@@ -218,13 +218,13 @@ find_decompressor() {
 # check if the log contains a piece of our segment
 #
 is_our_log() {
-	logf=$1
-	from_time=$2
-	to_time=$3
+	local logf=$1
+	local from_time=$2
+	local to_time=$3
 
-	cat=`find_decompressor $logf`
-	first_time=$(str2time "`$cat $logf | head -1 | $getstampproc`")
-	last_time=$(str2time "`$cat $logf | tail -1 | $getstampproc`")
+	local cat=`find_decompressor $logf`
+	local first_time=$(str2time "`$cat $logf | head -1 | $getstampproc`")
+	local last_time=$(str2time "`$cat $logf | tail -1 | $getstampproc`")
 	if [ x = "x$first_time" -o x = "x$last_time" ]; then
 		return 0 # skip (empty log?)
 	fi
@@ -249,9 +249,9 @@ is_our_log() {
 # hasn't been changed)
 #
 arch_logs() {
-	logf=$1
-	from_time=$2
-	to_time=$3
+	local logf=$1
+	local from_time=$2
+	local to_time=$3
 
 	# look for files such as: ha-log-20090308 or
 	# ha-log-20090308.gz (.bz2) or ha-log.0, etc
@@ -278,16 +278,16 @@ drop_tmp_file() {
 	[ -z "$tmp" ] || rmtempfile "$tmp"
 }
 print_log() {
-	cat=`find_decompressor $1`
+	local cat=`find_decompressor $1`
 	$cat $1
 }
 print_logseg() {
-	logf=$1
-	from_time=$2
-	to_time=$3
+	local logf=$1
+	local from_time=$2
+	local to_time=$3
 
 	# uncompress to a temp file (if necessary)
-	cat=`find_decompressor $logf`
+	local cat=`find_decompressor $logf`
 	if [ "$cat" != "cat" ]; then
 		tmp=`maketempfile`
 		$cat $logf > $tmp
@@ -323,19 +323,19 @@ print_logseg() {
 # find log/set of logs which are interesting for us
 #
 dumplogset() {
-	logf=$1
-	from_time=$2
-	to_time=$3
+	local logf=$1
+	local from_time=$2
+	local to_time=$3
 
-	logf_set=`arch_logs $logf $from_time $to_time`
+	local logf_set=`arch_logs $logf $from_time $to_time`
 	if [ x = "x$logf_set" ]; then
 		return
 	fi
 
-	num_logs=`echo "$logf_set" | wc -l`
-	oldest=`echo $logf_set | awk '{print $NF}'`
-	newest=`echo $logf_set | awk '{print $1}'`
-	mid_logfiles=`echo $logf_set | awk '{for(i=NF-1; i>1; i--) print $i}'`
+	local num_logs=`echo "$logf_set" | wc -l`
+	local oldest=`echo $logf_set | awk '{print $NF}'`
+	local newest=`echo $logf_set | awk '{print $1}'`
+	local mid_logfiles=`echo $logf_set | awk '{for(i=NF-1; i>1; i--) print $i}'`
 
 	# the first logfile: from $from_time to $to_time (or end)
 	# logfiles in the middle: all
