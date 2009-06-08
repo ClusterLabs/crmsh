@@ -1,0 +1,1026 @@
+#!/bin/sh
+
+ # Copyright (C) 2007 Dejan Muhamedagic <dmuhamedagic@suse.de>
+ # 
+ # This program is free software; you can redistribute it and/or
+ # modify it under the terms of the GNU General Public
+ # License as published by the Free Software Foundation; either
+ # version 2.1 of the License, or (at your option) any later version.
+ # 
+ # This software is distributed in the hope that it will be useful,
+ # but WITHOUT ANY WARRANTY; without even the implied warranty of
+ # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ # General Public License for more details.
+ # 
+ # You should have received a copy of the GNU General Public
+ # License along with this library; if not, write to the Free Software
+ # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ #
+
+. @sysconfdir@/ha.d/shellfuncs
+. $HA_NOARCHBIN/utillib.sh
+
+unset LANG
+export LC_ALL=POSIX
+
+PROG=`basename $0`
+# FIXME: once this is part of the package!
+PROGDIR=`dirname $0`
+echo "$PROGDIR" | grep -qs '^/' || {
+	test -f @sbindir@/$PROG &&
+		PROGDIR=@sbindir@
+	test -f $HA_NOARCHBIN/$PROG &&
+		PROGDIR=$HA_NOARCHBIN
+}
+
+# the default syslog facility is not (yet) exported by heartbeat
+# to shell scripts
+#
+DEFAULT_HA_LOGFACILITY="daemon"
+export DEFAULT_HA_LOGFACILITY
+LOGD_CF=`findlogdcf @sysconfdir@ $HA_DIR`
+export LOGD_CF
+
+: ${SSH_OPTS="-T"}
+LOG_PATTERNS="CRIT: ERROR:"
+# PEINPUTS_PATT="peng.*PEngine Input stored"
+
+#
+# the instance where user runs hb_report is the master
+# the others are slaves
+#
+if [ x"$1" = x__slave ]; then
+	SLAVE=1
+fi
+
+usage() {
+	cat<<EOF
+usage: hb_report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
+       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCA] dest
+
+	-f time: time to start from or a CTS test number
+	-t time: time to finish at (dflt: now)
+	-n nodes: node names for this cluster; this option is additive
+	         (use either -n "a b" or -n a -n b)
+	         if you run $PROG on the log host or use autojoin,
+	         it is highly recommended to set this option
+	-u user: ssh user to access other nodes (dflt: empty, root, hacluster)
+	-l file: log file
+	-E file: extra logs to collect; this option is additive
+	         (dflt: /var/log/messages)
+	-p patt: regular expression to match variables to be removed;
+	         this option is additive (dflt: "passw.*")
+	-L patt: regular expression to match in log files for analysis;
+	         this option is additive (dflt: $LOG_PATTERNS)
+	-e prog: your favourite editor
+	-M     : don't collect extra logs (/var/log/messages)
+	-D     : don't invoke editor to write description
+	-C     : remove the destination directory
+	-A     : this is an OpenAIS cluster
+	-S     : single node operation; don't try to start report
+	         collectors on other nodes
+	dest   : destination directory
+EOF
+
+[ "$1" != short ] &&
+	cat<<EOF
+
+	. the multifile output is first stored in a directory {dest}
+	  of which a tarball {dest}.tar.bz2 (or .gz) is created
+	. the time specification is as in either Date::Parse or
+	  Date::Manip, whatever you have installed; Date::Parse is
+	  preferred
+	. we try to figure where is the logfile; if we can't, please
+	  clue us in
+	. we collect only one logfile and /var/log/messages; if you
+	  have more than one logfile, then use '-E' option to supply
+	  as many as you want ('-M' empties the list)
+
+	Examples
+
+	  hb_report -f 2pm /tmp/report_1
+	  hb_report -f "2007/9/5 12:30" -t "2007/9/5 14:00" /tmp/report_2
+	  hb_report -f 1:00 -t 3:00 -l /var/log/cluster/ha-debug /tmp/report_3
+	  hb_report -f "09sep07 2:00" -u hbadmin /tmp/report_4
+	  hb_report -f 18:00 -p "usern.*" -p "admin.*" /tmp/report_5
+	  hb_report -f cts:133 /tmp/ctstest_133
+
+	. WARNING . WARNING . WARNING . WARNING . WARNING . WARNING .
+	  We try to sanitize the CIB and the peinputs files. If you
+	  have more sensitive information, please supply additional
+	  patterns yourself. The logs and the crm_mon, ccm_tool, and
+	  crm_verify output are *not* sanitized.
+	  Additional system logs (/var/log/messages) are collected in
+	  order to have a more complete report. If you don't want that
+	  specify -M.
+	  IT IS YOUR RESPONSIBILITY TO PROTECT THE DATA FROM EXPOSURE!
+EOF
+	exit
+}
+#
+# these are "global" variables
+#
+setvarsanddefaults() {
+	now=`perl -e 'print time()'`
+	# used by all
+	DESTDIR=""
+	FROM_TIME=""
+	CTS=""
+	TO_TIME=0
+	HA_LOG=""
+	UNIQUE_MSG="Mark:HB_REPORT:$now"
+	SANITIZE="passw.*"
+	REMOVE_DEST=""
+	# logs to collect in addition
+	# NB: they all have to be in syslog format
+	#
+	EXTRA_LOGS="/var/log/messages"
+	# used only by the master
+	NO_SSH=""
+	SSH_USER=""
+	TRY_SSH="root hacluster"
+	SLAVEPIDS=""
+	NO_DESCRIPTION=""
+}
+chkdirname() {
+	[ "$1" ] || usage short
+	[ $# -ne 1 ] && fatal "bad directory name: $1"
+	echo $1 | grep -qs '^/' ||
+		fatal "destination directory must be an absolute path"
+	[ "$1" = / ] &&
+		fatal "no root here, thank you"
+}
+chktime() {
+	[ "$1" ] || fatal "bad time specification: $2"
+}
+msgcleanup() {
+	fatal "destination directory $DESTDIR exists on $1, please cleanup"
+}
+nodistdirectory() {
+	fatal "could not create the destination directory $DESTDIR"
+}
+time2str() {
+	perl -e "use POSIX; print strftime('%x %X',localtime($1));"
+}
+
+#
+# find log files
+#
+logmark() {
+	logger -p $*
+}
+#
+# a special stamp is logged through syslog on _all_ nodes
+#
+logmarks() {
+	msg=$1
+	c="$PROGDIR/hb_report __slave $DESTDIR logmark $msg"
+
+	for n in $NODES; do
+		if [ "$n" = "`uname -n`" ]; then
+			[ "$THIS_IS_NODE" ] && logmark $HA_LOGFACILITY.$HA_LOGLEVEL $msg
+		else
+			[ "$ssh_good" ] &&
+				echo $c | ssh $ssh_opts $n
+		fi
+	done
+}
+#
+# first try syslog files, if none found then use the
+# logfile/debugfile settings
+#
+findlog() {
+	logf=""
+	if [ "$HA_LOGFACILITY" ]; then
+		logf=`findmsg $UNIQUE_MSG | awk '{print $1}'`
+	fi
+	if [ -f "$logf" ]; then
+		echo $logf
+	else
+		echo ${HA_DEBUGFILE:-$HA_LOGFILE}
+	fi
+}
+
+#
+# find log slices
+#
+
+find_decompressor() {
+	if echo $1 | grep -qs 'bz2$'; then
+		echo "bzip2 -dc"
+	elif echo $1 | grep -qs 'gz$'; then
+		echo "gzip -dc"
+	else
+		echo "cat"
+	fi
+}
+#
+# check if the log contains a piece of our segment
+#
+is_our_log() {
+	local logf=$1
+	local from_time=$2
+	local to_time=$3
+
+	local cat=`find_decompressor $logf`
+	local first_time=$(str2time "`$cat $logf | head -1 | $getstampproc`")
+	local last_time=$(str2time "`$cat $logf | tail -1 | $getstampproc`")
+	if [ x = "x$first_time" -o x = "x$last_time" ]; then
+		return 0 # skip (empty log?)
+	fi
+	if [ $from_time -gt $last_time ]; then
+		# we shouldn't get here anyway if the logs are in order
+		return 2 # we're past good logs; exit
+	fi
+	if [ $from_time -ge $first_time ]; then
+		return 3 # this is the last good log
+	fi
+	# have to go further back
+	if [ x = "x$to_time" -o $to_time -ge $first_time ]; then
+		return 1 # include this log
+	else
+		return 0 # don't include this log
+	fi
+}
+#
+# go through archived logs (timewise backwards) and see if there
+# are lines belonging to us
+# (we rely on untouched log files, i.e. that modify time
+# hasn't been changed)
+#
+arch_logs() {
+	local logf=$1
+	local from_time=$2
+	local to_time=$3
+
+	# look for files such as: ha-log-20090308 or
+	# ha-log-20090308.gz (.bz2) or ha-log.0, etc
+	ls -t $logf $logf*[0-9z] 2>/dev/null |
+	while read next_log; do
+		is_our_log $next_log $from_time $to_time
+		case $? in
+		0) ;;  # noop, continue
+		1) echo $next_log  # include log and continue
+			info "found log $next_log"
+			;;
+		2) break;; # don't go through older logs!
+		3) echo $next_log  # include log and continue
+			info "found log $next_log"
+			break
+			;; # don't go through older logs!
+		esac
+	done
+}
+#
+# print part of the log
+#
+drop_tmp_file() {
+	[ -z "$tmp" ] || rmtempfile "$tmp"
+}
+print_log() {
+	local cat=`find_decompressor $1`
+	$cat $1
+}
+print_logseg() {
+	local logf=$1
+	local from_time=$2
+	local to_time=$3
+
+	# uncompress to a temp file (if necessary)
+	local cat=`find_decompressor $logf`
+	if [ "$cat" != "cat" ]; then
+		tmp=`maketempfile`
+		$cat $logf > $tmp
+		trap drop_tmp_file 0
+		logf=$tmp
+	else
+		tmp=""
+	fi
+
+	if [ "$from_time" = 0 ]; then
+		FROM_LINE=1
+	else
+		FROM_LINE=`findln_by_time $logf $from_time`
+	fi
+	if [ -z "$FROM_LINE" ]; then
+		warning "couldn't find line for time $from_time; corrupt log file?"
+		return
+	fi
+
+	TO_LINE=""
+	if [ "$to_time" != 0 ]; then
+		TO_LINE=`findln_by_time $logf $to_time`
+		if [ -z "$TO_LINE" ]; then
+			warning "couldn't find line for time $to_time; corrupt log file?"
+			return
+		fi
+	fi
+	dumplog $logf $FROM_LINE $TO_LINE
+	drop_tmp_file
+	trap "" 0
+}
+#
+# find log/set of logs which are interesting for us
+#
+dumplogset() {
+	local logf=$1
+	local from_time=$2
+	local to_time=$3
+
+	local logf_set=`arch_logs $logf $from_time $to_time`
+	if [ x = "x$logf_set" ]; then
+		return
+	fi
+
+	local num_logs=`echo "$logf_set" | wc -l`
+	local oldest=`echo $logf_set | awk '{print $NF}'`
+	local newest=`echo $logf_set | awk '{print $1}'`
+	local mid_logfiles=`echo $logf_set | awk '{for(i=NF-1; i>1; i--) print $i}'`
+
+	# the first logfile: from $from_time to $to_time (or end)
+	# logfiles in the middle: all
+	# the last logfile: from beginning to $to_time (or end)
+	case $num_logs in
+	1) print_logseg $newest $from_time $to_time;;
+	*)
+		print_logseg $oldest $from_time 0
+		for f in $mid_logfiles; do
+			print_log $f
+		done
+		print_logseg $newest 0 $to_time
+	;;
+	esac
+}
+
+#
+# cts_findlogseg finds lines for the CTS test run (FROM_LINE and
+# TO_LINE) and then extracts the timestamps to get FROM_TIME and
+# TO_TIME
+#
+cts_findlogseg() {
+	logf=$1
+	testnum=$2
+
+	FROM_LINE=`grep -n "Running test.*\[ *$testnum\]" $logf | tail -1 | sed 's/:.*//'`
+	if [ -z "$FROM_LINE" ]; then
+		warning "couldn't find line for CTS test $testnum; corrupt log file?"
+		return
+	else
+		FROM_TIME=`linetime $logf $FROM_LINE`
+	fi
+	TO_LINE=`grep -n "Running test.*\[ *$(($testnum+1))\]" $logf | tail -1 | sed 's/:.*//'`
+	[ "$TO_LINE" ] ||
+		TO_LINE=`wc -l < $logf`
+	TO_TIME=`linetime $logf $TO_LINE`
+}
+
+#
+# this is how we pass environment to other hosts
+#
+dumpenv() {
+	cat<<EOF
+FROM_TIME=$FROM_TIME
+TO_TIME=$TO_TIME
+USER_NODES="$USER_NODES"
+HA_LOG=$HA_LOG
+MASTER_IS_HOSTLOG=$MASTER_IS_HOSTLOG
+DESTDIR=$DESTDIR
+UNIQUE_MSG=$UNIQUE_MSG
+SANITIZE="$SANITIZE"
+EXTRA_LOGS="$EXTRA_LOGS"
+REMOVE_DEST="$REMOVE_DEST"
+USER_CLUSTER_TYPE="$USER_CLUSTER_TYPE"
+CONF="$CONF"
+B_CONF="$B_CONF"
+PACKAGES="$PACKAGES"
+CORES_DIRS="$CORES_DIRS"
+EOF
+}
+start_remote_collectors() {
+	for node in $NODES; do
+		[ "$node" = "$WE" ] && continue
+		dumpenv | ssh $ssh_opts $node \
+			"cat > $DESTDIR/.env; $PROGDIR/hb_report __slave $DESTDIR" |
+			(cd $DESTDIR && tar xf -) &
+		SLAVEPIDS="$SLAVEPIDS $!"
+	done
+}
+
+#
+# does ssh work?
+#
+testsshuser() {
+	if [ "$2" ]; then
+		ssh -T -o Batchmode=yes $2@$1 true 2>/dev/null
+	else
+		ssh -T -o Batchmode=yes $1 true 2>/dev/null
+	fi
+}
+findsshuser() {
+	for u in "" $TRY_SSH; do
+		rc=0
+		failed_nodes=""
+		for n in $NODES; do
+			[ "$node" = "$WE" ] && continue
+			testsshuser $n $u || {
+				rc=1
+				failed_nodes="$failed_nodes $n"
+			}
+		done
+		if [ $rc -eq 0 ]; then
+			echo $u
+			return 0
+		else
+			if [ "$u" ]; then
+				info "ssh with user $u does not work to $failed_nodes"
+			else
+				info "ssh without user does not work to $failed_nodes"
+			fi
+			info "will try next user"
+		fi
+	done
+	return 1
+}
+
+#
+# the usual stuff
+#
+getbacktraces() {
+	flist=$(
+		for f in `find_files "$CORES_DIRS" $1 $2`; do
+			bf=`basename $f`
+			test `expr match $bf core` -gt 0 &&
+				echo $f
+		done)
+	[ "$flist" ] &&
+		getbt $flist > $3
+}
+getpeinputs() {
+	for pe_dir in $HA_VARLIB/pengine `dirname $HA_VARLIB`/pengine
+	do
+		test -d $pe_dir ||
+			continue
+		flist=$(
+			find_files $pe_dir $1 $2 | sed "s,`dirname $pe_dir`/,,g"
+		)
+		[ "$flist" ] &&
+			(cd `dirname $pe_dir` && tar cf - $flist) | (cd $3 && tar xf -)
+	done
+}
+touch_DC_if_dc() {
+	#dc=`crmadmin -D 2>/dev/null | awk '{print $NF}'`
+	dc=`crm_mon -1 2>/dev/null | awk '/Current DC/ {print $3}'`
+	if [ "$WE" = "$dc" ]; then
+		touch $1/DC
+	fi
+}
+
+#
+# some basic system info and stats
+#
+sys_info() {
+	cluster_info
+	crm_info
+	pkg_ver $PACKAGES
+	echo "Platform: `uname`"
+	echo "Kernel release: `uname -r`"
+	echo "Architecture: `uname -m`"
+	[ `uname` = Linux ] &&
+		echo "Distribution: `distro`"
+}
+sys_stats() {
+	set -x
+	uname -n
+	uptime
+	ps axf
+	ps auxw
+	top -b -n 1
+	ifconfig -a
+	ip addr list
+	netstat -i
+	arp -an
+	test -d /proc && {
+		cat /proc/cpuinfo
+	}
+	lsscsi
+	lspci
+	mount
+	df
+	set +x
+}
+
+#
+# replace sensitive info with '****'
+#
+sanitize() {
+	for f in $1/$B_CONF $1/$CIB_F $1/$CIB_TXT_F $1/pengine/*; do
+		[ -f "$f" ] && sanitize_one $f
+	done
+}
+
+#
+# remove duplicates if files are same, make links instead
+#
+consolidate() {
+	for n in $NODES; do
+		if [ -f $1/$2 ]; then
+			rm $1/$n/$2
+		else
+			mv $1/$n/$2 $1
+		fi
+		ln -s ../$2 $1/$n
+	done
+}
+
+#
+# some basic analysis of the report
+#
+checkcrmvfy() {
+	for n in $NODES; do
+		if [ -s $1/$n/$CRM_VERIFY_F ]; then
+			echo "WARN: crm_verify reported warnings at $n:"
+			cat $1/$n/$CRM_VERIFY_F
+		fi
+	done
+}
+checkbacktraces() {
+	for n in $NODES; do
+		[ -s $1/$n/$BT_F ] && {
+			echo "WARN: coredumps found at $n:"
+			egrep 'Core was generated|Program terminated' \
+					$1/$n/$BT_F |
+				sed 's/^/	/'
+		}
+	done
+}
+checkpermissions() {
+	for n in $NODES; do
+		if [ -s $1/$n/$PERMISSIONS_F ]; then
+			echo "WARN: problem with permissions/ownership at $n:"
+			cat $1/$n/$PERMISSIONS_F
+		fi
+	done
+}
+checklogs() {
+	logs=$(find $1 -name $HALOG_F;
+		for l in $EXTRA_LOGS; do find $1/* -name `basename $l`; done)
+	[ "$logs" ] || return
+	trap '[ -z "$pattfile" ] || rmtempfile "$pattfile"]' 0
+	pattfile=`maketempfile` ||
+		fatal "cannot create temporary files"
+	for p in $LOG_PATTERNS; do
+		echo "$p"
+	done > $pattfile
+	echo ""
+	echo "Log patterns:"
+	for n in $NODES; do
+		cat $logs | grep -f $pattfile
+	done
+	rmtempfile $pattfile
+	trap "" 0
+}
+
+#
+# check if files have same content in the cluster
+#
+cibdiff() {
+	d1=`dirname $1`
+	d2=`dirname $2`
+	if [ -f $d1/RUNNING -a -f $d2/RUNNING ] ||
+		[ -f $d1/STOPPED -a -f $d2/STOPPED ]; then
+		crm_diff -c -n $1 -o $2
+	else
+		echo "can't compare cibs from running and stopped systems"
+	fi
+}
+txtdiff() {
+	diff -u $1 $2
+}
+diffcheck() {
+	[ -f "$1" ] || {
+		echo "$1 does not exist"
+		return 1
+	}
+	[ -f "$2" ] || {
+		echo "$2 does not exist"
+		return 1
+	}
+	case `basename $1` in
+	$CIB_F)
+		cibdiff $1 $2;;
+	$B_CONF)
+		txtdiff $1 $2;; # confdiff?
+	*)
+		txtdiff $1 $2;;
+	esac
+}
+analyze_one() {
+	rc=0
+	node0=""
+	for n in $NODES; do
+		if [ "$node0" ]; then
+			diffcheck $1/$node0/$2 $1/$n/$2
+			rc=$(($rc+$?))
+		else
+			node0=$n
+		fi
+	done
+	return $rc
+}
+analyze() {
+	flist="$HOSTCACHE $MEMBERSHIP_F $CIB_F $CRM_MON_F $B_CONF logd.cf $SYSINFO_F"
+	for f in $flist; do
+		printf "Diff $f... "
+		ls $1/*/$f >/dev/null 2>&1 || {
+			echo "no $1/*/$f :/"
+			continue
+		}
+		if analyze_one $1 $f; then
+			echo "OK"
+			[ "$f" != $CIB_F ] &&
+				consolidate $1 $f
+		else
+			echo ""
+		fi
+	done
+	checkcrmvfy $1
+	checkbacktraces $1
+	checkpermissions $1
+	checklogs $1
+}
+
+#
+# description template, editing, and other notes
+#
+mktemplate() {
+	cat<<EOF
+Please edit this template and describe the issue/problem you
+encountered. Then, post to
+	Linux-HA@lists.linux-ha.org
+or file a bug at
+	http://developerbugs.linux-foundation.org/
+
+See http://linux-ha.org/ReportingProblems for detailed
+description on how to report problems.
+
+Thank you.
+
+Date: `date`
+By: $PROG $userargs
+Subject: [short problem description]
+Severity: [choose one] enhancement minor normal major critical blocking
+Component: [choose one] CRM LRM CCM RA fencing $CLUSTER_TYPE comm GUI tools other
+
+Detailed description:
+---
+[...]
+---
+
+EOF
+
+	if [ -f $DESTDIR/$SYSINFO_F ]; then
+		echo "Common system info found:"
+		cat $DESTDIR/$SYSINFO_F
+	else
+		for n in $NODES; do
+			if [ -f $DESTDIR/$n/$SYSINFO_F ]; then
+				echo "System info $n:"
+				sed 's/^/	/' $DESTDIR/$n/$SYSINFO_F
+			fi
+		done
+	fi
+}
+edittemplate() {
+	if ec=`pickfirst $EDITOR vim vi emacs nano`; then
+		$ec $1
+	else
+		warning "could not find a text editor"
+	fi
+}
+pickcompress() {
+	if COMPRESS=`pickfirst bzip2 gzip`; then
+		if [ "$COMPRESS" = bzip2 ]; then
+			COMPRESS_EXT=.bz2
+		else
+			COMPRESS_EXT=.gz
+		fi
+	else
+		warning "could not find a compression program; the resulting tarball may be huge"
+		COMPRESS=cat
+		COMPRESS_EXT=
+	fi
+}
+finalword() {
+	cat<<EOF
+The report is saved in $DESTDIR.tar$COMPRESS_EXT 
+
+Thank you for taking time to create this report.
+EOF
+}
+
+[ $# -eq 0 ] && usage
+
+# check for the major prereq for a) parameter parsing and b)
+# parsing logs
+#
+NO_str2time=""
+t=`str2time "12:00"`
+if [ "$t" = "" ]; then
+	NO_str2time=1
+	[ "$SLAVE" ] ||
+		fatal "please install the perl Date::Parse module"
+fi
+
+#
+# part 1: get and check options; and the destination
+#
+if [ "$SLAVE" = "" ]; then
+	setvarsanddefaults
+	userargs="$@"
+	while getopts f:t:l:u:p:L:e:E:n:MSDCAh o; do
+		case "$o" in
+			h) usage;;
+			f)
+				if echo "$OPTARG" | grep -qs '^cts:'; then
+					FROM_TIME=0 # to be calculated later
+					CTS=`echo "$OPTARG" | sed 's/cts://'`
+				else
+					FROM_TIME=`str2time "$OPTARG"`
+					chktime "$FROM_TIME" "$OPTARG"
+				fi
+			;;
+			t) TO_TIME=`str2time "$OPTARG"`
+			    chktime "$TO_TIME" "$OPTARG"
+			;;
+			n) NODES_SOURCE=user
+				USER_NODES="$USER_NODES $OPTARG"
+			;;
+			u) SSH_USER="$OPTARG";;
+			l) HA_LOG="$OPTARG";;
+			e) EDITOR="$OPTARG";;
+			p) SANITIZE="$SANITIZE $OPTARG";;
+			L) LOG_PATTERNS="$LOG_PATTERNS $OPTARG";;
+			S) NO_SSH=1;;
+			D) NO_DESCRIPTION=1;;
+			C) REMOVE_DEST=1;;
+			M) EXTRA_LOGS="";;
+			E) EXTRA_LOGS="$EXTRA_LOGS $OPTARG";;
+			A) USER_CLUSTER_TYPE="openais";;
+			[?]) usage short;;
+		esac
+	done
+	shift $(($OPTIND-1))
+	[ $# -ne 1 ] && usage short
+	DESTDIR=`echo $1 | sed 's,/*$,,'`
+	chkdirname $DESTDIR
+	[ "$FROM_TIME" ] || usage short
+else
+	# slave gets the environment from .env
+	DESTDIR=$2
+	[ -d $DESTDIR ] || nodistdirectory
+	. $DESTDIR/.env
+fi
+
+# allow user to enforce the cluster type
+# if not, then it is found out on _all_ nodes
+if [ -z "$USER_CLUSTER_TYPE" ]; then
+	CLUSTER_TYPE=`get_cluster_type`
+else
+	CLUSTER_TYPE=$USER_CLUSTER_TYPE
+fi
+
+# the very first thing we must figure out is which cluster
+# stack is used
+CORES_DIRS=$HA_VARLIB/cores
+COMMON_PACKAGES="pacemaker heartbeat-common heartbeat-resources"
+case "$CLUSTER_TYPE" in
+openais)
+	CONF=/etc/ais/openais.conf
+	PACKAGES="openais $COMMON_PACKAGES"
+	CF_SUPPORT=$HA_NOARCHBIN/openais_conf_support.sh
+	CORES_DIRS="$CORES_DIRS /var/lib/openais"
+	MEMBERSHIP_TOOL_OPTS=""
+	unset HOSTCACHE HB_UUID_F
+	;;
+heartbeat)
+	CONF=$HA_CF
+	PACKAGES="heartbeat $COMMON_PACKAGES"
+	CF_SUPPORT=$HA_NOARCHBIN/ha_cf_support.sh
+	MEMBERSHIP_TOOL_OPTS="-H"
+	;;
+esac
+B_CONF=`basename $CONF`
+
+if test -f "$CF_SUPPORT"; then
+	. $CF_SUPPORT
+else
+	fatal "no stack specific support: $CF_SUPPORT"
+fi
+
+getlogvars
+
+if [ "$SLAVE" -a "$3" = logmark ]; then
+	msg="$4"
+	logmark $HA_LOGFACILITY.$HA_LOGLEVEL $msg
+	exit
+fi
+
+WE=`uname -n`  # who am i?
+THIS_IS_NODE=""
+NODES=`getnodes`
+NODECNT=`echo $NODES | wc -w`
+if [ "$NODECNT" = 0 ]; then
+	fatal "could not figure out a list of nodes; is this a cluster node?"
+fi
+echo $NODES | grep -wqs $WE && # are we a node?
+	THIS_IS_NODE=1
+
+# the goods
+ANALYSIS_F=analysis.txt
+DESCRIPTION_F=description.txt
+HALOG_F=ha-log.txt
+BT_F=backtraces.txt
+SYSINFO_F=sysinfo.txt
+SYSSTATS_F=sysstats.txt
+export ANALYSIS_F DESCRIPTION_F HALOG_F BT_F SYSINFO_F SYSSTATS_F
+CRM_MON_F=crm_mon.txt
+MEMBERSHIP_F=members.txt
+HB_UUID_F=hb_uuid.txt
+HOSTCACHE=hostcache
+CRM_VERIFY_F=crm_verify.txt
+PERMISSIONS_F=permissions.txt
+CIB_F=cib.xml
+CIB_TXT_F=cib.txt
+export CRM_MON_F MEMBERSHIP_F CRM_VERIFY_F CIB_F CIB_TXT_F HB_UUID_F PERMISSIONS_F
+
+# this only on master
+if [ "$SLAVE" = "" ]; then
+
+	# if this is not a node, then some things afterwards might
+	# make no sense (not work)
+	if [ -z "$THIS_IS_NODE" -a "$NODES_SOURCE" != user ]; then
+		warning "this is not a node and you didn't specify a list of nodes using -n"
+	fi
+#
+# part 2: ssh business
+#
+	# find out if ssh works
+	ssh_good=""
+	if [ -z "$NO_SSH" ]; then
+		[ "$SSH_USER" ] ||
+			SSH_USER=`findsshuser`
+		if [ $? -eq 0 ]; then
+			ssh_good=1
+			if [ "$SSH_USER" ]; then
+				ssh_opts="-l $SSH_USER $SSH_OPTS"
+			else
+				ssh_opts="$SSH_OPTS"
+			fi
+		fi
+	fi
+# final check: don't run if the destination directory exists
+	[ -d $DESTDIR ] && msgcleanup "local node"
+	mkdir -p $DESTDIR
+	[ -d $DESTDIR ] || nodistdirectory
+	[ "$ssh_good" ] &&
+		for node in $NODES; do
+			[ "$node" = "$WE" ] && continue
+			ssh $ssh_opts $node "test -d $DESTDIR" && {
+				test -d $DESTDIR && rmdir $DESTDIR
+				msgcleanup $node
+			}
+			dumpenv |
+			ssh $ssh_opts $node "mkdir -p $DESTDIR && cat > $DESTDIR/.env"
+		done
+fi
+
+if [ "$SLAVE" = "" ]; then
+#
+# part 3: log marks to be searched for later
+#         important to do this now on _all_ nodes
+# 
+	if [ "$HA_LOGFACILITY" ]; then
+		logmarks $UNIQUE_MSG
+	fi
+fi
+
+# only cluster nodes need their own directories
+[ "$THIS_IS_NODE" ] && mkdir -p $DESTDIR/$WE
+
+#
+# part 4: find the logs and cut out the segment for the period
+#
+if [ "$HA_LOG" ]; then  # log provided by the user?
+	[ -f "$HA_LOG" ] || {  # not present
+		[ "$SLAVE" ] ||  # warning if not on slave
+			warning "$HA_LOG not found; we will try to find log ourselves"
+		HA_LOG=""
+	}
+fi
+if [ "$HA_LOG" = "" ]; then
+	HA_LOG=`findlog`
+	[ "$HA_LOG" ] &&
+		cnt=`fgrep -c $UNIQUE_MSG < $HA_LOG`
+fi
+if [ "$cnt" ] && [ $cnt -eq $NODECNT ]; then
+	MASTER_IS_HOSTLOG=1
+	info "found the central log!"
+fi
+
+if [ -f "$HA_LOG" ]; then
+	if [ "$NO_str2time" ]; then
+		warning "a log found; but we cannot slice it"
+		warning "please install the perl Date::Parse module"
+	else
+		getstampproc=`find_getstampproc < $HA_LOG`
+		if [ "$getstampproc" ]; then
+			export getstampproc # used by linetime
+			if [ "$CTS" ]; then
+				cts_findlogseg $HA_LOG $CTS
+				dumplog $HA_LOG $FROM_LINE $TO_LINE
+			else
+				dumplogset $HA_LOG $FROM_TIME $TO_TIME
+			fi |
+			if [ "$THIS_IS_NODE" ]; then
+				cat > $DESTDIR/$WE/$HALOG_F
+			else
+				cat > $DESTDIR/$HALOG_F # we are log server, probably
+			fi
+		else
+			warning "could not figure out the log format of $HA_LOG"
+		fi
+	fi
+else
+	[ "$MASTER_IS_HOSTLOG" ] ||
+		warning "could not find the log file on $WE"
+fi
+
+#
+# part 5: start this program on other nodes
+#
+if [ ! "$SLAVE" ]; then
+	if [ "$ssh_good" ]; then
+		start_remote_collectors
+	else
+		if [ -z "$NO_SSH" -a $NODECNT -gt 1 ]; then
+			warning "ssh does not work to all nodes"
+			warning "please use the -u option if you want to supply a password"
+		fi
+	fi
+fi
+
+#
+# part 6: get all other info (config, stats, etc)
+#
+if [ "$THIS_IS_NODE" ]; then
+	getconfig $DESTDIR/$WE
+	getpeinputs $FROM_TIME $TO_TIME $DESTDIR/$WE
+	getbacktraces $FROM_TIME $TO_TIME $DESTDIR/$WE/$BT_F
+	touch_DC_if_dc $DESTDIR/$WE
+	sanitize $DESTDIR/$WE
+	check_perms > $DESTDIR/$WE/$PERMISSIONS_F 2>&1
+	sys_info > $DESTDIR/$WE/$SYSINFO_F
+	sys_stats > $DESTDIR/$WE/$SYSSTATS_F 2>&1
+
+	for l in $EXTRA_LOGS; do
+		[ "$NO_str2time" ] && break
+		[ ! -f "$l" ] && continue
+		if [ "$l" = "$HA_LOG" -a "$l" != "$HALOG_F" ]; then
+			ln -s $HALOG_F $DESTDIR/$WE/`basename $l`
+			continue
+		fi
+		getstampproc=`find_getstampproc < $l`
+		if [ "$getstampproc" ]; then
+			export getstampproc # used by linetime
+			dumplogset $l $FROM_TIME $TO_TIME > $DESTDIR/$WE/`basename $l`
+		else
+			warning "could not figure out the log format of $l"
+		fi
+	done
+fi
+
+#
+# part 7: endgame:
+#         slaves tar their results to stdout, the master waits
+#         for them, analyses results, asks the user to edit the
+#         problem description template, and prints final notes
+#
+if [ "$SLAVE" ]; then
+	(cd $DESTDIR && tar cf - $WE)
+else
+	wait $SLAVEPIDS
+	analyze $DESTDIR > $DESTDIR/$ANALYSIS_F
+	mktemplate > $DESTDIR/$DESCRIPTION_F
+	[ "$NO_DESCRIPTION" ] || {
+		echo press enter to edit the problem description...
+		read junk
+		edittemplate $DESTDIR/$DESCRIPTION_F
+	}
+	cd $DESTDIR/..
+	pickcompress
+	tar cf - `basename $DESTDIR` | $COMPRESS > $DESTDIR.tar$COMPRESS_EXT
+	finalword
+fi
+
+[ "$REMOVE_DEST" ] &&
+	rm -r $DESTDIR
