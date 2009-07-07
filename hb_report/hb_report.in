@@ -935,17 +935,17 @@ if [ -f "$HA_LOG" ]; then
 		getstampproc=`find_getstampproc < $HA_LOG`
 		if [ "$getstampproc" ]; then
 			export getstampproc # used by linetime
+			if [ "$THIS_IS_NODE" ]; then
+				outf=$DESTDIR/$WE/$HALOG_F
+			else
+				outf=$DESTDIR/$HALOG_F # we are log server, probably
+			fi
 			if [ "$CTS" ]; then
 				cts_findlogseg $HA_LOG $CTS
 				dumplog $HA_LOG $FROM_LINE $TO_LINE
 			else
 				dumplogset $HA_LOG $FROM_TIME $TO_TIME
-			fi |
-			if [ "$THIS_IS_NODE" ]; then
-				cat > $DESTDIR/$WE/$HALOG_F
-			else
-				cat > $DESTDIR/$HALOG_F # we are log server, probably
-			fi
+			fi > $outf
 		else
 			warning "could not figure out the log format of $HA_LOG"
 		fi
