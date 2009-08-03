@@ -501,31 +501,39 @@ distro() {
 	warning "no lsb_release, no /etc/*-release, no /etc/debian_version: no distro information"
 }
 pkg_ver() {
+	if which dpkg >/dev/null 2>&1 ; then
+		pkg_mgr="deb"
+	else if which rpm >/dev/null 2>&1 ; then
+		pkg_mgr="rpm"
+	else if which pkg_info >/dev/null 2>&1 ; then
+		pkg_mgr="pkg_info"
+	else if which pkginfo >/dev/null 2>&1 ; then
+		pkg_mgr="pkginfo"
+	else
+		echo "Unknown package manager!"
+		return
+	fi
+
 	# for Linux .deb based systems
 	for pkg; do
-		which dpkg > /dev/null 2>&1 && {
-			dpkg-query -f '${Name} ${Version}' -W $pkg 2>/dev/null && break
-			[ $? -eq 0 ] &&
+		case $pkg_mgr in
+		deb)
+			if dpkg-query -f '${Name} ${Version}' -W $pkg 2>/dev/null ; then
 				debsums -s $pkg 2>/dev/null
-			break
-		}
-		# for Linux .rpm based systems
-		which rpm > /dev/null 2>&1 && {
-			rpm -q --qf '%{name} %{version}-%{release}' $pkg &&
-			echo &&
-			rpm --verify $pkg
-			break
-		}
-		# for OpenBSD
-		which pkg_info > /dev/null 2>&1 && {
+			fi
+			;;
+		rpm)
+			if rpm -q --qf '%{name} %{version}-%{release} - %{distribution} %{arch}\n' $pkg ; then
+				rpm --verify $pkg
+			fi
+			;;
+		pkg_info)
 			pkg_info | grep $pkg
-			break
-		}
-		# for Solaris
-		which pkginfo > /dev/null 2>&1 && {
+			;;
+		pkginfo)
 			pkginfo | awk '{print $3}'  # format?
-		}
-		# more packagers?
+			;;
+		esac
 	done
 }
 crm_info() {
