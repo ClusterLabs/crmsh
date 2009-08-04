@@ -508,6 +508,20 @@ sys_stats() {
 	df
 	set +x
 }
+dlm_dump() {
+	if which dlm_tool >/dev/null 2>&1 ; then
+		echo NOTICE - Lockspace overview:
+		dlm_tool ls
+		dlm_tool ls | grep name |
+			while read X N ; do 
+				echo NOTICE - Lockspace $N:
+				dlm_tool lockdump $N
+			done
+		echo NOTICE - Lockspace history:
+		dlm_tool dump
+	fi
+}
+
 
 #
 # replace sensitive info with '****'
@@ -848,7 +862,8 @@ HALOG_F=ha-log.txt
 BT_F=backtraces.txt
 SYSINFO_F=sysinfo.txt
 SYSSTATS_F=sysstats.txt
-export ANALYSIS_F DESCRIPTION_F HALOG_F BT_F SYSINFO_F SYSSTATS_F
+DLM_DUMP_F=dlm_dump.txt
+export ANALYSIS_F DESCRIPTION_F HALOG_F BT_F SYSINFO_F SYSSTATS_F DLM_DUMP_F
 CRM_MON_F=crm_mon.txt
 MEMBERSHIP_F=members.txt
 HB_UUID_F=hb_uuid.txt
@@ -986,6 +1001,7 @@ if [ "$THIS_IS_NODE" ]; then
 	sanitize $DESTDIR/$WE
 	check_perms > $DESTDIR/$WE/$PERMISSIONS_F 2>&1
 	sys_info > $DESTDIR/$WE/$SYSINFO_F
+	dlm_dump > $DESTDIR/$WE/$DLM_DUMP_F
 	sys_stats > $DESTDIR/$WE/$SYSSTATS_F 2>&1
 
 	for l in $EXTRA_LOGS; do
