@@ -1000,8 +1000,8 @@ if [ "$THIS_IS_NODE" ]; then
 	touch_DC_if_dc $DESTDIR/$WE
 	sanitize $DESTDIR/$WE
 	check_perms > $DESTDIR/$WE/$PERMISSIONS_F 2>&1
-	sys_info > $DESTDIR/$WE/$SYSINFO_F
-	dlm_dump > $DESTDIR/$WE/$DLM_DUMP_F
+	sys_info > $DESTDIR/$WE/$SYSINFO_F 2>&1
+	dlm_dump > $DESTDIR/$WE/$DLM_DUMP_F 2>&1
 	sys_stats > $DESTDIR/$WE/$SYSSTATS_F 2>&1
 
 	for l in $EXTRA_LOGS; do
