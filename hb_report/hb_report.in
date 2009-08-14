@@ -17,7 +17,7 @@
  # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  #
 
-. @sysconfdir@/ha.d/shellfuncs
+. /usr/lib/ocf/resource.d/heartbeat/.ocf-shellfuncs
 . $HA_NOARCHBIN/utillib.sh
 
 unset LANG
