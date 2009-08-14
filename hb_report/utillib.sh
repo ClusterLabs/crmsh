@@ -500,22 +500,27 @@ distro() {
 	}
 	warning "no lsb_release, no /etc/*-release, no /etc/debian_version: no distro information"
 }
+
 pkg_ver() {
-	if which dpkg >/dev/null 2>&1 ; then
-		pkg_mgr="deb"
-	else if which rpm >/dev/null 2>&1 ; then
-		pkg_mgr="rpm"
-	else if which pkg_info >/dev/null 2>&1 ; then
-		pkg_mgr="pkg_info"
-	else if which pkginfo >/dev/null 2>&1 ; then
-		pkg_mgr="pkginfo"
-	else
-		echo "Unknown package manager!"
-		return
-	fi
+        if which dpkg >/dev/null 2>&1 ; then
+                pkg_mgr="deb"
+        fi
+        if which rpm >/dev/null 2>&1 ; then
+                pkg_mgr="rpm"
+        fi
+        if which pkg_info >/dev/null 2>&1 ; then 
+                pkg_mgr="pkg_info"
+        fi
+        if which pkginfo >/dev/null 2>&1 ; then 
+                pkg_mgr="pkginfo"
+        fi
+        if [ -z "$pkg_mgr" ]; then
+                echo "Unknown package manager!"
+                return
+        fi
 
 	# for Linux .deb based systems
-	for pkg; do
+	for pkg ; do
 		case $pkg_mgr in
 		deb)
 			if dpkg-query -f '${Name} ${Version}' -W $pkg 2>/dev/null ; then
@@ -536,6 +541,7 @@ pkg_ver() {
 		esac
 	done
 }
+
 crm_info() {
 	$HA_BIN/crmd version 2>&1
 }
