@@ -18,6 +18,9 @@
  #
 
 . /usr/lib/ocf/resource.d/heartbeat/.ocf-shellfuncs
+
+HA_NOARCHBIN=@datadir@/heartbeat
+
 . $HA_NOARCHBIN/utillib.sh
 
 unset LANG
