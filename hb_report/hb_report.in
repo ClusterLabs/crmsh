@@ -48,6 +48,20 @@ export LOGD_CF
 LOG_PATTERNS="CRIT: ERROR:"
 # PEINPUTS_PATT="peng.*PEngine Input stored"
 
+# Important events
+#
+# Patterns format:
+#	title	extended_regexp
+# NB: don't use spaces in titles or regular expressions!
+EVENT_PATTERNS="
+membership	pcmk_peer_update.*(lost|memb):
+quorum		crmd.*ais.disp.*quorum.(lost|ac?quir)
+pause		Process.pause.detected
+resources	lrmd.*rsc:(start|stop)
+stonith		stonithd.*(requests|(Succeeded|Failed).to.STONITH|result=)
+start_stop	Executive.Service.RELEASE|crm_shutdown:.Requesting.shutdown|pcmk_shutdown:.Shutdown.complete
+"
+
 #
 # the instance where user runs hb_report is the master
 # the others are slaves
@@ -665,6 +679,28 @@ analyze() {
 	checkpermissions $1
 	checklogs $1
 }
+events_all() {
+	Epatt=`echo "$EVENT_PATTERNS" |
+		while read title p; do [ -n "$p" ] && echo -n "|$p"; done |
+		sed 's/.//'
+	`
+	grep -E "$Epatt" $1
+}
+events() {
+	destdir=$1
+	if [ -f $destdir/$HALOG_F ]; then
+		events_all $destdir/$HALOG_F > $destdir/events.txt
+		for n in $NODES; do
+			awk "\$4==\"$n\"" $destdir/events.txt > $destdir/$n/events.txt
+		done
+	else
+		for n in $NODES; do
+			[ -f $destdir/$n/$HALOG_F ] ||
+				continue
+			events_all $destdir/$n/$HALOG_F > $destdir/$n/events.txt
+		done
+	fi
+}
 
 #
 # description template, editing, and other notes
@@ -1036,6 +1072,7 @@ if [ "$SLAVE" ]; then
 else
 	wait $SLAVEPIDS
 	analyze $DESTDIR > $DESTDIR/$ANALYSIS_F
+	events $DESTDIR
 	mktemplate > $DESTDIR/$DESCRIPTION_F
 	[ "$NO_DESCRIPTION" ] || {
 		echo press enter to edit the problem description...
