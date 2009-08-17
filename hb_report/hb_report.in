@@ -810,7 +810,7 @@ fi
 # stack is used
 CORES_DIRS=$HA_VARLIB/cores
 PACKAGES="pacemaker libpacemaker3 pacemaker-pygui
-openais libopenais2
+openais libopenais2 corosync libcorosync1
 resource-agents cluster-glue libglue1 ldirectord
 heartbeat heartbeat-common heartbeat-resources libheartbeat2
 ocfs2-tools ocfs2-tools-o2cb ocfs2-kmp-default ocfs2-kmp-pae ocfs2-kmp-xen ocfs2-kmp-debug ocfs2-kmp-trace
