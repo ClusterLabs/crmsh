@@ -23,3 +23,4 @@ hanoarchdir		= $(datadir)/heartbeat
 
 hanoarch_SCRIPTS	= utillib.sh ha_cf_support.sh openais_conf_support.sh
 sbin_SCRIPTS		= hb_report
+man_MANS			= hb_report.8
