@@ -147,7 +147,7 @@ setvarsanddefaults() {
 	HA_LOG=""
 	UNIQUE_MSG="Mark:HB_REPORT:$now"
 	SANITIZE="passw.*"
-	REMOVE_DEST=""
+	REMOVE_DEST="1"
 	# logs to collect in addition
 	# NB: they all have to be in syslog format
 	#
@@ -157,7 +157,7 @@ setvarsanddefaults() {
 	SSH_USER=""
 	TRY_SSH="root hacluster"
 	SLAVEPIDS=""
-	NO_DESCRIPTION=""
+	NO_DESCRIPTION="1"
 }
 chkdirname() {
 	[ "$1" ] || usage short
