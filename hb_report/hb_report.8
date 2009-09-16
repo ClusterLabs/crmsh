@@ -1,12 +1,12 @@
 .\"     Title: hb_report
 .\"    Author: [see the "AUTHOR" section]
 .\" Generator: DocBook XSL Stylesheets v1.74.0 <http://docbook.sf.net/>
-.\"      Date: 09/15/2009
+.\"      Date: 09/16/2009
 .\"    Manual: Pacemaker documentation
 .\"    Source: hb_report 1.2
 .\"  Language: English
 .\"
-.TH "HB_REPORT" "8" "09/15/2009" "hb_report 1\&.2" "Pacemaker documentation"
+.TH "HB_REPORT" "8" "09/16/2009" "hb_report 1\&.2" "Pacemaker documentation"
 .\" -----------------------------------------------------------------
 .\" * (re)Define some macros
 .\" -----------------------------------------------------------------
@@ -308,7 +308,7 @@ node1# hb_report \-f 18:51 /tmp/hb1
 .ps -1
 .nf
 .BB lightgray
-# if hb_report can\'t figure out the stack
+# if hb_report can\'t figure out that this is openais
 node1# hb_report \-f 18:51 \-A /tmp/hb1
 .EB lightgray
 .fi
@@ -796,13 +796,22 @@ report crm_verify(8) results
 .\}
 save log messages matching major events to events\&.txt
 .RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+in case logging is configured without loghost, node logs and events files are combined using a perl utility
+.RE
 .SH "BUGS"
 .sp
 Finding logs may at times be extremely difficult, depending on how weird the syslog configuration\&. It would be nice to ask syslog\-ng developers to provide a way to find out the log destination based on facility and priority\&.
 .sp
 hb_report can function in a satisfactory way only if ssh works to all nodes using authorized_keys (without password)\&.
-.sp
-In case there is no central log host, events and other log information do not provide a single cluster view\&. Since it seems to be that most users do not have loghost deployed, it may be beneficial to implement a log combine utility which would sort logs based on timestamps (for ha\-log\&.txt and events\&.txt)\&.
 .sp
 There are way too many options\&.
 .SH "AUTHOR"

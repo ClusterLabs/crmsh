@@ -387,6 +387,8 @@ analyzing it. The analyzis consists of the following tasks:
 - report if there were coredumps and by whom
 - report crm_verify(8) results
 - save log messages matching major events to events.txt
+- in case logging is configured without loghost, node logs and
+  events files are combined using a perl utility
 
 
 BUGS
@@ -398,12 +400,6 @@ destination based on facility and priority.
 
 hb_report can function in a satisfactory way only if ssh works to
 all nodes using authorized_keys (without password).
-
-In case there is no central log host, events and other log
-information do not provide a single cluster view. Since it seems
-to be that most users do not have loghost deployed, it may be
-beneficial to implement a log combine utility which would sort
-logs based on timestamps (for ha-log.txt and events.txt).
 
 There are way too many options.
 
