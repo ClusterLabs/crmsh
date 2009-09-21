@@ -504,17 +504,13 @@ distro() {
 pkg_ver() {
         if which dpkg >/dev/null 2>&1 ; then
                 pkg_mgr="deb"
-        fi
-        if which rpm >/dev/null 2>&1 ; then
+        elif which rpm >/dev/null 2>&1 ; then
                 pkg_mgr="rpm"
-        fi
-        if which pkg_info >/dev/null 2>&1 ; then 
+        elif which pkg_info >/dev/null 2>&1 ; then 
                 pkg_mgr="pkg_info"
-        fi
-        if which pkginfo >/dev/null 2>&1 ; then 
+        elif which pkginfo >/dev/null 2>&1 ; then 
                 pkg_mgr="pkginfo"
-        fi
-        if [ -z "$pkg_mgr" ]; then
+        else
                 echo "Unknown package manager!"
                 return
         fi
