@@ -166,8 +166,16 @@ chkdirname() {
 	[ $# -ne 1 ] && fatal "bad directory name: $1"
 	echo $1 | grep -qs '^/' ||
 		fatal "destination directory must be an absolute path"
+	echo $1 | egrep -qs '/[.][.]*(/|$)' &&
+		fatal "sorry, no . or .. references in the destination"
 	[ "$1" = / ] &&
-		fatal "no root here, thank you"
+		fatal "no root directory here, thank you"
+}
+destdir_inode_test() {
+	root_inode=`ls -id / | awk '{print $1}'`
+	dest_inode=`ls -id $1 | awk '{print $1}'`
+	[ "$root_inode" = "$dest_inode" ] &&
+		fatal "no root directory here, thank you"
 }
 chktime() {
 	[ "$1" ] || fatal "bad time specification: $2"
@@ -868,6 +876,7 @@ if [ "$SLAVE" = "" ]; then
 	[ $# -ne 1 ] && usage short
 	DESTDIR=`echo $1 | sed 's,/*$,,'`
 	chkdirname $DESTDIR
+	destdir_inode_test $DESTDIR
 	[ "$FROM_TIME" ] || usage short
 else
 	# slave gets the environment from .env
