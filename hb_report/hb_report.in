@@ -218,7 +218,8 @@ findlog() {
 		echo $logf
 	else
 		echo ${HA_DEBUGFILE:-$HA_LOGFILE}
-		debug "will try with ${HA_DEBUGFILE:-$HA_LOGFILE}"
+		[ "${HA_DEBUGFILE:-$HA_LOGFILE}" ] &&
+			debug "will try with ${HA_DEBUGFILE:-$HA_LOGFILE}"
 	fi
 }
 
@@ -450,14 +451,16 @@ findsshuser() {
 			[ "$n" = "$WE" ] && continue
 			u_print=$u
 			[ "$u_print" ] || u_print=`id -un`
-			debug "test ssh user $u_print@$n"
-			testsshuser $n $u || {
+			debug "test ssh $u_print@$n"
+			if testsshuser $n $u; then
+				debug "ssh $u_print@$n OK"
+			else
 				rc=1
 				failed_nodes="$failed_nodes $n"
-			}
+				debug "ssh $u_print@$n failed"
+			fi
 		done
 		if [ $rc -eq 0 ]; then
-			debug "ssh user $u_print@$n OK"
 			echo $u
 			return 0
 		else
@@ -636,7 +639,11 @@ cibdiff() {
 	d2=`dirname $2`
 	if [ -f $d1/RUNNING -a -f $d2/RUNNING ] ||
 		[ -f $d1/STOPPED -a -f $d2/STOPPED ]; then
-		crm_diff -c -n $1 -o $2
+		if which crm_diff > /dev/null 2>&1; then
+			crm_diff -c -n $1 -o $2
+		else
+			info "crm_diff(8) not found, cannot diff CIBs"
+		fi
 	else
 		echo "can't compare cibs from running and stopped systems"
 	fi

@@ -79,7 +79,8 @@ get_logd_logvars() {
 }
 findlogdcf() {
 	for f in \
-		`which strings > /dev/null 2>&1 &&
+		`test -x $HA_BIN/ha_logd &&
+			which strings > /dev/null 2>&1 &&
 			strings $HA_BIN/ha_logd | grep 'logd\.cf'` \
 		`for d; do echo $d/logd.cf $d/ha_logd.cf; done`
 	do
@@ -119,7 +120,7 @@ findmsg() {
 	done 2>/dev/null
 	echo $log
 	[ "$log" ] &&
-		debug "found HA log at $log" ||
+		debug "found HA log at `echo $log`" ||
 		debug "no HA log found in $syslogdirs"
 }
 
@@ -170,10 +171,10 @@ find_getstampproc() {
 	echo $func
 }
 findln_by_time() {
-	logf=$1
-	tm=$2
-	first=1
-	last=`wc -l < $logf`
+	local logf=$1
+	local tm=$2
+	local first=1
+	local last=`wc -l < $logf`
 	while [ $first -le $last ]; do
 		mid=$((($last+$first)/2))
 		trycnt=10
@@ -203,9 +204,9 @@ findln_by_time() {
 }
 
 dumplog() {
-	logf=$1
-	from_line=$2
-	to_line=$3
+	local logf=$1
+	local from_line=$2
+	local to_line=$3
 	[ "$from_line" ] ||
 		return
 	tail -n +$from_line $logf |
