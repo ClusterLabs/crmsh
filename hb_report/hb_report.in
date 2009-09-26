@@ -408,6 +408,7 @@ dumpenv() {
 FROM_TIME=$FROM_TIME
 TO_TIME=$TO_TIME
 USER_NODES="$USER_NODES"
+NODES="$NODES"
 HA_LOG=$HA_LOG
 MASTER_IS_HOSTLOG=$MASTER_IS_HOSTLOG
 DESTDIR=$DESTDIR
@@ -929,14 +930,17 @@ fi
 
 WE=`uname -n`  # who am i?
 THIS_IS_NODE=""
-NODES=`getnodes`
-debug "nodes: `echo $NODES`"
+if [ "$SLAVE" = "" ]; then
+	NODES=`getnodes`
+	debug "nodes: `echo $NODES`"
+fi
 NODECNT=`echo $NODES | wc -w`
 if [ "$NODECNT" = 0 ]; then
 	fatal "could not figure out a list of nodes; is this a cluster node?"
 fi
-echo $NODES | grep -wqs $WE && # are we a node?
+if echo $NODES | grep -wqs $WE || [ "$SLAVE" ]; then # are we a node?
 	THIS_IS_NODE=1
+fi
 
 # the goods
 ANALYSIS_F=analysis.txt
