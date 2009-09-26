@@ -172,8 +172,8 @@ chkdirname() {
 		fatal "no root directory here, thank you"
 }
 destdir_inode_test() {
-	root_inode=`ls -id / | awk '{print $1}'`
-	dest_inode=`ls -id $1 | awk '{print $1}'`
+	root_inode=`ls -id / 2>/dev/null | awk '{print $1}'`
+	dest_inode=`ls -id $1 2>/dev/null | awk '{print $1}'`
 	[ "$root_inode" = "$dest_inode" ] &&
 		fatal "no root directory here, thank you"
 }
