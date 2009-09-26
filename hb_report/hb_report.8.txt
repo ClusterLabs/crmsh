@@ -14,7 +14,7 @@ hb_report - create report for CRM based clusters (Pacemaker)
 SYNOPSIS
 --------
 *hb_report* -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
-       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCA] dest
+       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCAv] dest
 
 
 DESCRIPTION
@@ -93,6 +93,10 @@ dest::
 	don't try to start slave collectors on other members of the
 	cluster. Under normal circumstances this option is not
 	needed. Use if ssh(1) does not work to other nodes.
+
+*-v*::
+	Increase verbosity. Normally used to debug unexpected
+	behaviour.
 
 *-h*::
 	Show usage and some examples.

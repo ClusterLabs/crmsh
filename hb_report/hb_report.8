@@ -1,12 +1,12 @@
 .\"     Title: hb_report
 .\"    Author: [see the "AUTHOR" section]
 .\" Generator: DocBook XSL Stylesheets v1.74.0 <http://docbook.sf.net/>
-.\"      Date: 09/16/2009
+.\"      Date: 09/26/2009
 .\"    Manual: Pacemaker documentation
 .\"    Source: hb_report 1.2
 .\"  Language: English
 .\"
-.TH "HB_REPORT" "8" "09/16/2009" "hb_report 1\&.2" "Pacemaker documentation"
+.TH "HB_REPORT" "8" "09/26/2009" "hb_report 1\&.2" "Pacemaker documentation"
 .\" -----------------------------------------------------------------
 .\" * (re)Define some macros
 .\" -----------------------------------------------------------------
@@ -170,7 +170,7 @@
 hb_report \- create report for CRM based clusters (Pacemaker)
 .SH "Synopsis"
 .sp
-\fBhb_report\fR \-f {time|"cts:"testnum} [\-t time] [\-u user] [\-l file] [\-n nodes] [\-E files] [\-p patt] [\-L patt] [\-e prog] [\-MSDCA] dest
+\fBhb_report\fR \-f {time|"cts:"testnum} [\-t time] [\-u user] [\-l file] [\-n nodes] [\-E files] [\-p patt] [\-L patt] [\-e prog] [\-MSDCAv] dest
 .SH "DESCRIPTION"
 .sp
 The hb_report(1) is a utility to collect all information (logs, configuration files, system information, etc) relevant to Pacemaker (CRM) over the given period of time\&.
@@ -234,6 +234,11 @@ The ssh user\&. hb_report will try to login to other nodes without specifying a 
 \fB\-S\fR
 .RS 4
 Single node operation\&. Run hb_report only on this node and don\(cqt try to start slave collectors on other members of the cluster\&. Under normal circumstances this option is not needed\&. Use if ssh(1) does not work to other nodes\&.
+.RE
+.PP
+\fB\-v\fR
+.RS 4
+Increase verbosity\&. Normally used to debug unexpected behaviour\&.
 .RE
 .PP
 \fB\-h\fR

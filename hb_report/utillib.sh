@@ -25,8 +25,10 @@ get_cluster_type() {
 	if ps -ef | grep -qs '[a]isexec' ||
 			[ -f /etc/ais/openais.conf -a ! -f "$HA_CF" ]
 	then
+		debug "this is OpenAIS cluster stack"
 		echo "openais"
 	else
+		debug "this is Heartbeat cluster stack"
 		echo "heartbeat"
 	fi
 }
@@ -48,12 +50,15 @@ getnodes() {
 		echo $USER_NODES
 	# 2. running crm
 	elif iscrmrunning; then
+		debug "querying CRM for nodes"
 		get_crm_nodes
 	# 3. hostcache
 	elif [ -f $HA_VARLIB/hostcache ]; then
+		debug "reading nodes from $HA_VARLIB/hostcache"
 		awk '{print $1}' $HA_VARLIB/hostcache
 	# 4. ha.cf
 	elif [ "$CLUSTER_TYPE" = heartbeat ]; then
+		debug "reading nodes from ha.cf"
 		getcfvar node
 	fi
 }
@@ -80,9 +85,11 @@ findlogdcf() {
 	do
 		if [ -f "$f" ]; then
 			echo $f
+			debug "found logd.cf at $f"
 			return 0
 		fi
 	done
+	debug "no logd.cf"
 	return 1
 }
 #
@@ -101,16 +108,19 @@ syslogmsg() {
 #
 findmsg() {
 	# this is tricky, we try a few directories
-	syslogdir="/var/log /var/logs /var/syslog /var/adm /var/log/ha /var/log/cluster"
+	syslogdirs="/var/log /var/logs /var/syslog /var/adm /var/log/ha /var/log/cluster"
 	favourites="ha-*"
 	mark=$1
 	log=""
-	for d in $syslogdir; do
+	for d in $syslogdirs; do
 		[ -d $d ] || continue
 		log=`fgrep -l "$mark" $d/$favourites` && break
 		log=`fgrep -l "$mark" $d/*` && break
 	done 2>/dev/null
 	echo $log
+	[ "$log" ] &&
+		debug "found HA log at $log" ||
+		debug "no HA log found in $syslogdirs"
 }
 
 #
@@ -146,11 +156,13 @@ find_getstampproc() {
 		t=$(str2time `echo $l | getstamp_syslog`)
 		if [ "$t" ]; then
 			func="getstamp_syslog"
+			debug "the log file is in the syslog format"
 			break
 		fi
 		t=$(str2time `echo $l | getstamp_legacy`)
 		if [ "$t" ]; then
 			func="getstamp_legacy"
+			debug "the log file is in the legacy format (please consider switching to syslog format)"
 			break
 		fi
 		trycnt=$(($trycnt-1))
@@ -301,6 +313,7 @@ findbinary() {
 		grep 'Core was generated' | awk '{print $5}' |
 		sed "s/^.//;s/[.':]*$//"`
 	if [ x = x"$binary" ]; then
+		debug "could not detect the program name for core $1 from the gdb output; will try with file(1)"
 		binary=$(file $1 | awk '/from/{
 			for( i=1; i<=NF; i++ )
 				if( $i == "from" ) {
@@ -314,12 +327,21 @@ findbinary() {
 			binary=`which $binary 2>/dev/null`
 		fi
 	fi
-	[ x = x"$binary" ] && return
+	if [ x = x"$binary" ]; then
+		warning "could not find the program path for core $1"
+		return
+	fi
 	fullpath=`which $binary 2>/dev/null`
 	if [ x = x"$fullpath" ]; then
-		[ -x $HA_BIN/$binary ] && echo $HA_BIN/$binary
+		if [ -x $HA_BIN/$binary ]; then
+			echo $HA_BIN/$binary
+			debug "found the program at $HA_BIN/$binary for core $1"
+		else
+			warning "could not find the program path for core $1"
+		fi
 	else
 		echo $fullpath
+		debug "found the program at $fullpath for core $1"
 	fi
 }
 getbt() {
@@ -470,6 +492,10 @@ warning() {
 info() {
 	echo "`uname -n`: INFO: $*" >&2
 }
+debug() {
+	[ "$VERBOSITY" ] && [ $VERBOSITY -gt 0 ] &&
+	echo "`uname -n`: DEBUG: $*" >&2
+}
 pickfirst() {
 	for x; do
 		which $x >/dev/null 2>&1 && {
@@ -486,6 +512,7 @@ pickfirst() {
 distro() {
 	which lsb_release >/dev/null 2>&1 && {
 		lsb_release -d
+		debug "using lsb_release for distribution info"
 		return
 	}
 	relf=`ls /etc/debian_version 2>/dev/null` ||
@@ -494,6 +521,7 @@ distro() {
 		for f in $relf; do
 			test -f $f && {
 				echo "`ls $f` `cat $f`"
+				debug "found $relf distribution release file"
 				return
 			}
 		done
@@ -502,18 +530,19 @@ distro() {
 }
 
 pkg_ver() {
-        if which dpkg >/dev/null 2>&1 ; then
-                pkg_mgr="deb"
-        elif which rpm >/dev/null 2>&1 ; then
-                pkg_mgr="rpm"
-        elif which pkg_info >/dev/null 2>&1 ; then 
-                pkg_mgr="pkg_info"
-        elif which pkginfo >/dev/null 2>&1 ; then 
-                pkg_mgr="pkginfo"
-        else
-                echo "Unknown package manager!"
-                return
-        fi
+	if which dpkg >/dev/null 2>&1 ; then
+			pkg_mgr="deb"
+	elif which rpm >/dev/null 2>&1 ; then
+			pkg_mgr="rpm"
+	elif which pkg_info >/dev/null 2>&1 ; then 
+			pkg_mgr="pkg_info"
+	elif which pkginfo >/dev/null 2>&1 ; then 
+			pkg_mgr="pkginfo"
+	else
+			echo "Unknown package manager!"
+			return
+	fi
+	debug "the package manager is $pkg_mgr"
 
 	# for Linux .deb based systems
 	for pkg ; do

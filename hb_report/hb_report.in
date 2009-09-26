@@ -73,7 +73,7 @@ fi
 usage() {
 	cat<<EOF
 usage: hb_report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
-       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCA] dest
+       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCAv] dest
 
 	-f time: time to start from or a CTS test number
 	-t time: time to finish at (dflt: now)
@@ -96,6 +96,7 @@ usage: hb_report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
 	-A     : this is an OpenAIS cluster
 	-S     : single node operation; don't try to start report
 	         collectors on other nodes
+	-v     : increase verbosity
 	dest   : destination directory
 EOF
 
@@ -158,6 +159,7 @@ setvarsanddefaults() {
 	TRY_SSH="root hacluster"
 	SLAVEPIDS=""
 	NO_DESCRIPTION="1"
+	VERBOSITY=0
 }
 chkdirname() {
 	[ "$1" ] || usage short
@@ -185,6 +187,7 @@ time2str() {
 #
 logmark() {
 	logger -p $*
+	debug "run: logger -p $*"
 }
 #
 # a special stamp is logged through syslog on _all_ nodes
@@ -215,6 +218,7 @@ findlog() {
 		echo $logf
 	else
 		echo ${HA_DEBUGFILE:-$HA_LOGFILE}
+		debug "will try with ${HA_DEBUGFILE:-$HA_LOGFILE}"
 	fi
 }
 
@@ -309,15 +313,16 @@ print_logseg() {
 		tmp=`maketempfile`
 		$cat $logf > $tmp
 		trap drop_tmp_file 0
-		logf=$tmp
+		sourcef=$tmp
 	else
+		sourcef=$logf
 		tmp=""
 	fi
 
 	if [ "$from_time" = 0 ]; then
 		FROM_LINE=1
 	else
-		FROM_LINE=`findln_by_time $logf $from_time`
+		FROM_LINE=`findln_by_time $sourcef $from_time`
 	fi
 	if [ -z "$FROM_LINE" ]; then
 		warning "couldn't find line for time $from_time; corrupt log file?"
@@ -326,13 +331,14 @@ print_logseg() {
 
 	TO_LINE=""
 	if [ "$to_time" != 0 ]; then
-		TO_LINE=`findln_by_time $logf $to_time`
+		TO_LINE=`findln_by_time $sourcef $to_time`
 		if [ -z "$TO_LINE" ]; then
 			warning "couldn't find line for time $to_time; corrupt log file?"
 			return
 		fi
 	fi
-	dumplog $logf $FROM_LINE $TO_LINE
+	dumplog $sourcef $FROM_LINE $TO_LINE
+	debug "including segment [$FROM_LINE-$TO_LINE] from $logf"
 	drop_tmp_file
 	trap "" 0
 }
@@ -363,6 +369,7 @@ dumplogset() {
 		print_logseg $oldest $from_time 0
 		for f in $mid_logfiles; do
 			print_log $f
+			debug "including complete $f logfile"
 		done
 		print_logseg $newest 0 $to_time
 	;;
@@ -389,6 +396,7 @@ cts_findlogseg() {
 	[ "$TO_LINE" ] ||
 		TO_LINE=`wc -l < $logf`
 	TO_TIME=`linetime $logf $TO_LINE`
+	debug "including segment [$FROM_LINE-$TO_LINE] from $logf"
 }
 
 #
@@ -411,6 +419,7 @@ CONF="$CONF"
 B_CONF="$B_CONF"
 PACKAGES="$PACKAGES"
 CORES_DIRS="$CORES_DIRS"
+VERBOSITY="$VERBOSITY"
 EOF
 }
 start_remote_collectors() {
@@ -438,13 +447,17 @@ findsshuser() {
 		rc=0
 		failed_nodes=""
 		for n in $NODES; do
-			[ "$node" = "$WE" ] && continue
+			[ "$n" = "$WE" ] && continue
+			u_print=$u
+			[ "$u_print" ] || u_print=`id -un`
+			debug "test ssh user $u_print@$n"
 			testsshuser $n $u || {
 				rc=1
 				failed_nodes="$failed_nodes $n"
 			}
 		done
 		if [ $rc -eq 0 ]; then
+			debug "ssh user $u_print@$n OK"
 			echo $u
 			return 0
 		else
@@ -469,8 +482,10 @@ getbacktraces() {
 			test `expr match $bf core` -gt 0 &&
 				echo $f
 		done)
-	[ "$flist" ] &&
+	[ "$flist" ] && {
 		getbt $flist > $3
+		debug "found backtraces: $flist"
+	}
 }
 getpeinputs() {
 	for pe_dir in $HA_VARLIB/pengine `dirname $HA_VARLIB`/pengine
@@ -480,8 +495,10 @@ getpeinputs() {
 		flist=$(
 			find_files $pe_dir $1 $2 | sed "s,`dirname $pe_dir`/,,g"
 		)
-		[ "$flist" ] &&
+		[ "$flist" ] && {
 			(cd `dirname $pe_dir` && tar cf - $flist) | (cd $3 && tar xf -)
+			debug "found `echo $flist | wc -w` pengine input files in $pe_dir"
+		}
 	done
 }
 touch_DC_if_dc() {
@@ -806,7 +823,7 @@ fi
 if [ "$SLAVE" = "" ]; then
 	setvarsanddefaults
 	userargs="$@"
-	while getopts f:t:l:u:p:L:e:E:n:MSDCAh o; do
+	while getopts f:t:l:u:p:L:e:E:n:MSDCAvh o; do
 		case "$o" in
 			h) usage;;
 			f)
@@ -835,6 +852,7 @@ if [ "$SLAVE" = "" ]; then
 			M) EXTRA_LOGS="";;
 			E) EXTRA_LOGS="$EXTRA_LOGS $OPTARG";;
 			A) USER_CLUSTER_TYPE="openais";;
+			v) VERBOSITY=$((VERBOSITY + 1));;
 			[?]) usage short;;
 		esac
 	done
@@ -894,6 +912,7 @@ else
 fi
 
 getlogvars
+debug "log settings: facility=$HA_LOGFACILITY logfile=$HA_LOGFILE debugfile=$HA_DEBUGFILE"
 
 if [ "$SLAVE" -a "$3" = logmark ]; then
 	msg="$4"
@@ -904,6 +923,7 @@ fi
 WE=`uname -n`  # who am i?
 THIS_IS_NODE=""
 NODES=`getnodes`
+debug "nodes: `echo $NODES`"
 NODECNT=`echo $NODES | wc -w`
 if [ "$NODECNT" = 0 ]; then
 	fatal "could not figure out a list of nodes; is this a cluster node?"
