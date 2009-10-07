@@ -415,7 +415,7 @@ get_crm_nodes() {
 		for( i=1; i<=NF; i++ )
 			if( $i~/^uname=/ ) {
 				sub("uname=.","",$i);
-				sub(".$","",$i);
+				sub("\".*","",$i);
 				print $i;
 				next;
 			}
