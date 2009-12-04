@@ -24,19 +24,4 @@ hanoarchdir		= $(datadir)/heartbeat
 hanoarch_SCRIPTS	= utillib.sh ha_cf_support.sh \
 				openais_conf_support.sh combine-logs.pl
 sbin_SCRIPTS		= hb_report
-man_MANS		= hb_report.8
 
-STYLESHEET_PREFIX 	?= http://docbook.sourceforge.net/release/xsl/current
-MANPAGES_STYLESHEET 	?= $(STYLESHEET_PREFIX)/manpages/docbook.xsl
-HTML_STYLESHEET 	?= $(STYLESHEET_PREFIX)/xhtml/docbook.xsl
-FO_STYLESHEET 		?= $(STYLESHEET_PREFIX)/fo/docbook.xsl
-
-XSLTPROC_OPTIONS 	?= --xinclude
-XSLTPROC_MANPAGES_OPTIONS ?= $(XSLTPROC_OPTIONS)
-XSLTPROC_HTML_OPTIONS 	?= $(XSLTPROC_OPTIONS)
-XSLTPROC_FO_OPTIONS 	?= $(XSLTPROC_OPTIONS)
-
-%.5 %.8 %.1: %.xml
-	$(XSLTPROC) \
-	$(XSLTPROC_MANPAGES_OPTIONS) \
-	$(MANPAGES_STYLESHEET) $<
