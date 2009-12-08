@@ -17,8 +17,6 @@
  # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  #
 
-. /usr/lib/ocf/resource.d/heartbeat/.ocf-shellfuncs
-
 HA_NOARCHBIN=@datadir@/heartbeat
 
 . $HA_NOARCHBIN/utillib.sh
@@ -305,7 +303,7 @@ arch_logs() {
 # print part of the log
 #
 drop_tmp_file() {
-	[ -z "$tmp" ] || rmtempfile "$tmp"
+	[ -z "$tmp" ] || rm -f "$tmp"
 }
 print_log() {
 	local cat=`find_decompressor $1`
@@ -319,7 +317,7 @@ print_logseg() {
 	# uncompress to a temp file (if necessary)
 	local cat=`find_decompressor $logf`
 	if [ "$cat" != "cat" ]; then
-		tmp=`maketempfile`
+		tmp=`mktemp`
 		$cat $logf > $tmp
 		trap drop_tmp_file 0
 		sourcef=$tmp
@@ -625,8 +623,8 @@ checklogs() {
 	logs=$(find $1 -name $HALOG_F;
 		for l in $EXTRA_LOGS; do find $1/* -name `basename $l`; done)
 	[ "$logs" ] || return
-	trap '[ -z "$pattfile" ] || rmtempfile "$pattfile"]' 0
-	pattfile=`maketempfile` ||
+	trap '[ -z "$pattfile" ] || rm -f "$pattfile"' 0
+	pattfile=`mktemp` ||
 		fatal "cannot create temporary files"
 	for p in $LOG_PATTERNS; do
 		echo "$p"
@@ -636,7 +634,7 @@ checklogs() {
 	for n in $NODES; do
 		cat $logs | grep -f $pattfile
 	done
-	rmtempfile $pattfile
+	rm -f $pattfile
 	trap "" 0
 }
 

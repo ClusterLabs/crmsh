@@ -15,8 +15,6 @@
  # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  #
 
-# NB: This is not going to work unless you source /etc/ha.d/shellfuncs!
-
 #
 # figure out the cluster type, depending on the process list
 # and existence of configuration files
@@ -224,14 +222,14 @@ isnumber() {
 	echo "$*" | grep -qs '^[0-9][0-9]*$'
 }
 touchfile() {
-	t=`maketempfile` &&
+	t=`mktemp` &&
 	perl -e "\$file=\"$t\"; \$tm=$1;" -e 'utime $tm, $tm, $file;' &&
 	echo $t
 }
 find_files_clean() {
-	[ -z "$to_stamp" ] || rmtempfile "$to_stamp"
+	[ -z "$to_stamp" ] || rm -f "$to_stamp"
 	to_stamp=""
-	[ -z "$from_stamp" ] || rmtempfile "$from_stamp"
+	[ -z "$from_stamp" ] || rm -f "$from_stamp"
 	from_stamp=""
 }
 find_files() {
@@ -442,9 +440,9 @@ sanitize_hacf() {
 	'
 }
 sanitize_one_clean() {
-	[ -z "$tmp" ] || rmtempfile "$tmp"
+	[ -z "$tmp" ] || rm -f "$tmp"
 	tmp=""
-	[ -z "$ref" ] || rmtempfile "$ref"
+	[ -z "$ref" ] || rm -f "$ref"
 	ref=""
 }
 sanitize_one() {
@@ -459,8 +457,8 @@ sanitize_one() {
 		decompress=cat
 	fi
 	trap sanitize_one_clean 0
-	tmp=`maketempfile`
-	ref=`maketempfile`
+	tmp=`mktemp`
+	ref=`mktemp`
 	if [ -z "$tmp" -o -z "$ref" ]; then
 		sanitize_one_clean
 		fatal "cannot create temporary files"

@@ -15,8 +15,6 @@
  # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  #
 
-# NB: This is not going to work unless you source /etc/ha.d/shellfuncs!
-
 #
 # Stack specific part (heartbeat)
 # ha.cf/logd.cf parsing
