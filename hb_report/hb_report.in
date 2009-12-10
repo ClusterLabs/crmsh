@@ -903,6 +903,7 @@ drbd drbd-kmp-xen drbd-kmp-pae drbd-kmp-default drbd-kmp-debug drbd-kmp-trace
 lvm2 lvm2-clvm
 libdlm libdlm2
 kernel-default kernel-pae kernel-xen
+glibc
 "
 case "$CLUSTER_TYPE" in
 openais)
