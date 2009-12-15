@@ -17,7 +17,7 @@
  # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  #
 
-HA_NOARCHBIN=@datadir@/heartbeat
+HA_NOARCHBIN=@datadir@/$PACKAGE
 
 . $HA_NOARCHBIN/utillib.sh
 
