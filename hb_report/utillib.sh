@@ -20,8 +20,9 @@
 # and existence of configuration files
 #
 get_cluster_type() {
-	if ps -ef | grep -qs '[a]isexec' ||
-			[ -f /etc/ais/openais.conf -a ! -f "$HA_CF" ]
+	if ps -ef | egrep -qs '[a]isexec|[c]orosync' ||
+			[ -f /etc/ais/openais.conf -a ! -f "$HA_CF" ] ||
+			[ -f /etc/corosync/corosync.conf -a ! -f "$HA_CF" ]
 	then
 		debug "this is OpenAIS cluster stack"
 		echo "openais"

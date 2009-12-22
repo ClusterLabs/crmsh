@@ -897,8 +897,8 @@ fi
 # stack is used
 CORES_DIRS=$HA_VARLIB/cores
 PACKAGES="pacemaker libpacemaker3 pacemaker-pygui
-openais libopenais2 corosync libcorosync1
-resource-agents cluster-glue libglue1 ldirectord
+openais libopenais2 corosync libcorosync4
+resource-agents cluster-glue libglue2 ldirectord
 heartbeat heartbeat-common heartbeat-resources libheartbeat2
 ocfs2-tools ocfs2-tools-o2cb ocfs2-kmp-default ocfs2-kmp-pae ocfs2-kmp-xen ocfs2-kmp-debug ocfs2-kmp-trace
 drbd drbd-kmp-xen drbd-kmp-pae drbd-kmp-default drbd-kmp-debug drbd-kmp-trace
@@ -909,9 +909,14 @@ glibc
 "
 case "$CLUSTER_TYPE" in
 openais)
-	CONF=/etc/ais/openais.conf
+	CONF=/etc/corosync/corosync.conf # corosync?
+	if test -f $CONF; then
+		CORES_DIRS="$CORES_DIRS /var/lib/corosync"
+	else
+		CONF=/etc/ais/openais.conf
+		CORES_DIRS="$CORES_DIRS /var/lib/openais"
+	fi
 	CF_SUPPORT=$HA_NOARCHBIN/openais_conf_support.sh
-	CORES_DIRS="$CORES_DIRS /var/lib/openais"
 	MEMBERSHIP_TOOL_OPTS=""
 	unset HOSTCACHE HB_UUID_F
 	;;

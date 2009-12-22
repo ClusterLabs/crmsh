@@ -84,6 +84,9 @@ getlogvars() {
 }
 cluster_info() {
 	: echo "openais version: how?"
+	if [ "$CONF" = /etc/corosync/corosync.conf ]; then
+		/usr/sbin/corosync -v
+	fi
 }
 essential_files() {
 	cat<<EOF
