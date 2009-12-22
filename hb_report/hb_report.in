@@ -65,7 +65,7 @@ fi
 usage() {
 	cat<<EOF
 usage: hb_report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
-       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCAv] dest
+       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCAVv] dest
 
 	-f time: time to start from or a CTS test number
 	-t time: time to finish at (dflt: now)
@@ -89,6 +89,7 @@ usage: hb_report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
 	-S     : single node operation; don't try to start report
 	         collectors on other nodes
 	-v     : increase verbosity
+	-V     : print version
 	dest   : destination directory
 EOF
 
@@ -125,6 +126,10 @@ EOF
 	  specify -M.
 	  IT IS YOUR RESPONSIBILITY TO PROTECT THE DATA FROM EXPOSURE!
 EOF
+	exit
+}
+version() {
+	echo "@PACKAGE_NAME@: @PACKAGE_VERSION@ (@BUILD_VERSION@)"
 	exit
 }
 #
@@ -518,6 +523,7 @@ touch_DC_if_dc() {
 #
 sys_info() {
 	cluster_info
+	hb_report -V # our info
 	crm_info
 	pkg_ver $PACKAGES
 	echo "Platform: `uname`"
@@ -831,9 +837,10 @@ fi
 if [ "$SLAVE" = "" ]; then
 	setvarsanddefaults
 	userargs="$@"
-	while getopts f:t:l:u:p:L:e:E:n:MSDCAvh o; do
+	while getopts f:t:l:u:p:L:e:E:n:MSDCAVvh o; do
 		case "$o" in
 			h) usage;;
+			V) version;;
 			f)
 				if echo "$OPTARG" | grep -qs '^cts:'; then
 					FROM_TIME=0 # to be calculated later
