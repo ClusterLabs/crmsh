@@ -27,14 +27,6 @@ unset LANG
 export LC_ALL=POSIX
 
 PROG=`basename $0`
-# FIXME: once this is part of the package!
-PROGDIR=`dirname $0`
-echo "$PROGDIR" | grep -qs '^/' || {
-	test -f @sbindir@/$PROG &&
-		PROGDIR=@sbindir@
-	test -f $HA_NOARCHBIN/$PROG &&
-		PROGDIR=$HA_NOARCHBIN
-}
 
 # the default syslog facility is not (yet) exported by heartbeat
 # to shell scripts
@@ -202,7 +194,7 @@ logmark() {
 #
 logmarks() {
 	msg=$1
-	c="$PROGDIR/hb_report __slave $DESTDIR logmark $msg"
+	c="hb_report __slave $DESTDIR logmark $msg"
 
 	for n in $NODES; do
 		if [ "$n" = "`uname -n`" ]; then
@@ -436,7 +428,7 @@ start_remote_collectors() {
 	for node in $NODES; do
 		[ "$node" = "$WE" ] && continue
 		dumpenv | ssh $ssh_opts $node \
-			"cat > $DESTDIR/.env; $PROGDIR/hb_report __slave $DESTDIR" |
+			"cat > $DESTDIR/.env; hb_report __slave $DESTDIR" |
 			(cd $DESTDIR && tar xf -) &
 		SLAVEPIDS="$SLAVEPIDS $!"
 	done
