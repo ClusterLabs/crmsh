@@ -76,7 +76,7 @@ essential_files() {
 	cat<<EOF
 d $HA_VARLIB 0755 root root
 d $HA_VARLIB/ccm 0750 hacluster haclient
-d $HA_VARLIB/pengine 0750 hacluster haclient
+d `dirname $HA_VARLIB`/pengine 0750 hacluster haclient
 d $HA_VARLIB/crm 0750 hacluster haclient
 EOF
 }
