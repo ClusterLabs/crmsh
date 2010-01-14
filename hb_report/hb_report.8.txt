@@ -14,7 +14,7 @@ hb_report - create report for CRM based clusters (Pacemaker)
 SYNOPSIS
 --------
 *hb_report* -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
-       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCAv] dest
+       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCAVv] dest
 
 
 DESCRIPTION
@@ -93,6 +93,9 @@ dest::
 	don't try to start slave collectors on other members of the
 	cluster. Under normal circumstances this option is not
 	needed. Use if ssh(1) does not work to other nodes.
+
+*-V*::
+	Print the version including the last repository changeset.
 
 *-v*::
 	Increase verbosity. Normally used to debug unexpected
@@ -318,7 +321,7 @@ everybody.
 
 Files starting with "ha-" are preferred. In case syslog sends
 messages to more than one file, if one of them is named ha-log or
-ha-debug those will be favoured to syslog or messages.
+ha-debug those will be favoured over syslog or messages.
 
 hb_report supports also archived logs in case the period
 specified extends that far in the past. The archives must reside
@@ -328,14 +331,14 @@ messages-20090105.bz2).
 
 If there is no separate log for the cluster, possibly unrelated
 messages from other programs are included. We don't filter logs,
-just pick a segment for the period you specified.
+but just pick a segment for the period you specified.
 
 MANUAL REPORT COLLECTION
 ------------------------
 
 So, your ssh doesn't work. In that case, you will have to run
-this procedure on all nodes. Use `-S` so that we don't bother with
-ssh:
+this procedure on all nodes. Use `-S` so that `hb_report` doesn't
+bother with ssh:
 
 	# hb_report -f 5:20pm -t 5:30pm -S /tmp/report_node1
 
@@ -402,6 +405,9 @@ how weird the syslog configuration. It would be nice to ask
 syslog-ng developers to provide a way to find out the log
 destination based on facility and priority.
 
+If you think you found a bug, please rerun with the -v option and
+attach the output to bugzilla.
+
 hb_report can function in a satisfactory way only if ssh works to
 all nodes using authorized_keys (without password).
 
@@ -420,6 +426,8 @@ Pacemaker: <http://clusterlabs.org/>
 Heartbeat and other Linux HA resources: <http://linux-ha.org/>
 
 OpenAIS: <http://www.openais.org/>
+
+Corosync: <http://www.corosync.org/>
 
 
 SEE ALSO
