@@ -399,7 +399,7 @@ cts_findlogseg() {
 		FROM_TIME=`linetime $logf $FROM_LINE`
 	fi
 	TO_LINE=`grep -n "Running test.*\[ *$(($testnum+1))\]" $logf | tail -1 | sed 's/:.*//'`
-	[ "$TO_LINE" ] ||
+	[ "$TO_LINE" -a $FROM_LINE -lt $TO_LINE ] ||
 		TO_LINE=`wc -l < $logf`
 	TO_TIME=`linetime $logf $TO_LINE`
 	debug "including segment [$FROM_LINE-$TO_LINE] from $logf"
