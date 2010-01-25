@@ -896,14 +896,18 @@ fi
 # the very first thing we must figure out is which cluster
 # stack is used
 CORES_DIRS=$HA_VARLIB/cores
-PACKAGES="pacemaker libpacemaker3 pacemaker-pygui
-openais libopenais2 corosync libcorosync4
+PACKAGES="pacemaker libpacemaker3 
+pacemaker-pygui pacemaker-pymgmt pymgmt-client
+openais libopenais2 libopenais3 corosync libcorosync4
 resource-agents cluster-glue libglue2 ldirectord
 heartbeat heartbeat-common heartbeat-resources libheartbeat2
-ocfs2-tools ocfs2-tools-o2cb ocfs2-kmp-default ocfs2-kmp-pae ocfs2-kmp-xen ocfs2-kmp-debug ocfs2-kmp-trace
+ocfs2-tools ocfs2-tools-o2cb ocfs2console
+ocfs2-kmp-default ocfs2-kmp-pae ocfs2-kmp-xen ocfs2-kmp-debug ocfs2-kmp-trace
 drbd drbd-kmp-xen drbd-kmp-pae drbd-kmp-default drbd-kmp-debug drbd-kmp-trace
-lvm2 lvm2-clvm
-libdlm libdlm2
+drbd-heartbeat drbd-pacemaker drbd-utils drbd-bash-completion drbd-xen
+lvm2 lvm2-clvm cmirrord
+libdlm libdlm2 libdlm3
+hawk ruby lighttpd
 kernel-default kernel-pae kernel-xen
 glibc
 "
