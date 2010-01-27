@@ -497,6 +497,7 @@ getbacktraces() {
 	}
 }
 getpeinputs() {
+	debug "looking for PE files in $HA_VARLIB/pengine, `dirname $HA_VARLIB`/pengine"
 	for pe_dir in $HA_VARLIB/pengine `dirname $HA_VARLIB`/pengine
 	do
 		test -d $pe_dir ||
