@@ -423,7 +423,7 @@ RESOURCES
 ---------
 Pacemaker: <http://clusterlabs.org/>
 
-Heartbeat and other Linux HA resources: <http://linux-ha.org/>
+Heartbeat and other Linux HA resources: <http://linux-ha.org/wiki>
 
 OpenAIS: <http://www.openais.org/>
 
