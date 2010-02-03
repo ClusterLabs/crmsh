@@ -1,0 +1,57 @@
+%name ocfs2
+
+# ocfs2 filesystem (cloned)
+#
+# This template generates a cloned instance of the ocfs2 filesystem
+#
+# NB: You need only one dlm/o2cb/clvm, regardless of how many
+# filesystems. In other words, you can use this template only for
+# one filesystem and to make another one, you'll have to edit the
+# resulting configuration yourself.
+
+%required
+
+# Name the ocfs2 filesystem
+# (for example: bigfs)
+# NB: The clone is going to be named c-<id> (e.g. c-bigfs)
+
+%% id 
+
+# The mount point
+
+%% directory 
+
+# The device
+
+%% device 
+
+# optional parameters for the ocfs2 filesystem
+
+%optional
+
+# mount options
+
+%% options
+
+%generate
+
+primitive %_:id ocf:heartbeat:Filesystem
+	params
+		directory="%_:directory"
+		fstype="ocfs2"
+		device="%_:device"
+		opt options="%_:options"
+
+monitor %_:id 20:40
+
+clone c-%_:id %_:id
+	meta interleave="true" ordered="true"
+
+primitive dlm ocf:pacemaker:controld
+primitive clvm ocf:lvm2:clvmd
+primitive o2cb ocf:ocfs2:o2cb
+group o2stage dlm clvm o2cb
+clone c-o2stage basegroup meta interleave="true"
+
+colocation colo-%_:id-o2stage inf: c-%_:id c-o2stage
+order order-%_:id-o2stage 0: c-o2stage c-%_:id
