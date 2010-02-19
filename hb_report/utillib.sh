@@ -351,7 +351,7 @@ getbt() {
 	}
 	for corefile; do
 		absbinpath=`findbinary $corefile`
-		[ x = x"$absbinpath" ] && return 1
+		[ x = x"$absbinpath" ] && continue
 		echo "====================== start backtrace ======================"
 		ls -l $corefile
 		gdb -batch -n -quiet -ex ${BT_OPTS:-"thread apply all bt full"} -ex quit \
