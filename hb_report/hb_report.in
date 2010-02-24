@@ -175,7 +175,7 @@ destdir_inode_test() {
 		fatal "no root directory here, thank you"
 }
 chktime() {
-	[ "$1" ] || fatal "bad time specification: $2"
+	[ "$1" ] || fatal "bad time specification: $2 (try 'YYYY-M-D H:M:S') "
 }
 msgcleanup() {
 	fatal "destination directory $DESTDIR exists on $1, please cleanup"
