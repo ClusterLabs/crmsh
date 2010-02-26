@@ -350,7 +350,7 @@ class CibObjectSetRaw(CibObjectSet):
             return False
         obj = self.lookup(node.tagName,node.getAttribute("id"))
         if obj:
-            rc = obj.update_from_node(node) != False
+            rc = obj.update_from_node(node)
             self.remove_objs.remove(obj)
         else:
             new_obj = cib_factory.create_from_node(node)
@@ -635,6 +635,7 @@ class CibObject(object):
         self.xml_obj_type = xml_obj_type
         self.origin = "" # where did it originally come from?
         self.nocli = False # we don't support this one
+        self.nocli_warn = True # don't issue warnings all the time
         self.updated = False # was the object updated
         self.invalid = False # the object has been invalidated (removed)
         self.moved = False # the object has been moved (from/to a container)
@@ -654,6 +655,14 @@ class CibObject(object):
             (self.obj_id,self.origin,self.updated,self.moved,self.invalid, \
             self.parent and self.parent.obj_id or "", \
             len(self.children))
+    def repr_cli_xml(self,node,format):
+        h = cli_display.keyword("xml")
+        l = node.toprettyxml('\t').split('\n')
+        l = [x for x in l if x] # drop empty lines
+        if format > 0:
+            return "%s %s" % (h,' \\\n'.join(l))
+        else:
+            return "%s %s" % (h,''.join(l))
     def repr_cli(self,node = None,format = 1):
         '''
         CLI representation for the node.
@@ -661,6 +670,8 @@ class CibObject(object):
         '''
         if not node:
             node = self.node
+        if self.nocli:
+            return self.repr_cli_xml(node,format)
         l = []
         l.append(self.repr_cli_head(node))
         cli_add_description(node,l)
@@ -722,9 +733,6 @@ class CibObject(object):
             if not l[i].startswith('#'):
                 l[i] = '#%s' % l[i]
         self.comment = '\n'.join(l)
-    def save_xml(self,node):
-        self.obj_id = node.getAttribute("id")
-        self.node = node
     def mknode(self,obj_id):
         if not cib_factory.is_cib_sane():
             return False
@@ -835,51 +843,41 @@ class CibObject(object):
                     child.node = c
     def update_from_cli(self,cli_list):
         'Update ourselves from the cli intermediate.'
+        if len(cli_list) >= 2 and cli_list[1][0] == "raw":
+            doc = xml.dom.minidom.parseString(cli_list[1][1])
+            return self.update_element(doc.childNodes[0])
+        return self.update_element(self.cli2node(cli_list))
+    def update_from_node(self,node):
+        'Update ourselves from a doc node.'
+        return self.update_element(node)
+    def update_element(self,newnode):
+        'Update ourselves from a doc node.'
+        if not newnode:
+            return False
         if not cib_factory.is_cib_sane():
             return False
-        if not cib_factory.verify_cli(cli_list):
-            return False
         oldnode = self.node
-        id_store.remove_xml(oldnode)
-        newnode = self.cli2node(cli_list)
-        if not newnode:
-            id_store.store_xml(oldnode)
-            return False
         if xml_cmp(oldnode,newnode):
             newnode.unlink()
             return True # the new and the old versions are equal
-        self.node = newnode
-        if user_prefs.is_check_always() \
-                and self.check_sanity() > 1:
-            id_store.remove_xml(newnode)
-            id_store.store_xml(oldnode)
-            self.node = oldnode
+        obj.node = node
+        if not cib_factory.test_element(self,newnode) or \
+                not id_store.replace_xml(oldnode,newnode):
+            obj.node = oldnode
             newnode.unlink()
             return False
-        oldnode.parentNode.replaceChild(newnode,oldnode)
-        cib_factory.adjust_children(self,cli_list)
+        self.node = cib_factory.replaceNode(newnode,oldnode)
+        self.nocli = False # try again after update
+        if not self.cli_use_validate():
+            self.nocli = True
+            self.nocli_warn = True
+        else:
+            self.nocli = False
+        cib_factory.adjust_children(self)
         oldnode.unlink()
         self.updated = True
         self.propagate_updated()
         return True
-    def update_from_node(self,node):
-        'Update ourselves from a doc node.'
-        if not node:
-            return False
-        if not cib_factory.is_cib_sane():
-            return False
-        oldxml = self.node
-        newxml = node
-        if xml_cmp(oldxml,newxml):
-            return True # the new and the old versions are equal
-        if not id_store.replace_xml(oldxml,newxml):
-            return False
-        oldxml.unlink()
-        self.node = cib_factory.doc.importNode(newxml,1)
-        cib_factory.topnode[self.parent_type].appendChild(self.node)
-        self.update_links()
-        self.updated = True
-        self.propagate_updated()
     def top_parent(self):
         '''Return the top parent or self'''
         if self.parent:
@@ -1329,6 +1327,14 @@ class CibFactory(Singleton):
             return self.doc.createComment(s)
         else:
             empty_cib_err()
+    def replaceNode(self,newnode,oldnode):
+        if not self.doc:
+            empty_cib_err()
+            return None
+        if newnode.ownerDocument != self.doc:
+            newnode = self.doc.importNode(newnode,1)
+        oldnode.parentNode.replaceChild(newnode,oldnode)
+        return newnode
     def is_cib_supported(self,cib):
         'Do we support this CIB?'
         req = cib.getAttribute("crm_feature_set")
@@ -1666,8 +1672,9 @@ class CibFactory(Singleton):
             pnode = node
         obj = cib_object_map[pnode.tagName][1](pnode.tagName)
         obj.origin = "cib"
+        obj.obj_id = node.getAttribute("id")
+        obj.node = node
         self.cib_objects.append(obj)
-        obj.save_xml(node)
     def populate(self):
         "Walk the cib and collect cib objects."
         all_nodes = get_interesting_nodes(self.doc,[])
@@ -1686,6 +1693,8 @@ class CibFactory(Singleton):
         for obj in self.cib_objects:
             if not obj.cli_use_validate():
                 obj.nocli = True
+                obj.nocli_warn = False
+                obj_cli_warn(obj.obj_id)
         for obj in self.cib_objects:
             obj.update_links()
     def initialize(self):
@@ -1810,26 +1819,25 @@ class CibFactory(Singleton):
             f = lambda: obj.filter(*args)
             if not f():
                 continue
-            if mode == "cli" and obj.nocli:
-                obj_cli_err(obj.obj_id)
-                continue
+            if mode == "cli" and obj.nocli and obj.nocli_warn:
+                obj.nocli_warn = False
+                obj_cli_warn(obj.obj_id)
             obj_list.append(obj)
         return obj_list
     def has_cib_changed(self):
         return self.mkobj_list("xml","changed") or self.remove_queue
-    def verify_constraints(self,cli_list):
+    def verify_constraints(self,node):
         '''
         Check if all resources referenced in a constraint exist
         '''
         rc = True
-        head = cli_list[0]
-        constraint_id = find_value(head[1],"id")
-        for obj_id in referenced_resources_cli(cli_list):
+        constraint_id = node.getAttribute("id")
+        for obj_id in referenced_resources(node):
             if not self.find_object(obj_id):
                 constraint_norefobj_err(constraint_id,obj_id)
                 rc = False
         return rc
-    def verify_children(self,cli_list):
+    def verify_rsc_children(self,node):
         '''
         Check prerequisites:
           a) all children must exist
@@ -1837,10 +1845,16 @@ class CibFactory(Singleton):
           (or should we steal children?)
           c) there may not be duplicate children
         '''
-        head = cli_list[0]
-        obj_type = head[0]
-        obj_id = find_value(head[1],"id")
-        c_ids = find_value(head[1],"$children")
+        obj_id = node.getAttribute("id")
+        if not obj_id:
+            common_err("element %s has no id" % node.tagName)
+            return False
+        try:
+            obj_type = cib_object_map[node.tagName][0]
+        except:
+            common_err("element %s (%s) not recognized"%(node.tagName,obj_id))
+            return False
+        c_ids = get_rsc_children_ids(node)
         if not c_ids:
             return True
         rc = True
@@ -1869,7 +1883,7 @@ class CibFactory(Singleton):
             common_err("%s may contain a primitive or a group; %s is %s"%(obj_type,child_id,child.obj_type))
             return False
         return True
-    def verify_cli(self,cli_list):
+    def verify_element(self,node):
         '''
         Can we create this object given its CLI representation.
         This is not about syntax, we're past that, but about
@@ -1879,9 +1893,9 @@ class CibFactory(Singleton):
         referenced resources are present.
         '''
         rc = True
-        if not self.verify_children(cli_list):
+        if not self.verify_rsc_children(node):
             rc = False
-        if not self.verify_constraints(cli_list):
+        if not self.verify_constraints(node):
             rc = False
         return rc
     def create_object(self,*args):
@@ -1948,42 +1962,32 @@ class CibFactory(Singleton):
         cli_list = mk_cli_list(cli)
         if not cli_list:
             return None
-        if not self.verify_cli(cli_list):
-            return None
         head = cli_list[0]
         obj_type = head[0].lower()
+        obj_id = find_value(head[1],"id")
+        if obj_id and not is_id_valid(obj_id):
+            invalid_id_err(obj_id)
+            return None
+        if len(cli_list) >= 2 and cli_list[1][0] == "raw":
+            doc = xml.dom.minidom.parseString(cli_list[1][1])
+            return self.create_from_node(doc.childNodes[0])
         if obj_type in olist(vars.nvset_cli_names):
             return self.set_property_cli(cli_list)
         if obj_type == "op":
             return self.add_op(cli_list)
-        obj_id = find_value(head[1],"id")
-        if not is_id_valid(obj_id):
-            invalid_id_err(obj_id)
-            return None
         obj = self.new_object(obj_type,obj_id)
         if not obj:
             return None
-        obj.node = obj.cli2node(cli_list)
-        if user_prefs.is_check_always() \
-                and obj.check_sanity() > 1:
-            id_store.remove_xml(obj.node)
-            obj.node.unlink()
+        node = obj.cli2node(cli_list)
+        obj.node = node
+        obj.obj_id = obj_id
+        if not node:
             return None
-        self.topnode[obj.parent_type].appendChild(obj.node)
-        self.adjust_children(obj,cli_list)
-        obj.origin = "user"
-        for child in obj.children:
-            # redirect constraints to the new parent
-            for c_obj in self.related_constraints(child):
-                self.remove_queue.append(c_obj.mkcopy())
-                rename_rscref(c_obj,child.obj_id,obj.obj_id)
-        # drop useless constraints which may have been created above
-        for c_obj in self.related_constraints(obj):
-            if silly_constraint(c_obj.node,obj.obj_id):
-                self._no_constraint_rm_msg = True
-                self._remove_obj(c_obj)
-                self._no_constraint_rm_msg = False
-        self.cib_objects.append(obj)
+        if not self.test_element(obj, node):
+            id_store.remove_xml(node)
+            node.unlink()
+            return None
+        self.add_element(obj, node)
         return obj
     def update_moved(self,obj):
         'Updated the moved flag. Mark affected constraints.'
@@ -1991,23 +1995,20 @@ class CibFactory(Singleton):
         if obj.moved:
             for c_obj in self.related_constraints(obj):
                 c_obj.recreate = True
-    def adjust_children(self,obj,cli_list):
+    def adjust_children(self,obj):
         '''
         All stuff children related: manage the nodes of children,
         update the list of children for the parent, update
         parents in the children.
         '''
-        head = cli_list[0]
-        children_ids = find_value(head[1],"$children")
-        if not children_ids:
+        new_children_ids = get_rsc_children_ids(obj.node)
+        if not new_children_ids:
             return
-        new_children = []
-        for child_id in children_ids:
-            new_children.append(self.find_object(child_id))
-        self._relink_orphans(obj,new_children)
-        obj.children = new_children
+        old_children = obj.children
+        obj.children = [self.find_object(x) for x in new_children_ids]
+        self._relink_orphans_to_top(old_children,obj.children)
         self._update_children(obj)
-    def _relink_child(self,obj):
+    def _relink_child_to_top(self,obj):
         'Relink a child to the top node.'
         obj.node.parentNode.removeChild(obj.node)
         self.topnode[obj.parent_type].appendChild(obj.node)
@@ -2029,38 +2030,58 @@ class CibFactory(Singleton):
             if child.parent and child.parent != obj:
                 child.parent.updated = True # the other parent updated
             child.parent = obj
-    def _relink_orphans(self,obj,new_children):
+    def _relink_orphans_to_top(self,old_children,new_children):
         "New orphans move to the top level for the object type."
-        for child in obj.children:
+        for child in old_children:
             if child not in new_children:
-                self._relink_child(child)
-    def add_obj(self,obj_type,node):
-        obj = self.new_object(obj_type, node.getAttribute("id"))
-        if not obj:
-            return None
-        obj.save_xml(node)
+                self._relink_child_to_top(child)
+    def test_element(self,obj,node):
+        if not node.getAttribute("id"):
+            return False
+        if not self.verify_element(node):
+            return False
+        if user_prefs.is_check_always() \
+                and obj.check_sanity() > 1:
+            return False
+        return True
+    def add_element(self,obj,node):
+        common_debug("append child %s to %s" % \
+            (obj.obj_id,self.topnode[obj.parent_type].tagName))
+        self.topnode[obj.parent_type].appendChild(node)
+        self.adjust_children(obj)
+        self.redirect_children_constraints(obj)
         if not obj.cli_use_validate():
+            self.nocli_warn = True
             obj.nocli = True
         obj.update_links()
         obj.origin = "user"
         self.cib_objects.append(obj)
-        return obj
     def create_from_node(self,node):
         'Create a new cib object from a document node.'
         if not node:
             return None
-        obj_type = cib_object_map[node.tagName][0]
-        node = self.doc.importNode(node,1)
-        obj = None
+        try:
+            obj_type = cib_object_map[node.tagName][0]
+        except:
+            return None
         if is_defaults(node):
-            for c in node.childNodes:
-                if not is_element(c) or c.tagName != "meta_attributes":
-                    continue
-                obj = self.add_obj(obj_type,c)
-        else:
-            obj = self.add_obj(obj_type,node)
-        if obj:
-            self.topnode[obj.parent_type].appendChild(node)
+            node = get_rscop_defaults_meta_node(node)
+            if not node:
+                return None
+        if node.ownerDocument != self.doc:
+            node = self.doc.importNode(node,1)
+        obj = self.new_object(obj_type, node.getAttribute("id"))
+        if not obj:
+            return None
+        if not id_store.store_xml(node):
+            return None
+        obj.node = node
+        obj.obj_id = node.getAttribute("id")
+        if not self.test_element(obj, node):
+            id_store.remove_xml(node)
+            node.unlink()
+            return None
+        self.add_element(obj, node)
         return obj
     def cib_objects_string(self, obj_list = None):
         l = []
@@ -2077,7 +2098,7 @@ class CibFactory(Singleton):
         for child in obj.children:
             #self._remove_obj(child)
             # just relink, don't remove children
-            self._relink_child(child)
+            self._relink_child_to_top(child)
         if obj.parent: # remove obj from its parent, if any
             obj.parent.children.remove(obj)
         id_store.remove_xml(obj.node)
@@ -2105,6 +2126,20 @@ class CibFactory(Singleton):
             if rsc_constraint(obj.obj_id,obj2.node):
                 c_list.append(obj2)
         return c_list
+    def redirect_children_constraints(self,obj):
+        '''
+        Redirect constraints to the new parent
+        '''
+        for child in obj.children:
+            for c_obj in self.related_constraints(child):
+                self.remove_queue.append(c_obj.mkcopy())
+                rename_rscref(c_obj,child.obj_id,obj.obj_id)
+        # drop useless constraints which may have been created above
+        for c_obj in self.related_constraints(obj):
+            if silly_constraint(c_obj.node,obj.obj_id):
+                self._no_constraint_rm_msg = True
+                self._remove_obj(c_obj)
+                self._no_constraint_rm_msg = False
     def add_to_remove_queue(self,obj):
         if obj.origin == "cib":
             self.remove_queue.append(obj)
