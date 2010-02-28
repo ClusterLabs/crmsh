@@ -389,8 +389,14 @@ dumplogset() {
 # TO_TIME
 #
 cts_findlogseg() {
-	testnum=$2
-	logf=`findmsg "Running test.*\[ *$testnum\]" | awk '{print $1}'`
+    
+	testnum=$1
+	logf=$2
+	if [ "x$logf" = "x" ]; then
+	    logf=`findmsg "Running test.*\[ *$testnum\]" | awk '{print $1}'`
+	fi
+	getstampproc=`find_getstampproc < $logf`
+	export getstampproc # used by linetime
 
 	FROM_LINE=`grep -n "Running test.*\[ *$testnum\]" $logf | tail -1 | sed 's/:.*//'`
 	if [ -z "$FROM_LINE" ]; then
@@ -404,6 +410,7 @@ cts_findlogseg() {
 		TO_LINE=`wc -l < $logf`
 	TO_TIME=`linetime $logf $TO_LINE`
 	debug "including segment [$FROM_LINE-$TO_LINE] from $logf"
+	dumplog $logf $FROM_LINE $TO_LINE
 }
 
 #
@@ -843,7 +850,7 @@ if [ "$SLAVE" = "" ]; then
 	setvarsanddefaults
 	userargs="$@"
 	DESTDIR="$HOME/hb_report-"`date +"%a-%d-%b-%Y"`
-	while getopts f:t:l:u:p:L:e:E:n:MSDCAVvhd o; do
+	while getopts f:t:l:u:p:L:e:E:n:MSDCAVvhdx o; do
 		case "$o" in
 			h) usage;;
 			V) version;;
@@ -876,6 +883,7 @@ if [ "$SLAVE" = "" ]; then
 			A) USER_CLUSTER_TYPE="openais";;
 			v) VERBOSITY=$((VERBOSITY + 1));;
 			d) COMPRESS="0"; REMOVE_DEST="0";;
+			x) set -x;;
 			[?]) usage short;;
 		esac
 	done
@@ -1070,29 +1078,30 @@ if [ "$cnt" ] && [ $cnt -eq $NODECNT ]; then
 	info "found the central log!"
 fi
 
+if [ "$THIS_IS_NODE" ]; then
+    outf=$DESTDIR/$WE/$HALOG_F
+else
+    outf=$DESTDIR/$HALOG_F # we are log server, probably
+fi
 if [ -f "$HA_LOG" ]; then
 	if [ "$NO_str2time" ]; then
 		warning "a log found; but we cannot slice it"
 		warning "please install the perl Date::Parse module"
+	elif [ "$CTS" ]; then
+	    cts_findlogseg $CTS $HA_LOG > $outf
+
 	else
 		getstampproc=`find_getstampproc < $HA_LOG`
 		if [ "$getstampproc" ]; then
 			export getstampproc # used by linetime
-			if [ "$THIS_IS_NODE" ]; then
-				outf=$DESTDIR/$WE/$HALOG_F
-			else
-				outf=$DESTDIR/$HALOG_F # we are log server, probably
-			fi
-			if [ "$CTS" ]; then
-				cts_findlogseg $HA_LOG $CTS
-				dumplog $HA_LOG $FROM_LINE $TO_LINE
-			else
-				dumplogset $HA_LOG $FROM_TIME $TO_TIME
-			fi > $outf
+			dumplogset $HA_LOG $FROM_TIME $TO_TIME > $outf
 		else
 			warning "could not figure out the log format of $HA_LOG"
 		fi
 	fi
+elif [ "$CTS" ]; then
+    cts_findlogseg $CTS > $outf
+
 else
 	[ "$MASTER_IS_HOSTLOG" ] ||
 		warning "could not find $HA_LOG on $WE"
