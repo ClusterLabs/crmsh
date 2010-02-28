@@ -114,12 +114,12 @@ findmsg() {
 	log=""
 	for d in $syslogdirs; do
 		[ -d $d ] || continue
-		log=`fgrep -l "$mark" $d/$favourites` && break
-		log=`fgrep -l "$mark" $d/*` && break
+		log=`grep -l -e "$mark" $d/$favourites` && break
+		log=`grep -l -e "$mark" $d/*` && break
 	done 2>/dev/null
-	echo $log
+	ls -t $log | tr '\n' ' '
 	[ "$log" ] &&
-		debug "found HA log at `echo $log`" ||
+		debug "found HA log at `ls -t $log | tr '\n' ' '`" ||
 		debug "no HA log found in $syslogdirs"
 }
 

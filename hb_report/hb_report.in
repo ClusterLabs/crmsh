@@ -146,6 +146,7 @@ setvarsanddefaults() {
 	UNIQUE_MSG="Mark:HB_REPORT:$now"
 	SANITIZE="passw.*"
 	REMOVE_DEST="1"
+	COMPRESS="1"
 	# logs to collect in addition
 	# NB: they all have to be in syslog format
 	#
@@ -388,13 +389,13 @@ dumplogset() {
 # TO_TIME
 #
 cts_findlogseg() {
-	logf=$1
 	testnum=$2
+	logf=`findmsg "Running test.*\[ *$testnum\]" | awk '{print $1}'`
 
 	FROM_LINE=`grep -n "Running test.*\[ *$testnum\]" $logf | tail -1 | sed 's/:.*//'`
 	if [ -z "$FROM_LINE" ]; then
 		warning "couldn't find line for CTS test $testnum; corrupt log file?"
-		return
+		exit 1
 	else
 		FROM_TIME=`linetime $logf $FROM_LINE`
 	fi
@@ -813,11 +814,13 @@ pickcompress() {
 	fi
 }
 finalword() {
-	cat<<EOF
-The report is saved in $DESTDIR.tar$COMPRESS_EXT 
-
-Thank you for taking time to create this report.
-EOF
+    if [ "$COMPRESS" = "1" ]; then
+	echo "The report is saved in $DESTDIR.tar$COMPRESS_EXT"
+    else
+	echo "The report is saved in $DESTDIR"
+    fi
+    echo " "
+    echo "Thank you for taking time to create this report."
 }
 
 [ $# -eq 0 ] && usage
@@ -839,7 +842,8 @@ fi
 if [ "$SLAVE" = "" ]; then
 	setvarsanddefaults
 	userargs="$@"
-	while getopts f:t:l:u:p:L:e:E:n:MSDCAVvh o; do
+	DESTDIR="$HOME/hb_report-"`date +"%a-%d-%b-%Y"`
+	while getopts f:t:l:u:p:L:e:E:n:MSDCAVvhd o; do
 		case "$o" in
 			h) usage;;
 			V) version;;
@@ -847,6 +851,7 @@ if [ "$SLAVE" = "" ]; then
 				if echo "$OPTARG" | grep -qs '^cts:'; then
 					FROM_TIME=0 # to be calculated later
 					CTS=`echo "$OPTARG" | sed 's/cts://'`
+					DESTDIR="$HOME/cts-$CTS-"`date +"%a-%d-%b-%Y"`
 				else
 					FROM_TIME=`str2time "$OPTARG"`
 					chktime "$FROM_TIME" "$OPTARG"
@@ -870,12 +875,14 @@ if [ "$SLAVE" = "" ]; then
 			E) EXTRA_LOGS="$EXTRA_LOGS $OPTARG";;
 			A) USER_CLUSTER_TYPE="openais";;
 			v) VERBOSITY=$((VERBOSITY + 1));;
+			d) COMPRESS="0"; REMOVE_DEST="0";;
 			[?]) usage short;;
 		esac
 	done
 	shift $(($OPTIND-1))
-	[ $# -ne 1 ] && usage short
-	DESTDIR=`echo $1 | sed 's,/*$,,'`
+	if [ $# -gt 1 ]; then
+	    DESTDIR=`echo $1 | sed 's,/*$,,'`
+	fi
 	chkdirname $DESTDIR
 	destdir_inode_test $DESTDIR
 	[ "$FROM_TIME" ] || usage short
@@ -939,8 +946,16 @@ else
 	fatal "no stack specific support: $CF_SUPPORT"
 fi
 
-getlogvars
-debug "log settings: facility=$HA_LOGFACILITY logfile=$HA_LOGFILE debugfile=$HA_DEBUGFILE"
+if [ "x$CTS" = "x" -o "x$SLAVE" != "x" ]; then
+    getlogvars
+    debug "log settings: facility=$HA_LOGFACILITY logfile=$HA_LOGFILE debugfile=$HA_DEBUGFILE"
+
+elif [ "x$SLAVE" = "x" ]; then
+    ctslog=`findmsg "CTS: Stack:" | awk '{print $1}'`
+    debug "Using CTS control file: $ctslog"
+    USER_NODES=`grep CTS: $ctslog | grep -v debug: | grep " \* " | sed s:.*\\\*::g | sort -u  | tr '\\n' ' '`
+    NODES_SOURCE=user
+fi
 
 if [ "$SLAVE" -a "$3" = logmark ]; then
 	msg="$4"
@@ -1080,7 +1095,7 @@ if [ -f "$HA_LOG" ]; then
 	fi
 else
 	[ "$MASTER_IS_HOSTLOG" ] ||
-		warning "could not find the log file on $WE"
+		warning "could not find $HA_LOG on $WE"
 fi
 
 #
@@ -1149,10 +1164,12 @@ else
 	test -f $DESTDIR/$HALOG_F ||
 		combine_logs $DESTDIR
 	cd $DESTDIR/..
-	pickcompress
-	tar cf - `basename $DESTDIR` | $COMPRESS > $DESTDIR.tar$COMPRESS_EXT
+	if [ "$COMPRESS" = "1" ]; then
+	    pickcompress
+	    tar cf - `basename $DESTDIR` | $COMPRESS > $DESTDIR.tar$COMPRESS_EXT
+	fi
 	finalword
 fi
 
-[ "$REMOVE_DEST" ] &&
+[ "$REMOVE_DEST" = "1" ] &&
 	rm -r $DESTDIR
