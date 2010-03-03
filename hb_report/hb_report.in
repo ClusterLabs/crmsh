@@ -389,11 +389,10 @@ dumplogset() {
 # TO_TIME
 #
 cts_findlogseg() {
-    
 	testnum=$1
 	logf=$2
 	if [ "x$logf" = "x" ]; then
-	    logf=`findmsg "Running test.*\[ *$testnum\]" | awk '{print $1}'`
+		logf=`findmsg "Running test.*\[ *$testnum\]" | awk '{print $1}'`
 	fi
 	getstampproc=`find_getstampproc < $logf`
 	export getstampproc # used by linetime
@@ -821,13 +820,13 @@ pickcompress() {
 	fi
 }
 finalword() {
-    if [ "$COMPRESS" = "1" ]; then
-	echo "The report is saved in $DESTDIR.tar$COMPRESS_EXT"
-    else
-	echo "The report is saved in $DESTDIR"
-    fi
-    echo " "
-    echo "Thank you for taking time to create this report."
+	if [ "$COMPRESS" = "1" ]; then
+		echo "The report is saved in $DESTDIR.tar$COMPRESS_EXT"
+	else
+		echo "The report is saved in $DESTDIR"
+	fi
+	echo " "
+	echo "Thank you for taking time to create this report."
 }
 
 [ $# -eq 0 ] && usage
@@ -865,7 +864,7 @@ if [ "$SLAVE" = "" ]; then
 				fi
 			;;
 			t) TO_TIME=`str2time "$OPTARG"`
-			    chktime "$TO_TIME" "$OPTARG"
+				chktime "$TO_TIME" "$OPTARG"
 			;;
 			n) NODES_SOURCE=user
 				USER_NODES="$USER_NODES $OPTARG"
@@ -889,7 +888,7 @@ if [ "$SLAVE" = "" ]; then
 	done
 	shift $(($OPTIND-1))
 	if [ $# -gt 1 ]; then
-	    DESTDIR=`echo $1 | sed 's,/*$,,'`
+		DESTDIR=`echo $1 | sed 's,/*$,,'`
 	fi
 	chkdirname $DESTDIR
 	destdir_inode_test $DESTDIR
@@ -955,14 +954,13 @@ else
 fi
 
 if [ "x$CTS" = "x" -o "x$SLAVE" != "x" ]; then
-    getlogvars
-    debug "log settings: facility=$HA_LOGFACILITY logfile=$HA_LOGFILE debugfile=$HA_DEBUGFILE"
-
+	getlogvars
+	debug "log settings: facility=$HA_LOGFACILITY logfile=$HA_LOGFILE debugfile=$HA_DEBUGFILE"
 elif [ "x$SLAVE" = "x" ]; then
-    ctslog=`findmsg "CTS: Stack:" | awk '{print $1}'`
-    debug "Using CTS control file: $ctslog"
-    USER_NODES=`grep CTS: $ctslog | grep -v debug: | grep " \* " | sed s:.*\\\*::g | sort -u  | tr '\\n' ' '`
-    NODES_SOURCE=user
+	ctslog=`findmsg "CTS: Stack:" | awk '{print $1}'`
+	debug "Using CTS control file: $ctslog"
+	USER_NODES=`grep CTS: $ctslog | grep -v debug: | grep " \* " | sed s:.*\\\*::g | sort -u  | tr '\\n' ' '`
+	NODES_SOURCE=user
 fi
 
 if [ "$SLAVE" -a "$3" = logmark ]; then
@@ -1079,17 +1077,16 @@ if [ "$cnt" ] && [ $cnt -eq $NODECNT ]; then
 fi
 
 if [ "$THIS_IS_NODE" ]; then
-    outf=$DESTDIR/$WE/$HALOG_F
+	outf=$DESTDIR/$WE/$HALOG_F
 else
-    outf=$DESTDIR/$HALOG_F # we are log server, probably
+	outf=$DESTDIR/$HALOG_F # we are log server, probably
 fi
 if [ -f "$HA_LOG" ]; then
 	if [ "$NO_str2time" ]; then
 		warning "a log found; but we cannot slice it"
 		warning "please install the perl Date::Parse module"
 	elif [ "$CTS" ]; then
-	    cts_findlogseg $CTS $HA_LOG > $outf
-
+		cts_findlogseg $CTS $HA_LOG > $outf
 	else
 		getstampproc=`find_getstampproc < $HA_LOG`
 		if [ "$getstampproc" ]; then
@@ -1100,8 +1097,7 @@ if [ -f "$HA_LOG" ]; then
 		fi
 	fi
 elif [ "$CTS" ]; then
-    cts_findlogseg $CTS > $outf
-
+	cts_findlogseg $CTS > $outf
 else
 	[ "$MASTER_IS_HOSTLOG" ] ||
 		warning "could not find $HA_LOG on $WE"
@@ -1174,8 +1170,8 @@ else
 		combine_logs $DESTDIR
 	cd $DESTDIR/..
 	if [ "$COMPRESS" = "1" ]; then
-	    pickcompress
-	    tar cf - `basename $DESTDIR` | $COMPRESS > $DESTDIR.tar$COMPRESS_EXT
+		pickcompress
+		tar cf - `basename $DESTDIR` | $COMPRESS > $DESTDIR.tar$COMPRESS_EXT
 	fi
 	finalword
 fi
