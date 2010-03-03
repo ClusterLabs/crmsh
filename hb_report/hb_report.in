@@ -849,7 +849,7 @@ if [ "$SLAVE" = "" ]; then
 	setvarsanddefaults
 	userargs="$@"
 	DESTDIR="$HOME/hb_report-"`date +"%a-%d-%b-%Y"`
-	while getopts f:t:l:u:p:L:e:E:n:MSDCAVvhdx o; do
+	while getopts f:t:l:u:p:L:e:E:n:MSDCAVvhd o; do
 		case "$o" in
 			h) usage;;
 			V) version;;
@@ -882,7 +882,6 @@ if [ "$SLAVE" = "" ]; then
 			A) USER_CLUSTER_TYPE="openais";;
 			v) VERBOSITY=$((VERBOSITY + 1));;
 			d) COMPRESS="0"; REMOVE_DEST="0";;
-			x) set -x;;
 			[?]) usage short;;
 		esac
 	done
@@ -899,6 +898,8 @@ else
 	[ -d $DESTDIR ] || nodistdirectory
 	. $DESTDIR/.env
 fi
+
+[ $VERBOSITY -gt 1 ] && set -x
 
 # allow user to enforce the cluster type
 # if not, then it is found out on _all_ nodes
