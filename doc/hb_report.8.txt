@@ -14,7 +14,7 @@ hb_report - create report for CRM based clusters (Pacemaker)
 SYNOPSIS
 --------
 *hb_report* -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
-       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCAVv] dest
+       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCAVdv] [dest]
 
 
 DESCRIPTION
@@ -30,7 +30,13 @@ dest::
 	The destination directory. Must be an absolute path. The
 	resulting tarball is placed in the parent directory and
 	contains the last directory element of this path. Typically
-	something like /tmp/standby-failed.
+	something like /tmp/standby-failed. If left out, the tarball
+	is created in your home directory named "hb_report-current_date",
+	for instance hb_report-Wed-03-Mar-2010.
+
+*-d*::
+	Don't create the compressed tar, but leave the result in a
+	directory.
 
 *-f* { time | "cts:"testnum }::
 	The start time from which to collect logs. The time is in the
