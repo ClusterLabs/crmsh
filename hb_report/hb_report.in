@@ -807,15 +807,15 @@ edittemplate() {
 	fi
 }
 pickcompress() {
-	if COMPRESS=`pickfirst bzip2 gzip`; then
-		if [ "$COMPRESS" = bzip2 ]; then
+	if COMPRESS_PROG=`pickfirst bzip2 gzip`; then
+		if [ "$COMPRESS_PROG" = bzip2 ]; then
 			COMPRESS_EXT=.bz2
 		else
 			COMPRESS_EXT=.gz
 		fi
 	else
 		warning "could not find a compression program; the resulting tarball may be huge"
-		COMPRESS=cat
+		COMPRESS_PROG=cat
 		COMPRESS_EXT=
 	fi
 }
@@ -886,7 +886,8 @@ if [ "$SLAVE" = "" ]; then
 		esac
 	done
 	shift $(($OPTIND-1))
-	if [ $# -gt 1 ]; then
+	[ $# -gt 1 ] && usage short
+	if [ $# -eq 1 ]; then
 		DESTDIR=`echo $1 | sed 's,/*$,,'`
 	fi
 	chkdirname $DESTDIR
@@ -1172,7 +1173,7 @@ else
 	cd $DESTDIR/..
 	if [ "$COMPRESS" = "1" ]; then
 		pickcompress
-		tar cf - `basename $DESTDIR` | $COMPRESS > $DESTDIR.tar$COMPRESS_EXT
+		tar cf - `basename $DESTDIR` | $COMPRESS_PROG > $DESTDIR.tar$COMPRESS_EXT
 	fi
 	finalword
 fi
