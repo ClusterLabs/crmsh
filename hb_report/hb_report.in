@@ -65,10 +65,11 @@ fi
 usage() {
 	cat<<EOF
 usage: hb_report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
-       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCAVv] dest
+       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCAVdv] [dest]
 
 	-f time: time to start from or a CTS test number
 	-t time: time to finish at (dflt: now)
+	-d     : don't compress, but leave result in a directory
 	-n nodes: node names for this cluster; this option is additive
 	         (use either -n "a b" or -n a -n b)
 	         if you run $PROG on the log host or use autojoin,
