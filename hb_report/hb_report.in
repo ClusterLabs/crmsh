@@ -963,6 +963,7 @@ elif [ "x$SLAVE" = "x" ]; then
 	ctslog=`findmsg "CTS: Stack:" | awk '{print $1}'`
 	debug "Using CTS control file: $ctslog"
 	USER_NODES=`grep CTS: $ctslog | grep -v debug: | grep " \* " | sed s:.*\\\*::g | sort -u  | tr '\\n' ' '`
+	HA_LOGFACILITY=`findmsg "CTS:.*Environment.SyslogFacility" | awk '{print $NF}'`
 	NODES_SOURCE=user
 fi
 
