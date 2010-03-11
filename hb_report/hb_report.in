@@ -504,7 +504,18 @@ getbacktraces() {
 		debug "found backtraces: $flist"
 	}
 }
+pe2png() {
+	local pef=`basename $1`
+	local dotf=`basename $pef .bz2`.dot
+	local pngf=`basename $pef .bz2`.png
+	(
+	cd `dirname $1`
+	ptest -D $dotf -x $pef
+	dot -Tpng -o $pngf $dotf >/dev/null 2>&1
+	)
+}
 getpeinputs() {
+	local f
 	debug "looking for PE files in $HA_VARLIB/pengine, `dirname $HA_VARLIB`/pengine"
 	for pe_dir in $HA_VARLIB/pengine `dirname $HA_VARLIB`/pengine
 	do
@@ -516,7 +527,12 @@ getpeinputs() {
 		[ "$flist" ] && {
 			(cd `dirname $pe_dir` && tar cf - $flist) | (cd $3 && tar xf -)
 			debug "found `echo $flist | wc -w` pengine input files in $pe_dir"
+			which dot >/dev/null 2>&1 ||
+				info "if you had graphviz, we'd also produce png graphics for all PE files"
 		}
+		for f in $flist; do
+			pe2png $3/$f
+		done
 	done
 }
 touch_DC_if_dc() {
