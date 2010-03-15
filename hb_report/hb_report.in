@@ -140,7 +140,7 @@ version() {
 # these are "global" variables
 #
 setvarsanddefaults() {
-	now=`perl -e 'print time()'`
+	local now=`perl -e 'print time()'`
 	# used by all
 	DESTDIR=""
 	FROM_TIME=""
@@ -175,8 +175,8 @@ chkdirname() {
 		fatal "no root directory here, thank you"
 }
 destdir_inode_test() {
-	root_inode=`ls -id / 2>/dev/null | awk '{print $1}'`
-	dest_inode=`ls -id $1 2>/dev/null | awk '{print $1}'`
+	local root_inode=`ls -id / 2>/dev/null | awk '{print $1}'`
+	local dest_inode=`ls -id $1 2>/dev/null | awk '{print $1}'`
 	[ "$root_inode" = "$dest_inode" ] &&
 		fatal "no root directory here, thank you"
 }
@@ -204,8 +204,8 @@ logmark() {
 # a special stamp is logged through syslog on _all_ nodes
 #
 logmarks() {
-	msg=$1
-	c="hb_report __slave $DESTDIR logmark $msg"
+	local msg=$1
+	local c="hb_report __slave $DESTDIR logmark $msg"
 
 	for n in $NODES; do
 		if [ "$n" = "`uname -n`" ]; then
@@ -221,7 +221,7 @@ logmarks() {
 # logfile/debugfile settings
 #
 findlog() {
-	logf=""
+	local logf=""
 	if [ "$HA_LOGFACILITY" ]; then
 		logf=`findmsg $UNIQUE_MSG | awk '{print $1}'`
 	fi
@@ -394,8 +394,8 @@ dumplogset() {
 # TO_TIME
 #
 cts_findlogseg() {
-	testnum=$1
-	logf=$2
+	local testnum=$1
+	local logf=$2
 	if [ "x$logf" = "x" ]; then
 		logf=`findmsg "Running test.*\[ *$testnum\]" | awk '{print $1}'`
 	fi
