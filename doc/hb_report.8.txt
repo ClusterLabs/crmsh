@@ -95,6 +95,10 @@ dest::
 	cluster. Under normal circumstances this option is not
 	needed. Use if ssh(1) does not work to other nodes.
 
+*-Z*::
+	If destination directories exist, remove them instead of exiting
+	(this is default for CTS).
+
 *-V*::
 	Print the version including the last repository changeset.
 
