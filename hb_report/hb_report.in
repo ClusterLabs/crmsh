@@ -535,9 +535,13 @@ getpeinputs() {
 			which dot >/dev/null 2>&1 ||
 				info "if you had graphviz, we'd also produce png graphics for all PE files"
 		}
-		for f in $flist; do
-			pe2png $3/$f
-		done
+		if [ `echo $flist | wc -w` -le 20 ]; then
+			for f in $flist; do
+				pe2png $3/$f
+			done
+		else
+			info "too many PE inputs to create dot files"
+		fi
 	done
 }
 touch_DC_if_dc() {
