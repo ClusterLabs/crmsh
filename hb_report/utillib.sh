@@ -117,7 +117,8 @@ findmsg() {
 		log=`grep -l -e "$mark" $d/$favourites` && break
 		log=`grep -l -e "$mark" $d/*` && break
 	done 2>/dev/null
-	ls -t $log | tr '\n' ' '
+	[ "$log" ] &&
+		ls -t $log | tr '\n' ' '
 	[ "$log" ] &&
 		debug "found HA log at `ls -t $log | tr '\n' ' '`" ||
 		debug "no HA log found in $syslogdirs"
