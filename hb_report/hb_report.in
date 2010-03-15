@@ -65,20 +65,21 @@ fi
 usage() {
 	cat<<EOF
 usage: hb_report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
-       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCAVdv] [dest]
+       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCZAVsvhd] [dest]
 
 	-f time: time to start from or a CTS test number
 	-t time: time to finish at (dflt: now)
 	-d     : don't compress, but leave result in a directory
 	-n nodes: node names for this cluster; this option is additive
 	         (use either -n "a b" or -n a -n b)
-	         if you run $PROG on the log host or use autojoin,
+	         if you run $PROG on the loghost or use autojoin,
 	         it is highly recommended to set this option
 	-u user: ssh user to access other nodes (dflt: empty, root, hacluster)
 	-l file: log file
 	-E file: extra logs to collect; this option is additive
 	         (dflt: /var/log/messages)
-	-p patt: regular expression to match variables to be removed;
+	-s     : sanitize the PE and CIB files
+	-p patt: regular expression to match variables containing sensitive data;
 	         this option is additive (dflt: "passw.*")
 	-L patt: regular expression to match in log files for analysis;
 	         this option is additive (dflt: $LOG_PATTERNS)
@@ -146,6 +147,7 @@ setvarsanddefaults() {
 	HA_LOG=""
 	UNIQUE_MSG="Mark:HB_REPORT:$now"
 	SANITIZE="passw.*"
+	DO_SANITIZE=""
 	REMOVE_DEST="1"
 	COMPRESS="1"
 	# logs to collect in addition
@@ -427,6 +429,7 @@ MASTER_IS_HOSTLOG=$MASTER_IS_HOSTLOG
 DESTDIR=$DESTDIR
 UNIQUE_MSG=$UNIQUE_MSG
 SANITIZE="$SANITIZE"
+DO_SANITIZE="$DO_SANITIZE"
 EXTRA_LOGS="$EXTRA_LOGS"
 REMOVE_DEST="$REMOVE_DEST"
 USER_CLUSTER_TYPE="$USER_CLUSTER_TYPE"
@@ -597,9 +600,23 @@ dlm_dump() {
 # replace sensitive info with '****'
 #
 sanitize() {
-	for f in $1/$B_CONF $1/$CIB_F $1/$CIB_TXT_F $1/pengine/*; do
+	for f in $1/$B_CONF; do
 		[ -f "$f" ] && sanitize_one $f
 	done
+	rc=0
+	for f in $1/$CIB_F $1/pengine/*; do
+		if [ -f "$f" ]; then
+			if [ "$DO_SANITIZE" ]; then
+				sanitize_one $f
+			else
+				test_sensitive_one $f && rc=1
+			fi
+		fi
+	done
+	[ $rc -ne 0 ] && {
+		warning "some PE or CIB files contain possibly sensitive data"
+		warning "you may not want to send this report to a public mailing list"
+	}
 }
 
 #
@@ -866,7 +883,7 @@ if [ "$SLAVE" = "" ]; then
 	setvarsanddefaults
 	userargs="$@"
 	DESTDIR="$HOME/hb_report-"`date +"%a-%d-%b-%Y"`
-	while getopts f:t:l:u:p:L:e:E:n:MSDCAVvhd o; do
+	while getopts f:t:l:u:p:L:e:E:n:MSDCZAVsvhd o; do
 		case "$o" in
 			h) usage;;
 			V) version;;
@@ -889,6 +906,7 @@ if [ "$SLAVE" = "" ]; then
 			u) SSH_USER="$OPTARG";;
 			l) HA_LOG="$OPTARG";;
 			e) EDITOR="$OPTARG";;
+			s) DO_SANITIZE="1";;
 			p) SANITIZE="$SANITIZE $OPTARG";;
 			L) LOG_PATTERNS="$LOG_PATTERNS $OPTARG";;
 			S) NO_SSH=1;;

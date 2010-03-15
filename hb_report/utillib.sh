@@ -427,6 +427,27 @@ get_crm_nodes() {
 #
 # this is not proper xml parsing, but it will work under the
 # circumstances
+is_sensitive_xml() {
+	epatt=""
+	for patt in $SANITIZE; do
+		epatt="$epatt|$patt"
+	done
+	epatt="`echo $epatt|sed 's/.//'`"
+	egrep -qs "name=\"$epatt\""
+}
+test_sensitive_one() {
+	file=$1
+	compress=""
+	echo $file | grep -qs 'gz$' && compress=gzip
+	echo $file | grep -qs 'bz2$' && compress=bzip2
+	if [ "$compress" ]; then
+		decompress="$compress -dc"
+	else
+		compress=cat
+		decompress=cat
+	fi
+	$decompress < $file | is_sensitive_xml
+}
 sanitize_xml_attrs() {
 	sed $(
 	for patt in $SANITIZE; do
