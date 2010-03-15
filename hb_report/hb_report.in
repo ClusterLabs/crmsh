@@ -87,6 +87,8 @@ usage: hb_report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
 	-M     : don't collect extra logs (/var/log/messages)
 	-D     : don't invoke editor to write description
 	-C     : remove the destination directory
+	-Z     : if destination directories exist, remove them instead of exiting
+	         (this is default for CTS)
 	-A     : this is an OpenAIS cluster
 	-S     : single node operation; don't try to start report
 	         collectors on other nodes
@@ -908,10 +910,12 @@ if [ "$SLAVE" = "" ]; then
 			e) EDITOR="$OPTARG";;
 			s) DO_SANITIZE="1";;
 			p) SANITIZE="$SANITIZE $OPTARG";;
+			s) DO_SANITIZE="1";;
 			L) LOG_PATTERNS="$LOG_PATTERNS $OPTARG";;
 			S) NO_SSH=1;;
 			D) NO_DESCRIPTION=1;;
 			C) REMOVE_DEST=1;;
+			Z) FORCE_REMOVE_DEST=1;;
 			M) EXTRA_LOGS="";;
 			E) EXTRA_LOGS="$EXTRA_LOGS $OPTARG";;
 			A) USER_CLUSTER_TYPE="openais";;
@@ -1066,15 +1070,25 @@ if [ "$SLAVE" = "" ]; then
 		fi
 	fi
 # final check: don't run if the destination directory exists
-	[ -d $DESTDIR ] && msgcleanup "local node"
+	[ -d $DESTDIR ] && {
+		if [ "$FORCE_REMOVE_DEST" ]; then
+			rm -r $DESTDIR
+		else
+			msgcleanup "local node"
+		fi
+	}
 	mkdir -p $DESTDIR
 	[ -d $DESTDIR ] || nodistdirectory
 	[ "$ssh_good" ] &&
 		for node in $NODES; do
 			[ "$node" = "$WE" ] && continue
 			ssh $ssh_opts $node "test -d $DESTDIR" && {
-				test -d $DESTDIR && rmdir $DESTDIR
-				msgcleanup $node
+				if [ "$CTS" ]; then # relax a bit for CTS
+					ssh $ssh_opts $node "rm -r $DESTDIR"
+				else
+					test -d $DESTDIR && rmdir $DESTDIR
+					msgcleanup $node
+				fi
 			}
 			dumpenv |
 			ssh $ssh_opts $node "mkdir -p $DESTDIR && cat > $DESTDIR/.env"
