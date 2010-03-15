@@ -14,7 +14,7 @@ hb_report - create report for CRM based clusters (Pacemaker)
 SYNOPSIS
 --------
 *hb_report* -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
-       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCAVdv] [dest]
+       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCZAVsvhd] [dest]
 
 
 DESCRIPTION
@@ -54,14 +54,14 @@ dest::
 	does not belong to the cluster, that may be difficult. Also,
 	OpenAIS doesn't contain a list of nodes and if Pacemaker is
 	not running, there is no way to find it out automatically.
-	This option is cummulative (i.e. use -n "a b" or -n a -n b).
+	This option is cumulative (i.e. use -n "a b" or -n a -n b).
 
 *-l* file::
 	Log file location. If, for whatever reason, hb_report cannot
 	find the log files, you can specify its absolute path.
 
 *-E* files::
-	Extra log files to collect. This option is cummulative. By
+	Extra log files to collect. This option is cumulative. By
 	default, /var/log/messages are collected along with the
 	cluster logs.
 
@@ -74,13 +74,8 @@ dest::
 	analysis. This option is additive (default: "CRIT: ERROR:").
 
 *-p* patt::
-	Regular expression to match variables to be sanitized
-	(replaced by a string of asterisks). If you don't want
-	information to be exposed in your report, you can specify
-	here a set of patterns to match variables in the CIB and
-	pengine files. stonith_host directives in ha.cf are also
-	sanitized. Logs are not sanitized.  This option is
-	cummulative (default: "passw.*").
+	Additional patterns to match parameter name which contain
+	sensitive information. This option is additive (default: "passw.*").
 
 *-A*::
 	This is an OpenAIS cluster. hb_report has some heuristics to
@@ -297,16 +292,21 @@ contain spaces.
 Should I send all this to the rest of Internet?
 -----------------------------------------------
 
-We make an effort to remove sensitive data from the configuration
-(CIB, ha.cf, and transition graphs). By default, parameters
-starting matching 'passw.*' are replaced by a string of '*'. Use
-the `-p` option to specify additional regular expressions to
-match variable names which may contain information you don't want
-to leak. For example:
+By default, the sensitive data in CIB and PE files is not mangled
+by `hb_report` because that makes PE input files mostly useless.
+If you still have no other option but to send the report to a
+public mailing list and do not want the sensitive data to be
+included, use the `-s` option. Without this option, `hb_report`
+will issue a warning if it finds information which should not be
+exposed. By default, parameters matching 'passw.*' are considered
+sensitive.  Use the `-p` option to specify additional regular
+expressions to match variable names which may contain information
+you don't want to leak. For example:
 
 	# hb_report -f 18:00 -p "user.*" -p "secret.*" /var/tmp/report
 
-Logs and other files are not filtered.
+Heartbeat's ha.cf is always sanitized. Logs and other files are
+not filtered.
 
 LOGS
 ----
