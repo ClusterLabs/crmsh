@@ -51,7 +51,7 @@ quorum		crmd.*ais.disp.*quorum.(lost|ac?quir)
 pause		Process.pause.detected
 resources	lrmd.*rsc:(start|stop)
 stonith		crmd.*te_fence_node.*Exec|stonith-ng.*log_oper.*reboot|stonithd.*(requests|(Succeeded|Failed).to.STONITH|result=)
-start_stop	corosync.*Initializing transport..UDP|Executive.Service.RELEASE|crm_shutdown:.Requesting.shutdown|pcmk_shutdown:.Shutdown.complete
+start_stop	Corosync.Cluster.Engine|Executive.Service.RELEASE|crm_shutdown:.Requesting.shutdown|pcmk_shutdown:.Shutdown.complete
 "
 
 #
