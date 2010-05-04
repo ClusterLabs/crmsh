@@ -551,6 +551,20 @@ touch_DC_if_dc() {
 		touch $1/DC
 	fi
 }
+getconfigurations() {
+	local dest=$1
+	for conf in $CONFIGURATIONS; do
+		if [ -f $conf ]; then
+			cp -p $conf $dest
+		elif [ -d $conf ]; then
+			(
+			cd `dirname $conf` &&
+			tar cf - `basename $conf` | (cd $dest && tar xf -)
+			)
+		fi
+	done
+}
+
 
 #
 # some basic system info and stats
@@ -1047,6 +1061,8 @@ PERMISSIONS_F=permissions.txt
 CIB_F=cib.xml
 CIB_TXT_F=cib.txt
 export CRM_MON_F MEMBERSHIP_F CRM_VERIFY_F CIB_F CIB_TXT_F HB_UUID_F PERMISSIONS_F
+CONFIGURATIONS="/etc/drbd.conf /etc/drbd.d"
+export CONFIGURATIONS
 
 # this only on master
 if [ "$SLAVE" = "" ]; then
@@ -1180,6 +1196,7 @@ if [ "$THIS_IS_NODE" ]; then
 	getconfig $DESTDIR/$WE
 	getpeinputs $FROM_TIME $TO_TIME $DESTDIR/$WE
 	getbacktraces $FROM_TIME $TO_TIME $DESTDIR/$WE/$BT_F
+	getconfigurations $DESTDIR/$WE
 	touch_DC_if_dc $DESTDIR/$WE
 	sanitize $DESTDIR/$WE
 	check_perms > $DESTDIR/$WE/$PERMISSIONS_F 2>&1
