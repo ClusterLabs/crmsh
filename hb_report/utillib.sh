@@ -404,9 +404,10 @@ getconfig() {
 		crm_uuid -r > $1/$HB_UUID_F 2>&1
 	[ -f "$1/$CIB_F" ] &&
 		crm_verify -V -x $1/$CIB_F >$1/$CRM_VERIFY_F 2>&1
+}
+crmconfig() {
 	[ -f "$1/$CIB_F" ] && which crm >/dev/null 2>&1 &&
 		CIB_file=$1/$CIB_F crm configure show >$1/$CIB_TXT_F 2>&1
-
 }
 get_crm_nodes() {
 	cibadmin -Ql -o nodes |

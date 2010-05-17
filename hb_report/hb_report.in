@@ -926,7 +926,6 @@ if [ "$SLAVE" = "" ]; then
 			u) SSH_USER="$OPTARG";;
 			l) HA_LOG="$OPTARG";;
 			e) EDITOR="$OPTARG";;
-			s) DO_SANITIZE="1";;
 			p) SANITIZE="$SANITIZE $OPTARG";;
 			s) DO_SANITIZE="1";;
 			L) LOG_PATTERNS="$LOG_PATTERNS $OPTARG";;
@@ -1199,6 +1198,7 @@ if [ "$THIS_IS_NODE" ]; then
 	getconfigurations $DESTDIR/$WE
 	touch_DC_if_dc $DESTDIR/$WE
 	sanitize $DESTDIR/$WE
+	crmconfig $DESTDIR/$WE
 	check_perms > $DESTDIR/$WE/$PERMISSIONS_F 2>&1
 	sys_info > $DESTDIR/$WE/$SYSINFO_F 2>&1
 	dlm_dump > $DESTDIR/$WE/$DLM_DUMP_F 2>&1
