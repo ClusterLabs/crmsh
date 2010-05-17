@@ -121,13 +121,18 @@ EOF
 	  hb_report -f cts:133 /tmp/ctstest_133
 
 	. WARNING . WARNING . WARNING . WARNING . WARNING . WARNING .
-	  We try to sanitize the CIB and the peinputs files. If you
-	  have more sensitive information, please supply additional
-	  patterns yourself. The logs and the crm_mon, ccm_tool, and
-	  crm_verify output are *not* sanitized.
+
+	  We won't sanitize the CIB and the peinputs files, because
+	  that would make them useless when trying to reproduce the
+	  PE behaviour. You may still choose to obliterate sensitive
+	  information if you use the -s and -p options, but in that
+	  case the support may be lacking as well. The logs and the
+	  crm_mon, ccm_tool, and crm_verify output are *not* sanitized.
+
 	  Additional system logs (/var/log/messages) are collected in
 	  order to have a more complete report. If you don't want that
 	  specify -M.
+
 	  IT IS YOUR RESPONSIBILITY TO PROTECT THE DATA FROM EXPOSURE!
 EOF
 	exit
