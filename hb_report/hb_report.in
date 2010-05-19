@@ -521,7 +521,7 @@ pe2png() {
 	(
 	cd `dirname $1`
 	ptest -D $dotf -x $pef
-	dot -Tpng -o $pngf $dotf >/dev/null 2>&1
+	# dot -Tpng -o $pngf $dotf >/dev/null 2>&1
 	)
 }
 getpeinputs() {
