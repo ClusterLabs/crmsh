@@ -32,6 +32,8 @@ class Vars(Singleton):
     "cluster_property_set": "property",
     "rsc_defaults": "rsc_defaults",
     "op_defaults": "op_defaults",
+    "acl_user": "user",
+    "acl_role": "role",
     }
     container_tags = ("group", "clone", "ms", "master")
     clonems_tags = ("clone", "ms", "master")
@@ -57,6 +59,13 @@ class Vars(Singleton):
         "date_expression": "expression",
         "duration": "duration",
         "date_spec": "date_spec",
+    }
+    acl_rule_names = ("read","write","deny")
+    acl_spec_map = {
+        "xpath": "xpath",
+        "ref": "ref",
+        "tag": "tag",
+        "attribute": "attribute",
     }
     lrm_exit_codes = {
         "success": "0",
@@ -138,8 +147,9 @@ class Vars(Singleton):
     stonithd_metadata = None # stonithd meta data
     pe_metadata = None # PE meta data
     crmd_metadata = None # crmd meta data
-    crm_properties_metadata = None # PE + crmd meta data
-    meta_progs = ("crmd","pengine","stonithd")
+    cib_metadata = None # cib meta data
+    crm_properties_metadata = None # PE + crmd + cib meta data
+    meta_progs = ("crmd","pengine","stonithd","cib")
     crmd_advanced = (
         "dc-version",
         "cluster-infrastructure",
