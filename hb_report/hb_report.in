@@ -577,7 +577,7 @@ getconfigurations() {
 sys_info() {
 	cluster_info
 	hb_report -V # our info
-	echo "resource-agents: `grep 'Build version:' /usr/lib/ocf/resource.d/heartbeat/.ocf-shellfuncs`"
+	echo "resource-agents: `grep 'Build version:' @OCF_ROOT_DIR@/resource.d/heartbeat/.ocf-shellfuncs`"
 	crm_info
 	pkg_ver $PACKAGES
 	echo "Platform: `uname`"
