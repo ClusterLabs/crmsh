@@ -423,6 +423,14 @@ get_crm_nodes() {
 	}
 	'
 }
+get_live_nodes() {
+	if [ `id -u` = 0 ] && which fping >/dev/null 2>&1; then
+		fping -a $@ 2>/dev/null
+	else
+		local h
+		for h; do ping -c 2 -q $h >/dev/null 2>&1 && echo $h; done
+	fi
+}
 
 #
 # remove values of sensitive attributes
