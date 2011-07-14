@@ -214,7 +214,7 @@ logmarks() {
 
 	for n in $NODES; do
 		if [ "$n" = "`uname -n`" ]; then
-			[ "$THIS_IS_NODE" ] && logmark $HA_LOGFACILITY.$HA_LOGLEVEL $msg
+			is_node && logmark $HA_LOGFACILITY.$HA_LOGLEVEL $msg
 		else
 			[ "$ssh_good" ] &&
 				echo $c | ssh $ssh_opts $n
@@ -431,6 +431,7 @@ FROM_TIME=$FROM_TIME
 TO_TIME=$TO_TIME
 USER_NODES="$USER_NODES"
 NODES="$NODES"
+MASTER_NODE="$MASTER_NODE"
 HA_LOG=$HA_LOG
 MASTER_IS_HOSTLOG=$MASTER_IS_HOSTLOG
 DESTDIR=$DESTDIR
@@ -447,14 +448,29 @@ CORES_DIRS="$CORES_DIRS"
 VERBOSITY="$VERBOSITY"
 EOF
 }
-start_remote_collectors() {
-	for node in $NODES; do
-		[ "$node" = "$WE" ] && continue
-		dumpenv | ssh $ssh_opts $node \
+is_collector() {
+	test "$SLAVE"
+}
+is_node() {
+	test "$THIS_IS_NODE"
+}
+is_master() {
+	! is_collector && test "$WE" = "$MASTER_NODE"
+}
+start_slave_collector() {
+	local node=$1
+
+	dumpenv |
+	if [ "$node" = "$WE" ]; then
+		cat > $DESTDIR/.env
+		hb_report __slave $DESTDIR
+	else
+		ssh $ssh_opts $node \
 			"cat > $DESTDIR/.env; hb_report __slave $DESTDIR" |
-			(cd $DESTDIR && tar xf -) &
-		SLAVEPIDS="$SLAVEPIDS $!"
-	done
+			(cd $DESTDIR && tar xf -)
+	fi &
+
+	SLAVEPIDS="$SLAVEPIDS $!"
 }
 
 #
@@ -878,6 +894,86 @@ pickcompress() {
 		COMPRESS_EXT=
 	fi
 }
+# get the right part of the log
+getlog() {
+	local outf
+
+	if [ "$HA_LOG" ]; then  # log provided by the user?
+		[ -f "$HA_LOG" ] || {  # not present
+			is_collector ||  # warning if not on slave
+				warning "$HA_LOG not found; we will try to find log ourselves"
+			HA_LOG=""
+		}
+	fi
+	if [ "$HA_LOG" = "" ]; then
+		HA_LOG=`findlog`
+		[ "$HA_LOG" ] &&
+			cnt=`fgrep -c $UNIQUE_MSG < $HA_LOG`
+	fi
+	if [ "$cnt" ] && [ $cnt -eq $NODECNT ]; then
+		MASTER_IS_HOSTLOG=1
+		info "found the central log!"
+	fi
+
+	if is_node; then
+		outf=$DESTDIR/$WE/$HALOG_F
+	else
+		outf=$DESTDIR/$HALOG_F # we are log server, probably
+	fi
+	if [ -f "$HA_LOG" ]; then
+		if [ "$NO_str2time" ]; then
+			warning "a log found; but we cannot slice it"
+			warning "please install the perl Date::Parse module"
+		elif [ "$CTS" ]; then
+			cts_findlogseg $CTS $HA_LOG > $outf
+		else
+			getstampproc=`find_getstampproc < $HA_LOG`
+			if [ "$getstampproc" ]; then
+				export getstampproc # used by linetime
+				dumplogset $HA_LOG $FROM_TIME $TO_TIME > $outf
+			else
+				warning "could not figure out the log format of $HA_LOG"
+			fi
+		fi
+	elif [ "$CTS" ]; then
+		cts_findlogseg $CTS > $outf
+	else
+		[ "$MASTER_IS_HOSTLOG" ] ||
+			warning "could not find $HA_LOG on $WE"
+	fi
+}
+#
+# get all other info (config, stats, etc)
+#
+collect_info() {
+	getconfig $DESTDIR/$WE
+	getpeinputs $FROM_TIME $TO_TIME $DESTDIR/$WE
+	getbacktraces $FROM_TIME $TO_TIME $DESTDIR/$WE/$BT_F
+	getconfigurations $DESTDIR/$WE
+	touch_DC_if_dc $DESTDIR/$WE
+	sanitize $DESTDIR/$WE
+	crmconfig $DESTDIR/$WE
+	check_perms > $DESTDIR/$WE/$PERMISSIONS_F 2>&1
+	sys_info > $DESTDIR/$WE/$SYSINFO_F 2>&1
+	dlm_dump > $DESTDIR/$WE/$DLM_DUMP_F 2>&1
+	sys_stats > $DESTDIR/$WE/$SYSSTATS_F 2>&1
+
+	for l in $EXTRA_LOGS; do
+		[ "$NO_str2time" ] && break
+		[ ! -f "$l" ] && continue
+		if [ "$l" = "$HA_LOG" -a "$l" != "$HALOG_F" ]; then
+			ln -s $HALOG_F $DESTDIR/$WE/`basename $l`
+			continue
+		fi
+		getstampproc=`find_getstampproc < $l`
+		if [ "$getstampproc" ]; then
+			export getstampproc # used by linetime
+			dumplogset $l $FROM_TIME $TO_TIME > $DESTDIR/$WE/`basename $l`
+		else
+			warning "could not figure out the log format of $l"
+		fi
+	done
+}
 finalword() {
 	if [ "$COMPRESS" = "1" ]; then
 		echo "The report is saved in $DESTDIR.tar$COMPRESS_EXT"
@@ -897,14 +993,14 @@ NO_str2time=""
 t=`str2time "12:00"`
 if [ "$t" = "" ]; then
 	NO_str2time=1
-	[ "$SLAVE" ] ||
+	is_collector ||
 		fatal "please install the perl Date::Parse module"
 fi
 
 #
 # part 1: get and check options; and the destination
 #
-if [ "$SLAVE" = "" ]; then
+if ! is_collector; then
 	setvarsanddefaults
 	userargs="$@"
 	DESTDIR="$HOME/hb_report-"`date +"%a-%d-%b-%Y"`
@@ -1016,10 +1112,10 @@ else
 	fatal "no stack specific support: $CF_SUPPORT"
 fi
 
-if [ "x$CTS" = "x" -o "x$SLAVE" != "x" ]; then
+if [ "x$CTS" = "x" ] || is_collector; then
 	getlogvars
 	debug "log settings: facility=$HA_LOGFACILITY logfile=$HA_LOGFILE debugfile=$HA_DEBUGFILE"
-elif [ "x$SLAVE" = "x" ]; then
+elif ! is_collector; then
 	ctslog=`findmsg "CTS: Stack:" | awk '{print $1}'`
 	debug "Using CTS control file: $ctslog"
 	USER_NODES=`grep CTS: $ctslog | grep -v debug: | grep " \* " | sed s:.*\\\*::g | sort -u  | tr '\\n' ' '`
@@ -1027,7 +1123,7 @@ elif [ "x$SLAVE" = "x" ]; then
 	NODES_SOURCE=user
 fi
 
-if [ "$SLAVE" -a "$3" = logmark ]; then
+if is_collector && [ "$3" = logmark ]; then
 	msg="$4"
 	logmark $HA_LOGFACILITY.$HA_LOGLEVEL $msg
 	exit
@@ -1035,7 +1131,8 @@ fi
 
 WE=`uname -n`  # who am i?
 THIS_IS_NODE=""
-if [ "$SLAVE" = "" ]; then
+if ! is_collector; then
+	MASTER_NODE=$WE
 	NODES=`getnodes`
 	debug "nodes: `echo $NODES`"
 fi
@@ -1043,7 +1140,7 @@ NODECNT=`echo $NODES | wc -w`
 if [ "$NODECNT" = 0 ]; then
 	fatal "could not figure out a list of nodes; is this a cluster node?"
 fi
-if echo $NODES | grep -wqs $WE || [ "$SLAVE" ]; then # are we a node?
+if echo $NODES | grep -wqs $WE; then # are we a node?
 	THIS_IS_NODE=1
 fi
 
@@ -1069,11 +1166,11 @@ CONFIGURATIONS="/etc/drbd.conf /etc/drbd.d"
 export CONFIGURATIONS
 
 # this only on master
-if [ "$SLAVE" = "" ]; then
+if ! is_collector; then
 
 	# if this is not a node, then some things afterwards might
 	# make no sense (not work)
-	if [ -z "$THIS_IS_NODE" -a "$NODES_SOURCE" != user ]; then
+	if ! is_node && [ "$NODES_SOURCE" != user ]; then
 		warning "this is not a node and you didn't specify a list of nodes using -n"
 	fi
 #
@@ -1103,7 +1200,7 @@ if [ "$SLAVE" = "" ]; then
 	}
 	mkdir -p $DESTDIR
 	[ -d $DESTDIR ] || nodistdirectory
-	[ "$ssh_good" ] &&
+	if [ "$ssh_good" ]; then
 		for node in $NODES; do
 			[ "$node" = "$WE" ] && continue
 			ssh $ssh_opts $node "test -d $DESTDIR" && {
@@ -1117,9 +1214,15 @@ if [ "$SLAVE" = "" ]; then
 			dumpenv |
 			ssh $ssh_opts $node "mkdir -p $DESTDIR && cat > $DESTDIR/.env"
 		done
+	else
+		if [ -z "$NO_SSH" -a $NODECNT -gt 1 ]; then
+			warning "ssh does not work to all nodes"
+			warning "please use the -u option if you want to supply a password"
+		fi
+	fi
 fi
 
-if [ "$SLAVE" = "" ]; then
+if ! is_collector; then
 #
 # part 3: log marks to be searched for later
 #         important to do this now on _all_ nodes
@@ -1129,111 +1232,30 @@ if [ "$SLAVE" = "" ]; then
 	fi
 fi
 
-# only cluster nodes need their own directories
-[ "$THIS_IS_NODE" ] && mkdir -p $DESTDIR/$WE
-
 #
 # part 4: find the logs and cut out the segment for the period
 #
-if [ "$HA_LOG" ]; then  # log provided by the user?
-	[ -f "$HA_LOG" ] || {  # not present
-		[ "$SLAVE" ] ||  # warning if not on slave
-			warning "$HA_LOG not found; we will try to find log ourselves"
-		HA_LOG=""
-	}
-fi
-if [ "$HA_LOG" = "" ]; then
-	HA_LOG=`findlog`
-	[ "$HA_LOG" ] &&
-		cnt=`fgrep -c $UNIQUE_MSG < $HA_LOG`
-fi
-if [ "$cnt" ] && [ $cnt -eq $NODECNT ]; then
-	MASTER_IS_HOSTLOG=1
-	info "found the central log!"
-fi
 
-if [ "$THIS_IS_NODE" ]; then
-	outf=$DESTDIR/$WE/$HALOG_F
-else
-	outf=$DESTDIR/$HALOG_F # we are log server, probably
-fi
-if [ -f "$HA_LOG" ]; then
-	if [ "$NO_str2time" ]; then
-		warning "a log found; but we cannot slice it"
-		warning "please install the perl Date::Parse module"
-	elif [ "$CTS" ]; then
-		cts_findlogseg $CTS $HA_LOG > $outf
-	else
-		getstampproc=`find_getstampproc < $HA_LOG`
-		if [ "$getstampproc" ]; then
-			export getstampproc # used by linetime
-			dumplogset $HA_LOG $FROM_TIME $TO_TIME > $outf
-		else
-			warning "could not figure out the log format of $HA_LOG"
-		fi
-	fi
-elif [ "$CTS" ]; then
-	cts_findlogseg $CTS > $outf
-else
-	[ "$MASTER_IS_HOSTLOG" ] ||
-		warning "could not find $HA_LOG on $WE"
-fi
+# only cluster nodes need their own directories
+is_node && mkdir -p $DESTDIR/$WE
 
-#
-# part 5: start this program on other nodes
-#
-if [ ! "$SLAVE" ]; then
-	if [ "$ssh_good" ]; then
-		start_remote_collectors
-	else
-		if [ -z "$NO_SSH" -a $NODECNT -gt 1 ]; then
-			warning "ssh does not work to all nodes"
-			warning "please use the -u option if you want to supply a password"
-		fi
-	fi
-fi
-
-#
-# part 6: get all other info (config, stats, etc)
-#
-if [ "$THIS_IS_NODE" ]; then
-	getconfig $DESTDIR/$WE
-	getpeinputs $FROM_TIME $TO_TIME $DESTDIR/$WE
-	getbacktraces $FROM_TIME $TO_TIME $DESTDIR/$WE/$BT_F
-	getconfigurations $DESTDIR/$WE
-	touch_DC_if_dc $DESTDIR/$WE
-	sanitize $DESTDIR/$WE
-	crmconfig $DESTDIR/$WE
-	check_perms > $DESTDIR/$WE/$PERMISSIONS_F 2>&1
-	sys_info > $DESTDIR/$WE/$SYSINFO_F 2>&1
-	dlm_dump > $DESTDIR/$WE/$DLM_DUMP_F 2>&1
-	sys_stats > $DESTDIR/$WE/$SYSSTATS_F 2>&1
-
-	for l in $EXTRA_LOGS; do
-		[ "$NO_str2time" ] && break
-		[ ! -f "$l" ] && continue
-		if [ "$l" = "$HA_LOG" -a "$l" != "$HALOG_F" ]; then
-			ln -s $HALOG_F $DESTDIR/$WE/`basename $l`
-			continue
-		fi
-		getstampproc=`find_getstampproc < $l`
-		if [ "$getstampproc" ]; then
-			export getstampproc # used by linetime
-			dumplogset $l $FROM_TIME $TO_TIME > $DESTDIR/$WE/`basename $l`
-		else
-			warning "could not figure out the log format of $l"
-		fi
+getlog
+if is_master; then
+	for node in $NODES; do
+		start_slave_collector $node
 	done
 fi
 
 #
-# part 7: endgame:
+# part 5: endgame:
 #         slaves tar their results to stdout, the master waits
 #         for them, analyses results, asks the user to edit the
 #         problem description template, and prints final notes
 #
-if [ "$SLAVE" ]; then
-	(cd $DESTDIR && tar cf - $WE)
+if is_collector; then
+	collect_info
+	[ "$WE" != "$MASTER_NODE" ] &&
+		(cd $DESTDIR && tar cf - $WE)
 else
 	wait $SLAVEPIDS
 	analyze $DESTDIR > $DESTDIR/$ANALYSIS_F
@@ -1254,5 +1276,8 @@ else
 	finalword
 fi
 
-[ "$REMOVE_DEST" = "1" ] &&
-	rm -r $DESTDIR
+if [ "$REMOVE_DEST" = "1" ]; then
+	if is_master || [ "$WE" != "$MASTER_NODE" ]; then
+		rm -r $DESTDIR
+	fi
+fi
