@@ -274,7 +274,7 @@ is_our_log() {
 		return 3 # this is the last good log
 	fi
 	# have to go further back
-	if [ x = "x$to_time" -o $to_time -ge $first_time ]; then
+	if [ $to_time -eq 0 -o $to_time -ge $first_time ]; then
 		return 1 # include this log
 	else
 		return 0 # don't include this log
