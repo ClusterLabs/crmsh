@@ -543,14 +543,12 @@ getbacktraces() {
 		debug "found backtraces: $flist"
 	}
 }
-pe2png() {
+pe2dot() {
 	local pef=`basename $1`
 	local dotf=`basename $pef .bz2`.dot
-	local pngf=`basename $pef .bz2`.png
 	(
 	cd `dirname $1`
 	ptest -D $dotf -x $pef
-	# dot -Tpng -o $pngf $dotf >/dev/null 2>&1
 	)
 }
 getpeinputs() {
@@ -566,12 +564,10 @@ getpeinputs() {
 		[ "$flist" ] && {
 			(cd `dirname $pe_dir` && tar cf - $flist) | (cd $3 && tar xf -)
 			debug "found `echo $flist | wc -w` pengine input files in $pe_dir"
-			which dot >/dev/null 2>&1 ||
-				info "if you had graphviz, we'd also produce png graphics for all PE files"
 		}
 		if [ `echo $flist | wc -w` -le 20 ]; then
 			for f in $flist; do
-				pe2png $3/$f
+				pe2dot $3/$f
 			done
 		else
 			info "too many PE inputs to create dot files"
