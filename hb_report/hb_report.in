@@ -1222,6 +1222,14 @@ if ! is_collector; then
 	fi
 fi
 
+# only cluster nodes need their own directories
+is_node && mkdir -p $DESTDIR/$WE
+
+if is_collector && [ $VERBOSITY -gt 1 ]; then
+	echo the debug information for node $WE is in $DESTDIR/$WE/debug.out
+	exec 2>>$DESTDIR/$WE/debug.out
+fi
+
 if ! is_collector; then
 #
 # part 3: log marks to be searched for later
@@ -1236,11 +1244,8 @@ fi
 # part 4: find the logs and cut out the segment for the period
 #
 
-# only cluster nodes need their own directories
-is_node && mkdir -p $DESTDIR/$WE
-
 getlog
-if is_master; then
+if ! is_collector; then
 	for node in $NODES; do
 		start_slave_collector $node
 	done
