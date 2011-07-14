@@ -1260,7 +1260,11 @@ fi
 # part 4: find the logs and cut out the segment for the period
 #
 
-getlog
+# if the master is also a node, getlog is going to be invoked
+# from the collector
+(is_master && is_node) ||
+	getlog
+
 if ! is_collector; then
 	for node in $NODES; do
 		start_slave_collector $node
