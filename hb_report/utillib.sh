@@ -115,7 +115,9 @@ findmsg() {
 	for d in $syslogdirs; do
 		[ -d $d ] || continue
 		log=`grep -l -e "$mark" $d/$favourites` && break
+		test "$log" && break
 		log=`grep -l -e "$mark" $d/*` && break
+		test "$log" && break
 	done 2>/dev/null
 	[ "$log" ] &&
 		ls -t $log | tr '\n' ' '
