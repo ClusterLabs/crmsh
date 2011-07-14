@@ -360,6 +360,19 @@ print_logseg() {
 	trap "" 0
 }
 #
+# print some log info (important for crm history)
+#
+loginfo() {
+	local logf=$1
+	local fake=$2
+	local nextpos=`python -c "f=open('$logf');f.seek(0,2);print f.tell()+1"`
+	if [ "$fake" ]; then
+		echo "synthetic:$logf $nextpos"
+	else
+		echo "$logf $nextpos"
+	fi
+}
+#
 # find log/set of logs which are interesting for us
 #
 dumplogset() {
@@ -830,6 +843,7 @@ combine_logs() {
 	test -x $HA_NOARCHBIN/combine-logs.pl ||
 		warning "cannot combine logs: no $HA_NOARCHBIN/combine-logs.pl"
 	$HA_NOARCHBIN/combine-logs.pl $destdir/*/$HALOG_F > $destdir/$HALOG_F
+	loginfo $destdir/$HALOG_F combined > $destdir/$HALOG_F.info
 	$HA_NOARCHBIN/combine-logs.pl $destdir/*/events.txt > $destdir/events.txt
 }
 
@@ -931,6 +945,7 @@ getlog() {
 			if [ "$getstampproc" ]; then
 				export getstampproc # used by linetime
 				dumplogset $HA_LOG $FROM_TIME $TO_TIME > $outf
+				loginfo $HA_LOG > $outf.info
 			else
 				warning "could not figure out the log format of $HA_LOG"
 			fi
@@ -969,6 +984,7 @@ collect_info() {
 		if [ "$getstampproc" ]; then
 			export getstampproc # used by linetime
 			dumplogset $l $FROM_TIME $TO_TIME > $DESTDIR/$WE/`basename $l`
+			loginfo $l > $DESTDIR/$WE/`basename $l`.info
 		else
 			warning "could not figure out the log format of $l"
 		fi
