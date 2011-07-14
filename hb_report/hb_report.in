@@ -559,7 +559,8 @@ getpeinputs() {
 		test -d $pe_dir ||
 			continue
 		flist=$(
-			find_files $pe_dir $1 $2 | sed "s,`dirname $pe_dir`/,,g"
+			find_files $pe_dir $1 $2 | sed "s,`dirname $pe_dir`/,,g" |
+				grep -v '[.]last$'
 		)
 		[ "$flist" ] && {
 			(cd `dirname $pe_dir` && tar cf - $flist) | (cd $3 && tar xf -)
