@@ -479,7 +479,7 @@ start_slave_collector() {
 		hb_report __slave $DESTDIR
 	else
 		ssh $ssh_opts $node \
-			"cat > $DESTDIR/.env; hb_report __slave $DESTDIR" |
+			"cat > $DESTDIR/.env; $SUDO hb_report __slave $DESTDIR" |
 			(cd $DESTDIR && tar xf -)
 	fi &
 
@@ -1263,6 +1263,11 @@ fi
 	getlog
 
 if ! is_collector; then
+	# assume that only root can collect data
+	SUDO=""
+	if [ -z "$SSH_USER" -a `id -u` != 0 ] || [ "$SSH_USER" != root ]; then
+		SUDO="sudo -u root -E"
+	fi
 	for node in $NODES; do
 		start_slave_collector $node
 	done
