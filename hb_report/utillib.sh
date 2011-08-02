@@ -310,6 +310,35 @@ check_perms() {
 #
 # coredumps
 #
+MYBINARIES="crmd|pengine|lrmd|attrd|cib|mgmtd|stonithd|corosync|libplumb|libpils"
+listpkg_zypper() {
+	local binary=$1 core=$2
+	gdb $binary $core </dev/null 2>&1 |
+	awk -v bins="$MYBINARIES" '
+	n>0 && /^Try: zypper install/ {gsub("\"",""); print $NF}
+	n>0 {n=0}
+	/Missing separate debuginfo/ && match($NF, bins) {n=1}
+	'
+}
+fetchpkg_zypper() {
+	debug "get debuginfo packages using zypper: $@"
+	zypper -qn install -C $@ >/dev/null
+}
+get_debuginfo() {
+	local binary=$1 core=$2
+	local pkg_mgr
+	gdb $binary $core </dev/null 2>/dev/null |
+		grep 'no debugging symbols found' > /dev/null ||
+		return  # no missing debuginfo
+	gdb $binary $core </dev/null 2>&1 |
+		grep 'Try: zypper install' > /dev/null &&
+		pkg_mgr="zypper"
+	if [ -z "$pkg_mgr" ]; then
+		warning "found core for $binary but there is no debuginfo and we don't know how to get it on this platform"
+		return
+	fi
+	fetchpkg_$pkg_mgr `listpkg_$pkg_mgr $binary $core`
+}
 findbinary() {
 	random_binary=`which cat 2>/dev/null` # suppose we are lucky
 	binary=`gdb $random_binary $1 < /dev/null 2>/dev/null |
@@ -355,6 +384,7 @@ getbt() {
 	for corefile; do
 		absbinpath=`findbinary $corefile`
 		[ x = x"$absbinpath" ] && continue
+		get_debuginfo $absbinpath $corefile
 		echo "====================== start backtrace ======================"
 		ls -l $corefile
 		gdb -batch -n -quiet -ex ${BT_OPTS:-"thread apply all bt full"} -ex quit \
