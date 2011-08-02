@@ -423,6 +423,13 @@ def wait4dc(what="", show_progress=True):
     if not dc:
         common_warn("can't find DC")
         return False
+    cmd = "crm_attribute -Gq -t crm_config -n crmd-transition-delay 2> /dev/null"
+    delay = get_stdout(add_sudo(cmd))
+    if delay:
+        delaymsec = crm_msec(delay)
+        if 0 < delaymsec:
+            common_info("The crmd-transition-delay is configured. Waiting %d msec before check DC status." % delaymsec)
+            time.sleep(delaymsec / 1000)
     cmd = "crmadmin -S %s" % dc
     cnt = 0
     output_started = 0
