@@ -217,7 +217,7 @@ logmarks() {
 			is_node && logmark $HA_LOGFACILITY.$HA_LOGLEVEL $msg
 		else
 			[ "$ssh_good" ] &&
-				echo $c | ssh $ssh_opts $n
+				ssh $ssh_opts $n "$c"
 		fi
 	done
 }
