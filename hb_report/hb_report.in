@@ -1217,7 +1217,7 @@ if ! is_collector; then
 		for node in $NODES; do
 			[ "$node" = "$WE" ] && continue
 			ssh $ssh_opts $node "test -d $DESTDIR" && {
-				if [ "$CTS" ]; then # relax a bit for CTS
+				if [ "$FORCE_REMOVE_DEST" -o "$CTS" ]; then # relax a bit for CTS
 					ssh $ssh_opts $node "rm -r $DESTDIR"
 				else
 					test -d $DESTDIR && rmdir $DESTDIR
