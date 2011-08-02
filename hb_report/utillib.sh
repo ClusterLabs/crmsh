@@ -310,6 +310,14 @@ check_perms() {
 #
 # coredumps
 #
+pkg_mgr_list() {
+# list of:
+# regex pkg_mgr
+# no spaces allowed in regex
+	cat<<EOF
+Try:.zypper.install zypper
+EOF
+}
 MYBINARIES="crmd|pengine|lrmd|attrd|cib|mgmtd|stonithd|corosync|libplumb|libpils"
 listpkg_zypper() {
 	local binary=$1 core=$2
@@ -318,11 +326,22 @@ listpkg_zypper() {
 	n>0 && /^Try: zypper install/ {gsub("\"",""); print $NF}
 	n>0 {n=0}
 	/Missing separate debuginfo/ && match($NF, bins) {n=1}
-	'
+	' | sort -u
 }
 fetchpkg_zypper() {
 	debug "get debuginfo packages using zypper: $@"
 	zypper -qn install -C $@ >/dev/null
+}
+find_pkgmgr() {
+	local binary=$1 core=$2
+	pkg_mgr_list |
+	while read regex pkg_mgr; do
+		if gdb $binary $core </dev/null 2>&1 |
+				grep "$regex" > /dev/null; then
+			echo $pkg_mgr
+			break
+		fi
+	done
 }
 get_debuginfo() {
 	local binary=$1 core=$2
@@ -330,9 +349,7 @@ get_debuginfo() {
 	gdb $binary $core </dev/null 2>/dev/null |
 		grep 'no debugging symbols found' > /dev/null ||
 		return  # no missing debuginfo
-	gdb $binary $core </dev/null 2>&1 |
-		grep 'Try: zypper install' > /dev/null &&
-		pkg_mgr="zypper"
+	pkg_mgr=`find_pkgmgr $binary $core`
 	if [ -z "$pkg_mgr" ]; then
 		warning "found core for $binary but there is no debuginfo and we don't know how to get it on this platform"
 		return
