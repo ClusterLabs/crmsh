@@ -345,7 +345,7 @@ find_pkgmgr() {
 }
 get_debuginfo() {
 	local binary=$1 core=$2
-	local pkg_mgr
+	local pkg_mgr pkgs
 	gdb $binary $core </dev/null 2>/dev/null |
 		grep 'no debugging symbols found' > /dev/null ||
 		return  # no missing debuginfo
@@ -354,7 +354,9 @@ get_debuginfo() {
 		warning "found core for $binary but there is no debuginfo and we don't know how to get it on this platform"
 		return
 	fi
-	fetchpkg_$pkg_mgr `listpkg_$pkg_mgr $binary $core`
+	pkgs=`listpkg_$pkg_mgr $binary $core`
+	[ -n "$pkgs" ] &&
+		fetchpkg_$pkg_mgr $pkgs
 }
 findbinary() {
 	random_binary=`which cat 2>/dev/null` # suppose we are lucky
