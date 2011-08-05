@@ -35,6 +35,7 @@ modules	=	__init__.py 	\
 			ra.py		\
 			report.py		\
 			log_patterns.py		\
+			crm_pssh.py	\
 			singletonmixin.py	\
 			template.py	\
 			term.py		\
