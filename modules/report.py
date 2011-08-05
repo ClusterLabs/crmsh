@@ -595,7 +595,7 @@ class Report(Singleton):
         if ext_cmd_nosudo("mkdir -p %s" % os.path.dirname(d)) != 0:
             return None
         common_info("retrieving information from cluster nodes, please wait ...")
-        rc = ext_cmd_nosudo("hb_report -f '%s' %s %s %s" %
+        rc = ext_cmd_nosudo("hb_report -Z -f '%s' %s %s %s" %
                 (self.from_dt.ctime(), to_option, nodes_option, d))
         if rc != 0:
             if os.path.isfile(tarball):
