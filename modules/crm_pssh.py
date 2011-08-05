@@ -84,7 +84,8 @@ def do_pssh(l, opts):
     hosts = []
     for host, cmdline in l:
         cmd = ['ssh', host, '-o', 'PasswordAuthentication=no',
-                '-o', 'SendEnv=PSSH_NODENUM']
+                '-o', 'SendEnv=PSSH_NODENUM',
+                '-o', 'StrictHostKeyChecking=no']
         if opts.options:
             for opt in opts.options:
                 cmd += ['-o', opt]
