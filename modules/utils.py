@@ -257,9 +257,9 @@ def acquire_lock(dir):
             os.mkdir(os.path.join(dir,_LOCKDIR))
             str2file("%d" % os.getpid(),os.path.join(dir,_LOCKDIR,_PIDF))
             return True
-        except OSError, e:
-            if e.errno != os.errno.EEXIST:
-                common_err("%s" % e.message)
+        except OSError as (errno, strerror):
+            if errno != os.errno.EEXIST:
+                common_err(strerror)
                 return False
             time.sleep(0.1)
             continue
