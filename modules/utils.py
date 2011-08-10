@@ -413,7 +413,10 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     print get_stdout(ptest, input_s = graph_s)
     #page_string(get_stdout(ptest, input_s = graph_s))
     if dotfile:
-        show_dot_graph(dotfile)
+        if os.path.getsize(dotfile) > 0:
+            show_dot_graph(dotfile)
+        else:
+            common_warn("ptest produced empty dot file")
         vars.tmpfiles.append(dotfile)
     else:
         if not nograph:

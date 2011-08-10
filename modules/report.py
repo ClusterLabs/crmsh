@@ -65,7 +65,25 @@ def syslog_ts(s):
         common_warn("malformed line: %s" % s)
         return None
 
-def log_seek(f, ts, endpos = False):
+def seek_to_edge(f, ts, to_end):
+    '''
+    f contains lines with exactly the timestamp ts.
+    Read forward (or backward) till we find the edge.
+    Linear search, but should be short.
+    '''
+    if not to_end:
+        while ts == get_timestamp(f):
+            f.seek(-1000, 1) # go back 10 or so lines
+    while True:
+        pos = f.tell()
+        s = f.readline()
+        curr_ts = syslog_ts(s)
+        if (to_end and curr_ts > ts) or \
+                (not to_end and curr_ts >= ts):
+            break
+    f.seek(pos)
+
+def log_seek(f, ts, to_end = False):
     '''
     f is an open log. Do binary search for the timestamp.
     Return the position of the (more or less) first line with a
@@ -75,10 +93,11 @@ def log_seek(f, ts, endpos = False):
     f.seek(0,2)
     last = f.tell()
     if not ts:
-        return endpos and last or first
+        return to_end and last or first
     badline = 0
     maxbadline = 10
-    common_debug("seek ts %s" % time.ctime(ts))
+    common_debug("seek %s:%s in %s" %
+        (time.ctime(ts), to_end and "end" or "start", f.name))
     while first <= last:
         # we can skip some iterations if it's about few lines
         if abs(first-last) < 120:
@@ -98,9 +117,12 @@ def log_seek(f, ts, endpos = False):
         elif log_ts < ts:
             first = mid+1
         else:
+            seek_to_edge(f, log_ts, to_end)
             break
-    common_debug("sought to %s" % time.ctime(log_ts))
-    return f.tell()
+    fpos = f.tell()
+    common_debug("sought to %s (%d)" % (f.readline(), fpos))
+    f.seek(fpos)
+    return fpos
 
 def get_timestamp(f):
     '''
@@ -187,7 +209,7 @@ class LogSyslog(object):
         for log in self.f:
             f = self.f[log]
             start = log_seek(f, self.from_ts)
-            end = log_seek(f, self.to_ts, endpos = True)
+            end = log_seek(f, self.to_ts, to_end = True)
             if start == -1 or end == -1:
                 bad_logs.append(log)
             else:
