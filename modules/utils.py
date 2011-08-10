@@ -392,7 +392,7 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     Pipe graph_s thru ptest(8). Show graph using dotty if requested.
     '''
     actions_filter = "grep LogActions: | grep -vw Leave"
-    ptest = "ptest -X"
+    ptest = "2>&1 ptest -X"
     if verbosity:
         if actions:
             verbosity = 'v' * max(3,len(verbosity))
@@ -408,7 +408,8 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
         dotfile = None
     # ptest prints to stderr
     if actions:
-        ptest = "%s 2>&1 | %s" % (ptest, actions_filter)
+        ptest = "%s | %s" % (ptest, actions_filter)
+    common_debug("invoke: %s" % ptest)
     print get_stdout(ptest, input_s = graph_s)
     #page_string(get_stdout(ptest, input_s = graph_s))
     if dotfile:
@@ -443,7 +444,7 @@ def check_range(a):
         return False
     if not isinstance(a[0],int) or not isinstance(a[1],int):
         return False
-    return (int(a[0]) < int(a[1]))
+    return (int(a[0]) <= int(a[1]))
 
 def sort_by_mtime(l):
     'Sort a (small) list of files by time mod.'

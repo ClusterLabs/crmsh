@@ -165,14 +165,14 @@ def report_node_list(idx,delimiter = False):
     if delimiter:
         return ' '
     return crm_report.node_list()
-def report_pe_cmd_list(idx,delimiter = False):
+def report_pe_list_transition(idx,delimiter = False):
     if delimiter:
         return ' '
-    return ["list","get","show","showdot"]
-def report_pe_list(idx,delimiter = False):
+    return crm_report.peinputs_list() + ["showdot"]
+def report_pe_list_peinputs(idx,delimiter = False):
     if delimiter:
         return ' '
-    return crm_report.peinputs_list()
+    return crm_report.peinputs_list() + ["v"]
 
 #
 # completion for primitives including help for parameters
@@ -484,7 +484,8 @@ completer_lists = {
         "resource" : (report_rsc_list,loop),
         "node" : (report_node_list,loop),
         "log" : (report_node_list,loop),
-        "peinputs" : (report_pe_cmd_list,report_pe_list,loop),
+        "peinputs" : (report_pe_list_peinputs,loop),
+        "transition" : (report_pe_list_transition,),
     },
 }
 def get_completer_list(level,cmd):

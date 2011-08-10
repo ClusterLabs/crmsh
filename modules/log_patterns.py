@@ -62,8 +62,3 @@ log_patterns = {
 		),
 	),
 }
-
-transition_patt = (
-	"crmd: .* Processing graph.*derived from .*/pe-[^-]+-(%%)[.]bz2", # transition start
-	"crmd: .* Transition.*Source=.*/pe-[^-]+-(%%)[.]bz2.: (Stopped|Complete|Terminated)", # and stop
-)

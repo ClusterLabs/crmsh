@@ -31,7 +31,7 @@ from term import TerminalController
 from xmlutil import *
 from utils import *
 from msg import *
-from log_patterns import log_patterns, transition_patt
+from log_patterns import log_patterns
 _NO_PSSH = False
 try:
     from crm_pssh import next_loglines, next_peinputs
@@ -297,8 +297,8 @@ def human_date(dt):
 def is_log(p):
     return os.path.isfile(p) and os.path.getsize(p) > 0
 
-def pe_file_in_range(pe_f, a, ext):
-    r = re.search("pe-[^-]+-([0-9]+)[.]%s$" % ext, pe_f)
+def pe_file_in_range(pe_f, a):
+    r = re.search("pe-[^-]+-([0-9]+)[.]bz2$", pe_f)
     if not r:
         return None
     if not a or (a[0] <= int(r.group(1)) <= a[1]):
@@ -325,6 +325,17 @@ def update_loginfo(rptlog, logfile, oldpos, appended_file):
     except IOError, msg:
         common_err("couldn't the update %s.info: %s" % (rptlog, msg))
 
+# r.group(1) transition number (a different thing from file number)
+# r.group(2) contains full path
+# r.group(3) file number
+transition_patt = (
+	"crmd: .* do_te_invoke: Processing graph ([0-9]+) .*derived from (.*/pe-[^-]+-(%%)[.]bz2)", # transition start
+	"crmd: .* run_graph: Transition ([0-9]+).*Source=(.*/pe-[^-]+-(%%)[.]bz2).: (Stopped|Complete|Terminated)", # and stop
+# r.group(1) transition number
+# r.group(2) number of actions
+	"crmd: .* unpack_graph: Unpacked transition (%%): ([0-9]+) actions", # number of actions
+)
+
 class Report(Singleton):
     '''
     A hb_report class.
@@ -346,6 +357,7 @@ class Report(Singleton):
         self.desc = None
         self.log_l = []
         self.central_log = None
+        self.peinputs_l = []
         self.cibgrp_d = {}
         self.cibrsc_l = []
         self.cibnode_l = []
@@ -363,7 +375,7 @@ class Report(Singleton):
         return self.cibnode_l
     def peinputs_list(self):
         return [re.search("pe-[^-]+-([0-9]+)[.]bz2$", x).group(1)
-            for x in self._file_list("bz2")]
+                for x in self.peinputs_l]
     def unpack_report(self, tarball):
         '''
         Unpack hb_report tarball.
@@ -495,28 +507,26 @@ class Report(Singleton):
                 continue
             u_dir = os.path.join(self.loc, node)
             rc = ext_cmd_nosudo("tar -C %s -x < %s" % (u_dir,fl[0]))
-    def find_new_peinputs(self, a):
+    def find_new_peinputs(self, node_l):
         '''
-        Get a list of pe inputs appearing in logs.
+        Get a list of pe inputs appearing in new logs.
+        The log is put in self.outdir/node by pssh.
         '''
         if not os.path.isdir(self.outdir):
             return []
         l = []
-        trans_re_l = [x.replace("%%","") for x in transition_patt]
-        for node,rptlog,logfile,nextpos in a:
-            node_l = []
+        for node in node_l:
             fl = glob.glob("%s/*%s*" % (self.outdir,node))
             if not fl:
                 continue
-            for s in file2list(fl[0]):
-                r = re.search(trans_re_l[0], s)
-                if not r:
-                    continue
-                node_l.append(r.group(1))
-            if node_l:
-                common_debug("found new PE inputs %s at %s" %
-                    ([os.path.basename(x) for x in node_l], node))
-                l.append([node,node_l])
+            try:
+                f = open(fl[0])
+            except IOError,msg:
+                common_err("open %s: %s"%(fl[0],msg))
+                continue
+            pe_l = self.get_transitions([x for x in f], keep_pe_path = True)
+            if pe_l:
+                l.append([node,pe_l])
         return l
     def update_live(self):
         '''
@@ -544,7 +554,7 @@ class Report(Singleton):
         rmdir_r(self.errdir)
         rc1 = next_loglines(a, self.outdir, self.errdir)
         self.append_newlogs(a)
-        pe_l = self.find_new_peinputs(a)
+        pe_l = self.find_new_peinputs([x[0] for x in a])
         rmdir_r(self.outdir)
         rmdir_r(self.errdir)
         rc2 = True
@@ -677,6 +687,55 @@ class Report(Singleton):
         for n in self.cibnode_l:
             self.nodecolor[n] = self.nodecolors[i]
             i = (i+1) % len(self.nodecolors)
+    def get_transitions(self, msg_l = None, keep_pe_path = False):
+        '''
+        Get a list of transitions.
+        Empty transitions are skipped.
+        We use the unpack_graph message to see the number of
+        actions.
+        Some callers need original PE file path (keep_pe_path),
+        otherwise we produce the path within the report.
+        If the caller doesn't provide the message list, then we
+        build it from the collected log files (self.logobj).
+        Otherwise, we get matches for transition patterns.
+        '''
+        trans_re_l = [x.replace("%%", "[0-9]+") for x in transition_patt]
+        if not msg_l:
+            msg_l = self.logobj.get_matches(trans_re_l)
+        else:
+            re_s = '|'.join(trans_re_l)
+            msg_l = [x for x in msg_l if re.search(re_s, x)]
+        pe_l = []
+        for msg in msg_l:
+            msg_a = msg.split()
+            if len(msg_a) < 8:
+                # this looks too short
+                common_warn("log message <%s> unexpected format, please report a bug" % msg)
+                continue
+            if msg_a[7] in ("unpack_graph:","run_graph:"):
+                continue # we want another message
+            node = msg_a[3]
+            pe_file = msg_a[-1]
+            pe_base = os.path.basename(pe_file)
+            # check if there were any actions in this transition
+            r = re.search(trans_re_l[0], msg)
+            trans_num = r.group(1)
+            unpack_patt = transition_patt[2].replace("%%", trans_num)
+            num_actions = 0
+            for t in msg_l:
+                try:
+                    num_actions = int(re.search(unpack_patt, t).group(2))
+                    break
+                except: pass
+            if num_actions == 0: # empty transition
+                common_debug("skipping empty transition %s (%s)" % (trans_num, pe_base))
+                continue
+            common_debug("found PE input at %s: %s" % (node, pe_file))
+            if keep_pe_path:
+                pe_l.append(pe_file)
+            else:
+                pe_l.append(os.path.join(self.loc, node, "pengine", pe_base))
+        return pe_l
     def report_setup(self):
         if not self.loc:
             return
@@ -687,6 +746,11 @@ class Report(Singleton):
         self.set_node_colors()
         self.logobj = LogSyslog(self.central_log, self.log_l, \
                 self.from_dt, self.to_dt)
+        self.peinputs_l = self.get_transitions()
+        for pe_input in self.peinputs_l:
+            if not os.path.isfile(pe_input):
+                warn_once("%s in the logs, but not in the report" % pe_input)
+                self.peinputs_l.remove(pe_input)
     def prepare_source(self):
         '''
         Unpack a hb_report tarball.
@@ -821,16 +885,16 @@ class Report(Singleton):
         Search for events within the given transition.
         '''
         pe_base = os.path.basename(pe_file)
-        r = re.search("pe-[^-]+-([0-9]+)[.]bz2", pe_base)
+        r = re.search("pe-[^-]+-([0-9]+)[.]", pe_base)
         pe_num = r.group(1)
         trans_re_l = [x.replace("%%",pe_num) for x in transition_patt]
         trans_start = self.logobj.search_logs(self.log_l, trans_re_l[0])
         trans_end = self.logobj.search_logs(self.log_l, trans_re_l[1])
         if not trans_start:
-            common_warn("transition %s start not found in logs" % pe_base)
+            common_warn("start of transition %s not found in logs" % pe_base)
             return False
         if not trans_end:
-            common_warn("transition %s end not found in logs" % pe_base)
+            common_warn("end of transition %s not found in logs (transition not complete yet?)" % pe_base)
             return False
         common_debug("transition start: %s" % trans_start[0])
         common_debug("transition end: %s" % trans_end[0])
@@ -891,23 +955,23 @@ class Report(Singleton):
             if not l:
                 return False
             self.show_logs(log_l = l)
-    def _file_list(self, ext, a = []):
-        '''
-        Return list of PE (or dot) files (abs paths) sorted by
-        mtime.
-        Input is a number or a pair of numbers representing
-        range. Otherwise, all matching files are returned.
-        '''
+    def pelist(self, a = []):
         if not self.prepare_source():
             return []
-        if not isinstance(a,(tuple,list)) and a is not None:
+        if isinstance(a,(tuple,list)):
+            if len(a) == 1:
+                a.append(a[0])
+        elif a is not None:
             a = [a,a]
-        return sort_by_mtime([x for x in dirwalk(self.loc) \
-                if pe_file_in_range(x,a,ext)])
-    def pelist(self, a = []):
-        return self._file_list("bz2", a)
+        return [x for x in self.peinputs_l \
+            if pe_file_in_range(x, a)]
     def dotlist(self, a = []):
-        return self._file_list("dot", a)
+        l = [x.replace("bz2","dot") for x in self.pelist(a)]
+        return [x for x in l if os.path.isfile(x)]
+    def find_pe_files(self, path):
+        'Find a PE or dot file matching part of the path.'
+        pe_l = path.endswith(".dot") and self.dotlist() or self.pelist()
+        return [x for x in pe_l if x.endswith(path)]
     def find_file(self, f):
         return file_find_by_name(self.loc, f)
 

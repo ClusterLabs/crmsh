@@ -156,6 +156,9 @@ def next_peinputs(node_pe_l, outdir, errdir):
         myopts = ["-q", "-o", outdir, "-e", errdir]
         opts, args = parse_args(myopts)
         l.append([node, cmdline])
+    if not l:
+        # is this a failure?
+        return True
     return do_pssh(l, opts)
 
 # vim:ts=4:sw=4:et:

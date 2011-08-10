@@ -2560,55 +2560,62 @@ Example:
 
 Every event in the cluster results in generating one or more
 Policy Engine (PE) files. These files describe future motions of
-resources. The files are listed along with the node where they
-were created (the DC at the time). The `get` subcommand will copy
-all PE input files to the current working directory (and use ssh
-if necessary).
+resources. The files are listed as full paths in the current
+report directory. Add `v` to also see the creation time stamps.
 
 Usage:
 ...............
-        peinputs list [{<range>|<number>} ...]
-        peinputs get [{<range>|<number>} ...]
+        peinputs [{<range>|<number>} ...] [v]
 
         range :: <n1>:<n2>
 ...............
 Example:
 ...............
-        peinputs get 440:444 446
+        peinputs
+        peinputs 440:444 446
+        peinputs v
 ...............
 
 [[cmdhelp_history_transition,show transition]]
 ==== `transition`
 
-The `show` subcommand will print actions planned by the PE and
-run graphviz (`dotty`) to display a graphical representation. Of
-course, for the latter an X11 session is required. This command
-invokes `ptest(8)` in background.
+This command will print actions planned by the PE and run
+graphviz (`dotty`) to display a graphical representation of the
+transition. Of course, for the latter an X11 session is required.
+This command invokes `ptest(8)` in background.
 
 The `showdot` subcommand runs graphviz (`dotty`) to display a
 graphical representation of the `.dot` file which has been
 included in the report. Essentially, it shows the calculation
 produced by `pengine` which is installed on the node where the
-report was produced.
+report was produced. In optimal case this output should not
+differ from the one produced by the locally installed `pengine`.
 
 If the PE input file number is not provided, it defaults to the
 last one, i.e. the last transition. If the number is negative,
 then the corresponding transition relative to the last one is
 chosen.
 
+If there are warning and error PE input files or different nodes
+were the DC in the observed timeframe, it may happen that PE
+input file numbers collide. In that case provide some unique part
+of the path to the file.
+
 After the `ptest` output, logs about events that happened during
 the transition are printed.
 
 Usage:
 ...............
-        transition show [<number>] [nograph] [v...] [scores] [actions] [utilization]
-        transition showdot [<number>]
+        transition [<number>|<file>] [nograph] [v...] [scores] [actions] [utilization]
+        transition showdot [<number>|<file>]
 ...............
 Examples:
 ...............
-        transition show
-        transition show 444
-        transition show -1
+        transition
+        transition 444
+        transition -1
+        transition pe-error-3.bz2
+        transition node-a/pengine/pe-input-2.bz2
         transition showdot 444
 ...............
 
