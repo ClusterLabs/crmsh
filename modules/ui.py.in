@@ -1796,22 +1796,15 @@ Examine Pacemaker's history: node and resource events, logs.
         return crm_report.info()
     def latest(self,cmd):
         "usage: latest"
-        try:
-            prev_level = levels.previous().myname()
-        except:
-            prev_level = ''
-        if prev_level != "cibconfig":
-            common_err("%s is available only when invoked from configure" % cmd)
-            return False
-        ts = cib_factory.last_commit_at()
-        if not ts:
-            common_err("no last commit time found")
-            return False
         if not wait4dc("transition", not options.batch):
             return False
-        self._set_source("live", ts)
+        self._set_source("live")
         crm_report.refresh_source()
-        return crm_report.events()
+        f = self._get_pe_byidx(-1)
+        if not f:
+            common_err("no transitions found")
+            return False
+        crm_report.show_transition_log(f)
     def resource(self,cmd,*args):
         "usage: resource <rsc> [<rsc> ...]"
         return crm_report.resource(*args)
@@ -1853,6 +1846,30 @@ Examine Pacemaker's history: node and resource events, logs.
         else:
             s = '\n'.join(l)
         page_string(s)
+    def _get_pe_byname(self, s):
+        l = crm_report.find_pe_files(s)
+        if len(l) == 0:
+            common_err("%s: path not found" % s)
+            return None
+        elif len(l) > 1:
+            common_err("%s: path ambiguous" % s)
+            return None
+        return l[0]
+    def _get_pe_byidx(self, idx):
+        l = crm_report.pelist()
+        if len(l) < abs(idx):
+            common_err("pe input file not found")
+            return None
+        return l[idx]
+    def _get_pe_bynum(self, n):
+        l = crm_report.pelist([n])
+        if len(l) == 0:
+            common_err("%s: PE file %d not found" % n)
+            return None
+        elif len(l) > 1:
+            common_err("%s: PE file %d ambiguous" % n)
+            return None
+        return l[0]
     def transition(self,cmd,*args):
         """usage: transition [<number>|<file>] [nograph] [v...] [scores] [actions] [utilization]
         transition showdot [<number>|<file>]"""
@@ -1864,48 +1881,35 @@ Examine Pacemaker's history: node and resource events, logs.
                 return False
             subcmd = "showdot"
             argl.remove(subcmd)
-        f = None
-        startarg = 1
-        if argl and re.search('pe-', argl[0]):
-            l = crm_report.find_pe_files(argl[0])
-            if len(l) == 0:
-                common_err("%s: path not found" % argl[0])
-                return False
-            elif len(l) > 1:
-                common_err("%s: path ambiguous" % argl[0])
-                return False
-            f = l[0]
-        else:
-            try: n = convert2ints(argl[0])
-            except: n = None
-            if n is None:
-                idx = -1
-                startarg = 0 # peinput number missing
-            elif n <= 0:
-                idx = n - 1
-                n = [] # to get all peinputs
-            else:
-                idx = 0
-            if subcmd == "showdot":
-                l = crm_report.dotlist(n)
-            else:
-                l = crm_report.pelist(n)
-            if len(l) < abs(idx):
-                if subcmd == "show":
-                    common_err("pe input file not found")
+        if argl:
+            if re.search('pe-', argl[0]):
+                f = self._get_pe_byname(argl[0])
+                argl.pop(0)
+            elif is_int(argl[0]):
+                n = int(argl[0])
+                if n <= 0:
+                    f = self._get_pe_byidx(n-1)
                 else:
-                    common_err("dot file not found")
-                return False
-            f = l[idx]
+                    f = self._get_pe_bynum(n)
+                argl.pop(0)
+            else:
+                f = self._get_pe_byidx(-1)
+        else:
+            f = self._get_pe_byidx(-1)
         if not f:
             return False
         rc = True
         if subcmd == "show":
             self.pe_file = f # self.pe_file needed by self.ptest
+            common_info("running ptest with %s" % f)
             rc = ptestlike(self.ptest,'vv',"%s %s" % \
-                (cmd, subcmd), *argl[startarg:])
+                (cmd, subcmd), *argl)
         else:
-            show_dot_graph(f.replace("bz2","dot"))
+            f = crm_report.pe2dot(f)
+            if not f:
+                common_err("dot file not found in the report")
+                return False
+            show_dot_graph(f)
         if rc:
             crm_report.show_transition_log(f)
         return rc

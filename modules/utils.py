@@ -449,6 +449,9 @@ def check_range(a):
         return False
     return (int(a[0]) <= int(a[1]))
 
+def shorttime(ts):
+    return time.strftime("%X",time.localtime(ts))
+
 def sort_by_mtime(l):
     'Sort a (small) list of files by time mod.'
     l2 = [(os.stat(x).st_mtime, x) for x in l]
@@ -489,6 +492,13 @@ def convert2ints(l):
         else: # it's a string then
             return int(l)
     except: return None
+def is_int(s):
+    'Check if the string can be converted to an integer.'
+    try:
+        i = int(s)
+        return True
+    except:
+        return False
 
 def is_process(s):
     proc = subprocess.Popen("ps -e -o pid,command | grep -qs '%s'" % s, \

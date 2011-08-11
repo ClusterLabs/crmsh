@@ -467,8 +467,7 @@ class Report(Singleton):
     def is_last_live_recent(self):
         '''
         Look at the last live hb_report. If it's recent enough,
-        return True. Return True also if self.to_dt is not empty
-        (not an open end report).
+        return True.
         '''
         try:
             last_ts = os.stat(self.desc).st_mtime
@@ -800,6 +799,7 @@ class Report(Singleton):
         if self.source != "live":
             self.error("refresh not supported")
             return False
+        self.last_live_update = 0
         self.loc = self.manage_live_report(force)
         self.report_setup()
         self.ready = self.check_report()
@@ -884,18 +884,10 @@ class Report(Singleton):
         print "Nodes:",' '.join(self.cibnode_l)
         print "Groups:",' '.join(self.cibgrp_d.keys())
         print "Resources:",' '.join(self.cibrsc_l)
-    def latest(self):
-        '''
-        Get the very latest cluster events, basically from the
-        latest transition.
-        Some transitions may be empty though.
-        '''
     def events(self):
         '''
         Show all events.
         '''
-        if not self.prepare_source():
-            return False
         all_re_l = self.build_re("resource",self.cibrsc_l) + \
             self.build_re("node",self.cibnode_l)
         if not all_re_l:
@@ -906,6 +898,8 @@ class Report(Singleton):
         '''
         Search for events within the given transition.
         '''
+        if not self.prepare_source():
+            return False
         pe_base = os.path.basename(pe_file)
         r = re.search("pe-[^-]+-([0-9]+)[.]", pe_base)
         pe_num = r.group(1)
@@ -926,6 +920,9 @@ class Report(Singleton):
             self.warn("strange, no timestamps found")
             return False
         # limit the log scope temporarily
+        common_info("logs for transition %s (%s-%s)" %
+            (pe_file.replace(self.loc+"/",""), \
+            shorttime(start_ts), shorttime(end_ts)))
         self.logobj.set_log_timeframe(start_ts, end_ts)
         self.events()
         self.logobj.set_log_timeframe(self.from_dt, self.to_dt)
@@ -994,6 +991,11 @@ class Report(Singleton):
         'Find a PE or dot file matching part of the path.'
         pe_l = path.endswith(".dot") and self.dotlist() or self.pelist()
         return [x for x in pe_l if x.endswith(path)]
+    def pe2dot(self, f):
+        f = f.replace("bz2","dot")
+        if os.path.isfile(f):
+            return f
+        return None
     def find_file(self, f):
         return file_find_by_name(self.loc, f)
 
