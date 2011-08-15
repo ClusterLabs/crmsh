@@ -3,7 +3,7 @@
 # log pattern specification
 #
 # patterns are grouped one of several classes:
-#  - resources: pertaining to a resource
+#  - resource: pertaining to a resource
 #  - node: pertaining to a node
 #  - quorum: quorum changes
 #  - events: other interesting events (core dumps, etc)
@@ -17,12 +17,12 @@
 log_patterns = {
 	"resource": (
 		( # detail 0
-			"lrmd:.*rsc:%%.*(start|stop)",
+			"lrmd:.*rsc:%%.*(start|stop|promote|demote|migrate)",
 			"lrmd:.*RA output:.*%%.*stderr",
 			"lrmd:.*WARN:.*Managed.*%%.*exited",
 		),
 		( # detail 1
-			"lrmd:.*rsc:%%.*probe",
+			"lrmd:.*rsc:%%.*(probe|notify)",
 			"lrmd:.*info:.*Managed.*%%.*exited",
 		),
 	),
