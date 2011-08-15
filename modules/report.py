@@ -320,10 +320,8 @@ def is_log(p):
     return os.path.isfile(p) and os.path.getsize(p) > 0
 
 def pe_file_in_range(pe_f, a):
-    r = re.search("pe-[^-]+-([0-9]+)[.]bz2$", pe_f)
-    if not r:
-        return None
-    if not a or (a[0] <= int(r.group(1)) <= a[1]):
+    pe_num = get_pe_num(pe_f)
+    if not a or (a[0] <= int(pe_num) <= a[1]):
         return pe_f
     return None
 
@@ -347,6 +345,12 @@ def update_loginfo(rptlog, logfile, oldpos, appended_file):
     except IOError, msg:
         common_err("couldn't the update %s.info: %s" % (rptlog, msg))
 
+def get_pe_num(pe_file):
+    try:
+        return re.search("pe-[^-]+-([0-9]+)[.]", pe_file).group(1)
+    except:
+        return "-1"
+
 # r.group(1) transition number (a different thing from file number)
 # r.group(2) contains full path
 # r.group(3) file number
@@ -357,6 +361,40 @@ transition_patt = (
 # r.group(2) number of actions
 	"crmd: .* unpack_graph: Unpacked transition (%%): ([0-9]+) actions", # number of actions
 )
+
+def run_graph_msg_actions(msg):
+    '''
+    crmd: [13667]: info: run_graph: Transition 399 (Complete=5,
+    Pending=1, Fired=1, Skipped=0, Incomplete=3,
+    Source=...
+    '''
+    d = {}
+    s = msg
+    while True:
+        r = re.search("([A-Z][a-z]+)=([0-9]+)", s)
+        if not r:
+            return d
+        d[r.group(1)] = int(r.group(2))
+        s = s[r.end():]
+def transition_actions(msg_l, te_invoke_msg, pe_file):
+    '''
+    Get the number of actions for the transition.
+    '''
+    # check if there were any actions in this transition
+    pe_num = get_pe_num(pe_file)
+    te_invoke_patt = transition_patt[0].replace("%%", pe_num)
+    run_patt = transition_patt[1].replace("%%", pe_num)
+    r = re.search(te_invoke_patt, te_invoke_msg)
+    trans_num = r.group(1)
+    unpack_patt = transition_patt[2].replace("%%", trans_num)
+    for msg in msg_l:
+        try:
+            return int(re.search(unpack_patt, msg).group(2))
+        except:
+            if re.search(run_patt, msg):
+                act_d = run_graph_msg_actions(msg)
+                return sum(act_d.values())
+    return -1
 
 class Report(Singleton):
     '''
@@ -396,8 +434,7 @@ class Report(Singleton):
     def node_list(self):
         return self.cibnode_l
     def peinputs_list(self):
-        return [re.search("pe-[^-]+-([0-9]+)[.]bz2$", x).group(1)
-                for x in self.peinputs_l]
+        return [get_pe_num(x) for x in self.peinputs_l]
     def unpack_report(self, tarball):
         '''
         Unpack hb_report tarball.
@@ -712,8 +749,6 @@ class Report(Singleton):
         '''
         Get a list of transitions.
         Empty transitions are skipped.
-        We use the unpack_graph message to see the number of
-        actions.
         Some callers need original PE file path (keep_pe_path),
         otherwise we produce the path within the report.
         If the caller doesn't provide the message list, then we
@@ -738,19 +773,12 @@ class Report(Singleton):
             node = msg_a[3]
             pe_file = msg_a[-1]
             pe_base = os.path.basename(pe_file)
-            # check if there were any actions in this transition
-            r = re.search(trans_re_l[0], msg)
-            trans_num = r.group(1)
-            unpack_patt = transition_patt[2].replace("%%", trans_num)
-            num_actions = 0
-            for t in msg_l:
-                try:
-                    num_actions = int(re.search(unpack_patt, t).group(2))
-                    break
-                except: pass
+            num_actions = transition_actions(msg_l, msg, pe_file)
             if num_actions == 0: # empty transition
-                common_debug("skipping empty transition %s (%s)" % (trans_num, pe_base))
+                common_debug("skipping empty transition (%s)" % pe_base)
                 continue
+            elif num_actions == -1: # couldn't find messages
+                common_warn("could not find number of actions for transition (%s)" % pe_base)
             common_debug("found PE input at %s: %s" % (node, pe_file))
             if keep_pe_path:
                 pe_l.append(pe_file)
@@ -894,6 +922,34 @@ class Report(Singleton):
             self.error("no resources or nodes found")
             return False
         self.show_logs(re_l = all_re_l)
+    def get_transition_msgs(self, pe_file, msg_l = []):
+        if not msg_l:
+            trans_re_l = [x.replace("%%", "[0-9]+") for x in transition_patt]
+            msg_l = self.logobj.get_matches(trans_re_l)
+        te_invoke_msg = ""
+        run_msg = ""
+        unpack_msg = ""
+        pe_num = get_pe_num(pe_file)
+        te_invoke_patt = transition_patt[0].replace("%%", pe_num)
+        run_patt = transition_patt[1].replace("%%", pe_num)
+        r = None
+        for msg in msg_l:
+            r = re.search(te_invoke_patt, msg)
+            if r:
+                te_invoke_msg = msg
+                break
+        if not r:
+            return ["", "", ""]
+        trans_num = r.group(1)
+        unpack_patt = transition_patt[2].replace("%%", trans_num)
+        for msg in msg_l:
+            if re.search(run_patt, msg):
+                run_msg = msg
+            elif re.search(unpack_patt, msg):
+                unpack_msg = msg
+            if run_msg and unpack_msg:
+                break
+        return [unpack_msg, te_invoke_msg, run_msg]
     def show_transition_log(self, pe_file):
         '''
         Search for events within the given transition.
@@ -901,28 +957,34 @@ class Report(Singleton):
         if not self.prepare_source():
             return False
         pe_base = os.path.basename(pe_file)
-        r = re.search("pe-[^-]+-([0-9]+)[.]", pe_base)
-        pe_num = r.group(1)
-        trans_re_l = [x.replace("%%",pe_num) for x in transition_patt]
-        trans_start = self.logobj.search_logs(self.log_l, trans_re_l[0])
-        trans_end = self.logobj.search_logs(self.log_l, trans_re_l[1])
-        if not trans_start:
+        pe_num = get_pe_num(pe_base)
+        unpack_msg, te_invoke_msg, run_msg = self.get_transition_msgs(pe_file)
+        if not te_invoke_msg:
             common_warn("start of transition %s not found in logs" % pe_base)
             return False
-        if not trans_end:
+        if not run_msg:
             common_warn("end of transition %s not found in logs (transition not complete yet?)" % pe_base)
             return False
-        common_debug("transition start: %s" % trans_start[0])
-        common_debug("transition end: %s" % trans_end[0])
-        start_ts = syslog_ts(trans_start[0])
-        end_ts = syslog_ts(trans_end[0])
+        common_debug("transition start: %s" % te_invoke_msg)
+        common_debug("transition end: %s" % run_msg)
+        start_ts = syslog_ts(te_invoke_msg)
+        end_ts = syslog_ts(run_msg)
         if not start_ts or not end_ts:
             self.warn("strange, no timestamps found")
             return False
-        # limit the log scope temporarily
+        act_d = run_graph_msg_actions(run_msg)
+        total = sum(act_d.values())
+        s = ""
+        for a in act_d:
+            if not act_d[a]:
+                continue
+            s = "%s %s=%d" % (s, a, act_d[a])
+        common_info("transition %s %d actions: %s" %
+            (pe_file.replace(self.loc+"/",""), total, s))
         common_info("logs for transition %s (%s-%s)" %
             (pe_file.replace(self.loc+"/",""), \
             shorttime(start_ts), shorttime(end_ts)))
+        # limit the log scope temporarily
         self.logobj.set_log_timeframe(start_ts, end_ts)
         self.events()
         self.logobj.set_log_timeframe(self.from_dt, self.to_dt)
