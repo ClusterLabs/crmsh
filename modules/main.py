@@ -16,6 +16,7 @@
 #
 
 import sys
+import os
 import shlex
 import getopt
 
@@ -205,7 +206,10 @@ vars = Vars.getInstance()
 levels = Levels.getInstance()
 
 # prefer the user set PATH
-os.putenv("PATH", "%s:%s" % (os.getenv("PATH"),vars.crm_daemon_dir))
+mybinpath = os.path.dirname(sys.argv[0])
+for p in mybinpath, vars.crm_daemon_dir:
+    if p not in os.environ["PATH"].split(':'):
+        os.environ['PATH'] = "%s:%s" % (os.environ['PATH'], p)
 
 def set_interactive():
     '''Set the interactive option only if we're on a tty.'''
