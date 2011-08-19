@@ -178,6 +178,34 @@ def shadowfile(name):
 def shadow2doc(name):
     return file2doc(shadowfile(name))
 
+def is_xs_boolean_true(bool):
+    return bool.lower() in ("true","1")
+def is_rsc_managed(id):
+    if not is_live_cib():
+        return False
+    rsc_node = rsc2node(id)
+    if not rsc_node:
+        return False
+    prop_node = get_properties_node(get_conf_elem(cibdump2doc("crm_config"), "crm_config"))
+    # maintenance-mode, if true, overrides all
+    attr = get_attr_value(prop_node, "maintenance-mode")
+    if attr and is_xs_boolean_true(attr):
+        return False
+    # then check the rsc is-managed meta attribute
+    rsc_meta_node = get_rsc_meta_node(rsc_node)
+    attr = get_attr_value(rsc_meta_node, "is-managed")
+    if attr:
+        return is_xs_boolean_true(attr)
+    # then rsc_defaults is-managed attribute
+    rsc_dflt_node = get_rscop_defaults_meta_node(get_conf_elem(cibdump2doc("rsc_defaults"), "rsc_defaults"))
+    attr = get_attr_value(rsc_dflt_node, "is-managed")
+    if attr:
+        return is_xs_boolean_true(attr)
+    # finally the is-managed-default property
+    attr = get_attr_value(prop_node, "is-managed-default")
+    if attr:
+        return is_xs_boolean_true(attr)
+    return True
 def is_rsc_running(id):
     if not is_live_cib():
         return False
@@ -691,12 +719,20 @@ def silly_constraint(c_node,rsc_id):
 def get_rsc_children_ids(node):
     return [x.getAttribute("id") \
         for x in node.childNodes if is_child_rsc(x)]
-def get_rscop_defaults_meta_node(node):
+def get_child_nvset_node(node, attr_set = "meta_attributes"):
+    if not node:
+        return None
     for c in node.childNodes:
-        if not is_element(c) or c.tagName != "meta_attributes":
+        if not is_element(c) or c.tagName != attr_set:
             continue
         return c
     return None
+def get_rscop_defaults_meta_node(node):
+    return get_child_nvset_node(node)
+def get_rsc_meta_node(node):
+    return get_child_nvset_node(node)
+def get_properties_node(node):
+    return get_child_nvset_node(node, attr_set = "cluster_property_set")
 
 def new_cib():
     doc = xml.dom.minidom.Document()
@@ -727,12 +763,19 @@ def new_cib_element(node,tagname,id_pfx):
     node.appendChild(newnode)
     return newnode
 def get_attr_in_set(node,attr):
+    if not node:
+        return None
     for c in node.childNodes:
         if not is_element(c):
             continue
         if c.tagName == "nvpair" and c.getAttribute("name") == attr:
             return c
     return None
+def get_attr_value(node,attr):
+    n = get_attr_in_set(node,attr)
+    if not n:
+        return None
+    return n.getAttribute("value")
 def set_attr(node,attr,value):
     '''
     Set an attribute in the attribute set.

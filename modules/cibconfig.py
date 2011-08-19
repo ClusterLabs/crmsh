@@ -2303,7 +2303,7 @@ class CibFactory(Singleton):
                 no_object_err(obj_id)
                 rc = False
                 continue
-            if is_rsc_running(obj_id):
+            if is_rsc_managed(obj_id) and is_rsc_running(obj_id):
                 common_err("resource %s is running, can't delete it" % obj_id)
                 rc = False
             else:
