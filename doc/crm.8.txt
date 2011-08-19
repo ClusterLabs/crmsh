@@ -869,6 +869,34 @@ Example:
         param ip_0 show ip
 ...............
 
+[[cmdhelp_resource_secret,manage sensitive parameters]]
+==== `secret`
+
+Sensitive parameters can be kept in local files rather than CIB
+in order to prevent accidental data exposure. Use the `secret`
+command to manage such parameters. `stash` and `unstash` move the
+value from the CIB and back to the CIB respectively. The `set`
+subcommand sets the parameter to the provided value. `delete`
+removes the parameter completely. `show` displays the value of
+the parameter from the local file. Use `check` to verify if the
+local file content is valid.
+
+Usage:
+...............
+        secret <rsc> set <param> <value>
+        secret <rsc> stash <param>
+        secret <rsc> unstash <param>
+        secret <rsc> delete <param>
+        secret <rsc> show <param>
+        secret <rsc> check <param>
+...............
+Example:
+...............
+        secret fence_1 show password
+        secret fence_1 stash password
+        secret fence_1 set password secret_value
+...............
+
 [[cmdhelp_resource_meta,manage a meta attribute]]
 ==== `meta`
 

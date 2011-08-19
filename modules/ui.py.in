@@ -661,7 +661,8 @@ def manage_attr(cmd,attr_ext_commands,*args):
         else:
             bad_usage(cmd,' '.join(args))
             return False
-    elif args[1] in ('delete','show'):
+    elif args[1] in ('delete','show') or \
+            (cmd == "secret" and args[1] in ('stash','unstash','check')):
         if len(args) == 3:
             if not is_name_sane(args[0]) \
                     or not is_name_sane(args[2]):
@@ -770,6 +771,14 @@ program.
         'delete': "crm_resource -z -r '%s' -d '%s'",
         'show': "crm_resource -z -r '%s' -g '%s'",
     }
+    rsc_secret =  {
+        'set': "cibsecret set '%s' '%s' '%s'",
+        'stash': "cibsecret stash '%s' '%s'",
+        'unstash': "cibsecret unstash '%s' '%s'",
+        'delete': "cibsecret delete '%s' '%s'",
+        'show': "cibsecret get '%s' '%s'",
+        'check': "cibsecret check '%s' '%s'",
+    }
     rsc_refresh = "crm_resource -R"
     rsc_refresh_node = "crm_resource -R -H '%s'"
     rsc_reprobe = "crm_resource -P"
@@ -787,6 +796,7 @@ program.
         self.cmd_table["migrate"] = (self.migrate,(1,4),0,1)
         self.cmd_table["unmigrate"] = (self.unmigrate,(1,1),0,1)
         self.cmd_table["param"] = (self.param,(3,4),1,1)
+        self.cmd_table["secret"] = (self.secret,(3,4),1,1)
         self.cmd_table["meta"] = (self.meta,(3,4),1,1)
         self.cmd_table["utilization"] = (self.utilization,(3,4),1,1)
         self.cmd_table["failcount"] = (self.failcount,(3,4),0,0)
@@ -923,6 +933,16 @@ program.
         param <rsc> delete <param>
         param <rsc> show <param>"""
         d = lambda: manage_attr(cmd,self.rsc_param,*args)
+        return d()
+    def secret(self,cmd,*args):
+        """usage:
+        secret <rsc> set <param> <value>
+        secret <rsc> stash <param>
+        secret <rsc> unstash <param>
+        secret <rsc> delete <param>
+        secret <rsc> show <param>
+        secret <rsc> check <param>"""
+        d = lambda: manage_attr(cmd,self.rsc_secret,*args)
         return d()
     def meta(self,cmd,*args):
         """usage:
