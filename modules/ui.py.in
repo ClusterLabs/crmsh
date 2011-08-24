@@ -1822,7 +1822,6 @@ Examine Pacemaker's history: node and resource events, logs.
         crm_report.refresh_source()
         f = self._get_pe_byidx(-1)
         if not f:
-            common_err("no transitions found")
             return False
         crm_report.show_transition_log(f)
     def resource(self,cmd,*args):
@@ -1878,7 +1877,7 @@ Examine Pacemaker's history: node and resource events, logs.
     def _get_pe_byidx(self, idx):
         l = crm_report.pelist()
         if len(l) < abs(idx):
-            common_err("pe input file not found")
+            common_err("pe input file for index %d not found" % (idx+1))
             return None
         return l[idx]
     def _get_pe_bynum(self, n):
@@ -1913,7 +1912,8 @@ Examine Pacemaker's history: node and resource events, logs.
                     f = self._get_pe_bynum(n)
                 argl.pop(0)
             else:
-                f = self._get_pe_byidx(-1)
+                common_err("<%s> doesn't sound like a PE input" % argl[0])
+                return False
         else:
             f = self._get_pe_byidx(-1)
         if not f:
@@ -1922,8 +1922,7 @@ Examine Pacemaker's history: node and resource events, logs.
         if subcmd == "show":
             self.pe_file = f # self.pe_file needed by self.ptest
             common_info("running ptest with %s" % f)
-            rc = ptestlike(self.ptest,'vv',"%s %s" % \
-                (cmd, subcmd), *argl)
+            rc = ptestlike(self.ptest,'vv', cmd, *argl)
         else:
             f = crm_report.pe2dot(f)
             if not f:
