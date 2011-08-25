@@ -72,8 +72,15 @@ def seek_to_edge(f, ts, to_end):
     Linear search, but should be short.
     '''
     if not to_end:
+        beg = 0
         while ts == get_timestamp(f):
-            f.seek(-1000, 1) # go back 10 or so lines
+            if f.tell() < 1000:
+                f.seek(0) # otherwise, the seek below throws an exception
+                if beg > 0: # avoid infinite loop
+                    return # goes all the way to the top
+                beg += 1
+            else:
+                f.seek(-1000, 1) # go back 10 or so lines
     while True:
         pos = f.tell()
         s = f.readline()
@@ -86,8 +93,8 @@ def seek_to_edge(f, ts, to_end):
 def log_seek(f, ts, to_end = False):
     '''
     f is an open log. Do binary search for the timestamp.
-    Return the position of the (more or less) first line with a
-    newer time.
+    Return the position of the (more or less) first line with an
+    earlier (or later) time.
     '''
     first = 0
     f.seek(0,2)
