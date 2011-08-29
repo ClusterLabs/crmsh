@@ -589,7 +589,7 @@ class Report(Singleton):
             except IOError,msg:
                 common_err("open %s: %s"%(fl[0],msg))
                 continue
-            pe_l = self.get_transitions([x for x in f], keep_pe_path = True)
+            pe_l = self.list_transitions([x for x in f], future_pe = True)
             if pe_l:
                 l.append([node,pe_l])
         return l
@@ -752,12 +752,13 @@ class Report(Singleton):
         for n in self.cibnode_l:
             self.nodecolor[n] = self.nodecolors[i]
             i = (i+1) % len(self.nodecolors)
-    def get_transitions(self, msg_l = None, keep_pe_path = False):
+    def list_transitions(self, msg_l = None, future_pe = False):
         '''
-        Get a list of transitions.
+        List transitions by reading logs.
         Empty transitions are skipped.
-        Some callers need original PE file path (keep_pe_path),
-        otherwise we produce the path within the report.
+        Some callers need original PE file path (future_pe),
+        otherwise we produce the path within the report and check
+        if the transition files exist.
         If the caller doesn't provide the message list, then we
         build it from the collected log files (self.logobj).
         Otherwise, we get matches for transition patterns.
@@ -786,11 +787,18 @@ class Report(Singleton):
                 continue
             elif num_actions == -1: # couldn't find messages
                 common_warn("could not find number of actions for transition (%s)" % pe_base)
-            common_debug("found PE input at %s: %s" % (node, pe_file))
-            if keep_pe_path:
-                pe_l.append(pe_file)
+            if not future_pe:
+                pe_l_file = os.path.join(self.loc, node, "pengine", pe_base)
+                if not os.path.isfile(pe_l_file):
+                    warn_once("%s in the logs, but not in the report" % pe_l_file)
+                    continue
             else:
-                pe_l.append(os.path.join(self.loc, node, "pengine", pe_base))
+                pe_l_file = "%s:%s" % (node, pe_file)
+            if pe_l_file in pe_l:
+                common_warn("duplicate %s, replacing older PE file" % pe_l_file)
+                pe_l.remove(pe_l_file)
+            common_debug("found PE input: %s" % pe_l_file)
+            pe_l.append(pe_l_file)
         return pe_l
     def report_setup(self):
         if not self.loc:
@@ -802,11 +810,7 @@ class Report(Singleton):
         self.set_node_colors()
         self.logobj = LogSyslog(self.central_log, self.log_l, \
                 self.from_dt, self.to_dt)
-        self.peinputs_l = self.get_transitions()
-        for pe_input in self.peinputs_l:
-            if not os.path.isfile(pe_input):
-                warn_once("%s in the logs, but not in the report" % pe_input)
-                self.peinputs_l.remove(pe_input)
+        self.peinputs_l = self.list_transitions()
     def prepare_source(self):
         '''
         Unpack a hb_report tarball.
@@ -859,7 +863,7 @@ class Report(Singleton):
         if not args:
             re_l = mk_re_list(patt_l,"")
         else:
-            re_l = mk_re_list(patt_l,r'(%s)\W' % "|".join(args))
+            re_l = mk_re_list(patt_l,r'(%s)' % "|".join(args))
         return re_l
     def disp(self, s):
         'color output'
@@ -886,11 +890,6 @@ class Report(Singleton):
             self.error("no logs found")
             return
         self.display_logs(self.logobj.get_matches(re_l, log_l))
-    def match_args(self, cib_l, args):
-        for a in args:
-            a_clone = re.sub(r':.*', '', a)
-            if not (a in cib_l) and not (a_clone in cib_l):
-                self.warn("%s not found in report, proceeding anyway" % a)
     def get_desc_line(self,fld):
         try:
             f = open(self.desc)
@@ -923,8 +922,9 @@ class Report(Singleton):
         '''
         Show all events.
         '''
-        all_re_l = self.build_re("resource",self.cibrsc_l) + \
-            self.build_re("node",self.cibnode_l)
+        all_re_l = self.build_re("resource", self.cibrsc_l) + \
+            self.build_re("node", self.cibnode_l) + \
+            self.build_re("events", [])
         if not all_re_l:
             self.error("no resources or nodes found")
             return False
@@ -940,6 +940,7 @@ class Report(Singleton):
         te_invoke_patt = transition_patt[0].replace("%%", pe_num)
         run_patt = transition_patt[1].replace("%%", pe_num)
         r = None
+        msg_l.reverse()
         for msg in msg_l:
             r = re.search(te_invoke_patt, msg)
             if r:
@@ -1009,7 +1010,6 @@ class Report(Singleton):
                 expanded_l += self.cibgrp_d[a]
             else:
                 expanded_l.append(a)
-        self.match_args(self.cibrsc_l,expanded_l)
         rsc_re_l = self.build_re("resource",expanded_l)
         if not rsc_re_l:
             return False
@@ -1020,7 +1020,6 @@ class Report(Singleton):
         '''
         if not self.prepare_source():
             return False
-        self.match_args(self.cibnode_l,args)
         node_re_l = self.build_re("node",args)
         if not node_re_l:
             return False

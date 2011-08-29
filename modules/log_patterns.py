@@ -12,34 +12,41 @@
 # detail level 0 is the lowest, i.e. should match the least
 # number of relevant messages
 
-# NB: If you modify this file, you must follow python syntax!
+# NB:
+# %% stands for whatever user input we get, for instance a
+# resource name or node name or just some regular expression
+# in optimal case, it should be surrounded by literals
+#
+# [Note that resources may contain clone numbers!]
 
 log_patterns = {
 	"resource": (
 		( # detail 0
-			"lrmd:.*rsc:%%.*(start|stop|promote|demote|migrate)",
-			"lrmd:.*RA output:.*%%.*stderr",
-			"lrmd:.*WARN:.*Managed.*%%.*exited",
+			"lrmd:.*rsc:%% (start|stop|promote|demote|migrate)",
+			"lrmd:.*RA output: .%%:.*:stderr",
+			"lrmd:.*WARN: Managed %%:.*exited",
 		),
 		( # detail 1
-			"lrmd:.*rsc:%%.*(probe|notify)",
-			"lrmd:.*info:.*Managed.*%%.*exited",
+			"lrmd:.*rsc:%%:.*(probe|notify)",
+			"lrmd:.*info: Managed %%:.*exited",
 		),
 	),
 	"node": (
 		( # detail 0
-			"%%.*Corosync.Cluster.Engine",
-			"%%.*Executive.Service.RELEASE",
-			"%%.*crm_shutdown:.Requesting.shutdown",
-			"%%.*pcmk_shutdown:.Shutdown.complete",
-			"%%.*Configuration.validated..Starting.heartbeat",
-			"pengine.*Scheduling Node %%",
-			"te_fence_node.*Exec.*%%",
-			"stonith-ng.*log_oper.*reboot.*%%",
-			"stonithd.*to STONITH.*%%",
-			"stonithd.*fenced node %%",
-			"pcmk_peer_update.*(lost|memb): %%",
-			"crmd.*ccm_event.*(NEW|LOST) %%",
+			" %% .*Corosync.Cluster.Engine",
+			" %% .*Executive.Service.RELEASE",
+			" %% .*crm_shutdown:.Requesting.shutdown",
+			" %% .*pcmk_shutdown:.Shutdown.complete",
+			" %% .*Configuration.validated..Starting.heartbeat",
+			"pengine.*Scheduling Node %% for STONITH",
+			"crmd.* tengine_stonith_callback: .* of %% failed",
+			"stonith-ng.*log_operation:.*host '%%'",
+			"te_fence_node: Exec.*on %% ",
+			"pe_fence_node: Node %% will be fenced",
+			"stonith-ng.*remote_op_timeout:.*for %% timed",
+			"stonithd.*Succeeded.*node %%:",
+			"pcmk_peer_update.*(lost|memb): %% ",
+			"crmd.*ccm_event.*(NEW|LOST):.* %% ",
 		),
 		( # detail 1
 		),
