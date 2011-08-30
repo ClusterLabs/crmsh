@@ -628,7 +628,17 @@ sys_stats() {
 	lsscsi
 	lspci
 	mount
-	df
+	# df can block, run in background, allow for 5 seconds (!)
+	local maxcnt=5
+	df &
+	while kill -0 $! >/dev/null 2>&1; do
+		sleep 1
+		if [ $maxcnt -le 0 ]; then
+			warning "df appears to be hanging, continuing without it"
+			break
+		fi
+		maxcnt=$((maxcnt-1))
+	done
 	set +x
 }
 dlm_dump() {
