@@ -226,22 +226,25 @@ def rsc_set_constraint(node,obj_type):
         action = n.getAttribute("action")
         for r in n.getElementsByTagName("resource_ref"):
             rsc = cli_display.rscref(r.getAttribute("id"))
-            q = (obj_type == "colocation") and role or action
+            q = (obj_type == "order") and action or role
             col.append(q and "%s:%s"%(rsc,q) or rsc)
             cnt += 1
         if not sequential:
             col.append(")")
-    if cnt <= 2: # a degenerate thingie
+    if (obj_type != "rsc_ticket" and cnt <= 2) or \
+            (obj_type == "rsc_ticket" and cnt <= 1): # a degenerate thingie
         col.insert(0,"_rsc_set_")
     return col
-def two_rsc_constraint(node,obj_type):
+def simple_rsc_constraint(node,obj_type):
     col = []
     if obj_type == "colocation":
         col.append(mkrscrole(node,"rsc"))
         col.append(mkrscrole(node,"with-rsc"))
-    else:
+    elif obj_type == "order":
         col.append(mkrscaction(node,"first"))
         col.append(mkrscaction(node,"then"))
+    else: # rsc_ticket
+        col.append(mkrscrole(node,"rsc"))
     return col
 
 # this pre (or post)-processing is oversimplified

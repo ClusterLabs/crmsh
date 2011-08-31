@@ -1243,7 +1243,7 @@ class CibSimpleConstraint(CibObject):
         if node.getElementsByTagName("resource_set"):
             col = rsc_set_constraint(node,obj_type)
         else:
-            col = two_rsc_constraint(node,obj_type)
+            col = simple_rsc_constraint(node,obj_type)
         if not col:
             return None
         symm = node.getAttribute("symmetrical")
@@ -1263,6 +1263,27 @@ class CibSimpleConstraint(CibObject):
             headnode.appendChild(n)
         remove_id_used_attributes(oldnode)
         return headnode
+
+class CibRscTicket(CibSimpleConstraint):
+    '''
+    rsc_ticket constraint.
+    '''
+    def repr_cli_head(self,node):
+        obj_type = vars.cib_cli_map[node.tagName]
+        node_id = node.getAttribute("id")
+        s = cli_display.keyword(obj_type)
+        id = cli_display.id(node_id)
+        ticket = cli_display.ticket(node.getAttribute("ticket"))
+        if node.getElementsByTagName("resource_set"):
+            col = rsc_set_constraint(node,obj_type)
+        else:
+            col = simple_rsc_constraint(node,obj_type)
+        if not col:
+            return None
+        a = node.getAttribute("loss-policy")
+        if a:
+            col.append("loss-policy=%s" % a)
+        return "%s %s %s: %s" % (s,id,ticket,' '.join(col))
 
 class CibProperty(CibObject):
     '''
@@ -1371,6 +1392,7 @@ cib_object_map = {
     "rsc_location": ( "location", CibLocation, "constraints" ),
     "rsc_colocation": ( "colocation", CibSimpleConstraint, "constraints" ),
     "rsc_order": ( "order", CibSimpleConstraint, "constraints" ),
+    "rsc_ticket": ( "rsc_ticket", CibRscTicket, "constraints" ),
     "cluster_property_set": ( "property", CibProperty, "crm_config", "cib-bootstrap-options" ),
     "rsc_defaults": ( "rsc_defaults", CibProperty, "rsc_defaults", "rsc-options" ),
     "op_defaults": ( "op_defaults", CibProperty, "op_defaults", "op-options" ),

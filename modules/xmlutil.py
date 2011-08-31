@@ -520,7 +520,8 @@ def mss(node_list):
 def constraints(node_list):
     return filter_on_tag(node_list,"rsc_location") \
         + filter_on_tag(node_list,"rsc_colocation") \
-        + filter_on_tag(node_list,"rsc_order")
+        + filter_on_tag(node_list,"rsc_order") \
+        + filter_on_tag(node_list,"rsc_ticket")
 def properties(node_list):
     return filter_on_tag(node_list,"cluster_property_set") \
         + filter_on_tag(node_list,"rsc_defaults") \
@@ -562,7 +563,8 @@ def constraints_cli(node_list):
     return filter_on_type(node_list,"location") \
         + filter_on_type(node_list,"colocation") \
         + filter_on_type(node_list,"collocation") \
-        + filter_on_type(node_list,"order")
+        + filter_on_type(node_list,"order") \
+        + filter_on_type(node_list,"rsc_ticket")
 def properties_cli(cl):
     return filter_on_type(cl,"property") \
         + filter_on_type(cl,"rsc_defaults") \
@@ -601,6 +603,8 @@ def referenced_resources(node):
     elif xml_obj_type == "rsc_order":
         node_list = node.getElementsByTagName("first") + \
             node.getElementsByTagName("then")
+    elif xml_obj_type == "rsc_ticket":
+        node_list = node.getElementsByTagName("rsc")
     return [x.getAttribute("id") for x in node_list]
 
 def rename_id(node,old_id,new_id):

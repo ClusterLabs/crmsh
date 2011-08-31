@@ -62,6 +62,8 @@ class CliDisplay(Singleton):
         return self.otherword(4, s)
     def score(self, s):
         return self.otherword(5, s)
+    def ticket(self, s):
+        return self.otherword(5, s)
 
 user_prefs = UserPrefs.getInstance()
 vars = Vars.getInstance()

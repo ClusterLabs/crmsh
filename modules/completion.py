@@ -467,6 +467,7 @@ completer_lists = {
         "location" : (null_list,rsc_id_list),
         "colocation" : (null_list,null_list,rsc_id_list,loop),
         "order" : (null_list,null_list,rsc_id_list,loop),
+        "rsc_ticket" : (null_list,null_list,rsc_id_list,loop),
         "property" : (property_complete,loop),
         "rsc_defaults" : (prim_complete_meta,loop),
         "op_defaults" : (op_attr_list,loop),

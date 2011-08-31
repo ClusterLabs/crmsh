@@ -178,6 +178,15 @@ def parse_op(s):
     head_pl.append(["name",s[0]])
     return cli_list
 
+def cli_parse_ticket(ticket,pl):
+    if ticket.endswith(':'):
+        ticket = ticket.rstrip(':')
+    else:
+        syntax_err(ticket, context = 'rsc_ticket')
+        return False
+    pl.append(["ticket",ticket])
+    return True
+
 def cli_parse_score(score,pl,noattr = False):
     if score.endswith(':'):
         score = score.rstrip(':')
@@ -197,6 +206,7 @@ def cli_parse_score(score,pl,noattr = False):
         else:
             pl.append(["score-attribute",score])
     return True
+
 def is_binary_op(s):
     l = s.split(':')
     if len(l) == 2:
@@ -302,13 +312,13 @@ def parse_location(s):
         return False
     return cli_list
 
-def cli_opt_symmetrical(p,pl):
+def cli_opt_attribute(type, p, pl, attr):
     if not p:
         return True
     pl1 = []
     cli_parse_attr([p],pl1)
-    if len(pl1) != 1 or not find_value(pl1,"symmetrical"):
-        syntax_err(p,context = "order")
+    if len(pl1) != 1 or not find_value(pl1, attr):
+        syntax_err(p,context = type)
         return False
     pl += pl1
     return True
@@ -490,7 +500,33 @@ def parse_order(s):
         resource_set_obj = ResourceSet(type,s[3:],cli_list)
         if not resource_set_obj.parse():
             return False
-    if not cli_opt_symmetrical(symm,head_pl):
+    if not cli_opt_attribute(type, symm, head_pl, "symmetrical"):
+        return False
+    return cli_list
+
+def parse_rsc_ticket(s):
+    cli_list = []
+    head_pl = []
+    type = "rsc_ticket"
+    cli_list.append([s[0],head_pl])
+    if len(s) < 4:
+        syntax_err(s,context = "rsc_ticket")
+        return False
+    head_pl.append(["id",s[1]])
+    if not cli_parse_ticket(s[2],head_pl):
+        return False
+    # save loss-policy for later (if it exists)
+    loss_policy = ""
+    if is_attribute(s[len(s)-1],"loss-policy"):
+        loss_policy = s.pop()
+    if len(s) == 4:
+        if not cli_parse_rsc_role(s[3], head_pl):
+            return False
+    else:
+        resource_set_obj = ResourceSet(type, s[3:], cli_list)
+        if not resource_set_obj.parse():
+            return False
+    if not cli_opt_attribute(type, loss_policy, head_pl, attr = "loss-policy"):
         return False
     return cli_list
 
@@ -501,6 +537,8 @@ def parse_constraint(s):
         return parse_colocation(s)
     elif keyword_cmp(s[0], "order"):
         return parse_order(s)
+    elif keyword_cmp(s[0], "rsc_ticket"):
+        return parse_rsc_ticket(s)
 def parse_property(s):
     cli_list = []
     head_pl = []
@@ -708,6 +746,7 @@ class CliParser(object):
         "colocation": (3,parse_constraint),
         "collocation": (3,parse_constraint),
         "order": (3,parse_constraint),
+        "rsc_ticket": (3,parse_constraint),
         "monitor": (3,parse_op),
         "node": (2,parse_node),
         "property": (2,parse_property),

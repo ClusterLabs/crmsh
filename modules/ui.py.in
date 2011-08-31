@@ -1400,6 +1400,7 @@ cluster.
         self.cmd_table["location"] = (self.conf_location,(2,),1,0)
         self.cmd_table["colocation"] = (self.conf_colocation,(2,),1,0)
         self.cmd_table["order"] = (self.conf_order,(2,),1,0)
+        self.cmd_table["rsc_ticket"] = (self.conf_rsc_ticket,(2,),1,0)
         self.cmd_table["property"] = (self.conf_property,(1,),1,0)
         self.cmd_table["rsc_defaults"] = (self.conf_rsc_defaults,(1,),1,0)
         self.cmd_table["op_defaults"] = (self.conf_op_defaults,(1,),1,0)
@@ -1631,6 +1632,10 @@ cluster.
     def conf_order(self,cmd,*args):
         """usage: order <id> score-type: <first-rsc>[:<action>] <then-rsc>[:<action>]
         [symmetrical=<bool>]"""
+        return self.__conf_object(cmd,*args)
+    def conf_rsc_ticket(self,cmd,*args):
+        """usage: rsc_ticket <id> <ticket_id>: <rsc>[:<role>] [<rsc>[:<role>] ...]
+        [loss-policy=<loss_policy_action>]"""
         return self.__conf_object(cmd,*args)
     def conf_property(self,cmd,*args):
         "usage: property [$id=<set_id>] <option>=<value>"

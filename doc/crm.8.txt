@@ -1639,6 +1639,34 @@ Example:
         order o1 inf: A ( B C )
 ...............
 
+[[cmdhelp_configure_rsc_ticket,resources ticket dependency]]
+==== `rsc_ticket`
+
+This constraint expresses dependency of resources on cluster-wide
+attributes, also known as tickets. Tickets are mainly used in
+geo-clusters, which consist of multiple sites. A ticket may be
+granted to a site, thus allowing resources to run there.
+
+The `loss-policy` attribute specifies what happens to the
+resource (or resources) if the ticket is revoked. The default is
+either `stop` or `demote` depending on whether a resource is
+multi-state.
+
+Usage:
+...............
+        rsc_ticket <id> <ticket_id>: <rsc>[:<role>] [<rsc>[:<role>] ...]
+          [loss-policy=<loss_policy_action>]
+
+        loss_policy_action :: stop | demote | fence | freeze
+...............
+Example:
+...............
+        rsc_ticket ticket-A_public-ip ticket-A: public-ip
+        rsc_ticket ticket-A_bigdb ticket-A: bigdb loss-policy=fence
+        rsc_ticket ticket-B_storage ticket-B: drbd-a:Master drbd-b:Master
+...............
+
+
 [[cmdhelp_configure_property,set a cluster property]]
 ==== `property`
 
