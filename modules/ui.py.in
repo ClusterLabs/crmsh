@@ -1938,6 +1938,61 @@ Examine Pacemaker's history: node and resource events, logs.
             crm_report.show_transition_log(f)
         return rc
 
+class Site(UserInterface):
+    '''
+    The site class
+    '''
+    lvl_name = "site"
+    desc_short = "Geo-cluster support"
+    desc_long = """
+The site level.
+
+Geo-cluster related management.
+"""
+    crm_ticket =  {
+        'grant': "crm_ticket -t '%s' -v true",
+        'revoke': "crm_ticket -t '%s' -v false",
+        'delete': "crm_ticket -t '%s' -D",
+        'show': "crm_ticket -t '%s' -G",
+        'time': "crm_ticket -t '%s' -T",
+    }
+    def __init__(self):
+        UserInterface.__init__(self)
+        self.cmd_table["ticket"] = (self.ticket,(2,2),1,0)
+    def ticket(self, cmd, subcmd, ticket):
+        "usage: ticket {grant|revoke|show|time|delete} <ticket>"
+        try:
+            attr_cmd = self.crm_ticket[subcmd]
+        except:
+            bad_usage(cmd,'%s %s' % (subcmd, ticket))
+            return False
+        if not is_name_sane(ticket):
+            return False
+        if subcmd not in ("show", "time"):
+            return ext_cmd(attr_cmd % ticket) == 0
+        l = stdout2list(attr_cmd % ticket)
+        try:
+            val = l[0].split('=')[3]
+        except:
+            common_warn("apparently nothing to show for ticket %s" % ticket)
+            return False
+        if subcmd == "show":
+            if val == "false":
+                print "ticket %s is revoked" % ticket
+            elif val == "true":
+                print "ticket %s is granted" % ticket
+            else:
+                common_warn("unexpected value for ticket %s: %s" % (ticket, val))
+                return False
+        else: # time
+            if not is_int(val):
+                common_warn("unexpected value for ticket %s: %s" % (ticket, val))
+                return False
+            if val == "-1":
+                print "%s: no such ticket" % ticket
+                return False
+            print "ticket %s last time granted on %s" % (ticket, time.ctime(int(val)))
+
 class TopLevel(UserInterface):
     '''
     The top level.
@@ -1959,6 +2014,7 @@ class TopLevel(UserInterface):
         self.cmd_table['node'] = NodeMgmt
         self.cmd_table['options'] = CliOptions
         self.cmd_table['history'] = History
+        self.cmd_table['site'] = Site
         self.cmd_table['status'] = (self.status,(0,5),0,0)
         self.cmd_table['ra'] = RA
         setup_aliases(self)

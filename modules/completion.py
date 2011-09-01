@@ -173,6 +173,10 @@ def report_pe_list_peinputs(idx,delimiter = False):
     if delimiter:
         return ' '
     return crm_report.peinputs_list() + ["v"]
+def ticket_cmd_list(idx,delimiter = False):
+    if delimiter:
+        return ' '
+    return ["grant","revoke","show","time","delete"]
 
 #
 # completion for primitives including help for parameters
@@ -487,6 +491,9 @@ completer_lists = {
         "log" : (report_node_list,loop),
         "peinputs" : (report_pe_list_peinputs,loop),
         "transition" : (report_pe_list_transition,),
+    },
+    "site" : {
+        "ticket" : (ticket_cmd_list,),
     },
 }
 def get_completer_list(level,cmd):

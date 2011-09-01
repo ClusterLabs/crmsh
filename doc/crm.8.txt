@@ -1133,6 +1133,31 @@ Example:
         status-attr node_1 show pingd
 ...............
 
+[[cmdhelp_site,site support]]
+=== `site`
+
+A cluster may consist of two or more subclusters in different and
+distant locations. This set of commands supports such setups.
+
+[[cmdhelp_site_ticket,manage site tickets]]
+==== `ticket`
+
+Tickets are cluster-wide attributes. They can be managed at the
+site where this command is executed.
+
+It is then possible to constrain resources depending on the
+ticket availability (see the <<cmdhelp_configure_rsc_ticket,`rsc_ticket`>> command
+for more details).
+
+Usage:
+...............
+        ticket {grant|revoke|show|time|delete} <ticket>
+...............
+Example:
+...............
+        ticket grant ticket1
+...............
+
 [[cmdhelp_options,user preferences]]
 === `options`
 
@@ -1651,6 +1676,8 @@ The `loss-policy` attribute specifies what happens to the
 resource (or resources) if the ticket is revoked. The default is
 either `stop` or `demote` depending on whether a resource is
 multi-state.
+
+See also the <<cmdhelp_site_ticket,`site`>> set of commands.
 
 Usage:
 ...............
