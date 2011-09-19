@@ -216,8 +216,7 @@ logmarks() {
 		if [ "$n" = "`uname -n`" ]; then
 			is_node && logmark $HA_LOGFACILITY.$HA_LOGLEVEL $msg
 		else
-			[ "$ssh_good" ] &&
-				ssh $ssh_opts $n "$c"
+			ssh $SSH_OPTS_AUTH $n "$c"
 		fi
 	done
 }
@@ -477,7 +476,7 @@ start_slave_collector() {
 		dumpenv > $DESTDIR/.env
 		hb_report __slave $DESTDIR
 	else
-		ssh $ssh_opts $node \
+		ssh $SSH_OPTS_AUTH $node \
 			"$SUDO hb_report __slave $DESTDIR" |
 			(cd $DESTDIR && tar xf -)
 	fi &
@@ -487,44 +486,50 @@ start_slave_collector() {
 
 #
 # does ssh work?
+# and how
 #
-testsshuser() {
-	if [ "$2" ]; then
-		ssh -T -o Batchmode=yes $2@$1 true 2>/dev/null
-	else
-		ssh -T -o Batchmode=yes $1 true 2>/dev/null
-	fi
+testsshconn() {
+	ssh -T -o Batchmode=yes $1 true 2>/dev/null
 }
 findsshuser() {
-	for u in "" $TRY_SSH; do
-		rc=0
-		failed_nodes=""
-		for n in $NODES; do
-			[ "$n" = "$WE" ] && continue
-			u_print=$u
-			[ "$u_print" ] || u_print=`id -un`
-			debug "test ssh $u_print@$n"
-			if testsshuser $n $u; then
-				debug "ssh $u_print@$n OK"
+	local n u rc
+	local ssh_s ssh_user="__undef" try_user_list failed_nodes=""
+	try_user_list=${SSH_USER:-"\"\" $TRY_SSH"}
+	for n in $NODES; do
+		rc=1
+		[ "$n" = "$WE" ] && continue
+		for u in $try_user_list; do
+			if [ "$u" != '""' ]; then
+				ssh_s=$u@$n
 			else
-				rc=1
-				failed_nodes="$failed_nodes $n"
-				debug "ssh $u_print@$n failed"
+				ssh_s=$n
+			fi
+			if testsshconn $ssh_s; then
+				debug "ssh $ssh_s OK"
+				ssh_user="$u"
+				try_user_list="$u" # we support just one user
+				rc=0
+				break
+			else
+				debug "ssh $ssh_s failed"
 			fi
 		done
-		if [ $rc -eq 0 ]; then
-			echo $u
-			return 0
-		else
-			if [ "$u" ]; then
-				info "ssh with user $u does not work to $failed_nodes"
-			else
-				info "ssh without user does not work to $failed_nodes"
-			fi
-			info "will try next user"
-		fi
+		[ $rc = 1 ] &&
+			failed_nodes="$failed_nodes $n"
 	done
-	return 1
+	[ -n "$failed_nodes" ] &&
+		warning "ssh to node(s)$failed_nodes does not work"
+	if [ "$ssh_user" != "__undef" ]; then
+		if [ "$ssh_user" != '""' ]; then
+			SSH_OPTS_AUTH="$SSH_OPTS -l $ssh_user"
+		else
+			SSH_OPTS_AUTH="$SSH_OPTS"
+		fi
+	else
+		return 1
+	fi
+	# drop nodes we cannot reach
+	NODES=`for n in $failed_nodes $NODES; do echo $n; done | sort | uniq -u`
 }
 
 #
@@ -1199,18 +1204,8 @@ if ! is_collector; then
 # part 2: ssh business
 #
 	# find out if ssh works
-	ssh_good=""
 	if [ -z "$NO_SSH" ]; then
-		[ "$SSH_USER" ] ||
-			SSH_USER=`findsshuser`
-		if [ $? -eq 0 ]; then
-			ssh_good=1
-			if [ "$SSH_USER" ]; then
-				ssh_opts="-l $SSH_USER $SSH_OPTS"
-			else
-				ssh_opts="$SSH_OPTS"
-			fi
-		fi
+		findsshuser
 	fi
 # final check: don't run if the destination directory exists
 	[ -d $DESTDIR ] && {
@@ -1222,26 +1217,19 @@ if ! is_collector; then
 	}
 	mkdir -p $DESTDIR
 	[ -d $DESTDIR ] || nodistdirectory
-	if [ "$ssh_good" ]; then
-		for node in $NODES; do
-			[ "$node" = "$WE" ] && continue
-			ssh $ssh_opts $node "test -d $DESTDIR" && {
-				if [ "$FORCE_REMOVE_DEST" -o "$CTS" ]; then # relax a bit for CTS
-					ssh $ssh_opts $node "rm -r $DESTDIR"
-				else
-					test -d $DESTDIR && rmdir $DESTDIR
-					msgcleanup $node
-				fi
-			}
-			dumpenv |
-			ssh $ssh_opts $node "mkdir -p $DESTDIR && cat > $DESTDIR/.env"
-		done
-	else
-		if [ -z "$NO_SSH" -a $NODECNT -gt 1 ]; then
-			warning "ssh does not work to all nodes"
-			warning "please use the -u option if you want to supply a password"
-		fi
-	fi
+	for node in $NODES; do
+		[ "$node" = "$WE" ] && continue
+		ssh $SSH_OPTS_AUTH $node "test -d $DESTDIR" && {
+			if [ "$FORCE_REMOVE_DEST" -o "$CTS" ]; then # relax a bit for CTS
+				ssh $SSH_OPTS_AUTH $node "rm -r $DESTDIR"
+			else
+				test -d $DESTDIR && rmdir $DESTDIR
+				msgcleanup $node
+			fi
+		}
+		dumpenv |
+		ssh $SSH_OPTS_AUTH $node "mkdir -p $DESTDIR && cat > $DESTDIR/.env"
+	done
 fi
 
 # only cluster nodes need their own directories
