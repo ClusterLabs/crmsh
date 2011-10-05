@@ -17,7 +17,7 @@
  # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  #
 
-. @OCF_ROOT_DIR@/resource.d/heartbeat/.ocf-shellfuncs
+. @OCF_ROOT_DIR@/lib/heartbeat/ocf-shellfuncs
 
 HA_NOARCHBIN=@datadir@/@PACKAGE_NAME@
 
@@ -607,7 +607,7 @@ getconfigurations() {
 sys_info() {
 	cluster_info
 	hb_report -V # our info
-	echo "resource-agents: `grep 'Build version:' @OCF_ROOT_DIR@/resource.d/heartbeat/.ocf-shellfuncs`"
+	echo "resource-agents: `grep 'Build version:' @OCF_ROOT_DIR@/lib/heartbeat/ocf-shellfuncs`"
 	crm_info
 	pkg_ver $PACKAGES
 	echo "Platform: `uname`"
