@@ -472,12 +472,13 @@ is_master() {
 start_slave_collector() {
 	local node=$1
 
+	dumpenv |
 	if [ "$node" = "$WE" ]; then
-		dumpenv > $DESTDIR/.env
+		cat > $DESTDIR/.env
 		hb_report __slave $DESTDIR
 	else
 		ssh $SSH_OPTS_AUTH $node \
-			"$SUDO hb_report __slave $DESTDIR" |
+			"cat > $DESTDIR/.env; $SUDO hb_report __slave $DESTDIR" |
 			(cd $DESTDIR && tar xf -)
 	fi &
 
