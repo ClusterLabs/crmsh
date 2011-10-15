@@ -195,9 +195,8 @@ def cli_parse_score(score,pl,noattr = False):
         return False
     if score in vars.score_types:
         pl.append(["score",vars.score_types[score]])
-    elif re.match("^[+-]?(inf|infinity|INFINITY|[[0-9]+)$",score):
-        score = score.replace("infinity","INFINITY")
-        score = score.replace("inf","INFINITY")
+    elif re.match("^[+-]?(inf(inity)?|INF(INITY)?|[0-9]+)$",score):
+        score = re.sub("inf(inity)?|INF(INITY)?", "INFINITY", score)
         pl.append(["score",score])
     elif score:
         if noattr:
