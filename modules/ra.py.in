@@ -427,7 +427,7 @@ class RAInfo(object):
         d = self.params()
         try: return d[pname]["default"]
         except: return None
-    def sanity_check_params(self, id, pl):
+    def sanity_check_params(self, id, pl, existence_only = False):
         '''
         pl is a list of (attribute,value) pairs.
         - are all required parameters defined
@@ -437,10 +437,11 @@ class RAInfo(object):
         d = {}
         for p,v in pl:
             d[p] = v
-        for p in self.reqd_params_list():
-            if p not in d:
-                common_err("%s: required parameter %s not defined" % (id,p))
-                rc |= user_prefs.get_check_rc()
+        if not existence_only:
+            for p in self.reqd_params_list():
+                if p not in d:
+                    common_err("%s: required parameter %s not defined" % (id,p))
+                    rc |= user_prefs.get_check_rc()
         for p in d:
             if p not in self.params():
                 common_err("%s: parameter %s does not exist" % (id,p))
@@ -617,6 +618,12 @@ class RAInfo(object):
                     l.append(self.ra_tab + s)
         if l:
             return "Operations' defaults (advisory minimum):\n\n" + '\n'.join(l)
+
+def get_ra(node):
+    ra_type = node.getAttribute("type")
+    ra_class = node.getAttribute("class")
+    ra_provider = node.getAttribute("provider")
+    return RAInfo(ra_class,ra_type,ra_provider)
 
 #
 # resource type definition

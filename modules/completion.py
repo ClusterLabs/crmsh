@@ -121,6 +121,10 @@ def node_id_list(idx,delimiter = False):
     if delimiter:
         return ' '
     return cib_factory.node_id_list()
+def rsc_template_list(idx,delimiter = False):
+    if delimiter:
+        return ' '
+    return cib_factory.rsc_template_list()
 def node_attr_keyw_list(idx,delimiter = False):
     if delimiter:
         return ' '
@@ -182,12 +186,11 @@ def ticket_cmd_list(idx,delimiter = False):
 # completion for primitives including help for parameters
 # (help also available for properties)
 #
-def get_primitive_type(words):
-    try:
-        idx = words.index("primitive") + 2
-        type_word = words[idx]
-    except: type_word = ''
-    return type_word
+def get_prim_token(words, n):
+    for key in ("primitive", "rsc_template"):
+        try: return words[words.index(key)+n-1]
+        except: pass
+    return ''
 def ra_type_list(toks,idx,delimiter):
     if idx == 2:
         if toks[0] == "ocf":
@@ -257,6 +260,12 @@ def get_lastkeyw(words,keyw):
     for w in revwords:
         if w in keyw:
             return w
+def ra_classes_or_tmpl(idx,delimiter = False):
+    words = readline.get_line_buffer().split()
+    if words[-1].startswith('@'):
+        return rsc_template_list(idx,delimiter)
+    else:
+        return ra_classes_list(idx,delimiter)
 def primitive_complete_complex(idx,delimiter = False):
     '''
     This completer depends on the content of the line, i.e. on
@@ -269,19 +278,24 @@ def primitive_complete_complex(idx,delimiter = False):
     }
     # manage the resource type
     words = readline.get_line_buffer().split()
-    type_word = get_primitive_type(words)
-    toks = type_word.split(':')
-    if toks[0] != "ocf":
-        idx += 1
-    if idx in (2,3):
-        return ra_type_list(toks,idx,delimiter)
-    # create an ra object
-    ra = None
-    ra_class,provider,rsc_type = disambiguate_ra_type(type_word)
-    if ra_type_validate(type_word,ra_class,provider,rsc_type):
-        ra = RAInfo(ra_class,rsc_type,provider)
+    cmd = get_prim_token(words, 1)
+    type_word = get_prim_token(words, 3)
+    with_template = cmd == "primitive" and type_word.startswith('@')
+    if with_template:
+        # template reference
+        ra = get_ra(cib_factory.find_object(type_word[1:]).node)
+    else:
+        toks = type_word.split(':')
+        if toks[0] != "ocf":
+            idx += 1
+        if idx in (2,3):
+            return ra_type_list(toks,idx,delimiter)
+        ra = None
+        ra_class,provider,rsc_type = disambiguate_ra_type(type_word)
+        if ra_type_validate(type_word,ra_class,provider,rsc_type):
+            ra = RAInfo(ra_class,rsc_type,provider)
     keywords = completers_set.keys()
-    if idx == 4:
+    if idx == 4 or (idx == 2 and with_template):
         if delimiter:
             return ' '
         return keywords
@@ -464,7 +478,8 @@ completer_lists = {
         "save" : None,
         "load" : None,
         "node" : (node_id_list,node_attr_keyw_list),
-        "primitive" : (null_list,ra_classes_list,primitive_complete_complex,loop),
+        "primitive" : (null_list,ra_classes_or_tmpl,primitive_complete_complex,loop),
+        "rsc_template" : (null_list,ra_classes_list,primitive_complete_complex,loop),
         "group" : (null_list,f_prim_id_list,loop),
         "clone" : (null_list,f_children_id_list),
         "ms" : (null_list,f_children_id_list),

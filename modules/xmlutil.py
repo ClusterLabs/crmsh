@@ -454,7 +454,7 @@ def remove_id_used_attr(node,lvl):
 def remove_id_used_attributes(node):
     if node:
         xmltraverse(node, remove_id_used_attr)
-def lookup_node(node,oldnode,location_only = False):
+def lookup_node(node,oldnode,location_only = False,ignore_id = False):
     '''
     Find a child of oldnode which matches node.
     This is used to "harvest" existing ids in order to prevent
@@ -473,7 +473,7 @@ def lookup_node(node,oldnode,location_only = False):
         attr_list = list(match_list[node.tagName])
     except KeyError:
         attr_list = []
-    if node.getAttribute("id"):
+    if not ignore_id and node.getAttribute("id"):
         #print "  add id attribute"
         attr_list.append("id")
     for c in oldnode.childNodes:
@@ -505,6 +505,30 @@ def find_operation(rsc_node,name,interval):
                     and c.getAttribute("interval") == interval:
                 return c
 
+def op2list(node):
+    pl = []
+    action = ""
+    for name in node.attributes.keys():
+        if name == "name":
+            action = node.getAttribute(name)
+        elif name != "id": # skip the id
+            pl.append([name,node.getAttribute(name)])
+    if not action:
+        common_err("op is invalid (no name)")
+    return action,pl
+def get_rsc_operations(rsc_node):
+    actions = {}
+    for c in rsc_node.childNodes:
+        if not is_element(c):
+            continue
+        if c.tagName == "operations":
+            for c2 in c.childNodes:
+                if is_element(c2) and c2.tagName == "op":
+                    op,pl = op2list(c2)
+                    if op:
+                        actions[op] = pl
+    return actions
+
 def filter_on_tag(nl,tag):
     return [node for node in nl if node.tagName == tag]
 def nodes(node_list):
@@ -517,6 +541,8 @@ def clones(node_list):
     return filter_on_tag(node_list,"clone")
 def mss(node_list):
     return filter_on_tag(node_list,"master")
+def templates(node_list):
+    return filter_on_tag(node_list,"template")
 def constraints(node_list):
     return filter_on_tag(node_list,"rsc_location") \
         + filter_on_tag(node_list,"rsc_colocation") \
@@ -534,7 +560,7 @@ def processing_sort(nl):
     It's usually important to process cib objects in this order,
     i.e. simple objects first.
     '''
-    return nodes(nl) + primitives(nl) + groups(nl) + mss(nl) + clones(nl) \
+    return nodes(nl) + templates(nl) + primitives(nl) + groups(nl) + mss(nl) + clones(nl) \
         + constraints(nl) + properties(nl) + acls(nl)
 
 def obj_cmp(obj1,obj2):
@@ -559,6 +585,8 @@ def clones_cli(cl):
     return filter_on_type(cl,"clone")
 def mss_cli(cl):
     return filter_on_type(cl,"ms") + filter_on_type(cl,"master")
+def templates_cli(cl):
+    return filter_on_type(cl,"rsc_template")
 def constraints_cli(node_list):
     return filter_on_type(node_list,"location") \
         + filter_on_type(node_list,"colocation") \
@@ -581,7 +609,7 @@ def processing_sort_cli(cl):
     Both a list of objects (CibObject) and list of cli
     representations accepted.
     '''
-    return nodes_cli(cl) + primitives_cli(cl) + groups_cli(cl) + mss_cli(cl) + clones_cli(cl) \
+    return nodes_cli(cl) + templates_cli(cl) + primitives_cli(cl) + groups_cli(cl) + mss_cli(cl) + clones_cli(cl) \
         + constraints_cli(cl) + properties_cli(cl) + ops_cli(cl) + acls_cli(cl)
 
 def is_resource_cli(s):
@@ -810,46 +838,66 @@ def xml_cmp(n, m, show = False):
         print "processed:",m.toprettyxml()
     return hash(n.toxml()) == hash(m.toxml())
 
-def merge_nvpairs(dnode,snode):
+def merge_attributes(dnode,snode,tag):
     rc = False
     add_children = []
-    for c in snode.childNodes:
-        if not is_element(c):
+    for sc in snode.childNodes:
+        if not is_element(sc):
             continue
-        if c.tagName == "nvpair":
-            dc = lookup_node(c,dnode)
+        if sc.tagName == tag:
+            dc = lookup_node(sc,dnode,ignore_id = True)
             if dc:
-                dc.setAttribute("value",c.getAttribute("value"))
+                m = sc.attributes
+                for i in range(m.length):
+                    attr = m.item(i)
+                    if attr.name == "id":
+                        continue
+                    s_value = attr.value
+                    if s_value != dc.getAttribute(attr.name):
+                        dc.setAttribute(attr.name,s_value)
+                        rc = True
             else:
-                add_children.append(c)
-            rc = True
+                add_children.append(sc)
+                rc = True
     for c in add_children:
-        dnode.appendChild(c)
+        dnode.appendChild(c.cloneNode(1))
     return rc
 
 def merge_nodes(dnode,snode):
     '''
     Import elements from snode into dnode.
-    If an element is attributes set (vars.nvpairs_tags), then
-    merge nvpairs by the name attribute.
+    If an element is attributes set (vars.nvpairs_tags) or
+    "operations", then merge attributes in the children.
     Otherwise, replace the whole element. (TBD)
     '''
-    #print "1:",dnode.toprettyxml()
-    #print "2:",snode.toprettyxml()
-    #vars.nvpairs_tags
     rc = False # any changes done?
     if not dnode or not snode:
         return rc
-    for c in snode.childNodes:
-        dc = lookup_node(c,dnode)
+    add_children = []
+    for sc in snode.childNodes:
+        dc = lookup_node(sc,dnode,ignore_id = True)
         if not dc:
-            if c.tagName in vars.nvpairs_tags:
-                dnode.appendChild(c)
+            if sc.tagName in vars.nvpairs_tags or sc.tagName == "operations":
+                add_children.append(sc)
                 rc = True
-            continue
-        if dc.tagName in vars.nvpairs_tags:
-            rc = rc or merge_nvpairs(dc,c)
+        elif dc.tagName in vars.nvpairs_tags:
+            rc = merge_attributes(dc,sc,"nvpair") or rc
+        elif dc.tagName == "operations":
+            rc = merge_attributes(dc,sc,"op") or rc
+    for c in add_children:
+        dnode.appendChild(c.cloneNode(1))
     return rc
+
+def merge_nodes_2(dnode, snode):
+    '''
+    Merge nodes in a new doc, i.e. keep dnode intact.
+    '''
+    doc = xml.dom.minidom.Document()
+    i_snode = doc.importNode(snode, 1)
+    i_dnode = doc.importNode(dnode, 1)
+    doc.appendChild(i_snode)
+    merge_nodes(i_snode, i_dnode)
+    return i_snode
 
 user_prefs = UserPrefs.getInstance()
 vars = Vars.getInstance()

@@ -33,7 +33,7 @@ from parse import CliParser
 from clidisplay import CliDisplay
 from cibstatus import CibStatus
 from idmgmt import IdMgmt
-from ra import RAInfo, get_properties_list, get_pe_meta
+from ra import get_ra, get_properties_list, get_pe_meta
 
 def show_unrecognized_elems(doc):
     try:
@@ -242,18 +242,18 @@ class CibObjectSet(object):
             (ra_class, ra_provider, ra_type, name, value) -> [ resourcename ]
             if parameter "name" should be unique
             '''
-            ra_class = prim.getAttribute("class")
-            ra_provider = prim.getAttribute("provider")
-            ra_type = prim.getAttribute("type")
             ra_id = prim.getAttribute("id")
-            ra = RAInfo(ra_class, ra_type, ra_provider)
-            if ra == None:
+            r_node = reduce_primitive(prim)
+            if not r_node:
+                return # template not defined yet
+            ra = get_ra(r_node)
+            if not ra.mk_ra_node():  # no RA found?
                 return
             ra_params = ra.params()
-            for a in prim.getElementsByTagName("instance_attributes"):
+            for a in r_node.getElementsByTagName("instance_attributes"):
                 # params are in instance_attributes just below the parent
                 # operations may have some as well, e.g. OCF_CHECK_LEVEL
-                if a.parentNode != prim:
+                if a.parentNode != r_node:
                     continue
                 for p in a.getElementsByTagName("nvpair"):
                     name = p.getAttribute("name")
@@ -984,11 +984,22 @@ class CibNode(CibObject):
         remove_id_used_attributes(get_topnode(cib_factory.doc,self.parent_type))
         return headnode
 
-def get_ra(node):
-    ra_type = node.getAttribute("type")
-    ra_class = node.getAttribute("class")
-    ra_provider = node.getAttribute("provider")
-    return RAInfo(ra_class,ra_type,ra_provider)
+def reduce_primitive(node):
+    '''
+    A primitive may reference template. If so, put the two
+    together.
+    Returns:
+        - if no template reference, node itself
+        - if template reference, but no template found, None
+        - return merged primitive node into template node
+    '''
+    template = node.getAttribute("template")
+    if not template:
+        return node
+    template_obj = cib_factory.find_object(template)
+    if not template_obj:
+        return None
+    return merge_nodes_2(node, template_obj.node)
 
 class CibPrimitive(CibObject):
     '''
@@ -1002,17 +1013,25 @@ class CibPrimitive(CibObject):
     def repr_cli_head(self,node):
         obj_type = vars.cib_cli_map[node.tagName]
         node_id = node.getAttribute("id")
-        ra_type = node.getAttribute("type")
-        ra_class = node.getAttribute("class")
-        ra_provider = node.getAttribute("provider")
-        s1 = s2 = ''
-        if ra_class:
-            s1 = "%s:"%ra_class
-        if ra_provider:
-            s2 = "%s:"%ra_provider
+        if obj_type == "primitive":
+            template_ref = node.getAttribute("template")
+        else:
+            template_ref = None
+        if template_ref:
+            rsc_spec = "@%s" % cli_display.idref(template_ref)
+        else:
+            ra_type = node.getAttribute("type")
+            ra_class = node.getAttribute("class")
+            ra_provider = node.getAttribute("provider")
+            s1 = s2 = ''
+            if ra_class:
+                s1 = "%s:"%ra_class
+            if ra_provider:
+                s2 = "%s:"%ra_provider
+            rsc_spec = ''.join((s1,s2,ra_type))
         s = cli_display.keyword(obj_type)
         id = cli_display.id(node_id)
-        return "%s %s %s" % (s, id, ''.join((s1,s2,ra_type)))
+        return "%s %s %s" % (s, id, rsc_spec)
     def repr_cli_child(self,c,format):
         if c.tagName in self.set_names:
             return "%s %s" % \
@@ -1080,31 +1099,30 @@ class CibPrimitive(CibObject):
             common_err("%s: no xml (strange)" % self.obj_id)
             return user_prefs.get_check_rc()
         rc3 = sanity_check_meta(self.obj_id,self.node,vars.rsc_meta_attributes)
-        ra = get_ra(self.node)
+        if self.obj_type == "primitive":
+            r_node = reduce_primitive(self.node)
+            if not r_node:
+                # perhaps the template will be defined later
+                return rc3
+        else:
+            r_node = self.node
+        ra = get_ra(r_node)
         if not ra.mk_ra_node():  # no RA found?
             if cib_factory.is_asymm_cluster():
                 return rc3
             ra.error("no such resource agent")
             return user_prefs.get_check_rc()
+        actions = get_rsc_operations(r_node)
+        default_timeout = get_default_timeout()
+        rc2 = ra.sanity_check_ops(self.obj_id, actions, default_timeout)
         params = []
-        for c in self.node.childNodes:
+        for c in r_node.childNodes:
             if not is_element(c):
                 continue
             if c.tagName == "instance_attributes":
                 params += nvpairs2list(c)
-        rc1 = ra.sanity_check_params(self.obj_id, params)
-        actions = {}
-        for c in self.node.childNodes:
-            if not is_element(c):
-                continue
-            if c.tagName == "operations":
-                for c2 in c.childNodes:
-                    if is_element(c2) and c2.tagName == "op":
-                        op,pl = op2list(c2)
-                        if op:
-                            actions[op] = pl
-        default_timeout = get_default_timeout()
-        rc2 = ra.sanity_check_ops(self.obj_id, actions, default_timeout)
+        rc1 = ra.sanity_check_params(self.obj_id, params,
+                existence_only = (self.obj_type != "primitive"))
         return rc1 | rc2 | rc3
 
 class CibContainer(CibObject):
@@ -1389,6 +1407,7 @@ cib_object_map = {
     "group": ( "group", CibContainer, "resources" ),
     "clone": ( "clone", CibContainer, "resources" ),
     "master": ( "ms", CibContainer, "resources" ),
+    "template": ( "rsc_template", CibPrimitive, "resources" ),
     "rsc_location": ( "location", CibLocation, "constraints" ),
     "rsc_colocation": ( "colocation", CibSimpleConstraint, "constraints" ),
     "rsc_order": ( "order", CibSimpleConstraint, "constraints" ),
@@ -1755,6 +1774,10 @@ class CibFactory(Singleton):
         "List of possible primitives ids (for group completion)."
         return [x.obj_id for x in self.cib_objects \
             if x.obj_type == "primitive" and not x.parent]
+    def rsc_template_list(self):
+        "List of templates."
+        return [x.obj_id for x in self.cib_objects \
+            if x.obj_type == "rsc_template"]
     def f_children_id_list(self):
         "List of possible child ids (for clone/master completion)."
         return [x.obj_id for x in self.cib_objects \
@@ -1800,13 +1823,19 @@ class CibFactory(Singleton):
                 common_warn("element %s is not a primitive" % obj_id)
                 rc = False
                 continue
-            ra = get_ra(obj.node)
+            r_node = reduce_primitive(obj.node)
+            if not r_node:
+                # cannot do anything without template defined
+                common_warn("template for %s not defined" % obj_id)
+                rc = False
+                continue
+            ra = get_ra(r_node)
             if not ra.mk_ra_node():  # no RA found?
                 if not self.is_asymm_cluster():
                     ra.error("no resource agent found for %s" % obj_id)
                 continue
             obj_modified = False
-            for c in obj.node.childNodes:
+            for c in r_node.childNodes:
                 if not is_element(c):
                     continue
                 if c.tagName == "operations":
@@ -1818,7 +1847,7 @@ class CibFactory(Singleton):
                             continue
                         if op in implied_actions:
                             implied_actions.remove(op)
-                        elif can_migrate(obj.node) and op in implied_migrate_actions:
+                        elif can_migrate(r_node) and op in implied_migrate_actions:
                             implied_migrate_actions.remove(op)
                         elif is_ms(obj.node.parentNode) and op in implied_ms_actions:
                             implied_ms_actions.remove(op)
@@ -1829,7 +1858,7 @@ class CibFactory(Singleton):
                             c2.setAttribute("timeout",adv_timeout)
                             obj_modified = True
             l = implied_actions
-            if can_migrate(obj.node):
+            if can_migrate(r_node):
                 l += implied_migrate_actions
             if is_ms(obj.node.parentNode):
                 l += implied_ms_actions
@@ -2123,7 +2152,7 @@ class CibFactory(Singleton):
         if not node:
             return
         if obj.obj_type in vars.nvset_cli_names:
-            rc = merge_nvpairs(obj.node, node)
+            rc = merge_attributes(obj.node, node, "nvpair")
         else:
             rc = merge_nodes(obj.node, node)
         if rc:

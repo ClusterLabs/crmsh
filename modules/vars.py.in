@@ -54,6 +54,7 @@ class Vars(Singleton):
     "rsc_colocation": "colocation",
     "rsc_order": "order",
     "rsc_ticket": "rsc_ticket",
+    "template": "rsc_template",
     "cluster_property_set": "property",
     "rsc_defaults": "rsc_defaults",
     "op_defaults": "op_defaults",
@@ -62,13 +63,13 @@ class Vars(Singleton):
     }
     container_tags = ("group", "clone", "ms", "master")
     clonems_tags = ("clone", "ms", "master")
-    resource_tags = ("primitive","group","clone","ms","master")
+    resource_tags = ("primitive","group","clone","ms","master","template")
     constraint_tags = ("rsc_location","rsc_colocation","rsc_order","rsc_ticket")
     constraint_rsc_refs = ("rsc","with-rsc","first","then")
     children_tags = ("group", "primitive")
     nvpairs_tags = ("meta_attributes", "instance_attributes", "utilization")
     defaults_tags = ("rsc_defaults","op_defaults")
-    resource_cli_names = ("primitive","group","clone","ms","master")
+    resource_cli_names = ("primitive","group","clone","ms","master","rsc_template")
     constraint_cli_names = ("location","colocation","collocation","order","rsc_ticket")
     nvset_cli_names = ("property","rsc_defaults","op_defaults")
     op_cli_names = ("monitor", "start", "stop", "migrate_to", "migrate_from","promote","demote","notify")

@@ -95,11 +95,14 @@ def parse_resource(s):
     head = []
     head.append(["id",s[1]])
     i = 3
-    if el_type == "primitive":
-        cli_parse_rsctype(s[2],head)
-        if not find_value(head,"type"):
-            syntax_err(s[2:], context = "primitive")
-            return False
+    if el_type in ("primitive", "rsc_template"):
+        if el_type == "primitive" and s[2].startswith('@'):
+            head.append(["template",s[2][1:]])
+        else:
+            cli_parse_rsctype(s[2],head)
+            if not find_value(head,"type"):
+                syntax_err(s[2:], context = el_type)
+                return False
     else:
         cl = []
         cl.append(s[2])
@@ -127,14 +130,14 @@ def parse_resource(s):
         if keyw in attr_lists_keyw:
             if state == 1:
                 state = 2
-        elif el_type == "primitive" and state == 0 and keyword_cmp(keyw, "operations"):
+        elif el_type in ("primitive", "rsc_template") and state == 0 and keyword_cmp(keyw, "operations"):
             state = 1
-        elif el_type == "primitive" and state <= 1 and keyword_cmp(keyw, "op"):
+        elif el_type in ("primitive", "rsc_template") and state <= 1 and keyword_cmp(keyw, "op"):
             if state == 0:
                 state = 1
             pl.append(["name",s[i+1]])
         else:
-            syntax_err(s[i:], context = 'primitive')
+            syntax_err(s[i:], context = el_type)
             return False
         if keyword_cmp(keyw, "op"):
             if len(s) > i+2:
@@ -144,7 +147,7 @@ def parse_resource(s):
         else:
             cli_parse_attr(s[i+1:],pl)
             if len(pl) == 0:
-                syntax_err(s[i:], context = 'primitive')
+                syntax_err(s[i:], context = el_type)
                 return False
         if keyword_cmp(keyw, "operations") and not is_only_id(pl,keyw):
             return False
@@ -154,7 +157,7 @@ def parse_resource(s):
             pl.append(["interval","0"])
         cli_list.append([keyw,pl])
     if len(s) > i:
-        syntax_err(s[i:], context = 'primitive')
+        syntax_err(s[i:], context = el_type)
         return False
     return cli_list
 def parse_op(s):
@@ -741,6 +744,7 @@ class CliParser(object):
         "clone": (3,parse_resource),
         "ms": (3,parse_resource),
         "master": (3,parse_resource),
+        "rsc_template": (3,parse_resource),
         "location": (3,parse_constraint),
         "colocation": (3,parse_constraint),
         "collocation": (3,parse_constraint),

@@ -1355,6 +1355,14 @@ Commands for resources are:
 - `clone`
 - `ms`/`master` (master-slave)
 
+In order to streamline large configurations, it is possible to
+define a template which can later be referenced in primitives:
+
+- `rsc_template`
+
+In that case the primitive inherits all attributes defined in the
+template.
+
 There are three types of constraints:
 
 - `location`
@@ -1429,9 +1437,13 @@ instance attributes of that operation. A typical example is
 
 For multistate resources, roles are specified as `role=<role>`.
 
+A template may be defined for resources which are of the same
+type and which share most of the configuration. See 
+<<cmdhelp_configure_rsc_template,`rsc_template`>> for more information.
+
 Usage:
 ...............
-        primitive <rsc> [<class>:[<provider>:]]<type>
+        primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>}
           [params attr_list]
           [meta attr_list]
           [utilization attr_list]
@@ -1462,6 +1474,9 @@ Example:
           params drbd_resource=r0 \
           op monitor role=Master interval=60s \
           op monitor role=Slave interval=300s
+
+        primitive xen0 @vm_scheme1 \
+          params xmfile=/etc/xen/vm/xen0
 ...............
 
 [[cmdhelp_configure_monitor,add monitor operation to a primitive]]
@@ -1564,6 +1579,40 @@ automatically replace such a reference with the right id:
 It is advisable to give meaningful names to attribute sets which
 are going to be referenced.
 ****************************
+
+[[cmdhelp_configure_rsc_template,define a resource template]]
+==== `rsc_template`
+
+The `rsc_template` command creates a resource template. It may be
+referenced in primitives. It is used to reduce large
+configurations with many similar resources.
+
+Usage:
+...............
+        rsc_template <name> [<class>:[<provider>:]]<type>
+          [params attr_list]
+          [meta attr_list]
+          [utilization attr_list]
+          [operations id_spec]
+            [op op_type [<attribute>=<value>...] ...]
+
+        attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
+        id_spec :: $id=<id> | $id-ref=<id>
+        op_type :: start | stop | monitor
+...............
+Example:
+...............
+        rsc_template public_vm ocf:heartbeat:Xen \
+          op start timeout=300s \
+          op stop timeout=300s \
+          op monitor interval=30s timeout=60s \
+          op migrate_from timeout=600s \
+          op migrate_to timeout=600s
+        primitive xen0 @public_vm \
+          params xmfile=/etc/xen/xen0
+        primitive xen1 @public_vm \
+          params xmfile=/etc/xen/xen1
+...............
 
 [[cmdhelp_configure_location,a location preference]]
 ==== `location`

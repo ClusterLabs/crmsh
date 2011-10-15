@@ -88,17 +88,6 @@ def nvpairs2list(node, add_id = False):
         pl.append([name,value])
     return pl
 
-def op2list(node):
-    pl = []
-    action = ""
-    for name in node.attributes.keys():
-        if name == "name":
-            action = node.getAttribute(name)
-        elif name != "id": # skip the id
-            pl.append([name,node.getAttribute(name)])
-    if not action:
-        common_err("op is invalid (no name)")
-    return action,pl
 def op_instattr(node):
     pl = []
     for c in node.childNodes:
