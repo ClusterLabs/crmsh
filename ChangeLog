@@ -7,4 +7,3 @@
 - support for LRM secrets at the resource level
 - enable removal of unmanaged resources (bnc#696506)
 - split-off from Pacemaker after release 1.1.6
-- upstream cs: ed6fe97d385f
