@@ -1,5 +1,9 @@
 %name apache
 
+# Copyright (C) 2009 Dejan Muhamedagic
+#
+# License: GNU General Public License (GPL)
+
 # Apache web server
 #
 # This template generates a single primitive resource of type apache

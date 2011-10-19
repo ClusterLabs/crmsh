@@ -1,5 +1,9 @@
 %name virtual-ip
 
+# Copyright (C) 2009 Dejan Muhamedagic
+#
+# License: GNU General Public License (GPL)
+
 # Virtual IP address
 #
 # This template generates a single primitive resource of type IPaddr

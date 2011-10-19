@@ -1,0 +1,10 @@
+* Wed Oct 19 2011 Dejan Muhamedagic <dejan@suse.de> and many others
+- stable release 1.1.0
+- history/troubleshooting support
+- template support
+- geo-cluster support commands
+- support for configure rsc_ticket
+- support for LRM secrets at the resource level
+- enable removal of unmanaged resources (bnc#696506)
+- split-off from Pacemaker after release 1.1.6
+- upstream cs: ed6fe97d385f

@@ -1,5 +1,9 @@
 %name gfs2-base
 
+# Copyright (C) 2009 Andrew Beekhof
+#
+# License: GNU General Public License (GPL)
+
 # gfs2 filesystem base (cloned)
 #
 # This template generates a cloned instance of the ocfs2 filesystem

@@ -1,5 +1,9 @@
 %name sbd
 
+# Copyright (C) 2009 Dejan Muhamedagic
+#
+# License: GNU General Public License (GPL)
+
 # Shared storage based fencing.
 #
 # This template generates a single instance of external/sbd.

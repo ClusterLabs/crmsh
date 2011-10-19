@@ -1,5 +1,9 @@
 %name filesystem
 
+# Copyright (C) 2009 Dejan Muhamedagic
+#
+# License: GNU General Public License (GPL)
+
 # Filesystem
 #
 # This template generates a single primitive resource of type

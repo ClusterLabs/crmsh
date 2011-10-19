@@ -1,5 +1,9 @@
 %name clvm
 
+# Copyright (C) 2009 Dejan Muhamedagic
+#
+# License: GNU General Public License (GPL)
+
 # Cluster-aware lvm (cloned)
 #
 # This template generates a cloned instance of clvm and one

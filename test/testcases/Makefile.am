@@ -18,7 +18,7 @@
 #
 MAINTAINERCLEANFILES = Makefile.in
 
-testcasesdir		= 	$(datadir)/$(PACKAGE)/tests/shell/testcases
+testcasesdir		= 	$(datadir)/$(PACKAGE)/tests/testcases
 testcases_SCRIPTS	=	confbasic-xml.filter ra.filter xmlonly.sh
 testcases_DATA		=	BSC basicset common.excl \
 	confbasic confbasic-xml delete file node ra resource shadow acl \

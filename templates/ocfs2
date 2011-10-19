@@ -1,5 +1,9 @@
 %name ocfs2
 
+# Copyright (C) 2009 Dejan Muhamedagic
+#
+# License: GNU General Public License (GPL)
+
 # ocfs2 filesystem (cloned)
 #
 # This template generates a cloned instance of the ocfs2 filesystem

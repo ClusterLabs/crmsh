@@ -1,5 +1,5 @@
 #
-# shell: Pacemaker code
+# doc: Pacemaker code
 #
 # Copyright (C) 2008 Andrew Beekhof
 #
@@ -17,27 +17,27 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
-MAINTAINERCLEANFILES    = Makefile.in aclocal.m4 configure
+MAINTAINERCLEANFILES    = Makefile.in
 
-sbin_SCRIPTS		= crm
+helpdir     = $(datadir)/$(PACKAGE)
 
-EXTRA_DIST		= crm
+asciiman	= crm.8.txt
+help_DATA	= crm.8.txt
+doc_DATA	= $(generated_docs)
 
-SUBDIRS = doc modules templates test
+generated_docs	=
+generated_mans	=
 
-doc_DATA = AUTHORS COPYING
+if BUILD_ASCIIDOC
+generated_docs	+= $(ascii:%.txt=%.html) $(asciiman:%.txt=%.html)
+generated_mans	+= $(asciiman:%.8.txt=%.8)
+$(generated_mans): $(asciiman)
+man8_MANS	= $(generated_mans)
+endif
 
-install-exec-local:
-	$(INSTALL) -d -m 770 $(DESTDIR)/$(CRM_CACHE_DIR)
-	-chown $(CRM_DAEMON_USER):$(CRM_DAEMON_GROUP) $(DESTDIR)/$(CRM_CACHE_DIR)
-
-clean-generic:
-	rm -f $(TARFILE) *.tar.bz2 *.sed
-
-dist-clean-local:
-	rm -f autoconf automake autoheader
-
-maintainer-clean-local:
-	rm -f libltdl.tar
-
-.PHONY: rpm pkg handy handy-copy
+%.html: %.txt
+	$(ASCIIDOC) --unsafe --backend=xhtml11 $<
+%.8: %.8.txt
+	a2x -f manpage $<
+clean-local:
+	-rm -rf $(generated_docs) $(generated_mans)

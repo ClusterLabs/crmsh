@@ -1,5 +1,5 @@
 #
-# doc: Pacemaker code
+# crmsh templates
 #
 # Copyright (C) 2008 Andrew Beekhof
 #
