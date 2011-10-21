@@ -172,6 +172,14 @@ find_getstampproc() {
 	done
 	echo $func
 }
+find_first_ts() {
+	local l ts
+	while read l; do
+		ts=$(str2time "`echo $l | $getstampproc`")
+		[ "$ts" ] && break
+	done
+	echo $ts
+}
 findln_by_time() {
 	local logf=$1
 	local tm=$2

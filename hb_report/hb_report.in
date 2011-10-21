@@ -260,8 +260,8 @@ is_our_log() {
 	local to_time=$3
 
 	local cat=`find_decompressor $logf`
-	local first_time=$(str2time "`$cat $logf | head -1 | $getstampproc`")
-	local last_time=$(str2time "`$cat $logf | tail -1 | $getstampproc`")
+	local first_time="`$cat $logf | head -10 | find_first_ts`"
+	local last_time="`$cat $logf | tail -10 | tac | find_first_ts`"
 	if [ x = "x$first_time" -o x = "x$last_time" ]; then
 		return 0 # skip (empty log?)
 	fi
