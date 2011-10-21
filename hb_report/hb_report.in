@@ -36,7 +36,7 @@ export DEFAULT_HA_LOGFACILITY
 LOGD_CF=`findlogdcf @sysconfdir@ $HA_DIR`
 export LOGD_CF
 
-: ${SSH_OPTS="-T"}
+: ${SSH_OPTS="-T -o StrictHostKeyChecking=no"}
 LOG_PATTERNS="CRIT: ERROR:"
 # PEINPUTS_PATT="peng.*PEngine Input stored"
 
