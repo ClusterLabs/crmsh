@@ -177,6 +177,7 @@ find_first_ts() {
 	while read l; do
 		ts=$(str2time "`echo $l | $getstampproc`")
 		[ "$ts" ] && break
+		warning "cannot extract time: |$l|; will try the next one"
 	done
 	echo $ts
 }
