@@ -520,6 +520,8 @@ findsshuser() {
 	done
 	[ -n "$failed_nodes" ] &&
 		warning "ssh to node(s)$failed_nodes does not work"
+	# drop nodes we cannot reach
+	NODES=`for n in $failed_nodes $NODES; do echo $n; done | sort | uniq -u`
 	if [ "$ssh_user" != "__undef" ]; then
 		if [ "$ssh_user" != '""' ]; then
 			SSH_OPTS_AUTH="$SSH_OPTS -l $ssh_user"
@@ -529,8 +531,6 @@ findsshuser() {
 	else
 		return 1
 	fi
-	# drop nodes we cannot reach
-	NODES=`for n in $failed_nodes $NODES; do echo $n; done | sort | uniq -u`
 }
 
 #
