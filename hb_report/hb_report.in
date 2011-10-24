@@ -490,7 +490,7 @@ start_slave_collector() {
 # and how
 #
 testsshconn() {
-	ssh -T -o Batchmode=yes $1 true 2>/dev/null
+	ssh $SSH_OPTS -o Batchmode=yes $1 true 2>/dev/null
 }
 findsshuser() {
 	local n u rc
