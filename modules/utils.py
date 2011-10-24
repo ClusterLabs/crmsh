@@ -524,7 +524,10 @@ def page_string(s):
     'Write string through a pager.'
     if not s:
         return
-    if not user_prefs.pager or not sys.stdout.isatty() or options.batch:
+    w,h = get_winsize()
+    if s.count('\n') < h:
+        print s
+    elif not user_prefs.pager or not sys.stdout.isatty() or options.batch:
         print s
     else:
         opts = ""
