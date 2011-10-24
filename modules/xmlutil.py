@@ -68,14 +68,26 @@ def cibdump2doc(section = None):
     else:
         cmd = cib_dump
     cmd = add_sudo(cmd)
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+    p = subprocess.Popen(cmd, shell=True, \
+        stdout = subprocess.PIPE, stderr = subprocess.PIPE)
     try:
-        doc = xmlparse(p.stdout)
+        (outp,err_outp) = p.communicate()
         p.wait()
+        rc = p.returncode
     except IOError, msg:
-        common_err(msg)
+        common_err("running %s: %s" % (cmd,msg))
         return None
-    return doc
+    if rc == 0:
+        try:
+            return xml.dom.minidom.parseString(outp)
+        except xml.parsers.expat.ExpatError,msg:
+            cib_parse_err(msg,outp)
+            return None
+    elif rc == 22:
+        return None
+    else:
+        common_error("running %s: %s" % (cmd,err_outp))
+        return None
 cib_piped = "cibadmin -p"
 def commit_rsc(node):
     "Replace a resource definition using cibadmin -R"
