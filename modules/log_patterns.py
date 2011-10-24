@@ -25,6 +25,7 @@ log_patterns = {
 			"lrmd:.*rsc:%% (start|stop|promote|demote|migrate)",
 			"lrmd:.*RA output: .%%:.*:stderr",
 			"lrmd:.*WARN: Managed %%:.*exited",
+			"[(]%%[)][[]",
 		),
 		( # detail 1
 			"lrmd:.*rsc:%%:.*(probe|notify)",
