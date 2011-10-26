@@ -188,9 +188,9 @@ AC_SUBST(CRM_CONFIG_DIR)
 
 dnl Eventually move out of the heartbeat dir tree and create compatability code
 dnl CRM_DAEMON_DIR=$libdir/pacemaker
-CRM_DAEMON_DIR=`extract_header_define crm_config.h CRM_DAEMON_DIR`
-AC_DEFINE_UNQUOTED(CRM_DAEMON_DIR,"$CRM_DAEMON_DIR", Location for Pacemaker daemons)
-AC_SUBST(CRM_DAEMON_DIR)
+GLUE_DAEMON_DIR=`extract_header_define $GLUE_HEADER GLUE_DAEMON_DIR`
+AC_DEFINE_UNQUOTED(GLUE_DAEMON_DIR,"$GLUE_DAEMON_DIR", Location for Pacemaker daemons)
+AC_SUBST(GLUE_DAEMON_DIR)
 
 CRM_CACHE_DIR=${localstatedir}/cache/crm
 AC_DEFINE_UNQUOTED(CRM_CACHE_DIR,"$CRM_CACHE_DIR", Where crm shell keeps the cache)
