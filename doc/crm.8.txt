@@ -64,8 +64,8 @@ OPTIONS
     scripts.
 
 *-w, --wait*::
-    Make `crm` wait for the transition to finish. Applicable only
-    for commands such as "resource start."
+    Make `crm` wait for the cluster transition to finish (for the
+    changes to take effect) after each processed line.
 
 *-H, --history*='DIR|FILE'::
     The `history` commands can examine either live cluster
