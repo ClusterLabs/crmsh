@@ -189,8 +189,14 @@ class LogSyslog(object):
         self.open_logs()
         self.set_log_timeframe(from_dt, to_dt)
     def open_log(self, log):
+        import bz2, gzip
         try:
-            self.f[log] = open(log)
+            if log.endswith(".bz2"):
+                self.f[log] = bz2.BZ2File(log)
+            elif log.endswith(".gz"):
+                self.f[log] = gzip.open(log)
+            else:
+                self.f[log] = open(log)
         except IOError,msg:
             common_err("open %s: %s"%(log,msg))
     def open_logs(self):
@@ -521,12 +527,10 @@ class Report(Singleton):
             return False
     def find_node_log(self, node):
         p = os.path.join(self.loc, node)
-        if is_log(os.path.join(p, "ha-log.txt")):
-            return os.path.join(p, "ha-log.txt")
-        elif is_log(os.path.join(p, "messages")):
-            return os.path.join(p, "messages")
-        else:
-            return None
+        for lf in ("ha-log.txt", "messages"):
+            if is_log(os.path.join(p, lf)):
+                return os.path.join(p, lf)
+        return None
     def find_central_log(self):
         'Return common log, if found.'
         central_log = os.path.join(self.loc, "ha-log.txt")
