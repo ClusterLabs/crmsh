@@ -178,7 +178,6 @@ def convert_dt(dt):
 class LogSyslog(object):
     '''
     Slice log, search log.
-    self.fp is an array of dicts.
     '''
     def __init__(self, central_log, log_l, from_dt, to_dt):
         self.log_l = log_l
