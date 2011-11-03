@@ -62,7 +62,7 @@ def syslog_ts(s):
         tm = time.strptime(' '.join([YEAR] + s.split()[0:3]),"%Y %b %d %H:%M:%S")
         return time.mktime(tm)
     except:
-        common_warn("malformed line: %s" % s)
+        common_debug("malformed line: %s" % s)
         return None
 
 def seek_to_edge(f, ts, to_end):
