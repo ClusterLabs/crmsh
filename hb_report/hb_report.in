@@ -65,7 +65,7 @@ fi
 usage() {
 	cat<<EOF
 usage: hb_report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
-       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCZAVsvhd] [dest]
+       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDZAVsvhd] [dest]
 
 	-f time: time to start from or a CTS test number
 	-t time: time to finish at (dflt: now)
@@ -86,7 +86,6 @@ usage: hb_report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
 	-e prog: your favourite editor
 	-M     : don't collect extra logs (/var/log/messages)
 	-D     : don't invoke editor to write description
-	-C     : remove the destination directory
 	-Z     : if destination directories exist, remove them instead of exiting
 	         (this is default for CTS)
 	-A     : this is an OpenAIS cluster
@@ -94,31 +93,30 @@ usage: hb_report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
 	         collectors on other nodes
 	-v     : increase verbosity
 	-V     : print version
-	dest   : destination directory
+	dest   : report name (may include path where to store the report)
 EOF
 
 [ "$1" != short ] &&
 	cat<<EOF
 
-	. the multifile output is first stored in a directory {dest}
-	  of which a tarball {dest}.tar.bz2 (or .gz) is created
+	. the multifile output is stored in a tarball {dest}.tar.bz2
 	. the time specification is as in either Date::Parse or
 	  Date::Manip, whatever you have installed; Date::Parse is
 	  preferred
 	. we try to figure where is the logfile; if we can't, please
-	  clue us in
+	  clue us in ('-l')
 	. we collect only one logfile and /var/log/messages; if you
 	  have more than one logfile, then use '-E' option to supply
 	  as many as you want ('-M' empties the list)
 
 	Examples
 
-	  hb_report -f 2pm /tmp/report_1
-	  hb_report -f "2007/9/5 12:30" -t "2007/9/5 14:00" /tmp/report_2
-	  hb_report -f 1:00 -t 3:00 -l /var/log/cluster/ha-debug /tmp/report_3
-	  hb_report -f "09sep07 2:00" -u hbadmin /tmp/report_4
-	  hb_report -f 18:00 -p "usern.*" -p "admin.*" /tmp/report_5
-	  hb_report -f cts:133 /tmp/ctstest_133
+	  hb_report -f 2pm report_1
+	  hb_report -f "2007/9/5 12:30" -t "2007/9/5 14:00" report_2
+	  hb_report -f 1:00 -t 3:00 -l /var/log/cluster/ha-debug report_3
+	  hb_report -f "09sep07 2:00" -u hbadmin report_4
+	  hb_report -f 18:00 -p "usern.*" -p "admin.*" report_5
+	  hb_report -f cts:133 ctstest_133
 
 	. WARNING . WARNING . WARNING . WARNING . WARNING . WARNING .
 
@@ -147,7 +145,7 @@ version() {
 setvarsanddefaults() {
 	local now=`perl -e 'print time()'`
 	# used by all
-	DESTDIR=""
+	DEST=""
 	FROM_TIME=""
 	CTS=""
 	TO_TIME=0
@@ -155,7 +153,7 @@ setvarsanddefaults() {
 	UNIQUE_MSG="Mark:HB_REPORT:$now"
 	SANITIZE="passw.*"
 	DO_SANITIZE=""
-	REMOVE_DEST="1"
+	FORCE_REMOVE_DEST=""
 	COMPRESS="1"
 	# logs to collect in addition
 	# NB: they all have to be in syslog format
@@ -169,30 +167,32 @@ setvarsanddefaults() {
 	NO_DESCRIPTION="1"
 	VERBOSITY=0
 }
-chkdirname() {
+chkname() {
 	[ "$1" ] || usage short
-	[ $# -ne 1 ] && fatal "bad directory name: $1"
-	echo $1 | grep -qs '^/' ||
-		fatal "destination directory must be an absolute path"
-	echo $1 | egrep -qs '/[.][.]*(/|$)' &&
-		fatal "sorry, no . or .. references in the destination"
-	[ "$1" = / ] &&
-		fatal "no root directory here, thank you"
+	echo $1 | grep -qs '[^a-zA-Z0-9@_+=:-]' &&
+		fatal "$1 contains illegal characters"
 }
-destdir_inode_test() {
-	local root_inode=`ls -id / 2>/dev/null | awk '{print $1}'`
-	local dest_inode=`ls -id $1 2>/dev/null | awk '{print $1}'`
-	[ "$root_inode" = "$dest_inode" ] &&
-		fatal "no root directory here, thank you"
+set_dest() {
+	# default DEST has already been set earlier (if the
+	# argument is missing)
+	if [ $# -eq 1 ]; then
+		DEST=`basename $1`
+		DESTDIR=`dirname $1`
+	fi
+	chkname $DEST
+	if [ -z "$COMPRESS" -a -e "$DESTDIR/$DEST" ]; then
+		if [ "$FORCE_REMOVE_DEST" -o "$CTS" ]; then
+			rm -rf $DESTDIR/$DEST
+		else
+			fatal "destination directory $DESTDIR/$DEST exists, please cleanup or use -Z" 
+		fi
+	fi
 }
 chktime() {
 	[ "$1" ] || fatal "bad time specification: $2 (try 'YYYY-M-D H:M:S') "
 }
-msgcleanup() {
-	fatal "destination directory $DESTDIR exists on $1, please cleanup"
-}
-nodistdirectory() {
-	fatal "could not create the destination directory $DESTDIR"
+no_dir() {
+	fatal "could not create the working directory $WORKDIR"
 }
 time2str() {
 	perl -e "use POSIX; print strftime('%x %X',localtime($1));"
@@ -204,21 +204,6 @@ time2str() {
 logmark() {
 	logger -p $*
 	debug "run: logger -p $*"
-}
-#
-# a special stamp is logged through syslog on _all_ nodes
-#
-logmarks() {
-	local msg=$1
-	local c="hb_report __slave $DESTDIR logmark $msg"
-
-	for n in $NODES; do
-		if [ "$n" = "`uname -n`" ]; then
-			is_node && logmark $HA_LOGFACILITY.$HA_LOGLEVEL $msg
-		else
-			ssh $SSH_OPTS_AUTH $n "$c"
-		fi
-	done
 }
 #
 # first try syslog files, if none found then use the
@@ -439,6 +424,7 @@ cts_findlogseg() {
 #
 dumpenv() {
 	cat<<EOF
+DEST=$DEST
 FROM_TIME=$FROM_TIME
 TO_TIME=$TO_TIME
 USER_NODES="$USER_NODES"
@@ -446,12 +432,10 @@ NODES="$NODES"
 MASTER_NODE="$MASTER_NODE"
 HA_LOG=$HA_LOG
 MASTER_IS_HOSTLOG=$MASTER_IS_HOSTLOG
-DESTDIR=$DESTDIR
 UNIQUE_MSG=$UNIQUE_MSG
 SANITIZE="$SANITIZE"
 DO_SANITIZE="$DO_SANITIZE"
 EXTRA_LOGS="$EXTRA_LOGS"
-REMOVE_DEST="$REMOVE_DEST"
 USER_CLUSTER_TYPE="$USER_CLUSTER_TYPE"
 CONF="$CONF"
 B_CONF="$B_CONF"
@@ -474,13 +458,11 @@ start_slave_collector() {
 
 	dumpenv |
 	if [ "$node" = "$WE" ]; then
-		cat > $DESTDIR/.env
-		hb_report __slave $DESTDIR
+		$SUDO hb_report __slave
 	else
 		ssh $SSH_OPTS_AUTH $node \
-			"cat > $DESTDIR/.env; $SUDO hb_report __slave $DESTDIR" |
-			(cd $DESTDIR && tar xf -)
-	fi &
+			"$SUDO hb_report __slave"
+	fi | (cd $WORKDIR && tar xf -) &
 
 	SLAVEPIDS="$SLAVEPIDS $!"
 }
@@ -888,14 +870,14 @@ Detailed description:
 
 EOF
 
-	if [ -f $DESTDIR/$SYSINFO_F ]; then
+	if [ -f $WORKDIR/$SYSINFO_F ]; then
 		echo "Common system info found:"
-		cat $DESTDIR/$SYSINFO_F
+		cat $WORKDIR/$SYSINFO_F
 	else
 		for n in $NODES; do
-			if [ -f $DESTDIR/$n/$SYSINFO_F ]; then
+			if [ -f $WORKDIR/$n/$SYSINFO_F ]; then
 				echo "System info $n:"
-				sed 's/^/	/' $DESTDIR/$n/$SYSINFO_F
+				sed 's/^/	/' $WORKDIR/$n/$SYSINFO_F
 			fi
 		done
 	fi
@@ -941,11 +923,7 @@ getlog() {
 		info "found the central log!"
 	fi
 
-	if is_node; then
-		outf=$DESTDIR/$WE/$HALOG_F
-	else
-		outf=$DESTDIR/$HALOG_F # we are log server, probably
-	fi
+	outf=$WORKDIR/$HALOG_F
 	if [ -f "$HA_LOG" ]; then
 		if [ "$NO_str2time" ]; then
 			warning "a log found; but we cannot slice it"
@@ -973,30 +951,30 @@ getlog() {
 # get all other info (config, stats, etc)
 #
 collect_info() {
-	getconfig $DESTDIR/$WE
-	getpeinputs $FROM_TIME $TO_TIME $DESTDIR/$WE
-	getbacktraces $FROM_TIME $TO_TIME $DESTDIR/$WE/$BT_F
-	getconfigurations $DESTDIR/$WE
-	touch_DC_if_dc $DESTDIR/$WE
-	sanitize $DESTDIR/$WE
-	crmconfig $DESTDIR/$WE
-	check_perms > $DESTDIR/$WE/$PERMISSIONS_F 2>&1
-	sys_info > $DESTDIR/$WE/$SYSINFO_F 2>&1
-	dlm_dump > $DESTDIR/$WE/$DLM_DUMP_F 2>&1
-	sys_stats > $DESTDIR/$WE/$SYSSTATS_F 2>&1
+	getconfig $WORKDIR
+	getpeinputs $FROM_TIME $TO_TIME $WORKDIR
+	getbacktraces $FROM_TIME $TO_TIME $WORKDIR/$BT_F
+	getconfigurations $WORKDIR
+	touch_DC_if_dc $WORKDIR
+	sanitize $WORKDIR
+	crmconfig $WORKDIR
+	check_perms > $WORKDIR/$PERMISSIONS_F 2>&1
+	sys_info > $WORKDIR/$SYSINFO_F 2>&1
+	dlm_dump > $WORKDIR/$DLM_DUMP_F 2>&1
+	sys_stats > $WORKDIR/$SYSSTATS_F 2>&1
 
 	for l in $EXTRA_LOGS; do
 		[ "$NO_str2time" ] && break
 		[ ! -f "$l" ] && continue
 		if [ "$l" = "$HA_LOG" -a "$l" != "$HALOG_F" ]; then
-			ln -s $HALOG_F $DESTDIR/$WE/`basename $l`
+			ln -s $HALOG_F $WORKDIR/`basename $l`
 			continue
 		fi
 		getstampproc=`find_getstampproc < $l`
 		if [ "$getstampproc" ]; then
 			export getstampproc # used by linetime
-			dumplogset $l $FROM_TIME $TO_TIME > $DESTDIR/$WE/`basename $l`
-			loginfo $l > $DESTDIR/$WE/`basename $l`.info
+			dumplogset $l $FROM_TIME $TO_TIME > $WORKDIR/`basename $l`
+			loginfo $l > $WORKDIR/`basename $l`.info
 		else
 			warning "could not figure out the log format of $l"
 		fi
@@ -1004,9 +982,9 @@ collect_info() {
 }
 finalword() {
 	if [ "$COMPRESS" = "1" ]; then
-		echo "The report is saved in $DESTDIR.tar$COMPRESS_EXT"
+		echo "The report is saved in $DESTDIR/$DEST.tar$COMPRESS_EXT"
 	else
-		echo "The report is saved in $DESTDIR"
+		echo "The report is saved in $DESTDIR/$DEST"
 	fi
 	echo " "
 	echo "Thank you for taking time to create this report."
@@ -1025,13 +1003,18 @@ if [ "$t" = "" ]; then
 		fatal "please install the perl Date::Parse module"
 fi
 
+WE=`uname -n`  # who am i?
+tmpdir=`mktemp -t -d .hb_report.workdir.XXXXXX`
+trap "rm -r $tmpdir" EXIT
+WORKDIR=$tmpdir
+
 #
 # part 1: get and check options; and the destination
 #
 if ! is_collector; then
 	setvarsanddefaults
 	userargs="$@"
-	DESTDIR="$HOME/hb_report-"`date +"%a-%d-%b-%Y"`
+	DEST="hb_report-"`date +"%a-%d-%b-%Y"`
 	while getopts f:t:l:u:p:L:e:E:n:MSDCZAVsvhd o; do
 		case "$o" in
 			h) usage;;
@@ -1040,7 +1023,7 @@ if ! is_collector; then
 				if echo "$OPTARG" | grep -qs '^cts:'; then
 					FROM_TIME=0 # to be calculated later
 					CTS=`echo "$OPTARG" | sed 's/cts://'`
-					DESTDIR="$HOME/cts-$CTS-"`date +"%a-%d-%b-%Y"`
+					DEST="cts-$CTS-"`date +"%a-%d-%b-%Y"`
 				else
 					FROM_TIME=`str2time "$OPTARG"`
 					chktime "$FROM_TIME" "$OPTARG"
@@ -1060,29 +1043,31 @@ if ! is_collector; then
 			L) LOG_PATTERNS="$LOG_PATTERNS $OPTARG";;
 			S) NO_SSH=1;;
 			D) NO_DESCRIPTION=1;;
-			C) REMOVE_DEST=1;;
+			C) : ;;
 			Z) FORCE_REMOVE_DEST=1;;
 			M) EXTRA_LOGS="";;
 			E) EXTRA_LOGS="$EXTRA_LOGS $OPTARG";;
 			A) USER_CLUSTER_TYPE="openais";;
 			v) VERBOSITY=$((VERBOSITY + 1));;
-			d) COMPRESS="0"; REMOVE_DEST="0";;
+			d) COMPRESS="";;
 			[?]) usage short;;
 		esac
 	done
 	shift $(($OPTIND-1))
 	[ $# -gt 1 ] && usage short
-	if [ $# -eq 1 ]; then
-		DESTDIR=`echo $1 | sed 's,/*$,,'`
-	fi
-	chkdirname $DESTDIR
-	destdir_inode_test $DESTDIR
+	set_dest $*
 	[ "$FROM_TIME" ] || usage short
+	WORKDIR=$tmpdir/$DEST
 else
-	# slave gets the environment from .env
-	DESTDIR=$2
-	[ -d $DESTDIR ] || nodistdirectory
-	. $DESTDIR/.env
+	WORKDIR=$tmpdir/$DEST/$WE
+fi
+
+mkdir -p $WORKDIR
+[ -d $WORKDIR ] || no_dir
+
+if is_collector; then
+	cat > $WORKDIR/.env
+	. $WORKDIR/.env
 fi
 
 [ $VERBOSITY -gt 1 ] && set -x
@@ -1151,13 +1136,6 @@ elif ! is_collector; then
 	NODES_SOURCE=user
 fi
 
-if is_collector && [ "$3" = logmark ]; then
-	msg="$4"
-	logmark $HA_LOGFACILITY.$HA_LOGLEVEL $msg
-	exit
-fi
-
-WE=`uname -n`  # who am i?
 THIS_IS_NODE=""
 if ! is_collector; then
 	MASTER_NODE=$WE
@@ -1208,47 +1186,18 @@ if ! is_collector; then
 	if [ -z "$NO_SSH" ]; then
 		findsshuser
 	fi
-# final check: don't run if the destination directory exists
-	[ -d $DESTDIR ] && {
-		if [ "$FORCE_REMOVE_DEST" ]; then
-			rm -r $DESTDIR
-		else
-			msgcleanup "local node"
-		fi
-	}
-	mkdir -p $DESTDIR
-	[ -d $DESTDIR ] || nodistdirectory
-	for node in $NODES; do
-		[ "$node" = "$WE" ] && continue
-		ssh $SSH_OPTS_AUTH $node "test -d $DESTDIR" && {
-			if [ "$FORCE_REMOVE_DEST" -o "$CTS" ]; then # relax a bit for CTS
-				ssh $SSH_OPTS_AUTH $node "rm -r $DESTDIR"
-			else
-				test -d $DESTDIR && rmdir $DESTDIR
-				msgcleanup $node
-			fi
-		}
-		dumpenv |
-		ssh $SSH_OPTS_AUTH $node "mkdir -p $DESTDIR && cat > $DESTDIR/.env"
-	done
 fi
 
-# only cluster nodes need their own directories
-is_node && mkdir -p $DESTDIR/$WE
+if is_collector && [ "$HA_LOGFACILITY" ]; then
+	logmark $HA_LOGFACILITY.$HA_LOGLEVEL $UNIQUE_MSG
+	# allow for the log message to get (hopefully) written to the
+	# log file
+	sleep 1
+fi
 
 if is_collector && [ $VERBOSITY -gt 1 ]; then
-	echo the debug information for node $WE is in $DESTDIR/$WE/debug.out
-	exec 2>>$DESTDIR/$WE/debug.out
-fi
-
-if ! is_collector; then
-#
-# part 3: log marks to be searched for later
-#         important to do this now on _all_ nodes
-# 
-	if [ "$HA_LOGFACILITY" ]; then
-		logmarks $UNIQUE_MSG
-	fi
+	info "the debug information for node $WE is in $WE/debug.out"
+	exec 2>>debug.out
 fi
 
 #
@@ -1279,30 +1228,24 @@ fi
 #
 if is_collector; then
 	collect_info
-	[ "$WE" != "$MASTER_NODE" ] &&
-		(cd $DESTDIR && tar cf - $WE)
+	(cd $WORKDIR/.. && tar cf - $WE)
 else
 	wait $SLAVEPIDS
-	analyze $DESTDIR > $DESTDIR/$ANALYSIS_F
-	events $DESTDIR
-	mktemplate > $DESTDIR/$DESCRIPTION_F
+	analyze $WORKDIR > $WORKDIR/$ANALYSIS_F
+	events $WORKDIR
+	mktemplate > $WORKDIR/$DESCRIPTION_F
 	[ "$NO_DESCRIPTION" ] || {
 		echo press enter to edit the problem description...
 		read junk
-		edittemplate $DESTDIR/$DESCRIPTION_F
+		edittemplate $WORKDIR/$DESCRIPTION_F
 	}
-	test -f $DESTDIR/$HALOG_F ||
-		combine_logs $DESTDIR
-	cd $DESTDIR/..
+	test -f $WORKDIR/$HALOG_F ||
+		combine_logs $WORKDIR
 	if [ "$COMPRESS" = "1" ]; then
 		pickcompress
-		tar cf - `basename $DESTDIR` | $COMPRESS_PROG > $DESTDIR.tar$COMPRESS_EXT
+		(cd $WORKDIR/.. && tar cf - $DEST) | $COMPRESS_PROG > $DESTDIR/$DEST.tar$COMPRESS_EXT
+	else
+		mv $WORKDIR $DESTDIR
 	fi
 	finalword
-fi
-
-if [ "$REMOVE_DEST" = "1" ]; then
-	if is_master || [ "$WE" != "$MASTER_NODE" ]; then
-		rm -r $DESTDIR
-	fi
 fi
