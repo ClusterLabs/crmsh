@@ -27,12 +27,10 @@ Pacemaker (CRM) over the given period of time.
 OPTIONS
 -------
 dest::
-	The destination directory. Must be an absolute path. The
-	resulting tarball is placed in the parent directory and
-	contains the last directory element of this path. Typically
-	something like /tmp/standby-failed. If left out, the tarball
-	is created in your home directory named "hb_report-current_date",
-	for instance hb_report-Wed-03-Mar-2010.
+	The report name. It can also contain a path where to put the
+	report tarball. If left out, the tarball is created in the
+	current directory named "hb_report-current_date", for instance
+	hb_report-Wed-03-Mar-2010.
 
 *-d*::
 	Don't create the compressed tar, but leave the result in a
@@ -96,8 +94,8 @@ dest::
 	needed. Use if ssh(1) does not work to other nodes.
 
 *-Z*::
-	If destination directories exist, remove them instead of exiting
-	(this is default for CTS).
+	If the destination directory exist, remove it instead of
+	exiting (this is default for CTS).
 
 *-V*::
 	Print the version including the last repository changeset.
@@ -125,10 +123,10 @@ EXAMPLES
 Last night during the backup there were several warnings
 encountered (logserver is the log host):
 
-	logserver# hb_report -f 3:00 -t 4:00 -n "node1 node2" /tmp/report
+	logserver# hb_report -f 3:00 -t 4:00 -n "node1 node2" report
 
 collects everything from all nodes from 3am to 4am last night.
-The files are compressed to a tarball /tmp/report.tar.bz2.
+The files are compressed to a tarball report.tar.bz2.
 
 Just found a problem during testing:
 
@@ -138,15 +136,15 @@ Just found a problem during testing:
 	node1# /etc/init.d/heartbeat start
 	node1# nasty-command-that-breaks-things
 	node1# sleep 120 #wait for the cluster to settle
-	node1# hb_report -f 18:51 /tmp/hb1
+	node1# hb_report -f 18:51 hb1
 
-	# if hb_report can't figure out that this is openais
-	node1# hb_report -f 18:51 -A /tmp/hb1
+	# if hb_report can't figure out that this is corosync
+	node1# hb_report -f 18:51 -A hb1
 
 	# if hb_report can't figure out the cluster members
-	node1# hb_report -f 18:51 -n "node1 node2" /tmp/hb1
+	node1# hb_report -f 18:51 -n "node1 node2" hb1
 
-The files are compressed to a tarball /tmp/hb1.tar.bz2.
+The files are compressed to a tarball hb1.tar.bz2.
 
 INTERPRETING RESULTS
 --------------------
@@ -186,8 +184,10 @@ on all nodes will also be at the top, with per-node links created
 
 The cluster log files are named ha-log.txt regardless of the
 actual log file name on the system. If it is found on the
-loghost, then it is placed in the top directory. Files named
-messages are excerpts of /var/log/messages from nodes.
+loghost, then it is placed in the top directory. If not, the top
+directory ha-log.txt contains all nodes logs merged and sorted by
+time. Files named messages are excerpts of /var/log/messages from
+nodes.
 
 Most files are copied verbatim or they contain output of a
 command. For instance, cib.xml is a copy of the CIB found in
@@ -385,7 +385,7 @@ The second phase is the most involved. During this phase all
 local information is collected, which includes:
 
 - logs (both current and archived if the start time is far in the past)
-- various configuration files (openais, heartbeat, logd)
+- various configuration files (corosync, heartbeat, logd)
 - the CIB (both as xml and as represented by the crm shell)
 - pengine inputs (if this node was the DC at any point in
   time over the given period)
