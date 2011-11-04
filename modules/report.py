@@ -796,7 +796,7 @@ class Report(Singleton):
                     warn_once("%s in the logs, but not in the report" % pe_l_file)
                     continue
             else:
-                pe_l_file = "%s:%s" % (node, pe_file)
+                pe_l_file = pe_file
             if pe_l_file in pe_l:
                 common_debug("duplicate %s, replacing older PE file" % pe_l_file)
                 pe_l.remove(pe_l_file)
