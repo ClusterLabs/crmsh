@@ -798,7 +798,7 @@ class Report(Singleton):
             else:
                 pe_l_file = "%s:%s" % (node, pe_file)
             if pe_l_file in pe_l:
-                common_warn("duplicate %s, replacing older PE file" % pe_l_file)
+                common_debug("duplicate %s, replacing older PE file" % pe_l_file)
                 pe_l.remove(pe_l_file)
             common_debug("found PE input: %s" % pe_l_file)
             pe_l.append(pe_l_file)
