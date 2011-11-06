@@ -1891,7 +1891,10 @@ Examine Pacemaker's history: node and resource events, logs.
     def _get_pe_byidx(self, idx):
         l = crm_report.pelist()
         if len(l) < abs(idx):
-            common_err("PE input file for index %d not found" % (idx+1))
+            if idx == -1:
+                common_err("no transitions found in the source")
+            else:
+                common_err("PE input file for index %d not found" % (idx+1))
             return None
         return l[idx]
     def _get_pe_bynum(self, n):

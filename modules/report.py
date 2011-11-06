@@ -821,6 +821,9 @@ class Report(Singleton):
         somewhere in the cache area.
         Parse the period.
         '''
+        if not self.source:
+            common_error("no source set yet")
+            return False
         if self.ready and self.source != "live":
             return True
         if self.source == "live":
