@@ -117,6 +117,10 @@ def rsc_id_list(idx,delimiter = False):
     if delimiter:
         return ' '
     return cib_factory.rsc_id_list()
+def rsc_tmpl_id_list(idx,delimiter = False):
+    if delimiter:
+        return ' '
+    return cib_factory.rsc_id_list() + cib_factory.rsc_template_list()
 def node_id_list(idx,delimiter = False):
     if delimiter:
         return ' '
@@ -484,9 +488,9 @@ completer_lists = {
         "clone" : (null_list,f_children_id_list),
         "ms" : (null_list,f_children_id_list),
         "location" : (null_list,rsc_id_list),
-        "colocation" : (null_list,null_list,rsc_id_list,loop),
-        "order" : (null_list,null_list,rsc_id_list,loop),
-        "rsc_ticket" : (null_list,null_list,rsc_id_list,loop),
+        "colocation" : (null_list,null_list,rsc_tmpl_id_list,loop),
+        "order" : (null_list,null_list,rsc_tmpl_id_list,loop),
+        "rsc_ticket" : (null_list,null_list,rsc_tmpl_id_list,loop),
         "property" : (property_complete,loop),
         "rsc_defaults" : (prim_complete_meta,loop),
         "op_defaults" : (op_attr_list,loop),
