@@ -472,6 +472,17 @@ class Report(Singleton):
         except OSError,msg:
             self.error(msg)
             return None
+        import tarfile
+        try:
+            tf = tarfile.open(bfname)
+            tf_loc = tf.getmembers()[0].name
+            if tf_loc != loc:
+                common_debug("top directory in tarball: %s, doesn't match the tarball name: %s" % (tf_loc,loc))
+                loc = tf_loc
+        except Exception, msg:
+            common_err("%s: %s" % (tarball, msg))
+            return None
+        common_debug("tar -x%s < %s" % (tar_unpack_option,bfname))
         rc = ext_cmd_nosudo("tar -x%s < %s" % (tar_unpack_option,bfname))
         if self.source == "live":
             os.remove(bfname)
