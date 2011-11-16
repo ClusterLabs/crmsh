@@ -478,7 +478,7 @@ class Report(Singleton):
             tf_loc = tf.getmembers()[0].name
             if tf_loc != loc:
                 common_debug("top directory in tarball: %s, doesn't match the tarball name: %s" % (tf_loc,loc))
-                loc = tf_loc
+                loc = os.path.join(os.path.dirname(loc), tf_loc)
         except Exception, msg:
             common_err("%s: %s" % (tarball, msg))
             return None
