@@ -481,10 +481,10 @@ class RAInfo(object):
                 rc |= 1
                 continue
 	    if "interval" in n_ops[op]:
-                if n_ops[op]["interval"] != "0":
-                    if op == "start" or op == "stop":
-                        v = n_ops[op]["interval"]
-                        common_warn("%s: Specified interval for %s is %s, this is greater than 0 thus invalid" %(id,op,v))
+                if op == "start" or op == "stop":
+                    v = n_ops[op]["interval"]
+                    if crm_msec(v) != 0:
+                        common_warn("%s: Specified interval for %s is %s, it must be 0" %(id,op,v))
             try:
                 adv_timeout = self.actions()[op]["timeout"]
             except:
