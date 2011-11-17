@@ -759,8 +759,12 @@ class CibObject(object):
         if self.nocli:
             return self.repr_cli_xml(node,format)
         l = []
+        if format < 0:
+            cli_display.set_no_pretty()
         head_s = self.repr_cli_head(node)
         if not head_s: # everybody must have a head
+            if format < 0:
+                cli_display.reset_no_pretty()
             return None
         comments = []
         l.append(head_s)
@@ -774,7 +778,10 @@ class CibObject(object):
             s = self.repr_cli_child(c,format)
             if s:
                 l.append(s)
-        return self.cli_format(l,comments,format)
+        s = self.cli_format(l,comments,format)
+        if format < 0:
+            cli_display.reset_no_pretty()
+        return s
     def repr_cli_child(self,c,format):
         if c.tagName in self.set_names:
             return "%s %s" % \
