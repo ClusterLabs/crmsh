@@ -37,7 +37,7 @@ Operations' defaults (advisory minimum):
 .INP: info stonith:external/ssh
 ssh STONITH device (stonith:external/ssh)
 
-ssh-based Linux host reset
+ssh-based host reset
 Fine for testing, but not suitable for production!
 Only reboot action supported, no poweroff, and, surprisingly enough, no poweron.
 
