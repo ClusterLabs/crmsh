@@ -700,7 +700,7 @@ def delete_rscref_rset(c_obj,rsc_id):
             l.append(rset)
             c_obj.updated = True
             c_modified = True
-        elif is_boolean_false(rset.getAttribute("sequential")):
+        elif is_boolean_false(rset.getAttribute("sequential")) and rref_cnt > 1:
             nonseq_rset = True
         cnt += rref_cnt
     rmnodes(l)
@@ -711,6 +711,12 @@ def rset_convert(c_obj):
     l = c_obj.node.getElementsByTagName("resource_ref")
     if len(l) != 2:
         return # eh?
+    rsetcnt = 0
+    for rset in c_obj.node.getElementsByTagName("resource_set"):
+        # in case there are multiple non-sequential sets
+        if rset.getAttribute("sequential"):
+            rset.removeAttribute("sequential")
+        rsetcnt += 1
     c_obj.modified = True
     cli = c_obj.repr_cli(format = -1)
     cli = cli.replace("_rsc_set_ ","")
@@ -719,6 +725,12 @@ def rset_convert(c_obj):
         c_obj.node.parentNode.replaceChild(newnode,c_obj.node)
         c_obj.node.unlink()
         c_obj.node = newnode
+        if rsetcnt == 1 and c_obj.obj_type == "colocation":
+            # exchange the elements in colocations
+            rsc = newnode.getAttribute("rsc")
+            with_rsc = newnode.getAttribute("with-rsc")
+            newnode.setAttribute("rsc", with_rsc)
+            newnode.setAttribute("with-rsc", rsc)
 def rename_rscref_rset(c_obj,old_id,new_id):
     c_modified = False
     d = {}

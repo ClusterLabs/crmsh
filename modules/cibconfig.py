@@ -2306,12 +2306,16 @@ class CibFactory(Singleton):
             if is_simpleconstraint(c_obj.node) and obj.children:
                 # the first child inherits constraints
                 rename_rscref(c_obj,obj.obj_id,obj.children[0].obj_id)
-            delete_rscref(c_obj,obj.obj_id)
+            deleted = False
+            if delete_rscref(c_obj,obj.obj_id):
+                deleted = True
             if silly_constraint(c_obj.node,obj.obj_id):
                 # remove invalid constraints
                 self._remove_obj(c_obj)
                 if not self._no_constraint_rm_msg:
                     err_buf.info("hanging %s deleted" % c_obj.obj_string())
+            elif deleted:
+                err_buf.info("constraint %s updated" % c_obj.obj_string())
     def related_constraints(self,obj):
         if not is_resource(obj.node):
             return []
