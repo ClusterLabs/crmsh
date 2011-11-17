@@ -43,7 +43,7 @@ BuildRequires:	asciidoc
 crm shell, a Pacemaker command line interface.
 
 Pacemaker is an advanced, scalable High-Availability cluster resource
-manager for Linux-HA (Heartbeat) and/or OpenAIS.
+manager for Heartbeat and/or Corosync.
 
 Authors: Dejan Muhamedagic <dejan@suse.de> and many others
 
