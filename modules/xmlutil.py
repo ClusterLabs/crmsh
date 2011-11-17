@@ -692,12 +692,20 @@ def delete_rscref_rset(c_obj,rsc_id):
             c_modified = True
     rmnodes(l)
     l = []
+    cnt = 0
+    nonseq_rset = False
     for rset in c_obj.node.getElementsByTagName("resource_set"):
-        if len(rset.getElementsByTagName("resource_ref")) == 0:
+        rref_cnt = len(rset.getElementsByTagName("resource_ref"))
+        if rref_cnt == 0:
             l.append(rset)
             c_obj.updated = True
             c_modified = True
+        elif is_boolean_false(rset.getAttribute("sequential")):
+            nonseq_rset = True
+        cnt += rref_cnt
     rmnodes(l)
+    if not nonseq_rset and cnt == 2:
+        rset_convert(c_obj)
     return c_modified
 def rset_convert(c_obj):
     l = c_obj.node.getElementsByTagName("resource_ref")
@@ -705,10 +713,12 @@ def rset_convert(c_obj):
         return # eh?
     c_obj.modified = True
     cli = c_obj.repr_cli(format = -1)
+    cli = cli.replace("_rsc_set_ ","")
     newnode = c_obj.cli2node(cli)
     if newnode:
         c_obj.node.parentNode.replaceChild(newnode,c_obj.node)
         c_obj.node.unlink()
+        c_obj.node = newnode
 def rename_rscref_rset(c_obj,old_id,new_id):
     c_modified = False
     d = {}
