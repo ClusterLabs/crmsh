@@ -532,9 +532,7 @@ class Report(Singleton):
         try:
             last_ts = os.stat(self.desc).st_mtime
             return (time.time() - last_ts <= self.live_recent)
-        except Exception, msg:
-            self.warn(msg)
-            self.warn("strange, couldn't stat %s" % self.desc)
+        except:
             return False
     def find_node_log(self, node):
         p = os.path.join(self.loc, node)
