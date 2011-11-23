@@ -1109,8 +1109,8 @@ class CibPrimitive(CibObject):
         if self.obj_type == "primitive":
             r_node = reduce_primitive(self.node)
             if not r_node:
-                # perhaps the template will be defined later
-                return rc3
+                common_err("%s: no such resource template" % self.node.getAttribute("template"))
+                return user_prefs.get_check_rc()
         else:
             r_node = self.node
         ra = get_ra(r_node)
