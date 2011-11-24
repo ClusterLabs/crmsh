@@ -2339,6 +2339,22 @@ class CibFactory(Singleton):
                 self._no_constraint_rm_msg = True
                 self._remove_obj(c_obj)
                 self._no_constraint_rm_msg = False
+    def template_primitives(self,obj):
+        if not is_template(obj.node):
+            return []
+        c_list = []
+        for obj2 in self.cib_objects:
+            if not is_primitive(obj2.node):
+                continue
+            if obj2.node.getAttribute("template") == obj.obj_id:
+                c_list.append(obj2)
+        return c_list
+    def check_running_primitives(self,prim_l):
+        for prim in prim_l:
+            if is_rsc_managed(prim.obj_id) and is_rsc_running(prim.obj_id):
+                common_err("resource %s is running, can't delete it" % prim.obj_id)
+                return False
+        return True
     def add_to_remove_queue(self,obj):
         if obj.origin == "cib":
             self.remove_queue.append(obj)
@@ -2368,8 +2384,18 @@ class CibFactory(Singleton):
             if is_rsc_managed(obj_id) and is_rsc_running(obj_id):
                 common_err("resource %s is running, can't delete it" % obj_id)
                 rc = False
-            else:
-                l.append(obj)
+                continue
+            if is_template(obj.node):
+                prim_l = self.template_primitives(obj)
+                prim_l = [x for x in prim_l \
+                    if x not in l and x.obj_id not in args]
+                if not self.check_running_primitives(prim_l):
+                    rc = False
+                    continue
+                for prim in prim_l:
+                    common_info("hanging %s deleted" % prim.obj_string())
+                    l.append(prim)
+            l.append(obj)
         if l:
             l = processing_sort_cli(l)
             for obj in reversed(l):

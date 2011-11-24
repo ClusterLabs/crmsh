@@ -357,6 +357,9 @@ def is_primitive(node):
 def is_resource(node):
     return is_element(node) \
         and node.tagName in vars.resource_tags
+def is_template(node):
+    return is_element(node) \
+        and node.tagName == "template"
 def is_child_rsc(node):
     return is_element(node) \
         and node.tagName in vars.children_tags
