@@ -94,7 +94,7 @@ rm -rf %{buildroot}
 %{_datadir}/crmsh
 
 %{_sbindir}/crm
-%{py_sitedir}/crm
+%{py_sitedir}/crmsh
 
 %doc %{_mandir}/man8/crm.8*
 %doc COPYING
