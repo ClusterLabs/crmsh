@@ -1014,6 +1014,7 @@ WORKDIR=$tmpdir
 if ! is_collector; then
 	setvarsanddefaults
 	userargs="$@"
+	DESTDIR=.
 	DEST="hb_report-"`date +"%a-%d-%b-%Y"`
 	while getopts f:t:l:u:p:L:e:E:n:MSDCZAVsvhd o; do
 		case "$o" in
