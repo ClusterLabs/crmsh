@@ -2651,7 +2651,10 @@ Example:
 Show actions and any failures that happened on all specified
 resources on all nodes. Normally, one gives resource names as
 arguments, but it is also possible to use extended regular
-expressions.
+expressions. Note that neither groups nor clones or master/slave
+names are ever logged. The resource command is going to expand
+all of these appropriately, so that clone instances or resources
+which are part of a group are shown.
 
 Usage:
 ...............
@@ -2660,8 +2663,8 @@ Usage:
 Example:
 ...............
         resource bigdb public_ip
-        resource bigdb:0
-        resource bigdb:.
+        resource my_.*_db2
+        resource ping_clone
 ...............
 
 [[cmdhelp_history_node,node events]]

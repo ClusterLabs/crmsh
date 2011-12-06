@@ -431,6 +431,7 @@ class Report(Singleton):
         self.central_log = None
         self.peinputs_l = []
         self.cibgrp_d = {}
+        self.cibcln_d = {}
         self.cibrsc_l = []
         self.cibnode_l = []
         self.setnodes = []
@@ -759,6 +760,10 @@ class Report(Singleton):
             for x in conf.getElementsByTagName("node") ]
         for grp in conf.getElementsByTagName("group"):
             self.cibgrp_d[grp.getAttribute("id")] = get_rsc_children_ids(grp)
+        for cln in conf.getElementsByTagName("clone") + \
+                conf.getElementsByTagName("master"):
+            try: self.cibcln_d[cln.getAttribute("id")] = get_rsc_children_ids(cln)[0]
+            except: pass
     def set_node_colors(self):
         i = 0
         for n in self.cibnode_l:
@@ -1021,8 +1026,10 @@ class Report(Singleton):
         # expand groups (if any)
         expanded_l = []
         for a in args:
-            if a in self.cibgrp_d:
+            if a in self.cibgrp_d: # add group members, groups aren't logged
                 expanded_l += self.cibgrp_d[a]
+            elif a in self.cibcln_d: # expand clones (aren't logged either)
+                expanded_l.append("%s:[0-9]+" % self.cibcln_d[a])
             else:
                 expanded_l.append(a)
         rsc_re_l = self.build_re("resource",expanded_l)
