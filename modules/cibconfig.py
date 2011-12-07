@@ -2136,6 +2136,7 @@ class CibFactory(Singleton):
             return False
         oldnode = obj.node
         if xml_cmp(oldnode,newnode):
+            newnode.parentNode.removeChild(newnode)
             newnode.unlink()
             return True # the new and the old versions are equal
         obj.node = newnode
