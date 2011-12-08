@@ -39,6 +39,11 @@ BuildRequires:  automake autoconf pkgconfig python
 BuildRequires:	libpacemaker-devel libglue-devel
 BuildRequires:	asciidoc
 
+%if 0%{?with_regression_tests}
+BuildRequires:  corosync procps vim-base
+Requires:       pacemaker
+%endif
+
 %description
 crm shell, a Pacemaker command line interface.
 
@@ -86,6 +91,19 @@ make DESTDIR=%{buildroot} docdir=%{crmsh_docdir} install
 
 %clean
 rm -rf %{buildroot}
+
+%if 0%{?with_regression_tests}
+
+%post
+# Needed so that the shell doesn't get stuck on escape
+# sequences
+export TERM=dumb
+if ! /usr/share/crmsh/tests/regression.sh ; then
+	echo "Shell tests failed."
+	cat crmtestout/regression.out
+	exit 1
+fi
+%endif
 
 %files
 ###########################################################
