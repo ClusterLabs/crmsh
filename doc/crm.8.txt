@@ -684,18 +684,22 @@ Example:
 ==== `meta` (`info`)
 
 Show the meta-data of a resource agent type. This is where users
-can find information on how to use a resource agent.
+can find information on how to use a resource agent. It is also
+possible to get information from some programs: `pengine`,
+`crmd`, `cib`, and `stonithd`. Just specify the program name
+instead of an RA.
 
 Usage:
 ...............
-        meta [<class>:[<provider>:]]<type>
-        meta <type> <class> [<provider>] (obsolete)
+        info [<class>:[<provider>:]]<type>
+        info <type> <class> [<provider>] (obsolete)
 ...............
 Example:
 ...............
-        meta apache
-        meta ocf:pacemaker:Dummy
-        meta stonith:ipmilan
+        info apache
+        info ocf:pacemaker:Dummy
+        info stonith:ipmilan
+        info pengine
 ...............
 
 [[cmdhelp_ra_providers,show providers for a RA and a class]]
