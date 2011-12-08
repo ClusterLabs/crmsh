@@ -942,7 +942,8 @@ class Report(Singleton):
         '''
         Show all events.
         '''
-        all_re_l = self.build_re("resource", self.cibrsc_l) + \
+        all_re_l = self.build_re("resource", self.cibrsc_l + \
+            ["%s:[0-9]+" % self.cibcln_d[x] for x in self.cibcln_d.keys()]) + \
             self.build_re("node", self.cibnode_l) + \
             self.build_re("events", [])
         if not all_re_l:
