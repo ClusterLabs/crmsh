@@ -1907,8 +1907,8 @@ Examine Pacemaker's history: node and resource events, logs.
             return None
         return l[0]
     def transition(self,cmd,*args):
-        """usage: transition [<number>|<file>] [nograph] [v...] [scores] [actions] [utilization]
-        transition showdot [<number>|<file>]"""
+        """usage: transition [<number>|<index>|<file>] [nograph] [v...] [scores] [actions] [utilization]
+        transition showdot [<number>|<index>|<file>]"""
         argl = list(args)
         subcmd = "show"
         if argl and argl[0] == "showdot":
@@ -1929,8 +1929,7 @@ Examine Pacemaker's history: node and resource events, logs.
                     f = self._get_pe_bynum(n)
                 argl.pop(0)
             else:
-                common_err("<%s> doesn't sound like a PE input" % argl[0])
-                return False
+                f = self._get_pe_byidx(-1)
         else:
             f = self._get_pe_byidx(-1)
         if not f:
