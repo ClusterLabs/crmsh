@@ -28,7 +28,7 @@ log_patterns = {
 			"[(]%%[)][[]",
 		),
 		( # detail 1
-			"lrmd:.*rsc:%%:.*(probe|notify)",
+			"lrmd:.*rsc:%% (probe|notify)",
 			"lrmd:.*info: Managed %%:.*exited",
 		),
 	),
