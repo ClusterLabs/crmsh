@@ -433,6 +433,8 @@ class Report(Singleton):
         self.cibgrp_d = {}
         self.cibcln_d = {}
         self.cibrsc_l = []
+        self.cibnotcloned_l = []
+        self.cibcloned_l = []
         self.cibnode_l = []
         self.setnodes = []
         self.outdir = os.path.join(vars.report_cache,"psshout")
@@ -443,7 +445,7 @@ class Report(Singleton):
     def warn(self, s):
         common_warn("%s: %s" % (self.source, s))
     def rsc_list(self):
-        return self.cibgrp_d.keys() + self.cibrsc_l
+        return self.cibgrp_d.keys() + self.cibcln_d.keys() + self.cibnotcloned_l
     def node_list(self):
         return self.cibnode_l
     def peinputs_list(self):
@@ -762,8 +764,11 @@ class Report(Singleton):
             self.cibgrp_d[grp.getAttribute("id")] = get_rsc_children_ids(grp)
         for cln in conf.getElementsByTagName("clone") + \
                 conf.getElementsByTagName("master"):
-            try: self.cibcln_d[cln.getAttribute("id")] = get_rsc_children_ids(cln)[0]
+            try:
+                self.cibcln_d[cln.getAttribute("id")] = get_prim_children_ids(cln)
+                self.cibcloned_l += self.cibcln_d[cln.getAttribute("id")]
             except: pass
+        self.cibnotcloned_l = [x for x in self.cibrsc_l if x not in self.cibcloned_l]
     def set_node_colors(self):
         i = 0
         for n in self.cibnode_l:
@@ -942,8 +947,9 @@ class Report(Singleton):
         '''
         Show all events.
         '''
-        all_re_l = self.build_re("resource", self.cibrsc_l + \
-            ["%s:[0-9]+" % self.cibcln_d[x] for x in self.cibcln_d.keys()]) + \
+        rsc_l = self.cibnotcloned_l
+        rsc_l += ["%s:[0-9]+" % x for x in self.cibcloned_l]
+        all_re_l = self.build_re("resource", rsc_l) + \
             self.build_re("node", self.cibnode_l) + \
             self.build_re("events", [])
         if not all_re_l:
@@ -1029,11 +1035,17 @@ class Report(Singleton):
         for a in args:
             if a in self.cibgrp_d: # add group members, groups aren't logged
                 expanded_l += self.cibgrp_d[a]
-            elif a in self.cibcln_d: # expand clones (aren't logged either)
-                expanded_l.append("%s:[0-9]+" % self.cibcln_d[a])
+            elif a in self.cibcln_d: # add group members, groups aren't logged
+                expanded_l += self.cibcln_d[a]
             else:
                 expanded_l.append(a)
-        rsc_re_l = self.build_re("resource",expanded_l)
+        exp_cloned_l = []
+        for rsc in expanded_l:
+            if rsc in self.cibcloned_l:
+                exp_cloned_l.append("%s:[0-9]+" % rsc)
+            else:
+                exp_cloned_l.append(rsc)
+        rsc_re_l = self.build_re("resource", exp_cloned_l)
         if not rsc_re_l:
             return False
         self.show_logs(re_l = rsc_re_l)

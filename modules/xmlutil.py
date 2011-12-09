@@ -348,6 +348,11 @@ def is_clone(node):
 def is_clonems(node):
     return is_element(node) \
         and node.tagName in vars.clonems_tags
+def is_cloned(node):
+    return is_element(node) \
+        and (node.parentNode.tagName in vars.clonems_tags or \
+            (node.parentNode.tagName == "group" and \
+            node.parentNode.parentNode.tagName in vars.clonems_tags))
 def is_container(node):
     return is_element(node) \
         and node.tagName in vars.container_tags
@@ -788,6 +793,11 @@ def silly_constraint(c_node,rsc_id):
 def get_rsc_children_ids(node):
     return [x.getAttribute("id") \
         for x in node.childNodes if is_child_rsc(x)]
+def get_prim_children_ids(node):
+    l = [x for x in node.childNodes if is_child_rsc(x)]
+    if l and l[0].tagName == "group":
+        l = [x for x in l[0].childNodes if is_child_rsc(x)]
+    return [x.getAttribute("id") for x in l]
 def get_child_nvset_node(node, attr_set = "meta_attributes"):
     if not node:
         return None
