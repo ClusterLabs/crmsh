@@ -394,7 +394,7 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     Pipe graph_s thru ptest(8). Show graph using dotty if requested.
     '''
     actions_filter = "grep LogActions: | grep -vw Leave"
-    ptest = "2>&1 ptest -X"
+    ptest = "2>&1 ptest -x -"
     if verbosity:
         if actions:
             verbosity = 'v' * max(3,len(verbosity))
