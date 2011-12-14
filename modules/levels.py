@@ -39,7 +39,7 @@ def mk_completion_tab(obj,ctab):
         elif key == "help":
             ctab[key] = topics_dict(obj.help_table)
         else:
-            ctab[key] = get_completer_list(obj.lvl_name,key)
+            ctab[key] = get_completer_list(obj,key)
 
 class Levels(Singleton):
     '''

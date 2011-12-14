@@ -515,10 +515,12 @@ completer_lists = {
         "ticket" : (ticket_cmd_list,),
     },
 }
-def get_completer_list(level,cmd):
+def get_completer_list(lvl_obj,cmd):
     'Return a list of completer functions.'
-    try: return completer_lists[level][cmd]
-    except: return None
+    try: return completer_lists[lvl_obj.lvl_name][cmd]
+    except:
+        try: return completer_lists[lvl_obj.lvl_name][lvl_obj.rev_alias_table[cmd]]
+        except: return None
 
 compl_help = CompletionHelp()
 user_prefs = UserPrefs.getInstance()

@@ -100,6 +100,7 @@ def setup_aliases(obj):
     for cmd in obj.cmd_aliases.keys():
         for alias in obj.cmd_aliases[cmd]:
             obj.cmd_table[alias] = obj.cmd_table[cmd]
+            obj.rev_alias_table[alias] = cmd
 
 def os_types_list(path):
     l = []
