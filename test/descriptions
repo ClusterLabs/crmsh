@@ -17,10 +17,10 @@
 
 lead=".TRY"
 describe_show() {
-	echo $lead Show CLI
+	echo $lead $*
 }
 describe_showxml() {
-	echo $lead Show XML
+	: echo $lead $*
 }
 describe_session() {
 	echo $lead $*

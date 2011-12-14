@@ -51,7 +51,7 @@ commit
 EOF
 }
 crm_showxml() {
-	CIB_file=sample.xml $CRM<<EOF
+	CIB_file=sample.xml $CRM<<EOF | sed -n '/^<?xml/,/^<\/cib>/p'
 configure
 _regtest on
 erase

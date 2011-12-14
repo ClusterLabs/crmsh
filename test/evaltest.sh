@@ -70,7 +70,7 @@ substvars() {
 dotest_session() {
 	echo -n "." >&3
 	test_cnt=$(($test_cnt+1))
-	describe_session $*  # show what we are about to do
+	describe_$cmd $*  # show what we are about to do
 	crm_$cmd |  # and execute the command
 		{ [ "$extcheck" ] && $extcheck || cat;}
 }
