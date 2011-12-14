@@ -34,27 +34,6 @@ colocation c1 inf: ( d1 d3 )
 colocation c2 inf: d3 d1
 colocation c3 inf: d3 d1
 order o1 inf: d1 d3
-.INP: show xml o1 c1 c2 c3
-<?xml version="1.0" ?>
-<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
-  <configuration>
-    <crm_config/>
-    <nodes/>
-    <resources/>
-    <constraints>
-      <rsc_order first="d1" id="o1" score="INFINITY" then="d3"/>
-      <rsc_colocation id="c1" score="INFINITY">
-        <resource_set id="c1-1" sequential="false">
-          <resource_ref id="d1"/>
-          <resource_ref id="d3"/>
-        </resource_set>
-      </rsc_colocation>
-      <rsc_colocation id="c2" rsc="d3" score="INFINITY" with-rsc="d1"/>
-      <rsc_colocation id="c3" rsc="d3" score="INFINITY" with-rsc="d1"/>
-    </constraints>
-  </configuration>
-</cib>
-
 .INP: _test
 .INP: verify
 .INP: show

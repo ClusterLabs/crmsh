@@ -1,4 +1,4 @@
-show Resource sets
+showxml Resource sets
 node node1
 primitive st stonith:ssh \
 	params hostlist='node1' \
@@ -13,9 +13,7 @@ colocation c1 inf: d4 ( d1 d2 d3 )
 colocation c2 inf: d1 d2 d3 d4
 colocation c3 inf: ( d3 d4 ) ( d1 d2 )
 delete d2
-show o1 c1 c2 c3
 delete d4
-show o1 c1 c2 c3
 _test
 verify
 .

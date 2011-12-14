@@ -1,6 +1,7 @@
 confbasic
 confbasic-xml
 rset
+rset-xml
 delete
 node
 resource

@@ -1,0 +1,33 @@
+<?xml version="1.0" ?>
+<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
+  <configuration>
+    <crm_config/>
+    <nodes>
+      <node id="node1" type="normal" uname="node1"/>
+    </nodes>
+    <resources>
+      <primitive class="stonith" id="st" type="ssh">
+        <instance_attributes id="st-instance_attributes">
+          <nvpair id="st-instance_attributes-hostlist" name="hostlist" value="node1"/>
+        </instance_attributes>
+        <operations>
+          <op id="st-start-0" interval="0" name="start" timeout="60s"/>
+        </operations>
+      </primitive>
+      <primitive class="ocf" id="d1" provider="pacemaker" type="Dummy"/>
+      <primitive class="ocf" id="d3" provider="heartbeat" type="Dummy"/>
+      <primitive class="ocf" id="d5" provider="heartbeat" type="Dummy"/>
+    </resources>
+    <constraints>
+      <rsc_order first="d1" id="o1" score="INFINITY" then="d3"/>
+      <rsc_colocation id="c1" score="INFINITY">
+        <resource_set id="c1-1" sequential="false">
+          <resource_ref id="d1"/>
+          <resource_ref id="d3"/>
+        </resource_set>
+      </rsc_colocation>
+      <rsc_colocation id="c2" rsc="d3" score="INFINITY" with-rsc="d1"/>
+      <rsc_colocation id="c3" rsc="d3" score="INFINITY" with-rsc="d1"/>
+    </constraints>
+  </configuration>
+</cib>
