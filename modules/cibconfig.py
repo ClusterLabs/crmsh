@@ -246,6 +246,9 @@ class CibObjectSet(object):
             r_node = reduce_primitive(prim)
             if not r_node:
                 return # template not defined yet
+            ra_type = node.getAttribute("type")
+            ra_class = node.getAttribute("class")
+            ra_provider = node.getAttribute("provider")
             ra = get_ra(r_node)
             if not ra.mk_ra_node():  # no RA found?
                 return
