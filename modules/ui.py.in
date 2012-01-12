@@ -1760,7 +1760,7 @@ Examine Pacemaker's history: node and resource events, logs.
             if not to_dt:
                 return False
         if to_dt and to_dt <= from_dt:
-            common_err("%s - %s: bad period" % from_time, to_time)
+            common_err("%s - %s: bad period" % (from_time, to_time))
             return False
         common_debug("setting period to <%s>:<%s>" % (from_dt,to_dt))
         return crm_report.set_period(from_dt,to_dt)
