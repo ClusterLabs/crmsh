@@ -108,7 +108,9 @@ syslogmsg() {
 #
 findmsg() {
 	# this is tricky, we try a few directories
-	syslogdirs="/var/log /var/logs /var/syslog /var/adm /var/log/ha /var/log/cluster"
+	syslogdirs="/var/log /var/logs /var/syslog /var/adm
+	/var/log/ha /var/log/cluster /var/log/pacemaker
+	/var/log/heartbeat /var/log/crm /var/log/corosync /var/log/openais"
 	favourites="ha-*"
 	mark=$1
 	log=""
