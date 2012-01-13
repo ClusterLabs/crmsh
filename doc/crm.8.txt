@@ -1897,6 +1897,14 @@ Usage:
         edit [xml] changed
 ...............
 
+.Note on renaming element ids
+****************************
+The edit command sometimes cannot properly handle modifying
+element ids. In particular for elements which belong to group or
+ms resources. Group and ms resources themselves also cannot be
+renamed. Please use the `rename` command instead.
+****************************
+
 [[cmdhelp_configure_filter,filter CIB objects]]
 ==== `filter`
 
