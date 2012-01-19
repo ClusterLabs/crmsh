@@ -940,7 +940,9 @@ class CibObject(object):
             return self.updated or self.origin == "user"
         if args[0].startswith("type:"):
             return self.obj_type == args[0][5:]
-        return self.obj_id in args
+        return self.obj_id in args or \
+            (self.obj_type == "node" and \
+            self.node.getAttribute("uname") in args)
 
 def mk_cli_list(cli):
     'Sometimes we get a string and sometimes a list.'
@@ -1758,6 +1760,11 @@ class CibFactory(Singleton):
         "Find an object for id."
         for obj in self.cib_objects:
             if obj.obj_id == obj_id:
+                return obj
+            # special case for Heartbeat nodes which have id
+            # different from uname
+            if obj.obj_type == "node" and \
+                    obj.node.getAttribute("uname") == obj_id:
                 return obj
         return None
     #
