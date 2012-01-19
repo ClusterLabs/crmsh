@@ -91,7 +91,7 @@ pcmk_status_action (string, [status]): Advanced use only: An alternate command t
 
 Operations' defaults (advisory minimum):
 
-    start         timeout=60
+    start         timeout=20
     stop          timeout=15
-    status        timeout=60
-    monitor       interval=3600 timeout=60
+    status        timeout=20
+    monitor       interval=3600 timeout=20
