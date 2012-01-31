@@ -45,6 +45,7 @@ log_patterns = {
 			"te_fence_node: Exec.*on %% ",
 			"pe_fence_node: Node %% will be fenced",
 			"stonith-ng.*remote_op_timeout:.*for %% timed",
+			"stonith-ng.*can_fence_host_with_device:.*can not fence %%:",
 			"stonithd.*Succeeded.*node %%:",
 			"pcmk_peer_update.*(lost|memb): %% ",
 			"crmd.*ccm_event.*(NEW|LOST):.* %% ",
