@@ -2820,7 +2820,8 @@ in the XML format.
 
 AUTHOR
 ------
-Written by Dejan Muhamedagic, <dejan@suse.de>
+Dejan Muhamedagic, <dejan@suse.de>
+and many OTHERS
 
 SEE ALSO
 --------

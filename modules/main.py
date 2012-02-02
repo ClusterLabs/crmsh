@@ -270,7 +270,6 @@ def run():
                 usage(0)
             elif o in ("--version"):
                 print >> sys.stdout,("""%s
-Written by Dejan Muhamedagic
 """ % vars.crm_version)
                 sys.exit(0)
 
