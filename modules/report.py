@@ -710,7 +710,7 @@ class Report(Singleton):
             self.from_dt = from_dt
             self.to_dt = to_dt
         elif self.source != "live":
-            if self.from_dt > from_dt:
+            if from_dt and self.from_dt > from_dt:
                 self.error("from time %s not within report" % from_dt)
                 return False
             if to_dt and self.to_dt < to_dt:
