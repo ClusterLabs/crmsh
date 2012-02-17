@@ -37,26 +37,26 @@ if not ocf_root:
     if not ocf_root:
         ocf_root = "/usr/lib/ocf"
     os.putenv("OCF_ROOT",ocf_root)
+lrmadmin_prog = "lrmadmin"
 class RaLrmd(object):
     '''
     Getting information from the resource agents.
     '''
-    lrmadmin_prog = "lrmadmin"
     def __init__(self):
         self.good = self.is_lrmd_accessible()
     def lrmadmin(self, opts, xml = False):
         '''
         Get information directly from lrmd using lrmadmin.
         '''
-        l = stdout2list("%s %s" % (self.lrmadmin_prog,opts))
+        l = stdout2list("%s %s" % (lrmadmin_prog,opts))
         if l and not xml:
             l = l[1:] # skip the first line
         return l
     def is_lrmd_accessible(self):
-        if not (is_program(self.lrmadmin_prog) and is_process("lrmd")):
+        if not (is_program(lrmadmin_prog) and is_process("lrmd")):
             return False
         return subprocess.call(\
-            add_sudo(">/dev/null 2>&1 %s -C" % self.lrmadmin_prog), \
+            add_sudo(">/dev/null 2>&1 %s -C" % lrmadmin_prog), \
             shell=True) == 0
     def meta(self, ra_class,ra_type,ra_provider):
         return self.lrmadmin("-M %s %s %s"%(ra_class,ra_type,ra_provider),True)
@@ -110,10 +110,20 @@ class RaOS(object):
         l.sort()
         return l
 
+def can_use_lrmadmin():
+    from distutils import version
+    # after this glue release all users can get meta-data and
+    # similar from lrmd
+    minimum_glue = "1.0.10"
+    glue_ver = get_stdout("%s -v" % lrmadmin_prog, stderr_on = False)
+    v_min = version.StrictVersion(minimum_glue)
+    v_this = version.StrictVersion(glue_ver)
+    return v_this >= v_min or \
+        (getuser() in ("root",vars.crm_daemon_user))
 def ra_if():
     if vars.ra_if:
         return vars.ra_if
-    if getuser() in ("root",vars.crm_daemon_user):
+    if can_use_lrmadmin():
         vars.ra_if = RaLrmd()
     if not vars.ra_if or not vars.ra_if.good:
         vars.ra_if = RaOS()
