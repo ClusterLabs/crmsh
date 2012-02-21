@@ -269,8 +269,7 @@ def run():
             if o in ("-h","--help"):
                 usage(0)
             elif o in ("--version"):
-                print >> sys.stdout,("""%s
-""" % vars.crm_version)
+                print >> sys.stdout,("%s" % vars.crm_version)
                 sys.exit(0)
 
             elif o == "-d":
