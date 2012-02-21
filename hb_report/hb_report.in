@@ -1213,7 +1213,7 @@ fi
 if ! is_collector; then
 	# assume that only root can collect data
 	SUDO=""
-	if [ -z "$SSH_USER" -a `id -u` != 0 ] || [ "$SSH_USER" != root ]; then
+	if [ -z "$SSH_USER" -a `id -u` != 0 ] || [ -n "$SSH_USER" -a "$SSH_USER" != root ]; then
 		SUDO="sudo -u root -E"
 	fi
 	for node in $NODES; do
