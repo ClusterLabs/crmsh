@@ -188,6 +188,13 @@ class Vars(Singleton):
         hist_file = os.path.join(homedir,".crm_history")
     rc_file = os.path.join(homedir,".crm.rc")
     tmpl_conf_dir = os.path.join(homedir,".crmconf")
+    index_file = os.path.join(homedir,".crm_help_index")
+    xdg_map = {
+        "history": "history",
+        "rc": "rc",
+        "crmconf": "crmconf",
+        "help_index": "help_index",
+    }
     report_cache = os.path.join("@CRM_CACHE_DIR@","history")
     tmpl_dir = "@datadir@/@PACKAGE@/templates"
     pe_dir = "@PE_STATE_DIR@"

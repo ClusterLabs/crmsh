@@ -22,7 +22,7 @@ import getopt
 
 from utils import *
 from userprefs import Options, UserPrefs
-from vars import Vars
+from vars import Vars, gethomedir
 from ui import cmd_exit
 from msg import *
 from levels import Levels
@@ -249,10 +249,49 @@ def set_interactive():
     if sys.stdin.isatty():
         options.interactive = True
 
+def xdg_file(name, xdg_name, obj_type, semantics):
+    if not name or not xdg_name:
+        return name
+    try:
+        from xdg import BaseDirectory
+        config_home = BaseDirectory.xdg_config_home
+        cache_home = BaseDirectory.xdg_cache_home
+    except:
+        # see http://standards.freedesktop.org/basedir-spec
+        homedir = gethomedir()
+        config_home = os.path.join(homedir, ".config")
+        cache_home = os.path.join(homedir, ".cache")
+    chk_fun = obj_type == "f" and os.path.isfile or os.path.isdir
+    dir = os.path.join(semantics == "config" and \
+        config_home or cache_home, "crm")
+    if not os.path.isdir(dir):
+        os.makedirs(dir, 0700)
+    new = os.path.join(dir, xdg_name)
+    if semantics == "config" and chk_fun(new) and chk_fun(name):
+        common_warn("both %s and %s exist, please cleanup" % (name, new))
+        return name
+    if chk_fun(name):
+        if semantics == "config":
+            common_info("moving %s to %s" % (name, new))
+        else:
+            common_debug("moving %s to %s" % (name, new))
+        os.rename(name, new)
+    return new
+def mv_user_files():
+    vars.hist_file = xdg_file(vars.hist_file, \
+        vars.xdg_map["history"], "f", "cache")
+    vars.rc_file = xdg_file(vars.rc_file, \
+        vars.xdg_map["rc"], "f", "config")
+    vars.index_file = xdg_file(vars.index_file, \
+        vars.xdg_map["help_index"], "f", "cache")
+    vars.tmpl_conf_dir = xdg_file(vars.tmpl_conf_dir, \
+        vars.xdg_map["crmconf"], "d", "config")
+
 def run():
     prereqs()
     inp_file = ''
 
+    mv_user_files()
     load_rc(vars.rc_file)
 
     if not sys.stdin.isatty():

@@ -19,7 +19,7 @@ import os
 import re
 from cache import WCache
 from utils import odict, page_string
-from vars import gethomedir
+from vars import Vars
 from msg import *
 
 #
@@ -109,7 +109,6 @@ class HelpSystem(object):
     [[cmdhelp_<level>,<short help text>]]
     '''
     help_text_file = "@datadir@/@PACKAGE@/crm.8.txt"
-    index_file = os.path.join(gethomedir(),".crm_help_index")
     def __init__(self):
         self.key_pos = {}
         self.leveld = {}
@@ -126,7 +125,7 @@ class HelpSystem(object):
             return None
     def drop_index(self):
         common_info("removing index")
-        os.unlink(self.index_file)
+        os.unlink(vars.index_file)
         self.key_pos = {}
         self.leveld = {}
         self.bad_index = True
@@ -143,7 +142,7 @@ class HelpSystem(object):
         help_f = self.open_file(self.help_text_file,"r")
         if not help_f:
             return False
-        idx_f = self.open_file(self.index_file,"w")
+        idx_f = self.open_file(vars.index_file,"w")
         if not idx_f:
             return False
         common_debug("building help index")
@@ -164,7 +163,7 @@ class HelpSystem(object):
         return True
     def is_index_old(self):
         try:
-            t_idx = os.path.getmtime(self.index_file)
+            t_idx = os.path.getmtime(vars.index_file)
         except:
             return True
         try:
@@ -177,7 +176,7 @@ class HelpSystem(object):
             self.mk_index()
         self.key_pos = {}
         self.leveld = {}
-        idx_f = self.open_file(self.index_file,"r")
+        idx_f = self.open_file(vars.index_file,"r")
         if not idx_f:
             return False
         cur_lvl = ''
@@ -273,5 +272,6 @@ class HelpSystem(object):
         return wcache.store("lvl_help_tab_%s" % lvl, help_tab)
 
 wcache = WCache.getInstance()
+vars = Vars.getInstance()
 
 # vim:ts=4:sw=4:et:

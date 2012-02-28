@@ -1335,7 +1335,7 @@ Display all current settings.
 [[cmdhelp_options_save,save the user preferences to the rc file]]
 ==== `save`
 
-Save current settings to the rc file (`$HOME/.crm.rc`). On
+Save current settings to the rc file (`$HOME/.config/crm/rc`). On
 further `crm` runs, the rc file is automatically read and parsed.
 
 [[cmdhelp_configure,CIB configuration]]
