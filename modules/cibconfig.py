@@ -1785,7 +1785,7 @@ class CibFactory(Singleton):
             if x.obj_type in vars.resource_tags and not x.parent]
     def node_id_list(self):
         "List of node ids."
-        return [x.obj_id for x in self.cib_objects \
+        return [x.node.getAttribute("uname") for x in self.cib_objects \
             if x.obj_type == "node"]
     def f_prim_id_list(self):
         "List of possible primitives ids (for group completion)."
