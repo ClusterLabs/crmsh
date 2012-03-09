@@ -24,7 +24,7 @@ import re
 import glob
 from userprefs import Options, UserPrefs
 from cache import WCache
-from vars import Vars, getuser
+from vars import Vars, getpwdent
 from utils import *
 from msg import *
 
@@ -119,7 +119,7 @@ def can_use_lrmadmin():
     v_min = version.StrictVersion(minimum_glue)
     v_this = version.StrictVersion(glue_ver)
     return v_this >= v_min or \
-        (getuser() in ("root",vars.crm_daemon_user))
+        (getpwdent()[0] in ("root",vars.crm_daemon_user))
 def ra_if():
     if vars.ra_if:
         return vars.ra_if
