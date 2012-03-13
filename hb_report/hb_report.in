@@ -1169,7 +1169,7 @@ PERMISSIONS_F=permissions.txt
 CIB_F=cib.xml
 CIB_TXT_F=cib.txt
 export CRM_MON_F MEMBERSHIP_F CRM_VERIFY_F CIB_F CIB_TXT_F HB_UUID_F PERMISSIONS_F
-CONFIGURATIONS="/etc/drbd.conf /etc/drbd.d"
+CONFIGURATIONS="/etc/drbd.conf /etc/drbd.d /etc/booth/booth.conf"
 export CONFIGURATIONS
 
 # this only on master
