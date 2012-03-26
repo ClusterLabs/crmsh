@@ -1308,6 +1308,7 @@ class StatusMgmt(UserInterface):
         self.cmd_table["run"] = (self.run,(0,3),1,0)
         self.cmd_table["simulate"] = (self.simulate,(0,3),1,0)
         self.cmd_table["quorum"] = (self.quorum,(1,1),1,0)
+        self.cmd_table["ticket"] = (self.edit_ticket,(2,2),2,0)
         setup_aliases(self)
     def myname(self):
         '''Just return some id.'''
@@ -1340,6 +1341,9 @@ class StatusMgmt(UserInterface):
     def edit_node(self,cmd,node,state):
         "usage: node <node> {online|offline|unclean}"
         return cib_status.edit_node(node,state)
+    def edit_ticket(self,cmd,ticket,subcmd):
+        "usage: ticket <ticket> {grant|revoke|activate|standby}"
+        return cib_status.edit_ticket(ticket,subcmd)
     def edit_op(self,cmd,op,rsc,rc,op_status = None,node = ''):
         "usage: op <operation> <resource> <exit_code> [<op_status>] [<node>]"
         if rc in vars.lrm_exit_codes:

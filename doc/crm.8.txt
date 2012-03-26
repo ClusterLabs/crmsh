@@ -2452,6 +2452,21 @@ Example:
         quorum false
 ...............
 
+[[cmdhelp_cibstatus_ticket,manage tickets]]
+==== `ticket`
+
+Modify the ticket status. Tickets can be granted and revoked.
+Granted tickets could be activated or put in standby.
+
+Usage:
+...............
+        ticket <ticket> {grant|revoke|activate|standby}
+...............
+Example:
+...............
+        ticket ticketA grant
+...............
+
 [[cmdhelp_cibstatus_run,run policy engine]]
 ==== `run`
 

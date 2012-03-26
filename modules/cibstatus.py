@@ -90,6 +90,12 @@ class CibStatus(Singleton):
         "offline": "-d",
         "unclean": "-f",
     }
+    ticket_ops = {
+        "grant": "-g",
+        "revoke": "-r",
+        "standby": "-b",
+        "activate": "-e",
+    }
     def __init__(self):
         self.origin = "live"
         self.backing_file = "" # file to keep the live cib
@@ -130,6 +136,7 @@ class CibStatus(Singleton):
         self.quorum = ''
         self.node_changes = {}
         self.op_changes = {}
+        self.ticket_changes = {}
         return True
     def source_file(self):
         if self.origin == "live":
@@ -242,6 +249,8 @@ class CibStatus(Singleton):
             print node,self.node_changes[node]
         for op in self.op_changes:
             print op,self.op_changes[op]
+        for ticket in self.ticket_changes:
+            print ticket,self.ticket_changes[ticket]
         if self.quorum:
             print "quorum:",self.quorum
         return True
@@ -283,6 +292,22 @@ class CibStatus(Singleton):
             return False
         self._load(self.origin)
         self.node_changes[node] = state
+        self.modified = True
+        return True
+    def edit_ticket(self,ticket,subcmd):
+        '''
+        Modify ticket status.
+        '''
+        if not self.get_status():
+            return False
+        if not subcmd in self.ticket_ops:
+            common_err("unknown ticket command %s" % subcmd)
+            return False
+        rc = self.inject("%s %s" % (self.ticket_ops[subcmd], ticket))
+        if rc != 0:
+            return False
+        self._load(self.origin)
+        self.ticket_changes[ticket] = subcmd
         self.modified = True
         return True
     def edit_op(self,op,rsc,rc_code,op_status,node = ''):
