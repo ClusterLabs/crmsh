@@ -1970,6 +1970,8 @@ Geo-cluster related management.
         'grant': "crm_ticket -t '%s' -g",
         'revoke': "crm_ticket -t '%s' -r",
         'delete': "crm_ticket -t '%s' -D granted",
+        'standby': "crm_ticket -t '%s' -s",
+        'activate': "crm_ticket -t '%s' -a",
         'show': "crm_ticket -t '%s' -G granted",
         'time': "crm_ticket -t '%s' -G last-granted",
     }
@@ -1977,7 +1979,7 @@ Geo-cluster related management.
         UserInterface.__init__(self)
         self.cmd_table["ticket"] = (self.ticket,(2,2),1,0)
     def ticket(self, cmd, subcmd, ticket):
-        "usage: ticket {grant|revoke|show|time|delete} <ticket>"
+        "usage: ticket {grant|revoke|standby|activate|show|time|delete} <ticket>"
         try:
             attr_cmd = self.crm_ticket[subcmd]
         except:
