@@ -1963,11 +1963,11 @@ The site level.
 Geo-cluster related management.
 """
     crm_ticket =  {
-        'grant': "crm_ticket -t '%s' -v true",
-        'revoke': "crm_ticket -t '%s' -v false",
-        'delete': "crm_ticket -t '%s' -D",
-        'show': "crm_ticket -t '%s' -G",
-        'time': "crm_ticket -t '%s' -T",
+        'grant': "crm_ticket -t '%s' -g",
+        'revoke': "crm_ticket -t '%s' -r",
+        'delete': "crm_ticket -t '%s' -D granted",
+        'show': "crm_ticket -t '%s' -G granted",
+        'time': "crm_ticket -t '%s' -G last-granted",
     }
     def __init__(self):
         UserInterface.__init__(self)
