@@ -895,7 +895,12 @@ class Report(Singleton):
         a = s.split()
         try: clr = self.nodecolor[a[3]]
         except: return s
-        return termctrl.render("${%s}%s${NORMAL}" % (clr,s))
+        try:
+            return termctrl.render("${%s}%s${NORMAL}" % (clr,s))
+        except:
+            # ${..} in logs?
+            s = s.replace("${","$.{")
+            return termctrl.render("${%s}%s${NORMAL}" % (clr,s))
     def display_logs(self, l):
         if not options.batch and sys.stdout.isatty():
             page_string('\n'.join([ self.disp(x) for x in l ]))
