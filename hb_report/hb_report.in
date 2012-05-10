@@ -570,6 +570,17 @@ touch_DC_if_dc() {
 		touch $1/DC
 	fi
 }
+corosync_blackbox() {
+	local from_time=$1
+	local to_time=$2
+	local outf=$3
+	local inpf
+	inpf=`find_files /var/lib/corosync $from_time $to_time | grep -w fdata`
+	if [ -f "$inpf" ]; then
+		corosync-fplay > $outf
+		touch -r $inpf $outf
+	fi
+}
 getconfigurations() {
 	local dest=$1
 	for conf in $CONFIGURATIONS; do
@@ -960,6 +971,7 @@ collect_info() {
 	getconfigurations $WORKDIR
 	check_perms > $WORKDIR/$PERMISSIONS_F 2>&1
 	dlm_dump > $WORKDIR/$DLM_DUMP_F 2>&1
+	corosync_blackbox $FROM_TIME $TO_TIME $WORKDIR/$COROSYNC_RECORDER_F
 	wait
 	sanitize $WORKDIR
 
@@ -1168,7 +1180,9 @@ CRM_VERIFY_F=crm_verify.txt
 PERMISSIONS_F=permissions.txt
 CIB_F=cib.xml
 CIB_TXT_F=cib.txt
+COROSYNC_RECORDER_F=fdata.txt
 export CRM_MON_F MEMBERSHIP_F CRM_VERIFY_F CIB_F CIB_TXT_F HB_UUID_F PERMISSIONS_F
+export COROSYNC_RECORDER_F
 CONFIGURATIONS="/etc/drbd.conf /etc/drbd.d /etc/booth/booth.conf"
 export CONFIGURATIONS
 
