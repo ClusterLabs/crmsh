@@ -54,6 +54,8 @@ stonith		crmd.*te_fence_node.*Exec|stonith-ng.*log_oper.*reboot|stonithd.*(reque
 start_stop	Configuration.validated..Starting.heartbeat|Corosync.Cluster.Engine|Executive.Service.RELEASE|crm_shutdown:.Requesting.shutdown|pcmk_shutdown:.Shutdown.complete
 "
 
+init_tmpfiles
+
 #
 # the instance where user runs hb_report is the master
 # the others are slaves
@@ -296,9 +298,6 @@ arch_logs() {
 #
 # print part of the log
 #
-drop_tmp_file() {
-	[ -z "$tmp" ] || rm -f "$tmp"
-}
 print_log() {
 	local cat=`find_decompressor $1`
 	$cat $1
@@ -317,8 +316,8 @@ print_logseg() {
 	local cat=`find_decompressor $logf`
 	if [ "$cat" != "cat" ]; then
 		tmp=`mktemp`
+		add_tmpfiles $tmp
 		$cat $logf > $tmp
-		trap drop_tmp_file 0
 		sourcef=$tmp
 	else
 		sourcef=$logf
@@ -345,8 +344,6 @@ print_logseg() {
 	fi
 	dumplog $sourcef $FROM_LINE $TO_LINE
 	debug "including segment [$FROM_LINE-$TO_LINE] from $logf"
-	drop_tmp_file
-	trap "" 0
 }
 #
 # print some log info (important for crm history)
@@ -718,9 +715,9 @@ checklogs() {
 	logs=$(find $1 -name $HALOG_F;
 		for l in $EXTRA_LOGS; do find $1/* -name `basename $l`; done)
 	[ "$logs" ] || return
-	trap '[ -z "$pattfile" ] || rm -f "$pattfile"' 0
 	pattfile=`mktemp` ||
 		fatal "cannot create temporary files"
+	add_tmpfiles $pattfile
 	for p in $LOG_PATTERNS; do
 		echo "$p"
 	done > $pattfile
@@ -729,8 +726,6 @@ checklogs() {
 	for n in $NODES; do
 		cat $logs | grep -f $pattfile
 	done
-	rm -f $pattfile
-	trap "" 0
 }
 
 #
@@ -1010,7 +1005,7 @@ fi
 
 WE=`uname -n`  # who am i?
 tmpdir=`mktemp -t -d .hb_report.workdir.XXXXXX`
-trap "rm -r $tmpdir" EXIT
+add_tmpfiles $tmpdir
 WORKDIR=$tmpdir
 
 #

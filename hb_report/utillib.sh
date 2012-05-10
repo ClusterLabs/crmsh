@@ -241,12 +241,6 @@ touchfile() {
 	perl -e "\$file=\"$t\"; \$tm=$1;" -e 'utime $tm, $tm, $file;' &&
 	echo $t
 }
-find_files_clean() {
-	[ -z "$to_stamp" ] || rm -f "$to_stamp"
-	to_stamp=""
-	[ -z "$from_stamp" ] || rm -f "$from_stamp"
-	from_stamp=""
-}
 find_files() {
 	dirs=$1
 	from_time=$2
@@ -255,24 +249,21 @@ find_files() {
 		warning "sorry, can't find files based on time if you don't supply time"
 		return
 	}
-	trap find_files_clean 0
 	if ! from_stamp=`touchfile $from_time`; then
-		warning "sorry, can't create temporary file for find_files"
+		warning "can't create temporary files"
 		return
 	fi
+	add_tmpfiles $from_stamp
 	findexp="-newer $from_stamp"
 	if isnumber "$to_time" && [ "$to_time" -gt 0 ]; then
 		if ! to_stamp=`touchfile $to_time`; then
-			warning "sorry, can't create temporary file for" \
-				"find_files"
-			find_files_clean
+			warning "can't create temporary files"
 			return
 		fi
+		add_tmpfiles $to_stamp
 		findexp="$findexp ! -newer $to_stamp"
 	fi
 	find $dirs -type f $findexp
-	find_files_clean
-	trap "" 0
 }
 
 #
@@ -532,12 +523,6 @@ sanitize_hacf() {
 	{print}
 	'
 }
-sanitize_one_clean() {
-	[ -z "$tmp" ] || rm -f "$tmp"
-	tmp=""
-	[ -z "$ref" ] || rm -f "$ref"
-	ref=""
-}
 sanitize_one() {
 	file=$1
 	compress=""
@@ -549,11 +534,10 @@ sanitize_one() {
 		compress=cat
 		decompress=cat
 	fi
-	trap sanitize_one_clean 0
 	tmp=`mktemp`
 	ref=`mktemp`
+	add_tmpfiles $tmp $ref
 	if [ -z "$tmp" -o -z "$ref" ]; then
-		sanitize_one_clean
 		fatal "cannot create temporary files"
 	fi
 	touch -r $file $ref  # save the mtime
@@ -563,12 +547,7 @@ sanitize_one() {
 		$decompress | sanitize_xml_attrs | $compress
 	fi < $file > $tmp
 	mv $tmp $file
-	# note: cleaning $tmp up is still needed even after it's renamed
-	# because its temp directory is still there.
-
 	touch -r $ref $file
-	sanitize_one_clean
-	trap "" 0
 }
 
 #
@@ -596,6 +575,23 @@ pickfirst() {
 		}
 	done
 	return 1
+}
+
+# tmp files business
+drop_tmpfiles() {
+	trap 'rm -rf `cat $__TMPFLIST`; rm $__TMPFLIST' EXIT
+}
+init_tmpfiles() {
+	if __TMPFLIST=`mktemp`; then
+		drop_tmpfiles
+	else
+		# this is really bad, let's just leave
+		fatal "eek, mktemp cannot create temporary files"
+	fi
+}
+add_tmpfiles() {
+	test -f "$__TMPFLIST" || return
+	echo $* >> $__TMPFLIST
 }
 
 #
