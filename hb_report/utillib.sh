@@ -428,12 +428,11 @@ getbt() {
 #
 iscrmrunning() {
 	ps -ef | grep -qs [c]rmd || return 1
-	#crmadmin -D >/dev/null 2>&1 &
-	crm_mon -1 >/dev/null 2>&1 &
+	crmadmin -D >/dev/null 2>&1 &
 	pid=$!
-	maxwait=10
+	maxwait=100
 	while kill -0 $pid 2>/dev/null && [ $maxwait -gt 0 ]; do
-		sleep 1
+		sleep 0.1
 		maxwait=$(($maxwait-1))
 	done
 	if kill -0 $pid 2>/dev/null; then
@@ -622,42 +621,41 @@ distro() {
 	warning "no lsb_release, no /etc/*-release, no /etc/debian_version: no distro information"
 }
 
+pkg_ver_deb() {
+	dpkg-query -f '${Name} ${Version}' -W $* 2>/dev/null
+	debsums -s $* 2>/dev/null
+}
+pkg_ver_rpm() {
+	{
+	rpm -q --qf '%{name} %{version}-%{release} - %{distribution} %{arch}\n' $*
+	rpm --verify $*
+	} 2>&1 | grep -v 'not installed'
+}
+pkg_ver_pkg_info() {
+	for pkg; do
+		pkg_info | grep $pkg
+	done
+}
+pkg_ver_pkginfo() {
+	for pkg; do
+		pkginfo $pkg | awk '{print $3}'  # format?
+	done
+}
 pkg_ver() {
 	if which dpkg >/dev/null 2>&1 ; then
-			pkg_mgr="deb"
+		pkg_mgr="deb"
 	elif which rpm >/dev/null 2>&1 ; then
-			pkg_mgr="rpm"
+		pkg_mgr="rpm"
 	elif which pkg_info >/dev/null 2>&1 ; then 
-			pkg_mgr="pkg_info"
+		pkg_mgr="pkg_info"
 	elif which pkginfo >/dev/null 2>&1 ; then 
-			pkg_mgr="pkginfo"
+		pkg_mgr="pkginfo"
 	else
-			echo "Unknown package manager!"
-			return
+		echo "Unknown package manager!"
+		return
 	fi
 	debug "the package manager is $pkg_mgr"
-
-	# for Linux .deb based systems
-	for pkg ; do
-		case $pkg_mgr in
-		deb)
-			if dpkg-query -f '${Name} ${Version}' -W $pkg 2>/dev/null ; then
-				debsums -s $pkg 2>/dev/null
-			fi
-			;;
-		rpm)
-			if rpm -q --qf '%{name} %{version}-%{release} - %{distribution} %{arch}\n' $pkg ; then
-				rpm --verify $pkg
-			fi
-			;;
-		pkg_info)
-			pkg_info | grep $pkg
-			;;
-		pkginfo)
-			pkginfo | awk '{print $3}'  # format?
-			;;
-		esac
-	done
+	pkg_ver_$pkg_mgr $*
 }
 
 crm_info() {

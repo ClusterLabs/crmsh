@@ -304,6 +304,11 @@ print_log() {
 	$cat $1
 }
 print_logseg() {
+	if test -x $HA_NOARCHBIN/print_logseg; then
+		$HA_NOARCHBIN/print_logseg "$1" "$2" "$3"
+		return
+	fi
+
 	local logf=$1
 	local from_time=$2
 	local to_time=$3
@@ -563,8 +568,7 @@ getpeinputs() {
 	done
 }
 touch_DC_if_dc() {
-	#dc=`crmadmin -D 2>/dev/null | awk '{print $NF}'`
-	dc=`crm_mon -1 2>/dev/null | awk '/Current DC/ {print $3}'`
+	dc=`crmadmin -D 2>/dev/null | awk '{print $NF}'`
 	if [ "$WE" = "$dc" ]; then
 		touch $1/DC
 	fi
@@ -951,17 +955,18 @@ getlog() {
 # get all other info (config, stats, etc)
 #
 collect_info() {
+	sys_info > $WORKDIR/$SYSINFO_F 2>&1 &
+	sys_stats > $WORKDIR/$SYSSTATS_F 2>&1 &
 	getconfig $WORKDIR
-	getpeinputs $FROM_TIME $TO_TIME $WORKDIR
+	getpeinputs $FROM_TIME $TO_TIME $WORKDIR &
+	crmconfig $WORKDIR &
+	touch_DC_if_dc $WORKDIR &
 	getbacktraces $FROM_TIME $TO_TIME $WORKDIR/$BT_F
 	getconfigurations $WORKDIR
-	touch_DC_if_dc $WORKDIR
-	sanitize $WORKDIR
-	crmconfig $WORKDIR
 	check_perms > $WORKDIR/$PERMISSIONS_F 2>&1
-	sys_info > $WORKDIR/$SYSINFO_F 2>&1
 	dlm_dump > $WORKDIR/$DLM_DUMP_F 2>&1
-	sys_stats > $WORKDIR/$SYSSTATS_F 2>&1
+	wait
+	sanitize $WORKDIR
 
 	for l in $EXTRA_LOGS; do
 		[ "$NO_str2time" ] && break
@@ -1232,8 +1237,8 @@ if is_collector; then
 	(cd $WORKDIR/.. && tar cf - $WE)
 else
 	wait $SLAVEPIDS
-	analyze $WORKDIR > $WORKDIR/$ANALYSIS_F
-	events $WORKDIR
+	analyze $WORKDIR > $WORKDIR/$ANALYSIS_F &
+	events $WORKDIR &
 	mktemplate > $WORKDIR/$DESCRIPTION_F
 	[ "$NO_DESCRIPTION" ] || {
 		echo press enter to edit the problem description...
@@ -1242,6 +1247,7 @@ else
 	}
 	test -f $WORKDIR/$HALOG_F ||
 		combine_logs $WORKDIR
+	wait
 	if [ "$COMPRESS" = "1" ]; then
 		pickcompress
 		(cd $WORKDIR/.. && tar cf - $DEST) | $COMPRESS_PROG > $DESTDIR/$DEST.tar$COMPRESS_EXT
