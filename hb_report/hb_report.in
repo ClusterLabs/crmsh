@@ -273,6 +273,7 @@ is_our_log() {
 # hasn't been changed)
 #
 arch_logs() {
+	local next_log
 	local logf=$1
 	local from_time=$2
 	local to_time=$3
@@ -311,6 +312,7 @@ print_logseg() {
 	local logf=$1
 	local from_time=$2
 	local to_time=$3
+	local tmp sourcef
 
 	# uncompress to a temp file (if necessary)
 	local cat=`find_decompressor $logf`
@@ -521,6 +523,7 @@ findsshuser() {
 # the usual stuff
 #
 getbacktraces() {
+	local f bf flist
 	flist=$(
 		for f in `find_files "$CORES_DIRS" $1 $2`; do
 			bf=`basename $f`
@@ -541,6 +544,7 @@ pe2dot() {
 	)
 }
 getpeinputs() {
+	local pe_dir flist
 	local f
 	debug "looking for PE files in $HA_VARLIB/pengine, `dirname $HA_VARLIB`/pengine"
 	for pe_dir in $HA_VARLIB/pengine `dirname $HA_VARLIB`/pengine
@@ -565,6 +569,7 @@ getpeinputs() {
 	done
 }
 touch_DC_if_dc() {
+	local dc
 	dc=`crmadmin -D 2>/dev/null | awk '{print $NF}'`
 	if [ "$WE" = "$dc" ]; then
 		touch $1/DC
@@ -582,6 +587,7 @@ corosync_blackbox() {
 	fi
 }
 getconfigurations() {
+	local conf
 	local dest=$1
 	for conf in $CONFIGURATIONS; do
 		if [ -f $conf ]; then
@@ -660,6 +666,7 @@ dlm_dump() {
 # replace sensitive info with '****'
 #
 sanitize() {
+	local f rc
 	for f in $1/$B_CONF; do
 		[ -f "$f" ] && sanitize_one $f
 	done
@@ -723,6 +730,7 @@ checkpermissions() {
 	done
 }
 checklogs() {
+	local logs pattfile l n
 	logs=$(find $1 -name $HALOG_F;
 		for l in $EXTRA_LOGS; do find $1/* -name `basename $l`; done)
 	[ "$logs" ] || return
@@ -743,6 +751,7 @@ checklogs() {
 # check if files have same content in the cluster
 #
 cibdiff() {
+	local d1 d2
 	d1=`dirname $1`
 	d2=`dirname $2`
 	if [ -f $d1/RUNNING -a -f $d2/RUNNING ] ||
@@ -778,6 +787,7 @@ diffcheck() {
 	esac
 }
 analyze_one() {
+	local rc node0 n
 	rc=0
 	node0=""
 	for n in $NODES; do
@@ -791,6 +801,7 @@ analyze_one() {
 	return $rc
 }
 analyze() {
+	local f flist
 	flist="$HOSTCACHE $MEMBERSHIP_F $CIB_F $CRM_MON_F $B_CONF logd.cf $SYSINFO_F"
 	for f in $flist; do
 		printf "Diff $f... "
@@ -812,6 +823,7 @@ analyze() {
 	checklogs $1
 }
 events_all() {
+	local Epatt title p
 	Epatt=`echo "$EVENT_PATTERNS" |
 		while read title p; do [ -n "$p" ] && echo -n "|$p"; done |
 		sed 's/.//'
@@ -819,6 +831,7 @@ events_all() {
 	grep -E "$Epatt" $1
 }
 events() {
+	local destdir n
 	destdir=$1
 	if [ -f $destdir/$HALOG_F ]; then
 		events_all $destdir/$HALOG_F > $destdir/events.txt
@@ -841,6 +854,7 @@ events() {
 # (network delay, machine load)
 #
 combine_logs() {
+	local destdir
 	destdir=$1
 	test $NODECNT -gt 1 ||
 		return
@@ -893,6 +907,7 @@ EOF
 	fi
 }
 edittemplate() {
+	local ec
 	if ec=`pickfirst $EDITOR vim vi emacs nano`; then
 		$ec $1
 	else
@@ -914,6 +929,7 @@ pickcompress() {
 }
 # get the right part of the log
 getlog() {
+	local getstampproc cnt
 	local outf
 
 	if [ "$HA_LOG" ]; then  # log provided by the user?
@@ -961,6 +977,7 @@ getlog() {
 # get all other info (config, stats, etc)
 #
 collect_info() {
+	local getstampproc l
 	sys_info > $WORKDIR/$SYSINFO_F 2>&1 &
 	sys_stats > $WORKDIR/$SYSSTATS_F 2>&1 &
 	getconfig $WORKDIR

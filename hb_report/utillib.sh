@@ -35,6 +35,7 @@ get_cluster_type() {
 # find out which membership tool is installed
 #
 echo_membership_tool() {
+	local f membership_tools
 	membership_tools="ccm_tool crm_node"
 	for f in $membership_tools; do
 		which $f 2>/dev/null && break
@@ -77,6 +78,7 @@ get_logd_logvars() {
 	HA_DEBUGFILE=`logd_getcfvar debugfile`
 }
 findlogdcf() {
+	local f
 	for f in \
 		`test -x $HA_BIN/ha_logd &&
 			which strings > /dev/null 2>&1 &&
@@ -96,6 +98,7 @@ findlogdcf() {
 # logging
 #
 syslogmsg() {
+	local severity logtag
 	severity=$1
 	shift 1
 	logtag=""
@@ -107,6 +110,7 @@ syslogmsg() {
 # find log destination
 #
 findmsg() {
+	local d syslogdirs favourites mark log
 	# this is tricky, we try a few directories
 	syslogdirs="/var/log /var/logs /var/syslog /var/adm
 	/var/log/ha /var/log/cluster /var/log/pacemaker
@@ -151,10 +155,12 @@ getstamp_legacy() {
 	awk '{print $2}' | sed 's/_/ /'
 }
 linetime() {
+	local l
 	l=`tail -n +$2 $1 | head -1 | $getstampproc`
 	str2time "$l"
 }
 find_getstampproc() {
+	local t l func trycnt
 	t=0 l="" func=""
 	trycnt=10
 	while [ $trycnt -gt 0 ] && read l; do
@@ -188,6 +194,7 @@ findln_by_time() {
 	local tm=$2
 	local first=1
 	local last=`wc -l < $logf`
+	local tmid mid trycnt
 	while [ $first -le $last ]; do
 		mid=$((($last+$first)/2))
 		trycnt=10
@@ -237,11 +244,14 @@ isnumber() {
 	echo "$*" | grep -qs '^[0-9][0-9]*$'
 }
 touchfile() {
+	local t
 	t=`mktemp` &&
 	perl -e "\$file=\"$t\"; \$tm=$1;" -e 'utime $tm, $tm, $file;' &&
 	echo $t
 }
 find_files() {
+	local dirs from_time to_time
+	local from_stamp to_stamp findexp
 	dirs=$1
 	from_time=$2
 	to_time=$3
@@ -292,6 +302,7 @@ chk_id() {
 	return 1
 }
 check_perms() {
+	local f p uid gid n_uid n_gid
 	essential_files |
 	while read type f p uid gid; do
 		[ -$type $f ] || {
@@ -322,6 +333,7 @@ EOF
 }
 MYBINARIES="crmd|pengine|lrmd|attrd|cib|mgmtd|stonithd|corosync|libplumb|libpils"
 listpkg_zypper() {
+	local bins
 	local binary=$1 core=$2
 	gdb $binary $core </dev/null 2>&1 |
 	awk -v bins="$MYBINARIES" '
@@ -336,6 +348,7 @@ fetchpkg_zypper() {
 }
 find_pkgmgr() {
 	local binary=$1 core=$2
+	local regex pkg_mgr
 	pkg_mgr_list |
 	while read regex pkg_mgr; do
 		if gdb $binary $core </dev/null 2>&1 |
@@ -361,6 +374,7 @@ get_debuginfo() {
 		fetchpkg_$pkg_mgr $pkgs
 }
 findbinary() {
+	local random_binary binary fullpath
 	random_binary=`which cat 2>/dev/null` # suppose we are lucky
 	binary=`gdb $random_binary $1 < /dev/null 2>/dev/null |
 		grep 'Core was generated' | awk '{print $5}' |
@@ -398,6 +412,7 @@ findbinary() {
 	fi
 }
 getbt() {
+	local corefile absbinpath
 	which gdb > /dev/null 2>&1 || {
 		warning "please install gdb to get backtraces"
 		return
@@ -418,6 +433,7 @@ getbt() {
 # heartbeat configuration/status
 #
 iscrmrunning() {
+	local pid maxwait
 	ps -ef | grep -qs [c]rmd || return 1
 	crmadmin -D >/dev/null 2>&1 &
 	pid=$!
@@ -490,6 +506,7 @@ get_live_nodes() {
 # this is not proper xml parsing, but it will work under the
 # circumstances
 is_sensitive_xml() {
+	local patt epatt
 	epatt=""
 	for patt in $SANITIZE; do
 		epatt="$epatt|$patt"
@@ -498,6 +515,7 @@ is_sensitive_xml() {
 	egrep -qs "name=\"$epatt\""
 }
 test_sensitive_one() {
+	local file compress decompress
 	file=$1
 	compress=""
 	echo $file | grep -qs 'gz$' && compress=gzip
@@ -511,6 +529,7 @@ test_sensitive_one() {
 	$decompress < $file | is_sensitive_xml
 }
 sanitize_xml_attrs() {
+	local patt
 	sed $(
 	for patt in $SANITIZE; do
 		echo "-e /name=\"$patt\"/s/value=\"[^\"]*\"/value=\"****\"/"
@@ -524,6 +543,7 @@ sanitize_hacf() {
 	'
 }
 sanitize_one() {
+	local file compress decompress tmp ref
 	file=$1
 	compress=""
 	echo $file | grep -qs 'gz$' && compress=gzip
@@ -598,6 +618,7 @@ add_tmpfiles() {
 # get some system info
 #
 distro() {
+	local relf f
 	which lsb_release >/dev/null 2>&1 && {
 		lsb_release -d
 		debug "using lsb_release for distribution info"
@@ -638,6 +659,7 @@ pkg_ver_pkginfo() {
 	done
 }
 pkg_ver() {
+	local pkg_mgr
 	if which dpkg >/dev/null 2>&1 ; then
 		pkg_mgr="deb"
 	elif which rpm >/dev/null 2>&1 ; then
