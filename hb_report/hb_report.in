@@ -647,6 +647,10 @@ sys_stats() {
 	done
 	set +x
 }
+time_status() {
+	date
+	ntpdc -pn
+}
 dlm_dump() {
 	if which dlm_tool >/dev/null 2>&1 ; then
 		echo NOTICE - Lockspace overview:
@@ -988,6 +992,7 @@ collect_info() {
 	getconfigurations $WORKDIR
 	check_perms > $WORKDIR/$PERMISSIONS_F 2>&1
 	dlm_dump > $WORKDIR/$DLM_DUMP_F 2>&1
+	time_status > $WORKDIR/$TIME_F 2>&1
 	corosync_blackbox $FROM_TIME $TO_TIME $WORKDIR/$COROSYNC_RECORDER_F
 	wait
 	sanitize $WORKDIR
@@ -1188,7 +1193,8 @@ BT_F=backtraces.txt
 SYSINFO_F=sysinfo.txt
 SYSSTATS_F=sysstats.txt
 DLM_DUMP_F=dlm_dump.txt
-export ANALYSIS_F DESCRIPTION_F HALOG_F BT_F SYSINFO_F SYSSTATS_F DLM_DUMP_F
+TIME_F=time.txt
+export ANALYSIS_F DESCRIPTION_F HALOG_F BT_F SYSINFO_F SYSSTATS_F DLM_DUMP_F TIME_F
 CRM_MON_F=crm_mon.txt
 MEMBERSHIP_F=members.txt
 HB_UUID_F=hb_uuid.txt
