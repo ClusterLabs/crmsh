@@ -1991,7 +1991,7 @@ Geo-cluster related management.
             return ext_cmd(attr_cmd % ticket) == 0
         l = stdout2list(attr_cmd % ticket)
         try:
-            val = l[0].split('=')[3]
+            val = l[0]
         except:
             common_warn("apparently nothing to show for ticket %s" % ticket)
             return False
