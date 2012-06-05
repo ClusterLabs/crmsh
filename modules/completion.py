@@ -500,6 +500,7 @@ completer_lists = {
         "cib" : None,
         "cibstatus" : None,
         "template" : None,
+        "rsctest" : (rsc_id_list,loop),
         "_test" : None,
         "_regtest" : None,
         "_objects" : None,

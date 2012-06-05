@@ -213,5 +213,11 @@ class Vars(Singleton):
         "crmd-finalization-timeout",
         "expected-quorum-votes",
     )
+    ocf_root = os.getenv("OCF_ROOT")
+    if not ocf_root:
+        ocf_root = "@OCF_ROOT_DIR@"
+        if not ocf_root:
+            ocf_root = "/usr/lib/ocf"
+        os.environ["OCF_ROOT"] = ocf_root
 
 # vim:ts=4:sw=4:et:

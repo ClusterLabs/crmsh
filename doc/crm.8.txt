@@ -343,6 +343,71 @@ following steps:
 - `show`: see if the configuration is valid
 - `apply`: apply the configuration to the `configure` level
 
+=== Resource testing
+
+The amount of detail in a cluster makes all configurations prone
+to errors. By far the largest number of issues in a cluster is
+due to bad resource configuration. The shell can help quickly
+diagnose such problems. And considerably reduce your keyboard
+wear.
+
+Let's say that we entered the following configuration:
+...............
+    node xen-b
+    node xen-c
+    node xen-d
+    primitive fencer stonith:external/libvirt \
+            params hypervisor_uri="qemu+tcp://10.2.13.1/system" \
+                hostlist="xen-b xen-c xen-d" \
+            op monitor interval="2h"
+    primitive svc ocf:heartbeat:Xinetd \
+            params service="systat" \
+            op monitor interval="30s"
+    primitive intranet-ip ocf:heartbeat:IPaddr2 \
+            params ip="10.2.13.100" \
+            op monitor interval="30s"
+    primitive apache ocf:heartbeat:apache \
+            params configfile="/etc/apache2/httpd.conf" \
+            op monitor interval="120s" timeout="60s"
+    group websvc apache intranet-ip
+    location websvc-pref websvc 100: xen-b
+...............
+
+Before typing `commit` to submit the configuration to the cib we
+can make sure that all resources are usable on all nodes:
+...............
+    crm(live)configure# rsctest websvc svc fencer
+...............
+
+It is important that resources being tested are not running on
+any nodes. Otherwise, the `rsctest` command will refuse to do
+anything. Of course, if the current configuration resides in a
+CIB shadow, then a `commit` is irrelevant. The point being that
+resources are not running on any node.
+
+.Note on stopping all resources
+****************************
+Alternatively to not committing a configuration, it is also
+possible to tell Pacemaker not to start any resources:
+
+...............
+    crm(live)configure# property stop-all-resources="yes"
+...............
+Almost none---resources of class stonith are still started. But
+shell is not as strict when it comes to stonith resources.
+****************************
+
+Order of resources is significant insofar that a resource depends
+on all resources to its left. In most configurations, it's
+probably practical to test resources in several runs, based on
+their dependencies.
+
+Apart from groups, `crm` does not interpret constraints and
+therefore knows nothing about resource dependencies. It also
+doesn't know if a resource can run on a node at all in case of an
+asymmetric cluster. It is up to the user to specify a list of
+eligible nodes if a resource is not meant to run on every node.
+
 === Tab completion
 
 The `crm` makes extensive use of the tab completion of
@@ -2040,6 +2105,39 @@ Examples:
 ...............
         ptest scores
         ptest vvvvv
+...............
+
+[[cmdhelp_configure_rsctest,test resources as currently configured]]
+==== `rsctest`
+
+Test resources with current resource configuration. If no nodes
+are specified, tests are run on all known nodes.
+
+The order of resources is significant: it is assumed that later
+resources depend on earlier ones.
+
+If a resource is multi-state, it is assumed that the role on
+which later resources depend is master.
+
+Tests are run sequentially to prevent running the same resource
+on two or more nodes. Tests are carried out only if none of the
+specified nodes currently run any of the specified resources.
+However, it won't verify whether resources run on the other
+nodes.
+
+Superuser privileges are obviously required: either run this as
+root or setup the `sudoers` file appropriately.
+
+Note that resource testing may take some time.
+
+Usage:
+...............
+        rsctest <rsc_id> [<rsc_id> ...] [<node_id> ...]
+...............
+Examples:
+...............
+        rsctest my_ip websvc
+        rsctest websvc nodeB
 ...............
 
 [[cmdhelp_configure_cib,CIB shadow management]]

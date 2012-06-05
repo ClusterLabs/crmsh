@@ -30,6 +30,7 @@ from cibstatus import CibStatus
 from report import Report
 from template import LoadTemplate
 from cliformat import nvpairs2list
+from rsctest import test_resources
 from ra import *
 from msg import *
 from utils import *
@@ -1414,6 +1415,7 @@ cluster.
         self.cmd_table["monitor"] = (self.conf_monitor,(2,2),1,0)
         self.cmd_table["role"] = (self.conf_role,(2,),2,0)
         self.cmd_table["user"] = (self.conf_user,(2,),2,0)
+        self.cmd_table["rsctest"] = (self.rsc_test,(1,),2,0)
         self.cmd_table["ra"] = RA
         self.cmd_table["cib"] = CibShadow
         self.cmd_table["cibstatus"] = StatusMgmt
@@ -1695,6 +1697,37 @@ cluster.
                     nodeutil[:<node>]
                     status"""
         return self.__conf_object(cmd,*args)
+    def rsc_test(self, cmd, *args):
+        "usage: rsctest <rsc_id> [<rsc_id> ...] [<node_id> ...]"
+        rc = True
+        rsc_l = []
+        node_l = []
+        current = "r"
+        for id in args:
+            el = cib_factory.find_object(id)
+            if not el:
+                common_err("element %s does not exist" % id)
+                rc = False
+            if current == "r" and is_resource(el.node):
+                if is_container(el.node):
+                    rsc_l += el.node.getElementsByTagName("primitive")
+                else:
+                    rsc_l.append(el.node)
+            elif is_normal_node(el.node):
+                current = "n"
+                node_l.append(el.node.getAttribute("uname"))
+            else:
+                syntax_err((cmd,id), context = 'rsctest')
+                return False
+        if not rc:
+            return False
+        if not rsc_l:
+            common_err("specify at least one resource")
+            return False
+        all_nodes = cib_factory.node_id_list()
+        if not node_l:
+            node_l = all_nodes
+        return test_resources(rsc_l, node_l, all_nodes)
     def end_game(self, no_questions_asked = False):
         if cib_factory.has_cib_changed():
             if no_questions_asked or not options.interactive or \

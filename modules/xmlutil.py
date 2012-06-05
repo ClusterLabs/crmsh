@@ -150,6 +150,9 @@ def rsc2node(id):
 def get_meta_param(id,param):
     rsc_meta_show = "crm_resource --meta -r '%s' -g '%s'"
     return get_stdout(rsc_meta_show % (id,param), stderr_on = False)
+def is_normal_node(n):
+    return is_element(n) and \
+        n.tagName == "node" and n.getAttribute("type") == "normal"
 def listnodes():
     nodes = []
     doc = cibdump2doc("nodes")
@@ -158,14 +161,8 @@ def listnodes():
     nodes_node = get_conf_elem(doc, "nodes")
     if not nodes_node:
         return []
-    for c in nodes_node.childNodes:
-        if not is_element(c):
-            continue
-        if c.tagName != "node":
-            continue
-        if c.getAttribute("type") == 'normal':
-            nodes.append(c.getAttribute("uname"))
-    return nodes
+    return [x.getAttribute("uname") for x in nodes_node.childNodes \
+        if is_normal_node(x)]
 def is_live_cib():
     '''We working with the live cluster?'''
     return not vars.cib_in_use and not os.getenv("CIB_file")
@@ -336,6 +333,9 @@ def is_emptynvpairs(node):
         return True
     else:
         return False
+def is_node(node):
+    return is_element(node) \
+        and node.tagName == "node"
 def is_group(node):
     return is_element(node) \
         and node.tagName == "group"
@@ -513,17 +513,28 @@ def lookup_node(node,oldnode,location_only = False,ignore_id = False):
                 return c
     return None
 
-def find_operation(rsc_node,name,interval):
+def find_operation(rsc_node, name, interval = "0"):
+    '''
+    Setting interval to "non-0" means get the first op with interval
+    different from 0.
+    '''
     op_node_l = rsc_node.getElementsByTagName("operations")
     for ops in op_node_l:
         for c in ops.childNodes:
-            if not is_element(c):
+            if not is_element(c) or c.tagName != "op":
                 continue
-            if c.tagName != "op":
+            if c.getAttribute("name") != name:
                 continue
-            if c.getAttribute("name") == name \
-                    and c.getAttribute("interval") == interval:
+            if (interval == "non-0" and
+                    crm_msec(c.getAttribute("interval")) > 0) or \
+                    crm_time_cmp(c.getAttribute("interval"), interval) == 0:
                 return c
+
+def get_op_timeout(rsc_node, op, default_timeout):
+    interval = (op == "monitor" and "non-0" or "0")
+    op_n = find_operation(rsc_node, op == "probe" and "monitor" or op, interval)
+    timeout = op_n and op_n.getAttribute("timeout") or default_timeout
+    return crm_msec(timeout)
 
 def op2list(node):
     pl = []

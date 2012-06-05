@@ -452,6 +452,40 @@ def check_range(a):
         return False
     return (int(a[0]) <= int(a[1]))
 
+def crm_msec(t):
+    '''
+    See lib/common/utils.c:crm_get_msec().
+    '''
+    convtab = {
+        'ms': (1,1),
+        'msec': (1,1),
+        'us': (1,1000),
+        'usec': (1,1000),
+        '': (1000,1),
+        's': (1000,1),
+        'sec': (1000,1),
+        'm': (60*1000,1),
+        'min': (60*1000,1),
+        'h': (60*60*1000,1),
+        'hr': (60*60*1000,1),
+    }
+    if not t:
+        return -1
+    r = re.match("\s*(\d+)\s*([a-zA-Z]+)?", t)
+    if not r:
+        return -1
+    if not r.group(2):
+        q = ''
+    else:
+        q = r.group(2).lower()
+    try:
+        mult,div = convtab[q]
+    except:
+        return -1
+    return (int(r.group(1))*mult)/div
+def crm_time_cmp(a, b):
+    return crm_msec(a) - crm_msec(b)
+
 def shorttime(ts):
     return time.strftime("%X",time.localtime(ts))
 

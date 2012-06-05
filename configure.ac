@@ -267,7 +267,6 @@ test/Makefile				\
 	test/testcases/Makefile			\
 modules/Makefile					\
 	modules/ui.py					\
-	modules/ra.py					\
 	modules/vars.py					\
 	modules/help.py					\
 	)

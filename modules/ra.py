@@ -31,12 +31,6 @@ from msg import *
 #
 # Resource Agents interface (meta-data, parameters, etc)
 #
-ocf_root = os.getenv("OCF_ROOT")
-if not ocf_root:
-    ocf_root = "@OCF_ROOT_DIR@"
-    if not ocf_root:
-        ocf_root = "/usr/lib/ocf"
-    os.putenv("OCF_ROOT",ocf_root)
 lrmadmin_prog = "lrmadmin"
 class RaLrmd(object):
     '''
@@ -80,7 +74,7 @@ class RaOS(object):
         l = []
         if ra_class == "ocf":
             l = stdout2list("%s/resource.d/%s/%s meta-data" % \
-                (ocf_root,ra_provider,ra_type))
+                (os.environ["OCF_ROOT"],ra_provider,ra_type))
         elif ra_class == "stonith":
             l = stdout2list("stonith -m -t %s" % ra_type)
         return l
@@ -88,7 +82,7 @@ class RaOS(object):
         'List of providers for a class:type.'
         l = []
         if ra_class == "ocf":
-            for s in glob.glob("%s/resource.d/*/%s" % (ocf_root,ra_type)):
+            for s in glob.glob("%s/resource.d/*/%s" % (os.environ["OCF_ROOT"],ra_type)):
                 a = s.split("/")
                 if len(a) == 7:
                     l.append(a[5])
@@ -101,7 +95,7 @@ class RaOS(object):
         l = []
         prov = ra_provider and ra_provider or "*"
         if ra_class == "ocf":
-            l = os_types_list("%s/resource.d/%s/*" % (ocf_root,prov))
+            l = os_types_list("%s/resource.d/%s/*" % (os.environ["OCF_ROOT"],prov))
         elif ra_class == "lsb":
             l = os_types_list("/etc/init.d/*")
         elif ra_class == "stonith":
@@ -153,7 +147,7 @@ def ra_providers_all(ra_class = "ocf"):
     id = "ra_providers_all-%s" % ra_class
     if wcache.is_cached(id):
         return wcache.retrieve(id)
-    dir = ocf_root + "/resource.d"
+    dir = "%s/resource.d" % os.environ["OCF_ROOT"]
     l = []
     for s in os.listdir(dir):
         if os.path.isdir("%s/%s" % (dir,s)):
@@ -240,39 +234,6 @@ def monitor_name_pl(pl):
     depth = find_value(pl, "depth") or '0'
     role = find_value(pl, "role")
     return mk_monitor_name(role,depth)
-def crm_msec(t):
-    '''
-    See lib/common/utils.c:crm_get_msec().
-    '''
-    convtab = {
-        'ms': (1,1),
-        'msec': (1,1),
-        'us': (1,1000),
-        'usec': (1,1000),
-        '': (1000,1),
-        's': (1000,1),
-        'sec': (1000,1),
-        'm': (60*1000,1),
-        'min': (60*1000,1),
-        'h': (60*60*1000,1),
-        'hr': (60*60*1000,1),
-    }
-    if not t:
-        return -1
-    r = re.match("\s*(\d+)\s*([a-zA-Z]+)?", t)
-    if not r:
-        return -1
-    if not r.group(2):
-        q = ''
-    else:
-        q = r.group(2).lower()
-    try:
-        mult,div = convtab[q]
-    except:
-        return -1
-    return (int(r.group(1))*mult)/div
-def crm_time_cmp(a, b):
-    return crm_msec(a) - crm_msec(b)
 
 class RAInfo(object):
     '''

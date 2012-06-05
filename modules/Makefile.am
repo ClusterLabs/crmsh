@@ -34,6 +34,7 @@ modules	=	__init__.py 	\
 			parse.py	\
 			ra.py		\
 			report.py		\
+			rsctest.py		\
 			log_patterns.py		\
 			crm_pssh.py	\
 			singletonmixin.py	\

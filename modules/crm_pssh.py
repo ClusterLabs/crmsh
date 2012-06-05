@@ -46,28 +46,33 @@ def option_parser():
 
     return parser
 
-def parse_args(myargs):
+def parse_args(myargs, t = _DEFAULT_TIMEOUT):
     parser = option_parser()
-    defaults = common_defaults(timeout=_DEFAULT_TIMEOUT)
+    defaults = common_defaults(timeout=t)
     parser.set_defaults(**defaults)
     opts, args = parser.parse_args(myargs)
     return opts, args
 
-def show_errors(errdir, hosts):
-    for host in hosts:
-        fl = glob.glob("%s/*%s*" % (errdir,host))
-        if not fl:
-            continue
-        for fname in fl:
-            try:
-                if os.stat(fname).st_size == 0:
-                    continue
-                f = open(fname)
-            except:
+def get_output(dir, host):
+    l = []
+    fl = glob.glob("%s/*%s*" % (dir,host))
+    for fname in fl:
+        try:
+            if os.stat(fname).st_size == 0:
                 continue
-            print "%s stderr:" % host
-            print ''.join(f)
-            f.close()
+            f = open(fname)
+        except:
+            continue
+        l = [x for x in f]
+        f.close()
+    return l
+
+def show_output(dir, hosts, desc):
+    for host in hosts:
+        out_l = get_output(dir, host)
+        if out_l:
+            print "%s %s:" % (host, desc)
+            print ''.join(out_l)
 
 def do_pssh(l, opts):
     if opts.outdir and not os.path.exists(opts.outdir):
@@ -101,28 +106,35 @@ def do_pssh(l, opts):
         t = Task(host, port, user, cmd, opts, stdin)
         manager.add_task(t)
     try:
-        statuses = manager.run()
+        return manager.run() # returns a list of exit codes
     except FatalError:
         common_err("pssh to nodes failed")
-        show_errors(opts.errdir, hosts)
+        show_output(opts.errdir, hosts, "stderr")
         return False
 
+def examine_outcome(l, opts, statuses):
+    '''
+    A custom function to show stderr in case there were issues.
+    Not suited for callers who want better control of output or
+    per-host processing.
+    '''
+    hosts = [x[0] for x in l]
     if min(statuses) < 0:
         # At least one process was killed.
         common_err("ssh process was killed")
-        show_errors(opts.errdir, hosts)
+        show_output(opts.errdir, hosts, "stderr")
         return False
     # The any builtin was introduced in Python 2.5 (so we can't use it yet):
     #elif any(x==255 for x in statuses):
     for status in statuses:
         if status == 255:
             common_warn("ssh processes failed")
-            show_errors(opts.errdir, hosts)
+            show_output(opts.errdir, hosts, "stderr")
             return False
     for status in statuses:
         if status not in (0, _EC_LOGROT):
             common_warn("some ssh processes failed")
-            show_errors(opts.errdir, hosts)
+            show_output(opts.errdir, hosts, "stderr")
             return False
     return True
 
@@ -137,7 +149,11 @@ def next_loglines(a, outdir, errdir):
         myopts = ["-q", "-o", outdir, "-e", errdir]
         opts, args = parse_args(myopts)
         l.append([node, cmdline])
-    return do_pssh(l, opts)
+    statuses = do_pssh(l, opts)
+    if statuses:
+        return examine_outcome(l, opts, statuses)
+    else:
+        return False
 
 def next_peinputs(node_pe_l, outdir, errdir):
     '''
@@ -159,6 +175,23 @@ def next_peinputs(node_pe_l, outdir, errdir):
     if not l:
         # is this a failure?
         return True
+    statuses = do_pssh(l, opts)
+    if statuses:
+        return examine_outcome(l, opts, statuses)
+    else:
+        return False
+
+def do_pssh_cmd(cmd, node_l, outdir, errdir, timeout = 20000):
+    '''
+    pssh to nodes and run cmd.
+    '''
+    l = []
+    for node in node_l:
+        l.append([node, cmd])
+    if not l:
+        return True
+    myopts = ["-q", "-o", outdir, "-e", errdir]
+    opts, args = parse_args(myopts, t = str(int(timeout/1000)))
     return do_pssh(l, opts)
 
 # vim:ts=4:sw=4:et:
