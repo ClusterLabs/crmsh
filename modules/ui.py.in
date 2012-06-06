@@ -1708,7 +1708,7 @@ cluster.
             if not el:
                 common_err("element %s does not exist" % id)
                 rc = False
-            if current == "r" and is_resource(el.node):
+            elif current == "r" and is_resource(el.node):
                 if is_container(el.node):
                     rsc_l += el.node.getElementsByTagName("primitive")
                 else:
