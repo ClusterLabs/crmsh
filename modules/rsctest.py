@@ -89,11 +89,15 @@ class RADriver(object):
         '''
         self.rscenv = {}
         n = self.rscdef_node
-        self.nvset2env(get_child_nvset_node(n))
         self.timeout = get_op_timeout(n, op, "20s")
         self.rscenv["%stimeout" % self.pfx["meta_attributes"]] = str(self.timeout)
         if op == "monitor":
             self.rscenv["%sinterval" % self.pfx["meta_attributes"]] = "10000"
+        if is_cloned(n):
+            # some of the meta attributes for clones/ms are used
+            # by resource agents
+            cn = get_topmost_rsc(n)
+            self.nvset2env(get_child_nvset_node(cn))
     def op_status(self, host):
         'Status of the last op.'
         try: return self.ec_l[host]
@@ -136,11 +140,13 @@ class RADriver(object):
         real_op = (op == "probe" and "monitor" or op)
         cmd = self.exec_cmd(real_op)
         common_debug("running %s on %s" % (real_op, node_l))
-        for envvar in self.rscenv.keys():
-            if "'" in  self.rscenv[envvar]:
-                cmd = '%s="%s" %s' % (envvar, self.rscenv[envvar], cmd)
+        for attr in self.rscenv.keys():
+            # shell doesn't allow "-" in var names
+            envvar = attr.replace("-","_")
+            if "'" in  self.rscenv[attr]:
+                cmd = '%s="%s" %s' % (envvar, self.rscenv[attr], cmd)
             else:
-                cmd = "%s='%s' %s" % (envvar, self.rscenv[envvar], cmd)
+                cmd = "%s='%s' %s" % (envvar, self.rscenv[attr], cmd)
         statuses = do_pssh_cmd(cmd, node_l, self.outdir, self.errdir, self.timeout)
         for i in range(len(node_l)):
             try: self.ec_l[node_l[i]] = statuses[i]
