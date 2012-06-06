@@ -128,12 +128,20 @@ class RADriver(object):
             (host, self.explain_op_status(host)))
         show_output(self.errdir, (host,), "stderr")
         show_output(self.outdir, (host,), "stdout")
+    def run_on_all(self, op):
+        '''
+        In case of cloned resources, it doesn't make sense to run
+        (certain) operations on just one node. So, we run them
+        everywhere instead.
+        For instance, some clones require quorum.
+        '''
+        return is_cloned(self.rscdef_node) and op in ("start", "stop")
     def runop(self, op, node_l = None):
         '''
         Execute an operation.
         '''
         from crm_pssh import do_pssh_cmd
-        if not node_l:
+        if not node_l or self.run_on_all(op):
             node_l = self.node_l
         self.last_op = op
         self.set_rscenv(op)
