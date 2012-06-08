@@ -26,7 +26,8 @@ log_patterns = {
 			"lrmd:.*RA output: .%%:.*:stderr",
 			"lrmd:.*WARN: Managed %%:.*exited",
 			"lrmd:.*WARN: .* %% .*timed out$",
-			"crmd:.*process_lrm_event: LRM operation %%_.*(Timed Out|confirmed=true)",
+			"crmd:.*process_lrm_event: LRM operation %%_(start|stop|promote|demote|migrate)_.*confirmed=true",
+			"crmd:.*process_lrm_event: LRM operation %%_.*Timed Out",
 			"[(]%%[)][[]",
 		),
 		( # detail 1
