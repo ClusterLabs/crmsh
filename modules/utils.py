@@ -26,6 +26,7 @@ import shutil
 
 from userprefs import Options, UserPrefs
 from vars import Vars
+from term import TerminalController
 from msg import *
 
 def is_program(prog):
@@ -557,20 +558,30 @@ def edit_file(fname):
         return
     return ext_cmd("%s %s" % (user_prefs.editor,fname))
 
+def need_pager(s, w, h):
+    from math import ceil
+    cnt = 0
+    for l in s.split('\n'):
+        # need to remove color codes
+        l = re.sub(r'\${\w+}', '', l)
+        cnt += int(ceil((len(l)+0.0)/w))
+        if cnt >= h:
+            return True
+    return False
 def page_string(s):
     'Write string through a pager.'
     if not s:
         return
     w,h = get_winsize()
-    if s.count('\n') < h:
-        print s
+    if not need_pager(s, w, h):
+        print termctrl.render(s)
     elif not user_prefs.pager or not sys.stdout.isatty() or options.batch:
-        print s
+        print termctrl.render(s)
     else:
         opts = ""
         if user_prefs.pager == "less":
             opts = "-R"
-        pipe_string("%s %s" % (user_prefs.pager,opts), s)
+        pipe_string("%s %s" % (user_prefs.pager,opts), termctrl.render(s))
 
 def get_winsize():
     try:
@@ -642,4 +653,5 @@ def lines2cli(s):
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 vars = Vars.getInstance()
+termctrl = TerminalController.getInstance()
 # vim:ts=4:sw=4:et:

@@ -20,7 +20,6 @@ from userprefs import Options, UserPrefs
 from vars import Vars
 from utils import *
 from msg import *
-from term import TerminalController
 
 class CliDisplay(Singleton):
     """
@@ -36,8 +35,8 @@ class CliDisplay(Singleton):
         if self.no_pretty:
             return s
         else:
-            return termctrl.render("${%s}%s${NORMAL}" % \
-                (user_prefs.colorscheme[clrnum].upper(), s))
+            return "${%s}%s${NORMAL}" % \
+                (user_prefs.colorscheme[clrnum].upper(), s)
     def keyword(self, kw):
         s = kw
         if "uppercase" in user_prefs.output:
@@ -67,6 +66,5 @@ class CliDisplay(Singleton):
 
 user_prefs = UserPrefs.getInstance()
 vars = Vars.getInstance()
-termctrl = TerminalController.getInstance()
 
 # vim:ts=4:sw=4:et:

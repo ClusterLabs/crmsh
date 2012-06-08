@@ -27,7 +27,6 @@ from singletonmixin import Singleton
 from userprefs import Options, UserPrefs
 from cibconfig import CibFactory
 from vars import Vars, getuser
-from term import TerminalController
 from xmlutil import *
 from utils import *
 from msg import *
@@ -896,20 +895,13 @@ class Report(Singleton):
         try: clr = self.nodecolor[a[3]]
         except: return s
         try:
-            return termctrl.render("${%s}%s${NORMAL}" % (clr,s))
+            return "${%s}%s${NORMAL}" % (clr,s)
         except:
             # ${..} in logs?
             s = s.replace("${","$.{")
-            return termctrl.render("${%s}%s${NORMAL}" % (clr,s))
+            return "${%s}%s${NORMAL}" % (clr,s)
     def display_logs(self, l):
-        if not options.batch and sys.stdout.isatty():
-            page_string('\n'.join([ self.disp(x) for x in l ]))
-        else: # raw output
-            try: # in case user quits the next prog in pipe
-                for s in l: print s
-            except IOError, msg:
-                if not ("Broken pipe" in msg):
-                    common_err(msg)
+        page_string('\n'.join([ self.disp(x) for x in l ]))
     def show_logs(self, log_l = [], re_l = []):
         '''
         Print log lines, either matched by re_l or all.
@@ -1109,7 +1101,6 @@ class Report(Singleton):
 
 vars = Vars.getInstance()
 options = Options.getInstance()
-termctrl = TerminalController.getInstance()
 cib_factory = CibFactory.getInstance()
 crm_report = Report.getInstance()
 # vim:ts=4:sw=4:et:
