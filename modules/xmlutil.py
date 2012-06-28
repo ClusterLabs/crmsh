@@ -796,7 +796,7 @@ def silly_constraint(c_node,rsc_id):
             cnt += 1
             if c_node.getAttribute(attr) == rsc_id:
                 rsc_cnt += 1
-    if c_node.tagName == "rsc_location":  # locations are never silly
+    if c_node.tagName in ("rsc_location", "rsc_ticket"):  # locations and tickets are never silly
         return cnt < 1
     else:
         return rsc_cnt == 2 or cnt < 2
