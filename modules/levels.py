@@ -57,6 +57,8 @@ class Levels(Singleton):
         mk_completion_tab(self.current_level,self.completion_tab)
     def getprompt(self):
         return ' '.join(self.prompts)
+    def is_in_transit(self):
+        return self._in_transit
     def mark(self):
         self._marker = len(self.level_stack)
         self._in_transit = False
@@ -81,7 +83,7 @@ class Levels(Singleton):
             return self.level_stack[-1]
     def droplevel(self):
         if self.level_stack:
-            self.current_level.end_game(self._in_transit)
+            self.current_level.end_game(no_questions_asked = self._in_transit)
             self.current_level = self.level_stack.pop()
             self.completion_tab = self.comp_stack.pop()
             self.parse_root = self.current_level.cmd_table

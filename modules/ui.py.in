@@ -73,6 +73,13 @@ class UserInterface(object):
             self.help_table = help_sys.load_level(self.lvl_name)
     def end_game(self, no_questions_asked = False):
         pass
+    def should_wait(self):
+        '''
+        A kludge to allow in-transit configuration changes to
+        make us wait on transition to finish. Needs to be
+        implemented in the level (currently, just configure).
+        '''
+        return False
     def help(self,cmd,topic = ''):
         "usage: help [<topic>]"
         if not self.help_table:
@@ -1728,6 +1735,8 @@ cluster.
         if not node_l:
             node_l = all_nodes
         return test_resources(rsc_l, node_l, all_nodes)
+    def should_wait(self):
+        return cib_factory.has_cib_changed()
     def end_game(self, no_questions_asked = False):
         if cib_factory.has_cib_changed():
             if no_questions_asked or not options.interactive or \

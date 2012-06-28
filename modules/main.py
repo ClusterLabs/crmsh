@@ -148,10 +148,13 @@ def parse_line(lvl,s):
         d = lambda: cmd[0](*args)
         rv = d() # execute the command
         # should we wait till the command takes effect?
-        if user_prefs.get_wait() and rv != False and cmd[3] == 1:
+        do_wait = user_prefs.get_wait() and rv != False and (cmd[3] == 1 or \
+            (lvl.current_level.should_wait() and \
+            (lvl.is_in_transit() or not options.interactive)))
+        lvl.release()
+        if do_wait:
             if not wait4dc(token, not options.batch):
                 rv = False
-        lvl.release()
         return rv != False
     return True
 
