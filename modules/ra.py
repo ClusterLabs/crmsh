@@ -398,6 +398,20 @@ class RAInfo(object):
         d = self.params()
         try: return d[pname]["default"]
         except: return None
+    def unreq_param(self, p):
+        '''
+        Allow for some exceptions.
+        
+        - the rhcs stonith agents sometimes require "action" (in
+          the meta-data) and "port", but they're automatically
+          supplied by stonithd
+        '''
+        if self.ra_class == "stonith" and \
+            (self.ra_type.startswith("rhcs/") or \
+            self.ra_type.startswith("fence_")):
+            if p in ("action", "port"):
+                return True
+        return False
     def sanity_check_params(self, id, pl, existence_only = False):
         '''
         pl is a list of (attribute,value) pairs.
@@ -410,6 +424,8 @@ class RAInfo(object):
             d[p] = v
         if not existence_only:
             for p in self.reqd_params_list():
+                if self.unreq_param(p):
+                    continue
                 if p not in d:
                     common_err("%s: required parameter %s not defined" % (id,p))
                     rc |= user_prefs.get_check_rc()
