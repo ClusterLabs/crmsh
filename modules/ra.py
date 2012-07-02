@@ -467,7 +467,7 @@ class RAInfo(object):
                 common_warn("%s: action %s not advertised in meta-data, it may not be supported by the RA" % (id,op))
                 rc |= 1
                 continue
-	    if "interval" in n_ops[op]:
+            if "interval" in n_ops[op]:
                 if op == "start" or op == "stop":
                     v = n_ops[op]["interval"]
                     if crm_msec(v) != 0:
