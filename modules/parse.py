@@ -770,7 +770,10 @@ class CliParser(object):
         '''
         cli_list = ''
         if type(s) == type(u''):
-            s = s.encode('ascii')
+            try: s = s.encode('ascii')
+            except Exception, msg:
+                common_err(msg)
+                return False
         if type(s) == type(''):
             if s and s.startswith('#'):
                 self.comments.append(s)
