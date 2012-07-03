@@ -445,17 +445,16 @@ class RAInfo(object):
             return None
     def sanity_check_ops(self, id, ops, default_timeout):
         '''
-        ops is a dict, operation names are keys and values are
-        lists of (attribute,value) pairs.
+        ops is a list of operations
         - do all operations exist
         - are timeouts sensible
         '''
         rc = 0
         n_ops = {}
         for op in ops:
-            n_op = op == "monitor" and monitor_name_pl(ops[op]) or op
+            n_op = op[0] == "monitor" and monitor_name_pl(op[1]) or op[0]
             n_ops[n_op] = {}
-            for p,v in ops[op]:
+            for p,v in op[1]:
                 if p in self.skip_op_attr:
                     continue
                 n_ops[n_op][p] = v

@@ -548,7 +548,7 @@ def op2list(node):
         common_err("op is invalid (no name)")
     return action,pl
 def get_rsc_operations(rsc_node):
-    actions = {}
+    actions = []
     for c in rsc_node.childNodes:
         if not is_element(c):
             continue
@@ -557,7 +557,7 @@ def get_rsc_operations(rsc_node):
                 if is_element(c2) and c2.tagName == "op":
                     op,pl = op2list(c2)
                     if op:
-                        actions[op] = pl
+                        actions.append([op,pl])
     return actions
 
 def filter_on_tag(nl,tag):
