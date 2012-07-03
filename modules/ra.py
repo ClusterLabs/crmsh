@@ -430,6 +430,9 @@ class RAInfo(object):
                     common_err("%s: required parameter %s not defined" % (id,p))
                     rc |= user_prefs.get_check_rc()
         for p in d:
+            if p.startswith("$"):
+                # these are special, non-RA parameters
+                continue
             if p not in self.params():
                 common_err("%s: parameter %s does not exist" % (id,p))
                 rc |= user_prefs.get_check_rc()
