@@ -471,6 +471,7 @@ class RAInfo(object):
                 v_msec = crm_msec(v)
                 if op in ("start", "stop") and v_msec != 0:
                     common_warn("%s: Specified interval for %s is %s, it must be 0" %(id,op,v))
+                    rc |= 1
                 if op.startswith("monitor") and v_msec != 0:
                     if v_msec not in intervals:
                         intervals[v_msec] = 1
