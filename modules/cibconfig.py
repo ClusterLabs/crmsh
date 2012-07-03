@@ -785,11 +785,15 @@ class CibObject(object):
         if format < 0:
             cli_display.reset_no_pretty()
         return s
+    def attr_set_str(self, node):
+        id = node.getAttribute("id")
+        add_id = cib_factory.is_id_refd(node.tagName, id)
+        return "%s %s" % \
+            (cli_display.keyword(self.set_names[node.tagName]), \
+            cli_pairs(nvpairs2list(node, add_id = add_id)))
     def repr_cli_child(self,c,format):
         if c.tagName in self.set_names:
-            return "%s %s" % \
-                (cli_display.keyword(self.set_names[c.tagName]), \
-                cli_pairs(nvpairs2list(c)))
+            return self.attr_set_str(c)
     def cli2node(self,cli,oldnode = None):
         '''
         Convert CLI representation to a DOM node.
@@ -1046,9 +1050,7 @@ class CibPrimitive(CibObject):
         return "%s %s %s" % (s, id, rsc_spec)
     def repr_cli_child(self,c,format):
         if c.tagName in self.set_names:
-            return "%s %s" % \
-                (cli_display.keyword(self.set_names[c.tagName]), \
-                cli_pairs(nvpairs2list(c)))
+            return self.attr_set_str(c)
         elif c.tagName == "operations":
             return cli_operations(c,format)
     def cli_list2node(self,cli_list,oldnode):
@@ -1897,6 +1899,12 @@ class CibFactory(Singleton):
                 obj.updated = True
                 obj.propagate_updated()
         return rc
+    def is_id_refd(self, attr_list_type, id):
+        node_l = self.doc.getElementsByTagName(attr_list_type)
+        for node in node_l:
+            if node.getAttribute("id-ref") == id:
+                return True
+        return False
     def resolve_id_ref(self,attr_list_type,id_ref):
         '''
         User is allowed to specify id_ref either as a an object
