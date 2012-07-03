@@ -461,16 +461,22 @@ class RAInfo(object):
         for req_op in self.required_ops:
             if req_op not in n_ops:
                 n_ops[req_op] = {}
+        intervals = {}
         for op in n_ops:
             if op not in self.actions():
                 common_warn("%s: action %s not advertised in meta-data, it may not be supported by the RA" % (id,op))
                 rc |= 1
-                continue
             if "interval" in n_ops[op]:
-                if op == "start" or op == "stop":
-                    v = n_ops[op]["interval"]
-                    if crm_msec(v) != 0:
-                        common_warn("%s: Specified interval for %s is %s, it must be 0" %(id,op,v))
+                v = n_ops[op]["interval"]
+                v_msec = crm_msec(v)
+                if op in ("start", "stop") and v_msec != 0:
+                    common_warn("%s: Specified interval for %s is %s, it must be 0" %(id,op,v))
+                if op.startswith("monitor") and v_msec != 0:
+                    if v_msec not in intervals:
+                        intervals[v_msec] = 1
+                    else:
+                        common_warn("%s: interval in %s must be unique" % (id, op))
+                        rc |= 1
             try:
                 adv_timeout = self.actions()[op]["timeout"]
             except:
