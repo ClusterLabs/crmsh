@@ -1052,7 +1052,9 @@ here.
         setup_aliases(self)
     def status(self,cmd,node = None):
         'usage: status [<node>]'
-        return ext_cmd("%s -o nodes"%cib_dump) == 0
+        a = node and ('--xpath "//nodes/node[@uname=\'%s\']"' % node) or \
+            '-o nodes'
+        return ext_cmd("%s %s" % (cib_dump, a)) == 0
     def show(self,cmd,node = None):
         'usage: show [<node>]'
         doc = cibdump2doc()

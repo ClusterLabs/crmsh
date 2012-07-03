@@ -1057,11 +1057,11 @@ Usage:
 
 Node management and status commands.
 
-[[cmdhelp_node_status,show nodes' status]]
+[[cmdhelp_node_status,show nodes' status as XML]]
 ==== `status`
 
-Show nodes' status. If the node parameter is omitted then all
-nodes are shown.
+Show nodes' status as XML. If the node parameter is omitted then
+all nodes are shown.
 
 Usage:
 ...............
