@@ -1190,13 +1190,12 @@ class CibContainer(CibObject):
         if not self.node:  # eh?
             common_err("%s: no xml (strange)" % self.obj_id)
             return user_prefs.get_check_rc()
-        if self.obj_type == "group":
-            l = vars.rsc_meta_attributes
-        elif self.obj_type == "clone":
-            l = vars.clone_meta_attributes
+        l = vars.rsc_meta_attributes
+        if self.obj_type == "clone":
+            l += vars.clone_meta_attributes
         elif self.obj_type == "ms":
-            l = vars.clone_meta_attributes + vars.ms_meta_attributes
-        rc = sanity_check_nvpairs(self.obj_id,self.node,l)
+            l += vars.clone_meta_attributes + vars.ms_meta_attributes
+        rc = sanity_check_meta(self.obj_id,self.node,l)
         return rc
 
 class CibLocation(CibObject):
