@@ -1750,6 +1750,7 @@ class CibFactory(Singleton):
         self.cib_attrs = {} # cib version dictionary
         self.cib_objects = [] # a list of cib objects
         self.remove_queue = [] # a list of cib objects to be removed
+        self.id_refs = {} # dict of id-refs
         self.overwrite = False # update cib unconditionally
     def reset(self):
         if not self.doc:
@@ -1900,11 +1901,8 @@ class CibFactory(Singleton):
                 obj.propagate_updated()
         return rc
     def is_id_refd(self, attr_list_type, id):
-        node_l = self.doc.getElementsByTagName(attr_list_type)
-        for node in node_l:
-            if node.getAttribute("id-ref") == id:
-                return True
-        return False
+        try: return self.id_refs[id] == attr_list_type
+        except: return False
     def resolve_id_ref(self,attr_list_type,id_ref):
         '''
         User is allowed to specify id_ref either as a an object
@@ -1912,7 +1910,8 @@ class CibFactory(Singleton):
         one, i.e. if the former is the case to find the right
         id to reference.
         '''
-        obj= self.find_object(id_ref)
+        obj = self.find_object(id_ref)
+        self.id_refs[id_ref] = attr_list_type
         if obj:
             node_l = obj.node.getElementsByTagName(attr_list_type)
             if node_l:
