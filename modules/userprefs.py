@@ -27,7 +27,9 @@ class Options(Singleton):
     interactive = False
     batch = False
     regression_tests = False
+    profile = False
     history = "live"
+    file = ""
     # now minus one hour
     report_from_time = time.ctime(time.time()-60*60)
     report_to_time = ""

@@ -290,76 +290,30 @@ def mv_user_files():
     vars.tmpl_conf_dir = xdg_file(vars.tmpl_conf_dir, \
         vars.xdg_map["crmconf"], "d", "config")
 
-def run():
-    prereqs()
-    inp_file = ''
-
-    mv_user_files()
-    load_rc(vars.rc_file)
-
-    if not sys.stdin.isatty():
-        err_buf.reset_lineno()
-        options.batch = True
-    else:
-        options.interactive = True
-
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], \
-            'whdf:FRD:H:', ("wait","version","help","debug","file=",\
-            "force","regression-tests","display=","history="))
-        for o,p in opts:
-            if o in ("-h","--help"):
-                usage(0)
-            elif o in ("--version"):
-                print >> sys.stdout,("%s" % vars.crm_version)
-                sys.exit(0)
-
-            elif o == "-d":
-                user_prefs.set_debug()
-            elif o == "-R":
-                options.regression_tests = True
-            elif o in ("-D","--display"):
-                user_prefs.set_output(p)
-            elif o in ("-F","--force"):
-                user_prefs.set_force()
-            elif o in ("-f","--file"):
-                options.batch = True
-                options.interactive = False
-                err_buf.reset_lineno()
-                inp_file = p
-            elif o in ("-H","--history"):
-                options.history = p
-            elif o in ("-w","--wait"):
-                user_prefs.wait = "yes"
-    except getopt.GetoptError,msg:
-        print msg
-        usage(1)
-
+def do_work():
+    global user_args
     # this special case is silly, but we have to keep it to
     # preserve the backward compatibility
-    if len(args) == 1 and args[0].startswith("conf"):
+    if len(user_args) == 1 and user_args[0].startswith("conf"):
         parse_line(levels,["configure"])
-    elif len(args) > 0:
+    elif len(user_args) > 0:
         err_buf.reset_lineno()
         # we're not sure yet whether it's an interactive session or not
         # (single-shot commands aren't)
         options.interactive = False
-        if parse_line(levels,shlex.split(' '.join(args))):
+        if parse_line(levels,shlex.split(' '.join(user_args))):
             # if the user entered a level, then just continue
             if not levels.previous():
                 sys.exit(0)
         else:
             sys.exit(1)
 
-    if inp_file == "-":
-        pass
-    elif inp_file:
+    if options.file and options.file != "-":
         try:
-            f = open(inp_file)
+            sys.stdin = open(options.file)
         except IOError, msg:
             common_err(msg)
             usage(2)
-        sys.stdin = f
 
     if options.interactive and not options.batch:
         from completion import setup_readline
@@ -381,5 +335,60 @@ def run():
         except ValueError, msg:
             rc = 1
             common_err(msg)
+
+def run():
+    global user_args
+    prereqs()
+
+    mv_user_files()
+    load_rc(vars.rc_file)
+
+    if not sys.stdin.isatty():
+        err_buf.reset_lineno()
+        options.batch = True
+    else:
+        options.interactive = True
+
+    try:
+        opts, user_args = getopt.getopt(sys.argv[1:], \
+            'whdf:FXRD:H:', ("wait","version","help","debug","file=",\
+            "force","profile","regression-tests","display=","history="))
+        for o,p in opts:
+            if o in ("-h","--help"):
+                usage(0)
+            elif o in ("--version"):
+                print >> sys.stdout,("%s" % vars.crm_version)
+                sys.exit(0)
+            elif o == "-d":
+                user_prefs.set_debug()
+            elif o == "-X":
+                options.profile = True
+            elif o == "-R":
+                options.regression_tests = True
+            elif o in ("-D","--display"):
+                user_prefs.set_output(p)
+            elif o in ("-F","--force"):
+                user_prefs.set_force()
+            elif o in ("-f","--file"):
+                options.batch = True
+                options.interactive = False
+                err_buf.reset_lineno()
+                options.file = p
+            elif o in ("-H","--history"):
+                options.history = p
+            elif o in ("-w","--wait"):
+                user_prefs.wait = "yes"
+    except getopt.GetoptError,msg:
+        print msg
+        usage(1)
+
+    if options.profile:
+        import hotshot
+        prof = hotshot.Profile("hotshot_crm_stats")
+        print "python -c 'from hotshot import stats; s = stats.load(\"hotshot_crm_stats\"); s.sort_stats(\"time\").print_stats()' | less"
+        prof.runcall(do_work)
+        prof.close()
+
+    do_work()
 
 # vim:ts=4:sw=4:et:
