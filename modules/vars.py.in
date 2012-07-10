@@ -193,6 +193,7 @@ class Vars(Singleton):
     }
     report_cache = os.path.join("@CRM_CACHE_DIR@","history")
     tmpl_dir = "@datadir@/@PACKAGE@/templates"
+    crm_schema_dir = "@CRM_DTD_DIRECTORY@"
     pe_dir = "@PE_STATE_DIR@"
     crm_conf_dir = "@CRM_CONFIG_DIR@"
     crm_daemon_dir = "@GLUE_DAEMON_DIR@"
