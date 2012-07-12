@@ -1105,7 +1105,13 @@ if is_collector; then
 	. $WORKDIR/.env
 fi
 
-[ $VERBOSITY -gt 1 ] && set -x
+[ $VERBOSITY -gt 1 ] && {
+	is_collector || {
+		info "high debug level, please read debug.out"
+	}
+	exec 2>>$WORKDIR/debug.out
+	set -x
+}
 
 # allow user to enforce the cluster type
 # if not, then it is found out on _all_ nodes
@@ -1231,11 +1237,6 @@ if is_collector && [ "$HA_LOGFACILITY" ]; then
 	# allow for the log message to get (hopefully) written to the
 	# log file
 	sleep 1
-fi
-
-if is_collector && [ $VERBOSITY -gt 1 ]; then
-	info "the debug information for node $WE is in $WE/debug.out"
-	exec 2>>debug.out
 fi
 
 #
