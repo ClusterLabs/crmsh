@@ -351,8 +351,8 @@ def run():
 
     try:
         opts, user_args = getopt.getopt(sys.argv[1:], \
-            'whdf:FXRD:H:', ("wait","version","help","debug","file=",\
-            "force","profile","regression-tests","display=","history="))
+            'whdf:FX:RD:H:', ("wait","version","help","debug","file=",\
+            "force","profile=","regression-tests","display=","history="))
         for o,p in opts:
             if o in ("-h","--help"):
                 usage(0)
@@ -362,7 +362,7 @@ def run():
             elif o == "-d":
                 user_prefs.set_debug()
             elif o == "-X":
-                options.profile = True
+                options.profile = p
             elif o == "-R":
                 options.regression_tests = True
             elif o in ("-D","--display"):
@@ -383,11 +383,9 @@ def run():
         usage(1)
 
     if options.profile:
-        import hotshot
-        prof = hotshot.Profile("hotshot_crm_stats")
-        print "python -c 'from hotshot import stats; s = stats.load(\"hotshot_crm_stats\"); s.sort_stats(\"time\").print_stats()' | less"
-        prof.runcall(do_work)
-        prof.close()
+        import cProfile
+        cProfile.run('main.do_work()', options.profile)
+        print "python -c 'import pstats; s = pstats.Stats(\"%s\"); s.sort_stats(\"cumulative\").print_stats()' | less" % options.profile
 
     do_work()
 

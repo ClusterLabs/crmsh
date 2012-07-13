@@ -27,7 +27,7 @@ class Options(Singleton):
     interactive = False
     batch = False
     regression_tests = False
-    profile = False
+    profile = ""
     history = "live"
     file = ""
     # now minus one hour
