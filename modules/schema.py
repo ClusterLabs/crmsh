@@ -58,17 +58,19 @@ def get_attr_details_l(schema, name):
         })
     return l
 
-def get_ops(el_name):
+def rng_attr_values_l(el_name, attr_name):
     l = schema.get('attr_det_l', el_name)
-    print l
     l2 = []
     for el in l:
-        if el['n'] == 'operation':
+        if el['n'] == attr_name:
             l2 += el['v']
     return l2
 
-def get_values(el_name, attr_name):
-    return schema.get('attr_det', el_name)[attr_name]['v']
+def rng_attr_values(el_name, attr_name):
+    try:
+        return schema.get('attr_det', el_name)[attr_name]['v']
+    except:
+        return []
 
 class Schema(Singleton):
     "Cache pacemaker schema stuff"

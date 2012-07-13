@@ -22,6 +22,7 @@ from utils import *
 from vars import Vars
 from msg import *
 from ra import disambiguate_ra_type, ra_type_validate
+from schema import Schema, rng_attr_values_l, rng_attr_values
 
 #
 # CLI parsing utilities
@@ -212,7 +213,8 @@ def cli_parse_score(score,pl,noattr = False):
 def is_binary_op(s):
     l = s.split(':')
     if len(l) == 2:
-        return l[0] in vars.binary_types and l[1] in olist(vars.binary_ops)
+        return l[0] in rng_attr_values('expression', 'type') and \
+            l[1] in olist(vars.binary_ops)
     elif len(l) == 1:
         return l[0] in olist(vars.binary_ops)
     else:
@@ -238,7 +240,7 @@ def cli_parse_expression(s,pl):
 def cli_parse_dateexpr(s,pl):
     if len(s) < 3:
         return False
-    if s[1] not in olist(vars.date_ops):
+    if s[1] not in olist(rng_attr_values_l('date_expression', 'operation')):
         return False
     pl.append(["operation",s[1]])
     if s[1] in olist(vars.simple_date_ops):
@@ -328,7 +330,7 @@ def cli_parse_rsc_role(s,pl,attr_pfx = ''):
     l = s.split(':')
     pl.append([attr_pfx+"rsc",l[0]])
     if len(l) == 2:
-        if l[1] in vars.roles_names:
+        if l[1] in rng_attr_values('resource_set', 'role'):
             pl.append([attr_pfx+"rsc-role",l[1]])
         elif l[1].isdigit():
             pl.append([attr_pfx+"rsc-instance",l[1]])
@@ -363,7 +365,9 @@ class ResourceSet(object):
     '''
     def __init__(self,type,s,cli_list):
         self.type = type
-        self.valid_q = (type == "order") and vars.actions_names or vars.roles_names
+        self.valid_q = (type == "order") and \
+            rng_attr_values('resource_set', 'action') or \
+            rng_attr_values('resource_set', 'role')
         self.q_attr = (type == "order") and "action" or "role"
         self.tokens = s
         self.cli_list = cli_list
@@ -466,7 +470,7 @@ def cli_parse_rsc_action(s,pl,rsc_pos):
     l = s.split(':')
     pl.append([rsc_pos,l[0]])
     if len(l) == 2:
-        if l[1] in vars.actions_names:
+        if l[1] in rng_attr_values('resource_set', 'action'):
             pl.append([rsc_pos+"-action",l[1]])
         elif l[1].isdigit():
             pl.append([rsc_pos+"-instance",l[1]])
@@ -807,4 +811,5 @@ class CliParser(object):
         return cli_list
 
 vars = Vars.getInstance()
+schema = Schema.getInstance()
 # vim:ts=4:sw=4:et:

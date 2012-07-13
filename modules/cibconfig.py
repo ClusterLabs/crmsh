@@ -34,6 +34,7 @@ from clidisplay import CliDisplay
 from cibstatus import CibStatus
 from idmgmt import IdMgmt
 from ra import get_ra, get_properties_list, get_pe_meta
+from schema import Schema, rng_attr_values, rng_attr_values_l
 
 def show_unrecognized_elems(doc):
     try:
@@ -594,7 +595,7 @@ def mkxmlop(e,oldnode,id_hint):
     node = cib_factory.createElement(e[0])
     inst_attr = []
     for n,v in e[1]:
-        if n in olist(vars.req_op_attributes + vars.op_attributes):
+        if n in olist(schema.get('attr', 'op', 'a')):
             node.setAttribute(n,v)
         else:
             inst_attr.append([n,v])
@@ -619,7 +620,8 @@ def mkxmldate(e,oldnode,id_hint):
     set_id(node,old_date,id_hint)
     date_spec_attr = []
     for n,v in e[1]:
-        if n in olist(vars.date_ops) or n == "operation":
+        if n in olist(rng_attr_values_l('date_expression', 'operation')) or \
+                n == "operation":
             continue
         elif n in vars.in_range_attrs:
             node.setAttribute(n,v)
@@ -896,6 +898,29 @@ class CibObject(object):
         rc = xml_cmp(self.node, xml2, show = True)
         xml2.unlink()
         return rc
+    def verify_attributes(self, xmlnode):
+        rc = True
+        op_id = xmlnode.getAttribute("name")
+        for name in xmlnode.attributes.keys():
+            vals = rng_attr_values(xmlnode.tagName, name)
+            if not vals:
+                continue
+            v = xmlnode.getAttribute(name)
+            if v not in vals:
+                common_warn("%s: op '%s' attribute '%s' value '%s' not recognized" % \
+                    (self.obj_id, op_id, name, v))
+                rc = False
+        return rc
+    def check_ops_attributes(self):
+        '''
+        Check if operation attributes settings are valid.
+        '''
+        rc = True
+        if not self.node:
+            return rc
+        for op_node in self.node.getElementsByTagName("op"):
+            rc |= self.verify_attributes(op_node)
+        return rc
     def check_sanity(self):
         '''
         Right now, this is only for primitives.
@@ -1129,6 +1154,7 @@ class CibPrimitive(CibObject):
         actions = get_rsc_operations(r_node)
         default_timeout = get_default_timeout()
         rc2 = ra.sanity_check_ops(self.obj_id, actions, default_timeout)
+        rc4 = self.check_ops_attributes()
         params = []
         for c in r_node.childNodes:
             if not is_element(c):
@@ -1360,7 +1386,7 @@ class CibProperty(CibObject):
             l = get_properties_list()
             l += ("dc-version","cluster-infrastructure","last-lrm-refresh")
         elif self.obj_type == "op_defaults":
-            l = vars.op_attributes
+            l = schema.get('attr', 'op', 'a')
         elif self.obj_type == "rsc_defaults":
             l = vars.rsc_meta_attributes
         rc = sanity_check_nvpairs(self.obj_id,self.node,l)
@@ -1552,6 +1578,7 @@ class CibFactory(Singleton):
             return False
         for attr in cib.attributes.keys():
             self.cib_attrs[attr] = cib.getAttribute(attr)
+        schema.init_schema(cib)
         return True
     #
     # create a doc from the list of objects
@@ -2505,5 +2532,6 @@ cib_factory = CibFactory.getInstance()
 cli_display = CliDisplay.getInstance()
 cib_status = CibStatus.getInstance()
 id_store = IdMgmt.getInstance()
+schema = Schema.getInstance()
 
 # vim:ts=4:sw=4:et:
