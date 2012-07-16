@@ -2668,7 +2668,7 @@ Example:
 ...............
 
 [[cmdhelp_history_limit,limit timeframe to be examined]]
-==== `limit`
+==== `limit` (`timeframe`)
 
 All history commands look at events within certain period. It
 defaults to the last hour for the live cluster source. There is

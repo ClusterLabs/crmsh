@@ -1771,6 +1771,9 @@ Examine Pacemaker's history: node and resource events, logs.
         self.cmd_table["log"] = (self.log,(0,),1,0)
         self.cmd_table["peinputs"] = (self.peinputs,(0,),1,0)
         self.cmd_table["transition"] = (self.transition,(0,),1,0)
+        self.cmd_aliases.update({
+            "limit": ("timeframe",),
+        })
         self._set_source(options.history)
     def _no_source(self):
         common_error("we have no source set yet! please use the source command")
