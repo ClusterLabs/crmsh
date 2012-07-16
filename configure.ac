@@ -186,6 +186,10 @@ CRM_CONFIG_DIR=`extract_header_define crm_config.h CRM_CONFIG_DIR`
 AC_DEFINE_UNQUOTED(CRM_CONFIG_DIR,"$CRM_CONFIG_DIR", Where to keep CIB configuration files)
 AC_SUBST(CRM_CONFIG_DIR)
 
+CRM_DTD_DIRECTORY=`extract_header_define crm_config.h CRM_DTD_DIRECTORY`
+AC_DEFINE_UNQUOTED(CRM_DTD_DIRECTORY,"$CRM_DTD_DIRECTORY", Where to keep CIB configuration files)
+AC_SUBST(CRM_DTD_DIRECTORY)
+
 dnl Eventually move out of the heartbeat dir tree and create compatability code
 dnl CRM_DAEMON_DIR=$libdir/pacemaker
 GLUE_DAEMON_DIR=`extract_header_define $GLUE_HEADER GLUE_DAEMON_DIR`
