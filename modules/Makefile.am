@@ -42,6 +42,8 @@ modules	=	__init__.py 	\
 			term.py		\
 			ui.py		\
 			userprefs.py	\
+			schema.py		\
+			pacemaker.py		\
 			utils.py	\
 			vars.py		\
 			xmlutil.py
