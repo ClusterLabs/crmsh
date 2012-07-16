@@ -367,10 +367,10 @@ def get_pe_num(pe_file):
 # r.group(3) file number
 transition_patt = (
 	"crmd: .* do_te_invoke: Processing graph ([0-9]+) .*derived from (.*/pe-[^-]+-(%%)[.]bz2)", # transition start
-	"crmd: .* run_graph: Transition ([0-9]+).*Source=(.*/pe-[^-]+-(%%)[.]bz2).: (Stopped|Complete|Terminated)", # and stop
+	"crmd: .* run_graph: .*Transition ([0-9]+).*Source=(.*/pe-[^-]+-(%%)[.]bz2).: (Stopped|Complete|Terminated)", # and stop
 # r.group(1) transition number
 # r.group(2) number of actions
-	"crmd: .* unpack_graph: Unpacked transition (%%): ([0-9]+) actions", # number of actions
+	"crmd: .* run_graph: .*Transition (%%) .*Complete=([0-9]+),", # number of actions
 )
 
 def run_graph_msg_actions(msg):
