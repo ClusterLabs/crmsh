@@ -694,9 +694,6 @@ class Report(Singleton):
                 return None
         self.last_live_update = time.time()
         return self.unpack_report(tarball)
-    def reset_period(self):
-        self.from_dt = None
-        self.to_dt = None
     def set_source(self,src):
         'Set our source.'
         self.source = src
@@ -705,27 +702,16 @@ class Report(Singleton):
         Set from/to_dt.
         '''
         common_debug("setting report times: <%s> - <%s>" % (from_dt,to_dt))
-        if not self.from_dt:
-            self.from_dt = from_dt
-            self.to_dt = to_dt
-        elif self.source != "live":
-            if from_dt and self.from_dt > from_dt:
-                self.error("from time %s not within report" % from_dt)
-                return False
-            if to_dt and self.to_dt < to_dt:
-                self.error("end time %s not within report" % to_dt)
-                return False
-            self.from_dt = from_dt
-            self.to_dt = to_dt
-        else:
-            need_ref = (self.from_dt > from_dt or \
-                    (to_dt and self.to_dt < to_dt))
-            self.from_dt = from_dt
-            self.to_dt = to_dt
-            if need_ref:
-                self.refresh_source(force = True)
+        need_ref = (self.source == "live") and \
+            ((from_dt and self.from_dt and self.from_dt > from_dt) or \
+            (to_dt and self.to_dt and self.to_dt < to_dt))
+        self.from_dt = from_dt
+        self.to_dt = to_dt
+        if need_ref:
+            self.refresh_source(force = True)
         if self.logobj:
             self.logobj.set_log_timeframe(self.from_dt, self.to_dt)
+        return True
     def set_detail(self,detail_lvl):
         '''
         Set the detail level.

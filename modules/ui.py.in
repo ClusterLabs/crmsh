@@ -1760,7 +1760,7 @@ Examine Pacemaker's history: node and resource events, logs.
     def __init__(self):
         UserInterface.__init__(self)
         self.cmd_table["source"] = (self.source,(1,1),1,0)
-        self.cmd_table["limit"] = (self.limit,(1,2),1,0)
+        self.cmd_table["limit"] = (self.limit,(0,2),1,0)
         self.cmd_table["refresh"] = (self.refresh,(0,1),1,0)
         self.cmd_table["detail"] = (self.detail,(1,1),1,0)
         self.cmd_table["setnodes"] = (self.setnodes,(1,),1,0)
@@ -1795,7 +1795,7 @@ Examine Pacemaker's history: node and resource events, logs.
                 common_err("no dateutil, please provide times as printed by date(1)")
                 return None
         return dt
-    def _set_period(self,from_time,to_time = ''):
+    def _set_period(self,from_time = '',to_time = ''):
         '''
         parse time specs and set period
         '''
@@ -1844,8 +1844,10 @@ Examine Pacemaker's history: node and resource events, logs.
         "usage: source {<dir>|<file>|live}"
         if src != options.history:
             return self._set_source(src)
-    def limit(self,cmd,from_time,to_time = ''):
-        "usage: limit <from_time> [<to_time>]"
+    def limit(self,cmd,from_time = '',to_time = ''):
+        "usage: limit [<from_time> [<to_time>]]"
+        if options.history == "live" and not from_time:
+            from_time = time.ctime(time.time() - 60*60)
         if options.report_from_time != from_time or \
                 options.report_to_time != to_time:
             if not self._set_period(from_time, to_time):
