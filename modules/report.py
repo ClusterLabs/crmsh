@@ -933,6 +933,10 @@ class Report(Singleton):
                 s = s.replace("%s: " % fld,"").rstrip()
                 return s
         f.close()
+    def dumpdescln(self, pfx, field):
+        s = self.get_desc_line(field)
+        if s:
+            print "%s: %s" % (pfx, s)
     def info(self):
         '''
         Print information about the source.
@@ -940,9 +944,8 @@ class Report(Singleton):
         if not self.prepare_source():
             return False
         print "Source: %s" % self.source
-        if self.source != "live":
-            print "Created:", self.get_desc_line("Date")
-            print "By:", self.get_desc_line("By")
+        self.dumpdescln("Created on", "Date")
+        self.dumpdescln("By", "By")
         print "Period: %s - %s" % \
             ((self.from_dt and human_date(self.from_dt) or "start"),
             (self.to_dt and human_date(self.to_dt) or "end"))
