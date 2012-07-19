@@ -26,7 +26,7 @@ import glob
 from singletonmixin import Singleton
 from userprefs import Options, UserPrefs
 from cibconfig import CibFactory
-from vars import Vars, getuser
+from vars import Vars, getuser, gethomedir
 from xmlutil import *
 from utils import *
 from msg import *
@@ -407,6 +407,22 @@ def transition_actions(msg_l, te_invoke_msg, pe_file):
                 return sum(act_d.values())
     return -1
 
+def mkarchive(dir):
+    "Create an archive from a directory"
+    home = gethomedir()
+    if not home:
+        common_err("no home directory, nowhere to pack report")
+        return False
+    archive = '%s.tar.bz2' % os.path.join(home, os.path.basename(dir))
+    cmd = "tar -C '%s/..' -cj -f '%s' %s" % \
+        (dir, archive, os.path.basename(dir))
+    if ext_cmd_nosudo(cmd) != 0:
+        common_err('could not pack report, command "%s" failed' % cmd)
+        return False
+    else:
+        print "Report saved in '%s'" % archive
+    return True
+
 class Report(Singleton):
     '''
     A hb_report class.
@@ -416,6 +432,7 @@ class Report(Singleton):
     nodecolors = (
     "NORMAL", "GREEN", "CYAN", "MAGENTA", "YELLOW", "WHITE", "BLUE", "RED"
     )
+    session_sub = "session"
     def __init__(self):
         self.source = None
         self.loc = None
@@ -449,6 +466,12 @@ class Report(Singleton):
         return self.cibnode_l
     def peinputs_list(self):
         return [get_pe_num(x) for x in self.peinputs_l]
+    def session_subcmd_list(self):
+        return ["save", "load", "pack", "delete", "list", "update"]
+    def session_list(self):
+        l = os.listdir(self.get_session_dir(None))
+        l.sort()
+        return l
     def unpack_report(self, tarball):
         '''
         Unpack hb_report tarball.
@@ -1084,6 +1107,52 @@ class Report(Singleton):
         return None
     def find_file(self, f):
         return file_find_by_name(self.loc, f)
+    def get_session_dir(self, name):
+        try:
+            return os.path.join(vars.report_cache, self.session_sub, name)
+        except:
+            return os.path.join(vars.report_cache, self.session_sub)
+    def save_state(self, dir):
+        '''
+        Save the current history state. It should include:
+        - timeframe
+        - detail
+        TODO
+        '''
+        return True
+    def load_state(self, dir):
+        '''
+        Load the history state from a file.
+        '''
+        return True
+    def manage_session(self, subcmd, name):
+        dir = self.get_session_dir(name)
+        if subcmd == "save" and os.path.exists(dir):
+            common_err("history session %s exists" % name)
+            return False
+        elif subcmd in ("load", "pack", "update", "delete") and not os.path.exists(dir):
+            common_err("history session %s does not exist" % name)
+            return False
+        if subcmd == "save":
+            if ext_cmd_nosudo("mkdir -p %s" % dir) != 0:
+                return False
+            if self.source == "live":
+                rc = ext_cmd_nosudo("tar -C '%s' -c . | tar -C '%s' -x" % \
+                    (self._live_loc(), dir))
+                if rc != 0:
+                    return False
+            return self.save_state(dir)
+        elif subcmd == "update":
+            return self.save_state(dir)
+        elif subcmd == "load":
+            return self.load_state(dir)
+        elif subcmd == "delete":
+            rmdir_r(dir)
+        elif subcmd == "list":
+            ext_cmd("ls %s" % self.get_session_dir(None))
+        elif subcmd == "pack":
+            return mkarchive(dir)
+        return True
 
 vars = Vars.getInstance()
 options = Options.getInstance()

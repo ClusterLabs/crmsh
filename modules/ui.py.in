@@ -1771,10 +1771,12 @@ Examine Pacemaker's history: node and resource events, logs.
         self.cmd_table["log"] = (self.log,(0,),1,0)
         self.cmd_table["peinputs"] = (self.peinputs,(0,),1,0)
         self.cmd_table["transition"] = (self.transition,(0,),1,0)
+        self.cmd_table["session"] = (self.session,(0,2),1,0)
         self.cmd_aliases.update({
             "limit": ("timeframe",),
         })
         self._set_source(options.history)
+        self.current_session = None
     def _no_source(self):
         common_error("we have no source set yet! please use the source command")
     def parse_time(self, t):
@@ -1832,6 +1834,7 @@ Examine Pacemaker's history: node and resource events, logs.
             return False
         crm_report.set_source(src)
         options.history = src
+        self.current_session = None
         options.report_to_time = ''
         rc = True
         if src == "live":
@@ -2002,6 +2005,42 @@ Examine Pacemaker's history: node and resource events, logs.
             show_dot_graph(f)
         if rc:
             crm_report.show_transition_log(f)
+        return rc
+    def session(self,cmd,subcmd = None,name = None):
+        "usage: session [{save|load|delete} <name> | pack [<name>] | update | list]"
+        if not subcmd:
+            print "current session: %s" % self.current_session
+            return True
+        # verify arguments
+        if subcmd not in ("save", "load", "pack", "delete", "list", "update"):
+            common_err("unknown history session subcmd: %s")
+            return False
+        if name:
+            if subcmd not in ("save", "load", "pack", "delete"):
+                syntax_err(subcmd, context = 'session')
+                return False
+            if not is_filename_sane(name):
+                return False
+        elif subcmd not in ("list", "update", "pack"):
+            syntax_err(subcmd, context = 'session')
+            return False
+        elif subcmd in ("update", "pack") and not self.current_session:
+            common_err("need to load a history session before update/pack")
+            return False
+        # do work
+        if not name:
+            # some commands work on the existing session
+            name = self.current_session
+        rc = crm_report.manage_session(subcmd, name)
+        # set source appropriately
+        if rc and subcmd in ("save", "load"):
+            self._set_source(crm_report.get_session_dir(name))
+            crm_report.info()
+            self.current_session = name
+        elif rc and subcmd == "delete":
+            if name == self.current_session:
+                common_info("current history session deleted, setting source to live")
+                self._set_source("live")
         return rc
 
 class Site(UserInterface):

@@ -2636,6 +2636,20 @@ that case we assume that the period stretching the whole report
 needs to be investigated. Of course, it is still possible to
 further reduce the time range.
 
+If you think you may have found a bug or just need clarification
+from developers or your support, the `session pack` command can
+help create a report. This is an example:
+...............
+    crm(live)history# timeframe "Jul 18 12:00" "Jul 18 12:30"
+    crm(live)history# session save strange_restart
+    crm(live)history# session pack
+    Report saved in .../strange_restart.tar.bz2
+    crm(live)history# 
+...............
+In order to reduce report size and allow developers to
+concentrate on the issue, you should beforehand limit the time
+frame. Giving a meaningful session name helps too.
+
 ==== `info`
 
 The `info` command shows most important information about the
@@ -2894,6 +2908,35 @@ Examples:
         transition pe-error-3.bz2
         transition node-a/pengine/pe-input-2.bz2
         transition showdot 444
+...............
+
+[[cmdhelp_history_session,manage history sessions]]
+==== `session`
+
+Sometimes you may want to get back to examining a particular
+history period or bug report. In order to make that easier, the
+current settings can be saved and later retrieved.
+
+If the current history being examined is coming from a live
+cluster the logs, PE inputs, and other files are saved too,
+because they may disappear from nodes. For the existing reports
+coming from `hb_report`, only the directory location is saved
+(not to waste space).
+
+A history session may also be packed into a tarball which can
+then be sent to support.
+
+Leave out subcommand to see the current session.
+
+Usage:
+...............
+        session [{save|load|delete} <name> | pack [<name>] | update | list]
+...............
+Examples:
+...............
+        session save bnc966622
+        session load rsclost-2
+        session list
 ...............
 
 === `end` (`cd`, `up`)

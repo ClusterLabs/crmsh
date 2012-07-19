@@ -181,6 +181,14 @@ def report_pe_list_peinputs(idx,delimiter = False):
     if delimiter:
         return ' '
     return crm_report.peinputs_list() + ["v"]
+def report_session_subcmd_list(idx,delimiter = False):
+    if delimiter:
+        return ' '
+    return crm_report.session_subcmd_list()
+def report_session_list(idx,delimiter = False):
+    if delimiter:
+        return ' '
+    return crm_report.session_list()
 def ticket_cmd_list(idx,delimiter = False):
     if delimiter:
         return ' '
@@ -511,6 +519,7 @@ completer_lists = {
         "log" : (report_node_list,loop),
         "peinputs" : (report_pe_list_peinputs,loop),
         "transition" : (report_pe_list_transition,),
+        "session" : (report_session_subcmd_list,report_session_list),
     },
     "site" : {
         "ticket" : (ticket_cmd_list,),
