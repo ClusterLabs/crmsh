@@ -302,7 +302,7 @@ class LogSyslog(object):
             else:
                 top_line_ts[first] = syslog_ts(top_line[first])
         return l
-    def get_matches(self, re_l, log_l = []):
+    def get_matches(self, re_l, log_l = None):
         '''
         Return a list of log messages which
         match one of the regexes in re_l.
@@ -911,7 +911,7 @@ class Report(Singleton):
             return "${%s}%s${NORMAL}" % (clr,s)
     def display_logs(self, l):
         page_string('\n'.join([ self.disp(x) for x in l ]))
-    def show_logs(self, log_l = [], re_l = []):
+    def show_logs(self, log_l = None, re_l = []):
         '''
         Print log lines, either matched by re_l or all.
         '''
@@ -965,7 +965,7 @@ class Report(Singleton):
             self.error("no resources or nodes found")
             return False
         self.show_logs(re_l = all_re_l)
-    def get_transition_msgs(self, pe_file, msg_l = []):
+    def get_transition_msgs(self, pe_file, msg_l = None):
         if not msg_l:
             trans_re_l = [x.replace("%%", "[0-9]+") for x in transition_patt]
             msg_l = self.logobj.get_matches(trans_re_l)
@@ -1086,7 +1086,7 @@ class Report(Singleton):
             if not l:
                 return False
             self.show_logs(log_l = l)
-    def pelist(self, a = []):
+    def pelist(self, a = None):
         if not self.prepare_source():
             return []
         if isinstance(a,(tuple,list)):
@@ -1096,7 +1096,7 @@ class Report(Singleton):
             a = [a,a]
         return [x for x in self.peinputs_l \
             if pe_file_in_range(x, a)]
-    def dotlist(self, a = []):
+    def dotlist(self, a = None):
         l = [x.replace("bz2","dot") for x in self.pelist(a)]
         return [x for x in l if os.path.isfile(x)]
     def find_pe_files(self, path):
