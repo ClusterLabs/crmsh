@@ -650,6 +650,28 @@ def lines2cli(s):
         cl.append(''.join(cum))
     return [x for x in cl if x]
 
+def parse_time(t):
+    '''
+    Try to make sense of the user provided time spec.
+    Use dateutil if available, otherwise strptime.
+    Return the datetime value.
+    '''
+    try:
+        import dateutil.parser
+        dt = dateutil.parser.parse(t)
+    except ValueError,msg:
+        common_err("%s: %s" % (t,msg))
+        return None
+    except ImportError,msg:
+        import datetime
+        try:
+            tm = time.strptime(t)
+            dt = datetime.datetime(*tm[0:7])
+        except ValueError,msg:
+            common_err("no dateutil, please provide times as printed by date(1)")
+            return None
+    return dt
+
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 vars = Vars.getInstance()

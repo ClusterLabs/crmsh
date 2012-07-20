@@ -921,6 +921,8 @@ class Report(Singleton):
             self.error("no logs found")
             return
         self.display_logs(self.logobj.get_matches(re_l, log_l))
+    def get_source(self):
+        return self.source
     def get_desc_line(self,fld):
         try:
             f = open(self.desc)
@@ -1115,19 +1117,73 @@ class Report(Singleton):
             return os.path.join(vars.report_cache, self.session_sub, name)
         except:
             return os.path.join(vars.report_cache, self.session_sub)
+    state_file = 'history_state.cfg'
+    rpt_section = 'report'
     def save_state(self, dir):
         '''
         Save the current history state. It should include:
+        - directory
         - timeframe
         - detail
         TODO
         '''
+        import ConfigParser
+        p = ConfigParser.SafeConfigParser()
+        p.add_section(self.rpt_section)
+        p.set(self.rpt_section, 'dir', \
+            self.source == "live" and dir or self.source)
+        p.set(self.rpt_section, 'from_time', \
+            self.from_dt and human_date(self.from_dt) or '')
+        p.set(self.rpt_section, 'to_time', \
+            self.to_dt and human_date(self.to_dt) or '')
+        p.set(self.rpt_section, 'detail', str(self.detail))
+        fname = os.path.join(dir, self.state_file)
+        try:
+            f = open(fname,"wb")
+        except IOError, msg:
+            common_err(msg)
+            return False
+        p.write(f)
+        f.close()
         return True
     def load_state(self, dir):
         '''
         Load the history state from a file.
         '''
-        return True
+        import ConfigParser
+        p = ConfigParser.SafeConfigParser()
+        fname = os.path.join(dir, self.state_file)
+        try:
+            p.read(fname)
+        except Exception, msg:
+            common_err(msg)
+            return False
+        rc = True
+        try:
+            for n, v in p.items(self.rpt_section):
+                if n == 'dir':
+                    self.source = self.loc = v
+                    if not os.path.exists(self.loc):
+                        common_err("session state file %s points to a "
+                            "non-existing directory: %s" % (fname, self.loc))
+                        rc = False
+                elif n == 'from_time':
+                    self.from_dt = v and parse_time(v) or None
+                elif n == 'to_time':
+                    self.to_dt = v and parse_time(v) or None
+                elif n == 'detail':
+                    self.detail = int(v)
+                else:
+                    common_warn("unknown item %s in the "
+                        "session state file %s" % (n, fname))
+        except ConfigParser.NoSectionError, msg:
+            common_err("session state file %s: %s" % (fname, msg))
+            rc = False
+        except Exception, msg:
+            common_err("bad value for '%s' in "
+                "session state file %s" % (n, v, fname))
+            rc = False
+        return rc
     def manage_session(self, subcmd, name):
         dir = self.get_session_dir(name)
         if subcmd == "save" and os.path.exists(dir):

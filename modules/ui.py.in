@@ -1779,38 +1779,17 @@ Examine Pacemaker's history: node and resource events, logs.
         self.current_session = None
     def _no_source(self):
         common_error("we have no source set yet! please use the source command")
-    def parse_time(self, t):
-        '''
-        Try to make sense of the user provided time spec.
-        Use dateutil if available, otherwise strptime.
-        Return the datetime value.
-        '''
-        try:
-            import dateutil.parser
-            dt = dateutil.parser.parse(t)
-        except ValueError,msg:
-            common_err("%s: %s" % (t,msg))
-            return None
-        except ImportError,msg:
-            import datetime
-            try:
-                tm = time.strptime(t)
-                dt = datetime.datetime(*tm[0:7])
-            except ValueError,msg:
-                common_err("no dateutil, please provide times as printed by date(1)")
-                return None
-        return dt
     def _set_period(self,from_time = '',to_time = ''):
         '''
         parse time specs and set period
         '''
         from_dt = to_dt = None
         if from_time:
-            from_dt = self.parse_time(from_time)
+            from_dt = parse_time(from_time)
             if not from_dt:
                 return False
         if to_time:
-            to_dt = self.parse_time(to_time)
+            to_dt = parse_time(to_time)
             if not to_dt:
                 return False
         if to_dt and to_dt <= from_dt:
@@ -2025,7 +2004,7 @@ Examine Pacemaker's history: node and resource events, logs.
         rc = crm_report.manage_session(subcmd, name)
         # set source appropriately
         if rc and subcmd in ("save", "load"):
-            self._set_source(crm_report.get_session_dir(name))
+            options.history = crm_report.get_source()
             crm_report.info()
             self.current_session = name
         elif rc and subcmd == "delete":
