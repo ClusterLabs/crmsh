@@ -1835,17 +1835,13 @@ Examine Pacemaker's history: node and resource events, logs.
         crm_report.set_source(src)
         options.history = src
         self.current_session = None
-        options.report_to_time = ''
-        rc = True
+        to_time = ''
         if src == "live":
-            options.report_from_time = time.ctime(live_from_time and \
+            from_time = time.ctime(live_from_time and \
                 live_from_time or (time.time() - 60*60))
         else:
-            options.report_from_time = ''
-            options.report_to_time = ''
-        rc = self._set_period(\
-            options.report_from_time, options.report_to_time)
-        return rc
+            from_time = ''
+        return self._set_period(from_time, to_time)
     def source(self,cmd,src = None):
         "usage: source {<dir>|<file>|live}"
         if src != options.history:
@@ -1854,12 +1850,7 @@ Examine Pacemaker's history: node and resource events, logs.
         "usage: limit [<from_time> [<to_time>]]"
         if options.history == "live" and not from_time:
             from_time = time.ctime(time.time() - 60*60)
-        if options.report_from_time != from_time or \
-                options.report_to_time != to_time:
-            if not self._set_period(from_time, to_time):
-                return False
-            options.report_from_time = from_time
-            options.report_to_time = to_time
+        return self._set_period(from_time, to_time)
     def refresh(self, cmd, force = ''):
         "usage: refresh"
         if options.history != "live":

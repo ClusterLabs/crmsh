@@ -30,9 +30,6 @@ class Options(Singleton):
     profile = ""
     history = "live"
     file = ""
-    # now minus one hour
-    report_from_time = time.ctime(time.time()-60*60)
-    report_to_time = ""
 
 options = Options.getInstance()
 termctrl = TerminalController.getInstance()
