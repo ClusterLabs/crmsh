@@ -1240,7 +1240,7 @@ class CibLocation(CibObject):
         pref_node = node.getAttribute("node")
         score = cli_display.score(get_score(node))
         if pref_node:
-            return "%s %s %s" % (s,score,pref_node)
+            return "%s %s: %s" % (s,score,pref_node)
         else:
             return s
     def repr_cli_child(self,c,format):
@@ -1306,7 +1306,7 @@ class CibSimpleConstraint(CibObject):
         symm = node.getAttribute("symmetrical")
         if symm:
             col.append("symmetrical=%s"%symm)
-        return "%s %s %s %s" % (s,id,score,' '.join(col))
+        return "%s %s %s: %s" % (s,id,score,' '.join(col))
     def repr_cli_child(self,c,format):
         pass # no children here
     def cli_list2node(self,cli_list,oldnode):

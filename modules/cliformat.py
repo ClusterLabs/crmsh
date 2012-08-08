@@ -150,7 +150,7 @@ def get_score(node):
     else:
         if score.find("INFINITY") >= 0:
             score = score.replace("INFINITY","inf")
-    return score + ":"
+    return score
 def cli_rule(node):
     s = []
     node_id = node.getAttribute("id")
@@ -163,7 +163,7 @@ def cli_rule(node):
     rsc_role = node.getAttribute("role")
     if rsc_role:
         s.append('$role="%s"' % rsc_role)
-    s.append(cli_display.score(get_score(node)))
+    s.append("%s:" % cli_display.score(get_score(node)))
     bool_op = node.getAttribute("boolean-op")
     if not bool_op:
         bool_op = "and"
