@@ -1749,9 +1749,13 @@ an extra attribute to allow for sets of resources which don't depend
 on each other in terms of state. The shell syntax for such sets is
 to put resources in parentheses.
 
+The optional `node-attribute` references an attribute in nodes'
+instance attributes.
+
 Usage:
 ...............
         colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>] ...
+          [node-attribute=<node_attr>]
 ...............
 Example:
 ...............

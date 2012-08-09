@@ -459,6 +459,10 @@ def parse_colocation(s):
     head_pl.append(["id",s[1]])
     if not cli_parse_score(s[2],head_pl):
         return False
+    # save node-attribute for later (if it exists)
+    node_attr = ""
+    if is_attribute(s[len(s)-1],"node-attribute"):
+        node_attr = s.pop()
     if len(s) == 5:
         if not cli_parse_rsc_role(s[3],head_pl):
             return False
@@ -468,6 +472,8 @@ def parse_colocation(s):
         resource_set_obj = ResourceSet(type,s[3:],cli_list)
         if not resource_set_obj.parse():
             return False
+    if not cli_opt_attribute(type, node_attr, head_pl, "node-attribute"):
+        return False
     return cli_list
 def cli_parse_rsc_action(s,pl,rsc_pos):
     l = s.split(':')

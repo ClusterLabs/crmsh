@@ -1303,9 +1303,14 @@ class CibSimpleConstraint(CibObject):
             col = simple_rsc_constraint(node,obj_type)
         if not col:
             return None
-        symm = node.getAttribute("symmetrical")
-        if symm:
-            col.append("symmetrical=%s"%symm)
+        if obj_type == "order":
+            symm = node.getAttribute("symmetrical")
+            if symm:
+                col.append("symmetrical=%s"%symm)
+        elif obj_type == "colocation":
+            node_attr = node.getAttribute("node-attribute")
+            if node_attr:
+                col.append("node-attribute=%s"%node_attr)
         return "%s %s %s: %s" % (s,id,score,' '.join(col))
     def repr_cli_child(self,c,format):
         pass # no children here

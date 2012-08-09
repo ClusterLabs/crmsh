@@ -1651,11 +1651,11 @@ cluster.
         unary_op :: defined | not_defined"""
         return self.__conf_object(cmd,*args)
     def conf_colocation(self,cmd,*args):
-        """usage: colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>]
-        """
+        """usage: colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>] ...
+        [node-attribute=<node_attr>]"""
         return self.__conf_object(cmd,*args)
     def conf_order(self,cmd,*args):
-        """usage: order <id> score-type: <first-rsc>[:<action>] <then-rsc>[:<action>]
+        """usage: order <id> {kind|<score>}: <rsc>[:<action>] <rsc>[:<action>] ...
         [symmetrical=<bool>]"""
         return self.__conf_object(cmd,*args)
     def conf_rsc_ticket(self,cmd,*args):
