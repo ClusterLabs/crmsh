@@ -10,17 +10,14 @@
       </cluster_property_set>
     </crm_config>
     <nodes>
+      <node id="pingnode" type="ping" uname="pingnode"/>
       <node id="node1" type="normal" uname="node1">
         <instance_attributes id="node1-instance_attributes">
           <nvpair id="node1-instance_attributes-mem" name="mem" value="16G"/>
         </instance_attributes>
       </node>
-      <node id="pingnode" type="ping" uname="pingnode"/>
     </nodes>
     <resources>
-      <master id="m">
-        <primitive class="ocf" id="d4" provider="pacemaker" type="Dummy"/>
-      </master>
       <primitive class="stonith" id="st" type="ssh">
         <instance_attributes id="st-instance_attributes">
           <nvpair id="st-instance_attributes-hostlist" name="hostlist" value="node1"/>
@@ -33,6 +30,9 @@
           <op id="st-monitor-60m" interval="60m" name="monitor" timeout="60s"/>
         </operations>
       </primitive>
+      <master id="m">
+        <primitive class="ocf" id="d4" provider="pacemaker" type="Dummy"/>
+      </master>
       <group id="g1">
         <primitive class="ocf" id="d1" provider="pacemaker" type="Dummy">
           <operations id="d1-ops">
@@ -70,7 +70,28 @@
       </primitive>
     </resources>
     <constraints>
-      <rsc_order first="d5" id="o1" score="INFINITY" then="d6"/>
+      <rsc_order first="d5" id="o1" kind="Mandatory" then="d6"/>
+      <rsc_order first="d5" id="o3" kind="Serialize" then="d6"/>
+      <rsc_ticket id="ticket-A_d6" rsc="d6" ticket="ticket-A"/>
+      <rsc_order first="d5" id="o4" score="INFINITY" then="d6"/>
+      <rsc_ticket id="ticket-B_d6_d5" loss-policy="fence" ticket="ticket-B">
+        <resource_set id="ticket-B_d6_d5-0">
+          <resource_ref id="d6"/>
+          <resource_ref id="d5"/>
+        </resource_set>
+      </rsc_ticket>
+      <rsc_ticket id="ticket-C_master" loss-policy="fence" ticket="ticket-C">
+        <resource_set id="ticket-C_master-0">
+          <resource_ref id="d6"/>
+        </resource_set>
+        <resource_set id="ticket-C_master-1" role="Master">
+          <resource_ref id="d5"/>
+        </resource_set>
+      </rsc_ticket>
+      <rsc_order first="d5" first-action="start" id="o2" kind="Optional" then="d6" then-action="promote"/>
+      <rsc_location id="l7" rsc="d5">
+        <rule id-ref="l2-rule1"/>
+      </rsc_location>
       <rsc_location id="l1" node="node1" rsc="g1" score="100"/>
       <rsc_location id="l2" rsc="c">
         <rule id="l2-rule1" score="100">
@@ -113,26 +134,7 @@
         <rule id-ref="l2-rule1"/>
       </rsc_location>
       <rsc_colocation id="c2" rsc="d5" rsc-role="Started" score="INFINITY" with-rsc="d6" with-rsc-role="Started"/>
-      <rsc_order first="d5" first-action="start" id="o2" score="0" then="d6" then-action="promote"/>
-      <rsc_ticket id="ticket-A_d6" rsc="d6" ticket="ticket-A"/>
-      <rsc_ticket id="ticket-B_d6_d5" loss-policy="fence" ticket="ticket-B">
-        <resource_set id="ticket-B_d6_d5-0">
-          <resource_ref id="d6"/>
-          <resource_ref id="d5"/>
-        </resource_set>
-      </rsc_ticket>
-      <rsc_ticket id="ticket-C_master" loss-policy="fence" ticket="ticket-C">
-        <resource_set id="ticket-C_master-0">
-          <resource_ref id="d6"/>
-        </resource_set>
-        <resource_set id="ticket-C_master-1" role="Master">
-          <resource_ref id="d5"/>
-        </resource_set>
-      </rsc_ticket>
       <rsc_colocation id="c1" rsc="d5" score="INFINITY" with-rsc="d6"/>
-      <rsc_location id="l7" rsc="d5">
-        <rule id-ref="l2-rule1"/>
-      </rsc_location>
     </constraints>
     <rsc_defaults>
       <meta_attributes id="rsc-options">

@@ -27,6 +27,7 @@ from ra import *
 from vars import Vars
 from utils import *
 from xmlutil import *
+from schema import Schema, rng_attr_values_l, rng_attr_values
 
 class CompletionHelp(object):
     '''
@@ -132,6 +133,10 @@ def node_attr_keyw_list(idx,delimiter = False):
     if delimiter:
         return ' '
     return vars.node_attributes_keyw
+def order_kind_list(idx,delimiter = False):
+    if delimiter:
+        return ': '
+    return rng_attr_values('rsc_order', 'kind')
 def status_node_list(idx,delimiter = False):
     if delimiter:
         return ' '
@@ -501,7 +506,7 @@ completer_lists = {
         "ms" : (null_list,f_children_id_list),
         "location" : (null_list,rsc_id_list),
         "colocation" : (null_list,null_list,rsc_tmpl_id_list,loop),
-        "order" : (null_list,null_list,rsc_tmpl_id_list,loop),
+        "order" : (null_list,order_kind_list,rsc_tmpl_id_list,loop),
         "rsc_ticket" : (null_list,null_list,rsc_tmpl_id_list,loop),
         "property" : (property_complete,loop),
         "rsc_defaults" : (prim_complete_meta,loop),
@@ -542,5 +547,6 @@ vars = Vars.getInstance()
 cib_status = CibStatus.getInstance()
 cib_factory = CibFactory.getInstance()
 crm_report = Report.getInstance()
+schema = Schema.getInstance()
 
 # vim:ts=4:sw=4:et:

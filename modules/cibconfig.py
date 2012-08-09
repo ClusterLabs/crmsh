@@ -1296,7 +1296,7 @@ class CibSimpleConstraint(CibObject):
         node_id = node.getAttribute("id")
         s = cli_display.keyword(obj_type)
         id = cli_display.id(node_id)
-        score = cli_display.score(get_score(node))
+        score = cli_display.score(get_score(node) or get_kind(node))
         if node.getElementsByTagName("resource_set"):
             col = rsc_set_constraint(node,obj_type)
         else:

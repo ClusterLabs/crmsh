@@ -1769,17 +1769,23 @@ extra attribute to allow for sets of resources whose actions may run
 in parallel. The shell syntax for such sets is to put resources in
 parentheses.
 
+Three strings are reserved to specify a kind of order constraint:
+`Mandatory`, `Optional`, and `Serialize`. It is preferred to use
+one of these settings instead of score. Previous versions mapped
+scores `0` and `inf` to keywords `advisory` and `mandatory`.
+That is still valid but deprecated.
+
 Usage:
 ...............
-        order <id> score-type: <rsc>[:<action>] <rsc>[:<action>] ...
+        order <id> {kind|<score>}: <rsc>[:<action>] <rsc>[:<action>] ...
           [symmetrical=<bool>]
 
-        score-type :: advisory | mandatory | <score>
+        kind :: Mandatory | Optional | Serialize
 ...............
 Example:
 ...............
-        order c_apache_1 mandatory: apache:start ip_1
-        order o1 inf: A ( B C )
+        order c_apache_1 Mandatory: apache:start ip_1
+        order o1 Serialize: A ( B C )
 ...............
 
 [[cmdhelp_configure_rsc_ticket,resources ticket dependency]]

@@ -30,8 +30,10 @@
 .INP: location l7 d5 	rule $id-ref=l2
 .INP: collocation c1 inf: d5 d6
 .INP: collocation c2 inf: d5:Started d6:Started
-.INP: order o1 mandatory: d5 d6
-.INP: order o2 advisory: d5:start d6:promote
+.INP: order o1 Mandatory: d5 d6
+.INP: order o2 Optional: d5:start d6:promote
+.INP: order o3 Serialize: d5 d6
+.INP: order o4 inf: d5 d6
 .INP: rsc_ticket ticket-A_d6 ticket-A: d6
 .INP: rsc_ticket ticket-B_d6_d5 ticket-B: d6 d5 loss-policy=fence
 .INP: rsc_ticket ticket-C_master ticket-C: d6 d5:Master loss-policy=fence
@@ -87,8 +89,10 @@ location l7 d5 \
 	rule $id-ref="l2-rule1"
 colocation c1 inf: d5 d6
 colocation c2 inf: d5:Started d6:Started
-order o1 inf: d5 d6
-order o2 0: d5:start d6:promote
+order o1 Mandatory: d5 d6
+order o2 Optional: d5:start d6:promote
+order o3 Serialize: d5 d6
+order o4 inf: d5 d6
 rsc_ticket ticket-A_d6 ticket-A: d6
 rsc_ticket ticket-B_d6_d5 ticket-B: d6 d5 loss-policy=fence
 rsc_ticket ticket-C_master ticket-C: d6 d5:Master loss-policy=fence

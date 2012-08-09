@@ -202,6 +202,9 @@ def cli_parse_score(score,pl,noattr = False):
     elif re.match("^[+-]?(inf(inity)?|INF(INITY)?|[0-9]+)$",score):
         score = re.sub("inf(inity)?|INF(INITY)?", "INFINITY", score)
         pl.append(["score",score])
+    # orders have the special kind attribute
+    elif noattr and can_cannonize(score, rng_attr_values('rsc_order', 'kind')):
+        pl.append(["kind", cannonize(score, rng_attr_values('rsc_order', 'kind'))])
     elif score:
         if noattr:
             common_err("attribute not allowed for score in orders")

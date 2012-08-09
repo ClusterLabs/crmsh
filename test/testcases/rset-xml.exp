@@ -19,7 +19,8 @@
       <primitive class="ocf" id="d5" provider="heartbeat" type="Dummy"/>
     </resources>
     <constraints>
-      <rsc_order first="d1" id="o1" score="INFINITY" then="d3"/>
+      <rsc_colocation id="c3" rsc="d3" score="INFINITY" with-rsc="d1"/>
+      <rsc_order first="d1" id="o1" kind="Serialize" then="d3"/>
       <rsc_colocation id="c1" score="INFINITY">
         <resource_set id="c1-1" sequential="false">
           <resource_ref id="d1"/>
@@ -27,7 +28,6 @@
         </resource_set>
       </rsc_colocation>
       <rsc_colocation id="c2" rsc="d3" score="INFINITY" with-rsc="d1"/>
-      <rsc_colocation id="c3" rsc="d3" score="INFINITY" with-rsc="d1"/>
     </constraints>
   </configuration>
 </cib>

@@ -60,6 +60,14 @@ def is_boolean_false(opt):
 def keyword_cmp(string1, string2):
     return string1.lower() == string2.lower()
 
+def can_cannonize(s, values):
+    return s.lower() in [x.lower() for x in values]
+def cannonize(s, values):
+    lw = [x.lower() for x in values]
+    if not s.lower() in lw:
+        return s
+    return values[lw.index(s.lower())]
+
 from UserDict import DictMixin
 class odict(DictMixin):
     def __init__(self, data=None, **kwdata):
