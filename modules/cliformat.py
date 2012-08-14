@@ -180,10 +180,6 @@ def cli_rule(node):
             exp.append(exp2cli(c))
     expression = (" %s "%cli_display.keyword(bool_op)).join(exp)
     return "%s %s" % (' '.join(s),expression)
-def cli_add_description(node,l):
-    desc = node.getAttribute("description")
-    if desc:
-        l.append(nvpair_format("description",desc))
 
 def mkrscrole(node,n):
     rsc = cli_display.rscref(node.getAttribute(n))

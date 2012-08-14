@@ -746,35 +746,35 @@ class CibObject(object):
             (self.obj_id,self.origin,self.updated,self.moved,self.invalid, \
             self.parent and self.parent.obj_id or "", \
             len(self.children))
-    def repr_cli_xml(self,node,format):
+    def repr_cli_xml(self,format):
         h = cli_display.keyword("xml")
-        l = node.toprettyxml('\t').split('\n')
+        l = self.node.toprettyxml('\t').split('\n')
         l = [x for x in l if x] # drop empty lines
         if format > 0:
             return "%s %s" % (h,' \\\n'.join(l))
         else:
             return "%s %s" % (h,''.join(l))
-    def repr_cli(self,node = None,format = 1):
+    def repr_cli(self,format = 1):
         '''
         CLI representation for the node.
         repr_cli_head and repr_cli_child in subclasess.
         '''
-        if not node:
-            node = self.node
         if self.nocli:
-            return self.repr_cli_xml(node,format)
+            return self.repr_cli_xml(format)
         l = []
         if format < 0:
             cli_display.set_no_pretty()
-        head_s = self.repr_cli_head(node)
+        head_s = self.repr_cli_head()
         if not head_s: # everybody must have a head
             if format < 0:
                 cli_display.reset_no_pretty()
             return None
         comments = []
         l.append(head_s)
-        cli_add_description(node,l)
-        for c in node.childNodes:
+        desc = self.node.getAttribute("description")
+        if desc:
+            l.append(nvpair_format("description",desc))
+        for c in self.node.childNodes:
             if is_comment(c):
                 comments.append(c.data)
                 continue
@@ -993,15 +993,13 @@ class CibNode(CibObject):
         "instance_attributes": "attributes",
         "utilization": "utilization",
     }
-    def repr_cli_head(self,node):
-        obj_type = vars.cib_cli_map[node.tagName]
-        node_id = node.getAttribute("id")
-        uname = node.getAttribute("uname")
-        s = cli_display.keyword(obj_type)
-        if node_id != uname:
-            s = '%s $id="%s"' % (s, node_id)
+    def repr_cli_head(self):
+        uname = self.node.getAttribute("uname")
+        s = cli_display.keyword(self.obj_type)
+        if self.obj_id != uname:
+            s = '%s $id="%s"' % (s, self.obj_id)
         s = '%s %s' % (s, cli_display.id(uname))
-        type = node.getAttribute("type")
+        type = self.node.getAttribute("type")
         if type != vars.node_default_type:
             s = '%s:%s' % (s, type)
         return s
@@ -1051,27 +1049,25 @@ class CibPrimitive(CibObject):
         "meta_attributes": "meta",
         "utilization": "utilization",
     }
-    def repr_cli_head(self,node):
-        obj_type = vars.cib_cli_map[node.tagName]
-        node_id = node.getAttribute("id")
-        if obj_type == "primitive":
-            template_ref = node.getAttribute("template")
+    def repr_cli_head(self):
+        if self.obj_type == "primitive":
+            template_ref = self.node.getAttribute("template")
         else:
             template_ref = None
         if template_ref:
             rsc_spec = "@%s" % cli_display.idref(template_ref)
         else:
-            ra_type = node.getAttribute("type")
-            ra_class = node.getAttribute("class")
-            ra_provider = node.getAttribute("provider")
+            ra_type = self.node.getAttribute("type")
+            ra_class = self.node.getAttribute("class")
+            ra_provider = self.node.getAttribute("provider")
             s1 = s2 = ''
             if ra_class:
                 s1 = "%s:"%ra_class
             if ra_provider:
                 s2 = "%s:"%ra_provider
             rsc_spec = ''.join((s1,s2,ra_type))
-        s = cli_display.keyword(obj_type)
-        id = cli_display.id(node_id)
+        s = cli_display.keyword(self.obj_type)
+        id = cli_display.id(self.obj_id)
         return "%s %s %s" % (s, id, rsc_spec)
     def repr_cli_child(self,c,format):
         if c.tagName in self.set_names:
@@ -1173,24 +1169,18 @@ class CibContainer(CibObject):
         "instance_attributes": "params",
         "meta_attributes": "meta",
     }
-    def repr_cli_head(self,node):
-        try:
-            obj_type = vars.cib_cli_map[node.tagName]
-        except:
-            unsupported_err(node.tagName)
-            return None
-        node_id = node.getAttribute("id")
+    def repr_cli_head(self):
         children = []
-        for c in node.childNodes:
+        for c in self.node.childNodes:
             if not is_element(c):
                 continue
-            if (obj_type == "group" and is_primitive(c)) or \
+            if (self.obj_type == "group" and is_primitive(c)) or \
                     is_child_rsc(c):
                 children.append(cli_display.rscref(c.getAttribute("id")))
-            elif obj_type in vars.clonems_tags and is_child_rsc(c):
+            elif self.obj_type in vars.clonems_tags and is_child_rsc(c):
                 children.append(cli_display.rscref(c.getAttribute("id")))
-        s = cli_display.keyword(obj_type)
-        id = cli_display.id(node_id)
+        s = cli_display.keyword(self.obj_type)
+        id = cli_display.id(self.obj_id)
         return "%s %s %s" % (s, id, ' '.join(children))
     def cli_list2node(self,cli_list,oldnode):
         head = copy.copy(cli_list[0])
@@ -1230,15 +1220,13 @@ class CibLocation(CibObject):
     '''
     Location constraint.
     '''
-    def repr_cli_head(self,node):
-        obj_type = vars.cib_cli_map[node.tagName]
-        node_id = node.getAttribute("id")
-        rsc = cli_display.rscref(node.getAttribute("rsc"))
-        s = cli_display.keyword(obj_type)
-        id = cli_display.id(node_id)
+    def repr_cli_head(self):
+        rsc = cli_display.rscref(self.node.getAttribute("rsc"))
+        s = cli_display.keyword(self.obj_type)
+        id = cli_display.id(self.obj_id)
         s = "%s %s %s"%(s,id,rsc)
-        pref_node = node.getAttribute("node")
-        score = cli_display.score(get_score(node))
+        pref_node = self.node.getAttribute("node")
+        score = cli_display.score(get_score(self.node))
         if pref_node:
             return "%s %s: %s" % (s,score,pref_node)
         else:
@@ -1291,24 +1279,22 @@ class CibSimpleConstraint(CibObject):
     '''
     Colocation and order constraints.
     '''
-    def repr_cli_head(self,node):
-        obj_type = vars.cib_cli_map[node.tagName]
-        node_id = node.getAttribute("id")
-        s = cli_display.keyword(obj_type)
-        id = cli_display.id(node_id)
-        score = cli_display.score(get_score(node) or get_kind(node))
-        if node.getElementsByTagName("resource_set"):
-            col = rsc_set_constraint(node,obj_type)
+    def repr_cli_head(self):
+        s = cli_display.keyword(self.obj_type)
+        id = cli_display.id(self.obj_id)
+        score = cli_display.score(get_score(self.node) or get_kind(self.node))
+        if self.node.getElementsByTagName("resource_set"):
+            col = rsc_set_constraint(self.node,self.obj_type)
         else:
-            col = simple_rsc_constraint(node,obj_type)
+            col = simple_rsc_constraint(self.node,self.obj_type)
         if not col:
             return None
-        if obj_type == "order":
-            symm = node.getAttribute("symmetrical")
+        if self.obj_type == "order":
+            symm = self.node.getAttribute("symmetrical")
             if symm:
                 col.append("symmetrical=%s"%symm)
-        elif obj_type == "colocation":
-            node_attr = node.getAttribute("node-attribute")
+        elif self.obj_type == "colocation":
+            node_attr = self.node.getAttribute("node-attribute")
             if node_attr:
                 col.append("node-attribute=%s"%node_attr)
         return "%s %s %s: %s" % (s,id,score,' '.join(col))
@@ -1330,19 +1316,17 @@ class CibRscTicket(CibSimpleConstraint):
     '''
     rsc_ticket constraint.
     '''
-    def repr_cli_head(self,node):
-        obj_type = vars.cib_cli_map[node.tagName]
-        node_id = node.getAttribute("id")
-        s = cli_display.keyword(obj_type)
-        id = cli_display.id(node_id)
-        ticket = cli_display.ticket(node.getAttribute("ticket"))
-        if node.getElementsByTagName("resource_set"):
-            col = rsc_set_constraint(node,obj_type)
+    def repr_cli_head(self):
+        s = cli_display.keyword(self.obj_type)
+        id = cli_display.id(self.obj_id)
+        ticket = cli_display.ticket(self.node.getAttribute("ticket"))
+        if self.node.getElementsByTagName("resource_set"):
+            col = rsc_set_constraint(self.node,self.obj_type)
         else:
-            col = simple_rsc_constraint(node,obj_type)
+            col = simple_rsc_constraint(self.node,self.obj_type)
         if not col:
             return None
-        a = node.getAttribute("loss-policy")
+        a = self.node.getAttribute("loss-policy")
         if a:
             col.append("loss-policy=%s" % a)
         return "%s %s %s: %s" % (s,id,ticket,' '.join(col))
@@ -1351,9 +1335,9 @@ class CibProperty(CibObject):
     '''
     Cluster properties.
     '''
-    def repr_cli_head(self,node):
+    def repr_cli_head(self):
         return '%s $id="%s"' % \
-            (cli_display.keyword(self.obj_type), node.getAttribute("id"))
+            (cli_display.keyword(self.obj_type), self.obj_id)
     def repr_cli_child(self,c,format):
         name = c.getAttribute("name")
         if "value" in c.attributes.keys():
@@ -1401,11 +1385,9 @@ class CibAcl(CibObject):
     '''
     User and role ACL.
     '''
-    def repr_cli_head(self,node):
-        obj_type = vars.cib_cli_map[node.tagName]
-        id = node.getAttribute("id")
-        s = cli_display.keyword(obj_type)
-        id = cli_display.id(id)
+    def repr_cli_head(self):
+        s = cli_display.keyword(self.obj_type)
+        id = cli_display.id(self.obj_id)
         return "%s %s" % (s,id)
     def repr_cli_child(self,c,format):
         if c.tagName in vars.acl_rule_names:
