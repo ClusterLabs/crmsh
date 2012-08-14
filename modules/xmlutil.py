@@ -19,6 +19,7 @@ import os
 import subprocess
 import xml.dom.minidom
 
+from schema import Schema, rng_attr_values, rng_attr_values_l
 from userprefs import Options, UserPrefs
 from vars import Vars, getuser, gethomedir
 from msg import *
@@ -830,7 +831,7 @@ def new_cib():
     doc.appendChild(cib)
     configuration = doc.createElement("configuration")
     cib.appendChild(configuration)
-    for name in vars.req_sections:
+    for name in schema.get('sub', "configuration", 'r'):
         node = doc.createElement(name)
         configuration.appendChild(node)
     return doc
@@ -959,4 +960,5 @@ def merge_nodes_2(dnode, snode):
 
 user_prefs = UserPrefs.getInstance()
 vars = Vars.getInstance()
+schema = Schema.getInstance()
 # vim:ts=4:sw=4:et:
