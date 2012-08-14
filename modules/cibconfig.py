@@ -796,6 +796,9 @@ class CibObject(object):
     def repr_cli_child(self,c,format):
         if c.tagName in self.set_names:
             return self.attr_set_str(c)
+    def get_oldnode(self):
+        '''Used to retrieve sub id's'''
+        return self.node
     def cli2node(self,cli,oldnode = None):
         '''
         Convert CLI representation to a DOM node.
@@ -805,12 +808,7 @@ class CibObject(object):
         if not cli_list:
             return None
         if not oldnode:
-            if self.obj_type == "property":
-                oldnode = get_topnode(cib_factory.doc,self.parent_type)
-            elif self.xml_obj_type in vars.defaults_tags:
-                oldnode = self.node.parentNode
-            else:
-                oldnode = self.node
+            oldnode = self.get_oldnode()
         comments = get_comments(cli_list)
         node = self.cli_list2node(cli_list,oldnode)
         if comments and node:
@@ -1345,6 +1343,12 @@ class CibProperty(CibObject):
         else:
             value = None
         return nvpair_format(name,value)
+    def get_oldnode(self):
+        '''Used to retrieve sub id's'''
+        if self.obj_type == "property":
+            return get_topnode(cib_factory.doc,self.parent_type)
+        else:
+            return self.node.parentNode
     def cli_list2node(self,cli_list,oldnode):
         head = copy.copy(cli_list[0])
         head[0] = backtrans[head[0]]
