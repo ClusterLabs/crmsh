@@ -171,6 +171,10 @@ class Vars(Singleton):
     node_default_type = "normal"
     node_attributes_keyw = ("attributes","utilization")
     shadow_envvar = "CIB_shadow"
+    attr_defaults = {
+        "resource_set": {"sequential": "true"},
+        "rule": {"boolean-op": "and"},
+    }
 
     prompt = ''
     tmpfiles = []

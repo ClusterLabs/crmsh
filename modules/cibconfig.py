@@ -1534,6 +1534,15 @@ class CibFactory(Singleton):
             newnode = self.doc.importNode(newnode,1)
         oldnode.parentNode.replaceChild(newnode,oldnode)
         return newnode
+    def copyNode(self,node):
+        if not self.doc:
+            empty_cib_err()
+            return None
+        if node.ownerDocument != self.doc:
+            newnode = self.doc.importNode(node,1)
+        else:
+            newnode = node.cloneNode(1)
+        return newnode
     def is_cib_supported(self,cib):
         'Do we support this CIB?'
         req = cib.getAttribute("crm_feature_set")

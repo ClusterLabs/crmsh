@@ -414,6 +414,18 @@ def printid(node_list):
     for node in node_list:
         id = node.getAttribute("id")
         if id: print "node id:",id
+def remove_dflt_attrs(node_list):
+    '''
+    Drop optional attributes which are already set to default
+    '''
+    for n in node_list:
+        try:
+            d = vars.attr_defaults[n.tagName]
+            for a in d.keys():
+                if n.getAttribute(a) == d[a]:
+                    n.removeAttribute(a)
+        except:
+            pass
 def sanitize_cib(doc):
     xml_processnodes(doc,is_status_node,rmnodes)
     #xml_processnodes(doc,is_element,printid)
@@ -421,6 +433,7 @@ def sanitize_cib(doc):
     xml_processnodes(doc,is_whitespace,rmnodes)
     #xml_processnodes(doc,is_comment,rmnodes)
     xml_processnodes(doc,is_container,sort_container_children)
+    xml_processnodes(doc,is_element,remove_dflt_attrs)
     xmltraverse(doc,drop_attr_defaults)
 
 def is_simpleconstraint(node):
