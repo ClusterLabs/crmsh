@@ -26,7 +26,7 @@ Source0:	crmsh.tar.bz2
 BuildRoot:	%{_tmppath}/%{name}-%{version}-build
 AutoReqProv:	on
 Requires(pre):	pacemaker
-Requires:	python >= 2.4 python-xdg
+Requires:	python >= 2.4
 
 %if 0%{?suse_version}
 # Suse splits this off into a separate package
