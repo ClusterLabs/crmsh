@@ -120,6 +120,7 @@ fi
 %doc ChangeLog
 %doc README
 
+%dir %{crmsh_docdir}
 %dir %attr (770, %{uname}, %{gname}) %{_var}/cache/crm
 
 %changelog
