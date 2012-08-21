@@ -97,7 +97,6 @@ rm -rf %{buildroot}
 %post
 # Needed so that the shell doesn't get stuck on escape
 # sequences
-export TERM=dumb
 if ! /usr/share/crmsh/tests/regression.sh ; then
 	echo "Shell tests failed."
 	cat crmtestout/regression.out
