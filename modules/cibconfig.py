@@ -650,7 +650,7 @@ def mkxmlrsc_set(e,oldnode,id_hint):
             ref_node = cib_factory.createElement(ref[0])
             ref_node.setAttribute(ref[1][0],ref[1][1])
             node.appendChild(ref_node)
-        elif ref[0] in ("sequential", "action", "role"):
+        elif ref[0] in ("sequential", "require-all", "action", "role"):
             node.setAttribute(ref[0], ref[1])
     return node
 

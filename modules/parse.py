@@ -366,6 +366,12 @@ class ResourceSet(object):
         (the first two elements of set_pl are optional)
     Action/role change makes a new resource set.
     '''
+    open_set = ('(','[')
+    close_set = (')',']')
+    matching = {
+        '[': ']',
+        '(': ')',
+    }
     def __init__(self,type,s,cli_list):
         self.type = type
         self.valid_q = (type == "order") and \
@@ -376,16 +382,17 @@ class ResourceSet(object):
         self.cli_list = cli_list
         self.reset_set()
         self.sequential = True
+        self.require_all = True
         self.fix_parentheses()
     def fix_parentheses(self):
         newtoks = []
         for p in self.tokens:
-            if p.startswith('(') and len(p) > 1:
-                newtoks.append('(')
+            if p[0] in self.open_set and len(p) > 1:
+                newtoks.append(p[0])
                 newtoks.append(p[1:])
-            elif p.endswith(')') and len(p) > 1:
+            elif p[len(p)-1] in self.close_set and len(p) > 1:
                 newtoks.append(p[0:len(p)-1])
-                newtoks.append(')')
+                newtoks.append(p[len(p)-1])
             else:
                 newtoks.append(p)
         self.tokens = newtoks
@@ -393,6 +400,7 @@ class ResourceSet(object):
         self.set_pl = []
         self.prev_q = ''  # previous qualifier (action or role)
         self.curr_attr = ''  # attribute (action or role)
+        self.opened = ''  # the open paren/bracket
     def save_set(self):
         if not self.set_pl:
             return
@@ -400,6 +408,8 @@ class ResourceSet(object):
             self.set_pl.insert(0,[self.curr_attr,self.prev_q])
         if not self.sequential:
             self.set_pl.insert(0,["sequential","false"])
+        if not self.require_all:
+            self.set_pl.insert(0,["require-all","false"])
         self.cli_list.append(["resource_set",self.set_pl])
         self.reset_set()
     def splitrsc(self,p):
@@ -411,13 +421,22 @@ class ResourceSet(object):
             tokpos += 1
             if p == "_rsc_set_":
                 continue # a degenerate resource set
-            if p == '(':
+            if p in self.open_set:
                 if self.set_pl: # save the set before
                     self.save_set()
+                if self.opened:
+                    syntax_err(self.tokens[tokpos:],context = self.type)
+                    return False
                 self.sequential = False
+                if p == '[':
+                    self.require_all = False
+                self.opened = p
                 continue
-            if p == ')':
-                if self.sequential:  # no '('
+            if p in self.close_set:
+                if not self.opened:
+                    syntax_err(self.tokens[tokpos:],context = self.type)
+                    return False
+                if p != self.matching[self.opened]:
                     syntax_err(self.tokens[tokpos:],context = self.type)
                     return False
                 if not self.set_pl:  # empty sets not allowed
@@ -425,6 +444,8 @@ class ResourceSet(object):
                     return False
                 self.save_set()
                 self.sequential = True
+                if p == ']':
+                    self.require_all = True
                 continue
             rsc,q = self.splitrsc(p)
             if q != self.prev_q: # one set can't have different roles/actions
@@ -439,7 +460,7 @@ class ResourceSet(object):
             else:
                 self.curr_attr = ''
             self.set_pl.append(["resource_ref",["id",rsc]])
-        if not self.sequential: # no ')'
+        if not self.sequential or not self.require_all: # no close
             syntax_err(self.tokens[tokpos:],context = self.type)
             return False
         if self.set_pl: # save the final set

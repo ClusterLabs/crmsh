@@ -205,10 +205,11 @@ def rsc_set_constraint(node,obj_type):
     col = []
     cnt = 0
     for n in node.getElementsByTagName("resource_set"):
-        sequential = True
-        if n.getAttribute("sequential") == "false":
-            sequential = False
-        if not sequential:
+        sequential = get_boolean(n.getAttribute("sequential"), True)
+        require_all = get_boolean(n.getAttribute("require-all"), True)
+        if not sequential and not require_all:
+            col.append("[")
+        elif not sequential:
             col.append("(")
         role = n.getAttribute("role")
         action = n.getAttribute("action")
@@ -217,9 +218,11 @@ def rsc_set_constraint(node,obj_type):
             q = (obj_type == "order") and action or role
             col.append(q and "%s:%s"%(rsc,q) or rsc)
             cnt += 1
-        if not sequential:
+        if not sequential and not require_all:
+            col.append("]")
+        elif not sequential:
             col.append(")")
-    if (sequential and obj_type != "rsc_ticket" and cnt <= 2) or \
+    if (sequential and require_all and obj_type != "rsc_ticket" and cnt <= 2) or \
             (obj_type == "rsc_ticket" and cnt <= 1): # a degenerate thingie
         col.insert(0,"_rsc_set_")
     return col

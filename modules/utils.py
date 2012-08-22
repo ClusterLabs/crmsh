@@ -56,6 +56,10 @@ def is_boolean_true(opt):
     return opt.lower() in ("yes","true","on")
 def is_boolean_false(opt):
     return opt.lower() in ("no","false","off")
+def get_boolean(opt, dflt):
+    if not opt:
+        return dflt
+    return is_boolean_true(opt)
 
 def keyword_cmp(string1, string2):
     return string1.lower() == string2.lower()
