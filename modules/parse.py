@@ -412,6 +412,17 @@ class ResourceSet(object):
             self.set_pl.insert(0,["require-all","false"])
         self.cli_list.append(["resource_set",self.set_pl])
         self.reset_set()
+    def parseattr(self, p):
+        l = p.split('=')
+        if len(l) != 2 or l[0] not in ("sequential","require-all"):
+            return False
+        if not verify_boolean(l[1]):
+            return False
+        if l[0] == "sequential":
+            self.sequential = get_boolean(l[1])
+        else:
+            self.require_all = get_boolean(l[1])
+        return True
     def splitrsc(self,p):
         l = p.split(':')
         return (len(l) == 1) and [p,''] or l
@@ -447,6 +458,11 @@ class ResourceSet(object):
                 if p == ']':
                     self.require_all = True
                 continue
+            if '=' in p:
+                if not self.parseattr(p):
+                    syntax_err(self.tokens[tokpos:],context = self.type)
+                    return False
+                continue
             rsc,q = self.splitrsc(p)
             if q != self.prev_q: # one set can't have different roles/actions
                 self.save_set()
@@ -460,7 +476,7 @@ class ResourceSet(object):
             else:
                 self.curr_attr = ''
             self.set_pl.append(["resource_ref",["id",rsc]])
-        if not self.sequential or not self.require_all: # no close
+        if self.opened: # no close
             syntax_err(self.tokens[tokpos:],context = self.type)
             return False
         if self.set_pl: # save the final set

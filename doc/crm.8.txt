@@ -1746,18 +1746,33 @@ This constraint expresses the placement relation between two
 or more resources. If there are more than two resources, then the
 constraint is called a resource set.
 
-Collocation resource sets have an extra attribute to allow for
-sets of resources which don't depend on each other in terms of
-state. The shell syntax for such sets is to put resources in
-parentheses.
+Collocation resource sets have an extra attribute (`sequential`)
+to allow for sets of resources which don't depend on each other
+in terms of state. The shell syntax for such sets is to put
+resources in parentheses.
 
-It may be required that only one out of a set of resources is
-present. Such sets are enclosed in brackets (`[` and `]`).
+If it is not required that all resources in a set are collocated,
+enclose the set in brackets (`[` and `]`).
 
-Sets, either of the same or different kind, cannot be nested.
+Sets cannot be nested.
 
 The optional `node-attribute` references an attribute in nodes'
 instance attributes.
+
+.Note on resource sets' XML attributes
+****************************
+The XML attribute `require-all` controls whether all resources in
+a set are, well, required. The bracketed sets actually have this
+attribute as well as `sequential` set to `false`. If you need a
+different combination, for whatever reason, just set one of the
+attributes within the set. Something like this:
+
+...............
+    crm(live)configure# order o1 Mandatory: [ A B sequential=true ] C
+...............
+It is up to you to find out whether such a combination makes
+sense.
+****************************
 
 Usage:
 ...............
@@ -1782,9 +1797,10 @@ Ordered resource sets have an extra attribute to allow for sets
 of resources whose actions may run in parallel. The shell syntax
 for such sets is to put resources in parentheses.
 
-It may be required that only one out of a set of resources is
-started or promoted. Such sets are enclosed in brackets (`[` and
-`]`).
+If it is not required that all resources in a set are started or
+promoted, enclose the set in brackets (`[` and `]`).
+
+Sets cannot be nested.
 
 Three strings are reserved to specify a kind of order constraint:
 `Mandatory`, `Optional`, and `Serialize`. It is preferred to use

@@ -205,10 +205,13 @@ def rsc_set_constraint(node,obj_type):
     col = []
     cnt = 0
     for n in node.getElementsByTagName("resource_set"):
+        add_seq = False
         sequential = get_boolean(n.getAttribute("sequential"), True)
         require_all = get_boolean(n.getAttribute("require-all"), True)
-        if not sequential and not require_all:
+        if not require_all:
             col.append("[")
+            if sequential:
+                add_seq = True
         elif not sequential:
             col.append("(")
         role = n.getAttribute("role")
@@ -218,7 +221,9 @@ def rsc_set_constraint(node,obj_type):
             q = (obj_type == "order") and action or role
             col.append(q and "%s:%s"%(rsc,q) or rsc)
             cnt += 1
-        if not sequential and not require_all:
+        if not require_all:
+            if add_seq:
+                col.append('sequential="true"')
             col.append("]")
         elif not sequential:
             col.append(")")
