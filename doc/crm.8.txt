@@ -1751,13 +1751,43 @@ to allow for sets of resources which don't depend on each other
 in terms of state. The shell syntax for such sets is to put
 resources in parentheses.
 
-If it is not required that all resources in a set are collocated,
-enclose the set in brackets (`[` and `]`).
-
 Sets cannot be nested.
 
 The optional `node-attribute` references an attribute in nodes'
 instance attributes.
+
+Usage:
+...............
+        colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>] ...
+          [node-attribute=<node_attr>]
+...............
+Example:
+...............
+        colocation dummy_and_apache -inf: apache dummy
+        colocation c1 inf: A ( B C )
+...............
+
+[[cmdhelp_configure_order,order resources]]
+==== `order`
+
+This constraint expresses the order of actions on two resources
+or more resources. If there are more than two resources, then the
+constraint is called a resource set.
+
+Ordered resource sets have an extra attribute to allow for sets
+of resources whose actions may run in parallel. The shell syntax
+for such sets is to put resources in parentheses.
+
+If the subsequent resource can start or promote after any one of the
+resources in a set has done, enclose the set in brackets (`[` and `]`).
+
+Sets cannot be nested.
+
+Three strings are reserved to specify a kind of order constraint:
+`Mandatory`, `Optional`, and `Serialize`. It is preferred to use
+one of these settings instead of score. Previous versions mapped
+scores `0` and `inf` to keywords `advisory` and `mandatory`.
+That is still valid but deprecated.
 
 .Note on resource sets' XML attributes
 ****************************
@@ -1776,40 +1806,6 @@ sense.
 
 Usage:
 ...............
-        colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>] ...
-          [node-attribute=<node_attr>]
-...............
-Example:
-...............
-        colocation dummy_and_apache -inf: apache dummy
-        colocation c1 inf: A ( B C )
-        colocation c1 inf: A [ B C ]
-...............
-
-[[cmdhelp_configure_order,order resources]]
-==== `order`
-
-This constraint expresses the order of actions on two resources
-or more resources. If there are more than two resources, then the
-constraint is called a resource set.
-
-Ordered resource sets have an extra attribute to allow for sets
-of resources whose actions may run in parallel. The shell syntax
-for such sets is to put resources in parentheses.
-
-If it is not required that all resources in a set are started or
-promoted, enclose the set in brackets (`[` and `]`).
-
-Sets cannot be nested.
-
-Three strings are reserved to specify a kind of order constraint:
-`Mandatory`, `Optional`, and `Serialize`. It is preferred to use
-one of these settings instead of score. Previous versions mapped
-scores `0` and `inf` to keywords `advisory` and `mandatory`.
-That is still valid but deprecated.
-
-Usage:
-...............
         order <id> {kind|<score>}: <rsc>[:<action>] <rsc>[:<action>] ...
           [symmetrical=<bool>]
 
@@ -1819,7 +1815,7 @@ Example:
 ...............
         order c_apache_1 Mandatory: apache:start ip_1
         order o1 Serialize: A ( B C )
-        order order_2 Mandatory: A [ B C ]
+        order order_2 Mandatory: [ A B ] C
 ...............
 
 [[cmdhelp_configure_rsc_ticket,resources ticket dependency]]
