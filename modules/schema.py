@@ -18,8 +18,7 @@
 import os
 from singletonmixin import Singleton
 from vars import Vars
-from pacemaker import *
-from xmlutil import *
+from pacemaker import CrmSchema
 
 def get_attrs(schema, name):
     return {
@@ -84,14 +83,12 @@ class Schema(Singleton):
         self.crm_schema = None
     def reset(self):
         self.store = {}
-    def init_schema(self, cib = None):
-        # if cib supplied, then enforce schema load
-        if not cib:
-            if self.crm_schema:
-                return
-            doc,cib = read_cib(cibdump2doc)
+    def init_schema(self, cib):
         self.crm_schema = CrmSchema(cib, vars.crm_schema_dir)
         self.reset()
+    def test_schema(self, cib):
+        crm_schema = CrmSchema(cib, vars.crm_schema_dir)
+        return crm_schema.validate_name
     def get(self, t, name, set = None):
         if not self.crm_schema:
             self.init_schema()

@@ -107,7 +107,6 @@ def read_cib(fun, params = None):
         return doc,None
     cib = doc.childNodes[0]
     if not is_element(cib) or cib.tagName != "cib":
-        cib_no_elem_err("cib")
         return doc,None
     return doc,cib
 

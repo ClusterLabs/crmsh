@@ -2000,6 +2000,24 @@ Example:
         op_defaults record-pending=true
 ...............
 
+[[cmdhelp_configure_schema,set or display current CIB RNG schema]]
+==== `schema`
+
+CIB's content is validated by a RNG schema. Pacemaker supports
+several, depending on version. Currently supported schemas are
+`pacemaker-1.0`, `pacemaker-1.1`, and `pacemaker-1.2`.
+
+Use this command to display or switch to another RNG schema.
+
+Usage:
+...............
+        schema [<schema>]
+...............
+Example:
+...............
+        schema pacemaker-1.1
+...............
+
 [[cmdhelp_configure_show,display CIB objects]]
 ==== `show`
 

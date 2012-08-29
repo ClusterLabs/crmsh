@@ -1407,6 +1407,7 @@ cluster.
         self.cmd_table["rename"] = (self.rename,(2,2),1,0)
         self.cmd_table["save"] = (self.save,(1,2),1,0)
         self.cmd_table["load"] = (self.load,(2,3),1,0)
+        self.cmd_table["schema"] = (self.schema,(0,1),1,0)
         self.cmd_table["node"] = (self.conf_node,(1,),1,0)
         self.cmd_table["primitive"] = (self.conf_primitive,(2,),1,0)
         self.cmd_table["group"] = (self.conf_group,(2,),1,0)
@@ -1589,9 +1590,21 @@ cluster.
             return cib_factory.upgrade_cib_06to10(True)
         else:
             return cib_factory.upgrade_cib_06to10()
+    def schema(self,cmd,schema_st=None):
+        "usage: schema [<schema>]"
+        if not cib_factory.is_cib_sane():
+            return False
+        if not schema_st:
+            print cib_factory.get_schema()
+            return True
+        return cib_factory.change_schema(schema_st)
     def __conf_object(self,cmd,*args):
         "The configure object command."
         if not cib_factory.is_cib_sane():
+            return False
+        if cmd in vars.cib_cli_map.values() and \
+                not cib_factory.is_elem_supported(cmd):
+            common_err("%s not supported by the RNG schema" % cmd)
             return False
         f = lambda: cib_factory.create_object(cmd,*args)
         return f()
