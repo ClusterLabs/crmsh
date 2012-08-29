@@ -24,11 +24,15 @@ from msg import *
 #
 # CLI format generation utilities (from XML)
 #
-def cli_format(pl,format):
+def _cli_format(pl,sep,format):
     if format > 0:
         return ' \\\n\t'.join(pl)
     else:
-        return ' '.join(pl)
+        return sep.join(pl)
+def cli_format(pl,format):
+    return _cli_format(pl,' ',format)
+def cli_format_xml(pl,format):
+    return _cli_format(pl,'',format)
 def cli_operations(node,format = 1):
     l = []
     node_id = node.getAttribute("id")

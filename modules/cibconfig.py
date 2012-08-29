@@ -718,7 +718,7 @@ class CibObject(object):
     '''
     state_fmt = "%16s %-8s%-8s%-8s%-8s%-8s%-4s"
     set_names = {}
-    def __init__(self,xml_obj_type,obj_id = None):
+    def __init__(self,xml_obj_type):
         if not xml_obj_type in cib_object_map:
             unsupported_err(xml_obj_type)
             return
@@ -734,12 +734,8 @@ class CibObject(object):
         self.recreate = False # constraints to be recreated
         self.parent = None # object superior (group/clone/ms)
         self.children = [] # objects inferior
-        if obj_id:
-            if not self.mknode(obj_id):
-                self = None # won't do :(
-        else:
-            self.obj_id = None
-            self.node = None
+        self.obj_id = None
+        self.node = None
     def dump_state(self):
         'Print object status'
         print self.state_fmt % \
@@ -750,10 +746,7 @@ class CibObject(object):
         h = cli_display.keyword("xml")
         l = self.node.toprettyxml('\t').split('\n')
         l = [x for x in l if x] # drop empty lines
-        if format > 0:
-            return "%s %s" % (h,' \\\n'.join(l))
-        else:
-            return "%s %s" % (h,''.join(l))
+        return "%s %s" % (h,cli_format_xml(l,format))
     def repr_cli(self,format = 1):
         '''
         CLI representation for the node.
@@ -764,7 +757,7 @@ class CibObject(object):
         l = []
         if format < 0:
             cli_display.set_no_pretty()
-        head_s = self.repr_cli_head()
+        head_s = self.repr_cli_head(format)
         if not head_s: # everybody must have a head
             if format < 0:
                 cli_display.reset_no_pretty()
@@ -799,6 +792,14 @@ class CibObject(object):
     def get_oldnode(self):
         '''Used to retrieve sub id's'''
         return self.node
+    def set_id(self, obj_id=None):
+        if obj_id:
+            self.obj_id = obj_id
+        else:
+            self.obj_id = self.node and self.node.getAttribute("id") or None
+    def set_nodeid(self):
+        if self.node and self.obj_id:
+            self.node.setAttribute("id",self.obj_id)
     def cli2node(self,cli,oldnode = None):
         '''
         Convert CLI representation to a DOM node.
@@ -841,15 +842,13 @@ class CibObject(object):
     def mknode(self,obj_id):
         if not cib_factory.is_cib_sane():
             return False
-        if id_store.id_in_use(obj_id):
-            return False
         if self.xml_obj_type in vars.defaults_tags:
             tag = "meta_attributes"
         else:
             tag = self.xml_obj_type
         self.node = cib_factory.createElement(tag)
-        self.obj_id = obj_id
-        self.node.setAttribute("id",self.obj_id)
+        self.set_id(obj_id)
+        self.set_nodeid()
         self.origin = "user"
         return True
     def can_be_renamed(self):
@@ -882,8 +881,6 @@ class CibObject(object):
         '''
         if not self.node:
             return True
-        if not self.attr_exists("id"):
-            return False
         cli_display.set_no_pretty()
         cli_text = self.repr_cli(format = 0)
         cli_display.reset_no_pretty()
@@ -991,7 +988,7 @@ class CibNode(CibObject):
         "instance_attributes": "attributes",
         "utilization": "utilization",
     }
-    def repr_cli_head(self):
+    def repr_cli_head(self,format):
         uname = self.node.getAttribute("uname")
         s = cli_display.keyword(self.obj_type)
         if self.obj_id != uname:
@@ -1047,7 +1044,7 @@ class CibPrimitive(CibObject):
         "meta_attributes": "meta",
         "utilization": "utilization",
     }
-    def repr_cli_head(self):
+    def repr_cli_head(self,format):
         if self.obj_type == "primitive":
             template_ref = self.node.getAttribute("template")
         else:
@@ -1167,7 +1164,7 @@ class CibContainer(CibObject):
         "instance_attributes": "params",
         "meta_attributes": "meta",
     }
-    def repr_cli_head(self):
+    def repr_cli_head(self,format):
         children = []
         for c in self.node.childNodes:
             if not is_element(c):
@@ -1218,7 +1215,7 @@ class CibLocation(CibObject):
     '''
     Location constraint.
     '''
-    def repr_cli_head(self):
+    def repr_cli_head(self,format):
         rsc = cli_display.rscref(self.node.getAttribute("rsc"))
         s = cli_display.keyword(self.obj_type)
         id = cli_display.id(self.obj_id)
@@ -1277,7 +1274,7 @@ class CibSimpleConstraint(CibObject):
     '''
     Colocation and order constraints.
     '''
-    def repr_cli_head(self):
+    def repr_cli_head(self,format):
         s = cli_display.keyword(self.obj_type)
         id = cli_display.id(self.obj_id)
         score = cli_display.score(get_score(self.node) or get_kind(self.node))
@@ -1314,7 +1311,7 @@ class CibRscTicket(CibSimpleConstraint):
     '''
     rsc_ticket constraint.
     '''
-    def repr_cli_head(self):
+    def repr_cli_head(self,format):
         s = cli_display.keyword(self.obj_type)
         id = cli_display.id(self.obj_id)
         ticket = cli_display.ticket(self.node.getAttribute("ticket"))
@@ -1333,7 +1330,7 @@ class CibProperty(CibObject):
     '''
     Cluster properties.
     '''
-    def repr_cli_head(self):
+    def repr_cli_head(self,format):
         return '%s $id="%s"' % \
             (cli_display.keyword(self.obj_type), self.obj_id)
     def repr_cli_child(self,c,format):
@@ -1389,7 +1386,7 @@ class CibAcl(CibObject):
     '''
     User and role ACL.
     '''
-    def repr_cli_head(self):
+    def repr_cli_head(self,format):
         s = cli_display.keyword(self.obj_type)
         id = cli_display.id(self.obj_id)
         return "%s %s" % (s,id)
@@ -1737,8 +1734,8 @@ class CibFactory(Singleton):
             pnode = node
         obj = cib_object_map[pnode.tagName][1](pnode.tagName)
         obj.origin = "cib"
-        obj.obj_id = node.getAttribute("id")
         obj.node = node
+        obj.set_id()
         self.cib_objects.append(obj)
     def populate(self):
         "Walk the cib and collect cib objects."
@@ -1982,15 +1979,13 @@ class CibFactory(Singleton):
         return symm and symm != "true"
     def new_object(self,obj_type,obj_id):
         "Create a new object of type obj_type."
-        if id_store.id_in_use(obj_id):
+        if obj_id and self.find_object(obj_id):
             return None
         for xml_obj_type,v in cib_object_map.items():
             if v[0] == obj_type:
-                obj = v[1](xml_obj_type,obj_id)
-                if obj.obj_id:
-                    return obj
-                else:
-                    return None
+                obj = v[1](xml_obj_type)
+                obj.mknode(obj_id)
+                return obj
         return None
     def mkobj_list(self,mode,*args):
         obj_list = []
@@ -2027,28 +2022,20 @@ class CibFactory(Singleton):
           c) there may not be duplicate children
         '''
         obj_id = node.getAttribute("id")
-        if not obj_id:
-            common_err("element %s has no id" % node.tagName)
-            return False
-        try:
-            obj_type = cib_object_map[node.tagName][0]
-        except:
-            common_err("element %s (%s) not recognized"%(node.tagName,obj_id))
-            return False
         c_ids = get_rsc_children_ids(node)
         if not c_ids:
             return True
         rc = True
         c_dict = {}
         for child_id in c_ids:
-            if not self.verify_child(child_id,obj_type,obj_id):
+            if not self.verify_child(child_id,node.tagName,obj_id):
                 rc = False
             if child_id in c_dict:
                 common_err("in group %s child %s listed more than once"%(obj_id,child_id))
                 rc = False
             c_dict[child_id] = 1
         return rc
-    def verify_child(self,child_id,obj_type,obj_id):
+    def verify_child(self,child_id,parent_tag,obj_id):
         'Check if child exists and obj_id is (or may become) its parent.'
         child = self.find_object(child_id)
         if not child:
@@ -2057,14 +2044,14 @@ class CibFactory(Singleton):
         if child.parent and child.parent.obj_id != obj_id:
             common_err("%s already in use at %s"%(child_id,child.parent.obj_id))
             return False
-        if obj_type == "group" and child.obj_type != "primitive":
+        if parent_tag == "group" and child.obj_type != "primitive":
             common_err("a group may contain only primitives; %s is %s"%(child_id,child.obj_type))
             return False
         if not child.obj_type in vars.children_tags:
-            common_err("%s may contain a primitive or a group; %s is %s"%(obj_type,child_id,child.obj_type))
+            common_err("%s may contain a primitive or a group; %s is %s"%(parent_tag,child_id,child.obj_type))
             return False
         return True
-    def verify_element(self,node):
+    def verify_element(self,obj):
         '''
         Can we create this object given its CLI representation.
         This is not about syntax, we're past that, but about
@@ -2074,9 +2061,18 @@ class CibFactory(Singleton):
         referenced resources are present.
         '''
         rc = True
-        if not self.verify_rsc_children(node):
+        node = obj.node
+        obj_id = obj.obj_id
+        try:
+            obj_type = cib_object_map[node.tagName][0]
+        except:
+            common_err("element %s (%s) not recognized"%(node.tagName,obj_id))
+            return False
+        if obj.parent_type == "resources" and \
+                not self.verify_rsc_children(node):
             rc = False
-        if not self.verify_constraints(node):
+        elif obj.parent_type == "constraints" and \
+                not self.verify_constraints(node):
             rc = False
         return rc
     def create_object(self,*args):
@@ -2257,10 +2253,8 @@ class CibFactory(Singleton):
             if child not in new_children:
                 self._relink_child_to_top(child)
     def test_element(self,obj,node):
-        if not node.getAttribute("id"):
-            return False
         if not obj.xml_obj_type in vars.defaults_tags:
-            if not self.verify_element(node):
+            if not self.verify_element(obj):
                 return False
         if user_prefs.is_check_always() \
                 and obj.check_sanity() > 1:
@@ -2287,7 +2281,7 @@ class CibFactory(Singleton):
                     child.node = c
     def add_element(self,obj,node):
         obj.node = node
-        obj.obj_id = node.getAttribute("id")
+        obj.set_id()
         if not self.test_element(obj, node):
             id_store.remove_xml(node)
             node.unlink()

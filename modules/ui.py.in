@@ -29,7 +29,7 @@ from cibconfig import mkset_obj, CibFactory
 from cibstatus import CibStatus
 from report import Report
 from template import LoadTemplate
-from cliformat import nvpairs2list
+from cliformat import nvpairs2list, cli_format
 from rsctest import test_resources
 from ra import *
 from msg import *
@@ -451,7 +451,7 @@ class Template(UserInterface):
                 if s:
                     piece2.append(' '.join(s))
             if piece2:
-                l2.append(' \\\n\t'.join(piece2))
+                l2.append(cli_format(piece2, 1))
         return '\n'.join(l2)
     def process(self,config = ''):
         '''Create a cli configuration from the current config'''

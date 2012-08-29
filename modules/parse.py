@@ -789,6 +789,7 @@ def xml_lex(s):
 
 class CliParser(object):
     parsers = {
+        # elem_name: (minimum number of tokens, parse function)
         "primitive": (3,parse_resource),
         "group": (3,parse_resource),
         "clone": (3,parse_resource),
