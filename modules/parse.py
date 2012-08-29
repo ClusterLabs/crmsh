@@ -654,6 +654,20 @@ def parse_node(s):
         syntax_err(s[i:], context = 'node')
         return False
     return cli_list
+def parse_fencing_order(s):
+    cli_list = []
+    head_pl = []
+    type = "fencing_topology"
+    cli_list.append([type,head_pl])
+    target = "@@"
+    for tok in s[1:]:
+        if tok.endswith(':'):
+            target = tok.rstrip(':')
+        else:
+            head_pl.append(["fencing-level",
+                [["target",target], ["devices",tok]]])
+    return cli_list
+
 def parse_xml(s):
     cli_list = []
     head = []
@@ -806,6 +820,7 @@ class CliParser(object):
         "property": (2,parse_property),
         "rsc_defaults": (2,parse_property),
         "op_defaults": (2,parse_property),
+        "fencing_topology": (3,parse_fencing_order),
         "role": (3,parse_acl),
         "user": (3,parse_acl),
         "xml": (3,parse_xml),

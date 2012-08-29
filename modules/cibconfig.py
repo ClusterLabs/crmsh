@@ -45,7 +45,7 @@ def show_unrecognized_elems(doc):
     for topnode in conf.childNodes:
         if not is_element(topnode):
             continue
-        if is_defaults(topnode):
+        if is_defaults(topnode) or topnode.tagName == "fencing-topology":
             continue
         for c in topnode.childNodes:
             if not is_element(c):
@@ -661,6 +661,13 @@ def mkxmlaclrole_ref(e):
     '''
     node = cib_factory.createElement(e[0])
     node.setAttribute(e[1][0],e[1][1])
+    return node
+
+def mkxmlhead(e):
+    '''
+    Create a fencing_topology xml.
+    '''
+    node = cib_factory.createElement(e[0])
     return node
 
 conv_list = {
@@ -1382,6 +1389,96 @@ class CibProperty(CibObject):
         rc = sanity_check_nvpairs(self.obj_id,self.node,l)
         return rc
 
+class CibFencingOrder(CibObject):
+    '''
+    Fencing order (fencing-topology).
+    '''
+    def set_id(self, obj_id=None):
+        self.obj_id = "fencing_topology"
+    def set_nodeid(self):
+        '''This id is not part of attributes'''
+        pass
+    def obj_string(self):
+        return self.obj_id
+    def matchcli(self,cli_list):
+        head = cli_list[0]
+        return self.obj_type == head[0]
+    def can_be_renamed(self):
+        ''' Cannot rename this one. '''
+        return False
+    def repr_cli_head(self,format):
+        s = cli_display.keyword(self.obj_type)
+        d = odict()
+        for c in self.node.getElementsByTagName("fencing-level"):
+            target = c.getAttribute("target")
+            if target not in d:
+                d[target] = {}
+            d[target][c.getAttribute("index")] = c.getAttribute("devices")
+        dd = odict()
+        for target in d.keys():
+            dd[target] = [d[target][x] for x in sorted(d[target].keys())]
+        d2 = {}
+        for target in dd.keys():
+            devs_s = ' '.join(dd[target])
+            d2[devs_s] = 1
+        if len(d2) == 1:
+            return "%s %s" % (s,devs_s)
+        return cli_format([s,] + \
+            ["%s: %s" % (x, ' '.join(dd[x])) for x in dd.keys()], format)
+    def _same_levels(self, pl):
+        for lvl_pl in pl:
+            cli_append_attr(lvl_pl[1],"index","")
+        for n in cib_factory.node_id_list():
+            for lvl_pl in pl:
+                cli_replace_attr(lvl_pl[1],"target",n)
+                yield copy.deepcopy(lvl_pl)
+    def _different_levels(self, pl):
+        for lvl_pl in pl:
+            cli_append_attr(lvl_pl[1],"index","")
+            yield lvl_pl
+    def cli_list2node(self,cli_list,oldnode):
+        head = copy.copy(cli_list[0])
+        head[0] = backtrans[head[0]]
+        node = mkxmlhead(head)
+        if find_value(head[1][0][1], "target") == "@@":
+            lvl_generator = self._same_levels
+        else:
+            lvl_generator = self._different_levels
+        target_i = {}
+        for lvl_pl in lvl_generator(head[1]):
+            target = find_value(lvl_pl[1], "target")
+            if target not in target_i:
+                target_i[target] = 1
+            cli_replace_attr(lvl_pl[1],"index",str(target_i[target]))
+            node.appendChild(mkxmlsimple(lvl_pl,oldnode,'fencing'))
+            target_i[target] += 1
+        remove_id_used_attributes(oldnode)
+        return node
+    def repr_cli_child(self,c,format):
+        pass # no children here
+    def check_sanity(self):
+        '''
+        Targets are nodes and resource are stonith resources.
+        '''
+        if not self.node:  # eh?
+            common_err("%s: no xml (strange)" % self.obj_id)
+            return user_prefs.get_check_rc()
+        rc = 0
+        nl = self.node.getElementsByTagName("fencing-level")
+        for target in [x.getAttribute("target") for x in nl]:
+            if target not in cib_factory.node_id_list():
+                common_warn("%s: target %s not a node" % (self.obj_id,target))
+                rc = 1
+        stonith_rsc_l = [x.obj_id for x in
+            cib_factory.mkobj_list("cli","type:primitive")
+            if x.node.getAttribute("class") == "stonith"]
+        for devices in [x.getAttribute("devices") for x in nl]:
+            for dev in devices.split(","):
+                if dev not in stonith_rsc_l:
+                    common_warn("%s: device %s not a stonith resource" % (self.obj_id,dev))
+                    rc = 1
+        return rc
+
 class CibAcl(CibObject):
     '''
     User and role ACL.
@@ -1442,6 +1539,7 @@ cib_object_map = {
     "cluster_property_set": ( "property", CibProperty, "crm_config", "cib-bootstrap-options" ),
     "rsc_defaults": ( "rsc_defaults", CibProperty, "rsc_defaults", "rsc-options" ),
     "op_defaults": ( "op_defaults", CibProperty, "op_defaults", "op-options" ),
+    "fencing-topology": ( "fencing_topology", CibFencingOrder, "configuration" ),
     "acl_role": ( "role", CibAcl, "acls" ),
     "acl_user": ( "user", CibAcl, "acls" ),
 }
@@ -1831,6 +1929,9 @@ class CibFactory(Singleton):
     def find_object_for_node(self,node):
         "Find an object which matches a dom node."
         for obj in self.cib_objects:
+            if node.tagName == "fencing-topology" and \
+                    obj.xml_obj_type == "fencing-topology":
+                return obj
             if node.getAttribute("id") == obj.obj_id:
                 return obj
         return None

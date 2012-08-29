@@ -56,6 +56,7 @@ class Vars(Singleton):
     "op_defaults": "op_defaults",
     "acl_user": "user",
     "acl_role": "role",
+    "fencing-topology": "fencing_topology",
     }
     container_tags = ("group", "clone", "ms", "master")
     clonems_tags = ("clone", "ms", "master")

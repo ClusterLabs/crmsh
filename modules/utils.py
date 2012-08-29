@@ -640,6 +640,13 @@ def find_value(pl,name):
         if n == name:
             return v
     return None
+def cli_replace_attr(pl,name,new_val):
+    for i in range(len(pl)):
+        if pl[i][0] == name:
+            pl[i][1] = new_val
+            return
+def cli_append_attr(pl,name,val):
+    pl.append([name,val])
 
 def lines2cli(s):
     '''

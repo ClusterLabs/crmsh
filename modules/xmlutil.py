@@ -453,6 +453,7 @@ match_list = {
     "op": ("name","interval"),
     "rule": ("score","score-attribute","role"),
     "expression": ("attribute","operation","value"),
+    "fencing-level": ("target","devices"),
 }
 def add_comment(node,s):
     '''
@@ -600,13 +601,15 @@ def properties(node_list):
 def acls(node_list):
     return filter_on_tag(node_list,"acl_role") \
         + filter_on_tag(node_list,"acl_user")
+def fencing_topology(node_list):
+    return filter_on_tag(node_list,"fencing-topology")
 def processing_sort(nl):
     '''
     It's usually important to process cib objects in this order,
     i.e. simple objects first.
     '''
     return nodes(nl) + templates(nl) + primitives(nl) + groups(nl) + mss(nl) + clones(nl) \
-        + constraints(nl) + properties(nl) + acls(nl)
+        + constraints(nl) + fencing_topology(nl) + properties(nl) + acls(nl)
 
 def obj_cmp(obj1,obj2):
     return cmp(obj1.obj_id,obj2.obj_id)
@@ -642,6 +645,8 @@ def properties_cli(cl):
     return filter_on_type(cl,"property") \
         + filter_on_type(cl,"rsc_defaults") \
         + filter_on_type(cl,"op_defaults")
+def fencing_topology_cli(cl):
+    return filter_on_type(cl,"fencing_topology")
 def acls_cli(cl):
     return filter_on_type(cl,"role") \
         + filter_on_type(cl,"user")
@@ -655,7 +660,8 @@ def processing_sort_cli(cl):
     representations accepted.
     '''
     return nodes_cli(cl) + templates_cli(cl) + primitives_cli(cl) + groups_cli(cl) + mss_cli(cl) + clones_cli(cl) \
-        + constraints_cli(cl) + properties_cli(cl) + ops_cli(cl) + acls_cli(cl)
+        + constraints_cli(cl) + fencing_topology_cli(cl) + properties_cli(cl) \
+        + ops_cli(cl) + acls_cli(cl)
 
 def is_resource_cli(s):
     return s in olist(vars.resource_cli_names)
@@ -903,12 +909,32 @@ def get_set_nodes(node,setname,create = 0):
         l.append(new_cib_element(node,setname,setname))
     return l
 
+def xml_noorder_hash(n):
+    hash_l = []
+    for c in n.childNodes:
+        if not is_element(c):
+            continue
+        hash_l.append(hash(c.toxml()))
+    return sorted(hash_l)
+xml_hash_d = {
+    "fencing-topology": xml_noorder_hash,
+}
 def xml_cmp(n, m, show = False):
-    rc = hash(n.toxml()) == hash(m.toxml())
+    if n.tagName in xml_hash_d:
+        n_hash_l = xml_hash_d[n.tagName](n)
+        m_hash_l = xml_hash_d[n.tagName](m)
+        rc = len(n_hash_l) == len(m_hash_l)
+        for i in range(len(n_hash_l)):
+            if not rc:
+                break
+            if n_hash_l[i] != m_hash_l[i]:
+                rc = False
+    else:
+        rc = hash(n.toxml()) == hash(m.toxml())
     if not rc and show and user_prefs.get_debug():
         print "original:",n.toprettyxml()
         print "processed:",m.toprettyxml()
-    return hash(n.toxml()) == hash(m.toxml())
+    return rc
 
 def merge_attributes(dnode,snode,tag):
     rc = False
