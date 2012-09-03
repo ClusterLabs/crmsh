@@ -1400,6 +1400,8 @@ class CibFencingOrder(CibObject):
         pass
     def obj_string(self):
         return self.obj_id
+    def match(self,xml_obj_type,obj_id):
+        return self.xml_obj_type == xml_obj_type
     def matchcli(self,cli_list):
         head = cli_list[0]
         return self.obj_type == head[0]
