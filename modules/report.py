@@ -83,6 +83,8 @@ def seek_to_edge(f, ts, to_end):
     while True:
         pos = f.tell()
         s = f.readline()
+        if not s:
+            break
         curr_ts = syslog_ts(s)
         if (to_end and curr_ts > ts) or \
                 (not to_end and curr_ts >= ts):
