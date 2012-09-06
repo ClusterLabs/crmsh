@@ -152,6 +152,7 @@ def pipe_string(cmd,s):
         if not ("Broken pipe" in msg):
             common_err(msg)
     return rc
+
 def filter_string(cmd,s,stderr_on = True):
     rc = -1 # command failed
     if stderr_on:
@@ -242,6 +243,10 @@ def ext_cmd(cmd):
     if options.regression_tests:
         print ".EXT", cmd
     return subprocess.call(add_sudo(cmd), shell=True)
+def ext_cmd_nosudo(cmd):
+    if options.regression_tests:
+        print ".EXT", cmd
+    return subprocess.call(cmd, shell=True)
 
 def rmdir_r(d):
     if d and os.path.isdir(d):
@@ -284,12 +289,7 @@ def acquire_lock(dir):
 def release_lock(dir):
     rmdir_r(os.path.join(dir,_LOCKDIR))
 
-#def ext_cmd_nosudo(cmd):
-#    if options.regression_tests:
-#        print ".EXT", cmd
-#    return subprocess.call(cmd, shell=True)
-
-def ext_cmd_nosudo(cmd):
+def pipe_cmd_nosudo(cmd):
     if options.regression_tests:
         print ".EXT", cmd
     proc = subprocess.Popen(cmd, shell = True,
@@ -568,7 +568,7 @@ def edit_file(fname):
         return
     if not user_prefs.editor:
         return
-    return ext_cmd("%s %s" % (user_prefs.editor,fname))
+    return ext_cmd_nosudo("%s %s" % (user_prefs.editor,fname))
 
 def need_pager(s, w, h):
     from math import ceil

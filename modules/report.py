@@ -418,7 +418,7 @@ def mkarchive(dir):
     archive = '%s.tar.bz2' % os.path.join(home, os.path.basename(dir))
     cmd = "tar -C '%s/..' -cj -f '%s' %s" % \
         (dir, archive, os.path.basename(dir))
-    if ext_cmd_nosudo(cmd) != 0:
+    if pipe_cmd_nosudo(cmd) != 0:
         common_err('could not pack report, command "%s" failed' % cmd)
         return False
     else:
@@ -510,7 +510,7 @@ class Report(Singleton):
             common_err("%s: %s" % (tarball, msg))
             return None
         common_debug("tar -x%s < %s" % (tar_unpack_option,bfname))
-        rc = ext_cmd_nosudo("tar -x%s < %s" % (tar_unpack_option,bfname))
+        rc = pipe_cmd_nosudo("tar -x%s < %s" % (tar_unpack_option,bfname))
         if self.source == "live":
             os.remove(bfname)
         os.chdir(cwd)
@@ -610,7 +610,7 @@ class Report(Singleton):
             if not fl:
                 continue
             u_dir = os.path.join(self.loc, node)
-            rc = ext_cmd_nosudo("tar -C %s -x < %s" % (u_dir,fl[0]))
+            rc = pipe_cmd_nosudo("tar -C %s -x < %s" % (u_dir,fl[0]))
     def find_new_peinputs(self, node_l):
         '''
         Get a list of pe inputs appearing in new logs.
@@ -706,10 +706,10 @@ class Report(Singleton):
         nodes_option = ""
         if self.setnodes:
             nodes_option = "'-n %s'" % ' '.join(self.setnodes)
-        if ext_cmd_nosudo("mkdir -p %s" % os.path.dirname(d)) != 0:
+        if pipe_cmd_nosudo("mkdir -p %s" % os.path.dirname(d)) != 0:
             return None
         common_info("retrieving information from cluster nodes, please wait ...")
-        rc = ext_cmd_nosudo("hb_report -Z -f '%s' %s %s %s" %
+        rc = pipe_cmd_nosudo("hb_report -Z -f '%s' %s %s %s" %
                 (self.from_dt.ctime(), to_option, nodes_option, d))
         if rc != 0:
             if os.path.isfile(tarball):
@@ -1195,10 +1195,10 @@ class Report(Singleton):
             common_err("history session %s does not exist" % name)
             return False
         if subcmd == "save":
-            if ext_cmd_nosudo("mkdir -p %s" % dir) != 0:
+            if pipe_cmd_nosudo("mkdir -p %s" % dir) != 0:
                 return False
             if self.source == "live":
-                rc = ext_cmd_nosudo("tar -C '%s' -c . | tar -C '%s' -x" % \
+                rc = pipe_cmd_nosudo("tar -C '%s' -c . | tar -C '%s' -x" % \
                     (self._live_loc(), dir))
                 if rc != 0:
                     return False
