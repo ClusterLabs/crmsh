@@ -1,3 +1,72 @@
+* Mon Sep 10 2012 Dejan Muhamedagic <dejan@suse.de> and many others
+- stable release 1.2.0
+- cibconfig: support kind attribute in orders
+- cibconfig: implement node-attribute in collocations
+- cibconfig: support require-all in resource sets
+- cibconfig: support for fencing-topology
+- cibconfig: new schema command
+- rsctest: resource testing
+- history: implement session saving
+- history: add alias (timeframe) for the limit command
+- xml: support for RNG schema
+- site: ticket standby and activate commands
+- site: update interface to crm_ticket
+- cibstatus: ticket management
+- ui: add vim syntax highlighting support
+- ui: import readline only when needed (don't print ".[?1034h")
+- cibconfig: drop attributes set to default on cib import
+- cibconfig: support setting attributes resource sets
+- history: improve limiting the report time period
+- xml: retrieve data from schema (lf#2092)
+- cibconfig: display referenced attr set ids (lf#2304)
+- cibconfig: don't verify parameters starting with '$'
+- cibconfig: fix meta attributes verify for container elements (lf#2555)
+- cibconfig: test for duplicate monitor intervals (lf#2586)
+- cibconfig: don't skip monitor operations on verify
+- ui: don't accept non-ascii input (lf#2597)
+- stonith: support rhcs fence-agents (bnc#769724)
+- ra: don't require certain parameters for rhcs stonith resources
+- ticket: fix redirecting rsc references in tickets (bnc#763465)
+- ui: enable wait (option -w) for single-shot configure commands
+- history: fine tune resource match patterns
+- utils: improve terminal output height calculation (pager)
+- shadow: calculate shadow directory just like crm_shadow (bnc#759056)
+- history: update patterns for resources
+- cibconfig: use uname instead of id when listing nodes (cl#5043)
+- ra: use only effective UID when choosing RA interface
+- ra: always use lrmadmin with glue 1.0.10 (cl#5036)
+- history: reset time period when setting source
+- cibconfig: repair resource parameter uniqueness test
+- completion: add command aliases to completion tables (cl#5013)
+- cibconfig: repair ability to manage multiple rsc/op_defaults (bnc#737812)
+- history: add clone/ms resources to events (fixes the transition command)
+- utils: use crm_simulate if ptest is not available
+- utils: repair ptest usage (bnc#736212)
+- history: expand clones and ms in the resource command (bnc#729631)
+- cibconfig: remove also elements which depend on the resource
+  template which is to be deleted (bnc#730404)
+- cibconfig: report error if a referenced template in primitive
+  doesn't exist (bnc#730404)
+- cibconfig: exchange rsc and with-rsc after converting collocation
+  sets to standard constraints (bnc#729628)
+- cibconfig: convert resource sets to standard constraints on
+  resource removal (bnc#729628)
+- ra: fix start/stop interval test
+- history: don't assume that a hb_report tarball name matches the
+  top directory name
+- completion: add templates as possible resource refences in
+  constraints
+- history: handle non-existing source better (bnc#728346)
+- history: fix regression when fetching new PE inputs (bnc#723417)
+- history: use debug severity for repeating messages (bnc#726611)
+- utils: prevent spurious error messages if an element doesn't
+  exist in CIB (bnc#723677)
+- history: add pattern to match resource log messages
+- doc: describe deficiency in the configure edit command (bnc#715698)
+- move user files to standard locations (XDG)
+- build: add optional regression testing on rpm build
+- build: fetch the daemon location from glue-config.h
+
 * Wed Oct 19 2011 Dejan Muhamedagic <dejan@suse.de> and many others
 - stable release 1.1.0
 - history/troubleshooting support
