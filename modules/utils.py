@@ -176,7 +176,7 @@ def str2tmp(s):
     Write the given string to a temporary file. Return the name
     of the file.
     '''
-    fd,tmp = mkstemp()
+    fd,tmp = mkstemp(suffix=".pcmk")
     try: f = os.fdopen(fd,"w")
     except IOError, msg:
         common_err(msg)

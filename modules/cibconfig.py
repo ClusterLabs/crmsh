@@ -118,7 +118,10 @@ class CibObjectSet(object):
         first.
         If no changes are done, return silently.
         '''
-        tmp = str2tmp(s)
+        if user_prefs.editor.startswith("vi"):
+            tmp = str2tmp("%s\n#vim:set syntax=pcmk\n" % s)
+        else:
+            tmp = str2tmp(s)
         if not tmp:
             return False
         filehash = hash(s)

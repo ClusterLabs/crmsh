@@ -118,6 +118,7 @@ fi
 %doc AUTHORS
 %doc ChangeLog
 %doc README
+%doc contrib
 
 %dir %{crmsh_docdir}
 %dir %attr (770, %{uname}, %{gname}) %{_var}/cache/crm
