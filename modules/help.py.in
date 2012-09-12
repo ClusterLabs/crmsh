@@ -22,44 +22,85 @@ from utils import odict, page_string
 from vars import Vars
 from msg import *
 
+# this table needs to match cmd_table of TopLevel in ui.py
+init_help_tab = {
+    "options": ("user preferences", """
+Several user preferences are available. Note that it is possible
+to save the preferences to a startup file.
+"""),
+    "cib": ("manage shadow CIBs", """
+A shadow CIB is a regular cluster configuration which is kept in
+a file. The CRM and the CRM tools may manage a shadow CIB in the
+same way as the live CIB (i.e. the current cluster configuration).
+A shadow CIB may be applied to the cluster in one step.
+"""),
+    "resource": ("resources management", """
+Everything related to resources management is available at this
+level. Most commands are implemented using the crm_resource(8)
+program.
+"""),
+    "node": ("nodes management", """
+A few node related tasks such as node standby are implemented
+here.
+"""),
+    "ra": ("resource agents information center", """
+This level contains commands which show various information about
+the installed resource agents. It is available both at the top
+level and at the `configure` level.
+"""),
+    "configure": ("CRM cluster configuration", """
+The configuration level.
+
+Note that you can change the working CIB at the cib level. It is
+advisable to configure shadow CIBs and then commit them to the
+cluster.
+"""),
+    "history": ("CRM cluster history", """
+The history level.
+
+Examine Pacemaker's history: node and resource events, logs.
+"""),
+    "site": ("Geo-cluster support", """
+The site level.
+
+Geo-cluster related management.
+"""),
+}
+
+def load_init_help_tab(help_tab, levels):
+    help_tab["."] = ("","""
+This is crm shell, a Pacemaker command line interface.
+""")
+    for lvl in levels:
+        try: help_tab[lvl] = init_help_tab[lvl]
+        except: pass
+    help_tab["status"] = ("show cluster status", """
+Show cluster status. The status is displayed by crm_mon. Supply
+additional arguments for more information or different format.
+See crm_mon(8) for more details.
+
+Usage:
+...............
+        status [<option> ...]
+
+        option :: bynode | inactive | ops | timing | failcounts
+...............
+""")
+
 #
 # help or make users feel less lonely
 #
-def add_shorthelp(topic,shorthelp,topic_help):
+def add_shorthelp(topic,shorthelp,short_tab):
     '''
     Join topics ("%s,%s") if they share the same short
     description.
     '''
-    for i in range(len(topic_help)):
-        if topic_help[i][1] == shorthelp:
-            topic_help[i][0] = "%s,%s" % (topic_help[i][0], topic)
+    for i in range(len(short_tab)):
+        if short_tab[i][1] == shorthelp:
+            short_tab[i][0] = "%s,%s" % (short_tab[i][0], topic)
             return
-    topic_help.append([topic, shorthelp])
-def dump_short_help(help_tab):
-    topic_help = []
-    for topic in help_tab:
-        if topic == '.':
-            continue
-        # with odict, for whatever reason, python parses differently:
-        # help_tab["..."] = ("...","...") and
-        # help_tab["..."] = ("...","""
-        # ...""")
-        # a parser bug?
-        if type(help_tab[topic][0]) == type(()):
-            shorthelp = help_tab[topic][0][0]
-        else:
-            shorthelp = help_tab[topic][0]
-        add_shorthelp(topic,shorthelp,topic_help)
-    for t,d in topic_help:
-        print "\t%-16s %s" % (t,d)
-def overview(help_tab):
-    print help_tab['.'][1]
-    # cheating here a bit, but ...
-    if "crm shell topics" not in help_tab['.'][1]:
-        print "Available commands:"
-        print ""
-    dump_short_help(help_tab)
-    print ""
+    short_tab.append([topic, shorthelp])
+
 def topic_help(help_tab,topic):
     if topic not in help_tab:
         print "Sorry, could not find any help for %s" % topic
@@ -74,18 +115,6 @@ def topic_help(help_tab,topic):
         page_string(longhelp)
     else:
         print shorthelp
-def cmd_help(help_tab,topic = ''):
-    "help!"
-    # help_tab is an odict (ordered dictionary):
-    # help_tab[topic] = (short_help,long_help)
-    # topic '.' is a special entry for the top level
-    if not help_tab:
-        common_info("sorry, help not available")
-        return
-    if not topic or topic == "topics":
-        overview(help_tab)
-    else:
-        topic_help(help_tab,topic)
 
 def add_static_help(help_tab):
     '''Add help items used everywhere'''
@@ -126,6 +155,45 @@ class HelpSystem(object):
         self.leveld = {}
         self.no_help_file = False  # don't print repeatedly messages
         self.bad_index = False  # don't print repeatedly warnings for bad index
+    def dump_short_help(self, help_tab):
+        short_tab = []
+        for topic in help_tab:
+            if topic == '.':
+                continue
+            # with odict, for whatever reason, python parses differently:
+            # help_tab["..."] = ("...","...") and
+            # help_tab["..."] = ("...","""
+            # ...""")
+            # a parser bug?
+            if type(help_tab[topic][0]) == type(()):
+                shorthelp = help_tab[topic][0][0]
+            else:
+                shorthelp = help_tab[topic][0]
+            add_shorthelp(topic,shorthelp,short_tab)
+        for t,d in short_tab:
+            if self.is_level(t):
+                t = "%s/" % t
+            print "\t%-16s %s" % (t,d)
+    def overview(self, help_tab):
+        print help_tab['.'][1]
+        # cheating here a bit, but ...
+        if "crm shell topics" not in help_tab['.'][1]:
+            print "Available commands:"
+            print ""
+        self.dump_short_help(help_tab)
+        print ""
+    def cmd_help(self,help_tab,topic = ''):
+        "help!"
+        # help_tab is an odict (ordered dictionary):
+        # help_tab[topic] = (short_help,long_help)
+        # topic '.' is a special entry for the top level
+        if not help_tab:
+            common_info("sorry, help not available")
+            return
+        if not topic or topic == "topics":
+            self.overview(help_tab)
+        else:
+            topic_help(help_tab,topic)
     def open_file(self,name,mode):
         try:
             f = open(name,mode)
@@ -217,6 +285,8 @@ class HelpSystem(object):
             self.key_pos[key] = fpos
         idx_f.close()
         return True
+    def is_level(self, s):
+        return (("cmdhelp_%s" % s) in self.leveld) or (s in init_help_tab)
     def __filter(self,s):
         if '<<' in s:
             return re.sub(r'<<[^,]+,(.+)>>', r'\1', s)

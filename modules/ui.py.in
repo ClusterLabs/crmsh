@@ -22,7 +22,7 @@ import shlex
 import time
 import bz2
 
-from help import HelpSystem, cmd_help, add_static_help
+from help import HelpSystem, load_init_help_tab, add_static_help
 from vars import Vars
 from levels import Levels
 from cibconfig import mkset_obj, CibFactory
@@ -95,7 +95,7 @@ class UserInterface(object):
                 self.help_table = help_sys.load_level(self.lvl_name)
                 setup_help_aliases(self)
             help_tab = self.help_table
-        cmd_help(help_tab,topic)
+        help_sys.cmd_help(help_tab,topic)
     def end(self,cmd,dir = ".."):
         "usage: end"
         self.end_game()
@@ -110,11 +110,6 @@ class CliOptions(UserInterface):
     Manage user preferences
     '''
     lvl_name = "options"
-    desc_short = "user preferences"
-    desc_long = """
-Several user preferences are available. Note that it is possible
-to save the preferences to a startup file.
-"""
     def __init__(self):
         UserInterface.__init__(self)
         self.cmd_table["skill-level"] = (self.set_skill_level,(1,1),0,0)
@@ -182,13 +177,6 @@ class CibShadow(UserInterface):
     CIB shadow management class
     '''
     lvl_name = "cib"
-    desc_short = "manage shadow CIBs"
-    desc_long = """
-A shadow CIB is a regular cluster configuration which is kept in
-a file. The CRM and the CRM tools may manage a shadow CIB in the
-same way as the live CIB (i.e. the current cluster configuration).
-A shadow CIB may be applied to the cluster in one step.
-"""
     extcmd = ">/dev/null </dev/null crm_shadow"
     extcmd_stdout = "</dev/null crm_shadow"
     def __init__(self):
@@ -756,12 +744,6 @@ class RscMgmt(UserInterface):
     Resources management class
     '''
     lvl_name = "resource"
-    desc_short = "resources management"
-    desc_long = """
-Everything related to resources management is available at this
-level. Most commands are implemented using the crm_resource(8)
-program.
-"""
     rsc_status_all = "crm_resource -L"
     rsc_status = "crm_resource -W -r '%s'"
     rsc_showxml = "crm_resource -q -r '%s'"
@@ -1016,11 +998,6 @@ class NodeMgmt(UserInterface):
     Nodes management class
     '''
     lvl_name = "node"
-    desc_short = "nodes management"
-    desc_long = """
-A few node related tasks such as node standby are implemented
-here.
-"""
     node_standby = "crm_attribute -N '%s' -n standby -v '%s' %s"
     node_delete = "cibadmin -D -o nodes -X '<node uname=\"%s\"/>'"
     node_delete_status = "cibadmin -D -o status -X '<node_state uname=\"%s\"/>'"
@@ -1227,12 +1204,6 @@ class RA(UserInterface):
     CIB shadow management class
     '''
     lvl_name = "ra"
-    desc_short = "resource agents information center"
-    desc_long = """
-This level contains commands which show various information about
-the installed resource agents. It is available both at the top
-level and at the `configure` level.
-"""
     provider_classes = ["ocf"]
     def __init__(self):
         UserInterface.__init__(self)
@@ -1393,14 +1364,6 @@ class CibConfig(UserInterface):
     The configuration class
     '''
     lvl_name = "configure"
-    desc_short = "CRM cluster configuration"
-    desc_long = """
-The configuration level.
-
-Note that you can change the working CIB at the cib level. It is
-advisable to configure shadow CIBs and then commit them to the
-cluster.
-"""
     def __init__(self):
         UserInterface.__init__(self)
         self.cmd_table["erase"] = (self.erase,(0,1),1,0)
@@ -1778,12 +1741,6 @@ class History(UserInterface):
     The history class
     '''
     lvl_name = "history"
-    desc_short = "CRM cluster history"
-    desc_long = """
-The history level.
-
-Examine Pacemaker's history: node and resource events, logs.
-"""
     def __init__(self):
         UserInterface.__init__(self)
         self.cmd_table["source"] = (self.source,(1,1),1,0)
@@ -2045,12 +2002,6 @@ class Site(UserInterface):
     The site class
     '''
     lvl_name = "site"
-    desc_short = "Geo-cluster support"
-    desc_long = """
-The site level.
-
-Geo-cluster related management.
-"""
     crm_ticket =  {
         'grant': "crm_ticket -t '%s' -g",
         'revoke': "crm_ticket -t '%s' -r",
@@ -2122,25 +2073,7 @@ class TopLevel(UserInterface):
         self.cmd_table['status'] = (self.status,(0,5),0,0)
         self.cmd_table['ra'] = RA
         setup_aliases(self)
-        self.help_table["."] = ("","""
-This is crm shell, a Pacemaker command line interface.
-""")
-        for lvl in self.cmd_table.keys():
-            try: self.help_table[lvl] = (self.cmd_table[lvl].desc_short, \
-                self.cmd_table[lvl].desc_long)
-            except: pass
-        self.help_table["status"] = ("show cluster status", """
-Show cluster status. The status is displayed by crm_mon. Supply
-additional arguments for more information or different format.
-See crm_mon(8) for more details.
-
-Usage:
-...............
-        status [<option> ...]
-
-        option :: bynode | inactive | ops | timing | failcounts
-...............
-""")
+        load_init_help_tab(self.help_table, self.cmd_table.keys())
         add_static_help(self.help_table)
         setup_help_aliases(self)
     def status(self,cmd,*args):
