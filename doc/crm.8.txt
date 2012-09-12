@@ -1,6 +1,6 @@
 :man source:   crm
 :man version:  1.1
-:man manual:   Pacemaker documentation
+:man manual:   crmsh documentation
 
 crm(8)
 ======
@@ -16,6 +16,7 @@ SYNOPSIS
 *crm* [-D output_type] [-f file] [-H hist_src] [-hFRDw] [--version] [args]
 
 
+[[topics_Description,Program description]]
 DESCRIPTION
 -----------
 Pacemaker configuration is stored in a CIB file (Cluster
@@ -76,7 +77,7 @@ OPTIONS
     Print help page.
 
 *--version*::
-    Print Pacemaker version and build information (Mercurial Hg
+    Print crmsh version and build information (Mercurial Hg
     changeset hash).
 
 *-R, --regression-tests*::
@@ -87,9 +88,10 @@ OPTIONS
     Print some debug information. Used by developers. [Not yet
     refined enough to print useful information for other users.]
 
+[[topics_Introduction,Introduction to the user interface]]
 == Introduction to the user interface
 
-Arguably the most important aspect of such a program is the user
+Arguably the most important aspect of `crm` is the user
 interface. We begin with an informal introduction so that the
 reader may get acquainted with it and get a general feeling of
 the tool. It is probably best just to give some examples:
@@ -108,9 +110,7 @@ the tool. It is probably best just to give some examples:
 
 3. Cluster configuration:
 
-    # crm<<EOF
-    configure
-      erase
+    # crm configure<<EOF
       #
       # resources
       #
@@ -165,6 +165,7 @@ Since the CIB is hierarchical such is the interface too. There
 are several levels and entering each of them enables the user to
 use a certain set of commands.
 
+[[topics_Shadows,Shadow CIB usage]]
 === Shadow CIB usage
 
 Shadow CIB is a normal cluster configuration stored in a file.
@@ -187,11 +188,12 @@ This short `configure` session excerpt shows how:
     crm(test-2)configure# commit
 ...............
 
-=== Templates
+[[topics_Templates,Configuration templates]]
+=== Configuration templates
 
-Templates are ready made configurations created by cluster
-experts. They are designed in such a way so that users may
-generate valid cluster configurations with minimum effort.
+Configuration templates are ready made configurations created by
+cluster experts. They are designed in such a way so that users
+may generate valid cluster configurations with minimum effort.
 If you are new to Pacemaker, templates may be the best way to
 start.
 
@@ -343,6 +345,7 @@ following steps:
 - `show`: see if the configuration is valid
 - `apply`: apply the configuration to the `configure` level
 
+[[topics_Testing,Resource testing]]
 === Resource testing
 
 The amount of detail in a cluster makes all configurations prone
@@ -408,14 +411,15 @@ doesn't know if a resource can run on a node at all in case of an
 asymmetric cluster. It is up to the user to specify a list of
 eligible nodes if a resource is not meant to run on every node.
 
+[[topics_Completion,Tab completion]]
 === Tab completion
 
-The `crm` makes extensive use of the tab completion of
-`readline`. The completion is both static (i.e. for `crm`
-commands) and dynamic. The latter takes into account the current
-status of the cluster or information from installed resource
-agents. Sometimes, completion may also be used to get short help
-on resource parameters. Here a few examples:
+The `crm` makes extensive use of tab completion. The completion
+is both static (i.e. for `crm` commands) and dynamic. The latter
+takes into account the current status of the cluster or
+information from installed resource agents. Sometimes, completion
+may also be used to get short help on resource parameters. Here a
+few examples:
 ...............
     crm(live)# resource
     crm(live)resource# <TAB><TAB>
@@ -451,7 +455,7 @@ on resource parameters. Here a few examples:
     crm(live)configure# primitive fence-1 stonith:ipmilan params auth=
 ...............
 
-[[SEMCHK]]
+[[topics_Checks,Configuration semantic checks]]
 === Configuration semantic checks
 
 Resource definitions may be checked against the meta-data
@@ -482,11 +486,12 @@ Note that if the `check-frequency` is set to `always` and the
 `check-mode` to `strict`, errors are not tolerated and such
 configuration cannot be saved.
 
+[[topics_Security,Access Control Lists (ACL)]]
 === Access Control Lists (ACL)
 
-It is desirable to allow users fine grained access to the cluster
-and not just ``all or nothing:'' all being the two ultimate power
-ids `root` and `hacluster`.
+By default, the users from the `haclient` group have full access
+to the cluster (or, more precisely, to the CIB). Access control
+lists allow for finer access control to the cluster.
 
 Access control lists consist of an ordered set of access rules.
 Each rule allows read or write access or denies access
@@ -562,7 +567,8 @@ XPath is a powerful language, but you should try to keep your ACL
 xpaths simple and the builtin shortcuts should be used whenever
 possible.
 
-== Reference
+[[topics_Reference,Command reference]]
+== Command reference
 
 We define a small and simple language. Most commands consist of
 just a list of simple tokens. The only complex constructs are
@@ -1250,6 +1256,14 @@ Usage:
         level :: operator | administrator | expert
 ...............
 
+.Note on security
+****************************
+The `skill-level` option is advisory only. There is nothing
+stopping any users change their skill level (see
+<<topics_Security,Access Control Lists (ACL)>> on how to enforce
+access control).
+****************************
+
 [[cmdhelp_options_user,set the cluster user]]
 ==== `user`
 
@@ -1380,7 +1394,7 @@ The checks require that resource agents are present. If they are
 not installed at the configuration time set this preference to
 `never`.
 
-See <<SEMCHK,Configuration semantic checks>> for more details.
+See <<topics_Checks,Configuration semantic checks>> for more details.
 
 [[cmdhelp_options_check-mode,how to treat semantic errors]]
 ==== `check-mode`
@@ -1390,7 +1404,7 @@ done in the `strict` mode or in the `relaxed` mode. In the former
 certain problems are treated as configuration errors. In the
 `relaxed` mode all are treated as warnings. The default is `strict`.
 
-See <<SEMCHK,Configuration semantic checks>> for more details.
+See <<topics_Checks,Configuration semantic checks>> for more details.
 
 [[cmdhelp_options_show,show current user preference]]
 ==== `show`

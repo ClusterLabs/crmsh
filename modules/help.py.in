@@ -53,16 +53,16 @@ def dump_short_help(help_tab):
     for t,d in topic_help:
         print "\t%-16s %s" % (t,d)
 def overview(help_tab):
-    print ""
     print help_tab['.'][1]
-    print ""
-    print "Available commands:"
-    print ""
+    # cheating here a bit, but ...
+    if "crm shell topics" not in help_tab['.'][1]:
+        print "Available commands:"
+        print ""
     dump_short_help(help_tab)
     print ""
 def topic_help(help_tab,topic):
     if topic not in help_tab:
-        print "There is no help for topic %s" % topic
+        print "Sorry, could not find any help for %s" % topic
         return
     if type(help_tab[topic][0]) == type(()):
         shorthelp = help_tab[topic][0][0]
@@ -82,16 +82,27 @@ def cmd_help(help_tab,topic = ''):
     if not help_tab:
         common_info("sorry, help not available")
         return
-    if not topic:
+    if not topic or topic == "topics":
         overview(help_tab)
     else:
         topic_help(help_tab,topic)
+
+def add_static_help(help_tab):
+    '''Add help items used everywhere'''
+    help_tab["help"] = ("show help (help topics for list of topics)", """
+The help subsystem consists of the command reference and a list
+of topics. The former is what you need in order to get the
+details regarding a specific command. The latter should help with
+concepts and examples.
+""")
+    help_tab["end"] = ("go back one level", "")
+    help_tab["quit"] = ("exit the program", "")
 
 def is_level(s):
     return len(s.split("_")) == 2
 
 def help_short(s):
-    r = re.search("help_[^,]+,(.*)\]\]", s)
+    r = re.search("_[^,]+,(.*)\]\]", s)
     return r and r.group(1) or ''
 
 class HelpSystem(object):
@@ -109,6 +120,7 @@ class HelpSystem(object):
     [[cmdhelp_<level>,<short help text>]]
     '''
     help_text_file = "@datadir@/@PACKAGE@/crm.8.txt"
+    topics_tok = "topics"
     def __init__(self):
         self.key_pos = {}
         self.leveld = {}
@@ -128,6 +140,7 @@ class HelpSystem(object):
         os.unlink(vars.index_file)
         self.key_pos = {}
         self.leveld = {}
+        self.leveld[self.topics_tok] = []
         self.bad_index = True
     def mk_index(self):
         '''
@@ -176,6 +189,7 @@ class HelpSystem(object):
             self.mk_index()
         self.key_pos = {}
         self.leveld = {}
+        self.leveld[self.topics_tok] = []
         idx_f = self.open_file(vars.index_file,"r")
         if not idx_f:
             return False
@@ -198,6 +212,8 @@ class HelpSystem(object):
                         self.leveld[cur_lvl] = []
                 else:
                     self.leveld[cur_lvl].append(key)
+            elif key.startswith("%s_" % self.topics_tok):
+                self.leveld[self.topics_tok].append(key)
             self.key_pos[key] = fpos
         idx_f.close()
         return True
@@ -206,7 +222,7 @@ class HelpSystem(object):
             return re.sub(r'<<[^,]+,(.+)>>', r'\1', s)
         else:
             return s
-    def __load_help_one(self,key,skip = 2):
+    def _load_help_one(self,key,skip = 2):
         longhelp = ''
         self.help_f.seek(self.key_pos[key])
         shorthelp = help_short(self.help_f.readline())
@@ -214,7 +230,7 @@ class HelpSystem(object):
             self.help_f.readline()
         l = []
         for s in self.help_f:
-            if s.startswith("[[") or s.startswith("="):
+            if l and (s.startswith("[[") or s.startswith("=")):
                 break
             l.append(self.__filter(s))
         if l and l[-1] == '\n':  # drop the last line of empty
@@ -234,8 +250,44 @@ class HelpSystem(object):
                 common_warn("help topic %s not found" % s)
                 self.drop_index()
             return None,None
-        return self.__load_help_one(s)
-    def __load_level(self,lvl):
+        return self._load_help_one(s)
+    def _load_topics(self, help_tab):
+        '''
+        Get the topic help text.
+        '''
+        lvl_s = self.topics_tok
+        if not lvl_s in self.leveld:
+            if not self.bad_index:
+                common_warn("help table for topics not found")
+                self.drop_index()
+            return None
+        help_tab["."] = ["","""
+List of crm shell topics.
+"""]
+        try:
+            for key in self.leveld[lvl_s]:
+                cmd = key[len(lvl_s)+1:]
+                help_tab[cmd] = self._load_help_one(key, skip=1)
+        except: pass
+    def _load_cmd_level(self, lvl, help_tab):
+        '''
+        Get the command help text.
+        '''
+        lvl_s = "cmdhelp_%s" % lvl
+        if not lvl_s in self.leveld:
+            if not self.bad_index:
+                common_warn("help table for level %s not found" % lvl)
+                self.drop_index()
+            return
+        common_debug("loading help table for level %s" % lvl)
+        help_tab["."] = self._load_help_one(lvl_s)
+        try:
+            for key in self.leveld[lvl_s]:
+                cmd = key[len(lvl_s)+1:]
+                help_tab[cmd] = self._load_help_one(key)
+        except: pass
+        add_static_help(help_tab)
+    def _load_level(self,lvl):
         '''
         For the given level, create a help table.
         '''
@@ -246,30 +298,20 @@ class HelpSystem(object):
         self.help_f = self.open_file(self.help_text_file,"r")
         if not self.help_f:
             return None
-        lvl_s = "cmdhelp_%s" % lvl
-        if not lvl_s in self.leveld:
-            if not self.bad_index:
-                common_warn("help table for level %s not found" % lvl)
-                self.drop_index()
-            return None
-        common_debug("loading help table for level %s" % lvl)
         help_tab = odict()
-        help_tab["."] = self.__load_help_one(lvl_s)
-        try:
-            for key in self.leveld[lvl_s]:
-                cmd = key[len(lvl_s)+1:]
-                help_tab[cmd] = self.__load_help_one(key)
-        except: pass
+        if lvl == self.topics_tok:
+            self._load_topics(help_tab)
+        else:
+            self._load_cmd_level(lvl, help_tab)
         self.help_f.close()
-        help_tab["quit"] = ("exit the program", "")
-        help_tab["help"] = ("show help", "")
-        help_tab["end"] = ("go back one level", "")
         return help_tab
     def load_level(self,lvl):
-        help_tab = self.__load_level(lvl)
+        help_tab = self._load_level(lvl)
         if self.bad_index: # try again
-            help_tab = self.__load_level(lvl)
+            help_tab = self._load_level(lvl)
         return wcache.store("lvl_help_tab_%s" % lvl, help_tab)
+    def load_topics(self):
+        return self.load_level(self.topics_tok)
 
 wcache = WCache.getInstance()
 vars = Vars.getInstance()
