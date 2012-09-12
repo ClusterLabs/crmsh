@@ -155,7 +155,7 @@ class HelpSystem(object):
         self.leveld = {}
         self.no_help_file = False  # don't print repeatedly messages
         self.bad_index = False  # don't print repeatedly warnings for bad index
-    def dump_short_help(self, help_tab):
+    def get_short_help(self, help_tab):
         short_tab = []
         for topic in help_tab:
             if topic == '.':
@@ -170,18 +170,19 @@ class HelpSystem(object):
             else:
                 shorthelp = help_tab[topic][0]
             add_shorthelp(topic,shorthelp,short_tab)
+        return short_tab
+    def overview(self, help_tab):
+        s = help_tab['.'][1]
+        # cheating here a bit, but ...
+        if "crm shell topics" not in help_tab['.'][1]:
+            s = "%s\nAvailable commands:\n" % s
+        short_tab = self.get_short_help(help_tab)
+        l = [s]
         for t,d in short_tab:
             if self.is_level(t):
                 t = "%s/" % t
-            print "\t%-16s %s" % (t,d)
-    def overview(self, help_tab):
-        print help_tab['.'][1]
-        # cheating here a bit, but ...
-        if "crm shell topics" not in help_tab['.'][1]:
-            print "Available commands:"
-            print ""
-        self.dump_short_help(help_tab)
-        print ""
+            l.append("\t%-16s %s" % (t,d))
+        page_string("\n".join(l))
     def cmd_help(self,help_tab,topic = ''):
         "help!"
         # help_tab is an odict (ordered dictionary):
