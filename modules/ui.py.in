@@ -60,6 +60,7 @@ class UserInterface(object):
     global_cmd_aliases = {
         "quit": ("bye","exit"),
         "end": ("cd","up"),
+        "help": ("?"),
     }
     def __init__(self):
         self.help_table = odict()
@@ -83,6 +84,8 @@ class UserInterface(object):
         return False
     def help(self,cmd,topic = ''):
         "usage: help [<command>|<Topic>|topics]"
+        if topic in ("?","Help","HELP","HELP!"):
+            topic = "help"
         if topic == "topics" or (topic and topic[0].isupper()):
             if not self.topics:
                 self.topics = help_sys.load_topics()
