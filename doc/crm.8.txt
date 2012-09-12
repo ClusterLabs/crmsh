@@ -2104,6 +2104,7 @@ Usage:
 Examples:
 ...............
         filter "sed '/^primitive/s/target-role=[^ ]*//'"
+        # crm configure filter \"sed \'/^primitive/s/target-role=[^ ]*//\'\"
 ...............
 
 [[cmdhelp_configure_delete,delete CIB objects]]
