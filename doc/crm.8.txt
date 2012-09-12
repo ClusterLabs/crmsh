@@ -1452,6 +1452,11 @@ There are three types of constraints:
 - `colocation`
 - `order`
 
+It is possible to define fencing order (stonith resource
+priorities):
+
+- `fencing_topology`
+
 Finally, there are the cluster properties, resource meta
 attributes defaults, and operations defaults. All are just a set
 of attributes. These attributes are managed by the following
