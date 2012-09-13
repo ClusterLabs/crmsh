@@ -166,7 +166,7 @@ are several levels and entering each of them enables the user to
 use a certain set of commands.
 
 [[topics_Shadows,Shadow CIB usage]]
-=== Shadow CIB usage
+== Shadow CIB usage
 
 Shadow CIB is a normal cluster configuration stored in a file.
 They may be manipulated in the same way like the _live_ CIB, but
@@ -189,7 +189,7 @@ This short `configure` session excerpt shows how:
 ...............
 
 [[topics_Templates,Configuration templates]]
-=== Configuration templates
+== Configuration templates
 
 Configuration templates are ready made configurations created by
 cluster experts. They are designed in such a way so that users
@@ -346,7 +346,7 @@ following steps:
 - `apply`: apply the configuration to the `configure` level
 
 [[topics_Testing,Resource testing]]
-=== Resource testing
+== Resource testing
 
 The amount of detail in a cluster makes all configurations prone
 to errors. By far the largest number of issues in a cluster is
@@ -412,7 +412,7 @@ asymmetric cluster. It is up to the user to specify a list of
 eligible nodes if a resource is not meant to run on every node.
 
 [[topics_Completion,Tab completion]]
-=== Tab completion
+== Tab completion
 
 The `crm` makes extensive use of tab completion. The completion
 is both static (i.e. for `crm` commands) and dynamic. The latter
@@ -456,7 +456,7 @@ few examples:
 ...............
 
 [[topics_Checks,Configuration semantic checks]]
-=== Configuration semantic checks
+== Configuration semantic checks
 
 Resource definitions may be checked against the meta-data
 provided with the resource agents. These checks are currently
@@ -487,7 +487,7 @@ Note that if the `check-frequency` is set to `always` and the
 configuration cannot be saved.
 
 [[topics_Security,Access Control Lists (ACL)]]
-=== Access Control Lists (ACL)
+== Access Control Lists (ACL)
 
 By default, the users from the `haclient` group have full access
 to the cluster (or, more precisely, to the CIB). Access control
