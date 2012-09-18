@@ -21,7 +21,7 @@ dnl     checks for compiler characteristics
 dnl     checks for library functions
 dnl     checks for system services
 
-AC_INIT(crmsh, 1.0.0, pacemaker@oss.clusterlabs.org)
+AC_INIT(crmsh, 1.2.0, linux-ha@linux-ha@lists.linux-ha.org)
 
 AC_ARG_WITH(version,
     [  --with-version=version   Override package version (if you're a packager needing to pretend) ],
