@@ -110,6 +110,9 @@ class CibObjectSet(object):
                 rmlist.append(obj)
         for obj in rmlist:
             self.obj_list.remove(obj)
+    def pre_edit(self, s):
+        '''Extra processing of the string to be editted'''
+        return s
     def edit_save(self,s,erase = False):
         '''
         Save string s to a tmp file. Invoke editor to edit it.
@@ -118,10 +121,8 @@ class CibObjectSet(object):
         first.
         If no changes are done, return silently.
         '''
-        if user_prefs.editor.startswith("vi"):
-            tmp = str2tmp("%s\n#vim:set syntax=pcmk\n" % s)
-        else:
-            tmp = str2tmp(s)
+        s = self.pre_edit(s)
+        tmp = str2tmp(s)
         if not tmp:
             return False
         filehash = hash(s)
@@ -339,6 +340,10 @@ class CibObjectSetCli(CibObjectSet):
             return ''
         return '\n'.join(obj.repr_cli(format = format) \
             for obj in processing_sort_cli(self.obj_list))
+    def pre_edit(self, s):
+        '''Extra processing of the string to be editted'''
+        if user_prefs.editor.startswith("vi"):
+            return "%s\n#vim:set syntax=pcmk\n" % s
     def process(self, cli_list, update = False):
         '''
         Create new objects or update existing ones.
