@@ -1258,7 +1258,8 @@ class RA(UserInterface):
             return False
         try:
             page_string(ra.meta_pretty())
-        except:
+        except Exception,msg:
+            common_err(msg)
             return False
 
 def ptestlike(simfun,def_verb,cmd,*args):
