@@ -142,8 +142,10 @@ class TerminalController(Singleton):
         return re.sub(r'\$\$|\${\w+}', self._render_sub, template)
     def _render_sub(self, match):
         s = match.group()
-        if s == '$$': return s
-        else: return getattr(self, s[2:-1])
+        try:
+            return getattr(self, s[2:-1])
+        except:
+            return s
     def is_color(self, s):
         try:
             attr = getattr(self, s.upper())
