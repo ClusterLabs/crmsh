@@ -1677,6 +1677,7 @@ class CibFactory(Singleton):
             common_err("current configuration not valid with %s, cannot change schema" % schema_st)
             return 4
         self.cib_attrs["validate-with"] = schema_st
+        self.new_schema = True
         return 0
     def is_elem_supported(self,obj_type):
         'Do we support this element?'
@@ -1723,13 +1724,6 @@ class CibFactory(Singleton):
             self.cib_attrs[attr] = cib.getAttribute(attr)
         schema.init_schema(cib)
         return True
-    def refresh_cib_attrs(self):
-        doc,cib = read_cib(cibdump2doc)
-        if not cib:
-            return
-        self.cib_attrs = {}
-        for attr in cib.attributes.keys():
-            self.cib_attrs[attr] = cib.getAttribute(attr)
     #
     # create a doc from the list of objects
     # (used by CibObjectSetRaw)
@@ -1822,31 +1816,29 @@ class CibFactory(Singleton):
             self.reset()
             self.initialize()
         return self.all_committed
-    def update_cib_attrs(self, cib, reread):
+    def commit_schema(self):
         '''
-        Set the validate-with, the schema might have changed.
-        Increase the epoch.
-        On reread (usually force) read the attributes from the
-        current CIB.
+        Set the validate-with, if the schema changed.
         '''
-        if reread:
-            schema_st = self.get_schema()
-            self.refresh_cib_attrs()
-            self.cib_attrs["validate-with"] = schema_st
-        cib.setAttribute("validate-with", self.get_schema())
-        self.cib_attrs["epoch"] = str(int(self.cib_attrs["epoch"])+1)
-        cib.setAttribute("epoch", self.cib_attrs["epoch"])
+        s = '<cib validate-with="%s"/>' % self.cib_attrs["validate-with"]
+        rc = pipe_string("%s -U" % cib_piped, s)
+        if rc != 0:
+            update_err("cib","-U",s, rc)
+            return False
+        self.new_schema = False
+        return True
     def commit_doc(self,force):
         try:
-            cib = self.doc.getElementsByTagName("cib")[0]
+            conf_node = self.doc.getElementsByTagName("configuration")[0]
         except:
-            common_error("cannot find the cib node")
+            common_error("cannot find the configuration node")
             return False
-        self.update_cib_attrs(cib, force)
+        if self.new_schema and not self.commit_schema():
+            return False
         cibadmin_opts = force and "-R --force" or "-R"
-        rc = pipe_string("%s %s" % (cib_piped,cibadmin_opts), cib.toxml())
+        rc = pipe_string("%s %s" % (cib_piped,cibadmin_opts), conf_node.toxml())
         if rc != 0:
-            update_err("cib",cibadmin_opts,cib.toprettyxml(), rc)
+            update_err("cib",cibadmin_opts,conf_node.toprettyxml(), rc)
             return False
         return True
     def mk_shadow(self):
@@ -1944,6 +1936,7 @@ class CibFactory(Singleton):
         self.remove_queue = [] # a list of cib objects to be removed
         self.id_refs = {} # dict of id-refs
         self.overwrite = False # update cib unconditionally
+        self.new_schema = False # schema changed
     def reset(self):
         if not self.doc:
             return
