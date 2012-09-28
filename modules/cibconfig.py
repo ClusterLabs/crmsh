@@ -344,6 +344,7 @@ class CibObjectSetCli(CibObjectSet):
         '''Extra processing of the string to be editted'''
         if user_prefs.editor.startswith("vi"):
             return "%s\n#vim:set syntax=pcmk\n" % s
+        return s
     def process(self, cli_list, update = False):
         '''
         Create new objects or update existing ones.
