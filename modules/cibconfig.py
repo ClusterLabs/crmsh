@@ -1011,7 +1011,7 @@ class CibNode(CibObject):
             s = '%s $id="%s"' % (s, self.obj_id)
         s = '%s %s' % (s, cli_display.id(uname))
         type = self.node.getAttribute("type")
-        if type != vars.node_default_type:
+        if type and type != vars.node_default_type:
             s = '%s:%s' % (s, type)
         return s
     def cli_list2node(self,cli_list,oldnode):
@@ -1023,8 +1023,9 @@ class CibNode(CibObject):
         if not obj_id:
             return None
         type = find_value(head[1],"type")
-        if not type:
+        if not vars.node_type_opt and not type:
             type = vars.node_default_type
+        if type:
             head[1].append(["type",type])
         headnode = mkxmlsimple(head,get_topnode(cib_factory.doc,self.parent_type),'node')
         id_hint = headnode.getAttribute("uname")

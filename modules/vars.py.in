@@ -17,6 +17,7 @@
 
 import os, pwd
 from singletonmixin import Singleton
+from distutils.version import StrictVersion
 
 def getpwdent():
     try: euid = os.geteuid()
@@ -203,6 +204,7 @@ class Vars(Singleton):
     crm_daemon_dir = "@CRM_DAEMON_DIR@"
     crm_daemon_user = "@CRM_DAEMON_USER@"
     crm_version = "@VERSION@ (Build @BUILD_VERSION@)"
+    pcmk_version = "@PCMK_VERSION@"
 
     ra_if = None # class interface to RA
     stonithd_metadata = None # stonithd meta data
@@ -224,5 +226,10 @@ class Vars(Singleton):
         if not ocf_root:
             ocf_root = "/usr/lib/ocf"
         os.environ["OCF_ROOT"] = ocf_root
+    if StrictVersion(pcmk_version) >= StrictVersion("1.1.8"):
+        node_type_opt = True
+        attr_defaults["node"] = {"type": "normal"}
+    else:
+        node_type_opt = False
 
 # vim:ts=4:sw=4:et:
