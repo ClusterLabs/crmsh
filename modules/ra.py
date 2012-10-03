@@ -104,6 +104,40 @@ class RaOS(object):
         l.sort()
         return l
 
+class RaCrmResource(object):
+    '''
+    Getting information from the resource agents via new crm_resource.
+    '''
+    def __init__(self):
+        self.good = True
+    def crm_resource(self, opts, xml = False):
+        '''
+        Get information directly from lrmd using lrmadmin.
+        '''
+        l = stdout2list("crm_resource %s" % opts, stderr_on=False)
+        if l and not xml:
+            l = l[1:] # skip the first line
+        return l
+    def meta(self, ra_class,ra_type,ra_provider):
+        return self.crm_resource("--show-metadata %s:%s:%s"%(ra_class,ra_provider,ra_type),True)
+    def providers(self, ra_type,ra_class = "ocf"):
+        'List of providers for OCF:type.'
+        return self.crm_resource("--list-ocf-alternatives %s" % ra_type,True)
+    def classes(self):
+        'List of classes.'
+        l = self.crm_resource("--list-standards",True)
+        for i in range(len(l)):
+            if l[i] == "ocf":
+                l[i] = "%s / %s" % (l[i], \
+                    ' '.join(self.crm_resource("--list-ocf-providers",True)))
+        return l
+    def types(self, ra_class = "ocf", ra_provider = ""):
+        'List of types for a class.'
+        if ra_provider:
+            return self.crm_resource("--list-agents %s:%s" % (ra_class,ra_provider))
+        else:
+            return self.crm_resource("--list-agents %s" % ra_class)
+
 def can_use_lrmadmin():
     from distutils import version
     # after this glue release all users can get meta-data and
@@ -114,10 +148,15 @@ def can_use_lrmadmin():
     v_this = version.StrictVersion(glue_ver)
     return v_this >= v_min or \
         (getpwdent()[0] in ("root",vars.crm_daemon_user))
+def crm_resource_support():
+    s = get_stdout("crm_resource --list-standards", stderr_on = False)
+    return s != ""
 def ra_if():
     if vars.ra_if:
         return vars.ra_if
-    if can_use_lrmadmin():
+    if crm_resource_support():
+        vars.ra_if = RaCrmResource()
+    elif can_use_lrmadmin():
         vars.ra_if = RaLrmd()
     if not vars.ra_if or not vars.ra_if.good:
         vars.ra_if = RaOS()
