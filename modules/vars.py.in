@@ -229,7 +229,9 @@ class Vars(Singleton):
     if StrictVersion(pcmk_version) >= StrictVersion("1.1.8"):
         node_type_opt = True
         attr_defaults["node"] = {"type": "normal"}
+        cib_no_section_rc = 6
     else:
         node_type_opt = False
+        cib_no_section_rc = 22
 
 # vim:ts=4:sw=4:et:

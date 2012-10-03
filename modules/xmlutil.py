@@ -84,7 +84,7 @@ def cibdump2doc(section = None):
         except xml.parsers.expat.ExpatError,msg:
             cib_parse_err(msg,outp)
             return None
-    elif rc == 22:
+    elif rc == vars.cib_no_section_rc:
         return None
     else:
         common_error("running %s: %s" % (cmd,err_outp))
