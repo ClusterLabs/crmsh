@@ -76,7 +76,10 @@ class RaOS(object):
             l = stdout2list("%s/resource.d/%s/%s meta-data" % \
                 (os.environ["OCF_ROOT"],ra_provider,ra_type))
         elif ra_class == "stonith":
-            l = stdout2list("stonith -m -t %s" % ra_type)
+            if ra_type.startswith("fence_") and os.path.exists("/usr/sbin/%s" %  ra_type):
+                l = stdout2list("/usr/sbin/%s -o metadata" % ra_type)
+            else:
+                l = stdout2list("stonith -m -t %s" % ra_type)
         return l
     def providers(self, ra_type,ra_class = "ocf"):
         'List of providers for a class:type.'
@@ -100,8 +103,13 @@ class RaOS(object):
             l = os_types_list("/etc/init.d/*")
         elif ra_class == "stonith":
             l = stdout2list("stonith -L")
+            l.extend(os_types_list("/usr/sbin/fence_*"))
         l = list(set(l))
         l.sort()
+        if ra_class == "stonith":
+            for ra in ("fence_ack_manual", "fence_pcmk", "fence_legacy"):
+                if l.count(ra):
+                    l.remove(ra)
         return l
 
 class RaCrmResource(object):
@@ -502,9 +510,12 @@ class RAInfo(object):
                 n_ops[n_op][p] = v
         for req_op in self.required_ops:
             if req_op not in n_ops:
-                n_ops[req_op] = {}
+                if not (self.ra_class == "stonith" and req_op in ("start", "stop")):
+                    n_ops[req_op] = {}
         intervals = {}
         for op in n_ops:
+            if self.ra_class == "stonith" and op in ("start", "stop"):
+                continue
             if op not in self.actions():
                 common_warn("%s: action %s not advertised in meta-data, it may not be supported by the RA" % (id,op))
                 rc |= 1
