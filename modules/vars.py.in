@@ -200,7 +200,7 @@ class Vars(Singleton):
     crm_schema_dir = "@CRM_DTD_DIRECTORY@"
     pe_dir = "@PE_STATE_DIR@"
     crm_conf_dir = "@CRM_CONFIG_DIR@"
-    crm_daemon_dir = "@GLUE_DAEMON_DIR@"
+    crm_daemon_dir = "@CRM_DAEMON_DIR@"
     crm_daemon_user = "@CRM_DAEMON_USER@"
     crm_version = "@VERSION@ (Build @BUILD_VERSION@)"
 

@@ -190,11 +190,17 @@ CRM_DTD_DIRECTORY=`extract_header_define crm_config.h CRM_DTD_DIRECTORY`
 AC_DEFINE_UNQUOTED(CRM_DTD_DIRECTORY,"$CRM_DTD_DIRECTORY", Where to keep CIB configuration files)
 AC_SUBST(CRM_DTD_DIRECTORY)
 
-dnl Eventually move out of the heartbeat dir tree and create compatability code
-dnl CRM_DAEMON_DIR=$libdir/pacemaker
-GLUE_DAEMON_DIR=`extract_header_define $GLUE_HEADER GLUE_DAEMON_DIR`
-AC_DEFINE_UNQUOTED(GLUE_DAEMON_DIR,"$GLUE_DAEMON_DIR", Location for Pacemaker daemons)
-AC_SUBST(GLUE_DAEMON_DIR)
+AC_PATH_PROGS(PKGCONFIG, pkg-config)
+if test x"${PKGCONFIG}" = x""; then
+   AC_MSG_ERROR(You need pkgconfig installed in order to build ${PACKAGE})
+fi
+
+CRM_DAEMON_DIR=`$PKGCONFIG pcmk --variable=daemondir`
+if test "X$CRM_DAEMON_DIR" = X; then
+	CRM_DAEMON_DIR=`extract_header_define $GLUE_HEADER GLUE_DAEMON_DIR`
+fi
+AC_DEFINE_UNQUOTED(CRM_DAEMON_DIR,"$CRM_DAEMON_DIR", Location for Pacemaker daemons)
+AC_SUBST(CRM_DAEMON_DIR)
 
 CRM_CACHE_DIR=${localstatedir}/cache/crm
 AC_DEFINE_UNQUOTED(CRM_CACHE_DIR,"$CRM_CACHE_DIR", Where crm shell keeps the cache)
@@ -245,7 +251,6 @@ dnl ===============================================
 PATH="$PATH:/sbin:/usr/sbin:/usr/local/sbin:/usr/local/bin"
 export PATH
 
-
 dnl Replacing AC_PROG_LIBTOOL with AC_CHECK_PROG because LIBTOOL
 dnl was NOT being expanded all the time thus causing things to fail.
 AM_PATH_PYTHON
@@ -256,7 +261,6 @@ AC_PATH_PROGS(HG, hg, /bin/false)
 AC_PATH_PROGS(TAR, tar)
 AC_PATH_PROGS(MD5, md5)
 AC_PATH_PROGS(TEST, test)
-AC_PATH_PROGS(PKGCONFIG, pkg-config)
 
 AM_CONDITIONAL(BUILD_ASCIIDOC, test x"${ASCIIDOC}" != x"")
 if test x"${ASCIIDOC}" != x""; then
