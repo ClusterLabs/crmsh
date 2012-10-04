@@ -118,26 +118,22 @@ class RaCrmResource(object):
     '''
     def __init__(self):
         self.good = True
-    def crm_resource(self, opts, xml = False):
+    def crm_resource(self, opts):
         '''
-        Get information directly from lrmd using lrmadmin.
+        Get information from crm_resource.
         '''
-        l = stdout2list("crm_resource %s" % opts, stderr_on=False)
-        if l and not xml:
-            l = l[1:] # skip the first line
-        return l
+        return stdout2list("crm_resource %s" % opts, stderr_on=False)
     def meta(self, ra_class,ra_type,ra_provider):
-        return self.crm_resource("--show-metadata %s:%s:%s"%(ra_class,ra_provider,ra_type),True)
+        return self.crm_resource("--show-metadata %s:%s:%s"%(ra_class,ra_provider,ra_type))
     def providers(self, ra_type,ra_class = "ocf"):
         'List of providers for OCF:type.'
-        return self.crm_resource("--list-ocf-alternatives %s" % ra_type,True)
+        if ra_class != "ocf":
+            common_err("no providers for class %s" % ra_class)
+            return []
+        return self.crm_resource("--list-ocf-alternatives %s" % ra_type)
     def classes(self):
         'List of classes.'
-        l = self.crm_resource("--list-standards",True)
-        for i in range(len(l)):
-            if l[i] == "ocf":
-                l[i] = "%s / %s" % (l[i], \
-                    ' '.join(self.crm_resource("--list-ocf-providers",True)))
+        l = self.crm_resource("--list-standards")
         return l
     def types(self, ra_class = "ocf", ra_provider = ""):
         'List of types for a class.'
