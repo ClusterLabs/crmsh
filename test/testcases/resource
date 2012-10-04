@@ -6,7 +6,6 @@ resource stop p3
 resource manage c1
 resource unmanage c1
 %setenv showobj=cli-prefer-p3
-resource migrate p3
 resource migrate p3 node1
 resource unmigrate p3
 %setenv showobj=p0
@@ -16,8 +15,3 @@ resource param p0 delete a0
 resource meta p0 set m0 123
 resource meta p0 show m0
 resource meta p0 delete m0
-resource failcount p0 set node1 5
-resource failcount p0 show node1
-resource failcount p0 delete node1
-resource cleanup p0 node1
-resource cleanup p0

@@ -86,23 +86,6 @@ resource p0 is NOT running
 </cib>
 
 .SETENV showobj=cli-prefer-p3
-.TRY resource migrate p3
-.EXT crm_resource -M -r 'p3' 
-Resource p3 not moved: not-active and no preferred location specified.
-Error performing operation: cib object missing
-.INP: configure
-.INP: _regtest on
-.INP: show xml cli-prefer-p3
-<?xml version="1.0" ?>
-<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
-  <configuration>
-    <crm_config/>
-    <nodes/>
-    <resources/>
-    <constraints/>
-  </configuration>
-</cib>
-
 .TRY resource migrate p3 node1
 .EXT crm_resource -M -r 'p3' --node='node1'
 .INP: configure
@@ -247,94 +230,6 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
 .TRY resource meta p0 delete m0
 .EXT crm_resource --meta -r 'p0' -d 'm0'
 Deleted p0 option: id=p0-meta_attributes-m0 name=m0
-.INP: configure
-.INP: _regtest on
-.INP: show xml p0
-<?xml version="1.0" ?>
-<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
-  <configuration>
-    <crm_config/>
-    <nodes/>
-    <resources>
-      <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy"/>
-    </resources>
-    <constraints/>
-  </configuration>
-</cib>
-
-.TRY resource failcount p0 set node1 5
-.EXT crm_attribute -t status -n 'fail-count-p0' -N 'node1' -v '5' -d 0
-.INP: configure
-.INP: _regtest on
-.INP: show xml p0
-<?xml version="1.0" ?>
-<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
-  <configuration>
-    <crm_config/>
-    <nodes/>
-    <resources>
-      <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy"/>
-    </resources>
-    <constraints/>
-  </configuration>
-</cib>
-
-.TRY resource failcount p0 show node1
-.EXT crm_attribute -t status -n 'fail-count-p0' -N 'node1' -G -d 0
-scope=status  name=fail-count-p0 value=0
-.INP: configure
-.INP: _regtest on
-.INP: show xml p0
-<?xml version="1.0" ?>
-<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
-  <configuration>
-    <crm_config/>
-    <nodes/>
-    <resources>
-      <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy"/>
-    </resources>
-    <constraints/>
-  </configuration>
-</cib>
-
-.TRY resource failcount p0 delete node1
-.EXT crm_attribute -t status -n 'fail-count-p0' -N 'node1' -D -d 0
-.INP: configure
-.INP: _regtest on
-.INP: show xml p0
-<?xml version="1.0" ?>
-<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
-  <configuration>
-    <crm_config/>
-    <nodes/>
-    <resources>
-      <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy"/>
-    </resources>
-    <constraints/>
-  </configuration>
-</cib>
-
-.TRY resource cleanup p0 node1
-.EXT crm_resource -C -r 'p0' -H 'node1'
-Error performing operation: connection failed
-.INP: configure
-.INP: _regtest on
-.INP: show xml p0
-<?xml version="1.0" ?>
-<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
-  <configuration>
-    <crm_config/>
-    <nodes/>
-    <resources>
-      <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy"/>
-    </resources>
-    <constraints/>
-  </configuration>
-</cib>
-
-.TRY resource cleanup p0
-.EXT crm_resource -C -r 'p0'
-Error performing operation: connection failed
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
