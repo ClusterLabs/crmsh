@@ -1757,6 +1757,7 @@ class History(UserInterface):
         self.cmd_table["peinputs"] = (self.peinputs,(0,),1,0)
         self.cmd_table["transition"] = (self.transition,(0,),1,0)
         self.cmd_table["session"] = (self.session,(0,2),1,0)
+        self.cmd_table["exclude"] = (self.exclude,(0,1),1,0)
         self.cmd_aliases.update({
             "limit": ("timeframe",),
         })
@@ -1996,6 +1997,15 @@ class History(UserInterface):
             if name == self.current_session:
                 common_info("current history session deleted, setting source to live")
                 self._set_source("live")
+        return rc
+    def exclude(self, cmd, arg=None):
+        "usage: exclude [<regex>|clear]"
+        if not arg:
+            rc = crm_report.manage_excludes("show")
+        elif arg == "clear":
+            rc = crm_report.manage_excludes("clear")
+        else:
+            rc = crm_report.manage_excludes("add", arg)
         return rc
 
 class Site(UserInterface):

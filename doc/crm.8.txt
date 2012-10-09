@@ -2953,6 +2953,25 @@ Example:
         log node-a
 ...............
 
+[[cmdhelp_history_exclude,exclude log messages]]
+==== `exclude`
+
+If a log is infested with irrelevant messages, those messages may
+be excluded by specifying a regular expression. The regular
+expressions used are Python extended. This command is additive.
+To drop all regular expressions, use `exclude clear`. Run
+`exclude` only to see the current list of regular expressions.
+Excludes are saved along with the history sessions.
+
+Usage:
+...............
+        exclude [<regex>|clear]
+...............
+Example:
+...............
+        exclude kernel.*ocfs2
+...............
+
 [[cmdhelp_history_peinputs,list or get PE input files]]
 ==== `peinputs`
 

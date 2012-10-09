@@ -22,6 +22,7 @@ import datetime
 import copy
 import re
 import glob
+import ConfigParser
 
 from singletonmixin import Singleton
 from userprefs import Options, UserPrefs
@@ -458,6 +459,8 @@ class Report(Singleton):
         self.outdir = os.path.join(vars.report_cache,"psshout")
         self.errdir = os.path.join(vars.report_cache,"pssherr")
         self.last_live_update = 0
+        self.log_filter_out = []
+        self.log_filter_out_re = []
     def error(self, s):
         common_err("%s: %s" % (self.source, s))
     def warn(self, s):
@@ -911,7 +914,14 @@ class Report(Singleton):
             # ${..} in logs?
             s = s.replace("${","$.{")
             return "${%s}%s${NORMAL}" % (clr,s)
+    def match_filter_out(self, s):
+        for re in self.log_filter_out_re:
+            if re.search(s):
+                return True
+        return False
     def display_logs(self, l):
+        if self.log_filter_out_re:
+            l = [x for x in l if not self.match_filter_out(x)]
         page_string('\n'.join([ self.disp(x) for x in l ]))
     def show_logs(self, log_l = None, re_l = []):
         '''
@@ -1129,7 +1139,6 @@ class Report(Singleton):
         - detail
         TODO
         '''
-        import ConfigParser
         p = ConfigParser.SafeConfigParser()
         p.add_section(self.rpt_section)
         p.set(self.rpt_section, 'dir', \
@@ -1139,6 +1148,7 @@ class Report(Singleton):
         p.set(self.rpt_section, 'to_time', \
             self.to_dt and human_date(self.to_dt) or '')
         p.set(self.rpt_section, 'detail', str(self.detail))
+        self.manage_excludes("save", p)
         fname = os.path.join(dir, self.state_file)
         try:
             f = open(fname,"wb")
@@ -1152,7 +1162,6 @@ class Report(Singleton):
         '''
         Load the history state from a file.
         '''
-        import ConfigParser
         p = ConfigParser.SafeConfigParser()
         fname = os.path.join(dir, self.state_file)
         try:
@@ -1178,12 +1187,13 @@ class Report(Singleton):
                 else:
                     common_warn("unknown item %s in the "
                         "session state file %s" % (n, fname))
+            rc |= self.manage_excludes("load", p)
         except ConfigParser.NoSectionError, msg:
             common_err("session state file %s: %s" % (fname, msg))
             rc = False
         except Exception, msg:
-            common_err("bad value for '%s' in "
-                "session state file %s" % (n, v, fname))
+            common_err("%s: bad value '%s' for '%s' in "
+                "session state file %s" % (msg, v, n, fname))
             rc = False
         return rc
     def manage_session(self, subcmd, name):
@@ -1214,6 +1224,46 @@ class Report(Singleton):
         elif subcmd == "pack":
             return mkarchive(dir)
         return True
+    log_section = 'log'
+    def manage_excludes(self, cmd, arg=None):
+        '''Exclude messages from log files.
+        arg: None (show, clear)
+             regex (add)
+             instance of ConfigParser.SafeConfigParser (load, save)
+        '''
+        if not self.prepare_source():
+            return False
+        rc = True
+        if cmd == "show":
+            print '\n'.join(self.log_filter_out)
+        elif cmd == "clear":
+            self.log_filter_out = []
+            self.log_filter_out_re = []
+        elif cmd == "add":
+            try:
+                regex = re.compile(arg)
+                self.log_filter_out.append(arg)
+                self.log_filter_out_re.append(regex)
+            except Exception,msg:
+                common_err("bad regex %s: %s" % (arg, msg))
+                rc = False
+        elif cmd == "save" and self.log_filter_out:
+            arg.add_section(self.log_section)
+            for i in range(len(self.log_filter_out)):
+                arg.set(self.log_section, 'exclude_%d' % i, \
+                    self.log_filter_out[i])
+        elif cmd == "load":
+            self.manage_excludes("clear")
+            try:
+                for n, v in arg.items(self.log_section):
+                    if n.startswith('exclude_'):
+                        rc |= self.manage_excludes("add", v)
+                    else:
+                        common_warn("unknown item %s in the "
+                            "section %s" % (n, self.log_section))
+            except ConfigParser.NoSectionError:
+                pass
+        return rc
 
 vars = Vars.getInstance()
 options = Options.getInstance()
