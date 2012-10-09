@@ -179,8 +179,11 @@ class HelpSystem(object):
         short_tab = self.get_short_help(help_tab)
         l = [s]
         for t,d in short_tab:
-            if self.is_level(t):
-                t = "%s/" % t
+# TODO: figure out how to make appending '/' work _only_ in case
+# t is really a level, becase some commands share name with
+# levels (e.g. history resource, history node)
+#            if self.is_level(t):
+#                t = "%s/" % t
             l.append("\t%-16s %s" % (t,d))
         page_string("\n".join(l))
     def cmd_help(self,help_tab,topic = ''):
