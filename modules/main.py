@@ -290,8 +290,22 @@ def mv_user_files():
     vars.tmpl_conf_dir = xdg_file(vars.tmpl_conf_dir, \
         vars.xdg_map["crmconf"], "d", "config")
 
+def compatibility():
+    from distutils.version import StrictVersion
+    try:
+        vars.pcmk_version = get_stdout("crmd version").split()[2]
+        if StrictVersion(vars.pcmk_version) >= StrictVersion("1.1.8"):
+            vars.node_type_opt = True
+            vars.attr_defaults["node"] = {"type": "normal"}
+            vars.cib_no_section_rc = 6
+    except Exception,msg:
+        vars.pcmk_version = "1.1.1"
+        common_warn(msg)
+        common_warn("could not get the pacemaker version, bad installation?")
+
 def do_work():
     global user_args
+    compatibility()
     # this special case is silly, but we have to keep it to
     # preserve the backward compatibility
     if len(user_args) == 1 and user_args[0].startswith("conf"):

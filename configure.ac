@@ -211,10 +211,6 @@ HA_STATE_DIR=`extract_header_define $GLUE_HEADER HA_VARRUNDIR`
 AC_DEFINE_UNQUOTED(HA_STATE_DIR,"$HA_STATE_DIR", Where Heartbeat keeps state files and sockets)
 AC_SUBST(HA_STATE_DIR)
 
-PCMK_VERSION=`$PKGCONFIG pcmk --modversion`
-AC_DEFINE_UNQUOTED(PCMK_VERSION,"$PCMK_VERSION", Pacemaker version)
-AC_SUBST(PCMK_VERSION)
-
 dnl Needed for the location of hostcache in CTS.py
 HA_VARLIBHBDIR=`extract_header_define $GLUE_HEADER HA_VARLIBHBDIR`
 AC_SUBST(HA_VARLIBHBDIR)
