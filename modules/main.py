@@ -291,10 +291,10 @@ def mv_user_files():
         vars.xdg_map["crmconf"], "d", "config")
 
 def compatibility():
-    from distutils.version import StrictVersion
+    from distutils.version import LooseVersion
     try:
         vars.pcmk_version = get_stdout("crmd version").split()[2]
-        if StrictVersion(vars.pcmk_version) >= StrictVersion("1.1.8"):
+        if LooseVersion(vars.pcmk_version) >= LooseVersion("1.1.8"):
             vars.node_type_opt = True
             vars.attr_defaults["node"] = {"type": "normal"}
             vars.cib_no_section_rc = 6
