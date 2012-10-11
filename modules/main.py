@@ -315,7 +315,20 @@ def do_work():
         # we're not sure yet whether it's an interactive session or not
         # (single-shot commands aren't)
         options.interactive = False
-        if parse_line(levels,shlex.split(' '.join(user_args))):
+        # add quotes if there's whitespace in one of the
+        # arguments; so that the user doesn't need to protect the
+        # quotes; but if there are two kinds of quotes which
+        # actually _survive_ the getopt, then we're _probably_
+        # screwed
+        # at any rate, stuff like ... '..."..."' as well as
+        # '...\'...\''  do work
+        l = []
+        for s in user_args:
+            if ' ' in s:
+                q = '"' in s and "'" or '"'
+                s = "%s%s%s" % (q,s,q)
+            l.append(s)
+        if parse_line(levels,shlex.split(' '.join(l))):
             # if the user entered a level, then just continue
             if not levels.previous():
                 sys.exit(0)
