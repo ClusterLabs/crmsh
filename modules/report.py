@@ -674,7 +674,8 @@ class Report(Singleton):
         self.last_live_update = time.time()
         return (rc1 and rc2)
     def get_live_report(self):
-        acquire_lock(vars.report_cache)
+        if not acquire_lock(vars.report_cache):
+            return None
         loc = self.new_live_hb_report()
         release_lock(vars.report_cache)
         return loc
@@ -690,7 +691,8 @@ class Report(Singleton):
             self.loc = d
             self.report_setup()
         if not force and self.is_last_live_recent():
-            acquire_lock(vars.report_cache)
+            if not acquire_lock(vars.report_cache):
+                return None
             rc = self.update_live()
             release_lock(vars.report_cache)
             if rc:
