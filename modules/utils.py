@@ -265,12 +265,12 @@ def check_locker(dir):
         return
     try:
         os.kill(pid, 0)
-    except OSError, err:
-        if err.errno == os.errno.ESRCH:
+    except OSError, (errno, strerror):
+        if errno == os.errno.ESRCH:
             common_info("history: removing stale lock")
             rmdir_r(os.path.join(dir,_LOCKDIR))
         else:
-            common_err("%s: %s" % (_LOCKDIR,err.message))
+            common_err("%s: %s" % (_LOCKDIR,strerror))
 def acquire_lock(dir):
     check_locker(dir)
     while True:
@@ -278,7 +278,7 @@ def acquire_lock(dir):
             os.mkdir(os.path.join(dir,_LOCKDIR))
             str2file("%d" % os.getpid(),os.path.join(dir,_LOCKDIR,_PIDF))
             return True
-        except OSError as (errno, strerror):
+        except OSError, (errno, strerror):
             if errno != os.errno.EEXIST:
                 common_err(strerror)
                 return False
