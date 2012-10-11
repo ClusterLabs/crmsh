@@ -2145,7 +2145,7 @@ class CibFactory(Singleton):
         return symm and symm != "true"
     def new_object(self,obj_type,obj_id):
         "Create a new object of type obj_type."
-        if obj_id and self.find_object(obj_id):
+        if obj_id and id_store.id_in_use(obj_id):
             return None
         for xml_obj_type,v in cib_object_map.items():
             if v[0] == obj_type:
