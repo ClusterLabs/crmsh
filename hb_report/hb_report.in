@@ -199,6 +199,49 @@ no_dir() {
 time2str() {
 	perl -e "use POSIX; print strftime('%x %X',localtime($1));"
 }
+# try to figure out where pacemaker ... etc
+compatibility_pcmk() {
+	# HA_VARLIB is normally set to {localstatedir}/heartbeat
+	# HA_BIN is normally set to {libdir}/heartbeat
+	local localstatedir libdir lastf
+	localstatedir=`dirname $HA_VARLIB`
+	libdir=`dirname $HA_BIN`
+	# PE_STATE_DIR
+	lastf=$(2>/dev/null ls -rt `find /var/lib -name pengine -type d |
+		sed 's,$,/*.last,'` | tail -1)
+	if [ -f "$lastf" ]; then
+		PE_STATE_DIR=`dirname $lastf`
+	else
+		for p in pacemaker/pengine pengine heartbeat/pengine; do
+			if [ -d $localstatedir/$p ]; then
+				debug "setting PE_STATE_DIR to $localstatedir/$p"
+				PE_STATE_DIR=$localstatedir/$p
+				break
+			fi
+		done
+	fi
+	# CIB
+	for p in pacemaker/cib heartbeat/crm; do
+		if [ -f $localstatedir/$p/cib.xml ]; then
+			debug "setting CIB_DIR to $localstatedir/$p"
+			CIB_DIR=$localstatedir/$p
+			debug "setting PCMK_LIB to `dirname $CIB_DIR`"
+			PCMK_LIB=`dirname $CIB_DIR`
+			break
+		fi
+	done
+	# CRM_DAEMON_DIR
+	for p in pacemaker heartbeat; do
+		if [ -x $libdir/$p/crmd ]; then
+			debug "setting CRM_DAEMON_DIR to $libdir/$p"
+			CRM_DAEMON_DIR=$libdir/$p
+			break
+		fi
+	done
+	# PTEST
+	PTEST=`echo_ptest_tool`
+	export PE_STATE_DIR CIB_DIR CRM_DAEMON_DIR PTEST
+}
 
 #
 # find log files
@@ -538,35 +581,32 @@ getbacktraces() {
 pe2dot() {
 	local pef=`basename $1`
 	local dotf=`basename $pef .bz2`.dot
+	test -z "$PTEST" && return
 	(
 	cd `dirname $1`
-	ptest -D $dotf -x $pef
+	$PTEST -D $dotf -x $pef >/dev/null 2>&1
 	)
 }
 getpeinputs() {
 	local pe_dir flist
 	local f
-	debug "looking for PE files in $HA_VARLIB/pengine, `dirname $HA_VARLIB`/pengine"
-	for pe_dir in $HA_VARLIB/pengine `dirname $HA_VARLIB`/pengine
-	do
-		test -d $pe_dir ||
-			continue
-		flist=$(
-			find_files $pe_dir $1 $2 | sed "s,`dirname $pe_dir`/,,g" |
-				grep -v '[.]last$'
-		)
-		[ "$flist" ] && {
-			(cd `dirname $pe_dir` && tar cf - $flist) | (cd $3 && tar xf -)
-			debug "found `echo $flist | wc -w` pengine input files in $pe_dir"
-		}
-		if [ `echo $flist | wc -w` -le 20 ]; then
-			for f in $flist; do
-				pe2dot $3/$f
-			done
-		else
-			info "too many PE inputs to create dot files"
-		fi
-	done
+	pe_dir=$PE_STATE_DIR
+	debug "looking for PE files in $pe_dir"
+	flist=$(
+		find_files $pe_dir $1 $2 | sed "s,`dirname $pe_dir`/,,g" |
+			grep -v '[.]last$'
+	)
+	[ "$flist" ] && {
+		(cd `dirname $pe_dir` && tar cf - $flist) | (cd $3 && tar xf -)
+		debug "found `echo $flist | wc -w` pengine input files in $pe_dir"
+	}
+	if [ `echo $flist | wc -w` -le 20 ]; then
+		for f in $flist; do
+			pe2dot $3/$f
+		done
+	else
+		info "too many PE inputs to create dot files"
+	fi
 }
 touch_DC_if_dc() {
 	local dc
@@ -1120,6 +1160,8 @@ fi
 	set -x
 }
 
+compatibility_pcmk
+
 # allow user to enforce the cluster type
 # if not, then it is found out on _all_ nodes
 if [ -z "$USER_CLUSTER_TYPE" ]; then
@@ -1130,7 +1172,7 @@ fi
 
 # the very first thing we must figure out is which cluster
 # stack is used
-CORES_DIRS=$HA_VARLIB/cores
+CORES_DIRS="`2>/dev/null ls -d $HA_VARLIB/cores $PCMK_LIB/cores | uniq`"
 PACKAGES="pacemaker libpacemaker3 
 pacemaker-pygui pacemaker-pymgmt pymgmt-client
 openais libopenais2 libopenais3 corosync libcorosync4

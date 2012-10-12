@@ -41,6 +41,15 @@ echo_membership_tool() {
 		which $f 2>/dev/null && break
 	done
 }
+# find out if ptest or crm_simulate
+#
+echo_ptest_tool() {
+	local f ptest_progs
+	ptest_progs="crm_simulate ptest"
+	for f in $ptest_progs; do
+		which $f 2>/dev/null && break
+	done
+}
 #
 # find nodes for this cluster
 #
@@ -400,12 +409,14 @@ findbinary() {
 	fi
 	fullpath=`which $binary 2>/dev/null`
 	if [ x = x"$fullpath" ]; then
-		if [ -x $HA_BIN/$binary ]; then
-			echo $HA_BIN/$binary
-			debug "found the program at $HA_BIN/$binary for core $1"
-		else
-			warning "could not find the program path for core $1"
-		fi
+		for d in $HA_BIN $CRM_DAEMON_DIR; do
+			if [ -x $d/$binary ]; then
+				echo $d/$binary
+				debug "found the program at $d/$binary for core $1"
+			else
+				warning "could not find the program path for core $1"
+			fi
+		done
 	else
 		echo $fullpath
 		debug "found the program at $fullpath for core $1"
@@ -463,7 +474,7 @@ getconfig() {
 		dumpstate $1
 		touch $1/RUNNING
 	else
-		cp -p $HA_VARLIB/crm/$CIB_F $1/ 2>/dev/null
+		cp -p $CIB_DIR/$CIB_F $1/ 2>/dev/null
 		touch $1/STOPPED
 	fi
 	[ "$HOSTCACHE" ] &&
@@ -677,5 +688,5 @@ pkg_ver() {
 }
 
 crm_info() {
-	$HA_BIN/crmd version 2>&1
+	$CRM_DAEMON_DIR/crmd version 2>&1
 }
