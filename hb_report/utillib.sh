@@ -480,7 +480,7 @@ crmconfig() {
 get_crm_nodes() {
 	cibadmin -Ql -o nodes |
 	awk '
-	/type="normal"/ {
+	/<node / {
 		for( i=1; i<=NF; i++ )
 			if( $i~/^uname=/ ) {
 				sub("uname=.","",$i);
