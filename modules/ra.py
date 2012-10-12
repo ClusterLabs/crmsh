@@ -148,6 +148,8 @@ def can_use_lrmadmin():
     # similar from lrmd
     minimum_glue = "1.0.10"
     glue_ver = get_stdout("%s -v" % lrmadmin_prog, stderr_on = False)
+    if not glue_ver: #lrmadmin probably not found
+        return False
     v_min = version.LooseVersion(minimum_glue)
     v_this = version.LooseVersion(glue_ver)
     return v_this >= v_min or \
