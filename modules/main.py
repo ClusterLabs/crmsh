@@ -325,8 +325,8 @@ def do_work():
         # '...\'...\''  do work
         l = []
         for s in user_args:
-            if ' ' in s:
-                q = '"' in s and "'" or '"'
+            if ' ' in s and not ('"' in s or "'" in s):
+                q = '"'
                 s = "%s%s%s" % (q,s,q)
             l.append(s)
         if parse_line(levels,shlex.split(' '.join(l))):
