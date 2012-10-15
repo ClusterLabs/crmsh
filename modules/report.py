@@ -365,17 +365,6 @@ def get_pe_num(pe_file):
     except:
         return "-1"
 
-# r.group(1) transition number (a different thing from file number)
-# r.group(2) contains full path
-# r.group(3) file number
-transition_patt = (
-	"crmd: .* do_te_invoke: Processing graph ([0-9]+) .*derived from (.*/pe-[^-]+-(%%)[.]bz2)", # transition start
-	"crmd: .* run_graph: .*Transition ([0-9]+).*Source=(.*/pe-[^-]+-(%%)[.]bz2).: (Stopped|Complete|Terminated)", # and stop
-# r.group(1) transition number
-# r.group(2) number of actions
-	"crmd: .* run_graph: .*Transition (%%) .*Complete=([0-9]+),", # number of actions
-)
-
 def run_graph_msg_actions(msg):
     '''
     crmd: [13667]: info: run_graph: Transition 399 (Complete=5,
@@ -396,11 +385,16 @@ def transition_actions(msg_l, te_invoke_msg, pe_file):
     '''
     # check if there were any actions in this transition
     pe_num = get_pe_num(pe_file)
-    te_invoke_patt = transition_patt[0].replace("%%", pe_num)
-    run_patt = transition_patt[1].replace("%%", pe_num)
+    if pe_num == "-1":
+        common_debug("no PE number for file: %s" % pe_file)
+        return -1
+    te_invoke_patt = vars.transition_patt[0].replace("%%", pe_num)
+    run_patt = vars.transition_patt[1].replace("%%", pe_num)
     r = re.search(te_invoke_patt, te_invoke_msg)
+    if not r:
+        return -1
     trans_num = r.group(1)
-    unpack_patt = transition_patt[2].replace("%%", trans_num)
+    unpack_patt = vars.transition_patt[2].replace("%%", trans_num)
     for msg in msg_l:
         try:
             return int(re.search(unpack_patt, msg).group(2))
@@ -800,7 +794,7 @@ class Report(Singleton):
         build it from the collected log files (self.logobj).
         Otherwise, we get matches for transition patterns.
         '''
-        trans_re_l = [x.replace("%%", "[0-9]+") for x in transition_patt]
+        trans_re_l = [x.replace("%%", "[0-9]+") for x in vars.transition_patt]
         if not msg_l:
             msg_l = self.logobj.get_matches(trans_re_l)
         else:
@@ -813,17 +807,16 @@ class Report(Singleton):
                 # this looks too short
                 common_warn("log message <%s> unexpected format, please report a bug" % msg)
                 continue
-            if msg_a[7] in ("unpack_graph:","run_graph:"):
+            if "run_graph:" in msg:
                 continue # we want another message
+            common_debug("trans msg use: %s" % msg_a)
             node = msg_a[3]
             pe_file = msg_a[-1]
             pe_base = os.path.basename(pe_file)
             num_actions = transition_actions(msg_l, msg, pe_file)
-            if num_actions == 0: # empty transition
+            if num_actions <= 0: # empty transition
                 common_debug("skipping empty transition (%s)" % pe_base)
                 continue
-            elif num_actions == -1: # couldn't find messages
-                common_warn("could not find number of actions for transition (%s)" % pe_base)
             if not future_pe:
                 pe_l_file = os.path.join(self.loc, node, "pengine", pe_base)
                 if not os.path.isfile(pe_l_file):
@@ -983,14 +976,14 @@ class Report(Singleton):
         self.show_logs(re_l = all_re_l)
     def get_transition_msgs(self, pe_file, msg_l = None):
         if not msg_l:
-            trans_re_l = [x.replace("%%", "[0-9]+") for x in transition_patt]
+            trans_re_l = [x.replace("%%", "[0-9]+") for x in vars.transition_patt]
             msg_l = self.logobj.get_matches(trans_re_l)
         te_invoke_msg = ""
         run_msg = ""
         unpack_msg = ""
         pe_num = get_pe_num(pe_file)
-        te_invoke_patt = transition_patt[0].replace("%%", pe_num)
-        run_patt = transition_patt[1].replace("%%", pe_num)
+        te_invoke_patt = vars.transition_patt[0].replace("%%", pe_num)
+        run_patt = vars.transition_patt[1].replace("%%", pe_num)
         r = None
         msg_l.reverse()
         for msg in msg_l:
@@ -1001,7 +994,7 @@ class Report(Singleton):
         if not r:
             return ["", "", ""]
         trans_num = r.group(1)
-        unpack_patt = transition_patt[2].replace("%%", trans_num)
+        unpack_patt = vars.transition_patt[2].replace("%%", trans_num)
         for msg in msg_l:
             if re.search(run_patt, msg):
                 run_msg = msg
