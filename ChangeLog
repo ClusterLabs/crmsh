@@ -1,3 +1,20 @@
+* Mon Oct 15 2012 Dejan Muhamedagic <dejan@suse.de> and many others
+- stable release 1.2.1
+- cibconfig: show error message on id in use
+- cibconfig: repair edit for non-vi users
+- cibconfig: update schema separately (don't remove the status section)
+- cibconfig: node type is optional now
+- ui: readd quotes for single-shot commands
+- ra: manage without glue installed (savannah#37560)
+- ra: improve support for RH fencing-agents
+- ra: add support for crm_resource
+- history: remove keyword 'as' which is not compatible with python
+  2.4 (savannah#37534)
+- history: add the exclude (log messages) command
+- history: pacemaker 1.1.8 compatibility code
+- utils: exit code of cibadmin -Q on no section changed in 1.1.8
+- some more pacemaker 1.1.8 compatibility code
+
 * Tue Sep 18 2012 Dejan Muhamedagic <dejan@suse.de> and many others
 - stable release 1.2.0
 - cibconfig: support the kind attribute in orders

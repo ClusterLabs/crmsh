@@ -17,7 +17,7 @@
 
 Name:		crmsh
 Summary:	Pacemaker command line interface
-Version:	1.2.0
+Version:	1.2.1
 Release:	%{crmsh_release}%{?dist}
 License:	GPLv2+
 Url:		http://www.clusterlabs.org
