@@ -167,7 +167,8 @@ def filter_string(cmd,s,stderr_on = True):
         outp = p.communicate(s)[0]
         p.wait()
         rc = p.returncode
-    except IOError, msg:
+    except Exception, msg:
+        outp = ''
         common_err(msg)
     return rc,outp
 
