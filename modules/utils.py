@@ -155,6 +155,7 @@ def pipe_string(cmd,s):
 
 def filter_string(cmd,s,stderr_on = True):
     rc = -1 # command failed
+    outp = ''
     if stderr_on:
         stderr = None
     else:
@@ -167,9 +168,13 @@ def filter_string(cmd,s,stderr_on = True):
         outp = p.communicate(s)[0]
         p.wait()
         rc = p.returncode
+    except OSError, (errno, strerror):
+        if errno != os.errno.EPIPE:
+            common_err(strerror)
+        common_info("from: %s" % cmd)
     except Exception, msg:
-        outp = ''
         common_err(msg)
+        common_info("from: %s" % cmd)
     return rc,outp
 
 def str2tmp(s):
