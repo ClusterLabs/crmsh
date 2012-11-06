@@ -387,6 +387,9 @@ def wait4dc(what = "", show_progress = True):
     cmd = "crmadmin -S %s" % dc
     cnt = 0
     output_started = 0
+    init_sleep = 0.25
+    max_sleep = 1.00
+    sleep_time = init_sleep
     while True:
         s = get_stdout(add_sudo(cmd))
         if not s.startswith("Status"):
@@ -400,7 +403,9 @@ def wait4dc(what = "", show_progress = True):
             if output_started:
                 sys.stderr.write(" done\n")
             return True
-        time.sleep(0.1)
+        time.sleep(sleep_time)
+        if sleep_time < max_sleep:
+            sleep_time *= 2
         if show_progress:
             if not output_started:
                 output_started = 1
