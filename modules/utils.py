@@ -631,6 +631,8 @@ def multicolumn(l):
         if len(s) > max_len:
             max_len = len(s)
     cols = w/(max_len + min_gap)  # approx.
+    if not cols:
+        cols = 1
     col_len = w/cols
     for i in range(len(l)/cols + 1):
         s = ''
