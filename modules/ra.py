@@ -80,6 +80,9 @@ class RaOS(object):
                 l = stdout2list("/usr/sbin/%s -o metadata" % ra_type)
             else:
                 l = stdout2list("stonith -m -t %s" % ra_type)
+        elif ra_class == "nagios":
+            l = stdout2list("%s/check_%s --metadata" % \
+                (vars.nagios_dir, ra_type))
         return l
     def providers(self, ra_type,ra_class = "ocf"):
         'List of providers for a class:type.'
@@ -92,7 +95,7 @@ class RaOS(object):
         return l
     def classes(self):
         'List of classes.'
-        return "heartbeat lsb ocf stonith".split()
+        return "heartbeat lsb nagios ocf stonith".split()
     def types(self, ra_class = "ocf", ra_provider = ""):
         'List of types for a class.'
         l = []
@@ -104,6 +107,9 @@ class RaOS(object):
         elif ra_class == "stonith":
             l = stdout2list("stonith -L")
             l.extend(os_types_list("/usr/sbin/fence_*"))
+        elif ra_class == "nagios":
+            l = os_types_list("%s/check_*" % vars.nagios_dir)
+            l = [x.replace("check_","") for x in l]
         l = list(set(l))
         l.sort()
         if ra_class == "stonith":

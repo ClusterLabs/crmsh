@@ -205,6 +205,7 @@ class Vars(Singleton):
     crm_daemon_dir = "@CRM_DAEMON_DIR@"
     crm_daemon_user = "@CRM_DAEMON_USER@"
     crm_version = "@VERSION@ (Build @BUILD_VERSION@)"
+    nagios_dir = "/usr/lib/nagios/plugins"
 
     ra_if = None # class interface to RA
     stonithd_metadata = None # stonithd meta data
