@@ -197,6 +197,9 @@ fi
 
 CRM_DAEMON_DIR=`$PKGCONFIG pcmk --variable=daemondir`
 if test "X$CRM_DAEMON_DIR" = X; then
+	CRM_DAEMON_DIR=`$PKGCONFIG pacemaker --variable=daemondir`
+fi
+if test "X$CRM_DAEMON_DIR" = X; then
 	CRM_DAEMON_DIR=`extract_header_define $GLUE_HEADER GLUE_DAEMON_DIR`
 fi
 AC_DEFINE_UNQUOTED(CRM_DAEMON_DIR,"$CRM_DAEMON_DIR", Location for Pacemaker daemons)
