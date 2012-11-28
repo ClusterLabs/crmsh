@@ -490,11 +490,12 @@ class Report(Singleton):
         if os.path.isdir(loc):
             return loc
         cwd = os.getcwd()
-        try:
-            os.chdir(parentdir)
-        except OSError,msg:
-            self.error(msg)
-            return None
+        if parentdir:
+            try:
+                os.chdir(parentdir)
+            except OSError,msg:
+                self.error(msg)
+                return None
         import tarfile
         try:
             tf = tarfile.open(bfname)
