@@ -2318,8 +2318,8 @@ class CibFactory(Singleton):
         the new properties should be merged with the old.
         Otherwise, users may be surprised.
         '''
-        id_store.remove_xml(obj.node)
         if len(cli_list) >= 2 and cli_list[1][0] == "raw":
+            id_store.remove_xml(obj.node)
             doc = xml.dom.minidom.parseString(cli_list[1][1])
             id_store.store_xml(doc.childNodes[0])
             return self.update_element(obj,doc.childNodes[0])
