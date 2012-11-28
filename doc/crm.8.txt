@@ -1406,6 +1406,31 @@ certain problems are treated as configuration errors. In the
 
 See <<topics_Checks,Configuration semantic checks>> for more details.
 
+[[cmdhelp_options_add-quotes,add quotes around parameters containing spaces]]
+==== `add-quotes`
+
+The shell (as in `/bin/sh`) parser strips quotes from the command
+line. This may sometimes make it really difficult to type values
+which contain white space. One typical example is the configure
+filter command. The crm shell will supply extra quotes around
+arguments which contain white space. The default is `yes`.
+
+.Note on quotes use
+****************************
+Adding quotes around arguments automatically has been introduced
+with version 1.2.2 and it is technically a regression. Being a
+regression is the only reason the `add-quotes` option exists. If
+you have custom shell scripts which would break, just set the
+`add-quotes` option to `no`.
+
+For instance, with adding quotes enabled, it is possible to do
+the following:
+...............
+    # crm configure primitive d1 ocf:heartbeat:Dummy meta description="some description here"
+    # crm configure filter 'sed "s/hostlist=./&node-c /"' fencing
+...............
+****************************
+
 [[cmdhelp_options_show,show current user preference]]
 ==== `show`
 
@@ -2088,13 +2113,11 @@ just a subset of elements.
 It is possible to filter the XML representation of objects, but
 probably not as useful as the configuration language. The
 presentation is somewhat different from what would be displayed
-by the `show` command---each element is shown on a single, i.e.
-there are no backslashes and no other embelishments.
+by the `show` command---each element is shown on a single line,
+i.e. there are no backslashes and no other embelishments.
 
 Don't forget to put quotes around the filter if it contains
-spaces. Further, if you use this in a single-shot mode (from the
-`sh` command line), protect all quotes with a backslash.
-Otherwise, they won't reach the `crm` shell parser.
+spaces.
 
 Usage:
 ...............
@@ -2104,7 +2127,7 @@ Usage:
 Examples:
 ...............
         filter "sed '/^primitive/s/target-role=[^ ]*//'"
-        # crm configure filter \"sed \'/^primitive/s/target-role=[^ ]*//\'\"
+        # crm configure filter "sed '/^primitive/s/target-role=[^ ]*//'"
 ...............
 
 [[cmdhelp_configure_delete,delete CIB objects]]

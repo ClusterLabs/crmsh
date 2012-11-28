@@ -325,9 +325,10 @@ def do_work():
         # '...\'...\''  do work
         l = []
         for s in user_args:
-            if ' ' in s and not ('"' in s or "'" in s):
-                q = '"'
-                s = "%s%s%s" % (q,s,q)
+            if user_prefs.get_add_quotes() and ' ' in s:
+                q = '"' in s and "'" or '"'
+                if not q in s:
+                    s = "%s%s%s" % (q,s,q)
             l.append(s)
         if parse_line(levels,shlex.split(' '.join(l))):
             # if the user entered a level, then just continue

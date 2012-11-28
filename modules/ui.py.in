@@ -122,6 +122,7 @@ class CliOptions(UserInterface):
         self.cmd_table["check-mode"] = (self.set_check_mode,(1,1),0,0)
         self.cmd_table["sort-elements"] = (self.set_sort_elements,(1,1),0,0)
         self.cmd_table["wait"] = (self.set_wait,(1,1),0,0)
+        self.cmd_table["add-quotes"] = (self.set_add_quotes,(1,1),0,0)
         self.cmd_table["save"] = (self.save_options,(0,0),0,0)
         self.cmd_table["show"] = (self.show_options,(0,0),0,0)
         setup_aliases(self)
@@ -162,6 +163,12 @@ class CliOptions(UserInterface):
             common_err("%s: bad boolean option"%opt)
             return True
         return user_prefs.set_wait(opt)
+    def set_add_quotes(self,cmd,opt):
+        "usage: add-quotes {yes|no}"
+        if not verify_boolean(opt):
+            common_err("%s: bad boolean option"%opt)
+            return True
+        return user_prefs.set_add_quotes(opt)
     def show_options(self,cmd):
         "usage: show"
         return user_prefs.write_rc(sys.stdout)

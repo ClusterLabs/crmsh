@@ -79,6 +79,7 @@ class UserPrefs(Singleton):
         self.force = False
         self.sort_elems = "yes"
         self.wait = False
+        self.add_quotes = "yes"
     def missing(self,n):
         common_err("could not find any %s on the system" % n)
     def check_skill_level(self,n):
@@ -168,6 +169,10 @@ class UserPrefs(Singleton):
         self.wait = is_boolean_true(opt) and "yes" or "no"
     def get_wait(self):
         return self.wait == "yes"
+    def set_add_quotes(self,opt):
+        self.add_quotes = is_boolean_true(opt) and "yes" or "no"
+    def get_add_quotes(self):
+        return self.add_quotes == "yes"
     def write_rc(self,f):
         print >>f, '%s "%s"' % ("editor",self.editor)
         print >>f, '%s "%s"' % ("pager",self.pager)
@@ -179,6 +184,7 @@ class UserPrefs(Singleton):
         print >>f, '%s "%s"' % ("check-frequency",self.check_frequency)
         print >>f, '%s "%s"' % ("check-mode",self.check_mode)
         print >>f, '%s "%s"' % ("wait",self.wait)
+        print >>f, '%s "%s"' % ("add-quotes",self.add_quotes)
     def save_options(self,rc_file):
         try: f = open(rc_file,"w")
         except IOError,msg:
