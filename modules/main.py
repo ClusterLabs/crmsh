@@ -290,23 +290,16 @@ def mv_user_files():
     vars.tmpl_conf_dir = xdg_file(vars.tmpl_conf_dir, \
         vars.xdg_map["crmconf"], "d", "config")
 
-def compatibility():
-    from distutils.version import LooseVersion
-    try:
-        vars.pcmk_version = get_stdout("crmd version").split()[2]
-        if LooseVersion(vars.pcmk_version) >= LooseVersion("1.1.8"):
-            vars.node_type_opt = True
-            vars.attr_defaults["node"] = {"type": "normal"}
-            vars.cib_no_section_rc = 6
-            vars.transition_patt[0] = "pengine.* process_pe_message: Calculated Transition ([0-9]+): (.*/pe-[^-]+-(%%)[.]bz2)" # transition start
-    except Exception,msg:
-        vars.pcmk_version = "1.1.1"
-        common_warn(msg)
-        common_warn("could not get the pacemaker version, bad installation?")
+def compatibility_setup():
+    if is_pcmk_118():
+        vars.node_type_opt = True
+        vars.attr_defaults["node"] = {"type": "normal"}
+        vars.cib_no_section_rc = 6
+        vars.transition_patt[0] = "pengine.* process_pe_message: Calculated Transition ([0-9]+): (.*/pe-[^-]+-(%%)[.]bz2)" # transition start
 
 def do_work():
     global user_args
-    compatibility()
+    compatibility_setup()
     # this special case is silly, but we have to keep it to
     # preserve the backward compatibility
     if len(user_args) == 1 and user_args[0].startswith("conf"):

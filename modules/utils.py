@@ -704,6 +704,20 @@ def parse_time(t):
             return None
     return dt
 
+def get_pcmk_version():
+    try:
+        v = get_stdout("crmd version").split()[2]
+    except Exception,msg:
+        v = "1.1.1"
+        common_warn("could not get the pacemaker version, bad installation?")
+    return v
+
+def is_pcmk_118():
+    if not vars.pcmk_version:
+        vars.pcmk_version = get_pcmk_version()
+    from distutils.version import LooseVersion
+    return LooseVersion(vars.pcmk_version) >= LooseVersion("1.1.8")
+
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 vars = Vars.getInstance()

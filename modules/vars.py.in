@@ -227,12 +227,16 @@ class Vars(Singleton):
         if not ocf_root:
             ocf_root = "/usr/lib/ocf"
         os.environ["OCF_ROOT"] = ocf_root
+    pcmk_version = "" # set later
 
     # r.group(1) transition number (a different thing from file number)
     # r.group(2) contains full path
     # r.group(3) file number
     transition_patt = [
         "crmd.* do_te_invoke: Processing graph ([0-9]+) .*derived from (.*/pe-[^-]+-(%%)[.]bz2)", # transition start
+    # r.group(1) transition number (a different thing from file number)
+    # r.group(2) contains full path
+    # r.group(3) transition status
         "crmd.* run_graph: .*Transition ([0-9]+).*Source=(.*/pe-[^-]+-(%%)[.]bz2).: (Stopped|Complete|Terminated)", # and stop
     # r.group(1) transition number
     # r.group(2) number of actions

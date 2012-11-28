@@ -31,7 +31,6 @@ from vars import Vars, getuser, gethomedir
 from xmlutil import *
 from utils import *
 from msg import *
-from log_patterns import log_patterns
 _NO_PSSH = False
 try:
     from crm_pssh import next_loglines, next_peinputs
@@ -881,6 +880,10 @@ class Report(Singleton):
         get the list of patterns for this type, up to and
         including current detail level
         '''
+        if is_pcmk_118():
+            from log_patterns_118 import log_patterns
+        else:
+            from log_patterns import log_patterns
         if not type in log_patterns:
             common_error("%s not featured in log patterns" % type)
             return None
