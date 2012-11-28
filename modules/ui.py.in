@@ -1768,6 +1768,7 @@ class History(UserInterface):
         self.cmd_aliases.update({
             "limit": ("timeframe",),
         })
+        setup_aliases(self)
         self._set_source(options.history)
         self.current_session = None
     def _no_source(self):
