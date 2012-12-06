@@ -1,3 +1,16 @@
+* Thu Dec  6 2012 Dejan Muhamedagic <dejan@suse.de> and many others
+- stable release 1.2.2
+- cibconfig: don't bail out if filter fails
+- cibconfig: improve id management on element update
+- ra: add support for nagios plugins
+- utils: make sure that there's at least one column (savannah#37658)
+- ui: improve quotes insertion (possible regression)
+- history: adjust log patterns for pacemaker v1.1.8
+- history: fix setting up the timeframe alias for limit
+- history: fix unpacking reports specified without directory
+- history: add log subcommand to transition
+- build: pcmk.pc renamed to pacemaker.pc in pacemaker v1.1.8
+
 * Mon Oct 15 2012 Dejan Muhamedagic <dejan@suse.de> and many others
 - stable release 1.2.1
 - cibconfig: show error message on id in use
