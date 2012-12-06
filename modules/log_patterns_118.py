@@ -22,7 +22,7 @@
 log_patterns = {
 	"resource": (
 		( # detail 0
-			"crmd.*Initiating%%_(start|stop|promote|demote|migrate)_",
+			"crmd.*Initiating.*%%_(start|stop|promote|demote|migrate)_",
 			"lrmd.*operation_finished: %%_",
 			"crmd.*process_lrm_event: LRM operation %%_(start|stop|promote|demote|migrate)_.*confirmed=true",
 			"crmd.*process_lrm_event: LRM operation %%_.*Timed Out",
