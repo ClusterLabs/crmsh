@@ -1930,14 +1930,15 @@ class History(UserInterface):
         return l[0]
     def transition(self,cmd,*args):
         """usage: transition [<number>|<index>|<file>] [nograph] [v...] [scores] [actions] [utilization]
-        transition showdot [<number>|<index>|<file>]"""
+        transition showdot [<number>|<index>|<file>]
+        transition log [<number>|<index>|<file>]"""
         argl = list(args)
         subcmd = "show"
-        if argl and argl[0] == "showdot":
-            if not user_prefs.dotty:
+        if argl and argl[0] in ("showdot", "log"):
+            if argl[0] == "showdot" and not user_prefs.dotty:
                 common_err("install graphviz to draw transition graphs")
                 return False
-            subcmd = "showdot"
+            subcmd = argl[0]
             argl.remove(subcmd)
         if argl:
             if re.search('pe-', argl[0]):
@@ -1957,18 +1958,21 @@ class History(UserInterface):
         if not f:
             return False
         rc = True
+        full_log = False
         if subcmd == "show":
             self.pe_file = f # self.pe_file needed by self.ptest
             common_info("running ptest with %s" % f)
             rc = ptestlike(self.ptest,'vv', cmd, *argl)
-        else:
+        elif subcmd == "showdot":
             f = crm_report.pe2dot(f)
             if not f:
                 common_err("dot file not found in the report")
                 return False
             show_dot_graph(f)
+        else:
+            full_log = True
         if rc:
-            crm_report.show_transition_log(f)
+            crm_report.show_transition_log(f, full_log)
         return rc
     def session(self,cmd,subcmd = None,name = None):
         "usage: session [{save|load|delete} <name> | pack [<name>] | update | list]"

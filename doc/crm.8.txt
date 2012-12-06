@@ -3031,6 +3031,9 @@ produced by `pengine` which is installed on the node where the
 report was produced. In optimal case this output should not
 differ from the one produced by the locally installed `pengine`.
 
+The `log` subcommand shows the full log for the duration of the
+transition.
+
 If the PE input file number is not provided, it defaults to the
 last one, i.e. the last transition. If the number is negative,
 then the corresponding transition relative to the last one is
@@ -3048,6 +3051,7 @@ Usage:
 ...............
         transition [<number>|<index>|<file>] [nograph] [v...] [scores] [actions] [utilization]
         transition showdot [<number>|<index>|<file>]
+        transition log [<number>|<index>|<file>]
 ...............
 Examples:
 ...............
@@ -3057,6 +3061,7 @@ Examples:
         transition pe-error-3.bz2
         transition node-a/pengine/pe-input-2.bz2
         transition showdot 444
+        transition log
 ...............
 
 [[cmdhelp_history_session,manage history sessions]]

@@ -547,6 +547,8 @@ class Report(Singleton):
         node = extract_node(msg)
         pe_base = os.path.basename(pe_file)
         return os.path.join(self.loc, node, "pengine", pe_base)
+    def short_pe_path(self, pe_file):
+        return pe_file.replace("%s/" % self.loc,"")
     def get_nodes(self):
         return [ os.path.basename(p)
             for p in os.listdir(self.loc)
@@ -1023,7 +1025,7 @@ class Report(Singleton):
         else:
             re_s = '|'.join(trans_re_l)
             return [x for x in msg_l if re.search(re_s, x)]
-    def show_transition_log(self, pe_file):
+    def show_transition_log(self, pe_file, full_log=False):
         '''
         Search for events within the given transition.
         '''
@@ -1044,17 +1046,20 @@ class Report(Singleton):
         if not start_ts or not end_ts:
             self.warn("strange, no timestamps found")
             return False
-        act_d = run_graph_msg_actions(run_msg)
-        total = sum(act_d.values())
-        s = " ".join(["%s=%d" % (x, act_d[x]) for x in act_d if act_d[x]])
-        common_info("transition %s %d actions: %s" %
-            (pe_file.replace(self.loc+"/",""), total, s))
-        common_info("logs for transition %s (%s-%s)" %
-            (pe_file.replace(self.loc+"/",""), \
-            shorttime(start_ts), shorttime(end_ts)))
         # limit the log scope temporarily
         self.logobj.set_log_timeframe(start_ts, end_ts)
-        self.events()
+        if full_log:
+            self.show_logs()
+        else:
+            act_d = run_graph_msg_actions(run_msg)
+            total = sum(act_d.values())
+            s = " ".join(["%s=%d" % (x, act_d[x]) for x in act_d if act_d[x]])
+            common_info("transition %s %d actions: %s" %
+                (self.short_pe_path(pe_file), total, s))
+            common_info("logs for transition %s (%s-%s)" %
+                (self.short_pe_path(pe_file), \
+                shorttime(start_ts), shorttime(end_ts)))
+            self.events()
         self.logobj.set_log_timeframe(self.from_dt, self.to_dt)
         return True
     def resource(self,*args):
