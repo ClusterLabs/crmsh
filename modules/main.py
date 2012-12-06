@@ -295,7 +295,6 @@ def compatibility_setup():
         vars.node_type_opt = True
         vars.attr_defaults["node"] = {"type": "normal"}
         vars.cib_no_section_rc = 6
-        vars.transition_patt[0] = "pengine.* process_pe_message: Calculated Transition ([0-9]+): (.*/pe-[^-]+-(%%)[.]bz2)" # transition start
 
 def do_work():
     global user_args

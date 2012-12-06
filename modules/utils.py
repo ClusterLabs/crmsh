@@ -704,17 +704,52 @@ def parse_time(t):
             return None
     return dt
 
-def get_pcmk_version():
+def get_pcmk_version(dflt):
     try:
         v = get_stdout("crmd version").split()[2]
+        common_debug("found pacemaker version: %s" % v)
     except Exception,msg:
-        v = "1.1.1"
+        v = dflt
         common_warn("could not get the pacemaker version, bad installation?")
     return v
 
-def is_pcmk_118():
+def get_cib_property(cib_f, attr, dflt):
+    """A poor man's get attribute procedure.
+    We don't want heavy parsing, this needs to be relatively
+    fast.
+    """
+    open_t = "<cluster_property_set"
+    close_t = "</cluster_property_set"
+    attr_s = 'name="%s"' % attr
+    ver_patt = re.compile('value="([^"]+)"')
+    ver = dflt # return some version in any case
+    try: f = open(cib_f, "r")
+    except IOError, msg:
+        common_err(msg)
+        return ver
+    state = 0
+    for s in f:
+        if state == 0:
+            if open_t in s:
+                state += 1
+        elif state == 1:
+            if close_t in s:
+                break
+            if attr_s in s:
+                r = ver_patt.search(s)
+                if r:
+                    ver = r.group(1)
+                break
+    f.close()
+    return ver
+
+def is_pcmk_118(cib_f=None):
     if not vars.pcmk_version:
-        vars.pcmk_version = get_pcmk_version()
+        if cib_f:
+            vars.pcmk_version = get_cib_property(cib_f, "dc-version", "1.1.1")
+            common_debug("found pacemaker version: %s in cib: %s" % (ver, cib_f))
+        else:
+            vars.pcmk_version = get_pcmk_version("1.1.1")
     from distutils.version import LooseVersion
     return LooseVersion(vars.pcmk_version) >= LooseVersion("1.1.8")
 

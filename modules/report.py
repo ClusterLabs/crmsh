@@ -378,30 +378,59 @@ def run_graph_msg_actions(msg):
             return d
         d[r.group(1)] = int(r.group(2))
         s = s[r.end():]
-def transition_actions(msg_l, te_invoke_msg, pe_file):
+
+def transition_actions(pe_file, msg_l):
     '''
     Get the number of actions for the transition.
     '''
     # check if there were any actions in this transition
+    te_invoke_msg, run_msg = get_transition_msgs(pe_file, msg_l)
+    if not run_msg:
+        if not te_invoke_msg: return -1 # no transition pattern at all
+        else: return -2 # no run msg found
+    act_d = run_graph_msg_actions(run_msg)
+    return sum(act_d.values())
+
+def extract_pe_file(msg):
+    msg_a = msg.split()
+    if len(msg_a) < 8:
+        # this looks too short
+        common_warn("log message <%s> unexpected format, please report a bug" % msg)
+        return ""
+    return msg_a[-1]
+def extract_node(msg):
+    msg_a = msg.split()
+    if len(msg_a) < 8:
+        # this looks too short
+        common_warn("log message <%s> unexpected format, please report a bug" % msg)
+        return ""
+    return msg_a[3]
+
+def get_transition_msgs(pe_file, msg_l):
+    te_invoke_msg = ""
+    run_msg = ""
     pe_num = get_pe_num(pe_file)
     if pe_num == "-1":
-        common_debug("no PE number for file: %s" % pe_file)
-        return -1
+        common_warn("%s: strange, transition number not found" % pe_file)
+        return ["", ""]
     te_invoke_patt = vars.transition_patt[0].replace("%%", pe_num)
     run_patt = vars.transition_patt[1].replace("%%", pe_num)
-    r = re.search(te_invoke_patt, te_invoke_msg)
-    if not r:
-        return -1
-    trans_num = r.group(1)
-    unpack_patt = vars.transition_patt[2].replace("%%", trans_num)
+    r = None
+    msg_l.reverse()
     for msg in msg_l:
-        try:
-            return int(re.search(unpack_patt, msg).group(2))
-        except:
-            if re.search(run_patt, msg):
-                act_d = run_graph_msg_actions(msg)
-                return sum(act_d.values())
-    return -1
+        r = re.search(te_invoke_patt, msg)
+        if r:
+            te_invoke_msg = msg
+            break
+    if not r:
+        common_warn("%s: transition start pattern not found" % pe_file)
+        return ["", ""]
+    trans_num = r.group(1)
+    for msg in msg_l:
+        if re.search(run_patt, msg):
+            run_msg = msg
+            break
+    return [te_invoke_msg, run_msg]
 
 def mkarchive(dir):
     "Create an archive from a directory"
@@ -429,6 +458,8 @@ class Report(Singleton):
     "NORMAL", "GREEN", "CYAN", "MAGENTA", "YELLOW", "WHITE", "BLUE", "RED"
     )
     session_sub = "session"
+    outdir = os.path.join(vars.report_cache, "psshout")
+    errdir = os.path.join(vars.report_cache, "pssherr")
     def __init__(self):
         self.source = None
         self.loc = None
@@ -449,8 +480,6 @@ class Report(Singleton):
         self.cibcloned_l = []
         self.cibnode_l = []
         self.setnodes = []
-        self.outdir = os.path.join(vars.report_cache,"psshout")
-        self.errdir = os.path.join(vars.report_cache,"pssherr")
         self.last_live_update = 0
         self.log_filter_out = []
         self.log_filter_out_re = []
@@ -514,6 +543,10 @@ class Report(Singleton):
         if rc != 0:
             return None
         return loc
+    def pe_report_path(self, pe_file, msg):
+        node = extract_node(msg)
+        pe_base = os.path.basename(pe_file)
+        return os.path.join(self.loc, node, "pengine", pe_base)
     def get_nodes(self):
         return [ os.path.basename(p)
             for p in os.listdir(self.loc)
@@ -747,19 +780,24 @@ class Report(Singleton):
         not part of the cluster).
         '''
         self.setnodes = args
+    def get_cib_loc(self):
+        nl = self.get_nodes()
+        if not nl:
+            return ""
+        return os.path.join(self.loc, nl[0], "cib.xml")
     def read_cib(self):
         '''
         Get some information from the report's CIB (node list,
         resource list, groups). If "live" and not central log,
         then use cibadmin.
         '''
-        nl = self.get_nodes()
-        if not nl:
-            return
+        doc = None
         if self.source == "live" and not self.central_log:
             doc = cibdump2doc()
         else:
-            doc = file2doc(os.path.join(self.loc,nl[0],"cib.xml"))
+            cib_f = self.get_cib_loc()
+            if cib_f:
+                doc = file2doc(cib_f)
         if not doc:
             return  # no cib?
         try: conf = doc.getElementsByTagName("configuration")[0]
@@ -790,35 +828,27 @@ class Report(Singleton):
         Some callers need original PE file path (future_pe),
         otherwise we produce the path within the report and check
         if the transition files exist.
+        NB: future_pe means that the peinput has not been fetched yet.
         If the caller doesn't provide the message list, then we
         build it from the collected log files (self.logobj).
         Otherwise, we get matches for transition patterns.
+
+        WARN: We rely here on the message format (syslog,
+        pacemaker).
         '''
-        trans_re_l = [x.replace("%%", "[0-9]+") for x in vars.transition_patt]
-        if not msg_l:
-            msg_l = self.logobj.get_matches(trans_re_l)
-        else:
-            re_s = '|'.join(trans_re_l)
-            msg_l = [x for x in msg_l if re.search(re_s, x)]
+        trans_msg_l = self.get_all_trans_msgs(msg_l)
+        trans_start_msg_l = self.get_invoke_trans_msgs(trans_msg_l)
         pe_l = []
-        for msg in msg_l:
-            msg_a = msg.split()
-            if len(msg_a) < 8:
-                # this looks too short
-                common_warn("log message <%s> unexpected format, please report a bug" % msg)
+        for msg in trans_start_msg_l:
+            pe_file = extract_pe_file(msg)
+            num_actions = transition_actions(pe_file, trans_msg_l)
+            if num_actions == 0: # empty transition
+                common_debug("skipping empty transition (%s)" % pe_file)
                 continue
-            if "run_graph:" in msg:
-                continue # we want another message
-            common_debug("trans msg use: %s" % msg_a)
-            node = msg_a[3]
-            pe_file = msg_a[-1]
-            pe_base = os.path.basename(pe_file)
-            num_actions = transition_actions(msg_l, msg, pe_file)
-            if num_actions <= 0: # empty transition
-                common_debug("skipping empty transition (%s)" % pe_base)
-                continue
+            elif num_actions == -1:
+                continue # no start message (partial logs)
             if not future_pe:
-                pe_l_file = os.path.join(self.loc, node, "pengine", pe_base)
+                pe_l_file = self.pe_report_path(pe_file, msg)
                 if not os.path.isfile(pe_l_file):
                     warn_once("%s in the logs, but not in the report" % pe_l_file)
                     continue
@@ -833,6 +863,8 @@ class Report(Singleton):
     def report_setup(self):
         if not self.loc:
             return
+        # reset pcmk version, as the source may have changed
+        vars.pcmk_version = None
         self.desc = os.path.join(self.loc,"description.txt")
         self.find_logs()
         self.find_central_log()
@@ -881,7 +913,10 @@ class Report(Singleton):
         get the list of patterns for this type, up to and
         including current detail level
         '''
-        if is_pcmk_118():
+        cib_f = None
+        if self.source != "live" or self.central_log:
+            cib_f = self.get_cib_loc()
+        if is_pcmk_118(cib_f=cib_f):
             from log_patterns_118 import log_patterns
         else:
             from log_patterns import log_patterns
@@ -978,49 +1013,29 @@ class Report(Singleton):
             self.error("no resources or nodes found")
             return False
         self.show_logs(re_l = all_re_l)
-    def get_transition_msgs(self, pe_file, msg_l = None):
+    def get_invoke_trans_msgs(self, msg_l):
+        te_invoke_patt = vars.transition_patt[0].replace("%%", "[0-9]+")
+        return [x for x in msg_l if re.search(te_invoke_patt, x)]
+    def get_all_trans_msgs(self, msg_l=None):
+        trans_re_l = [x.replace("%%", "[0-9]+") for x in vars.transition_patt]
         if not msg_l:
-            trans_re_l = [x.replace("%%", "[0-9]+") for x in vars.transition_patt]
-            msg_l = self.logobj.get_matches(trans_re_l)
-        te_invoke_msg = ""
-        run_msg = ""
-        unpack_msg = ""
-        pe_num = get_pe_num(pe_file)
-        te_invoke_patt = vars.transition_patt[0].replace("%%", pe_num)
-        run_patt = vars.transition_patt[1].replace("%%", pe_num)
-        r = None
-        msg_l.reverse()
-        for msg in msg_l:
-            r = re.search(te_invoke_patt, msg)
-            if r:
-                te_invoke_msg = msg
-                break
-        if not r:
-            return ["", "", ""]
-        trans_num = r.group(1)
-        unpack_patt = vars.transition_patt[2].replace("%%", trans_num)
-        for msg in msg_l:
-            if re.search(run_patt, msg):
-                run_msg = msg
-            elif re.search(unpack_patt, msg):
-                unpack_msg = msg
-            if run_msg and unpack_msg:
-                break
-        return [unpack_msg, te_invoke_msg, run_msg]
+            return self.logobj.get_matches(trans_re_l)
+        else:
+            re_s = '|'.join(trans_re_l)
+            return [x for x in msg_l if re.search(re_s, x)]
     def show_transition_log(self, pe_file):
         '''
         Search for events within the given transition.
         '''
         if not self.prepare_source():
             return False
-        pe_base = os.path.basename(pe_file)
-        pe_num = get_pe_num(pe_base)
-        unpack_msg, te_invoke_msg, run_msg = self.get_transition_msgs(pe_file)
+        te_invoke_msg, run_msg = \
+            get_transition_msgs(pe_file, self.get_all_trans_msgs())
         if not te_invoke_msg:
-            common_warn("start of transition %s not found in logs" % pe_base)
+            common_warn("start of transition %s not found in logs" % pe_file)
             return False
         if not run_msg:
-            common_warn("end of transition %s not found in logs (transition not complete yet?)" % pe_base)
+            common_warn("end of transition %s not found in logs (transition not complete yet?)" % pe_file)
             return False
         common_debug("transition start: %s" % te_invoke_msg)
         common_debug("transition end: %s" % run_msg)
@@ -1031,11 +1046,7 @@ class Report(Singleton):
             return False
         act_d = run_graph_msg_actions(run_msg)
         total = sum(act_d.values())
-        s = ""
-        for a in act_d:
-            if not act_d[a]:
-                continue
-            s = "%s %s=%d" % (s, a, act_d[a])
+        s = " ".join(["%s=%d" % (x, act_d[x]) for x in act_d if act_d[x]])
         common_info("transition %s %d actions: %s" %
             (pe_file.replace(self.loc+"/",""), total, s))
         common_info("logs for transition %s (%s-%s)" %
