@@ -369,6 +369,7 @@ def run_graph_msg_actions(msg):
     crmd: [13667]: info: run_graph: Transition 399 (Complete=5,
     Pending=1, Fired=1, Skipped=0, Incomplete=3,
     Source=...
+    Returns dict: d[Pending]=np, d[Fired]=nf, ...
     '''
     d = {}
     s = msg
@@ -378,18 +379,6 @@ def run_graph_msg_actions(msg):
             return d
         d[r.group(1)] = int(r.group(2))
         s = s[r.end():]
-
-def transition_actions(pe_file, msg_l):
-    '''
-    Get the number of actions for the transition.
-    '''
-    # check if there were any actions in this transition
-    te_invoke_msg, run_msg = get_transition_msgs(pe_file, msg_l)
-    if not run_msg:
-        if not te_invoke_msg: return -1 # no transition pattern at all
-        else: return -2 # no run msg found
-    act_d = run_graph_msg_actions(run_msg)
-    return sum(act_d.values())
 
 def extract_pe_file(msg):
     msg_a = msg.split()
@@ -406,31 +395,57 @@ def extract_node(msg):
         return ""
     return msg_a[3]
 
-def get_transition_msgs(pe_file, msg_l):
-    te_invoke_msg = ""
+def get_matching_run_msg(te_invoke_msg, trans_msg_l):
     run_msg = ""
+    pe_file = extract_pe_file(te_invoke_msg)
     pe_num = get_pe_num(pe_file)
     if pe_num == "-1":
         common_warn("%s: strange, transition number not found" % pe_file)
-        return ["", ""]
-    te_invoke_patt = vars.transition_patt[0].replace("%%", pe_num)
+        return ""
     run_patt = vars.transition_patt[1].replace("%%", pe_num)
-    r = None
-    msg_l.reverse()
-    for msg in msg_l:
-        r = re.search(te_invoke_patt, msg)
-        if r:
-            te_invoke_msg = msg
-            break
-    if not r:
-        common_warn("%s: transition start pattern not found" % pe_file)
-        return ["", ""]
-    trans_num = r.group(1)
-    for msg in msg_l:
+    for msg in trans_msg_l:
         if re.search(run_patt, msg):
             run_msg = msg
             break
-    return [te_invoke_msg, run_msg]
+    return run_msg
+
+class Transition(object):
+    '''
+    Capture transition related information.
+    '''
+    def __init__(self, te_invoke_msg, run_msg):
+        self.te_invoke_msg = te_invoke_msg
+        self.run_msg = run_msg
+        self.parse_msgs()
+    def __str__(self):
+        return "%s:%s" % (self.dc, \
+            os.path.basename(self.pe_file).replace(".bz2","").replace("pe-","").replace("input-",""))
+    def parse_msgs(self):
+        self.pe_file = extract_pe_file(self.te_invoke_msg)
+        self.pe_num = get_pe_num(self.pe_file)
+        self.dc = extract_node(self.te_invoke_msg)
+        self.start_ts = syslog_ts(self.te_invoke_msg)
+        if self.run_msg:
+            self.end_ts = syslog_ts(self.run_msg)
+        else:
+            common_warn("end of transition %s not found in logs (transition not complete yet?)" % self)
+            self.end_ts = time.time()
+    def total_actions(self):
+        if self.run_msg:
+            act_d = run_graph_msg_actions(self.run_msg)
+            return sum(act_d.values())
+        else:
+            return -1
+    def transition_info(self):
+        print "Transition %s (%s -" % (self, shorttime(self.start_ts)),
+        if self.run_msg:
+            print "%s):" % shorttime(self.end_ts)
+            act_d = run_graph_msg_actions(self.run_msg)
+            total = sum(act_d.values())
+            s = ", ".join(["%d %s" % (act_d[x], x) for x in act_d if act_d[x]])
+            print "\ttotal %d actions: %s" % (total, s)
+        else:
+            print "[unfinished])"
 
 def mkarchive(dir):
     "Create an archive from a directory"
@@ -492,7 +507,7 @@ class Report(Singleton):
     def node_list(self):
         return self.cibnode_l
     def peinputs_list(self):
-        return [get_pe_num(x) for x in self.peinputs_l]
+        return [x.pe_num for x in self.peinputs_l]
     def session_subcmd_list(self):
         return ["save", "load", "pack", "delete", "list", "update"]
     def session_list(self):
@@ -543,10 +558,9 @@ class Report(Singleton):
         if rc != 0:
             return None
         return loc
-    def pe_report_path(self, pe_file, msg):
-        node = extract_node(msg)
-        pe_base = os.path.basename(pe_file)
-        return os.path.join(self.loc, node, "pengine", pe_base)
+    def pe_report_path(self, t_obj):
+        pe_base = os.path.basename(t_obj.pe_file)
+        return os.path.join(self.loc, t_obj.dc, "pengine", pe_base)
     def short_pe_path(self, pe_file):
         return pe_file.replace("%s/" % self.loc,"")
     def get_nodes(self):
@@ -631,39 +645,33 @@ class Report(Singleton):
                 continue
             append_file(rptlog,fl[0])
             update_loginfo(rptlog, logfile, nextpos, fl[0])
-    def unpack_new_peinputs(self, a):
+    def unpack_new_peinputs(self, node, pe_l):
         '''
         Untar PE inputs fetched from nodes.
         '''
         if not os.path.isdir(self.outdir):
             return
-        for node,pe_l in a:
-            fl = glob.glob("%s/*%s*" % (self.outdir,node))
-            if not fl:
-                continue
-            u_dir = os.path.join(self.loc, node)
-            rc = pipe_cmd_nosudo("tar -C %s -x < %s" % (u_dir,fl[0]))
-    def find_new_peinputs(self, node_l):
+        fl = glob.glob("%s/*%s*" % (self.outdir,node))
+        if not fl:
+            return -1
+        u_dir = os.path.join(self.loc, node)
+        return pipe_cmd_nosudo("tar -C %s -x < %s" % (u_dir,fl[0]))
+    def find_new_peinputs(self, node):
         '''
         Get a list of pe inputs appearing in new logs.
         The log is put in self.outdir/node by pssh.
         '''
         if not os.path.isdir(self.outdir):
             return []
-        l = []
-        for node in node_l:
-            fl = glob.glob("%s/*%s*" % (self.outdir,node))
-            if not fl:
-                continue
-            try:
-                f = open(fl[0])
-            except IOError,msg:
-                common_err("open %s: %s"%(fl[0],msg))
-                continue
-            pe_l = self.list_transitions([x for x in f], future_pe = True)
-            if pe_l:
-                l.append([node,pe_l])
-        return l
+        fl = glob.glob("%s/*%s*" % (self.outdir,node))
+        if not fl:
+            return []
+        try:
+            f = open(fl[0])
+        except IOError,msg:
+            common_err("open %s: %s" % (fl[0], msg))
+            return []
+        return self.list_transitions([x for x in f], future_pe = True)
     def update_live(self):
         '''
         Update the existing live report, if it's older than
@@ -684,23 +692,33 @@ class Report(Singleton):
             if logf:
                 a.append([node, rptlog, logf, pos])
         if not a:
-            common_info("no elligible logs found :(")
+            common_info("no elligible logs found")
             return False
         rmdir_r(self.outdir)
         rmdir_r(self.errdir)
+        self.logobj = None
+        self.last_live_update = time.time()
         rc1 = next_loglines(a, self.outdir, self.errdir)
         self.append_newlogs(a)
-        pe_l = self.find_new_peinputs([x[0] for x in a])
+        new_peinputs_l = []
+        node_pe_l = []
+        for node in [x[0] for x in a]:
+            pe_l = self.find_new_peinputs(node)
+            if pe_l:
+                node_pe_l.append([node, [x.pe_file for x in pe_l]])
+                new_peinputs_l += pe_l
         rmdir_r(self.outdir)
         rmdir_r(self.errdir)
-        rc2 = True
-        if pe_l:
-            rc2 = next_peinputs(pe_l, self.outdir, self.errdir)
-        self.unpack_new_peinputs(pe_l)
-        self.logobj = None
+        if not node_pe_l:
+            return rc1
+        rc2 = next_peinputs(node_pe_l, self.outdir, self.errdir)
+        unpack_rc = 0
+        for node,pe_l in node_pe_l:
+            unpack_rc |= self.unpack_new_peinputs(node, pe_l)
+        rc2 |= (unpack_rc == 0)
         rmdir_r(self.outdir)
         rmdir_r(self.errdir)
-        self.last_live_update = time.time()
+        self.peinputs_l += new_peinputs_l
         return (rc1 and rc2)
     def get_live_report(self):
         if not acquire_lock(vars.report_cache):
@@ -823,6 +841,16 @@ class Report(Singleton):
         for n in self.cibnode_l:
             self.nodecolor[n] = self.nodecolors[i]
             i = (i+1) % len(self.nodecolors)
+    def get_invoke_trans_msgs(self, msg_l):
+        te_invoke_patt = vars.transition_patt[0].replace("%%", "[0-9]+")
+        return [x for x in msg_l if re.search(te_invoke_patt, x)]
+    def get_all_trans_msgs(self, msg_l=None):
+        trans_re_l = [x.replace("%%", "[0-9]+") for x in vars.transition_patt]
+        if not msg_l:
+            return self.logobj.get_matches(trans_re_l)
+        else:
+            re_s = '|'.join(trans_re_l)
+            return [x for x in msg_l if re.search(re_s, x)]
     def list_transitions(self, msg_l = None, future_pe = False):
         '''
         List transitions by reading logs.
@@ -842,25 +870,19 @@ class Report(Singleton):
         trans_start_msg_l = self.get_invoke_trans_msgs(trans_msg_l)
         pe_l = []
         for msg in trans_start_msg_l:
-            pe_file = extract_pe_file(msg)
-            num_actions = transition_actions(pe_file, trans_msg_l)
+            run_msg = get_matching_run_msg(msg, trans_msg_l)
+            t_obj = Transition(msg, run_msg)
+            num_actions = t_obj.total_actions()
             if num_actions == 0: # empty transition
-                common_debug("skipping empty transition (%s)" % pe_file)
+                common_debug("skipping empty transition (%s)" % t_obj)
                 continue
-            elif num_actions == -1:
-                continue # no start message (partial logs)
             if not future_pe:
-                pe_l_file = self.pe_report_path(pe_file, msg)
+                pe_l_file = self.pe_report_path(t_obj)
                 if not os.path.isfile(pe_l_file):
-                    warn_once("%s in the logs, but not in the report" % pe_l_file)
+                    warn_once("%s in the logs, but not in the report" % t_obj)
                     continue
-            else:
-                pe_l_file = pe_file
-            if pe_l_file in pe_l:
-                common_debug("duplicate %s, replacing older PE file" % pe_l_file)
-                pe_l.remove(pe_l_file)
-            common_debug("found PE input: %s" % pe_l_file)
-            pe_l.append(pe_l_file)
+            common_debug("found PE input: %s" % t_obj)
+            pe_l.append(t_obj)
         return pe_l
     def report_setup(self):
         if not self.loc:
@@ -1015,50 +1037,27 @@ class Report(Singleton):
             self.error("no resources or nodes found")
             return False
         self.show_logs(re_l = all_re_l)
-    def get_invoke_trans_msgs(self, msg_l):
-        te_invoke_patt = vars.transition_patt[0].replace("%%", "[0-9]+")
-        return [x for x in msg_l if re.search(te_invoke_patt, x)]
-    def get_all_trans_msgs(self, msg_l=None):
-        trans_re_l = [x.replace("%%", "[0-9]+") for x in vars.transition_patt]
-        if not msg_l:
-            return self.logobj.get_matches(trans_re_l)
-        else:
-            re_s = '|'.join(trans_re_l)
-            return [x for x in msg_l if re.search(re_s, x)]
+    def find_peinput(self, pe_file):
+        for t_obj in self.peinputs_l:
+            if self.pe_report_path(t_obj) == pe_file:
+                return t_obj
+        return None
     def show_transition_log(self, pe_file, full_log=False):
         '''
         Search for events within the given transition.
         '''
         if not self.prepare_source():
             return False
-        te_invoke_msg, run_msg = \
-            get_transition_msgs(pe_file, self.get_all_trans_msgs())
-        if not te_invoke_msg:
-            common_warn("start of transition %s not found in logs" % pe_file)
-            return False
-        if not run_msg:
-            common_warn("end of transition %s not found in logs (transition not complete yet?)" % pe_file)
-            return False
-        common_debug("transition start: %s" % te_invoke_msg)
-        common_debug("transition end: %s" % run_msg)
-        start_ts = syslog_ts(te_invoke_msg)
-        end_ts = syslog_ts(run_msg)
-        if not start_ts or not end_ts:
-            self.warn("strange, no timestamps found")
+        t_obj = self.find_peinput(pe_file)
+        if not t_obj:
+            common_err("%s: transition not found" % pe_file)
             return False
         # limit the log scope temporarily
-        self.logobj.set_log_timeframe(start_ts, end_ts)
+        self.logobj.set_log_timeframe(t_obj.start_ts, t_obj.end_ts)
         if full_log:
             self.show_logs()
         else:
-            act_d = run_graph_msg_actions(run_msg)
-            total = sum(act_d.values())
-            s = " ".join(["%s=%d" % (x, act_d[x]) for x in act_d if act_d[x]])
-            common_info("transition %s %d actions: %s" %
-                (self.short_pe_path(pe_file), total, s))
-            common_info("logs for transition %s (%s-%s)" %
-                (self.short_pe_path(pe_file), \
-                shorttime(start_ts), shorttime(end_ts)))
+            t_obj.transition_info()
             self.events()
         self.logobj.set_log_timeframe(self.from_dt, self.to_dt)
         return True
@@ -1123,8 +1122,8 @@ class Report(Singleton):
                 a.append(a[0])
         elif a is not None:
             a = [a,a]
-        return [x for x in self.peinputs_l \
-            if pe_file_in_range(x, a)]
+        return [self.pe_report_path(x) for x in self.peinputs_l \
+            if pe_file_in_range(x.pe_file, a)]
     def dotlist(self, a = None):
         l = [x.replace("bz2","dot") for x in self.pelist(a)]
         return [x for x in l if os.path.isfile(x)]
