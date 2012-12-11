@@ -22,10 +22,10 @@ testcasesdir		= 	$(datadir)/$(PACKAGE)/tests/testcases
 testcases_SCRIPTS	=	ra.filter xmlonly.sh
 testcases_DATA		=	BSC basicset common.excl \
 	confbasic confbasic-xml delete file node ra resource shadow acl \
-	rset rset-xml \
+	edit rset rset-xml \
 	confbasic-xml.exp confbasic.exp delete.exp file.exp \
 	node.exp ra.exp resource.exp shadow.exp acl.exp \
-	rset.exp rset-xml.exp
+	edit.exp rset.exp rset-xml.exp
 
 confbasic-xml.filter:
 	ln xmlonly.sh $@
