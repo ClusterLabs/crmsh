@@ -36,6 +36,7 @@ modules	=	__init__.py 	\
 			report.py		\
 			rsctest.py		\
 			log_patterns.py		\
+			log_patterns_118.py		\
 			crm_pssh.py	\
 			singletonmixin.py	\
 			template.py	\
