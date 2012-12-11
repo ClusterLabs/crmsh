@@ -214,13 +214,12 @@ def ra_types(ra_class = "ocf", ra_provider = ""):
     id = "ra_types-%s-%s" % (ra_class,ra_provider)
     if wcache.is_cached(id):
         return wcache.retrieve(id)
-    if ra_provider:
-        list = []
-        for ra in ra_if().types(ra_class):
-            if ra_provider in ra_providers(ra,ra_class):
-                list.append(ra)
-    else:
-        list = ra_if().types(ra_class)
+    list = []
+    for ra in ra_if().types(ra_class):
+        if (not ra_provider or \
+                ra_provider in ra_providers(ra,ra_class)) \
+                and ra not in list:
+            list.append(ra)
     list.sort()
     return wcache.store(id,list)
 
