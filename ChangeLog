@@ -1,3 +1,8 @@
+* Tue Dec 11 2012 Dejan Muhamedagic <dejan@suse.de> and many others
+- stable release 1.2.3
+- ra: don't print duplicate RAs in the list command (bnc#793585)
+- history: optimize source refreshing
+
 * Thu Dec  6 2012 Dejan Muhamedagic <dejan@suse.de> and many others
 - stable release 1.2.2
 - cibconfig: don't bail out if filter fails
