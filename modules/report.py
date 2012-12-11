@@ -463,6 +463,7 @@ def mkarchive(dir):
         print "Report saved in '%s'" % archive
     return True
 
+CH_SRC, CH_TIME, CH_UPD = range(1,4)
 class Report(Singleton):
     '''
     A hb_report class.
@@ -476,17 +477,19 @@ class Report(Singleton):
     outdir = os.path.join(vars.report_cache, "psshout")
     errdir = os.path.join(vars.report_cache, "pssherr")
     def __init__(self):
+        # main source attributes
         self.source = None
-        self.loc = None
-        self.ready = False
         self.from_dt = None
         self.to_dt = None
-        self.detail = 0
+        self.log_l = []
+        self.central_log = None
+        self.setnodes = [] # optional
+        # derived
+        self.loc = None
+        self.ready = False
         self.nodecolor = {}
         self.logobj = None
         self.desc = None
-        self.log_l = []
-        self.central_log = None
         self.peinputs_l = []
         self.cibgrp_d = {}
         self.cibcln_d = {}
@@ -494,10 +497,13 @@ class Report(Singleton):
         self.cibnotcloned_l = []
         self.cibcloned_l = []
         self.cibnode_l = []
-        self.setnodes = []
         self.last_live_update = 0
+        self.detail = 0
         self.log_filter_out = []
         self.log_filter_out_re = []
+        # change_origin may be CH_SRC, CH_TIME, CH_UPD
+        # depending on the change_origin, we update our attributes
+        self.change_origin = CH_SRC
     def error(self, s):
         common_err("%s: %s" % (self.source, s))
     def warn(self, s):
@@ -531,6 +537,7 @@ class Report(Singleton):
         else:
             self.error("this doesn't look like a report tarball")
             return None
+        self.change_origin = CH_SRC
         if os.path.isdir(loc):
             return loc
         cwd = os.getcwd()
@@ -597,7 +604,7 @@ class Report(Singleton):
         return True
     def _live_loc(self):
         return os.path.join(vars.report_cache,"live")
-    def is_last_live_recent(self):
+    def is_live_recent(self):
         '''
         Look at the last live hb_report. If it's recent enough,
         return True.
@@ -607,6 +614,12 @@ class Report(Singleton):
             return (time.time() - last_ts <= self.live_recent)
         except:
             return False
+    def is_live_very_recent(self):
+        '''
+        Look at the last live hb_report. If it's recent enough,
+        return True.
+        '''
+        return (time.time() - self.last_live_update) <= self.short_live_recent
     def find_node_log(self, node):
         p = os.path.join(self.loc, node)
         for lf in ("ha-log.txt", "messages"):
@@ -632,7 +645,7 @@ class Report(Singleton):
                 l.append(log)
             else:
                 self.warn("no log found for node %s" % node)
-        self.log_l = l
+        return l
     def append_newlogs(self, a):
         '''
         Append new logs fetched from nodes.
@@ -671,19 +684,15 @@ class Report(Singleton):
         except IOError,msg:
             common_err("open %s: %s" % (fl[0], msg))
             return []
+        common_debug("updating transitions from logs")
         return self.list_transitions([x for x in f], future_pe = True)
-    def update_live(self):
+    def update_live_report(self):
         '''
         Update the existing live report, if it's older than
         self.short_live_recent:
         - append newer logs
         - get new PE inputs
         '''
-        if (time.time() - self.last_live_update) <= self.short_live_recent:
-            return True
-        if _NO_PSSH:
-            warn_once("pssh not installed, slow live updates ahead")
-            return False
         a = []
         common_info("fetching new logs, please wait ...")
         for rptlog in self.log_l:
@@ -723,7 +732,7 @@ class Report(Singleton):
     def get_live_report(self):
         if not acquire_lock(vars.report_cache):
             return None
-        loc = self.new_live_hb_report()
+        loc = self.new_live_report()
         release_lock(vars.report_cache)
         return loc
     def manage_live_report(self, force = False):
@@ -737,15 +746,22 @@ class Report(Singleton):
             # the live report is there, but we were just invoked
             self.loc = d
             self.report_setup()
-        if not force and self.is_last_live_recent():
-            if not acquire_lock(vars.report_cache):
-                return None
-            rc = self.update_live()
-            release_lock(vars.report_cache)
-            if rc:
+        if not force and self.is_live_recent():
+            # try just to refresh the live report
+            if self.to_dt or self.is_live_very_recent():
                 return self._live_loc()
+            if not _NO_PSSH:
+                if not acquire_lock(vars.report_cache):
+                    return None
+                rc = self.update_live_report()
+                release_lock(vars.report_cache)
+                if rc:
+                    self.change_origin = CH_UPD
+                    return self._live_loc()
+            else:
+                warn_once("pssh not installed, slow live updates ahead")
         return self.get_live_report()
-    def new_live_hb_report(self):
+    def new_live_report(self):
         '''
         Run hb_report to get logs now.
         '''
@@ -773,7 +789,10 @@ class Report(Singleton):
         return self.unpack_report(tarball)
     def set_source(self,src):
         'Set our source.'
-        self.source = src
+        if self.source != src:
+            self.change_origin = CH_SRC
+            self.source = src
+            self.ready = False
     def set_period(self,from_dt,to_dt):
         '''
         Set from/to_dt.
@@ -785,6 +804,7 @@ class Report(Singleton):
         self.from_dt = from_dt
         self.to_dt = to_dt
         if need_ref:
+            self.change_origin = CH_UPD
             self.refresh_source(force = True)
         if self.logobj:
             self.logobj.set_log_timeframe(self.from_dt, self.to_dt)
@@ -812,12 +832,9 @@ class Report(Singleton):
         then use cibadmin.
         '''
         doc = None
-        if self.source == "live" and not self.central_log:
-            doc = cibdump2doc()
-        else:
-            cib_f = self.get_cib_loc()
-            if cib_f:
-                doc = file2doc(cib_f)
+        cib_f = self.get_cib_loc()
+        if cib_f:
+            doc = file2doc(cib_f)
         if not doc:
             return  # no cib?
         try: conf = doc.getElementsByTagName("configuration")[0]
@@ -885,18 +902,30 @@ class Report(Singleton):
             pe_l.append(t_obj)
         return pe_l
     def report_setup(self):
+        if not self.change_origin:
+            return
         if not self.loc:
             return
-        # reset pcmk version, as the source may have changed
-        vars.pcmk_version = None
-        self.desc = os.path.join(self.loc,"description.txt")
-        self.find_logs()
-        self.find_central_log()
-        self.read_cib()
-        self.set_node_colors()
+        if self.change_origin == CH_SRC:
+            vars.pcmk_version = None
+            self.desc = os.path.join(self.loc,"description.txt")
+            self.log_l = self.find_logs()
+            self.find_central_log()
+            self.read_cib()
+            self.set_node_colors()
+        elif self.change_origin == CH_UPD:
+            l = self.find_logs()
+            if self.log_l != l:
+                self.log_l = l
+                self.read_cib()
+                self.set_node_colors()
         self.logobj = LogSyslog(self.central_log, self.log_l, \
                 self.from_dt, self.to_dt)
-        self.peinputs_l = self.list_transitions()
+        if self.change_origin != CH_UPD:
+            common_debug("getting transitions from logs")
+            self.peinputs_l = self.list_transitions()
+        self.ready = self.check_report()
+        self.change_origin = 0
     def prepare_source(self):
         '''
         Unpack a hb_report tarball.
@@ -918,7 +947,6 @@ class Report(Singleton):
         if not self.loc:
             return False
         self.report_setup()
-        self.ready = self.check_report()
         return self.ready
     def refresh_source(self, force = False):
         '''
@@ -930,7 +958,6 @@ class Report(Singleton):
         self.last_live_update = 0
         self.loc = self.manage_live_report(force)
         self.report_setup()
-        self.ready = self.check_report()
         return self.ready
     def get_patt_l(self,type):
         '''
