@@ -353,6 +353,7 @@ listpkg_zypper() {
 }
 fetchpkg_zypper() {
 	debug "get debuginfo packages using zypper: $@"
+	zypper -qn ref > /dev/null
 	zypper -qn install -C $@ >/dev/null
 }
 find_pkgmgr() {
