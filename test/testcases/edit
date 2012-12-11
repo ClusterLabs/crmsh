@@ -4,7 +4,7 @@ node node1 \
 	attributes mem=16G
 primitive st stonith:null \
 	params hostlist='node1' \
-	meta yoyo-meta="yoyo 2" \
+	meta description="some description here" \
 	op start requires=nothing \
 	op monitor interval=60m
 primitive p1 ocf:heartbeat:Dummy \
@@ -29,6 +29,11 @@ primitive d2 ocf:heartbeat:Dummy
 primitive d3 ocf:heartbeat:Dummy
 group g2 d1 d2
 filter "sed '/g2/s/d1/p1/;/g1/s/p1/d1/'"
+filter "sed '$alocation loc-d1 d1 rule $id=r1 -inf: not_defined webserver rule $id=r2 webserver: defined webserver'"
+filter "sed 's/not_defined webserver/& or mem number:lte 0/'" loc-d1
+filter "sed 's/ or mem number:lte 0//'" loc-d1
+filter "sed 's/not_defined webserver/& rule -inf: not_defined a2/'" loc-d1
+filter "sed 's/not_defined webserver/& or mem number:lte 0/'" loc-d1
 _test
 verify
 .
