@@ -258,7 +258,7 @@ class CibShadow(UserInterface):
             f = open(infile)
         except IOError,msg:
             common_err("open: %s"%msg)
-            return
+            return False
         s = ''.join(f)
         f.close()
         # decompresed and rename shadow if it ends with .bz2
@@ -270,7 +270,7 @@ class CibShadow(UserInterface):
             f = open(shadowfile(name), "w")
         except IOError,msg:
             common_err("open: %s"%msg)
-            return
+            return False
         f.write(s)
         f.close()
         # use the shadow and load the status from there
