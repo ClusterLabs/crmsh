@@ -18,6 +18,7 @@
 import os
 import subprocess
 import xml.dom.minidom
+import bz2
 
 from schema import Schema, rng_attr_values, rng_attr_values_l
 from userprefs import Options, UserPrefs
@@ -186,6 +187,27 @@ def shadowfile(name):
     return "%s/shadow.%s" % (cib_shadow_dir(), name)
 def shadow2doc(name):
     return file2doc(shadowfile(name))
+def pe2shadow(pe_file, name):
+    '''Copy a PE file (or any CIB file) to a shadow.'''
+    try:
+        f = open(pe_file)
+    except IOError,msg:
+        common_err("open: %s"%msg)
+        return False
+    s = ''.join(f)
+    f.close()
+    # decompresed if it ends with .bz2
+    if pe_file.endswith(".bz2"):
+        s = bz2.decompress(s)
+    # copy input to the shadow
+    try:
+        f = open(shadowfile(name), "w")
+    except IOError,msg:
+        common_err("open: %s"%msg)
+        return False
+    f.write(s)
+    f.close()
+    return True
 
 def is_xs_boolean_true(bool):
     return bool.lower() in ("true","1")
