@@ -705,7 +705,6 @@ class Report(Singleton):
             return False
         rmdir_r(self.outdir)
         rmdir_r(self.errdir)
-        self.logobj = None
         self.last_live_update = time.time()
         rc1 = next_loglines(a, self.outdir, self.errdir)
         self.append_newlogs(a)
