@@ -844,8 +844,11 @@ class Report(Singleton):
             for x in conf.getElementsByTagName("primitive") ]
         self.cibnode_l = [ x.getAttribute("uname")
             for x in conf.getElementsByTagName("node") ]
+        self.cibgrp_d = {}
         for grp in conf.getElementsByTagName("group"):
             self.cibgrp_d[grp.getAttribute("id")] = get_rsc_children_ids(grp)
+        self.cibcln_d = {}
+        self.cibcloned_l = []
         for cln in conf.getElementsByTagName("clone") + \
                 conf.getElementsByTagName("master"):
             try:
