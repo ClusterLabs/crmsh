@@ -1970,7 +1970,7 @@ class History(UserInterface):
             return True
         # verify arguments
         if subcmd not in ("save", "load", "pack", "delete", "list", "update"):
-            common_err("unknown history session subcmd: %s")
+            common_err("unknown history session subcmd: %s" % subcmd)
             return False
         if name:
             if subcmd not in ("save", "load", "pack", "delete"):
