@@ -3034,10 +3034,15 @@ differ from the one produced by the locally installed `pengine`.
 The `log` subcommand shows the full log for the duration of the
 transition.
 
+A transition can also be saved to a CIB shadow for further
+analysis or use with `cib` or `configure` commands (use the
+`save` subcommand). The shadow file name defaults to the name of
+the PE input file.
+
 If the PE input file number is not provided, it defaults to the
-last one, i.e. the last transition. If the number is negative,
-then the corresponding transition relative to the last one is
-chosen.
+last one, i.e. the last transition. The last transition can also
+be referenced with number 0. If the number is negative, then the
+corresponding transition relative to the last one is chosen.
 
 If there are warning and error PE input files or different nodes
 were the DC in the observed timeframe, it may happen that PE
@@ -3052,6 +3057,7 @@ Usage:
         transition [<number>|<index>|<file>] [nograph] [v...] [scores] [actions] [utilization]
         transition showdot [<number>|<index>|<file>]
         transition log [<number>|<index>|<file>]
+        transition save [<number>|<index>|<file> [name]]
 ...............
 Examples:
 ...............
@@ -3062,6 +3068,7 @@ Examples:
         transition node-a/pengine/pe-input-2.bz2
         transition showdot 444
         transition log
+        transition save 0 enigma-22
 ...............
 
 [[cmdhelp_history_session,manage history sessions]]

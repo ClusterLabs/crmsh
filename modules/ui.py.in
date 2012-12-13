@@ -1913,10 +1913,11 @@ class History(UserInterface):
     def transition(self,cmd,*args):
         """usage: transition [<number>|<index>|<file>] [nograph] [v...] [scores] [actions] [utilization]
         transition showdot [<number>|<index>|<file>]
-        transition log [<number>|<index>|<file>]"""
+        transition log [<number>|<index>|<file>]
+        transition save [<number>|<index>|<file> [name]]"""
         argl = list(args)
         subcmd = "show"
-        if argl and argl[0] in ("showdot", "log"):
+        if argl and argl[0] in ("showdot", "log", "save"):
             if argl[0] == "showdot" and not user_prefs.dotty:
                 common_err("install graphviz to draw transition graphs")
                 return False
@@ -1951,6 +1952,12 @@ class History(UserInterface):
                 common_err("dot file not found in the report")
                 return False
             show_dot_graph(f)
+            return True
+        elif subcmd == "save":
+            try: name = argl[0]
+            except: name = os.path.basename(f).replace(".bz2","")
+            common_info("transition %s saved to shadow %s" % (f,name))
+            return pe2shadow(f, name)
         else:
             full_log = True
         if rc:
