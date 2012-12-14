@@ -1051,6 +1051,15 @@ class Report(Singleton):
         s = self.get_desc_line(field)
         if s:
             print "%s: %s" % (pfx, s)
+    def short_peinputs_list(self):
+        '''There could be quite a few transitions, limit the
+        output'''
+        max_output = 50
+        s = ""
+        if len(self.peinputs_l) > max_output:
+            s = "... "
+        return "%s%s" % (s, \
+            ' '.join([x.pe_num for x in self.peinputs_l[-max_output:]]))
     def info(self):
         '''
         Print information about the source.
@@ -1066,6 +1075,7 @@ class Report(Singleton):
         print "Nodes:",' '.join(self.cibnode_l)
         print "Groups:",' '.join(self.cibgrp_d.keys())
         print "Resources:",' '.join(self.cibrsc_l)
+        print "Transitions:", self.short_peinputs_list()
     def events(self):
         '''
         Show all events.
