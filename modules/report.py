@@ -409,6 +409,13 @@ def get_matching_run_msg(te_invoke_msg, trans_msg_l):
             break
     return run_msg
 
+def trans_str(node, pe_file):
+    '''Convert node,pe_file to transition sting.'''
+    return "%s:%s" % (node, os.path.basename(pe_file).replace(".bz2",""))
+def rpt_pe2t_str(rpt_pe_file):
+    '''Convert report's pe_file path to transition sting.'''
+    node = os.path.basename(os.path.dirname(os.path.dirname(rpt_pe_file)))
+    return trans_str(node, rpt_pe_file)
 class Transition(object):
     '''
     Capture transition related information.
@@ -418,8 +425,7 @@ class Transition(object):
         self.run_msg = run_msg
         self.parse_msgs()
     def __str__(self):
-        return "%s:%s" % (self.dc, \
-            os.path.basename(self.pe_file).replace(".bz2","").replace("pe-","").replace("input-",""))
+        return trans_str(self.dc, self.pe_file)
     def parse_msgs(self):
         self.pe_file = extract_pe_file(self.te_invoke_msg)
         self.pe_num = get_pe_num(self.pe_file)
@@ -430,7 +436,7 @@ class Transition(object):
         else:
             common_warn("end of transition %s not found in logs (transition not complete yet?)" % self)
             self.end_ts = time.time()
-    def total_actions(self):
+    def actions_count(self):
         if self.run_msg:
             act_d = run_graph_msg_actions(self.run_msg)
             return sum(act_d.values())
@@ -669,9 +675,9 @@ class Report(Singleton):
             return -1
         u_dir = os.path.join(self.loc, node)
         return pipe_cmd_nosudo("tar -C %s -x < %s" % (u_dir,fl[0]))
-    def find_new_peinputs(self, node):
+    def read_new_log(self, node):
         '''
-        Get a list of pe inputs appearing in new logs.
+        Get a list of log lines.
         The log is put in self.outdir/node by pssh.
         '''
         if not os.path.isdir(self.outdir):
@@ -684,8 +690,7 @@ class Report(Singleton):
         except IOError,msg:
             common_err("open %s: %s" % (fl[0], msg))
             return []
-        common_debug("updating transitions from logs")
-        return self.list_transitions([x for x in f], future_pe = True)
+        return f.readlines()
     def update_live_report(self):
         '''
         Update the existing live report, if it's older than
@@ -708,13 +713,15 @@ class Report(Singleton):
         self.last_live_update = time.time()
         rc1 = next_loglines(a, self.outdir, self.errdir)
         self.append_newlogs(a)
-        new_peinputs_l = []
         node_pe_l = []
         for node in [x[0] for x in a]:
-            pe_l = self.find_new_peinputs(node)
+            log_l = self.read_new_log(node)
+            pe_l = []
+            for new_t_obj in self.list_transitions(log_l, future_pe=True):
+                self.new_peinput(new_t_obj)
+                pe_l.append(new_t_obj.pe_file)
             if pe_l:
-                node_pe_l.append([node, [x.pe_file for x in pe_l]])
-                new_peinputs_l += pe_l
+                node_pe_l.append([node, pe_l])
         rmdir_r(self.outdir)
         rmdir_r(self.errdir)
         if not node_pe_l:
@@ -726,7 +733,6 @@ class Report(Singleton):
         rc2 |= (unpack_rc == 0)
         rmdir_r(self.outdir)
         rmdir_r(self.errdir)
-        self.peinputs_l += new_peinputs_l
         return (rc1 and rc2)
     def get_live_report(self):
         if not acquire_lock(vars.report_cache):
@@ -855,6 +861,13 @@ class Report(Singleton):
                 self.cibcloned_l += self.cibcln_d[cln.getAttribute("id")]
             except: pass
         self.cibnotcloned_l = [x for x in self.cibrsc_l if x not in self.cibcloned_l]
+    def new_peinput(self, new_pe):
+        t_obj = self.find_peinput(str(new_pe))
+        if t_obj:
+            common_debug("duplicate %s, replacing older PE file" % t_obj)
+            self.peinputs_l.remove(t_obj)
+        common_debug("appending new PE %s" % new_pe)
+        self.peinputs_l.append(new_pe)
     def set_node_colors(self):
         i = 0
         for n in self.cibnode_l:
@@ -887,11 +900,10 @@ class Report(Singleton):
         '''
         trans_msg_l = self.get_all_trans_msgs(msg_l)
         trans_start_msg_l = self.get_invoke_trans_msgs(trans_msg_l)
-        pe_l = []
         for msg in trans_start_msg_l:
             run_msg = get_matching_run_msg(msg, trans_msg_l)
             t_obj = Transition(msg, run_msg)
-            num_actions = t_obj.total_actions()
+            num_actions = t_obj.actions_count()
             if num_actions == 0: # empty transition
                 common_debug("skipping empty transition (%s)" % t_obj)
                 continue
@@ -901,8 +913,7 @@ class Report(Singleton):
                     warn_once("%s in the logs, but not in the report" % t_obj)
                     continue
             common_debug("found PE input: %s" % t_obj)
-            pe_l.append(t_obj)
-        return pe_l
+            yield t_obj
     def report_setup(self):
         if not self.change_origin:
             return
@@ -925,7 +936,9 @@ class Report(Singleton):
                 self.from_dt, self.to_dt)
         if self.change_origin != CH_UPD:
             common_debug("getting transitions from logs")
-            self.peinputs_l = self.list_transitions()
+            self.peinputs_l = []
+            for new_t_obj in self.list_transitions():
+                self.new_peinput(new_t_obj)
         self.ready = self.check_report()
         self.change_origin = 0
     def prepare_source(self):
@@ -1066,20 +1079,20 @@ class Report(Singleton):
             self.error("no resources or nodes found")
             return False
         self.show_logs(re_l = all_re_l)
-    def find_peinput(self, pe_file):
+    def find_peinput(self, t_str):
         for t_obj in self.peinputs_l:
-            if self.pe_report_path(t_obj) == pe_file:
+            if str(t_obj) == t_str:
                 return t_obj
         return None
-    def show_transition_log(self, pe_file, full_log=False):
+    def show_transition_log(self, rpt_pe_file, full_log=False):
         '''
         Search for events within the given transition.
         '''
         if not self.prepare_source():
             return False
-        t_obj = self.find_peinput(pe_file)
+        t_obj = self.find_peinput(rpt_pe2t_str(rpt_pe_file))
         if not t_obj:
-            common_err("%s: transition not found" % pe_file)
+            common_err("%s: transition not found" % rpt_pe_file)
             return False
         # limit the log scope temporarily
         self.logobj.set_log_timeframe(t_obj.start_ts, t_obj.end_ts)
