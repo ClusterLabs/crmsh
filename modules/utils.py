@@ -747,7 +747,8 @@ def is_pcmk_118(cib_f=None):
     if not vars.pcmk_version:
         if cib_f:
             vars.pcmk_version = get_cib_property(cib_f, "dc-version", "1.1.1")
-            common_debug("found pacemaker version: %s in cib: %s" % (ver, cib_f))
+            common_debug("found pacemaker version: %s in cib: %s" % \
+                (vars.pcmk_version, cib_f))
         else:
             vars.pcmk_version = get_pcmk_version("1.1.1")
     from distutils.version import LooseVersion
