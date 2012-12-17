@@ -1003,17 +1003,20 @@ class Report(Singleton):
         else:
             re_l = mk_re_list(patt_l,r'(%s)' % "|".join(args))
         return re_l
-    def disp(self, s):
-        'color output'
-        a = s.split()
-        try: clr = self.nodecolor[a[3]]
+    def _str_nodecolor(self, node, s):
+        try: clr = self.nodecolor[node]
         except: return s
         try:
             return "${%s}%s${NORMAL}" % (clr,s)
         except:
-            # ${..} in logs?
             s = s.replace("${","$.{")
             return "${%s}%s${NORMAL}" % (clr,s)
+    def disp(self, s):
+        'color output'
+        a = s.split()
+        try: node = a[3]
+        except: return s
+        return self._str_nodecolor(node, s)
     def match_filter_out(self, s):
         for re in self.log_filter_out_re:
             if re.search(s):
@@ -1050,16 +1053,17 @@ class Report(Singleton):
     def dumpdescln(self, pfx, field):
         s = self.get_desc_line(field)
         if s:
-            print "%s: %s" % (pfx, s)
+            return "%s: %s" % (pfx, s)
     def short_peinputs_list(self):
         '''There could be quite a few transitions, limit the
         output'''
-        max_output = 50
+        max_output = 20
         s = ""
         if len(self.peinputs_l) > max_output:
             s = "... "
         return "%s%s" % (s, \
-            ' '.join([x.pe_num for x in self.peinputs_l[-max_output:]]))
+            ' '.join([self._str_nodecolor(x.dc, x.pe_num) \
+                for x in self.peinputs_l[-max_output:]]))
     def get_rpt_dt(self, dt, whence):
         '''
         Figure out the time of the start/end of the report.
@@ -1085,16 +1089,19 @@ class Report(Singleton):
         '''
         if not self.prepare_source():
             return False
-        print "Source: %s" % self.source
-        self.dumpdescln("Created on", "Date")
-        self.dumpdescln("By", "By")
-        print "Period: %s - %s" % \
+        page_string('\n'.join((
+        "Source: %s" % self.source,
+        self.dumpdescln("Created on", "Date") or "Created on: -1:-1:-1",
+        self.dumpdescln("By", "By") or "By: unknown",
+        "Period: %s - %s" % \
             (self._str_dt(self.get_rpt_dt(self.from_dt, "top")), \
-            self._str_dt(self.get_rpt_dt(self.to_dt, "bottom")))
-        print "Nodes:",' '.join(self.cibnode_l)
-        print "Groups:",' '.join(self.cibgrp_d.keys())
-        print "Resources:",' '.join(self.cibrsc_l)
-        print "Transitions:", self.short_peinputs_list()
+            self._str_dt(self.get_rpt_dt(self.to_dt, "bottom"))),
+        "Nodes: %s" % ' '.join([ self._str_nodecolor(x, x) \
+            for x in self.cibnode_l ]),
+        "Groups: %s" % ' '.join(self.cibgrp_d.keys()),
+        "Resources: %s" % ' '.join(self.cibrsc_l),
+        "Transitions: %s" % self.short_peinputs_list(),
+        )))
     def events(self):
         '''
         Show all events.
