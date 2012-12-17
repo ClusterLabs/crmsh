@@ -1060,6 +1060,25 @@ class Report(Singleton):
             s = "... "
         return "%s%s" % (s, \
             ' '.join([x.pe_num for x in self.peinputs_l[-max_output:]]))
+    def get_rpt_dt(self, dt, whence):
+        '''
+        Figure out the time of the start/end of the report.
+        The ts input is the time stamp set by user (it can be
+        empty). whence is set either to "top" or "bottom".
+        '''
+        if dt:
+            return dt
+        try:
+            log_l = self.logobj.get_matches([])
+            if whence == "top":
+                myts = syslog_ts(log_l[0])
+            elif whence == "bottom":
+                myts = syslog_ts(log_l[-1])
+            return datetime.datetime.fromtimestamp(myts)
+        except:
+            return None
+    def _str_dt(self, dt):
+        return dt and human_date(dt) or "unknown"
     def info(self):
         '''
         Print information about the source.
@@ -1070,8 +1089,8 @@ class Report(Singleton):
         self.dumpdescln("Created on", "Date")
         self.dumpdescln("By", "By")
         print "Period: %s - %s" % \
-            ((self.from_dt and human_date(self.from_dt) or "start"),
-            (self.to_dt and human_date(self.to_dt) or "end"))
+            (self._str_dt(self.get_rpt_dt(self.from_dt, "top")), \
+            self._str_dt(self.get_rpt_dt(self.to_dt, "bottom")))
         print "Nodes:",' '.join(self.cibnode_l)
         print "Groups:",' '.join(self.cibgrp_d.keys())
         print "Resources:",' '.join(self.cibrsc_l)
