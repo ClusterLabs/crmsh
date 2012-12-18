@@ -23,6 +23,7 @@ import re
 import glob
 import time
 import shutil
+import bz2
 
 from userprefs import Options, UserPrefs
 from vars import Vars
@@ -742,6 +743,33 @@ def get_cib_property(cib_f, attr, dflt):
                 break
     f.close()
     return ver
+
+def get_cib_attributes(cib_f, tag, attr_l, dflt_l):
+    """A poor man's get attribute procedure.
+    We don't want heavy parsing, this needs to be relatively
+    fast.
+    """
+    open_t = "<%s " % tag
+    val_patt_l = [ re.compile('%s="([^"]+)"' % x) for x in attr_l ]
+    val_l = []
+    try: f = open(cib_f, "r")
+    except IOError, msg:
+        common_err(msg)
+        return ver
+    if os.path.splitext(cib_f)[-1] == '.bz2':
+        cib_s = bz2.decompress(''.join(f))
+    else:
+        cib_s = ''.join(f)
+    for s in cib_s.split('\n'):
+        if s.startswith(open_t):
+            i = 0
+            for patt in val_patt_l:
+                r = patt.search(s)
+                val_l.append(r and r.group(1) or dflt_l[i])
+                i += 1
+            break
+    f.close()
+    return val_l
 
 def is_pcmk_118(cib_f=None):
     if not vars.pcmk_version:

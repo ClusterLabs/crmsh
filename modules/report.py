@@ -442,6 +442,8 @@ class Transition(object):
             return sum(act_d.values())
         else:
             return -1
+    def shortname(self):
+        return os.path.basename(self.pe_file).replace(".bz2","")
     def transition_info(self):
         print "Transition %s (%s -" % (self, shorttime(self.start_ts)),
         if self.run_msg:
@@ -1082,7 +1084,7 @@ class Report(Singleton):
         except:
             return None
     def _str_dt(self, dt):
-        return dt and human_date(dt) or "unknown"
+        return dt and human_date(dt) or "--/--/-- --:--:--"
     def info(self):
         '''
         Print information about the source.
@@ -1091,7 +1093,7 @@ class Report(Singleton):
             return False
         page_string('\n'.join((
         "Source: %s" % self.source,
-        self.dumpdescln("Created on", "Date") or "Created on: -1:-1:-1",
+        self.dumpdescln("Created on", "Date") or "Created on: --:--:--",
         self.dumpdescln("By", "By") or "By: unknown",
         "Period: %s - %s" % \
             (self._str_dt(self.get_rpt_dt(self.from_dt, "top")), \
@@ -1192,7 +1194,23 @@ class Report(Singleton):
             if not l:
                 return False
             self.show_logs(log_l = l)
-    def pelist(self, a = None):
+    pe_details_header = \
+"Start      End       Filename      Client     User       Origin"
+    pe_details_separator = \
+"=====      ===       ========      ======     ====       ======"
+    def pe_detail_format(self, t_obj):
+        l = [
+            shorttime(t_obj.start_ts),
+            t_obj.end_ts and shorttime(t_obj.end_ts) or "--:--:--",
+            # the format string occurs also below
+            self._str_nodecolor(t_obj.dc, '%-13s' % t_obj.shortname())
+        ]
+        l += get_cib_attributes(self.pe_report_path(t_obj), "cib", \
+            ("update-client", "update-user", "update-origin"), \
+            ("no-client", "no-user", "no-origin"))
+        return '%s - %s  %-13s %-10s %-10s %s' % tuple(l)
+        #% (l2[0], l2[1], l2[2])
+    def pelist(self, a=None, long=False):
         if not self.prepare_source():
             return []
         if isinstance(a,(tuple,list)):
@@ -1200,8 +1218,11 @@ class Report(Singleton):
                 a.append(a[0])
         elif a is not None:
             a = [a,a]
-        return [self.pe_report_path(x) for x in self.peinputs_l \
-            if pe_file_in_range(x.pe_file, a)]
+        l = [ long and self.pe_detail_format(x) or self.pe_report_path(x)
+            for x in self.peinputs_l if pe_file_in_range(x.pe_file, a) ]
+        if long:
+            l = [self.pe_details_header, self.pe_details_separator] + l
+        return l
     def dotlist(self, a = None):
         l = [x.replace("bz2","dot") for x in self.pelist(a)]
         return [x for x in l if os.path.isfile(x)]

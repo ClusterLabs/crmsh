@@ -1874,14 +1874,11 @@ class History(UserInterface):
                 if a and len(a) == 2 and not check_range(a):
                     common_err("%s: invalid peinputs range" % a)
                     return False
-                l += crm_report.pelist(a)
+                l += crm_report.pelist(a, long=long)
         else:
-            l = crm_report.pelist()
+            l = crm_report.pelist(long=long)
         if not l: return False
-        if long:
-            s = get_stdout("for f in %s; do ls -l $f; done" % ' '.join(l))
-        else:
-            s = '\n'.join(l)
+        s = '\n'.join(l)
         page_string(s)
     def _get_pe_byname(self, s):
         l = crm_report.find_pe_files(s)
