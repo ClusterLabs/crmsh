@@ -102,6 +102,8 @@ esac
 
 setenvironment() {
 	filterf=$TESTDIR/$testcase.filter
+	pref=$TESTDIR/$testcase.pre
+	postf=$TESTDIR/$testcase.post
 	exclf=$TESTDIR/$testcase.excl
 	log_filter=$TESTDIR/$testcase.log_filter
 	expf=$TESTDIR/$testcase.exp
@@ -129,6 +131,7 @@ EOF
 
 runtestcase() {
 	setenvironment
+	[ -x "$pref" ] && $pref >/dev/null 2>&1
 	echo -n "$testcase" >&3
 	logmsg "BEGIN testcase $testcase"
 	(
@@ -141,6 +144,7 @@ runtestcase() {
 		echo " saving to expect file" >&3
 		cat > $expf
 	else
+		[ -x "$postf" ] && $postf >/dev/null 2>&1
 		echo -n " checking..." >&3
 		if head -2 $expf | grep -qs '^<cib'; then
 			crm_diff -o $expf -n -

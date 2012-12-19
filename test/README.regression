@@ -123,7 +123,7 @@ with the '%' sign and may be followed by additional parameters.
 	%repeat 10
 	configure primitive p-%i ocf:pacemaker:Dummy
 
-Filters and except files
+Filters and other auxiliary files
 
 Some output is necessarily very volatile, such as time stamps.
 It is possible to specify a filter for each testcase to get rid
@@ -137,3 +137,18 @@ Except files are a list of extended regular expressions fed to
 egrep(1). That way one can filter out lines which are not
 interesting. Again, the one applied to all is
 testcases/common.excl.
+
+A test may need an arbitrary script executed before or after the
+test itself in order to ascertain some state. The two scripts
+have extensions .pre and .post respectively. Their output is sent
+to /dev/null and the exit status ignored. 
+
+Finally, the daemon log files may be filtered using log_filter.
+
+The full collection of auxiliary files follows:
+
+	<TEST>.filter
+	<TEST>.excl
+	<TEST>.log_filter
+	<TEST>.pre
+	<TEST>.post
