@@ -471,7 +471,7 @@ def mkarchive(dir):
         print "Report saved in '%s'" % archive
     return True
 
-CH_SRC, CH_TIME, CH_UPD = range(1,4)
+CH_SRC, CH_TIME, CH_UPD = 1, 2, 3
 class Report(Singleton):
     '''
     A hb_report class.
@@ -545,7 +545,7 @@ class Report(Singleton):
         else:
             self.error("this doesn't look like a report tarball")
             return None
-        self.change_origin = CH_SRC
+        self.set_change_origin(CH_SRC)
         if os.path.isdir(loc):
             return loc
         cwd = os.getcwd()
@@ -763,7 +763,7 @@ class Report(Singleton):
                 rc = self.update_live_report()
                 release_lock(vars.report_cache)
                 if rc:
-                    self.change_origin = CH_UPD
+                    self.set_change_origin(CH_UPD)
                     return self._live_loc()
             else:
                 warn_once("pssh not installed, slow live updates ahead")
@@ -797,7 +797,7 @@ class Report(Singleton):
     def set_source(self,src):
         'Set our source.'
         if self.source != src:
-            self.change_origin = CH_SRC
+            self.set_change_origin(CH_SRC)
             self.source = src
             self.ready = False
     def set_period(self,from_dt,to_dt):
@@ -805,16 +805,17 @@ class Report(Singleton):
         Set from/to_dt.
         '''
         common_debug("setting report times: <%s> - <%s>" % (from_dt,to_dt))
-        need_ref = (self.source == "live") and \
+        need_refresh = (self.source == "live") and \
             ((from_dt and self.from_dt and self.from_dt > from_dt) or \
             (to_dt and self.to_dt and self.to_dt < to_dt))
         self.from_dt = from_dt
         self.to_dt = to_dt
-        if need_ref:
-            self.change_origin = CH_UPD
+        if need_refresh:
+            self.set_change_origin(CH_UPD)
             self.refresh_source(force = True)
-        if self.logobj:
-            self.logobj.set_log_timeframe(self.from_dt, self.to_dt)
+        else:
+            self.set_change_origin(CH_TIME)
+            self.report_setup()
         return True
     def set_detail(self,detail_lvl):
         '''
@@ -942,7 +943,7 @@ class Report(Singleton):
             for new_t_obj in self.list_transitions():
                 self.new_peinput(new_t_obj)
         self.ready = self.check_report()
-        self.change_origin = 0
+        self.set_change_origin(0)
     def prepare_source(self):
         '''
         Unpack a hb_report tarball.
@@ -1309,8 +1310,15 @@ class Report(Singleton):
                 "session state file %s" % (msg, v, n, fname))
             rc = False
         if rc:
-            self.change_origin = CH_SRC
+            self.set_change_origin(CH_SRC)
         return rc
+    def set_change_origin(self, org):
+        '''Set origin only to a smaller value (if current > 0).
+        This prevents lesser change_origin overwriting a greater
+        one.
+        '''
+        if self.change_origin == 0 or org < self.change_origin:
+            self.change_origin = org
     def manage_session(self, subcmd, name):
         dir = self.get_session_dir(name)
         if subcmd == "save" and os.path.exists(dir):
