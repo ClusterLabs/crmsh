@@ -1308,6 +1308,8 @@ class Report(Singleton):
             common_err("%s: bad value '%s' for '%s' in "
                 "session state file %s" % (msg, v, n, fname))
             rc = False
+        if rc:
+            self.change_origin = CH_SRC
         return rc
     def manage_session(self, subcmd, name):
         dir = self.get_session_dir(name)
