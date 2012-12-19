@@ -27,6 +27,7 @@ BuildRoot:	%{_tmppath}/%{name}-%{version}-build
 AutoReqProv:	on
 Requires(pre):	pacemaker
 Requires:	python >= 2.4
+Requires:	python-dateutil
 
 %if 0%{?suse_version}
 # Suse splits this off into a separate package
@@ -40,7 +41,7 @@ BuildRequires:	libpacemaker-devel libglue-devel
 BuildRequires:	asciidoc
 
 %if 0%{?with_regression_tests}
-BuildRequires:  corosync procps vim-base
+BuildRequires:  corosync procps vim-base python-dateutil
 Requires:       pacemaker
 %endif
 
