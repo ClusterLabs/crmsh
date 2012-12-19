@@ -1,3 +1,11 @@
+* Mon Dec 17 2012 Dejan Muhamedagic <dejan@suse.de> and many others
+- stable release 1.2.4
+- shadow: return proper exit code on I/O errors
+- history: implement transition save (to shadow) subcommand
+- history: fix regression when creating log objects
+- history: detailed transition output
+- history: force refresh on session load
+
 * Tue Dec 11 2012 Dejan Muhamedagic <dejan@suse.de> and many others
 - stable release 1.2.3
 - ra: don't print duplicate RAs in the list command (bnc#793585)
