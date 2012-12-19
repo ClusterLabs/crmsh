@@ -1337,6 +1337,9 @@ class Report(Singleton):
         elif subcmd == "list":
             ext_cmd("ls %s" % self.get_session_dir(None))
         elif subcmd == "pack":
+            if self.source != "live":
+                common_err("only live sessions can be packed")
+                return False
             return mkarchive(dir)
         return True
     log_section = 'log'
