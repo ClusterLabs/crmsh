@@ -19,13 +19,13 @@
 MAINTAINERCLEANFILES = Makefile.in
 
 testcasesdir		= 	$(datadir)/$(PACKAGE)/tests/testcases
-testcases_SCRIPTS	=	ra.filter xmlonly.sh
+testcases_SCRIPTS	=	ra.filter xmlonly.sh history.pre history.post
 testcases_DATA		=	BSC basicset common.excl \
 	confbasic confbasic-xml delete file node ra resource shadow acl \
-	edit rset rset-xml \
+	edit rset rset-xml history \
 	confbasic-xml.exp confbasic.exp delete.exp file.exp \
 	node.exp ra.exp resource.exp shadow.exp acl.exp \
-	edit.exp rset.exp rset-xml.exp
+	edit.exp rset.exp rset-xml.exp history.exp history.excl
 
 confbasic-xml.filter:
 	ln xmlonly.sh $@

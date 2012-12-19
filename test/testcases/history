@@ -1,0 +1,40 @@
+session History
+history
+source history-test.tar.bz2
+info
+node xen-d
+node xen-e
+node .*
+exclude pcmk_peer_update
+exclude
+node xen-e
+exclude clear
+exclude corosync|crmd|pengine|stonith-ng|cib|attrd|mgmtd|sshd
+log
+exclude clear
+peinputs
+peinputs v
+refresh
+resource d1
+# reduce report span
+timeframe "2012-12-14 20:07:30"
+peinputs
+resource d1
+exclude corosync|crmd|pengine|stonith-ng|cib|attrd|mgmtd|sshd
+transition log
+transition nograph
+transition -1 nograph
+transition save 0 _crmsh_regtest
+transition log 49
+# reset timeframe
+timeframe
+session save _crmsh_regtest
+session load _crmsh_regtest
+session
+session pack
+.
+session History 2
+history
+session load _crmsh_regtest
+exclude
+.
