@@ -50,6 +50,7 @@ log_patterns = {
 			"stonithd.*Succeeded.*node %%:",
 			"pcmk_peer_update.*(lost|memb): %% ",
 			"crmd.*ccm_event.*(NEW|LOST):.* %% ",
+			"Node return implies stonith of %% ",
 		),
 		( # detail 1
 		),
