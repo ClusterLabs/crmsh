@@ -513,6 +513,8 @@ def crm_time_cmp(a, b):
 
 def shorttime(ts):
     return time.strftime("%X",time.localtime(ts))
+def shortdate(ts):
+    return time.strftime("%F",time.localtime(ts))
 
 def sort_by_mtime(l):
     'Sort a (small) list of files by time mod.'

@@ -186,16 +186,16 @@ history-test/xen-e/pengine/pe-warn-272.bz2
 history-test/xen-e/pengine/pe-input-49.bz2
 history-test/xen-e/pengine/pe-input-50.bz2
 .INP: peinputs v
-Start      End       Filename      Client     User       Origin
-=====      ===       ========      ======     ====       ======
-20:06:57 - 20:06:57  pe-input-43   crmd       hacluster  xen-e
-20:07:19 - 20:07:23  pe-input-44   cibadmin   root       xen-d
-20:07:29 - 20:07:29  pe-input-45   cibadmin   root       xen-d
-20:07:29 - 20:07:29  pe-input-46   cibadmin   root       xen-d
-20:07:37 - 20:07:42  pe-input-48   cibadmin   root       xen-d
-20:07:54 - 20:07:56  pe-warn-272   cibadmin   root       xen-d
-20:07:56 - 20:07:57  pe-input-49   cibadmin   root       xen-d
-20:08:43 - 20:08:43  pe-input-50   cibadmin   root       xen-d
+Date       Start    End      Filename      Client     User       Origin
+====       =====    ===      ========      ======     ====       ======
+2012-12-14 20:06:57 20:06:57 pe-input-43   crmd       hacluster  xen-e
+2012-12-14 20:07:19 20:07:23 pe-input-44   cibadmin   root       xen-d
+2012-12-14 20:07:29 20:07:29 pe-input-45   cibadmin   root       xen-d
+2012-12-14 20:07:29 20:07:29 pe-input-46   cibadmin   root       xen-d
+2012-12-14 20:07:37 20:07:42 pe-input-48   cibadmin   root       xen-d
+2012-12-14 20:07:54 20:07:56 pe-warn-272   cibadmin   root       xen-d
+2012-12-14 20:07:56 20:07:57 pe-input-49   cibadmin   root       xen-d
+2012-12-14 20:08:43 20:08:43 pe-input-50   cibadmin   root       xen-d
 .INP: refresh
 INFO: 16: nothing to refresh if source isn't live
 .INP: resource d1

@@ -1196,11 +1196,12 @@ class Report(Singleton):
                 return False
             self.show_logs(log_l = l)
     pe_details_header = \
-"Start      End       Filename      Client     User       Origin"
+"Date       Start    End       Filename      Client     User       Origin"
     pe_details_separator = \
-"=====      ===       ========      ======     ====       ======"
+"====       =====    ===       ========      ======     ====       ======"
     def pe_detail_format(self, t_obj):
         l = [
+            shortdate(t_obj.start_ts),
             shorttime(t_obj.start_ts),
             t_obj.end_ts and shorttime(t_obj.end_ts) or "--:--:--",
             # the format string occurs also below
@@ -1209,8 +1210,7 @@ class Report(Singleton):
         l += get_cib_attributes(self.pe_report_path(t_obj), "cib", \
             ("update-client", "update-user", "update-origin"), \
             ("no-client", "no-user", "no-origin"))
-        return '%s - %s  %-13s %-10s %-10s %s' % tuple(l)
-        #% (l2[0], l2[1], l2[2])
+        return '%s %s %s  %-13s %-10s %-10s %s' % tuple(l)
     def pelist(self, a=None, long=False):
         if not self.prepare_source():
             return []
