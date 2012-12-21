@@ -180,7 +180,7 @@ def report_node_list(idx,delimiter = False):
 def report_pe_list_transition(idx,delimiter = False):
     if delimiter:
         return ' '
-    return crm_report.peinputs_list() + ["showdot"]
+    return crm_report.peinputs_list() + ["log", "showdot", "save"]
 def report_pe_list_peinputs(idx,delimiter = False):
     if delimiter:
         return ' '
