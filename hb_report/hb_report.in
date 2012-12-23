@@ -207,7 +207,7 @@ compatibility_pcmk() {
 	localstatedir=`dirname $HA_VARLIB`
 	libdir=`dirname $HA_BIN`
 	# PE_STATE_DIR
-	lastf=$(2>/dev/null ls -rt `find /var/lib -name pengine -type d |
+	lastf=$(2>/dev/null ls -rt `2>/dev/null find /var/lib -name pengine -type d |
 		sed 's,$,/*.last,'` | tail -1)
 	if [ -f "$lastf" ]; then
 		PE_STATE_DIR=`dirname $lastf`
