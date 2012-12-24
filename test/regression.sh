@@ -173,12 +173,17 @@ for a; do
 	if [ "$a" -a -f "$TESTDIR/$a" ]; then
 		testcase=$a
 		runtestcase
+	elif echo "$a" | grep -q "^set:"; then
+		TESTSET=$TESTDIR/`echo $a | sed 's/set://'`
+		if [ -f "$TESTSET" ]; then
+			while read testcase; do
+				runtestcase
+			done < $TESTSET
+		else
+			echo "testset $TESTSET does not exist" >&3
+		fi
 	else
-		echo "$a" | grep -q "^set:" &&
-			TESTSET=$TESTDIR/`echo $a | sed 's/set://'`
-		while read testcase; do
-			runtestcase
-		done < $TESTSET
+		echo "test $TESTDIR/$a does not exist" >&3
 	fi
 done
 
