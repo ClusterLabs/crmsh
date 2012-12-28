@@ -1194,6 +1194,11 @@ class CibContainer(CibObject):
         s = cli_display.keyword(self.obj_type)
         id = cli_display.id(self.obj_id)
         return "%s %s %s" % (s, id, ' '.join(children))
+    def is_eligible(self, obj):
+        if self.obj_type == "group":
+            return is_primitive(obj.node)
+        else:
+            return is_primitive(obj.node) or is_group(obj.node)
     def cli_list2node(self,cli_list,oldnode):
         head = copy.copy(cli_list[0])
         head[0] = backtrans[head[0]]
@@ -1207,6 +1212,9 @@ class CibContainer(CibObject):
             for child_id in v:
                 obj = cib_factory.find_object(child_id)
                 if obj:
+                    if not self.is_eligible(obj):
+                        common_err("element %s cannot be part of %s" % (obj.obj_string(), self.obj_id))
+                        continue
                     n = obj.node.cloneNode(1)
                     headnode.appendChild(n)
                 else:
