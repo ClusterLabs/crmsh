@@ -1364,6 +1364,7 @@ class CibConfig(UserInterface):
         self.cmd_table["upgrade"] = (self.upgrade,(0,1),1,0)
         self.cmd_table["show"] = (self.show,(0,),1,0)
         self.cmd_table["edit"] = (self.edit,(0,),1,0)
+        self.cmd_table["modgroup"] = (self.modgroup,(3,5),1,0)
         self.cmd_table["filter"] = (self.filter,(1,),1,0)
         self.cmd_table["delete"] = (self.delete,(1,),1,0)
         self.cmd_table["default-timeouts"] = (self.default_timeouts,(1,),1,0)
@@ -1429,6 +1430,57 @@ class CibConfig(UserInterface):
         set_obj = mkset_obj(*args)
         err_buf.release() # show them, but get an ack from the user
         return set_obj.filter(filter)
+    def modgroup(self,cmd,group_id,subcmd,prim_id,*args):
+        """usage: modgroup <id> add <id> [after <id>|before <id>]
+        modgroup <id> remove <id>"""
+        if not cib_factory.is_cib_sane():
+            return False
+        if subcmd not in ("add", "remove"):
+            common_err("modgroup subcommand %s unknown" % subcmd)
+            return False
+        after_before = None
+        if args:
+            if subcmd != "add" or args[0] not in ("after", "before"):
+                syntax_err(((cmd,group_id,subcmd,prim_id)+args), context = 'modgroup')
+                return False
+            if len(args) != 2:
+                syntax_err(((cmd,group_id,subcmd,prim_id)+args), context = 'modgroup')
+                return False
+            after_before = args[0]
+            ref_member_id = args[1]
+        g = cib_factory.find_object(group_id)
+        if not g:
+            common_err("group %s does not exist" % group_id)
+            return False
+        if not is_group(g.node):
+            common_err("element %s is not a group" % group_id)
+            return False
+        children = get_rsc_children_ids(g.node)
+        if after_before and ref_member_id not in children:
+            common_err("%s is not member of %s" % (ref_member_id, group_id))
+            return False
+        if subcmd == "remove" and prim_id not in children:
+            common_err("%s is not member of %s" % (prim_id, group_id))
+            return False
+        # done checking arguments
+        # have a group and children
+        if not after_before:
+            after_before = "after"
+            ref_member_id = children[-1]
+        # just do the filter
+        # (i wonder if this is a feature abuse?)
+        if subcmd == "add":
+            if after_before == "after":
+                sed_s = r's/ %s( |$)/& %s /' % (ref_member_id, prim_id)
+            else:
+                sed_s = r's/ %s( |$)/ %s& /' % (ref_member_id, prim_id)
+        else:
+            sed_s = r's/ %s( |$)/ /' % prim_id
+        err_buf.buffer() # keep error messages
+        l = (group_id,)
+        set_obj = mkset_obj(*l)
+        err_buf.release() # show them, but get an ack from the user
+        return set_obj.filter("sed -r '%s'" % sed_s)
     def edit(self,cmd,*args):
         "usage: edit [xml] [<id>...]"
         if not cib_factory.is_cib_sane():

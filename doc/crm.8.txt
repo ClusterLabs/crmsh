@@ -2177,6 +2177,23 @@ Usage:
         rename <old_id> <new_id>
 ...............
 
+[[cmdhelp_configure_modgroup,modify group]]
+==== `modgroup`
+
+Add or remove primitives in a group. The `add` subcommand appends
+the new group member by default. Should it go elsewhere, there
+are `after` and `before` clauses.
+
+Usage:
+...............
+        modgroup <id> add <id> [after <id>|before <id>]
+        modgroup <id> remove <id>
+...............
+Examples:
+...............
+        modgroup share1 add storage2 before share1-fs
+...............
+
 [[cmdhelp_configure_refresh,refresh from CIB]]
 ==== `refresh`
 

@@ -34,6 +34,17 @@ filter "sed 's/not_defined webserver/& or mem number:lte 0/'" loc-d1
 filter "sed 's/ or mem number:lte 0//'" loc-d1
 filter "sed 's/not_defined webserver/& rule -inf: not_defined a2/'" loc-d1
 filter "sed 's/not_defined webserver/& or mem number:lte 0/'" loc-d1
+modgroup g1 add d3
+modgroup g1 remove p1
+modgroup g1 add p1 after p2
+modgroup g1 remove p1
+modgroup g1 add p1 before p2
+modgroup g1 add p1
+modgroup g1 remove st
+modgroup g1 remove c1
+modgroup g1 remove nosuch
+modgroup g1 add c1
+modgroup g1 add nosuch
 _test
 verify
 .

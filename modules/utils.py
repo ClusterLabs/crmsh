@@ -162,6 +162,7 @@ def filter_string(cmd,s,stderr_on = True):
     else:
         stderr = subprocess.PIPE
     cmd = add_sudo(cmd)
+    common_debug("pipe through %s" % cmd)
     p = subprocess.Popen(cmd, shell=True, \
         stdin = subprocess.PIPE, \
         stdout = subprocess.PIPE, stderr = stderr)

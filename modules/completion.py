@@ -108,7 +108,15 @@ def id_list(idx,delimiter = False):
 def f_prim_id_list(idx,delimiter = False):
     if delimiter:
         return ' '
-    return cib_factory.f_prim_id_list()
+    return cib_factory.prim_id_list()
+def f_prim_free_id_list(idx,delimiter = False):
+    if delimiter:
+        return ' '
+    return cib_factory.f_prim_free_id_list()
+def f_group_id_list(idx,delimiter = False):
+    if delimiter:
+        return ' '
+    return cib_factory.f_group_id_list()
 def f_children_id_list(idx,delimiter = False):
     if delimiter:
         return ' '
@@ -197,6 +205,14 @@ def ticket_cmd_list(idx,delimiter = False):
     if delimiter:
         return ' '
     return ["grant","revoke","show","time","delete"]
+def modgroup_subcmd_list(idx,delimiter = False):
+    if delimiter:
+        return ' '
+    return ["add","remove"]
+def modgroup_modifier_list(idx,delimiter = False):
+    if delimiter:
+        return ' '
+    return ["after","before"]
 
 #
 # completion for primitives including help for parameters
@@ -494,6 +510,7 @@ completer_lists = {
         "edit" : (id_xml_list,id_list,loop),
         "filter" : (null_list,id_xml_list,id_list,loop),
         "delete" : (id_list,loop),
+        "modgroup" : (f_group_id_list,modgroup_subcmd_list,f_prim_id_list,modgroup_modifier_list,f_prim_id_list),
         "default-timeouts" : (id_list,loop),
         "rename" : (id_list,id_list),
         "save" : None,
@@ -501,7 +518,7 @@ completer_lists = {
         "node" : (node_id_list,node_attr_keyw_list),
         "primitive" : (null_list,ra_classes_or_tmpl,primitive_complete_complex,loop),
         "rsc_template" : (null_list,ra_classes_list,primitive_complete_complex,loop),
-        "group" : (null_list,f_prim_id_list,loop),
+        "group" : (null_list,f_prim_free_id_list,loop),
         "clone" : (null_list,f_children_id_list),
         "ms" : (null_list,f_children_id_list),
         "location" : (null_list,rsc_id_list),

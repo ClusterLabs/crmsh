@@ -1984,10 +1984,14 @@ class CibFactory(Singleton):
         "List of node ids."
         return [x.node.getAttribute("uname") for x in self.cib_objects \
             if x.obj_type == "node"]
-    def f_prim_id_list(self):
+    def f_prim_free_id_list(self):
         "List of possible primitives ids (for group completion)."
         return [x.obj_id for x in self.cib_objects \
             if x.obj_type == "primitive" and not x.parent]
+    def f_group_id_list(self):
+        "List of group ids."
+        return [x.obj_id for x in self.cib_objects \
+            if x.obj_type == "group"]
     def rsc_template_list(self):
         "List of templates."
         return [x.obj_id for x in self.cib_objects \
