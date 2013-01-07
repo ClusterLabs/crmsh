@@ -53,6 +53,27 @@ def cmd_exit(cmd,rc = 0):
         os.unlink(f)
     sys.exit(rc)
 
+ptest_options = ["@v+", "nograph", "scores", "actions", "utilization"]
+def fetch_opts(args, opt_l):
+    '''
+    Get and remove option keywords from args.
+    They are always listed last, at the end of the line.
+    Return a list of options found. The caller can do
+    if keyw in optlist: ...
+    '''
+    re_opt = None
+    if opt_l[0].startswith("@"):
+        re_opt = re.compile("^%s$" % opt_l[0][1:])
+        del opt_l[0]
+    l = []
+    for i in reversed(range(len(args))):
+        if (args[i] in opt_l) or \
+            (re_opt and re_opt.search(args[i])):
+            l.append(args.pop())
+        else:
+            break
+    return l
+
 class UserInterface(object):
     '''
     Stuff common to all user interface classes.
@@ -856,45 +877,31 @@ class RscMgmt(UserInterface):
         return set_deep_meta_attr("is-managed","false",rsc)
     def migrate(self,cmd,*args):
         """usage: migrate <rsc> [<node>] [<lifetime>] [force]"""
-        rsc = args[0]
+        argl = list(args)
+        rsc = argl[0]
         if not is_name_sane(rsc):
             return False
+        del argl[0]
         node = None
         lifetime = None
-        force = False
-        if len(args) == 2:
-            if not args[1] in listnodes():
-                if args[1] == "force":
-                    force = True
-                else:
-                    lifetime = args[1]
+        opt_l = fetch_opts(argl, ["force"])
+        if len(argl) == 1:
+            if not argl[0] in listnodes():
+                lifetime = argl[0]
             else:
-                node = args[1]
-        elif len(args) == 3:
-            if not args[1] in listnodes():
-                lifetime = args[1]
-                force = True
-            else:
-                node = args[1]
-                if args[2] == "force":
-                    force = True
-                else:
-                    lifetime = args[2]
-        elif len(args) == 4:
-            if not is_name_sane(args[1]):
-                return False
-            node = args[1]
-            lifetime = args[2]
-            if not args[3] == "force":
-                syntax_err((cmd,force))
-                return False
-            force = True
+                node = argl[0]
+        elif len(argl) == 2:
+            node = argl[0]
+            lifetime = argl[1]
+        else:
+            syntax_err((cmd,args))
+            return False
         opts = ''
         if node:
             opts = "--node='%s'" % node
         if lifetime:
             opts = "%s --lifetime='%s'" % (opts,lifetime)
-        if force or user_prefs.get_force():
+        if "force" in opt_l or user_prefs.get_force():
             opts = "%s --force" % opts
         return ext_cmd(self.rsc_migrate % (rsc,opts)) == 0
     def unmigrate(self,cmd,rsc):
@@ -1251,7 +1258,7 @@ class RA(UserInterface):
             common_err(msg)
             return False
 
-def ptestlike(simfun,def_verb,cmd,*args):
+def ptestlike(simfun,def_verb,cmd,args):
     verbosity = def_verb  # default verbosity
     nograph = False
     scores = False
@@ -1344,10 +1351,10 @@ class StatusMgmt(UserInterface):
         return cib_status.edit_op(op,rsc,num_rc,num_op_status,node)
     def run(self,cmd,*args):
         "usage: run [nograph] [v...] [scores] [utilization]"
-        return ptestlike(cib_status.run,'',cmd,*args)
+        return ptestlike(cib_status.run,'',cmd,args)
     def simulate(self,cmd,*args):
         "usage: simulate [nograph] [v...] [scores] [utilization]"
-        return ptestlike(cib_status.simulate,'',cmd,*args)
+        return ptestlike(cib_status.simulate,'',cmd,args)
 
 class CibConfig(UserInterface):
     '''
@@ -1571,7 +1578,7 @@ class CibConfig(UserInterface):
         if not cib_factory.is_cib_sane():
             return False
         set_obj = mkset_obj("xml")
-        return ptestlike(set_obj.ptest,'vv',cmd,*args)
+        return ptestlike(set_obj.ptest,'vv',cmd,args)
     def commit(self,cmd,force = None):
         "usage: commit [force]"
         if force and force != "force":
@@ -1916,9 +1923,7 @@ class History(UserInterface):
     def peinputs(self,cmd,*args):
         """usage: peinputs [{<range>|<number>} ...] [v]"""
         argl = list(args)
-        long = "v" in argl
-        if long:
-            argl.remove("v")
+        opt_l = fetch_opts(argl, ["v"])
         if argl:
             l = []
             for s in argl:
@@ -1926,9 +1931,9 @@ class History(UserInterface):
                 if a and len(a) == 2 and not check_range(a):
                     common_err("%s: invalid peinputs range" % a)
                     return False
-                l += crm_report.pelist(a, long=long)
+                l += crm_report.pelist(a, long=("v" in opt_l))
         else:
-            l = crm_report.pelist(long=long)
+            l = crm_report.pelist(long=("v" in opt_l))
         if not l: return False
         s = '\n'.join(l)
         page_string(s)
@@ -1959,6 +1964,39 @@ class History(UserInterface):
             common_err("PE file %d ambiguous" % n)
             return None
         return l[0]
+    def _get_pe_input(self, pe_spec):
+        '''Get PE input file from the <number>|<index>|<file>
+        spec.'''
+        if re.search('pe-', pe_spec):
+            f = self._get_pe_byname(pe_spec)
+        elif is_int(pe_spec):
+            n = int(pe_spec)
+            if n <= 0:
+                f = self._get_pe_byidx(n-1)
+            else:
+                f = self._get_pe_bynum(n)
+        else:
+            f = self._get_pe_byidx(-1)
+        return f
+    def _show_pe(self, f, opt_l):
+        self.pe_file = f # self.pe_file needed by self.ptest
+        ptestlike(self.ptest, 'vv', "transition", opt_l)
+        return crm_report.show_transition_log(f)
+    def _display_dot(self, f):
+        if not user_prefs.dotty:
+            common_err("install graphviz to draw transition graphs")
+            return False
+        f = crm_report.pe2dot(f)
+        if not f:
+            common_err("dot file not found in the report")
+            return False
+        show_dot_graph(f)
+        return True
+    def _pe2shadow(self, f, argl):
+        try: name = argl[0]
+        except: name = os.path.basename(f).replace(".bz2","")
+        common_info("transition %s saved to shadow %s" % (f,name))
+        return pe2shadow(f, name)
     def transition(self,cmd,*args):
         """usage: transition [<number>|<index>|<file>] [nograph] [v...] [scores] [actions] [utilization]
         transition showdot [<number>|<index>|<file>]
@@ -1967,50 +2005,30 @@ class History(UserInterface):
         argl = list(args)
         subcmd = "show"
         if argl and argl[0] in ("showdot", "log", "save"):
-            if argl[0] == "showdot" and not user_prefs.dotty:
-                common_err("install graphviz to draw transition graphs")
-                return False
             subcmd = argl[0]
-            argl.remove(subcmd)
+            del argl[0]
+        if subcmd == "show":
+            opt_l = fetch_opts(argl, ptest_options)
         if argl:
-            if re.search('pe-', argl[0]):
-                f = self._get_pe_byname(argl[0])
-                argl.pop(0)
-            elif is_int(argl[0]):
-                n = int(argl[0])
-                if n <= 0:
-                    f = self._get_pe_byidx(n-1)
-                else:
-                    f = self._get_pe_bynum(n)
-                argl.pop(0)
-            else:
-                f = self._get_pe_byidx(-1)
+            f = self._get_pe_input(argl[0])
+            del argl[0]
         else:
             f = self._get_pe_byidx(-1)
+        if (subcmd == "save" and len(argl) > 1) or \
+                (subcmd in ("show", "showdot", "log") and argl):
+            syntax_err(args, context = "transition")
+            return False
         if not f:
             return False
-        rc = True
-        full_log = False
         if subcmd == "show":
-            self.pe_file = f # self.pe_file needed by self.ptest
             common_info("running ptest with %s" % f)
-            rc = ptestlike(self.ptest,'vv', cmd, *argl)
+            rc = self._show_pe(f, opt_l)
         elif subcmd == "showdot":
-            f = crm_report.pe2dot(f)
-            if not f:
-                common_err("dot file not found in the report")
-                return False
-            show_dot_graph(f)
-            return True
+            rc = self._display_dot(f)
         elif subcmd == "save":
-            try: name = argl[0]
-            except: name = os.path.basename(f).replace(".bz2","")
-            common_info("transition %s saved to shadow %s" % (f,name))
-            return pe2shadow(f, name)
+            rc = self._pe2shadow(f, argl)
         else:
-            full_log = True
-        if rc:
-            rc = crm_report.show_transition_log(f, full_log)
+            rc = crm_report.show_transition_log(f, True)
         return rc
     def session(self,cmd,subcmd = None,name = None):
         "usage: session [{save|load|delete} <name> | pack [<name>] | update | list]"
