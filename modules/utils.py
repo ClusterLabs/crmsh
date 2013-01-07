@@ -190,6 +190,8 @@ def str2tmp(s):
         common_err(msg)
         return
     f.write(s)
+    if not s.endswith('\n'):
+        f.write("\n")
     f.close()
     return tmp
 def str2file(s,fname):
@@ -354,6 +356,13 @@ def append_file(dest,src):
     dest_f.close()
     return True
 
+def get_dc():
+    cmd = "crmadmin -D"
+    s = get_stdout(add_sudo(cmd))
+    if not s.startswith("Designated"):
+        return None
+    return s.split()[-1]
+
 def wait4dc(what = "", show_progress = True):
     '''
     Wait for the DC to get into the S_IDLE state. This should be
@@ -377,14 +386,9 @@ def wait4dc(what = "", show_progress = True):
     There's no timeout, as we expect the DC to eventually becomes
     idle.
     '''
-    cmd = "crmadmin -D"
-    s = get_stdout(add_sudo(cmd))
-    if not s.startswith("Designated"):
-        common_warn("%s unexpected output: %s" % (cmd,s))
-        return False
-    dc = s.split()[-1]
+    dc = get_dc()
     if not dc:
-        common_warn("can't find DC in: %s" % s)
+        common_warn("can't find DC")
         return False
     cmd = "crmadmin -S %s" % dc
     cnt = 0

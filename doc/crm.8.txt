@@ -3088,6 +3088,30 @@ Examples:
         transition save 0 enigma-22
 ...............
 
+[[cmdhelp_history_diff,cluster states/transitions difference]]
+==== `diff`
+
+A transition represents a change in cluster configuration or
+state. Use `diff` to see what has changed. Normally, the first
+transition specified should be the one which is older, but we are
+not going to enforce that. If you want to specify the current
+cluster configuration and status, use the string `live`.
+
+Note that a single configuration update may result in more than
+one transition.
+
+Usage:
+...............
+        diff {conf|status} pe pe
+
+        pe :: <number>|<index>|<file>|live
+...............
+Examples:
+...............
+        diff conf 2066 2067
+        diff status pe-input-2080.bz2 live
+...............
+
 [[cmdhelp_history_session,manage history sessions]]
 ==== `session`
 

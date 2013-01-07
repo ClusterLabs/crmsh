@@ -1804,6 +1804,7 @@ class History(UserInterface):
         self.cmd_table["log"] = (self.log,(0,),1,0)
         self.cmd_table["peinputs"] = (self.peinputs,(0,),1,0)
         self.cmd_table["transition"] = (self.transition,(0,),1,0)
+        self.cmd_table["diff"] = (self.diff,(3,3),1,0)
         self.cmd_table["session"] = (self.session,(0,2),1,0)
         self.cmd_table["exclude"] = (self.exclude,(0,1),1,0)
         self.cmd_aliases.update({
@@ -2030,6 +2031,91 @@ class History(UserInterface):
         else:
             rc = crm_report.show_transition_log(f, True)
         return rc
+    def _save_cib_env(self):
+        try:
+            self._cib_f_save = os.environ["CIB_file"]
+        except:
+            self._cib_f_save = None
+    def _reset_cib_env(self):
+        if self._cib_f_save:
+            os.environ["CIB_file"] = self._cib_f_save
+        else:
+            try: del os.environ["CIB_file"]
+            except: pass
+    def _setup_cib_env(self, pe_f):
+        '''Setup the CIB_file environment variable.
+        Alternatively, we could (or should) use shadows, but the
+        file/shadow management would be a bit involved.'''
+        if pe_f != "live":
+            os.environ["CIB_file"] = pe_f
+        else:
+            self._reset_cib_env()
+    def _get_cib_s(self, pe_f):
+        self._setup_cib_env(pe_f)
+        cib_factory.refresh()
+        if not cib_factory.is_cib_sane():
+            return False
+        err_buf.buffer() # keep error messages
+        set_obj = mkset_obj()
+        err_buf.release() # show them, but get an ack from the user
+        return str2tmp(set_obj.repr(format=0))
+    def _get_status_s(self, pe_f):
+        self._setup_cib_env(pe_f)
+        l = crm_mon().split('\n')
+        cnt = 0
+        for i,ln in enumerate(l):
+            if ln.startswith("===="):
+                cnt += 1
+            elif cnt >= 2:
+                break
+        l = l[i:]
+        return str2tmp('\n'.join(l))
+    def _get_diff_pe_input(self, t):
+        if t != "live":
+            return self._get_pe_input(t)
+        if not get_dc():
+            common_err("cluster not running")
+            return None
+        return "live"
+    def _diff(self, str_fun, t1, t2):
+        s = None
+        try:
+            prev_level = levels.previous().myname()
+        except:
+            prev_level = ''
+        if prev_level == "cibconfig" and cib_factory.has_cib_changed():
+            common_err("please try again after committing CIB changes")
+            return s
+        self._save_cib_env()
+        pe1_f = self._get_diff_pe_input(t1)
+        pe2_f = self._get_diff_pe_input(t2)
+        if not pe1_f or not pe2_f:
+            return False
+        f1 = str_fun(pe1_f)
+        f2 = str_fun(pe2_f)
+        rc = True
+        if f1 and f2:
+            s = get_stdout("diff -u -d -b --label %s --label %s %s %s" % (t1,t2,f1,f2))
+        try: os.unlink(f1)
+        except: pass
+        try: os.unlink(f2)
+        except: pass
+        if prev_level == "cibconfig":
+            cib_factory.refresh()
+        self._reset_cib_env()
+        return s
+    def diff(self,cmd,subcmd,t1,t2):
+        "usage: diff {conf|status} pe1 pe2"
+        if subcmd == "conf":
+            s = self._diff(self._get_cib_s, t1, t2)
+        elif subcmd == "status":
+            s = self._diff(self._get_status_s, t1, t2)
+        else:
+            syntax_err(subcmd, context = 'session')
+            return False
+        if s == None:
+            return False
+        page_string(s)
     def session(self,cmd,subcmd = None,name = None):
         "usage: session [{save|load|delete} <name> | pack [<name>] | update | list]"
         if not subcmd:
@@ -2127,13 +2213,19 @@ class Site(UserInterface):
                 return False
             print "ticket %s last time granted on %s" % (ticket, time.ctime(int(val)))
 
+crm_mon_prog = "crm_mon"
+def crm_mon(opts = ''):
+    """Run crm_mon -1
+    """
+    status_cmd = "%s -1 %s" % (crm_mon_prog, opts)
+    return get_stdout(add_sudo(status_cmd))
+
 class TopLevel(UserInterface):
     '''
     The top level.
     '''
     lvl_name = "."
-    crm_mon = "crm_mon -1"
-    status_opts = {
+    crm_mon_opts = {
         "bynode": "-n",
         "inactive": "-r",
         "ops": "-o",
@@ -2159,14 +2251,15 @@ class TopLevel(UserInterface):
         """usage: status [<option> ...]
             option :: bynode | inactive | ops | timing | failcounts
         """
-        status_cmd = self.crm_mon
+        l = []
         for par in args:
-            if par in self.status_opts:
-                status_cmd = "%s %s" % (status_cmd, self.status_opts[par])
+            if par in self.crm_mon_opts:
+                l.append(self.crm_mon_opts[par])
             else:
                 syntax_err((cmd,par), context = 'status')
                 return False
-        return ext_cmd(status_cmd) == 0
+        s = crm_mon(' '.join(l))
+        page_string(s)
 
 help_sys = HelpSystem()
 user_prefs = UserPrefs.getInstance()
