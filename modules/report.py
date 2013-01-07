@@ -54,8 +54,14 @@ def mk_re_list(patt_l,repl):
         l = [ x.replace(".*.*",".*") for x in l ]
     return l
 
-YEAR = time.strftime("%Y")
+
+def set_year(ts = None):
+    global YEAR
+    YEAR = time.strftime("%Y", time.localtime(ts))
+    common_debug("setting year to %s (ts: %s)" % (YEAR, str(ts)))
+
 def syslog_ts(s):
+    global YEAR
     try:
         # strptime defaults year to 1900 (sigh)
         tm = time.strptime(' '.join([YEAR] + s.split()[0:3]),"%Y %b %d %H:%M:%S")
@@ -512,6 +518,7 @@ class Report(Singleton):
         # change_origin may be CH_SRC, CH_TIME, CH_UPD
         # depending on the change_origin, we update our attributes
         self.change_origin = CH_SRC
+        set_year()
     def error(self, s):
         common_err("%s: %s" % (self.source, s))
     def warn(self, s):
@@ -925,6 +932,7 @@ class Report(Singleton):
         if self.change_origin == CH_SRC:
             vars.pcmk_version = None
             self.desc = os.path.join(self.loc,"description.txt")
+            set_year(os.stat(self.desc).st_mtime)
             self.log_l = self.find_logs()
             self.find_central_log()
             self.read_cib()
