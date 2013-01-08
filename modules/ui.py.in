@@ -2095,7 +2095,7 @@ class History(UserInterface):
         f2 = str_fun(pe2_f)
         rc = True
         if f1 and f2:
-            s = get_stdout("diff -u -d -b --label %s --label %s %s %s" % (t1,t2,f1,f2))
+            s = get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" % (t1,t2,f1,f2))
         try: os.unlink(f1)
         except: pass
         try: os.unlink(f2)
