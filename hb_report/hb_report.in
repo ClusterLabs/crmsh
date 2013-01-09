@@ -200,13 +200,20 @@ time2str() {
 	perl -e "use POSIX; print strftime('%x %X',localtime($1));"
 }
 # try to figure out where pacemaker ... etc
-compatibility_pcmk() {
-	# HA_VARLIB is normally set to {localstatedir}/heartbeat
-	# HA_BIN is normally set to {libdir}/heartbeat
-	local localstatedir libdir lastf
-	localstatedir=`dirname $HA_VARLIB`
-	libdir=`dirname $HA_BIN`
+get_pe_state_dir() {
+	PE_STATE_DIR=`strings $CRM_DAEMON_DIR/pengine |
+		awk 'NF==1&&/var\/lib\/.*pengine$/'`
+	test -d "$PE_STATE_DIR"
+}
+get_cib_dir() {
+	CIB_DIR=`strings $CRM_DAEMON_DIR/crmd |
+		awk 'NF==1&&/var\/lib\/.*(cib|crm)$/'`
+	test -d "$CIB_DIR"
+}
+get_pe_state_dir2() {
 	# PE_STATE_DIR
+	local localstatedir lastf
+	localstatedir=`dirname $HA_VARLIB`
 	lastf=$(2>/dev/null ls -rt `2>/dev/null find /var/lib -name pengine -type d |
 		sed 's,$,/*.last,'` | tail -1)
 	if [ -f "$lastf" ]; then
@@ -220,17 +227,24 @@ compatibility_pcmk() {
 			fi
 		done
 	fi
+}
+get_cib_dir2() {
 	# CIB
+	# HA_VARLIB is normally set to {localstatedir}/heartbeat
+	local localstatedir
+	localstatedir=`dirname $HA_VARLIB`
 	for p in pacemaker/cib heartbeat/crm; do
 		if [ -f $localstatedir/$p/cib.xml ]; then
 			debug "setting CIB_DIR to $localstatedir/$p"
 			CIB_DIR=$localstatedir/$p
-			debug "setting PCMK_LIB to `dirname $CIB_DIR`"
-			PCMK_LIB=`dirname $CIB_DIR`
 			break
 		fi
 	done
+}
+get_crm_daemon_dir() {
 	# CRM_DAEMON_DIR
+	local libdir
+	libdir=`dirname $HA_BIN`
 	for p in pacemaker heartbeat; do
 		if [ -x $libdir/$p/crmd ]; then
 			debug "setting CRM_DAEMON_DIR to $libdir/$p"
@@ -238,9 +252,19 @@ compatibility_pcmk() {
 			break
 		fi
 	done
+	if [ ! -d "$CRM_DAEMON_DIR" ]; then
+		fatal "cannot find pacemaker daemon directory!"
+	fi
+}
+compatibility_pcmk() {
+	get_crm_daemon_dir
+	get_pe_state_dir || get_pe_state_dir2
+	get_cib_dir || get_cib_dir2
+	debug "setting PCMK_LIB to `dirname $CIB_DIR`"
+	PCMK_LIB=`dirname $CIB_DIR`
 	# PTEST
 	PTEST=`echo_ptest_tool`
-	export PE_STATE_DIR CIB_DIR CRM_DAEMON_DIR PTEST
+	export PE_STATE_DIR CIB_DIR CRM_DAEMON_DIR PCMK_LIB PTEST
 }
 
 #
