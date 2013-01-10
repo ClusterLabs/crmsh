@@ -78,6 +78,7 @@ class UserInterface(object):
     '''
     Stuff common to all user interface classes.
     '''
+    lvl_name = "" # this is just a template
     global_cmd_aliases = {
         "quit": ("bye","exit"),
         "end": ("cd","up"),
@@ -94,6 +95,9 @@ class UserInterface(object):
         if options.interactive:
             self.help_table = help_sys.load_level(self.lvl_name)
         self.topics = []
+    def myname(self):
+        '''Just return some id.'''
+        return self.lvl_name
     def end_game(self, no_questions_asked = False):
         pass
     def should_wait(self):
@@ -1298,9 +1302,6 @@ class StatusMgmt(UserInterface):
         self.cmd_table["quorum"] = (self.quorum,(1,1),1,0)
         self.cmd_table["ticket"] = (self.edit_ticket,(2,2),2,0)
         setup_aliases(self)
-    def myname(self):
-        '''Just return some id.'''
-        return "cibstatus"
     def load(self,cmd,org):
         "usage: load {<file>|shadow:<cib>|live}"
         return cib_status.load(org)
@@ -1412,9 +1413,6 @@ class CibConfig(UserInterface):
         })
         setup_aliases(self)
         cib_factory.initialize()
-    def myname(self):
-        '''Just return some id.'''
-        return "cibconfig"
     def check_structure(self,cmd):
         return cib_factory.check_structure()
     def regression_testing(self,cmd,param):
