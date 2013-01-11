@@ -153,7 +153,8 @@ def get_meta_param(id,param):
     return get_stdout(rsc_meta_show % (id,param), stderr_on = False)
 def is_normal_node(n):
     return is_element(n) and \
-        n.tagName == "node" and n.getAttribute("type") == "normal"
+        n.tagName == "node" and \
+        (n.getAttribute("type") == "normal" or not n.getAttribute("type"))
 def listnodes():
     nodes = []
     doc = cibdump2doc("nodes")
