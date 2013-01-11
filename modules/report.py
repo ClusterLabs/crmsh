@@ -751,7 +751,7 @@ class Report(Singleton):
         loc = self.new_live_report()
         release_lock(vars.report_cache)
         return loc
-    def manage_live_report(self, force = False):
+    def manage_live_report(self, force=False, no_live_update=False):
         '''
         Update or create live report.
         '''
@@ -764,7 +764,7 @@ class Report(Singleton):
             self.report_setup()
         if not force and self.is_live_recent():
             # try just to refresh the live report
-            if self.to_dt or self.is_live_very_recent():
+            if self.to_dt or self.is_live_very_recent() or no_live_update:
                 return self._live_loc()
             if not _NO_PSSH:
                 if not acquire_lock(vars.report_cache):
@@ -954,7 +954,7 @@ class Report(Singleton):
                 self.new_peinput(new_t_obj)
         self.ready = self.check_report()
         self.set_change_origin(0)
-    def prepare_source(self):
+    def prepare_source(self, no_live_update=False):
         '''
         Unpack a hb_report tarball.
         For "live", create an ad-hoc hb_report and unpack it
@@ -964,10 +964,10 @@ class Report(Singleton):
         if not self.source:
             common_error("no source set yet")
             return False
-        if self.ready and self.source != "live":
+        if self.ready and (no_live_update or self.source != "live"):
             return True
         if self.source == "live":
-            self.loc = self.manage_live_report()
+            self.loc = self.manage_live_report(no_live_update=no_live_update)
         elif os.path.isfile(self.source):
             self.loc = self.unpack_report(self.source)
         elif os.path.isdir(self.source):
@@ -976,7 +976,7 @@ class Report(Singleton):
             return False
         self.report_setup()
         return self.ready
-    def refresh_source(self, force = False):
+    def refresh_source(self, force=False):
         '''
         Refresh report from live.
         '''
@@ -984,7 +984,7 @@ class Report(Singleton):
             self.error("refresh not supported")
             return False
         self.last_live_update = 0
-        self.loc = self.manage_live_report(force)
+        self.loc = self.manage_live_report(force=force)
         self.report_setup()
         return self.ready
     def get_patt_l(self,type):
@@ -1137,7 +1137,7 @@ class Report(Singleton):
         '''
         Search for events within the given transition.
         '''
-        if not self.prepare_source():
+        if not self.prepare_source(no_live_update=True):
             return False
         t_obj = self.find_peinput(rpt_pe2t_str(rpt_pe_file))
         if not t_obj:
@@ -1156,7 +1156,7 @@ class Report(Singleton):
         '''
         Show resource relevant logs.
         '''
-        if not self.prepare_source():
+        if not self.prepare_source(no_live_update=True):
             return False
         # expand groups (if any)
         expanded_l = []
@@ -1181,7 +1181,7 @@ class Report(Singleton):
         '''
         Show node relevant logs.
         '''
-        if not self.prepare_source():
+        if not self.prepare_source(no_live_update=True):
             return False
         node_re_l = self.build_re("node",args)
         if not node_re_l:
@@ -1222,7 +1222,7 @@ class Report(Singleton):
             ("no-client", "no-user", "no-origin"))
         return '%s %s %s  %-13s %-10s %-10s %s' % tuple(l)
     def pelist(self, a=None, long=False):
-        if not self.prepare_source():
+        if not self.prepare_source(no_live_update=True):
             return []
         if isinstance(a,(tuple,list)):
             if len(a) == 1:
@@ -1367,7 +1367,7 @@ class Report(Singleton):
              regex (add)
              instance of ConfigParser.SafeConfigParser (load, save)
         '''
-        if not self.prepare_source():
+        if not self.prepare_source(no_live_update=True):
             return False
         rc = True
         if cmd == "show":
