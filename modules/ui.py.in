@@ -897,7 +897,7 @@ class RscMgmt(UserInterface):
         elif len(argl) == 2:
             node = argl[0]
             lifetime = argl[1]
-        else:
+        elif len(argl) != 0:
             syntax_err((cmd,args))
             return False
         opts = ''
