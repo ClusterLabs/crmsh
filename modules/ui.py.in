@@ -1802,9 +1802,9 @@ class History(UserInterface):
         self.cmd_table["log"] = (self.log,(0,),1,0)
         self.cmd_table["peinputs"] = (self.peinputs,(0,),1,0)
         self.cmd_table["transition"] = (self.transition,(0,),1,0)
-        self.cmd_table["diff"] = (self.diff,(3,3),1,0)
-        self.cmd_table["show"] = (self.show,(2,2),1,0)
-        self.cmd_table["_dump"] = (self._dump,(2,2),1,0)
+        self.cmd_table["diff"] = (self.diff,(2,3),1,0)
+        self.cmd_table["show"] = (self.show,(1,2),1,0)
+        self.cmd_table["_dump"] = (self._dump,(1,2),1,0)
         self.cmd_table["session"] = (self.session,(0,2),1,0)
         self.cmd_table["exclude"] = (self.exclude,(0,1),1,0)
         self.cmd_aliases.update({
@@ -2113,53 +2113,58 @@ class History(UserInterface):
         try: os.unlink(f2)
         except: pass
         return s
-    def _common_pe_render_arg_check(self,cmd,subcmd):
-        if subcmd not in ("conf","status"):
-            syntax_err(subcmd, context = cmd)
-            return False
+    def _common_pe_render_check(self,cmd,opt_l,*args):
         if levels.previous().myname() == "cibconfig" \
                 and cib_factory.has_cib_changed():
             common_err("please try again after committing CIB changes")
             return False
+        argl = list(args)
+        opt_l += fetch_opts(argl, ["status"])
+        if argl:
+            syntax_err(' '.join(argl), context = cmd)
+            return False
         return True
-    def _dump(self,cmd,subcmd,t):
+    def _dump(self,cmd,t,*args):
         '''dump configuration or status to a file and print file
         name.
         NB: The configuration is color rendered, but note that
         that depends on the current value of the TERM variable.
         '''
-        if not self._common_pe_render_arg_check(cmd,subcmd):
+        opt_l = []
+        if not self._common_pe_render_check(cmd,opt_l,*args):
             return False
-        if subcmd == "conf":
-            s = term_render(self._render_pe(self._pe_config_plain, t))
-        elif subcmd == "status":
+        if "status" in opt_l:
             s = self._render_pe(self._pe_status_nohdr, t)
+        else:
+            s = term_render(self._render_pe(self._pe_config_plain, t))
         if levels.previous().myname() == "cibconfig":
             cib_factory.refresh()
         if not s:
             return False
         print str2tmp(s)
-    def show(self,cmd,subcmd,t):
-        "usage: show {conf|status} pe"
-        if not self._common_pe_render_arg_check(cmd,subcmd):
+    def show(self,cmd,t,*args):
+        "usage: show <pe> [status]"
+        opt_l = []
+        if not self._common_pe_render_check(cmd,opt_l,*args):
             return False
-        if subcmd == "conf":
-            s = self._render_pe(self._pe_config, t)
-        elif subcmd == "status":
-            s = self._render_pe(self._pe_status, t)
+        showfun = self._pe_config
+        if "status" in opt_l:
+            showfun = self._pe_status
+        s = self._render_pe(showfun, t)
         if levels.previous().myname() == "cibconfig":
             cib_factory.refresh()
         if not s:
             return False
         page_string(s)
-    def diff(self,cmd,subcmd,t1,t2):
-        "usage: diff {conf|status} pe1 pe2"
-        if not self._common_pe_render_arg_check(cmd,subcmd):
+    def diff(self,cmd,t1,t2,*args):
+        "usage: diff <pe> <pe> [status]"
+        opt_l = []
+        if not self._common_pe_render_check(cmd,opt_l,*args):
             return False
-        if subcmd == "conf":
-            s = self._diff(self._pe_config_plain, t1, t2)
-        elif subcmd == "status":
-            s = self._diff(self._pe_status_nohdr, t1, t2)
+        showfun = self._pe_config_plain
+        if "status" in opt_l:
+            showfun = self._pe_status_nohdr
+        s = self._diff(showfun, t1, t2)
         if levels.previous().myname() == "cibconfig":
             cib_factory.refresh()
         if s == None:

@@ -3097,38 +3097,41 @@ configuration output is the same as `crm configure show`.
 
 Usage:
 ...............
-        show {conf|status} pe
+        show <pe> [status]
 
         pe :: <number>|<index>|<file>|live
 ...............
 Examples:
 ...............
-        show conf 2066
-        show status pe-input-2080.bz2
+        show 2066
+        show pe-input-2080.bz2 status
 ...............
 
 [[cmdhelp_history_diff,cluster states/transitions difference]]
 ==== `diff`
 
 A transition represents a change in cluster configuration or
-state. Use `diff` to see what has changed. Normally, the first
-transition specified should be the one which is older, but we are
-not going to enforce that. If you want to specify the current
-cluster configuration and status, use the string `live`.
+state. Use `diff` to see what has changed.
+
+If you want to specify the current cluster configuration and
+status, use the string `live`.
+
+Normally, the first transition specified should be the one which
+is older, but we are not going to enforce that.
 
 Note that a single configuration update may result in more than
 one transition.
 
 Usage:
 ...............
-        diff {conf|status} pe pe
+        diff <pe> <pe> [status]
 
         pe :: <number>|<index>|<file>|live
 ...............
 Examples:
 ...............
-        diff conf 2066 2067
-        diff status pe-input-2080.bz2 live
+        diff 2066 2067
+        diff pe-input-2080.bz2 live status
 ...............
 
 [[cmdhelp_history_session,manage history sessions]]
