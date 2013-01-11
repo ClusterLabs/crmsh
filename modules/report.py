@@ -725,6 +725,8 @@ class Report(Singleton):
         node_pe_l = []
         for node in [x[0] for x in a]:
             log_l = self.read_new_log(node)
+            if not log_l:
+                continue
             pe_l = []
             for new_t_obj in self.list_transitions(log_l, future_pe=True):
                 self.new_peinput(new_t_obj)
