@@ -599,20 +599,24 @@ def need_pager(s, w, h):
         if cnt >= h:
             return True
     return False
+def term_render(s):
+    'Render for TERM.'
+    try: return termctrl.render(s)
+    except: return s
 def page_string(s):
-    'Write string through a pager.'
+    'Page string rendered for TERM.'
     if not s:
         return
     w,h = get_winsize()
     if not need_pager(s, w, h):
-        print termctrl.render(s)
+        print term_render(s)
     elif not user_prefs.pager or not sys.stdout.isatty() or options.batch:
-        print termctrl.render(s)
+        print term_render(s)
     else:
         opts = ""
         if user_prefs.pager == "less":
             opts = "-R"
-        pipe_string("%s %s" % (user_prefs.pager,opts), termctrl.render(s))
+        pipe_string("%s %s" % (user_prefs.pager,opts), term_render(s))
 
 def get_winsize():
     try:

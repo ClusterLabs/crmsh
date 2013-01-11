@@ -3088,6 +3088,25 @@ Examples:
         transition save 0 enigma-22
 ...............
 
+[[cmdhelp_history_show,show status or configuration of the PE input file]]
+==== `show`
+
+Every transition is saved as a PE file. Use this command to
+render that PE file either as configuration or status. The
+configuration output is the same as `crm configure show`.
+
+Usage:
+...............
+        show {conf|status} pe
+
+        pe :: <number>|<index>|<file>|live
+...............
+Examples:
+...............
+        show conf 2066
+        show status pe-input-2080.bz2
+...............
+
 [[cmdhelp_history_diff,cluster states/transitions difference]]
 ==== `diff`
 
