@@ -1802,7 +1802,7 @@ class History(UserInterface):
         self.cmd_table["log"] = (self.log,(0,),1,0)
         self.cmd_table["peinputs"] = (self.peinputs,(0,),1,0)
         self.cmd_table["transition"] = (self.transition,(0,),1,0)
-        self.cmd_table["diff"] = (self.diff,(2,3),1,0)
+        self.cmd_table["diff"] = (self.diff,(2,4),1,0)
         self.cmd_table["show"] = (self.show,(1,2),1,0)
         self.cmd_table["_dump"] = (self._dump,(1,2),1,0)
         self.cmd_table["session"] = (self.session,(0,2),1,0)
@@ -2061,6 +2061,9 @@ class History(UserInterface):
         set_obj = mkset_obj()
         err_buf.release() # show them, but get an ack from the user
         return set_obj
+    def _pe_config_noclr(self, pe_f):
+        '''Configuration with no formatting (no colors).'''
+        return self._pe_config_obj(pe_f).repr(format=-1)
     def _pe_config_plain(self, pe_f):
         '''Configuration with no formatting (but with colors).'''
         return self._pe_config_obj(pe_f).repr(format=0)
@@ -2098,11 +2101,7 @@ class History(UserInterface):
         s = pe_fun(pe_f)
         self._reset_cib_env()
         return s
-    def _diff(self, pe_fun, t1, t2):
-        s1 = self._render_pe(pe_fun, t1)
-        s2 = self._render_pe(pe_fun, t2)
-        if not s1 or not s2:
-            return None
+    def _unidiff(self, s1, s2, t1, t2):
         s = None
         f1 = str2tmp(s1)
         f2 = str2tmp(s2)
@@ -2113,13 +2112,33 @@ class History(UserInterface):
         try: os.unlink(f2)
         except: pass
         return s
+    def _diffhtml(self, s1, s2, t1, t2):
+        import difflib
+        fromlines = s1.split('\n')
+        tolines = s2.split('\n')
+        diff_l = difflib.HtmlDiff(wrapcolumn=60).make_file( \
+            fromlines, tolines, t1, t2)
+        return ''.join(diff_l)
+    def _diff(self, pe_fun, t1, t2, html=False):
+        s1 = self._render_pe(pe_fun, t1)
+        s2 = self._render_pe(pe_fun, t2)
+        if not s1 or not s2:
+            return None
+        if html:
+            s = self._diffhtml(s1, s2, t1, t2)
+        else:
+            s = self._unidiff(s1, s2, t1, t2)
+        return s
     def _common_pe_render_check(self,cmd,opt_l,*args):
         if levels.previous().myname() == "cibconfig" \
                 and cib_factory.has_cib_changed():
             common_err("please try again after committing CIB changes")
             return False
         argl = list(args)
-        opt_l += fetch_opts(argl, ["status"])
+        supported_l = ["status"]
+        if cmd == "diff":
+            supported_l.append("html")
+        opt_l += fetch_opts(argl, supported_l)
         if argl:
             syntax_err(' '.join(argl), context = cmd)
             return False
@@ -2157,19 +2176,25 @@ class History(UserInterface):
             return False
         page_string(s)
     def diff(self,cmd,t1,t2,*args):
-        "usage: diff <pe> <pe> [status]"
+        "usage: diff <pe> <pe> [status] [html]"
         opt_l = []
         if not self._common_pe_render_check(cmd,opt_l,*args):
             return False
         showfun = self._pe_config_plain
+        mkhtml = "html" in opt_l
         if "status" in opt_l:
             showfun = self._pe_status_nohdr
-        s = self._diff(showfun, t1, t2)
+        elif mkhtml:
+            showfun = self._pe_config_noclr
+        s = self._diff(showfun, t1, t2, html=mkhtml)
         if levels.previous().myname() == "cibconfig":
             cib_factory.refresh()
         if s == None:
             return False
-        page_string(s)
+        if not mkhtml:
+            page_string(s)
+        else:
+            sys.stdout.writelines(s)
     def session(self,cmd,subcmd = None,name = None):
         "usage: session [{save|load|delete} <name> | pack [<name>] | update | list]"
         if not subcmd:

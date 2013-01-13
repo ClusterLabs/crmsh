@@ -3111,7 +3111,8 @@ Examples:
 ==== `diff`
 
 A transition represents a change in cluster configuration or
-state. Use `diff` to see what has changed.
+state. Use `diff` to see what has changed between two
+transitions.
 
 If you want to specify the current cluster configuration and
 status, use the string `live`.
@@ -3124,7 +3125,7 @@ one transition.
 
 Usage:
 ...............
-        diff <pe> <pe> [status]
+        diff <pe> <pe> [status] [html]
 
         pe :: <number>|<index>|<file>|live
 ...............
