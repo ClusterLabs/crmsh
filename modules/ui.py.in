@@ -2063,7 +2063,7 @@ class History(UserInterface):
         return set_obj
     def _pe_config_noclr(self, pe_f):
         '''Configuration with no formatting (no colors).'''
-        return self._pe_config_obj(pe_f).repr(format=-1)
+        return self._pe_config_obj(pe_f).repr_nopretty()
     def _pe_config_plain(self, pe_f):
         '''Configuration with no formatting (but with colors).'''
         return self._pe_config_obj(pe_f).repr(format=0)

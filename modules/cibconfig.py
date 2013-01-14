@@ -334,6 +334,11 @@ class CibObjectSetCli(CibObjectSet):
     def __init__(self, *args):
         CibObjectSet.__init__(self, *args)
         self.obj_list = cib_factory.mkobj_list("cli",*args)
+    def repr_nopretty(self, format=1):
+        cli_display.set_no_pretty()
+        s = self.repr(format=format)
+        cli_display.reset_no_pretty()
+        return s
     def repr(self, format = 1):
         "Return a string containing cli format of all objects."
         if not self.obj_list:
