@@ -31,6 +31,7 @@ from report import Report
 from template import LoadTemplate
 from cliformat import nvpairs2list, cli_format
 from rsctest import test_resources
+from crm_gv import gv_types
 from ra import *
 from msg import *
 from utils import *
@@ -1379,6 +1380,7 @@ class CibConfig(UserInterface):
         self.cmd_table["rename"] = (self.rename,(2,2),1,0)
         self.cmd_table["save"] = (self.save,(1,2),1,0)
         self.cmd_table["load"] = (self.load,(2,3),1,0)
+        self.cmd_table["graph"] = (self.graph,(0,3),1,0)
         self.cmd_table["schema"] = (self.schema,(0,1),1,0)
         self.cmd_table["node"] = (self.conf_node,(1,),1,0)
         self.cmd_table["primitive"] = (self.conf_primitive,(2,),1,0)
@@ -1537,6 +1539,36 @@ class CibConfig(UserInterface):
             method = args[0]
             set_obj = mkset_obj("NOOBJ")
         return set_obj.import_file(method,url)
+    graph_types = ("dot",)
+    def graph(self,cmd,*args):
+        "usage: graph [<gtype> [<file> [<img_format>]]]"
+        if not cib_factory.is_cib_sane():
+            return False
+        try:
+            gtype = args[0]
+            if gtype not in gv_types:
+                common_err("graph type %s is not supported" % gtype)
+                return False
+        except:
+            gtype = "dot"
+        try:
+            outf = args[1]
+            if not is_filename_sane(outf):
+                return False
+        except:
+            outf = None
+        try:
+            ftype = args[2]
+        except:
+            ftype = gtype
+        set_obj = mkset_obj()
+        if not outf:
+            rc = set_obj.show_graph(gtype)
+        elif gtype == ftype:
+            rc = set_obj.save_graph(gtype, outf)
+        else:
+            rc = set_obj.graph_img(gtype, outf, ftype)
+        return rc
     def delete(self,cmd,*args):
         "usage: delete <id> [<id>...]"
         if not cib_factory.is_cib_sane():

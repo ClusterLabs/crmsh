@@ -61,6 +61,7 @@ class UserPrefs(Singleton):
         self.editor = find_program("EDITOR","vim","vi","emacs","nano")
         self.pager = find_program("PAGER","less","more","pg")
         self.dotty = find_program("","dotty")
+        self.dot = find_program("","dot")
         self.ptest = find_program("","ptest","crm_simulate")
         if not self.editor:
             self.missing("editor")

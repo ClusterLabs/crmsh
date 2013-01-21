@@ -38,6 +38,7 @@ modules	=	__init__.py 	\
 			log_patterns.py		\
 			log_patterns_118.py		\
 			crm_pssh.py	\
+			crm_gv.py	\
 			singletonmixin.py	\
 			template.py	\
 			term.py		\

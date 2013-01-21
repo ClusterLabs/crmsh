@@ -155,6 +155,16 @@ def is_normal_node(n):
     return is_element(n) and \
         n.tagName == "node" and \
         (n.getAttribute("type") == "normal" or not n.getAttribute("type"))
+def mk_rsc_type(n):
+    ra_type = n.getAttribute("type")
+    ra_class = n.getAttribute("class")
+    ra_provider = n.getAttribute("provider")
+    s1 = s2 = ''
+    if ra_class:
+        s1 = "%s:"%ra_class
+    if ra_provider:
+        s2 = "%s:"%ra_provider
+    return ''.join((s1,s2,ra_type))
 def listnodes():
     nodes = []
     doc = cibdump2doc("nodes")

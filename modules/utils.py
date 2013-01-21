@@ -228,6 +228,21 @@ def file2list(fname):
     l = ''.join(f).split('\n')
     f.close()
     return l
+def safe_open_w(fname):
+    if fname == "-":
+        f = sys.stdout
+    else:
+        if not options.batch and os.access(fname,os.F_OK):
+            if not ask("File %s exists. Do you want to overwrite it?"%fname):
+                return None
+        try: f = open(fname,"w")
+        except IOError, msg:
+            common_err(msg)
+            return None
+    return f
+def safe_close_w(f):
+    if f and f != sys.stdout:
+        f.close()
 
 def is_filename_sane(name):
     if re.search("['`/#*?$\[\]]",name):

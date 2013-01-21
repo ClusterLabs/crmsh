@@ -35,6 +35,7 @@ from cibstatus import CibStatus
 from idmgmt import IdMgmt
 from ra import get_ra, get_properties_list, get_pe_meta
 from schema import Schema, rng_attr_values, rng_attr_values_l
+from crm_gv import gv_types
 
 def show_unrecognized_elems(doc):
     try:
@@ -174,16 +175,9 @@ class CibObjectSet(object):
         cli_display.reset_no_pretty()
         return self.filter_save(filter,s)
     def save_to_file(self,fname):
-        if fname == "-":
-            f = sys.stdout
-        else:
-            if not options.batch and os.access(fname,os.F_OK):
-                if not ask("File %s exists. Do you want to overwrite it?"%fname):
-                    return False
-            try: f = open(fname,"w")
-            except IOError, msg:
-                common_err(msg)
-                return False
+        f = safe_open_w(fname)
+        if not f:
+            return False
         rc = True
         cli_display.set_no_pretty()
         s = self.repr()
@@ -193,9 +187,42 @@ class CibObjectSet(object):
             f.write('\n')
         elif self.obj_list:
             rc = False
-        if f != sys.stdout:
-            f.close()
+        safe_close_w(f)
         return rc
+    def _get_gv_obj(self, gtype):
+        if not self.obj_list:
+            return True, None
+        if gtype not in gv_types:
+            common_err("graphviz type %s is not supported" % gtype)
+            return False, None
+        return True, gv_types[gtype]()
+    def graph_repr(self, gv_obj):
+        '''Let CIB elements produce graph elements.
+        '''
+        for obj in processing_sort_cli(self.obj_list):
+            obj.repr_gv(gv_obj)
+    def show_graph(self, gtype):
+        '''Display graph using dotty'''
+        rc, gv_obj = self._get_gv_obj(gtype)
+        if not rc or not gv_obj:
+            return rc
+        self.graph_repr(gv_obj)
+        return gv_obj.display()
+    def graph_img(self, gtype, outf, img_type):
+        '''Render graph to image and save it to a file (done by
+        dot(1))'''
+        rc, gv_obj = self._get_gv_obj(gtype)
+        if not rc or not gv_obj:
+            return rc
+        self.graph_repr(gv_obj)
+        return gv_obj.image(img_type, outf)
+    def save_graph(self, gtype, outf):
+        '''Save graph to a file'''
+        rc, gv_obj = self._get_gv_obj(gtype)
+        if not rc or not gv_obj:
+            return rc
+        self.graph_repr(gv_obj)
+        return gv_obj.save(outf)
     def show(self):
         s = self.repr()
         if not s:
@@ -768,6 +795,31 @@ class CibObject(object):
         l = self.node.toprettyxml('\t').split('\n')
         l = [x for x in l if x] # drop empty lines
         return "%s %s" % (h,cli_format_xml(l,format))
+    def gv_rsc_id(self):
+        if self.parent and self.parent.obj_type in vars.clonems_tags:
+            return "%s:%s" % (self.parent.obj_type, self.obj_id)
+        else:
+            return self.obj_id
+    def set_gv_attrs(self, gv_obj, obj_type=None):
+        if not obj_type:
+            obj_type = self.obj_type
+        for attr,vd in vars.graph.iteritems():
+            if obj_type in vd:
+                id = self.node.getAttribute("uname")
+                if not id:
+                    id = self.obj_id
+                gv_obj.new_attr(id, attr, vd[obj_type])
+    def set_sg_attrs(self, sg_obj, obj_type=None):
+        if not obj_type:
+            obj_type = self.obj_type
+        for attr,vd in vars.graph.iteritems():
+            if obj_type in vd:
+                sg_obj.new_graph_attr(attr, vd[obj_type])
+    def repr_gv(self, gv_obj):
+        '''
+        Add some graphviz elements to gv_obj.
+        '''
+        pass
     def repr_cli(self,format = 1):
         '''
         CLI representation for the node.
@@ -989,6 +1041,41 @@ class CibObject(object):
             (self.obj_type == "node" and \
             self.node.getAttribute("uname") in args)
 
+def gv_first_prim(node):
+    if node.tagName != "primitive":
+        for c in node.childNodes:
+            if is_child_rsc(c):
+                return gv_first_prim(c)
+    return node.getAttribute("id")
+def gv_first_rsc(rsc_id):
+    rsc_obj = cib_factory.find_object(rsc_id)
+    if not rsc_obj:
+        return rsc_id
+    return gv_first_prim(rsc_obj.node)
+def gv_last_prim(node):
+    if node.tagName != "primitive":
+        for c in reversed(node.childNodes):
+            if is_child_rsc(c):
+                return gv_first_prim(c)
+    return node.getAttribute("id")
+def gv_last_rsc(rsc_id):
+    rsc_obj = cib_factory.find_object(rsc_id)
+    if not rsc_obj:
+        return rsc_id
+    return gv_last_prim(rsc_obj.node)
+
+def gv_edge_label(gv_obj, e, node):
+    score = get_score(node) or get_kind(node)
+    if score.find("inf") >= 0 or re.match("[0-9]",score):
+        lbl = score
+    elif score in rng_attr_values('rsc_order', 'kind'):
+        lbl = score
+    elif not score:
+        lbl = 'Adv'
+    else:
+        lbl = "attr:%s" % score
+    gv_obj.new_edge_attr(e, 'label', lbl)
+
 def mk_cli_list(cli):
     'Sometimes we get a string and sometimes a list.'
     if type(cli) == type('') or type(cli) == type(u''):
@@ -1039,6 +1126,17 @@ class CibNode(CibObject):
             headnode.appendChild(n)
         remove_id_used_attributes(get_topnode(cib_factory.doc,self.parent_type))
         return headnode
+    def repr_gv(self, gv_obj):
+        '''
+        Create a gv node. The label consists of the ID.
+        Nodes are square.
+        '''
+        uname = self.node.getAttribute("uname")
+        if not uname:
+            uname = self.obj_id
+        gv_obj.new_node(uname, top_node=True)
+        gv_obj.new_attr(uname, 'label', '%s\\nnode' % uname)
+        self.set_gv_attrs(gv_obj)
 
 def reduce_primitive(node):
     '''
@@ -1074,15 +1172,7 @@ class CibPrimitive(CibObject):
         if template_ref:
             rsc_spec = "@%s" % cli_display.idref(template_ref)
         else:
-            ra_type = self.node.getAttribute("type")
-            ra_class = self.node.getAttribute("class")
-            ra_provider = self.node.getAttribute("provider")
-            s1 = s2 = ''
-            if ra_class:
-                s1 = "%s:"%ra_class
-            if ra_provider:
-                s2 = "%s:"%ra_provider
-            rsc_spec = ''.join((s1,s2,ra_type))
+            rsc_spec = mk_rsc_type(self.node)
         s = cli_display.keyword(self.obj_type)
         id = cli_display.id(self.obj_id)
         return "%s %s %s" % (s, id, rsc_spec)
@@ -1177,6 +1267,27 @@ class CibPrimitive(CibObject):
         rc1 = ra.sanity_check_params(self.obj_id, params,
                 existence_only = (self.obj_type != "primitive"))
         return rc1 | rc2 | rc3
+    def repr_gv(self, gv_obj, from_grp=False):
+        '''
+        Create a gv node. The label consists of the ID and the
+        RA type.
+        '''
+        if not from_grp and self.parent and self.parent.obj_type == "group":
+            return
+        ra_class = self.node.getAttribute("class")
+        ra_type = self.node.getAttribute("type")
+        lbl_top = self.gv_rsc_id()
+        if ra_class in ("ocf", "stonith"):
+            lbl_bottom = ra_type
+        else:
+            lbl_bottom = "%s:%s" % (ra_class, ra_type)
+        gv_obj.new_node(self.obj_id, norank=(ra_class == "stonith"))
+        gv_obj.new_attr(self.obj_id, 'label', '%s\\n%s' % (lbl_top, lbl_bottom))
+        self.set_gv_attrs(gv_obj)
+        self.set_gv_attrs(gv_obj, "class:%s" % ra_class)
+        # if it's clone/ms, then get parent graph attributes
+        if self.parent and self.parent.obj_type in vars.clonems_tags:
+            self.set_gv_attrs(gv_obj, self.parent.obj_type)
 
 class CibContainer(CibObject):
     '''
@@ -1240,6 +1351,21 @@ class CibContainer(CibObject):
             l += vars.clone_meta_attributes + vars.ms_meta_attributes
         rc = sanity_check_meta(self.obj_id,self.node,l)
         return rc
+    def repr_gv(self, gv_obj):
+        '''
+        A group is a subgraph.
+        Clones and ms just get different attributes.
+        '''
+        if self.obj_type != "group":
+            return
+        sg_obj = gv_obj.group([x.obj_id for x in self.children], \
+            "cluster_%s" % self.obj_id)
+        sg_obj.new_graph_attr('label', "%s\\ngroup" % self.gv_rsc_id())
+        self.set_sg_attrs(sg_obj, self.obj_type)
+        if self.parent and self.parent.obj_type in vars.clonems_tags:
+            self.set_sg_attrs(sg_obj, self.parent.obj_type)
+        for child_rsc in self.children:
+            child_rsc.repr_gv(sg_obj, from_grp=True)
 
 class CibLocation(CibObject):
     '''
@@ -1299,6 +1425,20 @@ class CibLocation(CibObject):
                     common_warn("%s: referenced node %s does not exist" % (self.obj_id,uname))
                     rc = 1
         return rc
+    def repr_gv(self, gv_obj):
+        '''
+        What to do with the location constraint?
+        '''
+        pref_node = self.node.getAttribute("node")
+        if not pref_node:
+            # otherwise, it's too complex to render
+            return
+        rsc_id = gv_first_rsc(self.node.getAttribute("rsc"))
+        e = [pref_node, rsc_id]
+        gv_obj.new_edge(e)
+        gv_obj.new_edge_attr(e, 'style', 'dashed')
+        gv_obj.new_edge_attr(e, 'dir', 'none')
+        gv_edge_label(gv_obj, e, self.node)
 
 class CibSimpleConstraint(CibObject):
     '''
@@ -1336,6 +1476,19 @@ class CibSimpleConstraint(CibObject):
             headnode.appendChild(n)
         remove_id_used_attributes(oldnode)
         return headnode
+    def repr_gv(self, gv_obj):
+        '''
+        What to do with the collocation constraint?
+        '''
+        if self.obj_type != "order":
+            return
+        if self.node.getElementsByTagName("resource_set"):
+            # resource sets not yet
+            return
+        e = [gv_last_rsc(self.node.getAttribute("first")), \
+            gv_first_rsc(self.node.getAttribute("then"))]
+        gv_obj.new_edge(e)
+        gv_edge_label(gv_obj, e, self.node)
 
 class CibRscTicket(CibSimpleConstraint):
     '''
