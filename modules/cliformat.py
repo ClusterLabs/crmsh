@@ -148,6 +148,8 @@ def exp2cli(node):
         return "%s %s" % (binary_op_format(operation),attribute)
     else:
         return "%s %s %s" % (attribute,binary_op_format(operation),value)
+def abs_pos_score(score):
+    return score in ("inf", "+inf", "Mandatory")
 def get_kind(node):
     kind = node.getAttribute("kind")
     return kind

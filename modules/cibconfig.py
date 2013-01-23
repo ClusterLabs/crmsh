@@ -1074,7 +1074,10 @@ def gv_last_rsc(rsc_id):
 
 def gv_edge_score_label(gv_obj, e, node):
     score = get_score(node) or get_kind(node)
-    if score.find("inf") >= 0 or re.match("[0-9]",score):
+    if abs_pos_score(score):
+        gv_obj.new_edge_attr(e, 'style', 'solid')
+        return
+    elif score.find("inf") >= 0 or re.match("[0-9]",score):
         lbl = score
     elif score in rng_attr_values('rsc_order', 'kind'):
         lbl = score
