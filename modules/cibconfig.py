@@ -1280,6 +1280,8 @@ class CibPrimitive(CibObject):
         Create a gv node. The label consists of the ID and the
         RA type.
         '''
+        if self.obj_type != "primitive":
+            return
         if not from_grp and self.parent and self.parent.obj_type == "group":
             return
         n = reduce_primitive(self.node)
