@@ -1282,8 +1282,9 @@ class CibPrimitive(CibObject):
         '''
         if not from_grp and self.parent and self.parent.obj_type == "group":
             return
-        ra_class = self.node.getAttribute("class")
-        ra_type = self.node.getAttribute("type")
+        n = reduce_primitive(self.node)
+        ra_class = n.getAttribute("class")
+        ra_type = n.getAttribute("type")
         lbl_top = self.gv_rsc_id()
         if ra_class in ("ocf", "stonith"):
             lbl_bottom = ra_type
