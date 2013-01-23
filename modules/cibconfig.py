@@ -1441,14 +1441,20 @@ class CibLocation(CibObject):
         What to do with the location constraint?
         '''
         pref_node = self.node.getAttribute("node")
-        if not pref_node:
+        if pref_node:
+            score_n = self.node
             # otherwise, it's too complex to render
+        elif is_climove_location(self.node):
+            score_n = self.node.getElementsByTagName("rule")[0]
+            exp = self.node.getElementsByTagName("expression")[0]
+            pref_node = exp.getAttribute("value")
+        else:
             return
         rsc_id = gv_first_rsc(self.node.getAttribute("rsc"))
         e = [pref_node, rsc_id]
         gv_obj.new_edge(e)
         self.set_edge_attrs(gv_obj, e)
-        gv_edge_score_label(gv_obj, e, self.node)
+        gv_edge_score_label(gv_obj, e, score_n)
 
 def traverse_set(cum, st):
     e = []

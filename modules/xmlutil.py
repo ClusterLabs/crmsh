@@ -853,6 +853,15 @@ def silly_constraint(c_node,rsc_id):
     else:
         return rsc_cnt == 2 or cnt < 2
 
+def is_climove_location(node):
+    'Figure out if the location was created by crm resource move.'
+    rule_l = node.getElementsByTagName("rule")
+    expr_l = node.getElementsByTagName("expression")
+    return len(rule_l) == 1 and len(expr_l) == 1 and \
+        node.getAttribute("id").startswith("cli-") and \
+        expr_l[0].getAttribute("attribute") == "#uname" and \
+        expr_l[0].getAttribute("operation") == "eq"
+
 def get_rsc_ref_ids(node):
     return [x.getAttribute("id") \
         for x in node.getElementsByTagName("resource_ref")]
