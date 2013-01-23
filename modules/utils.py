@@ -244,9 +244,14 @@ def safe_close_w(f):
     if f and f != sys.stdout:
         f.close()
 
+def is_path_sane(name):
+    if re.search("['`#*?$\[\]]",name):
+        common_err("%s: bad path"%name)
+        return False
+    return True
 def is_filename_sane(name):
     if re.search("['`/#*?$\[\]]",name):
-        common_err("%s: bad name"%name)
+        common_err("%s: bad filename"%name)
         return False
     return True
 def is_name_sane(name):
@@ -256,7 +261,7 @@ def is_name_sane(name):
     return True
 def is_value_sane(name):
     if re.search("[']",name):
-        common_err("%s: bad name"%name)
+        common_err("%s: bad value"%name)
         return False
     return True
 

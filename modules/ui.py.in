@@ -1553,7 +1553,7 @@ class CibConfig(UserInterface):
             gtype = "dot"
         try:
             outf = args[1]
-            if not is_filename_sane(outf):
+            if not is_path_sane(outf):
                 return False
         except:
             outf = None
