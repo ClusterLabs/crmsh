@@ -195,7 +195,9 @@ class CibObjectSet(object):
         if gtype not in gv_types:
             common_err("graphviz type %s is not supported" % gtype)
             return False, None
-        return True, gv_types[gtype]()
+        gv_obj = gv_types[gtype]()
+        gv_obj.new_graph_attr("compound", "true")
+        return True, gv_obj
     def graph_repr(self, gv_obj):
         '''Let CIB elements produce graph elements.
         '''
@@ -815,6 +817,12 @@ class CibObject(object):
         for attr,vd in vars.graph.iteritems():
             if obj_type in vd:
                 sg_obj.new_graph_attr(attr, vd[obj_type])
+    def set_edge_attrs(self, gv_obj, e, obj_type=None):
+        if not obj_type:
+            obj_type = self.obj_type
+        for attr,vd in vars.graph.iteritems():
+            if obj_type in vd:
+                gv_obj.new_edge_attr(e, attr, vd[obj_type])
     def repr_gv(self, gv_obj):
         '''
         Add some graphviz elements to gv_obj.
@@ -1064,7 +1072,7 @@ def gv_last_rsc(rsc_id):
         return rsc_id
     return gv_last_prim(rsc_obj.node)
 
-def gv_edge_label(gv_obj, e, node):
+def gv_edge_score_label(gv_obj, e, node):
     score = get_score(node) or get_kind(node)
     if score.find("inf") >= 0 or re.match("[0-9]",score):
         lbl = score
@@ -1436,9 +1444,43 @@ class CibLocation(CibObject):
         rsc_id = gv_first_rsc(self.node.getAttribute("rsc"))
         e = [pref_node, rsc_id]
         gv_obj.new_edge(e)
-        gv_obj.new_edge_attr(e, 'style', 'dashed')
-        gv_obj.new_edge_attr(e, 'dir', 'none')
-        gv_edge_label(gv_obj, e, self.node)
+        self.set_edge_attrs(gv_obj, e)
+        gv_edge_score_label(gv_obj, e, self.node)
+
+def traverse_set(cum, st):
+    e = []
+    for i,elem in enumerate(cum):
+        if isinstance(elem, list):
+            for rsc in elem:
+                cum2 = copy.copy(cum)
+                cum2[i] = rsc
+                traverse_set(cum2, st)
+            return
+        else:
+            e.append(elem)
+    st.append(e)
+def _opt_set_name(n):
+    return "cluster%s" % n.getAttribute("id")
+def rsc_set_gv_edges(node, gv_obj):
+    cum = []
+    for n in node.getElementsByTagName("resource_set"):
+        sequential = get_boolean(n.getAttribute("sequential"), True)
+        require_all = get_boolean(n.getAttribute("require-all"), True)
+        l = get_rsc_ref_ids(n)
+        if not require_all and len(l) > 1:
+            sg_name = _opt_set_name(n)
+            cum.append('[%s]%s' % (sg_name, l[0]))
+        elif not sequential and len(l) > 1:
+            cum.append(l)
+        else:
+            cum += l
+    st = []
+    # deliver only 2-edges
+    for i,lvl in enumerate(cum):
+        if i == len(cum)-1:
+            break
+        traverse_set([cum[i],cum[i+1]], st)
+    return st
 
 class CibSimpleConstraint(CibObject):
     '''
@@ -1476,6 +1518,34 @@ class CibSimpleConstraint(CibObject):
             headnode.appendChild(n)
         remove_id_used_attributes(oldnode)
         return headnode
+    def _mk_optional_set(self, gv_obj, n):
+        '''
+        Put optional resource set in a box.
+        '''
+        members = get_rsc_ref_ids(n)
+        sg_name = _opt_set_name(n)
+        sg_obj = gv_obj.optional_set(members, sg_name)
+        self.set_sg_attrs(sg_obj, "optional_set")
+    def _mk_one_edge(self, gv_obj, e):
+        '''
+        Create an edge between two resources (used for resource
+        sets). If the first resource name starts with '[', it's
+        an optional resource set which is later put into a subgraph.
+        The edge then goes from the subgraph to the resource
+        which follows. An expensive exception.
+        '''
+        optional_rsc = False
+        r = re.match('\[(.*)\]', e[0])
+        if r:
+            optional_rsc = True
+            sg_name = r.group(1)
+        e = [ re.sub('\[(.*)\]', '', x) for x in e ]
+        e = [ gv_last_rsc(e[0]), gv_first_rsc(e[1]) ]
+        gv_obj.new_edge(e)
+        gv_edge_score_label(gv_obj, e, self.node)
+        if optional_rsc:
+            self.set_edge_attrs(gv_obj, e, 'optional_set')
+            gv_obj.new_edge_attr(e, 'ltail', gv_obj.gv_id(sg_name))
     def repr_gv(self, gv_obj):
         '''
         What to do with the collocation constraint?
@@ -1483,12 +1553,15 @@ class CibSimpleConstraint(CibObject):
         if self.obj_type != "order":
             return
         if self.node.getElementsByTagName("resource_set"):
-            # resource sets not yet
-            return
-        e = [gv_last_rsc(self.node.getAttribute("first")), \
-            gv_first_rsc(self.node.getAttribute("then"))]
-        gv_obj.new_edge(e)
-        gv_edge_label(gv_obj, e, self.node)
+            for e in rsc_set_gv_edges(self.node, gv_obj):
+                self._mk_one_edge(gv_obj, e)
+            for n in self.node.getElementsByTagName("resource_set"):
+                if not get_boolean(n.getAttribute("require-all"), True):
+                    self._mk_optional_set(gv_obj, n)
+        else:
+            self._mk_one_edge(gv_obj, [\
+                self.node.getAttribute("first"), \
+                self.node.getAttribute("then")])
 
 class CibRscTicket(CibSimpleConstraint):
     '''

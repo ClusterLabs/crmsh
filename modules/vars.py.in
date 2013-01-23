@@ -193,9 +193,15 @@ class Vars(Singleton):
             "class:stonith": "box",
         },
         "style": {
+            "node": "bold",
             "primitive": "filled",
             "class:stonith": "dashed",
-        }
+            "location": "dashed",
+            "optional_set": "dotted",
+        },
+        "dir": {
+            "location": "none",
+        },
     }
 
     prompt = ''

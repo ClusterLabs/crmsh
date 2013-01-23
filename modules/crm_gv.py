@@ -122,9 +122,9 @@ class Gv(object):
         l = []
         l.append(self.header())
         if self.node_attrs:
-            l.append('\tnode [%s]' % _attr_str(self.node_attrs))
+            l.append('\tnode [%s];' % _attr_str(self.node_attrs))
         for attr,v in self.graph_attrs.iteritems():
-            l.append('\t%s="%s"' % (attr,v))
+            l.append('\t%s="%s";' % (attr,v))
         for sg in self.subgraphs:
             l.append('\t%s' % '\n\t'.join(sg.repr()))
         for e in self.edges:
@@ -169,6 +169,16 @@ class GvDot(Gv):
         sg_obj.new_edge(members)
         self.subgraphs.append(sg_obj)
         self.new_node(members[0])
+        return sg_obj
+    def optional_set(self, members, id=None):
+        '''
+        Optional resource sets.
+        '''
+        sg_obj = SubgraphDot(id)
+        sg_obj.new_edge(members)
+        sg_obj.new_edge_attr(members, 'style', 'invis')
+        sg_obj.new_edge_attr(members, 'constraint', 'false')
+        self.subgraphs.append(sg_obj)
         return sg_obj
     def display(self):
         if not user_prefs.dotty:

@@ -853,6 +853,9 @@ def silly_constraint(c_node,rsc_id):
     else:
         return rsc_cnt == 2 or cnt < 2
 
+def get_rsc_ref_ids(node):
+    return [x.getAttribute("id") \
+        for x in node.getElementsByTagName("resource_ref")]
 def get_rsc_children_ids(node):
     return [x.getAttribute("id") \
         for x in node.childNodes if is_child_rsc(x)]
