@@ -8,6 +8,8 @@ resource unmanage c1
 %setenv showobj=cli-prefer-p3
 resource migrate p3 node1
 resource unmigrate p3
+resource migrate p3 node1 force
+resource unmigrate p3
 %setenv showobj=p0
 resource param p0 set a0 "1 2 3"
 resource param p0 show a0
