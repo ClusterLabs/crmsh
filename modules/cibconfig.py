@@ -1143,7 +1143,7 @@ class CibNode(CibObject):
         if not uname:
             uname = self.obj_id
         gv_obj.new_node(uname, top_node=True)
-        gv_obj.new_attr(uname, 'label', '%s\\nnode' % uname)
+        gv_obj.new_attr(uname, 'label', uname)
         self.set_gv_attrs(gv_obj)
 
 def reduce_primitive(node):
@@ -1368,7 +1368,7 @@ class CibContainer(CibObject):
             return
         sg_obj = gv_obj.group([x.obj_id for x in self.children], \
             "cluster_%s" % self.obj_id)
-        sg_obj.new_graph_attr('label', "%s\\ngroup" % self.gv_rsc_id())
+        sg_obj.new_graph_attr('label', self.gv_rsc_id())
         self.set_sg_attrs(sg_obj, self.obj_type)
         if self.parent and self.parent.obj_type in vars.clonems_tags:
             self.set_sg_attrs(sg_obj, self.parent.obj_type)
