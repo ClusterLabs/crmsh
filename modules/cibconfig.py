@@ -64,6 +64,11 @@ def mkset_obj(*args):
         obj = lambda: CibObjectSetCli(*args)
     return obj()
 
+def set_graph_attrs(gv_obj, obj_type):
+    for attr,vd in vars.graph.iteritems():
+        if obj_type in vd:
+            vg_obj.new_graph_attr(attr, vd[obj_type])
+
 class CibObjectSet(object):
     '''
     Edit or display a set of cib objects.
@@ -196,7 +201,7 @@ class CibObjectSet(object):
             common_err("graphviz type %s is not supported" % gtype)
             return False, None
         gv_obj = gv_types[gtype]()
-        gv_obj.new_graph_attr("compound", "true")
+        set_graph_attrs(gv_obj, ".")
         return True, gv_obj
     def graph_repr(self, gv_obj):
         '''Let CIB elements produce graph elements.
@@ -814,9 +819,7 @@ class CibObject(object):
     def set_sg_attrs(self, sg_obj, obj_type=None):
         if not obj_type:
             obj_type = self.obj_type
-        for attr,vd in vars.graph.iteritems():
-            if obj_type in vd:
-                sg_obj.new_graph_attr(attr, vd[obj_type])
+        set_graph_attrs(sg_obj, obj_type)
     def set_edge_attrs(self, gv_obj, e, obj_type=None):
         if not obj_type:
             obj_type = self.obj_type

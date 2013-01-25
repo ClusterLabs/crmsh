@@ -179,6 +179,9 @@ class Vars(Singleton):
     node_type_opt = False
     cib_no_section_rc = 22
     graph = {
+        "compound": {
+            ".": "true",
+        },
         "fillcolor": {
             "primitive": "lightgrey",
         },
