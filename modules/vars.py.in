@@ -178,41 +178,52 @@ class Vars(Singleton):
     }
     node_type_opt = False
     cib_no_section_rc = 22
+    # Graphviz attributes for various CIB elements.
+    # Shared for edge and node and graph attributes.
+    # Keys are graphviz attributes, values are dicts where keys
+    # are CIB element names and values graphviz values.
+    # - element "." refers to the whole graph
+    # - element "class:<ra_class>" refers to primitives of a
+    #   specific RA class
+    # - optional_set is a resource_set with require-all set to
+    #   false
+    # - group and optional_set are subgraphs (boxes)
     graph = {
-        "compound": {
-            ".": "true",
+        ".": {
+            "compound": "true",
         },
-        "fillcolor": {
-            "primitive": "lightgrey",
+        "node": {
+            "style": "bold",
+            "shape": "box",
+            "color": "blue",
         },
-        "color": {
-            "node": "blue",
+        "primitive": {
+            "fillcolor": "lightgrey",
+            "style": "filled",
+        },
+        "class:stonith": {
+            "shape": "box",
+            "style": "dashed",
+        },
+        "location": {
+            "style": "dashed",
+            "dir": "none",
+        },
+        "clone": {
+            "color": "red",
+        },
+        "ms": {
+            "color": "maroon",
+        },
+        "group": {
+            "color": "blue",
             "group": "blue",
-            "clone": "red",
-            "ms": "maroon",
+            "labelloc": "b",
+            "labeljust": "r",
+            "labelfontsize": "12",
         },
-        "shape": {
-            "node": "box",
-            "class:stonith": "box",
-        },
-        "style": {
-            "node": "bold",
-            "primitive": "filled",
-            "class:stonith": "dashed",
-            "location": "dashed",
-            "optional_set": "dotted",
-        },
-        "dir": {
-            "location": "none",
-        },
-        "labelloc": {
-            "group": "b",
-        },
-        "labeljust": {
-            "group": "r",
-        },
-        "labelfontsize": {
-            "group": "12",
+        "optional_set": {
+            "style": "dotted",
         },
     }
 

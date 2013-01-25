@@ -48,12 +48,8 @@ class Gv(object):
         self.norank_nodes = []
     def gv_id(self, n):
         return n.replace('-','_')
-    def node_attr(self, attr_n, attr_v):
-        self.node_attrs[attr_n] = attr_v
     def new_graph_attr(self, attr, v):
         self.graph_attrs[attr] = v
-    def graph_label(self, lbl):
-        self.new_graph_attr('label', lbl)
     def new_attr(self, n, attr_n, attr_v):
         id = self.gv_id(n)
         if id not in self.attrs:

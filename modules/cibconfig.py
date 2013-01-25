@@ -65,9 +65,10 @@ def mkset_obj(*args):
     return obj()
 
 def set_graph_attrs(gv_obj, obj_type):
-    for attr,vd in vars.graph.iteritems():
-        if obj_type in vd:
-            vg_obj.new_graph_attr(attr, vd[obj_type])
+    try:
+        for attr,attr_v in vars.graph[obj_type].iteritems():
+            gv_obj.new_graph_attr(attr, attr_v)
+    except: pass
 
 class CibObjectSet(object):
     '''
@@ -810,12 +811,11 @@ class CibObject(object):
     def set_gv_attrs(self, gv_obj, obj_type=None):
         if not obj_type:
             obj_type = self.obj_type
-        for attr,vd in vars.graph.iteritems():
-            if obj_type in vd:
-                id = self.node.getAttribute("uname")
-                if not id:
-                    id = self.obj_id
-                gv_obj.new_attr(id, attr, vd[obj_type])
+        id = self.node.getAttribute("uname") or self.obj_id
+        try:
+            for attr,attr_v in vars.graph[obj_type].iteritems():
+                gv_obj.new_attr(id, attr, attr_v)
+        except: pass
     def set_sg_attrs(self, sg_obj, obj_type=None):
         if not obj_type:
             obj_type = self.obj_type
@@ -823,9 +823,10 @@ class CibObject(object):
     def set_edge_attrs(self, gv_obj, e, obj_type=None):
         if not obj_type:
             obj_type = self.obj_type
-        for attr,vd in vars.graph.iteritems():
-            if obj_type in vd:
-                gv_obj.new_edge_attr(e, attr, vd[obj_type])
+        try:
+            for attr,attr_v in vars.graph[obj_type].iteritems():
+                gv_obj.new_edge_attr(e, attr, attr_v)
+        except: pass
     def repr_gv(self, gv_obj):
         '''
         Add some graphviz elements to gv_obj.
