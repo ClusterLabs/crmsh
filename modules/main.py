@@ -262,6 +262,8 @@ def xdg_file(name, xdg_name, obj_type, semantics):
     except:
         # see http://standards.freedesktop.org/basedir-spec
         homedir = gethomedir()
+        if not homedir:
+            return name
         config_home = os.path.join(homedir, ".config")
         cache_home = os.path.join(homedir, ".cache")
     chk_fun = obj_type == "f" and os.path.isfile or os.path.isdir
