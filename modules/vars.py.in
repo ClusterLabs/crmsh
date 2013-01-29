@@ -245,6 +245,18 @@ class Vars(Singleton):
         "crmconf": "crmconf",
         "help_index": "help_index",
     }
+    try:
+        from xdg import BaseDirectory
+        config_home = BaseDirectory.xdg_config_home
+        cache_home = BaseDirectory.xdg_cache_home
+    except:
+        # see http://standards.freedesktop.org/basedir-spec
+        if not homedir:
+            config_home = os.path.join("/", ".config")
+            cache_home = os.path.join("/", ".cache")
+        else:
+            config_home = os.path.join(homedir, ".config")
+            cache_home = os.path.join(homedir, ".cache")
     report_cache = os.path.join("@CRM_CACHE_DIR@","history")
     tmpl_dir = "@datadir@/@PACKAGE@/templates"
     crm_schema_dir = "@CRM_DTD_DIRECTORY@"

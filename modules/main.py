@@ -255,20 +255,9 @@ def set_interactive():
 def xdg_file(name, xdg_name, obj_type, semantics):
     if not name or not xdg_name:
         return name
-    try:
-        from xdg import BaseDirectory
-        config_home = BaseDirectory.xdg_config_home
-        cache_home = BaseDirectory.xdg_cache_home
-    except:
-        # see http://standards.freedesktop.org/basedir-spec
-        homedir = gethomedir()
-        if not homedir:
-            return name
-        config_home = os.path.join(homedir, ".config")
-        cache_home = os.path.join(homedir, ".cache")
     chk_fun = obj_type == "f" and os.path.isfile or os.path.isdir
     dir = os.path.join(semantics == "config" and \
-        config_home or cache_home, "crm")
+        vars.config_home or vars.cache_home, "crm")
     if not os.path.isdir(dir):
         os.makedirs(dir, 0700)
     new = os.path.join(dir, xdg_name)
