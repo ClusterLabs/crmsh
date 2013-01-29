@@ -736,6 +736,53 @@ def parse_time(t):
             return None
     return dt
 
+def save_graphviz_file(ini_f, attr_d):
+    '''
+    Save graphviz settings to an ini file, if it does not exist.
+    '''
+    if os.path.isfile(ini_f):
+        common_err("%s exists, please remove it first" % ini_f)
+        return False
+    try:
+        f = open(ini_f,"wb")
+    except IOError, msg:
+        common_err(msg)
+        return False
+    import ConfigParser
+    p = ConfigParser.SafeConfigParser()
+    for section,sect_d in attr_d.iteritems():
+        p.add_section(section)
+        for n,v in sect_d.iteritems():
+            p.set(section, n, v)
+    try:
+        p.write(f)
+    except IOError, msg:
+        common_err(msg)
+        return False
+    f.close()
+    common_info("graphviz attributes saved to %s" % ini_f)
+    return True
+def load_graphviz_file(ini_f):
+    '''
+    Load graphviz ini file, if it exists.
+    '''
+    if not os.path.isfile(ini_f):
+        return True, None
+    import ConfigParser
+    p = ConfigParser.SafeConfigParser()
+    try:
+        p.read(ini_f)
+    except Exception, msg:
+        common_err(msg)
+        return False, None
+    _graph_d = {}
+    for section in p.sections():
+        d = {}
+        for n, v in p.items(section):
+            d[n] = v
+        _graph_d[section] = d
+    return True, _graph_d
+
 def get_pcmk_version(dflt):
     try:
         v = get_stdout("crmd version").split()[2]

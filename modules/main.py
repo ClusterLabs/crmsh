@@ -256,8 +256,8 @@ def xdg_file(name, xdg_name, obj_type, semantics):
     if not name or not xdg_name:
         return name
     chk_fun = obj_type == "f" and os.path.isfile or os.path.isdir
-    dir = os.path.join(semantics == "config" and \
-        vars.config_home or vars.cache_home, "crm")
+    dir = semantics == "config" and \
+        vars.config_home or vars.cache_home
     if not os.path.isdir(dir):
         os.makedirs(dir, 0700)
     new = os.path.join(dir, xdg_name)

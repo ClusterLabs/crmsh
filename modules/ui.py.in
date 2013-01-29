@@ -1567,11 +1567,16 @@ class CibConfig(UserInterface):
         return set_obj.import_file(method,url)
     def graph(self,cmd,*args):
         "usage: graph [<gtype> [<file> [<img_format>]]]"
+        if args and args[0] == "exportsettings":
+            return save_graphviz_file(vars.graphviz_user_file, vars.graph)
         if not cib_factory.is_cib_sane():
             return False
         rc, gtype, outf, ftype = _graph_args(args)
         if not rc:
             return False
+        rc,d = load_graphviz_file(vars.graphviz_user_file)
+        if rc and d:
+            vars.graph = d
         set_obj = mkset_obj()
         if not outf:
             rc = set_obj.show_graph(gtype)
@@ -2227,6 +2232,9 @@ class History(UserInterface):
         rc, gtype, outf, ftype = _graph_args(args)
         if not rc:
             return False
+        rc,d = load_graphviz_file(vars.graphviz_user_file)
+        if rc and d:
+            vars.graph = d
         set_obj = self._pe_config_obj(pe_f)
         if not outf:
             rc = set_obj.show_graph(gtype)

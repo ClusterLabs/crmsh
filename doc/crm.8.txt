@@ -2420,9 +2420,15 @@ various graphviz tools (by default it is displayed in the user's
 X11 session). Optionally, by specifying the format, one can also
 produce an image instead.
 
+For more or different graphviz attributes, it is possible to save
+the default set of attributes to an ini file. If this file exists
+it will always override the builtin settings. The `exportsettings`
+subcommand also prints the location of the ini file.
+
 Usage:
 ...............
         graph [<gtype> [<file> [<img_format>]]]
+        graph exportsettings
 
         gtype :: dot
         img_format :: `dot` output format (see the `-T` option)

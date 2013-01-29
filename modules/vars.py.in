@@ -257,6 +257,9 @@ class Vars(Singleton):
         else:
             config_home = os.path.join(homedir, ".config")
             cache_home = os.path.join(homedir, ".cache")
+    config_home = os.path.join(config_home, "crm")
+    cache_home = os.path.join(cache_home, "crm")
+    graphviz_user_file = os.path.join(config_home, "graphviz")
     report_cache = os.path.join("@CRM_CACHE_DIR@","history")
     tmpl_dir = "@datadir@/@PACKAGE@/templates"
     crm_schema_dir = "@CRM_DTD_DIRECTORY@"
