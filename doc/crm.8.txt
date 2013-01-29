@@ -3135,6 +3135,28 @@ Examples:
         show pe-input-2080.bz2 status
 ...............
 
+[[cmdhelp_history_graph,generate a directed graph from the PE file]]
+==== `graph`
+
+Create a graphviz graphical layout from the PE file (the
+transition). Every transition contains the cluster configuration
+which was active at the time. See also <<cmdhelp_configure_graph,generate a directed graph
+from configuration>>.
+
+Usage:
+...............
+        graph <pe> [<gtype> [<file> [<img_format>]]]
+
+        gtype :: dot
+        img_format :: `dot` output format (see the `-T` option)
+...............
+Example:
+...............
+        graph -1
+        graph 322 dot clu1.conf.dot
+        graph 322 dot clu1.conf.svg svg
+...............
+
 [[cmdhelp_history_diff,cluster states/transitions difference]]
 ==== `diff`
 

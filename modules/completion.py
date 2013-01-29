@@ -550,6 +550,7 @@ completer_lists = {
         "peinputs" : (report_pe_list_peinputs,loop),
         "transition" : (report_pe_list_transition,),
         "show" : (report_pe_list_show,),
+        "graph" : (report_pe_list_show,),
         "diff" : (report_pe_list_show,report_pe_list_show),
         "session" : (report_session_subcmd_list,report_session_list),
     },

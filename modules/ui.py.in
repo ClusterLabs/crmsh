@@ -31,7 +31,6 @@ from report import Report
 from template import LoadTemplate
 from cliformat import nvpairs2list, cli_format
 from rsctest import test_resources
-from crm_gv import gv_types
 from ra import *
 from msg import *
 from utils import *
@@ -1358,6 +1357,33 @@ class StatusMgmt(UserInterface):
         "usage: simulate [nograph] [v...] [scores] [utilization]"
         return ptestlike(cib_status.simulate,'',cmd,args)
 
+def _graph_args(args):
+    '''
+    Common parameters for two graph commands:
+        configure graph [<gtype> [<file> [<img_format>]]]
+        history graph <pe> [<gtype> [<file> [<img_format>]]]
+    '''
+    from crm_gv import gv_types
+    gtype, outf, ftype = None, None, None
+    try:
+        gtype = args[0]
+        if gtype not in gv_types:
+            common_err("graph type %s is not supported" % gtype)
+            return False, gtype, outf, ftype
+    except:
+        gtype = "dot"
+    try:
+        outf = args[1]
+        if not is_path_sane(outf):
+            return False, gtype, outf, ftype
+    except:
+        outf = None
+    try:
+        ftype = args[2]
+    except:
+        ftype = gtype
+    return True, gtype, outf, ftype
+
 class CibConfig(UserInterface):
     '''
     The configuration class
@@ -1539,28 +1565,13 @@ class CibConfig(UserInterface):
             method = args[0]
             set_obj = mkset_obj("NOOBJ")
         return set_obj.import_file(method,url)
-    graph_types = ("dot",)
     def graph(self,cmd,*args):
         "usage: graph [<gtype> [<file> [<img_format>]]]"
         if not cib_factory.is_cib_sane():
             return False
-        try:
-            gtype = args[0]
-            if gtype not in gv_types:
-                common_err("graph type %s is not supported" % gtype)
-                return False
-        except:
-            gtype = "dot"
-        try:
-            outf = args[1]
-            if not is_path_sane(outf):
-                return False
-        except:
-            outf = None
-        try:
-            ftype = args[2]
-        except:
-            ftype = gtype
+        rc, gtype, outf, ftype = _graph_args(args)
+        if not rc:
+            return False
         set_obj = mkset_obj()
         if not outf:
             rc = set_obj.show_graph(gtype)
@@ -1836,6 +1847,7 @@ class History(UserInterface):
         self.cmd_table["transition"] = (self.transition,(0,),1,0)
         self.cmd_table["diff"] = (self.diff,(2,4),1,0)
         self.cmd_table["show"] = (self.show,(1,2),1,0)
+        self.cmd_table["graph"] = (self.graph,(1,4),1,0)
         self.cmd_table["_dump"] = (self._dump,(1,2),1,0)
         self.cmd_table["session"] = (self.session,(0,2),1,0)
         self.cmd_table["exclude"] = (self.exclude,(0,1),1,0)
@@ -2207,6 +2219,24 @@ class History(UserInterface):
         if not s:
             return False
         page_string(s)
+    def graph(self,cmd,t,*args):
+        "usage: graph <pe> [<gtype> [<file> [<img_format>]]]"
+        pe_f = self._get_diff_pe_input(t)
+        if not pe_f:
+            return False
+        rc, gtype, outf, ftype = _graph_args(args)
+        if not rc:
+            return False
+        set_obj = self._pe_config_obj(pe_f)
+        if not outf:
+            rc = set_obj.show_graph(gtype)
+        elif gtype == ftype:
+            rc = set_obj.save_graph(gtype, outf)
+        else:
+            rc = set_obj.graph_img(gtype, outf, ftype)
+        if levels.previous().myname() == "cibconfig":
+            cib_factory.refresh()
+        return rc
     def diff(self,cmd,t1,t2,*args):
         "usage: diff <pe> <pe> [status] [html]"
         opt_l = []
