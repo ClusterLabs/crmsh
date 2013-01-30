@@ -384,9 +384,11 @@ print_logseg() {
 	# uncompress to a temp file (if necessary)
 	local cat=`find_decompressor $logf`
 	if [ "$cat" != "cat" ]; then
-		tmp=`mktemp`
+		tmp=`mktemp` ||
+			fatal "disk full"
 		add_tmpfiles $tmp
-		$cat $logf > $tmp
+		$cat $logf > $tmp ||
+			fatal "disk full"
 		sourcef=$tmp
 	else
 		sourcef=$logf
@@ -1028,8 +1030,9 @@ getlog() {
 			getstampproc=`find_getstampproc < $HA_LOG`
 			if [ "$getstampproc" ]; then
 				export getstampproc # used by linetime
-				dumplogset $HA_LOG $FROM_TIME $TO_TIME > $outf
-				loginfo $HA_LOG > $outf.info
+				dumplogset $HA_LOG $FROM_TIME $TO_TIME > $outf &&
+					loginfo $HA_LOG > $outf.info ||
+					fatal "disk full"
 			else
 				warning "could not figure out the log format of $HA_LOG"
 			fi
@@ -1071,8 +1074,9 @@ collect_info() {
 		getstampproc=`find_getstampproc < $l`
 		if [ "$getstampproc" ]; then
 			export getstampproc # used by linetime
-			dumplogset $l $FROM_TIME $TO_TIME > $WORKDIR/`basename $l`
-			loginfo $l > $WORKDIR/`basename $l`.info
+			dumplogset $l $FROM_TIME $TO_TIME > $WORKDIR/`basename $l` &&
+				loginfo $l > $WORKDIR/`basename $l`.info ||
+				fatal "disk full"
 		else
 			warning "could not figure out the log format of $l"
 		fi
@@ -1102,7 +1106,8 @@ if [ "$t" = "" ]; then
 fi
 
 WE=`uname -n`  # who am i?
-tmpdir=`mktemp -t -d .hb_report.workdir.XXXXXX`
+tmpdir=`mktemp -t -d .hb_report.workdir.XXXXXX` ||
+	fatal "disk full"
 add_tmpfiles $tmpdir
 WORKDIR=$tmpdir
 
