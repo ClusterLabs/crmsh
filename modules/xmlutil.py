@@ -861,6 +861,13 @@ def is_climove_location(node):
         node.getAttribute("id").startswith("cli-") and \
         expr_l[0].getAttribute("attribute") == "#uname" and \
         expr_l[0].getAttribute("operation") == "eq"
+def is_pref_location(node):
+    'Figure out if the location is a node preference.'
+    rule_l = node.getElementsByTagName("rule")
+    expr_l = node.getElementsByTagName("expression")
+    return len(rule_l) == 1 and len(expr_l) == 1 and \
+        expr_l[0].getAttribute("attribute") == "#uname" and \
+        expr_l[0].getAttribute("operation") == "eq"
 
 def get_rsc_ref_ids(node):
     return [x.getAttribute("id") \

@@ -1451,7 +1451,7 @@ class CibLocation(CibObject):
         if pref_node:
             score_n = self.node
             # otherwise, it's too complex to render
-        elif is_climove_location(self.node):
+        elif is_pref_location(self.node):
             score_n = self.node.getElementsByTagName("rule")[0]
             exp = self.node.getElementsByTagName("expression")[0]
             pref_node = exp.getAttribute("value")
