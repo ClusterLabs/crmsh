@@ -47,7 +47,7 @@ class Gv(object):
         self.top_nodes = []
         self.norank_nodes = []
     def gv_id(self, n):
-        return n.replace('-','_')
+        return n.replace('-','_').replace('.','_')
     def new_graph_attr(self, attr, v):
         self.graph_attrs[attr] = v
     def new_attr(self, n, attr_n, attr_v):
