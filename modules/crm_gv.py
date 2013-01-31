@@ -43,7 +43,7 @@ class Gv(object):
         self.node_attrs = odict()
         self.attrs = odict()
         self.graph_attrs = odict()
-        self.edge_attrs = odict()
+        self.edge_attrs = []
         self.top_nodes = []
         self.norank_nodes = []
     def gv_id(self, n):
@@ -66,8 +66,6 @@ class Gv(object):
             self.nodes[id] = 0
         if norank:
             self.norank_nodes.append(id)
-    def edge_idx(self, e):
-        return ';'.join([self.gv_id(x) for x in e])
     def my_edge(self, e):
         return [self.gv_id(x) for x in e]
     def new_edge(self, e):
@@ -79,16 +77,16 @@ class Gv(object):
                 continue
             self.nodes[node] = i
         self.edges.append(ne)
-    def new_edge_attr(self, e, attr_n, attr_v):
-        e_idx = self.edge_idx(e)
-        if e_idx not in self.edge_attrs:
-            self.edge_attrs[e_idx] = odict()
-        self.edge_attrs[e_idx][attr_n] = attr_v
-    def edge_str(self, e):
-        e_s = self.EDGEOP.join(e)
-        e_idx = self.edge_idx(e)
-        if e_idx in self.edge_attrs:
-            return('%s [%s]' % (e_s, _attr_str(self.edge_attrs[e_idx])))
+        self.edge_attrs.append(odict())
+        return len(self.edges)-1
+    def new_edge_attr(self, e_id, attr_n, attr_v):
+        if e_id >= len(self.edge_attrs):
+            return # if the caller didn't create an edge beforehand
+        self.edge_attrs[e_id][attr_n] = attr_v
+    def edge_str(self, e_id):
+        e_s = self.EDGEOP.join(self.edges[e_id])
+        if e_id < len(self.edge_attrs):
+            return('%s [%s]' % (e_s, _attr_str(self.edge_attrs[e_id])))
         else:
             return e_s
     def invis_edge_str(self, tn, node):
@@ -123,8 +121,8 @@ class Gv(object):
             l.append('\t%s="%s";' % (attr,v))
         for sg in self.subgraphs:
             l.append('\t%s' % '\n\t'.join(sg.repr()))
-        for e in self.edges:
-            l.append('\t%s;' % self.edge_str(e))
+        for e_id in range(len(self.edges)):
+            l.append('\t%s;' % self.edge_str(e_id))
         for n,attr_d in self.attrs.iteritems():
             attr_s = _attr_str(attr_d)
             l.append('\t%s [%s];' % (n, attr_s))
@@ -171,9 +169,9 @@ class GvDot(Gv):
         Optional resource sets.
         '''
         sg_obj = SubgraphDot(id)
-        sg_obj.new_edge(members)
-        sg_obj.new_edge_attr(members, 'style', 'invis')
-        sg_obj.new_edge_attr(members, 'constraint', 'false')
+        e_id = sg_obj.new_edge(members)
+        sg_obj.new_edge_attr(e_id, 'style', 'invis')
+        sg_obj.new_edge_attr(e_id, 'constraint', 'false')
         self.subgraphs.append(sg_obj)
         return sg_obj
     def display(self):

@@ -820,12 +820,12 @@ class CibObject(object):
         if not obj_type:
             obj_type = self.obj_type
         set_graph_attrs(sg_obj, obj_type)
-    def set_edge_attrs(self, gv_obj, e, obj_type=None):
+    def set_edge_attrs(self, gv_obj, e_id, obj_type=None):
         if not obj_type:
             obj_type = self.obj_type
         try:
             for attr,attr_v in vars.graph[obj_type].iteritems():
-                gv_obj.new_edge_attr(e, attr, attr_v)
+                gv_obj.new_edge_attr(e_id, attr, attr_v)
         except: pass
     def repr_gv(self, gv_obj):
         '''
@@ -1076,10 +1076,10 @@ def gv_last_rsc(rsc_id):
         return rsc_id
     return gv_last_prim(rsc_obj.node)
 
-def gv_edge_score_label(gv_obj, e, node):
+def gv_edge_score_label(gv_obj, e_id, node):
     score = get_score(node) or get_kind(node)
     if abs_pos_score(score):
-        gv_obj.new_edge_attr(e, 'style', 'solid')
+        gv_obj.new_edge_attr(e_id, 'style', 'solid')
         return
     elif score.find("inf") >= 0 or re.match("[0-9]",score):
         lbl = score
@@ -1089,7 +1089,7 @@ def gv_edge_score_label(gv_obj, e, node):
         lbl = 'Adv'
     else:
         lbl = "attr:%s" % score
-    gv_obj.new_edge_attr(e, 'label', lbl)
+    gv_obj.new_edge_attr(e_id, 'label', lbl)
 
 def mk_cli_list(cli):
     'Sometimes we get a string and sometimes a list.'
@@ -1459,9 +1459,9 @@ class CibLocation(CibObject):
             return
         rsc_id = gv_first_rsc(self.node.getAttribute("rsc"))
         e = [pref_node, rsc_id]
-        gv_obj.new_edge(e)
-        self.set_edge_attrs(gv_obj, e)
-        gv_edge_score_label(gv_obj, e, score_n)
+        e_id = gv_obj.new_edge(e)
+        self.set_edge_attrs(gv_obj, e_id)
+        gv_edge_score_label(gv_obj, e_id, score_n)
 
 def traverse_set(cum, st):
     e = []
@@ -1557,11 +1557,11 @@ class CibSimpleConstraint(CibObject):
             sg_name = r.group(1)
         e = [ re.sub('\[(.*)\]', '', x) for x in e ]
         e = [ gv_last_rsc(e[0]), gv_first_rsc(e[1]) ]
-        gv_obj.new_edge(e)
-        gv_edge_score_label(gv_obj, e, self.node)
+        e_id = gv_obj.new_edge(e)
+        gv_edge_score_label(gv_obj, e_id, self.node)
         if optional_rsc:
-            self.set_edge_attrs(gv_obj, e, 'optional_set')
-            gv_obj.new_edge_attr(e, 'ltail', gv_obj.gv_id(sg_name))
+            self.set_edge_attrs(gv_obj, e_id, 'optional_set')
+            gv_obj.new_edge_attr(e_id, 'ltail', gv_obj.gv_id(sg_name))
     def repr_gv(self, gv_obj):
         '''
         What to do with the collocation constraint?
