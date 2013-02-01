@@ -619,16 +619,21 @@ getpeinputs() {
 	pe_dir=$PE_STATE_DIR
 	debug "looking for PE files in $pe_dir"
 	flist=$(
-		find_files $pe_dir $1 $2 | sed "s,`dirname $pe_dir`/,,g" |
-			grep -v '[.]last$'
+		find_files $pe_dir $1 $2 | grep -v '[.]last$'
 	)
 	[ "$flist" ] && {
-		(cd `dirname $pe_dir` && tar cf - $flist) | (cd $3 && tar xf -)
+		mkdir $3/`basename $pe_dir`
+		(
+		cd $3/`basename $pe_dir`
+		for f in $flist; do
+			ln -s $f || fatal "disk full"
+		done
+		)
 		debug "found `echo $flist | wc -w` pengine input files in $pe_dir"
 	}
 	if [ `echo $flist | wc -w` -le 20 ]; then
 		for f in $flist; do
-			pe2dot $3/$f
+			pe2dot $3/`basename $pe_dir`/`basename $f`
 		done
 	else
 		info "too many PE inputs to create dot files"
@@ -1345,7 +1350,7 @@ fi
 #
 if is_collector; then
 	collect_info
-	(cd $WORKDIR/.. && tar cf - $WE)
+	(cd $WORKDIR/.. && tar -h -cf - $WE)
 else
 	wait $SLAVEPIDS
 	analyze $WORKDIR > $WORKDIR/$ANALYSIS_F &
