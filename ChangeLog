@@ -1,3 +1,14 @@
+* Wed Feb  6 2013 Dejan Muhamedagic <dejan@suse.de> and many others
+- stable release 1.2.5
+- cibconfig: modgroup command
+- cibconfig: directed graph support
+- cibconfig: fix syntax error in ptest
+- history: diff command (between PE inputs)
+- history: show pe commands
+- history: graph command
+- history: reduce number of live updates
+- history: inherit year from the report
+
 * Mon Dec 17 2012 Dejan Muhamedagic <dejan@suse.de> and many others
 - stable release 1.2.4
 - shadow: return proper exit code on I/O errors
