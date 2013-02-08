@@ -1006,6 +1006,7 @@ pickcompress() {
 getlog() {
 	local getstampproc cnt
 	local outf
+	outf=$WORKDIR/$HALOG_F
 
 	if [ "$HA_LOG" ]; then  # log provided by the user?
 		[ -f "$HA_LOG" ] || {  # not present
@@ -1019,34 +1020,34 @@ getlog() {
 		[ "$HA_LOG" ] &&
 			cnt=`fgrep -c $UNIQUE_MSG < $HA_LOG`
 	fi
+	if [ "$HA_LOG" = "" -o ! -f "$HA_LOG" ]; then
+		if [ "$CTS" ]; then
+			cts_findlogseg $CTS > $outf
+		else
+			warning "no log at $WE"
+		fi
+		return
+	fi
 	if [ "$cnt" ] && [ $cnt -eq $NODECNT ]; then
 		MASTER_IS_HOSTLOG=1
 		info "found the central log!"
 	fi
 
-	outf=$WORKDIR/$HALOG_F
-	if [ -f "$HA_LOG" ]; then
-		if [ "$NO_str2time" ]; then
-			warning "a log found; but we cannot slice it"
-			warning "please install the perl Date::Parse module"
-		elif [ "$CTS" ]; then
-			cts_findlogseg $CTS $HA_LOG > $outf
-		else
-			getstampproc=`find_getstampproc < $HA_LOG`
-			if [ "$getstampproc" ]; then
-				export getstampproc # used by linetime
-				dumplogset $HA_LOG $FROM_TIME $TO_TIME > $outf &&
-					loginfo $HA_LOG > $outf.info ||
-					fatal "disk full"
-			else
-				warning "could not figure out the log format of $HA_LOG"
-			fi
-		fi
+	if [ "$NO_str2time" ]; then
+		warning "a log found; but we cannot slice it"
+		warning "please install the perl Date::Parse module"
 	elif [ "$CTS" ]; then
-		cts_findlogseg $CTS > $outf
+		cts_findlogseg $CTS $HA_LOG > $outf
 	else
-		[ "$MASTER_IS_HOSTLOG" ] ||
-			warning "could not find $HA_LOG on $WE"
+		getstampproc=`find_getstampproc < $HA_LOG`
+		if [ "$getstampproc" ]; then
+			export getstampproc # used by linetime
+			dumplogset $HA_LOG $FROM_TIME $TO_TIME > $outf &&
+				loginfo $HA_LOG > $outf.info ||
+				fatal "disk full"
+		else
+			warning "could not figure out the log format of $HA_LOG"
+		fi
 	fi
 }
 #
