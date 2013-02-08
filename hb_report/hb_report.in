@@ -626,7 +626,7 @@ getpeinputs() {
 		(
 		cd $3/`basename $pe_dir`
 		for f in $flist; do
-			ln -s $f || fatal "disk full"
+			ln -s $f
 		done
 		)
 		debug "found `echo $flist | wc -w` pengine input files in $pe_dir"

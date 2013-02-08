@@ -598,6 +598,7 @@ info() {
 debug() {
 	[ "$VERBOSITY" ] && [ $VERBOSITY -gt 0 ] &&
 	echo "`uname -n`: DEBUG: $*" >&2
+	return 0
 }
 pickfirst() {
 	for x; do
