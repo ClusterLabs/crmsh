@@ -305,7 +305,7 @@ def acquire_lock(dir):
     check_locker(dir)
     while True:
         try:
-            os.mkdir(os.path.join(dir,_LOCKDIR))
+            os.makedirs(os.path.join(dir,_LOCKDIR))
             str2file("%d" % os.getpid(),os.path.join(dir,_LOCKDIR,_PIDF))
             return True
         except OSError, (errno, strerror):
