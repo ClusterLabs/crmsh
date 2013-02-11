@@ -69,6 +69,10 @@ getnodes() {
 	elif [ "$CLUSTER_TYPE" = heartbeat ]; then
 		debug "reading nodes from ha.cf"
 		getcfvar node
+	# 5. if the cluster's stopped, try the CIB
+	elif [ -f $CIB_DIR/$CIB_F ]; then
+		debug "reading nodes from the archived $CIB_DIR/$CIB_F"
+		(CIB_file=$CIB_DIR/$CIB_F get_crm_nodes)
 	fi
 }
 

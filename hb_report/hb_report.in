@@ -1261,20 +1261,6 @@ elif ! is_collector; then
 	NODES_SOURCE=user
 fi
 
-THIS_IS_NODE=""
-if ! is_collector; then
-	MASTER_NODE=$WE
-	NODES=`getnodes`
-	debug "nodes: `echo $NODES`"
-fi
-NODECNT=`echo $NODES | wc -w`
-if [ "$NODECNT" = 0 ]; then
-	fatal "could not figure out a list of nodes; is this a cluster node?"
-fi
-if echo $NODES | grep -wqs $WE; then # are we a node?
-	THIS_IS_NODE=1
-fi
-
 # the goods
 ANALYSIS_F=analysis.txt
 DESCRIPTION_F=description.txt
@@ -1298,6 +1284,20 @@ export CRM_MON_F MEMBERSHIP_F CRM_VERIFY_F CIB_F CIB_TXT_F HB_UUID_F PERMISSIONS
 export COROSYNC_RECORDER_F
 CONFIGURATIONS="/etc/drbd.conf /etc/drbd.d /etc/booth/booth.conf"
 export CONFIGURATIONS
+
+THIS_IS_NODE=""
+if ! is_collector; then
+	MASTER_NODE=$WE
+	NODES=`getnodes`
+	debug "nodes: `echo $NODES`"
+fi
+NODECNT=`echo $NODES | wc -w`
+if [ "$NODECNT" = 0 ]; then
+	fatal "could not figure out a list of nodes; is this a cluster node?"
+fi
+if echo $NODES | grep -wqs $WE; then # are we a node?
+	THIS_IS_NODE=1
+fi
 
 # this only on master
 if ! is_collector; then
