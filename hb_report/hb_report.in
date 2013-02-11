@@ -639,6 +639,18 @@ getpeinputs() {
 		info "too many PE inputs to create dot files"
 	fi
 }
+getratraces() {
+	local trace_dir flist
+	local f
+	trace_dir=$HA_VARLIB/trace_ra
+	test -d "$trace_dir" || return 0
+	debug "looking for RA trace files in $trace_dir"
+	flist=$(find_files $trace_dir $1 $2 | sed "s,`dirname $trace_dir`/,,g")
+	[ "$flist" ] && {
+		tar -cf - -C `dirname $trace_dir` $flist | tar -xf - -C $3
+		debug "found `echo $flist | wc -w` RA trace files in $trace_dir"
+	}
+}
 touch_DC_if_dc() {
 	local dc
 	dc=`crmadmin -D 2>/dev/null | awk '{print $NF}'`
@@ -1067,6 +1079,7 @@ collect_info() {
 	dlm_dump > $WORKDIR/$DLM_DUMP_F 2>&1
 	time_status > $WORKDIR/$TIME_F 2>&1
 	corosync_blackbox $FROM_TIME $TO_TIME $WORKDIR/$COROSYNC_RECORDER_F
+	getratraces $FROM_TIME $TO_TIME $WORKDIR
 	wait
 	sanitize $WORKDIR
 
