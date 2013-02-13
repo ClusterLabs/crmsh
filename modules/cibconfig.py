@@ -1081,7 +1081,7 @@ def gv_edge_score_label(gv_obj, e_id, node):
     if abs_pos_score(score):
         gv_obj.new_edge_attr(e_id, 'style', 'solid')
         return
-    elif score.find("inf") >= 0 or re.match("[0-9]",score):
+    elif re.match("-?([0-9]+|inf)$",score):
         lbl = score
     elif score in rng_attr_values('rsc_order', 'kind'):
         lbl = score
