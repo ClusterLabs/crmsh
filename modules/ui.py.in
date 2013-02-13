@@ -818,6 +818,8 @@ class RscMgmt(UserInterface):
         self.cmd_table["cleanup"] = (self.cleanup,(1,2),1,1)
         self.cmd_table["refresh"] = (self.refresh,(0,1),0,0)
         self.cmd_table["reprobe"] = (self.reprobe,(0,1),0,1)
+        self.cmd_table["trace"] = (self.trace,(2,3),0,1)
+        self.cmd_table["untrace"] = (self.untrace,(2,3),0,1)
         self.cmd_aliases.update({
             "status": ("show","list",),
             "migrate": ("move",),
@@ -975,6 +977,67 @@ class RscMgmt(UserInterface):
             return ext_cmd(self.rsc_reprobe_node%args[0]) == 0
         else:
             return ext_cmd(self.rsc_reprobe) == 0
+    def _get_trace_rsc(self, rsc_id):
+        cib_factory.refresh()
+        if not cib_factory.is_cib_sane():
+            return None
+        rsc = cib_factory.find_object(rsc_id)
+        if not rsc:
+            common_err("resource %s does not exist" % rsc_id)
+            return None
+        if rsc.obj_type != "primitive":
+            common_err("element %s is not a primitive resource" % rsc_id)
+            return None
+        return rsc
+    def trace(self,cmd,rsc_id,op,interval=None):
+        'usage: trace <rsc> <op> [<interval>]'
+        rsc = self._get_trace_rsc(rsc_id)
+        if not rsc:
+            return False
+        if not interval:
+            interval = op == "monitor" and "non-0" or "0"
+        if op == "probe":
+            op = "monitor"
+        op_node = find_operation(rsc.node, op, interval)
+        if not op_node and crm_msec(interval) != 0:
+            common_err("not allowed to create non-0 interval operation %s" % op)
+            return False
+        if not op_node:
+            head_pl = ["op",[]]
+            head_pl[1].append(["name",op])
+            head_pl[1].append(["interval",interval])
+            head_pl[1].append([vars.trace_ra_attr,"1"])
+            cli_list = []
+            cli_list.append(head_pl)
+            if not rsc.add_operation(cli_list):
+                return False
+        else:
+            op_node = rsc.set_op_attr(op_node, vars.trace_ra_attr, "1")
+        if not cib_factory.commit():
+            return False
+        if op == "monitor" and crm_msec(interval) != 0:
+            common_warn("please CLEANUP the RA trace directory %s regularly!" \
+                % vars.ha_varlib_dir)
+        else:
+            common_info("restart %s to get the trace" % rsc_id)
+        return True
+    def untrace(self,cmd,rsc_id,op,interval=None):
+        'usage: untrace <rsc> <op> [<interval>]'
+        rsc = self._get_trace_rsc(rsc_id)
+        if not rsc:
+            return False
+        if not interval:
+            interval = op == "monitor" and "non-0" or "0"
+        if op == "probe":
+            op = "monitor"
+        op_node = find_operation(rsc.node, op, interval)
+        if not op_node:
+            common_err("operation %s does not exist in %s" % (op, rsc.obj_id))
+            return False
+        op_node = rsc.del_op_attr(op_node, vars.trace_ra_attr)
+        if rsc.is_dummy_operation(op_node):
+            rsc.del_operation(op_node)
+        return cib_factory.commit()
 
 def print_node(uname,id,node_type,other,inst_attr,offline):
     """

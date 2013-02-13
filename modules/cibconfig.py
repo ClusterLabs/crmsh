@@ -1170,6 +1170,56 @@ def reduce_primitive(node):
         return None
     return merge_nodes_2(node, template_obj.node)
 
+class Op(object):
+    '''
+    Operations.
+    '''
+    elem_type = "op"
+    def __init__(self, op_name, prim, node=None):
+        self.parent = prim
+        self.node = node
+        self.attr_d = odict()
+        self.attr_d["name"] = op_name
+        if self.node:
+            self.xml2dict()
+    def set_attr(self, n, v):
+        self.attr_d[n] = v
+    def get_attr(self, n):
+        try: return self.attr_d[n]
+        except: return None
+    def del_attr(self, n):
+        try: del self.attr_d[n]
+        except: pass
+    def xml2dict(self):
+        for name in self.node.attributes.keys():
+            if name != "id": # skip the id
+                self.set_attr(name, self.node.getAttribute(name))
+        for a in self.node.getElementsByTagName("instance_attributes"):
+            for p in a.getElementsByTagName("nvpair"):
+                n = p.getAttribute("name")
+                v = p.getAttribute("value")
+                self.set_attr(n, v)
+    def mkxml(self):
+        # create an xml node
+        if self.node:
+            if self.node.parentNode:
+                self.node.parentNode.removeChild(self.node)
+            id_store.remove_xml(self.node)
+            self.node.unlink()
+        self.node = cib_factory.createElement(self.elem_type)
+        inst_attr = []
+        for n,v in self.attr_d.iteritems():
+            if n in olist(schema.get('attr', 'op', 'a')):
+                self.node.setAttribute(n,v)
+            else:
+                inst_attr.append([n,v])
+        set_id(self.node, None, self.parent)
+        if inst_attr:
+            e = ["instance_attributes", inst_attr]
+            nia = mkxmlnvpairs(e, None, self.node.getAttribute("id"))
+            self.node.appendChild(nia)
+        return self.node
+
 class CibPrimitive(CibObject):
     '''
     Primitives.
@@ -1220,6 +1270,13 @@ class CibPrimitive(CibObject):
                 operations.appendChild(n)
         remove_id_used_attributes(oldnode)
         return headnode
+    def append_op(self, op_node):
+        try:
+            ops_node = self.node.getElementsByTagName("operations")[0]
+        except:
+            ops_node = cib_factory.createElement("operations")
+            self.node.appendChild(ops_node)
+        ops_node.appendChild(op_node)
     def add_operation(self,cli_list):
         # check if there is already an op with the same interval
         comments = get_comments(cli_list)
@@ -1230,23 +1287,56 @@ class CibPrimitive(CibObject):
             common_err("%s already has a %s op with interval %s" % \
                 (self.obj_id, name, interval))
             return None
-        # drop the rsc attribute
-        head[1].remove(["rsc",self.obj_id])
         # create an xml node
-        mon_node = mkxmlsimple(head, None, self.obj_id)
-        # get the place to append it to
-        try:
-            op_node = self.node.getElementsByTagName("operations")[0]
-        except:
-            op_node = cib_factory.createElement("operations")
-            self.node.appendChild(op_node)
-        op_node.appendChild(mon_node)
+        op_node = mkxmlnode(head, None, self.obj_id)
+        self.append_op(op_node)
         if comments and self.node:
             stuff_comments(self.node,comments)
         # the resource is updated
         self.updated = True
         self.propagate_updated()
         return self
+    def del_operation(self,op_node):
+        if not op_node.parentNode:
+            return
+        ops_node = op_node.parentNode
+        op_node.parentNode.removeChild(op_node)
+        id_store.remove_xml(op_node)
+        op_node.unlink()
+        if not ops_node.childNodes:
+            rmnode(ops_node)
+        self.updated = True
+        self.propagate_updated()
+    def is_dummy_operation(self,op_node):
+        '''If the op has just name, id, and interval=0, then it's
+        not of much use.'''
+        interval = op_node.getAttribute("interval")
+        if not op_node.childNodes and crm_msec(interval) == 0:
+            attr_names = set(op_node.attributes.keys())
+            basic_attr_names = set(["id","name","interval"])
+            if len(attr_names ^ basic_attr_names) == 0: 
+                return True
+        return False
+    def set_op_attr(self, op_node, attr_n, attr_v):
+        name = op_node.getAttribute("name")
+        op_obj = Op(name, self.obj_id, op_node)
+        op_obj.set_attr(attr_n, attr_v)
+        new_op_node = op_obj.mkxml()
+        self.append_op(new_op_node)
+        # the resource is updated
+        self.updated = True
+        self.propagate_updated()
+        return new_op_node
+    def del_op_attr(self, op_node, attr_n):
+        name = op_node.getAttribute("name")
+        op_obj = Op(name, self.obj_id, op_node)
+        op_obj.del_attr(attr_n)
+        new_op_node = op_obj.mkxml()
+        self.append_op(new_op_node)
+        # the resource is updated
+        self.updated = True
+        self.propagate_updated()
+        return new_op_node
     def check_sanity(self):
         '''
         Check operation timeouts and if all required parameters
@@ -2338,7 +2428,6 @@ class CibFactory(Singleton):
                 head_pl[1].append(["name",op])
                 head_pl[1].append(["timeout",adv_timeout])
                 head_pl[1].append(["interval","0"])
-                head_pl[1].append(["rsc",obj_id])
                 cli_list = []
                 cli_list.append(head_pl)
                 if not obj.add_operation(cli_list):
@@ -2540,6 +2629,7 @@ class CibFactory(Singleton):
         if rsc_obj.obj_type != "primitive":
             common_err("%s is not a primitive" % rsc_id)
             return None
+        head[1].remove(["rsc",rsc_id])
         return rsc_obj.add_operation(cli_list)
     def create_from_cli(self,cli):
         'Create a new cib object from the cli representation.'

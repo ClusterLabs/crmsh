@@ -90,6 +90,14 @@ def rsc_list(idx,delimiter = False):
         return []
     nodes = get_interesting_nodes(doc,[])
     return [x.getAttribute("id") for x in nodes if is_resource(x)]
+def rsc_prim_list(idx,delimiter = False):
+    if delimiter:
+        return ' '
+    doc = resources_xml()
+    if not doc:
+        return []
+    nodes = get_interesting_nodes(doc,[])
+    return [x.getAttribute("id") for x in nodes if is_primitive(x)]
 def null_list(idx,delimiter = False):
     if delimiter:
         return ' '
@@ -473,6 +481,8 @@ completer_lists = {
         "cleanup" : (rsc_list,nodes_list),
         "refresh" : (nodes_list,),
         "reprobe" : (nodes_list,),
+        "trace" : (rsc_prim_list,ra_operations_list),
+        "untrace" : (rsc_prim_list,ra_operations_list),
     },
     "node" : {
         "status" : (nodes_list,),

@@ -1058,6 +1058,37 @@ Usage:
         reprobe [<node>]
 ...............
 
+[[cmdhelp_resource_trace,start RA tracing]]
+==== `trace`
+
+Start tracing RA for the given operation. The trace files are
+stored in `$HA_VARLIB/trace_ra`. If the operation to be traced is
+monitor, note that the number of trace files can grow very
+quickly.
+
+Usage:
+...............
+        trace <rsc> <op> [<interval>]
+...............
+Example:
+...............
+        trace fs start
+...............
+
+[[cmdhelp_resource_untrace,stop RA tracing]]
+==== `untrace`
+
+Stop tracing RA for the given operation.
+
+Usage:
+...............
+        untrace <rsc> <op> [<interval>]
+...............
+Example:
+...............
+        untrace fs start
+...............
+
 [[cmdhelp_node,Nodes management]]
 === `node`
 

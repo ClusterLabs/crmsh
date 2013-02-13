@@ -157,6 +157,7 @@ class Vars(Singleton):
     ms_meta_attributes = (
         "master-max", "master-node-max", "description",
     )
+    trace_ra_attr = "trace_ra"
     score_types = {'advisory': '0','mandatory': 'INFINITY'}
     boolean_ops = ('or','and')
     binary_ops = ('lt','gt','lte','gte','eq','ne')
@@ -268,6 +269,7 @@ class Vars(Singleton):
     crm_daemon_dir = "@CRM_DAEMON_DIR@"
     crm_daemon_user = "@CRM_DAEMON_USER@"
     crm_version = "@VERSION@ (Build @BUILD_VERSION@)"
+    ha_varlib_dir = "@HA_VARLIBHBDIR@"
     nagios_dir = "/usr/lib/nagios/plugins"
 
     ra_if = None # class interface to RA
