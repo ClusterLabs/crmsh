@@ -1068,7 +1068,7 @@ def gv_last_prim(node):
     if node.tagName != "primitive":
         for c in reversed(node.childNodes):
             if is_child_rsc(c):
-                return gv_first_prim(c)
+                return gv_last_prim(c)
     return node.getAttribute("id")
 def gv_last_rsc(rsc_id):
     rsc_obj = cib_factory.find_object(rsc_id)
