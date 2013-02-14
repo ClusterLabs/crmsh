@@ -31,7 +31,12 @@ def getpwdent():
 def getuser():
     try: return getpwdent()[0]
     except: return os.getenv("USER")
-def gethomedir():
+def gethomedir(user=None):
+    if user:
+        try: return pwd.getpwnam(user)[5]
+        except Exception, msg:
+            common_err(msg)
+            return None
     homedir = os.getenv("HOME")
     if not homedir:
         try: return getpwdent()[5]

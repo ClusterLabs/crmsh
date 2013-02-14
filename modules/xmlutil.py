@@ -179,12 +179,15 @@ def is_live_cib():
     '''We working with the live cluster?'''
     return not vars.cib_in_use and not os.getenv("CIB_file")
 
+def is_crmuser():
+    return (user_prefs.crm_user in ("root",vars.crm_daemon_user) \
+        or getuser() in ("root",vars.crm_daemon_user))
 def cib_shadow_dir():
     if os.getenv("CIB_shadow_dir"):
         return os.getenv("CIB_shadow_dir")
-    if getuser() in ("root",vars.crm_daemon_user):
+    if is_crmuser():
         return vars.crm_conf_dir
-    home = gethomedir()
+    home = gethomedir(user_prefs.crm_user)
     if home and home.startswith(os.path.sep):
         return os.path.join(home,".cib")
     return os.getenv("TMPDIR") or "/tmp"
