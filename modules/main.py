@@ -176,11 +176,15 @@ def usage(rc):
         f = sys.stdout
     print >> f, """
 usage:
-    crm [-D display_type] [-f file] [-H hist_src] [-hFRDw] [--version] [args]
+    crm [-D display_type] [-f file] [-c cib] [-H hist_src] [-hFRDw] [--version] [args]
 
     -f, --file='FILE'::
         Load commands from the given file. If the file is - then
         use terminal stdin.
+
+    -c, --cib='CIB'::
+        Start the session with the given shadow CIB file.
+        Equivalent to cib use.
 
     -D, --display='OUTPUT_TYPE'::
         Choose one of the output options: plain, color, or
@@ -290,6 +294,8 @@ def compatibility_setup():
 def do_work():
     global user_args
     compatibility_setup()
+    if options.shadow:
+        parse_line(levels,["cib","use",options.shadow])
     # this special case is silly, but we have to keep it to
     # preserve the backward compatibility
     if len(user_args) == 1 and user_args[0].startswith("conf"):
@@ -363,8 +369,9 @@ def run():
 
     try:
         opts, user_args = getopt.getopt(sys.argv[1:], \
-            'whdf:FX:RD:H:', ("wait","version","help","debug","file=",\
-            "force","profile=","regression-tests","display=","history="))
+            'whdc:f:FX:RD:H:', ("wait","version","help","debug", \
+            "cib=","file=","force","profile=", \
+            "regression-tests","display=","history="))
         for o,p in opts:
             if o in ("-h","--help"):
                 usage(0)
@@ -390,6 +397,8 @@ def run():
                 options.history = p
             elif o in ("-w","--wait"):
                 user_prefs.wait = "yes"
+            elif o in ("-c","--cib"):
+                options.shadow = p
     except getopt.GetoptError,msg:
         print msg
         usage(1)

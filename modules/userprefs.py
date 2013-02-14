@@ -30,6 +30,7 @@ class Options(Singleton):
     profile = ""
     history = "live"
     file = ""
+    shadow = ""
 
 options = Options.getInstance()
 termctrl = TerminalController.getInstance()

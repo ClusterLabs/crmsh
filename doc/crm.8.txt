@@ -13,7 +13,7 @@ crm - Pacemaker command line interface for configuration and management
 
 SYNOPSIS
 --------
-*crm* [-D output_type] [-f file] [-H hist_src] [-hFRDw] [--version] [args]
+*crm* [-D output_type] [-f file] [-c cib] [-H hist_src] [-hFRDw] [--version] [args]
 
 
 [[topics_Description,Program description]]
@@ -53,6 +53,10 @@ OPTIONS
 *-f, --file*='FILE'::
 	Load commands from the given file. If the file is `-` then
     use terminal `stdin`.
+
+*-c, --cib*='CIB'::
+    Start the session with the given shadow CIB file.
+    Equivalent to `cib use`.
 
 *-D, --display=*'OUTPUT_TYPE'::
 	Choose one of the output options: `plain`, `color`, or
