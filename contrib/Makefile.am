@@ -1,7 +1,7 @@
 #
-# shell: Pacemaker code
+# contrib: crmsh contrib
 #
-# Copyright (C) 2008 Andrew Beekhof
+# Copyright (C) 2013 Dejan Muhamedagic
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -17,27 +17,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
-MAINTAINERCLEANFILES    = Makefile.in aclocal.m4 configure
+MAINTAINERCLEANFILES    = Makefile.in
 
-sbin_SCRIPTS		= crm
+contribdir      = $(docdir)/contrib
+contrib_DATA	= pacemaker-crm.vim  pcmk.vim  README.vimsyntax
 
-EXTRA_DIST		= crm
-
-SUBDIRS = doc modules templates test contrib
-
-doc_DATA = AUTHORS COPYING README ChangeLog
-
-install-exec-local:
-	$(INSTALL) -d -m 770 $(DESTDIR)/$(CRM_CACHE_DIR)
-	-chown $(CRM_DAEMON_USER):$(CRM_DAEMON_GROUP) $(DESTDIR)/$(CRM_CACHE_DIR)
-
-clean-generic:
-	rm -f $(TARFILE) *.tar.bz2 *.sed
-
-dist-clean-local:
-	rm -f autoconf automake autoheader
-
-maintainer-clean-local:
-	rm -f libltdl.tar
-
-.PHONY: rpm pkg handy handy-copy
+EXTRA_DIST		= $(contrib_DATA)

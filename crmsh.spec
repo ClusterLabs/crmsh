@@ -6,6 +6,12 @@
 %global upstream_version tip
 %global upstream_prefix crmsh
 
+%if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version}
+%define pkg_group System Environment/Daemons
+%else
+%define pkg_group Productivity/Clustering/HA
+%endif
+
 # Compatibility macros for distros (fedora) that don't provide Python macros by default
 # Do this instead of trying to conditionally include {_rpmconfigdir}/macros.python
 %{!?py_ver:     %{expand: %%global py_ver      %%(echo `python -c "import sys; print sys.version[:3]"`)}}
@@ -19,30 +25,38 @@ Name:		crmsh
 Summary:	Pacemaker command line interface
 Version:	1.2.5
 Release:	%{crmsh_release}%{?dist}
-License:	GPLv2+
-Url:		http://www.clusterlabs.org
-Group:		Productivity/Clustering/HA
+License:	GPL-2.0+
+Url:		http://savannah.nongnu.org/projects/crmsh
+Group:		%{pkg_group}
 Source0:	crmsh.tar.bz2
 BuildRoot:	%{_tmppath}/%{name}-%{version}-build
 AutoReqProv:	on
 Requires(pre):	pacemaker
 Requires:	python >= 2.4
 Requires:	python-dateutil
+Requires:       pssh
 
 %if 0%{?suse_version}
 # Suse splits this off into a separate package
 Requires:       python-curses python-xml
 BuildRequires:  python-curses python-xml
+BuildRequires:	libpacemaker-devel libglue-devel
+%else
+BuildRequires:	pacemaker-libs-devel cluster-glue-libs-devel
 %endif
 
 # Required for core functionality
 BuildRequires:  automake autoconf pkgconfig python
-%if 0%{?rhel}
-BuildRequires:	pacemaker-libs-devel cluster-glue-libs-devel
-%else
-BuildRequires:	libpacemaker-devel libglue-devel
-%endif
 BuildRequires:	asciidoc
+BuildRequires:	libtool
+
+%if 0%{?suse_version} > 1210
+# xsltproc is necessary for manpage generation; this is split out into
+# libxslt-tools as of openSUSE 12.2.  Possibly strictly should be
+# required by asciidoc
+BuildRequires:  libxslt-tools
+%endif
+
 
 %if 0%{?with_regression_tests}
 BuildRequires:  corosync procps vim-base python-dateutil
@@ -119,14 +133,15 @@ fi
 %{py_sitedir}/crmsh
 
 %doc %{_mandir}/man8/crm.8*
-%doc %{crmsh_docdir}/COPYING
-%doc %{crmsh_docdir}/AUTHORS
-%doc %{crmsh_docdir}/crm.8.html
-%doc ChangeLog
-%doc README
-%doc contrib
+%{crmsh_docdir}/COPYING
+%{crmsh_docdir}/AUTHORS
+%{crmsh_docdir}/crm.8.html
+%{crmsh_docdir}/ChangeLog
+%{crmsh_docdir}/README
+%{crmsh_docdir}/contrib/*
 
 %dir %{crmsh_docdir}
+%dir %{crmsh_docdir}/contrib
 %dir %attr (770, %{uname}, %{gname}) %{_var}/cache/crm
 
 %changelog

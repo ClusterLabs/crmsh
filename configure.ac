@@ -273,6 +273,7 @@ fi
 dnl The Makefiles and shell scripts we output
 AC_CONFIG_FILES(Makefile				        \
 doc/Makefile							\
+contrib/Makefile							\
 templates/Makefile				\
 test/Makefile				\
 	test/testcases/Makefile			\
