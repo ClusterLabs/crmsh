@@ -37,7 +37,11 @@ BuildRequires:  python-curses python-xml
 
 # Required for core functionality
 BuildRequires:  automake autoconf pkgconfig python
+%if 0%{?rhel}
+BuildRequires:	pacemaker-libs-devel cluster-glue-libs-devel
+%else
 BuildRequires:	libpacemaker-devel libglue-devel
+%endif
 BuildRequires:	asciidoc
 
 %if 0%{?with_regression_tests}
@@ -115,8 +119,9 @@ fi
 %{py_sitedir}/crmsh
 
 %doc %{_mandir}/man8/crm.8*
-%doc COPYING
-%doc AUTHORS
+%doc %{crmsh_docdir}/COPYING
+%doc %{crmsh_docdir}/AUTHORS
+%doc %{crmsh_docdir}/crm.8.html
 %doc ChangeLog
 %doc README
 %doc contrib
