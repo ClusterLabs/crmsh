@@ -208,9 +208,11 @@ class LogSyslog(object):
             common_err("open %s: %s"%(log,msg))
     def open_logs(self):
         if self.central_log:
+            common_debug("opening central log %s" % self.central_log)
             self.open_log(self.central_log)
         else:
             for log in self.log_l:
+                common_debug("opening log %s" % log)
                 self.open_log(log)
     def set_log_timeframe(self, from_dt, to_dt):
         '''
@@ -646,8 +648,12 @@ class Report(Singleton):
         central_log = os.path.join(self.loc, "ha-log.txt")
         if is_log(central_log):
             logf, pos = read_log_info(central_log)
+            if logf == '':
+                # assume it's not a central log (we don't
+                # know really)
+                return
             if logf.startswith("synthetic"):
-                # not really central log
+                # not central log
                 return
             common_debug("found central log %s" % logf)
             self.central_log = central_log
