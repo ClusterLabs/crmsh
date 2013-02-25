@@ -353,11 +353,11 @@ arch_logs() {
 		case $? in
 		0) ;;  # noop, continue
 		1) echo $next_log  # include log and continue
-			info "found log $next_log"
+			debug "found log $next_log"
 			;;
 		2) break;; # don't go through older logs!
 		3) echo $next_log  # include log and continue
-			info "found log $next_log"
+			debug "found log $next_log"
 			break
 			;; # don't go through older logs!
 		esac
@@ -636,7 +636,7 @@ getpeinputs() {
 			pe2dot $3/`basename $pe_dir`/`basename $f`
 		done
 	else
-		info "too many PE inputs to create dot files"
+		debug "too many PE inputs to create dot files"
 	fi
 }
 getratraces() {

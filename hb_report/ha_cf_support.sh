@@ -59,7 +59,7 @@ getlogvars() {
 		HA_LOGLEVEL="debug"
 	if uselogd; then
 		[ -f "$LOGD_CF" ] || {
-			info "logd used but logd.cf not found: using defaults"
+			debug "logd used but logd.cf not found: using defaults"
 			return  # no configuration: use defaults
 		}
 		debug "reading log settings from $LOGD_CF"
