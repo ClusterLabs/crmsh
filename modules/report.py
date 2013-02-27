@@ -178,6 +178,22 @@ def filter(sl, log_l):
     '''
     node_l = [log2node(x) for x in log_l if x]
     return [x for x in sl if is_our_log(x, node_l)]
+def first_log_lines(log_l):
+    '''
+    Return a list of all first lines of the logs.
+    '''
+    f_list = [ open(x) for x in log_l if x ]
+    l = [ x.readline().rstrip() for x in f_list if x ]
+    junk = [ x.close() for x in f_list if x ]
+    return l
+def last_log_lines(log_l):
+    '''
+    Return a list of all last lines of the logs.
+    '''
+    f_list = [ open(x) for x in log_l if x ]
+    l = [ x.readlines()[-1].rstrip() for x in f_list if x ]
+    junk = [ x.close() for x in f_list if x ]
+    return l
 def convert_dt(dt):
     try: return time.mktime(dt.timetuple())
     except: return None
@@ -820,9 +836,9 @@ class Report(Singleton):
         Set from/to_dt.
         '''
         common_debug("setting report times: <%s> - <%s>" % (from_dt,to_dt))
-        need_refresh = (self.source == "live") and \
-            ((from_dt and self.from_dt and self.from_dt > from_dt) or \
-            (to_dt and self.to_dt and self.to_dt < to_dt))
+        need_refresh = (self.source == "live") and self.ready and \
+            ((from_dt and self.get_rpt_dt(None, "top") > from_dt) or \
+            (to_dt and self.get_rpt_dt(None, "bottom") < to_dt))
         self.from_dt = from_dt
         self.to_dt = to_dt
         if need_refresh:
@@ -1092,11 +1108,10 @@ class Report(Singleton):
         if dt:
             return dt
         try:
-            log_l = self.logobj.get_matches([])
             if whence == "top":
-                myts = syslog_ts(log_l[0])
+                myts = min([syslog_ts(x) for x in first_log_lines(self.log_l)])
             elif whence == "bottom":
-                myts = syslog_ts(log_l[-1])
+                myts = max([syslog_ts(x) for x in last_log_lines(self.log_l)])
             return datetime.datetime.fromtimestamp(myts)
         except:
             return None
