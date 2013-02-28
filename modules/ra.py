@@ -309,6 +309,10 @@ class RAInfo(object):
         common_err("%s: %s" % (self.ra_string(), s))
     def warn(self, s):
         common_warn("%s: %s" % (self.ra_string(), s))
+    def info(self, s):
+        common_info("%s: %s" % (self.ra_string(), s))
+    def debug(self, s):
+        common_debug("%s: %s" % (self.ra_string(), s))
     def set_advanced_params(self, l):
         self.advanced_params = l
     def filter_crmd_attributes(self):
@@ -562,6 +566,7 @@ class RAInfo(object):
             l = prog_meta(self.ra_class)
         else:
             l = ra_if().meta(self.ra_class,self.ra_type,self.ra_provider)
+        self.debug("read and cached meta-data")
         return wcache.store(id, l)
     def meta_pretty(self):
         '''

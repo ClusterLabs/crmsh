@@ -314,13 +314,16 @@ class CibObjectSet(object):
             return
         # we check the whole CIB for clashes as a clash may originate between
         # an object already committed and a new one
+        check_set = set([o.obj_id \
+            for o in self.obj_list if o.obj_type == "primitive"])
+        if not check_set:
+            return 0
         clash_dict = {}
         for obj in set_obj_all.obj_list:
             node = obj.node
             if is_primitive(node):
                 process_primitive(node, clash_dict)
         # but we only warn if a 'new' object is involved 
-        check_set = set([o.node.getAttribute("id") for o in self.obj_list if is_primitive(o.node)])
         rc = 0
         for param, resources in clash_dict.items():
             # at least one new object must be involved
