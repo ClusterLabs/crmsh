@@ -837,8 +837,7 @@ class Report(Singleton):
         '''
         common_debug("setting report times: <%s> - <%s>" % (from_dt,to_dt))
         need_refresh = (self.source == "live") and self.ready and \
-            ((from_dt and self.get_rpt_dt(None, "top") > from_dt) or \
-            (to_dt and self.get_rpt_dt(None, "bottom") < to_dt))
+            (from_dt and self.get_rpt_dt(None, "top") > from_dt)
         self.from_dt = from_dt
         self.to_dt = to_dt
         if need_refresh:
