@@ -15,7 +15,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-from os import getenv
+import os
 import subprocess
 import sys
 import datetime, time
@@ -36,10 +36,14 @@ options = Options.getInstance()
 termctrl = TerminalController.getInstance()
 
 def is_program(prog):
-    return subprocess.call("which %s >/dev/null 2>&1"%prog, shell=True) == 0
+    """Is this program available?"""
+    for p in os.getenv("PATH").split(os.pathsep):
+        filename = os.path.join(p, prog)
+        if os.path.isfile(filename) and os.access(filename, os.X_OK):
+            return True
 def find_program(envvar,*args):
-    if envvar and getenv(envvar):
-        return getenv(envvar)
+    if envvar and os.getenv(envvar):
+        return os.getenv(envvar)
     for prog in args:
         if is_program(prog):
             return prog

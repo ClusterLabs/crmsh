@@ -31,7 +31,11 @@ from term import TerminalController
 from msg import *
 
 def is_program(prog):
-    return subprocess.call("which %s >/dev/null 2>&1"%prog, shell=True) == 0
+    """Is this program available?"""
+    for p in os.getenv("PATH").split(os.pathsep):
+        filename = os.path.join(p, prog)
+        if os.path.isfile(filename) and os.access(filename, os.X_OK):
+            return True
 
 def ask(msg):
     # if there's no terminal, no use asking and default to "no"
