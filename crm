@@ -25,7 +25,7 @@ from distutils import version
 v_min = version.StrictVersion(minimum_version)
 v_this = version.StrictVersion(sys.version[:3])
 if v_min > v_this:
-    sys.stderr.write("abort: minimum python version support is %s\n", \
+    sys.stderr.write("abort: minimum python version support is %s\n" % \
         minimum_version)
     sys.exit(-1)
 
