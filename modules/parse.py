@@ -90,7 +90,9 @@ def parse_resource(s):
     el_type = s[0].lower()
     if el_type == "master": # ugly kludge :(
         el_type = "ms"
-    attr_lists_keyw = olist(["params","meta","utilization"])
+    attr_lists_keyw = olist(["params","meta"])
+    if el_type in ("primitive", "rsc_template"):
+        attr_lists_keyw.append("utilization")
     cli_list = []
     # the head
     head = []
