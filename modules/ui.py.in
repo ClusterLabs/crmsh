@@ -1215,11 +1215,16 @@ class NodeMgmt(UserInterface):
                 # fmt: id uname status
                 # remove only those in state "lost"
                 if a[1] == node:
+                    node_ref_du_jour = a[0]
+                    if is_pcmk_118():
+                        node_ref_du_jour = a[1]
                     node_states[a[2]] = 1
                     if a[2] == "lost":
-                        ec = ext_cmd("%s --force -R %s" % (self.crm_node,a[0]))
+                        ec = ext_cmd("%s --force -R %s" % \
+                            (self.crm_node,node_ref_du_jour))
                         if ec != 0:
-                            common_warn('"%s --force -R %s" failed, rc=%d' % (self.crm_node,a[0],ec))
+                            common_warn('"%s --force -R %s" failed, rc=%d' % \
+                                (self.crm_node,node_ref_du_jour,ec))
             if not node_states:
                 common_info("node %s not found by %s" % (node,self.crm_node))
             elif "member" in node_states:
