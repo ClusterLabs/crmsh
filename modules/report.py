@@ -653,6 +653,11 @@ class Report(Singleton):
         return True.
         '''
         return (time.time() - self.last_live_update) <= self.short_live_recent
+    def prevent_live_update(self):
+        '''
+        Don't update live report if to_time is set (not open end).
+        '''
+        return self.to_dt is not None
     def find_node_log(self, node):
         p = os.path.join(self.loc, node)
         for lf in ("ha-log.txt", "messages"):
@@ -1157,7 +1162,7 @@ class Report(Singleton):
         '''
         Search for events within the given transition.
         '''
-        if not self.prepare_source(no_live_update=True):
+        if not self.prepare_source(no_live_update=self.prevent_live_update()):
             return False
         t_obj = self.find_peinput(rpt_pe2t_str(rpt_pe_file))
         if not t_obj:
@@ -1176,7 +1181,7 @@ class Report(Singleton):
         '''
         Show resource relevant logs.
         '''
-        if not self.prepare_source(no_live_update=True):
+        if not self.prepare_source(no_live_update=self.prevent_live_update()):
             return False
         # expand groups (if any)
         expanded_l = []
@@ -1201,7 +1206,7 @@ class Report(Singleton):
         '''
         Show node relevant logs.
         '''
-        if not self.prepare_source(no_live_update=True):
+        if not self.prepare_source(no_live_update=self.prevent_live_update()):
             return False
         node_re_l = self.build_re("node",args)
         if not node_re_l:
@@ -1242,7 +1247,7 @@ class Report(Singleton):
             ("no-client", "no-user", "no-origin"))
         return '%s %s %s  %-13s %-10s %-10s %s' % tuple(l)
     def pelist(self, a=None, long=False):
-        if not self.prepare_source(no_live_update=True):
+        if not self.prepare_source(no_live_update=self.prevent_live_update()):
             return []
         if isinstance(a,(tuple,list)):
             if len(a) == 1:
