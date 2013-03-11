@@ -550,7 +550,7 @@ testsshconn() {
 findsshuser() {
 	local n u rc
 	local ssh_s ssh_user="__undef" try_user_list failed_nodes=""
-	try_user_list=${SSH_USER:-"\"\" $TRY_SSH"}
+	try_user_list="\"\" $TRY_SSH"
 	for n in $NODES; do
 		rc=1
 		[ "$n" = "$WE" ] && continue
@@ -574,7 +574,7 @@ findsshuser() {
 			failed_nodes="$failed_nodes $n"
 	done
 	[ -n "$failed_nodes" ] &&
-		warning "ssh to node(s)$failed_nodes does not work"
+		warning "ssh to node(s) $failed_nodes does not work"
 	# drop nodes we cannot reach
 	NODES=`for n in $failed_nodes $NODES; do echo $n; done | sort | uniq -u`
 	if [ "$ssh_user" != "__undef" ]; then
@@ -1325,7 +1325,13 @@ if ! is_collector; then
 #
 	# find out if ssh works
 	if [ -z "$NO_SSH" ]; then
-		findsshuser
+		if [ -n "$SSH_USER" ]
+			# if the ssh user was supplied, consider that it
+			# works; helps reduce the number of ssh invocations
+			SSH_OPTS_AUTH="$SSH_OPTS -l $SSH_USER"
+		else
+			findsshuser
+		fi
 	fi
 fi
 
