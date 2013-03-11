@@ -155,6 +155,7 @@ class Vars(Singleton):
         "failure-timeout", "resource-stickiness", "target-role",
         "restart-type", "description",
     )
+    group_meta_attributes = ("container", )
     clone_meta_attributes = (
         "ordered", "notify", "interleave", "globally-unique",
         "clone-max", "clone-node-max", "clone-state", "description",

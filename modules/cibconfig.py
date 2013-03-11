@@ -1460,6 +1460,8 @@ class CibContainer(CibObject):
             l += vars.clone_meta_attributes
         elif self.obj_type == "ms":
             l += vars.clone_meta_attributes + vars.ms_meta_attributes
+        elif self.obj_type == "group":
+            l += vars.group_meta_attributes
         rc = sanity_check_meta(self.obj_id,self.node,l)
         return rc
     def repr_gv(self, gv_obj):
