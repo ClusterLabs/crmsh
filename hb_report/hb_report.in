@@ -533,7 +533,7 @@ start_slave_collector() {
 	if [ "$node" = "$WE" ]; then
 		$SUDO hb_report __slave
 	else
-		ssh $SSH_OPTS_AUTH $node \
+		ssh $SSH_OPTS $node \
 			"$SUDO hb_report __slave"
 	fi | (cd $WORKDIR && tar xf -) &
 
@@ -579,9 +579,7 @@ findsshuser() {
 	NODES=`for n in $failed_nodes $NODES; do echo $n; done | sort | uniq -u`
 	if [ "$ssh_user" != "__undef" ]; then
 		if [ "$ssh_user" != '""' ]; then
-			SSH_OPTS_AUTH="$SSH_OPTS -l $ssh_user"
-		else
-			SSH_OPTS_AUTH="$SSH_OPTS"
+			SSH_OPTS="$SSH_OPTS -l $ssh_user"
 		fi
 	else
 		return 1
@@ -1328,7 +1326,7 @@ if ! is_collector; then
 		if [ -n "$SSH_USER" ]
 			# if the ssh user was supplied, consider that it
 			# works; helps reduce the number of ssh invocations
-			SSH_OPTS_AUTH="$SSH_OPTS -l $SSH_USER"
+			SSH_OPTS="$SSH_OPTS -l $SSH_USER"
 		else
 			findsshuser
 		fi
