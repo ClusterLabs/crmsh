@@ -816,8 +816,8 @@ Usage:
 
 Start a resource by setting the `target-role` attribute. If there
 are multiple meta attributes sets, the attribute is set in all of
-them. If the resource is a group or a clone, all `target-role`
-attributes are removed from the children resources.
+them. If the resource is a clone, all `target-role` attributes
+are removed from the children resources.
 
 Usage:
 ...............
@@ -829,8 +829,8 @@ Usage:
 
 Stop a resource using the `target-role` attribute. If there
 are multiple meta attributes sets, the attribute is set in all of
-them. If the resource is a group or a clone, all `target-role`
-attributes are removed from the children resources.
+them. If the resource is a clone, all `target-role` attributes
+are removed from the children resources.
 
 Usage:
 ...............
@@ -887,8 +887,8 @@ Usage:
 
 Manage a resource using the `is-managed` attribute. If there
 are multiple meta attributes sets, the attribute is set in all of
-them. If the resource is a group or a clone, all `is-managed`
-attributes are removed from the children resources.
+them. If the resource is a clone, all `is-managed` attributes are
+removed from the children resources.
 
 Usage:
 ...............
@@ -900,8 +900,8 @@ Usage:
 
 Unmanage a resource using the `is-managed` attribute. If there
 are multiple meta attributes sets, the attribute is set in all of
-them. If the resource is a group or a clone, all `is-managed`
-attributes are removed from the children resources.
+them. If the resource is a clone, all `is-managed` attributes are
+removed from the children resources.
 
 Usage:
 ...............
