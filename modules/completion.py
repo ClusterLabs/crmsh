@@ -489,6 +489,8 @@ completer_lists = {
         "show" : (nodes_list,),
         "standby" : (nodes_list,),
         "online" : (nodes_list,),
+        "maintenance" : (nodes_list,),
+        "ready" : (nodes_list,),
         "fence" : (nodes_list,),
         "delete" : (nodes_list,),
         "clearstate" : (nodes_list,),

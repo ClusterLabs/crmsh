@@ -1061,7 +1061,8 @@ class NodeMgmt(UserInterface):
     Nodes management class
     '''
     lvl_name = "node"
-    node_standby = "crm_attribute -N '%s' -n standby -v '%s' %s"
+    node_standby = "crm_attribute -t nodes -N '%s' -n standby -v '%s' %s"
+    node_maint = "crm_attribute -t nodes -N '%s' -n maintenance -v '%s'"
     node_delete = "cibadmin -D -o nodes -X '<node uname=\"%s\"/>'"
     node_delete_status = "cibadmin -D -o status -X '<node_state uname=\"%s\"/>'"
     node_clear_state = "cibadmin %s -o status --xml-text '<node_state id=\"%s\" uname=\"%s\" ha=\"active\" in_ccm=\"false\" crmd=\"offline\" join=\"member\" expected=\"down\" crm-debug-origin=\"manual_clear\" shutdown=\"0\"/>'"
@@ -1090,6 +1091,8 @@ class NodeMgmt(UserInterface):
         self.cmd_table["show"] = (self.show,(0,1),0,0)
         self.cmd_table["standby"] = (self.standby,(0,2),0,1)
         self.cmd_table["online"] = (self.online,(0,1),0,1)
+        self.cmd_table["maintenance"] = (self.maintenance,(0,1),0,1)
+        self.cmd_table["ready"] = (self.ready,(0,1),0,1)
         self.cmd_table["fence"] = (self.fence,(1,1),0,1)
         self.cmd_table["delete"] = (self.delete,(1,1),0,0)
         self.cmd_table["clearstate"] = (self.clearstate,(1,1),0,1)
@@ -1176,6 +1179,20 @@ class NodeMgmt(UserInterface):
         if not is_name_sane(node):
             return False
         return ext_cmd(self.node_standby%(node,"off","--lifetime='forever'")) == 0
+    def maintenance(self,cmd,node = None):
+        'usage: maintenance [<node>]'
+        if not node:
+            node = vars.this_node
+        if not is_name_sane(node):
+            return False
+        return ext_cmd(self.node_maint%(node,"on")) == 0
+    def ready(self,cmd,node = None):
+        'usage: ready [<node>]'
+        if not node:
+            node = vars.this_node
+        if not is_name_sane(node):
+            return False
+        return ext_cmd(self.node_maint%(node,"off")) == 0
     def fence(self,cmd,node):
         'usage: fence <node>'
         if not node:

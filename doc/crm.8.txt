@@ -1147,6 +1147,31 @@ Usage:
         online [<node>]
 ...............
 
+[[cmdhelp_node_maintenance,put node into maintenance mode]]
+==== `maintenance`
+
+Set the node status to maintenance. This is equivalent to the
+cluster-wide `maintenance-mode` property but puts just one node
+into the maintenance mode. The node parameter defaults to the
+node where the command is run.
+
+Usage:
+...............
+        maintenance [<node>]
+...............
+
+[[cmdhelp_node_ready,put node into ready mode]]
+==== `ready`
+
+Set the node's maintenance status to `off`. The node should be
+now again fully operational and capable of running resource
+operations.
+
+Usage:
+...............
+        ready [<node>]
+...............
+
 [[cmdhelp_node_fence,fence node]]
 ==== `fence`
 
