@@ -1038,7 +1038,7 @@ getlog() {
 		fi
 		return
 	fi
-	if [ "$cnt" ] && [ $cnt -eq $NODECNT ]; then
+	if [ "$cnt" ] && [ $cnt -gt 1 -a $cnt -eq $NODECNT ]; then
 		MASTER_IS_HOSTLOG=1
 		info "found the central log!"
 	fi
