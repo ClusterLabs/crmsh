@@ -245,7 +245,19 @@ ssh::
 	semi-automated report generation. See below for instructions.
 	+
 	If you need to supply a password for your passphrase/login, then
-	please use the `-u` option.
+	always use the `-u` option.
+
+sudo::
+	If the ssh user (as specified with the `-u` option) is other
+	than `root`, then `hb_report` uses `sudo` to collect the
+	information which is readable only by the `root` user. In that
+	case it is required to setup the `sudoers` file properly. The
+	user (or group to which the user belongs) should have the
+	following line:
+	+
+	<user> ALL = NOPASSWD: /usr/sbin/hb_report
+	+
+	See the `sudoers(5)` man page for more details.
 
 Times::
 	In order to find files and messages in the given period and to
@@ -357,10 +369,6 @@ you'll have to copy the log to one of the nodes and tell us where
 it is:
 
 	# hb_report -f 5:20pm -t 5:30pm -l /var/tmp/ha-log -S /tmp/report_node1
-
-If you reconsider and want the ssh setup, take a look at the CTS
-README file for instructions.
-
 
 OPERATION
 ---------
