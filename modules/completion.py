@@ -181,6 +181,26 @@ def skills_list(idx,delimiter = False):
     if delimiter:
         return ' '
     return user_prefs.skill_levels.keys()
+def output_types_list(idx,delimiter = False):
+    if delimiter:
+        return ' '
+    return user_prefs.output_types
+def check_frequency_list(idx,delimiter = False):
+    if delimiter:
+        return ' '
+    return user_prefs.check_frequencies
+def check_mode_list(idx,delimiter = False):
+    if delimiter:
+        return ' '
+    return user_prefs.check_modes
+def manage_children_list(idx,delimiter = False):
+    if delimiter:
+        return ' '
+    return user_prefs.manage_children_options
+def yesno_list(idx,delimiter = False):
+    if delimiter:
+        return ' '
+    return ["yes", "no"]
 def ra_classes_list(idx,delimiter = False):
     if delimiter:
         return ':'
@@ -435,11 +455,13 @@ completer_lists = {
         "editor" : None,
         "pager" : None,
         "user" : None,
-        "output" : None,
+        "output" : (output_types_list,),
         "colorscheme" : None,
-        "check-frequency" : None,
-        "check-mode" : None,
-        "sort-elements" : None,
+        "check-frequency" : (check_frequency_list,),
+        "check-mode" : (check_mode_list,),
+        "sort-elements" : (yesno_list,),
+        "manage-children" : (manage_children_list,),
+        "add-quotes" : (yesno_list,),
         "save" : None,
         "show" : None,
     },
