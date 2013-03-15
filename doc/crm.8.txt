@@ -819,6 +819,8 @@ are multiple meta attributes sets, the attribute is set in all of
 them. If the resource is a clone, all `target-role` attributes
 are removed from the children resources.
 
+For details on group management see <<cmdhelp_options_manage-children,`options manage-children`>>.
+
 Usage:
 ...............
         start <rsc>
@@ -831,6 +833,8 @@ Stop a resource using the `target-role` attribute. If there
 are multiple meta attributes sets, the attribute is set in all of
 them. If the resource is a clone, all `target-role` attributes
 are removed from the children resources.
+
+For details on group management see <<cmdhelp_options_manage-children,`options manage-children`>>.
 
 Usage:
 ...............
@@ -846,6 +850,8 @@ the stop to finish, that is for all resources to really stop, and
 only then to order the start action. Due to this command
 entailing a whole set of operations, informational messages are
 printed to let the user see some progress.
+
+For details on group management see <<cmdhelp_options_manage-children,`options manage-children`>>.
 
 Usage:
 ...............
@@ -890,6 +896,8 @@ are multiple meta attributes sets, the attribute is set in all of
 them. If the resource is a clone, all `is-managed` attributes are
 removed from the children resources.
 
+For details on group management see <<cmdhelp_options_manage-children,`options manage-children`>>.
+
 Usage:
 ...............
         manage <rsc>
@@ -902,6 +910,8 @@ Unmanage a resource using the `is-managed` attribute. If there
 are multiple meta attributes sets, the attribute is set in all of
 them. If the resource is a clone, all `is-managed` attributes are
 removed from the children resources.
+
+For details on group management see <<cmdhelp_options_manage-children,`options manage-children`>>.
 
 Usage:
 ...............
@@ -1490,6 +1500,49 @@ the following:
     # crm configure filter 'sed "s/hostlist=./&node-c /"' fencing
 ...............
 ****************************
+
+[[cmdhelp_options_manage-children,how to handle children resource attributes]]
+==== `manage-children`
+
+Some resource management commands, such as `resource stop`, when
+the target resource is a group, may not always produce desired
+result. Each element, group and the primitive members, can have a
+meta attribute and those attributes may end up with conflicting
+values. Consider the following construct:
+...............
+    crm(live)# configure show svc fs virtual-ip
+    primitive fs ocf:heartbeat:Filesystem \
+            params device="/dev/drbd0" directory="/srv/nfs" fstype="ext3" \
+            op monitor interval="10s" \
+            meta target-role="Started"
+    primitive virtual-ip ocf:heartbeat:IPaddr2 \
+            params ip="10.2.13.110" iflabel="1" \
+            op monitor interval="10s" \
+            op start interval="0" \
+            meta target-role="Started"
+    group svc fs virtual-ip \
+            meta target-role="Stopped"
+...............
+
+Even though the element `svc` should be stopped, the group is
+actually running because all its members have the `target-role`
+set to `Started`:
+...............
+    crm(live)# resource show svc
+    resource svc is running on: xen-f 
+...............
+
+Hence, if the user invokes `resource stop svc` the intention is
+not clear. This preference gives the user an opportunity to
+better control what happens if attributes of group members have
+values which are in conflict with the same attribute of the group
+itself.
+
+Possible values are `ask` (the default), `always`, and `never`.
+If set to `always`, the crm shell removes all children attributes
+which have values different from the parent. If set to `never`,
+all children attributes are left intact. Finally, if set to
+`ask`, the user will be asked for each member what is to be done.
 
 [[cmdhelp_options_show,show current user preference]]
 ==== `show`

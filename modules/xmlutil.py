@@ -384,11 +384,16 @@ def is_clone(node):
 def is_clonems(node):
     return is_element(node) \
         and node.tagName in vars.clonems_tags
-def is_cloned(node):
-    return is_element(node) \
-        and (node.parentNode.tagName in vars.clonems_tags or \
+def is_cloned(node, tag=None):
+    if not is_element(node):
+        return False
+    return node.parentNode.tagName in vars.clonems_tags or \
             (node.parentNode.tagName == "group" and \
-            node.parentNode.parentNode.tagName in vars.clonems_tags))
+            node.parentNode.parentNode.tagName in vars.clonems_tags)
+def cloned_el(node):
+    for c in node.childNodes:
+        if is_resource(c):
+            return c.tagName
 def is_container(node):
     return is_element(node) \
         and node.tagName in vars.container_tags

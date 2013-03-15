@@ -61,6 +61,7 @@ class UserPrefs(Singleton):
     output_types = ("plain", "color", "uppercase")
     check_frequencies = ("always", "on-verify", "never")
     check_modes = ("strict", "relaxed")
+    manage_children_options = ("ask", "never", "always")
     def __init__(self):
         self.skill_level = 2 #TODO: set back to 0?
         self.editor = find_program("EDITOR","vim","vi","emacs","nano")
@@ -86,6 +87,7 @@ class UserPrefs(Singleton):
         self.sort_elems = "yes"
         self.wait = False
         self.add_quotes = "yes"
+        self.manage_children = "ask"
     def missing(self,n):
         common_err("could not find any %s on the system" % n)
     def check_skill_level(self,n):
@@ -179,6 +181,13 @@ class UserPrefs(Singleton):
         self.add_quotes = is_boolean_true(opt) and "yes" or "no"
     def get_add_quotes(self):
         return self.add_quotes == "yes"
+    def set_manage_children(self, opt):
+        if opt not in self.manage_children_options:
+            common_err("no %s manage_children option" % opt)
+            return False
+        self.manage_children = opt
+    def get_manage_children(self):
+        return self.manage_children
     def write_rc(self,f):
         print >>f, '%s "%s"' % ("editor",self.editor)
         print >>f, '%s "%s"' % ("pager",self.pager)
@@ -191,6 +200,7 @@ class UserPrefs(Singleton):
         print >>f, '%s "%s"' % ("check-mode",self.check_mode)
         print >>f, '%s "%s"' % ("wait",self.wait)
         print >>f, '%s "%s"' % ("add-quotes",self.add_quotes)
+        print >>f, '%s "%s"' % ("manage-children",self.manage_children)
     def save_options(self,rc_file):
         try: f = open(rc_file,"w")
         except IOError,msg:

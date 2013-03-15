@@ -281,3 +281,351 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
   </configuration>
 </cib>
 
+.TRY configure group g p0 p3
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <group id="g">
+        <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy"/>
+        <primitive class="ocf" id="p3" provider="pacemaker" type="Dummy">
+          <meta_attributes id="p3-meta_attributes">
+            <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
+          </meta_attributes>
+        </primitive>
+      </group>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY options manage-children never
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <group id="g">
+        <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy"/>
+        <primitive class="ocf" id="p3" provider="pacemaker" type="Dummy">
+          <meta_attributes id="p3-meta_attributes">
+            <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
+          </meta_attributes>
+        </primitive>
+      </group>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource start g
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <group id="g">
+        <meta_attributes id="g-meta_attributes">
+          <nvpair id="g-meta_attributes-target-role" name="target-role" value="Started"/>
+        </meta_attributes>
+        <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy"/>
+        <primitive class="ocf" id="p3" provider="pacemaker" type="Dummy">
+          <meta_attributes id="p3-meta_attributes">
+            <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
+          </meta_attributes>
+        </primitive>
+      </group>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource start p0
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <group id="g">
+        <meta_attributes id="g-meta_attributes">
+          <nvpair id="g-meta_attributes-target-role" name="target-role" value="Started"/>
+        </meta_attributes>
+        <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy">
+          <meta_attributes id="p0-meta_attributes">
+            <nvpair id="p0-meta_attributes-target-role" name="target-role" value="Started"/>
+          </meta_attributes>
+        </primitive>
+        <primitive class="ocf" id="p3" provider="pacemaker" type="Dummy">
+          <meta_attributes id="p3-meta_attributes">
+            <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
+          </meta_attributes>
+        </primitive>
+      </group>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource stop g
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <group id="g">
+        <meta_attributes id="g-meta_attributes">
+          <nvpair id="g-meta_attributes-target-role" name="target-role" value="Stopped"/>
+        </meta_attributes>
+        <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy">
+          <meta_attributes id="p0-meta_attributes">
+            <nvpair id="p0-meta_attributes-target-role" name="target-role" value="Started"/>
+          </meta_attributes>
+        </primitive>
+        <primitive class="ocf" id="p3" provider="pacemaker" type="Dummy">
+          <meta_attributes id="p3-meta_attributes">
+            <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
+          </meta_attributes>
+        </primitive>
+      </group>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY configure clone cg g
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <clone id="cg">
+        <group id="g">
+          <meta_attributes id="g-meta_attributes">
+            <nvpair id="g-meta_attributes-target-role" name="target-role" value="Stopped"/>
+          </meta_attributes>
+          <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy">
+            <meta_attributes id="p0-meta_attributes">
+              <nvpair id="p0-meta_attributes-target-role" name="target-role" value="Started"/>
+            </meta_attributes>
+          </primitive>
+          <primitive class="ocf" id="p3" provider="pacemaker" type="Dummy">
+            <meta_attributes id="p3-meta_attributes">
+              <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
+            </meta_attributes>
+          </primitive>
+        </group>
+      </clone>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY options manage-children always
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <clone id="cg">
+        <group id="g">
+          <meta_attributes id="g-meta_attributes">
+            <nvpair id="g-meta_attributes-target-role" name="target-role" value="Stopped"/>
+          </meta_attributes>
+          <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy">
+            <meta_attributes id="p0-meta_attributes">
+              <nvpair id="p0-meta_attributes-target-role" name="target-role" value="Started"/>
+            </meta_attributes>
+          </primitive>
+          <primitive class="ocf" id="p3" provider="pacemaker" type="Dummy">
+            <meta_attributes id="p3-meta_attributes">
+              <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
+            </meta_attributes>
+          </primitive>
+        </group>
+      </clone>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource start g
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <clone id="cg">
+        <meta_attributes id="cg-meta_attributes">
+          <nvpair id="cg-meta_attributes-target-role" name="target-role" value="Started"/>
+        </meta_attributes>
+        <group id="g">
+          <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy">
+            <meta_attributes id="p0-meta_attributes">
+              <nvpair id="p0-meta_attributes-target-role" name="target-role" value="Started"/>
+            </meta_attributes>
+          </primitive>
+          <primitive class="ocf" id="p3" provider="pacemaker" type="Dummy"/>
+        </group>
+      </clone>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource stop g
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <clone id="cg">
+        <meta_attributes id="cg-meta_attributes">
+          <nvpair id="cg-meta_attributes-target-role" name="target-role" value="Stopped"/>
+        </meta_attributes>
+        <group id="g">
+          <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy"/>
+          <primitive class="ocf" id="p3" provider="pacemaker" type="Dummy"/>
+        </group>
+      </clone>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource start cg
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <clone id="cg">
+        <meta_attributes id="cg-meta_attributes">
+          <nvpair id="cg-meta_attributes-target-role" name="target-role" value="Started"/>
+        </meta_attributes>
+        <group id="g">
+          <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy"/>
+          <primitive class="ocf" id="p3" provider="pacemaker" type="Dummy"/>
+        </group>
+      </clone>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource stop p0
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <clone id="cg">
+        <meta_attributes id="cg-meta_attributes">
+          <nvpair id="cg-meta_attributes-target-role" name="target-role" value="Started"/>
+        </meta_attributes>
+        <group id="g">
+          <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy">
+            <meta_attributes id="p0-meta_attributes">
+              <nvpair id="p0-meta_attributes-target-role" name="target-role" value="Stopped"/>
+            </meta_attributes>
+          </primitive>
+          <primitive class="ocf" id="p3" provider="pacemaker" type="Dummy"/>
+        </group>
+      </clone>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource start cg
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <clone id="cg">
+        <meta_attributes id="cg-meta_attributes">
+          <nvpair id="cg-meta_attributes-target-role" name="target-role" value="Started"/>
+        </meta_attributes>
+        <group id="g">
+          <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy"/>
+          <primitive class="ocf" id="p3" provider="pacemaker" type="Dummy"/>
+        </group>
+      </clone>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource stop cg
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib admin_epoch="0" crm_feature_set="3.0.1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" epoch="0" have-quorum="1" num_updates="1" remote-tls-port="0" validate-with="pacemaker-1.1">
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <clone id="cg">
+        <meta_attributes id="cg-meta_attributes">
+          <nvpair id="cg-meta_attributes-target-role" name="target-role" value="Stopped"/>
+        </meta_attributes>
+        <group id="g">
+          <primitive class="ocf" id="p0" provider="pacemaker" type="Dummy"/>
+          <primitive class="ocf" id="p3" provider="pacemaker" type="Dummy"/>
+        </group>
+      </clone>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+

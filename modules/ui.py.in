@@ -148,6 +148,7 @@ class CliOptions(UserInterface):
         self.cmd_table["sort-elements"] = (self.set_sort_elements,(1,1),0,0)
         self.cmd_table["wait"] = (self.set_wait,(1,1),0,0)
         self.cmd_table["add-quotes"] = (self.set_add_quotes,(1,1),0,0)
+        self.cmd_table["manage-children"] = (self.set_manage_children,(1,1),0,0)
         self.cmd_table["save"] = (self.save_options,(0,0),0,0)
         self.cmd_table["show"] = (self.show_options,(0,0),0,0)
         setup_aliases(self)
@@ -194,6 +195,9 @@ class CliOptions(UserInterface):
             common_err("%s: bad boolean option"%opt)
             return True
         return user_prefs.set_add_quotes(opt)
+    def set_manage_children(self,cmd,opt):
+        "usage: manage-children <option>"
+        return user_prefs.set_manage_children(opt)
     def show_options(self,cmd):
         "usage: show"
         return user_prefs.write_rc(sys.stdout)
@@ -696,7 +700,7 @@ def manage_attr(cmd,attr_ext_commands,*args):
         bad_usage(cmd,' '.join(args))
         return False
 
-def rm_meta_attribute(node,attr,l):
+def rm_meta_attribute(node,attr,l, force_children=False):
     '''
     Build a list of nvpair nodes which contain attribute
     (recursively in all children resources)
@@ -708,22 +712,53 @@ def rm_meta_attribute(node,attr,l):
             nvpair = get_attr_in_set(c,attr)
             if nvpair:
                 l.append(nvpair)
-        elif is_child_rsc(c) and not c.parentNode.tagName == "group":
-            rm_meta_attribute(c,attr,l)
-def clean_inferior_attributes(node,attr):
-    'Remove attr from all resources below'
+        elif force_children or \
+                (is_child_rsc(c) and not c.parentNode.tagName == "group"):
+            rm_meta_attribute(c,attr,l, force_children=force_children)
+def get_children_with_different_attr(node,attr,value):
     l = []
-    for c in node.childNodes:
-        if is_child_rsc(c):
-            rm_meta_attribute(c,attr,l)
-    rmnodes(l)
+    for p in node.getElementsByTagName("primitive"):
+        diff_attr = False
+        for meta_set in get_set_nodes(p, "meta_attributes", 0):
+            p_value = get_attr_value(meta_set,attr)
+            if p_value != None and p_value != value:
+                diff_attr = True
+                break
+        if diff_attr:
+            l.append(p)
+    return l
+def set_deep_meta_attr_node(target_node,attr,value):
+    nvpair_l = []
+    if is_clone(target_node):
+        for c in target_node.childNodes:
+            if is_child_rsc(c):
+                rm_meta_attribute(c,attr,nvpair_l)
+    if user_prefs.get_manage_children() != "never" and \
+            (is_group(target_node) or \
+            (is_clone(target_node) and cloned_el(target_node) == "group")):
+        odd_children = get_children_with_different_attr(target_node,attr,value)
+        for c in odd_children:
+            if user_prefs.get_manage_children() == "always" or \
+                    (user_prefs.get_manage_children() == "ask" and \
+                    ask("Do you want to override %s for child resource %s?" % (attr, c.getAttribute("id")))):
+                common_debug("force remove meta attr %s from %s" % \
+                    (attr, c.getAttribute("id")))
+                rm_meta_attribute(c,attr,nvpair_l, force_children=True)
+    rmnodes(list(set(nvpair_l)))
+    for n in get_set_nodes(target_node,"meta_attributes",1):
+        set_attr(n,attr,value)
+    return commit_rsc(target_node)
 def set_deep_meta_attr(attr,value,rsc_id):
     '''
     If the referenced rsc is a primitive that belongs to a group,
     then set its attribute.
     Otherwise, go up to the topmost resource which contains this
-    resource and set the attribute there and remove all the
-    attributes which may be set in its children.
+    resource and set the attribute there (i.e. if the resource is
+    cloned).
+    If it's a group then check its children. If any of them has
+    the attribute set to a value different from the one given,
+    then ask the user whether to reset them or not (exact
+    behaviour depends on the value of user_prefs.get_manage_children()).
     '''
     target_node = rsc2node(rsc_id)
     if not target_node:
@@ -732,10 +767,7 @@ def set_deep_meta_attr(attr,value,rsc_id):
     if not (target_node.tagName == "primitive" and \
         target_node.parentNode.tagName == "group"):
         target_node = get_topmost_rsc(target_node)
-    clean_inferior_attributes(target_node,attr)
-    for n in get_set_nodes(target_node,"meta_attributes",1):
-        set_attr(n,attr,value)
-    return commit_rsc(target_node)
+    return set_deep_meta_attr_node(target_node,attr,value)
 
 def get_max_clone(id):
     v = get_meta_param(id,"clone-max")

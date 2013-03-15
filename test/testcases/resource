@@ -17,3 +17,16 @@ resource param p0 delete a0
 resource meta p0 set m0 123
 resource meta p0 show m0
 resource meta p0 delete m0
+configure group g p0 p3
+options manage-children never
+resource start g
+resource start p0
+resource stop g
+configure clone cg g
+options manage-children always
+resource start g
+resource stop g
+resource start cg
+resource stop p0
+resource start cg
+resource stop cg
