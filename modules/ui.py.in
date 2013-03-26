@@ -2282,7 +2282,7 @@ class History(UserInterface):
         import difflib
         fromlines = s1.split('\n')
         tolines = s2.split('\n')
-        diff_l = difflib.HtmlDiff(wrapcolumn=60).make_file( \
+        diff_l = difflib.HtmlDiff(wrapcolumn=60).make_table( \
             fromlines, tolines, t1, t2)
         return ''.join(diff_l)
     def _diff(self, pe_fun, t1, t2, html=False):
