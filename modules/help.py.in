@@ -104,7 +104,7 @@ def add_shorthelp(topic,shorthelp,short_tab):
 def topic_help(help_tab,topic):
     if topic not in help_tab:
         print "Sorry, could not find any help for %s" % topic
-        return
+        return False
     if type(help_tab[topic][0]) == type(()):
         shorthelp = help_tab[topic][0][0]
         longhelp = help_tab[topic][0][1]
@@ -115,6 +115,7 @@ def topic_help(help_tab,topic):
         page_string(longhelp)
     else:
         print shorthelp
+    return True
 
 def add_static_help(help_tab):
     '''Add help items used everywhere'''
@@ -193,11 +194,12 @@ class HelpSystem(object):
         # topic '.' is a special entry for the top level
         if not help_tab:
             common_info("sorry, help not available")
-            return
+            return False
         if not topic or topic == "topics":
             self.overview(help_tab)
         else:
-            topic_help(help_tab,topic)
+            return topic_help(help_tab,topic)
+        return True
     def open_file(self,name,mode):
         try:
             f = open(name,mode)

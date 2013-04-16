@@ -120,7 +120,7 @@ class UserInterface(object):
                 self.help_table = help_sys.load_level(self.lvl_name)
                 setup_help_aliases(self)
             help_tab = self.help_table
-        help_sys.cmd_help(help_tab,topic)
+        return help_sys.cmd_help(help_tab,topic)
     def end(self,cmd,dir = ".."):
         "usage: end"
         self.end_game()
