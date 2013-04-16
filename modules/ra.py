@@ -42,7 +42,7 @@ class RaLrmd(object):
         '''
         Get information directly from lrmd using lrmadmin.
         '''
-        l = stdout2list("%s %s" % (lrmadmin_prog,opts))
+        rc, l = stdout2list("%s %s" % (lrmadmin_prog,opts))
         if l and not xml:
             l = l[1:] # skip the first line
         return l
@@ -73,15 +73,15 @@ class RaOS(object):
     def meta(self, ra_class,ra_type,ra_provider):
         l = []
         if ra_class == "ocf":
-            l = stdout2list("%s/resource.d/%s/%s meta-data" % \
+            rc, l = stdout2list("%s/resource.d/%s/%s meta-data" % \
                 (os.environ["OCF_ROOT"],ra_provider,ra_type))
         elif ra_class == "stonith":
             if ra_type.startswith("fence_") and os.path.exists("/usr/sbin/%s" %  ra_type):
-                l = stdout2list("/usr/sbin/%s -o metadata" % ra_type)
+                rc, l = stdout2list("/usr/sbin/%s -o metadata" % ra_type)
             else:
-                l = stdout2list("stonith -m -t %s" % ra_type)
+                rc, l = stdout2list("stonith -m -t %s" % ra_type)
         elif ra_class == "nagios":
-            l = stdout2list("%s/check_%s --metadata" % \
+            rc, l = stdout2list("%s/check_%s --metadata" % \
                 (vars.nagios_dir, ra_type))
         return l
     def providers(self, ra_type,ra_class = "ocf"):
@@ -105,7 +105,11 @@ class RaOS(object):
         elif ra_class == "lsb":
             l = os_types_list("/etc/init.d/*")
         elif ra_class == "stonith":
-            l = stdout2list("stonith -L")
+            rc, l = stdout2list("stonith -L")
+            if rc != 0:
+                # stonith(8) may not be installed
+                common_debug("stonith exited with code %d" % rc)
+                l = []
             l.extend(os_types_list("/usr/sbin/fence_*"))
         elif ra_class == "nagios":
             l = os_types_list("%s/check_*" % vars.nagios_dir)
@@ -128,7 +132,13 @@ class RaCrmResource(object):
         '''
         Get information from crm_resource.
         '''
-        return stdout2list("crm_resource %s" % opts, stderr_on=False)
+        rc, s = stdout2list("crm_resource %s" % opts, stderr_on=False)
+        # not clear when/why crm_resource exits with non-zero
+        # code
+        if rc != 0:
+            common_debug("crm_resource %s exited with code %d" % \
+                (opts, rc))
+        return s
     def meta(self, ra_class,ra_type,ra_provider):
         return self.crm_resource("--show-metadata %s:%s:%s"%(ra_class,ra_provider,ra_type))
     def providers(self, ra_type,ra_class = "ocf"):
@@ -153,7 +163,7 @@ def can_use_lrmadmin():
     # after this glue release all users can get meta-data and
     # similar from lrmd
     minimum_glue = "1.0.10"
-    glue_ver = get_stdout("%s -v" % lrmadmin_prog, stderr_on = False)
+    rc, glue_ver = get_stdout("%s -v" % lrmadmin_prog, stderr_on = False)
     if not glue_ver: #lrmadmin probably not found
         return False
     v_min = version.LooseVersion(minimum_glue)
@@ -161,7 +171,7 @@ def can_use_lrmadmin():
     return v_this >= v_min or \
         (getpwdent()[0] in ("root",vars.crm_daemon_user))
 def crm_resource_support():
-    s = get_stdout("crm_resource --list-standards", stderr_on = False)
+    rc, s = get_stdout("crm_resource --list-standards", stderr_on = False)
     return s != ""
 def ra_if():
     if vars.ra_if:
@@ -261,7 +271,10 @@ def prog_meta(prog):
     '''
     l = []
     if is_program(prog):
-        l = stdout2list("%s metadata" % prog)
+        rc, l = stdout2list("%s metadata" % prog)
+        if rc != 0:
+            common_debug("%s metadata exited with code %d" % (prog, rc))
+            l = []
     return l
 def get_nodes_text(n,tag):
     try:

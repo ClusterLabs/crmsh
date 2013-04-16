@@ -318,7 +318,7 @@ class CibShadow(UserInterface):
             return False
     def diff(self,cmd):
         "usage: diff"
-        s = get_stdout(add_sudo("%s -d" % self.extcmd_stdout))
+        rc, s = get_stdout(add_sudo("%s -d" % self.extcmd_stdout))
         page_string(s)
     def list(self,cmd):
         "usage: list"
@@ -1256,7 +1256,8 @@ class NodeMgmt(UserInterface):
             rc = ext_cmd(self.hb_delnode%node) == 0
         else:
             node_states = {}
-            for s in stdout2list("%s -l" % self.crm_node):
+            ec, l = stdout2list("%s -l" % self.crm_node)
+            for s in l:
                 a = s.split()
                 if len(a) != 3:
                     common_warn("%s bad format: %s" % (self.crm_node,s))
@@ -2239,11 +2240,24 @@ class History(UserInterface):
     def _pe_status(self, pe_f):
         '''Return status as a string.'''
         self._setup_cib_env(pe_f)
-        return crm_mon()
+        rc, s = crm_mon()
+        if rc != 0:
+            if s:
+                common_err("crm_mon exited with code %d and said: %s" % \
+                    (rc, s))
+            else:
+                common_err("crm_mon exited with code %d" % rc)
+            return None
+        return s
     def _pe_status_nohdr(self, pe_f):
         '''Return status (without header) as a string.'''
         self._setup_cib_env(pe_f)
-        l = crm_mon().split('\n')
+        rc, s = crm_mon()
+        if rc != 0:
+            common_err("crm_mon exited with code %d and said: %s" % \
+                (rc, s))
+            return None
+        l = s.split('\n')
         for i,ln in enumerate(l):
             if ln == "":
                 break
@@ -2272,7 +2286,7 @@ class History(UserInterface):
         f1 = str2tmp(s1)
         f2 = str2tmp(s2)
         if f1 and f2:
-            s = get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" % (t1,t2,f1,f2))
+            rc, s = get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" % (t1,t2,f1,f2))
         try: os.unlink(f1)
         except: pass
         try: os.unlink(f2)
@@ -2456,7 +2470,7 @@ class Site(UserInterface):
             return False
         if subcmd not in ("show", "time"):
             return ext_cmd(attr_cmd % ticket) == 0
-        l = stdout2list(attr_cmd % ticket)
+        rc, l = stdout2list(attr_cmd % ticket)
         try:
             val = l[0]
         except:
@@ -2524,8 +2538,13 @@ class TopLevel(UserInterface):
             else:
                 syntax_err((cmd,par), context = 'status')
                 return False
-        s = crm_mon(' '.join(l))
-        page_string(s)
+        rc, s = crm_mon(' '.join(l))
+        if rc != 0:
+            common_err("crm_mon exited with code %d and said: %s" % \
+                (rc, s))
+            return False
+        else:
+            page_string(s)
 
 help_sys = HelpSystem()
 user_prefs = UserPrefs.getInstance()

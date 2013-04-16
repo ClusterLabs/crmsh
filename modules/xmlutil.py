@@ -150,7 +150,8 @@ def rsc2node(id):
             return n
 def get_meta_param(id,param):
     rsc_meta_show = "crm_resource --meta -r '%s' -g '%s'"
-    return get_stdout(rsc_meta_show % (id,param), stderr_on = False)
+    rc, s = get_stdout(rsc_meta_show % (id,param), stderr_on = False)
+    return s
 def is_normal_node(n):
     return is_element(n) and \
         n.tagName == "node" and \
@@ -194,7 +195,8 @@ def cib_shadow_dir():
 def listshadows():
     dir = cib_shadow_dir()
     if os.path.isdir(dir):
-        return stdout2list("ls %s | fgrep shadow. | sed 's/^shadow\.//'" % dir)
+        rc, l = stdout2list("ls %s | fgrep shadow. | sed 's/^shadow\.//'" % dir)
+        return l
     else:
         return []
 def shadowfile(name):
@@ -261,7 +263,7 @@ def is_rsc_running(id):
         return False
     rsc_status = "crm_resource -W -r '%s'"
     test_id = rsc_clone(id) or id
-    outp = get_stdout(rsc_status % test_id, stderr_on = False)
+    rc, outp = get_stdout(rsc_status % test_id, stderr_on = False)
     return outp.find("running") > 0 and outp.find("NOT") == -1
 def is_rsc_clone(rsc_id):
     rsc_node = rsc2node(rsc_id)

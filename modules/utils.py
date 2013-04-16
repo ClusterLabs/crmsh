@@ -353,14 +353,14 @@ def get_stdout(cmd, input_s = None, stderr_on = True):
     outp = proc.communicate(input_s)[0]
     proc.wait()
     outp = outp.strip()
-    return outp
+    return proc.returncode, outp
 def stdout2list(cmd, stderr_on = True):
     '''
     Run a cmd, fetch output, return it as a list of lines.
     stderr_on controls whether to show output which comes on stderr.
     '''
-    s = get_stdout(add_sudo(cmd), stderr_on = stderr_on)
-    return s.split('\n')
+    rc, s = get_stdout(add_sudo(cmd), stderr_on = stderr_on)
+    return rc, s.split('\n')
 
 def append_file(dest,src):
     'Append src to dest'
@@ -382,7 +382,9 @@ def append_file(dest,src):
 
 def get_dc():
     cmd = "crmadmin -D"
-    s = get_stdout(add_sudo(cmd))
+    rc, s = get_stdout(add_sudo(cmd))
+    if rc != 0:
+        return None
     if not s.startswith("Designated"):
         return None
     return s.split()[-1]
@@ -421,9 +423,10 @@ def wait4dc(what = "", show_progress = True):
     max_sleep = 1.00
     sleep_time = init_sleep
     while True:
-        s = get_stdout(add_sudo(cmd))
+        rc, s = get_stdout(add_sudo(cmd))
         if not s.startswith("Status"):
-            common_warn("%s unexpected output: %s" % (cmd,s))
+            common_warn("%s unexpected output: %s (exit code: %d)" % \
+                (cmd, s, rc))
             return False
         try: dc_status = s.split()[-2]
         except:
@@ -467,7 +470,11 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     if actions:
         ptest = "%s | %s" % (ptest, actions_filter)
     common_debug("invoke: %s" % ptest)
-    print get_stdout(ptest, input_s = graph_s)
+    rc, s = get_stdout(ptest, input_s = graph_s)
+    if rc != 0:
+        common_warn("%s exited with %d" % (ptest, rc))
+    else:
+        print s
     #page_string(get_stdout(ptest, input_s = graph_s))
     if dotfile:
         if os.path.getsize(dotfile) > 0:
@@ -789,8 +796,12 @@ def load_graphviz_file(ini_f):
 
 def get_pcmk_version(dflt):
     try:
-        v = get_stdout("crmd version").split()[2]
-        common_debug("found pacemaker version: %s" % v)
+        rc, s = get_stdout("crmd version")
+        if rc != 0:
+            common_err("crmd exited with %d" % rc)
+        else:
+            v = s.split()[2]
+            common_debug("found pacemaker version: %s" % v)
     except Exception,msg:
         v = dflt
         common_warn("could not get the pacemaker version, bad installation?")
