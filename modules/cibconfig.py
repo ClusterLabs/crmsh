@@ -1137,12 +1137,12 @@ class CibNode(CibObject):
             type = vars.node_default_type
         if type:
             head[1].append(["type",type])
-        headnode = mkxmlsimple(head,get_topnode(cib_factory.doc,self.parent_type),'node')
+        headnode = mkxmlsimple(head,get_topnode(cib_factory.get_doc(),self.parent_type),'node')
         id_hint = headnode.getAttribute("uname")
         for e in cli_list[1:]:
             n = mkxmlnode(e,oldnode,id_hint)
             headnode.appendChild(n)
-        remove_id_used_attributes(get_topnode(cib_factory.doc,self.parent_type))
+        remove_id_used_attributes(get_topnode(cib_factory.get_doc(),self.parent_type))
         return headnode
     def repr_gv(self, gv_obj):
         '''
@@ -1710,7 +1710,7 @@ class CibProperty(CibObject):
     def get_oldnode(self):
         '''Used to retrieve sub id's'''
         if self.obj_type == "property":
-            return get_topnode(cib_factory.doc,self.parent_type)
+            return get_topnode(cib_factory.get_doc(),self.parent_type)
         else:
             return self.node.parentNode
     def cli_list2node(self,cli_list,oldnode):
@@ -1934,10 +1934,16 @@ class CibFactory(Singleton):
         self._no_constraint_rm_msg = False # internal (just not to produce silly messages)
         self.supported_cib_re = "^pacemaker-1[.][012]$"
     def is_cib_sane(self):
+        if not self.doc: # try to initialize
+            self.initialize()
         if not self.doc:
             empty_cib_err()
             return False
         return True
+    def get_doc(self):
+        if not self.is_cib_sane():
+            return None
+        return self.doc
     #
     # check internal structures
     #
@@ -1950,8 +1956,7 @@ class CibFactory(Singleton):
             return False
     def check_structure(self):
         #print "Checking structure..."
-        if not self.doc:
-            empty_cib_err()
+        if not self.is_cib_sane():
             return False
         rc = True
         for obj in self.cib_objects:
@@ -1974,26 +1979,22 @@ class CibFactory(Singleton):
         else:
             common_warn("bad parameter for regtest: %s" % param)
     def createElement(self,tag):
-        if self.doc:
-            return self.doc.createElement(tag)
-        else:
-            empty_cib_err()
+        if not self.is_cib_sane():
+            return False
+        return self.doc.createElement(tag)
     def createComment(self,s):
-        if self.doc:
-            return self.doc.createComment(s)
-        else:
-            empty_cib_err()
+        if not self.is_cib_sane():
+            return False
+        return self.doc.createComment(s)
     def replaceNode(self,newnode,oldnode):
-        if not self.doc:
-            empty_cib_err()
+        if not self.is_cib_sane():
             return None
         if newnode.ownerDocument != self.doc:
             newnode = self.doc.importNode(newnode,1)
         oldnode.parentNode.replaceChild(newnode,oldnode)
         return newnode
     def copyNode(self,node):
-        if not self.doc:
-            empty_cib_err()
+        if not self.is_cib_sane():
             return None
         if node.ownerDocument != self.doc:
             newnode = self.doc.importNode(node,1)
@@ -2049,8 +2050,7 @@ class CibFactory(Singleton):
         return False
     def upgrade_cib_06to10(self,force = False):
         'Upgrade the CIB from 0.6 to 1.0.'
-        if not self.doc:
-            empty_cib_err()
+        if not self.is_cib_sane():
             return False
         cib = self.doc.getElementsByTagName("cib")
         if not cib:
@@ -2155,8 +2155,7 @@ class CibFactory(Singleton):
         return self.last_commit_time
     def commit(self,force = False):
         'Commit the configuration to the CIB.'
-        if not self.doc:
-            empty_cib_err()
+        if not self.is_cib_sane():
             return False
         # all_committed is updated in the invoked object methods
         self.all_committed = True
@@ -2372,8 +2371,7 @@ class CibFactory(Singleton):
         implied_ms_actions = ["promote","demote"]
         implied_migrate_actions = ["migrate_to","migrate_from"]
         other_actions = ("monitor",)
-        if not self.doc:
-            empty_cib_err()
+        if not self.is_cib_sane():
             return False
         rc = True
         for obj_id in args:
@@ -2929,8 +2927,7 @@ class CibFactory(Singleton):
             self._remove_obj(obj)
     def delete(self,*args):
         'Delete a cib object.'
-        if not self.doc:
-            empty_cib_err()
+        if not self.is_cib_sane():
             return False
         rc = True
         l = []
@@ -2972,8 +2969,7 @@ class CibFactory(Singleton):
           deleted and the one with the new name created
         - rename old id to new id in the object
         '''
-        if not self.doc:
-            empty_cib_err()
+        if not self.is_cib_sane():
             return False
         if id_store.id_in_use(new_id):
             return False
@@ -2994,8 +2990,7 @@ class CibFactory(Singleton):
         "Remove all cib objects."
         # remove only bottom objects and no constraints
         # the rest will automatically follow
-        if not self.doc:
-            empty_cib_err()
+        if not self.is_cib_sane():
             return False
         erase_ok = True
         l = []
@@ -3027,8 +3022,7 @@ class CibFactory(Singleton):
         return True
     def erase_nodes(self):
         "Remove nodes only."
-        if not self.doc:
-            empty_cib_err()
+        if not self.is_cib_sane():
             return False
         l = [obj for obj in self.cib_objects if obj.obj_type == "node"]
         for obj in l:

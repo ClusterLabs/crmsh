@@ -1558,7 +1558,10 @@ class CibConfig(UserInterface):
             "ms": ("master",),
         })
         setup_aliases(self)
-        cib_factory.initialize()
+        # for interactive use, we want to populate the CIB
+        # immediately so that tab completion works
+        if options.interactive:
+            cib_factory.initialize()
     def check_structure(self,cmd):
         return cib_factory.check_structure()
     def regression_testing(self,cmd,param):
@@ -1731,8 +1734,6 @@ class CibConfig(UserInterface):
             return cib_factory.erase()
     def refresh(self,cmd):
         "usage: refresh"
-        if not cib_factory.is_cib_sane():
-            return False
         if options.interactive and cib_factory.has_cib_changed():
             if not ask("All changes will be dropped. Do you want to proceed?"):
                 return
@@ -1911,6 +1912,8 @@ class CibConfig(UserInterface):
         return self.__conf_object(cmd,*args)
     def rsc_test(self, cmd, *args):
         "usage: rsctest <rsc_id> [<rsc_id> ...] [<node_id> ...]"
+        if not cib_factory.is_cib_sane():
+            return False
         rc = True
         rsc_l = []
         node_l = []
