@@ -26,7 +26,6 @@ import ConfigParser
 
 from singletonmixin import Singleton
 from userprefs import Options, UserPrefs
-from cibconfig import CibFactory
 from vars import Vars, getuser, gethomedir
 from xmlutil import *
 from utils import *
@@ -1428,6 +1427,5 @@ class Report(Singleton):
 
 vars = Vars.getInstance()
 options = Options.getInstance()
-cib_factory = CibFactory.getInstance()
 crm_report = Report.getInstance()
 # vim:ts=4:sw=4:et:
