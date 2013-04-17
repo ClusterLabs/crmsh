@@ -812,7 +812,7 @@ class CliParser(object):
         "property": (2,parse_property),
         "rsc_defaults": (2,parse_property),
         "op_defaults": (2,parse_property),
-        "fencing_topology": (3,parse_fencing_order),
+        "fencing_topology": (2,parse_fencing_order),
         "role": (3,parse_acl),
         "user": (3,parse_acl),
         "xml": (3,parse_xml),

@@ -1836,8 +1836,11 @@ class CibFencingOrder(CibObject):
             if x.node.getAttribute("class") == "stonith"]
         for devices in [x.getAttribute("devices") for x in nl]:
             for dev in devices.split(","):
-                if dev not in stonith_rsc_l:
-                    common_warn("%s: device %s not a stonith resource" % (self.obj_id,dev))
+                if not cib_factory.find_object(dev):
+                    common_warn("%s: resource %s does not exist" % (self.obj_id,dev))
+                    rc = 1
+                elif dev not in stonith_rsc_l:
+                    common_warn("%s: %s not a stonith resource" % (self.obj_id,dev))
                     rc = 1
         return rc
 
