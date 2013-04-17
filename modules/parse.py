@@ -78,14 +78,6 @@ def is_only_id(pl,keyw):
         common_err("%s: only single $id or $id-ref attribute is allowed" % keyw)
         return False
     return True
-def check_operation(pl):
-    op_name = find_value(pl,"name")
-    if not op_name in olist(vars.op_cli_names):
-        common_warn("%s: operation not recognized" % op_name)
-    if op_name == "monitor" and not find_value(pl,"interval"):
-        common_err("monitor requires interval")
-        return False
-    return True
 def parse_resource(s):
     el_type = s[0].lower()
     if el_type == "master": # ugly kludge :(
@@ -145,8 +137,6 @@ def parse_resource(s):
         if keyword_cmp(keyw, "op"):
             if len(s) > i+2:
                 cli_parse_attr(s[i+2:],pl)
-            if not check_operation(pl):
-                return False
         else:
             cli_parse_attr(s[i+1:],pl)
             if len(pl) == 0:
