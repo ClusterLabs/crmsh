@@ -6,7 +6,7 @@
 %global upstream_version tip
 %global upstream_prefix crmsh
 
-%if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version}
+%if 0%{?fedora_version} || 0%{?centos_version} || %0%{?rhel_version} || 0%{?rhel} || 0%{?fedora}
 %define pkg_group System Environment/Daemons
 %else
 %define pkg_group Productivity/Clustering/HA
