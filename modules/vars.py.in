@@ -16,16 +16,17 @@
 #
 
 import os, pwd
+import sys
 from singletonmixin import Singleton
 
 def getpwdent():
     try: euid = os.geteuid()
     except Exception, msg:
-        common_err(msg)
+        sys.stderr.write("ERROR: %s\n" % msg)
         return None
     try: pwdent = pwd.getpwuid(euid)
     except Exception, msg:
-        common_err(msg)
+        sys.stderr.write("ERROR: %s\n" % msg)
         return None
     return pwdent
 def getuser():
@@ -35,7 +36,7 @@ def gethomedir(user=None):
     if user:
         try: return pwd.getpwnam(user)[5]
         except Exception, msg:
-            common_err(msg)
+            sys.stderr.write("ERROR: %s\n" % msg)
             return None
     homedir = os.getenv("HOME")
     if not homedir:
