@@ -282,7 +282,7 @@ class CibShadow(UserInterface):
                 return False
         if not name:
             name = os.path.basename(infile).replace(".bz2","")
-        if not pe2shadow(pe_file, name):
+        if not pe2shadow(infile, name):
             return False
         # use the shadow and load the status from there
         return self.use("use",name,"withstatus")
