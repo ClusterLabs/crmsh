@@ -496,12 +496,6 @@ def is_id_valid(id):
         return False
     id_re = "^[A-Za-z_][\w._-]*$"
     return re.match(id_re,id)
-def check_filename(fname):
-    """
-    Verify that the string is a filename.
-    """
-    fname_re = "^[^/]+$"
-    return re.match(fname_re,id)
 
 def check_range(a):
     """
@@ -848,7 +842,7 @@ def get_cib_attributes(cib_f, tag, attr_l, dflt_l):
     try: f = open(cib_f, "r")
     except IOError, msg:
         common_err(msg)
-        return ver
+        return dflt_l
     if os.path.splitext(cib_f)[-1] == '.bz2':
         cib_s = bz2.decompress(''.join(f))
     else:

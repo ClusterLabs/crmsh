@@ -165,6 +165,13 @@ def prereqs():
             print >> sys.stderr, "%s not available, check your installation"%prog
             sys.exit(1)
 
+# prefer the user set PATH
+def envsetup():
+    mybinpath = os.path.dirname(sys.argv[0])
+    for p in mybinpath, vars.crm_daemon_dir:
+        if p not in os.environ["PATH"].split(':'):
+            os.environ['PATH'] = "%s:%s" % (os.environ['PATH'], p)
+
 # three modes: interactive (no args supplied), batch (input from
 # a file), half-interactive (args supplied, but not batch)
 def cib_prompt():
@@ -244,12 +251,6 @@ options = Options.getInstance()
 err_buf = ErrorBuffer.getInstance()
 vars = Vars.getInstance()
 levels = Levels.getInstance()
-
-# prefer the user set PATH
-mybinpath = os.path.dirname(sys.argv[0])
-for p in mybinpath, vars.crm_daemon_dir:
-    if p not in os.environ["PATH"].split(':'):
-        os.environ['PATH'] = "%s:%s" % (os.environ['PATH'], p)
 
 def set_interactive():
     '''Set the interactive option only if we're on a tty.'''
@@ -356,6 +357,7 @@ def do_work():
 
 def run():
     global user_args
+    envsetup()
     prereqs()
 
     mv_user_files()
