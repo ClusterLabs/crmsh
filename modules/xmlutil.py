@@ -93,6 +93,8 @@ def cibdump2doc(section = None):
 cib_piped = "cibadmin -p"
 def commit_rsc(node):
     "Replace a resource definition using cibadmin -R"
+    xml_processnodes(node,is_emptynvpairs,rmnodes)
+    xml_processnodes(node,is_whitespace,rmnodes)
     rc = pipe_string("%s -R -o %s" % \
         (cib_piped, "resources"), node.toxml())
     return rc == 0
