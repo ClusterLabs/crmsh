@@ -165,6 +165,15 @@ def listnodes():
         return []
     return [x.get("uname") for x in nodes_elem.iterchildren("node") \
         if is_normal_node(x)]
+def is_our_node(s):
+    '''
+    Check if s is in a list of our nodes (ignore case).
+    This is not fast, perhaps should be cached.
+    '''
+    for n in listnodes():
+        if n.lower() == s.lower():
+            return True
+    return False
 def is_live_cib():
     '''We working with the live cluster?'''
     return not vars.cib_in_use and not os.getenv("CIB_file")
@@ -368,8 +377,6 @@ def is_emptynvpairs(node):
         return True
     else:
         return False
-def is_node(node):
-    return node.tag == "node"
 def is_group(node):
     return node.tag == "group"
 def is_ms(node):

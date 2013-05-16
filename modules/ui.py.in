@@ -924,7 +924,7 @@ class RscMgmt(UserInterface):
         lifetime = None
         opt_l = fetch_opts(argl, ["force"])
         if len(argl) == 1:
-            if not argl[0] in listnodes():
+            if not is_our_node(argl[0]):
                 lifetime = argl[0]
             else:
                 node = argl[0]
@@ -1186,7 +1186,7 @@ class NodeMgmt(UserInterface):
         if not args:
             node = vars.this_node
         if len(args) == 1:
-            if not args[0] in listnodes():
+            if not is_our_node(args[0]):
                 node = vars.this_node
                 lifetime = args[0]
             else:
@@ -1249,7 +1249,7 @@ class NodeMgmt(UserInterface):
         'usage: delete <node>'
         if not is_name_sane(node):
             return False
-        if not node in listnodes():
+        if not is_our_node(node):
             common_err("node %s not found in the CIB" % node)
             return False
         rc = True
