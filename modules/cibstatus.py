@@ -19,6 +19,7 @@ import sys
 import os
 import re
 import time
+from lxml import etree
 from singletonmixin import Singleton
 from vars import Vars
 from xmlutil import *
@@ -26,21 +27,19 @@ from msg import *
 
 def get_tag_by_id(node,tag,id):
     "Find a doc node which matches tag and id."
-    for n in node.getElementsByTagName(tag):
-        if n.getAttribute("id") == id:
+    for n in node.xpath(".//%s" % tag):
+        if n.get("id") == id:
             return n
     return None
 def get_status_node_id(n):
-    try: n = n.parentNode
+    try: n = n.getparent()
     except: return None
-    if n.tagName != "node_state":
+    if n.tag != "node_state":
         return get_status_node_id(n)
-    return n.getAttribute("id")
+    return n.get("id")
 def get_status_node(status_node,node):
-    for n in status_node.childNodes:
-        if not is_element(n) or n.tagName != "node_state":
-            continue
-        if n.getAttribute("id") == node:
+    for n in status_node.iterchildren("node_state"):
+        if n.get("id") == node:
             return n
     return None
 def get_status_ops(status_node,rsc,op,interval,node = ''):
@@ -50,19 +49,17 @@ def get_status_ops(status_node,rsc,op,interval,node = ''):
     monitors). Empty interval means any interval is fine.
     '''
     l = []
-    for n in status_node.childNodes:
-        if not is_element(n) or n.tagName != "node_state":
+    for n in status_node.iterchildren("node_state"):
+        if node is not None and n.get("id") != node:
             continue
-        if node and n.getAttribute("id") != node:
-            continue
-        for r in n.getElementsByTagName("lrm_resource"):
-            if r.getAttribute("id") != rsc:
+        for r in n.iterchildren("lrm_resource"):
+            if r.get("id") != rsc:
                 continue
-            for o in r.getElementsByTagName("lrm_rsc_op"):
-                if o.getAttribute("operation") != op:
+            for o in r.iterchildren("lrm_rsc_op"):
+                if o.get("operation") != op:
                     continue
-                if o.getAttribute("interval") == interval or \
-                  (interval == "-1" and o.getAttribute("interval") != "0"):
+                if o.get("interval") == interval or \
+                  (interval == "-1" and o.get("interval") != "0"):
                     l.append(o)
     return l
 
@@ -100,7 +97,6 @@ class CibStatus(Singleton):
         self.origin = "live"
         self.backing_file = "" # file to keep the live cib
         self.status_node = None
-        self.doc = None
         self.cib = None
         self.reset_state()
     def _cib_path(self,source):
@@ -113,21 +109,21 @@ class CibStatus(Singleton):
             if not self.backing_file:
                 self.backing_file = cib2tmp()
                 if not self.backing_file:
-                    return None,None
+                    return None
             else:
                 cibdump2file(self.backing_file)
             f = self.backing_file
         else:
             f = cib_path(source)
-        return read_cib(file2doc,f)
+        return read_cib(file2cib_elem,f)
     def _load(self,source):
-        doc,cib = self._load_cib(source)
-        if not doc:
+        cib = self._load_cib(source)
+        if cib is None:
             return False
-        status = get_conf_elem(doc, "status")
-        if not status:
+        status = cib.find("status")
+        if status is None:
             return False
-        self.doc,self.cib = doc,cib
+        self.cib = cib
         self.status_node = status
         self.reset_state()
         return True
@@ -144,13 +140,15 @@ class CibStatus(Singleton):
         else:
             return cib_path(self.origin)
     def status_node_list(self):
-        if not self.get_status():
+        st = self.get_status()
+        if st is None:
             return
-        return [x.getAttribute("id") for x in self.doc.getElementsByTagName("node_state")]
+        return [x.get("id") for x in st.xpath(".//node_state")]
     def status_rsc_list(self):
-        if not self.get_status():
+        st = self.get_status()
+        if st is None:
             return
-        rsc_list = [x.getAttribute("id") for x in self.doc.getElementsByTagName("lrm_resource")]
+        rsc_list = [x.get("id") for x in st.xpath(".//lrm_resource")]
         # how to uniq?
         d = {}
         for e in rsc_list:
@@ -183,21 +181,21 @@ class CibStatus(Singleton):
         if (not dest and self.origin == "live") or dest == "live":
             common_warn("cannot save status to the cluster")
             return False
-        doc,cib = self.doc,self.cib
+        cib = self.cib
         if dest:
             dest_path = cib_path(dest)
             if os.path.isfile(dest_path):
-                doc,cib = self._load_cib(dest)
-                if not doc or not cib:
+                cib = self._load_cib(dest)
+                if cib is None:
                     common_err("%s exists, but no cib inside" % dest)
                     return False
         else:
             dest_path = cib_path(self.origin)
-        if doc != self.doc:
-            status = get_conf_elem(doc, "status")
+        if cib != self.cib:
+            status = cib.find("status")
             rmnode(status)
-            cib.appendChild(doc.importNode(self.status_node,1))
-        xml = doc.toprettyxml(user_prefs.xmlindent)
+            cib.append(self.status_node)
+        xml = etree.tostring(cib)
         try: f = open(dest_path,"w")
         except IOError, msg:
             common_err(msg)
@@ -234,7 +232,7 @@ class CibStatus(Singleton):
         '''
         Return the status section node.
         '''
-        if (not self.status_node or \
+        if (self.status_node is None or \
             (self.origin == "live" and not self.modified)) \
                 and not self._load(self.origin):
             return None
@@ -258,9 +256,9 @@ class CibStatus(Singleton):
         '''
         Page the "pretty" XML of the status section.
         '''
-        if not self.get_status():
+        if self.get_status() is None:
             return False
-        page_string(self.status_node.toprettyxml(user_prefs.xmlindent))
+        page_string(etree.tostring(self.status_node, pretty_print=True))
         return True
     def inject(self,opts):
         return ext_cmd("%s %s" % \
@@ -278,7 +276,7 @@ class CibStatus(Singleton):
         Modify crmd, expected, and join attributes of node_state
         to set the node's state to online, offline, or unclean.
         '''
-        if not self.get_status():
+        if self.get_status() is None:
             return False
         if not state in self.node_ops:
             common_err("unknown state %s" % state)
@@ -298,7 +296,7 @@ class CibStatus(Singleton):
         '''
         Modify ticket status.
         '''
-        if not self.get_status():
+        if self.get_status() is None:
             return False
         if not subcmd in self.ticket_ops:
             common_err("unknown ticket command %s" % subcmd)
@@ -315,7 +313,7 @@ class CibStatus(Singleton):
         Set rc-code and op-status in the lrm_rsc_op status
         section element.
         '''
-        if not self.get_status():
+        if self.get_status() is None:
             return False
         l_op,l_int = split_op(op)
         op_nodes = get_status_ops(self.status_node,rsc,l_op,l_int,node)
@@ -339,7 +337,7 @@ class CibStatus(Singleton):
                 common_err("node not found for the operation %s" % op)
                 return False
             if l_int == "-1":
-                l_int = op_node.getAttribute("interval")
+                l_int = op_node.get("interval")
         op_op = op_status == "0" and "-i" or "-F"
         rc = self.inject("%s %s_%s_%s@%s=%s" % \
             (op_op, rsc, l_op, l_int, node, rc_code))

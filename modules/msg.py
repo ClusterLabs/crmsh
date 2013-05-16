@@ -112,7 +112,7 @@ def obj_cli_warn(name):
     err_buf.info("object %s cannot be represented in the CLI notation"%name)
 def missing_obj_err(node):
     err_buf.error("object %s:%s missing (shouldn't have happened)"% \
-        (node.tagName,node.getAttribute("id")))
+        (node.tag,node.get("id")))
 def constraint_norefobj_err(constraint_id,obj_id):
     err_buf.error("constraint %s references a resource %s which doesn't exist"% \
         (constraint_id,obj_id))

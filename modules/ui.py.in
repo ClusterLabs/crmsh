@@ -705,19 +705,19 @@ def rm_meta_attribute(node,attr,l, force_children=False):
     Build a list of nvpair nodes which contain attribute
     (recursively in all children resources)
     '''
-    for c in node.childNodes:
+    for c in node.iterchildren():
         if not is_element(c):
             continue
-        if c.tagName == "meta_attributes":
+        if c.tag == "meta_attributes":
             nvpair = get_attr_in_set(c,attr)
-            if nvpair:
+            if nvpair is not None:
                 l.append(nvpair)
         elif force_children or \
-                (is_child_rsc(c) and not c.parentNode.tagName == "group"):
+                (is_child_rsc(c) and not c.getparent().tag == "group"):
             rm_meta_attribute(c,attr,l, force_children=force_children)
 def get_children_with_different_attr(node,attr,value):
     l = []
-    for p in node.getElementsByTagName("primitive"):
+    for p in node.xpath(".//primitive"):
         diff_attr = False
         for meta_set in get_set_nodes(p, "meta_attributes", 0):
             p_value = get_attr_value(meta_set,attr)
@@ -730,7 +730,7 @@ def get_children_with_different_attr(node,attr,value):
 def set_deep_meta_attr_node(target_node,attr,value):
     nvpair_l = []
     if is_clone(target_node):
-        for c in target_node.childNodes:
+        for c in target_node.iterchildren():
             if is_child_rsc(c):
                 rm_meta_attribute(c,attr,nvpair_l)
     if user_prefs.get_manage_children() != "never" and \
@@ -740,9 +740,9 @@ def set_deep_meta_attr_node(target_node,attr,value):
         for c in odd_children:
             if user_prefs.get_manage_children() == "always" or \
                     (user_prefs.get_manage_children() == "ask" and \
-                    ask("Do you want to override %s for child resource %s?" % (attr, c.getAttribute("id")))):
+                    ask("Do you want to override %s for child resource %s?" % (attr, c.get("id")))):
                 common_debug("force remove meta attr %s from %s" % \
-                    (attr, c.getAttribute("id")))
+                    (attr, c.get("id")))
                 rm_meta_attribute(c,attr,nvpair_l, force_children=True)
     rmnodes(list(set(nvpair_l)))
     for n in get_set_nodes(target_node,"meta_attributes",1):
@@ -761,11 +761,11 @@ def set_deep_meta_attr(attr,value,rsc_id):
     behaviour depends on the value of user_prefs.get_manage_children()).
     '''
     target_node = rsc2node(rsc_id)
-    if not target_node:
+    if target_node is None:
         common_error("resource %s does not exist" % rsc_id)
         return False
-    if not (target_node.tagName == "primitive" and \
-        target_node.parentNode.tagName == "group"):
+    if not (target_node.tag == "primitive" and \
+        target_node.getparent().tag == "group"):
         target_node = get_topmost_rsc(target_node)
     return set_deep_meta_attr_node(target_node,attr,value)
 
@@ -1142,23 +1142,24 @@ class NodeMgmt(UserInterface):
         return ext_cmd("%s %s" % (cib_dump, a)) == 0
     def show(self,cmd,node = None):
         'usage: show [<node>]'
-        doc = cibdump2doc()
-        if not doc:
+        cib_elem = cibdump2elem()
+        if cib_elem is None:
             return False
-        nodes_node = get_conf_elem(doc, "nodes")
-        status = get_conf_elem(doc, "status")
-        if not nodes_node:
+        try:
+            nodes_node = cib_elem.xpath("//configuration/nodes")[0]
+            status = cib_elem.findall("status")[0]
+        except:
             return False
-        for c in nodes_node.childNodes:
-            if not is_element(c) or c.tagName != "node":
+        for c in nodes_node.iterchildren():
+            if not is_element(c) or c.tag != "node":
                 continue
-            if node and c.getAttribute("uname") != node:
+            if node is not None and c.get("uname") != node:
                 continue
             type = uname = id = ""
             inst_attr = []
             other = {}
-            for attr in c.attributes.keys():
-                v = c.getAttribute(attr)
+            for attr in c.keys():
+                v = c.get(attr)
                 if attr == "type":
                     type = v
                 elif attr == "uname":
@@ -1167,16 +1168,16 @@ class NodeMgmt(UserInterface):
                     id = v
                 else:
                     other[attr] = v
-            for c2 in c.childNodes:
+            for c2 in c.iterchildren():
                 if not is_element(c2):
                     continue
-                if c2.tagName == "instance_attributes":
+                if c2.tag == "instance_attributes":
                     inst_attr += nvpairs2list(c2)
             offline = False
-            for c2 in status.getElementsByTagName("node_state"):
-                if uname != c2.getAttribute("uname"):
+            for c2 in status.xpath(".//node_state"):
+                if uname != c2.get("uname"):
                     continue
-                offline = c2.getAttribute("crmd") == "offline"
+                offline = c2.get("crmd") == "offline"
             print_node(uname,id,type,other,inst_attr,offline)
     def standby(self,cmd,*args):
         'usage: standby [<node>] [<lifetime>]'
@@ -1372,7 +1373,7 @@ class RA(UserInterface):
             else:
                 ra_class,ra_provider,ra_type = disambiguate_ra_type(args[0])
         ra = RAInfo(ra_class,ra_type,ra_provider)
-        if not ra.mk_ra_node():
+        if ra.mk_ra_node() is None:
             return False
         try:
             page_string(ra.meta_pretty())
@@ -1925,12 +1926,12 @@ class CibConfig(UserInterface):
                 rc = False
             elif current == "r" and is_resource(el.node):
                 if is_container(el.node):
-                    rsc_l += el.node.getElementsByTagName("primitive")
+                    rsc_l += el.node.findall("primitive")
                 else:
                     rsc_l.append(el.node)
             elif is_normal_node(el.node):
                 current = "n"
-                node_l.append(el.node.getAttribute("uname"))
+                node_l.append(el.node.get("uname"))
             else:
                 syntax_err((cmd,id), context = 'rsctest')
                 return False

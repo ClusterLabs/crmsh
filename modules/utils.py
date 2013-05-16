@@ -148,6 +148,7 @@ def add_sudo(cmd):
 def pipe_string(cmd,s):
     rc = -1 # command failed
     cmd = add_sudo(cmd)
+    common_debug("piping string to %s" % cmd)
     p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE)
     try:
         p.communicate(s)

@@ -17,36 +17,27 @@
 
 import os
 import tempfile
-import xml.dom.minidom
-
-support_lxml = False
-try :
-	from lxml import etree
-	support_lxml = True
-except ImportError :
-	pass
+import copy
+from lxml import etree
 
 class PacemakerError(Exception):
 	'''PacemakerError exceptions'''
 
 known_schemas = {
-	"": ("dtd", "crm.dtd"),
-	"pacemaker-0.6": ("dtd", "crm.dtd"),
-	"transitional-0.6": ("dtd", "crm-transitional.dtd"),
 	"pacemaker-0.7": ("rng", "pacemaker-1.0.rng"),
 	"pacemaker-1.0": ("rng", "pacemaker-1.0.rng"),
 	"pacemaker-1.1": ("rng", "pacemaker-1.1.rng"),
 	"pacemaker-1.2": ("rng", "pacemaker-1.2.rng"),
 	}
 
-def get_validate_name(cib_dom_node) :
-	if cib_dom_node :
-		return cib_dom_node.getAttribute("validate-with")
+def get_validate_name(cib_elem) :
+	if cib_elem is not None:
+		return cib_elem.get("validate-with")
 	else :
 		return None
 
-def get_validate_type(cib_dom_node) : 
-	validate_name = get_validate_name(cib_dom_node)
+def get_validate_type(cib_elem) : 
+	validate_name = get_validate_name(cib_elem)
 	if validate_name == None or known_schemas.get(validate_name) == None :
 		return None
 	else :
@@ -87,17 +78,13 @@ def delete_dir(dir_path) :
 
 	os.rmdir(dir_path)
 
-def CrmSchema(cib_dom_node, local_dir) :
-	validate_type = get_validate_type(cib_dom_node)
-	if validate_type == "dtd" :
-		return DtdSchema(cib_dom_node, local_dir)
-	else :
-		return RngSchema(cib_dom_node, local_dir)
+def CrmSchema(cib_elem, local_dir) :
+	return RngSchema(cib_elem, local_dir)
 
 class Schema :
 	validate_name = None
 
-	def __init__(self, cib_dom_node, local_dir, is_local = True, get_schema_fn = None) :
+	def __init__(self, cib_elem, local_dir, is_local = True, get_schema_fn = None) :
 		self.is_local = is_local
 		if get_schema_fn != None :
 			self.get_schema_fn = get_schema_fn
@@ -105,48 +92,42 @@ class Schema :
 			self.get_schema_fn = read_schema_local
 
 		self.local_dir = local_dir
-		self.refresh(cib_dom_node)
+		self.refresh(cib_elem)
 
-	def refresh(self, cib_dom_node) :
+	def refresh(self, cib_elem) :
 		saved_validate_name = self.validate_name
-		self.validate_name = get_validate_name(cib_dom_node)
+		self.validate_name = get_validate_name(cib_elem)
 		self.schema_filename = get_schema_filename(self.validate_name)
-		self.validate_type = get_validate_type(cib_dom_node)
 		if self.validate_name != saved_validate_name :
 			return self.update_schema()
 
-	def validate_cib(self, new_cib_dom_node) :
+	def validate_cib(self, new_cib_elem) :
 		detail_msg = ""
-		if not support_lxml :
-			return (None, detail_msg)
 
 		if self.is_local :
-			schema_doc = os.path.join(self.local_dir, self.schema_filename)
+			schema_f = os.path.join(self.local_dir, self.schema_filename)
 		else :
 			try :
-				tmp_doc = self.tmp_schema_doc()
+				tmp_f = self.tmp_schema_f()
 			except EnvironmentError, msg :
 				raise PacemakerError("Cannot expand the Relax-NG schema: " + str(msg))
-			if tmp_doc == None :
+			if tmp_f == None :
 				raise PacemakerError("Cannot expand the Relax-NG schema")
 			else :
-				schema_doc = tmp_doc
+				schema_f = tmp_f
 		
 		try :
-			cib_doc = etree.fromstring(new_cib_dom_node.toxml())
+			cib_elem = etree.fromstring(etree.tostring(new_cib_elem))
 		except etree.Error, msg :
 			raise PacemakerError("Failed to parse the CIB XML: " + str(msg))
 			
 		try :
-			if self.validate_type == 'rng' :
-				schema = etree.RelaxNG(file = schema_doc)
-			else :
-				schema = etree.DTD(file = schema_doc)
+			schema = etree.RelaxNG(file = schema_f)
 				
 		except etree.Error, msg :
 			raise PacemakerError("Failed to parse the Relax-NG schema: " + str(msg))
 		#try :
-		#	schema.assertValid(cib_doc)
+		#	schema.assertValid(cib_elem)
 		#except etree.DocumentInvalid, err_msg :
 		#	print err_msg
 		#	print schema.error_log
@@ -158,20 +139,20 @@ class Schema :
 			except :
 				pass
 
-		is_valid = schema.validate(cib_doc)
+		is_valid = schema.validate(cib_elem)
 		if not is_valid :
 			for error_entry in schema.error_log :
 				detail_msg += error_entry.level_name + ": " + error_entry.message + "\n"
 
 		if not self.is_local :
 			try :
-				delete_dir(os.path.dirname(tmp_doc))
+				delete_dir(os.path.dirname(tmp_f))
 			except :
 				pass
 
 		return (is_valid, detail_msg)
 
-	def tmp_schema_doc(self) :
+	def tmp_schema_f(self) :
 		tmp_dir = tempfile.mkdtemp()
 		for schema_doc_name in self.schema_str_docs :
 			schema_doc_filename = os.path.join(tmp_dir, schema_doc_name)
@@ -204,106 +185,11 @@ class Schema :
 	def supported_rsc_types(self) :
 		return self.get_sub_elems("resources")
 
-class DtdSchema(Schema) :
-	def update_schema(self) :
-		from xml.parsers.xmlproc.xmldtd import load_dtd_string
-		self.schema_str_docs = {}
-
-		dtd =  self.get_schema_fn(self.validate_name, \
-			os.path.join(self.local_dir, self.schema_filename))
-		if dtd == None :
-			raise PaceamkerError("Cannot get the DTD:" + self.validate_name)
-		self.complete_dtd = load_dtd_string(dtd)
-		self.schema_str_docs[self.schema_filename] = dtd
-
-		return True
-
-	def find_elem(self, elem_name) :
-		return self.complete_dtd.get_elem(elem_name)
-
-	def get_elem_attr_objs(self, obj_type) :
-		dtd_attrs = []
-		dtd_elem = self.find_elem(obj_type)
-		for name in dtd_elem.get_attr_list() :
-			attr = dtd_elem.get_attr(name)
-			dtd_attrs.append(attr)
-		return dtd_attrs
-
-	def get_sub_elem_objs(self, obj_type) :
-		dtd_elems = []
-		dtd_elem = self.find_elem(obj_type)
-		for (name, mod) in dtd_elem.get_content_model()[1] :
-			elem = self.find_elem(name)
-			dtd_elems.append(elem)
-		return dtd_elems
-
-	def get_obj_name(self, dtd_obj) :
-		return dtd_obj.get_name()
-
-	def get_attr_type(self, dtd_attr) :
-		return dtd_attr.get_type()
-
-	def get_attr_values(self, dtd_attr) :
-		attr_type = dtd_attr.get_type()
-		if type(attr_type) == list:
-			return attr_type
-		else :
-			return []
-
-	def get_attr_default(self, dtd_attr) :
-		return dtd_attr.get_default()
-
-	# sub_set: 'a'(all), 'r'(required), 'o'(optional)
-	def get_elem_attrs_by_obj(self, dtd_elem, sub_set = 'a') :
-		attrs = []
-		for name in dtd_elem.get_attr_list() :
-			attr = dtd_elem.get_attr(name)
-			attr_decl = attr.get_decl()
-
-			if attr_decl != "#REQUIRED" :
-				is_optional = True
-			else :
-				is_optional = False
-
-			if sub_set == 'r' :
-				if not is_optional :
-					attrs.append(name)
-			elif sub_set == 'o' :
-				if is_optional :
-					attrs.append(name)
-			else :
-				attrs.append(name)
-		return attrs
-
-	# sub_set: 'a'(all), 'r'(required), 'o'(optional)
-	def get_sub_elems_by_obj(self, dtd_elem, sub_set = 'a') :
-		elems = []
-		(sep, cont, mod) = dtd_elem.get_content_model()
-
-		for (name, sub_mod) in cont :
-			if elems.count(name) :
-				continue
-
-			if sep == '|' or mod == '*' :
-				is_optional = True
-			else :
-				if sub_mod in ['*', '?'] :
-					is_optional = True
-				else :
-					is_optional = False
-
-			if sub_set == 'r' :
-				if not is_optional :
-					elems.append(name)
-			elif sub_set == 'o' :
-				if is_optional :
-					elems.append(name)
-			else :
-				elems.append(name)
-				
-		return elems
+def get_local_tag(el):
+	return el.tag.replace("{%s}" % el.nsmap[None],"")
 
 class RngSchema(Schema) :
+	expr = '//*[local-name() = $name]'
 	def update_schema(self) :
 		self.rng_docs = {}
 		self.schema_str_docs = {}
@@ -315,8 +201,8 @@ class RngSchema(Schema) :
 		self.rng_docs[file] = self.find_start_rng_node(validate_name, file)
 		if self.rng_docs[file] == None :
 			return
-		for extern_ref in self.rng_docs[file][0].getElementsByTagName("externalRef") :
-			href_value = extern_ref.getAttribute("href")
+		for extern_ref in self.rng_docs[file][0].xpath(self.expr, name="externalRef"):
+			href_value = extern_ref.get("href")
 			if self.rng_docs.get(href_value) == None :
 				self.update_rng_docs(validate_name, href_value)	
 
@@ -331,44 +217,45 @@ class RngSchema(Schema) :
 		self.schema_str_docs[file] = crm_schema
 
 		try :
-			rng_doc = xml.dom.minidom.parseString(crm_schema).documentElement
-		except xml.parsers.expat.ExpatError, msg :
+			grammar = etree.fromstring(crm_schema)
+		except Exception, msg :
 			raise PacemakerError("Failed to parse the Relax-NG schema: " + str(msg) + schema_info)
 
-		start_nodes = rng_doc.getElementsByTagName("start")
+		start_nodes = grammar.xpath(self.expr, name="start")
 		if len(start_nodes) > 0 :
 			start_node = start_nodes[0] 
-			return (rng_doc, start_node)
+			return (grammar, start_node)
 		else :
 			raise PacemakerError("Cannot find the start in the Relax-NG schema: " + schema_info)
 
 	def find_elem(self, elem_name) :
 		elem_node = None
-		for (rng_doc, start_node) in self.rng_docs.values() :
-			for elem_node in rng_doc.getElementsByTagName("element") :
-				if elem_node.getAttribute("name") == elem_name :
-					return (rng_doc, elem_node)
+		for (grammar, start_node) in self.rng_docs.values() :
+			for elem_node in grammar.xpath(self.expr, name="element") :
+				if elem_node.get("name") == elem_name :
+					return (grammar, elem_node)
 		return None
 
-	def get_sub_rng_nodes(self, rng_doc, rng_node) :
+	def get_sub_rng_nodes(self, grammar, rng_node) :
 		sub_rng_nodes = []
-		for child_node in rng_node.childNodes :
-			if child_node.nodeType != xml.dom.Node.ELEMENT_NODE :
+		for child_node in rng_node.iterchildren() :
+			if not isinstance(child_node.tag, basestring):
 				continue
-			if child_node.tagName == "ref" :
-				for def_node in rng_doc.getElementsByTagName("define") :
-					if def_node.getAttribute("name") == child_node.getAttribute("name") :
+			local_tag = get_local_tag(child_node)
+			if local_tag == "ref" :
+				for def_node in grammar.xpath(self.expr, name="define") :
+					if def_node.get("name") == child_node.get("name") :
 						break
-				sub_rng_nodes.extend(self.get_sub_rng_nodes(rng_doc, def_node))
-			elif child_node.tagName == "externalRef" :
-				nodes = self.get_sub_rng_nodes(*self.rng_docs[child_node.getAttribute("href")])
+				sub_rng_nodes.extend(self.get_sub_rng_nodes(grammar, def_node))
+			elif local_tag == "externalRef" :
+				nodes = self.get_sub_rng_nodes(*self.rng_docs[child_node.get("href")])
 				sub_rng_nodes.extend(nodes)
-			elif child_node.tagName in ["element", "attribute", "value", "data", "text"] :
-				sub_rng_nodes.append([(rng_doc, child_node)])
-			elif child_node.tagName in ["interleave", "optional", "zeroOrMore", "choice", "group", "oneOrMore"] :
-				nodes = self.get_sub_rng_nodes(rng_doc, child_node)
+			elif local_tag in ["element", "attribute", "value", "data", "text"] :
+				sub_rng_nodes.append([(grammar, child_node)])
+			elif local_tag in ["interleave", "optional", "zeroOrMore", "choice", "group", "oneOrMore"] :
+				nodes = self.get_sub_rng_nodes(grammar, child_node)
 				for node in nodes :
-					node.append(child_node)
+					node.append(copy.deepcopy(child_node))
 				sub_rng_nodes.extend(nodes)
 		return sub_rng_nodes
 
@@ -378,11 +265,11 @@ class RngSchema(Schema) :
 			return None
 		return self.sorted_sub_rng_nodes_by_node(*rng_node)
 
-	def sorted_sub_rng_nodes_by_node(self, rng_doc, rng_node) :
-		sub_rng_nodes = self.get_sub_rng_nodes(rng_doc, rng_node)
+	def sorted_sub_rng_nodes_by_node(self, grammar, rng_node) :
+		sub_rng_nodes = self.get_sub_rng_nodes(grammar, rng_node)
 		sorted_nodes = {}
 		for sub_rng_node in sub_rng_nodes :
-			name = sub_rng_node[0][1].tagName
+			name = get_local_tag(sub_rng_node[0][1])
 			if sorted_nodes.get(name) == None :
 				sorted_nodes[name] = []
 			sorted_nodes[name].append(sub_rng_node)
@@ -397,7 +284,7 @@ class RngSchema(Schema) :
 	def find_decl(self, rng_node, name, first = True) :
 		decl_node_index = 0
 		for decl_node in rng_node[1:] :
-			if decl_node.tagName == name :
+			if get_local_tag(decl_node) == name :
 				decl_node_index = rng_node.index(decl_node) - len(rng_node)
 				if first :
 					break
@@ -432,12 +319,12 @@ class RngSchema(Schema) :
 		return sorted_nodes
 
 	def get_obj_name(self, rng_node) :
-		return rng_node[0][1].getAttribute("name")
+		return rng_node[0][1].get("name")
 
 	def get_attr_type(self, attr_rng_node) :
 		sub_rng_nodes = self.sorted_sub_rng_nodes_by_node(*attr_rng_node[0])
 		for sub_rng_node in sub_rng_nodes.get("data", []) :
-			return sub_rng_nodes["data"][0][0][1].getAttribute("type")
+			return sub_rng_nodes["data"][0][0][1].get("type")
 
 		return None
 
@@ -445,24 +332,27 @@ class RngSchema(Schema) :
 		attr_values = []
 		sub_rng_nodes = self.sorted_sub_rng_nodes_by_node(*attr_rng_node[0])
 		for sub_rng_node in sub_rng_nodes.get("value", []) :
-			attr_values.append(sub_rng_node[0][1].childNodes[0].data)
+			#print etree.tostring(sub_rng_node[0][1])
+			#print sub_rng_node[0][1].text
+			#attr_values.append(sub_rng_node[0][1].getchildren()[0].data)
+			attr_values.append(sub_rng_node[0][1].text)
 
 		return attr_values
 
 	def get_attr_default(self, attr_rng_node) :
-		return attr_rng_node[0][1].getAttribute("ann:defaultValue")
+		return attr_rng_node[0][1].get("ann:defaultValue")
 
 	# sub_set: 'a'(all), 'r'(required), 'o'(optional)
 	def get_elem_attrs_by_obj(self, rng_obj, sub_set = 'a') :
-		(rng_doc, rng_node) = rng_obj
+		(grammar, rng_node) = rng_obj
 		if rng_node == None :
 			return None
 
 		attrs = []
-		sub_rng_nodes = self.get_sub_rng_nodes(rng_doc, rng_node)
+		sub_rng_nodes = self.get_sub_rng_nodes(grammar, rng_node)
 		for sub_rng_node in sub_rng_nodes :
-			if sub_rng_node[0][1].tagName == "attribute" :
-				name = sub_rng_node[0][1].getAttribute("name")
+			if get_local_tag(sub_rng_node[0][1]) == "attribute" :
+				name = sub_rng_node[0][1].get("name")
 				if attrs.count(name) :
 					continue
 
@@ -487,15 +377,15 @@ class RngSchema(Schema) :
 
 	# sub_set: 'a'(all), 'r'(required), 'o'(optional)
 	def get_sub_elems_by_obj(self, rng_obj, sub_set = 'a') :
-		(rng_doc, rng_node) = rng_obj
+		(grammar, rng_node) = rng_obj
 		if rng_node == None :
 			return None
 
 		elems = []
-		sub_rng_nodes = self.get_sub_rng_nodes(rng_doc, rng_node)
+		sub_rng_nodes = self.get_sub_rng_nodes(grammar, rng_node)
 		for sub_rng_node in sub_rng_nodes :
-			if sub_rng_node[0][1].tagName == "element" :
-				name = sub_rng_node[0][1].getAttribute("name")
+			if get_local_tag(sub_rng_node[0][1]) == "element" :
+				name = sub_rng_node[0][1].get("name")
 				if elems.count(name) :
 					continue
 

@@ -89,7 +89,7 @@ def rsc_list(idx,delimiter = False):
     if not doc:
         return []
     nodes = get_interesting_nodes(doc,[])
-    return [x.getAttribute("id") for x in nodes if is_resource(x)]
+    return [x.get("id") for x in nodes if is_resource(x)]
 def rsc_prim_list(idx,delimiter = False):
     if delimiter:
         return ' '
@@ -97,7 +97,7 @@ def rsc_prim_list(idx,delimiter = False):
     if not doc:
         return []
     nodes = get_interesting_nodes(doc,[])
-    return [x.getAttribute("id") for x in nodes if is_primitive(x)]
+    return [x.get("id") for x in nodes if is_primitive(x)]
 def null_list(idx,delimiter = False):
     if delimiter:
         return ' '

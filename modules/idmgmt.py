@@ -30,18 +30,18 @@ class IdMgmt(Singleton):
         '''
         Create a unique id for the xml node.
         '''
-        name = node.getAttribute("name")
-        if node.tagName == "nvpair":
+        name = node.get("name")
+        if node.tag == "nvpair":
             node_id = "%s-%s" % (pfx,name)
-        elif node.tagName == "op":
-            interval = node.getAttribute("interval")
+        elif node.tag == "op":
+            interval = node.get("interval")
             if interval:
                 node_id = "%s-%s-%s" % (pfx,name,interval)
             else:
                 node_id = "%s-%s" % (pfx,name)
         else:
             try:
-                subpfx = vars.subpfx_list[node.tagName]
+                subpfx = vars.subpfx_list[node.tag]
             except: subpfx = ''
             if subpfx:
                 node_id = "%s-%s" % (pfx,subpfx)
@@ -56,7 +56,7 @@ class IdMgmt(Singleton):
         self.save(node_id)
         return node_id
     def check_node(self,node,lvl):
-        node_id = node.getAttribute("id")
+        node_id = node.get("id")
         if not node_id:
             return
         if self.id_in_use(node_id):
@@ -64,9 +64,9 @@ class IdMgmt(Singleton):
             self.ok = False
             return
     def _store_node(self,node,lvl):
-        self.save(node.getAttribute("id"))
+        self.save(node.get("id"))
     def _drop_node(self,node,lvl):
-        self.remove(node.getAttribute("id"))
+        self.remove(node.get("id"))
     def check_xml(self,node):
         self.ok = True
         xmltraverse_thin(node,self.check_node)

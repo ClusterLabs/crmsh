@@ -67,7 +67,7 @@ primitive p3 ocf:heartbeat:Dummy
 primitive st stonith:null \
 	params hostlist="node1" \
 	meta description="some description here" \
-	op start interval="0" requires="nothing" \
+	op start requires="nothing" interval="0" \
 	op monitor interval="60m"
 group g1 p1 p2 d3
 group g2 d1 d2

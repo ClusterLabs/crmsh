@@ -16,7 +16,7 @@ primitive d2 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
 	params hostlist="node1" \
 	meta target-role="Started" \
-	op start interval="0" timeout="60s" requires="nothing" \
+	op start requires="nothing" timeout="60s" interval="0" \
 	op monitor interval="60m" timeout="60s"
 location d1-pref d1 100: node1
 .INP: _test
@@ -29,7 +29,7 @@ primitive p1 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
 	params hostlist="node1" \
 	meta target-role="Started" \
-	op start interval="0" timeout="60s" requires="nothing" \
+	op start requires="nothing" timeout="60s" interval="0" \
 	op monitor interval="60m" timeout="60s"
 location d1-pref p1 100: node1
 .INP: # delete primitive
@@ -41,7 +41,7 @@ primitive p1 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
 	params hostlist="node1" \
 	meta target-role="Started" \
-	op start interval="0" timeout="60s" requires="nothing" \
+	op start requires="nothing" timeout="60s" interval="0" \
 	op monitor interval="60m" timeout="60s"
 location d1-pref p1 100: node1
 .INP: # delete primitive with constraint
@@ -53,7 +53,7 @@ node node1
 primitive st stonith:ssh \
 	params hostlist="node1" \
 	meta target-role="Started" \
-	op start interval="0" timeout="60s" requires="nothing" \
+	op start requires="nothing" timeout="60s" interval="0" \
 	op monitor interval="60m" timeout="60s"
 .INP: primitive d1 ocf:pacemaker:Dummy
 .INP: location d1-pref d1 100: node1
@@ -70,7 +70,7 @@ primitive d1 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
 	params hostlist="node1" \
 	meta target-role="Started" \
-	op start interval="0" timeout="60s" requires="nothing" \
+	op start requires="nothing" timeout="60s" interval="0" \
 	op monitor interval="60m" timeout="60s"
 group g1 d1
 location d1-pref g1 100: node1
@@ -83,7 +83,7 @@ primitive d1 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
 	params hostlist="node1" \
 	meta target-role="Started" \
-	op start interval="0" timeout="60s" requires="nothing" \
+	op start requires="nothing" timeout="60s" interval="0" \
 	op monitor interval="60m" timeout="60s"
 location d1-pref d1 100: node1
 .INP: verify
@@ -103,7 +103,7 @@ primitive d2 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
 	params hostlist="node1" \
 	meta target-role="Started" \
-	op start interval="0" timeout="60s" requires="nothing" \
+	op start requires="nothing" timeout="60s" interval="0" \
 	op monitor interval="60m" timeout="60s"
 location d1-pref d2 100: node1
 .INP: _test
@@ -123,7 +123,7 @@ primitive d2 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
 	params hostlist="node1" \
 	meta target-role="Started" \
-	op start interval="0" timeout="60s" requires="nothing" \
+	op start requires="nothing" timeout="60s" interval="0" \
 	op monitor interval="60m" timeout="60s"
 location d1-pref d2 100: node1
 .INP: _test
@@ -141,7 +141,7 @@ node node1
 primitive st stonith:ssh \
 	params hostlist="node1" \
 	meta target-role="Started" \
-	op start interval="0" timeout="60s" requires="nothing" \
+	op start requires="nothing" timeout="60s" interval="0" \
 	op monitor interval="60m" timeout="60s"
 .INP: _test
 .INP: # verify

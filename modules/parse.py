@@ -17,7 +17,7 @@
 
 import shlex
 import re
-import xml.dom.minidom
+from lxml import etree
 from utils import *
 from vars import Vars
 from msg import *
@@ -670,24 +670,18 @@ def parse_xml(s):
         return False
     # strip spaces between elements
     # they produce text elements
-    xml_s = re.sub(r">\s+<", "><", xml_s)
     try:
-        doc = xml.dom.minidom.parseString(xml_s)
-    except xml.parsers.expat.ExpatError, msg:
+        e = etree.fromstring(xml_s)
+    except Exception, msg:
         common_err("cannot parse xml chunk: %s" % xml_s)
         common_err(msg)
         return False
     try:
-        elnode = doc.childNodes[0]
+        el_type = vars.cib_cli_map[e.tag]
     except:
-        common_err("no elements in %s" % xml_s)
+        common_err("element %s not recognized" % e.tag)
         return False
-    try:
-        el_type = vars.cib_cli_map[elnode.tagName]
-    except:
-        common_err("element %s not recognized" % elnode.tagName)
-        return False
-    id = elnode.getAttribute("id")
+    id = e.get("id")
     head.append(["id",id])
     cli_list.append([el_type,head])
     cli_list.append(["raw",xml_s])

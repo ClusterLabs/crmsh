@@ -19,7 +19,7 @@ import os
 import sys
 import subprocess
 import copy
-import xml.dom.minidom
+from lxml import etree
 import re
 import glob
 from userprefs import Options, UserPrefs
@@ -277,11 +277,7 @@ def prog_meta(prog):
             l = []
     return l
 def get_nodes_text(n,tag):
-    try:
-        node = n.getElementsByTagName(tag)[0]
-        for c in node.childNodes:
-            if c.nodeType == c.TEXT_NODE:
-                return c.data.strip()
+    try: return n.findtext(tag).strip()
     except: return ''
 
 def mk_monitor_name(role,depth):
@@ -290,8 +286,8 @@ def mk_monitor_name(role,depth):
         "monitor_%s%s" % (role,depth) or \
         "monitor%s" % depth
 def monitor_name_node(node):
-    depth = node.getAttribute("depth") or '0'
-    role = node.getAttribute("role")
+    depth = node.get("depth") or '0'
+    role = node.get("role")
     return mk_monitor_name(role,depth)
 def monitor_name_pl(pl):
     depth = find_value(pl, "depth") or '0'
@@ -313,7 +309,7 @@ class RAInfo(object):
         self.ra_provider = ra_provider
         if not self.ra_provider:
             self.ra_provider = "heartbeat"
-        self.ra_node = None
+        self.ra_elem = None
     def ra_string(self):
         return self.ra_class == "ocf" and \
             "%s:%s:%s" % (self.ra_class, self.ra_provider, self.ra_type) or \
@@ -329,52 +325,47 @@ class RAInfo(object):
     def set_advanced_params(self, l):
         self.advanced_params = l
     def filter_crmd_attributes(self):
-        for n in self.ra_node.getElementsByTagName("parameter"):
-            if not n.getAttribute("name") in vars.crmd_user_attributes:
-                n.parentNode.removeChild(n)
+        for p in self.ra_elem.xpath("//parameters/parameter"):
+            if not p.get("name") in vars.crmd_user_attributes:
+                self.ra_elem.remove(p)
     def add_ra_params(self,ra):
         '''
         Add parameters from another RAInfo instance.
         '''
         try:
-            if not self.mk_ra_node() or not ra.mk_ra_node():
+            if self.mk_ra_node() is None or ra.mk_ra_node() is None:
                 return
         except:
             return
         try:
-            params_node = self.doc.getElementsByTagName("parameters")[0]
+            params_node = self.ra_elem.findall("parameters")[0]
         except:
-            params_node = self.doc.createElement("parameters")
-            self.ra_node.appendChild(params_node)
-        for n in ra.ra_node.getElementsByTagName("parameter"):
-            params_node.appendChild(self.doc.importNode(n,1))
+            params_node = etree.SubElement(self.ra_elem, "parameters")
+        for n in ra.ra_elem.xpath("//parameters/parameter"):
+            params_node.append(copy.deepcopy(n))
     def mk_ra_node(self):
         '''
         Return the resource_agent node.
         '''
-        if self.ra_node:
-            return self.ra_node
+        if self.ra_elem is not None:
+            return self.ra_elem
         meta = self.meta()
         try:
-            self.doc = xml.dom.minidom.parseString('\n'.join(meta))
-        except:
-            self.error("could not parse meta-data: %s" % '\n'.join(meta))
-            self.ra_node = None
-            return None
-        try:
-            self.ra_node = self.doc.getElementsByTagName("resource-agent")[0]
-        except:
+            self.ra_elem = etree.fromstring('\n'.join(meta))
+            assert(self.ra_elem.tag == 'resource-agent')
+        except Exception,msg:
+            common_err(msg)
             self.error("meta-data contains no resource-agent element")
-            self.ra_node = None
+            self.ra_elem = None
             return None
         if self.ra_class == "stonith":
             self.add_ra_params(get_stonithd_meta())
-        return self.ra_node
+        return self.ra_elem
     def param_type_default(self,n):
         try:
-            content = n.getElementsByTagName("content")[0]
-            type = content.getAttribute("type")
-            default = content.getAttribute("default")
+            content = n.find("content")
+            type = content.get("type")
+            default = content.get("default")
             return type,default
         except:
             return None,None
@@ -386,35 +377,34 @@ class RAInfo(object):
         id = "ra_params-%s" % self.ra_string()
         if wcache.is_cached(id):
             return wcache.retrieve(id)
-        if not self.mk_ra_node():
+        if self.mk_ra_node() is None:
             return None
         d = {}
-        for pset in self.ra_node.getElementsByTagName("parameters"):
-            for c in pset.getElementsByTagName("parameter"):
-                name = c.getAttribute("name")
-                if not name:
-                    continue
-                required = c.getAttribute("required")
-                unique = c.getAttribute("unique")
-                type,default = self.param_type_default(c)
-                d[name] = {
-                    "required": required,
-                    "unique": unique,
-                    "type": type,
-                    "default": default,
-                }
+        for c in self.ra_elem.xpath("//parameters/parameter"):
+            name = c.get("name")
+            if not name:
+                continue
+            required = c.get("required")
+            unique = c.get("unique")
+            type,default = self.param_type_default(c)
+            d[name] = {
+                "required": required,
+                "unique": unique,
+                "type": type,
+                "default": default,
+            }
         return wcache.store(id,d)
     def completion_params(self):
         '''
         Extra method for completion, for we want to filter some
         (advanced) parameters out. And we want this to be fast.
         '''
-        if not self.mk_ra_node():
+        if self.mk_ra_node() is None:
             return None
-        return [c.getAttribute("name")
-            for c in self.ra_node.getElementsByTagName("parameter")
-                if c.getAttribute("name")
-                and c.getAttribute("name") not in self.advanced_params
+        return [c.get("name")
+            for c in self.ra_elem.xpath("//parameters/parameter")
+                if c.get("name")
+                and c.get("name") not in self.advanced_params
         ]
     def actions(self):
         '''
@@ -424,23 +414,22 @@ class RAInfo(object):
         id = "ra_actions-%s" % self.ra_string()
         if wcache.is_cached(id):
             return wcache.retrieve(id)
-        if not self.mk_ra_node():
+        if self.mk_ra_node() is None:
             return None
         d = {}
-        for pset in self.ra_node.getElementsByTagName("actions"):
-            for c in pset.getElementsByTagName("action"):
-                name = c.getAttribute("name")
-                if not name or name in self.skip_ops:
+        for c in self.ra_elem.xpath("//actions/action"):
+            name = c.get("name")
+            if not name or name in self.skip_ops:
+                continue
+            if name == "monitor":
+                name = monitor_name_node(c)
+            d[name] = {}
+            for a in c.attrib.keys():
+                if a in self.skip_op_attr:
                     continue
-                if name == "monitor":
-                    name = monitor_name_node(c)
-                d[name] = {}
-                for a in c.attributes.keys():
-                    if a in self.skip_op_attr:
-                        continue
-                    v = c.getAttribute(a)
-                    if v:
-                        d[name][a] = v
+                v = c.get(a)
+                if v:
+                    d[name][a] = v
         # add monitor ops without role, if they don't already
         # exist
         d2 = {}
@@ -505,7 +494,7 @@ class RAInfo(object):
                 rc |= user_prefs.get_check_rc()
         return rc
     def get_adv_timeout(self, op, node = None):
-        if node and op == "monitor":
+        if node is not None and op == "monitor":
             name = monitor_name_node(node)
         else:
             name = op
@@ -585,12 +574,12 @@ class RAInfo(object):
         '''
         Print the RA meta-data in a human readable form.
         '''
-        if not self.mk_ra_node():
+        if self.mk_ra_node() is None:
             return ''
         l = []
         title = self.meta_title()
         l.append(title)
-        longdesc = get_nodes_text(self.ra_node,"longdesc")
+        longdesc = get_nodes_text(self.ra_elem,"longdesc")
         if longdesc:
             l.append(longdesc)
         if self.ra_class != "heartbeat":
@@ -602,7 +591,7 @@ class RAInfo(object):
             l.append(actions)
         return '\n\n'.join(l)
     def get_shortdesc(self,n):
-        name = n.getAttribute("name")
+        name = n.get("name")
         shortdesc = get_nodes_text(n,"shortdesc")
         longdesc = get_nodes_text(n,"longdesc")
         if shortdesc and shortdesc not in (name,longdesc,self.ra_type):
@@ -610,16 +599,16 @@ class RAInfo(object):
         return ''
     def meta_title(self):
         s = self.ra_string()
-        shortdesc = self.get_shortdesc(self.ra_node)
+        shortdesc = self.get_shortdesc(self.ra_elem)
         if shortdesc:
             s = "%s (%s)" % (shortdesc,s)
         return s
     def meta_param_head(self,n):
-        name = n.getAttribute("name")
+        name = n.get("name")
         if not name:
             return None
         s = name
-        if n.getAttribute("required") == "1":
+        if n.get("required") == "1":
             s = s + "*"
         type,default = self.param_type_default(n)
         if type and default:
@@ -642,26 +631,24 @@ class RAInfo(object):
             l.append(longdesc)
         return '\n'.join(l)
     def meta_parameter(self,param):
-        if not self.mk_ra_node():
+        if self.mk_ra_node() is None:
             return ''
         l = []
-        for pset in self.ra_node.getElementsByTagName("parameters"):
-            for c in pset.getElementsByTagName("parameter"):
-                if c.getAttribute("name") == param:
-                    return self.format_parameter(c)
+        for c in self.ra_elem.xpath("//parameters/parameter"):
+            if c.get("name") == param:
+                return self.format_parameter(c)
     def meta_parameters(self):
-        if not self.mk_ra_node():
+        if self.mk_ra_node() is None:
             return ''
         l = []
-        for pset in self.ra_node.getElementsByTagName("parameters"):
-            for c in pset.getElementsByTagName("parameter"):
-                s = self.format_parameter(c)
-                if s:
-                    l.append(s)
+        for c in self.ra_elem.xpath("//parameters/parameter"):
+            s = self.format_parameter(c)
+            if s:
+                l.append(s)
         if l:
             return "Parameters (* denotes required, [] the default):\n\n" + '\n'.join(l)
     def meta_action_head(self,n):
-        name = n.getAttribute("name")
+        name = n.get("name")
         if not name:
             return ''
         if name in self.skip_ops:
@@ -669,27 +656,26 @@ class RAInfo(object):
         if name == "monitor":
             name = monitor_name_node(n)
         s = "%-13s" % name
-        for a in n.attributes.keys():
+        for a in n.attrib.keys():
             if a in self.skip_op_attr:
                 continue
-            v = n.getAttribute(a)
+            v = n.get(a)
             if v:
                 s = "%s %s=%s" % (s,a,v)
         return s
     def meta_actions(self):
         l = []
-        for aset in self.ra_node.getElementsByTagName("actions"):
-            for c in aset.getElementsByTagName("action"):
-                s = self.meta_action_head(c)
-                if s:
-                    l.append(self.ra_tab + s)
+        for c in self.ra_elem.xpath("//actions/action"):
+            s = self.meta_action_head(c)
+            if s:
+                l.append(self.ra_tab + s)
         if l:
             return "Operations' defaults (advisory minimum):\n\n" + '\n'.join(l)
 
-def get_ra(node):
-    ra_type = node.getAttribute("type")
-    ra_class = node.getAttribute("class")
-    ra_provider = node.getAttribute("provider")
+def get_ra(el):
+    ra_type = el.get("type")
+    ra_class = el.get("class")
+    ra_provider = el.get("provider")
     return RAInfo(ra_class,ra_type,ra_provider)
 
 #

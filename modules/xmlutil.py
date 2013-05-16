@@ -17,7 +17,8 @@
 
 import os
 import subprocess
-import xml.dom.minidom
+from lxml import etree, doctestcompare
+import copy
 import bz2
 
 from schema import Schema, rng_attr_values, rng_attr_values_l
@@ -28,19 +29,19 @@ from utils import *
 
 def xmlparse(f):
     try:
-        doc = xml.dom.minidom.parse(f)
-    except xml.parsers.expat.ExpatError,msg:
+        cib_elem = etree.parse(f).getroot()
+    except Exception,msg:
         common_err("cannot parse xml: %s" % msg)
         return None
-    return doc
-def file2doc(s):
+    return cib_elem
+def file2cib_elem(s):
     try: f = open(s,'r')
     except IOError, msg:
         common_err(msg)
         return None
-    doc = xmlparse(f)
+    cib_elem = xmlparse(f)
     f.close()
-    return doc
+    return cib_elem
 
 cib_dump = "cibadmin -Ql"
 def cibdump2file(fname):
@@ -63,8 +64,7 @@ def cib2tmp():
         common_err(msg)
         return None
     return tmpf
-def cibdump2doc(section = None):
-    doc = None
+def cibdump2elem(section = None):
     if section:
         cmd = "%s -o %s" % (cib_dump,section)
     else:
@@ -81,8 +81,8 @@ def cibdump2doc(section = None):
         return None
     if rc == 0:
         try:
-            return xml.dom.minidom.parseString(outp)
-        except xml.parsers.expat.ExpatError,msg:
+            return etree.fromstring(outp)
+        except Exception,msg:
             cib_parse_err(msg,outp)
             return None
     elif rc == vars.cib_no_section_rc:
@@ -94,61 +94,52 @@ cib_piped = "cibadmin -p"
 def commit_rsc(node):
     "Replace a resource definition using cibadmin -R"
     xml_processnodes(node,is_emptynvpairs,rmnodes)
-    xml_processnodes(node,is_whitespace,rmnodes)
     rc = pipe_string("%s -R -o %s" % \
-        (cib_piped, "resources"), node.toxml())
+        (cib_piped, "resources"), etree.tostring(node))
     return rc == 0
 
-def get_conf_elem(doc, tag):
-    try:
-        return doc.getElementsByTagName(tag)[0]
-    except:
-        return None
 def read_cib(fun, params = None):
-    doc = fun(params)
-    if not doc:
-        return doc,None
-    cib = doc.childNodes[0]
-    if not is_element(cib) or cib.tagName != "cib":
-        return doc,None
-    return doc,cib
+    cib_elem = fun(params)
+    if cib_elem is None or cib_elem.tag != "cib":
+        return None
+    return cib_elem
 
 def sanity_check_nvpairs(id,node,attr_list):
     rc = 0
-    for nvpair in node.childNodes:
-        if not is_element(nvpair) or nvpair.tagName != "nvpair":
+    for nvpair in node.iterchildren("nvpair"):
+        if not is_element(nvpair):
             continue
-        n = nvpair.getAttribute("name")
+        n = nvpair.get("name")
         if n and not n in attr_list:
             common_err("%s: attribute %s does not exist" % (id,n))
             rc |= user_prefs.get_check_rc()
     return rc
 def sanity_check_meta(id,node,attr_list):
     rc = 0
-    if not node or not attr_list:
+    if node is None or not attr_list:
         return rc
-    for c in node.childNodes:
+    for c in node.iterchildren():
         if not is_element(c):
             continue
-        if c.tagName == "meta_attributes":
+        if c.tag == "meta_attributes":
             rc |= sanity_check_nvpairs(id,c,attr_list)
     return rc
 def get_interesting_nodes(node,nodes):
-    for c in node.childNodes:
-        if is_element(c) and c.tagName in vars.cib_cli_map:
+    for c in node.iterchildren():
+        if is_element(c) and c.tag in vars.cib_cli_map:
             nodes.append(c)
         get_interesting_nodes(c,nodes)
     return nodes
 
 def resources_xml():
-    return cibdump2doc("resources")
+    return cibdump2elem("resources")
 def rsc2node(id):
-    doc = resources_xml()
-    if not doc:
+    rsc_elem = resources_xml()
+    if rsc_elem is None:
         return None
-    nodes = get_interesting_nodes(doc,[])
-    for n in nodes:
-        if is_resource(n) and n.getAttribute("id") == id:
+    elems = get_interesting_nodes(rsc_elem,[])
+    for n in elems:
+        if is_resource(n) and n.get("id") == id:
             return n
 def get_meta_param(id,param):
     rsc_meta_show = "crm_resource --meta -r '%s' -g '%s'"
@@ -156,12 +147,12 @@ def get_meta_param(id,param):
     return s
 def is_normal_node(n):
     return is_element(n) and \
-        n.tagName == "node" and \
-        (n.getAttribute("type") == "normal" or not n.getAttribute("type"))
+        n.tag == "node" and \
+        (n.get("type") == "normal" or not n.get("type"))
 def mk_rsc_type(n):
-    ra_type = n.getAttribute("type")
-    ra_class = n.getAttribute("class")
-    ra_provider = n.getAttribute("provider")
+    ra_type = n.get("type")
+    ra_class = n.get("class")
+    ra_provider = n.get("provider")
     s1 = s2 = ''
     if ra_class:
         s1 = "%s:"%ra_class
@@ -169,14 +160,10 @@ def mk_rsc_type(n):
         s2 = "%s:"%ra_provider
     return ''.join((s1,s2,ra_type))
 def listnodes():
-    nodes = []
-    doc = cibdump2doc("nodes")
-    if not doc:
+    nodes_elem = cibdump2elem("nodes")
+    if nodes_elem is None:
         return []
-    nodes_node = get_conf_elem(doc, "nodes")
-    if not nodes_node:
-        return []
-    return [x.getAttribute("uname") for x in nodes_node.childNodes \
+    return [x.get("uname") for x in nodes_elem.iterchildren("node") \
         if is_normal_node(x)]
 def is_live_cib():
     '''We working with the live cluster?'''
@@ -204,7 +191,7 @@ def listshadows():
 def shadowfile(name):
     return "%s/shadow.%s" % (cib_shadow_dir(), name)
 def shadow2doc(name):
-    return file2doc(shadowfile(name))
+    return file2cib_elem(shadowfile(name))
 def pe2shadow(pe_file, name):
     '''Copy a PE file (or any CIB file) to a shadow.'''
     try:
@@ -233,9 +220,9 @@ def is_rsc_managed(id):
     if not is_live_cib():
         return False
     rsc_node = rsc2node(id)
-    if not rsc_node:
+    if rsc_node is None:
         return False
-    prop_node = get_properties_node(get_conf_elem(cibdump2doc("crm_config"), "crm_config"))
+    prop_node = get_properties_node(cibdump2elem("crm_config"))
     # maintenance-mode, if true, overrides all
     attr = get_attr_value(prop_node, "maintenance-mode")
     if attr and is_xs_boolean_true(attr):
@@ -246,7 +233,7 @@ def is_rsc_managed(id):
     if attr:
         return is_xs_boolean_true(attr)
     # then rsc_defaults is-managed attribute
-    rsc_dflt_node = get_rscop_defaults_meta_node(get_conf_elem(cibdump2doc("rsc_defaults"), "rsc_defaults"))
+    rsc_dflt_node = get_rscop_defaults_meta_node(cibdump2elem("rsc_defaults"))
     attr = get_attr_value(rsc_dflt_node, "is-managed")
     if attr:
         return is_xs_boolean_true(attr)
@@ -255,11 +242,15 @@ def is_rsc_managed(id):
     if attr:
         return is_xs_boolean_true(attr)
     return True
+def cloned_el(node):
+    for c in node.iterchildren():
+        if is_resource(c):
+            return c.tag
 def is_rsc_running(id):
     if not is_live_cib():
         return False
     rsc_node = rsc2node(id)
-    if not rsc_node:
+    if rsc_node is None:
         return False
     if not is_resource(rsc_node):
         return False
@@ -269,42 +260,46 @@ def is_rsc_running(id):
     return outp.find("running") > 0 and outp.find("NOT") == -1
 def is_rsc_clone(rsc_id):
     rsc_node = rsc2node(rsc_id)
+    if rsc_node is None:
+        return False
     return is_clone(rsc_node)
 def is_rsc_ms(rsc_id):
     rsc_node = rsc2node(rsc_id)
+    if rsc_node is None:
+        return False
     return is_ms(rsc_node)
 def rsc_clone(rsc_id):
     '''Get a clone of a resource.'''
     rsc_node = rsc2node(rsc_id)
-    if not rsc_node or not rsc_node.parentNode:
+    if rsc_node is None or rsc_node.getparent() is None:
         return None
-    pnode = rsc_node.parentNode
+    pnode = rsc_node.getparent()
     if is_group(pnode):
-        pnode = pnode.parentNode
+        pnode = pnode.getparent()
     if is_clonems(pnode):
-        return pnode.getAttribute("id")
+        return pnode.get("id")
 def get_topmost_rsc(node):
     '''
     Return a topmost node which is a resource and contains this resource
     '''
-    if is_container(node.parentNode):
-        return get_topmost_rsc(node.parentNode)
+    if is_container(node.getparent()):
+        return get_topmost_rsc(node.getparent())
     return node
 def get_cloned_rsc(rsc_id):
     rsc_node = rsc2node(rsc_id)
-    if not rsc_node:
+    if rsc_node is None:
         return ""
-    for c in rsc_node.childNodes:
+    for c in rsc_node.iterchildren():
         if is_child_rsc(c):
-            return c.getAttribute("id")
+            return c.get("id")
     return ""
 attr_defaults_missing = {
 }
 def add_missing_attr(node):
     try:
-        for defaults in attr_defaults_missing[node.tagName]:
-            if not node.hasAttribute(defaults[0]):
-                node.setAttribute(defaults[0],defaults[1])
+        for defaults in attr_defaults_missing[node.tag]:
+            if defaults[0] not in node.attrib:
+                node.set(defaults[0],defaults[1])
     except: pass
 attr_defaults = {
     "rule": (("boolean-op","and"),),
@@ -312,176 +307,160 @@ attr_defaults = {
 }
 def drop_attr_defaults(node, ts = 0):
     try:
-        for defaults in attr_defaults[node.tagName]:
-            if node.getAttribute(defaults[0]) == defaults[1]:
-                node.removeAttribute(defaults[0])
+        for defaults in attr_defaults[node.tag]:
+            if node.get(defaults[0]) == defaults[1]:
+                del node.attrib[defaults[0]]
     except: pass
 
-def is_element(xmlnode):
-    return xmlnode and xmlnode.nodeType == xmlnode.ELEMENT_NODE
+def is_element(e):
+    return e is not None and isinstance(e.tag, basestring)
 
-def nameandid(xmlnode,level):
-    if xmlnode.nodeType == xmlnode.ELEMENT_NODE:
-        print level*' ',xmlnode.tagName,xmlnode.getAttribute("id"),xmlnode.getAttribute("name")
+def nameandid(e,level):
+    if e.tag:
+        print level*' ',e.tag,e.get("id"),e.get("name")
 
-def xmltraverse(xmlnode,fun,ts=0):
-    for c in xmlnode.childNodes:
+def xmltraverse(e,fun,ts=0):
+    for c in e.iterchildren():
         if is_element(c):
             fun(c,ts)
             xmltraverse(c,fun,ts+1)
 
-def xmltraverse_thin(xmlnode,fun,ts=0):
+def xmltraverse_thin(e,fun,ts=0):
     '''
     Skip elements which may be resources themselves.
     NB: Call this only on resource (or constraint) nodes, but
     never on cib or configuration!
     '''
-    for c in xmlnode.childNodes:
-        if is_element(c) and not c.tagName in ('primitive','group'):
+    for c in e.iterchildren():
+        if is_element(c) and not c.tag in ('primitive','group'):
             xmltraverse_thin(c,fun,ts+1)
-    fun(xmlnode,ts)
+    fun(e,ts)
 
-def xml_processnodes(xmlnode,node_filter,proc):
+def xml_processnodes(e,node_filter,proc):
     '''
     Process with proc all nodes that match filter.
     '''
     node_list = []
-    for child in xmlnode.childNodes:
+    for child in e.iterchildren():
         if node_filter(child):
             node_list.append(child)
-        if child.hasChildNodes():
+        if len(child) > 0:
             xml_processnodes(child,node_filter,proc)
     if node_list:
         proc(node_list)
 
 # filter the cib
-def is_whitespace(node):
-    return node.nodeType == node.TEXT_NODE and not node.data.strip()
-def is_comment(node):
-    return node.nodeType == node.COMMENT_NODE
-def is_status_node(node):
-    return is_element(node) and node.tagName == "status"
+def is_entity(e):
+    return e.tag == etree.Entity
+def is_comment(e):
+    return e.tag == etree.Comment
+def is_status_node(e):
+    return e.tag == "status"
 
 def is_emptynvpairs(node):
-    if is_element(node) and node.tagName in vars.nvpairs_tags:
+    if is_element(node) and node.tag in vars.nvpairs_tags:
         for a in vars.precious_attrs:
-            if node.getAttribute(a):
+            if node.get(a):
                 return False
-        for n in node.childNodes:
+        for n in node.iterchildren():
             if is_element(n):
                 return False
         return True
     else:
         return False
 def is_node(node):
-    return is_element(node) \
-        and node.tagName == "node"
+    return node.tag == "node"
 def is_group(node):
-    return is_element(node) \
-        and node.tagName == "group"
+    return node.tag == "group"
 def is_ms(node):
-    return is_element(node) \
-        and node.tagName in ("master","ms")
+    return node.tag in ("master","ms")
 def is_clone(node):
-    return is_element(node) \
-        and node.tagName == "clone"
+    return node.tag == "clone"
 def is_clonems(node):
+    return node.tag in vars.clonems_tags
+def is_cloned(node):
     return is_element(node) \
-        and node.tagName in vars.clonems_tags
-def is_cloned(node, tag=None):
-    if not is_element(node):
-        return False
-    return node.parentNode.tagName in vars.clonems_tags or \
-            (node.parentNode.tagName == "group" and \
-            node.parentNode.parentNode.tagName in vars.clonems_tags)
-def cloned_el(node):
-    for c in node.childNodes:
-        if is_resource(c):
-            return c.tagName
+        and (node.getparent().tag in vars.clonems_tags or \
+            (node.getparent().tag == "group" and \
+            node.getparent().getparent().tag in vars.clonems_tags))
 def is_container(node):
-    return is_element(node) \
-        and node.tagName in vars.container_tags
+    return node.tag in vars.container_tags
 def is_primitive(node):
-    return is_element(node) \
-        and node.tagName == "primitive"
+    return node.tag == "primitive"
 def is_resource(node):
-    return is_element(node) \
-        and node.tagName in vars.resource_tags
+    return node.tag in vars.resource_tags
 def is_template(node):
-    return is_element(node) \
-        and node.tagName == "template"
+    return node.tag == "template"
 def is_child_rsc(node):
-    return is_element(node) \
-        and node.tagName in vars.children_tags
+    return node.tag in vars.children_tags
 def is_constraint(node):
-    return is_element(node) \
-        and node.tagName in vars.constraint_tags
+    return node.tag in vars.constraint_tags
 def is_defaults(node):
-    return is_element(node) \
-        and node.tagName in vars.defaults_tags
-def rsc_constraint(rsc_id,cons_node):
-    if not is_element(cons_node):
+    return node.tag in vars.defaults_tags
+def rsc_constraint(rsc_id,con_elem):
+    if not is_element(con_elem):
         return False
-    for attr in cons_node.attributes.keys():
+    for attr in con_elem.keys():
         if attr in vars.constraint_rsc_refs \
-                and rsc_id == cons_node.getAttribute(attr):
+                and rsc_id == con_elem.get(attr):
             return True
-    for rref in cons_node.getElementsByTagName("resource_ref"):
-        if rsc_id == rref.getAttribute("id"):
+    for rref in con_elem.xpath("resource_set/resource_ref"):
+        if rsc_id == rref.get("id"):
             return True
     return False
 
-def sort_container_children(node_list):
+def sort_container_children(e_list):
     '''
     Make sure that attributes's nodes are first, followed by the
     elements (primitive/group). The order of elements is not
     disturbed, they are just shifted to end!
     '''
-    for node in node_list:
-        children = []
-        for c in node.childNodes:
-            if is_element(c) and c.tagName in vars.children_tags:
-                children.append(c)
+    for node in e_list:
+        children = [ x for x in node.iterchildren() \
+            if x.tag in vars.children_tags ]
         for c in children:
-            node.removeChild(c)
+            node.remove(c)
         for c in children:
-            node.appendChild(c)
-def rmnode(node):
-    if node and node.parentNode:
-        if node.parentNode:
-            node.parentNode.removeChild(node)
-        node.unlink()
-def rmnodes(node_list):
-    for node in node_list:
-        rmnode(node)
-def printid(node_list):
-    for node in node_list:
-        id = node.getAttribute("id")
-        if id: print "node id:",id
-def remove_dflt_attrs(node_list):
+            node.append(c)
+def rmnode(e):
+    if e is not None and e.getparent() is not None:
+        e.getparent().remove(e)
+def rmnodes(e_list):
+    for e in e_list:
+        rmnode(e)
+def printid(e_list):
+    for e in e_list:
+        id = e.get("id")
+        if id: print "element id:",id
+def remove_dflt_attrs(e_list):
     '''
     Drop optional attributes which are already set to default
     '''
-    for n in node_list:
+    for e in e_list:
         try:
-            d = vars.attr_defaults[n.tagName]
+            d = vars.attr_defaults[e.tag]
             for a in d.keys():
-                if n.getAttribute(a) == d[a]:
-                    n.removeAttribute(a)
+                if e.get(a) == d[a]:
+                    del e.attrib[a]
         except:
             pass
+def remove_text(e_list):
+    for e in e_list:
+        e.text = None
+        e.tail = None
 def sanitize_cib(doc):
     xml_processnodes(doc,is_status_node,rmnodes)
     #xml_processnodes(doc,is_element,printid)
     xml_processnodes(doc,is_emptynvpairs,rmnodes)
-    xml_processnodes(doc,is_whitespace,rmnodes)
+    xml_processnodes(doc,is_entity,rmnodes)
     #xml_processnodes(doc,is_comment,rmnodes)
     xml_processnodes(doc,is_container,sort_container_children)
     xml_processnodes(doc,is_element,remove_dflt_attrs)
+    xml_processnodes(doc,is_element,remove_text)
     xmltraverse(doc,drop_attr_defaults)
 
 def is_simpleconstraint(node):
-    return len(node.getElementsByTagName("resource_ref")) == 0
+    return len(node.xpath("resource_set/resource_ref")) == 0
 
 match_list = {
     "node": ("uname",),
@@ -499,40 +478,40 @@ match_list = {
     "expression": ("attribute","operation","value"),
     "fencing-level": ("target","devices"),
 }
-def add_comment(node,s):
+def add_comment(e,s):
     '''
-    Add comment s to node from doc.
+    Add comment s to e from doc.
     '''
-    if not node or not s:
+    if e is None or not s:
         return
-    comm_node = node.ownerDocument.createComment(s)
+    comm_elem = etree.Comment(s)
     firstelem = None
-    for n in node.childNodes:
-        if is_element(n):
-            firstelem = n
+    for c in e.iterchildren():
+        if is_element(c):
+            firstelem = e.index(c)
             break
-    node.insertBefore(comm_node, firstelem)
+    e.insert(firstelem, comm_elem)
 def stuff_comments(node,comments):
     for s in comments:
         add_comment(node,s)
-def fix_comments(node):
+def fix_comments(e):
     'Make sure that comments start with #'
-    cnodes = [x for x in node.childNodes if is_comment(x)]
-    for n in cnodes:
-        n.data = n.data.strip()
-        if not n.data.startswith("#"):
-            n.data = "# %s" % n.data
+    celems = [x for x in e.iterchildren() if is_comment(x)]
+    for c in celems:
+        c.text = c.text.strip()
+        if not c.text.startswith("#"):
+            c.text = "# %s" % c.text
 
-def set_id_used_attr(node):
-    node.setAttribute("__id_used", "Yes")
-def is_id_used_attr(node):
-    return node.getAttribute("__id_used") == "Yes"
-def remove_id_used_attr(node,lvl):
-    if is_element(node) and is_id_used_attr(node):
-        node.removeAttribute("__id_used")
-def remove_id_used_attributes(node):
-    if node:
-        xmltraverse(node, remove_id_used_attr)
+def set_id_used_attr(e):
+    e.set("__id_used", "Yes")
+def is_id_used_attr(e):
+    return e.get("__id_used") == "Yes"
+def remove_id_used_attr(e,lvl):
+    if is_element(e) and is_id_used_attr(e):
+        del e.attrib["__id_used"]
+def remove_id_used_attributes(e):
+    if e is not None:
+        xmltraverse(e, remove_id_used_attr)
 def lookup_node(node,oldnode,location_only = False,ignore_id = False):
     '''
     Find a child of oldnode which matches node.
@@ -544,31 +523,29 @@ def lookup_node(node,oldnode,location_only = False,ignore_id = False):
     (the first parameter here) contains the id, then the "id"
     attribute is added to the match list.
     '''
-    #print "lookup:",node.tagName,node.getAttribute("id")
-    if not oldnode:
+    #print "lookup:",node.tag,node.get("id")
+    if oldnode is None:
         return None
-    #print "  in:",oldnode.tagName,oldnode.getAttribute("id")
+    #print "  in:",oldnode.tag,oldnode.get("id")
     try:
-        attr_list = list(match_list[node.tagName])
+        attr_list = list(match_list[node.tag])
     except KeyError:
         attr_list = []
-    if not ignore_id and node.getAttribute("id"):
+    if not ignore_id and node.get("id"):
         #print "  add id attribute"
         attr_list.append("id")
-    for c in oldnode.childNodes:
-        if not is_element(c):
-            continue
+    for c in oldnode.iterchildren():
         if not location_only and is_id_used_attr(c):
             continue
-        #print "  checking:",c.tagName,c.getAttribute("id")
-        if node.tagName == c.tagName:
+        #print "  checking:",c.tag,c.get("id")
+        if node.tag == c.tag:
             failed = False
             for a in attr_list:
-                if node.getAttribute(a) != c.getAttribute(a):
+                if node.get(a) != c.get(a):
                     failed = True
                     break
             if not failed:
-                #print "  found:",c.tagName,c.getAttribute("id")
+                #print "  found:",c.tag,c.get("id")
                 return c
     return None
 
@@ -577,50 +554,48 @@ def find_operation(rsc_node, name, interval = "0"):
     Setting interval to "non-0" means get the first op with interval
     different from 0.
     '''
-    op_node_l = rsc_node.getElementsByTagName("operations")
+    op_node_l = rsc_node.findall("operations")
     for ops in op_node_l:
-        for c in ops.childNodes:
-            if not is_element(c) or c.tagName != "op":
-                continue
-            if c.getAttribute("name") != name:
+        for c in ops.iterchildren("op"):
+            if c.get("name") != name:
                 continue
             if (interval == "non-0" and
-                    crm_msec(c.getAttribute("interval")) > 0) or \
-                    crm_time_cmp(c.getAttribute("interval"), interval) == 0:
+                    crm_msec(c.get("interval")) > 0) or \
+                    crm_time_cmp(c.get("interval"), interval) == 0:
                 return c
 
 def get_op_timeout(rsc_node, op, default_timeout):
     interval = (op == "monitor" and "non-0" or "0")
     op_n = find_operation(rsc_node, op == "probe" and "monitor" or op, interval)
-    timeout = op_n and op_n.getAttribute("timeout") or default_timeout
+    timeout = op_n and op_n.get("timeout") or default_timeout
     return crm_msec(timeout)
 
 def op2list(node):
     pl = []
     action = ""
-    for name in node.attributes.keys():
+    for name in node.keys():
         if name == "name":
-            action = node.getAttribute(name)
+            action = node.get(name)
         elif name != "id": # skip the id
-            pl.append([name,node.getAttribute(name)])
+            pl.append([name,node.get(name)])
     if not action:
         common_err("op is invalid (no name)")
     return action,pl
 def get_rsc_operations(rsc_node):
     actions = []
-    for c in rsc_node.childNodes:
+    for c in rsc_node.iterchildren():
         if not is_element(c):
             continue
-        if c.tagName == "operations":
-            for c2 in c.childNodes:
-                if is_element(c2) and c2.tagName == "op":
+        if c.tag == "operations":
+            for c2 in c.iterchildren():
+                if is_element(c2) and c2.tag == "op":
                     op,pl = op2list(c2)
                     if op:
                         actions.append([op,pl])
     return actions
 
 def filter_on_tag(nl,tag):
-    return [node for node in nl if node.tagName == tag]
+    return [node for node in nl if node.tag == tag]
 def nodes(node_list):
     return filter_on_tag(node_list,"node")
 def primitives(node_list):
@@ -715,39 +690,38 @@ def is_constraint_cli(s):
 def referenced_resources(node):
     if not is_constraint(node):
         return []
-    xml_obj_type = node.tagName
+    xml_obj_type = node.tag
     if xml_obj_type == "rsc_location":
-        node_list = node.getElementsByTagName("rsc")
-    elif node.getElementsByTagName("resource_ref"): # resource sets
-        node_list = node.getElementsByTagName("resource_ref")
+        rsc_list = [node.get("rsc")]
+    elif node.xpath("resource_set/resource_ref"): # resource sets
+        rsc_list = [x.get("id") \
+                    for x in node.xpath("resource_set/resource_ref")]
     elif xml_obj_type == "rsc_colocation":
-        node_list = node.getElementsByTagName("rsc") + \
-            node.getElementsByTagName("with-rsc")
+        rsc_list = [node.get("rsc"), node.get("with-rsc")]
     elif xml_obj_type == "rsc_order":
-        node_list = node.getElementsByTagName("first") + \
-            node.getElementsByTagName("then")
+        rsc_list = [node.get("first"), node.get("then")]
     elif xml_obj_type == "rsc_ticket":
-        node_list = node.getElementsByTagName("rsc")
-    return [x.getAttribute("id") for x in node_list]
+        rsc_list = [node.get("rsc")]
+    return rsc_list
 
 def rename_id(node,old_id,new_id):
-    if node.getAttribute("id") == old_id:
-        node.setAttribute("id", new_id)
+    if node.get("id") == old_id:
+        node.set("id", new_id)
 def rename_rscref_simple(c_obj,old_id,new_id):
     c_modified = False
-    for attr in c_obj.node.attributes.keys():
+    for attr in c_obj.node.keys():
         if attr in vars.constraint_rsc_refs and \
-                c_obj.node.getAttribute(attr) == old_id:
-            c_obj.node.setAttribute(attr, new_id)
+                c_obj.node.get(attr) == old_id:
+            c_obj.node.set(attr, new_id)
             c_obj.updated = True
             c_modified = True
     return c_modified
 def delete_rscref_simple(c_obj,rsc_id):
     c_modified = False
-    for attr in c_obj.node.attributes.keys():
+    for attr in c_obj.node.keys():
         if attr in vars.constraint_rsc_refs and \
-                c_obj.node.getAttribute(attr) == rsc_id:
-            c_obj.node.removeAttribute(attr)
+                c_obj.node.get(attr) == rsc_id:
+            del c_obj.node.attrib[attr]
             c_obj.updated = True
             c_modified = True
     return c_modified
@@ -756,8 +730,8 @@ def rset_uniq(c_obj,d):
     Drop duplicate resource references.
     '''
     l = []
-    for rref in c_obj.node.getElementsByTagName("resource_ref"):
-        rsc_id = rref.getAttribute("id")
+    for rref in c_obj.node.xpath("resource_set/resource_ref"):
+        rsc_id = rref.get("id")
         if d[rsc_id] > 1: # drop one
             l.append(rref)
             d[rsc_id] -= 1
@@ -768,8 +742,8 @@ def delete_rscref_rset(c_obj,rsc_id):
     '''
     c_modified = False
     l = []
-    for rref in c_obj.node.getElementsByTagName("resource_ref"):
-        if rsc_id == rref.getAttribute("id"):
+    for rref in c_obj.node.xpath("resource_set/resource_ref"):
+        if rsc_id == rref.get("id"):
             l.append(rref)
             c_obj.updated = True
             c_modified = True
@@ -777,13 +751,13 @@ def delete_rscref_rset(c_obj,rsc_id):
     l = []
     cnt = 0
     nonseq_rset = False
-    for rset in c_obj.node.getElementsByTagName("resource_set"):
-        rref_cnt = len(rset.getElementsByTagName("resource_ref"))
+    for rset in c_obj.node.findall("resource_set"):
+        rref_cnt = len(rset.findall("resource_ref"))
         if rref_cnt == 0:
             l.append(rset)
             c_obj.updated = True
             c_modified = True
-        elif is_boolean_false(rset.getAttribute("sequential")) and rref_cnt > 1:
+        elif not get_boolean(rset.get("sequential"), True) and rref_cnt > 1:
             nonseq_rset = True
         cnt += rref_cnt
     rmnodes(l)
@@ -791,36 +765,35 @@ def delete_rscref_rset(c_obj,rsc_id):
         rset_convert(c_obj)
     return c_modified
 def rset_convert(c_obj):
-    l = c_obj.node.getElementsByTagName("resource_ref")
+    l = c_obj.node.xpath("resource_set/resource_ref")
     if len(l) != 2:
         return # eh?
     rsetcnt = 0
-    for rset in c_obj.node.getElementsByTagName("resource_set"):
+    for rset in c_obj.node.findall("resource_set"):
         # in case there are multiple non-sequential sets
-        if rset.getAttribute("sequential"):
-            rset.removeAttribute("sequential")
+        if rset.get("sequential"):
+            del rset.attrib["sequential"]
         rsetcnt += 1
     c_obj.modified = True
     cli = c_obj.repr_cli(format = -1)
     cli = cli.replace("_rsc_set_ ","")
     newnode = c_obj.cli2node(cli)
-    if newnode:
-        c_obj.node.parentNode.replaceChild(newnode,c_obj.node)
-        c_obj.node.unlink()
+    if newnode is not None:
+        c_obj.node.getparent().replace(c_obj.node,newnode)
         c_obj.node = newnode
         if rsetcnt == 1 and c_obj.obj_type == "colocation":
             # exchange the elements in colocations
-            rsc = newnode.getAttribute("rsc")
-            with_rsc = newnode.getAttribute("with-rsc")
-            newnode.setAttribute("rsc", with_rsc)
-            newnode.setAttribute("with-rsc", rsc)
+            rsc = newnode.get("rsc")
+            with_rsc = newnode.get("with-rsc")
+            newnode.set("rsc", with_rsc)
+            newnode.set("with-rsc", rsc)
 def rename_rscref_rset(c_obj,old_id,new_id):
     c_modified = False
     d = {}
-    for rref in c_obj.node.getElementsByTagName("resource_ref"):
-        rsc_id = rref.getAttribute("id")
+    for rref in c_obj.node.xpath("resource_set/resource_ref"):
+        rsc_id = rref.get("id")
         if rsc_id == old_id:
-            rref.setAttribute("id", new_id)
+            rref.set("id", new_id)
             rsc_id = new_id
             c_obj.updated = True
             c_modified = True
@@ -849,54 +822,54 @@ def silly_constraint(c_node,rsc_id):
     Remove a constraint from rsc_id to rsc_id.
     Or an invalid one.
     '''
-    if c_node.getElementsByTagName("resource_ref"):
+    if c_node.xpath("resource_set/resource_ref"):
         # it's a resource set
         # the resource sets have already been uniq-ed
-        return len(c_node.getElementsByTagName("resource_ref")) <= 1
+        return len(c_node.xpath("resource_set/resource_ref")) <= 1
     cnt = 0  # total count of referenced resources have to be at least two
     rsc_cnt = 0
-    for attr in c_node.attributes.keys():
+    for attr in c_node.keys():
         if attr in vars.constraint_rsc_refs:
             cnt += 1
-            if c_node.getAttribute(attr) == rsc_id:
+            if c_node.get(attr) == rsc_id:
                 rsc_cnt += 1
-    if c_node.tagName in ("rsc_location", "rsc_ticket"):  # locations and tickets are never silly
+    if c_node.tag in ("rsc_location", "rsc_ticket"):  # locations and tickets are never silly
         return cnt < 1
     else:
         return rsc_cnt == 2 or cnt < 2
 
 def is_climove_location(node):
     'Figure out if the location was created by crm resource move.'
-    rule_l = node.getElementsByTagName("rule")
-    expr_l = node.getElementsByTagName("expression")
+    rule_l = node.findall("rule")
+    expr_l = node.xpath(".//expression")
     return len(rule_l) == 1 and len(expr_l) == 1 and \
-        node.getAttribute("id").startswith("cli-") and \
-        expr_l[0].getAttribute("attribute") == "#uname" and \
-        expr_l[0].getAttribute("operation") == "eq"
+        node.get("id").startswith("cli-") and \
+        expr_l[0].get("attribute") == "#uname" and \
+        expr_l[0].get("operation") == "eq"
 def is_pref_location(node):
     'Figure out if the location is a node preference.'
-    rule_l = node.getElementsByTagName("rule")
-    expr_l = node.getElementsByTagName("expression")
+    rule_l = node.findall("rule")
+    expr_l = node.xpath(".//expression")
     return len(rule_l) == 1 and len(expr_l) == 1 and \
-        expr_l[0].getAttribute("attribute") == "#uname" and \
-        expr_l[0].getAttribute("operation") == "eq"
+        expr_l[0].get("attribute") == "#uname" and \
+        expr_l[0].get("operation") == "eq"
 
 def get_rsc_ref_ids(node):
-    return [x.getAttribute("id") \
-        for x in node.getElementsByTagName("resource_ref")]
+    return [x.get("id") \
+        for x in node.xpath("resource_set/resource_ref")]
 def get_rsc_children_ids(node):
-    return [x.getAttribute("id") \
-        for x in node.childNodes if is_child_rsc(x)]
+    return [x.get("id") \
+        for x in node.iterchildren() if is_child_rsc(x)]
 def get_prim_children_ids(node):
-    l = [x for x in node.childNodes if is_child_rsc(x)]
-    if l and l[0].tagName == "group":
-        l = [x for x in l[0].childNodes if is_child_rsc(x)]
-    return [x.getAttribute("id") for x in l]
+    l = [x for x in node.iterchildren() if is_child_rsc(x)]
+    if len(l) and l[0].tag == "group":
+        l = [x for x in l[0].iterchildren() if is_child_rsc(x)]
+    return [x.get("id") for x in l]
 def get_child_nvset_node(node, attr_set = "meta_attributes"):
-    if not node:
+    if node is None:
         return None
-    for c in node.childNodes:
-        if not is_element(c) or c.tagName != attr_set:
+    for c in node.iterchildren():
+        if not is_element(c) or c.tag != attr_set:
             continue
         return c
     return None
@@ -908,84 +881,64 @@ def get_properties_node(node):
     return get_child_nvset_node(node, attr_set = "cluster_property_set")
 
 def new_cib():
-    doc = xml.dom.minidom.Document()
-    cib = doc.createElement("cib")
-    doc.appendChild(cib)
-    configuration = doc.createElement("configuration")
-    cib.appendChild(configuration)
+    cib_elem = etree.Element("cib")
+    conf_elem = etree.SubElement(cib_elem, "configuration")
     for name in schema.get('sub', "configuration", 'r'):
-        node = doc.createElement(name)
-        configuration.appendChild(node)
-    return doc
-def get_topnode(doc, tag):
+        e = etree.SubElement(conf_elem, name)
+    return cib_elem
+def get_topnode(cib_elem, tag):
     "Get configuration element or create/append if there's none."
-    try:
-        e = doc.getElementsByTagName(tag)[0]
-    except:
-        e = doc.createElement(tag)
-        conf = doc.getElementsByTagName("configuration")[0]
-        if conf:
-            conf.appendChild(e)
-        else:
-            return None
+    e = cib_elem.find("configuration/%s" % tag)
+    if e is None:
+        conf_elem = cib_elem.find("configuration")
+        if conf_elem is not None:
+            common_debug("create configuration section %s" % tag)
+            e = etree.SubElement(conf_elem, tag)
     return e
-def new_cib_element(node,tagname,id_pfx):
-    base_id = node.getAttribute("id")
-    newnode = node.ownerDocument.createElement(tagname)
-    newnode.setAttribute("id", "%s-%s" % (base_id,id_pfx))
-    node.appendChild(newnode)
-    return newnode
-def get_attr_in_set(node,attr):
-    if not node:
+def new_cib_element(e,tagname,id_pfx):
+    base_id = e.get("id")
+    new_e = etree.SubElement(e, tagname)
+    new_e.set("id", "%s-%s" % (base_id,id_pfx))
+    return new_e
+def get_attr_in_set(e,attr):
+    if e is None:
         return None
-    for c in node.childNodes:
-        if not is_element(c):
-            continue
-        if c.tagName == "nvpair" and c.getAttribute("name") == attr:
+    for c in e.iterchildren("nvpair"):
+        if c.get("name") == attr:
             return c
     return None
-def get_attr_value(node,attr):
-    n = get_attr_in_set(node,attr)
-    if not n:
-        return None
-    return n.getAttribute("value")
-def set_attr(node,attr,value):
+def get_attr_value(e,attr):
+    try: return get_attr_in_set(e,attr).get("value")
+    except: return None
+def set_attr(e,attr,value):
     '''
     Set an attribute in the attribute set.
     '''
-    nvpair = get_attr_in_set(node,attr)
-    if not nvpair:
-        nvpair = new_cib_element(node,"nvpair",attr)
-    nvpair.setAttribute("name",attr)
-    nvpair.setAttribute("value",value)
-def get_set_nodes(node,setname,create = 0):
+    nvpair = get_attr_in_set(e,attr)
+    if nvpair is None:
+        nvpair = new_cib_element(e,"nvpair",attr)
+    nvpair.set("name",attr)
+    nvpair.set("value",value)
+def get_set_nodes(e,setname,create = 0):
     'Return the attributes set nodes (create one if requested)'
-    l = []
-    for c in node.childNodes:
-        if not is_element(c):
-            continue
-        if c.tagName == setname:
-            l.append(c)
+    l = [ c for c in e.iterchildren(setname) ]
     if l:
         return l
     if create:
-        l.append(new_cib_element(node,setname,setname))
+        l.append(new_cib_element(e,setname,setname))
     return l
 
 def xml_noorder_hash(n):
-    hash_l = []
-    for c in n.childNodes:
-        if not is_element(c):
-            continue
-        hash_l.append(hash(c.toxml()))
-    return sorted(hash_l)
+    return sorted([ hash(etree.tostring(x)) \
+        for x in n.iterchildren() if is_element(c) ])
 xml_hash_d = {
     "fencing-topology": xml_noorder_hash,
 }
+checker = doctestcompare.LXMLOutputChecker()
 def xml_cmp(n, m, show = False):
-    if n.tagName in xml_hash_d:
-        n_hash_l = xml_hash_d[n.tagName](n)
-        m_hash_l = xml_hash_d[n.tagName](m)
+    if n.tag in xml_hash_d:
+        n_hash_l = xml_hash_d[n.tag](n)
+        m_hash_l = xml_hash_d[n.tag](m)
         rc = len(n_hash_l) == len(m_hash_l)
         for i in range(len(n_hash_l)):
             if not rc:
@@ -993,35 +946,28 @@ def xml_cmp(n, m, show = False):
             if n_hash_l[i] != m_hash_l[i]:
                 rc = False
     else:
-        rc = hash(n.toxml()) == hash(m.toxml())
+        rc = checker.compare_docs(n, m)
     if not rc and show and user_prefs.get_debug():
-        print "original:",n.toprettyxml()
-        print "processed:",m.toprettyxml()
+        print checker.output_difference(n, m)
     return rc
 
 def merge_attributes(dnode,snode,tag):
     rc = False
     add_children = []
-    for sc in snode.childNodes:
-        if not is_element(sc):
-            continue
-        if sc.tagName == tag:
-            dc = lookup_node(sc,dnode,ignore_id = True)
-            if dc:
-                m = sc.attributes
-                for i in range(m.length):
-                    attr = m.item(i)
-                    if attr.name == "id":
-                        continue
-                    s_value = attr.value
-                    if s_value != dc.getAttribute(attr.name):
-                        dc.setAttribute(attr.name,s_value)
-                        rc = True
-            else:
-                add_children.append(sc)
-                rc = True
+    for sc in snode.iterchildren(tag):
+        dc = lookup_node(sc,dnode,ignore_id = True)
+        if dc is not None:
+            for a,v in sc.items():
+                if a == "id":
+                    continue
+                if v != dc.get(a):
+                    dc.set(a, v)
+                    rc = True
+        else:
+            add_children.append(sc)
+            rc = True
     for c in add_children:
-        dnode.appendChild(c.cloneNode(1))
+        dnode.append(copy.deepcopy(c))
     return rc
 
 def merge_nodes(dnode,snode):
@@ -1032,33 +978,30 @@ def merge_nodes(dnode,snode):
     Otherwise, replace the whole element. (TBD)
     '''
     rc = False # any changes done?
-    if not dnode or not snode:
+    if dnode is None or snode is None:
         return rc
     add_children = []
-    for sc in snode.childNodes:
+    for sc in snode.iterchildren():
         dc = lookup_node(sc,dnode,ignore_id = True)
         if not dc:
-            if sc.tagName in vars.nvpairs_tags or sc.tagName == "operations":
+            if sc.tag in vars.nvpairs_tags or sc.tag == "operations":
                 add_children.append(sc)
                 rc = True
-        elif dc.tagName in vars.nvpairs_tags:
+        elif dc.tag in vars.nvpairs_tags:
             rc = merge_attributes(dc,sc,"nvpair") or rc
-        elif dc.tagName == "operations":
+        elif dc.tag == "operations":
             rc = merge_attributes(dc,sc,"op") or rc
     for c in add_children:
-        dnode.appendChild(c.cloneNode(1))
+        dnode.append(copy.deepcopy(c))
     return rc
 
 def merge_nodes_2(dnode, snode):
     '''
     Merge nodes in a new doc, i.e. keep dnode intact.
     '''
-    doc = xml.dom.minidom.Document()
-    i_snode = doc.importNode(snode, 1)
-    i_dnode = doc.importNode(dnode, 1)
-    doc.appendChild(i_snode)
-    merge_nodes(i_snode, i_dnode)
-    return i_snode
+    i_dnode = etree.Element(dnode.tag)
+    merge_nodes(i_dnode, snode)
+    return i_dnode
 
 user_prefs = UserPrefs.getInstance()
 vars = Vars.getInstance()

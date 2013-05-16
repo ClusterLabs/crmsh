@@ -38,10 +38,10 @@ class RADriver(object):
         from tempfile import mkdtemp
         self.rscdef_node = rsc_node
         if rsc_node:
-            self.ra_class = rsc_node.getAttribute("class")
-            self.ra_type = rsc_node.getAttribute("type")
-            self.ra_provider = rsc_node.getAttribute("provider")
-            self.id = rsc_node.getAttribute("id")
+            self.ra_class = rsc_node.get("class")
+            self.ra_type = rsc_node.get("type")
+            self.ra_provider = rsc_node.get("provider")
+            self.id = rsc_node.get("id")
         else:
             self.ra_class = None
             self.ra_type = None
@@ -73,15 +73,15 @@ class RADriver(object):
         if not set_n:
             return
         try:
-            pfx = self.pfx[set_n.tagName]
+            pfx = self.pfx[set_n.tag]
         except:
-            self.err("unknown attributes set: %s" % set_n.tagName)
+            self.err("unknown attributes set: %s" % set_n.tag)
             return
-        for nvpair in set_n.childNodes:
-            if not is_element(nvpair) or nvpair.tagName != "nvpair":
+        for nvpair in set_n.iterchildren():
+            if not is_element(nvpair) or nvpair.tag != "nvpair":
                 continue
-            n = nvpair.getAttribute("name")
-            v = nvpair.getAttribute("value")
+            n = nvpair.get("name")
+            v = nvpair.get("value")
             self.rscenv["%s%s" % (pfx, n)] = v
     def set_rscenv(self, op):
         '''
@@ -230,8 +230,8 @@ ra_driver = {
 def check_test_support(rsc_l):
     rc = True
     for r in rsc_l:
-        id = r.getAttribute("id")
-        ra_class = r.getAttribute("class")
+        id = r.get("id")
+        ra_class = r.get("class")
         if not ra_class:
             common_warn("class attribute not found in %s" % id)
             rc = False
@@ -244,7 +244,7 @@ def are_all_stopped(rsc_l, node_l):
     rc = True
     sys.stderr.write("Probing resources ")
     for r in rsc_l:
-        ra_class = r.getAttribute("class")
+        ra_class = r.get("class")
         drv = ra_driver[ra_class](r, node_l)
         sys.stderr.write(".")
         drv.runop("probe")
@@ -276,8 +276,8 @@ def test_resources_1(rsc_l, node):
     started = []
     sys.stderr.write("testing on %s:" % node)
     for r in rsc_l:
-        id = r.getAttribute("id")
-        ra_class = r.getAttribute("class")
+        id = r.get("id")
+        ra_class = r.get("class")
         drv = ra_driver[ra_class](r, (node,))
         sys.stderr.write(" %s" % id)
         drv.runop("start", (node,))

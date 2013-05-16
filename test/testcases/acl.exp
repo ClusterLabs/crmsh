@@ -26,7 +26,7 @@ primitive d1 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
 	params hostlist="node1" \
 	meta target-role="Started" \
-	op start interval="0" timeout="60s" requires="nothing" \
+	op start requires="nothing" timeout="60s" interval="0" \
 	op monitor interval="60m" timeout="60s"
 role basic-read \
 	read status \

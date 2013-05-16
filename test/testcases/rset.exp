@@ -43,7 +43,7 @@ primitive d3 ocf:heartbeat:Dummy
 primitive d5 ocf:heartbeat:Dummy
 primitive st stonith:ssh \
 	params hostlist="node1" \
-	op start interval="0" timeout="60s"
+	op start timeout="60s" interval="0"
 colocation c1 inf: ( d1 d3 )
 colocation c2 inf: d3 d1
 colocation c3 inf: d3 d1

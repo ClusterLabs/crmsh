@@ -36,17 +36,17 @@ def cli_format_xml(pl,format):
         return ''.join(pl)
 def cli_operations(node,format = 1):
     l = []
-    node_id = node.getAttribute("id")
+    node_id = node.get("id")
     s = ''
     if node_id:
         s = '$id="%s"' % node_id
-    idref = node.getAttribute("id-ref")
+    idref = node.get("id-ref")
     if idref:
         s = '%s $id-ref="%s"' % (s,idref)
     if s:
         l.append("%s %s" % (cli_display.keyword("operations"),s))
-    for c in node.childNodes:
-        if is_element(c) and c.tagName == "op":
+    for c in node.iterchildren():
+        if is_element(c) and c.tag == "op":
             l.append(cli_op(c))
     return cli_format(l,format)
 def nvpair_format(n,v):
@@ -68,26 +68,24 @@ def nvpairs2list(node, add_id = False):
     '''
     pl = []
     # if there's id-ref, there can be then _only_ id-ref
-    value = node.getAttribute("id-ref")
+    value = node.get("id-ref")
     if value:
         pl.append(["$id-ref",value])
         return pl
     if add_id or \
-            (not node.childNodes and len(node.attributes) == 1):
-        value = node.getAttribute("id")
+            (not len(node) and len(node.attrib) == 1):
+        value = node.get("id")
         if value:
             pl.append(["$id",value])
-    for c in node.childNodes:
-        if not is_element(c):
-            continue
-        if c.tagName == "attributes":
+    for c in node.iterchildren():
+        if c.tag == "attributes":
             pl = nvpairs2list(c)
-        elif c.tagName != "nvpair":
+        elif c.tag != "nvpair":
             node_debug("expected nvpair got", c)
             continue
-        name = c.getAttribute("name")
-        if "value" in c.attributes.keys():
-            value = c.getAttribute("value")
+        name = c.get("name")
+        if "value" in c.keys():
+            value = c.get("value")
         else:
             value = None
         pl.append([name,value])
@@ -95,10 +93,8 @@ def nvpairs2list(node, add_id = False):
 
 def op_instattr(node):
     pl = []
-    for c in node.childNodes:
-        if not is_element(c):
-            continue
-        if c.tagName != "instance_attributes":
+    for c in node.iterchildren():
+        if c.tag != "instance_attributes":
             common_err("only instance_attributes are supported in operations")
         else:
             pl += nvpairs2list(c)
@@ -111,24 +107,24 @@ def cli_op(node):
     return "%s %s %s" % (cli_display.keyword("op"),action,cli_pairs(pl))
 def date_exp2cli(node):
     l = []
-    operation = node.getAttribute("operation")
+    operation = node.get("operation")
     l.append(cli_display.keyword("date"))
     l.append(cli_display.keyword(operation))
     if operation in olist(vars.simple_date_ops):
-        value = node.getAttribute(keyword_cmp(operation,'lt') and "end" or "start")
+        value = node.get(keyword_cmp(operation,'lt') and "end" or "start")
         l.append('"%s"' % cli_display.attr_value(value))
     else:
         if operation == 'in_range':
             for name in vars.in_range_attrs:
-                v = node.getAttribute(name)
+                v = node.get(name)
                 if v:
                     l.append(nvpair_format(name,v))
-        for c in node.childNodes:
-            if is_element(c) and c.tagName in ("duration","date_spec"):
+        for c in node.iterchildren():
+            if c.tag in ("duration","date_spec"):
                 pl = []
-                for name in c.attributes.keys():
+                for name in c.keys():
                     if name != "id":
-                        pl.append([name,c.getAttribute(name)])
+                        pl.append([name,c.get(name)])
                 l.append(cli_pairs(pl))
     return ' '.join(l)
 def binary_op_format(op):
@@ -138,12 +134,12 @@ def binary_op_format(op):
     else:
         return cli_display.keyword(op)
 def exp2cli(node):
-    operation = node.getAttribute("operation")
-    type = node.getAttribute("type")
+    operation = node.get("operation")
+    type = node.get("type")
     if type:
         operation = "%s:%s" % (type, operation)
-    attribute = node.getAttribute("attribute")
-    value = node.getAttribute("value")
+    attribute = node.get("attribute")
+    value = node.get("value")
     if not value:
         return "%s %s" % (binary_op_format(operation),attribute)
     else:
@@ -151,47 +147,45 @@ def exp2cli(node):
 def abs_pos_score(score):
     return score in ("inf", "+inf", "Mandatory")
 def get_kind(node):
-    kind = node.getAttribute("kind")
+    kind = node.get("kind")
     return kind
 def get_score(node):
-    score = node.getAttribute("score")
+    score = node.get("score")
     if not score:
-        score = node.getAttribute("score-attribute")
+        score = node.get("score-attribute")
     else:
         if score.find("INFINITY") >= 0:
             score = score.replace("INFINITY","inf")
     return score
 def cli_rule(node):
     s = []
-    node_id = node.getAttribute("id")
+    node_id = node.get("id")
     if node_id:
         s.append('$id="%s"' % node_id)
     else:
-        idref = node.getAttribute("id-ref")
+        idref = node.get("id-ref")
         if idref:
             return '$id-ref="%s"' % idref
-    rsc_role = node.getAttribute("role")
+    rsc_role = node.get("role")
     if rsc_role:
         s.append('$role="%s"' % rsc_role)
     s.append("%s:" % cli_display.score(get_score(node)))
-    bool_op = node.getAttribute("boolean-op")
+    bool_op = node.get("boolean-op")
     if not bool_op:
         bool_op = "and"
     exp = []
-    for c in node.childNodes:
-        if not is_element(c):
-            continue
-        if c.tagName == "date_expression":
+    for c in node.iterchildren():
+        if c.tag == "date_expression":
             exp.append(date_exp2cli(c))
-        elif c.tagName == "expression":
+        elif c.tag == "expression":
             exp.append(exp2cli(c))
     expression = (" %s "%cli_display.keyword(bool_op)).join(exp)
     return "%s %s" % (' '.join(s),expression)
 
 def mkrscrole(node,n):
-    rsc = cli_display.rscref(node.getAttribute(n))
-    rsc_role = node.getAttribute(n + "-role")
-    rsc_instance = node.getAttribute(n + "-instance")
+    rsc = cli_display.rscref(node.get(n))
+    rsc_role = node.get(n + "-role")
+    rsc_instance = node.get(n + "-instance")
     if rsc_role:
         return "%s:%s"%(rsc,rsc_role)
     elif rsc_instance:
@@ -199,9 +193,9 @@ def mkrscrole(node,n):
     else:
         return rsc
 def mkrscaction(node,n):
-    rsc = cli_display.rscref(node.getAttribute(n))
-    rsc_action = node.getAttribute(n + "-action")
-    rsc_instance = node.getAttribute(n + "-instance")
+    rsc = cli_display.rscref(node.get(n))
+    rsc_action = node.get(n + "-action")
+    rsc_instance = node.get(n + "-instance")
     if rsc_action:
         return "%s:%s"%(rsc,rsc_action)
     elif rsc_instance:
@@ -211,20 +205,20 @@ def mkrscaction(node,n):
 def rsc_set_constraint(node,obj_type):
     col = []
     cnt = 0
-    for n in node.getElementsByTagName("resource_set"):
+    for n in node.findall("resource_set"):
         add_seq = False
-        sequential = get_boolean(n.getAttribute("sequential"), True)
-        require_all = get_boolean(n.getAttribute("require-all"), True)
+        sequential = get_boolean(n.get("sequential"), True)
+        require_all = get_boolean(n.get("require-all"), True)
         if not require_all:
             col.append("[")
             if sequential:
                 add_seq = True
         elif not sequential:
             col.append("(")
-        role = n.getAttribute("role")
-        action = n.getAttribute("action")
-        for r in n.getElementsByTagName("resource_ref"):
-            rsc = cli_display.rscref(r.getAttribute("id"))
+        role = n.get("role")
+        action = n.get("action")
+        for r in n.findall("resource_ref"):
+            rsc = cli_display.rscref(r.get("id"))
             q = (obj_type == "order") and action or role
             col.append(q and "%s:%s"%(rsc,q) or rsc)
             cnt += 1
@@ -288,10 +282,10 @@ def acl_spec_format(xml_spec,v):
     return v_f and '%s:%s' % (key_f,v_f) or key_f
 def cli_acl_rule(node,format = 1):
     l = []
-    acl_rule_name = node.tagName
+    acl_rule_name = node.tag
     l.append(cli_display.keyword(acl_rule_name))
     for xml_spec in vars.acl_spec_map:
-        v = node.getAttribute(xml_spec)
+        v = node.get(xml_spec)
         if v:
             l.append(acl_spec_format(xml_spec,v))
     return ' '.join(l)
@@ -299,7 +293,7 @@ def cli_acl_roleref(node,format = 1):
     l = []
     l.append(cli_display.keyword("role"))
     l.append(":")
-    l.append(cli_display.attr_value(node.getAttribute("id")))
+    l.append(cli_display.attr_value(node.get("id")))
     return ''.join(l)
 #
 ################################################################

@@ -873,29 +873,29 @@ class Report(Singleton):
         resource list, groups). If "live" and not central log,
         then use cibadmin.
         '''
-        doc = None
+        cib_elem = None
         cib_f = self.get_cib_loc()
         if cib_f:
-            doc = file2doc(cib_f)
-        if not doc:
+            cib_elem = file2cib_elem(cib_f)
+        if cib_elem is None:
             return  # no cib?
-        try: conf = doc.getElementsByTagName("configuration")[0]
+        try: conf = cib_elem.find("configuration")
         except: # bad cib?
             return
-        self.cibrsc_l = [ x.getAttribute("id")
-            for x in conf.getElementsByTagName("primitive") ]
-        self.cibnode_l = [ x.getAttribute("uname")
-            for x in conf.getElementsByTagName("node") ]
+        self.cibrsc_l = [ x.get("id")
+            for x in conf.xpath("//resources/primitive") ]
+        self.cibnode_l = [ x.get("uname")
+            for x in conf.xpath("//nodes/node") ]
         self.cibgrp_d = {}
-        for grp in conf.getElementsByTagName("group"):
-            self.cibgrp_d[grp.getAttribute("id")] = get_rsc_children_ids(grp)
+        for grp in conf.xpath("//resources/group"):
+            self.cibgrp_d[grp.get("id")] = get_rsc_children_ids(grp)
         self.cibcln_d = {}
         self.cibcloned_l = []
-        for cln in conf.getElementsByTagName("clone") + \
-                conf.getElementsByTagName("master"):
+        for cln in conf.xpath("//resources/clone") + \
+                conf.xpath("//resources/master"):
             try:
-                self.cibcln_d[cln.getAttribute("id")] = get_prim_children_ids(cln)
-                self.cibcloned_l += self.cibcln_d[cln.getAttribute("id")]
+                self.cibcln_d[cln.get("id")] = get_prim_children_ids(cln)
+                self.cibcloned_l += self.cibcln_d[cln.get("id")]
             except: pass
         self.cibnotcloned_l = [x for x in self.cibrsc_l if x not in self.cibcloned_l]
     def new_peinput(self, new_pe):
@@ -1379,9 +1379,6 @@ class Report(Singleton):
         elif subcmd == "list":
             ext_cmd("ls %s" % self.get_session_dir(None))
         elif subcmd == "pack":
-            if self.source != "live":
-                common_err("only live sessions can be packed")
-                return False
             return mkarchive(dir)
         return True
     log_section = 'log'
