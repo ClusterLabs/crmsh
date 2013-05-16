@@ -1573,17 +1573,13 @@ class CibConfig(UserInterface):
         "usage: show [xml] [<id>...]"
         if not cib_factory.is_cib_sane():
             return False
-        err_buf.buffer() # keep error messages
         set_obj = mkset_obj(*args)
-        err_buf.release() # show them, but get an ack from the user
         return set_obj.show()
     def filter(self,cmd,filter,*args):
         "usage: filter <prog> [xml] [<id>...]"
         if not cib_factory.is_cib_sane():
             return False
-        err_buf.buffer() # keep error messages
         set_obj = mkset_obj(*args)
-        err_buf.release() # show them, but get an ack from the user
         return set_obj.filter(filter)
     def modgroup(self,cmd,group_id,subcmd,prim_id,*args):
         """usage: modgroup <id> add <id> [after <id>|before <id>]
@@ -1631,10 +1627,8 @@ class CibConfig(UserInterface):
                 sed_s = r's/ %s( |$)/ %s& /' % (ref_member_id, prim_id)
         else:
             sed_s = r's/ %s( |$)/ /' % prim_id
-        err_buf.buffer() # keep error messages
         l = (group_id,)
         set_obj = mkset_obj(*l)
-        err_buf.release() # show them, but get an ack from the user
         return set_obj.filter("sed -r '%s'" % sed_s)
     def edit(self,cmd,*args):
         "usage: edit [xml] [<id>...]"
@@ -2228,9 +2222,7 @@ class History(UserInterface):
         cib_factory.refresh()
         if not cib_factory.is_cib_sane():
             return False
-        err_buf.buffer() # keep error messages
         set_obj = mkset_obj()
-        err_buf.release() # show them, but get an ack from the user
         return set_obj
     def _pe_config_noclr(self, pe_f):
         '''Configuration with no formatting (no colors).'''

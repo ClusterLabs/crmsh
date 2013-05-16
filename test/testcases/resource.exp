@@ -107,21 +107,10 @@ resource p0 is NOT running
   </configuration>
 </cib>
 
+.SETENV showobj=
 .TRY resource unmigrate p3
 .EXT crm_resource -U -r 'p3'
-.INP: configure
-.INP: _regtest on
-.INP: show xml cli-prefer-p3
-<?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
-  <configuration>
-    <crm_config/>
-    <nodes/>
-    <resources/>
-    <constraints/>
-  </configuration>
-</cib>
-
+.SETENV showobj=cli-prefer-p3
 .TRY resource migrate p3 node1 force
 .EXT crm_resource -M -r 'p3' --node='node1' --force
 .INP: configure
@@ -143,21 +132,9 @@ resource p0 is NOT running
   </configuration>
 </cib>
 
+.SETENV showobj=
 .TRY resource unmigrate p3
 .EXT crm_resource -U -r 'p3'
-.INP: configure
-.INP: _regtest on
-.INP: show xml cli-prefer-p3
-<?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
-  <configuration>
-    <crm_config/>
-    <nodes/>
-    <resources/>
-    <constraints/>
-  </configuration>
-</cib>
-
 .SETENV showobj=p0
 .TRY resource param p0 set a0 "1 2 3"
 .EXT crm_resource -r 'p0' -p 'a0' -v '1 2 3'

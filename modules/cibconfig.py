@@ -78,7 +78,11 @@ class CibObjectSet(object):
     are defined in subclasses.
     '''
     def __init__(self, *args):
-        self.obj_list = []
+        rc,obj_list = cib_factory.mkobj_list(*args)
+        self.search_rc = rc
+        self.obj_list = obj_list
+    def get_search_rc(self):
+        return self.search_rc
     def _open_url(self,src):
         import urllib
         try:
@@ -163,6 +167,10 @@ class CibObjectSet(object):
         cli_display.set_no_pretty()
         s = self.repr()
         cli_display.reset_no_pretty()
+        # don't allow edit if one or more elements were not
+        # found
+        if not self.search_rc:
+            return self.search_rc
         return self.edit_save(s)
     def filter_save(self,filter,s):
         '''
@@ -179,6 +187,10 @@ class CibObjectSet(object):
         cli_display.set_no_pretty()
         s = self.repr(format = -1)
         cli_display.reset_no_pretty()
+        # don't allow filter if one or more elements were not
+        # found
+        if not self.search_rc:
+            return self.search_rc
         return self.filter_save(filter,s)
     def save_to_file(self,fname):
         f = safe_open_w(fname)
@@ -234,11 +246,9 @@ class CibObjectSet(object):
     def show(self):
         s = self.repr()
         if not s:
-            if self.obj_list: # objects could not be displayed
-                return False
-            else:
-                return True
+            return self.search_rc
         page_string(s)
+        return self.search_rc
     def import_file(self,method,fname):
         if not cib_factory.is_cib_sane():
             return False
@@ -367,7 +377,6 @@ class CibObjectSetCli(CibObjectSet):
     '''
     def __init__(self, *args):
         CibObjectSet.__init__(self, *args)
-        self.obj_list = cib_factory.mkobj_list("cli",*args)
     def repr_nopretty(self, format=1):
         cli_display.set_no_pretty()
         s = self.repr(format=format)
@@ -459,7 +468,6 @@ class CibObjectSetRaw(CibObjectSet):
     '''
     def __init__(self, *args):
         CibObjectSet.__init__(self, *args)
-        self.obj_list = cib_factory.mkobj_list("xml",*args)
     def repr(self, format = "ignored"):
         "Return a string containing xml of all objects."
         cib_elem = cib_factory.objlist2doc(self.obj_list)
@@ -1031,19 +1039,6 @@ class CibObject(object):
                     c.get("id") == child.obj_id:
                 return c
         return None
-    def filter(self,*args):
-        "Filter objects."
-        if not args:
-            return True
-        if args[0] == "NOOBJ":
-            return False
-        if args[0] == "changed":
-            return self.updated or self.origin == "user"
-        if args[0].startswith("type:"):
-            return self.obj_type == args[0][5:]
-        return self.obj_id in args or \
-            (self.obj_type == "node" and \
-            self.node.get("uname") in args)
 
 def gv_first_prim(node):
     if node.tag != "primitive":
@@ -1813,7 +1808,7 @@ class CibFencingOrder(CibObject):
                 common_warn("%s: target %s not a node" % (self.obj_id,target))
                 rc = 1
         stonith_rsc_l = [x.obj_id for x in
-            cib_factory.mkobj_list("cli","type:primitive")
+            cib_factory.get_elems_on_type("type:primitive")
             if x.node.get("class") == "stonith"]
         for devices in [x.get("devices") for x in nl]:
             for dev in devices.split(","):
@@ -2455,21 +2450,39 @@ class CibFactory(Singleton):
                 common_debug("create CIB element: %s" % obj.obj_string())
                 return obj
         return None
-    def mkobj_list(self,mode,*args):
+    def modified_elems(self):
+        return [ x for x in self.cib_objects if \
+            x.updated or x.origin == "user" ]
+    def get_elems_on_type(self, spec):
+        if not spec.startswith("type:"):
+            return []
+        t = spec[5:]
+        return [ x for x in self.cib_objects if x.obj_type == t ]
+    def mkobj_list(self,*args):
+        if not args:
+            return True,copy.copy(self.cib_objects)
+        if args[0] == "NOOBJ":
+            return True,[]
+        rc = True
         obj_list = []
-        for obj in self.cib_objects:
-            f = lambda: obj.filter(*args)
-            if not f():
-                continue
-            if mode == "cli" and obj.nocli and obj.nocli_warn:
-                obj.nocli_warn = False
-                obj_cli_warn(obj.obj_id)
-            obj_list.append(obj)
-        return obj_list
+        for spec in args:
+            if spec == "changed":
+                obj_list += self.modified_elems()
+            elif spec.startswith("type:"):
+                obj_list += self.get_elems_on_type(spec)
+            else:
+                obj = self.find_object(spec)
+                if obj:
+                    obj_list.append(obj)
+                else:
+                    no_object_err(spec)
+                    rc = False
+        obj_list = list(set(obj_list))
+        return rc,obj_list
     def is_cib_empty(self):
-        return not self.mkobj_list("cli","type:primitive")
+        return not self.get_elems_on_type("type:primitive")
     def has_cib_changed(self):
-        return self.mkobj_list("xml","changed") or self.remove_queue
+        return self.modified_elems() or self.remove_queue
     def verify_constraints(self,node):
         '''
         Check if all resources referenced in a constraint exist

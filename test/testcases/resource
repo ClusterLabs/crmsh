@@ -7,8 +7,11 @@ resource manage c1
 resource unmanage c1
 %setenv showobj=cli-prefer-p3
 resource migrate p3 node1
+%setenv showobj=
 resource unmigrate p3
+%setenv showobj=cli-prefer-p3
 resource migrate p3 node1 force
+%setenv showobj=
 resource unmigrate p3
 %setenv showobj=p0
 resource param p0 set a0 "1 2 3"
