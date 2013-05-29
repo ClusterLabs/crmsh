@@ -74,6 +74,26 @@ def fetch_opts(args, opt_l):
             break
     return l
 
+lifetime_options = ["reboot", "forever"]
+def fetch_lifetime_opt(args, iso8601=True):
+    '''
+    Get and remove a lifetime option from args. It can be one of
+    lifetime_options or an ISO 8601 formatted period/time. There
+    is apparently no good support in python for this format, so
+    we cheat a bit.
+    '''
+    if not args:
+        return None
+    if iso8601:
+        iso8601_re = re.compile("(PT?[0-9]|[0-9]+.*[:-])")
+    else:
+        iso8601_re = None
+    if (args[-1] in lifetime_options) or \
+            (iso8601_re and iso8601_re.match(args[-1])):
+        return args.pop()
+    else:
+        return None
+
 class UserInterface(object):
     '''
     Stuff common to all user interface classes.
@@ -921,19 +941,14 @@ class RscMgmt(UserInterface):
             return False
         del argl[0]
         node = None
-        lifetime = None
         opt_l = fetch_opts(argl, ["force"])
+        lifetime = fetch_lifetime_opt(argl)
         if len(argl) == 1:
-            if not is_our_node(argl[0]):
-                lifetime = argl[0]
-            else:
+            if is_our_node(argl[0]):
                 node = argl[0]
-        elif len(argl) == 2:
-            node = argl[0]
-            lifetime = argl[1]
-        elif len(argl) != 0:
-            syntax_err((cmd,args))
-            return False
+            else:
+                syntax_err((cmd,args))
+                return False
         opts = ''
         if node:
             opts = "--node='%s'" % node
@@ -1181,23 +1196,19 @@ class NodeMgmt(UserInterface):
             print_node(uname,id,type,other,inst_attr,offline)
     def standby(self,cmd,*args):
         'usage: standby [<node>] [<lifetime>]'
+        argl = list(args)
         node = None
-        lifetime = None
-        if not args:
+        lifetime = fetch_lifetime_opt(argl, iso8601=False)
+        if not argl:
             node = vars.this_node
-        if len(args) == 1:
-            if not is_our_node(args[0]):
-                node = vars.this_node
-                lifetime = args[0]
-            else:
+        elif len(argl) == 1:
+            if is_our_node(args[0]):
                 node = args[0]
-        elif len(args) == 2:
-            node = args[0]
-            lifetime = args[1]
-        if lifetime not in (None,"reboot","forever"):
-            common_err("bad lifetime: %s" % lifetime)
-            return False
-        if not is_name_sane(node):
+            else:
+                common_err("%s: node name not recognized" % args[0])
+                return False
+        else:
+            syntax_err(args, context=cmd)
             return False
         opts = ''
         if lifetime:
