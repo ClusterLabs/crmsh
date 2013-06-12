@@ -243,21 +243,37 @@ get_cib_dir2() {
 }
 get_crm_daemon_dir() {
 	# CRM_DAEMON_DIR
-	local libdir
+	local libdir p
 	libdir=`dirname $HA_BIN`
 	for p in pacemaker heartbeat; do
 		if [ -x $libdir/$p/crmd ]; then
 			debug "setting CRM_DAEMON_DIR to $libdir/$p"
 			CRM_DAEMON_DIR=$libdir/$p
-			break
+			return 0
 		fi
 	done
+	return 1
+}
+get_crm_daemon_dir2() {
+	# CRM_DAEMON_DIR again (brute force)
+	local p d d2
+	for p in /usr /usr/local /opt; do
+		for d in libexec lib64 lib; do
+			for d2 in pacemaker heartbeat; do
+				if [ -x $p/$d/$d2/crmd ]; then
+					debug "setting CRM_DAEMON_DIR to $p/$d/$d2"
+					CRM_DAEMON_DIR=$p/$d/$d2
+					break
+				fi
+			done
+		done
+	done
+}
+compatibility_pcmk() {
+	get_crm_daemon_dir || get_crm_daemon_dir2
 	if [ ! -d "$CRM_DAEMON_DIR" ]; then
 		fatal "cannot find pacemaker daemon directory!"
 	fi
-}
-compatibility_pcmk() {
-	get_crm_daemon_dir
 	get_pe_state_dir || get_pe_state_dir2
 	get_cib_dir || get_cib_dir2
 	debug "setting PCMK_LIB to `dirname $CIB_DIR`"
