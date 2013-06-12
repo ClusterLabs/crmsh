@@ -955,7 +955,11 @@ def xml_cmp(n, m, show = False):
     else:
         rc = checker.compare_docs(n, m)
     if not rc and show and user_prefs.get_debug():
-        print checker.output_difference(n, m)
+        # somewhat strange, but that's how this works
+        from doctest import Example
+        example = Example("etree.tostring(n)", etree.tostring(n))
+        got = etree.tostring(m)
+        print checker.output_difference(example, got, 0)
     return rc
 
 def merge_attributes(dnode,snode,tag):
