@@ -16,13 +16,11 @@
 #
 
 import os
-import sys
 import subprocess
 import copy
 from lxml import etree
 import re
 import glob
-from userprefs import Options, UserPrefs
 from cache import WCache
 from vars import Vars, getpwdent
 from utils import *
@@ -633,7 +631,6 @@ class RAInfo(object):
     def meta_parameter(self,param):
         if self.mk_ra_node() is None:
             return ''
-        l = []
         for c in self.ra_elem.xpath("//parameters/parameter"):
             if c.get("name") == param:
                 return self.format_parameter(c)

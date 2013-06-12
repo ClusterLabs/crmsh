@@ -15,7 +15,6 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-import os
 import time
 import copy
 
@@ -27,7 +26,7 @@ from ra import *
 from vars import Vars
 from utils import *
 from xmlutil import *
-from schema import Schema, rng_attr_values_l, rng_attr_values
+from schema import Schema, rng_attr_values
 
 class CompletionHelp(object):
     '''

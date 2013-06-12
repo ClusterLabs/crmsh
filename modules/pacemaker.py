@@ -68,12 +68,12 @@ def delete_dir(dir_path) :
     		for name in files :
 			try :
 				os.unlink(os.path.join(root, name))
-			except OSError, msg :
+			except OSError:
 				continue
 		for name in dirs :
 			try :
 				os.rmdir(os.path.join(root, name))
-			except OSError, msg :
+			except OSError:
 				continue
 
 	os.rmdir(dir_path)
@@ -289,26 +289,6 @@ class RngSchema(Schema) :
 				if first :
 					break
 		return decl_node_index
-
-	def get_decl_rng_nodes(self, rng_node) :
-		decl_rng_nodes = {}
-		choice_index = manager.find_decl(rng_node, "choice", False)
-		if choice_index != 0 :
-			decl_rng_nodes["choice"] = rng_node[choice_index]
-
-		first_choice_index = manager.find_decl(rng_node, "choice")
-		if first_choice_index != choice_index :
-			decl_rng_nodes["first_choice"] = rng_node[first_choice_index]
-
-		group_index = manager.find_decl(rng_node, "group", False)
-		if group_index != 0 :
-			decl_rng_nodes["group"] = rng_node[group_index]
-
-		first_group_index = manager.find_decl(rng_node, "group")
-		if first_group_index != group_index :
-			decl_rng_nodes["first_group"] = rng_node[first_group_index]
-
-		return decl_rng_nodes
 
 	def get_sorted_decl_nodes(self, decl_nodes_list, decl_type) :
 		sorted_nodes = []

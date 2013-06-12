@@ -16,17 +16,15 @@
 #
 
 import os
-import sys
 import time
 import datetime
-import copy
 import re
 import glob
 import ConfigParser
 
 from singletonmixin import Singleton
-from userprefs import Options, UserPrefs
-from vars import Vars, getuser, gethomedir
+from userprefs import Options
+from vars import Vars, gethomedir
 from xmlutil import *
 from utils import *
 from msg import *
@@ -183,7 +181,9 @@ def first_log_lines(log_l):
     '''
     f_list = [ open(x) for x in log_l if x ]
     l = [ x.readline().rstrip() for x in f_list if x ]
-    junk = [ x.close() for x in f_list if x ]
+    for x in f_list:
+        if x:
+            x.close()
     return l
 def last_log_lines(log_l):
     '''
@@ -191,7 +191,9 @@ def last_log_lines(log_l):
     '''
     f_list = [ open(x) for x in log_l if x ]
     l = [ x.readlines()[-1].rstrip() for x in f_list if x ]
-    junk = [ x.close() for x in f_list if x ]
+    for x in f_list:
+        if x:
+            x.close()
     return l
 def convert_dt(dt):
     try: return time.mktime(dt.timetuple())

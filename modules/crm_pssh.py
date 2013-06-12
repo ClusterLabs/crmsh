@@ -11,7 +11,6 @@ directory.  Each output file in that directory will be named by the
 corresponding remote node's hostname or IP address.
 """
 
-import fcntl
 import os
 import sys
 import glob
@@ -21,7 +20,6 @@ parent, bindir = os.path.split(os.path.dirname(os.path.abspath(sys.argv[0])))
 if os.path.exists(os.path.join(parent, 'psshlib')):
     sys.path.insert(0, parent)
 
-from psshlib import psshutil
 from psshlib.manager import Manager, FatalError
 from psshlib.task import Task
 from psshlib.cli import common_parser, common_defaults

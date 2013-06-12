@@ -15,10 +15,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-import sys
 import os
-import re
-import time
 from lxml import etree
 from singletonmixin import Singleton
 from vars import Vars

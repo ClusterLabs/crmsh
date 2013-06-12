@@ -15,8 +15,6 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-import sys
-import re
 from singletonmixin import Singleton
 
 def topics_dict(help_tab):

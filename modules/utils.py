@@ -16,7 +16,6 @@
 #
 
 import os
-import pwd
 from tempfile import mkstemp
 import subprocess
 import re
@@ -271,7 +270,7 @@ def is_value_sane(name):
     return True
 
 def show_dot_graph(dotfile):
-    p = subprocess.Popen("%s %s" % (user_prefs.dotty,dotfile), shell=True, bufsize=0, stdin=None, stdout=None, stderr=None, close_fds=True)
+    subprocess.Popen("%s %s" % (user_prefs.dotty,dotfile), shell=True, bufsize=0, stdin=None, stdout=None, stderr=None, close_fds=True)
     common_info("starting %s to show transition graph"%user_prefs.dotty)
 
 def ext_cmd(cmd):
@@ -590,7 +589,7 @@ def convert2ints(l):
 def is_int(s):
     'Check if the string can be converted to an integer.'
     try:
-        i = int(s)
+        int(s)
         return True
     except:
         return False
@@ -800,6 +799,7 @@ def get_pcmk_version(dflt):
     except Exception,msg:
         v = dflt
         common_warn("could not get the pacemaker version, bad installation?")
+        common_warn(msg)
     return v
 
 def get_cib_property(cib_f, attr, dflt):

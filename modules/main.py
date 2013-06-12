@@ -22,7 +22,7 @@ import getopt
 
 from utils import *
 from userprefs import Options, UserPrefs
-from vars import Vars, gethomedir
+from vars import Vars
 from ui import cmd_exit
 from msg import *
 from levels import Levels

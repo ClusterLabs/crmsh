@@ -21,8 +21,8 @@ from lxml import etree, doctestcompare
 import copy
 import bz2
 
-from schema import Schema, rng_attr_values, rng_attr_values_l
-from userprefs import Options, UserPrefs
+from schema import Schema
+from userprefs import UserPrefs
 from vars import Vars, getuser, gethomedir
 from msg import *
 from utils import *
@@ -891,7 +891,7 @@ def new_cib():
     cib_elem = etree.Element("cib")
     conf_elem = etree.SubElement(cib_elem, "configuration")
     for name in schema.get('sub', "configuration", 'r'):
-        e = etree.SubElement(conf_elem, name)
+        etree.SubElement(conf_elem, name)
     return cib_elem
 def get_topnode(cib_elem, tag):
     "Get configuration element or create/append if there's none."

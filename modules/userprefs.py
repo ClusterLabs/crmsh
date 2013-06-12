@@ -16,9 +16,7 @@
 #
 
 import os
-import subprocess
 import sys
-import datetime, time
 
 from singletonmixin import Singleton
 from term import TerminalController

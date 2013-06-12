@@ -15,12 +15,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-import sys
-import subprocess
 import copy
 from lxml import etree
-import re
-import time
 
 from singletonmixin import Singleton
 from userprefs import Options, UserPrefs
@@ -1351,7 +1347,7 @@ class CibPrimitive(CibObject):
             params += nvpairs2list(c)
         rc1 = ra.sanity_check_params(self.obj_id, params,
                 existence_only = (self.obj_type != "primitive"))
-        return rc1 | rc2 | rc3
+        return rc1 | rc2 | rc3 | rc4
     def repr_gv(self, gv_obj, from_grp=False):
         '''
         Create a gv node. The label consists of the ID and the
@@ -2010,7 +2006,6 @@ class CibFactory(Singleton):
         'Upgrade the CIB from 0.6 to 1.0.'
         if not self.is_cib_sane():
             return False
-        req = self.cib_elem.get("crm_feature_set")
         validator = self.cib_elem.get("validate-with")
         if force or not validator or re.match("0[.]6",validator):
             return ext_cmd(cib_upgrade) == 0
@@ -2050,7 +2045,6 @@ class CibFactory(Singleton):
         Optional filter to sieve objects.
         '''
         cib_elem = new_cib()
-        conf = cib_elem.find("configuration")
         # get only top parents for the objects in the list
         # e.g. if we get a primitive which is part of a clone,
         # then the clone gets in, not the primitive
@@ -2545,7 +2539,7 @@ class CibFactory(Singleton):
         node = obj.node
         obj_id = obj.obj_id
         try:
-            obj_type = cib_object_map[node.tag][0]
+            cib_object_map[node.tag][0]
         except:
             common_err("element %s (%s) not recognized"%(node.tag,obj_id))
             return False

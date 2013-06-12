@@ -16,7 +16,7 @@
 #
 
 from singletonmixin import Singleton
-from userprefs import Options, UserPrefs
+from userprefs import UserPrefs
 from vars import Vars
 from utils import *
 from msg import *
