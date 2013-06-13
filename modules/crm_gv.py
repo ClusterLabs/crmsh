@@ -109,6 +109,10 @@ class Gv(object):
                     continue
                 l.append('\t%s' % self.invis_edge_str(tn, node))
         return l
+    def header(self):
+        return ''
+    def footer(self):
+        return ''
     def repr(self):
         '''
         Dump gv graph to a string.

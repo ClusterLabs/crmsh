@@ -263,7 +263,7 @@ class CibObjectSet(object):
         if f != sys.stdin:
             f.close()
         return self.save(s, method == "update")
-    def repr(self):
+    def repr(self, format=format):
         '''
         Return a string with objects's representations (either
         CLI or XML).
@@ -829,6 +829,9 @@ class CibObject(object):
         Add some graphviz elements to gv_obj.
         '''
         pass
+    def repr_cli_head(self, format):
+        'implemented in subclasses'
+        pass
     def repr_cli(self,format = 1):
         '''
         CLI representation for the node.
@@ -882,6 +885,9 @@ class CibObject(object):
     def set_nodeid(self):
         if self.node is not None and self.obj_id:
             self.node.set("id",self.obj_id)
+    def cli_list2node(self,cli_list,oldnode):
+        'implemented in subclasses'
+        pass
     def cli2node(self,cli,oldnode = None):
         '''
         Convert CLI representation to a DOM node.
@@ -1187,7 +1193,7 @@ class Op(object):
         # create an xml node
         if self.node:
             if self.node.getparent() is not None:
-                self.getparent().remove(node)
+                self.node.getparent().remove(self.node)
             id_store.remove_xml(self.node)
         self.node = etree.Element(self.elem_type)
         inst_attr = []

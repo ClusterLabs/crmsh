@@ -51,6 +51,9 @@ class RADriver(object):
         self.outdir = mkdtemp(prefix = "crmsh_out.")
         self.errdir = mkdtemp(prefix = "crmsh_err.")
         self.ec_l = {}
+        self.ec_ok = self.unused
+        self.ec_stopped = self.unused
+        self.ec_master = self.unused
         self.last_op = None
         self.last_rec = {}
         self.timeout = 20000
@@ -136,6 +139,9 @@ class RADriver(object):
         For instance, some clones require quorum.
         '''
         return is_cloned(self.rscdef_node) and op in ("start", "stop")
+    def exec_cmd(self, op):
+        '''defined in subclasses'''
+        pass
     def runop(self, op, node_l = None):
         '''
         Execute an operation.

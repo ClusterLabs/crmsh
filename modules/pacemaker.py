@@ -93,6 +93,15 @@ class Schema :
 
 		self.local_dir = local_dir
 		self.refresh(cib_elem)
+		self.schema_str_docs = {}
+
+	def update_schema(self):
+		'defined in subclasses'
+		pass
+
+	def find_elem(self, elem_name) :
+		'defined in subclasses'
+		pass
 
 	def refresh(self, cib_elem) :
 		saved_validate_name = self.validate_name

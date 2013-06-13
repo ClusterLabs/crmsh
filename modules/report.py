@@ -1058,8 +1058,8 @@ class Report(Singleton):
         except: return s
         return self._str_nodecolor(node, s)
     def match_filter_out(self, s):
-        for re in self.log_filter_out_re:
-            if re.search(s):
+        for regexp in self.log_filter_out_re:
+            if regexp.search(s):
                 return True
         return False
     def display_logs(self, l):

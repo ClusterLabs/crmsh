@@ -297,7 +297,7 @@ def prim_complete_op(ra,delimiter):
             l = []
         else:
             dchar = '='
-            l = op_attr_list()
+            l = op_attr_list(0)
     if delimiter:
         return dchar
     return l

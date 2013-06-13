@@ -57,7 +57,7 @@ def get_attr_details_l(schema, name):
     return l
 
 def rng_attr_values_l(el_name, attr_name):
-    l = schema.get('attr_det_l', el_name)
+    l = g_schema.get('attr_det_l', el_name)
     l2 = []
     for el in l:
         if el['n'] == attr_name:
@@ -66,7 +66,7 @@ def rng_attr_values_l(el_name, attr_name):
 
 def rng_attr_values(el_name, attr_name):
     try:
-        return schema.get('attr_det', el_name)[attr_name]['v']
+        return g_schema.get('attr_det', el_name)[attr_name]['v']
     except:
         return []
 
@@ -101,6 +101,6 @@ class Schema(Singleton):
             return self.store[t][name]
 
 vars = Vars.getInstance()
-schema = Schema.getInstance()
+g_schema = Schema.getInstance()
 
 # vim:ts=4:sw=4:et:
