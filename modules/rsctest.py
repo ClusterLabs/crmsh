@@ -142,7 +142,7 @@ class RADriver(object):
     def exec_cmd(self, op):
         '''defined in subclasses'''
         pass
-    def runop(self, op, node_l = None):
+    def runop(self, op, node_l=None):
         '''
         Execute an operation.
         '''

@@ -44,7 +44,7 @@ def option_parser():
 
     return parser
 
-def parse_args(myargs, t = _DEFAULT_TIMEOUT):
+def parse_args(myargs, t=_DEFAULT_TIMEOUT):
     parser = option_parser()
     defaults = common_defaults(timeout=t)
     parser.set_defaults(**defaults)
@@ -53,7 +53,7 @@ def parse_args(myargs, t = _DEFAULT_TIMEOUT):
 
 def get_output(dir, host):
     l = []
-    fl = glob.glob("%s/*%s*" % (dir,host))
+    fl = glob.glob("%s/*%s*" % (dir, host))
     for fname in fl:
         try:
             if os.stat(fname).st_size == 0:
@@ -141,7 +141,7 @@ def next_loglines(a, outdir, errdir):
     pssh to nodes to collect new logs.
     '''
     l = []
-    for node,rptlog,logfile,nextpos in a:
+    for node, rptlog, logfile, nextpos in a:
         common_debug("updating %s from %s (pos %d)" % (logfile, node, nextpos))
         cmdline = "perl -e 'exit(%d) if (stat(\"%s\"))[7]<%d' && tail -c +%d %s" % (_EC_LOGROT, logfile, nextpos-1, nextpos, logfile)
         myopts = ["-q", "-o", outdir, "-e", errdir]
@@ -158,7 +158,7 @@ def next_peinputs(node_pe_l, outdir, errdir):
     pssh to nodes to collect new logs.
     '''
     l = []
-    for node,pe_l in node_pe_l:
+    for node, pe_l in node_pe_l:
         r = re.search("(.*)/pengine/", pe_l[0])
         if not r:
             common_err("strange, %s doesn't contain string pengine" % pe_l[0])
@@ -179,7 +179,7 @@ def next_peinputs(node_pe_l, outdir, errdir):
     else:
         return False
 
-def do_pssh_cmd(cmd, node_l, outdir, errdir, timeout = 20000):
+def do_pssh_cmd(cmd, node_l, outdir, errdir, timeout=20000):
     '''
     pssh to nodes and run cmd.
     '''

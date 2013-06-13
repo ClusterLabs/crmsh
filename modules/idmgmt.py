@@ -26,36 +26,36 @@ class IdMgmt(Singleton):
     def __init__(self):
         self._id_store = {}
         self.ok = True # error var
-    def new(self,node,pfx):
+    def new(self, node, pfx):
         '''
         Create a unique id for the xml node.
         '''
         name = node.get("name")
         if node.tag == "nvpair":
-            node_id = "%s-%s" % (pfx,name)
+            node_id = "%s-%s" % (pfx, name)
         elif node.tag == "op":
             interval = node.get("interval")
             if interval:
-                node_id = "%s-%s-%s" % (pfx,name,interval)
+                node_id = "%s-%s-%s" % (pfx, name, interval)
             else:
-                node_id = "%s-%s" % (pfx,name)
+                node_id = "%s-%s" % (pfx, name)
         else:
             try:
                 subpfx = vars.subpfx_list[node.tag]
             except: subpfx = ''
             if subpfx:
-                node_id = "%s-%s" % (pfx,subpfx)
+                node_id = "%s-%s" % (pfx, subpfx)
             else:
                 node_id = "%s" % pfx
         if self.is_used(node_id):
             for cnt in range(99): # shouldn't really get here
-                try_id = "%s-%d" % (node_id,cnt)
+                try_id = "%s-%d" % (node_id, cnt)
                 if not self.is_used(try_id):
                     node_id = try_id
                     break
         self.save(node_id)
         return node_id
-    def check_node(self,node,lvl):
+    def check_node(self, node, lvl):
         node_id = node.get("id")
         if not node_id:
             return
@@ -63,45 +63,45 @@ class IdMgmt(Singleton):
             common_error("id_store: id %s is in use" % node_id)
             self.ok = False
             return
-    def _store_node(self,node,lvl):
+    def _store_node(self, node, lvl):
         self.save(node.get("id"))
-    def _drop_node(self,node,lvl):
+    def _drop_node(self, node, lvl):
         self.remove(node.get("id"))
-    def check_xml(self,node):
+    def check_xml(self, node):
         self.ok = True
-        xmltraverse_thin(node,self.check_node)
+        xmltraverse_thin(node, self.check_node)
         return self.ok
-    def store_xml(self,node):
+    def store_xml(self, node):
         if not self.check_xml(node):
             return False
-        xmltraverse_thin(node,self._store_node)
+        xmltraverse_thin(node, self._store_node)
         return True
-    def remove_xml(self,node):
-        xmltraverse_thin(node,self._drop_node)
-    def replace_xml(self,oldnode,newnode):
+    def remove_xml(self, node):
+        xmltraverse_thin(node, self._drop_node)
+    def replace_xml(self, oldnode, newnode):
         self.remove_xml(oldnode)
         if not self.store_xml(newnode):
             self.store_xml(oldnode)
             return False
         return True
-    def is_used(self,node_id):
+    def is_used(self, node_id):
         return node_id in self._id_store
-    def id_in_use(self,obj_id):
+    def id_in_use(self, obj_id):
         if self.is_used(obj_id):
             id_used_err(obj_id)
             return True
         return False
-    def save(self,node_id):
+    def save(self, node_id):
         if not node_id: return
         common_debug("id_store: saved %s" % node_id)
         self._id_store[node_id] = 1
-    def rename(self,old_id,new_id):
+    def rename(self, old_id, new_id):
         if not old_id or not new_id: return
         if not self.is_used(old_id): return
         if self.is_used(new_id): return
         self.remove(old_id)
         self.save(new_id)
-    def remove(self,node_id):
+    def remove(self, node_id):
         if not node_id: return
         try:
             del self._id_store[node_id]

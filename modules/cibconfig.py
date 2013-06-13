@@ -36,7 +36,7 @@ from crm_gv import gv_types
 def show_unrecognized_elems(cib_elem):
     try:
         conf = cib_elem.findall("configuration")[0]
-    except:
+    except IndexError:
         common_warn("CIB has no configuration element")
         return
     for topnode in conf.iterchildren():
@@ -62,9 +62,10 @@ def mkset_obj(*args):
 
 def set_graph_attrs(gv_obj, obj_type):
     try:
-        for attr,attr_v in vars.graph[obj_type].iteritems():
+        for attr, attr_v in vars.graph[obj_type].iteritems():
             gv_obj.new_graph_attr(attr, attr_v)
-    except: pass
+    except KeyError:
+        pass
 
 class CibObjectSet(object):
     '''
@@ -74,26 +75,26 @@ class CibObjectSet(object):
     are defined in subclasses.
     '''
     def __init__(self, *args):
-        rc,obj_list = cib_factory.mkobj_list(*args)
+        rc, obj_list = cib_factory.mkobj_list(*args)
         self.search_rc = rc
         self.obj_list = obj_list
-    def get_search_rc(self):
-        return self.search_rc
-    def _open_url(self,src):
+        self.remove_objs = None
+        self.add_objs = None
+    def _open_url(self, src):
+        if src == "-":
+            return sys.stdin
         import urllib
         try:
             return urllib.urlopen(src)
         except:
             pass
-        if src == "-":
-            return sys.stdin
         try:
             return open(src)
         except:
             pass
         common_err("could not open %s" % src)
         return False
-    def init_aux_lists(self):
+    def _init_aux_lists(self):
         '''
         Before edit, initialize two auxiliary lists which will
         hold a list of objects to be removed and a list of
@@ -103,7 +104,7 @@ class CibObjectSet(object):
         '''
         self.remove_objs = copy.copy(self.obj_list)
         self.add_objs = []
-    def recreate_obj_list(self):
+    def _recreate_obj_list(self):
         '''
         Recreate obj_list: remove deleted objects and add
         created objects
@@ -117,10 +118,10 @@ class CibObjectSet(object):
                 rmlist.append(obj)
         for obj in rmlist:
             self.obj_list.remove(obj)
-    def pre_edit(self, s):
+    def _pre_edit(self, s):
         '''Extra processing of the string to be editted'''
         return s
-    def edit_save(self,s,erase = False):
+    def _edit_save(self, s, erase=False):
         '''
         Save string s to a tmp file. Invoke editor to edit it.
         Parse/save the resulting file. In case of syntax error,
@@ -128,7 +129,7 @@ class CibObjectSet(object):
         first.
         If no changes are done, return silently.
         '''
-        s = self.pre_edit(s)
+        s = self._pre_edit(s)
         tmp = str2tmp(s)
         if not tmp:
             return False
@@ -137,7 +138,7 @@ class CibObjectSet(object):
         while True:
             if edit_file(tmp) != 0:
                 break
-            try: f = open(tmp,'r')
+            try: f = open(tmp, 'r')
             except IOError, msg:
                 common_err(msg)
                 break
@@ -153,8 +154,10 @@ class CibObjectSet(object):
                     continue
             rc = True
             break
-        try: os.unlink(tmp)
-        except: pass
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
         return rc
     def edit(self):
         if options.batch:
@@ -167,19 +170,19 @@ class CibObjectSet(object):
         # found
         if not self.search_rc:
             return self.search_rc
-        return self.edit_save(s)
-    def filter_save(self,filter,s):
+        return self._edit_save(s)
+    def _filter_save(self, filter, s):
         '''
         Pipe string s through a filter. Parse/save the output.
         If no changes are done, return silently.
         '''
-        rc,outp = filter_string(filter,s)
+        rc, outp = filter_string(filter, s)
         if rc != 0:
             return False
         if hash(outp) == hash(s):
             return True
         return self.save(outp)
-    def filter(self,filter):
+    def filter(self, filter):
         cli_display.set_no_pretty()
         s = self.repr(format = -1)
         cli_display.reset_no_pretty()
@@ -187,8 +190,8 @@ class CibObjectSet(object):
         # found
         if not self.search_rc:
             return self.search_rc
-        return self.filter_save(filter,s)
-    def save_to_file(self,fname):
+        return self._filter_save(filter, s)
+    def save_to_file(self, fname):
         f = safe_open_w(fname)
         if not f:
             return False
@@ -212,7 +215,7 @@ class CibObjectSet(object):
         gv_obj = gv_types[gtype]()
         set_graph_attrs(gv_obj, ".")
         return True, gv_obj
-    def graph_repr(self, gv_obj):
+    def _graph_repr(self, gv_obj):
         '''Let CIB elements produce graph elements.
         '''
         for obj in processing_sort_cli(self.obj_list):
@@ -222,7 +225,7 @@ class CibObjectSet(object):
         rc, gv_obj = self._get_gv_obj(gtype)
         if not rc or not gv_obj:
             return rc
-        self.graph_repr(gv_obj)
+        self._graph_repr(gv_obj)
         return gv_obj.display()
     def graph_img(self, gtype, outf, img_type):
         '''Render graph to image and save it to a file (done by
@@ -230,14 +233,14 @@ class CibObjectSet(object):
         rc, gv_obj = self._get_gv_obj(gtype)
         if not rc or not gv_obj:
             return rc
-        self.graph_repr(gv_obj)
+        self._graph_repr(gv_obj)
         return gv_obj.image(img_type, outf)
     def save_graph(self, gtype, outf):
         '''Save graph to a file'''
         rc, gv_obj = self._get_gv_obj(gtype)
         if not rc or not gv_obj:
             return rc
-        self.graph_repr(gv_obj)
+        self._graph_repr(gv_obj)
         return gv_obj.save(outf)
     def show(self):
         s = self.repr()
@@ -245,7 +248,7 @@ class CibObjectSet(object):
             return self.search_rc
         page_string(s)
         return self.search_rc
-    def import_file(self,method,fname):
+    def import_file(self, method, fname):
         if not cib_factory.is_cib_sane():
             return False
         if method not in ("replace", "update"):
@@ -269,7 +272,7 @@ class CibObjectSet(object):
         CLI or XML).
         '''
         return ''
-    def save(self, s, update = False):
+    def save(self, s, update=False):
         '''
         For each object:
             - try to find a corresponding object in obj_list
@@ -310,9 +313,10 @@ class CibObjectSet(object):
                             k = (ra_class, ra_provider, ra_type, name, value)
                             try:
                                 clash_dict[k].append(ra_id)
-                            except:
+                            except KeyError:
                                 clash_dict[k] = [ra_id]
-                    except: pass
+                    except KeyError:
+                        pass
             return
         # we check the whole CIB for clashes as a clash may originate between
         # an object already committed and a new one
@@ -330,10 +334,10 @@ class CibObjectSet(object):
         for param, resources in clash_dict.items():
             # at least one new object must be involved
             if len(resources) > 1 and len(set(resources) & check_set) > 0:
-                    rc = 2
-                    msg = 'Resources %s violate uniqueness for parameter "%s": "%s"' %\
-                            (",".join(sorted(resources)), param[3], param[4])
-                    common_warning(msg)
+                rc = 2
+                msg = 'Resources %s violate uniqueness for parameter "%s": "%s"' % \
+                    (",".join(sorted(resources)), param[3], param[4])
+                common_warning(msg)
         return rc
     def semantic_check(self, set_obj_all):
         '''
@@ -343,15 +347,15 @@ class CibObjectSet(object):
         for obj in self.obj_list:
             rc |= obj.check_sanity()
         return rc
-    def lookup_cli(self,cli_list):
+    def _lookup_cli(self, cli_list):
         for obj in self.obj_list:
             if obj.matchcli(cli_list):
                 return obj
-    def lookup(self,xml_obj_type,obj_id):
+    def lookup(self, xml_obj_type, obj_id):
         for obj in self.obj_list:
-            if obj.match(xml_obj_type,obj_id):
+            if obj.match(xml_obj_type, obj_id):
                 return obj
-    def drop_remaining(self):
+    def _drop_remaining(self):
         'Any remaining objects in obj_list are deleted.'
         l = [x.obj_id for x in self.remove_objs]
         return cib_factory.delete(*l)
@@ -364,7 +368,8 @@ def get_comments(cli_list):
         if last[0] == "comments":
             cli_list.pop()
             return last[1]
-    except: pass
+    except IndexError:
+        pass
     return []
 
 class CibObjectSetCli(CibObjectSet):
@@ -378,26 +383,26 @@ class CibObjectSetCli(CibObjectSet):
         s = self.repr(format=format)
         cli_display.reset_no_pretty()
         return s
-    def repr(self, format = 1):
+    def repr(self, format=1):
         "Return a string containing cli format of all objects."
         if not self.obj_list:
             return ''
         return '\n'.join(obj.repr_cli(format = format) \
             for obj in processing_sort_cli(self.obj_list))
-    def pre_edit(self, s):
+    def _pre_edit(self, s):
         '''Extra processing of the string to be editted'''
         if user_prefs.editor.startswith("vi"):
             return "%s\n#vim:set syntax=pcmk\n" % s
         return s
-    def process(self, cli_list, update = False):
+    def process(self, cli_list, update=False):
         '''
         Create new objects or update existing ones.
         '''
-        myobj = obj = self.lookup_cli(cli_list)
+        myobj = obj = self._lookup_cli(cli_list)
         if update and not obj:
             obj = cib_factory.find_object_for_cli(cli_list)
         if obj:
-            rc = cib_factory.update_from_cli(obj,cli_list,update) != False
+            rc = cib_factory.update_from_cli(obj, cli_list, update) != False
             if myobj:
                 self.remove_objs.remove(myobj)
         else:
@@ -406,7 +411,7 @@ class CibObjectSetCli(CibObjectSet):
             if rc:
                 self.add_objs.append(obj)
         return rc
-    def save(self, s, update = False):
+    def save(self, s, update=False):
         '''
         Save a user supplied cli format configuration.
         On errors user is typically asked to review the
@@ -430,7 +435,7 @@ class CibObjectSetCli(CibObjectSet):
             err_buf.incr_lineno()
             cli_list = cp.parse(cli_text)
             if cli_list:
-                id = find_value(cli_list[0][1],"id")
+                id = find_value(cli_list[0][1], "id")
                 if id:
                     if id in id_list:
                         common_err("duplicate element %s" % id)
@@ -444,17 +449,17 @@ class CibObjectSetCli(CibObjectSet):
         # can ask the user to fix problems
         if not rc:
             return rc
-        self.init_aux_lists()
+        self._init_aux_lists()
         if l:
             for cli_list in processing_sort_cli(l):
-                if self.process(cli_list,update) == False:
+                if self.process(cli_list, update) == False:
                     rc = False
-        if not self.drop_remaining():
+        if not self._drop_remaining():
             # this is tricky, we don't know what was removed!
             # it could happen that the user dropped a resource
             # which was running and therefore couldn't be removed
             rc = False
-        self.recreate_obj_list()
+        self._recreate_obj_list()
         return rc
 
 cib_verify = "crm_verify -V -p"
@@ -464,7 +469,7 @@ class CibObjectSetRaw(CibObjectSet):
     '''
     def __init__(self, *args):
         CibObjectSet.__init__(self, *args)
-    def repr(self, format = "ignored"):
+    def repr(self, format="ignored"):
         "Return a string containing xml of all objects."
         cib_elem = cib_factory.objlist2doc(self.obj_list)
         s = etree.tostring(cib_elem, pretty_print=True)
@@ -479,14 +484,14 @@ class CibObjectSetRaw(CibObjectSet):
         conf_elem = cib_elem.findall("configuration")[0]
         s = etree.tostring(conf_elem, pretty_print=True)
         return s
-    def process(self, node, update = False):
+    def process(self, node, update=False):
         if not cib_factory.is_cib_sane():
             return False
-        myobj = obj = self.lookup(node.tag,node.get("id"))
+        myobj = obj = self.lookup(node.tag, node.get("id"))
         if update and not obj:
             obj = cib_factory.find_object_for_node(node)
         if obj:
-            rc = cib_factory.update_from_node(obj,node)
+            rc = cib_factory.update_from_node(obj, node)
             if myobj:
                 self.remove_objs.remove(obj)
         else:
@@ -495,34 +500,34 @@ class CibObjectSetRaw(CibObjectSet):
             if rc:
                 self.add_objs.append(new_obj)
         return rc
-    def save(self, s, update = False):
+    def save(self, s, update=False):
         try:
             cib_elem = etree.fromstring('\n'.join(s))
-        except Exception,msg:
-            cib_parse_err(msg,s)
+        except etree.ParseError, msg:
+            cib_parse_err(msg, s)
             return False
         rc = True
         sanitize_cib(cib_elem)
         show_unrecognized_elems(cib_elem)
-        newnodes = get_interesting_nodes(cib_elem,[])
-        self.init_aux_lists()
+        newnodes = get_interesting_nodes(cib_elem, [])
+        self._init_aux_lists()
         if newnodes:
             for node in processing_sort(newnodes):
-                if not self.process(node,update):
+                if not self.process(node, update):
                     rc = False
-        if not self.drop_remaining():
+        if not self._drop_remaining():
             rc = False
-        self.recreate_obj_list()
+        self._recreate_obj_list()
         return rc
     def verify(self):
         if not self.obj_list:
             return True
         cli_display.set_no_pretty()
-        rc = pipe_string(cib_verify,self.repr(format = -1))
+        rc = pipe_string(cib_verify, self.repr(format = -1))
         cli_display.reset_no_pretty()
-        if rc not in (0,1):
+        if rc not in (0, 1):
             common_debug(self.repr())
-        return rc in (0,1)
+        return rc in (0, 1)
     def ptest(self, nograph, scores, utilization, actions, verbosity):
         if not cib_factory.is_cib_sane():
             return False
@@ -538,7 +543,7 @@ class CibObjectSetRaw(CibObjectSet):
 #
 # XML generate utilities
 #
-def set_id(node,oldnode,id_hint,id_required = True):
+def set_id(node, oldnode, id_hint, id_required=True):
     '''
     Set the id attribute for the node.
     Procedure:
@@ -556,21 +561,21 @@ def set_id(node,oldnode,id_hint,id_required = True):
         new_id = old_id
     if not new_id:
         if id_required:
-            new_id = id_store.new(node,id_hint)
+            new_id = id_store.new(node, id_hint)
     else:
         id_store.save(new_id)
     if new_id:
-        node.set("id",new_id)
+        node.set("id", new_id)
         if oldnode is not None and old_id == new_id:
             set_id_used_attr(oldnode)
 
-def mkxmlsimple(e,oldnode,id_hint):
+def mkxmlsimple(e, oldnode, id_hint):
     '''
-    Create an xml node from the (name,dict) pair. The name is the
+    Create an xml node from the (name, dict) pair. The name is the
     name of the element. The dict contains a set of attributes.
     '''
     node = etree.Element(e[0])
-    for n,v in e[1]:
+    for n, v in e[1]:
         if n == "$children": # this one's skipped
             continue
         if n == "operation":
@@ -579,18 +584,18 @@ def mkxmlsimple(e,oldnode,id_hint):
             n = n.lstrip('$')
         if (type(v) != type('') and type(v) != type(u'')) \
                 or v: # skip empty strings
-            node.set(n,v)
+            node.set(n, v)
     id_ref = node.get("id-ref")
     if id_ref:
-        id_ref_2 = cib_factory.resolve_id_ref(e[0],id_ref)
-        node.set("id-ref",id_ref_2)
+        id_ref_2 = cib_factory.resolve_id_ref(e[0], id_ref)
+        node.set("id-ref", id_ref_2)
     else:
-        set_id(node,lookup_node(node,oldnode),id_hint)
+        set_id(node, lookup_node(node, oldnode), id_hint)
     return node
 
-def mkxmlnvpairs(e,oldnode,id_hint):
+def mkxmlnvpairs(e, oldnode, id_hint):
     '''
-    Create xml from the (name,dict) pair. The name is the name of
+    Create xml from the (name, dict) pair. The name is the name of
     the element. The dict contains a set of nvpairs. Stuff such
     as instance_attributes.
     NB: Other tags not containing nvpairs are fine if the dict is empty.
@@ -602,101 +607,102 @@ def mkxmlnvpairs(e,oldnode,id_hint):
     # in that case the id_hint is equal id
     # and this is important in case there are multiple sets
     if (e[0] == "cluster_property_set" or e[0] in vars.defaults_tags) and id_hint:
-        node.set("id",id_hint)
-    match_node = lookup_node(node,oldnode)
+        node.set("id", id_hint)
+    match_node = lookup_node(node, oldnode)
     #if match_node:
-        #print "found nvpairs set:",match_node.tag,match_node.get("id")
-    id_ref = find_value(e[1],"$id-ref")
+        #print "found nvpairs set:", match_node.tag, match_node.get("id")
+    id_ref = find_value(e[1], "$id-ref")
     if id_ref:
-        id_ref_2 = cib_factory.resolve_id_ref(e[0],id_ref)
-        node.set("id-ref",id_ref_2)
+        id_ref_2 = cib_factory.resolve_id_ref(e[0], id_ref)
+        node.set("id-ref", id_ref_2)
         if e[0] != "operations":
             return node # id_ref is the only attribute (if not operations)
-        e[1].remove(["$id-ref",id_ref])
-    v = find_value(e[1],"$id")
+        e[1].remove(["$id-ref", id_ref])
+    v = find_value(e[1], "$id")
     if v:
-        node.set("id",v)
-        e[1].remove(["$id",v])
+        node.set("id", v)
+        e[1].remove(["$id", v])
     elif e[0] in vars.nvset_cli_names:
-        node.set("id",id_hint)
+        node.set("id", id_hint)
     else:
         if e[0] == "operations": # operations don't need no id
-            set_id(node,match_node,id_hint,id_required = False)
+            set_id(node, match_node, id_hint, id_required = False)
         else:
-            set_id(node,match_node,id_hint)
+            set_id(node, match_node, id_hint)
     try:
         subpfx = vars.subpfx_list[e[0]]
-    except: subpfx = ''
-    subpfx = subpfx and "%s_%s" % (id_hint,subpfx) or id_hint
+    except KeyError:
+        subpfx = ''
+    subpfx = subpfx and "%s_%s" % (id_hint, subpfx) or id_hint
     nvpair_pfx = node.get("id") or subpfx
-    for n,v in e[1]:
+    for n, v in e[1]:
         nvpair = etree.SubElement(node, "nvpair")
-        nvpair.set("name",n)
+        nvpair.set("name", n)
         if v != None:
-            nvpair.set("value",v)
-        set_id(nvpair,lookup_node(nvpair,match_node),nvpair_pfx)
+            nvpair.set("value", v)
+        set_id(nvpair, lookup_node(nvpair, match_node), nvpair_pfx)
     return node
 
-def mkxmlop(e,oldnode,id_hint):
+def mkxmlop(e, oldnode, id_hint):
     '''
-    Create an operation xml from the (name,dict) pair.
+    Create an operation xml from the (name, dict) pair.
     '''
     node = etree.Element(e[0])
     inst_attr = []
-    for n,v in e[1]:
+    for n, v in e[1]:
         if n in olist(schema.get('attr', 'op', 'a')):
-            node.set(n,v)
+            node.set(n, v)
         else:
-            inst_attr.append([n,v])
+            inst_attr.append([n, v])
     tmp = etree.Element("operations")
-    oldops = lookup_node(tmp,oldnode) # first find old operations
-    oldop = lookup_node(node,oldops)
-    set_id(node,oldop,id_hint)
+    oldops = lookup_node(tmp, oldnode) # first find old operations
+    oldop = lookup_node(node, oldops)
+    set_id(node, oldop, id_hint)
     if inst_attr:
-        e = ["instance_attributes",inst_attr]
-        nia = mkxmlnvpairs(e,oldop,node.get("id"))
+        e = ["instance_attributes", inst_attr]
+        nia = mkxmlnvpairs(e, oldop, node.get("id"))
         node.append(nia)
     return node
 
-def mkxmldate(e,oldnode,id_hint):
+def mkxmldate(e, oldnode, id_hint):
     '''
-    Create a date_expression xml from the (name,dict) pair.
+    Create a date_expression xml from the (name, dict) pair.
     '''
     node = etree.Element(e[0])
-    operation = find_value(e[1],"operation").lower()
+    operation = find_value(e[1], "operation").lower()
     node.set("operation", operation)
-    old_date = lookup_node(node,oldnode) # first find old date element
-    set_id(node,old_date,id_hint)
+    old_date = lookup_node(node, oldnode) # first find old date element
+    set_id(node, old_date, id_hint)
     date_spec_attr = []
-    for n,v in e[1]:
+    for n, v in e[1]:
         if n in olist(rng_attr_values_l('date_expression', 'operation')) or \
                 n == "operation":
             continue
         elif n in vars.in_range_attrs:
-            node.set(n,v)
+            node.set(n, v)
         else:
-            date_spec_attr.append([n,v])
+            date_spec_attr.append([n, v])
     if not date_spec_attr:
         return node
     tag = operation == "date_spec" and "date_spec" or "duration"
     spec_elem = etree.SubElement(node, tag)
-    old_date_spec = lookup_node(spec_elem,old_date) # first find old date element
-    set_id(spec_elem,old_date_spec,id_hint)
-    for n,v in date_spec_attr:
-        spec_elem.set(n,v)
+    old_date_spec = lookup_node(spec_elem, old_date) # first find old date element
+    set_id(spec_elem, old_date_spec, id_hint)
+    for n, v in date_spec_attr:
+        spec_elem.set(n, v)
     return node
 
-def mkxmlrsc_set(e,oldnode,id_hint):
+def mkxmlrsc_set(e, oldnode, id_hint):
     '''
-    Create a resource_set xml from the (name,dict) pair.
+    Create a resource_set xml from the (name, dict) pair.
     '''
     node = etree.Element(e[0])
-    old_rsc_set = lookup_node(node,oldnode) # first find old date element
-    set_id(node,old_rsc_set,id_hint)
+    old_rsc_set = lookup_node(node, oldnode) # first find old date element
+    set_id(node, old_rsc_set, id_hint)
     for ref in e[1]:
         if ref[0] == "resource_ref":
             ref_node = etree.SubElement(node, ref[0])
-            ref_node.set(ref[1][0],ref[1][1])
+            ref_node.set(ref[1][0], ref[1][1])
         elif ref[0] in ("sequential", "require-all", "action", "role"):
             node.set(ref[0], ref[1])
     return node
@@ -707,7 +713,7 @@ def mkxmlaclrole_ref(e):
     everything else.
     '''
     node = etree.Element(e[0])
-    node.set(e[1][0],e[1][1])
+    node.set(e[1][0], e[1][1])
     return node
 
 def mkxmlhead(e):
@@ -728,39 +734,39 @@ conv_list = {
     "operations": "operations",
     "op": "op",
 }
-def mkxmlnode(e,oldnode,id_hint):
+def mkxmlnode(e, oldnode, id_hint):
     '''
-    Create xml from the (name,dict) pair. The name is the name of
+    Create xml from the (name, dict) pair. The name is the name of
     the element. The dict contains either a set of nvpairs or a
     set of attributes. The id is either generated or copied if
     found in the provided xml. Stuff such as instance_attributes.
     '''
     if e[0] in conv_list:
         e[0] = conv_list[e[0]]
-    if e[0] in ("instance_attributes","meta_attributes","operations","rsc_defaults","op_defaults","cluster_property_set","utilization"):
-        return mkxmlnvpairs(e,oldnode,id_hint)
+    if e[0] in ("instance_attributes", "meta_attributes", "operations", "rsc_defaults", "op_defaults", "cluster_property_set", "utilization"):
+        return mkxmlnvpairs(e, oldnode, id_hint)
     elif e[0] == "op":
-        return mkxmlop(e,oldnode,id_hint)
+        return mkxmlop(e, oldnode, id_hint)
     elif e[0] == "date_expression":
-        return mkxmldate(e,oldnode,id_hint)
+        return mkxmldate(e, oldnode, id_hint)
     elif e[0] == "resource_set":
-        return mkxmlrsc_set(e,oldnode,id_hint)
+        return mkxmlrsc_set(e, oldnode, id_hint)
     elif e[0] == "role_ref":
         return mkxmlaclrole_ref(e)
     else:
-        return mkxmlsimple(e,oldnode,id_hint)
+        return mkxmlsimple(e, oldnode, id_hint)
 
-def set_nvpair(set_node,name,value):
+def set_nvpair(set_node, name, value):
     n_id = set_node.get("id")
     for c in set_node.iterchildren():
         if is_element(c) and c.get("name") == name:
-            c.set("value",value)
+            c.set("value", value)
             return
     np = etree.SubElement(set_node, "nvpair")
-    np.set("name",name)
-    np.set("value",value)
-    new_id = id_store.new(np,n_id)
-    np.set("id",new_id)
+    np.set("name", name)
+    np.set("value", value)
+    new_id = id_store.new(np, n_id)
+    np.set("id", new_id)
 
 #
 # cib element classes (CibObject the parent class)
@@ -771,7 +777,7 @@ class CibObject(object):
     '''
     state_fmt = "%16s %-8s%-8s%-8s%-8s%-8s%-4s"
     set_names = {}
-    def __init__(self,xml_obj_type):
+    def __init__(self, xml_obj_type):
         if not xml_obj_type in cib_object_map:
             unsupported_err(xml_obj_type)
             return
@@ -789,60 +795,64 @@ class CibObject(object):
         self.children = [] # objects inferior
         self.obj_id = None
         self.node = None
-    def dump_state(self):
+    def __str__(self):
+        return "%s:%s" % (self.obj_type, self.obj_id)
+    def _dump_state(self):
         'Print object status'
         print self.state_fmt % \
             (self.obj_id,self.origin,self.updated,self.moved,self.invalid, \
             self.parent and self.parent.obj_id or "", \
             len(self.children))
-    def repr_cli_xml(self,format):
+    def _repr_cli_xml(self, format):
         h = cli_display.keyword("xml")
         l = etree.tostring(self.node, pretty_print=True).split('\n')
         l = [x for x in l if x] # drop empty lines
-        return "%s %s" % (h,cli_format_xml(l,format))
-    def gv_rsc_id(self):
+        return "%s %s" % (h, cli_format_xml(l, format))
+    def _gv_rsc_id(self):
         if self.parent and self.parent.obj_type in vars.clonems_tags:
             return "%s:%s" % (self.parent.obj_type, self.obj_id)
         else:
             return self.obj_id
-    def set_gv_attrs(self, gv_obj, obj_type=None):
+    def _set_gv_attrs(self, gv_obj, obj_type=None):
         if not obj_type:
             obj_type = self.obj_type
         id = self.node.get("uname") or self.obj_id
         try:
-            for attr,attr_v in vars.graph[obj_type].iteritems():
+            for attr, attr_v in vars.graph[obj_type].iteritems():
                 gv_obj.new_attr(id, attr, attr_v)
-        except: pass
-    def set_sg_attrs(self, sg_obj, obj_type=None):
+        except KeyError:
+            pass
+    def _set_sg_attrs(self, sg_obj, obj_type=None):
         if not obj_type:
             obj_type = self.obj_type
         set_graph_attrs(sg_obj, obj_type)
-    def set_edge_attrs(self, gv_obj, e_id, obj_type=None):
+    def _set_edge_attrs(self, gv_obj, e_id, obj_type=None):
         if not obj_type:
             obj_type = self.obj_type
         try:
-            for attr,attr_v in vars.graph[obj_type].iteritems():
+            for attr, attr_v in vars.graph[obj_type].iteritems():
                 gv_obj.new_edge_attr(e_id, attr, attr_v)
-        except: pass
+        except KeyError:
+            pass
     def repr_gv(self, gv_obj):
         '''
         Add some graphviz elements to gv_obj.
         '''
         pass
-    def repr_cli_head(self, format):
+    def _repr_cli_head(self, format):
         'implemented in subclasses'
         pass
-    def repr_cli(self,format = 1):
+    def repr_cli(self, format=1):
         '''
         CLI representation for the node.
-        repr_cli_head and repr_cli_child in subclasess.
+        _repr_cli_head and _repr_cli_child in subclasess.
         '''
         if self.nocli:
-            return self.repr_cli_xml(format)
+            return self._repr_cli_xml(format)
         l = []
         if format < 0:
             cli_display.set_no_pretty()
-        head_s = self.repr_cli_head(format)
+        head_s = self._repr_cli_head(format)
         if not head_s: # everybody must have a head
             if format < 0:
                 cli_display.reset_no_pretty()
@@ -851,30 +861,34 @@ class CibObject(object):
         l.append(head_s)
         desc = self.node.get("description")
         if desc:
-            l.append(nvpair_format("description",desc))
+            l.append(nvpair_format("description", desc))
         for c in self.node.iterchildren():
             if is_comment(c):
                 comments.append(c.text)
                 continue
             if not is_element(c):
                 continue
-            s = self.repr_cli_child(c,format)
+            s = self._repr_cli_child(c, format)
             if s:
                 l.append(s)
-        s = self.cli_format(l,comments,format)
+        s = self._cli_format_and_comment(l, comments, format)
         if format < 0:
             cli_display.reset_no_pretty()
         return s
-    def attr_set_str(self, node):
+    def _attr_set_str(self, node):
+        '''
+        Add $id=<id> if the set id is referenced by another
+        element.
+        '''
         id = node.get("id")
         add_id = cib_factory.is_id_refd(node.tag, id)
         return "%s %s" % \
             (cli_display.keyword(self.set_names[node.tag]), \
-            cli_pairs(nvpairs2list(node, add_id = add_id)))
-    def repr_cli_child(self,c,format):
+                cli_pairs(nvpairs2list(node, add_id=add_id)))
+    def _repr_cli_child(self, c, format):
         if c.tag in self.set_names:
-            return self.attr_set_str(c)
-    def get_oldnode(self):
+            return self._attr_set_str(c)
+    def _get_oldnode(self):
         '''Used to retrieve sub id's'''
         return self.node
     def set_id(self, obj_id=None):
@@ -884,11 +898,11 @@ class CibObject(object):
             self.obj_id = self.node is not None and self.node.get("id") or None
     def set_nodeid(self):
         if self.node is not None and self.obj_id:
-            self.node.set("id",self.obj_id)
-    def cli_list2node(self,cli_list,oldnode):
+            self.node.set("id", self.obj_id)
+    def _cli_list2node(self, cli_list, oldnode):
         'implemented in subclasses'
         pass
-    def cli2node(self,cli,oldnode = None):
+    def cli2node(self, cli, oldnode=None):
         '''
         Convert CLI representation to a DOM node.
         Defined in subclasses.
@@ -897,19 +911,19 @@ class CibObject(object):
         if not cli_list:
             return None
         if not oldnode:
-            oldnode = self.get_oldnode()
+            oldnode = self._get_oldnode()
         comments = get_comments(cli_list)
-        node = self.cli_list2node(cli_list,oldnode)
+        node = self._cli_list2node(cli_list, oldnode)
         if comments and node:
-            stuff_comments(node,comments)
+            stuff_comments(node, comments)
         return node
-    def cli_format(self,l,comments,format):
+    def _cli_format_and_comment(self, l, comments, format):
         '''
         Format and add comment (if any).
         '''
-        s = cli_format(l,format)
+        s = cli_format(l, format)
         cs = '\n'.join(comments)
-        return (comments and format >=0) and '\n'.join([cs,s]) or s
+        return (comments and format >=0) and '\n'.join([cs, s]) or s
     def move_comments(self):
         '''
         Move comments to the top of the node.
@@ -928,8 +942,8 @@ class CibObject(object):
             self.node.remove(comm_node)
             self.node.insert(firstelem, comm_node)
             firstelem += 1
-        common_debug("obj %s node: %s" % (self.obj_id,etree.tostring(self.node)))
-    def mknode(self,obj_id):
+        common_debug("obj %s node: %s" % (self.obj_id, etree.tostring(self.node)))
+    def mknode(self, obj_id):
         if not cib_factory.is_cib_sane():
             return False
         if self.xml_obj_type in vars.defaults_tags:
@@ -950,11 +964,6 @@ class CibObject(object):
             return False
         if not is_live_cib() and self.node.tag == "node":
             common_err("cannot rename nodes")
-            return False
-        return True
-    def attr_exists(self,attr):
-        if not attr in self.node.keys():
-            no_attribute_err(attr,self.obj_id)
             return False
         return True
     def cli_use_validate(self):
@@ -982,20 +991,24 @@ class CibObject(object):
             return False
         rc = xml_cmp(self.node, xml2, show = True)
         return rc
-    def verify_attributes(self, xmlnode):
+    def _verify_op_attributes(self, op_node):
+        '''
+        Check if all operation attributes are supported by the
+        schema.
+        '''
         rc = True
-        op_id = xmlnode.get("name")
-        for name in xmlnode.keys():
-            vals = rng_attr_values(xmlnode.tag, name)
+        op_id = op_node.get("name")
+        for name in op_node.keys():
+            vals = rng_attr_values(op_node.tag, name)
             if not vals:
                 continue
-            v = xmlnode.get(name)
+            v = op_node.get(name)
             if v not in vals:
                 common_warn("%s: op '%s' attribute '%s' value '%s' not recognized" % \
                     (self.obj_id, op_id, name, v))
                 rc = False
         return rc
-    def check_ops_attributes(self):
+    def _check_ops_attributes(self):
         '''
         Check if operation attributes settings are valid.
         '''
@@ -1003,7 +1016,7 @@ class CibObject(object):
         if self.node is None:
             return rc
         for op_node in self.node.xpath("operations/op"):
-            rc |= self.verify_attributes(op_node)
+            rc |= self._verify_op_attributes(op_node)
         return rc
     def check_sanity(self):
         '''
@@ -1011,14 +1024,12 @@ class CibObject(object):
         And groups/clones/ms and cluster properties.
         '''
         return 0
-    def matchcli(self,cli_list):
+    def matchcli(self, cli_list):
         head = cli_list[0]
         return self.obj_type == head[0] \
-            and self.obj_id == find_value(head[1],"id")
-    def match(self,xml_obj_type,obj_id):
+            and self.obj_id == find_value(head[1], "id")
+    def match(self, xml_obj_type, obj_id):
         return self.xml_obj_type == xml_obj_type and self.obj_id == obj_id
-    def obj_string(self):
-        return "%s:%s" % (self.obj_type,self.obj_id)
     def reset_updated(self):
         self.updated = False
         self.moved = False
@@ -1035,7 +1046,7 @@ class CibObject(object):
             return self.parent.top_parent()
         else:
             return self
-    def find_child_in_node(self,child):
+    def find_child_in_node(self, child):
         for c in self.node.iterchildren():
             if not is_element(c):
                 continue
@@ -1072,7 +1083,7 @@ def gv_edge_score_label(gv_obj, e_id, node):
     if abs_pos_score(score):
         gv_obj.new_edge_attr(e_id, 'style', 'solid')
         return
-    elif re.match("-?([0-9]+|inf)$",score):
+    elif re.match("-?([0-9]+|inf)$", score):
         lbl = score
     elif score in rng_attr_values('rsc_order', 'kind'):
         lbl = score
@@ -1102,7 +1113,7 @@ class CibNode(CibObject):
         "instance_attributes": "attributes",
         "utilization": "utilization",
     }
-    def repr_cli_head(self,format):
+    def _repr_cli_head(self, format):
         uname = self.node.get("uname")
         s = cli_display.keyword(self.obj_type)
         if self.obj_id != uname:
@@ -1112,25 +1123,25 @@ class CibNode(CibObject):
         if type and type != vars.node_default_type:
             s = '%s:%s' % (s, type)
         return s
-    def cli_list2node(self,cli_list,oldnode):
+    def _cli_list2node(self, cli_list, oldnode):
         head = copy.copy(cli_list[0])
         head[0] = backtrans[head[0]]
-        obj_id = find_value(head[1],"$id")
+        obj_id = find_value(head[1], "$id")
         if not obj_id:
-            obj_id = find_value(head[1],"uname")
+            obj_id = find_value(head[1], "uname")
         if not obj_id:
             return None
-        type = find_value(head[1],"type")
+        type = find_value(head[1], "type")
         if not vars.node_type_opt and not type:
             type = vars.node_default_type
         if type:
-            head[1].append(["type",type])
-        headnode = mkxmlsimple(head,get_topnode(cib_factory.get_cib_elem(),self.parent_type),'node')
+            head[1].append(["type", type])
+        headnode = mkxmlsimple(head, get_topnode(cib_factory.get_cib_elem(), self.parent_type), 'node')
         id_hint = headnode.get("uname")
         for e in cli_list[1:]:
-            n = mkxmlnode(e,oldnode,id_hint)
+            n = mkxmlnode(e, oldnode, id_hint)
             headnode.append(n)
-        remove_id_used_attributes(get_topnode(cib_factory.get_cib_elem(),self.parent_type))
+        remove_id_used_attributes(get_topnode(cib_factory.get_cib_elem(), self.parent_type))
         return headnode
     def repr_gv(self, gv_obj):
         '''
@@ -1142,7 +1153,7 @@ class CibNode(CibObject):
             uname = self.obj_id
         gv_obj.new_node(uname, top_node=True)
         gv_obj.new_attr(uname, 'label', uname)
-        self.set_gv_attrs(gv_obj)
+        self._set_gv_attrs(gv_obj)
 
 def reduce_primitive(node):
     '''
@@ -1176,11 +1187,15 @@ class Op(object):
     def set_attr(self, n, v):
         self.attr_d[n] = v
     def get_attr(self, n):
-        try: return self.attr_d[n]
-        except: return None
+        try:
+            return self.attr_d[n]
+        except KeyError:
+            return None
     def del_attr(self, n):
-        try: del self.attr_d[n]
-        except: pass
+        try:
+            del self.attr_d[n]
+        except KeyError:
+            pass
     def xml2dict(self):
         for name in self.node.keys():
             if name != "id": # skip the id
@@ -1197,11 +1212,11 @@ class Op(object):
             id_store.remove_xml(self.node)
         self.node = etree.Element(self.elem_type)
         inst_attr = []
-        for n,v in self.attr_d.iteritems():
+        for n, v in self.attr_d.iteritems():
             if n in olist(schema.get('attr', 'op', 'a')):
-                self.node.set(n,v)
+                self.node.set(n, v)
             else:
-                inst_attr.append([n,v])
+                inst_attr.append([n, v])
         set_id(self.node, None, self.parent)
         if inst_attr:
             e = ["instance_attributes", inst_attr]
@@ -1218,7 +1233,7 @@ class CibPrimitive(CibObject):
         "meta_attributes": "meta",
         "utilization": "utilization",
     }
-    def repr_cli_head(self,format):
+    def _repr_cli_head(self, format):
         if self.obj_type == "primitive":
             template_ref = self.node.get("template")
         else:
@@ -1230,12 +1245,12 @@ class CibPrimitive(CibObject):
         s = cli_display.keyword(self.obj_type)
         id = cli_display.id(self.obj_id)
         return "%s %s %s" % (s, id, rsc_spec)
-    def repr_cli_child(self,c,format):
+    def _repr_cli_child(self, c, format):
         if c.tag in self.set_names:
-            return self.attr_set_str(c)
+            return self._attr_set_str(c)
         elif c.tag == "operations":
-            return cli_operations(c,format)
-    def cli_list2node(self,cli_list,oldnode):
+            return cli_operations(c, format)
+    def _cli_list2node(self, cli_list, oldnode):
         '''
         Convert a CLI description to DOM node.
         Try to preserve as many ids as possible in case there's
@@ -1243,48 +1258,48 @@ class CibPrimitive(CibObject):
         '''
         head = copy.copy(cli_list[0])
         head[0] = backtrans[head[0]]
-        headnode = mkxmlsimple(head,oldnode,'rsc')
+        headnode = mkxmlsimple(head, oldnode, 'rsc')
         id_hint = headnode.get("id")
         operations = None
         for e in cli_list[1:]:
-            n = mkxmlnode(e,oldnode,id_hint)
+            n = mkxmlnode(e, oldnode, id_hint)
             if keyword_cmp(e[0], "operations"):
                 operations = n
             if not keyword_cmp(e[0], "op"):
                 headnode.append(n)
             else:
                 if operations is None:
-                    operations = mkxmlnode(["operations",{}],oldnode,id_hint)
+                    operations = mkxmlnode(["operations", {}], oldnode, id_hint)
                     headnode.append(operations)
                 operations.append(n)
         remove_id_used_attributes(oldnode)
         return headnode
-    def append_op(self, op_node):
+    def _append_op(self, op_node):
         try:
             ops_node = self.node.findall("operations")[0]
-        except:
+        except IndexError:
             ops_node = etree.SubElement(self.node, "operations")
         ops_node.append(op_node)
-    def add_operation(self,cli_list):
+    def add_operation(self, cli_list):
         # check if there is already an op with the same interval
         comments = get_comments(cli_list)
         head = copy.copy(cli_list[0])
         name = find_value(head[1], "name")
         interval = find_value(head[1], "interval")
-        if find_operation(self.node,name,interval):
+        if find_operation(self.node, name, interval):
             common_err("%s already has a %s op with interval %s" % \
                 (self.obj_id, name, interval))
             return None
         # create an xml node
         op_node = mkxmlnode(head, None, self.obj_id)
-        self.append_op(op_node)
+        self._append_op(op_node)
         if comments and self.node:
-            stuff_comments(self.node,comments)
+            stuff_comments(self.node, comments)
         # the resource is updated
         self.updated = True
         self.propagate_updated()
         return self
-    def del_operation(self,op_node):
+    def del_operation(self, op_node):
         if op_node.getparent() is None:
             return
         ops_node = op_node.getparent()
@@ -1294,13 +1309,13 @@ class CibPrimitive(CibObject):
             rmnode(ops_node)
         self.updated = True
         self.propagate_updated()
-    def is_dummy_operation(self,op_node):
+    def is_dummy_operation(self, op_node):
         '''If the op has just name, id, and interval=0, then it's
         not of much use.'''
         interval = op_node.get("interval")
         if len(op_node) == 0 and crm_msec(interval) == 0:
             attr_names = set(op_node.keys())
-            basic_attr_names = set(["id","name","interval"])
+            basic_attr_names = set(["id", "name", "interval"])
             if len(attr_names ^ basic_attr_names) == 0: 
                 return True
         return False
@@ -1309,7 +1324,7 @@ class CibPrimitive(CibObject):
         op_obj = Op(name, self.obj_id, op_node)
         op_obj.set_attr(attr_n, attr_v)
         new_op_node = op_obj.mkxml()
-        self.append_op(new_op_node)
+        self._append_op(new_op_node)
         # the resource is updated
         self.updated = True
         self.propagate_updated()
@@ -1319,7 +1334,7 @@ class CibPrimitive(CibObject):
         op_obj = Op(name, self.obj_id, op_node)
         op_obj.del_attr(attr_n)
         new_op_node = op_obj.mkxml()
-        self.append_op(new_op_node)
+        self._append_op(new_op_node)
         # the resource is updated
         self.updated = True
         self.propagate_updated()
@@ -1332,7 +1347,7 @@ class CibPrimitive(CibObject):
         if self.node is None:  # eh?
             common_err("%s: no xml (strange)" % self.obj_id)
             return user_prefs.get_check_rc()
-        rc3 = sanity_check_meta(self.obj_id,self.node,vars.rsc_meta_attributes)
+        rc3 = sanity_check_meta(self.obj_id, self.node, vars.rsc_meta_attributes)
         if self.obj_type == "primitive":
             r_node = reduce_primitive(self.node)
             if r_node is None:
@@ -1349,7 +1364,7 @@ class CibPrimitive(CibObject):
         actions = get_rsc_operations(r_node)
         default_timeout = get_default_timeout()
         rc2 = ra.sanity_check_ops(self.obj_id, actions, default_timeout)
-        rc4 = self.check_ops_attributes()
+        rc4 = self._check_ops_attributes()
         params = []
         for c in r_node.iterchildren("instance_attributes"):
             params += nvpairs2list(c)
@@ -1363,23 +1378,25 @@ class CibPrimitive(CibObject):
         '''
         if self.obj_type != "primitive":
             return
+        # if we belong to a group, but were not called with
+        # from_grp=True, then skip
         if not from_grp and self.parent and self.parent.obj_type == "group":
             return
         n = reduce_primitive(self.node)
         ra_class = n.get("class")
         ra_type = n.get("type")
-        lbl_top = self.gv_rsc_id()
+        lbl_top = self._gv_rsc_id()
         if ra_class in ("ocf", "stonith"):
             lbl_bottom = ra_type
         else:
             lbl_bottom = "%s:%s" % (ra_class, ra_type)
         gv_obj.new_node(self.obj_id, norank=(ra_class == "stonith"))
         gv_obj.new_attr(self.obj_id, 'label', '%s\\n%s' % (lbl_top, lbl_bottom))
-        self.set_gv_attrs(gv_obj)
-        self.set_gv_attrs(gv_obj, "class:%s" % ra_class)
+        self._set_gv_attrs(gv_obj)
+        self._set_gv_attrs(gv_obj, "class:%s" % ra_class)
         # if it's clone/ms, then get parent graph attributes
         if self.parent and self.parent.obj_type in vars.clonems_tags:
-            self.set_gv_attrs(gv_obj, self.parent.obj_type)
+            self._set_gv_attrs(gv_obj, self.parent.obj_type)
 
 class CibContainer(CibObject):
     '''
@@ -1389,7 +1406,7 @@ class CibContainer(CibObject):
         "instance_attributes": "params",
         "meta_attributes": "meta",
     }
-    def repr_cli_head(self,format):
+    def _repr_cli_head(self, format):
         children = []
         for c in self.node.iterchildren():
             if not is_element(c):
@@ -1402,26 +1419,26 @@ class CibContainer(CibObject):
         s = cli_display.keyword(self.obj_type)
         id = cli_display.id(self.obj_id)
         return "%s %s %s" % (s, id, ' '.join(children))
-    def is_eligible(self, obj):
+    def _is_eligible(self, obj):
         if self.obj_type == "group":
             return is_primitive(obj.node)
         else:
             return is_primitive(obj.node) or is_group(obj.node)
-    def cli_list2node(self,cli_list,oldnode):
+    def _cli_list2node(self, cli_list, oldnode):
         head = copy.copy(cli_list[0])
         head[0] = backtrans[head[0]]
-        headnode = mkxmlsimple(head,oldnode,'grp')
+        headnode = mkxmlsimple(head, oldnode, 'grp')
         id_hint = headnode.get("id")
         for e in cli_list[1:]:
-            n = mkxmlnode(e,oldnode,id_hint)
+            n = mkxmlnode(e, oldnode, id_hint)
             headnode.append(n)
-        v = find_value(head[1],"$children")
+        v = find_value(head[1], "$children")
         if v:
             for child_id in v:
                 obj = cib_factory.find_object(child_id)
                 if obj:
-                    if not self.is_eligible(obj):
-                        common_err("element %s cannot be part of %s" % (obj.obj_string(), self.obj_id))
+                    if not self._is_eligible(obj):
+                        common_err("element %s cannot be part of %s" % (str(obj), self.obj_id))
                         continue
                     headnode.append(copy.deepcopy(obj.node))
                 else:
@@ -1442,7 +1459,7 @@ class CibContainer(CibObject):
             l += vars.clone_meta_attributes + vars.ms_meta_attributes
         elif self.obj_type == "group":
             l += vars.group_meta_attributes
-        rc = sanity_check_meta(self.obj_id,self.node,l)
+        rc = sanity_check_meta(self.obj_id, self.node, l)
         return rc
     def repr_gv(self, gv_obj):
         '''
@@ -1453,10 +1470,10 @@ class CibContainer(CibObject):
             return
         sg_obj = gv_obj.group([x.obj_id for x in self.children], \
             "cluster_%s" % self.obj_id)
-        sg_obj.new_graph_attr('label', self.gv_rsc_id())
-        self.set_sg_attrs(sg_obj, self.obj_type)
+        sg_obj.new_graph_attr('label', self._gv_rsc_id())
+        self._set_sg_attrs(sg_obj, self.obj_type)
         if self.parent and self.parent.obj_type in vars.clonems_tags:
-            self.set_sg_attrs(sg_obj, self.parent.obj_type)
+            self._set_sg_attrs(sg_obj, self.parent.obj_type)
         for child_rsc in self.children:
             child_rsc.repr_gv(sg_obj, from_grp=True)
 
@@ -1464,37 +1481,37 @@ class CibLocation(CibObject):
     '''
     Location constraint.
     '''
-    def repr_cli_head(self,format):
+    def _repr_cli_head(self, format):
         rsc = cli_display.rscref(self.node.get("rsc"))
         s = cli_display.keyword(self.obj_type)
         id = cli_display.id(self.obj_id)
-        s = "%s %s %s"%(s,id,rsc)
+        s = "%s %s %s" % (s, id, rsc)
         pref_node = self.node.get("node")
         score = cli_display.score(get_score(self.node))
         if pref_node:
-            return "%s %s: %s" % (s,score,pref_node)
+            return "%s %s: %s" % (s, score, pref_node)
         else:
             return s
-    def repr_cli_child(self,c,format):
+    def _repr_cli_child(self, c, format):
         if c.tag == "rule":
             return "%s %s" % \
                 (cli_display.keyword("rule"), cli_rule(c))
-    def cli_list2node(self,cli_list,oldnode):
+    def _cli_list2node(self, cli_list, oldnode):
         head = copy.copy(cli_list[0])
         head[0] = backtrans[head[0]]
-        headnode = mkxmlsimple(head,oldnode,'location')
+        headnode = mkxmlsimple(head, oldnode, 'location')
         id_hint = headnode.get("id")
         oldrule = None
         for e in cli_list[1:]:
-            if e[0] in ("expression","date_expression"):
-                n = mkxmlnode(e,oldrule,id_hint)
+            if e[0] in ("expression", "date_expression"):
+                n = mkxmlnode(e, oldrule, id_hint)
             else:
-                n = mkxmlnode(e,oldnode,id_hint)
+                n = mkxmlnode(e, oldnode, id_hint)
             if keyword_cmp(e[0], "rule"):
                 add_missing_attr(n)
                 rule = n
                 headnode.append(n)
-                oldrule = lookup_node(rule,oldnode,location_only=True)
+                oldrule = lookup_node(rule, oldnode, location_only=True)
             else:
                 rule.append(n)
         remove_id_used_attributes(oldnode)
@@ -1508,14 +1525,14 @@ class CibLocation(CibObject):
             return user_prefs.get_check_rc()
         uname = self.node.get("node")
         if uname and uname not in cib_factory.node_id_list():
-            common_warn("%s: referenced node %s does not exist" % (self.obj_id,uname))
+            common_warn("%s: referenced node %s does not exist" % (self.obj_id, uname))
             return 1
         rc = 0
         for enode in self.node.xpath("rule/expression"):
             if enode.get("attribute") == "#uname":
                 uname = enode.get("value")
                 if uname and uname not in cib_factory.node_id_list():
-                    common_warn("%s: referenced node %s does not exist" % (self.obj_id,uname))
+                    common_warn("%s: referenced node %s does not exist" % (self.obj_id, uname))
                     rc = 1
         return rc
     def repr_gv(self, gv_obj):
@@ -1535,12 +1552,12 @@ class CibLocation(CibObject):
         rsc_id = gv_first_rsc(self.node.get("rsc"))
         e = [pref_node, rsc_id]
         e_id = gv_obj.new_edge(e)
-        self.set_edge_attrs(gv_obj, e_id)
+        self._set_edge_attrs(gv_obj, e_id)
         gv_edge_score_label(gv_obj, e_id, score_n)
 
 def traverse_set(cum, st):
     e = []
-    for i,elem in enumerate(cum):
+    for i, elem in enumerate(cum):
         if isinstance(elem, list):
             for rsc in elem:
                 cum2 = copy.copy(cum)
@@ -1567,45 +1584,45 @@ def rsc_set_gv_edges(node, gv_obj):
             cum += l
     st = []
     # deliver only 2-edges
-    for i,lvl in enumerate(cum):
+    for i, lvl in enumerate(cum):
         if i == len(cum)-1:
             break
-        traverse_set([cum[i],cum[i+1]], st)
+        traverse_set([cum[i], cum[i+1]], st)
     return st
 
 class CibSimpleConstraint(CibObject):
     '''
     Colocation and order constraints.
     '''
-    def repr_cli_head(self,format):
+    def _repr_cli_head(self, format):
         s = cli_display.keyword(self.obj_type)
         id = cli_display.id(self.obj_id)
         score = cli_display.score(get_score(self.node) or get_kind(self.node))
         if self.node.find("resource_set") is not None:
-            col = rsc_set_constraint(self.node,self.obj_type)
+            col = rsc_set_constraint(self.node, self.obj_type)
         else:
-            col = simple_rsc_constraint(self.node,self.obj_type)
+            col = simple_rsc_constraint(self.node, self.obj_type)
         if not col:
             return None
         if self.obj_type == "order":
             symm = self.node.get("symmetrical")
             if symm:
-                col.append("symmetrical=%s"%symm)
+                col.append("symmetrical=%s" % symm)
         elif self.obj_type == "colocation":
             node_attr = self.node.get("node-attribute")
             if node_attr:
-                col.append("node-attribute=%s"%node_attr)
-        return "%s %s %s: %s" % (s,id,score,' '.join(col))
-    def repr_cli_child(self,c,format):
+                col.append("node-attribute=%s" % node_attr)
+        return "%s %s %s: %s" % (s, id, score, ' '.join(col))
+    def _repr_cli_child(self, c, format):
         pass # no children here
-    def cli_list2node(self,cli_list,oldnode):
+    def _cli_list2node(self, cli_list, oldnode):
         head = copy.copy(cli_list[0])
         head[0] = backtrans[head[0]]
-        headnode = mkxmlsimple(head,oldnode,'')
+        headnode = mkxmlsimple(head, oldnode, '')
         id_hint = headnode.get("id")
         for e in cli_list[1:]:
             # if more than one element, it's a resource set
-            n = mkxmlnode(e,oldnode,id_hint)
+            n = mkxmlnode(e, oldnode, id_hint)
             headnode.append(n)
         remove_id_used_attributes(oldnode)
         return headnode
@@ -1616,7 +1633,7 @@ class CibSimpleConstraint(CibObject):
         members = get_rsc_ref_ids(n)
         sg_name = _opt_set_name(n)
         sg_obj = gv_obj.optional_set(members, sg_name)
-        self.set_sg_attrs(sg_obj, "optional_set")
+        self._set_sg_attrs(sg_obj, "optional_set")
     def _mk_one_edge(self, gv_obj, e):
         '''
         Create an edge between two resources (used for resource
@@ -1635,7 +1652,7 @@ class CibSimpleConstraint(CibObject):
         e_id = gv_obj.new_edge(e)
         gv_edge_score_label(gv_obj, e_id, self.node)
         if optional_rsc:
-            self.set_edge_attrs(gv_obj, e_id, 'optional_set')
+            self._set_edge_attrs(gv_obj, e_id, 'optional_set')
             gv_obj.new_edge_attr(e_id, 'ltail', gv_obj.gv_id(sg_name))
     def repr_gv(self, gv_obj):
         '''
@@ -1658,59 +1675,59 @@ class CibRscTicket(CibSimpleConstraint):
     '''
     rsc_ticket constraint.
     '''
-    def repr_cli_head(self,format):
+    def _repr_cli_head(self, format):
         s = cli_display.keyword(self.obj_type)
         id = cli_display.id(self.obj_id)
         ticket = cli_display.ticket(self.node.get("ticket"))
         if self.node.find("resource_set") is not None:
-            col = rsc_set_constraint(self.node,self.obj_type)
+            col = rsc_set_constraint(self.node, self.obj_type)
         else:
-            col = simple_rsc_constraint(self.node,self.obj_type)
+            col = simple_rsc_constraint(self.node, self.obj_type)
         if not col:
             return None
         a = self.node.get("loss-policy")
         if a:
             col.append("loss-policy=%s" % a)
-        return "%s %s %s: %s" % (s,id,ticket,' '.join(col))
+        return "%s %s %s: %s" % (s, id, ticket, ' '.join(col))
 
 class CibProperty(CibObject):
     '''
     Cluster properties.
     '''
-    def repr_cli_head(self,format):
+    def _repr_cli_head(self, format):
         return '%s $id="%s"' % \
             (cli_display.keyword(self.obj_type), self.obj_id)
-    def repr_cli_child(self,c,format):
+    def _repr_cli_child(self, c, format):
         name = c.get("name")
         if "value" in c.keys():
             value = c.get("value")
         else:
             value = None
-        return nvpair_format(name,value)
-    def get_oldnode(self):
+        return nvpair_format(name, value)
+    def _get_oldnode(self):
         '''Used to retrieve sub id's'''
         if self.obj_type == "property":
-            return get_topnode(cib_factory.get_cib_elem(),self.parent_type)
+            return get_topnode(cib_factory.get_cib_elem(), self.parent_type)
         else:
             return self.node.getparent()
-    def cli_list2node(self,cli_list,oldnode):
+    def _cli_list2node(self, cli_list, oldnode):
         head = copy.copy(cli_list[0])
         head[0] = backtrans[head[0]]
-        obj_id = find_value(head[1],"$id")
+        obj_id = find_value(head[1], "$id")
         if not obj_id:
             obj_id = cib_object_map[self.xml_obj_type][3]
-        headnode = mkxmlnode(head,oldnode,obj_id)
+        headnode = mkxmlnode(head, oldnode, obj_id)
         remove_id_used_attributes(oldnode)
         return headnode
-    def matchcli(self,cli_list):
+    def matchcli(self, cli_list):
         head = cli_list[0]
         if self.obj_type != head[0]:
             return False
         # if no id specified return True
         # (match the first of a kind)
-        if not find_value(head[1],"$id"):
+        if not find_value(head[1], "$id"):
             return True
-        return self.obj_id == find_value(head[1],"$id")
+        return self.obj_id == find_value(head[1], "$id")
     def check_sanity(self):
         '''
         Match properties with PE metadata.
@@ -1721,12 +1738,12 @@ class CibProperty(CibObject):
         l = []
         if self.obj_type == "property":
             l = get_properties_list()
-            l += ("dc-version","cluster-infrastructure","last-lrm-refresh")
+            l += ("dc-version", "cluster-infrastructure", "last-lrm-refresh")
         elif self.obj_type == "op_defaults":
             l = schema.get('attr', 'op', 'a')
         elif self.obj_type == "rsc_defaults":
             l = vars.rsc_meta_attributes
-        rc = sanity_check_nvpairs(self.obj_id,self.node,l)
+        rc = sanity_check_nvpairs(self.obj_id, self.node, l)
         return rc
 
 class CibFencingOrder(CibObject):
@@ -1740,15 +1757,15 @@ class CibFencingOrder(CibObject):
         pass
     def obj_string(self):
         return self.obj_id
-    def match(self,xml_obj_type,obj_id):
+    def match(self, xml_obj_type, obj_id):
         return self.xml_obj_type == xml_obj_type
-    def matchcli(self,cli_list):
+    def matchcli(self, cli_list):
         head = cli_list[0]
         return self.obj_type == head[0]
     def can_be_renamed(self):
         ''' Cannot rename this one. '''
         return False
-    def repr_cli_head(self,format):
+    def _repr_cli_head(self, format):
         s = cli_display.keyword(self.obj_type)
         d = odict()
         for c in self.node.iterchildren("fencing-level"):
@@ -1764,21 +1781,21 @@ class CibFencingOrder(CibObject):
             devs_s = ' '.join(dd[target])
             d2[devs_s] = 1
         if len(d2) == 1 and len(d) == len(listnodes()):
-            return "%s %s" % (s,devs_s)
+            return "%s %s" % (s, devs_s)
         return cli_format([s,] + \
             ["%s: %s" % (x, ' '.join(dd[x])) for x in dd.keys()], format)
     def _same_levels(self, pl):
         for lvl_pl in pl:
-            cli_append_attr(lvl_pl[1],"index","")
+            cli_append_attr(lvl_pl[1], "index", "")
         for n in cib_factory.node_id_list():
             for lvl_pl in pl:
-                cli_replace_attr(lvl_pl[1],"target",n)
+                cli_replace_attr(lvl_pl[1], "target", n)
                 yield copy.deepcopy(lvl_pl)
     def _different_levels(self, pl):
         for lvl_pl in pl:
-            cli_append_attr(lvl_pl[1],"index","")
+            cli_append_attr(lvl_pl[1], "index", "")
             yield lvl_pl
-    def cli_list2node(self,cli_list,oldnode):
+    def _cli_list2node(self, cli_list, oldnode):
         head = copy.copy(cli_list[0])
         head[0] = backtrans[head[0]]
         node = mkxmlhead(head)
@@ -1791,12 +1808,12 @@ class CibFencingOrder(CibObject):
             target = find_value(lvl_pl[1], "target")
             if target not in target_i:
                 target_i[target] = 1
-            cli_replace_attr(lvl_pl[1],"index",str(target_i[target]))
-            node.append(mkxmlsimple(lvl_pl,oldnode,'fencing'))
+            cli_replace_attr(lvl_pl[1], "index", str(target_i[target]))
+            node.append(mkxmlsimple(lvl_pl, oldnode, 'fencing'))
             target_i[target] += 1
         remove_id_used_attributes(oldnode)
         return node
-    def repr_cli_child(self,c,format):
+    def _repr_cli_child(self, c, format):
         pass # no children here
     def check_sanity(self):
         '''
@@ -1809,7 +1826,7 @@ class CibFencingOrder(CibObject):
         nl = self.node.findall("fencing-level")
         for target in [x.get("target") for x in nl]:
             if target not in cib_factory.node_id_list():
-                common_warn("%s: target %s not a node" % (self.obj_id,target))
+                common_warn("%s: target %s not a node" % (self.obj_id, target))
                 rc = 1
         stonith_rsc_l = [x.obj_id for x in
             cib_factory.get_elems_on_type("type:primitive")
@@ -1817,10 +1834,10 @@ class CibFencingOrder(CibObject):
         for devices in [x.get("devices") for x in nl]:
             for dev in devices.split(","):
                 if not cib_factory.find_object(dev):
-                    common_warn("%s: resource %s does not exist" % (self.obj_id,dev))
+                    common_warn("%s: resource %s does not exist" % (self.obj_id, dev))
                     rc = 1
                 elif dev not in stonith_rsc_l:
-                    common_warn("%s: %s not a stonith resource" % (self.obj_id,dev))
+                    common_warn("%s: %s not a stonith resource" % (self.obj_id, dev))
                     rc = 1
         return rc
 
@@ -1828,24 +1845,24 @@ class CibAcl(CibObject):
     '''
     User and role ACL.
     '''
-    def repr_cli_head(self,format):
+    def _repr_cli_head(self, format):
         s = cli_display.keyword(self.obj_type)
         id = cli_display.id(self.obj_id)
-        return "%s %s" % (s,id)
-    def repr_cli_child(self,c,format):
+        return "%s %s" % (s, id)
+    def _repr_cli_child(self, c, format):
         if c.tag in vars.acl_rule_names:
-            return cli_acl_rule(c,format)
+            return cli_acl_rule(c, format)
         else:
-            return cli_acl_roleref(c,format)
-    def cli_list2node(self,cli_list,oldnode):
+            return cli_acl_roleref(c, format)
+    def _cli_list2node(self, cli_list, oldnode):
         head = copy.copy(cli_list[0])
         head[0] = backtrans[head[0]]
-        headnode = mkxmlsimple(head,oldnode,'')
+        headnode = mkxmlsimple(head, oldnode, '')
         if len(cli_list) == 1:
             return headnode
         id_hint = headnode.get("id")
         for e in cli_list[1:]:
-            n = mkxmlnode(e,oldnode,id_hint)
+            n = mkxmlnode(e, oldnode, id_hint)
             headnode.append(n)
         remove_id_used_attributes(oldnode)
         return headnode
@@ -1871,6 +1888,7 @@ def get_default_timeout():
 
 # xml -> cli translations (and classes)
 cib_object_map = {
+    # xml_tag: ( cli_name, element class, parent element tag )
     "node": ( "node", CibNode, "nodes" ),
     "primitive": ( "primitive", CibPrimitive, "resources" ),
     "group": ( "group", CibContainer, "resources" ),
@@ -1895,7 +1913,7 @@ for key in cib_object_map:
 def can_migrate(node):
     for c in node.iterchildren("meta_attributes"):
         pl = nvpairs2list(c)
-        if find_value(pl,"allow-migrate") == "true":
+        if find_value(pl, "allow-migrate") == "true":
             return True
     return False
 
@@ -1906,9 +1924,8 @@ class CibFactory(Singleton):
     See check_structure below for details on the internal cib
     representation.
     '''
-    shadowcmd = ">/dev/null </dev/null crm_shadow"
     def __init__(self):
-        self.init_vars()
+        self._init_vars()
         self.regtest = options.regression_tests
         self.last_commit_time = 0
         self.all_committed = True # has commit produced error
@@ -1928,12 +1945,14 @@ class CibFactory(Singleton):
     #
     # check internal structures
     #
-    def check_parent(self,obj,parent):
+    def _check_parent(self, obj, parent):
         if not obj in parent.children:
-            common_err("object %s does not reference its child %s"%(parent.obj_id,obj.obj_id))
+            common_err("object %s does not reference its child %s" % \
+                (parent.obj_id, obj.obj_id))
             return False
         if parent.node != obj.node.getparent():
-            common_err("object %s node is not a child of its parent %s, but %s:%s"%(obj.obj_id,parent.obj_id,obj.node.tag,obj.node.get("id")))
+            common_err("object %s node is not a child of its parent %s, but %s:%s" % \
+                (obj.obj_id, parent.obj_id, obj.node.tag, obj.node.get("id")))
             return False
     def check_structure(self):
         #print "Checking structure..."
@@ -1941,15 +1960,15 @@ class CibFactory(Singleton):
             return False
         rc = True
         for obj in self.cib_objects:
-            #print "Checking %s... (%s)" % (obj.obj_id,obj.nocli)
+            #print "Checking %s... (%s)" % (obj.obj_id, obj.nocli)
             if obj.parent:
-                if self.check_parent(obj,obj.parent) == False:
+                if self._check_parent(obj, obj.parent) == False:
                     rc = False
             for child in obj.children:
-                if self.check_parent(child,child.parent) == False:
+                if self._check_parent(child, child.parent) == False:
                     rc = False
         return rc
-    def regression_testing(self,param):
+    def regression_testing(self, param):
         # provide some help for regression testing
         # in particular by trying to provide output which is
         # easier to predict
@@ -1959,19 +1978,19 @@ class CibFactory(Singleton):
             self.regtest = True
         else:
             common_warn("bad parameter for regtest: %s" % param)
-    def replace_elem(self,newnode,oldnode):
+    def _replace_elem(self, newnode, oldnode):
         if not self.is_cib_sane():
             return None
-        oldnode.getparent().replace(oldnode,newnode)
+        oldnode.getparent().replace(oldnode, newnode)
         return newnode
     def get_schema(self):
         return self.cib_attrs["validate-with"]
-    def change_schema(self,schema_st):
+    def change_schema(self, schema_st):
         'Use another schema'
         if schema_st == self.get_schema():
             common_info("already using schema %s" % schema_st)
             return True
-        if not re.match(self.supported_cib_re,schema_st):
+        if not re.match(self.supported_cib_re, schema_st):
             common_err("schema %s not supported by the shell" % schema_st)
             return False
         self.cib_elem.set("validate-with", schema_st)
@@ -1994,30 +2013,30 @@ class CibFactory(Singleton):
         self.cib_attrs["validate-with"] = schema_st
         self.new_schema = True
         return 0
-    def is_elem_supported(self,obj_type):
+    def is_elem_supported(self, obj_type):
         'Do we support this element?'
         try:
             if schema.get('sub', backtrans[obj_type], 'a') == None:
                 return False
-        except:
+        except KeyError:
             pass
         return True
     def is_cib_supported(self):
         'Do we support this CIB?'
         req = self.cib_elem.get("crm_feature_set")
         validator = self.cib_elem.get("validate-with")
-        if validator and re.match(self.supported_cib_re,validator):
+        if validator and re.match(self.supported_cib_re, validator):
             return True
-        cib_ver_unsupported_err(validator,req)
+        cib_ver_unsupported_err(validator, req)
         return False
-    def upgrade_cib_06to10(self,force = False):
+    def upgrade_cib_06to10(self, force=False):
         'Upgrade the CIB from 0.6 to 1.0.'
         if not self.is_cib_sane():
             return False
         validator = self.cib_elem.get("validate-with")
-        if force or not validator or re.match("0[.]6",validator):
+        if force or not validator or re.match("0[.]6", validator):
             return ext_cmd(cib_upgrade) == 0
-    def import_cib(self):
+    def _import_cib(self):
         'Parse the current CIB (from cibadmin -Q).'
         self.cib_elem = read_cib(cibdump2elem)
         if self.cib_elem is None:
@@ -2033,19 +2052,19 @@ class CibFactory(Singleton):
     # create a doc from the list of objects
     # (used by CibObjectSetRaw)
     #
-    def regtest_filter(self,cib):
-        for attr in ("epoch","admin_epoch"):
+    def _regtest_filter(self, cib):
+        for attr in ("epoch", "admin_epoch"):
             if cib.get(attr):
-                cib.set(attr,"0")
+                cib.set(attr, "0")
         for attr in ("cib-last-written",):
             if cib.get(attr):
                 del cib.attrib[attr]
-    def set_cib_attributes(self,cib):
+    def _set_cib_attributes(self, cib):
         for attr in self.cib_attrs:
-            cib.set(attr,self.cib_attrs[attr])
+            cib.set(attr, self.cib_attrs[attr])
         if self.regtest:
-            self.regtest_filter(cib)
-    def objlist2doc(self,obj_list,obj_filter = None):
+            self._regtest_filter(cib)
+    def objlist2doc(self, obj_list, obj_filter=None):
         '''
         Return document containing objects in obj_list.
         Must remove all children from the object list, because
@@ -2063,49 +2082,49 @@ class CibFactory(Singleton):
                 continue
             d[obj.top_parent()] = 1
         for obj in d:
-            get_topnode(cib_elem,obj.parent_type).append(copy.deepcopy(obj.node))
-        self.set_cib_attributes(cib_elem)
+            get_topnode(cib_elem, obj.parent_type).append(copy.deepcopy(obj.node))
+        self._set_cib_attributes(cib_elem)
         return cib_elem
     #
     # commit changed objects to the CIB
     #
-    def attr_match(self,c,a):
+    def _attr_match(self, c, a):
         'Does attribute match?'
-        try: cib_attr = self.cib_attrs[a]
-        except: cib_attr = None
+        try:
+            cib_attr = self.cib_attrs[a]
+        except KeyError:
+            cib_attr = None
         return c.get(a) == cib_attr
-    def is_current_cib_equal(self, silent = False):
+    def is_current_cib_equal(self, silent=False):
         if self.overwrite:
             return True
         cib_elem = read_cib(cibdump2elem)
         if cib_elem is None:
             return False
-        rc = self.attr_match(cib_elem,'epoch') and \
-                self.attr_match(cib_elem,'admin_epoch')
+        rc = self._attr_match(cib_elem, 'epoch') and \
+                self._attr_match(cib_elem, 'admin_epoch')
         if not silent and not rc:
             common_warn("CIB changed in the meantime: won't touch it!")
         return rc
-    def state_header(self):
+    def _state_header(self):
         'Print object status header'
         print CibObject.state_fmt % \
-            ("","origin","updated","moved","invalid","parent","children")
+            ("", "origin", "updated", "moved", "invalid", "parent", "children")
     def showobjects(self):
-        self.state_header()
+        self._state_header()
         for obj in self.cib_objects:
-            obj.dump_state()
+            obj._dump_state()
         if self.remove_queue:
             print "Remove queue:"
             for obj in self.remove_queue:
-                obj.dump_state()
-    def last_commit_at(self):
-        return self.last_commit_time
-    def commit(self,force = False):
+                obj._dump_state()
+    def commit(self, force=False):
         'Commit the configuration to the CIB.'
         if not self.is_cib_sane():
             return False
         # all_committed is updated in the invoked object methods
         self.all_committed = True
-        rc = self.commit_doc(force)
+        rc = self._commit_doc(force)
         if rc:
             # reload the cib!
             common_debug("CIB commit successful")
@@ -2114,75 +2133,35 @@ class CibFactory(Singleton):
             self.reset()
             self.initialize()
         return self.all_committed
-    def commit_schema(self):
+    def _commit_schema(self):
         '''
         Set the validate-with, if the schema changed.
         '''
         s = '<cib validate-with="%s"/>' % self.cib_attrs["validate-with"]
         rc = pipe_string("%s -U" % cib_piped, s)
         if rc != 0:
-            update_err("cib","-U",s, rc)
+            update_err("cib", "-U", s, rc)
             return False
         self.new_schema = False
         return True
-    def commit_doc(self,force):
+    def _commit_doc(self, force):
         try:
             conf_el = self.cib_elem.findall("configuration")[0]
-        except:
+        except IndexErr:
             common_error("cannot find the configuration element")
             return False
-        if self.new_schema and not self.commit_schema():
+        if self.new_schema and not self._commit_schema():
             return False
         cibadmin_opts = force and "-R --force" or "-R"
-        rc = pipe_string("%s %s" % (cib_piped,cibadmin_opts), etree.tostring(conf_el))
+        rc = pipe_string("%s %s" % (cib_piped, cibadmin_opts), etree.tostring(conf_el))
         if rc != 0:
-            update_err("cib",cibadmin_opts,etree.tostring(conf_el), rc)
-            return False
-        return True
-    def mk_shadow(self):
-        '''
-        Create a temporary shadow for commit/apply.
-        Unless the user's already working with a shadow CIB.
-        '''
-        # TODO: split CibShadow into ui and mgmt part, then reuse the mgmt
-        if not is_live_cib():
-            return True
-        self.tmp_shadow = "__crmshell.%d" % os.getpid()
-        if ext_cmd("%s -c %s" % (self.shadowcmd,self.tmp_shadow)) != 0:
-            common_error("creating tmp shadow %s failed" % self.tmp_shadow)
-            self.tmp_shadow = ""
-            return False
-        os.putenv(vars.shadow_envvar,self.tmp_shadow)
-        return True
-    def rm_shadow(self):
-        '''
-        Remove the temporary shadow.
-        Unless the user's already working with a shadow CIB.
-        '''
-        if not is_live_cib() or not self.tmp_shadow:
-            return
-        if ext_cmd("%s -D '%s' --force" % (self.shadowcmd,self.tmp_shadow)) != 0:
-            common_error("deleting tmp shadow %s failed" % self.tmp_shadow)
-        self.tmp_shadow = ""
-        os.unsetenv(vars.shadow_envvar)
-    def apply_shadow(self):
-        '''
-        Commit the temporary shadow.
-        Unless the user's already working with a shadow CIB.
-        '''
-        if not is_live_cib():
-            return True
-        if not self.tmp_shadow:
-            common_error("cannot commit no shadow")
-            return False
-        if ext_cmd("%s -C '%s' --force" % (self.shadowcmd,self.tmp_shadow)) != 0:
-            common_error("committing tmp shadow %s failed" % self.tmp_shadow)
+            update_err("cib", cibadmin_opts, etree.tostring(conf_el), rc)
             return False
         return True
     #
     # initialize cib_objects from CIB
     #
-    def save_node(self,node,pnode = None):
+    def _save_node(self, node, pnode=None):
         '''
         Need pnode (parent node) acrobacy because cluster
         properties and rsc/op_defaults hold stuff in a
@@ -2195,9 +2174,9 @@ class CibFactory(Singleton):
         obj.node = node
         obj.set_id()
         self.cib_objects.append(obj)
-    def populate(self):
+    def _populate(self):
         "Walk the cib and collect cib objects."
-        all_nodes = get_interesting_nodes(self.cib_elem,[])
+        all_nodes = get_interesting_nodes(self.cib_elem, [])
         if not all_nodes:
             return
         for node in processing_sort(all_nodes):
@@ -2205,9 +2184,9 @@ class CibFactory(Singleton):
                 for c in node.iterchildren():
                     if not is_element(c) or c.tag != "meta_attributes":
                         continue
-                    self.save_node(c,node)
+                    self._save_node(c, node)
             else:
-                self.save_node(node)
+                self._save_node(node)
         for obj in self.cib_objects:
             obj.move_comments()
             fix_comments(obj.node)
@@ -2217,17 +2196,17 @@ class CibFactory(Singleton):
                 obj.nocli_warn = False
                 obj_cli_warn(obj.obj_id)
         for obj in self.cib_objects:
-            self.update_links(obj)
+            self._update_links(obj)
     def initialize(self):
         if self.cib_elem is not None:
             return True
-        if not self.import_cib():
+        if not self._import_cib():
             return False
         sanitize_cib(self.cib_elem)
         show_unrecognized_elems(self.cib_elem)
-        self.populate()
+        self._populate()
         return self.check_structure()
-    def init_vars(self):
+    def _init_vars(self):
         self.cib_elem = None  # the cib
         self.cib_attrs = {} # cib version dictionary
         self.cib_objects = [] # a list of cib objects
@@ -2239,9 +2218,9 @@ class CibFactory(Singleton):
         if self.cib_elem is None:
             return
         self.cib_elem = None
-        self.init_vars()
+        self._init_vars()
         id_store.clear()
-    def find_object(self,obj_id):
+    def find_object(self, obj_id):
         "Find an object for id."
         for obj in self.cib_objects:
             if obj.obj_id == obj_id:
@@ -2291,7 +2270,7 @@ class CibFactory(Singleton):
     #
     # a few helper functions
     #
-    def find_object_for_node(self,node):
+    def find_object_for_node(self, node):
         "Find an object which matches a dom node."
         for obj in self.cib_objects:
             if node.tag == "fencing-topology" and \
@@ -2300,7 +2279,7 @@ class CibFactory(Singleton):
             if node.get("id") == obj.obj_id:
                 return obj
         return None
-    def find_object_for_cli(self,cli_list):
+    def find_object_for_cli(self, cli_list):
         "Find an object which matches the cli list."
         for obj in self.cib_objects:
             if obj.matchcli(cli_list):
@@ -2309,14 +2288,14 @@ class CibFactory(Singleton):
     #
     # Element editing stuff.
     #
-    def default_timeouts(self,*args):
+    def default_timeouts(self, *args):
         '''
         Set timeouts for operations from the defaults provided in
         the meta-data.
         '''
-        implied_actions = ["start","stop"]
-        implied_ms_actions = ["promote","demote"]
-        implied_migrate_actions = ["migrate_to","migrate_from"]
+        implied_actions = ["start", "stop"]
+        implied_ms_actions = ["promote", "demote"]
+        implied_migrate_actions = ["migrate_to", "migrate_from"]
         other_actions = ("monitor",)
         if not self.is_cib_sane():
             return False
@@ -2350,7 +2329,7 @@ class CibFactory(Singleton):
                     for c2 in c.iterchildren():
                         if not is_element(c2) or not c2.tag == "op":
                             continue
-                        op,pl = op2list(c2)
+                        op, pl = op2list(c2)
                         if not op:
                             continue
                         if op in implied_actions:
@@ -2361,9 +2340,9 @@ class CibFactory(Singleton):
                             implied_ms_actions.remove(op)
                         elif op not in other_actions:
                             continue
-                        adv_timeout = ra.get_adv_timeout(op,c2)
+                        adv_timeout = ra.get_adv_timeout(op, c2)
                         if adv_timeout:
-                            c2.set("timeout",adv_timeout)
+                            c2.set("timeout", adv_timeout)
                             obj_modified = True
             l = implied_actions
             if can_migrate(r_node):
@@ -2374,10 +2353,10 @@ class CibFactory(Singleton):
                 adv_timeout = ra.get_adv_timeout(op)
                 if not adv_timeout:
                     continue
-                head_pl = ["op",[]]
-                head_pl[1].append(["name",op])
-                head_pl[1].append(["timeout",adv_timeout])
-                head_pl[1].append(["interval","0"])
+                head_pl = ["op", []]
+                head_pl[1].append(["name", op])
+                head_pl[1].append(["timeout", adv_timeout])
+                head_pl[1].append(["interval", "0"])
                 cli_list = []
                 cli_list.append(head_pl)
                 if not obj.add_operation(cli_list):
@@ -2389,9 +2368,12 @@ class CibFactory(Singleton):
                 obj.propagate_updated()
         return rc
     def is_id_refd(self, attr_list_type, id):
-        try: return self.id_refs[id] == attr_list_type
-        except: return False
-    def resolve_id_ref(self,attr_list_type,id_ref):
+        '''Is this ID referenced anywhere?'''
+        try:
+            return self.id_refs[id] == attr_list_type
+        except KeyError:
+            return False
+    def resolve_id_ref(self, attr_list_type, id_ref):
         '''
         User is allowed to specify id_ref either as a an object
         id or as attributes id. Here we try to figure out which
@@ -2405,7 +2387,7 @@ class CibFactory(Singleton):
             if node_l:
                 if len(node_l) > 1:
                     common_warn("%s contains more than one %s, using first" % \
-                        (obj.obj_id,attr_list_type))
+                        (obj.obj_id, attr_list_type))
                 id = node_l[0].get("id")
                 if not id:
                     common_err("%s reference not found" % id_ref)
@@ -2418,7 +2400,7 @@ class CibFactory(Singleton):
                 return id_ref
         common_err("%s reference not found" % id_ref)
         return id_ref # hope that user will fix that
-    def _get_attr_value(self,obj_type,attr):
+    def _get_attr_value(self, obj_type, attr):
         if not self.is_cib_sane():
             return None
         for obj in self.cib_objects:
@@ -2428,28 +2410,28 @@ class CibFactory(Singleton):
                 if v:
                     return v
         return None
-    def get_property(self,property):
+    def get_property(self, property):
         '''
         Get the value of the given cluster property.
         '''
-        return self._get_attr_value("property",property)
-    def get_op_default(self,attr):
+        return self._get_attr_value("property", property)
+    def get_op_default(self, attr):
         '''
         Get the value of the attribute from op_defaults.
         '''
-        return self._get_attr_value("op_defaults",attr)
+        return self._get_attr_value("op_defaults", attr)
     def is_asymm_cluster(self):
         symm = self.get_property("symmetric-cluster")
         return symm and symm != "true"
-    def new_object(self,obj_type,obj_id):
+    def new_object(self, obj_type, obj_id):
         "Create a new object of type obj_type."
         if obj_id and id_store.id_in_use(obj_id):
             return None
-        for xml_obj_type,v in cib_object_map.items():
+        for xml_obj_type, v in cib_object_map.items():
             if v[0] == obj_type:
                 obj = v[1](xml_obj_type)
                 obj.mknode(obj_id)
-                common_debug("create CIB element: %s" % obj.obj_string())
+                common_debug("create CIB element: %s" % str(obj))
                 return obj
         return None
     def modified_elems(self):
@@ -2460,11 +2442,11 @@ class CibFactory(Singleton):
             return []
         t = spec[5:]
         return [ x for x in self.cib_objects if x.obj_type == t ]
-    def mkobj_list(self,*args):
+    def mkobj_list(self, *args):
         if not args:
-            return True,copy.copy(self.cib_objects)
+            return True, copy.copy(self.cib_objects)
         if args[0] == "NOOBJ":
-            return True,[]
+            return True, []
         rc = True
         obj_list = []
         for spec in args:
@@ -2480,12 +2462,12 @@ class CibFactory(Singleton):
                     no_object_err(spec)
                     rc = False
         obj_list = list(set(obj_list))
-        return rc,obj_list
+        return rc, obj_list
     def is_cib_empty(self):
         return not self.get_elems_on_type("type:primitive")
     def has_cib_changed(self):
         return self.modified_elems() or self.remove_queue
-    def verify_constraints(self,node):
+    def _verify_constraints(self, node):
         '''
         Check if all resources referenced in a constraint exist
         '''
@@ -2493,10 +2475,10 @@ class CibFactory(Singleton):
         constraint_id = node.get("id")
         for obj_id in referenced_resources(node):
             if not self.find_object(obj_id):
-                constraint_norefobj_err(constraint_id,obj_id)
+                constraint_norefobj_err(constraint_id, obj_id)
                 rc = False
         return rc
-    def verify_rsc_children(self,node):
+    def _verify_rsc_children(self, node):
         '''
         Check prerequisites:
           a) all children must exist
@@ -2511,30 +2493,33 @@ class CibFactory(Singleton):
         rc = True
         c_dict = {}
         for child_id in c_ids:
-            if not self.verify_child(child_id,node.tag,obj_id):
+            if not self._verify_child(child_id, node.tag, obj_id):
                 rc = False
             if child_id in c_dict:
-                common_err("in group %s child %s listed more than once"%(obj_id,child_id))
+                common_err("in group %s child %s listed more than once" % \
+                    (obj_id, child_id))
                 rc = False
             c_dict[child_id] = 1
         return rc
-    def verify_child(self,child_id,parent_tag,obj_id):
+    def _verify_child(self, child_id, parent_tag, obj_id):
         'Check if child exists and obj_id is (or may become) its parent.'
         child = self.find_object(child_id)
         if not child:
             no_object_err(child_id)
             return False
         if child.parent and child.parent.obj_id != obj_id:
-            common_err("%s already in use at %s"%(child_id,child.parent.obj_id))
+            common_err("%s already in use at %s"%(child_id, child.parent.obj_id))
             return False
         if parent_tag == "group" and child.obj_type != "primitive":
-            common_err("a group may contain only primitives; %s is %s"%(child_id,child.obj_type))
+            common_err("a group may contain only primitives; %s is %s" % \
+                (child_id, child.obj_type))
             return False
         if not child.obj_type in vars.children_tags:
-            common_err("%s may contain a primitive or a group; %s is %s"%(parent_tag,child_id,child.obj_type))
+            common_err("%s may contain a primitive or a group; %s is %s" % \
+                (parent_tag, child_id, child.obj_type))
             return False
         return True
-    def verify_element(self,obj):
+    def _verify_element(self, obj):
         '''
         Can we create this object given its CLI representation.
         This is not about syntax, we're past that, but about
@@ -2548,25 +2533,25 @@ class CibFactory(Singleton):
         obj_id = obj.obj_id
         try:
             cib_object_map[node.tag][0]
-        except:
-            common_err("element %s (%s) not recognized"%(node.tag,obj_id))
+        except KeyError:
+            common_err("element %s (%s) not recognized" % (node.tag, obj_id))
             return False
         if obj.parent_type == "resources" and \
-                not self.verify_rsc_children(node):
+                not self._verify_rsc_children(node):
             rc = False
         elif obj.parent_type == "constraints" and \
-                not self.verify_constraints(node):
+                not self._verify_constraints(node):
             rc = False
         return rc
-    def create_object(self,*args):
+    def create_object(self, *args):
         return self.create_from_cli(CliParser().parse(list(args))) != None
-    def set_property_cli(self,cli_list):
+    def set_property_cli(self, cli_list):
         comments = get_comments(cli_list)
         head_pl = cli_list[0]
         obj_type = head_pl[0].lower()
-        pset_id = find_value(head_pl[1],"$id")
+        pset_id = find_value(head_pl[1], "$id")
         if pset_id:
-            head_pl[1].remove(["$id",pset_id])
+            head_pl[1].remove(["$id", pset_id])
         else:
             pset_id = cib_object_map[backtrans[obj_type]][3]
         obj = self.find_object(pset_id)
@@ -2574,23 +2559,23 @@ class CibFactory(Singleton):
             if not is_id_valid(pset_id):
                 invalid_id_err(pset_id)
                 return None
-            obj = self.new_object(obj_type,pset_id)
+            obj = self.new_object(obj_type, pset_id)
             if not obj:
                 return None
-            get_topnode(self.cib_elem,obj.parent_type).append(obj.node)
+            get_topnode(self.cib_elem, obj.parent_type).append(obj.node)
             obj.origin = "user"
             self.cib_objects.append(obj)
-        for n,v in head_pl[1]:
-            set_nvpair(obj.node,n,v)
+        for n, v in head_pl[1]:
+            set_nvpair(obj.node, n, v)
         if comments and obj.node:
-            stuff_comments(obj.node,comments)
+            stuff_comments(obj.node, comments)
         obj.updated = True
         return obj
-    def add_op(self,cli_list):
+    def add_op(self, cli_list):
         '''Add an op to a primitive.'''
         head = cli_list[0]
         # does the referenced primitive exist
-        rsc_id = find_value(head[1],"rsc")
+        rsc_id = find_value(head[1], "rsc")
         rsc_obj = self.find_object(rsc_id)
         if not rsc_obj:
             no_object_err(rsc_id)
@@ -2598,16 +2583,16 @@ class CibFactory(Singleton):
         if rsc_obj.obj_type != "primitive":
             common_err("%s is not a primitive" % rsc_id)
             return None
-        head[1].remove(["rsc",rsc_id])
+        head[1].remove(["rsc", rsc_id])
         return rsc_obj.add_operation(cli_list)
-    def create_from_cli(self,cli):
+    def create_from_cli(self, cli):
         'Create a new cib object from the cli representation.'
         cli_list = mk_cli_list(cli)
         if not cli_list:
             return None
         head = cli_list[0]
         obj_type = head[0].lower()
-        obj_id = find_value(head[1],"id")
+        obj_id = find_value(head[1], "id")
         if obj_id and not is_id_valid(obj_id):
             invalid_id_err(obj_id)
             return None
@@ -2622,14 +2607,14 @@ class CibFactory(Singleton):
             obj = self.find_object(obj_id)
             # make an exception and allow updating nodes
             if obj:
-                self.merge_from_cli(obj,cli_list)
+                self.merge_from_cli(obj, cli_list)
                 return obj
-        obj = self.new_object(obj_type,obj_id)
+        obj = self.new_object(obj_type, obj_id)
         if not obj:
             return None
         node = obj.cli2node(cli_list)
-        return self.add_element(obj, node)
-    def update_from_cli(self,obj,cli_list,update = False):
+        return self._add_element(obj, node)
+    def update_from_cli(self, obj, cli_list, update=False):
         '''
         Replace element from the cli intermediate.
         If this is an update and the element is properties, then
@@ -2640,35 +2625,35 @@ class CibFactory(Singleton):
             id_store.remove_xml(obj.node)
             raw_elem = etree.fromstring(cli_list[1][1])
             id_store.store_xml(raw_elem)
-            return self.update_element(obj,raw_elem)
+            return self.update_element(obj, raw_elem)
         elif update and obj.obj_type in vars.nvset_cli_names:
-            self.merge_from_cli(obj,cli_list)
+            self.merge_from_cli(obj, cli_list)
             return True
         else:
-            return self.update_element(obj,obj.cli2node(cli_list))
-    def update_from_node(self,obj,node):
+            return self.update_element(obj, obj.cli2node(cli_list))
+    def update_from_node(self, obj, node):
         'Update element from a doc node.'
-        id_store.replace_xml(obj.node,node)
-        return self.update_element(obj,node)
-    def update_element(self,obj,newnode):
+        id_store.replace_xml(obj.node, node)
+        return self.update_element(obj, node)
+    def update_element(self, obj, newnode):
         'Update element from a doc node.'
         if newnode is None:
             return False
         if not self.is_cib_sane():
-            id_store.replace_xml(newnode,obj.node)
+            id_store.replace_xml(newnode, obj.node)
             return False
         oldnode = obj.node
-        if xml_cmp(oldnode,newnode):
+        if xml_cmp(oldnode, newnode):
             if newnode.getparent() is not None:
                 newnode.getparent().remove(newnode)
             return True # the new and the old versions are equal
         obj.node = newnode
-        if not self.test_element(obj,newnode):
-            id_store.replace_xml(newnode,oldnode)
+        if not self.test_element(obj, newnode):
+            id_store.replace_xml(newnode, oldnode)
             obj.node = oldnode
             return False
-        common_debug("update CIB element: %s" % obj.obj_string())
-        obj.node = self.replace_elem(newnode,oldnode)
+        common_debug("update CIB element: %s" % str(obj))
+        obj.node = self._replace_elem(newnode, oldnode)
         obj.nocli = False # try again after update
         self.adjust_children(obj)
         if not obj.cli_use_validate():
@@ -2677,7 +2662,7 @@ class CibFactory(Singleton):
         obj.updated = True
         obj.propagate_updated()
         return True
-    def merge_from_cli(self,obj,cli_list):
+    def merge_from_cli(self, obj, cli_list):
         node = obj.cli2node(cli_list)
         if node is None:
             return
@@ -2688,13 +2673,13 @@ class CibFactory(Singleton):
         if rc:
             obj.updated = True
             obj.propagate_updated()
-    def update_moved(self,obj):
+    def update_moved(self, obj):
         'Updated the moved flag. Mark affected constraints.'
         obj.moved = not obj.moved
         if obj.moved:
             for c_obj in self.related_constraints(obj):
                 c_obj.recreate = True
-    def adjust_children(self,obj):
+    def adjust_children(self, obj):
         '''
         All stuff children related: manage the nodes of children,
         update the list of children for the parent, update
@@ -2705,15 +2690,15 @@ class CibFactory(Singleton):
             return
         old_children = obj.children
         obj.children = [self.find_object(x) for x in new_children_ids]
-        self._relink_orphans_to_top(old_children,obj.children)
+        self._relink_orphans_to_top(old_children, obj.children)
         self._update_children(obj)
-    def _relink_child_to_top(self,obj):
+    def _relink_child_to_top(self, obj):
         'Relink a child to the top node.'
-        get_topnode(self.cib_elem,obj.parent_type).append(obj.node)
+        get_topnode(self.cib_elem, obj.parent_type).append(obj.node)
         if obj.origin == "cib":
             self.update_moved(obj)
         obj.parent = None
-    def _update_children(self,obj):
+    def _update_children(self, obj):
         '''For composite objects: update all children nodes.
         '''
         # unlink all and find them in the new node
@@ -2728,20 +2713,20 @@ class CibFactory(Singleton):
             if child.parent and child.parent != obj:
                 child.parent.updated = True # the other parent updated
             child.parent = obj
-    def _relink_orphans_to_top(self,old_children,new_children):
+    def _relink_orphans_to_top(self, old_children, new_children):
         "New orphans move to the top level for the object type."
         for child in old_children:
             if child not in new_children:
                 self._relink_child_to_top(child)
-    def test_element(self,obj,node):
+    def test_element(self, obj, node):
         if not obj.xml_obj_type in vars.defaults_tags:
-            if not self.verify_element(obj):
+            if not self._verify_element(obj):
                 return False
         if user_prefs.is_check_always() \
                 and obj.check_sanity() > 1:
             return False
         return True
-    def update_links(self,obj):
+    def _update_links(self, obj):
         '''
         Update the structure links for the object (obj.children,
         obj.parent). Update also the dom nodes, if necessary.
@@ -2760,7 +2745,7 @@ class CibFactory(Singleton):
                 if c != child.node:
                     rmnode(child.node)
                     child.node = c
-    def add_element(self,obj,node):
+    def _add_element(self, obj, node):
         obj.node = node
         obj.set_id()
         if not self.test_element(obj, node):
@@ -2768,25 +2753,25 @@ class CibFactory(Singleton):
             try: node.getparent().remove()
             except: pass
             return None
-        pnode = get_topnode(self.cib_elem,obj.parent_type)
+        pnode = get_topnode(self.cib_elem, obj.parent_type)
         common_debug("append child %s to %s" % (obj.obj_id, pnode.tag))
         pnode.append(node)
         self.adjust_children(obj)
-        self.redirect_children_constraints(obj)
+        self._redirect_children_constraints(obj)
         if not obj.cli_use_validate():
             self.nocli_warn = True
             obj.nocli = True
-        self.update_links(obj)
+        self._update_links(obj)
         obj.origin = "user"
         self.cib_objects.append(obj)
         return obj
-    def create_from_node(self,node):
+    def create_from_node(self, node):
         'Create a new cib object from a document node.'
         if not node:
             return None
         try:
             obj_type = cib_object_map[node.tag][0]
-        except:
+        except KeyError:
             return None
         if is_defaults(node):
             node = get_rscop_defaults_meta_node(node)
@@ -2797,21 +2782,13 @@ class CibFactory(Singleton):
             return None
         if not id_store.store_xml(node):
             return None
-        return self.add_element(obj, node)
-    def cib_objects_string(self, obj_list = None):
-        l = []
-        if not obj_list:
-            obj_list = self.cib_objects
-        for obj in obj_list:
-            l.append(obj.obj_string())
-        return ' '.join(l)
-    def _remove_obj(self,obj):
+        return self._add_element(obj, node)
+    def _remove_obj(self, obj):
         "Remove a cib object and its children."
         # remove children first
         # can't remove them here from obj.children!
-        common_debug("remove object %s" % obj.obj_string())
+        common_debug("remove object %s" % str(obj))
         for child in obj.children:
-            #self._remove_obj(child)
             # just relink, don't remove children
             self._relink_child_to_top(child)
         if obj.parent: # remove obj from its parent, if any
@@ -2819,46 +2796,46 @@ class CibFactory(Singleton):
         id_store.remove_xml(obj.node)
         rmnode(obj.node)
         obj.invalid = True
-        self.add_to_remove_queue(obj)
+        self._add_to_remove_queue(obj)
         self.cib_objects.remove(obj)
         for c_obj in self.related_constraints(obj):
             if is_simpleconstraint(c_obj.node) and obj.children:
                 # the first child inherits constraints
-                rename_rscref(c_obj,obj.obj_id,obj.children[0].obj_id)
+                rename_rscref(c_obj, obj.obj_id, obj.children[0].obj_id)
             deleted = False
-            if delete_rscref(c_obj,obj.obj_id):
+            if delete_rscref(c_obj, obj.obj_id):
                 deleted = True
-            if silly_constraint(c_obj.node,obj.obj_id):
+            if silly_constraint(c_obj.node, obj.obj_id):
                 # remove invalid constraints
                 self._remove_obj(c_obj)
                 if not self._no_constraint_rm_msg:
-                    err_buf.info("hanging %s deleted" % c_obj.obj_string())
+                    err_buf.info("hanging %s deleted" % str(c_obj))
             elif deleted:
-                err_buf.info("constraint %s updated" % c_obj.obj_string())
-    def related_constraints(self,obj):
+                err_buf.info("constraint %s updated" % str(c_obj))
+    def related_constraints(self, obj):
         if not is_resource(obj.node):
             return []
         c_list = []
         for obj2 in self.cib_objects:
             if not is_constraint(obj2.node):
                 continue
-            if rsc_constraint(obj.obj_id,obj2.node):
+            if rsc_constraint(obj.obj_id, obj2.node):
                 c_list.append(obj2)
         return c_list
-    def redirect_children_constraints(self,obj):
+    def _redirect_children_constraints(self, obj):
         '''
         Redirect constraints to the new parent
         '''
         for child in obj.children:
             for c_obj in self.related_constraints(child):
-                rename_rscref(c_obj,child.obj_id,obj.obj_id)
+                rename_rscref(c_obj, child.obj_id, obj.obj_id)
         # drop useless constraints which may have been created above
         for c_obj in self.related_constraints(obj):
-            if silly_constraint(c_obj.node,obj.obj_id):
+            if silly_constraint(c_obj.node, obj.obj_id):
                 self._no_constraint_rm_msg = True
                 self._remove_obj(c_obj)
                 self._no_constraint_rm_msg = False
-    def template_primitives(self,obj):
+    def template_primitives(self, obj):
         if not is_template(obj.node):
             return []
         c_list = []
@@ -2868,26 +2845,25 @@ class CibFactory(Singleton):
             if obj2.node.get("template") == obj.obj_id:
                 c_list.append(obj2)
         return c_list
-    def check_running_primitives(self,prim_l):
+    def _check_running_primitives(self, prim_l):
         for prim in prim_l:
             if is_rsc_managed(prim.obj_id) and is_rsc_running(prim.obj_id):
                 common_err("resource %s is running, can't delete it" % prim.obj_id)
                 return False
         return True
-    def add_to_remove_queue(self,obj):
+    def _add_to_remove_queue(self, obj):
         if obj.origin == "cib":
             self.remove_queue.append(obj)
-        #print self.cib_objects_string(self.remove_queue)
-    def delete_1(self,obj):
+    def _delete_1(self, obj):
         '''
         Remove an object and its parent in case the object is the
         only child.
         '''
         if obj.parent and len(obj.parent.children) == 1:
-            self.delete_1(obj.parent)
+            self._delete_1(obj.parent)
         if obj in self.cib_objects: # don't remove parents twice
             self._remove_obj(obj)
-    def delete(self,*args):
+    def delete(self, *args):
         'Delete a cib object.'
         if not self.is_cib_sane():
             return False
@@ -2907,7 +2883,7 @@ class CibFactory(Singleton):
                 prim_l = self.template_primitives(obj)
                 prim_l = [x for x in prim_l \
                     if x not in l and x.obj_id not in args]
-                if not self.check_running_primitives(prim_l):
+                if not self._check_running_primitives(prim_l):
                     rc = False
                     continue
                 for prim in prim_l:
@@ -2917,9 +2893,9 @@ class CibFactory(Singleton):
         if l:
             l = processing_sort_cli(l)
             for obj in reversed(l):
-                self.delete_1(obj)
+                self._delete_1(obj)
         return rc
-    def rename(self,old_id,new_id):
+    def rename(self, old_id, new_id):
         '''
         Rename a cib object.
         - check if the resource (if it's a resource) is stopped
@@ -2942,10 +2918,10 @@ class CibFactory(Singleton):
         if not obj.can_be_renamed():
             return False
         for c_obj in self.related_constraints(obj):
-            rename_rscref(c_obj,old_id,new_id)
-        rename_id(obj.node,old_id,new_id)
+            rename_rscref(c_obj, old_id, new_id)
+        rename_id(obj.node, old_id, new_id)
         obj.obj_id = new_id
-        id_store.rename(old_id,new_id)
+        id_store.rename(old_id, new_id)
         obj.updated = True
         obj.propagate_updated()
     def erase(self):
@@ -2979,7 +2955,7 @@ class CibFactory(Singleton):
             common_err("strange, but these objects remained:")
             for obj in self.cib_objects:
                 if obj.obj_type != "node":
-                    print >> sys.stderr, obj.obj_string()
+                    print >> sys.stderr, str(obj)
             self.cib_objects = []
         return True
     def erase_nodes(self):

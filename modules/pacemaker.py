@@ -94,6 +94,7 @@ class Schema :
 		self.local_dir = local_dir
 		self.refresh(cib_elem)
 		self.schema_str_docs = {}
+		self.schema_filename = None
 
 	def update_schema(self):
 		'defined in subclasses'
@@ -143,10 +144,7 @@ class Schema :
 		try :
 			etree.clear_error_log()
 		except :
-			try :
-				etree.clearErrorLog()
-			except :
-				pass
+			pass
 
 		is_valid = schema.validate(cib_elem)
 		if not is_valid :
@@ -176,6 +174,14 @@ class Schema :
 			return os.path.join(tmp_dir, self.schema_filename)
 		else :
 			return None
+
+	def get_sub_elems_by_obj(self, obj, sub_set = 'a') :
+		'''defined in subclasses'''
+		pass
+
+	def get_elem_attrs_by_obj(self, obj, sub_set = 'a') :
+		'''defined in subclasses'''
+		pass
 
 	# sub_set: 'a'(all), 'r'(required), 'o'(optional)
 	def get_elem_attrs(self, elem_name, sub_set = 'a') :

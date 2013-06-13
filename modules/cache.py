@@ -24,15 +24,15 @@ class WCache(Singleton):
         self.lists = {}
         self.stamp = time.time()
         self.max_cache_age = 600 # seconds
-    def is_cached(self,name):
+    def is_cached(self, name):
         if time.time() - self.stamp > self.max_cache_age:
             self.stamp = time.time()
             self.clear()
         return name in self.lists
-    def store(self,name,lst):
+    def store(self, name, lst):
         self.lists[name] = lst
         return lst
-    def retrieve(self,name):
+    def retrieve(self, name):
         if self.is_cached(name):
             return self.lists[name]
         else:

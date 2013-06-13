@@ -112,19 +112,19 @@ class TerminalController(Singleton):
         # Colors
         set_fg = self._tigetstr('setf')
         if set_fg:
-            for i,color in zip(range(len(self._COLORS)), self._COLORS):
+            for i, color in zip(range(len(self._COLORS)), self._COLORS):
                 setattr(self, color, curses.tparm(set_fg, i) or '')
         set_fg_ansi = self._tigetstr('setaf')
         if set_fg_ansi:
-            for i,color in zip(range(len(self._ANSICOLORS)), self._ANSICOLORS):
+            for i, color in zip(range(len(self._ANSICOLORS)), self._ANSICOLORS):
                 setattr(self, color, curses.tparm(set_fg_ansi, i) or '')
         set_bg = self._tigetstr('setb')
         if set_bg:
-            for i,color in zip(range(len(self._COLORS)), self._COLORS):
+            for i, color in zip(range(len(self._COLORS)), self._COLORS):
                 setattr(self, 'BG_'+color, curses.tparm(set_bg, i) or '')
         set_bg_ansi = self._tigetstr('setab')
         if set_bg_ansi:
-            for i,color in zip(range(len(self._ANSICOLORS)), self._ANSICOLORS):
+            for i, color in zip(range(len(self._ANSICOLORS)), self._ANSICOLORS):
                 setattr(self, 'BG_'+color, curses.tparm(set_bg_ansi, i) or '')
     def _tigetstr(self, cap_name):
         # String capabilities can include "delays" of the form "$<2>".
@@ -144,12 +144,13 @@ class TerminalController(Singleton):
         s = match.group()
         try:
             return getattr(self, s[2:-1])
-        except:
+        except IndexError:
             return s
     def is_color(self, s):
         try:
             attr = getattr(self, s.upper())
             return attr != None
-        except: return False
+        except AttributeError:
+            return False
 
 # vim:ts=4:sw=4:et:

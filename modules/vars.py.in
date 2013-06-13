@@ -20,28 +20,35 @@ import sys
 from singletonmixin import Singleton
 
 def getpwdent():
-    try: euid = os.geteuid()
+    try:
+        euid = os.geteuid()
     except Exception, msg:
         sys.stderr.write("ERROR: %s\n" % msg)
         return None
-    try: pwdent = pwd.getpwuid(euid)
+    try:
+        pwdent = pwd.getpwuid(euid)
     except Exception, msg:
         sys.stderr.write("ERROR: %s\n" % msg)
         return None
     return pwdent
 def getuser():
-    try: return getpwdent()[0]
-    except: return os.getenv("USER")
+    try:
+        return getpwdent()[0]
+    except:
+        return os.getenv("USER")
 def gethomedir(user=None):
     if user:
-        try: return pwd.getpwnam(user)[5]
+        try:
+            return pwd.getpwnam(user)[5]
         except Exception, msg:
             sys.stderr.write("ERROR: %s\n" % msg)
             return None
     homedir = os.getenv("HOME")
     if not homedir:
-        try: return getpwdent()[5]
-        except: return None
+        try:
+            return getpwdent()[5]
+        except:
+            return None
     else:
         return homedir
 
@@ -66,16 +73,16 @@ class Vars(Singleton):
     }
     container_tags = ("group", "clone", "ms", "master")
     clonems_tags = ("clone", "ms", "master")
-    resource_tags = ("primitive","group","clone","ms","master","template")
-    constraint_tags = ("rsc_location","rsc_colocation","rsc_order","rsc_ticket")
-    constraint_rsc_refs = ("rsc","with-rsc","first","then")
+    resource_tags = ("primitive", "group", "clone", "ms", "master", "template")
+    constraint_tags = ("rsc_location", "rsc_colocation", "rsc_order", "rsc_ticket")
+    constraint_rsc_refs = ("rsc", "with-rsc", "first", "then")
     children_tags = ("group", "primitive")
     nvpairs_tags = ("meta_attributes", "instance_attributes", "utilization")
-    defaults_tags = ("rsc_defaults","op_defaults")
-    resource_cli_names = ("primitive","group","clone","ms","master","rsc_template")
-    constraint_cli_names = ("location","colocation","collocation","order","rsc_ticket")
-    nvset_cli_names = ("property","rsc_defaults","op_defaults")
-    op_cli_names = ("monitor", "start", "stop", "migrate_to", "migrate_from","promote","demote","notify")
+    defaults_tags = ("rsc_defaults", "op_defaults")
+    resource_cli_names = ("primitive", "group", "clone", "ms", "master", "rsc_template")
+    constraint_cli_names = ("location", "colocation", "collocation", "order", "rsc_ticket")
+    nvset_cli_names = ("property", "rsc_defaults", "op_defaults")
+    op_cli_names = ("monitor", "start", "stop", "migrate_to", "migrate_from", "promote", "demote", "notify")
     ra_operations = ("probe", "monitor", "start", "stop",
        "promote", "demote", "notify", "migrate_to", "migrate_from")
     subpfx_list = {
@@ -92,7 +99,7 @@ class Vars(Singleton):
         "write": "write",
         "deny": "deny",
     }
-    acl_rule_names = ("read","write","deny")
+    acl_rule_names = ("read", "write", "deny")
     acl_spec_map = {
         "xpath": "xpath",
         "ref": "ref",
@@ -101,21 +108,21 @@ class Vars(Singleton):
     }
     acl_shortcuts = {
         "meta":
-            (r"//primitive\[@id='@@'\]/meta_attributes",r"/nvpair\[@name='@@'\]"),
+            (r"//primitive\[@id='@@'\]/meta_attributes", r"/nvpair\[@name='@@'\]"),
         "params":
-            (r"//primitive\[@id='@@'\]/instance_attributes",r"/nvpair\[@name='@@'\]"),
+            (r"//primitive\[@id='@@'\]/instance_attributes", r"/nvpair\[@name='@@'\]"),
         "utilization":
             (r"//primitive\[@id='@@'\]/utilization",),
         "location":
             (r"//rsc_location\[@id='cli-prefer-@@' and @rsc='@@'\]",),
         "property":
-            (r"//crm_config/cluster_property_set",r"/nvpair\[@name='@@'\]"),
+            (r"//crm_config/cluster_property_set", r"/nvpair\[@name='@@'\]"),
         "nodeattr":
-            (r"//nodes/node/instance_attributes",r"/nvpair\[@name='@@'\]"),
+            (r"//nodes/node/instance_attributes", r"/nvpair\[@name='@@'\]"),
         "nodeutil":
-            (r"//nodes/node/utilization",r"\[@uname='@@'\]"),
+            (r"//nodes/node/utilization", r"\[@uname='@@'\]"),
         "node":
-            (r"//nodes/node",r"\[@uname='@@'\]"),
+            (r"//nodes/node", r"\[@uname='@@'\]"),
         "status":
             (r"/cib/status",),
         "cib":
@@ -165,20 +172,20 @@ class Vars(Singleton):
         "master-max", "master-node-max", "description",
     )
     trace_ra_attr = "trace_ra"
-    score_types = {'advisory': '0','mandatory': 'INFINITY'}
-    boolean_ops = ('or','and')
-    binary_ops = ('lt','gt','lte','gte','eq','ne')
+    score_types = {'advisory': '0', 'mandatory': 'INFINITY'}
+    boolean_ops = ('or', 'and')
+    binary_ops = ('lt', 'gt', 'lte', 'gte', 'eq', 'ne')
     binary_types = ('string' , 'version' , 'number')
-    unary_ops = ('defined','not_defined')
-    simple_date_ops = ('lt','gt')
-    date_ops = ('lt','gt','in_range','date_spec')
+    unary_ops = ('defined', 'not_defined')
+    simple_date_ops = ('lt', 'gt')
+    date_ops = ('lt', 'gt', 'in_range', 'date_spec')
     date_spec_names = '''hours monthdays weekdays yearsdays months \
         weeks years weekyears moon'''.split()
-    in_range_attrs = ('start','end')
+    in_range_attrs = ('start', 'end')
     roles_names = ('Stopped', 'Started', 'Master', 'Slave')
     actions_names = ( 'start', 'promote', 'demote', 'stop')
     node_default_type = "normal"
-    node_attributes_keyw = ("attributes","utilization")
+    node_attributes_keyw = ("attributes", "utilization")
     shadow_envvar = "CIB_shadow"
     attr_defaults = {
         "resource_set": {"sequential": "true", "require-all": "true"},
@@ -243,10 +250,10 @@ class Vars(Singleton):
     if not homedir:
         hist_file = ''
     else:
-        hist_file = os.path.join(homedir,".crm_history")
-    rc_file = os.path.join(homedir,".crm.rc")
-    tmpl_conf_dir = os.path.join(homedir,".crmconf")
-    index_file = os.path.join(homedir,".crm_help_index")
+        hist_file = os.path.join(homedir, ".crm_history")
+    rc_file = os.path.join(homedir, ".crm.rc")
+    tmpl_conf_dir = os.path.join(homedir, ".crmconf")
+    index_file = os.path.join(homedir, ".crm_help_index")
     xdg_map = {
         "history": "history",
         "rc": "rc",
@@ -268,7 +275,7 @@ class Vars(Singleton):
     config_home = os.path.join(config_home, "crm")
     cache_home = os.path.join(cache_home, "crm")
     graphviz_user_file = os.path.join(config_home, "graphviz")
-    report_cache = os.path.join("@CRM_CACHE_DIR@","history")
+    report_cache = os.path.join("@CRM_CACHE_DIR@", "history")
     tmpl_dir = "@datadir@/@PACKAGE@/templates"
     crm_schema_dir = "@CRM_DTD_DIRECTORY@"
     pe_dir = "@PE_STATE_DIR@"
@@ -285,7 +292,7 @@ class Vars(Singleton):
     crmd_metadata = None # crmd meta data
     cib_metadata = None # cib meta data
     crm_properties_metadata = None # PE + crmd + cib meta data
-    meta_progs = ("crmd","pengine","stonithd","cib")
+    meta_progs = ("crmd", "pengine", "stonithd", "cib")
     crmd_advanced = (
         "dc-version",
         "cluster-infrastructure",

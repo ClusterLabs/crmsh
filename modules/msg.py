@@ -40,7 +40,7 @@ class ErrorBuffer(Singleton):
                     pass
             self.msg_list = []
         self.mode = "immediate"
-    def writemsg(self,msg):
+    def writemsg(self, msg):
         if self.mode == "immediate":
             if options.regression_tests:
                 print msg
@@ -58,21 +58,21 @@ class ErrorBuffer(Singleton):
         self.reset_lineno()
     def stop_tmp_lineno(self):
         self.lineno = self._save_lineno
-    def add_lineno(self,s):
+    def add_lineno(self, s):
         if self.lineno > 0:
-            return "%d: %s" % (self.lineno,s)
+            return "%d: %s" % (self.lineno, s)
         else: return s
-    def error(self,s):
+    def error(self, s):
         self.writemsg("ERROR: %s" % self.add_lineno(s))
-    def warning(self,s):
+    def warning(self, s):
         self.writemsg("WARNING: %s" % self.add_lineno(s))
-    def one_warning(self,s):
+    def one_warning(self, s):
         if not s in self.written:
             self.written[s] = 1
             self.writemsg("WARNING: %s" % self.add_lineno(s))
-    def info(self,s):
+    def info(self, s):
         self.writemsg("INFO: %s" % self.add_lineno(s))
-    def debug(self,s):
+    def debug(self, s):
         if user_prefs.get_debug():
             self.writemsg("DEBUG: %s" % self.add_lineno(s))
 
@@ -97,13 +97,13 @@ def no_file_err(name):
 def missing_prog_warn(name):
     err_buf.warning("could not find any %s on the system"%name)
 def node_err(msg, node):
-    err_buf.error("%s: %s" % (msg,node.toprettyxml()))
+    err_buf.error("%s: %s" % (msg, node.toprettyxml()))
 def node_debug(msg, node):
-    err_buf.debug("%s: %s" % (msg,node.toprettyxml()))
-def no_attribute_err(attr,obj_type):
-    err_buf.error("required attribute %s not found in %s"%(attr,obj_type))
-def bad_def_err(what,msg):
-    err_buf.error("bad %s definition: %s"%(what,msg))
+    err_buf.debug("%s: %s" % (msg, node.toprettyxml()))
+def no_attribute_err(attr, obj_type):
+    err_buf.error("required attribute %s not found in %s"%(attr, obj_type))
+def bad_def_err(what, msg):
+    err_buf.error("bad %s definition: %s"%(what, msg))
 def unsupported_err(name):
     err_buf.error("%s is not supported"%name)
 def no_such_obj_err(name):
@@ -112,10 +112,10 @@ def obj_cli_warn(name):
     err_buf.info("object %s cannot be represented in the CLI notation"%name)
 def missing_obj_err(node):
     err_buf.error("object %s:%s missing (shouldn't have happened)"% \
-        (node.tag,node.get("id")))
-def constraint_norefobj_err(constraint_id,obj_id):
+        (node.tag, node.get("id")))
+def constraint_norefobj_err(constraint_id, obj_id):
     err_buf.error("constraint %s references a resource %s which doesn't exist"% \
-        (constraint_id,obj_id))
+        (constraint_id, obj_id))
 def obj_exists_err(name):
     err_buf.error("object %s already exists"%name)
 def no_object_err(name):
@@ -126,36 +126,36 @@ def id_used_err(node_id):
     err_buf.error("%s: id is already in use"%node_id)
 def skill_err(s):
     err_buf.error("%s: this command is not allowed at this skill level"%' '.join(s))
-def syntax_err(s,token = '',context = ''):
+def syntax_err(s, token='', context=''):
     pfx = "syntax"
     if context:
-        pfx = "%s in %s" %(pfx,context)
+        pfx = "%s in %s" %(pfx, context)
     if type(s) == type(''):
-        err_buf.error("%s near <%s>"%(pfx,s))
+        err_buf.error("%s near <%s>"%(pfx, s))
     elif token:
-        err_buf.error("%s near <%s>: %s"%(pfx,token,' '.join(s)))
+        err_buf.error("%s near <%s>: %s"%(pfx, token, ' '.join(s)))
     else:
-        err_buf.error("%s: %s"%(pfx,' '.join(s)))
-def bad_usage(cmd,args):
-    err_buf.error("bad usage: %s %s"%(cmd,args))
+        err_buf.error("%s: %s"%(pfx, ' '.join(s)))
+def bad_usage(cmd, args):
+    err_buf.error("bad usage: %s %s"%(cmd, args))
 def empty_cib_err():
     err_buf.error("No CIB!")
-def cib_parse_err(msg,s):
+def cib_parse_err(msg, s):
     err_buf.error("%s"%msg)
     err_buf.info("offending string: %s" % s)
 def cib_no_elem_err(el_name):
     err_buf.error("CIB contains no '%s' element!"%el_name)
-def cib_ver_unsupported_err(validator,rel):
-    err_buf.error("CIB not supported: validator '%s', release '%s'"% (validator,rel))
+def cib_ver_unsupported_err(validator, rel):
+    err_buf.error("CIB not supported: validator '%s', release '%s'"% (validator, rel))
     err_buf.error("You may try the upgrade command")
-def update_err(obj_id,cibadm_opt,xml,rc):
+def update_err(obj_id, cibadm_opt, xml, rc):
     if cibadm_opt == '-U':
         task = "update"
     elif cibadm_opt == '-D':
         task = "delete"
     else:
         task = "replace"
-    err_buf.error("could not %s %s"%(task,obj_id))
+    err_buf.error("could not %s %s"%(task, obj_id))
     if rc == 54:
         err_buf.info("Permission denied.")
     else:

@@ -88,7 +88,7 @@ class Schema(Singleton):
     def test_schema(self, cib):
         crm_schema = CrmSchema(cib, vars.crm_schema_dir)
         return crm_schema.validate_name
-    def get(self, t, name, set = None):
+    def get(self, t, name, set=None):
         if not self.crm_schema:
             return []
         if t not in self.store:

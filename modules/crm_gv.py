@@ -70,7 +70,7 @@ class Gv(object):
         return [self.gv_id(x) for x in e]
     def new_edge(self, e):
         ne = self.my_edge(e)
-        for i,node in enumerate(ne):
+        for i, node in enumerate(ne):
             if i == 0:
                 continue
             if node in self.top_nodes:
@@ -104,7 +104,7 @@ class Gv(object):
         '''
         l = []
         for tn in self.top_nodes:
-            for node,rank in self.nodes.iteritems():
+            for node, rank in self.nodes.iteritems():
                 if rank > 0:
                     continue
                 l.append('\t%s' % self.invis_edge_str(tn, node))
@@ -121,13 +121,13 @@ class Gv(object):
         l.append(self.header())
         if self.node_attrs:
             l.append('\tnode [%s];' % _attr_str(self.node_attrs))
-        for attr,v in self.graph_attrs.iteritems():
-            l.append('\t%s="%s";' % (attr,v))
+        for attr, v in self.graph_attrs.iteritems():
+            l.append('\t%s="%s";' % (attr, v))
         for sg in self.subgraphs:
             l.append('\t%s' % '\n\t'.join(sg.repr()))
         for e_id in range(len(self.edges)):
             l.append('\t%s;' % self.edge_str(e_id))
-        for n,attr_d in self.attrs.iteritems():
+        for n, attr_d in self.attrs.iteritems():
             attr_s = _attr_str(attr_d)
             l.append('\t%s [%s];' % (n, attr_s))
         l += self.invisible_edges()

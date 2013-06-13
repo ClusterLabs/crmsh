@@ -26,10 +26,10 @@ def topics_dict(help_tab):
             topics[topic] = None
     return topics
 
-def mk_completion_tab(obj,ctab):
+def mk_completion_tab(obj, ctab):
     from completion import get_completer_list
     cmd_table = obj.cmd_table
-    for key,value in cmd_table.items():
+    for key, value in cmd_table.items():
         if key.startswith("_"):
             continue
         if type(value) == type(object):
@@ -37,13 +37,13 @@ def mk_completion_tab(obj,ctab):
         elif key == "help":
             ctab[key] = topics_dict(obj.help_table)
         else:
-            ctab[key] = get_completer_list(obj,key)
+            ctab[key] = get_completer_list(obj, key)
 
 class Levels(Singleton):
     '''
     Keep track of levels and prompts.
     '''
-    def __init__(self,start_level):
+    def __init__(self, start_level):
         self._marker = 0
         self._in_transit = False
         self.level_stack = []
@@ -52,7 +52,7 @@ class Levels(Singleton):
         self.parse_root = self.current_level.cmd_table
         self.prompts = []
         self.completion_tab = {}
-        mk_completion_tab(self.current_level,self.completion_tab)
+        mk_completion_tab(self.current_level, self.completion_tab)
     def getprompt(self):
         return ' '.join(self.prompts)
     def is_in_transit(self):
@@ -63,7 +63,7 @@ class Levels(Singleton):
     def release(self):
         while len(self.level_stack) > self._marker:
             self.droplevel()
-    def new_level(self,level_obj,token):
+    def new_level(self, level_obj, token):
         self.level_stack.append(self.current_level)
         self.comp_stack.append(self.completion_tab)
         self.prompts.append(token)
@@ -71,7 +71,7 @@ class Levels(Singleton):
         self.parse_root = self.current_level.cmd_table
         try:
             if not self.completion_tab[token]:
-                mk_completion_tab(self.current_level,self.completion_tab[token])
+                mk_completion_tab(self.current_level, self.completion_tab[token])
             self.completion_tab = self.completion_tab[token]
         except:
             pass

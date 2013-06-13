@@ -36,7 +36,7 @@ class CompletionHelp(object):
     def __init__(self):
         self.laststamp = 0
         self.lastitem = ''
-    def help(self,f,*args):
+    def help(self, f, *args):
         words = get_buffer().split()
         if not words:
             return
@@ -46,204 +46,204 @@ class CompletionHelp(object):
         if self.lastitem == key and \
                 time.time() - self.laststamp < self.timeout:
             return
-        help_s = f(key,*args)
+        help_s = f(key, *args)
         if help_s:
             print "\n%s" % help_s
-            print "%s%s" % (vars.prompt,get_buffer()),
+            print "%s%s" % (vars.prompt, get_buffer()),
             self.laststamp = time.time()
             self.lastitem = key
 
-def attr_cmds(idx,delimiter = False):
+def attr_cmds(idx, delimiter=False):
     if delimiter:
         return ' '
-    return ["delete","set","show"]
-def nodes_list(idx,delimiter = False):
+    return ["delete", "set", "show"]
+def nodes_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return listnodes()
-def shadows_list(idx,delimiter = False):
+def shadows_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return listshadows()
-def templates_list(idx,delimiter = False):
+def templates_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return listtemplates()
-def config_list(idx,delimiter = False):
+def config_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return listconfigs()
-def config_list_method(idx,delimiter = False):
+def config_list_method(idx, delimiter=False):
     if delimiter:
         return ' '
-    return listconfigs() + ["replace","update"]
-def shadows_live_list(idx,delimiter = False):
+    return listconfigs() + ["replace", "update"]
+def shadows_live_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return listshadows() + ['live']
-def rsc_list(idx,delimiter = False):
+def rsc_list(idx, delimiter=False):
     if delimiter:
         return ' '
     doc = resources_xml()
     if not doc:
         return []
-    nodes = get_interesting_nodes(doc,[])
+    nodes = get_interesting_nodes(doc, [])
     return [x.get("id") for x in nodes if is_resource(x)]
-def rsc_prim_list(idx,delimiter = False):
+def rsc_prim_list(idx, delimiter=False):
     if delimiter:
         return ' '
     doc = resources_xml()
     if not doc:
         return []
-    nodes = get_interesting_nodes(doc,[])
+    nodes = get_interesting_nodes(doc, [])
     return [x.get("id") for x in nodes if is_primitive(x)]
-def null_list(idx,delimiter = False):
+def null_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return []
-def loop(idx,delimiter = False):
+def loop(idx, delimiter=False):
     "just a marker in a list"
     pass
-def id_xml_list(idx,delimiter = False):
+def id_xml_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return cib_factory.id_list() + ['xml','changed']
-def id_list(idx,delimiter = False):
+def id_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return cib_factory.id_list()
-def f_prim_id_list(idx,delimiter = False):
+def f_prim_id_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return cib_factory.prim_id_list()
-def f_prim_free_id_list(idx,delimiter = False):
+def f_prim_free_id_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return cib_factory.f_prim_free_id_list()
-def f_group_id_list(idx,delimiter = False):
+def f_group_id_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return cib_factory.f_group_id_list()
-def f_children_id_list(idx,delimiter = False):
+def f_children_id_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return cib_factory.f_children_id_list()
-def rsc_id_list(idx,delimiter = False):
+def rsc_id_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return cib_factory.rsc_id_list()
-def rsc_tmpl_id_list(idx,delimiter = False):
+def rsc_tmpl_id_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return cib_factory.rsc_id_list() + cib_factory.rsc_template_list()
-def node_id_list(idx,delimiter = False):
+def node_id_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return cib_factory.node_id_list()
-def rsc_template_list(idx,delimiter = False):
+def rsc_template_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return cib_factory.rsc_template_list()
-def node_attr_keyw_list(idx,delimiter = False):
+def node_attr_keyw_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return vars.node_attributes_keyw
-def order_kind_list(idx,delimiter = False):
+def order_kind_list(idx, delimiter=False):
     if delimiter:
         return ': '
     return rng_attr_values('rsc_order', 'kind')
-def status_node_list(idx,delimiter = False):
+def status_node_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return cib_status.status_node_list()
-def status_rsc_list(idx,delimiter = False):
+def status_rsc_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return cib_status.status_rsc_list()
-def node_states_list(idx,delimiter = False):
+def node_states_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return vars.node_states
-def ra_operations_list(idx,delimiter = False):
+def ra_operations_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return vars.ra_operations
-def lrm_exit_codes_list(idx,delimiter = False):
+def lrm_exit_codes_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return vars.lrm_exit_codes.keys()
-def lrm_status_codes_list(idx,delimiter = False):
+def lrm_status_codes_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return vars.lrm_status_codes.keys()
-def skills_list(idx,delimiter = False):
+def skills_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return user_prefs.skill_levels.keys()
-def output_types_list(idx,delimiter = False):
+def output_types_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return user_prefs.output_types
-def check_frequency_list(idx,delimiter = False):
+def check_frequency_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return user_prefs.check_frequencies
-def check_mode_list(idx,delimiter = False):
+def check_mode_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return user_prefs.check_modes
-def manage_children_list(idx,delimiter = False):
+def manage_children_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return user_prefs.manage_children_options
-def yesno_list(idx,delimiter = False):
+def yesno_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return ["yes", "no"]
-def ra_classes_list(idx,delimiter = False):
+def ra_classes_list(idx, delimiter=False):
     if delimiter:
         return ':'
     return ra_classes()
-def report_rsc_list(idx,delimiter = False):
+def report_rsc_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return crm_report.rsc_list()
-def report_node_list(idx,delimiter = False):
+def report_node_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return crm_report.node_list()
-def report_pe_list_transition(idx,delimiter = False):
+def report_pe_list_transition(idx, delimiter=False):
     if delimiter:
         return ' '
     return crm_report.peinputs_list() + ["log", "showdot", "save"]
-def report_pe_list_peinputs(idx,delimiter = False):
+def report_pe_list_peinputs(idx, delimiter=False):
     if delimiter:
         return ' '
     return crm_report.peinputs_list() + ["v"]
-def report_pe_list_show(idx,delimiter = False):
+def report_pe_list_show(idx, delimiter=False):
     if delimiter:
         return ' '
     return crm_report.peinputs_list() + ["live"]
-def report_session_subcmd_list(idx,delimiter = False):
+def report_session_subcmd_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return crm_report.session_subcmd_list()
-def report_session_list(idx,delimiter = False):
+def report_session_list(idx, delimiter=False):
     if delimiter:
         return ' '
     return crm_report.session_list()
-def ticket_cmd_list(idx,delimiter = False):
+def ticket_cmd_list(idx, delimiter=False):
     if delimiter:
         return ' '
-    return ["grant","revoke","show","time","delete"]
-def modgroup_subcmd_list(idx,delimiter = False):
+    return ["grant", "revoke", "show", "time", "delete"]
+def modgroup_subcmd_list(idx, delimiter=False):
     if delimiter:
         return ' '
-    return ["add","remove"]
-def modgroup_modifier_list(idx,delimiter = False):
+    return ["add", "remove"]
+def modgroup_modifier_list(idx, delimiter=False):
     if delimiter:
         return ' '
-    return ["after","before"]
+    return ["after", "before"]
 
 #
 # completion for primitives including help for parameters
@@ -254,7 +254,7 @@ def get_prim_token(words, n):
         try: return words[words.index(key)+n-1]
         except: pass
     return ''
-def ra_type_list(toks,idx,delimiter):
+def ra_type_list(toks, idx, delimiter):
     if idx == 2:
         if toks[0] == "ocf":
             dchar = ':'
@@ -265,27 +265,27 @@ def ra_type_list(toks,idx,delimiter):
     elif idx == 3:
         dchar = ' '
         if toks[0] == "ocf":
-            l = ra_types(toks[0],toks[1])
+            l = ra_types(toks[0], toks[1])
         else:
             l = ra_types(toks[0])
     if delimiter:
         return dchar
     return l
-def prim_meta_attr_list(idx,delimiter = False):
+def prim_meta_attr_list(idx, delimiter=False):
     if delimiter:
         return '='
     return vars.rsc_meta_attributes
-def op_attr_list(idx,delimiter = False):
+def op_attr_list(idx, delimiter=False):
     if delimiter:
         return '='
     return vars.op_attributes
 def operations_list():
     return vars.op_cli_names
-def prim_complete_meta(ra,delimiter = False):
+def prim_complete_meta(ra, delimiter=False):
     if delimiter:
         return '='
-    return prim_meta_attr_list(0,delimiter)
-def prim_complete_op(ra,delimiter):
+    return prim_meta_attr_list(0, delimiter)
+def prim_complete_op(ra, delimiter):
     words = split_buffer()
     if (get_buffer()[-1] == ' ' and words[-1] == "op") \
             or (get_buffer()[-1] != ' ' and words[-2] == "op"):
@@ -301,7 +301,7 @@ def prim_complete_op(ra,delimiter):
     if delimiter:
         return dchar
     return l
-def prim_complete_params(ra,delimiter):
+def prim_complete_params(ra, delimiter):
     if get_buffer()[-1] == '=':
         dchar = ' '
         l = []
@@ -311,25 +311,25 @@ def prim_complete_params(ra,delimiter):
     if delimiter:
         return dchar
     return l
-def prim_params_info(key,ra):
+def prim_params_info(key, ra):
     return ra.meta_parameter(key)
-def meta_attr_info(key,ra):
+def meta_attr_info(key, ra):
     pass
-def op_attr_info(key,ra):
+def op_attr_info(key, ra):
     pass
-def get_lastkeyw(words,keyw):
+def get_lastkeyw(words, keyw):
     revwords = copy.copy(words)
     revwords.reverse()
     for w in revwords:
         if w in keyw:
             return w
-def ra_classes_or_tmpl(idx,delimiter = False):
+def ra_classes_or_tmpl(idx, delimiter=False):
     words = get_buffer().split()
     if words[-1].startswith('@'):
-        return rsc_template_list(idx,delimiter)
+        return rsc_template_list(idx, delimiter)
     else:
-        return ra_classes_list(idx,delimiter)
-def primitive_complete_complex(idx,delimiter = False):
+        return ra_classes_list(idx, delimiter)
+def primitive_complete_complex(idx, delimiter=False):
     '''
     This completer depends on the content of the line, i.e. on
     previous tokens, in particular on the type of the RA.
@@ -351,29 +351,29 @@ def primitive_complete_complex(idx,delimiter = False):
         toks = type_word.split(':')
         if toks[0] != "ocf":
             idx += 1
-        if idx in (2,3):
-            return ra_type_list(toks,idx,delimiter)
+        if idx in (2, 3):
+            return ra_type_list(toks, idx, delimiter)
         ra = None
-        ra_class,provider,rsc_type = disambiguate_ra_type(type_word)
-        if ra_type_validate(type_word,ra_class,provider,rsc_type):
-            ra = RAInfo(ra_class,rsc_type,provider)
+        ra_class, provider, rsc_type = disambiguate_ra_type(type_word)
+        if ra_type_validate(type_word, ra_class, provider, rsc_type):
+            ra = RAInfo(ra_class, rsc_type, provider)
     keywords = completers_set.keys()
     if idx == 4 or (idx == 2 and with_template):
         if delimiter:
             return ' '
         return keywords
-    lastkeyw = get_lastkeyw(words,keywords)
+    lastkeyw = get_lastkeyw(words, keywords)
     if '=' in words[-1] and get_buffer()[-1] != ' ':
         if not delimiter and lastkeyw and \
                 get_buffer()[-1] == '=' and len(words[-1]) > 1:
-            compl_help.help(completers_set[lastkeyw][1],ra)
+            compl_help.help(completers_set[lastkeyw][1], ra)
         if delimiter:
             return ' '
         return ['*']
     else:
         if lastkeyw:
-            return completers_set[lastkeyw][0](ra,delimiter)
-def property_complete(idx,delimiter = False):
+            return completers_set[lastkeyw][0](ra, delimiter)
+def property_complete(idx, delimiter=False):
     '''
     This completer depends on the content of the line, i.e. on
     previous tokens.
@@ -383,17 +383,17 @@ def property_complete(idx,delimiter = False):
     if '=' in words[-1] and get_buffer()[-1] != ' ':
         if not delimiter and \
                 get_buffer()[-1] == '=' and len(words[-1]) > 1:
-            compl_help.help(prim_params_info,ra)
+            compl_help.help(prim_params_info, ra)
         if delimiter:
             return ' '
         return ['*']
     else:
-        return prim_complete_params(ra,delimiter)
+        return prim_complete_params(ra, delimiter)
 
 #
 # core completer stuff
 #
-def lookup_dynamic(fun_list,idx,f_idx,words):
+def lookup_dynamic(fun_list, idx, f_idx, words):
     if not fun_list:
         return []
     if fun_list[f_idx] == loop:
@@ -401,21 +401,21 @@ def lookup_dynamic(fun_list,idx,f_idx,words):
     f = fun_list[f_idx]
     w = words[0]
     wordlist = f(idx)
-    delimiter = f(idx,1)
+    delimiter = f(idx, 1)
     if len(wordlist) == 1 and wordlist[0] == '*':
-        return lookup_dynamic(fun_list,idx+1,f_idx+1,words[1:])
+        return lookup_dynamic(fun_list, idx+1, f_idx+1, words[1:])
     elif len(words) == 1:
         return [x+delimiter for x in wordlist if x.startswith(w)]
-    return lookup_dynamic(fun_list,idx+1,f_idx+1,words[1:])
-def lookup_words(ctab,words):
+    return lookup_dynamic(fun_list, idx+1, f_idx+1, words[1:])
+def lookup_words(ctab, words):
     if not ctab:
         return []
     if type(ctab) == type(()):
-        return lookup_dynamic(ctab,0,0,words)
+        return lookup_dynamic(ctab, 0, 0, words)
     if len(words) == 1:
         return [x+' ' for x in ctab if x.startswith(words[0])]
     elif words[0] in ctab.keys():
-        return lookup_words(ctab[words[0]],words[1:])
+        return lookup_words(ctab[words[0]], words[1:])
     return []
 def get_buffer():
     import readline
@@ -425,13 +425,13 @@ def split_buffer():
     p = p.replace(':',' ').replace('=',' ')
     return p.split()
 
-def completer(txt,state):
+def completer(txt, state):
     import readline
     levels = Levels.getInstance()
     words = split_buffer()
     if readline.get_begidx() == readline.get_endidx():
         words.append('')
-    matched = lookup_words(levels.completion_tab,words)
+    matched = lookup_words(levels.completion_tab, words)
     matched.append(None)
     return matched[state]
 def setup_readline():
@@ -476,12 +476,12 @@ completer_lists = {
         "cibstatus" : None,
     },
     "template" : {
-        "new" : (null_list,templates_list,loop),
+        "new" : (null_list, templates_list, loop),
         "load" : (config_list,),
         "edit" : (config_list,),
         "delete" : (config_list,),
         "show" : (config_list,),
-        "apply" : (config_list_method,config_list),
+        "apply" : (config_list_method, config_list),
         "list" : None,
     },
     "resource" : {
@@ -493,17 +493,17 @@ completer_lists = {
         "demote" : (rsc_list,),
         "manage" : (rsc_list,),
         "unmanage" : (rsc_list,),
-        "migrate" : (rsc_list,nodes_list),
+        "migrate" : (rsc_list, nodes_list),
         "unmigrate" : (rsc_list,),
-        "param" : (rsc_list,attr_cmds),
-        "meta" : (rsc_list,attr_cmds),
-        "utilization" : (rsc_list,attr_cmds),
-        "failcount" : (rsc_list,attr_cmds,nodes_list),
-        "cleanup" : (rsc_list,nodes_list),
+        "param" : (rsc_list, attr_cmds),
+        "meta" : (rsc_list, attr_cmds),
+        "utilization" : (rsc_list, attr_cmds),
+        "failcount" : (rsc_list, attr_cmds, nodes_list),
+        "cleanup" : (rsc_list, nodes_list),
         "refresh" : (nodes_list,),
         "reprobe" : (nodes_list,),
-        "trace" : (rsc_prim_list,ra_operations_list),
-        "untrace" : (rsc_prim_list,ra_operations_list),
+        "trace" : (rsc_prim_list, ra_operations_list),
+        "untrace" : (rsc_prim_list, ra_operations_list),
     },
     "node" : {
         "status" : (nodes_list,),
@@ -515,9 +515,9 @@ completer_lists = {
         "fence" : (nodes_list,),
         "delete" : (nodes_list,),
         "clearstate" : (nodes_list,),
-        "attribute" : (nodes_list,attr_cmds),
-        "utilization" : (nodes_list,attr_cmds),
-        "status-attr" : (nodes_list,attr_cmds),
+        "attribute" : (nodes_list, attr_cmds),
+        "utilization" : (nodes_list, attr_cmds),
+        "status-attr" : (nodes_list, attr_cmds),
     },
     "ra" : {
         "classes" : None,
@@ -530,8 +530,8 @@ completer_lists = {
         "save" : None,
         "load" : None,
         "origin" : None,
-        "node" : (status_node_list,node_states_list),
-        "op" : (ra_operations_list,status_rsc_list,lrm_exit_codes_list,lrm_status_codes_list,status_node_list),
+        "node" : (status_node_list, node_states_list),
+        "op" : (ra_operations_list, status_rsc_list, lrm_exit_codes_list, lrm_status_codes_list, status_node_list),
         "run" : None,
         "simulate" : None,
         "quorum" : None,
@@ -543,55 +543,55 @@ completer_lists = {
         "ptest" : None,
         "commit" : None,
         "upgrade" : None,
-        "show" : (id_xml_list,id_list,loop),
-        "edit" : (id_xml_list,id_list,loop),
-        "filter" : (null_list,id_xml_list,id_list,loop),
-        "delete" : (id_list,loop),
-        "modgroup" : (f_group_id_list,modgroup_subcmd_list,f_prim_id_list,modgroup_modifier_list,f_prim_id_list),
-        "default-timeouts" : (id_list,loop),
-        "rename" : (id_list,id_list),
+        "show" : (id_xml_list, id_list, loop),
+        "edit" : (id_xml_list, id_list, loop),
+        "filter" : (null_list, id_xml_list, id_list, loop),
+        "delete" : (id_list, loop),
+        "modgroup" : (f_group_id_list, modgroup_subcmd_list, f_prim_id_list, modgroup_modifier_list, f_prim_id_list),
+        "default-timeouts" : (id_list, loop),
+        "rename" : (id_list, id_list),
         "save" : None,
         "load" : None,
-        "node" : (node_id_list,node_attr_keyw_list),
-        "primitive" : (null_list,ra_classes_or_tmpl,primitive_complete_complex,loop),
-        "rsc_template" : (null_list,ra_classes_list,primitive_complete_complex,loop),
-        "group" : (null_list,f_prim_free_id_list,loop),
-        "clone" : (null_list,f_children_id_list),
-        "ms" : (null_list,f_children_id_list),
-        "location" : (null_list,rsc_id_list),
-        "colocation" : (null_list,null_list,rsc_tmpl_id_list,loop),
-        "order" : (null_list,order_kind_list,rsc_tmpl_id_list,loop),
-        "rsc_ticket" : (null_list,null_list,rsc_tmpl_id_list,loop),
-        "property" : (property_complete,loop),
-        "rsc_defaults" : (prim_complete_meta,loop),
-        "op_defaults" : (op_attr_list,loop),
+        "node" : (node_id_list, node_attr_keyw_list),
+        "primitive" : (null_list, ra_classes_or_tmpl, primitive_complete_complex, loop),
+        "rsc_template" : (null_list, ra_classes_list, primitive_complete_complex, loop),
+        "group" : (null_list, f_prim_free_id_list, loop),
+        "clone" : (null_list, f_children_id_list),
+        "ms" : (null_list, f_children_id_list),
+        "location" : (null_list, rsc_id_list),
+        "colocation" : (null_list, null_list, rsc_tmpl_id_list, loop),
+        "order" : (null_list, order_kind_list, rsc_tmpl_id_list, loop),
+        "rsc_ticket" : (null_list, null_list, rsc_tmpl_id_list, loop),
+        "property" : (property_complete, loop),
+        "rsc_defaults" : (prim_complete_meta, loop),
+        "op_defaults" : (op_attr_list, loop),
         "xml" : None,
         "monitor" : None,
         "ra" : None,
         "cib" : None,
         "cibstatus" : None,
         "template" : None,
-        "rsctest" : (rsc_id_list,loop),
+        "rsctest" : (rsc_id_list, loop),
         "_test" : None,
         "_regtest" : None,
         "_objects" : None,
     },
     "history" : {
-        "resource" : (report_rsc_list,loop),
-        "node" : (report_node_list,loop),
-        "log" : (report_node_list,loop),
-        "peinputs" : (report_pe_list_peinputs,loop),
+        "resource" : (report_rsc_list, loop),
+        "node" : (report_node_list, loop),
+        "log" : (report_node_list, loop),
+        "peinputs" : (report_pe_list_peinputs, loop),
         "transition" : (report_pe_list_transition,),
         "show" : (report_pe_list_show,),
         "graph" : (report_pe_list_show,),
-        "diff" : (report_pe_list_show,report_pe_list_show),
-        "session" : (report_session_subcmd_list,report_session_list),
+        "diff" : (report_pe_list_show, report_pe_list_show),
+        "session" : (report_session_subcmd_list, report_session_list),
     },
     "site" : {
         "ticket" : (ticket_cmd_list,),
     },
 }
-def get_completer_list(lvl_obj,cmd):
+def get_completer_list(lvl_obj, cmd):
     'Return a list of completer functions.'
     try: return completer_lists[lvl_obj.lvl_name][cmd]
     except:

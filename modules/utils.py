@@ -54,12 +54,12 @@ def ask(msg):
             return ans[0].lower() == 'y'
 
 def verify_boolean(opt):
-    return opt.lower() in ("yes","true","on") or \
-        opt.lower() in ("no","false","off")
+    return opt.lower() in ("yes", "true", "on") or \
+        opt.lower() in ("no", "false", "off")
 def is_boolean_true(opt):
-    return opt.lower() in ("yes","true","on")
+    return opt.lower() in ("yes", "true", "on")
 def is_boolean_false(opt):
-    return opt.lower() in ("no","false","off")
+    return opt.lower() in ("no", "false", "off")
 def get_boolean(opt, dflt=False):
     if not opt:
         return dflt
@@ -122,7 +122,7 @@ def setup_aliases(obj):
 def os_types_list(path):
     l = []
     for f in glob.glob(path):
-        if os.access(f,os.X_OK) and os.path.isfile(f):
+        if os.access(f, os.X_OK) and os.path.isfile(f):
             a = f.split("/")
             l.append(a[-1])
     return l
@@ -130,21 +130,21 @@ def os_types_list(path):
 def listtemplates():
     l = []
     for f in os.listdir(vars.tmpl_dir):
-        if os.path.isfile("%s/%s" % (vars.tmpl_dir,f)):
+        if os.path.isfile("%s/%s" % (vars.tmpl_dir, f)):
             l.append(f)
     return l
 def listconfigs():
     l = []
     for f in os.listdir(vars.tmpl_conf_dir):
-        if os.path.isfile("%s/%s" % (vars.tmpl_conf_dir,f)):
+        if os.path.isfile("%s/%s" % (vars.tmpl_conf_dir, f)):
             l.append(f)
     return l
 
 def add_sudo(cmd):
     if user_prefs.crm_user:
-        return "sudo -E -u %s %s"%(user_prefs.crm_user,cmd)
+        return "sudo -E -u %s %s" % (user_prefs.crm_user, cmd)
     return cmd
-def pipe_string(cmd,s):
+def pipe_string(cmd, s):
     rc = -1 # command failed
     cmd = add_sudo(cmd)
     common_debug("piping string to %s" % cmd)
@@ -158,7 +158,7 @@ def pipe_string(cmd,s):
             common_err(msg)
     return rc
 
-def filter_string(cmd,s,stderr_on = True):
+def filter_string(cmd, s, stderr_on=True):
     rc = -1 # command failed
     outp = ''
     if stderr_on:
@@ -181,15 +181,16 @@ def filter_string(cmd,s,stderr_on = True):
     except Exception, msg:
         common_err(msg)
         common_info("from: %s" % cmd)
-    return rc,outp
+    return rc, outp
 
 def str2tmp(s):
     '''
     Write the given string to a temporary file. Return the name
     of the file.
     '''
-    fd,tmp = mkstemp(suffix=".pcmk")
-    try: f = os.fdopen(fd,"w")
+    fd, tmp = mkstemp(suffix=".pcmk")
+    try:
+        f = os.fdopen(fd,"w")
     except IOError, msg:
         common_err(msg)
         return
@@ -198,22 +199,24 @@ def str2tmp(s):
         f.write("\n")
     f.close()
     return tmp
-def str2file(s,fname):
+def str2file(s, fname):
     '''
     Write a string to a file.
     '''
-    try: f = open(fname,"w")
+    try:
+        f = open(fname,"w")
     except IOError, msg:
         common_err(msg)
         return False
     f.write(s)
     f.close()
     return True
-def file2str(fname, noerr = True):
+def file2str(fname, noerr=True):
     '''
     Read a one line file into a string, strip whitespace around.
     '''
-    try: f = open(fname,"r")
+    try:
+        f = open(fname,"r")
     except IOError, msg:
         if not noerr:
             common_err(msg)
@@ -225,7 +228,8 @@ def file2list(fname):
     '''
     Read a file into a list (newlines dropped).
     '''
-    try: f = open(fname,"r")
+    try:
+        f = open(fname,"r")
     except IOError, msg:
         common_err(msg)
         return None
@@ -236,7 +240,7 @@ def safe_open_w(fname):
     if fname == "-":
         f = sys.stdout
     else:
-        if not options.batch and os.access(fname,os.F_OK):
+        if not options.batch and os.access(fname, os.F_OK):
             if not ask("File %s exists. Do you want to overwrite it?"%fname):
                 return None
         try: f = open(fname,"w")
@@ -249,28 +253,28 @@ def safe_close_w(f):
         f.close()
 
 def is_path_sane(name):
-    if re.search("['`#*?$\[\]]",name):
+    if re.search("['`#*?$\[\]]", name):
         common_err("%s: bad path"%name)
         return False
     return True
 def is_filename_sane(name):
-    if re.search("['`/#*?$\[\]]",name):
+    if re.search("['`/#*?$\[\]]", name):
         common_err("%s: bad filename"%name)
         return False
     return True
 def is_name_sane(name):
-    if re.search("[']",name):
+    if re.search("[']", name):
         common_err("%s: bad name"%name)
         return False
     return True
 def is_value_sane(name):
-    if re.search("[']",name):
+    if re.search("[']", name):
         common_err("%s: bad value"%name)
         return False
     return True
 
 def show_dot_graph(dotfile):
-    subprocess.Popen("%s %s" % (user_prefs.dotty,dotfile), shell=True, bufsize=0, stdin=None, stdout=None, stderr=None, close_fds=True)
+    subprocess.Popen("%s %s" % (user_prefs.dotty, dotfile), shell=True, bufsize=0, stdin=None, stdout=None, stderr=None, close_fds=True)
     common_info("starting %s to show transition graph"%user_prefs.dotty)
 
 def ext_cmd(cmd):
@@ -289,28 +293,28 @@ def rmdir_r(d):
 _LOCKDIR = ".lockdir"
 _PIDF = "pid"
 def check_locker(dir):
-    if not os.path.isdir(os.path.join(dir,_LOCKDIR)):
+    if not os.path.isdir(os.path.join(dir, _LOCKDIR)):
         return
-    s = file2str(os.path.join(dir,_LOCKDIR,_PIDF))
+    s = file2str(os.path.join(dir, _LOCKDIR, _PIDF))
     pid = convert2ints(s)
-    if not isinstance(pid,int):
+    if not isinstance(pid, int):
         common_warn("history: removing malformed lock")
-        rmdir_r(os.path.join(dir,_LOCKDIR))
+        rmdir_r(os.path.join(dir, _LOCKDIR))
         return
     try:
         os.kill(pid, 0)
     except OSError, (errno, strerror):
         if errno == os.errno.ESRCH:
             common_info("history: removing stale lock")
-            rmdir_r(os.path.join(dir,_LOCKDIR))
+            rmdir_r(os.path.join(dir, _LOCKDIR))
         else:
-            common_err("%s: %s" % (_LOCKDIR,strerror))
+            common_err("%s: %s" % (_LOCKDIR, strerror))
 def acquire_lock(dir):
     check_locker(dir)
     while True:
         try:
-            os.makedirs(os.path.join(dir,_LOCKDIR))
-            str2file("%d" % os.getpid(),os.path.join(dir,_LOCKDIR,_PIDF))
+            os.makedirs(os.path.join(dir, _LOCKDIR))
+            str2file("%d" % os.getpid(), os.path.join(dir, _LOCKDIR, _PIDF))
             return True
         except OSError, (errno, strerror):
             if errno != os.errno.EEXIST:
@@ -321,7 +325,7 @@ def acquire_lock(dir):
         else:
             return False
 def release_lock(dir):
-    rmdir_r(os.path.join(dir,_LOCKDIR))
+    rmdir_r(os.path.join(dir, _LOCKDIR))
 
 def pipe_cmd_nosudo(cmd):
     if options.regression_tests:
@@ -329,7 +333,7 @@ def pipe_cmd_nosudo(cmd):
     proc = subprocess.Popen(cmd, shell = True,
         stdout = subprocess.PIPE,
         stderr = subprocess.PIPE)
-    (outp,err_outp) = proc.communicate()
+    (outp, err_outp) = proc.communicate()
     proc.wait()
     rc = proc.returncode
     if rc != 0:
@@ -337,7 +341,7 @@ def pipe_cmd_nosudo(cmd):
         print err_outp
     return rc
 
-def get_stdout(cmd, input_s = None, stderr_on = True):
+def get_stdout(cmd, input_s=None, stderr_on=True):
     '''
     Run a cmd, return stdout output.
     Optional input string "input_s".
@@ -354,7 +358,7 @@ def get_stdout(cmd, input_s = None, stderr_on = True):
     proc.wait()
     outp = outp.strip()
     return proc.returncode, outp
-def stdout2list(cmd, stderr_on = True):
+def stdout2list(cmd, stderr_on=True):
     '''
     Run a cmd, fetch output, return it as a list of lines.
     stderr_on controls whether to show output which comes on stderr.
@@ -362,16 +366,16 @@ def stdout2list(cmd, stderr_on = True):
     rc, s = get_stdout(add_sudo(cmd), stderr_on = stderr_on)
     return rc, s.split('\n')
 
-def append_file(dest,src):
+def append_file(dest, src):
     'Append src to dest'
     try:
         dest_f = open(dest,"a")
-    except IOError,msg:
+    except IOError, msg:
         common_err("open %s: %s" % (dest, msg))
         return False
     try:
         f = open(src)
-    except IOError,msg:
+    except IOError, msg:
         common_err("open %s: %s" % (src, msg))
         dest_f.close()
         return False
@@ -389,7 +393,7 @@ def get_dc():
         return None
     return s.split()[-1]
 
-def wait4dc(what = "", show_progress = True):
+def wait4dc(what="", show_progress=True):
     '''
     Wait for the DC to get into the S_IDLE state. This should be
     invoked only after a CIB modification which would exercise
@@ -430,7 +434,7 @@ def wait4dc(what = "", show_progress = True):
             return False
         try: dc_status = s.split()[-2]
         except:
-            common_warn("%s unexpected output: %s" % (cmd,s))
+            common_warn("%s unexpected output: %s" % (cmd, s))
             return False
         if dc_status == "S_IDLE":
             if output_started:
@@ -455,15 +459,15 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     ptest = "2>&1 %s -x -" % user_prefs.ptest
     if verbosity:
         if actions:
-            verbosity = 'v' * max(3,len(verbosity))
-        ptest = "%s -%s" % (ptest,verbosity.upper())
+            verbosity = 'v' * max(3, len(verbosity))
+        ptest = "%s -%s" % (ptest, verbosity.upper())
     if scores:
         ptest = "%s -s" % ptest
     if utilization:
         ptest = "%s -U" % ptest
     if user_prefs.dotty and not nograph:
-        fd,dotfile = mkstemp()
-        ptest = "%s -D %s" % (ptest,dotfile)
+        fd, dotfile = mkstemp()
+        ptest = "%s -D %s" % (ptest, dotfile)
     else:
         dotfile = None
     # ptest prints to stderr
@@ -495,7 +499,7 @@ def is_id_valid(id):
     if not id:
         return False
     id_re = "^[A-Za-z_][\w._-]*$"
-    return re.match(id_re,id)
+    return re.match(id_re, id)
 
 def check_range(a):
     """
@@ -503,7 +507,7 @@ def check_range(a):
     """
     if len(a) != 2:
         return False
-    if not isinstance(a[0],int) or not isinstance(a[1],int):
+    if not isinstance(a[0], int) or not isinstance(a[1], int):
         return False
     return (int(a[0]) <= int(a[1]))
 
@@ -512,17 +516,17 @@ def crm_msec(t):
     See lib/common/utils.c:crm_get_msec().
     '''
     convtab = {
-        'ms': (1,1),
-        'msec': (1,1),
-        'us': (1,1000),
-        'usec': (1,1000),
-        '': (1000,1),
-        's': (1000,1),
-        'sec': (1000,1),
-        'm': (60*1000,1),
-        'min': (60*1000,1),
-        'h': (60*60*1000,1),
-        'hr': (60*60*1000,1),
+        'ms': (1, 1),
+        'msec': (1, 1),
+        'us': (1, 1000),
+        'usec': (1, 1000),
+        '': (1000, 1),
+        's': (1000, 1),
+        'sec': (1000, 1),
+        'm': (60*1000, 1),
+        'min': (60*1000, 1),
+        'h': (60*60*1000, 1),
+        'hr': (60*60*1000, 1),
     }
     if not t:
         return -1
@@ -534,17 +538,17 @@ def crm_msec(t):
     else:
         q = r.group(2).lower()
     try:
-        mult,div = convtab[q]
-    except:
+        mult, div = convtab[q]
+    except KeyError:
         return -1
     return (int(r.group(1))*mult)/div
 def crm_time_cmp(a, b):
     return crm_msec(a) - crm_msec(b)
 
 def shorttime(ts):
-    return time.strftime("%X",time.localtime(ts))
+    return time.strftime("%X", time.localtime(ts))
 def shortdate(ts):
-    return time.strftime("%F",time.localtime(ts))
+    return time.strftime("%F", time.localtime(ts))
 
 def sort_by_mtime(l):
     'Sort a (small) list of files by time mod.'
@@ -555,7 +559,7 @@ def dirwalk(dir):
     "walk a directory tree, using a generator"
     # http://code.activestate.com/recipes/105873/
     for f in os.listdir(dir):
-        fullpath = os.path.join(dir,f)
+        fullpath = os.path.join(dir, f)
         if os.path.isdir(fullpath) and not os.path.islink(fullpath):
             for x in dirwalk(fullpath):  # recurse into subdir
                 yield x
@@ -581,17 +585,18 @@ def convert2ints(l):
     is returned!
     """
     try:
-        if isinstance(l,(tuple,list)):
+        if isinstance(l,(tuple, list)):
             return [int(x) for x in l]
         else: # it's a string then
             return int(l)
-    except: return None
+    except ValueError:
+        return None
 def is_int(s):
     'Check if the string can be converted to an integer.'
     try:
         int(s)
         return True
-    except:
+    except ValueError:
         return False
 
 def is_process(s):
@@ -612,7 +617,7 @@ def edit_file(fname):
         return
     if not user_prefs.editor:
         return
-    return ext_cmd_nosudo("%s %s" % (user_prefs.editor,fname))
+    return ext_cmd_nosudo("%s %s" % (user_prefs.editor, fname))
 
 def need_pager(s, w, h):
     from math import ceil
@@ -626,13 +631,15 @@ def need_pager(s, w, h):
     return False
 def term_render(s):
     'Render for TERM.'
-    try: return termctrl.render(s)
-    except: return s
+    try:
+        return termctrl.render(s)
+    except:
+        return s
 def page_string(s):
     'Page string rendered for TERM.'
     if not s:
         return
-    w,h = get_winsize()
+    w, h = get_winsize()
     if not need_pager(s, w, h):
         print term_render(s)
     elif not user_prefs.pager or not sys.stdout.isatty() or options.batch:
@@ -641,7 +648,7 @@ def page_string(s):
         opts = ""
         if user_prefs.pager == "less":
             opts = "-R"
-        pipe_string("%s %s" % (user_prefs.pager,opts), term_render(s))
+        pipe_string("%s %s" % (user_prefs.pager, opts), term_render(s))
 
 def get_winsize():
     try:
@@ -653,16 +660,17 @@ def get_winsize():
         try:
             w = os.environ['COLS']
             h = os.environ['LINES']
-        except:
-            w = 80; h = 25
-    return w,h
+        except KeyError:
+            w = 80
+            h = 25
+    return w, h
 def multicolumn(l):
     '''
     A ls-like representation of a list of strings.
     A naive approach.
     '''
     min_gap = 2
-    w,h = get_winsize()
+    w, h = get_winsize()
     max_len = 8
     for s in l:
         if len(s) > max_len:
@@ -677,26 +685,26 @@ def multicolumn(l):
             if not j < len(l):
                 break
             if not s:
-                s = "%-*s" % (col_len,l[j])
+                s = "%-*s" % (col_len, l[j])
             elif (j+1)%cols == 0:
-                s = "%s%s" % (s,l[j])
+                s = "%s%s" % (s, l[j])
             else:
-                s = "%s%-*s" % (s,col_len,l[j])
+                s = "%s%-*s" % (s, col_len, l[j])
         if s:
             print s
 
-def find_value(pl,name):
-    for n,v in pl:
+def find_value(pl, name):
+    for n, v in pl:
         if n == name:
             return v
     return None
-def cli_replace_attr(pl,name,new_val):
+def cli_replace_attr(pl, name, new_val):
     for i in range(len(pl)):
         if pl[i][0] == name:
             pl[i][1] = new_val
             return
-def cli_append_attr(pl,name,val):
-    pl.append([name,val])
+def cli_append_attr(pl, name, val):
+    pl.append([name, val])
 
 def lines2cli(s):
     '''
@@ -728,15 +736,15 @@ def parse_time(t):
     try:
         import dateutil.parser
         dt = dateutil.parser.parse(t)
-    except ValueError,msg:
-        common_err("%s: %s" % (t,msg))
+    except ValueError, msg:
+        common_err("%s: %s" % (t, msg))
         return None
-    except ImportError,msg:
+    except ImportError, msg:
         import datetime
         try:
             tm = time.strptime(t)
             dt = datetime.datetime(*tm[0:7])
-        except ValueError,msg:
+        except ValueError, msg:
             common_err("no dateutil, please provide times as printed by date(1)")
             return None
     return dt
@@ -755,9 +763,9 @@ def save_graphviz_file(ini_f, attr_d):
         return False
     import ConfigParser
     p = ConfigParser.SafeConfigParser()
-    for section,sect_d in attr_d.iteritems():
+    for section, sect_d in attr_d.iteritems():
         p.add_section(section)
-        for n,v in sect_d.iteritems():
+        for n, v in sect_d.iteritems():
             p.set(section, n, v)
     try:
         p.write(f)
@@ -796,7 +804,7 @@ def get_pcmk_version(dflt):
         else:
             v = s.split()[2]
             common_debug("found pacemaker version: %s" % v)
-    except Exception,msg:
+    except Exception, msg:
         v = dflt
         common_warn("could not get the pacemaker version, bad installation?")
         common_warn(msg)
@@ -812,7 +820,8 @@ def get_cib_property(cib_f, attr, dflt):
     attr_s = 'name="%s"' % attr
     ver_patt = re.compile('value="([^"]+)"')
     ver = dflt # return some version in any case
-    try: f = open(cib_f, "r")
+    try:
+        f = open(cib_f, "r")
     except IOError, msg:
         common_err(msg)
         return ver
@@ -840,7 +849,8 @@ def get_cib_attributes(cib_f, tag, attr_l, dflt_l):
     open_t = "<%s " % tag
     val_patt_l = [ re.compile('%s="([^"]+)"' % x) for x in attr_l ]
     val_l = []
-    try: f = open(cib_f, "r")
+    try:
+        f = open(cib_f, "r")
     except IOError, msg:
         common_err(msg)
         return dflt_l

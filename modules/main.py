@@ -36,13 +36,13 @@ def load_rc(rcfile):
         inp = multi_input()
         if inp == None:
             break
-        try: parse_line(levels,shlex.split(inp))
+        try: parse_line(levels, shlex.split(inp))
         except ValueError, msg:
             common_err(msg)
     f.close()
     sys.stdin = save_stdin
 
-def multi_input(prompt = ''):
+def multi_input(prompt=''):
     """
     Get input from user
     Allow multiple lines using a continuation character
@@ -55,7 +55,7 @@ def multi_input(prompt = ''):
             return None
         err_buf.incr_lineno()
         if options.regression_tests:
-            print ".INP:",text
+            print ".INP:", text
             sys.stdout.flush()
             sys.stderr.flush()
         stripped = text.strip()
@@ -69,13 +69,13 @@ def multi_input(prompt = ''):
             break
     return ''.join(line)
 
-def check_args(args,argsdim):
+def check_args(args, argsdim):
     if not argsdim: return True
     if len(argsdim) == 1:
         minargs = argsdim[0]
         return len(args) >= minargs
     else:
-        minargs,maxargs = argsdim
+        minargs, maxargs = argsdim
         return len(args) >= minargs and len(args) <= maxargs
 
 #
@@ -93,7 +93,7 @@ def check_args(args,argsdim):
 #
 # function: a function to handle this command
 # numargs_list: number of minimum/maximum arguments; for example,
-#   (0,1) means one optional argument, (1,1) one required; if the
+#   (0, 1) means one optional argument, (1, 1) one required; if the
 #   list is empty then the function will parse arguments itself
 # required minimum skill level: operator, administrator, expert
 #   (encoded as a small integer from 0 to 2)
@@ -110,7 +110,7 @@ def show_usage(cmd):
     else:
         syntax_err(cmd.__name__)
 
-def parse_line(lvl,s):
+def parse_line(lvl, s):
     if not s: return True
     if s[0].startswith('#'): return True
     lvl.mark()
@@ -125,7 +125,7 @@ def parse_line(lvl,s):
                 # interactive option _before_ creating the level
                 if not options.interactive and i == len(s)-1:
                     set_interactive()
-                lvl.new_level(pt[token],token)
+                lvl.new_level(pt[token], token)
                 pt = lvl.parse_root # move to the next level
             else:
                 cmd = pt[token] # terminal symbol
@@ -140,7 +140,7 @@ def parse_line(lvl,s):
             skill_err(s[i])
             return False
         args = s[i+1:]
-        if not check_args(args,cmd[1]):
+        if not check_args(args, cmd[1]):
             lvl.release()
             show_usage(cmd[0])
             return False
@@ -296,11 +296,11 @@ def do_work():
     global user_args
     compatibility_setup()
     if options.shadow:
-        parse_line(levels,["cib","use",options.shadow])
+        parse_line(levels, ["cib", "use", options.shadow])
     # this special case is silly, but we have to keep it to
     # preserve the backward compatibility
     if len(user_args) == 1 and user_args[0].startswith("conf"):
-        parse_line(levels,["configure"])
+        parse_line(levels, ["configure"])
     elif len(user_args) > 0:
         err_buf.reset_lineno()
         # we're not sure yet whether it's an interactive session or not
@@ -318,9 +318,9 @@ def do_work():
             if user_prefs.get_add_quotes() and ' ' in s:
                 q = '"' in s and "'" or '"'
                 if not q in s:
-                    s = "%s%s%s" % (q,s,q)
+                    s = "%s%s%s" % (q, s, q)
             l.append(s)
-        if parse_line(levels,shlex.split(' '.join(l))):
+        if parse_line(levels, shlex.split(' '.join(l))):
             # if the user entered a level, then just continue
             if not levels.previous():
                 sys.exit(0)
@@ -341,7 +341,7 @@ def do_work():
     rc = 0
     while True:
         if options.interactive and not options.batch:
-            vars.prompt = "crm(%s)%s# " % (cib_prompt(),levels.getprompt())
+            vars.prompt = "crm(%s)%s# " % (cib_prompt(), levels.getprompt())
         inp = multi_input(vars.prompt)
         if inp == None:
             if options.interactive:
@@ -349,7 +349,7 @@ def do_work():
             else:
                 cmd_exit("eof", rc)
         try:
-            if not parse_line(levels,shlex.split(inp)):
+            if not parse_line(levels, shlex.split(inp)):
                 rc = 1
         except ValueError, msg:
             rc = 1
@@ -371,11 +371,11 @@ def run():
 
     try:
         opts, user_args = getopt.getopt(sys.argv[1:], \
-            'whdc:f:FX:RD:H:', ("wait","version","help","debug", \
-            "cib=","file=","force","profile=", \
-            "regression-tests","display=","history="))
-        for o,p in opts:
-            if o in ("-h","--help"):
+            'whdc:f:FX:RD:H:', ("wait", "version", "help", "debug", \
+            "cib=", "file=", "force", "profile=", \
+            "regression-tests", "display=", "history="))
+        for o, p in opts:
+            if o in ("-h", "--help"):
                 usage(0)
             elif o in ("--version"):
                 print >> sys.stdout,("%s" % vars.crm_version)
@@ -386,22 +386,22 @@ def run():
                 options.profile = p
             elif o == "-R":
                 options.regression_tests = True
-            elif o in ("-D","--display"):
+            elif o in ("-D", "--display"):
                 user_prefs.set_output(p)
-            elif o in ("-F","--force"):
+            elif o in ("-F", "--force"):
                 user_prefs.set_force()
-            elif o in ("-f","--file"):
+            elif o in ("-f", "--file"):
                 options.batch = True
                 options.interactive = False
                 err_buf.reset_lineno()
                 options.file = p
-            elif o in ("-H","--history"):
+            elif o in ("-H", "--history"):
                 options.history = p
-            elif o in ("-w","--wait"):
+            elif o in ("-w", "--wait"):
                 user_prefs.wait = "yes"
-            elif o in ("-c","--cib"):
+            elif o in ("-c", "--cib"):
                 options.shadow = p
-    except getopt.GetoptError,msg:
+    except getopt.GetoptError, msg:
         print msg
         usage(1)
 

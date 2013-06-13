@@ -90,7 +90,7 @@ Usage:
 #
 # help or make users feel less lonely
 #
-def add_shorthelp(topic,shorthelp,short_tab):
+def add_shorthelp(topic, shorthelp, short_tab):
     '''
     Join topics ("%s,%s") if they share the same short
     description.
@@ -101,7 +101,7 @@ def add_shorthelp(topic,shorthelp,short_tab):
             return
     short_tab.append([topic, shorthelp])
 
-def topic_help(help_tab,topic):
+def topic_help(help_tab, topic):
     if topic not in help_tab:
         print "Sorry, could not find any help for %s" % topic
         return False
@@ -170,7 +170,7 @@ class HelpSystem(object):
                 shorthelp = help_tab[topic][0][0]
             else:
                 shorthelp = help_tab[topic][0]
-            add_shorthelp(topic,shorthelp,short_tab)
+            add_shorthelp(topic, shorthelp, short_tab)
         return short_tab
     def overview(self, help_tab):
         s = help_tab['.'][1]
@@ -179,18 +179,18 @@ class HelpSystem(object):
             s = "%s\nAvailable commands:\n" % s
         short_tab = self.get_short_help(help_tab)
         l = [s]
-        for t,d in short_tab:
+        for t, d in short_tab:
 # TODO: figure out how to make appending '/' work _only_ in case
 # t is really a level, becase some commands share name with
 # levels (e.g. history resource, history node)
 #            if self.is_level(t):
 #                t = "%s/" % t
-            l.append("\t%-16s %s" % (t,d))
+            l.append("\t%-16s %s" % (t, d))
         page_string("\n".join(l))
-    def cmd_help(self,help_tab,topic = ''):
+    def cmd_help(self, help_tab, topic=''):
         "help!"
         # help_tab is an odict (ordered dictionary):
-        # help_tab[topic] = (short_help,long_help)
+        # help_tab[topic] = (short_help, long_help)
         # topic '.' is a special entry for the top level
         if not help_tab:
             common_info("sorry, help not available")
@@ -198,14 +198,14 @@ class HelpSystem(object):
         if not topic or topic == "topics":
             self.overview(help_tab)
         else:
-            return topic_help(help_tab,topic)
+            return topic_help(help_tab, topic)
         return True
-    def open_file(self,name,mode):
+    def open_file(self, name, mode):
         try:
-            f = open(name,mode)
+            f = open(name, mode)
             return f
-        except IOError,msg:
-            common_err("%s open: %s"%(name,msg))
+        except IOError, msg:
+            common_err("%s open: %s"%(name, msg))
             common_err("extensive help system is not available")
             self.no_help_file = True
             return None
@@ -245,7 +245,7 @@ class HelpSystem(object):
                     key_pos[r.group(1)] = pos
         help_f.close()
         for key in key_pos:
-            print >>idx_f, '%s %d' % (key,key_pos[key])
+            print >>idx_f, '%s %d' % (key, key_pos[key])
         idx_f.close()
         return True
     def is_index_old(self):
@@ -293,12 +293,12 @@ class HelpSystem(object):
         return True
     def is_level(self, s):
         return (("cmdhelp_%s" % s) in self.leveld) or (s in init_help_tab)
-    def __filter(self,s):
+    def __filter(self, s):
         if '<<' in s:
             return re.sub(r'<<[^,]+,(.+)>>', r'\1', s)
         else:
             return s
-    def _load_help_one(self,key,skip = 2):
+    def _load_help_one(self, key, skip=2):
         longhelp = ''
         self.help_f.seek(self.key_pos[key])
         shorthelp = help_short(self.help_f.readline())
@@ -317,15 +317,15 @@ class HelpSystem(object):
             if not self.bad_index:
                 common_warn("help topic %s not found" % key)
                 self.drop_index()
-        return shorthelp,longhelp
-    def cmdhelp(self,s):
+        return shorthelp, longhelp
+    def cmdhelp(self, s):
         if not self.key_pos and not self.load_index():
-            return None,None
+            return None, None
         if not s in self.key_pos:
             if not self.bad_index:
                 common_warn("help topic %s not found" % s)
                 self.drop_index()
-            return None,None
+            return None, None
         return self._load_help_one(s)
     def _load_topics(self, help_tab):
         '''
@@ -363,7 +363,7 @@ List of crm shell topics.
                 help_tab[cmd] = self._load_help_one(key)
         except: pass
         add_static_help(help_tab)
-    def _load_level(self,lvl):
+    def _load_level(self, lvl):
         '''
         For the given level, create a help table.
         '''
@@ -381,7 +381,7 @@ List of crm shell topics.
             self._load_cmd_level(lvl, help_tab)
         self.help_f.close()
         return help_tab
-    def load_level(self,lvl):
+    def load_level(self, lvl):
         help_tab = self._load_level(lvl)
         if self.bad_index: # try again
             help_tab = self._load_level(lvl)

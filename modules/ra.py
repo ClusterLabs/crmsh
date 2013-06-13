@@ -36,11 +36,11 @@ class RaLrmd(object):
     '''
     def __init__(self):
         self.good = self.is_lrmd_accessible()
-    def lrmadmin(self, opts, xml = False):
+    def lrmadmin(self, opts, xml=False):
         '''
         Get information directly from lrmd using lrmadmin.
         '''
-        rc, l = stdout2list("%s %s" % (lrmadmin_prog,opts))
+        rc, l = stdout2list("%s %s" % (lrmadmin_prog, opts))
         if l and not xml:
             l = l[1:] # skip the first line
         return l
@@ -50,15 +50,15 @@ class RaLrmd(object):
         return subprocess.call(\
             add_sudo(">/dev/null 2>&1 %s -C" % lrmadmin_prog), \
             shell=True) == 0
-    def meta(self, ra_class,ra_type,ra_provider):
-        return self.lrmadmin("-M %s %s %s"%(ra_class,ra_type,ra_provider),True)
-    def providers(self, ra_type,ra_class = "ocf"):
+    def meta(self, ra_class, ra_type, ra_provider):
+        return self.lrmadmin("-M %s %s %s"%(ra_class, ra_type, ra_provider), True)
+    def providers(self, ra_type, ra_class="ocf"):
         'List of providers for a class:type.'
-        return self.lrmadmin("-P %s %s" % (ra_class,ra_type),True)
+        return self.lrmadmin("-P %s %s" % (ra_class, ra_type), True)
     def classes(self):
         'List of classes.'
         return self.lrmadmin("-C")
-    def types(self, ra_class = "ocf", ra_provider = ""):
+    def types(self, ra_class="ocf", ra_provider=""):
         'List of types for a class.'
         return self.lrmadmin("-T %s" % ra_class)
 
@@ -68,11 +68,11 @@ class RaOS(object):
     '''
     def __init__(self):
         self.good = True
-    def meta(self, ra_class,ra_type,ra_provider):
+    def meta(self, ra_class, ra_type, ra_provider):
         l = []
         if ra_class == "ocf":
             rc, l = stdout2list("%s/resource.d/%s/%s meta-data" % \
-                (os.environ["OCF_ROOT"],ra_provider,ra_type))
+                (os.environ["OCF_ROOT"], ra_provider, ra_type))
         elif ra_class == "stonith":
             if ra_type.startswith("fence_") and os.path.exists("/usr/sbin/%s" %  ra_type):
                 rc, l = stdout2list("/usr/sbin/%s -o metadata" % ra_type)
@@ -82,11 +82,11 @@ class RaOS(object):
             rc, l = stdout2list("%s/check_%s --metadata" % \
                 (vars.nagios_dir, ra_type))
         return l
-    def providers(self, ra_type,ra_class = "ocf"):
+    def providers(self, ra_type, ra_class="ocf"):
         'List of providers for a class:type.'
         l = []
         if ra_class == "ocf":
-            for s in glob.glob("%s/resource.d/*/%s" % (os.environ["OCF_ROOT"],ra_type)):
+            for s in glob.glob("%s/resource.d/*/%s" % (os.environ["OCF_ROOT"], ra_type)):
                 a = s.split("/")
                 if len(a) == 7:
                     l.append(a[5])
@@ -94,12 +94,12 @@ class RaOS(object):
     def classes(self):
         'List of classes.'
         return "heartbeat lsb nagios ocf stonith".split()
-    def types(self, ra_class = "ocf", ra_provider = ""):
+    def types(self, ra_class="ocf", ra_provider=""):
         'List of types for a class.'
         l = []
         prov = ra_provider and ra_provider or "*"
         if ra_class == "ocf":
-            l = os_types_list("%s/resource.d/%s/*" % (os.environ["OCF_ROOT"],prov))
+            l = os_types_list("%s/resource.d/%s/*" % (os.environ["OCF_ROOT"], prov))
         elif ra_class == "lsb":
             l = os_types_list("/etc/init.d/*")
         elif ra_class == "stonith":
@@ -137,9 +137,9 @@ class RaCrmResource(object):
             common_debug("crm_resource %s exited with code %d" % \
                 (opts, rc))
         return s
-    def meta(self, ra_class,ra_type,ra_provider):
-        return self.crm_resource("--show-metadata %s:%s:%s"%(ra_class,ra_provider,ra_type))
-    def providers(self, ra_type,ra_class = "ocf"):
+    def meta(self, ra_class, ra_type, ra_provider):
+        return self.crm_resource("--show-metadata %s:%s:%s"%(ra_class, ra_provider, ra_type))
+    def providers(self, ra_type, ra_class="ocf"):
         'List of providers for OCF:type.'
         if ra_class != "ocf":
             common_err("no providers for class %s" % ra_class)
@@ -149,10 +149,10 @@ class RaCrmResource(object):
         'List of classes.'
         l = self.crm_resource("--list-standards")
         return l
-    def types(self, ra_class = "ocf", ra_provider = ""):
+    def types(self, ra_class="ocf", ra_provider=""):
         'List of types for a class.'
         if ra_provider:
-            return self.crm_resource("--list-agents %s:%s" % (ra_class,ra_provider))
+            return self.crm_resource("--list-agents %s:%s" % (ra_class, ra_provider))
         else:
             return self.crm_resource("--list-agents %s" % ra_class)
 
@@ -167,7 +167,7 @@ def can_use_lrmadmin():
     v_min = version.LooseVersion(minimum_glue)
     v_this = version.LooseVersion(glue_ver)
     return v_this >= v_min or \
-        (getpwdent()[0] in ("root",vars.crm_daemon_user))
+        (getpwdent()[0] in ("root", vars.crm_daemon_user))
 def crm_resource_support():
     rc, s = get_stdout("crm_resource --list-standards", stderr_on = False)
     return s != ""
@@ -190,16 +190,16 @@ def ra_classes():
         return wcache.retrieve("ra_classes")
     l = ra_if().classes()
     l.sort()
-    return wcache.store("ra_classes",l)
-def ra_providers(ra_type,ra_class = "ocf"):
+    return wcache.store("ra_classes", l)
+def ra_providers(ra_type, ra_class="ocf"):
     'List of providers for a class:type.'
-    id = "ra_providers-%s-%s" % (ra_class,ra_type)
+    id = "ra_providers-%s-%s" % (ra_class, ra_type)
     if wcache.is_cached(id):
         return wcache.retrieve(id)
-    l = ra_if().providers(ra_type,ra_class)
+    l = ra_if().providers(ra_type, ra_class)
     l.sort()
-    return wcache.store(id,l)
-def ra_providers_all(ra_class = "ocf"):
+    return wcache.store(id, l)
+def ra_providers_all(ra_class="ocf"):
     '''
     List of providers for a class.
     '''
@@ -209,27 +209,27 @@ def ra_providers_all(ra_class = "ocf"):
     dir = "%s/resource.d" % os.environ["OCF_ROOT"]
     l = []
     for s in os.listdir(dir):
-        if os.path.isdir("%s/%s" % (dir,s)):
+        if os.path.isdir("%s/%s" % (dir, s)):
             l.append(s)
     l.sort()
-    return wcache.store(id,l)
-def ra_types(ra_class = "ocf", ra_provider = ""):
+    return wcache.store(id, l)
+def ra_types(ra_class="ocf", ra_provider=""):
     '''
     List of RA type for a class.
     '''
     if not ra_class:
         ra_class = "ocf"
-    id = "ra_types-%s-%s" % (ra_class,ra_provider)
+    id = "ra_types-%s-%s" % (ra_class, ra_provider)
     if wcache.is_cached(id):
         return wcache.retrieve(id)
     list = []
     for ra in ra_if().types(ra_class):
         if (not ra_provider or \
-                ra_provider in ra_providers(ra,ra_class)) \
+                ra_provider in ra_providers(ra, ra_class)) \
                 and ra not in list:
             list.append(ra)
     list.sort()
-    return wcache.store(id,list)
+    return wcache.store(id, list)
 
 def get_pe_meta():
     if not vars.pe_metadata:
@@ -274,23 +274,23 @@ def prog_meta(prog):
             common_debug("%s metadata exited with code %d" % (prog, rc))
             l = []
     return l
-def get_nodes_text(n,tag):
+def get_nodes_text(n, tag):
     try: return n.findtext(tag).strip()
     except: return ''
 
-def mk_monitor_name(role,depth):
+def mk_monitor_name(role, depth):
     depth = depth != "0" and ("_%s" % depth) or ""
     return role and role != "Started" and \
-        "monitor_%s%s" % (role,depth) or \
+        "monitor_%s%s" % (role, depth) or \
         "monitor%s" % depth
 def monitor_name_node(node):
     depth = node.get("depth") or '0'
     role = node.get("role")
-    return mk_monitor_name(role,depth)
+    return mk_monitor_name(role, depth)
 def monitor_name_pl(pl):
     depth = find_value(pl, "depth") or '0'
     role = find_value(pl, "role")
-    return mk_monitor_name(role,depth)
+    return mk_monitor_name(role, depth)
 
 class RAInfo(object):
     '''
@@ -300,7 +300,7 @@ class RAInfo(object):
     required_ops = ("start", "stop")
     skip_ops = ("meta-data", "validate-all")
     skip_op_attr = ("name", "depth", "role")
-    def __init__(self,ra_class,ra_type,ra_provider = "heartbeat"):
+    def __init__(self, ra_class, ra_type, ra_provider="heartbeat"):
         self.advanced_params = []
         self.ra_class = ra_class
         self.ra_type = ra_type
@@ -326,7 +326,7 @@ class RAInfo(object):
         for p in self.ra_elem.xpath("//parameters/parameter"):
             if not p.get("name") in vars.crmd_user_attributes:
                 self.ra_elem.remove(p)
-    def add_ra_params(self,ra):
+    def add_ra_params(self, ra):
         '''
         Add parameters from another RAInfo instance.
         '''
@@ -351,7 +351,7 @@ class RAInfo(object):
         try:
             self.ra_elem = etree.fromstring('\n'.join(meta))
             assert(self.ra_elem.tag == 'resource-agent')
-        except Exception,msg:
+        except Exception, msg:
             common_err(msg)
             self.error("meta-data contains no resource-agent element")
             self.ra_elem = None
@@ -359,14 +359,14 @@ class RAInfo(object):
         if self.ra_class == "stonith":
             self.add_ra_params(get_stonithd_meta())
         return self.ra_elem
-    def param_type_default(self,n):
+    def param_type_default(self, n):
         try:
             content = n.find("content")
             type = content.get("type")
             default = content.get("default")
-            return type,default
+            return type, default
         except:
-            return None,None
+            return None, None
     def params(self):
         '''
         Construct a dict of dicts: parameters are keys and
@@ -384,14 +384,14 @@ class RAInfo(object):
                 continue
             required = c.get("required")
             unique = c.get("unique")
-            type,default = self.param_type_default(c)
+            type, default = self.param_type_default(c)
             d[name] = {
                 "required": required,
                 "unique": unique,
                 "type": type,
                 "default": default,
             }
-        return wcache.store(id,d)
+        return wcache.store(id, d)
     def completion_params(self):
         '''
         Extra method for completion, for we want to filter some
@@ -437,7 +437,7 @@ class RAInfo(object):
                 if not norole_op in d:
                     d2[norole_op] = d[op]
         d.update(d2)
-        return wcache.store(id,d)
+        return wcache.store(id, d)
     def reqd_params_list(self):
         '''
         List of required parameters.
@@ -445,7 +445,7 @@ class RAInfo(object):
         d = self.params()
         if not d: return []
         return [x for x in d if d[x]["required"] == '1']
-    def param_default(self,pname):
+    def param_default(self, pname):
         '''
         Parameter's default.
         '''
@@ -466,32 +466,32 @@ class RAInfo(object):
             if p in ("action", "port"):
                 return True
         return False
-    def sanity_check_params(self, id, pl, existence_only = False):
+    def sanity_check_params(self, id, pl, existence_only=False):
         '''
-        pl is a list of (attribute,value) pairs.
+        pl is a list of (attribute, value) pairs.
         - are all required parameters defined
         - do all parameters exist
         '''
         rc = 0
         d = {}
-        for p,v in pl:
+        for p, v in pl:
             d[p] = v
         if not existence_only:
             for p in self.reqd_params_list():
                 if self.unreq_param(p):
                     continue
                 if p not in d:
-                    common_err("%s: required parameter %s not defined" % (id,p))
+                    common_err("%s: required parameter %s not defined" % (id, p))
                     rc |= user_prefs.get_check_rc()
         for p in d:
             if p.startswith("$"):
                 # these are special, non-RA parameters
                 continue
             if p not in self.params():
-                common_err("%s: parameter %s does not exist" % (id,p))
+                common_err("%s: parameter %s does not exist" % (id, p))
                 rc |= user_prefs.get_check_rc()
         return rc
-    def get_adv_timeout(self, op, node = None):
+    def get_adv_timeout(self, op, node=None):
         if node is not None and op == "monitor":
             name = monitor_name_node(node)
         else:
@@ -511,7 +511,7 @@ class RAInfo(object):
         for op in ops:
             n_op = op[0] == "monitor" and monitor_name_pl(op[1]) or op[0]
             n_ops[n_op] = {}
-            for p,v in op[1]:
+            for p, v in op[1]:
                 if p in self.skip_op_attr:
                     continue
                 n_ops[n_op][p] = v
@@ -524,13 +524,13 @@ class RAInfo(object):
             if self.ra_class == "stonith" and op in ("start", "stop"):
                 continue
             if op not in self.actions():
-                common_warn("%s: action %s not advertised in meta-data, it may not be supported by the RA" % (id,op))
+                common_warn("%s: action %s not advertised in meta-data, it may not be supported by the RA" % (id, op))
                 rc |= 1
             if "interval" in n_ops[op]:
                 v = n_ops[op]["interval"]
                 v_msec = crm_msec(v)
                 if op in ("start", "stop") and v_msec != 0:
-                    common_warn("%s: Specified interval for %s is %s, it must be 0" %(id,op,v))
+                    common_warn("%s: Specified interval for %s is %s, it must be 0" %(id, op, v))
                     rc |= 1
                 if op.startswith("monitor") and v_msec != 0:
                     if v_msec not in intervals:
@@ -550,9 +550,9 @@ class RAInfo(object):
                 timeout_string = "default timeout"
             if crm_msec(v) < 0:
                 continue
-            if crm_time_cmp(adv_timeout,v) > 0:
+            if crm_time_cmp(adv_timeout, v) > 0:
                 common_warn("%s: %s %s for %s is smaller than the advised %s" % \
-                    (id,timeout_string,v,op,adv_timeout))
+                    (id, timeout_string, v, op, adv_timeout))
                 rc |= 1
         return rc
     def meta(self):
@@ -565,7 +565,7 @@ class RAInfo(object):
         if self.ra_class in vars.meta_progs:
             l = prog_meta(self.ra_class)
         else:
-            l = ra_if().meta(self.ra_class,self.ra_type,self.ra_provider)
+            l = ra_if().meta(self.ra_class, self.ra_type, self.ra_provider)
         self.debug("read and cached meta-data")
         return wcache.store(id, l)
     def meta_pretty(self):
@@ -588,35 +588,35 @@ class RAInfo(object):
         if actions:
             l.append(actions)
         return '\n\n'.join(l)
-    def get_shortdesc(self,n):
+    def get_shortdesc(self, n):
         name = n.get("name")
         shortdesc = get_nodes_text(n,"shortdesc")
         longdesc = get_nodes_text(n,"longdesc")
-        if shortdesc and shortdesc not in (name,longdesc,self.ra_type):
+        if shortdesc and shortdesc not in (name, longdesc, self.ra_type):
             return shortdesc
         return ''
     def meta_title(self):
         s = self.ra_string()
         shortdesc = self.get_shortdesc(self.ra_elem)
         if shortdesc:
-            s = "%s (%s)" % (shortdesc,s)
+            s = "%s (%s)" % (shortdesc, s)
         return s
-    def meta_param_head(self,n):
+    def meta_param_head(self, n):
         name = n.get("name")
         if not name:
             return None
         s = name
         if n.get("required") == "1":
             s = s + "*"
-        type,default = self.param_type_default(n)
+        type, default = self.param_type_default(n)
         if type and default:
-            s = "%s (%s, [%s])" % (s,type,default)
+            s = "%s (%s, [%s])" % (s, type, default)
         elif type:
-            s = "%s (%s)" % (s,type)
+            s = "%s (%s)" % (s, type)
         shortdesc = self.get_shortdesc(n)
-        s = "%s: %s" % (s,shortdesc)
+        s = "%s: %s" % (s, shortdesc)
         return s
-    def format_parameter(self,n):
+    def format_parameter(self, n):
         l = []
         head = self.meta_param_head(n)
         if not head:
@@ -625,10 +625,10 @@ class RAInfo(object):
         l.append(head)
         longdesc = get_nodes_text(n,"longdesc")
         if longdesc:
-            longdesc = self.ra_tab + longdesc.replace("\n","\n"+self.ra_tab) + '\n'
+            longdesc = self.ra_tab + longdesc.replace("\n", "\n"+self.ra_tab) + '\n'
             l.append(longdesc)
         return '\n'.join(l)
-    def meta_parameter(self,param):
+    def meta_parameter(self, param):
         if self.mk_ra_node() is None:
             return ''
         for c in self.ra_elem.xpath("//parameters/parameter"):
@@ -644,7 +644,7 @@ class RAInfo(object):
                 l.append(s)
         if l:
             return "Parameters (* denotes required, [] the default):\n\n" + '\n'.join(l)
-    def meta_action_head(self,n):
+    def meta_action_head(self, n):
         name = n.get("name")
         if not name:
             return ''
@@ -658,7 +658,7 @@ class RAInfo(object):
                 continue
             v = n.get(a)
             if v:
-                s = "%s %s=%s" % (s,a,v)
+                s = "%s %s=%s" % (s, a, v)
         return s
     def meta_actions(self):
         l = []
@@ -673,7 +673,7 @@ def get_ra(el):
     ra_type = el.get("type")
     ra_class = el.get("class")
     ra_provider = el.get("provider")
-    return RAInfo(ra_class,ra_type,ra_provider)
+    return RAInfo(ra_class, ra_type, ra_provider)
 
 #
 # resource type definition
@@ -700,22 +700,22 @@ def disambiguate_ra_type(s):
     '''
     l = s.split(':')
     if not l or len(l) > 3:
-        return ["","",""]
+        return ["", "", ""]
     if len(l) == 3:
         return l
     elif len(l) == 2:
-        ra_class,ra_type = l
+        ra_class, ra_type = l
     else:
         ra_class = "ocf"
         ra_type = l[0]
     ra_provider = ''
     if ra_class == "ocf":
-        pl = ra_providers(ra_type,ra_class)
+        pl = ra_providers(ra_type, ra_class)
         if pl and len(pl) == 1:
             ra_provider = pl[0]
         elif not pl:
             ra_provider = 'heartbeat'
-    return ra_class,ra_provider,ra_type
+    return ra_class, ra_provider, ra_type
 
 wcache = WCache.getInstance()
 vars = Vars.getInstance()

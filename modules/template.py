@@ -20,19 +20,19 @@ from vars import Vars
 from utils import *
 from msg import *
 
-def get_var(l,key):
+def get_var(l, key):
     for s in l:
         a = s.split()
         if len(a) == 2 and a[0] == key:
             return a[1]
     return ''
-def chk_var(l,key):
+def chk_var(l, key):
     for s in l:
         a = s.split()
         if len(a) == 2 and a[0] == key and a[1]:
             return True
     return False
-def chk_key(l,key):
+def chk_key(l, key):
     for s in l:
         a = s.split()
         if len(a) >= 1 and a[0] == key:
@@ -51,12 +51,12 @@ def validate_template(l):
         common_err("invalid template: missing '%required' or '%optional'")
         return False
     return True
-def fix_tmpl_refs(l,id,pfx):
+def fix_tmpl_refs(l, id, pfx):
     for i in range(len(l)):
-        l[i] = l[i].replace(id,pfx)
-def fix_tmpl_refs_re(l,regex,repl):
+        l[i] = l[i].replace(id, pfx)
+def fix_tmpl_refs_re(l, regex, repl):
     for i in range(len(l)):
-        l[i] = re.sub(regex,repl,l[i])
+        l[i] = re.sub(regex, repl, l[i])
 class LoadTemplate(object):
     '''
     Load a template and its dependencies, generate a
@@ -71,16 +71,16 @@ class LoadTemplate(object):
 # unlike those following '%optional'.
 # You may also add comments for future reference.'''
     no_more_edit = '''# Don't edit anything below this line.'''
-    def __init__(self,name):
+    def __init__(self, name):
         self.name = name
         self.all_pre_gen = []
         self.all_post_gen = []
         self.all_pfx = []
-    def new_pfx(self,name):
+    def new_pfx(self, name):
         i = 1
         pfx = name
         while pfx in self.all_pfx:
-            pfx = "%s_%d" % (name,i)
+            pfx = "%s_%d" % (name, i)
             i += 1
         self.all_pfx.append(pfx)
         return pfx
@@ -95,19 +95,19 @@ class LoadTemplate(object):
             '', \
             '%generate', \
             '\n'.join(self.all_post_gen)])
-    def write_config(self,name):
+    def write_config(self, name):
         try:
-            f = open("%s/%s" % (vars.tmpl_conf_dir, name),"w")
-        except IOError,msg:
+            f = open("%s/%s" % (vars.tmpl_conf_dir, name), "w")
+        except IOError, msg:
             common_err("open: %s"%msg)
             return False
         print >>f, self.generate()
         f.close()
         return True
-    def load_template(self,tmpl):
+    def load_template(self, tmpl):
         try:
             f = open("%s/%s" % (vars.tmpl_dir, tmpl))
-        except IOError,msg:
+        except IOError, msg:
             common_err("open: %s"%msg)
             return ''
         l = (''.join(f)).split('\n')
@@ -127,7 +127,7 @@ class LoadTemplate(object):
                 tmpl_id = a[1]
                 tmpl_pfx = self.load_template(a[1])
                 if tmpl_pfx:
-                    fix_tmpl_refs(post_gen,'%'+tmpl_id,'%'+tmpl_pfx)
+                    fix_tmpl_refs(post_gen, '%'+tmpl_id, '%'+tmpl_pfx)
         pfx = self.new_pfx(name)
         fix_tmpl_refs(post_gen, '%_:', '%'+pfx+':')
         # replace remaining %_, it may be useful at times
@@ -146,6 +146,7 @@ class LoadTemplate(object):
         # process %if ... [%else] ... %fi
         rmidx_l = []
         if_seq = False
+        outcome = False # unnecessary, but to appease lints
         for i in range(len(self.all_post_gen)):
             s = self.all_post_gen[i]
             if if_seq:

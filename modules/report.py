@@ -42,17 +42,17 @@ except:
 # coloured nicely!)
 #
 
-def mk_re_list(patt_l,repl):
+def mk_re_list(patt_l, repl):
     'Build a list of regular expressions, replace "%%" with repl'
     l = []
     for re_l in patt_l:
-        l += [ x.replace("%%",repl) for x in re_l ]
+        l += [ x.replace("%%", repl) for x in re_l ]
     if not repl:
         l = [ x.replace(".*.*",".*") for x in l ]
     return l
 
 
-def set_year(ts = None):
+def set_year(ts=None):
     global YEAR
     YEAR = time.strftime("%Y", time.localtime(ts))
     common_debug("setting year to %s (ts: %s)" % (YEAR, str(ts)))
@@ -94,14 +94,14 @@ def seek_to_edge(f, ts, to_end):
             break
     f.seek(pos)
 
-def log_seek(f, ts, to_end = False):
+def log_seek(f, ts, to_end=False):
     '''
     f is an open log. Do binary search for the timestamp.
     Return the position of the (more or less) first line with an
     earlier (or later) time.
     '''
     first = 0
-    f.seek(0,2)
+    f.seek(0, 2)
     last = f.tell()
     if not ts:
         return to_end and last or first
@@ -221,8 +221,8 @@ class LogSyslog(object):
                 self.f[log] = gzip.open(log)
             else:
                 self.f[log] = open(log)
-        except IOError,msg:
-            common_err("open %s: %s"%(log,msg))
+        except IOError, msg:
+            common_err("open %s: %s"%(log, msg))
     def open_logs(self):
         if self.central_log:
             common_debug("opening central log %s" % self.central_log)
@@ -265,8 +265,8 @@ class LogSyslog(object):
             fpos = f.tell()
             s = f.readline().rstrip()
             if not patt or patt.search(s):
-                return s,fpos
-        return '',-1
+                return s, fpos
+        return '', -1
     def single_log_list(self, f, patt):
         l = []
         while True:
@@ -275,7 +275,7 @@ class LogSyslog(object):
                 return l
             l.append(s)
         return l
-    def search_logs(self, log_l, re_s = ''):
+    def search_logs(self, log_l, re_s=''):
         '''
         Search logs for re_s and sort by time.
         '''
@@ -302,13 +302,13 @@ class LogSyslog(object):
         # remove files with no matches found
         rm_idx_l.reverse()
         for i in rm_idx_l:
-            del fl[i],top_line[i]
+            del fl[i], top_line[i]
         common_debug("search <%s> in %s" % (re_s, [ f.name for f in fl ]))
         if len(fl) == 0: # nothing matched ?
             return []
         if len(fl) == 1:
             # no need to merge if there's only one log
-            return [top_line[0]] + self.single_log_list(fl[0],patt)
+            return [top_line[0]] + self.single_log_list(fl[0], patt)
         # search through multiple logs, merge sorted by time
         l = []
         first = 0
@@ -329,7 +329,7 @@ class LogSyslog(object):
             else:
                 top_line_ts[first] = syslog_ts(top_line[first])
         return l
-    def get_matches(self, re_l, log_l = None):
+    def get_matches(self, re_l, log_l=None):
         '''
         Return a list of log messages which
         match one of the regexes in re_l.
@@ -352,7 +352,7 @@ def human_date(dt):
     if not dt:
         dt = datetime.datetime.now()
     # drop microseconds
-    return re.sub("[.].*","","%s %s" % (dt.date(),dt.time()))
+    return re.sub("[.].*", "", "%s %s" % (dt.date(), dt.time()))
 
 def is_log(p):
     return os.path.isfile(p) and os.path.getsize(p) > 0
@@ -367,11 +367,11 @@ def read_log_info(log):
     'Read <log>.info and return logfile and next pos'
     s = file2str("%s.info" % log)
     try:
-        logf,pos = s.split()
+        logf, pos = s.split()
         return logf, int(pos)
     except:
         warn_once("hb_report too old, you need to update cluster-glue")
-        return '',-1
+        return '', -1
 
 def update_loginfo(rptlog, logfile, oldpos, appended_file):
     'Update <log>.info with new next pos'
@@ -561,7 +561,7 @@ class Report(Singleton):
         '''
         bfname = os.path.basename(tarball)
         parentdir = os.path.dirname(tarball)
-        common_debug("tarball: %s, in dir: %s" % (bfname,parentdir))
+        common_debug("tarball: %s, in dir: %s" % (bfname, parentdir))
         if bfname.endswith(".tar.bz2"):
             loc = tarball.replace(".tar.bz2","")
             tar_unpack_option = "j"
@@ -578,7 +578,7 @@ class Report(Singleton):
         if parentdir:
             try:
                 os.chdir(parentdir)
-            except OSError,msg:
+            except OSError, msg:
                 self.error(msg)
                 return None
         import tarfile
@@ -586,13 +586,13 @@ class Report(Singleton):
             tf = tarfile.open(bfname)
             tf_loc = tf.getmembers()[0].name
             if tf_loc != loc:
-                common_debug("top directory in tarball: %s, doesn't match the tarball name: %s" % (tf_loc,loc))
+                common_debug("top directory in tarball: %s, doesn't match the tarball name: %s" % (tf_loc, loc))
                 loc = os.path.join(os.path.dirname(loc), tf_loc)
         except Exception, msg:
             common_err("%s: %s" % (tarball, msg))
             return None
-        common_debug("tar -x%s < %s" % (tar_unpack_option,bfname))
-        rc = pipe_cmd_nosudo("tar -x%s < %s" % (tar_unpack_option,bfname))
+        common_debug("tar -x%s < %s" % (tar_unpack_option, bfname))
+        rc = pipe_cmd_nosudo("tar -x%s < %s" % (tar_unpack_option, bfname))
         if self.source == "live":
             os.remove(bfname)
         os.chdir(cwd)
@@ -695,11 +695,11 @@ class Report(Singleton):
         '''
         if not os.path.isdir(self.outdir):
             return
-        for node,rptlog,logfile,nextpos in a:
-            fl = glob.glob("%s/*%s*" % (self.outdir,node))
+        for node, rptlog, logfile, nextpos in a:
+            fl = glob.glob("%s/*%s*" % (self.outdir, node))
             if not fl:
                 continue
-            append_file(rptlog,fl[0])
+            append_file(rptlog, fl[0])
             update_loginfo(rptlog, logfile, nextpos, fl[0])
     def unpack_new_peinputs(self, node, pe_l):
         '''
@@ -707,11 +707,11 @@ class Report(Singleton):
         '''
         if not os.path.isdir(self.outdir):
             return
-        fl = glob.glob("%s/*%s*" % (self.outdir,node))
+        fl = glob.glob("%s/*%s*" % (self.outdir, node))
         if not fl:
             return -1
         u_dir = os.path.join(self.loc, node)
-        return pipe_cmd_nosudo("tar -C %s -x < %s" % (u_dir,fl[0]))
+        return pipe_cmd_nosudo("tar -C %s -x < %s" % (u_dir, fl[0]))
     def read_new_log(self, node):
         '''
         Get a list of log lines.
@@ -719,12 +719,12 @@ class Report(Singleton):
         '''
         if not os.path.isdir(self.outdir):
             return []
-        fl = glob.glob("%s/*%s*" % (self.outdir,node))
+        fl = glob.glob("%s/*%s*" % (self.outdir, node))
         if not fl:
             return []
         try:
             f = open(fl[0])
-        except IOError,msg:
+        except IOError, msg:
             common_err("open %s: %s" % (fl[0], msg))
             return []
         return f.readlines()
@@ -767,7 +767,7 @@ class Report(Singleton):
             return rc1
         rc2 = next_peinputs(node_pe_l, self.outdir, self.errdir)
         unpack_rc = 0
-        for node,pe_l in node_pe_l:
+        for node, pe_l in node_pe_l:
             unpack_rc |= self.unpack_new_peinputs(node, pe_l)
         rc2 |= (unpack_rc == 0)
         rmdir_r(self.outdir)
@@ -831,17 +831,17 @@ class Report(Singleton):
                 return None
         self.last_live_update = time.time()
         return self.unpack_report(tarball)
-    def set_source(self,src):
+    def set_source(self, src):
         'Set our source.'
         if self.source != src:
             self.set_change_origin(CH_SRC)
             self.source = src
             self.ready = False
-    def set_period(self,from_dt,to_dt):
+    def set_period(self, from_dt, to_dt):
         '''
         Set from/to_dt.
         '''
-        common_debug("setting report times: <%s> - <%s>" % (from_dt,to_dt))
+        common_debug("setting report times: <%s> - <%s>" % (from_dt, to_dt))
         need_refresh = (self.source == "live") and self.ready and \
             (from_dt and self.get_rpt_dt(None, "top") > from_dt)
         self.from_dt = from_dt
@@ -853,12 +853,12 @@ class Report(Singleton):
             self.set_change_origin(CH_TIME)
             self.report_setup()
         return True
-    def set_detail(self,detail_lvl):
+    def set_detail(self, detail_lvl):
         '''
         Set the detail level.
         '''
         self.detail = int(detail_lvl)
-    def set_nodes(self,*args):
+    def set_nodes(self, *args):
         '''
         Allow user to set the node list (necessary if the host is
         not part of the cluster).
@@ -922,7 +922,7 @@ class Report(Singleton):
         else:
             re_s = '|'.join(trans_re_l)
             return [x for x in msg_l if re.search(re_s, x)]
-    def list_transitions(self, msg_l = None, future_pe = False):
+    def list_transitions(self, msg_l=None, future_pe=False):
         '''
         List transitions by reading logs.
         Empty transitions are skipped.
@@ -1014,7 +1014,7 @@ class Report(Singleton):
         self.loc = self.manage_live_report(force=force)
         self.report_setup()
         return self.ready
-    def get_patt_l(self,type):
+    def get_patt_l(self, type):
         '''
         get the list of patterns for this type, up to and
         including current detail level
@@ -1030,7 +1030,7 @@ class Report(Singleton):
             common_error("%s not featured in log patterns" % type)
             return None
         return log_patterns[type][0:self.detail+1]
-    def build_re(self,type,args):
+    def build_re(self, type, args):
         '''
         Prepare a regex string for the type and args.
         For instance, "resource" and rsc1, rsc2, ...
@@ -1041,16 +1041,16 @@ class Report(Singleton):
         if not args:
             re_l = mk_re_list(patt_l,"")
         else:
-            re_l = mk_re_list(patt_l,r'(%s)' % "|".join(args))
+            re_l = mk_re_list(patt_l, r'(%s)' % "|".join(args))
         return re_l
     def _str_nodecolor(self, node, s):
         try: clr = self.nodecolor[node]
         except: return s
         try:
-            return "${%s}%s${NORMAL}" % (clr,s)
+            return "${%s}%s${NORMAL}" % (clr, s)
         except:
             s = s.replace("${","$.{")
-            return "${%s}%s${NORMAL}" % (clr,s)
+            return "${%s}%s${NORMAL}" % (clr, s)
     def disp(self, s):
         'color output'
         a = s.split()
@@ -1066,7 +1066,7 @@ class Report(Singleton):
         if self.log_filter_out_re:
             l = [x for x in l if not self.match_filter_out(x)]
         page_string('\n'.join([ self.disp(x) for x in l ]))
-    def show_logs(self, log_l = None, re_l = []):
+    def show_logs(self, log_l=None, re_l=[]):
         '''
         Print log lines, either matched by re_l or all.
         '''
@@ -1078,11 +1078,11 @@ class Report(Singleton):
         self.display_logs(self.logobj.get_matches(re_l, log_l))
     def get_source(self):
         return self.source
-    def get_desc_line(self,fld):
+    def get_desc_line(self, fld):
         try:
             f = open(self.desc)
-        except IOError,msg:
-            common_err("open %s: %s"%(self.desc,msg))
+        except IOError, msg:
+            common_err("open %s: %s"%(self.desc, msg))
             return
         for s in f:
             if s.startswith("%s: " % fld):
@@ -1178,7 +1178,7 @@ class Report(Singleton):
             self.events()
         self.logobj.set_log_timeframe(self.from_dt, self.to_dt)
         return True
-    def resource(self,*args):
+    def resource(self, *args):
         '''
         Show resource relevant logs.
         '''
@@ -1203,17 +1203,17 @@ class Report(Singleton):
         if not rsc_re_l:
             return False
         self.show_logs(re_l = rsc_re_l)
-    def node(self,*args):
+    def node(self, *args):
         '''
         Show node relevant logs.
         '''
         if not self.prepare_source(no_live_update=self.prevent_live_update()):
             return False
-        node_re_l = self.build_re("node",args)
+        node_re_l = self.build_re("node", args)
         if not node_re_l:
             return False
         self.show_logs(re_l = node_re_l)
-    def log(self,*args):
+    def log(self, *args):
         '''
         Show logs for a node or all nodes.
         '''
@@ -1250,17 +1250,17 @@ class Report(Singleton):
     def pelist(self, a=None, long=False):
         if not self.prepare_source(no_live_update=self.prevent_live_update()):
             return []
-        if isinstance(a,(tuple,list)):
+        if isinstance(a,(tuple, list)):
             if len(a) == 1:
                 a.append(a[0])
         elif a is not None:
-            a = [a,a]
+            a = [a, a]
         l = [ long and self.pe_detail_format(x) or self.pe_report_path(x)
             for x in self.peinputs_l if pe_file_in_range(x.pe_file, a) ]
         if long:
             l = [self.pe_details_header, self.pe_details_separator] + l
         return l
-    def dotlist(self, a = None):
+    def dotlist(self, a=None):
         l = [x.replace("bz2","dot") for x in self.pelist(a)]
         return [x for x in l if os.path.isfile(x)]
     def find_pe_files(self, path):
@@ -1403,7 +1403,7 @@ class Report(Singleton):
                 regex = re.compile(arg)
                 self.log_filter_out.append(arg)
                 self.log_filter_out_re.append(regex)
-            except Exception,msg:
+            except Exception, msg:
                 common_err("bad regex %s: %s" % (arg, msg))
                 rc = False
         elif cmd == "save" and self.log_filter_out:
