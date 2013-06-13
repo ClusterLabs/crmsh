@@ -895,12 +895,16 @@ def new_cib():
     return cib_elem
 def get_topnode(cib_elem, tag):
     "Get configuration element or create/append if there's none."
+    conf_elem = cib_elem.find("configuration")
+    if conf_elem is None:
+        common_err("no configuration element found!")
+        return None
+    if tag == "configuration":
+        return conf_elem
     e = cib_elem.find("configuration/%s" % tag)
     if e is None:
-        conf_elem = cib_elem.find("configuration")
-        if conf_elem is not None:
-            common_debug("create configuration section %s" % tag)
-            e = etree.SubElement(conf_elem, tag)
+        common_debug("create configuration section %s" % tag)
+        e = etree.SubElement(conf_elem, tag)
     return e
 def new_cib_element(e,tagname,id_pfx):
     base_id = e.get("id")
@@ -937,7 +941,7 @@ def get_set_nodes(e,setname,create = 0):
 
 def xml_noorder_hash(n):
     return sorted([ hash(etree.tostring(x)) \
-        for x in n.iterchildren() if is_element(c) ])
+        for x in n.iterchildren() if is_element(x) ])
 xml_hash_d = {
     "fencing-topology": xml_noorder_hash,
 }

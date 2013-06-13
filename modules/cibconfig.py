@@ -520,6 +520,8 @@ class CibObjectSetRaw(CibObjectSet):
         cli_display.set_no_pretty()
         rc = pipe_string(cib_verify,self.repr(format = -1))
         cli_display.reset_no_pretty()
+        if rc not in (0,1):
+            common_debug(self.repr())
         return rc in (0,1)
     def ptest(self, nograph, scores, utilization, actions, verbosity):
         if not cib_factory.is_cib_sane():
@@ -1755,7 +1757,7 @@ class CibFencingOrder(CibObject):
         for target in dd.keys():
             devs_s = ' '.join(dd[target])
             d2[devs_s] = 1
-        if len(d2) == 1:
+        if len(d2) == 1 and len(d) == len(listnodes()):
             return "%s %s" % (s,devs_s)
         return cli_format([s,] + \
             ["%s: %s" % (x, ' '.join(dd[x])) for x in dd.keys()], format)
@@ -1794,7 +1796,7 @@ class CibFencingOrder(CibObject):
         '''
         Targets are nodes and resource are stonith resources.
         '''
-        if not self.node:  # eh?
+        if self.node is None:  # eh?
             common_err("%s: no xml (strange)" % self.obj_id)
             return user_prefs.get_check_rc()
         rc = 0
