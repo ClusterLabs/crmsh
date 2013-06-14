@@ -18,6 +18,14 @@ Features
 
 	- this feature needs very careful consideration
 
+Misc
+
+. Create a web page
+
+	- there's already space at crmsh.nongnu.org
+
+	- preferred to be based on asciidoc or similar
+
 Code improvements
 
 These are some thoughts on how to improve maintainability and
