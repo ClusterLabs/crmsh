@@ -1041,7 +1041,7 @@ class Report(Singleton):
         if not args:
             re_l = mk_re_list(patt_l,"")
         else:
-            re_l = mk_re_list(patt_l, r'(%s)' % "|".join(args))
+            re_l = mk_re_list(patt_l, r'(?:%s)' % "|".join(args))
         return re_l
     def _str_nodecolor(self, node, s):
         try: clr = self.nodecolor[node]
