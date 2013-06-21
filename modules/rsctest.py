@@ -37,7 +37,7 @@ class RADriver(object):
     def __init__(self, rsc_node, node_l):
         from tempfile import mkdtemp
         self.rscdef_node = rsc_node
-        if rsc_node:
+        if rsc_node is not None:
             self.ra_class = rsc_node.get("class")
             self.ra_type = rsc_node.get("type")
             self.ra_provider = rsc_node.get("provider")

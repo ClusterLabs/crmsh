@@ -910,11 +910,11 @@ class CibObject(object):
         cli_list = mk_cli_list(cli)
         if not cli_list:
             return None
-        if not oldnode:
+        if oldnode is None:
             oldnode = self._get_oldnode()
         comments = get_comments(cli_list)
         node = self._cli_list2node(cli_list, oldnode)
-        if comments and node:
+        if comments and node is not None:
             stuff_comments(node, comments)
         return node
     def _cli_format_and_comment(self, l, comments, format):
@@ -1182,7 +1182,7 @@ class Op(object):
         self.node = node
         self.attr_d = odict()
         self.attr_d["name"] = op_name
-        if self.node:
+        if self.node is not None:
             self.xml2dict()
     def set_attr(self, n, v):
         self.attr_d[n] = v
@@ -1206,7 +1206,7 @@ class Op(object):
             self.set_attr(n, v)
     def mkxml(self):
         # create an xml node
-        if self.node:
+        if self.node is not None:
             if self.node.getparent() is not None:
                 self.node.getparent().remove(self.node)
             id_store.remove_xml(self.node)
@@ -1293,7 +1293,7 @@ class CibPrimitive(CibObject):
         # create an xml node
         op_node = mkxmlnode(head, None, self.obj_id)
         self._append_op(op_node)
-        if comments and self.node:
+        if comments and self.node is not None:
             stuff_comments(self.node, comments)
         # the resource is updated
         self.updated = True
@@ -1488,7 +1488,7 @@ class CibLocation(CibObject):
         s = "%s %s %s" % (s, id, rsc)
         pref_node = self.node.get("node")
         score = cli_display.score(get_score(self.node))
-        if pref_node:
+        if pref_node is not None:
             return "%s %s: %s" % (s, score, pref_node)
         else:
             return s
@@ -1540,7 +1540,7 @@ class CibLocation(CibObject):
         What to do with the location constraint?
         '''
         pref_node = self.node.get("node")
-        if pref_node:
+        if pref_node is not None:
             score_n = self.node
             # otherwise, it's too complex to render
         elif is_pref_location(self.node):
@@ -2311,7 +2311,7 @@ class CibFactory(Singleton):
                 rc = False
                 continue
             r_node = reduce_primitive(obj.node)
-            if not r_node:
+            if r_node is None:
                 # cannot do anything without template defined
                 common_warn("template for %s not defined" % obj_id)
                 rc = False
@@ -2567,7 +2567,7 @@ class CibFactory(Singleton):
             self.cib_objects.append(obj)
         for n, v in head_pl[1]:
             set_nvpair(obj.node, n, v)
-        if comments and obj.node:
+        if comments and obj.node is not None:
             stuff_comments(obj.node, comments)
         obj.updated = True
         return obj
@@ -2767,7 +2767,7 @@ class CibFactory(Singleton):
         return obj
     def create_from_node(self, node):
         'Create a new cib object from a document node.'
-        if not node:
+        if node is None:
             return None
         try:
             obj_type = cib_object_map[node.tag][0]
@@ -2775,7 +2775,7 @@ class CibFactory(Singleton):
             return None
         if is_defaults(node):
             node = get_rscop_defaults_meta_node(node)
-            if not node:
+            if node is None:
                 return None
         obj = self.new_object(obj_type, node.get("id"))
         if not obj:

@@ -279,7 +279,7 @@ class CibStatus(Singleton):
             common_err("unknown state %s" % state)
             return False
         node_node = get_tag_by_id(self.status_node, "node_state", node)
-        if not node_node:
+        if node_node is None:
             common_info("node %s created" % node)
             return False
         rc = self.inject("%s %s" % (self.node_ops[state], node))

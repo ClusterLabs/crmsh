@@ -389,7 +389,7 @@ class CibShadow(UserInterface):
             return True
         saved_cib = vars.cib_in_use
         self._use(name, '') # don't load the status yet
-        if not cib_factory.is_current_cib_equal(silent = True):
+        if not cib_factory.is_current_cib_equal(silent=True):
             # user made changes and now wants to switch to a
             # different and unequal CIB; we refuse to cooperate
             common_err("the requested CIB is different from the current one")
@@ -1046,10 +1046,10 @@ class RscMgmt(UserInterface):
         if op == "probe":
             op = "monitor"
         op_node = find_operation(rsc.node, op, interval)
-        if not op_node and crm_msec(interval) != 0:
+        if op_node is None and crm_msec(interval) != 0:
             common_err("not allowed to create non-0 interval operation %s" % op)
             return False
-        if not op_node:
+        if op_node is None:
             head_pl = ["op", []]
             head_pl[1].append(["name", op])
             head_pl[1].append(["interval", interval])
@@ -1078,7 +1078,7 @@ class RscMgmt(UserInterface):
         if op == "probe":
             op = "monitor"
         op_node = find_operation(rsc.node, op, interval)
-        if not op_node:
+        if op_node is None:
             common_err("operation %s does not exist in %s" % (op, rsc.obj_id))
             return False
         op_node = rsc.del_op_attr(op_node, vars.trace_ra_attr)
