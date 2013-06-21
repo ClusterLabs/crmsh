@@ -410,6 +410,7 @@ def run():
         cProfile.run('main.do_work()', options.profile)
         print "python -c 'import pstats; s = pstats.Stats(\"%s\"); s.sort_stats(\"cumulative\").print_stats()' | less" % options.profile
 
-    do_work()
+    else:
+        do_work()
 
 # vim:ts=4:sw=4:et:
