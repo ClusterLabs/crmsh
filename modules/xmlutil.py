@@ -866,7 +866,7 @@ def is_pref_location(node):
 
 def get_rsc_ref_ids(node):
     return [x.get("id") \
-        for x in node.xpath("resource_set/resource_ref")]
+        for x in node.xpath("./resource_ref")]
 def get_rsc_children_ids(node):
     return [x.get("id") \
         for x in node.iterchildren() if is_child_rsc(x)]
