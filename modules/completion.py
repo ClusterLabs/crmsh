@@ -84,18 +84,18 @@ def shadows_live_list(idx, delimiter=False):
 def rsc_list(idx, delimiter=False):
     if delimiter:
         return ' '
-    doc = resources_xml()
-    if not doc:
+    cib_el = resources_xml()
+    if cib_el is None:
         return []
-    nodes = get_interesting_nodes(doc, [])
+    nodes = get_interesting_nodes(cib_el, [])
     return [x.get("id") for x in nodes if is_resource(x)]
 def rsc_prim_list(idx, delimiter=False):
     if delimiter:
         return ' '
-    doc = resources_xml()
-    if not doc:
+    cib_el = resources_xml()
+    if cib_el is None:
         return []
-    nodes = get_interesting_nodes(doc, [])
+    nodes = get_interesting_nodes(cib_el, [])
     return [x.get("id") for x in nodes if is_primitive(x)]
 def null_list(idx, delimiter=False):
     if delimiter:
