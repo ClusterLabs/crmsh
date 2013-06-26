@@ -264,6 +264,8 @@ class LogSyslog(object):
         while f.tell() < self.endpos[f]:
             fpos = f.tell()
             s = f.readline().rstrip()
+            if not s:
+                continue
             if not patt or patt.search(s):
                 return s, fpos
         return '', -1
