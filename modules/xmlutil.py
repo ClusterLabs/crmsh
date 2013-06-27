@@ -495,12 +495,12 @@ def add_comment(e, s):
     if e is None or not s:
         return
     comm_elem = etree.Comment(s)
-    firstelem = None
+    firstelem_idx = 0
     for c in e.iterchildren():
         if is_element(c):
-            firstelem = e.index(c)
+            firstelem_idx = e.index(c)
             break
-    e.insert(firstelem, comm_elem)
+    e.insert(firstelem_idx, comm_elem)
 def stuff_comments(node, comments):
     for s in comments:
         add_comment(node, s)
