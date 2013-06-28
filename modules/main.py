@@ -291,6 +291,15 @@ def compatibility_setup():
         vars.node_type_opt = True
         vars.attr_defaults["node"] = {"type": "normal"}
         vars.cib_no_section_rc = 6
+    # see the configure ptest/simulate command
+    if not is_program("ptest"):
+        vars.simulate_programs["ptest"] = "crm_simulate"
+    if not is_program("crm_simulate"):
+        vars.simulate_programs["simulate"] = "ptest"
+    if not (is_program("ptest") or is_program("crm_simulate")):
+        common_warn("neither ptest nor crm_simulate exist, check your installation")
+        vars.simulate_programs["ptest"] = ""
+        vars.simulate_programs["simulate"] = ""
 
 def do_work():
     global user_args

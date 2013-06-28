@@ -2333,14 +2333,15 @@ Usage:
 ...............
 
 [[cmdhelp_configure_ptest,show cluster actions if changes were committed]]
-==== `ptest`
+==== `ptest` (`simulate`)
 
-Show PE (Policy Engine) motions using `ptest(8)`.
+Show PE (Policy Engine) motions using `ptest(8)` or
+`crm_simulate(8)`.
 
 A CIB is constructed using the current user edited configuration
 and the status from the running CIB. The resulting CIB is run
-through `ptest` to show changes which would happen if the
-configuration is committed.
+through `ptest` (or `crm_simulate`) to show changes which would
+happen if the configuration is committed.
 
 The status section may be loaded from another source and modified
 using the <<cmdhelp_cibstatus,`cibstatus`>> level commands. In that case, the
@@ -2357,6 +2358,10 @@ can also show allocation scores. `utilization` turns on
 information about the remaining capacity of nodes. With the
 `actions` option, `ptest` will print all resource actions.
 
+The `ptest` program has been replaced by `crm_simulate` in newer
+Pacemaker versions. In some installations both could be
+installed. Use `simulate` to enfore using `crm_simulate`.
+
 Usage:
 ...............
         ptest [nograph] [v...] [scores] [actions] [utilization]
@@ -2365,6 +2370,7 @@ Examples:
 ...............
         ptest scores
         ptest vvvvv
+        simulate actions
 ...............
 
 [[cmdhelp_configure_rsctest,test resources as currently configured]]

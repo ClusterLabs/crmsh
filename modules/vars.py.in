@@ -286,6 +286,11 @@ class Vars(Singleton):
     ha_varlib_dir = "@HA_VARLIBHBDIR@"
     nagios_dir = "/usr/lib/nagios/plugins"
 
+    simulate_programs = {
+        "ptest": "ptest",
+        "simulate": "crm_simulate",
+    }
+
     ra_if = None # class interface to RA
     stonithd_metadata = None # stonithd meta data
     pe_metadata = None # PE meta data

@@ -1570,6 +1570,7 @@ class CibConfig(UserInterface):
         self.cmd_aliases.update({
             "colocation": ("collocation",),
             "ms": ("master",),
+            "ptest": ("simulate",),
         })
         setup_aliases(self)
         # for interactive use, we want to populate the CIB
@@ -1749,6 +1750,12 @@ class CibConfig(UserInterface):
     def ptest(self, cmd, *args):
         "usage: ptest [nograph] [v...] [scores] [utilization] [actions]"
         if not cib_factory.is_cib_sane():
+            return False
+        # use ptest/crm_simulate depending on which command was
+        # used
+        user_prefs.ptest = vars.simulate_programs[cmd]
+        if not user_prefs.ptest:
+            common_warn("neither ptest nor crm_simulate exist")
             return False
         set_obj = mkset_obj("xml")
         return ptestlike(set_obj.ptest, 'vv', cmd, args)
