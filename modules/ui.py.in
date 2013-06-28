@@ -1094,6 +1094,8 @@ def print_node(uname, id, node_type, other, inst_attr, offline):
         attr2: v2
     """
     s_offline = offline and "(offline)" or ""
+    if not node_type:
+        node_type = "normal"
     if uname == id:
         print "%s: %s%s" % (uname, node_type, s_offline)
     else:
