@@ -457,6 +457,9 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     '''
     actions_filter = "grep LogActions: | grep -vw Leave"
     ptest = "2>&1 %s -x -" % user_prefs.ptest
+    if re.search("simulate", ptest) and \
+            not re.search("-[RS]", ptest):
+        ptest = "%s -S" % ptest
     if verbosity:
         if actions:
             verbosity = 'v' * max(3, len(verbosity))
@@ -474,12 +477,9 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     if actions:
         ptest = "%s | %s" % (ptest, actions_filter)
     common_debug("invoke: %s" % ptest)
-    rc, s = get_stdout(ptest, input_s = graph_s)
+    rc, s = get_stdout(ptest, input_s=graph_s)
     if rc != 0:
         common_warn("%s exited with %d" % (ptest, rc))
-    else:
-        print s
-    #page_string(get_stdout(ptest, input_s = graph_s))
     if dotfile:
         if os.path.getsize(dotfile) > 0:
             show_dot_graph(dotfile)
@@ -489,6 +489,9 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     else:
         if not nograph:
             common_info("install graphviz to see a transition graph")
+    if s:
+        page_string(s)
+    #page_string(get_stdout(ptest, input_s = graph_s))
     return True
 
 def is_id_valid(id):
