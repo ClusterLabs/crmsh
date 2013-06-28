@@ -26,6 +26,10 @@ state (string, [/var/run//Dummy-{OCF_RESOURCE_INSTANCE}.state]): State file
 fake (string, [dummy]): 
     Fake attribute that can be changed to cause a reload
 
+op_sleep (string, [0]): Operation sleep duration in seconds.
+    Number of seconds to sleep during operations.  This can be used to test how
+    the cluster reacts to operation timeouts.
+
 Operations' defaults (advisory minimum):
 
     start         timeout=20
@@ -53,10 +57,10 @@ livedangerously (enum): Live Dangerously!!
     setting this parameter to yes makes it an even worse idea.
     Viva la Vida Loca!
 
-stonith-timeout (time, [60s]): How long to wait for the STONITH action to complete.
+stonith-timeout (time, [60s]): How long to wait for the STONITH action to complete per a stonith device.
     Overrides the stonith-timeout cluster property
 
-priority (integer, [0]): The priority of the stonith resource. The lower the number, the higher the priority.
+priority (integer, [0]): The priority of the stonith resource. Devices are tried in order of highest priority to lowest.
 pcmk_host_argument (string, [port]): Advanced use only: An alternate parameter to supply instead of 'port'
     Some devices do not support the standard 'port' parameter or may provide additional ones.
     Use this to specify an alternate, device-specific, parameter that should indicate the machine to be fenced.
@@ -73,21 +77,56 @@ pcmk_reboot_action (string, [reboot]): Advanced use only: An alternate command t
     Some devices do not support the standard commands or may provide additional ones.
     Use this to specify an alternate, device-specific, command that implements the 'reboot' action.
 
-pcmk_poweroff_action (string, [poweroff]): Advanced use only: An alternate command to run instead of 'poweroff'
+pcmk_reboot_timeout (time, [60s]): Advanced use only: Specify an alternate timeout to use for reboot actions instead of stonith-timeout
+    Some devices need much more/less time to complete than normal.
+    Use this to specify an alternate, device-specific, timeout for 'reboot' actions.
+
+pcmk_reboot_retries (integer, [2]): Advanced use only: The maximum number of times to retry the 'reboot' command within the timeout period
+    Some devices do not support multiple connections. Operations may 'fail' if the device is busy with another task so Pacemaker will automatically retry the operation, if there is time remaining. Use this option to alter the number of times Pacemaker retries 'reboot' actions before giving up.
+
+pcmk_off_action (string, [off]): Advanced use only: An alternate command to run instead of 'off'
     Some devices do not support the standard commands or may provide additional ones.
-    Use this to specify an alternate, device-specific, command that implements the 'poweroff' action.
+    Use this to specify an alternate, device-specific, command that implements the 'off' action.
+
+pcmk_off_timeout (time, [60s]): Advanced use only: Specify an alternate timeout to use for off actions instead of stonith-timeout
+    Some devices need much more/less time to complete than normal.
+    Use this to specify an alternate, device-specific, timeout for 'off' actions.
+
+pcmk_off_retries (integer, [2]): Advanced use only: The maximum number of times to retry the 'off' command within the timeout period
+    Some devices do not support multiple connections. Operations may 'fail' if the device is busy with another task so Pacemaker will automatically retry the operation, if there is time remaining. Use this option to alter the number of times Pacemaker retries 'off' actions before giving up.
 
 pcmk_list_action (string, [list]): Advanced use only: An alternate command to run instead of 'list'
     Some devices do not support the standard commands or may provide additional ones.
     Use this to specify an alternate, device-specific, command that implements the 'list' action.
 
+pcmk_list_timeout (time, [60s]): Advanced use only: Specify an alternate timeout to use for list actions instead of stonith-timeout
+    Some devices need much more/less time to complete than normal.
+    Use this to specify an alternate, device-specific, timeout for 'list' actions.
+
+pcmk_list_retries (integer, [2]): Advanced use only: The maximum number of times to retry the 'list' command within the timeout period
+    Some devices do not support multiple connections. Operations may 'fail' if the device is busy with another task so Pacemaker will automatically retry the operation, if there is time remaining. Use this option to alter the number of times Pacemaker retries 'list' actions before giving up.
+
 pcmk_monitor_action (string, [monitor]): Advanced use only: An alternate command to run instead of 'monitor'
     Some devices do not support the standard commands or may provide additional ones.
     Use this to specify an alternate, device-specific, command that implements the 'monitor' action.
 
+pcmk_monitor_timeout (time, [60s]): Advanced use only: Specify an alternate timeout to use for monitor actions instead of stonith-timeout
+    Some devices need much more/less time to complete than normal.
+    Use this to specify an alternate, device-specific, timeout for 'monitor' actions.
+
+pcmk_monitor_retries (integer, [2]): Advanced use only: The maximum number of times to retry the 'monitor' command within the timeout period
+    Some devices do not support multiple connections. Operations may 'fail' if the device is busy with another task so Pacemaker will automatically retry the operation, if there is time remaining. Use this option to alter the number of times Pacemaker retries 'monitor' actions before giving up.
+
 pcmk_status_action (string, [status]): Advanced use only: An alternate command to run instead of 'status'
     Some devices do not support the standard commands or may provide additional ones.
     Use this to specify an alternate, device-specific, command that implements the 'status' action.
+
+pcmk_status_timeout (time, [60s]): Advanced use only: Specify an alternate timeout to use for status actions instead of stonith-timeout
+    Some devices need much more/less time to complete than normal.
+    Use this to specify an alternate, device-specific, timeout for 'status' actions.
+
+pcmk_status_retries (integer, [2]): Advanced use only: The maximum number of times to retry the 'status' command within the timeout period
+    Some devices do not support multiple connections. Operations may 'fail' if the device is busy with another task so Pacemaker will automatically retry the operation, if there is time remaining. Use this option to alter the number of times Pacemaker retries 'status' actions before giving up.
 
 Operations' defaults (advisory minimum):
 

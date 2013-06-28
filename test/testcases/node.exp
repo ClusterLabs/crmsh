@@ -13,7 +13,7 @@ node1: normal
   <configuration>
     <crm_config/>
     <nodes>
-      <node uname="node1" id="node1" type="normal">
+      <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
           <nvpair id="nodes-node1-standby" name="standby" value="on"/>
         </instance_attributes>
@@ -34,7 +34,7 @@ node1: normal
   <configuration>
     <crm_config/>
     <nodes>
-      <node uname="node1" id="node1" type="normal">
+      <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
           <nvpair id="nodes-node1-standby" name="standby" value="off"/>
         </instance_attributes>
@@ -55,7 +55,7 @@ node1: normal
   <configuration>
     <crm_config/>
     <nodes>
-      <node uname="node1" id="node1" type="normal">
+      <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
           <nvpair id="nodes-node1-standby" name="standby" value="off"/>
           <nvpair id="nodes-node1-maintenance" name="maintenance" value="on"/>
@@ -77,7 +77,7 @@ node1: normal
   <configuration>
     <crm_config/>
     <nodes>
-      <node uname="node1" id="node1" type="normal">
+      <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
           <nvpair id="nodes-node1-standby" name="standby" value="off"/>
           <nvpair id="nodes-node1-maintenance" name="maintenance" value="off"/>
@@ -99,7 +99,7 @@ node1: normal
   <configuration>
     <crm_config/>
     <nodes>
-      <node uname="node1" id="node1" type="normal">
+      <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
           <nvpair id="nodes-node1-standby" name="standby" value="off"/>
           <nvpair id="nodes-node1-maintenance" name="maintenance" value="off"/>
@@ -123,7 +123,7 @@ scope=nodes  name=a1 value=1 2 3
   <configuration>
     <crm_config/>
     <nodes>
-      <node uname="node1" id="node1" type="normal">
+      <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
           <nvpair id="nodes-node1-standby" name="standby" value="off"/>
           <nvpair id="nodes-node1-maintenance" name="maintenance" value="off"/>
@@ -148,7 +148,7 @@ Deleted nodes attribute: id=nodes-node1-a1 name=a1
   <configuration>
     <crm_config/>
     <nodes>
-      <node uname="node1" id="node1" type="normal">
+      <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
           <nvpair id="nodes-node1-standby" name="standby" value="off"/>
           <nvpair id="nodes-node1-maintenance" name="maintenance" value="off"/>
