@@ -91,7 +91,7 @@ class CibStatus(Singleton):
         "activate": "-e",
     }
     def __init__(self):
-        self.origin = "live"
+        self.origin = ""
         self.backing_file = "" # file to keep the live cib
         self.status_node = None
         self.cib = None
@@ -130,7 +130,13 @@ class CibStatus(Singleton):
         self.node_changes = {}
         self.op_changes = {}
         self.ticket_changes = {}
-        return True
+    def initialize(self):
+        if not vars.cib_in_use:
+            src = "live"
+        else:
+            src = "shadow:%s" % vars.cib_in_use
+        if self._load(src):
+            self.origin = src
     def source_file(self):
         if self.origin == "live":
             return self.backing_file
@@ -201,6 +207,8 @@ class CibStatus(Singleton):
         f.close()
         return True
     def _crm_simulate(self, cmd, nograph, scores, utilization, verbosity):
+        if not self.origin:
+            self.initialize()
         if verbosity:
             cmd = "%s -%s" % (cmd, verbosity.upper())
         if scores:
@@ -229,6 +237,8 @@ class CibStatus(Singleton):
         '''
         Return the status section node.
         '''
+        if not self.origin:
+            self.initialize()
         if (self.status_node is None or \
             (self.origin == "live" and not self.modified)) \
                 and not self._load(self.origin):
@@ -261,6 +271,8 @@ class CibStatus(Singleton):
         return ext_cmd("%s %s" % \
             (self.cmd_inject % (self.source_file(), self.source_file()), opts))
     def set_quorum(self, v):
+        if not self.origin:
+            self.initialize()
         rc = self.inject("--quorum=%s" % (v and "true" or "false"))
         if rc != 0:
             return False
