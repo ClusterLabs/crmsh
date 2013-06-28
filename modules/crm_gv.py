@@ -185,8 +185,7 @@ class GvDot(Gv):
         dotf = self.totmpf()
         if not dotf:
             return False
-        subprocess.Popen("%s %s" % (user_prefs.dotty, dotf), \
-            shell=True, bufsize=0, stdin=None, stdout=None, stderr=None, close_fds=True)
+        show_dot_graph(dotf)
         return True
     def image(self, img_type, outf):
         if not user_prefs.dot:

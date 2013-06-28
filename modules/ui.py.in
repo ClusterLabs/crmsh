@@ -2176,7 +2176,7 @@ class History(UserInterface):
         if not f:
             common_err("dot file not found in the report")
             return False
-        show_dot_graph(f)
+        show_dot_graph(f, keep_file=True)
         return True
     def _pe2shadow(self, f, argl):
         try: name = argl[0]

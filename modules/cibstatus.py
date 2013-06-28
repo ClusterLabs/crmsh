@@ -107,6 +107,7 @@ class CibStatus(Singleton):
                 self.backing_file = cib2tmp()
                 if not self.backing_file:
                     return None
+                vars.tmpfiles.append(self.backing_file)
             else:
                 cibdump2file(self.backing_file)
             f = self.backing_file
@@ -223,7 +224,6 @@ class CibStatus(Singleton):
         rc = ext_cmd(cmd % self.source_file())
         if dotfile:
             show_dot_graph(dotfile)
-            vars.tmpfiles.append(dotfile)
         return rc == 0
     # actions is ignored
     def run(self, nograph, scores, utilization, actions, verbosity):

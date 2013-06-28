@@ -273,8 +273,11 @@ def is_value_sane(name):
         return False
     return True
 
-def show_dot_graph(dotfile):
-    subprocess.Popen("%s %s" % (user_prefs.dotty, dotfile), shell=True, bufsize=0, stdin=None, stdout=None, stderr=None, close_fds=True)
+def show_dot_graph(dotfile, keep_file=False):
+    cmd = "%s %s" % (user_prefs.dotty, dotfile)
+    if not keep_file:
+        cmd = "(%s; rm -f %s)" % (cmd, dotfile)
+    subprocess.Popen(cmd, shell=True, bufsize=0, stdin=None, stdout=None, stderr=None, close_fds=True)
     common_info("starting %s to show transition graph"%user_prefs.dotty)
 
 def ext_cmd(cmd):
@@ -485,13 +488,11 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
             show_dot_graph(dotfile)
         else:
             common_warn("ptest produced empty dot file")
-        vars.tmpfiles.append(dotfile)
     else:
         if not nograph:
             common_info("install graphviz to see a transition graph")
     if s:
         page_string(s)
-    #page_string(get_stdout(ptest, input_s = graph_s))
     return True
 
 def is_id_valid(id):
