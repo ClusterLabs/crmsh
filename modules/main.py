@@ -19,6 +19,7 @@ import sys
 import os
 import shlex
 import getopt
+import atexit
 
 from utils import *
 from userprefs import Options, UserPrefs
@@ -157,6 +158,22 @@ def parse_line(lvl, s):
                 rv = False
         return rv != False
     return True
+
+def exit_handler():
+    '''
+    Write the history file. Remove tmp files.
+    '''
+    if options.interactive and not options.batch:
+        try:
+            from readline import write_history_file
+            write_history_file(vars.hist_file)
+        except:
+            pass
+    for f in vars.tmpfiles:
+        try:
+            os.unlink(f)
+        except OSError:
+            pass
 
 def prereqs():
     proglist = "which cibadmin crm_resource crm_attribute crm_mon"
@@ -371,6 +388,8 @@ def run():
 
     mv_user_files()
     load_rc(vars.rc_file)
+
+    atexit.register(exit_handler)
 
     if not sys.stdin.isatty():
         err_buf.reset_lineno()

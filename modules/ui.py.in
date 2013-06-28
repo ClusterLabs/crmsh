@@ -44,13 +44,6 @@ def cmd_exit(cmd, rc=0):
     cmd_end(cmd)
     if options.interactive and not options.batch:
         print "bye"
-        try:
-            from readline import write_history_file
-            write_history_file(vars.hist_file)
-        except:
-            pass
-    for f in vars.tmpfiles:
-        os.unlink(f)
     sys.exit(rc)
 
 ptest_options = ["@v+", "nograph", "scores", "actions", "utilization"]

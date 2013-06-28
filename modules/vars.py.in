@@ -243,6 +243,9 @@ class Vars(Singleton):
     }
 
     prompt = ''
+    # files listed in tmpfiles are removed on program exit
+    # NB: Do not add files on which programs running in the
+    # background may depend (see e.g. show_dot_graph)
     tmpfiles = []
     this_node = os.uname()[1]
     cib_in_use = os.getenv(shadow_envvar)
