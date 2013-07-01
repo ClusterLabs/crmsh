@@ -95,6 +95,7 @@ cib_piped = "cibadmin -p"
 def commit_rsc(node):
     "Replace a resource definition using cibadmin -R"
     xml_processnodes(node, is_emptynvpairs, rmnodes)
+    xml_processnodes(node, is_emptyops, rmnodes)
     rc = pipe_string("%s -R -o %s" % \
         (cib_piped, "resources"), etree.tostring(node))
     return rc == 0
@@ -369,8 +370,8 @@ def is_comment(e):
 def is_status_node(e):
     return e.tag == "status"
 
-def is_emptynvpairs(node):
-    if is_element(node) and node.tag in vars.nvpairs_tags:
+def is_emptyelem(node, tag_l):
+    if is_element(node) and node.tag in tag_l:
         for a in vars.precious_attrs:
             if node.get(a):
                 return False
@@ -380,6 +381,11 @@ def is_emptynvpairs(node):
         return True
     else:
         return False
+def is_emptynvpairs(node):
+    return is_emptyelem(node, vars.nvpairs_tags)
+def is_emptyops(node):
+    return is_emptyelem(node, ("operations",))
+
 def is_group(node):
     return node.tag == "group"
 def is_ms(node):
@@ -462,6 +468,7 @@ def sanitize_cib(doc):
     xml_processnodes(doc, is_status_node, rmnodes)
     #xml_processnodes(doc, is_element, printid)
     xml_processnodes(doc, is_emptynvpairs, rmnodes)
+    xml_processnodes(doc, is_emptyops, rmnodes)
     xml_processnodes(doc, is_entity, rmnodes)
     #xml_processnodes(doc, is_comment, rmnodes)
     xml_processnodes(doc, is_container, sort_container_children)
