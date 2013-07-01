@@ -545,7 +545,7 @@ class Report(Singleton):
     def warn(self, s):
         common_warn("%s: %s" % (self.source, s))
     def rsc_list(self):
-        return self.cibgrp_d.keys() + self.cibcln_d.keys() + self.cibnotcloned_l
+        return self.cibgrp_d.keys() + self.cibcln_d.keys() + self.cibrsc_l
     def node_list(self):
         return self.cibnode_l
     def peinputs_list(self):
