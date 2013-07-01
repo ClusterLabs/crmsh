@@ -148,6 +148,8 @@ def abs_pos_score(score):
     return score in ("inf", "+inf", "Mandatory")
 def get_kind(node):
     kind = node.get("kind")
+    if not kind:
+        kind = ""
     return kind
 def get_score(node):
     score = node.get("score")
@@ -156,6 +158,8 @@ def get_score(node):
     else:
         if score.find("INFINITY") >= 0:
             score = score.replace("INFINITY","inf")
+    if not score:
+        score = ""
     return score
 def cli_rule(node):
     s = []

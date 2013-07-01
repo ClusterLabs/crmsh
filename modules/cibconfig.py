@@ -944,8 +944,6 @@ class CibObject(object):
             firstelem += 1
         common_debug("obj %s node: %s" % (self.obj_id, etree.tostring(self.node)))
     def mknode(self, obj_id):
-        if not cib_factory.is_cib_sane():
-            return False
         if self.xml_obj_type in vars.defaults_tags:
             tag = "meta_attributes"
         else:
