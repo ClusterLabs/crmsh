@@ -301,6 +301,11 @@ def test_resources_1(rsc_l, node):
     return True
 
 def test_resources(rsc_l, node_l, all_nodes_l):
+    try:
+        import crm_pssh
+    except ImportError, msg:
+        common_err("pssh not installed, rsctest can not be executed")
+        return False
     if not check_test_support(rsc_l):
         return False
     if not are_all_stopped(rsc_l, all_nodes_l):
