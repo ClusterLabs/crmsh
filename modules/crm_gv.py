@@ -134,11 +134,7 @@ class Gv(object):
         l.append(self.footer())
         return l
     def totmpf(self):
-        tmpf = str2tmp('\n'.join(self.repr()))
-        if not tmpf:
-            return None
-        vars.tmpfiles.append(tmpf)
-        return tmpf
+        return str2tmp('\n'.join(self.repr()))
     def save(self, outf):
         f = safe_open_w(outf)
         if not f:
@@ -194,6 +190,7 @@ class GvDot(Gv):
         dotf = self.totmpf()
         if not dotf:
             return False
+        vars.tmpfiles.append(dotf)
         return (ext_cmd_nosudo("%s -T%s -o%s %s" % \
             (user_prefs.dot, img_type, outf, dotf)) == 0)
 
