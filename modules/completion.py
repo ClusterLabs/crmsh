@@ -278,7 +278,7 @@ def prim_meta_attr_list(idx, delimiter=False):
 def op_attr_list(idx, delimiter=False):
     if delimiter:
         return '='
-    return vars.op_attributes
+    return tuple(schema.get('attr', 'op', 'o')) + vars.op_extra_attrs
 def operations_list():
     return vars.op_cli_names
 def prim_complete_meta(ra, delimiter=False):
