@@ -502,7 +502,7 @@ class CibObjectSetRaw(CibObjectSet):
         return rc
     def save(self, s, update=False):
         try:
-            cib_elem = etree.fromstring('\n'.join(s))
+            cib_elem = etree.fromstring(s)
         except etree.ParseError, msg:
             cib_parse_err(msg, s)
             return False
