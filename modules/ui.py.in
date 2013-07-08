@@ -1258,50 +1258,30 @@ class NodeMgmt(UserInterface):
         if not is_our_node(node):
             common_err("node %s not found in the CIB" % node)
             return False
-        rc = True
         if cluster_stack() == "heartbeat":
-            rc = ext_cmd(self.hb_delnode%node) == 0
+            cmd = (self.hb_delnode % node)
         else:
-            node_states = {}
-            ec, l = stdout2list("%s -l" % self.crm_node)
-            for s in l:
-                a = s.split()
-                if len(a) != 3:
-                    common_warn("%s bad format: %s" % (self.crm_node, s))
-                    continue
-                # fmt: id uname status
-                # remove only those in state "lost"
-                if a[1] == node:
-                    node_ref_du_jour = a[0]
-                    if is_pcmk_118():
-                        node_ref_du_jour = a[1]
-                    node_states[a[2]] = 1
-                    if a[2] == "lost":
-                        ec = ext_cmd("%s --force -R %s" % \
-                            (self.crm_node, node_ref_du_jour))
-                        if ec != 0:
-                            common_warn('"%s --force -R %s" failed, rc=%d' % \
-                                (self.crm_node, node_ref_du_jour, ec))
-            if not node_states:
-                common_info("node %s not found by %s" % (node, self.crm_node))
-            elif "member" in node_states:
-                common_info("node %s appears to be still active" % node)
-                common_info("check output of %s -l" % self.crm_node)
-                rc = False
-            elif not "lost" in node_states:
-                common_err("node %s's state not recognized: %s" % (node, node_states.keys()))
-                common_info("check output of %s -l" % self.crm_node)
-                rc = False
-        if rc:
-            if ext_cmd(self.node_delete%node) != 0 or \
-                    ext_cmd(self.node_delete_status%node) != 0:
-                common_err("failed to remove %s from the CIB" % node)
-                rc = False
-        if rc:
-            common_info("node %s deleted" % node)
-        else:
-            common_err('failed to delete node %s' % node)
-        return rc
+            ec, s = get_stdout("%s -p" % self.crm_node)
+            if not s:
+                common_err('%s -p could not list any nodes (rc=%d)' % \
+                    (self.crm_node, ec))
+                return False
+            partition_l = s.split()
+            if node in partition_l:
+                common_err("according to %s, node %s is still active" % \
+                    (self.crm_node, node))
+                return False
+            cmd = "%s --force -R %s" % (self.crm_node, node)
+        ec = ext_cmd(cmd)
+        if ec != 0:
+            common_warn('"%s" failed, rc=%d' % (cmd, ec))
+            return False
+        if ext_cmd(self.node_delete % node) != 0 or \
+                ext_cmd(self.node_delete_status % node) != 0:
+            common_err("%s removed from membership, but not from CIB!" % node)
+            return False
+        common_info("node %s deleted" % node)
+        return True
     def attribute(self, cmd, *args):
         """usage:
         attribute <node> set <rsc> <value>
