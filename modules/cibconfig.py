@@ -1753,7 +1753,7 @@ class CibFencingOrder(CibObject):
     def set_nodeid(self):
         '''This id is not part of attributes'''
         pass
-    def obj_string(self):
+    def __str__(self):
         return self.obj_id
     def match(self, xml_obj_type, obj_id):
         return self.xml_obj_type == xml_obj_type
@@ -2885,7 +2885,7 @@ class CibFactory(Singleton):
                     rc = False
                     continue
                 for prim in prim_l:
-                    common_info("hanging %s deleted" % prim.obj_string())
+                    common_info("hanging %s deleted" % str(prim))
                     l.append(prim)
             l.append(obj)
         if l:
