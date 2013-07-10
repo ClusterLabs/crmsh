@@ -1214,7 +1214,13 @@ Usage:
 ==== `delete`
 
 Delete a node. This command will remove the node from the CIB
-and, in case the heartbeat stack is running, run hb_delnode too.
+and, in case the cluster stack is running, use the appropriate
+program (`crm_node` or `hb_delnode`) to remove the node from the
+membership.
+
+If the node is still listed as active and a member of our
+partition we refuse to remove it. With the global force option
+(`-F`) we will try to delete the node anyway.
 
 Usage:
 ...............

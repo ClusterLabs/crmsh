@@ -1258,6 +1258,7 @@ class NodeMgmt(UserInterface):
         if not is_our_node(node):
             common_err("node %s not found in the CIB" % node)
             return False
+        rc = True
         if cluster_stack() == "heartbeat":
             cmd = (self.hb_delnode % node)
         else:
@@ -1265,13 +1266,19 @@ class NodeMgmt(UserInterface):
             if not s:
                 common_err('%s -p could not list any nodes (rc=%d)' % \
                     (self.crm_node, ec))
-                return False
-            partition_l = s.split()
-            if node in partition_l:
-                common_err("according to %s, node %s is still active" % \
-                    (self.crm_node, node))
-                return False
+                rc = False
+            else:
+                partition_l = s.split()
+                if node in partition_l:
+                    common_err("according to %s, node %s is still active" % \
+                        (self.crm_node, node))
+                    rc = False
             cmd = "%s --force -R %s" % (self.crm_node, node)
+        if not rc:
+            if user_prefs.get_force():
+                common_info('proceeding with node %s removal' % node)
+            else:
+                return False
         ec = ext_cmd(cmd)
         if ec != 0:
             common_warn('"%s" failed, rc=%d' % (cmd, ec))
