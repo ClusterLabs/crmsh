@@ -1,1 +1,2 @@
 crm history session delete _crmsh_regtest
+rm -r history-test

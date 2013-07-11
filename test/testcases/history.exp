@@ -2,6 +2,7 @@
 .INP: history
 .INP: source history-test.tar.bz2
 .INP: info
+.EXT tar -xj < history-test.tar.bz2
 Source: history-test.tar.bz2
 Created on: --:--:--
 By: unknown
@@ -233,12 +234,16 @@ Dec 14 20:08:43 xen-e lrmd: [24225]: info: operation stop[11] on d1 for client 2
 Dec 14 20:08:43 xen-e external/libvirt(s-libvirt)[24748]: [24786]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
 .INP: transition nograph
 INFO: 24: running ptest with history-test/xen-e/pengine/pe-input-50.bz2
+warning: unpack_nodes: 	Blind faith: not fencing unseen nodes
+ warning: unpack_rsc_op: 	Processing failed op monitor for s-libvirt on xen-e: unknown error (1)
 Transition xen-e:pe-input-50 (20:08:43 - 20:08:43):
 	total 8 actions: 8 Complete
 Dec 14 20:08:43 xen-e lrmd: [24225]: info: rsc:d1 stop[11] (pid 24774)
 Dec 14 20:08:43 xen-e external/libvirt(s-libvirt)[24748]: [24786]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
 .INP: transition -1 nograph
 INFO: 25: running ptest with history-test/xen-e/pengine/pe-input-49.bz2
+warning: unpack_nodes: 	Blind faith: not fencing unseen nodes
+ warning: unpack_rsc_op: 	Processing failed op monitor for s-libvirt on xen-e: unknown error (1)
 Transition xen-e:pe-input-49 (20:07:56 - 20:07:57):
 	total 2 actions: 2 Complete
 Dec 14 20:07:56 xen-e lrmd: [24225]: info: rsc:d1 start[9] (pid 24568)
