@@ -115,6 +115,8 @@ class UserPrefs(Singleton):
     def set_crm_user(self, user=''):
         self.crm_user = user
     def set_output(self, otypes):
+        if not otypes:
+            otypes = "color"
         l = otypes.split(',')
         for otype in l:
             if not otype in self.output_types:
@@ -136,6 +138,8 @@ class UserPrefs(Singleton):
             self.colorscheme = colors
         else:
             self.output.remove("color")
+            if not self.output:
+                self.output.append("plain")
         return rc
     def is_check_always(self):
         '''
