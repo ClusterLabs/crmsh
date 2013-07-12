@@ -154,11 +154,15 @@ def update_err(obj_id, cibadm_opt, xml, rc):
         task = "update"
     elif cibadm_opt == '-D':
         task = "delete"
+    elif cibadm_opt == '-P':
+        task = "patch"
     else:
         task = "replace"
-    err_buf.error("could not %s %s"%(task, obj_id))
+    err_buf.error("could not %s %s (rc=%d)" % (task, obj_id, rc))
     if rc == 54:
         err_buf.info("Permission denied.")
+    elif task == "patch":
+        err_buf.info("offending xml diff: %s" % xml)
     else:
         err_buf.info("offending xml: %s" % xml)
 

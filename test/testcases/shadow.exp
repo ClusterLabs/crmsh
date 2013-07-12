@@ -10,7 +10,7 @@ INFO: 3: copied live CIB to regtest
 .INP: use regtest
 .INP: commit regtest
 .EXT >/dev/null </dev/null crm_shadow -C 'regtest' --force
-INFO: 5: commited 'regtest' shadow CIB to the cluster
+INFO: 5: committed 'regtest' shadow CIB to the cluster
 .INP: delete regtest
 ERROR: 6: regtest shadow CIB is in use
 .INP: use

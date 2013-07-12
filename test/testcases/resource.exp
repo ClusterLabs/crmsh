@@ -7,7 +7,7 @@ resource p0 is NOT running
 .INP: _regtest on
 .INP: show xml p3
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="3" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -27,7 +27,7 @@ resource p0 is NOT running
 .INP: _regtest on
 .INP: show xml p3
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="4" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -48,7 +48,7 @@ resource p0 is NOT running
 .INP: _regtest on
 .INP: show xml c1
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="5" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -69,7 +69,7 @@ resource p0 is NOT running
 .INP: _regtest on
 .INP: show xml c1
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="6" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -92,7 +92,7 @@ resource p0 is NOT running
 .INP: _regtest on
 .INP: show xml cli-prefer-p3
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="7" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -113,7 +113,7 @@ resource p0 is NOT running
 .INP: _regtest on
 .INP: show xml cli-prefer-p3
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="9" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -134,7 +134,7 @@ resource p0 is NOT running
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="11" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -156,7 +156,7 @@ resource p0 is NOT running
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="11" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -178,7 +178,7 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="12" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -195,7 +195,7 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="13" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -217,7 +217,7 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="13" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -239,7 +239,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="14" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -255,7 +255,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="16" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -278,7 +278,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="16" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -301,7 +301,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="17" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -327,7 +327,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="18" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -357,7 +357,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="19" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -387,7 +387,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="21" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -419,7 +419,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="21" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -451,7 +451,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="22" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -479,7 +479,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="23" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -503,7 +503,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="24" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -527,7 +527,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="25" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -555,7 +555,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="26" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -579,7 +579,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="0" admin_epoch="0" have-quorum="1">
+<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="27" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
   <configuration>
     <crm_config/>
     <nodes/>

@@ -1926,7 +1926,6 @@ class CibFactory(Singleton):
         self._init_vars()
         self.regtest = options.regression_tests
         self.last_commit_time = 0
-        self.all_committed = True # has commit produced error
         self._no_constraint_rm_msg = False # internal (just not to produce silly messages)
         self.supported_cib_re = "^pacemaker-1[.][012]$"
     def is_cib_sane(self):
@@ -2042,26 +2041,24 @@ class CibFactory(Singleton):
         if not self.is_cib_supported():
             self.reset()
             return False
-        for attr in self.cib_elem.keys():
-            self.cib_attrs[attr] = self.cib_elem.get(attr)
+        self._get_cib_attributes(self.cib_elem)
         schema.init_schema(self.cib_elem)
         return True
     #
     # create a doc from the list of objects
     # (used by CibObjectSetRaw)
     #
-    def _regtest_filter(self, cib):
-        for attr in ("epoch", "admin_epoch"):
-            if cib.get(attr):
-                cib.set(attr, "0")
-        for attr in ("cib-last-written",):
-            if cib.get(attr):
-                del cib.attrib[attr]
+    def bump_epoch(self):
+        try:
+            self.cib_attrs["epoch"] = str(int(self.cib_attrs["epoch"])+1)
+        except:
+            self.cib_attrs["epoch"] = "1"
+    def _get_cib_attributes(self, cib):
+        for attr in cib.keys():
+            self.cib_attrs[attr] = cib.get(attr)
     def _set_cib_attributes(self, cib):
         for attr in self.cib_attrs:
             cib.set(attr, self.cib_attrs[attr])
-        if self.regtest:
-            self._regtest_filter(cib)
     def objlist2doc(self, obj_list, obj_filter=None):
         '''
         Return document containing objects in obj_list.
@@ -2094,8 +2091,6 @@ class CibFactory(Singleton):
             cib_attr = None
         return c.get(a) == cib_attr
     def is_current_cib_equal(self, silent=False):
-        if self.overwrite:
-            return True
         cib_elem = read_cib(cibdump2elem)
         if cib_elem is None:
             return False
@@ -2120,9 +2115,10 @@ class CibFactory(Singleton):
         'Commit the configuration to the CIB.'
         if not self.is_cib_sane():
             return False
-        # all_committed is updated in the invoked object methods
-        self.all_committed = True
-        rc = self._commit_doc(force)
+        if cibadmin_can_patch():
+            rc = self._patch_cib(force)
+        else:
+            rc = self._replace_cib(force)
         if rc:
             # reload the cib!
             common_debug("CIB commit successful")
@@ -2130,8 +2126,8 @@ class CibFactory(Singleton):
                 self.last_commit_time = time.time()
             self.reset()
             self.initialize()
-        return self.all_committed
-    def _commit_schema(self):
+        return rc
+    def _update_schema(self):
         '''
         Set the validate-with, if the schema changed.
         '''
@@ -2142,18 +2138,49 @@ class CibFactory(Singleton):
             return False
         self.new_schema = False
         return True
-    def _commit_doc(self, force):
+    def _replace_cib(self, force):
         try:
             conf_el = self.cib_elem.findall("configuration")[0]
         except IndexErr:
             common_error("cannot find the configuration element")
             return False
-        if self.new_schema and not self._commit_schema():
+        if self.new_schema and not self._update_schema():
             return False
         cibadmin_opts = force and "-R --force" or "-R"
         rc = pipe_string("%s %s" % (cib_piped, cibadmin_opts), etree.tostring(conf_el))
         if rc != 0:
             update_err("cib", cibadmin_opts, etree.tostring(conf_el), rc)
+            return False
+        return True
+    def _patch_cib(self, force):
+        # copy the epoch from the current cib to both the target
+        # cib and the original one (otherwise cibadmin won't want
+        # to apply the patch)
+        current_cib = read_cib(cibdump2elem)
+        if current_cib is None:
+            return False
+        self._get_cib_attributes(current_cib)
+        self._set_cib_attributes(self.cib_orig)
+        current_cib = None # don't need that anymore
+        # now increase the epoch by 1
+        self.bump_epoch()
+        self._set_cib_attributes(self.cib_elem)
+        cib_s = etree.tostring(self.cib_orig, pretty_print=True)
+        tmpf = str2tmp(cib_s, suffix=".xml")
+        if not tmpf:
+            return False
+        vars.tmpfiles.append(tmpf)
+        cibadmin_opts = force and "-P --force" or "-P"
+        # produce a diff:
+        # dump_new_conf | crm_diff -o self.cib_orig -n -
+        rc, cib_diff = filter_string("crm_diff -o %s -n -" % \
+            tmpf, etree.tostring(self.cib_elem))
+        if not cib_diff:
+            common_err("crm_diff apparently failed to produce the diff (rc=%d)" % rc)
+            return False
+        rc = pipe_string("%s %s" % (cib_piped,cibadmin_opts), cib_diff)
+        if rc != 0:
+            update_err("cib", cibadmin_opts, cib_diff, rc)
             return False
         return True
     #
@@ -2201,21 +2228,24 @@ class CibFactory(Singleton):
         if not self._import_cib():
             return False
         sanitize_cib(self.cib_elem)
+        if cibadmin_can_patch():
+            self.cib_orig = copy.deepcopy(self.cib_elem)
         show_unrecognized_elems(self.cib_elem)
         self._populate()
         return self.check_structure()
     def _init_vars(self):
         self.cib_elem = None  # the cib
+        self.cib_orig = None  # the file holding the CIB which we loaded
         self.cib_attrs = {} # cib version dictionary
         self.cib_objects = [] # a list of cib objects
         self.remove_queue = [] # a list of cib objects to be removed
         self.id_refs = {} # dict of id-refs
-        self.overwrite = False # update cib unconditionally
         self.new_schema = False # schema changed
     def reset(self):
         if self.cib_elem is None:
             return
         self.cib_elem = None
+        self.cib_orig = None
         self._init_vars()
         id_store.clear()
     def find_object(self, obj_id):

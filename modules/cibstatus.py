@@ -104,7 +104,7 @@ class CibStatus(Singleton):
     def _load_cib(self, source):
         if source == "live":
             if not self.backing_file:
-                self.backing_file = cib2tmp()
+                self.backing_file = cibdump2tmp()
                 if not self.backing_file:
                     return None
                 vars.tmpfiles.append(self.backing_file)

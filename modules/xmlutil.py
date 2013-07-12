@@ -55,7 +55,7 @@ def cibdump2file(fname):
         common_err(msg)
         return None
     return str2file(s, fname)
-def cib2tmp():
+def cibdump2tmp():
     cmd = add_sudo(cib_dump)
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     try:

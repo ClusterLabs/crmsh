@@ -183,12 +183,12 @@ def filter_string(cmd, s, stderr_on=True):
         common_info("from: %s" % cmd)
     return rc, outp
 
-def str2tmp(s):
+def str2tmp(s, suffix=".pcmk"):
     '''
     Write the given string to a temporary file. Return the name
     of the file.
     '''
-    fd, tmp = mkstemp(suffix=".pcmk")
+    fd, tmp = mkstemp(suffix=suffix)
     try:
         f = os.fdopen(fd,"w")
     except IOError, msg:
@@ -880,7 +880,7 @@ def get_cib_attributes(cib_f, tag, attr_l, dflt_l):
     f.close()
     return val_l
 
-def is_pcmk_118(cib_f=None):
+def is_min_pcmk_ver(min_ver, cib_f=None):
     if not vars.pcmk_version:
         if cib_f:
             vars.pcmk_version = get_cib_property(cib_f, "dc-version", "1.1.1")
@@ -889,7 +889,11 @@ def is_pcmk_118(cib_f=None):
         else:
             vars.pcmk_version = get_pcmk_version("1.1.1")
     from distutils.version import LooseVersion
-    return LooseVersion(vars.pcmk_version) >= LooseVersion("1.1.8")
+    return LooseVersion(vars.pcmk_version) >= LooseVersion(min_ver)
+def is_pcmk_118(cib_f=None):
+    return is_min_pcmk_ver("1.1.8", cib_f=cib_f)
+def cibadmin_can_patch():
+    return is_min_pcmk_ver("1.1.10")
 
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
