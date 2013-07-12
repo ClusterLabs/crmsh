@@ -54,7 +54,7 @@ class UserPrefs(Singleton):
     '''
     Keep user preferences here.
     '''
-    dflt_colorscheme = "yellow, normal, cyan, red, green, magenta".split(',')
+    dflt_colorscheme = "yellow,normal,cyan,red,green,magenta".split(',')
     skill_levels = {"operator":0, "administrator":1, "expert":2}
     output_types = ("plain", "color", "uppercase")
     check_frequencies = ("always", "on-verify", "never")
@@ -124,8 +124,9 @@ class UserPrefs(Singleton):
     def set_colors(self, scheme):
         colors = scheme.split(',')
         if len(colors) != 6:
-            common_err("bad color scheme: %s"%scheme)
+            common_err("bad color scheme: %s" % scheme)
             colors = UserPrefs.dflt_colorscheme
+        colors = [ x.strip() for x in colors ]
         rc = True
         for c in colors:
             if not termctrl.is_color(c):
