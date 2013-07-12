@@ -1778,7 +1778,7 @@ class CibFencingOrder(CibObject):
         for target in dd.keys():
             devs_s = ' '.join(dd[target])
             d2[devs_s] = 1
-        if len(d2) == 1 and len(d) == len(listnodes()):
+        if len(d2) == 1 and len(d) == len(cib_factory.node_id_list()):
             return "%s %s" % (s, devs_s)
         return cli_format([s,] + \
             ["%s: %s" % (x, ' '.join(dd[x])) for x in dd.keys()], format)
