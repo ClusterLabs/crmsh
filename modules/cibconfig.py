@@ -2621,7 +2621,7 @@ class CibFactory(Singleton):
         head = cli_list[0]
         obj_type = head[0].lower()
         obj_id = find_value(head[1], "id")
-        if obj_id and not is_id_valid(obj_id):
+        if obj_type != "node" and obj_id and not is_id_valid(obj_id):
             invalid_id_err(obj_id)
             return None
         if len(cli_list) >= 2 and cli_list[1][0] == "raw":
