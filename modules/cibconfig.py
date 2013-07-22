@@ -121,12 +121,11 @@ class CibObjectSet(object):
     def _pre_edit(self, s):
         '''Extra processing of the string to be editted'''
         return s
-    def _edit_save(self, s, erase=False):
+    def _edit_save(self, s):
         '''
         Save string s to a tmp file. Invoke editor to edit it.
         Parse/save the resulting file. In case of syntax error,
-        allow user to reedit. If erase is True, erase the CIB
-        first.
+        allow user to reedit.
         If no changes are done, return silently.
         '''
         s = self._pre_edit(s)
@@ -147,8 +146,6 @@ class CibObjectSet(object):
             if hash(s) == filehash: # file unchanged
                 rc = True
                 break
-            if erase:
-                cib_factory.erase()
             if not self.save(s):
                 if ask("Do you want to edit again?"):
                     continue
@@ -402,7 +399,7 @@ class CibObjectSetCli(CibObjectSet):
         if update and not obj:
             obj = cib_factory.find_object_for_cli(cli_list)
         if obj:
-            rc = cib_factory.update_from_cli(obj, cli_list, update) != False
+            rc = cib_factory.update_from_cli(obj, cli_list, update)
             if myobj:
                 self.remove_objs.remove(myobj)
         else:
@@ -474,15 +471,6 @@ class CibObjectSetRaw(CibObjectSet):
         cib_elem = cib_factory.objlist2doc(self.obj_list)
         s = etree.tostring(cib_elem, pretty_print=True)
         s = '<?xml version="1.0" ?>\n%s' % s
-        return s
-    def repr_configure(self):
-        '''
-        Return a string containing xml of configure and its
-        children.
-        '''
-        cib_elem = cib_factory.objlist2doc(self.obj_list)
-        conf_elem = cib_elem.findall("configuration")[0]
-        s = etree.tostring(conf_elem, pretty_print=True)
         return s
     def process(self, node, update=False):
         if not cib_factory.is_cib_sane():
