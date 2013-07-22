@@ -104,6 +104,9 @@ class CibObjectSet(object):
     def _pre_edit(self, s):
         '''Extra processing of the string to be editted'''
         return s
+    def _post_edit(self, s):
+        '''Extra processing after editing'''
+        return s
     def _edit_save(self, s):
         '''
         Save string s to a tmp file. Invoke editor to edit it.
@@ -129,7 +132,7 @@ class CibObjectSet(object):
             if hash(s) == filehash: # file unchanged
                 rc = True
                 break
-            if not self.save(s):
+            if not self.save(self._post_edit(s)):
                 if ask("Do you want to edit again?"):
                     continue
             rc = True
@@ -355,6 +358,7 @@ class CibObjectSetCli(CibObjectSet):
     '''
     Edit or display a set of cib objects (using cli notation).
     '''
+    vim_stx_str = "#vim:set syntax=pcmk\n"
     def __init__(self, *args):
         CibObjectSet.__init__(self, *args)
     def repr_nopretty(self, format=1):
@@ -371,7 +375,11 @@ class CibObjectSetCli(CibObjectSet):
     def _pre_edit(self, s):
         '''Extra processing of the string to be editted'''
         if user_prefs.editor.startswith("vi"):
-            return "%s\n#vim:set syntax=pcmk\n" % s
+            return "%s\n%s" % (s, self.vim_stx_str)
+        return s
+    def _post_edit(self, s):
+        if user_prefs.editor.startswith("vi"):
+            return s.replace(self.vim_stx_str, "")
         return s
     def _get_id(self, cli_list):
         '''
