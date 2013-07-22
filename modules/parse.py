@@ -108,6 +108,9 @@ def parse_resource(s):
                 elif is_attribute(s[i],"description"):
                     break
                 else:
+                    if s[i] in cl:
+                        err_buf.error("in group %s child %s listed more than once" % (s[1], s[i]))
+                        return False
                     cl.append(s[i])
                     i += 1 # skip to the next token
         head.append(["$children", cl])
@@ -860,4 +863,5 @@ class CliParser(object):
 
 vars = Vars.getInstance()
 schema = Schema.getInstance()
+
 # vim:ts=4:sw=4:et:

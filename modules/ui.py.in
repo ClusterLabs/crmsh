@@ -664,8 +664,13 @@ class Template(UserInterface):
         tmp = str2tmp(s)
         if not tmp:
             return False
+        if method == "replace":
+            if options.interactive and cib_factory.has_cib_changed():
+                if not ask("This operation will erase all changes. Do you want to proceed?"):
+                    return False
+            cib_factory.erase()
         set_obj = mkset_obj("NOOBJ")
-        rc = set_obj.import_file(method, tmp)
+        rc = set_obj.import_file(tmp)
         try: os.unlink(tmp)
         except: pass
         return rc
@@ -1666,15 +1671,27 @@ class CibConfig(UserInterface):
                 return False
             url = args[2]
             method = args[1]
-            set_obj = mkset_obj("xml", "NOOBJ")
+            xml = True
         else:
             if len(args) != 2:
                 syntax_err(args, context = 'load')
                 return False
             url = args[1]
             method = args[0]
+            xml = False
+        if method not in ("replace", "update"):
+            common_err("unknown method %s" % method)
+            return False
+        if method == "replace":
+            if options.interactive and cib_factory.has_cib_changed():
+                if not ask("This operation will erase all changes. Do you want to proceed?"):
+                    return False
+            cib_factory.erase()
+        if xml:
+            set_obj = mkset_obj("xml", "NOOBJ")
+        else:
             set_obj = mkset_obj("NOOBJ")
-        return set_obj.import_file(method, url)
+        return set_obj.import_file(url)
     def graph(self, cmd, *args):
         "usage: graph [<gtype> [<file> [<img_format>]]]"
         if args and args[0] == "exportsettings":

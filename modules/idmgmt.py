@@ -25,7 +25,23 @@ class IdMgmt(Singleton):
     '''
     def __init__(self):
         self._id_store = {}
+        self._state = []
         self.ok = True # error var
+    def push_state(self):
+        self._state.append(copy.deepcopy(self._id_store))
+    def pop_state(self):
+        try:
+            self._id_store = self._state.pop()
+            return True
+        except KeyError:
+            return False
+    def drop_state(self):
+        try:
+            self._state.pop()
+        except KeyError:
+            pass
+    def clean_state(self):
+        self._state = []
     def new(self, node, pfx):
         '''
         Create a unique id for the xml node.
@@ -110,6 +126,7 @@ class IdMgmt(Singleton):
             pass
     def clear(self):
         self._id_store = {}
+        self._state = []
 
 vars = Vars.getInstance()
 

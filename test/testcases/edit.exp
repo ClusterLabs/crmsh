@@ -14,7 +14,6 @@
 .INP: filter "sed 's/p2/g1/'" c1
 .INP: filter "sed '/clone/s/g1/p2/'" c1 g1
 .INP: filter "sed '/clone/s/p2/g1/;s/p3/p2/'" c1 g1
-ERROR: 15: p2 already in use at c1
 .INP: filter "sed '1,$d'" c1 g1
 .INP: filter "sed -e '$aclone c1 g1' -e '$agroup g1 p1 p2'"
 .INP: location l1 p3 100: node1
@@ -27,8 +26,7 @@ ERROR: 15: p2 already in use at c1
 .INP: primitive d3 ocf:heartbeat:Dummy
 .INP: group g2 d1 d2
 .INP: filter "sed '/g2/s/d1/p1/;/g1/s/p1/d1/'"
-ERROR: 27: d1 already in use at g2
-ERROR: 27: p1 already in use at g1
+.INP: filter "sed '/g1/s/d1/p1/;/g2/s/p1/d1/'"
 .INP: filter "sed '$alocation loc-d1 d1 rule $id=r1 -inf: not_defined webserver rule $id=r2 webserver: defined webserver'"
 .INP: filter "sed 's/not_defined webserver/& or mem number:lte 0/'" loc-d1
 .INP: filter "sed 's/ or mem number:lte 0//'" loc-d1
@@ -40,17 +38,17 @@ ERROR: 27: p1 already in use at g1
 .INP: modgroup g1 remove p1
 .INP: modgroup g1 add p1 before p2
 .INP: modgroup g1 add p1
-ERROR: 38: in group g1 child p1 listed more than once
+ERROR: 1: in group g1 child p1 listed more than once
 .INP: modgroup g1 remove st
-ERROR: 39: st is not member of g1
+ERROR: 40: st is not member of g1
 .INP: modgroup g1 remove c1
-ERROR: 40: c1 is not member of g1
+ERROR: 41: c1 is not member of g1
 .INP: modgroup g1 remove nosuch
-ERROR: 41: nosuch is not member of g1
+ERROR: 42: nosuch is not member of g1
 .INP: modgroup g1 add c1
-ERROR: 42: element clone:c1 cannot be part of g1
+ERROR: 43: a group may contain only primitives; c1 is clone
 .INP: modgroup g1 add nosuch
-ERROR: 43: object nosuch does not exist
+ERROR: 44: object nosuch does not exist
 .INP: _test
 .INP: verify
 .INP: show

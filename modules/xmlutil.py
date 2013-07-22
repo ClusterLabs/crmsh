@@ -127,10 +127,24 @@ def sanity_check_meta(id, node, attr_list):
             rc |= sanity_check_nvpairs(id, c, attr_list)
     return rc
 def get_interesting_nodes(node, nodes_l):
+    '''
+    All nodes which can be represented as CIB objects.
+    '''
     for c in node.iterchildren():
-        if is_element(c) and c.tag in vars.cib_cli_map:
+        if is_cib_element(c):
             nodes_l.append(c)
         get_interesting_nodes(c, nodes_l)
+    return nodes_l
+def get_top_cib_nodes(node, nodes_l):
+    '''
+    All nodes which can be represented as CIB objects, but not
+    nodes which are children of other CIB objects.
+    '''
+    for c in node.iterchildren():
+        if is_cib_element(c):
+            nodes_l.append(c)
+        else:
+            get_top_cib_nodes(c, nodes_l)
     return nodes_l
 
 def resources_xml():
@@ -386,6 +400,8 @@ def is_emptynvpairs(node):
 def is_emptyops(node):
     return is_emptyelem(node, ("operations",))
 
+def is_cib_element(node):
+    return is_element(node) and node.tag in vars.cib_cli_map
 def is_group(node):
     return node.tag == "group"
 def is_ms(node):
@@ -695,6 +711,8 @@ def processing_sort_cli(cl):
     Both a list of objects (CibObject) and list of cli
     representations accepted.
     '''
+    if not cl:
+        return []
     return nodes_cli(cl) + templates_cli(cl) + primitives_cli(cl) + groups_cli(cl) + mss_cli(cl) + clones_cli(cl) \
         + constraints_cli(cl) + fencing_topology_cli(cl) + properties_cli(cl) \
         + ops_cli(cl) + acls_cli(cl)
@@ -1008,7 +1026,7 @@ def merge_nodes(dnode, snode):
     add_children = []
     for sc in snode.iterchildren():
         dc = lookup_node(sc, dnode, ignore_id = True)
-        if not dc:
+        if dc is None:
             if sc.tag in vars.nvpairs_tags or sc.tag == "operations":
                 add_children.append(sc)
                 rc = True

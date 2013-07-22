@@ -38,7 +38,8 @@ def show_unrecognized_elems(cib_elem):
         conf = cib_elem.findall("configuration")[0]
     except IndexError:
         common_warn("CIB has no configuration element")
-        return
+        return False
+    rc = True
     for topnode in conf.iterchildren():
         if not is_element(topnode):
             continue
@@ -49,6 +50,8 @@ def show_unrecognized_elems(cib_elem):
                 continue
             if not c.tag in cib_object_map:
                 common_warn("unrecognized CIB element %s" % c.tag)
+                rc = False
+    return rc
 
 #
 # object sets (enables operations on sets of elements)
@@ -75,11 +78,15 @@ class CibObjectSet(object):
     are defined in subclasses.
     '''
     def __init__(self, *args):
-        rc, obj_list = cib_factory.mkobj_list(*args)
+        self.args = args
+        self._initialize()
+    def _initialize(self):
+        rc, self.obj_set = cib_factory.mkobj_set(*self.args)
         self.search_rc = rc
-        self.obj_list = obj_list
-        self.remove_objs = None
-        self.add_objs = None
+        self.all_set = cib_factory.get_all_obj_set()
+        self.obj_ids = set([o.obj_id for o in self.obj_set])
+        self.all_ids = set([o.obj_id for o in self.all_set])
+        self.locked_ids = self.all_ids - self.obj_ids
     def _open_url(self, src):
         if src == "-":
             return sys.stdin
@@ -94,30 +101,6 @@ class CibObjectSet(object):
             pass
         common_err("could not open %s" % src)
         return False
-    def _init_aux_lists(self):
-        '''
-        Before edit, initialize two auxiliary lists which will
-        hold a list of objects to be removed and a list of
-        objects which were created. Then, we can create a new
-        object list which will match the current state of
-        affairs, i.e. the object set after the last edit.
-        '''
-        self.remove_objs = copy.copy(self.obj_list)
-        self.add_objs = []
-    def _recreate_obj_list(self):
-        '''
-        Recreate obj_list: remove deleted objects and add
-        created objects
-        '''
-        for obj in self.remove_objs:
-            self.obj_list.remove(obj)
-        self.obj_list += self.add_objs
-        rmlist = []
-        for obj in self.obj_list:
-            if obj.invalid:
-                rmlist.append(obj)
-        for obj in rmlist:
-            self.obj_list.remove(obj)
     def _pre_edit(self, s):
         '''Extra processing of the string to be editted'''
         return s
@@ -199,12 +182,12 @@ class CibObjectSet(object):
         if s:
             f.write(s)
             f.write('\n')
-        elif self.obj_list:
+        elif self.obj_set:
             rc = False
         safe_close_w(f)
         return rc
     def _get_gv_obj(self, gtype):
-        if not self.obj_list:
+        if not self.obj_set:
             return True, None
         if gtype not in gv_types:
             common_err("graphviz type %s is not supported" % gtype)
@@ -215,7 +198,7 @@ class CibObjectSet(object):
     def _graph_repr(self, gv_obj):
         '''Let CIB elements produce graph elements.
         '''
-        for obj in processing_sort_cli(self.obj_list):
+        for obj in processing_sort_cli(list(self.obj_set)):
             obj.repr_gv(gv_obj)
     def show_graph(self, gtype):
         '''Display graph using dotty'''
@@ -245,36 +228,28 @@ class CibObjectSet(object):
             return self.search_rc
         page_string(s)
         return self.search_rc
-    def import_file(self, method, fname):
+    def import_file(self, fname):
         if not cib_factory.is_cib_sane():
             return False
-        if method not in ("replace", "update"):
-            common_err("unknown method %s" % method)
-            return False
-        if method == "replace":
-            if options.interactive and cib_factory.has_cib_changed():
-                if not ask("This operation will erase all changes. Do you want to proceed?"):
-                    return False
-            cib_factory.erase()
         f = self._open_url(fname)
         if not f:
             return False
         s = ''.join(f)
         if f != sys.stdin:
             f.close()
-        return self.save(s, method == "update")
+        return self.save(s)
     def repr(self, format=format):
         '''
         Return a string with objects's representations (either
         CLI or XML).
         '''
         return ''
-    def save(self, s, update=False):
+    def save(self, s):
         '''
         For each object:
-            - try to find a corresponding object in obj_list
+            - try to find a corresponding object in obj_set
             - if (update and not found) or found:
-              replace the object in the obj_list with
+              replace the object in the obj_set with
               the new object
             - if not found: create new
         See below for specific implementations.
@@ -318,11 +293,11 @@ class CibObjectSet(object):
         # we check the whole CIB for clashes as a clash may originate between
         # an object already committed and a new one
         check_set = set([o.obj_id \
-            for o in self.obj_list if o.obj_type == "primitive"])
+            for o in self.obj_set if o.obj_type == "primitive"])
         if not check_set:
             return 0
         clash_dict = {}
-        for obj in set_obj_all.obj_list:
+        for obj in set_obj_all.obj_set:
             node = obj.node
             if is_primitive(node):
                 process_primitive(node, clash_dict)
@@ -341,21 +316,28 @@ class CibObjectSet(object):
         Test objects for sanity. This is about semantics.
         '''
         rc = self.__check_unique_clash(set_obj_all)
-        for obj in self.obj_list:
+        for obj in self.obj_set:
             rc |= obj.check_sanity()
         return rc
-    def _lookup_cli(self, cli_list):
-        for obj in self.obj_list:
-            if obj.matchcli(cli_list):
-                return obj
-    def lookup(self, xml_obj_type, obj_id):
-        for obj in self.obj_list:
-            if obj.match(xml_obj_type, obj_id):
-                return obj
-    def _drop_remaining(self):
-        'Any remaining objects in obj_list are deleted.'
-        l = [x.obj_id for x in self.remove_objs]
-        return cib_factory.delete(*l)
+    def is_edit_valid(self, id_set):
+        '''
+        1. Cannot name any elements as those which exist but
+        were not picked for editing.
+        2. Cannot remove running resources.
+        '''
+        rc = True
+        not_allowed = id_set & self.locked_ids
+        if not_allowed:
+            common_err("elements %s already exist" % \
+                ','.join(list(not_allowed)))
+            rc = False
+        delete_set = self.obj_ids - id_set
+        cannot_delete = [ x for x in delete_set if is_rsc_running(x) ]
+        if cannot_delete:
+            common_err("cannot delete running resources: %s" % \
+                ','.join(cannot_delete))
+            rc = False
+        return rc
 
 def get_comments(cli_list):
     if not cli_list:
@@ -382,49 +364,45 @@ class CibObjectSetCli(CibObjectSet):
         return s
     def repr(self, format=1):
         "Return a string containing cli format of all objects."
-        if not self.obj_list:
+        if not self.obj_set:
             return ''
         return '\n'.join(obj.repr_cli(format = format) \
-            for obj in processing_sort_cli(self.obj_list))
+            for obj in processing_sort_cli(list(self.obj_set)))
     def _pre_edit(self, s):
         '''Extra processing of the string to be editted'''
         if user_prefs.editor.startswith("vi"):
             return "%s\n#vim:set syntax=pcmk\n" % s
         return s
-    def process(self, cli_list, update=False):
+    def _get_id(self, cli_list):
         '''
-        Create new objects or update existing ones.
+        Get the id from a CLI representation. Normally, it should
+        be value of the id attribute, but sometimes the
+        attribute is missing.
         '''
-        myobj = obj = self._lookup_cli(cli_list)
-        if update and not obj:
-            obj = cib_factory.find_object_for_cli(cli_list)
-        if obj:
-            rc = cib_factory.update_from_cli(obj, cli_list, update)
-            if myobj:
-                self.remove_objs.remove(myobj)
-        else:
-            obj = cib_factory.create_from_cli(cli_list)
-            rc = obj != None
-            if rc:
-                self.add_objs.append(obj)
-        return rc
-    def save(self, s, update=False):
+        id = find_value(cli_list[0][1], "id")
+        if not id:
+            type = cli_list[0][0]
+            if type in vars.nvset_cli_names:
+                # some elements have default ids
+                # (property, *_defaults)
+                id = cib_object_map[backtrans[type]][3]
+            else:
+                # some are unique and have no ids,
+                # i.e. fencing-topology
+                id = type
+        return id
+    def save(self, s):
         '''
         Save a user supplied cli format configuration.
         On errors user is typically asked to review the
         configuration (for instance on editting).
 
-        On syntax error (return code 1), no changes are done, but
-        on semantic errors (return code 2), some changes did take
-        place so object list must be updated properly.
-
-        Finally, once syntax check passed, there's no way back,
-        all changes are applied to the current configuration.
-
-        TODO: Implement undo configuration changes.
+        On errors, the user is asked to edit again (if we're
+        coming from edit). The original CIB is preserved and no
+        changes are made.
         '''
-        l = []
-        id_list = []
+        edit_d = {}
+        id_set = set([])
         rc = True
         err_buf.start_tmp_lineno()
         cp = CliParser()
@@ -432,31 +410,26 @@ class CibObjectSetCli(CibObjectSet):
             err_buf.incr_lineno()
             cli_list = cp.parse(cli_text)
             if cli_list:
-                id = find_value(cli_list[0][1], "id")
-                if id:
-                    if id in id_list:
-                        common_err("duplicate element %s" % id)
-                        rc = False
-                    id_list.append(id)
-                l.append(cli_list)
+                id = self._get_id(cli_list)
+                if id in id_set:
+                    common_err("duplicate element %s" % id)
+                    rc = False
+                id_set.add(id)
+                edit_d[id] = cli_list
             elif cli_list == False:
                 rc = False
         err_buf.stop_tmp_lineno()
         # we can't proceed if there was a syntax error, but we
         # can ask the user to fix problems
+        rc &= self.is_edit_valid(id_set)
         if not rc:
             return rc
-        self._init_aux_lists()
-        if l:
-            for cli_list in processing_sort_cli(l):
-                if self.process(cli_list, update) == False:
-                    rc = False
-        if not self._drop_remaining():
-            # this is tricky, we don't know what was removed!
-            # it could happen that the user dropped a resource
-            # which was running and therefore couldn't be removed
-            rc = False
-        self._recreate_obj_list()
+        del_set = self.obj_ids - id_set
+        mk_set = id_set - self.obj_ids
+        upd_set = id_set & self.obj_ids
+        rc = cib_factory.set_update(edit_d, mk_set, upd_set, del_set)
+        if not rc:
+            self._initialize()
         return rc
 
 cib_verify = "crm_verify -V -p"
@@ -468,47 +441,50 @@ class CibObjectSetRaw(CibObjectSet):
         CibObjectSet.__init__(self, *args)
     def repr(self, format="ignored"):
         "Return a string containing xml of all objects."
-        cib_elem = cib_factory.objlist2doc(self.obj_list)
+        cib_elem = cib_factory.obj_set2cib(self.obj_set)
         s = etree.tostring(cib_elem, pretty_print=True)
         s = '<?xml version="1.0" ?>\n%s' % s
         return s
-    def process(self, node, update=False):
-        if not cib_factory.is_cib_sane():
-            return False
-        myobj = obj = self.lookup(node.tag, node.get("id"))
-        if update and not obj:
-            obj = cib_factory.find_object_for_node(node)
-        if obj:
-            rc = cib_factory.update_from_node(obj, node)
-            if myobj:
-                self.remove_objs.remove(obj)
+    def _get_id(self, node):
+        if node.tag == "fencing-topology":
+            return node.tag
         else:
-            new_obj = cib_factory.create_from_node(node)
-            rc = new_obj != None
-            if rc:
-                self.add_objs.append(new_obj)
-        return rc
-    def save(self, s, update=False):
+            return node.get("id")
+    def save(self, s):
         try:
             cib_elem = etree.fromstring(s)
         except etree.ParseError, msg:
             cib_parse_err(msg, s)
             return False
-        rc = True
         sanitize_cib(cib_elem)
-        show_unrecognized_elems(cib_elem)
-        newnodes = get_interesting_nodes(cib_elem, [])
-        self._init_aux_lists()
-        if newnodes:
-            for node in processing_sort(newnodes):
-                if not self.process(node, update):
-                    rc = False
-        if not self._drop_remaining():
-            rc = False
-        self._recreate_obj_list()
+        if not show_unrecognized_elems(cib_elem):
+            return False
+        rc = True
+        id_set = set([])
+        edit_d = {}
+        for node in get_top_cib_nodes(cib_elem, []):
+            id = self._get_id(node)
+            if not id:
+                common_err("element %s has no id!" % \
+                    etree.tostring(node, pretty_print=True))
+                rc = False
+            if id in id_set:
+                common_err("duplicate element %s" % id)
+                rc = False
+            id_set.add(id)
+            edit_d[id] = node
+        rc &= self.is_edit_valid(id_set)
+        if not rc:
+            return rc
+        del_set = self.obj_ids - id_set
+        mk_set = id_set - self.obj_ids
+        upd_set = id_set & self.obj_ids
+        rc = cib_factory.set_update(edit_d, mk_set, upd_set, del_set, "xml")
+        if not rc:
+            self._initialize()
         return rc
     def verify(self):
-        if not self.obj_list:
+        if not self.obj_set:
             return True
         cli_display.set_no_pretty()
         rc = pipe_string(cib_verify, self.repr(format = -1))
@@ -519,7 +495,7 @@ class CibObjectSetRaw(CibObjectSet):
     def ptest(self, nograph, scores, utilization, actions, verbosity):
         if not cib_factory.is_cib_sane():
             return False
-        cib_elem = cib_factory.objlist2doc(self.obj_list)
+        cib_elem = cib_factory.obj_set2cib(self.obj_set)
         status = cib_status.get_status()
         if status is None:
             common_err("no status section found")
@@ -763,7 +739,7 @@ class CibObject(object):
     '''
     The top level object of the CIB. Resources and constraints.
     '''
-    state_fmt = "%16s %-8s%-8s%-8s%-8s%-8s%-4s"
+    state_fmt = "%16s %-8s%-8s%-8s%-4s"
     set_names = {}
     def __init__(self, xml_obj_type):
         if not xml_obj_type in cib_object_map:
@@ -776,9 +752,6 @@ class CibObject(object):
         self.nocli = False # we don't support this one
         self.nocli_warn = True # don't issue warnings all the time
         self.updated = False # was the object updated
-        self.invalid = False # the object has been invalidated (removed)
-        self.moved = False # the object has been moved (from/to a container)
-        self.recreate = False # constraints to be recreated
         self.parent = None # object superior (group/clone/ms)
         self.children = [] # objects inferior
         self.obj_id = None
@@ -788,7 +761,7 @@ class CibObject(object):
     def _dump_state(self):
         'Print object status'
         print self.state_fmt % \
-            (self.obj_id,self.origin,self.updated,self.moved,self.invalid, \
+            (self.obj_id,self.origin,self.updated, \
             self.parent and self.parent.obj_id or "", \
             len(self.children))
     def _repr_cli_xml(self, format):
@@ -1018,8 +991,6 @@ class CibObject(object):
         return self.xml_obj_type == xml_obj_type and self.obj_id == obj_id
     def reset_updated(self):
         self.updated = False
-        self.moved = False
-        self.recreate = False
         for child in self.children:
             child.reset_updated()
     def propagate_updated(self):
@@ -1164,7 +1135,7 @@ class Op(object):
     '''
     elem_type = "op"
     def __init__(self, op_name, prim, node=None):
-        self.parent = prim
+        self.prim = prim
         self.node = node
         self.attr_d = odict()
         self.attr_d["name"] = op_name
@@ -1203,7 +1174,7 @@ class Op(object):
                 self.node.set(n, v)
             else:
                 inst_attr.append([n, v])
-        set_id(self.node, None, self.parent)
+        set_id(self.node, None, self.prim)
         if inst_attr:
             e = ["instance_attributes", inst_attr]
             nia = mkxmlnvpairs(e, None, self.node.get("id"))
@@ -1405,11 +1376,6 @@ class CibContainer(CibObject):
         s = cli_display.keyword(self.obj_type)
         id = cli_display.id(self.obj_id)
         return "%s %s %s" % (s, id, ' '.join(children))
-    def _is_eligible(self, obj):
-        if self.obj_type == "group":
-            return is_primitive(obj.node)
-        else:
-            return is_primitive(obj.node) or is_group(obj.node)
     def _cli_list2node(self, cli_list, oldnode):
         head = copy.copy(cli_list[0])
         head[0] = backtrans[head[0]]
@@ -1423,9 +1389,6 @@ class CibContainer(CibObject):
             for child_id in v:
                 obj = cib_factory.find_object(child_id)
                 if obj:
-                    if not self._is_eligible(obj):
-                        common_err("element %s cannot be part of %s" % (str(obj), self.obj_id))
-                        continue
                     headnode.append(copy.deepcopy(obj.node))
                 else:
                     no_object_err(child_id)
@@ -1936,9 +1899,14 @@ class CibFactory(Singleton):
                 (parent.obj_id, obj.obj_id))
             return False
         if parent.node != obj.node.getparent():
-            common_err("object %s node is not a child of its parent %s, but %s:%s" % \
-                (obj.obj_id, parent.obj_id, obj.node.tag, obj.node.get("id")))
+            if obj.node.getparent() is None:
+                common_err("object %s node is not a child of its parent %s" % \
+                    (obj.obj_id, parent.obj_id))
+            else:
+                common_err("object %s node is not a child of its parent %s, but %s:%s" % \
+                    (obj.obj_id, parent.obj_id, obj.node.getparent().tag, obj.node.getparent().get("id")))
             return False
+        return True
     def check_structure(self):
         #print "Checking structure..."
         if not self.is_cib_sane():
@@ -1947,10 +1915,12 @@ class CibFactory(Singleton):
         for obj in self.cib_objects:
             #print "Checking %s... (%s)" % (obj.obj_id, obj.nocli)
             if obj.parent:
-                if self._check_parent(obj, obj.parent) == False:
+                if not self._check_parent(obj, obj.parent):
                     rc = False
             for child in obj.children:
-                if self._check_parent(child, child.parent) == False:
+                if not child.parent:
+                    common_err("child %s does not reference its parent %s" % \
+                        (child.obj_id, obj.obj_id))
                     rc = False
         return rc
     def regression_testing(self, param):
@@ -1963,11 +1933,6 @@ class CibFactory(Singleton):
             self.regtest = True
         else:
             common_warn("bad parameter for regtest: %s" % param)
-    def _replace_elem(self, newnode, oldnode):
-        if not self.is_cib_sane():
-            return None
-        oldnode.getparent().replace(oldnode, newnode)
-        return newnode
     def get_schema(self):
         return self.cib_attrs["validate-with"]
     def change_schema(self, schema_st):
@@ -2047,9 +2012,9 @@ class CibFactory(Singleton):
     def _set_cib_attributes(self, cib):
         for attr in self.cib_attrs:
             cib.set(attr, self.cib_attrs[attr])
-    def objlist2doc(self, obj_list, obj_filter=None):
+    def obj_set2cib(self, obj_set, obj_filter=None):
         '''
-        Return document containing objects in obj_list.
+        Return document containing objects in obj_set.
         Must remove all children from the object list, because
         printing xml of parents will include them.
         Optional filter to sieve objects.
@@ -2060,7 +2025,7 @@ class CibFactory(Singleton):
         # then the clone gets in, not the primitive
         # dict will weed out duplicates
         d = {}
-        for obj in obj_list:
+        for obj in obj_set:
             if obj_filter and not obj_filter(obj):
                 continue
             d[obj.top_parent()] = 1
@@ -2090,7 +2055,7 @@ class CibFactory(Singleton):
     def _state_header(self):
         'Print object status header'
         print CibObject.state_fmt % \
-            ("", "origin", "updated", "moved", "invalid", "parent", "children")
+            ("", "origin", "updated", "parent", "children")
     def showobjects(self):
         self._state_header()
         for obj in self.cib_objects:
@@ -2194,9 +2159,7 @@ class CibFactory(Singleton):
             return
         for node in processing_sort(all_nodes):
             if is_defaults(node):
-                for c in node.iterchildren():
-                    if not is_element(c) or c.tag != "meta_attributes":
-                        continue
+                for c in node.xpath("./meta_attributes"):
                     self._save_node(c, node)
             else:
                 self._save_node(node)
@@ -2223,18 +2186,55 @@ class CibFactory(Singleton):
         return self.check_structure()
     def _init_vars(self):
         self.cib_elem = None  # the cib
-        self.cib_orig = None  # the file holding the CIB which we loaded
+        self.cib_orig = None  # the CIB which we loaded
         self.cib_attrs = {} # cib version dictionary
         self.cib_objects = [] # a list of cib objects
         self.remove_queue = [] # a list of cib objects to be removed
         self.id_refs = {} # dict of id-refs
         self.new_schema = False # schema changed
+        self._state = []
+    def _push_state(self):
+        '''
+        A rudimentary instance state backup. Just make copies of
+        all important variables.
+        id_store has to be backed up too.
+        '''
+        self._state.append([copy.deepcopy(x) \
+            for x in (self.cib_elem, \
+                self.cib_attrs, self.cib_objects, \
+                self.remove_queue, self.id_refs)])
+        id_store.push_state()
+    def _pop_state(self):
+        try:
+            common_debug("performing rollback")
+            self.cib_elem, \
+                self.cib_attrs, self.cib_objects, \
+                self.remove_queue, self.id_refs = self._state.pop()
+        except KeyError:
+            return False
+        # need to get addresses of all new objects created by
+        # deepcopy
+        for obj in self.cib_objects:
+            obj.node = self.find_node(obj.xml_obj_type, obj.obj_id)
+            self._update_links(obj)
+        id_store.pop_state()
+        return self.check_structure()
+    def _drop_state(self):
+        try:
+            self._state.pop()
+        except KeyError:
+            pass
+        id_store.drop_state()
+    def _clean_state(self):
+        self._state = []
+        id_store.clean_state()
     def reset(self):
         if self.cib_elem is None:
             return
         self.cib_elem = None
         self.cib_orig = None
         self._init_vars()
+        self._clean_state()
         id_store.clear()
     def find_object(self, obj_id):
         "Find an object for id."
@@ -2301,6 +2301,20 @@ class CibFactory(Singleton):
             if obj.matchcli(cli_list):
                 return obj
         return None
+    def find_node(self, tag, id, strict=True):
+        "Find a node of this type with this id."
+        try:
+            if tag in vars.defaults_tags:
+                expr = '//%s/meta_attributes[@id="%s"]' % (tag, id)
+            elif tag == 'fencing-topology':
+                expr = '//fencing-topology' % tag
+            else:
+                expr = '//%s[@id="%s"]' % (tag, id)
+            return self.cib_elem.xpath(expr)[0]
+        except IndexError:
+            if strict:
+                common_warn("strange, %s element %s not found" % (tag, id))
+            return None
     #
     # Element editing stuff.
     #
@@ -2458,27 +2472,28 @@ class CibFactory(Singleton):
             return []
         t = spec[5:]
         return [ x for x in self.cib_objects if x.obj_type == t ]
-    def mkobj_list(self, *args):
+    def mkobj_set(self, *args):
         if not args:
             return True, copy.copy(self.cib_objects)
         if args[0] == "NOOBJ":
             return True, []
         rc = True
-        obj_list = []
+        obj_set = set([])
         for spec in args:
             if spec == "changed":
-                obj_list += self.modified_elems()
+                obj_set |= set(self.modified_elems())
             elif spec.startswith("type:"):
-                obj_list += self.get_elems_on_type(spec)
+                obj_set |= set(self.get_elems_on_type(spec))
             else:
                 obj = self.find_object(spec)
                 if obj:
-                    obj_list.append(obj)
+                    obj_set.add(obj)
                 else:
                     no_object_err(spec)
                     rc = False
-        obj_list = list(set(obj_list))
-        return rc, obj_list
+        return rc, obj_set
+    def get_all_obj_set(self):
+        return set(self.cib_objects)
     def is_cib_empty(self):
         return not self.get_elems_on_type("type:primitive")
     def has_cib_changed(self):
@@ -2494,28 +2509,35 @@ class CibFactory(Singleton):
                 constraint_norefobj_err(constraint_id, obj_id)
                 rc = False
         return rc
-    def _verify_rsc_children(self, node):
+    def _verify_rsc_children(self, obj):
         '''
         Check prerequisites:
           a) all children must exist
-          b) no child may have other parent than me
-          (or should we steal children?)
+          b) no child may have more than one parent
           c) there may not be duplicate children
         '''
-        obj_id = node.get("id")
-        c_ids = get_rsc_children_ids(node)
-        if not c_ids:
-            return True
+        obj_id = obj.obj_id
         rc = True
         c_dict = {}
-        for child_id in c_ids:
-            if not self._verify_child(child_id, node.tag, obj_id):
+        for c in obj.node.iterchildren():
+            if not is_cib_element(c):
+                continue
+            child_id = c.get("id")
+            if not self._verify_child(child_id, obj.node.tag, obj_id):
                 rc = False
             if child_id in c_dict:
                 common_err("in group %s child %s listed more than once" % \
                     (obj_id, child_id))
                 rc = False
             c_dict[child_id] = 1
+        for other in [ x for x in self.cib_objects \
+                if x != obj and is_container(x.node) ]:
+            shared_obj = set(obj.children) & set(other.children)
+            if shared_obj:
+                common_err("%s contained in both %s and %s" % \
+                    (','.join([x.obj_id for x in shared_obj]),
+                    obj_id, other.obj_id))
+                rc = False
         return rc
     def _verify_child(self, child_id, parent_tag, obj_id):
         'Check if child exists and obj_id is (or may become) its parent.'
@@ -2523,12 +2545,12 @@ class CibFactory(Singleton):
         if not child:
             no_object_err(child_id)
             return False
-        if child.parent and child.parent.obj_id != obj_id:
-            common_err("%s already in use at %s"%(child_id, child.parent.obj_id))
-            return False
         if parent_tag == "group" and child.obj_type != "primitive":
             common_err("a group may contain only primitives; %s is %s" % \
                 (child_id, child.obj_type))
+            return False
+        if child.parent and child.parent.obj_id != obj_id:
+            common_err("%s already in use at %s"%(child_id, child.parent.obj_id))
             return False
         if not child.obj_type in vars.children_tags:
             common_err("%s may contain a primitive or a group; %s is %s" % \
@@ -2552,12 +2574,10 @@ class CibFactory(Singleton):
         except KeyError:
             common_err("element %s (%s) not recognized" % (node.tag, obj_id))
             return False
-        if obj.parent_type == "resources" and \
-                not self._verify_rsc_children(node):
-            rc = False
-        elif obj.parent_type == "constraints" and \
-                not self._verify_constraints(node):
-            rc = False
+        if is_container(node):
+            rc &= self._verify_rsc_children(obj)
+        elif is_constraint(node):
+            rc &= self._verify_constraints(node)
         return rc
     def create_object(self, *args):
         return self.create_from_cli(CliParser().parse(list(args))) != None
@@ -2630,7 +2650,7 @@ class CibFactory(Singleton):
             return None
         node = obj.cli2node(cli_list)
         return self._add_element(obj, node)
-    def update_from_cli(self, obj, cli_list, update=False):
+    def update_from_cli(self, obj, cli_list):
         '''
         Replace element from the cli intermediate.
         If this is an update and the element is properties, then
@@ -2642,7 +2662,7 @@ class CibFactory(Singleton):
             raw_elem = etree.fromstring(cli_list[1][1])
             id_store.store_xml(raw_elem)
             return self.update_element(obj, raw_elem)
-        elif update and obj.obj_type in vars.nvset_cli_names:
+        elif obj.obj_type in vars.nvset_cli_names:
             self.merge_from_cli(obj, cli_list)
             return True
         else:
@@ -2664,14 +2684,11 @@ class CibFactory(Singleton):
                 newnode.getparent().remove(newnode)
             return True # the new and the old versions are equal
         obj.node = newnode
-        if not self.test_element(obj, newnode):
-            id_store.replace_xml(newnode, oldnode)
-            obj.node = oldnode
-            return False
         common_debug("update CIB element: %s" % str(obj))
-        obj.node = self._replace_elem(newnode, oldnode)
+        if oldnode.getparent() is not None:
+            oldnode.getparent().replace(oldnode, newnode)
         obj.nocli = False # try again after update
-        self.adjust_children(obj)
+        self._adjust_children(obj)
         if not obj.cli_use_validate():
             obj.nocli_warn = True
             obj.nocli = True
@@ -2689,13 +2706,81 @@ class CibFactory(Singleton):
         if rc:
             obj.updated = True
             obj.propagate_updated()
-    def update_moved(self, obj):
-        'Updated the moved flag. Mark affected constraints.'
-        obj.moved = not obj.moved
-        if obj.moved:
-            for c_obj in self.related_constraints(obj):
-                c_obj.recreate = True
-    def adjust_children(self, obj):
+    def _cli_set_update(self, edit_d, mk_set, upd_set, del_set):
+        '''
+        Create/update/remove elements.
+        edit_d is a dict with id keys and cli_list values.
+        mk_set is a set of ids to be created.
+        upd_set is a set of ids to be updated (replaced).
+        del_set is a set to be removed.
+        '''
+        test_l = []
+        for cli in processing_sort_cli([edit_d[x] for x in mk_set]):
+            obj = self.create_from_cli(cli)
+            if not obj:
+                return False
+            test_l.append(obj)
+        for id in upd_set:
+            obj = self.find_object(id)
+            if not obj:
+                return False
+            if not self.update_from_cli(obj, edit_d[id]):
+                return False
+            test_l.append(obj)
+        if not self.delete(*list(del_set)):
+            return False
+        rc = True
+        for obj in test_l:
+            if not self.test_element(obj):
+                rc = False
+        return rc & self.check_structure()
+    def _xml_set_update(self, edit_d, mk_set, upd_set, del_set):
+        '''
+        Create/update/remove elements.
+        node_l is a list of elementtree elements.
+        mk_set is a set of ids to be created.
+        upd_set is a set of ids to be updated (replaced).
+        del_set is a set to be removed.
+        '''
+        test_l = []
+        for el in processing_sort([edit_d[x] for x in mk_set]):
+            obj = self.create_from_node(el)
+            if not obj:
+                return False
+            test_l.append(obj)
+        for id in upd_set:
+            obj = self.find_object(id)
+            if not obj:
+                return False
+            if not self.update_from_node(obj, edit_d[id]):
+                return False
+            test_l.append(obj)
+        if not self.delete(*list(del_set)):
+            return False
+        rc = True
+        for obj in test_l:
+            if not self.test_element(obj):
+                rc = False
+        return rc & self.check_structure()
+    def _set_update(self, edit_d, mk_set, upd_set, del_set, upd_type):
+        if upd_type == "xml":
+            return self._xml_set_update(edit_d, mk_set, upd_set, del_set)
+        else:
+            return self._cli_set_update(edit_d, mk_set, upd_set, del_set)
+    def set_update(self, edit_d, mk_set, upd_set, del_set, upd_type="cli"):
+        '''
+        Just a wrapper for _set_update() to allow for a
+        rollback.
+        '''
+        self._push_state()
+        if not self._set_update(edit_d, mk_set, upd_set, del_set, upd_type):
+            if not self._pop_state():
+                # this should never happen!
+                raise()
+            return False
+        self._drop_state()
+        return True
+    def _adjust_children(self, obj):
         '''
         All stuff children related: manage the nodes of children,
         update the list of children for the parent, update
@@ -2704,15 +2789,16 @@ class CibFactory(Singleton):
         new_children_ids = get_rsc_children_ids(obj.node)
         if not new_children_ids:
             return
-        old_children = obj.children
+        old_children = [x for x in obj.children if x.parent == obj]
         obj.children = [self.find_object(x) for x in new_children_ids]
-        self._relink_orphans_to_top(old_children, obj.children)
+        # relink orphans to top
+        for child in (set(old_children) - set(obj.children)):
+            common_debug("relink child %s to top" % str(child))
+            self._relink_child_to_top(child)
         self._update_children(obj)
     def _relink_child_to_top(self, obj):
         'Relink a child to the top node.'
         get_topnode(self.cib_elem, obj.parent_type).append(obj.node)
-        if obj.origin == "cib":
-            self.update_moved(obj)
         obj.parent = None
     def _update_children(self, obj):
         '''For composite objects: update all children nodes.
@@ -2724,17 +2810,10 @@ class CibFactory(Singleton):
             if child.children: # and children of children
                 self._update_children(child)
             rmnode(oldnode)
-            if not child.parent and child.origin == "cib":
-                self.update_moved(child)
             if child.parent and child.parent != obj:
                 child.parent.updated = True # the other parent updated
             child.parent = obj
-    def _relink_orphans_to_top(self, old_children, new_children):
-        "New orphans move to the top level for the object type."
-        for child in old_children:
-            if child not in new_children:
-                self._relink_child_to_top(child)
-    def test_element(self, obj, node):
+    def test_element(self, obj):
         if not obj.xml_obj_type in vars.defaults_tags:
             if not self._verify_element(obj):
                 return False
@@ -2745,7 +2824,7 @@ class CibFactory(Singleton):
     def _update_links(self, obj):
         '''
         Update the structure links for the object (obj.children,
-        obj.parent). Update also the dom nodes, if necessary.
+        obj.parent). Update also the XML, if necessary.
         '''
         obj.children = []
         if obj.obj_type not in vars.container_tags:
@@ -2759,20 +2838,16 @@ class CibFactory(Singleton):
                 child.parent = obj
                 obj.children.append(child)
                 if c != child.node:
+                    common_debug("removing child %s node" % str(child))
                     rmnode(child.node)
                     child.node = c
     def _add_element(self, obj, node):
         obj.node = node
         obj.set_id()
-        if not self.test_element(obj, node):
-            id_store.remove_xml(node)
-            try: node.getparent().remove()
-            except: pass
-            return None
         pnode = get_topnode(self.cib_elem, obj.parent_type)
         common_debug("append child %s to %s" % (obj.obj_id, pnode.tag))
         pnode.append(node)
-        self.adjust_children(obj)
+        self._adjust_children(obj)
         self._redirect_children_constraints(obj)
         if not obj.cli_use_validate():
             self.nocli_warn = True
@@ -2800,9 +2875,7 @@ class CibFactory(Singleton):
             return None
         return self._add_element(obj, node)
     def _remove_obj(self, obj):
-        "Remove a cib object and its children."
-        # remove children first
-        # can't remove them here from obj.children!
+        "Remove a cib object."
         common_debug("remove object %s" % str(obj))
         for child in obj.children:
             # just relink, don't remove children
@@ -2811,7 +2884,6 @@ class CibFactory(Singleton):
             obj.parent.children.remove(obj)
         id_store.remove_xml(obj.node)
         rmnode(obj.node)
-        obj.invalid = True
         self._add_to_remove_queue(obj)
         self.cib_objects.remove(obj)
         for c_obj in self.related_constraints(obj):
