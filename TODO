@@ -80,6 +80,7 @@ particular experienced pythonistas.
 
 	- at the time it didn't seem like anything less would do, but
 	  it's worth revising
+	  (done in changeset 12acfbfe94c6)
 
 . XML production is ugly
 
