@@ -131,7 +131,10 @@ EOF
 
 runtestcase() {
 	setenvironment
+	(
+	cd $rootdir
 	[ -x "$pref" ] && $pref >/dev/null 2>&1
+	)
 	echo -n "$testcase" >&3
 	logmsg "BEGIN testcase $testcase"
 	(
@@ -144,7 +147,10 @@ runtestcase() {
 		echo " saving to expect file" >&3
 		cat > $expf
 	else
+		(
+		cd $rootdir
 		[ -x "$postf" ] && $postf >/dev/null 2>&1
+		)
 		echo -n " checking..." >&3
 		if head -2 $expf | grep -qs '^<cib'; then
 			crm_diff -o $expf -n -
