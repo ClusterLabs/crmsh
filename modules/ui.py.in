@@ -778,7 +778,7 @@ def set_deep_meta_attr(attr, value, rsc_id):
     then ask the user whether to reset them or not (exact
     behaviour depends on the value of user_prefs.get_manage_children()).
     '''
-    target_node = rsc2node(rsc_id)
+    target_node = RscState().rsc2node(rsc_id)
     if target_node is None:
         common_error("resource %s does not exist" % rsc_id)
         return False
@@ -787,13 +787,6 @@ def set_deep_meta_attr(attr, value, rsc_id):
         target_node = get_topmost_rsc(target_node)
     return set_deep_meta_attr_node(target_node, attr, value)
 
-def get_max_clone(id):
-    v = get_meta_param(id,"clone-max")
-    try:
-        cnt = int(v)
-    except:
-        cnt = len(listnodes())
-    return cnt
 def cleanup_resource(rsc, node=''):
     if not is_name_sane(rsc) or not is_name_sane(node):
         return False
@@ -909,7 +902,7 @@ class RscMgmt(UserInterface):
         "usage: promote <rsc>"
         if not is_name_sane(rsc):
             return False
-        if not is_rsc_ms(rsc):
+        if not RscState().is_ms(rsc):
             common_err("%s is not a master-slave resource" % rsc)
             return False
         return ext_cmd(self.rsc_setrole%(rsc,"Master")) == 0
@@ -917,7 +910,7 @@ class RscMgmt(UserInterface):
         "usage: demote <rsc>"
         if not is_name_sane(rsc):
             return False
-        if not is_rsc_ms(rsc):
+        if not RscState().is_ms(rsc):
             common_err("%s is not a master-slave resource" % rsc)
             return False
         return ext_cmd(self.rsc_setrole%(rsc,"Slave")) == 0

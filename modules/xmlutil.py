@@ -147,16 +147,111 @@ def get_top_cib_nodes(node, nodes_l):
             get_top_cib_nodes(c, nodes_l)
     return nodes_l
 
+class RscState(object):
+    '''
+    Get the resource status and some other relevant bits.
+    In particular, this class should allow for a bit of caching
+    of cibadmin -Q -o resources output in case we need to check
+    more than one resource in a row.
+    '''
+    rsc_status = "crm_resource -W -r '%s'"
+    def __init__(self):
+        self.current_cib = None
+        self.rsc_elem = None
+        self.prop_elem = None
+        self.rsc_dflt_elem = None
+    def _init_cib(self):
+        self.current_cib = cibdump2elem("configuration")
+        self.rsc_elem = \
+            get_first_conf_elem(self.current_cib, "resources")
+        self.prop_elem = \
+            get_first_conf_elem(self.current_cib, "crm_config/cluster_property_set")
+        self.rsc_dflt_elem = \
+            get_first_conf_elem(self.current_cib, "rsc_defaults/meta_attributes")
+    def rsc2node(self, id):
+        '''
+        Get a resource XML element given the id.
+        NB: this is called from almost all other methods.
+        Hence we initialize the cib here. CIB reading is
+        expensive.
+        '''
+        if self.rsc_elem is None:
+            self._init_cib()
+        if self.rsc_elem is None:
+            return None
+        # does this need to be optimized?
+        expr = './/*[@id="%s"]' % id
+        try:
+            return self.rsc_elem.xpath(expr)[0]
+        except (IndexError, AttributeError):
+            return None
+    def is_ms(self, id):
+        '''
+        Test if the resource is master-slave.
+        '''
+        rsc_node = self.rsc2node(id)
+        if rsc_node is None:
+            return False
+        return is_ms(rsc_node)
+    def rsc_clone(self, id):
+        '''
+        Return id of the clone/ms containing this resource
+        or None if it's not cloned.
+        '''
+        rsc_node = self.rsc2node(id)
+        if rsc_node is None:
+            return None
+        pnode = rsc_node.getparent()
+        if pnode is None:
+            return None
+        if is_group(pnode):
+            pnode = pnode.getparent()
+        if is_clonems(pnode):
+            return pnode.get("id")
+        return None
+    def is_managed(self, id):
+        '''
+        Is this resource managed?
+        '''
+        rsc_node = self.rsc2node(id)
+        if rsc_node is None:
+            return False
+        # maintenance-mode, if true, overrides all
+        attr = get_attr_value(self.prop_elem, "maintenance-mode")
+        if attr and is_xs_boolean_true(attr):
+            return False
+        # then check the rsc is-managed meta attribute
+        rsc_meta_node = get_rsc_meta_node(rsc_node)
+        attr = get_attr_value(rsc_meta_node, "is-managed")
+        if attr:
+            return is_xs_boolean_true(attr)
+        # then rsc_defaults is-managed attribute
+        attr = get_attr_value(self.rsc_dflt_elem, "is-managed")
+        if attr:
+            return is_xs_boolean_true(attr)
+        # finally the is-managed-default property
+        attr = get_attr_value(self.prop_elem, "is-managed-default")
+        if attr:
+            return is_xs_boolean_true(attr)
+        return True
+    def is_running(self, id):
+        '''
+        Is this resource running?
+        '''
+        if not is_live_cib():
+            return False
+        test_id = self.rsc_clone(id) or id
+        rc, outp = get_stdout(self.rsc_status % test_id, stderr_on = False)
+        return outp.find("running") > 0 and outp.find("NOT") == -1
+    def can_delete(self, id):
+        '''
+        Can a resource be deleted?
+        The order below is important!
+        '''
+        return not (self.is_running(id) and self.is_managed(id))
+
 def resources_xml():
     return cibdump2elem("resources")
-def rsc2node(id):
-    rsc_elem = resources_xml()
-    if rsc_elem is None:
-        return None
-    elems = get_interesting_nodes(rsc_elem, [])
-    for n in elems:
-        if is_resource(n) and n.get("id") == id:
-            return n
 def get_meta_param(id, param):
     rsc_meta_show = "crm_resource --meta -r '%s' -g '%s'"
     rc, s = get_stdout(rsc_meta_show % (id, param), stderr_on = False)
@@ -241,68 +336,10 @@ def pe2shadow(pe_file, name):
 
 def is_xs_boolean_true(bool):
     return bool.lower() in ("true","1")
-def is_rsc_managed(id):
-    if not is_live_cib():
-        return False
-    rsc_node = rsc2node(id)
-    if rsc_node is None:
-        return False
-    prop_node = get_properties_node(cibdump2elem("crm_config"))
-    # maintenance-mode, if true, overrides all
-    attr = get_attr_value(prop_node, "maintenance-mode")
-    if attr and is_xs_boolean_true(attr):
-        return False
-    # then check the rsc is-managed meta attribute
-    rsc_meta_node = get_rsc_meta_node(rsc_node)
-    attr = get_attr_value(rsc_meta_node, "is-managed")
-    if attr:
-        return is_xs_boolean_true(attr)
-    # then rsc_defaults is-managed attribute
-    rsc_dflt_node = get_rscop_defaults_meta_node(cibdump2elem("rsc_defaults"))
-    attr = get_attr_value(rsc_dflt_node, "is-managed")
-    if attr:
-        return is_xs_boolean_true(attr)
-    # finally the is-managed-default property
-    attr = get_attr_value(prop_node, "is-managed-default")
-    if attr:
-        return is_xs_boolean_true(attr)
-    return True
 def cloned_el(node):
     for c in node.iterchildren():
         if is_resource(c):
             return c.tag
-def is_rsc_running(id):
-    if not is_live_cib():
-        return False
-    rsc_node = rsc2node(id)
-    if rsc_node is None:
-        return False
-    if not is_resource(rsc_node):
-        return False
-    rsc_status = "crm_resource -W -r '%s'"
-    test_id = rsc_clone(id) or id
-    rc, outp = get_stdout(rsc_status % test_id, stderr_on = False)
-    return outp.find("running") > 0 and outp.find("NOT") == -1
-def is_rsc_clone(rsc_id):
-    rsc_node = rsc2node(rsc_id)
-    if rsc_node is None:
-        return False
-    return is_clone(rsc_node)
-def is_rsc_ms(rsc_id):
-    rsc_node = rsc2node(rsc_id)
-    if rsc_node is None:
-        return False
-    return is_ms(rsc_node)
-def rsc_clone(rsc_id):
-    '''Get a clone of a resource.'''
-    rsc_node = rsc2node(rsc_id)
-    if rsc_node is None or rsc_node.getparent() is None:
-        return None
-    pnode = rsc_node.getparent()
-    if is_group(pnode):
-        pnode = pnode.getparent()
-    if is_clonems(pnode):
-        return pnode.get("id")
 def get_topmost_rsc(node):
     '''
     Return a topmost node which is a resource and contains this resource
@@ -310,14 +347,6 @@ def get_topmost_rsc(node):
     if is_container(node.getparent()):
         return get_topmost_rsc(node.getparent())
     return node
-def get_cloned_rsc(rsc_id):
-    rsc_node = rsc2node(rsc_id)
-    if rsc_node is None:
-        return ""
-    for c in rsc_node.iterchildren():
-        if is_child_rsc(c):
-            return c.get("id")
-    return ""
 attr_defaults_missing = {
 }
 def add_missing_attr(node):
@@ -921,6 +950,19 @@ def new_cib():
     for name in schema.get('sub', "configuration", 'r'):
         etree.SubElement(conf_elem, name)
     return cib_elem
+def get_conf_elems(cib_elem, path):
+    '''
+    Get a list of configuration elements. All elements are within
+    /configuration
+    '''
+    if cib_elem is None:
+        return None
+    return cib_elem.xpath("//configuration/%s" % path)
+def get_first_conf_elem(cib_elem, path):
+    try:
+        return get_conf_elems(cib_elem, path)[0]
+    except IndexError:
+        return None
 def get_topnode(cib_elem, tag):
     "Get configuration element or create/append if there's none."
     conf_elem = cib_elem.find("configuration")

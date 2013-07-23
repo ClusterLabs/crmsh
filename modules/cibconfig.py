@@ -330,12 +330,14 @@ class CibObjectSet(object):
         '''
         rc = True
         not_allowed = id_set & self.locked_ids
+        rscstat = RscState()
         if not_allowed:
             common_err("elements %s already exist" % \
                 ','.join(list(not_allowed)))
             rc = False
         delete_set = self.obj_ids - id_set
-        cannot_delete = [ x for x in delete_set if is_rsc_running(x) ]
+        cannot_delete = [ x for x in delete_set \
+            if not rscstat.can_delete(x) ]
         if cannot_delete:
             common_err("cannot delete running resources: %s" % \
                 ','.join(cannot_delete))
@@ -926,7 +928,8 @@ class CibObject(object):
         '''
         Return False if this object can't be renamed.
         '''
-        if is_rsc_running(self.obj_id):
+        rscstat = RscState()
+        if not rscstat.can_delete(self.obj_id):
             common_err("cannot rename a running resource (%s)" % self.obj_id)
             return False
         if not is_live_cib() and self.node.tag == "node":
@@ -1101,12 +1104,13 @@ class CibNode(CibObject):
             type = vars.node_default_type
         if type:
             head[1].append(["type", type])
-        headnode = mkxmlsimple(head, get_topnode(cib_factory.get_cib_elem(), self.parent_type), 'node')
+        headnode = mkxmlsimple(head, \
+            get_topnode(cib_factory.get_cib(), self.parent_type), 'node')
         id_hint = headnode.get("uname")
         for e in cli_list[1:]:
             n = mkxmlnode(e, oldnode, id_hint)
             headnode.append(n)
-        remove_id_used_attributes(get_topnode(cib_factory.get_cib_elem(), self.parent_type))
+        remove_id_used_attributes(get_topnode(cib_factory.get_cib(), self.parent_type))
         return headnode
     def repr_gv(self, gv_obj):
         '''
@@ -1664,7 +1668,7 @@ class CibProperty(CibObject):
     def _get_oldnode(self):
         '''Used to retrieve sub id's'''
         if self.obj_type == "property":
-            return get_topnode(cib_factory.get_cib_elem(), self.parent_type)
+            return get_topnode(cib_factory.get_cib(), self.parent_type)
         else:
             return self.node.getparent()
     def _cli_list2node(self, cli_list, oldnode):
@@ -1894,7 +1898,7 @@ class CibFactory(Singleton):
             empty_cib_err()
             return False
         return True
-    def get_cib_elem(self):
+    def get_cib(self):
         if not self.is_cib_sane():
             return None
         return self.cib_elem
@@ -2942,8 +2946,9 @@ class CibFactory(Singleton):
                 c_list.append(obj2)
         return c_list
     def _check_running_primitives(self, prim_l):
+        rscstat = RscState()
         for prim in prim_l:
-            if is_rsc_managed(prim.obj_id) and is_rsc_running(prim.obj_id):
+            if not rscstat.can_delete(prim.obj_id):
                 common_err("resource %s is running, can't delete it" % prim.obj_id)
                 return False
         return True
@@ -2965,13 +2970,14 @@ class CibFactory(Singleton):
             return False
         rc = True
         l = []
+        rscstat = RscState()
         for obj_id in args:
             obj = self.find_object(obj_id)
             if not obj:
                 no_object_err(obj_id)
                 rc = False
                 continue
-            if is_rsc_managed(obj_id) and is_rsc_running(obj_id):
+            if not rscstat.can_delete(obj_id):
                 common_err("resource %s is running, can't delete it" % obj_id)
                 rc = False
                 continue
@@ -3028,10 +3034,11 @@ class CibFactory(Singleton):
             return False
         erase_ok = True
         l = []
+        rscstat = RscState()
         for obj in [obj for obj in self.cib_objects \
                 if not obj.children and not is_constraint(obj.node) \
                 and obj.obj_type != "node" ]:
-            if is_rsc_running(obj.obj_id):
+            if not rscstat.can_delete(obj.obj_id):
                 common_warn("resource %s is running, can't delete it" % obj.obj_id)
                 erase_ok = False
             else:
