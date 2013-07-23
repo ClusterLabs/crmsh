@@ -1251,7 +1251,7 @@ class CibPrimitive(CibObject):
         head = copy.copy(cli_list[0])
         name = find_value(head[1], "name")
         interval = find_value(head[1], "interval")
-        if find_operation(self.node, name, interval):
+        if find_operation(self.node, name, interval) is not None:
             common_err("%s already has a %s op with interval %s" % \
                 (self.obj_id, name, interval))
             return None
