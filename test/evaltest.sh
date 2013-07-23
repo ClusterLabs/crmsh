@@ -23,6 +23,10 @@ CRM_NO_REG="$CRM"
 CRM="$CRM -R"
 export PYTHONUNBUFFERED=1
 
+if [ "$1" = prof ]; then
+	CRM="$CRM -X regtest.profile"
+fi
+
 . ./defaults
 . ./crm-interface
 . ./descriptions

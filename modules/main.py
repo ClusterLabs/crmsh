@@ -436,7 +436,10 @@ def run():
     if options.profile:
         import cProfile
         cProfile.run('main.do_work()', options.profile)
-        print "python -c 'import pstats; s = pstats.Stats(\"%s\"); s.sort_stats(\"cumulative\").print_stats()' | less" % options.profile
+        # print how to use the profile file, but don't disturb
+        # the regression tests
+        if not options.regression_tests:
+            print "python -c 'import pstats; s = pstats.Stats(\"%s\"); s.sort_stats(\"cumulative\").print_stats()' | less" % options.profile
 
     else:
         do_work()

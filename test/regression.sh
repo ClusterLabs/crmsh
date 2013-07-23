@@ -43,13 +43,14 @@ abspath() {
 usage() {
 	cat<<EOF
 
-usage: $0 [-q] [testcase...|set:testset]
+usage: $0 [-q] [-P] [testcase...|set:testset]
 
 Test crm shell using supplied testcases. If none are given,
 set:basicset is used. All testcases and sets are in testcases/.
 See also README.regression for description.
 
 -q: quiet operation (no progress shown)
+-P: profile test
 
 EOF
 exit 2
@@ -72,7 +73,7 @@ export HA_logfile HA_debugfile HA_use_logd HA_logfacility
 mkdir -p $OUTDIR
 . /etc/ha.d/shellfuncs
 
-args=`getopt hqc:p:m: $*`
+args=`getopt hqPc:p:m: $*`
 [ $? -ne 0 ] && usage
 eval set -- "$args"
 
@@ -82,6 +83,7 @@ while [ x"$1" != x ]; do
 		-h) usage;;
 	        -m) output_mode=$2; shift 1;;	    
 		-q) output_mode="silent";;
+		-P) do_profile=1;;
 	        -c) CRM=$2; export CRM; shift 1;;
 	        -p) PATH="$2:$PATH"; export PATH; shift 1;;
 		--) shift 1; break;;
@@ -139,7 +141,7 @@ runtestcase() {
 	logmsg "BEGIN testcase $testcase"
 	(
 	cd $rootdir
-	./evaltest.sh
+	./evaltest.sh $testargs
 	) < $TESTDIR/$testcase > $outf 2>&1
 
 	filter_output < $outf |
@@ -174,6 +176,15 @@ runtestcase() {
 
 [ "$1" = prepare ] && { prepare=1; shift 1;}
 [ $# -eq 0 ] && set "set:$DFLT_TESTSET"
+testargs=""
+if [ -n "$do_profile" ]; then
+	if echo $1 | grep -qs '^set:'; then
+		echo you can profile just one test
+		echo 'really!'
+		exit 1
+	fi
+	testargs="prof"
+fi
 
 for a; do
 	if [ "$a" -a -f "$TESTDIR/$a" ]; then
