@@ -81,7 +81,7 @@ class RADriver(object):
             self.err("unknown attributes set: %s" % set_n.tag)
             return
         for nvpair in set_n.iterchildren():
-            if not is_element(nvpair) or nvpair.tag != "nvpair":
+            if nvpair.tag != "nvpair":
                 continue
             n = nvpair.get("name")
             v = nvpair.get("value")

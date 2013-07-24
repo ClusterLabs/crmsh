@@ -724,8 +724,6 @@ def rm_meta_attribute(node, attr, l, force_children=False):
     (recursively in all children resources)
     '''
     for c in node.iterchildren():
-        if not is_element(c):
-            continue
         if c.tag == "meta_attributes":
             nvpair = get_attr_in_set(c, attr)
             if nvpair is not None:
@@ -1159,7 +1157,7 @@ class NodeMgmt(UserInterface):
         except:
             return False
         for c in nodes_node.iterchildren():
-            if not is_element(c) or c.tag != "node":
+            if c.tag != "node":
                 continue
             if node is not None and c.get("uname") != node:
                 continue
@@ -1177,8 +1175,6 @@ class NodeMgmt(UserInterface):
                 else:
                     other[attr] = v
             for c2 in c.iterchildren():
-                if not is_element(c2):
-                    continue
                 if c2.tag == "instance_attributes":
                     inst_attr += nvpairs2list(c2)
             offline = False

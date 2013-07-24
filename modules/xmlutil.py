@@ -109,8 +109,6 @@ def read_cib(fun, params=None):
 def sanity_check_nvpairs(id, node, attr_list):
     rc = 0
     for nvpair in node.iterchildren("nvpair"):
-        if not is_element(nvpair):
-            continue
         n = nvpair.get("name")
         if n and not n in attr_list:
             common_err("%s: attribute %s does not exist" % (id, n))
@@ -121,8 +119,6 @@ def sanity_check_meta(id, node, attr_list):
     if node is None or not attr_list:
         return rc
     for c in node.iterchildren():
-        if not is_element(c):
-            continue
         if c.tag == "meta_attributes":
             rc |= sanity_check_nvpairs(id, c, attr_list)
     return rc
@@ -252,13 +248,8 @@ class RscState(object):
 
 def resources_xml():
     return cibdump2elem("resources")
-def get_meta_param(id, param):
-    rsc_meta_show = "crm_resource --meta -r '%s' -g '%s'"
-    rc, s = get_stdout(rsc_meta_show % (id, param), stderr_on = False)
-    return s
 def is_normal_node(n):
-    return is_element(n) and \
-        n.tag == "node" and \
+    return n.tag == "node" and \
         (n.get("type") == "normal" or not n.get("type"))
 def mk_rsc_type(n):
     ra_type = n.get("type")
@@ -310,8 +301,6 @@ def listshadows():
         return []
 def shadowfile(name):
     return "%s/shadow.%s" % (cib_shadow_dir(), name)
-def shadow2doc(name):
-    return file2cib_elem(shadowfile(name))
 def pe2shadow(pe_file, name):
     '''Copy a PE file (or any CIB file) to a shadow.'''
     try:
@@ -368,18 +357,14 @@ def drop_attr_defaults(node, ts=0):
     except:
         pass
 
-def is_element(e):
-    return e is not None and isinstance(e.tag, basestring)
-
 def nameandid(e, level):
     if e.tag:
         print level*' ', e.tag, e.get("id"), e.get("name")
 
 def xmltraverse(e, fun, ts=0):
     for c in e.iterchildren():
-        if is_element(c):
-            fun(c, ts)
-            xmltraverse(c, fun, ts+1)
+        fun(c, ts)
+        xmltraverse(c, fun, ts+1)
 
 def xmltraverse_thin(e, fun, ts=0):
     '''
@@ -388,7 +373,7 @@ def xmltraverse_thin(e, fun, ts=0):
     never on cib or configuration!
     '''
     for c in e.iterchildren():
-        if is_element(c) and not c.tag in ('primitive','group'):
+        if not c.tag in ('primitive','group'):
             xmltraverse_thin(c, fun, ts+1)
     fun(e, ts)
 
@@ -406,6 +391,9 @@ def xml_processnodes(e, node_filter, proc):
         proc(node_list)
 
 # filter the cib
+def true(e):
+    'Just return True.'
+    return True
 def is_entity(e):
     return e.tag == etree.Entity
 def is_comment(e):
@@ -414,13 +402,12 @@ def is_status_node(e):
     return e.tag == "status"
 
 def is_emptyelem(node, tag_l):
-    if is_element(node) and node.tag in tag_l:
+    if node.tag in tag_l:
         for a in vars.precious_attrs:
             if node.get(a):
                 return False
         for n in node.iterchildren():
-            if is_element(n):
-                return False
+            return False
         return True
     else:
         return False
@@ -430,7 +417,7 @@ def is_emptyops(node):
     return is_emptyelem(node, ("operations",))
 
 def is_cib_element(node):
-    return is_element(node) and node.tag in vars.cib_cli_map
+    return node.tag in vars.cib_cli_map
 def is_group(node):
     return node.tag == "group"
 def is_ms(node):
@@ -440,8 +427,7 @@ def is_clone(node):
 def is_clonems(node):
     return node.tag in vars.clonems_tags
 def is_cloned(node):
-    return is_element(node) \
-        and (node.getparent().tag in vars.clonems_tags or \
+    return (node.getparent().tag in vars.clonems_tags or \
             (node.getparent().tag == "group" and \
             node.getparent().getparent().tag in vars.clonems_tags))
 def is_container(node):
@@ -459,8 +445,6 @@ def is_constraint(node):
 def is_defaults(node):
     return node.tag in vars.defaults_tags
 def rsc_constraint(rsc_id, con_elem):
-    if not is_element(con_elem):
-        return False
     for attr in con_elem.keys():
         if attr in vars.constraint_rsc_refs \
                 and rsc_id == con_elem.get(attr):
@@ -511,14 +495,14 @@ def remove_text(e_list):
         e.tail = None
 def sanitize_cib(doc):
     xml_processnodes(doc, is_status_node, rmnodes)
-    #xml_processnodes(doc, is_element, printid)
+    #xml_processnodes(doc, true, printid)
     xml_processnodes(doc, is_emptynvpairs, rmnodes)
     xml_processnodes(doc, is_emptyops, rmnodes)
     xml_processnodes(doc, is_entity, rmnodes)
     #xml_processnodes(doc, is_comment, rmnodes)
     xml_processnodes(doc, is_container, sort_container_children)
-    xml_processnodes(doc, is_element, remove_dflt_attrs)
-    xml_processnodes(doc, is_element, remove_text)
+    xml_processnodes(doc, true, remove_dflt_attrs)
+    xml_processnodes(doc, true, remove_text)
     xmltraverse(doc, drop_attr_defaults)
 
 def is_simpleconstraint(node):
@@ -549,9 +533,8 @@ def add_comment(e, s):
     comm_elem = etree.Comment(s)
     firstelem_idx = 0
     for c in e.iterchildren():
-        if is_element(c):
-            firstelem_idx = e.index(c)
-            break
+        firstelem_idx = e.index(c)
+        break
     e.insert(firstelem_idx, comm_elem)
 def stuff_comments(node, comments):
     for s in comments:
@@ -569,7 +552,7 @@ def set_id_used_attr(e):
 def is_id_used_attr(e):
     return e.get("__id_used") == "Yes"
 def remove_id_used_attr(e, lvl):
-    if is_element(e) and is_id_used_attr(e):
+    if is_id_used_attr(e):
         del e.attrib["__id_used"]
 def remove_id_used_attributes(e):
     if e is not None:
@@ -646,11 +629,9 @@ def op2list(node):
 def get_rsc_operations(rsc_node):
     actions = []
     for c in rsc_node.iterchildren():
-        if not is_element(c):
-            continue
         if c.tag == "operations":
             for c2 in c.iterchildren():
-                if is_element(c2) and c2.tag == "op":
+                if c2.tag == "op":
                     op, pl = op2list(c2)
                     if op:
                         actions.append([op, pl])
@@ -933,7 +914,7 @@ def get_child_nvset_node(node, attr_set="meta_attributes"):
     if node is None:
         return None
     for c in node.iterchildren():
-        if not is_element(c) or c.tag != attr_set:
+        if c.tag != attr_set:
             continue
         return c
     return None
@@ -1011,7 +992,7 @@ def get_set_nodes(e, setname, create=0):
 
 def xml_noorder_hash(n):
     return sorted([ hash(etree.tostring(x)) \
-        for x in n.iterchildren() if is_element(x) ])
+        for x in n.iterchildren() ])
 xml_hash_d = {
     "fencing-topology": xml_noorder_hash,
 }

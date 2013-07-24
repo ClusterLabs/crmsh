@@ -41,13 +41,9 @@ def show_unrecognized_elems(cib_elem):
         return False
     rc = True
     for topnode in conf.iterchildren():
-        if not is_element(topnode):
-            continue
         if is_defaults(topnode) or topnode.tag == "fencing-topology":
             continue
         for c in topnode.iterchildren():
-            if not is_element(c):
-                continue
             if not c.tag in cib_object_map:
                 common_warn("unrecognized CIB element %s" % c.tag)
                 rc = False
@@ -733,7 +729,7 @@ def mkxmlnode(e, oldnode, id_hint):
 def set_nvpair(set_node, name, value):
     n_id = set_node.get("id")
     for c in set_node.iterchildren():
-        if is_element(c) and c.get("name") == name:
+        if c.get("name") == name:
             c.set("value", value)
             return
     np = etree.SubElement(set_node, "nvpair")
@@ -837,8 +833,6 @@ class CibObject(object):
             if is_comment(c):
                 comments.append(c.text)
                 continue
-            if not is_element(c):
-                continue
             s = self._repr_cli_child(c, format)
             if s:
                 l.append(s)
@@ -906,7 +900,7 @@ class CibObject(object):
                 if firstelem:
                     l.append(n)
             else:
-                if not firstelem and is_element(n):
+                if not firstelem:
                     firstelem = self.node.index(n)
         for comm_node in l:
             common_debug("move comm %s" % etree.tostring(comm_node))
@@ -1016,8 +1010,6 @@ class CibObject(object):
             return self
     def find_child_in_node(self, child):
         for c in self.node.iterchildren():
-            if not is_element(c):
-                continue
             if c.tag == child.obj_type and \
                     c.get("id") == child.obj_id:
                 return c
@@ -1378,8 +1370,6 @@ class CibContainer(CibObject):
     def _repr_cli_head(self, format):
         children = []
         for c in self.node.iterchildren():
-            if not is_element(c):
-                continue
             if (self.obj_type == "group" and is_primitive(c)) or \
                     is_child_rsc(c):
                 children.append(cli_display.rscref(c.get("id")))
@@ -2365,11 +2355,9 @@ class CibFactory(Singleton):
                 continue
             obj_modified = False
             for c in r_node.iterchildren():
-                if not is_element(c):
-                    continue
                 if c.tag == "operations":
                     for c2 in c.iterchildren():
-                        if not is_element(c2) or not c2.tag == "op":
+                        if not c2.tag == "op":
                             continue
                         op, pl = op2list(c2)
                         if not op:

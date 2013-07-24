@@ -46,7 +46,7 @@ def cli_operations(node, format=1):
     if s:
         l.append("%s %s" % (cli_display.keyword("operations"), s))
     for c in node.iterchildren():
-        if is_element(c) and c.tag == "op":
+        if c.tag == "op":
             l.append(cli_op(c))
     return cli_format(l, format)
 def nvpair_format(n, v):
