@@ -1,15 +1,15 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
-# 
+#
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 2 of the License, or (at your option) any later version.
-# 
+#
 # This software is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
@@ -28,20 +28,25 @@ from ui import cmd_exit
 from msg import *
 from levels import Levels
 
+
 def load_rc(rcfile):
-    try: f = open(rcfile)
-    except: return
+    try:
+        f = open(rcfile)
+    except:
+        return
     save_stdin = sys.stdin
     sys.stdin = f
     while True:
         inp = multi_input()
         if inp == None:
             break
-        try: parse_line(levels, shlex.split(inp))
+        try:
+            parse_line(levels, shlex.split(inp))
         except ValueError, msg:
             common_err(msg)
     f.close()
     sys.stdin = save_stdin
+
 
 def multi_input(prompt=''):
     """
@@ -70,8 +75,10 @@ def multi_input(prompt=''):
             break
     return ''.join(line)
 
+
 def check_args(args, argsdim):
-    if not argsdim: return True
+    if not argsdim:
+        return True
     if len(argsdim) == 1:
         minargs = argsdim[0]
         return len(args) >= minargs
@@ -100,20 +107,26 @@ def check_args(args, argsdim):
 #   (encoded as a small integer from 0 to 2)
 # can the command cause transition to start (0 or 1)
 #   used to check whether to wait4dc to end the transition
-# 
+#
+
 
 def show_usage(cmd):
     p = None
-    try: p = cmd.__doc__
-    except: pass
+    try:
+        p = cmd.__doc__
+    except:
+        pass
     if p:
         print >> sys.stderr, p
     else:
         syntax_err(cmd.__name__)
 
+
 def parse_line(lvl, s):
-    if not s: return True
-    if s[0].startswith('#'): return True
+    if not s:
+        return True
+    if s[0].startswith('#'):
+        return True
     lvl.mark()
     pt = lvl.parse_root
     cmd = None
@@ -127,15 +140,15 @@ def parse_line(lvl, s):
                 if not options.interactive and i == len(s)-1:
                     set_interactive()
                 lvl.new_level(pt[token], token)
-                pt = lvl.parse_root # move to the next level
+                pt = lvl.parse_root  # move to the next level
             else:
-                cmd = pt[token] # terminal symbol
+                cmd = pt[token]  # terminal symbol
                 break  # and stop parsing
         else:
             syntax_err(s[i:])
             lvl.release()
             return False
-    if cmd: # found a terminal symbol
+    if cmd:  # found a terminal symbol
         if not user_prefs.check_skill_level(cmd[2]):
             lvl.release()
             skill_err(s[i])
@@ -147,9 +160,9 @@ def parse_line(lvl, s):
             return False
         args = s[i:]
         d = lambda: cmd[0](*args)
-        rv = d() # execute the command
+        rv = d()  # execute the command
         # should we wait till the command takes effect?
-        do_wait = user_prefs.get_wait() and rv != False and (cmd[3] == 1 or \
+        do_wait = user_prefs.get_wait() and rv != False and (cmd[3] == 1 or
             (lvl.current_level.should_wait() and \
             (lvl.is_in_transit() or not options.interactive)))
         lvl.release()
@@ -158,6 +171,7 @@ def parse_line(lvl, s):
                 rv = False
         return rv != False
     return True
+
 
 def exit_handler():
     '''
@@ -175,12 +189,14 @@ def exit_handler():
         except OSError:
             pass
 
+
 def prereqs():
     proglist = "which cibadmin crm_resource crm_attribute crm_mon"
     for prog in proglist.split():
         if not is_program(prog):
-            print >> sys.stderr, "%s not available, check your installation"%prog
+            print >> sys.stderr, "%s not available, check your installation" % prog
             sys.exit(1)
+
 
 # prefer the user set PATH
 def envsetup():
@@ -189,10 +205,12 @@ def envsetup():
         if p not in os.environ["PATH"].split(':'):
             os.environ['PATH'] = "%s:%s" % (os.environ['PATH'], p)
 
+
 # three modes: interactive (no args supplied), batch (input from
 # a file), half-interactive (args supplied, but not batch)
 def cib_prompt():
     return vars.cib_in_use or "live"
+
 
 def usage(rc):
     f = sys.stderr
@@ -257,7 +275,7 @@ usage:
         # echo stop global_www | crm resource
         # crm configure property no-quorum-policy=ignore
         # crm ra info pengine
-        # crm status 
+        # crm status
 
     See the crm(8) man page or the crm help system for more details.
     """
@@ -269,10 +287,12 @@ err_buf = ErrorBuffer.getInstance()
 vars = Vars.getInstance()
 levels = Levels.getInstance()
 
+
 def set_interactive():
     '''Set the interactive option only if we're on a tty.'''
     if sys.stdin.isatty():
         options.interactive = True
+
 
 def xdg_file(name, xdg_name, obj_type, semantics):
     if not name or not xdg_name:
@@ -293,15 +313,18 @@ def xdg_file(name, xdg_name, obj_type, semantics):
             common_debug("moving %s to %s" % (name, new))
         os.rename(name, new)
     return new
+
+
 def mv_user_files():
-    vars.hist_file = xdg_file(vars.hist_file, \
-        vars.xdg_map["history"], "f", "cache")
-    vars.rc_file = xdg_file(vars.rc_file, \
-        vars.xdg_map["rc"], "f", "config")
-    vars.index_file = xdg_file(vars.index_file, \
-        vars.xdg_map["help_index"], "f", "cache")
-    vars.tmpl_conf_dir = xdg_file(vars.tmpl_conf_dir, \
-        vars.xdg_map["crmconf"], "d", "config")
+    vars.hist_file = xdg_file(vars.hist_file,
+                              vars.xdg_map["history"], "f", "cache")
+    vars.rc_file = xdg_file(vars.rc_file,
+                            vars.xdg_map["rc"], "f", "config")
+    vars.index_file = xdg_file(vars.index_file,
+                               vars.xdg_map["help_index"], "f", "cache")
+    vars.tmpl_conf_dir = xdg_file(vars.tmpl_conf_dir,
+                                  vars.xdg_map["crmconf"], "d", "config")
+
 
 def compatibility_setup():
     if is_pcmk_118():
@@ -317,6 +340,7 @@ def compatibility_setup():
         common_warn("neither ptest nor crm_simulate exist, check your installation")
         vars.simulate_programs["ptest"] = ""
         vars.simulate_programs["simulate"] = ""
+
 
 def do_work():
     global user_args
@@ -381,6 +405,7 @@ def do_work():
             rc = 1
             common_err(msg)
 
+
 def run():
     global user_args
     envsetup()
@@ -398,15 +423,17 @@ def run():
         options.interactive = True
 
     try:
-        opts, user_args = getopt.getopt(sys.argv[1:], \
-            'whdc:f:FX:RD:H:', ("wait", "version", "help", "debug", \
-            "cib=", "file=", "force", "profile=", \
-            "regression-tests", "display=", "history="))
+        opts, user_args = getopt.getopt(
+            sys.argv[1:],
+            'whdc:f:FX:RD:H:',
+            ("wait", "version", "help", "debug",
+             "cib=", "file=", "force", "profile=",
+             "regression-tests", "display=", "history="))
         for o, p in opts:
             if o in ("-h", "--help"):
                 usage(0)
             elif o in ("--version"):
-                print >> sys.stdout,("%s" % vars.crm_version)
+                print >> sys.stdout, ("%s" % vars.crm_version)
                 sys.exit(0)
             elif o == "-d":
                 user_prefs.set_debug()
@@ -439,7 +466,10 @@ def run():
         # print how to use the profile file, but don't disturb
         # the regression tests
         if not options.regression_tests:
-            print "python -c 'import pstats; s = pstats.Stats(\"%s\"); s.sort_stats(\"cumulative\").print_stats()' | less" % options.profile
+            stats_cmd = "; ".join(['import pstats',
+                                   's = pstats.Stats("%s")' % options.profile,
+                                   's.sort_stats("cumulative").print_stats()'])
+            print "python -c '%s' | less" % (stats_cmd)
 
     else:
         do_work()

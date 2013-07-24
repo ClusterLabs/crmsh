@@ -1,15 +1,15 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
-# 
+#
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 2 of the License, or (at your option) any later version.
-# 
+#
 # This software is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
@@ -22,23 +22,32 @@ from vars import Vars
 from xmlutil import *
 from msg import *
 
+
 def get_tag_by_id(node, tag, id):
     "Find a doc node which matches tag and id."
     for n in node.xpath(".//%s" % tag):
         if n.get("id") == id:
             return n
     return None
+
+
 def get_status_node_id(n):
-    try: n = n.getparent()
-    except: return None
+    try:
+        n = n.getparent()
+    except:
+        return None
     if n.tag != "node_state":
         return get_status_node_id(n)
     return n.get("id")
+
+
 def get_status_node(status_node, node):
     for n in status_node.iterchildren("node_state"):
         if n.get("id") == node:
             return n
     return None
+
+
 def get_status_ops(status_node, rsc, op, interval, node=''):
     '''
     Find a doc node which matches the operation. interval set to
@@ -60,6 +69,7 @@ def get_status_ops(status_node, rsc, op, interval, node=''):
                     l.append(o)
     return l
 
+
 def split_op(op):
     if op == "probe":
         return "monitor", "0"
@@ -69,8 +79,10 @@ def split_op(op):
         return "monitor", op[8:]
     return op, "0"
 
+
 def cib_path(source):
     return source[0:7] == "shadow:" and shadowfile(source[7:]) or source
+
 
 class CibStatus(Singleton):
     '''
@@ -90,17 +102,20 @@ class CibStatus(Singleton):
         "standby": "-b",
         "activate": "-e",
     }
+
     def __init__(self):
         self.origin = ""
-        self.backing_file = "" # file to keep the live cib
+        self.backing_file = ""  # file to keep the live cib
         self.status_node = None
         self.cib = None
         self.reset_state()
+
     def _cib_path(self, source):
         if source[0:7] == "shadow:":
             return shadowfile(source[7:])
         else:
             return source
+
     def _load_cib(self, source):
         if source == "live":
             if not self.backing_file:
@@ -114,6 +129,7 @@ class CibStatus(Singleton):
         else:
             f = cib_path(source)
         return read_cib(file2cib_elem, f)
+
     def _load(self, source):
         cib = self._load_cib(source)
         if cib is None:
@@ -125,12 +141,14 @@ class CibStatus(Singleton):
         self.status_node = status
         self.reset_state()
         return True
+
     def reset_state(self):
         self.modified = False
         self.quorum = ''
         self.node_changes = {}
         self.op_changes = {}
         self.ticket_changes = {}
+
     def initialize(self):
         if not vars.cib_in_use:
             src = "live"
@@ -138,16 +156,19 @@ class CibStatus(Singleton):
             src = "shadow:%s" % vars.cib_in_use
         if self._load(src):
             self.origin = src
+
     def source_file(self):
         if self.origin == "live":
             return self.backing_file
         else:
             return cib_path(self.origin)
+
     def status_node_list(self):
         st = self.get_status()
         if st is None:
             return
         return [x.get("id") for x in st.xpath(".//node_state")]
+
     def status_rsc_list(self):
         st = self.get_status()
         if st is None:
@@ -158,6 +179,7 @@ class CibStatus(Singleton):
         for e in rsc_list:
             d[e] = 0
         return d.keys()
+
     def load(self, source):
         '''
         Load the status section from the given source. The source
@@ -171,6 +193,7 @@ class CibStatus(Singleton):
             return False
         self.origin = source
         return True
+
     def save(self, dest=None):
         '''
         Save the modified status section to a file/shadow. If the
@@ -200,13 +223,15 @@ class CibStatus(Singleton):
             rmnode(status)
             cib.append(self.status_node)
         xml = etree.tostring(cib)
-        try: f = open(dest_path, "w")
+        try:
+            f = open(dest_path, "w")
         except IOError, msg:
             common_err(msg)
             return False
         f.write(xml)
         f.close()
         return True
+
     def _crm_simulate(self, cmd, nograph, scores, utilization, verbosity):
         if not self.origin:
             self.initialize()
@@ -225,25 +250,29 @@ class CibStatus(Singleton):
         if dotfile:
             show_dot_graph(dotfile)
         return rc == 0
+
     # actions is ignored
     def run(self, nograph, scores, utilization, actions, verbosity):
-        return self._crm_simulate(self.cmd_run, \
-            nograph, scores, utilization, verbosity)
+        return self._crm_simulate(self.cmd_run,
+                                  nograph, scores, utilization, verbosity)
+
     # actions is ignored
     def simulate(self, nograph, scores, utilization, actions, verbosity):
-        return self._crm_simulate(self.cmd_simulate, \
-            nograph, scores, utilization, verbosity)
+        return self._crm_simulate(self.cmd_simulate,
+                                  nograph, scores, utilization, verbosity)
+
     def get_status(self):
         '''
         Return the status section node.
         '''
         if not self.origin:
             self.initialize()
-        if (self.status_node is None or \
+        if (self.status_node is None or
             (self.origin == "live" and not self.modified)) \
                 and not self._load(self.origin):
             return None
         return self.status_node
+
     def list_changes(self):
         '''
         Dump a set of changes done.
@@ -259,6 +288,7 @@ class CibStatus(Singleton):
         if self.quorum:
             print "quorum:", self.quorum
         return True
+
     def show(self):
         '''
         Page the "pretty" XML of the status section.
@@ -267,9 +297,11 @@ class CibStatus(Singleton):
             return False
         page_string(etree.tostring(self.status_node, pretty_print=True))
         return True
+
     def inject(self, opts):
-        return ext_cmd("%s %s" % \
-            (self.cmd_inject % (self.source_file(), self.source_file()), opts))
+        return ext_cmd("%s %s" %
+                       (self.cmd_inject % (self.source_file(), self.source_file()), opts))
+
     def set_quorum(self, v):
         if not self.origin:
             self.initialize()
@@ -280,6 +312,7 @@ class CibStatus(Singleton):
         self.quorum = v and "true" or "false"
         self.modified = True
         return True
+
     def edit_node(self, node, state):
         '''
         Modify crmd, expected, and join attributes of node_state
@@ -301,6 +334,7 @@ class CibStatus(Singleton):
         self.node_changes[node] = state
         self.modified = True
         return True
+
     def edit_ticket(self, ticket, subcmd):
         '''
         Modify ticket status.
@@ -317,6 +351,7 @@ class CibStatus(Singleton):
         self.ticket_changes[ticket] = subcmd
         self.modified = True
         return True
+
     def edit_op(self, op, rsc, rc_code, op_status, node=''):
         '''
         Set rc-code and op-status in the lrm_rsc_op status
@@ -348,8 +383,8 @@ class CibStatus(Singleton):
             if l_int == "-1":
                 l_int = op_node.get("interval")
         op_op = op_status == "0" and "-i" or "-F"
-        rc = self.inject("%s %s_%s_%s@%s=%s" % \
-            (op_op, rsc, l_op, l_int, node, rc_code))
+        rc = self.inject("%s %s_%s_%s@%s=%s" %
+                         (op_op, rsc, l_op, l_int, node, rc_code))
         if rc != 0:
             return False
         self.op_changes[node+":"+rsc+":"+op] = "rc="+rc_code

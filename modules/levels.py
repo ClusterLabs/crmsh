@@ -1,21 +1,22 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
-# 
+#
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 2 of the License, or (at your option) any later version.
-# 
+#
 # This software is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
 from singletonmixin import Singleton
+
 
 def topics_dict(help_tab):
     if not help_tab:
@@ -25,6 +26,7 @@ def topics_dict(help_tab):
         if topic != '.':
             topics[topic] = None
     return topics
+
 
 def mk_completion_tab(obj, ctab):
     from completion import get_completer_list
@@ -38,6 +40,7 @@ def mk_completion_tab(obj, ctab):
             ctab[key] = topics_dict(obj.help_table)
         else:
             ctab[key] = get_completer_list(obj, key)
+
 
 class Levels(Singleton):
     '''
@@ -53,16 +56,21 @@ class Levels(Singleton):
         self.prompts = []
         self.completion_tab = {}
         mk_completion_tab(self.current_level, self.completion_tab)
+
     def getprompt(self):
         return ' '.join(self.prompts)
+
     def is_in_transit(self):
         return self._in_transit
+
     def mark(self):
         self._marker = len(self.level_stack)
         self._in_transit = False
+
     def release(self):
         while len(self.level_stack) > self._marker:
             self.droplevel()
+
     def new_level(self, level_obj, token):
         self.level_stack.append(self.current_level)
         self.comp_stack.append(self.completion_tab)
@@ -76,12 +84,14 @@ class Levels(Singleton):
         except:
             pass
         self._in_transit = True
+
     def previous(self):
         if self.level_stack:
             return self.level_stack[-1]
+
     def droplevel(self):
         if self.level_stack:
-            self.current_level.end_game(no_questions_asked = self._in_transit)
+            self.current_level.end_game(no_questions_asked=self._in_transit)
             self.current_level = self.level_stack.pop()
             self.completion_tab = self.comp_stack.pop()
             self.parse_root = self.current_level.cmd_table

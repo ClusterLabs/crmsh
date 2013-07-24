@@ -1,15 +1,15 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
-# 
+#
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 2.1 of the License, or (at your option) any later version.
-# 
+#
 # This software is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -67,13 +67,16 @@ Geo-cluster related management.
 """),
 }
 
+
 def load_init_help_tab(help_tab, levels):
-    help_tab["."] = ("","""
+    help_tab["."] = ("", """
 This is crm shell, a Pacemaker command line interface.
 """)
     for lvl in levels:
-        try: help_tab[lvl] = init_help_tab[lvl]
-        except: pass
+        try:
+            help_tab[lvl] = init_help_tab[lvl]
+        except:
+            pass
     help_tab["status"] = ("show cluster status", """
 Show cluster status. The status is displayed by crm_mon. Supply
 additional arguments for more information or different format.
@@ -86,6 +89,7 @@ Usage:
         option :: bynode | inactive | ops | timing | failcounts
 ...............
 """)
+
 
 #
 # help or make users feel less lonely
@@ -100,6 +104,7 @@ def add_shorthelp(topic, shorthelp, short_tab):
             short_tab[i][0] = "%s,%s" % (short_tab[i][0], topic)
             return
     short_tab.append([topic, shorthelp])
+
 
 def topic_help(help_tab, topic):
     if topic not in help_tab:
@@ -117,6 +122,7 @@ def topic_help(help_tab, topic):
         print shorthelp
     return True
 
+
 def add_static_help(help_tab):
     '''Add help items used everywhere'''
     help_tab["help"] = ("show help (help topics for list of topics)", """
@@ -128,12 +134,15 @@ concepts and examples.
     help_tab["end"] = ("go back one level", "")
     help_tab["quit"] = ("exit the program", "")
 
+
 def is_level(s):
     return len(s.split("_")) == 2
+
 
 def help_short(s):
     r = re.search("_[^,]+,(.*)\]\]", s)
     return r and r.group(1) or ''
+
 
 class HelpSystem(object):
     '''
@@ -151,11 +160,13 @@ class HelpSystem(object):
     '''
     help_text_file = "@datadir@/@PACKAGE@/crm.8.txt"
     topics_tok = "topics"
+
     def __init__(self):
         self.key_pos = {}
         self.leveld = {}
         self.no_help_file = False  # don't print repeatedly messages
         self.bad_index = False  # don't print repeatedly warnings for bad index
+
     def get_short_help(self, help_tab):
         short_tab = []
         for topic in help_tab:
@@ -172,6 +183,7 @@ class HelpSystem(object):
                 shorthelp = help_tab[topic][0]
             add_shorthelp(topic, shorthelp, short_tab)
         return short_tab
+
     def overview(self, help_tab):
         s = help_tab['.'][1]
         # cheating here a bit, but ...
@@ -187,6 +199,7 @@ class HelpSystem(object):
 #                t = "%s/" % t
             l.append("\t%-16s %s" % (t, d))
         page_string("\n".join(l))
+
     def cmd_help(self, help_tab, topic=''):
         "help!"
         # help_tab is an odict (ordered dictionary):
@@ -200,15 +213,17 @@ class HelpSystem(object):
         else:
             return topic_help(help_tab, topic)
         return True
+
     def open_file(self, name, mode):
         try:
             f = open(name, mode)
             return f
         except IOError, msg:
-            common_err("%s open: %s"%(name, msg))
+            common_err("%s open: %s" % (name, msg))
             common_err("extensive help system is not available")
             self.no_help_file = True
             return None
+
     def drop_index(self):
         common_info("removing index")
         os.unlink(vars.index_file)
@@ -216,6 +231,7 @@ class HelpSystem(object):
         self.leveld = {}
         self.leveld[self.topics_tok] = []
         self.bad_index = True
+
     def mk_index(self):
         '''
         Prepare an index file, sorted by topic, with seek positions
@@ -226,10 +242,10 @@ class HelpSystem(object):
         crm_help_v = os.getenv("CRM_HELP_FILE")
         if crm_help_v:
             self.help_text_file = crm_help_v
-        help_f = self.open_file(self.help_text_file,"r")
+        help_f = self.open_file(self.help_text_file, "r")
         if not help_f:
             return False
-        idx_f = self.open_file(vars.index_file,"w")
+        idx_f = self.open_file(vars.index_file, "w")
         if not idx_f:
             return False
         common_debug("building help index")
@@ -248,6 +264,7 @@ class HelpSystem(object):
             print >>idx_f, '%s %d' % (key, key_pos[key])
         idx_f.close()
         return True
+
     def is_index_old(self):
         try:
             t_idx = os.path.getmtime(vars.index_file)
@@ -258,13 +275,14 @@ class HelpSystem(object):
         except:
             return True
         return t_help > t_idx
+
     def load_index(self):
         if self.is_index_old():
             self.mk_index()
         self.key_pos = {}
         self.leveld = {}
         self.leveld[self.topics_tok] = []
-        idx_f = self.open_file(vars.index_file,"r")
+        idx_f = self.open_file(vars.index_file, "r")
         if not idx_f:
             return False
         cur_lvl = ''
@@ -275,7 +293,7 @@ class HelpSystem(object):
                     common_err("index file corrupt")
                     idx_f.close()
                     self.drop_index()
-                    return self.load_index() # this runs only once
+                    return self.load_index()  # this runs only once
                 return False
             key = a[0]
             fpos = long(a[1])
@@ -291,13 +309,16 @@ class HelpSystem(object):
             self.key_pos[key] = fpos
         idx_f.close()
         return True
+
     def is_level(self, s):
         return (("cmdhelp_%s" % s) in self.leveld) or (s in init_help_tab)
+
     def __filter(self, s):
         if '<<' in s:
             return re.sub(r'<<[^,]+,(.+)>>', r'\1', s)
         else:
             return s
+
     def _load_help_one(self, key, skip=2):
         longhelp = ''
         self.help_f.seek(self.key_pos[key])
@@ -318,6 +339,7 @@ class HelpSystem(object):
                 common_warn("help topic %s not found" % key)
                 self.drop_index()
         return shorthelp, longhelp
+
     def cmdhelp(self, s):
         if not self.key_pos and not self.load_index():
             return None, None
@@ -327,6 +349,7 @@ class HelpSystem(object):
                 self.drop_index()
             return None, None
         return self._load_help_one(s)
+
     def _load_topics(self, help_tab):
         '''
         Get the topic help text.
@@ -337,14 +360,16 @@ class HelpSystem(object):
                 common_warn("help table for topics not found")
                 self.drop_index()
             return None
-        help_tab["."] = ["","""
+        help_tab["."] = ["", """
 List of crm shell topics.
 """]
         try:
             for key in self.leveld[lvl_s]:
                 cmd = key[len(lvl_s)+1:]
                 help_tab[cmd] = self._load_help_one(key, skip=1)
-        except: pass
+        except:
+            pass
+
     def _load_cmd_level(self, lvl, help_tab):
         '''
         Get the command help text.
@@ -361,8 +386,10 @@ List of crm shell topics.
             for key in self.leveld[lvl_s]:
                 cmd = key[len(lvl_s)+1:]
                 help_tab[cmd] = self._load_help_one(key)
-        except: pass
+        except:
+            pass
         add_static_help(help_tab)
+
     def _load_level(self, lvl):
         '''
         For the given level, create a help table.
@@ -371,7 +398,7 @@ List of crm shell topics.
             return wcache.retrieve("lvl_help_tab_%s" % lvl)
         if not self.key_pos and not self.load_index():
             return None
-        self.help_f = self.open_file(self.help_text_file,"r")
+        self.help_f = self.open_file(self.help_text_file, "r")
         if not self.help_f:
             return None
         help_tab = odict()
@@ -381,11 +408,13 @@ List of crm shell topics.
             self._load_cmd_level(lvl, help_tab)
         self.help_f.close()
         return help_tab
+
     def load_level(self, lvl):
         help_tab = self._load_level(lvl)
-        if self.bad_index: # try again
+        if self.bad_index:  # try again
             help_tab = self._load_level(lvl)
         return wcache.store("lvl_help_tab_%s" % lvl, help_tab)
+
     def load_topics(self):
         return self.load_level(self.topics_tok)
 

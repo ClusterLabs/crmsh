@@ -1,15 +1,15 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
-# 
+#
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 2 of the License, or (at your option) any later version.
-# 
+#
 # This software is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
@@ -29,12 +29,14 @@ from vars import Vars
 from term import TerminalController
 from msg import *
 
+
 def is_program(prog):
     """Is this program available?"""
     for p in os.getenv("PATH").split(os.pathsep):
         filename = os.path.join(p, prog)
         if os.path.isfile(filename) and os.access(filename, os.X_OK):
             return True
+
 
 def ask(msg):
     # if there's no terminal, no use asking and default to "no"
@@ -46,59 +48,79 @@ def ask(msg):
             ans = raw_input(msg + ' ')
         except EOFError:
             ans = 'n'
-        if not ans or ans[0].lower() not in ('n','y'):
+        if not ans or ans[0].lower() not in ('n', 'y'):
             if print_msg:
                 print "Please answer with y[es] or n[o]"
                 print_msg = False
         else:
             return ans[0].lower() == 'y'
 
+
 def verify_boolean(opt):
     return opt.lower() in ("yes", "true", "on") or \
         opt.lower() in ("no", "false", "off")
+
+
 def is_boolean_true(opt):
     return opt.lower() in ("yes", "true", "on")
+
+
 def is_boolean_false(opt):
     return opt.lower() in ("no", "false", "off")
+
+
 def get_boolean(opt, dflt=False):
     if not opt:
         return dflt
     return is_boolean_true(opt)
 
+
 def keyword_cmp(string1, string2):
     return string1.lower() == string2.lower()
 
+
 def can_cannonize(s, values):
     return s.lower() in [x.lower() for x in values]
+
+
 def cannonize(s, values):
     lw = [x.lower() for x in values]
     if not s.lower() in lw:
         return s
     return values[lw.index(s.lower())]
 
+
 from UserDict import DictMixin
+
+
 class odict(DictMixin):
     def __init__(self, data=None, **kwdata):
         self._keys = []
         self._data = {}
+
     def __setitem__(self, key, value):
         if key not in self._data:
             self._keys.append(key)
         self._data[key] = value
+
     def __getitem__(self, key):
         if key not in self._data:
             return self._data[key.lower()]
         return self._data[key]
+
     def __delitem__(self, key):
         del self._data[key]
         self._keys.remove(key)
+
     def keys(self):
         return list(self._keys)
+
     def copy(self):
         copyDict = odict()
         copyDict._data = self._data.copy()
         copyDict._keys = self._keys[:]
         return copyDict
+
 
 class olist(list):
     def __init__(self, keys):
@@ -108,16 +130,20 @@ class olist(list):
             self.append(key)
             self.append(key.upper())
 
+
 def setup_help_aliases(obj):
     for cmd in obj.cmd_aliases.keys():
         for alias in obj.cmd_aliases[cmd]:
             if obj.help_table:
                 obj.help_table[alias] = obj.help_table[cmd]
+
+
 def setup_aliases(obj):
     for cmd in obj.cmd_aliases.keys():
         for alias in obj.cmd_aliases[cmd]:
             obj.cmd_table[alias] = obj.cmd_table[cmd]
             obj.rev_alias_table[alias] = cmd
+
 
 def os_types_list(path):
     l = []
@@ -127,12 +153,15 @@ def os_types_list(path):
             l.append(a[-1])
     return l
 
+
 def listtemplates():
     l = []
     for f in os.listdir(vars.tmpl_dir):
         if os.path.isfile("%s/%s" % (vars.tmpl_dir, f)):
             l.append(f)
     return l
+
+
 def listconfigs():
     l = []
     for f in os.listdir(vars.tmpl_conf_dir):
@@ -140,12 +169,15 @@ def listconfigs():
             l.append(f)
     return l
 
+
 def add_sudo(cmd):
     if user_prefs.crm_user:
         return "sudo -E -u %s %s" % (user_prefs.crm_user, cmd)
     return cmd
+
+
 def pipe_string(cmd, s):
-    rc = -1 # command failed
+    rc = -1  # command failed
     cmd = add_sudo(cmd)
     common_debug("piping string to %s" % cmd)
     p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE)
@@ -158,8 +190,9 @@ def pipe_string(cmd, s):
             common_err(msg)
     return rc
 
+
 def filter_string(cmd, s, stderr_on=True):
-    rc = -1 # command failed
+    rc = -1  # command failed
     outp = ''
     if stderr_on:
         stderr = None
@@ -167,9 +200,11 @@ def filter_string(cmd, s, stderr_on=True):
         stderr = subprocess.PIPE
     cmd = add_sudo(cmd)
     common_debug("pipe through %s" % cmd)
-    p = subprocess.Popen(cmd, shell=True, \
-        stdin = subprocess.PIPE, \
-        stdout = subprocess.PIPE, stderr = stderr)
+    p = subprocess.Popen(cmd,
+                         shell=True,
+                         stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE,
+                         stderr=stderr)
     try:
         outp = p.communicate(s)[0]
         p.wait()
@@ -183,6 +218,7 @@ def filter_string(cmd, s, stderr_on=True):
         common_info("from: %s" % cmd)
     return rc, outp
 
+
 def str2tmp(s, suffix=".pcmk"):
     '''
     Write the given string to a temporary file. Return the name
@@ -190,7 +226,7 @@ def str2tmp(s, suffix=".pcmk"):
     '''
     fd, tmp = mkstemp(suffix=suffix)
     try:
-        f = os.fdopen(fd,"w")
+        f = os.fdopen(fd, "w")
     except IOError, msg:
         common_err(msg)
         return
@@ -199,24 +235,28 @@ def str2tmp(s, suffix=".pcmk"):
         f.write("\n")
     f.close()
     return tmp
+
+
 def str2file(s, fname):
     '''
     Write a string to a file.
     '''
     try:
-        f = open(fname,"w")
+        f = open(fname, "w")
     except IOError, msg:
         common_err(msg)
         return False
     f.write(s)
     f.close()
     return True
+
+
 def file2str(fname, noerr=True):
     '''
     Read a one line file into a string, strip whitespace around.
     '''
     try:
-        f = open(fname,"r")
+        f = open(fname, "r")
     except IOError, msg:
         if not noerr:
             common_err(msg)
@@ -224,77 +264,99 @@ def file2str(fname, noerr=True):
     s = f.readline()
     f.close()
     return s.strip()
+
+
 def file2list(fname):
     '''
     Read a file into a list (newlines dropped).
     '''
     try:
-        f = open(fname,"r")
+        f = open(fname, "r")
     except IOError, msg:
         common_err(msg)
         return None
     l = ''.join(f).split('\n')
     f.close()
     return l
+
+
 def safe_open_w(fname):
     if fname == "-":
         f = sys.stdout
     else:
         if not options.batch and os.access(fname, os.F_OK):
-            if not ask("File %s exists. Do you want to overwrite it?"%fname):
+            if not ask("File %s exists. Do you want to overwrite it?" % fname):
                 return None
-        try: f = open(fname,"w")
+        try:
+            f = open(fname, "w")
         except IOError, msg:
             common_err(msg)
             return None
     return f
+
+
 def safe_close_w(f):
     if f and f != sys.stdout:
         f.close()
 
+
 def is_path_sane(name):
     if re.search("['`#*?$\[\]]", name):
-        common_err("%s: bad path"%name)
+        common_err("%s: bad path" % name)
         return False
     return True
+
+
 def is_filename_sane(name):
     if re.search("['`/#*?$\[\]]", name):
-        common_err("%s: bad filename"%name)
+        common_err("%s: bad filename" % name)
         return False
     return True
+
+
 def is_name_sane(name):
     if re.search("[']", name):
-        common_err("%s: bad name"%name)
+        common_err("%s: bad name" % name)
         return False
     return True
+
+
 def is_value_sane(name):
     if re.search("[']", name):
-        common_err("%s: bad value"%name)
+        common_err("%s: bad value" % name)
         return False
     return True
+
 
 def show_dot_graph(dotfile, keep_file=False):
     cmd = "%s %s" % (user_prefs.dotty, dotfile)
     if not keep_file:
         cmd = "(%s; rm -f %s)" % (cmd, dotfile)
     subprocess.Popen(cmd, shell=True, bufsize=0, stdin=None, stdout=None, stderr=None, close_fds=True)
-    common_info("starting %s to show transition graph"%user_prefs.dotty)
+    common_info("starting %s to show transition graph" % user_prefs.dotty)
+
 
 def ext_cmd(cmd):
     if options.regression_tests:
         print ".EXT", cmd
     return subprocess.call(add_sudo(cmd), shell=True)
+
+
 def ext_cmd_nosudo(cmd):
     if options.regression_tests:
         print ".EXT", cmd
     return subprocess.call(cmd, shell=True)
 
+
 def rmdir_r(d):
     if d and os.path.isdir(d):
         shutil.rmtree(d)
 
+
 _LOCKDIR = ".lockdir"
 _PIDF = "pid"
+
+
 def check_locker(dir):
     if not os.path.isdir(os.path.join(dir, _LOCKDIR)):
         return
@@ -312,6 +374,8 @@ def check_locker(dir):
             rmdir_r(os.path.join(dir, _LOCKDIR))
         else:
             common_err("%s: %s" % (_LOCKDIR, strerror))
+
+
 def acquire_lock(dir):
     check_locker(dir)
     while True:
@@ -327,15 +391,19 @@ def acquire_lock(dir):
             continue
         else:
             return False
+
+
 def release_lock(dir):
     rmdir_r(os.path.join(dir, _LOCKDIR))
+
 
 def pipe_cmd_nosudo(cmd):
     if options.regression_tests:
         print ".EXT", cmd
-    proc = subprocess.Popen(cmd, shell = True,
-        stdout = subprocess.PIPE,
-        stderr = subprocess.PIPE)
+    proc = subprocess.Popen(cmd,
+                            shell=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
     (outp, err_outp) = proc.communicate()
     proc.wait()
     rc = proc.returncode
@@ -343,6 +411,7 @@ def pipe_cmd_nosudo(cmd):
         print outp
         print err_outp
     return rc
+
 
 def get_stdout(cmd, input_s=None, stderr_on=True):
     '''
@@ -354,25 +423,30 @@ def get_stdout(cmd, input_s=None, stderr_on=True):
         stderr = None
     else:
         stderr = subprocess.PIPE
-    proc = subprocess.Popen(cmd, shell = True, \
-        stdin = subprocess.PIPE, \
-        stdout = subprocess.PIPE, stderr = stderr)
+    proc = subprocess.Popen(cmd,
+                            shell=True,
+                            stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE,
+                            stderr=stderr)
     outp = proc.communicate(input_s)[0]
     proc.wait()
     outp = outp.strip()
     return proc.returncode, outp
+
+
 def stdout2list(cmd, stderr_on=True):
     '''
     Run a cmd, fetch output, return it as a list of lines.
     stderr_on controls whether to show output which comes on stderr.
     '''
-    rc, s = get_stdout(add_sudo(cmd), stderr_on = stderr_on)
+    rc, s = get_stdout(add_sudo(cmd), stderr_on=stderr_on)
     return rc, s.split('\n')
+
 
 def append_file(dest, src):
     'Append src to dest'
     try:
-        dest_f = open(dest,"a")
+        dest_f = open(dest, "a")
     except IOError, msg:
         common_err("open %s: %s" % (dest, msg))
         return False
@@ -387,6 +461,7 @@ def append_file(dest, src):
     dest_f.close()
     return True
 
+
 def get_dc():
     cmd = "crmadmin -D"
     rc, s = get_stdout(add_sudo(cmd))
@@ -395,6 +470,7 @@ def get_dc():
     if not s.startswith("Designated"):
         return None
     return s.split()[-1]
+
 
 def wait4dc(what="", show_progress=True):
     '''
@@ -439,10 +515,11 @@ def wait4dc(what="", show_progress=True):
     while True:
         rc, s = get_stdout(add_sudo(cmd))
         if not s.startswith("Status"):
-            common_warn("%s unexpected output: %s (exit code: %d)" % \
-                (cmd, s, rc))
+            common_warn("%s unexpected output: %s (exit code: %d)" %
+                        (cmd, s, rc))
             return False
-        try: dc_status = s.split()[-2]
+        try:
+            dc_status = s.split()[-2]
         except:
             common_warn("%s unexpected output: %s" % (cmd, s))
             return False
@@ -460,6 +537,7 @@ def wait4dc(what="", show_progress=True):
             cnt += 1
             if cnt % 5 == 0:
                 sys.stderr.write(".")
+
 
 def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     '''
@@ -502,6 +580,7 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
         page_string(s)
     return True
 
+
 def is_id_valid(id):
     """
     Verify that the id follows the definition:
@@ -512,6 +591,7 @@ def is_id_valid(id):
     id_re = "^[A-Za-z_][\w._-]*$"
     return re.match(id_re, id)
 
+
 def check_range(a):
     """
     Verify that the integer range in list a is valid.
@@ -521,6 +601,7 @@ def check_range(a):
     if not isinstance(a[0], int) or not isinstance(a[1], int):
         return False
     return (int(a[0]) <= int(a[1]))
+
 
 def crm_msec(t):
     '''
@@ -553,19 +634,27 @@ def crm_msec(t):
     except KeyError:
         return -1
     return (int(r.group(1))*mult)/div
+
+
 def crm_time_cmp(a, b):
     return crm_msec(a) - crm_msec(b)
 
+
 def shorttime(ts):
     return time.strftime("%X", time.localtime(ts))
+
+
 def shortdate(ts):
     return time.strftime("%F", time.localtime(ts))
+
 
 def sort_by_mtime(l):
     'Sort a (small) list of files by time mod.'
     l2 = [(os.stat(x).st_mtime, x) for x in l]
     l2.sort()
     return [x[1] for x in l2]
+
+
 def dirwalk(dir):
     "walk a directory tree, using a generator"
     # http://code.activestate.com/recipes/105873/
@@ -576,6 +665,8 @@ def dirwalk(dir):
                 yield x
         else:
             yield fullpath
+
+
 def file_find_by_name(dir, fname):
     'Find a file within a tree matching fname.'
     if not dir:
@@ -589,6 +680,7 @@ def file_find_by_name(dir, fname):
             return f
     return None
 
+
 def convert2ints(l):
     """
     Convert a list of strings (or a string) to a list of ints.
@@ -596,12 +688,14 @@ def convert2ints(l):
     is returned!
     """
     try:
-        if isinstance(l,(tuple, list)):
+        if isinstance(l, (tuple, list)):
             return [int(x) for x in l]
-        else: # it's a string then
+        else:  # it's a string then
             return int(l)
     except ValueError:
         return None
+
+
 def is_int(s):
     'Check if the string can be converted to an integer.'
     try:
@@ -610,17 +704,22 @@ def is_int(s):
     except ValueError:
         return False
 
+
 def is_process(s):
-    proc = subprocess.Popen("ps -e -o pid,command | grep -qs '%s'" % s, \
-        shell=True, stdout=subprocess.PIPE)
+    proc = subprocess.Popen("ps -e -o pid,command | grep -qs '%s'" % s,
+                            shell=True,
+                            stdout=subprocess.PIPE)
     proc.wait()
     return proc.returncode == 0
+
+
 def cluster_stack():
     if is_process("heartbeat:.[m]aster"):
         return "heartbeat"
     elif is_process("[a]isexec"):
         return "openais"
     return ""
+
 
 def edit_file(fname):
     'Edit a file.'
@@ -629,6 +728,7 @@ def edit_file(fname):
     if not user_prefs.editor:
         return
     return ext_cmd_nosudo("%s %s" % (user_prefs.editor, fname))
+
 
 def need_pager(s, w, h):
     from math import ceil
@@ -640,12 +740,16 @@ def need_pager(s, w, h):
         if cnt >= h:
             return True
     return False
+
+
 def term_render(s):
     'Render for TERM.'
     try:
         return termctrl.render(s)
     except:
         return s
+
+
 def page_string(s):
     'Page string rendered for TERM.'
     if not s:
@@ -661,6 +765,7 @@ def page_string(s):
             opts = "-R"
         pipe_string("%s %s" % (user_prefs.pager, opts), term_render(s))
 
+
 def get_winsize():
     try:
         import curses
@@ -675,6 +780,8 @@ def get_winsize():
             w = 80
             h = 25
     return w, h
+
+
 def multicolumn(l):
     '''
     A ls-like representation of a list of strings.
@@ -692,30 +799,36 @@ def multicolumn(l):
     col_len = w/cols
     for i in range(len(l)/cols + 1):
         s = ''
-        for j in range(i*cols,(i+1)*cols):
+        for j in range(i * cols, (i + 1) * cols):
             if not j < len(l):
                 break
             if not s:
                 s = "%-*s" % (col_len, l[j])
-            elif (j+1)%cols == 0:
+            elif (j + 1) % cols == 0:
                 s = "%s%s" % (s, l[j])
             else:
                 s = "%s%-*s" % (s, col_len, l[j])
         if s:
             print s
 
+
 def find_value(pl, name):
     for n, v in pl:
         if n == name:
             return v
     return None
+
+
 def cli_replace_attr(pl, name, new_val):
     for i in range(len(pl)):
         if pl[i][0] == name:
             pl[i][1] = new_val
             return
+
+
 def cli_append_attr(pl, name, val):
     pl.append([name, val])
+
 
 def lines2cli(s):
     '''
@@ -734,9 +847,10 @@ def lines2cli(s):
             cum.append(p)
             cl.append(''.join(cum).strip())
             cum = []
-    if cum: # in case s ends with backslash
+    if cum:  # in case s ends with backslash
         cl.append(''.join(cum))
     return [x for x in cl if x]
+
 
 def parse_time(t):
     '''
@@ -760,6 +874,7 @@ def parse_time(t):
             return None
     return dt
 
+
 def save_graphviz_file(ini_f, attr_d):
     '''
     Save graphviz settings to an ini file, if it does not exist.
@@ -768,7 +883,7 @@ def save_graphviz_file(ini_f, attr_d):
         common_err("%s exists, please remove it first" % ini_f)
         return False
     try:
-        f = open(ini_f,"wb")
+        f = open(ini_f, "wb")
     except IOError, msg:
         common_err(msg)
         return False
@@ -786,6 +901,8 @@ def save_graphviz_file(ini_f, attr_d):
     f.close()
     common_info("graphviz attributes saved to %s" % ini_f)
     return True
+
+
 def load_graphviz_file(ini_f):
     '''
     Load graphviz ini file, if it exists.
@@ -807,6 +924,7 @@ def load_graphviz_file(ini_f):
         _graph_d[section] = d
     return True, _graph_d
 
+
 def get_pcmk_version(dflt):
     try:
         rc, s = get_stdout("crmd version")
@@ -821,6 +939,7 @@ def get_pcmk_version(dflt):
         common_warn(msg)
     return v
 
+
 def get_cib_property(cib_f, attr, dflt):
     """A poor man's get attribute procedure.
     We don't want heavy parsing, this needs to be relatively
@@ -830,7 +949,7 @@ def get_cib_property(cib_f, attr, dflt):
     close_t = "</cluster_property_set"
     attr_s = 'name="%s"' % attr
     ver_patt = re.compile('value="([^"]+)"')
-    ver = dflt # return some version in any case
+    ver = dflt  # return some version in any case
     try:
         f = open(cib_f, "r")
     except IOError, msg:
@@ -852,13 +971,14 @@ def get_cib_property(cib_f, attr, dflt):
     f.close()
     return ver
 
+
 def get_cib_attributes(cib_f, tag, attr_l, dflt_l):
     """A poor man's get attribute procedure.
     We don't want heavy parsing, this needs to be relatively
     fast.
     """
     open_t = "<%s " % tag
-    val_patt_l = [ re.compile('%s="([^"]+)"' % x) for x in attr_l ]
+    val_patt_l = [re.compile('%s="([^"]+)"' % x) for x in attr_l]
     val_l = []
     try:
         f = open(cib_f, "r")
@@ -880,20 +1000,26 @@ def get_cib_attributes(cib_f, tag, attr_l, dflt_l):
     f.close()
     return val_l
 
+
 def is_min_pcmk_ver(min_ver, cib_f=None):
     if not vars.pcmk_version:
         if cib_f:
             vars.pcmk_version = get_cib_property(cib_f, "dc-version", "1.1.1")
-            common_debug("found pacemaker version: %s in cib: %s" % \
-                (vars.pcmk_version, cib_f))
+            common_debug("found pacemaker version: %s in cib: %s" %
+                         (vars.pcmk_version, cib_f))
         else:
             vars.pcmk_version = get_pcmk_version("1.1.1")
     from distutils.version import LooseVersion
     return LooseVersion(vars.pcmk_version) >= LooseVersion(min_ver)
+
+
 def is_pcmk_118(cib_f=None):
     return is_min_pcmk_ver("1.1.8", cib_f=cib_f)
+
+
 def cibadmin_can_patch():
     return is_min_pcmk_ver("1.1.10")
+
 
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()

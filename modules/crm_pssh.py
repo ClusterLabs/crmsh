@@ -29,20 +29,22 @@ from msg import *
 _DEFAULT_TIMEOUT = 60
 _EC_LOGROT = 120
 
+
 def option_parser():
     parser = common_parser()
     parser.usage = "%prog [OPTIONS] command [...]"
     parser.epilog = "Example: pssh -h hosts.txt -l irb2 -o /tmp/foo uptime"
 
     parser.add_option('-i', '--inline', dest='inline', action='store_true',
-            help='inline aggregated output for each server')
+                      help='inline aggregated output for each server')
     parser.add_option('-I', '--send-input', dest='send_input',
-            action='store_true',
-            help='read from standard input and send as input to ssh')
+                      action='store_true',
+                      help='read from standard input and send as input to ssh')
     parser.add_option('-P', '--print', dest='print_out', action='store_true',
-            help='print output as we get it')
+                      help='print output as we get it')
 
     return parser
+
 
 def parse_args(myargs, t=_DEFAULT_TIMEOUT):
     parser = option_parser()
@@ -50,6 +52,7 @@ def parse_args(myargs, t=_DEFAULT_TIMEOUT):
     parser.set_defaults(**defaults)
     opts, args = parser.parse_args(myargs)
     return opts, args
+
 
 def get_output(dir, host):
     l = []
@@ -65,12 +68,14 @@ def get_output(dir, host):
         f.close()
     return l
 
+
 def show_output(dir, hosts, desc):
     for host in hosts:
         out_l = get_output(dir, host)
         if out_l:
             print "%s %s:" % (host, desc)
             print ''.join(out_l)
+
 
 def do_pssh(l, opts):
     if opts.outdir and not os.path.exists(opts.outdir):
@@ -86,9 +91,10 @@ def do_pssh(l, opts):
     port = ""
     hosts = []
     for host, cmdline in l:
-        cmd = ['ssh', host, '-o', 'PasswordAuthentication=no',
-                '-o', 'SendEnv=PSSH_NODENUM',
-                '-o', 'StrictHostKeyChecking=no']
+        cmd = ['ssh', host,
+               '-o', 'PasswordAuthentication=no',
+               '-o', 'SendEnv=PSSH_NODENUM',
+               '-o', 'StrictHostKeyChecking=no']
         if opts.options:
             for opt in opts.options:
                 cmd += ['-o', opt]
@@ -104,11 +110,12 @@ def do_pssh(l, opts):
         t = Task(host, port, user, cmd, opts, stdin)
         manager.add_task(t)
     try:
-        return manager.run() # returns a list of exit codes
+        return manager.run()  # returns a list of exit codes
     except FatalError:
         common_err("pssh to nodes failed")
         show_output(opts.errdir, hosts, "stderr")
         return False
+
 
 def examine_outcome(l, opts, statuses):
     '''
@@ -136,14 +143,17 @@ def examine_outcome(l, opts, statuses):
             return False
     return True
 
+
 def next_loglines(a, outdir, errdir):
     '''
     pssh to nodes to collect new logs.
     '''
     l = []
     for node, rptlog, logfile, nextpos in a:
-        common_debug("updating %s from %s (pos %d)" % (logfile, node, nextpos))
-        cmdline = "perl -e 'exit(%d) if (stat(\"%s\"))[7]<%d' && tail -c +%d %s" % (_EC_LOGROT, logfile, nextpos-1, nextpos, logfile)
+        common_debug("updating %s from %s (pos %d)" %
+                     (logfile, node, nextpos))
+        cmdline = "perl -e 'exit(%d) if (stat(\"%s\"))[7]<%d' && tail -c +%d %s" % (
+            _EC_LOGROT, logfile, nextpos-1, nextpos, logfile)
         myopts = ["-q", "-o", outdir, "-e", errdir]
         opts, args = parse_args(myopts)
         l.append([node, cmdline])
@@ -152,6 +162,7 @@ def next_loglines(a, outdir, errdir):
         return examine_outcome(l, opts, statuses)
     else:
         return False
+
 
 def next_peinputs(node_pe_l, outdir, errdir):
     '''
@@ -164,7 +175,7 @@ def next_peinputs(node_pe_l, outdir, errdir):
             common_err("strange, %s doesn't contain string pengine" % pe_l[0])
             continue
         dir = "/%s" % r.group(1)
-        red_pe_l = [x.replace("%s/" % r.group(1),"") for x in pe_l]
+        red_pe_l = [x.replace("%s/" % r.group(1), "") for x in pe_l]
         common_debug("getting new PE inputs %s from %s" % (red_pe_l, node))
         cmdline = "tar -C %s -cf - %s" % (dir, ' '.join(red_pe_l))
         myopts = ["-q", "-o", outdir, "-e", errdir]
@@ -179,6 +190,7 @@ def next_peinputs(node_pe_l, outdir, errdir):
     else:
         return False
 
+
 def do_pssh_cmd(cmd, node_l, outdir, errdir, timeout=20000):
     '''
     pssh to nodes and run cmd.
@@ -189,7 +201,7 @@ def do_pssh_cmd(cmd, node_l, outdir, errdir, timeout=20000):
     if not l:
         return True
     myopts = ["-q", "-o", outdir, "-e", errdir]
-    opts, args = parse_args(myopts, t = str(int(timeout/1000)))
+    opts, args = parse_args(myopts, t=str(int(timeout/1000)))
     return do_pssh(l, opts)
 
 # vim:ts=4:sw=4:et:

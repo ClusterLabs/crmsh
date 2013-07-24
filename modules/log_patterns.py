@@ -7,7 +7,7 @@
 #  - node: pertaining to a node
 #  - quorum: quorum changes
 #  - events: other interesting events (core dumps, etc)
-# 
+#
 # paterns are grouped based on a detail level
 # detail level 0 is the lowest, i.e. should match the least
 # number of relevant messages

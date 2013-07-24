@@ -1,23 +1,25 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
-# 
+#
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 2.1 of the License, or (at your option) any later version.
-# 
+#
 # This software is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import os, pwd
+import os
+import pwd
 import sys
 from singletonmixin import Singleton
+
 
 def getpwdent():
     try:
@@ -31,11 +33,15 @@ def getpwdent():
         sys.stderr.write("ERROR: %s\n" % msg)
         return None
     return pwdent
+
+
 def getuser():
     try:
         return getpwdent()[0]
     except:
         return os.getenv("USER")
+
+
 def gethomedir(user=None):
     if user:
         try:
@@ -51,6 +57,7 @@ def gethomedir(user=None):
             return None
     else:
         return homedir
+
 
 class Vars(Singleton):
     cib_cli_map = {
@@ -84,7 +91,7 @@ class Vars(Singleton):
     nvset_cli_names = ("property", "rsc_defaults", "op_defaults")
     op_cli_names = ("monitor", "start", "stop", "migrate_to", "migrate_from", "promote", "demote", "notify")
     ra_operations = ("probe", "monitor", "start", "stop",
-       "promote", "demote", "notify", "migrate_to", "migrate_from")
+                     "promote", "demote", "notify", "migrate_to", "migrate_from")
     subpfx_list = {
         "instance_attributes": "instance_attributes",
         "meta_attributes": "meta_attributes",
@@ -169,7 +176,7 @@ class Vars(Singleton):
     score_types = {'advisory': '0', 'mandatory': 'INFINITY'}
     boolean_ops = ('or', 'and')
     binary_ops = ('lt', 'gt', 'lte', 'gte', 'eq', 'ne')
-    binary_types = ('string' , 'version' , 'number')
+    binary_types = ('string', 'version', 'number')
     unary_ops = ('defined', 'not_defined')
     simple_date_ops = ('lt', 'gt')
     date_ops = ('lt', 'gt', 'in_range', 'date_spec')
@@ -288,12 +295,12 @@ class Vars(Singleton):
         "simulate": "crm_simulate",
     }
 
-    ra_if = None # class interface to RA
-    stonithd_metadata = None # stonithd meta data
-    pe_metadata = None # PE meta data
-    crmd_metadata = None # crmd meta data
-    cib_metadata = None # cib meta data
-    crm_properties_metadata = None # PE + crmd + cib meta data
+    ra_if = None  # class interface to RA
+    stonithd_metadata = None  # stonithd meta data
+    pe_metadata = None  # PE meta data
+    crmd_metadata = None  # crmd meta data
+    cib_metadata = None  # cib meta data
+    crm_properties_metadata = None  # PE + crmd + cib meta data
     meta_progs = ("crmd", "pengine", "stonithd", "cib")
     crmd_advanced = (
         "dc-version",
@@ -308,17 +315,19 @@ class Vars(Singleton):
         if not ocf_root:
             ocf_root = "/usr/lib/ocf"
         os.environ["OCF_ROOT"] = ocf_root
-    pcmk_version = "" # set later
+    pcmk_version = ""  # set later
 
     # r.group(1) transition number (a different thing from file number)
     # r.group(2) contains full path
     # r.group(3) file number
     transition_patt = [
-        "crmd.* do_te_invoke: Processing graph ([0-9]+) .*derived from (.*/pe-[^-]+-(%%)[.]bz2)", # transition start
-    # r.group(1) transition number (a different thing from file number)
-    # r.group(2) contains full path
-    # r.group(3) transition status
-        "crmd.* run_graph: .*Transition ([0-9]+).*Source=(.*/pe-[^-]+-(%%)[.]bz2).: (Stopped|Complete|Terminated)", # and stop
+        # transition start
+        "crmd.* do_te_invoke: Processing graph ([0-9]+) .*derived from (.*/pe-[^-]+-(%%)[.]bz2)",
+        # r.group(1) transition number (a different thing from file number)
+        # r.group(2) contains full path
+        # r.group(3) transition status
+        # transition stop
+        "crmd.* run_graph: .*Transition ([0-9]+).*Source=(.*/pe-[^-]+-(%%)[.]bz2).: (Stopped|Complete|Terminated)",
     ]
 
 # vim:ts=4:sw=4:et:

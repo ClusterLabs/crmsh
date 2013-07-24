@@ -1,15 +1,15 @@
 # Copyright (C) 2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
-# 
+#
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 2.1 of the License, or (at your option) any later version.
-# 
+#
 # This software is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -28,11 +28,15 @@ from vars import Vars, gethomedir
 from xmlutil import *
 from utils import *
 from msg import *
+
+
 _NO_PSSH = False
+
 try:
     from crm_pssh import next_loglines, next_peinputs
 except:
     _NO_PSSH = True
+
 
 #
 # hb_report interface
@@ -42,13 +46,14 @@ except:
 # coloured nicely!)
 #
 
+
 def mk_re_list(patt_l, repl):
     'Build a list of regular expressions, replace "%%" with repl'
     l = []
     for re_l in patt_l:
-        l += [ x.replace("%%", repl) for x in re_l ]
+        l += [x.replace("%%", repl) for x in re_l]
     if not repl:
-        l = [ x.replace(".*.*",".*") for x in l ]
+        l = [x.replace(".*.*", ".*") for x in l]
     return l
 
 
@@ -57,15 +62,18 @@ def set_year(ts=None):
     YEAR = time.strftime("%Y", time.localtime(ts))
     common_debug("setting year to %s (ts: %s)" % (YEAR, str(ts)))
 
+
 def syslog_ts(s):
     global YEAR
     try:
         # strptime defaults year to 1900 (sigh)
-        tm = time.strptime(' '.join([YEAR] + s.split()[0:3]),"%Y %b %d %H:%M:%S")
+        tm = time.strptime(' '.join([YEAR] + s.split()[0:3]),
+                           "%Y %b %d %H:%M:%S")
         return time.mktime(tm)
     except:
         common_debug("malformed line: %s" % s)
         return None
+
 
 def seek_to_edge(f, ts, to_end):
     '''
@@ -77,12 +85,12 @@ def seek_to_edge(f, ts, to_end):
         beg = 0
         while ts == get_timestamp(f):
             if f.tell() < 1000:
-                f.seek(0) # otherwise, the seek below throws an exception
-                if beg > 0: # avoid infinite loop
-                    return # goes all the way to the top
+                f.seek(0)    # otherwise, the seek below throws an exception
+                if beg > 0:  # avoid infinite loop
+                    return   # goes all the way to the top
                 beg += 1
             else:
-                f.seek(-1000, 1) # go back 10 or so lines
+                f.seek(-1000, 1)  # go back 10 or so lines
     while True:
         pos = f.tell()
         s = f.readline()
@@ -93,6 +101,7 @@ def seek_to_edge(f, ts, to_end):
                 (not to_end and curr_ts >= ts):
             break
     f.seek(pos)
+
 
 def log_seek(f, ts, to_end=False):
     '''
@@ -108,7 +117,9 @@ def log_seek(f, ts, to_end=False):
     badline = 0
     maxbadline = 10
     common_debug("seek %s:%s in %s" %
-        (time.ctime(ts), to_end and "end" or "start", f.name))
+                 (time.ctime(ts),
+                  to_end and "end" or "start",
+                  f.name))
     while first <= last:
         # we can skip some iterations if it's about few lines
         if abs(first-last) < 120:
@@ -135,39 +146,47 @@ def log_seek(f, ts, to_end=False):
     f.seek(fpos)
     return fpos
 
+
 def get_timestamp(f):
     '''
     Get the whole line from f. The current file position is
     usually in the middle of the line.
     Then get timestamp and return it.
     '''
-    step = 30 # no line should be longer than 30
+    step = 30  # no line should be longer than 30
     cnt = 1
     current_pos = f.tell()
     s = f.readline()
-    if not s: # EOF?
-        f.seek(-step, 1) # backup a bit
+    if not s:  # EOF?
+        f.seek(-step, 1)  # backup a bit
         current_pos = f.tell()
         s = f.readline()
     while s and current_pos < f.tell():
-        if cnt*step >= f.tell(): # at 0?
+        if cnt*step >= f.tell():  # at 0?
             f.seek(0)
             break
         f.seek(-cnt*step, 1)
         s = f.readline()
         cnt += 1
-    pos = f.tell() # save the position ...
-    s = f.readline() # get the line
-    f.seek(pos) # ... and move the cursor back there
-    if not s: # definitely EOF (probably cannot happen)
+    pos = f.tell()     # save the position ...
+    s = f.readline()   # get the line
+    f.seek(pos)        # ... and move the cursor back there
+    if not s:          # definitely EOF (probably cannot happen)
         return None
     return syslog_ts(s)
 
+
 def is_our_log(s, node_l):
-    try: return s.split()[3] in node_l
-    except: return False
+    try:
+        return s.split()[3] in node_l
+    except:
+        return False
+
+
 def log2node(log):
     return os.path.basename(os.path.dirname(log))
+
+
 def filter(sl, log_l):
     '''
     Filter list of messages to get only those from the given log
@@ -175,34 +194,44 @@ def filter(sl, log_l):
     '''
     node_l = [log2node(x) for x in log_l if x]
     return [x for x in sl if is_our_log(x, node_l)]
+
+
 def first_log_lines(log_l):
     '''
     Return a list of all first lines of the logs.
     '''
-    f_list = [ open(x) for x in log_l if x ]
-    l = [ x.readline().rstrip() for x in f_list if x ]
+    f_list = [open(x) for x in log_l if x]
+    l = [x.readline().rstrip() for x in f_list if x]
     for x in f_list:
         if x:
             x.close()
     return l
+
+
 def last_log_lines(log_l):
     '''
     Return a list of all last lines of the logs.
     '''
-    f_list = [ open(x) for x in log_l if x ]
-    l = [ x.readlines()[-1].rstrip() for x in f_list if x ]
+    f_list = [open(x) for x in log_l if x]
+    l = [x.readlines()[-1].rstrip() for x in f_list if x]
     for x in f_list:
         if x:
             x.close()
     return l
+
+
 def convert_dt(dt):
-    try: return time.mktime(dt.timetuple())
-    except: return None
+    try:
+        return time.mktime(dt.timetuple())
+    except:
+        return None
+
 
 class LogSyslog(object):
     '''
     Slice log, search log.
     '''
+
     def __init__(self, central_log, log_l, from_dt, to_dt):
         self.log_l = log_l
         self.central_log = central_log
@@ -212,8 +241,10 @@ class LogSyslog(object):
         self.cache = {}
         self.open_logs()
         self.set_log_timeframe(from_dt, to_dt)
+
     def open_log(self, log):
-        import bz2, gzip
+        import bz2
+        import gzip
         try:
             if log.endswith(".bz2"):
                 self.f[log] = bz2.BZ2File(log)
@@ -222,7 +253,8 @@ class LogSyslog(object):
             else:
                 self.f[log] = open(log)
         except IOError, msg:
-            common_err("open %s: %s"%(log, msg))
+            common_err("open %s: %s" % (log, msg))
+
     def open_logs(self):
         if self.central_log:
             common_debug("opening central log %s" % self.central_log)
@@ -231,6 +263,7 @@ class LogSyslog(object):
             for log in self.log_l:
                 common_debug("opening log %s" % log)
                 self.open_log(log)
+
     def set_log_timeframe(self, from_dt, to_dt):
         '''
         Convert datetime to timestamps (i.e. seconds), then
@@ -247,7 +280,7 @@ class LogSyslog(object):
         for log in self.f:
             f = self.f[log]
             start = log_seek(f, self.from_ts)
-            end = log_seek(f, self.to_ts, to_end = True)
+            end = log_seek(f, self.to_ts, to_end=True)
             if start == -1 or end == -1:
                 bad_logs.append(log)
             else:
@@ -256,6 +289,7 @@ class LogSyslog(object):
         for log in bad_logs:
             del self.f[log]
             self.log_l.remove(log)
+
     def get_match_line(self, f, patt):
         '''
         Get first line from f that matches re_s, but is not
@@ -269,6 +303,7 @@ class LogSyslog(object):
             if not patt or patt.search(s):
                 return s, fpos
         return '', -1
+
     def single_log_list(self, f, patt):
         l = []
         while True:
@@ -277,6 +312,7 @@ class LogSyslog(object):
                 return l
             l.append(s)
         return l
+
     def search_logs(self, log_l, re_s=''):
         '''
         Search logs for re_s and sort by time.
@@ -286,13 +322,13 @@ class LogSyslog(object):
             patt = re.compile(re_s)
         # if there's central log, there won't be merge
         if self.central_log:
-            fl = [ self.f[f] for f in self.f ]
+            fl = [self.f[f] for f in self.f]
         else:
-            fl = [ self.f[f] for f in self.f if self.f[f].name in log_l ]
+            fl = [self.f[f] for f in self.f if self.f[f].name in log_l]
         for f in fl:
             f.seek(self.startpos[f])
         # get head lines of all nodes
-        top_line = [ self.get_match_line(x, patt)[0] for x in fl ]
+        top_line = [self.get_match_line(x, patt)[0] for x in fl]
         top_line_ts = []
         rm_idx_l = []
         # calculate time stamps for head lines
@@ -305,8 +341,8 @@ class LogSyslog(object):
         rm_idx_l.reverse()
         for i in rm_idx_l:
             del fl[i], top_line[i]
-        common_debug("search <%s> in %s" % (re_s, [ f.name for f in fl ]))
-        if len(fl) == 0: # nothing matched ?
+        common_debug("search <%s> in %s" % (re_s, [f.name for f in fl]))
+        if len(fl) == 0:  # nothing matched ?
             return []
         if len(fl) == 1:
             # no need to merge if there's only one log
@@ -331,6 +367,7 @@ class LogSyslog(object):
             else:
                 top_line_ts[first] = syslog_ts(top_line[first])
         return l
+
     def get_matches(self, re_l, log_l=None):
         '''
         Return a list of log messages which
@@ -349,6 +386,7 @@ class LogSyslog(object):
         #    self.cache[re_s] = self.search_logs(log_l, re_s)
         #return filter(self.cache[re_s], log_l)
 
+
 def human_date(dt):
     'Some human date representation. Date defaults to now.'
     if not dt:
@@ -356,14 +394,17 @@ def human_date(dt):
     # drop microseconds
     return re.sub("[.].*", "", "%s %s" % (dt.date(), dt.time()))
 
+
 def is_log(p):
     return os.path.isfile(p) and os.path.getsize(p) > 0
+
 
 def pe_file_in_range(pe_f, a):
     pe_num = get_pe_num(pe_f)
     if not a or (a[0] <= int(pe_num) <= a[1]):
         return pe_f
     return None
+
 
 def read_log_info(log):
     'Read <log>.info and return logfile and next pos'
@@ -375,9 +416,10 @@ def read_log_info(log):
         warn_once("hb_report too old, you need to update cluster-glue")
         return '', -1
 
+
 def update_loginfo(rptlog, logfile, oldpos, appended_file):
     'Update <log>.info with new next pos'
-    newpos = oldpos + os.stat(appended_file).st_size 
+    newpos = oldpos + os.stat(appended_file).st_size
     try:
         f = open("%s.info" % rptlog, "w")
         f.write("%s %d\n" % (logfile, newpos))
@@ -385,11 +427,13 @@ def update_loginfo(rptlog, logfile, oldpos, appended_file):
     except IOError, msg:
         common_err("couldn't the update %s.info: %s" % (rptlog, msg))
 
+
 def get_pe_num(pe_file):
     try:
         return re.search("pe-[^-]+-([0-9]+)[.]", pe_file).group(1)
     except:
         return "-1"
+
 
 def run_graph_msg_actions(msg):
     '''
@@ -407,6 +451,7 @@ def run_graph_msg_actions(msg):
         d[r.group(1)] = int(r.group(2))
         s = s[r.end():]
 
+
 def extract_pe_file(msg):
     msg_a = msg.split()
     if len(msg_a) < 8:
@@ -414,6 +459,8 @@ def extract_pe_file(msg):
         common_warn("log message <%s> unexpected format, please report a bug" % msg)
         return ""
     return msg_a[-1]
+
+
 def extract_node(msg):
     msg_a = msg.split()
     if len(msg_a) < 8:
@@ -421,6 +468,7 @@ def extract_node(msg):
         common_warn("log message <%s> unexpected format, please report a bug" % msg)
         return ""
     return msg_a[3]
+
 
 def get_matching_run_msg(te_invoke_msg, trans_msg_l):
     run_msg = ""
@@ -436,9 +484,11 @@ def get_matching_run_msg(te_invoke_msg, trans_msg_l):
             break
     return run_msg
 
+
 def trans_str(node, pe_file):
     '''Convert node,pe_file to transition sting.'''
-    return "%s:%s" % (node, os.path.basename(pe_file).replace(".bz2",""))
+    return "%s:%s" % (node, os.path.basename(pe_file).replace(".bz2", ""))
+
 def rpt_pe2t_str(rpt_pe_file):
     '''Convert report's pe_file path to transition sting.'''
     node = os.path.basename(os.path.dirname(os.path.dirname(rpt_pe_file)))
@@ -447,12 +497,15 @@ class Transition(object):
     '''
     Capture transition related information.
     '''
+
     def __init__(self, te_invoke_msg, run_msg):
         self.te_invoke_msg = te_invoke_msg
         self.run_msg = run_msg
         self.parse_msgs()
+
     def __str__(self):
         return trans_str(self.dc, self.pe_file)
+
     def parse_msgs(self):
         self.pe_file = extract_pe_file(self.te_invoke_msg)
         self.pe_num = get_pe_num(self.pe_file)
@@ -463,14 +516,17 @@ class Transition(object):
         else:
             common_warn("end of transition %s not found in logs (transition not complete yet?)" % self)
             self.end_ts = time.time()
+
     def actions_count(self):
         if self.run_msg:
             act_d = run_graph_msg_actions(self.run_msg)
             return sum(act_d.values())
         else:
             return -1
+
     def shortname(self):
-        return os.path.basename(self.pe_file).replace(".bz2","")
+        return os.path.basename(self.pe_file).replace(".bz2", "")
+
     def transition_info(self):
         print "Transition %s (%s -" % (self, shorttime(self.start_ts)),
         if self.run_msg:
@@ -481,6 +537,7 @@ class Transition(object):
             print "\ttotal %d actions: %s" % (total, s)
         else:
             print "[unfinished])"
+
 
 def mkarchive(dir):
     "Create an archive from a directory"
@@ -499,18 +556,26 @@ def mkarchive(dir):
     return True
 
 CH_SRC, CH_TIME, CH_UPD = 1, 2, 3
+
+
 class Report(Singleton):
     '''
     A hb_report class.
     '''
-    live_recent = 6*60*60 # recreate live hb_report once every 6 hours
-    short_live_recent = 60 # update once a minute
-    nodecolors = (
-    "NORMAL", "GREEN", "CYAN", "MAGENTA", "YELLOW", "WHITE", "BLUE", "RED"
-    )
+    live_recent = 6*60*60   # recreate live hb_report once every 6 hours
+    short_live_recent = 60  # update once a minute
+    nodecolors = ("NORMAL",
+                  "GREEN",
+                  "CYAN",
+                  "MAGENTA",
+                  "YELLOW",
+                  "WHITE",
+                  "BLUE",
+                  "RED")
     session_sub = "session"
     outdir = os.path.join(vars.report_cache, "psshout")
     errdir = os.path.join(vars.report_cache, "pssherr")
+
     def __init__(self):
         # main source attributes
         self.source = None
@@ -518,7 +583,7 @@ class Report(Singleton):
         self.to_dt = None
         self.log_l = []
         self.central_log = None
-        self.setnodes = [] # optional
+        self.setnodes = []  # optional
         # derived
         self.loc = None
         self.ready = False
@@ -540,22 +605,30 @@ class Report(Singleton):
         # depending on the change_origin, we update our attributes
         self.change_origin = CH_SRC
         set_year()
+
     def error(self, s):
         common_err("%s: %s" % (self.source, s))
+
     def warn(self, s):
         common_warn("%s: %s" % (self.source, s))
+
     def rsc_list(self):
         return self.cibgrp_d.keys() + self.cibcln_d.keys() + self.cibrsc_l
+
     def node_list(self):
         return self.cibnode_l
+
     def peinputs_list(self):
         return [x.pe_num for x in self.peinputs_l]
+
     def session_subcmd_list(self):
         return ["save", "load", "pack", "delete", "list", "update"]
+
     def session_list(self):
         l = os.listdir(self.get_session_dir(None))
         l.sort()
         return l
+
     def unpack_report(self, tarball):
         '''
         Unpack hb_report tarball.
@@ -565,10 +638,10 @@ class Report(Singleton):
         parentdir = os.path.dirname(tarball)
         common_debug("tarball: %s, in dir: %s" % (bfname, parentdir))
         if bfname.endswith(".tar.bz2"):
-            loc = tarball.replace(".tar.bz2","")
+            loc = tarball.replace(".tar.bz2", "")
             tar_unpack_option = "j"
-        elif bfname.endswith(".tar.gz"): # hmm, must be ancient
-            loc = tarball.replace(".tar.gz","")
+        elif bfname.endswith(".tar.gz"):  # hmm, must be ancient
+            loc = tarball.replace(".tar.gz", "")
             tar_unpack_option = "z"
         else:
             self.error("this doesn't look like a report tarball")
@@ -601,17 +674,20 @@ class Report(Singleton):
         if rc != 0:
             return None
         return loc
+
     def pe_report_path(self, t_obj):
         pe_base = os.path.basename(t_obj.pe_file)
         return os.path.join(self.loc, t_obj.dc, "pengine", pe_base)
+
     def short_pe_path(self, pe_file):
-        return pe_file.replace("%s/" % self.loc,"")
+        return pe_file.replace("%s/" % self.loc, "")
+
     def get_nodes(self):
-        return [ os.path.basename(p)
-            for p in os.listdir(self.loc)
+        return [os.path.basename(p)
+                for p in os.listdir(self.loc)
                 if os.path.isdir(os.path.join(self.loc, p)) and
-                os.path.isfile(os.path.join(self.loc, p, "cib.txt"))
-        ]
+                os.path.isfile(os.path.join(self.loc, p, "cib.txt"))]
+
     def check_nodes(self):
         'Verify if the nodes in cib match the nodes in the report.'
         nl = self.get_nodes()
@@ -626,6 +702,7 @@ class Report(Singleton):
         if nl:
             self.warn("strange, extra node(s) %s in report" % ','.join(nl))
         return True
+
     def check_report(self):
         '''
         Check some basic properties of the report.
@@ -638,8 +715,10 @@ class Report(Singleton):
         if not self.check_nodes():
             return False
         return True
+
     def _live_loc(self):
-        return os.path.join(vars.report_cache,"live")
+        return os.path.join(vars.report_cache, "live")
+
     def is_live_recent(self):
         '''
         Look at the last live hb_report. If it's recent enough,
@@ -650,23 +729,27 @@ class Report(Singleton):
             return (time.time() - last_ts <= self.live_recent)
         except:
             return False
+
     def is_live_very_recent(self):
         '''
         Look at the last live hb_report. If it's recent enough,
         return True.
         '''
         return (time.time() - self.last_live_update) <= self.short_live_recent
+
     def prevent_live_update(self):
         '''
         Don't update live report if to_time is set (not open end).
         '''
         return self.to_dt is not None
+
     def find_node_log(self, node):
         p = os.path.join(self.loc, node)
         for lf in ("ha-log.txt", "messages"):
             if is_log(os.path.join(p, lf)):
                 return os.path.join(p, lf)
         return None
+
     def find_central_log(self):
         'Return common log, if found.'
         central_log = os.path.join(self.loc, "ha-log.txt")
@@ -681,6 +764,7 @@ class Report(Singleton):
                 return
             common_debug("found central log %s" % logf)
             self.central_log = central_log
+
     def find_logs(self):
         'Return a list of logs found (one per node).'
         l = []
@@ -691,6 +775,7 @@ class Report(Singleton):
             else:
                 self.warn("no log found for node %s" % node)
         return l
+
     def append_newlogs(self, a):
         '''
         Append new logs fetched from nodes.
@@ -703,6 +788,7 @@ class Report(Singleton):
                 continue
             append_file(rptlog, fl[0])
             update_loginfo(rptlog, logfile, nextpos, fl[0])
+
     def unpack_new_peinputs(self, node, pe_l):
         '''
         Untar PE inputs fetched from nodes.
@@ -714,6 +800,7 @@ class Report(Singleton):
             return -1
         u_dir = os.path.join(self.loc, node)
         return pipe_cmd_nosudo("tar -C %s -x < %s" % (u_dir, fl[0]))
+
     def read_new_log(self, node):
         '''
         Get a list of log lines.
@@ -730,6 +817,7 @@ class Report(Singleton):
             common_err("open %s: %s" % (fl[0], msg))
             return []
         return f.readlines()
+
     def update_live_report(self):
         '''
         Update the existing live report, if it's older than
@@ -775,12 +863,14 @@ class Report(Singleton):
         rmdir_r(self.outdir)
         rmdir_r(self.errdir)
         return (rc1 and rc2)
+
     def get_live_report(self):
         if not acquire_lock(vars.report_cache):
             return None
         loc = self.new_live_report()
         release_lock(vars.report_cache)
         return loc
+
     def manage_live_report(self, force=False, no_live_update=False):
         '''
         Update or create live report.
@@ -807,6 +897,7 @@ class Report(Singleton):
             else:
                 warn_once("pssh not installed, slow live updates ahead")
         return self.get_live_report()
+
     def new_live_report(self):
         '''
         Run hb_report to get logs now.
@@ -824,7 +915,10 @@ class Report(Singleton):
             return None
         common_info("retrieving information from cluster nodes, please wait ...")
         rc = pipe_cmd_nosudo("hb_report -Z -f '%s' %s %s %s" %
-                (self.from_dt.ctime(), to_option, nodes_option, d))
+                             (self.from_dt.ctime(),
+                              to_option,
+                              nodes_option,
+                              d))
         if rc != 0:
             if os.path.isfile(tarball):
                 self.warn("hb_report thinks it failed, proceeding anyway")
@@ -833,12 +927,14 @@ class Report(Singleton):
                 return None
         self.last_live_update = time.time()
         return self.unpack_report(tarball)
+
     def set_source(self, src):
         'Set our source.'
         if self.source != src:
             self.set_change_origin(CH_SRC)
             self.source = src
             self.ready = False
+
     def set_period(self, from_dt, to_dt):
         '''
         Set from/to_dt.
@@ -850,27 +946,31 @@ class Report(Singleton):
         self.to_dt = to_dt
         if need_refresh:
             self.set_change_origin(CH_UPD)
-            self.refresh_source(force = True)
+            self.refresh_source(force=True)
         else:
             self.set_change_origin(CH_TIME)
             self.report_setup()
         return True
+
     def set_detail(self, detail_lvl):
         '''
         Set the detail level.
         '''
         self.detail = int(detail_lvl)
+
     def set_nodes(self, *args):
         '''
         Allow user to set the node list (necessary if the host is
         not part of the cluster).
         '''
         self.setnodes = args
+
     def get_cib_loc(self):
         nl = self.get_nodes()
         if not nl:
             return ""
         return os.path.join(self.loc, nl[0], "cib.xml")
+
     def read_cib(self):
         '''
         Get some information from the report's CIB (node list,
@@ -883,13 +983,14 @@ class Report(Singleton):
             cib_elem = file2cib_elem(cib_f)
         if cib_elem is None:
             return  # no cib?
-        try: conf = cib_elem.find("configuration")
-        except: # bad cib?
+        try:
+            conf = cib_elem.find("configuration")
+        except:  # bad cib?
             return
-        self.cibrsc_l = [ x.get("id")
-            for x in conf.xpath("//resources/primitive") ]
-        self.cibnode_l = [ x.get("uname")
-            for x in conf.xpath("//nodes/node") ]
+        self.cibrsc_l = [x.get("id")
+                         for x in conf.xpath("//resources/primitive")]
+        self.cibnode_l = [x.get("uname")
+                          for x in conf.xpath("//nodes/node")]
         self.cibgrp_d = {}
         for grp in conf.xpath("//resources/group"):
             self.cibgrp_d[grp.get("id")] = get_rsc_children_ids(grp)
@@ -900,8 +1001,10 @@ class Report(Singleton):
             try:
                 self.cibcln_d[cln.get("id")] = get_prim_children_ids(cln)
                 self.cibcloned_l += self.cibcln_d[cln.get("id")]
-            except: pass
+            except:
+                pass
         self.cibnotcloned_l = [x for x in self.cibrsc_l if x not in self.cibcloned_l]
+
     def new_peinput(self, new_pe):
         t_obj = self.find_peinput(str(new_pe))
         if t_obj:
@@ -909,14 +1012,17 @@ class Report(Singleton):
             self.peinputs_l.remove(t_obj)
         common_debug("appending new PE %s" % new_pe)
         self.peinputs_l.append(new_pe)
+
     def set_node_colors(self):
         i = 0
         for n in self.cibnode_l:
             self.nodecolor[n] = self.nodecolors[i]
             i = (i+1) % len(self.nodecolors)
+
     def get_invoke_trans_msgs(self, msg_l):
         te_invoke_patt = vars.transition_patt[0].replace("%%", "[0-9]+")
         return [x for x in msg_l if re.search(te_invoke_patt, x)]
+
     def get_all_trans_msgs(self, msg_l=None):
         trans_re_l = [x.replace("%%", "[0-9]+") for x in vars.transition_patt]
         if not msg_l:
@@ -924,6 +1030,7 @@ class Report(Singleton):
         else:
             re_s = '|'.join(trans_re_l)
             return [x for x in msg_l if re.search(re_s, x)]
+
     def list_transitions(self, msg_l=None, future_pe=False):
         '''
         List transitions by reading logs.
@@ -945,7 +1052,7 @@ class Report(Singleton):
             run_msg = get_matching_run_msg(msg, trans_msg_l)
             t_obj = Transition(msg, run_msg)
             num_actions = t_obj.actions_count()
-            if num_actions == 0: # empty transition
+            if num_actions == 0:  # empty transition
                 common_debug("skipping empty transition (%s)" % t_obj)
                 continue
             if not future_pe:
@@ -955,6 +1062,7 @@ class Report(Singleton):
                     continue
             common_debug("found PE input: %s" % t_obj)
             yield t_obj
+
     def report_setup(self):
         if not self.change_origin:
             return
@@ -962,7 +1070,7 @@ class Report(Singleton):
             return
         if self.change_origin == CH_SRC:
             vars.pcmk_version = None
-            self.desc = os.path.join(self.loc,"description.txt")
+            self.desc = os.path.join(self.loc, "description.txt")
             set_year(os.stat(self.desc).st_mtime)
             self.log_l = self.find_logs()
             self.find_central_log()
@@ -974,8 +1082,10 @@ class Report(Singleton):
                 self.log_l = l
                 self.read_cib()
                 self.set_node_colors()
-        self.logobj = LogSyslog(self.central_log, self.log_l, \
-                self.from_dt, self.to_dt)
+        self.logobj = LogSyslog(self.central_log,
+                                self.log_l,
+                                self.from_dt,
+                                self.to_dt)
         if self.change_origin != CH_UPD:
             common_debug("getting transitions from logs")
             self.peinputs_l = []
@@ -983,6 +1093,7 @@ class Report(Singleton):
                 self.new_peinput(new_t_obj)
         self.ready = self.check_report()
         self.set_change_origin(0)
+
     def prepare_source(self, no_live_update=False):
         '''
         Unpack a hb_report tarball.
@@ -1005,6 +1116,7 @@ class Report(Singleton):
             return False
         self.report_setup()
         return self.ready
+
     def refresh_source(self, force=False):
         '''
         Refresh report from live.
@@ -1016,6 +1128,7 @@ class Report(Singleton):
         self.loc = self.manage_live_report(force=force)
         self.report_setup()
         return self.ready
+
     def get_patt_l(self, type):
         '''
         get the list of patterns for this type, up to and
@@ -1032,6 +1145,7 @@ class Report(Singleton):
             common_error("%s not featured in log patterns" % type)
             return None
         return log_patterns[type][0:self.detail+1]
+
     def build_re(self, type, args):
         '''
         Prepare a regex string for the type and args.
@@ -1041,33 +1155,42 @@ class Report(Singleton):
         if not patt_l:
             return None
         if not args:
-            re_l = mk_re_list(patt_l,"")
+            re_l = mk_re_list(patt_l, "")
         else:
             re_l = mk_re_list(patt_l, r'(?:%s)' % "|".join(args))
         return re_l
+
     def _str_nodecolor(self, node, s):
-        try: clr = self.nodecolor[node]
-        except: return s
+        try:
+            clr = self.nodecolor[node]
+        except:
+            return s
         try:
             return "${%s}%s${NORMAL}" % (clr, s)
         except:
-            s = s.replace("${","$.{")
+            s = s.replace("${", "$.{")
             return "${%s}%s${NORMAL}" % (clr, s)
+
     def disp(self, s):
         'color output'
         a = s.split()
-        try: node = a[3]
-        except: return s
+        try:
+            node = a[3]
+        except:
+            return s
         return self._str_nodecolor(node, s)
+
     def match_filter_out(self, s):
         for regexp in self.log_filter_out_re:
             if regexp.search(s):
                 return True
         return False
+
     def display_logs(self, l):
         if self.log_filter_out_re:
             l = [x for x in l if not self.match_filter_out(x)]
-        page_string('\n'.join([ self.disp(x) for x in l ]))
+        page_string('\n'.join([self.disp(x) for x in l]))
+
     def show_logs(self, log_l=None, re_l=[]):
         '''
         Print log lines, either matched by re_l or all.
@@ -1078,24 +1201,28 @@ class Report(Singleton):
             self.error("no logs found")
             return
         self.display_logs(self.logobj.get_matches(re_l, log_l))
+
     def get_source(self):
         return self.source
+
     def get_desc_line(self, fld):
         try:
             f = open(self.desc)
         except IOError, msg:
-            common_err("open %s: %s"%(self.desc, msg))
+            common_err("open %s: %s" % (self.desc, msg))
             return
         for s in f:
             if s.startswith("%s: " % fld):
                 f.close()
-                s = s.replace("%s: " % fld,"").rstrip()
+                s = s.replace("%s: " % fld, "").rstrip()
                 return s
         f.close()
+
     def dumpdescln(self, pfx, field):
         s = self.get_desc_line(field)
         if s:
             return "%s: %s" % (pfx, s)
+
     def short_peinputs_list(self):
         '''There could be quite a few transitions, limit the
         output'''
@@ -1103,9 +1230,10 @@ class Report(Singleton):
         s = ""
         if len(self.peinputs_l) > max_output:
             s = "... "
-        return "%s%s" % (s, \
-            ' '.join([self._str_nodecolor(x.dc, x.pe_num) \
-                for x in self.peinputs_l[-max_output:]]))
+        return "%s%s" % (s,
+                         ' '.join([self._str_nodecolor(x.dc, x.pe_num)
+                                   for x in self.peinputs_l[-max_output:]]))
+
     def get_rpt_dt(self, dt, whence):
         '''
         Figure out the time of the start/end of the report.
@@ -1122,27 +1250,29 @@ class Report(Singleton):
             return datetime.datetime.fromtimestamp(myts)
         except:
             return None
+
     def _str_dt(self, dt):
         return dt and human_date(dt) or "--/--/-- --:--:--"
+
     def info(self):
         '''
         Print information about the source.
         '''
         if not self.prepare_source():
             return False
-        page_string('\n'.join((
-        "Source: %s" % self.source,
-        self.dumpdescln("Created on", "Date") or "Created on: --:--:--",
-        self.dumpdescln("By", "By") or "By: unknown",
-        "Period: %s - %s" % \
-            (self._str_dt(self.get_rpt_dt(self.from_dt, "top")), \
-            self._str_dt(self.get_rpt_dt(self.to_dt, "bottom"))),
-        "Nodes: %s" % ' '.join([ self._str_nodecolor(x, x) \
-            for x in self.cibnode_l ]),
-        "Groups: %s" % ' '.join(self.cibgrp_d.keys()),
-        "Resources: %s" % ' '.join(self.cibrsc_l),
-        "Transitions: %s" % self.short_peinputs_list(),
-        )))
+        page_string('\n'.join(("Source: %s" % self.source,
+                               self.dumpdescln("Created on", "Date") or "Created on: --:--:--",
+                               self.dumpdescln("By", "By") or "By: unknown",
+                               "Period: %s - %s" %
+                               (self._str_dt(self.get_rpt_dt(self.from_dt, "top")),
+                                self._str_dt(self.get_rpt_dt(self.to_dt, "bottom"))),
+                               "Nodes: %s" % ' '.join([self._str_nodecolor(x, x)
+                                                       for x in self.cibnode_l]),
+                               "Groups: %s" % ' '.join(self.cibgrp_d.keys()),
+                               "Resources: %s" % ' '.join(self.cibrsc_l),
+                               "Transitions: %s" % self.short_peinputs_list()
+                               )))
+
     def events(self):
         '''
         Show all events.
@@ -1155,12 +1285,14 @@ class Report(Singleton):
         if not all_re_l:
             self.error("no resources or nodes found")
             return False
-        self.show_logs(re_l = all_re_l)
+        self.show_logs(re_l=all_re_l)
+
     def find_peinput(self, t_str):
         for t_obj in self.peinputs_l:
             if str(t_obj) == t_str:
                 return t_obj
         return None
+
     def show_transition_log(self, rpt_pe_file, full_log=False):
         '''
         Search for events within the given transition.
@@ -1180,6 +1312,7 @@ class Report(Singleton):
             self.events()
         self.logobj.set_log_timeframe(self.from_dt, self.to_dt)
         return True
+
     def resource(self, *args):
         '''
         Show resource relevant logs.
@@ -1189,9 +1322,11 @@ class Report(Singleton):
         # expand groups (if any)
         expanded_l = []
         for a in args:
-            if a in self.cibgrp_d: # add group members, groups aren't logged
+            # add group members, groups aren't logged
+            if a in self.cibgrp_d:
                 expanded_l += self.cibgrp_d[a]
-            elif a in self.cibcln_d: # add group members, groups aren't logged
+            # add group members, groups aren't logged
+            elif a in self.cibcln_d:
                 expanded_l += self.cibcln_d[a]
             else:
                 expanded_l.append(a)
@@ -1204,7 +1339,8 @@ class Report(Singleton):
         rsc_re_l = self.build_re("resource", exp_cloned_l)
         if not rsc_re_l:
             return False
-        self.show_logs(re_l = rsc_re_l)
+        self.show_logs(re_l=rsc_re_l)
+
     def node(self, *args):
         '''
         Show node relevant logs.
@@ -1214,7 +1350,8 @@ class Report(Singleton):
         node_re_l = self.build_re("node", args)
         if not node_re_l:
             return False
-        self.show_logs(re_l = node_re_l)
+        self.show_logs(re_l=node_re_l)
+
     def log(self, *args):
         '''
         Show logs for a node or all nodes.
@@ -1232,11 +1369,13 @@ class Report(Singleton):
                 l.append(self.find_node_log(n))
             if not l:
                 return False
-            self.show_logs(log_l = l)
+            self.show_logs(log_l=l)
+
     pe_details_header = \
-"Date       Start    End       Filename      Client     User       Origin"
+      "Date       Start    End       Filename      Client     User       Origin"
     pe_details_separator = \
-"====       =====    ===       ========      ======     ====       ======"
+      "====       =====    ===       ========      ======     ====       ======"
+
     def pe_detail_format(self, t_obj):
         l = [
             shortdate(t_obj.start_ts),
@@ -1245,37 +1384,43 @@ class Report(Singleton):
             # the format string occurs also below
             self._str_nodecolor(t_obj.dc, '%-13s' % t_obj.shortname())
         ]
-        l += get_cib_attributes(self.pe_report_path(t_obj), "cib", \
-            ("update-client", "update-user", "update-origin"), \
-            ("no-client", "no-user", "no-origin"))
+        l += get_cib_attributes(self.pe_report_path(t_obj), "cib",
+                                ("update-client", "update-user", "update-origin"),
+                                ("no-client", "no-user", "no-origin"))
         return '%s %s %s  %-13s %-10s %-10s %s' % tuple(l)
+
     def pelist(self, a=None, long=False):
         if not self.prepare_source(no_live_update=self.prevent_live_update()):
             return []
-        if isinstance(a,(tuple, list)):
+        if isinstance(a, (tuple, list)):
             if len(a) == 1:
                 a.append(a[0])
         elif a is not None:
             a = [a, a]
-        l = [ long and self.pe_detail_format(x) or self.pe_report_path(x)
-            for x in self.peinputs_l if pe_file_in_range(x.pe_file, a) ]
+        l = [long and self.pe_detail_format(x) or self.pe_report_path(x)
+             for x in self.peinputs_l if pe_file_in_range(x.pe_file, a)]
         if long:
             l = [self.pe_details_header, self.pe_details_separator] + l
         return l
+
     def dotlist(self, a=None):
-        l = [x.replace("bz2","dot") for x in self.pelist(a)]
+        l = [x.replace("bz2", "dot") for x in self.pelist(a)]
         return [x for x in l if os.path.isfile(x)]
+
     def find_pe_files(self, path):
         'Find a PE or dot file matching part of the path.'
         pe_l = path.endswith(".dot") and self.dotlist() or self.pelist()
         return [x for x in pe_l if x.endswith(path)]
+
     def pe2dot(self, f):
-        f = f.replace("bz2","dot")
+        f = f.replace("bz2", "dot")
         if os.path.isfile(f):
             return f
         return None
+
     def find_file(self, f):
         return file_find_by_name(self.loc, f)
+
     def get_session_dir(self, name):
         try:
             return os.path.join(vars.report_cache, self.session_sub, name)
@@ -1283,6 +1428,7 @@ class Report(Singleton):
             return os.path.join(vars.report_cache, self.session_sub)
     state_file = 'history_state.cfg'
     rpt_section = 'report'
+
     def save_state(self, dir):
         '''
         Save the current history state. It should include:
@@ -1310,6 +1456,7 @@ class Report(Singleton):
         p.write(f)
         f.close()
         return True
+
     def load_state(self, dir):
         '''
         Load the history state from a file.
@@ -1327,8 +1474,8 @@ class Report(Singleton):
                 if n == 'dir':
                     self.source = self.loc = v
                     if not os.path.exists(self.loc):
-                        common_err("session state file %s points to a "
-                            "non-existing directory: %s" % (fname, self.loc))
+                        common_err("session state file %s points to a non-existing directory: %s" %
+                                   (fname, self.loc))
                         rc = False
                 elif n == 'from_time':
                     self.from_dt = v and parse_time(v) or None
@@ -1337,19 +1484,20 @@ class Report(Singleton):
                 elif n == 'detail':
                     self.detail = int(v)
                 else:
-                    common_warn("unknown item %s in the "
-                        "session state file %s" % (n, fname))
+                    common_warn("unknown item %s in the session state file %s" %
+                                (n, fname))
             rc |= self.manage_excludes("load", p)
         except ConfigParser.NoSectionError, msg:
             common_err("session state file %s: %s" % (fname, msg))
             rc = False
         except Exception, msg:
-            common_err("%s: bad value '%s' for '%s' in "
-                "session state file %s" % (msg, v, n, fname))
+            common_err("%s: bad value '%s' for '%s' in session state file %s" %
+                       (msg, v, n, fname))
             rc = False
         if rc:
             self.set_change_origin(CH_SRC)
         return rc
+
     def set_change_origin(self, org):
         '''Set origin only to a smaller value (if current > 0).
         This prevents lesser change_origin overwriting a greater
@@ -1357,6 +1505,7 @@ class Report(Singleton):
         '''
         if self.change_origin == 0 or org < self.change_origin:
             self.change_origin = org
+
     def manage_session(self, subcmd, name):
         dir = self.get_session_dir(name)
         if subcmd == "save" and os.path.exists(dir):
@@ -1369,8 +1518,8 @@ class Report(Singleton):
             if pipe_cmd_nosudo("mkdir -p %s" % dir) != 0:
                 return False
             if self.source == "live":
-                rc = pipe_cmd_nosudo("tar -C '%s' -c . | tar -C '%s' -x" % \
-                    (self._live_loc(), dir))
+                rc = pipe_cmd_nosudo("tar -C '%s' -c . | tar -C '%s' -x" %
+                                     (self._live_loc(), dir))
                 if rc != 0:
                     return False
             return self.save_state(dir)
@@ -1386,6 +1535,7 @@ class Report(Singleton):
             return mkarchive(dir)
         return True
     log_section = 'log'
+
     def manage_excludes(self, cmd, arg=None):
         '''Exclude messages from log files.
         arg: None (show, clear)
@@ -1411,8 +1561,8 @@ class Report(Singleton):
         elif cmd == "save" and self.log_filter_out:
             arg.add_section(self.log_section)
             for i in range(len(self.log_filter_out)):
-                arg.set(self.log_section, 'exclude_%d' % i, \
-                    self.log_filter_out[i])
+                arg.set(self.log_section, 'exclude_%d' % i,
+                        self.log_filter_out[i])
         elif cmd == "load":
             self.manage_excludes("clear")
             try:
@@ -1420,8 +1570,8 @@ class Report(Singleton):
                     if n.startswith('exclude_'):
                         rc |= self.manage_excludes("add", v)
                     else:
-                        common_warn("unknown item %s in the "
-                            "section %s" % (n, self.log_section))
+                        common_warn("unknown item %s in the section %s" %
+                                    (n, self.log_section))
             except ConfigParser.NoSectionError:
                 pass
         return rc

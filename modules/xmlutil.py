@@ -1,15 +1,15 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
-# 
+#
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 2 of the License, or (at your option) any later version.
-# 
+#
 # This software is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
@@ -27,6 +27,7 @@ from vars import Vars, getuser, gethomedir
 from msg import *
 from utils import *
 
+
 def xmlparse(f):
     try:
         cib_elem = etree.parse(f).getroot()
@@ -34,9 +35,11 @@ def xmlparse(f):
         common_err("cannot parse xml: %s" % msg)
         return None
     return cib_elem
+
+
 def file2cib_elem(s):
     try:
-        f = open(s,'r')
+        f = open(s, 'r')
     except IOError, msg:
         common_err(msg)
         return None
@@ -44,7 +47,10 @@ def file2cib_elem(s):
     f.close()
     return cib_elem
 
+
 cib_dump = "cibadmin -Ql"
+
+
 def cibdump2file(fname):
     cmd = add_sudo(cib_dump)
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
@@ -55,6 +61,8 @@ def cibdump2file(fname):
         common_err(msg)
         return None
     return str2file(s, fname)
+
+
 def cibdump2tmp():
     cmd = add_sudo(cib_dump)
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
@@ -65,14 +73,18 @@ def cibdump2tmp():
         common_err(msg)
         return None
     return tmpf
+
+
 def cibdump2elem(section=None):
     if section:
         cmd = "%s -o %s" % (cib_dump, section)
     else:
         cmd = cib_dump
     cmd = add_sudo(cmd)
-    p = subprocess.Popen(cmd, shell=True, \
-        stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    p = subprocess.Popen(cmd,
+                         shell=True,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
     try:
         (outp, err_outp) = p.communicate()
         p.wait()
@@ -91,20 +103,25 @@ def cibdump2elem(section=None):
     else:
         common_error("running %s: %s" % (cmd, err_outp))
         return None
+
 cib_piped = "cibadmin -p"
+
+
 def commit_rsc(node):
     "Replace a resource definition using cibadmin -R"
     xml_processnodes(node, is_emptynvpairs, rmnodes)
     xml_processnodes(node, is_emptyops, rmnodes)
-    rc = pipe_string("%s -R -o %s" % \
-        (cib_piped, "resources"), etree.tostring(node))
+    rc = pipe_string("%s -R -o %s" % (cib_piped, "resources"),
+                     etree.tostring(node))
     return rc == 0
+
 
 def read_cib(fun, params=None):
     cib_elem = fun(params)
     if cib_elem is None or cib_elem.tag != "cib":
         return None
     return cib_elem
+
 
 def sanity_check_nvpairs(id, node, attr_list):
     rc = 0
@@ -114,6 +131,8 @@ def sanity_check_nvpairs(id, node, attr_list):
             common_err("%s: attribute %s does not exist" % (id, n))
             rc |= user_prefs.get_check_rc()
     return rc
+
+
 def sanity_check_meta(id, node, attr_list):
     rc = 0
     if node is None or not attr_list:
@@ -122,6 +141,8 @@ def sanity_check_meta(id, node, attr_list):
         if c.tag == "meta_attributes":
             rc |= sanity_check_nvpairs(id, c, attr_list)
     return rc
+
+
 def get_interesting_nodes(node, nodes_l):
     '''
     All nodes which can be represented as CIB objects.
@@ -131,6 +152,8 @@ def get_interesting_nodes(node, nodes_l):
             nodes_l.append(c)
         get_interesting_nodes(c, nodes_l)
     return nodes_l
+
+
 def get_top_cib_nodes(node, nodes_l):
     '''
     All nodes which can be represented as CIB objects, but not
@@ -143,6 +166,7 @@ def get_top_cib_nodes(node, nodes_l):
             get_top_cib_nodes(c, nodes_l)
     return nodes_l
 
+
 class RscState(object):
     '''
     Get the resource status and some other relevant bits.
@@ -150,12 +174,15 @@ class RscState(object):
     of cibadmin -Q -o resources output in case we need to check
     more than one resource in a row.
     '''
+
     rsc_status = "crm_resource -W -r '%s'"
+
     def __init__(self):
         self.current_cib = None
         self.rsc_elem = None
         self.prop_elem = None
         self.rsc_dflt_elem = None
+
     def _init_cib(self):
         self.current_cib = cibdump2elem("configuration")
         self.rsc_elem = \
@@ -164,6 +191,7 @@ class RscState(object):
             get_first_conf_elem(self.current_cib, "crm_config/cluster_property_set")
         self.rsc_dflt_elem = \
             get_first_conf_elem(self.current_cib, "rsc_defaults/meta_attributes")
+
     def rsc2node(self, id):
         '''
         Get a resource XML element given the id.
@@ -181,6 +209,7 @@ class RscState(object):
             return self.rsc_elem.xpath(expr)[0]
         except (IndexError, AttributeError):
             return None
+
     def is_ms(self, id):
         '''
         Test if the resource is master-slave.
@@ -189,6 +218,7 @@ class RscState(object):
         if rsc_node is None:
             return False
         return is_ms(rsc_node)
+
     def rsc_clone(self, id):
         '''
         Return id of the clone/ms containing this resource
@@ -205,6 +235,7 @@ class RscState(object):
         if is_clonems(pnode):
             return pnode.get("id")
         return None
+
     def is_managed(self, id):
         '''
         Is this resource managed?
@@ -230,6 +261,7 @@ class RscState(object):
         if attr:
             return is_xs_boolean_true(attr)
         return True
+
     def is_running(self, id):
         '''
         Is this resource running?
@@ -237,8 +269,9 @@ class RscState(object):
         if not is_live_cib():
             return False
         test_id = self.rsc_clone(id) or id
-        rc, outp = get_stdout(self.rsc_status % test_id, stderr_on = False)
+        rc, outp = get_stdout(self.rsc_status % test_id, stderr_on=False)
         return outp.find("running") > 0 and outp.find("NOT") == -1
+
     def can_delete(self, id):
         '''
         Can a resource be deleted?
@@ -246,11 +279,16 @@ class RscState(object):
         '''
         return not (self.is_running(id) and self.is_managed(id))
 
+
 def resources_xml():
     return cibdump2elem("resources")
+
+
 def is_normal_node(n):
     return n.tag == "node" and \
         (n.get("type") == "normal" or not n.get("type"))
+
+
 def mk_rsc_type(n):
     ra_type = n.get("type")
     ra_class = n.get("class")
@@ -261,12 +299,16 @@ def mk_rsc_type(n):
     if ra_provider:
         s2 = "%s:" % ra_provider
     return ''.join((s1, s2, ra_type))
+
+
 def listnodes():
     nodes_elem = cibdump2elem("nodes")
     if nodes_elem is None:
         return []
-    return [x.get("uname") for x in nodes_elem.iterchildren("node") \
-        if is_normal_node(x)]
+    return [x.get("uname") for x in nodes_elem.iterchildren("node")
+            if is_normal_node(x)]
+
+
 def is_our_node(s):
     '''
     Check if s is in a list of our nodes (ignore case).
@@ -276,13 +318,18 @@ def is_our_node(s):
         if n.lower() == s.lower():
             return True
     return False
+
+
 def is_live_cib():
     '''We working with the live cluster?'''
     return not vars.cib_in_use and not os.getenv("CIB_file")
 
+
 def is_crmuser():
-    return (user_prefs.crm_user in ("root", vars.crm_daemon_user) \
-        or getuser() in ("root", vars.crm_daemon_user))
+    return (user_prefs.crm_user in ("root", vars.crm_daemon_user)
+            or getuser() in ("root", vars.crm_daemon_user))
+
+
 def cib_shadow_dir():
     if os.getenv("CIB_shadow_dir"):
         return os.getenv("CIB_shadow_dir")
@@ -290,23 +337,28 @@ def cib_shadow_dir():
         return vars.crm_conf_dir
     home = gethomedir(user_prefs.crm_user)
     if home and home.startswith(os.path.sep):
-        return os.path.join(home,".cib")
+        return os.path.join(home, ".cib")
     return os.getenv("TMPDIR") or "/tmp"
+
+
 def listshadows():
     dir = cib_shadow_dir()
-    if os.path.isdir(dir):
-        rc, l = stdout2list("ls %s | fgrep shadow. | sed 's/^shadow\.//'" % dir)
-        return l
-    else:
+    if not os.path.isdir(dir):
         return []
+    rc, l = stdout2list("ls %s | fgrep shadow. | sed 's/^shadow\.//'" % dir)
+    return l
+
+
 def shadowfile(name):
     return "%s/shadow.%s" % (cib_shadow_dir(), name)
+
+
 def pe2shadow(pe_file, name):
     '''Copy a PE file (or any CIB file) to a shadow.'''
     try:
         f = open(pe_file)
     except IOError, msg:
-        common_err("open: %s"%msg)
+        common_err("open: %s" % msg)
         return False
     s = ''.join(f)
     f.close()
@@ -317,18 +369,23 @@ def pe2shadow(pe_file, name):
     try:
         f = open(shadowfile(name), "w")
     except IOError, msg:
-        common_err("open: %s"%msg)
+        common_err("open: %s" % msg)
         return False
     f.write(s)
     f.close()
     return True
 
+
 def is_xs_boolean_true(bool):
-    return bool.lower() in ("true","1")
+    return bool.lower() in ("true", "1")
+
+
 def cloned_el(node):
     for c in node.iterchildren():
         if is_resource(c):
             return c.tag
+
+
 def get_topmost_rsc(node):
     '''
     Return a topmost node which is a resource and contains this resource
@@ -336,8 +393,12 @@ def get_topmost_rsc(node):
     if is_container(node.getparent()):
         return get_topmost_rsc(node.getparent())
     return node
+
+
 attr_defaults_missing = {
 }
+
+
 def add_missing_attr(node):
     try:
         for defaults in attr_defaults_missing[node.tag]:
@@ -345,10 +406,14 @@ def add_missing_attr(node):
                 node.set(defaults[0], defaults[1])
     except:
         pass
+
+
 attr_defaults = {
-    "rule": (("boolean-op","and"),),
-    "expression": (("type","string"),),
+    "rule": (("boolean-op", "and"),),
+    "expression": (("type", "string"),),
 }
+
+
 def drop_attr_defaults(node, ts=0):
     try:
         for defaults in attr_defaults[node.tag]:
@@ -357,14 +422,17 @@ def drop_attr_defaults(node, ts=0):
     except:
         pass
 
+
 def nameandid(e, level):
     if e.tag:
         print level*' ', e.tag, e.get("id"), e.get("name")
+
 
 def xmltraverse(e, fun, ts=0):
     for c in e.iterchildren():
         fun(c, ts)
         xmltraverse(c, fun, ts+1)
+
 
 def xmltraverse_thin(e, fun, ts=0):
     '''
@@ -373,9 +441,10 @@ def xmltraverse_thin(e, fun, ts=0):
     never on cib or configuration!
     '''
     for c in e.iterchildren():
-        if not c.tag in ('primitive','group'):
+        if not c.tag in ('primitive', 'group'):
             xmltraverse_thin(c, fun, ts+1)
     fun(e, ts)
+
 
 def xml_processnodes(e, node_filter, proc):
     '''
@@ -390,16 +459,24 @@ def xml_processnodes(e, node_filter, proc):
     if node_list:
         proc(node_list)
 
+
 # filter the cib
 def true(e):
     'Just return True.'
     return True
+
+
 def is_entity(e):
     return e.tag == etree.Entity
+
+
 def is_comment(e):
     return e.tag == etree.Comment
+
+
 def is_status_node(e):
     return e.tag == "status"
+
 
 def is_emptyelem(node, tag_l):
     if node.tag in tag_l:
@@ -411,39 +488,70 @@ def is_emptyelem(node, tag_l):
         return True
     else:
         return False
+
+
 def is_emptynvpairs(node):
     return is_emptyelem(node, vars.nvpairs_tags)
+
+
 def is_emptyops(node):
     return is_emptyelem(node, ("operations",))
 
+
 def is_cib_element(node):
     return node.tag in vars.cib_cli_map
+
+
 def is_group(node):
     return node.tag == "group"
+
+
 def is_ms(node):
-    return node.tag in ("master","ms")
+    return node.tag in ("master", "ms")
+
+
 def is_clone(node):
     return node.tag == "clone"
+
+
 def is_clonems(node):
     return node.tag in vars.clonems_tags
+
+
 def is_cloned(node):
-    return (node.getparent().tag in vars.clonems_tags or \
-            (node.getparent().tag == "group" and \
-            node.getparent().getparent().tag in vars.clonems_tags))
+    return (node.getparent().tag in vars.clonems_tags or
+            (node.getparent().tag == "group" and
+             node.getparent().getparent().tag in vars.clonems_tags))
+
+
 def is_container(node):
     return node.tag in vars.container_tags
+
+
 def is_primitive(node):
     return node.tag == "primitive"
+
+
 def is_resource(node):
     return node.tag in vars.resource_tags
+
+
 def is_template(node):
     return node.tag == "template"
+
+
 def is_child_rsc(node):
     return node.tag in vars.children_tags
+
+
 def is_constraint(node):
     return node.tag in vars.constraint_tags
+
+
 def is_defaults(node):
     return node.tag in vars.defaults_tags
+
+
 def rsc_constraint(rsc_id, con_elem):
     for attr in con_elem.keys():
         if attr in vars.constraint_rsc_refs \
@@ -454,6 +562,7 @@ def rsc_constraint(rsc_id, con_elem):
             return True
     return False
 
+
 def sort_container_children(e_list):
     '''
     Make sure that attributes's nodes are first, followed by the
@@ -461,22 +570,31 @@ def sort_container_children(e_list):
     disturbed, they are just shifted to end!
     '''
     for node in e_list:
-        children = [ x for x in node.iterchildren() \
-            if x.tag in vars.children_tags ]
+        children = [x for x in node.iterchildren()
+                    if x.tag in vars.children_tags]
         for c in children:
             node.remove(c)
         for c in children:
             node.append(c)
+
+
 def rmnode(e):
     if e is not None and e.getparent() is not None:
         e.getparent().remove(e)
+
+
 def rmnodes(e_list):
     for e in e_list:
         rmnode(e)
+
+
 def printid(e_list):
     for e in e_list:
         id = e.get("id")
-        if id: print "element id:", id
+        if id:
+            print "element id:", id
+
+
 def remove_dflt_attrs(e_list):
     '''
     Drop optional attributes which are already set to default
@@ -489,10 +607,14 @@ def remove_dflt_attrs(e_list):
                     del e.attrib[a]
         except:
             pass
+
+
 def remove_text(e_list):
     for e in e_list:
         e.text = None
         e.tail = None
+
+
 def sanitize_cib(doc):
     xml_processnodes(doc, is_status_node, rmnodes)
     #xml_processnodes(doc, true, printid)
@@ -505,8 +627,10 @@ def sanitize_cib(doc):
     xml_processnodes(doc, true, remove_text)
     xmltraverse(doc, drop_attr_defaults)
 
+
 def is_simpleconstraint(node):
     return len(node.xpath("resource_set/resource_ref")) == 0
+
 
 match_list = {
     "node": ("uname",),
@@ -519,11 +643,13 @@ match_list = {
     "utilization": (),
     "operations": (),
     "nvpair": ("name",),
-    "op": ("name","interval"),
-    "rule": ("score","score-attribute","role"),
-    "expression": ("attribute","operation","value"),
-    "fencing-level": ("target","devices"),
+    "op": ("name", "interval"),
+    "rule": ("score", "score-attribute", "role"),
+    "expression": ("attribute", "operation", "value"),
+    "fencing-level": ("target", "devices"),
 }
+
+
 def add_comment(e, s):
     '''
     Add comment s to e from doc.
@@ -536,9 +662,13 @@ def add_comment(e, s):
         firstelem_idx = e.index(c)
         break
     e.insert(firstelem_idx, comm_elem)
+
+
 def stuff_comments(node, comments):
     for s in comments:
         add_comment(node, s)
+
+
 def fix_comments(e):
     'Make sure that comments start with #'
     celems = [x for x in e.iterchildren() if is_comment(x)]
@@ -547,16 +677,25 @@ def fix_comments(e):
         if not c.text.startswith("#"):
             c.text = "# %s" % c.text
 
+
 def set_id_used_attr(e):
     e.set("__id_used", "Yes")
+
+
 def is_id_used_attr(e):
     return e.get("__id_used") == "Yes"
+
+
 def remove_id_used_attr(e, lvl):
     if is_id_used_attr(e):
         del e.attrib["__id_used"]
+
+
 def remove_id_used_attributes(e):
     if e is not None:
         xmltraverse(e, remove_id_used_attr)
+
+
 def lookup_node(node, oldnode, location_only=False, ignore_id=False):
     '''
     Find a child of oldnode which matches node.
@@ -594,6 +733,7 @@ def lookup_node(node, oldnode, location_only=False, ignore_id=False):
                 return c
     return None
 
+
 def find_operation(rsc_node, name, interval="0"):
     '''
     Setting interval to "non-0" means get the first op with interval
@@ -609,11 +749,13 @@ def find_operation(rsc_node, name, interval="0"):
                     crm_time_cmp(c.get("interval"), interval) == 0:
                 return c
 
+
 def get_op_timeout(rsc_node, op, default_timeout):
     interval = (op == "monitor" and "non-0" or "0")
     op_n = find_operation(rsc_node, op == "probe" and "monitor" or op, interval)
     timeout = op_n and op_n.get("timeout") or default_timeout
     return crm_msec(timeout)
+
 
 def op2list(node):
     pl = []
@@ -621,11 +763,13 @@ def op2list(node):
     for name in node.keys():
         if name == "name":
             action = node.get(name)
-        elif name != "id": # skip the id
+        elif name != "id":  # skip the id
             pl.append([name, node.get(name)])
     if not action:
         common_err("op is invalid (no name)")
     return action, pl
+
+
 def get_rsc_operations(rsc_node):
     actions = []
     for c in rsc_node.iterchildren():
@@ -637,34 +781,57 @@ def get_rsc_operations(rsc_node):
                         actions.append([op, pl])
     return actions
 
+
 def filter_on_tag(nl, tag):
     return [node for node in nl if node.tag == tag]
+
+
 def nodes(node_list):
-    return filter_on_tag(node_list,"node")
+    return filter_on_tag(node_list, "node")
+
+
 def primitives(node_list):
-    return filter_on_tag(node_list,"primitive")
+    return filter_on_tag(node_list, "primitive")
+
+
 def groups(node_list):
-    return filter_on_tag(node_list,"group")
+    return filter_on_tag(node_list, "group")
+
+
 def clones(node_list):
-    return filter_on_tag(node_list,"clone")
+    return filter_on_tag(node_list, "clone")
+
+
 def mss(node_list):
-    return filter_on_tag(node_list,"master")
+    return filter_on_tag(node_list, "master")
+
+
 def templates(node_list):
-    return filter_on_tag(node_list,"template")
+    return filter_on_tag(node_list, "template")
+
+
 def constraints(node_list):
-    return filter_on_tag(node_list,"rsc_location") \
-        + filter_on_tag(node_list,"rsc_colocation") \
-        + filter_on_tag(node_list,"rsc_order") \
-        + filter_on_tag(node_list,"rsc_ticket")
+    return filter_on_tag(node_list, "rsc_location") \
+        + filter_on_tag(node_list, "rsc_colocation") \
+        + filter_on_tag(node_list, "rsc_order") \
+        + filter_on_tag(node_list, "rsc_ticket")
+
+
 def properties(node_list):
-    return filter_on_tag(node_list,"cluster_property_set") \
-        + filter_on_tag(node_list,"rsc_defaults") \
-        + filter_on_tag(node_list,"op_defaults")
+    return filter_on_tag(node_list, "cluster_property_set") \
+        + filter_on_tag(node_list, "rsc_defaults") \
+        + filter_on_tag(node_list, "op_defaults")
+
+
 def acls(node_list):
-    return filter_on_tag(node_list,"acl_role") \
-        + filter_on_tag(node_list,"acl_user")
+    return filter_on_tag(node_list, "acl_role") \
+        + filter_on_tag(node_list, "acl_user")
+
+
 def fencing_topology(node_list):
-    return filter_on_tag(node_list,"fencing-topology")
+    return filter_on_tag(node_list, "fencing-topology")
+
+
 def processing_sort(nl):
     '''
     It's usually important to process cib objects in this order,
@@ -673,47 +840,74 @@ def processing_sort(nl):
     return nodes(nl) + templates(nl) + primitives(nl) + groups(nl) + mss(nl) + clones(nl) \
         + constraints(nl) + fencing_topology(nl) + properties(nl) + acls(nl)
 
+
 def obj_cmp(obj1, obj2):
     return cmp(obj1.obj_id, obj2.obj_id)
+
+
 def filter_on_type(cl, obj_type):
     if type(cl[0]) == type([]):
         l = [cli_list for cli_list in cl if cli_list[0][0] == obj_type]
         if user_prefs.get_sort_elems():
-            l.sort(cmp = cmp)
+            l.sort(cmp=cmp)
     else:
         l = [obj for obj in cl if obj.obj_type == obj_type]
         if user_prefs.get_sort_elems():
-            l.sort(cmp = obj_cmp)
+            l.sort(cmp=obj_cmp)
     return l
+
+
 def nodes_cli(cl):
-    return filter_on_type(cl,"node")
+    return filter_on_type(cl, "node")
+
+
 def primitives_cli(cl):
-    return filter_on_type(cl,"primitive")
+    return filter_on_type(cl, "primitive")
+
+
 def groups_cli(cl):
-    return filter_on_type(cl,"group")
+    return filter_on_type(cl, "group")
+
+
 def clones_cli(cl):
-    return filter_on_type(cl,"clone")
+    return filter_on_type(cl, "clone")
+
+
 def mss_cli(cl):
-    return filter_on_type(cl,"ms") + filter_on_type(cl,"master")
+    return filter_on_type(cl, "ms") + filter_on_type(cl, "master")
+
+
 def templates_cli(cl):
-    return filter_on_type(cl,"rsc_template")
+    return filter_on_type(cl, "rsc_template")
+
+
 def constraints_cli(node_list):
-    return filter_on_type(node_list,"location") \
-        + filter_on_type(node_list,"colocation") \
-        + filter_on_type(node_list,"collocation") \
-        + filter_on_type(node_list,"order") \
-        + filter_on_type(node_list,"rsc_ticket")
+    return filter_on_type(node_list, "location") \
+        + filter_on_type(node_list, "colocation") \
+        + filter_on_type(node_list, "collocation") \
+        + filter_on_type(node_list, "order") \
+        + filter_on_type(node_list, "rsc_ticket")
+
+
 def properties_cli(cl):
-    return filter_on_type(cl,"property") \
-        + filter_on_type(cl,"rsc_defaults") \
-        + filter_on_type(cl,"op_defaults")
+    return filter_on_type(cl, "property") \
+        + filter_on_type(cl, "rsc_defaults") \
+        + filter_on_type(cl, "op_defaults")
+
+
 def fencing_topology_cli(cl):
-    return filter_on_type(cl,"fencing_topology")
+    return filter_on_type(cl, "fencing_topology")
+
+
 def acls_cli(cl):
-    return filter_on_type(cl,"role") \
-        + filter_on_type(cl,"user")
+    return filter_on_type(cl, "role") \
+        + filter_on_type(cl, "user")
+
+
 def ops_cli(cl):
-    return filter_on_type(cl,"op")
+    return filter_on_type(cl, "op")
+
+
 def processing_sort_cli(cl):
     '''
     Return the given list in this order:
@@ -727,10 +921,14 @@ def processing_sort_cli(cl):
         + constraints_cli(cl) + fencing_topology_cli(cl) + properties_cli(cl) \
         + ops_cli(cl) + acls_cli(cl)
 
+
 def is_resource_cli(s):
     return s in olist(vars.resource_cli_names)
+
+
 def is_constraint_cli(s):
     return s in olist(vars.constraint_cli_names)
+
 
 def referenced_resources(node):
     if not is_constraint(node):
@@ -738,8 +936,9 @@ def referenced_resources(node):
     xml_obj_type = node.tag
     if xml_obj_type == "rsc_location":
         rsc_list = [node.get("rsc")]
-    elif node.xpath("resource_set/resource_ref"): # resource sets
-        rsc_list = [x.get("id") \
+    elif node.xpath("resource_set/resource_ref"):
+        # resource sets
+        rsc_list = [x.get("id")
                     for x in node.xpath("resource_set/resource_ref")]
     elif xml_obj_type == "rsc_colocation":
         rsc_list = [node.get("rsc"), node.get("with-rsc")]
@@ -749,9 +948,12 @@ def referenced_resources(node):
         rsc_list = [node.get("rsc")]
     return rsc_list
 
+
 def rename_id(node, old_id, new_id):
     if node.get("id") == old_id:
         node.set("id", new_id)
+
+
 def rename_rscref_simple(c_obj, old_id, new_id):
     c_modified = False
     for attr in c_obj.node.keys():
@@ -761,6 +963,8 @@ def rename_rscref_simple(c_obj, old_id, new_id):
             c_obj.updated = True
             c_modified = True
     return c_modified
+
+
 def delete_rscref_simple(c_obj, rsc_id):
     c_modified = False
     for attr in c_obj.node.keys():
@@ -770,6 +974,8 @@ def delete_rscref_simple(c_obj, rsc_id):
             c_obj.updated = True
             c_modified = True
     return c_modified
+
+
 def rset_uniq(c_obj, d):
     '''
     Drop duplicate resource references.
@@ -777,10 +983,13 @@ def rset_uniq(c_obj, d):
     l = []
     for rref in c_obj.node.xpath("resource_set/resource_ref"):
         rsc_id = rref.get("id")
-        if d[rsc_id] > 1: # drop one
+        if d[rsc_id] > 1:
+            # drop one
             l.append(rref)
             d[rsc_id] -= 1
     rmnodes(l)
+
+
 def delete_rscref_rset(c_obj, rsc_id):
     '''
     Drop all reference to rsc_id.
@@ -809,10 +1018,12 @@ def delete_rscref_rset(c_obj, rsc_id):
     if not nonseq_rset and cnt == 2:
         rset_convert(c_obj)
     return c_modified
+
+
 def rset_convert(c_obj):
     l = c_obj.node.xpath("resource_set/resource_ref")
     if len(l) != 2:
-        return # eh?
+        return  # eh?
     rsetcnt = 0
     for rset in c_obj.node.findall("resource_set"):
         # in case there are multiple non-sequential sets
@@ -820,8 +1031,8 @@ def rset_convert(c_obj):
             del rset.attrib["sequential"]
         rsetcnt += 1
     c_obj.modified = True
-    cli = c_obj.repr_cli(format = -1)
-    cli = cli.replace("_rsc_set_ ","")
+    cli = c_obj.repr_cli(format=-1)
+    cli = cli.replace("_rsc_set_ ", "")
     newnode = c_obj.cli2node(cli)
     if newnode is not None:
         c_obj.node.getparent().replace(c_obj.node, newnode)
@@ -832,6 +1043,8 @@ def rset_convert(c_obj):
             with_rsc = newnode.get("with-rsc")
             newnode.set("rsc", with_rsc)
             newnode.set("with-rsc", rsc)
+
+
 def rename_rscref_rset(c_obj, old_id, new_id):
     c_modified = False
     d = {}
@@ -844,7 +1057,7 @@ def rename_rscref_rset(c_obj, old_id, new_id):
             c_modified = True
         if not rsc_id in d:
             d[rsc_id] = 1
-        else: 
+        else:
             d[rsc_id] += 1
     rset_uniq(c_obj, d)
     # if only two resource references remained then, to preserve
@@ -855,13 +1068,19 @@ def rename_rscref_rset(c_obj, old_id, new_id):
     if cnt == 2:
         rset_convert(c_obj)
     return c_modified
+
+
 def rename_rscref(c_obj, old_id, new_id):
     if rename_rscref_simple(c_obj, old_id, new_id) or \
             rename_rscref_rset(c_obj, old_id, new_id):
         err_buf.info("resource references in %s updated" % str(c_obj))
+
+
 def delete_rscref(c_obj, rsc_id):
     return delete_rscref_simple(c_obj, rsc_id) or \
         delete_rscref_rset(c_obj, rsc_id)
+
+
 def silly_constraint(c_node, rsc_id):
     '''
     Remove a constraint from rsc_id to rsc_id.
@@ -883,6 +1102,7 @@ def silly_constraint(c_node, rsc_id):
     else:
         return rsc_cnt == 2 or cnt < 2
 
+
 def is_climove_location(node):
     'Figure out if the location was created by crm resource move.'
     rule_l = node.findall("rule")
@@ -891,6 +1111,8 @@ def is_climove_location(node):
         node.get("id").startswith("cli-") and \
         expr_l[0].get("attribute") == "#uname" and \
         expr_l[0].get("operation") == "eq"
+
+
 def is_pref_location(node):
     'Figure out if the location is a node preference.'
     rule_l = node.findall("rule")
@@ -899,17 +1121,24 @@ def is_pref_location(node):
         expr_l[0].get("attribute") == "#uname" and \
         expr_l[0].get("operation") == "eq"
 
+
 def get_rsc_ref_ids(node):
-    return [x.get("id") \
-        for x in node.xpath("./resource_ref")]
+    return [x.get("id")
+            for x in node.xpath("./resource_ref")]
+
+
 def get_rsc_children_ids(node):
-    return [x.get("id") \
-        for x in node.iterchildren() if is_child_rsc(x)]
+    return [x.get("id")
+            for x in node.iterchildren() if is_child_rsc(x)]
+
+
 def get_prim_children_ids(node):
     l = [x for x in node.iterchildren() if is_child_rsc(x)]
     if len(l) and l[0].tag == "group":
         l = [x for x in l[0].iterchildren() if is_child_rsc(x)]
     return [x.get("id") for x in l]
+
+
 def get_child_nvset_node(node, attr_set="meta_attributes"):
     if node is None:
         return None
@@ -918,12 +1147,19 @@ def get_child_nvset_node(node, attr_set="meta_attributes"):
             continue
         return c
     return None
+
+
 def get_rscop_defaults_meta_node(node):
     return get_child_nvset_node(node)
+
+
 def get_rsc_meta_node(node):
     return get_child_nvset_node(node)
+
+
 def get_properties_node(node):
-    return get_child_nvset_node(node, attr_set = "cluster_property_set")
+    return get_child_nvset_node(node, attr_set="cluster_property_set")
+
 
 def new_cib():
     cib_elem = etree.Element("cib")
@@ -931,6 +1167,8 @@ def new_cib():
     for name in schema.get('sub', "configuration", 'r'):
         etree.SubElement(conf_elem, name)
     return cib_elem
+
+
 def get_conf_elems(cib_elem, path):
     '''
     Get a list of configuration elements. All elements are within
@@ -939,11 +1177,15 @@ def get_conf_elems(cib_elem, path):
     if cib_elem is None:
         return None
     return cib_elem.xpath("//configuration/%s" % path)
+
+
 def get_first_conf_elem(cib_elem, path):
     try:
         return get_conf_elems(cib_elem, path)[0]
     except IndexError:
         return None
+
+
 def get_topnode(cib_elem, tag):
     "Get configuration element or create/append if there's none."
     conf_elem = cib_elem.find("configuration")
@@ -957,11 +1199,15 @@ def get_topnode(cib_elem, tag):
         common_debug("create configuration section %s" % tag)
         e = etree.SubElement(conf_elem, tag)
     return e
+
+
 def new_cib_element(e, tagname, id_pfx):
     base_id = e.get("id")
     new_e = etree.SubElement(e, tagname)
     new_e.set("id", "%s-%s" % (base_id, id_pfx))
     return new_e
+
+
 def get_attr_in_set(e, attr):
     if e is None:
         return None
@@ -969,9 +1215,15 @@ def get_attr_in_set(e, attr):
         if c.get("name") == attr:
             return c
     return None
+
+
 def get_attr_value(e, attr):
-    try: return get_attr_in_set(e, attr).get("value")
-    except: return None
+    try:
+        return get_attr_in_set(e, attr).get("value")
+    except:
+        return None
+
+
 def set_attr(e, attr, value):
     '''
     Set an attribute in the attribute set.
@@ -981,22 +1233,29 @@ def set_attr(e, attr, value):
         nvpair = new_cib_element(e, "nvpair", attr)
     nvpair.set("name", attr)
     nvpair.set("value", value)
+
+
 def get_set_nodes(e, setname, create=0):
     'Return the attributes set nodes (create one if requested)'
-    l = [ c for c in e.iterchildren(setname) ]
+    l = [c for c in e.iterchildren(setname)]
     if l:
         return l
     if create:
         l.append(new_cib_element(e, setname, setname))
     return l
 
+
 def xml_noorder_hash(n):
-    return sorted([ hash(etree.tostring(x)) \
-        for x in n.iterchildren() ])
+    return sorted([hash(etree.tostring(x))
+                   for x in n.iterchildren()])
+
 xml_hash_d = {
     "fencing-topology": xml_noorder_hash,
 }
+
 checker = doctestcompare.LXMLOutputChecker()
+
+
 def xml_cmp(n, m, show=False):
     if n.tag in xml_hash_d:
         n_hash_l = xml_hash_d[n.tag](n)
@@ -1017,11 +1276,12 @@ def xml_cmp(n, m, show=False):
         print checker.output_difference(example, got, 0)
     return rc
 
+
 def merge_attributes(dnode, snode, tag):
     rc = False
     add_children = []
     for sc in snode.iterchildren(tag):
-        dc = lookup_node(sc, dnode, ignore_id = True)
+        dc = lookup_node(sc, dnode, ignore_id=True)
         if dc is not None:
             for a, v in sc.items():
                 if a == "id":
@@ -1036,6 +1296,7 @@ def merge_attributes(dnode, snode, tag):
         dnode.append(copy.deepcopy(c))
     return rc
 
+
 def merge_nodes(dnode, snode):
     '''
     Import elements from snode into dnode.
@@ -1043,23 +1304,24 @@ def merge_nodes(dnode, snode):
     "operations", then merge attributes in the children.
     Otherwise, replace the whole element. (TBD)
     '''
-    rc = False # any changes done?
+    rc = False  # any changes done?
     if dnode is None or snode is None:
         return rc
     add_children = []
     for sc in snode.iterchildren():
-        dc = lookup_node(sc, dnode, ignore_id = True)
+        dc = lookup_node(sc, dnode, ignore_id=True)
         if dc is None:
             if sc.tag in vars.nvpairs_tags or sc.tag == "operations":
                 add_children.append(sc)
                 rc = True
         elif dc.tag in vars.nvpairs_tags:
-            rc = merge_attributes(dc, sc,"nvpair") or rc
+            rc = merge_attributes(dc, sc, "nvpair") or rc
         elif dc.tag == "operations":
-            rc = merge_attributes(dc, sc,"op") or rc
+            rc = merge_attributes(dc, sc, "op") or rc
     for c in add_children:
         dnode.append(copy.deepcopy(c))
     return rc
+
 
 def merge_nodes_2(dnode, snode):
     '''
@@ -1068,6 +1330,7 @@ def merge_nodes_2(dnode, snode):
     i_dnode = etree.Element(dnode.tag)
     merge_nodes(i_dnode, snode)
     return i_dnode
+
 
 user_prefs = UserPrefs.getInstance()
 vars = Vars.getInstance()
