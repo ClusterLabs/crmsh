@@ -24,8 +24,10 @@ import bz2
 from schema import Schema
 from userprefs import UserPrefs
 from vars import Vars, getuser, gethomedir
-from msg import *
-from utils import *
+from msg import common_err, common_error, common_debug, cib_parse_err, err_buf
+from utils import add_sudo, str2file, str2tmp, pipe_string, get_boolean
+from utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
+from utils import olist
 
 
 def xmlparse(f):

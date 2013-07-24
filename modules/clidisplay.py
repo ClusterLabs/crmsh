@@ -18,8 +18,6 @@
 from singletonmixin import Singleton
 from userprefs import UserPrefs
 from vars import Vars
-from utils import *
-from msg import *
 
 
 class CliDisplay(Singleton):

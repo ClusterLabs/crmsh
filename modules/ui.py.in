@@ -31,10 +31,13 @@ from report import Report
 from template import LoadTemplate
 from cliformat import nvpairs2list, cli_format
 from rsctest import test_resources
-from ra import *
-from msg import *
-from utils import *
-from xmlutil import *
+from msg import common_error, common_err, common_info, common_debug, common_warn
+from msg import syntax_err, bad_usage
+from msg import UserPrefs, Options, ErrorBuffer
+import utils
+import ra
+import glob
+import xmlutil
 
 
 def cmd_end(cmd, dir=".."):
@@ -108,9 +111,9 @@ class UserInterface(object):
     }
 
     def __init__(self):
-        self.help_table = odict()
-        self.cmd_table = odict()
-        self.rev_alias_table = odict()
+        self.help_table = utils.odict()
+        self.cmd_table = utils.odict()
+        self.rev_alias_table = utils.odict()
         self.cmd_table["help"] = (self.help, (0, 1), 0, 0)
         self.cmd_table["quit"] = (self.exit, (0, 0), 0, 0)
         self.cmd_table["end"] = (self.end, (0, 1), 0, 0)
@@ -145,7 +148,7 @@ class UserInterface(object):
         else:
             if not self.help_table:
                 self.help_table = help_sys.load_level(self.lvl_name)
-                setup_help_aliases(self)
+                utils.setup_help_aliases(self)
             help_tab = self.help_table
         return help_sys.cmd_help(help_tab, topic)
 
@@ -182,7 +185,7 @@ class CliOptions(UserInterface):
         self.cmd_table["manage-children"] = (self.set_manage_children, (1, 1), 0, 0)
         self.cmd_table["save"] = (self.save_options, (0, 0), 0, 0)
         self.cmd_table["show"] = (self.show_options, (0, 0), 0, 0)
-        setup_aliases(self)
+        utils.setup_aliases(self)
 
     def set_skill_level(self, cmd, skill_level):
         """usage: skill-level <level>
@@ -219,21 +222,21 @@ class CliOptions(UserInterface):
 
     def set_sort_elements(self, cmd, opt):
         "usage: sort-elements {yes|no}"
-        if not verify_boolean(opt):
+        if not utils.verify_boolean(opt):
             common_err("%s: bad boolean option" % opt)
             return True
         return user_prefs.set_sort_elems(opt)
 
     def set_wait(self, cmd, opt):
         "usage: wait {yes|no}"
-        if not verify_boolean(opt):
+        if not utils.verify_boolean(opt):
             common_err("%s: bad boolean option" % opt)
             return True
         return user_prefs.set_wait(opt)
 
     def set_add_quotes(self, cmd, opt):
         "usage: add-quotes {yes|no}"
-        if not verify_boolean(opt):
+        if not utils.verify_boolean(opt):
             common_err("%s: bad boolean option" % opt)
             return True
         return user_prefs.set_add_quotes(opt)
@@ -275,19 +278,19 @@ class CibShadow(UserInterface):
         self.cmd_table["import"] = (self.pe_import, (1, 2), 1, 0)
         self.cmd_table["cibstatus"] = StatusMgmt
         self.chkcmd()
-        setup_aliases(self)
+        utils.setup_aliases(self)
 
     def chkcmd(self):
         try:
-            ext_cmd("%s 2>&1" % self.extcmd)
+            utils.ext_cmd("%s 2>&1" % self.extcmd)
         except os.error:
-            no_prog_err(self.extcmd)
+            utils.no_prog_err(self.extcmd)
             return False
         return True
 
     def new(self, cmd, name, *args):
         "usage: new <shadow_cib> [withstatus] [force] [empty]"
-        if not is_filename_sane(name):
+        if not utils.is_filename_sane(name):
             return False
         for par in args:
             if not par in ("force", "--force", "withstatus", "empty"):
@@ -299,7 +302,7 @@ class CibShadow(UserInterface):
             new_cmd = "%s -c '%s'" % (self.extcmd, name)
         if user_prefs.get_force() or "force" in args or "--force" in args:
             new_cmd = "%s --force" % new_cmd
-        if ext_cmd(new_cmd) == 0:
+        if utils.ext_cmd(new_cmd) == 0:
             common_info("%s shadow CIB created" % name)
             self.use("use", name)
             if "withstatus" in args:
@@ -322,7 +325,7 @@ class CibShadow(UserInterface):
 
     def pe_import(self, cmd, infile, name=None):
         "usage: import {<file>|<number>} [<shadow>]"
-        if name and not is_filename_sane(name):
+        if name and not utils.is_filename_sane(name):
             return False
         # where's the input?
         if not os.access(infile, os.F_OK):
@@ -334,19 +337,19 @@ class CibShadow(UserInterface):
                 return False
         if not name:
             name = os.path.basename(infile).replace(".bz2", "")
-        if not pe2shadow(infile, name):
+        if not xmlutil.pe2shadow(infile, name):
             return False
         # use the shadow and load the status from there
         return self.use("use", name, "withstatus")
 
     def delete(self, cmd, name):
         "usage: delete <shadow_cib>"
-        if not is_filename_sane(name):
+        if not utils.is_filename_sane(name):
             return False
         if vars.cib_in_use == name:
             common_err("%s shadow CIB is in use" % name)
             return False
-        if ext_cmd("%s -D '%s' --force" % (self.extcmd, name)) == 0:
+        if utils.ext_cmd("%s -D '%s' --force" % (self.extcmd, name)) == 0:
             common_info("%s shadow CIB deleted" % name)
         else:
             common_err("failed to delete %s shadow CIB" % name)
@@ -354,9 +357,9 @@ class CibShadow(UserInterface):
 
     def reset(self, cmd, name):
         "usage: reset <shadow_cib>"
-        if not is_filename_sane(name):
+        if not utils.is_filename_sane(name):
             return False
-        if ext_cmd("%s -r '%s'" % (self.extcmd, name)) == 0:
+        if utils.ext_cmd("%s -r '%s'" % (self.extcmd, name)) == 0:
             common_info("copied live CIB to %s" % name)
         else:
             common_err("failed to copy live CIB to %s" % name)
@@ -364,9 +367,9 @@ class CibShadow(UserInterface):
 
     def commit(self, cmd, name):
         "usage: commit <shadow_cib>"
-        if not is_filename_sane(name):
+        if not utils.is_filename_sane(name):
             return False
-        if ext_cmd("%s -C '%s' --force" % (self.extcmd, name)) == 0:
+        if utils.ext_cmd("%s -C '%s' --force" % (self.extcmd, name)) == 0:
             common_info("committed '%s' shadow CIB to the cluster" % name)
         else:
             common_err("failed to commit the %s shadow CIB" % name)
@@ -374,16 +377,16 @@ class CibShadow(UserInterface):
 
     def diff(self, cmd):
         "usage: diff"
-        rc, s = get_stdout(add_sudo("%s -d" % self.extcmd_stdout))
-        page_string(s)
+        rc, s = utils.get_stdout(utils.add_sudo("%s -d" % self.extcmd_stdout))
+        utils.page_string(s)
 
     def list(self, cmd):
         "usage: list"
         if options.regression_tests:
-            for t in listshadows():
+            for t in xmlutil.listshadows():
                 print t
         else:
-            multicolumn(listshadows())
+            utils.multicolumn(xmlutil.listshadows())
 
     def _use(self, name, withstatus):
         # Choose a shadow cib for further changes. If the name
@@ -403,10 +406,10 @@ class CibShadow(UserInterface):
     def use(self, cmd, name='', withstatus=''):
         "usage: use [<shadow_cib>] [withstatus]"
         # check the name argument
-        if name and not is_filename_sane(name):
+        if name and not utils.is_filename_sane(name):
             return False
         if name and name != "live":
-            if not os.access(shadowfile(name), os.F_OK):
+            if not os.access(xmlutil.shadowfile(name), os.F_OK):
                 common_err("%s: no such shadow CIB" % name)
                 return False
         if withstatus and withstatus != "withstatus":
@@ -434,7 +437,7 @@ class CibShadow(UserInterface):
             common_err("the requested CIB is different from the current one")
             if user_prefs.get_force():
                 common_info("CIB overwrite forced")
-            elif not ask("All changes will be dropped. Do you want to proceed?"):
+            elif not utils.ask("All changes will be dropped. Do you want to proceed?"):
                 self._use(saved_cib, '')  # revert to the previous CIB
                 return False
         self._use(name, withstatus)  # now load the status too
@@ -463,7 +466,7 @@ class Template(UserInterface):
         self.cmd_table["show"] = (self.show, (0, 1), 0, 0)
         self.cmd_table["apply"] = (self.apply, (0, 2), 1, 0)
         self.cmd_table["list"] = (self.list, (0, 1), 0, 0)
-        setup_aliases(self)
+        utils.setup_aliases(self)
         self.init_dir()
         self.curr_conf = ''
 
@@ -618,7 +621,7 @@ class Template(UserInterface):
         return self.generate(l, user_data)
     def new(self, cmd, name, *args):
         "usage: new <config> <template> [<template> ...] [params name=value ...]"
-        if not is_filename_sane(name):
+        if not utils.is_filename_sane(name):
             return False
         if os.path.isfile("%s/%s" % (vars.tmpl_conf_dir, name)):
             common_err("config %s exists; delete it first" % name)
@@ -647,7 +650,7 @@ class Template(UserInterface):
         self.curr_conf = name
 
     def config_exists(self, name):
-        if not is_filename_sane(name):
+        if not utils.is_filename_sane(name):
             return False
         if not os.path.isfile("%s/%s" % (vars.tmpl_conf_dir, name)):
             common_err("%s: no such config" % name)
@@ -664,7 +667,7 @@ class Template(UserInterface):
             return False
         if name == self.curr_conf:
             if not force and not user_prefs.get_force() and \
-                    not ask("Do you really want to remove config %s which is in use?" % self.curr_conf):
+                    not utils.ask("Do you really want to remove config %s which is in use?" % self.curr_conf):
                 return False
             else:
                 self.curr_conf = ''
@@ -687,9 +690,9 @@ class Template(UserInterface):
         if name:
             if not self.config_exists(name):
                 return False
-            edit_file("%s/%s" % (vars.tmpl_conf_dir, name))
+            utils.edit_file("%s/%s" % (vars.tmpl_conf_dir, name))
         else:
-            edit_file("%s/%s" % (vars.tmpl_conf_dir, self.curr_conf))
+            utils.edit_file("%s/%s" % (vars.tmpl_conf_dir, self.curr_conf))
 
     def show(self, cmd, name=''):
         "usage: show [<config>]"
@@ -725,12 +728,12 @@ class Template(UserInterface):
             s = self.process()
         if not s:
             return False
-        tmp = str2tmp(s)
+        tmp = utils.str2tmp(s)
         if not tmp:
             return False
         if method == "replace":
             if options.interactive and cib_factory.has_cib_changed():
-                if not ask("This operation will erase all changes. Do you want to proceed?"):
+                if not utils.ask("This operation will erase all changes. Do you want to proceed?"):
                     return False
             cib_factory.erase()
         set_obj = mkset_obj("NOOBJ")
@@ -744,9 +747,9 @@ class Template(UserInterface):
     def list(self, cmd, templates=''):
         "usage: list [templates]"
         if templates == "templates":
-            multicolumn(listtemplates())
+            utils.multicolumn(utils.listtemplates())
         else:
-            multicolumn(listconfigs())
+            utils.multicolumn(utils.listconfigs())
 
 
 def manage_attr(cmd, attr_ext_commands, *args):
@@ -764,21 +767,21 @@ def manage_attr(cmd, attr_ext_commands, *args):
         return False
     if args[1] == 'set':
         if len(args) == 4:
-            if not is_name_sane(args[0]) \
-                    or not is_name_sane(args[2]) \
-                    or not is_value_sane(args[3]):
+            if not utils.is_name_sane(args[0]) \
+                    or not utils.is_name_sane(args[2]) \
+                    or not utils.is_value_sane(args[3]):
                 return False
-            return ext_cmd(attr_cmd % (args[0], args[2], args[3])) == 0
+            return utils.ext_cmd(attr_cmd % (args[0], args[2], args[3])) == 0
         else:
             bad_usage(cmd, ' '.join(args))
             return False
     elif args[1] in ('delete', 'show') or \
             (cmd == "secret" and args[1] in ('stash', 'unstash', 'check')):
         if len(args) == 3:
-            if not is_name_sane(args[0]) \
-                    or not is_name_sane(args[2]):
+            if not utils.is_name_sane(args[0]) \
+                    or not utils.is_name_sane(args[2]):
                 return False
-            return ext_cmd(attr_cmd % (args[0], args[2])) == 0
+            return utils.ext_cmd(attr_cmd % (args[0], args[2])) == 0
         else:
             bad_usage(cmd, ' '.join(args))
             return False
@@ -794,11 +797,11 @@ def rm_meta_attribute(node, attr, l, force_children=False):
     '''
     for c in node.iterchildren():
         if c.tag == "meta_attributes":
-            nvpair = get_attr_in_set(c, attr)
+            nvpair = xmlutil.get_attr_in_set(c, attr)
             if nvpair is not None:
                 l.append(nvpair)
         elif force_children or \
-                (is_child_rsc(c) and not c.getparent().tag == "group"):
+                (xmlutil.is_child_rsc(c) and not c.getparent().tag == "group"):
             rm_meta_attribute(c, attr, l, force_children=force_children)
 
 
@@ -806,8 +809,8 @@ def get_children_with_different_attr(node, attr, value):
     l = []
     for p in node.xpath(".//primitive"):
         diff_attr = False
-        for meta_set in get_set_nodes(p, "meta_attributes", 0):
-            p_value = get_attr_value(meta_set, attr)
+        for meta_set in xmlutil.get_set_nodes(p, "meta_attributes", 0):
+            p_value = xmlutil.get_attr_value(meta_set, attr)
             if p_value != None and p_value != value:
                 diff_attr = True
                 break
@@ -818,25 +821,25 @@ def get_children_with_different_attr(node, attr, value):
 
 def set_deep_meta_attr_node(target_node, attr, value):
     nvpair_l = []
-    if is_clone(target_node):
+    if xmlutil.is_clone(target_node):
         for c in target_node.iterchildren():
-            if is_child_rsc(c):
+            if xmlutil.is_child_rsc(c):
                 rm_meta_attribute(c, attr, nvpair_l)
     if user_prefs.get_manage_children() != "never" and \
-            (is_group(target_node) or \
-            (is_clone(target_node) and cloned_el(target_node) == "group")):
+            (xmlutil.is_group(target_node) or \
+            (xmlutil.is_clone(target_node) and xmlutil.cloned_el(target_node) == "group")):
         odd_children = get_children_with_different_attr(target_node, attr, value)
         for c in odd_children:
             if user_prefs.get_manage_children() == "always" or \
                     (user_prefs.get_manage_children() == "ask" and \
-                    ask("Do you want to override %s for child resource %s?" % (attr, c.get("id")))):
+                    utils.ask("Do you want to override %s for child resource %s?" % (attr, c.get("id")))):
                 common_debug("force remove meta attr %s from %s" %
                              (attr, c.get("id")))
                 rm_meta_attribute(c, attr, nvpair_l, force_children=True)
-    rmnodes(list(set(nvpair_l)))
-    for n in get_set_nodes(target_node, "meta_attributes", 1):
-        set_attr(n, attr, value)
-    return commit_rsc(target_node)
+    xmlutil.rmnodes(list(set(nvpair_l)))
+    for n in xmlutil.get_set_nodes(target_node, "meta_attributes", 1):
+        xmlutil.set_attr(n, attr, value)
+    return xmlutil.commit_rsc(target_node)
 
 
 def set_deep_meta_attr(attr, value, rsc_id):
@@ -851,23 +854,23 @@ def set_deep_meta_attr(attr, value, rsc_id):
     then ask the user whether to reset them or not (exact
     behaviour depends on the value of user_prefs.get_manage_children()).
     '''
-    target_node = RscState().rsc2node(rsc_id)
+    target_node = xmlutil.RscState().rsc2node(rsc_id)
     if target_node is None:
         common_error("resource %s does not exist" % rsc_id)
         return False
     if not (target_node.tag == "primitive" and \
         target_node.getparent().tag == "group"):
-        target_node = get_topmost_rsc(target_node)
+        target_node = xmlutil.get_topmost_rsc(target_node)
     return set_deep_meta_attr_node(target_node, attr, value)
 
 
 def cleanup_resource(rsc, node=''):
-    if not is_name_sane(rsc) or not is_name_sane(node):
+    if not utils.is_name_sane(rsc) or not utils.is_name_sane(node):
         return False
     if not node:
-        rc = ext_cmd(RscMgmt.rsc_cleanup_all % (rsc)) == 0
+        rc = utils.ext_cmd(RscMgmt.rsc_cleanup_all % (rsc)) == 0
     else:
-        rc = ext_cmd(RscMgmt.rsc_cleanup % (rsc, node)) == 0
+        rc = utils.ext_cmd(RscMgmt.rsc_cleanup % (rsc, node)) == 0
     return rc
 
 
@@ -944,68 +947,68 @@ class RscMgmt(UserInterface):
             "migrate": ("move",),
             "unmigrate": ("unmove",),
         })
-        setup_aliases(self)
+        utils.setup_aliases(self)
 
     def status(self, cmd, rsc=None):
         "usage: status [<rsc>]"
         if rsc:
-            if not is_name_sane(rsc):
+            if not utils.is_name_sane(rsc):
                 return False
-            return ext_cmd(self.rsc_status % rsc) == 0
+            return utils.ext_cmd(self.rsc_status % rsc) == 0
         else:
-            return ext_cmd(self.rsc_status_all) == 0
+            return utils.ext_cmd(self.rsc_status_all) == 0
 
     def start(self, cmd, rsc):
         "usage: start <rsc>"
-        if not is_name_sane(rsc):
+        if not utils.is_name_sane(rsc):
             return False
         return set_deep_meta_attr("target-role", "Started", rsc)
 
     def restart(self, cmd, rsc):
         "usage: restart <rsc>"
-        if not is_name_sane(rsc):
+        if not utils.is_name_sane(rsc):
             return False
         common_info("ordering %s to stop" % rsc)
         if not self.stop("stop", rsc):
             return False
-        if not wait4dc("stop", not options.batch):
+        if not utils.wait4dc("stop", not options.batch):
             return False
         common_info("ordering %s to start" % rsc)
         return self.start("start", rsc)
 
     def stop(self, cmd, rsc):
         "usage: stop <rsc>"
-        if not is_name_sane(rsc):
+        if not utils.is_name_sane(rsc):
             return False
         return set_deep_meta_attr("target-role", "Stopped", rsc)
 
     def promote(self, cmd, rsc):
         "usage: promote <rsc>"
-        if not is_name_sane(rsc):
+        if not utils.is_name_sane(rsc):
             return False
-        if not RscState().is_ms(rsc):
+        if not xmlutil.RscState().is_ms(rsc):
             common_err("%s is not a master-slave resource" % rsc)
             return False
-        return ext_cmd(self.rsc_setrole % (rsc, "Master")) == 0
+        return utils.ext_cmd(self.rsc_setrole % (rsc, "Master")) == 0
 
     def demote(self, cmd, rsc):
         "usage: demote <rsc>"
-        if not is_name_sane(rsc):
+        if not utils.is_name_sane(rsc):
             return False
-        if not RscState().is_ms(rsc):
+        if not xmlutil.RscState().is_ms(rsc):
             common_err("%s is not a master-slave resource" % rsc)
             return False
-        return ext_cmd(self.rsc_setrole % (rsc, "Slave")) == 0
+        return utils.ext_cmd(self.rsc_setrole % (rsc, "Slave")) == 0
 
     def manage(self, cmd, rsc):
         "usage: manage <rsc>"
-        if not is_name_sane(rsc):
+        if not utils.is_name_sane(rsc):
             return False
         return set_deep_meta_attr("is-managed", "true", rsc)
 
     def unmanage(self, cmd, rsc):
         "usage: unmanage <rsc>"
-        if not is_name_sane(rsc):
+        if not utils.is_name_sane(rsc):
             return False
         return set_deep_meta_attr("is-managed", "false", rsc)
 
@@ -1013,14 +1016,14 @@ class RscMgmt(UserInterface):
         """usage: migrate <rsc> [<node>] [<lifetime>] [force]"""
         argl = list(args)
         rsc = argl[0]
-        if not is_name_sane(rsc):
+        if not utils.is_name_sane(rsc):
             return False
         del argl[0]
         node = None
         opt_l = fetch_opts(argl, ["force"])
         lifetime = fetch_lifetime_opt(argl)
         if len(argl) == 1:
-            if is_our_node(argl[0]):
+            if xmlutil.is_our_node(argl[0]):
                 node = argl[0]
             else:
                 syntax_err((cmd, args))
@@ -1032,13 +1035,13 @@ class RscMgmt(UserInterface):
             opts = "%s --lifetime='%s'" % (opts, lifetime)
         if "force" in opt_l or user_prefs.get_force():
             opts = "%s --force" % opts
-        return ext_cmd(self.rsc_migrate % (rsc, opts)) == 0
+        return utils.ext_cmd(self.rsc_migrate % (rsc, opts)) == 0
 
     def unmigrate(self, cmd, rsc):
         "usage: unmigrate <rsc>"
-        if not is_name_sane(rsc):
+        if not utils.is_name_sane(rsc):
             return False
-        return ext_cmd(self.rsc_unmigrate % rsc) == 0
+        return utils.ext_cmd(self.rsc_unmigrate % rsc) == 0
 
     def cleanup(self, cmd, *args):
         "usage: cleanup <rsc> [<node>]"
@@ -1095,20 +1098,20 @@ class RscMgmt(UserInterface):
     def refresh(self, cmd, *args):
         'usage: refresh [<node>]'
         if len(args) == 1:
-            if not is_name_sane(args[0]):
+            if not utils.is_name_sane(args[0]):
                 return False
-            return ext_cmd(self.rsc_refresh_node % args[0]) == 0
+            return utils.ext_cmd(self.rsc_refresh_node % args[0]) == 0
         else:
-            return ext_cmd(self.rsc_refresh) == 0
+            return utils.ext_cmd(self.rsc_refresh) == 0
 
     def reprobe(self, cmd, *args):
         'usage: reprobe [<node>]'
         if len(args) == 1:
-            if not is_name_sane(args[0]):
+            if not utils.is_name_sane(args[0]):
                 return False
-            return ext_cmd(self.rsc_reprobe_node % args[0]) == 0
+            return utils.ext_cmd(self.rsc_reprobe_node % args[0]) == 0
         else:
-            return ext_cmd(self.rsc_reprobe) == 0
+            return utils.ext_cmd(self.rsc_reprobe) == 0
 
     def _get_trace_rsc(self, rsc_id):
         cib_factory.refresh()
@@ -1132,8 +1135,8 @@ class RscMgmt(UserInterface):
             interval = op == "monitor" and "non-0" or "0"
         if op == "probe":
             op = "monitor"
-        op_node = find_operation(rsc.node, op, interval)
-        if op_node is None and crm_msec(interval) != 0:
+        op_node = xmlutil.find_operation(rsc.node, op, interval)
+        if op_node is None and utils.crm_msec(interval) != 0:
             common_err("not allowed to create non-0 interval operation %s" % op)
             return False
         if op_node is None:
@@ -1149,7 +1152,7 @@ class RscMgmt(UserInterface):
             op_node = rsc.set_op_attr(op_node, vars.trace_ra_attr, "1")
         if not cib_factory.commit():
             return False
-        if op == "monitor" and crm_msec(interval) != 0:
+        if op == "monitor" and utils.crm_msec(interval) != 0:
             common_warn("please CLEANUP the RA trace directory %s regularly!" %
                         vars.ha_varlib_dir)
         else:
@@ -1165,7 +1168,7 @@ class RscMgmt(UserInterface):
             interval = op == "monitor" and "non-0" or "0"
         if op == "probe":
             op = "monitor"
-        op_node = find_operation(rsc.node, op, interval)
+        op_node = xmlutil.find_operation(rsc.node, op, interval)
         if op_node is None:
             common_err("operation %s does not exist in %s" % (op, rsc.obj_id))
             return False
@@ -1242,17 +1245,17 @@ class NodeMgmt(UserInterface):
         self.cmd_aliases.update({
             "show": ("list",),
         })
-        setup_aliases(self)
+        utils.setup_aliases(self)
 
     def status(self, cmd, node=None):
         'usage: status [<node>]'
         a = node and ('--xpath "//nodes/node[@uname=\'%s\']"' % node) or \
             '-o nodes'
-        return ext_cmd("%s %s" % (cib_dump, a)) == 0
+        return utils.ext_cmd("%s %s" % (xmlutil.cib_dump, a)) == 0
 
     def show(self, cmd, node=None):
         'usage: show [<node>]'
-        cib_elem = cibdump2elem()
+        cib_elem = xmlutil.cibdump2elem()
         if cib_elem is None:
             return False
         try:
@@ -1296,7 +1299,7 @@ class NodeMgmt(UserInterface):
         if not argl:
             node = vars.this_node
         elif len(argl) == 1:
-            if is_our_node(args[0]):
+            if xmlutil.is_our_node(args[0]):
                 node = args[0]
             else:
                 common_err("%s: node name not recognized" % args[0])
@@ -1309,65 +1312,65 @@ class NodeMgmt(UserInterface):
             opts = "--lifetime='%s'" % lifetime
         else:
             opts = "--lifetime='forever'"
-        return ext_cmd(self.node_standby % (node, "on", opts)) == 0
+        return utils.ext_cmd(self.node_standby % (node, "on", opts)) == 0
 
     def online(self, cmd, node=None):
         'usage: online [<node>]'
         if not node:
             node = vars.this_node
-        if not is_name_sane(node):
+        if not utils.is_name_sane(node):
             return False
-        return ext_cmd(self.node_standby % (node, "off", "--lifetime='forever'")) == 0
+        return utils.ext_cmd(self.node_standby % (node, "off", "--lifetime='forever'")) == 0
 
     def maintenance(self, cmd, node=None):
         'usage: maintenance [<node>]'
         if not node:
             node = vars.this_node
-        if not is_name_sane(node):
+        if not utils.is_name_sane(node):
             return False
-        return ext_cmd(self.node_maint % (node, "on")) == 0
+        return utils.ext_cmd(self.node_maint % (node, "on")) == 0
 
     def ready(self, cmd, node=None):
         'usage: ready [<node>]'
         if not node:
             node = vars.this_node
-        if not is_name_sane(node):
+        if not utils.is_name_sane(node):
             return False
-        return ext_cmd(self.node_maint % (node, "off")) == 0
+        return utils.ext_cmd(self.node_maint % (node, "off")) == 0
 
     def fence(self, cmd, node):
         'usage: fence <node>'
         if not node:
             node = vars.this_node
-        if not is_name_sane(node):
+        if not utils.is_name_sane(node):
             return False
         if not user_prefs.get_force() and \
-                not ask("Do you really want to shoot %s?" % node):
+                not utils.ask("Do you really want to shoot %s?" % node):
             return False
-        return ext_cmd(self.node_fence % (node)) == 0
+        return utils.ext_cmd(self.node_fence % (node)) == 0
 
     def clearstate(self, cmd, node):
         'usage: clearstate <node>'
-        if not is_name_sane(node):
+        if not utils.is_name_sane(node):
             return False
         if not user_prefs.get_force() and \
-                not ask("Do you really want to drop state for node %s?" % node):
+                not utils.ask("Do you really want to drop state for node %s?" % node):
             return False
-        return ext_cmd(self.node_clear_state % ("-M -c", node, node)) == 0 and \
-            ext_cmd(self.node_clear_state % ("-R", node, node)) == 0
+        return utils.ext_cmd(self.node_clear_state % ("-M -c", node, node)) == 0 and \
+            utils.ext_cmd(self.node_clear_state % ("-R", node, node)) == 0
 
     def delete(self, cmd, node):
         'usage: delete <node>'
-        if not is_name_sane(node):
+        if not utils.is_name_sane(node):
             return False
-        if not is_our_node(node):
+        if not xmlutil.is_our_node(node):
             common_err("node %s not found in the CIB" % node)
             return False
         rc = True
-        if cluster_stack() == "heartbeat":
+        if utils.cluster_stack() == "heartbeat":
             cmd = (self.hb_delnode % node)
         else:
-            ec, s = get_stdout("%s -p" % self.crm_node)
+            ec, s = utils.get_stdout("%s -p" % self.crm_node)
             if not s:
                 common_err('%s -p could not list any nodes (rc=%d)' %
                            (self.crm_node, ec))
@@ -1384,12 +1387,12 @@ class NodeMgmt(UserInterface):
                 common_info('proceeding with node %s removal' % node)
             else:
                 return False
-        ec = ext_cmd(cmd)
+        ec = utils.ext_cmd(cmd)
         if ec != 0:
             common_warn('"%s" failed, rc=%d' % (cmd, ec))
             return False
-        if ext_cmd(self.node_delete % node) != 0 or \
-                ext_cmd(self.node_delete_status % node) != 0:
+        if utils.ext_cmd(self.node_delete % node) != 0 or \
+                utils.ext_cmd(self.node_delete_status % node) != 0:
             common_err("%s removed from membership, but not from CIB!" % node)
             return False
         common_info("node %s deleted" % node)
@@ -1436,33 +1439,33 @@ class RA(UserInterface):
         self.cmd_aliases.update({
             "meta": ("info",),
         })
-        setup_aliases(self)
+        utils.setup_aliases(self)
 
     def classes(self, cmd):
         "usage: classes"
-        for c in ra_classes():
+        for c in ra.ra_classes():
             if c in self.provider_classes:
-                print "%s / %s" % (c, ' '.join(ra_providers_all(c)))
+                print "%s / %s" % (c, ' '.join(ra.ra_providers_all(c)))
             else:
                 print "%s" % c
 
     def providers(self, cmd, ra_type, ra_class="ocf"):
         "usage: providers <ra> [<class>]"
-        print ' '.join(ra_providers(ra_type, ra_class))
+        print ' '.join(ra.ra_providers(ra_type, ra_class))
 
     def list(self, cmd, c, p=None):
         "usage: list <class> [<provider>]"
-        if not c in ra_classes():
+        if not c in ra.ra_classes():
             common_err("class %s does not exist" % c)
             return False
-        if p and not p in ra_providers_all(c):
+        if p and not p in ra.ra_providers_all(c):
             common_err("there is no provider %s for class %s" % (p, c))
             return False
         if options.regression_tests:
-            for t in ra_types(c, p):
+            for t in ra.ra_types(c, p):
                 print t
         else:
-            multicolumn(ra_types(c, p))
+            utils.multicolumn(ra.ra_types(c, p))
 
     def meta(self, cmd, *args):
         "usage: meta [<class>:[<provider>:]]<type>"
@@ -1478,12 +1481,12 @@ class RA(UserInterface):
                 ra_class = args[0]
                 ra_provider = ra_type = None
             else:
-                ra_class, ra_provider, ra_type = disambiguate_ra_type(args[0])
-        ra = RAInfo(ra_class, ra_type, ra_provider)
+                ra_class, ra_provider, ra_type = ra.disambiguate_ra_type(args[0])
+        agent = ra.RAInfo(ra_class, ra_type, ra_provider)
         if ra.mk_ra_node() is None:
             return False
         try:
-            page_string(ra.meta_pretty())
+            utils.page_string(agent.meta_pretty())
         except Exception, msg:
             common_err(msg)
             return False
@@ -1530,7 +1533,7 @@ class StatusMgmt(UserInterface):
         self.cmd_table["simulate"] = (self.simulate, (0, 3), 1, 0)
         self.cmd_table["quorum"] = (self.quorum, (1, 1), 1, 0)
         self.cmd_table["ticket"] = (self.edit_ticket, (2, 2), 2, 0)
-        setup_aliases(self)
+        utils.setup_aliases(self)
 
     def load(self, cmd, org):
         "usage: load {<file>|shadow:<cib>|live}"
@@ -1557,10 +1560,10 @@ class StatusMgmt(UserInterface):
 
     def quorum(self, cmd, opt):
         "usage: quorum <bool>"
-        if not verify_boolean(opt):
+        if not utils.verify_boolean(opt):
             common_err("%s: bad boolean option" % opt)
             return False
-        return cib_status.set_quorum(is_boolean_true(opt))
+        return cib_status.set_quorum(utils.is_boolean_true(opt))
 
     def edit_node(self, cmd, node, state):
         "usage: node <node> {online|offline|unclean}"
@@ -1614,7 +1617,7 @@ def _graph_args(args):
         gtype = "dot"
     try:
         outf = args[1]
-        if not is_path_sane(outf):
+        if not utils.is_path_sane(outf):
             return False, gtype, outf, ftype
     except:
         outf = None
@@ -1682,7 +1685,7 @@ class CibConfig(UserInterface):
             "ms": ("master",),
             "ptest": ("simulate",),
         })
-        setup_aliases(self)
+        utils.setup_aliases(self)
         # for interactive use, we want to populate the CIB
         # immediately so that tab completion works
         if options.interactive:
@@ -1733,10 +1736,10 @@ class CibConfig(UserInterface):
         if not g:
             common_err("group %s does not exist" % group_id)
             return False
-        if not is_group(g.node):
+        if not xmlutil.is_group(g.node):
             common_err("element %s is not a group" % group_id)
             return False
-        children = get_rsc_children_ids(g.node)
+        children = xmlutil.get_rsc_children_ids(g.node)
         if after_before and ref_member_id not in children:
             common_err("%s is not member of %s" % (ref_member_id, group_id))
             return False
@@ -1820,7 +1823,7 @@ class CibConfig(UserInterface):
             return False
         if method == "replace":
             if options.interactive and cib_factory.has_cib_changed():
-                if not ask("This operation will erase all changes. Do you want to proceed?"):
+                if not utils.ask("This operation will erase all changes. Do you want to proceed?"):
                     return False
             cib_factory.erase()
         if xml:
@@ -1832,13 +1835,13 @@ class CibConfig(UserInterface):
     def graph(self, cmd, *args):
         "usage: graph [<gtype> [<file> [<img_format>]]]"
         if args and args[0] == "exportsettings":
-            return save_graphviz_file(vars.graphviz_user_file, vars.graph)
+            return utils.save_graphviz_file(vars.graphviz_user_file, vars.graph)
         if not cib_factory.is_cib_sane():
             return False
         rc, gtype, outf, ftype = _graph_args(args)
         if not rc:
             return False
-        rc, d = load_graphviz_file(vars.graphviz_user_file)
+        rc, d = utils.load_graphviz_file(vars.graphviz_user_file)
         if rc and d:
             vars.graph = d
         set_obj = mkset_obj()
@@ -1883,7 +1886,7 @@ class CibConfig(UserInterface):
     def refresh(self, cmd):
         "usage: refresh"
         if options.interactive and cib_factory.has_cib_changed():
-            if not ask("All changes will be dropped. Do you want to proceed?"):
+            if not utils.ask("All changes will be dropped. Do you want to proceed?"):
                 return
         cib_factory.refresh()
 
@@ -1912,7 +1915,7 @@ class CibConfig(UserInterface):
             common_info("try changing something first")
             return
         rc1 = True
-        if not (force or cibadmin_can_patch()):
+        if not (force or utils.cibadmin_can_patch()):
             rc1 = cib_factory.is_current_cib_equal()
         rc2 = cib_factory.is_cib_empty() or \
             self._verify(mkset_obj("xml", "changed"), mkset_obj("xml"))
@@ -1921,7 +1924,7 @@ class CibConfig(UserInterface):
         if force or user_prefs.get_force():
             common_info("commit forced")
             return cib_factory.commit(force=True)
-        if ask("Do you still want to commit?"):
+        if utils.ask("Do you still want to commit?"):
             return cib_factory.commit(force=True)
         return False
 
@@ -2103,12 +2106,12 @@ class CibConfig(UserInterface):
             if not el:
                 common_err("element %s does not exist" % id)
                 rc = False
-            elif current == "r" and is_resource(el.node):
-                if is_container(el.node):
+            elif current == "r" and xmlutil.is_resource(el.node):
+                if xmlutil.is_container(el.node):
                     rsc_l += el.node.findall("primitive")
                 else:
                     rsc_l.append(el.node)
-            elif is_normal_node(el.node):
+            elif xmlutil.is_normal_node(el.node):
                 current = "n"
                 node_l.append(el.node.get("uname"))
             else:
@@ -2130,7 +2133,7 @@ class CibConfig(UserInterface):
     def end_game(self, no_questions_asked=False):
         if cib_factory.has_cib_changed():
             if no_questions_asked or not options.interactive or \
-                ask("There are changes pending. Do you want to commit them?"):
+                utils.ask("There are changes pending. Do you want to commit them?"):
                 self.commit("commit")
         cib_factory.reset()
 
@@ -2164,7 +2167,7 @@ class History(UserInterface):
         self.cmd_aliases.update({
             "limit": ("timeframe",),
         })
-        setup_aliases(self)
+        utils.setup_aliases(self)
         self._set_source(options.history)
         self.current_session = None
 
@@ -2177,11 +2180,11 @@ class History(UserInterface):
         '''
         from_dt = to_dt = None
         if from_time:
-            from_dt = parse_time(from_time)
+            from_dt = utils.parse_time(from_time)
             if not from_dt:
                 return False
         if to_time:
-            to_dt = parse_time(to_time)
+            to_dt = utils.parse_time(to_time)
             if not to_dt:
                 return False
         if to_dt and to_dt <= from_dt:
@@ -2240,7 +2243,7 @@ class History(UserInterface):
 
     def detail(self, cmd, detail_lvl):
         "usage: detail <detail_level>"
-        detail_num = convert2ints(detail_lvl)
+        detail_num = utils.convert2ints(detail_lvl)
         if not (isinstance(detail_num, int) and int(detail_num) >= 0):
             bad_usage(cmd, detail_lvl)
             return False
@@ -2258,7 +2261,7 @@ class History(UserInterface):
 
     def latest(self, cmd):
         "usage: latest"
-        if not wait4dc("transition", not options.batch):
+        if not utils.wait4dc("transition", not options.batch):
             return False
         self._set_source("live")
         crm_report.refresh_source()
@@ -2288,7 +2291,7 @@ class History(UserInterface):
             return False
         s = bz2.decompress(''.join(f))
         f.close()
-        return run_ptest(s, nograph, scores, utilization, actions, verbosity)
+        return utils.run_ptest(s, nograph, scores, utilization, actions, verbosity)
 
     def peinputs(self, cmd, *args):
         """usage: peinputs [{<range>|<number>} ...] [v]"""
@@ -2297,8 +2300,8 @@ class History(UserInterface):
         if argl:
             l = []
             for s in argl:
-                a = convert2ints(s.split(':'))
-                if a and len(a) == 2 and not check_range(a):
+                a = utils.convert2ints(s.split(':'))
+                if a and len(a) == 2 and not utils.check_range(a):
                     common_err("%s: invalid peinputs range" % a)
                     return False
                 l += crm_report.pelist(a, long=("v" in opt_l))
@@ -2307,7 +2310,7 @@ class History(UserInterface):
         if not l:
             return False
         s = '\n'.join(l)
-        page_string(s)
+        utils.page_string(s)
 
     def _get_pe_byname(self, s):
         l = crm_report.find_pe_files(s)
@@ -2344,7 +2347,7 @@ class History(UserInterface):
         spec.'''
         if re.search('pe-', pe_spec):
             f = self._get_pe_byname(pe_spec)
-        elif is_int(pe_spec):
+        elif utils.is_int(pe_spec):
             n = int(pe_spec)
             if n <= 0:
                 f = self._get_pe_byidx(n-1)
@@ -2367,7 +2370,7 @@ class History(UserInterface):
         if not f:
             common_err("dot file not found in the report")
             return False
-        show_dot_graph(f, keep_file=True)
+        utils.show_dot_graph(f, keep_file=True)
         return True
 
     def _pe2shadow(self, f, argl):
@@ -2376,7 +2379,7 @@ class History(UserInterface):
         except:
             name = os.path.basename(f).replace(".bz2", "")
         common_info("transition %s saved to shadow %s" % (f, name))
-        return pe2shadow(f, name)
+        return xmlutil.pe2shadow(f, name)
 
     def transition(self, cmd, *args):
         """usage: transition [<number>|<index>|<file>] [nograph] [v...] [scores] [actions] [utilization]
@@ -2493,7 +2496,7 @@ class History(UserInterface):
     def _get_diff_pe_input(self, t):
         if t != "live":
             return self._get_pe_input(t)
-        if not get_dc():
+        if not utils.get_dc():
             common_err("cluster not running")
             return None
         return "live"
@@ -2509,10 +2512,10 @@ class History(UserInterface):
 
     def _unidiff(self, s1, s2, t1, t2):
         s = None
-        f1 = str2tmp(s1)
-        f2 = str2tmp(s2)
+        f1 = utils.str2tmp(s1)
+        f2 = utils.str2tmp(s2)
         if f1 and f2:
-            rc, s = get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" % (t1, t2, f1, f2))
+            rc, s = utils.get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" % (t1, t2, f1, f2))
         try:
             os.unlink(f1)
         except:
@@ -2569,12 +2572,12 @@ class History(UserInterface):
         if "status" in opt_l:
             s = self._render_pe(self._pe_status_nohdr, t)
         else:
-            s = term_render(self._render_pe(self._pe_config_plain, t))
+            s = utils.term_render(self._render_pe(self._pe_config_plain, t))
         if levels.previous().myname() == "cibconfig":
             cib_factory.refresh()
         if not s:
             return False
-        print str2tmp(s)
+        print utils.str2tmp(s)
 
     def show(self, cmd, t, *args):
         "usage: show <pe> [status]"
@@ -2589,7 +2592,7 @@ class History(UserInterface):
             cib_factory.refresh()
         if not s:
             return False
-        page_string(s)
+        utils.page_string(s)
 
     def graph(self, cmd, t, *args):
         "usage: graph <pe> [<gtype> [<file> [<img_format>]]]"
@@ -2599,7 +2602,7 @@ class History(UserInterface):
         rc, gtype, outf, ftype = _graph_args(args)
         if not rc:
             return False
-        rc, d = load_graphviz_file(vars.graphviz_user_file)
+        rc, d = utils.load_graphviz_file(vars.graphviz_user_file)
         if rc and d:
             vars.graph = d
         set_obj = self._pe_config_obj(pe_f)
@@ -2630,7 +2633,7 @@ class History(UserInterface):
         if s == None:
             return False
         if not mkhtml:
-            page_string(s)
+            utils.page_string(s)
         else:
             sys.stdout.writelines(s)
 
@@ -2647,7 +2650,7 @@ class History(UserInterface):
             if subcmd not in ("save", "load", "pack", "delete"):
                 syntax_err(subcmd, context='session')
                 return False
-            if not is_filename_sane(name):
+            if not utils.is_filename_sane(name):
                 return False
         elif subcmd not in ("list", "update", "pack"):
             syntax_err(subcmd, context='session')
@@ -2706,13 +2709,13 @@ class Site(UserInterface):
         try:
             attr_cmd = self.crm_ticket[subcmd]
         except KeyError:
-            bad_usage(cmd, '%s %s' % (subcmd, ticket))
+            utils.bad_usage(cmd, '%s %s' % (subcmd, ticket))
             return False
-        if not is_name_sane(ticket):
+        if not utils.is_name_sane(ticket):
             return False
         if subcmd not in ("show", "time"):
-            return ext_cmd(attr_cmd % ticket) == 0
-        rc, l = stdout2list(attr_cmd % ticket)
+            return utils.ext_cmd(attr_cmd % ticket) == 0
+        rc, l = utils.stdout2list(attr_cmd % ticket)
         try:
             val = l[0]
         except IndexError:
@@ -2727,7 +2730,7 @@ class Site(UserInterface):
                 common_warn("unexpected value for ticket %s: %s" % (ticket, val))
                 return False
         else:  # time
-            if not is_int(val):
+            if not utils.is_int(val):
                 common_warn("unexpected value for ticket %s: %s" % (ticket, val))
                 return False
             if val == "-1":
@@ -2743,7 +2746,7 @@ def crm_mon(opts=''):
     """Run crm_mon -1
     """
     status_cmd = "%s -1 %s" % (crm_mon_prog, opts)
-    return get_stdout(add_sudo(status_cmd))
+    return utils.get_stdout(utils.add_sudo(status_cmd))
 
 
 class TopLevel(UserInterface):
@@ -2770,10 +2773,10 @@ class TopLevel(UserInterface):
         self.cmd_table['site'] = Site
         self.cmd_table['status'] = (self.status, (0, 5), 0, 0)
         self.cmd_table['ra'] = RA
-        setup_aliases(self)
+        utils.setup_aliases(self)
         load_init_help_tab(self.help_table, self.cmd_table.keys())
         add_static_help(self.help_table)
-        setup_help_aliases(self)
+        utils.setup_help_aliases(self)
 
     def status(self, cmd, *args):
         """usage: status [<option> ...]
@@ -2792,7 +2795,7 @@ class TopLevel(UserInterface):
                        (rc, s))
             return False
         else:
-            page_string(s)
+            utils.page_string(s)
 
 help_sys = HelpSystem()
 user_prefs = UserPrefs.getInstance()

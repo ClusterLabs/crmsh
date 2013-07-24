@@ -19,8 +19,10 @@ import os
 from lxml import etree
 from singletonmixin import Singleton
 from vars import Vars
-from xmlutil import *
-from msg import *
+from tempfile import mkstemp
+from utils import ext_cmd, show_dot_graph, page_string
+from msg import common_err, common_info, common_warn, user_prefs
+import xmlutil
 
 
 def get_tag_by_id(node, tag, id):
@@ -81,7 +83,7 @@ def split_op(op):
 
 
 def cib_path(source):
-    return source[0:7] == "shadow:" and shadowfile(source[7:]) or source
+    return source[0:7] == "shadow:" and xmlutil.shadowfile(source[7:]) or source
 
 
 class CibStatus(Singleton):
@@ -112,23 +114,23 @@ class CibStatus(Singleton):
 
     def _cib_path(self, source):
         if source[0:7] == "shadow:":
-            return shadowfile(source[7:])
+            return xmlutil.shadowfile(source[7:])
         else:
             return source
 
     def _load_cib(self, source):
         if source == "live":
             if not self.backing_file:
-                self.backing_file = cibdump2tmp()
+                self.backing_file = xmlutil.cibdump2tmp()
                 if not self.backing_file:
                     return None
                 vars.tmpfiles.append(self.backing_file)
             else:
-                cibdump2file(self.backing_file)
+                xmlutil.cibdump2file(self.backing_file)
             f = self.backing_file
         else:
             f = cib_path(source)
-        return read_cib(file2cib_elem, f)
+        return xmlutil.read_cib(xmlutil.file2cib_elem, f)
 
     def _load(self, source):
         cib = self._load_cib(source)
@@ -220,7 +222,7 @@ class CibStatus(Singleton):
             dest_path = cib_path(self.origin)
         if cib != self.cib:
             status = cib.find("status")
-            rmnode(status)
+            xmlutil.rmnode(status)
             cib.append(self.status_node)
         xml = etree.tostring(cib)
         try:

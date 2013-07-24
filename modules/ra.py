@@ -23,9 +23,11 @@ import re
 import glob
 from cache import WCache
 from vars import Vars, getpwdent
-from utils import *
-from msg import *
-
+from utils import stdout2list, is_program, is_process, add_sudo
+from utils import os_types_list, get_stdout, find_value
+from utils import crm_msec, crm_time_cmp
+from msg import common_debug, common_err, common_warn, common_info
+from msg import user_prefs
 
 #
 # Resource Agents interface (meta-data, parameters, etc)

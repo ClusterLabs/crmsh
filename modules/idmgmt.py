@@ -16,8 +16,10 @@
 #
 
 from vars import Vars
-from xmlutil import *
-from msg import *
+import copy
+from msg import common_error, common_debug, id_used_err
+import xmlutil
+from singletonmixin import Singleton
 
 
 class IdMgmt(Singleton):
@@ -102,17 +104,17 @@ class IdMgmt(Singleton):
 
     def check_xml(self, node):
         self.ok = True
-        xmltraverse_thin(node, self.check_node)
+        xmlutil.xmltraverse_thin(node, self.check_node)
         return self.ok
 
     def store_xml(self, node):
         if not self.check_xml(node):
             return False
-        xmltraverse_thin(node, self._store_node)
+        xmlutil.xmltraverse_thin(node, self._store_node)
         return True
 
     def remove_xml(self, node):
-        xmltraverse_thin(node, self._drop_node)
+        xmlutil.xmltraverse_thin(node, self._drop_node)
 
     def replace_xml(self, oldnode, newnode):
         self.remove_xml(oldnode)

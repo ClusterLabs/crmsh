@@ -21,12 +21,15 @@ import shlex
 import getopt
 import atexit
 
-from utils import *
+from utils import wait4dc, is_pcmk_118, is_program
 from userprefs import Options, UserPrefs
 from vars import Vars
 from ui import cmd_exit
-from msg import *
+from msg import ErrorBuffer, syntax_err, skill_err
+from msg import common_warn, common_info, common_debug, common_err
 from levels import Levels
+
+user_args = None  # assigned in run()
 
 
 def load_rc(rcfile):

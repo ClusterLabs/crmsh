@@ -21,6 +21,7 @@ from lxml import etree
 from singletonmixin import Singleton
 from userprefs import Options, UserPrefs
 from vars import Vars
+from utils import ext_cmd
 from cliformat import *
 from utils import *
 from xmlutil import *
@@ -2314,7 +2315,7 @@ class CibFactory(Singleton):
     def _replace_cib(self, force):
         try:
             conf_el = self.cib_elem.findall("configuration")[0]
-        except IndexErr:
+        except IndexError:
             common_error("cannot find the configuration element")
             return False
         if self.new_schema and not self._update_schema():
@@ -3050,8 +3051,7 @@ class CibFactory(Singleton):
         self._push_state()
         if not self._set_update(edit_d, mk_set, upd_set, del_set, upd_type):
             if not self._pop_state():
-                # this should never happen!
-                raise()
+                raise "this should never happen!"
             return False
         self._drop_state()
         return True

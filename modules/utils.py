@@ -16,6 +16,7 @@
 #
 
 import os
+import sys
 from tempfile import mkstemp
 import subprocess
 import re
@@ -27,7 +28,7 @@ import bz2
 from userprefs import Options, UserPrefs
 from vars import Vars
 from term import TerminalController
-from msg import *
+from msg import common_warn, common_info, common_debug, common_err
 
 
 def is_program(prog):

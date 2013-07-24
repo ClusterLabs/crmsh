@@ -20,7 +20,7 @@ import re
 from cache import WCache
 from utils import odict, page_string
 from vars import Vars
-from msg import *
+from msg import common_info, common_err, common_debug, common_warn
 
 # this table needs to match cmd_table of TopLevel in ui.py
 init_help_tab = {

@@ -17,8 +17,7 @@
 
 import re
 from vars import Vars
-from utils import *
-from msg import *
+from msg import common_err, common_info, common_warn
 
 
 def get_var(l, key):
