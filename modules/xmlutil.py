@@ -843,7 +843,7 @@ def rename_rscref_rset(c_obj, old_id, new_id):
             c_obj.updated = True
             c_modified = True
         if not rsc_id in d:
-            d[rsc_id] = 0
+            d[rsc_id] = 1
         else: 
             d[rsc_id] += 1
     rset_uniq(c_obj, d)
