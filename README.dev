@@ -1,6 +1,8 @@
+== The manifest
+
 This is the list of all modules including short descriptions.
 
-== Main
+=== Main
 
 crm::
 
@@ -15,50 +17,60 @@ modules/main.py::
 modules/levels.py::
 
 	Levels (collections of commands) hierarchy. Takes care of the
-	prompt and the stack of levels.
+	prompt and moving back and forth through levels.
 
-== User interface
+=== User interface
 
 modules/ui.py.in::
 
 	User interface. All levels and commands are implemented here.
+	The starting point is the +TopLevel+ class (the root level).
+	For instance, other +UserInterface+ subclasses include
+	+RscMgmt+, +RA+, and +CibConfig+. The code should be mostly
+	straightforward.
 
 modules/completion.py::
 
-	Tab completion for interactive use. Can show parts of the RA
-	metadata. Quite convoluted at some spots.
+	Tab completion for interactive use. The list of all
+	completers is in the +completer_lists+ dictionary. It is used
+	by +Levels+ to create a completion table. Can show parts of
+	the RA metadata or other help texts. Quite convoluted at some
+	spots and otherwise trivial.
 
 modules/help.py.in::
 
 	Reads help from a text file and presents parts of it in
 	response to the help command. The text file has special
-	anchors to demarcate help topics and command help text.
+	anchors to demarcate help topics and command help text. See
+	the +HelpSystem+ class for more information.
 
 doc/crm.8.txt::
 
 	Online help in asciidoc format. Several help topics (search
 	for +[[topic_+) and command reference (search for
 	+[[cmdhelp_+). Every user interface change needs to be
-	reflected here. A source for the man page too.
+	reflected here. _Actually, every user interface change has to
+	start here_. A source for the +crm(8)+ man page too.
 
-== Global variables
+=== Global variables
 
 modules/vars.py.in::
 
-	Global constants and variables (it would be good to
-	separate the two).
+	Global constants (mostly) and (a few) variables (it would be
+	good to separate the two).
 
 modules/userprefs.py::
 
-	User preferences. Keeps also options variables and defaults.
+	User preferences. Keeps also user options passed on the
+	command line.
 
-== CIB configuration editing and management
+=== CIB configuration editing and management
 
 modules/cibconfig.py::
 
-	Configuration (CIB) manager. Implements most of the
-	configure level. The bigest and the most complex part. There
-	are three major classes:
+	Configuration (CIB) manager. Implements the configure level.
+	The bigest and the most complex part. There are three major
+	classes:
 
 	+CibFactory+::: operations on the CIB or parts of it.
 
@@ -71,14 +83,11 @@ modules/cibconfig.py::
 	elements. Two subclasses with CLI and XML presentations
 	of cib elements. Most operations are going via these
 	subclasses (+show+, +edit+, +save+, +filter+).
-	NB: At times, some +CibObject+ instances need access to
-	+CibFactory+, which is obviously less than optimal. Some
-	of those can probably be replaced.
 
 modules/idmgmt.py::
 
 	CIB id management. Guarantees that all ids are unique.
-	Mainly a helper for CibFactory.
+	A helper for CibFactory.
 
 modules/parse.py::
 
@@ -97,14 +106,14 @@ modules/crm_gv.py::
 
 	Interface to GraphViz. Generates graph specs for dotty(1).
 
-== CIB status editing
+=== CIB status editing
 
 modules/cibstatus.py::
 
 	CIB status section editor and manipulator (cibstatus
 	level). Interface to crm_simulate.
 
-== Resource agents
+=== Resource agents
 
 modules/ra.py::
 
@@ -114,19 +123,19 @@ modules/rsctest.py::
 
 	Resource tester (configure rsctest command).
 
-== Cluster history
+=== Cluster history
 
 modules/report.py::
 
-	Cluster history. Interface to logs and other relevant
-	artifacts left on disk by the cluster.
+	Cluster history. Interface to logs and other artifacts left
+	on disk by the cluster.
 
 modules/log_patterns.py, log_patterns_118.py::
 
 	Pacemaker subsystems' log patterns. For versions earlier than
 	1.1.8 and the latter.
 
-== Auxiliary
+=== Auxiliary
 
 modules/singletonmixin.py::
 
@@ -162,3 +171,87 @@ modules/utils.py::
 modules/xmlutil.py::
 
 	A bag of useful XML functions. Needs more order.
+
+== Code improvements
+
+These are some thoughts on how to improve maintainability and
+make crmsh nicer. Mostly for people looking at the code, the
+users shouldn't notice much (or any) difference.
+
+Everybody's invited to comment and make further suggestions, in
+particular experienced pythonistas.
+
+=== Parser
+
+	- the current parser is just awful
+
+	- the parser should be implemented in one of the existing
+	  python parsing libraries/tools, such as PLY or pyparsing
+	  (need to investigate which would be the easiest to apply
+	  for the crmsh language)
+
+	- proper parser should allow easier updates and easier
+	  language extension (currently, crmsh doesn't support
+	  some date rule constructs)
+
+	- make sure that the new parser is not significantly slower
+	  from the existing!
+
+=== Syntax highlighting
+
+	- syntax highlighting is done before producing output, which
+	  is basically wrong and makes code convoluted; it further
+	  makes extra processing more difficult
+
+	- use a python library (pygments seems to be the best
+	  candidate); that should also allow other output formats
+	  (not only terminal)
+
+	- how to extend pygments to understand a new language? it'd
+	  be good to be able to get this _without_ pushing the parser
+	  upstream (that would take _long_ to propagate to
+	  distributions)
+
+=== Language class
+
+	- the crmsh language is packed just as a list of lists of
+	  lists or thereabouts, which is not very convenient (in
+	  particular for debugging); it actually used to be a dict,
+	  then dicts wouldn't do as they don't guarantee order and I
+	  didn't know at the time about ordered dictionaries
+
+	- a class to capture the language should help
+
+=== Configuration edit is complex
+
+	- at the time it didn't seem like anything less would do, but
+	  it's worth revising
+	  (done in changeset 12acfbfe94c6)
+
+=== XML production is ugly
+
+	- due in part to preserving all XML ids (which may not be
+	  necessary, but makes comparing XMLs for equality easier)
+
+	- some kind of production rules set and a general XML machine
+	  would be preferable
+
+=== CibFactory is huge
+
+	- this is a single central CIB class, it'd be good to have it
+	  split into several smaller classes (how?)
+
+=== The element create/update procedure is complex
+
+	- not sure how to improve this
+
+=== Bad namespace separation
+
+	- xmlutil and utils are just a loose collection of functions,
+	  need to be organized better (get rid of 'from xyz import *')
+
+=== Add more comments
+
+	- in particular describe how CibObjectSet, CibObject, and
+	  CibFactory work together (that's the core of the configure
+	  level)
