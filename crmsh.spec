@@ -35,11 +35,13 @@ Requires(pre):	pacemaker
 Requires:	python >= 2.4
 Requires:	python-dateutil
 Requires:       pssh
+Requires:       python-lxml
+BuildRequires:  python-lxml
 
 %if 0%{?suse_version}
 # Suse splits this off into a separate package
-Requires:       python-curses python-xml
-BuildRequires:  python-curses python-xml
+Requires:       python-curses
+BuildRequires:  python-curses
 BuildRequires:	libpacemaker-devel libglue-devel
 %else
 BuildRequires:	pacemaker-libs-devel cluster-glue-libs-devel
