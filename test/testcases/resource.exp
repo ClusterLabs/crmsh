@@ -1,13 +1,16 @@
 .TRY resource status p0
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_resource -W -r 'p0'
 resource p0 is NOT running
 .SETENV showobj=p3
 .TRY resource start p3
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p3
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="3" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -23,11 +26,13 @@ resource p0 is NOT running
 </cib>
 
 .TRY resource stop p3
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p3
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="4" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -44,11 +49,13 @@ resource p0 is NOT running
 
 .SETENV showobj=c1
 .TRY resource manage c1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml c1
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="5" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -65,11 +72,13 @@ resource p0 is NOT running
 </cib>
 
 .TRY resource unmanage c1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml c1
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="6" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -87,12 +96,14 @@ resource p0 is NOT running
 
 .SETENV showobj=cli-prefer-p3
 .TRY resource migrate p3 node1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_resource -M -r 'p3' --node='node1'
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml cli-prefer-p3
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="7" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -105,15 +116,18 @@ resource p0 is NOT running
 
 .SETENV showobj=
 .TRY resource unmigrate p3
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_resource -U -r 'p3'
 .SETENV showobj=cli-prefer-p3
 .TRY resource migrate p3 node1 force
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_resource -M -r 'p3' --node='node1' --force
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml cli-prefer-p3
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="9" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -126,15 +140,18 @@ resource p0 is NOT running
 
 .SETENV showobj=
 .TRY resource unmigrate p3
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_resource -U -r 'p3'
 .SETENV showobj=p0
 .TRY resource param p0 set a0 "1 2 3"
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_resource -r 'p0' -p 'a0' -v '1 2 3'
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="11" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -150,13 +167,15 @@ resource p0 is NOT running
 </cib>
 
 .TRY resource param p0 show a0
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_resource -r 'p0' -g 'a0'
 1 2 3
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="11" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -172,13 +191,15 @@ resource p0 is NOT running
 </cib>
 
 .TRY resource param p0 delete a0
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_resource -r 'p0' -d 'a0'
 Deleted p0 option: id=p0-instance_attributes-a0 name=a0
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="12" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -190,12 +211,14 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
 </cib>
 
 .TRY resource meta p0 set m0 123
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_resource --meta -r 'p0' -p 'm0' -v '123'
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="13" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -211,13 +234,15 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
 </cib>
 
 .TRY resource meta p0 show m0
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_resource --meta -r 'p0' -g 'm0'
 123
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="13" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -233,13 +258,15 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
 </cib>
 
 .TRY resource meta p0 delete m0
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_resource --meta -r 'p0' -d 'm0'
 Deleted p0 option: id=p0-meta_attributes-m0 name=m0
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="14" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -251,11 +278,13 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY configure group g p0 p3
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="16" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -274,11 +303,13 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY options manage-children never
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="16" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -297,11 +328,13 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource start g
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="17" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -323,11 +356,13 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource start p0
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="18" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -353,11 +388,13 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource stop g
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="19" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -383,11 +420,13 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY configure clone cg g
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="21" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -415,11 +454,13 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY options manage-children always
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="21" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -447,11 +488,13 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource start g
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="22" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -475,11 +518,13 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource stop g
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="23" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -499,11 +544,13 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource start cg
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="24" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -523,11 +570,13 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource stop p0
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="25" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -551,11 +600,13 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource start cg
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="26" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -575,11 +626,13 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource stop cg
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="27" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>

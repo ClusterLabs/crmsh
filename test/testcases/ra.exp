@@ -1,4 +1,5 @@
 .TRY RA interface
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: ra
 .INP: providers IPaddr
 heartbeat

@@ -1,12 +1,12 @@
 <?xml version="1.0" ?>
-<cib num_updates="1" dc-uuid="f36760d8-d84a-46b2-b452-4c8cac8b3396" crm_feature_set="3.0.1" validate-with="pacemaker-1.1" remote-tls-port="0" epoch="2" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009" have-quorum="1">
+<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config>
-      <cluster_property_set id="cpset2">
-        <nvpair name="maintenance-mode" value="true" id="cpset2-maintenance-mode"/>
-      </cluster_property_set>
       <cluster_property_set id="cib-bootstrap-options">
         <nvpair name="stonith-enabled" value="true" id="cib-bootstrap-options-stonith-enabled"/>
+      </cluster_property_set>
+      <cluster_property_set id="cpset2">
+        <nvpair name="maintenance-mode" value="true" id="cpset2-maintenance-mode"/>
       </cluster_property_set>
     </crm_config>
     <nodes>

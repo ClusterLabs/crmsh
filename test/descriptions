@@ -25,6 +25,9 @@ describe_showxml() {
 describe_session() {
 	echo $lead $*
 }
+describe_filesession() {
+	echo $lead $*
+}
 describe_single() {
 	echo $lead $*
 }

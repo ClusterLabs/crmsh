@@ -23,6 +23,6 @@ SUBDIRS = testcases
 testdir		= 	$(datadir)/$(PACKAGE)/tests
 test_SCRIPTS	=	regression.sh evaltest.sh
 test_DATA	=	README.regression defaults descriptions \
-			crm-interface empty.xml history-test.tar.bz2
+			crm-interface history-test.tar.bz2
 #				shouldn't need this, but we do for some versions of autofoo tools
 EXTRA_DIST	=	$(test_SCRIPTS) $(test_DATA)

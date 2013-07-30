@@ -1,4 +1,5 @@
 .TRY configure save sample.txt
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT cat sample.txt
 node node1
 primitive p0 ocf:pacemaker:Dummy
@@ -13,13 +14,17 @@ clone c1 p1
 property $id="cib-bootstrap-options" \
 	default-action-timeout="60s"
 .TRY configure erase nodes
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .TRY configure load replace sample.txt
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .TRY Load update
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: erase
 .INP: erase nodes
 .INP: load update sample.txt
 .TRY configure show
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 node node1
 primitive p0 ocf:pacemaker:Dummy
 primitive p1 ocf:pacemaker:Dummy

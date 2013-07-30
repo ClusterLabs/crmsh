@@ -1,4 +1,5 @@
 .TRY Resource sets
+.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: erase

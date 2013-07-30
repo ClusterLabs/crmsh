@@ -15,16 +15,28 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+CIB=__crmsh_regtest
+
+filter_epoch() {
+	sed '/^<cib /s/ epoch="[0-9]*"/ epoch="1"/'
+}
+filter_date() {
+	sed '/^<cib /s/cib-last-written=".*"/cib-last-written="Sun Apr 12 21:37:48 2009"/'
+}
+filter_cib() {
+	sed -n '/^<?xml/,/^<\/cib>/p' | filter_date | filter_epoch
+}
+
 crm_setup() {
 	$CRM_NO_REG options check-frequency on-verify
 	$CRM_NO_REG options check-mode relaxed
+	$CRM_NO_REG cib delete $CIB 2>/dev/null
 }
+
 crm_mksample() {
-	cp empty.xml sample.xml
-	CIB_file=sample.xml $CRM_NO_REG<<EOF
+	$CRM_NO_REG cib new $CIB empty 2>/dev/null
+	$CRM_NO_REG -c $CIB<<EOF
 configure
-erase
-erase nodes
 node node1
 primitive p0 ocf:pacemaker:Dummy
 primitive p1 ocf:pacemaker:Dummy
@@ -40,7 +52,7 @@ end
 EOF
 }
 crm_show() {
-	CIB_file=sample.xml $CRM<<EOF
+	$CRM -c $CIB<<EOF
 configure
 _regtest on
 erase
@@ -51,7 +63,7 @@ commit
 EOF
 }
 crm_showxml() {
-	CIB_file=sample.xml $CRM<<EOF | sed -n '/^<?xml/,/^<\/cib>/p'
+	$CRM -c $CIB<<EOF | filter_cib
 configure
 _regtest on
 erase
@@ -62,15 +74,23 @@ commit
 EOF
 }
 crm_session() {
-	CIB_file=sample.xml $CRM <<EOF
+	$CRM -c $CIB <<EOF
 `cat`
 EOF
 }
+crm_filesession() {
+	local _file=`mktemp`
+	$CRM -c $CIB configure save xml $_file
+	CIB_file=$_file $CRM <<EOF
+`cat`
+EOF
+	rm -f $_file
+}
 crm_single() {
-	CIB_file=sample.xml $CRM $*
+	$CRM -c $CIB $*
 }
 crm_showobj() {
-	CIB_file=sample.xml $CRM<<EOF
+	$CRM -c $CIB<<EOF | filter_date | filter_epoch
 configure
 _regtest on
 show xml $1

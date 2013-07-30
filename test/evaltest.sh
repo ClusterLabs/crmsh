@@ -120,7 +120,7 @@ while read cmd rest; do
 		"#"*) : a comment ;;
 		"%stop") break ;;
 		"%"*) specopt ;;
-		show|showxml|session) runtest_session $rest ;;
+		show|showxml|session|filesession) runtest_session $rest ;;
 		*) runtest_single $cmd $rest ;;
 	esac
 	line=$(($line+1))
