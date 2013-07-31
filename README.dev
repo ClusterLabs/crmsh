@@ -255,3 +255,11 @@ particular experienced pythonistas.
 	- in particular describe how CibObjectSet, CibObject, and
 	  CibFactory work together (that's the core of the configure
 	  level)
+
+=== Fix incorrect use of CibFactory.is_cib_sane()
+
+    - This function should only be used internally in CibFactory, and
+      should be called from every entry point into the class: It
+      handles lazy initialization of the cib. Right now it is used
+      from ui.py.in as well. Also, the error handling if it fails
+      needs to be cleaned up.
