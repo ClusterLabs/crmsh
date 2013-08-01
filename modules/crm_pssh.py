@@ -24,7 +24,8 @@ from psshlib.manager import Manager, FatalError
 from psshlib.task import Task
 from psshlib.cli import common_parser, common_defaults
 
-from msg import *
+from msg import common_err, common_debug, common_warn
+
 
 _DEFAULT_TIMEOUT = 60
 _EC_LOGROT = 120

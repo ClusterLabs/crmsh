@@ -16,9 +16,10 @@
 #
 
 import os
-from utils import *
-from xmlutil import *
-from msg import *
+import sys
+from msg import common_err, common_debug, common_warn, common_info
+from utils import rmdir_r
+from xmlutil import get_topmost_rsc, get_op_timeout, get_child_nvset_node, is_ms, is_cloned
 
 
 #

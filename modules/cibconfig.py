@@ -17,15 +17,13 @@
 
 import copy
 from lxml import etree
-
+import os
+import sys
+import re
+import time
 from singletonmixin import Singleton
 from userprefs import Options, UserPrefs
 from vars import Vars
-from utils import ext_cmd
-from cliformat import *
-from utils import *
-from xmlutil import *
-from msg import *
 from parse import CliParser
 from clidisplay import CliDisplay
 from cibstatus import CibStatus
@@ -33,6 +31,28 @@ from idmgmt import IdMgmt
 from ra import get_ra, get_properties_list, get_pe_meta
 from schema import Schema, rng_attr_values, rng_attr_values_l
 from crm_gv import gv_types
+from msg import common_warn, common_err, common_debug, common_info, ErrorBuffer
+from msg import common_error, constraint_norefobj_err, obj_cli_warn, cib_parse_err, no_object_err
+from msg import missing_obj_err, common_warning, update_err, unsupported_err, empty_cib_err
+from msg import invalid_id_err, cib_ver_unsupported_err
+from utils import ext_cmd, safe_open_w, pipe_string, safe_close_w, crm_msec
+from utils import ask, lines2cli, cli_append_attr, cli_replace_attr, olist, odict
+from utils import keyword_cmp, page_string, cibadmin_can_patch, str2tmp, vars
+from utils import run_ptest, is_id_valid, edit_file, get_boolean, filter_string, find_value
+from xmlutil import is_child_rsc, rsc_constraint, sanitize_cib, rename_id, get_interesting_nodes
+from xmlutil import is_pref_location, get_topnode, new_cib, get_rscop_defaults_meta_node
+from xmlutil import rename_rscref, is_ms, silly_constraint, is_container, fix_comments
+from xmlutil import sanity_check_nvpairs, merge_nodes, op2list, mk_rsc_type, is_resource
+from xmlutil import stuff_comments, is_comment, is_constraint, read_cib, processing_sort_cli
+from xmlutil import find_operation, get_rsc_children_ids, is_primitive, referenced_resources
+from xmlutil import cibdump2elem, processing_sort, get_rsc_ref_ids, merge_nodes_2
+from xmlutil import remove_id_used_attributes, get_top_cib_nodes, set_id_used_attr
+from xmlutil import merge_attributes, is_cib_element, sanity_check_meta, add_missing_attr
+from xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
+from xmlutil import get_rsc_operations, delete_rscref, xml_cmp, lookup_node, RscState
+from cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
+from cliformat import cli_acl_rule, cli_pairs, rsc_set_constraint, cli_format_xml, get_kind
+from cliformat import cli_operations, simple_rsc_constraint, cli_rule, cli_format
 
 
 def show_unrecognized_elems(cib_elem):

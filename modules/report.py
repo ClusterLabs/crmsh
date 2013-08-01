@@ -25,10 +25,11 @@ import ConfigParser
 from singletonmixin import Singleton
 from userprefs import Options
 from vars import Vars, gethomedir
-from xmlutil import *
-from utils import *
-from msg import *
-
+from msg import common_debug, common_warn, common_err, common_error, common_info, warn_once
+from xmlutil import file2cib_elem, get_rsc_children_ids, get_prim_children_ids
+from utils import file2str, shortdate, acquire_lock, append_file, ext_cmd, shorttime
+from utils import page_string, release_lock, rmdir_r, parse_time, get_cib_attributes
+from utils import is_pcmk_118, pipe_cmd_nosudo, file_find_by_name, vars
 
 _NO_PSSH = False
 
@@ -36,6 +37,9 @@ try:
     from crm_pssh import next_loglines, next_peinputs
 except:
     _NO_PSSH = True
+
+
+YEAR = None
 
 
 #

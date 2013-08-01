@@ -17,9 +17,10 @@
 
 from vars import Vars
 from clidisplay import CliDisplay
-from xmlutil import *
-from utils import *
-from msg import *
+from msg import common_err, node_debug
+import utils
+from utils import vars
+import xmlutil
 
 
 #
@@ -114,7 +115,7 @@ def op_instattr(node):
 
 
 def cli_op(node):
-    action, pl = op2list(node)
+    action, pl = xmlutil.op2list(node)
     if not action:
         return ""
     pl += op_instattr(node)
@@ -126,8 +127,8 @@ def date_exp2cli(node):
     operation = node.get("operation")
     l.append(cli_display.keyword("date"))
     l.append(cli_display.keyword(operation))
-    if operation in olist(vars.simple_date_ops):
-        value = node.get(keyword_cmp(operation, 'lt') and "end" or "start")
+    if operation in utils.olist(vars.simple_date_ops):
+        value = node.get(utils.keyword_cmp(operation, 'lt') and "end" or "start")
         l.append('"%s"' % cli_display.attr_value(value))
     else:
         if operation == 'in_range':
@@ -244,8 +245,8 @@ def rsc_set_constraint(node, obj_type):
     cnt = 0
     for n in node.findall("resource_set"):
         add_seq = False
-        sequential = get_boolean(n.get("sequential"), True)
-        require_all = get_boolean(n.get("require-all"), True)
+        sequential = utils.get_boolean(n.get("sequential"), True)
+        require_all = utils.get_boolean(n.get("require-all"), True)
         if not require_all:
             col.append("[")
             if sequential:

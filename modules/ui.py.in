@@ -32,9 +32,10 @@ from template import LoadTemplate
 from cliformat import nvpairs2list, cli_format
 from rsctest import test_resources
 from msg import common_error, common_err, common_info, common_debug, common_warn
-from msg import syntax_err, bad_usage
+from msg import syntax_err, bad_usage, no_prog_err
 from msg import UserPrefs, Options, ErrorBuffer
 import utils
+from utils import vars
 import ra
 import glob
 import xmlutil
@@ -284,7 +285,7 @@ class CibShadow(UserInterface):
         try:
             utils.ext_cmd("%s 2>&1" % self.extcmd)
         except os.error:
-            utils.no_prog_err(self.extcmd)
+            no_prog_err(self.extcmd)
             return False
         return True
 
@@ -2708,7 +2709,7 @@ class Site(UserInterface):
         try:
             attr_cmd = self.crm_ticket[subcmd]
         except KeyError:
-            utils.bad_usage(cmd, '%s %s' % (subcmd, ticket))
+            bad_usage(cmd, '%s %s' % (subcmd, ticket))
             return False
         if not utils.is_name_sane(ticket):
             return False
