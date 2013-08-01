@@ -19,6 +19,7 @@ import os
 import pwd
 import sys
 from singletonmixin import Singleton
+import config
 
 
 def getpwdent():
@@ -279,15 +280,15 @@ class Vars(Singleton):
     config_home = os.path.join(config_home, "crm")
     cache_home = os.path.join(cache_home, "crm")
     graphviz_user_file = os.path.join(config_home, "graphviz")
-    report_cache = os.path.join("@CRM_CACHE_DIR@", "history")
-    tmpl_dir = "@datadir@/@PACKAGE@/templates"
-    crm_schema_dir = "@CRM_DTD_DIRECTORY@"
-    pe_dir = "@PE_STATE_DIR@"
-    crm_conf_dir = "@CRM_CONFIG_DIR@"
-    crm_daemon_dir = "@CRM_DAEMON_DIR@"
-    crm_daemon_user = "@CRM_DAEMON_USER@"
-    crm_version = "@VERSION@ (Build @BUILD_VERSION@)"
-    ha_varlib_dir = "@HA_VARLIBHBDIR@"
+    report_cache = os.path.join(config.CRM_CACHE_DIR, "history")
+    tmpl_dir = os.path.join(config.DATADIR, config.PACKAGE, "templates")
+    crm_schema_dir = config.CRM_DTD_DIRECTORY
+    pe_dir = config.PE_STATE_DIR
+    crm_conf_dir = config.CRM_CONFIG_DIR
+    crm_daemon_dir = config.CRM_DAEMON_DIR
+    crm_daemon_user = config.CRM_DAEMON_USER
+    crm_version = "%s (Build %s)" % (config.VERSION, config.BUILD_VERSION)
+    ha_varlib_dir = config.HA_VARLIBHBDIR
     nagios_dir = "/usr/lib/nagios/plugins"
 
     simulate_programs = {
@@ -311,7 +312,7 @@ class Vars(Singleton):
     )
     ocf_root = os.getenv("OCF_ROOT")
     if not ocf_root:
-        ocf_root = "@OCF_ROOT_DIR@"
+        ocf_root = config.OCF_ROOT_DIR
         if not ocf_root:
             ocf_root = "/usr/lib/ocf"
         os.environ["OCF_ROOT"] = ocf_root

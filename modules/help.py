@@ -21,6 +21,7 @@ from cache import WCache
 from utils import odict, page_string
 from vars import Vars
 from msg import common_info, common_err, common_debug, common_warn
+import config
 
 # this table needs to match cmd_table of TopLevel in ui.py
 init_help_tab = {
@@ -158,7 +159,7 @@ class HelpSystem(object):
 
     [[cmdhelp_<level>,<short help text>]]
     '''
-    help_text_file = "@datadir@/@PACKAGE@/crm.8.txt"
+    help_text_file = os.path.join(config.DATADIR, config.PACKAGE, "crm.8.txt")
     topics_tok = "topics"
 
     def __init__(self):

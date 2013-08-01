@@ -39,6 +39,7 @@ from utils import vars
 import ra
 import glob
 import xmlutil
+import config
 
 
 def cmd_end(cmd, dir=".."):
@@ -1209,7 +1210,7 @@ class NodeMgmt(UserInterface):
     node_delete = "cibadmin -D -o nodes -X '<node uname=\"%s\"/>'"
     node_delete_status = "cibadmin -D -o status -X '<node_state uname=\"%s\"/>'"
     node_clear_state = "cibadmin %s -o status --xml-text '<node_state id=\"%s\" uname=\"%s\" ha=\"active\" in_ccm=\"false\" crmd=\"offline\" join=\"member\" expected=\"down\" crm-debug-origin=\"manual_clear\" shutdown=\"0\"/>'"
-    hb_delnode = "@datadir@/heartbeat/hb_delnode '%s'"
+    hb_delnode = config.DATADIR + "/heartbeat/hb_delnode '%s'"
     crm_node = "crm_node"
     node_fence = "crm_attribute -t status -U '%s' -n terminate -v true"
     dc = "crmadmin -D"
