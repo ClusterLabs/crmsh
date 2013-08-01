@@ -278,9 +278,7 @@ templates/Makefile				\
 test/Makefile				\
 	test/testcases/Makefile			\
 modules/Makefile					\
-	modules/ui.py					\
-	modules/vars.py					\
-	modules/help.py					\
+	modules/config.py					\
 	)
 
 dnl Now process the entire list of files added by previous 
