@@ -152,7 +152,7 @@ def parse_line(lvl, s):
             lvl.release()
             return False
     if cmd:  # found a terminal symbol
-        if not user_prefs.check_skill_level(cmd[2]):
+        if user_prefs.skill_level < cmd[2]:
             lvl.release()
             skill_err(s[i])
             return False
@@ -165,7 +165,7 @@ def parse_line(lvl, s):
         d = lambda: cmd[0](*args)
         rv = d()  # execute the command
         # should we wait till the command takes effect?
-        do_wait = user_prefs.get_wait() and rv != False and (cmd[3] == 1 or
+        do_wait = user_prefs.wait and rv != False and (cmd[3] == 1 or
             (lvl.current_level.should_wait() and \
             (lvl.is_in_transit() or not options.interactive)))
         lvl.release()
@@ -368,7 +368,7 @@ def do_work():
         # '...\'...\''  do work
         l = []
         for s in user_args:
-            if user_prefs.get_add_quotes() and ' ' in s:
+            if user_prefs.add_quotes and ' ' in s:
                 q = '"' in s and "'" or '"'
                 if not q in s:
                     s = "%s%s%s" % (q, s, q)
@@ -439,15 +439,15 @@ def run():
                 print >> sys.stdout, ("%s" % vars.crm_version)
                 sys.exit(0)
             elif o == "-d":
-                user_prefs.set_debug()
+                user_prefs.debug = "yes"
             elif o == "-X":
                 options.profile = p
             elif o == "-R":
                 options.regression_tests = True
             elif o in ("-D", "--display"):
-                user_prefs.set_output(p)
+                user_prefs.output = p
             elif o in ("-F", "--force"):
-                user_prefs.set_force()
+                user_prefs.force = "yes"
             elif o in ("-f", "--file"):
                 options.batch = True
                 options.interactive = False

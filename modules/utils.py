@@ -172,8 +172,8 @@ def listconfigs():
 
 
 def add_sudo(cmd):
-    if user_prefs.crm_user:
-        return "sudo -E -u %s %s" % (user_prefs.crm_user, cmd)
+    if user_prefs.user:
+        return "sudo -E -u %s %s" % (user_prefs.user, cmd)
     return cmd
 
 

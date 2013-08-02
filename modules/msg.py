@@ -89,7 +89,7 @@ class ErrorBuffer(Singleton):
         self.writemsg("INFO: %s" % self.add_lineno(s))
 
     def debug(self, s):
-        if user_prefs.get_debug():
+        if user_prefs.debug:
             self.writemsg("DEBUG: %s" % self.add_lineno(s))
 
 
@@ -188,8 +188,7 @@ def id_used_err(node_id):
 
 
 def skill_err(s):
-    err_buf.error("%s: this command is not allowed at this skill level" %
-                  ' '.join(s))
+    err_buf.error("%s: this command is not allowed at this skill level" % s)
 
 
 def syntax_err(s, token='', context=''):

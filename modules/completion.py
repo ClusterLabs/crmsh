@@ -243,31 +243,31 @@ def lrm_status_codes_list(idx, delimiter=False):
 def skills_list(idx, delimiter=False):
     if delimiter:
         return ' '
-    return user_prefs.skill_levels.keys()
+    return user_prefs.choice_list("skill_level")
 
 
 def output_types_list(idx, delimiter=False):
     if delimiter:
         return ' '
-    return user_prefs.output_types
+    return user_prefs.choice_list("output")
 
 
 def check_frequency_list(idx, delimiter=False):
     if delimiter:
         return ' '
-    return user_prefs.check_frequencies
+    return user_prefs.choice_list("check_frequency")
 
 
 def check_mode_list(idx, delimiter=False):
     if delimiter:
         return ' '
-    return user_prefs.check_modes
+    return user_prefs.choice_list("check_mode")
 
 
 def manage_children_list(idx, delimiter=False):
     if delimiter:
         return ' '
-    return user_prefs.manage_children_options
+    return user_prefs.choice_list("manage_children")
 
 
 def yesno_list(idx, delimiter=False):

@@ -192,60 +192,51 @@ class CliOptions(UserInterface):
     def set_skill_level(self, cmd, skill_level):
         """usage: skill-level <level>
         level: operator | administrator | expert"""
-        return user_prefs.set_skill_level(skill_level)
+        return user_prefs.set_pref("skill-level", skill_level)
 
     def set_editor(self, cmd, prog):
         "usage: editor <program>"
-        return user_prefs.set_editor(prog)
+        return user_prefs.set_pref("editor", prog)
 
     def set_pager(self, cmd, prog):
         "usage: pager <program>"
-        return user_prefs.set_pager(prog)
+        return user_prefs.set_pref("pager", prog)
 
     def set_crm_user(self, cmd, user=''):
         "usage: user [<crm_user>]"
-        return user_prefs.set_crm_user(user)
+        return user_prefs.set_pref("user", user)
 
     def set_output(self, cmd, otypes):
         "usage: output <type>"
-        return user_prefs.set_output(otypes)
+        return user_prefs.set_pref("output", otypes)
 
     def set_colors(self, cmd, scheme):
         "usage: colorscheme <colors>"
-        return user_prefs.set_colors(scheme)
+        return user_prefs.set_pref("colorscheme", scheme)
 
     def set_check_frequency(self, cmd, freq):
-        "usage: check-frequence <freq>"
-        return user_prefs.set_check_freq(freq)
+        "usage: check-frequency <freq>"
+        return user_prefs.set_pref("check-frequency", freq)
 
     def set_check_mode(self, cmd, mode):
         "usage: check-mode <mode>"
-        return user_prefs.set_check_mode(mode)
+        return user_prefs.set_pref("check-mode", mode)
 
     def set_sort_elements(self, cmd, opt):
         "usage: sort-elements {yes|no}"
-        if not utils.verify_boolean(opt):
-            common_err("%s: bad boolean option" % opt)
-            return True
-        return user_prefs.set_sort_elems(opt)
+        return user_prefs.set_pref("sort-elements", opt)
 
     def set_wait(self, cmd, opt):
         "usage: wait {yes|no}"
-        if not utils.verify_boolean(opt):
-            common_err("%s: bad boolean option" % opt)
-            return True
-        return user_prefs.set_wait(opt)
+        return user_prefs.set_pref("wait", opt)
 
     def set_add_quotes(self, cmd, opt):
         "usage: add-quotes {yes|no}"
-        if not utils.verify_boolean(opt):
-            common_err("%s: bad boolean option" % opt)
-            return True
-        return user_prefs.set_add_quotes(opt)
+        return user_prefs.set_pref("add-quotes", opt)
 
     def set_manage_children(self, cmd, opt):
         "usage: manage-children <option>"
-        return user_prefs.set_manage_children(opt)
+        return user_prefs.set_pref("manage-children", opt)
 
     def show_options(self, cmd):
         "usage: show"
@@ -302,7 +293,7 @@ class CibShadow(UserInterface):
             new_cmd = "%s -e '%s'" % (self.extcmd, name)
         else:
             new_cmd = "%s -c '%s'" % (self.extcmd, name)
-        if user_prefs.get_force() or "force" in args or "--force" in args:
+        if user_prefs.force or "force" in args or "--force" in args:
             new_cmd = "%s --force" % new_cmd
         if utils.ext_cmd(new_cmd) == 0:
             common_info("%s shadow CIB created" % name)
@@ -437,7 +428,7 @@ class CibShadow(UserInterface):
             # user made changes and now wants to switch to a
             # different and unequal CIB; we refuse to cooperate
             common_err("the requested CIB is different from the current one")
-            if user_prefs.get_force():
+            if user_prefs.force:
                 common_info("CIB overwrite forced")
             elif not utils.ask("All changes will be dropped. Do you want to proceed?"):
                 self._use(saved_cib, '')  # revert to the previous CIB
@@ -668,7 +659,7 @@ class Template(UserInterface):
         if not self.config_exists(name):
             return False
         if name == self.curr_conf:
-            if not force and not user_prefs.get_force() and \
+            if not force and not user_prefs.force and \
                     not utils.ask("Do you really want to remove config %s which is in use?" % self.curr_conf):
                 return False
             else:
@@ -827,13 +818,13 @@ def set_deep_meta_attr_node(target_node, attr, value):
         for c in target_node.iterchildren():
             if xmlutil.is_child_rsc(c):
                 rm_meta_attribute(c, attr, nvpair_l)
-    if user_prefs.get_manage_children() != "never" and \
+    if user_prefs.manage_children != "never" and \
             (xmlutil.is_group(target_node) or \
             (xmlutil.is_clone(target_node) and xmlutil.cloned_el(target_node) == "group")):
         odd_children = get_children_with_different_attr(target_node, attr, value)
         for c in odd_children:
-            if user_prefs.get_manage_children() == "always" or \
-                    (user_prefs.get_manage_children() == "ask" and \
+            if user_prefs.manage_children == "always" or \
+                    (user_prefs.manage_children == "ask" and \
                     utils.ask("Do you want to override %s for child resource %s?" % (attr, c.get("id")))):
                 common_debug("force remove meta attr %s from %s" %
                              (attr, c.get("id")))
@@ -854,7 +845,7 @@ def set_deep_meta_attr(attr, value, rsc_id):
     If it's a group then check its children. If any of them has
     the attribute set to a value different from the one given,
     then ask the user whether to reset them or not (exact
-    behaviour depends on the value of user_prefs.get_manage_children()).
+    behaviour depends on the value of user_prefs.manage_children).
     '''
     target_node = xmlutil.RscState().rsc2node(rsc_id)
     if target_node is None:
@@ -1035,7 +1026,7 @@ class RscMgmt(UserInterface):
             opts = "--node='%s'" % node
         if lifetime:
             opts = "%s --lifetime='%s'" % (opts, lifetime)
-        if "force" in opt_l or user_prefs.get_force():
+        if "force" in opt_l or user_prefs.force:
             opts = "%s --force" % opts
         return utils.ext_cmd(self.rsc_migrate % (rsc, opts)) == 0
 
@@ -1346,7 +1337,7 @@ class NodeMgmt(UserInterface):
             node = vars.this_node
         if not utils.is_name_sane(node):
             return False
-        if not user_prefs.get_force() and \
+        if not user_prefs.force and \
                 not utils.ask("Do you really want to shoot %s?" % node):
             return False
         return utils.ext_cmd(self.node_fence % (node)) == 0
@@ -1355,7 +1346,7 @@ class NodeMgmt(UserInterface):
         'usage: clearstate <node>'
         if not utils.is_name_sane(node):
             return False
-        if not user_prefs.get_force() and \
+        if not user_prefs.force and \
                 not utils.ask("Do you really want to drop state for node %s?" % node):
             return False
         return utils.ext_cmd(self.node_clear_state % ("-M -c", node, node)) == 0 and \
@@ -1385,7 +1376,7 @@ class NodeMgmt(UserInterface):
                     rc = False
             cmd = "%s --force -R %s" % (self.crm_node, node)
         if not rc:
-            if user_prefs.get_force():
+            if user_prefs.force:
                 common_info('proceeding with node %s removal' % node)
             else:
                 return False
@@ -1900,7 +1891,6 @@ class CibConfig(UserInterface):
         # used
         user_prefs.ptest = vars.simulate_programs[cmd]
         if not user_prefs.ptest:
-            common_warn("neither ptest nor crm_simulate exist")
             return False
         set_obj = mkset_obj("xml")
         return ptestlike(set_obj.ptest, 'vv', cmd, args)
@@ -1923,7 +1913,7 @@ class CibConfig(UserInterface):
             self._verify(mkset_obj("xml", "changed"), mkset_obj("xml"))
         if rc1 and rc2:
             return cib_factory.commit()
-        if force or user_prefs.get_force():
+        if force or user_prefs.force:
             common_info("commit forced")
             return cib_factory.commit(force=True)
         if utils.ask("Do you still want to commit?"):
@@ -1937,7 +1927,7 @@ class CibConfig(UserInterface):
         if force and force != "force":
             syntax_err((cmd, force))
             return False
-        if user_prefs.get_force() or force:
+        if user_prefs.force or force:
             return cib_factory.upgrade_cib_06to10(True)
         else:
             return cib_factory.upgrade_cib_06to10()

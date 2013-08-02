@@ -43,123 +43,269 @@ def is_program(prog):
             return True
 
 
-def find_program(envvar, *args):
+def find_program(envvar, proglist):
     if envvar and os.getenv(envvar):
         return os.getenv(envvar)
-    for prog in args:
+    for prog in proglist:
         if is_program(prog):
             return prog
 
 
 def is_boolean_true(opt):
-    return opt.lower() in ("yes", "true", "on")
+    return opt.lower() in ("yes", "true", "on", "1")
+
+
+def is_boolean_false(opt):
+    return opt.lower() in ("no", "false", "off", "0")
+
+
+def is_boolean(opt):
+    return is_boolean_true(opt) or is_boolean_false(opt)
 
 
 def common_err(s):
     print >> sys.stderr, "ERROR: %s" % s
 
 
-class UserPrefs(Singleton):
+class Preference(object):
     '''
-    Keep user preferences here.
+    Single user preference. Includes default and validation. set
+    and get.
     '''
-    dflt_colorscheme = "yellow,normal,cyan,red,green,magenta".split(',')
-    skill_levels = {"operator": 0, "administrator": 1, "expert": 2}
-    output_types = ("plain", "color", "uppercase")
-    check_frequencies = ("always", "on-verify", "never")
-    check_modes = ("strict", "relaxed")
-    manage_children_options = ("ask", "never", "always")
 
-    def __init__(self):
-        self.skill_level = 2  # TODO: set back to 0?
-        self.editor = find_program("EDITOR", "vim", "vi", "emacs", "nano")
-        self.pager = find_program("PAGER", "less", "more", "pg")
-        self.dotty = find_program("", "dotty")
-        self.dot = find_program("", "dot")
-        self.ptest = find_program("", "ptest", "crm_simulate")
-        if not self.editor:
-            self.missing("editor")
-        if not self.pager:
-            self.missing("pager")
-        self.crm_user = ""
-        self.xmlindent = "  "  # two spaces
-        # keywords,ids,attribute names,values
-        self.colorscheme = self.dflt_colorscheme
-        # plain or color
-        self.output = ['color']
-        # the semantic checks preferences
-        self.check_frequency = "always"
-        self.check_mode = "strict"
-        self.debug = False
-        self.force = False
-        self.sort_elems = "yes"
-        self.wait = False
-        self.add_quotes = "yes"
-        self.manage_children = "ask"
+    def __init__(self, name, dflt, vtype):
+        self.name = name
+        self.dflt = dflt
+        self.vtype = vtype
+        self.reset()
 
-    def missing(self, n):
-        common_err("could not find any %s on the system" % n)
+    def validate(self, value):
+        '''
+        Is the value valid.
+        '''
+        return True
 
-    def check_skill_level(self, n):
-        return self.skill_level >= n
+    def _preproc(self, value):
+        '''Preprocess user's input'''
+        return value
 
-    def set_skill_level(self, skill_level):
-        if skill_level in self.skill_levels:
-            self.skill_level = self.skill_levels[skill_level]
-        else:
-            common_err("no %s skill level" % skill_level)
+    def set(self, value):
+        '''
+        Set the preference.
+        '''
+        if not self.validate(value):
             return False
+        self.value = self._preproc(value)
+        return True
 
-    def get_skill_level(self):
-        for s in self.skill_levels:
-            if self.skill_level == self.skill_levels[s]:
-                return s
+    def get(self):
+        'Return setting.'
+        return self.value
 
-    def set_editor(self, prog):
-        if is_program(prog):
-            self.editor = prog
+    def reset(self):
+        'Reset value.'
+        self.set(self.dflt)
+
+    def __str__(self):
+        'Return string representation.'
+        if isinstance(self.value, basestring):
+            return self.value
         else:
-            common_err("program %s does not exist" % prog)
+            return str(self.value)
+
+
+class StringOpt(Preference):
+    '''A string preference.'''  
+
+    def __init__(self, name, dflt, ignored):
+        Preference.__init__(self, name, dflt, "string")
+
+
+class ProgramOpt(Preference):
+    '''A program preference'''  
+
+    def __init__(self, name, envvar, proglist):
+        self.envvar = envvar
+        self.proglist = proglist
+        self.name = name
+        self.vtype = "program"
+        self.reset()
+
+    def validate(self, value):
+        '''Is the value valid.'''
+        if not is_program(value):
+            common_err("%s does not exist or is not a program" % value)
             return False
+        return True
 
-    def set_pager(self, prog):
-        if is_program(prog):
-            self.pager = prog
-        else:
-            common_err("program %s does not exist" % prog)
+    def reset(self):
+        '''Pick a program from a envvar, list.'''
+        self.value = find_program(self.envvar, self.proglist)
+
+
+class BooleanOpt(Preference):
+    '''A true/false preference.'''  
+
+    def __init__(self, name, dflt, ignored):
+        Preference.__init__(self, name, dflt, "boolean")
+
+    def validate(self, value):
+        '''Is the value valid.'''
+        if not is_boolean(value):
+            common_err("%s not valid (yes or no are valid)" % value)
             return False
+        return True
 
-    def set_crm_user(self, user=''):
-        self.crm_user = user
+    def get(self):
+        'Return setting.'
+        return is_boolean_true(self.value)
 
-    def set_output(self, otypes):
-        if not otypes:
-            otypes = "color"
-        l = otypes.split(',')
+
+class ChoiceOpt(Preference):
+    '''A string preference with limited choice.'''  
+
+    def __init__(self, name, dflt, choices):
+        self.choices = choices
+        Preference.__init__(self, name, dflt, "choice")
+
+    def validate(self, value):
+        '''Is the value valid.'''
+        if value not in self.choices:
+            common_err("%s not valid (choose one from %s)" %
+                (value, ','.join(self.choices)))
+        return (value in self.choices)
+
+
+class DictOpt(ChoiceOpt):
+    '''A skill level preference.'''  
+
+    def __init__(self, name, dflt, choices):
+        self.choices = choices
+        Preference.__init__(self, name, dflt, "dict")
+
+    def get(self):
+        'Return setting.'
+        try:
+            return self.choices[self.value]
+        except KeyError:
+            return None
+
+
+class MultiChoiceOpt(Preference):
+    '''Multiple string preference with limited choice.'''  
+
+    def __init__(self, name, dflt, choices):
+        self.choices = choices
+        Preference.__init__(self, name, dflt, "multi")
+
+    def _preproc(self, value):
+        '''Preprocess user's input'''
+        return [x.strip() for x in value.split(',')]
+
+    def validate(self, value):
+        '''Is the value valid.'''
+        l = self._preproc(value)
         for otype in l:
-            if not otype in self.output_types:
-                common_err("no %s output type" % otype)
+            if not otype in self.choices:
+                common_err("%s not valid (choose one from %s)" %
+                    (value, ','.join(self.choices)))
                 return False
-        self.output = l
+        return True
 
-    def set_colors(self, scheme):
-        colors = scheme.split(',')
+    def __str__(self):
+        'Return string representation.'
+        return ','.join(self.value)
+
+
+class ColorOpt(MultiChoiceOpt):
+    '''A list of terminal colors preference.'''  
+
+    def __init__(self, name, dflt, ignored):
+        Preference.__init__(self, name, dflt, "color")
+
+    def validate(self, scheme):
+        '''Is the color scheme valid.'''
+        colors = self._preproc(scheme)
         if len(colors) != 6:
             common_err("bad color scheme: %s" % scheme)
-            colors = UserPrefs.dflt_colorscheme
-        colors = [x.strip() for x in colors]
+            return False
         rc = True
         for c in colors:
             if not termctrl.is_color(c):
                 common_err("%s is not a recognized color" % c)
                 rc = False
-        if rc:
-            self.colorscheme = colors
-        else:
-            self.output.remove("color")
-            if not self.output:
-                self.output.append("plain")
         return rc
+
+
+class UserPrefs(Singleton):
+    '''
+    Keep user preferences here.
+    '''
+
+    opt_dict = {
+        "editor": (ProgramOpt, "EDITOR", ("vim", "vi", "emacs", "nano")),
+        "pager": (ProgramOpt, "PAGER", ("less", "more", "pg")),
+        "user": (StringOpt, "", ()),
+        "skill_level": (DictOpt, "expert", 
+            {"operator": 0, "administrator": 1, "expert": 2}),
+        "output": (MultiChoiceOpt, "color", ("plain", "color", "uppercase")),
+        "colorscheme": (ColorOpt, "yellow,normal,cyan,red,green,magenta", ()),
+        "sort_elements": (BooleanOpt, "yes", ()),
+        "check_frequency": (ChoiceOpt, "always", ("always", "on-verify", "never")),
+        "check_mode": (ChoiceOpt, "strict", ("strict", "relaxed")),
+        "wait": (BooleanOpt, "no", ()),
+        "add_quotes": (BooleanOpt, "yes", ()),
+        "manage_children": (ChoiceOpt, "ask", ("ask", "never", "always")),
+
+        "force": (BooleanOpt, "no", ()),
+        "debug": (BooleanOpt, "no", ()),
+        "ptest": (ProgramOpt, "", ("ptest", "crm_simulate")),
+        "dotty": (ProgramOpt, "", ("dotty",)),
+        "dot": (ProgramOpt, "", ("dot",)),
+    }
+    # this defines the write order and what needs to be saved to
+    # a rc file
+    _prefs = ("editor", "pager", "user", "skill_level", "output",
+        "colorscheme", "sort_elements", "check_frequency", "check_mode",
+        "wait", "add_quotes", "manage_children")
+
+    _options = {}
+
+    def __init__(self):
+        if self._options:
+            return
+        self.reset_options()
+
+    def reset_options(self):
+        for attr in self.opt_dict.keys():
+            opt = self.opt_dict[attr]
+            self._options[attr] = opt[0](attr, opt[1], opt[2])
+
+    def _get_opt(self, name):
+        int_name = name.replace("-", "_")
+        try:
+            return self.opt_dict[int_name], int_name
+        except KeyError:
+            common_err("unknown option: %s" % name)
+            return None, None
+
+    def __setattr__(self, name, value):
+        opt, int_name = self._get_opt(name)
+        if not opt or not int_name:
+            return
+        # if not defined, create an instance
+        if int_name not in self._options:
+            self._options[int_name] = opt[0](name, opt[1], opt[2])
+        return self._options[int_name].set(value)
+
+    def set_pref(self, name, value):
+        return self.__setattr__(name, value)
+
+    def __getattr__(self, name):
+        opt, int_name = self._get_opt(name)
+        if not int_name:
+            return None
+        return self._options[int_name].get()
 
     def is_check_always(self):
         '''
@@ -167,6 +313,15 @@ class UserPrefs(Singleton):
         make sense to do that with non-interactive sessions.
         '''
         return options.interactive and self.check_frequency == "always"
+
+    def choice_list(self, attr):
+        '''
+        Return list of possible choices for multichoice, etc.
+        '''
+        try:
+            return self.opt_dict[attr][2]
+        except KeyError:
+            return []
 
     def get_check_rc(self):
         '''
@@ -176,72 +331,13 @@ class UserPrefs(Singleton):
         '''
         return self.check_mode == "strict" and 2 or 1
 
-    def set_check_freq(self, frequency):
-        if frequency not in self.check_frequencies:
-            common_err("no %s check frequency" % frequency)
-            return False
-        self.check_frequency = frequency
-
-    def set_check_mode(self, mode):
-        if mode not in self.check_modes:
-            common_err("no %s check mode" % mode)
-            return False
-        self.check_mode = mode
-
-    def set_debug(self):
-        self.debug = True
-
-    def get_debug(self):
-        return self.debug
-
-    def set_force(self):
-        self.force = True
-
-    def get_force(self):
-        return self.force
-
-    def set_sort_elems(self, opt):
-        self.sort_elems = is_boolean_true(opt) and "yes" or "no"
-
-    def get_sort_elems(self):
-        return self.sort_elems == "yes"
-
-    def set_wait(self, opt):
-        self.wait = is_boolean_true(opt) and "yes" or "no"
-
-    def get_wait(self):
-        return self.wait == "yes"
-
-    def set_add_quotes(self, opt):
-        self.add_quotes = is_boolean_true(opt) and "yes" or "no"
-
-    def get_add_quotes(self):
-        return self.add_quotes == "yes"
-
-    def set_manage_children(self, opt):
-        if opt not in self.manage_children_options:
-            common_err("no %s manage_children option" % opt)
-            return False
-        self.manage_children = opt
-
-    def get_manage_children(self):
-        return self.manage_children
-
     def write_rc(self, f):
-        print >> f, '%s "%s"' % ("editor", self.editor)
-        print >> f, '%s "%s"' % ("pager", self.pager)
-        print >> f, '%s "%s"' % ("user", self.crm_user)
-        print >> f, '%s "%s"' % ("skill-level", self.get_skill_level())
-        print >> f, '%s "%s"' % ("output", ','.join(self.output))
-        print >> f, '%s "%s"' % ("colorscheme", ','.join(self.colorscheme))
-        print >> f, '%s "%s"' % ("sort-elements", self.sort_elems)
-        print >> f, '%s "%s"' % ("check-frequency", self.check_frequency)
-        print >> f, '%s "%s"' % ("check-mode", self.check_mode)
-        print >> f, '%s "%s"' % ("wait", self.wait)
-        print >> f, '%s "%s"' % ("add-quotes", self.add_quotes)
-        print >> f, '%s "%s"' % ("manage-children", self.manage_children)
+        for attr in self._prefs:
+            n = attr.replace("_", "-")
+            print >> f, '%s "%s"' % (n, self._options[attr])
 
     def save_options(self, rc_file):
+        #print "saving options to %s" % rc_file
         try:
             f = open(rc_file, "w")
         except IOError, msg:

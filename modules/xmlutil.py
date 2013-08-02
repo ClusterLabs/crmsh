@@ -328,7 +328,7 @@ def is_live_cib():
 
 
 def is_crmuser():
-    return (user_prefs.crm_user in ("root", vars.crm_daemon_user)
+    return (user_prefs.user in ("root", vars.crm_daemon_user)
             or getuser() in ("root", vars.crm_daemon_user))
 
 
@@ -337,7 +337,7 @@ def cib_shadow_dir():
         return os.getenv("CIB_shadow_dir")
     if is_crmuser():
         return vars.crm_conf_dir
-    home = gethomedir(user_prefs.crm_user)
+    home = gethomedir(user_prefs.user)
     if home and home.startswith(os.path.sep):
         return os.path.join(home, ".cib")
     return os.getenv("TMPDIR") or "/tmp"
@@ -850,11 +850,11 @@ def obj_cmp(obj1, obj2):
 def filter_on_type(cl, obj_type):
     if type(cl[0]) == type([]):
         l = [cli_list for cli_list in cl if cli_list[0][0] == obj_type]
-        if user_prefs.get_sort_elems():
+        if user_prefs.sort_elements:
             l.sort(cmp=cmp)
     else:
         l = [obj for obj in cl if obj.obj_type == obj_type]
-        if user_prefs.get_sort_elems():
+        if user_prefs.sort_elements:
             l.sort(cmp=obj_cmp)
     return l
 
@@ -1270,7 +1270,7 @@ def xml_cmp(n, m, show=False):
                 rc = False
     else:
         rc = checker.compare_docs(n, m)
-    if not rc and show and user_prefs.get_debug():
+    if not rc and show and user_prefs.debug:
         # somewhat strange, but that's how this works
         from doctest import Example
         example = Example("etree.tostring(n)", etree.tostring(n))
