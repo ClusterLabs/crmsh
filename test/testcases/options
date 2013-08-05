@@ -1,0 +1,23 @@
+session Options
+options
+reset
+pager cat
+editor vi
+show
+check-frequency never
+check-mode nosuchever
+colorscheme normal,yellow,cyan,red,green,magenta
+colorscheme normal,yellow,cyan,red
+pager nosuchprogram
+skill-level operator
+skill-level joe
+skill-level expert
+output plain
+output misplain
+wait true
+wait off
+wait happy
+show
+save
+.
+options show
