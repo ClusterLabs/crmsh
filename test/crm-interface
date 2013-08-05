@@ -28,6 +28,7 @@ filter_cib() {
 }
 
 crm_setup() {
+	$CRM_NO_REG options reset
 	$CRM_NO_REG options check-frequency on-verify
 	$CRM_NO_REG options check-mode relaxed
 	$CRM_NO_REG cib delete $CIB 2>/dev/null
