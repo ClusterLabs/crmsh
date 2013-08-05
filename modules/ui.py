@@ -187,6 +187,7 @@ class CliOptions(UserInterface):
         self.cmd_table["manage-children"] = (self.set_manage_children, (1, 1), 0, 0)
         self.cmd_table["save"] = (self.save_options, (0, 0), 0, 0)
         self.cmd_table["show"] = (self.show_options, (0, 0), 0, 0)
+        self.cmd_table["reset"] = (self.reset_options, (0, 0), 0, 0)
         utils.setup_aliases(self)
 
     def set_skill_level(self, cmd, skill_level):
@@ -245,6 +246,10 @@ class CliOptions(UserInterface):
     def save_options(self, cmd):
         "usage: save"
         return user_prefs.save_options(vars.rc_file)
+
+    def reset_options(self, cmd):
+        "usage: reset"
+        return user_prefs.reset_options()
 
     def end_game(self, no_questions_asked=False):
         if no_questions_asked and not options.interactive:

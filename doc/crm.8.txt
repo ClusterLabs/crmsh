@@ -1561,6 +1561,13 @@ Display all current settings.
 Save current settings to the rc file (`$HOME/.config/crm/rc`). On
 further `crm` runs, the rc file is automatically read and parsed.
 
+[[cmdhelp_options_reset,reset user preferences to factory defaults]]
+==== `reset`
+
+This command resets all user options to the defaults. If used as
+a single-shot command, the rc file (`$HOME/.config/crm/rc`) is
+reset to the defaults too.
+
 [[cmdhelp_configure,CIB configuration]]
 === `configure`
 
