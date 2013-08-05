@@ -61,8 +61,8 @@ BuildRequires:  libxslt-tools
 
 
 %if 0%{?with_regression_tests}
-BuildRequires:  corosync procps vim-base python-dateutil
-Requires:       pacemaker
+BuildRequires:  corosync procps vim python-dateutil
+Requires:       pacemaker pssh
 %endif
 
 %description
@@ -116,8 +116,6 @@ rm -rf %{buildroot}
 %if 0%{?with_regression_tests}
 
 %post
-# Needed so that the shell doesn't get stuck on escape
-# sequences
 if ! /usr/share/crmsh/tests/regression.sh ; then
 	echo "Shell tests failed."
 	cat crmtestout/regression.out
