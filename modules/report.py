@@ -74,9 +74,28 @@ def syslog_ts(s):
         tm = time.strptime(' '.join([YEAR] + s.split()[0:3]),
                            "%Y %b %d %H:%M:%S")
         return time.mktime(tm)
-    except:
-        common_debug("malformed line: %s" % s)
-        return None
+    except: # try the rfc5424
+        try:
+            tm = parse_time(s.split()[0])
+            return time.mktime(tm.timetuple())
+        except Exception:
+            common_debug("malformed line: %s" % s)
+            return None
+
+
+def syslog2node(s):
+    '''Get the node from a syslog line.'''
+    try:
+        # strptime defaults year to 1900 (sigh)
+        tm = time.strptime(' '.join(s.split()[0:3]),
+                           "%b %d %H:%M:%S")
+        return s.split()[3]
+    except: # try the rfc5424
+        try:
+            tm = parse_time(s.split()[0])
+            return s.split()[1]
+        except Exception, msg:
+            return None
 
 
 def seek_to_edge(f, ts, to_end):
@@ -181,10 +200,7 @@ def get_timestamp(f):
 
 
 def is_our_log(s, node_l):
-    try:
-        return s.split()[3] in node_l
-    except:
-        return False
+    return syslog2node(s) in node_l
 
 
 def log2node(log):
@@ -458,20 +474,11 @@ def run_graph_msg_actions(msg):
 
 def extract_pe_file(msg):
     msg_a = msg.split()
-    if len(msg_a) < 8:
+    if len(msg_a) < 5:
         # this looks too short
         common_warn("log message <%s> unexpected format, please report a bug" % msg)
         return ""
     return msg_a[-1]
-
-
-def extract_node(msg):
-    msg_a = msg.split()
-    if len(msg_a) < 8:
-        # this looks too short
-        common_warn("log message <%s> unexpected format, please report a bug" % msg)
-        return ""
-    return msg_a[3]
 
 
 def get_matching_run_msg(te_invoke_msg, trans_msg_l):
@@ -513,7 +520,7 @@ class Transition(object):
     def parse_msgs(self):
         self.pe_file = extract_pe_file(self.te_invoke_msg)
         self.pe_num = get_pe_num(self.pe_file)
-        self.dc = extract_node(self.te_invoke_msg)
+        self.dc = syslog2node(self.te_invoke_msg)
         self.start_ts = syslog_ts(self.te_invoke_msg)
         if self.run_msg:
             self.end_ts = syslog_ts(self.run_msg)
@@ -1177,10 +1184,8 @@ class Report(Singleton):
 
     def disp(self, s):
         'color output'
-        a = s.split()
-        try:
-            node = a[3]
-        except:
+        node = syslog2node(s)
+        if node is None:
             return s
         return self._str_nodecolor(node, s)
 
