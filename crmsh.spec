@@ -2,9 +2,9 @@
 %global uname hacluster
 %global crmsh_docdir %{_defaultdocdir}/%{name}
 
-%global specversion 0
 %global upstream_version tip
 %global upstream_prefix crmsh
+%global crmsh_release 0.rc1
 
 %if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version} || 0%{?rhel} || 0%{?fedora}
 %define pkg_group System Environment/Daemons
@@ -19,12 +19,11 @@
 %{!?py_libdir:  %{expand: %%global py_libdir   %%{expand:%%%%{py_prefix}/%%%%{_lib}/python%%%%{py_ver}}}}
 %{!?py_sitedir: %{expand: %%global py_sitedir  %%{expand:%%%%{py_libdir}/site-packages}}}
 
-%global crmsh_release %{specversion}
 
 Name:		crmsh
 Summary:	Pacemaker command line interface
-Version:	1.2.5
-Release:	%{crmsh_release}%{?dist}
+Version:	1.2.6
+Release:	%{?crmsh_release}%{?dist}
 License:	GPL-2.0+
 Url:		http://savannah.nongnu.org/projects/crmsh
 Group:		%{pkg_group}

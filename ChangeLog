@@ -1,3 +1,50 @@
+* Mon Aug  5 2013 Dejan Muhamedagic <dejan@suse.de> and many others
+- release candidate 1.2.6-rc1
+- main: allow starting with a specified CIB shadow
+- main: make sure that tmp files get removed
+- cibconf: replace minidom with lxml
+- cibconf: groups can have the container meta attribute
+- cibconf: do not load CIB automatically in a non-interactive
+  mode (bnc#813045)
+- cibconf: allow single level fencing_topology (savannah#38737)
+- cibconf: improve exit code if a referenced element does not
+  exist (e.g. in the show command)
+- cibconf: add simulate alias for the ptest command
+- cibconf: add -S when running crm_simulate (formerly ptest)
+- cibconf: use cibadmin patch to update live CIB (with pcmk >= 1.1.10)
+- cibconf: node ids are not id but text
+- cibconf: improve elements edit operation
+- resource: trace and untrace (RA) commands
+- resource: prevent whitespace in meta_attributes when setting
+  attributes in nested elements such as groups (bnc#815447)
+- resource: add option for better control of group management
+  (bnc#806901)
+- node/resource: improve lifetime processing
+- node: update interface to crm_node, its usage changed
+  (bnc#805278)
+- node: maintenance/ready commands
+- node: ignore case when looking up nodes
+- node: update interface to crm_node (node delete)
+- node: allow forced node removal
+- shadow: fix regression in cib import (from PE file)
+- shadow: set shadow directory according to the user preference
+- history: fix search for resource messages (bnc#803790)
+- history: refresh live report for commands other than info
+  (bnc#807402)
+- history: use anonymous re groups to prevent out of groups assertion
+- history: fix xpath expression for graphs of resource sets
+- history: skip empty lines (!) when searching logs
+- history: add support for rfc5242 date format in syslog
+- userprefs: add reset command
+- ui: fix exit code of crm status if crm_mon fails (savannah#38702)
+- ui: fix exit code of the help command
+- parse: drop obsolete test for operations
+- performance: do not make unnecessary parameter uniqueness test
+  (bnc#806372)
+- performance: check programs existence with python os module
+  (bnc#806372)
+- performance: improve tests for running resources
+
 * Wed Feb  6 2013 Dejan Muhamedagic <dejan@suse.de> and many others
 - stable release 1.2.5
 - cibconfig: modgroup command
