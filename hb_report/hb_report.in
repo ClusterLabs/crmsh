@@ -1350,7 +1350,8 @@ if ! is_collector; then
 	fi
 	# assume that only root can collect data
 	SUDO=""
-	if [ -z "$SSH_USER" -a `id -u` != 0 ] || [ "$SSH_USER" != root ]; then
+	if [ -z "$SSH_USER" -a `id -u` != 0 ] ||
+			[ -n "$SSH_USER" -a "$SSH_USER" != root ]; then
 		debug "ssh user other than root, use sudo"
 		SUDO="sudo -u root"
 	fi
