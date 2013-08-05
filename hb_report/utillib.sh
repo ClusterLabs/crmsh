@@ -150,15 +150,20 @@ findmsg() {
 #
 str2time() {
 	perl -e "\$time='$*';" -e '
+	$unix_tm = 0;
 	eval "use Date::Parse";
 	if (!$@) {
-		print str2time($time);
+		$unix_tm = str2time($time);
 	} else {
 		eval "use Date::Manip";
 		if (!$@) {
-			print UnixDate(ParseDateString($time), "%s");
+			$unit_tm = UnixDate(ParseDateString($time), "%s");
 		}
 	}
+	if ($unix_tm != "") {
+		$unix_tm = int($unix_tm);
+	}
+	print $unix_tm;
 	'
 }
 getstamp_syslog() {
@@ -166,6 +171,9 @@ getstamp_syslog() {
 }
 getstamp_legacy() {
 	awk '{print $2}' | sed 's/_/ /'
+}
+getstamp_rfc5424() {
+	awk '{print $1}'
 }
 linetime() {
 	local l
@@ -181,6 +189,12 @@ find_getstampproc() {
 		if [ "$t" ]; then
 			func="getstamp_syslog"
 			debug "the log file is in the syslog format"
+			break
+		fi
+		t=$(str2time `echo $l | getstamp_rfc5424`)
+		if [ "$t" ]; then
+			func="getstamp_rfc5424"
+			debug "the log file is in the rfc5424 format"
 			break
 		fi
 		t=$(str2time `echo $l | getstamp_legacy`)
