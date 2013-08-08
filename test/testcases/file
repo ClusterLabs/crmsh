@@ -2,10 +2,10 @@ configure save sample.txt
 %ext cat sample.txt
 configure erase nodes
 configure load replace sample.txt
+%ext sed -i 's/60s/2m/' sample.txt
 session Load update
 configure
-erase
-erase nodes
+delete m1 p1
 load update sample.txt
 .
 configure show

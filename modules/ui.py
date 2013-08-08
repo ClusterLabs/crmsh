@@ -734,7 +734,7 @@ class Template(UserInterface):
                 if not utils.ask("This operation will erase all changes. Do you want to proceed?"):
                     return False
             cib_factory.erase()
-        set_obj = mkset_obj("NOOBJ")
+        set_obj = mkset_obj()
         rc = set_obj.import_file(tmp)
         try:
             os.unlink(tmp)
@@ -1825,9 +1825,9 @@ class CibConfig(UserInterface):
                     return False
             cib_factory.erase()
         if xml:
-            set_obj = mkset_obj("xml", "NOOBJ")
+            set_obj = mkset_obj("xml")
         else:
-            set_obj = mkset_obj("NOOBJ")
+            set_obj = mkset_obj()
         return set_obj.import_file(url)
 
     def graph(self, cmd, *args):

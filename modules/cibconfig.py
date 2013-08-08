@@ -278,7 +278,7 @@ class CibObjectSet(object):
         s = ''.join(f)
         if f != sys.stdin:
             f.close()
-        return self.save(s)
+        return self.save(s, no_remove=True)
 
     def repr(self, format=format):
         '''
@@ -287,7 +287,7 @@ class CibObjectSet(object):
         '''
         return ''
 
-    def save(self, s):
+    def save(self, s, no_remove=False):
         '''
         For each object:
             - try to find a corresponding object in obj_set
@@ -454,7 +454,7 @@ class CibObjectSetCli(CibObjectSet):
                 id = type
         return id
 
-    def save(self, s):
+    def save(self, s, no_remove=False):
         '''
         Save a user supplied cli format configuration.
         On errors user is typically asked to review the
@@ -465,7 +465,8 @@ class CibObjectSetCli(CibObjectSet):
         changes are made.
         '''
         edit_d = {}
-        id_set = set([])
+        id_set = set()
+        del_set = set()
         rc = True
         err_buf.start_tmp_lineno()
         cp = CliParser()
@@ -484,10 +485,11 @@ class CibObjectSetCli(CibObjectSet):
         err_buf.stop_tmp_lineno()
         # we can't proceed if there was a syntax error, but we
         # can ask the user to fix problems
-        rc &= self.is_edit_valid(id_set)
+        if not no_remove:
+            rc &= self.is_edit_valid(id_set)
+            del_set = self.obj_ids - id_set
         if not rc:
             return rc
-        del_set = self.obj_ids - id_set
         mk_set = id_set - self.obj_ids
         upd_set = id_set & self.obj_ids
         rc = cib_factory.set_update(edit_d, mk_set, upd_set, del_set)
@@ -519,7 +521,7 @@ class CibObjectSetRaw(CibObjectSet):
         else:
             return node.get("id")
 
-    def save(self, s):
+    def save(self, s, no_remove=False):
         try:
             cib_elem = etree.fromstring(s)
         except etree.ParseError, msg:
@@ -529,7 +531,8 @@ class CibObjectSetRaw(CibObjectSet):
         if not show_unrecognized_elems(cib_elem):
             return False
         rc = True
-        id_set = set([])
+        id_set = set()
+        del_set = set()
         edit_d = {}
         for node in get_top_cib_nodes(cib_elem, []):
             id = self._get_id(node)
@@ -542,10 +545,11 @@ class CibObjectSetRaw(CibObjectSet):
                 rc = False
             id_set.add(id)
             edit_d[id] = node
-        rc &= self.is_edit_valid(id_set)
+        if not no_remove:
+            rc &= self.is_edit_valid(id_set)
+            del_set = self.obj_ids - id_set
         if not rc:
             return rc
-        del_set = self.obj_ids - id_set
         mk_set = id_set - self.obj_ids
         upd_set = id_set & self.obj_ids
         rc = cib_factory.set_update(edit_d, mk_set, upd_set, del_set, "xml")

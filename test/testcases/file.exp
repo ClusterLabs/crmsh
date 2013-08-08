@@ -17,11 +17,11 @@ property $id="cib-bootstrap-options" \
 .EXT >/dev/null </dev/null crm_shadow 2>&1
 .TRY configure load replace sample.txt
 .EXT >/dev/null </dev/null crm_shadow 2>&1
+.EXT sed -i 's/60s/2m/' sample.txt
 .TRY Load update
 .EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
-.INP: erase
-.INP: erase nodes
+.INP: delete m1 p1
 .INP: load update sample.txt
 .TRY configure show
 .EXT >/dev/null </dev/null crm_shadow 2>&1
@@ -36,5 +36,5 @@ primitive st stonith:null \
 ms m1 p2
 clone c1 p1
 property $id="cib-bootstrap-options" \
-	default-action-timeout="60s"
+	default-action-timeout="2m"
 .EXT rm sample.txt
