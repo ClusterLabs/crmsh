@@ -1,0 +1,34 @@
+= crm shell
+
+== Introduction
+
+The `crm` shell is a command-line interface for High-Availability
+cluster management on GNU/Linux systems. It simplifies the
+configuration, management and troubleshooting of
+http://clusterlabs.org[Pacemaker]-based clusters, by providing a
+powerful and intuitive set of features.
+
+For more information and installation instructions, see the
+link:documentation.html[Documentation] page.
+
+== News ==
+
+++++
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script type="text/javascript" src="js/FeedEk.js"></script>
+<div id="news-feed">The news feed loads via javascript.</div>
+<script type="text/javascript">
+   $('#news-feed').FeedEk({
+    FeedUrl : 'https://savannah.nongnu.org/news/atom.php?group=crmsh',
+    MaxCount : 1,
+    ShowDesc : true,
+    ShowPubDate:true,
+    TitleLinkTarget:'_blank'
+   });
+</script>
+++++
+
+https://savannah.nongnu.org/news/?group_id=10890[News Archive]
+
+
+
