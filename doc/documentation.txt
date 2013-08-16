@@ -42,7 +42,13 @@ On openSUSE 12.3, you will want to add the
 http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/[network:ha-clustering:Stable] repository, 
 to get the latest stable version of the `crm` shell:
 
-Once that is added, you can run
+----
+zypper ar \
+  http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/openSUSE_12.3/ \
+  network:ha-clustering:Stable
+----
+
+Once added, you can run
 
 ----
 zypper in crmsh
