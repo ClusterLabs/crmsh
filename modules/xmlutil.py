@@ -27,7 +27,7 @@ from vars import Vars, getuser, gethomedir
 from msg import common_err, common_error, common_debug, cib_parse_err, err_buf
 from utils import add_sudo, str2file, str2tmp, pipe_string, get_boolean
 from utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
-from utils import olist
+from utils import olist, cibadmin_can_patch
 
 
 def xmlparse(f):
@@ -623,7 +623,11 @@ def sanitize_cib(doc):
     xml_processnodes(doc, is_emptynvpairs, rmnodes)
     xml_processnodes(doc, is_emptyops, rmnodes)
     xml_processnodes(doc, is_entity, rmnodes)
-    #xml_processnodes(doc, is_comment, rmnodes)
+    # krig: workaround for reported bug in
+    # pacemaker 1.1.10: comments are not accepted
+    # in cib patch updates
+    if cibadmin_can_patch():
+        xml_processnodes(doc, is_comment, rmnodes)
     xml_processnodes(doc, is_container, sort_container_children)
     xml_processnodes(doc, true, remove_dflt_attrs)
     xml_processnodes(doc, true, remove_text)

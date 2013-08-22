@@ -2352,6 +2352,7 @@ class CibFactory(Singleton):
         return True
 
     def _patch_cib(self, force):
+        sanitize_cib(self.cib_elem)
         # copy the epoch from the current cib to both the target
         # cib and the original one (otherwise cibadmin won't want
         # to apply the patch)
