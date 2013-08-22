@@ -3,6 +3,7 @@ configure save sample.txt
 configure erase nodes
 configure load replace sample.txt
 %ext sed -i 's/60s/2m/' sample.txt
+%ext sed -i '8a # comment' sample.txt
 session Load update
 configure
 delete m1 p1
