@@ -18,6 +18,7 @@ property $id="cib-bootstrap-options" \
 .TRY configure load replace sample.txt
 .EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT sed -i 's/60s/2m/' sample.txt
+.EXT sed -i '8a # comment' sample.txt
 .TRY Load update
 .EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
