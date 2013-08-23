@@ -50,6 +50,7 @@ from xmlutil import remove_id_used_attributes, get_top_cib_nodes, set_id_used_at
 from xmlutil import merge_attributes, is_cib_element, sanity_check_meta, add_missing_attr
 from xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
 from xmlutil import get_rsc_operations, delete_rscref, xml_cmp, lookup_node, RscState
+from xmlutil import strip_comments
 from cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
 from cliformat import cli_acl_rule, cli_pairs, rsc_set_constraint, cli_format_xml, get_kind
 from cliformat import cli_operations, simple_rsc_constraint, cli_rule, cli_format
@@ -2352,7 +2353,7 @@ class CibFactory(Singleton):
         return True
 
     def _patch_cib(self, force):
-        sanitize_cib(self.cib_elem)
+        strip_comments(self.cib_elem)
         # copy the epoch from the current cib to both the target
         # cib and the original one (otherwise cibadmin won't want
         # to apply the patch)
