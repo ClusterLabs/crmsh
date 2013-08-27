@@ -442,7 +442,7 @@ class CibObjectSetCli(CibObjectSet):
         be value of the id attribute, but sometimes the
         attribute is missing.
         '''
-        id = find_value(cli_list[0][1], "id")
+        id = find_value(cli_list[0][1], "id") or find_value(cli_list[0][1], "$id")
         if not id:
             type = cli_list[0][0]
             if type in vars.nvset_cli_names:
