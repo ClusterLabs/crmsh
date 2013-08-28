@@ -1,3 +1,10 @@
+* Wed Aug 28 2013 Dejan Muhamedagic <dejan@suse.de> and many others
+- release candidate 1.2.6-rc3
+- cibconf: disable atomic updates until cibadmin gets fixed
+- cibconf: match special ids on configuration edit (fixes
+  disappearing elements on edit)
+- doc: website sources
+
 * Mon Aug  5 2013 Dejan Muhamedagic <dejan@suse.de> and many others
 - release candidate 1.2.6-rc1
 - main: allow starting with a specified CIB shadow
