@@ -1019,7 +1019,9 @@ def is_pcmk_118(cib_f=None):
 
 
 def cibadmin_can_patch():
-    return is_min_pcmk_ver("1.1.10")
+    # cibadmin -P doesn't handle comments, hopefully in v1.1.11
+    return False
+    #return is_min_pcmk_ver("1.1.11")
 
 
 user_prefs = UserPrefs.getInstance()
