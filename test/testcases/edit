@@ -46,6 +46,10 @@ modgroup g1 remove c1
 modgroup g1 remove nosuch
 modgroup g1 add c1
 modgroup g1 add nosuch
+filter "sed 's/^/# this is a comment\\n/'" loc-d1
 _test
 verify
 .
+configure rsc_defaults $id="rsc_options" failure-timeout=10m
+configure filter "sed 's/2m/60s/'" cib-bootstrap-options
+configure show rsc_options

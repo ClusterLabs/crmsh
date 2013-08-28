@@ -50,6 +50,7 @@ ERROR: 42: nosuch is not member of g1
 ERROR: 43: a group may contain only primitives; c1 is clone
 .INP: modgroup g1 add nosuch
 ERROR: 44: object nosuch does not exist
+.INP: filter "sed 's/^/# this is a comment\n/'" loc-d1
 .INP: _test
 .INP: verify
 .INP: show
@@ -72,6 +73,7 @@ group g1 p1 p2 d3
 group g2 d1 d2
 clone c1 g1
 location l1 p3 100: node1
+# this is a comment
 location loc-d1 d1 \
 	rule $id="r1" -inf: not_defined webserver or mem number:lte 0 \
 	rule $id="loc-d1-rule" -inf: not_defined a2 \
@@ -80,3 +82,11 @@ order o1 inf: p3 c1
 property $id="cib-bootstrap-options" \
 	default-action-timeout="2m"
 .INP: commit
+.TRY configure rsc_defaults $id="rsc_options" failure-timeout=10m
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.TRY configure filter "sed 's/2m/60s/'" cib-bootstrap-options
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.TRY configure show rsc_options
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+rsc_defaults $id="rsc_options" \
+	failure-timeout="10m"
