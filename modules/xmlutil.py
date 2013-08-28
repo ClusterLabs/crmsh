@@ -630,13 +630,6 @@ def sanitize_cib(doc):
     xmltraverse(doc, drop_attr_defaults)
 
 
-def strip_comments(doc):
-    # krig: workaround for reported bug in
-    # pacemaker 1.1.10: comments are not accepted
-    # in cib patch updates
-    xml_processnodes(doc, is_comment, rmnodes)
-
-
 def is_simpleconstraint(node):
     return len(node.xpath("resource_set/resource_ref")) == 0
 
