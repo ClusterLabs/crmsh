@@ -74,7 +74,7 @@ def syslog_ts(s):
         tm = time.strptime(' '.join([YEAR] + s.split()[0:3]),
                            "%Y %b %d %H:%M:%S")
         return time.mktime(tm)
-    except: # try the rfc5424
+    except:  # try the rfc5424
         try:
             tm = parse_time(s.split()[0])
             return time.mktime(tm.timetuple())
@@ -87,14 +87,14 @@ def syslog2node(s):
     '''Get the node from a syslog line.'''
     try:
         # strptime defaults year to 1900 (sigh)
-        tm = time.strptime(' '.join(s.split()[0:3]),
-                           "%b %d %H:%M:%S")
+        time.strptime(' '.join(s.split()[0:3]),
+                      "%b %d %H:%M:%S")
         return s.split()[3]
-    except: # try the rfc5424
+    except:  # try the rfc5424
         try:
-            tm = parse_time(s.split()[0])
+            parse_time(s.split()[0])
             return s.split()[1]
-        except Exception, msg:
+        except Exception:
             return None
 
 
@@ -155,7 +155,7 @@ def log_seek(f, ts, to_end=False):
             if badline > maxbadline:
                 common_warn("giving up on log %s" % f.name)
                 return -1
-            first += 120 # move forward a bit
+            first += 120  # move forward a bit
             continue
         if log_ts > ts:
             last = mid-1
@@ -377,7 +377,8 @@ class LogSyslog(object):
                         continue
                     if top_line_ts[i] and top_line_ts[i] < top_line_ts[first]:
                         first = i
-                except: pass
+                except:
+                    pass
             if not top_line[first]:
                 break
             l.append(top_line[first])
@@ -500,10 +501,13 @@ def trans_str(node, pe_file):
     '''Convert node,pe_file to transition sting.'''
     return "%s:%s" % (node, os.path.basename(pe_file).replace(".bz2", ""))
 
+
 def rpt_pe2t_str(rpt_pe_file):
     '''Convert report's pe_file path to transition sting.'''
     node = os.path.basename(os.path.dirname(os.path.dirname(rpt_pe_file)))
     return trans_str(node, rpt_pe_file)
+
+
 class Transition(object):
     '''
     Capture transition related information.
@@ -525,7 +529,8 @@ class Transition(object):
         if self.run_msg:
             self.end_ts = syslog_ts(self.run_msg)
         else:
-            common_warn("end of transition %s not found in logs (transition not complete yet?)" % self)
+            common_warn("end of transition %s not found in logs (transition not complete yet?)" %
+                        self)
             self.end_ts = time.time()
 
     def actions_count(self):
@@ -672,7 +677,8 @@ class Report(Singleton):
             tf = tarfile.open(bfname)
             tf_loc = tf.getmembers()[0].name
             if tf_loc != loc:
-                common_debug("top directory in tarball: %s, doesn't match the tarball name: %s" % (tf_loc, loc))
+                common_debug("top directory in tarball: %s, doesn't match the tarball name: %s" %
+                             (tf_loc, loc))
                 loc = os.path.join(os.path.dirname(loc), tf_loc)
         except Exception, msg:
             common_err("%s: %s" % (tarball, msg))
@@ -1448,17 +1454,17 @@ class Report(Singleton):
         '''
         p = ConfigParser.SafeConfigParser()
         p.add_section(self.rpt_section)
-        p.set(self.rpt_section, 'dir', \
-            self.source == "live" and dir or self.source)
-        p.set(self.rpt_section, 'from_time', \
-            self.from_dt and human_date(self.from_dt) or '')
-        p.set(self.rpt_section, 'to_time', \
-            self.to_dt and human_date(self.to_dt) or '')
+        p.set(self.rpt_section, 'dir',
+              self.source == "live" and dir or self.source)
+        p.set(self.rpt_section, 'from_time',
+              self.from_dt and human_date(self.from_dt) or '')
+        p.set(self.rpt_section, 'to_time',
+              self.to_dt and human_date(self.to_dt) or '')
         p.set(self.rpt_section, 'detail', str(self.detail))
         self.manage_excludes("save", p)
         fname = os.path.join(dir, self.state_file)
         try:
-            f = open(fname,"wb")
+            f = open(fname, "wb")
         except IOError, msg:
             common_err(msg)
             return False
