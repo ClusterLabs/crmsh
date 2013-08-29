@@ -87,6 +87,11 @@ dest::
 	"hacluster". If you have another user for administration over
 	ssh, please use this option.
 
+*-X* ssh-options::
+	Extra ssh options. These will be added to every ssh
+	invocation. Alternatively, use `$HOME/.ssh/config` to setup
+	desired ssh connection options.
+
 *-S*::
 	Single node operation. Run hb_report only on this node and
 	don't try to start slave collectors on other members of the
@@ -246,6 +251,10 @@ ssh::
 	+
 	If you need to supply a password for your passphrase/login, then
 	always use the `-u` option.
+	+
+	For extra ssh(1) options, if you're too lazy to setup
+	$HOME/.ssh/config, use the `-X` option. Do not forget to put
+	the options in quotes.
 
 sudo::
 	If the ssh user (as specified with the `-u` option) is other
