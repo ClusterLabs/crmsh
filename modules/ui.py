@@ -2699,6 +2699,7 @@ class Site(UserInterface):
     def __init__(self):
         UserInterface.__init__(self)
         self.cmd_table["ticket"] = (self.ticket, (2, 2), 1, 0)
+        utils.setup_aliases(self)
 
     def ticket(self, cmd, subcmd, ticket):
         "usage: ticket {grant|revoke|standby|activate|show|time|delete} <ticket>"
