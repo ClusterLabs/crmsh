@@ -415,11 +415,7 @@ class CibShadow(UserInterface):
             return False
         # If invoked from configure
         # take special precautions
-        try:
-            prev_level = levels.previous().myname()
-        except:
-            prev_level = ''
-        if prev_level != "cibconfig":
+        if levels.previous().myname() != "cibconfig":
             self._use(name, withstatus)
             return True
         if not cib_factory.has_cib_changed():
