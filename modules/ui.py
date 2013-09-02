@@ -150,7 +150,7 @@ class UserInterface(object):
         else:
             if not self.help_table:
                 self.help_table = help_sys.load_level(self.lvl_name)
-                utils.setup_help_aliases(self)
+                self._setup_help_aliases()
             help_tab = self.help_table
         return help_sys.cmd_help(help_tab, topic)
 
@@ -163,6 +163,18 @@ class UserInterface(object):
         "usage: exit"
         self.end_game()
         cmd_exit(cmd)
+
+    def _setup_aliases(self):
+        for cmd in self.cmd_aliases.keys():
+            for alias in self.cmd_aliases[cmd]:
+                self.cmd_table[alias] = self.cmd_table[cmd]
+                self.rev_alias_table[alias] = cmd
+
+    def _setup_help_aliases(self):
+        for cmd in self.cmd_aliases.keys():
+            for alias in self.cmd_aliases[cmd]:
+                if self.help_table:
+                    self.help_table[alias] = self.help_table[cmd]
 
 
 class CliOptions(UserInterface):
@@ -188,7 +200,7 @@ class CliOptions(UserInterface):
         self.cmd_table["save"] = (self.save_options, (0, 0), 0, 0)
         self.cmd_table["show"] = (self.show_options, (0, 0), 0, 0)
         self.cmd_table["reset"] = (self.reset_options, (0, 0), 0, 0)
-        utils.setup_aliases(self)
+        self._setup_aliases()
 
     def set_skill_level(self, cmd, skill_level):
         """usage: skill-level <level>
@@ -276,7 +288,7 @@ class CibShadow(UserInterface):
         self.cmd_table["import"] = (self.pe_import, (1, 2), 1, 0)
         self.cmd_table["cibstatus"] = StatusMgmt
         self.chkcmd()
-        utils.setup_aliases(self)
+        self._setup_aliases()
 
     def chkcmd(self):
         try:
@@ -460,7 +472,7 @@ class Template(UserInterface):
         self.cmd_table["show"] = (self.show, (0, 1), 0, 0)
         self.cmd_table["apply"] = (self.apply, (0, 2), 1, 0)
         self.cmd_table["list"] = (self.list, (0, 1), 0, 0)
-        utils.setup_aliases(self)
+        self._setup_aliases()
         self.init_dir()
         self.curr_conf = ''
 
@@ -941,7 +953,7 @@ class RscMgmt(UserInterface):
             "migrate": ("move",),
             "unmigrate": ("unmove",),
         })
-        utils.setup_aliases(self)
+        self._setup_aliases()
 
     def status(self, cmd, rsc=None):
         "usage: status [<rsc>]"
@@ -1239,7 +1251,7 @@ class NodeMgmt(UserInterface):
         self.cmd_aliases.update({
             "show": ("list",),
         })
-        utils.setup_aliases(self)
+        self._setup_aliases()
 
     def status(self, cmd, node=None):
         'usage: status [<node>]'
@@ -1433,7 +1445,7 @@ class RA(UserInterface):
         self.cmd_aliases.update({
             "meta": ("info",),
         })
-        utils.setup_aliases(self)
+        self._setup_aliases()
 
     def classes(self, cmd):
         "usage: classes"
@@ -1527,7 +1539,7 @@ class StatusMgmt(UserInterface):
         self.cmd_table["simulate"] = (self.simulate, (0, 3), 1, 0)
         self.cmd_table["quorum"] = (self.quorum, (1, 1), 1, 0)
         self.cmd_table["ticket"] = (self.edit_ticket, (2, 2), 2, 0)
-        utils.setup_aliases(self)
+        self._setup_aliases()
 
     def load(self, cmd, org):
         "usage: load {<file>|shadow:<cib>|live}"
@@ -1679,7 +1691,7 @@ class CibConfig(UserInterface):
             "ms": ("master",),
             "ptest": ("simulate",),
         })
-        utils.setup_aliases(self)
+        self._setup_aliases()
         # for interactive use, we want to populate the CIB
         # immediately so that tab completion works
         if options.interactive:
@@ -2160,7 +2172,7 @@ class History(UserInterface):
         self.cmd_aliases.update({
             "limit": ("timeframe",),
         })
-        utils.setup_aliases(self)
+        self._setup_aliases()
         self._set_source(options.history)
         self.current_session = None
 
@@ -2695,7 +2707,7 @@ class Site(UserInterface):
     def __init__(self):
         UserInterface.__init__(self)
         self.cmd_table["ticket"] = (self.ticket, (2, 2), 1, 0)
-        utils.setup_aliases(self)
+        self._setup_aliases()
 
     def ticket(self, cmd, subcmd, ticket):
         "usage: ticket {grant|revoke|standby|activate|show|time|delete} <ticket>"
@@ -2766,10 +2778,10 @@ class TopLevel(UserInterface):
         self.cmd_table['site'] = Site
         self.cmd_table['status'] = (self.status, (0, 5), 0, 0)
         self.cmd_table['ra'] = RA
-        utils.setup_aliases(self)
+        self._setup_aliases()
         load_init_help_tab(self.help_table, self.cmd_table.keys())
         add_static_help(self.help_table)
-        utils.setup_help_aliases(self)
+        self._setup_help_aliases()
 
     def status(self, cmd, *args):
         """usage: status [<option> ...]
