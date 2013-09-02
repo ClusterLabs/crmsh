@@ -23,14 +23,12 @@ class WCache(Singleton):
     "Cache stuff. A naive implementation."
 
     def __init__(self):
-        self.lists = {}
-        self.stamp = time.time()
         self.max_cache_age = 600  # seconds
+        self._clear()
 
     def is_cached(self, name):
         if time.time() - self.stamp > self.max_cache_age:
-            self.stamp = time.time()
-            self.clear()
+            self._clear()
         return name in self.lists
 
     def store(self, name, lst):
@@ -42,7 +40,8 @@ class WCache(Singleton):
             return self.lists[name]
         return None
 
-    def clear(self):
+    def _clear(self):
+        self.stamp = time.time()
         self.lists = {}
 
 # vim:ts=4:sw=4:et:
