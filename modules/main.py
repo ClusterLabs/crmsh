@@ -123,11 +123,6 @@ def show_usage(cmd):
         syntax_err(cmd.__name__)
 
 
-def should_wait(lvl):
-    "Checks, based on level, if we should wait for the command to complete"
-    return lvl.current_level.should_wait() and (lvl.is_in_transit() or not options.interactive)
-
-
 def execute_command(lvl, cmd, args):
     """Execute the command and optionally wait for completion
     lvl: Current level
@@ -145,7 +140,7 @@ def execute_command(lvl, cmd, args):
     if rv is False:
         return False
     # should we wait till the command takes effect?
-    do_wait = user_prefs.wait and (wait == 1 or should_wait(lvl))
+    do_wait = user_prefs.wait and (wait == 1 or lvl.should_wait())
     if do_wait:
         if not wait4dc(args[0], not options.batch):
             rv = False

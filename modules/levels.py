@@ -97,4 +97,13 @@ class Levels(Singleton):
             self.parse_root = self.current_level.cmd_table
             self.prompts.pop()
 
+    def should_wait(self):
+        """Wait for command completion in certain circumstances.
+        """
+        from userprefs import Options
+        options = Options.getInstance()
+        by_level = self.current_level.should_wait()
+        transit_or_noninteractive = self.is_in_transit() or not options.interactive
+        return by_level and transit_or_noninteractive
+
 # vim:ts=4:sw=4:et:
