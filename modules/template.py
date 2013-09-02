@@ -16,7 +16,7 @@
 #
 
 import re
-from vars import Vars
+import vars
 from msg import common_err, common_info, common_warn
 
 
@@ -189,7 +189,5 @@ class LoadTemplate(object):
         rmidx_l.reverse()
         for i in rmidx_l:
             del self.all_post_gen[i]
-
-vars = Vars.getInstance()
 
 # vim:ts=4:sw=4:et:

@@ -16,7 +16,7 @@
 #
 
 from singletonmixin import Singleton
-from vars import Vars
+import vars
 from pacemaker import CrmSchema
 
 
@@ -115,7 +115,6 @@ class Schema(Singleton):
         else:
             return self.store[t][name]
 
-vars = Vars.getInstance()
 g_schema = Schema.getInstance()
 
 # vim:ts=4:sw=4:et:

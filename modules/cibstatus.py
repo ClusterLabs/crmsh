@@ -18,7 +18,7 @@
 import os
 from lxml import etree
 from singletonmixin import Singleton
-from vars import Vars
+import vars
 from tempfile import mkstemp
 from utils import ext_cmd, show_dot_graph, page_string
 from msg import common_err, common_info, common_warn, user_prefs
@@ -396,5 +396,4 @@ class CibStatus(Singleton):
         self.modified = True
         return True
 
-vars = Vars.getInstance()
 # vim:ts=4:sw=4:et:

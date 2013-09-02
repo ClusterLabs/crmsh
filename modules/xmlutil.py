@@ -23,7 +23,7 @@ import bz2
 
 from schema import Schema
 from userprefs import UserPrefs
-from vars import Vars, getuser, gethomedir
+import vars
 from msg import common_err, common_error, common_debug, cib_parse_err, err_buf
 from utils import add_sudo, str2file, str2tmp, pipe_string, get_boolean
 from utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
@@ -329,7 +329,7 @@ def is_live_cib():
 
 def is_crmuser():
     return (user_prefs.user in ("root", vars.crm_daemon_user)
-            or getuser() in ("root", vars.crm_daemon_user))
+            or vars.getuser() in ("root", vars.crm_daemon_user))
 
 
 def cib_shadow_dir():
@@ -337,7 +337,7 @@ def cib_shadow_dir():
         return os.getenv("CIB_shadow_dir")
     if is_crmuser():
         return vars.crm_conf_dir
-    home = gethomedir(user_prefs.user)
+    home = vars.gethomedir(user_prefs.user)
     if home and home.startswith(os.path.sep):
         return os.path.join(home, ".cib")
     return os.getenv("TMPDIR") or "/tmp"
@@ -1335,6 +1335,5 @@ def merge_nodes_2(dnode, snode):
 
 
 user_prefs = UserPrefs.getInstance()
-vars = Vars.getInstance()
 schema = Schema.getInstance()
 # vim:ts=4:sw=4:et:

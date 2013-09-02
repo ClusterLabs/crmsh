@@ -23,7 +23,7 @@ import re
 import time
 from singletonmixin import Singleton
 from userprefs import Options, UserPrefs
-from vars import Vars
+import vars
 from parse import CliParser
 from clidisplay import CliDisplay
 from cibstatus import CibStatus
@@ -37,7 +37,7 @@ from msg import missing_obj_err, common_warning, update_err, unsupported_err, em
 from msg import invalid_id_err, cib_ver_unsupported_err
 from utils import ext_cmd, safe_open_w, pipe_string, safe_close_w, crm_msec
 from utils import ask, lines2cli, cli_append_attr, cli_replace_attr, olist, odict
-from utils import keyword_cmp, page_string, cibadmin_can_patch, str2tmp, vars
+from utils import keyword_cmp, page_string, cibadmin_can_patch, str2tmp
 from utils import run_ptest, is_id_valid, edit_file, get_boolean, filter_string, find_value
 from xmlutil import is_child_rsc, rsc_constraint, sanitize_cib, rename_id, get_interesting_nodes
 from xmlutil import is_pref_location, get_topnode, new_cib, get_rscop_defaults_meta_node
@@ -3381,7 +3381,6 @@ class CibFactory(Singleton):
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 err_buf = ErrorBuffer.getInstance()
-vars = Vars.getInstance()
 cib_factory = CibFactory.getInstance()
 cli_display = CliDisplay.getInstance()
 cib_status = CibStatus.getInstance()

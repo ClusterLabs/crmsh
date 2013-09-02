@@ -24,12 +24,12 @@ import ConfigParser
 
 from singletonmixin import Singleton
 from userprefs import Options
-from vars import Vars, gethomedir
+import vars
 from msg import common_debug, common_warn, common_err, common_error, common_info, warn_once
 from xmlutil import file2cib_elem, get_rsc_children_ids, get_prim_children_ids
 from utils import file2str, shortdate, acquire_lock, append_file, ext_cmd, shorttime
 from utils import page_string, release_lock, rmdir_r, parse_time, get_cib_attributes
-from utils import is_pcmk_118, pipe_cmd_nosudo, file_find_by_name, vars
+from utils import is_pcmk_118, pipe_cmd_nosudo, file_find_by_name
 
 _NO_PSSH = False
 
@@ -557,7 +557,7 @@ class Transition(object):
 
 def mkarchive(dir):
     "Create an archive from a directory"
-    home = gethomedir()
+    home = vars.gethomedir()
     if not home:
         common_err("no home directory, nowhere to pack report")
         return False
@@ -1591,7 +1591,6 @@ class Report(Singleton):
                 pass
         return rc
 
-vars = Vars.getInstance()
 options = Options.getInstance()
 crm_report = Report.getInstance()
 # vim:ts=4:sw=4:et:

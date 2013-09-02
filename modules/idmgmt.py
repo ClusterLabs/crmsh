@@ -15,7 +15,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-from vars import Vars
+import vars
 import copy
 from msg import common_error, common_debug, id_used_err
 import xmlutil
@@ -160,7 +160,5 @@ class IdMgmt(Singleton):
     def clear(self):
         self._id_store = {}
         self._state = []
-
-vars = Vars.getInstance()
 
 # vim:ts=4:sw=4:et:

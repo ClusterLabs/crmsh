@@ -16,7 +16,7 @@
 #
 
 from userprefs import UserPrefs
-from vars import Vars
+import vars
 import utils
 from msg import common_err
 
@@ -239,6 +239,5 @@ gv_types = {
 }
 
 user_prefs = UserPrefs.getInstance()
-vars = Vars.getInstance()
 
 # vim:ts=4:sw=4:et:

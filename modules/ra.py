@@ -22,7 +22,7 @@ from lxml import etree
 import re
 import glob
 from cache import WCache
-from vars import Vars, getpwdent
+import vars
 from utils import stdout2list, is_program, is_process, add_sudo
 from utils import os_types_list, get_stdout, find_value
 from utils import crm_msec, crm_time_cmp
@@ -190,7 +190,7 @@ def can_use_lrmadmin():
     v_min = version.LooseVersion(minimum_glue)
     v_this = version.LooseVersion(glue_ver)
     return v_this >= v_min or \
-        (getpwdent()[0] in ("root", vars.crm_daemon_user))
+        (vars.getpwdent()[0] in ("root", vars.crm_daemon_user))
 
 
 def crm_resource_support():
@@ -810,5 +810,4 @@ def disambiguate_ra_type(s):
     return ra_class, ra_provider, ra_type
 
 wcache = WCache.getInstance()
-vars = Vars.getInstance()
 # vim:ts=4:sw=4:et:

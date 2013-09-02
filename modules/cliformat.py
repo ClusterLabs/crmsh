@@ -15,11 +15,10 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-from vars import Vars
+import vars
 from clidisplay import CliDisplay
 from msg import common_err, node_debug
 import utils
-from utils import vars
 import xmlutil
 
 
@@ -350,7 +349,6 @@ def cli_acl_roleref(node, format=1):
 #
 ################################################################
 
-vars = Vars.getInstance()
 cli_display = CliDisplay.getInstance()
 
 # vim:ts=4:sw=4:et:

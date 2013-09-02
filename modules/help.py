@@ -19,7 +19,7 @@ import os
 import re
 from cache import WCache
 from utils import odict, page_string
-from vars import Vars
+import vars
 from msg import common_info, common_err, common_debug, common_warn
 import config
 
@@ -420,6 +420,5 @@ List of crm shell topics.
         return self.load_level(self.topics_tok)
 
 wcache = WCache.getInstance()
-vars = Vars.getInstance()
 
 # vim:ts=4:sw=4:et:

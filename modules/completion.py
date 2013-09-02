@@ -22,10 +22,10 @@ from cibconfig import CibFactory
 from cibstatus import CibStatus
 from report import Report
 from levels import Levels
-from vars import Vars
+import vars
 from schema import Schema, rng_attr_values
 from xmlutil import get_interesting_nodes, is_resource, resources_xml, listshadows, is_primitive, listnodes
-from utils import listtemplates, listconfigs, vars
+from utils import listtemplates, listconfigs
 from userprefs import UserPrefs
 from ra import get_ra, ra_classes, disambiguate_ra_type, get_properties_meta
 from ra import ra_types, ra_providers_all, ra_type_validate, RAInfo
@@ -744,7 +744,6 @@ def get_completer_list(lvl_obj, cmd):
 
 compl_help = CompletionHelp()
 user_prefs = UserPrefs.getInstance()
-vars = Vars.getInstance()
 cib_status = CibStatus.getInstance()
 cib_factory = CibFactory.getInstance()
 crm_report = Report.getInstance()

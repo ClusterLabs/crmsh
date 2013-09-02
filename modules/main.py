@@ -23,7 +23,7 @@ import atexit
 
 from utils import wait4dc, is_pcmk_118, is_program
 from userprefs import Options, UserPrefs
-from vars import Vars
+import vars
 from ui import cmd_exit
 from msg import ErrorBuffer, syntax_err, skill_err
 from msg import common_warn, common_info, common_debug, common_err
@@ -287,7 +287,6 @@ usage:
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 err_buf = ErrorBuffer.getInstance()
-vars = Vars.getInstance()
 levels = Levels.getInstance()
 
 

@@ -23,7 +23,7 @@ import time
 import bz2
 
 from help import HelpSystem, load_init_help_tab, add_static_help
-from vars import Vars
+import vars
 from levels import Levels
 from cibconfig import mkset_obj, CibFactory
 from cibstatus import CibStatus
@@ -35,7 +35,6 @@ from msg import common_error, common_err, common_info, common_debug, common_warn
 from msg import syntax_err, bad_usage, no_prog_err
 from msg import UserPrefs, Options, ErrorBuffer
 import utils
-from utils import vars
 import ra
 import glob
 import xmlutil
@@ -2806,7 +2805,6 @@ help_sys = HelpSystem()
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 err_buf = ErrorBuffer.getInstance()
-vars = Vars.getInstance()
 levels = Levels.getInstance(TopLevel)
 cib_status = CibStatus.getInstance()
 cib_factory = CibFactory.getInstance()

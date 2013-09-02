@@ -17,7 +17,6 @@
 
 from singletonmixin import Singleton
 from userprefs import UserPrefs
-from vars import Vars
 
 
 class CliDisplay(Singleton):
@@ -77,6 +76,5 @@ class CliDisplay(Singleton):
 
 
 user_prefs = UserPrefs.getInstance()
-vars = Vars.getInstance()
 
 # vim:ts=4:sw=4:et:

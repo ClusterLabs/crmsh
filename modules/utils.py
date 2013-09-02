@@ -26,7 +26,7 @@ import shutil
 import bz2
 
 from userprefs import Options, UserPrefs
-from vars import Vars
+import vars
 from term import TerminalController
 from msg import common_warn, common_info, common_debug, common_err
 
@@ -1012,6 +1012,5 @@ def cibadmin_can_patch():
 
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
-vars = Vars.getInstance()
 termctrl = TerminalController.getInstance()
 # vim:ts=4:sw=4:et:

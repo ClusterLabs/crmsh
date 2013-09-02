@@ -18,10 +18,10 @@
 import shlex
 import re
 from lxml import etree
-from vars import Vars
+import vars
 from ra import disambiguate_ra_type, ra_type_validate
 from schema import Schema, rng_attr_values_l, rng_attr_values
-from utils import keyword_cmp, verify_boolean, lines2cli, cannonize, can_cannonize, get_boolean, find_value, olist, vars
+from utils import keyword_cmp, verify_boolean, lines2cli, cannonize, can_cannonize, get_boolean, find_value, olist
 from msg import err_buf, bad_def_err, syntax_err, common_err
 
 
@@ -937,7 +937,6 @@ class CliParser(object):
             self.comments = []
         return cli_list
 
-vars = Vars.getInstance()
 schema = Schema.getInstance()
 
 # vim:ts=4:sw=4:et:
