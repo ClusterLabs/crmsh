@@ -76,7 +76,9 @@ def fetch_opts(args, opt_l):
             break
     return l
 
-lifetime_options = ["reboot", "forever"]
+
+LIFETIME = ["reboot", "forever"]
+ISO8601_RE = re.compile("(PT?[0-9]|[0-9]+.*[:-])")
 
 
 def fetch_lifetime_opt(args, iso8601=True):
@@ -86,17 +88,11 @@ def fetch_lifetime_opt(args, iso8601=True):
     is apparently no good support in python for this format, so
     we cheat a bit.
     '''
-    if not args:
-        return None
-    if iso8601:
-        iso8601_re = re.compile("(PT?[0-9]|[0-9]+.*[:-])")
-    else:
-        iso8601_re = None
-    if (args[-1] in lifetime_options) or \
-            (iso8601_re and iso8601_re.match(args[-1])):
-        return args.pop()
-    else:
-        return None
+    if args:
+        opt = args[-1]
+        if opt in LIFETIME or (iso8601 and ISO8601_RE.match(opt)):
+            return args.pop()
+    return None
 
 
 class UserInterface(object):
