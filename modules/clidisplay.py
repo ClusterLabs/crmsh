@@ -32,7 +32,7 @@ class CliDisplay(Singleton):
     def reset_no_pretty(self):
         self.no_pretty = False
 
-    def colorstring(self, clrnum, s):
+    def _colorstring(self, clrnum, s):
         if self.no_pretty:
             return s
         else:
@@ -44,12 +44,12 @@ class CliDisplay(Singleton):
         if "uppercase" in user_prefs.output:
             s = s.upper()
         if "color" in user_prefs.output:
-            s = self.colorstring(0, s)
+            s = self._colorstring(0, s)
         return s
 
     def otherword(self, n, s):
         if "color" in user_prefs.output:
-            return self.colorstring(n, s)
+            return self._colorstring(n, s)
         else:
             return s
 
