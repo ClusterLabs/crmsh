@@ -21,7 +21,7 @@ modules/levels.py::
 
 === User interface
 
-modules/ui.py.in::
+modules/ui.py::
 
 	User interface. All levels and commands are implemented here.
 	The starting point is the +TopLevel+ class (the root level).
@@ -37,7 +37,7 @@ modules/completion.py::
 	the RA metadata or other help texts. Quite convoluted at some
 	spots and otherwise trivial.
 
-modules/help.py.in::
+modules/help.py::
 
 	Reads help from a text file and presents parts of it in
 	response to the help command. The text file has special
@@ -54,7 +54,11 @@ doc/crm.8.txt::
 
 === Global variables
 
-modules/vars.py.in::
+modules/config.py.in::
+
+    Compile-time constants defined during the build process.
+
+modules/vars.py::
 
 	Global constants (mostly) and (a few) variables (it would be
 	good to separate the two).
@@ -261,5 +265,5 @@ particular experienced pythonistas.
     - This function should only be used internally in CibFactory, and
       should be called from every entry point into the class: It
       handles lazy initialization of the cib. Right now it is used
-      from ui.py.in as well. Also, the error handling if it fails
+      from ui.py as well. Also, the error handling if it fails
       needs to be cleaned up.
