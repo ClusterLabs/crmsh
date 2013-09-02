@@ -29,8 +29,6 @@ from msg import ErrorBuffer, syntax_err, skill_err
 from msg import common_warn, common_info, common_debug, common_err
 from levels import Levels
 
-user_args = None  # assigned in run()
-
 
 def load_rc(rcfile):
     try:
@@ -125,54 +123,67 @@ def show_usage(cmd):
         syntax_err(cmd.__name__)
 
 
-def parse_line(lvl, s):
-    if not s:
-        return True
-    if s[0].startswith('#'):
+def should_wait(lvl):
+    "Checks, based on level, if we should wait for the command to complete"
+    return lvl.current_level.should_wait() and (lvl.is_in_transit() or not options.interactive)
+
+
+def execute_command(lvl, cmd, args):
+    """Execute the command and optionally wait for completion
+    lvl: Current level
+    cmd: (function, arglimits, skill_level, wait)
+    args: argv-style argument list (args[0] is the command name)
+    """
+    fn, arglimits, skill_level, wait = cmd
+    if user_prefs.skill_level < skill_level:
+        skill_err(args[0])
+        return False
+    if not check_args(args[1:], arglimits):
+        show_usage(fn)
+        return False
+    rv = fn(*args)  # execute the command
+    if rv is False:
+        return False
+    # should we wait till the command takes effect?
+    do_wait = user_prefs.wait and (wait == 1 or should_wait(lvl))
+    if do_wait:
+        if not wait4dc(args[0], not options.batch):
+            rv = False
+    return rv is not False
+
+
+def parse_line(lvl, line):
+    """Parse line into level movement and/or a command execution
+    lvl: Current level
+    line: line split into tokens
+    """
+    if not line or line[0].startswith('#'):
         return True
     lvl.mark()
     pt = lvl.parse_root
     cmd = None
     i = 0
-    for i in range(len(s)):
-        token = s[i]
-        if token in pt:
-            if type(pt[token]) == type(object):
-                # on entering new level we need to set the
-                # interactive option _before_ creating the level
-                if not options.interactive and i == len(s)-1:
-                    set_interactive()
-                lvl.new_level(pt[token], token)
-                pt = lvl.parse_root  # move to the next level
-            else:
-                cmd = pt[token]  # terminal symbol
-                break  # and stop parsing
+    for i in range(len(line)):
+        token = line[i]
+        if token not in pt:
+            syntax_err(line[i:])
+            lvl.release()
+            return False
+        current = pt[token]
+        if type(current) == type(object):
+            # on entering new level we need to set the
+            # interactive option _before_ creating the level
+            if not options.interactive and i == len(line)-1:
+                set_interactive()
+            lvl.new_level(current, token)
+            pt = lvl.parse_root  # move to the next level
         else:
-            syntax_err(s[i:])
-            lvl.release()
-            return False
+            cmd = current
+            break  # and stop parsing
     if cmd:  # found a terminal symbol
-        if user_prefs.skill_level < cmd[2]:
-            lvl.release()
-            skill_err(s[i])
-            return False
-        args = s[i+1:]
-        if not check_args(args, cmd[1]):
-            lvl.release()
-            show_usage(cmd[0])
-            return False
-        args = s[i:]
-        d = lambda: cmd[0](*args)
-        rv = d()  # execute the command
-        # should we wait till the command takes effect?
-        do_wait = user_prefs.wait and rv != False and (cmd[3] == 1 or
-            (lvl.current_level.should_wait() and \
-            (lvl.is_in_transit() or not options.interactive)))
+        retval = execute_command(lvl, cmd, line[i:])
         lvl.release()
-        if do_wait:
-            if not wait4dc(token, not options.batch):
-                rv = False
-        return rv != False
+        return retval
     return True
 
 
@@ -344,8 +355,7 @@ def compatibility_setup():
         vars.simulate_programs["simulate"] = ""
 
 
-def do_work():
-    global user_args
+def do_work(user_args):
     compatibility_setup()
     if options.shadow:
         parse_line(levels, ["cib", "use", options.shadow])
@@ -409,7 +419,6 @@ def do_work():
 
 
 def run():
-    global user_args
     envsetup()
     prereqs()
 
@@ -464,7 +473,10 @@ def run():
 
     if options.profile:
         import cProfile
-        cProfile.run('main.do_work()', options.profile)
+        cProfile.runctx('main.do_work(user_args)',
+                        globals(),
+                        {'user_args': user_args},
+                        filename=options.profile)
         # print how to use the profile file, but don't disturb
         # the regression tests
         if not options.regression_tests:
@@ -474,6 +486,6 @@ def run():
             print "python -c '%s' | less" % (stats_cmd)
 
     else:
-        do_work()
+        do_work(user_args)
 
 # vim:ts=4:sw=4:et:
