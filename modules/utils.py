@@ -913,18 +913,18 @@ def load_graphviz_file(ini_f):
 
 
 def get_pcmk_version(dflt):
+    version = dflt
     try:
         rc, s = get_stdout("crmd version")
         if rc != 0:
             common_err("crmd exited with %d" % rc)
         else:
-            v = s.split()[2]
-            common_debug("found pacemaker version: %s" % v)
+            version = s.split()[2]
+            common_debug("found pacemaker version: %s" % version)
     except Exception, msg:
-        v = dflt
         common_warn("could not get the pacemaker version, bad installation?")
         common_warn(msg)
-    return v
+    return version
 
 
 def get_cib_property(cib_f, attr, dflt):
