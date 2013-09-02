@@ -24,7 +24,7 @@ import atexit
 from utils import wait4dc, is_pcmk_118, is_program
 from userprefs import Options, UserPrefs
 import vars
-from ui import cmd_exit
+from ui import cmd_exit, TopLevel
 from msg import ErrorBuffer, syntax_err, skill_err
 from msg import common_warn, common_info, common_debug, common_err
 from levels import Levels
@@ -287,7 +287,7 @@ usage:
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 err_buf = ErrorBuffer.getInstance()
-levels = Levels.getInstance()
+levels = Levels.getInstance(TopLevel)
 
 
 def set_interactive():

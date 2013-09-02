@@ -43,7 +43,14 @@ import config
 
 def cmd_end(cmd, dir=".."):
     "Go up one level."
+    levels = Levels.getInstance()
     levels.droplevel()
+
+
+def previous_level_is(name):
+    "Checks if inside given level"
+    levels = Levels.getInstance()
+    return levels.previous().myname() == name
 
 
 def cmd_exit(cmd, rc=0):
@@ -423,7 +430,7 @@ class CibShadow(UserInterface):
             return False
         # If invoked from configure
         # take special precautions
-        if levels.previous().myname() != "cibconfig":
+        if not previous_level_is("cibconfig"):
             self._use(name, withstatus)
             return True
         if not cib_factory.has_cib_changed():
@@ -2546,8 +2553,7 @@ class History(UserInterface):
         return s
 
     def _common_pe_render_check(self, cmd, opt_l, *args):
-        if levels.previous().myname() == "cibconfig" \
-                and cib_factory.has_cib_changed():
+        if previous_level_is("cibconfig") and cib_factory.has_cib_changed():
             common_err("please try again after committing CIB changes")
             return False
         argl = list(args)
@@ -2573,7 +2579,7 @@ class History(UserInterface):
             s = self._render_pe(self._pe_status_nohdr, t)
         else:
             s = utils.term_render(self._render_pe(self._pe_config_plain, t))
-        if levels.previous().myname() == "cibconfig":
+        if previous_level_is("cibconfig"):
             cib_factory.refresh()
         if not s:
             return False
@@ -2588,7 +2594,7 @@ class History(UserInterface):
         if "status" in opt_l:
             showfun = self._pe_status
         s = self._render_pe(showfun, t)
-        if levels.previous().myname() == "cibconfig":
+        if previous_level_is("cibconfig"):
             cib_factory.refresh()
         if not s:
             return False
@@ -2612,7 +2618,7 @@ class History(UserInterface):
             rc = set_obj.save_graph(gtype, outf)
         else:
             rc = set_obj.graph_img(gtype, outf, ftype)
-        if levels.previous().myname() == "cibconfig":
+        if previous_level_is("cibconfig"):
             cib_factory.refresh()
         return rc
 
@@ -2628,7 +2634,7 @@ class History(UserInterface):
         elif mkhtml:
             showfun = self._pe_config_noclr
         s = self._diff(showfun, t1, t2, html=mkhtml)
-        if levels.previous().myname() == "cibconfig":
+        if previous_level_is("cibconfig"):
             cib_factory.refresh()
         if s == None:
             return False
@@ -2802,7 +2808,6 @@ help_sys = HelpSystem()
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 err_buf = ErrorBuffer.getInstance()
-levels = Levels.getInstance(TopLevel)
 cib_status = CibStatus.getInstance()
 cib_factory = CibFactory.getInstance()
 crm_report = Report.getInstance()
