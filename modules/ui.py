@@ -136,7 +136,7 @@ class UserInterface(object):
 
     def help(self, cmd, topic=''):
         "usage: help [<command>|<Topic>|topics]"
-        if topic in ("?", "Help", "HELP", "HELP!"):
+        if topic.lower() in ("?", "help", "help!"):
             topic = "help"
         if topic == "topics" or (topic and topic[0].isupper()):
             if not self.topics:
@@ -160,16 +160,17 @@ class UserInterface(object):
         cmd_exit(cmd)
 
     def _setup_aliases(self):
-        for cmd in self.cmd_aliases.keys():
-            for alias in self.cmd_aliases[cmd]:
+        for cmd, aliases in self.cmd_aliases.iteritems():
+            for alias in aliases:
                 self.cmd_table[alias] = self.cmd_table[cmd]
                 self.rev_alias_table[alias] = cmd
 
     def _setup_help_aliases(self):
-        for cmd in self.cmd_aliases.keys():
-            for alias in self.cmd_aliases[cmd]:
-                if self.help_table:
-                    self.help_table[alias] = self.help_table[cmd]
+        if self.help_table:
+            for cmd, aliases in self.cmd_aliases.iteritems():
+                if cmd in self.help_table:
+                    for alias in aliases:
+                        self.help_table[alias] = self.help_table[cmd]
 
 
 class CliOptions(UserInterface):
