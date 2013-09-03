@@ -2208,7 +2208,7 @@ class History(UserInterface):
             common_error("source %s doesn't exist" % src)
             return False
 
-    def _set_source(self, src):
+    def _set_source(self, src, live_from_time=None):
         '''
         Have the last history source survive the History
         and Report instances
@@ -2219,11 +2219,12 @@ class History(UserInterface):
         crm_report.set_source(src)
         options.history = src
         self.current_session = None
+        to_time = ''
         if src == "live":
-            from_time = time.ctime()
+            from_time = time.ctime(live_from_time and live_from_time or (time.time() - 60*60))
         else:
             from_time = ''
-        return self._set_period(from_time, '')
+        return self._set_period(from_time, to_time)
 
     def source(self, cmd, src=None):
         "usage: source {<dir>|<file>|live}"
