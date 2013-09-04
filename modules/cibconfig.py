@@ -2523,7 +2523,12 @@ class CibFactory(Singleton):
         return [x.obj_id for x in self.cib_objects if x.obj_type in vars.children_tags]
 
     def rsc_id_list(self):
-        "List of resource ids (for constraint completion)."
+        "List of all resource ids."
+        return [x.obj_id for x in self.cib_objects
+                if x.obj_type in vars.resource_tags]
+
+    def top_rsc_id_list(self):
+        "List of top resource ids (for constraint completion)."
         return [x.obj_id for x in self.cib_objects
                 if x.obj_type in vars.resource_tags and not x.parent]
 
