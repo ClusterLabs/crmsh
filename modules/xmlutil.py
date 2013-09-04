@@ -755,7 +755,7 @@ def find_operation(rsc_node, name, interval="0"):
 def get_op_timeout(rsc_node, op, default_timeout):
     interval = (op == "monitor" and "non-0" or "0")
     op_n = find_operation(rsc_node, op == "probe" and "monitor" or op, interval)
-    timeout = op_n and op_n.get("timeout") or default_timeout
+    timeout = op_n is not None and op_n.get("timeout") or default_timeout
     return crm_msec(timeout)
 
 
