@@ -82,7 +82,7 @@ class RADriver(object):
         common_debug("%s: %s" % (self.id_str(), s))
 
     def is_ms(self):
-        return is_ms(self.rscdef_node)
+        return is_ms(get_topmost_rsc(self.rscdef_node))
 
     def nvset2env(self, set_n):
         if set_n is None:
