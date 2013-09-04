@@ -85,7 +85,7 @@ class RADriver(object):
         return is_ms(self.rscdef_node)
 
     def nvset2env(self, set_n):
-        if not set_n:
+        if set_n is None:
             return
         try:
             pfx = self.pfx[set_n.tag]
