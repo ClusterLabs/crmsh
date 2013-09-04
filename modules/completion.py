@@ -333,7 +333,7 @@ def report_session_list(idx, delimiter=False):
 def ticket_cmd_list(idx, delimiter=False):
     if delimiter:
         return ' '
-    return ["grant", "revoke", "show", "time", "delete"]
+    return ["grant", "revoke", "standby", "activate", "show", "time", "delete"]
 
 
 def modgroup_subcmd_list(idx, delimiter=False):
