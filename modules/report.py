@@ -1005,7 +1005,7 @@ class Report(Singleton):
         except:  # bad cib?
             return
         self.cibrsc_l = [x.get("id")
-                         for x in conf.xpath("//resources/primitive")]
+                         for x in conf.xpath("//resources//primitive")]
         self.cibnode_l = [x.get("uname")
                           for x in conf.xpath("//nodes/node")]
         self.cibgrp_d = {}
