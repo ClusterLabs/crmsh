@@ -38,7 +38,7 @@ class RADriver(object):
     undef = -200
     unused = -201
 
-    def __init__(self, rsc_node, node_l):
+    def __init__(self, rsc_node, nodes):
         from tempfile import mkdtemp
         self.rscdef_node = rsc_node
         if rsc_node is not None:
@@ -51,7 +51,7 @@ class RADriver(object):
             self.ra_type = None
             self.ra_provider = None
             self.id = None
-        self.node_l = node_l
+        self.nodes = nodes
         self.outdir = mkdtemp(prefix="crmsh_out.")
         self.errdir = mkdtemp(prefix="crmsh_err.")
         self.ec_l = {}
@@ -166,18 +166,18 @@ class RADriver(object):
         '''defined in subclasses'''
         pass
 
-    def runop(self, op, node_l=None):
+    def runop(self, op, nodes=None):
         '''
         Execute an operation.
         '''
         from crm_pssh import do_pssh_cmd
-        if not node_l or self.run_on_all(op):
-            node_l = self.node_l
+        if not nodes or self.run_on_all(op):
+            nodes = self.nodes
         self.last_op = op
         self.set_rscenv(op)
         real_op = (op == "probe" and "monitor" or op)
         cmd = self.exec_cmd(real_op)
-        common_debug("running %s on %s" % (real_op, node_l))
+        common_debug("running %s on %s" % (real_op, nodes))
         for attr in self.rscenv.keys():
             # shell doesn't allow "-" in var names
             envvar = attr.replace("-", "_")
@@ -185,13 +185,56 @@ class RADriver(object):
                 cmd = '%s="%s" %s' % (envvar, self.rscenv[attr], cmd)
             else:
                 cmd = "%s='%s' %s" % (envvar, self.rscenv[attr], cmd)
-        statuses = do_pssh_cmd(cmd, node_l, self.outdir, self.errdir, self.timeout)
-        for i in range(len(node_l)):
+        statuses = do_pssh_cmd(cmd, nodes, self.outdir, self.errdir, self.timeout)
+        for i in range(len(nodes)):
             try:
-                self.ec_l[node_l[i]] = statuses[i]
+                self.ec_l[nodes[i]] = statuses[i]
             except:
-                self.ec_l[node_l[i]] = self.undef
+                self.ec_l[nodes[i]] = self.undef
         return
+
+    def stop(self, node):
+        """
+        Make sure resource is stopped on node.
+        """
+        if self.is_ms():
+            self.runop("demote", (node,))
+        self.runop("stop", (node,))
+        ok = self.is_ok(node)
+        if not ok:
+            self.err("resource failed to stop on %s, clean it up!" % node)
+            self.show_log(node)
+        return ok
+
+    def test_resource(self, node):
+        """
+        Perform test of resource on node.
+        """
+        self.runop("start", (node,))
+        if self.is_ms() and self.is_ok(node):
+            self.runop("promote", (node,))
+        return self.is_ok(node)
+
+    def probe(self):
+        """
+        Execute probe (if possible)
+        """
+        self.runop("probe")
+
+    def verify_stopped(self, node):
+        """
+        Make sure resource is stopped on node.
+        """
+        stopped = self.is_stopped(node)
+        if not stopped:
+            if self.is_ok(node):
+                self.warn("resource running at %s" % (node))
+            elif self.is_ms() and self.is_master(node):
+                self.warn("resource is master at %s" % (node))
+            else:
+                self.warn("resource not clean at %s" % (node))
+                self.show_log(node)
+        return stopped
 
 
 class RAOCF(RADriver):
@@ -265,19 +308,61 @@ class RALSB(RADriver):
         return cmd
 
 
+class RAStonith(RADriver):
+    '''
+    Execute operations on Stonith resources.
+    '''
+
+    STONITH_OK = 0
+    STONITH_ERR = 1
+
+    def __init__(self, *args):
+        RADriver.__init__(self, *args)
+        self.ec_ok = self.STONITH_OK
+        self.ec_stopped = self.STONITH_ERR
+
+    def stop(self, node):
+        """
+        Disable for stonith resources.
+        """
+        return True
+
+    def verify_stopped(self, node):
+        """
+        Disable for stonith resources.
+        """
+        return True
+
+    def test_resource(self, node):
+        """
+        Run test for stonith resource
+        """
+        for prefix in ['rhcs/', 'fence_']:
+            if self.ra_type.startswith(prefix):
+                self.err("Cannot test RHCS STONITH resources!")
+                return False
+        return RADriver.test_resource(self, node)
+
+    def exec_cmd(self, op):
+        """
+        FIXME: Is stonith_admin reliably available?
+        """
+        return "stonith_admin -Q %s" % (self.id)
+
+
 ra_driver = {
     "ocf": RAOCF,
     "lsb": RALSB,
+    "stonith": RAStonith
 }
 
 
-def check_test_support(rsc_l):
+def check_test_support(resources):
     rc = True
-    for r in rsc_l:
-        id = r.get("id")
+    for r in resources:
         ra_class = r.get("class")
         if not ra_class:
-            common_warn("class attribute not found in %s" % id)
+            common_warn("class attribute not found in %s" % r.get('id'))
             rc = False
         elif ra_class not in ra_driver:
             common_warn("testing of class %s resources not supported" %
@@ -286,77 +371,61 @@ def check_test_support(rsc_l):
     return rc
 
 
-def are_all_stopped(rsc_l, node_l):
+def are_all_stopped(resources, nodes):
     rc = True
     sys.stderr.write("Probing resources ")
-    for r in rsc_l:
+    for r in resources:
         ra_class = r.get("class")
-        drv = ra_driver[ra_class](r, node_l)
+        drv = ra_driver[ra_class](r, nodes)
         sys.stderr.write(".")
-        drv.runop("probe")
-        for i in range(len(node_l)):
-            if not drv.is_stopped(node_l[i]):
-                if drv.is_ok(node_l[i]):
-                    drv.warn("resource running at %s" % node_l[i])
-                elif drv.is_ms() and drv.is_master(node_l[i]):
-                    drv.warn("resource is master at %s" % node_l[i])
-                else:
-                    drv.warn("resource not clean at %s" % node_l[i])
-                    drv.show_log(node_l[i])
+        drv.probe()
+        for node in nodes:
+            if not drv.verify_stopped(node):
                 rc = False
     sys.stderr.write("\n")
     return rc
 
 
 def stop_all(started, node):
-    'Stop all resources in started, in reverse order.'
+    'Stop all started resources in reverse order on node.'
     while started:
         drv = started.pop()
-        if drv.is_ms():
-            drv.runop("demote", (node,))
-        drv.runop("stop", (node,))
-        if not drv.is_ok(node):
-            drv.err("resource failed to stop on %s, clean it up!" % node)
-            drv.show_log(node)
+        drv.stop(node)
 
 
-def test_resources_1(rsc_l, node):
-    started = []
-    sys.stderr.write("testing on %s:" % node)
-    for r in rsc_l:
-        id = r.get("id")
-        ra_class = r.get("class")
-        drv = ra_driver[ra_class](r, (node,))
-        sys.stderr.write(" %s" % id)
-        drv.runop("start", (node,))
-        if drv.is_ms() and drv.is_ok(node):
-            drv.runop("promote", (node,))
-        if drv.is_ok(node):
-            started.append(drv)
-        else:
-            sys.stderr.write("\n")
-            drv.show_log(node)
-            stop_all(started, node)
-            return False
-    sys.stderr.write("\n")
-    stop_all(started, node)
-    return True
+def test_resources(resources, nodes, all_nodes):
+    def test_node(node):
+        started = []
+        sys.stderr.write("testing on %s:" % node)
+        for r in resources:
+            id = r.get("id")
+            ra_class = r.get("class")
+            drv = ra_driver[ra_class](r, (node,))
+            sys.stderr.write(" %s" % id)
+            if drv.test_resource(node):
+                started.append(drv)
+            else:
+                sys.stderr.write("\n")
+                drv.show_log(node)
+                stop_all(started, node)
+                return False
+        sys.stderr.write("\n")
+        stop_all(started, node)
+        return True
 
-
-def test_resources(rsc_l, node_l, all_nodes_l):
     try:
         import crm_pssh
     except ImportError:
         common_err("pssh not installed, rsctest can not be executed")
         return False
-    if not check_test_support(rsc_l):
+    if not check_test_support(resources):
         return False
-    if not are_all_stopped(rsc_l, all_nodes_l):
+    if not are_all_stopped(resources, all_nodes):
         sys.stderr.write("Stop all resources before testing!\n")
         return False
     rc = True
-    for node in node_l:
-        rc |= test_resources_1(rsc_l, node)
+    for node in nodes:
+        rc |= test_node(node)
     return rc
 
 # vim:ts=4:sw=4:et:
