@@ -124,16 +124,14 @@ class RaOS(object):
                 # stonith(8) may not be installed
                 common_debug("stonith exited with code %d" % rc)
                 l = []
-            l.extend(os_types_list("/usr/sbin/fence_*"))
+            for ra in os_types_list("/usr/sbin/fence_*"):
+                if ra not in ("fence_ack_manual", "fence_pcmk", "fence_legacy"):
+                    l.append(ra)
         elif ra_class == "nagios":
             l = os_types_list("%s/check_*" % vars.nagios_dir)
             l = [x.replace("check_", "") for x in l]
         l = list(set(l))
         l.sort()
-        if ra_class == "stonith":
-            for ra in ("fence_ack_manual", "fence_pcmk", "fence_legacy"):
-                if l.count(ra):
-                    l.remove(ra)
         return l
 
 
