@@ -24,7 +24,7 @@ import bz2
 from schema import Schema
 from userprefs import UserPrefs
 import vars
-from msg import common_err, common_error, common_debug, cib_parse_err, err_buf
+from msg import common_err, common_error, common_debug, cib_parse_err, ErrorBuffer
 from utils import add_sudo, str2file, str2tmp, pipe_string, get_boolean
 from utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
 from utils import olist
@@ -1073,6 +1073,7 @@ def rename_rscref_rset(c_obj, old_id, new_id):
 
 
 def rename_rscref(c_obj, old_id, new_id):
+    err_buf = ErrorBuffer.getInstance()
     if rename_rscref_simple(c_obj, old_id, new_id) or \
             rename_rscref_rset(c_obj, old_id, new_id):
         err_buf.info("resource references in %s updated" % str(c_obj))

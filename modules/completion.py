@@ -21,7 +21,6 @@ import copy
 from cibconfig import CibFactory
 from cibstatus import CibStatus
 from report import Report
-from levels import Levels
 import vars
 from schema import Schema, rng_attr_values
 from xmlutil import get_interesting_nodes, is_resource, resources_xml, listshadows, is_primitive, listnodes
@@ -565,19 +564,17 @@ def split_buffer():
     return p.split()
 
 
-def completer(txt, state):
+def setup_readline(levels):
     import readline
-    levels = Levels.getInstance()
-    words = split_buffer()
-    if readline.get_begidx() == readline.get_endidx():
-        words.append('')
-    matched = lookup_words(levels.completion_tab, words)
-    matched.append(None)
-    return matched[state]
 
+    def completer(txt, state):
+        words = split_buffer()
+        if readline.get_begidx() == readline.get_endidx():
+            words.append('')
+        matched = lookup_words(levels.completion_tab(), words)
+        matched.append(None)
+        return matched[state]
 
-def setup_readline():
-    import readline
     readline.set_history_length(100)
     readline.parse_and_bind("tab: complete")
     readline.set_completer(completer)

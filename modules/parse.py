@@ -22,7 +22,7 @@ import vars
 from ra import disambiguate_ra_type, ra_type_validate
 from schema import Schema, rng_attr_values_l, rng_attr_values
 from utils import keyword_cmp, verify_boolean, lines2cli, cannonize, can_cannonize, get_boolean, find_value, olist
-from msg import err_buf, bad_def_err, syntax_err, common_err
+from msg import ErrorBuffer, bad_def_err, syntax_err, common_err
 
 
 #
@@ -90,6 +90,7 @@ def is_only_id(pl, keyw):
 
 
 def parse_resource(s):
+    err_buf = ErrorBuffer.getInstance()
     el_type = s[0].lower()
     if el_type == "master":  # ugly kludge :(
         el_type = "ms"
@@ -891,21 +892,19 @@ class CliParser(object):
     def __init__(self):
         self.comments = []
 
-    def parse(self, s):
+    def _normalize(self, s):
         '''
-        Input: a list of tokens (or a CLI format string).
-        Return: a list of items; each item is a tuple
-            with two members: a string (tag) and a nvpairs or
-            attributes dict.
+        Handles basic normalization of the input string.
+        Converts unicode to ascii, XML data to CLI format,
+        lexing etc.
         '''
-        cli_list = ''
-        if type(s) == type(u''):
+        if isinstance(s, unicode):
             try:
                 s = s.encode('ascii')
             except Exception, msg:
                 common_err(msg)
                 return False
-        if type(s) == type(''):
+        if isinstance(s, str):
             if s and s.startswith('#'):
                 self.comments.append(s)
                 return None
@@ -920,8 +919,19 @@ class CliParser(object):
         # but there shouldn't be any newlines (?)
         while '\n' in s:
             s.remove('\n')
+        return s
+
+    def parse(self, s):
+        '''
+        Input: a list of tokens (or a CLI format string).
+        Return: a list of items; each item is a tuple
+            with two members: a string (tag) and a nvpairs or
+            attributes dict.
+        '''
+        cli_list = ''
+        s = self._normalize(s)
         if not s:
-            return None
+            return s
         if s[0] not in self.parsers.keys():
             syntax_err(s)
             return False

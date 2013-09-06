@@ -24,7 +24,6 @@ import bz2
 
 from help import HelpSystem, load_init_help_tab, add_static_help
 import vars
-from levels import Levels
 from cibconfig import mkset_obj, CibFactory
 from cibstatus import CibStatus
 from report import Report
@@ -43,12 +42,14 @@ import config
 
 def cmd_end(cmd, dir=".."):
     "Go up one level."
+    from levels import Levels
     levels = Levels.getInstance()
     levels.droplevel()
 
 
 def previous_level_is(name):
     "Checks if inside given level"
+    from levels import Levels
     levels = Levels.getInstance()
     return levels.previous().myname() == name
 
@@ -125,6 +126,7 @@ class UserInterface(object):
         if options.interactive:
             self.help_table = help_sys.load_level(self.lvl_name)
         self.topics = []
+        self.completion_tab = None
 
     def myname(self):
         '''Just return some id.'''
@@ -141,6 +143,37 @@ class UserInterface(object):
         '''
         return False
 
+    def setup_completion(self, ctab):
+        """
+        Set up structure for tab completion.
+        This function is called from Levels.
+        Completion data is cached in the UI
+        objects.
+        """
+
+        def topics_dict(help_tab):
+            if not help_tab:
+                return {}
+            return dict([(topic, None) for topic in help_tab if topic != '.'])
+
+        self.completion_tab = ctab
+        if ctab:
+            return
+        cmd_table = self.cmd_table
+        for key, value in cmd_table.items():
+            if key.startswith("_"):
+                continue
+            if self._is_help_cmd(key):
+                ctab[key] = topics_dict(self._load_help_table())
+            elif isinstance(value, tuple):
+                from completion import get_completer_list
+                ctab[key] = get_completer_list(self, key) or {}
+            else:
+                ctab[key] = {}
+
+    def _is_help_cmd(self, key):
+        return key.lower() in ('?', 'help', 'help!')
+
     def help(self, cmd, topic=''):
         "usage: help [<command>|<Topic>|topics]"
         if topic.lower() in ("?", "help", "help!"):
@@ -150,11 +183,14 @@ class UserInterface(object):
                 self.topics = help_sys.load_topics()
             help_tab = self.topics
         else:
-            if not self.help_table:
-                self.help_table = help_sys.load_level(self.lvl_name)
-            self._setup_help_aliases()
-            help_tab = self.help_table
+            help_tab = self._load_help_table()
         return help_sys.cmd_help(help_tab, topic)
+
+    def _load_help_table(self):
+        if not self.help_table:
+            self.help_table = help_sys.load_level(self.lvl_name)
+        self._setup_help_aliases()
+        return self.help_table
 
     def end(self, cmd, dir=".."):
         "usage: end"

@@ -16,46 +16,29 @@
 #
 
 from singletonmixin import Singleton
-
-
-def topics_dict(help_tab):
-    if not help_tab:
-        return {}
-    topics = {}
-    for topic in help_tab:
-        if topic != '.':
-            topics[topic] = None
-    return topics
-
-
-def mk_completion_tab(obj, ctab):
-    from completion import get_completer_list
-    cmd_table = obj.cmd_table
-    for key, value in cmd_table.items():
-        if key.startswith("_"):
-            continue
-        if type(value) == type(object):
-            ctab[key] = {}
-        elif key == "help":
-            ctab[key] = topics_dict(obj.help_table)
-        else:
-            ctab[key] = get_completer_list(obj, key)
+from ui import TopLevel
 
 
 class Levels(Singleton):
     '''
     Keep track of levels and prompts.
     '''
-    def __init__(self, start_level):
+
+    def __init__(self):
         self._marker = 0
         self._in_transit = False
-        self.level_stack = []
-        self.comp_stack = []
-        self.current_level = start_level()
-        self.parse_root = self.current_level.cmd_table
+        self.level_stack = [TopLevel()]
         self.prompts = []
-        self.completion_tab = {}
-        mk_completion_tab(self.current_level, self.completion_tab)
+        self.current_level().setup_completion({})
+
+    def current_level(self):
+        return self.level_stack[-1]
+
+    def _parse_root(self):
+        return self.current_level().cmd_table
+
+    def completion_tab(self):
+        return self.current_level().completion_tab
 
     def getprompt(self):
         return ' '.join(self.prompts)
@@ -66,35 +49,29 @@ class Levels(Singleton):
     def mark(self):
         self._marker = len(self.level_stack)
         self._in_transit = False
+        return self._parse_root()
 
     def release(self):
         while len(self.level_stack) > self._marker:
             self.droplevel()
 
     def new_level(self, level_obj, token):
-        self.level_stack.append(self.current_level)
-        self.comp_stack.append(self.completion_tab)
+        sublevel = level_obj()
+        sublevel.setup_completion(self.completion_tab()[token])
+        self.level_stack.append(sublevel)
         self.prompts.append(token)
-        self.current_level = level_obj()
-        self.parse_root = self.current_level.cmd_table
-        try:
-            if not self.completion_tab[token]:
-                mk_completion_tab(self.current_level, self.completion_tab[token])
-            self.completion_tab = self.completion_tab[token]
-        except:
-            pass
         self._in_transit = True
+        return self._parse_root()
 
     def previous(self):
-        if self.level_stack:
-            return self.level_stack[-1]
+        if len(self.level_stack) > 1:
+            return self.level_stack[-2]
+        return ''
 
     def droplevel(self):
-        if self.level_stack:
-            self.current_level.end_game(no_questions_asked=self._in_transit)
-            self.current_level = self.level_stack.pop()
-            self.completion_tab = self.comp_stack.pop()
-            self.parse_root = self.current_level.cmd_table
+        if len(self.level_stack) > 1:
+            self.current_level().end_game(no_questions_asked=self._in_transit)
+            self.level_stack.pop()
             self.prompts.pop()
 
     def should_wait(self):
@@ -102,7 +79,7 @@ class Levels(Singleton):
         """
         from userprefs import Options
         options = Options.getInstance()
-        by_level = self.current_level.should_wait()
+        by_level = self.current_level().should_wait()
         transit_or_noninteractive = self.is_in_transit() or not options.interactive
         return by_level and transit_or_noninteractive
 

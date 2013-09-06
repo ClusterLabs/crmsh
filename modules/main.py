@@ -24,7 +24,7 @@ import atexit
 from utils import wait4dc, is_pcmk_118, is_program
 from userprefs import Options, UserPrefs
 import vars
-from ui import cmd_exit, TopLevel
+from ui import cmd_exit
 from msg import ErrorBuffer, syntax_err, skill_err
 from msg import common_warn, common_info, common_debug, common_err
 from levels import Levels
@@ -154,8 +154,7 @@ def parse_line(lvl, line):
     """
     if not line or line[0].startswith('#'):
         return True
-    lvl.mark()
-    pt = lvl.parse_root
+    pt = lvl.mark()
     cmd = None
     i = 0
     for i in range(len(line)):
@@ -170,8 +169,7 @@ def parse_line(lvl, line):
             # interactive option _before_ creating the level
             if not options.interactive and i == len(line)-1:
                 set_interactive()
-            lvl.new_level(current, token)
-            pt = lvl.parse_root  # move to the next level
+            pt = lvl.new_level(current, token)
         else:
             cmd = current
             break  # and stop parsing
@@ -293,7 +291,7 @@ usage:
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 err_buf = ErrorBuffer.getInstance()
-levels = Levels.getInstance(TopLevel)
+levels = Levels.getInstance()
 
 
 def set_interactive():
@@ -393,7 +391,7 @@ def do_work(user_args):
 
     if options.interactive and not options.batch:
         from completion import setup_readline
-        setup_readline()
+        setup_readline(levels)
 
     rc = 0
     while True:
