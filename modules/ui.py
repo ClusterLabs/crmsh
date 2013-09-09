@@ -176,7 +176,7 @@ class UserInterface(object):
 
     def help(self, cmd, topic=''):
         "usage: help [<command>|<Topic>|topics]"
-        if topic.lower() in ("?", "help", "help!"):
+        if self._is_help_cmd(topic):
             topic = "help"
         if topic == "topics" or (topic and topic[0].isupper()):
             if not self.topics:
