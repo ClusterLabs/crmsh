@@ -150,7 +150,7 @@ class UserInterface(object):
         else:
             if not self.help_table:
                 self.help_table = help_sys.load_level(self.lvl_name)
-                utils.setup_help_aliases(self)
+            utils.setup_help_aliases(self)
             help_tab = self.help_table
         return help_sys.cmd_help(help_tab, topic)
 
