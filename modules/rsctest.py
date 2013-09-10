@@ -343,11 +343,23 @@ class RAStonith(RADriver):
                 return False
         return RADriver.test_resource(self, node)
 
+    def _params(self):
+        '''
+        Get all the instance_attribute nvpairs and build:
+        name=value name=value name=value
+        '''
+        return " ".join(["%s=%s" % (nv.get('name'), nv.get('value')) for nv in
+                         self.rscdef_node.xpath("instance_attributes/nvpair")])
+
     def exec_cmd(self, op):
         """
-        FIXME: Is stonith_admin reliably available?
+        Probe resource on each node.
         """
-        return "stonith_admin -Q %s" % (self.id)
+        typ = self.ra_type
+        params = self._params()
+        if params:
+            params = " " + params
+        return "stonith -t %s%s -S" % (typ, params)
 
 
 ra_driver = {
