@@ -17,6 +17,7 @@
 
 import os
 import sys
+import pipes
 from msg import common_err, common_debug, common_warn, common_info
 from utils import rmdir_r
 from xmlutil import get_topmost_rsc, get_op_timeout, get_child_nvset_node, is_ms, is_cloned
@@ -181,10 +182,7 @@ class RADriver(object):
         for attr in self.rscenv.keys():
             # shell doesn't allow "-" in var names
             envvar = attr.replace("-", "_")
-            if "'" in self.rscenv[attr]:
-                cmd = '%s="%s" %s' % (envvar, self.rscenv[attr], cmd)
-            else:
-                cmd = "%s='%s' %s" % (envvar, self.rscenv[attr], cmd)
+            cmd = "%s=%s %s" % (envvar, pipes.quote(self.rscenv[attr]), cmd)
         statuses = do_pssh_cmd(cmd, nodes, self.outdir, self.errdir, self.timeout)
         for i in range(len(nodes)):
             try:
@@ -343,23 +341,16 @@ class RAStonith(RADriver):
                 return False
         return RADriver.test_resource(self, node)
 
-    def _params(self):
-        '''
-        Get all the instance_attribute nvpairs and build:
-        name=value name=value name=value
-        '''
-        return " ".join(["%s=%s" % (nv.get('name'), nv.get('value')) for nv in
-                         self.rscdef_node.xpath("instance_attributes/nvpair")])
+    def set_rscenv(self, op):
+        RADriver.set_rscenv(self, op)
+        for nv in self.rscdef_node.xpath("instance_attributes/nvpair"):
+            self.rscenv[nv.get('name')] = nv.get('value')
 
     def exec_cmd(self, op):
         """
         Probe resource on each node.
         """
-        typ = self.ra_type
-        params = self._params()
-        if params:
-            params = " " + params
-        return "stonith -t %s%s -S" % (typ, params)
+        return "stonith -t %s -E -S" % (self.ra_type)
 
 
 ra_driver = {
