@@ -194,7 +194,7 @@ def exit_handler():
 
 
 def prereqs():
-    proglist = "which cibadmin crm_resource crm_attribute crm_mon"
+    proglist = "cibadmin crm_resource crm_attribute crm_mon"
     for prog in proglist.split():
         if not is_program(prog):
             print >> sys.stderr, "%s not available, check your installation" % prog
