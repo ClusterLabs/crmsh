@@ -22,14 +22,14 @@
 log_patterns = {
 	"resource": (
 		( # detail 0
-			"crmd.*Initiating.*%%_(start|stop|promote|demote|migrate)_",
+			"crmd.*Initiating.*%%_(?:start|stop|promote|demote|migrate)_",
 			"lrmd.*operation_finished: %%_",
-			"crmd.*process_lrm_event: LRM operation %%_(start|stop|promote|demote|migrate)_.*confirmed=true",
+			"crmd.*process_lrm_event: LRM operation %%_(?:start|stop|promote|demote|migrate)_.*confirmed=true",
 			"crmd.*process_lrm_event: LRM operation %%_.*Timed Out",
 			"[(]%%[)][[]",
 		),
 		( # detail 1
-			"crmd.*Initiating%%_(monitor_0|notify)",
+			"crmd.*Initiating%%_(?:monitor_0|notify)",
 		),
 	),
 	"node": (
@@ -48,8 +48,8 @@ log_patterns = {
 			"stonith-ng.*remote_op_timeout.*on %% for.*timed out",
 			"stonith-ng.*can_fence_host_with_device:.*can not fence %%:",
 			"stonithd.*Succeeded.*node %%:",
-			"pcmk_peer_update.*(lost|memb): %% ",
-			"crmd.*ccm_event.*(NEW|LOST):.* %% ",
+			"pcmk_peer_update.*(?:lost|memb): %% ",
+			"crmd.*ccm_event.*(?:NEW|LOST):.* %% ",
 			"Node return implies stonith of %% ",
 		),
 		( # detail 1
@@ -58,7 +58,7 @@ log_patterns = {
 	"quorum": (
 		( # detail 0
 			"crmd.*crm_update_quorum:.Updating.quorum.status",
-			"crmd.*ais.disp.*quorum.(lost|ac?quir)",
+			"crmd.*ais.disp.*quorum.(?:lost|ac?quir)",
 		),
 		( # detail 1
 		),
