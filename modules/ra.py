@@ -146,13 +146,13 @@ class RaCrmResource(object):
         '''
         Get information from crm_resource.
         '''
-        rc, s = stdout2list("crm_resource %s" % opts, stderr_on=False)
+        rc, l = stdout2list("crm_resource %s" % opts, stderr_on=False)
         # not clear when/why crm_resource exits with non-zero
         # code
         if rc != 0:
             common_debug("crm_resource %s exited with code %d" %
                          (opts, rc))
-        return s
+        return l
 
     def meta(self, ra_class, ra_type, ra_provider):
         return self.crm_resource("--show-metadata %s:%s:%s" % (ra_class, ra_provider, ra_type))
@@ -363,6 +363,9 @@ class RAInfo(object):
         if not self.ra_provider:
             self.ra_provider = "heartbeat"
         self.ra_elem = None
+        self.broken_ra = False
+        if not self.ra_type or not self.ra_class:
+            self.broken_ra = True
 
     def ra_string(self):
         return self.ra_class == "ocf" and \
@@ -411,17 +414,27 @@ class RAInfo(object):
         '''
         if self.ra_elem is not None:
             return self.ra_elem
+        # don't try again in vain
+        if self.broken_ra:
+            return None
+        self.broken_ra = True
         meta = self.meta()
         try:
             self.ra_elem = etree.fromstring('\n'.join(meta))
+        except Exception, msg:
+            if not meta:
+                self.error("got no meta-data, does this RA exist?")
+            else:
+                self.error("meta-data is no good XML")
+            return None
+        try:
             assert(self.ra_elem.tag == 'resource-agent')
         except Exception, msg:
-            common_err(msg)
             self.error("meta-data contains no resource-agent element")
-            self.ra_elem = None
             return None
         if self.ra_class == "stonith":
             self.add_ra_params(get_stonithd_meta())
+        self.broken_ra = False
         return self.ra_elem
 
     def param_type_default(self, n):
@@ -643,6 +656,8 @@ class RAInfo(object):
             l = prog_meta(self.ra_class)
         else:
             l = ra_if().meta(self.ra_class, self.ra_type, self.ra_provider)
+        if not l:
+            return None
         self.debug("read and cached meta-data")
         return wcache.store(id, l)
 
