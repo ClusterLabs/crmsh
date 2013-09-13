@@ -45,7 +45,7 @@ from xmlutil import rename_rscref, is_ms, silly_constraint, is_container, fix_co
 from xmlutil import sanity_check_nvpairs, merge_nodes, op2list, mk_rsc_type, is_resource
 from xmlutil import stuff_comments, is_comment, is_constraint, read_cib, processing_sort_cli
 from xmlutil import find_operation, get_rsc_children_ids, is_primitive, referenced_resources
-from xmlutil import cibdump2elem, processing_sort, get_rsc_ref_ids, merge_nodes_2
+from xmlutil import cibdump2elem, processing_sort, get_rsc_ref_ids, merge_tmpl_into_prim
 from xmlutil import remove_id_used_attributes, get_top_cib_nodes, set_id_used_attr
 from xmlutil import merge_attributes, is_cib_element, sanity_check_meta, add_missing_attr
 from xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
@@ -1268,7 +1268,7 @@ def reduce_primitive(node):
     template_obj = cib_factory.find_object(template)
     if not template_obj:
         return None
-    return merge_nodes_2(node, template_obj.node)
+    return merge_tmpl_into_prim(node, template_obj.node)
 
 
 class Op(object):

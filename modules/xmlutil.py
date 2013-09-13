@@ -1326,13 +1326,21 @@ def merge_nodes(dnode, snode):
     return rc
 
 
-def merge_nodes_2(dnode, snode):
+def merge_tmpl_into_prim(prim_node, tmpl_node):
     '''
-    Merge nodes in a new doc, i.e. keep dnode intact.
+    Create a new primitive element which is a merge of a
+    rsc_template and a primitive which references it.
     '''
-    i_dnode = etree.Element(dnode.tag)
-    merge_nodes(i_dnode, snode)
-    return i_dnode
+    dnode = etree.Element(prim_node.tag)
+    merge_nodes(dnode, tmpl_node)
+    merge_nodes(dnode, prim_node)
+    # the resulting node should inherit all primitives attributes
+    for a, v in prim_node.items():
+        dnode.set(a, v)
+    # but class/provider/type are coming from the template
+    for a in ("class", "provider", "type"):
+        dnode.set(a, tmpl_node.get(a))
+    return dnode
 
 
 user_prefs = UserPrefs.getInstance()
