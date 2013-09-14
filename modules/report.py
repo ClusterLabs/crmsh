@@ -950,6 +950,7 @@ class Report(Singleton):
         if self.source != src:
             self.set_change_origin(CH_SRC)
             self.source = src
+            self.loc = None
             self.ready = False
 
     def set_period(self, from_dt, to_dt):
