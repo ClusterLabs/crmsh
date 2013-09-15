@@ -441,10 +441,7 @@ def stdout2list(cmd, stderr_on=True):
     stderr_on controls whether to show output which comes on stderr.
     '''
     rc, s = get_stdout(add_sudo(cmd), stderr_on=stderr_on)
-    if not s:
-        return rc, []
-    else:
-        return rc, s.split('\n')
+    return rc, s.split('\n')
 
 
 def append_file(dest, src):
