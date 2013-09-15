@@ -364,8 +364,6 @@ class RAInfo(object):
             self.ra_provider = "heartbeat"
         self.ra_elem = None
         self.broken_ra = False
-        if not self.ra_type or not self.ra_class:
-            self.broken_ra = True
 
     def ra_string(self):
         return self.ra_class == "ocf" and \
