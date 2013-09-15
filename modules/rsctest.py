@@ -343,23 +343,16 @@ class RAStonith(RADriver):
                 return False
         return RADriver.test_resource(self, node)
 
-    def _params(self):
-        '''
-        Get all the instance_attribute nvpairs and build:
-        name=value name=value name=value
-        '''
-        return " ".join(["%s=%s" % (nv.get('name'), nv.get('value')) for nv in
-                         self.rscdef_node.xpath("instance_attributes/nvpair")])
+    def set_rscenv(self, op):
+        RADriver.set_rscenv(self, op)
+        for nv in self.rscdef_node.xpath("instance_attributes/nvpair"):
+            self.rscenv[nv.get('name')] = nv.get('value')
 
     def exec_cmd(self, op):
         """
         Probe resource on each node.
         """
-        typ = self.ra_type
-        params = self._params()
-        if params:
-            params = " " + params
-        return "stonith -t %s%s -S" % (typ, params)
+        return "stonith -t %s -E -S" % (self.ra_type)
 
 
 ra_driver = {
