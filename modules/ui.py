@@ -2709,7 +2709,7 @@ class History(UserInterface):
         # set source appropriately
         if rc and subcmd in ("save", "load"):
             options.history = crm_report.get_source()
-            crm_report.info()
+            crm_report.prepare_source()
             self.current_session = name
         elif rc and subcmd == "delete":
             if name == self.current_session:
