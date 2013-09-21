@@ -25,6 +25,7 @@ modules	=	__init__.py 	\
 			cibstatus.py	\
 			clidisplay.py	\
 			cliformat.py	\
+			cibobjects.py	\
 			completion.py	\
 			config.py	\
 			help.py		\
