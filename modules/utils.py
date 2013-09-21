@@ -129,12 +129,19 @@ class odict(DictMixin):
 
 
 class olist(list):
+    """
+    Implements the 'in' operator
+    in a case-insensitive manner,
+    allowing "if x in olist(...)"
+    """
     def __init__(self, keys):
-        #print "Init %s" % (repr(keys))
-        super(olist, self).__init__()
-        for key in keys:
-            self.append(key)
-            self.append(key.upper())
+        super(olist, self).__init__([k.lower() for k in keys])
+
+    def __contains__(self, key):
+        return super(olist, self).__contains__(key.lower())
+
+    def append(self, key):
+        super(olist, self).append(key.lower())
 
 
 def os_types_list(path):
