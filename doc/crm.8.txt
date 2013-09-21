@@ -1643,7 +1643,8 @@ attributes at the `node` level.
 
 Usage:
 ...............
-        node <uname>[:<type>]
+        node [$id=<id>] <uname>[:<type>]
+          [description=<description>]
           [attributes <param>=<value> [<param>=<value>...]]
           [utilization <param>=<value> [<param>=<value>...]]
 
@@ -1683,6 +1684,7 @@ type and which share most of the configuration. See
 Usage:
 ...............
         primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>}
+          [description=<description>]
           [params attr_list]
           [meta attr_list]
           [utilization attr_list]
@@ -1748,6 +1750,7 @@ The `group` command creates a group of resources.
 Usage:
 ...............
         group <name> <rsc> [<rsc>...]
+          [description=<description>]
           [meta attr_list]
           [params attr_list]
 
@@ -1768,6 +1771,7 @@ single primitive resource or one group of resources.
 Usage:
 ...............
         clone <name> <rsc>
+          [description=<description>]
           [meta attr_list]
           [params attr_list]
 
@@ -1788,6 +1792,7 @@ single primitive resource or one group of resources.
 Usage:
 ...............
         ms <name> <rsc>
+          [description=<description>]
           [meta attr_list]
           [params attr_list]
 
@@ -1829,6 +1834,7 @@ configurations with many similar resources.
 Usage:
 ...............
         rsc_template <name> [<class>:[<provider>:]]<type>
+          [description=<description>]
           [params attr_list]
           [meta attr_list]
           [utilization attr_list]
