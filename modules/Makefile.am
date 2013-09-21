@@ -47,6 +47,7 @@ modules	=	__init__.py 	\
 			userprefs.py	\
 			schema.py		\
 			pacemaker.py		\
+			ordereddict.py		\
 			utils.py	\
 			vars.py		\
 			xmlutil.py
