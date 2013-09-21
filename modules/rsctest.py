@@ -17,9 +17,8 @@
 
 import os
 import sys
-import pipes
 from msg import common_err, common_debug, common_warn, common_info
-from utils import rmdir_r
+from utils import rmdir_r, quote
 from xmlutil import get_topmost_rsc, get_op_timeout, get_child_nvset_node, is_ms, is_cloned
 
 
@@ -182,7 +181,7 @@ class RADriver(object):
         for attr in self.rscenv.keys():
             # shell doesn't allow "-" in var names
             envvar = attr.replace("-", "_")
-            cmd = "%s=%s %s" % (envvar, pipes.quote(self.rscenv[attr]), cmd)
+            cmd = "%s=%s %s" % (envvar, quote(self.rscenv[attr]), cmd)
         statuses = do_pssh_cmd(cmd, nodes, self.outdir, self.errdir, self.timeout)
         for i in range(len(nodes)):
             try:
