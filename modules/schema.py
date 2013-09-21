@@ -115,6 +115,23 @@ class Schema(Singleton):
         else:
             return self.store[t][name]
 
+    def rng_attr_values(self, el_name, attr_name):
+        ""
+        try:
+            return self.get('attr_det', el_name)[attr_name]['v']
+        except:
+            return []
+
+    def rng_attr_values_l(self, el_name, attr_name):
+        ""
+        l = self.get('attr_det_l', el_name)
+        l2 = []
+        for el in l:
+            if el['n'] == attr_name:
+                l2 += el['v']
+        return l2
+
+
 g_schema = Schema.getInstance()
 
 # vim:ts=4:sw=4:et:
