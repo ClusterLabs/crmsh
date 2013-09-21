@@ -1185,7 +1185,7 @@ def gv_edge_score_label(gv_obj, e_id, node):
 
 def mk_cli_list(cli):
     'Sometimes we get a string and sometimes a list.'
-    if type(cli) == type('') or type(cli) == type(u''):
+    if isinstance(cli, basestring):
         cp = CliParser()
         # what follows looks strange, but the last string actually matters
         # the previous ones may be comments and are collected by the parser
