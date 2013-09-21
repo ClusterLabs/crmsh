@@ -2203,6 +2203,7 @@ class History(UserInterface):
         self.cmd_table["peinputs"] = (self.peinputs, (0,), 1, 0)
         self.cmd_table["transition"] = (self.transition, (0,), 1, 0)
         self.cmd_table["diff"] = (self.diff, (2, 4), 1, 0)
+        self.cmd_table["wdiff"] = (self.wdiff, (2, 3), 1, 0)
         self.cmd_table["show"] = (self.show, (1, 2), 1, 0)
         self.cmd_table["graph"] = (self.graph, (1, 4), 1, 0)
         self.cmd_table["_dump"] = (self._dump, (1, 2), 1, 0)
@@ -2554,6 +2555,22 @@ class History(UserInterface):
         self._reset_cib_env()
         return s
 
+    def _worddiff(self, s1, s2):
+        s = None
+        f1 = utils.str2tmp(s1)
+        f2 = utils.str2tmp(s2)
+        if f1 and f2:
+            rc, s = utils.get_stdout("wdiff %s %s" % (f1, f2))
+        try:
+            os.unlink(f1)
+        except:
+            pass
+        try:
+            os.unlink(f2)
+        except:
+            pass
+        return s
+
     def _unidiff(self, s1, s2, t1, t2):
         s = None
         f1 = utils.str2tmp(s1)
@@ -2578,13 +2595,15 @@ class History(UserInterface):
             fromlines, tolines, t1, t2)
         return ''.join(diff_l)
 
-    def _diff(self, pe_fun, t1, t2, html=False):
+    def _diff(self, pe_fun, t1, t2, html=False, wdiff=False):
         s1 = self._render_pe(pe_fun, t1)
         s2 = self._render_pe(pe_fun, t2)
         if not s1 or not s2:
             return None
         if html:
             s = self._diffhtml(s1, s2, t1, t2)
+        elif wdiff:
+            s = self._worddiff(s1, s2)
         else:
             s = self._unidiff(s1, s2, t1, t2)
         return s
@@ -2679,6 +2698,21 @@ class History(UserInterface):
             utils.page_string(s)
         else:
             sys.stdout.writelines(s)
+
+    def wdiff(self, cmd, t1, t2, *args):
+        "usage: wdiff <pe> <pe> [status]"
+        opt_l = []
+        if not self._common_pe_render_check(cmd, opt_l, *args):
+            return False
+        showfun = self._pe_config_plain
+        if "status" in opt_l:
+            showfun = self._pe_status_nohdr
+        s = self._diff(showfun, t1, t2, wdiff=True)
+        if previous_level_is("cibconfig"):
+            cib_factory.refresh()
+        if s is None:
+            return False
+        utils.page_string(s)
 
     def session(self, cmd, subcmd=None, name=None):
         "usage: session [{save|load|delete} <name> | pack [<name>] | update | list]"

@@ -3341,6 +3341,34 @@ Examples:
         diff pe-input-2080.bz2 live status
 ...............
 
+[[cmdhelp_history_wdiff,cluster states/transitions difference]]
+==== `wdiff`
+
+A transition represents a change in cluster configuration or
+state. Use `wdiff` to see what has changed between two
+transitions as word differences on a line-by-line basis.
+
+If you want to specify the current cluster configuration and
+status, use the string `live`.
+
+Normally, the first transition specified should be the one which
+is older, but we are not going to enforce that.
+
+Note that a single configuration update may result in more than
+one transition.
+
+Usage:
+...............
+        wdiff <pe> <pe> [status]
+
+        pe :: <number>|<index>|<file>|live
+...............
+Examples:
+...............
+        wdiff 2066 2067
+        wdiff pe-input-2080.bz2 live status
+...............
+
 [[cmdhelp_history_session,manage history sessions]]
 ==== `session`
 
