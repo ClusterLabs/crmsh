@@ -21,7 +21,7 @@ from lxml import etree
 import vars
 from ra import disambiguate_ra_type, ra_type_validate
 from schema import Schema, rng_attr_values_l, rng_attr_values
-from utils import keyword_cmp, verify_boolean, lines2cli, cannonize, can_cannonize, get_boolean, find_value, olist
+from utils import keyword_cmp, verify_boolean, lines2cli, canonize, can_canonize, get_boolean, find_value, olist
 from msg import ErrorBuffer, bad_def_err, syntax_err, common_err
 
 
@@ -215,8 +215,8 @@ def cli_parse_score(score, pl, noattr=False):
         score = re.sub("inf(inity)?|INF(INITY)?", "INFINITY", score)
         pl.append(["score", score])
     # orders have the special kind attribute
-    elif noattr and can_cannonize(score, rng_attr_values('rsc_order', 'kind')):
-        pl.append(["kind", cannonize(score, rng_attr_values('rsc_order', 'kind'))])
+    elif noattr and can_canonize(score, rng_attr_values('rsc_order', 'kind')):
+        pl.append(["kind", canonize(score, rng_attr_values('rsc_order', 'kind'))])
     elif score:
         if noattr:
             common_err("attribute not allowed for score in orders")

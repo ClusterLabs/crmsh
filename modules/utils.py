@@ -80,15 +80,20 @@ def keyword_cmp(string1, string2):
     return string1.lower() == string2.lower()
 
 
-def can_cannonize(s, values):
-    return s.lower() in [x.lower() for x in values]
+def can_canonize(s, values):
+    sl = s.lower()
+    for x in values:
+        if sl == x.lower():
+            return True
+    return False
 
 
-def cannonize(s, values):
-    lw = [x.lower() for x in values]
-    if not s.lower() in lw:
-        return s
-    return values[lw.index(s.lower())]
+def canonize(s, values):
+    sl = s.lower()
+    for x in values:
+        if sl == x.lower():
+            return x
+    return sl
 
 
 from UserDict import DictMixin
