@@ -1916,6 +1916,15 @@ This constraint expresses the placement relation between two
 or more resources. If there are more than two resources, then the
 constraint is called a resource set.
 
+The score is used to indicate the priority of the constraint. A
+positive score indicates that the resources should run on the same
+node. A negative score that they should not run on the same
+node. Values of positive or negative `infinity` indicate a mandatory
+constraint.
+
+In the two resource form, the cluster will place `<with-rsc>` first,
+and then decide where to put the `<rsc>` resource.
+
 Collocation resource sets have an extra attribute (`sequential`)
 to allow for sets of resources which don't depend on each other
 in terms of state. The shell syntax for such sets is to put
@@ -1928,12 +1937,15 @@ instance attributes.
 
 Usage:
 ...............
+        colocation <id> <score>: <rsc>[:<role>] <with-rsc>[:<role>]
+          [node-attribute=<node_attr>]
+
         colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>] ...
           [node-attribute=<node_attr>]
 ...............
 Example:
 ...............
-        colocation dummy_and_apache -inf: apache dummy
+        colocation never_put_apache_with_dummy -inf: apache dummy
         colocation c1 inf: A ( B C )
 ...............
 
