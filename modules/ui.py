@@ -582,7 +582,7 @@ class Template(UserInterface):
                 if s:
                     piece2.append(' '.join(s))
             if piece2:
-                l2.append(cli_format(piece2, 1))
+                l2.append(cli_format(piece2, break_lines=True))
         return '\n'.join(l2)
 
     def process(self, config=''):

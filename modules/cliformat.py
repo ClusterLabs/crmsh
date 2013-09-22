@@ -25,21 +25,16 @@ import xmlutil
 #
 # CLI format generation utilities (from XML)
 #
-def cli_format(pl, format):
-    if format > 0:
+def cli_format(pl, break_lines=True, xml=False):
+    if break_lines and xml:
+        return ' \\\n'.join(pl)
+    elif break_lines:
         return ' \\\n\t'.join(pl)
     else:
         return ' '.join(pl)
 
 
-def cli_format_xml(pl, format):
-    if format > 0:
-        return ' \\\n'.join(pl)
-    else:
-        return ''.join(pl)
-
-
-def cli_operations(node, format=1):
+def cli_operations(node, break_lines=True):
     l = []
     node_id = node.get("id")
     s = ''
@@ -53,7 +48,7 @@ def cli_operations(node, format=1):
     for c in node.iterchildren():
         if c.tag == "op":
             l.append(cli_op(c))
-    return cli_format(l, format)
+    return cli_format(l, break_lines=break_lines)
 
 
 def nvpair_format(n, v):

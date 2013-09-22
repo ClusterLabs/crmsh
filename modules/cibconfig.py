@@ -51,7 +51,7 @@ from xmlutil import merge_attributes, is_cib_element, sanity_check_meta, add_mis
 from xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
 from xmlutil import get_rsc_operations, delete_rscref, xml_cmp, lookup_node, RscState
 from cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
-from cliformat import cli_acl_rule, cli_pairs, rsc_set_constraint, cli_format_xml, get_kind
+from cliformat import cli_acl_rule, cli_pairs, rsc_set_constraint, get_kind
 from cliformat import cli_operations, simple_rsc_constraint, cli_rule, cli_format
 
 
@@ -867,7 +867,7 @@ class CibObject(object):
         h = cli_display.keyword("xml")
         l = etree.tostring(self.node, pretty_print=True).split('\n')
         l = [x for x in l if x]  # drop empty lines
-        return "%s %s" % (h, cli_format_xml(l, format))
+        return "%s %s" % (h, cli_format(l, break_lines=(format > 0), xml=True))
 
     def _gv_rsc_id(self):
         if self.parent and self.parent.obj_type in vars.clonems_tags:
@@ -937,7 +937,7 @@ class CibObject(object):
             s = self._repr_cli_child(c, format)
             if s:
                 l.append(s)
-        s = self._cli_format_and_comment(l, comments, format)
+        s = self._cli_format_and_comment(l, comments, break_lines=(format > 0))
         if format < 0:
             cli_display.reset_no_pretty()
         return s
@@ -990,11 +990,11 @@ class CibObject(object):
             stuff_comments(node, comments)
         return node
 
-    def _cli_format_and_comment(self, l, comments, format):
+    def _cli_format_and_comment(self, l, comments, break_lines):
         '''
         Format and add comment (if any).
         '''
-        s = cli_format(l, format)
+        s = cli_format(l, break_lines=break_lines)
         cs = '\n'.join(comments)
         return (comments and format >= 0) and '\n'.join([cs, s]) or s
 
@@ -1358,7 +1358,7 @@ class CibPrimitive(CibObject):
         if c.tag in self.set_names:
             return self._attr_set_str(c)
         elif c.tag == "operations":
-            return cli_operations(c, format)
+            return cli_operations(c, break_lines=(format > 0))
 
     def _cli_list2node(self, cli_list, oldnode):
         '''
@@ -1933,7 +1933,7 @@ class CibFencingOrder(CibObject):
             return "%s %s" % (s, devs_s)
         return cli_format([s] + ["%s: %s" % (x, ' '.join(dd[x]))
                                  for x in dd.keys()],
-                          format)
+                          break_lines=(format > 0))
 
     def _same_levels(self, pl):
         for lvl_pl in pl:
