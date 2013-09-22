@@ -472,7 +472,7 @@ class CibObjectSetCli(CibObjectSet):
         cp = CliParser()
         for cli_text in lines2cli(s):
             err_buf.incr_lineno()
-            cli_list = cp.parse(cli_text)
+            cli_list = cp.parse2(cli_text)
             if cli_list:
                 id = self._get_id(cli_list)
                 if id in id_set:
@@ -1190,7 +1190,7 @@ def mk_cli_list(cli):
         # what follows looks strange, but the last string actually matters
         # the previous ones may be comments and are collected by the parser
         for s in lines2cli(cli):
-            cli_list = cp.parse(s)
+            cli_list = cp.parse2(s)
         return cli_list
     else:
         return cli
@@ -2873,7 +2873,9 @@ class CibFactory(Singleton):
         return rc
 
     def create_object(self, *args):
-        return self.create_from_cli(CliParser().parse(list(args))) != None
+        cp = CliParser()
+        out = cp.parse2(list(args))
+        return self.create_from_cli(out) is not None
 
     def set_property_cli(self, cli_list):
         comments = get_comments(cli_list)

@@ -39,7 +39,7 @@
 .INP: modgroup g1 remove p1
 .INP: modgroup g1 add p1 before p2
 .INP: modgroup g1 add p1
-ERROR: 1: in group g1 child p1 listed more than once
+ERROR: 1: syntax in group: child p1 listed more than once in group g1 parsing 'group g1 p1 p2 d3 p1'
 .INP: modgroup g1 remove st
 ERROR: 40: st is not member of g1
 .INP: modgroup g1 remove c1

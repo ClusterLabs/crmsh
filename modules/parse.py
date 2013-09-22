@@ -144,8 +144,7 @@ class BaseParser(object):
     def current_token(self):
         if self.has_tokens():
             return self._cmd[self._currtok]
-        else:
-            return None
+        return None
 
     def has_tokens(self):
         return self._currtok < len(self._cmd)
@@ -226,24 +225,25 @@ class BaseParser(object):
         (None, foo, bar) if string splits into (foo, bar)
         (None, None, foo) if string splits into (foo)
         """
-        if order:
+        if not order:
             if not self.current_token():
-                self.err("Unexpected end, expected <value>[:<value> ...] (max %d parts)" % len(order))
-            sp = self.current_token().split(sep)
-            if len(sp) > len(order):
-                self.err("Too many parts, expected <value>[:<value> ...] (max %d parts)" % len(order))
-            while len(sp) < len(order):
-                try:
-                    sp.insert(order.index(len(sp)), None)
-                except ValueError:
-                    self.err("Internal error, please file a bug report (order = %s)" %
-                             (repr(order)))
-            self.match_any()
-            return sp
-        else:
-            if not self.current_token():
-                self.err("Expected <value>[:<value> ...]")
+                self.err("Expected val[%sval ...]" % (sep))
             return self.match_any().split(sep)
+        if not self.current_token():
+            fmt = "Expected val[%sval ...] (max %d parts)"
+            self.err(fmt % (sep, len(order)))
+        sp = self.current_token().split(sep)
+        if len(sp) > len(order):
+            fmt = "Expected val[%sval ...] (max %d parts)"
+            self.err(fmt % (sep, len(order)))
+        try:
+            while len(sp) < len(order):
+                sp.insert(order.index(len(sp)), None)
+        except ValueError:
+            self.err("Internal error, please file a bug report (order = %s)" %
+                     (repr(order)))
+        self.match_any()
+        return sp
 
     def match_dispatch(self, errmsg=None):
         """
@@ -299,7 +299,7 @@ class NodeParser(BaseParser):
         out = Node()
         if self.try_match(self._ID_RE):
             out.id = self.matched(1)
-        self.match(self._UNAME_RE, errmsg="Expected <uname>[:<type>]")
+        self.match(self._UNAME_RE, errmsg="Expected uname[:type]")
         out.uname, out.type = self.matched(1), self.matched(3)
         out.description = self.try_match_description()
         self.match_arguments(out, ('attributes', 'utilization'))
@@ -309,7 +309,7 @@ class NodeParser(BaseParser):
 class ResourceParser(BaseParser):
     _TEMPLATE_RE = re.compile(r'@(.+)$')
     _RA_TYPE_RE = re.compile(r'[a-z0-9_:-]+$', re.IGNORECASE)
-    _OPTYPE_RE = re.compile(r'(start|stop|monitor)$', re.IGNORECASE)
+    _OPTYPE_RE = re.compile(r'(%s)$' % ('|'.join(vars.op_cli_names)), re.IGNORECASE)
 
     def can_parse(self):
         return ('primitive', 'group', 'clone', 'ms', 'master', 'rsc_template')
@@ -327,9 +327,9 @@ class ResourceParser(BaseParser):
             out.ra_provider = cpt[1]
 
     def match_op(self, out):
-        "op start|stop|monitor [<n>=<v> ...]"
+        "op <optype> [<n>=<v> ...]"
         self.match('op')
-        op_type = self.match(self._OPTYPE_RE, errmsg="Expected op_type (start|stop|monitor)")
+        op_type = self.match(self._OPTYPE_RE, errmsg="Expected operation type")
         op_attrs = self.match_nvpairs(minpairs=0)
         has_interval = False
         for kv in op_attrs:
@@ -352,7 +352,7 @@ class ResourceParser(BaseParser):
     def match_attr_list(self, name, out):
         attr_list = self.try_match_nvpairs(name)
         if not attr_list:
-            return
+            return False
         # handle $id and $id-ref
         attr0 = attr_list[0][0].lower()
         if attr0 == '$id-ref':
@@ -363,6 +363,7 @@ class ResourceParser(BaseParser):
                 self.err("At least one param is required")
         for n, v in attr_list:
             getattr(out, name)[n] = v
+        return True
 
     def match_arguments(self, out, names):
         """
@@ -383,7 +384,8 @@ class ResourceParser(BaseParser):
                 self.match_op(out)
             else:
                 for name in names:
-                    self.match_attr_list(name, out)
+                    if self.match_attr_list(name, out):
+                        break
 
     def parse(self, cmd):
         return self.begin_dispatch(cmd, min_args=2)
@@ -434,11 +436,8 @@ class ResourceParser(BaseParser):
     parse_clone = _master_or_clone
 
     def _try_group_resource(self):
-        if not self.has_tokens():
-            return None
-        eq = '=' in self.current_token()
-        pm = self.current_token() in ('params', 'meta')
-        if eq or pm:
+        t = self.current_token()
+        if (not t) or ('=' in t) or (t in ('params', 'meta')):
             return None
         return self.match_any()
 
@@ -446,10 +445,11 @@ class ResourceParser(BaseParser):
         out = Group()
         out.id = self.match_identifier()
         while self._try_group_resource():
-            if self.lastmatch() in out.children:
-                self.err("in group %s, child %s is listed more than once" %
-                         (out.id, self.lastmatch()))
-            out.children.append(self.lastmatch())
+            child = self.lastmatch()
+            if child in out.children:
+                self.err("child %s listed more than once in group %s" %
+                         (child, out.id))
+            out.children.append(child)
         out.description = self.try_match_description()
         self.match_arguments(out, ('params', 'meta'))
         return out
@@ -458,10 +458,9 @@ class ResourceParser(BaseParser):
 class ConstraintParser(BaseParser):
     _SCORE_RE = re.compile(r"([^:]+):$")
     _ROLE_RE = re.compile(r"\$role=(.+)$", re.IGNORECASE)
-    _BOOLOP_RE = re.compile(r'(or|and)$', re.IGNORECASE)
-    _BINOP_RE = re.compile(r'((string|version|number):)?(lt|gt|lte|gte|eq|ne)$', re.IGNORECASE)
-    _UNARYOP_RE = re.compile(r'(defined|not_defined)$', re.IGNORECASE)
-    _DATEOP_RE = re.compile(r'(lt|gt|in_range|date_spec)?', re.IGNORECASE)
+    _BOOLOP_RE = re.compile(r'(%s)$' % ('|'.join(vars.boolean_ops)), re.IGNORECASE)
+    _UNARYOP_RE = re.compile(r'(%s)$' % ('|'.join(vars.unary_ops)), re.IGNORECASE)
+    _BINOP_RE = None
 
     def can_parse(self):
         return ('location', 'colocation', 'collocation', 'order', 'rsc_ticket')
@@ -482,12 +481,13 @@ class ConstraintParser(BaseParser):
             if self.try_match(self._ROLE_RE):
                 head.append(['$role', self.matched(1)])
             if idref:
-                return rule
+                out.rules.append(rule)
+                continue
             self.match(self._SCORE_RE)
             score = self.validate_score(self.matched(1))
             head.append(score)
             boolop, expr = self.match_rule_expression()
-            if boolop:
+            if boolop and not keyword_cmp(boolop, 'and'):
                 head.append(['boolean-op', boolop])
             out.rules.append(rule)
             out.rules.extend(expr)
@@ -538,6 +538,10 @@ class ConstraintParser(BaseParser):
             return ['expression', [['operation', unary_op], ['attribute', attr]]]
         else:
             attr = self.match_identifier()
+            if not self._BINOP_RE:
+                self._BINOP_RE = re.compile(r'((%s):)?(%s)$' % (
+                    '|'.join(self.validation.expression_types()),
+                    '|'.join(vars.binary_ops)), re.IGNORECASE)
             self.match(self._BINOP_RE)
             optype = self.matched(2)
             binop = self.matched(3)
@@ -569,14 +573,14 @@ class ConstraintParser(BaseParser):
             return [['operation', op]] + self.match_nvpairs(minpairs=1)
 
     def validate_score(self, score, noattr=False):
-        if score in olist(vars.score_types):
+        if not noattr and score in olist(vars.score_types):
             return vars.score_types[score.lower()]
         elif re.match("^[+-]?(inf(inity)?|INF(INITY)?|[0-9]+)$", score):
             score = re.sub("inf(inity)?|INF(INITY)?", "INFINITY", score)
             return ("score", score)
         if noattr:
             # orders have the special kind attribute
-            kind = self.validation.canonize_kind(score)
+            kind = self.validation.canonize(score, self.validation.rsc_order_kinds())
             if not kind:
                 self.err("Invalid kind: " + score)
             return ('kind', kind)
@@ -613,11 +617,11 @@ class ConstraintParser(BaseParser):
     def parse_order(self):
         out = Order()
         out.id = self.match_identifier()
-        if self.try_match('(mandatory|optional|serialize)$'):
+        if self.try_match('(%s)$' % ('|'.join(self.validation.rsc_order_kinds()))):
             out.kind = self.matched(1).lower()
         else:
             self.match(self._SCORE_RE)
-            out.score = self.validate_score(self.matched(1))
+            out.score = self.validate_score(self.matched(1), noattr=True)
         if self.try_match_tail('symmetrical=(true|false|yes|no|on|off)$'):
             out.symmetrical = is_boolean_true(self.matched(1))
         out.simple, out.resources = self.match_resource_set('action')
@@ -661,9 +665,9 @@ class ConstraintParser(BaseParser):
     def match_simple_role_set(self, count):
         def rsc_role():
             rsc, role = self.match_split(order=(0, 1))
-            t = self.validation.classify_role(role)
+            role, t = self.validation.classify_role(role)
             if role and not t:
-                self.err('invalid role: ' + role)
+                self.err("Invalid role '%s' for '%s'" % (role, rsc))
             return rsc, role, t
 
         def fmt(info, name):
@@ -678,7 +682,7 @@ class ConstraintParser(BaseParser):
     def match_simple_action_set(self):
         def rsc_action():
             rsc, action = self.match_split(order=(0, 1))
-            t = self.validation.classify_action(action)
+            action, t = self.validation.classify_action(action)
             if action and not t:
                 self.err('invalid action: ' + action)
             return rsc, action, t
@@ -702,7 +706,7 @@ class OpParser(BaseParser):
         out = Monitor()
         out.resource, out.role = self.match_split(order=(0, 1))
         if out.role:
-            out.role_class = self.validation.classify_role(out.role)
+            out.role, out.role_class = self.validation.classify_role(out.role)
             if not out.role_class:
                 self.err("Invalid role '%s' for resource '%s'" % (out.role, out.resource))
         out.interval, out.timeout = self.match_split(order=(0, 1))
@@ -710,14 +714,12 @@ class OpParser(BaseParser):
 
 
 class PropertyParser(BaseParser):
-    _PROPTYPE = ['property', 'rsc_defaults', 'op_defaults']
-
     def can_parse(self):
-        return self._PROPTYPE
+        return ('property', 'rsc_defaults', 'op_defaults')
 
     def parse(self, cmd):
         self.begin(cmd, min_args=1)
-        self.match('(%s)$' % '|'.join(self._PROPTYPE))
+        self.match('(%s)$' % '|'.join(self.can_parse()))
         out = Property()
         out.type = self.matched(1)
         if self.try_match_idspec():
@@ -766,8 +768,10 @@ class AclParser(BaseParser):
         out = User()
         out.uid = self.match_identifier()
         while self.has_tokens():
+            # role identifier
             if self.try_match(self._ROLE_REF_RE):
                 out.roles.append(self.matched(1))
+            # acl right rule
             else:
                 out.rules.append(self._add_rule())
         return out
@@ -777,9 +781,7 @@ class AclParser(BaseParser):
         rule.right = self.match(self._ACL_RIGHT_RE).lower()
         eligible_specs = vars.acl_spec_map.values()
         while self.has_tokens():
-            a = self.current_token()
-            a = a.split(':', 1)
-            a = self._expand_shortcuts(a)
+            a = self._expand_shortcuts(self.current_token().split(':', 1))
             if len(a) != 2 or a[0] not in eligible_specs:
                 break
             self.match_any()
@@ -896,9 +898,6 @@ class ResourceSet(object):
     def __init__(self, type, s, parent):
         self.parent = parent
         self.type = type
-        self.valid_q = (type == "order") and \
-            parent.validation.resource_actions() or \
-            parent.validation.resource_roles()
         self.q_attr = (type == "order") and "action" or "role"
         self.tokens = s
         self.cli_list = []
@@ -952,7 +951,20 @@ class ResourceSet(object):
 
     def splitrsc(self, p):
         l = p.split(':')
-        return (len(l) == 1) and [p, ''] or l
+        if len(l) == 2:
+            if self.q_attr == 'action':
+                l[1] = self.parent.validation.canonize(
+                    l[1],
+                    self.parent.validation.resource_actions())
+            else:
+                l[1] = self.parent.validation.canonize(
+                    l[1],
+                    self.parent.validation.resource_roles())
+            if not l[1]:
+                self.err('Invalid %s for %s' % (self.q_attr, p))
+        elif len(l) == 1:
+            l = [p, '']
+        return l
 
     def err(self, token, errmsg):
         syntax_err(self.parent._cmd,
@@ -1003,9 +1015,6 @@ class ResourceSet(object):
                 self.save_set()
                 self.prev_q = q
             if q:
-                if q not in self.valid_q:
-                    self.err(token=self.tokens[tokpos],
-                             errmsg='%s: Invalid %s in %s' % (q, self.q_attr, self.type))
                 if not self.curr_attr:
                     self.curr_attr = self.q_attr
             else:
@@ -1027,15 +1036,22 @@ class Validation(object):
 
     def resource_roles(self):
         'returns list of valid resource roles'
-        return olist(self.schema.rng_attr_values('resource_set', 'role'))
+        return self.schema.rng_attr_values('resource_set', 'role')
 
     def resource_actions(self):
         'returns list of valid resource actions'
-        return olist(self.schema.rng_attr_values('resource_set', 'action'))
+        return self.schema.rng_attr_values('resource_set', 'action')
 
     def date_ops(self):
         'returns list of valid date operations'
-        return olist(self.schema.rng_attr_values_l('date_expression', 'operation'))
+        return self.schema.rng_attr_values_l('date_expression', 'operation')
+
+    def expression_types(self):
+        'returns list of valid expression types'
+        return self.schema.rng_attr_values_l('expression', 'type')
+
+    def rsc_order_kinds(self):
+        return self.schema.rng_attr_values('rsc_order', 'kind')
 
     def class_provider_type(self, value):
         """
@@ -1047,31 +1063,31 @@ class Validation(object):
             return None
         return c_p_t
 
-    def canonize_kind(self, score):
-        ''
-        sl = score.lower()
-        for x in self.schema.rng_attr_values('rsc_order', 'kind'):
-            if sl == x.lower():
+    def canonize(self, value, lst):
+        'case-normalizes value to what is in lst'
+        value = value.lower()
+        for x in lst:
+            if value == x.lower():
                 return x
         return None
 
     def classify_role(self, role):
         if not role:
-            return None
-        if role in self.resource_roles():
-            return 'role'
+            return role, None
+        elif role in olist(self.resource_roles()):
+            return self.canonize(role, self.resource_roles()), 'role'
         elif role.isdigit():
-            return 'instance'
-        return None
+            return role, 'instance'
+        return role, None
 
     def classify_action(self, action):
         if not action:
-            return None
-        if action in self.resource_actions():
-            return 'action'
+            return action, None
+        elif action in olist(self.resource_actions()):
+            return self.canonize(action, self.resource_actions()), 'action'
         elif action.isdigit():
-            return 'instance'
-        return None
+            return action, 'instance'
+        return action, None
 
 
 class CliParser(object):
@@ -1135,9 +1151,7 @@ class CliParser(object):
     def parse(self, s):
         '''
         Input: a list of tokens (or a CLI format string).
-        Return: a list of items; each item is a tuple
-            with two members: a string (tag) and a nvpairs or
-            attributes dict.
+        Return: a cibobject
             On failure, returns either False or None.
         '''
         s = self._normalize(s)
@@ -1149,10 +1163,17 @@ class CliParser(object):
                 ret = parser.do_parse(s)
                 if self.comments:
                     ret.comments = self.comments
+                    self.comments = []
                 return ret
             except ParseError:
                 return False
         syntax_err(s, token=s[0], msg="Unknown command")
         return False
+
+    def parse2(self, s):
+        p = self.parse(s)
+        if not p:
+            return p
+        return p.to_list()
 
 # vim:ts=4:sw=4:et:

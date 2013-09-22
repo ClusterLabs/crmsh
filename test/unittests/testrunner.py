@@ -57,9 +57,9 @@ tests = [test_info(f) for f in os.listdir('.') if test_info(f)]
 
 
 def run_test(name, testfile):
-    print "%s (%s):" % (name, testfile)
+    print "%s" % (name.capitalize())
     quiet = '-b '
-    if '-v' in sys.argv:
+    if '-v' in sys.argv:  # or old version
         quiet = ' '
     cmd = 'PYTHONPATH=%s python -B -m unittest %s%s' % (
         '../../modules',

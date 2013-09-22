@@ -55,7 +55,10 @@ class ListFmt(object):
             self.fwd(len(tok))
             if self.fmt[0] == '%':
                 a = self.arg()
-                tok += a
+                if a is None:
+                    tok = None
+                else:
+                    tok += a
             self.add(tok)
 
     def apply(self):
@@ -86,11 +89,21 @@ class Expr(object):
         self.comments = []
         self.description = None
 
-    def to_list(self):
+    def _to_list(self):
         """
         Convert object to nested list form.
         """
         raise NotImplemented
+
+    def to_list(self):
+        """
+        Convert object to nested list form.
+        Adds comments to output.
+        """
+        l = self._to_list()
+        if self.comments:
+            l.append(['comments', self.comments])
+        return l
 
 
 class Resource(Expr):
@@ -107,7 +120,7 @@ class Resource(Expr):
             else:
                 ret.append(['op', [['name', typ]] + val])
 
-    def _to_list(self, typ):
+    def _to_list_impl(self, typ):
         head = None
         prim = typ in ('primitive', 'rsc_template')
         if prim and self.template:
@@ -142,8 +155,8 @@ class Primitive(Resource):
         self.utilization = odict()
         self.operations = []
 
-    def to_list(self):
-        return self._to_list('primitive')
+    def _to_list(self):
+        return self._to_list_impl('primitive')
 
 
 class RscTemplate(Resource):
@@ -155,8 +168,8 @@ class RscTemplate(Resource):
         self.utilization = odict()
         self.operations = []
 
-    def to_list(self):
-        return self._to_list('rsc_template')
+    def _to_list(self):
+        return self._to_list_impl('rsc_template')
 
 
 class Group(Resource):
@@ -164,8 +177,8 @@ class Group(Resource):
         Resource.__init__(self)
         self.children = []
 
-    def to_list(self):
-        return self._to_list('group')
+    def _to_list(self):
+        return self._to_list_impl('group')
 
 
 class Clone(Resource):
@@ -173,8 +186,8 @@ class Clone(Resource):
         Resource.__init__(self)
         self.children = None
 
-    def to_list(self):
-        return self._to_list('clone')
+    def _to_list(self):
+        return self._to_list_impl('clone')
 
 
 class Master(Resource):
@@ -182,8 +195,8 @@ class Master(Resource):
         Resource.__init__(self)
         self.children = None
 
-    def to_list(self):
-        return self._to_list('ms')
+    def _to_list(self):
+        return self._to_list_impl('ms')
 
 
 class Constraint(Expr):
@@ -201,7 +214,7 @@ class Location(Constraint):
         self.rules = []
         self.simple = False
 
-    def to_list(self):
+    def _to_list(self):
         if self.score and self.node:
             return listfmt('[[location [[id %] [rsc %] % [node %]]]]',
                            self.id, self.resource, self.score, self.node)
@@ -217,7 +230,7 @@ class Colocation(Constraint):
         self.node_attribute = None
         self.simple = False
 
-    def to_list(self):
+    def _to_list(self):
         ret = listfmt(
             '[[colocation [[id %] % [node-attribute %]]]]',
             self.id, self.score, self.node_attribute)
@@ -238,7 +251,7 @@ class Order(Constraint):
         self.symmetrical = None
         self.simple = False
 
-    def to_list(self):
+    def _to_list(self):
         if self.kind:
             ret = listfmt(
                 '[[order [[id %] [kind %] [symmetrical %]]]]',
@@ -263,7 +276,7 @@ class RscTicket(Constraint):
         self.loss_policy = None
         self.simple = False
 
-    def to_list(self):
+    def _to_list(self):
         ret = listfmt(
             '[[rsc_ticket [[id %] [ticket %] [loss-policy %]]]]',
             self.id, self.ticket, self.loss_policy)
@@ -284,9 +297,9 @@ class Monitor(Expr):
         self.interval = None
         self.timeout = None
 
-    def to_list(self):
+    def _to_list(self):
         return listfmt(
-            '[[op [[rsc %] [rsc-% %] [interval %] [timeout %] [name monitor]]]]',
+            '[[op [[rsc %] [% %] [interval %] [timeout %] [name monitor]]]]',
             self.resource, self.role_class, self.role, self.interval, self.timeout)
 
 
@@ -299,7 +312,7 @@ class Node(Expr):
         self.attributes = odict()
         self.utilization = odict()
 
-    def to_list(self):
+    def _to_list(self):
         t = self.type
         if t and t.lower() == vars.node_default_type:
             t = None
@@ -317,7 +330,7 @@ class Property(Expr):
         self.type = None
         self.values = []
 
-    def to_list(self):
+    def _to_list(self):
         return [[self.type, [[n, v] for n, v in self.values]]]
 
 
@@ -329,8 +342,8 @@ class FencingTopology(Expr):
     def add_level(self, target, devices):
         self.levels.append(['fencing-level', [['target', target], ['devices', devices]]])
 
-    def to_list(self):
-        return [['fencing-topology', self.levels]]
+    def _to_list(self):
+        return [['fencing_topology', self.levels]]
 
 
 class ACLRight(object):
@@ -339,9 +352,9 @@ class ACLRight(object):
         self.specs = []
 
     def __repr__(self):
-        return repr(self.to_list())
+        return repr(self._to_list())
 
-    def to_list(self):
+    def _to_list(self):
         return [self.right, self.specs]
 
 
@@ -351,9 +364,9 @@ class Role(Expr):
         self.role_id = None
         self.rules = []
 
-    def to_list(self):
+    def _to_list(self):
         ret = listfmt('[[role [[id %]]]]', self.role_id)
-        ret.extend(r.to_list() for r in self.rules)
+        ret.extend(r._to_list() for r in self.rules)
         return ret
 
 
@@ -364,11 +377,11 @@ class User(Expr):
         self.roles = []
         self.rules = []
 
-    def to_list(self):
+    def _to_list(self):
         ret = listfmt('[[user [[id %]]]]', self.uid)
         for role in self.roles:
             ret.append(['role_ref', ['id', role]])
-        ret.extend(r.to_list() for r in self.rules)
+        ret.extend(r._to_list() for r in self.rules)
         return ret
 
 
@@ -379,5 +392,5 @@ class RawXML(Expr):
         self.type = None
         self.raw = None
 
-    def to_list(self):
+    def _to_list(self):
         return listfmt('[[% [[id %]]] [raw %]]', self.type, self.id, self.raw)

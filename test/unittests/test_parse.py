@@ -19,8 +19,8 @@
 import parse
 import unittest
 import shlex
-import itertools
-from utils import olist
+from utils import olist, lines2cli
+from pprint import pformat
 
 
 class MockValidation(parse.Validation):
@@ -28,10 +28,19 @@ class MockValidation(parse.Validation):
         parse.Validation.__init__(self, None)
 
     def resource_roles(self):
-        return olist(['master', 'slave'])
+        return ['Master', 'Slave', 'Started']
 
     def resource_actions(self):
-        return olist(['start', 'stop'])
+        return ['start', 'stop', 'promote', 'demote']
+
+    def date_ops(self):
+        return ['lt', 'gt', 'in_range', 'date_spec']
+
+    def expression_types(self):
+        return ['normal', 'string', 'number']
+
+    def rsc_order_kinds(self):
+        return ['Mandatory', 'Optional', 'Serialize']
 
 
 class TestBaseParser(unittest.TestCase):
@@ -127,6 +136,12 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.ra_class, 'ocf')
         self.assertTrue(out.operations[0][0] == 'monitor')
 
+        out = self.parser.parse('primitive st stonith:ssh params hostlist=node1 meta target-role=Started op start requires=nothing timeout=60s op monitor interval=60m timeout=60s')
+        self.assertEqual(out.id, 'st')
+
+        out = self.parser.parse('primitive st stonith:null params hostlist=node1 meta description="some description here" op start requires=nothing op monitor interval=60m')
+        self.assertEqual(out.id, 'st')
+
         out = self.parser.parse('ms m0 resource params a=b')
         self.assertEqual(out.id, 'm0')
         self.assertEqual(out.children[0], 'resource')
@@ -213,11 +228,15 @@ class TestCliParser(unittest.TestCase):
         out = self.parser.parse('monitor apache:Master 10s:20s')
         self.assertEqual(out.resource, 'apache')
         self.assertEqual(out.role, 'Master')
+        lf = out.to_list()
+        self.assertNotEqual(lf, None)
 
         out = self.parser.parse('monitor apache 60m')
         self.assertEqual(out.resource, 'apache')
         self.assertEqual(out.role, None)
         self.assertEqual(out.interval, '60m')
+        lf = out.to_list()
+        self.assertNotEqual(lf, None)
 
     def test_acl(self):
         out = self.parser.parse('role user-1 error')
@@ -250,4 +269,273 @@ class TestCliParser(unittest.TestCase):
         out = self.parser.parse('fencing_topology node-a: poison-pill power node-b: ipmi serial')
         print out.levels
         self.assertEqual(4, len(out.levels))
+
+    def _parse_lines(self, lines):
+        out = []
+        for line in lines2cli(lines):
+            if line:
+                tmp = self.parser.parse(line.strip())
+                self.assertNotEqual(tmp, False)
+                if tmp:
+                    out.append(tmp.to_list())
+        return out
+
+    def test_comments(self):
+        outp = self._parse_lines('''
+        # comment
+        node n1
+        ''')
+        self.assertNotEqual(-1, repr(outp).find('# comment'))
+
+    def test_configs(self):
+        outp = self._parse_lines('''
+        primitive rsc_dummy ocf:heartbeat:Dummy
+        monitor rsc_dummy 30
+        ''')
+        print outp
+        self.assertEqual(2, len(outp))
+
+        outp = self._parse_lines('''
+        primitive testfs ocf:heartbeat:Filesystem \
+          params directory="/mnt" fstype="ocfs2" device="/dev/sda1"
+        clone testfs-clone testfs \
+          meta ordered="true" interleave="true"
+        ''')
+        print outp
+        self.assertEqual(2, len(outp))
+
+        inp = '''
+        node node1 \
+          attributes mem=16G
+        node node2 utilization cpu=4
+        primitive st stonith:ssh \
+          params hostlist='node1 node2' \
+          meta target-role="Started" \
+          op start requires=nothing timeout=60s \
+          op monitor interval=60m timeout=60s
+        primitive st2 stonith:ssh \
+          params hostlist='node1 node2'
+        primitive d1 ocf:pacemaker:Dummy \
+          operations $id=d1-ops \
+          op monitor interval=60m \
+          op monitor interval=120m OCF_CHECK_LEVEL=10
+        monitor d1 60s:30s
+        primitive d2 ocf:heartbeat:Delay \
+          params mondelay=60 \
+          op start timeout=60s \
+          op stop timeout=60s
+        monitor d2:Started 60s:30s
+        group g1 d1 d2
+        primitive d3 ocf:pacemaker:Dummy
+        clone c d3 \
+          meta clone-max=1
+        primitive d4 ocf:pacemaker:Dummy
+        ms m d4
+        primitive s5 ocf:pacemaker:Stateful \
+        operations $id-ref=d1-ops
+        primitive s6 ocf:pacemaker:Stateful \
+          operations $id-ref=d1
+        ms m5 s5
+        ms m6 s6
+        location l1 g1 100: node1
+        location l2 c \
+          rule $id=l2-rule1 100: #uname eq node1
+        location l3 m5 \
+          rule inf: #uname eq node1 and pingd gt 0
+        location l4 m5 \
+          rule -inf: not_defined pingd or pingd lte 0
+        location l5 m5 \
+          rule -inf: not_defined pingd or pingd lte 0 \
+          rule inf: #uname eq node1 and pingd gt 0 \
+          rule inf: date lt "2009-05-26" and \
+          date in_range start="2009-05-26" end="2009-07-26" and \
+          date in_range start="2009-05-26" years="2009" and \
+          date date_spec years="2009" hours="09-17"
+        location l6 m5 \
+          rule $id-ref=l2-rule1
+        location l7 m5 \
+          rule $id-ref=l2
+        collocation c1 inf: m6 m5
+        collocation c2 inf: m5:Master d1:Started
+        order o1 Mandatory: m5 m6
+        order o2 Optional: d1:start m5:promote
+        order o3 Serialize: m5 m6
+        order o4 inf: m5 m6
+        rsc_ticket ticket-A_m6 ticket-A: m6
+        rsc_ticket ticket-B_m6_m5 ticket-B: m6 m5 loss-policy=fence
+        rsc_ticket ticket-C_master ticket-C: m6 m5:Master loss-policy=fence
+        fencing_topology st st2
+        property stonith-enabled=true
+        property $id=cpset2 maintenance-mode=true
+        rsc_defaults failure-timeout=10m
+        op_defaults $id=opsdef2 record-pending=true
+        '''
+
+        old_parser_output = '''[[['node', [['uname', 'node1'], ['id', 'node1']]],
+  ['attributes', [['mem', '16G']]]],
+ [['node', [['uname', 'node2'], ['id', 'node2']]],
+  ['utilization', [['cpu', '4']]]],
+ [['primitive', [['id', 'st'], ['class', 'stonith'], ['type', 'ssh']]],
+  ['params', [['hostlist', 'node1 node2']]],
+  ['meta', [['target-role', 'Started']]],
+  ['op',
+   [['name', 'start'],
+    ['requires', 'nothing'],
+    ['timeout', '60s'],
+    ['interval', '0']]],
+  ['op', [['name', 'monitor'], ['interval', '60m'], ['timeout', '60s']]]],
+ [['primitive', [['id', 'st2'], ['class', 'stonith'], ['type', 'ssh']]],
+  ['params', [['hostlist', 'node1 node2']]]],
+ [['primitive',
+   [['id', 'd1'],
+    ['class', 'ocf'],
+    ['provider', 'pacemaker'],
+    ['type', 'Dummy']]],
+  ['operations', [['$id', 'd1-ops']]],
+  ['op', [['name', 'monitor'], ['interval', '60m']]],
+  ['op',
+   [['name', 'monitor'], ['interval', '120m'], ['OCF_CHECK_LEVEL', '10']]]],
+ [['op',
+   [['rsc', 'd1'],
+    ['interval', '60s'],
+    ['timeout', '30s'],
+    ['name', 'monitor']]]],
+ [['primitive',
+   [['id', 'd2'],
+    ['class', 'ocf'],
+    ['provider', 'heartbeat'],
+    ['type', 'Delay']]],
+  ['params', [['mondelay', '60']]],
+  ['op', [['name', 'start'], ['timeout', '60s'], ['interval', '0']]],
+  ['op', [['name', 'stop'], ['timeout', '60s'], ['interval', '0']]]],
+ [['op',
+   [['rsc', 'd2'],
+    ['role', 'Started'],
+    ['interval', '60s'],
+    ['timeout', '30s'],
+    ['name', 'monitor']]]],
+ [['group', [['id', 'g1'], ['$children', ['d1', 'd2']]]]],
+ [['primitive',
+   [['id', 'd3'],
+    ['class', 'ocf'],
+    ['provider', 'pacemaker'],
+    ['type', 'Dummy']]]],
+ [['clone', [['id', 'c'], ['$children', ['d3']]]],
+  ['meta', [['clone-max', '1']]]],
+ [['primitive',
+   [['id', 'd4'],
+    ['class', 'ocf'],
+    ['provider', 'pacemaker'],
+    ['type', 'Dummy']]]],
+ [['ms', [['id', 'm'], ['$children', ['d4']]]]],
+ [['primitive',
+   [['id', 's5'],
+    ['class', 'ocf'],
+    ['provider', 'pacemaker'],
+    ['type', 'Stateful']]],
+  ['operations', [['$id-ref', 'd1-ops']]]],
+ [['primitive',
+   [['id', 's6'],
+    ['class', 'ocf'],
+    ['provider', 'pacemaker'],
+    ['type', 'Stateful']]],
+  ['operations', [['$id-ref', 'd1']]]],
+ [['ms', [['id', 'm5'], ['$children', ['s5']]]]],
+ [['ms', [['id', 'm6'], ['$children', ['s6']]]]],
+ [['location',
+   [['id', 'l1'], ['rsc', 'g1'], ['score', '100'], ['node', 'node1']]]],
+ [['location', [['id', 'l2'], ['rsc', 'c']]],
+  ['rule', [['$id', 'l2-rule1'], ['score', '100']]],
+  ['expression',
+   [['attribute', '#uname'], ['operation', 'eq'], ['value', 'node1']]]],
+ [['location', [['id', 'l3'], ['rsc', 'm5']]],
+  ['rule', [['score', 'INFINITY']]],
+  ['expression',
+   [['attribute', '#uname'], ['operation', 'eq'], ['value', 'node1']]],
+  ['expression',
+   [['attribute', 'pingd'], ['operation', 'gt'], ['value', '0']]]],
+ [['location', [['id', 'l4'], ['rsc', 'm5']]],
+  ['rule', [['score', '-INFINITY'], ['boolean-op', 'or']]],
+  ['expression', [['operation', 'not_defined'], ['attribute', 'pingd']]],
+  ['expression',
+   [['attribute', 'pingd'], ['operation', 'lte'], ['value', '0']]]],
+ [['location', [['id', 'l5'], ['rsc', 'm5']]],
+  ['rule', [['score', '-INFINITY'], ['boolean-op', 'or']]],
+  ['expression', [['operation', 'not_defined'], ['attribute', 'pingd']]],
+  ['expression',
+   [['attribute', 'pingd'], ['operation', 'lte'], ['value', '0']]],
+  ['rule', [['score', 'INFINITY']]],
+  ['expression',
+   [['attribute', '#uname'], ['operation', 'eq'], ['value', 'node1']]],
+  ['expression',
+   [['attribute', 'pingd'], ['operation', 'gt'], ['value', '0']]],
+  ['rule', [['score', 'INFINITY']]],
+  ['date_expression', [['operation', 'lt'], ['end', '2009-05-26']]],
+  ['date_expression',
+   [['operation', 'in_range'],
+    ['start', '2009-05-26'],
+    ['end', '2009-07-26']]],
+  ['date_expression',
+   [['operation', 'in_range'], ['start', '2009-05-26'], ['years', '2009']]],
+  ['date_expression',
+   [['operation', 'date_spec'], ['years', '2009'], ['hours', '09-17']]]],
+ [['location', [['id', 'l6'], ['rsc', 'm5']]],
+  ['rule', [['$id-ref', 'l2-rule1']]]],
+ [['location', [['id', 'l7'], ['rsc', 'm5']]], ['rule', [['$id-ref', 'l2']]]],
+ [['colocation',
+   [['id', 'c1'], ['score', 'INFINITY'], ['rsc', 'm6'], ['with-rsc', 'm5']]]],
+ [['colocation',
+   [['id', 'c2'],
+    ['score', 'INFINITY'],
+    ['rsc', 'm5'],
+    ['rsc-role', 'Master'],
+    ['with-rsc', 'd1'],
+    ['with-rsc-role', 'Started']]]],
+ [['order',
+   [['id', 'o1'], ['kind', 'Mandatory'], ['first', 'm5'], ['then', 'm6']]]],
+ [['order',
+   [['id', 'o2'],
+    ['kind', 'Optional'],
+    ['first', 'd1'],
+    ['first-action', 'start'],
+    ['then', 'm5'],
+    ['then-action', 'promote']]]],
+ [['order',
+   [['id', 'o3'], ['kind', 'Serialize'], ['first', 'm5'], ['then', 'm6']]]],
+ [['order',
+   [['id', 'o4'], ['score', 'INFINITY'], ['first', 'm5'], ['then', 'm6']]]],
+ [['rsc_ticket',
+   [['id', 'ticket-A_m6'], ['ticket', 'ticket-A'], ['rsc', 'm6']]]],
+ [['rsc_ticket',
+   [['id', 'ticket-B_m6_m5'],
+    ['ticket', 'ticket-B'],
+    ['loss-policy', 'fence']]],
+  ['resource_set',
+   [['resource_ref', ['id', 'm6']], ['resource_ref', ['id', 'm5']]]]],
+ [['rsc_ticket',
+   [['id', 'ticket-C_master'],
+    ['ticket', 'ticket-C'],
+    ['loss-policy', 'fence']]],
+  ['resource_set', [['resource_ref', ['id', 'm6']]]],
+  ['resource_set', [['role', 'Master'], ['resource_ref', ['id', 'm5']]]]],
+ [['fencing_topology',
+   [['fencing-level', [['target', '@@'], ['devices', 'st']]],
+    ['fencing-level', [['target', '@@'], ['devices', 'st2']]]]]],
+ [['property', [['stonith-enabled', 'true']]]],
+ [['property', [['$id', 'cpset2'], ['maintenance-mode', 'true']]]],
+ [['rsc_defaults', [['failure-timeout', '10m']]]],
+ [['op_defaults', [['$id', 'opsdef2'], ['record-pending', 'true']]]]]'''
+
+        outp = self._parse_lines(inp)
+        a = pformat(outp).replace('(', '[').replace(')', ']')
+        b = old_parser_output
+        if a != b:
+            f = open('failed-diff-new.txt', 'w')
+            f.write(a)
+            f.close()
+            f = open('failed-diff-old.txt', 'w')
+            f.write(b)
+            f.close()
+        self.assertEqual(a, b)
+
 
