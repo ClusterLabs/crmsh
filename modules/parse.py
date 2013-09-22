@@ -20,368 +20,835 @@ import re
 from lxml import etree
 import vars
 from ra import disambiguate_ra_type, ra_type_validate
-from schema import Schema, rng_attr_values_l, rng_attr_values
-from utils import keyword_cmp, verify_boolean, lines2cli, canonize, can_canonize, get_boolean, find_value, olist
-from msg import ErrorBuffer, bad_def_err, syntax_err, common_err
+from schema import Schema
+from utils import keyword_cmp, verify_boolean, lines2cli
+from utils import get_boolean, olist, is_boolean_true
+from msg import common_err, syntax_err
+from cibobjects import Primitive, RscTemplate, Group, Clone, Master
+from cibobjects import Location, Colocation, Order, RscTicket
+from cibobjects import Monitor, Node, Property, RscDefaults, OpDefaults
+from cibobjects import FencingTopology, ACLRule, Role, User, RawXML
 
 
-#
-# CLI parsing utilities
-# WARNING: ugly code ahead (to be replaced some day by a proper
-# yacc parser, if there's such a thing)
-#
-def cli_parse_rsctype(s, pl):
+class ParseError(Exception):
     '''
-    Parse the resource type.
+    Raised by parsers when parsing fails.
+    No error message, parsers should write
+    error messages before raising the exception.
     '''
-    ra_class, provider, rsc_type = disambiguate_ra_type(s)
-    if not ra_type_validate(s, ra_class, provider, rsc_type):
-        return None
-    pl.append(["class", ra_class])
-    if ra_class == "ocf":
-        pl.append(["provider", provider])
-    pl.append(["type", rsc_type])
 
 
-def is_attribute(p, a):
-    return p.startswith(a + '=')
+class BaseParser(object):
+    _NVPAIR_RE = re.compile(r'([^=]+)=(.+)$')
+    _IDENT_RE = re.compile(r'([a-z0-9_-].*)$', re.IGNORECASE)
+    _DISPATCH_RE = re.compile(r'[a-z0-9_]+$', re.IGNORECASE)
+    _DESC_RE = re.compile(r'description=(.+)$', re.IGNORECASE)
+    _RESOURCE_RE = re.compile(r'([^=]+)$')
+    _IDSPEC_RE = re.compile(r'(\$id-ref|\$id)=(.*)$', re.IGNORECASE)
 
+    def can_parse(self):
+        "Returns a list of commands this parser understands"
+        raise NotImplemented
 
-def cli_parse_attr_strict(s, pl):
-    '''
-    Parse attributes in the 'p=v' form.
-    '''
-    if s and '=' in s[0]:
-        n, v = s[0].split('=', 1)
-        if not n:
-            return
-        pl.append([n, v])
-        cli_parse_attr_strict(s[1:], pl)
+    def parse(self, cmd):
+        "Called by do_parse(). Raises ParseError if parsing fails."
+        raise NotImplemented
 
+    def init(self, validation):
+        self.validation = validation
 
-def cli_parse_attr(s, pl):
-    '''
-    Parse attributes in the 'p=v' form.
-    Allow also the 'p' form (no value) unless p is one of the
-    attr_list_keyw words.
-    '''
-    attr_lists_keyw = olist(["params", "meta", "utilization", "operations", "op", "attributes"])
-    if s:
-        if s[0] in attr_lists_keyw:
-            return
-        if '=' in s[0]:
-            n, v = s[0].split('=', 1)
+    def err(self, errmsg):
+        "Report a parse error and abort."
+        token = None
+        if self.has_tokens():
+            token = self._cmd[self._currtok]
+        syntax_err(self._cmd, context=self._cmd[0], token=token, msg=errmsg)
+        raise ParseError
+
+    def begin(self, cmd, min_args=-1):
+        self._cmd = cmd
+        self._currtok = 0
+        self._lastmatch = None
+        if min_args > -1 and len(cmd) < min_args:
+            self.err("Expected at least " + min_args + " arguments")
+
+    def begin_dispatch(self, cmd, min_args=-1):
+        """
+        Begin parsing cmd.
+        Dispatches to parse_<resource> based on the first token.
+        """
+        self.begin(cmd, min_args=min_args)
+        return self.match_dispatch(errmsg="Unknown command")
+
+    def do_parse(self, cmd):
+        "Called by CliParser. Calls parse()"
+        out = self.parse(cmd)
+        "Parsers should pass their return value through this method."
+        if self.is_comment():
+            out.comments.append(' '.join(self._cmd[self._currtok:]))
+            self._currtok = len(self._cmd)
+        elif self.has_tokens():
+            self.err("Unknown arguments: " + ' '.join(self._cmd[self._currtok:]))
+        return out
+
+    def try_match(self, rx):
+        """
+        Try to match the given regex with the curren token.
+        rx: compiled regex or string
+        returns: the match object, if the match is successful
+        """
+        tok = self.current_token()
+        if not tok:
+            return None
+        if isinstance(rx, basestring):
+            if not rx.endswith('$'):
+                rx = rx + '$'
+            self._lastmatch = re.match(rx, tok, re.IGNORECASE)
         else:
-            n, v = s[0], None
-        if not n:
-            return
-        pl.append([n, v])
-        cli_parse_attr(s[1:], pl)
+            self._lastmatch = rx.match(tok)
+        if self._lastmatch is not None:
+            if not self.has_tokens():
+                self.err("Unexpected end of line")
+            self._currtok += 1
+        return self._lastmatch
 
-
-def is_only_id(pl, keyw):
-    if len(pl) > 1:
-        common_err("%s: only single $id or $id-ref attribute is allowed" % keyw)
-        return False
-    if len(pl) == 1 and pl[0][0] not in ("$id", "$id-ref"):
-        common_err("%s: only single $id or $id-ref attribute is allowed" % keyw)
-        return False
-    return True
-
-
-def parse_resource(s):
-    err_buf = ErrorBuffer.getInstance()
-    el_type = s[0].lower()
-    if el_type == "master":  # ugly kludge :(
-        el_type = "ms"
-    attr_lists_keyw = olist(["params", "meta"])
-    if el_type in ("primitive", "rsc_template"):
-        attr_lists_keyw.append("utilization")
-    cli_list = []
-    # the head
-    head = []
-    head.append(["id", s[1]])
-    i = 3
-    if el_type in ("primitive", "rsc_template"):
-        if el_type == "primitive" and s[2].startswith('@'):
-            head.append(["template", s[2][1:]])
-        else:
-            cli_parse_rsctype(s[2], head)
-            if not find_value(head, "type"):
-                syntax_err(s[2:], context=el_type)
-                return False
-    else:
-        cl = []
-        cl.append(s[2])
-        if el_type == "group":
-            while i < len(s):
-                if s[i] in attr_lists_keyw:
-                    break
-                elif is_attribute(s[i], "description"):
-                    break
-                else:
-                    if s[i] in cl:
-                        err_buf.error("in group %s child %s listed more than once" % (s[1], s[i]))
-                        return False
-                    cl.append(s[i])
-                    i += 1  # skip to the next token
-        head.append(["$children", cl])
-    try:  # s[i] may be out of range
-        if is_attribute(s[i], "description"):
-            cli_parse_attr(s[i:i+1], head)
-            i += 1  # skip to the next token
-    except:
-        pass
-    cli_list.append([el_type, head])
-    # the rest
-    state = 0  # 1: reading operations; 2: operations read
-    while len(s) > i+1:
-        pl = []
-        keyw = s[i].lower()
-        if keyw in attr_lists_keyw:
-            if state == 1:
-                state = 2
-        elif el_type in ("primitive", "rsc_template") and state == 0 and keyword_cmp(keyw, "operations"):
-            state = 1
-        elif el_type in ("primitive", "rsc_template") and state <= 1 and keyword_cmp(keyw, "op"):
-            if state == 0:
-                state = 1
-            pl.append(["name", s[i+1]])
-        else:
-            syntax_err(s[i:], context=el_type)
-            return False
-        if keyword_cmp(keyw, "op"):
-            if len(s) > i+2:
-                cli_parse_attr(s[i+2:], pl)
-        else:
-            cli_parse_attr(s[i+1:], pl)
-            if len(pl) == 0:
-                syntax_err(s[i:], context=el_type)
-                return False
-        if keyword_cmp(keyw, "operations") and not is_only_id(pl, keyw):
-            return False
-        i += len(pl)+1
-        # interval is obligatory for ops, supply 0 if not there
-        if keyword_cmp(keyw, "op") and not find_value(pl, "interval"):
-            pl.append(["interval", "0"])
-        cli_list.append([keyw, pl])
-    if len(s) > i:
-        syntax_err(s[i:], context=el_type)
-        return False
-    return cli_list
-
-
-def parse_op(s):
-    if len(s) != 3:
-        syntax_err(s, context=s[0])
-        return False
-    cli_list = []
-    head_pl = []
-    # this is an op
-    cli_list.append(["op", head_pl])
-    if not cli_parse_rsc_role(s[1], head_pl):
-        return False
-    if not cli_parse_op_times(s[2], head_pl):
-        return False
-    # rename rsc-role to role
-    for i in range(len(head_pl)):
-        if head_pl[i][0] == "rsc-role":
-            head_pl[i][0] = "role"
-            break
-    # add the operation name
-    head_pl.append(["name", s[0]])
-    return cli_list
-
-
-def cli_parse_ticket(ticket, pl):
-    if ticket.endswith(':'):
-        ticket = ticket.rstrip(':')
-    else:
-        syntax_err(ticket, context='rsc_ticket')
-        return False
-    pl.append(["ticket", ticket])
-    return True
-
-
-def cli_parse_score(score, pl, noattr=False):
-    if score.endswith(':'):
-        score = score.rstrip(':')
-    else:
-        syntax_err(score, context='score')
-        return False
-    if score in vars.score_types:
-        pl.append(["score", vars.score_types[score]])
-    elif re.match("^[+-]?(inf(inity)?|INF(INITY)?|[0-9]+)$", score):
-        score = re.sub("inf(inity)?|INF(INITY)?", "INFINITY", score)
-        pl.append(["score", score])
-    # orders have the special kind attribute
-    elif noattr and can_canonize(score, rng_attr_values('rsc_order', 'kind')):
-        pl.append(["kind", canonize(score, rng_attr_values('rsc_order', 'kind'))])
-    elif score:
-        if noattr:
-            common_err("attribute not allowed for score in orders")
-            return False
-        else:
-            pl.append(["score-attribute", score])
-    return True
-
-
-def is_binary_op(s):
-    l = s.split(':')
-    if len(l) == 2:
-        return l[0] in rng_attr_values('expression', 'type') and \
-            l[1] in olist(vars.binary_ops)
-    elif len(l) == 1:
-        return l[0] in olist(vars.binary_ops)
-    else:
-        return False
-
-
-def cli_parse_binary_op(s, pl):
-    l = s.split(':')
-    if len(l) == 2:
-        pl.append(["type", l[0]])
-        pl.append(["operation", l[1]])
-    else:
-        pl.append(["operation", l[0]])
-
-
-def cli_parse_expression(s, pl):
-    if len(s) > 1 and s[0] in olist(vars.unary_ops):
-        pl.append(["operation", s[0]])
-        pl.append(["attribute", s[1]])
-    elif len(s) > 2 and is_binary_op(s[1]):
-        pl.append(["attribute", s[0]])
-        cli_parse_binary_op(s[1], pl)
-        pl.append(["value", s[2]])
-    else:
-        return False
-    return True
-
-
-def cli_parse_dateexpr(s, pl):
-    if len(s) < 3:
-        return False
-    if s[1] not in olist(rng_attr_values_l('date_expression', 'operation')):
-        return False
-    pl.append(["operation", s[1]])
-    if s[1] in olist(vars.simple_date_ops):
-        pl.append([keyword_cmp(s[1], 'lt') and "end" or "start", s[2]])
-        return True
-    cli_parse_attr_strict(s[2:], pl)
-    return True
-
-
-def parse_rule(s):
-    if not keyword_cmp(s[0], "rule"):
-        syntax_err(s, context="rule")
-        return 0, None
-    rule_list = []
-    head_pl = []
-    rule_list.append([s[0].lower(), head_pl])
-    i = 1
-    cli_parse_attr_strict(s[i:], head_pl)
-    i += len(head_pl)
-    if find_value(head_pl, "$id-ref"):
-        return i, rule_list
-    if not cli_parse_score(s[i], head_pl):
-        return i, None
-    i += 1
-    bool_op = ''
-    while len(s) > i+1:
-        pl = []
-        if keyword_cmp(s[i], "date"):
-            fun = cli_parse_dateexpr
-            elem = "date_expression"
-        else:
-            fun = cli_parse_expression
-            elem = "expression"
-        if not fun(s[i:], pl):
-            syntax_err(s[i:], context="rule")
-            return i, None
-        rule_list.append([elem, pl])
-        i += len(pl)
-        if find_value(pl, "type"):
-            i -= 1  # reduce no of tokens by one if there was "type:op"
-        if elem == "date_expression":
-            i += 1  # increase no of tokens by one if it was date expression
-        if len(s) > i and s[i] in olist(vars.boolean_ops):
-            if bool_op and not keyword_cmp(bool_op, s[i]):
-                common_err("rule contains different bool operations: %s" % ' '.join(s))
-                return i, None
+    def match(self, rx, errmsg=None):
+        """
+        Match the given regex with the current token.
+        If match fails, parse is aborted and an error reported.
+        rx: compiled regex or string.
+        errmsg: optional error message if match fails.
+        Returns: The matched token.
+        """
+        if not self.try_match(rx):
+            if errmsg:
+                self.err(errmsg)
+            elif isinstance(rx, basestring):
+                self.err("Expected " + rx)
             else:
-                bool_op = s[i].lower()
-                i += 1
-        if len(s) > i and keyword_cmp(s[i], "rule"):
-            break
-    if bool_op and not keyword_cmp(bool_op, 'and'):
-        head_pl.append(["boolean-op", bool_op])
-    return i, rule_list
+                self.err("Expected " + rx.pattern.rstrip('$'))
+        return self.matched(0)
 
+    def matched(self, idx=0):
+        """
+        After a successful match, returns
+        the groups generated by the match.
+        """
+        return self._lastmatch.group(idx)
 
-def parse_location(s):
-    cli_list = []
-    head_pl = []
-    head_pl.append(["id", s[1]])
-    head_pl.append(["rsc", s[2]])
-    cli_list.append([s[0].lower(), head_pl])
-    # the short node preference form
-    if len(s) == 5 and not keyword_cmp(s[3], "rule"):
-        if not cli_parse_score(s[3], head_pl):
-            return False
-        head_pl.append(["node", s[4]])
-        return cli_list
-    i = 3
-    while i < len(s):
-        numtoks, l = parse_rule(s[i:])
-        if not l:
-            return False
-        cli_list += l
-        i += numtoks
-    if len(s) < i:
-        syntax_err(s[i:], context="location")
-        return False
-    return cli_list
+    def lastmatch(self):
+        return self._lastmatch
 
+    def rewind(self):
+        "useful for when validation fails, to undo the match"
+        if self._currtok > 0:
+            self._currtok -= 1
 
-def cli_opt_attribute(type, p, pl, attr):
-    if not p:
-        return True
-    pl1 = []
-    cli_parse_attr([p], pl1)
-    if len(pl1) != 1 or not find_value(pl1, attr):
-        syntax_err(p, context=type)
-        return False
-    pl += pl1
-    return True
-
-
-def cli_parse_rsc_role(s, pl, attr_pfx=''):
-    l = s.split(':')
-    pl.append([attr_pfx+"rsc", l[0]])
-    if len(l) == 2:
-        if l[1] in rng_attr_values('resource_set', 'role'):
-            pl.append([attr_pfx+"rsc-role", l[1]])
-        elif l[1].isdigit():
-            pl.append([attr_pfx+"rsc-instance", l[1]])
+    def current_token(self):
+        if self.has_tokens():
+            return self._cmd[self._currtok]
         else:
-            bad_def_err("resource role/instance", s)
-            return False
-    elif len(l) > 2:
-        bad_def_err("resource role/instance", s)
-        return False
-    return True
+            return None
+
+    def is_comment(self):
+        return self._currtok < len(self._cmd) and self._cmd[self._currtok].startswith('#')
+
+    def has_tokens(self):
+        return self._currtok < len(self._cmd) and not self.is_comment()
+
+    def match_rest(self):
+        '''
+        matches and returns the rest
+        of the tokens in a list
+        '''
+        ret = self._cmd[self._currtok:]
+        self._currtok = len(self._cmd)
+        return ret
+
+    def match_any(self):
+        if not self.has_tokens():
+            self.err("Unexpected end of line")
+        tok = self.current_token()
+        self._currtok += 1
+        self._lastmatch = tok
+        return tok
+
+    def match_nvpairs(self, minpairs=1):
+        """
+        Matches string of p=v tokens
+        """
+        ret = []
+        while self.try_match(self._NVPAIR_RE):
+            ret.append((self.matched(1), self.matched(2)))
+        if len(ret) < minpairs:
+            if minpairs == 1:
+                self.err("Expected at least one name-value pair")
+            else:
+                self.err("Expected at least %d name-value pairs" % (minpairs))
+        return ret
+
+    def try_match_nvpairs(self, name):
+        """
+        Matches sequence of <name> [<key>=<value> [<key>=<value> ...] ...]
+        """
+        if self.try_match(name):
+            self._lastmatch = self.match_nvpairs(minpairs=1)
+        else:
+            self._lastmatch = []
+        return self._lastmatch
+
+    def match_identifier(self):
+        return self.match(self._IDENT_RE, errmsg="Expected identifier")
+
+    def match_resource(self):
+        return self.match(self._RESOURCE_RE, errmsg="Expected resource")
+
+    def match_idspec(self):
+        """
+        matches $id=<id> | $id-ref=<id>
+        matched(1) = $id|$id-ref
+        matched(2) = <id>
+        """
+        return self.match(self._IDSPEC_RE, errmsg="Expected $id-ref=<id> or $id=<id>")
+
+    def try_match_idspec(self):
+        """
+        matches $id=<value> | $id-ref=<value>
+        matched(1) = $id|$id-ref
+        matched(2) = <value>
+        """
+        return self.try_match(self._IDSPEC_RE)
+
+    def match_split(self, sep=':', order=None):
+        """
+        matches *:*:*...
+        order is an optional list of indices (0-based),
+        order (0, 1, 2) looks for a max-three split, and returns
+        (0, 1, 2) if string splits into (0, 1, 2)
+        (0, 1, None) if string splits into (0, 1)
+        (0, None, None) if string splits into (0)
+        order (2, 1, 0) returns
+        (foo, bar, baz) if string splits into (foo, bar, baz)
+        (None, foo, bar) if string splits into (foo, bar)
+        (None, None, foo) if string splits into (foo)
+        """
+        if order:
+            if not self.current_token():
+                self.err("Unexpected end, expected <value>[:<value> ...] (max %d parts)" % len(order))
+            sp = self.current_token().split(sep)
+            if len(sp) > len(order):
+                self.err("Too many parts, expected <value>[:<value> ...] (max %d parts)" % len(order))
+            while len(sp) < len(order):
+                try:
+                    sp.insert(order.index(len(sp)), None)
+                except ValueError:
+                    self.err("Internal error, please file a bug report (order = %s)" %
+                             (repr(order)))
+            self.match_any()
+            return sp
+        else:
+            if not self.current_token():
+                self.err("Expected <value>[:<value> ...]")
+            return self.match_any().split(sep)
+
+    def match_dispatch(self, errmsg=None):
+        """
+        Match on the next token. Looks
+        for a method named parse_<token>.
+        If found, the named function is called.
+        Else, an error is reported.
+        """
+        t = self.match(self._DISPATCH_RE, errmsg=errmsg)
+        t = 'parse_' + t.lower()
+        if hasattr(self, t) and callable(getattr(self, t)):
+            return getattr(self, t)()
+        self.rewind()  # rewind for more accurate error message
+        self.err(errmsg)
+
+    def try_match_description(self):
+        """
+        reads a description=? token if one is next
+        """
+        if self.try_match(self._DESC_RE):
+            return self.matched(1)
+        return None
 
 
-def cli_parse_op_times(s, pl):
-    l = s.split(':')
-    pl.append(["interval", l[0]])
-    if len(l) == 2:
-        pl.append(["timeout", l[1]])
-    elif len(l) > 2:
-        bad_def_err("op times", s)
+class NodeParser(BaseParser):
+    _ID_RE = re.compile(r'\$id=(.+)$', re.IGNORECASE)
+    _UNAME_RE = re.compile(r'([^:]+)(:(normal|member|ping))?$', re.IGNORECASE)
+
+    def can_parse(self):
+        return ('node',)
+
+    def match_arguments(self, out, names):
+        """matches [<name> <n>=<v> <n>=<v> ...]
+        adds the nvpairs to dicts named out.<name>
+        """
+        names = olist(names)
+        while self.has_tokens() and (self.current_token() in names):
+            for name in names:
+                for n, v in self.try_match_nvpairs(name):
+                    getattr(out, name)[n] = v
+
+    def parse(self, cmd):
+        """
+        node [$id=<id>] <uname>[:<type>]
+          [description=<description>]
+          [attributes <param>=<value> [<param>=<value>...]]
+          [utilization <param>=<value> [<param>=<value>...]]
+
+        type :: normal | member | ping
+        """
+        self.begin(cmd, min_args=1)
+        self.match('node')
+        out = Node()
+        if self.try_match(self._ID_RE):
+            out.id = self.matched(1)
+        self.match(self._UNAME_RE, errmsg="Expected <uname>[:<type>]")
+        out.uname, out.type = self.matched(1), self.matched(3)
+        out.description = self.try_match_description()
+        self.match_arguments(out, ('attributes', 'utilization'))
+        return out
+
+
+class ResourceParser(BaseParser):
+    _TEMPLATE_RE = re.compile(r'@(.+)$')
+    _RA_TYPE_RE = re.compile(r'[a-z0-9_:-]+$', re.IGNORECASE)
+    _OPTYPE_RE = re.compile(r'(start|stop|monitor)$', re.IGNORECASE)
+
+    def can_parse(self):
+        return ('primitive', 'group', 'clone', 'ms', 'master', 'rsc_template')
+
+    def match_ra_type(self, out):
+        "[<class>:[<provider>:]]<type>"
+        if not self.current_token():
+            self.err("Expected resource type")
+        cpt = self.validation.class_provider_type(self.current_token())
+        if not cpt:
+            self.err("Unknown resource type")
+        self.match_any()
+        out.ra_class, out.ra_type = cpt[0], cpt[2]
+        if out.ra_class == 'ocf':
+            out.ra_provider = cpt[1]
+
+    def match_op(self, out):
+        "op start|stop|monitor [<n>=<v> ...]"
+        self.match('op')
+        op_type = self.match(self._OPTYPE_RE, errmsg="Expected op_type (start|stop|monitor)")
+        op_attrs = self.match_nvpairs(minpairs=0)
+        # TODO: decide on a representation
+        out.operations.append((op_type, op_attrs))
+
+    def match_operations(self, out):
+        self.match('operations')
+        self.match_idspec()
+        out.operations.append(self.matched(1))
+        if self.matched(1).lower() == '$id':
+            self.match_op(out)  # require at least one op
+            while self.current_token().lower() == 'op':
+                self.match_op(out)
+
+    def match_attr_list(self, name, out):
+        attr_list = self.try_match_nvpairs(name)
+        if not attr_list:
+            return
+        # handle $id and $id-ref
+        attr0 = attr_list[0][0].lower()
+        if attr0 == '$id-ref':
+            if len(attr_list) > 1:
+                self.err("Only a single $id-ref is allowed")
+        elif attr0 == '$id':
+            if len(attr_list) < 2:
+                self.err("At least one param is required")
+        for n, v in attr_list:
+            getattr(out, name)[n] = v
+
+    def match_arguments(self, out, names):
+        """
+        [<name> attr_list]
+        [operations id_spec]
+        [op op_type [<attribute>=<value> ...] ...]
+
+        attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
+        id_spec :: $id=<id> | $id-ref=<id>
+        op_type :: start | stop | monitor
+        """
+        names = olist(names)
+        while self.has_tokens() and self.current_token() in names:
+            t = self.current_token()
+            if t == 'operations':
+                self.match_operations(out)
+            elif t == 'op':
+                self.match_op(out)
+            else:
+                for name in names:
+                    self.match_attr_list(name, out)
+
+    def parse(self, cmd):
+        return self.begin_dispatch(cmd, min_args=2)
+
+    def _primitive_or_template(self):
+        """
+        primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>]
+          [params attr_list]
+          [meta attr_list]
+          [utilization attr_list]
+          [operations id_spec]
+          [op op_type [<attribute>=<value> ...] ...]
+
+        attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val> ...] | $id-ref=<id>
+        id_spec :: $id=<id> | $id-ref=<id>
+        op_type :: start | stop | monitor
+        """
+        t = self.matched(0).lower()
+        if t == 'primitive':
+            out = Primitive()
+        else:
+            out = RscTemplate()
+        out.id = self.match_identifier()
+        if t == 'primitive' and self.try_match(self._TEMPLATE_RE):
+            out.template = self.matched(1)
+        else:
+            self.match_ra_type(out)
+        out.description = self.try_match_description()
+        self.match_arguments(out, ('params', 'meta', 'utilization', 'operations', 'op'))
+        return out
+
+    parse_primitive = _primitive_or_template
+    parse_template = _primitive_or_template
+
+    def _master_or_clone(self):
+        if self.matched(0).lower() == 'clone':
+            out = Clone()
+        else:
+            out = Master()
+        out.id = self.match_identifier()
+        out.resource = self.match_resource()
+        out.description = self.try_match_description()
+        self.match_arguments(out, ('params', 'meta'))
+        return out
+
+    parse_master = _master_or_clone
+    parse_ms = _master_or_clone
+    parse_clone = _master_or_clone
+
+    def _try_group_resource(self):
+        if not self.has_tokens():
+            return None
+        eq = '=' in self.current_token()
+        pm = self.current_token() in ('params', 'meta')
+        if eq or pm:
+            return None
+        return self.match_any()
+
+    def parse_group(self):
+        out = Group()
+        out.id = self.match_identifier()
+        while self._try_group_resource():
+            if self.lastmatch() in out.children:
+                self.err("in group %s, child %s is listed more than once" %
+                         (out.id, self.lastmatch()))
+            out.children.append(self.lastmatch())
+        out.description = self.try_match_description()
+        self.match_arguments(out, ('params', 'meta'))
+        return out
+
+
+class ConstraintParser(BaseParser):
+    _SCORE_RE = re.compile(r"([^:]+):$")
+    _ROLE_RE = re.compile(r"\$role=(.+)$", re.IGNORECASE)
+    _BOOLOP_RE = re.compile(r'(or|and)$', re.IGNORECASE)
+    _BINOP_RE = re.compile(r'((string|version|number):)?(lt|gt|lte|gte|eq|ne)$', re.IGNORECASE)
+    _UNARYOP_RE = re.compile(r'(defined|not_defined)$', re.IGNORECASE)
+    _DATEOP_RE = re.compile(r'(lt|gt|in_range|date_spec)?', re.IGNORECASE)
+
+    def can_parse(self):
+        return ('location', 'colocation', 'collocation', 'order', 'rsc_ticket')
+
+    def parse(self, cmd):
+        return self.begin_dispatch(cmd, min_args=2)
+
+    def match_rules(self, out):
+        '''parse rule definitions'''
+        while self.try_match('rule'):
+            rule = Location.Rule()
+            if self.try_match_idspec():
+                rule.id = self.matched(2)
+            if self.try_match(self._ROLE_RE):
+                rule.role = self.matched(1)
+            self.match(self._SCORE_RE)
+            rule.score = self.validate_score(self.matched(1))
+            rule.expression = self.match_rule_expression()
+            out.rules.append(rule)
+
+    def match_rule_expression(self):
+        """
+        expression :: <simple_exp> [bool_op <simple_exp> ...]
+        bool_op :: or | and
+        simple_exp :: <attribute> [type:]<binary_op> <value>
+                      | <unary_op> <attribute>
+                      | date <date_expr>
+        type :: string | version | number
+        binary_op :: lt | gt | lte | gte | eq | ne
+        unary_op :: defined | not_defined
+
+        date_expr :: lt <end>
+                     | gt <start>
+                     | in_range start=<start> end=<end>
+                     | in_range start=<start> <duration>
+                     | date_spec <date_spec>
+        duration|date_spec ::
+                     hours=<value>
+                     | monthdays=<value>
+                     | weekdays=<value>
+                     | yearsdays=<value>
+                     | months=<value>
+                     | weeks=<value>
+                     | years=<value>
+                     | weekyears=<value>
+                     | moon=<value>
+        """
+        expr = [self.match_simple_exp()]
+        while self.try_match(self._BOOLOP_RE):
+            expr.append(self.matched(1))
+            expr.append(self.match_simple_exp())
+        return expr
+
+    def _match_simple_exp(self):
+        if self.try_match('date'):
+            return self.match_date()
+        elif self.try_match(self._UNARYOP_RE):
+            unary_op = self.matched(1)
+            attr = self.match_identifier()
+            return (unary_op, attr)
+        else:
+            attr = self.match_identifier()
+            self.match(self._BINOP_RE)
+            optype = self.matched(2)
+            binop = self.matched(3)
+            val = self.match_any()
+            return (binop, optype, attr, val)
+
+    def match_date(self):
+        """
+        returns: ('date', <op>, [(n, v), (n, v)])
+        """
+        self.match('(%s)$' % (self.validation.date_ops()))
+        op = self.matched(1)
+        if op in olist(vars.simple_date_ops):
+            val = self.match_any()
+            if keyword_cmp(op, 'lt'):
+                return ('date', op, [('end', val)])
+            return ('date', op, [('start', val)])
+        elif op == 'in_range':
+            nv = self.match_nvpairs(minpairs=2)
+            if not keyword_cmp(nv[0][0], 'start'):
+                self.err("Expected start=<start>")
+            return ('date', op, nv)
+        else:  # lt, gt, date_spec, ?
+            return ('date', op, self.match_nvpairs(minpairs=1))
+
+    def validate_score(self, score, noattr=False):
+        if score in olist(vars.score_types):
+            return vars.score_types[score.lower()]
+        elif re.match("^[+-]?(inf(inity)?|INF(INITY)?|[0-9]+)$", score):
+            score = re.sub("inf(inity)?|INF(INITY)?", "INFINITY", score)
+            return ("score", score)
+        if noattr:
+            # orders have the special kind attribute
+            kind = self.validation.canonize_kind(score)
+            if not kind:
+                self.err("Invalid kind: " + score)
+            return ('kind', kind)
+        else:
+            return ('score-attribute', score)
+
+    def parse_location(self):
+        out = Location()
+        out.id = self.match_identifier()
+        out.resource = self.match_resource()
+        if self.try_match(self._SCORE_RE):
+            out.score = self.validate_score(self.matched(1))
+            out.node = self.match_identifier()
+        else:
+            self.match_rules(out)
+        return out
+
+    def parse_colocation(self):
+        """
+        colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>] ...
+          [node-attribute=<node_attr>]
+        """
+        out = Colocation()
+        out.id = self.match_identifier()
+        self.match(self._SCORE_RE)
+        out.score = self.validate_score(self.matched(1))
+        if self.try_match_tail('node-attribute=(.+)$'):
+            out.node_attribute = self.matched(1).lower()
+        out.resources = self.match_resource_set('role')
+        return out
+
+    parse_collocation = parse_colocation
+
+    def parse_order(self):
+        out = Order()
+        out.id = self.match_identifier()
+        if self.try_match('(mandatory|optional|serialize)$'):
+            out.kind = self.matched(1).lower()
+        else:
+            self.match(self._SCORE_RE)
+            out.score = self.validate_score(self.matched(1))
+        if self.try_match_tail('symmetrical=(true|false|yes|no|on|off)$'):
+            out.symmetrical = is_boolean_true(self.matched(1))
+        out.resources = self.match_resource_set('action')
+        return out
+
+    def parse_rsc_ticket(self):
+        out = RscTicket()
+        out.id = self.match_identifier()
+        self.match(self._SCORE_RE)
+        out.ticket_id = self.matched(1)
+        if self.try_match_tail('loss-policy=(stop|demote|fence|freeze)$'):
+            out.loss_policy = self.matched(1)
+        out.resources = self.match_resource_set('role')
+        return out
+
+    def try_match_tail(self, rx):
+        "ugly hack to prematurely extract a tail attribute"
+        pos = self._currtok
+        self._currtok = len(self._cmd) - 1
+        ret = self.try_match(rx)
+        if ret:
+            self._cmd = self._cmd[:-1]
+        self._currtok = pos
+        return ret
+
+    def remaining_tokens(self):
+        return len(self._cmd) - self._currtok
+
+    def match_resource_set(self, suffix_type):
+        if self.remaining_tokens() == 2:
+            if suffix_type == 'role':
+                return self.match_simple_role_set()
+            else:
+                return self.match_simple_action_set()
+        tokens = self.match_rest()
+        parser = ResourceSet(suffix_type, tokens, self)
+        return parser.parse()
+
+    def match_simple_role_set(self):
+        def rsc_role():
+            rsc, role = self.match_split(order=(0, 1))
+            t = self.validation.classify_role(role)
+            if role and not t:
+                self.err('invalid role: ' + role)
+            return rsc, role, t
+
+        def fmt(info, name):
+            if info[1]:
+                return [[name, info[0]], [name + '-' + info[2], info[1]]]
+            return [[name, info[0]]]
+        ret = fmt(rsc_role(), 'rsc')
+        return ret + fmt(rsc_role(), 'with-rsc')
+
+    def match_simple_action_set(self):
+        def rsc_action():
+            rsc, action = self.match_split(order=(0, 1))
+            t = self.validation.classify_action(action)
+            if action and not t:
+                self.err('invalid action: ' + action)
+            return rsc, action, t
+
+        def fmt(info, name):
+            if info[1]:
+                return [[name, info[0]], [name + '-' + info[2], info[1]]]
+            return [[name, info[0]]]
+        ret = fmt(rsc_action(), 'first')
+        return ret + fmt(rsc_action(), 'then')
+
+
+class OpParser(BaseParser):
+    def can_parse(self):
+        return ('monitor',)
+
+    def parse(self, cmd):
+        return self.begin_dispatch(cmd, min_args=2)
+
+    def parse_monitor(self):
+        out = Monitor()
+        out.resource, out.role = self.match_split(order=(0, 1))
+        if out.role and not self.validation.classify_role(out.role):
+            self.err("Invalid role '%s' for resource '%s'" % (out.role, out.resource))
+        out.interval, out.timeout = self.match_split(order=(0, 1))
+        return out
+
+
+class PropertyParser(BaseParser):
+    _PROPTYPE = {
+        'property': Property,
+        'rsc_defaults': RscDefaults,
+        'op_defaults': OpDefaults
+    }
+
+    def can_parse(self):
+        return self._PROPTYPE.keys()
+
+    def parse(self, cmd):
+        self.begin(cmd, min_args=1)
+        out = self._PROPTYPE[self.match('(%s)$' % '|'.join(self._PROPTYPE))]()
+        if self.try_match_idspec():
+            out.id = self.matched(2)
+        out.values = self.match_nvpairs()
+        return out
+
+
+class FencingOrderParser(BaseParser):
+    _TARGET_RE = re.compile(r'([^:]+):$')
+
+    def can_parse(self):
+        return ('fencing_topology',)
+
+    def parse(self, cmd):
+        self.begin(cmd, min_args=1)
+        self.match("fencing_topology")
+        target = "@@"
+        out = FencingTopology()
+        while self.has_tokens():
+            if self.try_match(self._TARGET_RE):
+                target = self.matched(1)
+            else:
+                out.add_level(target, self.match_any())
+        return out
+
+
+class AclParser(BaseParser):
+    _ACL_RIGHT_RE = re.compile(r'(%s)$' % ('|'.join(vars.acl_rule_names)), re.IGNORECASE)
+    _ROLE_REF_RE = re.compile(r'role:(.+)$', re.IGNORECASE)
+
+    def can_parse(self):
+        return ('user', 'role')
+
+    def parse(self, cmd):
+        return self.begin_dispatch(cmd, min_args=2)
+
+    def parse_role(self):
+        out = Role()
+        out.role_id = self.match_identifier()
+        while self.has_tokens():
+            out.rules.append(self._add_rule())
+        return out
+
+    def parse_user(self):
+        out = User()
+        out.uid = self.match_identifier()
+        while self.has_tokens():
+            if self.try_match(self._ROLE_REF_RE):
+                out.roles.append(self.matched(1))
+            else:
+                out.rules.append(self._add_rule())
+        return out
+
+    def _add_rule(self):
+        rule = ACLRule()
+        rule.right = self.match(self._ACL_RIGHT_RE).lower()
+        eligible_specs = vars.acl_spec_map.values()
+        while self.has_tokens():
+            a = self.current_token()
+            a = a.split(':', 1)
+            a = self._expand_shortcuts(a)
+            if len(a) != 2 or a[0] not in eligible_specs:
+                break
+            self.match_any()
+            rule.specs.append((a[0], a[1]))
+            if self._remove_spec(eligible_specs, a[0]):
+                break
+        return rule
+
+    def _remove_spec(self, speclist, spec):
+        """
+        Remove spec from list of eligible specs.
+        Returns true if spec parse is complete.
+        """
+        try:
+            speclist.remove(spec)
+            if spec == 'xpath':
+                speclist.remove('ref')
+                speclist.remove('tag')
+            elif spec in ('ref', 'tag'):
+                speclist.remove('xpath')
+            else:
+                return True
+        except ValueError:
+            pass
         return False
-    return True
+
+    def _expand_shortcuts(self, l):
+        '''
+        Expand xpath shortcuts. The input list l contains the user
+        input. If no shortcut was found, just return l.
+        In case of syntax error, return empty list. Otherwise, l[0]
+        contains 'xpath' and l[1] the expansion as found in
+        vars.acl_shortcuts. The id placeholders '@@' are replaced
+        with the given attribute names or resource references.
+        '''
+        try:
+            expansion = vars.acl_shortcuts[l[0]]
+        except KeyError:
+            return l
+        l[0] = "xpath"
+        if len(l) == 1:
+            if '@@' in expansion[0]:
+                return []
+            l.append(expansion[0])
+            return l
+        a = l[1].split(':')
+        xpath = ""
+        exp_i = 0
+        for tok in a:
+            try:
+                # some expansions may contain no id placeholders
+                # of course, they don't consume input tokens
+                if '@@' not in expansion[exp_i]:
+                    xpath += expansion[exp_i]
+                    exp_i += 1
+                xpath += expansion[exp_i].replace('@@', tok)
+                exp_i += 1
+            except:
+                return []
+        # need to remove backslash chars which were there to escape
+        # special characters in expansions when used as regular
+        # expressions (mainly '[]')
+        l[1] = xpath.replace("\\", "")
+        return l
+
+
+class RawXMLParser(BaseParser):
+    def can_parse(self):
+        return ('xml',)
+
+    def parse(self, cmd):
+        self.begin(cmd, min_args=1)
+        self.match('xml')
+        if not self.has_tokens():
+            self.err("Expected XML data")
+        xml_data = ' '.join(self.match_rest())
+        # strip spaces between elements
+        # they produce text elements
+        try:
+            e = etree.fromstring(xml_data)
+        except Exception, e:
+            common_err("Cannot parse XML data: %s" % xml_data)
+            self.err(e)
+        try:
+            el_type = vars.cib_cli_map[e.tag]
+        except:
+            self.err("Element %s not recognized" % (e.tag))
+        out = RawXML()
+        out.id = e.get("id")
+        out.type = el_type
+        out.raw = xml_data
+        return out
 
 
 class ResourceSet(object):
@@ -403,14 +870,15 @@ class ResourceSet(object):
         '(': ')',
     }
 
-    def __init__(self, type, s, cli_list):
+    def __init__(self, type, s, parent):
+        self.parent = parent
         self.type = type
         self.valid_q = (type == "order") and \
-            rng_attr_values('resource_set', 'action') or \
-            rng_attr_values('resource_set', 'role')
+            parent.validation.resource_actions() or \
+            parent.validation.resource_roles()
         self.q_attr = (type == "order") and "action" or "role"
         self.tokens = s
-        self.cli_list = cli_list
+        self.cli_list = []
         self.reset_set()
         self.sequential = True
         self.require_all = True
@@ -463,6 +931,13 @@ class ResourceSet(object):
         l = p.split(':')
         return (len(l) == 1) and [p, ''] or l
 
+    def err(self, token, errmsg):
+        syntax_err(self.parent._cmd,
+                   context=self.type,
+                   token=token,
+                   msg=errmsg)
+        raise ParseError
+
     def parse(self):
         tokpos = -1
         for p in self.tokens:
@@ -473,8 +948,8 @@ class ResourceSet(object):
                 if self.set_pl:  # save the set before
                     self.save_set()
                 if self.opened:
-                    syntax_err(self.tokens[tokpos:], context=self.type)
-                    return False
+                    self.err(token=self.tokens[tokpos],
+                             errmsg='Cannot nest resource sets')
                 self.sequential = False
                 if p == '[':
                     self.require_all = False
@@ -482,14 +957,14 @@ class ResourceSet(object):
                 continue
             if p in self.close_set:
                 if not self.opened:
-                    syntax_err(self.tokens[tokpos:], context=self.type)
-                    return False
+                    self.err(token=self.tokens[tokpos],
+                             errmsg='Unmatched closing bracket')
                 if p != self.matching[self.opened]:
-                    syntax_err(self.tokens[tokpos:], context=self.type)
-                    return False
+                    self.err(token=self.tokens[tokpos],
+                             errmsg='Mismatched closing bracket')
                 if not self.set_pl:  # empty sets not allowed
-                    syntax_err(self.tokens[tokpos:], context=self.type)
-                    return False
+                    self.err(token=self.tokens[tokpos],
+                             errmsg='Empty resource set')
                 self.save_set()
                 self.sequential = True
                 if p == ']':
@@ -497,8 +972,8 @@ class ResourceSet(object):
                 continue
             if '=' in p:
                 if not self.parseattr(p):
-                    syntax_err(self.tokens[tokpos:], context=self.type)
-                    return False
+                    self.err(token=self.tokens[tokpos],
+                             errmsg='Unknown attribute')
                 continue
             rsc, q = self.splitrsc(p)
             if q != self.prev_q:  # one set can't have different roles/actions
@@ -506,391 +981,108 @@ class ResourceSet(object):
                 self.prev_q = q
             if q:
                 if q not in self.valid_q:
-                    common_err("%s: invalid %s in %s" % (q, self.q_attr, self.type))
-                    return False
+                    self.err(token=self.tokens[tokpos],
+                             errmsg='%s: Invalid %s in %s' % (q, self.q_attr, self.type))
                 if not self.curr_attr:
                     self.curr_attr = self.q_attr
             else:
                 self.curr_attr = ''
             self.set_pl.append(["resource_ref", ["id", rsc]])
         if self.opened:  # no close
-            syntax_err(self.tokens[tokpos:], context=self.type)
-            return False
+            self.err(token=self.tokens[tokpos],
+                     errmsg='Unmatched opening bracket')
         if self.set_pl:  # save the final set
             self.save_set()
-        return True
+        ret = self.cli_list
+        self.cli_list = []
+        return ret
 
 
-def parse_colocation(s):
-    cli_list = []
-    head_pl = []
-    type = s[0]
-    if type == "collocation":  # another ugly :(
-        type = "colocation"
-    cli_list.append([type, head_pl])
-    if len(s) < 5:
-        syntax_err(s, context="colocation")
-        return False
-    head_pl.append(["id", s[1]])
-    if not cli_parse_score(s[2], head_pl):
-        return False
-    # save node-attribute for later (if it exists)
-    node_attr = ""
-    if is_attribute(s[len(s)-1], "node-attribute"):
-        node_attr = s.pop()
-    if len(s) == 5:
-        if not cli_parse_rsc_role(s[3], head_pl):
-            return False
-        if not cli_parse_rsc_role(s[4], head_pl, 'with-'):
-            return False
-    else:
-        resource_set_obj = ResourceSet(type, s[3:], cli_list)
-        if not resource_set_obj.parse():
-            return False
-    if not cli_opt_attribute(type, node_attr, head_pl, "node-attribute"):
-        return False
-    return cli_list
+class Validation(object):
+    def __init__(self, schema):
+        self.schema = schema
 
+    def resource_roles(self):
+        'returns list of valid resource roles'
+        return olist(self.schema.rng_attr_values('resource_set', 'role'))
 
-def cli_parse_rsc_action(s, pl, rsc_pos):
-    l = s.split(':')
-    pl.append([rsc_pos, l[0]])
-    if len(l) == 2:
-        if l[1] in rng_attr_values('resource_set', 'action'):
-            pl.append([rsc_pos+"-action", l[1]])
-        elif l[1].isdigit():
-            pl.append([rsc_pos+"-instance", l[1]])
-        else:
-            bad_def_err("resource action/instance", s)
-            return False
-    elif len(l) > 1:
-        bad_def_err("resource action/instance", s)
-        return False
-    return True
+    def resource_actions(self):
+        'returns list of valid resource actions'
+        return olist(self.schema.rng_attr_values('resource_set', 'action'))
 
+    def date_ops(self):
+        'returns list of valid date operations'
+        return olist(self.schema.rng_attr_values_l('date_expression', 'operation'))
 
-def parse_order(s):
-    cli_list = []
-    head_pl = []
-    type = "order"
-    cli_list.append([s[0], head_pl])
-    if len(s) < 5:
-        syntax_err(s, context="order")
-        return False
-    head_pl.append(["id", s[1]])
-    if not cli_parse_score(s[2], head_pl, noattr=True):
-        return False
-    # save symmetrical for later (if it exists)
-    symm = ""
-    if is_attribute(s[len(s)-1], "symmetrical"):
-        symm = s.pop()
-    if len(s) == 5:
-        if not cli_parse_rsc_action(s[3], head_pl, 'first'):
-            return False
-        if not cli_parse_rsc_action(s[4], head_pl, 'then'):
-            return False
-    else:
-        resource_set_obj = ResourceSet(type, s[3:], cli_list)
-        if not resource_set_obj.parse():
-            return False
-    if not cli_opt_attribute(type, symm, head_pl, "symmetrical"):
-        return False
-    return cli_list
+    def class_provider_type(self, value):
+        """
+        Unravel [class:[provider:]]type
+        returns: (class, provider, type)
+        """
+        c_p_t = disambiguate_ra_type(value)
+        if not ra_type_validate(value, *c_p_t):
+            return None
+        return c_p_t
 
-
-def parse_rsc_ticket(s):
-    cli_list = []
-    head_pl = []
-    type = "rsc_ticket"
-    cli_list.append([s[0], head_pl])
-    if len(s) < 4:
-        syntax_err(s, context="rsc_ticket")
-        return False
-    head_pl.append(["id", s[1]])
-    if not cli_parse_ticket(s[2], head_pl):
-        return False
-    # save loss-policy for later (if it exists)
-    loss_policy = ""
-    if is_attribute(s[len(s)-1], "loss-policy"):
-        loss_policy = s.pop()
-    if len(s) == 4:
-        if not cli_parse_rsc_role(s[3], head_pl):
-            return False
-    else:
-        resource_set_obj = ResourceSet(type, s[3:], cli_list)
-        if not resource_set_obj.parse():
-            return False
-    if not cli_opt_attribute(type, loss_policy, head_pl, attr="loss-policy"):
-        return False
-    return cli_list
-
-
-def parse_constraint(s):
-    if keyword_cmp(s[0], "location"):
-        return parse_location(s)
-    elif s[0] in olist(["colocation", "collocation"]):
-        return parse_colocation(s)
-    elif keyword_cmp(s[0], "order"):
-        return parse_order(s)
-    elif keyword_cmp(s[0], "rsc_ticket"):
-        return parse_rsc_ticket(s)
-
-
-def parse_property(s):
-    cli_list = []
-    head_pl = []
-    cli_list.append([s[0], head_pl])
-    cli_parse_attr_strict(s[1:], head_pl)
-    if len(head_pl) < 0 or len(s) > len(head_pl)+1:
-        syntax_err(s, context=s[0])
-        return False
-    return cli_list
-
-
-def cli_parse_uname(s, pl):
-    l = s.split(':')
-    if not l or len(l) > 2:
+    def canonize_kind(self, score):
+        ''
+        sl = score.lower()
+        for x in self.schema.rng_attr_values('rsc_order', 'kind'):
+            if sl == x.lower():
+                return x
         return None
-    pl.append(["uname", l[0]])
-    if len(l) == 2:
-        pl.append(["type", l[1]])
 
+    def classify_role(self, role):
+        if not role:
+            return None
+        if role in self.resource_roles():
+            return 'role'
+        elif role.isdigit():
+            return 'instance'
+        return None
 
-def parse_node(s):
-    cli_list = []
-    # the head
-    head = []
-    # optional $id
-    id = ''
-    opt_id_l = []
-    i = 1
-    cli_parse_attr_strict(s[i:], opt_id_l)
-    if opt_id_l:
-        id = find_value(opt_id_l, "$id")
-        i += 1
-    # uname[:type]
-    cli_parse_uname(s[i], head)
-    uname = find_value(head, "uname")
-    if not uname:
-        return False
-    head.append(["id", id and id or uname])
-    # drop type if default
-    type = find_value(head, "type")
-    if type == vars.node_default_type:
-        head.remove(["type", type])
-    cli_list.append([s[0], head])
-    if len(s) == i:
-        return cli_list
-    # the rest
-    i += 1
-    try:  # s[i] may be out of range
-        if is_attribute(s[i], "description"):
-            cli_parse_attr(s[i:i+1], head)
-            i += 1  # skip to the next token
-    except:
-        pass
-    while len(s) > i+1:
-        if not s[i] in olist(vars.node_attributes_keyw):
-            syntax_err(s[i:], context='node')
-            return False
-        pl = []
-        cli_parse_attr(s[i+1:], pl)
-        if len(pl) == 0:
-            syntax_err(s[i:], context='node')
-            return False
-        cli_list.append([s[i], pl])
-        i += len(pl)+1
-    if len(s) > i:
-        syntax_err(s[i:], context='node')
-        return False
-    return cli_list
-
-
-def parse_fencing_order(s):
-    cli_list = []
-    head_pl = []
-    type = "fencing_topology"
-    cli_list.append([type, head_pl])
-    target = "@@"
-    for tok in s[1:]:
-        if tok.endswith(':'):
-            target = tok.rstrip(':')
-        else:
-            head_pl.append(["fencing-level",
-                            [["target", target],
-                             ["devices", tok]]])
-    return cli_list
-
-
-def parse_xml(s):
-    cli_list = []
-    head = []
-    try:
-        xml_s = ' '.join(s[1:])
-    except:
-        syntax_err(s, context='xml')
-        return False
-    # strip spaces between elements
-    # they produce text elements
-    try:
-        e = etree.fromstring(xml_s)
-    except Exception, msg:
-        common_err("cannot parse xml chunk: %s" % xml_s)
-        common_err(msg)
-        return False
-    try:
-        el_type = vars.cib_cli_map[e.tag]
-    except:
-        common_err("element %s not recognized" % e.tag)
-        return False
-    id = e.get("id")
-    head.append(["id", id])
-    cli_list.append([el_type, head])
-    cli_list.append(["raw", xml_s])
-    return cli_list
-
-
-def expand_acl_shortcuts(l):
-    '''
-    Expand xpath shortcuts. The input list l contains the user
-    input. If no shortcut was found, just return l.
-    In case of syntax error, return empty list. Otherwise, l[0]
-    contains 'xpath' and l[1] the expansion as found in
-    vars.acl_shortcuts. The id placeholders '@@' are replaced
-    with the given attribute names or resource references.
-    '''
-    shortcut = l[0]
-    try:
-        expansion = vars.acl_shortcuts[shortcut]
-    except:
-        return l
-    l[0] = "xpath"
-    if len(l) == 1:
-        if '@@' in expansion[0]:
-            return []
-        l.append(expansion[0])
-        return l
-    a = l[1].split(':')
-    xpath = ""
-    exp_i = 0
-    for tok in a:
-        try:
-            # some expansions may contain no id placeholders
-            # of course, they don't consume input tokens
-            if '@@' not in expansion[exp_i]:
-                xpath += expansion[exp_i]
-                exp_i += 1
-            xpath += expansion[exp_i].replace('@@', tok)
-            exp_i += 1
-        except:
-            return []
-    # need to remove backslash chars which were there to escape
-    # special characters in expansions when used as regular
-    # expressions (mainly '[]')
-    l[1] = xpath.replace("\\", "")
-    return l
-
-
-def is_acl_rule_name(a):
-    return a in olist(vars.acl_rule_names)
-
-
-def get_acl_specs(s):
-    l = []
-    eligible_specs = vars.acl_spec_map.values()
-    for spec in s:
-        a = spec.split(':', 1)
-        a = expand_acl_shortcuts(a)
-        if len(a) != 2 or a[0] not in eligible_specs:
-            return l
-        l.append([a[0], a[1]])
-        eligible_specs.remove(a[0])
-        if a[0] == "xpath":
-            eligible_specs.remove("ref")
-            eligible_specs.remove("tag")
-        elif a[0] in ("ref", "tag"):
-            # this can happen twice
-            try:
-                eligible_specs.remove("xpath")
-            except:
-                pass
-        else:
-            break  # nothing after "attribute"
-    return l
-
-
-def cli_parse_acl_rules(s, obj_type, cli_list):
-    i = 0
-    while i < len(s):
-        if not is_acl_rule_name(s[i]):
-            syntax_err(s, context=obj_type)
-            return False
-        rule_name = s[i]
-        i += 1
-        if i >= len(s):
-            syntax_err(s, context=obj_type)
-            return False
-        l = get_acl_specs(s[i:])
-        if len(l) < 1:
-            syntax_err(s, context=obj_type)
-            return False
-        i += len(l)
-        cli_list.append([rule_name, l])
-    return cli_list
-
-
-def parse_acl(s):
-    cli_list = []
-    head_pl = []
-    obj_type = s[0]
-    cli_list.append([obj_type, head_pl])
-    head_pl.append(["id", s[1]])
-    if keyword_cmp(obj_type, "user") and s[2].startswith("role:"):
-        for i in range(2, len(s)):
-            a = s[i].split(':', 1)
-            if len(a) != 2 or a[0] != "role":
-                syntax_err(s, context=obj_type)
-                return False
-            cli_list.append(["role_ref", ["id", a[1]]])
-        return cli_list
-    return cli_parse_acl_rules(s[2:], obj_type, cli_list)
-
-
-def xml_lex(s):
-    l = lines2cli(s)
-    a = []
-    for p in l:
-        a += p.split()
-    return a
+    def classify_action(self, action):
+        if not action:
+            return None
+        if action in self.resource_actions():
+            return 'action'
+        elif action.isdigit():
+            return 'instance'
+        return None
 
 
 class CliParser(object):
-    parsers = {
-        # elem_name: (minimum number of tokens, parse function)
-        "primitive": (3, parse_resource),
-        "group": (3, parse_resource),
-        "clone": (3, parse_resource),
-        "ms": (3, parse_resource),
-        "master": (3, parse_resource),
-        "rsc_template": (3, parse_resource),
-        "location": (3, parse_constraint),
-        "colocation": (3, parse_constraint),
-        "collocation": (3, parse_constraint),
-        "order": (3, parse_constraint),
-        "rsc_ticket": (3, parse_constraint),
-        "monitor": (3, parse_op),
-        "node": (2, parse_node),
-        "property": (2, parse_property),
-        "rsc_defaults": (2, parse_property),
-        "op_defaults": (2, parse_property),
-        "fencing_topology": (2, parse_fencing_order),
-        "role": (3, parse_acl),
-        "user": (3, parse_acl),
-        "xml": (3, parse_xml),
-    }
+    parsers = {}
 
     def __init__(self):
         self.comments = []
+        validation = Validation(Schema.getInstance())
+        if not self.parsers:
+            def add(*parsers):
+                for pcls in parsers:
+                    p = pcls()
+                    p.init(validation)
+                    for n in p.can_parse():
+                        self.parsers[n] = p
+            add(ResourceParser,
+                ConstraintParser,
+                OpParser,
+                NodeParser,
+                PropertyParser,
+                FencingOrderParser,
+                AclParser,
+                RawXMLParser)
+
+    def _xml_lex(self, s):
+        try:
+            l = lines2cli(s)
+            a = []
+            for p in l:
+                a += p.split()
+            return a
+        except ValueError, e:
+            common_err(e)
+            return False
 
     def _normalize(self, s):
         '''
@@ -901,21 +1093,17 @@ class CliParser(object):
         if isinstance(s, unicode):
             try:
                 s = s.encode('ascii')
-            except Exception, msg:
-                common_err(msg)
+            except Exception, e:
+                common_err(e)
                 return False
         if isinstance(s, str):
             if s and s.startswith('#'):
                 self.comments.append(s)
                 return None
             if s.startswith('xml'):
-                s = xml_lex(s)
+                s = self._xml_lex(s)
             else:
-                try:
-                    s = shlex.split(s)
-                except ValueError, msg:
-                    common_err(msg)
-                    return False
+                s = shlex.split(s)
         # but there shouldn't be any newlines (?)
         while '\n' in s:
             s.remove('\n')
@@ -927,26 +1115,21 @@ class CliParser(object):
         Return: a list of items; each item is a tuple
             with two members: a string (tag) and a nvpairs or
             attributes dict.
+            On failure, returns either False or None.
         '''
-        cli_list = ''
         s = self._normalize(s)
         if not s:
             return s
-        if s[0] not in self.parsers.keys():
-            syntax_err(s)
-            return False
-        mintoks, parser_fn = self.parsers[s[0]]
-        if len(s) < mintoks:
-            syntax_err(s)
-            return False
-        cli_list = parser_fn(s)
-        if not cli_list:
-            return False
-        if self.comments:
-            cli_list.append(["comments", self.comments])
-            self.comments = []
-        return cli_list
-
-schema = Schema.getInstance()
+        if s[0] in self.parsers:
+            parser = self.parsers[s[0]]
+            try:
+                ret = parser.do_parse(s)
+                if self.comments:
+                    ret.comments = self.comments
+                return ret
+            except ParseError:
+                return False
+        syntax_err(s, token=s[0], msg="Unknown command")
+        return False
 
 # vim:ts=4:sw=4:et:
