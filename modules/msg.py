@@ -191,16 +191,20 @@ def skill_err(s):
     err_buf.error("%s: this command is not allowed at this skill level" % s)
 
 
-def syntax_err(s, token='', context=''):
-    pfx = "syntax"
+def syntax_err(s, token='', context='', msg=''):
+    err = "syntax"
     if context:
-        pfx = "%s in %s" % (pfx, context)
-    if type(s) == type(''):
-        err_buf.error("%s near <%s>" % (pfx, s))
+        err += " in "
+        err += context
+    if msg:
+        err += ": %s" % (msg)
+    if isinstance(s, basestring):
+        err += " parsing '%s'" % (s)
     elif token:
-        err_buf.error("%s near <%s>: %s" % (pfx, token, ' '.join(s)))
+        err += " near <%s> parsing '%s'" % (token, ' '.join(s))
     else:
-        err_buf.error("%s: %s" % (pfx, ' '.join(s)))
+        err += " parsing '%s'" % (' '.join(s))
+    err_buf.error(err)
 
 
 def bad_usage(cmd, args):
