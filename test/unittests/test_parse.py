@@ -19,7 +19,7 @@
 import parse
 import unittest
 import shlex
-from utils import olist, lines2cli
+from utils import lines2cli
 from pprint import pformat
 
 
@@ -53,8 +53,10 @@ class TestBaseParser(unittest.TestCase):
 
     def test_err(self):
         self._reset('a:b:c:d')
-        with self.assertRaises(parse.ParseError):
+
+        def runner():
             self.base.match_split(order=(0, 1))
+        self.assertRaises(parse.ParseError, runner)
 
     def test_idspec(self):
         self._reset('$id=foo')
@@ -67,9 +69,10 @@ class TestBaseParser(unittest.TestCase):
         self.assertEqual(self.base.matched(1), '$id-ref')
         self.assertEqual(self.base.matched(2), 'foo')
 
-        with self.assertRaises(parse.ParseError):
+        def runner():
             self._reset('id=foo')
             self.base.match_idspec()
+        self.assertRaises(parse.ParseError, runner)
 
     def test_match_split(self):
         self._reset('resource:role')
@@ -538,4 +541,5 @@ class TestCliParser(unittest.TestCase):
             f.close()
         self.assertEqual(a, b)
 
-
+if __name__ == '__main__':
+    unittest.main()
