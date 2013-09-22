@@ -25,9 +25,9 @@ from utils import keyword_cmp, verify_boolean, lines2cli
 from utils import get_boolean, olist, is_boolean_true
 from msg import common_err, syntax_err
 from cibobjects import Primitive, RscTemplate, Group, Clone, Master
-from cibobjects import Location, Colocation, Order, RscTicket
-from cibobjects import Monitor, Node, Property, RscDefaults, OpDefaults
-from cibobjects import FencingTopology, ACLRule, Role, User, RawXML
+from cibobjects import Location, Colocation, Order
+from cibobjects import Monitor, Node, Property, RscTicket
+from cibobjects import FencingTopology, ACLRight, Role, User, RawXML
 
 
 class ParseError(Exception):
@@ -40,7 +40,7 @@ class ParseError(Exception):
 
 class BaseParser(object):
     _NVPAIR_RE = re.compile(r'([^=]+)=(.+)$')
-    _IDENT_RE = re.compile(r'([a-z0-9_-].*)$', re.IGNORECASE)
+    _IDENT_RE = re.compile(r'([a-z0-9_#$-].*)$', re.IGNORECASE)
     _DISPATCH_RE = re.compile(r'[a-z0-9_]+$', re.IGNORECASE)
     _DESC_RE = re.compile(r'description=(.+)$', re.IGNORECASE)
     _RESOURCE_RE = re.compile(r'([^=]+)$')
@@ -69,8 +69,8 @@ class BaseParser(object):
         self._cmd = cmd
         self._currtok = 0
         self._lastmatch = None
-        if min_args > -1 and len(cmd) < min_args:
-            self.err("Expected at least " + min_args + " arguments")
+        if min_args > -1 and len(cmd) < min_args + 1:
+            self.err("Expected at least %d arguments" % (min_args))
 
     def begin_dispatch(self, cmd, min_args=-1):
         """
@@ -84,10 +84,7 @@ class BaseParser(object):
         "Called by CliParser. Calls parse()"
         out = self.parse(cmd)
         "Parsers should pass their return value through this method."
-        if self.is_comment():
-            out.comments.append(' '.join(self._cmd[self._currtok:]))
-            self._currtok = len(self._cmd)
-        elif self.has_tokens():
+        if self.has_tokens():
             self.err("Unknown arguments: " + ' '.join(self._cmd[self._currtok:]))
         return out
 
@@ -150,11 +147,8 @@ class BaseParser(object):
         else:
             return None
 
-    def is_comment(self):
-        return self._currtok < len(self._cmd) and self._cmd[self._currtok].startswith('#')
-
     def has_tokens(self):
-        return self._currtok < len(self._cmd) and not self.is_comment()
+        return self._currtok < len(self._cmd)
 
     def match_rest(self):
         '''
@@ -337,16 +331,22 @@ class ResourceParser(BaseParser):
         self.match('op')
         op_type = self.match(self._OPTYPE_RE, errmsg="Expected op_type (start|stop|monitor)")
         op_attrs = self.match_nvpairs(minpairs=0)
-        # TODO: decide on a representation
+        has_interval = False
+        for kv in op_attrs:
+            if kv[0].lower() == 'interval':
+                has_interval = True
+                break
+        if not has_interval:
+            op_attrs.append(('interval', '0'))
         out.operations.append((op_type, op_attrs))
 
     def match_operations(self, out):
         self.match('operations')
         self.match_idspec()
-        out.operations.append(self.matched(1))
+        out.operations.append((self.matched(1).lower(), self.matched(2)))
         if self.matched(1).lower() == '$id':
             self.match_op(out)  # require at least one op
-            while self.current_token().lower() == 'op':
+            while self.has_tokens() and self.current_token().lower() == 'op':
                 self.match_op(out)
 
     def match_attr_list(self, name, out):
@@ -424,7 +424,7 @@ class ResourceParser(BaseParser):
         else:
             out = Master()
         out.id = self.match_identifier()
-        out.resource = self.match_resource()
+        out.children = [self.match_resource()]
         out.description = self.try_match_description()
         self.match_arguments(out, ('params', 'meta'))
         return out
@@ -472,15 +472,25 @@ class ConstraintParser(BaseParser):
     def match_rules(self, out):
         '''parse rule definitions'''
         while self.try_match('rule'):
-            rule = Location.Rule()
+            head = []
+            rule = ['rule', head]
+            idref = False
             if self.try_match_idspec():
-                rule.id = self.matched(2)
+                head.append([self.matched(1), self.matched(2)])
+                if self.matched(1) == '$id-ref':
+                    idref = True
             if self.try_match(self._ROLE_RE):
-                rule.role = self.matched(1)
+                head.append(['$role', self.matched(1)])
+            if idref:
+                return rule
             self.match(self._SCORE_RE)
-            rule.score = self.validate_score(self.matched(1))
-            rule.expression = self.match_rule_expression()
+            score = self.validate_score(self.matched(1))
+            head.append(score)
+            boolop, expr = self.match_rule_expression()
+            if boolop:
+                head.append(['boolean-op', boolop])
             out.rules.append(rule)
+            out.rules.extend(expr)
 
     def match_rule_expression(self):
         """
@@ -509,45 +519,54 @@ class ConstraintParser(BaseParser):
                      | weekyears=<value>
                      | moon=<value>
         """
-        expr = [self.match_simple_exp()]
+        boolop = None
+        exprs = [self._match_simple_exp()]
         while self.try_match(self._BOOLOP_RE):
-            expr.append(self.matched(1))
-            expr.append(self.match_simple_exp())
-        return expr
+            if boolop and self.matched(1) != boolop:
+                self.err("Mixing bool ops not allowed: %s != %s" % (boolop, self.matched(1)))
+            else:
+                boolop = self.matched(1)
+            exprs.append(self._match_simple_exp())
+        return boolop, exprs
 
     def _match_simple_exp(self):
         if self.try_match('date'):
-            return self.match_date()
+            return ['date_expression', self.match_date()]
         elif self.try_match(self._UNARYOP_RE):
             unary_op = self.matched(1)
             attr = self.match_identifier()
-            return (unary_op, attr)
+            return ['expression', [['operation', unary_op], ['attribute', attr]]]
         else:
             attr = self.match_identifier()
             self.match(self._BINOP_RE)
             optype = self.matched(2)
             binop = self.matched(3)
             val = self.match_any()
-            return (binop, optype, attr, val)
+            ret = ['expression', [['attribute', attr]]]
+            if optype:
+                ret[1].extend([['type', optype], ['operation', binop], ['value', val]])
+            else:
+                ret[1].extend([['operation', binop], ['value', val]])
+            return ret
 
     def match_date(self):
         """
-        returns: ('date', <op>, [(n, v), (n, v)])
+        returns: [['operation', <op>], (n, v), (n, v)]
         """
-        self.match('(%s)$' % (self.validation.date_ops()))
+        self.match('(%s)$' % ('|'.join(self.validation.date_ops())))
         op = self.matched(1)
         if op in olist(vars.simple_date_ops):
             val = self.match_any()
             if keyword_cmp(op, 'lt'):
-                return ('date', op, [('end', val)])
-            return ('date', op, [('start', val)])
+                return [['operation', op], ('end', val)]
+            return [['operation', op], ('start', val)]
         elif op == 'in_range':
             nv = self.match_nvpairs(minpairs=2)
             if not keyword_cmp(nv[0][0], 'start'):
                 self.err("Expected start=<start>")
-            return ('date', op, nv)
+            return [['operation', op]] + nv
         else:  # lt, gt, date_spec, ?
-            return ('date', op, self.match_nvpairs(minpairs=1))
+            return [['operation', op]] + self.match_nvpairs(minpairs=1)
 
     def validate_score(self, score, noattr=False):
         if score in olist(vars.score_types):
@@ -586,7 +605,7 @@ class ConstraintParser(BaseParser):
         out.score = self.validate_score(self.matched(1))
         if self.try_match_tail('node-attribute=(.+)$'):
             out.node_attribute = self.matched(1).lower()
-        out.resources = self.match_resource_set('role')
+        out.simple, out.resources = self.match_resource_set('role')
         return out
 
     parse_collocation = parse_colocation
@@ -601,17 +620,17 @@ class ConstraintParser(BaseParser):
             out.score = self.validate_score(self.matched(1))
         if self.try_match_tail('symmetrical=(true|false|yes|no|on|off)$'):
             out.symmetrical = is_boolean_true(self.matched(1))
-        out.resources = self.match_resource_set('action')
+        out.simple, out.resources = self.match_resource_set('action')
         return out
 
     def parse_rsc_ticket(self):
         out = RscTicket()
         out.id = self.match_identifier()
         self.match(self._SCORE_RE)
-        out.ticket_id = self.matched(1)
+        out.ticket = self.matched(1)
         if self.try_match_tail('loss-policy=(stop|demote|fence|freeze)$'):
             out.loss_policy = self.matched(1)
-        out.resources = self.match_resource_set('role')
+        out.simple, out.resources = self.match_resource_set('role', simple_count=1)
         return out
 
     def try_match_tail(self, rx):
@@ -627,17 +646,19 @@ class ConstraintParser(BaseParser):
     def remaining_tokens(self):
         return len(self._cmd) - self._currtok
 
-    def match_resource_set(self, suffix_type):
-        if self.remaining_tokens() == 2:
+    def match_resource_set(self, suffix_type, simple_count=2):
+        simple = False
+        if self.remaining_tokens() == simple_count:
+            simple = True
             if suffix_type == 'role':
-                return self.match_simple_role_set()
+                return True, self.match_simple_role_set(simple_count)
             else:
-                return self.match_simple_action_set()
+                return True, self.match_simple_action_set()
         tokens = self.match_rest()
         parser = ResourceSet(suffix_type, tokens, self)
-        return parser.parse()
+        return simple, parser.parse()
 
-    def match_simple_role_set(self):
+    def match_simple_role_set(self, count):
         def rsc_role():
             rsc, role = self.match_split(order=(0, 1))
             t = self.validation.classify_role(role)
@@ -650,7 +671,9 @@ class ConstraintParser(BaseParser):
                 return [[name, info[0]], [name + '-' + info[2], info[1]]]
             return [[name, info[0]]]
         ret = fmt(rsc_role(), 'rsc')
-        return ret + fmt(rsc_role(), 'with-rsc')
+        if count == 2:
+            ret += fmt(rsc_role(), 'with-rsc')
+        return ret
 
     def match_simple_action_set(self):
         def rsc_action():
@@ -678,28 +701,28 @@ class OpParser(BaseParser):
     def parse_monitor(self):
         out = Monitor()
         out.resource, out.role = self.match_split(order=(0, 1))
-        if out.role and not self.validation.classify_role(out.role):
-            self.err("Invalid role '%s' for resource '%s'" % (out.role, out.resource))
+        if out.role:
+            out.role_class = self.validation.classify_role(out.role)
+            if not out.role_class:
+                self.err("Invalid role '%s' for resource '%s'" % (out.role, out.resource))
         out.interval, out.timeout = self.match_split(order=(0, 1))
         return out
 
 
 class PropertyParser(BaseParser):
-    _PROPTYPE = {
-        'property': Property,
-        'rsc_defaults': RscDefaults,
-        'op_defaults': OpDefaults
-    }
+    _PROPTYPE = ['property', 'rsc_defaults', 'op_defaults']
 
     def can_parse(self):
-        return self._PROPTYPE.keys()
+        return self._PROPTYPE
 
     def parse(self, cmd):
         self.begin(cmd, min_args=1)
-        out = self._PROPTYPE[self.match('(%s)$' % '|'.join(self._PROPTYPE))]()
+        self.match('(%s)$' % '|'.join(self._PROPTYPE))
+        out = Property()
+        out.type = self.matched(1)
         if self.try_match_idspec():
-            out.id = self.matched(2)
-        out.values = self.match_nvpairs()
+            out.values.append(('$id', self.matched(2)))
+        out.values.extend(self.match_nvpairs())
         return out
 
 
@@ -750,7 +773,7 @@ class AclParser(BaseParser):
         return out
 
     def _add_rule(self):
-        rule = ACLRule()
+        rule = ACLRight()
         rule.right = self.match(self._ACL_RIGHT_RE).lower()
         eligible_specs = vars.acl_spec_map.values()
         while self.has_tokens():

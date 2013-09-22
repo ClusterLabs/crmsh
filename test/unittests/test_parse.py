@@ -129,17 +129,17 @@ class TestCliParser(unittest.TestCase):
 
         out = self.parser.parse('ms m0 resource params a=b')
         self.assertEqual(out.id, 'm0')
-        self.assertEqual(out.resource, 'resource')
+        self.assertEqual(out.children[0], 'resource')
         self.assertTrue('a' in out.params)
 
         out = self.parser.parse('master ma resource meta a=b')
         self.assertEqual(out.id, 'ma')
-        self.assertEqual(out.resource, 'resource')
+        self.assertEqual(out.children[0], 'resource')
         self.assertTrue('a' in out.meta)
 
         out = self.parser.parse('clone clone-1 resource meta a=b')
         self.assertEqual(out.id, 'clone-1')
-        self.assertEqual(out.resource, 'resource')
+        self.assertEqual(out.children[0], 'resource')
         self.assertTrue('a' in out.meta)
 
         out = self.parser.parse('group group-1 a')
@@ -149,9 +149,8 @@ class TestCliParser(unittest.TestCase):
         out = self.parser.parse('group group-1 a b c')
         self.assertEqual(len(out.children), 3)
 
-        # should this be allowed?
         out = self.parser.parse('group group-1')
-        self.assertEqual(len(out.children), 0)
+        self.assertFalse(out)
 
         out = self.parser.parse('group group-1 params a=b')
         self.assertEqual(len(out.children), 0)
