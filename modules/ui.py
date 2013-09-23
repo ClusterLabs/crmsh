@@ -735,7 +735,7 @@ class Template(UserInterface):
                     return False
             cib_factory.erase()
         set_obj = mkset_obj()
-        rc = set_obj.import_file(tmp)
+        rc = set_obj.import_file(method, tmp)
         try:
             os.unlink(tmp)
         except:
@@ -1828,7 +1828,7 @@ class CibConfig(UserInterface):
             set_obj = mkset_obj("xml")
         else:
             set_obj = mkset_obj()
-        return set_obj.import_file(url)
+        return set_obj.import_file(method, url)
 
     def graph(self, cmd, *args):
         "usage: graph [<gtype> [<file> [<img_format>]]]"
