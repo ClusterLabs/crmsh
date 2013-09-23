@@ -269,7 +269,10 @@ class CibObjectSet(object):
         page_string(s)
         return self.search_rc
 
-    def import_file(self, fname):
+    def import_file(self, method, fname):
+        '''
+        method: update or replace
+        '''
         if not cib_factory.is_cib_sane():
             return False
         f = self._open_url(fname)
@@ -278,7 +281,7 @@ class CibObjectSet(object):
         s = ''.join(f)
         if f != sys.stdin:
             f.close()
-        return self.save(s, no_remove=True)
+        return self.save(s, no_remove=True, method=method)
 
     def repr(self, format=format):
         '''
@@ -287,7 +290,7 @@ class CibObjectSet(object):
         '''
         return ''
 
-    def save(self, s, no_remove=False):
+    def save(self, s, no_remove=False, method='update'):
         '''
         For each object:
             - try to find a corresponding object in obj_set
@@ -454,7 +457,7 @@ class CibObjectSetCli(CibObjectSet):
                 id = type
         return id
 
-    def save(self, s, no_remove=False):
+    def save(self, s, no_remove=False, method='update'):
         '''
         Save a user supplied cli format configuration.
         On errors user is typically asked to review the
@@ -492,7 +495,7 @@ class CibObjectSetCli(CibObjectSet):
             return rc
         mk_set = id_set - self.obj_ids
         upd_set = id_set & self.obj_ids
-        rc = cib_factory.set_update(edit_d, mk_set, upd_set, del_set)
+        rc = cib_factory.set_update(edit_d, mk_set, upd_set, del_set, method)
         if not rc:
             self._initialize()
         return rc
@@ -521,7 +524,7 @@ class CibObjectSetRaw(CibObjectSet):
         else:
             return node.get("id")
 
-    def save(self, s, no_remove=False):
+    def save(self, s, no_remove=False, method='update'):
         try:
             cib_elem = etree.fromstring(s)
         except etree.ParseError, msg:
@@ -552,7 +555,7 @@ class CibObjectSetRaw(CibObjectSet):
             return rc
         mk_set = id_set - self.obj_ids
         upd_set = id_set & self.obj_ids
-        rc = cib_factory.set_update(edit_d, mk_set, upd_set, del_set, "xml")
+        rc = cib_factory.set_update(edit_d, mk_set, upd_set, del_set, "xml", method)
         if not rc:
             self._initialize()
         return rc
@@ -2949,7 +2952,7 @@ class CibFactory(Singleton):
         node = obj.cli2node(cli_list)
         return self._add_element(obj, node)
 
-    def update_from_cli(self, obj, cli_list):
+    def update_from_cli(self, obj, cli_list, method):
         '''
         Replace element from the cli intermediate.
         If this is an update and the element is properties, then
@@ -2961,11 +2964,10 @@ class CibFactory(Singleton):
             raw_elem = etree.fromstring(cli_list[1][1])
             id_store.store_xml(raw_elem)
             return self.update_element(obj, raw_elem)
-        elif obj.obj_type in vars.nvset_cli_names:
+        if method == 'update' and obj.obj_type in vars.nvset_cli_names:
             self.merge_from_cli(obj, cli_list)
             return True
-        else:
-            return self.update_element(obj, obj.cli2node(cli_list))
+        return self.update_element(obj, obj.cli2node(cli_list))
 
     def update_from_node(self, obj, node):
         'Update element from a doc node.'
@@ -3009,13 +3011,14 @@ class CibFactory(Singleton):
             obj.updated = True
             obj.propagate_updated()
 
-    def _cli_set_update(self, edit_d, mk_set, upd_set, del_set):
+    def _cli_set_update(self, edit_d, mk_set, upd_set, del_set, method):
         '''
         Create/update/remove elements.
         edit_d is a dict with id keys and cli_list values.
         mk_set is a set of ids to be created.
         upd_set is a set of ids to be updated (replaced).
         del_set is a set to be removed.
+        method is either replace or update.
         '''
         test_l = []
         for cli in processing_sort_cli([edit_d[x] for x in mk_set]):
@@ -3027,7 +3030,7 @@ class CibFactory(Singleton):
             obj = self.find_object(id)
             if not obj:
                 return False
-            if not self.update_from_cli(obj, edit_d[id]):
+            if not self.update_from_cli(obj, edit_d[id], method):
                 return False
             test_l.append(obj)
         if not self.delete(*list(del_set)):
@@ -3067,19 +3070,19 @@ class CibFactory(Singleton):
                 rc = False
         return rc & self.check_structure()
 
-    def _set_update(self, edit_d, mk_set, upd_set, del_set, upd_type):
+    def _set_update(self, edit_d, mk_set, upd_set, del_set, upd_type, method):
         if upd_type == "xml":
             return self._xml_set_update(edit_d, mk_set, upd_set, del_set)
         else:
-            return self._cli_set_update(edit_d, mk_set, upd_set, del_set)
+            return self._cli_set_update(edit_d, mk_set, upd_set, del_set, method)
 
-    def set_update(self, edit_d, mk_set, upd_set, del_set, upd_type="cli"):
+    def set_update(self, edit_d, mk_set, upd_set, del_set, upd_type="cli", method='update'):
         '''
         Just a wrapper for _set_update() to allow for a
         rollback.
         '''
         self._push_state()
-        if not self._set_update(edit_d, mk_set, upd_set, del_set, upd_type):
+        if not self._set_update(edit_d, mk_set, upd_set, del_set, upd_type, method):
             if not self._pop_state():
                 raise "this should never happen!"
             return False
