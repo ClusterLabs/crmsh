@@ -290,7 +290,7 @@ class CibObjectSet(object):
         '''
         return ''
 
-    def save(self, s, no_remove=False, method='update'):
+    def save(self, s, no_remove=False, method='replace'):
         '''
         For each object:
             - try to find a corresponding object in obj_set
@@ -457,7 +457,7 @@ class CibObjectSetCli(CibObjectSet):
                 id = type
         return id
 
-    def save(self, s, no_remove=False, method='update'):
+    def save(self, s, no_remove=False, method='replace'):
         '''
         Save a user supplied cli format configuration.
         On errors user is typically asked to review the
@@ -524,7 +524,7 @@ class CibObjectSetRaw(CibObjectSet):
         else:
             return node.get("id")
 
-    def save(self, s, no_remove=False, method='update'):
+    def save(self, s, no_remove=False, method='replace'):
         try:
             cib_elem = etree.fromstring(s)
         except etree.ParseError, msg:
@@ -3075,7 +3075,7 @@ class CibFactory(Singleton):
         else:
             return self._cli_set_update(edit_d, mk_set, upd_set, del_set, method)
 
-    def set_update(self, edit_d, mk_set, upd_set, del_set, upd_type="cli", method='update'):
+    def set_update(self, edit_d, mk_set, upd_set, del_set, upd_type="cli", method='replace'):
         '''
         Just a wrapper for _set_update() to allow for a
         rollback.
