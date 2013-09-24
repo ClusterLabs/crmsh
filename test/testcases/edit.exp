@@ -90,3 +90,16 @@ property $id="cib-bootstrap-options" \
 .EXT >/dev/null </dev/null crm_shadow 2>&1
 rsc_defaults $id="rsc_options" \
 	failure-timeout="10m"
+.TRY configure property stonith-enabled=true
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.TRY configure show cib-bootstrap-options
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+property $id="cib-bootstrap-options" \
+	default-action-timeout="60s" \
+	stonith-enabled="true"
+.TRY configure filter 'sed "s/stonith-enabled=.true.//"'
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.TRY configure show cib-bootstrap-options
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+property $id="cib-bootstrap-options" \
+	default-action-timeout="60s"
