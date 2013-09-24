@@ -53,3 +53,7 @@ verify
 configure rsc_defaults $id="rsc_options" failure-timeout=10m
 configure filter "sed 's/2m/60s/'" cib-bootstrap-options
 configure show rsc_options
+configure property stonith-enabled=true
+configure show cib-bootstrap-options
+configure filter 'sed "s/stonith-enabled=.true.//"'
+configure show cib-bootstrap-options
