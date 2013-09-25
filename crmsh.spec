@@ -4,7 +4,7 @@
 
 %global upstream_version tip
 %global upstream_prefix crmsh
-%global crmsh_release 0.rc1
+%global crmsh_release 1
 
 %if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version} || 0%{?rhel} || 0%{?fedora}
 %define pkg_group System Environment/Daemons

@@ -1,3 +1,23 @@
+* Tue Sep 24 2013 Kristoffer Grönlund <kgronlund@suse.com>, Dejan Muhamedagic <dejan@suse.de>, and many others
+- release 1.2.6
+- cibconf: fix removing cluster properties in edit (bnc#841764)
+- history: improve setting history source
+- cibconf: fix rsc_template referencing (savannah#40011)
+- rsctest: add support for STONITH resources
+- help: fix help for alias commands
+- history: show and allow completion of all primitives and not only
+  top level resources such as groups
+- site: add missing completions
+- rsctest: fix multistate resource testing
+- site: add missing command aliases
+
+* Wed Aug 28 2013 Dejan Muhamedagic <dejan@suse.de> and many others
+- release candidate 1.2.6-rc3
+- cibconf: disable atomic updates until cibadmin gets fixed
+- cibconf: match special ids on configuration edit (fixes
+  disappearing elements on edit)
+- doc: website sources
+
 * Mon Aug  5 2013 Dejan Muhamedagic <dejan@suse.de> and many others
 - release candidate 1.2.6-rc1
 - main: allow starting with a specified CIB shadow
