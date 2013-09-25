@@ -206,7 +206,7 @@ class GvDot(Gv):
         dotf = self.totmpf()
         if not dotf:
             return False
-        utils.show_dot_graph(dotf)
+        utils.show_dot_graph(dotf, desc="configuration graph")
         return True
 
     def image(self, img_type, outf):

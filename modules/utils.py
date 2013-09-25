@@ -311,12 +311,12 @@ def is_value_sane(name):
     return True
 
 
-def show_dot_graph(dotfile, keep_file=False):
+def show_dot_graph(dotfile, keep_file=False, desc="transition graph"):
     cmd = "%s %s" % (user_prefs.dotty, dotfile)
     if not keep_file:
         cmd = "(%s; rm -f %s)" % (cmd, dotfile)
     subprocess.Popen(cmd, shell=True, bufsize=0, stdin=None, stdout=None, stderr=None, close_fds=True)
-    common_info("starting %s to show transition graph" % user_prefs.dotty)
+    common_info("starting %s to show %s" % (user_prefs.dotty, desc))
 
 
 def ext_cmd(cmd):
