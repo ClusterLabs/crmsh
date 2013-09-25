@@ -235,16 +235,14 @@ Dec 14 20:08:43 xen-e lrmd: [24225]: info: operation stop[11] on d1 for client 2
 Dec 14 20:08:43 xen-e external/libvirt(s-libvirt)[24748]: [24786]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
 .INP: transition nograph
 INFO: 24: running ptest with history-test/xen-e/pengine/pe-input-50.bz2
-warning: unpack_nodes: 	Blind faith: not fencing unseen nodes
- warning: unpack_rsc_op: 	Processing failed op monitor for s-libvirt on xen-e: unknown error (1)
+.SIM >/dev/null 2>&1 ptest -x - -VV
 Transition xen-e:pe-input-50 (20:08:43 - 20:08:43):
 	total 8 actions: 8 Complete
 Dec 14 20:08:43 xen-e lrmd: [24225]: info: rsc:d1 stop[11] (pid 24774)
 Dec 14 20:08:43 xen-e external/libvirt(s-libvirt)[24748]: [24786]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
 .INP: transition -1 nograph
 INFO: 25: running ptest with history-test/xen-e/pengine/pe-input-49.bz2
-warning: unpack_nodes: 	Blind faith: not fencing unseen nodes
- warning: unpack_rsc_op: 	Processing failed op monitor for s-libvirt on xen-e: unknown error (1)
+.SIM >/dev/null 2>&1 ptest -x - -VV
 Transition xen-e:pe-input-49 (20:07:56 - 20:07:57):
 	total 2 actions: 2 Complete
 Dec 14 20:07:56 xen-e lrmd: [24225]: info: rsc:d1 start[9] (pid 24568)
@@ -270,23 +268,7 @@ Dec 14 20:07:57 xen-d haveged: haveged stopping due to signal 15
 .INP: timeframe
 .INP: session save _crmsh_regtest
 .EXT mkdir -p /var/cache/crm/history/session/_crmsh_regtest
-Source: history-test.tar.bz2
-Created on: --:--:--
-By: unknown
-Period: 2012-12-14 20:06:34 - 2012-12-14 20:08:44
-Nodes: xen-d xen-e
-Groups: 
-Resources: d1 s-libvirt
-Transitions: 43 44 45 46 48 272 49 50
 .INP: session load _crmsh_regtest
-Source: history-test.tar.bz2
-Created on: --:--:--
-By: unknown
-Period: 2012-12-14 20:06:34 - 2012-12-14 20:08:44
-Nodes: xen-d xen-e
-Groups: 
-Resources: d1 s-libvirt
-Transitions: 43 44 45 46 48 272 49 50
 .INP: session
 current session: _crmsh_regtest
 .INP: session pack
@@ -296,13 +278,5 @@ Report saved in '/root/_crmsh_regtest.tar.bz2'
 .EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: history
 .INP: session load _crmsh_regtest
-Source: history-test.tar.bz2
-Created on: --:--:--
-By: unknown
-Period: 2012-12-14 20:06:34 - 2012-12-14 20:08:44
-Nodes: xen-d xen-e
-Groups: 
-Resources: d1 s-libvirt
-Transitions: 43 44 45 46 48 272 49 50
 .INP: exclude
 corosync|crmd|pengine|stonith-ng|cib|attrd|mgmtd|sshd

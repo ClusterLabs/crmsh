@@ -565,6 +565,9 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     # ptest prints to stderr
     if actions:
         ptest = "%s | %s" % (ptest, actions_filter)
+    if options.regression_tests:
+        ptest = ">/dev/null %s" % ptest
+        print ".SIM", ptest
     common_debug("invoke: %s" % ptest)
     rc, s = get_stdout(ptest, input_s=graph_s)
     if rc != 0:
