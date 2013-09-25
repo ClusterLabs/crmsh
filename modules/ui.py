@@ -2367,7 +2367,7 @@ class History(UserInterface):
         if not f:
             common_err("dot file not found in the report")
             return False
-        utils.show_dot_graph(f, keep_file=True)
+        utils.show_dot_graph(f, keep_file=True, desc="configuration graph")
         return True
 
     def _pe2shadow(self, f, argl):
