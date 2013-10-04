@@ -20,36 +20,40 @@
 %{!?py_sitedir: %{expand: %%global py_sitedir  %%{expand:%%%%{py_libdir}/site-packages}}}
 
 
-Name:		crmsh
-Summary:	Pacemaker command line interface
-Version:	1.2.6
-Release:	%{?crmsh_release}%{?dist}
-License:	GPL-2.0+
-Url:		http://savannah.nongnu.org/projects/crmsh
-Group:		%{pkg_group}
-Source0:	crmsh.tar.bz2
-BuildRoot:	%{_tmppath}/%{name}-%{version}-build
-AutoReqProv:	on
-Requires(pre):	pacemaker
-Requires:	python >= 2.4
-Requires:	python-dateutil
+Name:           crmsh
+Summary:        Pacemaker command line interface
+License:        GPL-2.0+
+Group:          %{pkg_group}
+Version:        1.2.6
+Release:        %{?crmsh_release}%{?dist}
+Url:            http://savannah.nongnu.org/projects/crmsh
+Source0:        crmsh.tar.bz2
+BuildRoot:      %{_tmppath}/%{name}-%{version}-build
+Requires(pre):  pacemaker
 Requires:       pssh
+Requires:       python >= 2.4
+Requires:       python-dateutil
 Requires:       python-lxml
 BuildRequires:  python-lxml
 
 %if 0%{?suse_version}
 # Suse splits this off into a separate package
 Requires:       python-curses
+BuildRequires:  fdupes
+BuildRequires:  libglue-devel
+BuildRequires:  libpacemaker-devel
 BuildRequires:  python-curses
-BuildRequires:	libpacemaker-devel libglue-devel
 %else
-BuildRequires:	pacemaker-libs-devel cluster-glue-libs-devel
+BuildRequires:  cluster-glue-libs-devel
+BuildRequires:  pacemaker-libs-devel
 %endif
 
 # Required for core functionality
-BuildRequires:  automake autoconf pkgconfig python
-BuildRequires:	asciidoc
-BuildRequires:	libtool
+BuildRequires:  asciidoc
+BuildRequires:  autoconf
+BuildRequires:  automake
+BuildRequires:  pkgconfig
+BuildRequires:  python
 
 %if 0%{?suse_version} > 1210
 # xsltproc is necessary for manpage generation; this is split out into
@@ -60,8 +64,12 @@ BuildRequires:  libxslt-tools
 
 
 %if 0%{?with_regression_tests}
-BuildRequires:  corosync procps vim python-dateutil
-Requires:       pacemaker pssh
+BuildRequires:  corosync
+BuildRequires:  procps
+BuildRequires:  python-dateutil
+BuildRequires:  vim
+Requires:       pacemaker
+Requires:       pssh
 %endif
 
 %description
@@ -91,23 +99,25 @@ find . -exec touch \{\} \;
 # hence, use this ugly hack
 %if 0%{?suse_version} < 1020
 export docdir=%{crmsh_docdir}
-%{configure}			\
-	--localstatedir=%{_var}				\
-	--with-package-name=%{name} \
-	--with-version=%{version}-%{release}
+%{configure}            \
+    --localstatedir=%{_var}             \
+    --with-package-name=%{name} \
+    --with-version=%{version}-%{release}
 %else
-%{configure}			\
-	--localstatedir=%{_var}				\
-	--with-package-name=%{name}		\
-	--with-version=%{version}-%{release}	\
-	--docdir=%{crmsh_docdir}
+%{configure}            \
+    --localstatedir=%{_var}             \
+    --with-package-name=%{name}     \
+    --with-version=%{version}-%{release}    \
+    --docdir=%{crmsh_docdir}
 %endif
 
 make %{_smp_mflags} docdir=%{crmsh_docdir}
 
 %install
-rm -rf %{buildroot}
 make DESTDIR=%{buildroot} docdir=%{crmsh_docdir} install
+%if 0%{?suse_version}
+%fdupes %{buildroot}
+%endif
 
 %clean
 rm -rf %{buildroot}
@@ -115,11 +125,17 @@ rm -rf %{buildroot}
 %if 0%{?with_regression_tests}
 
 %post
-if ! /usr/share/crmsh/tests/regression.sh ; then
-	echo "Shell tests failed."
-	cat crmtestout/regression.out
-	exit 1
+
+# NB: this is called twice by OBS, that's why we touch the file
+if [ ! -e /tmp/.crmsh_regression_tests_ran ]; then
+    touch /tmp/.crmsh_regression_tests_ran
+    if ! /usr/share/crmsh/tests/regression.sh ; then
+        echo "Shell tests failed."
+        cat crmtestout/regression.out
+        exit 1
+    fi
 fi
+
 %endif
 
 %files
