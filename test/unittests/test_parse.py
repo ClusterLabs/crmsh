@@ -270,8 +270,11 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(2, len(out.levels))
 
         out = self.parser.parse('fencing_topology node-a: poison-pill power node-b: ipmi serial')
-        print out.levels
         self.assertEqual(4, len(out.levels))
+
+        out = self.parser.parse('fencing_topology vbox4: stonith-vbox3-1-off,stonith-vbox3-2-off,stonith-vbox3-1-on,stonith-vbox3-2-on')
+        self.assertEqual(1, len(out.levels))
+        self.assertEqual
 
     def _parse_lines(self, lines):
         out = []
