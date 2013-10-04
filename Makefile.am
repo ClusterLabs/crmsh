@@ -37,7 +37,4 @@ clean-generic:
 dist-clean-local:
 	rm -f autoconf automake autoheader
 
-maintainer-clean-local:
-	rm -f libltdl.tar
-
 .PHONY: rpm pkg handy handy-copy
