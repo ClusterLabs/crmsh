@@ -274,7 +274,6 @@ class TestCliParser(unittest.TestCase):
 
         out = self.parser.parse('fencing_topology vbox4: stonith-vbox3-1-off,stonith-vbox3-2-off,stonith-vbox3-1-on,stonith-vbox3-2-on')
         self.assertEqual(1, len(out.levels))
-        self.assertEqual
 
     def _parse_lines(self, lines):
         out = []
