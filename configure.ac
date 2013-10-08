@@ -273,6 +273,7 @@ test/testcases/Makefile  \
 modules/Makefile         \
 modules/config.py        \
 hb_report/Makefile       \
+hb_report/hb_report      \
 )
 
 dnl Now process the entire list of files added by previous 
