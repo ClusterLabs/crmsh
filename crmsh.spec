@@ -143,10 +143,17 @@ fi
 ###########################################################
 %defattr(-,root,root)
 
-%{_datadir}/crmsh
 
 %{_sbindir}/crm
+%{_sbindir}/hb_report
 %{py_sitedir}/crmsh
+
+%{_datadir}/%{name}
+%{_datadir}/%{name}/ha_cf_support.sh
+%{_datadir}/%{name}/openais_conf_support.sh
+%{_datadir}/%{name}/utillib.sh
+%{_datadir}/%{name}/combine-logs.pl
+%{_datadir}/%{name}/ha_log.sh
 
 %doc %{_mandir}/man8/crm.8*
 %{crmsh_docdir}/COPYING
