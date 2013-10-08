@@ -23,7 +23,7 @@ sbin_SCRIPTS		= crm
 
 EXTRA_DIST		= crm
 
-SUBDIRS = doc modules templates test contrib
+SUBDIRS = doc modules templates test contrib hb_report
 
 doc_DATA = AUTHORS COPYING README ChangeLog
 

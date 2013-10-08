@@ -35,6 +35,7 @@ Requires:       python >= 2.4
 Requires:       python-dateutil
 Requires:       python-lxml
 BuildRequires:  python-lxml
+Conflicts:      cluster-glue <= 1.0.12
 
 %if 0%{?suse_version}
 # Suse splits this off into a separate package
