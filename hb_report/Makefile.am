@@ -17,11 +17,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
-MAINTAINERCLEANFILES    = Makefile.in
-
-hanoarchdir		= $(datadir)/$(PACKAGE_NAME)
-
-hanoarch_SCRIPTS	= combine-logs.pl
-hanoarch_DATA	= utillib.sh ha_cf_support.sh openais_conf_support.sh
-sbin_SCRIPTS		= hb_report
-
+MAINTAINERCLEANFILES  = Makefile.in
+hanoarchdir           = $(datadir)/@PACKAGE@
+hanoarch_DATA         = combine-logs.pl utillib.sh ha_cf_support.sh openais_conf_support.sh
+sbin_SCRIPTS          = hb_report
