@@ -21,3 +21,5 @@ MAINTAINERCLEANFILES  = Makefile.in
 hanoarchdir           = $(datadir)/@PACKAGE@
 hanoarch_DATA         = combine-logs.pl utillib.sh ha_cf_support.sh openais_conf_support.sh
 sbin_SCRIPTS          = hb_report
+
+EXTRA_DIST            = $(hanoarch_DATA)
