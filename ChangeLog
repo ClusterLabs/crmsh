@@ -1,0 +1,201 @@
+* Tue Sep 24 2013 Kristoffer Grönlund <kgronlund@suse.com>, Dejan Muhamedagic <dejan@suse.de>, and many others
+- release 1.2.6
+- cibconf: fix removing cluster properties in edit (bnc#841764)
+- history: improve setting history source
+- cibconf: fix rsc_template referencing (savannah#40011)
+- rsctest: add support for STONITH resources
+- help: fix help for alias commands
+- history: show and allow completion of all primitives and not only
+  top level resources such as groups
+- site: add missing completions
+- rsctest: fix multistate resource testing
+- site: add missing command aliases
+
+* Wed Aug 28 2013 Dejan Muhamedagic <dejan@suse.de> and many others
+- release candidate 1.2.6-rc3
+- cibconf: disable atomic updates until cibadmin gets fixed
+- cibconf: match special ids on configuration edit (fixes
+  disappearing elements on edit)
+- doc: website sources
+
+* Mon Aug  5 2013 Dejan Muhamedagic <dejan@suse.de> and many others
+- release candidate 1.2.6-rc1
+- main: allow starting with a specified CIB shadow
+- main: make sure that tmp files get removed
+- cibconf: replace minidom with lxml
+- cibconf: groups can have the container meta attribute
+- cibconf: do not load CIB automatically in a non-interactive
+  mode (bnc#813045)
+- cibconf: allow single level fencing_topology (savannah#38737)
+- cibconf: improve exit code if a referenced element does not
+  exist (e.g. in the show command)
+- cibconf: add simulate alias for the ptest command
+- cibconf: add -S when running crm_simulate (formerly ptest)
+- cibconf: use cibadmin patch to update live CIB (with pcmk >= 1.1.10)
+- cibconf: node ids are not id but text
+- cibconf: improve elements edit operation
+- resource: trace and untrace (RA) commands
+- resource: prevent whitespace in meta_attributes when setting
+  attributes in nested elements such as groups (bnc#815447)
+- resource: add option for better control of group management
+  (bnc#806901)
+- node/resource: improve lifetime processing
+- node: update interface to crm_node, its usage changed
+  (bnc#805278)
+- node: maintenance/ready commands
+- node: ignore case when looking up nodes
+- node: update interface to crm_node (node delete)
+- node: allow forced node removal
+- shadow: fix regression in cib import (from PE file)
+- shadow: set shadow directory according to the user preference
+- history: fix search for resource messages (bnc#803790)
+- history: refresh live report for commands other than info
+  (bnc#807402)
+- history: use anonymous re groups to prevent out of groups assertion
+- history: fix xpath expression for graphs of resource sets
+- history: skip empty lines (!) when searching logs
+- history: add support for rfc5242 date format in syslog
+- userprefs: add reset command
+- ui: fix exit code of crm status if crm_mon fails (savannah#38702)
+- ui: fix exit code of the help command
+- parse: drop obsolete test for operations
+- performance: do not make unnecessary parameter uniqueness test
+  (bnc#806372)
+- performance: check programs existence with python os module
+  (bnc#806372)
+- performance: improve tests for running resources
+
+* Wed Feb  6 2013 Dejan Muhamedagic <dejan@suse.de> and many others
+- stable release 1.2.5
+- cibconfig: modgroup command
+- cibconfig: directed graph support
+- cibconfig: fix syntax error in ptest
+- history: diff command (between PE inputs)
+- history: show pe commands
+- history: graph command
+- history: reduce number of live updates
+- history: inherit year from the report
+
+* Mon Dec 17 2012 Dejan Muhamedagic <dejan@suse.de> and many others
+- stable release 1.2.4
+- shadow: return proper exit code on I/O errors
+- history: implement transition save (to shadow) subcommand
+- history: fix regression when creating log objects
+- history: detailed transition output
+- history: force refresh on session load
+
+* Tue Dec 11 2012 Dejan Muhamedagic <dejan@suse.de> and many others
+- stable release 1.2.3
+- ra: don't print duplicate RAs in the list command (bnc#793585)
+- history: optimize source refreshing
+
+* Thu Dec  6 2012 Dejan Muhamedagic <dejan@suse.de> and many others
+- stable release 1.2.2
+- cibconfig: don't bail out if filter fails
+- cibconfig: improve id management on element update
+- ra: add support for nagios plugins
+- utils: make sure that there's at least one column (savannah#37658)
+- ui: improve quotes insertion (possible regression)
+- history: adjust log patterns for pacemaker v1.1.8
+- history: fix setting up the timeframe alias for limit
+- history: fix unpacking reports specified without directory
+- history: add log subcommand to transition
+- build: pcmk.pc renamed to pacemaker.pc in pacemaker v1.1.8
+
+* Mon Oct 15 2012 Dejan Muhamedagic <dejan@suse.de> and many others
+- stable release 1.2.1
+- cibconfig: show error message on id in use
+- cibconfig: repair edit for non-vi users
+- cibconfig: update schema separately (don't remove the status section)
+- cibconfig: node type is optional now
+- ui: readd quotes for single-shot commands
+- ra: manage without glue installed (savannah#37560)
+- ra: improve support for RH fencing-agents
+- ra: add support for crm_resource
+- history: remove keyword 'as' which is not compatible with python
+  2.4 (savannah#37534)
+- history: add the exclude (log messages) command
+- history: pacemaker 1.1.8 compatibility code
+- utils: exit code of cibadmin -Q on no section changed in 1.1.8
+- some more pacemaker 1.1.8 compatibility code
+
+* Tue Sep 18 2012 Dejan Muhamedagic <dejan@suse.de> and many others
+- stable release 1.2.0
+- cibconfig: support the kind attribute in orders
+- cibconfig: implement node-attribute in collocations
+- cibconfig: support require-all in resource sets
+- cibconfig: support for fencing-topology
+- cibconfig: new schema command
+- rsctest: resource testing
+- history: implement session saving
+- history: add alias (timeframe) for the limit command
+- xml: support for RNG schema
+- site: ticket standby and activate commands
+- site: update interface to crm_ticket
+- cibstatus: ticket management
+- ui: add vim syntax highlighting support
+- xml: retrieve data from schema (lf#2092)
+- stonith: support rhcs fence-agents (bnc#769724)
+- ticket: fix redirecting rsc references in tickets (bnc#763465)
+- ui: import readline only when needed (don't print ".[?1034h")
+- ui: don't accept non-ascii input (lf#2597)
+- ui: enable wait (option -w) for single-shot configure commands
+- shadow: calculate shadow directory just like crm_shadow (bnc#759056)
+- utils: improve terminal output height calculation (pager)
+- utils: use crm_simulate if ptest is not available
+- utils: repair ptest usage (bnc#736212)
+- utils: prevent spurious error messages if an element doesn't
+  exist in CIB (bnc#723677)
+- cibconfig: drop attributes set to default on cib import
+- cibconfig: support setting attributes in resource sets
+- cibconfig: display referenced attr set ids (lf#2304)
+- cibconfig: don't verify parameters starting with '$'
+- cibconfig: fix meta attributes verify for container elements (lf#2555)
+- cibconfig: test for duplicate monitor intervals (lf#2586)
+- cibconfig: don't skip monitor operations on verify
+- cibconfig: use uname instead of id when listing nodes (cl#5043)
+- cibconfig: repair resource parameter uniqueness test
+- cibconfig: repair ability to manage multiple rsc/op_defaults (bnc#737812)
+- cibconfig: remove also elements which depend on the resource
+  template which is to be deleted (bnc#730404)
+- cibconfig: report error if a referenced template in primitive
+  doesn't exist (bnc#730404)
+- cibconfig: exchange rsc and with-rsc after converting collocation
+  sets to standard constraints (bnc#729628)
+- cibconfig: convert resource sets to standard constraints on
+  resource removal (bnc#729628)
+- ra: don't require certain parameters for rhcs stonith resources
+- ra: use only effective UID when choosing RA interface
+- ra: always use lrmadmin with glue 1.0.10 (cl#5036)
+- ra: fix start/stop interval test
+- completion: add command aliases to completion tables (cl#5013)
+- completion: add templates as possible resource references in
+  constraints
+- history: improve limiting the report time period
+- history: tune resource match patterns
+- history: reset time period when setting source
+- history: add clone/ms resources to events (fixes the transition command)
+- history: expand clones and ms in the resource command (bnc#729631)
+- history: don't assume that a hb_report tarball name matches the
+  top directory name
+- history: handle non-existing source better (bnc#728346)
+- history: fix regression when fetching new PE inputs (bnc#723417)
+- history: use debug severity for repeating messages (bnc#726611)
+- help: page overview help screens
+- help: append slash to levels in overview help screen
+- help: add '?' as alias for help
+- help: add topics to the help system
+- doc: describe deficiency in the configure edit command (bnc#715698)
+- move user files to standard locations (XDG)
+- build: add optional regression testing on rpm build
+- build: fetch the daemon location from glue-config.h
+
+* Wed Oct 19 2011 Dejan Muhamedagic <dejan@suse.de> and many others
+- stable release 1.1.0
+- history/troubleshooting support
+- template support
+- geo-cluster support commands
+- support for configure rsc_ticket
+- support for LRM secrets at the resource level
+- enable removal of unmanaged resources (bnc#696506)
+- split-off from Pacemaker after release 1.1.6

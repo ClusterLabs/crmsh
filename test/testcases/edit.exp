@@ -1,0 +1,105 @@
+.TRY Configuration editing
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.INP: configure
+.INP: _regtest on
+.INP: erase
+.INP: erase nodes
+.INP: property default-action-timeout=2m
+.INP: node node1 	attributes mem=16G
+.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" 	op start requires=nothing 	op monitor interval=60m
+.INP: primitive p1 ocf:heartbeat:Dummy 	op monitor interval=60m 	op monitor interval=120m OCF_CHECK_LEVEL=10
+.INP: filter "sed '$aprimitive p2 ocf:heartbeat:Dummy'"
+.INP: filter "sed '$agroup g1 p1 p2'"
+.INP: filter "sed 's/p2/p3/;$aprimitive p3 ocf:heartbeat:Dummy'" g1
+.INP: filter "sed '$aclone c1 p2'"
+.INP: filter "sed 's/p2/g1/'" c1
+.INP: filter "sed '/clone/s/g1/p2/'" c1 g1
+.INP: filter "sed '/clone/s/p2/g1/;s/p3/p2/'" c1 g1
+.INP: filter "sed '1,$d'" c1 g1
+.INP: filter "sed -e '$aclone c1 g1' -e '$agroup g1 p1 p2'"
+.INP: location l1 p3 100: node1
+.INP: order o1 inf: p3 c1
+.INP: colocation cl1 inf: c1 p3
+.INP: filter "sed '/cl1/s/p3/p2/'"
+.INP: filter "sed '/cl1/d'"
+.INP: primitive d1 ocf:heartbeat:Dummy
+.INP: primitive d2 ocf:heartbeat:Dummy
+.INP: primitive d3 ocf:heartbeat:Dummy
+.INP: group g2 d1 d2
+.INP: filter "sed '/g2/s/d1/p1/;/g1/s/p1/d1/'"
+.INP: filter "sed '/g1/s/d1/p1/;/g2/s/p1/d1/'"
+.INP: filter "sed '$alocation loc-d1 d1 rule $id=r1 -inf: not_defined webserver rule $id=r2 webserver: defined webserver'"
+.INP: filter "sed 's/not_defined webserver/& or mem number:lte 0/'" loc-d1
+.INP: filter "sed 's/ or mem number:lte 0//'" loc-d1
+.INP: filter "sed 's/not_defined webserver/& rule -inf: not_defined a2/'" loc-d1
+.INP: filter "sed 's/not_defined webserver/& or mem number:lte 0/'" loc-d1
+.INP: modgroup g1 add d3
+.INP: modgroup g1 remove p1
+.INP: modgroup g1 add p1 after p2
+.INP: modgroup g1 remove p1
+.INP: modgroup g1 add p1 before p2
+.INP: modgroup g1 add p1
+ERROR: 1: syntax in group: child p1 listed more than once in group g1 parsing 'group g1 p1 p2 d3 p1'
+.INP: modgroup g1 remove st
+ERROR: 40: st is not member of g1
+.INP: modgroup g1 remove c1
+ERROR: 41: c1 is not member of g1
+.INP: modgroup g1 remove nosuch
+ERROR: 42: nosuch is not member of g1
+.INP: modgroup g1 add c1
+ERROR: 43: a group may contain only primitives; c1 is clone
+.INP: modgroup g1 add nosuch
+ERROR: 44: object nosuch does not exist
+.INP: filter "sed 's/^/# this is a comment\n/'" loc-d1
+.INP: _test
+.INP: verify
+.INP: show
+node node1 \
+	attributes mem="16G"
+primitive d1 ocf:heartbeat:Dummy
+primitive d2 ocf:heartbeat:Dummy
+primitive d3 ocf:heartbeat:Dummy
+primitive p1 ocf:heartbeat:Dummy \
+	op monitor interval="60m" \
+	op monitor interval="120m" OCF_CHECK_LEVEL="10"
+primitive p2 ocf:heartbeat:Dummy
+primitive p3 ocf:heartbeat:Dummy
+primitive st stonith:null \
+	params hostlist="node1" \
+	meta description="some description here" \
+	op start requires="nothing" interval="0" \
+	op monitor interval="60m"
+group g1 p1 p2 d3
+group g2 d1 d2
+clone c1 g1
+location l1 p3 100: node1
+# this is a comment
+location loc-d1 d1 \
+	rule $id="r1" -inf: not_defined webserver or mem number:lte 0 \
+	rule $id="loc-d1-rule" -inf: not_defined a2 \
+	rule $id="r2" webserver: defined webserver
+order o1 inf: p3 c1
+property $id="cib-bootstrap-options" \
+	default-action-timeout="2m"
+.INP: commit
+.TRY configure rsc_defaults $id="rsc_options" failure-timeout=10m
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.TRY configure filter "sed 's/2m/60s/'" cib-bootstrap-options
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.TRY configure show rsc_options
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+rsc_defaults $id="rsc_options" \
+	failure-timeout="10m"
+.TRY configure property stonith-enabled=true
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.TRY configure show cib-bootstrap-options
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+property $id="cib-bootstrap-options" \
+	default-action-timeout="60s" \
+	stonith-enabled="true"
+.TRY configure filter 'sed "s/stonith-enabled=.true.//"'
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.TRY configure show cib-bootstrap-options
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+property $id="cib-bootstrap-options" \
+	default-action-timeout="60s"

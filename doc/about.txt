@@ -1,0 +1,19 @@
+= About =
+
+== Site ==
+
+This site was generated from http://asciidoc.org[AsciiDoc] sources.
+
+The CSS for this site started as a clone of the +bare+ theme by https://github.com/rtomayko/adoc-themes[Ryan Tomayko].
+
+News feed uses http://jquery.com[jQuery] and http://jquery-plugins.net/FeedEk/FeedEk.html[FeedEk].
+
+== Authors ==
+
+include::../AUTHORS[]
+
+== License ==
+
+The `crm` shell is licensed under the GNU General Public License (GPL).
+
+For more information, see https://gnu.org/licenses/gpl.html

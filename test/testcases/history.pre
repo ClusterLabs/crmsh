@@ -1,0 +1,3 @@
+#!/bin/sh
+crm history session delete _crmsh_regtest
+rm -rf history-test

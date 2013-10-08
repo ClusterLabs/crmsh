@@ -1,0 +1,22 @@
+This is the CRM shell, a Pacemaker command line interface.
+It supports pacemaker configuration, management, and
+troubleshooting.
+
+CRM shell is implemented in Python.
+
+Building and installing
+
+Autoconf is used to take care of platform dependendent locations.
+It is mainly inherited from the Pacemaker source.
+
+./autogen.sh
+./configure
+make
+make install
+
+Manifest
+
+./doc: man page
+./modules: the code
+./templates: configuration templates
+./test: regression tests

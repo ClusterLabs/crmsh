@@ -1,0 +1,280 @@
+.TRY History
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.INP: history
+.INP: source history-test.tar.bz2
+.INP: info
+.EXT tar -xj < history-test.tar.bz2
+Source: history-test.tar.bz2
+Created on: --:--:--
+By: unknown
+Period: 2012-12-14 20:06:34 - 2012-12-14 20:08:44
+Nodes: xen-d xen-e
+Groups: 
+Resources: d1 s-libvirt
+Transitions: 43 44 45 46 48 272 49 50
+.INP: node xen-d
+Dec 14 20:06:35 xen-d corosync[5649]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
+Dec 14 20:06:36 xen-d corosync[5649]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
+Dec 14 20:07:54 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: lost: xen-d 906822154
+Dec 14 20:07:54 xen-e pengine: [24227]: WARN: pe_fence_node: Node xen-d will be fenced because it is un-expectedly down
+Dec 14 20:07:54 xen-e crmd: [24228]: notice: te_fence_node: Executing reboot fencing operation (12) on xen-d (timeout=60000)
+Dec 14 20:07:54 xen-e pengine: [24227]: WARN: stage6: Scheduling Node xen-d for STONITH
+Dec 14 20:07:56 xen-e stonith-ng: [24224]: notice: log_operation: Operation 'reboot' [24519] (call 0 from c0c111a5-d332-48f7-9375-739b91e04f0e) for host 'xen-d' with device 's-libvirt' returned: 0
+Dec 14 20:08:23 xen-d corosync[1874]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
+Dec 14 20:08:23 xen-d corosync[1874]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
+.INP: node xen-e
+Dec 14 20:06:35 xen-e corosync[24218]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
+Dec 14 20:07:54 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: xen-e 923599370
+Dec 14 20:08:40 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: xen-e 923599370
+.INP: node .*
+Dec 14 20:06:35 xen-e corosync[24218]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
+Dec 14 20:06:35 xen-d corosync[5649]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
+Dec 14 20:06:36 xen-d corosync[5649]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
+Dec 14 20:07:54 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: xen-e 923599370
+Dec 14 20:07:54 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: lost: xen-d 906822154
+Dec 14 20:07:54 xen-e pengine: [24227]: WARN: pe_fence_node: Node xen-d will be fenced because it is un-expectedly down
+Dec 14 20:07:54 xen-e crmd: [24228]: notice: te_fence_node: Executing reboot fencing operation (12) on xen-d (timeout=60000)
+Dec 14 20:07:54 xen-e pengine: [24227]: WARN: stage6: Scheduling Node xen-d for STONITH
+Dec 14 20:07:56 xen-e stonith-ng: [24224]: notice: log_operation: Operation 'reboot' [24519] (call 0 from c0c111a5-d332-48f7-9375-739b91e04f0e) for host 'xen-d' with device 's-libvirt' returned: 0
+Dec 14 20:08:23 xen-d corosync[1874]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
+Dec 14 20:08:23 xen-d corosync[1874]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
+Dec 14 20:08:40 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: xen-e 923599370
+.INP: exclude pcmk_peer_update
+.INP: exclude
+pcmk_peer_update
+.INP: node xen-e
+Dec 14 20:06:35 xen-e corosync[24218]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
+.INP: exclude clear
+.INP: exclude corosync|crmd|pengine|stonith-ng|cib|attrd|mgmtd|sshd
+.INP: log
+Dec 14 20:06:35 xen-d lrmd: [5657]: info: max-children set to 4 (2 processors online)
+Dec 14 20:06:35 xen-d lrmd: [5657]: info: enabling coredumps
+Dec 14 20:06:35 xen-d lrmd: [5657]: info: Started.
+Dec 14 20:06:35 xen-e lrmd: [24225]: info: max-children set to 4 (2 processors online)
+Dec 14 20:06:35 xen-e lrmd: [24225]: info: enabling coredumps
+Dec 14 20:06:35 xen-e lrmd: [24225]: info: Started.
+Dec 14 20:06:36 xen-e lrmd: [24225]: info: max-children already set to 4
+Dec 14 20:06:37 xen-d lrmd: [5657]: info: max-children already set to 4
+Dec 14 20:07:19 xen-d lrmd: [5657]: info: rsc:d1 probe[2] (pid 5812)
+Dec 14 20:07:19 xen-d lrmd: [5657]: notice: lrmd_rsc_new(): No lrm_rprovider field in message
+Dec 14 20:07:19 xen-d lrmd: [5657]: info: rsc:s-libvirt probe[3] (pid 5813)
+Dec 14 20:07:19 xen-d lrmd: [5657]: info: operation monitor[3] on s-libvirt for client 5660: pid 5813 exited with return code 7
+Dec 14 20:07:19 xen-d lrmd: [5657]: info: operation monitor[2] on d1 for client 5660: pid 5812 exited with return code 7
+Dec 14 20:07:19 xen-d lrmd: [5657]: info: rsc:d1 start[4] (pid 5833)
+Dec 14 20:07:19 xen-d lrmd: [5657]: info: operation start[4] on d1 for client 5660: pid 5833 exited with return code 0
+Dec 14 20:07:19 xen-d lrmd: [5657]: info: rsc:d1 monitor[5] (pid 5840)
+Dec 14 20:07:19 xen-d lrmd: [5657]: info: operation monitor[5] on d1 for client 5660: pid 5840 exited with return code 0
+Dec 14 20:07:19 xen-e lrmd: [24225]: info: rsc:d1 probe[2] (pid 24243)
+Dec 14 20:07:19 xen-e lrmd: [24225]: notice: lrmd_rsc_new(): No lrm_rprovider field in message
+Dec 14 20:07:19 xen-e lrmd: [24225]: info: rsc:s-libvirt probe[3] (pid 24244)
+Dec 14 20:07:19 xen-e lrmd: [24225]: info: operation monitor[3] on s-libvirt for client 24228: pid 24244 exited with return code 7
+Dec 14 20:07:19 xen-e lrmd: [24225]: info: operation monitor[2] on d1 for client 24228: pid 24243 exited with return code 7
+Dec 14 20:07:19 xen-e lrmd: [24225]: info: rsc:s-libvirt start[4] (pid 24264)
+Dec 14 20:07:20 xen-e external/libvirt(s-libvirt)[24271]: [24288]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+Dec 14 20:07:21 xen-e lrmd: [24225]: info: operation start[4] on s-libvirt for client 24228: pid 24264 exited with return code 0
+Dec 14 20:07:21 xen-e lrmd: [24225]: info: rsc:s-libvirt monitor[5] (pid 24289)
+Dec 14 20:07:22 xen-e external/libvirt(s-libvirt)[24296]: [24313]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+Dec 14 20:07:23 xen-e lrmd: [24225]: info: operation monitor[5] on s-libvirt for client 24228: pid 24289 exited with return code 0
+Dec 14 20:07:29 xen-e external/libvirt(s-libvirt)[24321]: [24338]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+Dec 14 20:07:29 xen-d lrmd: [5657]: info: cancel_op: operation monitor[5] on d1 for client 5660, its parameters: CRM_meta_name=[monitor] crm_feature_set=[3.0.6] CRM_meta_timeout=[30000] CRM_meta_interval=[5000]  cancelled
+Dec 14 20:07:29 xen-d lrmd: [5657]: info: rsc:d1 stop[6] (pid 5926)
+Dec 14 20:07:29 xen-d lrmd: [5657]: info: operation stop[6] on d1 for client 5660: pid 5926 exited with return code 0
+Dec 14 20:07:29 xen-d lrmd: [5657]: info: rsc:d1 start[7] (pid 5929)
+Dec 14 20:07:29 xen-d lrmd: [5657]: info: operation start[7] on d1 for client 5660: pid 5929 exited with return code 0
+Dec 14 20:07:29 xen-d lrmd: [5657]: info: rsc:d1 monitor[8] (pid 5938)
+Dec 14 20:07:29 xen-d lrmd: [5657]: info: operation monitor[8] on d1 for client 5660: pid 5938 exited with return code 0
+Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24387]: ERROR: Failed to get status for xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen
+Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24393]: ERROR: setlocale: No such file or directory
+Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24393]: error: Cannot recv data: Warning: Identity file /root/.ssh/xen not accessible: No such file or directory.
+Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24393]: Permission denied (publickey,keyboard-interactive). : Connection reset by peer
+Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24393]: error: failed to connect to the hypervisor
+Dec 14 20:07:37 xen-e stonith: [24366]: WARN: external_status: 'libvirt status' failed with rc 1
+Dec 14 20:07:37 xen-e stonith: [24366]: ERROR: external/libvirt device not accessible.
+Dec 14 20:07:37 xen-e lrm-stonith: [24364]: WARN: map_ra_retvalue: Mapped the invalid return code -2.
+Dec 14 20:07:37 xen-e lrmd: [24225]: info: cancel_op: operation monitor[5] on s-libvirt for client 24228, its parameters: CRM_meta_name=[monitor] crm_feature_set=[3.0.6] CRM_meta_timeout=[60000] CRM_meta_interval=[5000] hostlist=[xen-d xen-e] hypervisor_uri=[xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen] reset_method=[reboot]  cancelled
+Dec 14 20:07:37 xen-e lrmd: [24225]: info: rsc:s-libvirt stop[6] (pid 24417)
+Dec 14 20:07:37 xen-e lrmd: [24225]: info: operation stop[6] on s-libvirt for client 24228: pid 24417 exited with return code 0
+Dec 14 20:07:37 xen-e lrmd: [24225]: info: rsc:s-libvirt start[7] (pid 24418)
+Dec 14 20:07:39 xen-e external/libvirt(s-libvirt)[24425]: [24442]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+Dec 14 20:07:40 xen-e lrmd: [24225]: info: operation start[7] on s-libvirt for client 24228: pid 24418 exited with return code 0
+Dec 14 20:07:40 xen-e lrmd: [24225]: info: rsc:s-libvirt monitor[8] (pid 24456)
+Dec 14 20:07:41 xen-e external/libvirt(s-libvirt)[24463]: [24480]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+Dec 14 20:07:42 xen-e lrmd: [24225]: info: operation monitor[8] on s-libvirt for client 24228: pid 24456 exited with return code 0
+Dec 14 20:07:44 xen-d lrmd: [5657]: info: cancel_op: operation monitor[8] on d1 for client 5660, its parameters: CRM_meta_name=[monitor] crm_feature_set=[3.0.6] CRM_meta_timeout=[30000] CRM_meta_interval=[5000]  cancelled
+Dec 14 20:07:48 xen-e external/libvirt(s-libvirt)[24488]: [24505]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+Dec 14 20:07:55 xen-e external/libvirt(s-libvirt)[24525]: [24540]: notice: Domain xen-d was rebooted
+Dec 14 20:07:55 xen-d shutdown[6093]: shutting down for system reboot
+Dec 14 20:07:55 xen-d init: Switching to runlevel: 6
+Dec 14 20:07:56 xen-e lrmd: [24225]: info: rsc:d1 start[9] (pid 24568)
+Dec 14 20:07:56 xen-e lrmd: [24225]: info: operation start[9] on d1 for client 24228: pid 24568 exited with return code 0
+Dec 14 20:07:57 xen-e lrmd: [24225]: info: rsc:d1 monitor[10] (pid 24577)
+Dec 14 20:07:57 xen-e lrmd: [24225]: info: operation monitor[10] on d1 for client 24228: pid 24577 exited with return code 0
+Dec 14 20:07:57 xen-e external/libvirt(s-libvirt)[24555]: [24588]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+Dec 14 20:07:57 xen-d logd: [6194]: debug: Stopping ha_logd with pid 1787
+Dec 14 20:07:57 xen-d logd: [6194]: info: Waiting for pid=1787 to exit
+Dec 14 20:07:57 xen-d logd: [1787]: debug: logd_term_action: received SIGTERM
+Dec 14 20:07:57 xen-d logd: [1787]: debug: logd_term_action: waiting for 0 messages to be read for process lrmd
+Dec 14 20:07:57 xen-d logd: [1787]: debug: logd_term_action: waiting for 0 messages to be read by write process
+Dec 14 20:07:57 xen-d logd: [1787]: debug: logd_term_action: sending SIGTERM to write process
+Dec 14 20:07:57 xen-d logd: [1790]: info: logd_term_write_action: received SIGTERM
+Dec 14 20:07:57 xen-d logd: [1790]: debug: Writing out 0 messages then quitting
+Dec 14 20:07:57 xen-d logd: [1790]: info: Exiting write process
+Dec 14 20:07:57 xen-d haveged: haveged stopping due to signal 15
+Dec 14 20:07:58 xen-d logd: [6194]: info: Pid 1787 exited
+Dec 14 20:07:58 xen-d rpcbind: rpcbind terminating on signal. Restart with "rpcbind -w"
+Dec 14 20:07:58 xen-d kernel: Kernel logging (proc) stopped.
+Dec 14 20:07:58 xen-d kernel: Kernel log daemon terminating.
+Dec 14 20:07:58 xen-d syslog-ng[1679]: Termination requested via signal, terminating;
+Dec 14 20:07:58 xen-d syslog-ng[1679]: syslog-ng shutting down; version='2.0.9'
+Dec 14 20:08:07 xen-e external/libvirt(s-libvirt)[24599]: [24616]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+Dec 14 20:08:15 xen-e external/libvirt(s-libvirt)[24630]: [24647]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+Dec 14 20:08:21 xen-d syslog-ng[1681]: syslog-ng starting up; version='2.0.9'
+Dec 14 20:08:21 xen-d iscsid: iSCSI logger with pid=1682 started!
+Dec 14 20:08:22 xen-d sm-notify[1716]: Version 1.2.3 starting
+Dec 14 20:08:22 xen-d haveged: haveged starting up
+Dec 14 20:08:22 xen-d haveged: arch:        x86 vendor:      amd generic:     0 i_cache:     64 d_cache:     64 loop_idx:    20 loop_idxmax: 40 loop_sz:     63724 loop_szmax:  124334 etime:       18207 havege_ndpt  0
+Dec 14 20:08:22 xen-d logd: [1789]: info: setting log facility to daemon
+Dec 14 20:08:22 xen-d logd: [1789]: info: logd started with /etc/logd.cf.
+Dec 14 20:08:22 xen-d iscsid: transport class version 2.0-870. iscsid version 2.0-872.suse
+Dec 14 20:08:22 xen-d iscsid: iSCSI daemon with pid=1683 started!
+Dec 14 20:08:22 xen-e external/libvirt(s-libvirt)[24658]: [24678]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+Dec 14 20:08:23 xen-d lrmd: [1945]: info: max-children set to 4 (2 processors online)
+Dec 14 20:08:23 xen-d lrmd: [1945]: info: enabling coredumps
+Dec 14 20:08:23 xen-d lrmd: [1945]: info: Started.
+Dec 14 20:08:25 xen-d lrmd: [1945]: info: max-children already set to 4
+Dec 14 20:08:25 xen-d ntpd[2127]: ntpd 4.2.4p8@1.1612-o Thu Nov 10 17:10:45 UTC 2011 (1)
+Dec 14 20:08:25 xen-d ntpd[2128]: precision = 2.000 usec
+Dec 14 20:08:25 xen-d ntpd[2128]: ntp_io: estimated max descriptors: 1024, initial socket boundary: 16
+Dec 14 20:08:25 xen-d ntpd[2128]: Listening on interface #0 wildcard, 0.0.0.0#123 Disabled
+Dec 14 20:08:25 xen-d ntpd[2128]: Listening on interface #1 wildcard, ::#123 Disabled
+Dec 14 20:08:25 xen-d ntpd[2128]: Listening on interface #2 eth0, fe80::216:3eff:fe65:738a#123 Enabled
+Dec 14 20:08:25 xen-d ntpd[2128]: Listening on interface #3 lo, ::1#123 Enabled
+Dec 14 20:08:25 xen-d ntpd[2128]: Listening on interface #4 lo, 127.0.0.1#123 Enabled
+Dec 14 20:08:25 xen-d ntpd[2128]: Listening on interface #5 lo, 127.0.0.2#123 Enabled
+Dec 14 20:08:25 xen-d ntpd[2128]: Listening on interface #6 eth0, 10.2.13.54#123 Enabled
+Dec 14 20:08:25 xen-d ntpd[2128]: kernel time sync status 2040
+Dec 14 20:08:25 xen-d ntpd[2128]: frequency initialized 29.933 PPM from /var/lib/ntp/drift/ntp.drift
+Dec 14 20:08:25 xen-d /usr/sbin/cron[2244]: (CRON) STARTUP (V5.0)
+Dec 14 20:08:26 xen-d lrmd: [1945]: info: rsc:d1 probe[2] (pid 2384)
+Dec 14 20:08:26 xen-d lrmd: [1945]: notice: lrmd_rsc_new(): No lrm_rprovider field in message
+Dec 14 20:08:26 xen-d lrmd: [1945]: info: rsc:s-libvirt probe[3] (pid 2385)
+Dec 14 20:08:26 xen-d lrmd: [1945]: info: operation monitor[3] on s-libvirt for client 1948: pid 2385 exited with return code 7
+Dec 14 20:08:26 xen-d lrmd: [1945]: info: operation monitor[2] on d1 for client 1948: pid 2384 exited with return code 7
+Dec 14 20:08:26 xen-d lrmd: [1945]: info: rsc:d1 start[4] (pid 2405)
+Dec 14 20:08:26 xen-d lrmd: [1945]: info: operation start[4] on d1 for client 1948: pid 2405 exited with return code 0
+Dec 14 20:08:26 xen-d kernel: klogd 1.4.1, log source = /proc/kmsg started.
+Dec 14 20:08:26 xen-d kernel: [   22.808182] Loading iSCSI transport class v2.0-870.
+Dec 14 20:08:26 xen-d kernel: [   22.815399] iscsi: registered transport (tcp)
+Dec 14 20:08:26 xen-d kernel: [   23.572989] BIOS EDD facility v0.16 2004-Jun-25, 0 devices found
+Dec 14 20:08:26 xen-d kernel: [   23.573005] EDD information not available.
+Dec 14 20:08:26 xen-d lrmd: [1945]: info: rsc:d1 monitor[5] (pid 2409)
+Dec 14 20:08:26 xen-d lrmd: [1945]: info: operation monitor[5] on d1 for client 1948: pid 2409 exited with return code 0
+Dec 14 20:08:29 xen-e external/libvirt(s-libvirt)[24689]: [24706]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+Dec 14 20:08:29 xen-d kernel: [   30.841076] eth0: no IPv6 routers present
+Dec 14 20:08:29 xen-d logger: Mark:HB_REPORT:1355512108
+Dec 14 20:08:36 xen-e external/libvirt(s-libvirt)[24717]: [24734]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+Dec 14 20:08:43 xen-e lrmd: [24225]: info: cancel_op: operation monitor[10] on d1 for client 24228, its parameters: CRM_meta_name=[monitor] crm_feature_set=[3.0.6] CRM_meta_timeout=[30000] CRM_meta_interval=[5000]  cancelled
+Dec 14 20:08:43 xen-e lrmd: [24225]: info: rsc:d1 stop[11] (pid 24774)
+Dec 14 20:08:43 xen-e lrmd: [24225]: info: operation stop[11] on d1 for client 24228: pid 24774 exited with return code 0
+Dec 14 20:08:43 xen-e external/libvirt(s-libvirt)[24748]: [24786]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+.INP: exclude clear
+.INP: peinputs
+history-test/xen-e/pengine/pe-input-43.bz2
+history-test/xen-e/pengine/pe-input-44.bz2
+history-test/xen-e/pengine/pe-input-45.bz2
+history-test/xen-e/pengine/pe-input-46.bz2
+history-test/xen-e/pengine/pe-input-48.bz2
+history-test/xen-e/pengine/pe-warn-272.bz2
+history-test/xen-e/pengine/pe-input-49.bz2
+history-test/xen-e/pengine/pe-input-50.bz2
+.INP: peinputs v
+Date       Start    End       Filename      Client     User       Origin
+====       =====    ===       ========      ======     ====       ======
+2012-12-14 20:06:57 20:06:57  pe-input-43   crmd       hacluster  xen-e
+2012-12-14 20:07:19 20:07:23  pe-input-44   cibadmin   root       xen-d
+2012-12-14 20:07:29 20:07:29  pe-input-45   cibadmin   root       xen-d
+2012-12-14 20:07:29 20:07:29  pe-input-46   cibadmin   root       xen-d
+2012-12-14 20:07:37 20:07:42  pe-input-48   cibadmin   root       xen-d
+2012-12-14 20:07:54 20:07:56  pe-warn-272   cibadmin   root       xen-d
+2012-12-14 20:07:56 20:07:57  pe-input-49   cibadmin   root       xen-d
+2012-12-14 20:08:43 20:08:43  pe-input-50   cibadmin   root       xen-d
+.INP: refresh
+INFO: 16: nothing to refresh if source isn't live
+.INP: resource d1
+Dec 14 20:07:19 xen-d lrmd: [5657]: info: rsc:d1 start[4] (pid 5833)
+Dec 14 20:07:19 xen-d crmd: [5660]: info: process_lrm_event: LRM operation d1_start_0 (call=4, rc=0, cib-update=14, confirmed=true) ok
+Dec 14 20:07:29 xen-d lrmd: [5657]: info: rsc:d1 stop[6] (pid 5926)
+Dec 14 20:07:29 xen-d crmd: [5660]: info: process_lrm_event: LRM operation d1_stop_0 (call=6, rc=0, cib-update=17, confirmed=true) ok
+Dec 14 20:07:29 xen-d lrmd: [5657]: info: rsc:d1 start[7] (pid 5929)
+Dec 14 20:07:29 xen-d crmd: [5660]: info: process_lrm_event: LRM operation d1_start_0 (call=7, rc=0, cib-update=18, confirmed=true) ok
+Dec 14 20:07:56 xen-e lrmd: [24225]: info: rsc:d1 start[9] (pid 24568)
+Dec 14 20:07:56 xen-e crmd: [24228]: info: process_lrm_event: LRM operation d1_start_0 (call=9, rc=0, cib-update=96, confirmed=true) ok
+Dec 14 20:08:26 xen-d lrmd: [1945]: info: rsc:d1 start[4] (pid 2405)
+Dec 14 20:08:26 xen-d crmd: [1948]: info: process_lrm_event: LRM operation d1_start_0 (call=4, rc=0, cib-update=9, confirmed=true) ok
+Dec 14 20:08:43 xen-e lrmd: [24225]: info: rsc:d1 stop[11] (pid 24774)
+Dec 14 20:08:43 xen-e crmd: [24228]: info: process_lrm_event: LRM operation d1_stop_0 (call=11, rc=0, cib-update=125, confirmed=true) ok
+.INP: # reduce report span
+.INP: timeframe "2012-12-14 20:07:30"
+.INP: peinputs
+history-test/xen-e/pengine/pe-input-48.bz2
+history-test/xen-e/pengine/pe-warn-272.bz2
+history-test/xen-e/pengine/pe-input-49.bz2
+history-test/xen-e/pengine/pe-input-50.bz2
+.INP: resource d1
+Dec 14 20:07:56 xen-e lrmd: [24225]: info: rsc:d1 start[9] (pid 24568)
+Dec 14 20:07:56 xen-e crmd: [24228]: info: process_lrm_event: LRM operation d1_start_0 (call=9, rc=0, cib-update=96, confirmed=true) ok
+Dec 14 20:08:26 xen-d lrmd: [1945]: info: rsc:d1 start[4] (pid 2405)
+Dec 14 20:08:26 xen-d crmd: [1948]: info: process_lrm_event: LRM operation d1_start_0 (call=4, rc=0, cib-update=9, confirmed=true) ok
+Dec 14 20:08:43 xen-e lrmd: [24225]: info: rsc:d1 stop[11] (pid 24774)
+Dec 14 20:08:43 xen-e crmd: [24228]: info: process_lrm_event: LRM operation d1_stop_0 (call=11, rc=0, cib-update=125, confirmed=true) ok
+.INP: exclude corosync|crmd|pengine|stonith-ng|cib|attrd|mgmtd|sshd
+.INP: transition log
+Dec 14 20:08:43 xen-e lrmd: [24225]: info: cancel_op: operation monitor[10] on d1 for client 24228, its parameters: CRM_meta_name=[monitor] crm_feature_set=[3.0.6] CRM_meta_timeout=[30000] CRM_meta_interval=[5000]  cancelled
+Dec 14 20:08:43 xen-e lrmd: [24225]: info: rsc:d1 stop[11] (pid 24774)
+Dec 14 20:08:43 xen-e lrmd: [24225]: info: operation stop[11] on d1 for client 24228: pid 24774 exited with return code 0
+Dec 14 20:08:43 xen-e external/libvirt(s-libvirt)[24748]: [24786]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+.INP: transition nograph
+INFO: 24: running ptest with history-test/xen-e/pengine/pe-input-50.bz2
+Transition xen-e:pe-input-50 (20:08:43 - 20:08:43):
+	total 8 actions: 8 Complete
+Dec 14 20:08:43 xen-e lrmd: [24225]: info: rsc:d1 stop[11] (pid 24774)
+Dec 14 20:08:43 xen-e external/libvirt(s-libvirt)[24748]: [24786]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+.INP: transition -1 nograph
+INFO: 25: running ptest with history-test/xen-e/pengine/pe-input-49.bz2
+Transition xen-e:pe-input-49 (20:07:56 - 20:07:57):
+	total 2 actions: 2 Complete
+Dec 14 20:07:56 xen-e lrmd: [24225]: info: rsc:d1 start[9] (pid 24568)
+Dec 14 20:07:57 xen-e external/libvirt(s-libvirt)[24555]: [24588]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+.INP: transition save 0 _crmsh_regtest
+INFO: 26: transition history-test/xen-e/pengine/pe-input-50.bz2 saved to shadow _crmsh_regtest
+.INP: transition log 49
+Dec 14 20:07:56 xen-e lrmd: [24225]: info: rsc:d1 start[9] (pid 24568)
+Dec 14 20:07:56 xen-e lrmd: [24225]: info: operation start[9] on d1 for client 24228: pid 24568 exited with return code 0
+Dec 14 20:07:57 xen-e lrmd: [24225]: info: rsc:d1 monitor[10] (pid 24577)
+Dec 14 20:07:57 xen-e lrmd: [24225]: info: operation monitor[10] on d1 for client 24228: pid 24577 exited with return code 0
+Dec 14 20:07:57 xen-e external/libvirt(s-libvirt)[24555]: [24588]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+Dec 14 20:07:57 xen-d logd: [6194]: info: Waiting for pid=1787 to exit
+Dec 14 20:07:57 xen-d logd: [1787]: debug: logd_term_action: received SIGTERM
+Dec 14 20:07:57 xen-d logd: [1787]: debug: logd_term_action: waiting for 0 messages to be read for process lrmd
+Dec 14 20:07:57 xen-d logd: [1787]: debug: logd_term_action: waiting for 0 messages to be read by write process
+Dec 14 20:07:57 xen-d logd: [1787]: debug: logd_term_action: sending SIGTERM to write process
+Dec 14 20:07:57 xen-d logd: [1790]: info: logd_term_write_action: received SIGTERM
+Dec 14 20:07:57 xen-d logd: [1790]: debug: Writing out 0 messages then quitting
+Dec 14 20:07:57 xen-d logd: [1790]: info: Exiting write process
+Dec 14 20:07:57 xen-d haveged: haveged stopping due to signal 15
+.INP: # reset timeframe
+.INP: timeframe
+.INP: session save _crmsh_regtest
+.EXT mkdir -p /var/cache/crm/history/session/_crmsh_regtest
+.INP: session load _crmsh_regtest
+.INP: session
+current session: _crmsh_regtest
+.INP: session pack
+.EXT tar -C '/var/cache/crm/history/session/_crmsh_regtest/..' -cj -f '/root/_crmsh_regtest.tar.bz2' _crmsh_regtest
+Report saved in '/root/_crmsh_regtest.tar.bz2'
+.TRY History 2
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.INP: history
+.INP: session load _crmsh_regtest
+.INP: exclude
+corosync|crmd|pengine|stonith-ng|cib|attrd|mgmtd|sshd

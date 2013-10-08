@@ -1,0 +1,66 @@
+.TRY Options
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.INP: options
+.INP: reset
+.INP: pager cat
+.INP: editor vi
+.INP: show
+editor "vi"
+pager "cat"
+user ""
+skill-level "expert"
+output "color"
+colorscheme "yellow,normal,cyan,red,green,magenta"
+sort-elements "yes"
+check-frequency "always"
+check-mode "strict"
+wait "no"
+add-quotes "yes"
+manage-children "ask"
+.INP: check-frequency never
+.INP: check-mode nosuchever
+ERROR: nosuchever not valid (choose one from strict,relaxed)
+.INP: colorscheme normal,yellow,cyan,red,green,magenta
+.INP: colorscheme normal,yellow,cyan,red
+ERROR: bad color scheme: normal,yellow,cyan,red
+.INP: pager nosuchprogram
+ERROR: nosuchprogram does not exist or is not a program
+.INP: skill-level operator
+.INP: skill-level joe
+ERROR: joe not valid (choose one from operator,administrator,expert)
+.INP: skill-level expert
+.INP: output plain
+.INP: output misplain
+ERROR: misplain not valid (choose one from plain,color,uppercase)
+.INP: wait true
+.INP: wait off
+.INP: wait happy
+ERROR: happy not valid (yes or no are valid)
+.INP: show
+editor "vi"
+pager "cat"
+user ""
+skill-level "expert"
+output "plain"
+colorscheme "normal,yellow,cyan,red,green,magenta"
+sort-elements "yes"
+check-frequency "never"
+check-mode "strict"
+wait "off"
+add-quotes "yes"
+manage-children "ask"
+.INP: save
+.TRY options show
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+editor "vi"
+pager "cat"
+user ""
+skill-level "expert"
+output "plain"
+colorscheme "normal,yellow,cyan,red,green,magenta"
+sort-elements "yes"
+check-frequency "never"
+check-mode "strict"
+wait "off"
+add-quotes "yes"
+manage-children "ask"

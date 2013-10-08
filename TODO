@@ -1,0 +1,27 @@
+Features
+
+. Audit
+
+	- add user auditing, i.e. save all commands that were run
+
+	- save to a local file (distributed DB would probably be an
+	  overkill)
+
+. Cluster documentation
+
+	- one of the more recent features is graph capability
+	  (graphviz) which is a very good step in terms of cluster
+	  documentation; need to extend that with some textual
+	  cluster description and perhaps history and such
+
+	- everybody likes reports (and in particular your boss)
+
+	- this feature needs very careful consideration
+
+Misc
+
+. Create a web page
+
+	- there's already space at crmsh.nongnu.org
+
+	- preferred to be based on asciidoc or similar

@@ -1,0 +1,35 @@
+resource status p0
+%setenv showobj=p3
+resource start p3
+resource stop p3
+%setenv showobj=c1
+resource manage c1
+resource unmanage c1
+%setenv showobj=cli-prefer-p3
+resource migrate p3 node1
+%setenv showobj=
+resource unmigrate p3
+%setenv showobj=cli-prefer-p3
+resource migrate p3 node1 force
+%setenv showobj=
+resource unmigrate p3
+%setenv showobj=p0
+resource param p0 set a0 "1 2 3"
+resource param p0 show a0
+resource param p0 delete a0
+resource meta p0 set m0 123
+resource meta p0 show m0
+resource meta p0 delete m0
+configure group g p0 p3
+options manage-children never
+resource start g
+resource start p0
+resource stop g
+configure clone cg g
+options manage-children always
+resource start g
+resource stop g
+resource start cg
+resource stop p0
+resource start cg
+resource stop cg

@@ -1,0 +1,24 @@
+There are two VIM syntax files contributed:
+
+pacemaker-crm.vim
+pcmk.vim
+
+Neither matches colours used in crm configure show and both need
+to be improved. Still, you may want to edit a more colorful
+configuration. To have that in "crm configure edit" do the
+following:
+
+Copy one of them to ~/.vim/syntax/pcmk.vim.
+
+Don't forget to put "syntax on" in the VIM rc file (~/.vimrc or
+~/.exrc).
+
+If you're editing a file directly, just type:
+
+:setf pcmk
+
+Many thanks to the contributors:
+
+Trevor Hemsley <themsley@voiceflex.com>
+Dan Frincu <df.cluster@gmail.com>
+Lars Ellenberg <lars@linbit.com>

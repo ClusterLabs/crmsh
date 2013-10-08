@@ -1,0 +1,339 @@
+/* ---------------------------------------------------------------------------
+   Based on
+   Bare AsciiDoc styles
+   Ryan Tomayko <r@tomayko.com>
+
+   Heavily modified by
+   Kristoffer Gronlund <kgronlund@suse.com>
+   --------------------------------------------------------------------------- */
+
+body {
+    font-family:'Open Sans', 'lucida grande',verdana,helvetica,arial,sans-serif;
+    font-size: 100%;
+    line-height: 1.3636em;
+    margin: 0px 0px;
+    padding: 0px;
+    width: 100%;
+    color:#333;
+    background: #faf8f6;
+}
+
+em {
+    font-style:italic;
+}
+
+strong {
+    font-weight:bold;
+    color:#000;
+}
+
+.monospaced {
+    font-family:'Ubuntu Mono', consolas, 'lucida console', 'bitstream vera sans mono', 'courier new', monospace;
+    color:#000;
+}
+
+p {
+    margin-bottom: 1em;
+}
+
+ul, ol, dl {
+    margin-top: 1em;
+    margin-bottom: 2em;
+}
+
+ul p {
+    margin: 10px 0;
+}
+
+dl {
+    margin-left:40px
+}
+
+dt {
+    font-weight:normal;
+    color:#000;
+}
+
+h1, h2, h3, h4, h5 {
+    font-family:'Open Sans', 'lucida grande',verdana,helvetica,arial,sans-serif;
+    font-weight:normal;
+    color:#000;
+}
+
+h1 {
+    font-size:34px;
+    line-height:1.428;
+    margin:0px;
+    margin-top: 40px;
+}
+
+h2 {
+    font-size:23px;
+    line-height:1.36363636; /* repeating, of course */
+    margin: 0px;
+    margin-top: 30px;
+}
+
+h2 + .sectionbody {}
+
+h3 {
+    font-size:18px;
+    line-height:1.1;
+    margin: 0px;
+    margin-top: 30px;
+}
+
+h4 {
+    font-size:13px;
+    font-weight:bold;
+    line-height:1.538;
+}
+
+h5 {
+    font-size:13px;
+    font-style:italic;
+    line-height:1.538;
+}
+
+pre {
+    font-size:large;
+    color: #111;
+}
+
+#header {
+    background:#fff;
+    padding-left: 24px;
+    padding-top: 8px;
+    padding-bottom: 0px;
+    border-bottom: 1px solid #ddd;
+}
+
+#header h1 {
+    margin: 0px;
+    font-size: 50px;
+    display: inline;
+}
+
+#header a {
+    text-decoration: none;
+    color: #444;
+}
+
+#header a:hover {
+    color: #aa2200;
+}
+
+#topbar {
+    display: inline;
+}
+
+#topbar ul {
+    list-style: none;
+    display: inline;
+}
+
+#topbar li {
+    list-style: none;
+    display: inline;
+    padding-right: 1em;
+}
+
+#container {
+    max-width: 720px;
+    margin: 0px auto;
+    text-align:left;
+}
+
+#author {
+    color:#999;
+}
+
+a:link {
+ color:#419eda;
+}
+
+a:visited {
+ color:#cc1100;
+}
+
+a:active {
+ color:#6ec654;
+}
+
+a:hover {
+ color:#ee3300;
+}
+
+
+#content {
+    text-align: justify;
+}
+
+.title, .sidebar-title {
+    font-weight:normal;
+    color:#000;
+    margin-bottom:0;
+}
+
+div.content {
+    margin: 8px;
+    padding: 0;
+}
+
+div.admonitionblock .title {
+    font-weight:bold;
+}
+
+div.admonitionblock {
+    margin:30px 0px;
+    color:#555;
+}
+
+div.admonitionblock td.icon {
+    width:30px;
+    padding-right:20px;
+    padding-left:20px;
+    text-transform:uppercase;
+    font-weight:bold;
+    color:#888;
+}
+
+div.listingblock .content {
+    border:1px solid silver;
+    background:#eee;
+    padding:5px;
+}
+
+div.listingblock .content pre {
+    margin:0;
+}
+
+div.literalblock .content {
+    margin-left:40px;
+}
+
+div.verseblock .content {
+    white-space:pre
+}
+
+div.sidebarblock > div.content {
+    border:1px solid silver;
+    background:#FFFFEE;
+    padding:0 10px;
+    color:#222;
+    font-size:smaller;
+    line-height:1.5;
+    max-width: 720px;
+}
+
+div.sidebarblock .title {
+    margin:10px 0;
+    font-weight:bold;
+    font-size: 1.1em;
+    color:#442;
+}
+
+.quoteblock-content {
+    font-style:italic;
+    color:#444;
+    margin-left:40px;
+}
+
+.quoteblock-content .attribution {
+    font-style:normal;
+    text-align:right;
+    color:#000;
+}
+
+.exampleblock-content *:first-child { margin-top:0 }
+.exampleblock-content {
+    border-left:2px solid silver;
+    padding-left:8px;
+}
+
+#footnotes {
+    text-align:left;
+}
+
+#footnotes hr {
+    height: 1px;
+    color: #ccc;
+    width: 80%;
+}
+
+#footer {
+    font-size:11px;
+    color:#888;
+    margin-top:40px;
+    text-align: center;
+}
+
+.feedEkList .newsItem {
+    list-style-type: none;
+}
+
+.feedEkList .itemTitle {
+    font-size: large;
+}
+
+.feedEkList .itemDate {
+    font-size: smaller;
+}
+
+.feedEkList .itemContent {
+}
+
+@media screen {
+    #toc {
+        text-align: left;
+        font-size: 90%;
+        line-height: 1.1em;
+        margin: 8px;
+    }
+
+    #toc a {
+        text-decoration: none;
+    }
+
+    #toc .toclevel1 {
+        margin-top: 0.5em;
+    }
+
+    #toc .toclevel2 {
+        margin-top: 0.25em;
+        margin-left: 24px;
+        display: list-item;
+        color: #aaaaaa;
+    }
+
+    #toc .toclevel3 {
+        margin-top: 0.25em;
+        margin-left: 32px;
+        display: list-item;
+        color: #aaaaaa;
+    }
+
+    #toctitle {
+        font-size:23px;
+        line-height:1.1;
+        margin:20px 0;
+
+    }
+}
+
+@media screen and (max-width: 1024px) {
+    #toc {
+        display: none;
+    }
+}
+
+@media screen and (min-width: 1024px) {
+    #toc {
+        position: absolute;
+        overflow: hidden;
+        top: 0px;
+        left: 0px;
+        margin-top: 120px;
+        max-width: 140px;
+    }
+}
