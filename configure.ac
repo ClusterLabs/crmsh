@@ -264,15 +264,16 @@ if test x"${ASCIIDOC}" != x""; then
 fi
 
 dnl The Makefiles and shell scripts we output
-AC_CONFIG_FILES(Makefile				        \
-doc/Makefile							\
-contrib/Makefile							\
-templates/Makefile				\
-test/Makefile				\
-	test/testcases/Makefile			\
-modules/Makefile					\
-	modules/config.py					\
-	)
+AC_CONFIG_FILES(Makefile \
+doc/Makefile             \
+contrib/Makefile         \
+templates/Makefile       \
+test/Makefile            \
+test/testcases/Makefile  \
+modules/Makefile         \
+modules/config.py        \
+hb_report/Makefile       \
+)
 
 dnl Now process the entire list of files added by previous 
 dnl  calls to AC_CONFIG_FILES()
