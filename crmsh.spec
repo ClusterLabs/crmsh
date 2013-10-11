@@ -153,7 +153,6 @@ fi
 %{_datadir}/%{name}/openais_conf_support.sh
 %{_datadir}/%{name}/utillib.sh
 %{_datadir}/%{name}/combine-logs.pl
-%{_datadir}/%{name}/ha_log.sh
 
 %doc %{_mandir}/man8/crm.8*
 %{crmsh_docdir}/COPYING
