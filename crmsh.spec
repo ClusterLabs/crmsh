@@ -154,7 +154,7 @@ fi
 %{_datadir}/%{name}/utillib.sh
 %{_datadir}/%{name}/combine-logs.pl
 
-%doc %{_mandir}/man8/crm.8*
+%doc %{_mandir}/man8/*
 %{crmsh_docdir}/COPYING
 %{crmsh_docdir}/AUTHORS
 %{crmsh_docdir}/crm.8.html

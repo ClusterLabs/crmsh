@@ -21,7 +21,7 @@ MAINTAINERCLEANFILES    = Makefile.in
 
 helpdir     = $(datadir)/$(PACKAGE)
 
-asciiman	= crm.8.txt
+asciiman	= crm.8.txt hb_report.8.txt
 help_DATA	= crm.8.txt
 doc_DATA	= $(generated_docs)
 
