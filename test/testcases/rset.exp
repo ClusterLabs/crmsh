@@ -1,0 +1,52 @@
+.TRY Resource sets
+.EXT >/dev/null </dev/null crm_shadow 2>&1
+.INP: configure
+.INP: _regtest on
+.INP: erase
+.INP: erase nodes
+.INP: node node1
+.INP: primitive st stonith:ssh 	params hostlist='node1' 	op start timeout=60s
+.INP: primitive d1 ocf:pacemaker:Dummy
+.INP: primitive d2 ocf:heartbeat:Dummy
+.INP: primitive d3 ocf:heartbeat:Dummy
+.INP: primitive d4 ocf:heartbeat:Dummy
+.INP: primitive d5 ocf:heartbeat:Dummy
+.INP: order o1 Serialize: d1 d2 ( d3 d4 )
+.INP: colocation c1 inf: d4 ( d1 d2 d3 )
+.INP: colocation c2 inf: d1 d2 d3 d4
+.INP: colocation c3 inf: ( d3 d4 ) ( d1 d2 )
+.INP: delete d2
+INFO: 16: constraint order:o1 updated
+INFO: 16: constraint colocation:c1 updated
+INFO: 16: constraint colocation:c2 updated
+INFO: 16: constraint colocation:c3 updated
+.INP: show o1 c1 c2 c3
+colocation c1 inf: d4 ( d1 d3 )
+colocation c2 inf: d1 d3 d4
+colocation c3 inf: ( d3 d4 ) ( d1 )
+order o1 Serialize: d1 ( d3 d4 )
+.INP: delete d4
+INFO: 18: constraint order:o1 updated
+INFO: 18: constraint colocation:c1 updated
+INFO: 18: constraint colocation:c2 updated
+INFO: 18: constraint colocation:c3 updated
+.INP: show o1 c1 c2 c3
+colocation c1 inf: ( d1 d3 )
+colocation c2 inf: d3 d1
+colocation c3 inf: d3 d1
+order o1 Serialize: d1 d3
+.INP: _test
+.INP: verify
+.INP: show
+node node1
+primitive d1 ocf:pacemaker:Dummy
+primitive d3 ocf:heartbeat:Dummy
+primitive d5 ocf:heartbeat:Dummy
+primitive st stonith:ssh \
+	params hostlist="node1" \
+	op start timeout="60s" interval="0"
+colocation c1 inf: ( d1 d3 )
+colocation c2 inf: d3 d1
+colocation c3 inf: d3 d1
+order o1 Serialize: d1 d3
+.INP: commit

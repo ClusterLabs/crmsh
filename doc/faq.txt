@@ -1,0 +1,50 @@
+= Frequently Asked Questions
+
+== What is the crm shell?
+
+The `crm` shell is a command-line interface to the Pacemaker cluster
+resource management stack. If that doesn't make any sense to you, the
+easiest way to get up to speed is to go to the
+http://clusterlabs.org/[Pacemaker] website and read more about what it
+does there.
+
+The `crm` shell provides a simpler interface to configuring Pacemaker
+than manipulating the XML of the CIB (Cluster Information Base)
+directly. With its command-line style interface, changes to the
+cluster can be performed quickly and painlessly. It also works as a
+scripting tool, allowing more complicated changes to be applied to the
+cluster.
+
+The `crm` shell also functions as a management console, providing a
+unified interface to a number of other auxilliary tools related to
+Pacemaker and cluster management.
+
+== What distributions does the shell run on?
+
+Many distributions provide packages for the `crm` shell in their
+respective package repositories. The best and safest way to obtain the
+`crm` shell is via the distribution repositories, so look there first.
+
+The intention is for the `crm` shell to work well on all the major
+distributions. Pre-built packages are provided for the
+following distros:
+
+    * openSUSE
+    * Fedora
+    * CentOS
+    * Red Hat Linux
+
+More information can be found on the
+link:documentation.html#_installation[Documentation] page.
+
+== Didn't crm use to be part of Pacemaker?
+
+Yes, initially, the `crm` shell was distributed as part of the
+Pacemaker project. It was split into its own, separate project in
+2011.
+
+== Command-line is well and good, but is there a web interface?
+
+Yes! Take a look at https://github.com/ClusterLabs/hawk[Hawk].
+
+Hawk uses the `crm` shell as its backend to interact with the cluster.

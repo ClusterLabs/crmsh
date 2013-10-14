@@ -1,0 +1,49 @@
+ASCIIDOC := asciidoc
+SRC := index.txt crm.8.txt faq.txt documentation.txt development.txt about.txt
+TGT := $(patsubst %.txt,gen/%.html,$(SRC))
+CSS := css/crm.css
+CSS := $(patsubst %,gen/%,$(CSS))
+JS  := js/FeedEk.js
+JS  := $(patsubst %,gen/%,$(JS))
+IMG := img/loader.gif
+IMG  := $(patsubst %,gen/%,$(IMG))
+WATCHDIR := watchdir
+XDGOPEN := xdg-open
+
+.PHONY: all clean deploy open
+
+gen/%.html: %.txt crm.conf
+	@mkdir -p gen
+	@$(ASCIIDOC) --unsafe -b html5 -f crm.conf -o $@ $<
+	@python ./postprocess.py $@
+
+gen/css/%.css: css/%.css
+	@mkdir -p gen/css
+	@cp -r $< $@
+	@echo "+ $@"
+
+gen/js/%.js: js/%.js
+	@mkdir -p gen/js
+	@cp -r $< $@
+	@echo "+ $@"
+
+gen/img/%: img/%
+	@mkdir -p gen/img
+	@cp -r $< $@
+	@echo "+ $@"
+
+site: $(TGT) $(CSS) $(JS) $(IMG)
+
+deploy: site
+	@echo "TODO: CVS upload"
+
+open: site
+	@$(XDGOPEN) gen/index.html
+
+watch:
+	@$(WATCHDIR) --verbose --cmd "make -f Makefile.www" . css js img
+
+clean:
+	-@$(RM) -rf gen/*.html gen/css gen/js gen/img
+
+all: site
