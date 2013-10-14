@@ -149,15 +149,12 @@ fi
 %{py_sitedir}/crmsh
 
 %{_datadir}/%{name}
-%{_datadir}/%{name}/ha_cf_support.sh
-%{_datadir}/%{name}/openais_conf_support.sh
-%{_datadir}/%{name}/utillib.sh
-%{_datadir}/%{name}/combine-logs.pl
 
 %doc %{_mandir}/man8/*
 %{crmsh_docdir}/COPYING
 %{crmsh_docdir}/AUTHORS
 %{crmsh_docdir}/crm.8.html
+%{crmsh_docdir}/hb_report.8.html
 %{crmsh_docdir}/ChangeLog
 %{crmsh_docdir}/README
 %{crmsh_docdir}/contrib/*
