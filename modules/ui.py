@@ -1206,6 +1206,7 @@ class NodeMgmt(UserInterface):
     node_delete = "cibadmin -D -o nodes -X '<node uname=\"%s\"/>'"
     node_delete_status = "cibadmin -D -o status -X '<node_state uname=\"%s\"/>'"
     node_clear_state = "cibadmin %s -o status --xml-text '<node_state id=\"%s\" uname=\"%s\" ha=\"active\" in_ccm=\"false\" crmd=\"offline\" join=\"member\" expected=\"down\" crm-debug-origin=\"manual_clear\" shutdown=\"0\"/>'"
+    node_clear_state_118 = "stonith_admin --confirm %s"
     hb_delnode = config.DATADIR + "/heartbeat/hb_delnode '%s'"
     crm_node = "crm_node"
     node_fence = "crm_attribute -t status -U '%s' -n terminate -v true"
@@ -1354,8 +1355,11 @@ class NodeMgmt(UserInterface):
         if not user_prefs.force and \
                 not utils.ask("Do you really want to drop state for node %s?" % node):
             return False
-        return utils.ext_cmd(self.node_clear_state % ("-M -c", node, node)) == 0 and \
-            utils.ext_cmd(self.node_clear_state % ("-R", node, node)) == 0
+        if utils.is_pcmk_118():
+            return utils.ext_cmd(self.node_clear_state_118 % node) == 0
+        else:
+            return utils.ext_cmd(self.node_clear_state % ("-M -c", node, node)) == 0 and \
+                utils.ext_cmd(self.node_clear_state % ("-R", node, node)) == 0
 
     def delete(self, cmd, node):
         'usage: delete <node>'
