@@ -1668,7 +1668,7 @@ class CibConfig(UserInterface):
         self.cmd_table["property"] = (self.conf_property, (1,), 1, 0)
         self.cmd_table["rsc_defaults"] = (self.conf_rsc_defaults, (1,), 1, 0)
         self.cmd_table["op_defaults"] = (self.conf_op_defaults, (1,), 1, 0)
-        self.cmd_table["fencing_topology"] = (self.conf_fencing_order, (2,), 1, 0)
+        self.cmd_table["fencing_topology"] = (self.conf_fencing_order, (1,), 1, 0)
         self.cmd_table["xml"] = (self.conf_xml, (1,), 1, 0)
         self.cmd_table["monitor"] = (self.conf_monitor, (2, 2), 1, 0)
         self.cmd_table["role"] = (self.conf_role, (2,), 2, 0)

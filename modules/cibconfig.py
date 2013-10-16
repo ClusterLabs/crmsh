@@ -1927,7 +1927,8 @@ class CibFencingOrder(CibObject):
             d[target][c.get("index")] = c.get("devices")
         dd = odict()
         for target in d.keys():
-            dd[target] = [d[target][x] for x in sorted(d[target].keys())]
+            dd[target] = [d[target][str(x)] 
+                for x in sorted([int(i) for i in d[target].keys()])]
         d2 = {}
         for target in dd.keys():
             devs_s = ' '.join(dd[target])
