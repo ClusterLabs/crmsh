@@ -1,0 +1,234 @@
+= Resource testing =
+
+Never created a pacemaker cluster configuration before? Please
+read on.
+
+Ever created a pacemaker configuration without errors? All
+resources worked from the get go on all your nodes? Really? We
+want a photo of you!
+
+Seriously, it is so error prone to get a cluster resource
+definition right that I think I ever managed to do that only with
+`Dummy` resources. There are many details and all of them are
+stuffed in a single place as simple name-value attributes. Then
+there are multiple nodes and their environment inevitably always
+in flux and changing (entropy anybody?).
+
+Now, once you defined your set of resources and are about to
+_commit_ the configuration (at that point it usually takes a
+deep breath to do so) be ready to meet an avalanche of error
+messages, not all of which are easy to understand or follow. Not
+to mention that you need to read the logs too. Even though we do
+have a link:history-tutorial.html[tool] to help with that, it is
+going to be an interesting experience and not quite recommended
+if you're just starting with pacemaker clusters. The experienced
+too are going to have much easier time following the advice below.
+
+== Basic usage ==
+
+Enter resource testing. It is a special feature designed to help
+users find problems in resource configurations.
+
+The usage is very simple:
+
+----
+crm(live)configure# rsctest web-server 
+Probing resources ..
+testing on xen-f: apache web-ip
+testing on xen-g: apache web-ip
+crm(live)configure# 
+----
+
+What actually happened above and what is it good for? From the
+output we can infer that the `web-server` resource is actually a
+group comprising one apache web server and one IP address.
+Indeed:
+
+----
+crm(live)configure# show web-server 
+group web-server apache web-ip \
+        meta target-role="Stopped"
+crm(live)configure# 
+----
+
+The `rsctest` command first established that the resources are
+stopped on all nodes in the cluster. Then it tests the resources
+in the order defined by the resource group on all nodes. It does
+this by manually starting the resources, one by one, then running
+a "monitor" for each resource to make sure that the resources are
+healthy, and finally stopping the resources in reverse order.
+
+Since there is no additional output, the test passed. It looks
+like we have a properly defined web server group.
+
+== Reporting problems ==
+
+Now, the above run was not very interesting so let's spoil the
+idyll:
+
+----
+xen-f:~ # mv /etc/apache2/httpd.conf /tmp
+----
+
+We moved the apache configuration file away on node `xen-f`.  The
+`apache` resource should fail now:
+
+----
+crm(live)configure# rsctest web-server 
+Probing resources ..
+testing on xen-f: apache
+host xen-f (exit code 5)
+xen-f stderr:
+2013/10/17_16:51:26 ERROR: Configuration file /etc/apache2/httpd.conf not found!
+2013/10/17_16:51:26 ERROR: environment is invalid, resource considered stopped
+
+testing on xen-g: apache web-ip
+crm(live)configure# 
+----
+
+As expected, `apache` failed to start on node `xen-f`. When the
+cluster resource manager runs an operation on a resource, all
+messages are logged (there is anyway no terminal attached to the
+cluster) and all one can see in the resource status is the type
+of the exit code (in this case it is an installation problem).
+For instance, the output would look like this:
+
+----
+xen-f:~ # crm status
+Last updated: Thu Oct 17 19:21:44 2013
+Last change: Thu Oct 17 19:21:28 2013 by root via crm_resource on xen-f
+...
+Failed actions:
+    apache_start_0 on xen-f 'not installed' (5): call=2074, status=complete,
+last-rc-change='Thu Oct 17 19:21:31 2013', queued=164ms, exec=0ms
+----
+
+That does not look very informative. With `rsctest` we can
+immediately see what is the problem. It saves us prowling the
+logs looking for messages of the `apache` resource agent.
+
+Note that the IP address is not tested, because the resource it
+depends on could not be started.
+
+== What is tested? ==
+
+The start, monitor, and stop operations, in exactly that order,
+are tested for every resource specified. Note that normally the
+two latter operations should never fail if the resource agent is
+well implemented. The RA should under normal circumstances be
+able to stop or monitor a started resource. However, this is
+_not_ a replacement for resource agent testing. If that is what
+you are looking for, see
+http://www.linux-ha.org/doc/dev-guides/_testing_resource_agents.html[the
+RA testing chapter] of the RA development guide.
+
+== Protecting resources ==
+
+The `rsctest` command goes to great lengths to prevent starting a
+resource on more than one node at the same time. For some stuff
+that would actually mean data corruption and we certainly don't
+want that to happen.
+
+----
+xen-f:~ # (echo start web-server; echo show web-server) | crm -w resource
+resource web-server is running on: xen-g 
+xen-f:~ # crm configure rsctest web-server
+Probing resources .WARNING: apache:probe: resource running at xen-g
+.WARNING: web-ip:probe: resource running at xen-g
+
+Stop all resources before testing!
+xen-f:~ # crm configure rsctest web-server xen-f
+Probing resources .WARNING: apache:probe: resource running at xen-g
+.WARNING: web-ip:probe: resource running at xen-g
+
+Stop all resources before testing!
+xen-f:~ # 
+----
+
+As you can see, if `rsctest` finds any of the resources running
+on any node it refuses to run any tests.
+
+== Multi-state and clone resources ==
+
+Apart from groups, the `rsctest` can also handle the other two
+special kinds of resources. Let's take a look at one `drbd`-based
+configuration:
+
+----
+crm(live)configure# show ms_drbd_nfs drbd0-vg 
+primitive drbd0-vg ocf:heartbeat:LVM \
+        params volgrpname="drbd0-vg"
+primitive p_drbd_nfs ocf:linbit:drbd \
+        meta target-role="Stopped" \
+        params drbd_resource="nfs" \
+        op monitor interval="15" role="Master" \
+        op monitor interval="30" role="Slave" \
+        op start interval="0" timeout="300" \
+        op stop interval="0" timeout="120"
+ms ms_drbd_nfs p_drbd_nfs \
+        meta notify="true" clone-max="2"
+crm(live)configure# 
+----
+
+The `nfs` drbd resource contains a volume group `drbd0-vg`.
+
+----
+crm(live)configure# rsctest ms_drbd_nfs drbd0-vg 
+Probing resources ..
+testing on xen-f: p_drbd_nfs drbd0-vg
+testing on xen-g: p_drbd_nfs drbd0-vg
+crm(live)configure# 
+----
+
+For the multi-state (master-slave) resources, the involved
+resource motions are somewhat more complex: the resource is first
+started on both nodes and then promoted on the node where the
+next resource is to be tested (in this case the volume group).
+Then it gets demoted to slave and promoted on the other
+node to master so that the depending resources can be tested on
+that node too.
+
+Note that even though we asked for `ms_drbd_nfs` to be tested,
+there is `p_drbd_nfs` in the output which is the primitive
+encapsulated in the master-slave resource. You can specify either
+one.
+
+== Stonith resources ==
+
+The stonith resources are also special and need special
+treatment. What is tested is just the device status. Actually
+fencing nodes was deemed to drastic. Please use `node fence` to
+test the fencing device effectiveness. It also does not matter
+whether the stonith resource is "running" on any node: being
+started is just something that happens virtually in the
+`stonithd` process.
+
+== Summary ==
+
+- use `rsctest` to make sure that the resources can be started
+  correctly on all nodes
+
+- `rsctest` protects resources by making sure beforehand that
+  none of them is currently running on any of the cluster nodes
+
+- `rsctest` understands groups, master-slave (multi-state), and
+  clone resources, but nothing else of the configuration
+  (constraints or any other placement/order cluster configuration
+  elements)
+
+- it is up to the user to test resources only on nodes which are
+  really supposed to run them and in a proper order (if that
+  order is expressed via constraints)
+
+- `rsctest` cannot protect resources if they are running on
+  nodes which are not present in the cluster or from bad RA
+  implementations (but neither would a cluster resource manager)
+
+- `rsctest` was not designed to test RA thoroughly
+
+== `crmsh` help and online resources (_sic!_) ==
+
+- link:crm.8.html#topics_Testing[`crm help Testing`]
+
+- link:crm.8.html#cmdhelp_configure_rsctest[`crm configure help
+rsctest`]

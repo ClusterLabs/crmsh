@@ -3,6 +3,7 @@
 == Usage ==
 
 * link:crm.8.html[Man page]
+* link:tutorials.html[Guides & Tutorials]
 * link:faq.html[FAQ]
 
 The SUSE

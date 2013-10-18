@@ -1,0 +1,25 @@
+= Guides & Tutorials =
+
+You will find here what you may expect, a set of hands-on
+tutorials and best practices. `crmsh` is a free software project,
+and is open to contributors.  More guides and tutorials are very
+much welcome!
+
+== Resource testing ==
+
+For newbies and seasoned practitioners alike, the guide on
+resource testing helps when you want to make sure that the new
+resources can run on all nodes.
+
+* link:rsctest-tutorial.html[Resource testing]
+
+// == Cluster history ==
+// 
+// The history of a cluster is stored in more than one place and on
+// more than one host, which makes it notoriously difficult to
+// follow. This guide introduces the `crmsh` history feature. It
+// digs out and presents bits of cluster history from the logs or
+// policy engine input files (transitions).
+// 
+// * link:history-tutorial.html[`crmsh` history]
+// 
