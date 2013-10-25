@@ -25,6 +25,7 @@ import ConfigParser
 from singletonmixin import Singleton
 from userprefs import Options
 import vars
+import config
 from msg import common_debug, common_warn, common_err, common_error, common_info, warn_once
 from xmlutil import file2cib_elem, get_rsc_children_ids, get_prim_children_ids
 from utils import file2str, shortdate, acquire_lock, append_file, ext_cmd, shorttime
