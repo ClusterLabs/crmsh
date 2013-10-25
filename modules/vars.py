@@ -255,6 +255,9 @@ prompt = ''
 # background may depend (see e.g. show_dot_graph)
 tmpfiles = []
 this_node = os.uname()[1]
+tmp_cib = False
+tmp_cib_prompt = "@tmp@"
+live_cib_prompt = "live"
 cib_in_use = os.getenv(shadow_envvar)
 homedir = gethomedir()
 hist_file = ''

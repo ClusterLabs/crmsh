@@ -216,7 +216,11 @@ def envsetup():
 # three modes: interactive (no args supplied), batch (input from
 # a file), half-interactive (args supplied, but not batch)
 def cib_prompt():
-    return vars.cib_in_use or "live"
+    if not vars.cib_in_use:
+        return vars.live_cib_prompt
+    if vars.tmp_cib:
+        return vars.tmp_cib_prompt
+    return vars.cib_in_use
 
 
 def usage(rc):

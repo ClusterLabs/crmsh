@@ -322,6 +322,7 @@ def show_dot_graph(dotfile, keep_file=False, desc="transition graph"):
 def ext_cmd(cmd):
     if options.regression_tests:
         print ".EXT", cmd
+    common_debug("invoke: %s" % add_sudo(cmd))
     return subprocess.call(add_sudo(cmd), shell=True)
 
 

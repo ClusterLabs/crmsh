@@ -16,6 +16,7 @@
 #
 
 import sys
+from tempfile import mkstemp
 import re
 import os
 import shlex
@@ -317,10 +318,10 @@ class CibShadow(UserInterface):
 
     def __init__(self):
         UserInterface.__init__(self)
-        self.cmd_table["new"] = (self.new, (1, 3), 1, 0)
+        self.cmd_table["new"] = (self.new, (0, 3), 1, 0)
         self.cmd_table["delete"] = (self.delete, (1, 1), 1, 0)
         self.cmd_table["reset"] = (self.reset, (1, 1), 1, 0)
-        self.cmd_table["commit"] = (self.commit, (1, 1), 1, 1)
+        self.cmd_table["commit"] = (self.commit, (0, 1), 1, 1)
         self.cmd_table["use"] = (self.use, (0, 2), 1, 0)
         self.cmd_table["diff"] = (self.diff, (0, 0), 1, 0)
         self.cmd_table["list"] = (self.list, (0, 0), 1, 0)
@@ -337,24 +338,38 @@ class CibShadow(UserInterface):
             return False
         return True
 
-    def new(self, cmd, name, *args):
-        "usage: new <shadow_cib> [withstatus] [force] [empty]"
-        if not utils.is_filename_sane(name):
+    def new(self, cmd, *args):
+        "usage: new [<shadow_cib>] [withstatus] [force] [empty]"
+        argl = list(args)
+        opt_l = fetch_opts(argl, ["force", "--force", "withstatus", "empty"])
+        if len(argl) > 1:
+            syntax_err((cmd, args))
             return False
-        for par in args:
-            if not par in ("force", "--force", "withstatus", "empty"):
-                syntax_err((cmd, name, par), context='new')
+        name = None
+        if argl:
+            name = argl[0]
+            if not utils.is_filename_sane(name):
                 return False
-        if "empty" in args:
+            if name in (vars.tmp_cib_prompt, vars.live_cib_prompt):
+                common_err("shadow name %s not allowed" % name)
+                return False
+            del argl[0]
+            vars.tmp_cib = False
+        else:
+            fd, fname = mkstemp(dir=xmlutil.cib_shadow_dir(), prefix="shadow.crmsh_")
+            vars.tmpfiles.append(fname)
+            name = os.path.basename(fname).replace("shadow.", "")
+            vars.tmp_cib = True
+        if "empty" in opt_l:
             new_cmd = "%s -e '%s'" % (self.extcmd, name)
         else:
             new_cmd = "%s -c '%s'" % (self.extcmd, name)
-        if user_prefs.force or "force" in args or "--force" in args:
+        if vars.tmp_cib or user_prefs.force or "force" in opt_l or "--force" in opt_l:
             new_cmd = "%s --force" % new_cmd
         if utils.ext_cmd(new_cmd) == 0:
             common_info("%s shadow CIB created" % name)
             self.use("use", name)
-            if "withstatus" in args:
+            if "withstatus" in opt_l:
                 cib_status.load("shadow:%s" % name)
 
     def _find_pe(self, infile):
@@ -414,15 +429,22 @@ class CibShadow(UserInterface):
             common_err("failed to copy live CIB to %s" % name)
             return False
 
-    def commit(self, cmd, name):
-        "usage: commit <shadow_cib>"
-        if not utils.is_filename_sane(name):
+    def commit(self, cmd, name=None):
+        "usage: commit [<shadow_cib>]"
+        if name and not utils.is_filename_sane(name):
+            return False
+        if not name:
+            name = vars.cib_in_use
+        if not name:
+            common_err("there is nothing to commit")
             return False
         if utils.ext_cmd("%s -C '%s' --force" % (self.extcmd, name)) == 0:
             common_info("committed '%s' shadow CIB to the cluster" % name)
         else:
             common_err("failed to commit the %s shadow CIB" % name)
             return False
+        if vars.tmp_cib:
+            self._use("", "")
 
     def diff(self, cmd):
         "usage: diff"
@@ -442,10 +464,13 @@ class CibShadow(UserInterface):
         # provided is empty, then choose the live (cluster) cib.
         # Don't allow ' in shadow names
         if not name or name == "live":
-            os.unsetenv(vars.shadow_envvar)
-            vars.cib_in_use = ""
             if withstatus:
                 cib_status.load("live")
+            if vars.tmp_cib:
+                utils.ext_cmd("%s -D '%s' --force" % (self.extcmd, vars.cib_in_use))
+                vars.tmp_cib = False
+            vars.cib_in_use = ""
+            os.unsetenv(vars.shadow_envvar)
         else:
             os.putenv(vars.shadow_envvar, name)
             vars.cib_in_use = name

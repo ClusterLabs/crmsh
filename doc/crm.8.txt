@@ -611,10 +611,18 @@ includes the name of the currently active shadow or the live CIB.
 ==== `new`
 
 Create a new shadow CIB. The live cluster configuration and
-status is copied to the shadow CIB. Specify `withstatus` if you
-want to edit the status section of the shadow CIB (see the
-<<cmdhelp_cibstatus,cibstatus section>>). Add `force` to force overwriting the
-existing shadow CIB.
+status is copied to the shadow CIB.
+
+If the name of the shadow is omitted, we create a temporary CIB
+shadow. It is useful if multiple level sessions are desired
+without affecting the cluster. A temporary CIB shadow is short
+lived and will be removed either on `commit` or on program exit.
+Note that if the temporary shadow is not committed all changes in
+the temporary shadow are lost.
+
+Specify `withstatus` if you want to edit the status section of
+the shadow CIB (see the <<cmdhelp_cibstatus,cibstatus section>>).
+Add `force` to force overwriting the existing shadow CIB.
 
 To start with an empty configuration that is not copied from the live
 CIB, specify the `empty` keyword. (This also allows a shadow CIB to be
@@ -622,7 +630,7 @@ created in case no cluster is running.)
 
 Usage:
 ...............
-        new <cib> [withstatus] [force] [empty]
+        new [<cib>] [withstatus] [force] [empty]
 ...............
 
 [[cmdhelp_cib_delete,delete a shadow CIB]]
@@ -648,11 +656,14 @@ Usage:
 [[cmdhelp_cib_commit,copy a shadow CIB to the cluster]]
 ==== `commit`
 
-Apply a shadow CIB to the cluster.
+Apply a shadow CIB to the cluster. If the shadow name is omitted
+then the current shadow CIB is applied.
+
+Temporary shadow CIBs are removed automatically on commit.
 
 Usage:
 ...............
-        commit <cib>
+        commit [<cib>]
 ...............
 
 [[cmdhelp_cib_use,change working CIB]]
