@@ -931,8 +931,10 @@ class Report(Singleton):
         if pipe_cmd_nosudo("mkdir -p %s" % os.path.dirname(d)) != 0:
             return None
         common_info("retrieving information from cluster nodes, please wait ...")
-        rc = pipe_cmd_nosudo("hb_report -Z -f '%s' %s %s %s" %
-                             (self.from_dt.ctime(),
+        rc = pipe_cmd_nosudo("%s/%s/hb_report -Z -f '%s' %s %s %s" %
+                             (config.DATADIR,
+                              config.PACKAGE,
+                              self.from_dt.ctime(),
                               to_option,
                               nodes_option,
                               d))

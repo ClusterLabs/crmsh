@@ -35,7 +35,6 @@ Requires:       python >= 2.4
 Requires:       python-dateutil
 Requires:       python-lxml
 BuildRequires:  python-lxml
-Conflicts:      cluster-glue <= 1.0.12
 
 %if 0%{?suse_version}
 # Suse splits this off into a separate package
@@ -145,7 +144,6 @@ fi
 
 
 %{_sbindir}/crm
-%{_sbindir}/hb_report
 %{py_sitedir}/crmsh
 
 %{_datadir}/%{name}
@@ -154,7 +152,6 @@ fi
 %{crmsh_docdir}/COPYING
 %{crmsh_docdir}/AUTHORS
 %{crmsh_docdir}/crm.8.html
-%{crmsh_docdir}/hb_report.8.html
 %{crmsh_docdir}/ChangeLog
 %{crmsh_docdir}/README
 %{crmsh_docdir}/contrib/*
