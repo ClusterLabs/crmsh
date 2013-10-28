@@ -34,6 +34,7 @@ Requires:       pssh
 Requires:       python >= 2.4
 Requires:       python-dateutil
 Requires:       python-lxml
+Requires:       which
 BuildRequires:  python-lxml
 
 %if 0%{?suse_version}
