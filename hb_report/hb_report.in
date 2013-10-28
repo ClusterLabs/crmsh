@@ -1138,6 +1138,9 @@ if [ "$t" = "" ]; then
 		fatal "please install the perl Date::Parse module"
 fi
 
+which which >/dev/null 2>&1 ||
+	fatal "please install the which(1) program"
+
 WE=`uname -n`  # who am i?
 tmpdir=`mktemp -t -d .hb_report.workdir.XXXXXX` ||
 	fatal "disk full"
