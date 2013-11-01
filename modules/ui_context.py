@@ -123,7 +123,8 @@ class Context(object):
                     else:
                         # use the completer for the command
                         ret = self.command_info.complete(self, tokens)
-                        ret = [t for t in ret if t.startswith(tokens[-1])]
+                        if tokens:
+                            ret = [t for t in ret if t.startswith(tokens[-1])]
                         return ret
                 # reached the end on a valid level.
                 # return the completions for the previous level.
@@ -174,9 +175,12 @@ class Context(object):
                 self._rl_line = None
                 self._rl_words = []
         try:
-            return self._rl_words[state]
+            ret = self._rl_words[state]
         except IndexError:
-            return None
+            ret = None
+        if ret and line.split()[-1].endswith(ret):
+            return ret + ' '
+        return ret
 
     def current_level(self):
         return self.stack[-1]
