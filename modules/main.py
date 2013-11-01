@@ -17,15 +17,13 @@
 
 import sys
 import os
-import re
-import shlex
 import getopt
 import atexit
 
-from utils import wait4dc, is_pcmk_118, is_program
+from utils import is_pcmk_118
 from userprefs import Options, UserPrefs
 import vars
-from msg import ErrorBuffer, syntax_err, skill_err
+from msg import ErrorBuffer, syntax_err
 from msg import common_warn, common_info, common_debug, common_err
 from clidisplay import CliDisplay
 from term import TerminalController
@@ -34,7 +32,7 @@ import ui_tree
 import ui_context
 
 
-def load_rc(rcfile):
+def load_rc(context, rcfile):
     try:
         f = open(rcfile)
     except:
@@ -43,10 +41,11 @@ def load_rc(rcfile):
     sys.stdin = f
     while True:
         inp = multi_input()
-        if inp == None:
+        if inp is None:
             break
         try:
-            parse_line(levels, shlex.split(inp))
+            if not context.run(inp):
+                raise ValueError("Error in RC file: " + rcfile)
         except ValueError, msg:
             common_err(msg)
     f.close()
@@ -304,11 +303,8 @@ def add_quotes(args):
     return l
 
 
-def do_work(user_args):
+def do_work(context, user_args):
     compatibility_setup()
-
-    tree = ui_tree.Tree()
-    context = ui_context.Context(tree)
 
     if options.shadow:
         if not context.run("cib use " + options.shadow):
@@ -441,11 +437,11 @@ def parse_options():
         usage(1)
 
 
-def profile_run(user_args):
+def profile_run(context, user_args):
     import cProfile
-    cProfile.runctx('do_work(user_args)',
+    cProfile.runctx('do_work(context, user_args)',
                     globals(),
-                    {'user_args': user_args},
+                    {'context': context, 'user_args': user_args},
                     filename=options.profile)
     # print how to use the profile file, but don't disturb
     # the regression tests
@@ -463,7 +459,11 @@ def run():
             return
         envsetup()
         mv_user_files()
-        load_rc(vars.rc_file)
+
+        tree = ui_tree.Tree()
+        context = ui_context.Context(tree)
+
+        load_rc(context, vars.rc_file)
         atexit.register(exit_handler)
         options.interactive = sys.stdin.isatty()
         if not options.interactive:
@@ -471,9 +471,9 @@ def run():
             options.batch = True
         user_args = parse_options()
         if options.profile:
-            profile_run(user_args)
+            profile_run(context, user_args)
         else:
-            do_work(user_args)
+            do_work(context, user_args)
     except KeyboardInterrupt:
         print "Ctrl-C, leaving"
         sys.exit(1)
