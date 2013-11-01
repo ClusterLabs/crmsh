@@ -204,46 +204,6 @@ def primitive_complete_complex(args):
 
     return completers_set[last_keyw](agent, args)
 
-    '''
-    completers_set = {
-        "params": (prim_complete_params, prim_params_info),
-        "meta": (prim_complete_meta, meta_attr_info),
-        "op": (prim_complete_op, op_attr_info),
-    }
-    # manage the resource type
-    cmd = get_prim_token(args, 1)
-    type_word = get_prim_token(args, 3)
-    with_template = cmd == "primitive" and type_word.startswith('@')
-    if with_template:
-        # template reference
-        agent = ra.get_ra(cib_factory.find_object(type_word[1:]).node)
-    else:
-        toks = type_word.split(':')
-        if toks[0] != "ocf":
-            idx += 1
-        if idx in (2, 3):
-            return ra_type_list(toks, idx, delimiter)
-        agent = None
-        ra_class, provider, rsc_type = disambiguate_ra_type(type_word)
-        if ra_type_validate(type_word, ra_class, provider, rsc_type):
-            agent = RAInfo(ra_class, rsc_type, provider)
-    keywords = completers_set.keys()
-    if idx == 4 or (idx == 2 and with_template):
-        if delimiter:
-            return ' '
-        return keywords
-    lastkeyw = get_lastkeyw(words, keywords)
-    if '=' in words[-1] and get_buffer()[-1] != ' ':
-        if not delimiter and lastkeyw and \
-                args[-1].endswith('=') and len(words[-1]) > 1:
-            compl_help.help(completers_set[lastkeyw][1], agent)
-        if delimiter:
-            return ' '
-        return ['*']
-    else:
-        if lastkeyw:
-            return completers_set[lastkeyw][0](args, agent, delimiter)
-    '''
 
 class CibConfig(command.UI):
     '''
