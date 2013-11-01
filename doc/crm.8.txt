@@ -584,6 +584,7 @@ ellipsis (`...`) signifies that the previous construct may be
 repeated, `|` means pick one of many, and the rest are literals
 (strings, `:`, `=`).
 
+[[cmdhelp_status,Cluster status]]
 === `status`
 
 Show cluster status. The status is displayed by `crm_mon`. Supply
