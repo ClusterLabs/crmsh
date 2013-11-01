@@ -24,7 +24,7 @@ from msg import Options
 
 
 def complete_class_provider_type(args):
-    sp = args[0].split(':')
+    sp = args[1].split(':')
     if len(sp) < 2:
         return [c+':' for c in ra.ra_classes()]
     elif len(sp) < 3:
@@ -65,7 +65,7 @@ class RA(command.UI):
         print ' '.join(ra.ra_providers(ra_type, ra_class))
 
     @command.skill_level('administrator')
-    @command.completers(compl.call(ra.ra_classes), lambda args: ra.ra_providers_all(args[0]))
+    @command.completers(compl.call(ra.ra_classes), lambda args: ra.ra_providers_all(args[1]))
     def do_list(self, context, c, p=None):
         "usage: list <class> [<provider>]"
         options = Options.getInstance()
