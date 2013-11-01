@@ -629,6 +629,14 @@ The command will then make sure that all required packages are
 installed on each of the nodes, and then install appropriate base
 configurations for the cluster messaging layer and for Pacemaker.
 
+This command can be used from a machine that is not part of the high
+availability cluster, as long as `crm` is installed on that
+machine. Only the nodes in the argument list will be considered as
+part of the newly created cluster.
+
+Note: SSH communications and access via hostname need to be
+configured in advance.
+
 Usage:
 ...............
         init nodes=<node-1>,<node-2>,...,<node-N>
