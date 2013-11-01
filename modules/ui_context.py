@@ -48,7 +48,7 @@ class Context(object):
 
         # readline cache
         self._rl_line = None
-        self._rl_words = None
+        self._rl_words = []
 
     def run(self, line):
         '''
@@ -161,6 +161,10 @@ class Context(object):
         except IOError:
             pass
 
+    def clear_readline_cache(self):
+        self._rl_line = None
+        self._rl_words = []
+
     def readline_completer(self, text, state):
         def matching(word):
             'we are only completing the last word in the line'
@@ -172,8 +176,7 @@ class Context(object):
                 self._rl_line = line
                 self._rl_words = [w for w in self.complete(line) if matching(w)]
             except Exception:
-                self._rl_line = None
-                self._rl_words = []
+                self.clear_readline_cache()
         try:
             ret = self._rl_words[state]
         except IndexError:
@@ -205,6 +208,8 @@ class Context(object):
         if 'requires' in dir(entry) and not entry.requires():
             self.fatal_error("Missing requirements")
         self.stack.append(entry)
+
+        self.clear_readline_cache()
 
     def _set_interactive(self):
         '''Set the interactive option only if we're on a tty.'''
@@ -267,7 +272,11 @@ class Context(object):
         '''
         if len(self.stack) > 1:
             self.stack.pop()
-            self.restore_stack = False
+            self.clear_readline_cache()
+
+    def save_stack(self):
+        self.restore_stack = False
+        self.clear_readline_cache()
 
     def quit(self, rc=0):
         '''

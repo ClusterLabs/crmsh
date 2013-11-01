@@ -250,6 +250,7 @@ Navigates back in the user interface.
         '''
         self.end_game()
         context.up()
+        context.save_stack()
 
     @help('''List levels and commands
 Lists the available sublevels and commands
@@ -307,6 +308,7 @@ Examples:
         else:
             self.do_cd(context, path[0])
             self.do_cd(context, path[1])
+        context.save_stack()
 
     @alias('bye', 'exit')
     @help('''Exit the interactive shell
