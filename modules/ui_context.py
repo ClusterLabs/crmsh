@@ -38,6 +38,7 @@ class Context(object):
     def __init__(self, tree):
         self.tree = tree
         self.stack = [tree.root]
+        self.restore_stack = True
 
         # holds information about the currently
         # executing command
@@ -57,6 +58,7 @@ class Context(object):
         if not line or line.startswith('#'):
             return True
 
+        self.restore_stack = True
         saved_stack = list(self.stack)
 
         try:
@@ -72,14 +74,16 @@ class Context(object):
                     self.enter_level(self.command_info.level)
                 else:
                     ret = self.execute_command()
-                    self.stack = saved_stack
+                    if self.restore_stack:
+                        self.stack = saved_stack
                     return ret
             return True
         except ValueError, msg:
             common_err("%s: %s" % (self.get_qualified_name(), msg))
         except IOError, msg:
             common_err("%s: %s" % (self.get_qualified_name(), msg))
-        self.stack = saved_stack
+        if self.restore_stack:
+            self.stack = saved_stack
         return False
 
     def complete(self, line):
@@ -251,6 +255,7 @@ class Context(object):
         '''
         if len(self.stack) > 1:
             self.stack.pop()
+            self.restore_stack = False
 
     def quit(self, rc=0):
         '''
