@@ -26,6 +26,16 @@ from msg import UserPrefs, Options
 from msg import no_prog_err
 from cibstatus import CibStatus
 from cibconfig import CibFactory
+import completers as compl
+
+
+_listshadows = compl.call(xmlutil.listshadows)
+
+
+def _listshadows_plus_live(args):
+    return xmlutil.listshadows() + ['live']
+
+_NEWARGS = ('force', '--force', 'withstatus', 'empty')
 
 
 class CibShadow(command.UI):
@@ -47,12 +57,13 @@ class CibShadow(command.UI):
         pass
 
     @command.skill_level('administrator')
+    @command.completer_list_repeating(compl.null, compl.choice(_NEWARGS))
     def do_new(self, context, name, *args):
         "usage: new <shadow_cib> [withstatus] [force] [empty]"
         if not utils.is_filename_sane(name):
             context.fatal_error("Bad filename: " + name)
         for par in args:
-            if not par in ("force", "--force", "withstatus", "empty"):
+            if not par in _NEWARGS:
                 context.fatal_error("Unknown argument: " + par)
         if "empty" in args:
             new_cmd = "%s -e '%s'" % (self.extcmd, name)
@@ -82,6 +93,7 @@ class CibShadow(command.UI):
         return fl[0]
 
     @command.skill_level('administrator')
+    @command.completer_list(compl.null, _listshadows)
     def do_pe_import(self, context, infile, name=None):
         "usage: import {<file>|<number>} [<shadow>]"
         if name and not utils.is_filename_sane(name):
@@ -99,6 +111,7 @@ class CibShadow(command.UI):
         return self.use("use", name, "withstatus")
 
     @command.skill_level('administrator')
+    @command.completer_list(_listshadows)
     def do_delete(self, context, name):
         "usage: delete <shadow_cib>"
         if not utils.is_filename_sane(name):
@@ -111,6 +124,7 @@ class CibShadow(command.UI):
             context.fatal_error("failed to delete %s shadow CIB" % name)
 
     @command.skill_level('administrator')
+    @command.completer_list(_listshadows)
     def do_reset(self, context, name):
         "usage: reset <shadow_cib>"
         if not utils.is_filename_sane(name):
@@ -122,6 +136,7 @@ class CibShadow(command.UI):
 
     @command.skill_level('administrator')
     @command.wait
+    @command.completer_list(_listshadows)
     def do_commit(self, context, name):
         "usage: commit <shadow_cib>"
         if not utils.is_filename_sane(name):
@@ -163,6 +178,7 @@ class CibShadow(command.UI):
         return True
 
     @command.skill_level('administrator')
+    @command.completer_list(_listshadows_plus_live, compl.choice(['withstatus']))
     def do_use(self, context, name='', withstatus=''):
         "usage: use [<shadow_cib>] [withstatus]"
         # check the name argument

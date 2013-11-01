@@ -15,10 +15,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-# Decorators and other helper functions for the UI
-#
-# Mostly, what these functions do is store extra metadata
-# inside the functions.
+# - Base class for UI levels
+# - Decorators and other helper functions for the UI
+#   Mostly, what these functions do is store extra metadata
+#   inside the functions.
 
 #from functools import wraps
 import inspect
@@ -26,6 +26,13 @@ import help as help_module
 
 
 def name(n):
+    '''
+    Overrides the name of the command.
+    This is useful to handle commands with
+    dashes instead of underlines, or commands
+    with awkward names (like commands with a
+    leading underscore).
+    '''
     def inner(fn):
         setattr(fn, '_name', n)
         return fn
@@ -33,6 +40,13 @@ def name(n):
 
 
 def alias(*aliases):
+    '''
+    Adds aliases for the command. The command
+    will also be callable using the alias. The
+    command name set in the command context will
+    reflect the alias used (so the same command can
+    behave differently depending on the alias).
+    '''
     def inner(fn):
         setattr(fn, '_aliases', aliases)
         return fn
@@ -40,6 +54,15 @@ def alias(*aliases):
 
 
 def level(level_class):
+    '''
+    Changes the command into a level movement.
+    Calling the command doesn't actually call the
+    member function this decorator is applied to, so
+    don't put any code in that function.
+
+    This is a bit awkward, but given how decorators work,
+    it's the best I could think of.
+    '''
     def inner(fn):
         # check signature of given level function
         _check_args(fn, ('self',))
@@ -115,14 +138,47 @@ def wait(fn):
     return fn
 
 
-def completer(*fns):
+def completer(cb):
     '''
-    Use to set a list of tab completers for the command.
-    The completer gets as its argument the command line entered so far,
-    and returns a list of possible completions.
+    Use to set a tab completer for the command.
+    The completer is called for the command, regardless
+    of the number of arguments called so far
     '''
     def inner(fn):
-        setattr(fn, '_completers', fns)
+        setattr(fn, '_completer', cb)
+        return fn
+    return inner
+
+
+def completer_list(*fns):
+    '''
+    Use to set a list of positional tab completers for the command.
+    Each completer gets as its argument the command line entered so far,
+    and returns a list of possible completions.
+    '''
+    def completer(args):
+        if len(args) <= len(fns):
+            return fns[len(args)-1](args)
+        return []
+
+    def inner(fn):
+        setattr(fn, '_completer', completer)
+        return fn
+    return inner
+
+
+def completer_list_repeating(*fns):
+    '''
+    Like completer_list, but calls the last completer
+    for any additional arguments
+    '''
+    def completer(args):
+        if len(args) <= len(fns):
+            return fns[len(args)-1](args)
+        return fns[-1](args)
+
+    def inner(fn):
+        setattr(fn, '_completer', completer)
         return fn
     return inner
 
@@ -134,6 +190,10 @@ class UI(object):
       - Error handling
       - Help
       - Completion
+    '''
+
+    '''
+    Name of level: override this in the subclass.
     '''
     name = None
 
@@ -213,6 +273,10 @@ class UI(object):
         return self._children.keys()
 
     def get_child(self, name):
+        '''
+        Returns child info for the given name, or None
+        if the child is not found.
+        '''
         return self._children.get(name)
 
     @classmethod
@@ -288,7 +352,7 @@ class ChildInfo(object):
         self.skill_level = maybe('_skill_level', 0)
         self.wait = maybe('_wait', False)
         self.level = maybe('_level', None)
-        self.completers = maybe('_completers', None)
+        self.completer = maybe('_completer', None)
         self.parent = parent
         self.children = {}
         if self.type == 'level' and self.level:
@@ -300,8 +364,10 @@ class ChildInfo(object):
         The completer mostly completes based on argument position, but
         some commands are context sensitive...
         '''
-        import sys
-        print >>sys.stderr, self.name, args
+        #import sys
+        #print >>sys.stderr, self.name, args
+        if self.completer is not None:
+            return self.completer(args)
         return []
 
     def __repr__(self):

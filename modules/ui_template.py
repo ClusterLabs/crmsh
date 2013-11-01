@@ -20,6 +20,7 @@ import os
 import re
 import shlex
 import command
+import completers as compl
 import utils
 from template import LoadTemplate
 from cliformat import cli_format
@@ -48,6 +49,7 @@ class Template(command.UI):
         self.init_dir()
 
     @command.skill_level('administrator')
+    @command.completer_list_repeating(compl.null, compl.call(utils.listtemplates))
     def do_new(self, context, name, *args):
         "usage: new <config> <template> [<template> ...] [params name=value ...]"
         if not utils.is_filename_sane(name):
