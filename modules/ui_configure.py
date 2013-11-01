@@ -253,6 +253,8 @@ class CibConfig(command.UI):
 
     def __init__(self):
         command.UI.__init__(self)
+        # for interactive use, we want to populate the CIB
+        # immediately so that tab completion works
         if options.interactive:
             cib_factory.initialize()
 
@@ -404,7 +406,7 @@ class CibConfig(command.UI):
     def do_save(self, context, *args):
         "usage: save [xml] <filename>"
         if not cib_factory.is_cib_sane():
-            return False
+            context.fatal_error("CIB is not valid")
         if args[0] == "xml":
             f = args[1]
             set_obj = mkset_obj("xml")
@@ -418,7 +420,7 @@ class CibConfig(command.UI):
     def do_load(self, context, *args):
         "usage: load [xml] {replace|update} {<url>|<path>}"
         if not cib_factory.is_cib_sane():
-            return False
+            context.fatal_error("CIB is not valid")
         if args[0] == "xml":
             if len(args) != 3:
                 context.fatal_error("Expected 3 arguments (%d given)" % len(args))
@@ -451,10 +453,10 @@ class CibConfig(command.UI):
         if args and args[0] == "exportsettings":
             return utils.save_graphviz_file(vars.graphviz_user_file, vars.graph)
         if not cib_factory.is_cib_sane():
-            return False
+            context.fatal_error("CIB is not valid")
         rc, gtype, outf, ftype = ui_utils.graph_args(args)
         if not rc:
-            return False
+            context.fatal_error("Failed to create graph")
         rc, d = utils.load_graphviz_file(vars.graphviz_user_file)
         if rc and d:
             vars.graph = d
@@ -472,7 +474,7 @@ class CibConfig(command.UI):
     def do_delete(self, context, *args):
         "usage: delete <id> [<id>...]"
         if not cib_factory.is_cib_sane():
-            return False
+            context.fatal_error("CIB is not valid")
         return cib_factory.delete(*args)
 
     @command.name('default-timeouts')
@@ -481,7 +483,7 @@ class CibConfig(command.UI):
     def do_default_timeouts(self, context, *args):
         "usage: default-timeouts <id> [<id>...]"
         if not cib_factory.is_cib_sane():
-            return False
+            context.fatal_error("CIB is not valid")
         return cib_factory.default_timeouts(*args)
 
     @command.skill_level('administrator')
@@ -489,7 +491,7 @@ class CibConfig(command.UI):
     def do_rename(self, context, old_id, new_id):
         "usage: rename <old_id> <new_id>"
         if not cib_factory.is_cib_sane():
-            return False
+            context.fatal_error("CIB is not valid")
         return cib_factory.rename(old_id, new_id)
 
     @command.skill_level('administrator')
@@ -497,13 +499,12 @@ class CibConfig(command.UI):
     def do_erase(self, context, nodes=None):
         "usage: erase [nodes]"
         if not cib_factory.is_cib_sane():
-            return False
-        if nodes:
-            if nodes != 'nodes':
-                context.fatal_error("Expected 'nodes' (found '%s')" % (nodes))
-            return cib_factory.erase_nodes()
-        else:
+            context.fatal_error("CIB is not valid")
+        if nodes is None:
             return cib_factory.erase()
+        if nodes != 'nodes':
+            context.fatal_error("Expected 'nodes' (found '%s')" % (nodes))
+        return cib_factory.erase_nodes()
 
     @command.skill_level('administrator')
     def do_refresh(self, context):

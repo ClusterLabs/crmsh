@@ -15,4 +15,4 @@ ERROR: 6: cib.delete: regtest shadow CIB is in use
 .INP: use
 .INP: delete regtest
 .EXT >/dev/null </dev/null crm_shadow -D 'regtest' --force
-INFO: 8: regtest shadow CIB deleted
+INFO: 8: cib.delete: regtest shadow CIB deleted
