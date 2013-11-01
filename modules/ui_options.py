@@ -20,6 +20,7 @@ import sys
 import command
 import completers
 from msg import UserPrefs, Options
+import vars
 
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
@@ -116,6 +117,6 @@ class CliOptions(command.UI):
 
     def end_game(self, no_questions_asked=False):
         if no_questions_asked and not options.interactive:
-            self.save_options("save")
+            self.do_save(None)
 
 # vim:ts=4:sw=4:et:
