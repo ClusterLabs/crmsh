@@ -17,9 +17,15 @@
 #
 
 import command
+import completers as compl
 import utils
 import ui_utils
+import vars
 from cibstatus import CibStatus
+
+
+cib_status = CibStatus.getInstance()
+_status_node_list = compl.call(cib_status.status_node_list)
 
 
 class CibStatusUI(command.UI):
@@ -28,51 +34,51 @@ class CibStatusUI(command.UI):
     '''
     name = "cibstatus"
 
-    def __init__(self):
-        command.UI.__init__(self)
-        self.cib_status = CibStatus.getInstance()
-
     @command.skill_level('expert')
     def do_load(self, context, org):
         "usage: load {<file>|shadow:<cib>|live}"
-        return self.cib_status.load(org)
+        return cib_status.load(org)
 
     @command.skill_level('expert')
     def do_save(self, context, dest=None):
         "usage: save [<file>|shadow:<cib>]"
-        return self.cib_status.save(dest)
+        return cib_status.save(dest)
 
     @command.skill_level('administrator')
     def do_origin(self, context):
         "usage: origin"
-        state = self.cib_status.modified and " (modified)" or ""
-        print "%s%s" % (self.cib_status.origin, state)
+        state = cib_status.modified and " (modified)" or ""
+        print "%s%s" % (cib_status.origin, state)
 
     @command.skill_level('administrator')
+    @command.completers(compl.choice(['changed']))
     def do_show(self, context, changed=""):
         "usage: show [changed]"
         if changed:
             if changed != "changed":
                 context.fatal_error("Expected 'changed', got '%s'" % (changed))
-            return self.cib_status.list_changes()
-        return self.cib_status.show()
+            return cib_status.list_changes()
+        return cib_status.show()
 
     @command.skill_level('administrator')
+    @command.completers(compl.booleans)
     def do_quorum(self, context, opt):
         "usage: quorum <bool>"
         if not utils.verify_boolean(opt):
             context.fatal_error("%s: bad boolean option" % opt)
-        return self.cib_status.set_quorum(utils.is_boolean_true(opt))
+        return cib_status.set_quorum(utils.is_boolean_true(opt))
 
     @command.skill_level('expert')
+    @command.completers(_status_node_list, compl.choice(vars.node_states))
     def do_node(self, context, node, state):
         "usage: node <node> {online|offline|unclean}"
-        return self.cib_status.edit_node(node, state)
+        return cib_status.edit_node(node, state)
 
     @command.skill_level('expert')
+    @command.completers(compl.null, compl.choice(cib_status.ticket_ops.keys()))
     def do_ticket(self, context, ticket, subcmd):
         "usage: ticket <ticket> {grant|revoke|activate|standby}"
-        return self.cib_status.edit_ticket(ticket, subcmd)
+        return cib_status.edit_ticket(ticket, subcmd)
 
     @command.skill_level('expert')
     def do_op(self, context, op, rsc, rc, op_status=None, node=''):
@@ -89,14 +95,15 @@ class CibStatusUI(command.UI):
                 num_op_status = vars.lrm_status_codes[op_status]
             if not num_op_status.isdigit():
                 context.fatal_error("Invalid operation status '%s'" % num_op_status)
-        return self.cib_status.edit_op(op, rsc, num_rc, num_op_status, node)
+        return cib_status.edit_op(op, rsc, num_rc, num_op_status, node)
 
     @command.skill_level('administrator')
     def do_run(self, context, *args):
         "usage: run [nograph] [v...] [scores] [utilization]"
-        return ui_utils.ptestlike(self.cib_status.run, '', context.get_command_name(), args)
+        return ui_utils.ptestlike(cib_status.run, '', context.get_command_name(), args)
 
     @command.skill_level('administrator')
     def do_simulate(self, context, *args):
         "usage: simulate [nograph] [v...] [scores] [utilization]"
-        return ui_utils.ptestlike(self.cib_status.simulate, '', context.get_command_name(), args)
+        return ui_utils.ptestlike(cib_status.simulate, '', context.get_command_name(), args)
+
