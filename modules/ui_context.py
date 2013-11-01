@@ -236,8 +236,11 @@ class Context(object):
         return rv
 
     def should_wait(self):
-        if not user_prefs.wait or not self.command_info.wait:
+        if not user_prefs.wait:
             return False
+
+        if self.command_info.wait:
+            return True
 
         by_level = self.current_level().should_wait()
         transit_or_noninteractive = self.is_in_transit() or not options.interactive
