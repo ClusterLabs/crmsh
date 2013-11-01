@@ -174,6 +174,12 @@ def last_keyword(words, keyw):
     return None
 
 
+def _property_completer(args):
+    '''context-sensitive completer'''
+    agent = ra.get_properties_meta()
+    return _prim_params_completer(agent, args)
+
+
 def primitive_complete_complex(args):
     '''
     This completer depends on the content of the line, i.e. on
@@ -655,13 +661,13 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    #@command.completers_repeating(property_complete)
+    @command.completers_repeating(_property_completer)
     def do_property(self, context, *args):
         "usage: property [$id=<set_id>] <option>=<value>"
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    #@command.completers_repeating(prim_complete_meta)
+    @command.completers_repeating(_prim_meta_completer)
     def do_rsc_defaults(self, context, *args):
         "usage: rsc_defaults [$id=<set_id>] <option>=<value>"
         return self.__conf_object(context.get_command_name(), *args)
