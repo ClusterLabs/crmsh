@@ -1,4 +1,5 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
+# Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -15,410 +16,258 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+'''
+The commands exposed by this module all
+get their data from the doc/crm.8.txt text
+file. In that file, there are help for
+ - topics
+ - levels
+ - commands in levels
+
+The help file is lazily loaded when the first
+request for help is made.
+
+All help is in the following form in the manual:
+[[cmdhelp_<level>_<cmd>,<short help text>]]
+=== ...
+Long help text.
+...
+[[cmdhelp_<level>_<cmd>,<short help text>]]
+
+Help for the level itself is like this:
+
+[[cmdhelp_<level>,<short help text>]]
+'''
+
 import os
 import re
-from cache import WCache
-from utils import odict, page_string
-import vars
-from msg import common_info, common_err, common_debug, common_warn
+from utils import page_string
+from msg import common_err
 import config
-
-# this table needs to match cmd_table of TopLevel in ui.py
-init_help_tab = {
-    "options": ("user preferences", """
-Several user preferences are available. Note that it is possible
-to save the preferences to a startup file.
-"""),
-    "cib": ("manage shadow CIBs", """
-A shadow CIB is a regular cluster configuration which is kept in
-a file. The CRM and the CRM tools may manage a shadow CIB in the
-same way as the live CIB (i.e. the current cluster configuration).
-A shadow CIB may be applied to the cluster in one step.
-"""),
-    "resource": ("resources management", """
-Everything related to resources management is available at this
-level. Most commands are implemented using the crm_resource(8)
-program.
-"""),
-    "node": ("nodes management", """
-A few node related tasks such as node standby are implemented
-here.
-"""),
-    "ra": ("resource agents information center", """
-This level contains commands which show various information about
-the installed resource agents. It is available both at the top
-level and at the `configure` level.
-"""),
-    "configure": ("CRM cluster configuration", """
-The configuration level.
-
-Note that you can change the working CIB at the cib level. It is
-advisable to configure shadow CIBs and then commit them to the
-cluster.
-"""),
-    "history": ("CRM cluster history", """
-The history level.
-
-Examine Pacemaker's history: node and resource events, logs.
-"""),
-    "site": ("Geo-cluster support", """
-The site level.
-
-Geo-cluster related management.
-"""),
-}
+import clidisplay
+from ordereddict import odict
 
 
-def load_init_help_tab(help_tab, levels):
-    help_tab["."] = ("", """
-This is crm shell, a Pacemaker command line interface.
-""")
-    for lvl in levels:
-        try:
-            help_tab[lvl] = init_help_tab[lvl]
-        except:
-            pass
-    help_tab["status"] = ("show cluster status", """
-Show cluster status. The status is displayed by crm_mon. Supply
-additional arguments for more information or different format.
-See crm_mon(8) for more details.
+class HelpEntry(object):
+    def __init__(self, short_help, long_help=''):
+        self.short = short_help
+        self.long = long_help
 
-Usage:
-...............
-        status [<option> ...]
+    def paginate(self):
+        '''
+        Display help, paginated.
+        Replace asciidoc syntax with colorized output where possible.
+        '''
+        short_help = self.short
+        long_help = self.long
+        if long_help:
+            display = clidisplay.CliDisplay.getInstance()
+            short_help = display.attr_name(short_help)
+            long_help = re.sub(r'`([^`]+)`', display.keyword(r'\1'), long_help)
+        page_string(short_help + '\n' + long_help)
 
-        option :: bynode | inactive | ops | timing | failcounts
-...............
-""")
+    def __str__(self):
+        if self.long:
+            return self.short + '\n' + self.long
+        return self.short
+
+    def __repr__(self):
+        return str(self)
 
 
-#
-# help or make users feel less lonely
-#
-def add_shorthelp(topic, shorthelp, short_tab):
+HELP_FILE = os.path.join(config.DATADIR, config.PACKAGE, "crm.8.txt")
+
+_DEFAULT = HelpEntry('No help available')
+_REFERENCE_RE = re.compile(r'<<[^,]+,(.+)>>')
+
+# loaded on demand
+# _LOADED is set to True when an attempt
+# has been made (so it won't be tried again)
+_LOADED = False
+_TOPICS = odict()
+_LEVELS = odict()
+_COMMANDS = odict()
+
+
+def help_overview():
     '''
-    Join topics ("%s,%s") if they share the same short
-    description.
+    Returns an overview of all available
+    topics and commands.
     '''
-    for i in range(len(short_tab)):
-        if short_tab[i][1] == shorthelp:
-            short_tab[i][0] = "%s,%s" % (short_tab[i][0], topic)
-            return
-    short_tab.append([topic, shorthelp])
+    _load_help()
+    s = "Available topics:\n\n"
+    for title, topic in _TOPICS.iteritems():
+        s += "\t%-16s %s\n" % (title, topic.short)
+    s += "\n"
+    s += "Available commands:\n\n"
+    for title, level in _LEVELS.iteritems():
+        s += "\t%-16s %s\n" % (title, level.short)
+        if title in _COMMANDS:
+            for cmdname, cmd in _COMMANDS[title].iteritems():
+                s += "\t\t%-16s %s\n" % (cmdname, cmd.short)
+            s += "\n"
+    return HelpEntry('Help overview for crmsh\n', s)
 
 
-def topic_help(help_tab, topic):
-    if topic not in help_tab:
-        print "Sorry, could not find any help for %s" % topic
-        return False
-    if type(help_tab[topic][0]) == type(()):
-        shorthelp = help_tab[topic][0][0]
-        longhelp = help_tab[topic][0][1]
-    else:
-        shorthelp = help_tab[topic][0]
-        longhelp = help_tab[topic][1]
-    if longhelp:
-        page_string(longhelp)
-    else:
-        print shorthelp
-    return True
-
-
-def add_static_help(help_tab):
-    '''Add help items used everywhere'''
-    help_tab["help"] = ("show help (help topics for list of topics)", """
-The help subsystem consists of the command reference and a list
-of topics. The former is what you need in order to get the
-details regarding a specific command. The latter should help with
-concepts and examples.
-""")
-    help_tab["end"] = ("go back one level", "")
-    help_tab["quit"] = ("exit the program", "")
-
-
-def is_level(s):
-    return len(s.split("_")) == 2
-
-
-def help_short(s):
-    r = re.search("_[^,]+,(.*)\]\]", s)
-    return r and r.group(1) or ''
-
-
-class HelpSystem(object):
+def help_topics():
     '''
-    The help system. All help is in the following form in the
-    manual:
-    [[cmdhelp_<level>_<cmd>,<short help text>]]
-    === ...
-    Long help text.
-    ...
-    [[cmdhelp_<level>_<cmd>,<short help text>]]
-
-    Help for the level itself is like this:
-
-    [[cmdhelp_<level>,<short help text>]]
+    Returns an overview of all available
+    topics.
     '''
-    help_text_file = os.path.join(config.DATADIR, config.PACKAGE, "crm.8.txt")
-    topics_tok = "topics"
+    _load_help()
+    s = ''
+    for title, topic in _TOPICS.iteritems():
+        s += "\t%-16s %s\n" % (title, topic.short)
+    return HelpEntry('Available topics\n', s)
 
-    def __init__(self):
-        self.key_pos = {}
-        self.leveld = {}
-        self.no_help_file = False  # don't print repeatedly messages
-        self.bad_index = False  # don't print repeatedly warnings for bad index
 
-    def get_short_help(self, help_tab):
-        short_tab = []
-        for topic in help_tab:
-            if topic == '.':
-                continue
-            # with odict, for whatever reason, python parses differently:
-            # help_tab["..."] = ("...","...") and
-            # help_tab["..."] = ("...","""
-            # ...""")
-            # a parser bug?
-            if type(help_tab[topic][0]) == type(()):
-                shorthelp = help_tab[topic][0][0]
-            else:
-                shorthelp = help_tab[topic][0]
-            add_shorthelp(topic, shorthelp, short_tab)
-        return short_tab
+def help_topic(topic):
+    '''
+    Returns a help entry for a given topic.
+    '''
+    _load_help()
+    return _TOPICS.get(topic, _DEFAULT)
 
-    def overview(self, help_tab):
-        s = help_tab['.'][1]
-        # cheating here a bit, but ...
-        if "crm shell topics" not in help_tab['.'][1]:
-            s = "%s\nAvailable commands:\n" % s
-        short_tab = self.get_short_help(help_tab)
-        l = [s]
-        for t, d in short_tab:
-# TODO: figure out how to make appending '/' work _only_ in case
-# t is really a level, becase some commands share name with
-# levels (e.g. history resource, history node)
-#            if self.is_level(t):
-#                t = "%s/" % t
-            l.append("\t%-16s %s" % (t, d))
-        page_string("\n".join(l))
 
-    def cmd_help(self, help_tab, topic=''):
-        "help!"
-        # help_tab is an odict (ordered dictionary):
-        # help_tab[topic] = (short_help, long_help)
-        # topic '.' is a special entry for the top level
-        if not help_tab:
-            common_info("sorry, help not available")
-            return False
-        if not topic or topic == "topics":
-            self.overview(help_tab)
-        else:
-            return topic_help(help_tab, topic)
-        return True
+def help_level(level):
+    '''
+    Returns a help entry for a given level.
+    '''
+    _load_help()
+    return _LEVELS.get(level, _DEFAULT)
 
-    def open_file(self, name, mode):
-        try:
-            f = open(name, mode)
-            return f
-        except IOError, msg:
-            common_err("%s open: %s" % (name, msg))
-            common_err("extensive help system is not available")
-            self.no_help_file = True
-            return None
 
-    def drop_index(self):
-        common_info("removing index")
-        os.unlink(vars.index_file)
-        self.key_pos = {}
-        self.leveld = {}
-        self.leveld[self.topics_tok] = []
-        self.bad_index = True
+def help_command(level, command):
+    '''
+    Returns a help entry for a given command
+    '''
+    _load_help()
+    if not level in _COMMANDS:
+        return _DEFAULT
+    return _COMMANDS[level].get(command, _DEFAULT)
 
-    def mk_index(self):
+
+def _is_help_topic(arg):
+    return arg and arg[0].isupper()
+
+
+def help_contextual(context, topic):
+    """
+    Displays and paginates
+    """
+    if (not topic and context == '.'):
+        return help_overview()
+    elif topic == 'topics':
+        return help_topics()
+    elif _is_help_topic(topic):
+        return help_topic(topic)
+    elif topic in _LEVELS:
+        return help_level(topic)
+    return help_command(context, topic)
+
+
+def add_help(entry, topic=None, level=None, command=None):
+    '''
+    Takes a help entry as argument and inserts it into the
+    help system.
+
+    Used to define some help texts statically, for example
+    for 'up' and 'help' itself.
+    '''
+    if topic:
+        if topic not in _TOPICS or _TOPICS[topic] is _DEFAULT:
+            _TOPICS[topic] = entry
+    elif level and command:
+        if level not in _COMMANDS:
+            _COMMANDS[level] = odict()
+        lvl = _COMMANDS[level]
+        if command not in lvl or lvl[command] is _DEFAULT:
+            lvl[command] = entry
+    elif level:
+        if level not in _LEVELS or _LEVELS[level] is _DEFAULT:
+            _LEVELS[level] = entry
+
+
+def _load_help():
+    '''
+    Lazily load and parse crm.8.txt.
+    '''
+    global _LOADED
+    if _LOADED:
+        return
+    _LOADED = True
+
+    def parse_header(line):
+        'returns a new entry'
+        entry = {'type': '', 'name': '', 'short': '', 'long': ''}
+        line = line[2:-3]  # strip [[ and ]]\n
+        info, short_help = line.split(',', 1)
+        entry['short'] = short_help.strip()
+        info = info.split('_')
+        if info[0] == 'topics':
+            entry['type'] = 'topic'
+            entry['name'] = info[1]
+        elif info[0] == 'cmdhelp':
+            if len(info) == 2:
+                entry['type'] = 'level'
+                entry['name'] = info[1]
+            elif len(info) == 3:
+                entry['type'] = 'command'
+                entry['level'] = info[1]
+                entry['name'] = info[2]
+        return entry
+
+    def process(entry):
+        'writes the entry into topics/levels/commands'
+        short_help = entry['short']
+        long_help = entry['long']
+        if long_help.startswith('=='):
+            long_help = long_help.split('\n', 1)[1]
+        helpobj = HelpEntry(short_help, long_help.rstrip())
+        name = entry['name']
+        if entry['type'] == 'topic':
+            _TOPICS[name] = helpobj
+        elif entry['type'] == 'level':
+            _LEVELS[name] = helpobj
+        elif entry['type'] == 'command':
+            lvl = entry['level']
+            if lvl not in _COMMANDS:
+                _COMMANDS[lvl] = odict()
+            _COMMANDS[lvl][name] = helpobj
+
+    def filter_line(line):
+        '''clean up an input line
+         - <<...>> references -> short description
+         - remove surrounding dots from preformatted blocks
         '''
-        Prepare an index file, sorted by topic, with seek positions
-        Do we need a hash on content?
-        '''
-        if self.no_help_file:
-            return False
-        crm_help_v = os.getenv("CRM_HELP_FILE")
-        if crm_help_v:
-            self.help_text_file = crm_help_v
-        help_f = self.open_file(self.help_text_file, "r")
-        if not help_f:
-            return False
-        idx_f = self.open_file(vars.index_file, "w")
-        if not idx_f:
-            return False
-        common_debug("building help index")
-        key_pos = odict()
-        while 1:
-            pos = help_f.tell()
-            s = help_f.readline()
-            if not s:
-                break
-            if s.startswith("[["):
-                r = re.search(r'..([^,]+),', s)
-                if r:
-                    key_pos[r.group(1)] = pos
-        help_f.close()
-        for key in key_pos:
-            print >>idx_f, '%s %d' % (key, key_pos[key])
-        idx_f.close()
-        return True
+        line = _REFERENCE_RE.sub(r'\1', line)
+        if re.match(r'^\.{3,}\n$', line):
+            line = '\n'
+        return line
 
-    def is_index_old(self):
-        try:
-            t_idx = os.path.getmtime(vars.index_file)
-        except:
-            return True
-        try:
-            t_help = os.path.getmtime(self.help_text_file)
-        except:
-            return True
-        return t_help > t_idx
+    def append_cmdinfos():
+        "append command information to level descriptions"
+        for lvlname, level in _LEVELS.iteritems():
+            if lvlname in _COMMANDS:
+                level.long += "\n\nCommands:\n"
+                for cmdname, cmd in _COMMANDS[lvlname].iteritems():
+                    level.long += "\t`%-16s` %s\n" % (cmdname, cmd.short)
 
-    def load_index(self):
-        if self.is_index_old():
-            self.mk_index()
-        self.key_pos = {}
-        self.leveld = {}
-        self.leveld[self.topics_tok] = []
-        idx_f = self.open_file(vars.index_file, "r")
-        if not idx_f:
-            return False
-        cur_lvl = ''
-        for s in idx_f:
-            a = s.split()
-            if len(a) != 2:
-                if not self.bad_index:
-                    common_err("index file corrupt")
-                    idx_f.close()
-                    self.drop_index()
-                    return self.load_index()  # this runs only once
-                return False
-            key = a[0]
-            fpos = long(a[1])
-            if key.startswith("cmdhelp_"):
-                if is_level(key):
-                    if key != cur_lvl:
-                        cur_lvl = key
-                        self.leveld[cur_lvl] = []
-                else:
-                    self.leveld[cur_lvl].append(key)
-            elif key.startswith("%s_" % self.topics_tok):
-                self.leveld[self.topics_tok].append(key)
-            self.key_pos[key] = fpos
-        idx_f.close()
-        return True
-
-    def is_level(self, s):
-        return (("cmdhelp_%s" % s) in self.leveld) or (s in init_help_tab)
-
-    def __filter(self, s):
-        if '<<' in s:
-            return re.sub(r'<<[^,]+,(.+)>>', r'\1', s)
-        else:
-            return s
-
-    def _load_help_one(self, key, skip=2):
-        longhelp = ''
-        self.help_f.seek(self.key_pos[key])
-        shorthelp = help_short(self.help_f.readline())
-        for i in range(skip-1):
-            self.help_f.readline()
-        l = []
-        for s in self.help_f:
-            if l and (s.startswith("[[") or s.startswith("=")):
-                break
-            l.append(self.__filter(s))
-        if l and l[-1] == '\n':  # drop the last line of empty
-            l.pop()
-        if l:
-            longhelp = ''.join(l)
-        if not shorthelp or not longhelp:
-            if not self.bad_index:
-                common_warn("help topic %s not found" % key)
-                self.drop_index()
-        return shorthelp, longhelp
-
-    def cmdhelp(self, s):
-        if not self.key_pos and not self.load_index():
-            return None, None
-        if not s in self.key_pos:
-            if not self.bad_index:
-                common_warn("help topic %s not found" % s)
-                self.drop_index()
-            return None, None
-        return self._load_help_one(s)
-
-    def _load_topics(self, help_tab):
-        '''
-        Get the topic help text.
-        '''
-        lvl_s = self.topics_tok
-        if not lvl_s in self.leveld:
-            if not self.bad_index:
-                common_warn("help table for topics not found")
-                self.drop_index()
-            return None
-        help_tab["."] = ["", """
-List of crm shell topics.
-"""]
-        try:
-            for key in self.leveld[lvl_s]:
-                cmd = key[len(lvl_s)+1:]
-                help_tab[cmd] = self._load_help_one(key, skip=1)
-        except:
-            pass
-
-    def _load_cmd_level(self, lvl, help_tab):
-        '''
-        Get the command help text.
-        '''
-        lvl_s = "cmdhelp_%s" % lvl
-        if not lvl_s in self.leveld:
-            if not self.bad_index:
-                common_warn("help table for level %s not found" % lvl)
-                self.drop_index()
-            return
-        common_debug("loading help table for level %s" % lvl)
-        help_tab["."] = self._load_help_one(lvl_s)
-        try:
-            for key in self.leveld[lvl_s]:
-                cmd = key[len(lvl_s)+1:]
-                help_tab[cmd] = self._load_help_one(key)
-        except:
-            pass
-        add_static_help(help_tab)
-
-    def _load_level(self, lvl):
-        '''
-        For the given level, create a help table.
-        '''
-        if wcache.is_cached("lvl_help_tab_%s" % lvl):
-            return wcache.retrieve("lvl_help_tab_%s" % lvl)
-        if not self.key_pos and not self.load_index():
-            return None
-        self.help_f = self.open_file(self.help_text_file, "r")
-        if not self.help_f:
-            return None
-        help_tab = odict()
-        if lvl == self.topics_tok:
-            self._load_topics(help_tab)
-        else:
-            self._load_cmd_level(lvl, help_tab)
-        self.help_f.close()
-        return help_tab
-
-    def load_level(self, lvl):
-        help_tab = self._load_level(lvl)
-        if self.bad_index:  # try again
-            help_tab = self._load_level(lvl)
-        return wcache.store("lvl_help_tab_%s" % lvl, help_tab)
-
-    def load_topics(self):
-        return self.load_level(self.topics_tok)
-
-wcache = WCache.getInstance()
+    try:
+        name = os.getenv("CRM_HELP_FILE") or HELP_FILE
+        helpfile = open(name, 'r')
+        entry = None
+        for line in helpfile:
+            if line.startswith('[['):
+                if entry is not None:
+                    process(entry)
+                entry = parse_header(line)
+            elif entry is not None:
+                entry['long'] += filter_line(line)
+        helpfile.close()
+        append_cmdinfos()
+    except IOError, msg:
+        common_err("%s open: %s" % (name, msg))
+        common_err("extensive help system is not available")
 
 # vim:ts=4:sw=4:et:
