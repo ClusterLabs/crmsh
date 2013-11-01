@@ -19,78 +19,94 @@ SYNOPSIS
 [[topics_Description,Program description]]
 DESCRIPTION
 -----------
-Pacemaker configuration is stored in a CIB file (Cluster
-Information Base). The CIB is a set of instructions coded in XML.
-Editing the CIB is a challenge, not only due to its complexity
-and a wide variety of options, but also because XML is more
-computer than user friendly. The `crm` shell alleviates this
-issue significantly by introducing small and simple configuration
-language. The CIB is translated into this language on the fly.
+The `crm` shell is a command-line based cluster configuration and
+management tool. Its goal is to assist as much as possible with the
+configuration and maintenance of Pacemaker-based High Availability
+clusters.
 
-`crm` is also a management tool. For management tasks it relies
-almost exclusively on other command line tools, such as
-`crm_resource(8)` or `crm_attribute(8)`.  Use of these programs
-is, however, plagued by the notorious weakness common to all UNIX
-tools: a multitude of options, necessary for operation and yet
-very hard to remember. `crm` tries to present a consistent
-interface to the user and to hide the arcane detail.
+`crm` works both as a command-line tool to be called directly from the
+system shell, and as an interactive shell with extensive tab
+completion and help.
 
-It may be used either as an interactive shell or for single
-commands directly on the shell's command line. It is also
-possible to feed it a set of commands from standard input or a
-file, thus turning it into a scripting tool. Templates with ready
-made configurations may help newbies learn about the cluster
-configuration or facilitate testing procedures.
+The primary focus of the `crm` shell is to provide a simplified and
+consistent interface to Pacemaker, but it also provides tools for
+managing the creation and configuration of High Availability clusters
+from scratch. To learn more about this aspect of `crm`, see the
+`cluster` section below.
 
-The `crm` shell is line oriented: every command must start and
-finish on the same line. It is possible to use a continuation
-character (`\`) to write one command in two or more lines. The
-continuation character is commonly used when displaying
-configurations.
+The Pacemaker configuration is stored in something called a CIB file,
+where CIB stands for Cluster Information Base. The CIB is a set of
+instructions coded in XML which is synchronized across the cluster.
+
+Editing the CIB is a challenge, not only due to its complexity and
+wide variety of options, but also because XML is more computer than
+user friendly. To help with this task, the `crm` shell provides a
+small and simple line-oriented configuration language consistent with
+the other commands available in the shell. For more information about
+this language and how to use it, see the `configure` section below.
+
+`crm` provides a consistent and well-documented interface to most of
+the management tools included in Pacemaker, for example
+`crm_resource(8)` or `crm_attribute(8)`. Instead of having to remember
+the various flags and options available for each tool, `crm` hides all
+of the arcane detail.
+
+`crm` can also function as a cluster scripting tool, and can be fed
+multi-line sets of commands either directly from standard input or via
+a file. Templates with ready made configurations may help newbies
+learn about the cluster configuration or facilitate testing
+procedures.
+
+The `crm` shell is line oriented: every command must start and finish
+on the same line. It is possible to use a continuation character (`\`)
+to write one command in two or more lines. The continuation character
+is commonly used when displaying configurations.
 
 OPTIONS
 -------
 *-f, --file*='FILE'::
-	Load commands from the given file. If the file is `-` then
-    use terminal `stdin`.
+	Load commands from the given file. If a dash `-` is used in place
+    of a file name, `crm` will read commands from the shell standard
+    input (`stdin`).
 
 *-c, --cib*='CIB'::
-    Start the session with the given shadow CIB file.
-    Equivalent to `cib use`.
+    Start the session using the given shadow CIB file.
+    Equivalent to `cib use <CIB>`.
 
 *-D, --display=*'OUTPUT_TYPE'::
 	Choose one of the output options: `plain`, `color`, or
-    `uppercase`. The default is `color` if the terminal emulation
-    supports colors. Otherwise, `plain` is used.
+	`uppercase`. The default is `color` if the terminal emulation
+	supports colors. Otherwise, `plain` is used.
 
 *-F, --force*::
-    Make `crm` proceed with doing changes even though it would
-    normally ask user to confirm some of them. Mostly useful in
-    scripts.
+    Make `crm` proceed with applying changes where it would normally
+    ask the user to confirm before proceeding. This option is mainly
+    useful in scripts, and should be used with care.
 
 *-w, --wait*::
     Make `crm` wait for the cluster transition to finish (for the
     changes to take effect) after each processed line.
 
 *-H, --history*='DIR|FILE'::
-    The `history` commands can examine either live cluster
-    (default) or a report generated by `hb_report`. Use this
-    option to specify a directory or file containing the report.
+    The `history` commands can either work directly on the live
+    cluster (default), or on a report generated by the `report`
+    command. Use this option to specify a directory or file containing
+    the previously generated report.
 
 *-h, --help*::
     Print help page.
 
 *--version*::
-    Print crmsh version and build information (Mercurial Hg
-    changeset hash).
+    Print crmsh version and build information (Mercurial Hg changeset
+    hash).
 
 *-R, --regression-tests*::
-    Run in the regression test mode. Used mainly by the
-    regression testing suite.
+    Run in the regression test mode. Used mainly by the regression
+    testing suite.
 
 *-d, --debug*::
-    Print some debug information. Used by developers. [Not yet
-    refined enough to print useful information for other users.]
+    Print some debug information. Used by developers. [Not yet refined
+    enough to print useful information for other users.]
 
 [[topics_Introduction,Introduction to the user interface]]
 == Introduction to the user interface
@@ -100,20 +116,29 @@ interface. We begin with an informal introduction so that the
 reader may get acquainted with it and get a general feeling of
 the tool. It is probably best just to give some examples:
 
+The main purpose of `crm` is to provide a simple yet powerful
+interface to the cluster stack. To get started and to give new users a
+feel for how to use it, lets just jump straight into some examples:
+
 1. Command line (one-shot) use:
 
+........
         # crm resource stop www_app
+........
 
 2. Interactive use:
 
+........
         # crm
         crm(live)# resource
         crm(live)resource# unmanage tetris_1
-        crm(live)resource# end
+        crm(live)resource# up
         crm(live)# node standby node4
+........
 
 3. Cluster configuration:
 
+........
     # crm configure<<EOF
       #
       # resources
@@ -153,39 +178,46 @@ the tool. It is probably best just to give some examples:
       property stonith-enabled=true
       commit
     EOF
+........
 
-If you've ever done a CRM style configuration, you should be able
-to understand the above examples without much difficulties.  The
-shell should provide a means to manage the cluster efficiently or
-put together a configuration in a concise manner.
+If you have ever done a CRM style configuration before, the examples
+above should be immediately understandable without too much
+difficulty. The `crm` provides a means to efficiently manage a
+cluster, and to put a configuration together in a simple and concise manner.
 
-The `(live)` string in the prompt signifies that the current CIB
+The `crm` interface is hierarchical, with commands organized into
+separate levels by functionality. To list the available levels and
+commands, either execute `help <level>`, or, if at the top level of
+the shell, simply typing `help` will provide an overview of all
+available levels and commands.
+
+The `(live)` string in the `crm` prompt signifies that the current CIB
 in use is the cluster live configuration. It is also possible to
-work with the so-called shadow CIBs, i.e. configurations which
-are stored in files and aren't active, but may be applied at any
-time to the cluster.
-
-Since the CIB is hierarchical such is the interface too. There
-are several levels and entering each of them enables the user to
-use a certain set of commands.
+work with so-called shadow CIBs. These are separate, inactive
+configurations stored in files, that can be applied and thereby
+replace the live configuration at any time.
 
 [[topics_Shadows,Shadow CIB usage]]
 == Shadow CIB usage
 
-Shadow CIB is a normal cluster configuration stored in a file.
-They may be manipulated in the same way like the _live_ CIB, but
-these changes have no effect on the cluster resources. The
-administrator may choose to apply any of them to the cluster,
-thus replacing the running configuration with the one which is in
-the shadow CIB. The `crm` prompt always contains the name of the
-configuration which is currently in use or string _live_ if we
-are using the current cluster configuration.
+A Shadow CIB is a normal cluster configuration stored in a file.
+They may be manipulated in much the same way as the _live_ CIB, with
+the key difference that changes to a shadow CIB have no effect on the
+actual cluster resources. An administrator may choose to apply any of
+them to the cluster, thus replacing the running configuration with the
+one found in the shadow CIB.
 
-At the configure level no changes take place before the `commit`
-command. Sometimes though, the administrator may start working
-with the running configuration, but change mind and instead of
-committing the changes to the cluster save them to a shadow CIB.
-This short `configure` session excerpt shows how:
+The `crm` prompt always contains the name of the configuration which
+is currently in use, or the string _live_ if using the live cluster
+configuration.
+
+When editing the configuration in the `configure` level, no changes
+are actually applied until the `commit` command is executed. It is
+possible to start editing a configuration as usual, but instead of
+committing the changes to the active CIB, save them to a shadow CIB.
+
+The following example `configure` session demonstrates how this can be
+done:
 ...............
     crm(live)configure# cib new test-2
     INFO: test-2 shadow CIB created
