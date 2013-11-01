@@ -349,10 +349,13 @@ def do_work(user_args):
             if options.interactive and not options.batch:
                 # TODO: fix how color interacts with readline,
                 # seems the color prompt messes it up
-                #termctrl = TerminalController.getInstance()
-                #cli_display = CliDisplay.getInstance()
+                termctrl = TerminalController.getInstance()
+                cli_display = CliDisplay.getInstance()
                 promptstr = "crm(%s)%s# " % (cib_prompt(), context.prompt())
-                vars.prompt = promptstr  # termctrl.render(cli_display.prompt(promptstr))
+                if cli_display.colors_enabled():
+                    vars.prompt = termctrl.render_prompt(cli_display.prompt(promptstr))
+                else:
+                    vars.prompt = promptstr
             inp = multi_input(vars.prompt)
             if inp is None:
                 if options.interactive:

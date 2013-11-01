@@ -46,6 +46,9 @@ class CliDisplay(Singleton):
             return "${BOLD}${%s}%s${NORMAL}" % \
                 (user_prefs.colorscheme[clrnum].upper(), s)
 
+    def colors_enabled(self):
+        return 'color' in user_prefs.output
+
     def keyword(self, kw):
         s = kw
         if "uppercase" in user_prefs.output:
@@ -72,7 +75,7 @@ class CliDisplay(Singleton):
         return s
 
     def prompt(self, s):
-        return self._colorize(s, 'cyan', 'bold')
+        return self._colorize(s, 'green', 'bold')
 
     def help_header(self, s):
         return self._colorize(s, 'blue', 'bold', 'underline')
