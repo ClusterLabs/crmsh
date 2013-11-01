@@ -201,23 +201,31 @@ def _is_help_topic(arg):
     return arg and arg[0].isupper()
 
 
-def help_contextual(context, topic):
+def _is_command(level, command):
+    return level in _COMMANDS and command in _COMMANDS[level]
+
+
+def _is_level(level):
+    return level in _LEVELS
+
+
+def help_contextual(context, subject, subtopic):
     """
-    Displays and paginates
+    Returns contextual help
     """
-    if (not topic and context == '.'):
+    if context == '.' and subject is None:
         return help_overview()
-    elif not topic:
-        return help_level(context)
-    elif topic == 'topics':
+    if subject == 'topics':
         return help_topics()
-    elif _is_help_topic(topic):
-        return help_topic(topic)
-    elif context in _COMMANDS and topic in _COMMANDS[context]:
-        return help_command(context, topic)
-    elif topic in _LEVELS:
-        return help_level(topic)
-    return help_command(context, topic)
+    if subject is None:
+        return help_level(context)
+    if subtopic is not None:
+        return help_command(subject, subtopic)
+    if _is_command(context, subject):
+        return help_command(context, subject)
+    if _is_level(subject):
+        return help_level(subject)
+    return _DEFAULT
 
 
 def add_help(entry, topic=None, level=None, command=None):

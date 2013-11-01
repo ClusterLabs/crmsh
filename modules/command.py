@@ -328,10 +328,8 @@ Examples:
     @completer(_help_completer)
     def do_help(self, context, subject=None, subtopic=None):
         """usage: help topic|level|command"""
-        if subtopic is None:
-            help_module.help_contextual(context.level_name(), subject).paginate()
-        else:
-            help_module.help_contextual(subject, subtopic).paginate()
+        h = help_module.help_contextual(context.level_name(), subject, subtopic)
+        h.paginate()
 
     def get_completions(self):
         '''
