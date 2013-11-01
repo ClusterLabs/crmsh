@@ -336,6 +336,13 @@ class UserPrefs(Singleton):
             n = attr.replace("_", "-")
             print >> f, '%s "%s"' % (n, self._options[attr])
 
+    def print_option(self, name):
+        try:
+            key = name.replace('-', '_')
+            print '%s "%s"' % (name, self._options[key])
+        except KeyError:
+            print >>sys.stderr, "ERROR: %s not set" % (name)
+
     def save_options(self, rc_file):
         #print "saving options to %s" % rc_file
         try:
