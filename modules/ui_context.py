@@ -113,7 +113,7 @@ class Context(object):
                         self.enter_level(self.command_info.level)
                     else:
                         # use the completer for the command
-                        return self.command_info.complete(tokens)
+                        return self.command_info.complete(self, tokens)
                 # reached the end on a valid level.
                 # return the completions for the previous level.
                 if self.previous_level():

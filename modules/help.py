@@ -49,8 +49,8 @@ from ordereddict import odict
 
 
 class HelpFilter(object):
-    _B0 = re.compile(r'^\.{3,}$')
-    _B1 = re.compile(r'^\*{3,}$')
+    _B0 = re.compile(r'^\.{4,}')
+    _B1 = re.compile(r'^\*{4,}')
     _QUOTED = re.compile(r'`([^`]+)`')
 
     def __init__(self, display):
@@ -102,6 +102,8 @@ class HelpEntry(object):
         prefix = ''
         if self.alias_for:
             prefix = helpfilter("(Redirected from `%s` to `%s`)\n" % self.alias_for)
+
+        print long_help
 
         page_string(short_help + '\n' + prefix + long_help)
 
@@ -162,6 +164,11 @@ def help_topics():
     for title, topic in _TOPICS.iteritems():
         s += "\t`%-16s` %s\n" % (title, topic.short)
     return HelpEntry('Available topics\n', s)
+
+
+def list_help_topics():
+    _load_help()
+    return _TOPICS.keys()
 
 
 def help_topic(topic):
@@ -331,8 +338,13 @@ def _load_help():
                 if entry is not None:
                     process(entry)
                 entry = parse_header(line)
+            elif entry is not None and line.startswith('===') and entry['long']:
+                process(entry)
+                entry = None
             elif entry is not None:
                 entry['long'] += filter_line(line)
+        if entry is not None:
+            process(entry)
         helpfile.close()
         append_cmdinfos()
         fixup_help_aliases()

@@ -80,10 +80,10 @@ class RA(command.UI):
             utils.multicolumn(ra.ra_types(c, p))
 
     @command.skill_level('administrator')
-    @command.alias('info')
+    @command.alias('meta')
     @command.completers(complete_class_provider_type)
-    def do_meta(self, context, *args):
-        "usage: meta [<class>:[<provider>:]]<type>"
+    def do_info(self, context, *args):
+        "usage: info [<class>:[<provider>:]]<type>"
         if len(args) > 1:  # obsolete syntax
             ra_type = args[0]
             ra_class = args[1]

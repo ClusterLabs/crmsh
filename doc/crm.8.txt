@@ -874,7 +874,7 @@ Example:
 ...............
 
 [[cmdhelp_ra_meta,show meta data for a RA]]
-==== `meta` (`info`)
+==== `info` (`meta`)
 
 Show the meta-data of a resource agent type. This is where users
 can find information on how to use a resource agent. It is also

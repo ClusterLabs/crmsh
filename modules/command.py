@@ -183,6 +183,20 @@ def completers_repeating(*fns):
     return inner
 
 
+def _cd_completer(args, context):
+    'TODO: make better completion'
+    ret = []
+    if context.previous_level():
+        ret += ['..']
+    return ret + [l for l in context.current_level().get_completions()
+                  if context.current_level().is_sublevel(l)]
+
+
+def _help_completer(args, context):
+    'TODO: make better completion'
+    return help_module.list_help_topics() + context.current_level().get_completions()
+
+
 class UI(object):
     '''
     Base class for all ui levels.
@@ -231,6 +245,24 @@ Navigates back in the user interface.
         self.end_game()
         context.up()
 
+    @help('''List levels and commands
+Lists the available sublevels and commands
+at the current level.
+''')
+    def do_ls(self, context):
+        '''
+        Shows list of places to go and commands to call
+        '''
+        out = []
+        if context.previous_level():
+            out = ['..']
+        out += context.current_level().get_completions()
+        for i, o in enumerate(out):
+            print '%-16s' % (o),
+            if ((i - 2) % 3) == 0:
+                print ''
+        print ''
+
     @help('''Navigate the level structure
 This command works similar to how `cd` works in a regular unix
 system shell. `cd ..` returns to the previous level.
@@ -250,7 +282,7 @@ Examples:
         cd configure/ra
 ....
 ''')
-    #@completers_repeating(lambda arg: ?)
+    @completer(_cd_completer)
     def do_cd(self, context, optarg='..'):
         path = optarg.split('/', 1)
         if len(path) == 1:
@@ -293,6 +325,7 @@ Examples:
         help quit
 ....
 ''')
+    @completer(_help_completer)
     def do_help(self, context, subject=None, subtopic=None):
         """usage: help topic|level|command"""
         if subtopic is None:
@@ -312,6 +345,13 @@ Examples:
         if the child is not found.
         '''
         return self._children.get(name)
+
+    def is_sublevel(self, name):
+        '''
+        True if the given name is a sublevel of this level
+        '''
+        sub = self._children.get(name)
+        return sub and sub.type == 'level'
 
     @classmethod
     def init_ui(self):
@@ -392,7 +432,7 @@ class ChildInfo(object):
         if self.type == 'level' and self.level:
             self.children = self.level.init_ui()
 
-    def complete(self, args):
+    def complete(self, context, args):
         '''
         Execute the completer for this command with the given arguments.
         The completer mostly completes based on argument position, but
@@ -400,9 +440,13 @@ class ChildInfo(object):
         - make args[0] be name of command
         '''
         #import sys
-        #print >>sys.stderr, self.name, args
         if self.completer is not None:
-            return self.completer([self.name] + args)
+            specs = inspect.getargspec(self.completer)
+            if 'context' in specs.args:
+                #print >>sys.stderr, self.name, context, args
+                return self.completer([self.name] + args, context)
+            else:
+                return self.completer([self.name] + args)
         return []
 
     def __repr__(self):
