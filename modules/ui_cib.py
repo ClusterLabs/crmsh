@@ -85,7 +85,7 @@ class CibShadow(command.UI):
             new_cmd = "%s --force" % new_cmd
         if utils.ext_cmd(new_cmd) == 0:
             context.info("%s shadow CIB created" % name)
-            self.use("use", name)
+            self.do_use(context, name)
             if "withstatus" in opt_l:
                 cib_status.load("shadow:%s" % name)
 
@@ -120,7 +120,7 @@ class CibShadow(command.UI):
         if not xmlutil.pe2shadow(infile, name):
             context.fatal_error("Error copying PE file to shadow: %s -> %s" % (infile, name))
         # use the shadow and load the status from there
-        return self.use("use", name, "withstatus")
+        return self.do_use(context, name, "withstatus")
 
     @command.skill_level('administrator')
     @command.completers(compl.shadows)
