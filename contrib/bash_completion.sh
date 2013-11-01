@@ -28,6 +28,6 @@ _crm() {
         return 0
     fi
 
-    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$(2>/dev/null ./crm --compgen "${COMP_POINT}" "${COMP_LINE}")' -- "$cur"))
+    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$(2>/dev/null crm --compgen "${COMP_POINT}" "${COMP_LINE}")' -- "$cur"))
 } &&
 complete -o bashdefault -o default -F _crm crm     || complete -o default -F _crm crm
