@@ -39,6 +39,13 @@ class CliDisplay(Singleton):
             return "${%s}%s${NORMAL}" % \
                 (user_prefs.colorscheme[clrnum].upper(), s)
 
+    def _boldcolorstring(self, clrnum, s):
+        if self.no_pretty:
+            return s
+        else:
+            return "${BOLD}${%s}%s${NORMAL}" % \
+                (user_prefs.colorscheme[clrnum].upper(), s)
+
     def keyword(self, kw):
         s = kw
         if "uppercase" in user_prefs.output:
@@ -52,6 +59,36 @@ class CliDisplay(Singleton):
             return self._colorstring(n, s)
         else:
             return s
+
+    def boldword(self, n, s):
+        if "color" in user_prefs.output:
+            return self._boldcolorstring(n, s)
+        else:
+            return s
+
+    def _colorize(self, s, *colors):
+        if 'color' in user_prefs.output and not self.no_pretty:
+            return ''.join(('${%s}' % clr.upper()) for clr in colors) + s + '${NORMAL}'
+        return s
+
+    def prompt(self, s):
+        return self._colorize(s, 'cyan', 'bold')
+
+    def help_header(self, s):
+        return self._colorize(s, 'yellow', 'bold')
+
+    def help_keyword(self, s):
+        return self._colorize(s, 'white', 'bold')
+
+    def help_begin_block(self):
+        if 'color' in user_prefs.output and not self.no_pretty:
+            return '${CYAN}'
+        return ''
+
+    def help_end_block(self):
+        if 'color' in user_prefs.output and not self.no_pretty:
+            return '${NORMAL}'
+        return ''
 
     def id(self, s):
         return self.otherword(1, s)
