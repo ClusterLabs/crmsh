@@ -310,11 +310,14 @@ def do_work(user_args):
     context = ui_context.Context(tree)
 
     if options.shadow:
-        context.run("cib use " + options.shadow)
+        if not context.run("cib use " + options.shadow):
+            sys.exit(1)
+
     # this special case is silly, but we have to keep it to
     # preserve the backward compatibility
     if len(user_args) == 1 and user_args[0].startswith("conf"):
-        context.run("configure")
+        if not context.run("configure"):
+            sys.exit(1)
     elif len(user_args) > 0:
         err_buf.reset_lineno()
         # we're not sure yet whether it's an interactive session or not
