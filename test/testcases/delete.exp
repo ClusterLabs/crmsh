@@ -1,5 +1,4 @@
 .TRY Delete/Rename test
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: # erase to start from scratch
 .INP: erase

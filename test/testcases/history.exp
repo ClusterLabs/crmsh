@@ -1,5 +1,4 @@
 .TRY History
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: history
 .INP: source history-test.tar.bz2
 .INP: info
@@ -273,7 +272,6 @@ current session: _crmsh_regtest
 .EXT tar -C '/var/cache/crm/history/session/_crmsh_regtest/..' -cj -f '/root/_crmsh_regtest.tar.bz2' _crmsh_regtest
 Report saved in '/root/_crmsh_regtest.tar.bz2'
 .TRY History 2
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: history
 .INP: session load _crmsh_regtest
 .INP: exclude

@@ -1,14 +1,10 @@
 .TRY node show
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 node1: normal
 .TRY node show node1
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 node1: normal
 .SETENV showobj=node1
 .TRY node standby node1
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_attribute -t nodes -N 'node1' -n standby -v 'on' --lifetime='forever'
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
@@ -29,9 +25,7 @@ node1: normal
 </cib>
 
 .TRY node online node1
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_attribute -t nodes -N 'node1' -n standby -v 'off' --lifetime='forever'
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
@@ -52,9 +46,7 @@ node1: normal
 </cib>
 
 .TRY node maintenance node1
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_attribute -t nodes -N 'node1' -n maintenance -v 'on'
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
@@ -76,9 +68,7 @@ node1: normal
 </cib>
 
 .TRY node ready node1
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_attribute -t nodes -N 'node1' -n maintenance -v 'off'
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
@@ -100,9 +90,7 @@ node1: normal
 </cib>
 
 .TRY node attribute node1 set a1 "1 2 3"
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_attribute -t nodes -U 'node1' -n 'a1' -v '1 2 3'
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
@@ -125,10 +113,8 @@ node1: normal
 </cib>
 
 .TRY node attribute node1 show a1
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_attribute -G -t nodes -U 'node1' -n 'a1'
 scope=nodes  name=a1 value=1 2 3
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
@@ -151,11 +137,9 @@ scope=nodes  name=a1 value=1 2 3
 </cib>
 
 .TRY node attribute node1 delete a1
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .EXT crm_attribute -D -t nodes -U 'node1' -n 'a1'
 Deleted nodes attribute: id=nodes-node1-a1 name=a1
 
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1

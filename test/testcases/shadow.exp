@@ -1,7 +1,5 @@
 .TRY Shadow CIB management
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: cib
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: new regtest force
 .EXT >/dev/null </dev/null crm_shadow -c 'regtest' --force
 INFO: 2: regtest shadow CIB created

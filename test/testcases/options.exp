@@ -1,5 +1,4 @@
 .TRY Options
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: options
 .INP: reset
 .INP: pager cat
@@ -51,7 +50,6 @@ add-quotes "yes"
 manage-children "ask"
 .INP: save
 .TRY options show
-.EXT >/dev/null </dev/null crm_shadow 2>&1
 editor "vi"
 pager "cat"
 user ""
