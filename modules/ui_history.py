@@ -484,7 +484,7 @@ class History(command.UI):
 
     @command.skill_level('administrator')
     @command.name('_dump')
-    def _dump(self, context, t, *args):
+    def do_dump(self, context, t, *args):
         '''dump configuration or status to a file and print file
         name.
         NB: The configuration is color rendered, but note that
@@ -506,7 +506,7 @@ class History(command.UI):
     @command.skill_level('administrator')
     @command.completers(compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])),
                         compl.choice(['status']))
-    def show(self, context, t, *args):
+    def do_show(self, context, t, *args):
         "usage: show <pe> [status]"
         opt_l = []
         if not self._common_pe_render_check(context.get_command_name(), opt_l, *args):
@@ -523,7 +523,7 @@ class History(command.UI):
 
     @command.skill_level('administrator')
     @command.completers(compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])))
-    def graph(self, context, t, *args):
+    def do_graph(self, context, t, *args):
         "usage: graph <pe> [<gtype> [<file> [<img_format>]]]"
         pe_f = self._get_diff_pe_input(t)
         if not pe_f:
@@ -548,7 +548,7 @@ class History(command.UI):
     @command.skill_level('administrator')
     @command.completers(compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])),
                         compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])))
-    def diff(self, context, t1, t2, *args):
+    def do_diff(self, context, t1, t2, *args):
         "usage: diff <pe> <pe> [status] [html]"
         opt_l = []
         if not self._common_pe_render_check(context.get_command_name(), opt_l, *args):
@@ -572,7 +572,7 @@ class History(command.UI):
     @command.skill_level('administrator')
     @command.completers(compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])),
                         compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])))
-    def wdiff(self, context, t1, t2, *args):
+    def do_wdiff(self, context, t1, t2, *args):
         "usage: wdiff <pe> <pe> [status]"
         opt_l = []
         if not self._common_pe_render_check(context.get_command_name(), opt_l, *args):
@@ -590,7 +590,7 @@ class History(command.UI):
     @command.skill_level('administrator')
     @command.completers(compl.call(crm_report.session_subcmd_list),
                         compl.call(crm_report.session_list))
-    def session(self, context, subcmd=None, name=None):
+    def do_session(self, context, subcmd=None, name=None):
         "usage: session [{save|load|delete} <name> | pack [<name>] | update | list]"
         if not subcmd:
             print "current session: %s" % self.current_session
@@ -629,7 +629,7 @@ class History(command.UI):
 
     @command.skill_level('administrator')
     @command.completers(compl.choice(['clear']))
-    def exclude(self, context, arg=None):
+    def do_exclude(self, context, arg=None):
         "usage: exclude [<regex>|clear]"
         if not arg:
             rc = crm_report.manage_excludes("show")
