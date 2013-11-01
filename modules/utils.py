@@ -725,7 +725,7 @@ def need_pager(s, w, h):
     for l in s.split('\n'):
         # need to remove color codes
         l = re.sub(r'\${\w+}', '', l)
-        cnt += int(ceil((len(l)+0.0)/w))
+        cnt += int(ceil((len(l) + 0.5)/w))
         if cnt >= h:
             return True
     return False
@@ -916,6 +916,10 @@ def load_graphviz_file(ini_f):
 
 def get_pcmk_version(dflt):
     version = dflt
+
+    if not is_program('crmd'):
+        return version
+
     try:
         rc, s = get_stdout("crmd version")
         if rc != 0:
