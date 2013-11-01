@@ -32,13 +32,13 @@ def choice(lst):
 null = choice([])
 
 
-def call(fn, *args):
+def call(fn, *fnargs):
     '''
     Call the given function with the given arguments.
     The function has to return a list of completions.
     '''
     def completer(args):
-        return fn(*args)
+        return fn(*fnargs)
     return completer
 
 
