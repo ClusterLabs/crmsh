@@ -437,15 +437,14 @@ class ChildInfo(object):
         some commands are context sensitive...
         - make args[0] be name of command
         '''
-        #import sys
+        ret = []
         if self.completer is not None:
             specs = inspect.getargspec(self.completer)
             if 'context' in specs.args:
-                #print >>sys.stderr, self.name, context, args
-                return self.completer([self.name] + args, context)
+                ret = self.completer([self.name] + args, context)
             else:
-                return self.completer([self.name] + args)
-        return []
+                ret = self.completer([self.name] + args)
+        return ret
 
     def __repr__(self):
         return "%s:%s (%s)" % (self.type, self.name, self.short_help)
