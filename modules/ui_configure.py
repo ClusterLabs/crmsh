@@ -179,6 +179,7 @@ class CibConfig(command.UI):
             common_warn("neither ptest nor crm_simulate exist, check your installation")
             vars.simulate_programs["ptest"] = ""
             vars.simulate_programs["simulate"] = ""
+        return True
 
     @command.name('_test')
     @command.skill_level('administrator')
