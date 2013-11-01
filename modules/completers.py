@@ -55,6 +55,9 @@ def join(*fns):
     return completer
 
 
+booleans = choice(['yes', 'no', 'true', 'false', 'on', 'off'])
+
+
 def resources(args):
     cib_el = xmlutil.resources_xml()
     if cib_el is None:
