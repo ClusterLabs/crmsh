@@ -17,14 +17,17 @@
 #
 
 import command
+import completers as compl
 import utils
 import vars
 import xmlutil
+import ra
 from cibconfig import mkset_obj, CibFactory
 from msg import UserPrefs, Options, ErrorBuffer
 from msg import common_err, common_info, common_warn
 from msg import syntax_err
 import rsctest
+import schema
 import ui_cib
 import ui_cibstatus
 import ui_ra
@@ -32,6 +35,120 @@ import ui_template
 import ui_history
 import ui_utils
 
+user_prefs = UserPrefs.getInstance()
+options = Options.getInstance()
+err_buf = ErrorBuffer.getInstance()
+cib_factory = CibFactory.getInstance()
+
+# Tab completion helpers
+_id_list = compl.call(cib_factory.id_list)
+_id_xml_list = compl.join(_id_list, compl.choice(['xml', 'changed']))
+_prim_id_list = compl.call(cib_factory.prim_id_list)
+_f_prim_free_id_list = compl.call(cib_factory.f_prim_free_id_list)
+_f_group_id_list = compl.call(cib_factory.f_group_id_list)
+_f_children_id_list = compl.call(cib_factory.f_children_id_list)
+_rsc_id_list = compl.call(cib_factory.rsc_id_list)
+_top_rsc_id_list = compl.call(cib_factory.top_rsc_id_list)
+_node_id_list = compl.call(cib_factory.node_id_list)
+_rsc_template_list = compl.call(cib_factory.rsc_template_list)
+_ra_classes_list = compl.call(ra.ra_classes)
+
+
+def top_rsc_tmpl_id_list(args):
+    return cib_factory.top_rsc_id_list() + cib_factory.rsc_template_list()
+
+
+def ra_classes_or_tmpl(args):
+    if args[-1].startswith('@'):
+        return cib_factory.rsc_template_list()
+    else:
+        return ra.ra_classes()
+
+
+def op_attr_list(args):
+    return [schema.get('attr', 'op', 'o') + '='] + [s + '=' for s in vars.op_extra_attrs]
+
+
+def node_id_colon_list(args):
+    return [s + ':' for s in _node_id_list(args)]
+
+
+def stonith_resource_list(args):
+    return [x.obj_id for x in
+            cib_factory.get_elems_on_type("type:primitive")
+            if x.node.get("class") == "stonith"]
+
+
+# completion for primitives including help for parameters
+# (help also available for properties)
+
+'''
+def prim_complete_params(args, agent, delimiter):
+    if args[-1].endswith('='):
+        dchar = ' '
+        l = []
+    else:
+        dchar = '='
+        l = agent.completion_params()
+    if delimiter:
+        return dchar
+    return l
+
+def get_prim_token(words, n):
+    for key in ("primitive", "rsc_template"):
+        try:
+            return words[words.index(key) + n - 1]
+        except:
+            pass
+    return ''
+'''
+
+
+def primitive_complete_complex(args):
+    '''
+    This completer depends on the content of the line, i.e. on
+    previous tokens, in particular on the type of the RA.
+    '''
+    '''
+    completers_set = {
+        "params": (prim_complete_params, prim_params_info),
+        "meta": (prim_complete_meta, meta_attr_info),
+        "op": (prim_complete_op, op_attr_info),
+    }
+    # manage the resource type
+    cmd = get_prim_token(args, 1)
+    type_word = get_prim_token(args, 3)
+    with_template = cmd == "primitive" and type_word.startswith('@')
+    if with_template:
+        # template reference
+        agent = ra.get_ra(cib_factory.find_object(type_word[1:]).node)
+    else:
+        toks = type_word.split(':')
+        if toks[0] != "ocf":
+            idx += 1
+        if idx in (2, 3):
+            return ra_type_list(toks, idx, delimiter)
+        agent = None
+        ra_class, provider, rsc_type = disambiguate_ra_type(type_word)
+        if ra_type_validate(type_word, ra_class, provider, rsc_type):
+            agent = RAInfo(ra_class, rsc_type, provider)
+    keywords = completers_set.keys()
+    if idx == 4 or (idx == 2 and with_template):
+        if delimiter:
+            return ' '
+        return keywords
+    lastkeyw = get_lastkeyw(words, keywords)
+    if '=' in words[-1] and get_buffer()[-1] != ' ':
+        if not delimiter and lastkeyw and \
+                args[-1].endswith('=') and len(words[-1]) > 1:
+            compl_help.help(completers_set[lastkeyw][1], agent)
+        if delimiter:
+            return ' '
+        return ['*']
+    else:
+        if lastkeyw:
+            return completers_set[lastkeyw][0](args, agent, delimiter)
+    '''
 
 class CibConfig(command.UI):
     '''
@@ -93,6 +210,7 @@ class CibConfig(command.UI):
         pass
 
     @command.skill_level('administrator')
+    @command.completers_repeating(_id_xml_list, _id_list)
     def do_show(self, context, *args):
         "usage: show [xml] [<id>...]"
         if not cib_factory.is_cib_sane():
@@ -101,6 +219,7 @@ class CibConfig(command.UI):
         return set_obj.show()
 
     @command.skill_level('administrator')
+    @command.completers_repeating(compl.null, _id_xml_list, _id_list)
     def do_filter(self, context, filter, *args):
         "usage: filter <prog> [xml] [<id>...]"
         if not cib_factory.is_cib_sane():
@@ -109,6 +228,8 @@ class CibConfig(command.UI):
         return set_obj.filter(filter)
 
     @command.skill_level('administrator')
+    @command.completers(_f_group_id_list, compl.choice(['add', 'remove']),
+                        _prim_id_list, compl.choice(['after', 'before']), _prim_id_list)
     def do_modgroup(self, context, group_id, subcmd, prim_id, *args):
         """usage: modgroup <id> add <id> [after <id>|before <id>]
         modgroup <id> remove <id>"""
@@ -157,6 +278,7 @@ class CibConfig(command.UI):
         return set_obj.filter("sed -r '%s'" % sed_s)
 
     @command.skill_level('administrator')
+    @command.completers_repeating(_id_xml_list, _id_list)
     def do_edit(self, context, *args):
         "usage: edit [xml] [<id>...]"
         if not cib_factory.is_cib_sane():
@@ -248,6 +370,7 @@ class CibConfig(command.UI):
         return rc
 
     @command.skill_level('administrator')
+    @command.completers_repeating(_id_list)
     def do_delete(self, context, *args):
         "usage: delete <id> [<id>...]"
         if not cib_factory.is_cib_sane():
@@ -256,6 +379,7 @@ class CibConfig(command.UI):
 
     @command.name('default-timeouts')
     @command.alias('default_timeouts')
+    @command.completers_repeating(_id_list)
     def do_default_timeouts(self, context, *args):
         "usage: default-timeouts <id> [<id>...]"
         if not cib_factory.is_cib_sane():
@@ -263,6 +387,7 @@ class CibConfig(command.UI):
         return cib_factory.default_timeouts(*args)
 
     @command.skill_level('administrator')
+    @command.completers(_id_list, _id_list)
     def do_rename(self, context, old_id, new_id):
         "usage: rename <old_id> <new_id>"
         if not cib_factory.is_cib_sane():
@@ -270,6 +395,7 @@ class CibConfig(command.UI):
         return cib_factory.rename(old_id, new_id)
 
     @command.skill_level('administrator')
+    @command.completers(compl.choice(['nodes']))
     def do_erase(self, context, nodes=None):
         "usage: erase [nodes]"
         if not cib_factory.is_cib_sane():
@@ -290,6 +416,7 @@ class CibConfig(command.UI):
         cib_factory.refresh()
 
     @command.alias('simulate')
+    @command.completers(compl.choice(['nograph']))
     def do_ptest(self, context, *args):
         "usage: ptest [nograph] [v...] [scores] [utilization] [actions]"
         if not cib_factory.is_cib_sane():
@@ -304,6 +431,7 @@ class CibConfig(command.UI):
 
     @command.skill_level('administrator')
     @command.wait
+    @command.completers(compl.choice(['force']))
     def do_commit(self, context, force=None):
         "usage: commit [force]"
         if force and force != "force":
@@ -330,6 +458,7 @@ class CibConfig(command.UI):
         return False
 
     @command.skill_level('administrator')
+    @command.completers(compl.choice(['force']))
     def do_upgrade(self, context, force=None):
         "usage: upgrade [force]"
         if not cib_factory.is_cib_sane():
@@ -365,6 +494,7 @@ class CibConfig(command.UI):
         return f()
 
     @command.skill_level('administrator')
+    @command.completers(_node_id_list, compl.choice(vars.node_attributes_keyw))
     def do_node(self, context, *args):
         """usage: node <uname>[:<type>]
            [attributes <param>=<value> [<param>=<value>...]]
@@ -372,6 +502,8 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
+    @command.completers(compl.null, ra_classes_or_tmpl)
+    #, primitive_complete_complex) TODO: repeating
     def do_primitive(self, context, *args):
         """usage: primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>}
         [params <param>=<value> [<param>=<value>...]]
@@ -382,6 +514,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
+    @command.completers_repeating(compl.null, _f_prim_free_id_list)
     def do_group(self, context, *args):
         """usage: group <name> <rsc> [<rsc>...]
         [params <param>=<value> [<param>=<value>...]]
@@ -389,6 +522,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
+    @command.completers_repeating(compl.null, _f_children_id_list)
     def do_clone(self, context, *args):
         """usage: clone <name> <rsc>
         [params <param>=<value> [<param>=<value>...]]
@@ -397,6 +531,7 @@ class CibConfig(command.UI):
 
     @command.alias('master')
     @command.skill_level('administrator')
+    @command.completers_repeating(compl.null, _f_children_id_list)
     def do_ms(self, context, *args):
         """usage: ms <name> <rsc>
         [params <param>=<value> [<param>=<value>...]]
@@ -404,6 +539,8 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
+    @command.completers(compl.null, _ra_classes_list)
+    #, primitive_complete_complex) TODO: repeating
     def do_rsc_template(self, context, *args):
         """usage: rsc_template <name> [<class>:[<provider>:]]<type>
         [params <param>=<value> [<param>=<value>...]]
@@ -414,6 +551,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
+    @command.completers(compl.null, _top_rsc_id_list)
     def do_location(self, context, *args):
         """usage: location <id> <rsc> {node_pref|rules}
 
@@ -437,39 +575,48 @@ class CibConfig(command.UI):
 
     @command.alias('collocation')
     @command.skill_level('administrator')
+    @command.completers_repeating(compl.null, compl.null, top_rsc_tmpl_id_list)
     def do_colocation(self, context, *args):
         """usage: colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>] ...
         [node-attribute=<node_attr>]"""
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
+    @command.completers_repeating(compl.null,
+                                  compl.call(schema.rng_attr_values, 'rsc_order', 'kind'),
+                                  top_rsc_tmpl_id_list)
     def do_order(self, context, *args):
         """usage: order <id> {kind|<score>}: <rsc>[:<action>] <rsc>[:<action>] ...
         [symmetrical=<bool>]"""
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
+    @command.completers_repeating(compl.null, compl.null, top_rsc_tmpl_id_list)
     def do_rsc_ticket(self, context, *args):
         """usage: rsc_ticket <id> <ticket_id>: <rsc>[:<role>] [<rsc>[:<role>] ...]
         [loss-policy=<loss_policy_action>]"""
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
+    #@command.completers_repeating(property_complete)
     def do_property(self, context, *args):
         "usage: property [$id=<set_id>] <option>=<value>"
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
+    #@command.completers_repeating(prim_complete_meta)
     def do_rsc_defaults(self, context, *args):
         "usage: rsc_defaults [$id=<set_id>] <option>=<value>"
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
+    @command.completers_repeating(op_attr_list)
     def do_op_defaults(self, context, *args):
         "usage: op_defaults [$id=<set_id>] <option>=<value>"
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
+    @command.completers_repeating(node_id_colon_list, stonith_resource_list)
     def do_fencing_topology(self, context, *args):
         "usage: fencing_topology [<node>:] stonith_resources [stonith_resources ...]"
         return self.__conf_object(context.get_command_name(), *args)
@@ -480,11 +627,13 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
+    @command.completers(_f_children_id_list)
     def do_monitor(self, context, *args):
         "usage: monitor <rsc>[:<role>] <interval>[:<timeout>]"
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('expert')
+    @command.completers_repeating(compl.null, compl.choice(["role:", "read", "write", "deny"]))
     def do_user(self, context, *args):
         """user <uid> {roles|rules}
 
@@ -495,6 +644,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('expert')
+    @command.completers_repeating(compl.null, compl.choice(["read", "write", "deny"]))
     def do_role(self, context, *args):
         """role <role-id> rule [rule ...]
 
@@ -518,6 +668,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('expert')
+    @command.completers_repeating(_rsc_id_list)
     def do_rsctest(self, context, *args):
         "usage: rsctest <rsc_id> [<rsc_id> ...] [<node_id> ...]"
         if not cib_factory.is_cib_sane():
@@ -562,9 +713,3 @@ class CibConfig(command.UI):
             elif utils.ask("There are changes pending. Do you want to commit them?"):
                 self.commit("commit")
         cib_factory.reset()
-
-
-user_prefs = UserPrefs.getInstance()
-options = Options.getInstance()
-err_buf = ErrorBuffer.getInstance()
-cib_factory = CibFactory.getInstance()
