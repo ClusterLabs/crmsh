@@ -75,10 +75,10 @@ class CliDisplay(Singleton):
         return self._colorize(s, 'cyan', 'bold')
 
     def help_header(self, s):
-        return self._colorize(s, 'yellow', 'bold')
+        return self._colorize(s, 'blue', 'bold', 'underline')
 
     def help_keyword(self, s):
-        return self._colorize(s, 'white', 'bold')
+        return self._colorize(s, 'normal', 'bold')
 
     def help_begin_block(self):
         if 'color' in user_prefs.output and not self.no_pretty:
