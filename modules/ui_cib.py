@@ -22,6 +22,7 @@ import command
 import xmlutil
 import utils
 import ui_cibstatus
+import vars
 
 from tempfile import mkstemp
 from msg import UserPrefs, Options
@@ -148,10 +149,14 @@ class CibShadow(command.UI):
     @command.skill_level('administrator')
     @command.wait
     @command.completers(compl.shadows)
-    def do_commit(self, context, name):
-        "usage: commit <shadow_cib>"
-        if not utils.is_filename_sane(name):
+    def do_commit(self, context, name=None):
+        "usage: commit [<shadow_cib>]"
+        if name and not utils.is_filename_sane(name):
             context.fatal_error("Bad filename: " + name)
+        if not name:
+            name = vars.cib_in_use
+        if not name:
+            context.fatal_error("There is nothing to commit")
         if utils.ext_cmd("%s -C '%s' --force" % (self.extcmd, name)) == 0:
             context.info("committed '%s' shadow CIB to the cluster" % name)
         else:
@@ -177,10 +182,13 @@ class CibShadow(command.UI):
         # provided is empty, then choose the live (cluster) cib.
         # Don't allow ' in shadow names
         if not name or name == "live":
-            os.unsetenv(vars.shadow_envvar)
-            vars.cib_in_use = ""
             if withstatus:
                 cib_status.load("live")
+            if vars.tmp_cib:
+                utils.ext_cmd("%s -D '%s' --force" % (self.extcmd, vars.cib_in_use))
+                vars.tmp_cib = False
+            vars.cib_in_use = ''
+            os.unsetenv(vars.shadow_envvar)
         else:
             os.putenv(vars.shadow_envvar, name)
             vars.cib_in_use = name
