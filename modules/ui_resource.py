@@ -17,6 +17,7 @@
 #
 
 import command
+import completions as compl
 import utils
 import xmlutil
 import ui_utils
@@ -112,6 +113,10 @@ def cleanup_resource(rsc, node=''):
     return rc
 
 
+_attrcmds = compl.choice(['delete', 'set', 'show'])
+_raoperations = compl.choice(vars.ra_operations)
+
+
 class RscMgmt(command.UI):
     '''
     Resources management class
@@ -167,6 +172,7 @@ class RscMgmt(command.UI):
         return True
 
     @command.alias('show', 'list')
+    @command.completers(compl.resources)
     def do_status(self, context, rsc=None):
         "usage: status [<rsc>]"
         if rsc:
@@ -177,6 +183,7 @@ class RscMgmt(command.UI):
             return utils.ext_cmd(self.rsc_status_all) == 0
 
     @command.wait
+    @command.completers(compl.resources)
     def do_start(self, context, rsc):
         "usage: start <rsc>"
         if not utils.is_name_sane(rsc):
@@ -184,6 +191,7 @@ class RscMgmt(command.UI):
         return set_deep_meta_attr("target-role", "Started", rsc)
 
     @command.wait
+    @command.completers(compl.resources)
     def do_restart(self, context, rsc):
         "usage: restart <rsc>"
         if not utils.is_name_sane(rsc):
@@ -197,6 +205,7 @@ class RscMgmt(command.UI):
         return self.start("start", rsc)
 
     @command.wait
+    @command.completers(compl.resources)
     def do_stop(self, context, rsc):
         "usage: stop <rsc>"
         if not utils.is_name_sane(rsc):
@@ -204,6 +213,7 @@ class RscMgmt(command.UI):
         return set_deep_meta_attr("target-role", "Stopped", rsc)
 
     @command.wait
+    @command.completers(compl.resources)
     def do_promote(self, context, rsc):
         "usage: promote <rsc>"
         if not utils.is_name_sane(rsc):
@@ -214,6 +224,7 @@ class RscMgmt(command.UI):
         return utils.ext_cmd(self.rsc_setrole % (rsc, "Master")) == 0
 
     @command.wait
+    @command.completers(compl.resources)
     def do_demote(self, context, rsc):
         "usage: demote <rsc>"
         if not utils.is_name_sane(rsc):
@@ -223,12 +234,14 @@ class RscMgmt(command.UI):
             return False
         return utils.ext_cmd(self.rsc_setrole % (rsc, "Slave")) == 0
 
+    @command.completers(compl.resources)
     def do_manage(self, context, rsc):
         "usage: manage <rsc>"
         if not utils.is_name_sane(rsc):
             return False
         return set_deep_meta_attr("is-managed", "true", rsc)
 
+    @command.completers(compl.resources)
     def do_unmanage(self, context, rsc):
         "usage: unmanage <rsc>"
         if not utils.is_name_sane(rsc):
@@ -237,6 +250,8 @@ class RscMgmt(command.UI):
 
     @command.alias('move')
     @command.skill_level('administrator')
+    @command.completers_repeating(compl.resources, compl.nodes,
+                                  compl.choice(['lifetime', 'force']))
     def do_migrate(self, context, *args):
         """usage: migrate <rsc> [<node>] [<lifetime>] [force]"""
         argl = list(args)
@@ -263,6 +278,7 @@ class RscMgmt(command.UI):
 
     @command.alias('unmove')
     @command.skill_level('administrator')
+    @command.completers(compl.resources)
     def do_unmigrate(self, context, rsc):
         "usage: unmigrate <rsc>"
         if not utils.is_name_sane(rsc):
@@ -271,6 +287,7 @@ class RscMgmt(command.UI):
 
     @command.skill_level('administrator')
     @command.wait
+    @command.completers(compl.resources, compl.nodes)
     def do_cleanup(self, context, *args):
         "usage: cleanup <rsc> [<node>]"
         # Cleanup a resource on a node. Omit node to cleanup on
@@ -280,6 +297,7 @@ class RscMgmt(command.UI):
         else:
             return cleanup_resource(args[0])
 
+    @command.completers(compl.resources, _attrcmds, compl.nodes)
     def do_failcount(self, context, *args):
         """usage:
         failcount <rsc> set <node> <value>
@@ -289,6 +307,7 @@ class RscMgmt(command.UI):
 
     @command.skill_level('administrator')
     @command.wait
+    @command.completers(compl.resources, _attrcmds)
     def do_param(self, context, *args):
         """usage:
         param <rsc> set <param> <value>
@@ -298,6 +317,8 @@ class RscMgmt(command.UI):
 
     @command.skill_level('administrator')
     @command.wait
+    @command.completers(compl.resources,
+                        compl.choice(['set', 'stash', 'unstash', 'delete', 'show', 'check']))
     def do_secret(self, context, *args):
         """usage:
         secret <rsc> set <param> <value>
@@ -310,6 +331,7 @@ class RscMgmt(command.UI):
 
     @command.skill_level('administrator')
     @command.wait
+    @command.completers(compl.resources, _attrcmds)
     def do_meta(self, context, *args):
         """usage:
         meta <rsc> set <attr> <value>
@@ -319,6 +341,7 @@ class RscMgmt(command.UI):
 
     @command.skill_level('administrator')
     @command.wait
+    @command.completers(compl.resources, _attrcmds)
     def do_utilization(self, context, *args):
         """usage:
         utilization <rsc> set <attr> <value>
@@ -326,6 +349,7 @@ class RscMgmt(command.UI):
         utilization <rsc> show <attr>"""
         return ui_utils.manage_attr(context.get_command_name(), self.rsc_utilization, args)
 
+    @command.completers(compl.nodes)
     def do_refresh(self, context, *args):
         'usage: refresh [<node>]'
         if len(args) == 1:
@@ -336,6 +360,7 @@ class RscMgmt(command.UI):
             return utils.ext_cmd(self.rsc_refresh) == 0
 
     @command.wait
+    @command.completers(compl.nodes)
     def do_reprobe(self, context, *args):
         'usage: reprobe [<node>]'
         if len(args) == 1:
@@ -359,6 +384,7 @@ class RscMgmt(command.UI):
         return rsc
 
     @command.wait
+    @command.completers(compl.primitives, _raoperations)
     def do_trace(self, context, rsc_id, op, interval=None):
         'usage: trace <rsc> <op> [<interval>]'
         rsc = self._get_trace_rsc(rsc_id)
@@ -393,6 +419,7 @@ class RscMgmt(command.UI):
         return True
 
     @command.wait
+    @command.completers(compl.primitives, _raoperations)
     def do_untrace(self, context, rsc_id, op, interval=None):
         'usage: untrace <rsc> <op> [<interval>]'
         rsc = self._get_trace_rsc(rsc_id)

@@ -49,7 +49,7 @@ class Template(command.UI):
         self.init_dir()
 
     @command.skill_level('administrator')
-    @command.completer_list_repeating(compl.null, compl.call(utils.listtemplates))
+    @command.completers_repeating(compl.null, compl.call(utils.listtemplates))
     def do_new(self, context, name, *args):
         "usage: new <config> <template> [<template> ...] [params name=value ...]"
         if not utils.is_filename_sane(name):
@@ -81,6 +81,7 @@ class Template(command.UI):
         self.curr_conf = name
 
     @command.skill_level('administrator')
+    @command.completers(compl.call(utils.listconfigs))
     def do_delete(self, context, name, force=''):
         "usage: delete <config> [force]"
         if force:
@@ -99,6 +100,7 @@ class Template(command.UI):
         os.remove("%s/%s" % (vars.tmpl_conf_dir, name))
 
     @command.skill_level('administrator')
+    @command.completers(compl.call(utils.listconfigs))
     def do_load(self, context, name=''):
         "usage: load [<config>]"
         if not name:
@@ -109,6 +111,7 @@ class Template(command.UI):
         self.curr_conf = name
 
     @command.skill_level('administrator')
+    @command.completers(compl.call(utils.listconfigs))
     def do_edit(self, context, name=''):
         "usage: edit [<config>]"
         if not name and not self.curr_conf:
@@ -121,6 +124,7 @@ class Template(command.UI):
         else:
             utils.edit_file("%s/%s" % (vars.tmpl_conf_dir, self.curr_conf))
 
+    @command.completers(compl.call(utils.listconfigs))
     def do_show(self, context, name=''):
         "usage: show [<config>]"
         if not name and not self.curr_conf:
@@ -134,6 +138,9 @@ class Template(command.UI):
             print self.process()
 
     @command.skill_level('administrator')
+    @command.completers(compl.join(compl.call(utils.listconfigs),
+                                       compl.choice(['replace', 'update'])),
+                            compl.call(utils.listconfigs))
     def do_apply(self, context, *args):
         "usage: apply [<method>] [<config>]"
         method = "replace"
@@ -172,6 +179,7 @@ class Template(command.UI):
             pass
         return rc
 
+    @command.completers(compl.choice(['templates']))
     def do_list(self, context, templates=''):
         "usage: list [templates]"
         if templates == "templates":

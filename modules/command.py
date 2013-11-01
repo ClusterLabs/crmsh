@@ -150,7 +150,7 @@ def completer(cb):
     return inner
 
 
-def completer_list(*fns):
+def completers(*fns):
     '''
     Use to set a list of positional tab completers for the command.
     Each completer gets as its argument the command line entered so far,
@@ -167,7 +167,7 @@ def completer_list(*fns):
     return inner
 
 
-def completer_list_repeating(*fns):
+def completers_repeating(*fns):
     '''
     Like completer_list, but calls the last completer
     for any additional arguments

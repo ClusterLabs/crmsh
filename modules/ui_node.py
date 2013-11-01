@@ -18,6 +18,7 @@
 
 import config
 import command
+import completers as compl
 import ui_utils
 import utils
 import xmlutil
@@ -101,6 +102,7 @@ class NodeMgmt(command.UI):
                 return False
         return True
 
+    @command.completers(compl.nodes)
     def do_status(self, context, node=None):
         'usage: status [<node>]'
         a = node and ('--xpath "//nodes/node[@uname=\'%s\']"' % node) or \
@@ -108,6 +110,7 @@ class NodeMgmt(command.UI):
         return utils.ext_cmd("%s %s" % (xmlutil.cib_dump, a)) == 0
 
     @command.alias('list')
+    @command.completers(compl.nodes)
     def do_show(self, context, node=None):
         'usage: show [<node>]'
         cib_elem = xmlutil.cibdump2elem()
@@ -147,6 +150,7 @@ class NodeMgmt(command.UI):
             print_node(uname, id, type, other, inst_attr, offline)
 
     @command.wait
+    @command.completers(compl.nodes)
     def do_standby(self, context, *args):
         'usage: standby [<node>] [<lifetime>]'
         argl = list(args)
@@ -171,6 +175,7 @@ class NodeMgmt(command.UI):
         return utils.ext_cmd(self.node_standby % (node, "on", opts)) == 0
 
     @command.wait
+    @command.completers(compl.nodes)
     def do_online(self, context, node=None):
         'usage: online [<node>]'
         if not node:
@@ -180,6 +185,7 @@ class NodeMgmt(command.UI):
         return utils.ext_cmd(self.node_standby % (node, "off", "--lifetime='forever'")) == 0
 
     @command.wait
+    @command.completers(compl.nodes)
     def do_maintenance(self, context, node=None):
         'usage: maintenance [<node>]'
         if not node:
@@ -189,6 +195,7 @@ class NodeMgmt(command.UI):
         return utils.ext_cmd(self.node_maint % (node, "on")) == 0
 
     @command.wait
+    @command.completers(compl.nodes)
     def do_ready(self, context, node=None):
         'usage: ready [<node>]'
         if not node:
@@ -198,6 +205,7 @@ class NodeMgmt(command.UI):
         return utils.ext_cmd(self.node_maint % (node, "off")) == 0
 
     @command.wait
+    @command.completers(compl.nodes)
     def do_fence(self, context, node):
         'usage: fence <node>'
         if not node:
@@ -210,6 +218,7 @@ class NodeMgmt(command.UI):
         return utils.ext_cmd(self.node_fence % (node)) == 0
 
     @command.wait
+    @command.completers(compl.nodes)
     def do_clearstate(self, context, node):
         'usage: clearstate <node>'
         if not utils.is_name_sane(node):
@@ -223,6 +232,7 @@ class NodeMgmt(command.UI):
             return utils.ext_cmd(self.node_clear_state % ("-M -c", node, node)) == 0 and \
                 utils.ext_cmd(self.node_clear_state % ("-R", node, node)) == 0
 
+    @command.completers(compl.nodes)
     def do_delete(self, context, node):
         'usage: delete <node>'
         if not utils.is_name_sane(node):
@@ -263,6 +273,7 @@ class NodeMgmt(command.UI):
         return True
 
     @command.wait
+    @command.completers(compl.nodes, compl.choice(['set', 'delete', 'show']), compl.resources)
     def do_attribute(self, context, *args):
         """usage:
         attribute <node> set <rsc> <value>
@@ -271,6 +282,7 @@ class NodeMgmt(command.UI):
         return ui_utils.manage_attr(context.get_command_name(), self.node_attr, args)
 
     @command.wait
+    @command.completers(compl.nodes, compl.choice(['set', 'delete', 'show']), compl.resources)
     def do_utilization(self, context, *args):
         """usage:
         utilization <node> set <rsc> <value>
@@ -280,6 +292,7 @@ class NodeMgmt(command.UI):
 
     @command.wait
     @command.name('status-attr')
+    @command.completers(compl.nodes, compl.choice(['set', 'delete', 'show']), compl.resources)
     def do_status_attr(self, context, *args):
         """usage:
         status-attr <node> set <rsc> <value>

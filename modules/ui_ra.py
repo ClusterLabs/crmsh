@@ -17,9 +17,31 @@
 #
 
 import command
+import completers as compl
 import utils
 import ra
 from msg import Options
+
+
+def complete_class_provider_type(args):
+    sp = args[0].split(':')
+    if len(sp) < 2:
+        return [c+':' for c in ra.ra_classes()]
+    elif len(sp) < 3:
+        ret = []
+        for c in ra.ra_classes():
+            if sp[0] == c:
+                ret += ['%s:%s:' % (c, p) for p in ra.ra_providers_all(c)]
+        return ret
+    else:
+        providers = []
+        for c in ra.ra_classes():
+            if sp[0] == c:
+                providers += [(c, p) for p in ra.ra_providers_all(c) if p == sp[1]]
+        ret = []
+        for c, p in providers:
+            ret += ['%s:%s:%s' % (c, p, t) for t in ra.ra_types(c, p)]
+        return ret
 
 
 class RA(command.UI):
@@ -43,6 +65,7 @@ class RA(command.UI):
         print ' '.join(ra.ra_providers(ra_type, ra_class))
 
     @command.skill_level('administrator')
+    @command.completers(compl.call(ra.ra_classes), lambda args: ra.ra_providers_all(args[0]))
     def do_list(self, context, c, p=None):
         "usage: list <class> [<provider>]"
         options = Options.getInstance()
@@ -58,6 +81,7 @@ class RA(command.UI):
 
     @command.skill_level('administrator')
     @command.alias('info')
+    @command.completers(complete_class_provider_type)
     def do_meta(self, context, *args):
         "usage: meta [<class>:[<provider>:]]<type>"
         if len(args) > 1:  # obsolete syntax

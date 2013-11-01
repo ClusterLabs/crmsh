@@ -130,6 +130,7 @@ class Context(object):
         readline.set_history_length(100)
         readline.parse_and_bind("tab: complete")
         readline.set_completer(self.readline_completer)
+        # FIXME: might not want to do this anymore
         delims = readline.get_completer_delims()
         delims = delims.replace('-', '').replace('/', '').replace('=', '')
         readline.set_completer_delims(delims)

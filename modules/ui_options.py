@@ -35,7 +35,7 @@ class CliOptions(command.UI):
     name = "options"
 
     @command.name('skill-level')
-    @command.completer_list(_getprefs('skill_level'))
+    @command.completers(_getprefs('skill_level'))
     def do_skill_level(self, context, skill_level):
         """usage: skill-level <level>
         level: operator | administrator | expert"""
@@ -53,7 +53,7 @@ class CliOptions(command.UI):
         "usage: user [<crm_user>]"
         return user_prefs.set_pref("user", user)
 
-    @command.completer_list(_getprefs('output'))
+    @command.completers(_getprefs('output'))
     def do_output(self, context, otypes):
         "usage: output <type>"
         return user_prefs.set_pref("output", otypes)
@@ -63,36 +63,36 @@ class CliOptions(command.UI):
         return user_prefs.set_pref("colorscheme", scheme)
 
     @command.name('check-frequency')
-    @command.completer_list(_getprefs('check_frequency'))
+    @command.completers(_getprefs('check_frequency'))
     def do_check_frequency(self, context, freq):
         "usage: check-frequency <freq>"
         return user_prefs.set_pref("check-frequency", freq)
 
     @command.name('check-mode')
-    @command.completer_list(_getprefs('check_mode'))
+    @command.completers(_getprefs('check_mode'))
     def do_check_mode(self, context, mode):
         "usage: check-mode <mode>"
         return user_prefs.set_pref("check-mode", mode)
 
     @command.name('sort-elements')
-    @command.completer_list(_yesno)
+    @command.completers(_yesno)
     def do_sort_elements(self, context, opt):
         "usage: sort-elements {yes|no}"
         return user_prefs.set_pref("sort-elements", opt)
 
-    @command.completer_list(_yesno)
+    @command.completers(_yesno)
     def do_wait(self, context, opt):
         "usage: wait {yes|no}"
         return user_prefs.set_pref("wait", opt)
 
     @command.name('add-quotes')
-    @command.completer_list(_yesno)
+    @command.completers(_yesno)
     def do_add_quotes(self, context, opt):
         "usage: add-quotes {yes|no}"
         return user_prefs.set_pref("add-quotes", opt)
 
     @command.name('manage-children')
-    @command.completer_list(_getprefs('manage_children'))
+    @command.completers(_getprefs('manage_children'))
     def do_manage_children(self, context, opt):
         "usage: manage-children <option>"
         return user_prefs.set_pref("manage-children", opt)

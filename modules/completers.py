@@ -17,6 +17,8 @@
 
 # Helper completers
 
+import xmlutil
+
 
 def choice(lst):
     '''
@@ -38,3 +40,36 @@ def call(fn, *args):
     def completer(args):
         return fn(*args)
     return completer
+
+
+def join(*fns):
+    '''
+    Combine the output of several completers
+    into a single completer.
+    '''
+    def completer(args):
+        ret = []
+        for fn in fns:
+            ret += fn(args)
+        return ret
+    return completer
+
+
+def resources(args):
+    cib_el = xmlutil.resources_xml()
+    if cib_el is None:
+        return []
+    nodes = xmlutil.get_interesting_nodes(cib_el, [])
+    return [x.get("id") for x in nodes if xmlutil.is_resource(x)]
+
+
+def primitives(args):
+    cib_el = xmlutil.resources_xml()
+    if cib_el is None:
+        return []
+    nodes = xmlutil.get_interesting_nodes(cib_el, [])
+    return [x.get("id") for x in nodes if xmlutil.is_primitive(x)]
+
+nodes = call(xmlutil.listnodes)
+
+shadows = call(xmlutil.listshadows)
