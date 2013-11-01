@@ -205,12 +205,10 @@ def help_contextual(context, topic):
     """
     Displays and paginates
     """
-    #if context != '.':
-    #    print ":: %s/%s" % (context, topic)
-    #else:
-    #    print ":: %s" % topic
     if (not topic and context == '.'):
         return help_overview()
+    elif not topic:
+        return help_level(context)
     elif topic == 'topics':
         return help_topics()
     elif _is_help_topic(topic):
