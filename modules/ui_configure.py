@@ -16,6 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+import time
 import command
 import completers as compl
 import utils
@@ -52,7 +53,6 @@ _rsc_id_list = compl.call(cib_factory.rsc_id_list)
 _top_rsc_id_list = compl.call(cib_factory.top_rsc_id_list)
 _node_id_list = compl.call(cib_factory.node_id_list)
 _rsc_template_list = compl.call(cib_factory.rsc_template_list)
-_ra_classes_list = compl.call(ra.ra_classes)
 
 
 def top_rsc_tmpl_id_list(args):
@@ -62,8 +62,7 @@ def top_rsc_tmpl_id_list(args):
 def ra_classes_or_tmpl(args):
     if args[-1].startswith('@'):
         return cib_factory.rsc_template_list()
-    else:
-        return ra.ra_classes()
+    return ui_ra.complete_class_provider_type(args)
 
 
 def op_attr_list(args):
@@ -89,18 +88,6 @@ def _load_2nd_completer(args):
 # completion for primitives including help for parameters
 # (help also available for properties)
 
-'''
-def prim_complete_params(args, agent, delimiter):
-    if args[-1].endswith('='):
-        dchar = ' '
-        l = []
-    else:
-        dchar = '='
-        l = agent.completion_params()
-    if delimiter:
-        return dchar
-    return l
-
 def get_prim_token(words, n):
     for key in ("primitive", "rsc_template"):
         try:
@@ -108,7 +95,83 @@ def get_prim_token(words, n):
         except:
             pass
     return ''
-'''
+
+
+def ra_agent_for_template(tmpl):
+    '''@template -> ra.agent'''
+    return ra.get_ra(cib_factory.find_object(tmpl[1:]).node)
+
+
+def ra_agent_for_cpt(cpt):
+    '''class:provider:type -> ra.agent'''
+    agent = None
+    ra_class, provider, rsc_type = ra.disambiguate_ra_type(cpt)
+    if ra.ra_type_validate(cpt, ra_class, provider, rsc_type):
+        agent = ra.RAInfo(ra_class, rsc_type, provider)
+    return agent
+
+
+class CompletionHelp(object):
+    '''
+    Print some help on whatever last word in the line.
+    '''
+    timeout = 60  # don't print again and again
+    laststamp = 0
+    lasttopic = ''
+
+    @classmethod
+    def help(self, topic, helptxt):
+        if self.lasttopic == topic and \
+                time.time() - self.laststamp < self.timeout:
+            return
+        if helptxt:
+            import readline
+            cmdline = readline.get_line_buffer()
+            print "\n%s" % helptxt
+            print "%s%s" % (vars.prompt, cmdline),
+            self.laststamp = time.time()
+            self.lasttopic = topic
+
+
+def _prim_params_completer(agent, args):
+    completing = args[-1]
+    if completing == 'params':
+        return ['params']
+    if completing.endswith('='):
+        if len(completing) > 1 and options.interactive:
+            topic = completing[:-1]
+            CompletionHelp.help(topic, agent.meta_parameter(topic))
+        return []
+    elif '=' in completing:
+        return []
+    return [s+'=' for s in agent.completion_params()]
+
+
+def _prim_meta_completer(agent, args):
+    completing = args[-1]
+    if completing == 'meta':
+        return ['meta']
+    if '=' in completing:
+        return []
+    return [s+'=' for s in vars.rsc_meta_attributes]
+
+
+def _prim_op_completer(agent, args):
+    completing = args[-1]
+    if completing == 'op':
+        return ['op']
+    if args[-2] == 'op':
+        return vars.op_cli_names
+
+    return []
+
+
+def last_keyword(words, keyw):
+    '''returns the last occurance of an element in keyw in words'''
+    for w in reversed(words):
+        if w in keyw:
+            return w
+    return None
 
 
 def primitive_complete_complex(args):
@@ -116,6 +179,31 @@ def primitive_complete_complex(args):
     This completer depends on the content of the line, i.e. on
     previous tokens, in particular on the type of the RA.
     '''
+    cmd = get_prim_token(args, 1)
+    type_word = get_prim_token(args, 3)
+    with_template = cmd == 'primitive' and type_word.startswith('@')
+
+    if with_template:
+        agent = ra_agent_for_template(type_word)
+    else:
+        agent = ra_agent_for_cpt(type_word)
+
+    completers_set = {
+        "params": _prim_params_completer,
+        "meta": _prim_meta_completer,
+        "op": _prim_op_completer,
+    }
+
+    keywords = completers_set.keys()
+    if len(args) == 4:  # <cmd> <id> <type> <?>
+        return keywords
+
+    last_keyw = last_keyword(args, keywords)
+    if last_keyw is None:
+        return []
+
+    return completers_set[last_keyw](agent, args)
+
     '''
     completers_set = {
         "params": (prim_complete_params, prim_params_info),
@@ -511,8 +599,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers(compl.null, ra_classes_or_tmpl)
-    #, primitive_complete_complex) TODO: repeating
+    @command.completers_repeating(compl.null, ra_classes_or_tmpl, primitive_complete_complex)
     def do_primitive(self, context, *args):
         """usage: primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>}
         [params <param>=<value> [<param>=<value>...]]
@@ -548,8 +635,8 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers(compl.null, _ra_classes_list)
-    #, primitive_complete_complex) TODO: repeating
+    @command.completers_repeating(compl.null, ui_ra.complete_class_provider_type,
+                                  primitive_complete_complex)
     def do_rsc_template(self, context, *args):
         """usage: rsc_template <name> [<class>:[<provider>:]]<type>
         [params <param>=<value> [<param>=<value>...]]
