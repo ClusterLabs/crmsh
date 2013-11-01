@@ -157,8 +157,8 @@ def completers(*fns):
     and returns a list of possible completions.
     '''
     def completer(args):
-        if len(args) <= len(fns):
-            return fns[len(args)-1](args)
+        if (len(args) - 1) <= len(fns):
+            return fns[len(args)-2](args)
         return []
 
     def inner(fn):
@@ -169,12 +169,12 @@ def completers(*fns):
 
 def completers_repeating(*fns):
     '''
-    Like completer_list, but calls the last completer
+    Like completers, but calls the last completer
     for any additional arguments
     '''
     def completer(args):
-        if len(args) <= len(fns):
-            return fns[len(args)-1](args)
+        if (len(args) - 1) <= len(fns):
+            return fns[len(args)-2](args)
         return fns[-1](args)
 
     def inner(fn):
