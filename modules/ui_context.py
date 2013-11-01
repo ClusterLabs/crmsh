@@ -39,6 +39,7 @@ class Context(object):
         self.tree = tree
         self.stack = [tree.root]
         self.restore_stack = True
+        self._in_transit = False
 
         # holds information about the currently
         # executing command
@@ -60,6 +61,7 @@ class Context(object):
 
         self.restore_stack = True
         saved_stack = list(self.stack)
+        self._in_transit = False
 
         try:
             tokens = shlex.split(line)
@@ -204,6 +206,9 @@ class Context(object):
         if not options.interactive and not self.command_args:
             self._set_interactive()
 
+        # not sure what this is all about
+        self._in_transit = True
+
         entry = level()
         if 'requires' in dir(entry) and not entry.requires():
             self.fatal_error("Missing requirements")
@@ -243,7 +248,7 @@ class Context(object):
         TODO
         FIXME
         '''
-        return False
+        return self._in_transit
 
     def check_skill_level(self, skill_level):
         if user_prefs.skill_level < skill_level:
