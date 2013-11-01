@@ -1029,6 +1029,44 @@ def quote(s):
     return "'" + s.replace("'", "'\"'\"'") + "'"
 
 
+def fetch_opts(args, opt_l):
+    '''
+    Get and remove option keywords from args.
+    They are always listed last, at the end of the line.
+    Return a list of options found. The caller can do
+    if keyw in optlist: ...
+    '''
+    re_opt = None
+    if opt_l[0].startswith("@"):
+        re_opt = re.compile("^%s$" % opt_l[0][1:])
+        del opt_l[0]
+    l = []
+    for i in reversed(range(len(args))):
+        if (args[i] in opt_l) or (re_opt and re_opt.search(args[i])):
+            l.append(args.pop())
+        else:
+            break
+    return l
+
+
+_LIFETIME = ["reboot", "forever"]
+_ISO8601_RE = re.compile("(PT?[0-9]|[0-9]+.*[:-])")
+
+
+def fetch_lifetime_opt(args, iso8601=True):
+    '''
+    Get and remove a lifetime option from args. It can be one of
+    lifetime_options or an ISO 8601 formatted period/time. There
+    is apparently no good support in python for this format, so
+    we cheat a bit.
+    '''
+    if args:
+        opt = args[-1]
+        if opt in _LIFETIME or (iso8601 and _ISO8601_RE.match(opt)):
+            return args.pop()
+    return None
+
+
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 termctrl = TerminalController.getInstance()

@@ -197,14 +197,6 @@ def exit_handler():
             pass
 
 
-def prereqs():
-    proglist = "cibadmin crm_resource crm_attribute crm_mon"
-    for prog in proglist.split():
-        if not is_program(prog):
-            print >> sys.stderr, "%s not available, check your installation" % prog
-            sys.exit(1)
-
-
 # prefer the user set PATH
 def envsetup():
     mybinpath = os.path.dirname(sys.argv[0])
@@ -402,7 +394,7 @@ def do_work(user_args):
         if options.interactive and not options.batch:
             vars.prompt = "crm(%s)%s# " % (cib_prompt(), levels.getprompt())
         inp = multi_input(vars.prompt)
-        if inp == None:
+        if inp is None:
             if options.interactive:
                 cmd_exit("eof")
             else:
@@ -417,7 +409,6 @@ def do_work(user_args):
 
 def run():
     envsetup()
-    prereqs()
 
     mv_user_files()
     load_rc(vars.rc_file)

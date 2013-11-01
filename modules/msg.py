@@ -207,8 +207,11 @@ def syntax_err(s, token='', context='', msg=''):
     err_buf.error(err)
 
 
-def bad_usage(cmd, args):
-    err_buf.error("bad usage: %s %s" % (cmd, args))
+def bad_usage(cmd, args, msg=None):
+    if not msg:
+        err_buf.error("Bad usage: '%s %s'" % (cmd, args))
+    else:
+        err_buf.error("Bad usage: %s, command: '%s %s'" % (msg, cmd, args))
 
 
 def empty_cib_err():

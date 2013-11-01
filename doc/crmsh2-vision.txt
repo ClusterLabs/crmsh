@@ -1,0 +1,63 @@
+= crmsh 2.0 vision =
+
+This is my vision for `crmsh 2.0`.
+
+* Modular
+
+* No globals
+
+* Fully functional cluster sublevel with ansible integration
+
+* Cleaned up msg module with better error messages
+
+== Installation ==
+
+Simply do `pip install crmsh` or `zypper install crmsh` on one of the
+machines, then go
+
+----
+crm cluster init nodes=node-a,node-b,node-c
+crm cluster apply web-server virtual-ip=192.168.10.10
+crm cluster status
+----
+
+This will ensure that all necessary packages for corosync, pacemaker,
+apache etc. are installed on all the nodes, and also verifies
+connectivity and network health across the cluster. It then configures
+corosync, installs a basic CIB, makes sure that the cluster is up and
+running, configures apache with mod_status and then adds resources for
+a web server with a virtual IP, and finally verifies that everything
+works okay.
+
+To execute some arbitrary task across the cluster, run
+
+----
+crm cluster shell '/bin/ls -l'
+----
+
+To add another node to the cluster, run
+
+---
+crm cluster join node-d
+---
+
+`crmsh` makes sure to reload the corosync configuration to insert the
+new node on the fly.
+
+== CIB management ==
+
+* Allow rules everywhere that Pacemaker does.
+
+== Completion ==
+
+* Fully functional tab completion in interactive mode.
+
+* Fully functional bash tab completion.
+
+* (optional) Fully functional zsh tab completion.
+
+== hawk ==
+
+* Enable hawk to use the `crm cluster apply` mechanism in its wizards.
+
+
