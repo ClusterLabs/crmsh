@@ -28,7 +28,7 @@ from msg import common_warn, common_info, common_debug, common_err
 from clidisplay import CliDisplay
 from term import TerminalController
 
-import ui_tree
+import ui_root
 import ui_context
 
 
@@ -384,8 +384,8 @@ def compgen():
     line = line_split[1].lstrip()
 
     options.interactive = False
-    tree = ui_tree.Tree()
-    context = ui_context.Context(tree)
+    ui = ui_root.Root()
+    context = ui_context.Context(ui)
     last_word = line.rsplit(' ', 1)
     if len(last_word) > 1 and ':' in last_word[1]:
         idx = last_word[1].rfind(':')
@@ -460,8 +460,8 @@ def run():
         envsetup()
         mv_user_files()
 
-        tree = ui_tree.Tree()
-        context = ui_context.Context(tree)
+        ui = ui_root.Root()
+        context = ui_context.Context(ui)
 
         load_rc(context, vars.rc_file)
         atexit.register(exit_handler)

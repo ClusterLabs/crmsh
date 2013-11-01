@@ -35,9 +35,8 @@ class Context(object):
     The Context is passed as the first parameter
     to any command.
     """
-    def __init__(self, tree):
-        self.tree = tree
-        self.stack = [tree.root]
+    def __init__(self, root):
+        self.stack = [root]
         self._mark = 0
         self._in_transit = False
 
