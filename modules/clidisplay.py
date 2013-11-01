@@ -67,10 +67,10 @@ class CliDisplay(Singleton):
         return s
 
     def prompt(self, s):
-        ret = self._colorize(s, 'green', 'bold')
         if self.colors_enabled():
-            ret = "${RLIGNOREBEGIN}%s${RLIGNOREEND}" % (ret)
-        return ret
+            s = "${RLIGNOREBEGIN}${GREEN}${BOLD}${RLIGNOREEND}" + s
+            return s + "${RLIGNOREBEGIN}${NORMAL}${RLIGNOREEND}"
+        return s
 
     def help_header(self, s):
         return self._colorize(s, 'blue', 'bold', 'underline')
