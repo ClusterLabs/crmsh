@@ -16,9 +16,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+import os
 import command
 import utils
 from msg import no_prog_err
+import config
 
 
 class Report(command.UI):
@@ -27,7 +29,7 @@ class Report(command.UI):
     '''
     name = "report"
 
-    extcmd = "crmsh_hb_report"
+    extcmd = os.path.join(config.DATADIR, config.PACKAGE, 'hb_report')
 
     def requires(self):
         if not utils.is_program(self.extcmd):
