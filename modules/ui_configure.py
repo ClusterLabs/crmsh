@@ -34,6 +34,7 @@ import ui_ra
 import ui_template
 import ui_history
 import ui_utils
+from crm_gv import gv_types
 
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
@@ -356,6 +357,7 @@ class CibConfig(command.UI):
         return set_obj.import_file(method, url)
 
     @command.skill_level('administrator')
+    @command.completers(compl.choice(gv_types.keys() + ['exportsettings']))
     def do_graph(self, context, *args):
         "usage: graph [<gtype> [<file> [<img_format>]]]"
         if args and args[0] == "exportsettings":
@@ -489,16 +491,15 @@ class CibConfig(command.UI):
             return True
         return cib_factory.change_schema(schema_st)
 
-    def __conf_object(self, context, *args):
+    def __conf_object(self, cmd, *args):
         "The configure object command."
         if not cib_factory.is_cib_sane():
             return False
-        cmd = context.get_command_name()
         if cmd in vars.cib_cli_map.values() and \
                 not cib_factory.is_elem_supported(cmd):
             common_err("%s not supported by the RNG schema" % cmd)
             return False
-        f = lambda: cib_factory.create_object(context.get_command_name(), *args)
+        f = lambda: cib_factory.create_object(cmd, *args)
         return f()
 
     @command.skill_level('administrator')
