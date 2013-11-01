@@ -79,6 +79,12 @@ def stonith_resource_list(args):
             if x.node.get("class") == "stonith"]
 
 
+def _load_2nd_completer(args):
+    if args[1] == 'xml':
+        return ['replace', 'update']
+    return []
+
+
 # completion for primitives including help for parameters
 # (help also available for properties)
 
@@ -318,6 +324,7 @@ class CibConfig(command.UI):
         return set_obj.save_to_file(f)
 
     @command.skill_level('administrator')
+    @command.completers(compl.choice(['xml', 'replace', 'update']), _load_2nd_completer)
     def do_load(self, context, *args):
         "usage: load [xml] {replace|update} {<url>|<path>}"
         if not cib_factory.is_cib_sane():
