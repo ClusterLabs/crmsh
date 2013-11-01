@@ -319,9 +319,13 @@ class UserPrefs(Singleton):
         Return list of possible choices for multichoice, etc.
         '''
         try:
-            return self.opt_dict[attr][2]
+            ret = self.opt_dict[attr][2]
         except KeyError:
-            return []
+            ret = []
+        # skill-level choices is a dict
+        if isinstance(ret, dict):
+            ret = ret.keys()
+        return ret
 
     def get_check_rc(self):
         '''
@@ -336,12 +340,20 @@ class UserPrefs(Singleton):
             n = attr.replace("_", "-")
             print >> f, '%s "%s"' % (n, self._options[attr])
 
+    def all_options(self):
+        '''
+        Returns a list with the names of all available options.
+        '''
+        return self._options.keys()
+
     def print_option(self, name):
         try:
             key = name.replace('-', '_')
             print '%s "%s"' % (name, self._options[key])
+            return True
         except KeyError:
             print >>sys.stderr, "ERROR: %s not set" % (name)
+            return False
 
     def save_options(self, rc_file):
         #print "saving options to %s" % rc_file

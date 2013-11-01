@@ -38,31 +38,31 @@ class CliOptions(command.UI):
 
     @command.name('skill-level')
     @command.completers(_getprefs('skill_level'))
-    def do_skill_level(self, context, skill_level):
+    def do_skill_level(self, context, level):
         """usage: skill-level <level>
         level: operator | administrator | expert"""
-        return user_prefs.set_pref("skill-level", skill_level)
+        return user_prefs.set_pref('skill-level', level)
 
-    def do_editor(self, context, prog):
+    def do_editor(self, context, program):
         "usage: editor <program>"
-        return user_prefs.set_pref("editor", prog)
+        return user_prefs.set_pref('editor', program)
 
-    def do_pager(self, context, prog):
+    def do_pager(self, context, program):
         "usage: pager <program>"
-        return user_prefs.set_pref("pager", prog)
+        return user_prefs.set_pref('pager', program)
 
-    def do_user(self, context, user=''):
+    def do_user(self, context, crm_user=''):
         "usage: user [<crm_user>]"
-        return user_prefs.set_pref("user", user)
+        return user_prefs.set_pref('user', crm_user)
 
     @command.completers(_getprefs('output'))
-    def do_output(self, context, otypes):
+    def do_output(self, context, output_type):
         "usage: output <type>"
-        return user_prefs.set_pref("output", otypes)
+        return user_prefs.set_pref("output", output_type)
 
-    def do_colorscheme(self, context, scheme):
+    def do_colorscheme(self, context, colors):
         "usage: colorscheme <colors>"
-        return user_prefs.set_pref("colorscheme", scheme)
+        return user_prefs.set_pref("colorscheme", colors)
 
     @command.name('check-frequency')
     @command.completers(_getprefs('check_frequency'))
@@ -99,9 +99,12 @@ class CliOptions(command.UI):
         "usage: manage-children <option>"
         return user_prefs.set_pref("manage-children", opt)
 
-    def do_show(self, context):
-        "usage: show"
-        return user_prefs.write_rc(sys.stdout)
+    @command.completers(completers.call(user_prefs.all_options))
+    def do_show(self, context, option=None):
+        "usage: show [option]"
+        if option is None:
+            return user_prefs.write_rc(sys.stdout)
+        return user_prefs.print_option(option)
 
     def do_save(self, context):
         "usage: save"

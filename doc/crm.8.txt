@@ -1673,6 +1673,15 @@ all children attributes are left intact. Finally, if set to
 
 Display all current settings.
 
+Given an option name as argument, `show` will display only the value
+of that argument.
+
+Usage:
+........
+        show
+        show skill-level
+........
+
 [[cmdhelp_options_save,save the user preferences to the rc file]]
 ==== `save`
 
