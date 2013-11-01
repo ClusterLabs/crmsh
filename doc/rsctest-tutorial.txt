@@ -8,21 +8,23 @@ resources worked from the get go on all your nodes? Really? We
 want a photo of you!
 
 Seriously, it is so error prone to get a cluster resource
-definition right that I think I ever managed to do that only with
-`Dummy` resources. There are many details and all of them are
-stuffed in a single place as simple name-value attributes. Then
-there are multiple nodes and their environment inevitably always
-in flux and changing (entropy anybody?).
+definition right that I think I ever only managed to do it with
+`Dummy` resources. There are many intricate details that have to be
+just right, and all of them are stuffed in a single place as simple
+name-value attributes. Then there are multiple nodes, each node
+containing a complex system environment inevitably always in flux and
+changing (entropy anybody?).
 
 Now, once you defined your set of resources and are about to
 _commit_ the configuration (at that point it usually takes a
-deep breath to do so) be ready to meet an avalanche of error
+deep breath to do so), be ready to meet an avalanche of error
 messages, not all of which are easy to understand or follow. Not
 to mention that you need to read the logs too. Even though we do
-have a link:history-tutorial.html[tool] to help with that, it is
-going to be an interesting experience and not quite recommended
-if you're just starting with pacemaker clusters. The experienced
-too are going to have much easier time following the advice below.
+have a link:history-tutorial.html[tool] to help with digging through
+the logs, it is going to be an interesting experience and not quite
+recommended if you're just starting with pacemaker clusters. Even the
+experts can save a lot of time and headaches by following the advice
+below.
 
 == Basic usage ==
 
@@ -88,10 +90,11 @@ crm(live)configure#
 
 As expected, `apache` failed to start on node `xen-f`. When the
 cluster resource manager runs an operation on a resource, all
-messages are logged (there is anyway no terminal attached to the
-cluster) and all one can see in the resource status is the type
-of the exit code (in this case it is an installation problem).
-For instance, the output would look like this:
+messages are logged (there is no terminal attached to the
+cluster, anyway). All one can see in the resource status is the type
+of the exit code. In this case, it is an installation problem.
+
+For instance, the output could look like this:
 
 ----
 xen-f:~ # crm status
@@ -104,7 +107,7 @@ last-rc-change='Thu Oct 17 19:21:31 2013', queued=164ms, exec=0ms
 ----
 
 That does not look very informative. With `rsctest` we can
-immediately see what is the problem. It saves us prowling the
+immediately see what the problem is. It saves us prowling the
 logs looking for messages of the `apache` resource agent.
 
 Note that the IP address is not tested, because the resource it
@@ -197,7 +200,7 @@ one.
 
 The stonith resources are also special and need special
 treatment. What is tested is just the device status. Actually
-fencing nodes was deemed to drastic. Please use `node fence` to
+fencing nodes was deemed too drastic. Please use `node fence` to
 test the fencing device effectiveness. It also does not matter
 whether the stonith resource is "running" on any node: being
 started is just something that happens virtually in the
@@ -224,7 +227,8 @@ started is just something that happens virtually in the
   nodes which are not present in the cluster or from bad RA
   implementations (but neither would a cluster resource manager)
 
-- `rsctest` was not designed to test RA thoroughly
+- `rsctest` was designed as a debugging and configuration aid, and is
+  not intended to provide full Resource Agent test coverage.
 
 == `crmsh` help and online resources (_sic!_) ==
 

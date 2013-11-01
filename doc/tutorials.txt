@@ -1,9 +1,11 @@
 = Guides & Tutorials =
 
-You will find here what you may expect, a set of hands-on
-tutorials and best practices. `crmsh` is a free software project,
-and is open to contributors.  More guides and tutorials are very
-much welcome!
+This section contains a growing series of guides and tutorials,
+hopefully covering topics of interest both to beginners and experts in
+cluster configuration.
+
+`crmsh` is a free software project, and is open to contributors.  More
+guides and tutorials are very much welcome!
 
 == Resource testing ==
 
