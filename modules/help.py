@@ -75,9 +75,13 @@ class HelpFilter(object):
 
 
 class HelpEntry(object):
-    def __init__(self, short_help, long_help=''):
-        self.short = short_help
+    def __init__(self, short_help, long_help='', alias_for=None):
+        if short_help:
+            self.short = short_help[0].upper() + short_help[1:]
+        else:
+            self.short = 'Help'
         self.long = long_help
+        self.alias_for = alias_for
 
     def paginate(self):
         '''
@@ -85,14 +89,21 @@ class HelpEntry(object):
         Replace asciidoc syntax with colorized output where possible.
         '''
         display = clidisplay.CliDisplay.getInstance()
+        helpfilter = HelpFilter(display)
+
         short_help = display.help_header(self.short)
 
         long_help = self.long
         if long_help:
-            helpfilter = HelpFilter(display)
             long_help = helpfilter(long_help)
+            if not long_help.startswith('\n'):
+                long_help = '\n' + long_help
 
-        page_string(short_help + '\n' + long_help)
+        prefix = ''
+        if self.alias_for:
+            prefix = helpfilter("(Redirected from `%s` to `%s`)\n" % self.alias_for)
+
+        page_string(short_help + '\n' + prefix + long_help)
 
     def __str__(self):
         if self.long:
@@ -289,6 +300,28 @@ def _load_help():
                 for cmdname, cmd in _COMMANDS[lvlname].iteritems():
                     level.long += "\t`%-16s` %s\n" % (cmdname, cmd.short)
 
+    def fixup_help_aliases():
+        "add help for aliases"
+
+        def add_help_for_alias(lvlname, command, alias):
+            if lvlname not in _COMMANDS:
+                return
+            if command not in _COMMANDS[lvlname]:
+                return
+            if alias in _COMMANDS[lvlname]:
+                return
+            info = _COMMANDS[lvlname][command]
+            _COMMANDS[lvlname][alias] = HelpEntry(info.short, info.long, (alias, command))
+
+        def add_aliases_for_level(lvl):
+            for name, info in lvl._children.iteritems():
+                for alias in info.aliases:
+                    add_help_for_alias(lvl.name, info.name, alias)
+                if info.level:
+                    add_aliases_for_level(info.level)
+        from ui_root import Root
+        add_aliases_for_level(Root)
+
     try:
         name = os.getenv("CRM_HELP_FILE") or HELP_FILE
         helpfile = open(name, 'r')
@@ -302,6 +335,7 @@ def _load_help():
                 entry['long'] += filter_line(line)
         helpfile.close()
         append_cmdinfos()
+        fixup_help_aliases()
     except IOError, msg:
         common_err("%s open: %s" % (name, msg))
         common_err("extensive help system is not available")
