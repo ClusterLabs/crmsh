@@ -106,8 +106,6 @@ class HelpEntry(object):
         if self.is_alias():
             prefix = helpfilter("(Redirected from `%s` to `%s`)\n" % self.alias_for)
 
-        print long_help
-
         page_string(short_help + '\n' + prefix + long_help)
 
     def __str__(self):
