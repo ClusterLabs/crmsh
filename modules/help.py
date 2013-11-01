@@ -275,10 +275,11 @@ def _load_help():
             if len(info) == 2:
                 entry['type'] = 'level'
                 entry['name'] = info[1]
-            elif len(info) == 3:
+            elif len(info) >= 3:
                 entry['type'] = 'command'
                 entry['level'] = info[1]
-                entry['name'] = info[2]
+                entry['name'] = '_'.join(info[2:])
+
         return entry
 
     def process(entry):
