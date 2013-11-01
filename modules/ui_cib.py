@@ -22,12 +22,14 @@ import command
 import xmlutil
 import utils
 import ui_cibstatus
+
+from tempfile import mkstemp
 from msg import UserPrefs, Options
 from msg import no_prog_err
 from cibstatus import CibStatus
 from cibconfig import CibFactory
-import completers as compl
 
+import completers as compl
 
 _NEWARGS = ('force', '--force', 'withstatus', 'empty')
 
@@ -52,23 +54,38 @@ class CibShadow(command.UI):
 
     @command.skill_level('administrator')
     @command.completers_repeating(compl.null, compl.choice(_NEWARGS))
-    def do_new(self, context, name, *args):
-        "usage: new <shadow_cib> [withstatus] [force] [empty]"
-        if not utils.is_filename_sane(name):
-            context.fatal_error("Bad filename: " + name)
-        for par in args:
-            if not par in _NEWARGS:
-                context.fatal_error("Unknown argument: " + par)
-        if "empty" in args:
+    def do_new(self, context, *args):
+        "usage: new [<shadow_cib>] [withstatus] [force] [empty]"
+        argl = list(args)
+        opt_l = utils.fetch_opts(argl, ["force", "--force", "withstatus", "empty"])
+        if len(argl) > 1:
+            context.fatal_error("Unexpected argument(s): " + ','.join(argl))
+
+        name = None
+        if argl:
+            name = argl[0]
+            if not utils.is_filename_sane(name):
+                context.fatal_error("Bad filename: " + name)
+            if name in (vars.tmp_cib_prompt, vars.live_cib_prompt):
+                context.fatal_error("Shadow name '%s' is not allowed" % (name))
+            del argl[0]
+            vars.tmp_cib = False
+        else:
+            fd, fname = mkstemp(dir=xmlutil.cib_shadow_dir(), prefix="shadow.crmsh_")
+            vars.tmpfiles.append(fname)
+            name = os.path.basename(fname).replace("shadow.", "")
+            vars.tmp_cib = True
+
+        if "empty" in opt_l:
             new_cmd = "%s -e '%s'" % (self.extcmd, name)
         else:
             new_cmd = "%s -c '%s'" % (self.extcmd, name)
-        if user_prefs.force or "force" in args or "--force" in args:
+        if vars.tmp_cib or user_prefs.force or "force" in opt_l or "--force" in opt_l:
             new_cmd = "%s --force" % new_cmd
         if utils.ext_cmd(new_cmd) == 0:
             context.info("%s shadow CIB created" % name)
             self.use("use", name)
-            if "withstatus" in args:
+            if "withstatus" in opt_l:
                 cib_status.load("shadow:%s" % name)
 
     def _find_pe(self, context, infile):
