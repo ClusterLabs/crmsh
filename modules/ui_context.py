@@ -122,7 +122,9 @@ class Context(object):
                         self.enter_level(self.command_info.level)
                     else:
                         # use the completer for the command
-                        return self.command_info.complete(self, tokens)
+                        ret = self.command_info.complete(self, tokens)
+                        ret = [t for t in ret if t.startswith(tokens[-1])]
+                        return ret
                 # reached the end on a valid level.
                 # return the completions for the previous level.
                 if self.previous_level():
@@ -145,12 +147,14 @@ class Context(object):
 
     def setup_readline(self):
         readline.set_history_length(100)
-        readline.parse_and_bind("tab: complete")
+        for v in ('tab: complete',
+                  'set bell-style visible',
+                  #'set menu-complete-display-prefix on',
+                  #'set show-all-if-unmodified on',
+                  'set skip-completed-text on'):
+            readline.parse_and_bind(v)
         readline.set_completer(self.readline_completer)
-        # FIXME: might not want to do this anymore
-        delims = readline.get_completer_delims()
-        delims = delims.replace('-', '').replace('/', '').replace('=', '')
-        readline.set_completer_delims(delims)
+        readline.set_completer_delims(' \t\n,')
         try:
             readline.read_history_file(vars.hist_file)
         except IOError:
@@ -163,8 +167,12 @@ class Context(object):
 
         line = readline.get_line_buffer()
         if line != self._rl_line:
-            self._rl_line = line
-            self._rl_words = [w for w in self.complete(line) if matching(w)]
+            try:
+                self._rl_line = line
+                self._rl_words = [w for w in self.complete(line) if matching(w)]
+            except Exception:
+                self._rl_line = None
+                self._rl_words = []
         try:
             return self._rl_words[state]
         except IndexError:
