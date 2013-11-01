@@ -83,6 +83,9 @@ class HelpEntry(object):
         self.long = long_help
         self.alias_for = alias_for
 
+    def is_alias(self):
+        return self.alias_for is not None
+
     def paginate(self):
         '''
         Display help, paginated.
@@ -100,7 +103,7 @@ class HelpEntry(object):
                 long_help = '\n' + long_help
 
         prefix = ''
-        if self.alias_for:
+        if self.is_alias():
             prefix = helpfilter("(Redirected from `%s` to `%s`)\n" % self.alias_for)
 
         print long_help
@@ -149,7 +152,8 @@ def help_overview():
         if title in _COMMANDS:
             s += "\t`%-16s` %s\n" % (title, level.short)
             for cmdname, cmd in _COMMANDS[title].iteritems():
-                s += "\t\t`%-16s` %s\n" % (cmdname, cmd.short)
+                if not cmd.is_alias():
+                    s += "\t\t`%-16s` %s\n" % (cmdname, cmd.short)
             s += "\n"
     return HelpEntry('Help overview for crmsh\n', s)
 
