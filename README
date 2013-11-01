@@ -1,22 +1,60 @@
-This is the CRM shell, a Pacemaker command line interface.
-It supports pacemaker configuration, management, and
-troubleshooting.
+# INTRODUCTION
 
-CRM shell is implemented in Python.
+crmsh is a command-line interface for High-Availability cluster
+management on GNU/Linux systems. It simplifies the configuration,
+management and troubleshooting of Pacemaker-based clusters, by
+providing a powerful and intuitive set of features.
 
-Building and installing
+crmsh can function both as an interactive shell with tab completion
+and inline documentation, and as a command-line tool. It can also be
+used in batch mode to execute commands from files.
+
+# MORE INFORMATION
+
+The website for crmsh is:
+
+  * http://crmsh.nongnu.org/
+
+Documentation for the latest stable release is found at:
+
+  * http://crmsh.nongnu.org/documentation.html
+
+# DEVELOPMENT
+
+crmsh is implemented in Python. The source code for crmsh is kept in a
+Mercurial source repository. To check out the latest development
+version, install Mercurial and run this command:
+
+    hg clone http://hg.savannah.nongnu.org/hgweb/crmsh/
+
+Bugs and issues can be reported on either of the two issue trackers
+associated with the project:
+
+ * https://savannah.nongnu.org/bugs/?group=crmsh
+
+ * https://developerbugs.linuxfoundation.org/enter_bug.cgi?product=Pacemaker;component=Shell;version=1.2
+
+Any other questions or comments can be made on the linux-ha mailing
+list at:
+
+ * http://lists.linux-ha.org/mailman/listinfo/linux-ha
+
+# INSTALLING
 
 Autoconf is used to take care of platform dependendent locations.
 It is mainly inherited from the Pacemaker source.
 
-./autogen.sh
-./configure
-make
-make install
+    ./autogen.sh
+    ./configure
+    make
+    make install
 
-Manifest
+# MANIFEST
 
-./doc: man page
-./modules: the code
-./templates: configuration templates
-./test: regression tests
+    ./doc: man page, source for the website and other documentation
+    ./modules: the code
+    ./templates: configuration templates
+    ./test: unit tests and regression tests
+    ./contrib: vim highlighting scripts and other semi-related
+               contributions
+    ./hb_report: log file collection and analysis tool
