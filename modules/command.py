@@ -363,11 +363,12 @@ class ChildInfo(object):
         Execute the completer for this command with the given arguments.
         The completer mostly completes based on argument position, but
         some commands are context sensitive...
+        - make args[0] be name of command
         '''
         #import sys
         #print >>sys.stderr, self.name, args
         if self.completer is not None:
-            return self.completer(args)
+            return self.completer([self.name] + args)
         return []
 
     def __repr__(self):
