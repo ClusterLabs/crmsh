@@ -208,7 +208,7 @@ def primitive_complete_complex(args):
     if last_keyw is None:
         return []
 
-    return completers_set[last_keyw](agent, args)
+    return completers_set[last_keyw](agent, args) + keywords
 
 
 class CibConfig(command.UI):
