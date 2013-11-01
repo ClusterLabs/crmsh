@@ -1,5 +1,5 @@
 :man source:   crm
-:man version:  1.2.0
+:man version:  1.3.0
 :man manual:   crmsh documentation
 
 crm(8)
@@ -65,7 +65,7 @@ is commonly used when displaying configurations.
 OPTIONS
 -------
 *-f, --file*='FILE'::
-	Load commands from the given file. If a dash `-` is used in place
+    Load commands from the given file. If a dash `-` is used in place
     of a file name, `crm` will read commands from the shell standard
     input (`stdin`).
 
@@ -74,9 +74,9 @@ OPTIONS
     Equivalent to `cib use <CIB>`.
 
 *-D, --display=*'OUTPUT_TYPE'::
-	Choose one of the output options: `plain`, `color`, or
-	`uppercase`. The default is `color` if the terminal emulation
-	supports colors. Otherwise, `plain` is used.
+    Choose one of the output options: `plain`, `color`, or
+    `uppercase`. The default is `color` if the terminal emulation
+    supports colors. Otherwise, `plain` is used.
 
 *-F, --force*::
     Make `crm` proceed with applying changes where it would normally
@@ -120,64 +120,61 @@ The main purpose of `crm` is to provide a simple yet powerful
 interface to the cluster stack. To get started and to give new users a
 feel for how to use it, lets just jump straight into some examples:
 
-1. Command line (one-shot) use:
-
+.Command line (one-shot) use:
 ........
-        # crm resource stop www_app
-........
-
-2. Interactive use:
-
-........
-        # crm
-        crm(live)# resource
-        crm(live)resource# unmanage tetris_1
-        crm(live)resource# up
-        crm(live)# node standby node4
+# crm resource stop www_app
 ........
 
-3. Cluster configuration:
-
+.Interactive use:
 ........
-    # crm configure<<EOF
-      #
-      # resources
-      #
-      primitive disk0 iscsi \
-        params portal=192.168.2.108:3260 target=iqn.2008-07.com.suse:disk0
-      primitive fs0 Filesystem \
-        params device=/dev/disk/by-label/disk0 directory=/disk0 fstype=ext3
-      primitive internal_ip IPaddr params ip=192.168.1.101
-      primitive apache apache \
-        params configfile=/disk0/etc/apache2/site0.conf
-      primitive apcfence stonith:apcsmart \
-        params ttydev=/dev/ttyS0 hostlist="node1 node2" \
-        op start timeout=60s
-      primitive pingd pingd \
-        params name=pingd dampen=5s multiplier=100 host_list="r1 r2"
-      #
-      # monitor apache and the UPS
-      #
-      monitor apache 60s:30s
-      monitor apcfence 120m:60s
-      #
-      # cluster layout
-      #
-      group internal_www \
-        disk0 fs0 internal_ip apache
-      clone fence apcfence \
-        meta globally-unique=false clone-max=2 clone-node-max=1
-      clone conn pingd \
-        meta globally-unique=false clone-max=2 clone-node-max=1
-      location node_pref internal_www \
-        rule 50: #uname eq node1 \
-        rule pingd: defined pingd
-      #
-      # cluster properties
-      #
-      property stonith-enabled=true
-      commit
-    EOF
+# crm
+crm(live)# resource
+crm(live)resource# unmanage tetris_1
+crm(live)resource# up
+crm(live)# node standby node4
+........
+
+.Cluster configuration:
+........
+# crm configure<<EOF
+  #
+  # resources
+  #
+  primitive disk0 iscsi \
+    params portal=192.168.2.108:3260 target=iqn.2008-07.com.suse:disk0
+  primitive fs0 Filesystem \
+    params device=/dev/disk/by-label/disk0 directory=/disk0 fstype=ext3
+  primitive internal_ip IPaddr params ip=192.168.1.101
+  primitive apache apache \
+    params configfile=/disk0/etc/apache2/site0.conf
+  primitive apcfence stonith:apcsmart \
+    params ttydev=/dev/ttyS0 hostlist="node1 node2" \
+    op start timeout=60s
+  primitive pingd pingd \
+    params name=pingd dampen=5s multiplier=100 host_list="r1 r2"
+  #
+  # monitor apache and the UPS
+  #
+  monitor apache 60s:30s
+  monitor apcfence 120m:60s
+  #
+  # cluster layout
+  #
+  group internal_www \
+    disk0 fs0 internal_ip apache
+  clone fence apcfence \
+    meta globally-unique=false clone-max=2 clone-node-max=1
+  clone conn pingd \
+    meta globally-unique=false clone-max=2 clone-node-max=1
+  location node_pref internal_www \
+    rule 50: #uname eq node1 \
+    rule pingd: defined pingd
+  #
+  # cluster properties
+  #
+  property stonith-enabled=true
+  commit
+EOF
 ........
 
 If you have ever done a CRM style configuration before, the examples
@@ -219,9 +216,9 @@ committing the changes to the active CIB, save them to a shadow CIB.
 The following example `configure` session demonstrates how this can be
 done:
 ...............
-    crm(live)configure# cib new test-2
-    INFO: test-2 shadow CIB created
-    crm(test-2)configure# commit
+crm(live)configure# cib new test-2
+INFO: test-2 shadow CIB created
+crm(test-2)configure# commit
 ...............
 
 [[topics_Templates,Configuration templates]]
@@ -236,17 +233,17 @@ start.
 We will show here how to create a simple yet functional Apache
 configuration:
 ...............
-    # crm configure
-    crm(live)configure# template
-    crm(live)configure template# list templates
-    apache       filesystem   virtual-ip   
-    crm(live)configure template# new web <TAB><TAB>
-    apache       filesystem   virtual-ip   
-    crm(live)configure template# new web apache
-    INFO: pulling in template apache
-    INFO: pulling in template virtual-ip
-    crm(live)configure template# list
-    web2-d       web2         vip2         web3         vip          web
+# crm configure
+crm(live)configure# template
+crm(live)configure template# list templates
+apache       filesystem   virtual-ip   
+crm(live)configure template# new web <TAB><TAB>
+apache       filesystem   virtual-ip   
+crm(live)configure template# new web apache
+INFO: pulling in template apache
+INFO: pulling in template virtual-ip
+crm(live)configure template# list
+web2-d       web2     vip2     web3     vip      web
 ...............
 
 We enter the `template` level from `configure`. Use the `list`
@@ -263,11 +260,11 @@ may be used to get an idea about the minimum required changes
 which have to be done. All `ERROR` messages show the line numbers
 in which the respective parameters are to be defined:
 ...............
-    crm(live)configure template# show
-    ERROR: 23: required parameter ip not set
-    ERROR: 61: required parameter id not set
-    ERROR: 65: required parameter configfile not set
-    crm(live)configure template# edit
+crm(live)configure template# show
+ERROR: 23: required parameter ip not set
+ERROR: 61: required parameter id not set
+ERROR: 65: required parameter configfile not set
+crm(live)configure template# edit
 ...............
 
 The `edit` command invokes the preferred text editor with the
@@ -277,14 +274,14 @@ to specify only parameters. For example, the `web` configuration
 we created above has the following required and optional
 parameters (all parameter lines start with `%%`):
 ...............
-    $ grep -n ^%% ~/.crmconf/web
-    23:%% ip 
-    31:%% netmask 
-    35:%% lvs_support 
-    61:%% id 
-    65:%% configfile 
-    71:%% options 
-    76:%% envfiles 
+$ grep -n ^%% ~/.crmconf/web
+23:%% ip 
+31:%% netmask 
+35:%% lvs_support 
+61:%% id 
+65:%% configfile 
+71:%% options 
+76:%% envfiles 
 ...............
 
 These lines are the only ones that should be modified. Simply
@@ -292,32 +289,32 @@ append the parameter value at the end of the line. For instance,
 after editing this template, the result could look like this (we
 used tabs instead of spaces to make the values stand out):
 ...............
-    $ grep -n ^%% ~/.crmconf/web
-    23:%% ip                192.168.1.101
-    31:%% netmask 
-    35:%% lvs_support 
-    61:%% id                websvc
-    65:%% configfile        /etc/apache2/httpd.conf
-    71:%% options 
-    76:%% envfiles 
+$ grep -n ^%% ~/.crmconf/web
+23:%% ip        192.168.1.101
+31:%% netmask 
+35:%% lvs_support 
+61:%% id        websvc
+65:%% configfile    /etc/apache2/httpd.conf
+71:%% options 
+76:%% envfiles 
 ...............
 
 As you can see, the parameter line format is very simple:
 ...............
-    %% <name> <value>
+%% <name> <value>
 ...............
 
 After editing the file, use `show` again to display the
 configuration:
 ...............
-    crm(live)configure template# show
-    primitive virtual-ip ocf:heartbeat:IPaddr \
-            params ip="192.168.1.101"
-    primitive apache ocf:heartbeat:apache \
-            params configfile="/etc/apache2/httpd.conf"
-    monitor apache 120s:60s
-    group websvc \
-            apache virtual-ip
+crm(live)configure template# show
+primitive virtual-ip ocf:heartbeat:IPaddr \
+    params ip="192.168.1.101"
+primitive apache ocf:heartbeat:apache \
+    params configfile="/etc/apache2/httpd.conf"
+monitor apache 120s:60s
+group websvc \
+    apache virtual-ip
 ...............
 
 The target resource of the apache template is a group which we
@@ -333,17 +330,17 @@ crm configuration (note how the configuration changed slightly,
 though it is still equivalent, after being digested at the
 `configure` level):
 ...............
-    crm(live)configure template# apply 
-    crm(live)configure template# cd ..
-    crm(live)configure# show
-    node xen-b
-    node xen-c
-    primitive apache ocf:heartbeat:apache \
-        params configfile="/etc/apache2/httpd.conf" \
-        op monitor interval="120s" timeout="60s"
-    primitive virtual-ip ocf:heartbeat:IPaddr \
-        params ip="192.168.1.101"
-    group websvc apache virtual-ip
+crm(live)configure template# apply 
+crm(live)configure template# cd ..
+crm(live)configure# show
+node xen-b
+node xen-c
+primitive apache ocf:heartbeat:apache \
+    params configfile="/etc/apache2/httpd.conf" \
+    op monitor interval="120s" timeout="60s"
+primitive virtual-ip ocf:heartbeat:IPaddr \
+    params ip="192.168.1.101"
+group websvc apache virtual-ip
 ...............
 
 Note that this still does not commit the configuration to the CIB
@@ -354,23 +351,23 @@ command.
 To complete our example, we should also define the preferred node
 to run the service:
 ...............
-    crm(live)configure# location websvc-pref websvc 100: xen-b
+crm(live)configure# location websvc-pref websvc 100: xen-b
 ...............
 
 If you are not happy with some resource names which are provided
 by default, you can rename them now:
 ...............
-    crm(live)configure# rename virtual-ip intranet-ip
-    crm(live)configure# show
-    node xen-b
-    node xen-c
-    primitive apache ocf:heartbeat:apache \
-            params configfile="/etc/apache2/httpd.conf" \
-            op monitor interval="120s" timeout="60s"
-    primitive intranet-ip ocf:heartbeat:IPaddr \
-            params ip="192.168.1.101"
-    group websvc apache intranet-ip
-    location websvc-pref websvc 100: xen-b
+crm(live)configure# rename virtual-ip intranet-ip
+crm(live)configure# show
+node xen-b
+node xen-c
+primitive apache ocf:heartbeat:apache \
+    params configfile="/etc/apache2/httpd.conf" \
+    op monitor interval="120s" timeout="60s"
+primitive intranet-ip ocf:heartbeat:IPaddr \
+    params ip="192.168.1.101"
+group websvc apache intranet-ip
+location websvc-pref websvc 100: xen-b
 ...............
 
 To summarize, working with templates typically consists of the
@@ -392,30 +389,30 @@ wear.
 
 Let's say that we entered the following configuration:
 ...............
-    node xen-b
-    node xen-c
-    node xen-d
-    primitive fencer stonith:external/libvirt \
-            params hypervisor_uri="qemu+tcp://10.2.13.1/system" \
-                hostlist="xen-b xen-c xen-d" \
-            op monitor interval="2h"
-    primitive svc ocf:heartbeat:Xinetd \
-            params service="systat" \
-            op monitor interval="30s"
-    primitive intranet-ip ocf:heartbeat:IPaddr2 \
-            params ip="10.2.13.100" \
-            op monitor interval="30s"
-    primitive apache ocf:heartbeat:apache \
-            params configfile="/etc/apache2/httpd.conf" \
-            op monitor interval="120s" timeout="60s"
-    group websvc apache intranet-ip
-    location websvc-pref websvc 100: xen-b
+node xen-b
+node xen-c
+node xen-d
+primitive fencer stonith:external/libvirt \
+    params hypervisor_uri="qemu+tcp://10.2.13.1/system" \
+        hostlist="xen-b xen-c xen-d" \
+    op monitor interval="2h"
+primitive svc ocf:heartbeat:Xinetd \
+    params service="systat" \
+    op monitor interval="30s"
+primitive intranet-ip ocf:heartbeat:IPaddr2 \
+    params ip="10.2.13.100" \
+    op monitor interval="30s"
+primitive apache ocf:heartbeat:apache \
+    params configfile="/etc/apache2/httpd.conf" \
+    op monitor interval="120s" timeout="60s"
+group websvc apache intranet-ip
+location websvc-pref websvc 100: xen-b
 ...............
 
 Before typing `commit` to submit the configuration to the cib we
 can make sure that all resources are usable on all nodes:
 ...............
-    crm(live)configure# rsctest websvc svc fencer
+crm(live)configure# rsctest websvc svc fencer
 ...............
 
 It is important that resources being tested are not running on
@@ -430,7 +427,7 @@ Alternatively to not committing a configuration, it is also
 possible to tell Pacemaker not to start any resources:
 
 ...............
-    crm(live)configure# property stop-all-resources="yes"
+crm(live)configure# property stop-all-resources="yes"
 ...............
 Almost none---resources of class stonith are still started. But
 shell is not as strict when it comes to stonith resources.
@@ -457,38 +454,38 @@ information from installed resource agents. Sometimes, completion
 may also be used to get short help on resource parameters. Here a
 few examples:
 ...............
-    crm(live)# resource
-    crm(live)resource# <TAB><TAB>
-    bye           failcount     move          restart       unmigrate 
-    cd            help          param         show          unmove 
-    cleanup       list          promote       start         up 
-    demote        manage        quit          status utilization 
-    end           meta          refresh       stop          
-    exit          migrate       reprobe       unmanage      
-    crm(live)resource# end
-    crm(live)# configure 
-    crm(live)configure# primitive fence-1 <TAB><TAB>
-    heartbeat:  lsb:        ocf:        stonith:    
-    crm(live)configure# primitive fence-1 stonith:<TAB><TAB>
-    apcmaster                external/ippower9258     fence_legacy 
-    apcmastersnmp            external/kdumpcheck      ibmhmc 
-    apcsmart                 external/libvirt         ipmilan 
-    baytech                  external/nut             meatware 
-    bladehpi                 external/rackpdu         null 
-    cyclades                 external/riloe           nw_rpc100s 
-    drac3                    external/sbd             rcd_serial 
-    external/drac5           external/ssh             rps10 
-    external/dracmc-telnet   external/ssh-bad         ssh 
-    external/hmchttp         external/ssh-slow        suicide 
-    external/ibmrsa          external/vmware          wti_mpc 
-    external/ibmrsa-telnet   external/xen0            wti_nps 
-    external/ipmi            external/xen0-ha         
-    crm(live)configure# primitive fence-1 stonith:ipmilan params <TAB><TAB>
-    auth=      hostname=  ipaddr=    login=     password=  port=      priv=
-    crm(live)configure# primitive fence-1 stonith:ipmilan params auth=<TAB><TAB>
-    auth* (string)
-        The authorization type of the IPMI session ("none", "straight", "md2", or "md5")
-    crm(live)configure# primitive fence-1 stonith:ipmilan params auth=
+crm(live)# resource
+crm(live)resource# <TAB><TAB>
+bye           failcount     move          restart       unmigrate 
+cd            help          param         show          unmove 
+cleanup       list          promote       start         up 
+demote        manage        quit          status        utilization 
+end           meta          refresh       stop      
+exit          migrate       reprobe       unmanage      
+crm(live)resource# end
+crm(live)# configure 
+crm(live)configure# primitive fence-1 <TAB><TAB>
+heartbeat:  lsb:    ocf:    stonith:    
+crm(live)configure# primitive fence-1 stonith:<TAB><TAB>
+apcmaster                external/ippower9258     fence_legacy 
+apcmastersnmp            external/kdumpcheck      ibmhmc 
+apcsmart                 external/libvirt         ipmilan 
+baytech                  external/nut             meatware 
+bladehpi                 external/rackpdu         null 
+cyclades                 external/riloe           nw_rpc100s 
+drac3                    external/sbd             rcd_serial 
+external/drac5           external/ssh             rps10 
+external/dracmc-telnet   external/ssh-bad         ssh 
+external/hmchttp         external/ssh-slow        suicide 
+external/ibmrsa          external/vmware          wti_mpc 
+external/ibmrsa-telnet   external/xen0            wti_nps 
+external/ipmi            external/xen0-ha     
+crm(live)configure# primitive fence-1 stonith:ipmilan params <TAB><TAB>
+auth=      hostname=  ipaddr=    login=     password=  port=      priv=
+crm(live)configure# primitive fence-1 stonith:ipmilan params auth=<TAB><TAB>
+auth* (string)
+    The authorization type of the IPMI session ("none", "straight", "md2", or "md5")
+crm(live)configure# primitive fence-1 stonith:ipmilan params auth=
 ...............
 
 [[topics_Checks,Configuration semantic checks]]
@@ -538,11 +535,11 @@ For instance, this is a role which defines a set of rules
 allowing management of a single resource:
 
 ...............
-    role bigdb_admin \
-        write meta:bigdb:target-role \
-        write meta:bigdb:is-managed \
-        write location:bigdb \
-        read ref:bigdb
+role bigdb_admin \
+    write meta:bigdb:target-role \
+    write meta:bigdb:is-managed \
+    write location:bigdb \
+    read ref:bigdb
 ...............
 
 The first two rules allow modifying the `target-role` and
@@ -556,19 +553,19 @@ For proper operation of all Pacemaker programs, it is advisable
 to add the following role to all users:
 
 ...............
-    role read_all \
-        read cib
+role read_all \
+    read cib
 ...............
 
 For finer grained read access try with the rules listed in the
 following role:
 
 ...............
-    role basic_read \
-        read node attribute:uname \
-        read node attribute:type \
-        read property \
-        read status
+role basic_read \
+    read node attribute:uname \
+    read node attribute:type \
+    read property \
+    read status
 ...............
 
 It is however possible that some Pacemaker programs (e.g.
@@ -582,12 +579,12 @@ shell to XPath specifications. For instance,
 You can see the expansion by showing XML:
 
 ...............
-    crm(live) configure# show xml bigdb_admin
-    ...
-    <acls>
-      <acl_role id="bigdb_admin">
-          <write id="bigdb_admin-write"
-          xpath="//primitive[@id='bigdb']/meta_attributes/nvpair[@name='target-role']"/>
+crm(live) configure# show xml bigdb_admin
+...
+<acls>
+  <acl_role id="bigdb_admin">
+      <write id="bigdb_admin-write"
+      xpath="//primitive[@id='bigdb']/meta_attributes/nvpair[@name='target-role']"/>
 ...............
 
 Many different XPath expressions can have equal meaning. For
@@ -595,8 +592,8 @@ instance, the following two are equal, but only the first one is
 going to be recognized as shortcut:
 
 ...............
-      //primitive[@id='bigdb']/meta_attributes/nvpair[@name='target-role']
-      //resources/primitive[@id='bigdb']/meta_attributes/nvpair[@name='target-role']
+//primitive[@id='bigdb']/meta_attributes/nvpair[@name='target-role']
+//resources/primitive[@id='bigdb']/meta_attributes/nvpair[@name='target-role']
 ...............
 
 XPath is a powerful language, but you should try to keep your ACL
@@ -625,9 +622,9 @@ See `crm_mon(8)` for more details.
 
 Usage:
 ...............
-        status [<option> ...]
+status [<option> ...]
 
-        option :: bynode | inactive | ops | timing | failcounts
+option :: bynode | inactive | ops | timing | failcounts
 ...............
 
 [[cmdhelp_cluster,Cluster setup and management]]
@@ -671,7 +668,7 @@ configured in advance.
 
 Usage:
 ...............
-        init nodes=<node-1>,<node-2>,...,<node-N>
+init nodes=<node-1>,<node-2>,...,<node-N>
 ...............
 
 [[cmdhelp_cluster_join,Add a new node to a cluster]]
@@ -685,7 +682,7 @@ up to host the file system.
 
 Usage:
 ...............
-        join <node>
+join <node>
 ...............
 
 [[cmdhelp_cluster_status,Cluster status check]]
@@ -697,7 +694,7 @@ the local node.
 
 Usage:
 ...............
-        status
+status
 ...............
 
 [[cmdhelp_cluster_doctor,Extensive health check]]
@@ -709,7 +706,7 @@ configuration problems.
 
 Usage:
 ...............
-        doctor
+doctor
 ...............
 
 [[cmdhelp_cluster_actions,List available cluster actions]]
@@ -725,7 +722,7 @@ are installed and configured on all of the nodes.
 
 Usage:
 ...............
-        actions
+actions
 ...............
 
 [[cmdhelp_cluster_action,Apply a cluster action]]
@@ -733,7 +730,7 @@ Usage:
 
 Usage:
 ...............
-        action <action> [args ...]
+action <action> [args ...]
 ...............
 
 [[cmdhelp_cib,CIB shadow management]]
@@ -769,7 +766,7 @@ created in case no cluster is running.)
 
 Usage:
 ...............
-        new [<cib>] [withstatus] [force] [empty]
+new [<cib>] [withstatus] [force] [empty]
 ...............
 
 [[cmdhelp_cib_delete,delete a shadow CIB]]
@@ -779,7 +776,7 @@ Delete an existing shadow CIB.
 
 Usage:
 ...............
-        delete <cib>
+delete <cib>
 ...............
 
 [[cmdhelp_cib_reset,copy live cib to a shadow CIB]]
@@ -789,7 +786,7 @@ Copy the current cluster configuration into the shadow CIB.
 
 Usage:
 ...............
-        reset <cib>
+reset <cib>
 ...............
 
 [[cmdhelp_cib_commit,copy a shadow CIB to the cluster]]
@@ -802,7 +799,7 @@ Temporary shadow CIBs are removed automatically on commit.
 
 Usage:
 ...............
-        commit [<cib>]
+commit [<cib>]
 ...............
 
 [[cmdhelp_cib_use,change working CIB]]
@@ -814,7 +811,7 @@ Leave out the CIB name to switch to the running CIB.
 
 Usage:
 ...............
-        use [<cib>] [withstatus]
+use [<cib>] [withstatus]
 ...............
 
 [[cmdhelp_cib_diff,diff between the shadow CIB and the live CIB]]
@@ -825,7 +822,7 @@ the active shadow CIB.
 
 Usage:
 ...............
-        diff
+diff
 ...............
 
 [[cmdhelp_cib_list,list all shadow CIBs]]
@@ -835,7 +832,7 @@ List existing shadow CIBs.
 
 Usage:
 ...............
-        list
+list
 ...............
 
 [[cmdhelp_cib_import,import a CIB or PE input file to a shadow]]
@@ -857,12 +854,12 @@ need to specify the full name.
 
 Usage:
 ...............
-        import {<file>|<number>} [<shadow>]
+import {<file>|<number>} [<shadow>]
 ...............
 Examples:
 ...............
-        import pe-warn-2222
-        import 2289 issue2
+import pe-warn-2222
+import 2289 issue2
 ...............
 
 [[cmdhelp_cib_cibstatus,CIB status management and editing]]
@@ -886,7 +883,7 @@ of available providers.
 
 Usage:
 ...............
-        classes
+classes
 ...............
 
 [[cmdhelp_ra_list,list RA for a class (and provider)]]
@@ -898,11 +895,11 @@ only from that provider.
 
 Usage:
 ...............
-        list <class> [<provider>]
+list <class> [<provider>]
 ...............
 Example:
 ...............
-        list ocf pacemaker
+list ocf pacemaker
 ...............
 
 [[cmdhelp_ra_meta,show meta data for a RA]]
@@ -916,15 +913,15 @@ instead of an RA.
 
 Usage:
 ...............
-        info [<class>:[<provider>:]]<type>
-        info <type> <class> [<provider>] (obsolete)
+info [<class>:[<provider>:]]<type>
+info <type> <class> [<provider>] (obsolete)
 ...............
 Example:
 ...............
-        info apache
-        info ocf:pacemaker:Dummy
-        info stonith:ipmilan
-        info pengine
+info apache
+info ocf:pacemaker:Dummy
+info stonith:ipmilan
+info pengine
 ...............
 
 [[cmdhelp_ra_providers,show providers for a RA and a class]]
@@ -935,11 +932,11 @@ defaults to `ocf`.
 
 Usage:
 ...............
-        providers <type> [<class>]
+providers <type> [<class>]
 ...............
 Example:
 ...............
-        providers apache
+providers apache
 ...............
 
 [[cmdhelp_resource,Resource management]]
@@ -958,7 +955,7 @@ status of all resources is printed.
 
 Usage:
 ...............
-        status [<rsc>]
+status [<rsc>]
 ...............
 
 [[cmdhelp_resource_start,start a resource]]
@@ -973,7 +970,7 @@ For details on group management see <<cmdhelp_options_manage-children,`options m
 
 Usage:
 ...............
-        start <rsc>
+start <rsc>
 ...............
 
 [[cmdhelp_resource_stop,stop a resource]]
@@ -988,7 +985,7 @@ For details on group management see <<cmdhelp_options_manage-children,`options m
 
 Usage:
 ...............
-        stop <rsc>
+stop <rsc>
 ...............
 
 [[cmdhelp_resource_restart,restart a resource]]
@@ -1005,15 +1002,15 @@ For details on group management see <<cmdhelp_options_manage-children,`options m
 
 Usage:
 ...............
-        restart <rsc>
+restart <rsc>
 ...............
 Example:
 ...............
-        # crm resource restart g_webserver
-        INFO: ordering g_webserver to stop
-        waiting for stop to finish .... done
-        INFO: ordering g_webserver to start
-        # 
+# crm resource restart g_webserver
+INFO: ordering g_webserver to stop
+waiting for stop to finish .... done
+INFO: ordering g_webserver to start
+# 
 ...............
 
 [[cmdhelp_resource_promote,promote a master-slave resource]]
@@ -1024,7 +1021,7 @@ attribute.
 
 Usage:
 ...............
-        promote <rsc>
+promote <rsc>
 ...............
 
 [[cmdhelp_resource_demote,demote a master-slave resource]]
@@ -1035,7 +1032,7 @@ attribute.
 
 Usage:
 ...............
-        demote <rsc>
+demote <rsc>
 ...............
 
 [[cmdhelp_resource_manage,put a resource into managed mode]]
@@ -1050,7 +1047,7 @@ For details on group management see <<cmdhelp_options_manage-children,`options m
 
 Usage:
 ...............
-        manage <rsc>
+manage <rsc>
 ...............
 
 [[cmdhelp_resource_unmanage,put a resource into unmanaged mode]]
@@ -1065,7 +1062,7 @@ For details on group management see <<cmdhelp_options_manage-children,`options m
 
 Usage:
 ...............
-        unmanage <rsc>
+unmanage <rsc>
 ...............
 
 [[cmdhelp_resource_migrate,migrate a resource to another node]]
@@ -1079,7 +1076,7 @@ constraint will no longer be active.
 
 Usage:
 ...............
-        migrate <rsc> [<node>] [<lifetime>] [force]
+migrate <rsc> [<node>] [<lifetime>] [force]
 ...............
 
 [[cmdhelp_resource_unmigrate,unmigrate a resource to another node]]
@@ -1089,7 +1086,7 @@ Remove the constraint generated by the previous migrate command.
 
 Usage:
 ...............
-        unmigrate <rsc>
+unmigrate <rsc>
 ...............
 
 [[cmdhelp_resource_param,manage a parameter of a resource]]
@@ -1099,13 +1096,13 @@ Show/edit/delete a parameter of a resource.
 
 Usage:
 ...............
-        param <rsc> set <param> <value>
-        param <rsc> delete <param>
-        param <rsc> show <param>
+param <rsc> set <param> <value>
+param <rsc> delete <param>
+param <rsc> show <param>
 ...............
 Example:
 ...............
-        param ip_0 show ip
+param ip_0 show ip
 ...............
 
 [[cmdhelp_resource_secret,manage sensitive parameters]]
@@ -1122,18 +1119,18 @@ local file content is valid.
 
 Usage:
 ...............
-        secret <rsc> set <param> <value>
-        secret <rsc> stash <param>
-        secret <rsc> unstash <param>
-        secret <rsc> delete <param>
-        secret <rsc> show <param>
-        secret <rsc> check <param>
+secret <rsc> set <param> <value>
+secret <rsc> stash <param>
+secret <rsc> unstash <param>
+secret <rsc> delete <param>
+secret <rsc> show <param>
+secret <rsc> check <param>
 ...............
 Example:
 ...............
-        secret fence_1 show password
-        secret fence_1 stash password
-        secret fence_1 set password secret_value
+secret fence_1 show password
+secret fence_1 stash password
+secret fence_1 set password secret_value
 ...............
 
 [[cmdhelp_resource_meta,manage a meta attribute]]
@@ -1145,13 +1142,13 @@ such as `resource stop`.
 
 Usage:
 ...............
-        meta <rsc> set <attr> <value>
-        meta <rsc> delete <attr>
-        meta <rsc> show <attr>
+meta <rsc> set <attr> <value>
+meta <rsc> delete <attr>
+meta <rsc> show <attr>
 ...............
 Example:
 ...............
-        meta ip_0 set target-role stopped
+meta ip_0 set target-role stopped
 ...............
 
 [[cmdhelp_resource_utilization,manage a utilization attribute]]
@@ -1165,13 +1162,13 @@ requirements and node size. See also <<cmdhelp_node_utilization,node utilization
 
 Usage:
 ...............
-        utilization <rsc> set <attr> <value>
-        utilization <rsc> delete <attr>
-        utilization <rsc> show <attr>
+utilization <rsc> set <attr> <value>
+utilization <rsc> delete <attr>
+utilization <rsc> show <attr>
 ...............
 Example:
 ...............
-        utilization xen1 set memory 4096
+utilization xen1 set memory 4096
 ...............
 
 [[cmdhelp_resource_failcount,manage failcounts]]
@@ -1181,13 +1178,13 @@ Show/edit/delete the failcount of a resource.
 
 Usage:
 ...............
-        failcount <rsc> set <node> <value>
-        failcount <rsc> delete <node>
-        failcount <rsc> show <node>
+failcount <rsc> set <node> <value>
+failcount <rsc> delete <node>
+failcount <rsc> show <node>
 ...............
 Example:
 ...............
-        failcount fs_0 delete node2
+failcount fs_0 delete node2
 ...............
 
 [[cmdhelp_resource_cleanup,cleanup resource status]]
@@ -1199,7 +1196,7 @@ If there are many nodes, the command may take a while.
 
 Usage:
 ...............
-        cleanup <rsc> [<node>]
+cleanup <rsc> [<node>]
 ...............
 
 [[cmdhelp_resource_refresh,refresh CIB from the LRM status]]
@@ -1209,7 +1206,7 @@ Refresh CIB from the LRM status.
 
 Usage:
 ...............
-        refresh [<node>]
+refresh [<node>]
 ...............
 
 [[cmdhelp_resource_reprobe,probe for resources not started by the CRM]]
@@ -1219,7 +1216,7 @@ Probe for resources not started by the CRM.
 
 Usage:
 ...............
-        reprobe [<node>]
+reprobe [<node>]
 ...............
 
 [[cmdhelp_resource_trace,start RA tracing]]
@@ -1232,11 +1229,11 @@ quickly.
 
 Usage:
 ...............
-        trace <rsc> <op> [<interval>]
+trace <rsc> <op> [<interval>]
 ...............
 Example:
 ...............
-        trace fs start
+trace fs start
 ...............
 
 [[cmdhelp_resource_untrace,stop RA tracing]]
@@ -1246,11 +1243,11 @@ Stop tracing RA for the given operation.
 
 Usage:
 ...............
-        untrace <rsc> <op> [<interval>]
+untrace <rsc> <op> [<interval>]
 ...............
 Example:
 ...............
-        untrace fs start
+untrace fs start
 ...............
 
 [[cmdhelp_node,Nodes management]]
@@ -1266,7 +1263,7 @@ all nodes are shown.
 
 Usage:
 ...............
-        status [<node>]
+status [<node>]
 ...............
 
 [[cmdhelp_node_show,show node]]
@@ -1277,7 +1274,7 @@ nodes are shown.
 
 Usage:
 ...............
-        show [<node>]
+show [<node>]
 ...............
 
 [[cmdhelp_node_standby,put node into standby]]
@@ -1291,9 +1288,9 @@ standby after reboot.
 
 Usage:
 ...............
-        standby [<node>] [<lifetime>]
+standby [<node>] [<lifetime>]
 
-        lifetime :: reboot | forever
+lifetime :: reboot | forever
 ...............
 
 [[cmdhelp_node_online,set node online]]
@@ -1304,7 +1301,7 @@ defaults to the node where the command is run.
 
 Usage:
 ...............
-        online [<node>]
+online [<node>]
 ...............
 
 [[cmdhelp_node_maintenance,put node into maintenance mode]]
@@ -1317,7 +1314,7 @@ node where the command is run.
 
 Usage:
 ...............
-        maintenance [<node>]
+maintenance [<node>]
 ...............
 
 [[cmdhelp_node_ready,put node into ready mode]]
@@ -1329,7 +1326,7 @@ operations.
 
 Usage:
 ...............
-        ready [<node>]
+ready [<node>]
 ...............
 
 [[cmdhelp_node_fence,fence node]]
@@ -1341,7 +1338,7 @@ resources, no fencing will happen.
 
 Usage:
 ...............
-        fence <node>
+fence <node>
 ...............
 
 [[cmdhelp_node_clearstate,Clear node state]]
@@ -1357,7 +1354,7 @@ the fence had succeeded, possibly starting resources multiple times.
 
 Usage:
 ...............
-        clearstate <node>
+clearstate <node>
 ...............
 
 [[cmdhelp_node_delete,delete node]]
@@ -1374,7 +1371,7 @@ partition we refuse to remove it. With the global force option
 
 Usage:
 ...............
-        delete <node>
+delete <node>
 ...............
 
 [[cmdhelp_node_attribute,manage attributes]]
@@ -1385,13 +1382,13 @@ relatively static properties, such as memory size.
 
 Usage:
 ...............
-        attribute <node> set <attr> <value>
-        attribute <node> delete <attr>
-        attribute <node> show <attr>
+attribute <node> set <attr> <value>
+attribute <node> delete <attr>
+attribute <node> show <attr>
 ...............
 Example:
 ...............
-        attribute node_1 set memory_size 4096
+attribute node_1 set memory_size 4096
 ...............
 
 [[cmdhelp_node_utilization,manage utilization attributes]]
@@ -1406,14 +1403,14 @@ resources based on resource requirements and node size. See also
 
 Usage:
 ...............
-        utilization <node> set <attr> <value>
-        utilization <node> delete <attr>
-        utilization <node> show <attr>
+utilization <node> set <attr> <value>
+utilization <node> delete <attr>
+utilization <node> show <attr>
 ...............
 Examples:
 ...............
-        utilization node_1 set memory 16384
-        utilization node_1 show cpu
+utilization node_1 set memory 16384
+utilization node_1 show cpu
 ...............
 
 [[cmdhelp_node_status-attr,manage status attributes]]
@@ -1425,13 +1422,13 @@ typical example is attribute generated by the `pingd` utility.
 
 Usage:
 ...............
-        status-attr <node> set <attr> <value>
-        status-attr <node> delete <attr>
-        status-attr <node> show <attr>
+status-attr <node> set <attr> <value>
+status-attr <node> delete <attr>
+status-attr <node> show <attr>
 ...............
 Example:
 ...............
-        status-attr node_1 show pingd
+status-attr node_1 show pingd
 ...............
 
 [[cmdhelp_site,site support]]
@@ -1452,11 +1449,11 @@ for more details).
 
 Usage:
 ...............
-        ticket {grant|revoke|standby|activate|show|time|delete} <ticket>
+ticket {grant|revoke|standby|activate|show|time|delete} <ticket>
 ...............
 Example:
 ...............
-        ticket grant ticket1
+ticket grant ticket1
 ...............
 
 [[cmdhelp_options,user preferences]]
@@ -1477,9 +1474,9 @@ shadow CIBs. The expert may do all.
 
 Usage:
 ...............
-        skill-level <level>
-        
-        level :: operator | administrator | expert
+skill-level <level>
+
+level :: operator | administrator | expert
 ...............
 
 .Note on security
@@ -1504,11 +1501,11 @@ the appropriate user (such as `hacluster`), and setup the
 
 Usage:
 ...............
-        user system-user
+user system-user
 ...............
 Example:
 ...............
-        user hacluster
+user hacluster
 ...............
 
 [[cmdhelp_options_editor,set preferred editor program]]
@@ -1521,11 +1518,11 @@ standard UNIX editors (`vi`,`emacs`,`nano`).
 
 Usage:
 ...............
-        editor program
+editor program
 ...............
 Example:
 ...............
-        editor vim
+editor vim
 ...............
 
 [[cmdhelp_options_pager,set preferred pager program]]
@@ -1544,11 +1541,11 @@ the order they were created, set this option to `no`.
 
 Usage:
 ...............
-        sort-elements {yes|no}
+sort-elements {yes|no}
 ...............
 Example:
 ...............
-        sort-elements no
+sort-elements no
 ...............
 
 [[cmdhelp_options_wait,synchronous operation]]
@@ -1562,11 +1559,11 @@ indicate progress.
 
 Usage:
 ...............
-        wait {yes|no}
+wait {yes|no}
 ...............
 Example:
 ...............
-        wait yes
+wait yes
 ...............
 
 [[cmdhelp_options_output,set output type]]
@@ -1605,7 +1602,7 @@ setups.
 
 Example:
 ...............
-    colorscheme yellow,normal,blue,red,green,magenta
+colorscheme yellow,normal,blue,red,green,magenta
 ...............
 
 [[cmdhelp_options_check-frequency,when to perform semantic check]]
@@ -1652,8 +1649,9 @@ you have custom shell scripts which would break, just set the
 For instance, with adding quotes enabled, it is possible to do
 the following:
 ...............
-    # crm configure primitive d1 ocf:heartbeat:Dummy meta description="some description here"
-    # crm configure filter 'sed "s/hostlist=./&node-c /"' fencing
+# crm configure primitive d1 ocf:heartbeat:Dummy \
+    meta description="some description here"
+# crm configure filter 'sed "s/hostlist=./&node-c /"' fencing
 ...............
 ****************************
 
@@ -1666,26 +1664,26 @@ result. Each element, group and the primitive members, can have a
 meta attribute and those attributes may end up with conflicting
 values. Consider the following construct:
 ...............
-    crm(live)# configure show svc fs virtual-ip
-    primitive fs ocf:heartbeat:Filesystem \
-            params device="/dev/drbd0" directory="/srv/nfs" fstype="ext3" \
-            op monitor interval="10s" \
-            meta target-role="Started"
-    primitive virtual-ip ocf:heartbeat:IPaddr2 \
-            params ip="10.2.13.110" iflabel="1" \
-            op monitor interval="10s" \
-            op start interval="0" \
-            meta target-role="Started"
-    group svc fs virtual-ip \
-            meta target-role="Stopped"
+crm(live)# configure show svc fs virtual-ip
+primitive fs ocf:heartbeat:Filesystem \
+    params device="/dev/drbd0" directory="/srv/nfs" fstype="ext3" \
+    op monitor interval="10s" \
+    meta target-role="Started"
+primitive virtual-ip ocf:heartbeat:IPaddr2 \
+    params ip="10.2.13.110" iflabel="1" \
+    op monitor interval="10s" \
+    op start interval="0" \
+    meta target-role="Started"
+group svc fs virtual-ip \
+    meta target-role="Stopped"
 ...............
 
 Even though the element `svc` should be stopped, the group is
 actually running because all its members have the `target-role`
 set to `Started`:
 ...............
-    crm(live)# resource show svc
-    resource svc is running on: xen-f 
+crm(live)# resource show svc
+resource svc is running on: xen-f 
 ...............
 
 Hence, if the user invokes `resource stop svc` the intention is
@@ -1710,8 +1708,8 @@ of that argument.
 
 Usage:
 ........
-        show
-        show skill-level
+show
+show skill-level
 ........
 
 [[cmdhelp_options_save,save the user preferences to the rc file]]
@@ -1802,17 +1800,17 @@ attributes at the `node` level.
 
 Usage:
 ...............
-        node [$id=<id>] <uname>[:<type>]
-          [description=<description>]
-          [attributes <param>=<value> [<param>=<value>...]]
-          [utilization <param>=<value> [<param>=<value>...]]
+node [$id=<id>] <uname>[:<type>]
+  [description=<description>]
+  [attributes <param>=<value> [<param>=<value>...]]
+  [utilization <param>=<value> [<param>=<value>...]]
 
-        type :: normal | member | ping
+type :: normal | member | ping
 ...............
 Example:
 ...............
-        node node1
-        node big_node attributes memory=64
+node node1
+node big_node attributes memory=64
 ...............
 
 [[cmdhelp_configure_primitive,define a resource]]
@@ -1842,41 +1840,41 @@ type and which share most of the configuration. See
 
 Usage:
 ...............
-        primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>}
-          [description=<description>]
-          [params attr_list]
-          [meta attr_list]
-          [utilization attr_list]
-          [operations id_spec]
-            [op op_type [<attribute>=<value>...] ...]
+primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>}
+  [description=<description>]
+  [params attr_list]
+  [meta attr_list]
+  [utilization attr_list]
+  [operations id_spec]
+    [op op_type [<attribute>=<value>...] ...]
 
-        attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
-        id_spec :: $id=<id> | $id-ref=<id>
-        op_type :: start | stop | monitor
+attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
+id_spec :: $id=<id> | $id-ref=<id>
+op_type :: start | stop | monitor
 ...............
 Example:
 ...............
-        primitive apcfence stonith:apcsmart \
-          params ttydev=/dev/ttyS0 hostlist="node1 node2" \
-          op start timeout=60s \
-          op monitor interval=30m timeout=60s
+primitive apcfence stonith:apcsmart \
+  params ttydev=/dev/ttyS0 hostlist="node1 node2" \
+  op start timeout=60s \
+  op monitor interval=30m timeout=60s
 
-        primitive www8 apache \
-          params configfile=/etc/apache/www8.conf \
-          operations $id-ref=apache_ops
+primitive www8 apache \
+  params configfile=/etc/apache/www8.conf \
+  operations $id-ref=apache_ops
 
-        primitive db0 mysql \
-          params config=/etc/mysql/db0.conf \
-          op monitor interval=60s \
-          op monitor interval=300s OCF_CHECK_LEVEL=10
+primitive db0 mysql \
+  params config=/etc/mysql/db0.conf \
+  op monitor interval=60s \
+  op monitor interval=300s OCF_CHECK_LEVEL=10
 
-        primitive r0 ocf:linbit:drbd \
-          params drbd_resource=r0 \
-          op monitor role=Master interval=60s \
-          op monitor role=Slave interval=300s
+primitive r0 ocf:linbit:drbd \
+  params drbd_resource=r0 \
+  op monitor role=Master interval=60s \
+  op monitor role=Slave interval=300s
 
-        primitive xen0 @vm_scheme1 \
-          params xmfile=/etc/xen/vm/xen0
+primitive xen0 @vm_scheme1 \
+  params xmfile=/etc/xen/vm/xen0
 ...............
 
 [[cmdhelp_configure_monitor,add monitor operation to a primitive]]
@@ -1891,11 +1889,11 @@ the `primitive` command.
 
 Usage:
 ...............
-        monitor <rsc>[:<role>] <interval>[:<timeout>]
+monitor <rsc>[:<role>] <interval>[:<timeout>]
 ...............
 Example:
 ...............
-        monitor apcfence 60m:60s
+monitor apcfence 60m:60s
 ...............
 
 Note that after executing the command, the monitor operation may
@@ -1921,19 +1919,19 @@ resource referred to by the container attribute must be of type
 
 Usage:
 ...............
-        group <name> <rsc> [<rsc>...]
-          [description=<description>]
-          [meta attr_list]
-          [params attr_list]
+group <name> <rsc> [<rsc>...]
+  [description=<description>]
+  [meta attr_list]
+  [params attr_list]
 
-        attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
+attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
 ...............
 Example:
 ...............
-        group internal_www disk0 fs0 internal_ip apache \
-          meta target_role=stopped
+group internal_www disk0 fs0 internal_ip apache \
+  meta target_role=stopped
 
-        group vm-and-services vm vm-sshd meta container="vm"
+group vm-and-services vm vm-sshd meta container="vm"
 ...............
 
 [[cmdhelp_configure_clone,define a clone]]
@@ -1944,17 +1942,17 @@ single primitive resource or one group of resources.
 
 Usage:
 ...............
-        clone <name> <rsc>
-          [description=<description>]
-          [meta attr_list]
-          [params attr_list]
+clone <name> <rsc>
+  [description=<description>]
+  [meta attr_list]
+  [params attr_list]
 
-        attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
+attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
 ...............
 Example:
 ...............
-        clone cl_fence apc_1 \
-          meta clone-node-max=1 globally-unique=false
+clone cl_fence apc_1 \
+  meta clone-node-max=1 globally-unique=false
 ...............
 
 [[cmdhelp_configure_ms,define a master-slave resource]]
@@ -1965,17 +1963,17 @@ single primitive resource or one group of resources.
 
 Usage:
 ...............
-        ms <name> <rsc>
-          [description=<description>]
-          [meta attr_list]
-          [params attr_list]
+ms <name> <rsc>
+  [description=<description>]
+  [meta attr_list]
+  [params attr_list]
 
-        attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
+attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
 ...............
 Example:
 ...............
-        ms disk1 drbd1 \
-          meta notify=true globally-unique=false
+ms disk1 drbd1 \
+  meta notify=true globally-unique=false
 ...............
 
 .Note on `id-ref` usage
@@ -1988,11 +1986,11 @@ reference an object instead of an attribute set. `crm` will
 automatically replace such a reference with the right id:
 
 ...............
-    crm(live)configure# primitive a2 www-2 meta $id-ref=a1
-    crm(live)configure# show a2
-    primitive a2 ocf:heartbeat:apache \
-        meta $id-ref="a1-meta_attributes"
-        [...]
+crm(live)configure# primitive a2 www-2 meta $id-ref=a1
+crm(live)configure# show a2
+primitive a2 ocf:heartbeat:apache \
+    meta $id-ref="a1-meta_attributes"
+    [...]
 ...............
 It is advisable to give meaningful names to attribute sets which
 are going to be referenced.
@@ -2007,30 +2005,30 @@ configurations with many similar resources.
 
 Usage:
 ...............
-        rsc_template <name> [<class>:[<provider>:]]<type>
-          [description=<description>]
-          [params attr_list]
-          [meta attr_list]
-          [utilization attr_list]
-          [operations id_spec]
-            [op op_type [<attribute>=<value>...] ...]
+rsc_template <name> [<class>:[<provider>:]]<type>
+  [description=<description>]
+  [params attr_list]
+  [meta attr_list]
+  [utilization attr_list]
+  [operations id_spec]
+    [op op_type [<attribute>=<value>...] ...]
 
-        attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
-        id_spec :: $id=<id> | $id-ref=<id>
-        op_type :: start | stop | monitor
+attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
+id_spec :: $id=<id> | $id-ref=<id>
+op_type :: start | stop | monitor
 ...............
 Example:
 ...............
-        rsc_template public_vm ocf:heartbeat:Xen \
-          op start timeout=300s \
-          op stop timeout=300s \
-          op monitor interval=30s timeout=60s \
-          op migrate_from timeout=600s \
-          op migrate_to timeout=600s
-        primitive xen0 @public_vm \
-          params xmfile=/etc/xen/xen0
-        primitive xen1 @public_vm \
-          params xmfile=/etc/xen/xen1
+rsc_template public_vm ocf:heartbeat:Xen \
+  op start timeout=300s \
+  op stop timeout=300s \
+  op monitor interval=30s timeout=60s \
+  op migrate_from timeout=600s \
+  op migrate_to timeout=600s
+primitive xen0 @public_vm \
+  params xmfile=/etc/xen/xen0
+primitive xen1 @public_vm \
+  params xmfile=/etc/xen/xen1
 ...............
 
 [[cmdhelp_configure_location,a location preference]]
@@ -2042,51 +2040,51 @@ which specify a score to be awarded if the rule matches.
 
 Usage:
 ...............
-        location <id> <rsc> {node_pref|rules}
+location <id> <rsc> {node_pref|rules}
 
-        node_pref :: <score>: <node>
+node_pref :: <score>: <node>
 
-        rules ::
-          rule [id_spec] [$role=<role>] <score>: <expression>
-          [rule [id_spec] [$role=<role>] <score>: <expression> ...]
+rules ::
+  rule [id_spec] [$role=<role>] <score>: <expression>
+  [rule [id_spec] [$role=<role>] <score>: <expression> ...]
 
-        id_spec :: $id=<id> | $id-ref=<id>
-        score :: <number> | <attribute> | [-]inf
-        expression :: <simple_exp> [bool_op <simple_exp> ...]
-        bool_op :: or | and
-        simple_exp :: <attribute> [type:]<binary_op> <value>
-                      | <unary_op> <attribute>
-                      | date <date_expr>
-        type :: string | version | number
-        binary_op :: lt | gt | lte | gte | eq | ne
-        unary_op :: defined | not_defined
+id_spec :: $id=<id> | $id-ref=<id>
+score :: <number> | <attribute> | [-]inf
+expression :: <simple_exp> [bool_op <simple_exp> ...]
+bool_op :: or | and
+simple_exp :: <attribute> [type:]<binary_op> <value>
+          | <unary_op> <attribute>
+          | date <date_expr>
+type :: string | version | number
+binary_op :: lt | gt | lte | gte | eq | ne
+unary_op :: defined | not_defined
 
-        date_expr :: lt <end>
-                     | gt <start>
-                     | in_range start=<start> end=<end>
-                     | in_range start=<start> <duration>
-                     | date_spec <date_spec>
-        duration|date_spec ::
-                     hours=<value>
-                     | monthdays=<value>
-                     | weekdays=<value>
-                     | yearsdays=<value>
-                     | months=<value>
-                     | weeks=<value>
-                     | years=<value>
-                     | weekyears=<value>
-                     | moon=<value>
+date_expr :: lt <end>
+         | gt <start>
+         | in_range start=<start> end=<end>
+         | in_range start=<start> <duration>
+         | date_spec <date_spec>
+duration|date_spec ::
+         hours=<value>
+         | monthdays=<value>
+         | weekdays=<value>
+         | yearsdays=<value>
+         | months=<value>
+         | weeks=<value>
+         | years=<value>
+         | weekyears=<value>
+         | moon=<value>
 ...............
 Examples:
 ...............
-        location conn_1 internal_www 100: node1
+location conn_1 internal_www 100: node1
 
-        location conn_1 internal_www \
-          rule 50: #uname eq node1 \
-          rule pingd: defined pingd
+location conn_1 internal_www \
+  rule 50: #uname eq node1 \
+  rule pingd: defined pingd
 
-        location conn_2 dummy_float \
-          rule -inf: not_defined pingd or pingd number:lte 0
+location conn_2 dummy_float \
+  rule -inf: not_defined pingd or pingd number:lte 0
 ...............
 
 [[cmdhelp_configure_colocation,colocate resources]]
@@ -2117,16 +2115,16 @@ instance attributes.
 
 Usage:
 ...............
-        colocation <id> <score>: <rsc>[:<role>] <with-rsc>[:<role>]
-          [node-attribute=<node_attr>]
+colocation <id> <score>: <rsc>[:<role>] <with-rsc>[:<role>]
+  [node-attribute=<node_attr>]
 
-        colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>] ...
-          [node-attribute=<node_attr>]
+colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>] ...
+  [node-attribute=<node_attr>]
 ...............
 Example:
 ...............
-        colocation never_put_apache_with_dummy -inf: apache dummy
-        colocation c1 inf: A ( B C )
+colocation never_put_apache_with_dummy -inf: apache dummy
+colocation c1 inf: A ( B C )
 ...............
 
 [[cmdhelp_configure_order,order resources]]
@@ -2160,7 +2158,7 @@ different combination, for whatever reason, just set one of the
 attributes within the set. Something like this:
 
 ...............
-    crm(live)configure# order o1 Mandatory: [ A B sequential=true ] C
+crm(live)configure# order o1 Mandatory: [ A B sequential=true ] C
 ...............
 It is up to you to find out whether such a combination makes
 sense.
@@ -2168,16 +2166,16 @@ sense.
 
 Usage:
 ...............
-        order <id> {kind|<score>}: <rsc>[:<action>] <rsc>[:<action>] ...
-          [symmetrical=<bool>]
+order <id> {kind|<score>}: <rsc>[:<action>] <rsc>[:<action>] ...
+  [symmetrical=<bool>]
 
-        kind :: Mandatory | Optional | Serialize
+kind :: Mandatory | Optional | Serialize
 ...............
 Example:
 ...............
-        order c_apache_1 Mandatory: apache:start ip_1
-        order o1 Serialize: A ( B C )
-        order order_2 Mandatory: [ A B ] C
+order c_apache_1 Mandatory: apache:start ip_1
+order o1 Serialize: A ( B C )
+order order_2 Mandatory: [ A B ] C
 ...............
 
 [[cmdhelp_configure_rsc_ticket,resources ticket dependency]]
@@ -2197,16 +2195,16 @@ See also the <<cmdhelp_site_ticket,`site`>> set of commands.
 
 Usage:
 ...............
-        rsc_ticket <id> <ticket_id>: <rsc>[:<role>] [<rsc>[:<role>] ...]
-          [loss-policy=<loss_policy_action>]
+rsc_ticket <id> <ticket_id>: <rsc>[:<role>] [<rsc>[:<role>] ...]
+  [loss-policy=<loss_policy_action>]
 
-        loss_policy_action :: stop | demote | fence | freeze
+loss_policy_action :: stop | demote | fence | freeze
 ...............
 Example:
 ...............
-        rsc_ticket ticket-A_public-ip ticket-A: public-ip
-        rsc_ticket ticket-A_bigdb ticket-A: bigdb loss-policy=fence
-        rsc_ticket ticket-B_storage ticket-B: drbd-a:Master drbd-b:Master
+rsc_ticket ticket-A_public-ip ticket-A: public-ip
+rsc_ticket ticket-A_bigdb ticket-A: bigdb loss-policy=fence
+rsc_ticket ticket-B_storage ticket-B: drbd-a:Master drbd-b:Master
 ...............
 
 
@@ -2217,11 +2215,11 @@ Set the cluster (`crm_config`) options.
 
 Usage:
 ...............
-        property [$id=<set_id>] <option>=<value> [<option>=<value> ...]
+property [$id=<set_id>] <option>=<value> [<option>=<value> ...]
 ...............
 Example:
 ...............
-        property stonith-enabled=true
+property stonith-enabled=true
 ...............
 
 [[cmdhelp_configure_rsc_defaults,set resource defaults]]
@@ -2231,11 +2229,11 @@ Set defaults for the resource meta attributes.
 
 Usage:
 ...............
-        rsc_defaults [$id=<set_id>] <option>=<value> [<option>=<value> ...]
+rsc_defaults [$id=<set_id>] <option>=<value> [<option>=<value> ...]
 ...............
 Example:
 ...............
-        rsc_defaults failure-timeout=3m
+rsc_defaults failure-timeout=3m
 ...............
 
 [[cmdhelp_configure_fencing_topology,node fencing order]]
@@ -2256,19 +2254,19 @@ That should reduce the configuration size in some stonith setups.
 
 Usage:
 ...............
-        fencing_topology stonith_resources [stonith_resources ...]
-        fencing_topology fencing_order [fencing_order ...]
+fencing_topology stonith_resources [stonith_resources ...]
+fencing_topology fencing_order [fencing_order ...]
 
-        fencing_order :: <node>: stonith_resources [stonith_resources ...]
+fencing_order :: <node>: stonith_resources [stonith_resources ...]
 
-        stonith_resources :: <rsc>[,<rsc>...]
+stonith_resources :: <rsc>[,<rsc>...]
 ...............
 Example:
 ...............
-        fencing_topology poison-pill power
-        fencing_topology \
-            node-a: poison-pill power
-            node-b: ipmi serial
+fencing_topology poison-pill power
+fencing_topology \
+    node-a: poison-pill power
+    node-b: ipmi serial
 ...............
 
 [[cmdhelp_configure_role,define role access rights]]
@@ -2296,33 +2294,33 @@ status is necessary for various monitoring tools such as
 
 Usage:
 ...............
-        role <role-id> rule [rule ...]
+role <role-id> rule [rule ...]
 
-        rule :: acl-right cib-spec [attribute:<attribute>]
+rule :: acl-right cib-spec [attribute:<attribute>]
 
-        acl-right :: read | write | deny
+acl-right :: read | write | deny
 
-        cib-spec :: xpath-spec | tag-ref-spec
-        xpath-spec :: xpath:<xpath> | shortcut
-        tag-ref-spec :: tag:<tag> | ref:<id> | tag:<tag> ref:<id>
+cib-spec :: xpath-spec | tag-ref-spec
+xpath-spec :: xpath:<xpath> | shortcut
+tag-ref-spec :: tag:<tag> | ref:<id> | tag:<tag> ref:<id>
 
-        shortcut :: meta:<rsc>[:<attr>]
-                    params:<rsc>[:<attr>]
-                    utilization:<rsc>
-                    location:<rsc>
-                    property[:<attr>]
-                    node[:<node>]
-                    nodeattr[:<attr>]
-                    nodeutil[:<node>]
-                    status
+shortcut :: meta:<rsc>[:<attr>]
+        params:<rsc>[:<attr>]
+        utilization:<rsc>
+        location:<rsc>
+        property[:<attr>]
+        node[:<node>]
+        nodeattr[:<attr>]
+        nodeutil[:<node>]
+        status
 ...............
 Example:
 ...............
-        role app1_admin \
-            write meta:app1:target-role \
-            write meta:app1:is-managed \
-            write location:app1 \
-            read ref:app1
+role app1_admin \
+    write meta:app1:target-role \
+    write meta:app1:is-managed \
+    write location:app1 \
+    read ref:app1
 ...............
 
 [[cmdhelp_configure_user,define user access rights]]
@@ -2336,16 +2334,16 @@ best practice.
 
 Usage:
 ...............
-        user <uid> {roles|rules}
+user <uid> {roles|rules}
 
-        roles :: role:<role-ref> [role:<role-ref> ...]
-        rules :: rule [rule ...]
+roles :: role:<role-ref> [role:<role-ref> ...]
+rules :: rule [rule ...]
 ...............
 Example:
 ...............
-        user joe \
-            role:app1_admin \
-            role:read_all
+user joe \
+    role:app1_admin \
+    role:read_all
 ...............
 
 [[cmdhelp_configure_op_defaults,set resource operations defaults]]
@@ -2355,11 +2353,11 @@ Set defaults for the operations meta attributes.
 
 Usage:
 ...............
-        op_defaults [$id=<set_id>] <option>=<value> [<option>=<value> ...]
+op_defaults [$id=<set_id>] <option>=<value> [<option>=<value> ...]
 ...............
 Example:
 ...............
-        op_defaults record-pending=true
+op_defaults record-pending=true
 ...............
 
 [[cmdhelp_configure_schema,set or display current CIB RNG schema]]
@@ -2373,11 +2371,11 @@ Use this command to display or switch to another RNG schema.
 
 Usage:
 ...............
-        schema [<schema>]
+schema [<schema>]
 ...............
 Example:
 ...............
-        schema pacemaker-1.1
+schema pacemaker-1.1
 ...............
 
 [[cmdhelp_configure_show,display CIB objects]]
@@ -2391,8 +2389,8 @@ representation.
 
 Usage:
 ...............
-        show [xml] [<id> ...]
-        show [xml] changed
+show [xml] [<id> ...]
+show [xml] changed
 ...............
 
 [[cmdhelp_configure_edit,edit CIB objects]]
@@ -2407,8 +2405,8 @@ object. If you do that, don't modify any id attributes.
 
 Usage:
 ...............
-        edit [xml] [<id> ...]
-        edit [xml] changed
+edit [xml] [<id> ...]
+edit [xml] changed
 ...............
 
 .Note on renaming element ids
@@ -2439,13 +2437,13 @@ spaces.
 
 Usage:
 ...............
-        filter <prog> [xml] [<id> ...]
-        filter <prog> [xml] changed
+filter <prog> [xml] [<id> ...]
+filter <prog> [xml] changed
 ...............
 Examples:
 ...............
-        filter "sed '/^primitive/s/target-role=[^ ]*//'"
-        # crm configure filter "sed '/^primitive/s/target-role=[^ ]*//'"
+filter "sed '/^primitive/s/target-role=[^ ]*//'"
+# crm configure filter "sed '/^primitive/s/target-role=[^ ]*//'"
 ...............
 
 [[cmdhelp_configure_delete,delete CIB objects]]
@@ -2458,7 +2456,7 @@ related constraints are removed as well.
 
 Usage:
 ...............
-        delete <id> [<id>...]
+delete <id> [<id>...]
 ...............
 
 [[cmdhelp_configure_default-timeouts,set timeouts for operations to minimums from the meta-data]]
@@ -2470,7 +2468,7 @@ primitive.
 
 Usage:
 ...............
-        default-timeouts <id> [<id>...]
+default-timeouts <id> [<id>...]
 ...............
 
 .Note on `default-timeouts`
@@ -2492,7 +2490,7 @@ If you want to rename a resource, it must be in the stopped state.
 
 Usage:
 ...............
-        rename <old_id> <new_id>
+rename <old_id> <new_id>
 ...............
 
 [[cmdhelp_configure_modgroup,modify group]]
@@ -2504,12 +2502,12 @@ are `after` and `before` clauses.
 
 Usage:
 ...............
-        modgroup <id> add <id> [after <id>|before <id>]
-        modgroup <id> remove <id>
+modgroup <id> add <id> [after <id>|before <id>]
+modgroup <id> remove <id>
 ...............
 Examples:
 ...............
-        modgroup share1 add storage2 before share1-fs
+modgroup share1 add storage2 before share1-fs
 ...............
 
 [[cmdhelp_configure_refresh,refresh from CIB]]
@@ -2520,7 +2518,7 @@ during this session are lost.
 
 Usage:
 ...............
-        refresh
+refresh
 ...............
 
 [[cmdhelp_configure_erase,erase the CIB]]
@@ -2534,7 +2532,7 @@ strange/interesting/unwelcome effects.
 
 Usage:
 ...............
-        erase [nodes]
+erase [nodes]
 ...............
 
 [[cmdhelp_configure_ptest,show cluster actions if changes were committed]]
@@ -2569,13 +2567,13 @@ installed. Use `simulate` to enfore using `crm_simulate`.
 
 Usage:
 ...............
-        ptest [nograph] [v...] [scores] [actions] [utilization]
+ptest [nograph] [v...] [scores] [actions] [utilization]
 ...............
 Examples:
 ...............
-        ptest scores
-        ptest vvvvv
-        simulate actions
+ptest scores
+ptest vvvvv
+simulate actions
 ...............
 
 [[cmdhelp_configure_rsctest,test resources as currently configured]]
@@ -2603,12 +2601,12 @@ Note that resource testing may take some time.
 
 Usage:
 ...............
-        rsctest <rsc_id> [<rsc_id> ...] [<node_id> ...]
+rsctest <rsc_id> [<rsc_id> ...] [<node_id> ...]
 ...............
 Examples:
 ...............
-        rsctest my_ip websvc
-        rsctest websvc nodeB
+rsctest my_ip websvc
+rsctest websvc nodeB
 ...............
 
 [[cmdhelp_configure_cib,CIB shadow management]]
@@ -2619,9 +2617,9 @@ the `configure` level to enable saving intermediate changes to a
 shadow CIB instead of to the live cluster. This short excerpt
 shows how:
 ...............
-    crm(live)configure# cib new test-2
-    INFO: test-2 shadow CIB created
-    crm(test-2)configure# commit
+crm(live)configure# cib new test-2
+INFO: test-2 shadow CIB created
+crm(test-2)configure# commit
 ...............
 Note how the current CIB in the prompt changed from `live` to
 `test-2` after issuing the `cib new` command. See also the
@@ -2642,11 +2640,11 @@ user to make a good CRM configuration out of it. See also the
 
 Usage:
 ...............
-        template [xml] url
+template [xml] url
 ...............
 Example:
 ...............
-        template two-apaches.txt
+template two-apaches.txt
 ...............
 
 [[cmdhelp_configure_commit,commit the changes to the CIB]]
@@ -2662,7 +2660,7 @@ If you know that it's fine to still apply them add `force`.
 
 Usage:
 ...............
-        commit [force]
+commit [force]
 ...............
 
 [[cmdhelp_configure_verify,verify the CIB with crm_verify]]
@@ -2672,7 +2670,7 @@ Verify the contents of the CIB which would be committed.
 
 Usage:
 ...............
-        verify
+verify
 ...............
 
 [[cmdhelp_configure_upgrade,upgrade the CIB to version 1.0]]
@@ -2683,7 +2681,7 @@ that the current CIB version is coming from the older release,
 you may try to upgrade it to the latest revision. The command
 to perform the upgrade is:
 ...............
-    # cibadmin --upgrade --force
+# cibadmin --upgrade --force
 ...............
 
 If we don't recognize the current CIB as the old one, but you're
@@ -2691,7 +2689,7 @@ sure that it is, you may force the command.
 
 Usage:
 ...............
-        upgrade [force]
+upgrade [force]
 ...............
 
 [[cmdhelp_configure_save,save the CIB to a file]]
@@ -2702,11 +2700,11 @@ Save the current configuration to a file. Optionally, as XML. Use
 
 Usage:
 ...............
-        save [xml] <file>
+save [xml] <file>
 ...............
 Example:
 ...............
-        save myfirstcib.txt
+save myfirstcib.txt
 ...............
 
 [[cmdhelp_configure_load,import the CIB from a file]]
@@ -2720,14 +2718,14 @@ The file may be a CLI file or an XML file.
 
 Usage:
 ...............
-        load [xml] <method> URL
+load [xml] <method> URL
 
-        method :: replace | update
+method :: replace | update
 ...............
 Example:
 ...............
-        load xml update myfirstcib.xml
-        load xml replace http://storage.big.com/cibs/bigcib.xml
+load xml update myfirstcib.xml
+load xml replace http://storage.big.com/cibs/bigcib.xml
 ...............
 
 [[cmdhelp_configure_graph,generate a directed graph]]
@@ -2751,17 +2749,17 @@ subcommand also prints the location of the ini file.
 
 Usage:
 ...............
-        graph [<gtype> [<file> [<img_format>]]]
-        graph exportsettings
+graph [<gtype> [<file> [<img_format>]]]
+graph exportsettings
 
-        gtype :: dot
-        img_format :: `dot` output format (see the `-T` option)
+gtype :: dot
+img_format :: `dot` output format (see the `-T` option)
 ...............
 Example:
 ...............
-        graph dot
-        graph dot clu1.conf.dot
-        graph dot clu1.conf.svg svg
+graph dot
+graph dot clu1.conf.dot
+graph dot clu1.conf.svg svg
 ...............
 
 [[cmdhelp_configure_xml,raw xml]]
@@ -2778,7 +2776,7 @@ use `xml` for configuration.
 
 Usage:
 ...............
-        xml <xml>
+xml <xml>
 ...............
 
 [[cmdhelp_template,edit and import a configuration from a template]]
@@ -2806,12 +2804,12 @@ configuration.
 
 Usage:
 ...............
-        new <config> <template> [<template> ...] [params name=value ...]"
+new <config> <template> [<template> ...] [params name=value ...]"
 ...............
 Examples:
 ...............
-        new vip virtual-ip
-        new bigfs ocfs2 params device=/dev/sdx8 directory=/bigfs
+new vip virtual-ip
+new bigfs ocfs2 params device=/dev/sdx8 directory=/bigfs
 ...............
 
 [[cmdhelp_template_load,load a configuration]]
@@ -2822,7 +2820,7 @@ Load an existing configuration. Further `edit`, `show`, and
 
 Usage:
 ...............
-        load <config>
+load <config>
 ...............
 
 [[cmdhelp_template_edit,edit a configuration]]
@@ -2832,7 +2830,7 @@ Edit current or given configuration using your favourite editor.
 
 Usage:
 ...............
-        edit [<config>]
+edit [<config>]
 ...............
 
 [[cmdhelp_template_delete,delete a configuration]]
@@ -2843,7 +2841,7 @@ removed by force.
 
 Usage:
 ...............
-        delete <config> [force]
+delete <config> [force]
 ...............
 
 [[cmdhelp_template_list,list configurations/templates]]
@@ -2853,7 +2851,7 @@ List existing configurations or templates.
 
 Usage:
 ...............
-        list [templates]
+list [templates]
 ...............
 
 [[cmdhelp_template_apply,process and apply the current configuration to the current CIB]]
@@ -2865,9 +2863,9 @@ default, the CIB is replaced, unless the method is set to
 
 Usage:
 ...............
-        apply [<method>] [<config>]
+apply [<method>] [<config>]
 
-        method :: replace | update
+method :: replace | update
 ...............
 
 [[cmdhelp_template_show,show the processed configuration]]
@@ -2877,7 +2875,7 @@ Process the current or given configuration and display the result.
 
 Usage:
 ...............
-        show [<config>]
+show [<config>]
 ...............
 
 [[cmdhelp_cibstatus,CIB status management and editing]]
@@ -2927,12 +2925,12 @@ running cluster status section.
 
 Usage:
 ...............
-        load {<file>|shadow:<cib>|live}
+load {<file>|shadow:<cib>|live}
 ...............
 Example:
 ...............
-        load bug-12299.xml
-        load shadow:test1
+load bug-12299.xml
+load shadow:test1
 ...............
 
 [[cmdhelp_cibstatus_save,save the CIB status section]]
@@ -2951,11 +2949,11 @@ as they are run.
 
 Usage:
 ...............
-        save [<file>|shadow:<cib>]
+save [<file>|shadow:<cib>]
 ...............
 Example:
 ...............
-        save bug-12299.xml
+save bug-12299.xml
 ...............
 
 [[cmdhelp_cibstatus_origin,display origin of the CIB status section]]
@@ -2966,7 +2964,7 @@ essentially shows the latest `load` argument.
 
 Usage:
 ...............
-        origin
+origin
 ...............
 
 [[cmdhelp_cibstatus_show,show CIB status section]]
@@ -2978,7 +2976,7 @@ readable output of all changes.
 
 Usage:
 ...............
-        show [changed]
+show [changed]
 ...............
 
 [[cmdhelp_cibstatus_node,change node status]]
@@ -3001,11 +2999,11 @@ has unexpectedly disappeared.
 
 Usage:
 ...............
-        node <node> {online|offline|unclean}
+node <node> {online|offline|unclean}
 ...............
 Example:
 ...............
-        node xen-b unclean
+node xen-b unclean
 ...............
 
 [[cmdhelp_cibstatus_op,edit outcome of a resource operation]]
@@ -3020,25 +3018,25 @@ ignored.
 
 Usage:
 ...............
-        op <operation> <resource> <exit_code> [<op_status>] [<node>]
+op <operation> <resource> <exit_code> [<op_status>] [<node>]
 
-        operation :: probe | monitor[:<n>] | start | stop |
-           promote | demote | notify | migrate_to | migrate_from
-        exit_code :: <rc> | success | generic | args | 
-           unimplemented | perm | installed | configured | not_running | 
-           master | failed_master
-        op_status :: pending | done | cancelled | timeout | notsupported | error
+operation :: probe | monitor[:<n>] | start | stop |
+   promote | demote | notify | migrate_to | migrate_from
+exit_code :: <rc> | success | generic | args | 
+   unimplemented | perm | installed | configured | not_running | 
+   master | failed_master
+op_status :: pending | done | cancelled | timeout | notsupported | error
 
-        n :: the monitor interval in seconds; if omitted, the first
-           recurring operation is referenced
-        rc :: numeric exit code in range 0..9
+n :: the monitor interval in seconds; if omitted, the first
+   recurring operation is referenced
+rc :: numeric exit code in range 0..9
 ...............
 Example:
 ...............
-        op start d1 xen-b generic
-        op start d1 xen-b 1
-        op monitor d1 xen-b not_running
-        op stop d1 xen-b 0 timeout
+op start d1 xen-b generic
+op start d1 xen-b 1
+op monitor d1 xen-b not_running
+op stop d1 xen-b 0 timeout
 ...............
 
 [[cmdhelp_cibstatus_quorum,set the quorum]]
@@ -3048,11 +3046,11 @@ Set the quorum value.
 
 Usage:
 ...............
-        quorum <bool>
+quorum <bool>
 ...............
 Example:
 ...............
-        quorum false
+quorum false
 ...............
 
 [[cmdhelp_cibstatus_ticket,manage tickets]]
@@ -3063,11 +3061,11 @@ Granted tickets could be activated or put in standby.
 
 Usage:
 ...............
-        ticket <ticket> {grant|revoke|activate|standby}
+ticket <ticket> {grant|revoke|activate|standby}
 ...............
 Example:
 ...............
-        ticket ticketA grant
+ticket ticketA grant
 ...............
 
 [[cmdhelp_cibstatus_run,run policy engine]]
@@ -3084,11 +3082,11 @@ to display the changes graphically.
 
 Usage:
 ...............
-        run [nograph] [v...] [scores] [utilization]
+run [nograph] [v...] [scores] [utilization]
 ...............
 Example:
 ...............
-        run
+run
 ...............
 
 [[cmdhelp_cibstatus_simulate,simulate cluster transition]]
@@ -3106,11 +3104,11 @@ to display the changes graphically.
 
 Usage:
 ...............
-        simulate [nograph] [v...] [scores] [utilization]
+simulate [nograph] [v...] [scores] [utilization]
 ...............
 Example:
 ...............
-        simulate
+simulate
 ...............
 
 [[cmdhelp_history,cluster history]]
@@ -3145,11 +3143,11 @@ If you think you may have found a bug or just need clarification
 from developers or your support, the `session pack` command can
 help create a report. This is an example:
 ...............
-    crm(live)history# timeframe "Jul 18 12:00" "Jul 18 12:30"
-    crm(live)history# session save strange_restart
-    crm(live)history# session pack
-    Report saved in .../strange_restart.tar.bz2
-    crm(live)history# 
+crm(live)history# timeframe "Jul 18 12:00" "Jul 18 12:30"
+crm(live)history# session save strange_restart
+crm(live)history# session pack
+Report saved in .../strange_restart.tar.bz2
+crm(live)history# 
 ...............
 In order to reduce report size and allow developers to
 concentrate on the issue, you should beforehand limit the time
@@ -3162,11 +3160,11 @@ cluster.
 
 Usage:
 ...............
-        info
+info
 ...............
 Example:
 ...............
-        info
+info
 ...............
 
 [[cmdhelp_history_latest,show latest news from the cluster]]
@@ -3179,11 +3177,11 @@ first wait until it finishes.
 
 Usage:
 ...............
-        latest
+latest
 ...............
 Example:
 ...............
-        latest
+latest
 ...............
 
 [[cmdhelp_history_limit,limit timeframe to be examined]]
@@ -3197,8 +3195,8 @@ timeframe.
 The time period is parsed by the dateutil python module. It
 covers wide range of date formats. For instance:
 
-- 3:00          (today at 3am)
-- 15:00         (today at 3pm)
+- 3:00      (today at 3am)
+- 15:00     (today at 3pm)
 - 2010/9/1 2pm  (September 1st 2010 at 2pm)
 
 We won't bother to give definition of the time specification in
@@ -3212,13 +3210,13 @@ strptime and only the kind as printed by `date(1)` is allowed:
 
 Usage:
 ...............
-        limit [<from_time> [<to_time>]]
+limit [<from_time> [<to_time>]]
 ...............
 Examples:
 ...............
-        limit 10:15
-        limit 15h22m 16h
-        limit "Sun 5 20:46" "Sun 5 22:00"
+limit 10:15
+limit 15h22m 16h
+limit "Sun 5 20:46" "Sun 5 22:00"
 ...............
 
 [[cmdhelp_history_source,set source to be examined]]
@@ -3235,14 +3233,14 @@ is not removed on exit.
 
 Usage:
 ...............
-        source [<dir>|<file>|live]
+source [<dir>|<file>|live]
 ...............
 Examples:
 ...............
-        source live
-        source /tmp/customer_case_22.tar.bz2
-        source /tmp/customer_case_22
-        source
+source live
+source /tmp/customer_case_22.tar.bz2
+source /tmp/customer_case_22
+source
 ...............
 
 [[cmdhelp_history_refresh,refresh live report]]
@@ -3255,7 +3253,7 @@ the logs. If you want to make a completely new report, specify
 
 Usage:
 ...............
-        refresh [force]
+refresh [force]
 ...............
 
 [[cmdhelp_history_detail,set the level of detail shown]]
@@ -3265,13 +3263,13 @@ How much detail to show from the logs.
 
 Usage:
 ...............
-        detail <detail_level>
+detail <detail_level>
 
-        detail_level :: small integer (defaults to 0)
+detail_level :: small integer (defaults to 0)
 ...............
 Example:
 ...............
-        detail 1
+detail 1
 ...............
 
 [[cmdhelp_history_setnodes,set the list of cluster nodes]]
@@ -3282,11 +3280,11 @@ it is necessary to set the list of nodes.
 
 Usage:
 ...............
-        setnodes node <node> [<node> ...]
+setnodes node <node> [<node> ...]
 ...............
 Example:
 ...............
-        setnodes node_a node_b
+setnodes node_a node_b
 ...............
 
 [[cmdhelp_history_resource,resource events]]
@@ -3302,13 +3300,13 @@ which are part of a group are shown.
 
 Usage:
 ...............
-        resource <rsc> [<rsc> ...]
+resource <rsc> [<rsc> ...]
 ...............
 Example:
 ...............
-        resource bigdb public_ip
-        resource my_.*_db2
-        resource ping_clone
+resource bigdb public_ip
+resource my_.*_db2
+resource ping_clone
 ...............
 
 [[cmdhelp_history_node,node events]]
@@ -3320,11 +3318,11 @@ node names or extended regular expressions.
 
 Usage:
 ...............
-        node <node> [<node> ...]
+node <node> [<node> ...]
 ...............
 Example:
 ...............
-        node node1
+node node1
 ...............
 
 [[cmdhelp_history_log,log content]]
@@ -3344,11 +3342,11 @@ may actually happen fairly often.
 
 Usage:
 ...............
-        log [<node>]
+log [<node>]
 ...............
 Example:
 ...............
-        log node-a
+log node-a
 ...............
 
 [[cmdhelp_history_exclude,exclude log messages]]
@@ -3363,11 +3361,11 @@ Excludes are saved along with the history sessions.
 
 Usage:
 ...............
-        exclude [<regex>|clear]
+exclude [<regex>|clear]
 ...............
 Example:
 ...............
-        exclude kernel.*ocfs2
+exclude kernel.*ocfs2
 ...............
 
 [[cmdhelp_history_peinputs,list or get PE input files]]
@@ -3380,15 +3378,15 @@ report directory. Add `v` to also see the creation time stamps.
 
 Usage:
 ...............
-        peinputs [{<range>|<number>} ...] [v]
+peinputs [{<range>|<number>} ...] [v]
 
-        range :: <n1>:<n2>
+range :: <n1>:<n2>
 ...............
 Example:
 ...............
-        peinputs
-        peinputs 440:444 446
-        peinputs v
+peinputs
+peinputs 440:444 446
+peinputs v
 ...............
 
 [[cmdhelp_history_transition,show transition]]
@@ -3429,21 +3427,21 @@ the transition are printed.
 
 Usage:
 ...............
-        transition [<number>|<index>|<file>] [nograph] [v...] [scores] [actions] [utilization]
-        transition showdot [<number>|<index>|<file>]
-        transition log [<number>|<index>|<file>]
-        transition save [<number>|<index>|<file> [name]]
+transition [<number>|<index>|<file>] [nograph] [v...] [scores] [actions] [utilization]
+transition showdot [<number>|<index>|<file>]
+transition log [<number>|<index>|<file>]
+transition save [<number>|<index>|<file> [name]]
 ...............
 Examples:
 ...............
-        transition
-        transition 444
-        transition -1
-        transition pe-error-3.bz2
-        transition node-a/pengine/pe-input-2.bz2
-        transition showdot 444
-        transition log
-        transition save 0 enigma-22
+transition
+transition 444
+transition -1
+transition pe-error-3.bz2
+transition node-a/pengine/pe-input-2.bz2
+transition showdot 444
+transition log
+transition save 0 enigma-22
 ...............
 
 [[cmdhelp_history_show,show status or configuration of the PE input file]]
@@ -3455,14 +3453,14 @@ configuration output is the same as `crm configure show`.
 
 Usage:
 ...............
-        show <pe> [status]
+show <pe> [status]
 
-        pe :: <number>|<index>|<file>|live
+pe :: <number>|<index>|<file>|live
 ...............
 Examples:
 ...............
-        show 2066
-        show pe-input-2080.bz2 status
+show 2066
+show pe-input-2080.bz2 status
 ...............
 
 [[cmdhelp_history_graph,generate a directed graph from the PE file]]
@@ -3475,16 +3473,16 @@ from configuration>>.
 
 Usage:
 ...............
-        graph <pe> [<gtype> [<file> [<img_format>]]]
+graph <pe> [<gtype> [<file> [<img_format>]]]
 
-        gtype :: dot
-        img_format :: `dot` output format (see the `-T` option)
+gtype :: dot
+img_format :: `dot` output format (see the `-T` option)
 ...............
 Example:
 ...............
-        graph -1
-        graph 322 dot clu1.conf.dot
-        graph 322 dot clu1.conf.svg svg
+graph -1
+graph 322 dot clu1.conf.dot
+graph 322 dot clu1.conf.svg svg
 ...............
 
 [[cmdhelp_history_diff,cluster states/transitions difference]]
@@ -3505,14 +3503,14 @@ one transition.
 
 Usage:
 ...............
-        diff <pe> <pe> [status] [html]
+diff <pe> <pe> [status] [html]
 
-        pe :: <number>|<index>|<file>|live
+pe :: <number>|<index>|<file>|live
 ...............
 Examples:
 ...............
-        diff 2066 2067
-        diff pe-input-2080.bz2 live status
+diff 2066 2067
+diff pe-input-2080.bz2 live status
 ...............
 
 [[cmdhelp_history_wdiff,cluster states/transitions difference]]
@@ -3533,14 +3531,14 @@ one transition.
 
 Usage:
 ...............
-        wdiff <pe> <pe> [status]
+wdiff <pe> <pe> [status]
 
-        pe :: <number>|<index>|<file>|live
+pe :: <number>|<index>|<file>|live
 ...............
 Examples:
 ...............
-        wdiff 2066 2067
-        wdiff pe-input-2080.bz2 live status
+wdiff 2066 2067
+wdiff pe-input-2080.bz2 live status
 ...............
 
 [[cmdhelp_history_session,manage history sessions]]
@@ -3563,13 +3561,13 @@ Leave out subcommand to see the current session.
 
 Usage:
 ...............
-        session [{save|load|delete} <name> | pack [<name>] | update | list]
+session [{save|load|delete} <name> | pack [<name>] | update | list]
 ...............
 Examples:
 ...............
-        session save bnc966622
-        session load rsclost-2
-        session list
+session save bnc966622
+session load rsclost-2
+session list
 ...............
 
 [[cmdhelp_report,Handle reports for the cluster]]
@@ -3588,19 +3586,19 @@ See `crmsh_hb_report(8)` for more details.
 
 Usage:
 ...............
-        report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
-               [-n nodes] [-E files] [-p patt] [-L patt] [-e prog]
-               [-MSDZAVsvhd] [dest]
+report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
+       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog]
+       [-MSDZAVsvhd] [dest]
 ...............
 
 Examples:
 ...............
-        create -f 2pm report_1
-        create -f "2007/9/5 12:30" -t "2007/9/5 14:00" report_2
-        create -f 1:00 -t 3:00 -l /var/log/cluster/ha-debug report_3
-        create -f "09sep07 2:00" -u hbadmin report_4
-        create -f 18:00 -p "usern.*" -p "admin.*" report_5
-        create -f cts:133 ctstest_133
+create -f 2pm report_1
+create -f "2007/9/5 12:30" -t "2007/9/5 14:00" report_2
+create -f 1:00 -t 3:00 -l /var/log/cluster/ha-debug report_3
+create -f "09sep07 2:00" -u hbadmin report_4
+create -f 18:00 -p "usern.*" -p "admin.*" report_5
+create -f cts:133 ctstest_133
 ...............
 
 === `end` (`cd`, `up`)
@@ -3610,7 +3608,7 @@ the parent level. This command is available everywhere.
 
 Usage:
 ...............
-        end
+end
 ...............
 
 === `help`
@@ -3620,7 +3618,7 @@ specified topic (command). This command is available everywhere.
 
 Usage:
 ...............
-        help [<topic>]
+help [<topic>]
 ...............
 
 === `quit` (`exit`, `bye`)
@@ -3638,9 +3636,10 @@ The crm shell will not try to update the objects it does not
 understand. Of course, it is always possible to edit such objects
 in the XML format.
 
-AUTHOR
-------
+AUTHORS
+-------
 Dejan Muhamedagic, <dejan@suse.de>
+Kristoffer Gronlund <kgronlund@suse.com>
 and many OTHERS
 
 SEE ALSO
@@ -3651,8 +3650,10 @@ ptest(8), dotty(1), crm_simulate(8), cibadmin(8)
 
 COPYING
 -------
-Copyright \(C) 2008-2011 Dejan Muhamedagic. Free use of this
-software is granted under the terms of the GNU General Public License (GPL).
+Copyright \(C) 2008-2013 Dejan Muhamedagic.
+Copyright \(C) 2013 Kristoffer Gronlund.
+
+Free use of this software is granted under the terms of the GNU General Public License (GPL).
 
 //////////////////////
  vim:ts=4:sw=4:expandtab:
