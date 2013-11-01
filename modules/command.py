@@ -220,7 +220,9 @@ class UI(object):
         return False
 
     @alias('end', 'back')
-    @help('Go back to previous level')
+    @help('''Go back to previous level
+Navigates back in the user interface.
+''')
     def do_up(self, context):
         '''
         TODO: Implement full cd navigation. cd ../configure, for example
@@ -229,36 +231,68 @@ class UI(object):
         self.end_game()
         context.up()
 
-    @help('Navigate the level structure')
+    @help('''Navigate the level structure
+This command works similar to how `cd` works in a regular unix
+system shell. `cd ..` returns to the previous level.
+
+If the current level is `resource`, executing `cd ../configure` will
+move directly to the `configure` level.
+
+One difference between this command and the usual behavior of `cd`
+is that without any argument, this command will go back one level
+instead of doing nothing.
+
+Examples:
+....
+        cd ..
+        cd configure
+        cd ../configure
+        cd configure/ra
+....
+''')
+    #@completers_repeating(lambda arg: ?)
     def do_cd(self, context, optarg='..'):
-        '''
-        TODO: Implement full cd navigation. cd ../configure, for example
-        Also implement ls to list commands / levels from current location
-        '''
-        if optarg == '..':
-            self.end_game()
-            context.up()
-        elif optarg == '.':
-            pass
+        path = optarg.split('/', 1)
+        if len(path) == 1:
+            path = path[0]
+            if path == '..':
+                self.end_game()
+                context.up()
+            elif path == '.' or not path:
+                return
+            else:
+                info = self.get_child(path)
+                if not info or not info.level:
+                    context.fatal_error("No such level: " + path)
+                self.end_game()
+                context.enter_level(info.level)
+        else:
+            self.do_cd(context, path[0])
+            self.do_cd(context, path[1])
 
     @alias('bye', 'exit')
-    @help('Exit the interactive shell')
+    @help('''Exit the interactive shell
+Terminates `crm` immediately. For some levels, `quit` may
+ask for confirmation before terminating, if there are
+uncommitted changes to the configuration.
+''')
     def do_quit(self, context):
         self.end_game()
         context.quit()
 
     @alias('?')
     @help('''show help (help topics for list of topics)
-    The help subsystem consists of the command reference and a list
-    of topics. The former is what you need in order to get the
-    details regarding a specific command. The latter should help with
-    concepts and examples.
+The help subsystem consists of the command reference and a list
+of topics. The former is what you need in order to get the
+details regarding a specific command. The latter should help with
+concepts and examples.
 
-    Examples:
-
+Examples:
+....
         help Introduction
         help quit
-    ''')
+....
+''')
     def do_help(self, context, subject=None, subtopic=None):
         """usage: help topic|level|command"""
         if subtopic is None:
