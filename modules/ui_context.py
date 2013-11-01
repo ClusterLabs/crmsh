@@ -57,6 +57,8 @@ class Context(object):
         if not line or line.startswith('#'):
             return True
 
+        saved_stack = list(self.stack)
+
         try:
             tokens = shlex.split(line)
             while tokens:
@@ -69,12 +71,15 @@ class Context(object):
                 if self.command_info.type == 'level':
                     self.enter_level(self.command_info.level)
                 else:
-                    return self.execute_command()
+                    ret = self.execute_command()
+                    self.stack = saved_stack
+                    return ret
             return True
         except ValueError, msg:
             common_err("%s: %s" % (self.get_qualified_name(), msg))
         except IOError, msg:
             common_err("%s: %s" % (self.get_qualified_name(), msg))
+        self.stack = saved_stack
         return False
 
     def complete(self, line):
