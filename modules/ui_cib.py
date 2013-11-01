@@ -161,6 +161,8 @@ class CibShadow(command.UI):
             context.info("committed '%s' shadow CIB to the cluster" % name)
         else:
             context.fatal_error("failed to commit the %s shadow CIB" % name)
+        if vars.tmp_cib:
+            self._use('', '')
 
     @command.skill_level('administrator')
     def do_diff(self, context):
