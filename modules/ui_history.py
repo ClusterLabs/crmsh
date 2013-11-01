@@ -22,6 +22,7 @@ import time
 import re
 import bz2
 import command
+import completers as compl
 import utils
 import ui_utils
 import xmlutil
@@ -34,6 +35,12 @@ import cmd_status
 
 
 ptest_options = ["@v+", "nograph", "scores", "actions", "utilization"]
+
+err_buf = ErrorBuffer.getInstance()
+options = Options.getInstance()
+user_prefs = UserPrefs.getInstance()
+cib_factory = CibFactory.getInstance()
+crm_report = Report.getInstance()
 
 
 class History(command.UI):
@@ -130,6 +137,7 @@ class History(command.UI):
         return crm_report.set_detail(detail_lvl)
 
     @command.skill_level('administrator')
+    @command.completers_repeating(compl.call(crm_report.node_list))
     def do_setnodes(self, context, *args):
         "usage: setnodes <node> [<node> ...]"
         if options.history != "live":
@@ -154,17 +162,20 @@ class History(command.UI):
         crm_report.show_transition_log(f)
 
     @command.skill_level('administrator')
+    @command.completers_repeating(compl.call(crm_report.rsc_list))
     def do_resource(self, context, *args):
         "usage: resource <rsc> [<rsc> ...]"
         return crm_report.resource(*args)
 
     @command.skill_level('administrator')
     @command.wait
+    @command.completers_repeating(compl.call(crm_report.node_list))
     def do_node(self, context, *args):
         "usage: node <node> [<node> ...]"
         return crm_report.node(*args)
 
     @command.skill_level('administrator')
+    @command.completers_repeating(compl.call(crm_report.node_list))
     def do_log(self, context, *args):
         "usage: log [<node> ...]"
         return crm_report.log(*args)
@@ -181,6 +192,8 @@ class History(command.UI):
         return utils.run_ptest(s, nograph, scores, utilization, actions, verbosity)
 
     @command.skill_level('administrator')
+    @command.completers_repeating(compl.join(compl.call(crm_report.peinputs_list),
+                                             compl.choice(['v'])))
     def do_peinputs(self, context, *args):
         """usage: peinputs [{<range>|<number>} ...] [v]"""
         argl = list(args)
@@ -270,6 +283,8 @@ class History(command.UI):
         return xmlutil.pe2shadow(f, name)
 
     @command.skill_level('administrator')
+    @command.completers(compl.join(compl.call(crm_report.peinputs_list),
+                                   compl.choice(['log', 'showdot', 'save'])))
     def do_transition(self, context, *args):
         """usage: transition [<number>|<index>|<file>] [nograph] [v...] [scores] [actions] [utilization]
         transition showdot [<number>|<index>|<file>]
@@ -489,6 +504,8 @@ class History(command.UI):
         print utils.str2tmp(s)
 
     @command.skill_level('administrator')
+    @command.completers(compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])),
+                        compl.choice(['status']))
     def show(self, context, t, *args):
         "usage: show <pe> [status]"
         opt_l = []
@@ -505,6 +522,7 @@ class History(command.UI):
         utils.page_string(s)
 
     @command.skill_level('administrator')
+    @command.completers(compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])))
     def graph(self, context, t, *args):
         "usage: graph <pe> [<gtype> [<file> [<img_format>]]]"
         pe_f = self._get_diff_pe_input(t)
@@ -528,6 +546,8 @@ class History(command.UI):
         return rc
 
     @command.skill_level('administrator')
+    @command.completers(compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])),
+                        compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])))
     def diff(self, context, t1, t2, *args):
         "usage: diff <pe> <pe> [status] [html]"
         opt_l = []
@@ -550,6 +570,8 @@ class History(command.UI):
             sys.stdout.writelines(s)
 
     @command.skill_level('administrator')
+    @command.completers(compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])),
+                        compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])))
     def wdiff(self, context, t1, t2, *args):
         "usage: wdiff <pe> <pe> [status]"
         opt_l = []
@@ -566,6 +588,8 @@ class History(command.UI):
         utils.page_string(s)
 
     @command.skill_level('administrator')
+    @command.completers(compl.call(crm_report.session_subcmd_list),
+                        compl.call(crm_report.session_list))
     def session(self, context, subcmd=None, name=None):
         "usage: session [{save|load|delete} <name> | pack [<name>] | update | list]"
         if not subcmd:
@@ -604,6 +628,7 @@ class History(command.UI):
         return rc
 
     @command.skill_level('administrator')
+    @command.completers(compl.choice(['clear']))
     def exclude(self, context, arg=None):
         "usage: exclude [<regex>|clear]"
         if not arg:
@@ -614,10 +639,4 @@ class History(command.UI):
             rc = crm_report.manage_excludes("add", arg)
         return rc
 
-
-err_buf = ErrorBuffer.getInstance()
-options = Options.getInstance()
-user_prefs = UserPrefs.getInstance()
-cib_factory = CibFactory.getInstance()
-crm_report = Report.getInstance()
 # vim:ts=4:sw=4:et:

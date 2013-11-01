@@ -81,6 +81,11 @@ class CibStatusUI(command.UI):
         return cib_status.edit_ticket(ticket, subcmd)
 
     @command.skill_level('expert')
+    @command.completers(compl.choice(vars.ra_operations),
+                        compl.call(cib_status.status_rsc_list),
+                        compl.choice(vars.lrm_exit_codes.keys()),
+                        compl.choice(vars.lrm_status_codes.keys()),
+                        compl.choice(vars.node_states))
     def do_op(self, context, op, rsc, rc, op_status=None, node=''):
         "usage: op <operation> <resource> <exit_code> [<op_status>] [<node>]"
         if rc in vars.lrm_exit_codes:
@@ -98,12 +103,13 @@ class CibStatusUI(command.UI):
         return cib_status.edit_op(op, rsc, num_rc, num_op_status, node)
 
     @command.skill_level('administrator')
+    @command.completers(compl.choice(['nograph']))
     def do_run(self, context, *args):
         "usage: run [nograph] [v...] [scores] [utilization]"
         return ui_utils.ptestlike(cib_status.run, '', context.get_command_name(), args)
 
     @command.skill_level('administrator')
+    @command.completers(compl.choice(['nograph']))
     def do_simulate(self, context, *args):
         "usage: simulate [nograph] [v...] [scores] [utilization]"
         return ui_utils.ptestlike(cib_status.simulate, '', context.get_command_name(), args)
-
