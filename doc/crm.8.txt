@@ -62,6 +62,7 @@ on the same line. It is possible to use a continuation character (`\`)
 to write one command in two or more lines. The continuation character
 is commonly used when displaying configurations.
 
+[[topics_CommandLine,Available command line options]]
 OPTIONS
 -------
 *-f, --file*='FILE'::

@@ -73,15 +73,21 @@ class CliDisplay(Singleton):
         return s
 
     def help_header(self, s):
-        return self._colorize(s, 'blue', 'bold', 'underline')
+        return self._colorize(s, 'normal', 'bold')
 
     def help_keyword(self, s):
-        return self._colorize(s, 'normal', 'bold')
+        return self._colorize(s, 'blue', 'bold', 'underline')
+
+    def help_topic(self, s):
+        return self._colorize(s, 'yellow', 'bold')
 
     def help_begin_block(self):
         if self.colors_enabled():
             return '${CYAN}'
         return ''
+
+    def help_block(self, s):
+        return self._colorize(s, 'cyan')
 
     def help_end_block(self):
         if self.colors_enabled():

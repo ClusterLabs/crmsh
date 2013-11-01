@@ -59,106 +59,106 @@ class Root(command.UI):
 
     @command.level(ui_cluster.Cluster)
     @command.help('''Cluster setup and management
-    Commands at this level enable low-level cluster configuration
-    management with HA awareness.
-    ''')
+Commands at this level enable low-level cluster configuration
+management with HA awareness.
+''')
     def do_cluster(self):
         pass
 
     @command.level(ui_cib.CibShadow)
     @command.help('''manage shadow CIBs
-    A shadow CIB is a regular cluster configuration which is kept in
-    a file. The CRM and the CRM tools may manage a shadow CIB in the
-    same way as the live CIB (i.e. the current cluster configuration).
-    A shadow CIB may be applied to the cluster in one step.
-    ''')
+A shadow CIB is a regular cluster configuration which is kept in
+a file. The CRM and the CRM tools may manage a shadow CIB in the
+same way as the live CIB (i.e. the current cluster configuration).
+A shadow CIB may be applied to the cluster in one step.
+''')
     def do_cib(self):
         pass
 
     @command.level(ui_resource.RscMgmt)
     @command.help('''resources management
-    Everything related to resources management is available at this
-    level. Most commands are implemented using the crm_resource(8)
-    program.
-    ''')
+Everything related to resources management is available at this
+level. Most commands are implemented using the crm_resource(8)
+program.
+''')
     def do_resource(self):
         pass
 
     @command.level(ui_configure.CibConfig)
     @command.help('''CRM cluster configuration
-    The configuration level.
+The configuration level.
 
-    Note that you can change the working CIB at the cib level. It is
-    advisable to configure shadow CIBs and then commit them to the
-    cluster.
-    ''')
+Note that you can change the working CIB at the cib level. It is
+advisable to configure shadow CIBs and then commit them to the
+cluster.
+''')
     def do_configure(self):
         pass
 
     @command.level(ui_node.NodeMgmt)
     @command.help('''nodes management
-    A few node related tasks such as node standby are implemented
-    here.
-    ''')
+A few node related tasks such as node standby are implemented
+here.
+''')
     def do_node(self):
         pass
 
     @command.level(ui_options.CliOptions)
     @command.help('''user preferences
-    Several user preferences are available. Note that it is possible
-    to save the preferences to a startup file.
-    ''')
+Several user preferences are available. Note that it is possible
+to save the preferences to a startup file.
+''')
     def do_options(self):
         pass
 
     @command.level(ui_history.History)
     @command.help('''CRM cluster history
-    The history level.
+The history level.
 
-    Examine Pacemaker's history: node and resource events, logs.
-    ''')
+Examine Pacemaker's history: node and resource events, logs.
+''')
     def do_history(self):
         pass
 
     @command.level(ui_site.Site)
     @command.help('''Geo-cluster support
-    The site level.
+The site level.
 
-    Geo-cluster related management.
-    ''')
+Geo-cluster related management.
+''')
     def do_site(self):
         pass
 
     @command.level(ui_ra.RA)
     @command.help('''resource agents information center
-    This level contains commands which show various information about
-    the installed resource agents. It is available both at the top
-    level and at the `configure` level.
-    ''')
+This level contains commands which show various information about
+the installed resource agents. It is available both at the top
+level and at the `configure` level.
+''')
     def do_ra(self):
         pass
 
     @command.level(ui_report.Report)
     @command.help('''Utility to collect logs and other information
-    `report` is a utility to collect all information (logs,
-    configuration files, system information, etc) relevant to
-    crmsh over the given period of time.
-    ''')
+`report` is a utility to collect all information (logs,
+configuration files, system information, etc) relevant to
+crmsh over the given period of time.
+''')
     def do_report(self):
         pass
 
     @command.help('''show cluster status
-    Show cluster status. The status is displayed by crm_mon. Supply
-    additional arguments for more information or different format.
-    See crm_mon(8) for more details.
+Show cluster status. The status is displayed by `crm_mon`. Supply
+additional arguments for more information or different format.
+See `crm_mon(8)` for more details.
 
-    Usage:
-    ...............
-    status [<option> ...]
+Usage:
+...............
+status [<option> ...]
 
-    option :: bynode | inactive | ops | timing | failcounts
-    ...............
-    ''')
+option :: bynode | inactive | ops | timing | failcounts
+...............
+''')
     def do_status(self, context, *args):
         cmd_status.cmd_status(args)
 

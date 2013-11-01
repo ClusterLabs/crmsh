@@ -52,6 +52,8 @@ class HelpFilter(object):
     _B0 = re.compile(r'^\.{4,}')
     _B1 = re.compile(r'^\*{4,}')
     _QUOTED = re.compile(r'`([^`]+)`')
+    _TOPIC = re.compile(r'(.*)::$')
+    _TOPIC2 = re.compile(r'^\.\w+')
 
     def __init__(self, display):
         self.display = display
@@ -61,14 +63,18 @@ class HelpFilter(object):
         block_edge = self._B0.match(line) or self._B1.match(line)
         if block_edge and not self.in_block:
             self.in_block = True
-            return self.display.help_begin_block()
+            return ''
         elif block_edge and self.in_block:
             self.in_block = False
-            return self.display.help_end_block()
+            return ''
         elif not self.in_block:
-            return self._QUOTED.sub(self.display.help_keyword(r'\1'), line)
-        else:
+            if self._TOPIC2.match(line):
+                return self.display.help_topic(line[1:])
+            line = self._QUOTED.sub(self.display.help_keyword(r'\1'), line)
+            line = self._TOPIC.sub(self.display.help_topic(r'\1'), line)
             return line
+        else:
+            return self.display.help_block(line)
 
     def __call__(self, text):
         return '\n'.join([self._filter(line) for line in text.splitlines()]) + '\n'
@@ -130,6 +136,13 @@ _TOPICS = odict()
 _LEVELS = odict()
 _COMMANDS = odict()
 
+_TOPICS["Overview"] = HelpEntry("Available help topics and commands")
+_TOPICS["Topics"] = HelpEntry("Available help topics")
+
+
+def _titleline(title, desc, suffix=''):
+    return '%-16s %s\n' % (('`%s`' % (title)) + suffix, desc)
+
 
 def help_overview():
     '''
@@ -139,19 +152,25 @@ def help_overview():
     _load_help()
     s = "Available topics:\n\n"
     for title, topic in _TOPICS.iteritems():
-        s += "\t`%-16s` %s\n" % (title, topic.short)
+        s += '\t' + _titleline(title, topic.short)
     s += "\n"
     s += "Available commands:\n\n"
+
+    for title, command in _COMMANDS.get('.', {}).iteritems():
+        if not command.is_alias():
+            s += '\t' + _titleline(title, command.short)
+    s += "\n"
+
+    hidden_commands = ('up', 'cd', 'help', 'quit', 'ls')
+
     for title, level in _LEVELS.iteritems():
-        if title not in _COMMANDS:
-            s += "\t`%-16s` %s\n" % (title, level.short)
-            s += "\n"
-    for title, level in _LEVELS.iteritems():
-        if title in _COMMANDS:
-            s += "\t`%-16s` %s\n" % (title, level.short)
+        if title != '.' and title in _COMMANDS:
+            s += '\t' + _titleline(title, level.short, suffix='/')
             for cmdname, cmd in _COMMANDS[title].iteritems():
+                if cmdname in hidden_commands:
+                    continue
                 if not cmd.is_alias():
-                    s += "\t\t`%-16s` %s\n" % (cmdname, cmd.short)
+                    s += '\t\t' + _titleline(cmdname, cmd.short)
             s += "\n"
     return HelpEntry('Help overview for crmsh\n', s)
 
@@ -164,7 +183,7 @@ def help_topics():
     _load_help()
     s = ''
     for title, topic in _TOPICS.iteritems():
-        s += "\t`%-16s` %s\n" % (title, topic.short)
+        s += '\t' + _titleline(title, topic.short)
     return HelpEntry('Available topics\n', s)
 
 
@@ -215,12 +234,14 @@ def help_contextual(context, subject, subtopic):
     """
     Returns contextual help
     """
-    if context == '.' and subject is None:
+    if (context == '.' and subject is None) or (subject.lower() == 'overview'):
         return help_overview()
-    if subject == 'topics':
+    if subject.lower() == 'topics':
         return help_topics()
     if subject is None:
         return help_level(context)
+    if _is_help_topic(subject):
+        return help_topic(subject)
     if subtopic is not None:
         return help_command(subject, subtopic)
     if _is_command(context, subject):
@@ -242,6 +263,8 @@ def add_help(entry, topic=None, level=None, command=None):
         if topic not in _TOPICS or _TOPICS[topic] is _DEFAULT:
             _TOPICS[topic] = entry
     elif level and command:
+        if level not in _LEVELS:
+            _LEVELS[level] = HelpEntry("No description available")
         if level not in _COMMANDS:
             _COMMANDS[level] = odict()
         lvl = _COMMANDS[level]
@@ -303,10 +326,8 @@ def _load_help():
     def filter_line(line):
         '''clean up an input line
          - <<...>> references -> short description
-         - remove surrounding dots from preformatted blocks
         '''
-        line = _REFERENCE_RE.sub(r'\1', line)
-        return line
+        return _REFERENCE_RE.sub(r'\1', line)
 
     def append_cmdinfos():
         "append command information to level descriptions"
@@ -314,7 +335,17 @@ def _load_help():
             if lvlname in _COMMANDS:
                 level.long += "\n\nCommands:\n"
                 for cmdname, cmd in _COMMANDS[lvlname].iteritems():
-                    level.long += "\t`%-16s` %s\n" % (cmdname, cmd.short)
+                    level.long += "\t" + _titleline(cmdname, cmd.short)
+
+    def fixup_root_commands():
+        "root commands appear as levels"
+
+        strip_topics = []
+        for tname, topic in _LEVELS.iteritems():
+            if not _COMMANDS.get(tname):
+                strip_topics.append(tname)
+        for t in strip_topics:
+            del _LEVELS[t]
 
     def fixup_help_aliases():
         "add help for aliases"
@@ -356,6 +387,7 @@ def _load_help():
             process(entry)
         helpfile.close()
         append_cmdinfos()
+        fixup_root_commands()
         fixup_help_aliases()
     except IOError, msg:
         common_err("%s open: %s" % (name, msg))
