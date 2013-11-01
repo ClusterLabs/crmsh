@@ -137,12 +137,12 @@ class History(command.UI):
         return crm_report.set_nodes(*args)
 
     @command.skill_level('administrator')
-    def do_info(self, cmd):
+    def do_info(self, context):
         "usage: info"
         return crm_report.info()
 
     @command.skill_level('administrator')
-    def do_latest(self, cmd):
+    def do_latest(self, context):
         "usage: latest"
         if not utils.wait4dc("transition", not options.batch):
             return False

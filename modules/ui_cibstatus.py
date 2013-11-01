@@ -65,12 +65,12 @@ class CibStatusUI(command.UI):
         return self.cib_status.set_quorum(utils.is_boolean_true(opt))
 
     @command.skill_level('expert')
-    def do_node(self, cmd, node, state):
+    def do_node(self, context, node, state):
         "usage: node <node> {online|offline|unclean}"
         return self.cib_status.edit_node(node, state)
 
     @command.skill_level('expert')
-    def do_ticket(self, cmd, ticket, subcmd):
+    def do_ticket(self, context, ticket, subcmd):
         "usage: ticket <ticket> {grant|revoke|activate|standby}"
         return self.cib_status.edit_ticket(ticket, subcmd)
 

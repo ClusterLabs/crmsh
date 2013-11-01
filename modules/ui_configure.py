@@ -22,7 +22,7 @@ import vars
 import xmlutil
 from cibconfig import mkset_obj, CibFactory
 from msg import UserPrefs, Options, ErrorBuffer
-from msg import common_err, common_info
+from msg import common_err, common_info, common_warn
 from msg import syntax_err
 import rsctest
 import ui_cib
@@ -44,19 +44,32 @@ class CibConfig(command.UI):
         if options.interactive:
             cib_factory.initialize()
 
+    def requires(self):
+        # see the configure ptest/simulate command
+        has_ptest = utils.is_program('ptest')
+        has_simulate = utils.is_program('crm_simulate')
+        if not has_ptest:
+            vars.simulate_programs["ptest"] = "crm_simulate"
+        if not has_simulate:
+            vars.simulate_programs["simulate"] = "ptest"
+        if not (has_ptest or has_simulate):
+            common_warn("neither ptest nor crm_simulate exist, check your installation")
+            vars.simulate_programs["ptest"] = ""
+            vars.simulate_programs["simulate"] = ""
+
     @command.name('_test')
     @command.skill_level('administrator')
-    def do_check_structure(self, cmd):
+    def do_check_structure(self, context):
         return cib_factory.check_structure()
 
     @command.name('_regtest')
     @command.skill_level('administrator')
-    def do_regression_testing(self, cmd, param):
+    def do_regression_testing(self, context, param):
         return cib_factory.regression_testing(param)
 
     @command.name('_objects')
     @command.skill_level('administrator')
-    def do_showobjects(self, cmd):
+    def do_showobjects(self, context):
         cib_factory.showobjects()
 
     @command.level(ui_ra.RA)
