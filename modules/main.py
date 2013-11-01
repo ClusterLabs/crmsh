@@ -24,10 +24,13 @@ import atexit
 from utils import wait4dc, is_pcmk_118, is_program
 from userprefs import Options, UserPrefs
 import vars
-from ui import cmd_exit
 from msg import ErrorBuffer, syntax_err, skill_err
 from msg import common_warn, common_info, common_debug, common_err
-from levels import Levels
+from clidisplay import CliDisplay
+from term import TerminalController
+
+import ui_tree
+import ui_context
 
 
 def load_rc(rcfile):
@@ -121,63 +124,6 @@ def show_usage(cmd):
         print >> sys.stderr, p
     else:
         syntax_err(cmd.__name__)
-
-
-def execute_command(lvl, cmd, args):
-    """Execute the command and optionally wait for completion
-    lvl: Current level
-    cmd: (function, arglimits, skill_level, wait)
-    args: argv-style argument list (args[0] is the command name)
-    """
-    fn, arglimits, skill_level, wait = cmd
-    if user_prefs.skill_level < skill_level:
-        skill_err(args[0])
-        return False
-    if not check_args(args[1:], arglimits):
-        show_usage(fn)
-        return False
-    rv = fn(*args)  # execute the command
-    if rv is False:
-        return False
-    # should we wait till the command takes effect?
-    do_wait = user_prefs.wait and (wait == 1 or lvl.should_wait())
-    if do_wait:
-        if not wait4dc(args[0], not options.batch):
-            rv = False
-    return rv is not False
-
-
-def parse_line(lvl, line):
-    """Parse line into level movement and/or a command execution
-    lvl: Current level
-    line: line split into tokens
-    """
-    if not line or line[0].startswith('#'):
-        return True
-    pt = lvl.mark()
-    cmd = None
-    i = 0
-    for i in range(len(line)):
-        token = line[i]
-        if token not in pt:
-            syntax_err(line[i:])
-            lvl.release()
-            return False
-        current = pt[token]
-        if type(current) == type(object):
-            # on entering new level we need to set the
-            # interactive option _before_ creating the level
-            if not options.interactive and i == len(line)-1:
-                set_interactive()
-            pt = lvl.new_level(current, token)
-        else:
-            cmd = current
-            break  # and stop parsing
-    if cmd:  # found a terminal symbol
-        retval = execute_command(lvl, cmd, line[i:])
-        lvl.release()
-        return retval
-    return True
 
 
 def exit_handler():
@@ -287,7 +233,7 @@ usage:
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 err_buf = ErrorBuffer.getInstance()
-levels = Levels.getInstance()
+#levels = Levels.getInstance()
 
 
 def set_interactive():
@@ -333,47 +279,52 @@ def compatibility_setup():
         vars.node_type_opt = True
         vars.attr_defaults["node"] = {"type": "normal"}
         vars.cib_no_section_rc = 6
-    # see the configure ptest/simulate command
-    if not is_program("ptest"):
-        vars.simulate_programs["ptest"] = "crm_simulate"
-    if not is_program("crm_simulate"):
-        vars.simulate_programs["simulate"] = "ptest"
-    if not (is_program("ptest") or is_program("crm_simulate")):
-        common_warn("neither ptest nor crm_simulate exist, check your installation")
-        vars.simulate_programs["ptest"] = ""
-        vars.simulate_programs["simulate"] = ""
+
+
+def add_quotes(args):
+    '''
+    Add quotes if there's whitespace in one of the
+    arguments; so that the user doesn't need to protect the
+    quotes.
+
+    If there are two kinds of quotes which actually _survive_
+    the getopt, then we're _probably_ screwed.
+
+    At any rate, stuff like ... '..."..."'
+    as well as '...\'...\''  do work.
+    '''
+    l = []
+    for s in args:
+        if user_prefs.add_quotes and ' ' in s:
+            q = '"' in s and "'" or '"'
+            if not q in s:
+                s = "%s%s%s" % (q, s, q)
+        l.append(s)
+    return l
 
 
 def do_work(user_args):
     compatibility_setup()
+
+    tree = ui_tree.Tree()
+    context = ui_context.Context(tree)
+
     if options.shadow:
-        parse_line(levels, ["cib", "use", options.shadow])
+        context.run("cib use " + options.shadow)
     # this special case is silly, but we have to keep it to
     # preserve the backward compatibility
     if len(user_args) == 1 and user_args[0].startswith("conf"):
-        parse_line(levels, ["configure"])
+        context.run("configure")
     elif len(user_args) > 0:
         err_buf.reset_lineno()
         # we're not sure yet whether it's an interactive session or not
         # (single-shot commands aren't)
         options.interactive = False
-        # add quotes if there's whitespace in one of the
-        # arguments; so that the user doesn't need to protect the
-        # quotes; but if there are two kinds of quotes which
-        # actually _survive_ the getopt, then we're _probably_
-        # screwed
-        # at any rate, stuff like ... '..."..."' as well as
-        # '...\'...\''  do work
-        l = []
-        for s in user_args:
-            if user_prefs.add_quotes and ' ' in s:
-                q = '"' in s and "'" or '"'
-                if not q in s:
-                    s = "%s%s%s" % (q, s, q)
-            l.append(s)
-        if parse_line(levels, shlex.split(' '.join(l))):
+
+        l = add_quotes(user_args)
+        if context.run(' '.join(l)):
             # if the user entered a level, then just continue
-            if not levels.previous():
+            if not context.previous_level():
                 sys.exit(0)
         else:
             sys.exit(1)
@@ -386,28 +337,54 @@ def do_work(user_args):
             usage(2)
 
     if options.interactive and not options.batch:
-        from completion import setup_readline
-        setup_readline(levels)
+        context.setup_readline()
 
     rc = 0
     while True:
         if options.interactive and not options.batch:
-            vars.prompt = "crm(%s)%s# " % (cib_prompt(), levels.getprompt())
+            termctrl = TerminalController.getInstance()
+            cli_display = CliDisplay.getInstance()
+            promptstr = "crm(%s)%s# " % (cib_prompt(), context.prompt())
+            vars.prompt = termctrl.render(cli_display.prompt(promptstr))
         inp = multi_input(vars.prompt)
         if inp is None:
             if options.interactive:
-                cmd_exit("eof")
-            else:
-                cmd_exit("eof", rc)
+                rc = 0
+            context.quit(rc)
         try:
-            if not parse_line(levels, shlex.split(inp)):
+            if not context.run(inp):
                 rc = 1
         except ValueError, msg:
             rc = 1
             common_err(msg)
 
 
+def compgen():
+    args = sys.argv[2:]
+    if len(args) < 2:
+        return
+
+    #point = int(args[0])
+    line = args[1]
+
+    # remove crm from commandline
+    line = line.split(' ', 1)
+    if len(line) == 1:
+        return
+    line = line[1].lstrip()
+
+    options.interactive = False
+    tree = ui_tree.Tree()
+    context = ui_context.Context(tree)
+    for w in context.complete(line):
+        print w
+
+
 def run():
+    if len(sys.argv) >= 2 and sys.argv[1] == '--compgen':
+        compgen()
+        return
+
     envsetup()
 
     mv_user_files()

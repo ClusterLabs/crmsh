@@ -17,10 +17,12 @@
 
 import shlex
 import sys
+import readline
 from msg import common_err, common_info, common_warn
 from msg import Options, UserPrefs
 from utils import wait4dc
 import ui_utils
+import vars
 
 
 class Context(object):
@@ -42,6 +44,10 @@ class Context(object):
         self.command_name = None
         self.command_args = None
         self.command_info = None
+
+        # readline cache
+        self._rl_line = None
+        self._rl_words = None
 
     def run(self, line):
         '''
@@ -78,6 +84,8 @@ class Context(object):
         A space at the end of the line is significant.
         '''
         complete_next = line.endswith(' ')
+        #if complete_next:
+        #    print >>sys.stderr, "complete_next is on"
 
         # copy current state
         prev_stack = list(self.stack)
@@ -118,6 +126,32 @@ class Context(object):
             self.command_args = prev_args
             self.command_info = prev_info
 
+    def setup_readline(self):
+        readline.set_history_length(100)
+        readline.parse_and_bind("tab: complete")
+        readline.set_completer(self.readline_completer)
+        delims = readline.get_completer_delims()
+        delims = delims.replace('-', '').replace('/', '').replace('=', '')
+        readline.set_completer_delims(delims)
+        try:
+            readline.read_history_file(vars.hist_file)
+        except IOError:
+            pass
+
+    def readline_completer(self, text, state):
+        def matching(word):
+            'we are only completing the last word in the line'
+            return word.split()[-1].startswith(text)
+
+        line = readline.get_line_buffer()
+        if line != self._rl_line:
+            self._rl_line = line
+            self._rl_words = [w for w in self.complete(line) if matching(w)]
+        try:
+            return self._rl_words[state]
+        except IndexError:
+            return None
+
     def current_level(self):
         return self.stack[-1]
 
@@ -142,7 +176,7 @@ class Context(object):
             self.fatal_error("Missing requirements")
         self.stack.append(entry)
 
-    def _set_interactive():
+    def _set_interactive(self):
         '''Set the interactive option only if we're on a tty.'''
         if sys.stdin.isatty():
             options.interactive = True
@@ -204,13 +238,13 @@ class Context(object):
         if len(self.stack) > 1:
             self.stack.pop()
 
-    def quit(self):
+    def quit(self, rc=0):
         '''
         Exit from the top level
         '''
         if options.interactive and not options.batch:
             print "bye"
-        sys.exit(0)
+        sys.exit(rc)
 
     def level_name(self):
         '''

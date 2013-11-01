@@ -115,7 +115,7 @@ def wait(fn):
     return fn
 
 
-def completers(*fns):
+def completer(*fns):
     '''
     Use to set a list of tab completers for the command.
     The completer gets as its argument the command line entered so far,
@@ -199,9 +199,12 @@ class UI(object):
         help Introduction
         help quit
     ''')
-    def do_help(self, context, arg=None):
+    def do_help(self, context, subject=None, subtopic=None):
         """usage: help topic|level|command"""
-        help_module.help_contextual(context.level_name(), arg).paginate()
+        if subtopic is None:
+            help_module.help_contextual(context.level_name(), subject).paginate()
+        else:
+            help_module.help_contextual(subject, subtopic).paginate()
 
     def get_completions(self):
         '''
@@ -231,11 +234,11 @@ class UI(object):
 
                 # Add static help to the help system
                 if info.short_help:
-                    entry = help.HelpEntry(info.short_help, info.long_help)
+                    entry = help_module.HelpEntry(info.short_help, info.long_help)
                     if info.type == 'command':
-                        help.add_help(entry, level=self.name, command=info.name)
+                        help_module.add_help(entry, level=self.name, command=info.name)
                     elif info.type == 'level':
-                        help.add_help(entry, level=info.name)
+                        help_module.add_help(entry, level=info.name)
         setattr(self, '_children', children)
         return children
 
@@ -285,6 +288,7 @@ class ChildInfo(object):
         self.skill_level = maybe('_skill_level', 0)
         self.wait = maybe('_wait', False)
         self.level = maybe('_level', None)
+        self.completers = maybe('_completers', None)
         self.parent = parent
         self.children = {}
         if self.type == 'level' and self.level:
@@ -296,6 +300,8 @@ class ChildInfo(object):
         The completer mostly completes based on argument position, but
         some commands are context sensitive...
         '''
+        import sys
+        print >>sys.stderr, self.name, args
         return []
 
     def __repr__(self):
