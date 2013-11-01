@@ -97,28 +97,36 @@ class Context(object):
             if not line or line.startswith('#'):
                 return self.current_level().get_completions()
 
-            tokens = shlex.split(line)
-            if complete_next:
-                tokens += ['']
-            while tokens:
-                token, tokens = tokens[0], tokens[1:]
-                self.command_name = token
-                self.command_args = tokens
-                self.command_info = self.current_level().get_child(token)
+            try:
+                tokens = shlex.split(line)
+                if complete_next:
+                    tokens += ['']
+                while tokens:
+                    token, tokens = tokens[0], tokens[1:]
+                    self.command_name = token
+                    self.command_args = tokens
+                    self.command_info = self.current_level().get_child(token)
 
-                if not self.command_info:
-                    return self.current_level().get_completions()
-                if self.command_info.type == 'level':
-                    self.enter_level(self.command_info.level)
-                else:
-                    # use the completer for the command
-                    return self.command_info.complete(tokens)
-            # reached the end on a valid level.
-            # return the completions for the previous level.
-            if self.previous_level():
-                return self.previous_level().get_completions()
-            # not sure this is the right thing to do
-            return self.current_level().get_completions()
+                    if not self.command_info:
+                        return self.current_level().get_completions()
+                    if self.command_info.type == 'level':
+                        self.enter_level(self.command_info.level)
+                    else:
+                        # use the completer for the command
+                        return self.command_info.complete(tokens)
+                # reached the end on a valid level.
+                # return the completions for the previous level.
+                if self.previous_level():
+                    return self.previous_level().get_completions()
+                # not sure this is the right thing to do
+                return self.current_level().get_completions()
+            except ValueError:
+                #common_err("%s: %s" % (self.get_qualified_name(), msg))
+                pass
+            except IOError:
+                #common_err("%s: %s" % (self.get_qualified_name(), msg))
+                pass
+            return []
         finally:
             # restore level stack
             self.stack = prev_stack
