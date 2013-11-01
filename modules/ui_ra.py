@@ -20,28 +20,28 @@ import command
 import completers as compl
 import utils
 import ra
+import vars
 from msg import Options
 
 
 def complete_class_provider_type(args):
-    sp = args[1].split(':')
-    if len(sp) < 2:
-        return [c+':' for c in ra.ra_classes()]
-    elif len(sp) < 3:
-        ret = []
-        for c in ra.ra_classes():
-            if sp[0] == c:
-                ret += ['%s:%s:' % (c, p) for p in ra.ra_providers_all(c)]
-        return ret
-    else:
-        providers = []
-        for c in ra.ra_classes():
-            if sp[0] == c:
-                providers += [(c, p) for p in ra.ra_providers_all(c) if p == sp[1]]
-        ret = []
-        for c, p in providers:
-            ret += ['%s:%s:%s' % (c, p, t) for t in ra.ra_types(c, p)]
-        return ret
+    '''
+    This is just too complicated to complete properly...
+    '''
+    ret = set([])
+    classes = ra.ra_classes()
+    for c in classes:
+        if c != 'ocf':
+            types = ra.ra_types(c)
+            for t in types:
+                ret.add('%s:%s' % (c, t))
+
+    providers = ra.ra_providers_all('ocf')
+    for p in providers:
+        types = ra.ra_types('ocf', p)
+        for t in types:
+            ret.add('ocf:%s:%s' % (p, t))
+    return list(ret)
 
 
 class RA(command.UI):
@@ -66,18 +66,19 @@ class RA(command.UI):
 
     @command.skill_level('administrator')
     @command.completers(compl.call(ra.ra_classes), lambda args: ra.ra_providers_all(args[1]))
-    def do_list(self, context, c, p=None):
+    def do_list(self, context, class_, provider_=None):
         "usage: list <class> [<provider>]"
         options = Options.getInstance()
-        if not c in ra.ra_classes():
-            context.fatal_error("class %s does not exist" % c)
-        if p and not p in ra.ra_providers_all(c):
-            context.fatal_error("there is no provider %s for class %s" % (p, c))
+        if not class_ in ra.ra_classes():
+            context.fatal_error("class %s does not exist" % class_)
+        if provider_ and not provider_ in ra.ra_providers_all(class_):
+            context.fatal_error("there is no provider %s for class %s" % (provider_, class_))
+        types = ra.ra_types(class_, provider_)
         if options.regression_tests:
-            for t in ra.ra_types(c, p):
+            for t in types:
                 print t
         else:
-            utils.multicolumn(ra.ra_types(c, p))
+            utils.multicolumn(types)
 
     @command.skill_level('administrator')
     @command.alias('meta')
