@@ -48,6 +48,32 @@ import clidisplay
 from ordereddict import odict
 
 
+class HelpFilter(object):
+    _B0 = re.compile(r'^\.{3,}$')
+    _B1 = re.compile(r'^\*{3,}$')
+    _QUOTED = re.compile(r'`([^`]+)`')
+
+    def __init__(self, display):
+        self.display = display
+        self.in_block = False
+
+    def _filter(self, line):
+        block_edge = self._B0.match(line) or self._B1.match(line)
+        if block_edge and not self.in_block:
+            self.in_block = True
+            return self.display.help_begin_block()
+        elif block_edge and self.in_block:
+            self.in_block = False
+            return self.display.help_end_block()
+        elif not self.in_block:
+            return self._QUOTED.sub(self.display.help_keyword(r'\1'), line)
+        else:
+            return line
+
+    def __call__(self, text):
+        return '\n'.join([self._filter(line) for line in text.splitlines()]) + '\n'
+
+
 class HelpEntry(object):
     def __init__(self, short_help, long_help=''):
         self.short = short_help
@@ -58,12 +84,14 @@ class HelpEntry(object):
         Display help, paginated.
         Replace asciidoc syntax with colorized output where possible.
         '''
-        short_help = self.short
+        display = clidisplay.CliDisplay.getInstance()
+        short_help = display.help_header(self.short)
+
         long_help = self.long
         if long_help:
-            display = clidisplay.CliDisplay.getInstance()
-            short_help = display.attr_name(short_help)
-            long_help = re.sub(r'`([^`]+)`', display.keyword(r'\1'), long_help)
+            helpfilter = HelpFilter(display)
+            long_help = helpfilter(long_help)
+
         page_string(short_help + '\n' + long_help)
 
     def __str__(self):
@@ -97,14 +125,18 @@ def help_overview():
     _load_help()
     s = "Available topics:\n\n"
     for title, topic in _TOPICS.iteritems():
-        s += "\t%-16s %s\n" % (title, topic.short)
+        s += "\t`%-16s` %s\n" % (title, topic.short)
     s += "\n"
     s += "Available commands:\n\n"
     for title, level in _LEVELS.iteritems():
-        s += "\t%-16s %s\n" % (title, level.short)
+        if title not in _COMMANDS:
+            s += "\t`%-16s` %s\n" % (title, level.short)
+            s += "\n"
+    for title, level in _LEVELS.iteritems():
         if title in _COMMANDS:
+            s += "\t`%-16s` %s\n" % (title, level.short)
             for cmdname, cmd in _COMMANDS[title].iteritems():
-                s += "\t\t%-16s %s\n" % (cmdname, cmd.short)
+                s += "\t\t`%-16s` %s\n" % (cmdname, cmd.short)
             s += "\n"
     return HelpEntry('Help overview for crmsh\n', s)
 
@@ -117,7 +149,7 @@ def help_topics():
     _load_help()
     s = ''
     for title, topic in _TOPICS.iteritems():
-        s += "\t%-16s %s\n" % (title, topic.short)
+        s += "\t`%-16s` %s\n" % (title, topic.short)
     return HelpEntry('Available topics\n', s)
 
 
@@ -155,12 +187,18 @@ def help_contextual(context, topic):
     """
     Displays and paginates
     """
+    if context != '.':
+        print ":: %s/%s" % (context, topic)
+    else:
+        print ":: %s" % topic
     if (not topic and context == '.'):
         return help_overview()
     elif topic == 'topics':
         return help_topics()
     elif _is_help_topic(topic):
         return help_topic(topic)
+    elif context in _COMMANDS and topic in _COMMANDS[context]:
+        return help_command(context, topic)
     elif topic in _LEVELS:
         return help_level(topic)
     return help_command(context, topic)
@@ -241,8 +279,6 @@ def _load_help():
          - remove surrounding dots from preformatted blocks
         '''
         line = _REFERENCE_RE.sub(r'\1', line)
-        if re.match(r'^\.{3,}\n$', line):
-            line = '\n'
         return line
 
     def append_cmdinfos():
