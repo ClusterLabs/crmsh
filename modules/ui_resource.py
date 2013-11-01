@@ -17,7 +17,8 @@
 #
 
 import command
-import completions as compl
+import completers as compl
+import vars
 import utils
 import xmlutil
 import ui_utils
