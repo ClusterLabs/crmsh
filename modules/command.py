@@ -248,7 +248,6 @@ Navigates back in the user interface.
         TODO: Implement full cd navigation. cd ../configure, for example
         Also implement ls to list commands / levels from current location
         '''
-        self.end_game()
         context.up()
         context.save_stack()
 
@@ -295,7 +294,6 @@ Examples:
         if len(path) == 1:
             path = path[0]
             if path == '..':
-                self.end_game()
                 context.up()
             elif path == '.' or not path:
                 return
@@ -303,7 +301,6 @@ Examples:
                 info = self.get_child(path)
                 if not info or not info.level:
                     context.fatal_error("No such level: " + path)
-                self.end_game()
                 context.enter_level(info.level)
         else:
             self.do_cd(context, path[0])
@@ -317,7 +314,6 @@ ask for confirmation before terminating, if there are
 uncommitted changes to the configuration.
 ''')
     def do_quit(self, context):
-        self.end_game()
         context.quit()
 
     @alias('?')

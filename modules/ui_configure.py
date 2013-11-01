@@ -494,20 +494,16 @@ class CibConfig(command.UI):
         set_obj = mkset_obj("xml")
         return ui_utils.ptestlike(set_obj.ptest, 'vv', context.get_command_name(), args)
 
-    @command.skill_level('administrator')
-    @command.wait
-    @command.completers(compl.choice(['force']))
-    def do_commit(self, context, force=None):
-        "usage: commit [force]"
+    def _commit(self, force=None):
         if force and force != "force":
-            syntax_err((context.get_command_name(), force))
+            syntax_err(('configure.commit', force))
             return False
         if not cib_factory.is_cib_sane():
             return False
         if not cib_factory.has_cib_changed():
             common_info("apparently there is nothing to commit")
             common_info("try changing something first")
-            return
+            return True
         rc1 = True
         if not (force or utils.cibadmin_can_patch()):
             rc1 = cib_factory.is_current_cib_equal()
@@ -521,6 +517,13 @@ class CibConfig(command.UI):
         if utils.ask("Do you still want to commit?"):
             return cib_factory.commit(force=True)
         return False
+
+    @command.skill_level('administrator')
+    @command.wait
+    @command.completers(compl.choice(['force']))
+    def do_commit(self, context, force=None):
+        "usage: commit [force]"
+        return self._commit(force=force)
 
     @command.skill_level('administrator')
     @command.completers(compl.choice(['force']))
@@ -772,7 +775,7 @@ class CibConfig(command.UI):
     def end_game(self, no_questions_asked=False):
         if cib_factory.has_cib_changed():
             if no_questions_asked or not options.interactive:
-                self.commit("commit")
+                self._commit()
             elif utils.ask("There are changes pending. Do you want to commit them?"):
-                self.commit("commit")
+                self._commit()
         cib_factory.reset()

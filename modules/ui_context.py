@@ -38,7 +38,7 @@ class Context(object):
     def __init__(self, tree):
         self.tree = tree
         self.stack = [tree.root]
-        self.restore_stack = True
+        self._mark = 0
         self._in_transit = False
 
         # holds information about the currently
@@ -59,10 +59,11 @@ class Context(object):
         if not line or line.startswith('#'):
             return True
 
-        self.restore_stack = True
-        saved_stack = list(self.stack)
+        self._mark = len(self.stack)
         self._in_transit = False
 
+        rv = True
+        cmd = False
         try:
             tokens = shlex.split(line)
             while tokens:
@@ -75,18 +76,19 @@ class Context(object):
                 if self.command_info.type == 'level':
                     self.enter_level(self.command_info.level)
                 else:
-                    ret = self.execute_command()
-                    if self.restore_stack:
-                        self.stack = saved_stack
-                    return ret
-            return True
+                    cmd = True
+                    break
+            if cmd:
+                rv = self.execute_command() is not False
         except ValueError, msg:
             common_err("%s: %s" % (self.get_qualified_name(), msg))
+            rv = False
         except IOError, msg:
             common_err("%s: %s" % (self.get_qualified_name(), msg))
-        if self.restore_stack:
-            self.stack = saved_stack
-        return False
+            rv = False
+        if cmd or (rv is False):
+            self._back_out()
+        return rv
 
     def complete(self, line):
         '''
@@ -213,7 +215,6 @@ class Context(object):
         if 'requires' in dir(entry) and not entry.requires():
             self.fatal_error("Missing requirements")
         self.stack.append(entry)
-
         self.clear_readline_cache()
 
     def _set_interactive(self):
@@ -279,17 +280,25 @@ class Context(object):
         Navigate up in the levels hierarchy
         '''
         if len(self.stack) > 1:
+            self.current_level().end_game(no_questions_asked=self._in_transit)
             self.stack.pop()
             self.clear_readline_cache()
 
+    def _back_out(self):
+        '''
+        Restore the stack to the marked position
+        '''
+        while self._mark > 0 and len(self.stack) > self._mark:
+            self.up()
+
     def save_stack(self):
-        self.restore_stack = False
-        self.clear_readline_cache()
+        self._mark = len(self.stack)
 
     def quit(self, rc=0):
         '''
         Exit from the top level
         '''
+        self.current_level().end_game()
         if options.interactive and not options.batch:
             print "bye"
         sys.exit(rc)
