@@ -18,8 +18,19 @@
 
 import time
 import command
+import completers as compl
 import utils
 from msg import bad_usage, common_warn, no_prog_err
+
+_ticket_commands = {
+    'grant': "crm_ticket -t '%s' -g",
+    'revoke': "crm_ticket -t '%s' -r",
+    'delete': "crm_ticket -t '%s' -D granted",
+    'standby': "crm_ticket -t '%s' -s",
+    'activate': "crm_ticket -t '%s' -a",
+    'show': "crm_ticket -t '%s' -G granted",
+    'time': "crm_ticket -t '%s' -G last-granted",
+}
 
 
 class Site(command.UI):
@@ -28,16 +39,6 @@ class Site(command.UI):
     '''
     name = "site"
 
-    crm_ticket = {
-        'grant': "crm_ticket -t '%s' -g",
-        'revoke': "crm_ticket -t '%s' -r",
-        'delete': "crm_ticket -t '%s' -D granted",
-        'standby': "crm_ticket -t '%s' -s",
-        'activate': "crm_ticket -t '%s' -a",
-        'show': "crm_ticket -t '%s' -G granted",
-        'time': "crm_ticket -t '%s' -G last-granted",
-    }
-
     def requires(self):
         if not utils.is_program('crm_ticket'):
             no_prog_err('crm_ticket')
@@ -45,11 +46,12 @@ class Site(command.UI):
         return True
 
     @command.skill_level('administrator')
+    @command.completers(compl.choice(_ticket_commands.keys()))
     def do_ticket(self, context, subcmd, ticket):
         "usage: ticket {grant|revoke|standby|activate|show|time|delete} <ticket>"
         cmd = context.get_command_name()
         try:
-            attr_cmd = self.crm_ticket[subcmd]
+            attr_cmd = _ticket_commands[subcmd]
         except KeyError:
             bad_usage(cmd, '%s %s' % (subcmd, ticket))
             return False
