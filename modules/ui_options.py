@@ -21,11 +21,13 @@ import command
 import completers
 from msg import UserPrefs, Options
 
+user_prefs = UserPrefs.getInstance()
+options = Options.getInstance()
+_yesno = completers.choice(['yes', 'no'])
+
 
 def _getprefs(opt):
     return completers.call(user_prefs.choice_list, opt)
-
-_yesno = completers.choice(['yes', 'no'])
 
 
 class CliOptions(command.UI):
@@ -113,6 +115,4 @@ class CliOptions(command.UI):
         if no_questions_asked and not options.interactive:
             self.save_options("save")
 
-user_prefs = UserPrefs.getInstance()
-options = Options.getInstance()
 # vim:ts=4:sw=4:et:
