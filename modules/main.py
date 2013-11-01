@@ -17,6 +17,7 @@
 
 import sys
 import os
+import re
 import shlex
 import getopt
 import atexit
@@ -367,7 +368,6 @@ def do_work(user_args):
             context.quit(1)
 
 
-
 def compgen():
     args = sys.argv[2:]
     if len(args) < 2:
@@ -377,16 +377,22 @@ def compgen():
     line = args[1]
 
     # remove crm from commandline
-    line = line.split(' ', 1)
-    if len(line) == 1:
+    line_split = line.split(' ', 1)
+    if len(line_split) == 1:
         return
-    line = line[1].lstrip()
+    line = line_split[1].lstrip()
 
     options.interactive = False
     tree = ui_tree.Tree()
     context = ui_context.Context(tree)
-    for w in context.complete(line):
-        print w
+    last_word = line.rsplit(' ', 1)
+    if len(last_word) > 1 and ':' in last_word[1]:
+        idx = last_word[1].rfind(':')
+        for w in context.complete(line):
+            print w[idx+1:]
+    else:
+        for w in context.complete(line):
+            print w
 
 
 def parse_options():
