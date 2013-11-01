@@ -35,8 +35,8 @@ except ImportError, msg:
     try:
         # Perhaps we're running from the source directory
         from modules import main
-    except ImportError:
-        sys.stderr.write("abort: %s\n" % msg)
+    except ImportError, msg2:
+        sys.stderr.write("abort: %s, %s\n" % (msg, msg2))
         sys.stderr.write("(check your install and PYTHONPATH)\n")
         sys.exit(-1)
 
