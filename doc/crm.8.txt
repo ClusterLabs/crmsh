@@ -597,6 +597,104 @@ Usage:
         option :: bynode | inactive | ops | timing | failcounts
 ...............
 
+[[cmdhelp_cluster,Cluster setup and management]]
+=== `cluster`
+
+Whole-cluster configuration management with High Availability
+awareness.
+
+The commands on the cluster level allows configuration and
+modification of the underlying cluster infrastructure, and also
+supplies tools to do whole-cluster systems management.
+
+These commands enable easy installation and maintenance of a HA
+cluster, by providing support for package installation, configuration
+of the cluster messaging layer, file system setup and configuration,
+and more.
+
+[[cmdhelp_cluster_init,Initialize a new cluster]]
+==== `init` (`create`, `setup`)
+
+`init` helps with installing and configuring a brand new
+cluster to a minimal working state.
+
+Given a list of nodes, `init` will first of all try to contact each
+node in the list using SSH. If there are any problems reaching another
+node, a failure will be reported.
+
+The network will be tested for multicast support betwen the nodes.
+
+The command will then make sure that all required packages are
+installed on each of the nodes, and then install appropriate base
+configurations for the cluster messaging layer and for Pacemaker.
+
+Usage:
+...............
+        init nodes=<node-1>,<node-2>,...,<node-N>
+...............
+
+[[cmdhelp_cluster_join,Add a new node to a cluster]]
+==== `join`
+
+This command simplifies the process of adding a new node to a running
+cluster. The new node will be installed and configured with the
+packages and configuration files needed to run the cluster
+resources. If a cluster file system is used, the new node will be set
+up to host the file system.
+
+Usage:
+...............
+        join <node>
+...............
+
+[[cmdhelp_cluster_status,Cluster status check]]
+==== `status`
+
+Reports the status for the cluster messaging layer on the local
+node. Also reports the status of any DRBD file system configured on
+the local node.
+
+Usage:
+...............
+        status
+...............
+
+[[cmdhelp_cluster_doctor,Extensive health check]]
+==== `doctor`
+
+The `doctor` command will try to discover and diagnose any issues with
+the cluster, including network communication issues, system health and
+configuration problems.
+
+Usage:
+...............
+        doctor
+...............
+
+[[cmdhelp_cluster_actions,List available cluster actions]]
+==== `actions`
+
+Lists the available `cluster actions`.
+
+Cluster actions are scripts that can perform modifications across the
+whole cluster. These modifications can be simple things like executing
+a shell command on each of the nodes and collecting the results, or it
+can be more complicated processes like making sure certain packages
+are installed and configured on all of the nodes.
+
+Usage:
+...............
+        actions
+...............
+
+[[cmdhelp_cluster_action,Apply a cluster action]]
+==== `action`
+
+Usage:
+...............
+        action <action> [args ...]
+...............
+
 [[cmdhelp_cib,CIB shadow management]]
 === `cib` (shadow CIBs)
 
@@ -3422,6 +3520,37 @@ Examples:
         session save bnc966622
         session load rsclost-2
         session list
+...............
+
+[[cmdhelp_report,Handle reports for the cluster]]
+=== `report`
+
+Provides an interface to collect cluster reports. A report is an
+archive containing log files, configuration files, system information
+and other relevant data for a given time period. This is a useful tool
+for collecting data to attach to bug reports, or for detecting the
+root cause of errors resulting in resource failover, for example.
+
+[[cmdhelp_report_create,Create a new report]]
+==== `create`
+
+See `crmsh_hb_report(8)` for more details.
+
+Usage:
+...............
+        report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
+               [-n nodes] [-E files] [-p patt] [-L patt] [-e prog]
+               [-MSDZAVsvhd] [dest]
+...............
+
+Examples:
+...............
+        create -f 2pm report_1
+        create -f "2007/9/5 12:30" -t "2007/9/5 14:00" report_2
+        create -f 1:00 -t 3:00 -l /var/log/cluster/ha-debug report_3
+        create -f "09sep07 2:00" -u hbadmin report_4
+        create -f 18:00 -p "usern.*" -p "admin.*" report_5
+        create -f cts:133 ctstest_133
 ...............
 
 === `end` (`cd`, `up`)

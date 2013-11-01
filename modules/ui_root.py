@@ -45,6 +45,7 @@ import ui_history
 import ui_ra
 import ui_site
 import ui_node
+import ui_report
 import ui_options
 
 
@@ -135,6 +136,15 @@ class Root(command.UI):
     level and at the `configure` level.
     ''')
     def do_ra(self):
+        pass
+
+    @command.level(ui_report.Report)
+    @command.help('''Utility to collect logs and other information
+    `report` is a utility to collect all information (logs,
+    configuration files, system information, etc) relevant to
+    crmsh over the given period of time.
+    ''')
+    def do_report(self):
         pass
 
     @command.help('''show cluster status

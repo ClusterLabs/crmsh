@@ -43,7 +43,7 @@ class Cluster(command.UI):
 
         Automatic as far as possible.
         '''
-        return True
+        context.fatal_error("Not implemented.")
 
     @command.skill_level('administrator')
     def do_join(self, context, node):
@@ -51,31 +51,37 @@ class Cluster(command.UI):
         Join the given node to the cluster.
         Installs packages, sets up corosync and pacemaker, etc.
         '''
-        return True
+        context.fatal_error("Not implemented.")
 
     def do_status(self, context):
         '''
         Quick cluster health status. Corosync status, DRBD status...
         '''
-        return True
+        context.fatal_error("Not implemented.")
 
     def do_doctor(self, context):
         '''
         Cluster extensive health monitoring.
         '''
-        return True
+        context.fatal_error("Not implemented.")
+
+    def do_actions(self, context):
+        '''
+        List the available cluster actions.
+        '''
+        context.fatal_error("No cluster actions found.")
 
     @command.skill_level('administrator')
-    def do_apply(self, context, playbook, *args):
+    def do_action(self, context, action, *args):
         '''
-        Apply the given playbook (cluster script)
+        Apply the given cluster action.
         '''
-        return True
+        context.fatal_error("Cluster action '%' not found." % (action))
 
     @command.skill_level('administrator')
     def do_shell(self, context, shellcmd):
         '''
-        Execute the given shell command on all nodes in the cluster
+        Execute the given shell command on
+        all nodes in the cluster.
         '''
-        return True
-
+        context.fatal_error("Not implemented.")
