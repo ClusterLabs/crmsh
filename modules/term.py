@@ -83,6 +83,8 @@ class TerminalController(Singleton):
     HIDE_CURSOR=cinvis SHOW_CURSOR=cnorm""".split()
     _COLORS = """BLACK BLUE GREEN CYAN RED MAGENTA YELLOW WHITE""".split()
     _ANSICOLORS = "BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE".split()
+    RLIGNOREBEGIN = '\001'
+    RLIGNOREEND = '\002'
     def __init__(self, term_stream=sys.stdout):
         """
         Create a `TerminalController` and initialize its attributes
@@ -140,18 +142,6 @@ class TerminalController(Singleton):
         '' (if it's not).
         """
         return re.sub(r'\$\$|\${\w+}', self._render_sub, template)
-
-    def render_prompt(self, template):
-        return re.sub(r'\$\$|\${\w+}', self._render_sub_prompt, template)
-
-    def _render_sub_prompt(self, match):
-        RLIGNORE_B = '\001'
-        RLIGNORE_E = '\002'
-        s = match.group()
-        try:
-            return RLIGNORE_B + getattr(self, s[2:-1]) + RLIGNORE_E
-        except IndexError:
-            return s
 
     def _render_sub(self, match):
         s = match.group()

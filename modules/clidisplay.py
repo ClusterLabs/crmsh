@@ -33,21 +33,19 @@ class CliDisplay(Singleton):
         self.no_pretty = False
 
     def _colorstring(self, clrnum, s):
-        if self.no_pretty:
-            return s
-        else:
+        if self.colors_enabled():
             return "${%s}%s${NORMAL}" % \
                 (user_prefs.colorscheme[clrnum].upper(), s)
+        return s
 
     def _boldcolorstring(self, clrnum, s):
-        if self.no_pretty:
-            return s
-        else:
+        if self.colors_enabled():
             return "${BOLD}${%s}%s${NORMAL}" % \
                 (user_prefs.colorscheme[clrnum].upper(), s)
+        return s
 
     def colors_enabled(self):
-        return 'color' in user_prefs.output
+        return 'color' in user_prefs.output and not self.no_pretty
 
     def keyword(self, kw):
         s = kw
@@ -58,24 +56,21 @@ class CliDisplay(Singleton):
         return s
 
     def otherword(self, n, s):
-        if "color" in user_prefs.output:
-            return self._colorstring(n, s)
-        else:
-            return s
+        return self._colorstring(n, s)
 
     def boldword(self, n, s):
-        if "color" in user_prefs.output:
-            return self._boldcolorstring(n, s)
-        else:
-            return s
+        return self._boldcolorstring(n, s)
 
     def _colorize(self, s, *colors):
-        if 'color' in user_prefs.output and not self.no_pretty:
+        if self.colors_enabled():
             return ''.join(('${%s}' % clr.upper()) for clr in colors) + s + '${NORMAL}'
         return s
 
     def prompt(self, s):
-        return self._colorize(s, 'green', 'bold')
+        ret = self._colorize(s, 'green', 'bold')
+        if self.colors_enabled():
+            ret = "${RLIGNOREBEGIN}%s${RLIGNOREEND}" % (ret)
+        return ret
 
     def help_header(self, s):
         return self._colorize(s, 'blue', 'bold', 'underline')
@@ -84,12 +79,12 @@ class CliDisplay(Singleton):
         return self._colorize(s, 'normal', 'bold')
 
     def help_begin_block(self):
-        if 'color' in user_prefs.output and not self.no_pretty:
+        if self.colors_enabled():
             return '${CYAN}'
         return ''
 
     def help_end_block(self):
-        if 'color' in user_prefs.output and not self.no_pretty:
+        if self.colors_enabled():
             return '${NORMAL}'
         return ''
 

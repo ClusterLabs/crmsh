@@ -353,7 +353,7 @@ def do_work(user_args):
                 cli_display = CliDisplay.getInstance()
                 promptstr = "crm(%s)%s# " % (cib_prompt(), context.prompt())
                 if cli_display.colors_enabled():
-                    vars.prompt = termctrl.render_prompt(cli_display.prompt(promptstr))
+                    vars.prompt = termctrl.render(cli_display.prompt(promptstr))
                 else:
                     vars.prompt = promptstr
             inp = multi_input(vars.prompt)
