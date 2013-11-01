@@ -272,7 +272,7 @@ class CibConfig(command.UI):
     def do_show(self, context, *args):
         "usage: show [xml] [<id>...]"
         if not cib_factory.is_cib_sane():
-            return False
+            context.fatal_error("CIB is not valid")
         set_obj = mkset_obj(*args)
         return set_obj.show()
 
@@ -281,7 +281,7 @@ class CibConfig(command.UI):
     def do_filter(self, context, filter, *args):
         "usage: filter <prog> [xml] [<id>...]"
         if not cib_factory.is_cib_sane():
-            return False
+            context.fatal_error("CIB is not valid")
         set_obj = mkset_obj(*args)
         return set_obj.filter(filter)
 
@@ -292,7 +292,7 @@ class CibConfig(command.UI):
         """usage: modgroup <id> add <id> [after <id>|before <id>]
         modgroup <id> remove <id>"""
         if not cib_factory.is_cib_sane():
-            return False
+            context.fatal_error("CIB is not valid")
         if subcmd not in ("add", "remove"):
             common_err("modgroup subcommand %s unknown" % subcmd)
             return False
@@ -340,7 +340,7 @@ class CibConfig(command.UI):
     def do_edit(self, context, *args):
         "usage: edit [xml] [<id>...]"
         if not cib_factory.is_cib_sane():
-            return False
+            context.fatal_error("CIB is not valid")
         err_buf.buffer()  # keep error messages
         set_obj = mkset_obj(*args)
         err_buf.release()  # show them, but get an ack from the user
@@ -358,7 +358,7 @@ class CibConfig(command.UI):
     def do_verify(self, context):
         "usage: verify"
         if not cib_factory.is_cib_sane():
-            return False
+            context.fatal_error("CIB is not valid")
         set_obj_all = mkset_obj("xml")
         return self._verify(set_obj_all, set_obj_all)
 
