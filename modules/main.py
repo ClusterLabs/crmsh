@@ -344,22 +344,28 @@ def do_work(user_args):
 
     rc = 0
     while True:
-        if options.interactive and not options.batch:
-            termctrl = TerminalController.getInstance()
-            cli_display = CliDisplay.getInstance()
-            promptstr = "crm(%s)%s# " % (cib_prompt(), context.prompt())
-            vars.prompt = termctrl.render(cli_display.prompt(promptstr))
-        inp = multi_input(vars.prompt)
-        if inp is None:
-            if options.interactive:
-                rc = 0
-            context.quit(rc)
         try:
-            if not context.run(inp):
+            if options.interactive and not options.batch:
+                termctrl = TerminalController.getInstance()
+                cli_display = CliDisplay.getInstance()
+                promptstr = "crm(%s)%s# " % (cib_prompt(), context.prompt())
+                vars.prompt = termctrl.render(cli_display.prompt(promptstr))
+            inp = multi_input(vars.prompt)
+            if inp is None:
+                if options.interactive:
+                    rc = 0
+                context.quit(rc)
+            try:
+                if not context.run(inp):
+                    rc = 1
+            except ValueError, msg:
                 rc = 1
-        except ValueError, msg:
-            rc = 1
-            common_err(msg)
+                common_err(msg)
+        except KeyboardInterrupt:
+            if options.interactive and not options.batch:
+                print "Ctrl-C, leaving"
+            context.quit(1)
+
 
 
 def compgen():
@@ -383,24 +389,7 @@ def compgen():
         print w
 
 
-def run():
-    if len(sys.argv) >= 2 and sys.argv[1] == '--compgen':
-        compgen()
-        return
-
-    envsetup()
-
-    mv_user_files()
-    load_rc(vars.rc_file)
-
-    atexit.register(exit_handler)
-
-    if not sys.stdin.isatty():
-        err_buf.reset_lineno()
-        options.batch = True
-    else:
-        options.interactive = True
-
+def parse_options():
     try:
         opts, user_args = getopt.getopt(
             sys.argv[1:],
@@ -435,25 +424,47 @@ def run():
                 user_prefs.wait = "yes"
             elif o in ("-c", "--cib"):
                 options.shadow = p
+        return user_args
     except getopt.GetoptError, msg:
         print msg
         usage(1)
 
-    if options.profile:
-        import cProfile
-        cProfile.runctx('main.do_work(user_args)',
-                        globals(),
-                        {'user_args': user_args},
-                        filename=options.profile)
-        # print how to use the profile file, but don't disturb
-        # the regression tests
-        if not options.regression_tests:
-            stats_cmd = "; ".join(['import pstats',
-                                   's = pstats.Stats("%s")' % options.profile,
-                                   's.sort_stats("cumulative").print_stats()'])
-            print "python -c '%s' | less" % (stats_cmd)
 
-    else:
-        do_work(user_args)
+def profile_run(user_args):
+    import cProfile
+    cProfile.runctx('do_work(user_args)',
+                    globals(),
+                    {'user_args': user_args},
+                    filename=options.profile)
+    # print how to use the profile file, but don't disturb
+    # the regression tests
+    if not options.regression_tests:
+        stats_cmd = "; ".join(['import pstats',
+                               's = pstats.Stats("%s")' % options.profile,
+                               's.sort_stats("cumulative").print_stats()'])
+        print "python -c '%s' | less" % (stats_cmd)
+
+
+def run():
+    try:
+        if len(sys.argv) >= 2 and sys.argv[1] == '--compgen':
+            compgen()
+            return
+        envsetup()
+        mv_user_files()
+        load_rc(vars.rc_file)
+        atexit.register(exit_handler)
+        options.interactive = sys.stdin.isatty()
+        if not options.interactive:
+            err_buf.reset_lineno()
+            options.batch = True
+        user_args = parse_options()
+        if options.profile:
+            profile_run(user_args)
+        else:
+            do_work(user_args)
+    except KeyboardInterrupt:
+        print "Ctrl-C, leaving"
+        sys.exit(1)
 
 # vim:ts=4:sw=4:et:
