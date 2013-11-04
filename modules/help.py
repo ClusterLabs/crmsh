@@ -234,12 +234,14 @@ def help_contextual(context, subject, subtopic):
     """
     Returns contextual help
     """
-    if (context == '.' and subject is None) or (subject.lower() == 'overview'):
+    if subject is None:
+        if context == '.':
+            return help_overview()
+        return help_level(context)
+    if subject.lower() == 'overview':
         return help_overview()
     if subject.lower() == 'topics':
         return help_topics()
-    if subject is None:
-        return help_level(context)
     if _is_help_topic(subject):
         return help_topic(subject)
     if subtopic is not None:
