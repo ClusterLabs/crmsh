@@ -261,7 +261,9 @@ class _Configuration(object):
             return self._systemwide.get(section, name) or ''
         return self._defaults.get(section, name) or ''
 
-    def get(self, section, name):
+    def get(self, section, name, raw=False):
+        if raw:
+            return self.get_impl(section, name)
         return DEFAULTS[section][name].get(self.get_impl(section, name))
 
     def set(self, section, name, value):
@@ -278,6 +280,14 @@ class _Configuration(object):
 
     def items(self, section):
         return [(k, self.get(section, k)) for k, _ in self._defaults.items(section)]
+
+    def configured_keys(self, section):
+        ret = []
+        if self._systemwide:
+            ret += self._systemwide.options(section)
+        if self._user:
+            ret += self._user.options(section)
+        return list(set(ret))
 
     def reset(self):
         '''reset to what is on disk'''
@@ -317,14 +327,29 @@ def set_option(section, option, value):
     _configuration.set(section, option, value)
 
 
-def get_option(section, option):
-    return _configuration.get(section, option)
+def get_option(section, option, raw=False):
+    '''
+    Return the given option.
+    If raw is True, return the configured value.
+    Example: for a boolean, returns "yes", not True
+    '''
+    return _configuration.get(section, option, raw=raw)
 
 
 def get_all_options():
+    '''Returns a list of all configurable options'''
     ret = []
     for sname, section in DEFAULTS.iteritems():
         ret += ['%s.%s' % (sname, option) for option in section.keys()]
+    return sorted(ret)
+
+
+def get_configured_options():
+    '''Returns a list of all options that have a non-default value'''
+    ret = []
+    for sname in DEFAULTS.keys():
+        for key in _configuration.configured_keys(sname):
+            ret += '%s.%s' % (sname, key)
     return ret
 
 

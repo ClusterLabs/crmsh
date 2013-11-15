@@ -84,7 +84,7 @@ class CliOptions(command.UI):
     def do_set(self, context, option, value):
         '''usage: set <option> <value>'''
         parts = option.split('.')
-        if parts != 2:
+        if len(parts) != 2:
             context.fatal_error("Unknown option: " + option)
         config.set_option(parts[0], parts[1], value)
 
@@ -92,7 +92,7 @@ class CliOptions(command.UI):
     def do_get(self, context, option):
         '''usage: get <option>'''
         parts = option.split('.')
-        if parts != 2:
+        if len(parts) != 2:
             context.fatal_error("Unknown option: " + option)
         return config.get_option(parts[0], parts[1])
 
@@ -161,12 +161,20 @@ class CliOptions(command.UI):
 
     @command.completers(completers.choice(config.get_all_options()))
     def do_show(self, context, option=None):
-        "usage: show [option]"
-        if option is None:
-            for opt in config.get_all_options():
-                print "%s = %s" % (opt, config.get_option(*opt.split('.')))
+        "usage: show [all | <option>]"
+        if option is None or option == 'all':
+            opts = None
+            if option == 'all':
+                opts = config.get_all_options()
+            else:
+                opts = config.get_configured_options()
+            for opt in opts:
+                print "%s = %s" % (opt, config.get_option(*opt.split('.'), raw=True))
         else:
-            val = self.do_get(context, option)
+            parts = option.split('.')
+            if len(parts) != 2:
+                context.fatal_error("Unknown option: " + option)
+            val = config.get_option(parts[0], parts[1], raw=True)
             print "%s = %s" % (option, val)
 
     def do_save(self, context):
