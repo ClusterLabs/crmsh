@@ -35,65 +35,71 @@ _PERUSER = '~/.config/crm/settings'
 _parser = None
 
 
+class _ConfigValue(object):
+    def __init__(self, value):
+        self._value = value
+
+    def load(self, value):
+        "Set value without triggering a config file save"
+        self._value = value
+
+
 class _Section(object):
-    def _load(self, name):
-        # read values from parser
-        # read from envvar if startswith('$')
-        pass
+    pass
 
 
 class core(_Section):
-    editor = "$EDITOR"
-    pager = "$PAGER"
-    user = ""
-    skill_level = "expert"
-    sort_elements = "yes"
-    check_frequency = "always"
-    check_mode = "strict"
-    wait = "no"
-    add_quotes = "yes"
-    manage_children = "ask"
-    force = "no"
-    debug = "no"
-    ptest = ""
-    dotty = ""
-    dot = ""
+    editor = _ConfigValue("$EDITOR")
+    pager = _ConfigValue("$PAGER")
+    user = _ConfigValue("")
+    skill_level = _ConfigValue("expert")
+    sort_elements = _ConfigValue("yes")
+    check_frequency = _ConfigValue("always")
+    check_mode = _ConfigValue("strict")
+    wait = _ConfigValue("no")
+    add_quotes = _ConfigValue("yes")
+    manage_children = _ConfigValue("ask")
+    force = _ConfigValue("no")
+    debug = _ConfigValue("no")
+    ptest = _ConfigValue("")
+    dotty = _ConfigValue("")
+    dot = _ConfigValue("")
 
 
 class path(_Section):
-    prefix = "/usr"
-    datadir = "%(prefix)s/share"
-    sharedir = "%(datadir)s/crmsh"
-    cache = "/var/cache/crm"
-    crm_config = "/var/lib/pacemaker/cib"
-    crm_daemon_dir = "%(prefix)s/lib64/pacemaker"
-    crm_daemon_user = "hacluster"
-    ocf_root = "%(prefix)s/lib/ocf"
-    crm_dtd_dir = "%(datadir)s/pacemaker"
-    pe_state_dir = "/var/lib/pacemaker/pengine"
-    heartbeat_dir = "/var/lib/heartbeat"
-    hb_delnode = "%(datadir)s/heartbeat/hb_delnode"
-    nagios_plugins = "%(prefix)s/lib/nagios/plugins"
+    prefix = _ConfigValue("/usr")
+    datadir = _ConfigValue("%(prefix)s/share")
+    sharedir = _ConfigValue("%(datadir)s/crmsh")
+    cache = _ConfigValue("/var/cache/crm")
+    crm_config = _ConfigValue("/var/lib/pacemaker/cib")
+    crm_daemon_dir = _ConfigValue("%(prefix)s/lib64/pacemaker")
+    crm_daemon_user = _ConfigValue("hacluster")
+    ocf_root = _ConfigValue("%(prefix)s/lib/ocf")
+    crm_dtd_dir = _ConfigValue("%(datadir)s/pacemaker")
+    pe_state_dir = _ConfigValue("/var/lib/pacemaker/pengine")
+    heartbeat_dir = _ConfigValue("/var/lib/heartbeat")
+    hb_delnode = _ConfigValue("%(datadir)s/heartbeat/hb_delnode")
+    nagios_plugins = _ConfigValue("%(prefix)s/lib/nagios/plugins")
 
 
 class color(_Section):
-    style = "color"
-    error = "red bold"
-    ok = "green bold"
-    warn = "yellow bold"
-    info = "cyan"
-    help_keyword = "blue bold underline"
-    help_header = "normal bold"
-    help_topic = "yellow bold"
-    help_block = "cyan"
-    keyword = "yellow"
-    identifier = "normal"
-    attr_name = "cyan"
-    attr_value = "red"
-    resource_reference = "green"
-    id_reference = "green"
-    score = "magenta"
-    ticket = "magenta"
+    style = _ConfigValue("color")
+    error = _ConfigValue("red bold")
+    ok = _ConfigValue("green bold")
+    warn = _ConfigValue("yellow bold")
+    info = _ConfigValue("cyan")
+    help_keyword = _ConfigValue("blue bold underline")
+    help_header = _ConfigValue("normal bold")
+    help_topic = _ConfigValue("yellow bold")
+    help_block = _ConfigValue("cyan")
+    keyword = _ConfigValue("yellow")
+    identifier = _ConfigValue("normal")
+    attr_name = _ConfigValue("cyan")
+    attr_value = _ConfigValue("red")
+    resource_reference = _ConfigValue("green")
+    id_reference = _ConfigValue("green")
+    score = _ConfigValue("magenta")
+    ticket = _ConfigValue("magenta")
 
 
 def load():
@@ -101,11 +107,20 @@ def load():
     if _parser:
         return _parser
     _parser = ConfigParser.SafeConfigParser()
+
+    # Read config files
     for loc in (_GLOBAL, _PERUSER):
         _parser.readfp(open(loc), loc)
 
-    for section in ('core', 'path', 'color'):
-        pass
+    # Update configuration objects with values from config files
+    for section in (core, path, color):
+        section_name = section.__class__.__name__
+        if _parser.has_section(section_name):
+            for key, value in _parser.items(section_name):
+                cv = getattr(section, key)
+                if cv and isinstance(cv, _ConfigValue):
+                    cv.load(value)
+
     return _parser
 
 
