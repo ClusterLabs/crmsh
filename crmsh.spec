@@ -159,7 +159,7 @@ fi
 %{crmsh_docdir}/README
 %{crmsh_docdir}/contrib/*
 
-%dir %{_sysconfdir}/crmsh
+%{_sysconfdir}/crm
 
 %dir %{crmsh_docdir}
 %dir %{crmsh_docdir}/contrib
