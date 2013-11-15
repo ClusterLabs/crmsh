@@ -283,9 +283,9 @@ class _Configuration(object):
 
     def configured_keys(self, section):
         ret = []
-        if self._systemwide:
+        if self._systemwide and self._systemwide.has_section(section):
             ret += self._systemwide.options(section)
-        if self._user:
+        if self._user and self._user.has_section(section):
             ret += self._user.options(section)
         return list(set(ret))
 
