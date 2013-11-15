@@ -115,14 +115,14 @@ class Preference(object):
 
 
 class StringOpt(Preference):
-    '''A string preference.'''  
+    '''A string preference.'''
 
     def __init__(self, name, dflt, ignored):
         Preference.__init__(self, name, dflt, "string")
 
 
 class ProgramOpt(Preference):
-    '''A program preference'''  
+    '''A program preference'''
 
     def __init__(self, name, envvar, proglist):
         self.envvar = envvar
@@ -144,7 +144,7 @@ class ProgramOpt(Preference):
 
 
 class BooleanOpt(Preference):
-    '''A true/false preference.'''  
+    '''A true/false preference.'''
 
     def __init__(self, name, dflt, ignored):
         Preference.__init__(self, name, dflt, "boolean")
@@ -162,7 +162,7 @@ class BooleanOpt(Preference):
 
 
 class ChoiceOpt(Preference):
-    '''A string preference with limited choice.'''  
+    '''A string preference with limited choice.'''
 
     def __init__(self, name, dflt, choices):
         self.choices = choices
@@ -172,12 +172,12 @@ class ChoiceOpt(Preference):
         '''Is the value valid.'''
         if value not in self.choices:
             common_err("%s not valid (choose one from %s)" %
-                (value, ','.join(self.choices)))
+                       (value, ','.join(self.choices)))
         return (value in self.choices)
 
 
 class DictOpt(ChoiceOpt):
-    '''A skill level preference.'''  
+    '''A skill level preference.'''
 
     def __init__(self, name, dflt, choices):
         self.choices = choices
@@ -192,7 +192,7 @@ class DictOpt(ChoiceOpt):
 
 
 class MultiChoiceOpt(Preference):
-    '''Multiple string preference with limited choice.'''  
+    '''Multiple string preference with limited choice.'''
 
     def __init__(self, name, dflt, choices):
         self.choices = choices
@@ -208,7 +208,7 @@ class MultiChoiceOpt(Preference):
         for otype in l:
             if not otype in self.choices:
                 common_err("%s not valid (choose one from %s)" %
-                    (value, ','.join(self.choices)))
+                           (value, ','.join(self.choices)))
                 return False
         return True
 
@@ -218,7 +218,7 @@ class MultiChoiceOpt(Preference):
 
 
 class ColorOpt(MultiChoiceOpt):
-    '''A list of terminal colors preference.'''  
+    '''A list of terminal colors preference.'''
 
     def __init__(self, name, dflt, ignored):
         Preference.__init__(self, name, dflt, "color")
@@ -246,8 +246,8 @@ class UserPrefs(Singleton):
         "editor": (ProgramOpt, "EDITOR", ("vim", "vi", "emacs", "nano")),
         "pager": (ProgramOpt, "PAGER", ("less", "more", "pg")),
         "user": (StringOpt, "", ()),
-        "skill_level": (DictOpt, "expert", 
-            {"operator": 0, "administrator": 1, "expert": 2}),
+        "skill_level": (DictOpt, "expert",
+                        {"operator": 0, "administrator": 1, "expert": 2}),
         "output": (MultiChoiceOpt, "color", ("plain", "color", "uppercase")),
         "colorscheme": (ColorOpt, "yellow,normal,cyan,red,green,magenta", ()),
         "sort_elements": (BooleanOpt, "yes", ()),
@@ -266,8 +266,8 @@ class UserPrefs(Singleton):
     # this defines the write order and what needs to be saved to
     # a rc file
     _prefs = ("editor", "pager", "user", "skill_level", "output",
-        "colorscheme", "sort_elements", "check_frequency", "check_mode",
-        "wait", "add_quotes", "manage_children")
+              "colorscheme", "sort_elements", "check_frequency", "check_mode",
+              "wait", "add_quotes", "manage_children")
 
     _options = {}
 
