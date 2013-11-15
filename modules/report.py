@@ -23,9 +23,8 @@ import glob
 import ConfigParser
 
 from singletonmixin import Singleton
-from userprefs import Options
-import vars
 import config
+import vars
 import userdir
 from msg import common_debug, common_warn, common_err, common_error, common_info, warn_once
 from xmlutil import file2cib_elem, get_rsc_children_ids, get_prim_children_ids
@@ -1596,6 +1595,5 @@ class Report(Singleton):
                 pass
         return rc
 
-options = Options.getInstance()
 crm_report = Report.getInstance()
 # vim:ts=4:sw=4:et:

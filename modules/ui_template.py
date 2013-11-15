@@ -24,10 +24,10 @@ import completers as compl
 import utils
 import config
 import userdir
+import options
 from template import LoadTemplate
 from cliformat import cli_format
 from cibconfig import mkset_obj, CibFactory
-from userprefs import Options
 from msg import ErrorBuffer
 from msg import common_err, common_warn
 from msg import syntax_err
@@ -350,6 +350,5 @@ class Template(command.UI):
 
 
 err_buf = ErrorBuffer.getInstance()
-options = Options.getInstance()
 cib_factory = CibFactory.getInstance()
 # vim:ts=4:sw=4:et:

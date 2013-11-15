@@ -26,9 +26,8 @@ import shutil
 import bz2
 import config
 import userdir
-
-from userprefs import Options
 import vars
+import options
 from term import TerminalController
 from msg import common_warn, common_info, common_debug, common_err
 
@@ -1121,6 +1120,5 @@ def fetch_lifetime_opt(args, iso8601=True):
     return None
 
 
-options = Options.getInstance()
 termctrl = TerminalController.getInstance()
 # vim:ts=4:sw=4:et:

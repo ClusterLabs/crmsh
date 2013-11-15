@@ -18,10 +18,9 @@
 
 import command
 import completers
-from msg import Options
 import config
+import options
 
-options = Options.getInstance()
 _yesno = completers.choice(['yes', 'no'])
 
 _legacy_map = {

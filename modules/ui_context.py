@@ -20,8 +20,8 @@ import sys
 import readline
 import config
 import utils
+import options
 from msg import common_err, common_info, common_warn
-from msg import Options
 import ui_utils
 import userdir
 
@@ -354,7 +354,5 @@ class Context(object):
     def info(self, msg):
         common_info("%s: %s" % (self.get_qualified_name(), msg))
 
-
-options = Options.getInstance()
 
 # vim:ts=4:sw=4:et:

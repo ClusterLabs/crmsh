@@ -23,10 +23,10 @@ import config
 import utils
 import xmlutil
 import ui_utils
+import options
 
 from msg import common_error, common_err, common_info, common_debug, common_warn
 from msg import no_prog_err
-from userprefs import Options
 from cibconfig import CibFactory
 
 
@@ -441,5 +441,4 @@ class RscMgmt(command.UI):
         return cib_factory.commit()
 
 
-options = Options.getInstance()
 cib_factory = CibFactory.getInstance()

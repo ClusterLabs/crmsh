@@ -29,8 +29,9 @@ import ui_utils
 import userdir
 import xmlutil
 import vars
+import options
 from cibconfig import mkset_obj, CibFactory
-from msg import Options, ErrorBuffer
+from msg import ErrorBuffer
 from msg import common_err, common_debug, common_info
 from msg import syntax_err, bad_usage
 from report import Report
@@ -40,7 +41,6 @@ import cmd_status
 ptest_options = ["@v+", "nograph", "scores", "actions", "utilization"]
 
 err_buf = ErrorBuffer.getInstance()
-options = Options.getInstance()
 cib_factory = CibFactory.getInstance()
 crm_report = Report.getInstance()
 

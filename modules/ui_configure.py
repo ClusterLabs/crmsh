@@ -26,7 +26,8 @@ import userdir
 import xmlutil
 import ra
 from cibconfig import mkset_obj, CibFactory
-from msg import Options, ErrorBuffer
+import options
+from msg import ErrorBuffer
 from msg import common_err, common_info, common_warn
 from msg import syntax_err
 import rsctest
@@ -39,7 +40,6 @@ import ui_history
 import ui_utils
 from crm_gv import gv_types
 
-options = Options.getInstance()
 err_buf = ErrorBuffer.getInstance()
 cib_factory = CibFactory.getInstance()
 

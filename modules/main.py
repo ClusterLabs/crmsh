@@ -21,7 +21,7 @@ import getopt
 import atexit
 
 import config
-from userprefs import Options
+import options
 import vars
 from msg import ErrorBuffer, syntax_err, common_err
 from clidisplay import CliDisplay
@@ -231,7 +231,6 @@ usage:
     """
     sys.exit(rc)
 
-options = Options.getInstance()
 err_buf = ErrorBuffer.getInstance()
 #levels = Levels.getInstance()
 

@@ -24,8 +24,7 @@ import utils
 import ui_cibstatus
 import vars
 import config
-
-from userprefs import Options
+import options
 from msg import no_prog_err
 from cibstatus import CibStatus
 from cibconfig import CibFactory
@@ -232,7 +231,6 @@ class CibShadow(command.UI):
         return self._use(name, withstatus)  # now load the status too
 
 
-options = Options.getInstance()
 cib_status = CibStatus.getInstance()
 cib_factory = CibFactory.getInstance()
 

@@ -19,8 +19,8 @@ import sys
 from lxml import etree
 import config
 from singletonmixin import Singleton
-from userprefs import Options
 import clidisplay
+import options
 
 
 class ErrorBuffer(Singleton):
@@ -271,5 +271,4 @@ def not_impl_info(s):
 
 
 err_buf = ErrorBuffer.getInstance()
-options = Options.getInstance()
 # vim:ts=4:sw=4:et:

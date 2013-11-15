@@ -22,7 +22,7 @@ import sys
 import re
 import time
 from singletonmixin import Singleton
-from userprefs import Options
+import options
 import vars
 import tmpfiles
 from parse import CliParser
@@ -3394,7 +3394,6 @@ class CibFactory(Singleton):
         self.reset()
         self.initialize()
 
-options = Options.getInstance()
 err_buf = ErrorBuffer.getInstance()
 cib_factory = CibFactory.getInstance()
 cli_display = CliDisplay.getInstance()

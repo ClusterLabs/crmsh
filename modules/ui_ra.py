@@ -21,7 +21,7 @@ import completers as compl
 import utils
 import ra
 import vars
-from msg import Options
+import options
 
 
 def complete_class_provider_type(args):
@@ -68,7 +68,6 @@ class RA(command.UI):
     @command.completers(compl.call(ra.ra_classes), lambda args: ra.ra_providers_all(args[1]))
     def do_list(self, context, class_, provider_=None):
         "usage: list <class> [<provider>]"
-        options = Options.getInstance()
         if not class_ in ra.ra_classes():
             context.fatal_error("class %s does not exist" % class_)
         if provider_ and not provider_ in ra.ra_providers_all(class_):

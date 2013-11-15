@@ -38,6 +38,7 @@ modules =	__init__.py \
 			log_patterns.py \
 			main.py \
 			msg.py \
+			options.py \
 			ordereddict.py \
 			pacemaker.py \
 			parse.py \
@@ -65,7 +66,6 @@ modules =	__init__.py \
 			ui_template.py \
 			ui_utils.py \
 			userdir.py \
-			userprefs.py \
 			utils.py \
 			vars.py \
 			xmlutil.py
