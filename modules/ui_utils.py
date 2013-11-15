@@ -118,6 +118,25 @@ def graph_args(args):
     return True, gtype, outf, ftype
 
 
+def pretty_arguments(f, nskip=0):
+    '''
+    Returns a prettified representation
+    of the command arguments
+    '''
+    specs = inspect.getargspec(f)
+    named_args = []
+    if specs.defaults is None:
+        named_args += specs.args
+    else:
+        named_args += specs.args[:-len(specs.defaults)]
+        named_args += [("[%s]" % a) for a in specs.args[-len(specs.defaults):]]
+    if specs.varargs:
+        named_args += ['[%s ...]' % (specs.varargs)]
+    if nskip:
+        named_args = named_args[nskip:]
+    return ' '.join(named_args)
+
+
 def validate_arguments(f, args, nskip=0):
     '''
     Compares the declared arguments of f to
@@ -140,17 +159,7 @@ def validate_arguments(f, args, nskip=0):
         max_args = -1
 
     def mknamed():
-        named_args = []
-        if specs.defaults is None:
-            named_args += specs.args
-        else:
-            named_args += specs.args[:-len(specs.defaults)]
-            named_args += [("[%s]" % a) for a in specs.args[-len(specs.defaults):]]
-        if specs.varargs:
-            named_args += ['[%s ...]' % (specs.varargs)]
-        if nskip:
-            named_args = named_args[nskip:]
-        return ' '.join(named_args)
+        return pretty_arguments(f, nskip=nskip)
 
     if min_args == max_args and len(args) != min_args:
         raise ValueError("Expected (%s), takes exactly %d arguments (%d given)" %
