@@ -197,11 +197,6 @@ CRM_CACHE_DIR=${localstatedir}/cache/crm
 AC_DEFINE_UNQUOTED(CRM_CACHE_DIR,"$CRM_CACHE_DIR", Where crm shell keeps the cache)
 AC_SUBST(CRM_CACHE_DIR)
 
-dnl Needed so that the Corosync plugin can clear out the directory as Heartbeat does
-HA_STATE_DIR=`extract_header_define $GLUE_HEADER HA_VARRUNDIR`
-AC_DEFINE_UNQUOTED(HA_STATE_DIR,"$HA_STATE_DIR", Where Heartbeat keeps state files and sockets)
-AC_SUBST(HA_STATE_DIR)
-
 dnl Needed for the location of hostcache in CTS.py
 HA_VARLIBHBDIR=`extract_header_define $GLUE_HEADER HA_VARLIBHBDIR`
 AC_SUBST(HA_VARLIBHBDIR)
