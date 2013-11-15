@@ -160,6 +160,7 @@ fi
 %{crmsh_docdir}/contrib/*
 
 %{_sysconfdir}/crm
+%config %{_sysconfdir}/crm/crm.conf
 
 %dir %{crmsh_docdir}
 %dir %{crmsh_docdir}/contrib
