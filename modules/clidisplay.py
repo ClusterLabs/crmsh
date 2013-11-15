@@ -47,6 +47,18 @@ class CliDisplay(Singleton):
     def colors_enabled(self):
         return 'color' in user_prefs.output and not self.no_pretty
 
+    def error(self, s):
+        return self._colorize(s, 'red', 'bold')
+
+    def ok(self, s):
+        return self._colorize(s, 'green', 'bold')
+
+    def info(self, s):
+        return self._colorize(s, 'cyan')
+
+    def warn(self, s):
+        return self._colorize(s, 'yellow', 'bold')
+
     def keyword(self, kw):
         s = kw
         if "uppercase" in user_prefs.output:
