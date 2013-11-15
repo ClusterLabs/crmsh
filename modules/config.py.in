@@ -20,39 +20,66 @@ import os
 import sys
 
 
-def _autoconf(var, dflt):
-    if var.startswith('@') and var.endswith('@'):
-        return dflt
-    return var
+def _define(autoconf=None, envvar=None, setenv=False, default=None):
+    '''
+    define an overridable constant
+    * Better defaults
+    * Save as userprefs
+    * No compile-time defines
+    '''
+    value = default
+    if autoconf and not (autoconf.startswith('@') and autoconf.endswith('@')):
+        value = autoconf
+    if envvar:
+        val = os.getenv(envvar)
+        if val:
+            value = val
+            if setenv:
+                os.environ[envvar] = val
+    return value
 
-# Base configuration values
-DATADIR = _autoconf("@datadir@", '/usr/share')
+DATADIR = _define(autoconf="@datadir@", default='/usr/share')
 PACKAGE = os.path.basename(os.path.dirname(sys.modules[__name__].__file__))
-CRM_CACHE_DIR = _autoconf("@CRM_CACHE_DIR@", '/var/cache/crm')
-
-# derived configuration values
-CRM_CONFIG_DIR = "@CRM_CONFIG_DIR@"
-CRM_DAEMON_DIR = "@CRM_DAEMON_DIR@"
-CRM_DAEMON_USER = _autoconf("@CRM_DAEMON_USER@", "hacluster")
-VERSION = _autoconf("@VERSION@", "dev")
-BUILD_VERSION = _autoconf("@BUILD_VERSION@", "dev")
-OCF_ROOT_DIR = _autoconf("@OCF_ROOT_DIR@", "/usr/lib/ocf")
-
-CRM_SCHEMA_DIR = _autoconf("@CRM_DTD_DIRECTORY@", '')
-PE_STATE_DIR = '/var/lib/pacemaker/pengine'
-CRM_CONFIG_DIR = '/var/lib/pacemaker/cib'
-CRM_DAEMON_DIR = os.getenv("CRM_DAEMON_DIR") or '/usr/lib64/pacemaker'
-CRM_DAEMON_USER = os.getenv("CRM_DAEMON_USER") or 'hacluster'
-CRM_VERSION = "%s (Build %s)" % (VERSION, BUILD_VERSION)
-HA_VARLIBHBDIR = '/var/lib/heartbeat'
+CRM_CACHE_DIR = _define(autoconf="@CRM_CACHE_DIR@", default='/var/cache/crm')
+CRM_CONFIG_DIR = _define(autoconf="@CRM_CONFIG_DIR@")
+CRM_DAEMON_DIR = _define(autoconf="@CRM_DAEMON_DIR@")
+CRM_DAEMON_USER = _define(autoconf="@CRM_DAEMON_USER@", default="hacluster")
+VERSION = _define(autoconf="@VERSION@", default="dev")
+BUILD_VERSION = _define(autoconf="@BUILD_VERSION@", default="dev")
+OCF_ROOT_DIR = _define(autoconf="@OCF_ROOT_DIR@", default="/usr/lib/ocf")
+CRM_SCHEMA_DIR = _define(autoconf="@CRM_DTD_DIRECTORY@")
+PE_STATE_DIR = _define(default='/var/lib/pacemaker/pengine')
+CRM_CONFIG_DIR = _define(default='/var/lib/pacemaker/cib')
+CRM_DAEMON_DIR = _define(autoconf="@CRM_DAEMON_DIR@",
+                         envvar="CRM_DAEMON_DIR",
+                         default='/usr/lib64/pacemaker')
+CRM_DAEMON_USER = _define(autoconf="@CRM_DAEMON_USER@",
+                          envvar="CRM_DAEMON_USER",
+                          default='hacluster')
+HA_VARLIBHBDIR = _define(autoconf="@HA_VARLIBHBDIR@", default='/var/lib/heartbeat')
+CRM_SHARE_DIR = _define(default=os.path.join(DATADIR, PACKAGE))
 REPORT_CACHE_DIR = os.path.join(CRM_CACHE_DIR, 'history')
-CRM_SHARE_DIR = '/usr/share/crmsh'
 TEMPLATES_DIR = os.path.join(CRM_SHARE_DIR, 'templates')
 HELP_TEXT_FILE = os.path.join(CRM_SHARE_DIR, 'crm.8.txt')
-HB_DELNODE_EXEC = '/usr/share/heartbeat/hb_delnode'
-NAGIOS_PLUGINS_DIR = '/usr/lib/nagios/plugins'
+HB_DELNODE_EXEC = _define(default=os.path.join(DATADIR, 'heartbeat/hb_delnode'))
+NAGIOS_PLUGINS_DIR = _define(default='/usr/lib/nagios/plugins')
+OCF_ROOT_DIR = _define(autoconf="@OCF_ROOT_DIR@",
+                       envvar="OCF_ROOT",
+                       setenv=True,
+                       default="/usr/lib/ocf")
 
-OCF_ROOT_DIR = os.getenv("OCF_ROOT")
-if not OCF_ROOT_DIR:
-    OCF_ROOT_DIR = _autoconf("@OCF_ROOT_DIR@", "/usr/lib/ocf")
-    os.environ["OCF_ROOT"] = OCF_ROOT_DIR
+CRM_VERSION = "%s (Build %s)" % (VERSION, BUILD_VERSION)
+
+# dependencies on pacemaker:
+# CRM_DAEMON_USER
+# CRM_DAEMON_GROUP
+# CRM_STATE_DIR
+# PE_STATE_DIR
+# CRM_CONFIG_DIR
+# CRM_DTD_DIRECTORY
+# CRM_DAEMON_DIR
+
+# dependencies on cluster-glue:
+# CRM_DAEMON_DIR
+# HA_VARLIBHBDIR
+# OCF_ROOT_DIR
