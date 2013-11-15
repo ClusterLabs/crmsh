@@ -64,6 +64,7 @@ class TerminalController(Singleton):
     BLINK = ''           #: Turn on blink mode
     DIM = ''             #: Turn on half-bright mode
     REVERSE = ''         #: Turn on reverse-video mode
+    UNDERLINE = ''       #: Turn on underline mode
     NORMAL = ''          #: Turn off all modes
     # Cursor display:
     HIDE_CURSOR = ''     #: Make the cursor invisible
