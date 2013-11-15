@@ -22,6 +22,7 @@ import completers as compl
 import ui_utils
 import utils
 import xmlutil
+import vars
 from msg import common_err, syntax_err, no_prog_err, common_info, common_warn
 from msg import UserPrefs
 from cliformat import nvpairs2list

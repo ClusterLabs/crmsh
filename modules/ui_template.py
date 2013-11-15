@@ -22,6 +22,7 @@ import shlex
 import command
 import completers as compl
 import utils
+import vars
 from template import LoadTemplate
 from cliformat import cli_format
 from cibconfig import mkset_obj, CibFactory

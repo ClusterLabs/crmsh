@@ -26,6 +26,7 @@ import completers as compl
 import utils
 import ui_utils
 import xmlutil
+import vars
 from cibconfig import mkset_obj, CibFactory
 from msg import UserPrefs, Options, ErrorBuffer
 from msg import common_err, common_debug, common_info

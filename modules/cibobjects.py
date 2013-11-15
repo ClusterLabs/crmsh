@@ -17,6 +17,7 @@
 
 from ordereddict import odict
 import re
+import vars
 
 
 class ListFmt(object):
