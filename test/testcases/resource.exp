@@ -98,7 +98,7 @@ resource p0 is NOT running
     <nodes/>
     <resources/>
     <constraints>
-      <rsc_location id="cli-prefer-p3" rsc="p3" node="node1" score="INFINITY"/>
+      <rsc_location id="cli-prefer-p3" rsc="p3" role="Started" node="node1" score="INFINITY"/>
     </constraints>
   </configuration>
 </cib>
@@ -119,7 +119,7 @@ resource p0 is NOT running
     <nodes/>
     <resources/>
     <constraints>
-      <rsc_location id="cli-prefer-p3" rsc="p3" node="node1" score="INFINITY"/>
+      <rsc_location id="cli-prefer-p3" rsc="p3" role="Started" node="node1" score="INFINITY"/>
     </constraints>
   </configuration>
 </cib>
