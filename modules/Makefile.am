@@ -64,6 +64,7 @@ modules =	__init__.py \
 			ui_site.py \
 			ui_template.py \
 			ui_utils.py \
+			userdir.py \
 			userprefs.py \
 			utils.py \
 			vars.py \
