@@ -767,6 +767,8 @@ def cluster_stack():
         return "heartbeat"
     elif is_process("[a]isexec"):
         return "openais"
+    elif os.path.exists("/etc/corosync/corosync.conf"):
+        return "corosync"
     return ""
 
 
