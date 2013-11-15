@@ -26,6 +26,7 @@ from singletonmixin import Singleton
 from userprefs import Options
 import vars
 import config
+import utils
 from msg import common_debug, common_warn, common_err, common_error, common_info, warn_once
 from xmlutil import file2cib_elem, get_rsc_children_ids, get_prim_children_ids
 from utils import file2str, shortdate, acquire_lock, append_file, ext_cmd, shorttime
@@ -558,7 +559,7 @@ class Transition(object):
 
 def mkarchive(dir):
     "Create an archive from a directory"
-    home = vars.gethomedir()
+    home = utils.gethomedir()
     if not home:
         common_err("no home directory, nowhere to pack report")
         return False
@@ -590,8 +591,8 @@ class Report(Singleton):
                   "BLUE",
                   "RED")
     session_sub = "session"
-    outdir = os.path.join(vars.report_cache, "psshout")
-    errdir = os.path.join(vars.report_cache, "pssherr")
+    outdir = os.path.join(config.REPORT_CACHE_DIR, "psshout")
+    errdir = os.path.join(config.REPORT_CACHE_DIR, "pssherr")
 
     def __init__(self):
         # main source attributes
@@ -735,7 +736,7 @@ class Report(Singleton):
         return True
 
     def _live_loc(self):
-        return os.path.join(vars.report_cache, "live")
+        return os.path.join(config.REPORT_CACHE_DIR, "live")
 
     def is_live_recent(self):
         '''
@@ -883,10 +884,10 @@ class Report(Singleton):
         return (rc1 and rc2)
 
     def get_live_report(self):
-        if not acquire_lock(vars.report_cache):
+        if not acquire_lock(config.REPORT_CACHE_DIR):
             return None
         loc = self.new_live_report()
-        release_lock(vars.report_cache)
+        release_lock(config.REPORT_CACHE_DIR)
         return loc
 
     def manage_live_report(self, force=False, no_live_update=False):
@@ -905,10 +906,10 @@ class Report(Singleton):
             if self.to_dt or self.is_live_very_recent() or no_live_update:
                 return self._live_loc()
             if not _NO_PSSH:
-                if not acquire_lock(vars.report_cache):
+                if not acquire_lock(config.REPORT_CACHE_DIR):
                     return None
                 rc = self.update_live_report()
-                release_lock(vars.report_cache)
+                release_lock(config.REPORT_CACHE_DIR)
                 if rc:
                     self.set_change_origin(CH_UPD)
                     return self._live_loc()
@@ -1442,9 +1443,9 @@ class Report(Singleton):
 
     def get_session_dir(self, name):
         try:
-            return os.path.join(vars.report_cache, self.session_sub, name)
+            return os.path.join(config.REPORT_CACHE_DIR, self.session_sub, name)
         except:
-            return os.path.join(vars.report_cache, self.session_sub)
+            return os.path.join(config.REPORT_CACHE_DIR, self.session_sub)
     state_file = 'history_state.cfg'
     rpt_section = 'report'
 

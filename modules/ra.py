@@ -23,6 +23,8 @@ import re
 import glob
 from cache import WCache
 import vars
+import config
+import utils
 from utils import stdout2list, is_program, is_process, add_sudo
 from utils import os_types_list, get_stdout, find_value
 from utils import crm_msec, crm_time_cmp
@@ -93,7 +95,7 @@ class RaOS(object):
                 rc, l = stdout2list("stonith -m -t %s" % ra_type)
         elif ra_class == "nagios":
             rc, l = stdout2list("%s/check_%s --metadata" %
-                                (vars.nagios_dir, ra_type))
+                                (config.NAGIOS_PLUGINS_DIR, ra_type))
         return l
 
     def providers(self, ra_type, ra_class="ocf"):
@@ -128,7 +130,7 @@ class RaOS(object):
                 if ra not in ("fence_ack_manual", "fence_pcmk", "fence_legacy"):
                     l.append(ra)
         elif ra_class == "nagios":
-            l = os_types_list("%s/check_*" % vars.nagios_dir)
+            l = os_types_list("%s/check_*" % config.NAGIUS_PLUGINS_DIR)
             l = [x.replace("check_", "") for x in l]
         l = list(set(l))
         l.sort()
@@ -188,7 +190,7 @@ def can_use_lrmadmin():
     v_min = version.LooseVersion(minimum_glue)
     v_this = version.LooseVersion(glue_ver)
     return v_this >= v_min or \
-        (vars.getpwdent()[0] in ("root", vars.crm_daemon_user))
+        (utils.getpwdent()[0] in ("root", config.CRM_DAEMON_USER))
 
 
 def crm_resource_support():

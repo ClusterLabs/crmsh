@@ -142,7 +142,7 @@ def exit_handler():
 # prefer the user set PATH
 def envsetup():
     mybinpath = os.path.dirname(sys.argv[0])
-    for p in mybinpath, config.crm_daemon_dir:
+    for p in mybinpath, config.CRM_DAEMON_DIR:
         if p not in os.environ["PATH"].split(':'):
             os.environ['PATH'] = "%s:%s" % (os.environ['PATH'], p)
 

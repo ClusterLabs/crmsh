@@ -19,6 +19,7 @@
 import command
 import completers as compl
 import vars
+import config
 import utils
 import xmlutil
 import ui_utils
@@ -414,7 +415,7 @@ class RscMgmt(command.UI):
             return False
         if op == "monitor" and utils.crm_msec(interval) != 0:
             common_warn("please CLEANUP the RA trace directory %s regularly!" %
-                        vars.ha_varlib_dir)
+                        config.HA_VARLIBHBDIR)
         else:
             common_info("restart %s to get the trace" % rsc_id)
         return True

@@ -22,7 +22,8 @@ import shlex
 import command
 import completers as compl
 import utils
-import vars
+import config
+import userdir
 from template import LoadTemplate
 from cliformat import cli_format
 from cibconfig import mkset_obj, CibFactory
@@ -55,7 +56,7 @@ class Template(command.UI):
         "usage: new <config> <template> [<template> ...] [params name=value ...]"
         if not utils.is_filename_sane(name):
             return False
-        if os.path.isfile("%s/%s" % (vars.tmpl_conf_dir, name)):
+        if os.path.isfile("%s/%s" % (userdir.CRMCONF_DIR, name)):
             common_err("config %s exists; delete it first" % name)
             return False
         lt = LoadTemplate(name)
@@ -98,7 +99,7 @@ class Template(command.UI):
                 return False
             else:
                 self.curr_conf = ''
-        os.remove("%s/%s" % (vars.tmpl_conf_dir, name))
+        os.remove("%s/%s" % (userdir.CRMCONF_DIR, name))
 
     @command.skill_level('administrator')
     @command.completers(compl.call(utils.listconfigs))
@@ -121,9 +122,9 @@ class Template(command.UI):
         if name:
             if not self.config_exists(name):
                 return False
-            utils.edit_file("%s/%s" % (vars.tmpl_conf_dir, name))
+            utils.edit_file("%s/%s" % (userdir.CRMCONF_DIR, name))
         else:
-            utils.edit_file("%s/%s" % (vars.tmpl_conf_dir, self.curr_conf))
+            utils.edit_file("%s/%s" % (userdir.CRMCONF_DIR, self.curr_conf))
 
     @command.completers(compl.call(utils.listconfigs))
     def do_show(self, context, name=''):
@@ -190,9 +191,9 @@ class Template(command.UI):
 
     def init_dir(self):
         '''Create the conf directory, link to templates'''
-        if not os.path.isdir(vars.tmpl_conf_dir):
+        if not os.path.isdir(userdir.CRMCONF_DIR):
             try:
-                os.makedirs(vars.tmpl_conf_dir)
+                os.makedirs(userdir.CRMCONF_DIR)
             except os.error, msg:
                 common_err("makedirs: %s" % msg)
 
@@ -200,7 +201,7 @@ class Template(command.UI):
         '''return a list of required templates'''
         # Not used. May need it later.
         try:
-            tf = open("%s/%s" % (vars.tmpl_dir, tmpl), "r")
+            tf = open("%s/%s" % (config.TEMPLATES_DIR, tmpl), "r")
         except IOError, msg:
             common_err("open: %s" % msg)
             return
@@ -215,7 +216,7 @@ class Template(command.UI):
     def config_exists(self, name):
         if not utils.is_filename_sane(name):
             return False
-        if not os.path.isfile("%s/%s" % (vars.tmpl_conf_dir, name)):
+        if not os.path.isfile("%s/%s" % (userdir.CRMCONF_DIR, name)):
             common_err("%s: no such config" % name)
             return False
         return True
@@ -268,7 +269,7 @@ class Template(command.UI):
     def process(self, config=''):
         '''Create a cli configuration from the current config'''
         try:
-            f = open("%s/%s" % (vars.tmpl_conf_dir, config or self.curr_conf), 'r')
+            f = open("%s/%s" % (userdir.CRMCONF_DIR, config or self.curr_conf), 'r')
         except IOError, msg:
             common_err("open: %s" % msg)
             return ''

@@ -16,7 +16,8 @@
 #
 
 import re
-import vars
+import config
+import userdir
 from msg import common_err, common_info, common_warn
 
 
@@ -113,7 +114,7 @@ class LoadTemplate(object):
 
     def write_config(self, name):
         try:
-            f = open("%s/%s" % (vars.tmpl_conf_dir, name), "w")
+            f = open("%s/%s" % (userdir.CRMCONF_DIR, name), "w")
         except IOError, msg:
             common_err("open: %s" % msg)
             return False
@@ -123,7 +124,7 @@ class LoadTemplate(object):
 
     def load_template(self, tmpl):
         try:
-            f = open("%s/%s" % (vars.tmpl_dir, tmpl))
+            f = open("%s/%s" % (config.TEMPLATES_DIR, tmpl))
         except IOError, msg:
             common_err("open: %s" % msg)
             return ''

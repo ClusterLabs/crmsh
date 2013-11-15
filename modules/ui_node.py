@@ -22,7 +22,7 @@ import completers as compl
 import ui_utils
 import utils
 import xmlutil
-import vars
+import userdir
 from msg import common_err, syntax_err, no_prog_err, common_info, common_warn
 from msg import UserPrefs
 from cliformat import nvpairs2list
@@ -158,7 +158,7 @@ class NodeMgmt(command.UI):
         node = None
         lifetime = utils.fetch_lifetime_opt(argl, iso8601=False)
         if not argl:
-            node = vars.this_node
+            node = userdir.this_node()
         elif len(argl) == 1:
             if xmlutil.is_our_node(args[0]):
                 node = args[0]
@@ -180,7 +180,7 @@ class NodeMgmt(command.UI):
     def do_online(self, context, node=None):
         'usage: online [<node>]'
         if not node:
-            node = vars.this_node
+            node = userdir.this_node()
         if not utils.is_name_sane(node):
             return False
         return utils.ext_cmd(self.node_standby % (node, "off", "--lifetime='forever'")) == 0
@@ -190,7 +190,7 @@ class NodeMgmt(command.UI):
     def do_maintenance(self, context, node=None):
         'usage: maintenance [<node>]'
         if not node:
-            node = vars.this_node
+            node = userdir.this_node()
         if not utils.is_name_sane(node):
             return False
         return utils.ext_cmd(self.node_maint % (node, "on")) == 0
@@ -200,7 +200,7 @@ class NodeMgmt(command.UI):
     def do_ready(self, context, node=None):
         'usage: ready [<node>]'
         if not node:
-            node = vars.this_node
+            node = userdir.this_node()
         if not utils.is_name_sane(node):
             return False
         return utils.ext_cmd(self.node_maint % (node, "off")) == 0
@@ -210,7 +210,7 @@ class NodeMgmt(command.UI):
     def do_fence(self, context, node):
         'usage: fence <node>'
         if not node:
-            node = vars.this_node
+            node = userdir.this_node()
         if not utils.is_name_sane(node):
             return False
         if not user_prefs.force and \

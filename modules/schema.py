@@ -16,7 +16,7 @@
 #
 
 from singletonmixin import Singleton
-import vars
+import config
 from pacemaker import CrmSchema
 
 
@@ -96,11 +96,11 @@ class Schema(Singleton):
         self.store = {}
 
     def init_schema(self, cib):
-        self.crm_schema = CrmSchema(cib, vars.crm_schema_dir)
+        self.crm_schema = CrmSchema(cib, config.CRM_SCHEMA_DIR)
         self.reset()
 
     def test_schema(self, cib):
-        crm_schema = CrmSchema(cib, vars.crm_schema_dir)
+        crm_schema = CrmSchema(cib, config.CRM_SCHEMA_DIR)
         return crm_schema.validate_name
 
     def get(self, t, name, set=None):

@@ -31,17 +31,14 @@ PACKAGE = os.path.basename(os.path.dirname(sys.modules[__name__].__file__))
 CRM_CACHE_DIR = _autoconf("@CRM_CACHE_DIR@", '/var/cache/crm')
 
 # derived configuration values
-CRM_DTD_DIRECTORY = "@CRM_DTD_DIRECTORY@"
-#PE_STATE_DIR = "@PE_STATE_DIR@"
 CRM_CONFIG_DIR = "@CRM_CONFIG_DIR@"
 CRM_DAEMON_DIR = "@CRM_DAEMON_DIR@"
-CRM_DAEMON_USER = "@CRM_DAEMON_USER@"
-VERSION = "@VERSION@"
-BUILD_VERSION = "@BUILD_VERSION@"
-#HA_VARLIBHBDIR = "@HA_VARLIBHBDIR@"
-OCF_ROOT_DIR = "@OCF_ROOT_DIR@"
+CRM_DAEMON_USER = _autoconf("@CRM_DAEMON_USER@", "hacluster")
+VERSION = _autoconf("@VERSION@", "dev")
+BUILD_VERSION = _autoconf("@BUILD_VERSION@", "dev")
+OCF_ROOT_DIR = _autoconf("@OCF_ROOT_DIR@", "/usr/lib/ocf")
 
-CRM_SCHEMA_DIR = CRM_DTD_DIRECTORY
+CRM_SCHEMA_DIR = _autoconf("@CRM_DTD_DIRECTORY@", '')
 PE_STATE_DIR = '/var/lib/pacemaker/pengine'
 CRM_CONFIG_DIR = '/var/lib/pacemaker/cib'
 CRM_DAEMON_DIR = os.getenv("CRM_DAEMON_DIR") or '/usr/lib64/pacemaker'

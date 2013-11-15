@@ -23,6 +23,7 @@ import xmlutil
 import utils
 import ui_cibstatus
 import vars
+import config
 
 from msg import UserPrefs, Options
 from msg import no_prog_err
@@ -91,7 +92,7 @@ class CibShadow(command.UI):
     def _find_pe(self, context, infile):
         'Find a pe input'
         for p in ("%s/%s", "%s/%s.bz2", "%s/pe-*-%s.bz2"):
-            fl = glob.glob(p % (vars.pe_dir, infile))
+            fl = glob.glob(p % (config.PE_STATE_DIR, infile))
             if fl:
                 break
         if not fl:

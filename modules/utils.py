@@ -25,6 +25,8 @@ import time
 import shutil
 import bz2
 import pwd
+import config
+import userdir
 
 from userprefs import Options, UserPrefs
 import vars
@@ -197,16 +199,16 @@ def os_types_list(path):
 
 def listtemplates():
     l = []
-    for f in os.listdir(vars.tmpl_dir):
-        if os.path.isfile("%s/%s" % (vars.tmpl_dir, f)):
+    for f in os.listdir(config.TEMPLATES_DIR):
+        if os.path.isfile("%s/%s" % (config.TEMPLATES_DIR, f)):
             l.append(f)
     return l
 
 
 def listconfigs():
     l = []
-    for f in os.listdir(vars.tmpl_conf_dir):
-        if os.path.isfile("%s/%s" % (vars.tmpl_conf_dir, f)):
+    for f in os.listdir(userdir.CRMCONF_DIR):
+        if os.path.isfile("%s/%s" % (userdir.CRMCONF_DIR, f)):
             l.append(f)
     return l
 
