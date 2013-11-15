@@ -43,18 +43,23 @@ def this_node():
     return os.uname()[1]
 
 _cib_shadow = 'CIB_shadow'
+_cib_in_use = ''
 
 
 def set_cib_in_use(name):
     os.putenv(_cib_shadow, name)
+    global _cib_in_use
+    _cib_in_use = name
 
 
 def clear_cib_in_use():
     os.unsetenv(_cib_shadow)
+    global _cib_in_use
+    _cib_in_use = ''
 
 
 def get_cib_in_use():
-    return os.getenv(_cib_shadow) or ''
+    return _cib_in_use
 
 
 def is_program(prog):
