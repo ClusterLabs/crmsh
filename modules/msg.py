@@ -19,6 +19,7 @@ import sys
 from lxml import etree
 from singletonmixin import Singleton
 from userprefs import Options, UserPrefs
+import clidisplay
 
 
 class ErrorBuffer(Singleton):
@@ -26,6 +27,7 @@ class ErrorBuffer(Singleton):
     Show error messages either immediately or buffered.
     '''
     def __init__(self):
+        self._display = clidisplay.CliDisplay.getInstance()
         self.msg_list = []
         self.mode = "immediate"
         self.lineno = -1
@@ -46,6 +48,8 @@ class ErrorBuffer(Singleton):
         self.mode = "immediate"
 
     def writemsg(self, msg):
+        if msg.endswith('\n'):
+            msg = msg[:-1]
         if self.mode == "immediate":
             if options.regression_tests:
                 print msg
@@ -75,22 +79,32 @@ class ErrorBuffer(Singleton):
             return s
 
     def error(self, s):
-        self.writemsg("ERROR: %s" % self.add_lineno(s))
+        self.writemsg(self._render(self._display.error("ERROR")) + ": %s" % self.add_lineno(s))
 
     def warning(self, s):
-        self.writemsg("WARNING: %s" % self.add_lineno(s))
+        self.writemsg(self._render(self._display.warn("WARNING")) + ": %s" % self.add_lineno(s))
 
     def one_warning(self, s):
         if not s in self.written:
             self.written[s] = 1
-            self.writemsg("WARNING: %s" % self.add_lineno(s))
+            self.writemsg(self._render(self._display.warn("WARNING")) + ": %s" %
+                          self.add_lineno(s))
 
     def info(self, s):
-        self.writemsg("INFO: %s" % self.add_lineno(s))
+        self.writemsg(self._render(self._display.info("INFO")) + ": %s" % self.add_lineno(s))
 
     def debug(self, s):
         if user_prefs.debug:
             self.writemsg("DEBUG: %s" % self.add_lineno(s))
+
+    def _render(self, s):
+        'Render for TERM.'
+        try:
+            import term
+            termctrl = term.TerminalController.getInstance()
+            return termctrl.render(s)
+        except:
+            return s
 
 
 def common_error(s):
