@@ -88,14 +88,6 @@ class CliOptions(command.UI):
             context.fatal_error("Unknown option: " + option)
         config.set_option(parts[0], parts[1], value)
 
-    @command.completers(completers.choice(config.get_all_options()))
-    def do_get(self, context, option):
-        '''usage: get <option>'''
-        parts = option.split('.')
-        if len(parts) != 2:
-            context.fatal_error("Unknown option: " + option)
-        return config.get_option(parts[0], parts[1])
-
     @command.name('skill-level')
     @command.completers(_getprefs('skill_level'))
     def do_skill_level(self, context, level):
