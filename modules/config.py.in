@@ -80,7 +80,10 @@ CRM_DAEMON_USER = _define(autoconf="@CRM_DAEMON_USER@",
                           default="hacluster")
 VERSION = _define(autoconf="@VERSION@", default="dev")
 BUILD_VERSION = _define(autoconf="@BUILD_VERSION@", default="dev")
-OCF_ROOT_DIR = _define(autoconf="@OCF_ROOT_DIR@", default=_deduce_ocf_root_dir)
+OCF_ROOT_DIR = _define(autoconf="@OCF_ROOT_DIR@",
+                       envvar="OCF_ROOT",
+                       setenv=True,
+                       default=_deduce_ocf_root_dir)
 CRM_SCHEMA_DIR = _define(autoconf="@CRM_DTD_DIRECTORY@")
 PE_STATE_DIR = _define(autoconf="@PE_STATE_DIR@", default='/var/lib/pacemaker/pengine')
 
@@ -91,10 +94,6 @@ TEMPLATES_DIR = os.path.join(CRM_SHARE_DIR, 'templates')
 HELP_TEXT_FILE = os.path.join(CRM_SHARE_DIR, 'crm.8.txt')
 HB_DELNODE_EXEC = _define(default=os.path.join(DATADIR, 'heartbeat/hb_delnode'))
 NAGIOS_PLUGINS_DIR = _define(default='/usr/lib/nagios/plugins')
-OCF_ROOT_DIR = _define(autoconf="@OCF_ROOT_DIR@",
-                       envvar="OCF_ROOT",
-                       setenv=True,
-                       default="/usr/lib/ocf")
 
 CRM_VERSION = "%s (Build %s)" % (VERSION, BUILD_VERSION)
 
