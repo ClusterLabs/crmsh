@@ -232,14 +232,8 @@ class NodeMgmt(command.UI):
             return utils.ext_cmd(self.node_clear_state % ("-M -c", node, node)) == 0 and \
                 utils.ext_cmd(self.node_clear_state % ("-R", node, node)) == 0
 
-    @command.completers(compl.nodes)
-    def do_delete(self, context, node):
-        'usage: delete <node>'
-        if not utils.is_name_sane(node):
-            return False
-        if not xmlutil.is_our_node(node):
-            common_err("node %s not found in the CIB" % node)
-            return False
+    def _call_delnode(self, node):
+        "Remove node (how depends on cluster stack)"
         rc = True
         if utils.cluster_stack() == "heartbeat":
             cmd = (self.hb_delnode % node)
@@ -264,6 +258,18 @@ class NodeMgmt(command.UI):
         ec = utils.ext_cmd(cmd)
         if ec != 0:
             common_warn('"%s" failed, rc=%d' % (cmd, ec))
+            return False
+        return True
+
+    @command.completers(compl.nodes)
+    def do_delete(self, context, node):
+        'usage: delete <node>'
+        if not utils.is_name_sane(node):
+            return False
+        if not xmlutil.is_our_node(node):
+            common_err("node %s not found in the CIB" % node)
+            return False
+        if not self._call_delnode(node):
             return False
         if utils.ext_cmd(self.node_delete % node) != 0 or \
                 utils.ext_cmd(self.node_delete_status % node) != 0:
