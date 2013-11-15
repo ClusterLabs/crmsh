@@ -248,7 +248,8 @@ class _Configuration(object):
 
     def save(self):
         if self._user:
-            os.makedirs(os.path.dirname(_PERUSER))
+            if not os.path.isdir(os.path.dirname(_PERUSER)):
+                os.makedirs(os.path.dirname(_PERUSER))
             fp = open(_PERUSER, 'w')
             self._user.write(fp)
             fp.close()

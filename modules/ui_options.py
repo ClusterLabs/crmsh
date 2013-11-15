@@ -51,7 +51,7 @@ def _legacy_set_pref(name, value):
         return  # TODO
     opt = _legacy_map.get(name)
     if opt:
-        config.set(opt[0], opt[1], value)
+        config.set_option(opt[0], opt[1], value)
 
 
 def _getprefs(opt):
