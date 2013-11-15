@@ -26,7 +26,7 @@ from userprefs import UserPrefs
 import vars
 import config
 from msg import common_err, common_error, common_debug, cib_parse_err, ErrorBuffer
-import utils
+import userdir
 from utils import add_sudo, str2file, str2tmp, pipe_string, get_boolean
 from utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
 from utils import olist, get_cib_in_use
@@ -331,7 +331,7 @@ def is_live_cib():
 
 def is_crmuser():
     return (user_prefs.user in ("root", config.CRM_DAEMON_USER)
-            or utils.getuser() in ("root", config.CRM_DAEMON_USER))
+            or userdir.getuser() in ("root", config.CRM_DAEMON_USER))
 
 
 def cib_shadow_dir():
@@ -339,7 +339,7 @@ def cib_shadow_dir():
         return os.getenv("CIB_shadow_dir")
     if is_crmuser():
         return config.CRM_CONFIG_DIR
-    home = utils.gethomedir(user_prefs.user)
+    home = userdir.gethomedir(user_prefs.user)
     if home and home.startswith(os.path.sep):
         return os.path.join(home, ".cib")
     return os.getenv("TMPDIR") or "/tmp"

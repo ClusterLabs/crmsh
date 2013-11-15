@@ -33,7 +33,6 @@ from term import TerminalController
 from msg import common_warn, common_info, common_debug, common_err
 
 
-getpwdent = userdir.getpwdent
 getuser = userdir.getuser
 gethomedir = userdir.gethomedir
 

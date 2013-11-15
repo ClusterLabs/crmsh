@@ -24,7 +24,7 @@ import glob
 from cache import WCache
 import vars
 import config
-import utils
+import userdir
 from utils import stdout2list, is_program, is_process, add_sudo
 from utils import os_types_list, get_stdout, find_value
 from utils import crm_msec, crm_time_cmp
@@ -190,7 +190,7 @@ def can_use_lrmadmin():
     v_min = version.LooseVersion(minimum_glue)
     v_this = version.LooseVersion(glue_ver)
     return v_this >= v_min or \
-        (utils.getpwdent()[0] in ("root", config.CRM_DAEMON_USER))
+        (userdir.getuser() in ("root", config.CRM_DAEMON_USER))
 
 
 def crm_resource_support():

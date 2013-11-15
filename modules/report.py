@@ -26,7 +26,7 @@ from singletonmixin import Singleton
 from userprefs import Options
 import vars
 import config
-import utils
+import userdir
 from msg import common_debug, common_warn, common_err, common_error, common_info, warn_once
 from xmlutil import file2cib_elem, get_rsc_children_ids, get_prim_children_ids
 from utils import file2str, shortdate, acquire_lock, append_file, ext_cmd, shorttime
@@ -559,7 +559,7 @@ class Transition(object):
 
 def mkarchive(dir):
     "Create an archive from a directory"
-    home = utils.gethomedir()
+    home = userdir.gethomedir()
     if not home:
         common_err("no home directory, nowhere to pack report")
         return False

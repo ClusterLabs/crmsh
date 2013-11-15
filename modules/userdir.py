@@ -16,66 +16,33 @@
 #
 
 import os
-import sys
 
 from msg import common_warn, common_info, common_debug
 
-import pwd
-
-
-def getpwdent():
-    try:
-        euid = os.geteuid()
-    except Exception, msg:
-        sys.stderr.write("ERROR: %s\n" % msg)
-        return None
-    try:
-        pwdent = pwd.getpwuid(euid)
-    except Exception, msg:
-        sys.stderr.write("ERROR: %s\n" % msg)
-        return None
-    return pwdent
-
 
 def getuser():
-    try:
-        return getpwdent()[0]
-    except:
-        return os.getenv("USER")
+    "Returns the name of the current user"
+    import getpass
+    return getpass.getuser()
 
 
-def gethomedir(user=None):
-    if user:
-        try:
-            return pwd.getpwnam(user)[5]
-        except Exception, msg:
-            sys.stderr.write("ERROR: %s\n" % msg)
-            return None
-    homedir = os.getenv("HOME")
-    if not homedir:
-        try:
-            return getpwdent()[5]
-        except:
-            return None
-    else:
-        return homedir
-
-
-HOME_DIR = gethomedir() or './'
-
-HISTORY_FILE = os.path.join(HOME_DIR, ".crm_history")
-RC_FILE = os.path.join(HOME_DIR, ".crm.rc")
-CRMCONF_DIR = os.path.join(HOME_DIR, ".crmconf")
+def gethomedir(user=''):
+    return os.path.expanduser("~" + user)
 
 # see http://standards.freedesktop.org/basedir-spec
-CONFIG_HOME = os.path.join(HOME_DIR, ".config")
-CACHE_HOME = os.path.join(HOME_DIR, ".cache")
+CONFIG_HOME = os.path.expanduser("~/.config")
+CACHE_HOME = os.path.expanduser("~/.cache")
 try:
     from xdg import BaseDirectory
     CONFIG_HOME = BaseDirectory.xdg_config_home
     CACHE_HOME = BaseDirectory.xdg_cache_home
 except:
     pass
+
+# TODO: move to CONFIG_HOME
+HISTORY_FILE = os.path.expanduser("~/.crm_history")
+RC_FILE = os.path.expanduser("~/.crm.rc")
+CRMCONF_DIR = os.expanduser("~/.crmconf")
 
 GRAPHVIZ_USER_FILE = os.path.join(CONFIG_HOME, "graphviz")
 
