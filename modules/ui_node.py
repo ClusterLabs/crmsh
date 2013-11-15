@@ -23,7 +23,6 @@ import ui_utils
 import utils
 import xmlutil
 from msg import common_err, syntax_err, no_prog_err, common_info, common_warn
-from msg import UserPrefs
 from cliformat import nvpairs2list
 
 
@@ -75,7 +74,7 @@ class NodeMgmt(command.UI):
                    shutdown="0"
        />'""")
     node_clear_state_118 = "stonith_admin --confirm %s"
-    hb_delnode = config.DATADIR + "/heartbeat/hb_delnode '%s'"
+    hb_delnode = config.path.hb_delnode + " '%s'"
     crm_node = "crm_node"
     node_fence = "crm_attribute -t status -U '%s' -n terminate -v true"
     dc = "crmadmin -D"
@@ -212,7 +211,7 @@ class NodeMgmt(command.UI):
             node = utils.this_node()
         if not utils.is_name_sane(node):
             return False
-        if not user_prefs.force and \
+        if not config.core.force and \
                 not utils.ask("Do you really want to shoot %s?" % node):
             return False
         return utils.ext_cmd(self.node_fence % (node)) == 0
@@ -223,7 +222,7 @@ class NodeMgmt(command.UI):
         'usage: clearstate <node>'
         if not utils.is_name_sane(node):
             return False
-        if not user_prefs.force and \
+        if not config.core.force and \
                 not utils.ask("Do you really want to drop state for node %s?" % node):
             return False
         if utils.is_pcmk_118():
@@ -251,7 +250,7 @@ class NodeMgmt(command.UI):
                     rc = False
             cmd = "%s --force -R %s" % (self.crm_node, node)
         if not rc:
-            if user_prefs.force:
+            if config.core.force:
                 common_info('proceeding with node %s removal' % node)
             else:
                 return False
@@ -307,5 +306,4 @@ class NodeMgmt(command.UI):
         return ui_utils.manage_attr(context.get_command_name(), self.node_status, args)
 
 
-user_prefs = UserPrefs.getInstance()
 # vim:ts=4:sw=4:et:

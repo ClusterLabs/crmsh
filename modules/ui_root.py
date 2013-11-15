@@ -31,10 +31,6 @@
 #   This is so that crmsh can be installed with minimal prereqs,
 #   and use cluster sublevel to install all requirements
 
-from cibconfig import CibFactory
-from cibstatus import CibStatus
-from report import Report
-from msg import UserPrefs, Options, ErrorBuffer
 import command
 import cmd_status
 import ui_cib
@@ -165,12 +161,5 @@ option :: bynode | inactive | ops | timing | failcounts
 # this will initialize _children for all levels under the root
 Root.init_ui()
 
-
-user_prefs = UserPrefs.getInstance()
-options = Options.getInstance()
-err_buf = ErrorBuffer.getInstance()
-cib_status = CibStatus.getInstance()
-cib_factory = CibFactory.getInstance()
-crm_report = Report.getInstance()
 
 # vim:ts=4:sw=4:et:

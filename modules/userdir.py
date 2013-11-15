@@ -17,8 +17,6 @@
 
 import os
 
-from msg import common_warn, common_info, common_debug
-
 
 def getuser():
     "Returns the name of the current user"
@@ -30,12 +28,12 @@ def gethomedir(user=''):
     return os.path.expanduser("~" + user)
 
 # see http://standards.freedesktop.org/basedir-spec
-CONFIG_HOME = os.path.expanduser("~/.config")
-CACHE_HOME = os.path.expanduser("~/.cache")
+CONFIG_HOME = os.path.join(os.path.expanduser("~/.config"), 'crm')
+CACHE_HOME = os.path.join(os.path.expanduser("~/.cache"), 'crm')
 try:
     from xdg import BaseDirectory
-    CONFIG_HOME = BaseDirectory.xdg_config_home
-    CACHE_HOME = BaseDirectory.xdg_cache_home
+    CONFIG_HOME = os.path.join(BaseDirectory.xdg_config_home, 'crm')
+    CACHE_HOME = os.path.join(BaseDirectory.xdg_cache_home, 'crm')
 except:
     pass
 
@@ -56,6 +54,7 @@ def mv_user_files():
     global CRMCONF_DIR
 
     def _xdg_file(name, xdg_name, chk_fun, directory):
+        from msg import common_warn, common_info, common_debug
         if not name:
             return name
         if not os.path.isdir(directory):

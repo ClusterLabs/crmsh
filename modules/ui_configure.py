@@ -19,13 +19,14 @@
 import time
 import command
 import completers as compl
+import config
 import utils
 import vars
 import userdir
 import xmlutil
 import ra
 from cibconfig import mkset_obj, CibFactory
-from msg import UserPrefs, Options, ErrorBuffer
+from msg import Options, ErrorBuffer
 from msg import common_err, common_info, common_warn
 from msg import syntax_err
 import rsctest
@@ -38,7 +39,6 @@ import ui_history
 import ui_utils
 from crm_gv import gv_types
 
-user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 err_buf = ErrorBuffer.getInstance()
 cib_factory = CibFactory.getInstance()
@@ -355,7 +355,7 @@ class CibConfig(command.UI):
 
     def _verify(self, set_obj_semantic, set_obj_all):
         rc1 = set_obj_all.verify()
-        if user_prefs.check_frequency != "never":
+        if config.core.check_frequency != "never":
             rc2 = set_obj_semantic.semantic_check(set_obj_all)
         else:
             rc2 = 0
@@ -489,8 +489,8 @@ class CibConfig(command.UI):
             return False
         # use ptest/crm_simulate depending on which command was
         # used
-        user_prefs.ptest = vars.simulate_programs[context.get_command_name()]
-        if not user_prefs.ptest:
+        config.core.ptest = vars.simulate_programs[context.get_command_name()]
+        if not config.core.ptest:
             return False
         set_obj = mkset_obj("xml")
         return ui_utils.ptestlike(set_obj.ptest, 'vv', context.get_command_name(), args)
@@ -512,7 +512,7 @@ class CibConfig(command.UI):
             self._verify(mkset_obj("xml", "changed"), mkset_obj("xml"))
         if rc1 and rc2:
             return cib_factory.commit()
-        if force or user_prefs.force:
+        if force or config.core.force:
             common_info("commit forced")
             return cib_factory.commit(force=True)
         if utils.ask("Do you still want to commit?"):
@@ -535,7 +535,7 @@ class CibConfig(command.UI):
         if force and force != "force":
             syntax_err((context.get_command_name(), force))
             return False
-        if user_prefs.force or force:
+        if config.core.force or force:
             return cib_factory.upgrade_cib_06to10(True)
         else:
             return cib_factory.upgrade_cib_06to10()

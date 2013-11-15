@@ -123,7 +123,7 @@ class HelpEntry(object):
         return str(self)
 
 
-HELP_FILE = config.HELP_TEXT_FILE
+HELP_FILE = os.path.join(config.path.sharedir, 'crm.8.txt')
 
 _DEFAULT = HelpEntry('No help available')
 _REFERENCE_RE = re.compile(r'<<[^,]+,(.+)>>')

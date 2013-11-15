@@ -101,13 +101,15 @@ find . -exec touch \{\} \;
 %if 0%{?suse_version} < 1020
 export docdir=%{crmsh_docdir}
 %{configure}            \
+	--sysconfdir=%{_sysconfdir} \
     --localstatedir=%{_var}             \
-    --with-package-name=%{name} \
+    --with-pkg-name=%{name} \
     --with-version=%{version}-%{release}
 %else
 %{configure}            \
+	--sysconfdir=%{_sysconfdir} \
     --localstatedir=%{_var}             \
-    --with-package-name=%{name}     \
+    --with-pkg-name=%{name}     \
     --with-version=%{version}-%{release}    \
     --docdir=%{crmsh_docdir}
 %endif
@@ -156,6 +158,8 @@ fi
 %{crmsh_docdir}/ChangeLog
 %{crmsh_docdir}/README
 %{crmsh_docdir}/contrib/*
+
+%dir %{_sysconfdir}/crmsh
 
 %dir %{crmsh_docdir}
 %dir %{crmsh_docdir}/contrib

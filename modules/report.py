@@ -591,8 +591,9 @@ class Report(Singleton):
                   "BLUE",
                   "RED")
     session_sub = "session"
-    outdir = os.path.join(config.REPORT_CACHE_DIR, "psshout")
-    errdir = os.path.join(config.REPORT_CACHE_DIR, "pssherr")
+    report_cache_dir = os.path.join(config.path.cache, 'history')
+    outdir = os.path.join(config.path.cache, 'history', "psshout")
+    errdir = os.path.join(config.path.cache, 'history', "pssherr")
 
     def __init__(self):
         # main source attributes
@@ -736,7 +737,7 @@ class Report(Singleton):
         return True
 
     def _live_loc(self):
-        return os.path.join(config.REPORT_CACHE_DIR, "live")
+        return os.path.join(self.report_cache_dir, "live")
 
     def is_live_recent(self):
         '''
@@ -884,10 +885,10 @@ class Report(Singleton):
         return (rc1 and rc2)
 
     def get_live_report(self):
-        if not acquire_lock(config.REPORT_CACHE_DIR):
+        if not acquire_lock(self.report_cache_dir):
             return None
         loc = self.new_live_report()
-        release_lock(config.REPORT_CACHE_DIR)
+        release_lock(self.report_cache_dir)
         return loc
 
     def manage_live_report(self, force=False, no_live_update=False):
@@ -906,10 +907,10 @@ class Report(Singleton):
             if self.to_dt or self.is_live_very_recent() or no_live_update:
                 return self._live_loc()
             if not _NO_PSSH:
-                if not acquire_lock(config.REPORT_CACHE_DIR):
+                if not acquire_lock(self.report_cache_dir):
                     return None
                 rc = self.update_live_report()
-                release_lock(config.REPORT_CACHE_DIR)
+                release_lock(self.report_cache_dir)
                 if rc:
                     self.set_change_origin(CH_UPD)
                     return self._live_loc()
@@ -933,9 +934,8 @@ class Report(Singleton):
         if pipe_cmd_nosudo("mkdir -p %s" % os.path.dirname(d)) != 0:
             return None
         common_info("retrieving information from cluster nodes, please wait ...")
-        rc = pipe_cmd_nosudo("%s/%s/hb_report -Z -f '%s' %s %s %s" %
-                             (config.DATADIR,
-                              config.PACKAGE,
+        rc = pipe_cmd_nosudo("%s/hb_report -Z -f '%s' %s %s %s" %
+                             (config.path.sharedir,
                               self.from_dt.ctime(),
                               to_option,
                               nodes_option,
@@ -1443,9 +1443,9 @@ class Report(Singleton):
 
     def get_session_dir(self, name):
         try:
-            return os.path.join(config.REPORT_CACHE_DIR, self.session_sub, name)
+            return os.path.join(self.report_cache_dir, self.session_sub, name)
         except:
-            return os.path.join(config.REPORT_CACHE_DIR, self.session_sub)
+            return os.path.join(self.report_cache_dir, self.session_sub)
     state_file = 'history_state.cfg'
     rpt_section = 'report'
 

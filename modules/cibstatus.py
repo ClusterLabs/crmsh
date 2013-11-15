@@ -21,9 +21,10 @@ from singletonmixin import Singleton
 import tmpfiles
 from tempfile import mkstemp
 from utils import ext_cmd, show_dot_graph, page_string
-from msg import common_err, common_info, common_warn, user_prefs
+from msg import common_err, common_info, common_warn
 import xmlutil
 import utils
+import config
 
 
 def get_tag_by_id(node, tag, id):
@@ -245,7 +246,7 @@ class CibStatus(Singleton):
             cmd = "%s -s" % cmd
         if utilization:
             cmd = "%s -U" % cmd
-        if user_prefs.dotty and not nograph:
+        if config.core.dotty and not nograph:
             fd, dotfile = mkstemp()
             cmd = "%s -D %s" % (cmd, dotfile)
         else:

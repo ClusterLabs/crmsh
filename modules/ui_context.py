@@ -18,9 +18,10 @@
 import shlex
 import sys
 import readline
+import config
+import utils
 from msg import common_err, common_info, common_warn
-from msg import Options, UserPrefs
-from utils import wait4dc
+from msg import Options
 import ui_utils
 import userdir
 
@@ -244,12 +245,12 @@ class Context(object):
 
         # should we wait till the command takes effect?
         if rv and self.should_wait():
-            if not wait4dc(self.command_name, not options.batch):
+            if not utils.wait4dc(self.command_name, not options.batch):
                 return False
         return rv
 
     def should_wait(self):
-        if not user_prefs.wait:
+        if not config.core.wait:
             return False
 
         if self.command_info.wait:
@@ -267,10 +268,11 @@ class Context(object):
         return self._in_transit
 
     def check_skill_level(self, skill_level):
-        if user_prefs.skill_level < skill_level:
-            levels = {0: 'operator', 1: 'administrator', 2: 'expert'}
+        levels_to = {0: 'operator', 1: 'administrator', 2: 'expert'}
+        levels_from = {'operator': 0, 'administrator': 1, 'expert': 2}
+        if levels_from.get(config.core.skill_level, 0) < skill_level:
             self.fatal_error("ACL %s skill level required" %
-                             (levels.get(skill_level, 'other')))
+                             (levels_to.get(skill_level, 'other')))
 
     def get_command_name(self):
         "Returns name used to call the current command"
@@ -354,6 +356,5 @@ class Context(object):
 
 
 options = Options.getInstance()
-user_prefs = UserPrefs.getInstance()
 
 # vim:ts=4:sw=4:et:

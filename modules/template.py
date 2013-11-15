@@ -15,6 +15,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
+import os
 import re
 import config
 import userdir
@@ -124,7 +125,7 @@ class LoadTemplate(object):
 
     def load_template(self, tmpl):
         try:
-            f = open("%s/%s" % (config.TEMPLATES_DIR, tmpl))
+            f = open(os.path.join(config.path.sharedir, 'templates', tmpl))
         except IOError, msg:
             common_err("open: %s" % msg)
             return ''

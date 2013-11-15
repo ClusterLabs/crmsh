@@ -27,7 +27,8 @@ import userdir
 from template import LoadTemplate
 from cliformat import cli_format
 from cibconfig import mkset_obj, CibFactory
-from msg import UserPrefs, Options, ErrorBuffer
+from userprefs import Options
+from msg import ErrorBuffer
 from msg import common_err, common_warn
 from msg import syntax_err
 
@@ -93,7 +94,7 @@ class Template(command.UI):
         if not self.config_exists(name):
             return False
         if name == self.curr_conf:
-            if not force and not user_prefs.force and \
+            if not force and not config.core.force and \
                     not utils.ask("Do you really want to remove config %s which is in use?" %
                                   self.curr_conf):
                 return False
@@ -201,7 +202,8 @@ class Template(command.UI):
         '''return a list of required templates'''
         # Not used. May need it later.
         try:
-            tf = open("%s/%s" % (config.TEMPLATES_DIR, tmpl), "r")
+            templatepath = os.path.join(config.path.sharedir, 'templates', tmpl)
+            tf = open(templatepath, "r")
         except IOError, msg:
             common_err("open: %s" % msg)
             return
@@ -349,6 +351,5 @@ class Template(command.UI):
 
 err_buf = ErrorBuffer.getInstance()
 options = Options.getInstance()
-user_prefs = UserPrefs.getInstance()
 cib_factory = CibFactory.getInstance()
 # vim:ts=4:sw=4:et:

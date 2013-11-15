@@ -25,7 +25,7 @@ import ui_cibstatus
 import vars
 import config
 
-from msg import UserPrefs, Options
+from userprefs import Options
 from msg import no_prog_err
 from cibstatus import CibStatus
 from cibconfig import CibFactory
@@ -81,7 +81,7 @@ class CibShadow(command.UI):
             new_cmd = "%s -e '%s'" % (self.extcmd, name)
         else:
             new_cmd = "%s -c '%s'" % (self.extcmd, name)
-        if vars.tmp_cib or user_prefs.force or "force" in opt_l or "--force" in opt_l:
+        if vars.tmp_cib or config.core.force or "force" in opt_l or "--force" in opt_l:
             new_cmd = "%s --force" % new_cmd
         if utils.ext_cmd(new_cmd) == 0:
             context.info("%s shadow CIB created" % name)
@@ -92,7 +92,7 @@ class CibShadow(command.UI):
     def _find_pe(self, context, infile):
         'Find a pe input'
         for p in ("%s/%s", "%s/%s.bz2", "%s/pe-*-%s.bz2"):
-            fl = glob.glob(p % (config.PE_STATE_DIR, infile))
+            fl = glob.glob(p % (config.path.pe_state_dir, infile))
             if fl:
                 break
         if not fl:
@@ -224,7 +224,7 @@ class CibShadow(command.UI):
             # user made changes and now wants to switch to a
             # different and unequal CIB; we refuse to cooperate
             context.error_message("the requested CIB is different from the current one")
-            if user_prefs.force:
+            if config.core.force:
                 context.info("CIB overwrite forced")
             elif not utils.ask("All changes will be dropped. Do you want to proceed?"):
                 self._use(saved_cib, '')  # revert to the previous CIB
@@ -232,7 +232,6 @@ class CibShadow(command.UI):
         return self._use(name, withstatus)  # now load the status too
 
 
-user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 cib_status = CibStatus.getInstance()
 cib_factory = CibFactory.getInstance()

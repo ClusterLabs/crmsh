@@ -27,7 +27,7 @@ import bz2
 import config
 import userdir
 
-from userprefs import Options, UserPrefs
+from userprefs import Options
 import vars
 from term import TerminalController
 from msg import common_warn, common_info, common_debug, common_err
@@ -169,8 +169,9 @@ def os_types_list(path):
 
 def listtemplates():
     l = []
-    for f in os.listdir(config.TEMPLATES_DIR):
-        if os.path.isfile("%s/%s" % (config.TEMPLATES_DIR, f)):
+    templates_dir = os.path.join(config.path.sharedir, 'templates')
+    for f in os.listdir(templates_dir):
+        if os.path.isfile("%s/%s" % (templates_dir, f)):
             l.append(f)
     return l
 
@@ -184,8 +185,8 @@ def listconfigs():
 
 
 def add_sudo(cmd):
-    if user_prefs.user:
-        return "sudo -E -u %s %s" % (user_prefs.user, cmd)
+    if config.core.user:
+        return "sudo -E -u %s %s" % (config.core.user, cmd)
     return cmd
 
 
@@ -342,11 +343,11 @@ def is_value_sane(name):
 
 
 def show_dot_graph(dotfile, keep_file=False, desc="transition graph"):
-    cmd = "%s %s" % (user_prefs.dotty, dotfile)
+    cmd = "%s %s" % (config.core.dotty, dotfile)
     if not keep_file:
         cmd = "(%s; rm -f %s)" % (cmd, dotfile)
     subprocess.Popen(cmd, shell=True, bufsize=0, stdin=None, stdout=None, stderr=None, close_fds=True)
-    common_info("starting %s to show %s" % (user_prefs.dotty, desc))
+    common_info("starting %s to show %s" % (config.core.dotty, desc))
 
 
 def ext_cmd(cmd):
@@ -365,6 +366,23 @@ def ext_cmd_nosudo(cmd):
 def rmdir_r(d):
     if d and os.path.isdir(d):
         shutil.rmtree(d)
+
+
+def is_check_always():
+    '''
+    Even though the frequency may be set to always, it doesn't
+    make sense to do that with non-interactive sessions.
+    '''
+    return options.interactive and config.core.check_frequency == "always"
+
+
+def get_check_rc():
+    '''
+    If the check mode is set to strict, then on errors we
+    return 2 which is the code for error. Otherwise, we
+    pretend that errors are warnings.
+    '''
+    return config.core.check_mode == "strict" and 2 or 1
 
 
 _LOCKDIR = ".lockdir"
@@ -561,7 +579,7 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     Pipe graph_s thru ptest(8). Show graph using dotty if requested.
     '''
     actions_filter = "grep LogActions: | grep -vw Leave"
-    ptest = "2>&1 %s -x -" % user_prefs.ptest
+    ptest = "2>&1 %s -x -" % config.core.ptest
     if re.search("simulate", ptest) and \
             not re.search("-[RS]", ptest):
         ptest = "%s -S" % ptest
@@ -573,7 +591,7 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
         ptest = "%s -s" % ptest
     if utilization:
         ptest = "%s -U" % ptest
-    if user_prefs.dotty and not nograph:
+    if config.core.dotty and not nograph:
         fd, dotfile = mkstemp()
         ptest = "%s -D %s" % (ptest, dotfile)
     else:
@@ -746,9 +764,9 @@ def edit_file(fname):
     'Edit a file.'
     if not fname:
         return
-    if not user_prefs.editor:
+    if not config.core.editor:
         return
-    return ext_cmd_nosudo("%s %s" % (user_prefs.editor, fname))
+    return ext_cmd_nosudo("%s %s" % (config.core.editor, fname))
 
 
 def need_pager(s, w, h):
@@ -778,13 +796,13 @@ def page_string(s):
     w, h = get_winsize()
     if not need_pager(s, w, h):
         print term_render(s)
-    elif not user_prefs.pager or not sys.stdout.isatty() or options.batch:
+    elif not config.core.pager or not sys.stdout.isatty() or options.batch:
         print term_render(s)
     else:
         opts = ""
-        if user_prefs.pager == "less":
+        if config.core.pager == "less":
             opts = "-R"
-        pipe_string("%s %s" % (user_prefs.pager, opts), term_render(s))
+        pipe_string("%s %s" % (config.core.pager, opts), term_render(s))
 
 
 def get_winsize():
@@ -1103,7 +1121,6 @@ def fetch_lifetime_opt(args, iso8601=True):
     return None
 
 
-user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 termctrl = TerminalController.getInstance()
 # vim:ts=4:sw=4:et:

@@ -21,12 +21,12 @@ from lxml import etree, doctestcompare
 import copy
 import bz2
 
-from schema import Schema
-from userprefs import UserPrefs
-import vars
 import config
+from schema import Schema
+import vars
 from msg import common_err, common_error, common_debug, cib_parse_err, ErrorBuffer
 import userdir
+import utils
 from utils import add_sudo, str2file, str2tmp, pipe_string, get_boolean
 from utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
 from utils import olist, get_cib_in_use
@@ -133,7 +133,7 @@ def sanity_check_nvpairs(id, node, attr_list):
         n = nvpair.get("name")
         if n and not n in attr_list:
             common_err("%s: attribute %s does not exist" % (id, n))
-            rc |= user_prefs.get_check_rc()
+            rc |= utils.get_check_rc()
     return rc
 
 
@@ -330,16 +330,16 @@ def is_live_cib():
 
 
 def is_crmuser():
-    return (user_prefs.user in ("root", config.CRM_DAEMON_USER)
-            or userdir.getuser() in ("root", config.CRM_DAEMON_USER))
+    return (config.core.user in ("root", config.path.crm_daemon_user)
+            or userdir.getuser() in ("root", config.path.crm_daemon_user))
 
 
 def cib_shadow_dir():
     if os.getenv("CIB_shadow_dir"):
         return os.getenv("CIB_shadow_dir")
     if is_crmuser():
-        return config.CRM_CONFIG_DIR
-    home = userdir.gethomedir(user_prefs.user)
+        return config.path.crm_config
+    home = userdir.gethomedir(config.core.user)
     if home and home.startswith(os.path.sep):
         return os.path.join(home, ".cib")
     return os.getenv("TMPDIR") or "/tmp"
@@ -852,11 +852,11 @@ def obj_cmp(obj1, obj2):
 def filter_on_type(cl, obj_type):
     if type(cl[0]) == type([]):
         l = [cli_list for cli_list in cl if cli_list[0][0] == obj_type]
-        if user_prefs.sort_elements:
+        if config.core.sort_elements:
             l.sort(cmp=cmp)
     else:
         l = [obj for obj in cl if obj.obj_type == obj_type]
-        if user_prefs.sort_elements:
+        if config.core.sort_elements:
             l.sort(cmp=obj_cmp)
     return l
 
@@ -1273,7 +1273,7 @@ def xml_cmp(n, m, show=False):
                 rc = False
     else:
         rc = checker.compare_docs(n, m)
-    if not rc and show and user_prefs.debug:
+    if not rc and show and config.core.debug:
         # somewhat strange, but that's how this works
         from doctest import Example
         example = Example("etree.tostring(n)", etree.tostring(n))
@@ -1345,6 +1345,5 @@ def merge_tmpl_into_prim(prim_node, tmpl_node):
     return dnode
 
 
-user_prefs = UserPrefs.getInstance()
 schema = Schema.getInstance()
 # vim:ts=4:sw=4:et:

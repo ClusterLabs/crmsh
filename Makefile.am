@@ -25,7 +25,11 @@ EXTRA_DIST		= crm
 
 SUBDIRS = doc modules templates test contrib hb_report
 
-doc_DATA = AUTHORS COPYING README ChangeLog
+doc_DATA = AUTHORS COPYING README ChangeLog version
+
+# in .spec, set --sysconfdir=/etc
+crmconfdir=$(sysconfdir)/$(PACKAGE)
+crmconf_DATA = crm.conf
 
 install-exec-local:
 	$(INSTALL) -d -m 770 $(DESTDIR)/$(CRM_CACHE_DIR)

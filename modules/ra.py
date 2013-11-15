@@ -25,11 +25,11 @@ from cache import WCache
 import vars
 import config
 import userdir
+import utils
 from utils import stdout2list, is_program, is_process, add_sudo
 from utils import os_types_list, get_stdout, find_value
 from utils import crm_msec, crm_time_cmp
 from msg import common_debug, common_err, common_warn, common_info
-from msg import user_prefs
 
 #
 # Resource Agents interface (meta-data, parameters, etc)
@@ -95,7 +95,7 @@ class RaOS(object):
                 rc, l = stdout2list("stonith -m -t %s" % ra_type)
         elif ra_class == "nagios":
             rc, l = stdout2list("%s/check_%s --metadata" %
-                                (config.NAGIOS_PLUGINS_DIR, ra_type))
+                                (config.path.nagios_plugins, ra_type))
         return l
 
     def providers(self, ra_type, ra_class="ocf"):
@@ -130,7 +130,7 @@ class RaOS(object):
                 if ra not in ("fence_ack_manual", "fence_pcmk", "fence_legacy"):
                     l.append(ra)
         elif ra_class == "nagios":
-            l = os_types_list("%s/check_*" % config.NAGIUS_PLUGINS_DIR)
+            l = os_types_list("%s/check_*" % config.path.nagios_plugins)
             l = [x.replace("check_", "") for x in l]
         l = list(set(l))
         l.sort()
@@ -190,7 +190,7 @@ def can_use_lrmadmin():
     v_min = version.LooseVersion(minimum_glue)
     v_this = version.LooseVersion(glue_ver)
     return v_this >= v_min or \
-        (userdir.getuser() in ("root", config.CRM_DAEMON_USER))
+        (userdir.getuser() in ("root", config.path.crm_daemon_user))
 
 
 def crm_resource_support():
@@ -569,14 +569,14 @@ class RAInfo(object):
                     continue
                 if p not in d:
                     common_err("%s: required parameter %s not defined" % (id, p))
-                    rc |= user_prefs.get_check_rc()
+                    rc |= utils.get_check_rc()
         for p in d:
             if p.startswith("$"):
                 # these are special, non-RA parameters
                 continue
             if p not in self.params():
                 common_err("%s: parameter %s does not exist" % (id, p))
-                rc |= user_prefs.get_check_rc()
+                rc |= utils.get_check_rc()
         return rc
 
     def get_adv_timeout(self, op, node=None):

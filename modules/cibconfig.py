@@ -22,7 +22,7 @@ import sys
 import re
 import time
 from singletonmixin import Singleton
-from userprefs import Options, UserPrefs
+from userprefs import Options
 import vars
 import tmpfiles
 from parse import CliParser
@@ -36,6 +36,7 @@ from msg import common_warn, common_err, common_debug, common_info, ErrorBuffer
 from msg import common_error, constraint_norefobj_err, obj_cli_warn, cib_parse_err, no_object_err
 from msg import missing_obj_err, common_warning, update_err, unsupported_err, empty_cib_err
 from msg import invalid_id_err, cib_ver_unsupported_err
+import utils
 from utils import ext_cmd, safe_open_w, pipe_string, safe_close_w, crm_msec
 from utils import ask, lines2cli, cli_append_attr, cli_replace_attr, olist, odict
 from utils import keyword_cmp, page_string, cibadmin_can_patch, str2tmp
@@ -430,12 +431,12 @@ class CibObjectSetCli(CibObjectSet):
 
     def _pre_edit(self, s):
         '''Extra processing of the string to be editted'''
-        if user_prefs.editor.startswith("vi"):
+        if config.core.editor.startswith("vi"):
             return "%s\n%s" % (s, self.vim_stx_str)
         return s
 
     def _post_edit(self, s):
-        if user_prefs.editor.startswith("vi"):
+        if config.core.editor.startswith("vi"):
             return s.replace(self.vim_stx_str, "")
         return s
 
@@ -1467,13 +1468,13 @@ class CibPrimitive(CibObject):
         '''
         if self.node is None:  # eh?
             common_err("%s: no xml (strange)" % self.obj_id)
-            return user_prefs.get_check_rc()
+            return utils.get_check_rc()
         rc3 = sanity_check_meta(self.obj_id, self.node, vars.rsc_meta_attributes)
         if self.obj_type == "primitive":
             r_node = reduce_primitive(self.node)
             if r_node is None:
                 common_err("%s: no such resource template" % self.node.get("template"))
-                return user_prefs.get_check_rc()
+                return utils.get_check_rc()
         else:
             r_node = self.node
         ra = get_ra(r_node)
@@ -1481,7 +1482,7 @@ class CibPrimitive(CibObject):
             if cib_factory.is_asymm_cluster():
                 return rc3
             ra.error("no such resource agent")
-            return user_prefs.get_check_rc()
+            return utils.get_check_rc()
         actions = get_rsc_operations(r_node)
         default_timeout = get_default_timeout()
         rc2 = ra.sanity_check_ops(self.obj_id, actions, default_timeout)
@@ -1568,7 +1569,7 @@ class CibContainer(CibObject):
         '''
         if self.node is None:  # eh?
             common_err("%s: no xml (strange)" % self.obj_id)
-            return user_prefs.get_check_rc()
+            return utils.get_check_rc()
         l = vars.rsc_meta_attributes
         if self.obj_type == "clone":
             l += vars.clone_meta_attributes
@@ -1649,7 +1650,7 @@ class CibLocation(CibObject):
         '''
         if self.node is None:  # eh?
             common_err("%s: no xml (strange)" % self.obj_id)
-            return user_prefs.get_check_rc()
+            return utils.get_check_rc()
         uname = self.node.get("node")
         if uname and uname not in cib_factory.node_id_list():
             common_warn("%s: referenced node %s does not exist" % (self.obj_id, uname))
@@ -1883,7 +1884,7 @@ class CibProperty(CibObject):
         '''
         if self.node is None:  # eh?
             common_err("%s: no xml (strange)" % self.obj_id)
-            return user_prefs.get_check_rc()
+            return utils.get_check_rc()
         l = []
         if self.obj_type == "property":
             l = get_properties_list()
@@ -1985,7 +1986,7 @@ class CibFencingOrder(CibObject):
         '''
         if self.node is None:  # eh?
             common_err("%s: no xml (strange)" % self.obj_id)
-            return user_prefs.get_check_rc()
+            return utils.get_check_rc()
         rc = 0
         nl = self.node.findall("fencing-level")
         for target in [x.get("target") for x in nl]:
@@ -3135,8 +3136,7 @@ class CibFactory(Singleton):
         if not obj.xml_obj_type in vars.defaults_tags:
             if not self._verify_element(obj):
                 return False
-        if user_prefs.is_check_always() \
-                and obj.check_sanity() > 1:
+        if utils.is_check_always() and obj.check_sanity() > 1:
             return False
         return True
 
@@ -3394,7 +3394,6 @@ class CibFactory(Singleton):
         self.reset()
         self.initialize()
 
-user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 err_buf = ErrorBuffer.getInstance()
 cib_factory = CibFactory.getInstance()

@@ -96,11 +96,11 @@ class Schema(Singleton):
         self.store = {}
 
     def init_schema(self, cib):
-        self.crm_schema = CrmSchema(cib, config.CRM_SCHEMA_DIR)
+        self.crm_schema = CrmSchema(cib, config.path.crm_dtd_dir)
         self.reset()
 
     def test_schema(self, cib):
-        crm_schema = CrmSchema(cib, config.CRM_SCHEMA_DIR)
+        crm_schema = CrmSchema(cib, config.path.crm_dtd_dir)
         return crm_schema.validate_name
 
     def get(self, t, name, set=None):

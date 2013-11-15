@@ -21,7 +21,7 @@ import getopt
 import atexit
 
 import config
-from userprefs import Options, UserPrefs
+from userprefs import Options
 import vars
 from msg import ErrorBuffer, syntax_err, common_err
 from clidisplay import CliDisplay
@@ -34,6 +34,10 @@ import ui_context
 
 
 def load_rc(context, rcfile):
+    # only load the RC file if there is no new-style user config
+    if config.has_user_config():
+        return
+
     try:
         f = open(rcfile)
     except:
@@ -142,7 +146,7 @@ def exit_handler():
 # prefer the user set PATH
 def envsetup():
     mybinpath = os.path.dirname(sys.argv[0])
-    for p in mybinpath, config.CRM_DAEMON_DIR:
+    for p in mybinpath, config.path.crm_daemon_dir:
         if p not in os.environ["PATH"].split(':'):
             os.environ['PATH'] = "%s:%s" % (os.environ['PATH'], p)
 
@@ -227,7 +231,6 @@ usage:
     """
     sys.exit(rc)
 
-user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 err_buf = ErrorBuffer.getInstance()
 #levels = Levels.getInstance()
@@ -260,7 +263,7 @@ def add_quotes(args):
     '''
     l = []
     for s in args:
-        if user_prefs.add_quotes and ' ' in s:
+        if config.core.add_quotes and ' ' in s:
             q = '"' in s and "'" or '"'
             if not q in s:
                 s = "%s%s%s" % (q, s, q)
@@ -376,15 +379,15 @@ def parse_options():
                 print >> sys.stdout, ("%s" % config.CRM_VERSION)
                 sys.exit(0)
             elif o == "-d":
-                user_prefs.debug = "yes"
+                config.core.debug = "yes"
             elif o == "-X":
                 options.profile = p
             elif o == "-R":
                 options.regression_tests = True
             elif o in ("-D", "--display"):
-                user_prefs.output = p
+                config.core.output = p
             elif o in ("-F", "--force"):
-                user_prefs.force = "yes"
+                config.core.force = "yes"
             elif o in ("-f", "--file"):
                 options.batch = True
                 options.interactive = False
@@ -393,7 +396,7 @@ def parse_options():
             elif o in ("-H", "--history"):
                 options.history = p
             elif o in ("-w", "--wait"):
-                user_prefs.wait = "yes"
+                config.core.wait = "yes"
             elif o in ("-c", "--cib"):
                 options.shadow = p
         return user_args

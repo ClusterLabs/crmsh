@@ -26,7 +26,7 @@ import ui_utils
 
 from msg import common_error, common_err, common_info, common_debug, common_warn
 from msg import no_prog_err
-from msg import UserPrefs, Options
+from userprefs import Options
 from cibconfig import CibFactory
 
 
@@ -65,13 +65,13 @@ def set_deep_meta_attr_node(target_node, attr, value):
         for c in target_node.iterchildren():
             if xmlutil.is_child_rsc(c):
                 rm_meta_attribute(c, attr, nvpair_l)
-    if user_prefs.manage_children != "never" and \
+    if config.core.manage_children != "never" and \
             (xmlutil.is_group(target_node) or
              (xmlutil.is_clone(target_node) and xmlutil.cloned_el(target_node) == "group")):
         odd_children = get_children_with_different_attr(target_node, attr, value)
         for c in odd_children:
-            if user_prefs.manage_children == "always" or \
-                    (user_prefs.manage_children == "ask" and
+            if config.core.manage_children == "always" or \
+                    (config.core.manage_children == "ask" and
                      utils.ask("Do you want to override %s for child resource %s?" %
                                (attr, c.get("id")))):
                 common_debug("force remove meta attr %s from %s" %
@@ -93,7 +93,7 @@ def set_deep_meta_attr(attr, value, rsc_id):
     If it's a group then check its children. If any of them has
     the attribute set to a value different from the one given,
     then ask the user whether to reset them or not (exact
-    behaviour depends on the value of user_prefs.manage_children).
+    behaviour depends on the value of config.core.manage_children).
     '''
     target_node = xmlutil.RscState().rsc2node(rsc_id)
     if target_node is None:
@@ -274,7 +274,7 @@ class RscMgmt(command.UI):
             opts = "--node='%s'" % node
         if lifetime:
             opts = "%s --lifetime='%s'" % (opts, lifetime)
-        if "force" in opt_l or user_prefs.force:
+        if "force" in opt_l or config.core.force:
             opts = "%s --force" % opts
         return utils.ext_cmd(self.rsc_migrate % (rsc, opts)) == 0
 
@@ -415,7 +415,7 @@ class RscMgmt(command.UI):
             return False
         if op == "monitor" and utils.crm_msec(interval) != 0:
             common_warn("please CLEANUP the RA trace directory %s regularly!" %
-                        config.HA_VARLIBHBDIR)
+                        config.path.heartbeat_dir)
         else:
             common_info("restart %s to get the trace" % rsc_id)
         return True
@@ -441,6 +441,5 @@ class RscMgmt(command.UI):
         return cib_factory.commit()
 
 
-user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
 cib_factory = CibFactory.getInstance()

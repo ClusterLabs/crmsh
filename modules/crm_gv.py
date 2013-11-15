@@ -15,7 +15,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-from userprefs import UserPrefs
+import config
 import tmpfiles
 import utils
 from msg import common_err
@@ -200,7 +200,7 @@ class GvDot(Gv):
         return sg_obj
 
     def display(self):
-        if not user_prefs.dotty:
+        if not config.core.dotty:
             common_err("dotty not found")
             return False
         dotf = self.totmpf()
@@ -210,7 +210,7 @@ class GvDot(Gv):
         return True
 
     def image(self, img_type, outf):
-        if not user_prefs.dot:
+        if not config.core.dot:
             common_err("dot not found")
             return False
         dotf = self.totmpf()
@@ -218,7 +218,7 @@ class GvDot(Gv):
             return False
         tmpfiles.add(dotf)
         return (utils.ext_cmd_nosudo("%s -T%s -o%s %s" %
-                                     (user_prefs.dot, img_type, outf, dotf)) == 0)
+                                     (config.core.dot, img_type, outf, dotf)) == 0)
 
 
 class SubgraphDot(GvDot):
@@ -237,7 +237,5 @@ class SubgraphDot(GvDot):
 gv_types = {
     "dot": GvDot,
 }
-
-user_prefs = UserPrefs.getInstance()
 
 # vim:ts=4:sw=4:et:

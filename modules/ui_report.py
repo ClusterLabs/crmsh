@@ -29,7 +29,7 @@ class Report(command.UI):
     '''
     name = "report"
 
-    extcmd = os.path.join(config.DATADIR, config.PACKAGE, 'hb_report')
+    extcmd = os.path.join(config.path.sharedir, 'hb_report')
 
     def requires(self):
         if not utils.is_program(self.extcmd):

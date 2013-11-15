@@ -17,8 +17,9 @@
 
 import sys
 from lxml import etree
+import config
 from singletonmixin import Singleton
-from userprefs import Options, UserPrefs
+from userprefs import Options
 import clidisplay
 
 
@@ -94,7 +95,7 @@ class ErrorBuffer(Singleton):
         self.writemsg(self._render(self._display.info("INFO")) + ": %s" % self.add_lineno(s))
 
     def debug(self, s):
-        if user_prefs.debug:
+        if config.core.debug:
             self.writemsg("DEBUG: %s" % self.add_lineno(s))
 
     def _render(self, s):
@@ -269,7 +270,6 @@ def not_impl_info(s):
     err_buf.info("%s is not implemented yet" % s)
 
 
-user_prefs = UserPrefs.getInstance()
 err_buf = ErrorBuffer.getInstance()
 options = Options.getInstance()
 # vim:ts=4:sw=4:et:

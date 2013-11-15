@@ -9,8 +9,8 @@ and a per-user configuration file. The values set in the user-local
 file take precedence over the system-wide settings.
 
 The global configuration file is usually installed at
-`/etc/crmsh/settings`, and the user-local configuration file at
-`~/.config/crmsh/settings`.
+`/etc/crm/crm.conf`, and the user-local configuration file at
+`~/.config/crm/crm.conf`.
 
 
 == Upgrading from crm 1.x to 2.x ==
@@ -97,6 +97,15 @@ score = magenta
 ticket = magenta
 ----------------------
 
+
+== Loading and saving options ==
+
+Options are loaded from the global configuration file first, and the
+user-local file second. This means that the user-local options take
+precedence over the global configuration.
+
+When changing an option using the `options` sublevel, the
+configuration file is written to disk with the new value.
 
 == Syntax highlighting ==
 

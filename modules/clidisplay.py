@@ -16,7 +16,7 @@
 #
 
 from singletonmixin import Singleton
-from userprefs import UserPrefs
+import config
 
 
 class CliDisplay(Singleton):
@@ -32,48 +32,29 @@ class CliDisplay(Singleton):
     def reset_no_pretty(self):
         self.no_pretty = False
 
-    def _colorstring(self, clrnum, s):
-        if self.colors_enabled():
-            return "${%s}%s${NORMAL}" % \
-                (user_prefs.colorscheme[clrnum].upper(), s)
-        return s
-
-    def _boldcolorstring(self, clrnum, s):
-        if self.colors_enabled():
-            return "${BOLD}${%s}%s${NORMAL}" % \
-                (user_prefs.colorscheme[clrnum].upper(), s)
-        return s
-
     def colors_enabled(self):
-        return 'color' in user_prefs.output and not self.no_pretty
+        return 'color' in config.color.style and not self.no_pretty
 
     def error(self, s):
-        return self._colorize(s, 'red', 'bold')
+        return self._colorize(s, config.color.error)
 
     def ok(self, s):
-        return self._colorize(s, 'green', 'bold')
+        return self._colorize(s, config.color.ok)
 
     def info(self, s):
-        return self._colorize(s, 'cyan')
+        return self._colorize(s, config.color.info)
 
     def warn(self, s):
-        return self._colorize(s, 'yellow', 'bold')
+        return self._colorize(s, config.color.warn)
 
-    def keyword(self, kw):
-        s = kw
-        if "uppercase" in user_prefs.output:
+    def keyword(self, s):
+        if "uppercase" in config.color.style:
             s = s.upper()
-        if "color" in user_prefs.output:
-            s = self._colorstring(0, s)
+        if "color" in config.color.style:
+            s = self._colorize(s, config.color.keyword)
         return s
 
-    def otherword(self, n, s):
-        return self._colorstring(n, s)
-
-    def boldword(self, n, s):
-        return self._boldcolorstring(n, s)
-
-    def _colorize(self, s, *colors):
+    def _colorize(self, s, colors):
         if self.colors_enabled():
             return ''.join(('${%s}' % clr.upper()) for clr in colors) + s + '${NORMAL}'
         return s
@@ -85,49 +66,37 @@ class CliDisplay(Singleton):
         return s
 
     def help_header(self, s):
-        return self._colorize(s, 'normal', 'bold')
+        return self._colorize(s, config.color.help_header)
 
     def help_keyword(self, s):
-        return self._colorize(s, 'blue', 'bold', 'underline')
+        return self._colorize(s, config.color.help_keyword)
 
     def help_topic(self, s):
-        return self._colorize(s, 'yellow', 'bold')
-
-    def help_begin_block(self):
-        if self.colors_enabled():
-            return '${CYAN}'
-        return ''
+        return self._colorize(s, config.color.help_topic)
 
     def help_block(self, s):
-        return self._colorize(s, 'cyan')
-
-    def help_end_block(self):
-        if self.colors_enabled():
-            return '${NORMAL}'
-        return ''
+        return self._colorize(s, config.color.help_block)
 
     def id(self, s):
-        return self.otherword(1, s)
+        return self._colorize(s, config.color.identifier)
 
     def attr_name(self, s):
-        return self.otherword(2, s)
+        return self._colorize(s, config.color.attr_name)
 
     def attr_value(self, s):
-        return self.otherword(3, s)
+        return self._colorize(s, config.color.attr_value)
 
     def rscref(self, s):
-        return self.otherword(4, s)
+        return self._colorize(s, config.color.resource_reference)
 
     def idref(self, s):
-        return self.otherword(4, s)
+        return self._colorize(s, config.color.id_reference)
 
     def score(self, s):
-        return self.otherword(5, s)
+        return self._colorize(s, config.color.score)
 
     def ticket(self, s):
-        return self.otherword(5, s)
+        return self._colorize(s, config.color.ticket)
 
-
-user_prefs = UserPrefs.getInstance()
 
 # vim:ts=4:sw=4:et:

@@ -21,6 +21,7 @@ import sys
 import time
 import re
 import bz2
+import config
 import command
 import completers as compl
 import utils
@@ -29,7 +30,7 @@ import userdir
 import xmlutil
 import vars
 from cibconfig import mkset_obj, CibFactory
-from msg import UserPrefs, Options, ErrorBuffer
+from msg import Options, ErrorBuffer
 from msg import common_err, common_debug, common_info
 from msg import syntax_err, bad_usage
 from report import Report
@@ -40,7 +41,6 @@ ptest_options = ["@v+", "nograph", "scores", "actions", "utilization"]
 
 err_buf = ErrorBuffer.getInstance()
 options = Options.getInstance()
-user_prefs = UserPrefs.getInstance()
 cib_factory = CibFactory.getInstance()
 crm_report = Report.getInstance()
 
@@ -266,7 +266,7 @@ class History(command.UI):
         return crm_report.show_transition_log(f)
 
     def _display_dot(self, f):
-        if not user_prefs.dotty:
+        if not config.core.dotty:
             common_err("install graphviz to draw transition graphs")
             return False
         f = crm_report.pe2dot(f)
