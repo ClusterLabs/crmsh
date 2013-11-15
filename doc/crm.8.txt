@@ -649,22 +649,12 @@ and more.
 `init` helps with installing and configuring a brand new
 cluster to a minimal working state.
 
-Given a list of nodes, `init` will first of all try to contact each
-node in the list using SSH. If there are any problems reaching another
-node, a failure will be reported.
+This command will configure and set up corosync, pacemaker and
+dependencies. There are multiple optional steps that can be
+performed.
 
-The network will be tested for multicast support betwen the nodes.
-
-The command will then make sure that all required packages are
-installed on each of the nodes, and then install appropriate base
-configurations for the cluster messaging layer and for Pacemaker.
-
-Once the required services are installed and started, a minimal CIB
-configuration will be installed in the cluster. At this point, the
-cluster can be manually configured as usual. It is also possible to
-perform more whole-cluster configuration using the pre-defined cluster
-actions, as described below. It is also possible to create new actions
-to be executed in the same way as the provided actions.
+The result of executing this command will be a 1-node cluster. Further
+nodes can then be added to the cluster using the `join` command.
 
 STONITH will be enabled by default, since the use of a STONITH device
 is always recommended. For testing and learning purposes, however, it
@@ -674,9 +664,9 @@ is possible to disable STONITH via
 configure property stonith-enabled=false
 ----
 
-Quorum will be configured if the number of nodes in the cluster are
-greater than 2. The `doctor` command will warn if the qourum
-configuration does not match the number of nodes in the cluster.q
+Quorum will be configured when there are more than two nodes in the
+cluster. The `doctor` command will warn if the qourum configuration
+does not match the number of nodes in the cluster.
 
 NOTE: SSH communications and access via hostname need to be
       configured in advance. The use of an SSH agent and an authorized key

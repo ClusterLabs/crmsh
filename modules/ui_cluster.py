@@ -32,12 +32,11 @@ class Cluster(command.UI):
     name = "cluster"
 
     @command.skill_level('administrator')
-    @command.alias('create', 'setup')
     def do_init(self, context):
         '''
         Cluster initialization, from scratch!
 
-        Can assume that the dependencies for crmsh are installed.
+        Can assume that the dependencies for crmsh are installed on this node.
 
         Don't count on anything else.
 
@@ -50,7 +49,12 @@ class Cluster(command.UI):
         '''
         Join the given node to the cluster.
         Installs packages, sets up corosync and pacemaker, etc.
+        Is assumed to be executed from a node in an existing cluster.
         '''
+        # verify that localhost is in a cluster
+        # check health of cluster
+        # probe new node
+        # install stuff on new node
         context.fatal_error("Not implemented.")
 
     def do_status(self, context):
