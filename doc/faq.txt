@@ -43,6 +43,16 @@ Yes, initially, the `crm` shell was distributed as part of the
 Pacemaker project. It was split into its own, separate project in
 2011.
 
+A common misconception is that `crm` has been replaced by `pcs`
+(available at https://github.com/feist/pcs[github.com/feist/pcs]). `pcs`
+is an alternative command line interface similar to `crm`. Both
+projects are being actively developed, with slightly different
+goals. Our recommendation is to use whatever shell your distribution
+of choice comes with and supports, unless you have a particular
+preference or are on a distribution which doesn't bundle either. In
+that case, we are obviously biased towards one of the available
+choices. ;)
+
 == Command-line is well and good, but is there a web interface?
 
 Yes! Take a look at https://github.com/ClusterLabs/hawk[Hawk].

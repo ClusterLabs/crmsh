@@ -37,15 +37,23 @@ here:
 For other distributions, packages may be available in the respective
 package repositories.
 
-=== openSUSE 12.3
+=== openSUSE 12.3, 13.1
 
-On openSUSE 12.3, you will want to add the
+On openSUSE, you will want to add the
 http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/[network:ha-clustering:Stable] repository, 
 to get the latest stable version of the `crm` shell:
 
+.openSUSE 12.3:
 ----
 zypper ar \
   http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/openSUSE_12.3/ \
+  network:ha-clustering:Stable
+----
+
+.openSUSE 13.1:
+----
+zypper ar \
+  http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/openSUSE_13.1/ \
   network:ha-clustering:Stable
 ----
 
