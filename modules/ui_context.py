@@ -25,6 +25,11 @@ import ui_utils
 import vars
 
 
+#import logging
+#logging.basicConfig(level=logging.DEBUG,
+#                    filename='/tmp/crm-completion.log',
+#                    filemode='a')
+
 class Context(object):
     """
     Context is a cursor that marks the current
@@ -152,8 +157,9 @@ class Context(object):
     def setup_readline(self):
         readline.set_history_length(100)
         for v in ('tab: complete',
-                  'set bell-style visible',
+                  #'set bell-style visible',
                   #'set menu-complete-display-prefix on',
+                  #'set show-all-if-ambiguous on',
                   #'set show-all-if-unmodified on',
                   'set skip-completed-text on'):
             readline.parse_and_bind(v)
@@ -177,14 +183,21 @@ class Context(object):
         if line != self._rl_line:
             try:
                 self._rl_line = line
-                self._rl_words = [w for w in self.complete(line) if matching(w)]
-            except Exception:
+                completions = self.complete(line)
+                if text:
+                    self._rl_words = [w for w in completions if matching(w)]
+                else:
+                    self._rl_words = completions
+            except Exception, msg:
+                #logging.exception(msg)
                 self.clear_readline_cache()
+
         try:
             ret = self._rl_words[state]
         except IndexError:
             ret = None
-        if ret and line.split()[-1].endswith(ret):
+        #logging.debug("line:%s, text:%s, ret:%s, state:%s", repr(line), repr(text), ret, state)
+        if not text or (ret and line.split()[-1].endswith(ret)):
             return ret + ' '
         return ret
 
