@@ -18,7 +18,7 @@
 import os
 from lxml import etree
 from singletonmixin import Singleton
-import vars
+import tmpfiles
 from tempfile import mkstemp
 from utils import ext_cmd, show_dot_graph, page_string
 from msg import common_err, common_info, common_warn, user_prefs
@@ -125,7 +125,7 @@ class CibStatus(Singleton):
                 self.backing_file = xmlutil.cibdump2tmp()
                 if not self.backing_file:
                     return None
-                vars.tmpfiles.append(self.backing_file)
+                tmpfiles.add(self.backing_file)
             else:
                 xmlutil.cibdump2file(self.backing_file)
             f = self.backing_file

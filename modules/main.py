@@ -137,11 +137,6 @@ def exit_handler():
             write_history_file(userdir.HISTORY_FILE)
         except:
             pass
-    for f in vars.tmpfiles:
-        try:
-            os.unlink(f)
-        except OSError:
-            pass
 
 
 # prefer the user set PATH

@@ -48,6 +48,7 @@ modules =	__init__.py \
 			singletonmixin.py \
 			template.py \
 			term.py \
+			tmpfiles.py \
 			ui_cib.py \
 			ui_cibstatus.py \
 			ui_cluster.py \

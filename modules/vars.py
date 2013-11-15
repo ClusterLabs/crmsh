@@ -207,10 +207,6 @@ graph = {
 }
 
 prompt = ''
-# files listed in tmpfiles are removed on program exit
-# NB: Do not add files on which programs running in the
-# background may depend (see e.g. show_dot_graph)
-tmpfiles = []
 tmp_cib = False
 tmp_cib_prompt = "@tmp@"
 live_cib_prompt = "live"

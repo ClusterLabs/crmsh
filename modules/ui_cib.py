@@ -24,11 +24,11 @@ import utils
 import ui_cibstatus
 import vars
 
-from tempfile import mkstemp
 from msg import UserPrefs, Options
 from msg import no_prog_err
 from cibstatus import CibStatus
 from cibconfig import CibFactory
+import tmpfiles
 
 import completers as compl
 
@@ -72,8 +72,7 @@ class CibShadow(command.UI):
             del argl[0]
             vars.tmp_cib = False
         else:
-            fd, fname = mkstemp(dir=xmlutil.cib_shadow_dir(), prefix="shadow.crmsh_")
-            vars.tmpfiles.append(fname)
+            fd, fname = tmpfiles.create(dir=xmlutil.cib_shadow_dir(), prefix="shadow.crmsh_")
             name = os.path.basename(fname).replace("shadow.", "")
             vars.tmp_cib = True
 

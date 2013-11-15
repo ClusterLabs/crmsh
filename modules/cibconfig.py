@@ -24,6 +24,7 @@ import time
 from singletonmixin import Singleton
 from userprefs import Options, UserPrefs
 import vars
+import tmpfiles
 from parse import CliParser
 from clidisplay import CliDisplay
 from cibstatus import CibStatus
@@ -2372,7 +2373,7 @@ class CibFactory(Singleton):
         tmpf = str2tmp(cib_s, suffix=".xml")
         if not tmpf:
             return False
-        vars.tmpfiles.append(tmpf)
+        tmpfiles.add(tmpf)
         cibadmin_opts = force and "-P --force" or "-P"
         # produce a diff:
         # dump_new_conf | crm_diff -o self.cib_orig -n -

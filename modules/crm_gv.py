@@ -16,7 +16,7 @@
 #
 
 from userprefs import UserPrefs
-import vars
+import tmpfiles
 import utils
 from msg import common_err
 
@@ -216,7 +216,7 @@ class GvDot(Gv):
         dotf = self.totmpf()
         if not dotf:
             return False
-        vars.tmpfiles.append(dotf)
+        tmpfiles.add(dotf)
         return (utils.ext_cmd_nosudo("%s -T%s -o%s %s" %
                                      (user_prefs.dot, img_type, outf, dotf)) == 0)
 
