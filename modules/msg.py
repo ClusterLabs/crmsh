@@ -29,6 +29,11 @@ class ErrorBuffer(Singleton):
     '''
     def __init__(self):
         self._display = clidisplay.CliDisplay.getInstance()
+        try:
+            import term
+            self._termctrl = term.TerminalController.getInstance()
+        except:
+            self._termctrl = None
         self.msg_list = []
         self.mode = "immediate"
         self.lineno = -1
@@ -79,11 +84,17 @@ class ErrorBuffer(Singleton):
         else:
             return s
 
+    def _prefix(self, pfx, s):
+        self.writemsg(self._render("%s: %s" % (pfx, self.add_lineno(s))))
+
+    def ok(self, s):
+        self._prefix(self._display.ok("OK"), s)
+
     def error(self, s):
-        self.writemsg(self._render(self._display.error("ERROR")) + ": %s" % self.add_lineno(s))
+        self._prefix(self._display.error("ERROR"), s)
 
     def warning(self, s):
-        self.writemsg(self._render(self._display.warn("WARNING")) + ": %s" % self.add_lineno(s))
+        self._prefix(self._display.warn("WARNING"), s)
 
     def one_warning(self, s):
         if not s in self.written:
@@ -92,20 +103,17 @@ class ErrorBuffer(Singleton):
                           self.add_lineno(s))
 
     def info(self, s):
-        self.writemsg(self._render(self._display.info("INFO")) + ": %s" % self.add_lineno(s))
+        self._prefix(self._display.info("INFO"), s)
 
     def debug(self, s):
         if config.core.debug:
-            self.writemsg("DEBUG: %s" % self.add_lineno(s))
+            self._prefix("DEBUG", s)
 
     def _render(self, s):
         'Render for TERM.'
-        try:
-            import term
-            termctrl = term.TerminalController.getInstance()
-            return termctrl.render(s)
-        except:
-            return s
+        if self._termctrl:
+            return self._termctrl.render(s)
+        return s
 
 
 def common_error(s):
