@@ -169,7 +169,8 @@ class CliOptions(command.UI):
             else:
                 opts = config.get_configured_options()
             for opt in opts:
-                print "%s = %s" % (opt, config.get_option(*opt.split('.'), raw=True))
+                parts = opt.split('.')
+                print "%s = %s" % (opt, config.get_option(parts[0], parts[1], raw=True))
         else:
             parts = option.split('.')
             if len(parts) != 2:

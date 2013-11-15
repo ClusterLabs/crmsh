@@ -349,7 +349,7 @@ def get_configured_options():
     ret = []
     for sname in DEFAULTS.keys():
         for key in _configuration.configured_keys(sname):
-            ret += '%s.%s' % (sname, key)
+            ret.append('%s.%s' % (sname, key))
     return ret
 
 
