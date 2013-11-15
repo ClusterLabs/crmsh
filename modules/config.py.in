@@ -48,8 +48,8 @@ VERSION = _define(autoconf="@VERSION@", default="dev")
 BUILD_VERSION = _define(autoconf="@BUILD_VERSION@", default="dev")
 OCF_ROOT_DIR = _define(autoconf="@OCF_ROOT_DIR@", default="/usr/lib/ocf")
 CRM_SCHEMA_DIR = _define(autoconf="@CRM_DTD_DIRECTORY@")
-PE_STATE_DIR = _define(default='/var/lib/pacemaker/pengine')
-CRM_CONFIG_DIR = _define(default='/var/lib/pacemaker/cib')
+PE_STATE_DIR = _define(autoconf="@PE_STATE_DIR@", default='/var/lib/pacemaker/pengine')
+CRM_CONFIG_DIR = _define(autoconf="@CRM_CONFIG_DIR@", default='/var/lib/pacemaker/cib')
 CRM_DAEMON_DIR = _define(autoconf="@CRM_DAEMON_DIR@",
                          envvar="CRM_DAEMON_DIR",
                          default='/usr/lib64/pacemaker')
