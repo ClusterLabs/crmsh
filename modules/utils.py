@@ -24,7 +24,6 @@ import glob
 import time
 import shutil
 import bz2
-import pwd
 import config
 import userdir
 
@@ -34,42 +33,9 @@ from term import TerminalController
 from msg import common_warn, common_info, common_debug, common_err
 
 
-def getpwdent():
-    try:
-        euid = os.geteuid()
-    except Exception, msg:
-        sys.stderr.write("ERROR: %s\n" % msg)
-        return None
-    try:
-        pwdent = pwd.getpwuid(euid)
-    except Exception, msg:
-        sys.stderr.write("ERROR: %s\n" % msg)
-        return None
-    return pwdent
-
-
-def getuser():
-    try:
-        return getpwdent()[0]
-    except:
-        return os.getenv("USER")
-
-
-def gethomedir(user=None):
-    if user:
-        try:
-            return pwd.getpwnam(user)[5]
-        except Exception, msg:
-            sys.stderr.write("ERROR: %s\n" % msg)
-            return None
-    homedir = os.getenv("HOME")
-    if not homedir:
-        try:
-            return getpwdent()[5]
-        except:
-            return None
-    else:
-        return homedir
+getpwdent = userdir.getpwdent
+getuser = userdir.getuser
+gethomedir = userdir.gethomedir
 
 
 def this_node():

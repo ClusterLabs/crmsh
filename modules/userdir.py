@@ -16,11 +16,52 @@
 #
 
 import os
-import utils
+import sys
 
 from msg import common_warn, common_info, common_debug
 
-HOME_DIR = utils.gethomedir() or './'
+import pwd
+
+
+def getpwdent():
+    try:
+        euid = os.geteuid()
+    except Exception, msg:
+        sys.stderr.write("ERROR: %s\n" % msg)
+        return None
+    try:
+        pwdent = pwd.getpwuid(euid)
+    except Exception, msg:
+        sys.stderr.write("ERROR: %s\n" % msg)
+        return None
+    return pwdent
+
+
+def getuser():
+    try:
+        return getpwdent()[0]
+    except:
+        return os.getenv("USER")
+
+
+def gethomedir(user=None):
+    if user:
+        try:
+            return pwd.getpwnam(user)[5]
+        except Exception, msg:
+            sys.stderr.write("ERROR: %s\n" % msg)
+            return None
+    homedir = os.getenv("HOME")
+    if not homedir:
+        try:
+            return getpwdent()[5]
+        except:
+            return None
+    else:
+        return homedir
+
+
+HOME_DIR = gethomedir() or './'
 
 HISTORY_FILE = os.path.join(HOME_DIR, ".crm_history")
 RC_FILE = os.path.join(HOME_DIR, ".crm.rc")
