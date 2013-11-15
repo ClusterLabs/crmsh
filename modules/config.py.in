@@ -51,48 +51,8 @@ TEMPLATES_DIR = os.path.join(CRM_SHARE_DIR, 'templates')
 HELP_TEXT_FILE = os.path.join(CRM_SHARE_DIR, 'crm.8.txt')
 HB_DELNODE_EXEC = '/usr/share/heartbeat/hb_delnode'
 NAGIOS_PLUGINS_DIR = '/usr/lib/nagios/plugins'
-OCF_ROOT_DIR = os.getenv("OCF_ROOT") or '/usr/lib/ocf'
 
-#HOME_DIR = gethomedir()
-#hist_file = ''
-#if HOME_DIR:
-#    hist_file = os.path.join(homedir, ".crm_history")
-#rc_file = os.path.join(homedir, ".crm.rc")
-#tmpl_conf_dir = os.path.join(homedir, ".crmconf")
-#index_file = os.path.join(homedir, ".crm_help_index")
-
-#config_home = None
-#cache_home = None
-#try:
-#    from xdg import BaseDirectory
-#    config_home = BaseDirectory.xdg_config_home
-#    cache_home = BaseDirectory.xdg_cache_home
-#except:
-#    # see http://standards.freedesktop.org/basedir-spec
-#    if not homedir:
-#        config_home = os.path.join("/", ".config")
-#        cache_home = os.path.join("/", ".cache")
-#    else:
-#        config_home = os.path.join(homedir, ".config")
-#        cache_home = os.path.join(homedir, ".cache")
-
-#config_home = os.path.join(config_home, "crm")
-#cache_home = os.path.join(cache_home, "crm")
-#graphviz_user_file = os.path.join(config_home, "graphviz")
-
-
-#ocf_root = os.getenv("OCF_ROOT")
-#if not ocf_root:
-#    ocf_root = config.OCF_ROOT_DIR or "/usr/lib/ocf"
-#    os.environ["OCF_ROOT"] = ocf_root
-
-# report_cache = os.path.join(config.CRM_CACHE_DIR, "history")
-# tmpl_dir = os.path.join(config.DATADIR, config.PACKAGE, "templates")
-# crm_schema_dir = config.CRM_DTD_DIRECTORY
-# pe_dir = config.PE_STATE_DIR
-# crm_conf_dir = config.CRM_CONFIG_DIR
-# crm_daemon_dir = config.CRM_DAEMON_DIR
-# crm_daemon_user = config.CRM_DAEMON_USER
-# crm_version = "%s (Build %s)" % (config.VERSION, config.BUILD_VERSION)
-# ha_varlib_dir = config.HA_VARLIBHBDIR
-# nagios_dir = "/usr/lib/nagios/plugins"
+OCF_ROOT_DIR = os.getenv("OCF_ROOT")
+if not OCF_ROOT_DIR:
+    OCF_ROOT_DIR = _autoconf("@OCF_ROOT_DIR@", "/usr/lib/ocf")
+    os.environ["OCF_ROOT"] = OCF_ROOT_DIR

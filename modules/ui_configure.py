@@ -21,6 +21,7 @@ import command
 import completers as compl
 import utils
 import vars
+import userdir
 import xmlutil
 import ra
 from cibconfig import mkset_obj, CibFactory
@@ -417,13 +418,13 @@ class CibConfig(command.UI):
     def do_graph(self, context, *args):
         "usage: graph [<gtype> [<file> [<img_format>]]]"
         if args and args[0] == "exportsettings":
-            return utils.save_graphviz_file(vars.graphviz_user_file, vars.graph)
+            return utils.save_graphviz_file(userdir.GRAPHVIZ_USER_FILE, vars.graph)
         if not cib_factory.is_cib_sane():
             context.fatal_error("CIB is not valid")
         rc, gtype, outf, ftype = ui_utils.graph_args(args)
         if not rc:
             context.fatal_error("Failed to create graph")
-        rc, d = utils.load_graphviz_file(vars.graphviz_user_file)
+        rc, d = utils.load_graphviz_file(userdir.GRAPHVIZ_USER_FILE)
         if rc and d:
             vars.graph = d
         set_obj = mkset_obj()

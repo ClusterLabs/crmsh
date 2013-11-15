@@ -22,7 +22,7 @@ from msg import common_err, common_info, common_warn
 from msg import Options, UserPrefs
 from utils import wait4dc
 import ui_utils
-import vars
+import userdir
 
 
 #import logging
@@ -166,7 +166,7 @@ class Context(object):
         readline.set_completer(self.readline_completer)
         readline.set_completer_delims(' \t\n,')
         try:
-            readline.read_history_file(vars.hist_file)
+            readline.read_history_file(userdir.HISTORY_FILE)
         except IOError:
             pass
 

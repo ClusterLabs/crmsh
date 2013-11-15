@@ -20,7 +20,7 @@ import sys
 import command
 import completers
 from msg import UserPrefs, Options
-import vars
+import userdir
 
 user_prefs = UserPrefs.getInstance()
 options = Options.getInstance()
@@ -109,7 +109,7 @@ class CliOptions(command.UI):
 
     def do_save(self, context):
         "usage: save"
-        return user_prefs.save_options(vars.rc_file)
+        return user_prefs.save_options(userdir.RC_FILE)
 
     def do_reset(self, context):
         "usage: reset"
