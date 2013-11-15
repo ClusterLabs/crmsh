@@ -1256,6 +1256,16 @@ Example:
 untrace fs start
 ...............
 
+[[cmdhelp_resource_scores,Display resource scores]]
+=== `scores`
+
+Display the allocation scores for all resources.
+
+Usage:
+................
+scores
+................
+
 [[cmdhelp_node,Nodes management]]
 === `node`
 

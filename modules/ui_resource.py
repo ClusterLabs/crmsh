@@ -225,6 +225,15 @@ class RscMgmt(command.UI):
             return False
         return utils.ext_cmd(self.rsc_setrole % (rsc, "Master")) == 0
 
+    def do_scores(self, context):
+        "usage: scores"
+        if utils.is_program('crm_simulate'):
+            utils.ext_cmd('crm_simulate -sL')
+        elif utils.is_program('ptest'):
+            utils.ext_cmd('ptest -sL')
+        else:
+            context.fatal_error("Need crm_simulate or ptest in path to display scores")
+
     @command.wait
     @command.completers(compl.resources)
     def do_demote(self, context, rsc):
