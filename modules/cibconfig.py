@@ -1609,7 +1609,11 @@ class CibLocation(CibObject):
         pref_node = self.node.get("node")
         score = cli_display.score(get_score(self.node))
         if pref_node is not None:
-            return "%s %s: %s" % (s, score, pref_node)
+            ret = "%s %s: %s" % (s, score, pref_node)
+            role = self.node.get("role")
+            if role is not None:
+                ret += " role=%s" % (role)
+            return ret
         else:
             return s
 

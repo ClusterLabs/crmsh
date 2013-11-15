@@ -2043,7 +2043,7 @@ Usage:
 ...............
 location <id> <rsc> {node_pref|rules}
 
-node_pref :: <score>: <node>
+node_pref :: <score>: <node> [role=<role>]
 
 rules ::
   rule [id_spec] [$role=<role>] <score>: <expression>

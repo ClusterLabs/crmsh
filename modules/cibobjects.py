@@ -212,15 +212,19 @@ class Location(Constraint):
         self.resource = None
         self.score = None
         self.node = None
+        self.role = None
         self.rules = []
         self.simple = False
 
     def _to_list(self):
+        ret = None
         if self.score and self.node:
-            return listfmt('[[location [[id %] [rsc %] % [node %]]]]',
-                           self.id, self.resource, self.score, self.node)
-        return listfmt('[[location [[id %] [rsc %]]]]',
-                       self.id, self.resource) + self.rules
+            ret = listfmt('[[location [[id %] [rsc %] % [node %] [role %]]]]',
+                          self.id, self.resource, self.score, self.node, self.role)
+        else:
+            ret = listfmt('[[location [[id %] [rsc %]]]]',
+                          self.id, self.resource) + self.rules
+        return ret
 
 
 class Colocation(Constraint):

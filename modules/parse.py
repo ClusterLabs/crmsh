@@ -458,6 +458,7 @@ class ResourceParser(BaseParser):
 class ConstraintParser(BaseParser):
     _SCORE_RE = re.compile(r"([^:]+):$")
     _ROLE_RE = re.compile(r"\$role=(.+)$", re.IGNORECASE)
+    _ROLE2_RE = re.compile(r"role=(.+)$", re.IGNORECASE)
     _BOOLOP_RE = re.compile(r'(%s)$' % ('|'.join(vars.boolean_ops)), re.IGNORECASE)
     _UNARYOP_RE = re.compile(r'(%s)$' % ('|'.join(vars.unary_ops)), re.IGNORECASE)
     _BINOP_RE = None
@@ -588,12 +589,20 @@ class ConstraintParser(BaseParser):
             return ('score-attribute', score)
 
     def parse_location(self):
+        """
+        location <id> <rsc> <score>: <node> [role=<role>]
+        location <id> <rsc> [rule ...]
+        """
         out = Location()
         out.id = self.match_identifier()
         out.resource = self.match_resource()
         if self.try_match(self._SCORE_RE):
             out.score = self.validate_score(self.matched(1))
             out.node = self.match_identifier()
+            if self.try_match(self._ROLE_RE):
+                out.role = self.matched(1)
+            elif self.try_match(self._ROLE2_RE):
+                out.role = self.matched(1)
         else:
             self.match_rules(out)
         return out
