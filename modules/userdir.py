@@ -42,7 +42,7 @@ except:
 # TODO: move to CONFIG_HOME
 HISTORY_FILE = os.path.expanduser("~/.crm_history")
 RC_FILE = os.path.expanduser("~/.crm.rc")
-CRMCONF_DIR = os.expanduser("~/.crmconf")
+CRMCONF_DIR = os.path.expanduser("~/.crmconf")
 
 GRAPHVIZ_USER_FILE = os.path.join(CONFIG_HOME, "graphviz")
 
