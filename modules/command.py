@@ -23,6 +23,7 @@
 #from functools import wraps
 import inspect
 import help as help_module
+import ui_utils
 
 
 def name(n):
@@ -375,10 +376,19 @@ Examples:
                 # Add static help to the help system
                 if info.short_help:
                     entry = help_module.HelpEntry(info.short_help, info.long_help)
-                    if info.type == 'command':
-                        help_module.add_help(entry, level=self.name, command=info.name)
-                    elif info.type == 'level':
-                        help_module.add_help(entry, level=info.name)
+                elif info.type == 'command':
+                    entry = help_module.HelpEntry(
+                        'Help for command ' + info.name,
+                        'Note: This command is not documented.\n' +
+                        'Usage: %s %s' % (info.name,
+                                          ui_utils.pretty_arguments(info.function, nskip=2)))
+                elif info.type == 'level':
+                    entry = help_module.HelpEntry('Help for level ' + info.name,
+                                                  'Note: This level is not documented.\n')
+                if info.type == 'command':
+                    help_module.add_help(entry, level=self.name, command=info.name)
+                elif info.type == 'level':
+                    help_module.add_help(entry, level=info.name)
         setattr(self, '_children', children)
         return children
 
