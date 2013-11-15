@@ -1,6 +1,7 @@
 ASCIIDOC := asciidoc
-SRC := index.txt crm.8.txt faq.txt documentation.txt development.txt about.txt \
-	tutorials.txt rsctest-tutorial.txt history-tutorial.txt
+SRC := index.txt crm.8.txt faq.txt documentation.txt development.txt \
+	configuration.txt about.txt tutorials.txt rsctest-tutorial.txt \
+	history-tutorial.txt
 TGT := $(patsubst %.txt,gen/%.html,$(SRC))
 CSS := css/crm.css
 CSS := $(patsubst %,gen/%,$(CSS))

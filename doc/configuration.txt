@@ -1,0 +1,125 @@
+= Configuration =
+
+.Version information
+NOTE: This section applies to `crmsh 2.0+` only.
+
+
+`crm` can be configured using both a system-wide configuration file,
+and a per-user configuration file. The values set in the user-local
+file take precedence over the system-wide settings.
+
+The global configuration file is usually installed at
+`/etc/crmsh/settings`, and the user-local configuration file at
+`~/.config/crmsh/settings`.
+
+
+== Upgrading from crm 1.x to 2.x ==
+
+The configuration file format and location changed significantly going
+from crm 1.x to 2.x. If `crm` cannot find a user-local configuration
+file when starting up, it will look for an old-style configuration
+file at `~/.crm.rc`. If this file exists, `crm` will prompt the user
+asking if the old-style configuration should be  automatically
+converted to a new-style configuration file.
+
+
+== Format description ==
+
+The `settings` file consists of sections introduced by a `[section]`
+header, and followed by `name=value` pairs.
+
+Leading whitespace is stripped from values.
+
+Values can contain format strings referring to other values in the
+same section.
+
+Lines starting with `#` or `;` are interpreted as comments.
+
+Values starting with `$` are interpreted as environment variable
+references, and the value will be retrieved from the named environment
+variable if set.
+
+== Example configuration ==
+
+The example configuration below lists all available options and their
+default values.
+
+----------------------
+[core]
+editor = $EDITOR
+pager = $PAGER
+user =
+skill_level = expert
+sort_elements = yes
+check_frequency = always
+check_mode = strict
+wait = no
+add_quotes = yes
+manage_children = ask
+force = no
+debug = no
+ptest = ptest, crm_simulate
+dotty = dotty
+dot = dot
+
+[path]
+prefix = /usr
+datadir = %(prefix)s/share
+sharedir = %(datadir)s/crmsh
+cache = /var/cache/crm
+crm_config = $CRM_CONFIG_DIR, /var/lib/pacemaker/cib
+crm_daemon_dir = %(prefix)s/lib64/pacemaker
+crm_daemon_user = hacluster
+ocf_root = %(prefix)s/lib/ocf
+crm_dtd_dir = %(datadir)s/pacemaker
+pe_state_dir = /var/lib/pacemaker/pengine
+heartbeat_dir = /var/lib/heartbeat
+hb_delnode = %(datadir)s/heartbeat/hb_delnode
+nagios_plugins = %(prefix)s/lib/nagios/plugins
+
+[color]
+style = color
+error = red bold
+ok = green bold
+warn = yellow bold
+info = cyan
+help_keyword = blue bold underline
+help_header = normal bold
+help_topic = yellow bold
+help_block = cyan
+keyword = yellow
+id = normal
+attr_name = cyan
+attr_value = red
+resource_reference = green
+id_reference = green
+score = magenta
+ticket = magenta
+----------------------
+
+
+== Syntax highlighting ==
+
+By default, `crm` will try to syntax highlight its output when
+connected to a TTY. To disable this behavior, set the configuration
+value `style = none` in the `[color]` section.
+
+The available color choices may depend on the terminal used, but
+normally include the following:
+
+----
+black blue green cyan red magenta yellow white
+----
+
+Colors can be combined with styles:
+
+----
+bold blink dim reverse underline normal
+----
+
+== Setting options from the interactive shell ==
+
+Options can be set directly from the interactive shell using the
+`options` sublevel. These options will be written to the per-user
+configuration file. Note that changing an option in this way may erase
+comments added to the configuration file.

@@ -2,7 +2,9 @@
 
 == Usage ==
 
-* link:crm.8.html[Man page]
+* link:crm.8.html[Man page (v2.0)]
+* link:crm.8-1.2.6.html[Man page (v1.2.6)]
+* link:configuration.html[Configuration]
 * link:tutorials.html[Guides & Tutorials]
 * link:faq.html[FAQ]
 
