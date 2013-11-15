@@ -128,7 +128,7 @@ class CibShadow(command.UI):
         "usage: delete <shadow_cib>"
         if not utils.is_filename_sane(name):
             context.fatal_error("Bad filename: " + name)
-        if vars.cib_in_use == name:
+        if utils.get_cib_in_use() == name:
             context.fatal_error("%s shadow CIB is in use" % name)
         if utils.ext_cmd("%s -D '%s' --force" % (self.extcmd, name)) == 0:
             context.info("%s shadow CIB deleted" % name)
@@ -154,7 +154,7 @@ class CibShadow(command.UI):
         if name and not utils.is_filename_sane(name):
             context.fatal_error("Bad filename: " + name)
         if not name:
-            name = vars.cib_in_use
+            name = utils.get_cib_in_use()
         if not name:
             context.fatal_error("There is nothing to commit")
         if utils.ext_cmd("%s -C '%s' --force" % (self.extcmd, name)) == 0:
@@ -187,13 +187,11 @@ class CibShadow(command.UI):
             if withstatus:
                 cib_status.load("live")
             if vars.tmp_cib:
-                utils.ext_cmd("%s -D '%s' --force" % (self.extcmd, vars.cib_in_use))
+                utils.ext_cmd("%s -D '%s' --force" % (self.extcmd, utils.get_cib_in_use()))
                 vars.tmp_cib = False
-            vars.cib_in_use = ''
-            os.unsetenv(vars.shadow_envvar)
+            utils.clear_cib_in_use()
         else:
-            os.putenv(vars.shadow_envvar, name)
-            vars.cib_in_use = name
+            utils.set_cib_in_use(name)
             if withstatus:
                 cib_status.load("shadow:%s" % name)
         return True
@@ -220,7 +218,7 @@ class CibShadow(command.UI):
             # new CIB: refresh the CIB factory
             cib_factory.refresh()
             return ret
-        saved_cib = vars.cib_in_use
+        saved_cib = utils.get_cib_in_use()
         self._use(name, '')  # don't load the status yet
         if not cib_factory.is_current_cib_equal(silent=True):
             # user made changes and now wants to switch to a

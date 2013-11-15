@@ -25,6 +25,7 @@ import command
 import completers as compl
 import utils
 import ui_utils
+import userdir
 import xmlutil
 import vars
 from cibconfig import mkset_obj, CibFactory
@@ -532,7 +533,7 @@ class History(command.UI):
         rc, gtype, outf, ftype = ui_utils.graph_args(args)
         if not rc:
             return False
-        rc, d = utils.load_graphviz_file(vars.graphviz_user_file)
+        rc, d = utils.load_graphviz_file(userdir.GRAPHVIZ_USER_FILE)
         if rc and d:
             vars.graph = d
         set_obj = self._pe_config_obj(pe_f)

@@ -20,13 +20,14 @@ import os
 import getopt
 import atexit
 
-from utils import is_pcmk_118
+import config
 from userprefs import Options, UserPrefs
 import vars
-from msg import ErrorBuffer, syntax_err
-from msg import common_warn, common_info, common_debug, common_err
+from msg import ErrorBuffer, syntax_err, common_err
 from clidisplay import CliDisplay
 from term import TerminalController
+import utils
+import userdir
 
 import ui_root
 import ui_context
@@ -133,7 +134,7 @@ def exit_handler():
     if options.interactive and not options.batch:
         try:
             from readline import write_history_file
-            write_history_file(vars.hist_file)
+            write_history_file(userdir.HISTORY_FILE)
         except:
             pass
     for f in vars.tmpfiles:
@@ -146,7 +147,7 @@ def exit_handler():
 # prefer the user set PATH
 def envsetup():
     mybinpath = os.path.dirname(sys.argv[0])
-    for p in mybinpath, vars.crm_daemon_dir:
+    for p in mybinpath, config.crm_daemon_dir:
         if p not in os.environ["PATH"].split(':'):
             os.environ['PATH'] = "%s:%s" % (os.environ['PATH'], p)
 
@@ -154,11 +155,12 @@ def envsetup():
 # three modes: interactive (no args supplied), batch (input from
 # a file), half-interactive (args supplied, but not batch)
 def cib_prompt():
-    if not vars.cib_in_use:
+    shadow = utils.get_cib_in_use()
+    if not shadow:
         return vars.live_cib_prompt
     if vars.tmp_cib:
         return vars.tmp_cib_prompt
-    return vars.cib_in_use
+    return shadow
 
 
 def usage(rc):
@@ -242,40 +244,8 @@ def set_interactive():
         options.interactive = True
 
 
-def xdg_file(name, xdg_name, obj_type, semantics):
-    if not name or not xdg_name:
-        return name
-    chk_fun = obj_type == "f" and os.path.isfile or os.path.isdir
-    dir = semantics == "config" and \
-        vars.config_home or vars.cache_home
-    if not os.path.isdir(dir):
-        os.makedirs(dir, 0700)
-    new = os.path.join(dir, xdg_name)
-    if semantics == "config" and chk_fun(new) and chk_fun(name):
-        common_warn("both %s and %s exist, please cleanup" % (name, new))
-        return name
-    if chk_fun(name):
-        if semantics == "config":
-            common_info("moving %s to %s" % (name, new))
-        else:
-            common_debug("moving %s to %s" % (name, new))
-        os.rename(name, new)
-    return new
-
-
-def mv_user_files():
-    vars.hist_file = xdg_file(vars.hist_file,
-                              vars.xdg_map["history"], "f", "cache")
-    vars.rc_file = xdg_file(vars.rc_file,
-                            vars.xdg_map["rc"], "f", "config")
-    vars.index_file = xdg_file(vars.index_file,
-                               vars.xdg_map["help_index"], "f", "cache")
-    vars.tmpl_conf_dir = xdg_file(vars.tmpl_conf_dir,
-                                  vars.xdg_map["crmconf"], "d", "config")
-
-
 def compatibility_setup():
-    if is_pcmk_118():
+    if utils.is_pcmk_118():
         vars.node_type_opt = True
         vars.attr_defaults["node"] = {"type": "normal"}
         vars.cib_no_section_rc = 6
@@ -408,7 +378,7 @@ def parse_options():
             if o in ("-h", "--help"):
                 usage(0)
             elif o in ("--version"):
-                print >> sys.stdout, ("%s" % vars.crm_version)
+                print >> sys.stdout, ("%s" % config.CRM_VERSION)
                 sys.exit(0)
             elif o == "-d":
                 user_prefs.debug = "yes"
@@ -458,12 +428,12 @@ def run():
             compgen()
             return
         envsetup()
-        mv_user_files()
+        userdir.mv_user_files()
 
         ui = ui_root.Root()
         context = ui_context.Context(ui)
 
-        load_rc(context, vars.rc_file)
+        load_rc(context, userdir.RC_FILE)
         atexit.register(exit_handler)
         options.interactive = sys.stdin.isatty()
         if not options.interactive:

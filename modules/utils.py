@@ -24,11 +24,69 @@ import glob
 import time
 import shutil
 import bz2
+import pwd
 
 from userprefs import Options, UserPrefs
 import vars
 from term import TerminalController
 from msg import common_warn, common_info, common_debug, common_err
+
+
+def getpwdent():
+    try:
+        euid = os.geteuid()
+    except Exception, msg:
+        sys.stderr.write("ERROR: %s\n" % msg)
+        return None
+    try:
+        pwdent = pwd.getpwuid(euid)
+    except Exception, msg:
+        sys.stderr.write("ERROR: %s\n" % msg)
+        return None
+    return pwdent
+
+
+def getuser():
+    try:
+        return getpwdent()[0]
+    except:
+        return os.getenv("USER")
+
+
+def gethomedir(user=None):
+    if user:
+        try:
+            return pwd.getpwnam(user)[5]
+        except Exception, msg:
+            sys.stderr.write("ERROR: %s\n" % msg)
+            return None
+    homedir = os.getenv("HOME")
+    if not homedir:
+        try:
+            return getpwdent()[5]
+        except:
+            return None
+    else:
+        return homedir
+
+
+def this_node():
+    'returns name of this node (hostname)'
+    return os.uname()[1]
+
+_cib_shadow = 'CIB_shadow'
+
+
+def set_cib_in_use(name):
+    os.putenv(_cib_shadow, name)
+
+
+def clear_cib_in_use():
+    os.unsetenv(_cib_shadow)
+
+
+def get_cib_in_use():
+    return os.getenv(_cib_shadow) or ''
 
 
 def is_program(prog):

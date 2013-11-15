@@ -27,7 +27,7 @@ import vars
 from msg import common_err, common_error, common_debug, cib_parse_err, ErrorBuffer
 from utils import add_sudo, str2file, str2tmp, pipe_string, get_boolean
 from utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
-from utils import olist
+from utils import olist, get_cib_in_use
 
 
 def xmlparse(f):
@@ -324,7 +324,7 @@ def is_our_node(s):
 
 def is_live_cib():
     '''We working with the live cluster?'''
-    return not vars.cib_in_use and not os.getenv("CIB_file")
+    return not get_cib_in_use() and not os.getenv("CIB_file")
 
 
 def is_crmuser():

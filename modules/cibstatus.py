@@ -23,6 +23,7 @@ from tempfile import mkstemp
 from utils import ext_cmd, show_dot_graph, page_string
 from msg import common_err, common_info, common_warn, user_prefs
 import xmlutil
+import utils
 
 
 def get_tag_by_id(node, tag, id):
@@ -152,10 +153,11 @@ class CibStatus(Singleton):
         self.ticket_changes = {}
 
     def initialize(self):
-        if not vars.cib_in_use:
+        src = utils.get_cib_in_use()
+        if not src:
             src = "live"
         else:
-            src = "shadow:%s" % vars.cib_in_use
+            src = "shadow:" + src
         if self._load(src):
             self.origin = src
 

@@ -15,49 +15,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import os
-import pwd
-import sys
-import config
-
-
-def getpwdent():
-    try:
-        euid = os.geteuid()
-    except Exception, msg:
-        sys.stderr.write("ERROR: %s\n" % msg)
-        return None
-    try:
-        pwdent = pwd.getpwuid(euid)
-    except Exception, msg:
-        sys.stderr.write("ERROR: %s\n" % msg)
-        return None
-    return pwdent
-
-
-def getuser():
-    try:
-        return getpwdent()[0]
-    except:
-        return os.getenv("USER")
-
-
-def gethomedir(user=None):
-    if user:
-        try:
-            return pwd.getpwnam(user)[5]
-        except Exception, msg:
-            sys.stderr.write("ERROR: %s\n" % msg)
-            return None
-    homedir = os.getenv("HOME")
-    if not homedir:
-        try:
-            return getpwdent()[5]
-        except:
-            return None
-    else:
-        return homedir
-
 
 cib_cli_map = {
     "node": "node",
@@ -254,53 +211,9 @@ prompt = ''
 # NB: Do not add files on which programs running in the
 # background may depend (see e.g. show_dot_graph)
 tmpfiles = []
-this_node = os.uname()[1]
 tmp_cib = False
 tmp_cib_prompt = "@tmp@"
 live_cib_prompt = "live"
-cib_in_use = os.getenv(shadow_envvar)
-homedir = gethomedir()
-hist_file = ''
-if homedir:
-    hist_file = os.path.join(homedir, ".crm_history")
-rc_file = os.path.join(homedir, ".crm.rc")
-tmpl_conf_dir = os.path.join(homedir, ".crmconf")
-index_file = os.path.join(homedir, ".crm_help_index")
-xdg_map = {
-    "history": "history",
-    "rc": "rc",
-    "crmconf": "crmconf",
-    "help_index": "help_index",
-}
-
-config_home = None
-cache_home = None
-try:
-    from xdg import BaseDirectory
-    config_home = BaseDirectory.xdg_config_home
-    cache_home = BaseDirectory.xdg_cache_home
-except:
-    # see http://standards.freedesktop.org/basedir-spec
-    if not homedir:
-        config_home = os.path.join("/", ".config")
-        cache_home = os.path.join("/", ".cache")
-    else:
-        config_home = os.path.join(homedir, ".config")
-        cache_home = os.path.join(homedir, ".cache")
-
-config_home = os.path.join(config_home, "crm")
-cache_home = os.path.join(cache_home, "crm")
-graphviz_user_file = os.path.join(config_home, "graphviz")
-report_cache = os.path.join(config.CRM_CACHE_DIR, "history")
-tmpl_dir = os.path.join(config.DATADIR, config.PACKAGE, "templates")
-crm_schema_dir = config.CRM_DTD_DIRECTORY
-pe_dir = config.PE_STATE_DIR
-crm_conf_dir = config.CRM_CONFIG_DIR
-crm_daemon_dir = config.CRM_DAEMON_DIR
-crm_daemon_user = config.CRM_DAEMON_USER
-crm_version = "%s (Build %s)" % (config.VERSION, config.BUILD_VERSION)
-ha_varlib_dir = config.HA_VARLIBHBDIR
-nagios_dir = "/usr/lib/nagios/plugins"
 
 simulate_programs = {
     "ptest": "ptest",
@@ -321,10 +234,6 @@ crmd_advanced = (
     "crmd-finalization-timeout",
     "expected-quorum-votes",
 )
-ocf_root = os.getenv("OCF_ROOT")
-if not ocf_root:
-    ocf_root = config.OCF_ROOT_DIR or "/usr/lib/ocf"
-    os.environ["OCF_ROOT"] = ocf_root
 pcmk_version = ""  # set later
 
 # r.group(1) transition number (a different thing from file number)
