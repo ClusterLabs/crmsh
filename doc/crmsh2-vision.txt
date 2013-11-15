@@ -10,6 +10,21 @@ This is my vision for `crmsh 2.0`.
 
 * Cleaned up msg module with better error messages
 
+
+Random notes:
+
+The documentation at Clusterlabs is not accurate when it comes to use
+of crmsh, and contains errors. How do I get them fixed? This will be
+especially true when crmsh 2.0 is realised, since I'll be making big
+changes that should make crmsh more convenient to use (and more
+powerful).
+
+Perhaps the way to go is to create an alternative, public "clusters
+from scratch" which uses crmsh and hawk. Hopefully a guide that can
+work just as well for non-SUSE systems.
+
+
+
 == Installation ==
 
 Simply do `pip install crmsh` or `zypper install crmsh` on one of the
@@ -44,6 +59,24 @@ crm cluster join node-d
 `crmsh` makes sure to reload the corosync configuration to insert the
 new node on the fly.
 
+----
+http://clusterlabs.org/doc/en-US/Pacemaker/1.1-crmsh/html/Clusters_from_Scratch/_configuring_corosync.html
+----
+
+print corosync status:
+
+----
+corosync-cfgtool -s
+corosync-cmapctl
+corosync-quorumtool -l
+----
+
+== Cluster health monitoring ==
+
+TODO: Add checks for inappropriate multicast address use.
+See: `http://clusterlabs.org/doc/en-US/Pacemaker/1.1-crmsh/html/Clusters_from_Scratch/_notes_on_multicast_address_assignment.html`
+
+
 == CIB management ==
 
 * Allow rules everywhere that Pacemaker does.
@@ -59,5 +92,37 @@ new node on the fly.
 == hawk ==
 
 * Enable hawk to use the `crm cluster apply` mechanism in its wizards.
+
+
+== configuration ==
+
+Configuration of crm should be both easier and more flexible. Instead
+of modifying the source code when installing by rewriting config.py,
+the installer should install a default configuration which sets the
+paths and the base configuration. This can then be overridden when
+running the application, so that different users can use crm to manage
+different instances of the stack, for example.
+
+This would also allow installing crm in a user-directory and using it
+to remotely manage/query a cluster.
+
+== report ==
+
+crm should use crm_report, and crm_report should be modified so that
+it has all the capabilities that it needs. This should be wrapped in
+crmsh with 'crm report'.
+
+Maybe splitting out the incremental update to its own sub-command so
+you have 'crm report create' and 'crm report update'?
+
+== CIB ==
+
+Improvements to the CIB manipulation: Support rules everywhere it
+makes sense. Add the distill command. Work on constraints to improve
+the use of them.
+
+== Tags ==
+
+Tags should be implemented in Pacemaker itself.
 
 
