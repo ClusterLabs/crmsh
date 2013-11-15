@@ -233,17 +233,17 @@ class _Configuration(object):
         self._user = None
 
     def load(self):
-        self._defaults = ConfigParser.SafeConfigParser(allow_no_value=True)
+        self._defaults = ConfigParser.SafeConfigParser()
         for section, keys in DEFAULTS.iteritems():
             self._defaults.add_section(section)
             for key, opt in keys.iteritems():
                 self._defaults.set(section, key, opt.default)
 
         if os.path.isfile(_SYSTEMWIDE):
-            self._system = ConfigParser.SafeConfigParser(allow_no_value=True)
+            self._system = ConfigParser.SafeConfigParser()
             self._system.read([_SYSTEMWIDE])
         if os.path.isfile(_PERUSER):
-            self._user = ConfigParser.SafeConfigParser(allow_no_value=True)
+            self._user = ConfigParser.SafeConfigParser()
             self._user.read([_PERUSER])
 
     def save(self):
@@ -270,7 +270,7 @@ class _Configuration(object):
             raise ValueError("Setting invalid option %s.%s" % (section, name))
         DEFAULTS[section][name].validate(value)
         if self._user is None:
-            self._user = ConfigParser.SafeConfigParser(allow_no_value=True)
+            self._user = ConfigParser.SafeConfigParser()
         if not self._user.has_section(section):
             self._user.add_section(section)
         self._user.set(section, name, _stringify(value))
@@ -280,7 +280,7 @@ class _Configuration(object):
 
     def reset(self):
         '''reset to what is on disk'''
-        self._user = ConfigParser.SafeConfigParser(allow_no_value=True)
+        self._user = ConfigParser.SafeConfigParser()
         self._user.read([_PERUSER])
 
 
