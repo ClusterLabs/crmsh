@@ -27,7 +27,7 @@ def _define(autoconf=None, envvar=None, setenv=False, default=None):
     * Save as userprefs
     * No compile-time defines
     '''
-    value = default
+    value = None
     if autoconf and not (autoconf.startswith('@') and autoconf.endswith('@')):
         value = autoconf
     if envvar:
@@ -36,28 +36,56 @@ def _define(autoconf=None, envvar=None, setenv=False, default=None):
             value = val
             if setenv:
                 os.environ[envvar] = val
+    if value is None and default is not None:
+        if isinstance(default, basestring):
+            value = default
+        else:
+            value = default()
     return value
+
+
+def _deduce_crm_daemon_dir():
+    "brute-force attempt to deduce crm_daemon_dir"
+    for l in ['/usr', '/usr/local', '/opt']:
+        for d in ['libexec', 'lib64', 'lib']:
+            for p in ['pacemaker', 'heartbeat']:
+                if os.path.isfile(os.path.join(l, d, p, 'crmd')):
+                    return os.path.join(l, d, p)
+    return '/usr/lib64/pacemaker'
+
+
+def _deduce_ocf_root_dir():
+    "brute-force attempt to deduce ocf_root_dir"
+    for l in ['/usr', '/usr/local', '/opt']:
+        for d in ['libexec', 'lib64', 'lib']:
+            if os.path.isdir(os.path.join(l, d, 'ocf')):
+                return os.path.join(l, d, 'ocf')
+    return '/usr/lib/ocf'
+
 
 DATADIR = _define(autoconf="@datadir@", default='/usr/share')
 PACKAGE = os.path.basename(os.path.dirname(sys.modules[__name__].__file__))
-CRM_CACHE_DIR = _define(autoconf="@CRM_CACHE_DIR@", default='/var/cache/crm')
-CRM_CONFIG_DIR = _define(autoconf="@CRM_CONFIG_DIR@")
-CRM_DAEMON_DIR = _define(autoconf="@CRM_DAEMON_DIR@")
-CRM_DAEMON_USER = _define(autoconf="@CRM_DAEMON_USER@", default="hacluster")
-VERSION = _define(autoconf="@VERSION@", default="dev")
-BUILD_VERSION = _define(autoconf="@BUILD_VERSION@", default="dev")
-OCF_ROOT_DIR = _define(autoconf="@OCF_ROOT_DIR@", default="/usr/lib/ocf")
-CRM_SCHEMA_DIR = _define(autoconf="@CRM_DTD_DIRECTORY@")
-PE_STATE_DIR = _define(autoconf="@PE_STATE_DIR@", default='/var/lib/pacemaker/pengine')
-CRM_CONFIG_DIR = _define(autoconf="@CRM_CONFIG_DIR@", default='/var/lib/pacemaker/cib')
+CRM_SHARE_DIR = _define(default=os.path.join(DATADIR, PACKAGE))
+CRM_CACHE_DIR = _define(autoconf="@CRM_CACHE_DIR@",
+                        envvar="CRM_CACHE_DIR",
+                        default='/var/cache/crm')
+CRM_CONFIG_DIR = _define(autoconf="@CRM_CONFIG_DIR@",
+                         envvar="CRM_CONFIG_DIR",
+                         default='/var/lib/pacemaker/cib')
 CRM_DAEMON_DIR = _define(autoconf="@CRM_DAEMON_DIR@",
                          envvar="CRM_DAEMON_DIR",
-                         default='/usr/lib64/pacemaker')
+                         default=_deduce_crm_daemon_dir)
 CRM_DAEMON_USER = _define(autoconf="@CRM_DAEMON_USER@",
                           envvar="CRM_DAEMON_USER",
-                          default='hacluster')
+                          default="hacluster")
+VERSION = _define(autoconf="@VERSION@", default="dev")
+BUILD_VERSION = _define(autoconf="@BUILD_VERSION@", default="dev")
+OCF_ROOT_DIR = _define(autoconf="@OCF_ROOT_DIR@", default=_deduce_ocf_root_dir)
+CRM_SCHEMA_DIR = _define(autoconf="@CRM_DTD_DIRECTORY@")
+PE_STATE_DIR = _define(autoconf="@PE_STATE_DIR@", default='/var/lib/pacemaker/pengine')
+
 HA_VARLIBHBDIR = _define(autoconf="@HA_VARLIBHBDIR@", default='/var/lib/heartbeat')
-CRM_SHARE_DIR = _define(default=os.path.join(DATADIR, PACKAGE))
+
 REPORT_CACHE_DIR = os.path.join(CRM_CACHE_DIR, 'history')
 TEMPLATES_DIR = os.path.join(CRM_SHARE_DIR, 'templates')
 HELP_TEXT_FILE = os.path.join(CRM_SHARE_DIR, 'crm.8.txt')
