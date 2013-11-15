@@ -444,7 +444,7 @@ def pipe_cmd_nosudo(cmd):
     return rc
 
 
-def get_stdout(cmd, input_s=None, stderr_on=True):
+def get_stdout(cmd, input_s=None, stderr_on=True, shell=True):
     '''
     Run a cmd, return stdout output.
     Optional input string "input_s".
@@ -455,22 +455,21 @@ def get_stdout(cmd, input_s=None, stderr_on=True):
     else:
         stderr = subprocess.PIPE
     proc = subprocess.Popen(cmd,
-                            shell=True,
+                            shell=shell,
                             stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
                             stderr=stderr)
-    outp = proc.communicate(input_s)[0]
+    stdout_data, stderr_data = proc.communicate(input_s)
     proc.wait()
-    outp = outp.strip()
-    return proc.returncode, outp
+    return proc.returncode, stdout_data.strip()
 
 
-def stdout2list(cmd, stderr_on=True):
+def stdout2list(cmd, stderr_on=True, shell=True):
     '''
     Run a cmd, fetch output, return it as a list of lines.
     stderr_on controls whether to show output which comes on stderr.
     '''
-    rc, s = get_stdout(add_sudo(cmd), stderr_on=stderr_on)
+    rc, s = get_stdout(add_sudo(cmd), stderr_on=stderr_on, shell=shell)
     if not s:
         return rc, []
     else:
