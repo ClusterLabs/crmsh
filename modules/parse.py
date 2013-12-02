@@ -325,10 +325,12 @@ def parse_location(s):
     head_pl.append(["rsc", s[2]])
     cli_list.append([s[0].lower(), head_pl])
     # the short node preference form
-    if len(s) == 5 and not keyword_cmp(s[3], "rule"):
+    if len(s) in (5, 6) and not keyword_cmp(s[3], "rule"):
         if not cli_parse_score(s[3], head_pl):
             return False
         head_pl.append(["node", s[4]])
+        if len(s) == 6 and s[5].startswith('role='):
+            head_pl.append(["role", s[5].split('=', 1)[1]])
         return cli_list
     i = 3
     while i < len(s):
