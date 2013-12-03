@@ -54,6 +54,9 @@ _rsc_id_list = compl.call(cib_factory.rsc_id_list)
 _top_rsc_id_list = compl.call(cib_factory.top_rsc_id_list)
 _node_id_list = compl.call(cib_factory.node_id_list)
 _rsc_template_list = compl.call(cib_factory.rsc_template_list)
+_group_completer = compl.join(_f_prim_free_id_list, compl.choice(['params', 'meta']))
+_clone_completer = compl.choice(['params', 'meta'])
+_ms_completer = compl.choice(['params', 'meta'])
 
 
 def top_rsc_tmpl_id_list(args):
@@ -581,7 +584,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.null, _f_prim_free_id_list)
+    @command.completers_repeating(compl.null, _group_completer)
     def do_group(self, context, *args):
         """usage: group <name> <rsc> [<rsc>...]
         [params <param>=<value> [<param>=<value>...]]
@@ -589,7 +592,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.null, _f_children_id_list)
+    @command.completers_repeating(compl.null, _f_children_id_list, _clone_completer)
     def do_clone(self, context, *args):
         """usage: clone <name> <rsc>
         [params <param>=<value> [<param>=<value>...]]
@@ -598,7 +601,7 @@ class CibConfig(command.UI):
 
     @command.alias('master')
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.null, _f_children_id_list)
+    @command.completers_repeating(compl.null, _f_children_id_list, _ms_completer)
     def do_ms(self, context, *args):
         """usage: ms <name> <rsc>
         [params <param>=<value> [<param>=<value>...]]
