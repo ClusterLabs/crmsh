@@ -1,0 +1,12 @@
+diff -r 13a63558be20 modules/utils.py
+--- a/modules/utils.py	Fri Oct 25 16:57:25 2013 +0200
++++ b/modules/utils.py	Fri Oct 25 17:14:45 2013 +0200
+@@ -1008,7 +1008,7 @@ def is_pcmk_118(cib_f=None):
+ 
+ def cibadmin_can_patch():
+     # cibadmin -P doesn't handle comments, hopefully in v1.1.11
+-    return False
++    return True
+     #return is_min_pcmk_ver("1.1.11")
+ 
+ 
