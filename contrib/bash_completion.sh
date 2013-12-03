@@ -1,4 +1,4 @@
-#!bash
+#-*- mode: shell-script;-*-
 #
 # bash completion support for crmsh.
 #

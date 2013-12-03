@@ -141,7 +141,7 @@ make %{_smp_mflags} docdir=%{crmsh_docdir}
 
 %install
 make DESTDIR=%{buildroot} docdir=%{crmsh_docdir} install
-install -m 644 -D contrib/bash_completion.sh ${buildroot}/etc/bash_completion.d/crm.sh
+install -Dm0644 contrib/bash_completion.sh %{buildroot}%{_sysconfdir}/bash_completion.d/crm.sh
 %if 0%{?suse_version}
 %fdupes %{buildroot}
 %endif
@@ -188,6 +188,6 @@ fi
 %dir %{crmsh_docdir}
 %dir %{crmsh_docdir}/contrib
 %dir %attr (770, %{uname}, %{gname}) %{_var}/cache/crm
-/etc/bash_completion.d/crm.sh
+%config %{_sysconfdir}/bash_completion.d/crm.sh
 
 %changelog
