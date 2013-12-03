@@ -406,6 +406,14 @@ def rmdir_r(d):
         shutil.rmtree(d)
 
 
+def nvpairs2dict(pairs):
+    '''
+    takes a list of string of form ['a=b', 'c=d']
+    and returns {'a':'b', 'c':'d'}
+    '''
+    return dict(x.split('=', 1) for x in pairs)
+
+
 def is_check_always():
     '''
     Even though the frequency may be set to always, it doesn't
