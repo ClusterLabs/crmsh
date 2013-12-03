@@ -30,8 +30,6 @@ all very much welcome!
 
     * https://savannah.nongnu.org/bugs/?group=crmsh
 
-    * https://developerbugs.linuxfoundation.org/enter_bug.cgi?product=Pacemaker;component=Shell;version=1.2
-
 == IRC ==
 
     * +#linux-ha+ on http://freenode.net[irc.freenode.net]

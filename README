@@ -27,12 +27,9 @@ version, install Mercurial and run this command:
 
     hg clone http://hg.savannah.nongnu.org/hgweb/crmsh/
 
-Bugs and issues can be reported on either of the two issue trackers
-associated with the project:
+Bugs and issues can be reported here:
 
  * https://savannah.nongnu.org/bugs/?group=crmsh
-
- * https://developerbugs.linuxfoundation.org/enter_bug.cgi?product=Pacemaker;component=Shell;version=1.2
 
 Any other questions or comments can be made on the linux-ha mailing
 list at:
