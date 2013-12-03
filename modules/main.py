@@ -45,7 +45,7 @@ def load_rc(context, rcfile):
     save_stdin = sys.stdin
     sys.stdin = f
     while True:
-        inp = multi_input()
+        inp = utils.multi_input()
         if inp is None:
             break
         try:
@@ -55,34 +55,6 @@ def load_rc(context, rcfile):
             common_err(msg)
     f.close()
     sys.stdin = save_stdin
-
-
-def multi_input(prompt=''):
-    """
-    Get input from user
-    Allow multiple lines using a continuation character
-    """
-    line = []
-    while True:
-        try:
-            text = raw_input(prompt)
-        except EOFError:
-            return None
-        err_buf.incr_lineno()
-        if options.regression_tests:
-            print ".INP:", text
-            sys.stdout.flush()
-            sys.stderr.flush()
-        stripped = text.strip()
-        if stripped.endswith('\\'):
-            stripped = stripped.rstrip('\\')
-            line.append(stripped)
-            if prompt:
-                prompt = '> '
-        else:
-            line.append(stripped)
-            break
-    return ''.join(line)
 
 
 def check_args(args, argsdim):
@@ -319,7 +291,7 @@ def do_work(context, user_args):
                     vars.prompt = termctrl.render(cli_display.prompt(promptstr))
                 else:
                     vars.prompt = promptstr
-            inp = multi_input(vars.prompt)
+            inp = utils.multi_input(vars.prompt)
             if inp is None:
                 if options.interactive:
                     rc = 0

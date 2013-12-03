@@ -29,7 +29,7 @@ import userdir
 import vars
 import options
 from term import TerminalController
-from msg import common_warn, common_info, common_debug, common_err
+from msg import common_warn, common_info, common_debug, common_err, err_buf
 
 
 getuser = userdir.getuser
@@ -84,6 +84,45 @@ def ask(msg):
                 print_msg = False
         else:
             return ans[0].lower() == 'y'
+
+# holds part of line before \ split
+# for a multi-line input
+_LINE_BUFFER = ''
+
+
+def get_line_buffer():
+    return _LINE_BUFFER
+
+
+def multi_input(prompt=''):
+    """
+    Get input from user
+    Allow multiple lines using a continuation character
+    """
+    global _LINE_BUFFER
+    line = []
+    _LINE_BUFFER = ''
+    while True:
+        try:
+            text = raw_input(prompt)
+        except EOFError:
+            return None
+        err_buf.incr_lineno()
+        if options.regression_tests:
+            print ".INP:", text
+            sys.stdout.flush()
+            sys.stderr.flush()
+        stripped = text.strip()
+        if stripped.endswith('\\'):
+            stripped = stripped.rstrip('\\')
+            line.append(stripped)
+            _LINE_BUFFER += stripped
+            if prompt:
+                prompt = '   > '
+        else:
+            line.append(stripped)
+            break
+    return ''.join(line)
 
 
 def verify_boolean(opt):

@@ -180,7 +180,7 @@ class Context(object):
             'we are only completing the last word in the line'
             return word.split()[-1].startswith(text)
 
-        line = readline.get_line_buffer()
+        line = utils.get_line_buffer() + readline.get_line_buffer()
         if line != self._rl_line:
             try:
                 self._rl_line = line
