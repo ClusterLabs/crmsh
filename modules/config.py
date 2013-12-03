@@ -315,6 +315,8 @@ class _Section(object):
 def load():
     _configuration.load()
 
+    os.environ["OCF_ROOT"] = _configuration.get('path', 'ocf_root')
+
 
 def save():
     '''
