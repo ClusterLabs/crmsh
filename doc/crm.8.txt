@@ -1722,10 +1722,13 @@ Display all current settings.
 Given an option name as argument, `show` will display only the value
 of that argument.
 
+Given `all` as argument, `show` displays all available user options.
+
 Usage:
 ........
 show
 show skill-level
+show all
 ........
 
 [[cmdhelp_options_save,save the user preferences to the rc file]]
