@@ -70,7 +70,7 @@ def ra_classes_or_tmpl(args):
 
 
 def op_attr_list(args):
-    return [schema.get('attr', 'op', 'o') + '='] + [s + '=' for s in vars.op_extra_attrs]
+    return [schema.g_schema.get('attr', 'op', 'o') + '='] + [s + '=' for s in vars.op_extra_attrs]
 
 
 def node_id_colon_list(args):
