@@ -42,7 +42,7 @@ Name:           crmsh
 Summary:        Pacemaker command line interface
 License:        GPL-2.0+
 Group:          %{pkg_group}
-Version:        1.2.6
+Version:        2.0
 Release:        %{?crmsh_release}%{?dist}
 Url:            http://savannah.nongnu.org/projects/crmsh
 Source0:        crmsh.tar.bz2
