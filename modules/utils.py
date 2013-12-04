@@ -638,7 +638,7 @@ def is_id_valid(id):
     """
     if not id:
         return False
-    id_re = "^[A-Za-z_][\w._-]*$"
+    id_re = r"^[A-Za-z_][\w._-]*$"
     return re.match(id_re, id)
 
 
@@ -672,7 +672,7 @@ def crm_msec(t):
     }
     if not t:
         return -1
-    r = re.match("\s*(\d+)\s*([a-zA-Z]+)?", t)
+    r = re.match(r"\s*(\d+)\s*([a-zA-Z]+)?", t)
     if not r:
         return -1
     if not r.group(2):
