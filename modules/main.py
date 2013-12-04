@@ -356,7 +356,7 @@ def parse_options():
             elif o == "-R":
                 options.regression_tests = True
             elif o in ("-D", "--display"):
-                config.core.output = p
+                config.color.style = p
             elif o in ("-F", "--force"):
                 config.core.force = "yes"
             elif o in ("-f", "--file"):
