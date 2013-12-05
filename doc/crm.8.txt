@@ -640,45 +640,21 @@ supplies tools to do whole-cluster systems management.
 
 These commands enable easy installation and maintenance of a HA
 cluster, by providing support for package installation, configuration
-of the cluster messaging layer, file system setup and configuration,
-and more.
+of the cluster messaging layer, file system setup and more.
 
-[[cmdhelp_cluster_init,Initialize a new cluster]]
-==== `init` (`create`, `setup`)
+[[cmdhelp_cluster_create,Create a new HA cluster]]
+==== `create`
 
-`init` helps with installing and configuring a brand new
-cluster to a minimal working state.
-
-This command will configure and set up corosync, pacemaker and
-dependencies. There are multiple optional steps that can be
-performed.
-
-The result of executing this command will be a 1-node cluster. Further
-nodes can then be added to the cluster using the `join` command.
-
-STONITH will be enabled by default, since the use of a STONITH device
-is always recommended. For testing and learning purposes, however, it
-is possible to disable STONITH via
-
-----
-configure property stonith-enabled=false
-----
-
-Quorum will be configured when there are more than two nodes in the
-cluster. The `doctor` command will warn if the qourum configuration
-does not match the number of nodes in the cluster.
-
-NOTE: SSH communications and access via hostname need to be
-      configured in advance. The use of an SSH agent and an authorized key
-      installed on all of the nodes is highly recommended.
+Installs and configures a basic HA cluster on the given group of
+nodes.
 
 Usage:
-...............
-init nodes=<node-1>,<node-2>,...,<node-N>
-...............
+........
+create nodes=node1,node2,node3
+........
 
-[[cmdhelp_cluster_join,Add a new node to a cluster]]
-==== `join`
+[[cmdhelp_cluster_add,Add a new node to the cluster]]
+==== `add`
 
 This command simplifies the process of adding a new node to a running
 cluster. The new node will be installed and configured with the
@@ -688,55 +664,126 @@ up to host the file system.
 
 Usage:
 ...............
-join <node>
+add <node>
+...............
+
+[[cmdhelp_cluster_remove,Remove a node from the cluster]]
+==== `remove`
+
+This command simplifies the process of removing a node from the
+cluster, moving any resources hosted by that node to other nodes.
+
+Usage:
+...............
+remove <node>
 ...............
 
 [[cmdhelp_cluster_status,Cluster status check]]
 ==== `status`
 
 Reports the status for the cluster messaging layer on the local
-node. Also reports the status of any DRBD file system configured on
-the local node.
+node.
 
 Usage:
 ...............
 status
 ...............
 
-[[cmdhelp_cluster_doctor,Extensive health check]]
-==== `doctor`
+[[cmdhelp_cluster_health,Cluster health check]]
+==== `status`
 
-The `doctor` command will try to discover and diagnose any issues with
-the cluster, including network communication issues, system health and
-configuration problems.
-
-Usage:
-...............
-doctor
-...............
-
-[[cmdhelp_cluster_actions,List available cluster actions]]
-==== `actions`
-
-Lists the available `cluster actions`.
-
-Cluster actions are scripts that can perform modifications across the
-whole cluster. These modifications can be simple things like executing
-a shell command on each of the nodes and collecting the results, or it
-can be more complicated processes like making sure certain packages
-are installed and configured on all of the nodes.
+Runs a larger set of tests and queries on all nodes in the cluster to
+verify the health and detect potential problems.
 
 Usage:
 ...............
-actions
+health
 ...............
 
-[[cmdhelp_cluster_action,Apply a cluster action]]
-==== `action`
+[[cmdhelp_cluster_apply,Apply a cluster script]]
+==== `apply`
+
+Installs new cluster configuration scripts. These scripts can be used
+to configure various cluster configurations, including package
+installation, system configuration and CIB modifications.
+
+For example, the requirements for running an apache-based web server
+can easily be set up with the following command:
+
+........
+apply www/apache
+........
+
+To learn more about what parameters a script takes as input, use the
+`describe` command:
+
+........
+describe www/apache
+........
+
+NOTE: SSH communications and access via hostname need to be
+      configured in advance. The use of an SSH agent and an authorized key
+      installed on all of the nodes is highly recommended.
+      To quickly set up a recommended SSH configuration on a group of
+      nodes, use the `create` command.
+
+[[cmdhelp_cluster_list,List available cluster configuration scripts]]
+==== `list`
+
+Lists the available configuration scripts that can be executed using
+the `apply` command.
 
 Usage:
 ...............
-action <action> [args ...]
+list
+...............
+
+[[cmdhelp_cluster_wait_for_startup,Wait for cluster to start]]
+==== `wait_for_startup`
+
+Mostly useful in scripts or automated workflows, this command will
+attempt to connect to the local cluster node repeatedly. The command
+will keep trying until the cluster node responds, or the `timeout`
+elapses. The timeout can be changed by supplying a value in seconds as
+an argument.
+
+Usage:
+........
+wait_for_startup
+........
+
+[[cmdhelp_cluster_describe,Show detailed information for a script]]
+==== `describe`
+
+Shows detailed information about a script. Also lists all required
+and optional parameters that the script takes as input.
+
+Usage:
+........
+describe www/apache
+........
+
+[[cmdhelp_cluster_reload,Reload corosync configuration]]
+==== `reload`
+
+Reloads the corosync configuration on all nodes. Call this after
+changing anything in `/etc/corosync/corosync.conf`. Remember to make
+the changes on all nodes (or use `csync2`).
+
+Usage:
+........
+reload
+........
+
+[[cmdhelp_cluster_run,Execute an arbitrary command on all nodes]]
+==== `run`
+
+This command takes a shell statement as argument, executes that
+statement on all nodes in the cluster, and reports the result.
+
+Usage:
+...............
+run <command>
 ...............
 
 [[cmdhelp_cib,CIB shadow management]]

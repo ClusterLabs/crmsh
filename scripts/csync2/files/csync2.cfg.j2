@@ -1,0 +1,20 @@
+group ha_group
+{
+	key {{ csync2_keyfile }};
+	{% for host in groups['all'] %}
+	host {{ host }};
+	{% endfor %}
+	include /etc/booth/booth.conf;
+	include /etc/corosync/corosync.conf;
+	include /etc/corosync/authkey;
+	include {{csync2_cfg}};
+	include {{csync2_keyfile}};
+	include /etc/ctdb/nodes;
+	include /etc/drbd.d;
+	include /etc/ha.d/ldirectord.cf;
+	include /etc/lvm/lvm.conf;
+	include /etc/multipath.conf;
+	include /etc/samba/smb.conf;
+	include /etc/sysconfig/pacemaker;
+	include /etc/sysconfig/sbd;
+}

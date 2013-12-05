@@ -94,7 +94,7 @@ class Expr(object):
         """
         Convert object to nested list form.
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def to_list(self):
         """

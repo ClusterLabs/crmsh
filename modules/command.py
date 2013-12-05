@@ -103,7 +103,7 @@ def help(doc):
     return inner
 
 
-def skill_level(level):
+def skill_level(new_level):
     '''
     Use to set the required skill level of a command:
 
@@ -112,14 +112,14 @@ def skill_level(level):
         def do_rmrf(self, cmd, args):
             ...
     '''
-    if isinstance(level, basestring):
+    if isinstance(new_level, basestring):
         levels = {'operator': 0, 'administrator': 1, 'expert': 2}
-        if level.lower() not in levels:
-            raise ValueError("Unknown skill level: " + level)
-        level = levels[level.lower()]
+        if new_level.lower() not in levels:
+            raise ValueError("Unknown skill level: " + new_level)
+        new_level = levels[new_level.lower()]
 
     def inner(fn):
-        setattr(fn, '_skill_level', level)
+        setattr(fn, '_skill_level', new_level)
         return fn
     return inner
 
@@ -213,9 +213,7 @@ class UI(object):
       - Completion
     '''
 
-    '''
-    Name of level: override this in the subclass.
-    '''
+    # Name of level: override this in the subclass.
     name = None
 
     def requires(self):
@@ -342,18 +340,18 @@ Examples:
         '''
         return self._children.keys()
 
-    def get_child(self, name):
+    def get_child(self, child):
         '''
         Returns child info for the given name, or None
         if the child is not found.
         '''
-        return self._children.get(name)
+        return self._children.get(child)
 
-    def is_sublevel(self, name):
+    def is_sublevel(self, child):
         '''
         True if the given name is a sublevel of this level
         '''
-        sub = self._children.get(name)
+        sub = self._children.get(child)
         return sub and sub.type == 'level'
 
     @classmethod

@@ -1,0 +1,9 @@
+---
+- name: Install and configure DRBD
+  description: >
+    This script ensures that the packages required to run DRBD
+    resources are installed on all cluster nodes.
+  steps:
+    - name: Ensure DRBD is installed
+      package: name=drbd state=present
+      where: all

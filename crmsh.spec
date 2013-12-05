@@ -57,6 +57,8 @@ Requires:       python >= 2.4
 Requires:       python-dateutil
 Requires:       python-lxml
 Requires:       which
+Requires:       python-PyYAML
+Requires:       python-Jinja2
 BuildRequires:  python-lxml
 
 %if 0%{?suse_version}

@@ -1,0 +1,19 @@
+---
+- name: Install and configure an NFS server
+  description: >
+    This script ensures that the packages required for a clustered
+    NFS server are installed on all cluster nodes.
+
+  steps:
+    - name: Ensure required packages are installed
+      package: name=nfs-kernel-server state=present
+
+    - name: Ensure rpcbind is enabled and started
+      service: name=rpcbind enabled=yes state=started
+
+    - name: Ensure NFS server is not managed by system
+      service: name=nfsserver enabled=no state=stopped
+
+    - name: Ensure NFS server resource is added to CIB
+      shell: crm --force --wait configure load update files/nfsserver.cib
+      where: local

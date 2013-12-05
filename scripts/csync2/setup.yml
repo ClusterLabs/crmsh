@@ -1,0 +1,46 @@
+---
+- name: Install and configure csync2
+  description: >
+    This script will install and configure csync2 on all your cluster
+    nodes with a basic configuration for HA clusters.
+
+    A new csync2 configuration will be created at
+    `/etc/csync2/csync2.cfg`. If csync2 is already installed and
+    configured, this configuration may replace your current
+    configuration. A backup of the previous configuration will be
+    created.
+
+    A csync2 key will be created at `/etc/csync2/key_hagroup`.
+
+    NOTE: If you are running iptables, you need to open tcp port 30865 on
+    all hosts so that the other hosts can connect.
+  parameters:
+    - name: csync2_keyfile
+      required: false
+      default: /etc/csync2/key_hagroup
+    - name: csync2_cfg
+      required: false
+      default: /etc/csync2/csync2.cfg
+
+  steps:
+    - name: install csync2 service
+      package: name=csync2 state=present
+
+    - name: generate shared key
+      command: csync2 -k {{csync2_keyfile}} creates={{csync2_keyfile}}
+      where: local
+
+    - name: distribute csync2 key
+      copy: src={{csync2_keyfile}} dest={{csync2_keyfile}} backup=yes
+
+    - name: install csync2 configuration
+      template: src=files/csync2.cfg.j2 dest={{csync2_cfg}} backup=yes
+     
+    - name: start csync2 socket
+      command: systemctl enable csync2.socket
+
+    - name: start csync2 socket
+      command: systemctl start csync2.socket
+    
+    - name: update csync2
+      command: csync2 -cr /

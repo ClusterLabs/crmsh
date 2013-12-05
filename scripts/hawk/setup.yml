@@ -1,0 +1,20 @@
+---
+- name: Install and configure the Hawk web UI
+  description: >
+    Hawk is a web-based GUI for managing and monitoring Pacemaker HA
+    clusters. It is generally intended to be run on every node in the
+    cluster, so that you can just point your web browser at any node to
+    access it, e.g.:
+
+    ........
+    https://your-server:7630/
+    ........
+
+    This script ensures that all requirements to run Hawk are fulfilled.
+
+  steps:
+    - name: Ensure apache2 is installed
+      package: name=apache2 state=present
+
+    - name: Ensure hawk is installed
+      package: name=hawk state=present

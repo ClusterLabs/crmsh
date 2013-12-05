@@ -48,11 +48,11 @@ class BaseParser(object):
 
     def can_parse(self):
         "Returns a list of commands this parser understands"
-        raise NotImplemented
+        raise NotImplementedError
 
     def parse(self, cmd):
         "Called by do_parse(). Raises ParseError if parsing fails."
-        raise NotImplemented
+        raise NotImplementedError
 
     def init(self, validation):
         self.validation = validation
