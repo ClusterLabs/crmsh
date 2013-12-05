@@ -64,8 +64,8 @@ class ErrorBuffer(Singleton):
         else:
             self.msg_list.append(msg)
 
-    def reset_lineno(self):
-        self.lineno = 0
+    def reset_lineno(self, to=0):
+        self.lineno = to
 
     def incr_lineno(self):
         if self.lineno >= 0:

@@ -255,9 +255,9 @@ def do_work(context, user_args):
         if not context.run("configure"):
             sys.exit(1)
     elif len(user_args) > 0:
-        err_buf.reset_lineno()
         # we're not sure yet whether it's an interactive session or not
         # (single-shot commands aren't)
+        err_buf.reset_lineno()
         options.interactive = False
 
         l = add_quotes(user_args)
@@ -265,6 +265,9 @@ def do_work(context, user_args):
             # if the user entered a level, then just continue
             if not context.previous_level():
                 sys.exit(0)
+            set_interactive()
+            if options.interactive:
+                err_buf.reset_lineno(-1)
         else:
             sys.exit(1)
 

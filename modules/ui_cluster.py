@@ -47,6 +47,7 @@ def _list_cluster_nodes():
     except OSError, msg:
         raise ValueError("Error getting list of nodes from crmadmin: %s" % (msg))
 
+
 class Cluster(command.UI):
     '''
     Whole cluster management.
