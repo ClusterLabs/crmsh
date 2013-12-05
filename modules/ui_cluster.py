@@ -302,7 +302,35 @@ class Cluster(command.UI):
         inventory = self._inventory()
         if not inventory:
             context.fatal_error("No hosts defined")
-        context.fatal_error("Not implemented.")
+        from crm_pssh import do_pssh_cmd, get_output
+        from tempfile import mkdtemp
+        outdir = mkdtemp(prefix="crmsh_out.")
+        errdir = mkdtemp(prefix="crmsh_err.")
+        try:
+            timeout = 20000
+            statuses = do_pssh_cmd(cmd, inventory['nodes'], outdir, errdir, timeout)
+            result = []
+            for n, rc in zip(inventory['nodes'], statuses):
+                outp = ''.join(get_output(outdir, n))
+                errp = ''.join(get_output(errdir, n))
+                result.append((n, rc, outp, errp))
+
+            nok, nfail = 0, 0
+            for n, rc, outp, errp in result:
+                if rc == 0:
+                    nok += 1
+                    print "OK: %s" % (n)
+                    print outp
+            for n, rc, outp, errp in result:
+                if rc != 0:
+                    nfail += 1
+                    print "FAIL: %s" % (n)
+                    print outp
+                    print errp
+            print "OK: %s, FAIL: %s" % (nok, nfail)
+        finally:
+            utils.rmdir_r(outdir)
+            utils.rmdir_r(errdir)
 
     @command.skill_level('administrator')
     def do_reload(self, context):
