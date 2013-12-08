@@ -317,6 +317,8 @@ find_decompressor() {
 		echo "bzip2 -dc"
 	elif echo $1 | grep -qs 'gz$'; then
 		echo "gzip -dc"
+	elif echo $1 | grep -qs 'xz$'; then
+		echo "xz -dc"
 	else
 		echo "cat"
 	fi
@@ -1016,8 +1018,10 @@ edittemplate() {
 	fi
 }
 pickcompress() {
-	if COMPRESS_PROG=`pickfirst bzip2 gzip`; then
-		if [ "$COMPRESS_PROG" = bzip2 ]; then
+	if COMPRESS_PROG=`pickfirst xz bzip2 gzip`; then
+		if [ "$COMPRESS_PROG" = xz ]; then
+			COMPRESS_EXT=.xz
+		elif [ "$COMPRESS_PROG" = bzip2 ]; then
 			COMPRESS_EXT=.bz2
 		else
 			COMPRESS_EXT=.gz
