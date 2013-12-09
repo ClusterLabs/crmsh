@@ -58,8 +58,8 @@ Requires:       python-dateutil
 Requires:       python-lxml
 Requires:       which
 Requires:       python-PyYAML
-Requires:       python-Jinja2
 BuildRequires:  python-lxml
+BuildRequires:  python-PyYAML
 
 %if 0%{?suse_version}
 # Suse splits this off into a separate package
