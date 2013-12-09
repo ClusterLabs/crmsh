@@ -418,7 +418,7 @@ class ResourceParser(BaseParser):
         return out
 
     parse_primitive = _primitive_or_template
-    parse_template = _primitive_or_template
+    parse_rsc_template = _primitive_or_template
 
     def _master_or_clone(self):
         if self.matched(0).lower() == 'clone':

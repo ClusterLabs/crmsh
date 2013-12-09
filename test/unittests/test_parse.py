@@ -139,6 +139,11 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.ra_class, 'ocf')
         self.assertTrue(out.operations[0][0] == 'monitor')
 
+        out = self.parser.parse('rsc_template public_vm ocf:heartbeat:Xen op start timeout=300s op stop timeout=300s op monitor interval=30s timeout=60s op migrate_from timeout=600s op migrate_to timeout=600s')
+        self.assertEqual(out.id, 'public_vm')
+        self.assertEqual(out.ra_class, 'ocf')
+        #print out.to_list()
+
         out = self.parser.parse('primitive st stonith:ssh params hostlist=node1 meta target-role=Started op start requires=nothing timeout=60s op monitor interval=60m timeout=60s')
         self.assertEqual(out.id, 'st')
 

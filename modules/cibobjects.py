@@ -163,6 +163,7 @@ class Primitive(Resource):
 class RscTemplate(Resource):
     def __init__(self):
         Resource.__init__(self)
+        self.template = None
         self.ra_class = None
         self.ra_provider = None
         self.ra_type = None
