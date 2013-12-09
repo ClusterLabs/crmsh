@@ -21,6 +21,7 @@ import os
 import sys
 import re
 import time
+import config
 from singletonmixin import Singleton
 import options
 import vars
