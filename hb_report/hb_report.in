@@ -1018,7 +1018,7 @@ edittemplate() {
 	fi
 }
 pickcompress() {
-	if COMPRESS_PROG=`pickfirst xz bzip2 gzip`; then
+	if COMPRESS_PROG=`pickfirst bzip2 gzip xz`; then
 		if [ "$COMPRESS_PROG" = xz ]; then
 			COMPRESS_EXT=.xz
 		elif [ "$COMPRESS_PROG" = bzip2 ]; then
