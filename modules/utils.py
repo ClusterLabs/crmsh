@@ -1077,6 +1077,25 @@ def is_pcmk_118(cib_f=None):
     return is_min_pcmk_ver("1.1.8", cib_f=cib_f)
 
 
+_cibadmin_features_cached = None
+
+def cibadmin_features():
+    '''
+    # usage example:
+    if 'corosync-plugin' in cibadmin_features()
+    '''
+    global _cibadmin_features_cached
+    if _cibadmin_features_cached is None:
+        _cibadmin_features_cached = []
+        rc, outp = get_stdout(['cibadmin', '-!'], shell=False)
+        if rc == 0:
+            outp = outp.strip()
+            m = re.match(r'Pacemaker\s(\S+)\s\(Build: ([^\)]+)\):\s(.*)', outp)
+            if m and len(m.groups()) > 2:
+                _cibadmin_features_cached = m.group(3).split()
+    return _cibadmin_features_cached
+
+
 def cibadmin_can_patch():
     # cibadmin -P doesn't handle comments, hopefully in v1.1.11
     return False
