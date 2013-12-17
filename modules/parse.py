@@ -43,7 +43,7 @@ class BaseParser(object):
     _IDENT_RE = re.compile(r'([a-z0-9_#$-].*)$', re.IGNORECASE)
     _DISPATCH_RE = re.compile(r'[a-z0-9_]+$', re.IGNORECASE)
     _DESC_RE = re.compile(r'description=(.+)$', re.IGNORECASE)
-    _RESOURCE_RE = re.compile(r'([^=]+)$')
+    _RESOURCE_RE = re.compile(r'([a-z_#$][^=]*)$', re.IGNORECASE)
     _IDSPEC_RE = re.compile(r'(\$id-ref|\$id)=(.*)$', re.IGNORECASE)
 
     def can_parse(self):
@@ -604,7 +604,7 @@ class ConstraintParser(BaseParser):
         """
         out = Location()
         out.id = self.match_identifier()
-        if self.try_match('^/(.*)/$'):
+        if self.try_match('^/(.+)/$'):
             out.rsc_pattern = self.matched(1)
         elif self.try_match('{'):
             tokens = self.match_until('}')
