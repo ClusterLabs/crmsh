@@ -141,6 +141,13 @@ export docdir=%{crmsh_docdir}
 
 make %{_smp_mflags} docdir=%{crmsh_docdir}
 
+%if 0%{?with_regression_tests}
+    if ! test/unittests/testrunner.py ; then
+        echo "Shell unit tests failed."
+        exit 1
+    fi
+%endif
+
 %install
 make DESTDIR=%{buildroot} docdir=%{crmsh_docdir} install
 install -Dm0644 contrib/bash_completion.sh %{buildroot}%{_sysconfdir}/bash_completion.d/crm.sh
@@ -151,20 +158,18 @@ install -Dm0644 contrib/bash_completion.sh %{buildroot}%{_sysconfdir}/bash_compl
 %clean
 rm -rf %{buildroot}
 
-%if 0%{?with_regression_tests}
-
-%post
-
+# Run regression tests after installing the package
 # NB: this is called twice by OBS, that's why we touch the file
+%if 0%{?with_regression_tests}
+%post
 if [ ! -e /tmp/.crmsh_regression_tests_ran ]; then
     touch /tmp/.crmsh_regression_tests_ran
-    if ! /usr/share/crmsh/tests/regression.sh ; then
+    if ! %{_datadir}/%{name}/tests/regression.sh ; then
         echo "Shell tests failed."
         cat crmtestout/regression.out
         exit 1
     fi
 fi
-
 %endif
 
 %files

@@ -25,7 +25,7 @@ import userdir
 
 
 _SYSTEMWIDE = '/etc/crm/crmsh.conf'
-_PERUSER = os.path.join(userdir.CONFIG_HOME, 'crm.conf')
+_PERUSER = os.getenv("CRM_CONFIG_FILE") or os.path.join(userdir.CONFIG_HOME, 'crm.conf')
 
 
 # opt_ classes

@@ -26,28 +26,6 @@ import subprocess
 os.chdir(os.path.dirname(os.path.abspath(sys.modules[__name__].__file__)))
 
 
-def create_config_py():
-    "TODO: make config.py.in a runtime, not compile-time generated module"
-    if not os.path.isfile('../../modules/config.py'):
-        fake_config_py = """DATADIR = "."
-PACKAGE = "../doc"
-CRM_CACHE_DIR = "."
-CRM_DTD_DIRECTORY = "."
-PE_STATE_DIR = "."
-CRM_CONFIG_DIR = "."
-CRM_DAEMON_DIR = "."
-CRM_DAEMON_USER = "hacluster"
-VERSION = "dev"
-BUILD_VERSION = "dev"
-HA_VARLIBHBDIR = "."
-OCF_ROOT_DIR = "."
-"""
-        f = open('../../modules/config.py', 'w')
-        f.write(fake_config_py)
-        f.close()
-create_config_py()
-
-
 def test_info(f):
     m = re.match(r'^test_(.+)\.py$', os.path.basename(f))
     if m:
@@ -58,8 +36,9 @@ tests = [test_info(f) for f in os.listdir('.') if test_info(f)]
 
 def run_test(name, testfile):
     print "%s" % (name.capitalize())
-    cmd = 'PYTHONPATH=%s python -B %s' % (
+    cmd = 'PYTHONPATH=%s CRM_CONFIG_FILE=%s python -B %s' % (
         '../../modules',
+        'test.conf',
         testfile
     )
     ret = subprocess.call(cmd, shell=True)
