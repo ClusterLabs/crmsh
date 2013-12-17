@@ -198,7 +198,7 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(3, sum(1 for s in out.resources if s[0] == 'resource_set'))
 
         out = self.parser.parse('colocation col-1 0: a:master b')
-        print out.resources
+        #print out.resources
         self.assertEqual(out.id, 'col-1')
 
         out = self.parser.parse('colocation col-1 10: ) bar wiz')
@@ -221,6 +221,7 @@ class TestCliParser(unittest.TestCase):
 
         out = self.parser.parse('order order_2 Mandatory: [ A B ] C')
         self.assertEqual(out.id, 'order_2')
+        self.assertEqual(out.to_list(), [['order', [['id', 'order_2'], ('kind', 'Mandatory')]], ['resource_set', [['require-all', 'false'], ['sequential', 'false'], ['resource_ref', ['id', 'A']], ['resource_ref', ['id', 'B']]]], ['resource_set', [['resource_ref', ['id', 'C']]]]])
 
         out = self.parser.parse('rsc_ticket ticket-A_public-ip ticket-A: public-ip')
         self.assertEqual(out.id, 'ticket-A_public-ip')
@@ -302,7 +303,7 @@ class TestCliParser(unittest.TestCase):
         primitive rsc_dummy ocf:heartbeat:Dummy
         monitor rsc_dummy 30
         ''')
-        print outp
+        #print outp
         self.assertEqual(2, len(outp))
 
         outp = self._parse_lines('''
@@ -311,7 +312,7 @@ class TestCliParser(unittest.TestCase):
         clone testfs-clone testfs \
           meta ordered="true" interleave="true"
         ''')
-        print outp
+        #print outp
         self.assertEqual(2, len(outp))
 
         inp = '''
