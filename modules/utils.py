@@ -1097,9 +1097,8 @@ def cibadmin_features():
 
 
 def cibadmin_can_patch():
-    # cibadmin -P doesn't handle comments, hopefully in v1.1.11
-    return False
-    #return is_min_pcmk_ver("1.1.11")
+    # cibadmin -P doesn't handle comments in <1.1.11 (unless patched)
+    return is_min_pcmk_ver("1.1.11")
 
 
 # quote function from python module shlex.py in python 3.3
