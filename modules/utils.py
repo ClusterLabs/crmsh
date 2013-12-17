@@ -980,13 +980,17 @@ def load_graphviz_file(ini_f):
 def get_pcmk_version(dflt):
     version = dflt
 
-    if not is_program('crmd'):
+    if is_program('crmd'):
+        cmd = 'crmd'
+    elif os.path.isfile(os.path.join(config.path.crm_daemon_dir, 'crmd')):
+        cmd = os.path.join(config.path.crm_daemon_dir, 'crmd')
+    else:
         return version
 
     try:
-        rc, s = get_stdout("crmd version")
+        rc, s = get_stdout("%s version" % (cmd))
         if rc != 0:
-            common_err("crmd exited with %d" % rc)
+            common_err("%s exited with %d" % (cmd, rc))
         else:
             version = s.split()[2]
             common_debug("found pacemaker version: %s" % version)
