@@ -260,8 +260,10 @@ def rsc_set_constraint(node, obj_type):
             col.append("]")
         elif not sequential:
             col.append(")")
-    if (sequential and require_all and obj_type != "rsc_ticket" and cnt <= 2) or \
-            (obj_type == "rsc_ticket" and cnt <= 1):  # a degenerate thingie
+    is_ticket = obj_type == 'rsc_ticket'
+    is_location = obj_type == 'location'
+    if not is_location and ((sequential and require_all and not is_ticket and cnt <= 2) or
+                            (is_ticket and cnt <= 1)):  # a degenerate thingie
         col.insert(0, "_rsc_set_")
     return col
 

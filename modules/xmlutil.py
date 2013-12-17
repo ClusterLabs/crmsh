@@ -938,7 +938,8 @@ def referenced_resources(node):
     if not is_constraint(node):
         return []
     xml_obj_type = node.tag
-    if xml_obj_type == "rsc_location":
+    rsc_list = []
+    if xml_obj_type == "rsc_location" and node.get("rsc"):
         rsc_list = [node.get("rsc")]
     elif node.xpath("resource_set/resource_ref"):
         # resource sets

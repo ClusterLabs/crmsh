@@ -1072,6 +1072,8 @@ class CibObject(object):
         xml2 = self.cli2node(cli_text)
         if xml2 is None:
             return False
+        common_debug("a: %s" % etree.tostring(self.node))
+        common_debug("b: %s" % etree.tostring(xml2))
         rc = xml_cmp(self.node, xml2, show=True)
         return rc
 
@@ -1605,7 +1607,18 @@ class CibLocation(CibObject):
     '''
 
     def _repr_cli_head(self, format):
-        rsc = cli_display.rscref(self.node.get("rsc"))
+        rsc = None
+        if "rsc" in self.node.keys():
+            rsc = self.node.get("rsc")
+        elif "rsc-pattern" in self.node.keys():
+            rsc = '/%s/' % (self.node.get("rsc-pattern"))
+        if rsc is not None:
+            rsc = cli_display.rscref(rsc)
+        elif self.node.find("resource_set") is not None:
+            rsc = '{ %s }' % (' '.join(rsc_set_constraint(self.node, self.obj_type)))
+        else:
+            common_err("%s: unknown rsc_location format" % self.obj_id)
+            return None
         s = cli_display.keyword(self.obj_type)
         id = cli_display.id(self.obj_id)
         s = "%s %s %s" % (s, id, rsc)
@@ -1631,18 +1644,23 @@ class CibLocation(CibObject):
         headnode = mkxmlsimple(head, oldnode, 'location')
         id_hint = headnode.get("id")
         oldrule = None
+        rule = None
         for e in cli_list[1:]:
             if e[0] in ("expression", "date_expression"):
                 n = mkxmlnode(e, oldrule, id_hint)
             else:
                 n = mkxmlnode(e, oldnode, id_hint)
-            if keyword_cmp(e[0], "rule"):
+            if e[0] in ("resource_set"):
+                headnode.append(n)
+            elif keyword_cmp(e[0], "rule"):
                 add_missing_attr(n)
                 rule = n
                 headnode.append(n)
                 oldrule = lookup_node(rule, oldnode, location_only=True)
-            else:
+            elif rule is not None:
                 rule.append(n)
+            else:
+                headnode.append(n)
         remove_id_used_attributes(oldnode)
         return headnode
 
@@ -1653,11 +1671,23 @@ class CibLocation(CibObject):
         if self.node is None:  # eh?
             common_err("%s: no xml (strange)" % self.obj_id)
             return utils.get_check_rc()
+        rc = 0
         uname = self.node.get("node")
         if uname and uname not in cib_factory.node_id_list():
             common_warn("%s: referenced node %s does not exist" % (self.obj_id, uname))
-            return 1
-        rc = 0
+            rc = 1
+        pattern = self.node.get("rsc-pattern")
+        if pattern:
+            try:
+                re.compile(pattern)
+            except IndexError, e:
+                common_warn("%s: '%s' may not be a valid regular expression (%s)" %
+                            (self.obj_id, pattern, e))
+                rc = 1
+            except re.error, e:
+                common_warn("%s: '%s' may not be a valid regular expression (%s)" %
+                            (self.obj_id, pattern, e))
+                rc = 1
         for enode in self.node.xpath("rule/expression"):
             if enode.get("attribute") == "#uname":
                 uname = enode.get("value")

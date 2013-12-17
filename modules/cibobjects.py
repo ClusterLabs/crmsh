@@ -211,6 +211,8 @@ class Location(Constraint):
     def __init__(self):
         Constraint.__init__(self)
         self.resource = None
+        self.rsc_pattern = None
+        self.rsc_set = None
         self.score = None
         self.node = None
         self.role = None
@@ -219,12 +221,16 @@ class Location(Constraint):
 
     def _to_list(self):
         ret = None
+        rscpart = None
         if self.score and self.node:
-            ret = listfmt('[[location [[id %] [rsc %] % [node %] [role %]]]]',
-                          self.id, self.resource, self.score, self.node, self.role)
+            ret = listfmt('[[location [[id %] [rsc %] [rsc-pattern %] % [node %] [role %]]]]',
+                          self.id, self.resource, self.rsc_pattern,
+                          self.score, self.node, self.role)
         else:
-            ret = listfmt('[[location [[id %] [rsc %]]]]',
-                          self.id, self.resource) + self.rules
+            ret = listfmt('[[location [[id %] [rsc %] [rsc-pattern %]]]]',
+                          self.id, self.resource, self.rsc_pattern) + self.rules
+        if self.rsc_set:
+            ret += self.rsc_set
         return ret
 
 

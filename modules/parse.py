@@ -588,14 +588,33 @@ class ConstraintParser(BaseParser):
         else:
             return ('score-attribute', score)
 
+    def match_until(self, end_token):
+        tokens = []
+        while self.current_token() is not None and self.current_token() != end_token:
+            tokens.append(self.match_any())
+        return tokens
+
     def parse_location(self):
         """
-        location <id> <rsc> <score>: <node> [role=<role>]
-        location <id> <rsc> [rule ...]
+        location <id> rsc <score>: <node> [role=<role>]
+        location <id> rsc [rule ...]
+        rsc :: /<rsc-pattern>/
+            | { <rsc-set> }
+            | <rsc>
         """
         out = Location()
         out.id = self.match_identifier()
-        out.resource = self.match_resource()
+        if self.try_match('^/(.*)/$'):
+            out.rsc_pattern = self.matched(1)
+        elif self.try_match('{'):
+            tokens = self.match_until('}')
+            self.match('}')
+            if not tokens:
+                self.err("Empty resource set")
+            parser = ResourceSet('role', tokens, self)
+            out.rsc_set = parser.parse()
+        else:
+            out.resource = self.match_resource()
         if self.try_match(self._SCORE_RE):
             out.score = self.validate_score(self.matched(1))
             out.node = self.match_identifier()
@@ -624,6 +643,12 @@ class ConstraintParser(BaseParser):
     parse_collocation = parse_colocation
 
     def parse_order(self):
+        '''
+        order <id> {kind|<score>}: <rsc>[:<action>] <rsc>[:<action>] ...
+          [symmetrical=<bool>]
+
+        kind :: Mandatory | Optional | Serialize
+        '''
         out = Order()
         out.id = self.match_identifier()
         if self.try_match('(%s)$' % ('|'.join(self.validation.rsc_order_kinds()))):
@@ -637,6 +662,12 @@ class ConstraintParser(BaseParser):
         return out
 
     def parse_rsc_ticket(self):
+        '''
+        rsc_ticket <id> <ticket_id>: <rsc>[:<role>] [<rsc>[:<role>] ...]
+        [loss-policy=<loss_policy_action>]
+
+        loss_policy_action :: stop | demote | fence | freeze
+        '''
         out = RscTicket()
         out.id = self.match_identifier()
         self.match(self._SCORE_RE)

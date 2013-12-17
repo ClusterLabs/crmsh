@@ -186,6 +186,23 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.score[1], 'INFINITY')
         self.assertEqual(out.node, 'foo')
 
+        out = self.parser.parse('location loc-1 /foo.*/ inf: bar')
+        self.assertEqual(out.id, 'loc-1')
+        self.assertEqual(out.rsc_pattern, 'foo.*')
+        self.assertEqual(out.score[1], 'INFINITY')
+        self.assertEqual(out.node, 'bar')
+        #print out.to_list()
+
+        out = self.parser.parse('location loc-1 // inf: bar')
+        self.assertFalse(out)
+
+        out = self.parser.parse('location loc-1 { one ( two three ) four } inf: bar')
+        self.assertEqual(out.id, 'loc-1')
+        self.assertEqual(3, sum(1 for s in out.rsc_set if s[0] == 'resource_set'))
+        self.assertEqual(out.score[1], 'INFINITY')
+        self.assertEqual(out.node, 'bar')
+        #print out.to_list()
+
         out = self.parser.parse('colocation col-1 inf: foo:master ( bar wiz sequential=yes )')
         self.assertEqual(out.id, 'col-1')
         self.assertEqual(2, sum(1 for s in out.resources if s[0] == 'resource_set'))
