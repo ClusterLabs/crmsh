@@ -43,4 +43,4 @@ class Report(command.UI):
 
         create -f "YYYY-MM-DD H:M:S" [-t "YYYY-MM-DD H:M:S"] [options ...] [dest]
         '''
-        return utils.ext_cmd(self.extcmd + ' '.join(args)) == 0
+        return utils.ext_cmd(self.extcmd + ' ' + ' '.join(args)) == 0
