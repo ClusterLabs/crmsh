@@ -493,7 +493,7 @@ class History(command.UI):
         that depends on the current value of the TERM variable.
         '''
         opt_l = []
-        if not self._common_pe_render_check(context.get_command_name(), opt_l, *args):
+        if not self._common_pe_render_check(context, opt_l, *args):
             return False
         if "status" in opt_l:
             s = self._render_pe(self._pe_status_nohdr, t)
@@ -511,7 +511,7 @@ class History(command.UI):
     def do_show(self, context, t, *args):
         "usage: show <pe> [status]"
         opt_l = []
-        if not self._common_pe_render_check(context.get_command_name(), opt_l, *args):
+        if not self._common_pe_render_check(context, opt_l, *args):
             return False
         showfun = self._pe_config
         if "status" in opt_l:
@@ -553,7 +553,7 @@ class History(command.UI):
     def do_diff(self, context, t1, t2, *args):
         "usage: diff <pe> <pe> [status] [html]"
         opt_l = []
-        if not self._common_pe_render_check(context.get_command_name(), opt_l, *args):
+        if not self._common_pe_render_check(context, opt_l, *args):
             return False
         showfun = self._pe_config_plain
         mkhtml = "html" in opt_l
@@ -577,7 +577,7 @@ class History(command.UI):
     def do_wdiff(self, context, t1, t2, *args):
         "usage: wdiff <pe> <pe> [status]"
         opt_l = []
-        if not self._common_pe_render_check(context.get_command_name(), opt_l, *args):
+        if not self._common_pe_render_check(context, opt_l, *args):
             return False
         showfun = self._pe_config_plain
         if "status" in opt_l:
