@@ -495,7 +495,8 @@ class CibObjectSetCli(CibObjectSet):
             return rc
         mk_set = id_set - self.obj_ids
         upd_set = id_set & self.obj_ids
-        rc = cib_factory.set_update(edit_d, mk_set, upd_set, del_set, method)
+        rc = cib_factory.set_update(edit_d, mk_set, upd_set, del_set,
+                                    upd_type="cli", method=method)
         if not rc:
             self._initialize()
         return rc

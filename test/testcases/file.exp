@@ -23,6 +23,7 @@ property $id="cib-bootstrap-options" \
 .EXT >/dev/null </dev/null crm_shadow 2>&1
 .INP: configure
 .INP: delete m1 p1
+.INP: property cluster-recheck-interval="10m"
 .INP: load update sample.txt
 .TRY configure show
 .EXT >/dev/null </dev/null crm_shadow 2>&1
@@ -38,5 +39,6 @@ primitive st stonith:null \
 ms m1 p2
 clone c1 p1
 property $id="cib-bootstrap-options" \
-	default-action-timeout="2m"
+	default-action-timeout="2m" \
+	cluster-recheck-interval="10m"
 .EXT rm sample.txt
