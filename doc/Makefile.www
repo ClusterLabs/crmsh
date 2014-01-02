@@ -17,7 +17,7 @@ XDGOPEN := xdg-open
 gen/%.html: %.txt crm.conf
 	@mkdir -p gen
 	@$(ASCIIDOC) --unsafe -b html5 -f crm.conf -o $@ $<
-	@python ./postprocess.py $@
+	@python ./postprocess.py -o $@ $<
 
 gen/css/%.css: css/%.css
 	@mkdir -p gen/css
