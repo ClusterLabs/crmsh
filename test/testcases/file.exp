@@ -19,6 +19,7 @@ property $id="cib-bootstrap-options" \
 .TRY Load update
 .INP: configure
 .INP: delete m1 p1
+.INP: property cluster-recheck-interval="10m"
 .INP: load update sample.txt
 .TRY configure show
 node node1
@@ -33,5 +34,6 @@ primitive st stonith:null \
 ms m1 p2
 clone c1 p1
 property $id="cib-bootstrap-options" \
-	default-action-timeout="2m"
+	default-action-timeout="2m" \
+	cluster-recheck-interval="10m"
 .EXT rm sample.txt
