@@ -238,7 +238,11 @@ class TestCliParser(unittest.TestCase):
 
         out = self.parser.parse('order order_2 Mandatory: [ A B ] C')
         self.assertEqual(out.id, 'order_2')
-        self.assertEqual(out.to_list(), [['order', [['id', 'order_2'], ('kind', 'Mandatory')]], ['resource_set', [['require-all', 'false'], ['sequential', 'false'], ['resource_ref', ['id', 'A']], ['resource_ref', ['id', 'B']]]], ['resource_set', [['resource_ref', ['id', 'C']]]]])
+        self.assertEqual(out.to_list(), [['order', [['id', 'order_2'], ['kind', 'Mandatory']]], ['resource_set', [['require-all', 'false'], ['sequential', 'false'], ['resource_ref', ['id', 'A']], ['resource_ref', ['id', 'B']]]], ['resource_set', [['resource_ref', ['id', 'C']]]]])
+
+        out = self.parser.parse('order order-1 Optional: group1:stop group2:start')
+        self.assertEqual(out.id, 'order-1')
+        self.assertEqual(out.to_list(), [['order', [['id', 'order-1'], ['kind', 'Optional'], ['first', 'group1'], ['first-action', 'stop'], ['then', 'group2'], ['then-action', 'start']]]])
 
         out = self.parser.parse('rsc_ticket ticket-A_public-ip ticket-A: public-ip')
         self.assertEqual(out.id, 'ticket-A_public-ip')

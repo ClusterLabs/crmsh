@@ -578,15 +578,15 @@ class ConstraintParser(BaseParser):
             return vars.score_types[score.lower()]
         elif re.match("^[+-]?(inf(inity)?|INF(INITY)?|[0-9]+)$", score):
             score = re.sub("inf(inity)?|INF(INITY)?", "INFINITY", score)
-            return ("score", score)
+            return ["score", score]
         if noattr:
             # orders have the special kind attribute
             kind = self.validation.canonize(score, self.validation.rsc_order_kinds())
             if not kind:
                 self.err("Invalid kind: " + score)
-            return ('kind', kind)
+            return ['kind', kind]
         else:
-            return ('score-attribute', score)
+            return ['score-attribute', score]
 
     def match_until(self, end_token):
         tokens = []
@@ -651,8 +651,8 @@ class ConstraintParser(BaseParser):
         '''
         out = Order()
         out.id = self.match_identifier()
-        if self.try_match('(%s)$' % ('|'.join(self.validation.rsc_order_kinds()))):
-            out.kind = self.matched(1).lower()
+        if self.try_match('(%s):$' % ('|'.join(self.validation.rsc_order_kinds()))):
+            out.kind = self.validation.canonize(self.matched(1), self.validation.rsc_order_kinds())
         else:
             self.match(self._SCORE_RE)
             out.score = self.validate_score(self.matched(1), noattr=True)
