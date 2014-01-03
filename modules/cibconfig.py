@@ -89,8 +89,34 @@ def mkset_obj(*args):
 
 def set_graph_attrs(gv_obj, obj_type):
     try:
+        for attr, attr_v in vars.graph['*'].iteritems():
+            gv_obj.new_graph_attr(attr, attr_v)
+    except KeyError:
+        pass
+    try:
         for attr, attr_v in vars.graph[obj_type].iteritems():
             gv_obj.new_graph_attr(attr, attr_v)
+    except KeyError:
+        pass
+
+
+def set_obj_attrs(gv_obj, obj_id, obj_type):
+    try:
+        for attr, attr_v in vars.graph['*'].iteritems():
+            gv_obj.new_attr(obj_id, attr, attr_v)
+    except KeyError:
+        pass
+    try:
+        for attr, attr_v in vars.graph[obj_type].iteritems():
+            gv_obj.new_attr(obj_id, attr, attr_v)
+    except KeyError:
+        pass
+
+
+def set_edge_attrs(gv_obj, edge_id, obj_type):
+    try:
+        for attr, attr_v in vars.graph[obj_type].iteritems():
+            gv_obj.new_edge_attr(edge_id, attr, attr_v)
     except KeyError:
         pass
 
@@ -886,12 +912,8 @@ class CibObject(object):
     def _set_gv_attrs(self, gv_obj, obj_type=None):
         if not obj_type:
             obj_type = self.obj_type
-        id = self.node.get("uname") or self.obj_id
-        try:
-            for attr, attr_v in vars.graph[obj_type].iteritems():
-                gv_obj.new_attr(id, attr, attr_v)
-        except KeyError:
-            pass
+        obj_id = self.node.get("uname") or self.obj_id
+        set_obj_attrs(gv_obj, obj_id, obj_type)
 
     def _set_sg_attrs(self, sg_obj, obj_type=None):
         if not obj_type:
@@ -901,11 +923,7 @@ class CibObject(object):
     def _set_edge_attrs(self, gv_obj, e_id, obj_type=None):
         if not obj_type:
             obj_type = self.obj_type
-        try:
-            for attr, attr_v in vars.graph[obj_type].iteritems():
-                gv_obj.new_edge_attr(e_id, attr, attr_v)
-        except KeyError:
-            pass
+        set_edge_attrs(gv_obj, e_id, obj_type)
 
     def repr_gv(self, gv_obj):
         '''
@@ -1505,27 +1523,49 @@ class CibPrimitive(CibObject):
         Create a gv node. The label consists of the ID and the
         RA type.
         '''
-        if self.obj_type != "primitive":
-            return
-        # if we belong to a group, but were not called with
-        # from_grp=True, then skip
-        if not from_grp and self.parent and self.parent.obj_type == "group":
-            return
-        n = reduce_primitive(self.node)
-        ra_class = n.get("class")
-        ra_type = n.get("type")
-        lbl_top = self._gv_rsc_id()
-        if ra_class in ("ocf", "stonith"):
-            lbl_bottom = ra_type
-        else:
-            lbl_bottom = "%s:%s" % (ra_class, ra_type)
-        gv_obj.new_node(self.obj_id, norank=(ra_class == "stonith"))
-        gv_obj.new_attr(self.obj_id, 'label', '%s\\n%s' % (lbl_top, lbl_bottom))
-        self._set_gv_attrs(gv_obj)
-        self._set_gv_attrs(gv_obj, "class:%s" % ra_class)
-        # if it's clone/ms, then get parent graph attributes
-        if self.parent and self.parent.obj_type in vars.clonems_tags:
-            self._set_gv_attrs(gv_obj, self.parent.obj_type)
+        if self.obj_type == "primitive":
+            # if we belong to a group, but were not called with
+            # from_grp=True, then skip
+            if not from_grp and self.parent and self.parent.obj_type == "group":
+                return
+            n = reduce_primitive(self.node)
+            ra_class = n.get("class")
+            ra_type = n.get("type")
+            lbl_top = self._gv_rsc_id()
+            if ra_class in ("ocf", "stonith"):
+                lbl_bottom = ra_type
+            else:
+                lbl_bottom = "%s:%s" % (ra_class, ra_type)
+            gv_obj.new_node(self.obj_id, norank=(ra_class == "stonith"))
+            gv_obj.new_attr(self.obj_id, 'label', '%s\\n%s' % (lbl_top, lbl_bottom))
+            self._set_gv_attrs(gv_obj)
+            self._set_gv_attrs(gv_obj, "class:%s" % ra_class)
+            # if it's clone/ms, then get parent graph attributes
+            if self.parent and self.parent.obj_type in vars.clonems_tags:
+                self._set_gv_attrs(gv_obj, self.parent.obj_type)
+
+            template_ref = self.node.get("template")
+            if template_ref:
+                e = [template_ref, self.obj_id]
+                e_id = gv_obj.new_edge(e)
+                self._set_edge_attrs(gv_obj, e_id, 'template:edge')
+
+        elif self.obj_type == "rsc_template":
+            n = reduce_primitive(self.node)
+            ra_class = n.get("class")
+            ra_type = n.get("type")
+            lbl_top = self._gv_rsc_id()
+            if ra_class in ("ocf", "stonith"):
+                lbl_bottom = ra_type
+            else:
+                lbl_bottom = "%s:%s" % (ra_class, ra_type)
+            gv_obj.new_node(self.obj_id, norank=(ra_class == "stonith"))
+            gv_obj.new_attr(self.obj_id, 'label', '%s\\n%s' % (lbl_top, lbl_bottom))
+            self._set_gv_attrs(gv_obj)
+            self._set_gv_attrs(gv_obj, "class:%s" % ra_class)
+            # if it's clone/ms, then get parent graph attributes
+            if self.parent and self.parent.obj_type in vars.clonems_tags:
+                self._set_gv_attrs(gv_obj, self.parent.obj_type)
 
 
 class CibContainer(CibObject):

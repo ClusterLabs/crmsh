@@ -171,6 +171,10 @@ graph = {
     ".": {
         "compound": "true",
     },
+    "*": {
+        "fontname": "Helvetica",
+        "fontsize": "11",
+    },
     "node": {
         "style": "bold",
         "shape": "box",
@@ -178,6 +182,11 @@ graph = {
     },
     "primitive": {
         "fillcolor": "lightgrey",
+        "style": "filled",
+    },
+    "rsc_template": {
+        "fillcolor": "lightgrey",
+        "color": "mediumpurple",
         "style": "filled",
     },
     "class:stonith": {
@@ -203,6 +212,12 @@ graph = {
     },
     "optional_set": {
         "style": "dotted",
+    },
+    "template:edge": {
+        "color": "grey64",
+        "style": "dotted",
+        "arrowtail": "open",
+        "dir": "back",
     },
 }
 

@@ -174,11 +174,7 @@ class GvDot(Gv):
 
     def header(self):
         name = self.id and self.id or "G"
-        # TODO: allow customization of output size
-        # Limit to A4 size
-        width = 8.27 - 0.9
-        height = 11.69 - 0.9
-        return 'digraph %s {\nsize="%s,%s";' % (name, width, height)
+        return 'digraph %s {\n' % (name)
 
     def footer(self):
         return '}'
