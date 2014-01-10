@@ -106,7 +106,10 @@ def load_script(script):
 
 
 def verify(name):
-    script_dir = os.path.dirname(resolve_script(name))
+    script = resolve_script(name)
+    if not script:
+        raise ValueError("%s not found" % (name))
+    script_dir = os.path.dirname(script)
     main = load_script(name)
     for key in ['name', 'description', 'parameters', 'steps']:
         if key not in main:
