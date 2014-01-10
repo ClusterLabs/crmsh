@@ -19,10 +19,10 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in
 
-scriptinitdir 		= $(datadir)/@PACKAGE@/scripts/init
+scriptremovedir 		= $(datadir)/@PACKAGE@/scripts/remove
 
-scriptinit_DATA	= main.yml
-scriptinit_SCRIPTS	= collect.py init.py install.py report.py verify.py
+scriptremove_DATA	= main.yml
+scriptremove_SCRIPTS	= collect.py
 
-EXTRA_DIST	= $(scriptinit_DATA) $(scriptinit_SCRIPTS)
+EXTRA_DIST	= $(scriptremove_DATA) $(scriptremove_SCRIPTS)
 

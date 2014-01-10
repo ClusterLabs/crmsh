@@ -1,0 +1,12 @@
+---
+- name: Adds a new node to an already existing cluster
+  description: >
+    Adds the new node both to Pacemaker and Corosync.
+  parameters:
+    - name: node
+      description: Node to add to the cluster
+  steps:
+    - name: Check state of nodes
+      type: collect
+      call: collect.py
+

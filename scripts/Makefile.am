@@ -1,2 +1,2 @@
-SUBDIRS = check-uptime health
+SUBDIRS = check-uptime health init add remove
 

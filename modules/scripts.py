@@ -291,7 +291,7 @@ def run(host_aliases, name, args, dry_run=False):
                 if local_node:
                     rc, out, err = utils.get_stdout_stderr(cmdline)
                     if rc != 0:
-                        err_buf.error("[%s]: %s: %s" % (local_node, cmdline, err))
+                        err_buf.error("[%s]: %s" % (local_node, err))
                         ok = False
                     else:
                         step_result[local_node] = json.loads(out)
