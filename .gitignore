@@ -2,3 +2,7 @@
 *~
 #*.*#
 doc/gen
+Makefile.in
+autom4te.cache
+patches/*
+
