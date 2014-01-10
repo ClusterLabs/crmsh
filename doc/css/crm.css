@@ -15,7 +15,7 @@ body {
     padding: 0px;
     width: 100%;
     color:#333;
-    background: #faf8f6;
+    background: #fff;
 }
 
 em {
@@ -101,7 +101,7 @@ pre {
 }
 
 #header {
-    background:#fff;
+    background: #faf8f6;
     padding-left: 24px;
     padding-top: 8px;
     padding-bottom: 0px;
@@ -200,7 +200,7 @@ div.admonitionblock td.icon {
 
 div.listingblock .content {
     border:1px solid silver;
-    background:#eee;
+    background: #faf8f6;
     padding:5px;
 }
 

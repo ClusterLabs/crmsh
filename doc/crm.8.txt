@@ -5,7 +5,6 @@
 crm(8)
 ======
 
-
 NAME
 ----
 crm - Pacemaker command line interface for configuration and management

@@ -3,12 +3,16 @@ SRC := index.txt crm.8.txt faq.txt documentation.txt development.txt \
 	configuration.txt about.txt tutorials.txt rsctest-tutorial.txt \
 	history-tutorial.txt crm.1.2.6.txt
 TGT := $(patsubst %.txt,gen/%.html,$(SRC))
-CSS := css/crm.css
+CSS := css/crm.css css/font-awesome.min.css
 CSS := $(patsubst %,gen/%,$(CSS))
 JS  := js/FeedEk.js
 JS  := $(patsubst %,gen/%,$(JS))
 IMG := img/loader.gif
 IMG  := $(patsubst %,gen/%,$(IMG))
+FONTS := fonts/FontAwesome.otf fonts/fontawesome-webfont.eot \
+	fonts/fontawesome-webfont.svg fonts/fontawesome-webfont.ttf \
+	fonts/fontawesome-webfont.woff
+FONTS := $(patsubst %,gen/%,$(FONTS))
 WATCHDIR := watchdir
 XDGOPEN := xdg-open
 
@@ -34,7 +38,12 @@ gen/img/%: img/%
 	@cp -r $< $@
 	@echo "+ $@"
 
-site: $(TGT) $(CSS) $(JS) $(IMG)
+gen/fonts/%: fonts/%
+	@mkdir -p gen/fonts
+	@cp -r $< $@
+	@echo "+ $@"
+
+site: $(TGT) $(CSS) $(JS) $(IMG) $(FONTS)
 
 deploy: site
 	@echo "TODO: CVS upload"
@@ -43,9 +52,9 @@ open: site
 	@$(XDGOPEN) gen/index.html
 
 watch:
-	@$(WATCHDIR) --verbose --cmd "make -f Makefile.www" . css js img
+	@$(WATCHDIR) --verbose --cmd "make -f Makefile.www" . css js img fonts
 
 clean:
-	-@$(RM) -rf gen/*.html gen/css gen/js gen/img
+	-@$(RM) -rf gen/*.html gen/css gen/js gen/img gen/fonts
 
 all: site

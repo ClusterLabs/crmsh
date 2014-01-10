@@ -8,6 +8,8 @@ The CSS for this site started as a clone of the +bare+ theme by https://github.c
 
 News feed uses http://jquery.com[jQuery] and http://jquery-plugins.net/FeedEk/FeedEk.html[FeedEk].
 
+Fonts used are https://www.google.com/fonts/specimen/Open+Sans[Open Sans] and http://fontawesome.io[Font Awesome].
+
 == Authors ==
 
 include::../AUTHORS[]
