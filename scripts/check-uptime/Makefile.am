@@ -21,7 +21,8 @@ MAINTAINERCLEANFILES    = Makefile.in
 
 uptimedir 		= $(datadir)/@PACKAGE@/scripts/check-uptime
 
-uptime_DATA	= fetch.py report.py main.yml
+uptime_DATA	= main.yml
+uptime_SCRIPTS	= fetch.py report.py
 
-EXTRA_DIST	= $(uptime_DATA)
+EXTRA_DIST	= $(uptime_DATA) $(uptime_SCRIPTS)
 

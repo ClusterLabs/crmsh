@@ -21,6 +21,7 @@ MAINTAINERCLEANFILES    = Makefile.in
 
 healthdir 		= $(datadir)/@PACKAGE@/scripts/health
 
-health_DATA	= main.yml collect.py report.py
+health_DATA	= main.yml
+health_SCRIPTS	= collect.py report.py
 
-EXTRA_DIST	= $(health_DATA)
+EXTRA_DIST	= $(health_DATA) $(health_SCRIPTS)
