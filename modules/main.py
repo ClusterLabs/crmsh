@@ -247,13 +247,13 @@ def do_work(context, user_args):
 
     if options.shadow:
         if not context.run("cib use " + options.shadow):
-            sys.exit(1)
+            return 1
 
     # this special case is silly, but we have to keep it to
     # preserve the backward compatibility
     if len(user_args) == 1 and user_args[0].startswith("conf"):
         if not context.run("configure"):
-            sys.exit(1)
+            return 1
     elif len(user_args) > 0:
         # we're not sure yet whether it's an interactive session or not
         # (single-shot commands aren't)
@@ -264,12 +264,12 @@ def do_work(context, user_args):
         if context.run(' '.join(l)):
             # if the user entered a level, then just continue
             if not context.previous_level():
-                sys.exit(0)
+                return 0
             set_interactive()
             if options.interactive:
                 err_buf.reset_lineno(-1)
         else:
-            sys.exit(1)
+            return 1
 
     if options.file and options.file != "-":
         try:
@@ -309,6 +309,7 @@ def do_work(context, user_args):
             if options.interactive and not options.batch:
                 print "Ctrl-C, leaving"
             context.quit(1)
+    return rc
 
 
 def compgen():
@@ -392,13 +393,14 @@ def profile_run(context, user_args):
                                's = pstats.Stats("%s")' % options.profile,
                                's.sort_stats("cumulative").print_stats()'])
         print "python -c '%s' | less" % (stats_cmd)
+    return 0
 
 
 def run():
     try:
         if len(sys.argv) >= 2 and sys.argv[1] == '--compgen':
             compgen()
-            return
+            return 0
         envsetup()
         userdir.mv_user_files()
 
@@ -413,9 +415,9 @@ def run():
             options.batch = True
         user_args = parse_options()
         if options.profile:
-            profile_run(context, user_args)
+            return profile_run(context, user_args)
         else:
-            do_work(context, user_args)
+            return do_work(context, user_args)
     except KeyboardInterrupt:
         print "Ctrl-C, leaving"
         sys.exit(1)

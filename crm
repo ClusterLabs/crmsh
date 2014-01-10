@@ -40,5 +40,6 @@ except ImportError, msg:
         sys.stderr.write("(check your install and PYTHONPATH)\n")
         sys.exit(-1)
 
-main.run()
+rc = main.run()
+sys.exit(rc)
 # vim:ts=4:sw=4:et:
