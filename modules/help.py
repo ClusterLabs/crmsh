@@ -213,9 +213,13 @@ def help_command(level, command):
     Returns a help entry for a given command
     '''
     _load_help()
-    if not level in _COMMANDS:
-        return _DEFAULT
-    return _COMMANDS[level].get(command, _DEFAULT)
+    lvlhelp = _COMMANDS.get(level)
+    if not lvlhelp:
+        raise ValueError("Undocumented topic '%s'" % (level))
+    cmdhelp = lvlhelp.get(command)
+    if not cmdhelp:
+        raise ValueError("Undocumented topic '%s' in '%s'" % (command, level))
+    return cmdhelp
 
 
 def _is_help_topic(arg):
@@ -250,7 +254,7 @@ def help_contextual(context, subject, subtopic):
         return help_command(context, subject)
     if _is_level(subject):
         return help_level(subject)
-    return _DEFAULT
+    raise ValueError("Undocumented topic '%s'" % (subject))
 
 
 def add_help(entry, topic=None, level=None, command=None):
