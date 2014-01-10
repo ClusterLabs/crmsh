@@ -5,6 +5,7 @@
 * link:crm.8.html[Man page (development version)]
 * link:crm.1.2.6.html[Man page (stable version 1.2.6)]
 * link:configuration.html[Configuration]
+* link:scripts.html[Cluster scripts]
 * link:tutorials.html[Guides & Tutorials]
 * link:faq.html[FAQ]
 
