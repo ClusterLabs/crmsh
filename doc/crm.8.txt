@@ -641,15 +641,35 @@ These commands enable easy installation and maintenance of a HA
 cluster, by providing support for package installation, configuration
 of the cluster messaging layer, file system setup and more.
 
-[[cmdhelp_cluster_create,Create a new HA cluster]]
-==== `create`
+[[cmdhelp_cluster_start,Start cluster services]]
+==== `start`
 
-Installs and configures a basic HA cluster on the given group of
-nodes.
+Starts the cluster-related system services on this node.
+
+Usage:
+.........
+start
+.........
+
+[[cmdhelp_cluster_stop,Stop cluster services]]
+==== `start`
+
+Stops the cluster-related system services on this node.
+
+Usage:
+.........
+stop
+.........
+
+[[cmdhelp_cluster_init,Initializes a new HA cluster]]
+==== `init`
+
+Installs and configures a basic HA cluster on a set of nodes.
 
 Usage:
 ........
-create nodes=node1,node2,node3
+init node1 node2 node3
+init --dry-run node1 node2 node3
 ........
 
 [[cmdhelp_cluster_add,Add a new node to the cluster]]
@@ -660,6 +680,8 @@ cluster. The new node will be installed and configured with the
 packages and configuration files needed to run the cluster
 resources. If a cluster file system is used, the new node will be set
 up to host the file system.
+
+This command should be executed from a node already in the cluster.
 
 Usage:
 ...............
@@ -689,52 +711,14 @@ status
 ...............
 
 [[cmdhelp_cluster_health,Cluster health check]]
-==== `status`
+==== `health`
 
 Runs a larger set of tests and queries on all nodes in the cluster to
-verify the health and detect potential problems.
+verify the general system health and detect potential problems.
 
 Usage:
 ...............
 health
-...............
-
-[[cmdhelp_cluster_apply,Apply a cluster script]]
-==== `apply`
-
-Installs new cluster configuration scripts. These scripts can be used
-to configure various cluster configurations, including package
-installation, system configuration and CIB modifications.
-
-For example, the requirements for running an apache-based web server
-can easily be set up with the following command:
-
-........
-apply www/apache
-........
-
-To learn more about what parameters a script takes as input, use the
-`describe` command:
-
-........
-describe www/apache
-........
-
-NOTE: SSH communications and access via hostname need to be
-      configured in advance. The use of an SSH agent and an authorized key
-      installed on all of the nodes is highly recommended.
-      To quickly set up a recommended SSH configuration on a group of
-      nodes, use the `create` command.
-
-[[cmdhelp_cluster_list,List available cluster configuration scripts]]
-==== `list`
-
-Lists the available configuration scripts that can be executed using
-the `apply` command.
-
-Usage:
-...............
-list
 ...............
 
 [[cmdhelp_cluster_wait_for_startup,Wait for cluster to start]]
@@ -751,29 +735,6 @@ Usage:
 wait_for_startup
 ........
 
-[[cmdhelp_cluster_describe,Show detailed information for a script]]
-==== `describe`
-
-Shows detailed information about a script. Also lists all required
-and optional parameters that the script takes as input.
-
-Usage:
-........
-describe www/apache
-........
-
-[[cmdhelp_cluster_reload,Reload corosync configuration]]
-==== `reload`
-
-Reloads the corosync configuration on all nodes. Call this after
-changing anything in `/etc/corosync/corosync.conf`. Remember to make
-the changes on all nodes (or use `csync2`).
-
-Usage:
-........
-reload
-........
-
 [[cmdhelp_cluster_run,Execute an arbitrary command on all nodes]]
 ==== `run`
 
@@ -784,6 +745,168 @@ Usage:
 ...............
 run <command>
 ...............
+
+Example:
+...............
+run "cat /proc/uptime"
+...............
+
+[[cmdhelp_script,Cluster script management]]
+=== `cluster`
+
+Cluster scripts can perform cluster-wide configuration,
+validation and management. See the `list` command for
+an overview of available scripts.
+
+[[cmdhelp_script_list,List available scripts]]
+==== `list`
+
+Lists the available cluster scripts.
+
+Usage:
+............
+list
+............
+
+[[cmdhelp_script_verify,Verify the cluster script]]
+==== `verify`
+
+Mainly useful when creating new scripts, this command
+verifies that the script definition has all necessary
+fields and that the referenced actions exist.
+
+Usage:
+............
+verify <script>
+............
+
+[[cmdhelp_script_describe,Describe the cluster script]]
+==== `describe`
+
+Prints a description and short summary of the cluster script, with
+descriptions of all parameters, both required and optional.
+
+Usage:
+............
+describe <script>
+............
+
+[[cmdhelp_script_run,Execute the cluster script]]
+==== `run`
+
+Runs a cluster script. Can optionally take two arguments:
+* `--nodes`: List of nodes that the script runs over
+* `--dry-run`: If set, the script will not perform any modifications.
+
+Usage:
+.............
+run [--dry-run] [--nodes <node-list>] <script> [args...]
+.............
+
+Example:
+.............
+run --dry-run health verbose=yes
+run --nodes "node-1 node-2 node-3" init
+.............
+
+[[cmdhelp_corosync,Corosync management]]
+=== `corosync`
+
+Corosync is the underlying messaging layer for most HA clusters.
+This level provides commands for editing and managing the corosync
+configuration.
+
+[[cmdhelp_corosync_status,Display the corosync status]]
+==== `status`
+
+Displays the status of Corosync, including the votequorum state.
+
+Usage:
+.........
+status
+.........
+
+[[cmdhelp_corosync_show,Display the corosync configuration]]
+==== `show`
+
+Displays the corosync configuration on the current node.
+
+.........
+show
+.........
+
+[[cmdhelp_corosync_edit,Edit the corosync configuration]]
+==== `edit`
+
+Opens the Corosync configuration file in an editor.
+
+Usage:
+.........
+edit
+.........
+
+[[cmdhelp_corosync_reload,Reload the corosync configuration]]
+==== `reload`
+
+Tells all instances of corosync in this cluster to reload
+`corosync.conf`.
+
+After pushing a new configuration to all cluster nodes, call this
+command to make corosync use the new configuration.
+
+Usage:
+.........
+reload
+.........
+
+[[cmdhelp_corosync_push,Push the corosync configuration]]
+==== `push`
+
+Pushes the corosync configuration file on this node to
+the list of nodes provided. If no target nodes are given,
+the configuration is pushed to all other nodes in the cluster.
+
+It is recommended to use `csync2` to distribute the cluster
+configuration files rather than relying on this command.
+
+Usage:
+.........
+push [node] ...
+.........
+
+Example:
+.........
+push node-2 node-3
+.........
+
+[[cmdhelp_corosync_pull,Pulls the corosync configuration]]
+==== `pull`
+
+Gets the corosync configuration from another node and copies
+it to this node.
+
+Usage:
+.........
+pull <node>
+.........
+
+[[cmdhelp_corosync_diff,Diffs the corosync configuration]]
+==== `diff`
+
+Diffs the corosync configurations on different nodes. If no nodes are
+given as arguments, the corosync configurations on all nodes in the
+cluster are compared.
+
+`diff` takes an option argument `--checksum`, to force checksum mode.
+
+If the number of nodes to compare are greater than two, `diff`
+automatically switches to checksum mode.
+
+Usage:
+.........
+diff [--checksum] [node...]
+.........
+
 
 [[cmdhelp_cib,CIB shadow management]]
 === `cib` (shadow CIBs)

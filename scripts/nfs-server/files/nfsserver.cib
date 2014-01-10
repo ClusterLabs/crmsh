@@ -1,4 +1,0 @@
-primitive p_lsb_nfsserver \
-  lsb:nfsserver \
-  op monitor interval="30s"
-clone cl_lsb_nfsserver p_lsb_nfsserver

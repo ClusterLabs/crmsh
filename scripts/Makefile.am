@@ -1,0 +1,2 @@
+SUBDIRS = check-uptime health
+

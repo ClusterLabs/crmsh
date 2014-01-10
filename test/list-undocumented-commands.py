@@ -16,12 +16,21 @@ import modules.help
 modules.help.HELP_FILE = "doc/crm.8.txt"
 modules.help._load_help()
 
+_IGNORED_COMMANDS = ('help', 'quit', 'cd', 'up', 'ls')
 
 def check_help(ui):
     for name, child in ui._children.iteritems():
-        if modules.help.help_contextual(ui.name, name, None) == modules.help._DEFAULT:
-            print "Undocumented: %s %s" % (ui.name, name)
-        if child.type == 'level':
+        if child.type == 'command':
+            try:
+                h = modules.help.help_command(ui.name, name)
+                if h.generated and name not in _IGNORED_COMMANDS:
+                    print "Undocumented: %s %s" % (ui.name, name)
+            except:
+                print "Undocumented: %s %s" % (ui.name, name)
+        elif child.type == 'level':
+            h = modules.help.help_level(name)
+            if h.generated:
+                print "Undocumented: %s %s" % (ui.name, name)
             check_help(child.level)
 
 check_help(Root())

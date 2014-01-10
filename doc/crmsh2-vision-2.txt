@@ -1,0 +1,55 @@
+node ha-three
+node ha-one
+node ha-two
+template template-1 Dummy
+resource apache apache
+	params configfile=/etc/apache2/httpd.conf
+	meta remote-node=ha-one
+	op stop timeout=60 interval=0
+	op monitor interval=10 timeout=20
+	op start timeout=40 interval=0 trace_ra=1
+resource st-ssh stonith:external/ssh
+	params hostlist="ha-two ha-three"
+	op monitor interval=0 trace_ra=1
+resource test-1 @template-1
+resource test-2 @template-1
+resource virtual-ip IPaddr2
+	params ip=192.168.122.13 lvs_support=false
+	op start timeout=20 interval=0
+	op stop timeout=20 interval=0
+	op monitor interval=10 timeout=20
+group web-server virtual-ip apache
+	meta target-role=Started
+clone fencing st-ssh
+	meta target-role=Started
+property
+	stonith-enabled=true
+	no-quorum-policy=ignore
+	placement-strategy=balanced
+	dc-version=1.1.10+git20131204.93a37bf-94.6-1.1.10+git20131204.93a37bf
+	cluster-infrastructure=corosync
+	expected-quorum-votes=3
+	symmetric-cluster=true
+rsc_defaults
+	resource-stickiness=1
+	migration-threshold=3
+# 
+op_defaults
+	timeout=200
+	record-pending=true
+
+
+1. hide $id="..." for node
+2. rename primitive to resource
+3. rename rsc_template to template
+4. allow just "foo" instead of $id="foo" if first argument to
+rsc_defaults, property, op_defaults
+5. do resource name resolution correctly, and simplify displayed names
+   if possible (for example, ocf:heartbeat: is the default so always
+   just display the RA name)
+6. don't require the \ line-continuation character when given batched 
+   input: indented lines are assumed to be continuation lines if
+   previous line is not an empty line
+7. hide ID of rsc_defaults, property, op_defaults if there is only one
+   instance
+8. don't quite arguments unless necessary

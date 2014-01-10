@@ -1,0 +1,30 @@
+---
+- name: Initialize a new cluster
+  description: >
+    Creates a new cluster on the given set of hosts.
+  parameters:
+    - name: stage
+      description: One of ssh, csync2, corosync, storage, sbd, cluster, vgfs
+      default: "all"
+    - name: quiet
+      description: "Don't describe what's happening, just do it."
+      default: false
+    - name: iface
+      description: "Use the given interface. Auto-detects interface by default."
+      default: ""
+  steps:
+    - name: Check state of nodes
+      type: collect
+      call: collect.py
+    - name: Verify parameters
+      type: verify
+      call: verify.py
+    - name: Install cluster packages
+      type: apply
+      call: install.py
+    - name: Initialize cluster
+      type: apply_local
+      call: init.py
+    - name: Summarize changes
+      type: report
+      call: report.py

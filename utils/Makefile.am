@@ -1,7 +1,7 @@
 #
-# shell: Pacemaker code
+# crmsh util scripts
 #
-# Copyright (C) 2008 Andrew Beekhof
+# Copyright (C) 2014 Kristoffer Gronlund
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -17,31 +17,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
-MAINTAINERCLEANFILES    = Makefile.in aclocal.m4 configure
+MAINTAINERCLEANFILES    = Makefile.in
 
-sbin_SCRIPTS		= crm
+utilsdir 		= $(datadir)/@PACKAGE@/utils
 
-EXTRA_DIST		= crm
+utils_DATA	= rpmcheck.py crm_script.py package_manager.py
 
-SUBDIRS = doc modules templates test contrib hb_report utils scripts
-
-doc_DATA = AUTHORS COPYING README ChangeLog
-
-crmversiondir=$(datadir)/@PACKAGE@
-crmversion_DATA = version
-
-# in .spec, set --sysconfdir=/etc
-crmconfdir=$(sysconfdir)/crm
-crmconf_DATA = crm.conf
-
-install-exec-local:
-	$(INSTALL) -d -m 770 $(DESTDIR)/$(CRM_CACHE_DIR)
-	-chown $(CRM_DAEMON_USER):$(CRM_DAEMON_GROUP) $(DESTDIR)/$(CRM_CACHE_DIR)
-
-clean-generic:
-	rm -f $(TARFILE) *.tar.bz2 *.sed
-
-dist-clean-local:
-	rm -f autoconf automake autoheader
-
-.PHONY: rpm pkg handy handy-copy
+EXTRA_DIST	= $(utils_DATA)

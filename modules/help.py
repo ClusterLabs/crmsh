@@ -81,13 +81,14 @@ class HelpFilter(object):
 
 
 class HelpEntry(object):
-    def __init__(self, short_help, long_help='', alias_for=None):
+    def __init__(self, short_help, long_help='', alias_for=None, generated=False):
         if short_help:
             self.short = short_help[0].upper() + short_help[1:]
         else:
             self.short = 'Help'
         self.long = long_help
         self.alias_for = alias_for
+        self.generated = generated
 
     def is_alias(self):
         return self.alias_for is not None
@@ -125,7 +126,7 @@ class HelpEntry(object):
 
 HELP_FILE = os.path.join(config.path.sharedir, 'crm.8.txt')
 
-_DEFAULT = HelpEntry('No help available')
+_DEFAULT = HelpEntry('No help available', long_help='', alias_for=None, generated=True)
 _REFERENCE_RE = re.compile(r'<<[^,]+,(.+)>>')
 
 # loaded on demand
@@ -136,8 +137,8 @@ _TOPICS = odict()
 _LEVELS = odict()
 _COMMANDS = odict()
 
-_TOPICS["Overview"] = HelpEntry("Available help topics and commands")
-_TOPICS["Topics"] = HelpEntry("Available help topics")
+_TOPICS["Overview"] = HelpEntry("Available help topics and commands", generated=True)
+_TOPICS["Topics"] = HelpEntry("Available help topics", generated=True)
 
 
 def _titleline(title, desc, suffix=''):
@@ -172,7 +173,7 @@ def help_overview():
                 if not cmd.is_alias():
                     s += '\t\t' + _titleline(cmdname, cmd.short)
             s += "\n"
-    return HelpEntry('Help overview for crmsh\n', s)
+    return HelpEntry('Help overview for crmsh\n', s, generated=True)
 
 
 def help_topics():
@@ -184,7 +185,7 @@ def help_topics():
     s = ''
     for title, topic in _TOPICS.iteritems():
         s += '\t' + _titleline(title, topic.short)
-    return HelpEntry('Available topics\n', s)
+    return HelpEntry('Available topics\n', s, generated=True)
 
 
 def list_help_topics():
@@ -270,7 +271,7 @@ def add_help(entry, topic=None, level=None, command=None):
             _TOPICS[topic] = entry
     elif level and command:
         if level not in _LEVELS:
-            _LEVELS[level] = HelpEntry("No description available")
+            _LEVELS[level] = HelpEntry("No description available", generated=True)
         if level not in _COMMANDS:
             _COMMANDS[level] = odict()
         lvl = _COMMANDS[level]

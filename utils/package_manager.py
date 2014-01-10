@@ -78,6 +78,8 @@ class Zypper(PackageManager):
     def __init__(self):
         self._rpm = is_program('rpm')
         self._zyp = is_program('zypper')
+        if self._rpm is None or self._zyp is None:
+            raise OSError("Missing tools: %s, %s" % (self._rpm, self._zyp))
 
     def get_version(self, name):
         cmd = [self._rpm, '-q', name]
@@ -89,6 +91,10 @@ class Zypper(PackageManager):
         return None
 
     def is_installed(self, name):
+        if not isinstance(self._rpm, basestring):
+            raise IOError(str(self._rpm))
+        if not isinstance(name, basestring):
+            raise IOError(str(name))
         cmd = [self._rpm, '--query', '--info', name]
         rc, stdout, stderr = run(cmd)
         return rc == 0
@@ -225,6 +231,8 @@ def manage_package(pkg, state):
     """
     Gathers version and release information about a package.
     """
+    if pkg is None:
+        raise IOError("PKG IS NONE")
     pf = get_platform()
     if pf != 'Linux':
         fail(msg="Unsupported platform: " + pf)
@@ -264,6 +272,8 @@ def main():
     args = parser.parse_args()
     global DRY_RUN
     DRY_RUN = args.dry_run
+    if not args.name or not args.state:
+        raise IOError("Bad arguments: %s" % (sys.argv))
     data = manage_package(args.name, args.state)
     print json.dumps(data)
 

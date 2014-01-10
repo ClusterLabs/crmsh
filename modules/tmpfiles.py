@@ -23,6 +23,8 @@ import os
 import atexit
 from tempfile import mkstemp
 
+import utils
+
 _FILES = []
 
 
@@ -44,7 +46,7 @@ def add(filename):
     _FILES.append(filename)
 
 
-def create(dir='/tmp', prefix='crmsh_'):
+def create(dir=utils.get_tempdir(), prefix='crmsh_'):
     '''
     Create a temporary file and remove it at program exit.
     Returns (fd, filename)

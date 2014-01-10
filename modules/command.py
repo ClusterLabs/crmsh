@@ -373,16 +373,18 @@ Examples:
 
                 # Add static help to the help system
                 if info.short_help:
-                    entry = help_module.HelpEntry(info.short_help, info.long_help)
+                    entry = help_module.HelpEntry(info.short_help, info.long_help, generated=True)
                 elif info.type == 'command':
                     entry = help_module.HelpEntry(
                         'Help for command ' + info.name,
                         'Note: This command is not documented.\n' +
                         'Usage: %s %s' % (info.name,
-                                          ui_utils.pretty_arguments(info.function, nskip=2)))
+                                          ui_utils.pretty_arguments(info.function, nskip=2)),
+                        generated=True)
                 elif info.type == 'level':
                     entry = help_module.HelpEntry('Help for level ' + info.name,
-                                                  'Note: This level is not documented.\n')
+                                                  'Note: This level is not documented.\n',
+                                                  generated=True)
                 if info.type == 'command':
                     help_module.add_help(entry, level=self.name, command=info.name)
                 elif info.type == 'level':

@@ -1,0 +1,13 @@
+---
+- name: Check the health of the cluster
+  description: >
+    Runs various checks to verify the health of the cluster nodes
+  parameters: []
+  steps:
+    - name: Collecting information...
+      type: collect
+      call: collect.py
+    - name: Verify and report health
+      type: report
+      call: report.py
+

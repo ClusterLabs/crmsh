@@ -1,9 +1,0 @@
----
-- name: Install and configure the Apache web server
-  description: >
-    This script ensures that all requirements to run a clustered Apache
-    web server are fulfilled.
-  
-  steps:
-    - name: Ensure apache2 is installed
-      package: name=apache2 state=present

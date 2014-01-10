@@ -11,7 +11,8 @@ V2_PAGES = ['quickstart.html',
             'manual.html',
             'faq.html',
             'documentation.html',
-            'development.html']
+            'development.html',
+            'scripts.html']
 INSERT_AFTER = '<!--TOC-->'
 
 def read_toc_data(infile, debug):

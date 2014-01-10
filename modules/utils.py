@@ -40,6 +40,7 @@ def this_node():
     'returns name of this node (hostname)'
     return os.uname()[1]
 
+
 _cib_shadow = 'CIB_shadow'
 _cib_in_use = ''
 
@@ -58,6 +59,10 @@ def clear_cib_in_use():
 
 def get_cib_in_use():
     return _cib_in_use
+
+
+def get_tempdir():
+    return os.getenv("TMPDIR") or "/tmp"
 
 
 def is_program(prog):
@@ -379,7 +384,13 @@ def nvpairs2dict(pairs):
     takes a list of string of form ['a=b', 'c=d']
     and returns {'a':'b', 'c':'d'}
     '''
-    return dict(x.split('=', 1) for x in pairs)
+    data = []
+    for var in pairs:
+        if '=' in var:
+            data.append(var.split('=', 1))
+        else:
+            data.append([var, None])
+    return dict(data)
 
 
 def is_check_always():
@@ -475,8 +486,20 @@ def get_stdout(cmd, input_s=None, stderr_on=True, shell=True):
                             stdout=subprocess.PIPE,
                             stderr=stderr)
     stdout_data, stderr_data = proc.communicate(input_s)
-    proc.wait()
     return proc.returncode, stdout_data.strip()
+
+
+def get_stdout_stderr(cmd, shell=True):
+    '''
+    Run a cmd, return (rc, stdout, stderr)
+    '''
+    proc = subprocess.Popen(cmd,
+                            shell=shell,
+                            stdin=None,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    stdout_data, stderr_data = proc.communicate()
+    return proc.returncode, stdout_data.strip(), stderr_data.strip()
 
 
 def stdout2list(cmd, stderr_on=True, shell=True):
@@ -768,7 +791,7 @@ def cluster_stack():
         return "heartbeat"
     elif is_process("[a]isexec"):
         return "openais"
-    elif os.path.exists("/etc/corosync/corosync.conf"):
+    elif os.path.exists("/etc/corosync/corosync.conf") or is_program('corosync-cfgtool'):
         return "corosync"
     return ""
 
@@ -780,6 +803,33 @@ def edit_file(fname):
     if not config.core.editor:
         return
     return ext_cmd_nosudo("%s %s" % (config.core.editor, fname))
+
+
+def edit_file_ext(fname, template=''):
+    '''
+    Edit a file via a temporary file.
+    Raises IOError on any error.
+    '''
+    if not os.path.isfile(fname):
+        s = template
+    else:
+        s = open(fname).read()
+    filehash = hash(s)
+    tmpfile = str2tmp(s)
+    try:
+        try:
+            if edit_file(tmpfile) != 0:
+                return
+            s = open(tmpfile, 'r').read()
+            if hash(s) == filehash:  # file unchanged
+                return
+            f2 = open(fname, 'w')
+            f2.write(s)
+            f2.close()
+        finally:
+            os.unlink(tmpfile)
+    except OSError, e:
+        raise IOError(e)
 
 
 def need_pager(s, w, h):
@@ -1154,6 +1204,41 @@ def fetch_lifetime_opt(args, iso8601=True):
         if opt in _LIFETIME or (iso8601 and _ISO8601_RE.match(opt)):
             return args.pop()
     return None
+
+
+def resolve_hostnames(hostnames):
+    '''
+    Tries to resolve the given list of hostnames.
+    returns (ok, failed-hostname)
+    ok: True if all hostnames resolved
+    failed-hostname: First failed hostname resolution
+    '''
+    import socket
+    for node in hostnames:
+        try:
+            socket.gethostbyname(node)
+        except socket.error:
+            return False, node
+    return True, None
+
+
+def list_cluster_nodes():
+    '''
+    Returns a list of nodes in the cluster.
+    '''
+
+    def getname(toks):
+        if toks and len(toks) >= 2:
+            return toks[1]
+        return None
+
+    try:
+        rc, outp = stdout2list(['crm_node', '-l'], stderr_on=False, shell=False)
+        if rc != 0:
+            raise IOError("crm_node failed (RC=%s): %s" % (rc, outp))
+        return [x for x in [getname(line.split()) for line in outp] if x]
+    except OSError, msg:
+        raise ValueError("Error getting list of nodes from crm_node: %s" % (msg))
 
 
 termctrl = TerminalController.getInstance()

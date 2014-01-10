@@ -251,6 +251,10 @@ AC_CONFIG_FILES(Makefile \
 doc/Makefile             \
 contrib/Makefile         \
 templates/Makefile       \
+utils/Makefile           \
+scripts/Makefile         \
+scripts/health/Makefile  \
+scripts/check-uptime/Makefile  \
 test/Makefile            \
 test/testcases/Makefile  \
 modules/Makefile         \

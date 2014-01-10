@@ -29,7 +29,7 @@ import userdir
 import utils
 from utils import add_sudo, str2file, str2tmp, pipe_string, get_boolean
 from utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
-from utils import olist, get_cib_in_use
+from utils import olist, get_cib_in_use, get_tempdir
 
 
 def xmlparse(f):
@@ -342,7 +342,7 @@ def cib_shadow_dir():
     home = userdir.gethomedir(config.core.user)
     if home and home.startswith(os.path.sep):
         return os.path.join(home, ".cib")
-    return os.getenv("TMPDIR") or "/tmp"
+    return get_tempdir()
 
 
 def listshadows():

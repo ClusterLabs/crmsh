@@ -30,6 +30,7 @@ modules =	__init__.py \
 			command.py \
 			completers.py \
 			config.py \
+			corosync.py \
 			crm_gv.py \
 			crm_pssh.py \
 			help.py \
@@ -46,6 +47,7 @@ modules =	__init__.py \
 			report.py \
 			rsctest.py \
 			schema.py \
+			scripts.py \
 			singletonmixin.py \
 			template.py \
 			term.py \
@@ -55,6 +57,7 @@ modules =	__init__.py \
 			ui_cluster.py \
 			ui_configure.py \
 			ui_context.py \
+			ui_corosync.py \
 			ui_history.py \
 			ui_node.py \
 			ui_options.py \
@@ -62,11 +65,11 @@ modules =	__init__.py \
 			ui_report.py \
 			ui_resource.py \
 			ui_root.py \
+			ui_script.py \
 			ui_site.py \
 			ui_template.py \
 			ui_utils.py \
 			userdir.py \
-			userprefs.py \
 			utils.py \
 			vars.py \
 			xmlutil.py
