@@ -19,6 +19,7 @@ import sys
 import os
 import getopt
 import atexit
+import random
 
 import config
 import options
@@ -31,6 +32,9 @@ import userdir
 
 import ui_root
 import ui_context
+
+
+random.seed()
 
 
 def load_rc(context, rcfile):
