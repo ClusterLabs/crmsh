@@ -14,9 +14,9 @@
 ; manage_children = ask
 ; force = no
 ; debug = no
-; ptest =
-; dotty =
-; dot =
+; ptest = ptest, crm_simulate
+; dotty = dotty
+; dot = dot
 
 [path]
 sharedir = @datadir@/@PACKAGE@
