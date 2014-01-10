@@ -77,7 +77,7 @@ class Context(object):
                 self.command_args = tokens
                 self.command_info = self.current_level().get_child(token)
                 if not self.command_info:
-                    self.fatal_error("No such command: %s" % token)
+                    self.fatal_error("No such command")
                 if self.command_info.type == 'level':
                     self.enter_level(self.command_info.level)
                 else:
