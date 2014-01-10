@@ -17,6 +17,8 @@ def exit_ok(data):
     print json.dumps(data)
     sys.exit(0)
 def is_true(s):
+    if s in (True, False):
+        return s
     return s.lower() in ('yes', 'true', '1', 'on')
 def service(name, action):
     return call('service', name, action)
