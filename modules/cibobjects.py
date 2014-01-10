@@ -221,7 +221,6 @@ class Location(Constraint):
 
     def _to_list(self):
         ret = None
-        rscpart = None
         if self.score and self.node:
             ret = listfmt('[[location [[id %] [rsc %] [rsc-pattern %] % [node %] [role %]]]]',
                           self.id, self.resource, self.rsc_pattern,
