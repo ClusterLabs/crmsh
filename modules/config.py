@@ -109,6 +109,10 @@ class opt_boolean(object):
         self.completions = ('yes', 'true', 'on', 'no', 'false', 'off')
 
     def validate(self, val):
+        if val is True:
+            val = 'true'
+        elif val is False:
+            val = 'false'
         if val not in self.completions:
             raise ValueError("Not a boolean: %s" % (val))
 
