@@ -2509,7 +2509,19 @@ Examples:
 ...............
 filter "sed '/^primitive/s/target-role=[^ ]*//'"
 # crm configure filter "sed '/^primitive/s/target-role=[^ ]*//'"
+crm configure <<END
+  filter "sed '/threshold=\"1\"/s/=\"1\"/=\"0\"/g'"
+END
 ...............
+
+.Note on quotation marks
+**************************
+Filter commands which feature a blend of quotation marks can be
+difficult to get right, especially when used directly from bash, since
+bash does its own quotation parsing. In these cases, it can be easier
+to supply the filter command as standard input. See the last example
+above.
+**************************
 
 [[cmdhelp_configure_delete,delete CIB objects]]
 ==== `delete`
