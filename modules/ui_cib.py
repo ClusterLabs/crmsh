@@ -50,7 +50,7 @@ class CibShadow(command.UI):
         return True
 
     @command.level(ui_cibstatus.CibStatusUI)
-    def do_cibconfig(self):
+    def do_cibstatus(self):
         pass
 
     @command.skill_level('administrator')
