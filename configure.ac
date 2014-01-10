@@ -255,6 +255,9 @@ utils/Makefile           \
 scripts/Makefile         \
 scripts/health/Makefile  \
 scripts/check-uptime/Makefile  \
+scripts/init/Makefile  \
+scripts/add/Makefile  \
+scripts/remove/Makefile  \
 test/Makefile            \
 test/testcases/Makefile  \
 modules/Makefile         \
