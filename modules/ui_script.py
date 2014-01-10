@@ -59,11 +59,16 @@ class Script(command.UI):
         '''
         nodes = None
         dry_run = False
-        while len(args) and args[0] in ('--nodes', '--dry-run'):
+        while len(args):
             if args[0] == '--nodes':
                 nodes = args[1].replace(',', ' ').split()
                 args = args[2:]
-            else:
+            elif args[0].startswith('--nodes='):
+                nodes = args[0][9:].replace(',', ' ').split()
+                args = args[1:]
+            elif args[0] == '--dry-run':
                 dry_run = True
                 args = args[1:]
+            else:
+                break
         return scripts.run(nodes, name, args, dry_run=dry_run)
