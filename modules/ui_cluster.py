@@ -32,20 +32,19 @@ def _list_cluster_nodes():
     '''
     Returns a list of nodes in the cluster.
     '''
-    def getname(line):
-        while len(line) > 1:
-            if line[0] == 'node:':
-                return line[1]
-            line = line[1:]
+
+    def getname(toks):
+        if toks and len(toks) >= 2:
+            return toks[1]
         return None
 
     try:
-        rc, outp = utils.stdout2list(['crmadmin', '-N'], stderr_on=False, shell=False)
+        rc, outp = utils.stdout2list(['crm_node', '-l'], stderr_on=False, shell=False)
         if rc != 0:
-            raise IOError("crmadmin failed (RC=%s): %s" % (rc, outp))
+            raise IOError("crm_node failed (RC=%s): %s" % (rc, outp))
         return [x for x in [getname(line.split()) for line in outp] if x]
     except OSError, msg:
-        raise ValueError("Error getting list of nodes from crmadmin: %s" % (msg))
+        raise ValueError("Error getting list of nodes from crm_node: %s" % (msg))
 
 
 class Cluster(command.UI):
