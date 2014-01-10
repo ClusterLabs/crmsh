@@ -32,6 +32,9 @@ _EC_LOGROT = 120
 
 
 def option_parser():
+    '''
+    Create commandline option parser.
+    '''
     parser = common_parser()
     parser.usage = "%prog [OPTIONS] command [...]"
     parser.epilog = "Example: pssh -h hosts.txt -l irb2 -o /tmp/foo uptime"
@@ -48,6 +51,9 @@ def option_parser():
 
 
 def parse_args(myargs, t=_DEFAULT_TIMEOUT):
+    '''
+    Parse the given commandline arguments.
+    '''
     parser = option_parser()
     defaults = common_defaults(timeout=t)
     parser.set_defaults(**defaults)
@@ -56,21 +62,26 @@ def parse_args(myargs, t=_DEFAULT_TIMEOUT):
 
 
 def get_output(dir, host):
+    '''
+    Looks for the output returned by the given host.
+    This is somewhat problematic, since it is possible that
+    different hosts can have similar hostnames. For example naming
+    hosts "host.1" and "host.2" will confuse this code.
+    '''
     l = []
-    fl = glob.glob("%s/*%s*" % (dir, host))
-    for fname in fl:
+    for fname in ["%s/%s" % (dir, host)] + glob.glob("%s/%s.[0-9]*" % (dir, host)):
         try:
-            if os.stat(fname).st_size == 0:
-                continue
-            f = open(fname)
+            if os.path.isfile(fname):
+                l += open(fname).readlines()
         except:
             continue
-        l = [x for x in f]
-        f.close()
     return l
 
 
 def show_output(dir, hosts, desc):
+    '''
+    Display output from hosts. See get_output for caveats.
+    '''
     for host in hosts:
         out_l = get_output(dir, host)
         if out_l:
@@ -79,6 +90,10 @@ def show_output(dir, hosts, desc):
 
 
 def do_pssh(l, opts):
+    '''
+    Adapted from psshlib. Perform command across list of hosts.
+    l = [(host, command), ...]
+    '''
     if opts.outdir and not os.path.exists(opts.outdir):
         os.makedirs(opts.outdir)
     if opts.errdir and not os.path.exists(opts.errdir):
