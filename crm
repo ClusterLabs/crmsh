@@ -36,8 +36,21 @@ except ImportError, msg:
         # Perhaps we're running from the source directory
         from modules import main
     except ImportError, msg2:
-        sys.stderr.write("abort: %s, %s\n" % (msg, msg2))
-        sys.stderr.write("(check your install and PYTHONPATH)\n")
+        sys.stderr.write('''Fatal error:
+    %s
+    %s
+
+Failed to start the crm shell! This is likely due to
+a broken installation or a missing dependency.
+
+If you are using a packaged version of the crm shell,
+please try reinstalling the package. Also check your
+PYTHONPATH and make sure that the crmsh module is
+reachable.
+
+Please file an issue describing your installation at
+http://crmsh.nongnu.org/ .
+''' % (msg, msg2))
         sys.exit(-1)
 
 rc = main.run()
