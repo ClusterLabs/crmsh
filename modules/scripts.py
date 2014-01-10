@@ -184,6 +184,7 @@ def run(host_aliases, name, args, dry_run=False):
 
         local_node = utils.this_node()
         if local_node in host_aliases:
+            host_aliases = list(host_aliases)
             host_aliases.remove(local_node)
         else:
             local_node = None
