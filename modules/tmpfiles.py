@@ -20,12 +20,14 @@ Files added to tmpfiles are removed at program exit.
 '''
 
 import os
+import shutil
 import atexit
-from tempfile import mkstemp
+from tempfile import mkstemp, mkdtemp
 
 import utils
 
 _FILES = []
+_DIRS = []
 
 
 def _exit_handler():
@@ -35,13 +37,18 @@ def _exit_handler():
             os.unlink(f)
         except OSError:
             pass
+    for d in _DIRS:
+        try:
+            shutil.rmtree(d)
+        except OSError:
+            pass
 
 
 def add(filename):
     '''
     Remove the named file at program exit.
     '''
-    if len(_FILES) == 0:
+    if len(_FILES) + len(_DIRS) == 0:
         atexit.register(_exit_handler)
     _FILES.append(filename)
 
@@ -54,3 +61,11 @@ def create(dir=utils.get_tempdir(), prefix='crmsh_'):
     fd, fname = mkstemp(dir=dir, prefix=prefix)
     add(fname)
     return fd, fname
+
+
+def create_dir(dir=utils.get_tempdir(), prefix='crmsh_'):
+    ret = mkdtemp(dir=dir, prefix=prefix)
+    if len(_FILES) + len(_DIRS) == 0:
+        atexit.register(_exit_handler)
+    _DIRS.append(ret)
+    return ret
