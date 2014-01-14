@@ -182,6 +182,12 @@ def run(host_aliases, name, args, dry_run=False):
     if not has_pssh:
         raise ValueError("PSSH library is not installed or is not up to date.")
 
+    # TODO: allow more options here, like user, port...
+    opts = pssh.Options()
+    opts.timeout = 60
+    opts.recursive = True
+    opts.ssh_options += ['ControlPersist=no']
+
     remote_tmp = _remote_tmp_basename()
     try:
         filename = resolve_script(name)
@@ -219,10 +225,6 @@ def run(host_aliases, name, args, dry_run=False):
         else:
             local_node = None
 
-        # TODO: allow more options here, like user, port...
-        opts = pssh.Options()
-        opts.timeout = 60
-        opts.recursive = True
         #_has_controlpersist = _check_control_persist()
         #if _has_controlpersist:
         #    opts.ssh_options += ["ControlMaster=auto",
@@ -232,7 +234,6 @@ def run(host_aliases, name, args, dry_run=False):
         # ControlPersist is broken
         # See: http://code.google.com/p/parallel-ssh/issues/detail?id=67
         # Fixed in openssh 6.3
-        opts.ssh_options += ['ControlPersist=no']
 
         # create temporary working folder locally,
         # and prepare files to send to other nodes
@@ -390,14 +391,15 @@ def run(host_aliases, name, args, dry_run=False):
         raise ValueError("Internal error: %s" % (e))
     finally:
         # TODO: safe cleanup on remote nodes
-        for host, result in pssh.call(host_aliases,
-                                      "%s %s" % (os.path.join(remote_tmp, 'crm_clean.py'),
-                                                 remote_tmp),
-                                      opts).iteritems():
-            if isinstance(result, pssh.Error):
-                err_buf.warning("[%s]: Failed to clean up %s" % (host, remote_tmp))
-                ok = False
-        if os.path.isdir(remote_tmp):
+        if host_aliases:
+            for host, result in pssh.call(host_aliases,
+                                          "%s %s" % (os.path.join(remote_tmp, 'crm_clean.py'),
+                                                     remote_tmp),
+                                          opts).iteritems():
+                if isinstance(result, pssh.Error):
+                    err_buf.warning("[%s]: Failed to clean up %s" % (host, remote_tmp))
+                    ok = False
+        if remote_tmp and os.path.isdir(remote_tmp):
             shutil.rmtree(remote_tmp)
 
 
