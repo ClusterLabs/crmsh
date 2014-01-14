@@ -27,9 +27,9 @@ import userdir
 
 try:
     from psshlib import api as pssh
-    _has_pssh = True
+    has_pssh = True
 except ImportError:
-    _has_pssh = False
+    has_pssh = False
 
 import utils
 
@@ -107,6 +107,32 @@ def load_script(script):
     return None
 
 
+def _step_action(step):
+    name = step.get('name')
+    if 'type' in step:
+        return name, step.get('type'), step.get('call')
+    else:
+        for typ in ['collect', 'validate', 'apply', 'apply_local', 'report']:
+            if typ in step:
+                return name, typ, step['typ'].strip()
+    return name, None, None
+
+
+def _verify_step(scriptdir, scriptname, step):
+    step_name, step_type, step_call = _step_action(step)
+    if not step_name:
+        raise ValueError("Error in %s: Step missing name" % (scriptname))
+    if not step_type:
+        raise ValueError("Error in %s: Step '%s' has no action defined" %
+                         (scriptname, step_name))
+    if not step_call:
+        raise ValueError("Error in %s: Step '%s' has no call defined" %
+                         (scriptname, step_name))
+    if not os.path.isfile(os.path.join(scriptdir, step_call)):
+        raise ValueError("Error in %s: Step '%s' file not found: %s" %
+                         (scriptname, step_name, step_call))
+
+
 def verify(name):
     script = resolve_script(name)
     if not script:
@@ -117,11 +143,7 @@ def verify(name):
         if key not in main:
             raise ValueError("Error in %s: Missing %s" % (name, key))
     for step in main.get('steps', []):
-        for key in ['name', 'type', 'call']:
-            if key not in step:
-                raise ValueError("Error in %s: Step missing %s" % (name, key))
-        if not os.path.isfile(os.path.join(script_dir, step['call'])):
-            raise ValueError("Step %s: Action not found: %s" % (step['name'], step['call']))
+        _verify_step(script_dir, name, step)
     return main
 
 
@@ -157,6 +179,9 @@ def run(host_aliases, name, args, dry_run=False):
     '''
     Run the given script on the given set of hosts
     '''
+    if not has_pssh:
+        raise ValueError("PSSH library is not installed or is not up to date.")
+
     remote_tmp = _remote_tmp_basename()
     try:
         filename = resolve_script(name)
@@ -260,9 +285,7 @@ def run(host_aliases, name, args, dry_run=False):
         data = [params]
 
         for step in main['steps']:
-            step_name = step['name']
-            step_type = step['type']
-            step_call = step['call']
+            step_name, step_type, step_call = _step_action(step)
 
             # TODO: run asynchronously on remote nodes
             # run on remote nodes
