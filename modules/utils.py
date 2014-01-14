@@ -872,6 +872,16 @@ def page_string(s):
         pipe_string("%s %s" % (config.core.pager, opts), term_render(s))
 
 
+def page_file(filename):
+    'Open file in pager'
+    if not os.path.isfile(filename):
+        return
+    cmd = config.core.pager
+    if config.core.pager == "less":
+        cmd += " -R"
+    return ext_cmd_nosudo(cmd + ' ' + filename, shell=True)
+
+
 def get_winsize():
     try:
         import curses
