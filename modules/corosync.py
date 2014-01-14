@@ -109,11 +109,12 @@ def pull_configuration(from_node):
     local_path = conf()
     fd, fname = tmpfiles.create()
     print "Retrieving %s:%s..." % (from_node, local_path)
-    rc = utils.ext_cmd_nosudo(['scp',
-                               '-o', 'PasswordAuthentication=no',
-                               '-o', 'StrictHostKeyChecking=no',
-                               '%s:%s' % (from_node, local_path),
-                               fname])
+    cmd = ['scp', '-qC',
+           '-o', 'PasswordAuthentication=no',
+           '-o', 'StrictHostKeyChecking=no',
+           '%s:%s' % (from_node, local_path),
+           fname]
+    rc = utils.ext_cmd_nosudo(cmd, shell=False)
     if rc == 0:
         data = open(fname).read()
         newhash = hash(data)
