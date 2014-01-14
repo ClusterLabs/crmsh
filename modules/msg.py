@@ -53,14 +53,14 @@ class ErrorBuffer(Singleton):
             self.msg_list = []
         self.mode = "immediate"
 
-    def writemsg(self, msg):
+    def writemsg(self, msg, to=sys.stderr):
         if msg.endswith('\n'):
             msg = msg[:-1]
         if self.mode == "immediate":
             if options.regression_tests:
                 print msg
             else:
-                print >> sys.stderr, msg
+                print >> to, msg
         else:
             self.msg_list.append(msg)
 
@@ -84,11 +84,11 @@ class ErrorBuffer(Singleton):
         else:
             return s
 
-    def _prefix(self, pfx, s):
-        self.writemsg(self._render("%s: %s" % (pfx, self.add_lineno(s))))
+    def _prefix(self, pfx, s, to=sys.stderr):
+        self.writemsg(self._render("%s: %s" % (pfx, self.add_lineno(s))), to=to)
 
     def ok(self, s):
-        self._prefix(self._display.ok("OK"), s)
+        self._prefix(self._display.ok("OK"), s, to=sys.stdout)
 
     def error(self, s):
         self._prefix(self._display.error("ERROR"), s)
@@ -103,7 +103,7 @@ class ErrorBuffer(Singleton):
                           self.add_lineno(s))
 
     def info(self, s):
-        self._prefix(self._display.info("INFO"), s)
+        self._prefix(self._display.info("INFO"), s, to=sys.stdout)
 
     def debug(self, s):
         if config.core.debug:
