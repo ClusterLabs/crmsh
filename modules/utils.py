@@ -480,8 +480,6 @@ def get_stdout(cmd, input_s=None, stderr_on=True, shell=True):
         stderr = None
     else:
         stderr = subprocess.PIPE
-    if options.regression_tests:
-        print ".EXT", cmd
     proc = subprocess.Popen(cmd,
                             shell=shell,
                             stdin=subprocess.PIPE,
@@ -495,8 +493,6 @@ def get_stdout_stderr(cmd, shell=True):
     '''
     Run a cmd, return (rc, stdout, stderr)
     '''
-    if options.regression_tests:
-        print ".EXT", cmd
     proc = subprocess.Popen(cmd,
                             shell=shell,
                             stdin=None,
