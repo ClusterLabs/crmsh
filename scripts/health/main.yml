@@ -5,9 +5,7 @@
   parameters: []
   steps:
     - name: Collecting information...
-      type: collect
-      call: collect.py
+      collect: collect.py
     - name: Verify and report health
-      type: report
-      call: report.py
+      report: report.py
 
