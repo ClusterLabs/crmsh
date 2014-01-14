@@ -1,5 +1,9 @@
 = About =
 
+== Authors ==
+
+include::../AUTHORS[]
+
 == Site ==
 
 This site was generated from http://asciidoc.org[AsciiDoc] sources.
@@ -10,12 +14,8 @@ News feed uses http://jquery.com[jQuery] and http://jquery-plugins.net/FeedEk/Fe
 
 Fonts used are https://www.google.com/fonts/specimen/Open+Sans[Open Sans] and http://fontawesome.io[Font Awesome].
 
-== Authors ==
-
-include::../AUTHORS[]
-
 == License ==
 
-The `crm` shell is licensed under the GNU General Public License (GPL).
+`crmsh` is licensed under the GNU General Public License (GPL).
 
 For more information, see https://gnu.org/licenses/gpl.html

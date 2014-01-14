@@ -1,35 +1,26 @@
 = Development =
 
-The source code for the CRM shell is kept in a Mercurial source
-repository hosted at +nongnu.org+. To obtain a copy of the source
-code, you will need the Mercurial command line tool, +hg+:
+The source code for `crmsh` is kept in a 
+http://mercurial.selenic.com[Mercurial] repository 
+hosted at http://nongnu.org[nongnu]. Use the 
+command-line tool +hg+ to download it:
 
-    hg clone http://hg.savannah.nongnu.org/hgweb/crmsh/
+----
+hg clone http://hg.savannah.nongnu.org/hgweb/crmsh/
+----
 
-For more information about how to use Mercurial and distributed
-version control software in general, see the Mercurial website at
-http://mercurial.selenic.com[mercurial.selenic.com].
-
-`crmsh` is a free software project, and is open to
-contributors. Patches, comments, documentation, testing and so on are
+`crmsh` is a free software project, and is open to contributors. 
+Patches, comments, documentation, testing and so on are
 all very much welcome!
 
-== Project Page ==
+== Tools ==
 
-    * https://savannah.nongnu.org/projects/crmsh/
-
-== Mercurial Repository ==
-
-    * http://hg.savannah.nongnu.org/hgweb/crmsh/
-
-== Mailing List ==
-
-    * http://lists.linux-ha.org/mailman/listinfo/linux-ha
-
-== Issue Tracker ==
-
-    * https://savannah.nongnu.org/bugs/?group=crmsh
-
-== IRC ==
-
-    * +#linux-ha+ on http://freenode.net[irc.freenode.net]
+++++
+<ul class="nav">
+<li><a href="https://savannah.nongnu.org/projects/crmsh/"><i class="fa fa-gears fa-3x fa-fw"></i> Project Page</a></li>
+<li><a href="http://hg.savannah.nongnu.org/hgweb/crmsh/"><i class="fa fa-archive fa-3x fa-fw"></i> Source Repository</a></li>
+<li><a href="http://lists.linux-ha.org/mailman/listinfo/linux-ha"><i class="fa fa-envelope fa-3x fa-fw"></i> Mailing List</a></li>
+<li><a href="https://savannah.nongnu.org/bugs/?group=crmsh"><i class="fa fa-bug fa-3x fa-fw"></i> Issue Tracker</a></li>
+<li><a href="irc://freenode.net/#linux-ha"><i class="fa fa-comments fa-3x fa-fw"></i> IRC: #linux-ha</a></li>
+</ul>
+++++

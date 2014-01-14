@@ -268,6 +268,21 @@ div.sidebarblock .title {
     text-align: center;
 }
 
+.nav {
+    margin-bottom: 0;
+    padding-left: 0;
+    list-style: none;
+}
+
+.nav li {
+    line-height: 4em;
+}
+
+.nav a {
+    font-size: 120%;
+    text-decoration: none;
+}
+
 .feedEkList .newsItem {
     list-style-type: none;
 }
