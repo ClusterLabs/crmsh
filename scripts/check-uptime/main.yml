@@ -3,15 +3,15 @@
   description: >
     Fetches the uptime of all nodes and reports which
     node has lived longest.
+
   parameters:
     - name: show_all
       description: Show all uptimes
       default: false
+
   steps:
     - name: Fetch uptimes
-      type: collect
-      call: fetch.py
-    - name: Report uptime
-      type: report
-      call: report.py
+      collect: fetch.py
 
+    - name: Report uptime
+      report: report.py
