@@ -103,7 +103,7 @@ class ErrorBuffer(Singleton):
                           self.add_lineno(s))
 
     def info(self, s):
-        self._prefix(self._display.info("INFO"), s, to=sys.stdout)
+        self._prefix(self._display.info("INFO"), s)
 
     def debug(self, s):
         if config.core.debug:
