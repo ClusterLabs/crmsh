@@ -23,6 +23,7 @@ import os
 import subprocess
 import shutil
 from msg import err_buf
+import userdir
 
 try:
     from psshlib import api as pssh
@@ -38,7 +39,8 @@ except ImportError:
     import simplejson as json
 
 
-_SCRIPTS_DIR = os.path.join(config.path.sharedir, 'scripts')
+_SCRIPTS_DIR = [os.path.join(userdir.CONFIG_HOME, 'scripts'),
+                os.path.join(config.path.sharedir, 'scripts')]
 
 
 def _check_control_persist():
@@ -64,9 +66,10 @@ def _remote_tmp_basename():
 
 
 def resolve_script(name):
-    script_main = os.path.join(_SCRIPTS_DIR, name, 'main.yml')
-    if os.path.isfile(script_main):
-        return script_main
+    for d in _SCRIPTS_DIR:
+        script_main = os.path.join(_SCRIPTS_DIR, name, 'main.yml')
+        if os.path.isfile(script_main):
+            return script_main
     return None
 
 
@@ -92,7 +95,8 @@ def list_scripts():
                         recurse(root, path_combine(prefix, f))
         except OSError:
             pass
-    recurse(_SCRIPTS_DIR, '')
+    for d in _SCRIPTS_DIR:
+        recurse(d, '')
     return sorted(l)
 
 
