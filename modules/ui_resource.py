@@ -199,12 +199,12 @@ class RscMgmt(command.UI):
         if not utils.is_name_sane(rsc):
             return False
         common_info("ordering %s to stop" % rsc)
-        if not self.stop("stop", rsc):
+        if not self.do_stop(context, rsc):
             return False
         if not utils.wait4dc("stop", not options.batch):
             return False
         common_info("ordering %s to start" % rsc)
-        return self.start("start", rsc)
+        return self.do_start(context, rsc)
 
     @command.wait
     @command.completers(compl.resources)
