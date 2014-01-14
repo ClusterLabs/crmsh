@@ -22,6 +22,6 @@ MAINTAINERCLEANFILES    = Makefile.in
 utilsdir 		= $(datadir)/@PACKAGE@/utils
 
 utils_DATA	= crm_script.py
-utils_SCRIPTS	= rpmcheck.py package_manager.py
+utils_SCRIPTS	= crm_clean.py crm_rpmcheck.py crm_pkg.py
 
 EXTRA_DIST	= $(utils_DATA) $(utils_SCRIPTS)

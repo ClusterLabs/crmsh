@@ -17,8 +17,6 @@
 
 import config
 import yaml
-import options
-import shlex
 import time
 import random
 import os
@@ -365,6 +363,13 @@ def run(host_aliases, name, args, dry_run=False):
         raise ValueError("Internal error: %s" % (e))
     finally:
         # TODO: safe cleanup on remote nodes
+        for host, result in pssh.call(host_aliases,
+                                      "%s %s" % (os.path.join(remote_tmp, 'crm_clean.py'),
+                                                 remote_tmp),
+                                      opts).iteritems():
+            if isinstance(result, pssh.Error):
+                err_buf.warning("[%s]: Failed to clean up %s" % (host, remote_tmp))
+                ok = False
         if os.path.isdir(remote_tmp):
             shutil.rmtree(remote_tmp)
 
