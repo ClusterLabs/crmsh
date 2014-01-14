@@ -67,7 +67,7 @@ def _remote_tmp_basename():
 
 def resolve_script(name):
     for d in _SCRIPTS_DIR:
-        script_main = os.path.join(_SCRIPTS_DIR, name, 'main.yml')
+        script_main = os.path.join(d, name, 'main.yml')
         if os.path.isfile(script_main):
             return script_main
     return None
