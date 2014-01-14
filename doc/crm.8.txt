@@ -3353,10 +3353,12 @@ In order to reduce report size and allow developers to
 concentrate on the issue, you should beforehand limit the time
 frame. Giving a meaningful session name helps too.
 
+[[cmdhelp_history_info,Cluster information summary]]
 ==== `info`
 
-The `info` command shows most important information about the
-cluster.
+The `info` command provides a summary of the information source, which
+can be either a live cluster snapshot or a previously generated
+report.
 
 Usage:
 ...............
