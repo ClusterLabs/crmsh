@@ -32,11 +32,11 @@ def is_corosync_stack():
 
 
 def cfgtool(*args):
-    return utils.get_stdout(['corosync-cfgtool'] + args, shell=False)
+    return utils.get_stdout(['corosync-cfgtool'] + list(args), shell=False)
 
 
 def quorumtool(*args):
-    return utils.get_stdout(['corosync-quorumtool'] + args, shell=False)
+    return utils.get_stdout(['corosync-quorumtool'] + list(args), shell=False)
 
 
 class CorosyncConf(object):
