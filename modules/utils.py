@@ -1241,5 +1241,22 @@ def list_cluster_nodes():
         raise ValueError("Error getting list of nodes from crm_node: %s" % (msg))
 
 
+def service_info(name):
+    if is_program('systemctl'):
+        rc, outp = get_stdout(['systemctl', 'show',
+                               '-p', 'UnitFileState',
+                               '-p', 'ActiveState',
+                               '-p', 'SubState',
+                               name + '.service'], shell=False)
+        if rc == 0:
+            info = []
+            for line in outp.split('\n'):
+                data = line.split('=', 1)
+                if len(data) == 2:
+                    info.append(data[1].strip())
+            return '/'.join(info)
+    return None
+
+
 termctrl = TerminalController.getInstance()
 # vim:ts=4:sw=4:et:
