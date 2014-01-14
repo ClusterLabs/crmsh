@@ -361,17 +361,17 @@ def show_dot_graph(dotfile, keep_file=False, desc="transition graph"):
     common_info("starting %s to show %s" % (config.core.dotty, desc))
 
 
-def ext_cmd(cmd):
+def ext_cmd(cmd, shell=True):
     if options.regression_tests:
         print ".EXT", cmd
     common_debug("invoke: %s" % add_sudo(cmd))
-    return subprocess.call(add_sudo(cmd), shell=True)
+    return subprocess.call(add_sudo(cmd), shell=shell)
 
 
-def ext_cmd_nosudo(cmd):
+def ext_cmd_nosudo(cmd, shell=True):
     if options.regression_tests:
         print ".EXT", cmd
-    return subprocess.call(cmd, shell=True)
+    return subprocess.call(cmd, shell=shell)
 
 
 def rmdir_r(d):
