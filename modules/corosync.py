@@ -20,6 +20,7 @@ configuration file, and also the corosync-* utilities.
 '''
 
 import os
+import re
 import utils
 
 
@@ -49,6 +50,15 @@ class CorosyncConf(object):
         '''
         self._data = data
         return True
+
+    def get_logfile(self):
+        '''
+        Return corosync logfile (if set)
+        '''
+        m = re.search(r"^\s*logfile:\s*(.+)$", self._data, re.M)
+        if m:
+            return m.group(1)
+        return None
 
     def to_string(self):
         '''
