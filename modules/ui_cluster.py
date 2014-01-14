@@ -87,6 +87,8 @@ class Cluster(command.UI):
         if len(hosts) and hosts[0] == '--dry-run':
             dry_run = True
             hosts = hosts[1:]
+        if len(hosts) == 0:
+            hosts = None
         return scripts.run(hosts, 'init', [], dry_run=dry_run)
 
     @command.skill_level('administrator')
@@ -113,9 +115,12 @@ class Cluster(command.UI):
         '''
         Extensive health check.
         '''
+        dry_run = False
         if len(hosts) and hosts[0] == '--dry-run':
             dry_run = True
             hosts = hosts[1:]
+        if len(hosts) == 0:
+            hosts = None
         return scripts.run(hosts, 'health', [], dry_run=dry_run)
 
     def _node_in_cluster(self, node):
@@ -128,13 +133,21 @@ class Cluster(command.UI):
         stack = utils.cluster_stack()
         if not stack:
             err_buf.error("Cluster stack not detected!")
-        else:
-            print "* Cluster stack: " + utils.cluster_stack()
         if utils.cluster_stack() == 'corosync':
+            print "Services:"
+            for svc in ["corosync", "pacemaker"]:
+                info = utils.service_info(svc)
+                if info:
+                    print "%-16s %s" % (svc, info)
+                else:
+                    print "%-16s unknown" % (svc)
+
             rc, outp = utils.get_stdout(['corosync-cfgtool', '-s'], shell=False)
-            print outp
-            rc, outp = utils.get_stdout(['corosync-quorumtool', '-s'], shell=False)
-            print outp
+            if rc == 0:
+                print ""
+                print outp
+            else:
+                print "Failed to get corosync status"
 
     def do_wait_for_startup(self, context, timeout='10'):
         "usage: wait_for_startup [<timeout>]"
