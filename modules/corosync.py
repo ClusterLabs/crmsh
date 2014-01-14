@@ -145,11 +145,15 @@ def diff_configuration(nodes, checksum=False):
     import tmpfiles
     local_path = conf()
 
+    this_node = utils.this_node()
+    nodes = list(nodes)
+
     if checksum or len(nodes) > 2:
-        fd, fname = tmpfiles.create()
+        tmpdir = tmpfiles.create_dir()
         opts = pssh.Options()
-        opts.localdir = None
-        by_host = pssh.slurp(nodes, local_path, fname, opts).items()
+        opts.localdir = tmpdir
+        to = os.path.basename(local_path)
+        by_host = pssh.slurp(nodes, local_path, to, opts).items()
         for host, result in by_host:
             if isinstance(result, pssh.Error):
                 raise ValueError(str(result))
@@ -157,34 +161,49 @@ def diff_configuration(nodes, checksum=False):
         import hashlib
 
         print "%-16s  SHA1 checksum of %s" % ('Host', local_path)
+        if this_node not in nodes:
+            print "%-16s: %s" % (this_node, hashlib.sha1(open(local_path).read()).hexdigest())
         for host, result in by_host:
             rc, _, _, path = result
             print "%-16s: %s" % (host, hashlib.sha1(open(path).read()).hexdigest())
     elif len(nodes) == 1:
-        if nodes[0] == utils.this_node():
-            raise ValueError("Can't diff node against itself")
-
-        fd, fname = tmpfiles.create()
+        tmpdir = tmpfiles.create_dir()
         opts = pssh.Options()
-        opts.localdir = None
-        by_host = pssh.slurp(nodes, local_path, fname, opts)
+        opts.localdir = tmpdir
+        to = os.path.basename(local_path)
+        by_host = pssh.slurp(nodes, local_path, to, opts)
         for host, result in by_host.iteritems():
             if isinstance(result, pssh.Error):
-                raise ValueError(str(result))
+                raise ValueError("Failed on %s: %s" % (host, str(result)))
             rc, _, _, path = result
             rc, s = utils.get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
-                                     (utils.this_node(), host, local_path, path))
+                                     (host, this_node, path, local_path))
             utils.page_string(s)
-    else:
-        fd, fname = tmpfiles.create()
+    elif this_node in nodes:
+        nodes.remove(this_node)
+        tmpdir = tmpfiles.create_dir()
         opts = pssh.Options()
-        opts.localdir = None
-        by_host = pssh.slurp(nodes, local_path, fname, opts).items()
+        opts.localdir = tmpdir
+        to = os.path.basename(local_path)
+        by_host = pssh.slurp(nodes, local_path, to, opts)
+        for host, result in by_host.iteritems():
+            if isinstance(result, pssh.Error):
+                raise ValueError("Failed on %s: %s" % (host, str(result)))
+            rc, _, _, path = result
+            rc, s = utils.get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
+                                     (host, this_node, path, local_path))
+            utils.page_string(s)
+    elif len(nodes):
+        tmpdir = tmpfiles.create_dir()
+        opts = pssh.Options()
+        opts.localdir = tmpdir
+        to = os.path.basename(local_path)
+        by_host = pssh.slurp(nodes, local_path, to, opts).items()
         for host, result in by_host:
             if isinstance(result, pssh.Error):
-                raise ValueError(str(result))
-        h1, p1 = by_host[0]
-        h2, p2 = by_host[1]
+                raise ValueError("Failed on %s: %s" % (host, str(result)))
+        h1, r1 = by_host[0]
+        h2, r2 = by_host[1]
         rc, s = utils.get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
-                                 (h1, p1, h2, p2))
+                                 (h1, h2, r1[3], r2[3]))
         utils.page_string(s)
