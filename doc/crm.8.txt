@@ -845,6 +845,20 @@ Usage:
 edit
 .........
 
+[[cmdhelp_corosync_log,Show the corosync log file]]
+==== `log`
+
+Opens the log file specified in the corosync configuration file. If no
+log file is configured, this command returns an error.
+
+The pager used can be configured either using the PAGER
+environment variable or in `crm.conf`.
+
+Usage:
+.........
+log
+.........
+
 [[cmdhelp_corosync_reload,Reload the corosync configuration]]
 ==== `reload`
 

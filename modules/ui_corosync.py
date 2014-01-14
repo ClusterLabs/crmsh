@@ -101,3 +101,16 @@ class Corosync(command.UI):
         if not os.path.isfile(cfg):
             context.fatal_error("No corosync configuration found on this node.")
         utils.page_string(open(cfg).read())
+
+    def do_log(self, context):
+        '''
+        Display the corosync log file (if any).
+        '''
+        cfg = corosync.load()
+        if not cfg:
+            context.fatal_error("Failed to load corosync configuration")
+        fn = cfg.get_logfile()
+        if fn:
+            utils.page_file(fn)
+        else:
+            context.fatal_error("No corosync log file configured")
