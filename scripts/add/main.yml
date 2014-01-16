@@ -4,9 +4,12 @@
     Installs missing packages and copies corosync.conf
     from one of the existing cluster nodes.
 
-    This script is somewhat special: nodes must contain
-    at least one node already in the cluster and also the
-    node to add
+    This script is somewhat special: The nodes parameter
+    must contain at least one node already in the cluster 
+    as well as the new node to add.
+
+    A more user-friendly interface to this script is 
+    provided via the cluster add command.
   parameters:
     - name: node
       description: Node to add to the cluster
