@@ -239,6 +239,7 @@ def help_contextual(context, subject, subtopic):
     """
     Returns contextual help
     """
+    _load_help()
     if subject is None:
         if context == '.':
             return help_overview()
