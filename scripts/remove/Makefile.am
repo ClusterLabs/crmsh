@@ -22,7 +22,7 @@ MAINTAINERCLEANFILES    = Makefile.in
 scriptremovedir 		= $(datadir)/@PACKAGE@/scripts/remove
 
 scriptremove_DATA	= main.yml
-scriptremove_SCRIPTS	= collect.py
+scriptremove_SCRIPTS	= remove.py
 
 EXTRA_DIST	= $(scriptremove_DATA) $(scriptremove_SCRIPTS)
 
