@@ -1,12 +1,28 @@
 ---
-- name: Adds a new node to an already existing cluster
+- name: Add a new node to an already existing cluster
   description: >
-    Adds the new node both to Pacemaker and Corosync.
+    Installs missing packages and copies corosync.conf
+    from one of the existing cluster nodes.
+
+    This script is somewhat special: nodes must contain
+    at least one node already in the cluster and also the
+    node to add
   parameters:
     - name: node
       description: Node to add to the cluster
   steps:
-    - name: Check state of nodes
-      type: collect
-      call: collect.py
+    - name: Check cluster
+      collect: add.py collect
+
+    - name: Validate parameters
+      validate: add.py validate
+
+    - name: Install required packages
+      apply: add.py install
+
+    - name: Copy configuration files
+      apply_local: add.py copy
+
+    - name: Start cluster on new node
+      apply: add.py start
 
