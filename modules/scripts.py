@@ -55,9 +55,10 @@ def _check_control_persist():
     return "Bad configuration option" not in err
 
 
-def _remote_tmp_basename():
+def _generate_workdir_name():
     '''
-    Generate a temporary folder name to use remotely
+    Generate a temporary folder name to use while
+    running the script
     '''
     # TODO: make use of /tmp configurable
     basefile = 'crm-tmp-%s-%s' % (time.time(), random.randint(0, 2**48))
@@ -118,6 +119,10 @@ def _step_action(step):
     return name, None, None
 
 
+def arg0(cmd):
+    return cmd.split()[0]
+
+
 def _verify_step(scriptdir, scriptname, step):
     step_name, step_type, step_call = _step_action(step)
     if not step_name:
@@ -128,7 +133,7 @@ def _verify_step(scriptdir, scriptname, step):
     if not step_call:
         raise ValueError("Error in %s: Step '%s' has no call defined" %
                          (scriptname, step_name))
-    if not os.path.isfile(os.path.join(scriptdir, step_call)):
+    if not os.path.isfile(os.path.join(scriptdir, arg0(step_call))):
         raise ValueError("Error in %s: Step '%s' file not found: %s" %
                          (scriptname, step_name, step_call))
 
@@ -145,6 +150,11 @@ def verify(name):
     for step in main.get('steps', []):
         _verify_step(script_dir, name, step)
     return main
+
+COMMON_PARAMS = [('nodes', None, 'List of nodes to execute the script for'),
+                 ('dry_run', 'no', 'If set, only execute collecting and validating steps'),
+                 ('step', None, 'If set, only execute the named step'),
+                 ('statefile', None, 'When single-stepping, the state is saved in the given file')]
 
 
 def describe(name):
@@ -163,249 +173,162 @@ def describe(name):
     desc = rewrap(script.get('description', 'No description available'))
 
     params = script.get('parameters', [])
-    if params:
-        desc += "Parameters (* = Required):\n"
-        for p in params:
-            rq = ''
-            if p.get('required'):
-                rq = '*'
-            desc += "  %-24s %s\n" % (p['name'] + rq, p.get('description', ''))
+    desc += "Parameters (* = Required):\n"
+    for name, value, description in COMMON_PARAMS:
+        if value is not None:
+            defval = ' (default: %s)' % (value)
+        else:
+            defval = ''
+        desc += "  %-24s %s%s\n" % (name, description, defval)
+    for p in params:
+        rq = ''
+        if p.get('required'):
+            rq = '*'
+        defval = p.get('default', None)
+        if defval is not None:
+            defval = ' (default: %s)' % (defval)
+        else:
+            defval = ''
+        desc += "  %-24s %s%s\n" % (p['name'] + rq, p.get('description', ''), defval)
+
+    desc += "\nSteps:\n"
+    for step in script.get('steps', []):
+        name = step.get('name')
+        if name:
+            desc += "  * %s\n" % (name)
 
     e = HelpEntry(script.get('name', name), desc)
     e.paginate()
 
 
-def run(host_aliases, name, args, dry_run=False):
-    '''
-    Run the given script on the given set of hosts
-    '''
-    if not has_pssh:
-        raise ValueError("PSSH library is not installed or is not up to date.")
-
-    # TODO: allow more options here, like user, port...
+def _make_options():
+    "Setup pssh options. TODO: Allow setting user/port/timeout"
     opts = pssh.Options()
     opts.timeout = 60
     opts.recursive = True
     opts.ssh_options += ['ControlPersist=no']
+    return opts
 
-    remote_tmp = _remote_tmp_basename()
+
+def _open_script(name):
+    filename = resolve_script(name)
+    main = verify(name)
+    if main is None or filename is None:
+        raise ValueError('Loading script failed: ' + name)
+    script_dir = os.path.dirname(filename)
+    return main, filename, script_dir
+
+
+def _parse_parameters(name, args, main):
+    '''
+    Parse run parameters into a dict.
+    Also extract parameters to the script
+    runner: hosts, dry_run, step etc.
+    '''
+    args = utils.nvpairs2dict(args)
+    params = {}
+    for key, val in args.iteritems():
+        params[key] = val
+    for param in main['parameters']:
+        name = param['name']
+        if name not in params:
+            if 'default' in param:
+                params[name] = param['default']
+            else:
+                raise ValueError("Missing required parameter %s" % (name))
+    hosts = args.get('nodes')
+    if hosts is None:
+        hosts = utils.list_cluster_nodes()
+    else:
+        hosts = hosts.replace(',', ' ').split()
+    if not hosts:
+        raise ValueError("No hosts")
+    dry_run = args.get('dry_run', False)
+    step = args.get('step', None)
+    statefile = args.get('statefile', None)
+    return params, hosts, dry_run, step, statefile
+
+
+def _extract_localnode(hosts):
+    """
+    Remove loal node from hosts list, so
+    we can treat it separately
+    """
+    local_node = utils.this_node()
+    if local_node in hosts:
+        hosts.remove(local_node)
+    else:
+        local_node = None
+    return local_node, hosts
+
+
+def _set_controlpersist(opts):
+    #_has_controlpersist = _check_control_persist()
+    #if _has_controlpersist:
+    #    opts.ssh_options += ["ControlMaster=auto",
+    #                         "ControlPersist=30s",
+    #                         "ControlPath=/tmp/crm-ssh-%r@%h:%p"]
+    # unfortunately, due to bad interaction between pssh and ssh,
+    # ControlPersist is broken
+    # See: http://code.google.com/p/parallel-ssh/issues/detail?id=67
+    # Fixed in openssh 6.3
+    pass
+
+
+def _create_script_workdir(scriptdir, workdir):
+    "Create workdir and copy contents of scriptdir into it"
+    if subprocess.call(["mkdir", "-p", os.path.dirname(workdir)], shell=False) != 0:
+        raise ValueError("Failed to create temporary working directory")
     try:
-        filename = resolve_script(name)
-        main = verify(name)
-        if main is None:
-            raise ValueError('Loading script failed: ' + name)
-
-        script_dir = os.path.dirname(filename)
-
-        # process parameters
-        params = {}
-        for key, val in utils.nvpairs2dict(args).iteritems():
-            params[key] = val
-        for param in main['parameters']:
-            name = param['name']
-            if name not in params:
-                if 'default' in param:
-                    params[name] = param['default']
-                else:
-                    raise ValueError("Missing required parameter %s" % (name))
-
-        # use cluster nodes if none are given
-        if host_aliases is None:
-            host_aliases = utils.list_cluster_nodes()
-        if not host_aliases:
-            raise ValueError("No hosts")
-
-        err_buf.info(main['name'])
-        err_buf.info("Nodes: " + ', '.join(host_aliases))
-
-        local_node = utils.this_node()
-        if local_node in host_aliases:
-            host_aliases = list(host_aliases)
-            host_aliases.remove(local_node)
-        else:
-            local_node = None
-
-        #_has_controlpersist = _check_control_persist()
-        #if _has_controlpersist:
-        #    opts.ssh_options += ["ControlMaster=auto",
-        #                         "ControlPersist=30s",
-        #                         "ControlPath=/tmp/crm-ssh-%r@%h:%p"]
-        # unfortunately, due to bad interaction between pssh and ssh,
-        # ControlPersist is broken
-        # See: http://code.google.com/p/parallel-ssh/issues/detail?id=67
-        # Fixed in openssh 6.3
-
-        # create temporary working folder locally,
-        # and prepare files to send to other nodes
-        if subprocess.call(["mkdir", "-p", os.path.dirname(remote_tmp)], shell=False) != 0:
-            raise ValueError("Failed to create temporary working directory")
-        try:
-            shutil.copytree(script_dir, remote_tmp)
-        except (IOError, OSError), e:
-            raise ValueError(e)
-        try:
-            import glob
-            for f in glob.glob(os.path.join(config.path.sharedir, 'utils/*.py')):
-                shutil.copy(os.path.join(config.path.sharedir, f), remote_tmp)
-        except (IOError, OSError), e:
-            raise ValueError(e)
-
-        # Create temporary working folders remotely
-        ok = True
-        for host, result in pssh.call(host_aliases,
-                                      "mkdir -p %s" % (os.path.dirname(remote_tmp)),
-                                      opts).iteritems():
-            if isinstance(result, pssh.Error):
-                err_buf.error("[%s]: %s" % (host, result))
-                ok = False
-            else:
-                err_buf.ok("[%s]: Create working folder" % (host))
-        if not ok:
-            raise ValueError("Failed to create working folders, aborting.")
-
-        # and copy script data to remote nodes
-        for host, result in pssh.copy(host_aliases,
-                                      remote_tmp,
-                                      remote_tmp, opts).iteritems():
-            if isinstance(result, pssh.Error):
-                err_buf.error("[%s]: %s" % (host, result))
-                ok = False
-            else:
-                err_buf.ok("[%s]: Copy script data" % (host))
-        if not ok:
-            raise ValueError("Failed when copying script data, aborting.")
-
-        # Ok, now we work from the temporary folder
-        script_dir = remote_tmp
-        # make sure all path references are relative to the script directory
-        os.chdir(script_dir)
-
-        # data passed to steps
-        # built up as steps are processed
-        # hostname is replaced for each node
-        data = [params]
-
-        for step in main['steps']:
-            step_name, step_type, step_call = _step_action(step)
-
-            # TODO: run asynchronously on remote nodes
-            # run on remote nodes
-            # run on local nodes
-            # TODO: wait for remote results
-
-            cmdline = 'cd "%s"; ./%s' % (remote_tmp, step_call)
-
-            # update script.input
-            input_file = os.path.join(remote_tmp, 'script.input')
-            json.dump(data, open(input_file, 'w'))
-            if not _copy_to_all(remote_tmp, host_aliases,
-                                local_node, input_file, input_file, opts):
-                raise ValueError("Failed when updating input, aborting.")
-
-            if step_type == 'collect':
-                step_result = {}
-                for host, result in pssh.call(host_aliases,
-                                              cmdline,
-                                              opts).iteritems():
-                    if isinstance(result, pssh.Error):
-                        err_buf.error("[%s]: %s" % (host, result))
-                        ok = False
-                    else:
-                        rc, out, err = result
-                        if rc != 0:
-                            err_buf.error("[%s]: %s" % (host, err))
-                            ok = False
-                        else:
-                            step_result[host] = json.loads(out)
-                if local_node:
-                    rc, out, err = utils.get_stdout_stderr(cmdline)
-                    if rc != 0:
-                        err_buf.error("[%s]: %s" % (local_node, err))
-                        ok = False
-                    else:
-                        step_result[local_node] = json.loads(out)
-                if ok:
-                    data.append(step_result)
-                    err_buf.ok(step_name)
-            elif step_type == 'apply':
-                if dry_run:
-                    break
-                step_result = {}
-                for host, result in pssh.call(host_aliases,
-                                              cmdline,
-                                              opts).iteritems():
-                    if isinstance(result, pssh.Error):
-                        err_buf.error("[%s]: %s" % (host, result))
-                        ok = False
-                    else:
-                        rc, out, err = result
-                        if rc != 0:
-                            err_buf.error("[%s]: %s" % (host, err))
-                            ok = False
-                        else:
-                            step_result[host] = json.loads(out)
-                if local_node:
-                    rc, out, err = utils.get_stdout_stderr(cmdline)
-                    if rc != 0:
-                        err_buf.error("[%s]: %s" % (host, err))
-                        ok = False
-                    else:
-                        step_result[local_node] = json.loads(out)
-                if ok:
-                    data.append(step_result)
-                    err_buf.ok(step_name)
-            elif step_type == 'validate':
-                # execute script locally
-                # update params with returned updated values
-                rc, out = utils.get_stdout(cmdline)
-                if rc != 0:
-                    ok = False
-                elif out:
-                    outp = json.loads(out)
-                    for k, v in outp:
-                        data[0][k] = v
-                if ok:
-                    err_buf.ok(step_name)
-            elif step_type == 'apply_local':
-                if dry_run:
-                    break
-                rc, out = utils.get_stdout(cmdline)
-                if rc != 0:
-                    ok = False
-                elif out:
-                    outp = json.loads(out)
-                    data.append(outp)
-                if ok:
-                    err_buf.ok(step_name)
-            elif step_type == 'report':
-                rc, out = utils.get_stdout(cmdline)
-                if rc != 0:
-                    ok = False
-                else:
-                    print out
-            if not ok:
-                raise ValueError("%s [FAIL]: Aborting." % (step_name))
-    except (OSError, IOError), e:
-        import traceback
-        traceback.print_exc()
-        raise ValueError("Internal error: %s" % (e))
-    finally:
-        # TODO: safe cleanup on remote nodes
-        if host_aliases:
-            for host, result in pssh.call(host_aliases,
-                                          "%s %s" % (os.path.join(remote_tmp, 'crm_clean.py'),
-                                                     remote_tmp),
-                                          opts).iteritems():
-                if isinstance(result, pssh.Error):
-                    err_buf.warning("[%s]: Failed to clean up %s" % (host, remote_tmp))
-                    ok = False
-        if remote_tmp and os.path.isdir(remote_tmp):
-            shutil.rmtree(remote_tmp)
+        shutil.copytree(scriptdir, workdir)
+    except (IOError, OSError), e:
+        raise ValueError(e)
 
 
-def _copy_to_all(remote_tmp, host_aliases, local_node, src, dst, opts):
+def _copy_utils(dst):
+    '''
+    Copy run utils to the destination directory
+    '''
+    try:
+        import glob
+        for f in glob.glob(os.path.join(config.path.sharedir, 'utils/*.py')):
+            shutil.copy(os.path.join(config.path.sharedir, f), dst)
+    except (IOError, OSError), e:
+        raise ValueError(e)
+
+
+def _create_remote_workdirs(hosts, path, opts):
+    "Create workdirs on remote hosts"
     ok = True
-    ret = pssh.copy(host_aliases, src, dst, opts)
+    for host, result in pssh.call(hosts,
+                                  "mkdir -p %s" % (os.path.dirname(path)),
+                                  opts).iteritems():
+        if isinstance(result, pssh.Error):
+            err_buf.error("[%s]: %s" % (host, result))
+            ok = False
+    if not ok:
+        raise ValueError("Failed to create working folders, aborting.")
+
+
+def _copy_to_remote_dirs(hosts, path, opts):
+    "Copy a local folder to same location on remote hosts"
+    ok = True
+    for host, result in pssh.copy(hosts,
+                                  path,
+                                  path, opts).iteritems():
+        if isinstance(result, pssh.Error):
+            err_buf.error("[%s]: %s" % (host, result))
+            ok = False
+    if not ok:
+        raise ValueError("Failed when copying script data, aborting.")
+
+
+def _copy_to_all(workdir, hosts, local_node, src, dst, opts):
+    """
+    Copy src to dst both locally and remotely
+    """
+    ok = True
+    ret = pssh.copy(hosts, src, dst, opts)
     for host, result in ret.iteritems():
         if isinstance(result, pssh.Error):
             err_buf.error("[%s]: %s" % (host, result))
@@ -415,13 +338,220 @@ def _copy_to_all(remote_tmp, host_aliases, local_node, src, dst, opts):
             if rc != 0:
                 err_buf.error("[%s]: %s" % (host, err))
                 ok = False
-    if local_node and not src.startswith(remote_tmp):
+    if local_node and not src.startswith(workdir):
         try:
-            if os.path.isfile(src):
-                shutil.copy(src, dst)
-            else:
-                shutil.copytree(src, dst)
-        except (IOError, OSError), e:
+            if os.path.abspath(src) != os.path.abspath(dst):
+                if os.path.isfile(src):
+                    shutil.copy(src, dst)
+                else:
+                    shutil.copytree(src, dst)
+        except (IOError, OSError, shutil.Error), e:
             err_buf.error("[%s]: %s" % (utils.this_node(), e))
             ok = False
     return ok
+
+
+class RunStep(object):
+    def __init__(self, main, params, local_node, hosts, opts, dry_run, workdir):
+        self.main = main
+        self.data = [params]
+        self.local_node = local_node
+        self.hosts = hosts
+        self.opts = opts
+        self.dry_run = dry_run
+        self.workdir = workdir
+        self.statefile = os.path.join(self.workdir, 'script.input')
+        self.dstfile = os.path.join(self.workdir, 'script.input')
+
+    def _build_cmdline(self, sname, stype, scall):
+        cmdline = 'cd "%s"; ./%s' % (self.workdir, scall)
+        if config.core.debug:
+            import pprint
+            print "step:", sname, stype, scall
+            print "cmdline:", cmdline
+            print "data:"
+            pprint.pprint(self.data)
+        return cmdline
+
+    def single_step(self, step_name, statefile):
+        self.statefile = statefile
+        for step in self.main['steps']:
+            name, action, call = _step_action(step)
+            if name == step_name:
+                # if this is not the first step, load step data
+                if step != self.main['steps'][0]:
+                    if os.path.isfile(statefile):
+                        self.data = json.load(open(statefile))
+                    else:
+                        raise ValueError("No state for step: %s" % (step_name))
+                result = self.run_step(name, action, call)
+                json.dump(self.data, open(self.statefile, 'w'))
+                return result
+        err_buf.error("%s: Step not found" % (step_name))
+        return False
+
+    def _update_state(self):
+        json.dump(self.data, open(self.statefile, 'w'))
+        return _copy_to_all(self.workdir,
+                            self.hosts,
+                            self.local_node,
+                            self.statefile,
+                            self.dstfile,
+                            self.opts)
+
+    def run_step(self, name, action, call):
+        """
+        Execute a single step
+        """
+        cmdline = self._build_cmdline(name, action, call)
+
+        if not self._update_state():
+            raise ValueError("Failed when updating input, aborting.")
+
+        ok = False
+        if action in ('collect', 'apply'):
+            result = self._process_remote(cmdline)
+            if result is not None:
+                self.data.append(result)
+                ok = True
+        elif action == 'validate':
+            result = self._process_local(cmdline)
+            if result is not None:
+                if result:
+                    result = json.loads(result)
+                else:
+                    result = {}
+                self.data.append(result)
+                if isinstance(result, dict):
+                    for k, v in result.iteritems():
+                        self.data[0][k] = v
+                ok = True
+        elif action == 'apply_local':
+            result = self._process_local(cmdline)
+            if result is not None:
+                if result:
+                    result = json.loads(result)
+                else:
+                    result = {}
+                self.data.append(result)
+                ok = True
+        elif action == 'report':
+            result = self._process_local(cmdline)
+            if result is not None:
+                err_buf.ok(name)
+                print result
+                return True
+        if ok:
+            err_buf.ok(name)
+        return ok
+
+    def all_steps(self):
+        # TODO: run asynchronously on remote nodes
+        # run on remote nodes
+        # run on local nodes
+        # TODO: wait for remote results
+        for step in self.main['steps']:
+            name, action, call = _step_action(step)
+            if self.dry_run and action in ('apply', 'apply_local'):
+                break
+            if not self.run_step(name, action, call):
+                return False
+        return True
+
+    def _process_remote(self, cmdline):
+        """
+        Handle a step that executes on all nodes
+        """
+        ok = True
+        step_result = {}
+        for host, result in pssh.call(self.hosts,
+                                      cmdline,
+                                      self.opts).iteritems():
+            if isinstance(result, pssh.Error):
+                err_buf.error("[%s]: %s" % (host, result))
+                ok = False
+            else:
+                rc, out, err = result
+                if rc != 0:
+                    err_buf.error("[%s]: %s%s" % (host, out, err))
+                    ok = False
+                else:
+                    step_result[host] = json.loads(out)
+        if self.local_node:
+            rc, out, err = utils.get_stdout_stderr(cmdline)
+            if rc != 0:
+                err_buf.error("[%s]: %s" % (self.local_node, err))
+                ok = False
+            else:
+                step_result[self.local_node] = json.loads(out)
+        if ok:
+            return step_result
+        return None
+
+    def _process_local(self, cmdline):
+        """
+        Handle a step that executes locally
+        """
+        rc, out, err = utils.get_stdout_stderr(cmdline)
+        if rc != 0:
+            err_buf.error("[%s]: Error (%d): %s" % (self.local_node, rc, err))
+            return None
+        return out
+
+
+def _run_cleanup(hosts, workdir, opts):
+    "Clean up after the cluster script"
+    if hosts and workdir:
+        for host, result in pssh.call(hosts,
+                                      "%s %s" % (os.path.join(workdir, 'crm_clean.py'),
+                                                 workdir),
+                                      opts).iteritems():
+            if isinstance(result, pssh.Error):
+                err_buf.warning("[%s]: Failed to clean up %s" % (host, workdir))
+    if workdir and os.path.isdir(workdir):
+        shutil.rmtree(workdir)
+
+
+def run(name, args):
+    '''
+    Run the given script on the given set of hosts
+    name: a cluster script is a folder <name> containing a main.yml file
+    args: list of nvpairs
+    '''
+    if not has_pssh:
+        raise ValueError("PSSH library is not installed or is not up to date.")
+    # TODO: allow more options here, like user, port...
+    opts = _make_options()
+    hosts = None
+    workdir = _generate_workdir_name()
+    try:
+        main, filename, script_dir = _open_script(name)
+        params, hosts, dry_run, step, statefile = _parse_parameters(name, args, main)
+        err_buf.info(main['name'])
+        err_buf.info("Nodes: " + ', '.join(hosts))
+        local_node, hosts = _extract_localnode(hosts)
+        _set_controlpersist(opts)
+        _create_script_workdir(script_dir, workdir)
+        _copy_utils(workdir)
+        _create_remote_workdirs(hosts, workdir, opts)
+        _copy_to_remote_dirs(hosts, workdir, opts)
+        # make sure all path references are relative to the script directory
+        if statefile:
+            statefile = os.path.abspath(statefile)
+        os.chdir(workdir)
+
+        stepper = RunStep(main, params, local_node, hosts, opts, dry_run, workdir)
+
+        if step or statefile:
+            if not step or not statefile:
+                raise ValueError("Must set both step and statefile")
+            return stepper.single_step(step, statefile)
+        else:
+            return stepper.all_steps()
+
+    except (OSError, IOError), e:
+        import traceback
+        traceback.print_exc()
+        raise ValueError("Internal error while running %s: %s" % (name, e))
+    finally:
+        _run_cleanup(hosts, workdir, opts)

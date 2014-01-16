@@ -78,50 +78,51 @@ class Cluster(command.UI):
 
         # TODO: optionally stop services on all nodes or specific node
 
+    def _args_implicit(self, context, args, name):
+        '''
+        handle early non-nvpair arguments as
+        values in an implicit list
+        '''
+        args = list(args)
+        vals = []
+        while args and args[0].find('=') == -1:
+            vals.append(args[0])
+            args = args[1:]
+        if vals:
+            return args + ['%s=%s' % (name, ','.join(vals))]
+        return args
+
     @command.skill_level('administrator')
-    def do_init(self, context, *hosts):
+    def do_init(self, context, *args):
         '''
         Initialize a cluster with the given hosts as nodes.
         '''
-        dry_run = False
-        if len(hosts) and hosts[0] == '--dry-run':
-            dry_run = True
-            hosts = hosts[1:]
-        if len(hosts) == 0:
-            hosts = None
-        return scripts.run(hosts, 'init', [], dry_run=dry_run)
+        return scripts.run('init', self._args_implicit(context, args, 'nodes'))
 
     @command.skill_level('administrator')
-    def do_add(self, context, node):
+    def do_add(self, context, *args):
         '''
-        Add the given node to the cluster.
+        Add the given node(s) to the cluster.
         Installs packages, sets up corosync and pacemaker, etc.
         Must be executed from a node in the existing cluster.
         '''
-        if self._node_in_cluster(node):
-            context.fatal_error("Node already in cluster: %s" % (node))
-        return scripts.run(None, 'add', ['node=%s' % (node)])
+        return scripts.run('add', self._args_implicit(context, args, 'node'))
 
     @command.skill_level('administrator')
-    def do_remove(self, context, node):
+    def do_remove(self, context, *args):
         '''
-        Remove the given node from the cluster.
+        Remove the given node(s) from the cluster.
         '''
-        if not self._node_in_cluster(node):
-            context.fatal_error("Node not in cluster: %s" % (node))
-        return scripts.run(None, 'remove', ['node=%s' % (node)])
+        return scripts.run('remove', self._args_implicit(context, args, 'node'))
 
-    def do_health(self, context, *hosts):
+    def do_health(self, context, *args):
         '''
         Extensive health check.
         '''
-        dry_run = False
-        if len(hosts) and hosts[0] == '--dry-run':
-            dry_run = True
-            hosts = hosts[1:]
-        if len(hosts) == 0:
-            hosts = None
-        return scripts.run(hosts, 'health', [], dry_run=dry_run)
+        params = self._args_implicit(context, args, 'nodes')
+        if not any(k.startswith('nodes=') for k in params):
+            params += ['nodes=%s' % (','.join(utils.list_cluster_nodes()))]
+        return scripts.run('health', params)
 
     def _node_in_cluster(self, node):
         return node in utils.list_cluster_nodes()
