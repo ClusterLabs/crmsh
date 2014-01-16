@@ -80,8 +80,21 @@ def run_copy():
                             "chown root:root %s;chmod 400 %s" % (COROSYNC_AUTH, COROSYNC_AUTH),
                             opts)
         check_results(pssh, results)
+
+    # Add new nodes to corosync.conf before copying
+    for node in add_nodes:
+        rc, _, err = crm_script.call(['crm', 'corosync', 'add-node', node])
+        if rc != 0:
+            crm_script.exit_fail('Failed to add %s to corosync.conf: %s' % (node, err))
+
     results = pssh.copy(add_nodes, COROSYNC_CONF, COROSYNC_CONF, opts)
     check_results(pssh, results)
+
+    # reload corosync config here?
+    rc, _, err = crm_script.call(['crm', 'corosync', 'reload'])
+    if rc != 0:
+        crm_script.exit_fail('Failed to reload corosync configuration: %s' % (err))
+
     crm_script.exit_ok(host)
 
 
