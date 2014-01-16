@@ -23,6 +23,8 @@ import os
 import re
 import utils
 import tmpfiles
+import socket
+from msg import err_buf
 
 
 def conf():
@@ -93,7 +95,6 @@ def push_configuration(nodes):
 
     if not _has_pssh:
         raise ValueError("PSSH is required to push")
-    from msg import err_buf
 
     local_path = conf()
 
@@ -210,3 +211,97 @@ def diff_configuration(nodes, checksum=False):
         _diff_this(pssh, local_path, nodes, this_node)
     elif len(nodes):
         _diff(pssh, local_path, nodes)
+
+
+def next_nodeid():
+    f = open(conf()).read()
+    p = re.compile(r"nodeid:\s*([0-9]+)")
+    ids = [int(m) for m in p.findall(f)]
+    if ids:
+        return max(ids) + 1
+    return 1
+
+
+def insert_section(config, section, block):
+    """
+    In the section { ... }, insert the block
+    Returns updated config
+    """
+    lines = config
+    out = []
+    in_section = False
+    brackets = 0
+    at = None
+    found = False
+    section_re = re.compile('%s\\s*{' % (section))
+    for linenum in xrange(len(lines)):
+        at = linenum
+        line = lines[linenum]
+        if not in_section and section_re.search(line):
+            in_section = True
+        if in_section:
+            brackets += line.count('{')
+            brackets -= line.count('}')
+            if brackets == 0:
+                found = True
+                break
+        out.append(line)
+    if found:
+        out += block.split('\n')
+    else:
+        out += ("\n%s {\n%s\n}\n" % (section, block)).split('\n')
+    for line in lines[at:]:
+        out.append(line)
+    return out
+
+
+def get_ip(node):
+    try:
+        return socket.gethostbyname(node)
+    except:
+        return None
+
+
+def add_node(name):
+    '''
+    Add node to corosync.conf
+    '''
+    coronodes = None
+    nodes = None
+    coronodes = utils.list_corosync_nodes()
+    try:
+        nodes = utils.list_cluster_nodes()
+    except Exception:
+        nodes = []
+    ipaddr = get_ip(name)
+    if name in coronodes or (ipaddr and ipaddr in coronodes):
+        err_buf.warning("%s already in corosync.conf" % (name))
+        return
+    if name in nodes:
+        err_buf.warning("%s already in configuration" % (name))
+        return
+
+    node_addr = name
+    node_id = next_nodeid()
+    f = open(conf())
+    lines = f.read().split('\n')
+    f.close()
+    block = """    node {
+        ring0_addr: %s
+        nodeid: %s
+    }
+""" % (node_addr, node_id)
+    out = insert_section(lines, 'nodelist', block)
+
+    f = open(conf(), 'w')
+    f.write('\n'.join(out))
+    f.close()
+
+    # update running config (if any)
+    if nodes:
+        utils.ext_cmd(["corosync-cmapctl",
+                       "-s", "nodelist.node.%s.nodeid" % (node_id - 1),
+                       "u32", str(node_id)], shell=False)
+        utils.ext_cmd(["corosync-cmapctl",
+                       "-s", "nodelist.node.%s.ring0_addr" % (node_id - 1),
+                       "str", node_addr], shell=False)

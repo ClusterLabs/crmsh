@@ -114,3 +114,9 @@ class Corosync(command.UI):
             utils.page_file(fn)
         else:
             context.fatal_error("No corosync log file configured")
+
+    @command.name('add-node')
+    @command.alias('add_node')
+    @command.skill_level('administrator')
+    def do_addnode(self, context, name):
+        corosync.add_node(name)
