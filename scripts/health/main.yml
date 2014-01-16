@@ -4,8 +4,8 @@
     Runs various checks to verify the health of the cluster nodes
   parameters: []
   steps:
-    - name: Collecting information...
+    - name: Collect cluster information
       collect: collect.py
-    - name: Verify and report health
+    - name: Report cluster state
       report: report.py
 

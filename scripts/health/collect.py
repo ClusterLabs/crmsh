@@ -3,38 +3,14 @@ import os
 import crm_script
 data = crm_script.get_input()
 
-PACKAGES = ['booth',
-            'cluster-glue',
-            'corosync',
-            'crmsh',
-            'csync2',
-            'drbd',
-            'fence-agents',
-            'gfs2',
-            'gfs2-utils',
-            'ha-cluster-bootstrap',
-            'haproxy',
-            'hawk',
-            'libdlm',
-            'libqb',
-            'ocfs2',
-            'ocfs2-tools',
-            'pacemaker',
-            'pacemaker-mgmt',
-            'pcs',
-            'pssh',
-            'resource-agents',
-            'rubygem-sinatra',
-            'sbd']
+PACKAGES = ['booth', 'cluster-glue', 'corosync', 'crmsh', 'csync2', 'drbd',
+            'fence-agents', 'gfs2', 'gfs2-utils', 'ha-cluster-bootstrap',
+            'haproxy', 'hawk', 'libdlm', 'libqb', 'ocfs2', 'ocfs2-tools',
+            'pacemaker', 'pacemaker-mgmt', 'pcs', 'pssh', 'resource-agents',
+            'rubygem-sinatra', 'sbd']
 
 def rpm_info():
     return crm_script.rpmcheck(PACKAGES)
-
-def package_info():
-    package_states = []
-    for pkg in PACKAGES:
-        package_states.append(crm_script.check_package(pkg, state='present'))
-    return package_states
 
 def logrotate_info():
     rc, _, _ = crm_script.call(
@@ -78,7 +54,6 @@ tmpfs           7.9G   11M  7.9G   1% /var/lock
 try:
     data = {
         'rpm': rpm_info(),
-        'packages': package_info(),
         'logrotate': logrotate_info(),
         'system': sys_info(),
         'disk': disk_info()
