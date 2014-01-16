@@ -300,31 +300,31 @@ and agents, to facilitate password-less access to nodes.
 
 === Running scripts without a cluster ===
 
-Scripts that should be runnable on non-cluster nodes or before the
-cluster has been configured can take a list of nodes as argument. This
-is provided to the `run` command using a double-dashed command-line
-argument syntax, to clarify that this is an argument to `crm` and not
-to the script itself:
+All cluster scripts can optionally take a `nodes` argument, which
+determines the nodes that the script will run on. This node list is
+not limited to nodes already in the cluster. It is even possible to
+execute cluster scripts before a cluster is set up, such as the
+`health` and `init` scripts used by the `cluster` sub-level.
 
 ........
-crm script run health --nodes=example1,example2
+crm script run health nodes=example1,example2
 ........
 
 The list of nodes can be comma- or space-separated, but if the list
 contains spaces, the whole argument will have to be quoted:
 
 ........
-crm script run health --nodes="example1 example2"
+crm script run health nodes="example1 example2"
 ........
 
 === Running in validate mode ===
 
 It may be desirable to do a dry-run of a script, to see if any
 problems are present that would make the script fail before trying to
-apply it. To do this, add the argument `--dry-run` to the invocation:
+apply it. To do this, add the argument `dry_run=yes` to the invocation:
 
 .........
-crm script run health --dry-run
+crm script run health dry_run=yes
 .........
 
 The script execution will stop at the first `apply` action. Note that

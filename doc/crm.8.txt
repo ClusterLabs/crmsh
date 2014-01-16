@@ -791,22 +791,40 @@ Usage:
 describe <script>
 ............
 
+[[cmdhelp_script_steps,List steps in cluster script]]
+==== `steps`
+
+List the names of all steps in the cluster script.
+
+This command is intended for use by automated tools
+and the web frontend.
+
+Usage:
+............
+steps <script>
+............
+
+
 [[cmdhelp_script_run,Execute the cluster script]]
 ==== `run`
 
-Runs a cluster script. Can optionally take two arguments:
-* `--nodes`: List of nodes that the script runs over
-* `--dry-run`: If set, the script will not perform any modifications.
+Runs a cluster script. Can optionally take at least two arguments:
+* `nodes=<nodes>`: List of nodes that the script runs over
+* `dry_run=yes|no`: If set, the script will not perform any modifications.
+
+Additional arguments may be available depending on the cluster
+script. Use the `describe` command to see what arguments are
+provided.
 
 Usage:
 .............
-run [--dry-run] [--nodes <node-list>] <script> [args...]
+run <script> [args...]
 .............
 
 Example:
 .............
-run --dry-run health verbose=yes
-run --nodes "node-1 node-2 node-3" init
+run health dry_run=yes verbose=yes
+run init nodes="node-1 node-2 node-3"
 .............
 
 [[cmdhelp_corosync,Corosync management]]
