@@ -87,6 +87,49 @@ run health verbose=true
 ........
 
 
+==== Single-stepping a script ====
+
+It is possible to run a script step-by-step, with manual intervention
+between steps. First of all, list the steps of the script to run:
+
+........
+crm script steps health
+........
+
+To execute a single step, two things need to be provided:
+
+1. The name of the step to execute (printed by `steps`)
+2. a file in which `crmsh` stores the state of execution.
+
+Note that it is entirely possible to run steps out-of-order, however
+this is unlikely to work in practice since steps often rely on the
+output of previous steps.
+
+The following command will execute the first step of the `health`
+script and store the output in a temporary file named `health.json`:
+
+........
+crm script run health \
+    step='Collect cluster information' \
+    statefile='health.json'
+........
+
+The statefile contains the script parameters and the output of
+previous steps, encoded as `json` data.
+
+To continue executing the next step in sequence, replace the step name
+with the next step:
+
+........
+crm script run health \
+    step='Report cluster state' \
+    statefile='health.json'
+........
+
+Note that the `dry_run` flag that can be used to do partial execution
+of scripts is not taken into consideration when single-stepping
+through a script.
+
 == Creating a script ==
 
 This section will describe how to create a new script, where to put
@@ -378,3 +421,4 @@ also passed along with the script. This library can be found in
 `utils/crm_script.py` in the source repository. This library helps
 with producing output in the correct format, parsing the
 `script.input` data provided to scripts, and more.
+
