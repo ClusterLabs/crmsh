@@ -114,7 +114,7 @@ def _step_action(step):
     else:
         for typ in ['collect', 'validate', 'apply', 'apply_local', 'report']:
             if typ in step:
-                return name, typ, step['typ'].strip()
+                return name, typ, step[typ].strip()
     return name, None, None
 
 
