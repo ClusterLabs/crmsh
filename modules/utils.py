@@ -1232,6 +1232,25 @@ def resolve_hostnames(hostnames):
     return True, None
 
 
+def list_corosync_nodes():
+    '''
+    Returns list of nodes configured
+    in corosync.conf
+    '''
+    try:
+        cfg = os.getenv('COROSYNC_MAIN_CONFIG_FILE', '/etc/corosync/corosync.conf')
+        lines = open(cfg).read().split('\n')
+        addr_re = re.compile(r'\s*ring0_addr:\s+(.*)')
+        nodes = []
+        for line in lines:
+            addr = addr_re.match(line)
+            if addr:
+                nodes.append(addr.group(1))
+        return nodes
+    except Exception:
+        return []
+
+
 def list_cluster_nodes():
     '''
     Returns a list of nodes in the cluster.
