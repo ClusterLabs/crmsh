@@ -206,7 +206,7 @@ def describe(name):
 def _make_options():
     "Setup pssh options. TODO: Allow setting user/port/timeout"
     opts = pssh.Options()
-    opts.timeout = 60
+    opts.timeout = 600
     opts.recursive = True
     opts.ssh_options += [
         'PasswordAuthentication=no',
