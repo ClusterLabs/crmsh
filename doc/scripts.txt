@@ -1,4 +1,5 @@
 = Scripts =
+:source-highlighter: pygments
 
 .Version information
 NOTE: This section applies to the in-development `crmsh 2.0+` only.
@@ -168,7 +169,8 @@ learn more, see http:://yaml.org/[yaml.org].
 Here is an example `main.yml` file, heavily commented to explain what
 each section means.
 
-........
+[source,yaml]
+----
 ---
 # The triple-dash indicates that this is a yaml document.
 # All yaml documents should begin with this line.
@@ -187,36 +189,48 @@ each section means.
       description: Show all uptimes
       default: false
   steps:
-    # Steps must have a descriptive name, a type and a call action.
-    # The action should be an executable script located
-    # in the same folder as the main.yml file.
-    # type is one of collect, validate, apply, apply_local or report.
-    # collect: Runs on all nodes. Should not perform changes, only
-    # gather and return information.
-    # validate: Runs on the local node only. Should report problems
-    # that would prevent further progress.
-    # apply: Runs on all nodes. Performs changes to the system.
-    # apply_local: Runs on the local node only. Performs changes to
-    # the system.
-    # report: Runs on the local node only. Output from this step is
-    # printed, not saved as input to the following steps. This output
-    # does not have to be in JSON format.
+    # Steps consist of a descriptive name and an action which
+    # calls a script to do its work. The script should be an
+    # executable file located in the same folder as main.yml.
+    #
+    # Script files can be written in any language, as long as
+    # the cluster nodes know how to execute them.
+    #
+    # These are the valid actions:
+    # collect:
+    #     Runs on all nodes. Should not perform changes, only
+    #     gather and return information.
+    # validate:
+    #     Runs on the local node only. Should report problems
+    #     that would prevent further progress. If validate returns
+    #     a map of values, matching script parameters are updated
+    #     to reflect those values.
+    # apply:
+    #     Runs on all nodes. Applies changes.
+    #     If the dry_run flag is set, script execution stops
+    #     before the first apply action.
+    #
+    # apply_local:
+    #     Runs on the local node only. Otherwise same as apply.
+    #
+    # report:
+    #     Runs on the local node only. Output from this step is
+    #     printed, not saved as input to the following steps.
+    #     This output does not have to be in JSON format.
     - name: Fetch uptime
-      type: collect
-      call: fetch.py
+      collect: fetch.py
     - name: Report uptime
-      type: report
-      call: report.py
-........
+      report: report.py
+----
 
 The actions must not be Python scripts. They can be plain bash scripts
 or any other executable script as long as the nodes have the necessary
 dependencies installed. However, see below why implementing scripts in
 Python is easier.
 
-Actions must report their progress either by returning JSON on
-standard output, or by returning a non-zero return value and printing
-an error message to standard error.
+Actions report their progress either by returning JSON on standard
+output, or by returning a non-zero return value and printing an error
+message to standard error.
 
 Any JSON returned by an action will be available to the following
 steps in the script. When the script executes, it does so in a
@@ -238,32 +252,33 @@ With this knowledge, we can implement `fetch.py` and `report.py`.
 
 `fetch.py`:
 
-........
+[source,python]
+----
 #!/usr/bin/env python
 import crm_script
 try:
     uptime = open('/proc/uptime').read().split()[0]
+    crm_script.exit_ok(uptime)
 except:
     crm_script.exit_fail("Couldn't open /proc/uptime")
-crm_script.exit_ok({'uptime': uptime})
-........
+----
 
 `report.py`:
 
-........
+[source,python]
+----
 #!/usr/bin/env python
 import crm_script
-data = crm_script.get_input()
-show_all = crm_script.is_true(data[0]['show_all'])
-uptimes = [(h, v['uptime']) for h, v in data[1].iteritems()]
+show_all = crm_script.is_true(crm_script.param('show_all'))
+uptimes = crm_script.output(1).items()
 max_uptime = '', 0
-for h, t in uptimes:
-    if t > max_uptime[1]:
-        max_uptime = h, t
+for host, uptime in uptimes:
+    if uptime > max_uptime[1]:
+        max_uptime = host, uptime
 if show_all:
     print "Uptimes: %s" % (', '.join("%s: %s" % v for v in uptimes))
 print "Longest uptime is %s seconds on host %s" % (max_uptime[1], max_uptime[0])
-........
+----
 
 See below for more details on the helper library `crm_script`.
 
@@ -285,12 +300,37 @@ following command:
 crm script run check-uptime
 ........
 
+Example output:
+
+[source,bash]
+----
+# crm script run check-uptime
+INFO: Check uptime of nodes
+INFO: Nodes: ha-three, ha-one
+OK: Fetch uptimes
+OK: Report uptime
+Longest uptime is 161054.04 seconds on host ha-one
+----
+
 To see if the `show_all` parameter works as intended, run the
 following:
 
 ........
 crm script run check-uptime show_all=yes
 ........
+
+Example output:
+
+[source,bash]
+----
+# crm script run check-uptime show_all=yes
+INFO: Check uptime of nodes
+INFO: Nodes: ha-three, ha-one
+OK: Fetch uptimes
+OK: Report uptime
+Uptimes: ha-one: 161069.83, ha-three: 159950.38
+Longest uptime is 161069.83 seconds on host ha-one
+----
 
 === Remote permissions ===
 
