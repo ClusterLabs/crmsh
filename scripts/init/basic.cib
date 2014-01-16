@@ -1,0 +1,12 @@
+property $id="cib-bootstrap-options' \
+    stonith-enabled="false" \
+    no-quorum-policy="ignore" \
+    placement-strategy="balanced"
+
+op_defaults $id="op-options" \
+    timeout="600" \
+    record-pending="true"
+
+rsc_defaults $id="rsc-options" \
+    resource-stickiness="1" \
+    migration-threshold="3"
