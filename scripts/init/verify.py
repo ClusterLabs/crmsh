@@ -178,6 +178,12 @@ def check_services():
                 crm_script.exit_fail("%s already running corosync" % (host))
 
 
+def make_mcastaddr():
+    import random
+    random.seed()
+    b, c, d = random.randint(1, 254), random.randint(1, 254), random.randint(1, 254)
+    return "%02x.%02x.%02x.%02x" % (239, b, c, d)
+
 try:
     for host, info in data.iteritems():
         verify_host(host, info)
@@ -188,6 +194,9 @@ try:
 
     ret = {}
     ret['iface'] = select_interfaces(crm_script.param('iface'), data)
+
+    if not crm_script.param('mcastaddr'):
+        ret['mcastaddr'] = make_mcastaddr()
 
     crm_script.exit_ok(ret)
 
