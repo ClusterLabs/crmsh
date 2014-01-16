@@ -939,6 +939,62 @@ Usage:
 diff [--checksum] [node...]
 .........
 
+[[cmdhelp_corosync_add-node,Add a corosync node]]
+==== `add-node`
+
+Adds a node to the corosync configuration. This is used with the `udpu`
+type configuration in corosync.
+
+A nodeid for the added node is generated automatically.
+
+Note that this command assumes that only a single ring is used, and
+sets only the address for ring0.
+
+Usage:
+.........
+add-node <addr>
+.........
+
+[[cmdhelp_corosync_del-node,Remove a corosync node]]
+==== `del-node`
+
+Removes a node from the corosync configuration. The argument given is
+the `ring0_addr` address set in the configuration file.
+
+Usage:
+.........
+del-node <addr>
+.........
+
+[[cmdhelp_corosync_get,Get a corosync configuration value]]
+==== `get`
+
+Returns the value configured in `corosync.conf`, which is not
+necessarily the value used in the running configuration. See `reload`
+for telling corosync about configuration changes.
+
+The argument is the complete dot-separated path to the value.
+
+If there are multiple values configured with the same path, the
+command returns all values for that path. For example, to get all
+configured `ring0_addr` values, use this command:
+
+Example:
+........
+get nodelist.node.ring0_addr
+........
+
+[[cmdhelp_corosync.set,Set a corosync configuration value]]
+==== `set`
+
+Sets the value identified by the given path. If the value does not
+exist in the configuration file, it will be added. However, if the
+section containing the value does not exist, the command will fail.
+
+Usage:
+.........
+set quorum.expected_votes 2
+.........
 
 [[cmdhelp_cib,CIB shadow management]]
 === `cib` (shadow CIBs)

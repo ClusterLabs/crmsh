@@ -106,10 +106,7 @@ class Corosync(command.UI):
         '''
         Display the corosync log file (if any).
         '''
-        cfg = corosync.load()
-        if not cfg:
-            context.fatal_error("Failed to load corosync configuration")
-        fn = cfg.get_logfile()
+        fn = corosync.get_logfile(open(corosync.conf()).read())
         if fn:
             utils.page_file(fn)
         else:
@@ -119,4 +116,23 @@ class Corosync(command.UI):
     @command.alias('add_node')
     @command.skill_level('administrator')
     def do_addnode(self, context, name):
+        "Add a node to the corosync nodelist"
         corosync.add_node(name)
+
+    @command.name('del-node')
+    @command.alias('del_node')
+    @command.skill_level('administrator')
+    def do_delnode(self, context, name):
+        "Remove a node from the corosync nodelist"
+        corosync.del_node(name)
+
+    @command.skill_level('administrator')
+    def do_get(self, context, path):
+        "Get a corosync configuration value"
+        for v in corosync.get_values(path):
+            print v
+
+    @command.skill_level('administrator')
+    def do_set(self, context, path, value):
+        "Set a corosync configuration value"
+        corosync.set_value(path, value)
