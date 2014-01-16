@@ -15,13 +15,15 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-import config
-import yaml
+import sys
 import time
 import random
 import os
-import subprocess
 import shutil
+import subprocess
+import yaml
+import config
+import options
 from msg import err_buf
 import userdir
 
@@ -365,6 +367,7 @@ class RunStep(object):
         self.workdir = workdir
         self.statefile = os.path.join(self.workdir, 'script.input')
         self.dstfile = os.path.join(self.workdir, 'script.input')
+        self.in_progress = False
 
     def _build_cmdline(self, sname, stype, scall):
         cmdline = 'cd "%s"; ./%s' % (self.workdir, scall)
@@ -402,51 +405,80 @@ class RunStep(object):
                             self.dstfile,
                             self.opts)
 
+    def start(self, txt):
+        if not options.batch:
+            sys.stdout.write(txt)
+            sys.stdout.flush()
+            self.in_progress = True
+
+    def flush(self):
+        if self.in_progress:
+            self.in_progress = False
+            sys.stdout.write('\r')
+            sys.stdout.flush()
+
+    def ok(self, fmt, *args):
+        self.flush()
+        err_buf.ok(fmt % args)
+
+    def out(self, fmt, *args):
+        self.flush()
+        print fmt % args
+
+    def error(self, fmt, *args):
+        self.flush()
+        err_buf.error(fmt % args)
+
     def run_step(self, name, action, call):
         """
         Execute a single step
         """
-        cmdline = self._build_cmdline(name, action, call)
 
-        if not self._update_state():
-            raise ValueError("Failed when updating input, aborting.")
-
-        ok = False
-        if action in ('collect', 'apply'):
-            result = self._process_remote(cmdline)
-            if result is not None:
-                self.data.append(result)
-                ok = True
-        elif action == 'validate':
-            result = self._process_local(cmdline)
-            if result is not None:
-                if result:
-                    result = json.loads(result)
-                else:
-                    result = {}
-                self.data.append(result)
-                if isinstance(result, dict):
-                    for k, v in result.iteritems():
-                        self.data[0][k] = v
-                ok = True
-        elif action == 'apply_local':
-            result = self._process_local(cmdline)
-            if result is not None:
-                if result:
-                    result = json.loads(result)
-                else:
-                    result = {}
-                self.data.append(result)
-                ok = True
-        elif action == 'report':
-            result = self._process_local(cmdline)
-            if result is not None:
-                err_buf.ok(name)
-                print result
-                return True
-        if ok:
-            err_buf.ok(name)
-        return ok
+        self.start('%s...' % (name))
+        try:
+            cmdline = self._build_cmdline(name, action, call)
+            if not self._update_state():
+                raise ValueError("Failed when updating input, aborting.")
+            output = None
+            ok = False
+            if action in ('collect', 'apply'):
+                result = self._process_remote(cmdline)
+                if result is not None:
+                    self.data.append(result)
+                    ok = True
+            elif action == 'validate':
+                result = self._process_local(cmdline)
+                if result is not None:
+                    if result:
+                        result = json.loads(result)
+                    else:
+                        result = {}
+                    self.data.append(result)
+                    if isinstance(result, dict):
+                        for k, v in result.iteritems():
+                            self.data[0][k] = v
+                    ok = True
+            elif action == 'apply_local':
+                result = self._process_local(cmdline)
+                if result is not None:
+                    if result:
+                        result = json.loads(result)
+                    else:
+                        result = {}
+                    self.data.append(result)
+                    ok = True
+            elif action == 'report':
+                result = self._process_local(cmdline)
+                if result is not None:
+                    output = result
+                    ok = True
+            if ok:
+                self.ok(name)
+            if output:
+                self.out(output)
+            return ok
+        finally:
+            self.flush()
 
     def all_steps(self):
         # TODO: run asynchronously on remote nodes
@@ -471,19 +503,19 @@ class RunStep(object):
                                       cmdline,
                                       self.opts).iteritems():
             if isinstance(result, pssh.Error):
-                err_buf.error("[%s]: %s" % (host, result))
+                self.error("[%s]: %s" % (host, result))
                 ok = False
             else:
                 rc, out, err = result
                 if rc != 0:
-                    err_buf.error("[%s]: %s%s" % (host, out, err))
+                    self.error("[%s]: %s%s" % (host, out, err))
                     ok = False
                 else:
                     step_result[host] = json.loads(out)
         if self.local_node:
             rc, out, err = utils.get_stdout_stderr(cmdline)
             if rc != 0:
-                err_buf.error("[%s]: %s" % (self.local_node, err))
+                self.error("[%s]: %s" % (self.local_node, err))
                 ok = False
             else:
                 step_result[self.local_node] = json.loads(out)
@@ -497,7 +529,7 @@ class RunStep(object):
         """
         rc, out, err = utils.get_stdout_stderr(cmdline)
         if rc != 0:
-            err_buf.error("[%s]: Error (%d): %s" % (self.local_node, rc, err))
+            self.error("[%s]: Error (%d): %s" % (self.local_node, rc, err))
             return None
         return out
 
@@ -557,4 +589,5 @@ def run(name, args):
         traceback.print_exc()
         raise ValueError("Internal error while running %s: %s" % (name, e))
     finally:
-        _run_cleanup(hosts, workdir, opts)
+        if not config.core.debug:
+            _run_cleanup(hosts, workdir, opts)
