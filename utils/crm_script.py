@@ -36,7 +36,7 @@ def is_true(s):
         return s
     return s.lower() in ('yes', 'true', '1', 'on')
 def service(name, action):
-    return call('service', name, action)
+    return call(['systemctl', action, name + '.service'])
 def package(name, state):
     rc, out, err = call(['./crm_pkg.py', '-n', name, '-s', state])
     if rc != 0:
