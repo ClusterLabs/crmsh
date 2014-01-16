@@ -16,11 +16,12 @@ def run_validate():
         crm_script.exit_fail("%s not found or not responding: %s" % (node, data.get(node)))
     if host == node:
         crm_script.exit_fail("Call from another node: %s = %s" % (node, host))
-    crm_script.exit_ok(node)
+    crm_script.exit_ok(host)
 
 
 def run_apply():
     rc, out, err = crm_script.call(['ssh',
+                                    '-o', 'PasswordAuthentication=no',
                                     'root@%s' % (node),
                                     'systemctl stop corosync.service'])
     if rc != 0:
