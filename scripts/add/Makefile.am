@@ -22,7 +22,7 @@ MAINTAINERCLEANFILES    = Makefile.in
 scriptadddir 		= $(datadir)/@PACKAGE@/scripts/add
 
 scriptadd_DATA	= main.yml
-scriptadd_SCRIPTS	= collect.py
+scriptadd_SCRIPTS	= add.py
 
 EXTRA_DIST	= $(scriptadd_DATA) $(scriptadd_SCRIPTS)
 
