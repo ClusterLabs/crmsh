@@ -1,12 +1,16 @@
 ---
-- name: Removes a node from a cluster
+- name: Remove node from cluster
   description: >
     Removes the node both from Pacemaker and Corosync.
   parameters:
     - name: node
       description: Node to remove from the cluster
   steps:
-    - name: Check state of nodes
-      type: collect
-      call: collect.py
+    - name: Check nodes
+      collect: remove.py collect
 
+    - name: Validate parameters
+      validate: remove.py validate
+
+    - name: Remove node from cluster
+      apply_local: remove.py apply
