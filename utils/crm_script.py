@@ -1,3 +1,4 @@
+import os
 import sys
 import subprocess as proc
 try:
@@ -8,8 +9,22 @@ def call(cmd, shell=False):
     p = proc.Popen(cmd, shell=shell, stdin=None, stdout=proc.PIPE, stderr=proc.PIPE)
     out, err = p.communicate()
     return p.returncode, out.strip(), err.strip()
+def host():
+    return os.uname()[1]
+_input = None
 def get_input():
-    return json.load(open('./script.input'))
+    global _input
+    if _input is None:
+        _input =  json.load(open('./script.input'))
+    return _input
+def parameters():
+    return get_input()[0]
+def param(name):
+    return parameters().get(name)
+def output(step_idx):
+    if step_idx < len(get_input()):
+        return get_input()[step_idx]
+    return {}
 def exit_fail(msg):
     print >>sys.stderr, msg
     sys.exit(1)
