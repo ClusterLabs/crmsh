@@ -1,7 +1,11 @@
 ---
 - name: Remove node from cluster
   description: >
-    Removes the node both from Pacemaker and Corosync.
+    Removes the node from the cluster. Resources currently
+    allocated to the node will be moved elsewhere if possible.
+
+    A more usable interface to this script is provided via
+    the cluster remove command.
   parameters:
     - name: node
       description: Node to remove from the cluster
