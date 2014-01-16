@@ -41,7 +41,6 @@ def run(cmd):
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
     out, err = proc.communicate(None)
-    proc.wait()
     return proc.returncode, out, err
 
 
@@ -111,7 +110,7 @@ class Zypper(PackageManager):
                'install',
                '--auto-agree-with-licenses',
                name]
-        rc, stdout, stderr = run(cmd, check_rc=False)
+        rc, stdout, stderr = run(cmd)
         changed = rc == 0
         return (rc, stdout, stderr, changed)
 
@@ -128,7 +127,7 @@ class Zypper(PackageManager):
                'update',
                '--auto-agree-with-licenses',
                name]
-        rc, stdout, stderr = run(cmd, check_rc=False)
+        rc, stdout, stderr = run(cmd)
         post_version = self.get_version(name)
         changed = pre_version != post_version
         return (rc, stdout, stderr, changed)
@@ -180,7 +179,7 @@ class Yum(PackageManager):
                '-d', 2,
                'install',
                name]
-        rc, stdout, stderr = run(cmd, check_rc=False)
+        rc, stdout, stderr = run(cmd)
         changed = rc == 0
         return (rc, stdout, stderr, changed)
 
@@ -197,7 +196,7 @@ class Yum(PackageManager):
                '-d', 2,
                'update',
                name]
-        rc, stdout, stderr = run(cmd, check_rc=False)
+        rc, stdout, stderr = run(cmd)
         post_version = self.get_version(name)
         changed = pre_version != post_version
         return (rc, stdout, stderr, changed)
