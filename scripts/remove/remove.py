@@ -3,7 +3,7 @@ import sys
 import crm_script
 
 host = crm_script.host()
-node = crm_script.param('node')
+remove_nodes = crm_script.param('node').split(',')
 
 
 def run_collect():
@@ -12,26 +12,28 @@ def run_collect():
 
 def run_validate():
     data = crm_script.output(1)
-    if data.get(node) != node:
-        crm_script.exit_fail("%s not found or not responding: %s" % (node, data.get(node)))
-    if host == node:
-        crm_script.exit_fail("Call from another node: %s = %s" % (node, host))
+    for node in remove_nodes:
+        if data.get(node) != node:
+            crm_script.exit_fail("%s not found or not responding: %s" % (node, data.get(node)))
+        if host == node:
+            crm_script.exit_fail("Call from another node: %s = %s" % (node, host))
     crm_script.exit_ok(host)
 
 
 def run_apply():
-    rc, out, err = crm_script.call(['ssh',
-                                    '-o', 'PasswordAuthentication=no',
-                                    'root@%s' % (node),
-                                    'systemctl stop corosync.service'])
-    if rc != 0:
-        crm_script.exit_fail("Failed to stop corosync on %s: %s" % (node, err))
+    for node in remove_nodes:
+        rc, out, err = crm_script.call(['ssh',
+                                        '-o', 'PasswordAuthentication=no',
+                                        'root@%s' % (node),
+                                        'systemctl stop corosync.service'])
+        if rc != 0:
+            crm_script.exit_fail("Failed to stop corosync on %s: %s" % (node, err))
 
-    rc, out, err = crm_script.call(['crm', 'node', 'delete', node])
-    if rc != 0:
-        crm_script.exit_fail("Failed to remove %s from CIB: %s" % (node, err))
+        rc, out, err = crm_script.call(['crm', 'node', 'delete', node])
+        if rc != 0:
+            crm_script.exit_fail("Failed to remove %s from CIB: %s" % (node, err))
 
-    crm_script.exit_ok({"removed": node})
+    crm_script.exit_ok({"removed": remove_nodes})
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or sys.argv[1] == 'collect':
