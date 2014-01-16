@@ -206,7 +206,10 @@ def _make_options():
     opts = pssh.Options()
     opts.timeout = 60
     opts.recursive = True
-    opts.ssh_options += ['ControlPersist=no']
+    opts.ssh_options += [
+        'PasswordAuthentication=no',
+        #'StrictHostKeyChecking=no',
+        'ControlPersist=no']
     return opts
 
 
