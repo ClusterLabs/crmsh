@@ -355,16 +355,16 @@ Examples:
         return sub and sub.type == 'level'
 
     @classmethod
-    def init_ui(self):
+    def init_ui(cls):
         children = {}
-        for child_name in dir(self):
-            child = getattr(self, child_name)
+        for child_name in dir(cls):
+            child = getattr(cls, child_name)
             iscommand = child_name.startswith('do_') and inspect.ismethod(child)
             if iscommand:
-                info = ChildInfo(child, self)
+                info = ChildInfo(child, cls)
                 if info.type == 'command' and not is_valid_command_function(info.function):
                     raise ValueError("Invalid command function: %s.%s" %
-                                     (self.__name__, info.function.__name__))
+                                     (cls.__name__, info.function.__name__))
                 children[info.name] = info
 
                 # Set up aliases
@@ -386,20 +386,20 @@ Examples:
                                                   'Note: This level is not documented.\n',
                                                   generated=True)
                 if info.type == 'command':
-                    help_module.add_help(entry, level=self.name, command=info.name)
+                    help_module.add_help(entry, level=cls.name, command=info.name)
                 elif info.type == 'level':
                     help_module.add_help(entry, level=info.name)
-        setattr(self, '_children', children)
+        setattr(cls, '_children', children)
         return children
 
 
-def make_name(name):
+def make_name(new_name):
     '''
     Generate command name from command function name.
     '''
-    if name.startswith('do_'):
-        return name[3:]
-    return name
+    if new_name.startswith('do_'):
+        return new_name[3:]
+    return new_name
 
 
 class ChildInfo(object):
