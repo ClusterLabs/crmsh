@@ -21,8 +21,8 @@ MAINTAINERCLEANFILES    = Makefile.in
 
 scriptinitdir 		= $(datadir)/@PACKAGE@/scripts/init
 
-scriptinit_DATA	= main.yml
-scriptinit_SCRIPTS	= collect.py init.py configure.py report.py verify.py
+scriptinit_DATA	= main.yml corosync.conf.template init_common.py basic.cib
+scriptinit_SCRIPTS	= collect.py verify.py configure.py authkey.py init.py
 
 EXTRA_DIST	= $(scriptinit_DATA) $(scriptinit_SCRIPTS)
 
