@@ -106,22 +106,33 @@ class Cluster(command.UI):
         Installs packages, sets up corosync and pacemaker, etc.
         Must be executed from a node in the existing cluster.
         '''
-        return scripts.run('add', self._args_implicit(context, args, 'node'))
+        params = self._args_implicit(context, args, 'node')
+        paramdict = utils.nvpairs2dict(params)
+        node = paramdict.get('node')
+        if node:
+            node = node.replace(',', ' ').split()
+        else:
+            node = []
+        nodes = paramdict.get('nodes')
+        if not nodes:
+            nodes = utils.list_cluster_nodes()
+        nodes += node
+        params += ['nodes=%s' % (','.join(nodes))]
+        return scripts.run('add', params)
 
     @command.skill_level('administrator')
     def do_remove(self, context, *args):
         '''
         Remove the given node(s) from the cluster.
         '''
-        return scripts.run('remove', self._args_implicit(context, args, 'node'))
+        params = self._args_implicit(context, args, 'node')
+        return scripts.run('remove', params)
 
     def do_health(self, context, *args):
         '''
         Extensive health check.
         '''
         params = self._args_implicit(context, args, 'nodes')
-        if not any(k.startswith('nodes=') for k in params):
-            params += ['nodes=%s' % (','.join(utils.list_cluster_nodes()))]
         return scripts.run('health', params)
 
     def _node_in_cluster(self, node):
