@@ -16,6 +16,7 @@
 #
 
 import os
+import sys
 import time
 import datetime
 import re
@@ -1069,6 +1070,14 @@ class Report(Singleton):
         '''
         trans_msg_l = self.get_all_trans_msgs(msg_l)
         trans_start_msg_l = self.get_invoke_trans_msgs(trans_msg_l)
+        common_debug("Num transition msgs: %s" % (len(trans_msg_l)))
+        common_debug("Num start transition msgs: %s" % (len(trans_start_msg_l)))
+        MANY_TRANSITIONS = 10000
+        progress = False
+        if len(trans_msg_l) > MANY_TRANSITIONS:
+            common_warn("Processing %s transitions..." %
+                        (len(trans_msg_l)))
+            progress = True
         for msg in trans_start_msg_l:
             run_msg = get_matching_run_msg(msg, trans_msg_l)
             t_obj = Transition(msg, run_msg)
@@ -1082,6 +1091,9 @@ class Report(Singleton):
                     warn_once("%s in the logs, but not in the report" % t_obj)
                     continue
             common_debug("found PE input: %s" % t_obj)
+            if progress:
+                sys.stdout.write('.')
+                sys.stdout.flush()
             yield t_obj
 
     def report_setup(self):
