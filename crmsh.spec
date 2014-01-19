@@ -1,7 +1,7 @@
 #
 # spec file for package crmsh
 #
-# Copyright (c) 2013 SUSE LINUX Products GmbH, Nuernberg, Germany.
+# Copyright (c) 2014 SUSE LINUX Products GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -37,7 +37,6 @@
 %{!?py_libdir:  %{expand: %%global py_libdir   %%{expand:%%%%{py_prefix}/%%%%{_lib}/python%%%%{py_ver}}}}
 %{!?py_sitedir: %{expand: %%global py_sitedir  %%{expand:%%%%{py_libdir}/site-packages}}}
 
-
 Name:           crmsh
 Summary:        Pacemaker command line interface
 License:        GPL-2.0+
@@ -54,12 +53,12 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Requires(pre):  pacemaker
 Requires:       pssh
 Requires:       python >= 2.4
+Requires:       python-PyYAML
 Requires:       python-dateutil
 Requires:       python-lxml
 Requires:       which
-Requires:       python-PyYAML
-BuildRequires:  python-lxml
 BuildRequires:  python-PyYAML
+BuildRequires:  python-lxml
 
 %if 0%{?suse_version}
 # Suse splits this off into a separate package
@@ -86,7 +85,6 @@ BuildRequires:  python
 # required by asciidoc
 BuildRequires:  libxslt-tools
 %endif
-
 
 %if 0%{?with_regression_tests}
 BuildRequires:  corosync
@@ -185,12 +183,12 @@ fi
 %{crmsh_docdir}/COPYING
 %{crmsh_docdir}/AUTHORS
 %{crmsh_docdir}/crm.8.html
+%{crmsh_docdir}/crmsh_hb_report.8.html
 %{crmsh_docdir}/ChangeLog
 %{crmsh_docdir}/README
 %{crmsh_docdir}/contrib/*
 
-%{_sysconfdir}/crm
-%config %{_sysconfdir}/crm/crm.conf
+%config %{_sysconfdir}/crm
 
 %dir %{crmsh_docdir}
 %dir %{crmsh_docdir}/contrib
