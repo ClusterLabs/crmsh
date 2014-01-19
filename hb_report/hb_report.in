@@ -681,7 +681,7 @@ corosync_blackbox() {
 	local inpf
 	inpf=`find_files /var/lib/corosync $from_time $to_time | grep -w fdata`
 	if [ -f "$inpf" ]; then
-		corosync-fplay > $outf
+		corosync-blackbox > $outf
 		touch -r $inpf $outf
 	fi
 }
