@@ -984,7 +984,7 @@ Example:
 get nodelist.node.ring0_addr
 ........
 
-[[cmdhelp_corosync.set,Set a corosync configuration value]]
+[[cmdhelp_corosync_set,Set a corosync configuration value]]
 ==== `set`
 
 Sets the value identified by the given path. If the value does not
