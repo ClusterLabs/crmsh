@@ -1,25 +1,25 @@
-:man source:   hb_report
+:man source:   crmsh_hb_report
 :man version:  1.2
 :man manual:   Pacemaker documentation
 
-hb_report(8)
+crmsh_hb_report(8)
 ============
 
 
 NAME
 ----
-hb_report - create report for CRM based clusters (Pacemaker)
+crm report - create report for CRM based clusters (Pacemaker)
 
 
 SYNOPSIS
 --------
-*hb_report* -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
+*crm report* -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
        [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCZAVsvhd] [dest]
 
 
 DESCRIPTION
 -----------
-The hb_report(1) is a utility to collect all information (logs,
+The crmsh_hb_report(8) is a utility to collect all information (logs,
 configuration files, system information, etc) relevant to
 Pacemaker (CRM) over the given period of time.
 
@@ -47,7 +47,7 @@ dest::
 
 *-n* nodes::
 	A list of space separated hostnames (cluster members).
-	hb_report may try to find out the set of nodes by itself, but
+	crm report may try to find out the set of nodes by itself, but
 	if it runs on the loghost which, as it is usually the case,
 	does not belong to the cluster, that may be difficult. Also,
 	OpenAIS doesn't contain a list of nodes and if Pacemaker is
@@ -55,7 +55,7 @@ dest::
 	This option is cumulative (i.e. use -n "a b" or -n a -n b).
 
 *-l* file::
-	Log file location. If, for whatever reason, hb_report cannot
+	Log file location. If, for whatever reason, crm report cannot
 	find the log files, you can specify its absolute path.
 
 *-E* files::
@@ -76,13 +76,13 @@ dest::
 	sensitive information. This option is additive (default: "passw.*").
 
 *-A*::
-	This is an OpenAIS cluster. hb_report has some heuristics to
+	This is an OpenAIS cluster. `crm report` has some heuristics to
 	find the cluster stack, but that is not always reliable.
-	By default, hb_report assumes that it is run on a Heartbeat
+	By default, `crm report` assumes that it is run on a Heartbeat
 	cluster.
 
 *-u* user::
-	The ssh user. hb_report will try to login to other nodes
+	The ssh user. `crm report` will try to login to other nodes
 	without specifying a user, then as "root", and finally as
 	"hacluster". If you have another user for administration over
 	ssh, please use this option.
@@ -93,7 +93,7 @@ dest::
 	desired ssh connection options.
 
 *-S*::
-	Single node operation. Run hb_report only on this node and
+	Single node operation. Run `crm report` only on this node and
 	don't try to start slave collectors on other members of the
 	cluster. Under normal circumstances this option is not
 	needed. Use if ssh(1) does not work to other nodes.
@@ -128,7 +128,7 @@ EXAMPLES
 Last night during the backup there were several warnings
 encountered (logserver is the log host):
 
-	logserver# hb_report -f 3:00 -t 4:00 -n "node1 node2" report
+	logserver# crm report -f 3:00 -t 4:00 -n "node1 node2" report
 
 collects everything from all nodes from 3am to 4am last night.
 The files are compressed to a tarball report.tar.bz2.
@@ -141,19 +141,19 @@ Just found a problem during testing:
 	node1# /etc/init.d/heartbeat start
 	node1# nasty-command-that-breaks-things
 	node1# sleep 120 #wait for the cluster to settle
-	node1# hb_report -f 18:51 hb1
+	node1# crm report -f 18:51 hb1
 
-	# if hb_report can't figure out that this is corosync
-	node1# hb_report -f 18:51 -A hb1
+	# if crm report can't figure out that this is corosync
+	node1# crm report -f 18:51 -A hb1
 
-	# if hb_report can't figure out the cluster members
-	node1# hb_report -f 18:51 -n "node1 node2" hb1
+	# if crm report can't figure out the cluster members
+	node1# crm report -f 18:51 -n "node1 node2" hb1
 
 The files are compressed to a tarball hb1.tar.bz2.
 
 INTERPRETING RESULTS
 --------------------
-The compressed tar archive is the final product of hb_report.
+The compressed tar archive is the final product of `crm report`.
 This is one example of its content, for a CTS test case on a
 three node OpenAIS cluster:
 
@@ -217,7 +217,7 @@ Some files are result of a more involved processing:
 
 	*permissions.txt*::
 	One of the more common problem causes are file and directory
-	permissions. hb_report looks for a set of predefined
+	permissions. `crm report` looks for a set of predefined
 	directories and checks their permissions. Any issues are
 	reported here.
 
@@ -258,22 +258,22 @@ ssh::
 
 sudo::
 	If the ssh user (as specified with the `-u` option) is other
-	than `root`, then `hb_report` uses `sudo` to collect the
+	than `root`, then `crm report` uses `sudo` to collect the
 	information which is readable only by the `root` user. In that
 	case it is required to setup the `sudoers` file properly. The
 	user (or group to which the user belongs) should have the
 	following line:
 	+
-	<user> ALL = NOPASSWD: /usr/sbin/hb_report
+	<user> ALL = NOPASSWD: /usr/sbin/crm
 	+
 	See the `sudoers(5)` man page for more details.
 
 Times::
 	In order to find files and messages in the given period and to
-	parse the `-f` and `-t` options, `hb_report` uses perl and one of the
+	parse the `-f` and `-t` options, `crm report` uses perl and one of the
 	`Date::Parse` or `Date::Manip` perl modules. Note that you need
 	only one of these. Furthermore, on nodes which have no logs and
-	where you don't run `hb_report` directly, no date parsing is
+	where you don't run `crm report` directly, no date parsing is
 	necessary. In other words, if you run this on a loghost then you
 	don't need these perl modules on the cluster nodes.
 	+
@@ -303,7 +303,7 @@ or just rely on common sense and try stuff like:
 	2007/9/1 2pm  (September 1st at 2pm)
 	Tue Sep 15 20:46:27 CEST 2009 (September 15th etc)
 
-`hb_report` will (probably) complain if it can't figure out what do
+`crm report` will (probably) complain if it can't figure out what do
 you mean.
 
 Try to delimit the event as close as possible in order to reduce
@@ -318,17 +318,17 @@ Should I send all this to the rest of Internet?
 -----------------------------------------------
 
 By default, the sensitive data in CIB and PE files is not mangled
-by `hb_report` because that makes PE input files mostly useless.
+by `crm report` because that makes PE input files mostly useless.
 If you still have no other option but to send the report to a
 public mailing list and do not want the sensitive data to be
-included, use the `-s` option. Without this option, `hb_report`
+included, use the `-s` option. Without this option, `crm report`
 will issue a warning if it finds information which should not be
 exposed. By default, parameters matching 'passw.*' are considered
 sensitive.  Use the `-p` option to specify additional regular
 expressions to match variable names which may contain information
 you don't want to leak. For example:
 
-	# hb_report -f 18:00 -p "user.*" -p "secret.*" /var/tmp/report
+	# crm report -f 18:00 -p "user.*" -p "secret.*" /var/tmp/report
 
 Heartbeat's ha.cf is always sanitized. Logs and other files are
 not filtered.
@@ -344,7 +344,7 @@ if the syslog files are in a non-standard directory. We look in
 /var/log/cluster. In case we can't find the logs, please supply
 their location:
 
-	# hb_report -f 5pm -l /var/log/cluster1/ha-log -S /tmp/report_node1
+	# crm report -f 5pm -l /var/log/cluster1/ha-log -S /tmp/report_node1
 
 If you have different log locations on different nodes, well,
 perhaps you'd like to make them the same and make life easier for
@@ -354,7 +354,7 @@ Files starting with "ha-" are preferred. In case syslog sends
 messages to more than one file, if one of them is named ha-log or
 ha-debug those will be favoured over syslog or messages.
 
-hb_report supports also archived logs in case the period
+`crm report` supports also archived logs in case the period
 specified extends that far in the past. The archives must reside
 in the same directory as the current log and their names must
 be prefixed with the name of the current log (syslog-1.gz or
@@ -368,25 +368,25 @@ MANUAL REPORT COLLECTION
 ------------------------
 
 So, your ssh doesn't work. In that case, you will have to run
-this procedure on all nodes. Use `-S` so that `hb_report` doesn't
+this procedure on all nodes. Use `-S` so that `crm report` doesn't
 bother with ssh:
 
-	# hb_report -f 5:20pm -t 5:30pm -S /tmp/report_node1
+	# crm report -f 5:20pm -t 5:30pm -S /tmp/report_node1
 
 If you also have a log host which is not in the cluster, then
 you'll have to copy the log to one of the nodes and tell us where
 it is:
 
-	# hb_report -f 5:20pm -t 5:30pm -l /var/tmp/ha-log -S /tmp/report_node1
+	# crm report -f 5:20pm -t 5:30pm -l /var/tmp/ha-log -S /tmp/report_node1
 
 OPERATION
 ---------
-hb_report collects files and other information in a fairly
+`crm report` collects files and other information in a fairly
 straightforward way. The most complex tasks are discovering the
 log file locations (if syslog is used which is the most common
 case) and coordinating the operation on multiple nodes.
 
-The instance of hb_report running on the host where it was
+The instance of `crm report` running on the host where it was
 invoked is the master instance. Instances running on other nodes
 are slave instances. The master instance communicates with slave
 instances by ssh. There are multiple ssh invocations per run, so
@@ -435,7 +435,7 @@ destination based on facility and priority.
 If you think you found a bug, please rerun with the -v option and
 attach the output to bugzilla.
 
-hb_report can function in a satisfactory way only if ssh works to
+`crm report` can function in a satisfactory way only if ssh works to
 all nodes using authorized_keys (without password).
 
 There are way too many options.
