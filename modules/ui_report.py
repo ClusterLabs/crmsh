@@ -17,31 +17,22 @@
 #
 
 import os
-import command
 import utils
-from msg import no_prog_err
 import config
+import subprocess
+from signal import signal, SIGPIPE, SIG_DFL
 
 
-class Report(command.UI):
-    '''
-    Implements the report interface in crmsh.
-    '''
-    name = "report"
-
-    extcmd = os.path.join(config.path.sharedir, 'hb_report')
-
-    def requires(self):
-        if not utils.is_program(self.extcmd):
-            no_prog_err(self.extcmd)
-            return False
-        return True
-
-    def do_create(self, context, *args):
-        '''
-        Create a new report.
-
-        create -f "YYYY-MM-DD H:M:S" [-t "YYYY-MM-DD H:M:S"] [options ...] [dest]
-        '''
-        cmd = [self.extcmd] + list(args)
-        return utils.ext_cmd(cmd, shell=False) == 0
+def create_report(context, args):
+    toolopts = [os.path.join(config.path.sharedir, 'hb_report'),
+                'hb_report',
+                'crm_report']
+    extcmd = None
+    for tool in toolopts:
+        if utils.is_program(tool):
+            extcmd = tool
+            break
+    if not extcmd:
+        context.fatal_error("No reporting tool found")
+    cmd = [extcmd] + list(args)
+    return subprocess.call(cmd, shell=False, preexec_fn=lambda: signal(SIGPIPE, SIG_DFL))

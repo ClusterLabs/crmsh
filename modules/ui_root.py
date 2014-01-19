@@ -154,14 +154,13 @@ level and at the `configure` level.
     def do_ra(self):
         pass
 
-    @command.level(ui_report.Report)
     @command.help('''Utility to collect logs and other information
 `report` is a utility to collect all information (logs,
 configuration files, system information, etc) relevant to
 crmsh over the given period of time.
 ''')
-    def do_report(self):
-        pass
+    def do_report(self, context, *args):
+        return ui_report.create_report(context, args)
 
     @command.help('''show cluster status
 Show cluster status. The status is displayed by `crm_mon`. Supply

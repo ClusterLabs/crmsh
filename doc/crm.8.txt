@@ -613,7 +613,7 @@ ellipsis (`...`) signifies that the previous construct may be
 repeated, `|` means pick one of many, and the rest are literals
 (strings, `:`, `=`).
 
-[[cmdhelp_status,Cluster status]]
+[[cmdhelp_._status,Cluster status]]
 === `status`
 
 Show cluster status. The status is displayed by `crm_mon`. Supply
@@ -3860,19 +3860,17 @@ session load rsclost-2
 session list
 ...............
 
-[[cmdhelp_report,Handle reports for the cluster]]
+[[cmdhelp_._report,Create cluster status report]]
 === `report`
 
-Provides an interface to collect cluster reports. A report is an
+Interface to a tool for creating a cluster report. A report is an
 archive containing log files, configuration files, system information
 and other relevant data for a given time period. This is a useful tool
 for collecting data to attach to bug reports, or for detecting the
 root cause of errors resulting in resource failover, for example.
 
-[[cmdhelp_report_create,Create a new report]]
-==== `create`
-
-See `crmsh_hb_report(8)` for more details.
+See `crmsh_hb_report(8)` for more details on arguments,
+or call `crm report -h`
 
 Usage:
 ...............
@@ -3883,12 +3881,12 @@ report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
 
 Examples:
 ...............
-create -f 2pm report_1
-create -f "2007/9/5 12:30" -t "2007/9/5 14:00" report_2
-create -f 1:00 -t 3:00 -l /var/log/cluster/ha-debug report_3
-create -f "09sep07 2:00" -u hbadmin report_4
-create -f 18:00 -p "usern.*" -p "admin.*" report_5
-create -f cts:133 ctstest_133
+report -f 2pm report_1
+report -f "2007/9/5 12:30" -t "2007/9/5 14:00" report_2
+report -f 1:00 -t 3:00 -l /var/log/cluster/ha-debug report_3
+report -f "09sep07 2:00" -u hbadmin report_4
+report -f 18:00 -p "usern.*" -p "admin.*" report_5
+report -f cts:133 ctstest_133
 ...............
 
 === `end` (`cd`, `up`)
