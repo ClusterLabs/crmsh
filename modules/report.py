@@ -1091,8 +1091,18 @@ class Report(Singleton):
             return
         if self.change_origin == CH_SRC:
             vars.pcmk_version = None
-            self.desc = os.path.join(self.loc, "description.txt")
-            set_year(os.stat(self.desc).st_mtime)
+            # is this an hb_report or a crm_report?
+            for descname in ("description.txt", "report.summary"):
+                self.desc = os.path.join(self.loc, descname)
+                if os.path.isfile(self.desc):
+                    yr = os.stat(self.desc).st_mtime
+                    common_debug("Found %s, created %s" % (descname, yr))
+                    set_year(yr)
+                    break
+            else:
+                self.error("Invalid report: No description found")
+                return
+
             self.log_l = self.find_logs()
             self.find_central_log()
             self.read_cib()
