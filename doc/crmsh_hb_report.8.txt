@@ -3,12 +3,11 @@
 :man manual:   Pacemaker documentation
 
 crmsh_hb_report(8)
-============
-
+==================
 
 NAME
 ----
-crm report - create report for CRM based clusters (Pacemaker)
+crmsh_hb_report - create report for CRM based clusters (Pacemaker)
 
 
 SYNOPSIS
@@ -459,7 +458,7 @@ Corosync: <http://www.corosync.org/>
 
 SEE ALSO
 --------
-Date::Parse(3)
+crm(8), Date::Parse(3)
 
 
 COPYING
