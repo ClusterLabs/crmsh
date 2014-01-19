@@ -380,7 +380,7 @@ class ResourceParser(BaseParser):
             t = self.current_token()
             if t == 'operations':
                 self.match_operations(out)
-            elif t == 'op':
+            elif t.lower() == 'op':
                 self.match_op(out)
             else:
                 for name in names:
@@ -437,7 +437,7 @@ class ResourceParser(BaseParser):
 
     def _try_group_resource(self):
         t = self.current_token()
-        if (not t) or ('=' in t) or (t in ('params', 'meta')):
+        if (not t) or ('=' in t) or (t.lower() in ('params', 'meta')):
             return None
         return self.match_any()
 
@@ -1186,6 +1186,8 @@ class CliParser(object):
         # but there shouldn't be any newlines (?)
         while '\n' in s:
             s.remove('\n')
+        if s:
+            s[0] = s[0].lower()
         return s
 
     def parse(self, s):
@@ -1197,8 +1199,9 @@ class CliParser(object):
         s = self._normalize(s)
         if not s:
             return s
-        if s[0] in self.parsers:
-            parser = self.parsers[s[0]]
+        kw = s[0]
+        if kw in self.parsers:
+            parser = self.parsers[kw]
             try:
                 ret = parser.do_parse(s)
                 if self.comments:

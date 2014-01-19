@@ -319,6 +319,39 @@ class TestCliParser(unittest.TestCase):
         ''')
         self.assertNotEqual(-1, repr(outp).find('# comment'))
 
+    def test_uppercase(self):
+        outp = self._parse_lines('''
+        PRIMITIVE rsc_dummy ocf:heartbeat:Dummy
+        MONITOR rsc_dummy 30
+        ''')
+        #print outp
+        self.assertEqual(2, len(outp))
+
+        outp = self._parse_lines('''
+        PRIMITIVE testfs ocf:heartbeat:Filesystem \
+          PARAMS directory="/mnt" fstype="ocfs2" device="/dev/sda1"
+        CLONE testfs-clone testfs \
+          META ordered="true" interleave="true"
+        ''')
+        #print outp
+        self.assertEqual(2, len(outp))
+
+        out = self.parser.parse('LOCATION loc-1 resource INF: foo')
+        self.assertEqual(out.id, 'loc-1')
+        self.assertEqual(out.resource, 'resource')
+        self.assertEqual(out.score[1], 'INFINITY')
+        self.assertEqual(out.node, 'foo')
+
+        out = self.parser.parse('NODE node-1 ATTRIBUTES foo=bar UTILIZATION wiz=bang')
+        self.assertTrue('foo' in out.attributes)
+        self.assertTrue('wiz' in out.utilization and out.utilization['wiz'] == 'bang')
+
+        out = self.parser.parse('PRIMITIVE virtual-ip ocf:heartbeat:IPaddr2 PARAMS ip=192.168.122.13 lvs_support=false OP start timeout=20 interval=0 OP stop timeout=20 interval=0 OP monitor interval=10 timeout=20')
+        self.assertTrue('ip' in out.params)
+
+        out = self.parser.parse('GROUP web-server virtual-ip apache META target-role=Started')
+        self.assertEqual(out.id, 'web-server')
+
     def test_configs(self):
         outp = self._parse_lines('''
         primitive rsc_dummy ocf:heartbeat:Dummy
