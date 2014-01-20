@@ -17,9 +17,26 @@
 
 import os
 import command
+import completers
 import utils
 from msg import err_buf
 import corosync
+
+
+def _push_completer(args):
+    try:
+        n = utils.list_cluster_nodes()
+        n.remove(utils.this_node())
+        return n
+    except:
+        n = []
+
+
+def _all_nodes(args):
+    try:
+        return utils.list_cluster_nodes()
+    except:
+        return []
 
 
 class Corosync(command.UI):
@@ -52,6 +69,7 @@ class Corosync(command.UI):
         return corosync.cfgtool('-R')[0] == 0
 
     @command.skill_level('administrator')
+    @command.completers_repeating(_push_completer)
     def do_push(self, context, *nodes):
         '''
         Push corosync configuration to other cluster nodes.
@@ -64,12 +82,14 @@ class Corosync(command.UI):
         return corosync.push_configuration(nodes)
 
     @command.skill_level('administrator')
+    @command.completers(_push_completer)
     def do_pull(self, context, node):
         '''
         Pull corosync configuration from another node.
         '''
         return corosync.pull_configuration(node)
 
+    @command.completers_repeating(_all_nodes)
     def do_diff(self, context, *nodes):
         '''
         Compare corosync configuration between nodes.
@@ -127,6 +147,7 @@ class Corosync(command.UI):
         corosync.del_node(name)
 
     @command.skill_level('administrator')
+    @command.completers(completers.call(corosync.get_all_paths))
     def do_get(self, context, path):
         "Get a corosync configuration value"
         for v in corosync.get_values(path):

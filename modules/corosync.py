@@ -170,6 +170,14 @@ class Parser(object):
                 ret.append(t.value)
         return ret
 
+    def all_paths(self):
+        """Returns all value paths"""
+        ret = []
+        for t in self._tokens:
+            if t.token == _tVALUE:
+                ret.append(t.path)
+        return ret
+
     def count(self, path):
         """Returns the number of elements matching path"""
         n = 0
@@ -417,6 +425,12 @@ def get_ip(node):
         return socket.gethostbyname(node)
     except:
         return None
+
+
+def get_all_paths():
+    f = open(conf()).read()
+    p = Parser(f)
+    return p.all_paths()
 
 
 def get_values(path):
