@@ -489,16 +489,16 @@ def get_stdout(cmd, input_s=None, stderr_on=True, shell=True):
     return proc.returncode, stdout_data.strip()
 
 
-def get_stdout_stderr(cmd, shell=True):
+def get_stdout_stderr(cmd, input_s=None, shell=True):
     '''
     Run a cmd, return (rc, stdout, stderr)
     '''
     proc = subprocess.Popen(cmd,
                             shell=shell,
-                            stdin=None,
+                            stdin=input_s and subprocess.PIPE or None,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
-    stdout_data, stderr_data = proc.communicate()
+    stdout_data, stderr_data = proc.communicate(input_s)
     return proc.returncode, stdout_data.strip(), stderr_data.strip()
 
 
