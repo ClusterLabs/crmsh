@@ -77,7 +77,9 @@ def sudo_call(cmd, shell=False):
     sudo_prompt = 'crm_script_sudo_prompt'
     cmd = ['sudo', '-H', '-S', '-p', sudo_prompt] + cmd
     p = proc.Popen(cmd, shell=shell, stdin=proc.PIPE, stdout=proc.PIPE, stderr=proc.PIPE)
-    sudo_pass = _stdin_data.get('sudo', 'linux')
+    sudo_pass = "%s\n" % (_stdin_data.get('sudo', 'linux'))
+    print >>sys.stderr, "CMD: %s" % (str(cmd))
+    print >>sys.stderr, "SUDO: %s" % (repr(sudo_pass))
     out, err = p.communicate(input=sudo_pass)
     return p.returncode, out.strip(), err.strip()
 
@@ -91,15 +93,25 @@ def service(name, action):
 def package(name, state):
     rc, out, err = sudo_call(['./crm_pkg.py', '-n', name, '-s', state])
     if rc != 0:
-        raise IOError(err)
-    return json.loads(out)
+        raise IOError("%s / %s" % (out, err))
+    outp = json.loads(out)
+    if isinstance(outp, dict) and 'rc' in outp:
+        rc = int(outp['rc'])
+        if rc != 0:
+            raise IOError("(rc=%s) %s%s" % (rc, outp.get('stdout', ''), outp.get('stderr', '')))
+    return outp
 
 
 def check_package(name, state):
     rc, out, err = call(['./crm_pkg.py', '--dry-run', '-n', name, '-s', state])
     if rc != 0:
         raise IOError(err)
-    return json.loads(out)
+    outp = json.loads(out)
+    if isinstance(outp, dict) and 'rc' in outp:
+        rc = int(outp['rc'])
+        if rc != 0:
+            raise IOError("(rc=%s) %s%s" % (rc, outp.get('stdout', ''), outp.get('stderr', '')))
+    return outp
 
 
 def rpmcheck(names):

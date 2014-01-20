@@ -475,6 +475,9 @@ class RunStep(object):
         self.flush()
         err_buf.error(fmt % args)
 
+    def debug(self, msg):
+        err_buf.debug(msg)
+
     def run_step(self, name, action, call):
         """
         Execute a single step
@@ -562,23 +565,23 @@ class RunStep(object):
                                       cmdline,
                                       self.opts).iteritems():
             if isinstance(result, pssh.Error):
-                self.error("[%s]: %s" % (host, result))
+                self.error("[%s]: %s", host, result)
                 ok = False
             else:
                 rc, out, err = result
                 if rc != 0:
-                    self.error("[%s]: %s%s" % (host, out, err))
+                    self.error("[%s]: %s%s", host, out, err)
                     ok = False
                 else:
                     step_result[host] = json.loads(out)
         if self.local_node:
-            rc, out, err = utils.get_stdout_stderr(cmdline)
-            if rc != 0:
-                self.error("[%s]: %s" % (self.local_node[0], err))
+            ret = self._process_local(cmdline)
+            if ret is None:
                 ok = False
             else:
-                step_result[self.local_node[0]] = json.loads(out)
+                step_result[self.local_node[0]] = json.loads(ret)
         if ok:
+            self.debug("%s" % repr(step_result))
             return step_result
         return None
 
@@ -586,10 +589,15 @@ class RunStep(object):
         """
         Handle a step that executes locally
         """
-        rc, out, err = utils.get_stdout_stderr(cmdline)
+        if self.sudo_pass:
+            input_s = u'sudo: %s\n' % (self.sudo_pass)
+        else:
+            input_s = None
+        rc, out, err = utils.get_stdout_stderr(cmdline, input_s=input_s, shell=True)
         if rc != 0:
-            self.error("[%s]: Error (%d): %s" % (self.local_node[0], rc, err))
+            self.error("[%s]: Error (%d): %s", self.local_node[0], rc, err)
             return None
+        self.debug("%s" % repr(out))
         return out
 
 
