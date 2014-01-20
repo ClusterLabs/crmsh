@@ -38,6 +38,7 @@ import ui_ra
 import ui_template
 import ui_history
 import ui_utils
+import ui_assist
 from crm_gv import gv_types
 
 err_buf = ErrorBuffer.getInstance()
@@ -275,6 +276,10 @@ class CibConfig(command.UI):
 
     @command.level(ui_history.History)
     def do_history(self):
+        pass
+
+    @command.level(ui_assist.Assist)
+    def do_assist(self):
         pass
 
     @command.skill_level('administrator')

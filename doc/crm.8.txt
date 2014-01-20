@@ -3403,6 +3403,38 @@ Example:
 simulate
 ...............
 
+[[cmdhelp_assist,Configuration assistant]]
+=== `assist`
+
+The `assist` sublevel is a collection of helper
+commands that create or modify resources and
+constraints, to simplify the creation of certain
+configurations.
+
+For more information on individual commands, see
+the help text for those commands.
+
+[[cmdhelp_assist_weak-bond,Create a weak bond between resources]]
+==== `weak-bond`
+
+A colocation between a group of resources says that the resources
+should be located together, but it also means that those resources are
+dependent on each other. If one of the resources fails, the others
+will be restarted.
+
+If this is not desired, it is possible to circumvent: By placing the
+resources in a non-sequential set and colocating the set with a dummy
+resource which is not monitored, the resources will be placed together
+but will have no further dependency on each other.
+
+This command creates both the constraint and the dummy resource needed
+for such a colocation.
+
+Usage:
+........
+weak-bond resource-1 resource-2
+........
+
 [[cmdhelp_history,cluster history]]
 === `history`
 

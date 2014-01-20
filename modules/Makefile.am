@@ -52,6 +52,7 @@ modules =	__init__.py \
 			template.py \
 			term.py \
 			tmpfiles.py \
+			ui_assist.py \
 			ui_cib.py \
 			ui_cibstatus.py \
 			ui_cluster.py \
