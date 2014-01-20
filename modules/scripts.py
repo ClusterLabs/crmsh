@@ -153,10 +153,24 @@ def verify(name):
         _verify_step(script_dir, name, step)
     return main
 
-COMMON_PARAMS = [('nodes', None, 'List of nodes to execute the script for'),
-                 ('dry_run', 'no', 'If set, only execute collecting and validating steps'),
-                 ('step', None, 'If set, only execute the named step'),
-                 ('statefile', None, 'When single-stepping, the state is saved in the given file')]
+
+def common_params():
+    "Parameters common to all cluster scripts"
+    return [('nodes', None, 'List of nodes to execute the script for'),
+            ('dry_run', 'no', 'If set, only execute collecting and validating steps'),
+            ('step', None, 'If set, only execute the named step'),
+            ('statefile', None, 'When single-stepping, the state is saved in the given file'),
+            ('user', config.core.user, 'Run script as the given user'),
+            ('sudo_user', None, 'Sudo as the given user'),
+            ('port', None, 'Port to connect on'),
+            ('timeout', '600', 'Execution timeout in seconds')]
+
+
+def common_param_default(name):
+    for param, default, _ in common_params():
+        if param == name:
+            return default
+    return None
 
 
 def describe(name):
@@ -176,7 +190,7 @@ def describe(name):
 
     params = script.get('parameters', [])
     desc += "Parameters (* = Required):\n"
-    for name, value, description in COMMON_PARAMS:
+    for name, value, description in common_params():
         if value is not None:
             defval = ' (default: %s)' % (value)
         else:
@@ -203,10 +217,10 @@ def describe(name):
     e.paginate()
 
 
-def _make_options():
+def _make_options(params):
     "Setup pssh options. TODO: Allow setting user/port/timeout"
     opts = pssh.Options()
-    opts.timeout = 600
+    opts.timeout = int(params['timeout'])
     opts.recursive = True
     opts.ssh_options += [
         'PasswordAuthentication=no',
@@ -227,11 +241,11 @@ def _open_script(name):
 def _parse_parameters(name, args, main):
     '''
     Parse run parameters into a dict.
-    Also extract parameters to the script
-    runner: hosts, dry_run, step etc.
     '''
     args = utils.nvpairs2dict(args)
     params = {}
+    for key, default, _ in common_params():
+        params[key] = default
     for key, val in args.iteritems():
         params[key] = val
     for param in main['parameters']:
@@ -241,17 +255,26 @@ def _parse_parameters(name, args, main):
                 params[name] = param['default']
             else:
                 raise ValueError("Missing required parameter %s" % (name))
-    hosts = args.get('nodes')
-    if hosts is None:
-        hosts = utils.list_cluster_nodes()
-    else:
-        hosts = hosts.replace(',', ' ').split()
-    if not hosts:
-        raise ValueError("No hosts")
-    dry_run = args.get('dry_run', False)
-    step = args.get('step', None)
-    statefile = args.get('statefile', None)
-    return params, hosts, dry_run, step, statefile
+
+    def filter_param(name, fn):
+        params[name] = fn(params[name])
+
+    user = params['user']
+    port = params['port']
+
+    def filter_nodes(nodes):
+        if nodes:
+            nodes = nodes.replace(',', ' ').split()
+        else:
+            nodes = utils.list_cluster_nodes()
+        if not nodes:
+            raise ValueError("No hosts")
+        return [(user, port, node) for node in nodes]
+
+    filter_param('nodes', filter_nodes)
+    filter_param('dry_run', lambda x: utils.is_boolean_true(x))
+    filter_param('statefile', lambda x: (x and os.path.abspath(x)) or x)
+    return params
 
 
 def _extract_localnode(hosts):
@@ -555,28 +578,28 @@ def run(name, args):
     '''
     if not has_pssh:
         raise ValueError("PSSH library is not installed or is not up to date.")
-    # TODO: allow more options here, like user, port...
-    opts = _make_options()
-    hosts = None
     workdir = _generate_workdir_name()
+    main, filename, script_dir = _open_script(name)
+    params = _parse_parameters(name, args, main)
+    hosts = params['nodes']
+    dry_run = params['dry_run']
+    err_buf.info(main['name'])
+    err_buf.info("Nodes: " + ', '.join(hosts))
+    local_node, hosts = _extract_localnode(hosts)
+    opts = _make_options(params)
+    _set_controlpersist(opts)
+
     try:
-        main, filename, script_dir = _open_script(name)
-        params, hosts, dry_run, step, statefile = _parse_parameters(name, args, main)
-        err_buf.info(main['name'])
-        err_buf.info("Nodes: " + ', '.join(hosts))
-        local_node, hosts = _extract_localnode(hosts)
-        _set_controlpersist(opts)
         _create_script_workdir(script_dir, workdir)
         _copy_utils(workdir)
         _create_remote_workdirs(hosts, workdir, opts)
         _copy_to_remote_dirs(hosts, workdir, opts)
         # make sure all path references are relative to the script directory
-        if statefile:
-            statefile = os.path.abspath(statefile)
         os.chdir(workdir)
 
         stepper = RunStep(main, params, local_node, hosts, opts, dry_run, workdir)
-
+        step = params['step']
+        statefile = params['statefile']
         if step or statefile:
             if not step or not statefile:
                 raise ValueError("Must set both step and statefile")
