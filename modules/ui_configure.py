@@ -225,7 +225,7 @@ class CibConfig(command.UI):
         command.UI.__init__(self)
         # for interactive use, we want to populate the CIB
         # immediately so that tab completion works
-        if options.interactive:
+        if options.interactive or options.shell_completion:
             cib_factory.initialize()
 
     def requires(self):

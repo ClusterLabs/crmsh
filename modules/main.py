@@ -325,6 +325,8 @@ def compgen():
     if len(args) < 2:
         return
 
+    options.shell_completion = True
+
     #point = int(args[0])
     line = args[1]
 

@@ -27,3 +27,5 @@ history = "live"
 file = ""
 shadow = ""
 scriptdir = ""
+# set to true when completing non-interactively
+shell_completion = False
