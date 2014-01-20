@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-import sys
-import os
 import crm_script
 
 host = crm_script.host()
@@ -33,7 +31,7 @@ def check_results(pssh, results):
 
 
 def gen_authkey():
-    rc, out, err = crm_script.call(['corosync-keygen', '-l'])
+    rc, out, err = crm_script.sudo_call(['corosync-keygen', '-l'])
     if rc != 0:
         crm_script.exit_fail("Error generating key: %s" % (err))
 

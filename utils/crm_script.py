@@ -1,5 +1,7 @@
 import os
 import sys
+import getpass
+import select
 import subprocess as proc
 try:
     import json
@@ -8,11 +10,16 @@ except ImportError:
 
 _input = None
 
-
-def call(cmd, shell=False):
-    p = proc.Popen(cmd, shell=shell, stdin=None, stdout=proc.PIPE, stderr=proc.PIPE)
-    out, err = p.communicate()
-    return p.returncode, out.strip(), err.strip()
+# read stdin, if there's anything to read
+_stdin_data = {}
+while sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+    line = sys.stdin.readline()
+    if line:
+        d = line.split(':', 1)
+        if len(d) == 2:
+            _stdin_data[d[0].strip()] = d[1].strip()
+    else:
+        break
 
 
 def host():
@@ -56,12 +63,33 @@ def is_true(s):
     return s.lower() in ('yes', 'true', '1', 'on')
 
 
+def call(cmd, shell=False):
+    p = proc.Popen(cmd, shell=shell, stdin=None, stdout=proc.PIPE, stderr=proc.PIPE)
+    out, err = p.communicate()
+    return p.returncode, out.strip(), err.strip()
+
+
+def sudo_call(cmd, shell=False):
+    if getpass.getuser() == 'root' or not is_true(param('sudo')) or not _stdin_data.get('sudo'):
+        return call(cmd, shell=shell)
+    os.unsetenv('SSH_ASKPASS')
+    call(['sudo', '-k'], shell=False)
+    sudo_prompt = 'crm_script_sudo_prompt'
+    cmd = ['sudo', '-H', '-S', '-p', sudo_prompt] + cmd
+    p = proc.Popen(cmd, shell=shell, stdin=proc.PIPE, stdout=proc.PIPE, stderr=proc.PIPE)
+    sudo_pass = _stdin_data.get('sudo', 'linux')
+    out, err = p.communicate(input=sudo_pass)
+    return p.returncode, out.strip(), err.strip()
+
+
 def service(name, action):
-    return call(['systemctl', action, name + '.service'])
+    if action.startswith('is-'):
+        return call(['/usr/bin/systemctl', action, name + '.service'])
+    return sudo_call(['/usr/bin/systemctl', action, name + '.service'])
 
 
 def package(name, state):
-    rc, out, err = call(['./crm_pkg.py', '-n', name, '-s', state])
+    rc, out, err = sudo_call(['./crm_pkg.py', '-n', name, '-s', state])
     if rc != 0:
         raise IOError(err)
     return json.loads(out)

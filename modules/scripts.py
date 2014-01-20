@@ -19,7 +19,9 @@ import sys
 import time
 import random
 import os
+import io
 import shutil
+import getpass
 import subprocess
 import yaml
 import config
@@ -161,7 +163,8 @@ def common_params():
             ('step', None, 'If set, only execute the named step'),
             ('statefile', None, 'When single-stepping, the state is saved in the given file'),
             ('user', config.core.user or None, 'Run script as the given user'),
-            ('sudo_user', None, 'Sudo as the given user'),
+            ('sudo', 'no',
+             'If set, crm will prompt for a sudo password and use sudo when appropriate'),
             ('port', None, 'Port to connect on'),
             ('timeout', '600', 'Execution timeout in seconds')]
 
@@ -255,7 +258,9 @@ def _filter_nodes(nodes, user, port):
         nodes = utils.list_cluster_nodes()
     if not nodes:
         raise ValueError("No hosts")
-    return [(user, port, node) for node in nodes]
+    nodes = [(node, port or None, user or None) for node in nodes]
+    print nodes
+    return nodes
 
 
 def _parse_parameters(name, args, main):
@@ -279,6 +284,7 @@ def _parse_parameters(name, args, main):
     port = params['port']
     _filter_dict(params, 'nodes', _filter_nodes, user, port)
     _filter_dict(params, 'dry_run', lambda x: utils.is_boolean_true(x))
+    _filter_dict(params, 'sudo', lambda x: utils.is_boolean_true(x))
     _filter_dict(params, 'statefile', lambda x: (x and os.path.abspath(x)) or x)
     return params
 
@@ -288,12 +294,15 @@ def _extract_localnode(hosts):
     Remove loal node from hosts list, so
     we can treat it separately
     """
-    local_node = utils.this_node()
-    if local_node in hosts:
-        hosts.remove(local_node)
-    else:
-        local_node = None
-    return local_node, hosts
+    this_node = utils.this_node()
+    hosts2 = []
+    local_node = None
+    for h, p, u in hosts:
+        if h != this_node:
+            hosts2.append((h, p, u))
+        else:
+            local_node = (h, p, u)
+    return local_node, hosts2
 
 
 def _set_controlpersist(opts):
@@ -334,6 +343,7 @@ def _copy_utils(dst):
 def _create_remote_workdirs(hosts, path, opts):
     "Create workdirs on remote hosts"
     ok = True
+    print hosts
     for host, result in pssh.call(hosts,
                                   "mkdir -p %s" % (os.path.dirname(path)),
                                   opts).iteritems():
@@ -386,17 +396,19 @@ def _copy_to_all(workdir, hosts, local_node, src, dst, opts):
 
 
 class RunStep(object):
-    def __init__(self, main, params, local_node, hosts, opts, dry_run, workdir):
+    def __init__(self, main, params, local_node, hosts, opts, workdir):
         self.main = main
         self.data = [params]
         self.local_node = local_node
         self.hosts = hosts
         self.opts = opts
-        self.dry_run = dry_run
+        self.dry_run = params.get('dry_run', False)
+        self.sudo = params.get('sudo', False)
         self.workdir = workdir
         self.statefile = os.path.join(self.workdir, 'script.input')
         self.dstfile = os.path.join(self.workdir, 'script.input')
         self.in_progress = False
+        self.sudo_pass = None
 
     def _build_cmdline(self, sname, stype, scall):
         cmdline = 'cd "%s"; ./%s' % (self.workdir, scall)
@@ -516,11 +528,18 @@ class RunStep(object):
         # TODO: wait for remote results
         for step in self.main['steps']:
             name, action, call = _step_action(step)
-            if self.dry_run and action in ('apply', 'apply_local'):
-                break
+            if action in ('apply', 'apply_local'):
+                if self.dry_run:
+                    break
+                self._check_sudo_pass()
             if not self.run_step(name, action, call):
                 return False
         return True
+
+    def _check_sudo_pass(self):
+        if self.sudo and not self.sudo_pass:
+            prompt = "sudo password: "
+            self.sudo_pass = getpass.getpass(prompt=prompt)
 
     def _process_remote(self, cmdline):
         """
@@ -528,6 +547,12 @@ class RunStep(object):
         """
         ok = True
         step_result = {}
+
+        if self.sudo_pass:
+            self.opts.input_stream = u'sudo: %s\n' % (self.sudo_pass)
+        else:
+            self.opts.input_stream = None
+
         for host, result in pssh.call(self.hosts,
                                       cmdline,
                                       self.opts).iteritems():
@@ -544,10 +569,10 @@ class RunStep(object):
         if self.local_node:
             rc, out, err = utils.get_stdout_stderr(cmdline)
             if rc != 0:
-                self.error("[%s]: %s" % (self.local_node, err))
+                self.error("[%s]: %s" % (self.local_node[0], err))
                 ok = False
             else:
-                step_result[self.local_node] = json.loads(out)
+                step_result[self.local_node[0]] = json.loads(out)
         if ok:
             return step_result
         return None
@@ -558,7 +583,7 @@ class RunStep(object):
         """
         rc, out, err = utils.get_stdout_stderr(cmdline)
         if rc != 0:
-            self.error("[%s]: Error (%d): %s" % (self.local_node, rc, err))
+            self.error("[%s]: Error (%d): %s" % (self.local_node[0], rc, err))
             return None
         return out
 
@@ -588,9 +613,8 @@ def run(name, args):
     main, filename, script_dir = _open_script(name)
     params = _parse_parameters(name, args, main)
     hosts = params['nodes']
-    dry_run = params['dry_run']
     err_buf.info(main['name'])
-    err_buf.info("Nodes: " + ', '.join(hosts))
+    err_buf.info("Nodes: " + ', '.join([x[0] for x in hosts]))
     local_node, hosts = _extract_localnode(hosts)
     opts = _make_options(params)
     _set_controlpersist(opts)
@@ -603,7 +627,7 @@ def run(name, args):
         # make sure all path references are relative to the script directory
         os.chdir(workdir)
 
-        stepper = RunStep(main, params, local_node, hosts, opts, dry_run, workdir)
+        stepper = RunStep(main, params, local_node, hosts, opts, workdir)
         step = params['step']
         statefile = params['statefile']
         if step or statefile:
