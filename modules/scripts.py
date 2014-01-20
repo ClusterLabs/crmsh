@@ -225,6 +225,17 @@ def describe(name):
     e.paginate()
 
 
+def param_completion_list(name):
+    "Returns completions for the given script"
+    try:
+        script = load_script(name)
+        ps = [p['name'] + '=' for p in script.get('parameters', [])]
+        ps += [p[0] + '=' for p in common_params()]
+        return ps
+    except Exception:
+        return [p[0] + '=' for p in common_params()]
+
+
 def _make_options(params):
     "Setup pssh options."
     opts = pssh.Options()

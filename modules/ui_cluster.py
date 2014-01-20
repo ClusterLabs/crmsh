@@ -20,6 +20,15 @@ import command
 import utils
 from msg import err_buf
 import scripts
+import completers as compl
+
+
+def _remove_completer(args):
+    try:
+        n = utils.list_cluster_nodes()
+    except:
+        n = []
+    return scripts.param_completion_list('remove') + n
 
 
 class Cluster(command.UI):
@@ -92,6 +101,7 @@ class Cluster(command.UI):
             return args + ['%s=%s' % (name, ','.join(vals))]
         return args
 
+    @command.completers_repeating(compl.choice(scripts.param_completion_list('init')))
     @command.skill_level('administrator')
     def do_init(self, context, *args):
         '''
@@ -99,6 +109,7 @@ class Cluster(command.UI):
         '''
         return scripts.run('init', self._args_implicit(context, args, 'nodes'))
 
+    @command.completers_repeating(compl.choice(scripts.param_completion_list('add')))
     @command.skill_level('administrator')
     def do_add(self, context, *args):
         '''
@@ -120,6 +131,7 @@ class Cluster(command.UI):
         params += ['nodes=%s' % (','.join(nodes))]
         return scripts.run('add', params)
 
+    @command.completers_repeating(_remove_completer)
     @command.skill_level('administrator')
     def do_remove(self, context, *args):
         '''
@@ -128,6 +140,7 @@ class Cluster(command.UI):
         params = self._args_implicit(context, args, 'node')
         return scripts.run('remove', params)
 
+    @command.completers_repeating(compl.choice(scripts.param_completion_list('health')))
     def do_health(self, context, *args):
         '''
         Extensive health check.
@@ -161,6 +174,7 @@ class Cluster(command.UI):
             else:
                 print "Failed to get corosync status"
 
+    @command.completers_repeating(compl.choice(['10', '60', '600']))
     def do_wait_for_startup(self, context, timeout='10'):
         "usage: wait_for_startup [<timeout>]"
         import time
