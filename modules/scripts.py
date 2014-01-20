@@ -160,7 +160,7 @@ def common_params():
             ('dry_run', 'no', 'If set, only execute collecting and validating steps'),
             ('step', None, 'If set, only execute the named step'),
             ('statefile', None, 'When single-stepping, the state is saved in the given file'),
-            ('user', config.core.user, 'Run script as the given user'),
+            ('user', config.core.user or None, 'Run script as the given user'),
             ('sudo_user', None, 'Sudo as the given user'),
             ('port', None, 'Port to connect on'),
             ('timeout', '600', 'Execution timeout in seconds')]
@@ -218,14 +218,18 @@ def describe(name):
 
 
 def _make_options(params):
-    "Setup pssh options. TODO: Allow setting user/port/timeout"
+    "Setup pssh options."
     opts = pssh.Options()
     opts.timeout = int(params['timeout'])
     opts.recursive = True
     opts.ssh_options += [
+        'KbdInteractiveAuthentication=no',
+        'PreferredAuthentications=gssapi-with-mic,gssapi-keyex,hostbased,publickey',
         'PasswordAuthentication=no',
         #'StrictHostKeyChecking=no',
         'ControlPersist=no']
+    if config.core.debug:
+        opts.ssh_extra += ['-vvv']
     return opts
 
 
@@ -236,6 +240,22 @@ def _open_script(name):
         raise ValueError('Loading script failed: ' + name)
     script_dir = os.path.dirname(filename)
     return main, filename, script_dir
+
+
+def _filter_dict(d, name, fn, *args):
+    'filter the given element in the dict through the function fn'
+    d[name] = fn(d[name], *args)
+
+
+def _filter_nodes(nodes, user, port):
+    'filter function for the nodes element'
+    if nodes:
+        nodes = nodes.replace(',', ' ').split()
+    else:
+        nodes = utils.list_cluster_nodes()
+    if not nodes:
+        raise ValueError("No hosts")
+    return [(user, port, node) for node in nodes]
 
 
 def _parse_parameters(name, args, main):
@@ -251,29 +271,15 @@ def _parse_parameters(name, args, main):
     for param in main['parameters']:
         name = param['name']
         if name not in params:
-            if 'default' in param:
-                params[name] = param['default']
-            else:
+            if 'default' not in param:
                 raise ValueError("Missing required parameter %s" % (name))
-
-    def filter_param(name, fn):
-        params[name] = fn(params[name])
+            params[name] = param['default']
 
     user = params['user']
     port = params['port']
-
-    def filter_nodes(nodes):
-        if nodes:
-            nodes = nodes.replace(',', ' ').split()
-        else:
-            nodes = utils.list_cluster_nodes()
-        if not nodes:
-            raise ValueError("No hosts")
-        return [(user, port, node) for node in nodes]
-
-    filter_param('nodes', filter_nodes)
-    filter_param('dry_run', lambda x: utils.is_boolean_true(x))
-    filter_param('statefile', lambda x: (x and os.path.abspath(x)) or x)
+    _filter_dict(params, 'nodes', _filter_nodes, user, port)
+    _filter_dict(params, 'dry_run', lambda x: utils.is_boolean_true(x))
+    _filter_dict(params, 'statefile', lambda x: (x and os.path.abspath(x)) or x)
     return params
 
 
