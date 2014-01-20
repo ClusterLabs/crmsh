@@ -43,9 +43,14 @@ except ImportError:
     import simplejson as json
 
 
-_SCRIPTS_DIR = [os.path.join(userdir.CONFIG_HOME, 'scripts'),
-                os.path.join(config.path.sharedir, 'scripts')]
-
+def script_dirs():
+    ret = []
+    for d in options.scriptdir.split(';'):
+        if d and os.path.isdir(d):
+            ret.append(d)
+    ret.append(os.path.join(userdir.CONFIG_HOME, 'scripts'))
+    ret.append(os.path.join(config.path.sharedir, 'scripts'))
+    return ret
 
 def _check_control_persist():
     '''
@@ -71,7 +76,7 @@ def _generate_workdir_name():
 
 
 def resolve_script(name):
-    for d in _SCRIPTS_DIR:
+    for d in script_dirs():
         script_main = os.path.join(d, name, 'main.yml')
         if os.path.isfile(script_main):
             return script_main
@@ -100,7 +105,7 @@ def list_scripts():
                         recurse(root, path_combine(prefix, f))
         except OSError:
             pass
-    for d in _SCRIPTS_DIR:
+    for d in script_dirs():
         recurse(d, '')
     return sorted(l)
 

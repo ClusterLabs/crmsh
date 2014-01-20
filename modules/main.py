@@ -144,7 +144,7 @@ def usage(rc):
         f = sys.stdout
     print >> f, """
 usage:
-    crm [-D display_type] [-f file] [-c cib] [-H hist_src] [-hFRDw] [--version] [args]
+    crm [OPTIONS] [ARGS...]
 
     -f, --file='FILE'::
         Load commands from the given file. If the file is - then
@@ -187,6 +187,10 @@ usage:
     -d, --debug::
         Print some debug information. Used by developers. [Not yet
         refined enough to print useful information for other users.]
+
+    --scriptdir='DIR'::
+        Extra directory where crm looks for cluster scripts. Can be
+        a semicolon-separated list of directories.
 
     Use crm without arguments for an interactive session.
     Supply one or more arguments for a "single-shot" use.
@@ -350,7 +354,8 @@ def parse_options():
             'whdc:f:FX:RD:H:',
             ("wait", "version", "help", "debug",
              "cib=", "file=", "force", "profile=",
-             "regression-tests", "display=", "history="))
+             "regression-tests", "display=", "history=",
+             "scriptdir="))
         for o, p in opts:
             if o in ("-h", "--help"):
                 usage(0)
@@ -378,6 +383,8 @@ def parse_options():
                 config.core.wait = "yes"
             elif o in ("-c", "--cib"):
                 options.shadow = p
+            elif o in ("--scriptdir"):
+                options.scriptdir = p
         return user_args
     except getopt.GetoptError, msg:
         print msg

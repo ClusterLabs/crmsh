@@ -12,7 +12,7 @@ crm - Pacemaker command line interface for configuration and management
 
 SYNOPSIS
 --------
-*crm* [-D output_type] [-f file] [-c cib] [-H hist_src] [-hFRDw] [--version] [args]
+*crm* [OPTIONS] [ARGS...]
 
 
 [[topics_Description,Program description]]
@@ -107,6 +107,10 @@ OPTIONS
 *-d, --debug*::
     Print some debug information. Used by developers. [Not yet refined
     enough to print useful information for other users.]
+
+*--scriptdir*='DIR'::
+    Extra directory where crm looks for cluster scripts. Can be a semi-colon
+    separated list of directories.
 
 [[topics_Introduction,Introduction to the user interface]]
 == Introduction to the user interface
