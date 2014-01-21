@@ -299,14 +299,11 @@ class RscMgmt(command.UI):
     @command.skill_level('administrator')
     @command.wait
     @command.completers(compl.resources, compl.nodes)
-    def do_cleanup(self, context, *args):
+    def do_cleanup(self, context, resource, node=''):
         "usage: cleanup <rsc> [<node>]"
         # Cleanup a resource on a node. Omit node to cleanup on
         # all live nodes.
-        if len(args) == 2:  # remove
-            return cleanup_resource(args[0], args[1])
-        else:
-            return cleanup_resource(args[0])
+        return cleanup_resource(resource, node)
 
     @command.completers(compl.resources, _attrcmds, compl.nodes)
     def do_failcount(self, context, *args):
