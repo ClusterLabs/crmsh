@@ -244,8 +244,8 @@ class _Configuration(object):
                 self._defaults.set(section, key, opt.default)
 
         if os.path.isfile(_SYSTEMWIDE):
-            self._system = ConfigParser.SafeConfigParser()
-            self._system.read([_SYSTEMWIDE])
+            self._systemwide = ConfigParser.SafeConfigParser()
+            self._systemwide.read([_SYSTEMWIDE])
         if os.path.isfile(_PERUSER):
             self._user = ConfigParser.SafeConfigParser()
             self._user.read([_PERUSER])
