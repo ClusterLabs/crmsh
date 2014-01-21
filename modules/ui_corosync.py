@@ -126,11 +126,10 @@ class Corosync(command.UI):
         '''
         Display the corosync log file (if any).
         '''
-        fn = corosync.get_logfile(open(corosync.conf()).read())
-        if fn:
-            utils.page_file(fn)
-        else:
+        logfile = corosync.get_value('logging.logfile')
+        if not logfile:
             context.fatal_error("No corosync log file configured")
+        utils.page_file(logfile)
 
     @command.name('add-node')
     @command.alias('add_node')

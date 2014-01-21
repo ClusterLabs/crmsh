@@ -433,6 +433,12 @@ def get_all_paths():
     return p.all_paths()
 
 
+def get_value(path):
+    f = open(conf()).read()
+    p = Parser(f)
+    return p.get(path)
+
+
 def get_values(path):
     f = open(conf()).read()
     p = Parser(f)
