@@ -20,7 +20,7 @@ import time
 import command
 import completers as compl
 import utils
-from msg import bad_usage, common_warn, no_prog_err
+from msg import no_prog_err
 
 _ticket_commands = {
     'grant': "crm_ticket -t '%s' -g",
@@ -31,6 +31,25 @@ _ticket_commands = {
     'show': "crm_ticket -t '%s' -G granted",
     'time': "crm_ticket -t '%s' -G last-granted",
 }
+
+
+def _show(context, ticket, val):
+    "Display status of ticket"
+    if val == "false":
+        print "ticket %s is revoked" % ticket
+    elif val == "true":
+        print "ticket %s is granted" % ticket
+    else:
+        context.fatal_error("unexpected value for ticket %s: %s" % (ticket, val))
+
+
+def _time(context, ticket, val):
+    "Display grant time for ticket"
+    if not utils.is_int(val):
+        context.fatal_error("unexpected value for ticket %s: %s" % (ticket, val))
+    if val == "-1":
+        context.fatal_error("%s: no such ticket" % ticket)
+    print "ticket %s last time granted on %s" % (ticket, time.ctime(int(val)))
 
 
 class Site(command.UI):
@@ -49,12 +68,9 @@ class Site(command.UI):
     @command.completers(compl.choice(_ticket_commands.keys()))
     def do_ticket(self, context, subcmd, ticket):
         "usage: ticket {grant|revoke|standby|activate|show|time|delete} <ticket>"
-        cmd = context.get_command_name()
-        try:
-            attr_cmd = _ticket_commands[subcmd]
-        except KeyError:
-            bad_usage(cmd, '%s %s' % (subcmd, ticket))
-            return False
+        attr_cmd = _ticket_commands.get(subcmd)
+        if not attr_cmd:
+            context.fatal_error('Expected one of %s' % '|'.join(_ticket_commands.keys()))
         if not utils.is_name_sane(ticket):
             return False
         if subcmd not in ("show", "time"):
@@ -63,21 +79,8 @@ class Site(command.UI):
         try:
             val = l[0]
         except IndexError:
-            common_warn("apparently nothing to show for ticket %s" % ticket)
-            return False
+            context.fatal_error("apparently nothing to show for ticket %s" % ticket)
         if subcmd == "show":
-            if val == "false":
-                print "ticket %s is revoked" % ticket
-            elif val == "true":
-                print "ticket %s is granted" % ticket
-            else:
-                common_warn("unexpected value for ticket %s: %s" % (ticket, val))
-                return False
+            _show(context, ticket, val)
         else:  # time
-            if not utils.is_int(val):
-                common_warn("unexpected value for ticket %s: %s" % (ticket, val))
-                return False
-            if val == "-1":
-                print "%s: no such ticket" % ticket
-                return False
-            print "ticket %s last time granted on %s" % (ticket, time.ctime(int(val)))
+            _time(context, ticket, val)
