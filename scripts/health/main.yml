@@ -6,6 +6,7 @@
   steps:
     - name: Collect cluster information
       collect: collect.py
+    - name: Run HA health check
+      apply_local: hahealth.py
     - name: Report cluster state
       report: report.py
-

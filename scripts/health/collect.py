@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import os
+import hashlib
+import platform
 import crm_script
 data = crm_script.get_input()
 
@@ -19,11 +21,32 @@ def logrotate_info():
 
 def sys_info():
     sysname, nodename, release, version, machine = os.uname()
-    return {'sysname': sysname,
-            'nodename': nodename,
+    #The first three columns measure CPU and IO utilization of the
+    #last one, five, and 15 minute periods. The fourth column shows
+    #the number of currently running processes and the total number of
+    #processes. The last column displays the last process ID used.
+    system, node, release, version, machine, processor = platform.uname()
+    distname, distver, distid = platform.linux_distribution()
+    hostname = platform.node().split('.')[0]
+
+    uptime = open('/proc/uptime').read().split()
+    loadavg = open('/proc/loadavg').read().split()
+
+    return {'system': system,
+            'node': node,
             'release': release,
             'version': version,
-            'machine': machine}
+            'machine': machine,
+            'processor': processor,
+            'distname': distname,
+            'distver': distver,
+            'distid': distid,
+            'user': os.getlogin(),
+            'hostname': hostname,
+            'uptime': uptime[0],
+            'idletime': uptime[1],
+            'loadavg': loadavg[2]  # 15 minute average
+            }
 
 def disk_info():
     rc, out, err = crm_script.call(['df'], shell=False)
@@ -38,12 +61,38 @@ def disk_info():
         return disk_use
     return []
 
+# configurations out of sync
+
+FILES = [
+    '/etc/csync2/key_hagroup',
+    '/etc/csync2/csync2.cfg',
+    '/etc/corosync/corosync.conf',
+    '/etc/sysconfig/sbd',
+    '/etc/sysconfig/SuSEfirewall2',
+    '/etc/sysconfig/SuSEfirewall2.d/services/cluster'
+    ]
+
+
+def files_info():
+    ret = {}
+    for f in FILES:
+        if os.path.isfile(f):
+            try:
+                ret[f] = hashlib.sha1(open(f).read()).hexdigest()
+            except IOError, e:
+                ret[f] = "error: %s" % (e)
+        else:
+            ret[f] = ""
+    return ret
+
+
 try:
     data = {
         'rpm': rpm_info(),
         'logrotate': logrotate_info(),
         'system': sys_info(),
-        'disk': disk_info()
+        'disk': disk_info(),
+        'files': files_info()
     }
     crm_script.exit_ok(data)
 except Exception, e:
