@@ -99,7 +99,7 @@ class _Configuration(object):
         self._defaults.readfp(cStringIO.StringIO(_DEFAULT))
 
         if os.path.isfile(_SYSTEMWIDE):
-            self._system = ConfigParser.SafeConfigParser(allow_no_value=True)
+            self._systemwide = ConfigParser.SafeConfigParser(allow_no_value=True)
         if os.path.isfile(_PERUSER):
             self._user = ConfigParser.SafeConfigParser(allow_no_value=True)
 
