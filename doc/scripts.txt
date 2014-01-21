@@ -298,12 +298,12 @@ With this knowledge, we can implement `fetch.py` and `report.py`.
 [source,python]
 ----
 #!/usr/bin/env python
-import crm_script
+import crm_script as crm
 try:
     uptime = open('/proc/uptime').read().split()[0]
-    crm_script.exit_ok(uptime)
+    crm.exit_ok(uptime)
 except:
-    crm_script.exit_fail("Couldn't open /proc/uptime")
+    crm.exit_fail("Couldn't open /proc/uptime")
 ----
 
 `report.py`:
@@ -311,16 +311,16 @@ except:
 [source,python]
 ----
 #!/usr/bin/env python
-import crm_script
-show_all = crm_script.is_true(crm_script.param('show_all'))
-uptimes = crm_script.output(1).items()
-max_uptime = '', 0
+import crm_script as crm
+show_all = crm.is_true(crm.param('show_all'))
+uptimes = crm.output(1).items()
+max_uptime = 0, ''
 for host, uptime in uptimes:
-    if uptime > max_uptime[1]:
-        max_uptime = host, uptime
+    if uptime > max_uptime[0]:
+        max_uptime = uptime, host
 if show_all:
     print "Uptimes: %s" % (', '.join("%s: %s" % v for v in uptimes))
-print "Longest uptime is %s seconds on host %s" % (max_uptime[1], max_uptime[0])
+print "Longest uptime is %s seconds on host %s" % max_uptime
 ----
 
 See below for more details on the helper library `crm_script`.
@@ -422,3 +422,24 @@ also passed along with the script. This library can be found in
 with producing output in the correct format, parsing the
 `script.input` data provided to scripts, and more.
 
+.`crm_script` API
+`host()`::
+    Returns hostname of current node
+`get_input()`::
+    Returns the input data list. The first element in the list
+    is a dict of the script parameters. The rest are the output
+    from previous steps.
+`parameters()`::
+    Returns the script parameters as a dict.
+`param(name)`::
+    Returns the value of the named script parameter.
+`output(step_idx)`::
+    Returns the output of the given step, with the first step being step 1.
+`exit_ok(data)`::
+    Exits the step returning `data` as output.
+`exit_fail(msg)`::
+    Exits the step returning `msg` as error message.
+`is_true(value)`::
+    Converts a truth value from string to boolean.
+`call(cmd, shell=False)`::
+    Perform a system call. Returns `(rc, stdout, stderr)`.

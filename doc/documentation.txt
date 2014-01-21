@@ -31,33 +31,27 @@ Packages for several popular distributions are hosted at the open
 build service. Get the *current stable version* of the `crm` shell
 here:
 
-.OBS Project Page
-- https://build.opensuse.org/package/show/network:ha-clustering:Stable/crmsh
+* https://build.opensuse.org/package/show/network:ha-clustering:Stable/crmsh[OBS Project Page]
 
-.Direct package downloads
-- http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/ 
+* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/[Direct package downloads]
 
 For other distributions, packages may be available in the respective
 package repositories.
 
-=== openSUSE 12.3, 13.1
+=== openSUSE
 
 On openSUSE, you will want to add the
-http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/[network:ha-clustering:Stable] repository, 
-to get the latest stable version of the `crm` shell:
+http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/[network:ha-clustering:Stable] repository, to get the latest stable version of the `crm` shell:
 
-.openSUSE 12.3:
-----
-zypper ar \
-  http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/openSUSE_12.3/ \
-  network:ha-clustering:Stable
-----
+==== Repository links ====
 
-.openSUSE 13.1:
+* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/openSUSE_12.3/[openSUSE 12.3]
+* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/openSUSE_13.1/[openSUSE 13.1]
+
+
+.Adding a repository using zypper:
 ----
-zypper ar \
-  http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/openSUSE_13.1/ \
-  network:ha-clustering:Stable
+zypper ar <repository> network:ha-clustering:Stable
 ----
 
 Once added, you can run

@@ -1,14 +1,5 @@
 = Development =
 
-The source code for `crmsh` is kept in a 
-http://mercurial.selenic.com[Mercurial] repository 
-hosted at http://nongnu.org[nongnu]. Use the 
-command-line tool +hg+ to download it:
-
-----
-hg clone http://hg.savannah.nongnu.org/hgweb/crmsh/
-----
-
 `crmsh` is a free software project, and is open to contributors. 
 Patches, comments, documentation, testing and so on are
 all very much welcome!
@@ -24,3 +15,46 @@ all very much welcome!
 <li><a href="irc://freenode.net/#linux-ha"><i class="fa fa-comments fa-3x fa-fw"></i> IRC: #linux-ha</a></li>
 </ul>
 ++++
+
+== Building crmsh ==
+
+The source code for `crmsh` is kept in a 
+http://mercurial.selenic.com[Mercurial] repository 
+hosted at http://nongnu.org[nongnu]. Use the 
+command-line tool +hg+ to get a working copy:
+
+----
+hg clone http://hg.savannah.nongnu.org/hgweb/crmsh/
+----
+
+`crmsh` needs the source code to `cluster-glue` and `pacemaker` when
+installing. On openSUSE, these are packaged as `libglue-devel` and
+`libpacemaker-devel`.
+
+.Building
+----
+./autogen.sh
+./configure
+make
+make install
+----
+
+=== Unit tests ===
+
+To run the unit test suite, go to the source code directory of `crmsh`
+and call:
+
+----
+./test/unittests/testrunner.py
+----
+
+=== Regression tests ===
+
+`crmsh` comes with a regression test suite. The regression tests need
+to run after installation, on a system which has pacemaker
+installed. To execute the tests, call:
+
+----
+/usr/share/crmsh/tests/regression.sh
+cat crmtestout/regression.out
+----

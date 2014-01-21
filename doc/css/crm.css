@@ -199,7 +199,7 @@ div.admonitionblock td.icon {
 }
 
 div.listingblock .content {
-    border:1px solid silver;
+    border-left:4px solid #419eda;
     background: #faf8f6;
     padding:8px;
 }
@@ -217,8 +217,8 @@ div.verseblock .content {
 }
 
 div.sidebarblock > div.content {
-    border:1px solid silver;
-    background:#FFFFEE;
+    border-left:4px solid #419eda;
+    background: #faf8f6;
     padding:0 10px;
     color:#222;
     font-size:smaller;
