@@ -19,7 +19,6 @@ import sys
 import time
 import random
 import os
-import io
 import shutil
 import getpass
 import subprocess
@@ -275,7 +274,6 @@ def _filter_nodes(nodes, user, port):
     if not nodes:
         raise ValueError("No hosts")
     nodes = [(node, port or None, user or None) for node in nodes]
-    print nodes
     return nodes
 
 
@@ -299,8 +297,8 @@ def _parse_parameters(name, args, main):
     user = params['user']
     port = params['port']
     _filter_dict(params, 'nodes', _filter_nodes, user, port)
-    _filter_dict(params, 'dry_run', lambda x: utils.is_boolean_true(x))
-    _filter_dict(params, 'sudo', lambda x: utils.is_boolean_true(x))
+    _filter_dict(params, 'dry_run', utils.is_boolean_true)
+    _filter_dict(params, 'sudo', utils.is_boolean_true)
     _filter_dict(params, 'statefile', lambda x: (x and os.path.abspath(x)) or x)
     return params
 
@@ -359,7 +357,6 @@ def _copy_utils(dst):
 def _create_remote_workdirs(hosts, path, opts):
     "Create workdirs on remote hosts"
     ok = True
-    print hosts
     for host, result in pssh.call(hosts,
                                   "mkdir -p %s" % (os.path.dirname(path)),
                                   opts).iteritems():

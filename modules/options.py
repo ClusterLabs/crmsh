@@ -24,7 +24,7 @@ batch = False
 regression_tests = False
 profile = ""
 history = "live"
-file = ""
+input_file = ""
 shadow = ""
 scriptdir = ""
 # set to true when completing non-interactively

@@ -97,7 +97,7 @@ def get_prim_token(words, n):
     for key in ("primitive", "rsc_template"):
         try:
             return words[words.index(key) + n - 1]
-        except:
+        except IndexError:
             pass
     return ''
 
@@ -125,17 +125,17 @@ class CompletionHelp(object):
     lasttopic = ''
 
     @classmethod
-    def help(self, topic, helptxt):
-        if self.lasttopic == topic and \
-                time.time() - self.laststamp < self.timeout:
+    def help(cls, topic, helptxt):
+        if cls.lasttopic == topic and \
+                time.time() - cls.laststamp < cls.timeout:
             return
         if helptxt:
             import readline
             cmdline = readline.get_line_buffer()
             print "\n%s" % helptxt
             print "%s%s" % (vars.prompt, cmdline),
-            self.laststamp = time.time()
-            self.lasttopic = topic
+            cls.laststamp = time.time()
+            cls.lasttopic = topic
 
 
 def _prim_params_completer(agent, args):
@@ -293,12 +293,12 @@ class CibConfig(command.UI):
 
     @command.skill_level('administrator')
     @command.completers_repeating(compl.null, _id_xml_list, _id_list)
-    def do_filter(self, context, filter, *args):
+    def do_filter(self, context, filterprog, *args):
         "usage: filter <prog> [xml] [<id>...]"
         if not cib_factory.is_cib_sane():
             context.fatal_error("CIB is not valid")
         set_obj = mkset_obj(*args)
-        return set_obj.filter(filter)
+        return set_obj.filter(filterprog)
 
     @command.skill_level('administrator')
     @command.completers(_f_group_id_list, compl.choice(['add', 'remove']),
@@ -752,10 +752,10 @@ class CibConfig(command.UI):
         rsc_l = []
         node_l = []
         current = "r"
-        for id in args:
-            el = cib_factory.find_object(id)
+        for ident in args:
+            el = cib_factory.find_object(ident)
             if not el:
-                common_err("element %s does not exist" % id)
+                common_err("element %s does not exist" % ident)
                 rc = False
             elif current == "r" and xmlutil.is_resource(el.node):
                 if xmlutil.is_container(el.node):
@@ -766,7 +766,7 @@ class CibConfig(command.UI):
                 current = "n"
                 node_l.append(el.node.get("uname"))
             else:
-                syntax_err((context.get_command_name(), id), context='rsctest')
+                syntax_err((context.get_command_name(), ident), context='rsctest')
                 return False
         if not rc:
             return False

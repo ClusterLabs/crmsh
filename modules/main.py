@@ -279,9 +279,9 @@ def do_work(context, user_args):
         else:
             return 1
 
-    if options.file and options.file != "-":
+    if options.input_file and options.input_file != "-":
         try:
-            sys.stdin = open(options.file)
+            sys.stdin = open(options.input_file)
         except IOError, msg:
             common_err(msg)
             usage(2)
@@ -361,7 +361,7 @@ def parse_options():
         for o, p in opts:
             if o in ("-h", "--help"):
                 usage(0)
-            elif o in ("--version"):
+            elif o == "--version":
                 print >> sys.stdout, ("%s" % config.CRM_VERSION)
                 sys.exit(0)
             elif o == "-d":
@@ -378,14 +378,14 @@ def parse_options():
                 options.batch = True
                 options.interactive = False
                 err_buf.reset_lineno()
-                options.file = p
+                options.input_file = p
             elif o in ("-H", "--history"):
                 options.history = p
             elif o in ("-w", "--wait"):
                 config.core.wait = "yes"
             elif o in ("-c", "--cib"):
                 options.shadow = p
-            elif o in ("--scriptdir"):
+            elif o == "--scriptdir":
                 options.scriptdir = p
         return user_args
     except getopt.GetoptError, msg:

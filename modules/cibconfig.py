@@ -265,7 +265,7 @@ class CibObjectSet(object):
         '''Let CIB elements produce graph elements.
         '''
         for obj in processing_sort_cli(list(self.obj_set)):
-            obj.repr_gv(gv_obj)
+            obj.repr_gv(gv_obj, from_grp=False)
 
     def show_graph(self, gtype):
         '''Display graph using dotty'''
@@ -925,7 +925,7 @@ class CibObject(object):
             obj_type = self.obj_type
         set_edge_attrs(gv_obj, e_id, obj_type)
 
-    def repr_gv(self, gv_obj):
+    def repr_gv(self, gv_obj, from_grp=False):
         '''
         Add some graphviz elements to gv_obj.
         '''
@@ -1268,7 +1268,7 @@ class CibNode(CibObject):
         remove_id_used_attributes(get_topnode(cib_factory.get_cib(), self.parent_type))
         return headnode
 
-    def repr_gv(self, gv_obj):
+    def repr_gv(self, gv_obj, from_grp=False):
         '''
         Create a gv node. The label consists of the ID.
         Nodes are square.
@@ -1625,7 +1625,7 @@ class CibContainer(CibObject):
         rc = sanity_check_meta(self.obj_id, self.node, l)
         return rc
 
-    def repr_gv(self, gv_obj):
+    def repr_gv(self, gv_obj, from_grp=False):
         '''
         A group is a subgraph.
         Clones and ms just get different attributes.
@@ -1691,7 +1691,7 @@ class CibLocation(CibObject):
                 n = mkxmlnode(e, oldrule, id_hint)
             else:
                 n = mkxmlnode(e, oldnode, id_hint)
-            if e[0] in ("resource_set"):
+            if e[0] == "resource_set":
                 headnode.append(n)
             elif keyword_cmp(e[0], "rule"):
                 add_missing_attr(n)
@@ -1737,7 +1737,7 @@ class CibLocation(CibObject):
                     rc = 1
         return rc
 
-    def repr_gv(self, gv_obj):
+    def repr_gv(self, gv_obj, from_grp=False):
         '''
         What to do with the location constraint?
         '''
@@ -1856,11 +1856,11 @@ class CibSimpleConstraint(CibObject):
         which follows. An expensive exception.
         '''
         optional_rsc = False
-        r = re.match('\[(.*)\]', e[0])
+        r = re.match(r'\[(.*)\]', e[0])
         if r:
             optional_rsc = True
             sg_name = r.group(1)
-        e = [re.sub('\[(.*)\]', '', x) for x in e]
+        e = [re.sub(r'\[(.*)\]', '', x) for x in e]
         e = [gv_last_rsc(e[0]), gv_first_rsc(e[1])]
         e_id = gv_obj.new_edge(e)
         gv_edge_score_label(gv_obj, e_id, self.node)
@@ -1868,7 +1868,7 @@ class CibSimpleConstraint(CibObject):
             self._set_edge_attrs(gv_obj, e_id, 'optional_set')
             gv_obj.new_edge_attr(e_id, 'ltail', gv_obj.gv_id(sg_name))
 
-    def repr_gv(self, gv_obj):
+    def repr_gv(self, gv_obj, from_grp=False):
         '''
         What to do with the collocation constraint?
         '''
@@ -2006,8 +2006,8 @@ class CibFencingOrder(CibObject):
             d[target][c.get("index")] = c.get("devices")
         dd = odict()
         for target in d.keys():
-            dd[target] = [d[target][str(x)] 
-                for x in sorted([int(i) for i in d[target].keys()])]
+            sorted_keys = sorted([int(i) for i in d[target].keys()])
+            dd[target] = [d[target][str(x)] for x in sorted_keys]
         d2 = {}
         for target in dd.keys():
             devs_s = ' '.join(dd[target])
@@ -3164,7 +3164,7 @@ class CibFactory(Singleton):
         self._push_state()
         if not self._set_update(edit_d, mk_set, upd_set, del_set, upd_type, method):
             if not self._pop_state():
-                raise "this should never happen!"
+                raise RuntimeError("this should never happen!")
             return False
         self._drop_state()
         return True
@@ -3181,7 +3181,7 @@ class CibFactory(Singleton):
         old_children = [x for x in obj.children if x.parent == obj]
         obj.children = [self.find_object(x) for x in new_children_ids]
         # relink orphans to top
-        for child in (set(old_children) - set(obj.children)):
+        for child in set(old_children) - set(obj.children):
             common_debug("relink child %s to top" % str(child))
             self._relink_child_to_top(child)
         self._update_children(obj)

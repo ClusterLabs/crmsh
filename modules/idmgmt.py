@@ -64,10 +64,7 @@ class IdMgmt(Singleton):
             else:
                 node_id = "%s-%s" % (pfx, name)
         else:
-            try:
-                subpfx = vars.subpfx_list[node.tag]
-            except:
-                subpfx = ''
+            subpfx = vars.subpfx_list.get(node.tag, '')
             if subpfx:
                 node_id = "%s-%s" % (pfx, subpfx)
             else:

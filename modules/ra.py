@@ -387,11 +387,6 @@ class RAInfo(object):
     def set_advanced_params(self, l):
         self.advanced_params = l
 
-    def filter_crmd_attributes(self):
-        for p in self.ra_elem.xpath("//parameters/parameter"):
-            if not p.get("name") in vars.crmd_user_attributes:
-                self.ra_elem.remove(p)
-
     def add_ra_params(self, ra):
         '''
         Add parameters from another RAInfo instance.
@@ -421,15 +416,15 @@ class RAInfo(object):
         meta = self.meta()
         try:
             self.ra_elem = etree.fromstring('\n'.join(meta))
-        except Exception, msg:
+        except Exception:
             if not meta:
                 self.error("got no meta-data, does this RA exist?")
             else:
                 self.error("meta-data is no good XML")
             return None
         try:
-            assert(self.ra_elem.tag == 'resource-agent')
-        except Exception, msg:
+            assert self.ra_elem.tag == 'resource-agent'
+        except Exception:
             self.error("meta-data contains no resource-agent element")
             return None
         if self.ra_class == "stonith":

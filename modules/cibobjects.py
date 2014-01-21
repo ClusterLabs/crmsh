@@ -111,8 +111,15 @@ class Resource(Expr):
     def __init__(self):
         Expr.__init__(self)
         self.id = None
+        self.template = None
         self.params = odict()
         self.meta = odict()
+        self.operations = []
+        self.ra_class = None
+        self.ra_provider = None
+        self.ra_type = None
+        self.utilization = odict()
+        self.children = []
 
     def _op_to_list(self, ret):
         for typ, val in self.operations:
@@ -149,12 +156,6 @@ class Resource(Expr):
 class Primitive(Resource):
     def __init__(self):
         Resource.__init__(self)
-        self.template = None
-        self.ra_class = None
-        self.ra_provider = None
-        self.ra_type = None
-        self.utilization = odict()
-        self.operations = []
 
     def _to_list(self):
         return self._to_list_impl('primitive')
@@ -163,12 +164,6 @@ class Primitive(Resource):
 class RscTemplate(Resource):
     def __init__(self):
         Resource.__init__(self)
-        self.template = None
-        self.ra_class = None
-        self.ra_provider = None
-        self.ra_type = None
-        self.utilization = odict()
-        self.operations = []
 
     def _to_list(self):
         return self._to_list_impl('rsc_template')
@@ -177,7 +172,6 @@ class RscTemplate(Resource):
 class Group(Resource):
     def __init__(self):
         Resource.__init__(self)
-        self.children = []
 
     def _to_list(self):
         return self._to_list_impl('group')
@@ -186,7 +180,6 @@ class Group(Resource):
 class Clone(Resource):
     def __init__(self):
         Resource.__init__(self)
-        self.children = None
 
     def _to_list(self):
         return self._to_list_impl('clone')
@@ -195,7 +188,6 @@ class Clone(Resource):
 class Master(Resource):
     def __init__(self):
         Resource.__init__(self)
-        self.children = None
 
     def _to_list(self):
         return self._to_list_impl('ms')

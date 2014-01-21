@@ -211,7 +211,7 @@ def pipe_string(cmd, s):
         p.wait()
         rc = p.returncode
     except IOError, msg:
-        if not ("Broken pipe" in msg):
+        if "Broken pipe" not in msg:
             common_err(msg)
     return rc
 
@@ -673,7 +673,7 @@ def check_range(a):
         return False
     if not isinstance(a[0], int) or not isinstance(a[1], int):
         return False
-    return (int(a[0]) <= int(a[1]))
+    return int(a[0]) <= int(a[1])
 
 
 def crm_msec(t):
@@ -900,7 +900,7 @@ def multicolumn(l):
     A naive approach.
     '''
     min_gap = 2
-    w, h = get_winsize()
+    w, _ = get_winsize()
     max_len = 8
     for s in l:
         if len(s) > max_len:

@@ -81,9 +81,11 @@ class BaseParser(object):
         return self.match_dispatch(errmsg="Unknown command")
 
     def do_parse(self, cmd):
-        "Called by CliParser. Calls parse()"
+        """
+        Called by CliParser. Calls parse()
+        Parsers should pass their return value through this method.
+        """
         out = self.parse(cmd)
-        "Parsers should pass their return value through this method."
         if self.has_tokens():
             self.err("Unknown arguments: " + ' '.join(self._cmd[self._currtok:]))
         return out

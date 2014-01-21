@@ -61,9 +61,9 @@ def validate_template(l):
     return True
 
 
-def fix_tmpl_refs(l, id, pfx):
+def fix_tmpl_refs(l, ident, pfx):
     for i in range(len(l)):
-        l[i] = l[i].replace(id, pfx)
+        l[i] = l[i].replace(ident, pfx)
 
 
 def fix_tmpl_refs_re(l, regex, repl):

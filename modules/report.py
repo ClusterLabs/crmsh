@@ -70,7 +70,6 @@ def set_year(ts=None):
 
 
 def syslog_ts(s):
-    global YEAR
     try:
         # strptime defaults year to 1900 (sigh)
         tm = time.strptime(' '.join([YEAR] + s.split()[0:3]),
@@ -209,7 +208,7 @@ def log2node(log):
     return os.path.basename(os.path.dirname(log))
 
 
-def filter(sl, log_l):
+def filter_log(sl, log_l):
     '''
     Filter list of messages to get only those from the given log
     files list.
@@ -399,15 +398,15 @@ class LogSyslog(object):
         if not log_l:
             log_l = self.log_l
         re_s = '|'.join(re_l)
-        return filter(self.search_logs(log_l, re_s), log_l)
+        return filter_log(self.search_logs(log_l, re_s), log_l)
         # caching is not ready!
         # gets complicated because of different time frames
         # (TODO)
         #if not re_s: # just list logs
-        #    return filter(self.search_logs(log_l), log_l)
+        #    return filter_log(self.search_logs(log_l), log_l)
         #if re_s not in self.cache: # cache regex search
         #    self.cache[re_s] = self.search_logs(log_l, re_s)
-        #return filter(self.cache[re_s], log_l)
+        #return filter_log(self.cache[re_s], log_l)
 
 
 def human_date(dt):
@@ -715,7 +714,7 @@ class Report(Singleton):
             self.error("no nodes in report")
             return False
         for n in self.cibnode_l:
-            if not (n in nl):
+            if n not in nl:
                 self.warn("node %s not in report" % n)
             else:
                 nl.remove(n)
@@ -746,7 +745,7 @@ class Report(Singleton):
         '''
         try:
             last_ts = os.stat(self.desc).st_mtime
-            return (time.time() - last_ts <= self.live_recent)
+            return time.time() - last_ts <= self.live_recent
         except:
             return False
 
@@ -882,7 +881,7 @@ class Report(Singleton):
         rc2 |= (unpack_rc == 0)
         rmdir_r(self.outdir)
         rmdir_r(self.errdir)
-        return (rc1 and rc2)
+        return rc1 and rc2
 
     def get_live_report(self):
         if not acquire_lock(self.report_cache_dir):
