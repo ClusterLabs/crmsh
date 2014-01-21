@@ -349,7 +349,7 @@ def listshadows():
     dir = cib_shadow_dir()
     if not os.path.isdir(dir):
         return []
-    rc, l = stdout2list("ls %s | fgrep shadow. | sed 's/^shadow\.//'" % dir)
+    rc, l = stdout2list("ls %s | fgrep shadow. | sed 's/^shadow\\.//'" % dir)
     return l
 
 
