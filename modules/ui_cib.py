@@ -105,7 +105,7 @@ class CibShadow(command.UI):
 
     @command.skill_level('administrator')
     @command.completers(compl.null, compl.shadows)
-    def do_pe_import(self, context, infile, name=None):
+    def do_import(self, context, infile, name=None):
         "usage: import {<file>|<number>} [<shadow>]"
         if name and not utils.is_filename_sane(name):
             context.fatal_error("Bad filename: " + name)
