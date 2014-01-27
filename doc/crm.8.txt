@@ -1987,9 +1987,34 @@ Given `all` as argument, `show` displays all available user options.
 
 Usage:
 ........
+show [all|<option>]
+........
+
+Example:
+........
 show
 show skill-level
 show all
+........
+
+[[cmdhelp_options_set,Set the value of a given option]]
+==== `set`
+
+Sets the value of an option. Takes the fully qualified
+name of the option as argument, as displayed by `show all`.
+
+The modified option value is stored in the user-local
+configuration file, usually found in `~/.config/crm/crm.conf`.
+
+Usage:
+........
+set <option> <value>
+........
+
+Example:
+........
+set color.warn "magenta bold"
+set editor nano
 ........
 
 [[cmdhelp_options_save,save the user preferences to the rc file]]
