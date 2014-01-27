@@ -1169,7 +1169,7 @@ Example:
 list ocf pacemaker
 ...............
 
-[[cmdhelp_ra_meta,show meta data for a RA]]
+[[cmdhelp_ra_info,show meta data for a RA]]
 ==== `info` (`meta`)
 
 Show the meta-data of a resource agent type. This is where users

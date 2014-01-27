@@ -84,7 +84,9 @@ class RA(command.UI):
     @command.completers(complete_class_provider_type)
     def do_info(self, context, *args):
         "usage: info [<class>:[<provider>:]]<type>"
-        if len(args) > 1:  # obsolete syntax
+        if len(args) == 0:
+            context.fatal_error("Expected [<class>:[<provider>:]]<type>")
+        elif len(args) > 1:  # obsolete syntax
             ra_type = args[0]
             ra_class = args[1]
             if len(args) < 3:
