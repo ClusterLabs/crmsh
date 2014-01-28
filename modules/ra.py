@@ -794,6 +794,20 @@ def ra_type_validate(s, ra_class, provider, rsc_type):
     return True
 
 
+def pick_provider(providers):
+    '''
+    Pick the most appropriate choice from a
+    list of providers, falling back to
+    'heartbeat' if no good choice is found
+    '''
+    if not providers:
+        return 'heartbeat'
+    for pick in ('heartbeat', 'pacemaker'):
+        if pick in providers:
+            return pick
+    return providers[0]
+
+
 def disambiguate_ra_type(s):
     '''
     Unravel [class:[provider:]]type
@@ -811,10 +825,7 @@ def disambiguate_ra_type(s):
     ra_provider = ''
     if ra_class == "ocf":
         pl = ra_providers(ra_type, ra_class)
-        if pl and len(pl) == 1:
-            ra_provider = pl[0]
-        elif not pl:
-            ra_provider = 'heartbeat'
+        ra_provider = pick_provider(pl)
     return ra_class, ra_provider, ra_type
 
 wcache = WCache.getInstance()
