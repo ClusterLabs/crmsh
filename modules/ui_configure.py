@@ -44,9 +44,19 @@ from crm_gv import gv_types
 err_buf = ErrorBuffer.getInstance()
 cib_factory = CibFactory.getInstance()
 
+
+def _type_completions():
+    "completer for type: use in show"
+    typelist = cib_factory.type_list()
+    return ['type:%s' % (t) for t in typelist]
+
+
 # Tab completion helpers
 _id_list = compl.call(cib_factory.id_list)
-_id_xml_list = compl.join(_id_list, compl.choice(['xml', 'changed']))
+_id_xml_list = compl.join(_id_list, compl.choice(['xml']))
+_id_show_list = compl.join(_id_list,
+                           compl.choice(['xml', 'changed']),
+                           compl.call(_type_completions))
 _prim_id_list = compl.call(cib_factory.prim_id_list)
 _f_prim_free_id_list = compl.call(cib_factory.f_prim_free_id_list)
 _f_group_id_list = compl.call(cib_factory.f_group_id_list)
@@ -283,7 +293,7 @@ class CibConfig(command.UI):
         pass
 
     @command.skill_level('administrator')
-    @command.completers_repeating(_id_xml_list, _id_list)
+    @command.completers_repeating(_id_show_list)
     def do_show(self, context, *args):
         "usage: show [xml] [<id>...]"
         if not cib_factory.is_cib_sane():

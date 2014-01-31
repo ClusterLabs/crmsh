@@ -2689,13 +2689,23 @@ schema pacemaker-1.1
 The `show` command displays objects. It may display all objects
 or a set of objects. The user may also choose to see only objects
 which were changed.
+
 Optionally, the XML code may be displayed instead of the CLI
-representation.
+representation by passing `xml` as the first argument.
+
+To show all objects of a certain type, use the `type:` prefix.
 
 Usage:
 ...............
 show [xml] [<id> ...]
 show [xml] changed
+...............
+
+Example:
+...............
+show webapp
+show type:primitive
+show xml type:node
 ...............
 
 [[cmdhelp_configure_edit,edit CIB objects]]
