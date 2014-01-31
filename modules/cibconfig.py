@@ -2597,6 +2597,10 @@ class CibFactory(Singleton):
         "List of ids (for completion)."
         return [x.obj_id for x in self.cib_objects]
 
+    def type_list(self):
+        "List of object types (for completion)"
+        return list(set([x.obj_type for x in self.cib_objects]))
+
     def prim_id_list(self):
         "List of primitives ids (for group completion)."
         return [x.obj_id for x in self.cib_objects if x.obj_type == "primitive"]
