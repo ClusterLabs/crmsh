@@ -1337,8 +1337,12 @@ def merge_tmpl_into_prim(prim_node, tmpl_node):
     for a, v in prim_node.items():
         dnode.set(a, v)
     # but class/provider/type are coming from the template
+    # savannah#41410: stonith resources do not have the provider
+    # attribute
     for a in ("class", "provider", "type"):
-        dnode.set(a, tmpl_node.get(a))
+        v = tmpl_node.get(a)
+        if v is not None:
+            dnode.set(a, v)
     return dnode
 
 
