@@ -1970,6 +1970,15 @@ class CibProperty(CibObject):
         return rc
 
 
+def is_stonith_rsc(xmlnode):
+    '''
+    True if resource is stonith or derived from stonith template.
+    '''
+    if xmlnode.get('template'):
+        xmlnode = reduce_primitive(xmlnode)
+    return xmlnode.get('class') == 'stonith'
+
+
 class CibFencingOrder(CibObject):
     '''
     Fencing order (fencing-topology).
@@ -2068,7 +2077,7 @@ class CibFencingOrder(CibObject):
                 rc = 1
         stonith_rsc_l = [x.obj_id for x in
                          cib_factory.get_elems_on_type("type:primitive")
-                         if x.node.get("class") == "stonith"]
+                         if is_stonith_rsc(x.node)]
         for devices in [x.get("devices") for x in nl]:
             for dev in devices.split(","):
                 if not cib_factory.find_object(dev):
