@@ -48,7 +48,7 @@ To run the unit test suite, go to the source code directory of `crmsh`
 and call:
 
 ----
-PYTHONPATH=modules nosetests -w test/unittests
+./test/unit-tests.sh
 ----
 
 === Regression tests ===

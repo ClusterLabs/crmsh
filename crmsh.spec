@@ -141,9 +141,9 @@ export docdir=%{crmsh_docdir}
 make %{_smp_mflags} docdir=%{crmsh_docdir}
 
 %if 0%{?with_regression_tests}
-    PYTHONPATH=modules nosetests -w test/unittests
+	./test/unit-tests.sh
     if [ ! $? ]; then
-        echo "Shell unit tests failed."
+        echo "Unit tests failed."
         exit 1
     fi
 %endif
@@ -165,7 +165,7 @@ rm -rf %{buildroot}
 if [ ! -e /tmp/.crmsh_regression_tests_ran ]; then
     touch /tmp/.crmsh_regression_tests_ran
     if ! %{_datadir}/%{name}/tests/regression.sh ; then
-        echo "Shell tests failed."
+        echo "Regression tests failed."
         cat crmtestout/regression.out
         exit 1
     fi
