@@ -179,7 +179,7 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(len(out.children), 0)
         self.assertTrue('a' in out.params)
 
-    def test_constraints(self):
+    def test_location(self):
         out = self.parser.parse('location loc-1 resource inf: foo')
         self.assertEqual(out.id, 'loc-1')
         self.assertEqual(out.resource, 'resource')
@@ -203,6 +203,7 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.node, 'bar')
         #print out.to_list()
 
+    def test_colocation(self):
         out = self.parser.parse('colocation col-1 inf: foo:master ( bar wiz sequential=yes )')
         self.assertEqual(out.id, 'col-1')
         self.assertEqual(2, sum(1 for s in out.resources if s[0] == 'resource_set'))
@@ -227,7 +228,27 @@ class TestCliParser(unittest.TestCase):
         out = self.parser.parse('colocation col-1 10: ( bar wiz ]')
         self.assertFalse(out)
 
+    def test_order(self):
         out = self.parser.parse('order o1 Mandatory: [ A B sequential=true ] C')
+        self.assertEqual(out.resources[0][0], 'resource_set')
+        self.assertTrue(['require-all', 'false'] in out.resources[0][1])
+        self.assertTrue(['sequential', 'true'] in out.resources[0][1])
+        self.assertEqual(out.id, 'o1')
+
+        out = self.parser.parse('order o1 Mandatory: [ A B sequential=false ] C')
+        self.assertEqual(out.resources[0][0], 'resource_set')
+        self.assertTrue(['require-all', 'false'] in out.resources[0][1])
+        self.assertTrue(['sequential', 'false'] in out.resources[0][1])
+        self.assertEqual(out.id, 'o1')
+
+        out = self.parser.parse('order o1 Mandatory: A B C sequential=false')
+        self.assertEqual(out.resources[0][0], 'resource_set')
+        self.assertTrue(['sequential', 'false'] in out.resources[0][1])
+        self.assertEqual(out.id, 'o1')
+
+        out = self.parser.parse('order o1 Mandatory: A B C sequential=true')
+        self.assertEqual(out.resources[0][0], 'resource_set')
+        self.assertTrue(['sequential', 'true'] not in out.resources[0][1])
         self.assertEqual(out.id, 'o1')
 
         out = self.parser.parse('order c_apache_1 Mandatory: apache:start ip_1')
@@ -244,6 +265,7 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.id, 'order-1')
         self.assertEqual(out.to_list(), [['order', [['id', 'order-1'], ['kind', 'Optional'], ['first', 'group1'], ['first-action', 'stop'], ['then', 'group2'], ['then-action', 'start']]]])
 
+    def test_ticket(self):
         out = self.parser.parse('rsc_ticket ticket-A_public-ip ticket-A: public-ip')
         self.assertEqual(out.id, 'ticket-A_public-ip')
 

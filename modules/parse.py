@@ -974,6 +974,8 @@ class ResourceSet(object):
             self.set_pl.insert(0, [self.curr_attr, self.prev_q])
         if not self.sequential:
             self.set_pl.insert(0, ["sequential", "false"])
+        elif not self.require_all:
+            self.set_pl.insert(0, ["sequential", "true"])
         if not self.require_all:
             self.set_pl.insert(0, ["require-all", "false"])
         self.cli_list.append(["resource_set", self.set_pl])
