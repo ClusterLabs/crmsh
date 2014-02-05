@@ -142,7 +142,7 @@ make %{_smp_mflags} docdir=%{crmsh_docdir}
 
 %if 0%{?with_regression_tests}
     PYTHONPATH=modules nosetests -w test/unittests
-    if ! $? ; then
+    if [ ! $? ]; then
         echo "Shell unit tests failed."
         exit 1
     fi
