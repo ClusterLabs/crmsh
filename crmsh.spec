@@ -90,6 +90,7 @@ BuildRequires:  libxslt-tools
 BuildRequires:  corosync
 BuildRequires:  procps
 BuildRequires:  python-dateutil
+BuildRequires:  python-nose
 BuildRequires:  vim
 Requires:       pacemaker
 Requires:       pssh
@@ -140,7 +141,8 @@ export docdir=%{crmsh_docdir}
 make %{_smp_mflags} docdir=%{crmsh_docdir}
 
 %if 0%{?with_regression_tests}
-    if ! test/unittests/testrunner.py ; then
+    PYTHONPATH=modules nosetests -w test/unittests
+    if ! $? ; then
         echo "Shell unit tests failed."
         exit 1
     fi

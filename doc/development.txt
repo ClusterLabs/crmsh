@@ -41,11 +41,14 @@ make install
 
 === Unit tests ===
 
+The test suite uses nose. On most distributions, this can be installed
+by installing the package +python-nose+, or using +pip+.
+
 To run the unit test suite, go to the source code directory of `crmsh`
 and call:
 
 ----
-./test/unittests/testrunner.py
+PYTHONPATH=modules nosetests -w test/unittests
 ----
 
 === Regression tests ===
