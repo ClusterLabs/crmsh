@@ -86,6 +86,18 @@ BuildRequires:  python
 BuildRequires:  libxslt-tools
 %endif
 
+%description
+crm shell, a Pacemaker command line interface.
+
+Pacemaker is an advanced, scalable High-Availability cluster resource
+manager for Heartbeat and/or Corosync.
+
+Authors: Dejan Muhamedagic <dejan@suse.de> and many others
+
+%package test
+Summary:        Tests for crmsh
+Group:          %{pkg_group}
+Requires:       crmsh
 %if 0%{?with_regression_tests}
 BuildRequires:  corosync
 BuildRequires:  procps
@@ -95,8 +107,7 @@ BuildRequires:  vim
 Requires:       pacemaker
 Requires:       pssh
 %endif
-
-%description
+%description test
 crm shell, a Pacemaker command line interface.
 
 Pacemaker is an advanced, scalable High-Availability cluster resource
@@ -161,7 +172,7 @@ rm -rf %{buildroot}
 # Run regression tests after installing the package
 # NB: this is called twice by OBS, that's why we touch the file
 %if 0%{?with_regression_tests}
-%post
+%post test
 if [ ! -e /tmp/.crmsh_regression_tests_ran ]; then
     touch /tmp/.crmsh_regression_tests_ran
     if ! %{_datadir}/%{name}/tests/regression.sh ; then
@@ -180,6 +191,7 @@ fi
 %{py_sitedir}/crmsh
 
 %{_datadir}/%{name}
+%exclude %{_datadir}/%{name}/tests
 
 %doc %{_mandir}/man8/*
 %{crmsh_docdir}/COPYING
@@ -196,5 +208,9 @@ fi
 %dir %{crmsh_docdir}/contrib
 %dir %attr (770, %{uname}, %{gname}) %{_var}/cache/crm
 %config %{_sysconfdir}/bash_completion.d/crm.sh
+
+%files test
+%defattr(-,root,root)
+%{_datadir}/%{name}/tests
 
 %changelog
