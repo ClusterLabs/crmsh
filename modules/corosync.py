@@ -100,7 +100,7 @@ def corosync_tokenizer(stream):
             stream = stream[m.end():]
             yield t
             continue
-        raise ValueError("Parse error at ...%s" % (stream))
+        raise ValueError("Parse error at [..%s..]" % (stream[:16]))
 
 
 def make_section(path, contents=None):
