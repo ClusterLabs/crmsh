@@ -38,7 +38,7 @@
 %{!?py_sitedir: %{expand: %%global py_sitedir  %%{expand:%%%%{py_libdir}/site-packages}}}
 
 Name:           crmsh
-Summary:        Pacemaker command line interface
+Summary:        High Availability cluster command-line interface
 License:        GPL-2.0+
 Group:          %{pkg_group}
 Version:        2.0
@@ -87,15 +87,15 @@ BuildRequires:  libxslt-tools
 %endif
 
 %description
-crm shell, a Pacemaker command line interface.
-
-Pacemaker is an advanced, scalable High-Availability cluster resource
-manager for Heartbeat and/or Corosync.
+The crm shell is a command-line interface for High-Availability
+cluster management on GNU/Linux systems. It simplifies the
+configuration, management and troubleshooting of Pacemaker-based
+clusters, by providing a powerful and intuitive set of features.
 
 Authors: Dejan Muhamedagic <dejan@suse.de> and many others
 
 %package test
-Summary:        Tests for crmsh
+Summary:        Test package for crmsh
 Group:          %{pkg_group}
 Requires:       crmsh
 %if 0%{?with_regression_tests}
@@ -108,10 +108,10 @@ Requires:       pacemaker
 Requires:       pssh
 %endif
 %description test
-crm shell, a Pacemaker command line interface.
-
-Pacemaker is an advanced, scalable High-Availability cluster resource
-manager for Heartbeat and/or Corosync.
+The crm shell is a command-line interface for High-Availability
+cluster management on GNU/Linux systems. It simplifies the
+configuration, management and troubleshooting of Pacemaker-based
+clusters, by providing a powerful and intuitive set of features.
 
 Authors: Dejan Muhamedagic <dejan@suse.de> and many others
 
