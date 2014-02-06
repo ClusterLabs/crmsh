@@ -23,6 +23,7 @@ from corosync import Parser, make_section, make_value
 
 F1 = open('corosync.conf.1').read()
 F2 = open('corosync.conf.2').read()
+F3 = open('bug-862577_corosync.conf').read()
 
 
 def _valid(parser):
@@ -93,6 +94,11 @@ class TestCorosyncParser(unittest.TestCase):
         self.assertEqual(p.count('nodelist.node'), 4)
         self.assertEqual(p.get_all('nodelist.node.nodeid'),
                          ['1'])
+
+    def test_bnc862577(self):
+        p = Parser(F3)
+        _valid(p)
+        self.assertEqual(p.count('service.ver'), 1)
 
 if __name__ == '__main__':
     unittest.main()

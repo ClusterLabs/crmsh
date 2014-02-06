@@ -68,8 +68,8 @@ class Token(object):
 
 def corosync_tokenizer(stream):
     """Parses the corosync config file into a token stream"""
-    section_re = re.compile(r'(\w+) {')
-    value_re = re.compile(r'(\w+): (\S+)')
+    section_re = re.compile(r'(\w+)\s*{')
+    value_re = re.compile(r'(\w+):\s*(\S+)')
     path = []
     while stream:
         stream = stream.lstrip()
