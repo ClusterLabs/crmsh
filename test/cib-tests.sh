@@ -55,7 +55,6 @@ runt() {
 	local T="$1"
 	local CIBE="$BASE/$(basename $T .input).exp.xml"
 	cp $BASE/shadow.base $CIB_file
-	cat $BASE/shadow.base
 	run "crm" 0 "Running testcase: $T" <$T
 	local rc
 	if [ ! -e $CIBE ]; then
@@ -68,7 +67,6 @@ runt() {
 			return 0
 		fi
 	fi
-	cat $CIB_file
 
 	if ! crm_diff --filter -o $CIBE -n $CIB_file >/dev/null 2>&1 ; then
 		logt "$T: XML: $CIBE does not match $CIB_file"
