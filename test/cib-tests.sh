@@ -17,13 +17,17 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-BASE=${1:-`pwd`}
+BASE=${1:-`pwd`}/cibtests
 AUTOCREATE=1
 
 logt() {
 	local msg="$1"
 	echo $(date) "$msg" >>$LOGF
 	echo "$msg"
+}
+
+difft() {
+	crm_diff -V --filter -o $1 -n $2
 }
 
 run() {
@@ -39,16 +43,19 @@ run() {
 	if [ $erc != "I" ]; then
 		if [ $rc -ne $erc ]; then
 			logt "$msg: FAILED ($erc != $rc)"
-			logt "See $LOGF for details."
-			exit 1
+			cat $LOGF
+			return 1
 		fi
 	fi
 	echo "$msg: ok"
+	return 0
 }
 
 runt() {
 	local T="$1"
 	local CIBE="$BASE/$(basename $T .input).exp.xml"
+	cp $BASE/shadow.base $CIB_file
+	cat $BASE/shadow.base
 	run "crm" 0 "Running testcase: $T" <$T
 	local rc
 	if [ ! -e $CIBE ]; then
@@ -61,22 +68,31 @@ runt() {
 			return 0
 		fi
 	fi
+	cat $CIB_file
 
-	if ! crm_diff -o $CIBE -n $CIB_file >/dev/null 2>&1 ; then
+	if ! crm_diff --filter -o $CIBE -n $CIB_file >/dev/null 2>&1 ; then
 		logt "$T: XML: $CIBE does not match $CIB_file"
-		exit 1
+		difft $CIBE $CIB_file
+		return 1
 	fi
+	return 0
 }
 
 LOGF=$(mktemp)
 export PATH=/usr/sbin:$PATH
 
 export CIB_file=$BASE/shadow.test
-cp $BASE/shadow.base $CIB_file
 
+failed=0
 for T in $(ls $BASE/*.input) ; do
 	runt $T
+	failed=$(($? + $failed))
 done
+
+if [ $failed -gt 0 ]; then
+	logt "$failed tests failed!"
+	exit 1
+fi
 
 logt "All tests passed!"
 rm $LOGF $CIB_file

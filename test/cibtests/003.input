@@ -1,7 +1,11 @@
 configure
+property stonith-enabled=false
 primitive testfs ocf:heartbeat:Filesystem \
 	params directory="/mnt" fstype="ocfs2" device="/dev/sda1"
 clone testfs-clone testfs \
 	meta ordered="true" interleave="true"
 commit
+up
+resource stop testfs-clone
 quit
+

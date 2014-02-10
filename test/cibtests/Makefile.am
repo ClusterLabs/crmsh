@@ -18,11 +18,12 @@
 #
 MAINTAINERCLEANFILES = Makefile.in
 
-SUBDIRS = testcases cibtests
+cibtestsdir		= 	$(datadir)/$(PACKAGE)/tests/cibtests
+cibtests_DATA	= shadow.base \
+	001.exp.xml 001.input \
+	002.exp.xml 002.input \
+	003.exp.xml 003.input \
+	004.exp.xml 004.input
 
-testdir		= 	$(datadir)/$(PACKAGE)/tests
-test_SCRIPTS	=	regression.sh evaltest.sh cib-tests.sh
-test_DATA	=	README.regression defaults descriptions \
-			crm-interface history-test.tar.bz2
-#				shouldn't need this, but we do for some versions of autofoo tools
-EXTRA_DIST	=	$(test_SCRIPTS) $(test_DATA)
+#			shouldn't need this next line...
+EXTRA_DIST =		$(cibtests_DATA)

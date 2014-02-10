@@ -180,6 +180,11 @@ if [ ! -e /tmp/.crmsh_regression_tests_ran ]; then
         cat crmtestout/regression.out
         exit 1
     fi
+	cd %{_datadir}/%{name}/tests
+	if ! ./cib-tests.sh ; then
+		echo "CIB tests failed."
+		exit 1
+	fi
 fi
 %endif
 

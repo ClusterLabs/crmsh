@@ -1,4 +1,5 @@
 configure
+property stonith-enabled=false
 primitive rsc_dummy ocf:heartbeat:Dummy
 monitor rsc_dummy 30
 commit

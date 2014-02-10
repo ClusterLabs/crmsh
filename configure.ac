@@ -260,6 +260,7 @@ scripts/add/Makefile  \
 scripts/remove/Makefile  \
 test/Makefile            \
 test/testcases/Makefile  \
+test/cibtests/Makefile   \
 modules/Makefile         \
 hb_report/Makefile       \
 hb_report/hb_report      \

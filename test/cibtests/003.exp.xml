@@ -1,0 +1,28 @@
+<cib epoch="2" num_updates="1" admin_epoch="0" validate-with="pacemaker-1.0" cib-last-written="Tue Mar 31 14:52:24 2009">
+  <configuration>
+    <crm_config>
+      <cluster_property_set id="cib-bootstrap-options">
+        <nvpair name="stonith-enabled" value="false" id="cib-bootstrap-options-stonith-enabled"/>
+      </cluster_property_set>
+    </crm_config>
+    <nodes/>
+    <resources>
+      <clone id="testfs-clone">
+        <meta_attributes id="testfs-clone-meta_attributes">
+          <nvpair name="ordered" value="true" id="testfs-clone-meta_attributes-ordered"/>
+          <nvpair name="interleave" value="true" id="testfs-clone-meta_attributes-interleave"/>
+          <nvpair id="testfs-clone-meta_attributes-target-role" name="target-role" value="Stopped"/>
+        </meta_attributes>
+        <primitive id="testfs" class="ocf" provider="heartbeat" type="Filesystem">
+          <instance_attributes id="testfs-instance_attributes">
+            <nvpair name="directory" value="/mnt" id="testfs-instance_attributes-directory"/>
+            <nvpair name="fstype" value="ocfs2" id="testfs-instance_attributes-fstype"/>
+            <nvpair name="device" value="/dev/sda1" id="testfs-instance_attributes-device"/>
+          </instance_attributes>
+        </primitive>
+      </clone>
+    </resources>
+    <constraints/>
+  </configuration>
+  <status/>
+</cib>
