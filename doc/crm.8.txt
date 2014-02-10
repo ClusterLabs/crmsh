@@ -3133,7 +3133,8 @@ Usage:
 ...............
 new <config> <template> [<template> ...] [params name=value ...]"
 ...............
-Examples:
+
+Example:
 ...............
 new vip virtual-ip
 new bigfs ocfs2 params device=/dev/sdx8 directory=/bigfs
