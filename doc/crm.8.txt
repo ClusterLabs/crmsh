@@ -3131,7 +3131,7 @@ configuration.
 
 Usage:
 ...............
-new <config> <template> [<template> ...] [params name=value ...]"
+new <config> <template> [<template> ...] [params name=value ...]
 ...............
 
 Example:
