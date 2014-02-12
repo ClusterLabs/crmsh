@@ -52,7 +52,7 @@ Patch11:        crmsh-cibadmin_can_patch.patch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Requires(pre):  pacemaker
 Requires:       pssh
-Requires:       python >= 2.4
+Requires:       python >= 2.6
 Requires:       python-PyYAML
 Requires:       python-dateutil
 Requires:       python-lxml
