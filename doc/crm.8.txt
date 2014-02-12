@@ -617,7 +617,7 @@ ellipsis (`...`) signifies that the previous construct may be
 repeated, `|` means pick one of many, and the rest are literals
 (strings, `:`, `=`).
 
-[[cmdhelp_._status,Cluster status]]
+[[cmdhelp_root_status,Cluster status]]
 === `status`
 
 Show cluster status. The status is displayed by `crm_mon`. Supply
@@ -3501,7 +3501,9 @@ further reduce the time range.
 
 If you think you may have found a bug or just need clarification
 from developers or your support, the `session pack` command can
-help create a report. This is an example:
+help create a report.
+
+Example:
 ...............
 crm(live)history# timeframe "Jul 18 12:00" "Jul 18 12:30"
 crm(live)history# session save strange_restart
@@ -3509,6 +3511,7 @@ crm(live)history# session pack
 Report saved in .../strange_restart.tar.bz2
 crm(live)history# 
 ...............
+
 In order to reduce report size and allow developers to
 concentrate on the issue, you should beforehand limit the time
 frame. Giving a meaningful session name helps too.
@@ -3932,7 +3935,7 @@ session load rsclost-2
 session list
 ...............
 
-[[cmdhelp_._report,Create cluster status report]]
+[[cmdhelp_root_report,Create cluster status report]]
 === `report`
 
 Interface to a tool for creating a cluster report. A report is an

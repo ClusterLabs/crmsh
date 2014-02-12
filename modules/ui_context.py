@@ -320,7 +320,7 @@ class Context(object):
     def level_name(self):
         '''
         Returns the name of the current level.
-        Returns '.' if at the root level.
+        Returns 'root' if at the root level.
         '''
         return self.current_level().name
 

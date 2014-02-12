@@ -53,7 +53,7 @@ class Root(command.UI):
     """
 
     # name is the user-visible name of this CLI level.
-    name = '.'
+    name = 'root'
 
     @command.level(ui_cluster.Cluster)
     @command.help('''Cluster setup and management

@@ -157,7 +157,7 @@ def help_overview():
     s += "\n"
     s += "Available commands:\n\n"
 
-    for title, command in _COMMANDS.get('.', {}).iteritems():
+    for title, command in _COMMANDS.get('root', {}).iteritems():
         if not command.is_alias():
             s += '\t' + _titleline(title, command.short)
     s += "\n"
@@ -165,7 +165,7 @@ def help_overview():
     hidden_commands = ('up', 'cd', 'help', 'quit', 'ls')
 
     for title, level in _LEVELS.iteritems():
-        if title != '.' and title in _COMMANDS:
+        if title != 'root' and title in _COMMANDS:
             s += '\t' + _titleline(title, level.short, suffix='/')
             for cmdname, cmd in _COMMANDS[title].iteritems():
                 if cmdname in hidden_commands:
@@ -241,7 +241,7 @@ def help_contextual(context, subject, subtopic):
     """
     _load_help()
     if subject is None:
-        if context == '.':
+        if context == 'root':
             return help_overview()
         return help_level(context)
     if subject.lower() == 'overview':
