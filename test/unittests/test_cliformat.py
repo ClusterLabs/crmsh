@@ -48,6 +48,10 @@ def roundtrip(type, name, cli):
     assert node is not None
     obj.node = node
     obj.set_id()
+    obj.nocli = True
+    xml = obj.repr_cli(format=-1)
+    print xml
+    obj.nocli = False
     s = obj.repr_cli(format=-1)
     if s != cli:
         print "GOT:", s
