@@ -18,7 +18,6 @@
 
 import utils
 import parse
-import cliformat
 import cibconfig
 from test_parse import MockValidation
 
@@ -64,3 +63,8 @@ def test_rscset():
 
 def test_bnc863736():
     roundtrip('order', 'order_3', 'order order_3 Mandatory: [ A B ] C symmetrical=true')
+
+
+def test_sequential():
+    roundtrip('colocation', 'rsc_colocation-master',
+              'colocation rsc_colocation-master inf: [ vip-master vip-rep sequential="true" ] [ msPostgresql:Master sequential="true" ]')
