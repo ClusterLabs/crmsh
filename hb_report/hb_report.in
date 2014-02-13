@@ -26,7 +26,7 @@ HA_NOARCHBIN=@datadir@/@PACKAGE_NAME@
 unset LANG
 export LC_ALL=POSIX
 
-PROG=`report`
+PROG="report"
 
 # the default syslog facility is not (yet) exported by heartbeat
 # to shell scripts
