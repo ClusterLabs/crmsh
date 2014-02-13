@@ -902,10 +902,16 @@ class CibObject(object):
                                 len(self.children))
 
     def _repr_cli_xml(self, format):
-        h = cli_display.keyword("xml")
-        l = etree.tostring(self.node, pretty_print=True).split('\n')
-        l = [x for x in l if x]  # drop empty lines
-        return "%s %s" % (h, cli_format(l, break_lines=(format > 0), xml=True))
+        if format < 0:
+            cli_display.set_no_pretty()
+        try:
+            h = cli_display.keyword("xml")
+            l = etree.tostring(self.node, pretty_print=True).split('\n')
+            l = [x for x in l if x]  # drop empty lines
+            return "%s %s" % (h, cli_format(l, break_lines=(format > 0), xml=True))
+        finally:
+            if format < 0:
+                cli_display.reset_no_pretty()
 
     def _gv_rsc_id(self):
         if self.parent and self.parent.obj_type in vars.clonems_tags:
