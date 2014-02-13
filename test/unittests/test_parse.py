@@ -257,6 +257,20 @@ class TestCliParser(unittest.TestCase):
         out = self.parser.parse('order o1 Serialize: A ( B C )')
         self.assertEqual(out.id, 'o1')
 
+        out = self.parser.parse('order o1 Serialize: A ( B C ) symmetrical=false')
+        self.assertEqual(out.id, 'o1')
+        self.assertFalse(out.symmetrical)
+
+        out = self.parser.parse('order o1 Serialize: A ( B C ) symmetrical=true')
+        self.assertEqual(out.id, 'o1')
+        self.assertTrue(out.symmetrical)
+
+        out = self.parser.parse('colocation rsc_colocation-master INFINITY: [ vip-master vip-rep sequential=true ] [ msPostgresql:Master sequential=true ]')
+        print out.to_list()
+        self.assertEqual(out.resources[0][0], 'resource_set')
+        self.assertTrue(['sequential', 'true'] in out.resources[0][1])
+        self.assertEqual(out.id, 'rsc_colocation-master')
+
         out = self.parser.parse('order order_2 Mandatory: [ A B ] C')
         self.assertEqual(out.id, 'order_2')
         self.assertEqual(out.to_list(), [['order', [['id', 'order_2'], ['kind', 'Mandatory']]], ['resource_set', [['require-all', 'false'], ['sequential', 'false'], ['resource_ref', ['id', 'A']], ['resource_ref', ['id', 'B']]]], ['resource_set', [['resource_ref', ['id', 'C']]]]])
