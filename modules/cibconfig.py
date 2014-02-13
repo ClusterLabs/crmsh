@@ -657,8 +657,12 @@ def mkxmlsimple(e, oldnode, id_hint):
             v = v.lower()
         if n.startswith('$'):
             n = n.lstrip('$')
-        if (type(v) != type('') and type(v) != type(u'')) \
-                or v:  # skip empty strings
+        if not isinstance(v, basestring):
+            if isinstance(v, bool):
+                v = str(v).lower()
+            else:
+                raise ValueError("cannot make attribute value from '%s'" % (v))
+        if v:  # skip empty strings
             node.set(n, v)
     id_ref = node.get("id-ref")
     if id_ref:
