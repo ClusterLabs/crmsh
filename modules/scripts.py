@@ -244,7 +244,7 @@ def _make_options(params):
         'KbdInteractiveAuthentication=no',
         'PreferredAuthentications=gssapi-with-mic,gssapi-keyex,hostbased,publickey',
         'PasswordAuthentication=no',
-        #'StrictHostKeyChecking=no',
+        'StrictHostKeyChecking=no',
         'ControlPersist=no']
     if config.core.debug:
         opts.ssh_extra += ['-vvv']
