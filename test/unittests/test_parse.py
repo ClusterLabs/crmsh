@@ -207,6 +207,8 @@ class TestCliParser(unittest.TestCase):
         out = self.parser.parse('colocation col-1 inf: foo:master ( bar wiz sequential=yes )')
         self.assertEqual(out.id, 'col-1')
         self.assertEqual(2, sum(1 for s in out.resources if s[0] == 'resource_set'))
+        self.assertFalse(['sequential', 'true'] in out.resources[0][1])
+        self.assertFalse(['sequential', 'false'] in out.resources[0][1])
 
         out = self.parser.parse(
             'colocation col-1 -20: foo:Master ( bar wiz ) ( zip zoo ) node-attribute="fiz"')
@@ -232,7 +234,8 @@ class TestCliParser(unittest.TestCase):
         out = self.parser.parse('order o1 Mandatory: [ A B sequential=true ] C')
         self.assertEqual(out.resources[0][0], 'resource_set')
         self.assertTrue(['require-all', 'false'] in out.resources[0][1])
-        self.assertTrue(['sequential', 'true'] in out.resources[0][1])
+        self.assertFalse(['sequential', 'true'] in out.resources[0][1])
+        self.assertFalse(['sequential', 'false'] in out.resources[0][1])
         self.assertEqual(out.id, 'o1')
 
         out = self.parser.parse('order o1 Mandatory: [ A B sequential=false ] C')
@@ -265,10 +268,12 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.id, 'o1')
         self.assertTrue(out.symmetrical)
 
-        out = self.parser.parse('colocation rsc_colocation-master INFINITY: [ vip-master vip-rep sequential=true ] [ msPostgresql:Master sequential=true ]')
+        inp = 'colocation rsc_colocation-master INFINITY: [ vip-master vip-rep sequential=true ] [ msPostgresql:Master sequential=true ]'
+        out = self.parser.parse(inp)
+        print inp
         print out.to_list()
         self.assertEqual(out.resources[0][0], 'resource_set')
-        self.assertTrue(['sequential', 'true'] in out.resources[0][1])
+        self.assertFalse(['sequential', 'false'] in out.resources[0][1])
         self.assertEqual(out.id, 'rsc_colocation-master')
 
         out = self.parser.parse('order order_2 Mandatory: [ A B ] C')

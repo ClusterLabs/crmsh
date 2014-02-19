@@ -2118,6 +2118,42 @@ node node1
 node big_node attributes memory=64
 ...............
 
+==== Resource sets
+
+Using resource sets can be a bit confusing unless one knows the
+details of the implementation in Pacemaker as well as how to interpret
+the syntax provided by `crmsh`.
+
+Three different types of resource sets are provided by `crmsh`, and
+each one implies different values for the two resource set attributes,
+`sequential` and `require-all`.
+
+`sequential`::
+  If true, the resources in the set do not depend on each other
+  internally. Setting `sequential` to true implies a strict order of
+  dependency within the set.
+
+`require-all`::
+  If false, only one resource in the set is required to fulfil the
+  requirements of the set. The set of `A, B and C` with `require-all`
+  set to `false` is be read as `A OR B OR C` when its dependencies
+  are resolved.
+
+The three types of resource sets modify the attributes in the
+following way:
+
+1. Implicit sets (no brackets). `sequential=true`, `require-all=true`
+2. Parenthesis set (`( ... )`). `sequential=false`, `require-all=true`
+3. Bracket set (`[ ... ]`). `sequential=false`, `require-all=false`
+
+To create a set with the properties `sequential=true` and
+`require-all=false`, explicitly set `sequential` in a bracketed set,
+`[ A B C sequential=true ]`.
+
+To create multiple sets with both `sequential` and `require-all` set to
+true, explicitly set `sequential` in a parenthesis set:
+`A B ( C D sequential=true )`.
+
 [[cmdhelp_configure_primitive,define a resource]]
 ==== `primitive`
 

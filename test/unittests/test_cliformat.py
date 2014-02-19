@@ -56,6 +56,7 @@ def roundtrip(type, name, cli):
     if s != cli:
         print "GOT:", s
         print "EXP:", cli
+    assert obj.cli_use_validate()
     assert s == cli
 
 
@@ -72,3 +73,23 @@ def test_bnc863736():
 def test_sequential():
     roundtrip('colocation', 'rsc_colocation-master',
               'colocation rsc_colocation-master inf: [ vip-master vip-rep sequential="true" ] [ msPostgresql:Master sequential="true" ]')
+
+def test_broken_colo():
+    xml = """<rsc_colocation id="colo-2" score="INFINITY">
+  <resource_set id="colo-2-0" require-all="false">
+    <resource_ref id="vip1"/>
+    <resource_ref id="vip2"/>
+  </resource_set>
+  <resource_set id="colo-2-1" require-all="false" role="Master">
+    <resource_ref id="apache"/>
+  </resource_set>
+</rsc_colocation>"""
+    from lxml import etree
+    data = etree.fromstring(xml)
+    obj = factory.new_object('colocation', 'colo-2')
+    assert obj is not None
+    obj.node = data
+    obj.set_id()
+    data = obj.repr_cli(format=-1)
+    print data
+    assert data == 'colocation colo-2 inf: [ vip1 vip2 sequential="true" ] [ apache:Master sequential="true" ]'

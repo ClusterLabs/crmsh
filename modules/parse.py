@@ -944,6 +944,7 @@ class ResourceSet(object):
         self.tokens = s
         self.cli_list = []
         self.reset_set()
+        self.opened = ''
         self.sequential = True
         self.require_all = True
         self.fix_parentheses()
@@ -965,7 +966,6 @@ class ResourceSet(object):
         self.set_pl = []
         self.prev_q = ''  # previous qualifier (action or role)
         self.curr_attr = ''  # attribute (action or role)
-        self.opened = ''  # the open paren/bracket
 
     def save_set(self):
         if not self.set_pl:
@@ -974,23 +974,21 @@ class ResourceSet(object):
             self.set_pl.insert(0, [self.curr_attr, self.prev_q])
         if not self.sequential:
             self.set_pl.insert(0, ["sequential", "false"])
-        elif not self.require_all:
-            self.set_pl.insert(0, ["sequential", "true"])
         if not self.require_all:
             self.set_pl.insert(0, ["require-all", "false"])
         self.cli_list.append(["resource_set", self.set_pl])
         self.reset_set()
 
     def parseattr(self, p):
+        attrs = {"sequential": "sequential",
+                 "require-all": "require_all"}
         l = p.split('=')
-        if len(l) != 2 or l[0] not in ("sequential", "require-all"):
+        if len(l) != 2 or l[0] not in attrs:
             return False
-        if not verify_boolean(l[1]):
+        k, v = l
+        if not verify_boolean(v):
             return False
-        if l[0] == "sequential":
-            self.sequential = get_boolean(l[1])
-        else:
-            self.require_all = get_boolean(l[1])
+        setattr(self, attrs[k], get_boolean(v))
         return True
 
     def splitrsc(self, p):
@@ -1017,6 +1015,26 @@ class ResourceSet(object):
                    msg=errmsg)
         raise ParseError
 
+    def update_attrs(self, bracket, tokpos):
+        if bracket in ('(', '['):
+            if self.opened:
+                self.err(token=self.tokens[tokpos],
+                         errmsg='Cannot nest resource sets')
+            self.sequential = False
+            if bracket == '[':
+                self.require_all = False
+            self.opened = bracket
+        elif bracket in (')', ']'):
+            if not self.opened:
+                self.err(token=self.tokens[tokpos],
+                         errmsg='Unmatched closing bracket')
+            if bracket != self.matching[self.opened]:
+                self.err(token=self.tokens[tokpos],
+                         errmsg='Mismatched closing bracket')
+            self.sequential = True
+            self.require_all = True
+            self.opened = ''
+
     def parse(self):
         tokpos = -1
         for p in self.tokens:
@@ -1024,30 +1042,16 @@ class ResourceSet(object):
             if p == "_rsc_set_":
                 continue  # a degenerate resource set
             if p in self.open_set:
-                if self.set_pl:  # save the set before
-                    self.save_set()
-                if self.opened:
-                    self.err(token=self.tokens[tokpos],
-                             errmsg='Cannot nest resource sets')
-                self.sequential = False
-                if p == '[':
-                    self.require_all = False
-                self.opened = p
+                self.save_set()
+                self.update_attrs(p, tokpos)
                 continue
             if p in self.close_set:
-                if not self.opened:
-                    self.err(token=self.tokens[tokpos],
-                             errmsg='Unmatched closing bracket')
-                if p != self.matching[self.opened]:
-                    self.err(token=self.tokens[tokpos],
-                             errmsg='Mismatched closing bracket')
-                if not self.set_pl:  # empty sets not allowed
+                # empty sets not allowed
+                if not self.set_pl:
                     self.err(token=self.tokens[tokpos],
                              errmsg='Empty resource set')
                 self.save_set()
-                self.sequential = True
-                if p == ']':
-                    self.require_all = True
+                self.update_attrs(p, tokpos)
                 continue
             if '=' in p:
                 if not self.parseattr(p):

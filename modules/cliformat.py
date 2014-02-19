@@ -234,18 +234,22 @@ def mkrscaction(node, n):
         return rsc
 
 
+def boolean_maybe(v):
+    "returns True/False or None"
+    if v is None:
+        return None
+    return utils.get_boolean(v)
+
+
 def rsc_set_constraint(node, obj_type):
     col = []
     cnt = 0
     for n in node.findall("resource_set"):
-        add_seq = False
-        sequential = utils.get_boolean(n.get("sequential"), True)
-        require_all = utils.get_boolean(n.get("require-all"), True)
-        if not require_all:
+        sequential = boolean_maybe(n.get("sequential"))
+        require_all = boolean_maybe(n.get("require-all"))
+        if require_all is False:
             col.append("[")
-            if sequential:
-                add_seq = True
-        elif not sequential:
+        elif sequential is False:
             col.append("(")
         role = n.get("role")
         action = n.get("action")
@@ -254,15 +258,18 @@ def rsc_set_constraint(node, obj_type):
             q = (obj_type == "order") and action or role
             col.append(q and "%s:%s" % (rsc, q) or rsc)
             cnt += 1
-        if not require_all:
-            if add_seq:
+        if require_all is False:
+            if sequential in (None, True):
                 col.append('sequential="true"')
             col.append("]")
-        elif not sequential:
+        elif sequential is False:
+            if require_all is False:
+                col.append('require-all="false"')
             col.append(")")
     is_ticket = obj_type == 'rsc_ticket'
     is_location = obj_type == 'location'
-    if not is_location and ((sequential and require_all and not is_ticket and cnt <= 2) or
+    is_seq_all = sequential in (None, True) and require_all in (None, True)
+    if not is_location and ((is_seq_all and not is_ticket and cnt <= 2) or
                             (is_ticket and cnt <= 1)):  # a degenerate thingie
         col.insert(0, "_rsc_set_")
     return col
