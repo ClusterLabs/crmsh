@@ -2094,30 +2094,6 @@ Comments start with `#` in the first line. The comments are tied
 to the element which follows. If the element moves, its comments
 will follow.
 
-[[cmdhelp_configure_node,define a cluster node]]
-==== `node`
-
-The node command describes a cluster node. Nodes in the CIB are
-commonly created automatically by the CRM. Hence, you should not
-need to deal with nodes unless you also want to define node
-attributes. Note that it is also possible to manage node
-attributes at the `node` level.
-
-Usage:
-...............
-node [$id=<id>] <uname>[:<type>]
-  [description=<description>]
-  [attributes <param>=<value> [<param>=<value>...]]
-  [utilization <param>=<value> [<param>=<value>...]]
-
-type :: normal | member | ping
-...............
-Example:
-...............
-node node1
-node big_node attributes memory=64
-...............
-
 ==== Resource sets
 
 Using resource sets can be a bit confusing unless one knows the
@@ -2153,6 +2129,30 @@ To create a set with the properties `sequential=true` and
 To create multiple sets with both `sequential` and `require-all` set to
 true, explicitly set `sequential` in a parenthesis set:
 `A B ( C D sequential=true )`.
+
+[[cmdhelp_configure_node,define a cluster node]]
+==== `node`
+
+The node command describes a cluster node. Nodes in the CIB are
+commonly created automatically by the CRM. Hence, you should not
+need to deal with nodes unless you also want to define node
+attributes. Note that it is also possible to manage node
+attributes at the `node` level.
+
+Usage:
+...............
+node [$id=<id>] <uname>[:<type>]
+  [description=<description>]
+  [attributes <param>=<value> [<param>=<value>...]]
+  [utilization <param>=<value> [<param>=<value>...]]
+
+type :: normal | member | ping
+...............
+Example:
+...............
+node node1
+node big_node attributes memory=64
+...............
 
 [[cmdhelp_configure_primitive,define a resource]]
 ==== `primitive`
