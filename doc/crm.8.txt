@@ -1356,6 +1356,23 @@ Usage:
 unmigrate <rsc>
 ...............
 
+[[cmdhelp_resource_maintenance,Enable/disable per-resource maintenance mode]]
+==== `maintenance`
+
+Enables or disables the per-resource maintenance mode. When this mode
+is enabled, no monitor operations will be triggered for the resource.
+
+Usage:
+..................
+maintenance <resource> [on|off|true|false]
+..................
+
+Example:
+..................
+maintenance rsc1
+maintenance rsc2 off
+..................
+
 [[cmdhelp_resource_param,manage a parameter of a resource]]
 ==== `param`
 

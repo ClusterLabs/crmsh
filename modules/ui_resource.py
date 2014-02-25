@@ -133,6 +133,7 @@ class RscMgmt(command.UI):
     rsc_unmigrate = "crm_resource -U -r '%s'"
     rsc_cleanup = "crm_resource -C -r '%s' -H '%s'"
     rsc_cleanup_all = "crm_resource -C -r '%s'"
+    rsc_maintenance = "crm_resource -r '%s' --meta -p maintenance -v '%s'"
     rsc_param = {
         'set': "crm_resource -r '%s' -p '%s' -v '%s'",
         'delete': "crm_resource -r '%s' -d '%s'",
@@ -377,6 +378,19 @@ class RscMgmt(command.UI):
             return utils.ext_cmd(self.rsc_reprobe_node % args[0]) == 0
         else:
             return utils.ext_cmd(self.rsc_reprobe) == 0
+
+    @command.wait
+    @command.completers(compl.resources, compl.choice(['on', 'off', 'true', 'false']))
+    def do_maintenance(self, context, resource, on_off='true'):
+        'usage: maintenance <resource> [on|off|true|false]'
+        on_off = on_off.lower()
+        if on_off not in ('on', 'true', 'off', 'false'):
+            context.fatal_error("Expected <resource> [on|off|true|false]")
+        elif on_off in ('on', 'true'):
+            on_off = 'true'
+        else:
+            on_off = 'false'
+        return utils.ext_cmd(self.rsc_maintenance % (resource, on_off)) == 0
 
     def _get_trace_rsc(self, rsc_id):
         cib_factory.refresh()
