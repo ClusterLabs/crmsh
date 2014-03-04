@@ -633,6 +633,20 @@ def _run_cleanup(hosts, workdir, opts):
         shutil.rmtree(workdir)
 
 
+def _print_debug(hosts, workdir, opts):
+    "Print debug output (if any)"
+    dbglog = os.path.join(workdir, 'crm_script.debug')
+    for host, result in pssh.call(hosts,
+                                  "[ -f '%s' ] && cat '%s'" % (dbglog, dbglog),
+                                  opts).iteritems():
+        if isinstance(result, pssh.Error):
+            err_buf.error("[%s]: %s" % (host, result))
+        else:
+            rc, out, err = result
+            print out
+            print err
+
+
 def run(name, args):
     '''
     Run the given script on the given set of hosts
@@ -674,4 +688,7 @@ def run(name, args):
         traceback.print_exc()
         raise ValueError("Internal error while running %s: %s" % (name, e))
     finally:
-        _run_cleanup(hosts, workdir, opts)
+        if not config.core.debug:
+            _run_cleanup(hosts, workdir, opts)
+        else:
+            _print_debug(hosts, workdir, opts)
