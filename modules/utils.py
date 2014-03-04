@@ -205,6 +205,8 @@ def pipe_string(cmd, s):
     rc = -1  # command failed
     cmd = add_sudo(cmd)
     common_debug("piping string to %s" % cmd)
+    if options.regression_tests:
+        print ".EXT", cmd
     p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE)
     try:
         p.communicate(s)
@@ -225,6 +227,8 @@ def filter_string(cmd, s, stderr_on=True):
         stderr = subprocess.PIPE
     cmd = add_sudo(cmd)
     common_debug("pipe through %s" % cmd)
+    if options.regression_tests:
+        print ".EXT", cmd
     p = subprocess.Popen(cmd,
                          shell=True,
                          stdin=subprocess.PIPE,
@@ -357,6 +361,8 @@ def show_dot_graph(dotfile, keep_file=False, desc="transition graph"):
     cmd = "%s %s" % (config.core.dotty, dotfile)
     if not keep_file:
         cmd = "(%s; rm -f %s)" % (cmd, dotfile)
+    if options.regression_tests:
+        print ".EXT", cmd
     subprocess.Popen(cmd, shell=True, bufsize=0, stdin=None, stdout=None, stderr=None, close_fds=True)
     common_info("starting %s to show %s" % (config.core.dotty, desc))
 
@@ -480,6 +486,8 @@ def get_stdout(cmd, input_s=None, stderr_on=True, shell=True):
         stderr = None
     else:
         stderr = subprocess.PIPE
+    if options.regression_tests:
+        print ".EXT", cmd
     proc = subprocess.Popen(cmd,
                             shell=shell,
                             stdin=subprocess.PIPE,
@@ -493,6 +501,8 @@ def get_stdout_stderr(cmd, input_s=None, shell=True):
     '''
     Run a cmd, return (rc, stdout, stderr)
     '''
+    if options.regression_tests:
+        print ".EXT", cmd
     proc = subprocess.Popen(cmd,
                             shell=shell,
                             stdin=input_s and subprocess.PIPE or None,
@@ -779,7 +789,10 @@ def is_int(s):
 
 
 def is_process(s):
-    proc = subprocess.Popen("ps -e -o pid,command | grep -qs '%s'" % s,
+    cmd = "ps -e -o pid,command | grep -qs '%s'" % s
+    if options.regression_tests:
+        print ".EXT", cmd
+    proc = subprocess.Popen(cmd,
                             shell=True,
                             stdout=subprocess.PIPE)
     proc.wait()

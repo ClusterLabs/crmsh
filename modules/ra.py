@@ -24,6 +24,7 @@ import glob
 from cache import WCache
 import vars
 import config
+import options
 import userdir
 import utils
 from utils import stdout2list, is_program, is_process, add_sudo
@@ -56,8 +57,11 @@ class RaLrmd(object):
     def is_lrmd_accessible(self):
         if not (is_program(lrmadmin_prog) and is_process("lrmd")):
             return False
+        cmd = add_sudo(">/dev/null 2>&1 %s -C" % lrmadmin_prog)
+        if options.regression_tests:
+            print ".EXT", cmd
         return subprocess.call(
-            add_sudo(">/dev/null 2>&1 %s -C" % lrmadmin_prog),
+            cmd,
             shell=True) == 0
 
     def meta(self, ra_class, ra_type, ra_provider):

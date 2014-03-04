@@ -19,6 +19,7 @@
 import os
 import utils
 import config
+import options
 import subprocess
 from signal import signal, SIGPIPE, SIG_DFL
 
@@ -35,4 +36,6 @@ def create_report(context, args):
     if not extcmd:
         context.fatal_error("No reporting tool found")
     cmd = [extcmd] + list(args)
+    if options.regression_tests:
+        print ".EXT", cmd
     return subprocess.call(cmd, shell=False, preexec_fn=lambda: signal(SIGPIPE, SIG_DFL))

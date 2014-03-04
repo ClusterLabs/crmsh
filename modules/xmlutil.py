@@ -22,6 +22,7 @@ import copy
 import bz2
 
 import config
+import options
 from schema import Schema
 import vars
 from msg import common_err, common_error, common_debug, cib_parse_err, ErrorBuffer
@@ -57,6 +58,8 @@ cib_dump = "cibadmin -Ql"
 
 def cibdump2file(fname):
     cmd = add_sudo(cib_dump)
+    if options.regression_tests:
+        print ".EXT", cmd
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     try:
         s = ''.join(p.stdout)
@@ -69,6 +72,8 @@ def cibdump2file(fname):
 
 def cibdump2tmp():
     cmd = add_sudo(cib_dump)
+    if options.regression_tests:
+        print ".EXT", cmd
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     try:
         tmpf = str2tmp(''.join(p.stdout))
@@ -85,6 +90,8 @@ def cibdump2elem(section=None):
     else:
         cmd = cib_dump
     cmd = add_sudo(cmd)
+    if options.regression_tests:
+        print ".EXT", cmd
     p = subprocess.Popen(cmd,
                          shell=True,
                          stdout=subprocess.PIPE,

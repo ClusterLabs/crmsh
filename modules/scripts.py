@@ -51,12 +51,16 @@ def script_dirs():
     ret.append(os.path.join(config.path.sharedir, 'scripts'))
     return ret
 
+
 def _check_control_persist():
     '''
     Checks if ControlPersist is available. If so,
     we'll use it to make things faster.
     '''
-    cmd = subprocess.Popen('ssh -o ControlPersist'.split(),
+    cmd = 'ssh -o ControlPersist'.split()
+    if options.regression_tests:
+        print ".EXT", cmd
+    cmd = subprocess.Popen(cmd,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
     (out, err) = cmd.communicate()
@@ -334,7 +338,10 @@ def _set_controlpersist(opts):
 
 def _create_script_workdir(scriptdir, workdir):
     "Create workdir and copy contents of scriptdir into it"
-    if subprocess.call(["mkdir", "-p", os.path.dirname(workdir)], shell=False) != 0:
+    cmd = ["mkdir", "-p", os.path.dirname(workdir)]
+    if options.regression_tests:
+        print ".EXT", cmd
+    if subprocess.call(cmd, shell=False) != 0:
         raise ValueError("Failed to create temporary working directory")
     try:
         shutil.copytree(scriptdir, workdir)
