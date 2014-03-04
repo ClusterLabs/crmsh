@@ -180,7 +180,7 @@ class Cluster(command.UI):
         import time
         t0 = time.time()
         timeout = float(timeout)
-        cmd = 'crm_mon -s -1 2&>1 >/dev/null'
+        cmd = 'crm_mon -bD1 2&>1 >/dev/null'
         ret = utils.ext_cmd(cmd)
         while ret in (107, 64) and time.time() < t0 + timeout:
             time.sleep(1)
