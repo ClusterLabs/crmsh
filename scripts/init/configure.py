@@ -1,8 +1,60 @@
 #!/usr/bin/env python
 import sys
+import os
 import crm_script
 
 host = crm_script.host()
+hostinfo = crm_script.output(1)[host]
+
+
+def service_enabled(name):
+    for svc in hostinfo['services']:
+        if svc['name'] == name and svc['enabled'] == 'enabled':
+            return True
+    return False
+
+
+def service_active(name):
+    for svc in hostinfo['services']:
+        if svc['name'] == name and svc['active'] == 'active':
+            return True
+    return False
+
+SUSE_FW_TEMPLATE = """## Name: HAE cluster ports
+## Description: opens ports for HAE cluster services
+TCP="%(tcp)s"
+UDP="%(udp)s"
+"""
+
+
+def configure_firewall():
+    corosync_mcastport = crm_script.param('mcastport')
+    FW_CLUSTER = '/etc/sysconfig/SuSEfirewall2.d/services/cluster'
+
+    tcp_ports = '30865 5560 7630 21064'
+    udp_ports = corosync_mcastport
+
+    if service_enabled('SuSEfirewall2_init'):
+        if os.path.isfile(FW_CLUSTER):
+            import re
+            tmpl = open(FW_CLUSTER).read()
+            tmpl = re.sub(r'^TCP="(.*)"', 'TCP="%s"' % (tcp_ports), tmpl, flags=re.M)
+            tmpl = re.sub(r'^UDP="(.*)"', 'UDP="%s"' % (udp_ports), tmpl, flags=re.M)
+            with open(FW_CLUSTER, 'w') as f:
+                f.write(tmpl)
+        elif os.path.isdir(os.path.dirname(FW_CLUSTER)):
+            with open(FW_CLUSTER, 'w') as fwc:
+                fwc.write(SUSE_FW_TEMPLATE % {'tcp': tcp_ports,
+                                              'udp': udp_ports})
+        else:
+            # neither the cluster file nor the services
+            # directory exists
+            crm_script.exit_fail("SUSE firewall is configured but %s does not exist" %
+                                 os.path.dirname(FW_CLUSTER))
+        if service_active('SuSEfirewall2_init'):
+            crm_script.service('SuSEfirewall2_init', 'restart')
+
+    # TODO: other platforms
 
 
 def run_install():
@@ -13,6 +65,8 @@ def run_install():
             crm_script.package(pkg, 'latest')
         except Exception, e:
             crm_script.exit_fail("Failed to install %s: %s" % (pkg, e))
+
+    configure_firewall()
 
     crm_script.exit_ok(True)
 
@@ -27,7 +81,7 @@ def make_bindnetaddr():
     iface = crm_script.param('iface')
     if isinstance(iface, dict):
         iface = iface[host]
-    interfaces = crm_script.output(1)[host]['net']['interfaces']
+    interfaces = hostinfo['net']['interfaces']
     if not iface:
         for info in interfaces:
             if info.get('Destination') == '0.0.0.0':
