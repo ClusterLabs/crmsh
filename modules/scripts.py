@@ -304,6 +304,8 @@ def _parse_parameters(name, args, main):
     _filter_dict(params, 'dry_run', utils.is_boolean_true)
     _filter_dict(params, 'sudo', utils.is_boolean_true)
     _filter_dict(params, 'statefile', lambda x: (x and os.path.abspath(x)) or x)
+    if config.core.debug:
+        params['debug'] = True
     return params
 
 
@@ -434,9 +436,8 @@ class RunStep(object):
         cmdline = 'cd "%s"; ./%s' % (self.workdir, scall)
         if config.core.debug:
             import pprint
-            print "step:", sname, stype, scall
-            print "cmdline:", cmdline
-            print "data:"
+            print "** %s [%s] - %s" % (sname, stype, scall)
+            print cmdline
             pprint.pprint(self.data)
         return cmdline
 
@@ -624,7 +625,10 @@ def _run_cleanup(hosts, workdir, opts):
                                                  workdir),
                                       opts).iteritems():
             if isinstance(result, pssh.Error):
-                err_buf.warning("[%s]: Failed to clean up %s" % (host, workdir))
+                err_buf.warning("[%s]: Failed to clean up %s: %s" % (host, workdir, result))
+            else:
+                rc, out, err = result
+                print out
     if workdir and os.path.isdir(workdir):
         shutil.rmtree(workdir)
 
@@ -670,5 +674,4 @@ def run(name, args):
         traceback.print_exc()
         raise ValueError("Internal error while running %s: %s" % (name, e))
     finally:
-        if not config.core.debug:
-            _run_cleanup(hosts, workdir, opts)
+        _run_cleanup(hosts, workdir, opts)

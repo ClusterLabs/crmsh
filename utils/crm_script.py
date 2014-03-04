@@ -60,10 +60,40 @@ def exit_ok(data):
 def is_true(s):
     if s in (True, False):
         return s
-    return s.lower() in ('yes', 'true', '1', 'on')
+    return isinstance(s, basestring) and s.lower() in ('yes', 'true', '1', 'on')
+
+
+_debug_enabled = None
+
+
+def debug_enabled():
+    global _debug_enabled
+    if _debug_enabled is None:
+        _debug_enabled = is_true(param('debug'))
+    return _debug_enabled
+
+
+def info(msg):
+    "writes msg to log"
+    with open('./crm_script.debug', 'a') as dbglog:
+        dbglog.write('%s' % (msg))
+
+
+def debug(msg):
+    "writes msg to log and syslog if debug is enabled"
+    if debug_enabled():
+        try:
+            with open('./crm_script.debug', 'a') as dbglog:
+                dbglog.write('%s\n' % (msg))
+            import syslog
+            syslog.openlog("crmsh", 0, syslog.LOG_USER)
+            syslog.syslog(syslog.LOG_NOTICE, unicode(msg).encode('utf8'))
+        except:
+            pass
 
 
 def call(cmd, shell=False):
+    debug("crm_script(call): %s" % (cmd))
     p = proc.Popen(cmd, shell=shell, stdin=None, stdout=proc.PIPE, stderr=proc.PIPE)
     out, err = p.communicate()
     return p.returncode, out.strip(), err.strip()
@@ -72,6 +102,7 @@ def call(cmd, shell=False):
 def sudo_call(cmd, shell=False):
     if getpass.getuser() == 'root' or not is_true(param('sudo')) or not _stdin_data.get('sudo'):
         return call(cmd, shell=shell)
+    debug("crm_script(sudo_call): %s" % (cmd))
     os.unsetenv('SSH_ASKPASS')
     call(['sudo', '-k'], shell=False)
     sudo_prompt = 'crm_script_sudo_prompt'
@@ -139,3 +170,4 @@ def save_template(template, dest, **kwargs):
             f.write(tmpl)
     except Exception, e:
         raise IOError("Failed to write %s from template %s: %s" % (dest, template, e))
+    debug("crm_script(save_template): wrote %s" % (dest))

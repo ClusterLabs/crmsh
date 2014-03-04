@@ -16,6 +16,8 @@ for f in sys.argv[1:]:
         if os.path.isfile(f):
             os.remove(f)
         elif os.path.isdir(f):
+            if os.path.isfile(os.path.join(f, 'crm_script.debug')):
+                print open(os.path.join(f, 'crm_script.debug')).read()
             shutil.rmtree(f)
     except OSError, e:
         errors.append(e)
