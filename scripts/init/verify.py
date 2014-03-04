@@ -132,7 +132,7 @@ def select_interfaces(user_iface, data):
                 if i.get('Destination') == 'default':
                     selections[host] = i['Iface']
 
-    def invalid(iface):
+    def invalid(host, iface):
         for i in data[host]['net']['interfaces']:
             if i['Iface'] == iface:
                 return False
@@ -182,7 +182,7 @@ def make_mcastaddr():
     import random
     random.seed()
     b, c, d = random.randint(1, 254), random.randint(1, 254), random.randint(1, 254)
-    return "%02x.%02x.%02x.%02x" % (239, b, c, d)
+    return "%d.%d.%d.%d" % (239, b, c, d)
 
 try:
     for host, info in data.iteritems():

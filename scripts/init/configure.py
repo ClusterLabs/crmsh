@@ -34,7 +34,7 @@ def make_bindnetaddr():
             crm_script.fail_exit("Could not discover appropriate bindnetaddr")
         ip = ip.split('.')
         ip[3] = 0
-        return '.'.join(ip)
+        return '.'.join(str(x) for x in ip)
     try:
         for info in crm_script.output(1)[host]['net']['interfaces']:
             if info.get('Iface') == iface and info.get('Destination').endswith('.0'):
@@ -59,7 +59,9 @@ def run_corosync():
 """ % (node, i + 1)
 
     quorum_txt = ""
-    if len(nodelist) < 3:
+    if len(nodelist) == 1:
+        quorum_txt = ''
+    if len(nodelist) == 2:
         quorum_txt = """    two_node: 1
 """
     else:
@@ -67,8 +69,8 @@ def run_corosync():
     expected_votes: %s
 """ % ((len(nodelist) / 2) + 1)
 
-    tmpl = open('./corosync.template').read()
-    tmpl % {
+    tmpl = open('./corosync.conf.template').read()
+    tmpl = tmpl % {
         'bindnetaddr': make_bindnetaddr(),
         'mcastaddr': crm_script.param('mcastaddr'),
         'mcastport': crm_script.param('mcastport'),
