@@ -22,6 +22,8 @@ from singletonmixin import Singleton
 import clidisplay
 import options
 
+ERR_STREAM = sys.stderr
+
 
 class ErrorBuffer(Singleton):
     '''
@@ -44,7 +46,10 @@ class ErrorBuffer(Singleton):
 
     def release(self):
         if self.msg_list:
-            print >> sys.stderr, '\n'.join(self.msg_list)
+            if ERR_STREAM:
+                print >> ERR_STREAM, '\n'.join(self.msg_list)
+            else:
+                print '\n'.join(self.msg_list)
             if not options.batch:
                 try:
                     raw_input("Press enter to continue... ")
@@ -53,11 +58,13 @@ class ErrorBuffer(Singleton):
             self.msg_list = []
         self.mode = "immediate"
 
-    def writemsg(self, msg, to=sys.stderr):
+    def writemsg(self, msg, to=None):
+        if to is None:
+            to = ERR_STREAM
         if msg.endswith('\n'):
             msg = msg[:-1]
         if self.mode == "immediate":
-            if options.regression_tests:
+            if options.regression_tests or not to:
                 print msg
             else:
                 print >> to, msg
@@ -84,7 +91,7 @@ class ErrorBuffer(Singleton):
         else:
             return s
 
-    def _prefix(self, pfx, s, to=sys.stderr):
+    def _prefix(self, pfx, s, to=None):
         self.writemsg(self._render("%s: %s" % (pfx, self.add_lineno(s))), to=to)
 
     def ok(self, s):
