@@ -2474,11 +2474,13 @@ class CibFactory(Singleton):
         cibadmin_opts = force and "-P --force" or "-P"
         # produce a diff:
         # dump_new_conf | crm_diff -o self.cib_orig -n -
+        common_debug("Input: %s" % (etree.tostring(self.cib_elem)))
         rc, cib_diff = filter_string("crm_diff -o %s -n -" % tmpf,
                                      etree.tostring(self.cib_elem))
         if not cib_diff:
             common_err("crm_diff apparently failed to produce the diff (rc=%d)" % rc)
             return False
+        common_debug("Diff: %s" % (cib_diff))
         rc = pipe_string("%s %s" % (cib_piped, cibadmin_opts),
                          cib_diff)
         if rc != 0:
