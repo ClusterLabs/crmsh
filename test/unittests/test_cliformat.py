@@ -40,7 +40,7 @@ def mk_cli_list(cli):
         return cli
 
 
-def roundtrip(type, name, cli):
+def roundtrip(type, name, cli, debug=False):
     obj = factory.new_object(type, name)
     assert obj is not None
     cli_list = mk_cli_list(cli)
@@ -56,8 +56,13 @@ def roundtrip(type, name, cli):
     if s != cli:
         print "GOT:", s
         print "EXP:", cli
+    if debug:
+        print s
+        print cli
     assert obj.cli_use_validate()
     assert s == cli
+    if debug:
+        assert False
 
 
 def test_rscset():
@@ -93,3 +98,32 @@ def test_broken_colo():
     data = obj.repr_cli(format=-1)
     print data
     assert data == 'colocation colo-2 inf: [ vip1 vip2 sequential="true" ] [ apache:Master sequential="true" ]'
+
+
+def test_comment():
+    roundtrip('primitive', 'd0', "# comment 1\nprimitive d0 ocf:pacemaker:Dummy")
+
+
+def test_ordering():
+    xml = """<primitive id="dummy" class="ocf" provider="pacemaker" type="Dummy"> \
+  <operations> \
+    <op name="start" timeout="60" interval="0" id="dummy-start-0"/> \
+    <op name="stop" timeout="60" interval="0" id="dummy-stop-0"/> \
+    <op name="monitor" interval="60" timeout="30" id="dummy-monitor-60"/> \
+  </operations> \
+  <meta_attributes id="dummy-meta_attributes"> \
+    <nvpair id="dummy-meta_attributes-target-role" name="target-role"
+value="Stopped"/> \
+  </meta_attributes> \
+</primitive>"""
+    from lxml import etree
+    data = etree.fromstring(xml)
+    obj = factory.new_object('primitive', 'dummy')
+    assert obj is not None
+    obj.node = data
+    obj.set_id()
+    data = obj.repr_cli(format=-1)
+    print data
+    exp = 'primitive dummy ocf:pacemaker:Dummy op start timeout="60" interval="0" op stop timeout="60" interval="0" op monitor interval="60" timeout="30" meta target-role="Stopped"'
+    assert data == exp
+
