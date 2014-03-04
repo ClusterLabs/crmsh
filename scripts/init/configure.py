@@ -69,22 +69,17 @@ def run_corosync():
     expected_votes: %s
 """ % ((len(nodelist) / 2) + 1)
 
-    tmpl = open('./corosync.conf.template').read()
-    tmpl = tmpl % {
-        'bindnetaddr': make_bindnetaddr(),
-        'mcastaddr': crm_script.param('mcastaddr'),
-        'mcastport': crm_script.param('mcastport'),
-        'transport': crm_script.param('transport'),
-        'nodelist': nodelist_txt,
-        'quorum': quorum_txt
-    }
-
     try:
-        f = open('/etc/corosync/corosync.conf', 'w')
-        f.write(tmpl)
-        f.close()
+        crm_script.save_template('./corosync.conf.template',
+                                 '/etc/corosync/corosync.conf',
+                                 bindnetaddr=make_bindnetaddr(),
+                                 mcastaddr=crm_script.param('mcastaddr'),
+                                 mcastport=crm_script.param('mcastport'),
+                                 transport=crm_script.param('transport'),
+                                 nodelist=nodelist_txt,
+                                 quorum=quorum_txt)
     except Exception, e:
-        crm_script.exit_fail("Failed to write corosync.conf: %s" % (e))
+        crm_script.exit_fail(str(e))
 
     # start cluster
     rc, out, err = crm_script.call(['crm', 'cluster', 'start'])

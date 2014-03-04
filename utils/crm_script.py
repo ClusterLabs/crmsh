@@ -119,3 +119,23 @@ def rpmcheck(names):
     if rc != 0:
         raise IOError(err)
     return json.loads(out)
+
+
+def save_template(template, dest, **kwargs):
+    '''
+    1. Reads a template from <template>,
+    2. Replaces all template variables with those in <kwargs> and
+    3. writes the resulting file to <dest>
+    '''
+    import re
+    tmpl = open(template).read()
+    keys = re.findall(r'%\((\w+)\)s', tmpl, re.MULTILINE)
+    missing_keys = set(keys) - set(kwargs.keys())
+    if missing_keys:
+        raise ValueError("Missing template arguments: %s" % ', '.join(missing_keys))
+    tmpl = tmpl % kwargs
+    try:
+        with open(dest, 'w') as f:
+            f.write(tmpl)
+    except Exception, e:
+        raise IOError("Failed to write %s from template %s: %s" % (dest, template, e))
