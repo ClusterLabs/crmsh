@@ -1053,8 +1053,10 @@ def rset_convert(c_obj):
             # exchange the elements in colocations
             rsc = newnode.get("rsc")
             with_rsc = newnode.get("with-rsc")
-            newnode.set("rsc", with_rsc)
-            newnode.set("with-rsc", rsc)
+            if with_rsc is not None:
+                newnode.set("rsc", with_rsc)
+            if rsc is not None:
+                newnode.set("with-rsc", rsc)
 
 
 def rename_rscref_rset(c_obj, old_id, new_id):
