@@ -5,6 +5,16 @@ rc, _, err = crm_script.call(['crm', 'cluster', 'wait_for_startup', '30'])
 if rc != 0:
     crm_script.exit_fail("Cluster not responding")
 
+def check_for_primitives():
+    rc, out, err = crm_script.call("crm configure show type:primitive | grep primitive", shell=True)
+    if rc == 0 and out:
+        return True
+    return False
+
+if check_for_primitives():
+    crm_script.debug("Joined existing cluster - will not reconfigure")
+    crm_script.exit_ok(True)
+
 try:
     nodelist = crm_script.output(1).keys()
     if len(nodelist) < 3:

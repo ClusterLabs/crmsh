@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import crm_script
+import os
+import stat
 
 host = crm_script.host()
 others = crm_script.output(1).keys()
@@ -31,9 +33,12 @@ def check_results(pssh, results):
 
 
 def gen_authkey():
-    rc, out, err = crm_script.sudo_call(['corosync-keygen', '-l'])
-    if rc != 0:
-        crm_script.exit_fail("Error generating key: %s" % (err))
+    if not os.path.isfile(COROSYNC_AUTH):
+        rc, out, err = crm_script.sudo_call(['corosync-keygen', '-l'])
+        if rc != 0:
+            crm_script.exit_fail("Error generating key: %s" % (err))
+    elif stat.S_IMODE(os.stat(COROSYNC_AUTH)[stat.ST_MODE]) != stat.S_IRUSR:
+        os.chmod(COROSYNC_AUTH, stat.S_IRUSR)
 
 
 def run_copy():
