@@ -14,8 +14,10 @@ try:
     crm_script.save_template('./basic.cib.template',
                              './basic.cib',
                              no_quorum_policy=policy)
-except Exception, e:
-    crm_script.exit_fail(str(e))
+except IOError, e:
+    crm_script.exit_fail("IO error: %s" % (str(e)))
+except ValueError, e:
+    crm_script.exit_fail("Value error: %s" % (str(e)))
 
 rc, _, err = crm_script.call(['crm', 'configure', 'load', 'replace', './basic.cib'])
 if rc != 0:

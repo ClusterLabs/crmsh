@@ -65,7 +65,7 @@ def sys_info():
 def net_info():
     ret = {}
     interfaces = []
-    rc, out, err = crm_script.call(['netstat', '-r'])
+    rc, out, err = crm_script.call(['netstat', '-nr'])
     if rc == 0:
         data = [l.split() for l in out.split('\n')]
         if len(data) < 3:

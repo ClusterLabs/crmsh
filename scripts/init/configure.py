@@ -27,17 +27,18 @@ def make_bindnetaddr():
     iface = crm_script.param('iface')
     if isinstance(iface, dict):
         iface = iface[host]
+    interfaces = crm_script.output(1)[host]['net']['interfaces']
     if not iface:
-        try:
-            ip = crm_script.output(1)[host]['net']['hostname']['ip']
-        except:
-            crm_script.fail_exit("Could not discover appropriate bindnetaddr")
-        ip = ip.split('.')
-        ip[3] = 0
-        return '.'.join(str(x) for x in ip)
+        for info in interfaces:
+            if info.get('Destination') == '0.0.0.0':
+                iface = info.get('Iface')
+                break
     try:
-        for info in crm_script.output(1)[host]['net']['interfaces']:
-            if info.get('Iface') == iface and info.get('Destination').endswith('.0'):
+        for info in interfaces:
+            if info.get('Iface') != iface:
+                continue
+            dst = info.get('Destination')
+            if dst != '0.0.0.0':
                 return info.get('Destination')
     except:
         pass
