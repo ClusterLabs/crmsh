@@ -8,7 +8,7 @@ totem {
 	interface {
 		ringnumber: 0
 		bindnetaddr: %(bindnetaddr)s
-        mcastaddr: %(mcastaddr)s
+		mcastaddr: %(mcastaddr)s
 		mcastport: %(mcastport)s
 		ttl: 1
 	}
@@ -29,7 +29,7 @@ logging {
 }
 
 nodelist {
-    %(nodelist)s
+%(nodelist)s
 
 #    node {
 #		ring0_addr: 192.168.122.120
@@ -42,5 +42,5 @@ quorum {
 	# see also corosync.conf.5 and votequorum.5
 	#provider: corosync_votequorum
 	#expected_votes: 2
-    %(quorum)s
+%(quorum)s
 }
