@@ -65,6 +65,16 @@ def roundtrip(type, name, cli, debug=False):
         assert False
 
 
+def setup_func():
+    "set up test fixtures"
+    import idmgmt
+    idmgmt.IdMgmt.getInstance().clear()
+
+
+def teardown_func():
+    "tear down test fixtures"
+
+
 def test_rscset():
     roundtrip('colocation', 'foo', 'colocation foo inf: a b')
     roundtrip('order', 'order_2', 'order order_2 Mandatory: [ A B ] C')
@@ -98,6 +108,7 @@ def test_broken_colo():
     data = obj.repr_cli(format=-1)
     print data
     assert data == 'colocation colo-2 inf: [ vip1 vip2 sequential="true" ] [ apache:Master sequential="true" ]'
+    assert obj.cli_use_validate()
 
 
 def test_comment():
@@ -126,4 +137,29 @@ value="Stopped"/> \
     print data
     exp = 'primitive dummy ocf:pacemaker:Dummy op start timeout="60" interval="0" op stop timeout="60" interval="0" op monitor interval="60" timeout="30" meta target-role="Stopped"'
     assert data == exp
+    assert obj.cli_use_validate()
 
+
+def test_ordering2():
+    xml = """<primitive id="dummy2" class="ocf" provider="pacemaker" type="Dummy"> \
+  <meta_attributes id="dummy2-meta_attributes"> \
+    <nvpair id="dummy2-meta_attributes-target-role" name="target-role"
+value="Stopped"/> \
+  </meta_attributes> \
+  <operations> \
+    <op name="start" timeout="60" interval="0" id="dummy2-start-0"/> \
+    <op name="stop" timeout="60" interval="0" id="dummy2-stop-0"/> \
+    <op name="monitor" interval="60" timeout="30" id="dummy2-monitor-60"/> \
+  </operations> \
+</primitive>"""
+    from lxml import etree
+    data = etree.fromstring(xml)
+    obj = factory.new_object('primitive', 'dummy2')
+    assert obj is not None
+    obj.node = data
+    obj.set_id()
+    data = obj.repr_cli(format=-1)
+    print data
+    exp = 'primitive dummy2 ocf:pacemaker:Dummy meta target-role="Stopped" op start timeout="60" interval="0" op stop timeout="60" interval="0" op monitor interval="60" timeout="30"'
+    assert data == exp
+    assert obj.cli_use_validate()

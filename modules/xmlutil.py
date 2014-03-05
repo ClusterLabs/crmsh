@@ -84,6 +84,18 @@ def cibdump2tmp():
     return tmpf
 
 
+def cibtext2elem(cibtext):
+    """
+    Convert a text format CIB to
+    an XML tree.
+    """
+    try:
+        return etree.fromstring(cibtext)
+    except Exception, err:
+        cib_parse_err(err, cibtext)
+        return None
+
+
 def cibdump2elem(section=None):
     if section:
         cmd = "%s -o %s" % (cib_dump, section)
@@ -104,11 +116,7 @@ def cibdump2elem(section=None):
         common_err("running %s: %s" % (cmd, msg))
         return None
     if rc == 0:
-        try:
-            return etree.fromstring(outp)
-        except Exception, msg:
-            cib_parse_err(msg, outp)
-            return None
+        return cibtext2elem(outp)
     elif rc == vars.cib_no_section_rc:
         return None
     else:

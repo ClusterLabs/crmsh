@@ -54,6 +54,7 @@ from xmlutil import remove_id_used_attributes, get_top_cib_nodes, set_id_used_at
 from xmlutil import merge_attributes, is_cib_element, sanity_check_meta, add_missing_attr
 from xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
 from xmlutil import get_rsc_operations, delete_rscref, xml_cmp, lookup_node, RscState
+from xmlutil import cibtext2elem
 from cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
 from cliformat import cli_acl_rule, cli_pairs, rsc_set_constraint, get_kind
 from cliformat import cli_operations, simple_rsc_constraint, cli_rule, cli_format
@@ -1089,6 +1090,14 @@ class CibObject(object):
         The validation procedure:
         we convert xml to cli and then back to xml. If the two
         xml representations match then we can understand the xml.
+
+        Complication:
+        There are valid variations of the XML where the CLI syntax
+        cannot express the difference. For example, sub-tags in a
+        <primitive> are not ordered, but the CLI syntax can only express
+        one specific ordering.
+
+        This is usually not a problem unless mixing pcs and crmsh.
         '''
         if self.node is None:
             return True
@@ -2322,9 +2331,9 @@ class CibFactory(Singleton):
         if force or not validator or re.match("0[.]6", validator):
             return ext_cmd(cib_upgrade) == 0
 
-    def _import_cib(self):
+    def _import_cib(self, cib_elem):
         'Parse the current CIB (from cibadmin -Q).'
-        self.cib_elem = read_cib(cibdump2elem)
+        self.cib_elem = cib_elem
         if self.cib_elem is None:
             return False
         if not self.is_cib_supported():
@@ -2527,10 +2536,14 @@ class CibFactory(Singleton):
         for obj in self.cib_objects:
             self._update_links(obj)
 
-    def initialize(self):
+    def initialize(self, cib=None):
         if self.cib_elem is not None:
             return True
-        if not self._import_cib():
+        if cib is None:
+            cib = read_cib(cibdump2elem)
+        elif isinstance(cib, basestring):
+            cib = cibtext2elem(cib)
+        if not self._import_cib(cib):
             return False
         sanitize_cib(self.cib_elem)
         if cibadmin_can_patch():
