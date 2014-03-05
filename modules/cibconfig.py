@@ -34,7 +34,7 @@ from ra import get_ra, get_properties_list, get_pe_meta
 from schema import Schema, rng_attr_values, rng_attr_values_l
 from crm_gv import gv_types
 from msg import common_warn, common_err, common_debug, common_info, ErrorBuffer
-from msg import common_error, constraint_norefobj_err, obj_cli_warn, cib_parse_err, no_object_err
+from msg import common_error, constraint_norefobj_err, cib_parse_err, no_object_err
 from msg import missing_obj_err, common_warning, update_err, unsupported_err, empty_cib_err
 from msg import invalid_id_err, cib_ver_unsupported_err
 import utils
@@ -2523,7 +2523,7 @@ class CibFactory(Singleton):
             if not obj.cli_use_validate():
                 obj.nocli = True
                 obj.nocli_warn = False
-                obj_cli_warn(obj.obj_id)
+                common_warn("object %s cannot be represented in the CLI notation" % (obj.obj_id))
         for obj in self.cib_objects:
             self._update_links(obj)
 

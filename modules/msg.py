@@ -187,10 +187,6 @@ def no_such_obj_err(name):
     err_buf.error("%s object is not supported" % name)
 
 
-def obj_cli_warn(name):
-    err_buf.info("object %s cannot be represented in the CLI notation" % name)
-
-
 def missing_obj_err(node):
     err_buf.error("object %s:%s missing (shouldn't have happened)" %
                   (node.tag, node.get("id")))
