@@ -1282,7 +1282,7 @@ checker = doctestcompare.LXMLOutputChecker()
 def xml_cmp_unordered(a, b):
     "used by xml_cmp to compare xml trees without ordering"
     def fail(msg):
-        print "%s!=%s: %s" % (a.tag, b.tag, msg)
+        common_debug("%s!=%s: %s" % (a.tag, b.tag, msg))
         return False
 
     def tagflat(x):
