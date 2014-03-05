@@ -1110,8 +1110,6 @@ class CibObject(object):
         xml2 = self.cli2node(cli_text)
         if xml2 is None:
             return False
-        common_debug("a: %s" % etree.tostring(self.node))
-        common_debug("b: %s" % etree.tostring(xml2))
         rc = xml_cmp(self.node, xml2, show=True)
         return rc
 
