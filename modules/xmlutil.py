@@ -1285,8 +1285,14 @@ def xml_cmp_unordered(a, b):
         print "%s!=%s: %s" % (a.tag, b.tag, msg)
         return False
 
+    def tagflat(x):
+        if isinstance(x.tag, basestring):
+            return x.tag
+        return x.text
+
     def sorter(a, b):
-        return cmp('|'.join([a.tag, str(a.attrib)]), '|'.join([b.tag, str(b.attrib)]))
+        return cmp('|'.join([tagflat(a), str(a.attrib)]),
+                   '|'.join([tagflat(b), str(b.attrib)]))
 
     def safe_strip(text):
         "strip which handles None by returning ''"
