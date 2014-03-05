@@ -19,6 +19,11 @@
 .INP: 
 .INP: _test
 .INP: verify
+.EXT crm_resource --list-standards
+.EXT crm_resource --show-metadata stonith:heartbeat:ssh
+.EXT stonithd metadata
+.EXT crm_resource --show-metadata ocf:pacemaker:Dummy
+.EXT pengine metadata
 .INP: show
 node node1
 primitive d0 ocf:pacemaker:Dummy

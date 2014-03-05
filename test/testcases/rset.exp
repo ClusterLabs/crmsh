@@ -36,6 +36,12 @@ colocation c3 inf: d3 d1
 order o1 Serialize: d1 d3
 .INP: _test
 .INP: verify
+.EXT crm_resource --list-standards
+.EXT crm_resource --show-metadata stonith:heartbeat:ssh
+.EXT stonithd metadata
+.EXT crm_resource --show-metadata ocf:pacemaker:Dummy
+.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
+.EXT pengine metadata
 .INP: show
 node node1
 primitive d1 ocf:pacemaker:Dummy

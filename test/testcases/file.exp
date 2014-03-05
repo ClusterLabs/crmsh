@@ -14,6 +14,14 @@ property $id="cib-bootstrap-options" \
 	default-action-timeout="60s"
 .TRY configure erase nodes
 .TRY configure load replace sample.txt
+.EXT crm_resource --list-standards
+.EXT crm_resource --show-metadata ocf:pacemaker:Dummy
+.EXT crm_resource --show-metadata ocf:heartbeat:Delay
+.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT stonithd metadata
+.EXT crmd metadata
+.EXT pengine metadata
+.EXT cib metadata
 .EXT sed -i 's/60s/2m/' sample.txt
 .EXT sed -i '8a # comment' sample.txt
 .TRY Load update
@@ -21,6 +29,14 @@ property $id="cib-bootstrap-options" \
 .INP: delete m1 p1
 .INP: property cluster-recheck-interval="10m"
 .INP: load update sample.txt
+.EXT crm_resource --list-standards
+.EXT crm_resource --show-metadata ocf:pacemaker:Dummy
+.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT stonithd metadata
+.EXT crm_resource --show-metadata ocf:heartbeat:Delay
+.EXT crmd metadata
+.EXT pengine metadata
+.EXT cib metadata
 .TRY configure show
 node node1
 primitive p0 ocf:pacemaker:Dummy

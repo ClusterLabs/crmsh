@@ -47,6 +47,15 @@
 .INP: op_defaults $id=opsdef2 record-pending=true
 .INP: _test
 .INP: verify
+.EXT crm_resource --list-standards
+.EXT crm_resource --show-metadata stonith:heartbeat:ssh
+.EXT stonithd metadata
+.EXT crm_resource --show-metadata ocf:pacemaker:Dummy
+.EXT crm_resource --show-metadata ocf:heartbeat:Delay
+.EXT crm_resource --show-metadata ocf:pacemaker:Stateful
+.EXT pengine metadata
+.EXT crmd metadata
+.EXT cib metadata
 .INP: show
 node node1 \
 	attributes mem="16G"
