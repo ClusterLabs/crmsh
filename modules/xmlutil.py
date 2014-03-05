@@ -1279,6 +1279,35 @@ xml_hash_d = {
 checker = doctestcompare.LXMLOutputChecker()
 
 
+def xml_cmp_unordered(a, b):
+    "used by xml_cmp to compare xml trees without ordering"
+    def fail(msg):
+        print "%s!=%s: %s" % (a.tag, b.tag, msg)
+        return False
+
+    def sorter(a, b):
+        return cmp('|'.join([a.tag, str(a.attrib)]), '|'.join([b.tag, str(b.attrib)]))
+
+    def safe_strip(text):
+        "strip which handles None by returning ''"
+        if text is None:
+            return ''
+        return text.strip()
+
+    if a.tag != b.tag:
+        return fail("tags differ: %s != %s" % (a.tag, b.tag))
+    if a.attrib != b.attrib:
+        return fail("attributes differ: %s != %s" % (a.attrib, b.attrib))
+    if safe_strip(a.text) != safe_strip(b.text):
+        return fail("text differ %s != %s" % (repr(a.text), repr(b.text)))
+    if safe_strip(a.tail) != safe_strip(b.tail):
+        return fail("tails differ: %s != %s" % (a.tail, b.tail))
+    if len(a) != len(b):
+        return fail("number of children differ")
+    return not any(not xml_cmp_unordered(a, b) for a, b in
+                   zip(sorted(a, sorter), sorted(b, sorter)))
+
+
 def xml_cmp(n, m, show=False):
     if n.tag in xml_hash_d:
         n_hash_l = xml_hash_d[n.tag](n)
@@ -1290,7 +1319,8 @@ def xml_cmp(n, m, show=False):
             if n_hash_l[i] != m_hash_l[i]:
                 rc = False
     else:
-        rc = checker.compare_docs(n, m)
+        #rc = checker.compare_docs(n, m)
+        rc = xml_cmp_unordered(n, m)
     if not rc and show and config.core.debug:
         # somewhat strange, but that's how this works
         from doctest import Example
