@@ -630,8 +630,9 @@ def remove_dflt_attrs(e_list):
 
 def remove_text(e_list):
     for e in e_list:
-        e.text = None
-        e.tail = None
+        if not is_comment(e):
+            e.text = None
+            e.tail = None
 
 
 def sanitize_cib(doc):
@@ -1204,7 +1205,8 @@ def get_conf_elems(cib_elem, path):
 
 def get_first_conf_elem(cib_elem, path):
     try:
-        return get_conf_elems(cib_elem, path)[0]
+        elems = get_conf_elems(cib_elem, path)
+        return elems[0] if elems else None
     except IndexError:
         return None
 
