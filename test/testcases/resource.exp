@@ -3,6 +3,7 @@
 resource p0 is NOT running
 .SETENV showobj=p3
 .TRY resource start p3
+.EXT cibadmin -p -R -o resources
 .INP: configure
 .INP: _regtest on
 .INP: show xml p3
@@ -23,6 +24,7 @@ resource p0 is NOT running
 </cib>
 
 .TRY resource stop p3
+.EXT cibadmin -p -R -o resources
 .INP: configure
 .INP: _regtest on
 .INP: show xml p3
@@ -44,6 +46,7 @@ resource p0 is NOT running
 
 .SETENV showobj=c1
 .TRY resource manage c1
+.EXT cibadmin -p -R -o resources
 .INP: configure
 .INP: _regtest on
 .INP: show xml c1
@@ -65,6 +68,7 @@ resource p0 is NOT running
 </cib>
 
 .TRY resource unmanage c1
+.EXT cibadmin -p -R -o resources
 .INP: configure
 .INP: _regtest on
 .INP: show xml c1
@@ -297,6 +301,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource start g
+.EXT cibadmin -p -R -o resources
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -323,6 +328,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource start p0
+.EXT cibadmin -p -R -o resources
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -353,6 +359,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource stop g
+.EXT cibadmin -p -R -o resources
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -447,6 +454,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource start g
+.EXT cibadmin -p -R -o resources
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -475,6 +483,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource stop g
+.EXT cibadmin -p -R -o resources
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -499,6 +508,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource start cg
+.EXT cibadmin -p -R -o resources
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -523,6 +533,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource stop p0
+.EXT cibadmin -p -R -o resources
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -551,6 +562,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource start cg
+.EXT cibadmin -p -R -o resources
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -575,6 +587,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource stop cg
+.EXT cibadmin -p -R -o resources
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0

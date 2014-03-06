@@ -90,15 +90,24 @@ property $id="cib-bootstrap-options" \
 .INP: commit
 .TRY configure rsc_defaults $id="rsc_options" failure-timeout=10m
 .TRY configure filter "sed 's/2m/60s/'" cib-bootstrap-options
+.EXT crmd metadata
+.EXT pengine metadata
+.EXT cib metadata
 .TRY configure show rsc_options
 rsc_defaults $id="rsc_options" \
 	failure-timeout="10m"
 .TRY configure property stonith-enabled=true
+.EXT crmd metadata
+.EXT pengine metadata
+.EXT cib metadata
 .TRY configure show cib-bootstrap-options
 property $id="cib-bootstrap-options" \
 	default-action-timeout="60s" \
 	stonith-enabled="true"
 .TRY configure filter 'sed "s/stonith-enabled=.true.//"'
+.EXT crmd metadata
+.EXT pengine metadata
+.EXT cib metadata
 .TRY configure show cib-bootstrap-options
 property $id="cib-bootstrap-options" \
 	default-action-timeout="60s"
