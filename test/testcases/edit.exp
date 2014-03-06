@@ -52,6 +52,13 @@ ERROR: 44: object nosuch does not exist
 .INP: filter "sed 's/^/# this is a comment\n/'" loc-d1
 .INP: _test
 .INP: verify
+.EXT crm_resource --list-standards
+.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT stonithd metadata
+.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
+.EXT crmd metadata
+.EXT pengine metadata
+.EXT cib metadata
 .INP: show
 node node1 \
 	attributes mem="16G"
