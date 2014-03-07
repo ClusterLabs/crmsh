@@ -1293,8 +1293,8 @@ def xml_cmp_unordered(a, b):
         return x.text
 
     def sorter(a, b):
-        return cmp('|'.join([tagflat(a), str(a.attrib)]),
-                   '|'.join([tagflat(b), str(b.attrib)]))
+        return cmp('|'.join([tagflat(a), '|'.join(sorted(a.attrib.keys()))]),
+                   '|'.join([tagflat(b), '|'.join(sorted(b.attrib.keys()))]))
 
     def safe_strip(text):
         "strip which handles None by returning ''"
@@ -1304,7 +1304,7 @@ def xml_cmp_unordered(a, b):
 
     if a.tag != b.tag:
         return fail("tags differ: %s != %s" % (a.tag, b.tag))
-    if a.attrib != b.attrib:
+    if '|'.join(sorted(a.attrib.keys())) != '|'.join(sorted(b.attrib.keys())):
         return fail("attributes differ: %s != %s" % (a.attrib, b.attrib))
     if safe_strip(a.text) != safe_strip(b.text):
         return fail("text differ %s != %s" % (repr(a.text), repr(b.text)))
