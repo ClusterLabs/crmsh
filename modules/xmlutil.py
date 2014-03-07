@@ -613,8 +613,9 @@ def remove_dflt_attrs(e_list):
 
 def remove_text(e_list):
     for e in e_list:
-        e.text = None
-        e.tail = None
+        if not is_comment(e):
+            e.text = None
+            e.tail = None
 
 
 def sanitize_cib(doc):
