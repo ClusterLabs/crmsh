@@ -410,15 +410,15 @@ class CibObjectSet(object):
         not_allowed = id_set & self.locked_ids
         rscstat = RscState()
         if not_allowed:
-            common_err("elements %s already exist" %
-                       ','.join(list(not_allowed)))
+            common_err("Elements %s already exist" %
+                       ', '.join(list(not_allowed)))
             rc = False
         delete_set = self.obj_ids - id_set
         cannot_delete = [x for x in delete_set
                          if not rscstat.can_delete(x)]
         if cannot_delete:
-            common_err("cannot delete running resources: %s" %
-                       ','.join(cannot_delete))
+            common_err("Cannot delete running resources: %s" %
+                       ', '.join(cannot_delete))
             rc = False
         return rc
 
@@ -526,6 +526,7 @@ class CibObjectSetCli(CibObjectSet):
             return rc
         mk_set = id_set - self.obj_ids
         upd_set = id_set & self.obj_ids
+
         rc = cib_factory.set_update(edit_d, mk_set, upd_set, del_set,
                                     upd_type="cli", method=method)
         if not rc:
@@ -3139,20 +3140,25 @@ class CibFactory(Singleton):
         for cli in processing_sort_cli([edit_d[x] for x in mk_set]):
             obj = self.create_from_cli(cli)
             if not obj:
+                common_debug("create_from_cli '%s' failed" % (cli))
                 return False
             test_l.append(obj)
         for id in upd_set:
             obj = self.find_object(id)
             if not obj:
+                common_debug("%s not found!" % (id))
                 return False
             if not self.update_from_cli(obj, edit_d[id], method):
+                common_debug("update_from_cli failed: %s, %s, %s" % (obj, edit_d[id], method))
                 return False
             test_l.append(obj)
         if not self.delete(*list(del_set)):
+            common_debug("delete %s failed" % (list(del_set)))
             return False
         rc = True
         for obj in test_l:
             if not self.test_element(obj):
+                common_debug("test_element failed for %s" % (obj))
                 rc = False
         return rc & self.check_structure()
 
