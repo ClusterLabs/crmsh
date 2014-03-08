@@ -658,8 +658,6 @@ def run(name, args):
     workdir = _generate_workdir_name()
     main, filename, script_dir = _open_script(name)
     params = _parse_parameters(name, args, main)
-    if params['askpass'] and not utils.is_program('sshpass'):
-        raise ValueError("The program 'sshpass' is required to use SSH password login.")
     hosts = params['nodes']
     err_buf.info(main['name'])
     err_buf.info("Nodes: " + ', '.join([x[0] for x in hosts]))
