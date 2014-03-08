@@ -1298,7 +1298,7 @@ def xml_equals_unordered(a, b):
 
     if a.tag != b.tag:
         return fail("tags differ: %s != %s" % (a.tag, b.tag))
-    if '|'.join(sorted(a.attrib.keys())) != '|'.join(sorted(b.attrib.keys())):
+    if a.attrib != b.attrib:
         return fail("attributes differ: %s != %s" % (a.attrib, b.attrib))
     if safe_strip(a.text) != safe_strip(b.text):
         return fail("text differ %s != %s" % (repr(a.text), repr(b.text)))
