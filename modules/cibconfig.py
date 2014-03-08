@@ -53,7 +53,7 @@ from xmlutil import cibdump2elem, processing_sort, get_rsc_ref_ids, merge_tmpl_i
 from xmlutil import remove_id_used_attributes, get_top_cib_nodes, set_id_used_attr
 from xmlutil import merge_attributes, is_cib_element, sanity_check_meta, add_missing_attr
 from xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
-from xmlutil import get_rsc_operations, delete_rscref, xml_cmp, lookup_node, RscState
+from xmlutil import get_rsc_operations, delete_rscref, xml_equals, lookup_node, RscState
 from xmlutil import cibtext2elem
 from cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
 from cliformat import cli_acl_rule, cli_pairs, rsc_set_constraint, get_kind
@@ -1110,8 +1110,7 @@ class CibObject(object):
         xml2 = self.cli2node(cli_text)
         if xml2 is None:
             return False
-        rc = xml_cmp(self.node, xml2, show=True)
-        return rc
+        return xml_equals(self.node, xml2, show=True)
 
     def _verify_op_attributes(self, op_node):
         '''
@@ -3098,7 +3097,7 @@ class CibFactory(Singleton):
             id_store.replace_xml(newnode, obj.node)
             return False
         oldnode = obj.node
-        if xml_cmp(oldnode, newnode):
+        if xml_equals(oldnode, newnode):
             if newnode.getparent() is not None:
                 newnode.getparent().remove(newnode)
             return True  # the new and the old versions are equal

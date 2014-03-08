@@ -1281,26 +1281,20 @@ xml_hash_d = {
 checker = doctestcompare.LXMLOutputChecker()
 
 
-def xml_cmp_unordered(a, b):
-    "used by xml_cmp to compare xml trees without ordering"
+def xml_equals_unordered(a, b):
+    "used by xml_equals to compare xml trees without ordering"
     def fail(msg):
         common_debug("%s!=%s: %s" % (a.tag, b.tag, msg))
         return False
 
     def tagflat(x):
-        if isinstance(x.tag, basestring):
-            return x.tag
-        return x.text
+        return isinstance(x.tag, basestring) and x.tag or x.text
 
-    def sorter(a, b):
-        return cmp('|'.join([tagflat(a), '|'.join(sorted(a.attrib.keys()))]),
-                   '|'.join([tagflat(b), '|'.join(sorted(b.attrib.keys()))]))
+    def sortby(v):
+        return tagflat(v) + ''.join(sorted(v.attrib.keys()))
 
     def safe_strip(text):
-        "strip which handles None by returning ''"
-        if text is None:
-            return ''
-        return text.strip()
+        return text is not None and text.strip() or ''
 
     if a.tag != b.tag:
         return fail("tags differ: %s != %s" % (a.tag, b.tag))
@@ -1312,11 +1306,13 @@ def xml_cmp_unordered(a, b):
         return fail("tails differ: %s != %s" % (a.tail, b.tail))
     if len(a) != len(b):
         return fail("number of children differ")
-    return not any(not xml_cmp_unordered(a, b) for a, b in
-                   zip(sorted(a, sorter), sorted(b, sorter)))
+    sorted_children = zip(sorted(a, key=sortby), sorted(b, key=sortby))
+    if sorted_children:
+        return all(xml_equals_unordered(a, b) for a, b in sorted_children)
+    return True
 
 
-def xml_cmp(n, m, show=False):
+def xml_equals(n, m, show=False):
     if n.tag in xml_hash_d:
         n_hash_l = xml_hash_d[n.tag](n)
         m_hash_l = xml_hash_d[n.tag](m)
@@ -1328,7 +1324,7 @@ def xml_cmp(n, m, show=False):
                 rc = False
     else:
         #rc = checker.compare_docs(n, m)
-        rc = xml_cmp_unordered(n, m)
+        rc = xml_equals_unordered(n, m)
     if not rc and show and config.core.debug:
         # somewhat strange, but that's how this works
         from doctest import Example
