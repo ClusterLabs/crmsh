@@ -225,3 +225,32 @@ def test_comments():
     xmlutil.sanitize_cib(elems)
     assert etree.tostring(elems).count("COMMENT TEXT") == 3
 
+
+def test_eq1():
+    xml1 = """<cluster_property_set id="cib-bootstrap-options">
+    <nvpair id="cib-bootstrap-options-stonith-enabled" name="stonith-enabled" value="true"></nvpair>
+    <nvpair id="cib-bootstrap-options-stonith-timeout" name="stonith-timeout" value="180"></nvpair>
+    <nvpair id="cib-bootstrap-options-symmetric-cluster" name="symmetric-cluster" value="false"></nvpair>
+    <nvpair id="cib-bootstrap-options-no-quorum-policy" name="no-quorum-policy" value="freeze"></nvpair>
+    <nvpair id="cib-bootstrap-options-batch-limit" name="batch-limit" value="20"></nvpair>
+    <nvpair id="cib-bootstrap-options-dc-version" name="dc-version" value="1.1.10-c1a326d"></nvpair>
+    <nvpair id="cib-bootstrap-options-cluster-infrastructure" name="cluster-infrastructure" value="corosync"></nvpair>
+    <nvpair id="cib-bootstrap-options-last-lrm-refresh" name="last-lrm-refresh" value="1391433789"></nvpair>
+    <nvpair id="cib-bootstrap-options-is-managed-default" name="is-managed-default" value="true"></nvpair>
+  </cluster_property_set>
+  """
+    xml2 = """<cluster_property_set id="cib-bootstrap-options">
+    <nvpair id="cib-bootstrap-options-stonith-enabled" name="stonith-enabled" value="true"></nvpair>
+    <nvpair id="cib-bootstrap-options-stonith-timeout" name="stonith-timeout" value="180"></nvpair>
+    <nvpair id="cib-bootstrap-options-symmetric-cluster" name="symmetric-cluster" value="false"></nvpair>
+    <nvpair id="cib-bootstrap-options-no-quorum-policy" name="no-quorum-policy" value="freeze"></nvpair>
+    <nvpair id="cib-bootstrap-options-batch-limit" name="batch-limit" value="20"></nvpair>
+    <nvpair id="cib-bootstrap-options-dc-version" name="dc-version" value="1.1.10-c1a326d"></nvpair>
+    <nvpair id="cib-bootstrap-options-cluster-infrastructure" name="cluster-infrastructure" value="corosync"></nvpair>
+    <nvpair id="cib-bootstrap-options-last-lrm-refresh" name="last-lrm-refresh" value="1391433789"></nvpair>
+    <nvpair id="cib-bootstrap-options-is-managed-default" name="is-managed-default" value="true"></nvpair>
+  </cluster_property_set>
+    """
+    e1 = etree.fromstring(xml1)
+    e2 = etree.fromstring(xml2)
+    assert xmlutil.xml_equals(e1, e2, show=True)
