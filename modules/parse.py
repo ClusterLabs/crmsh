@@ -459,7 +459,7 @@ class ResourceParser(BaseParser):
 
 class ConstraintParser(BaseParser):
     _SCORE_RE = re.compile(r"([^:]+):$")
-    _ROLE_RE = re.compile(r"\$role=(.+)$", re.IGNORECASE)
+    _ROLE_RE = re.compile(r"\$?role=(.+)$", re.IGNORECASE)
     _ROLE2_RE = re.compile(r"role=(.+)$", re.IGNORECASE)
     _BOOLOP_RE = re.compile(r'(%s)$' % ('|'.join(vars.boolean_ops)), re.IGNORECASE)
     _UNARYOP_RE = re.compile(r'(%s)$' % ('|'.join(vars.unary_ops)), re.IGNORECASE)

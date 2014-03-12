@@ -203,6 +203,11 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.node, 'bar')
         #print out.to_list()
 
+        out = self.parser.parse('location loc-1 thing rule role=slave -inf: #uname eq madrid')
+        self.assertEqual(out.id, 'loc-1')
+        self.assertEqual(out.resource, 'thing')
+        self.assertEqual(out.score, None)
+
     def test_colocation(self):
         out = self.parser.parse('colocation col-1 inf: foo:master ( bar wiz sequential=yes )')
         self.assertEqual(out.id, 'col-1')
