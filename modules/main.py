@@ -217,7 +217,7 @@ err_buf = ErrorBuffer.getInstance()
 
 def set_interactive():
     '''Set the interactive option only if we're on a tty.'''
-    if sys.stdin.isatty():
+    if utils.can_ask():
         options.interactive = True
 
 
@@ -422,7 +422,7 @@ def run():
 
         load_rc(context, userdir.RC_FILE)
         atexit.register(exit_handler)
-        options.interactive = sys.stdin.isatty()
+        options.interactive = utils.can_ask()
         if not options.interactive:
             err_buf.reset_lineno()
             options.batch = True

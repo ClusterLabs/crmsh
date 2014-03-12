@@ -232,7 +232,7 @@ class Context(object):
 
     def _set_interactive(self):
         '''Set the interactive option only if we're on a tty.'''
-        if sys.stdin.isatty():
+        if utils.can_ask():
             options.interactive = True
 
     def execute_command(self):

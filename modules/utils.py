@@ -73,22 +73,38 @@ def is_program(prog):
             return True
 
 
+def can_ask():
+    """
+    Is user-interactivity possible?
+    Checks if connected to a TTY.
+    """
+    return sys.stdin.isatty()
+
+
 def ask(msg):
-    # if there's no terminal, no use asking and default to "no"
-    if not sys.stdin.isatty():
+    """
+    Ask for user confirmation.
+    If core.force is true, always return true.
+    If not interactive and core.force is false, always return false.
+    """
+    if config.core.force:
+        common_info("%s [YES]" % (msg))
+        return True
+    if not can_ask():
         return False
-    print_msg = True
+
+    msg += ' '
+    if msg.endswith('? '):
+        msg = msg[:-2] + ' ([y]/n)? '
+
     while True:
         try:
-            ans = raw_input(msg + ' ')
+            ans = raw_input(msg)
         except EOFError:
             ans = 'n'
-        if not ans or ans[0].lower() not in ('n', 'y'):
-            if print_msg:
-                print "Please answer with y[es] or n[o]"
-                print_msg = False
-        else:
-            return ans[0].lower() == 'y'
+        ans = ans[0].lower()
+        if ans in 'yn':
+            return ans == 'y'
 
 # holds part of line before \ split
 # for a multi-line input
@@ -872,7 +888,7 @@ def page_string(s):
     w, h = get_winsize()
     if not need_pager(s, w, h):
         print term_render(s)
-    elif not config.core.pager or not sys.stdout.isatty() or options.batch:
+    elif not config.core.pager or not can_ask() or options.batch:
         print term_render(s)
     else:
         opts = ""
