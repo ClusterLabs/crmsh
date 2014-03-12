@@ -32,7 +32,7 @@ def configure_firewall():
     FW_CLUSTER = '/etc/sysconfig/SuSEfirewall2.d/services/cluster'
 
     tcp_ports = '30865 5560 7630 21064'
-    udp_ports = corosync_mcastport
+    udp_ports = '%s %s' % (corosync_mcastport, int(corosync_mcastport) - 1)
 
     if service_enabled('SuSEfirewall2_init'):
         if os.path.isfile(FW_CLUSTER):
