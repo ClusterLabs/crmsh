@@ -1270,15 +1270,7 @@ def get_set_nodes(e, setname, create=0):
     return l
 
 
-def xml_noorder_hash(n):
-    return sorted([hash(etree.tostring(x))
-                   for x in n.iterchildren()])
-
-xml_hash_d = {
-    "fencing-topology": xml_noorder_hash,
-}
-
-checker = doctestcompare.LXMLOutputChecker()
+_checker = doctestcompare.LXMLOutputChecker()
 
 
 def xml_equals_unordered(a, b):
@@ -1291,7 +1283,7 @@ def xml_equals_unordered(a, b):
         return isinstance(x.tag, basestring) and x.tag or x.text
 
     def sortby(v):
-        return tagflat(v) + ''.join(sorted(v.attrib.keys()))
+        return tagflat(v) + ''.join(sorted(v.attrib.keys() + v.attrib.values()))
 
     def safe_strip(text):
         return text is not None and text.strip() or ''
@@ -1313,24 +1305,13 @@ def xml_equals_unordered(a, b):
 
 
 def xml_equals(n, m, show=False):
-    if n.tag in xml_hash_d:
-        n_hash_l = xml_hash_d[n.tag](n)
-        m_hash_l = xml_hash_d[n.tag](m)
-        rc = len(n_hash_l) == len(m_hash_l)
-        for i in range(len(n_hash_l)):
-            if not rc:
-                break
-            if n_hash_l[i] != m_hash_l[i]:
-                rc = False
-    else:
-        #rc = checker.compare_docs(n, m)
-        rc = xml_equals_unordered(n, m)
+    rc = xml_equals_unordered(n, m)
     if not rc and show and config.core.debug:
         # somewhat strange, but that's how this works
         from doctest import Example
         example = Example("etree.tostring(n)", etree.tostring(n))
         got = etree.tostring(m)
-        print checker.output_difference(example, got, 0)
+        print _checker.output_difference(example, got, 0)
     return rc
 
 

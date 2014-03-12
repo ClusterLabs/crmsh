@@ -19,6 +19,7 @@
 import utils
 import parse
 import cibconfig
+from lxml import etree
 from test_parse import MockValidation
 
 factory = cibconfig.cib_factory
@@ -99,7 +100,6 @@ def test_broken_colo():
     <resource_ref id="apache"/>
   </resource_set>
 </rsc_colocation>"""
-    from lxml import etree
     data = etree.fromstring(xml)
     obj = factory.new_object('colocation', 'colo-2')
     assert obj is not None
@@ -127,7 +127,6 @@ def test_ordering():
 value="Stopped"/> \
   </meta_attributes> \
 </primitive>"""
-    from lxml import etree
     data = etree.fromstring(xml)
     obj = factory.new_object('primitive', 'dummy')
     assert obj is not None
@@ -152,7 +151,6 @@ value="Stopped"/> \
     <op name="monitor" interval="60" timeout="30" id="dummy2-monitor-60"/> \
   </operations> \
 </primitive>"""
-    from lxml import etree
     data = etree.fromstring(xml)
     obj = factory.new_object('primitive', 'dummy2')
     assert obj is not None
@@ -163,3 +161,24 @@ value="Stopped"/> \
     exp = 'primitive dummy2 ocf:pacemaker:Dummy meta target-role="Stopped" op start timeout="60" interval="0" op stop timeout="60" interval="0" op monitor interval="60" timeout="30"'
     assert data == exp
     assert obj.cli_use_validate()
+
+def test_fencing():
+    xml = """<fencing-topology>
+    <fencing-level devices="st1" id="fencing" index="1"
+target="ha-three"></fencing-level>
+    <fencing-level devices="st1" id="fencing-0" index="1"
+target="ha-two"></fencing-level>
+    <fencing-level devices="st1" id="fencing-1" index="1"
+target="ha-one"></fencing-level>
+  </fencing-topology>"""
+    data = etree.fromstring(xml)
+    obj = factory.new_object('fencing_topology', 'st1')
+    assert obj is not None
+    obj.node = data
+    obj.set_id()
+    data = obj.repr_cli(format=-1)
+    print data
+    exp = 'fencing_topology st1'
+    assert data == exp
+    assert obj.cli_use_validate()
+
