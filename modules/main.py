@@ -180,13 +180,12 @@ usage:
         Print Pacemaker version and build information (Mercurial Hg
         changeset hash).
 
-    -R, --regression-tests::
-        Run in the regression test mode. Used mainly by the
-        regression testing suite.
-
     -d, --debug::
-        Print some debug information. Used by developers. [Not yet
-        refined enough to print useful information for other users.]
+        Print verbose debugging information.
+
+    -R, --regression-tests::
+        Enables extra verbose trace logging used by the regression
+        tests. Logs all external calls made by crmsh.
 
     --scriptdir='DIR'::
         Extra directory where crm looks for cluster scripts. Can be
