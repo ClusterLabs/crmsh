@@ -666,7 +666,11 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     common_debug("invoke: %s" % ptest)
     rc, s = get_stdout(ptest, input_s=graph_s)
     if rc != 0:
-        common_warn("%s exited with %d" % (ptest, rc))
+        common_debug("%s exited with %d" % (ptest, rc))
+        if actions and rc == 1:
+            common_warn("No actions found.")
+        else:
+            common_warn("Simulation was unsuccessful (RC=%d)." % (rc))
     if dotfile:
         if os.path.getsize(dotfile) > 0:
             show_dot_graph(dotfile)
