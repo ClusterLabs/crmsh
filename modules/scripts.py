@@ -67,6 +67,20 @@ def _check_control_persist():
     return "Bad configuration option" not in err
 
 
+def _pssh_call(hosts, cmd, opts):
+    "pssh.call with debug logging"
+    if config.core.debug or options.regression_tests:
+        err_buf.debug("pssh.call(%s, %s)" % (repr(hosts), cmd))
+    return pssh.call(hosts, cmd, opts)
+
+
+def _pssh_copy(hosts, src, dst, opts):
+    "pssh.copy with debug logging"
+    if config.core.debug or options.regression_tests:
+        err_buf.debug("pssh.copy(%s, %s, %s)" % (repr(hosts), src, dst))
+    return pssh.copy(hosts, src, dst, opts)
+
+
 def _generate_workdir_name():
     '''
     Generate a temporary folder name to use while
@@ -250,7 +264,7 @@ def _make_options(params):
         'PasswordAuthentication=no',
         'StrictHostKeyChecking=no',
         'ControlPersist=no']
-    if config.core.debug:
+    if options.regression_tests:
         opts.ssh_extra += ['-vvv']
     return opts
 
@@ -322,6 +336,9 @@ def _extract_localnode(hosts):
             hosts2.append((h, p, u))
         else:
             local_node = (h, p, u)
+    err_buf.debug("Local node: %s, Remote hosts: %s" % (
+        local_node,
+        ', '.join(h[0] for h in hosts2)))
     return local_node, hosts2
 
 
@@ -366,22 +383,24 @@ def _copy_utils(dst):
 def _create_remote_workdirs(hosts, path, opts):
     "Create workdirs on remote hosts"
     ok = True
-    for host, result in pssh.call(hosts,
-                                  "mkdir -p %s" % (os.path.dirname(path)),
-                                  opts).iteritems():
+    for host, result in _pssh_call(hosts,
+                                   "mkdir -p %s" % (os.path.dirname(path)),
+                                   opts).iteritems():
         if isinstance(result, pssh.Error):
-            err_buf.error("[%s]: %s" % (host, result))
+            err_buf.error("[%s]: Start: %s" % (host, result))
             ok = False
     if not ok:
-        raise ValueError("Failed to create working folders, aborting.")
+        msg = "Failed to connect to one or more of these hosts via SSH: %s" % (
+            ', '.join(h[0] for h in hosts))
+        raise ValueError(msg)
 
 
 def _copy_to_remote_dirs(hosts, path, opts):
     "Copy a local folder to same location on remote hosts"
     ok = True
-    for host, result in pssh.copy(hosts,
-                                  path,
-                                  path, opts).iteritems():
+    for host, result in _pssh_copy(hosts,
+                                   path,
+                                   path, opts).iteritems():
         if isinstance(result, pssh.Error):
             err_buf.error("[%s]: %s" % (host, result))
             ok = False
@@ -394,7 +413,7 @@ def _copy_to_all(workdir, hosts, local_node, src, dst, opts):
     Copy src to dst both locally and remotely
     """
     ok = True
-    ret = pssh.copy(hosts, src, dst, opts)
+    ret = _pssh_copy(hosts, src, dst, opts)
     for host, result in ret.iteritems():
         if isinstance(result, pssh.Error):
             err_buf.error("[%s]: %s" % (host, result))
@@ -412,7 +431,7 @@ def _copy_to_all(workdir, hosts, local_node, src, dst, opts):
                 else:
                     shutil.copytree(src, dst)
         except (IOError, OSError, shutil.Error), e:
-            err_buf.error("[%s]: %s" % (utils.this_node(), e))
+            err_buf.error("[%s]: %s" % (local_node, e))
             ok = False
     return ok
 
@@ -577,9 +596,9 @@ class RunStep(object):
         else:
             self.opts.input_stream = None
 
-        for host, result in pssh.call(self.hosts,
-                                      cmdline,
-                                      self.opts).iteritems():
+        for host, result in _pssh_call(self.hosts,
+                                       cmdline,
+                                       self.opts).iteritems():
             if isinstance(result, pssh.Error):
                 self.error("[%s]: %s", host, result)
                 ok = False
@@ -617,34 +636,54 @@ class RunStep(object):
         return out
 
 
-def _run_cleanup(hosts, workdir, opts):
+def _cleanup_local(workdir):
+    "clean up the local tmp dir"
+    if workdir and os.path.isdir(workdir):
+        cleanscript = os.path.join(workdir, 'crm_clean.py')
+        if os.path.isfile(cleanscript):
+            if subprocess.call([cleanscript, workdir], shell=False) != 0:
+                shutil.rmtree(workdir)
+        else:
+            shutil.rmtree(workdir)
+
+
+def _print_output(host, rc, out, err):
+    "Print the output from a process that ran on host"
+    if out:
+        err_buf.ok("[%s]: %s" % (host, out))
+    if err:
+        err_buf.error("[%s]: %s" % (host, err))
+
+
+def _run_cleanup(local_node, hosts, workdir, opts):
     "Clean up after the cluster script"
     if hosts and workdir:
-        for host, result in pssh.call(hosts,
-                                      "%s %s" % (os.path.join(workdir, 'crm_clean.py'),
-                                                 workdir),
-                                      opts).iteritems():
+        cleanscript = os.path.join(workdir, 'crm_clean.py')
+        for host, result in _pssh_call(hosts,
+                                       "%s %s" % (cleanscript,
+                                                  workdir),
+                                       opts).iteritems():
             if isinstance(result, pssh.Error):
-                err_buf.warning("[%s]: Failed to clean up %s: %s" % (host, workdir, result))
+                err_buf.debug("[%s]: Failed to clean up %s" % (host, workdir))
+                err_buf.error("[%s]: Clean: %s" % (host, result))
             else:
-                rc, out, err = result
-                print out
-    if workdir and os.path.isdir(workdir):
-        shutil.rmtree(workdir)
+                _print_output(host, *result)
+    _cleanup_local(workdir)
 
 
-def _print_debug(hosts, workdir, opts):
+def _print_debug(local_node, hosts, workdir, opts):
     "Print debug output (if any)"
     dbglog = os.path.join(workdir, 'crm_script.debug')
-    for host, result in pssh.call(hosts,
-                                  "[ -f '%s' ] && cat '%s'" % (dbglog, dbglog),
-                                  opts).iteritems():
+    for host, result in _pssh_call(hosts,
+                                   "[ -f '%s' ] && cat '%s'" % (dbglog, dbglog),
+                                   opts).iteritems():
         if isinstance(result, pssh.Error):
             err_buf.error("[%s]: %s" % (host, result))
         else:
-            rc, out, err = result
-            print out
-            print err
+            _print_output(host, *result)
+    if os.path.isfile(dbglog):
+        f = open(dbglog).read()
+        err_buf.ok("[%s]: %s" % (local_node, f))
 
 
 def run(name, args):
@@ -689,6 +728,6 @@ def run(name, args):
         raise ValueError("Internal error while running %s: %s" % (name, e))
     finally:
         if not config.core.debug:
-            _run_cleanup(hosts, workdir, opts)
+            _run_cleanup(local_node, hosts, workdir, opts)
         else:
-            _print_debug(hosts, workdir, opts)
+            _print_debug(local_node, hosts, workdir, opts)
