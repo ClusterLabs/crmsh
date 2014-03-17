@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import crm_script
-import init_common as init
+import crm_init
 try:
-    crm_script.exit_ok(init.info())
+    crm_script.exit_ok(crm_init.info())
 except Exception, e:
     crm_script.exit_fail(str(e))

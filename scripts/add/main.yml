@@ -26,6 +26,9 @@
     - name: Copy configuration files
       apply_local: add.py copy
 
+    - name: Configure firewall
+      apply: add.py firewall
+
     - name: Start cluster on new node
       apply: add.py start
 

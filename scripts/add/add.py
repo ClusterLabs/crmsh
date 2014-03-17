@@ -2,15 +2,13 @@
 import sys
 import os
 import crm_script
+import crm_init
 
 COROSYNC_AUTH = '/etc/corosync/authkey'
 COROSYNC_CONF = '/etc/corosync/corosync.conf'
 
 host = crm_script.host()
 add_nodes = crm_script.param('node').split(',')
-
-PACKAGES = ['pacemaker', 'corosync', 'crmsh']
-
 
 def run_collect():
     if host not in add_nodes:
@@ -19,7 +17,7 @@ def run_collect():
     rc, out, err = crm_script.service('pacemaker', 'is-active')
     if rc == 0 and out.strip() == 'active':
         crm_script.exit_fail("Pacemaker already running on %s" % (host))
-    crm_script.exit_ok(host)
+    crm_script.exit_ok(crm_init.info())
 
 
 def make_opts():
@@ -49,11 +47,8 @@ def run_validate():
 def run_install():
     if host not in add_nodes:
         crm_script.exit_ok(host)
-    for pkg in PACKAGES:
-        try:
-            crm_script.package(pkg, 'latest')
-        except Exception, e:
-            crm_script.exit_fail("Error installing package '%s': %s" % (pkg, e))
+    packages = ['cluster-glue', 'corosync', 'crmsh', 'pacemaker', 'resource-agents']
+    crm_init.install_packages(packages)
     crm_script.exit_ok(host)
 
 
@@ -98,6 +93,13 @@ def run_copy():
     crm_script.exit_ok(host)
 
 
+def run_firewall():
+    if host not in add_nodes:
+        crm_script.exit_ok(host)
+    crm_init.configure_firewall()
+    crm_script.exit_ok(host)
+
+
 def start_new_node():
     if host not in add_nodes:
         crm_script.exit_ok(host)
@@ -118,6 +120,8 @@ if __name__ == "__main__":
         run_install()
     elif sys.argv[1] == 'copy':
         run_copy()
+    elif sys.argv[1] == 'firewall':
+        run_firewall()
     elif sys.argv[1] == 'start':
         start_new_node()
     else:

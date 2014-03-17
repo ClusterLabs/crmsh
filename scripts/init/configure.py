@@ -1,95 +1,19 @@
 #!/usr/bin/env python
 import sys
-import os
-import re
 import crm_script
-
-host = crm_script.host()
-hostinfo = crm_script.output(1)[host]
-
-
-def service_enabled(name):
-    for svc in hostinfo['services']:
-        if svc['name'] == name and svc['enabled'] == 'enabled':
-            return True
-    return False
-
-
-def service_active(name):
-    for svc in hostinfo['services']:
-        if svc['name'] == name and svc['active'] == 'active':
-            return True
-    return False
-
-SUSE_FW_TEMPLATE = """## Name: HAE cluster ports
-## Description: opens ports for HAE cluster services
-TCP="%(tcp)s"
-UDP="%(udp)s"
-"""
-
-
-def configure_firewall():
-    corosync_mcastport = crm_script.param('mcastport')
-    FW = '/etc/sysconfig/SuSEfirewall2'
-    FW_CLUSTER = '/etc/sysconfig/SuSEfirewall2.d/services/cluster'
-
-    tcp_ports = '30865 5560 7630 21064'
-    udp_ports = '%s %s' % (corosync_mcastport, int(corosync_mcastport) - 1)
-
-    if service_enabled('SuSEfirewall2_init'):
-        if os.path.isfile(FW_CLUSTER):
-            tmpl = open(FW_CLUSTER).read()
-            tmpl = re.sub(r'^TCP="(.*)"', 'TCP="%s"' % (tcp_ports), tmpl, flags=re.M)
-            tmpl = re.sub(r'^UDP="(.*)"', 'UDP="%s"' % (udp_ports), tmpl, flags=re.M)
-            with open(FW_CLUSTER, 'w') as f:
-                f.write(tmpl)
-        elif os.path.isdir(os.path.dirname(FW_CLUSTER)):
-            with open(FW_CLUSTER, 'w') as fwc:
-                fwc.write(SUSE_FW_TEMPLATE % {'tcp': tcp_ports,
-                                              'udp': udp_ports})
-        else:
-            # neither the cluster file nor the services
-            # directory exists
-            crm_script.exit_fail("SUSE firewall is configured but %s does not exist" %
-                                 os.path.dirname(FW_CLUSTER))
-
-        # add cluster to FW_CONFIGURATIONS_EXT
-        if os.path.isfile(FW):
-            txt = open(FW).read()
-            m = re.search(r'^FW_CONFIGURATIONS_EXT="(.*)"', txt, re.M)
-            if m:
-                services = m.group(1).split()
-                if 'cluster' not in services:
-                    services.append('cluster')
-                txt = re.sub(r'^FW_CONFIGURATIONS_EXT="(.*)"',
-                             r'FW_CONFIGURATIONS_EXT="%s"' % (' '.join(services)),
-                             txt,
-                             flags=re.M)
-            else:
-                txt += '\nFW_CONFIGURATIONS_EXT="cluster"'
-            with open(FW, 'w') as fw:
-                fw.write(txt)
-        if service_active('SuSEfirewall2_init'):
-            crm_script.service('SuSEfirewall2_init', 'restart')
-
-    # TODO: other platforms
+import crm_init
 
 
 def run_install():
-    # install packages
-    PACKAGES = ['cluster-glue', 'corosync', 'crmsh', 'pacemaker', 'resource-agents']
-    for pkg in PACKAGES:
-        try:
-            crm_script.package(pkg, 'latest')
-        except Exception, e:
-            crm_script.exit_fail("Failed to install %s: %s" % (pkg, e))
-
-    configure_firewall()
-
+    packages = ['cluster-glue', 'corosync', 'crmsh', 'pacemaker', 'resource-agents']
+    crm_init.install_packages(packages)
+    crm_init.configure_firewall()
     crm_script.exit_ok(True)
 
 
 def make_bindnetaddr():
+    host = crm_script.host()
+    hostinfo = crm_script.output(1)[host]
     ba = crm_script.param('bindnetaddr')
     if ba:
         return ba

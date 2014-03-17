@@ -171,3 +171,4 @@ def save_template(template, dest, **kwargs):
     except Exception, e:
         raise IOError("Failed to write %s from template %s: %s" % (dest, template, e))
     debug("crm_script(save_template): wrote %s" % (dest))
+

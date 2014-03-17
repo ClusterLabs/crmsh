@@ -1,13 +1,6 @@
 #!/usr/bin/env python
 import crm_script
-
-data = crm_script.output(1)
-
-
-def verify_host(host, info):
-    if host != info['system']['hostname']:
-        crm_script.exit_fail("Hostname mismatch: %s is not %s" %
-                             (host, info['system']['hostname']))
+import crm_init
 
 
 def select_interfaces(user_iface, data):
@@ -32,39 +25,6 @@ def select_interfaces(user_iface, data):
     return user_iface
 
 
-def compare_system(systems):
-    def check(value, msg):
-        vals = set([system[value] for host, system in systems])
-        if len(vals) > 1:
-            info = ', '.join('%s: %s' % (h, system[value]) for h, system in systems)
-            crm_script.exit_fail("%s: %s" % (msg, info))
-
-    check('machine', 'Architecture differs')
-    #check('release', 'Kernel release differs')
-    check('distname', 'Distribution differs')
-    check('distver', 'Distribution version differs')
-    #check('version', 'Kernel version differs')
-
-
-def check_diskspace():
-    for host, info in data.iteritems():
-        for mount, percent in info['disk']:
-            interesting = (mount == '/' or
-                           mount.startswith('/var/log') or
-                           mount.startswith('/tmp'))
-            if interesting and percent > 90:
-                crm_script.exit_fail("Not enough space on %s:%s" % (host, mount))
-
-
-def check_services():
-    for host, info in data.iteritems():
-        for svc in info['services']:
-            if svc['name'] == 'pacemaker' and svc['active'] == 'active':
-                crm_script.exit_fail("%s already running pacemaker" % (host))
-            if svc['name'] == 'corosync' and svc['active'] == 'active':
-                crm_script.exit_fail("%s already running corosync" % (host))
-
-
 def make_mcastaddr():
     import random
     random.seed()
@@ -72,12 +32,9 @@ def make_mcastaddr():
     return "%d.%d.%d.%d" % (239, b, c, d)
 
 try:
-    for host, info in data.iteritems():
-        verify_host(host, info)
-    compare_system((h, info['system']) for h, info in data.iteritems())
+    data = crm_script.output(1)
 
-    check_diskspace()
-    check_services()
+    crm_init.verify(data)
 
     ret = {}
     ret['iface'] = select_interfaces(crm_script.param('iface'), data)
