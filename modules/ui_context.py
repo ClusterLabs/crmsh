@@ -92,7 +92,7 @@ class Context(object):
             common_err("%s: %s" % (self.get_qualified_name(), msg))
             rv = False
         if cmd or (rv is False):
-            self._back_out()
+            rv = self._back_out() and rv
         return rv
 
     def complete(self, line):
@@ -293,17 +293,21 @@ class Context(object):
         '''
         Navigate up in the levels hierarchy
         '''
+        ok = True
         if len(self.stack) > 1:
-            self.current_level().end_game(no_questions_asked=self._in_transit)
+            ok = self.current_level().end_game(no_questions_asked=self._in_transit)
             self.stack.pop()
             self.clear_readline_cache()
+        return ok
 
     def _back_out(self):
         '''
         Restore the stack to the marked position
         '''
+        ok = True
         while self._mark > 0 and len(self.stack) > self._mark:
-            self.up()
+            ok = self.up() and ok
+        return ok
 
     def save_stack(self):
         self._mark = len(self.stack)
@@ -312,9 +316,11 @@ class Context(object):
         '''
         Exit from the top level
         '''
-        self.current_level().end_game()
+        ok = self.current_level().end_game()
         if options.interactive and not options.batch:
             print "bye"
+        if not ok and rc == 0:
+            rc = 1
         sys.exit(rc)
 
     def level_name(self):

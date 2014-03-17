@@ -792,9 +792,11 @@ class CibConfig(command.UI):
         return cib_factory.has_cib_changed()
 
     def end_game(self, no_questions_asked=False):
+        ok = True
         if cib_factory.has_cib_changed():
             if no_questions_asked or not options.interactive:
-                self._commit()
+                ok = self._commit()
             elif utils.ask("There are changes pending. Do you want to commit them?"):
-                self._commit()
+                ok = self._commit()
         cib_factory.reset()
+        return ok

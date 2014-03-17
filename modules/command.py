@@ -247,8 +247,9 @@ Navigates back in the user interface.
         TODO: Implement full cd navigation. cd ../configure, for example
         Also implement ls to list commands / levels from current location
         '''
-        context.up()
+        ok = context.up()
         context.save_stack()
+        return ok
 
     @help('''List levels and commands
 Lists the available sublevels and commands
@@ -289,22 +290,26 @@ Examples:
 ''')
     @completer(_cd_completer)
     def do_cd(self, context, optarg='..'):
+        ok = True
         path = optarg.split('/', 1)
         if len(path) == 1:
             path = path[0]
             if path == '..':
-                context.up()
+                ok = context.up()
             elif path == '.' or not path:
-                return
+                return ok
             else:
                 info = self.get_child(path)
                 if not info or not info.level:
                     context.fatal_error("No such level: " + path)
                 context.enter_level(info.level)
         else:
-            self.do_cd(context, path[0])
-            self.do_cd(context, path[1])
+            if not self.do_cd(context, path[0]):
+                ok = False
+            if not self.do_cd(context, path[1]):
+                ok = False
         context.save_stack()
+        return True
 
     @alias('bye', 'exit')
     @help('''Exit the interactive shell
