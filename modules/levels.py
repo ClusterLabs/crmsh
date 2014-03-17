@@ -68,8 +68,10 @@ class Levels(Singleton):
         self._in_transit = False
 
     def release(self):
+        ok = True
         while len(self.level_stack) > self._marker:
-            self.droplevel()
+            ok = self.droplevel() and ok
+        return ok
 
     def new_level(self, level_obj, token):
         self.level_stack.append(self.current_level)
@@ -90,11 +92,13 @@ class Levels(Singleton):
             return self.level_stack[-1]
 
     def droplevel(self):
+        ok = True
         if self.level_stack:
-            self.current_level.end_game(no_questions_asked=self._in_transit)
+            ok = self.current_level.end_game(no_questions_asked=self._in_transit) and ok
             self.current_level = self.level_stack.pop()
             self.completion_tab = self.comp_stack.pop()
             self.parse_root = self.current_level.cmd_table
             self.prompts.pop()
+        return ok
 
 # vim:ts=4:sw=4:et:

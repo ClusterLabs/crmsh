@@ -168,7 +168,7 @@ def parse_line(lvl, s):
         do_wait = user_prefs.wait and rv != False and (cmd[3] == 1 or
             (lvl.current_level.should_wait() and \
             (lvl.is_in_transit() or not options.interactive)))
-        lvl.release()
+        rv = lvl.release() and rv
         if do_wait:
             if not wait4dc(token, not options.batch):
                 rv = False

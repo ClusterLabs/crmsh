@@ -372,6 +372,7 @@ class CibShadow(UserInterface):
         else:
             common_err("failed to commit the %s shadow CIB" % name)
             return False
+        return True
 
     def diff(self, cmd):
         "usage: diff"
@@ -2132,11 +2133,13 @@ class CibConfig(UserInterface):
         return cib_factory.has_cib_changed()
 
     def end_game(self, no_questions_asked=False):
+        ok = True
         if cib_factory.has_cib_changed():
             if no_questions_asked or not options.interactive or \
                 utils.ask("There are changes pending. Do you want to commit them?"):
-                self.commit("commit")
+                ok = self.commit("commit")
         cib_factory.reset()
+        return ok
 
 
 class History(UserInterface):
