@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os
+import re
 import crm_script
 
 host = crm_script.host()
@@ -29,6 +30,7 @@ UDP="%(udp)s"
 
 def configure_firewall():
     corosync_mcastport = crm_script.param('mcastport')
+    FW = '/etc/sysconfig/SuSEfirewall2'
     FW_CLUSTER = '/etc/sysconfig/SuSEfirewall2.d/services/cluster'
 
     tcp_ports = '30865 5560 7630 21064'
@@ -36,7 +38,6 @@ def configure_firewall():
 
     if service_enabled('SuSEfirewall2_init'):
         if os.path.isfile(FW_CLUSTER):
-            import re
             tmpl = open(FW_CLUSTER).read()
             tmpl = re.sub(r'^TCP="(.*)"', 'TCP="%s"' % (tcp_ports), tmpl, flags=re.M)
             tmpl = re.sub(r'^UDP="(.*)"', 'UDP="%s"' % (udp_ports), tmpl, flags=re.M)
@@ -51,6 +52,23 @@ def configure_firewall():
             # directory exists
             crm_script.exit_fail("SUSE firewall is configured but %s does not exist" %
                                  os.path.dirname(FW_CLUSTER))
+
+        # add cluster to FW_CONFIGURATIONS_EXT
+        if os.path.isfile(FW):
+            txt = open(FW).read()
+            m = re.search(r'^FW_CONFIGURATIONS_EXT="(.*)"', txt, re.M)
+            if m:
+                services = m.group(1).split()
+                if 'cluster' not in services:
+                    services.append('cluster')
+                txt = re.sub(r'^FW_CONFIGURATIONS_EXT="(.*)"',
+                             r'FW_CONFIGURATIONS_EXT="%s"' % (' '.join(services)),
+                             txt,
+                             flags=re.M)
+            else:
+                txt += '\nFW_CONFIGURATIONS_EXT="cluster"'
+            with open(FW, 'w') as fw:
+                fw.write(txt)
         if service_active('SuSEfirewall2_init'):
             crm_script.service('SuSEfirewall2_init', 'restart')
 
