@@ -295,7 +295,7 @@ class Context(object):
         '''
         ok = True
         if len(self.stack) > 1:
-            ok = self.current_level().end_game(no_questions_asked=self._in_transit)
+            ok = self.current_level().end_game(no_questions_asked=self._in_transit) is not False
             self.stack.pop()
             self.clear_readline_cache()
         return ok
@@ -319,7 +319,7 @@ class Context(object):
         ok = self.current_level().end_game()
         if options.interactive and not options.batch:
             print "bye"
-        if not ok and rc == 0:
+        if ok is False and rc == 0:
             rc = 1
         sys.exit(rc)
 
