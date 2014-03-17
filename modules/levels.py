@@ -94,7 +94,8 @@ class Levels(Singleton):
     def droplevel(self):
         ok = True
         if self.level_stack:
-            ok = self.current_level.end_game(no_questions_asked=self._in_transit) and ok
+            end_game = self.current_level.end_game(no_questions_asked=self._in_transit)
+            ok = (end_game is not False) and ok
             self.current_level = self.level_stack.pop()
             self.completion_tab = self.comp_stack.pop()
             self.parse_root = self.current_level.cmd_table
