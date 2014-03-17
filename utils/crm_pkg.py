@@ -107,6 +107,7 @@ class Zypper(PackageManager):
 
         cmd = [self._zyp,
                '--non-interactive',
+               '--no-refresh',
                'install',
                '--auto-agree-with-licenses',
                name]
@@ -124,6 +125,7 @@ class Zypper(PackageManager):
         pre_version = self.get_version(name)
         cmd = [self._zyp,
                '--non-interactive',
+               '--no-refresh',
                'update',
                '--auto-agree-with-licenses',
                name]
