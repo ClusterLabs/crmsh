@@ -41,6 +41,9 @@ def is_program(prog):
 
 def ask(msg):
     # if there's no terminal, no use asking and default to "no"
+    # unless force is set
+    if user_prefs.force:
+        return True
     if not sys.stdin.isatty():
         return False
     print_msg = True
