@@ -2184,9 +2184,8 @@ cib_object_map = {
     "acl_user": ("user", CibAcl, "acls"),
 }
 
-backtrans = odict()  # generate a translation cli -> tag
-for key in cib_object_map:
-    backtrans[cib_object_map[key][0]] = key
+# generate a translation cli -> tag
+backtrans = odict((item[0], key) for key, item in cib_object_map.iteritems())
 
 
 def can_migrate(node):
