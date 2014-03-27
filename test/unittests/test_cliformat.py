@@ -79,7 +79,7 @@ def teardown_func():
 def test_rscset():
     roundtrip('colocation', 'foo', 'colocation foo inf: a b')
     roundtrip('order', 'order_2', 'order order_2 Mandatory: [ A B ] C')
-    roundtrip('rsc_template', 'public_vm', 'rsc_template public_vm ocf:heartbeat:Xen')
+    roundtrip('rsc_template', 'public_vm', 'rsc_template public_vm Xen')
 
 
 def test_bnc863736():
