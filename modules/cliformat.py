@@ -263,17 +263,20 @@ def rsc_set_constraint(node, obj_type):
             cnt += 1
         if require_all is False:
             if sequential in (None, True):
-                col.append('sequential="true"')
+                col.append(nvpair_format('sequential', 'true'))
             col.append("]")
         elif sequential is False:
             if require_all is False:
-                col.append('require-all="false"')
+                col.append(nvpair_format('require-all', 'false'))
             col.append(")")
     is_ticket = obj_type == 'rsc_ticket'
     is_location = obj_type == 'location'
     is_seq_all = sequential in (None, True) and require_all in (None, True)
-    if not is_location and ((is_seq_all and not is_ticket and cnt <= 2) or
-                            (is_ticket and cnt <= 1)):  # a degenerate thingie
+
+    if not is_location and is_seq_all and not is_ticket and cnt <= 2:
+        col.insert(0, '(')
+        col.extend([nvpair_format('sequential', 'true'), ')'])
+    elif not is_location and is_ticket and cnt <= 1:  # a degenerate thingie
         col.insert(0, "_rsc_set_")
     return col
 
