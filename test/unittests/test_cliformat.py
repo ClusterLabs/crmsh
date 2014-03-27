@@ -88,7 +88,7 @@ def test_bnc863736():
 
 def test_sequential():
     roundtrip('colocation', 'rsc_colocation-master',
-              'colocation rsc_colocation-master inf: [ vip-master vip-rep sequential=true ] [ msPostgresql:Master sequential=true ]')
+              'colocation rsc_colocation-master inf: [ vip-master vip-rep sequential="true" ] [ msPostgresql:Master sequential="true" ]')
 
 def test_broken_colo():
     xml = """<rsc_colocation id="colo-2" score="INFINITY">
@@ -107,7 +107,7 @@ def test_broken_colo():
     obj.set_id()
     data = obj.repr_cli(format=-1)
     print data
-    assert data == 'colocation colo-2 inf: [ vip1 vip2 sequential=true ] [ apache:Master sequential=true ]'
+    assert data == 'colocation colo-2 inf: [ vip1 vip2 sequential="true" ] [ apache:Master sequential="true" ]'
     assert obj.cli_use_validate()
 
 
@@ -180,23 +180,5 @@ target="ha-one"></fencing-level>
     print data
     exp = 'fencing_topology st1'
     assert data == exp
-    assert obj.cli_use_validate()
-
-
-def test_degenerate_set():
-    xml = """<rsc_colocation id="colo-3" score="INFINITY">
-  <resource_set id="colo-3-0">
-    <resource_ref id="vip1"/>
-    <resource_ref id="vip2"/>
-  </resource_set>
-</rsc_colocation>"""
-    data = etree.fromstring(xml)
-    obj = factory.new_object('colocation', 'colo-3')
-    assert obj is not None
-    obj.node = data
-    obj.set_id()
-    data = obj.repr_cli(format=-1)
-    print data
-    assert data == 'colocation colo-3 inf: ( vip1 vip2 sequential=true )'
     assert obj.cli_use_validate()
 
