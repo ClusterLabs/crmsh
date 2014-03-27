@@ -16,10 +16,10 @@ node node1
 primitive d1 ocf:pacemaker:Dummy
 primitive d2 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
-	params hostlist="node1" \
-	meta target-role="Started" \
-	op start requires="nothing" timeout="60s" interval="0" \
-	op monitor interval="60m" timeout="60s"
+	params hostlist=node1 \
+	meta target-role=Started \
+	op start requires=nothing timeout=60s interval=0 \
+	op monitor interval=60m timeout=60s
 location d1-pref d1 100: node1
 .INP: _test
 .INP: rename d1 p1
@@ -29,10 +29,10 @@ node node1
 primitive d2 ocf:pacemaker:Dummy
 primitive p1 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
-	params hostlist="node1" \
-	meta target-role="Started" \
-	op start requires="nothing" timeout="60s" interval="0" \
-	op monitor interval="60m" timeout="60s"
+	params hostlist=node1 \
+	meta target-role=Started \
+	op start requires=nothing timeout=60s interval=0 \
+	op monitor interval=60m timeout=60s
 location d1-pref p1 100: node1
 .INP: # delete primitive
 .INP: delete d2
@@ -41,10 +41,10 @@ location d1-pref p1 100: node1
 node node1
 primitive p1 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
-	params hostlist="node1" \
-	meta target-role="Started" \
-	op start requires="nothing" timeout="60s" interval="0" \
-	op monitor interval="60m" timeout="60s"
+	params hostlist=node1 \
+	meta target-role=Started \
+	op start requires=nothing timeout=60s interval=0 \
+	op monitor interval=60m timeout=60s
 location d1-pref p1 100: node1
 .INP: # delete primitive with constraint
 .INP: delete p1
@@ -53,10 +53,10 @@ INFO: 20: hanging location:d1-pref deleted
 .INP: show
 node node1
 primitive st stonith:ssh \
-	params hostlist="node1" \
-	meta target-role="Started" \
-	op start requires="nothing" timeout="60s" interval="0" \
-	op monitor interval="60m" timeout="60s"
+	params hostlist=node1 \
+	meta target-role=Started \
+	op start requires=nothing timeout=60s interval=0 \
+	op monitor interval=60m timeout=60s
 .INP: primitive d1 ocf:pacemaker:Dummy
 .INP: location d1-pref d1 100: node1
 .INP: _test
@@ -70,10 +70,10 @@ INFO: 29: resource references in location:d1-pref updated
 node node1
 primitive d1 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
-	params hostlist="node1" \
-	meta target-role="Started" \
-	op start requires="nothing" timeout="60s" interval="0" \
-	op monitor interval="60m" timeout="60s"
+	params hostlist=node1 \
+	meta target-role=Started \
+	op start requires=nothing timeout=60s interval=0 \
+	op monitor interval=60m timeout=60s
 group g1 d1
 location d1-pref g1 100: node1
 .INP: _test
@@ -83,10 +83,10 @@ INFO: 33: resource references in location:d1-pref updated
 node node1
 primitive d1 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
-	params hostlist="node1" \
-	meta target-role="Started" \
-	op start requires="nothing" timeout="60s" interval="0" \
-	op monitor interval="60m" timeout="60s"
+	params hostlist=node1 \
+	meta target-role=Started \
+	op start requires=nothing timeout=60s interval=0 \
+	op monitor interval=60m timeout=60s
 location d1-pref d1 100: node1
 .INP: verify
 .EXT crm_resource --show-metadata stonith:heartbeat:ssh
@@ -107,10 +107,10 @@ node node1
 primitive d1 ocf:pacemaker:Dummy
 primitive d2 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
-	params hostlist="node1" \
-	meta target-role="Started" \
-	op start requires="nothing" timeout="60s" interval="0" \
-	op monitor interval="60m" timeout="60s"
+	params hostlist=node1 \
+	meta target-role=Started \
+	op start requires=nothing timeout=60s interval=0 \
+	op monitor interval=60m timeout=60s
 location d1-pref d2 100: node1
 .INP: _test
 .INP: group g1 d2 d1
@@ -127,10 +127,10 @@ node node1
 primitive d1 ocf:pacemaker:Dummy
 primitive d2 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
-	params hostlist="node1" \
-	meta target-role="Started" \
-	op start requires="nothing" timeout="60s" interval="0" \
-	op monitor interval="60m" timeout="60s"
+	params hostlist=node1 \
+	meta target-role=Started \
+	op start requires=nothing timeout=60s interval=0 \
+	op monitor interval=60m timeout=60s
 location d1-pref d2 100: node1
 .INP: _test
 .INP: group g1 d2 d1
@@ -145,10 +145,10 @@ INFO: 53: hanging location:d1-pref deleted
 .INP: show
 node node1
 primitive st stonith:ssh \
-	params hostlist="node1" \
-	meta target-role="Started" \
-	op start requires="nothing" timeout="60s" interval="0" \
-	op monitor interval="60m" timeout="60s"
+	params hostlist=node1 \
+	meta target-role=Started \
+	op start requires=nothing timeout=60s interval=0 \
+	op monitor interval=60m timeout=60s
 .INP: _test
 .INP: # verify
 .INP: verify

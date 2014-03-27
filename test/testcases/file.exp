@@ -6,14 +6,14 @@ node node1
 primitive p0 ocf:pacemaker:Dummy
 primitive p1 ocf:pacemaker:Dummy
 primitive p2 Delay \
-	params startdelay="2" mondelay="2" stopdelay="2"
+	params startdelay=2 mondelay=2 stopdelay=2
 primitive p3 ocf:pacemaker:Dummy
 primitive st stonith:null \
-	params hostlist="node1"
+	params hostlist=node1
 ms m1 p2
 clone c1 p1
-property $id="cib-bootstrap-options" \
-	default-action-timeout="60s"
+property cib-bootstrap-options: \
+	default-action-timeout=60s
 .TRY configure erase nodes
 .EXT crm_resource --list-standards
 .EXT crm_resource --list-ocf-alternatives Delay
@@ -50,14 +50,14 @@ node node1
 primitive p0 ocf:pacemaker:Dummy
 primitive p1 ocf:pacemaker:Dummy
 primitive p2 Delay \
-	params startdelay="2" mondelay="2" stopdelay="2"
+	params startdelay=2 mondelay=2 stopdelay=2
 primitive p3 ocf:pacemaker:Dummy
 primitive st stonith:null \
-	params hostlist="node1"
+	params hostlist=node1
 # comment
 ms m1 p2
 clone c1 p1
-property $id="cib-bootstrap-options" \
-	default-action-timeout="2m" \
-	cluster-recheck-interval="10m"
+property cib-bootstrap-options: \
+	default-action-timeout=2m \
+	cluster-recheck-interval=10m
 .EXT rm sample.txt

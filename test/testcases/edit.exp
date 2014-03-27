@@ -63,20 +63,20 @@ ERROR: 44: object nosuch does not exist
 .EXT cib metadata
 .INP: show
 node node1 \
-	attributes mem="16G"
+	attributes mem=16G
 primitive d1 Dummy
 primitive d2 Dummy
 primitive d3 Dummy
 primitive p1 Dummy \
-	op monitor interval="60m" \
-	op monitor interval="120m" OCF_CHECK_LEVEL="10"
+	op monitor interval=60m \
+	op monitor interval=120m OCF_CHECK_LEVEL=10
 primitive p2 Dummy
 primitive p3 Dummy
 primitive st stonith:null \
-	params hostlist="node1" \
+	params hostlist=node1 \
 	meta description="some description here" \
-	op start requires="nothing" interval="0" \
-	op monitor interval="60m"
+	op start requires=nothing interval=0 \
+	op monitor interval=60m
 group g1 p1 p2 d3
 group g2 d1 d2
 clone c1 g1
@@ -87,8 +87,8 @@ location loc-d1 d1 \
 	rule $id="loc-d1-rule" -inf: not_defined a2 \
 	rule $id="r2" webserver: defined webserver
 order o1 inf: p3 c1
-property $id="cib-bootstrap-options" \
-	default-action-timeout="2m"
+property cib-bootstrap-options: \
+	default-action-timeout=2m
 .INP: commit
 .TRY configure rsc_defaults $id="rsc_options" failure-timeout=10m
 .EXT crm_resource --list-standards
@@ -102,8 +102,8 @@ property $id="cib-bootstrap-options" \
 .TRY configure show rsc_options
 .EXT crm_resource --list-standards
 .EXT crm_resource --list-ocf-alternatives Dummy
-rsc_defaults $id="rsc_options" \
-	failure-timeout="10m"
+rsc_defaults rsc_options: \
+	failure-timeout=10m
 .TRY configure property stonith-enabled=true
 .EXT crm_resource --list-standards
 .EXT crm_resource --list-ocf-alternatives Dummy
@@ -113,10 +113,10 @@ rsc_defaults $id="rsc_options" \
 .TRY configure show cib-bootstrap-options
 .EXT crm_resource --list-standards
 .EXT crm_resource --list-ocf-alternatives Dummy
-property $id="cib-bootstrap-options" \
-	default-action-timeout="60s" \
-	stonith-enabled="true"
-.TRY configure filter 'sed "s/stonith-enabled=.true.//"'
+property cib-bootstrap-options: \
+	default-action-timeout=60s \
+	stonith-enabled=true
+.TRY configure filter 'sed "s/stonith-enabled=true//"'
 .EXT crm_resource --list-standards
 .EXT crm_resource --list-ocf-alternatives Dummy
 .EXT crmd metadata
@@ -125,5 +125,5 @@ property $id="cib-bootstrap-options" \
 .TRY configure show cib-bootstrap-options
 .EXT crm_resource --list-standards
 .EXT crm_resource --list-ocf-alternatives Dummy
-property $id="cib-bootstrap-options" \
-	default-action-timeout="60s"
+property cib-bootstrap-options: \
+	default-action-timeout=60s
