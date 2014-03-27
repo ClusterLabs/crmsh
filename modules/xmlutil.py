@@ -320,13 +320,7 @@ def unique_ra(typ, klass, provider):
     """
     if klass is None and provider is None:
         return True
-    if klass == 'ocf':
-        if provider is None or provider in ('heartbeat', 'pacemaker'):
-            return True
-        import ra
-        providers = set(ra.ra_providers(typ))
-        return providers == set(['pacemaker', 'heartbeat']) or len(providers) == 1
-    return False
+    return klass == 'ocf' and provider is None or provider == 'heartbeat'
 
 
 def mk_rsc_type(n):
