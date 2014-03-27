@@ -2,11 +2,14 @@
 .INP: configure
 .INP: _regtest on
 .INP: erase
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 .INP: erase nodes
 .INP: property default-action-timeout=2m
 .INP: node node1 	attributes mem=16G
 .INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" 	op start requires=nothing 	op monitor interval=60m
 .INP: primitive p1 ocf:heartbeat:Dummy 	op monitor interval=60m 	op monitor interval=120m OCF_CHECK_LEVEL=10
+.EXT crm_resource --list-ocf-alternatives Dummy
 .INP: filter "sed '$aprimitive p2 ocf:heartbeat:Dummy'"
 .INP: filter "sed '$agroup g1 p1 p2'"
 .INP: filter "sed 's/p2/p3/;$aprimitive p3 ocf:heartbeat:Dummy'" g1
@@ -52,7 +55,6 @@ ERROR: 44: object nosuch does not exist
 .INP: filter "sed 's/^/# this is a comment\n/'" loc-d1
 .INP: _test
 .INP: verify
-.EXT crm_resource --list-standards
 .EXT crm_resource --show-metadata stonith:heartbeat:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
@@ -62,14 +64,14 @@ ERROR: 44: object nosuch does not exist
 .INP: show
 node node1 \
 	attributes mem="16G"
-primitive d1 ocf:heartbeat:Dummy
-primitive d2 ocf:heartbeat:Dummy
-primitive d3 ocf:heartbeat:Dummy
-primitive p1 ocf:heartbeat:Dummy \
+primitive d1 Dummy
+primitive d2 Dummy
+primitive d3 Dummy
+primitive p1 Dummy \
 	op monitor interval="60m" \
 	op monitor interval="120m" OCF_CHECK_LEVEL="10"
-primitive p2 ocf:heartbeat:Dummy
-primitive p3 ocf:heartbeat:Dummy
+primitive p2 Dummy
+primitive p3 Dummy
 primitive st stonith:null \
 	params hostlist="node1" \
 	meta description="some description here" \
@@ -89,25 +91,39 @@ property $id="cib-bootstrap-options" \
 	default-action-timeout="2m"
 .INP: commit
 .TRY configure rsc_defaults $id="rsc_options" failure-timeout=10m
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Dummy
 .TRY configure filter "sed 's/2m/60s/'" cib-bootstrap-options
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Dummy
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata
 .TRY configure show rsc_options
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Dummy
 rsc_defaults $id="rsc_options" \
 	failure-timeout="10m"
 .TRY configure property stonith-enabled=true
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Dummy
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata
 .TRY configure show cib-bootstrap-options
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Dummy
 property $id="cib-bootstrap-options" \
 	default-action-timeout="60s" \
 	stonith-enabled="true"
 .TRY configure filter 'sed "s/stonith-enabled=.true.//"'
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Dummy
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata
 .TRY configure show cib-bootstrap-options
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Dummy
 property $id="cib-bootstrap-options" \
 	default-action-timeout="60s"

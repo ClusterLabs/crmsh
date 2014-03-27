@@ -7,6 +7,8 @@ resource p0 is NOT running
 .INP: configure
 .INP: _regtest on
 .INP: show xml p3
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -28,6 +30,8 @@ resource p0 is NOT running
 .INP: configure
 .INP: _regtest on
 .INP: show xml p3
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -50,6 +54,8 @@ resource p0 is NOT running
 .INP: configure
 .INP: _regtest on
 .INP: show xml c1
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -72,6 +78,8 @@ resource p0 is NOT running
 .INP: configure
 .INP: _regtest on
 .INP: show xml c1
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -95,6 +103,8 @@ resource p0 is NOT running
 .INP: configure
 .INP: _regtest on
 .INP: show xml cli-prefer-p3
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -116,6 +126,8 @@ resource p0 is NOT running
 .INP: configure
 .INP: _regtest on
 .INP: show xml cli-prefer-p3
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -137,6 +149,8 @@ resource p0 is NOT running
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -159,6 +173,8 @@ resource p0 is NOT running
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -181,6 +197,8 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -198,6 +216,8 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -220,6 +240,8 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -242,6 +264,8 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -255,9 +279,13 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY configure group g p0 p3
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -281,6 +309,8 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -305,6 +335,8 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -332,6 +364,8 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -363,6 +397,8 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -390,9 +426,13 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY configure clone cg g
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -425,6 +465,8 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -458,6 +500,8 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -487,6 +531,8 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -512,6 +558,8 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -537,6 +585,8 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -566,6 +616,8 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -591,6 +643,8 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
