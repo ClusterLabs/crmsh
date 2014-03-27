@@ -308,10 +308,37 @@ def is_normal_node(n):
         (n.get("type") == "normal" or not n.get("type"))
 
 
+def unique_ra(typ, klass, provider):
+    """
+    Unique:
+    * it's explicitly ocf:heartbeat: or ocf:pacemaker:
+    * no explicit class or provider
+    * only one provider (heartbeat and pacemaker counts as one provider)
+    Not unique:
+    * class is not ocf
+    * multiple providers
+    """
+    if klass is None and provider is None:
+        return True
+    if klass == 'ocf':
+        if provider is None or provider in ('heartbeat', 'pacemaker'):
+            return True
+        import ra
+        providers = set(ra.ra_providers(typ))
+        return providers == set(['pacemaker', 'heartbeat']) or len(providers) == 1
+    return False
+
+
 def mk_rsc_type(n):
+    """
+    Returns prefixless for unique RAs
+    """
     ra_type = n.get("type")
     ra_class = n.get("class")
     ra_provider = n.get("provider")
+    if unique_ra(ra_type, ra_class, ra_provider):
+        ra_class = None
+        ra_provider = None
     s1 = s2 = ''
     if ra_class:
         s1 = "%s:" % ra_class
