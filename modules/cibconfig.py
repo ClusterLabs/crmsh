@@ -514,7 +514,7 @@ class CibObjectSetCli(CibObjectSet):
                     rc = False
                 id_set.add(id)
                 edit_d[id] = cli_list
-            elif cli_list == False:
+            elif cli_list is False:
                 rc = False
         err_buf.stop_tmp_lineno()
         # we can't proceed if there was a syntax error, but we
@@ -720,7 +720,7 @@ def mkxmlnvpairs(e, oldnode, id_hint):
     for n, v in e[1]:
         nvpair = etree.SubElement(node, "nvpair")
         nvpair.set("name", n)
-        if v != None:
+        if v is not None:
             nvpair.set("value", v)
         set_id(nvpair, lookup_node(nvpair, match_node), nvpair_pfx)
     return node
@@ -2296,7 +2296,7 @@ class CibFactory(Singleton):
         schema.init_schema(self.cib_elem)
         rc = True
         for obj in self.cib_objects:
-            if schema.get('sub', obj.node.tag, 'a') == None:
+            if schema.get('sub', obj.node.tag, 'a') is None:
                 common_err("%s not supported by the RNG schema" % obj.node.tag)
                 rc = False
         if not rc:
@@ -2312,7 +2312,7 @@ class CibFactory(Singleton):
     def is_elem_supported(self, obj_type):
         'Do we support this element?'
         try:
-            if schema.get('sub', backtrans[obj_type], 'a') == None:
+            if schema.get('sub', backtrans[obj_type], 'a') is None:
                 return False
         except KeyError:
             pass
