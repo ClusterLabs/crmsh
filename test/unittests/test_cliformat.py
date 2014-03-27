@@ -134,7 +134,7 @@ value="Stopped"/> \
     obj.set_id()
     data = obj.repr_cli(format=-1)
     print data
-    exp = 'primitive dummy ocf:pacemaker:Dummy op start timeout="60" interval="0" op stop timeout="60" interval="0" op monitor interval="60" timeout="30" meta target-role="Stopped"'
+    exp = 'primitive dummy ocf:pacemaker:Dummy op start timeout=60 interval=0 op stop timeout=60 interval=0 op monitor interval=60 timeout=30 meta target-role=Stopped'
     assert data == exp
     assert obj.cli_use_validate()
 
@@ -158,7 +158,7 @@ value="Stopped"/> \
     obj.set_id()
     data = obj.repr_cli(format=-1)
     print data
-    exp = 'primitive dummy2 ocf:pacemaker:Dummy meta target-role="Stopped" op start timeout="60" interval="0" op stop timeout="60" interval="0" op monitor interval="60" timeout="30"'
+    exp = 'primitive dummy2 ocf:pacemaker:Dummy meta target-role=Stopped op start timeout=60 interval=0 op stop timeout=60 interval=0 op monitor interval=60 timeout=30'
     assert data == exp
     assert obj.cli_use_validate()
 

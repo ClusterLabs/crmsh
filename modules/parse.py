@@ -45,6 +45,8 @@ class BaseParser(object):
     _DESC_RE = re.compile(r'description=(.+)$', re.IGNORECASE)
     _RESOURCE_RE = re.compile(r'([a-z_#$][^=]*)$', re.IGNORECASE)
     _IDSPEC_RE = re.compile(r'(\$id-ref|\$id)=(.*)$', re.IGNORECASE)
+    _ID_RE = re.compile(r'\$id=(.+)$', re.IGNORECASE)
+    _ID_NEW_RE = re.compile(r'([\w-]+):$', re.IGNORECASE)
 
     def can_parse(self):
         "Returns a list of commands this parser understands"
@@ -214,6 +216,19 @@ class BaseParser(object):
         """
         return self.try_match(self._IDSPEC_RE)
 
+    def try_match_initial_id(self):
+        """
+        Used as the first match on certain commands
+        like node and property, to match either
+        node $id=<id>
+        or
+        node <id>:
+        """
+        m = self.try_match(self._ID_RE)
+        if m:
+            return m
+        return self.try_match(self._ID_NEW_RE)
+
     def match_split(self, sep=':', order=None):
         """
         matches *:*:*...
@@ -271,7 +286,6 @@ class BaseParser(object):
 
 
 class NodeParser(BaseParser):
-    _ID_RE = re.compile(r'\$id=(.+)$', re.IGNORECASE)
     _UNAME_RE = re.compile(r'([^:]+)(:(normal|member|ping))?$', re.IGNORECASE)
 
     def can_parse(self):
@@ -289,7 +303,7 @@ class NodeParser(BaseParser):
 
     def parse(self, cmd):
         """
-        node [$id=<id>] <uname>[:<type>]
+        node [<id>:|$id=<id>] <uname>[:<type>]
           [description=<description>]
           [attributes <param>=<value> [<param>=<value>...]]
           [utilization <param>=<value> [<param>=<value>...]]
@@ -299,7 +313,7 @@ class NodeParser(BaseParser):
         self.begin(cmd, min_args=1)
         self.match('node')
         out = Node()
-        if self.try_match(self._ID_RE):
+        if self.try_match_initial_id():
             out.id = self.matched(1)
         self.match(self._UNAME_RE, errmsg="Expected uname[:type]")
         out.uname, out.type = self.matched(1), self.matched(3)
@@ -764,7 +778,9 @@ class PropertyParser(BaseParser):
         self.match('(%s)$' % '|'.join(self.can_parse()))
         out = Property()
         out.type = self.matched(1)
-        if self.try_match_idspec():
+        if self.try_match_initial_id():
+            out.values.append(('$id', self.matched(1)))
+        elif self.try_match_idspec():
             out.values.append(('$id', self.matched(2)))
         out.values.extend(self.match_nvpairs())
         return out

@@ -1254,7 +1254,10 @@ class CibNode(CibObject):
         uname = self.node.get("uname")
         s = cli_display.keyword(self.obj_type)
         if self.obj_id != uname:
-            s = '%s $id="%s"' % (s, self.obj_id)
+            if utils.noquotes(self.obj_id):
+                s = "%s %s:" % (s, self.obj_id)
+            else:
+                s = '%s $id="%s"' % (s, self.obj_id)
         s = '%s %s' % (s, cli_display.id(uname))
         type = self.node.get("type")
         if type and type != vars.node_default_type:
@@ -1930,8 +1933,12 @@ class CibProperty(CibObject):
     '''
 
     def _repr_cli_head(self, format):
-        return '%s $id="%s"' % \
-            (cli_display.keyword(self.obj_type), self.obj_id)
+        s = cli_display.keyword(self.obj_type)
+        if utils.noquotes(self.obj_id):
+            s = "%s %s:" % (s, self.obj_id)
+        else:
+            s = '%s $id="%s"' % (s, self.obj_id)
+        return s
 
     def _repr_cli_child(self, c, format):
         name = c.get("name")

@@ -54,7 +54,10 @@ def cli_operations(node, break_lines=True):
 def nvpair_format(n, v):
     if v is None:
         return cli_display.attr_name(n)
-    return '%s="%s"' % (cli_display.attr_name(n), cli_display.attr_value(v))
+    elif utils.noquotes(v):
+        return '%s=%s' % (cli_display.attr_name(n), cli_display.attr_value(v))
+    else:
+        return '%s="%s"' % (cli_display.attr_name(n), cli_display.attr_value(v))
 
 
 def cli_pairs(pl):

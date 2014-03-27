@@ -117,6 +117,14 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.id, 'testid')
         self.assertEqual(out.uname, 'node-1')
 
+        out = self.parser.parse('node 1: node-1')
+        self.assertEqual(out.id, '1')
+        self.assertEqual(out.uname, 'node-1')
+
+        out = self.parser.parse('node testid: node-1')
+        self.assertEqual(out.id, 'testid')
+        self.assertEqual(out.uname, 'node-1')
+
         out = self.parser.parse('node $id=testid node-1:ping')
         self.assertEqual(out.id, 'testid')
         self.assertEqual(out.uname, 'node-1')
@@ -337,6 +345,12 @@ class TestCliParser(unittest.TestCase):
 
         out = self.parser.parse('rsc_defaults failure-timeout=3m')
         self.assertTrue(('failure-timeout', '3m') in out.values)
+
+        out = self.parser.parse('rsc_defaults foo: failure-timeout=3m')
+        self.assertTrue(('$id', 'foo') in out.values)
+
+        out = self.parser.parse('rsc_defaults failure-timeout=3m foo:')
+        self.assertFalse(out)
 
     def test_fencing(self):
         out = self.parser.parse('fencing_topology poison-pill power')

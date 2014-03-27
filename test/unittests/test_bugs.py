@@ -43,7 +43,7 @@ def test_bug41660_1():
     obj.set_id()
     data = obj.repr_cli(format=-1)
     print data
-    exp = 'primitive bug41660 ocf:pacemaker:Dummy meta target-role="Stopped"'
+    exp = 'primitive bug41660 ocf:pacemaker:Dummy meta target-role=Stopped'
     assert data == exp
     assert obj.cli_use_validate()
 
@@ -99,7 +99,7 @@ def test_bug41660_2():
     obj.set_id()
     data = obj.repr_cli(format=-1)
     print data
-    exp = 'clone libvirtd-clone libvirtd meta interleave="true" ordered="true" target-role="Stopped"'
+    exp = 'clone libvirtd-clone libvirtd meta interleave=true ordered=true target-role=Stopped'
     assert data == exp
     #assert obj.cli_use_validate()
 
@@ -153,7 +153,7 @@ def test_bug41660_3():
     obj.set_id()
     data = obj.repr_cli(format=-1)
     print data
-    exp = 'clone libvirtd-clone libvirtd meta target-role="Stopped"'
+    exp = 'clone libvirtd-clone libvirtd meta target-role=Stopped'
     assert data == exp
     #assert obj.cli_use_validate()
 

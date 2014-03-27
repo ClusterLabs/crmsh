@@ -1320,5 +1320,13 @@ def service_info(name):
     return None
 
 
+# This RE matches nvpair values that can
+# be left unquoted
+_NOQUOTES_RE = re.compile(r'^[\w\.-]+$')
+
+
+def noquotes(v):
+    return _NOQUOTES_RE.match(v) is not None
+
 termctrl = TerminalController.getInstance()
 # vim:ts=4:sw=4:et:
