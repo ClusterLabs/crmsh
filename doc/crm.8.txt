@@ -12,7 +12,7 @@ crm - Pacemaker command line interface for configuration and management
 
 SYNOPSIS
 --------
-*crm* [OPTIONS] [ARGS...]
+*crm* [OPTIONS] [SUBCOMMAND ARGS...]
 
 
 [[topics_Description,Program description]]
@@ -100,13 +100,12 @@ OPTIONS
     Print crmsh version and build information (Mercurial Hg changeset
     hash).
 
-*-R, --regression-tests*::
-    Run in the regression test mode. Used mainly by the regression
-    testing suite.
-
 *-d, --debug*::
-    Print some debug information. Used by developers. [Not yet refined
-    enough to print useful information for other users.]
+    Print verbose debugging information.
+
+*-R, --regression-tests*::
+    Enables extra verbose trace logging used by the regression
+    tests. Logs all external calls made by crmsh.
 
 *--scriptdir*='DIR'::
     Extra directory where crm looks for cluster scripts. Can be a semi-colon
@@ -312,9 +311,9 @@ After editing the file, use `show` again to display the
 configuration:
 ...............
 crm(live)configure template# show
-primitive virtual-ip ocf:heartbeat:IPaddr \
-    params ip="192.168.1.101"
-primitive apache ocf:heartbeat:apache \
+primitive virtual-ip IPaddr \
+    params ip=192.168.1.101
+primitive apache apache \
     params configfile="/etc/apache2/httpd.conf"
 monitor apache 120s:60s
 group websvc \
@@ -339,11 +338,11 @@ crm(live)configure template# cd ..
 crm(live)configure# show
 node xen-b
 node xen-c
-primitive apache ocf:heartbeat:apache \
+primitive apache apache \
     params configfile="/etc/apache2/httpd.conf" \
-    op monitor interval="120s" timeout="60s"
-primitive virtual-ip ocf:heartbeat:IPaddr \
-    params ip="192.168.1.101"
+    op monitor interval=120s timeout=60s
+primitive virtual-ip IPaddr \
+    params ip=192.168.1.101
 group websvc apache virtual-ip
 ...............
 
@@ -365,11 +364,11 @@ crm(live)configure# rename virtual-ip intranet-ip
 crm(live)configure# show
 node xen-b
 node xen-c
-primitive apache ocf:heartbeat:apache \
+primitive apache apache \
     params configfile="/etc/apache2/httpd.conf" \
-    op monitor interval="120s" timeout="60s"
-primitive intranet-ip ocf:heartbeat:IPaddr \
-    params ip="192.168.1.101"
+    op monitor interval=120s timeout=60s
+primitive intranet-ip IPaddr \
+    params ip=192.168.1.101
 group websvc apache intranet-ip
 location websvc-pref websvc 100: xen-b
 ...............
@@ -399,16 +398,16 @@ node xen-d
 primitive fencer stonith:external/libvirt \
     params hypervisor_uri="qemu+tcp://10.2.13.1/system" \
         hostlist="xen-b xen-c xen-d" \
-    op monitor interval="2h"
-primitive svc ocf:heartbeat:Xinetd \
-    params service="systat" \
-    op monitor interval="30s"
-primitive intranet-ip ocf:heartbeat:IPaddr2 \
-    params ip="10.2.13.100" \
-    op monitor interval="30s"
-primitive apache ocf:heartbeat:apache \
+    op monitor interval=2h
+primitive svc Xinetd \
+    params service=systat \
+    op monitor interval=30s
+primitive intranet-ip IPaddr2 \
+    params ip=10.2.13.100 \
+    op monitor interval=30s
+primitive apache apache \
     params configfile="/etc/apache2/httpd.conf" \
-    op monitor interval="120s" timeout="60s"
+    op monitor interval=120s timeout=60s
 group websvc apache intranet-ip
 location websvc-pref websvc 100: xen-b
 ...............
@@ -431,7 +430,7 @@ Alternatively to not committing a configuration, it is also
 possible to tell Pacemaker not to start any resources:
 
 ...............
-crm(live)configure# property stop-all-resources="yes"
+crm(live)configure# property stop-all-resources=yes
 ...............
 Almost none---resources of class stonith are still started. But
 shell is not as strict when it comes to stonith resources.
@@ -1943,7 +1942,7 @@ you have custom shell scripts which would break, just set the
 For instance, with adding quotes enabled, it is possible to do
 the following:
 ...............
-# crm configure primitive d1 ocf:heartbeat:Dummy \
+# crm configure primitive d1 Dummy \
     meta description="some description here"
 # crm configure filter 'sed "s/hostlist=./&node-c /"' fencing
 ...............
@@ -1959,17 +1958,17 @@ meta attribute and those attributes may end up with conflicting
 values. Consider the following construct:
 ...............
 crm(live)# configure show svc fs virtual-ip
-primitive fs ocf:heartbeat:Filesystem \
-    params device="/dev/drbd0" directory="/srv/nfs" fstype="ext3" \
-    op monitor interval="10s" \
-    meta target-role="Started"
-primitive virtual-ip ocf:heartbeat:IPaddr2 \
-    params ip="10.2.13.110" iflabel="1" \
-    op monitor interval="10s" \
-    op start interval="0" \
-    meta target-role="Started"
+primitive fs Filesystem \
+    params device="/dev/drbd0" directory="/srv/nfs" fstype=ext3 \
+    op monitor interval=10s \
+    meta target-role=Started
+primitive virtual-ip IPaddr2 \
+    params ip=10.2.13.110 iflabel=1 \
+    op monitor interval=10s \
+    op start interval=0 \
+    meta target-role=Started
 group svc fs virtual-ip \
-    meta target-role="Stopped"
+    meta target-role=Stopped
 ...............
 
 Even though the element `svc` should be stopped, the group is
@@ -2346,8 +2345,8 @@ automatically replace such a reference with the right id:
 ...............
 crm(live)configure# primitive a2 www-2 meta $id-ref=a1
 crm(live)configure# show a2
-primitive a2 ocf:heartbeat:apache \
-    meta $id-ref="a1-meta_attributes"
+primitive a2 apache \
+    meta $id-ref=a1-meta_attributes
     [...]
 ...............
 It is advisable to give meaningful names to attribute sets which
@@ -2377,7 +2376,7 @@ op_type :: start | stop | monitor
 ...............
 Example:
 ...............
-rsc_template public_vm ocf:heartbeat:Xen \
+rsc_template public_vm Xen \
   op start timeout=300s \
   op stop timeout=300s \
   op monitor interval=30s timeout=60s \
