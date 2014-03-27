@@ -392,13 +392,17 @@ class CibConfig(command.UI):
         "usage: save [xml] <filename>"
         if not cib_factory.is_cib_sane():
             context.fatal_error("CIB is not valid")
+        if not args:
+            context.fatal_error("Expected 1 argument (0 given)")
         if args[0] == "xml":
-            f = args[1]
+            if len(args) != 2:
+                context.fatal_error("Expected 2 arguments (%d given)" % (len(args)))
+            filename = args[1]
             set_obj = mkset_obj("xml")
         else:
-            f = args[0]
+            filename = args[0]
             set_obj = mkset_obj()
-        return set_obj.save_to_file(f)
+        return set_obj.save_to_file(filename)
 
     @command.skill_level('administrator')
     @command.completers(compl.choice(['xml', 'replace', 'update']), _load_2nd_completer)
@@ -406,6 +410,8 @@ class CibConfig(command.UI):
         "usage: load [xml] {replace|update} {<url>|<path>}"
         if not cib_factory.is_cib_sane():
             context.fatal_error("CIB is not valid")
+        if len(args) < 2:
+            context.fatal_error("Expected 2 arguments (0 given)")
         if args[0] == "xml":
             if len(args) != 3:
                 context.fatal_error("Expected 3 arguments (%d given)" % len(args))
