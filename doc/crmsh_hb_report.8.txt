@@ -231,7 +231,7 @@ Some files are result of a more involved processing:
 
 	*sysstats.txt*::
 	Output of various system commands such as ps(1), uptime(1),
-	netstat(8), and ifconfig(8). The dynamic part of the system.
+	netstat(8), and ip(8). The dynamic part of the system.
 
 description.txt should contain a user supplied description of the
 problem, but since it is very seldom used, it will be dropped
