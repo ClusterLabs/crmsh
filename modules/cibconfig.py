@@ -1734,7 +1734,7 @@ class CibLocation(CibObject):
             return utils.get_check_rc()
         rc = 0
         uname = self.node.get("node")
-        if uname and uname not in cib_factory.node_id_list():
+        if uname and uname.lower() not in [id.lower() for id in cib_factory.node_id_list()]:
             common_warn("%s: referenced node %s does not exist" % (self.obj_id, uname))
             rc = 1
         pattern = self.node.get("rsc-pattern")
@@ -1752,7 +1752,7 @@ class CibLocation(CibObject):
         for enode in self.node.xpath("rule/expression"):
             if enode.get("attribute") == "#uname":
                 uname = enode.get("value")
-                if uname and uname not in cib_factory.node_id_list():
+                if uname and uname.lower() not in [id.lower() for id in cib_factory.node_id_list()]:
                     common_warn("%s: referenced node %s does not exist" % (self.obj_id, uname))
                     rc = 1
         return rc
@@ -2096,7 +2096,7 @@ class CibFencingOrder(CibObject):
         rc = 0
         nl = self.node.findall("fencing-level")
         for target in [x.get("target") for x in nl]:
-            if target not in cib_factory.node_id_list():
+            if target.lower() not in [id.lower() for id in cib_factory.node_id_list()]:
                 common_warn("%s: target %s not a node" % (self.obj_id, target))
                 rc = 1
         stonith_rsc_l = [x.obj_id for x in
