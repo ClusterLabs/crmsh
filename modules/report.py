@@ -764,7 +764,7 @@ class Report(Singleton):
 
     def find_node_log(self, node):
         p = os.path.join(self.loc, node)
-        for lf in ("ha-log.txt", "messages"):
+        for lf in ("ha-log.txt", "messages", "journal.log"):
             if is_log(os.path.join(p, lf)):
                 return os.path.join(p, lf)
         return None
