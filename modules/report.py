@@ -596,6 +596,8 @@ class Report(Singleton):
 
     def __init__(self):
         # main source attributes
+        self._creation_time = "--:--:--"
+        self._creator = "unknown"
         self.source = None
         self.from_dt = None
         self.to_dt = None
@@ -1108,6 +1110,12 @@ class Report(Singleton):
                 if os.path.isfile(self.desc):
                     yr = os.stat(self.desc).st_mtime
                     common_debug("Found %s, created %s" % (descname, yr))
+                    self._creation_time = time.strftime("%a %d %b %H:%M:%S %Z %Y",
+                                                        time.localtime(yr))
+                    if descname == 'report.summary':
+                        self._creator = "crm_report"
+                    else:
+                        self._creator = 'unknown'
                     set_year(yr)
                     break
             else:
@@ -1258,11 +1266,6 @@ class Report(Singleton):
                 return s
         f.close()
 
-    def dumpdescln(self, pfx, field):
-        s = self.get_desc_line(field)
-        if s:
-            return "%s: %s" % (pfx, s)
-
     def short_peinputs_list(self):
         '''There could be quite a few transitions, limit the
         output'''
@@ -1300,9 +1303,13 @@ class Report(Singleton):
         '''
         if not self.prepare_source():
             return False
+
+        created_on = self.get_desc_line("Date") or self._creation_time
+        created_by = self.get_desc_line("By") or self._creator
+
         page_string('\n'.join(("Source: %s" % self.source,
-                               self.dumpdescln("Created on", "Date") or "Created on: --:--:--",
-                               self.dumpdescln("By", "By") or "By: unknown",
+                               "Created on: %s" % (created_on),
+                               "By: %s" % (created_by),
                                "Period: %s - %s" %
                                (self._str_dt(self.get_rpt_dt(self.from_dt, "top")),
                                 self._str_dt(self.get_rpt_dt(self.to_dt, "bottom"))),
