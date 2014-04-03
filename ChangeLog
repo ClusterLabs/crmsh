@@ -1,3 +1,139 @@
+* Thu Apr 4 2014 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- release 2.0
+- Improve output from history explorer when using a crm_report-generated
+  report (bnc#870886)
+- Add journal.log to interesting log files (bnc#870886)
+- make sanity check of node name not case sensitive
+- hb_report: Don't use deprecated ifconfig (bnc#871089)
+- parse: Clean up the CLI syntax display
+- ra: display without class:provider: prefix if possible
+- Better args error handling in configure load/save (bnc#870654)
+- ui_context: Correctly check end_game() return value (bnc#868533)
+- command: Propagate error from auto-commit (bnc#868533)
+- crm_pkg: Add --no-refresh to zypper commands
+- scripts: configure firewall to open cluster ports (bnc#868008)
+- scripts: Improved debug output from cluster scripts (bnc#866636)
+- main: Better descriptions for -d and -R flags.
+- utils: Nicer warning when crm_simulate fails
+- ui: Don't call nonexistent function on unsupported cluster stack
+- xmlutil: fencing-topology used broken comparison (bnc#866639)
+- parse: More liberal parsing of role assignment in constraint rules
+- scripts: corosync uses mcastport - 1 (bnc#868008)
+- utils: ask() did not respect force flag in all cases (bnc#868007)
+- xmlutil: Compare attribute dictionaries properly
+- xmlutil: Fix attribute handling in XML comparison function
+- xmlutil: Fix sorting of attribute keys in xml_cmp
+- xmlutil: Sanitize the CIB a bit less aggressively (bnc#866434)
+- xmlutil: in xml_cmp, s/print/common_debug/
+- xmlutil: Handle XML comments properly in xml_cmp
+- xmlutil: order-independent XML comparison (bnc#866434)
+- scripts: don't modify system unless necessary (bnc#866569)
+- xmlutil: don't crash on degenerate colocations
+- scripts: enable trace logging for cluster scripts (bnc#866636)
+- ui_cluster: use crm_mon -bD1 in wait_for_cluster (bnc#866635)
+- scripts: Disable corosync.log by default (bnc#866569)
+- scripts: Open appropriate ports in firewall (bnc#866569)
+- scripts: Configure quorum based on node count (bnc#866569)
+- utils: Record all calls in regression test output (bnc#862383)
+- ui_resource: Add maintenance command (bnc#863071)
+- parse: Fix resource sets, once and for all (savannah#41617)
+- scripts: Disable strict host key checking (bnc#864238)
+- hb_report: Fix incorrect quotes (bnc#863816)
+- cibconfig: do not format xml tags when requested (bnc#863746)
+- cibconfig: Handle non-string arguments (bnc#863736)
+- ui_root: Rename root level to 'root' (bnc#863583)
+- corosync: Allow tabs in corosync.conf (bnc#862577)
+- parse: Fix sequential=true for resource sets (bnc#862334)
+- cibconfig: fencing_topology warning with stonith templates
+  (savannah#41414)
+- xmlutil: rsc_template has no provider attribute (savannah#41410)
+- ra: Infer provider from RA name (bnc#860754)
+- ui_options: add missing documentation for options set (bnc#860585)
+- ui_cib: correct name of cib import (bnc#860584)
+- ui_ra: Fix problems with ra info command (bnc#860583)
+- ui_resource: Fix crash in resource cleanup (bnc#859570)
+- ui_assist: Add assist sublevel (fate#314917)
+- hb_report: Show progress when processing many transitions
+- report: Open reports output by crm_report (fate#316330)
+- hb_report: Display as 'report'
+- report: Move report creation to root
+- ui_report: Fix invocation of hb_report
+- hb_report: call corosync-blackbox, not corosync-fplay
+- help: Bug in delayed loading of help text
+- corosync: Better parser and more commands
+- scripts: Set PasswordAuthentication=no
+- ui_resource: Fix bug in resource restart
+- ui_cluster: Revised cluster status
+- msg: Don't print ok/info to stderr
+- ui_script: Allow --nodes='..', not only --nodes '..'
+- scripts: Cluster scripts (fate#316464, fate#309206, fate#316332)
+- config: Validate boolean values correctly
+- main: Seed random generator on startup
+- main: More informative error on start failure
+- cluster: Use crm_node -l for node list
+- crm_pssh: Limit scope of glob in pssh/get_output
+- ui_context: Less repetitive error message on unknown command
+- ui_cib: Fix typo in sublevel name: cib.cibconfig -> cib.cibstatus
+- help: Return error if help topic is not found (bug#40821)
+- main: Return more useful error codes
+- crm_gv: Support rsc_template in graphs (bnc#850159)
+- cibconfig: Updated fix for configure load method (bnc#841764)
+- parse: Correct recognition of kind in order constraints
+- history: Fix incorrect argument to level check
+- report: Fix broken call to hb_report
+- parse: Stricter parsing of resource names
+- parse: Resource sets in location constraints (fate#315158).
+- utils: Enable cibadmin -P for 1.1.11
+- parse: rsc_template is not recognized by parser (bnc#854562)
+- vars: Add remote-node as resource attribute (bnc#854552)
+- cibconfig: Add missing config import
+- hb_report: Prefer generating .bz2 archives (bnc#854060)
+- hb_report: Add support for xz compression (bnc#854060)
+- cluster: Implement run using pssh
+- ui_cluster: Cluster sublevel implementation
+- configure: Improved completion for group, clone, ms (bnc#845339)
+- config: Set OCF_ROOT in environ structure (used by ra.py)
+- main: Tab completion for multi-line statements BUG: bnc#845339
+- bash_completion: Add completion installation to spec file
+- ui_resource: Added new resource scores command
+- command: Improved default help for commands
+- crm_gv: Limit graph size to fit on A4
+- config: New configuration file format
+- parse: Support role= in rsc_location
+- msg: Add colors to message output
+- templates: Update OCFS2 template.
+- ui_context: Fix readline completion for empty input
+- ui_configure: Clearer error messages
+- ui_context: Wait if in transit
+- ui_configure: Clearer error messages
+- Enable colorized prompt
+- ui_context: Allow ui stack modifications
+- ui_configure: Completion + help for primitive
+- ui_context: Fix completion with no args to command
+- command: Fix case with no args to completer
+- ui_context: Improve completion
+- ui_ra: Updated completion for info
+- main.compgen: Adapt output to bash completion
+- bash_completion: Improve colon-handling
+- main: Fix issues with ctrl+C and profiling
+- ui_options: add option to print single user preference values
+- bash_completion: fix path to crm
+- Clean up contextual_help
+- Fix help with no argument
+- ui_context: Allow commands that manipulate the stack
+- ui_context: Fix stack handling
+- ui_configure: Add missing return statement
+- Check if command failed
+- Initial bash completion / completion framework
+- Add report level to wrap crmsh_hb_report
+- UI makeover
+- help: Rewritten help subsystem
+- hb_report: exit early if which(1) is missing
+- ui: anonymous temporary shadow CIBs
+- cibconf: fix two fencing top issues (savannah#40173)
+- node: clear state new way since pcmk 1.1.8 (bnc#843699)
+- Integrate hb_report as part of crmsh
+
 * Tue Sep 24 2013 Kristoffer Grönlund <kgronlund@suse.com>, Dejan Muhamedagic <dejan@suse.de>, and many others
 - release 1.2.6
 - cibconf: fix removing cluster properties in edit (bnc#841764)
