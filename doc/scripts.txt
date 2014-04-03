@@ -2,7 +2,7 @@
 :source-highlighter: pygments
 
 .Version information
-NOTE: This section applies to the in-development `crmsh 2.0+` only.
+NOTE: This section applies to `crmsh 2.0+` only.
 
 == Introduction ==
 

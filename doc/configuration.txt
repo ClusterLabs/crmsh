@@ -1,7 +1,7 @@
 = Configuration =
 
 .Version information
-NOTE: This section applies to the in-development `crmsh 2.0+` only.
+NOTE: This section applies to `crmsh 2.0+` only.
 
 
 `crm` can be configured using both a system-wide configuration file,
