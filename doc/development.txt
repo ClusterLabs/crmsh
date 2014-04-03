@@ -1,6 +1,6 @@
 = Development =
 
-`crmsh` is a free software project, and is open to contributors. 
+`crmsh` is a free software project, and is open to contributors.
 Patches, comments, documentation, testing and so on are
 all very much welcome!
 
@@ -8,23 +8,22 @@ all very much welcome!
 
 ++++
 <ul class="nav">
-<li><a href="https://savannah.nongnu.org/projects/crmsh/"><i class="fa fa-gears fa-3x fa-fw"></i> Project Page</a></li>
-<li><a href="http://hg.savannah.nongnu.org/hgweb/crmsh/"><i class="fa fa-archive fa-3x fa-fw"></i> Source Repository</a></li>
+<li><a href="https://github.com/crmsh/crmsh"><i class="fa fa-archive fa-3x fa-fw"></i> Source Repository</a></li>
 <li><a href="http://lists.linux-ha.org/mailman/listinfo/linux-ha"><i class="fa fa-envelope fa-3x fa-fw"></i> Mailing List</a></li>
-<li><a href="https://savannah.nongnu.org/bugs/?group=crmsh"><i class="fa fa-bug fa-3x fa-fw"></i> Issue Tracker</a></li>
+<li><a href="https://github.com/crmsh/crmsh/issues"><i class="fa fa-bug fa-3x fa-fw"></i> Issue Tracker</a></li>
 <li><a href="irc://freenode.net/#linux-ha"><i class="fa fa-comments fa-3x fa-fw"></i> IRC: #linux-ha</a></li>
 </ul>
 ++++
 
 == Building crmsh ==
 
-The source code for `crmsh` is kept in a 
-http://mercurial.selenic.com[Mercurial] repository 
-hosted at http://nongnu.org[nongnu]. Use the 
-command-line tool +hg+ to get a working copy:
+The source code for `crmsh` is kept in a
+http://git-scm.com/[git] repository
+hosted at https://github.com[github]. Use the
+command-line tool +git+ to get a working copy:
 
 ----
-hg clone http://hg.savannah.nongnu.org/hgweb/crmsh/
+git clone https://github.com/crmsh/crmsh.git
 ----
 
 `crmsh` needs the source code to `cluster-glue` and `pacemaker` when

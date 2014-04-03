@@ -49,7 +49,7 @@ PYTHONPATH and make sure that the crmsh module is
 reachable.
 
 Please file an issue describing your installation at
-http://crmsh.nongnu.org/ .
+https://github.com/crmsh/crmsh/issues/ .
 ''' % (msg, msg2))
         sys.exit(-1)
 

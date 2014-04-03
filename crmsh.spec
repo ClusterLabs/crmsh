@@ -43,7 +43,7 @@ License:        GPL-2.0+
 Group:          %{pkg_group}
 Version:        2.0
 Release:        %{?crmsh_release}%{?dist}
-Url:            http://savannah.nongnu.org/projects/crmsh
+Url:            http://crmsh.github.io
 Source0:        crmsh.tar.bz2
 # PATCH-FEATURE-OPENSUSE crmsh-cibadmin_can_patch.patch
 # dejan@suse.de -- enable atomic CIB updates here, because our

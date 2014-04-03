@@ -13,23 +13,23 @@ used in batch mode to execute commands from files.
 
 The website for crmsh is:
 
-  * http://crmsh.nongnu.org/
+  * http://crmsh.github.io/
 
 Documentation for the latest stable release is found at:
 
-  * http://crmsh.nongnu.org/documentation.html
+  * http://crmsh.github.io/documentation.html
 
 # DEVELOPMENT
 
 crmsh is implemented in Python. The source code for crmsh is kept in a
-Mercurial source repository. To check out the latest development
-version, install Mercurial and run this command:
+git source repository. To check out the latest development
+version, install git and run this command:
 
-    hg clone http://hg.savannah.nongnu.org/hgweb/crmsh/
+    git clone https://github.com/crmsh/crmsh
 
 Bugs and issues can be reported here:
 
- * https://savannah.nongnu.org/bugs/?group=crmsh
+ * https://github.com/crmsh/crmsh/issues
 
 Any other questions or comments can be made on the linux-ha mailing
 list at:
