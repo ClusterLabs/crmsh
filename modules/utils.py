@@ -95,16 +95,17 @@ def ask(msg):
 
     msg += ' '
     if msg.endswith('? '):
-        msg = msg[:-2] + ' ([y]/n)? '
+        msg = msg[:-2] + ' (y/n)? '
 
     while True:
         try:
             ans = raw_input(msg)
         except EOFError:
             ans = 'n'
-        ans = ans[0].lower()
-        if ans in 'yn':
-            return ans == 'y'
+        if ans:
+            ans = ans[0].lower()
+            if ans in 'yn':
+                return ans == 'y'
 
 # holds part of line before \ split
 # for a multi-line input
