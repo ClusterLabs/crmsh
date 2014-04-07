@@ -53,14 +53,14 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Requires(pre):  pacemaker
 Requires:       pssh
 Requires:       python >= 2.6
-Requires:       python-PyYAML
 Requires:       python-dateutil
 Requires:       python-lxml
 Requires:       which
-BuildRequires:  python-PyYAML
 BuildRequires:  python-lxml
 
 %if 0%{?suse_version}
+Requires:       python-PyYAML
+BuildRequires:  python-PyYAML
 # Suse splits this off into a separate package
 Requires:       python-curses
 BuildRequires:  fdupes
@@ -70,6 +70,11 @@ BuildRequires:  python-curses
 %else
 BuildRequires:  cluster-glue-libs-devel
 BuildRequires:  pacemaker-libs-devel
+%endif
+
+%if 0%{?fedora_version}
+Requires:       PyYAML
+BuildRequires:  PyYAML
 %endif
 
 # Required for core functionality

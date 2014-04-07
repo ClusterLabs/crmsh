@@ -22,7 +22,6 @@ import os
 import shutil
 import getpass
 import subprocess
-import yaml
 import config
 import options
 from msg import err_buf
@@ -130,7 +129,11 @@ def list_scripts():
 def load_script(script):
     main = resolve_script(script)
     if main and os.path.isfile(main):
-        return yaml.load(open(main))[0]
+        try:
+            import yaml
+            return yaml.load(open(main))[0]
+        except ImportError, e:
+            raise ValueError("PyYAML error: %s" % (e))
     return None
 
 
