@@ -78,8 +78,18 @@ def set_deep_meta_attr_node(target_node, attr, value):
                              (attr, c.get("id")))
                 rm_meta_attribute(c, attr, nvpair_l, force_children=True)
     xmlutil.rmnodes(list(set(nvpair_l)))
-    for n in xmlutil.get_set_nodes(target_node, "meta_attributes", 1):
-        xmlutil.set_attr(n, attr, value)
+
+    # work around issue with pcs interoperability
+    # by finding exising nvpairs -- if there are any, just
+    # set the value in those. Otherwise fall back to adding
+    # to all meta_attributes tags
+    nvpairs = target_node.xpath("//meta_attributes/nvpair[@name='%s']" % (attr))
+    if len(nvpairs) > 0:
+        for nvpair in nvpairs:
+            nvpair.set("value", value)
+    else:
+        for n in xmlutil.get_set_nodes(target_node, "meta_attributes", 1):
+            xmlutil.set_attr(n, attr, value)
     return xmlutil.commit_rsc(target_node)
 
 

@@ -254,3 +254,31 @@ def test_eq1():
     e1 = etree.fromstring(xml1)
     e2 = etree.fromstring(xml2)
     assert xmlutil.xml_equals(e1, e2, show=True)
+
+
+def test_pcs_interop_1():
+    """
+    pcs<>crmsh interop bug
+    """
+
+    xml = """<clone id="dummies">
+        <meta_attributes id="dummies-meta">
+          <nvpair name="globally-unique" value="false" id="dummies-meta-globally-unique"/>
+        </meta_attributes>
+        <meta_attributes id="dummies-meta_attributes">
+          <nvpair id="dummies-meta_attributes-target-role" name="target-role" value="Stopped"/>
+        </meta_attributes>
+        <primitive id="dummy-1" class="ocf" provider="heartbeat" type="Dummy"/>
+      </clone>"""
+    elem = etree.fromstring(xml)
+    from ui_resource import set_deep_meta_attr_node
+
+    assert len(elem.xpath("//meta_attributes/nvpair[@name='target-role']")) == 1
+
+    print "BEFORE:", etree.tostring(elem)
+
+    set_deep_meta_attr_node(elem, 'target-role', 'Stopped')
+
+    print "AFTER:", etree.tostring(elem)
+
+    assert len(elem.xpath("//meta_attributes/nvpair[@name='target-role']")) == 1
