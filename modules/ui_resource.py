@@ -83,7 +83,7 @@ def set_deep_meta_attr_node(target_node, attr, value):
     # by finding exising nvpairs -- if there are any, just
     # set the value in those. Otherwise fall back to adding
     # to all meta_attributes tags
-    nvpairs = target_node.xpath("//meta_attributes/nvpair[@name='%s']" % (attr))
+    nvpairs = target_node.xpath("./meta_attributes/nvpair[@name='%s']" % (attr))
     if len(nvpairs) > 0:
         for nvpair in nvpairs:
             nvpair.set("value", value)
