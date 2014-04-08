@@ -1752,7 +1752,8 @@ class CibLocation(CibObject):
         for enode in self.node.xpath("rule/expression"):
             if enode.get("attribute") == "#uname":
                 uname = enode.get("value")
-                if uname and uname.lower() not in [id.lower() for id in cib_factory.node_id_list()]:
+                ids = [i.lower() for i in cib_factory.node_id_list()]
+                if uname and uname.lower() not in ids:
                     common_warn("%s: referenced node %s does not exist" % (self.obj_id, uname))
                     rc = 1
         return rc

@@ -380,7 +380,8 @@ def show_dot_graph(dotfile, keep_file=False, desc="transition graph"):
         cmd = "(%s; rm -f %s)" % (cmd, dotfile)
     if options.regression_tests:
         print ".EXT", cmd
-    subprocess.Popen(cmd, shell=True, bufsize=0, stdin=None, stdout=None, stderr=None, close_fds=True)
+    subprocess.Popen(cmd, shell=True, bufsize=0,
+                     stdin=None, stdout=None, stderr=None, close_fds=True)
     common_info("starting %s to show %s" % (config.core.dotty, desc))
 
 

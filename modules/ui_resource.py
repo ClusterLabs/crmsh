@@ -90,7 +90,7 @@ def set_deep_meta_attr_node(target_node, attr, value):
     else:
         for n in xmlutil.get_set_nodes(target_node, "meta_attributes", 1):
             xmlutil.set_attr(n, attr, value)
-    return xmlutil.commit_rsc(target_node)
+    return True
 
 
 def set_deep_meta_attr(attr, value, rsc_id):
@@ -112,7 +112,9 @@ def set_deep_meta_attr(attr, value, rsc_id):
     if not (target_node.tag == "primitive" and
             target_node.getparent().tag == "group"):
         target_node = xmlutil.get_topmost_rsc(target_node)
-    return set_deep_meta_attr_node(target_node, attr, value)
+    if not set_deep_meta_attr_node(target_node, attr, value):
+        return False
+    return xmlutil.commit_rsc(target_node)
 
 
 def cleanup_resource(rsc, node=''):

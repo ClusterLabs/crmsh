@@ -887,7 +887,7 @@ def obj_cmp(obj1, obj2):
 
 
 def filter_on_type(cl, obj_type):
-    if type(cl[0]) == type([]):
+    if isinstance(cl[0], list):
         l = [cli_list for cli_list in cl if cli_list[0][0] == obj_type]
         if config.core.sort_elements:
             l.sort(cmp=cmp)
@@ -958,7 +958,8 @@ def processing_sort_cli(cl):
     '''
     if not cl:
         return []
-    return nodes_cli(cl) + templates_cli(cl) + primitives_cli(cl) + groups_cli(cl) + mss_cli(cl) + clones_cli(cl) \
+    return nodes_cli(cl) + templates_cli(cl) + primitives_cli(cl) \
+        + groups_cli(cl) + mss_cli(cl) + clones_cli(cl) \
         + constraints_cli(cl) + fencing_topology_cli(cl) + properties_cli(cl) \
         + ops_cli(cl) + acls_cli(cl)
 
@@ -1311,18 +1312,18 @@ def xml_equals_unordered(a, b):
 
     if a.tag != b.tag:
         return fail("tags differ: %s != %s" % (a.tag, b.tag))
-    if a.attrib != b.attrib:
+    elif a.attrib != b.attrib:
         return fail("attributes differ: %s != %s" % (a.attrib, b.attrib))
-    if safe_strip(a.text) != safe_strip(b.text):
+    elif safe_strip(a.text) != safe_strip(b.text):
         return fail("text differ %s != %s" % (repr(a.text), repr(b.text)))
-    if safe_strip(a.tail) != safe_strip(b.tail):
+    elif safe_strip(a.tail) != safe_strip(b.tail):
         return fail("tails differ: %s != %s" % (a.tail, b.tail))
-    if len(a) != len(b):
+    elif len(a) != len(b):
         return fail("number of children differ")
+    elif len(a) == 0:
+        return True
     sorted_children = zip(sorted(a, key=sortby), sorted(b, key=sortby))
-    if sorted_children:
-        return all(xml_equals_unordered(a, b) for a, b in sorted_children)
-    return True
+    return all(xml_equals_unordered(a, b) for a, b in sorted_children)
 
 
 def xml_equals(n, m, show=False):
