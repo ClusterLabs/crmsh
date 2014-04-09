@@ -26,7 +26,7 @@ from utils import get_boolean, olist, is_boolean_true
 from msg import common_err, syntax_err
 from cibobjects import Primitive, RscTemplate, Group, Clone, Master
 from cibobjects import Location, Colocation, Order
-from cibobjects import Monitor, Node, Property, RscTicket
+from cibobjects import Monitor, Node, Property, RscTicket, Tag
 from cibobjects import FencingTopology, ACLRight, Role, User, RawXML
 
 
@@ -805,6 +805,28 @@ class FencingOrderParser(BaseParser):
         return out
 
 
+class TagParser(BaseParser):
+    _TAG_RE = re.compile(r"([^:]+):$")
+
+    def can_parse(self):
+        return ('tag',)
+
+    def parse(self, cmd):
+        self.begin(cmd, min_args=2)
+        self.match('tag')
+        self.match(self._TAG_RE)
+        tagname = self.matched(1)
+        resources = []
+        while self.has_tokens():
+            resources.append(self.match_resource())
+        if not resources:
+            self.err("Expected at least one resource")
+        out = Tag()
+        out.id = tagname
+        out.resources = resources
+        return out
+
+
 class AclParser(BaseParser):
     _ACL_RIGHT_RE = re.compile(r'(%s)$' % ('|'.join(vars.acl_rule_names)), re.IGNORECASE)
     _ROLE_REF_RE = re.compile(r'role:(.+)$', re.IGNORECASE)
@@ -1174,7 +1196,8 @@ class CliParser(object):
                 PropertyParser,
                 FencingOrderParser,
                 AclParser,
-                RawXMLParser)
+                RawXMLParser,
+                TagParser)
 
     def _xml_lex(self, s):
         try:

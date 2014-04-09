@@ -362,6 +362,19 @@ class TestCliParser(unittest.TestCase):
         out = self.parser.parse('fencing_topology vbox4: stonith-vbox3-1-off,stonith-vbox3-2-off,stonith-vbox3-1-on,stonith-vbox3-2-on')
         self.assertEqual(1, len(out.levels))
 
+    def test_tag(self):
+        out = self.parser.parse('tag tag1: one two three')
+        self.assertEqual(out.id, 'tag1')
+        self.assertEqual(out.resources, ['one', 'two', 'three'])
+        self.assertEqual([['tag'], 'tag1', ['one', 'two', 'three']],
+                         out.to_list())
+
+        out = self.parser.parse('tag tag1:')
+        self.assertFalse(out)
+
+        out = self.parser.parse('tag tag1:: foo')
+        self.assertFalse(out)
+
     def _parse_lines(self, lines):
         out = []
         for line in lines2cli(lines):

@@ -397,3 +397,15 @@ class RawXML(Expr):
 
     def _to_list(self):
         return listfmt('[[% [[id %]]] [raw %]]', self.type, self.id, self.raw)
+
+
+class Tag(Expr):
+    def __init__(self):
+        Expr.__init__(self)
+        self.id = None
+        self.resources = []
+
+    def _to_list(self):
+        ret = listfmt('[[tag] %]', self.id)
+        ret.append(self.resources)
+        return ret

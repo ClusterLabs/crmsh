@@ -825,6 +825,7 @@ conv_list = {
     "utilization": "utilization",
     "operations": "operations",
     "op": "op",
+    "tag": "tag",
 }
 
 
@@ -2143,6 +2144,28 @@ class CibAcl(CibObject):
             headnode.append(n)
         remove_id_used_attributes(oldnode)
         return headnode
+
+
+class CibTag(CibObject):
+
+    def _repr_cli_head(self, fmt):
+        s = cli_display.keyword('tag')
+        id_ = cli_display.id(self.obj_id)
+        return "%s %s:" % (s, id_)
+
+    def _repr_cli_child(self, c, fmt):
+        return c.get('id')
+
+    def _cli_list2node(self, cli_list, oldnode):
+        """
+        cli_list: [[tag] <id> [<rsc>, <rsc>...]]
+        out: <tag id="<id>"><obj_ref id="<rsc>">...</tag>
+        """
+        tag = etree.Element('tag', id=cli_list[1])
+        for rsc in cli_list[2]:
+            etree.SubElement(tag, 'obj_ref', id=rsc)
+        return tag
+
 #
 ################################################################
 
@@ -2184,6 +2207,7 @@ cib_object_map = {
     "fencing-topology": ("fencing_topology", CibFencingOrder, "configuration"),
     "acl_role": ("role", CibAcl, "acls"),
     "acl_user": ("user", CibAcl, "acls"),
+    "tag": ("tag", CibTag, "tags"),
 }
 
 # generate a translation cli -> tag

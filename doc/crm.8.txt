@@ -2717,6 +2717,24 @@ Example:
 op_defaults record-pending=true
 ...............
 
+[[cmdhelp_configure_tag,Define resource tags]]
+==== `tag`
+
+Define a resource tag. A tag is an id referring to one or more
+resources, without implying any constraints between the tagged
+resources. This can be useful for grouping conceptually related
+resources.
+
+Usage:
+...............
+tag <tag-name>: <rsc> [<rsc> ...]
+...............
+Example:
+...............
+tag web: p-webserver p-vip
+...............
+
+
 [[cmdhelp_configure_schema,set or display current CIB RNG schema]]
 ==== `schema`
 
