@@ -20,6 +20,7 @@ from lxml import etree
 import os
 import sys
 import re
+import fnmatch
 import time
 import config
 from singletonmixin import Singleton
@@ -2617,16 +2618,23 @@ class CibFactory(Singleton):
         self._clean_state()
         id_store.clear()
 
-    def find_object(self, obj_id):
-        "Find an object for id."
+    def find_objects(self, obj_id):
+        "Find objects for id (can be a wildcard-glob)."
+        matchfn = lambda x: fnmatch.fnmatch(x, obj_id)
+        objs = []
         for obj in self.cib_objects:
-            if obj.obj_id == obj_id:
-                return obj
+            if matchfn(obj.obj_id):
+                objs.append(obj)
             # special case for Heartbeat nodes which have id
             # different from uname
-            if obj.obj_type == "node" and \
-                    obj.node.get("uname") == obj_id:
-                return obj
+            elif obj.obj_type == "node" and matchfn(obj.node.get("uname")):
+                objs.append(obj)
+        return objs
+
+    def find_object(self, obj_id):
+        objs = self.find_objects(obj_id)
+        if len(objs) > 0:
+            return objs[0]
         return None
 
     #
@@ -2896,10 +2904,10 @@ class CibFactory(Singleton):
             elif spec.startswith("type:"):
                 obj_set |= set(self.get_elems_on_type(spec))
             else:
-                obj = self.find_object(spec)
-                if obj:
+                objs = self.find_objects(spec)
+                for obj in objs:
                     obj_set.add(obj)
-                else:
+                if len(objs) == 0:
                     no_object_err(spec)
                     rc = False
         return rc, obj_set
