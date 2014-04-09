@@ -93,6 +93,15 @@ def set_deep_meta_attr_node(target_node, attr, value):
     return True
 
 
+def set_deep_meta_attr_tag(tag, attr, value):
+    """
+    tag: an etree tag node
+    TODO: make transactional (shadow CIB?)
+    """
+    return all(set_deep_meta_attr(attr, value, ref.get('id'))
+               for ref in tag.xpath("./obj_ref"))
+
+
 def set_deep_meta_attr(attr, value, rsc_id):
     '''
     If the referenced rsc is a primitive that belongs to a group,
@@ -109,6 +118,9 @@ def set_deep_meta_attr(attr, value, rsc_id):
     if target_node is None:
         common_error("resource %s does not exist" % rsc_id)
         return False
+
+    if target_node.tag == 'tag':
+        return set_deep_meta_attr_tag(target_node, attr, value)
     if not (target_node.tag == "primitive" and
             target_node.getparent().tag == "group"):
         target_node = xmlutil.get_topmost_rsc(target_node)
