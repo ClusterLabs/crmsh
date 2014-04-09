@@ -758,6 +758,11 @@ class CibConfig(command.UI):
                     status"""
         return self.__conf_object(context.get_command_name(), *args)
 
+    @command.skill_level('administrator')
+    @command.completers_repeating(compl.null, top_rsc_tmpl_id_list)
+    def do_tag(self, context, *args):
+        return self.__conf_object(context.get_command_name(), *args)
+
     @command.skill_level('expert')
     @command.completers_repeating(_rsc_id_list)
     def do_rsctest(self, context, *args):

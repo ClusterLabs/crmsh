@@ -2161,8 +2161,9 @@ class CibTag(CibObject):
         cli_list: [[tag] <id> [<rsc>, <rsc>...]]
         out: <tag id="<id>"><obj_ref id="<rsc>">...</tag>
         """
-        tag = etree.Element('tag', id=cli_list[1])
-        for rsc in cli_list[2]:
+        tagid = cli_list[0][1][0][1]
+        tag = etree.Element('tag', id=tagid)
+        for rsc in cli_list[1]:
             etree.SubElement(tag, 'obj_ref', id=rsc)
         return tag
 

@@ -406,6 +406,6 @@ class Tag(Expr):
         self.resources = []
 
     def _to_list(self):
-        ret = listfmt('[[tag] %]', self.id)
+        ret = listfmt('[[tag [[id %]]]]', self.id)
         ret.append(self.resources)
         return ret

@@ -366,7 +366,7 @@ class TestCliParser(unittest.TestCase):
         out = self.parser.parse('tag tag1: one two three')
         self.assertEqual(out.id, 'tag1')
         self.assertEqual(out.resources, ['one', 'two', 'three'])
-        self.assertEqual([['tag'], 'tag1', ['one', 'two', 'three']],
+        self.assertEqual([['tag', [['id', 'tag1']]], ['one', 'two', 'three']],
                          out.to_list())
 
         out = self.parser.parse('tag tag1:')
