@@ -74,11 +74,11 @@ def syslog_ts(s):
         # strptime defaults year to 1900 (sigh)
         tm = time.strptime(' '.join([YEAR] + s.split()[0:3]),
                            "%Y %b %d %H:%M:%S")
-        return time.mktime(tm)
+        return tm
     except:  # try the rfc5424
         try:
             tm = parse_time(s.split()[0])
-            return time.mktime(tm.timetuple())
+            return tm
         except Exception:
             common_debug("malformed line: %s" % s)
             return None
