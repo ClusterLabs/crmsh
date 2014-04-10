@@ -1038,7 +1038,7 @@ class Report(Singleton):
 
     def set_node_colors(self):
         i = 0
-        for n in self.cibnode_l:
+        for n in self.get_nodes():
             self.nodecolor[n] = self.nodecolors[i]
             i = (i+1) % len(self.nodecolors)
 
