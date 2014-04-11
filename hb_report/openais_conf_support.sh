@@ -90,7 +90,7 @@ cluster_info() {
 }
 essential_files() {
 	cat<<EOF
-d $PCMK_LIB 0755 root root
+d $PCMK_LIB 0750 hacluster haclient
 d $PE_STATE_DIR 0750 hacluster haclient
 d $CIB_DIR 0750 hacluster haclient
 EOF
