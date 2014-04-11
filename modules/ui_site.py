@@ -19,17 +19,18 @@
 import time
 import command
 import completers as compl
+import config
 import utils
 from msg import no_prog_err
 
 _ticket_commands = {
-    'grant': "crm_ticket -t '%s' -g",
-    'revoke': "crm_ticket -t '%s' -r",
-    'delete': "crm_ticket -t '%s' -D granted",
-    'standby': "crm_ticket -t '%s' -s",
-    'activate': "crm_ticket -t '%s' -a",
-    'show': "crm_ticket -t '%s' -G granted",
-    'time': "crm_ticket -t '%s' -G last-granted",
+    'grant': "%s -t '%s' -g",
+    'revoke': "%s -t '%s' -r",
+    'delete': "%s -t '%s' -D granted",
+    'standby': "%s -t '%s' -s",
+    'activate': "%s -t '%s' -a",
+    'show': "%s -t '%s' -G granted",
+    'time': "%s -t '%s' -G last-granted",
 }
 
 
@@ -68,14 +69,19 @@ class Site(command.UI):
     @command.completers(compl.choice(_ticket_commands.keys()))
     def do_ticket(self, context, subcmd, ticket):
         "usage: ticket {grant|revoke|standby|activate|show|time|delete} <ticket>"
+
+        base_cmd = "crm_ticket"
+        if config.core.force:
+            base_cmd += " --force"
+
         attr_cmd = _ticket_commands.get(subcmd)
         if not attr_cmd:
             context.fatal_error('Expected one of %s' % '|'.join(_ticket_commands.keys()))
         if not utils.is_name_sane(ticket):
             return False
         if subcmd not in ("show", "time"):
-            return utils.ext_cmd(attr_cmd % ticket) == 0
-        rc, l = utils.stdout2list(attr_cmd % ticket)
+            return utils.ext_cmd(attr_cmd % (base_cmd, ticket)) == 0
+        rc, l = utils.stdout2list(attr_cmd % (base_cmd, ticket))
         try:
             val = l[0]
         except IndexError:
