@@ -72,13 +72,13 @@ def set_year(ts=None):
 def syslog_ts(s):
     try:
         # strptime defaults year to 1900 (sigh)
+        # strptime returns a time_struct
         tm = time.strptime(' '.join([YEAR] + s.split()[0:3]),
                            "%Y %b %d %H:%M:%S")
-        return time.mktime(tm)
+        return datetime.datetime.fromtimestamp(time.mktime(tm))
     except:  # try the rfc5424
         try:
-            tm = parse_time(s.split()[0])
-            return time.mktime(tm.timetuple())
+            return parse_time(s.split()[0])
         except Exception:
             common_debug("malformed line: %s" % s)
             return None
