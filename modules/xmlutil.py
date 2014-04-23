@@ -668,7 +668,9 @@ def add_comment(e, s):
 
 
 def stuff_comments(node, comments):
-    for s in comments:
+    if not comments:
+        return
+    for s in reversed(comments):
         add_comment(node, s)
 
 
