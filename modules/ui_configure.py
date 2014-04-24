@@ -26,6 +26,8 @@ import userdir
 import xmlutil
 import ra
 from cibconfig import mkset_obj, CibFactory
+from clidisplay import CliDisplay
+from term import TerminalController
 import options
 from msg import ErrorBuffer
 from msg import common_err, common_info, common_warn
@@ -143,7 +145,13 @@ class CompletionHelp(object):
             import readline
             cmdline = readline.get_line_buffer()
             print "\n%s" % helptxt
-            print "%s%s" % (vars.prompt, cmdline),
+            cli_display = CliDisplay.getInstance()
+            if cli_display.colors_enabled():
+                termctrl = TerminalController.getInstance()
+                print "%s%s" % (termctrl.render(cli_display.prompt_noreadline(vars.prompt)),
+                                cmdline),
+            else:
+                print "%s%s" % (vars.prompt, cmdline),
             cls.laststamp = time.time()
             cls.lasttopic = topic
 
