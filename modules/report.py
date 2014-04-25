@@ -150,7 +150,7 @@ def log_seek(f, ts, to_end=False):
             break
         mid = (first+last)/2
         f.seek(mid)
-        log_ts = get_timestamp(f)
+        log_ts = convert_dt(get_timestamp(f))
         if not log_ts:
             badline += 1
             if badline > maxbadline:
