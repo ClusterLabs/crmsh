@@ -65,6 +65,11 @@ class CliDisplay(Singleton):
             return s + "${RLIGNOREBEGIN}${NORMAL}${RLIGNOREEND}"
         return s
 
+    def prompt_noreadline(self, s):
+        if self.colors_enabled():
+            return "${GREEN}${BOLD}" + s + "${NORMAL}"
+        return s
+
     def help_header(self, s):
         return self._colorize(s, config.color.help_header)
 

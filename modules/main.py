@@ -297,11 +297,12 @@ def do_work(context, user_args):
                 termctrl = TerminalController.getInstance()
                 cli_display = CliDisplay.getInstance()
                 promptstr = "crm(%s)%s# " % (cib_prompt(), context.prompt())
+                vars.prompt = promptstr
                 if cli_display.colors_enabled():
-                    vars.prompt = termctrl.render(cli_display.prompt(promptstr))
+                    rendered_prompt = termctrl.render(cli_display.prompt(promptstr))
                 else:
-                    vars.prompt = promptstr
-            inp = utils.multi_input(vars.prompt)
+                    rendered_prompt = promptstr
+            inp = utils.multi_input(rendered_prompt)
             if inp is None:
                 if options.interactive:
                     rc = 0
