@@ -1046,7 +1046,7 @@ class ResourceSet(object):
             l = [p, '']
         return l
 
-    def err(self, token, errmsg):
+    def err(self, errmsg, token=''):
         syntax_err(self.parent._cmd,
                    context=self.type,
                    token=token,
@@ -1056,19 +1056,19 @@ class ResourceSet(object):
     def update_attrs(self, bracket, tokpos):
         if bracket in ('(', '['):
             if self.opened:
-                self.err(token=self.tokens[tokpos],
-                         errmsg='Cannot nest resource sets')
+                self.err('Cannot nest resource sets',
+                         token=self.tokens[tokpos])
             self.sequential = False
             if bracket == '[':
                 self.require_all = False
             self.opened = bracket
         elif bracket in (')', ']'):
             if not self.opened:
-                self.err(token=self.tokens[tokpos],
-                         errmsg='Unmatched closing bracket')
+                self.err('Unmatched closing bracket',
+                         token=self.tokens[tokpos])
             if bracket != self.matching[self.opened]:
-                self.err(token=self.tokens[tokpos],
-                         errmsg='Mismatched closing bracket')
+                self.err('Mismatched closing bracket',
+                         token=self.tokens[tokpos])
             self.sequential = True
             self.require_all = True
             self.opened = ''
@@ -1086,15 +1086,15 @@ class ResourceSet(object):
             if p in self.close_set:
                 # empty sets not allowed
                 if not self.set_pl:
-                    self.err(token=self.tokens[tokpos],
-                             errmsg='Empty resource set')
+                    self.err('Empty resource set',
+                             token=self.tokens[tokpos])
                 self.save_set()
                 self.update_attrs(p, tokpos)
                 continue
             if '=' in p:
                 if not self.parseattr(p):
-                    self.err(token=self.tokens[tokpos],
-                             errmsg='Unknown attribute')
+                    self.err('Unknown attribute',
+                             token=self.tokens[tokpos])
                 continue
             rsc, q = self.splitrsc(p)
             if q != self.prev_q:  # one set can't have different roles/actions
@@ -1107,8 +1107,8 @@ class ResourceSet(object):
                 self.curr_attr = ''
             self.set_pl.append(["resource_ref", ["id", rsc]])
         if self.opened:  # no close
-            self.err(token=self.tokens[tokpos],
-                     errmsg='Unmatched opening bracket')
+            self.err('Unmatched opening bracket',
+                     token=self.tokens[tokpos])
         if self.set_pl:  # save the final set
             self.save_set()
         ret = self.cli_list
