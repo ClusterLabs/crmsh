@@ -1041,7 +1041,8 @@ class ResourceSet(object):
                     l[1],
                     self.parent.validation.resource_roles())
             if not l[1]:
-                self.err('Invalid %s for %s' % (self.q_attr, p))
+                self.err(token=None,
+                         errmsg='Invalid %s for %s' % (self.q_attr, p))
         elif len(l) == 1:
             l = [p, '']
         return l
