@@ -81,6 +81,8 @@ def show_unrecognized_elems(cib_elem):
 # object sets (enables operations on sets of elements)
 #
 def mkset_obj(*args):
+    if not cib_factory.is_cib_sane():
+        raise ValueError("CIB is not valid")
     if args and args[0] == "xml":
         obj = lambda: CibObjectSetRaw(*args[1:])
     else:
@@ -2245,9 +2247,9 @@ class CibFactory(object):
         # try to initialize
         if self.cib_elem is None:
             self.initialize()
-        if self.cib_elem is None:
-            empty_cib_err()
-            return False
+            if self.cib_elem is None:
+                empty_cib_err()
+                return False
         return True
 
     def get_cib(self):
@@ -2645,6 +2647,8 @@ class CibFactory(object):
 
     def find_objects(self, obj_id):
         "Find objects for id (can be a wildcard-glob)."
+        if not self.is_cib_sane():
+            return None
         matchfn = lambda x: fnmatch.fnmatch(x, obj_id)
         objs = []
         for obj in self.cib_objects:
@@ -2657,6 +2661,8 @@ class CibFactory(object):
         return objs
 
     def find_object(self, obj_id):
+        if not self.is_cib_sane():
+            return None
         objs = self.find_objects(obj_id)
         if len(objs) > 0:
             return objs[0]
@@ -2944,6 +2950,8 @@ class CibFactory(object):
         return not self.get_elems_on_type("type:primitive")
 
     def has_cib_changed(self):
+        if not self.is_cib_sane():
+            return False
         return self.modified_elems() or self.remove_queue
 
     def _verify_constraints(self, node):
@@ -3032,6 +3040,8 @@ class CibFactory(object):
         return rc
 
     def create_object(self, *args):
+        if not self.is_cib_sane():
+            return False
         cp = CliParser()
         out = cp.parse2(list(args))
         return self.create_from_cli(out) is not None
@@ -3547,6 +3557,7 @@ class CibFactory(object):
         "Refresh from the CIB."
         self.reset()
         self.initialize()
+        return self.is_cib_sane()
 
 cib_factory = CibFactory()
 

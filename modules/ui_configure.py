@@ -298,8 +298,6 @@ class CibConfig(command.UI):
     @command.completers_repeating(_id_show_list)
     def do_show(self, context, *args):
         "usage: show [xml] [<id>...]"
-        if not cib_factory.is_cib_sane():
-            context.fatal_error("CIB is not valid")
         set_obj = mkset_obj(*args)
         return set_obj.show()
 
@@ -307,8 +305,6 @@ class CibConfig(command.UI):
     @command.completers_repeating(compl.null, _id_xml_list, _id_list)
     def do_filter(self, context, filterprog, *args):
         "usage: filter <prog> [xml] [<id>...]"
-        if not cib_factory.is_cib_sane():
-            context.fatal_error("CIB is not valid")
         set_obj = mkset_obj(*args)
         return set_obj.filter(filterprog)
 
@@ -318,8 +314,6 @@ class CibConfig(command.UI):
     def do_modgroup(self, context, group_id, subcmd, prim_id, *args):
         """usage: modgroup <id> add <id> [after <id>|before <id>]
         modgroup <id> remove <id>"""
-        if not cib_factory.is_cib_sane():
-            context.fatal_error("CIB is not valid")
         if subcmd not in ("add", "remove"):
             common_err("modgroup subcommand %s unknown" % subcmd)
             return False
@@ -366,8 +360,6 @@ class CibConfig(command.UI):
     @command.completers_repeating(_id_xml_list, _id_list)
     def do_edit(self, context, *args):
         "usage: edit [xml] [<id>...]"
-        if not cib_factory.is_cib_sane():
-            context.fatal_error("CIB is not valid")
         err_buf.buffer()  # keep error messages
         set_obj = mkset_obj(*args)
         err_buf.release()  # show them, but get an ack from the user
@@ -384,16 +376,12 @@ class CibConfig(command.UI):
     @command.skill_level('administrator')
     def do_verify(self, context):
         "usage: verify"
-        if not cib_factory.is_cib_sane():
-            context.fatal_error("CIB is not valid")
         set_obj_all = mkset_obj("xml")
         return self._verify(set_obj_all, set_obj_all)
 
     @command.skill_level('administrator')
     def do_save(self, context, *args):
         "usage: save [xml] <filename>"
-        if not cib_factory.is_cib_sane():
-            context.fatal_error("CIB is not valid")
         if not args:
             context.fatal_error("Expected 1 argument (0 given)")
         if args[0] == "xml":
@@ -410,8 +398,6 @@ class CibConfig(command.UI):
     @command.completers(compl.choice(['xml', 'replace', 'update']), _load_2nd_completer)
     def do_load(self, context, *args):
         "usage: load [xml] {replace|update} {<url>|<path>}"
-        if not cib_factory.is_cib_sane():
-            context.fatal_error("CIB is not valid")
         if len(args) < 2:
             context.fatal_error("Expected 2 arguments (0 given)")
         if args[0] == "xml":
@@ -445,8 +431,6 @@ class CibConfig(command.UI):
         "usage: graph [<gtype> [<file> [<img_format>]]]"
         if args and args[0] == "exportsettings":
             return utils.save_graphviz_file(userdir.GRAPHVIZ_USER_FILE, vars.graph)
-        if not cib_factory.is_cib_sane():
-            context.fatal_error("CIB is not valid")
         rc, gtype, outf, ftype = ui_utils.graph_args(args)
         if not rc:
             context.fatal_error("Failed to create graph")
@@ -466,8 +450,6 @@ class CibConfig(command.UI):
     @command.completers_repeating(_id_list)
     def do_delete(self, context, *args):
         "usage: delete <id> [<id>...]"
-        if not cib_factory.is_cib_sane():
-            context.fatal_error("CIB is not valid")
         return cib_factory.delete(*args)
 
     @command.name('default-timeouts')
@@ -475,24 +457,18 @@ class CibConfig(command.UI):
     @command.completers_repeating(_id_list)
     def do_default_timeouts(self, context, *args):
         "usage: default-timeouts <id> [<id>...]"
-        if not cib_factory.is_cib_sane():
-            context.fatal_error("CIB is not valid")
         return cib_factory.default_timeouts(*args)
 
     @command.skill_level('administrator')
     @command.completers(_id_list, _id_list)
     def do_rename(self, context, old_id, new_id):
         "usage: rename <old_id> <new_id>"
-        if not cib_factory.is_cib_sane():
-            context.fatal_error("CIB is not valid")
         return cib_factory.rename(old_id, new_id)
 
     @command.skill_level('administrator')
     @command.completers(compl.choice(['nodes']))
     def do_erase(self, context, nodes=None):
         "usage: erase [nodes]"
-        if not cib_factory.is_cib_sane():
-            context.fatal_error("CIB is not valid")
         if nodes is None:
             return cib_factory.erase()
         if nodes != 'nodes':
@@ -511,8 +487,6 @@ class CibConfig(command.UI):
     @command.completers(compl.choice(['nograph']))
     def do_ptest(self, context, *args):
         "usage: ptest [nograph] [v...] [scores] [utilization] [actions]"
-        if not cib_factory.is_cib_sane():
-            return False
         # use ptest/crm_simulate depending on which command was
         # used
         config.core.ptest = vars.simulate_programs[context.get_command_name()]
@@ -524,8 +498,6 @@ class CibConfig(command.UI):
     def _commit(self, force=None):
         if force and force != "force":
             syntax_err(('configure.commit', force))
-            return False
-        if not cib_factory.is_cib_sane():
             return False
         if not cib_factory.has_cib_changed():
             common_info("apparently there is nothing to commit")
@@ -556,8 +528,6 @@ class CibConfig(command.UI):
     @command.completers(compl.choice(['force']))
     def do_upgrade(self, context, force=None):
         "usage: upgrade [force]"
-        if not cib_factory.is_cib_sane():
-            return False
         if force and force != "force":
             syntax_err((context.get_command_name(), force))
             return False
@@ -569,8 +539,6 @@ class CibConfig(command.UI):
     @command.skill_level('administrator')
     def do_schema(self, context, schema_st=None):
         "usage: schema [<schema>]"
-        if not cib_factory.is_cib_sane():
-            return False
         if not schema_st:
             print cib_factory.get_schema()
             return True
@@ -578,8 +546,6 @@ class CibConfig(command.UI):
 
     def __conf_object(self, cmd, *args):
         "The configure object command."
-        if not cib_factory.is_cib_sane():
-            return False
         if cmd in vars.cib_cli_map.values() and \
                 not cib_factory.is_elem_supported(cmd):
             common_err("%s not supported by the RNG schema" % cmd)
@@ -769,8 +735,6 @@ class CibConfig(command.UI):
     @command.completers_repeating(_rsc_id_list)
     def do_rsctest(self, context, *args):
         "usage: rsctest <rsc_id> [<rsc_id> ...] [<node_id> ...]"
-        if not cib_factory.is_cib_sane():
-            return False
         rc = True
         rsc_l = []
         node_l = []

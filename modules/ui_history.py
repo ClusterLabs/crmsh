@@ -346,8 +346,7 @@ class History(command.UI):
         '''Return set_obj of the configuration. It can later be
         rendered using the repr() method.'''
         self._setup_cib_env(pe_f)
-        cib_factory.refresh()
-        if not cib_factory.is_cib_sane():
+        if not cib_factory.refresh():
             return False
         set_obj = mkset_obj()
         return set_obj

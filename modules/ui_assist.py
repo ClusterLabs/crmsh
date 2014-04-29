@@ -61,9 +61,6 @@ class Assist(command.UI):
         in effect, a colocation which does not imply any
         internal relationship between resources.
         '''
-        if not cib_factory.is_cib_sane():
-            return False
-
         if len(nodes) < 2:
             context.fatal_error("Need at least two arguments")
 

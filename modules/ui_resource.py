@@ -417,8 +417,7 @@ class RscMgmt(command.UI):
         return utils.ext_cmd(self.rsc_maintenance % (resource, on_off)) == 0
 
     def _get_trace_rsc(self, rsc_id):
-        cib_factory.refresh()
-        if not cib_factory.is_cib_sane():
+        if not cib_factory.refresh():
             return None
         rsc = cib_factory.find_object(rsc_id)
         if not rsc:
