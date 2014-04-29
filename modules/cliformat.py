@@ -16,7 +16,7 @@
 #
 
 import vars
-from clidisplay import CliDisplay
+import clidisplay
 from msg import common_err, node_debug
 import utils
 import xmlutil
@@ -44,7 +44,7 @@ def cli_operations(node, break_lines=True):
     if idref:
         s = '%s $id-ref="%s"' % (s, idref)
     if s:
-        l.append("%s %s" % (cli_display.keyword("operations"), s))
+        l.append("%s %s" % (clidisplay.keyword("operations"), s))
     for c in node.iterchildren():
         if c.tag == "op":
             l.append(cli_op(c))
@@ -53,11 +53,11 @@ def cli_operations(node, break_lines=True):
 
 def nvpair_format(n, v):
     if v is None:
-        return cli_display.attr_name(n)
+        return clidisplay.attr_name(n)
     elif utils.noquotes(v):
-        return '%s=%s' % (cli_display.attr_name(n), cli_display.attr_value(v))
+        return '%s=%s' % (clidisplay.attr_name(n), clidisplay.attr_value(v))
     else:
-        return '%s="%s"' % (cli_display.attr_name(n), cli_display.attr_value(v))
+        return '%s="%s"' % (clidisplay.attr_name(n), clidisplay.attr_value(v))
 
 
 def cli_pairs(pl):
@@ -116,17 +116,17 @@ def cli_op(node):
     if not action:
         return ""
     pl += op_instattr(node)
-    return "%s %s %s" % (cli_display.keyword("op"), action, cli_pairs(pl))
+    return "%s %s %s" % (clidisplay.keyword("op"), action, cli_pairs(pl))
 
 
 def date_exp2cli(node):
     l = []
     operation = node.get("operation")
-    l.append(cli_display.keyword("date"))
-    l.append(cli_display.keyword(operation))
+    l.append(clidisplay.keyword("date"))
+    l.append(clidisplay.keyword(operation))
     if operation in utils.olist(vars.simple_date_ops):
         value = node.get(utils.keyword_cmp(operation, 'lt') and "end" or "start")
-        l.append('"%s"' % cli_display.attr_value(value))
+        l.append('"%s"' % clidisplay.attr_value(value))
     else:
         if operation == 'in_range':
             for name in vars.in_range_attrs:
@@ -146,9 +146,9 @@ def date_exp2cli(node):
 def binary_op_format(op):
     l = op.split(':')
     if len(l) == 2:
-        return "%s:%s" % (l[0], cli_display.keyword(l[1]))
+        return "%s:%s" % (l[0], clidisplay.keyword(l[1]))
     else:
-        return cli_display.keyword(op)
+        return clidisplay.keyword(op)
 
 
 def exp2cli(node):
@@ -199,7 +199,7 @@ def cli_rule(node):
     rsc_role = node.get("role")
     if rsc_role:
         s.append('$role="%s"' % rsc_role)
-    s.append("%s:" % cli_display.score(get_score(node)))
+    s.append("%s:" % clidisplay.score(get_score(node)))
     bool_op = node.get("boolean-op")
     if not bool_op:
         bool_op = "and"
@@ -209,12 +209,12 @@ def cli_rule(node):
             exp.append(date_exp2cli(c))
         elif c.tag == "expression":
             exp.append(exp2cli(c))
-    expression = (" %s " % cli_display.keyword(bool_op)).join(exp)
+    expression = (" %s " % clidisplay.keyword(bool_op)).join(exp)
     return "%s %s" % (' '.join(s), expression)
 
 
 def mkrscrole(node, n):
-    rsc = cli_display.rscref(node.get(n))
+    rsc = clidisplay.rscref(node.get(n))
     rsc_role = node.get(n + "-role")
     rsc_instance = node.get(n + "-instance")
     if rsc_role:
@@ -226,7 +226,7 @@ def mkrscrole(node, n):
 
 
 def mkrscaction(node, n):
-    rsc = cli_display.rscref(node.get(n))
+    rsc = clidisplay.rscref(node.get(n))
     rsc_action = node.get(n + "-action")
     rsc_instance = node.get(n + "-instance")
     if rsc_action:
@@ -257,7 +257,7 @@ def rsc_set_constraint(node, obj_type):
         role = n.get("role")
         action = n.get("action")
         for r in n.findall("resource_ref"):
-            rsc = cli_display.rscref(r.get("id"))
+            rsc = clidisplay.rscref(r.get("id"))
             q = (obj_type == "order") and action or role
             col.append(q and "%s:%s" % (rsc, q) or rsc)
             cnt += 1
@@ -320,25 +320,25 @@ def find_acl_shortcut(xpath):
 
 
 def acl_spec_format(xml_spec, v):
-    key_f = cli_display.keyword(vars.acl_spec_map[xml_spec])
+    key_f = clidisplay.keyword(vars.acl_spec_map[xml_spec])
     if xml_spec == "xpath":
         (shortcut, spec_l) = find_acl_shortcut(v)
         if shortcut:
-            key_f = cli_display.keyword(shortcut)
-            v_f = ':'.join([cli_display.attr_value(x) for x in spec_l])
+            key_f = clidisplay.keyword(shortcut)
+            v_f = ':'.join([clidisplay.attr_value(x) for x in spec_l])
         else:
-            v_f = '"%s"' % cli_display.attr_value(v)
+            v_f = '"%s"' % clidisplay.attr_value(v)
     elif xml_spec == "ref":
-        v_f = '%s' % cli_display.attr_value(v)
+        v_f = '%s' % clidisplay.attr_value(v)
     else:  # tag and attribute
-        v_f = '%s' % cli_display.attr_value(v)
+        v_f = '%s' % clidisplay.attr_value(v)
     return v_f and '%s:%s' % (key_f, v_f) or key_f
 
 
 def cli_acl_rule(node, format=1):
     l = []
     acl_rule_name = node.tag
-    l.append(cli_display.keyword(acl_rule_name))
+    l.append(clidisplay.keyword(acl_rule_name))
     for xml_spec in vars.acl_spec_map:
         v = node.get(xml_spec)
         if v:
@@ -348,14 +348,12 @@ def cli_acl_rule(node, format=1):
 
 def cli_acl_roleref(node, format=1):
     l = []
-    l.append(cli_display.keyword("role"))
+    l.append(clidisplay.keyword("role"))
     l.append(":")
-    l.append(cli_display.attr_value(node.get("id")))
+    l.append(clidisplay.attr_value(node.get("id")))
     return ''.join(l)
 
 #
 ################################################################
-
-cli_display = CliDisplay.getInstance()
 
 # vim:ts=4:sw=4:et:

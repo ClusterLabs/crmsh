@@ -26,8 +26,8 @@ import vars
 import config
 import options
 from msg import no_prog_err
-from cibstatus import CibStatus
-from cibconfig import CibFactory
+from cibstatus import cib_status
+from cibconfig import cib_factory
 import tmpfiles
 
 import completers as compl
@@ -230,8 +230,5 @@ class CibShadow(command.UI):
                 return False
         return self._use(name, withstatus)  # now load the status too
 
-
-cib_status = CibStatus.getInstance()
-cib_factory = CibFactory.getInstance()
 
 # vim:ts=4:sw=4:et:

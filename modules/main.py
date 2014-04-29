@@ -24,9 +24,9 @@ import random
 import config
 import options
 import vars
-from msg import ErrorBuffer, syntax_err, common_err
-from clidisplay import CliDisplay
-from term import TerminalController
+from msg import err_buf, syntax_err, common_err
+import clidisplay
+import term
 import utils
 import userdir
 
@@ -210,9 +210,6 @@ def usage(rc):
     """
     sys.exit(rc)
 
-err_buf = ErrorBuffer.getInstance()
-#levels = Levels.getInstance()
-
 
 def set_interactive():
     '''Set the interactive option only if we're on a tty.'''
@@ -295,12 +292,10 @@ def do_work(context, user_args):
             if options.interactive and not options.batch:
                 # TODO: fix how color interacts with readline,
                 # seems the color prompt messes it up
-                termctrl = TerminalController.getInstance()
-                cli_display = CliDisplay.getInstance()
                 promptstr = "crm(%s)%s# " % (cib_prompt(), context.prompt())
                 vars.prompt = promptstr
-                if cli_display.colors_enabled():
-                    rendered_prompt = termctrl.render(cli_display.prompt(promptstr))
+                if clidisplay.colors_enabled():
+                    rendered_prompt = term.render(clidisplay.prompt(promptstr))
                 else:
                     rendered_prompt = promptstr
             inp = utils.multi_input(rendered_prompt)

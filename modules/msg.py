@@ -18,24 +18,22 @@
 import sys
 from lxml import etree
 import config
-from singletonmixin import Singleton
 import clidisplay
 import options
 
 ERR_STREAM = sys.stderr
 
 
-class ErrorBuffer(Singleton):
+class ErrorBuffer(object):
     '''
     Show error messages either immediately or buffered.
     '''
     def __init__(self):
-        self._display = clidisplay.CliDisplay.getInstance()
         try:
             import term
-            self._termctrl = term.TerminalController.getInstance()
+            self._term = term
         except:
-            self._termctrl = None
+            self._term = None
         self.msg_list = []
         self.mode = "immediate"
         self.lineno = -1
@@ -95,22 +93,22 @@ class ErrorBuffer(Singleton):
         self.writemsg(self._render("%s: %s" % (pfx, self.add_lineno(s))), to=to)
 
     def ok(self, s):
-        self._prefix(self._display.ok("OK"), s, to=sys.stdout)
+        self._prefix(clidisplay.ok("OK"), s, to=sys.stdout)
 
     def error(self, s):
-        self._prefix(self._display.error("ERROR"), s)
+        self._prefix(clidisplay.error("ERROR"), s)
 
     def warning(self, s):
-        self._prefix(self._display.warn("WARNING"), s)
+        self._prefix(clidisplay.warn("WARNING"), s)
 
     def one_warning(self, s):
         if not s in self.written:
             self.written[s] = 1
-            self.writemsg(self._render(self._display.warn("WARNING")) + ": %s" %
+            self.writemsg(self._render(clidisplay.warn("WARNING")) + ": %s" %
                           self.add_lineno(s))
 
     def info(self, s):
-        self._prefix(self._display.info("INFO"), s)
+        self._prefix(clidisplay.info("INFO"), s)
 
     def debug(self, s):
         if config.core.debug:
@@ -118,8 +116,8 @@ class ErrorBuffer(Singleton):
 
     def _render(self, s):
         'Render for TERM.'
-        if self._termctrl:
-            return self._termctrl.render(s)
+        if self._term:
+            return self._term.render(s)
         return s
 
 
@@ -281,5 +279,5 @@ def not_impl_info(s):
     err_buf.info("%s is not implemented yet" % s)
 
 
-err_buf = ErrorBuffer.getInstance()
+err_buf = ErrorBuffer()
 # vim:ts=4:sw=4:et:

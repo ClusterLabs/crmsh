@@ -26,7 +26,7 @@ factory = cibconfig.cib_factory
 def setup_func():
     "set up test fixtures"
     import idmgmt
-    idmgmt.IdMgmt.getInstance().clear()
+    idmgmt.clear()
 
 
 def test_bug41660_1():

@@ -27,7 +27,7 @@ import options
 
 from msg import common_error, common_err, common_info, common_debug, common_warn
 from msg import no_prog_err
-from cibconfig import CibFactory
+from cibconfig import cib_factory
 
 
 def rm_meta_attribute(node, attr, l, force_children=False):
@@ -483,6 +483,3 @@ class RscMgmt(command.UI):
         if rsc.is_dummy_operation(op_node):
             rsc.del_operation(op_node)
         return cib_factory.commit()
-
-
-cib_factory = CibFactory.getInstance()

@@ -24,9 +24,6 @@ from pprint import pformat
 
 
 class MockValidation(parse.Validation):
-    def __init__(self):
-        parse.Validation.__init__(self, None)
-
     def resource_roles(self):
         return ['Master', 'Slave', 'Started']
 

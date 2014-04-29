@@ -15,7 +15,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from singletonmixin import Singleton
 import config
 from pacemaker import CrmSchema
 
@@ -64,74 +63,67 @@ def get_attr_details_l(schema, name):
     return l
 
 
+_cache_funcs = {
+    'attr': get_attrs,
+    'sub': get_subs,
+    'attr_det': get_attr_details_d,
+    'attr_det_l': get_attr_details_l,
+}
+
+
+_crm_schema = None
+_store = {}
+
+
+def reset():
+    global _store
+    _store = {}
+
+
+def _load_schema(cib):
+    return CrmSchema(cib, config.path.crm_dtd_dir)
+
+
+def init_schema(cib):
+    global _crm_schema
+    _crm_schema = _load_schema(cib)
+    reset()
+
+
+def test_schema(self, cib):
+    crm_schema = _load_schema(cib)
+    return crm_schema.validate_name
+
+
+def get(t, name, set=None):
+    if not _crm_schema:
+        return []
+    if t not in _store:
+        _store[t] = {}
+    if name not in _store[t]:
+        _store[t][name] = _cache_funcs[t](_crm_schema, name)
+    if set:
+        return _store[t][name][set]
+    else:
+        return _store[t][name]
+
+
+def rng_attr_values(el_name, attr_name):
+    ""
+    try:
+        return get('attr_det', el_name)[attr_name]['v']
+    except:
+        return []
+
+
 def rng_attr_values_l(el_name, attr_name):
-    l = g_schema.get('attr_det_l', el_name)
+    ""
+    l = get('attr_det_l', el_name)
     l2 = []
     for el in l:
         if el['n'] == attr_name:
             l2 += el['v']
     return l2
 
-
-def rng_attr_values(el_name, attr_name):
-    try:
-        return g_schema.get('attr_det', el_name)[attr_name]['v']
-    except:
-        return []
-
-
-class Schema(Singleton):
-    "Cache pacemaker schema stuff"
-    cache_funcs = {
-        'attr': get_attrs,
-        'sub': get_subs,
-        'attr_det': get_attr_details_d,
-        'attr_det_l': get_attr_details_l,
-    }
-
-    def __init__(self):
-        self.crm_schema = None
-
-    def reset(self):
-        self.store = {}
-
-    def init_schema(self, cib):
-        self.crm_schema = CrmSchema(cib, config.path.crm_dtd_dir)
-        self.reset()
-
-    def test_schema(self, cib):
-        crm_schema = CrmSchema(cib, config.path.crm_dtd_dir)
-        return crm_schema.validate_name
-
-    def get(self, t, name, set=None):
-        if not self.crm_schema:
-            return []
-        if t not in self.store:
-            self.store[t] = {}
-        if name not in self.store[t]:
-            self.store[t][name] = self.cache_funcs[t](self.crm_schema, name)
-        if set:
-            return self.store[t][name][set]
-        else:
-            return self.store[t][name]
-
-    def rng_attr_values(self, el_name, attr_name):
-        ""
-        try:
-            return self.get('attr_det', el_name)[attr_name]['v']
-        except:
-            return []
-
-    def rng_attr_values_l(self, el_name, attr_name):
-        ""
-        l = self.get('attr_det_l', el_name)
-        l2 = []
-        for el in l:
-            if el['n'] == attr_name:
-                l2 += el['v']
-        return l2
-
-
-g_schema = Schema.getInstance()
 
 # vim:ts=4:sw=4:et:

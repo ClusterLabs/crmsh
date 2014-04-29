@@ -21,10 +21,9 @@ import completers as compl
 import utils
 import ui_utils
 import vars
-from cibstatus import CibStatus
+from cibstatus import cib_status
 
 
-cib_status = CibStatus.getInstance()
 _status_node_list = compl.call(cib_status.status_node_list)
 
 

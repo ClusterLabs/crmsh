@@ -23,9 +23,9 @@ import bz2
 
 import config
 import options
-from schema import Schema
+import schema
 import vars
-from msg import common_err, common_error, common_debug, cib_parse_err, ErrorBuffer
+from msg import common_err, common_error, common_debug, cib_parse_err, err_buf
 import userdir
 import utils
 from utils import add_sudo, str2file, str2tmp, pipe_string, get_boolean
@@ -1118,7 +1118,6 @@ def rename_rscref_rset(c_obj, old_id, new_id):
 
 
 def rename_rscref(c_obj, old_id, new_id):
-    err_buf = ErrorBuffer.getInstance()
     if rename_rscref_simple(c_obj, old_id, new_id) or \
             rename_rscref_rset(c_obj, old_id, new_id):
         err_buf.info("resource references in %s updated" % str(c_obj))
@@ -1406,5 +1405,4 @@ def merge_tmpl_into_prim(prim_node, tmpl_node):
     return dnode
 
 
-schema = Schema.getInstance()
 # vim:ts=4:sw=4:et:

@@ -69,7 +69,7 @@ def roundtrip(type, name, cli, debug=False):
 def setup_func():
     "set up test fixtures"
     import idmgmt
-    idmgmt.IdMgmt.getInstance().clear()
+    idmgmt.clear()
 
 
 def teardown_func():

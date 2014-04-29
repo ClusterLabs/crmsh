@@ -141,12 +141,6 @@ modules/log_patterns.py, log_patterns_118.py::
 
 === Auxiliary
 
-modules/singletonmixin.py::
-
-	Implementation of the singleton pattern (from activestate).
-	Enables single instance use across several modules. Heavily
-	(ab)used.
-
 modules/term.py::
 
 	Terminal driver (from activestate).

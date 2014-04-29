@@ -17,7 +17,6 @@
 
 import os
 from lxml import etree
-from singletonmixin import Singleton
 import tmpfiles
 from tempfile import mkstemp
 from utils import ext_cmd, show_dot_graph, page_string
@@ -88,7 +87,7 @@ def cib_path(source):
     return source[0:7] == "shadow:" and xmlutil.shadowfile(source[7:]) or source
 
 
-class CibStatus(Singleton):
+class CibStatus(object):
     '''
     CIB status management
     '''
@@ -398,5 +397,7 @@ class CibStatus(Singleton):
         self._load(self.origin)
         self.modified = True
         return True
+
+cib_status = CibStatus()
 
 # vim:ts=4:sw=4:et:

@@ -27,10 +27,9 @@ import userdir
 import options
 from template import LoadTemplate
 from cliformat import cli_format
-from cibconfig import mkset_obj, CibFactory
-from msg import ErrorBuffer
+from cibconfig import mkset_obj, cib_factory
 from msg import common_err, common_warn
-from msg import syntax_err
+from msg import syntax_err, err_buf
 
 
 def check_transition(inp, state, possible_l):
@@ -349,6 +348,4 @@ class Template(command.UI):
         return self.generate(l, user_data)
 
 
-err_buf = ErrorBuffer.getInstance()
-cib_factory = CibFactory.getInstance()
 # vim:ts=4:sw=4:et:

@@ -23,7 +23,6 @@ import re
 import glob
 import ConfigParser
 
-from singletonmixin import Singleton
 import config
 import vars
 import userdir
@@ -586,7 +585,7 @@ def mkarchive(dir):
 CH_SRC, CH_TIME, CH_UPD = 1, 2, 3
 
 
-class Report(Singleton):
+class Report(object):
     '''
     A hb_report class.
     '''
@@ -1634,5 +1633,4 @@ class Report(Singleton):
                 pass
         return rc
 
-crm_report = Report.getInstance()
 # vim:ts=4:sw=4:et:

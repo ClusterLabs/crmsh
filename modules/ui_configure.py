@@ -25,13 +25,12 @@ import vars
 import userdir
 import xmlutil
 import ra
-from cibconfig import mkset_obj, CibFactory
-from clidisplay import CliDisplay
-from term import TerminalController
+from cibconfig import mkset_obj, cib_factory
+import clidisplay
+import term
 import options
-from msg import ErrorBuffer
 from msg import common_err, common_info, common_warn
-from msg import syntax_err
+from msg import err_buf, syntax_err
 import rsctest
 import schema
 import ui_cib
@@ -42,9 +41,6 @@ import ui_history
 import ui_utils
 import ui_assist
 from crm_gv import gv_types
-
-err_buf = ErrorBuffer.getInstance()
-cib_factory = CibFactory.getInstance()
 
 
 def _type_completions():
@@ -145,10 +141,8 @@ class CompletionHelp(object):
             import readline
             cmdline = readline.get_line_buffer()
             print "\n%s" % helptxt
-            cli_display = CliDisplay.getInstance()
-            if cli_display.colors_enabled():
-                termctrl = TerminalController.getInstance()
-                print "%s%s" % (termctrl.render(cli_display.prompt_noreadline(vars.prompt)),
+            if clidisplay.colors_enabled():
+                print "%s%s" % (term.render(clidisplay.prompt_noreadline(vars.prompt)),
                                 cmdline),
             else:
                 print "%s%s" % (vars.prompt, cmdline),

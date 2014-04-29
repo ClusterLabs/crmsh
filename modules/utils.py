@@ -29,7 +29,7 @@ import config
 import userdir
 import vars
 import options
-from term import TerminalController
+import term
 from msg import common_warn, common_info, common_debug, common_err, err_buf
 
 
@@ -887,7 +887,7 @@ def need_pager(s, w, h):
 def term_render(s):
     'Render for TERM.'
     try:
-        return termctrl.render(s)
+        return term.render(s)
     except:
         return s
 
@@ -1334,5 +1334,5 @@ _NOQUOTES_RE = re.compile(r'^[\w\.-]+$')
 def noquotes(v):
     return _NOQUOTES_RE.match(v) is not None
 
-termctrl = TerminalController.getInstance()
+
 # vim:ts=4:sw=4:et:

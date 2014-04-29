@@ -21,7 +21,7 @@ import copy
 from lxml import etree
 import re
 import glob
-from cache import WCache
+import cache
 import vars
 import config
 import options
@@ -218,21 +218,21 @@ def ra_classes():
     '''
     List of RA classes.
     '''
-    if wcache.is_cached("ra_classes"):
-        return wcache.retrieve("ra_classes")
+    if cache.is_cached("ra_classes"):
+        return cache.retrieve("ra_classes")
     l = ra_if().classes()
     l.sort()
-    return wcache.store("ra_classes", l)
+    return cache.store("ra_classes", l)
 
 
 def ra_providers(ra_type, ra_class="ocf"):
     'List of providers for a class:type.'
     id = "ra_providers-%s-%s" % (ra_class, ra_type)
-    if wcache.is_cached(id):
-        return wcache.retrieve(id)
+    if cache.is_cached(id):
+        return cache.retrieve(id)
     l = ra_if().providers(ra_type, ra_class)
     l.sort()
-    return wcache.store(id, l)
+    return cache.store(id, l)
 
 
 def ra_providers_all(ra_class="ocf"):
@@ -240,15 +240,15 @@ def ra_providers_all(ra_class="ocf"):
     List of providers for a class.
     '''
     id = "ra_providers_all-%s" % ra_class
-    if wcache.is_cached(id):
-        return wcache.retrieve(id)
+    if cache.is_cached(id):
+        return cache.retrieve(id)
     dir = "%s/resource.d" % os.environ["OCF_ROOT"]
     l = []
     for s in os.listdir(dir):
         if os.path.isdir("%s/%s" % (dir, s)):
             l.append(s)
     l.sort()
-    return wcache.store(id, l)
+    return cache.store(id, l)
 
 
 def ra_types(ra_class="ocf", ra_provider=""):
@@ -258,8 +258,8 @@ def ra_types(ra_class="ocf", ra_provider=""):
     if not ra_class:
         ra_class = "ocf"
     id = "ra_types-%s-%s" % (ra_class, ra_provider)
-    if wcache.is_cached(id):
-        return wcache.retrieve(id)
+    if cache.is_cached(id):
+        return cache.retrieve(id)
     list = []
     for ra in ra_if().types(ra_class):
         if (not ra_provider or
@@ -267,7 +267,7 @@ def ra_types(ra_class="ocf", ra_provider=""):
                 and ra not in list:
             list.append(ra)
     list.sort()
-    return wcache.store(id, list)
+    return cache.store(id, list)
 
 
 def get_pe_meta():
@@ -456,8 +456,8 @@ class RAInfo(object):
         dictionary of attributes/values are values. Cached too.
         '''
         id = "ra_params-%s" % self.ra_string()
-        if wcache.is_cached(id):
-            return wcache.retrieve(id)
+        if cache.is_cached(id):
+            return cache.retrieve(id)
         if self.mk_ra_node() is None:
             return None
         d = {}
@@ -474,7 +474,7 @@ class RAInfo(object):
                 "type": type,
                 "default": default,
             }
-        return wcache.store(id, d)
+        return cache.store(id, d)
 
     def completion_params(self):
         '''
@@ -494,8 +494,8 @@ class RAInfo(object):
         dictionary of attributes/values are values. Cached too.
         '''
         id = "ra_actions-%s" % self.ra_string()
-        if wcache.is_cached(id):
-            return wcache.retrieve(id)
+        if cache.is_cached(id):
+            return cache.retrieve(id)
         if self.mk_ra_node() is None:
             return None
         d = {}
@@ -521,7 +521,7 @@ class RAInfo(object):
                 if not norole_op in d:
                     d2[norole_op] = d[op]
         d.update(d2)
-        return wcache.store(id, d)
+        return cache.store(id, d)
 
     def reqd_params_list(self):
         '''
@@ -654,8 +654,8 @@ class RAInfo(object):
         RA meta-data as raw xml.
         '''
         id = "ra_meta-%s" % self.ra_string()
-        if wcache.is_cached(id):
-            return wcache.retrieve(id)
+        if cache.is_cached(id):
+            return cache.retrieve(id)
         if self.ra_class in vars.meta_progs:
             l = prog_meta(self.ra_class)
         else:
@@ -663,7 +663,7 @@ class RAInfo(object):
         if not l:
             return None
         self.debug("read and cached meta-data")
-        return wcache.store(id, l)
+        return cache.store(id, l)
 
     def meta_pretty(self):
         '''
@@ -837,5 +837,4 @@ def disambiguate_ra_type(s):
         ra_provider = pick_provider(pl)
     return ra_class, ra_provider, ra_type
 
-wcache = WCache.getInstance()
 # vim:ts=4:sw=4:et:

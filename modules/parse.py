@@ -20,7 +20,7 @@ import re
 from lxml import etree
 import vars
 from ra import disambiguate_ra_type, ra_type_validate
-from schema import Schema
+import schema
 from utils import keyword_cmp, verify_boolean, lines2cli
 from utils import get_boolean, olist, is_boolean_true
 from msg import common_err, syntax_err
@@ -1116,27 +1116,24 @@ class ResourceSet(object):
 
 
 class Validation(object):
-    def __init__(self, schema):
-        self.schema = schema
-
     def resource_roles(self):
         'returns list of valid resource roles'
-        return self.schema.rng_attr_values('resource_set', 'role')
+        return schema.rng_attr_values('resource_set', 'role')
 
     def resource_actions(self):
         'returns list of valid resource actions'
-        return self.schema.rng_attr_values('resource_set', 'action')
+        return schema.rng_attr_values('resource_set', 'action')
 
     def date_ops(self):
         'returns list of valid date operations'
-        return self.schema.rng_attr_values_l('date_expression', 'operation')
+        return schema.rng_attr_values_l('date_expression', 'operation')
 
     def expression_types(self):
         'returns list of valid expression types'
-        return self.schema.rng_attr_values_l('expression', 'type')
+        return schema.rng_attr_values_l('expression', 'type')
 
     def rsc_order_kinds(self):
-        return self.schema.rng_attr_values('rsc_order', 'kind')
+        return schema.rng_attr_values('rsc_order', 'kind')
 
     def class_provider_type(self, value):
         """
@@ -1180,7 +1177,7 @@ class CliParser(object):
 
     def __init__(self):
         self.comments = []
-        validation = Validation(Schema.getInstance())
+        validation = Validation()
         if not self.parsers:
             def add(*parsers):
                 for pcls in parsers:

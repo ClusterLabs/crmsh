@@ -16,32 +16,37 @@
 #
 
 import time
-from singletonmixin import Singleton
+
+"Cache stuff. A naive implementation."
 
 
-class WCache(Singleton):
-    "Cache stuff. A naive implementation."
+_max_cache_age = 600  # seconds
+_stamp = time.time()
+_lists = {}
 
-    def __init__(self):
-        self.max_cache_age = 600  # seconds
-        self._clear()
 
-    def is_cached(self, name):
-        if time.time() - self.stamp > self.max_cache_age:
-            self._clear()
-        return name in self.lists
+def _clear():
+    global _stamp
+    global _lists
+    _stamp = time.time()
+    _lists = {}
 
-    def store(self, name, lst):
-        self.lists[name] = lst
-        return lst
 
-    def retrieve(self, name):
-        if self.is_cached(name):
-            return self.lists[name]
-        return None
+def is_cached(name):
+    if time.time() - _stamp > _max_cache_age:
+        _clear()
+    return name in _lists
 
-    def _clear(self):
-        self.stamp = time.time()
-        self.lists = {}
+
+def store(name, lst):
+    _lists[name] = lst
+    return lst
+
+
+def retrieve(name):
+    if is_cached(name):
+        return _lists[name]
+    return None
+
 
 # vim:ts=4:sw=4:et:

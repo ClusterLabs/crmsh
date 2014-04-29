@@ -48,7 +48,6 @@ modules =	__init__.py \
 			rsctest.py \
 			schema.py \
 			scripts.py \
-			singletonmixin.py \
 			template.py \
 			term.py \
 			tmpfiles.py \
