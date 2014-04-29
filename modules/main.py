@@ -291,6 +291,7 @@ def do_work(context, user_args):
     rc = 0
     while True:
         try:
+            rendered_prompt = vars.prompt
             if options.interactive and not options.batch:
                 # TODO: fix how color interacts with readline,
                 # seems the color prompt messes it up
