@@ -22,6 +22,7 @@ import subprocess
 import re
 import glob
 import time
+import datetime
 import shutil
 import bz2
 import config
@@ -746,10 +747,14 @@ def crm_time_cmp(a, b):
 
 
 def shorttime(ts):
+    if isinstance(ts, datetime.datetime):
+        return ts.strftime("%X")
     return time.strftime("%X", time.localtime(ts))
 
 
 def shortdate(ts):
+    if isinstance(ts, datetime.datetime):
+        return ts.strftime("%F")
     return time.strftime("%F", time.localtime(ts))
 
 
@@ -1012,7 +1017,6 @@ def parse_time(t):
         common_err("%s: %s" % (t, msg))
         return None
     except ImportError, msg:
-        import datetime
         try:
             tm = time.strptime(t)
             dt = datetime.datetime(*tm[0:7])
