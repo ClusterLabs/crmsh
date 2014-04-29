@@ -120,7 +120,7 @@ def seek_to_edge(f, ts, to_end):
         s = f.readline()
         if not s:
             break
-        curr_ts = syslog_ts(s)
+        curr_ts = convert_dt(syslog_ts(s))
         if (to_end and curr_ts > ts) or \
                 (not to_end and curr_ts >= ts):
             break
