@@ -279,7 +279,8 @@ def get_pe_meta():
 def get_crmd_meta():
     if not vars.crmd_metadata:
         vars.crmd_metadata = RAInfo("crmd", "metadata")
-        vars.crmd_metadata.set_advanced_params(vars.crmd_advanced)
+        vars.crmd_metadata.exclude_from_completion(
+            vars.crmd_metadata_do_not_complete)
     return vars.crmd_metadata
 
 
@@ -362,7 +363,7 @@ class RAInfo(object):
     skip_op_attr = ("name", "depth", "role")
 
     def __init__(self, ra_class, ra_type, ra_provider="heartbeat"):
-        self.advanced_params = []
+        self.excluded_from_completion = []
         self.ra_class = ra_class
         self.ra_type = ra_type
         self.ra_provider = ra_provider
@@ -388,8 +389,12 @@ class RAInfo(object):
     def debug(self, s):
         common_debug("%s: %s" % (self.ra_string(), s))
 
-    def set_advanced_params(self, l):
-        self.advanced_params = l
+    def exclude_from_completion(self, l):
+        """
+        Exclude given list of metadata params
+        from completion
+        """
+        self.excluded_from_completion = l
 
     def add_ra_params(self, ra):
         '''
@@ -481,7 +486,7 @@ class RAInfo(object):
         return [c.get("name")
                 for c in self.ra_elem.xpath("//parameters/parameter")
                 if c.get("name")
-                and c.get("name") not in self.advanced_params]
+                and c.get("name") not in self.excluded_from_completion]
 
     def actions(self):
         '''

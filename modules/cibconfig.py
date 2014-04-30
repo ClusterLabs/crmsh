@@ -1988,7 +1988,7 @@ class CibProperty(CibObject):
         l = []
         if self.obj_type == "property":
             l = get_properties_list()
-            l += ("dc-version", "cluster-infrastructure", "last-lrm-refresh")
+            l += vars.extra_cluster_properties
         elif self.obj_type == "op_defaults":
             l = schema.get('attr', 'op', 'a')
         elif self.obj_type == "rsc_defaults":

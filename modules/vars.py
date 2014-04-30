@@ -238,13 +238,16 @@ crmd_metadata = None  # crmd meta data
 cib_metadata = None  # cib meta data
 crm_properties_metadata = None  # PE + crmd + cib meta data
 meta_progs = ("crmd", "pengine", "stonithd", "cib")
-crmd_advanced = (
-    "dc-version",
-    "cluster-infrastructure",
-    "crmd-integration-timeout",
-    "crmd-finalization-timeout",
-    "expected-quorum-votes",
-)
+# elide these properties from tab completion
+crmd_metadata_do_not_complete = ("dc-version",
+                                 "cluster-infrastructure",
+                                 "crmd-integration-timeout",
+                                 "crmd-finalization-timeout",
+                                 "expected-quorum-votes")
+extra_cluster_properties = ("dc-version",
+                            "cluster-infrastructure",
+                            "last-lrm-refresh",
+                            "site")
 pcmk_version = ""  # set later
 
 # r.group(1) transition number (a different thing from file number)
