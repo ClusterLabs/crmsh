@@ -977,8 +977,7 @@ class ResourceSet(object):
 
     def __init__(self, type, s, parent):
         self.parent = parent
-        self.type = type
-        self.q_attr = (type == "order") and "action" or "role"
+        self.q_attr = type
         self.tokens = s
         self.cli_list = []
         self.reset_set()
@@ -1048,7 +1047,7 @@ class ResourceSet(object):
 
     def err(self, errmsg, token=''):
         syntax_err(self.parent._cmd,
-                   context=self.type,
+                   context=self.q_attr,
                    token=token,
                    msg=errmsg)
         raise ParseError
