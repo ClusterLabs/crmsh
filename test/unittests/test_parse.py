@@ -273,6 +273,9 @@ class TestCliParser(unittest.TestCase):
         out = self.parser.parse('order c_apache_1 Mandatory: apache:start ip_1')
         self.assertEqual(out.id, 'c_apache_1')
 
+        out = self.parser.parse('order c_apache_2 Mandatory: apache:start ip_1 ip_2 ip_3')
+        self.assertEqual(out.id, 'c_apache_2')
+
         out = self.parser.parse('order o1 Serialize: A ( B C )')
         self.assertEqual(out.id, 'o1')
 
