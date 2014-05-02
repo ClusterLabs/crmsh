@@ -18,7 +18,7 @@
 import shlex
 import re
 from lxml import etree
-import vars
+import constants
 from ra import disambiguate_ra_type, ra_type_validate
 import schema
 from utils import keyword_cmp, verify_boolean, lines2cli
@@ -325,7 +325,7 @@ class NodeParser(BaseParser):
 class ResourceParser(BaseParser):
     _TEMPLATE_RE = re.compile(r'@(.+)$')
     _RA_TYPE_RE = re.compile(r'[a-z0-9_:-]+$', re.IGNORECASE)
-    _OPTYPE_RE = re.compile(r'(%s)$' % ('|'.join(vars.op_cli_names)), re.IGNORECASE)
+    _OPTYPE_RE = re.compile(r'(%s)$' % ('|'.join(constants.op_cli_names)), re.IGNORECASE)
 
     def can_parse(self):
         return ('primitive', 'group', 'clone', 'ms', 'master', 'rsc_template')
@@ -475,8 +475,8 @@ class ConstraintParser(BaseParser):
     _SCORE_RE = re.compile(r"([^:]+):$")
     _ROLE_RE = re.compile(r"\$?role=(.+)$", re.IGNORECASE)
     _ROLE2_RE = re.compile(r"role=(.+)$", re.IGNORECASE)
-    _BOOLOP_RE = re.compile(r'(%s)$' % ('|'.join(vars.boolean_ops)), re.IGNORECASE)
-    _UNARYOP_RE = re.compile(r'(%s)$' % ('|'.join(vars.unary_ops)), re.IGNORECASE)
+    _BOOLOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.boolean_ops)), re.IGNORECASE)
+    _UNARYOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.unary_ops)), re.IGNORECASE)
     _BINOP_RE = None
 
     def can_parse(self):
@@ -558,7 +558,7 @@ class ConstraintParser(BaseParser):
             if not self._BINOP_RE:
                 self._BINOP_RE = re.compile(r'((%s):)?(%s)$' % (
                     '|'.join(self.validation.expression_types()),
-                    '|'.join(vars.binary_ops)), re.IGNORECASE)
+                    '|'.join(constants.binary_ops)), re.IGNORECASE)
             self.match(self._BINOP_RE)
             optype = self.matched(2)
             binop = self.matched(3)
@@ -576,7 +576,7 @@ class ConstraintParser(BaseParser):
         """
         self.match('(%s)$' % ('|'.join(self.validation.date_ops())))
         op = self.matched(1)
-        if op in olist(vars.simple_date_ops):
+        if op in olist(constants.simple_date_ops):
             val = self.match_any()
             if keyword_cmp(op, 'lt'):
                 return [['operation', op], ('end', val)]
@@ -590,8 +590,8 @@ class ConstraintParser(BaseParser):
             return [['operation', op]] + self.match_nvpairs(minpairs=1)
 
     def validate_score(self, score, noattr=False):
-        if not noattr and score in olist(vars.score_types):
-            return vars.score_types[score.lower()]
+        if not noattr and score in olist(constants.score_types):
+            return constants.score_types[score.lower()]
         elif re.match("^[+-]?(inf(inity)?|INF(INITY)?|[0-9]+)$", score):
             score = re.sub("inf(inity)?|INF(INITY)?", "INFINITY", score)
             return ["score", score]
@@ -828,7 +828,7 @@ class TagParser(BaseParser):
 
 
 class AclParser(BaseParser):
-    _ACL_RIGHT_RE = re.compile(r'(%s)$' % ('|'.join(vars.acl_rule_names)), re.IGNORECASE)
+    _ACL_RIGHT_RE = re.compile(r'(%s)$' % ('|'.join(constants.acl_rule_names)), re.IGNORECASE)
     _ROLE_REF_RE = re.compile(r'role:(.+)$', re.IGNORECASE)
 
     def can_parse(self):
@@ -859,7 +859,7 @@ class AclParser(BaseParser):
     def _add_rule(self):
         rule = ACLRight()
         rule.right = self.match(self._ACL_RIGHT_RE).lower()
-        eligible_specs = vars.acl_spec_map.values()
+        eligible_specs = constants.acl_spec_map.values()
         while self.has_tokens():
             a = self._expand_shortcuts(self.current_token().split(':', 1))
             if len(a) != 2 or a[0] not in eligible_specs:
@@ -894,11 +894,11 @@ class AclParser(BaseParser):
         input. If no shortcut was found, just return l.
         In case of syntax error, return empty list. Otherwise, l[0]
         contains 'xpath' and l[1] the expansion as found in
-        vars.acl_shortcuts. The id placeholders '@@' are replaced
+        constants.acl_shortcuts. The id placeholders '@@' are replaced
         with the given attribute names or resource references.
         '''
         try:
-            expansion = vars.acl_shortcuts[l[0]]
+            expansion = constants.acl_shortcuts[l[0]]
         except KeyError:
             return l
         l[0] = "xpath"
@@ -946,7 +946,7 @@ class RawXMLParser(BaseParser):
             common_err("Cannot parse XML data: %s" % xml_data)
             self.err(e)
         try:
-            el_type = vars.cib_cli_map[e.tag]
+            el_type = constants.cib_cli_map[e.tag]
         except:
             self.err("Element %s not recognized" % (e.tag))
         out = RawXML()

@@ -58,7 +58,7 @@ modules/config.py.in::
 
     Compile-time constants defined during the build process.
 
-modules/vars.py::
+modules/constants.py::
 
 	Global constants (mostly) and (a few) variables (it would be
 	good to separate the two).

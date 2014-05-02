@@ -22,7 +22,7 @@ from lxml import etree
 import re
 import glob
 import cache
-import vars
+import constants
 import config
 import options
 import userdir
@@ -203,15 +203,15 @@ def crm_resource_support():
 
 
 def ra_if():
-    if vars.ra_if:
-        return vars.ra_if
+    if constants.ra_if:
+        return constants.ra_if
     if crm_resource_support():
-        vars.ra_if = RaCrmResource()
+        constants.ra_if = RaCrmResource()
     elif can_use_lrmadmin():
-        vars.ra_if = RaLrmd()
-    if not vars.ra_if or not vars.ra_if.good:
-        vars.ra_if = RaOS()
-    return vars.ra_if
+        constants.ra_if = RaLrmd()
+    if not constants.ra_if or not constants.ra_if.good:
+        constants.ra_if = RaOS()
+    return constants.ra_if
 
 
 def ra_classes():
@@ -271,40 +271,40 @@ def ra_types(ra_class="ocf", ra_provider=""):
 
 
 def get_pe_meta():
-    if not vars.pe_metadata:
-        vars.pe_metadata = RAInfo("pengine", "metadata")
-    return vars.pe_metadata
+    if not constants.pe_metadata:
+        constants.pe_metadata = RAInfo("pengine", "metadata")
+    return constants.pe_metadata
 
 
 def get_crmd_meta():
-    if not vars.crmd_metadata:
-        vars.crmd_metadata = RAInfo("crmd", "metadata")
-        vars.crmd_metadata.exclude_from_completion(
-            vars.crmd_metadata_do_not_complete)
-    return vars.crmd_metadata
+    if not constants.crmd_metadata:
+        constants.crmd_metadata = RAInfo("crmd", "metadata")
+        constants.crmd_metadata.exclude_from_completion(
+            constants.crmd_metadata_do_not_complete)
+    return constants.crmd_metadata
 
 
 def get_stonithd_meta():
-    if not vars.stonithd_metadata:
-        vars.stonithd_metadata = RAInfo("stonithd", "metadata")
-    return vars.stonithd_metadata
+    if not constants.stonithd_metadata:
+        constants.stonithd_metadata = RAInfo("stonithd", "metadata")
+    return constants.stonithd_metadata
 
 
 def get_cib_meta():
-    if not vars.cib_metadata:
-        vars.cib_metadata = RAInfo("cib", "metadata")
-    return vars.cib_metadata
+    if not constants.cib_metadata:
+        constants.cib_metadata = RAInfo("cib", "metadata")
+    return constants.cib_metadata
 
 
 def get_properties_meta():
-    if not vars.crm_properties_metadata:
+    if not constants.crm_properties_metadata:
         get_pe_meta()
         get_crmd_meta()
         get_cib_meta()
-        vars.crm_properties_metadata = copy.deepcopy(vars.crmd_metadata)
-        vars.crm_properties_metadata.add_ra_params(vars.pe_metadata)
-        vars.crm_properties_metadata.add_ra_params(vars.cib_metadata)
-    return vars.crm_properties_metadata
+        constants.crm_properties_metadata = copy.deepcopy(constants.crmd_metadata)
+        constants.crm_properties_metadata.add_ra_params(constants.pe_metadata)
+        constants.crm_properties_metadata.add_ra_params(constants.cib_metadata)
+    return constants.crm_properties_metadata
 
 
 def get_properties_list():
@@ -656,7 +656,7 @@ class RAInfo(object):
         id = "ra_meta-%s" % self.ra_string()
         if cache.is_cached(id):
             return cache.retrieve(id)
-        if self.ra_class in vars.meta_progs:
+        if self.ra_class in constants.meta_progs:
             l = prog_meta(self.ra_class)
         else:
             l = ra_if().meta(self.ra_class, self.ra_type, self.ra_provider)

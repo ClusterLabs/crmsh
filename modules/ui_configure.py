@@ -21,7 +21,7 @@ import command
 import completers as compl
 import config
 import utils
-import vars
+import constants
 import userdir
 import xmlutil
 import ra
@@ -79,7 +79,7 @@ def ra_classes_or_tmpl(args):
 
 
 def op_attr_list(args):
-    return [schema.g_schema.get('attr', 'op', 'o') + '='] + [s + '=' for s in vars.op_extra_attrs]
+    return [schema.g_schema.get('attr', 'op', 'o') + '='] + [s + '=' for s in constants.op_extra_attrs]
 
 
 def node_id_colon_list(args):
@@ -142,10 +142,10 @@ class CompletionHelp(object):
             cmdline = readline.get_line_buffer()
             print "\n%s" % helptxt
             if clidisplay.colors_enabled():
-                print "%s%s" % (term.render(clidisplay.prompt_noreadline(vars.prompt)),
+                print "%s%s" % (term.render(clidisplay.prompt_noreadline(constants.prompt)),
                                 cmdline),
             else:
-                print "%s%s" % (vars.prompt, cmdline),
+                print "%s%s" % (constants.prompt, cmdline),
             cls.laststamp = time.time()
             cls.lasttopic = topic
 
@@ -170,7 +170,7 @@ def _prim_meta_completer(agent, args):
         return ['meta']
     if '=' in completing:
         return []
-    return [s+'=' for s in vars.rsc_meta_attributes]
+    return [s+'=' for s in constants.rsc_meta_attributes]
 
 
 def _prim_op_completer(agent, args):
@@ -178,7 +178,7 @@ def _prim_op_completer(agent, args):
     if completing == 'op':
         return ['op']
     if args[-2] == 'op':
-        return vars.op_cli_names
+        return constants.op_cli_names
 
     return []
 
@@ -246,13 +246,13 @@ class CibConfig(command.UI):
         has_ptest = utils.is_program('ptest')
         has_simulate = utils.is_program('crm_simulate')
         if not has_ptest:
-            vars.simulate_programs["ptest"] = "crm_simulate"
+            constants.simulate_programs["ptest"] = "crm_simulate"
         if not has_simulate:
-            vars.simulate_programs["simulate"] = "ptest"
+            constants.simulate_programs["simulate"] = "ptest"
         if not (has_ptest or has_simulate):
             common_warn("neither ptest nor crm_simulate exist, check your installation")
-            vars.simulate_programs["ptest"] = ""
-            vars.simulate_programs["simulate"] = ""
+            constants.simulate_programs["ptest"] = ""
+            constants.simulate_programs["simulate"] = ""
         return True
 
     @command.name('_test')
@@ -430,13 +430,13 @@ class CibConfig(command.UI):
     def do_graph(self, context, *args):
         "usage: graph [<gtype> [<file> [<img_format>]]]"
         if args and args[0] == "exportsettings":
-            return utils.save_graphviz_file(userdir.GRAPHVIZ_USER_FILE, vars.graph)
+            return utils.save_graphviz_file(userdir.GRAPHVIZ_USER_FILE, constants.graph)
         rc, gtype, outf, ftype = ui_utils.graph_args(args)
         if not rc:
             context.fatal_error("Failed to create graph")
         rc, d = utils.load_graphviz_file(userdir.GRAPHVIZ_USER_FILE)
         if rc and d:
-            vars.graph = d
+            constants.graph = d
         set_obj = mkset_obj()
         if not outf:
             rc = set_obj.show_graph(gtype)
@@ -489,7 +489,7 @@ class CibConfig(command.UI):
         "usage: ptest [nograph] [v...] [scores] [utilization] [actions]"
         # use ptest/crm_simulate depending on which command was
         # used
-        config.core.ptest = vars.simulate_programs[context.get_command_name()]
+        config.core.ptest = constants.simulate_programs[context.get_command_name()]
         if not config.core.ptest:
             return False
         set_obj = mkset_obj("xml")
@@ -546,7 +546,7 @@ class CibConfig(command.UI):
 
     def __conf_object(self, cmd, *args):
         "The configure object command."
-        if cmd in vars.cib_cli_map.values() and \
+        if cmd in constants.cib_cli_map.values() and \
                 not cib_factory.is_elem_supported(cmd):
             common_err("%s not supported by the RNG schema" % cmd)
             return False
@@ -554,7 +554,7 @@ class CibConfig(command.UI):
         return f()
 
     @command.skill_level('administrator')
-    @command.completers(_node_id_list, compl.choice(vars.node_attributes_keyw))
+    @command.completers(_node_id_list, compl.choice(constants.node_attributes_keyw))
     def do_node(self, context, *args):
         """usage: node <uname>[:<type>]
            [attributes <param>=<value> [<param>=<value>...]]

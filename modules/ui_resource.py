@@ -18,7 +18,7 @@
 
 import command
 import completers as compl
-import vars
+import constants
 import config
 import utils
 import xmlutil
@@ -140,7 +140,7 @@ def cleanup_resource(rsc, node=''):
 
 
 _attrcmds = compl.choice(['delete', 'set', 'show'])
-_raoperations = compl.choice(vars.ra_operations)
+_raoperations = compl.choice(constants.ra_operations)
 
 
 class RscMgmt(command.UI):
@@ -447,13 +447,13 @@ class RscMgmt(command.UI):
             head_pl = ["op", []]
             head_pl[1].append(["name", op])
             head_pl[1].append(["interval", interval])
-            head_pl[1].append([vars.trace_ra_attr, "1"])
+            head_pl[1].append([constants.trace_ra_attr, "1"])
             cli_list = []
             cli_list.append(head_pl)
             if not rsc.add_operation(cli_list):
                 return False
         else:
-            op_node = rsc.set_op_attr(op_node, vars.trace_ra_attr, "1")
+            op_node = rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
         if not cib_factory.commit():
             return False
         if op == "monitor" and utils.crm_msec(interval) != 0:
@@ -478,7 +478,7 @@ class RscMgmt(command.UI):
         if op_node is None:
             common_err("operation %s does not exist in %s" % (op, rsc.obj_id))
             return False
-        op_node = rsc.del_op_attr(op_node, vars.trace_ra_attr)
+        op_node = rsc.del_op_attr(op_node, constants.trace_ra_attr)
         if rsc.is_dummy_operation(op_node):
             rsc.del_operation(op_node)
         return cib_factory.commit()

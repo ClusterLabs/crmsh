@@ -27,7 +27,7 @@ import shutil
 import bz2
 import config
 import userdir
-import vars
+import constants
 import options
 import term
 from msg import common_warn, common_info, common_debug, common_err, err_buf
@@ -1161,15 +1161,15 @@ def get_cib_attributes(cib_f, tag, attr_l, dflt_l):
 
 
 def is_min_pcmk_ver(min_ver, cib_f=None):
-    if not vars.pcmk_version:
+    if not constants.pcmk_version:
         if cib_f:
-            vars.pcmk_version = get_cib_property(cib_f, "dc-version", "1.1.1")
+            constants.pcmk_version = get_cib_property(cib_f, "dc-version", "1.1.1")
             common_debug("found pacemaker version: %s in cib: %s" %
-                         (vars.pcmk_version, cib_f))
+                         (constants.pcmk_version, cib_f))
         else:
-            vars.pcmk_version = get_pcmk_version("1.1.1")
+            constants.pcmk_version = get_pcmk_version("1.1.1")
     from distutils.version import LooseVersion
-    return LooseVersion(vars.pcmk_version) >= LooseVersion(min_ver)
+    return LooseVersion(constants.pcmk_version) >= LooseVersion(min_ver)
 
 
 def is_pcmk_118(cib_f=None):

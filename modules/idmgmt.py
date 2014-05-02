@@ -15,7 +15,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-import vars
+import constants
 import copy
 from msg import common_error, common_debug, id_used_err
 import xmlutil
@@ -68,7 +68,7 @@ def new(node, pfx):
         else:
             node_id = "%s-%s" % (pfx, name)
     else:
-        subpfx = vars.subpfx_list.get(node.tag, '')
+        subpfx = constants.subpfx_list.get(node.tag, '')
         if subpfx:
             node_id = "%s-%s" % (pfx, subpfx)
         else:

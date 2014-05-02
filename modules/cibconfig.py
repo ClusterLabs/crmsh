@@ -24,7 +24,7 @@ import fnmatch
 import time
 import config
 import options
-import vars
+import constants
 import tmpfiles
 from parse import CliParser
 import clidisplay
@@ -92,12 +92,12 @@ def mkset_obj(*args):
 
 def set_graph_attrs(gv_obj, obj_type):
     try:
-        for attr, attr_v in vars.graph['*'].iteritems():
+        for attr, attr_v in constants.graph['*'].iteritems():
             gv_obj.new_graph_attr(attr, attr_v)
     except KeyError:
         pass
     try:
-        for attr, attr_v in vars.graph[obj_type].iteritems():
+        for attr, attr_v in constants.graph[obj_type].iteritems():
             gv_obj.new_graph_attr(attr, attr_v)
     except KeyError:
         pass
@@ -105,12 +105,12 @@ def set_graph_attrs(gv_obj, obj_type):
 
 def set_obj_attrs(gv_obj, obj_id, obj_type):
     try:
-        for attr, attr_v in vars.graph['*'].iteritems():
+        for attr, attr_v in constants.graph['*'].iteritems():
             gv_obj.new_attr(obj_id, attr, attr_v)
     except KeyError:
         pass
     try:
-        for attr, attr_v in vars.graph[obj_type].iteritems():
+        for attr, attr_v in constants.graph[obj_type].iteritems():
             gv_obj.new_attr(obj_id, attr, attr_v)
     except KeyError:
         pass
@@ -118,7 +118,7 @@ def set_obj_attrs(gv_obj, obj_id, obj_type):
 
 def set_edge_attrs(gv_obj, edge_id, obj_type):
     try:
-        for attr, attr_v in vars.graph[obj_type].iteritems():
+        for attr, attr_v in constants.graph[obj_type].iteritems():
             gv_obj.new_edge_attr(edge_id, attr, attr_v)
     except KeyError:
         pass
@@ -480,7 +480,7 @@ class CibObjectSetCli(CibObjectSet):
         id = find_value(cli_list[0][1], "id") or find_value(cli_list[0][1], "$id")
         if not id:
             type = cli_list[0][0]
-            if type in vars.nvset_cli_names:
+            if type in constants.nvset_cli_names:
                 # some elements have default ids
                 # (property, *_defaults)
                 id = cib_object_map[backtrans[type]][3]
@@ -684,13 +684,13 @@ def mkxmlnvpairs(e, oldnode, id_hint):
     as instance_attributes.
     NB: Other tags not containing nvpairs are fine if the dict is empty.
     '''
-    xml_node_type = e[0] in vars.defaults_tags and "meta_attributes" or e[0]
+    xml_node_type = e[0] in constants.defaults_tags and "meta_attributes" or e[0]
     node = etree.Element(xml_node_type)
     # another exception:
     # cluster_property_set and defaults have nvpairs as direct children
     # in that case the id_hint is equal id
     # and this is important in case there are multiple sets
-    if (e[0] == "cluster_property_set" or e[0] in vars.defaults_tags) and id_hint:
+    if (e[0] == "cluster_property_set" or e[0] in constants.defaults_tags) and id_hint:
         node.set("id", id_hint)
     match_node = lookup_node(node, oldnode)
     #if match_node:
@@ -706,7 +706,7 @@ def mkxmlnvpairs(e, oldnode, id_hint):
     if v:
         node.set("id", v)
         e[1].remove(["$id", v])
-    elif e[0] in vars.nvset_cli_names:
+    elif e[0] in constants.nvset_cli_names:
         node.set("id", id_hint)
     else:
         if e[0] == "operations":  # operations don't need no id
@@ -714,7 +714,7 @@ def mkxmlnvpairs(e, oldnode, id_hint):
         else:
             set_id(node, match_node, id_hint)
     try:
-        subpfx = vars.subpfx_list[e[0]]
+        subpfx = constants.subpfx_list[e[0]]
     except KeyError:
         subpfx = ''
     subpfx = subpfx and "%s_%s" % (id_hint, subpfx) or id_hint
@@ -766,7 +766,7 @@ def mkxmldate(e, oldnode, id_hint):
         if n in olist(schema.rng_attr_values_l('date_expression', 'operation')) or \
                 n == "operation":
             continue
-        elif n in vars.in_range_attrs:
+        elif n in constants.in_range_attrs:
             node.set(n, v)
         else:
             date_spec_attr.append([n, v])
@@ -919,7 +919,7 @@ class CibObject(object):
                 clidisplay.enable_pretty()
 
     def _gv_rsc_id(self):
-        if self.parent and self.parent.obj_type in vars.clonems_tags:
+        if self.parent and self.parent.obj_type in constants.clonems_tags:
             return "%s:%s" % (self.parent.obj_type, self.obj_id)
         else:
             return self.obj_id
@@ -1060,7 +1060,7 @@ class CibObject(object):
         common_debug("obj %s node: %s" % (self.obj_id, etree.tostring(self.node)))
 
     def mknode(self, obj_id):
-        if self.xml_obj_type in vars.defaults_tags:
+        if self.xml_obj_type in constants.defaults_tags:
             tag = "meta_attributes"
         else:
             tag = self.xml_obj_type
@@ -1263,7 +1263,7 @@ class CibNode(CibObject):
                 s = '%s $id="%s"' % (s, self.obj_id)
         s = '%s %s' % (s, clidisplay.id(uname))
         type = self.node.get("type")
-        if type and type != vars.node_default_type:
+        if type and type != constants.node_default_type:
             s = '%s:%s' % (s, type)
         return s
 
@@ -1276,8 +1276,8 @@ class CibNode(CibObject):
         if not obj_id:
             return None
         type = find_value(head[1], "type")
-        if not vars.node_type_opt and not type:
-            type = vars.node_default_type
+        if not constants.node_type_opt and not type:
+            type = constants.node_default_type
         if type:
             head[1].append(["type", type])
         headnode = mkxmlsimple(head,
@@ -1515,7 +1515,7 @@ class CibPrimitive(CibObject):
         if self.node is None:  # eh?
             common_err("%s: no xml (strange)" % self.obj_id)
             return utils.get_check_rc()
-        rc3 = sanity_check_meta(self.obj_id, self.node, vars.rsc_meta_attributes)
+        rc3 = sanity_check_meta(self.obj_id, self.node, constants.rsc_meta_attributes)
         if self.obj_type == "primitive":
             r_node = reduce_primitive(self.node)
             if r_node is None:
@@ -1564,7 +1564,7 @@ class CibPrimitive(CibObject):
             self._set_gv_attrs(gv_obj)
             self._set_gv_attrs(gv_obj, "class:%s" % ra_class)
             # if it's clone/ms, then get parent graph attributes
-            if self.parent and self.parent.obj_type in vars.clonems_tags:
+            if self.parent and self.parent.obj_type in constants.clonems_tags:
                 self._set_gv_attrs(gv_obj, self.parent.obj_type)
 
             template_ref = self.node.get("template")
@@ -1587,7 +1587,7 @@ class CibPrimitive(CibObject):
             self._set_gv_attrs(gv_obj)
             self._set_gv_attrs(gv_obj, "class:%s" % ra_class)
             # if it's clone/ms, then get parent graph attributes
-            if self.parent and self.parent.obj_type in vars.clonems_tags:
+            if self.parent and self.parent.obj_type in constants.clonems_tags:
                 self._set_gv_attrs(gv_obj, self.parent.obj_type)
 
 
@@ -1606,7 +1606,7 @@ class CibContainer(CibObject):
             if (self.obj_type == "group" and is_primitive(c)) or \
                     is_child_rsc(c):
                 children.append(clidisplay.rscref(c.get("id")))
-            elif self.obj_type in vars.clonems_tags and is_child_rsc(c):
+            elif self.obj_type in constants.clonems_tags and is_child_rsc(c):
                 children.append(clidisplay.rscref(c.get("id")))
         s = clidisplay.keyword(self.obj_type)
         id = clidisplay.id(self.obj_id)
@@ -1638,13 +1638,13 @@ class CibContainer(CibObject):
         if self.node is None:  # eh?
             common_err("%s: no xml (strange)" % self.obj_id)
             return utils.get_check_rc()
-        l = vars.rsc_meta_attributes
+        l = constants.rsc_meta_attributes
         if self.obj_type == "clone":
-            l += vars.clone_meta_attributes
+            l += constants.clone_meta_attributes
         elif self.obj_type == "ms":
-            l += vars.clone_meta_attributes + vars.ms_meta_attributes
+            l += constants.clone_meta_attributes + constants.ms_meta_attributes
         elif self.obj_type == "group":
-            l += vars.group_meta_attributes
+            l += constants.group_meta_attributes
         rc = sanity_check_meta(self.obj_id, self.node, l)
         return rc
 
@@ -1659,7 +1659,7 @@ class CibContainer(CibObject):
                               "cluster_%s" % self.obj_id)
         sg_obj.new_graph_attr('label', self._gv_rsc_id())
         self._set_sg_attrs(sg_obj, self.obj_type)
-        if self.parent and self.parent.obj_type in vars.clonems_tags:
+        if self.parent and self.parent.obj_type in constants.clonems_tags:
             self._set_sg_attrs(sg_obj, self.parent.obj_type)
         for child_rsc in self.children:
             child_rsc.repr_gv(sg_obj, from_grp=True)
@@ -1989,11 +1989,11 @@ class CibProperty(CibObject):
         l = []
         if self.obj_type == "property":
             l = get_properties_list()
-            l += vars.extra_cluster_properties
+            l += constants.extra_cluster_properties
         elif self.obj_type == "op_defaults":
             l = schema.get('attr', 'op', 'a')
         elif self.obj_type == "rsc_defaults":
-            l = vars.rsc_meta_attributes
+            l = constants.rsc_meta_attributes
         rc = sanity_check_nvpairs(self.obj_id, self.node, l)
         return rc
 
@@ -2128,7 +2128,7 @@ class CibAcl(CibObject):
         return "%s %s" % (s, id)
 
     def _repr_cli_child(self, c, format):
-        if c.tag in vars.acl_rule_names:
+        if c.tag in constants.acl_rule_names:
             return cli_acl_rule(c, format)
         else:
             return cli_acl_roleref(c, format)
@@ -2685,17 +2685,17 @@ class CibFactory(object):
 
     def children_id_list(self):
         "List of child ids (for clone/master completion)."
-        return [x.obj_id for x in self.cib_objects if x.obj_type in vars.children_tags]
+        return [x.obj_id for x in self.cib_objects if x.obj_type in constants.children_tags]
 
     def rsc_id_list(self):
         "List of all resource ids."
         return [x.obj_id for x in self.cib_objects
-                if x.obj_type in vars.resource_tags]
+                if x.obj_type in constants.resource_tags]
 
     def top_rsc_id_list(self):
         "List of top resource ids (for constraint completion)."
         return [x.obj_id for x in self.cib_objects
-                if x.obj_type in vars.resource_tags and not x.parent]
+                if x.obj_type in constants.resource_tags and not x.parent]
 
     def node_id_list(self):
         "List of node ids."
@@ -2720,7 +2720,7 @@ class CibFactory(object):
     def f_children_id_list(self):
         "List of possible child ids (for clone/master completion)."
         return [x.obj_id for x in self.cib_objects
-                if x.obj_type in vars.children_tags and not x.parent]
+                if x.obj_type in constants.children_tags and not x.parent]
 
     #
     # a few helper functions
@@ -2745,7 +2745,7 @@ class CibFactory(object):
     def find_node(self, tag, id, strict=True):
         "Find a node of this type with this id."
         try:
-            if tag in vars.defaults_tags:
+            if tag in constants.defaults_tags:
                 expr = '//%s/meta_attributes[@id="%s"]' % (tag, id)
             elif tag == 'fencing-topology':
                 expr = '//fencing-topology' % tag
@@ -3010,7 +3010,7 @@ class CibFactory(object):
         if child.parent and child.parent.obj_id != obj_id:
             common_err("%s already in use at %s" % (child_id, child.parent.obj_id))
             return False
-        if not child.obj_type in vars.children_tags:
+        if not child.obj_type in constants.children_tags:
             common_err("%s may contain a primitive or a group; %s is %s" %
                        (parent_tag, child_id, child.obj_type))
             return False
@@ -3102,7 +3102,7 @@ class CibFactory(object):
         if len(cli_list) >= 2 and cli_list[1][0] == "raw":
             raw_elem = etree.fromstring(cli_list[1][1])
             return self.create_from_node(raw_elem)
-        if obj_type in olist(vars.nvset_cli_names):
+        if obj_type in olist(constants.nvset_cli_names):
             return self.set_property_cli(cli_list)
         if obj_type == "op":
             return self.add_op(cli_list)
@@ -3130,7 +3130,7 @@ class CibFactory(object):
             raw_elem = etree.fromstring(cli_list[1][1])
             idmgmt.store_xml(raw_elem)
             return self.update_element(obj, raw_elem)
-        if method == 'update' and obj.obj_type in vars.nvset_cli_names:
+        if method == 'update' and obj.obj_type in constants.nvset_cli_names:
             self.merge_from_cli(obj, cli_list)
             return True
         return self.update_element(obj, obj.cli2node(cli_list))
@@ -3169,7 +3169,7 @@ class CibFactory(object):
         node = obj.cli2node(cli_list)
         if node is None:
             return
-        if obj.obj_type in vars.nvset_cli_names:
+        if obj.obj_type in constants.nvset_cli_names:
             rc = merge_attributes(obj.node, node, "nvpair")
         else:
             rc = merge_nodes(obj.node, node)
@@ -3297,7 +3297,7 @@ class CibFactory(object):
             child.parent = obj
 
     def test_element(self, obj):
-        if not obj.xml_obj_type in vars.defaults_tags:
+        if not obj.xml_obj_type in constants.defaults_tags:
             if not self._verify_element(obj):
                 return False
         if utils.is_check_always() and obj.check_sanity() > 1:
@@ -3310,7 +3310,7 @@ class CibFactory(object):
         obj.parent). Update also the XML, if necessary.
         '''
         obj.children = []
-        if obj.obj_type not in vars.container_tags:
+        if obj.obj_type not in constants.container_tags:
             return
         for c in obj.node.iterchildren():
             if is_child_rsc(c):

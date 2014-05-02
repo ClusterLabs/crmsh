@@ -22,7 +22,7 @@ import command
 import xmlutil
 import utils
 import ui_cibstatus
-import vars
+import constants
 import config
 import options
 from msg import no_prog_err
@@ -67,20 +67,20 @@ class CibShadow(command.UI):
             name = argl[0]
             if not utils.is_filename_sane(name):
                 context.fatal_error("Bad filename: " + name)
-            if name in (vars.tmp_cib_prompt, vars.live_cib_prompt):
+            if name in (constants.tmp_cib_prompt, constants.live_cib_prompt):
                 context.fatal_error("Shadow name '%s' is not allowed" % (name))
             del argl[0]
-            vars.tmp_cib = False
+            constants.tmp_cib = False
         else:
             fd, fname = tmpfiles.create(dir=xmlutil.cib_shadow_dir(), prefix="shadow.crmsh_")
             name = os.path.basename(fname).replace("shadow.", "")
-            vars.tmp_cib = True
+            constants.tmp_cib = True
 
         if "empty" in opt_l:
             new_cmd = "%s -e '%s'" % (self.extcmd, name)
         else:
             new_cmd = "%s -c '%s'" % (self.extcmd, name)
-        if vars.tmp_cib or config.core.force or "force" in opt_l or "--force" in opt_l:
+        if constants.tmp_cib or config.core.force or "force" in opt_l or "--force" in opt_l:
             new_cmd = "%s --force" % new_cmd
         if utils.ext_cmd(new_cmd) == 0:
             context.info("%s shadow CIB created" % name)
@@ -160,7 +160,7 @@ class CibShadow(command.UI):
             context.info("committed '%s' shadow CIB to the cluster" % name)
         else:
             context.fatal_error("failed to commit the %s shadow CIB" % name)
-        if vars.tmp_cib:
+        if constants.tmp_cib:
             self._use('', '')
 
     @command.skill_level('administrator')
@@ -185,9 +185,9 @@ class CibShadow(command.UI):
         if not name or name == "live":
             if withstatus:
                 cib_status.load("live")
-            if vars.tmp_cib:
+            if constants.tmp_cib:
                 utils.ext_cmd("%s -D '%s' --force" % (self.extcmd, utils.get_cib_in_use()))
-                vars.tmp_cib = False
+                constants.tmp_cib = False
             utils.clear_cib_in_use()
         else:
             utils.set_cib_in_use(name)

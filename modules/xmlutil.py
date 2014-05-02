@@ -24,7 +24,7 @@ import bz2
 import config
 import options
 import schema
-import vars
+import constants
 from msg import common_err, common_error, common_debug, cib_parse_err, err_buf
 import userdir
 import utils
@@ -117,7 +117,7 @@ def cibdump2elem(section=None):
         return None
     if rc == 0:
         return cibtext2elem(outp)
-    elif rc == vars.cib_no_section_rc:
+    elif rc == constants.cib_no_section_rc:
         return None
     else:
         common_error("running %s: %s" % (cmd, err_outp))
@@ -520,7 +520,7 @@ def is_status_node(e):
 
 def is_emptyelem(node, tag_l):
     if node.tag in tag_l:
-        for a in vars.precious_attrs:
+        for a in constants.precious_attrs:
             if node.get(a):
                 return False
         for n in node.iterchildren():
@@ -531,7 +531,7 @@ def is_emptyelem(node, tag_l):
 
 
 def is_emptynvpairs(node):
-    return is_emptyelem(node, vars.nvpairs_tags)
+    return is_emptyelem(node, constants.nvpairs_tags)
 
 
 def is_emptyops(node):
@@ -539,7 +539,7 @@ def is_emptyops(node):
 
 
 def is_cib_element(node):
-    return node.tag in vars.cib_cli_map
+    return node.tag in constants.cib_cli_map
 
 
 def is_group(node):
@@ -555,17 +555,17 @@ def is_clone(node):
 
 
 def is_clonems(node):
-    return node.tag in vars.clonems_tags
+    return node.tag in constants.clonems_tags
 
 
 def is_cloned(node):
-    return (node.getparent().tag in vars.clonems_tags or
+    return (node.getparent().tag in constants.clonems_tags or
             (node.getparent().tag == "group" and
-             node.getparent().getparent().tag in vars.clonems_tags))
+             node.getparent().getparent().tag in constants.clonems_tags))
 
 
 def is_container(node):
-    return node.tag in vars.container_tags
+    return node.tag in constants.container_tags
 
 
 def is_primitive(node):
@@ -573,7 +573,7 @@ def is_primitive(node):
 
 
 def is_resource(node):
-    return node.tag in vars.resource_tags
+    return node.tag in constants.resource_tags
 
 
 def is_template(node):
@@ -581,20 +581,20 @@ def is_template(node):
 
 
 def is_child_rsc(node):
-    return node.tag in vars.children_tags
+    return node.tag in constants.children_tags
 
 
 def is_constraint(node):
-    return node.tag in vars.constraint_tags
+    return node.tag in constants.constraint_tags
 
 
 def is_defaults(node):
-    return node.tag in vars.defaults_tags
+    return node.tag in constants.defaults_tags
 
 
 def rsc_constraint(rsc_id, con_elem):
     for attr in con_elem.keys():
-        if attr in vars.constraint_rsc_refs \
+        if attr in constants.constraint_rsc_refs \
                 and rsc_id == con_elem.get(attr):
             return True
     for rref in con_elem.xpath("resource_set/resource_ref"):
@@ -611,7 +611,7 @@ def sort_container_children(e_list):
     '''
     for node in e_list:
         children = [x for x in node.iterchildren()
-                    if x.tag in vars.children_tags]
+                    if x.tag in constants.children_tags]
         for c in children:
             node.remove(c)
         for c in children:
@@ -641,7 +641,7 @@ def remove_dflt_attrs(e_list):
     '''
     for e in e_list:
         try:
-            d = vars.attr_defaults[e.tag]
+            d = constants.attr_defaults[e.tag]
             for a in d.keys():
                 if e.get(a) == d[a]:
                     del e.attrib[a]
@@ -967,11 +967,11 @@ def processing_sort_cli(cl):
 
 
 def is_resource_cli(s):
-    return s in olist(vars.resource_cli_names)
+    return s in olist(constants.resource_cli_names)
 
 
 def is_constraint_cli(s):
-    return s in olist(vars.constraint_cli_names)
+    return s in olist(constants.constraint_cli_names)
 
 
 def referenced_resources(node):
@@ -1002,7 +1002,7 @@ def rename_id(node, old_id, new_id):
 def rename_rscref_simple(c_obj, old_id, new_id):
     c_modified = False
     for attr in c_obj.node.keys():
-        if attr in vars.constraint_rsc_refs and \
+        if attr in constants.constraint_rsc_refs and \
                 c_obj.node.get(attr) == old_id:
             c_obj.node.set(attr, new_id)
             c_obj.updated = True
@@ -1013,7 +1013,7 @@ def rename_rscref_simple(c_obj, old_id, new_id):
 def delete_rscref_simple(c_obj, rsc_id):
     c_modified = False
     for attr in c_obj.node.keys():
-        if attr in vars.constraint_rsc_refs and \
+        if attr in constants.constraint_rsc_refs and \
                 c_obj.node.get(attr) == rsc_id:
             del c_obj.node.attrib[attr]
             c_obj.updated = True
@@ -1140,7 +1140,7 @@ def silly_constraint(c_node, rsc_id):
     cnt = 0  # total count of referenced resources have to be at least two
     rsc_cnt = 0
     for attr in c_node.keys():
-        if attr in vars.constraint_rsc_refs:
+        if attr in constants.constraint_rsc_refs:
             cnt += 1
             if c_node.get(attr) == rsc_id:
                 rsc_cnt += 1
@@ -1361,7 +1361,7 @@ def merge_attributes(dnode, snode, tag):
 def merge_nodes(dnode, snode):
     '''
     Import elements from snode into dnode.
-    If an element is attributes set (vars.nvpairs_tags) or
+    If an element is attributes set (constants.nvpairs_tags) or
     "operations", then merge attributes in the children.
     Otherwise, replace the whole element. (TBD)
     '''
@@ -1372,10 +1372,10 @@ def merge_nodes(dnode, snode):
     for sc in snode.iterchildren():
         dc = lookup_node(sc, dnode, ignore_id=True)
         if dc is None:
-            if sc.tag in vars.nvpairs_tags or sc.tag == "operations":
+            if sc.tag in constants.nvpairs_tags or sc.tag == "operations":
                 add_children.append(sc)
                 rc = True
-        elif dc.tag in vars.nvpairs_tags:
+        elif dc.tag in constants.nvpairs_tags:
             rc = merge_attributes(dc, sc, "nvpair") or rc
         elif dc.tag == "operations":
             rc = merge_attributes(dc, sc, "op") or rc

@@ -20,7 +20,7 @@ import command
 import completers as compl
 import utils
 import ra
-import vars
+import constants
 import options
 
 
@@ -94,7 +94,7 @@ class RA(command.UI):
             else:
                 ra_provider = args[2]
         else:
-            if args[0] in vars.meta_progs:
+            if args[0] in constants.meta_progs:
                 ra_class = args[0]
                 ra_provider = ra_type = None
             else:

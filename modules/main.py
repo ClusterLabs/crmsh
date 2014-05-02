@@ -23,7 +23,7 @@ import random
 
 import config
 import options
-import vars
+import constants
 from msg import err_buf, syntax_err, common_err
 import clidisplay
 import term
@@ -132,9 +132,9 @@ def envsetup():
 def cib_prompt():
     shadow = utils.get_cib_in_use()
     if not shadow:
-        return vars.live_cib_prompt
-    if vars.tmp_cib:
-        return vars.tmp_cib_prompt
+        return constants.live_cib_prompt
+    if constants.tmp_cib:
+        return constants.tmp_cib_prompt
     return shadow
 
 
@@ -219,9 +219,9 @@ def set_interactive():
 
 def compatibility_setup():
     if utils.is_pcmk_118():
-        vars.node_type_opt = True
-        vars.attr_defaults["node"] = {"type": "normal"}
-        vars.cib_no_section_rc = 6
+        constants.node_type_opt = True
+        constants.attr_defaults["node"] = {"type": "normal"}
+        constants.cib_no_section_rc = 6
 
 
 def add_quotes(args):
@@ -288,12 +288,12 @@ def do_work(context, user_args):
     rc = 0
     while True:
         try:
-            rendered_prompt = vars.prompt
+            rendered_prompt = constants.prompt
             if options.interactive and not options.batch:
                 # TODO: fix how color interacts with readline,
                 # seems the color prompt messes it up
                 promptstr = "crm(%s)%s# " % (cib_prompt(), context.prompt())
-                vars.prompt = promptstr
+                constants.prompt = promptstr
                 if clidisplay.colors_enabled():
                     rendered_prompt = term.render(clidisplay.prompt(promptstr))
                 else:

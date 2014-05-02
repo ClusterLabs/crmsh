@@ -28,7 +28,7 @@ import utils
 import ui_utils
 import userdir
 import xmlutil
-import vars
+import constants
 import options
 from cibconfig import mkset_obj, cib_factory
 from msg import common_err, common_debug, common_info
@@ -531,7 +531,7 @@ class History(command.UI):
             return False
         rc, d = utils.load_graphviz_file(userdir.GRAPHVIZ_USER_FILE)
         if rc and d:
-            vars.graph = d
+            constants.graph = d
         set_obj = self._pe_config_obj(pe_f)
         if not outf:
             rc = set_obj.show_graph(gtype)

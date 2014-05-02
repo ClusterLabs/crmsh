@@ -17,7 +17,7 @@
 
 from ordereddict import odict
 import re
-import vars
+import constants
 
 
 class ListFmt(object):
@@ -317,7 +317,7 @@ class Node(Expr):
 
     def _to_list(self):
         t = self.type
-        if t and t.lower() == vars.node_default_type:
+        if t and t.lower() == constants.node_default_type:
             t = None
         attrs = self.attributes.items() or None
         utils = self.utilization.items() or None

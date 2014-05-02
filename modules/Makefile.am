@@ -71,7 +71,7 @@ modules =	__init__.py \
 			ui_utils.py \
 			userdir.py \
 			utils.py \
-			vars.py \
+			constants.py \
 			xmlutil.py
 
 shelllibdir	= $(pyexecdir)/crmsh

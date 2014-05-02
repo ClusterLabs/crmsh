@@ -15,7 +15,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-import vars
+import constants
 import clidisplay
 from msg import common_err, node_debug
 import utils
@@ -124,12 +124,12 @@ def date_exp2cli(node):
     operation = node.get("operation")
     l.append(clidisplay.keyword("date"))
     l.append(clidisplay.keyword(operation))
-    if operation in utils.olist(vars.simple_date_ops):
+    if operation in utils.olist(constants.simple_date_ops):
         value = node.get(utils.keyword_cmp(operation, 'lt') and "end" or "start")
         l.append('"%s"' % clidisplay.attr_value(value))
     else:
         if operation == 'in_range':
-            for name in vars.in_range_attrs:
+            for name in constants.in_range_attrs:
                 v = node.get(name)
                 if v:
                     l.append(nvpair_format(name, v))
@@ -311,8 +311,8 @@ def match_acl_shortcut(xpath, re_l):
 
 
 def find_acl_shortcut(xpath):
-    for shortcut in vars.acl_shortcuts:
-        l = build_exp_re(vars.acl_shortcuts[shortcut])
+    for shortcut in constants.acl_shortcuts:
+        l = build_exp_re(constants.acl_shortcuts[shortcut])
         (ec, spec_l) = match_acl_shortcut(xpath, l)
         if ec:
             return (shortcut, spec_l)
@@ -320,7 +320,7 @@ def find_acl_shortcut(xpath):
 
 
 def acl_spec_format(xml_spec, v):
-    key_f = clidisplay.keyword(vars.acl_spec_map[xml_spec])
+    key_f = clidisplay.keyword(constants.acl_spec_map[xml_spec])
     if xml_spec == "xpath":
         (shortcut, spec_l) = find_acl_shortcut(v)
         if shortcut:
@@ -339,7 +339,7 @@ def cli_acl_rule(node, format=1):
     l = []
     acl_rule_name = node.tag
     l.append(clidisplay.keyword(acl_rule_name))
-    for xml_spec in vars.acl_spec_map:
+    for xml_spec in constants.acl_spec_map:
         v = node.get(xml_spec)
         if v:
             l.append(acl_spec_format(xml_spec, v))
