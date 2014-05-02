@@ -20,6 +20,7 @@ import subprocess
 from lxml import etree, doctestcompare
 import copy
 import bz2
+from collections import defaultdict
 
 import config
 import options
@@ -435,19 +436,6 @@ def get_topmost_rsc(node):
     return node
 
 
-attr_defaults_missing = {
-}
-
-
-def add_missing_attr(node):
-    try:
-        for defaults in attr_defaults_missing[node.tag]:
-            if defaults[0] not in node.attrib:
-                node.set(defaults[0], defaults[1])
-    except:
-        pass
-
-
 attr_defaults = {
     "rule": (("boolean-op", "and"),),
     "expression": (("type", "string"),),
@@ -673,22 +661,13 @@ def is_simpleconstraint(node):
     return len(node.xpath("resource_set/resource_ref")) == 0
 
 
-match_list = {
-    "node": ("uname",),
-    "crm_config": (),
-    "rsc_defaults": (),
-    "op_defaults": (),
-    "cluster_property_set": (),
-    "instance_attributes": (),
-    "meta_attributes": (),
-    "utilization": (),
-    "operations": (),
-    "nvpair": ("name",),
-    "op": ("name", "interval"),
-    "rule": ("score", "score-attribute", "role"),
-    "expression": ("attribute", "operation", "value"),
-    "fencing-level": ("target", "devices"),
-}
+match_list = defaultdict(tuple,
+                         {"node": ("uname",),
+                          "nvpair": ("name",),
+                          "op": ("name", "interval"),
+                          "rule": ("score", "score-attribute", "role"),
+                          "expression": ("attribute", "operation", "value"),
+                          "fencing-level": ("target", "devices")})
 
 
 def add_comment(e, s):
@@ -750,29 +729,19 @@ def lookup_node(node, oldnode, location_only=False, ignore_id=False):
     (the first parameter here) contains the id, then the "id"
     attribute is added to the match list.
     '''
-    #print "lookup:", node.tag, node.get("id")
     if oldnode is None:
         return None
-    #print "  in:", oldnode.tag, oldnode.get("id")
-    try:
-        attr_list = list(match_list[node.tag])
-    except KeyError:
-        attr_list = []
+    attr_list = list(match_list[node.tag])
     if not ignore_id and node.get("id"):
-        #print "  add id attribute"
         attr_list.append("id")
     for c in oldnode.iterchildren():
         if not location_only and is_id_used_attr(c):
             continue
-        #print "  checking:", c.tag, c.get("id")
         if node.tag == c.tag:
-            failed = False
             for a in attr_list:
                 if node.get(a) != c.get(a):
-                    failed = True
                     break
-            if not failed:
-                #print "  found:", c.tag, c.get("id")
+            else:
                 return c
     return None
 

@@ -361,39 +361,50 @@ Examples:
 
     @classmethod
     def init_ui(cls):
+        def get_if_command(attr):
+            "Return the named attribute if it's a command"
+            child = getattr(cls, attr)
+            return child if attr.startswith('do_') and inspect.ismethod(child) else None
+
+        def add_aliases(children, info):
+            "Add any aliases for command to child map"
+            for alias in info.aliases:
+                children[alias] = info
+
+        def add_help(info):
+            "Add static help to the help system"
+            if info.short_help:
+                entry = help_module.HelpEntry(info.short_help, info.long_help, generated=True)
+            elif info.type == 'command':
+                entry = help_module.HelpEntry(
+                    'Help for command ' + info.name,
+                    'Note: This command is not documented.\n' +
+                    'Usage: %s %s' % (info.name,
+                                      ui_utils.pretty_arguments(info.function, nskip=2)),
+                    generated=True)
+            elif info.type == 'level':
+                entry = help_module.HelpEntry('Help for level ' + info.name,
+                                              'Note: This level is not documented.\n',
+                                              generated=True)
+            if info.type == 'command':
+                help_module.add_help(entry, level=cls.name, command=info.name)
+            elif info.type == 'level':
+                help_module.add_help(entry, level=info.name)
+
+        def prepare(children, child):
+            info = ChildInfo(child, cls)
+            if info.type == 'command' and not is_valid_command_function(info.function):
+                raise ValueError("Invalid command function: %s.%s" %
+                                 (cls.__name__, info.function.__name__))
+            children[info.name] = info
+            add_aliases(children, info)
+            add_help(info)
+
         children = {}
         for child_name in dir(cls):
-            child = getattr(cls, child_name)
-            iscommand = child_name.startswith('do_') and inspect.ismethod(child)
-            if iscommand:
-                info = ChildInfo(child, cls)
-                if info.type == 'command' and not is_valid_command_function(info.function):
-                    raise ValueError("Invalid command function: %s.%s" %
-                                     (cls.__name__, info.function.__name__))
-                children[info.name] = info
-
-                # Set up aliases
-                for alias in info.aliases:
-                    children[alias] = info
-
-                # Add static help to the help system
-                if info.short_help:
-                    entry = help_module.HelpEntry(info.short_help, info.long_help, generated=True)
-                elif info.type == 'command':
-                    entry = help_module.HelpEntry(
-                        'Help for command ' + info.name,
-                        'Note: This command is not documented.\n' +
-                        'Usage: %s %s' % (info.name,
-                                          ui_utils.pretty_arguments(info.function, nskip=2)),
-                        generated=True)
-                elif info.type == 'level':
-                    entry = help_module.HelpEntry('Help for level ' + info.name,
-                                                  'Note: This level is not documented.\n',
-                                                  generated=True)
-                if info.type == 'command':
-                    help_module.add_help(entry, level=cls.name, command=info.name)
-                elif info.type == 'level':
-                    help_module.add_help(entry, level=info.name)
+            child = get_if_command(child_name)
+            if child:
+                prepare(children, child)
         setattr(cls, '_children', children)
         return children
 

@@ -96,7 +96,7 @@ def test_schema(self, cib):
 
 
 def get(t, name, set=None):
-    if not _crm_schema:
+    if _crm_schema is None:
         return []
     if t not in _store:
         _store[t] = {}

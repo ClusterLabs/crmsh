@@ -92,12 +92,7 @@ def nvpairs2list(node, add_id=False):
         elif c.tag != "nvpair":
             node_debug("expected nvpair got", c)
             continue
-        name = c.get("name")
-        if "value" in c.keys():
-            value = c.get("value")
-        else:
-            value = None
-        pl.append([name, value])
+        pl.append([c.get("name"), c.get("value")])
     return pl
 
 

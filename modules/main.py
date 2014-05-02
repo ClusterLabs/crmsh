@@ -24,7 +24,7 @@ import random
 import config
 import options
 import constants
-from msg import err_buf, syntax_err, common_err
+from msg import err_buf, common_err
 import clidisplay
 import term
 import utils
@@ -59,52 +59,6 @@ def load_rc(context, rcfile):
             common_err(msg)
     f.close()
     sys.stdin = save_stdin
-
-
-def check_args(args, argsdim):
-    if not argsdim:
-        return True
-    if len(argsdim) == 1:
-        minargs = argsdim[0]
-        return len(args) >= minargs
-    else:
-        minargs, maxargs = argsdim
-        return len(args) >= minargs and len(args) <= maxargs
-
-#
-# Note on parsing
-#
-# Parsing tables are python dictionaries.
-#
-# Keywords are used as keys and the corresponding values are
-# lists (actually tuples, since they should be read-only) or
-# classes. In the former case, the keyword is a terminal and
-# in the latter, a new object for the class is created. The class
-# must have the cmd_table variable.
-#
-# The list has the following content:
-#
-# function: a function to handle this command
-# numargs_list: number of minimum/maximum arguments; for example,
-#   (0, 1) means one optional argument, (1, 1) one required; if the
-#   list is empty then the function will parse arguments itself
-# required minimum skill level: operator, administrator, expert
-#   (encoded as a small integer from 0 to 2)
-# can the command cause transition to start (0 or 1)
-#   used to check whether to wait4dc to end the transition
-#
-
-
-def show_usage(cmd):
-    p = None
-    try:
-        p = cmd.__doc__
-    except:
-        pass
-    if p:
-        print >> sys.stderr, p
-    else:
-        syntax_err(cmd.__name__)
 
 
 def exit_handler():

@@ -192,7 +192,7 @@ def missing_obj_err(node):
 
 def constraint_norefobj_err(constraint_id, obj_id):
     err_buf.error("constraint %s references a resource %s which doesn't exist" %
-        (constraint_id, obj_id))
+                  (constraint_id, obj_id))
 
 
 def obj_exists_err(name):

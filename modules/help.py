@@ -396,7 +396,6 @@ def _load_help():
         fixup_root_commands()
         fixup_help_aliases()
     except IOError, msg:
-        common_err("%s open: %s" % (name, msg))
-        common_err("extensive help system is not available")
+        common_err("Help text not found! %s" % (msg))
 
 # vim:ts=4:sw=4:et:

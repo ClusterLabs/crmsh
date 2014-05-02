@@ -51,7 +51,7 @@ from xmlutil import stuff_comments, is_comment, is_constraint, read_cib, process
 from xmlutil import find_operation, get_rsc_children_ids, is_primitive, referenced_resources
 from xmlutil import cibdump2elem, processing_sort, get_rsc_ref_ids, merge_tmpl_into_prim
 from xmlutil import remove_id_used_attributes, get_top_cib_nodes, set_id_used_attr
-from xmlutil import merge_attributes, is_cib_element, sanity_check_meta, add_missing_attr
+from xmlutil import merge_attributes, is_cib_element, sanity_check_meta
 from xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
 from xmlutil import get_rsc_operations, delete_rscref, xml_equals, lookup_node, RscState
 from xmlutil import cibtext2elem
@@ -84,10 +84,8 @@ def mkset_obj(*args):
     if not cib_factory.is_cib_sane():
         raise ValueError("CIB is not valid")
     if args and args[0] == "xml":
-        obj = lambda: CibObjectSetRaw(*args[1:])
-    else:
-        obj = lambda: CibObjectSetCli(*args)
-    return obj()
+        return CibObjectSetRaw(*args[1:])
+    return CibObjectSetCli(*args)
 
 
 def set_graph_attrs(gv_obj, obj_type):
@@ -550,14 +548,12 @@ class CibObjectSetRaw(CibObjectSet):
         "Return a string containing xml of all objects."
         cib_elem = cib_factory.obj_set2cib(self.obj_set)
         s = etree.tostring(cib_elem, pretty_print=True)
-        s = '<?xml version="1.0" ?>\n%s' % s
-        return s
+        return '<?xml version="1.0" ?>\n' + s
 
     def _get_id(self, node):
         if node.tag == "fencing-topology":
-            return node.tag
-        else:
-            return node.get("id")
+            return "fencing-topology"
+        return node.get("id")
 
     def save(self, s, no_remove=False, method='replace'):
         try:
@@ -653,20 +649,25 @@ def mkxmlsimple(e, oldnode, id_hint):
     Create an xml node from the (name, dict) pair. The name is the
     name of the element. The dict contains a set of attributes.
     '''
-    node = etree.Element(e[0])
-    for n, v in e[1]:
+    def nvpair(n, v):
         if n == "$children":  # this one's skipped
-            continue
+            return None, None
         if n == "operation":
             v = v.lower()
-        if n.startswith('$'):
+        elif n.startswith('$'):
             n = n.lstrip('$')
-        if not isinstance(v, basestring):
-            if isinstance(v, bool):
-                v = str(v).lower()
-            else:
-                raise ValueError("cannot make attribute value from '%s'" % (v))
-        if v:  # skip empty strings
+        if isinstance(v, basestring) and v:
+            return n, v
+        elif isinstance(v, bool):
+            return n, str(v).lower()
+        elif v:
+            raise ValueError("cannot make attribute value from '%s'" % (v))
+        else:
+            return None, None
+    node = etree.Element(e[0])
+    for n, v in e[1]:
+        n, v = nvpair(n, v)
+        if n is not None:
             node.set(n, v)
     id_ref = node.get("id-ref")
     if id_ref:
@@ -1717,7 +1718,6 @@ class CibLocation(CibObject):
             if e[0] == "resource_set":
                 headnode.append(n)
             elif keyword_cmp(e[0], "rule"):
-                add_missing_attr(n)
                 rule = n
                 headnode.append(n)
                 oldrule = lookup_node(rule, oldnode, location_only=True)
@@ -1945,12 +1945,7 @@ class CibProperty(CibObject):
         return s
 
     def _repr_cli_child(self, c, format):
-        name = c.get("name")
-        if "value" in c.keys():
-            value = c.get("value")
-        else:
-            value = None
-        return nvpair_format(name, value)
+        return nvpair_format(c.get("name"), c.get("value"))
 
     def _get_oldnode(self):
         '''Used to retrieve sub id's'''
