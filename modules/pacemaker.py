@@ -31,6 +31,7 @@ known_schemas = {
     "pacemaker-1.1": ("rng", "pacemaker-1.1.rng"),
     "pacemaker-1.2": ("rng", "pacemaker-1.2.rng"),
     "pacemaker-1.3": ("rng", "pacemaker-1.3.rng"),
+    "pacemaker-2.0": ("rng", "pacemaker-2.0.rng"),
 }
 
 
