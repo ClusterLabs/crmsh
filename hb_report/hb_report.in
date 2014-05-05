@@ -36,6 +36,7 @@ export DEFAULT_HA_LOGFACILITY
 LOGD_CF=`findlogdcf @sysconfdir@ $HA_DIR`
 export LOGD_CF
 
+SSH_PASSWORD_NODES=""
 : ${SSH_OPTS="-o StrictHostKeyChecking=no -o EscapeChar=none"}
 LOG_PATTERNS="CRIT: ERROR:"
 # PEINPUTS_PATT="peng.*PEngine Input stored"
@@ -561,19 +562,27 @@ start_slave_collector() {
 #
 # does ssh work?
 # and how
+# test the provided ssh user
+# or try to find a ssh user which works without password
+# if ssh works without password, we can run the collector in the
+# background and save some time
 #
 testsshconn() {
 	ssh $SSH_OPTS -T -o Batchmode=yes $1 true 2>/dev/null
 }
 findsshuser() {
 	local n u rc
-	local ssh_s ssh_user="__undef" try_user_list failed_nodes=""
-	try_user_list="\"\" $TRY_SSH"
+	local ssh_s ssh_user="__undef" try_user_list
+	if [ -z "$SSH_USER" ]; then
+		try_user_list="__default $TRY_SSH"
+	else
+		try_user_list="$SSH_USER"
+	fi
 	for n in $NODES; do
 		rc=1
 		[ "$n" = "$WE" ] && continue
 		for u in $try_user_list; do
-			if [ "$u" != '""' ]; then
+			if [ "$u" != '__default' ]; then
 				ssh_s=$u@$n
 			else
 				ssh_s=$n
@@ -589,19 +598,33 @@ findsshuser() {
 			fi
 		done
 		[ $rc = 1 ] &&
-			failed_nodes="$failed_nodes $n"
+			SSH_PASSWORD_NODES="$SSH_PASSWORD_NODES $n"
 	done
-	[ -n "$failed_nodes" ] &&
-		warning "ssh to node(s) $failed_nodes does not work"
-	# drop nodes we cannot reach
-	NODES=`for n in $failed_nodes $NODES; do echo $n; done | sort | uniq -u`
+	if [ -n "$SSH_PASSWORD_NODES" ]; then
+		warning "passwordless ssh to node(s) $SSH_PASSWORD_NODES does not work"
+	fi
+
 	if [ "$ssh_user" = "__undef" ]; then
 		return 1
 	fi
-	if [ "$ssh_user" != '""' ]; then
-		echo $ssh_user
+	if [ "$ssh_user" != "__default" ]; then
+		SSH_USER=$ssh_user
 	fi
 	return 0
+}
+node_needs_pwd() {
+	local n
+	for n in $SSH_PASSWORD_NODES; do
+		[ "$n" = "$1" ] && return 0
+	done
+	return 1
+}
+say_ssh_user() {
+	if [ -n "$SSH_USER" ]; then
+		echo $SSH_USER
+	else
+		echo your user
+	fi
 }
 
 #
@@ -1347,9 +1370,7 @@ if ! is_collector; then
 	if [ -z "$NO_SSH" ]; then
 		# if the ssh user was supplied, consider that it
 		# works; helps reduce the number of ssh invocations
-		if [ -z "$SSH_USER" ]; then
-			SSH_USER=`findsshuser`
-		fi
+		findsshuser
 		if [ -n "$SSH_USER" ]; then
 			SSH_OPTS="$SSH_OPTS -o User=$SSH_USER"
 		fi
@@ -1386,11 +1407,13 @@ fi
 
 if ! is_collector; then
 	for node in $NODES; do
-		if [ -z "$SSH_USER" ]; then
+		if node_needs_pwd $node; then
+			info "Please provide password for `say_ssh_user` at $node"
+			info "Note that collecting data will take a while."
+			start_slave_collector $node
+		else
 			start_slave_collector $node &
 			SLAVEPIDS="$SLAVEPIDS $!"
-		else
-			start_slave_collector $node
 		fi
 	done
 fi
