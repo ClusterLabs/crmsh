@@ -44,14 +44,14 @@ def get_validate_name(cib_elem):
 
 def get_validate_type(cib_elem):
     validate_name = get_validate_name(cib_elem)
-    if validate_name == None or known_schemas.get(validate_name) == None:
+    if validate_name is None or known_schemas.get(validate_name) is None:
         return None
     else:
         return known_schemas.get(validate_name)[0]
 
 
 def get_schema_filename(validate_name):
-    if validate_name == None or known_schemas.get(validate_name) == None:
+    if validate_name is None or known_schemas.get(validate_name) is None:
         return None
     else:
         return known_schemas.get(validate_name)[1]
@@ -97,7 +97,7 @@ class Schema:
 
     def __init__(self, cib_elem, local_dir, is_local=True, get_schema_fn=None):
         self.is_local = is_local
-        if get_schema_fn != None:
+        if get_schema_fn is not None:
             self.get_schema_fn = get_schema_fn
         else:
             self.get_schema_fn = read_schema_local
@@ -132,7 +132,7 @@ class Schema:
                 tmp_f = self.tmp_schema_f()
             except EnvironmentError, msg:
                 raise PacemakerError("Cannot expand the Relax-NG schema: " + str(msg))
-            if tmp_f == None:
+            if tmp_f is None:
                 raise PacemakerError("Cannot expand the Relax-NG schema")
             else:
                 schema_f = tmp_f
@@ -197,14 +197,14 @@ class Schema:
     # sub_set: 'a'(all), 'r'(required), 'o'(optional)
     def get_elem_attrs(self, elem_name, sub_set='a'):
         elem_obj = self.find_elem(elem_name)
-        if elem_obj == None:
+        if elem_obj is None:
             return None
         return self.get_elem_attrs_by_obj(elem_obj, sub_set)
 
     # sub_set: 'a'(all), 'r'(required), 'o'(optional)
     def get_sub_elems(self, elem_name, sub_set='a'):
         elem_obj = self.find_elem(elem_name)
-        if elem_obj == None:
+        if elem_obj is None:
             return None
         return self.get_sub_elems_by_obj(elem_obj, sub_set)
 
@@ -228,11 +228,11 @@ class RngSchema(Schema):
 
     def update_rng_docs(self, validate_name="", file=""):
         self.rng_docs[file] = self.find_start_rng_node(validate_name, file)
-        if self.rng_docs[file] == None:
+        if self.rng_docs[file] is None:
             return
         for extern_ref in self.rng_docs[file][0].xpath(self.expr, name="externalRef"):
             href_value = extern_ref.get("href")
-            if self.rng_docs.get(href_value) == None:
+            if self.rng_docs.get(href_value) is None:
                 self.update_rng_docs(validate_name, href_value)
 
     def find_start_rng_node(self, validate_name="", file=""):
@@ -290,7 +290,7 @@ class RngSchema(Schema):
 
     def sorted_sub_rng_nodes_by_name(self, obj_type):
         rng_node = self.find_elem(obj_type)
-        if rng_node == None or rng_node[1] == None:
+        if rng_node is None or rng_node[1] is None:
             return None
         return self.sorted_sub_rng_nodes_by_node(*rng_node)
 
@@ -299,7 +299,7 @@ class RngSchema(Schema):
         sorted_nodes = {}
         for sub_rng_node in sub_rng_nodes:
             name = get_local_tag(sub_rng_node[0][1])
-            if sorted_nodes.get(name) == None:
+            if sorted_nodes.get(name) is None:
                 sorted_nodes[name] = []
             sorted_nodes[name].append(sub_rng_node)
         return sorted_nodes
@@ -323,7 +323,7 @@ class RngSchema(Schema):
         sorted_nodes = []
         for rng_nodes in decl_nodes_list:
             rng_node = rng_nodes.get(decl_type)
-            if rng_node != None and rng_node not in sorted_nodes:
+            if rng_node is not None and rng_node not in sorted_nodes:
                 sorted_nodes.append(rng_node)
         return sorted_nodes
 
@@ -354,7 +354,7 @@ class RngSchema(Schema):
     # sub_set: 'a'(all), 'r'(required), 'o'(optional)
     def get_elem_attrs_by_obj(self, rng_obj, sub_set='a'):
         (grammar, rng_node) = rng_obj
-        if rng_node == None:
+        if rng_node is None:
             return None
 
         attrs = []
@@ -387,7 +387,7 @@ class RngSchema(Schema):
     # sub_set: 'a'(all), 'r'(required), 'o'(optional)
     def get_sub_elems_by_obj(self, rng_obj, sub_set='a'):
         (grammar, rng_node) = rng_obj
-        if rng_node == None:
+        if rng_node is None:
             return None
 
         elems = []
