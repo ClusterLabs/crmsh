@@ -247,7 +247,7 @@ crmd_metadata_do_not_complete = ("dc-version",
 extra_cluster_properties = ("dc-version",
                             "cluster-infrastructure",
                             "last-lrm-refresh",
-                            "site")
+                            "cluster")
 pcmk_version = ""  # set later
 
 # r.group(1) transition number (a different thing from file number)
