@@ -2239,7 +2239,8 @@ class CibFactory(Singleton):
         self.last_commit_time = 0
         # internal (just not to produce silly messages)
         self._no_constraint_rm_msg = False
-        self.supported_cib_re = "^pacemaker-1[.][0123]$"
+        # FIXME
+        self.supported_cib_re = "^pacemaker-[12][.][0123]$"
 
     def is_cib_sane(self):
         # try to initialize
