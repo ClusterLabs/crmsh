@@ -1553,6 +1553,8 @@ class CibPrimitive(CibObject):
             if not from_grp and self.parent and self.parent.obj_type == "group":
                 return
             n = reduce_primitive(self.node)
+            if n is None:
+                raise ValueError("Referenced template not found")
             ra_class = n.get("class")
             ra_type = n.get("type")
             lbl_top = self._gv_rsc_id()
@@ -1576,6 +1578,8 @@ class CibPrimitive(CibObject):
 
         elif self.obj_type == "rsc_template":
             n = reduce_primitive(self.node)
+            if n is None:
+                raise ValueError("Referenced template not found")
             ra_class = n.get("class")
             ra_type = n.get("type")
             lbl_top = self._gv_rsc_id()
@@ -1997,8 +2001,9 @@ def is_stonith_rsc(xmlnode):
     '''
     True if resource is stonith or derived from stonith template.
     '''
-    if xmlnode.get('template'):
-        xmlnode = reduce_primitive(xmlnode)
+    xmlnode = reduce_primitive(xmlnode)
+    if xmlnode is None:
+        return False
     return xmlnode.get('class') == 'stonith'
 
 
