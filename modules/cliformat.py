@@ -51,6 +51,14 @@ def cli_operations(node, break_lines=True):
     return cli_format(l, break_lines=break_lines)
 
 
+def head_id_format(nodeid):
+    "Special format for property list / node id"
+    if utils.noquotes(nodeid):
+        return "%s:" % (clidisplay.attr_value(nodeid))
+    return '%s="%s"' % (clidisplay.attr_name('$id'),
+                        clidisplay.attr_value(nodeid))
+
+
 def nvpair_format(n, v):
     if v is None:
         return clidisplay.attr_name(n)
@@ -89,6 +97,9 @@ def nvpairs2list(node, add_id=False):
     for c in node.iterchildren():
         if c.tag == "attributes":
             pl = nvpairs2list(c)
+        elif c.tag == "rule" or xmlutil.is_comment(c):
+            # skip rule expressions and comments
+            continue
         elif c.tag != "nvpair":
             node_debug("expected nvpair got", c)
             continue
@@ -115,10 +126,11 @@ def cli_op(node):
 
 
 def date_exp2cli(node):
+    kwmap = {'in_range': 'in', 'date_spec': 'spec'}
     l = []
     operation = node.get("operation")
     l.append(clidisplay.keyword("date"))
-    l.append(clidisplay.keyword(operation))
+    l.append(clidisplay.keyword(kwmap.get(operation, operation)))
     if operation in utils.olist(constants.simple_date_ops):
         value = node.get(utils.keyword_cmp(operation, 'lt') and "end" or "start")
         l.append('"%s"' % clidisplay.attr_value(value))
@@ -182,10 +194,10 @@ def get_score(node):
     return score
 
 
-def cli_rule(node):
+def cli_rule(node, is_id_refd):
     s = []
     node_id = node.get("id")
-    if node_id:
+    if node_id and is_id_refd(node.tag, node_id):
         s.append('$id="%s"' % node_id)
     else:
         idref = node.get("id-ref")
@@ -342,11 +354,8 @@ def cli_acl_rule(node, format=1):
 
 
 def cli_acl_roleref(node, format=1):
-    l = []
-    l.append(clidisplay.keyword("role"))
-    l.append(":")
-    l.append(clidisplay.attr_value(node.get("id")))
-    return ''.join(l)
+    return "%s:%s" % (clidisplay.keyword("role"),
+                      clidisplay.attr_value(node.get("id")))
 
 #
 ################################################################

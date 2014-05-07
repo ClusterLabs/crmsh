@@ -72,7 +72,7 @@ def new(node, pfx):
         if subpfx:
             node_id = "%s-%s" % (pfx, subpfx)
         else:
-            node_id = "%s" % pfx
+            node_id = pfx
     if is_used(node_id):
         node_id = _gen_free_id(node_id)
     save(node_id)
@@ -179,5 +179,31 @@ def clear():
     global _state
     _id_store = {}
     _state = []
+
+
+def set(node, oldnode, id_hint, id_required=True):
+    '''
+    Set the id attribute for the node.
+    - if the node already contains "id", keep it
+    - if the old node contains "id", copy that
+    - if the node contains "uname", copy that
+    - else if required, create a new one using id_hint
+    - save the new id in idmgmt.
+    '''
+    old_id = oldnode.get("id") if oldnode is not None else None
+    new_id = node.get("id") or old_id or node.get("uname")
+    from msg import common_debug
+    from lxml import etree
+    common_debug("idmgmt.set: %s, %s, %s" % (etree.tostring(node), new_id, old_id))
+    if new_id:
+        save(new_id)
+    elif id_required:
+        new_id = new(node, id_hint)
+    if new_id:
+        node.set("id", new_id)
+        if oldnode is not None and old_id == new_id:
+            xmlutil.set_id_used_attr(oldnode)
+
+
 
 # vim:ts=4:sw=4:et:

@@ -24,6 +24,7 @@
 import inspect
 import help as help_module
 import ui_utils
+from msg import common_debug
 
 
 def name(n):
@@ -299,9 +300,10 @@ Examples:
             elif path == '.' or not path:
                 return ok
             else:
-                info = self.get_child(path)
+                info = context.current_level().get_child(path)
                 if not info or not info.level:
-                    context.fatal_error("No such level: " + path)
+                    common_debug("children: %s" % (self._children))
+                    context.fatal_error("%s not found in %s" % (path, context.current_level()))
                 context.enter_level(info.level)
         else:
             if not self.do_cd(context, path[0]):

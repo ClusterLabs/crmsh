@@ -701,6 +701,7 @@ def fix_comments(e):
 
 
 def set_id_used_attr(e):
+    common_debug("setting id used: %s" % (etree.tostring(e)))
     e.set("__id_used", "Yes")
 
 
@@ -714,6 +715,7 @@ def remove_id_used_attr(e, lvl):
 
 
 def remove_id_used_attributes(e):
+    common_debug("clearing id used: %s" % (etree.tostring(e)))
     if e is not None:
         xmltraverse(e, remove_id_used_attr)
 
@@ -783,65 +785,38 @@ def op2list(node):
 
 
 def get_rsc_operations(rsc_node):
-    actions = []
-    for c in rsc_node.iterchildren():
-        if c.tag == "operations":
-            for c2 in c.iterchildren():
-                if c2.tag == "op":
-                    op, pl = op2list(c2)
-                    if op:
-                        actions.append([op, pl])
+    actions = [op2list(op) for op in rsc_node.xpath('//operations/op')]
+    actions = [[op, pl] for op, pl in actions if op]
     return actions
 
 
-def filter_on_tag(nl, tag):
-    return [node for node in nl if node.tag == tag]
+# lower score = earlier sort
+def make_sort_map(*order):
+    m = {}
+    for i, o in enumerate(order):
+        if isinstance(o, basestring):
+            m[o] = i
+        else:
+            for k in o:
+                m[k] = i
+    return m
 
 
-def nodes(node_list):
-    return filter_on_tag(node_list, "node")
+_sort_xml_order = make_sort_map('node', 'template', 'primitive',
+                                'group', 'master', 'clone',
+                                'rsc_location', 'rsc_colocation',
+                                'rsc_order', 'rsc_ticket', 'fencing-topology',
+                                'cluster_property_set', 'rsc_defaults', 'op_defaults',
+                                'op', 'acl_role', 'acl_user', 'tag')
 
+_sort_cli_order = make_sort_map('node', 'rsc_template', 'primitive',
+                                'group', 'ms', 'master', 'clone',
+                                'location', 'colocation', 'collocation',
+                                'order', 'rsc_ticket', 'fencing_topology',
+                                'property', 'rsc_defaults', 'op_defaults',
+                                'op', 'role', 'user', 'tag')
 
-def primitives(node_list):
-    return filter_on_tag(node_list, "primitive")
-
-
-def groups(node_list):
-    return filter_on_tag(node_list, "group")
-
-
-def clones(node_list):
-    return filter_on_tag(node_list, "clone")
-
-
-def mss(node_list):
-    return filter_on_tag(node_list, "master")
-
-
-def templates(node_list):
-    return filter_on_tag(node_list, "template")
-
-
-def constraints(node_list):
-    return filter_on_tag(node_list, "rsc_location") \
-        + filter_on_tag(node_list, "rsc_colocation") \
-        + filter_on_tag(node_list, "rsc_order") \
-        + filter_on_tag(node_list, "rsc_ticket")
-
-
-def properties(node_list):
-    return filter_on_tag(node_list, "cluster_property_set") \
-        + filter_on_tag(node_list, "rsc_defaults") \
-        + filter_on_tag(node_list, "op_defaults")
-
-
-def acls(node_list):
-    return filter_on_tag(node_list, "acl_role") \
-        + filter_on_tag(node_list, "acl_user")
-
-
-def fencing_topology(node_list):
-    return filter_on_tag(node_list, "fencing-topology")
+_SORT_LAST = 1000
 
 
 def processing_sort(nl):
@@ -849,90 +824,23 @@ def processing_sort(nl):
     It's usually important to process cib objects in this order,
     i.e. simple objects first.
     '''
-    return nodes(nl) + templates(nl) + primitives(nl) + groups(nl) + mss(nl) + clones(nl) \
-        + constraints(nl) + fencing_topology(nl) + properties(nl) + acls(nl)
-
-
-def obj_cmp(obj1, obj2):
-    return cmp(obj1.obj_id, obj2.obj_id)
-
-
-def filter_on_type(cl, obj_type):
-    if isinstance(cl[0], list):
-        l = [cli_list for cli_list in cl if cli_list[0][0] == obj_type]
-        if config.core.sort_elements:
-            l.sort(cmp=cmp)
+    if config.core.sort_elements:
+        sortfn = lambda k: (_sort_xml_order.get(k.tag, _SORT_LAST), k.get('id'))
     else:
-        l = [obj for obj in cl if obj.obj_type == obj_type]
-        if config.core.sort_elements:
-            l.sort(cmp=obj_cmp)
-    return l
-
-
-def nodes_cli(cl):
-    return filter_on_type(cl, "node")
-
-
-def primitives_cli(cl):
-    return filter_on_type(cl, "primitive")
-
-
-def groups_cli(cl):
-    return filter_on_type(cl, "group")
-
-
-def clones_cli(cl):
-    return filter_on_type(cl, "clone")
-
-
-def mss_cli(cl):
-    return filter_on_type(cl, "ms") + filter_on_type(cl, "master")
-
-
-def templates_cli(cl):
-    return filter_on_type(cl, "rsc_template")
-
-
-def constraints_cli(node_list):
-    return filter_on_type(node_list, "location") \
-        + filter_on_type(node_list, "colocation") \
-        + filter_on_type(node_list, "collocation") \
-        + filter_on_type(node_list, "order") \
-        + filter_on_type(node_list, "rsc_ticket")
-
-
-def properties_cli(cl):
-    return filter_on_type(cl, "property") \
-        + filter_on_type(cl, "rsc_defaults") \
-        + filter_on_type(cl, "op_defaults")
-
-
-def fencing_topology_cli(cl):
-    return filter_on_type(cl, "fencing_topology")
-
-
-def acls_cli(cl):
-    return filter_on_type(cl, "role") \
-        + filter_on_type(cl, "user")
-
-
-def ops_cli(cl):
-    return filter_on_type(cl, "op")
+        sortfn = lambda k: _sort_xml_order.get(k.tag, _SORT_LAST)
+    return sorted(nl, key=sortfn)
 
 
 def processing_sort_cli(cl):
     '''
-    Return the given list in this order:
-    nodes, primitives, groups, ms, clones, constraints, rest
-    Both a list of objects (CibObject) and list of cli
-    representations accepted.
+    cl: list of objects (CibObject)
+    Returns the given list in order
     '''
-    if not cl:
-        return []
-    return nodes_cli(cl) + templates_cli(cl) + primitives_cli(cl) \
-        + groups_cli(cl) + mss_cli(cl) + clones_cli(cl) \
-        + constraints_cli(cl) + fencing_topology_cli(cl) + properties_cli(cl) \
-        + ops_cli(cl) + acls_cli(cl)
+    if config.core.sort_elements:
+        sortfn = lambda k: (_sort_cli_order.get(k.obj_type, _SORT_LAST), k.obj_id)
+    else:
+        sortfn = lambda k: _sort_cli_order.get(k.obj_type, _SORT_LAST)
+    return sorted(cl, key=sortfn)
 
 
 def is_resource_cli(s):

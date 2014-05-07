@@ -617,7 +617,7 @@ class RAInfo(object):
             if self.ra_class == "stonith" and op in ("start", "stop"):
                 continue
             if op not in self.actions():
-                common_warn("%s: action %s not advertised in meta-data, it may not be supported by the RA" % (id, op))
+                common_warn("%s: action %s not advertised in meta-data, it may not be supported by the RA"  % (id, op))
                 rc |= 1
             if "interval" in n_ops[op]:
                 v = n_ops[op]["interval"]
@@ -653,9 +653,9 @@ class RAInfo(object):
         '''
         RA meta-data as raw xml.
         '''
-        id = "ra_meta-%s" % self.ra_string()
-        if cache.is_cached(id):
-            return cache.retrieve(id)
+        sid = "ra_meta-%s" % self.ra_string()
+        if cache.is_cached(sid):
+            return cache.retrieve(sid)
         if self.ra_class in constants.meta_progs:
             l = prog_meta(self.ra_class)
         else:
@@ -663,7 +663,7 @@ class RAInfo(object):
         if not l:
             return None
         self.debug("read and cached meta-data")
-        return cache.store(id, l)
+        return cache.store(sid, l)
 
     def meta_pretty(self):
         '''
@@ -708,11 +708,11 @@ class RAInfo(object):
         s = name
         if n.get("required") == "1":
             s = s + "*"
-        type, default = self.param_type_default(n)
-        if type and default:
-            s = "%s (%s, [%s])" % (s, type, default)
-        elif type:
-            s = "%s (%s)" % (s, type)
+        typ, default = self.param_type_default(n)
+        if typ and default:
+            s = "%s (%s, [%s])" % (s, typ, default)
+        elif typ:
+            s = "%s (%s)" % (s, typ)
         shortdesc = self.get_shortdesc(n)
         s = "%s: %s" % (s, shortdesc)
         return s
@@ -746,13 +746,11 @@ class RAInfo(object):
             if s:
                 l.append(s)
         if l:
-            return "Parameters (* denotes required, [] the default):\n\n" + '\n'.join(l)
+            return "Parameters (*: required, []: default):\n\n" + '\n'.join(l)
 
     def meta_action_head(self, n):
         name = n.get("name")
-        if not name:
-            return ''
-        if name in self.skip_ops:
+        if not name or name in self.skip_ops:
             return ''
         if name == "monitor":
             name = monitor_name_node(n)
@@ -771,15 +769,13 @@ class RAInfo(object):
             s = self.meta_action_head(c)
             if s:
                 l.append(self.ra_tab + s)
-        if l:
-            return "Operations' defaults (advisory minimum):\n\n" + '\n'.join(l)
+        if len(l) == 0:
+            return None
+        return "Operations' defaults (advisory minimum):\n\n" + '\n'.join(l)
 
 
-def get_ra(el):
-    ra_type = el.get("type")
-    ra_class = el.get("class")
-    ra_provider = el.get("provider")
-    return RAInfo(ra_class, ra_type, ra_provider)
+def get_ra(r):
+    return RAInfo(r.get("class"), r.get("type"), r.get("provider"))
 
 
 #
@@ -809,11 +805,10 @@ def pick_provider(providers):
     list of providers, falling back to
     'heartbeat' if no good choice is found
     '''
-    if not providers:
+    if not providers or 'heartbeat' in providers:
         return 'heartbeat'
-    for pick in ('heartbeat', 'pacemaker'):
-        if pick in providers:
-            return pick
+    elif 'pacemaker' in providers:
+        return 'pacemaker'
     return providers[0]
 
 
@@ -827,14 +822,10 @@ def disambiguate_ra_type(s):
     if len(l) == 3:
         return l
     elif len(l) == 2:
-        ra_class, ra_type = l
+        cl, tp = l
     else:
-        ra_class = "ocf"
-        ra_type = l[0]
-    ra_provider = ''
-    if ra_class == "ocf":
-        pl = ra_providers(ra_type, ra_class)
-        ra_provider = pick_provider(pl)
-    return ra_class, ra_provider, ra_type
+        cl, tp = "ocf", l[0]
+    pr = pick_provider(ra_providers(tp, cl)) if cl == 'ocf' else ''
+    return cl, pr, tp
 
 # vim:ts=4:sw=4:et:

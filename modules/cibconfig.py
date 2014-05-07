@@ -39,8 +39,8 @@ from msg import missing_obj_err, common_warning, update_err, unsupported_err, em
 from msg import invalid_id_err, cib_ver_unsupported_err
 import utils
 from utils import ext_cmd, safe_open_w, pipe_string, safe_close_w, crm_msec
-from utils import ask, lines2cli, cli_append_attr, cli_replace_attr, olist
-from utils import keyword_cmp, page_string, cibadmin_can_patch, str2tmp
+from utils import ask, lines2cli, olist
+from utils import page_string, cibadmin_can_patch, str2tmp
 from utils import run_ptest, is_id_valid, edit_file, get_boolean, filter_string, find_value
 from ordereddict import odict
 from xmlutil import is_child_rsc, rsc_constraint, sanitize_cib, rename_id, get_interesting_nodes
@@ -50,13 +50,13 @@ from xmlutil import sanity_check_nvpairs, merge_nodes, op2list, mk_rsc_type, is_
 from xmlutil import stuff_comments, is_comment, is_constraint, read_cib, processing_sort_cli
 from xmlutil import find_operation, get_rsc_children_ids, is_primitive, referenced_resources
 from xmlutil import cibdump2elem, processing_sort, get_rsc_ref_ids, merge_tmpl_into_prim
-from xmlutil import remove_id_used_attributes, get_top_cib_nodes, set_id_used_attr
+from xmlutil import remove_id_used_attributes, get_top_cib_nodes
 from xmlutil import merge_attributes, is_cib_element, sanity_check_meta
 from xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
 from xmlutil import get_rsc_operations, delete_rscref, xml_equals, lookup_node, RscState
 from xmlutil import cibtext2elem
 from cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
-from cliformat import cli_acl_rule, cli_pairs, rsc_set_constraint, get_kind
+from cliformat import cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
 from cliformat import cli_operations, simple_rsc_constraint, cli_rule, cli_format
 
 
@@ -122,6 +122,115 @@ def set_edge_attrs(gv_obj, edge_id, obj_type):
         pass
 
 
+def fill_nvpairs(name, node, attrs, id_hint):
+    '''
+    Fill the container node with attrs:
+    name: name of container
+    node: container Element
+    attrs: dict containing values
+    id_hint: used to generate unique ids for nvpairs
+    '''
+    subpfx = constants.subpfx_list.get(name, '')
+    subpfx = "%s_%s" % (id_hint, subpfx) if subpfx else id_hint
+    nvpair_pfx = node.get("id") or subpfx
+    for n, v in attrs.iteritems():
+        nvpair = etree.SubElement(node, "nvpair", name=n)
+        if v is not None:
+            nvpair.set("value", v)
+        idmgmt.set(nvpair, None, nvpair_pfx)
+    return node
+
+
+def mkxmlnvpairs(name, attrs, id_hint):
+    '''
+    name: Name of the element.
+    attrs: dict containing a set of nvpairs.
+    hint: Used to generate ids.
+
+    Example: instance_attributes, {name: value...}, <hint>
+
+    Notes:
+
+      Other tags not containing nvpairs are fine if the dict is empty.
+
+      cluster_property_set and defaults have nvpairs as direct children.
+      In that case, use the id_hint directly as id.
+      This is important in case there are multiple sets.
+
+    '''
+    xml_node_type = name in constants.defaults_tags and "meta_attributes" or name
+    node = etree.Element(xml_node_type)
+    notops = name != "operations"
+
+    if (name == "cluster_property_set" or name in constants.defaults_tags) and id_hint:
+        node.set("id", id_hint)
+    id_ref = attrs.get("$id-ref")
+    if id_ref:
+        id_ref_2 = cib_factory.resolve_id_ref(name, id_ref)
+        node.set("id-ref", id_ref_2)
+        if notops:
+            return node  # id_ref is the only attribute (if not operations)
+        if '$id-ref' in attrs:
+            del attrs['$id-ref']
+    v = attrs.get('$id')
+    if v:
+        node.set("id", v)
+        del attrs['$id']
+    elif name in constants.nvset_cli_names:
+        node.set("id", id_hint)
+    else:
+        # operations don't need no id
+        idmgmt.set(node, None, id_hint, id_required=notops)
+    return fill_nvpairs(name, node, attrs, id_hint)
+
+
+def copy_nvpairs(tonode, fromnode):
+    """
+    copy nvpairs from fromnode to tonode.
+    things to copy can be nvpairs, comments or rules.
+    """
+    def copy_comment(cnode):
+        for nvp2 in tonode:
+            if is_comment(nvp2) and nvp2.text == cnode.text:
+                break  # no need to copy
+        else:
+            tonode.append(copy.deepcopy(cnode))
+
+    def copy_nvpair(nvp):
+        n = nvp.get('name')
+        for nvp2 in tonode:
+            if nvp2.get('name') == n:
+                nvp2.set('value', nvp.get('value'))
+                break
+        else:
+            m = etree.SubElement(tonode,
+                                 'nvpair',
+                                 name=n,
+                                 value=nvp.get('value'))
+            m.set('id', idmgmt.new(m, id_hint))
+            tonode.append(m)
+
+    def copy_id(node):
+        nid = node.get('id')
+        for nvp2 in tonode:
+            if nvp2.get('id') == nid:
+                tonode.replace(nvp2, copy.deepcopy(node))
+                break
+        else:
+            tonode.append(copy.deepcopy(node))
+
+    id_hint = tonode.get('id')
+    for c in fromnode:
+        if is_comment(c):
+            copy_comment(c)
+        elif c.tag == "nvpair":
+            copy_nvpair(c)
+        elif 'id' in c.attrib:  # ok, it has an id, we can work with this
+            copy_id(c)
+        else:  # no idea what this is, just copy it
+            tonode.append(copy.deepcopy(c))
+
+
 class CibObjectSet(object):
     '''
     Edit or display a set of cib objects.
@@ -144,16 +253,17 @@ class CibObjectSet(object):
     def _open_url(self, src):
         if src == "-":
             return sys.stdin
-        import urllib
+        import urllib2
         try:
-            return urllib.urlopen(src)
-        except:
+            ret = urllib2.urlopen(src)
+            return ret
+        except (urllib2.URLError, ValueError):
             pass
         try:
-            return open(src)
-        except:
-            pass
-        common_err("could not open %s" % src)
+            ret = open(src)
+            return ret
+        except IOError, e:
+            common_err("could not open %s: %s" % (src, e))
         return False
 
     def _pre_edit(self, s):
@@ -423,19 +533,6 @@ class CibObjectSet(object):
         return rc
 
 
-def get_comments(cli_list):
-    if not cli_list:
-        return []
-    last = cli_list[len(cli_list)-1]
-    try:
-        if last[0] == "comments":
-            cli_list.pop()
-            return last[1]
-    except IndexError:
-        pass
-    return []
-
-
 class CibObjectSetCli(CibObjectSet):
     '''
     Edit or display a set of cib objects (using cli notation).
@@ -459,7 +556,7 @@ class CibObjectSetCli(CibObjectSet):
                          for obj in processing_sort_cli(list(self.obj_set)))
 
     def _pre_edit(self, s):
-        '''Extra processing of the string to be editted'''
+        '''Extra processing of the string to be edited'''
         if config.core.editor.startswith("vi"):
             return "%s\n%s" % (s, self.vim_stx_str)
         return s
@@ -469,24 +566,17 @@ class CibObjectSetCli(CibObjectSet):
             return s.replace(self.vim_stx_str, "")
         return s
 
-    def _get_id(self, cli_list):
+    def _get_id(self, node):
         '''
         Get the id from a CLI representation. Normally, it should
         be value of the id attribute, but sometimes the
         attribute is missing.
         '''
-        id = find_value(cli_list[0][1], "id") or find_value(cli_list[0][1], "$id")
-        if not id:
-            type = cli_list[0][0]
-            if type in constants.nvset_cli_names:
-                # some elements have default ids
-                # (property, *_defaults)
-                id = cib_object_map[backtrans[type]][3]
-            else:
-                # some are unique and have no ids,
-                # i.e. fencing-topology
-                id = type
-        return id
+        if node.tag == 'fencing-topology':
+            return 'fencing_topology'
+        if node.tag in constants.defaults_tags:
+            return node[0].get('id')
+        return node.get('id')
 
     def save(self, s, no_remove=False, method='replace'):
         '''
@@ -506,15 +596,20 @@ class CibObjectSetCli(CibObjectSet):
         cp = CliParser()
         for cli_text in lines2cli(s):
             err_buf.incr_lineno()
-            cli_list = cp.parse2(cli_text)
-            if cli_list:
-                id = self._get_id(cli_list)
-                if id in id_set:
-                    common_err("duplicate element %s" % id)
+            node = cp.parse(cli_text)
+            if node not in (False, None):
+                obj_id = id_for_node(node)
+                if obj_id is None:
+                    common_err("element %s has no id!" %
+                               etree.tostring(node, pretty_print=True))
                     rc = False
-                id_set.add(id)
-                edit_d[id] = cli_list
-            elif cli_list is False:
+                elif obj_id in id_set:
+                    common_err("duplicate element %s" % obj_id)
+                    rc = False
+                else:
+                    id_set.add(obj_id)
+                    edit_d[obj_id] = node
+            elif node is False:
                 rc = False
         err_buf.stop_tmp_lineno()
         # we can't proceed if there was a syntax error, but we
@@ -552,7 +647,7 @@ class CibObjectSetRaw(CibObjectSet):
 
     def _get_id(self, node):
         if node.tag == "fencing-topology":
-            return "fencing-topology"
+            return "fencing_topology"
         return node.get("id")
 
     def save(self, s, no_remove=False, method='replace'):
@@ -570,15 +665,16 @@ class CibObjectSetRaw(CibObjectSet):
         edit_d = {}
         for node in get_top_cib_nodes(cib_elem, []):
             id = self._get_id(node)
-            if not id:
+            if id is None:
                 common_err("element %s has no id!" %
                            etree.tostring(node, pretty_print=True))
                 rc = False
-            if id in id_set:
+            elif id in id_set:
                 common_err("duplicate element %s" % id)
                 rc = False
-            id_set.add(id)
-            edit_d[id] = node
+            else:
+                id_set.add(id)
+                edit_d[id] = node
         if not no_remove:
             rc &= self.is_edit_valid(id_set)
             del_set = self.obj_ids - id_set
@@ -598,7 +694,7 @@ class CibObjectSetRaw(CibObjectSet):
         rc = pipe_string(cib_verify, self.repr(format=-1))
         clidisplay.enable_pretty()
         if rc not in (0, 1):
-            common_debug(self.repr())
+            common_debug("verify (rc=%s): %s" % (rc, self.repr()))
         return rc in (0, 1)
 
     def ptest(self, nograph, scores, utilization, actions, verbosity):
@@ -614,261 +710,149 @@ class CibObjectSetRaw(CibObjectSet):
         return run_ptest(graph_s, nograph, scores, utilization, actions, verbosity)
 
 
-#
-# XML generate utilities
-#
-def set_id(node, oldnode, id_hint, id_required=True):
-    '''
-    Set the id attribute for the node.
-    Procedure:
-    - if the node already contains "id", keep it
-    - if the old node contains "id", copy that
-    - if neither is true, then create a new one using id_hint
-      (exception: if not id_required, then no new id is generated)
-    Finally, save the new id in idmgmt.
-    '''
-    old_id = None
-    new_id = node.get("id")
-    if oldnode is not None and oldnode.get("id"):
-        old_id = oldnode.get("id")
-    if not new_id:
-        new_id = old_id
-    if not new_id:
-        if id_required:
-            new_id = idmgmt.new(node, id_hint)
-    else:
-        idmgmt.save(new_id)
-    if new_id:
-        node.set("id", new_id)
-        if oldnode is not None and old_id == new_id:
-            set_id_used_attr(oldnode)
+def find_comment_nodes(node):
+    return [c for c in node.iterchildren() if is_comment(c)]
 
 
-def mkxmlsimple(e, oldnode, id_hint):
-    '''
-    Create an xml node from the (name, dict) pair. The name is the
-    name of the element. The dict contains a set of attributes.
-    '''
-    def nvpair(n, v):
-        if n == "$children":  # this one's skipped
-            return None, None
-        if n == "operation":
-            v = v.lower()
-        elif n.startswith('$'):
-            n = n.lstrip('$')
-        if isinstance(v, basestring) and v:
-            return n, v
-        elif isinstance(v, bool):
-            return n, str(v).lower()
-        elif v:
-            raise ValueError("cannot make attribute value from '%s'" % (v))
+def fix_node_ids(node, oldnode):
+    """
+    Fills in missing ids, getting ids from oldnode
+    as much as possible. Tries to generate reasonable
+    ids as well.
+    """
+    hint_map = {
+        'node': 'node',
+        'primitive': 'rsc',
+        'template': 'rsc',
+        'master': 'grp',
+        'group': 'grp',
+        'clone': 'grp',
+        'rsc_location': 'location',
+        'fencing-topology': 'fencing',
+        'tags': 'tag',
+        }
+
+    idless = set(['operations', 'fencing-topology'])
+    isref = set(['resource_ref', 'obj_ref', 'crmsh-ref'])
+
+    def needs_id(node):
+        a = node.attrib
+        if node.tag in isref:
+            return False
+        return 'id-ref' not in a and node.tag not in idless
+
+    def next_prefix(node, refnode, prefix):
+        if node.tag == 'node' and 'uname' in node.attrib:
+            return node.get('uname')
+        if 'id' in node.attrib:
+            return node.get('id')
+        return prefix
+
+    def recurse(node, oldnode, prefix):
+        refnode = lookup_node(node, oldnode)
+        if needs_id(node):
+            idmgmt.set(node, refnode, prefix, id_required=(node.tag not in idless))
+        prefix = next_prefix(node, refnode, prefix)
+        for c in node.iterchildren():
+            if not is_comment(c):
+                recurse(c, refnode if refnode is not None else oldnode, prefix)
+
+    recurse(node, oldnode, hint_map.get(node.tag, ''))
+
+
+def resolve_references(node):
+    """
+    In the output from parse(), there are
+    possible references to other nodes in
+    the CIB. This resolves those references.
+    """
+    for ref in node.iterchildren('crmsh-ref'):
+        child_id = ref.get('id')
+        obj = cib_factory.find_object(child_id)
+        common_debug("resolve_references: %s -> %s" % (child_id, obj))
+        if obj is not None:
+            newnode = copy.deepcopy(obj.node)
+            node.replace(ref, newnode)
         else:
-            return None, None
-    node = etree.Element(e[0])
-    for n, v in e[1]:
-        n, v = nvpair(n, v)
-        if n is not None:
-            node.set(n, v)
-    id_ref = node.get("id-ref")
-    if id_ref:
-        id_ref_2 = cib_factory.resolve_id_ref(e[0], id_ref)
-        node.set("id-ref", id_ref_2)
+            node.remove(ref)
+            common_err("%s refers to missing object %s" % (node.get('id'),
+                                                           child_id))
+
+
+def id_for_node(node, id_hint=None):
+    "find id for unprocessed node"
+    root = node
+    if node.tag in constants.defaults_tags:
+        node = node[0]
+    if node.tag == 'fencing-topology':
+        obj_id = 'fencing_topology'
     else:
-        set_id(node, lookup_node(node, oldnode), id_hint)
-    return node
+        obj_id = node.get('id') or node.get('uname')
+    if obj_id is None:
+        if node.tag == 'op' and id_hint:
+            idmgmt.set(node, None, id_hint)
+            obj_id = node.get('id')
+        else:
+            defid = default_id_for_tag(root.tag)
+            if defid is not None:
+                try:
+                    node.set('id', defid)
+                except TypeError, e:
+                    raise ValueError('Internal error: %s (%s)' % (e, etree.tostring(node)))
+                obj_id = node.get('id')
+                idmgmt.save(obj_id)
+    if root.tag != "node" and obj_id and not is_id_valid(obj_id):
+        invalid_id_err(obj_id)
+        return None
+    return obj_id
 
 
-def mkxmlnvpairs(e, oldnode, id_hint):
-    '''
-    Create xml from the (name, dict) pair. The name is the name of
-    the element. The dict contains a set of nvpairs. Stuff such
-    as instance_attributes.
-    NB: Other tags not containing nvpairs are fine if the dict is empty.
-    '''
-    xml_node_type = e[0] in constants.defaults_tags and "meta_attributes" or e[0]
-    node = etree.Element(xml_node_type)
-    # another exception:
-    # cluster_property_set and defaults have nvpairs as direct children
-    # in that case the id_hint is equal id
-    # and this is important in case there are multiple sets
-    if (e[0] == "cluster_property_set" or e[0] in constants.defaults_tags) and id_hint:
-        node.set("id", id_hint)
-    match_node = lookup_node(node, oldnode)
-    #if match_node:
-        #print "found nvpairs set:", match_node.tag, match_node.get("id")
-    id_ref = find_value(e[1], "$id-ref")
-    if id_ref:
-        id_ref_2 = cib_factory.resolve_id_ref(e[0], id_ref)
-        node.set("id-ref", id_ref_2)
-        if e[0] != "operations":
-            return node  # id_ref is the only attribute (if not operations)
-        e[1].remove(["$id-ref", id_ref])
-    v = find_value(e[1], "$id")
-    if v:
-        node.set("id", v)
-        e[1].remove(["$id", v])
-    elif e[0] in constants.nvset_cli_names:
-        node.set("id", id_hint)
+def postprocess_cli(node, oldnode=None, id_hint=None):
+    """
+    input: unprocessed but parsed XML
+    output: XML, obj_type, obj_id
+    """
+    if node.tag == 'op':
+        obj_type = 'op'
     else:
-        if e[0] == "operations":  # operations don't need no id
-            set_id(node, match_node, id_hint, id_required=False)
-        else:
-            set_id(node, match_node, id_hint)
-    try:
-        subpfx = constants.subpfx_list[e[0]]
-    except KeyError:
-        subpfx = ''
-    subpfx = subpfx and "%s_%s" % (id_hint, subpfx) or id_hint
-    nvpair_pfx = node.get("id") or subpfx
-    for n, v in e[1]:
-        nvpair = etree.SubElement(node, "nvpair")
-        nvpair.set("name", n)
-        if v is not None:
-            nvpair.set("value", v)
-        set_id(nvpair, lookup_node(nvpair, match_node), nvpair_pfx)
-    return node
+        obj_type = cib_object_map[node.tag][0]
+    obj_id = id_for_node(node, id_hint=id_hint)
+    if obj_id is None:
+        if obj_type == 'op':
+            # In this case, we need to delay postprocessing
+            # until we know where to insert the op
+            return node, obj_type, None
+        common_err("No ID found for %s: %s" % (obj_type, etree.tostring(node)))
+        return None, None, None
+    if node.tag in constants.defaults_tags:
+        node = node[0]
+    fix_node_ids(node, oldnode)
+    resolve_references(node)
+    if oldnode is not None:
+        remove_id_used_attributes(oldnode)
+    return node, obj_type, obj_id
 
 
-def mkxmlop(e, oldnode, id_hint):
-    '''
-    Create an operation xml from the (name, dict) pair.
-    '''
-    node = etree.Element(e[0])
-    inst_attr = []
-    for n, v in e[1]:
-        if n in olist(schema.get('attr', 'op', 'a')):
-            node.set(n, v)
-        else:
-            inst_attr.append([n, v])
-    tmp = etree.Element("operations")
-    # first find old operations
-    oldops = lookup_node(tmp, oldnode)
-    oldop = lookup_node(node, oldops)
-    set_id(node, oldop, id_hint)
-    if inst_attr:
-        e = ["instance_attributes", inst_attr]
-        nia = mkxmlnvpairs(e, oldop, node.get("id"))
-        node.append(nia)
-    return node
-
-
-def mkxmldate(e, oldnode, id_hint):
-    '''
-    Create a date_expression xml from the (name, dict) pair.
-    '''
-    node = etree.Element(e[0])
-    operation = find_value(e[1], "operation").lower()
-    node.set("operation", operation)
-    # first find old date element
-    old_date = lookup_node(node, oldnode)
-    set_id(node, old_date, id_hint)
-    date_spec_attr = []
-    for n, v in e[1]:
-        if n in olist(schema.rng_attr_values_l('date_expression', 'operation')) or \
-                n == "operation":
-            continue
-        elif n in constants.in_range_attrs:
-            node.set(n, v)
-        else:
-            date_spec_attr.append([n, v])
-    if not date_spec_attr:
-        return node
-    tag = operation == "date_spec" and "date_spec" or "duration"
-    spec_elem = etree.SubElement(node, tag)
-    # first find old date element
-    old_date_spec = lookup_node(spec_elem, old_date)
-    set_id(spec_elem, old_date_spec, id_hint)
-    for n, v in date_spec_attr:
-        spec_elem.set(n, v)
-    return node
-
-
-def mkxmlrsc_set(e, oldnode, id_hint):
-    '''
-    Create a resource_set xml from the (name, dict) pair.
-    '''
-    node = etree.Element(e[0])
-    # first find old date element
-    old_rsc_set = lookup_node(node, oldnode)
-    set_id(node, old_rsc_set, id_hint)
-    for ref in e[1]:
-        if ref[0] == "resource_ref":
-            ref_node = etree.SubElement(node, ref[0])
-            ref_node.set(ref[1][0], ref[1][1])
-        elif ref[0] in ("sequential", "require-all", "action", "role"):
-            node.set(ref[0], ref[1])
-    return node
-
-
-def mkxmlaclrole_ref(e):
-    '''
-    Create a role reference xml. Very simple, but different from
-    everything else.
-    '''
-    node = etree.Element(e[0])
-    node.set(e[1][0], e[1][1])
-    return node
-
-
-def mkxmlhead(e):
-    '''
-    Create a fencing_topology xml.
-    '''
-    node = etree.Element(e[0])
-    return node
-
-conv_list = {
-    "params": "instance_attributes",
-    "meta": "meta_attributes",
-    "property": "cluster_property_set",
-    "rsc_defaults": "rsc_defaults",
-    "op_defaults": "op_defaults",
-    "attributes": "instance_attributes",
-    "utilization": "utilization",
-    "operations": "operations",
-    "op": "op",
-    "tag": "tag",
-}
-
-
-def mkxmlnode(e, oldnode, id_hint):
-    '''
-    Create xml from the (name, dict) pair. The name is the name of
-    the element. The dict contains either a set of nvpairs or a
-    set of attributes. The id is either generated or copied if
-    found in the provided xml. Stuff such as instance_attributes.
-    '''
-    if e[0] in conv_list:
-        e[0] = conv_list[e[0]]
-    if e[0] in ("instance_attributes", "meta_attributes",
-                "operations", "rsc_defaults",
-                "op_defaults", "cluster_property_set",
-                "utilization"):
-        return mkxmlnvpairs(e, oldnode, id_hint)
-    elif e[0] == "op":
-        return mkxmlop(e, oldnode, id_hint)
-    elif e[0] == "date_expression":
-        return mkxmldate(e, oldnode, id_hint)
-    elif e[0] == "resource_set":
-        return mkxmlrsc_set(e, oldnode, id_hint)
-    elif e[0] == "role_ref":
-        return mkxmlaclrole_ref(e)
-    else:
-        return mkxmlsimple(e, oldnode, id_hint)
-
-
-def set_nvpair(set_node, name, value):
-    n_id = set_node.get("id")
-    for c in set_node.iterchildren():
-        if c.get("name") == name:
-            c.set("value", value)
-            return
-    np = etree.SubElement(set_node, "nvpair")
-    np.set("name", name)
-    np.set("value", value)
-    new_id = idmgmt.new(np, n_id)
-    np.set("id", new_id)
-
+def parse_cli_to_xml(cli, oldnode=None, validation=None):
+    """
+    input: CLI text
+    output: XML, obj_type, obj_id
+    """
+    parser = CliParser()
+    if validation is not None:
+        for p in parser.parsers.values():
+            p.validation = validation
+    node = None
+    if isinstance(cli, basestring):
+        for s in lines2cli(cli):
+            node = parser.parse(s)
+    else:  # should be a pre-tokenized list
+        node = parser.parse(cli)
+    if node is False:
+        return None, None, None
+    elif node is None:
+        return None, None, None
+    return postprocess_cli(node, oldnode)
 
 #
 # cib element classes (CibObject the parent class)
@@ -922,8 +906,7 @@ class CibObject(object):
     def _gv_rsc_id(self):
         if self.parent and self.parent.obj_type in constants.clonems_tags:
             return "%s:%s" % (self.parent.obj_type, self.obj_id)
-        else:
-            return self.obj_id
+        return self.obj_id
 
     def _set_gv_attrs(self, gv_obj, obj_type=None):
         if not obj_type:
@@ -961,76 +944,88 @@ class CibObject(object):
         l = []
         if format < 0:
             clidisplay.disable_pretty()
-        head_s = self._repr_cli_head(format)
-        # everybody must have a head
-        if not head_s:
+        try:
+            head_s = self._repr_cli_head(format)
+            # everybody must have a head
+            if not head_s:
+                return None
+            comments = []
+            l.append(head_s)
+            desc = self.node.get("description")
+            if desc:
+                l.append(nvpair_format("description", desc))
+            for c in self.node.iterchildren():
+                if is_comment(c):
+                    comments.append(c.text)
+                    continue
+                s = self._repr_cli_child(c, format)
+                if s:
+                    l.append(s)
+            return self._cli_format_and_comment(l, comments, break_lines=(format > 0))
+        finally:
             if format < 0:
                 clidisplay.enable_pretty()
-            return None
-        comments = []
-        l.append(head_s)
-        desc = self.node.get("description")
-        if desc:
-            l.append(nvpair_format("description", desc))
-        for c in self.node.iterchildren():
-            if is_comment(c):
-                comments.append(c.text)
-                continue
-            s = self._repr_cli_child(c, format)
-            if s:
-                l.append(s)
-        s = self._cli_format_and_comment(l, comments, break_lines=(format > 0))
-        if format < 0:
-            clidisplay.enable_pretty()
-        return s
 
     def _attr_set_str(self, node):
         '''
         Add $id=<id> if the set id is referenced by another
         element.
+
+        also show rule expressions if found
         '''
-        id = node.get("id")
-        add_id = cib_factory.is_id_refd(node.tag, id)
-        return "%s %s" % (clidisplay.keyword(self.set_names[node.tag]),
-                          cli_pairs(nvpairs2list(node, add_id=add_id)))
+        ret = "%s " % (clidisplay.keyword(self.set_names[node.tag]))
+        node_id = node.get("id")
+        if cib_factory.is_id_refd(node.tag, node_id):
+            ret += "%s " % (nvpair_format("$id", node_id))
+
+        for c in node.iterchildren():
+            if c.tag == "rule":
+                ret += "%s %s " % (clidisplay.keyword("rule"), cli_rule(c, cib_factory.is_id_refd))
+            elif c.tag == "nvpair":
+                ret += "%s " % (nvpair_format(c.get("name"), c.get("value")))
+        if ret[-1] == ' ':
+            ret = ret[:-1]
+        return ret
 
     def _repr_cli_child(self, c, format):
         if c.tag in self.set_names:
             return self._attr_set_str(c)
 
     def _get_oldnode(self):
-        '''Used to retrieve sub id's'''
+        '''
+        Used to retrieve sub id's.
+        '''
+        if self.obj_type == "property":
+            return get_topnode(cib_factory.get_cib(), self.parent_type)
+        elif self.obj_type in constants.defaults_tags:
+            return self.node.getparent()
         return self.node
 
     def set_id(self, obj_id=None):
-        if obj_id:
-            self.obj_id = obj_id
-        else:
-            self.obj_id = self.node is not None and self.node.get("id") or None
+        if obj_id is None and self.node is not None:
+            obj_id = self.node.get("id") or self.node.get('uname')
+            if obj_id is None:
+                m = cib_object_map.get(self.node.tag)
+                if m and len(m) > 3:
+                    obj_id = m[3]
+        self.obj_id = obj_id
 
     def set_nodeid(self):
         if self.node is not None and self.obj_id:
             self.node.set("id", self.obj_id)
 
-    def _cli_list2node(self, cli_list, oldnode):
-        'implemented in subclasses'
-        pass
-
-    def cli2node(self, cli, oldnode=None):
+    def cli2node(self, cli):
         '''
         Convert CLI representation to a DOM node.
-        Defined in subclasses.
         '''
-        cli_list = mk_cli_list(cli)
-        if not cli_list:
-            return None
-        if oldnode is None:
-            oldnode = self._get_oldnode()
-        comments = get_comments(cli_list)
-        node = self._cli_list2node(cli_list, oldnode)
-        if comments and node is not None:
-            stuff_comments(node, comments)
+        oldnode = self._get_oldnode()
+        node, obj_type, obj_id = parse_cli_to_xml(cli, oldnode)
         return node
+
+    def set_node(self, node, oldnode=None):
+        self.node = node
+        self.set_id()
+        return self.node
 
     def _cli_format_and_comment(self, l, comments, break_lines):
         '''
@@ -1054,11 +1049,9 @@ class CibObject(object):
                 if not firstelem:
                     firstelem = self.node.index(n)
         for comm_node in l:
-            common_debug("move comm %s" % etree.tostring(comm_node))
             self.node.remove(comm_node)
             self.node.insert(firstelem, comm_node)
             firstelem += 1
-        common_debug("obj %s node: %s" % (self.obj_id, etree.tostring(self.node)))
 
     def mknode(self, obj_id):
         if self.xml_obj_type in constants.defaults_tags:
@@ -1110,12 +1103,21 @@ class CibObject(object):
         cli_text = self.repr_cli(format=0)
         clidisplay.enable_pretty()
         if not cli_text:
+            common_debug("validation failed: %s" % (etree.tostring(self.node)))
             return False
-        common_debug("clitext: %s" % cli_text)
         xml2 = self.cli2node(cli_text)
         if xml2 is None:
+            common_debug("validation failed: %s -> %s" % (
+                etree.tostring(self.node),
+                cli_text))
             return False
-        return xml_equals(self.node, xml2, show=True)
+        if not xml_equals(self.node, xml2, show=True):
+            common_debug("validation failed: %s -> %s -> %s" % (
+                etree.tostring(self.node),
+                cli_text,
+                etree.tostring(xml2)))
+            return False
+        return True
 
     def _verify_op_attributes(self, op_node):
         '''
@@ -1152,14 +1154,6 @@ class CibObject(object):
         And groups/clones/ms and cluster properties.
         '''
         return 0
-
-    def matchcli(self, cli_list):
-        head = cli_list[0]
-        return self.obj_type == head[0] \
-            and self.obj_id == find_value(head[1], "id")
-
-    def match(self, xml_obj_type, obj_id):
-        return self.xml_obj_type == xml_obj_type and self.obj_id == obj_id
 
     def reset_updated(self):
         self.updated = False
@@ -1232,19 +1226,6 @@ def gv_edge_score_label(gv_obj, e_id, node):
     gv_obj.new_edge_attr(e_id, 'label', lbl)
 
 
-def mk_cli_list(cli):
-    'Sometimes we get a string and sometimes a list.'
-    if isinstance(cli, basestring):
-        cp = CliParser()
-        # what follows looks strange, but the last string actually matters
-        # the previous ones may be comments and are collected by the parser
-        for s in lines2cli(cli):
-            cli_list = cp.parse2(s)
-        return cli_list
-    else:
-        return cli
-
-
 class CibNode(CibObject):
     '''
     Node and node's attributes.
@@ -1267,30 +1248,6 @@ class CibNode(CibObject):
         if type and type != constants.node_default_type:
             s = '%s:%s' % (s, type)
         return s
-
-    def _cli_list2node(self, cli_list, oldnode):
-        head = copy.copy(cli_list[0])
-        head[0] = backtrans[head[0]]
-        obj_id = find_value(head[1], "$id")
-        if not obj_id:
-            obj_id = find_value(head[1], "uname")
-        if not obj_id:
-            return None
-        type = find_value(head[1], "type")
-        if not constants.node_type_opt and not type:
-            type = constants.node_default_type
-        if type:
-            head[1].append(["type", type])
-        headnode = mkxmlsimple(head,
-                               get_topnode(cib_factory.get_cib(),
-                                           self.parent_type),
-                               'node')
-        id_hint = headnode.get("uname")
-        for e in cli_list[1:]:
-            n = mkxmlnode(e, oldnode, id_hint)
-            headnode.append(n)
-        remove_id_used_attributes(get_topnode(cib_factory.get_cib(), self.parent_type))
-        return headnode
 
     def repr_gv(self, gv_obj, from_grp=False):
         '''
@@ -1368,16 +1325,15 @@ class Op(object):
                 self.node.getparent().remove(self.node)
             idmgmt.remove_xml(self.node)
         self.node = etree.Element(self.elem_type)
-        inst_attr = []
+        inst_attr = {}
         for n, v in self.attr_d.iteritems():
             if n in olist(schema.get('attr', 'op', 'a')):
                 self.node.set(n, v)
             else:
-                inst_attr.append([n, v])
-        set_id(self.node, None, self.prim)
+                inst_attr[n] = v
+        idmgmt.set(self.node, None, self.prim)
         if inst_attr:
-            e = ["instance_attributes", inst_attr]
-            nia = mkxmlnvpairs(e, None, self.node.get("id"))
+            nia = mkxmlnvpairs("instance_attributes", inst_attr, self.node.get("id"))
             self.node.append(nia)
         return self.node
 
@@ -1412,31 +1368,6 @@ class CibPrimitive(CibObject):
         elif c.tag == "operations":
             return cli_operations(c, break_lines=(format > 0))
 
-    def _cli_list2node(self, cli_list, oldnode):
-        '''
-        Convert a CLI description to DOM node.
-        Try to preserve as many ids as possible in case there's
-        an old XML version.
-        '''
-        head = copy.copy(cli_list[0])
-        head[0] = backtrans[head[0]]
-        headnode = mkxmlsimple(head, oldnode, 'rsc')
-        id_hint = headnode.get("id")
-        operations = None
-        for e in cli_list[1:]:
-            n = mkxmlnode(e, oldnode, id_hint)
-            if keyword_cmp(e[0], "operations"):
-                operations = n
-            if not keyword_cmp(e[0], "op"):
-                headnode.append(n)
-            else:
-                if operations is None:
-                    operations = mkxmlnode(["operations", {}], oldnode, id_hint)
-                    headnode.append(operations)
-                operations.append(n)
-        remove_id_used_attributes(oldnode)
-        return headnode
-
     def _append_op(self, op_node):
         try:
             ops_node = self.node.findall("operations")[0]
@@ -1444,21 +1375,23 @@ class CibPrimitive(CibObject):
             ops_node = etree.SubElement(self.node, "operations")
         ops_node.append(op_node)
 
-    def add_operation(self, cli_list):
+    def add_operation(self, node):
         # check if there is already an op with the same interval
-        comments = get_comments(cli_list)
-        head = copy.copy(cli_list[0])
-        name = find_value(head[1], "name")
-        interval = find_value(head[1], "interval")
+        name = node.get("name")
+        interval = node.get("interval")
         if find_operation(self.node, name, interval) is not None:
             common_err("%s already has a %s op with interval %s" %
                        (self.obj_id, name, interval))
             return None
         # create an xml node
-        op_node = mkxmlnode(head, None, self.obj_id)
-        self._append_op(op_node)
+        if 'id' not in node.attrib:
+            idmgmt.set(node, None, self.obj_id)
+        self._append_op(node)
+        comments = find_comment_nodes(node)
+        for comment in comments:
+            node.remove(comment)
         if comments and self.node is not None:
-            stuff_comments(self.node, comments)
+            stuff_comments(self.node, [c.text for c in comments])
         # the resource is updated
         self.updated = True
         self.propagate_updated()
@@ -1617,25 +1550,6 @@ class CibContainer(CibObject):
         id = clidisplay.id(self.obj_id)
         return "%s %s %s" % (s, id, ' '.join(children))
 
-    def _cli_list2node(self, cli_list, oldnode):
-        head = copy.copy(cli_list[0])
-        head[0] = backtrans[head[0]]
-        headnode = mkxmlsimple(head, oldnode, 'grp')
-        id_hint = headnode.get("id")
-        for e in cli_list[1:]:
-            n = mkxmlnode(e, oldnode, id_hint)
-            headnode.append(n)
-        v = find_value(head[1], "$children")
-        if v:
-            for child_id in v:
-                obj = cib_factory.find_object(child_id)
-                if obj:
-                    headnode.append(copy.deepcopy(obj.node))
-                else:
-                    no_object_err(child_id)
-        remove_id_used_attributes(oldnode)
-        return headnode
-
     def check_sanity(self):
         '''
         Check meta attributes.
@@ -1705,32 +1619,7 @@ class CibLocation(CibObject):
     def _repr_cli_child(self, c, format):
         if c.tag == "rule":
             return "%s %s" % \
-                (clidisplay.keyword("rule"), cli_rule(c))
-
-    def _cli_list2node(self, cli_list, oldnode):
-        head = copy.copy(cli_list[0])
-        head[0] = backtrans[head[0]]
-        headnode = mkxmlsimple(head, oldnode, 'location')
-        id_hint = headnode.get("id")
-        oldrule = None
-        rule = None
-        for e in cli_list[1:]:
-            if e[0] in ("expression", "date_expression"):
-                n = mkxmlnode(e, oldrule, id_hint)
-            else:
-                n = mkxmlnode(e, oldnode, id_hint)
-            if e[0] == "resource_set":
-                headnode.append(n)
-            elif keyword_cmp(e[0], "rule"):
-                rule = n
-                headnode.append(n)
-                oldrule = lookup_node(rule, oldnode, location_only=True)
-            elif rule is not None:
-                rule.append(n)
-            else:
-                headnode.append(n)
-        remove_id_used_attributes(oldnode)
-        return headnode
+                (clidisplay.keyword("rule"), cli_rule(c, cib_factory.is_id_refd))
 
     def check_sanity(self):
         '''
@@ -1786,25 +1675,24 @@ class CibLocation(CibObject):
         gv_edge_score_label(gv_obj, e_id, score_n)
 
 
-def traverse_set(cum, st):
-    e = []
-    for i, elem in enumerate(cum):
-        if isinstance(elem, list):
-            for rsc in elem:
-                cum2 = copy.copy(cum)
-                cum2[i] = rsc
-                traverse_set(cum2, st)
-            return
-        else:
-            e.append(elem)
-    st.append(e)
-
-
 def _opt_set_name(n):
     return "cluster%s" % n.get("id")
 
 
 def rsc_set_gv_edges(node, gv_obj):
+    def traverse_set(cum, st):
+        e = []
+        for i, elem in enumerate(cum):
+            if isinstance(elem, list):
+                for rsc in elem:
+                    cum2 = copy.copy(cum)
+                    cum2[i] = rsc
+                    traverse_set(cum2, st)
+                return
+            else:
+                e.append(elem)
+        st.append(e)
+
     cum = []
     for n in node.iterchildren("resource_set"):
         sequential = get_boolean(n.get("sequential"), True)
@@ -1850,21 +1738,6 @@ class CibSimpleConstraint(CibObject):
             if node_attr:
                 col.append("node-attribute=%s" % node_attr)
         return "%s %s %s: %s" % (s, id, score, ' '.join(col))
-
-    def _repr_cli_child(self, c, format):
-        pass  # no children here
-
-    def _cli_list2node(self, cli_list, oldnode):
-        head = copy.copy(cli_list[0])
-        head[0] = backtrans[head[0]]
-        headnode = mkxmlsimple(head, oldnode, '')
-        id_hint = headnode.get("id")
-        for e in cli_list[1:]:
-            # if more than one element, it's a resource set
-            n = mkxmlnode(e, oldnode, id_hint)
-            headnode.append(n)
-        remove_id_used_attributes(oldnode)
-        return headnode
 
     def _mk_optional_set(self, gv_obj, n):
         '''
@@ -1941,42 +1814,17 @@ class CibProperty(CibObject):
     '''
 
     def _repr_cli_head(self, format):
-        s = clidisplay.keyword(self.obj_type)
-        if utils.noquotes(self.obj_id):
-            s = "%s %s:" % (s, self.obj_id)
-        else:
-            s = '%s $id="%s"' % (s, self.obj_id)
-        return s
+        return "%s %s" % (clidisplay.keyword(self.obj_type),
+                          head_id_format(self.obj_id))
 
     def _repr_cli_child(self, c, format):
-        return nvpair_format(c.get("name"), c.get("value"))
-
-    def _get_oldnode(self):
-        '''Used to retrieve sub id's'''
-        if self.obj_type == "property":
-            return get_topnode(cib_factory.get_cib(), self.parent_type)
+        if c.tag == "rule":
+            return ' '.join((clidisplay.keyword("rule"),
+                             cli_rule(c, cib_factory.is_id_refd)))
+        elif c.tag == "nvpair":
+            return nvpair_format(c.get("name"), c.get("value"))
         else:
-            return self.node.getparent()
-
-    def _cli_list2node(self, cli_list, oldnode):
-        head = copy.copy(cli_list[0])
-        head[0] = backtrans[head[0]]
-        obj_id = find_value(head[1], "$id")
-        if not obj_id:
-            obj_id = cib_object_map[self.xml_obj_type][3]
-        headnode = mkxmlnode(head, oldnode, obj_id)
-        remove_id_used_attributes(oldnode)
-        return headnode
-
-    def matchcli(self, cli_list):
-        head = cli_list[0]
-        if self.obj_type != head[0]:
-            return False
-        # if no id specified return True
-        # (match the first of a kind)
-        if not find_value(head[1], "$id"):
-            return True
-        return self.obj_id == find_value(head[1], "$id")
+            return ''
 
     def check_sanity(self):
         '''
@@ -2022,13 +1870,6 @@ class CibFencingOrder(CibObject):
     def __str__(self):
         return self.obj_id
 
-    def match(self, xml_obj_type, obj_id):
-        return self.xml_obj_type == xml_obj_type
-
-    def matchcli(self, cli_list):
-        head = cli_list[0]
-        return self.obj_type == head[0]
-
     def can_be_renamed(self):
         ''' Cannot rename this one. '''
         return False
@@ -2054,38 +1895,6 @@ class CibFencingOrder(CibObject):
         return cli_format([s] + ["%s: %s" % (x, ' '.join(dd[x]))
                                  for x in dd.keys()],
                           break_lines=(format > 0))
-
-    def _same_levels(self, pl):
-        for lvl_pl in pl:
-            cli_append_attr(lvl_pl[1], "index", "")
-        for n in cib_factory.node_id_list():
-            for lvl_pl in pl:
-                cli_replace_attr(lvl_pl[1], "target", n)
-                yield copy.deepcopy(lvl_pl)
-
-    def _different_levels(self, pl):
-        for lvl_pl in pl:
-            cli_append_attr(lvl_pl[1], "index", "")
-            yield lvl_pl
-
-    def _cli_list2node(self, cli_list, oldnode):
-        head = copy.copy(cli_list[0])
-        head[0] = backtrans[head[0]]
-        node = mkxmlhead(head)
-        if find_value(head[1][0][1], "target") == "@@":
-            lvl_generator = self._same_levels
-        else:
-            lvl_generator = self._different_levels
-        target_i = {}
-        for lvl_pl in lvl_generator(head[1]):
-            target = find_value(lvl_pl[1], "target")
-            if target not in target_i:
-                target_i[target] = 1
-            cli_replace_attr(lvl_pl[1], "index", str(target_i[target]))
-            node.append(mkxmlsimple(lvl_pl, oldnode, 'fencing'))
-            target_i[target] += 1
-        remove_id_used_attributes(oldnode)
-        return node
 
     def _repr_cli_child(self, c, format):
         pass  # no children here
@@ -2130,43 +1939,24 @@ class CibAcl(CibObject):
     def _repr_cli_child(self, c, format):
         if c.tag in constants.acl_rule_names:
             return cli_acl_rule(c, format)
-        else:
-            return cli_acl_roleref(c, format)
-
-    def _cli_list2node(self, cli_list, oldnode):
-        head = copy.copy(cli_list[0])
-        head[0] = backtrans[head[0]]
-        headnode = mkxmlsimple(head, oldnode, '')
-        if len(cli_list) == 1:
-            return headnode
-        id_hint = headnode.get("id")
-        for e in cli_list[1:]:
-            n = mkxmlnode(e, oldnode, id_hint)
-            headnode.append(n)
-        remove_id_used_attributes(oldnode)
-        return headnode
+        return cli_acl_roleref(c, format)
 
 
 class CibTag(CibObject):
+    '''
+    Tag objects
+
+    TODO: check_sanity, repr_gv
+
+    '''
 
     def _repr_cli_head(self, fmt):
-        s = clidisplay.keyword('tag')
+        s = clidisplay.keyword(self.obj_type)
         id_ = clidisplay.id(self.obj_id)
-        return "%s %s:" % (s, id_)
+        sub = ' '.join(clidisplay.rscref(c.get('id'))
+                       for c in self.node.iterchildren() if not is_comment(c))
+        return "%s %s: %s" % (s, id_, sub)
 
-    def _repr_cli_child(self, c, fmt):
-        return c.get('id')
-
-    def _cli_list2node(self, cli_list, oldnode):
-        """
-        cli_list: [[tag] <id> [<rsc>, <rsc>...]]
-        out: <tag id="<id>"><obj_ref id="<rsc>">...</tag>
-        """
-        tagid = cli_list[0][1][0][1]
-        tag = etree.Element('tag', id=tagid)
-        for rsc in cli_list[1]:
-            etree.SubElement(tag, 'obj_ref', id=rsc)
-        return tag
 
 #
 ################################################################
@@ -2192,7 +1982,7 @@ def get_default_timeout():
 
 # xml -> cli translations (and classes)
 cib_object_map = {
-    # xml_tag: ( cli_name, element class, parent element tag )
+    # xml_tag: ( cli_name, element class, parent element tag, id hint )
     "node": ("node", CibNode, "nodes"),
     "primitive": ("primitive", CibPrimitive, "resources"),
     "group": ("group", CibContainer, "resources"),
@@ -2214,6 +2004,17 @@ cib_object_map = {
 
 # generate a translation cli -> tag
 backtrans = odict((item[0], key) for key, item in cib_object_map.iteritems())
+
+
+def default_id_for_tag(tag):
+    "Get default id for XML tag"
+    m = cib_object_map.get(tag, tuple())
+    return m[3] if len(m) > 3 else None
+
+
+def default_id_for_obj(obj_type):
+    "Get default id for object type"
+    return default_id_for_tag(backtrans.get(obj_type))
 
 
 def can_migrate(node):
@@ -2279,14 +2080,13 @@ class CibFactory(object):
         return True
 
     def check_structure(self):
-        #print "Checking structure..."
         if not self.is_cib_sane():
             return False
         rc = True
         for obj in self.cib_objects:
-            #print "Checking %s... (%s)" % (obj.obj_id, obj.nocli)
             if obj.parent:
                 if not self._check_parent(obj, obj.parent):
+                    common_debug("check_parent failed: %s %s" % (obj.obj_id, obj.parent))
                     rc = False
             for child in obj.children:
                 if not child.parent:
@@ -2421,11 +2221,7 @@ class CibFactory(object):
     #
     def _attr_match(self, c, a):
         'Does attribute match?'
-        try:
-            cib_attr = self.cib_attrs[a]
-        except KeyError:
-            cib_attr = None
-        return c.get(a) == cib_attr
+        return c.get(a) == self.cib_attrs.get(a)
 
     def is_current_cib_equal(self, silent=False):
         cib_elem = read_cib(cibdump2elem)
@@ -2461,9 +2257,10 @@ class CibFactory(object):
             rc = self._replace_cib(force)
         if rc:
             # reload the cib!
-            common_debug("CIB commit successful")
+            t = time.time()
+            common_debug("CIB commit successful at %s" % (t))
             if is_live_cib():
-                self.last_commit_time = time.time()
+                self.last_commit_time = t
             self.reset()
             self.initialize()
         return rc
@@ -2533,7 +2330,7 @@ class CibFactory(object):
     #
     # initialize cib_objects from CIB
     #
-    def _save_node(self, node, pnode=None):
+    def _create_object_from_cib(self, node, pnode=None):
         '''
         Need pnode (parent node) acrobacy because cluster
         properties and rsc/op_defaults hold stuff in a
@@ -2546,6 +2343,7 @@ class CibFactory(object):
         obj.node = node
         obj.set_id()
         self.cib_objects.append(obj)
+        return obj
 
     def _populate(self):
         "Walk the cib and collect cib objects."
@@ -2555,19 +2353,23 @@ class CibFactory(object):
         for node in processing_sort(all_nodes):
             if is_defaults(node):
                 for c in node.xpath("./meta_attributes"):
-                    self._save_node(c, node)
+                    self._create_object_from_cib(c, node)
             else:
-                self._save_node(node)
+                self._create_object_from_cib(node)
         for obj in self.cib_objects:
             obj.move_comments()
             fix_comments(obj.node)
+        self.cli_use_validate_all()
+        for obj in self.cib_objects:
+            self._update_links(obj)
+
+    def cli_use_validate_all(self):
         for obj in self.cib_objects:
             if not obj.cli_use_validate():
                 obj.nocli = True
                 obj.nocli_warn = False
-                common_warn("object %s cannot be represented in the CLI notation" % (obj.obj_id))
-        for obj in self.cib_objects:
-            self._update_links(obj)
+                # no need to warn, user can see the object displayed as XML
+                common_debug("object %s cannot be represented in the CLI notation" % (obj.obj_id))
 
     def initialize(self, cib=None):
         if self.cib_elem is not None:
@@ -2611,7 +2413,7 @@ class CibFactory(object):
 
     def _pop_state(self):
         try:
-            common_debug("performing rollback")
+            common_debug("performing rollback from %s" % (self.cib_objects))
             self.cib_elem, \
                 self.cib_attrs, self.cib_objects, \
                 self.remove_queue, self.id_refs = self._state.pop()
@@ -2649,7 +2451,7 @@ class CibFactory(object):
         "Find objects for id (can be a wildcard-glob)."
         if not self.is_cib_sane():
             return None
-        matchfn = lambda x: fnmatch.fnmatch(x, obj_id)
+        matchfn = lambda x: x and fnmatch.fnmatch(x, obj_id)
         objs = []
         for obj in self.cib_objects:
             if matchfn(obj.obj_id):
@@ -2732,13 +2534,6 @@ class CibFactory(object):
                     obj.xml_obj_type == "fencing-topology":
                 return obj
             if node.get("id") == obj.obj_id:
-                return obj
-        return None
-
-    def find_object_for_cli(self, cli_list):
-        "Find an object which matches the cli list."
-        for obj in self.cib_objects:
-            if obj.matchcli(cli_list):
                 return obj
         return None
 
@@ -2902,15 +2697,17 @@ class CibFactory(object):
 
     def new_object(self, obj_type, obj_id):
         "Create a new object of type obj_type."
-        if obj_id and idmgmt.id_in_use(obj_id):
+        common_debug("new_object: %s:%s" % (obj_type, obj_id))
+        xml_obj_type = backtrans.get(obj_type)
+        v = cib_object_map.get(xml_obj_type)
+        if v is None:
             return None
-        for xml_obj_type, v in cib_object_map.items():
-            if v[0] == obj_type:
-                obj = v[1](xml_obj_type)
-                obj.mknode(obj_id)
-                common_debug("create CIB element: %s" % str(obj))
-                return obj
-        return None
+        obj = v[1](xml_obj_type)
+        obj.obj_type = obj_type
+        obj.set_id(obj_id)
+        obj.node = None
+        obj.origin = "user"
+        return obj
 
     def modified_elems(self):
         return [x for x in self.cib_objects
@@ -2946,7 +2743,7 @@ class CibFactory(object):
     def get_all_obj_set(self):
         return set(self.cib_objects)
 
-    def is_cib_empty(self):
+    def has_no_primitives(self):
         return not self.get_elems_on_type("type:primitive")
 
     def has_cib_changed(self):
@@ -3042,19 +2839,10 @@ class CibFactory(object):
     def create_object(self, *args):
         if not self.is_cib_sane():
             return False
-        cp = CliParser()
-        out = cp.parse2(list(args))
-        return self.create_from_cli(out) is not None
+        return self.create_from_cli(list(args)) is not None
 
-    def set_property_cli(self, cli_list):
-        comments = get_comments(cli_list)
-        head_pl = cli_list[0]
-        obj_type = head_pl[0].lower()
-        pset_id = find_value(head_pl[1], "$id")
-        if pset_id:
-            head_pl[1].remove(["$id", pset_id])
-        else:
-            pset_id = cib_object_map[backtrans[obj_type]][3]
+    def set_property_cli(self, obj_type, node):
+        pset_id = node.get('id') or default_id_for_obj(obj_type)
         obj = self.find_object(pset_id)
         if not obj:
             if not is_id_valid(pset_id):
@@ -3063,21 +2851,20 @@ class CibFactory(object):
             obj = self.new_object(obj_type, pset_id)
             if not obj:
                 return None
-            get_topnode(self.cib_elem, obj.parent_type).append(obj.node)
+            topnode = get_topnode(self.cib_elem, obj.parent_type)
+            obj.node = etree.SubElement(topnode, node.tag)
             obj.origin = "user"
+            obj.node.set('id', pset_id)
+            topnode.append(obj.node)
             self.cib_objects.append(obj)
-        for n, v in head_pl[1]:
-            set_nvpair(obj.node, n, v)
-        if comments and obj.node is not None:
-            stuff_comments(obj.node, comments)
+        copy_nvpairs(obj.node, node)
         obj.updated = True
         return obj
 
-    def add_op(self, cli_list):
+    def add_op(self, node):
         '''Add an op to a primitive.'''
-        head = cli_list[0]
         # does the referenced primitive exist
-        rsc_id = find_value(head[1], "rsc")
+        rsc_id = node.get('rsc')
         rsc_obj = self.find_object(rsc_id)
         if not rsc_obj:
             no_object_err(rsc_id)
@@ -3085,55 +2872,52 @@ class CibFactory(object):
         if rsc_obj.obj_type != "primitive":
             common_err("%s is not a primitive" % rsc_id)
             return None
-        head[1].remove(["rsc", rsc_id])
-        return rsc_obj.add_operation(cli_list)
+
+        # the given node is not postprocessed
+        node, obj_type, obj_id = postprocess_cli(node, id_hint=rsc_obj.obj_id)
+
+        del node.attrib['rsc']
+        return rsc_obj.add_operation(node)
 
     def create_from_cli(self, cli):
         'Create a new cib object from the cli representation.'
-        cli_list = mk_cli_list(cli)
-        if not cli_list:
+        if not self.is_cib_sane():
+            common_debug("create_from_cli (%s): is_cib_sane() failed" % (cli))
             return None
-        head = cli_list[0]
-        obj_type = head[0].lower()
-        obj_id = find_value(head[1], "id")
-        if obj_type != "node" and obj_id and not is_id_valid(obj_id):
-            invalid_id_err(obj_id)
+        if isinstance(cli, basestring) or isinstance(cli, list):
+            elem, obj_type, obj_id = parse_cli_to_xml(cli)
+        else:
+            elem, obj_type, obj_id = postprocess_cli(cli)
+        if elem is None:
+            # FIXME: raise error?
+            common_debug("create_from_cli (%s): failed" % (cli))
             return None
-        if len(cli_list) >= 2 and cli_list[1][0] == "raw":
-            raw_elem = etree.fromstring(cli_list[1][1])
-            return self.create_from_node(raw_elem)
+        common_debug("create_from_cli: %s, %s, %s" % (etree.tostring(elem), obj_type, obj_id))
         if obj_type in olist(constants.nvset_cli_names):
-            return self.set_property_cli(cli_list)
+            return self.set_property_cli(obj_type, elem)
         if obj_type == "op":
-            return self.add_op(cli_list)
+            return self.add_op(elem)
         if obj_type == "node":
             obj = self.find_object(obj_id)
             # make an exception and allow updating nodes
             if obj:
-                self.merge_from_cli(obj, cli_list)
+                self.merge_from_cli(obj, elem)
                 return obj
         obj = self.new_object(obj_type, obj_id)
         if not obj:
             return None
-        node = obj.cli2node(cli_list)
-        return self._add_element(obj, node)
+        return self._add_element(obj, elem)
 
-    def update_from_cli(self, obj, cli_list, method):
+    def update_from_cli(self, obj, node, method):
         '''
         Replace element from the cli intermediate.
         If this is an update and the element is properties, then
         the new properties should be merged with the old.
         Otherwise, users may be surprised.
         '''
-        if len(cli_list) >= 2 and cli_list[1][0] == "raw":
-            idmgmt.remove_xml(obj.node)
-            raw_elem = etree.fromstring(cli_list[1][1])
-            idmgmt.store_xml(raw_elem)
-            return self.update_element(obj, raw_elem)
         if method == 'update' and obj.obj_type in constants.nvset_cli_names:
-            self.merge_from_cli(obj, cli_list)
-            return True
-        return self.update_element(obj, obj.cli2node(cli_list))
+            return self.merge_from_cli(obj, node)
+        return self.update_element(obj, node)
 
     def update_from_node(self, obj, node):
         'Update element from a doc node.'
@@ -3159,16 +2943,15 @@ class CibFactory(object):
         obj.nocli = False  # try again after update
         self._adjust_children(obj)
         if not obj.cli_use_validate():
+            common_debug("update_element: validation failed (%s, %s)" % (obj, etree.tostring(newnode)))
             obj.nocli_warn = True
             obj.nocli = True
         obj.updated = True
         obj.propagate_updated()
         return True
 
-    def merge_from_cli(self, obj, cli_list):
-        node = obj.cli2node(cli_list)
-        if node is None:
-            return
+    def merge_from_cli(self, obj, node):
+        common_debug("merge_from_cli: %s %s" % (obj.obj_type, etree.tostring(node)))
         if obj.obj_type in constants.nvset_cli_names:
             rc = merge_attributes(obj.node, node, "nvpair")
         else:
@@ -3176,21 +2959,23 @@ class CibFactory(object):
         if rc:
             obj.updated = True
             obj.propagate_updated()
+        return True
 
     def _cli_set_update(self, edit_d, mk_set, upd_set, del_set, method):
         '''
         Create/update/remove elements.
-        edit_d is a dict with id keys and cli_list values.
+        edit_d is a dict with id keys and parsed xml values.
         mk_set is a set of ids to be created.
         upd_set is a set of ids to be updated (replaced).
         del_set is a set to be removed.
         method is either replace or update.
         '''
+        common_debug("_cli_set_update: %s, %s, %s" % (mk_set, upd_set, del_set))
         test_l = []
-        for cli in processing_sort_cli([edit_d[x] for x in mk_set]):
+        for cli in processing_sort([edit_d[x] for x in mk_set]):
             obj = self.create_from_cli(cli)
             if not obj:
-                common_debug("create_from_cli '%s' failed" % (cli))
+                common_debug("create_from_cli '%s' failed" % (etree.tostring(cli)))
                 return False
             test_l.append(obj)
         for id in upd_set:
@@ -3198,8 +2983,13 @@ class CibFactory(object):
             if not obj:
                 common_debug("%s not found!" % (id))
                 return False
-            if not self.update_from_cli(obj, edit_d[id], method):
-                common_debug("update_from_cli failed: %s, %s, %s" % (obj, edit_d[id], method))
+            node, _, _ = postprocess_cli(edit_d[id])
+            if node is None:
+                common_debug("postprocess_cli failed: %s" % (id))
+                return False
+            if not self.update_from_cli(obj, node, method):
+                common_debug("update_from_cli failed: %s, %s, %s" %
+                             (obj, etree.tostring(node), method))
                 return False
             test_l.append(obj)
         if not self.delete(*list(del_set)):
@@ -3220,6 +3010,7 @@ class CibFactory(object):
         upd_set is a set of ids to be updated (replaced).
         del_set is a set to be removed.
         '''
+        common_debug("_xml_set_update: %s, %s, %s" % (mk_set, upd_set, del_set))
         test_l = []
         for el in processing_sort([edit_d[x] for x in mk_set]):
             obj = self.create_from_node(el)
@@ -3321,7 +3112,6 @@ class CibFactory(object):
                 child.parent = obj
                 obj.children.append(child)
                 if c != child.node:
-                    common_debug("removing child %s node" % str(child))
                     rmnode(child.node)
                     child.node = c
 
@@ -3329,7 +3119,7 @@ class CibFactory(object):
         obj.node = node
         obj.set_id()
         pnode = get_topnode(self.cib_elem, obj.parent_type)
-        common_debug("append child %s to %s" % (obj.obj_id, pnode.tag))
+        common_debug("_add_element: append child %s to %s" % (obj.obj_id, pnode.tag))
         pnode.append(node)
         self._adjust_children(obj)
         self._redirect_children_constraints(obj)
@@ -3344,19 +3134,20 @@ class CibFactory(object):
     def create_from_node(self, node):
         'Create a new cib object from a document node.'
         if node is None:
+            common_debug("create_from_node: got None")
             return None
         try:
             obj_type = cib_object_map[node.tag][0]
         except KeyError:
+            common_debug("create_from_node: keyerror (%s)" % (node.tag))
             return None
         if is_defaults(node):
             node = get_rscop_defaults_meta_node(node)
             if node is None:
+                common_debug("create_from_node: get_rscop_defaults_meta_node failed")
                 return None
         obj = self.new_object(obj_type, node.get("id"))
         if not obj:
-            return None
-        if not idmgmt.store_xml(node):
             return None
         return self._add_element(obj, node)
 

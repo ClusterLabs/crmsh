@@ -33,6 +33,7 @@ cib_cli_map = {
     "acl_user": "user",
     "acl_role": "role",
     "fencing-topology": "fencing_topology",
+    "tag": "tag"
 }
 container_tags = ("group", "clone", "ms", "master")
 clonems_tags = ("clone", "ms", "master")
@@ -152,11 +153,12 @@ node_default_type = "normal"
 node_attributes_keyw = ("attributes", "utilization")
 shadow_envvar = "CIB_shadow"
 attr_defaults = {
+    "node": {"type": "normal"},
     "resource_set": {"sequential": "true", "require-all": "true"},
     "rule": {"boolean-op": "and"},
 }
-node_type_opt = False
-cib_no_section_rc = 22
+node_type_opt = True
+cib_no_section_rc = 6
 # Graphviz attributes for various CIB elements.
 # Shared for edge and node and graph attributes.
 # Keys are graphviz attributes, values are dicts where keys

@@ -2418,9 +2418,9 @@ unary_op :: defined | not_defined
 
 date_expr :: lt <end>
          | gt <start>
-         | in_range start=<start> end=<end>
-         | in_range start=<start> <duration>
-         | date_spec <date_spec>
+         | in start=<start> end=<end>
+         | in start=<start> <duration>
+         | spec <date_spec>
 duration|date_spec ::
          hours=<value>
          | monthdays=<value>

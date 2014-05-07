@@ -21,17 +21,17 @@ from pacemaker import CrmSchema
 
 def get_attrs(schema, name):
     return {
-        'a': schema.get_elem_attrs(name, 'a'),
-        'r': schema.get_elem_attrs(name, 'r'),
-        'o': schema.get_elem_attrs(name, 'o'),
+        'a': schema.get_elem_attrs(name, 'a'),  # all
+        'r': schema.get_elem_attrs(name, 'r'),  # required
+        'o': schema.get_elem_attrs(name, 'o'),  # optional
     }
 
 
 def get_subs(schema, name):
     return {
-        'a': schema.get_sub_elems(name, 'a'),
-        'r': schema.get_sub_elems(name, 'r'),
-        'o': schema.get_sub_elems(name, 'o'),
+        'a': schema.get_sub_elems(name, 'a'),  # all
+        'r': schema.get_sub_elems(name, 'r'),  # required
+        'o': schema.get_sub_elems(name, 'o'),  # optional
     }
 
 

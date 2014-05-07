@@ -167,6 +167,10 @@ def get_boolean(opt, dflt=False):
     return is_boolean_true(opt)
 
 
+def canonical_boolean(opt):
+    return 'true' if is_boolean_true(opt) else 'false'
+
+
 def keyword_cmp(string1, string2):
     return string1.lower() == string2.lower()
 
@@ -1163,11 +1167,11 @@ def get_cib_attributes(cib_f, tag, attr_l, dflt_l):
 def is_min_pcmk_ver(min_ver, cib_f=None):
     if not constants.pcmk_version:
         if cib_f:
-            constants.pcmk_version = get_cib_property(cib_f, "dc-version", "1.1.1")
+            constants.pcmk_version = get_cib_property(cib_f, "dc-version", "1.1.11")
             common_debug("found pacemaker version: %s in cib: %s" %
                          (constants.pcmk_version, cib_f))
         else:
-            constants.pcmk_version = get_pcmk_version("1.1.1")
+            constants.pcmk_version = get_pcmk_version("1.1.11")
     from distutils.version import LooseVersion
     return LooseVersion(constants.pcmk_version) >= LooseVersion(min_ver)
 

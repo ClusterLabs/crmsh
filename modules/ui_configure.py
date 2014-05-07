@@ -506,7 +506,7 @@ class CibConfig(command.UI):
         rc1 = True
         if not (force or utils.cibadmin_can_patch()):
             rc1 = cib_factory.is_current_cib_equal()
-        rc2 = cib_factory.is_cib_empty() or \
+        rc2 = cib_factory.has_no_primitives() or \
             self._verify(mkset_obj("xml", "changed"), mkset_obj("xml"))
         if rc1 and rc2:
             return cib_factory.commit()

@@ -16,39 +16,25 @@
 #
 # unit tests for cliformat.py
 
-import utils
-import parse
 import cibconfig
 from lxml import etree
 from test_parse import MockValidation
+from nose.tools import eq_
 
 factory = cibconfig.cib_factory
 
 
-def mk_cli_list(cli):
-    'Sometimes we get a string and sometimes a list.'
-    if isinstance(cli, basestring):
-        cp = parse.CliParser()
-        mv = MockValidation()
-        for p in cp.parsers.values():
-            p.validation = mv
-        # what follows looks strange, but the last string actually matters
-        # the previous ones may be comments and are collected by the parser
-        for s in utils.lines2cli(cli):
-            cli_list = cp.parse2(s)
-        return cli_list
-    else:
-        return cli
+def assert_is_not_none(thing):
+    if thing is None:
+        message = "%s was None" % (thing)
+        raise AssertionError(message)
 
 
-def roundtrip(type, name, cli, debug=False):
-    obj = factory.new_object(type, name)
-    assert obj is not None
-    cli_list = mk_cli_list(cli)
-    node = obj.cli2node(cli_list)
-    assert node is not None
-    obj.node = node
-    obj.set_id()
+def roundtrip(cli, debug=False):
+    node, _, _ = cibconfig.parse_cli_to_xml(cli, validation=MockValidation())
+    assert_is_not_none(node)
+    obj = factory.create_from_node(node)
+    assert_is_not_none(obj)
     obj.nocli = True
     xml = obj.repr_cli(format=-1)
     print xml
@@ -61,9 +47,8 @@ def roundtrip(type, name, cli, debug=False):
         print s
         print cli
     assert obj.cli_use_validate()
-    assert s == cli
-    if debug:
-        assert False
+    eq_(s, cli)
+    assert not debug
 
 
 def setup_func():
@@ -77,18 +62,22 @@ def teardown_func():
 
 
 def test_rscset():
-    roundtrip('colocation', 'foo', 'colocation foo inf: a b')
-    roundtrip('order', 'order_2', 'order order_2 Mandatory: [ A B ] C')
-    roundtrip('rsc_template', 'public_vm', 'rsc_template public_vm Xen')
+    roundtrip('colocation foo inf: a b')
+    roundtrip('order order_2 Mandatory: [ A B ] C')
+    roundtrip('rsc_template public_vm Xen')
+
+
+def test_group():
+    factory.create_from_cli('primitive p1 Dummy')
+    roundtrip('group g1 p1 params target-role=Stopped')
 
 
 def test_bnc863736():
-    roundtrip('order', 'order_3', 'order order_3 Mandatory: [ A B ] C symmetrical=true')
+    roundtrip('order order_3 Mandatory: [ A B ] C symmetrical=true')
 
 
 def test_sequential():
-    roundtrip('colocation', 'rsc_colocation-master',
-              'colocation rsc_colocation-master inf: [ vip-master vip-rep sequential="true" ] [ msPostgresql:Master sequential="true" ]')
+    roundtrip('colocation rsc_colocation-master inf: [ vip-master vip-rep sequential="true" ] [ msPostgresql:Master sequential="true" ]')
 
 def test_broken_colo():
     xml = """<rsc_colocation id="colo-2" score="INFINITY">
@@ -101,18 +90,19 @@ def test_broken_colo():
   </resource_set>
 </rsc_colocation>"""
     data = etree.fromstring(xml)
-    obj = factory.new_object('colocation', 'colo-2')
-    assert obj is not None
-    obj.node = data
-    obj.set_id()
+    obj = factory.create_from_node(data)
+    assert_is_not_none(obj)
     data = obj.repr_cli(format=-1)
-    print data
-    assert data == 'colocation colo-2 inf: [ vip1 vip2 sequential="true" ] [ apache:Master sequential="true" ]'
+    eq_('colocation colo-2 inf: [ vip1 vip2 sequential="true" ] [ apache:Master sequential="true" ]', data)
     assert obj.cli_use_validate()
 
 
 def test_comment():
-    roundtrip('primitive', 'd0', "# comment 1\nprimitive d0 ocf:pacemaker:Dummy")
+    roundtrip("# comment 1\nprimitive d0 ocf:pacemaker:Dummy")
+
+
+def test_comment2():
+    roundtrip("# comment 1\n# comment 2\n# comment 3\nprimitive d0 ocf:pacemaker:Dummy")
 
 
 def test_ordering():
@@ -128,14 +118,12 @@ value="Stopped"/> \
   </meta_attributes> \
 </primitive>"""
     data = etree.fromstring(xml)
-    obj = factory.new_object('primitive', 'dummy')
-    assert obj is not None
-    obj.node = data
-    obj.set_id()
+    obj = factory.create_from_node(data)
+    assert_is_not_none(obj)
     data = obj.repr_cli(format=-1)
     print data
     exp = 'primitive dummy ocf:pacemaker:Dummy op start timeout=60 interval=0 op stop timeout=60 interval=0 op monitor interval=60 timeout=30 meta target-role=Stopped'
-    assert data == exp
+    eq_(exp, data)
     assert obj.cli_use_validate()
 
 
@@ -152,14 +140,12 @@ value="Stopped"/> \
   </operations> \
 </primitive>"""
     data = etree.fromstring(xml)
-    obj = factory.new_object('primitive', 'dummy2')
-    assert obj is not None
-    obj.node = data
-    obj.set_id()
+    obj = factory.create_from_node(data)
+    assert_is_not_none(obj)
     data = obj.repr_cli(format=-1)
     print data
     exp = 'primitive dummy2 ocf:pacemaker:Dummy meta target-role=Stopped op start timeout=60 interval=0 op stop timeout=60 interval=0 op monitor interval=60 timeout=30'
-    assert data == exp
+    eq_(exp, data)
     assert obj.cli_use_validate()
 
 def test_fencing():
@@ -172,13 +158,30 @@ target="ha-two"></fencing-level>
 target="ha-one"></fencing-level>
   </fencing-topology>"""
     data = etree.fromstring(xml)
-    obj = factory.new_object('fencing_topology', 'st1')
-    assert obj is not None
-    obj.node = data
-    obj.set_id()
+    obj = factory.create_from_node(data)
+    assert_is_not_none(obj)
     data = obj.repr_cli(format=-1)
     print data
     exp = 'fencing_topology st1'
-    assert data == exp
+    eq_(exp, data)
     assert obj.cli_use_validate()
 
+
+def test_master():
+    xml = """<master id="ms-1">
+    <crmsh-ref id="dummy3" />
+    </master>
+    """
+    data = etree.fromstring(xml)
+    factory.create_from_cli("primitive dummy3 ocf:pacemaker:Dummy")
+    data, _, _ = cibconfig.postprocess_cli(data)
+    print "after postprocess:", etree.tostring(data)
+    obj = factory.create_from_node(data)
+    assert_is_not_none(obj)
+    assert obj.cli_use_validate()
+
+
+def test_param_rules():
+    roundtrip('primitive foo Dummy ' +
+              'params rule inf: #uname eq wizbang laser=yes ' +
+              'params rule inf: #uname eq gandalf staff=yes')

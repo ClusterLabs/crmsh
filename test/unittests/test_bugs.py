@@ -41,6 +41,7 @@ def test_bug41660_1():
     assert obj is not None
     obj.node = data
     obj.set_id()
+    print etree.tostring(obj.node)
     data = obj.repr_cli(format=-1)
     print data
     exp = 'primitive bug41660 ocf:pacemaker:Dummy meta target-role=Stopped'
@@ -50,7 +51,6 @@ def test_bug41660_1():
     def mock_commit_rsc(node):
         xmlutil.xml_processnodes(node, xmlutil.is_emptynvpairs, xmlutil.rmnodes)
         xmlutil.xml_processnodes(node, xmlutil.is_emptyops, xmlutil.rmnodes)
-        print etree.tostring(node)
         assert 'name="target-role" value="Started"' in etree.tostring(node)
         return True
 
