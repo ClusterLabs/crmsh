@@ -507,7 +507,10 @@ class RunStep(object):
 
     def out(self, fmt, *args):
         self.flush()
-        print fmt % args
+        if args:
+            print fmt % args
+        else:
+            print fmt
 
     def error(self, fmt, *args):
         self.flush()
