@@ -298,7 +298,7 @@ class RuleParser(BaseParser):
 
     def match_attr_list(self, name, tag):
         """
-        matches <name> [$id=<id>] <n>=<v> <n>=<v> ... | $id-ref=<id-ref>
+        matches <name> [$id=<id>] [<score>:] <n>=<v> <n>=<v> ... | $id-ref=<id-ref>
         """
         from cibconfig import cib_factory
 
@@ -312,9 +312,12 @@ class RuleParser(BaseParser):
                 return r
             else:
                 xmlid = self.matched(2)
+        score = None
+        if self.try_match(self._SCORE_RE):
+            score = self.matched(1)
         rules = self.match_rules()
         values = self.match_nvpairs(minpairs=1)
-        return xmlbuilder.attributes(tag, rules, values, xmlid)
+        return xmlbuilder.attributes(tag, rules, values, xmlid=xmlid, score=score)
 
     def match_attr_lists(self, name_map):
         """
@@ -345,9 +348,10 @@ class RuleParser(BaseParser):
                 rule.set('role', self.matched(1))
             if idref:
                 continue
-            self.match(self._SCORE_RE,
-                       errmsg="Expected score, (<number>|<attribute>|[+-]inf):")
-            rule.set(*self.validate_score(self.matched(1)))
+            if self.try_match(self._SCORE_RE):
+                rule.set(*self.validate_score(self.matched(1)))
+            else:
+                rule.set('score', 'INFINITY')
             boolop, exprs = self.match_rule_expression()
             if boolop and not keyword_cmp(boolop, 'and'):
                 rule.set('boolean-op', boolop)

@@ -71,7 +71,7 @@ def set_date_expression(expr, tag, values):
     return expr
 
 
-def attributes(typename, rules, values, xmlid=None):
+def attributes(typename, rules, values, xmlid=None, score=None):
     """
     Represents a set of name-value pairs, tagged with
     a container typename and an optional xml id.
@@ -87,6 +87,8 @@ def attributes(typename, rules, values, xmlid=None):
     e = new(typename)
     if xmlid:
         e.set("id", xmlid)
+    if score:
+        e.set("score", score)
     for rule in rules:
         e.append(rule)
     for name, value in values:

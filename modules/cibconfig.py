@@ -978,6 +978,10 @@ class CibObject(object):
         if cib_factory.is_id_refd(node.tag, node_id):
             ret += "%s " % (nvpair_format("$id", node_id))
 
+        score = node.get("score")
+        if score:
+            ret += "%s: " % (clidisplay.score(score))
+
         for c in node.iterchildren():
             if c.tag == "rule":
                 ret += "%s %s " % (clidisplay.keyword("rule"), cli_rule(c, cib_factory.is_id_refd))

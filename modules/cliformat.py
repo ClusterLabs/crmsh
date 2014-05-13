@@ -194,6 +194,26 @@ def get_score(node):
     return score
 
 
+def cli_rule_score(node):
+    score = node.get("score")
+    if score == "INFINITY":
+        return None
+    return get_score(node)
+
+
+def cli_exprs(node):
+    bool_op = node.get("boolean-op")
+    if not bool_op:
+        bool_op = "and"
+    exp = []
+    for c in node.iterchildren():
+        if c.tag == "date_expression":
+            exp.append(date_exp2cli(c))
+        elif c.tag == "expression":
+            exp.append(exp2cli(c))
+    return (" %s " % clidisplay.keyword(bool_op)).join(exp)
+
+
 def cli_rule(node, is_id_refd):
     s = []
     node_id = node.get("id")
@@ -206,18 +226,11 @@ def cli_rule(node, is_id_refd):
     rsc_role = node.get("role")
     if rsc_role:
         s.append('$role="%s"' % rsc_role)
-    s.append("%s:" % clidisplay.score(get_score(node)))
-    bool_op = node.get("boolean-op")
-    if not bool_op:
-        bool_op = "and"
-    exp = []
-    for c in node.iterchildren():
-        if c.tag == "date_expression":
-            exp.append(date_exp2cli(c))
-        elif c.tag == "expression":
-            exp.append(exp2cli(c))
-    expression = (" %s " % clidisplay.keyword(bool_op)).join(exp)
-    return "%s %s" % (' '.join(s), expression)
+    score = cli_rule_score(node)
+    if score:
+        s.append("%s:" % (clidisplay.score(score)))
+    s.append(cli_exprs(node))
+    return ' '.join(s)
 
 
 def mkrscrole(node, n):

@@ -348,7 +348,7 @@ class TestCliParser(unittest.TestCase):
 
         # missing score
         out = self.parser.parse('property rule #uname eq node1 stonith-enabled=no')
-        self.assertFalse(out)
+        self.assertEqual(['INFINITY'], out.xpath('//@score'))
 
         out = self.parser.parse('property rule 10: #uname eq node1 stonith-enabled=no')
         self.assertEqual(['no'], out.xpath('//nvpair[@name="stonith-enabled"]/@value'))
