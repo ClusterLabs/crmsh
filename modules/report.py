@@ -1288,7 +1288,7 @@ class Report(Singleton):
         Show all events.
         '''
         rsc_l = self.cibnotcloned_l
-        rsc_l += ["%s(:[0-9]+)?" % x for x in self.cibcloned_l]
+        rsc_l += ["%s(?::[0-9]+)?" % x for x in self.cibcloned_l]
         all_re_l = self.build_re("resource", rsc_l) + \
             self.build_re("node", self.cibnode_l) + \
             self.build_re("events", [])
@@ -1343,7 +1343,7 @@ class Report(Singleton):
         exp_cloned_l = []
         for rsc in expanded_l:
             if rsc in self.cibcloned_l:
-                exp_cloned_l.append("%s(:[0-9]+)?" % rsc)
+                exp_cloned_l.append("%s(?::[0-9]+)?" % rsc)
             else:
                 exp_cloned_l.append(rsc)
         rsc_re_l = self.build_re("resource", exp_cloned_l)
