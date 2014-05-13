@@ -2159,8 +2159,10 @@ Usage:
 ...............
 node [$id=<id>] <uname>[:<type>]
   [description=<description>]
-  [attributes <param>=<value> [<param>=<value>...]]
-  [utilization <param>=<value> [<param>=<value>...]]
+  [attributes [$id=<id>] [<score>:] [rule...]
+    <param>=<value> [<param>=<value>...]] | $id-ref=<ref>
+  [utilization [$id=<id>] [<score>:] [rule...]
+    <param>=<value> [<param>=<value>...]] | $id-ref=<ref>
 
 type :: normal | member | ping
 ...............
@@ -2205,7 +2207,8 @@ primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>}
   [operations id_spec]
     [op op_type [<attribute>=<value>...] ...]
 
-attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
+attr_list :: [$id=<id>] [<score>:] [rule...]
+             <attr>=<val> [<attr>=<val>...]] | $id-ref=<id>
 id_spec :: $id=<id> | $id-ref=<id>
 op_type :: start | stop | monitor
 ...............
@@ -2232,6 +2235,12 @@ primitive r0 ocf:linbit:drbd \
 
 primitive xen0 @vm_scheme1 \
   params xmfile=/etc/xen/vm/xen0
+
+primitive mySpecialRsc Special \
+  params 3: rule #uname eq node1 interface=eth1 \
+  params 2: rule #uname eq node2 interface=eth2 port=8888 \
+  params 1: interface=eth0 port=9999
+
 ...............
 
 [[cmdhelp_configure_monitor,add monitor operation to a primitive]]
@@ -2572,11 +2581,12 @@ Set the cluster (`crm_config`) options.
 
 Usage:
 ...............
-property [$id=<set_id>] <option>=<value> [<option>=<value> ...]
+property [$id=<set_id>] [rule ...] <option>=<value> [<option>=<value> ...]
 ...............
 Example:
 ...............
 property stonith-enabled=true
+property rule date spec years=2014 stonith-enabled=false
 ...............
 
 [[cmdhelp_configure_rsc_defaults,set resource defaults]]
@@ -2586,7 +2596,7 @@ Set defaults for the resource meta attributes.
 
 Usage:
 ...............
-rsc_defaults [$id=<set_id>] <option>=<value> [<option>=<value> ...]
+rsc_defaults [$id=<set_id>] [rule ...] <option>=<value> [<option>=<value> ...]
 ...............
 Example:
 ...............
@@ -2710,7 +2720,7 @@ Set defaults for the operations meta attributes.
 
 Usage:
 ...............
-op_defaults [$id=<set_id>] <option>=<value> [<option>=<value> ...]
+op_defaults [$id=<set_id>] [rule ...] <option>=<value> [<option>=<value> ...]
 ...............
 Example:
 ...............
