@@ -18,16 +18,14 @@
 import shlex
 import re
 from lxml import etree
-import vars
+import constants
 from ra import disambiguate_ra_type, ra_type_validate
-from schema import Schema
+import schema
 from utils import keyword_cmp, verify_boolean, lines2cli
-from utils import get_boolean, olist, is_boolean_true
+from utils import get_boolean, olist, canonical_boolean
 from msg import common_err, syntax_err
-from cibobjects import Primitive, RscTemplate, Group, Clone, Master
-from cibobjects import Location, Colocation, Order
-from cibobjects import Monitor, Node, Property, RscTicket, Tag
-from cibobjects import FencingTopology, ACLRight, Role, User, RawXML
+import xmlbuilder
+import xmlutil
 
 
 class ParseError(Exception):
@@ -40,7 +38,7 @@ class ParseError(Exception):
 
 class BaseParser(object):
     _NVPAIR_RE = re.compile(r'([^=]+)=(.+)$')
-    _IDENT_RE = re.compile(r'([a-z0-9_#$-].*)$', re.IGNORECASE)
+    _IDENT_RE = re.compile(r'([a-z0-9_#$-][^=]*)$', re.IGNORECASE)
     _DISPATCH_RE = re.compile(r'[a-z0-9_]+$', re.IGNORECASE)
     _DESC_RE = re.compile(r'description=(.+)$', re.IGNORECASE)
     _RESOURCE_RE = re.compile(r'([a-z_#$][^=]*)$', re.IGNORECASE)
@@ -170,13 +168,29 @@ class BaseParser(object):
         self._lastmatch = tok
         return tok
 
+    def match_nvpairs_bykey(self, valid_keys, minpairs=1):
+        """
+        matches string of p=v tokens, but only
+        if p is in valid_keys
+        """
+        _KEY_RE = re.compile(r'(%s)=(.+)$' % '|'.join(valid_keys))
+        ret = []
+        while self.try_match(_KEY_RE):
+            ret.append([self.matched(1), self.matched(2)])
+        if len(ret) < minpairs:
+            if minpairs == 1:
+                self.err("Expected at least one name-value pair")
+            else:
+                self.err("Expected at least %d name-value pairs" % (minpairs))
+        return ret
+
     def match_nvpairs(self, minpairs=1):
         """
         Matches string of p=v tokens
         """
         ret = []
         while self.try_match(self._NVPAIR_RE):
-            ret.append((self.matched(1), self.matched(2)))
+            ret.append([self.matched(1), self.matched(2)])
         if len(ret) < minpairs:
             if minpairs == 1:
                 self.err("Expected at least one name-value pair")
@@ -229,36 +243,17 @@ class BaseParser(object):
             return m
         return self.try_match(self._ID_NEW_RE)
 
-    def match_split(self, sep=':', order=None):
+    def match_split(self):
         """
-        matches *:*:*...
-        order is an optional list of indices (0-based),
-        order (0, 1, 2) looks for a max-three split, and returns
-        (0, 1, 2) if string splits into (0, 1, 2)
-        (0, 1, None) if string splits into (0, 1)
-        (0, None, None) if string splits into (0)
-        order (2, 1, 0) returns
-        (foo, bar, baz) if string splits into (foo, bar, baz)
-        (None, foo, bar) if string splits into (foo, bar)
-        (None, None, foo) if string splits into (foo)
+        matches value[:value]
         """
-        if not order:
-            if not self.current_token():
-                self.err("Expected val[%sval ...]" % (sep))
-            return self.match_any().split(sep)
         if not self.current_token():
-            fmt = "Expected val[%sval ...] (max %d parts)"
-            self.err(fmt % (sep, len(order)))
-        sp = self.current_token().split(sep)
-        if len(sp) > len(order):
-            fmt = "Expected val[%sval ...] (max %d parts)"
-            self.err(fmt % (sep, len(order)))
-        try:
-            while len(sp) < len(order):
-                sp.insert(order.index(len(sp)), None)
-        except ValueError:
-            self.err("Internal error, please file a bug report (order = %s)" %
-                     (repr(order)))
+            self.err("Expected value[:value]")
+        sp = self.current_token().split(':')
+        if len(sp) > 2:
+            self.err("Expected value[:value]")
+        while len(sp) < 2:
+            sp.append(None)
         self.match_any()
         return sp
 
@@ -284,230 +279,85 @@ class BaseParser(object):
             return self.matched(1)
         return None
 
-
-class NodeParser(BaseParser):
-    _UNAME_RE = re.compile(r'([^:]+)(:(normal|member|ping))?$', re.IGNORECASE)
-
-    def can_parse(self):
-        return ('node',)
-
-    def match_arguments(self, out, names):
-        """matches [<name> <n>=<v> <n>=<v> ...]
-        adds the nvpairs to dicts named out.<name>
-        """
-        names = olist(names)
-        while self.has_tokens() and (self.current_token() in names):
-            for name in names:
-                for n, v in self.try_match_nvpairs(name):
-                    getattr(out, name)[n] = v
-
-    def parse(self, cmd):
-        """
-        node [<id>:|$id=<id>] <uname>[:<type>]
-          [description=<description>]
-          [attributes <param>=<value> [<param>=<value>...]]
-          [utilization <param>=<value> [<param>=<value>...]]
-
-        type :: normal | member | ping
-        """
-        self.begin(cmd, min_args=1)
-        self.match('node')
-        out = Node()
-        if self.try_match_initial_id():
-            out.id = self.matched(1)
-        self.match(self._UNAME_RE, errmsg="Expected uname[:type]")
-        out.uname, out.type = self.matched(1), self.matched(3)
-        out.description = self.try_match_description()
-        self.match_arguments(out, ('attributes', 'utilization'))
-        return out
+    def match_until(self, end_token):
+        tokens = []
+        while self.current_token() is not None and self.current_token() != end_token:
+            tokens.append(self.match_any())
+        return tokens
 
 
-class ResourceParser(BaseParser):
-    _TEMPLATE_RE = re.compile(r'@(.+)$')
-    _RA_TYPE_RE = re.compile(r'[a-z0-9_:-]+$', re.IGNORECASE)
-    _OPTYPE_RE = re.compile(r'(%s)$' % ('|'.join(vars.op_cli_names)), re.IGNORECASE)
-
-    def can_parse(self):
-        return ('primitive', 'group', 'clone', 'ms', 'master', 'rsc_template')
-
-    def match_ra_type(self, out):
-        "[<class>:[<provider>:]]<type>"
-        if not self.current_token():
-            self.err("Expected resource type")
-        cpt = self.validation.class_provider_type(self.current_token())
-        if not cpt:
-            self.err("Unknown resource type")
-        self.match_any()
-        out.ra_class, out.ra_type = cpt[0], cpt[2]
-        if out.ra_class == 'ocf':
-            out.ra_provider = cpt[1]
-
-    def match_op(self, out):
-        "op <optype> [<n>=<v> ...]"
-        self.match('op')
-        op_type = self.match(self._OPTYPE_RE, errmsg="Expected operation type")
-        op_attrs = self.match_nvpairs(minpairs=0)
-        has_interval = False
-        for kv in op_attrs:
-            if kv[0].lower() == 'interval':
-                has_interval = True
-                break
-        if not has_interval:
-            op_attrs.append(('interval', '0'))
-        out.operations.append((op_type, op_attrs))
-
-    def match_operations(self, out):
-        self.match('operations')
-        self.match_idspec()
-        out.operations.append((self.matched(1).lower(), self.matched(2)))
-        if self.matched(1).lower() == '$id':
-            self.match_op(out)  # require at least one op
-            while self.has_tokens() and self.current_token().lower() == 'op':
-                self.match_op(out)
-
-    def match_attr_list(self, name, out):
-        attr_list = self.try_match_nvpairs(name)
-        if not attr_list:
-            return False
-        # handle $id and $id-ref
-        attr0 = attr_list[0][0].lower()
-        if attr0 == '$id-ref':
-            if len(attr_list) > 1:
-                self.err("Only a single $id-ref is allowed")
-        elif attr0 == '$id':
-            if len(attr_list) < 2:
-                self.err("At least one param is required")
-        for n, v in attr_list:
-            getattr(out, name)[n] = v
-        return True
-
-    def match_arguments(self, out, names):
-        """
-        [<name> attr_list]
-        [operations id_spec]
-        [op op_type [<attribute>=<value> ...] ...]
-
-        attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
-        id_spec :: $id=<id> | $id-ref=<id>
-        op_type :: start | stop | monitor
-        """
-        names = olist(names)
-        while self.has_tokens() and self.current_token() in names:
-            t = self.current_token()
-            if t == 'operations':
-                self.match_operations(out)
-            elif t.lower() == 'op':
-                self.match_op(out)
-            else:
-                for name in names:
-                    if self.match_attr_list(name, out):
-                        break
-
-    def parse(self, cmd):
-        return self.begin_dispatch(cmd, min_args=2)
-
-    def _primitive_or_template(self):
-        """
-        primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>]
-          [params attr_list]
-          [meta attr_list]
-          [utilization attr_list]
-          [operations id_spec]
-          [op op_type [<attribute>=<value> ...] ...]
-
-        attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val> ...] | $id-ref=<id>
-        id_spec :: $id=<id> | $id-ref=<id>
-        op_type :: start | stop | monitor
-        """
-        t = self.matched(0).lower()
-        if t == 'primitive':
-            out = Primitive()
-        else:
-            out = RscTemplate()
-        out.id = self.match_identifier()
-        if t == 'primitive' and self.try_match(self._TEMPLATE_RE):
-            out.template = self.matched(1)
-        else:
-            self.match_ra_type(out)
-        out.description = self.try_match_description()
-        self.match_arguments(out, ('params', 'meta', 'utilization', 'operations', 'op'))
-        return out
-
-    parse_primitive = _primitive_or_template
-    parse_rsc_template = _primitive_or_template
-
-    def _master_or_clone(self):
-        if self.matched(0).lower() == 'clone':
-            out = Clone()
-        else:
-            out = Master()
-        out.id = self.match_identifier()
-        out.children = [self.match_resource()]
-        out.description = self.try_match_description()
-        self.match_arguments(out, ('params', 'meta'))
-        return out
-
-    parse_master = _master_or_clone
-    parse_ms = _master_or_clone
-    parse_clone = _master_or_clone
-
-    def _try_group_resource(self):
-        t = self.current_token()
-        if (not t) or ('=' in t) or (t.lower() in ('params', 'meta')):
-            return None
-        return self.match_any()
-
-    def parse_group(self):
-        out = Group()
-        out.id = self.match_identifier()
-        while self._try_group_resource():
-            child = self.lastmatch()
-            if child in out.children:
-                self.err("child %s listed more than once in group %s" %
-                         (child, out.id))
-            out.children.append(child)
-        out.description = self.try_match_description()
-        self.match_arguments(out, ('params', 'meta'))
-        return out
-
-
-class ConstraintParser(BaseParser):
+class RuleParser(BaseParser):
+    """
+    Adds matchers to parse rule expressions.
+    """
     _SCORE_RE = re.compile(r"([^:]+):$")
     _ROLE_RE = re.compile(r"\$?role=(.+)$", re.IGNORECASE)
-    _ROLE2_RE = re.compile(r"role=(.+)$", re.IGNORECASE)
-    _BOOLOP_RE = re.compile(r'(%s)$' % ('|'.join(vars.boolean_ops)), re.IGNORECASE)
-    _UNARYOP_RE = re.compile(r'(%s)$' % ('|'.join(vars.unary_ops)), re.IGNORECASE)
+    _BOOLOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.boolean_ops)), re.IGNORECASE)
+    _UNARYOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.unary_ops)), re.IGNORECASE)
     _BINOP_RE = None
 
-    def can_parse(self):
-        return ('location', 'colocation', 'collocation', 'order', 'rsc_ticket')
+    def match_attr_list(self, name, tag):
+        """
+        matches <name> [$id=<id>] [<score>:] <n>=<v> <n>=<v> ... | $id-ref=<id-ref>
+        """
+        from cibconfig import cib_factory
 
-    def parse(self, cmd):
-        return self.begin_dispatch(cmd, min_args=2)
+        self.match(name)
+        xmlid = None
+        if self.try_match_idspec():
+            if self.matched(1) == '$id-ref':
+                r = xmlbuilder.new(tag)
+                ref = cib_factory.resolve_id_ref(name, self.matched(2))
+                r.set('id-ref', ref)
+                return r
+            else:
+                xmlid = self.matched(2)
+        score = None
+        if self.try_match(self._SCORE_RE):
+            score = self.matched(1)
+        rules = self.match_rules()
+        values = self.match_nvpairs(minpairs=1)
+        return xmlbuilder.attributes(tag, rules, values, xmlid=xmlid, score=score)
 
-    def match_rules(self, out):
+    def match_attr_lists(self, name_map):
+        """
+        generator which matches attr_lists
+        name_map: maps CLI name to XML name
+        """
+        while self.try_match('|'.join(name_map.keys())):
+            name = self.matched(0).lower()
+            self.rewind()
+            yield self.match_attr_list(name, name_map[name])
+
+    def match_rules(self):
         '''parse rule definitions'''
+        from cibconfig import cib_factory
+
+        rules = []
         while self.try_match('rule'):
-            head = []
-            rule = ['rule', head]
+            rule = xmlbuilder.new('rule')
+            rules.append(rule)
             idref = False
             if self.try_match_idspec():
-                head.append([self.matched(1), self.matched(2)])
-                if self.matched(1) == '$id-ref':
+                idtyp, idval = self.matched(1)[1:], self.matched(2)
+                if idtyp == 'id-ref':
+                    idval = cib_factory.resolve_id_ref('rule', idval)
                     idref = True
+                rule.set(idtyp, idval)
             if self.try_match(self._ROLE_RE):
-                head.append(['$role', self.matched(1)])
+                rule.set('role', self.matched(1))
             if idref:
-                out.rules.append(rule)
                 continue
-            self.match(self._SCORE_RE)
-            score = self.validate_score(self.matched(1))
-            head.append(score)
-            boolop, expr = self.match_rule_expression()
+            if self.try_match(self._SCORE_RE):
+                rule.set(*self.validate_score(self.matched(1)))
+            else:
+                rule.set('score', 'INFINITY')
+            boolop, exprs = self.match_rule_expression()
             if boolop and not keyword_cmp(boolop, 'and'):
-                head.append(['boolean-op', boolop])
-            out.rules.append(rule)
-            out.rules.extend(expr)
+                rule.set('boolean-op', boolop)
+            for expr in exprs:
+                rule.append(expr)
+        return rules
 
     def match_rule_expression(self):
         """
@@ -548,50 +398,72 @@ class ConstraintParser(BaseParser):
 
     def _match_simple_exp(self):
         if self.try_match('date'):
-            return ['date_expression', self.match_date()]
+            return self.match_date()
         elif self.try_match(self._UNARYOP_RE):
             unary_op = self.matched(1)
             attr = self.match_identifier()
-            return ['expression', [['operation', unary_op], ['attribute', attr]]]
+            return xmlbuilder.new('expression', operation=unary_op, attribute=attr)
         else:
             attr = self.match_identifier()
             if not self._BINOP_RE:
                 self._BINOP_RE = re.compile(r'((%s):)?(%s)$' % (
                     '|'.join(self.validation.expression_types()),
-                    '|'.join(vars.binary_ops)), re.IGNORECASE)
+                    '|'.join(constants.binary_ops)), re.IGNORECASE)
             self.match(self._BINOP_RE)
             optype = self.matched(2)
             binop = self.matched(3)
             val = self.match_any()
-            ret = ['expression', [['attribute', attr]]]
-            if optype:
-                ret[1].extend([['type', optype], ['operation', binop], ['value', val]])
-            else:
-                ret[1].extend([['operation', binop], ['value', val]])
-            return ret
+            node = xmlbuilder.new('expression',
+                                  operation=binop,
+                                  attribute=attr,
+                                  value=val)
+            xmlbuilder.maybe_set(node, 'type', optype)
+            return node
 
     def match_date(self):
         """
-        returns: [['operation', <op>], (n, v), (n, v)]
+        returns for example:
+        <date_expression id="" operation="op">
+        <date_spec hours="9-16"/>
+        </date_expression>
         """
-        self.match('(%s)$' % ('|'.join(self.validation.date_ops())))
+        node = xmlbuilder.new('date_expression')
+
+        date_ops = self.validation.date_ops()
+        # spec -> date_spec
+        if 'date_spec' in date_ops:
+            date_ops.append('spec')
+        # in -> in_range
+        if 'in_range' in date_ops:
+            date_ops.append('in')
+        self.match('(%s)$' % ('|'.join(date_ops)))
         op = self.matched(1)
-        if op in olist(vars.simple_date_ops):
+        opmap = {'in': 'in_range', 'spec': 'date_spec'}
+        node.set('operation', opmap.get(op, op))
+        if op in olist(constants.simple_date_ops):
+            # lt|gt <value>
             val = self.match_any()
             if keyword_cmp(op, 'lt'):
-                return [['operation', op], ('end', val)]
-            return [['operation', op], ('start', val)]
-        elif op == 'in_range':
-            nv = self.match_nvpairs(minpairs=2)
-            if not keyword_cmp(nv[0][0], 'start'):
-                self.err("Expected start=<start>")
-            return [['operation', op]] + nv
-        else:  # lt, gt, date_spec, ?
-            return [['operation', op]] + self.match_nvpairs(minpairs=1)
+                node.set('end', val)
+            else:
+                node.set('start', val)
+            return node
+        elif op in ('in_range', 'in'):
+            # date in start=<start> end=<end>
+            # date in start=<start> <duration>
+            valid_keys = list(constants.in_range_attrs) + constants.date_spec_names
+            vals = self.match_nvpairs_bykey(valid_keys, minpairs=2)
+            return xmlbuilder.set_date_expression(node, 'duration', vals)
+        elif op in ('date_spec', 'spec'):
+            valid_keys = constants.date_spec_names
+            vals = self.match_nvpairs_bykey(valid_keys, minpairs=1)
+            return xmlbuilder.set_date_expression(node, 'date_spec', vals)
+        else:
+            self.err("Unknown date operation '%s', please upgrade crmsh" % (op))
 
     def validate_score(self, score, noattr=False):
-        if not noattr and score in olist(vars.score_types):
-            return vars.score_types[score.lower()]
+        if not noattr and score in olist(constants.score_types):
+            return constants.score_types[score.lower()]
         elif re.match("^[+-]?(inf(inity)?|INF(INITY)?|[0-9]+)$", score):
             score = re.sub("inf(inity)?|INF(INITY)?", "INFINITY", score)
             return ["score", score]
@@ -604,11 +476,224 @@ class ConstraintParser(BaseParser):
         else:
             return ['score-attribute', score]
 
-    def match_until(self, end_token):
-        tokens = []
-        while self.current_token() is not None and self.current_token() != end_token:
-            tokens.append(self.match_any())
-        return tokens
+
+class NodeParser(RuleParser):
+    _UNAME_RE = re.compile(r'([^:]+)(:(normal|member|ping))?$', re.IGNORECASE)
+
+    def can_parse(self):
+        return ('node',)
+
+    def parse(self, cmd):
+        """
+        node [<id>:|$id=<id>] <uname>[:<type>]
+          [description=<description>]
+          [attributes <param>=<value> [<param>=<value>...]]
+          [utilization <param>=<value> [<param>=<value>...]]
+
+        type :: normal | member | ping
+        """
+        self.begin(cmd, min_args=1)
+        self.match('node')
+        out = xmlbuilder.new('node')
+        xmlbuilder.maybe_set(out, "id", self.try_match_initial_id() and self.matched(1))
+        self.match(self._UNAME_RE, errmsg="Expected uname[:type]")
+        out.set("uname", self.matched(1))
+        nodetype = self.matched(3)
+        if not constants.node_type_opt and not nodetype:
+            nodetype = constants.node_default_type
+        xmlbuilder.maybe_set(out, "type", nodetype)
+        xmlbuilder.maybe_set(out, "description", self.try_match_description())
+        for attr_list in self.match_attr_lists({'attributes': 'instance_attributes',
+                                                'utilization': 'utilization'}):
+            out.append(attr_list)
+        return out
+
+
+class ResourceParser(RuleParser):
+    _TEMPLATE_RE = re.compile(r'@(.+)$')
+    _RA_TYPE_RE = re.compile(r'[a-z0-9_:-]+$', re.IGNORECASE)
+    _OPTYPE_RE = re.compile(r'(%s)$' % ('|'.join(constants.op_cli_names)), re.IGNORECASE)
+
+    def can_parse(self):
+        return ('primitive', 'group', 'clone', 'ms', 'master', 'rsc_template')
+
+    def match_ra_type(self, out):
+        "[<class>:[<provider>:]]<type>"
+        if not self.current_token():
+            self.err("Expected resource type")
+        cpt = self.validation.class_provider_type(self.current_token())
+        if not cpt:
+            self.err("Unknown resource type")
+        self.match_any()
+        xmlbuilder.maybe_set(out, 'class', cpt[0])
+        xmlbuilder.maybe_set(out, 'provider', cpt[1])
+        xmlbuilder.maybe_set(out, 'type', cpt[2])
+
+    def match_op(self, out, pfx='op'):
+        """
+        op <optype> [<n>=<v> ...]
+
+        to:
+          <op name="monitor" timeout="30" interval="10" id="p_mysql-monitor-10">
+            <instance_attributes id="p_mysql-monitor-10-instance_attributes">
+              <nvpair name="depth" value="0" id="p_mysql-monitor-10-instance_attributes-depth"/>
+            </instance_attributes>
+          </op>
+        """
+        self.match('op')
+        op_type = self.match(self._OPTYPE_RE, errmsg="Expected operation type")
+        all_attrs = self.match_nvpairs(minpairs=0)
+        node = xmlbuilder.new('op', name=op_type)
+        if not any(k.lower() == 'interval' for k, _ in all_attrs):
+            all_attrs.append(('interval', '0'))
+        valid_attrs = set(self.validation.op_attributes())
+        inst_attrs = None
+        for n, v in all_attrs:
+            if n in valid_attrs:
+                node.set(n, v)
+
+        for n, v in all_attrs:
+            if n not in valid_attrs:
+                if inst_attrs is None:
+                    inst_attrs = xmlbuilder.child(node, 'instance_attributes')
+                inst_attrs.append(xmlbuilder.nvpair(n, v))
+        out.append(node)
+
+    def match_operations(self, out, match_id):
+        from cibconfig import cib_factory
+
+        def is_op():
+            return self.has_tokens() and self.current_token().lower() == 'op'
+        if match_id:
+            self.match('operations')
+        node = xmlbuilder.child(out, 'operations')
+        if match_id:
+            self.match_idspec()
+            match_id = self.matched(1)[1:].lower()
+            idval = self.matched(2)
+            if match_id == 'id-ref':
+                idval = cib_factory.resolve_id_ref('operations', idval)
+
+            node.set(match_id, idval)
+
+        # The ID assignment skips the operations node if possible,
+        # so we need to pass the prefix (id of the owner node)
+        # to match_op
+        pfx = out.get('id') or 'op'
+
+        while is_op():
+            self.match_op(node, pfx=pfx)
+
+    def match_arguments(self, out, name_map):
+        """
+        [<name> attr_list]
+        [operations id_spec]
+        [op op_type [<attribute>=<value> ...] ...]
+
+        attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
+        id_spec :: $id=<id> | $id-ref=<id>
+        op_type :: start | stop | monitor
+        """
+        names = olist(name_map.keys())
+        oplist = olist([op for op in name_map if op.lower() in ('operations', 'op')])
+        for op in oplist:
+            del name_map[op]
+        while self.has_tokens() and self.current_token() in names:
+            t = self.current_token().lower()
+            if t in oplist:
+                self.match_operations(out, t == 'operations')
+            else:
+                for attr_list in self.match_attr_lists(name_map):
+                    out.append(attr_list)
+
+    def parse(self, cmd):
+        return self.begin_dispatch(cmd, min_args=2)
+
+    def _primitive_or_template(self):
+        """
+        primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>]
+          [params attr_list]
+          [meta attr_list]
+          [utilization attr_list]
+          [operations id_spec]
+          [op op_type [<attribute>=<value> ...] ...]
+
+        attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val> ...] | $id-ref=<id>
+        id_spec :: $id=<id> | $id-ref=<id>
+        op_type :: start | stop | monitor
+        """
+        t = self.matched(0).lower()
+        if t == 'primitive':
+            out = xmlbuilder.new('primitive')
+        else:
+            out = xmlbuilder.new('template')
+        out.set('id', self.match_identifier())
+        if t == 'primitive' and self.try_match(self._TEMPLATE_RE):
+            out.set('template', self.matched(1))
+        else:
+            self.match_ra_type(out)
+        xmlbuilder.maybe_set(out, 'description', self.try_match_description())
+        self.match_arguments(out, {'params': 'instance_attributes',
+                                   'meta': 'meta_attributes',
+                                   'utilization': 'utilization',
+                                   'operations': 'operations',
+                                   'op': 'op'})
+        return out
+
+    parse_primitive = _primitive_or_template
+    parse_rsc_template = _primitive_or_template
+
+    def _master_or_clone(self):
+        if self.matched(0).lower() == 'clone':
+            out = xmlbuilder.new('clone')
+        else:
+            out = xmlbuilder.new('master')
+        out.set('id', self.match_identifier())
+
+        # FIXME: as a post-processing step in cib-factory, reshuffle entities
+        # so that the things that should be inside the container node are
+        xmlbuilder.child(out, 'crmsh-ref', id=self.match_resource())
+        xmlbuilder.maybe_set(out, 'description', self.try_match_description())
+        self.match_arguments(out, {'params': 'instance_attributes',
+                                   'meta': 'meta_attributes'})
+        return out
+
+    parse_master = _master_or_clone
+    parse_ms = _master_or_clone
+    parse_clone = _master_or_clone
+
+    def _try_group_resource(self):
+        t = self.current_token()
+        if (not t) or ('=' in t) or (t.lower() in ('params', 'meta')):
+            return None
+        return self.match_any()
+
+    def parse_group(self):
+        out = xmlbuilder.new('group')
+        out.set('id', self.match_identifier())
+        children = []
+        while self._try_group_resource():
+            child = self.lastmatch()
+            if child in children:
+                self.err("child %s listed more than once in group %s" %
+                         (child, out.get('id')))
+            children.append(child)
+        for child in children:
+            xmlbuilder.child(out, 'crmsh-ref', id=child)
+        xmlbuilder.maybe_set(out, 'description', self.try_match_description())
+        self.match_arguments(out, {'params': 'instance_attributes',
+                                   'meta': 'meta_attributes'})
+        return out
+
+
+class ConstraintParser(RuleParser):
+    _ROLE2_RE = re.compile(r"role=(.+)$", re.IGNORECASE)
+
+    def can_parse(self):
+        return ('location', 'colocation', 'collocation', 'order', 'rsc_ticket')
+
+    def parse(self, cmd):
+        return self.begin_dispatch(cmd, min_args=2)
 
     def parse_location(self):
         """
@@ -618,28 +703,27 @@ class ConstraintParser(BaseParser):
             | { <rsc-set> }
             | <rsc>
         """
-        out = Location()
-        out.id = self.match_identifier()
+        out = xmlbuilder.new('rsc_location', id=self.match_identifier())
         if self.try_match('^/(.+)/$'):
-            out.rsc_pattern = self.matched(1)
+            out.set('rsc-pattern', self.matched(1))
         elif self.try_match('{'):
             tokens = self.match_until('}')
             self.match('}')
             if not tokens:
                 self.err("Empty resource set")
             parser = ResourceSet('role', tokens, self)
-            out.rsc_set = parser.parse()
+            for rscset in parser.parse():
+                out.append(rscset)
         else:
-            out.resource = self.match_resource()
+            out.set('rsc', self.match_resource())
         if self.try_match(self._SCORE_RE):
-            out.score = self.validate_score(self.matched(1))
-            out.node = self.match_identifier()
-            if self.try_match(self._ROLE_RE):
-                out.role = self.matched(1)
-            elif self.try_match(self._ROLE2_RE):
-                out.role = self.matched(1)
+            out.set(*self.validate_score(self.matched(1)))
+            out.set('node', self.match_identifier())
+            if self.try_match(self._ROLE_RE) or self.try_match(self._ROLE2_RE):
+                out.set('role', self.matched(1))
         else:
-            self.match_rules(out)
+            for rule in self.match_rules():
+                out.append(rule)
         return out
 
     def parse_colocation(self):
@@ -647,13 +731,12 @@ class ConstraintParser(BaseParser):
         colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>] ...
           [node-attribute=<node_attr>]
         """
-        out = Colocation()
-        out.id = self.match_identifier()
-        self.match(self._SCORE_RE)
-        out.score = self.validate_score(self.matched(1))
+        out = xmlbuilder.new('rsc_colocation', id=self.match_identifier())
+        self.match(self._SCORE_RE, errmsg="Expected <score>:")
+        out.set(*self.validate_score(self.matched(1)))
         if self.try_match_tail('node-attribute=(.+)$'):
-            out.node_attribute = self.matched(1).lower()
-        out.simple, out.resources = self.match_resource_set('role')
+            out.set('node-attribute', self.matched(1).lower())
+        self.try_match_rscset(out, 'role')
         return out
 
     parse_collocation = parse_colocation
@@ -665,16 +748,16 @@ class ConstraintParser(BaseParser):
 
         kind :: Mandatory | Optional | Serialize
         '''
-        out = Order()
-        out.id = self.match_identifier()
+        out = xmlbuilder.new('rsc_order', id=self.match_identifier())
         if self.try_match('(%s):$' % ('|'.join(self.validation.rsc_order_kinds()))):
-            out.kind = self.validation.canonize(self.matched(1), self.validation.rsc_order_kinds())
+            out.set('kind', self.validation.canonize(
+                self.matched(1), self.validation.rsc_order_kinds()))
         else:
-            self.match(self._SCORE_RE)
-            out.score = self.validate_score(self.matched(1), noattr=True)
+            self.match(self._SCORE_RE, errmsg="Expected kind|<score>:")
+            out.set(*self.validate_score(self.matched(1), noattr=True))
         if self.try_match_tail('symmetrical=(true|false|yes|no|on|off)$'):
-            out.symmetrical = is_boolean_true(self.matched(1))
-        out.simple, out.resources = self.match_resource_set('action')
+            out.set('symmetrical', canonical_boolean(self.matched(1)))
+        self.try_match_rscset(out, 'action')
         return out
 
     def parse_rsc_ticket(self):
@@ -684,14 +767,22 @@ class ConstraintParser(BaseParser):
 
         loss_policy_action :: stop | demote | fence | freeze
         '''
-        out = RscTicket()
-        out.id = self.match_identifier()
-        self.match(self._SCORE_RE)
-        out.ticket = self.matched(1)
+        out = xmlbuilder.new('rsc_ticket', id=self.match_identifier())
+        self.match(self._SCORE_RE, errmsg="Expected <ticket-id>:")
+        out.set('ticket', self.matched(1))
         if self.try_match_tail('loss-policy=(stop|demote|fence|freeze)$'):
-            out.loss_policy = self.matched(1)
-        out.simple, out.resources = self.match_resource_set('role', simple_count=1)
+            out.set('loss-policy', self.matched(1))
+        self.try_match_rscset(out, 'role', simple_count=1)
         return out
+
+    def try_match_rscset(self, out, suffix_type, simple_count=2):
+        simple, resources = self.match_resource_set(suffix_type, simple_count=simple_count)
+        if simple:
+            for n, v in resources:
+                out.set(n, v)
+        else:
+            for rscset in resources:
+                out.append(rscset)
 
     def try_match_tail(self, rx):
         "ugly hack to prematurely extract a tail attribute"
@@ -720,7 +811,7 @@ class ConstraintParser(BaseParser):
 
     def match_simple_role_set(self, count):
         def rsc_role():
-            rsc, role = self.match_split(order=(0, 1))
+            rsc, role = self.match_split()
             role, t = self.validation.classify_role(role)
             if role and not t:
                 self.err("Invalid role '%s' for '%s'" % (role, rsc))
@@ -737,7 +828,7 @@ class ConstraintParser(BaseParser):
 
     def match_simple_action_set(self):
         def rsc_action():
-            rsc, action = self.match_split(order=(0, 1))
+            rsc, action = self.match_split()
             action, t = self.validation.classify_action(action)
             if action and not t:
                 self.err('invalid action: ' + action)
@@ -759,53 +850,118 @@ class OpParser(BaseParser):
         return self.begin_dispatch(cmd, min_args=2)
 
     def parse_monitor(self):
-        out = Monitor()
-        out.resource, out.role = self.match_split(order=(0, 1))
-        if out.role:
-            out.role, out.role_class = self.validation.classify_role(out.role)
-            if not out.role_class:
-                self.err("Invalid role '%s' for resource '%s'" % (out.role, out.resource))
-        out.interval, out.timeout = self.match_split(order=(0, 1))
+        out = xmlbuilder.new('op', name="monitor")
+        resource, role = self.match_split()
+        if role:
+            role, role_class = self.validation.classify_role(role)
+            if not role_class:
+                self.err("Invalid role '%s' for resource '%s'" % (role, resource))
+            out.set(role_class, role)
+        out.set('rsc', resource)
+        interval, timeout = self.match_split()
+        xmlbuilder.maybe_set(out, 'interval', interval)
+        xmlbuilder.maybe_set(out, 'timeout', timeout)
         return out
 
 
-class PropertyParser(BaseParser):
+class PropertyParser(RuleParser):
+    """
+    property = <cluster_property_set>...</>
+    rsc_defaults = <rsc_defaults><meta_attributes>...</></>
+    op_defaults = <op_defaults><meta_attributes>...</></>
+    """
     def can_parse(self):
         return ('property', 'rsc_defaults', 'op_defaults')
 
     def parse(self, cmd):
+        from cibconfig import cib_factory
+
+        setmap = {'property': 'cluster_property_set',
+                  'rsc_defaults': 'meta_attributes',
+                  'op_defaults': 'meta_attributes'}
         self.begin(cmd, min_args=1)
         self.match('(%s)$' % '|'.join(self.can_parse()))
-        out = Property()
-        out.type = self.matched(1)
+        if self.matched(1) in constants.defaults_tags:
+            root = xmlbuilder.new(self.matched(1))
+            attrs = xmlbuilder.child(root, setmap[self.matched(1)])
+        else:  # property -> cluster_property_set
+            root = xmlbuilder.new(setmap[self.matched(1)])
+            attrs = root
         if self.try_match_initial_id():
-            out.values.append(('$id', self.matched(1)))
+            attrs.set('id', self.matched(1))
         elif self.try_match_idspec():
-            out.values.append(('$id', self.matched(2)))
-        out.values.extend(self.match_nvpairs())
-        return out
+            idkey = self.matched(1)[1:]
+            idval = self.matched(2)
+            if idkey == 'id-ref':
+                idval = cib_factory.resolve_id_ref(attrs.tag, idval)
+            attrs.set(idkey, idval)
+        for rule in self.match_rules():
+            attrs.append(rule)
+        for n, v in self.match_nvpairs():
+            attrs.append(xmlbuilder.nvpair(n, v))
+        return root
 
 
 class FencingOrderParser(BaseParser):
+    """
+    <fencing-topology>
+    <fencing-level id=<id> target=<text> index=<+int> devices="\w,\w..."/>
+    </fencing-topology>
+    """
+
     _TARGET_RE = re.compile(r'([^:]+):$')
 
     def can_parse(self):
-        return ('fencing_topology',)
+        return ('fencing-topology', 'fencing_topology')
 
     def parse(self, cmd):
         self.begin(cmd, min_args=1)
-        self.match("fencing_topology")
+        if not self.try_match("fencing-topology"):
+            self.match("fencing_topology")
         target = "@@"
-        out = FencingTopology()
+        # (target, devices)
+        raw_levels = []
         while self.has_tokens():
             if self.try_match(self._TARGET_RE):
                 target = self.matched(1)
             else:
-                out.add_level(target, self.match_any())
+                raw_levels.append((target, self.match_any()))
+        if len(raw_levels) == 0:
+            self.err("Missing list of devices")
+        return self._postprocess_levels(raw_levels)
+
+    def _postprocess_levels(self, raw_levels):
+        from collections import defaultdict
+        from itertools import repeat
+        from cibconfig import cib_factory
+        if raw_levels[0][0] == "@@":
+            def node_levels():
+                for node in cib_factory.node_id_list():
+                    for target, devices in raw_levels:
+                        yield node, devices
+            lvl_generator = node_levels
+        else:
+            lvl_generator = lambda: raw_levels
+
+        out = xmlbuilder.new('fencing-topology')
+        targets = defaultdict(repeat(1).next)
+        for target, devices in lvl_generator():
+            xmlbuilder.child(out, 'fencing-level',
+                             target=target,
+                             index=str(targets[target]),
+                             devices=devices)
+            targets[target] += 1
+
         return out
 
 
 class TagParser(BaseParser):
+    """
+    <tag id=id>
+      <obj_ref id=rsc/>
+      ...
+    </tag>
+    """
     _TAG_RE = re.compile(r"([^:]+):$")
 
     def can_parse(self):
@@ -815,20 +971,17 @@ class TagParser(BaseParser):
         self.begin(cmd, min_args=2)
         self.match('tag')
         self.match(self._TAG_RE)
-        tagname = self.matched(1)
-        resources = []
+        out = xmlbuilder.new('tag', id=self.matched(1))
         while self.has_tokens():
-            resources.append(self.match_resource())
-        if not resources:
+            e = xmlbuilder.new('obj_ref', id=self.match_resource())
+            out.append(e)
+        if len(out) == 0:
             self.err("Expected at least one resource")
-        out = Tag()
-        out.id = tagname
-        out.resources = resources
         return out
 
 
 class AclParser(BaseParser):
-    _ACL_RIGHT_RE = re.compile(r'(%s)$' % ('|'.join(vars.acl_rule_names)), re.IGNORECASE)
+    _ACL_RIGHT_RE = re.compile(r'(%s)$' % ('|'.join(constants.acl_rule_names)), re.IGNORECASE)
     _ROLE_REF_RE = re.compile(r'role:(.+)$', re.IGNORECASE)
 
     def can_parse(self):
@@ -838,34 +991,33 @@ class AclParser(BaseParser):
         return self.begin_dispatch(cmd, min_args=2)
 
     def parse_role(self):
-        out = Role()
-        out.role_id = self.match_identifier()
+        out = xmlbuilder.new('acl_role')
+        out.set('id', self.match_identifier())
         while self.has_tokens():
-            out.rules.append(self._add_rule())
+            out.append(self._add_rule())
         return out
 
     def parse_user(self):
-        out = User()
-        out.uid = self.match_identifier()
+        out = xmlbuilder.new('acl_user')
+        out.set('id', self.match_identifier())
         while self.has_tokens():
             # role identifier
             if self.try_match(self._ROLE_REF_RE):
-                out.roles.append(self.matched(1))
+                xmlbuilder.child(out, 'role_ref', id=self.matched(1))
             # acl right rule
             else:
-                out.rules.append(self._add_rule())
+                out.append(self._add_rule())
         return out
 
     def _add_rule(self):
-        rule = ACLRight()
-        rule.right = self.match(self._ACL_RIGHT_RE).lower()
-        eligible_specs = vars.acl_spec_map.values()
+        rule = xmlbuilder.new(self.match(self._ACL_RIGHT_RE).lower())
+        eligible_specs = constants.acl_spec_map.values()
         while self.has_tokens():
             a = self._expand_shortcuts(self.current_token().split(':', 1))
             if len(a) != 2 or a[0] not in eligible_specs:
                 break
             self.match_any()
-            rule.specs.append((a[0], a[1]))
+            rule.set(a[0], a[1])
             if self._remove_spec(eligible_specs, a[0]):
                 break
         return rule
@@ -894,11 +1046,11 @@ class AclParser(BaseParser):
         input. If no shortcut was found, just return l.
         In case of syntax error, return empty list. Otherwise, l[0]
         contains 'xpath' and l[1] the expansion as found in
-        vars.acl_shortcuts. The id placeholders '@@' are replaced
+        constants.acl_shortcuts. The id placeholders '@@' are replaced
         with the given attribute names or resource references.
         '''
         try:
-            expansion = vars.acl_shortcuts[l[0]]
+            expansion = constants.acl_shortcuts[l[0]]
         except KeyError:
             return l
         l[0] = "xpath"
@@ -945,27 +1097,21 @@ class RawXMLParser(BaseParser):
         except Exception, e:
             common_err("Cannot parse XML data: %s" % xml_data)
             self.err(e)
-        try:
-            el_type = vars.cib_cli_map[e.tag]
-        except:
+        if e.tag not in constants.cib_cli_map:
             self.err("Element %s not recognized" % (e.tag))
-        out = RawXML()
-        out.id = e.get("id")
-        out.type = el_type
-        out.raw = xml_data
-        return out
+        return e
 
 
 class ResourceSet(object):
     '''
     Constraint resource set parser. Parses sth like:
     a ( b c:start ) d:Master e ...
-    Appends one or more lists to cli_list.
-    Lists are in form:
-        list :: ["resource_set", set_pl]
-        set_pl :: [["sequential","false"], ["action"|"role", action|role],
-            ["resource_ref", ["id", rsc]], ...]
-        (the first two elements of set_pl are optional)
+    Appends one or more resource sets to cli_list.
+    Resource sets are in form:
+    <resource_set [sequential=false] [require-all=false] [action=<action>] [role=<role>]>
+        <resource_ref id="<rsc>"/>
+        ...
+    </resource_set>
     Action/role change makes a new resource set.
     '''
     open_set = ('(', '[')
@@ -1000,31 +1146,39 @@ class ResourceSet(object):
         self.tokens = newtoks
 
     def reset_set(self):
-        self.set_pl = []
+        self.set_pl = xmlbuilder.new("resource_set")
         self.prev_q = ''  # previous qualifier (action or role)
         self.curr_attr = ''  # attribute (action or role)
 
     def save_set(self):
-        if not self.set_pl:
+        if not len(self.set_pl):
             return
-        if self.curr_attr:
-            self.set_pl.insert(0, [self.curr_attr, self.prev_q])
-        if not self.sequential:
-            self.set_pl.insert(0, ["sequential", "false"])
         if not self.require_all:
-            self.set_pl.insert(0, ["require-all", "false"])
-        self.cli_list.append(["resource_set", self.set_pl])
+            self.set_pl.set("require-all", "false")
+        if not self.sequential:
+            self.set_pl.set("sequential", "false")
+        if self.curr_attr:
+            self.set_pl.set(self.curr_attr, self.prev_q)
+        self.make_resource_set()
         self.reset_set()
 
-    def parseattr(self, p):
+    def make_resource_set(self):
+        self.cli_list.append(self.set_pl)
+
+    def parseattr(self, p, tokpos):
         attrs = {"sequential": "sequential",
                  "require-all": "require_all"}
         l = p.split('=')
-        if len(l) != 2 or l[0] not in attrs:
-            return False
+        if len(l) != 2:
+            self.err('Extra = in %s' % (p),
+                     token=self.tokens[tokpos])
+        if l[0] not in attrs:
+            self.err('Unknown attribute',
+                     token=self.tokens[tokpos])
         k, v = l
         if not verify_boolean(v):
-            return False
+            self.err('Not a boolean: %s' % (v),
+                     token=self.tokens[tokpos])
         setattr(self, attrs[k], get_boolean(v))
         return True
 
@@ -1084,16 +1238,14 @@ class ResourceSet(object):
                 continue
             if p in self.close_set:
                 # empty sets not allowed
-                if not self.set_pl:
+                if not len(self.set_pl):
                     self.err('Empty resource set',
                              token=self.tokens[tokpos])
                 self.save_set()
                 self.update_attrs(p, tokpos)
                 continue
             if '=' in p:
-                if not self.parseattr(p):
-                    self.err('Unknown attribute',
-                             token=self.tokens[tokpos])
+                self.parseattr(p, tokpos)
                 continue
             rsc, q = self.splitrsc(p)
             if q != self.prev_q:  # one set can't have different roles/actions
@@ -1104,11 +1256,11 @@ class ResourceSet(object):
                     self.curr_attr = self.q_attr
             else:
                 self.curr_attr = ''
-            self.set_pl.append(["resource_ref", ["id", rsc]])
+            self.set_pl.append(xmlbuilder.new("resource_ref", id=rsc))
         if self.opened:  # no close
             self.err('Unmatched opening bracket',
                      token=self.tokens[tokpos])
-        if self.set_pl:  # save the final set
+        if len(self.set_pl):  # save the final set
             self.save_set()
         ret = self.cli_list
         self.cli_list = []
@@ -1116,27 +1268,24 @@ class ResourceSet(object):
 
 
 class Validation(object):
-    def __init__(self, schema):
-        self.schema = schema
-
     def resource_roles(self):
         'returns list of valid resource roles'
-        return self.schema.rng_attr_values('resource_set', 'role')
+        return schema.rng_attr_values('resource_set', 'role')
 
     def resource_actions(self):
         'returns list of valid resource actions'
-        return self.schema.rng_attr_values('resource_set', 'action')
+        return schema.rng_attr_values('resource_set', 'action')
 
     def date_ops(self):
         'returns list of valid date operations'
-        return self.schema.rng_attr_values_l('date_expression', 'operation')
+        return schema.rng_attr_values_l('date_expression', 'operation')
 
     def expression_types(self):
         'returns list of valid expression types'
-        return self.schema.rng_attr_values_l('expression', 'type')
+        return schema.rng_attr_values_l('expression', 'type')
 
     def rsc_order_kinds(self):
-        return self.schema.rng_attr_values('rsc_order', 'kind')
+        return schema.rng_attr_values('rsc_order', 'kind')
 
     def class_provider_type(self, value):
         """
@@ -1174,13 +1323,16 @@ class Validation(object):
             return action, 'instance'
         return action, None
 
+    def op_attributes(self):
+        return olist(schema.get('attr', 'op', 'a'))
+
 
 class CliParser(object):
     parsers = {}
 
     def __init__(self):
         self.comments = []
-        validation = Validation(Schema.getInstance())
+        validation = Validation()
         if not self.parsers:
             def add(*parsers):
                 for pcls in parsers:
@@ -1250,19 +1402,16 @@ class CliParser(object):
             parser = self.parsers[kw]
             try:
                 ret = parser.do_parse(s)
-                if self.comments:
-                    ret.comments = self.comments
+                if ret is not None and len(self.comments) > 0:
+                    if ret.tag in constants.defaults_tags:
+                        xmlutil.stuff_comments(ret[0], self.comments)
+                    else:
+                        xmlutil.stuff_comments(ret, self.comments)
                     self.comments = []
                 return ret
             except ParseError:
                 return False
         syntax_err(s, token=s[0], msg="Unknown command")
         return False
-
-    def parse2(self, s):
-        p = self.parse(s)
-        if not p:
-            return p
-        return p.to_list()
 
 # vim:ts=4:sw=4:et:

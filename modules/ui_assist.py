@@ -15,15 +15,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import sys
 import utils
 import command
 import completers as compl
 import options
 import xmlutil
-from cibconfig import CibFactory
-
-cib_factory = CibFactory.getInstance()
+from cibconfig import cib_factory
 
 
 class Assist(command.UI):
@@ -64,9 +61,6 @@ class Assist(command.UI):
         in effect, a colocation which does not imply any
         internal relationship between resources.
         '''
-        if not cib_factory.is_cib_sane():
-            return False
-
         if len(nodes) < 2:
             context.fatal_error("Need at least two arguments")
 

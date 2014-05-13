@@ -55,8 +55,7 @@ class HelpFilter(object):
     _TOPIC = re.compile(r'(.*)::$')
     _TOPIC2 = re.compile(r'^\.\w+')
 
-    def __init__(self, display):
-        self.display = display
+    def __init__(self):
         self.in_block = False
 
     def _filter(self, line):
@@ -69,12 +68,12 @@ class HelpFilter(object):
             return ''
         elif not self.in_block:
             if self._TOPIC2.match(line):
-                return self.display.help_topic(line[1:])
-            line = self._QUOTED.sub(self.display.help_keyword(r'\1'), line)
-            line = self._TOPIC.sub(self.display.help_topic(r'\1'), line)
+                return clidisplay.help_topic(line[1:])
+            line = self._QUOTED.sub(clidisplay.help_keyword(r'\1'), line)
+            line = self._TOPIC.sub(clidisplay.help_topic(r'\1'), line)
             return line
         else:
-            return self.display.help_block(line)
+            return clidisplay.help_block(line)
 
     def __call__(self, text):
         return '\n'.join([self._filter(line) for line in text.splitlines()]) + '\n'
@@ -98,10 +97,9 @@ class HelpEntry(object):
         Display help, paginated.
         Replace asciidoc syntax with colorized output where possible.
         '''
-        display = clidisplay.CliDisplay.getInstance()
-        helpfilter = HelpFilter(display)
+        helpfilter = HelpFilter()
 
-        short_help = display.help_header(self.short)
+        short_help = clidisplay.help_header(self.short)
 
         long_help = self.long
         if long_help:
@@ -398,7 +396,6 @@ def _load_help():
         fixup_root_commands()
         fixup_help_aliases()
     except IOError, msg:
-        common_err("%s open: %s" % (name, msg))
-        common_err("extensive help system is not available")
+        common_err("Help text not found! %s" % (msg))
 
 # vim:ts=4:sw=4:et:

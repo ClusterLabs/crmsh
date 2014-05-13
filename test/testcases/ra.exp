@@ -22,7 +22,7 @@ but they shouldn't/cannot cover _all_ possible resource
 instances. So, try to be neither overly generous nor too stingy,
 but moderate. The minimum timeouts should never be below 10 seconds.
 
-Parameters (* denotes required, [] the default):
+Parameters (*: required, []: default):
 
 state (string, [/var/run//Dummy-{OCF_RESOURCE_INSTANCE}.state]): State file
     Location to store the resource state in.
@@ -51,7 +51,7 @@ ssh-based host reset
 Fine for testing, but not suitable for production!
 Only reboot action supported, no poweroff, and, surprisingly enough, no poweron.
 
-Parameters (* denotes required, [] the default):
+Parameters (*: required, []: default):
 
 hostlist* (string): Hostlist
     The list of hosts that the STONITH device controls

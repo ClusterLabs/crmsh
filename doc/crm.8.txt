@@ -239,9 +239,9 @@ configuration:
 # crm configure
 crm(live)configure# template
 crm(live)configure template# list templates
-apache       filesystem   virtual-ip   
+apache       filesystem   virtual-ip
 crm(live)configure template# new web <TAB><TAB>
-apache       filesystem   virtual-ip   
+apache       filesystem   virtual-ip
 crm(live)configure template# new web apache
 INFO: pulling in template apache
 INFO: pulling in template virtual-ip
@@ -278,13 +278,13 @@ we created above has the following required and optional
 parameters (all parameter lines start with `%%`):
 ...............
 $ grep -n ^%% ~/.crmconf/web
-23:%% ip 
-31:%% netmask 
-35:%% lvs_support 
-61:%% id 
-65:%% configfile 
-71:%% options 
-76:%% envfiles 
+23:%% ip
+31:%% netmask
+35:%% lvs_support
+61:%% id
+65:%% configfile
+71:%% options
+76:%% envfiles
 ...............
 
 These lines are the only ones that should be modified. Simply
@@ -294,12 +294,12 @@ used tabs instead of spaces to make the values stand out):
 ...............
 $ grep -n ^%% ~/.crmconf/web
 23:%% ip        192.168.1.101
-31:%% netmask 
-35:%% lvs_support 
+31:%% netmask
+35:%% lvs_support
 61:%% id        websvc
 65:%% configfile    /etc/apache2/httpd.conf
-71:%% options 
-76:%% envfiles 
+71:%% options
+76:%% envfiles
 ...............
 
 As you can see, the parameter line format is very simple:
@@ -333,7 +333,7 @@ crm configuration (note how the configuration changed slightly,
 though it is still equivalent, after being digested at the
 `configure` level):
 ...............
-crm(live)configure template# apply 
+crm(live)configure template# apply
 crm(live)configure template# cd ..
 crm(live)configure# show
 node xen-b
@@ -459,30 +459,30 @@ few examples:
 ...............
 crm(live)# resource
 crm(live)resource# <TAB><TAB>
-bye           failcount     move          restart       unmigrate 
-cd            help          param         show          unmove 
-cleanup       list          promote       start         up 
-demote        manage        quit          status        utilization 
-end           meta          refresh       stop      
-exit          migrate       reprobe       unmanage      
+bye           failcount     move          restart       unmigrate
+cd            help          param         show          unmove
+cleanup       list          promote       start         up
+demote        manage        quit          status        utilization
+end           meta          refresh       stop
+exit          migrate       reprobe       unmanage
 crm(live)resource# end
-crm(live)# configure 
+crm(live)# configure
 crm(live)configure# primitive fence-1 <TAB><TAB>
-heartbeat:  lsb:    ocf:    stonith:    
+heartbeat:  lsb:    ocf:    stonith:
 crm(live)configure# primitive fence-1 stonith:<TAB><TAB>
-apcmaster                external/ippower9258     fence_legacy 
-apcmastersnmp            external/kdumpcheck      ibmhmc 
-apcsmart                 external/libvirt         ipmilan 
-baytech                  external/nut             meatware 
-bladehpi                 external/rackpdu         null 
-cyclades                 external/riloe           nw_rpc100s 
-drac3                    external/sbd             rcd_serial 
-external/drac5           external/ssh             rps10 
-external/dracmc-telnet   external/ssh-bad         ssh 
-external/hmchttp         external/ssh-slow        suicide 
-external/ibmrsa          external/vmware          wti_mpc 
-external/ibmrsa-telnet   external/xen0            wti_nps 
-external/ipmi            external/xen0-ha     
+apcmaster                external/ippower9258     fence_legacy
+apcmastersnmp            external/kdumpcheck      ibmhmc
+apcsmart                 external/libvirt         ipmilan
+baytech                  external/nut             meatware
+bladehpi                 external/rackpdu         null
+cyclades                 external/riloe           nw_rpc100s
+drac3                    external/sbd             rcd_serial
+external/drac5           external/ssh             rps10
+external/dracmc-telnet   external/ssh-bad         ssh
+external/hmchttp         external/ssh-slow        suicide
+external/ibmrsa          external/vmware          wti_mpc
+external/ibmrsa-telnet   external/xen0            wti_nps
+external/ipmi            external/xen0-ha
 crm(live)configure# primitive fence-1 stonith:ipmilan params <TAB><TAB>
 auth=      hostname=  ipaddr=    login=     password=  port=      priv=
 crm(live)configure# primitive fence-1 stonith:ipmilan params auth=<TAB><TAB>
@@ -1276,7 +1276,7 @@ Example:
 INFO: ordering g_webserver to stop
 waiting for stop to finish .... done
 INFO: ordering g_webserver to start
-# 
+#
 ...............
 
 [[cmdhelp_resource_promote,promote a master-slave resource]]
@@ -1976,7 +1976,7 @@ actually running because all its members have the `target-role`
 set to `Started`:
 ...............
 crm(live)# resource show svc
-resource svc is running on: xen-f 
+resource svc is running on: xen-f
 ...............
 
 Hence, if the user invokes `resource stop svc` the intention is
@@ -2159,8 +2159,10 @@ Usage:
 ...............
 node [$id=<id>] <uname>[:<type>]
   [description=<description>]
-  [attributes <param>=<value> [<param>=<value>...]]
-  [utilization <param>=<value> [<param>=<value>...]]
+  [attributes [$id=<id>] [<score>:] [rule...]
+    <param>=<value> [<param>=<value>...]] | $id-ref=<ref>
+  [utilization [$id=<id>] [<score>:] [rule...]
+    <param>=<value> [<param>=<value>...]] | $id-ref=<ref>
 
 type :: normal | member | ping
 ...............
@@ -2192,7 +2194,7 @@ instance attributes of that operation. A typical example is
 For multistate resources, roles are specified as `role=<role>`.
 
 A template may be defined for resources which are of the same
-type and which share most of the configuration. See 
+type and which share most of the configuration. See
 <<cmdhelp_configure_rsc_template,`rsc_template`>> for more information.
 
 Usage:
@@ -2205,7 +2207,8 @@ primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>}
   [operations id_spec]
     [op op_type [<attribute>=<value>...] ...]
 
-attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
+attr_list :: [$id=<id>] [<score>:] [rule...]
+             <attr>=<val> [<attr>=<val>...]] | $id-ref=<id>
 id_spec :: $id=<id> | $id-ref=<id>
 op_type :: start | stop | monitor
 ...............
@@ -2232,6 +2235,12 @@ primitive r0 ocf:linbit:drbd \
 
 primitive xen0 @vm_scheme1 \
   params xmfile=/etc/xen/vm/xen0
+
+primitive mySpecialRsc Special \
+  params 3: rule #uname eq node1 interface=eth1 \
+  params 2: rule #uname eq node2 interface=eth2 port=8888 \
+  params 1: interface=eth0 port=9999
+
 ...............
 
 [[cmdhelp_configure_monitor,add monitor operation to a primitive]]
@@ -2418,9 +2427,9 @@ unary_op :: defined | not_defined
 
 date_expr :: lt <end>
          | gt <start>
-         | in_range start=<start> end=<end>
-         | in_range start=<start> <duration>
-         | date_spec <date_spec>
+         | in start=<start> end=<end>
+         | in start=<start> <duration>
+         | spec <date_spec>
 duration|date_spec ::
          hours=<value>
          | monthdays=<value>
@@ -2572,11 +2581,12 @@ Set the cluster (`crm_config`) options.
 
 Usage:
 ...............
-property [$id=<set_id>] <option>=<value> [<option>=<value> ...]
+property [$id=<set_id>] [rule ...] <option>=<value> [<option>=<value> ...]
 ...............
 Example:
 ...............
 property stonith-enabled=true
+property rule date spec years=2014 stonith-enabled=false
 ...............
 
 [[cmdhelp_configure_rsc_defaults,set resource defaults]]
@@ -2586,7 +2596,7 @@ Set defaults for the resource meta attributes.
 
 Usage:
 ...............
-rsc_defaults [$id=<set_id>] <option>=<value> [<option>=<value> ...]
+rsc_defaults [$id=<set_id>] [rule ...] <option>=<value> [<option>=<value> ...]
 ...............
 Example:
 ...............
@@ -2710,7 +2720,7 @@ Set defaults for the operations meta attributes.
 
 Usage:
 ...............
-op_defaults [$id=<set_id>] <option>=<value> [<option>=<value> ...]
+op_defaults [$id=<set_id>] [rule ...] <option>=<value> [<option>=<value> ...]
 ...............
 Example:
 ...............
@@ -3420,8 +3430,8 @@ op <operation> <resource> <exit_code> [<op_status>] [<node>]
 
 operation :: probe | monitor[:<n>] | start | stop |
    promote | demote | notify | migrate_to | migrate_from
-exit_code :: <rc> | success | generic | args | 
-   unimplemented | perm | installed | configured | not_running | 
+exit_code :: <rc> | success | generic | args |
+   unimplemented | perm | installed | configured | not_running |
    master | failed_master
 op_status :: pending | done | cancelled | timeout | notsupported | error
 
@@ -3579,7 +3589,7 @@ crm(live)history# timeframe "Jul 18 12:00" "Jul 18 12:30"
 crm(live)history# session save strange_restart
 crm(live)history# session pack
 Report saved in .../strange_restart.tar.bz2
-crm(live)history# 
+crm(live)history#
 ...............
 
 In order to reduce report size and allow developers to

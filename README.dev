@@ -58,7 +58,7 @@ modules/config.py.in::
 
     Compile-time constants defined during the build process.
 
-modules/vars.py::
+modules/constants.py::
 
 	Global constants (mostly) and (a few) variables (it would be
 	good to separate the two).
@@ -140,12 +140,6 @@ modules/log_patterns.py, log_patterns_118.py::
 	1.1.8 and the latter.
 
 === Auxiliary
-
-modules/singletonmixin.py::
-
-	Implementation of the singleton pattern (from activestate).
-	Enables single instance use across several modules. Heavily
-	(ab)used.
 
 modules/term.py::
 

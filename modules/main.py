@@ -23,10 +23,10 @@ import random
 
 import config
 import options
-import vars
-from msg import ErrorBuffer, syntax_err, common_err
-from clidisplay import CliDisplay
-from term import TerminalController
+import constants
+from msg import err_buf, common_err
+import clidisplay
+import term
 import utils
 import userdir
 
@@ -61,52 +61,6 @@ def load_rc(context, rcfile):
     sys.stdin = save_stdin
 
 
-def check_args(args, argsdim):
-    if not argsdim:
-        return True
-    if len(argsdim) == 1:
-        minargs = argsdim[0]
-        return len(args) >= minargs
-    else:
-        minargs, maxargs = argsdim
-        return len(args) >= minargs and len(args) <= maxargs
-
-#
-# Note on parsing
-#
-# Parsing tables are python dictionaries.
-#
-# Keywords are used as keys and the corresponding values are
-# lists (actually tuples, since they should be read-only) or
-# classes. In the former case, the keyword is a terminal and
-# in the latter, a new object for the class is created. The class
-# must have the cmd_table variable.
-#
-# The list has the following content:
-#
-# function: a function to handle this command
-# numargs_list: number of minimum/maximum arguments; for example,
-#   (0, 1) means one optional argument, (1, 1) one required; if the
-#   list is empty then the function will parse arguments itself
-# required minimum skill level: operator, administrator, expert
-#   (encoded as a small integer from 0 to 2)
-# can the command cause transition to start (0 or 1)
-#   used to check whether to wait4dc to end the transition
-#
-
-
-def show_usage(cmd):
-    p = None
-    try:
-        p = cmd.__doc__
-    except:
-        pass
-    if p:
-        print >> sys.stderr, p
-    else:
-        syntax_err(cmd.__name__)
-
-
 def exit_handler():
     '''
     Write the history file. Remove tmp files.
@@ -132,9 +86,9 @@ def envsetup():
 def cib_prompt():
     shadow = utils.get_cib_in_use()
     if not shadow:
-        return vars.live_cib_prompt
-    if vars.tmp_cib:
-        return vars.tmp_cib_prompt
+        return constants.live_cib_prompt
+    if constants.tmp_cib:
+        return constants.tmp_cib_prompt
     return shadow
 
 
@@ -210,9 +164,6 @@ def usage(rc):
     """
     sys.exit(rc)
 
-err_buf = ErrorBuffer.getInstance()
-#levels = Levels.getInstance()
-
 
 def set_interactive():
     '''Set the interactive option only if we're on a tty.'''
@@ -221,10 +172,10 @@ def set_interactive():
 
 
 def compatibility_setup():
-    if utils.is_pcmk_118():
-        vars.node_type_opt = True
-        vars.attr_defaults["node"] = {"type": "normal"}
-        vars.cib_no_section_rc = 6
+    if not utils.is_pcmk_118():
+        constants.node_type_opt = False
+        del constants.attr_defaults["node"]
+        constants.cib_no_section_rc = 22
 
 
 def add_quotes(args):
@@ -291,16 +242,14 @@ def do_work(context, user_args):
     rc = 0
     while True:
         try:
-            rendered_prompt = vars.prompt
+            rendered_prompt = constants.prompt
             if options.interactive and not options.batch:
                 # TODO: fix how color interacts with readline,
                 # seems the color prompt messes it up
-                termctrl = TerminalController.getInstance()
-                cli_display = CliDisplay.getInstance()
                 promptstr = "crm(%s)%s# " % (cib_prompt(), context.prompt())
-                vars.prompt = promptstr
-                if cli_display.colors_enabled():
-                    rendered_prompt = termctrl.render(cli_display.prompt(promptstr))
+                constants.prompt = promptstr
+                if clidisplay.colors_enabled():
+                    rendered_prompt = term.render(clidisplay.prompt(promptstr))
                 else:
                     rendered_prompt = promptstr
             inp = utils.multi_input(rendered_prompt)

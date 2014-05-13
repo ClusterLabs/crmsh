@@ -31,6 +31,31 @@ def _oneline(s):
     return ' '.join(l.strip() for l in s.splitlines())
 
 
+def unpack_node_xmldata(node, is_offline):
+    """
+    takes an XML element defining a node, and
+    returns the data to pass to print_node
+    is_offline: function(uname) -> offline?
+    """
+    type = uname = id = ""
+    inst_attr = []
+    other = {}
+    for attr in node.keys():
+        v = node.get(attr)
+        if attr == "type":
+            type = v
+        elif attr == "uname":
+            uname = v
+        elif attr == "id":
+            id = v
+        else:
+            other[attr] = v
+    for elem in node.iterchildren():
+        if elem.tag == "instance_attributes":
+            inst_attr += nvpairs2list(elem)
+    return uname, id, type, other, inst_attr, is_offline(uname)
+
+
 def print_node(uname, id, node_type, other, inst_attr, offline):
     """
     Try to pretty print a node from the cib. Sth like:
@@ -118,35 +143,20 @@ class NodeMgmt(command.UI):
         try:
             nodes_node = cib_elem.xpath("//configuration/nodes")[0]
             status = cib_elem.findall("status")[0]
+            node_state = status.xpath(".//node_state")
         except:
             return False
+
+        def is_offline(uname):
+            for state in node_state:
+                if state.get("uname") == uname and state.get("crmd") == "offline":
+                    return True
+            return False
+
         for c in nodes_node.iterchildren():
-            if c.tag != "node":
+            if c.tag != "node" or (node is not None and c.get("uname") != node):
                 continue
-            if node is not None and c.get("uname") != node:
-                continue
-            type = uname = id = ""
-            inst_attr = []
-            other = {}
-            for attr in c.keys():
-                v = c.get(attr)
-                if attr == "type":
-                    type = v
-                elif attr == "uname":
-                    uname = v
-                elif attr == "id":
-                    id = v
-                else:
-                    other[attr] = v
-            for c2 in c.iterchildren():
-                if c2.tag == "instance_attributes":
-                    inst_attr += nvpairs2list(c2)
-            offline = False
-            for c2 in status.xpath(".//node_state"):
-                if uname != c2.get("uname"):
-                    continue
-                offline = c2.get("crmd") == "offline"
-            print_node(uname, id, type, other, inst_attr, offline)
+            print_node(*unpack_node_xmldata(c, is_offline))
 
     @command.wait
     @command.completers(compl.nodes)

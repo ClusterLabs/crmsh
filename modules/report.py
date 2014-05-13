@@ -23,9 +23,8 @@ import re
 import glob
 import ConfigParser
 
-from singletonmixin import Singleton
 import config
-import vars
+import constants
 import userdir
 from msg import common_debug, common_warn, common_err, common_error, common_info, warn_once
 from xmlutil import file2cib_elem, get_rsc_children_ids, get_prim_children_ids
@@ -501,7 +500,7 @@ def get_matching_run_msg(te_invoke_msg, trans_msg_l):
     if pe_num == "-1":
         common_warn("%s: strange, transition number not found" % pe_file)
         return ""
-    run_patt = vars.transition_patt[1].replace("%%", pe_num)
+    run_patt = constants.transition_patt[1].replace("%%", pe_num)
     for msg in trans_msg_l:
         if re.search(run_patt, msg):
             run_msg = msg
@@ -586,7 +585,7 @@ def mkarchive(dir):
 CH_SRC, CH_TIME, CH_UPD = 1, 2, 3
 
 
-class Report(Singleton):
+class Report(object):
     '''
     A hb_report class.
     '''
@@ -1054,11 +1053,11 @@ class Report(Singleton):
             i = (i+1) % len(self.nodecolors)
 
     def get_invoke_trans_msgs(self, msg_l):
-        te_invoke_patt = vars.transition_patt[0].replace("%%", "[0-9]+")
+        te_invoke_patt = constants.transition_patt[0].replace("%%", "[0-9]+")
         return [x for x in msg_l if re.search(te_invoke_patt, x)]
 
     def get_all_trans_msgs(self, msg_l=None):
-        trans_re_l = [x.replace("%%", "[0-9]+") for x in vars.transition_patt]
+        trans_re_l = [x.replace("%%", "[0-9]+") for x in constants.transition_patt]
         if not msg_l:
             return self.logobj.get_matches(trans_re_l)
         else:
@@ -1114,7 +1113,7 @@ class Report(Singleton):
         if not self.loc:
             return
         if self.change_origin == CH_SRC:
-            vars.pcmk_version = None
+            constants.pcmk_version = None
             # is this an hb_report or a crm_report?
             for descname in ("description.txt", "report.summary"):
                 self.desc = os.path.join(self.loc, descname)
@@ -1634,5 +1633,4 @@ class Report(Singleton):
                 pass
         return rc
 
-crm_report = Report.getInstance()
 # vim:ts=4:sw=4:et:

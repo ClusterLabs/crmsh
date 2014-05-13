@@ -28,21 +28,18 @@ import utils
 import ui_utils
 import userdir
 import xmlutil
-import vars
+import constants
 import options
-from cibconfig import mkset_obj, CibFactory
-from msg import ErrorBuffer
+from cibconfig import mkset_obj, cib_factory
 from msg import common_err, common_debug, common_info
 from msg import syntax_err, bad_usage
-from report import Report
+import report
 import cmd_status
 
 
 ptest_options = ["@v+", "nograph", "scores", "actions", "utilization"]
 
-err_buf = ErrorBuffer.getInstance()
-cib_factory = CibFactory.getInstance()
-crm_report = Report.getInstance()
+crm_report = report.Report()
 
 
 class History(command.UI):
@@ -349,8 +346,7 @@ class History(command.UI):
         '''Return set_obj of the configuration. It can later be
         rendered using the repr() method.'''
         self._setup_cib_env(pe_f)
-        cib_factory.refresh()
-        if not cib_factory.is_cib_sane():
+        if not cib_factory.refresh():
             return False
         set_obj = mkset_obj()
         return set_obj
@@ -535,7 +531,7 @@ class History(command.UI):
             return False
         rc, d = utils.load_graphviz_file(userdir.GRAPHVIZ_USER_FILE)
         if rc and d:
-            vars.graph = d
+            constants.graph = d
         set_obj = self._pe_config_obj(pe_f)
         if not outf:
             rc = set_obj.show_graph(gtype)

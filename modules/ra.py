@@ -21,8 +21,8 @@ import copy
 from lxml import etree
 import re
 import glob
-from cache import WCache
-import vars
+import cache
+import constants
 import config
 import options
 import userdir
@@ -203,36 +203,36 @@ def crm_resource_support():
 
 
 def ra_if():
-    if vars.ra_if:
-        return vars.ra_if
+    if constants.ra_if:
+        return constants.ra_if
     if crm_resource_support():
-        vars.ra_if = RaCrmResource()
+        constants.ra_if = RaCrmResource()
     elif can_use_lrmadmin():
-        vars.ra_if = RaLrmd()
-    if not vars.ra_if or not vars.ra_if.good:
-        vars.ra_if = RaOS()
-    return vars.ra_if
+        constants.ra_if = RaLrmd()
+    if not constants.ra_if or not constants.ra_if.good:
+        constants.ra_if = RaOS()
+    return constants.ra_if
 
 
 def ra_classes():
     '''
     List of RA classes.
     '''
-    if wcache.is_cached("ra_classes"):
-        return wcache.retrieve("ra_classes")
+    if cache.is_cached("ra_classes"):
+        return cache.retrieve("ra_classes")
     l = ra_if().classes()
     l.sort()
-    return wcache.store("ra_classes", l)
+    return cache.store("ra_classes", l)
 
 
 def ra_providers(ra_type, ra_class="ocf"):
     'List of providers for a class:type.'
     id = "ra_providers-%s-%s" % (ra_class, ra_type)
-    if wcache.is_cached(id):
-        return wcache.retrieve(id)
+    if cache.is_cached(id):
+        return cache.retrieve(id)
     l = ra_if().providers(ra_type, ra_class)
     l.sort()
-    return wcache.store(id, l)
+    return cache.store(id, l)
 
 
 def ra_providers_all(ra_class="ocf"):
@@ -240,15 +240,15 @@ def ra_providers_all(ra_class="ocf"):
     List of providers for a class.
     '''
     id = "ra_providers_all-%s" % ra_class
-    if wcache.is_cached(id):
-        return wcache.retrieve(id)
+    if cache.is_cached(id):
+        return cache.retrieve(id)
     dir = "%s/resource.d" % os.environ["OCF_ROOT"]
     l = []
     for s in os.listdir(dir):
         if os.path.isdir("%s/%s" % (dir, s)):
             l.append(s)
     l.sort()
-    return wcache.store(id, l)
+    return cache.store(id, l)
 
 
 def ra_types(ra_class="ocf", ra_provider=""):
@@ -258,8 +258,8 @@ def ra_types(ra_class="ocf", ra_provider=""):
     if not ra_class:
         ra_class = "ocf"
     id = "ra_types-%s-%s" % (ra_class, ra_provider)
-    if wcache.is_cached(id):
-        return wcache.retrieve(id)
+    if cache.is_cached(id):
+        return cache.retrieve(id)
     list = []
     for ra in ra_if().types(ra_class):
         if (not ra_provider or
@@ -267,44 +267,44 @@ def ra_types(ra_class="ocf", ra_provider=""):
                 and ra not in list:
             list.append(ra)
     list.sort()
-    return wcache.store(id, list)
+    return cache.store(id, list)
 
 
 def get_pe_meta():
-    if not vars.pe_metadata:
-        vars.pe_metadata = RAInfo("pengine", "metadata")
-    return vars.pe_metadata
+    if not constants.pe_metadata:
+        constants.pe_metadata = RAInfo("pengine", "metadata")
+    return constants.pe_metadata
 
 
 def get_crmd_meta():
-    if not vars.crmd_metadata:
-        vars.crmd_metadata = RAInfo("crmd", "metadata")
-        vars.crmd_metadata.exclude_from_completion(
-            vars.crmd_metadata_do_not_complete)
-    return vars.crmd_metadata
+    if not constants.crmd_metadata:
+        constants.crmd_metadata = RAInfo("crmd", "metadata")
+        constants.crmd_metadata.exclude_from_completion(
+            constants.crmd_metadata_do_not_complete)
+    return constants.crmd_metadata
 
 
 def get_stonithd_meta():
-    if not vars.stonithd_metadata:
-        vars.stonithd_metadata = RAInfo("stonithd", "metadata")
-    return vars.stonithd_metadata
+    if not constants.stonithd_metadata:
+        constants.stonithd_metadata = RAInfo("stonithd", "metadata")
+    return constants.stonithd_metadata
 
 
 def get_cib_meta():
-    if not vars.cib_metadata:
-        vars.cib_metadata = RAInfo("cib", "metadata")
-    return vars.cib_metadata
+    if not constants.cib_metadata:
+        constants.cib_metadata = RAInfo("cib", "metadata")
+    return constants.cib_metadata
 
 
 def get_properties_meta():
-    if not vars.crm_properties_metadata:
+    if not constants.crm_properties_metadata:
         get_pe_meta()
         get_crmd_meta()
         get_cib_meta()
-        vars.crm_properties_metadata = copy.deepcopy(vars.crmd_metadata)
-        vars.crm_properties_metadata.add_ra_params(vars.pe_metadata)
-        vars.crm_properties_metadata.add_ra_params(vars.cib_metadata)
-    return vars.crm_properties_metadata
+        constants.crm_properties_metadata = copy.deepcopy(constants.crmd_metadata)
+        constants.crm_properties_metadata.add_ra_params(constants.pe_metadata)
+        constants.crm_properties_metadata.add_ra_params(constants.cib_metadata)
+    return constants.crm_properties_metadata
 
 
 def get_properties_list():
@@ -456,8 +456,8 @@ class RAInfo(object):
         dictionary of attributes/values are values. Cached too.
         '''
         id = "ra_params-%s" % self.ra_string()
-        if wcache.is_cached(id):
-            return wcache.retrieve(id)
+        if cache.is_cached(id):
+            return cache.retrieve(id)
         if self.mk_ra_node() is None:
             return None
         d = {}
@@ -474,7 +474,7 @@ class RAInfo(object):
                 "type": type,
                 "default": default,
             }
-        return wcache.store(id, d)
+        return cache.store(id, d)
 
     def completion_params(self):
         '''
@@ -494,8 +494,8 @@ class RAInfo(object):
         dictionary of attributes/values are values. Cached too.
         '''
         id = "ra_actions-%s" % self.ra_string()
-        if wcache.is_cached(id):
-            return wcache.retrieve(id)
+        if cache.is_cached(id):
+            return cache.retrieve(id)
         if self.mk_ra_node() is None:
             return None
         d = {}
@@ -521,7 +521,7 @@ class RAInfo(object):
                 if not norole_op in d:
                     d2[norole_op] = d[op]
         d.update(d2)
-        return wcache.store(id, d)
+        return cache.store(id, d)
 
     def reqd_params_list(self):
         '''
@@ -617,7 +617,7 @@ class RAInfo(object):
             if self.ra_class == "stonith" and op in ("start", "stop"):
                 continue
             if op not in self.actions():
-                common_warn("%s: action %s not advertised in meta-data, it may not be supported by the RA" % (id, op))
+                common_warn("%s: action %s not advertised in meta-data, it may not be supported by the RA"  % (id, op))
                 rc |= 1
             if "interval" in n_ops[op]:
                 v = n_ops[op]["interval"]
@@ -653,17 +653,17 @@ class RAInfo(object):
         '''
         RA meta-data as raw xml.
         '''
-        id = "ra_meta-%s" % self.ra_string()
-        if wcache.is_cached(id):
-            return wcache.retrieve(id)
-        if self.ra_class in vars.meta_progs:
+        sid = "ra_meta-%s" % self.ra_string()
+        if cache.is_cached(sid):
+            return cache.retrieve(sid)
+        if self.ra_class in constants.meta_progs:
             l = prog_meta(self.ra_class)
         else:
             l = ra_if().meta(self.ra_class, self.ra_type, self.ra_provider)
         if not l:
             return None
         self.debug("read and cached meta-data")
-        return wcache.store(id, l)
+        return cache.store(sid, l)
 
     def meta_pretty(self):
         '''
@@ -708,11 +708,11 @@ class RAInfo(object):
         s = name
         if n.get("required") == "1":
             s = s + "*"
-        type, default = self.param_type_default(n)
-        if type and default:
-            s = "%s (%s, [%s])" % (s, type, default)
-        elif type:
-            s = "%s (%s)" % (s, type)
+        typ, default = self.param_type_default(n)
+        if typ and default:
+            s = "%s (%s, [%s])" % (s, typ, default)
+        elif typ:
+            s = "%s (%s)" % (s, typ)
         shortdesc = self.get_shortdesc(n)
         s = "%s: %s" % (s, shortdesc)
         return s
@@ -746,13 +746,11 @@ class RAInfo(object):
             if s:
                 l.append(s)
         if l:
-            return "Parameters (* denotes required, [] the default):\n\n" + '\n'.join(l)
+            return "Parameters (*: required, []: default):\n\n" + '\n'.join(l)
 
     def meta_action_head(self, n):
         name = n.get("name")
-        if not name:
-            return ''
-        if name in self.skip_ops:
+        if not name or name in self.skip_ops:
             return ''
         if name == "monitor":
             name = monitor_name_node(n)
@@ -771,15 +769,13 @@ class RAInfo(object):
             s = self.meta_action_head(c)
             if s:
                 l.append(self.ra_tab + s)
-        if l:
-            return "Operations' defaults (advisory minimum):\n\n" + '\n'.join(l)
+        if len(l) == 0:
+            return None
+        return "Operations' defaults (advisory minimum):\n\n" + '\n'.join(l)
 
 
-def get_ra(el):
-    ra_type = el.get("type")
-    ra_class = el.get("class")
-    ra_provider = el.get("provider")
-    return RAInfo(ra_class, ra_type, ra_provider)
+def get_ra(r):
+    return RAInfo(r.get("class"), r.get("type"), r.get("provider"))
 
 
 #
@@ -809,11 +805,10 @@ def pick_provider(providers):
     list of providers, falling back to
     'heartbeat' if no good choice is found
     '''
-    if not providers:
+    if not providers or 'heartbeat' in providers:
         return 'heartbeat'
-    for pick in ('heartbeat', 'pacemaker'):
-        if pick in providers:
-            return pick
+    elif 'pacemaker' in providers:
+        return 'pacemaker'
     return providers[0]
 
 
@@ -827,15 +822,10 @@ def disambiguate_ra_type(s):
     if len(l) == 3:
         return l
     elif len(l) == 2:
-        ra_class, ra_type = l
+        cl, tp = l
     else:
-        ra_class = "ocf"
-        ra_type = l[0]
-    ra_provider = ''
-    if ra_class == "ocf":
-        pl = ra_providers(ra_type, ra_class)
-        ra_provider = pick_provider(pl)
-    return ra_class, ra_provider, ra_type
+        cl, tp = "ocf", l[0]
+    pr = pick_provider(ra_providers(tp, cl)) if cl == 'ocf' else ''
+    return cl, pr, tp
 
-wcache = WCache.getInstance()
 # vim:ts=4:sw=4:et:

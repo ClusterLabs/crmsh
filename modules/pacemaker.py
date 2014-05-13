@@ -88,11 +88,20 @@ def delete_dir(dir_path):
     os.rmdir(dir_path)
 
 
+def subset_select(sub_set, optional):
+    "Helper used to select attributes/elements based on subset and optional flag"
+    if sub_set == 'r':  # required
+        return not optional
+    if sub_set == 'o':  # optional
+        return optional
+    return True
+
+
 def CrmSchema(cib_elem, local_dir):
     return RngSchema(cib_elem, local_dir)
 
 
-class Schema:
+class Schema(object):
     validate_name = None
 
     def __init__(self, cib_elem, local_dir, is_local=True, get_schema_fn=None):
@@ -109,11 +118,11 @@ class Schema:
 
     def update_schema(self):
         'defined in subclasses'
-        pass
+        raise NotImplementedError
 
     def find_elem(self, elem_name):
         'defined in subclasses'
-        pass
+        raise NotImplementedError
 
     def refresh(self, cib_elem):
         saved_validate_name = self.validate_name
@@ -188,11 +197,11 @@ class Schema:
 
     def get_sub_elems_by_obj(self, obj, sub_set='a'):
         '''defined in subclasses'''
-        pass
+        raise NotImplementedError
 
     def get_elem_attrs_by_obj(self, obj, sub_set='a'):
         '''defined in subclasses'''
-        pass
+        raise NotImplementedError
 
     # sub_set: 'a'(all), 'r'(required), 'o'(optional)
     def get_elem_attrs(self, elem_name, sub_set='a'):
@@ -219,11 +228,14 @@ def get_local_tag(el):
 class RngSchema(Schema):
     expr = '//*[local-name() = $name]'
 
+    def __init__(self, cib_elem, local_dir, is_local=True, get_schema_fn=None):
+        self.rng_docs = {}
+        Schema.__init__(self, cib_elem, local_dir, is_local=is_local, get_schema_fn=get_schema_fn)
+
     def update_schema(self):
         self.rng_docs = {}
         self.schema_str_docs = {}
         self.update_rng_docs(self.validate_name, self.schema_filename)
-
         return True
 
     def update_rng_docs(self, validate_name="", file=""):
@@ -239,7 +251,6 @@ class RngSchema(Schema):
         schema_info = validate_name + " " + file
         crm_schema = self.get_schema_fn(validate_name,
                                         os.path.join(self.local_dir, file))
-
         if not crm_schema:
             raise PacemakerError("Cannot get the Relax-NG schema: " + schema_info)
 
@@ -257,12 +268,18 @@ class RngSchema(Schema):
         else:
             raise PacemakerError("Cannot find the start in the Relax-NG schema: " + schema_info)
 
+    def find_in_grammar(self, grammar, node, name):
+        for elem_node in grammar.xpath(self.expr, name=node):
+            if elem_node.get("name") == name:
+                return elem_node
+        return None
+
     def find_elem(self, elem_name):
         elem_node = None
         for (grammar, start_node) in self.rng_docs.values():
-            for elem_node in grammar.xpath(self.expr, name="element"):
-                if elem_node.get("name") == elem_name:
-                    return (grammar, elem_node)
+            elem_node = self.find_in_grammar(grammar, 'element', elem_name)
+            if elem_node is not None:
+                return (grammar, elem_node)
         return None
 
     def get_sub_rng_nodes(self, grammar, rng_node):
@@ -272,16 +289,16 @@ class RngSchema(Schema):
                 continue
             local_tag = get_local_tag(child_node)
             if local_tag == "ref":
-                for def_node in grammar.xpath(self.expr, name="define"):
-                    if def_node.get("name") == child_node.get("name"):
-                        break
-                sub_rng_nodes.extend(self.get_sub_rng_nodes(grammar, def_node))
+                def_node = self.find_in_grammar(grammar, 'define', child_node.get('name'))
+                if def_node is not None:
+                    sub_rng_nodes.extend(self.get_sub_rng_nodes(grammar, def_node))
             elif local_tag == "externalRef":
                 nodes = self.get_sub_rng_nodes(*self.rng_docs[child_node.get("href")])
                 sub_rng_nodes.extend(nodes)
             elif local_tag in ["element", "attribute", "value", "data", "text"]:
                 sub_rng_nodes.append([(grammar, child_node)])
-            elif local_tag in ["interleave", "optional", "zeroOrMore", "choice", "group", "oneOrMore"]:
+            elif local_tag in ["interleave", "optional", "zeroOrMore",
+                               "choice", "group", "oneOrMore"]:
                 nodes = self.get_sub_rng_nodes(grammar, child_node)
                 for node in nodes:
                     node.append(copy.deepcopy(child_node))
@@ -351,69 +368,38 @@ class RngSchema(Schema):
     def get_attr_default(self, attr_rng_node):
         return attr_rng_node[0][1].get("ann:defaultValue")
 
-    # sub_set: 'a'(all), 'r'(required), 'o'(optional)
+    def _get_by_obj(self, rng_obj, typ, sub_set):
+        """
+        Used to select attributes or elements based on
+        sub_set selector and optionality.
+        typ: 'attribute' or 'element'
+        sub_set: 'a'(all), 'r'(required), 'o'(optional)
+        """
+        grammar, rng_node = rng_obj
+        if rng_node is None:
+            return None
+
+        selected = []
+        sub_rng_nodes = self.get_sub_rng_nodes(grammar, rng_node)
+        for node in sub_rng_nodes:
+            head = node[0][1]
+            if get_local_tag(head) != typ:
+                continue
+            name = head.get("name")
+            if selected.count(name):
+                continue
+            # the complicated case: 'choice'
+            #if self.find_decl(sub_rng_node, "choice") != 0:
+            optional = any(self.find_decl(node, opt) != 0
+                           for opt in ("optional", "zeroOrMore"))
+            if subset_select(sub_set, optional):
+                selected.append(name)
+        return selected
+
     def get_elem_attrs_by_obj(self, rng_obj, sub_set='a'):
-        (grammar, rng_node) = rng_obj
-        if rng_node is None:
-            return None
+        "sub_set: 'a'(all), 'r'(required), 'o'(optional)"
+        return self._get_by_obj(rng_obj, 'attribute', sub_set=sub_set)
 
-        attrs = []
-        sub_rng_nodes = self.get_sub_rng_nodes(grammar, rng_node)
-        for sub_rng_node in sub_rng_nodes:
-            if get_local_tag(sub_rng_node[0][1]) == "attribute":
-                name = sub_rng_node[0][1].get("name")
-                if attrs.count(name):
-                    continue
-
-                if self.find_decl(sub_rng_node, "optional") != 0 \
-                  or self.find_decl(sub_rng_node, "zeroOrMore") != 0:
-                    is_optional = True
-                else:
-                    is_optional = False
-
-                # the complicated case: 'choice'
-                            #if self.find_decl(sub_rng_node, "choice") != 0:
-
-                if sub_set == 'r':
-                    if not is_optional:
-                        attrs.append(name)
-                elif sub_set == 'o':
-                    if is_optional:
-                        attrs.append(name)
-                else:
-                    attrs.append(name)
-        return attrs
-
-    # sub_set: 'a'(all), 'r'(required), 'o'(optional)
     def get_sub_elems_by_obj(self, rng_obj, sub_set='a'):
-        (grammar, rng_node) = rng_obj
-        if rng_node is None:
-            return None
-
-        elems = []
-        sub_rng_nodes = self.get_sub_rng_nodes(grammar, rng_node)
-        for sub_rng_node in sub_rng_nodes:
-            if get_local_tag(sub_rng_node[0][1]) == "element":
-                name = sub_rng_node[0][1].get("name")
-                if elems.count(name):
-                    continue
-
-                if self.find_decl(sub_rng_node, "optional") != 0 \
-                  or self.find_decl(sub_rng_node, "zeroOrMore") != 0:
-                    is_optional = True
-                else:
-                    is_optional = False
-
-                # the complicated case: 'choice'
-                            #if self.find_decl(sub_rng_node, "choice") != 0:
-
-                if sub_set == 'r':
-                    if not is_optional:
-                        elems.append(name)
-                elif sub_set == 'o':
-                    if is_optional:
-                        elems.append(name)
-                else:
-                    elems.append(name)
-
-        return elems
+        "sub_set: 'a'(all), 'r'(required), 'o'(optional)"
+        return self._get_by_obj(rng_obj, 'element', sub_set=sub_set)

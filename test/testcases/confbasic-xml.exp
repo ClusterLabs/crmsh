@@ -37,10 +37,10 @@
       <group id="g1">
         <primitive id="d1" class="ocf" provider="pacemaker" type="Dummy">
           <operations id="d1-ops">
-            <op name="monitor" interval="60m" id="d1-monitor-60m"/>
-            <op name="monitor" interval="120m" id="d1-monitor-120m">
-              <instance_attributes id="d1-monitor-120m-instance_attributes">
-                <nvpair name="OCF_CHECK_LEVEL" value="10" id="d1-monitor-120m-instance_attributes-OCF_CHECK_LEVEL"/>
+            <op name="monitor" interval="60m" id="d1-ops-monitor-60m"/>
+            <op name="monitor" interval="120m" id="d1-ops-monitor-120m">
+              <instance_attributes id="d1-ops-monitor-120m-instance_attributes">
+                <nvpair name="OCF_CHECK_LEVEL" value="10" id="d1-ops-monitor-120m-instance_attributes-OCF_CHECK_LEVEL"/>
               </instance_attributes>
             </op>
             <op interval="60s" timeout="30s" name="monitor" id="d1-monitor-60s"/>
@@ -85,28 +85,28 @@
     <constraints>
       <rsc_location id="l3" rsc="m5">
         <rule score="INFINITY" id="l3-rule">
-          <expression attribute="#uname" operation="eq" value="node1" id="l3-expression"/>
-          <expression attribute="pingd" operation="gt" value="0" id="l3-expression-0"/>
+          <expression attribute="#uname" operation="eq" value="node1" id="l3-rule-expression"/>
+          <expression attribute="pingd" operation="gt" value="0" id="l3-rule-expression-0"/>
         </rule>
       </rsc_location>
       <rsc_location id="l1" rsc="g1" score="100" node="node1"/>
       <rsc_location id="l5" rsc="m5">
         <rule score="-INFINITY" boolean-op="or" id="l5-rule">
-          <expression operation="not_defined" attribute="pingd" id="l5-expression"/>
-          <expression attribute="pingd" operation="lte" value="0" id="l5-expression-0"/>
+          <expression operation="not_defined" attribute="pingd" id="l5-rule-expression"/>
+          <expression attribute="pingd" operation="lte" value="0" id="l5-rule-expression-0"/>
         </rule>
         <rule score="INFINITY" id="l5-rule-0">
-          <expression attribute="#uname" operation="eq" value="node1" id="l5-expression-1"/>
-          <expression attribute="pingd" operation="gt" value="0" id="l5-expression-2"/>
+          <expression attribute="#uname" operation="eq" value="node1" id="l5-rule-0-expression"/>
+          <expression attribute="pingd" operation="gt" value="0" id="l5-rule-0-expression-0"/>
         </rule>
         <rule score="INFINITY" id="l5-rule-1">
-          <date_expression operation="lt" id="l5-expression-3" end="2009-05-26"/>
-          <date_expression operation="in_range" id="l5-expression-4" start="2009-05-26" end="2009-07-26"/>
-          <date_expression operation="in_range" id="l5-expression-5" start="2009-05-26">
-            <duration id="l5-duration" years="2009"/>
+          <date_expression operation="lt" id="l5-rule-1-expression" end="2009-05-26"/>
+          <date_expression operation="in_range" id="l5-rule-1-expression-0" start="2009-05-26" end="2009-07-26"/>
+          <date_expression operation="in_range" id="l5-rule-1-expression-1" start="2009-05-26">
+            <duration id="l5-rule-1-expression-1-duration" years="2009"/>
           </date_expression>
-          <date_expression operation="date_spec" id="l5-expression-6">
-            <date_spec id="l5-date_spec" years="2009" hours="09-17"/>
+          <date_expression operation="date_spec" id="l5-rule-1-expression-2">
+            <date_spec id="l5-rule-1-expression-2-date_spec" years="2009" hours="09-17"/>
           </date_expression>
         </rule>
       </rsc_location>
@@ -131,8 +131,8 @@
       <rsc_order id="o2" kind="Optional" first="d1" first-action="start" then="m5" then-action="promote"/>
       <rsc_location id="l4" rsc="m5">
         <rule score="-INFINITY" boolean-op="or" id="l4-rule">
-          <expression operation="not_defined" attribute="pingd" id="l4-expression"/>
-          <expression attribute="pingd" operation="lte" value="0" id="l4-expression-0"/>
+          <expression operation="not_defined" attribute="pingd" id="l4-rule-expression"/>
+          <expression attribute="pingd" operation="lte" value="0" id="l4-rule-expression-0"/>
         </rule>
       </rsc_location>
       <rsc_ticket id="ticket-C_master" ticket="ticket-C" loss-policy="fence">
@@ -145,7 +145,7 @@
       </rsc_ticket>
       <rsc_location id="l2" rsc="c">
         <rule id="l2-rule1" score="100">
-          <expression attribute="#uname" operation="eq" value="node1" id="l2-expression"/>
+          <expression attribute="#uname" operation="eq" value="node1" id="l2-rule1-expression"/>
         </rule>
       </rsc_location>
     </constraints>

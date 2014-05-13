@@ -51,7 +51,7 @@ ERROR: 42: configure.modgroup: nosuch is not member of g1
 .INP: modgroup g1 add c1
 ERROR: 43: a group may contain only primitives; c1 is clone
 .INP: modgroup g1 add nosuch
-ERROR: 44: object nosuch does not exist
+ERROR: 44: g1 refers to missing object nosuch
 .INP: filter "sed 's/^/# this is a comment\n/'" loc-d1
 .INP: _test
 .INP: verify
@@ -83,9 +83,9 @@ clone c1 g1
 location l1 p3 100: node1
 # this is a comment
 location loc-d1 d1 \
-	rule $id="r1" -inf: not_defined webserver or mem number:lte 0 \
-	rule $id="loc-d1-rule" -inf: not_defined a2 \
-	rule $id="r2" webserver: defined webserver
+	rule -inf: not_defined webserver or mem number:lte 0 \
+	rule -inf: not_defined a2 \
+	rule webserver: defined webserver
 order o1 inf: p3 c1
 property cib-bootstrap-options: \
 	default-action-timeout=2m
@@ -119,6 +119,9 @@ property cib-bootstrap-options: \
 .TRY configure filter 'sed "s/stonith-enabled=true//"'
 .EXT crm_resource --list-standards
 .EXT crm_resource --list-ocf-alternatives Dummy
+.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
+.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT stonithd metadata
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata

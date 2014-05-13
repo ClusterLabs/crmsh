@@ -20,11 +20,10 @@ import command
 import completers as compl
 import utils
 import ui_utils
-import vars
-from cibstatus import CibStatus
+import constants
+from cibstatus import cib_status
 
 
-cib_status = CibStatus.getInstance()
 _status_node_list = compl.call(cib_status.status_node_list)
 
 
@@ -69,7 +68,7 @@ class CibStatusUI(command.UI):
         return cib_status.set_quorum(utils.is_boolean_true(opt))
 
     @command.skill_level('expert')
-    @command.completers(_status_node_list, compl.choice(vars.node_states))
+    @command.completers(_status_node_list, compl.choice(constants.node_states))
     def do_node(self, context, node, state):
         "usage: node <node> {online|offline|unclean}"
         return cib_status.edit_node(node, state)
@@ -81,23 +80,23 @@ class CibStatusUI(command.UI):
         return cib_status.edit_ticket(ticket, subcmd)
 
     @command.skill_level('expert')
-    @command.completers(compl.choice(vars.ra_operations),
+    @command.completers(compl.choice(constants.ra_operations),
                         compl.call(cib_status.status_rsc_list),
-                        compl.choice(vars.lrm_exit_codes.keys()),
-                        compl.choice(vars.lrm_status_codes.keys()),
-                        compl.choice(vars.node_states))
+                        compl.choice(constants.lrm_exit_codes.keys()),
+                        compl.choice(constants.lrm_status_codes.keys()),
+                        compl.choice(constants.node_states))
     def do_op(self, context, op, rsc, rc, op_status=None, node=''):
         "usage: op <operation> <resource> <exit_code> [<op_status>] [<node>]"
-        if rc in vars.lrm_exit_codes:
-            num_rc = vars.lrm_exit_codes[rc]
+        if rc in constants.lrm_exit_codes:
+            num_rc = constants.lrm_exit_codes[rc]
         else:
             num_rc = rc
         if not num_rc.isdigit():
             context.fatal_error("Invalid exit code '%s'" % num_rc)
         num_op_status = op_status
         if op_status:
-            if op_status in vars.lrm_status_codes:
-                num_op_status = vars.lrm_status_codes[op_status]
+            if op_status in constants.lrm_status_codes:
+                num_op_status = constants.lrm_status_codes[op_status]
             if not num_op_status.isdigit():
                 context.fatal_error("Invalid operation status '%s'" % num_op_status)
         return cib_status.edit_op(op, rsc, num_rc, num_op_status, node)

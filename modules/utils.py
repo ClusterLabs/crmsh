@@ -27,9 +27,9 @@ import shutil
 import bz2
 import config
 import userdir
-import vars
+import constants
 import options
-from term import TerminalController
+import term
 from msg import common_warn, common_info, common_debug, common_err, err_buf
 
 
@@ -165,6 +165,10 @@ def get_boolean(opt, dflt=False):
     if not opt:
         return dflt
     return is_boolean_true(opt)
+
+
+def canonical_boolean(opt):
+    return 'true' if is_boolean_true(opt) else 'false'
 
 
 def keyword_cmp(string1, string2):
@@ -887,7 +891,7 @@ def need_pager(s, w, h):
 def term_render(s):
     'Render for TERM.'
     try:
-        return termctrl.render(s)
+        return term.render(s)
     except:
         return s
 
@@ -1161,15 +1165,15 @@ def get_cib_attributes(cib_f, tag, attr_l, dflt_l):
 
 
 def is_min_pcmk_ver(min_ver, cib_f=None):
-    if not vars.pcmk_version:
+    if not constants.pcmk_version:
         if cib_f:
-            vars.pcmk_version = get_cib_property(cib_f, "dc-version", "1.1.1")
+            constants.pcmk_version = get_cib_property(cib_f, "dc-version", "1.1.11")
             common_debug("found pacemaker version: %s in cib: %s" %
-                         (vars.pcmk_version, cib_f))
+                         (constants.pcmk_version, cib_f))
         else:
-            vars.pcmk_version = get_pcmk_version("1.1.1")
+            constants.pcmk_version = get_pcmk_version("1.1.11")
     from distutils.version import LooseVersion
-    return LooseVersion(vars.pcmk_version) >= LooseVersion(min_ver)
+    return LooseVersion(constants.pcmk_version) >= LooseVersion(min_ver)
 
 
 def is_pcmk_118(cib_f=None):
@@ -1334,5 +1338,5 @@ _NOQUOTES_RE = re.compile(r'^[\w\.-]+$')
 def noquotes(v):
     return _NOQUOTES_RE.match(v) is not None
 
-termctrl = TerminalController.getInstance()
+
 # vim:ts=4:sw=4:et:

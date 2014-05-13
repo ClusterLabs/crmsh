@@ -18,7 +18,7 @@
 
 import command
 import completers as compl
-import vars
+import constants
 import config
 import utils
 import xmlutil
@@ -27,7 +27,7 @@ import options
 
 from msg import common_error, common_err, common_info, common_debug, common_warn
 from msg import no_prog_err
-from cibconfig import CibFactory
+from cibconfig import cib_factory
 
 
 def rm_meta_attribute(node, attr, l, force_children=False):
@@ -140,7 +140,7 @@ def cleanup_resource(rsc, node=''):
 
 
 _attrcmds = compl.choice(['delete', 'set', 'show'])
-_raoperations = compl.choice(vars.ra_operations)
+_raoperations = compl.choice(constants.ra_operations)
 
 
 class RscMgmt(command.UI):
@@ -417,8 +417,7 @@ class RscMgmt(command.UI):
         return utils.ext_cmd(self.rsc_maintenance % (resource, on_off)) == 0
 
     def _get_trace_rsc(self, rsc_id):
-        cib_factory.refresh()
-        if not cib_factory.is_cib_sane():
+        if not cib_factory.refresh():
             return None
         rsc = cib_factory.find_object(rsc_id)
         if not rsc:
@@ -448,13 +447,13 @@ class RscMgmt(command.UI):
             head_pl = ["op", []]
             head_pl[1].append(["name", op])
             head_pl[1].append(["interval", interval])
-            head_pl[1].append([vars.trace_ra_attr, "1"])
+            head_pl[1].append([constants.trace_ra_attr, "1"])
             cli_list = []
             cli_list.append(head_pl)
             if not rsc.add_operation(cli_list):
                 return False
         else:
-            op_node = rsc.set_op_attr(op_node, vars.trace_ra_attr, "1")
+            op_node = rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
         if not cib_factory.commit():
             return False
         if op == "monitor" and utils.crm_msec(interval) != 0:
@@ -479,10 +478,7 @@ class RscMgmt(command.UI):
         if op_node is None:
             common_err("operation %s does not exist in %s" % (op, rsc.obj_id))
             return False
-        op_node = rsc.del_op_attr(op_node, vars.trace_ra_attr)
+        op_node = rsc.del_op_attr(op_node, constants.trace_ra_attr)
         if rsc.is_dummy_operation(op_node):
             rsc.del_operation(op_node)
         return cib_factory.commit()
-
-
-cib_factory = CibFactory.getInstance()

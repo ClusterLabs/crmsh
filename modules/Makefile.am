@@ -22,7 +22,6 @@ MAINTAINERCLEANFILES    = Makefile.in
 modules =	__init__.py \
 			cache.py \
 			cibconfig.py \
-			cibobjects.py \
 			cibstatus.py \
 			clidisplay.py \
 			cliformat.py \
@@ -48,7 +47,6 @@ modules =	__init__.py \
 			rsctest.py \
 			schema.py \
 			scripts.py \
-			singletonmixin.py \
 			template.py \
 			term.py \
 			tmpfiles.py \
@@ -72,7 +70,8 @@ modules =	__init__.py \
 			ui_utils.py \
 			userdir.py \
 			utils.py \
-			vars.py \
+			constants.py \
+			xmlbuilder.py \
 			xmlutil.py
 
 shelllibdir	= $(pyexecdir)/crmsh

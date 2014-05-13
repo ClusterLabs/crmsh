@@ -20,12 +20,13 @@ import subprocess
 from lxml import etree, doctestcompare
 import copy
 import bz2
+from collections import defaultdict
 
 import config
 import options
-from schema import Schema
-import vars
-from msg import common_err, common_error, common_debug, cib_parse_err, ErrorBuffer
+import schema
+import constants
+from msg import common_err, common_error, common_debug, cib_parse_err, err_buf
 import userdir
 import utils
 from utils import add_sudo, str2file, str2tmp, pipe_string, get_boolean
@@ -117,7 +118,7 @@ def cibdump2elem(section=None):
         return None
     if rc == 0:
         return cibtext2elem(outp)
-    elif rc == vars.cib_no_section_rc:
+    elif rc == constants.cib_no_section_rc:
         return None
     else:
         common_error("running %s: %s" % (cmd, err_outp))
@@ -435,19 +436,6 @@ def get_topmost_rsc(node):
     return node
 
 
-attr_defaults_missing = {
-}
-
-
-def add_missing_attr(node):
-    try:
-        for defaults in attr_defaults_missing[node.tag]:
-            if defaults[0] not in node.attrib:
-                node.set(defaults[0], defaults[1])
-    except:
-        pass
-
-
 attr_defaults = {
     "rule": (("boolean-op", "and"),),
     "expression": (("type", "string"),),
@@ -520,7 +508,7 @@ def is_status_node(e):
 
 def is_emptyelem(node, tag_l):
     if node.tag in tag_l:
-        for a in vars.precious_attrs:
+        for a in constants.precious_attrs:
             if node.get(a):
                 return False
         for n in node.iterchildren():
@@ -531,7 +519,7 @@ def is_emptyelem(node, tag_l):
 
 
 def is_emptynvpairs(node):
-    return is_emptyelem(node, vars.nvpairs_tags)
+    return is_emptyelem(node, constants.nvpairs_tags)
 
 
 def is_emptyops(node):
@@ -539,7 +527,7 @@ def is_emptyops(node):
 
 
 def is_cib_element(node):
-    return node.tag in vars.cib_cli_map
+    return node.tag in constants.cib_cli_map
 
 
 def is_group(node):
@@ -555,17 +543,17 @@ def is_clone(node):
 
 
 def is_clonems(node):
-    return node.tag in vars.clonems_tags
+    return node.tag in constants.clonems_tags
 
 
 def is_cloned(node):
-    return (node.getparent().tag in vars.clonems_tags or
+    return (node.getparent().tag in constants.clonems_tags or
             (node.getparent().tag == "group" and
-             node.getparent().getparent().tag in vars.clonems_tags))
+             node.getparent().getparent().tag in constants.clonems_tags))
 
 
 def is_container(node):
-    return node.tag in vars.container_tags
+    return node.tag in constants.container_tags
 
 
 def is_primitive(node):
@@ -573,7 +561,7 @@ def is_primitive(node):
 
 
 def is_resource(node):
-    return node.tag in vars.resource_tags
+    return node.tag in constants.resource_tags
 
 
 def is_template(node):
@@ -581,20 +569,20 @@ def is_template(node):
 
 
 def is_child_rsc(node):
-    return node.tag in vars.children_tags
+    return node.tag in constants.children_tags
 
 
 def is_constraint(node):
-    return node.tag in vars.constraint_tags
+    return node.tag in constants.constraint_tags
 
 
 def is_defaults(node):
-    return node.tag in vars.defaults_tags
+    return node.tag in constants.defaults_tags
 
 
 def rsc_constraint(rsc_id, con_elem):
     for attr in con_elem.keys():
-        if attr in vars.constraint_rsc_refs \
+        if attr in constants.constraint_rsc_refs \
                 and rsc_id == con_elem.get(attr):
             return True
     for rref in con_elem.xpath("resource_set/resource_ref"):
@@ -611,7 +599,7 @@ def sort_container_children(e_list):
     '''
     for node in e_list:
         children = [x for x in node.iterchildren()
-                    if x.tag in vars.children_tags]
+                    if x.tag in constants.children_tags]
         for c in children:
             node.remove(c)
         for c in children:
@@ -641,7 +629,7 @@ def remove_dflt_attrs(e_list):
     '''
     for e in e_list:
         try:
-            d = vars.attr_defaults[e.tag]
+            d = constants.attr_defaults[e.tag]
             for a in d.keys():
                 if e.get(a) == d[a]:
                     del e.attrib[a]
@@ -673,22 +661,13 @@ def is_simpleconstraint(node):
     return len(node.xpath("resource_set/resource_ref")) == 0
 
 
-match_list = {
-    "node": ("uname",),
-    "crm_config": (),
-    "rsc_defaults": (),
-    "op_defaults": (),
-    "cluster_property_set": (),
-    "instance_attributes": (),
-    "meta_attributes": (),
-    "utilization": (),
-    "operations": (),
-    "nvpair": ("name",),
-    "op": ("name", "interval"),
-    "rule": ("score", "score-attribute", "role"),
-    "expression": ("attribute", "operation", "value"),
-    "fencing-level": ("target", "devices"),
-}
+match_list = defaultdict(tuple,
+                         {"node": ("uname",),
+                          "nvpair": ("name",),
+                          "op": ("name", "interval"),
+                          "rule": ("score", "score-attribute", "role"),
+                          "expression": ("attribute", "operation", "value"),
+                          "fencing-level": ("target", "devices")})
 
 
 def add_comment(e, s):
@@ -722,6 +701,7 @@ def fix_comments(e):
 
 
 def set_id_used_attr(e):
+    common_debug("setting id used: %s" % (etree.tostring(e)))
     e.set("__id_used", "Yes")
 
 
@@ -735,6 +715,7 @@ def remove_id_used_attr(e, lvl):
 
 
 def remove_id_used_attributes(e):
+    common_debug("clearing id used: %s" % (etree.tostring(e)))
     if e is not None:
         xmltraverse(e, remove_id_used_attr)
 
@@ -750,29 +731,19 @@ def lookup_node(node, oldnode, location_only=False, ignore_id=False):
     (the first parameter here) contains the id, then the "id"
     attribute is added to the match list.
     '''
-    #print "lookup:", node.tag, node.get("id")
     if oldnode is None:
         return None
-    #print "  in:", oldnode.tag, oldnode.get("id")
-    try:
-        attr_list = list(match_list[node.tag])
-    except KeyError:
-        attr_list = []
+    attr_list = list(match_list[node.tag])
     if not ignore_id and node.get("id"):
-        #print "  add id attribute"
         attr_list.append("id")
     for c in oldnode.iterchildren():
         if not location_only and is_id_used_attr(c):
             continue
-        #print "  checking:", c.tag, c.get("id")
         if node.tag == c.tag:
-            failed = False
             for a in attr_list:
                 if node.get(a) != c.get(a):
-                    failed = True
                     break
-            if not failed:
-                #print "  found:", c.tag, c.get("id")
+            else:
                 return c
     return None
 
@@ -814,65 +785,38 @@ def op2list(node):
 
 
 def get_rsc_operations(rsc_node):
-    actions = []
-    for c in rsc_node.iterchildren():
-        if c.tag == "operations":
-            for c2 in c.iterchildren():
-                if c2.tag == "op":
-                    op, pl = op2list(c2)
-                    if op:
-                        actions.append([op, pl])
+    actions = [op2list(op) for op in rsc_node.xpath('//operations/op')]
+    actions = [[op, pl] for op, pl in actions if op]
     return actions
 
 
-def filter_on_tag(nl, tag):
-    return [node for node in nl if node.tag == tag]
+# lower score = earlier sort
+def make_sort_map(*order):
+    m = {}
+    for i, o in enumerate(order):
+        if isinstance(o, basestring):
+            m[o] = i
+        else:
+            for k in o:
+                m[k] = i
+    return m
 
 
-def nodes(node_list):
-    return filter_on_tag(node_list, "node")
+_sort_xml_order = make_sort_map('node', 'template', 'primitive',
+                                'group', 'master', 'clone',
+                                'rsc_location', 'rsc_colocation',
+                                'rsc_order', 'rsc_ticket', 'fencing-topology',
+                                'cluster_property_set', 'rsc_defaults', 'op_defaults',
+                                'op', 'acl_role', 'acl_user', 'tag')
 
+_sort_cli_order = make_sort_map('node', 'rsc_template', 'primitive',
+                                'group', 'ms', 'master', 'clone',
+                                'location', 'colocation', 'collocation',
+                                'order', 'rsc_ticket', 'fencing_topology',
+                                'property', 'rsc_defaults', 'op_defaults',
+                                'op', 'role', 'user', 'tag')
 
-def primitives(node_list):
-    return filter_on_tag(node_list, "primitive")
-
-
-def groups(node_list):
-    return filter_on_tag(node_list, "group")
-
-
-def clones(node_list):
-    return filter_on_tag(node_list, "clone")
-
-
-def mss(node_list):
-    return filter_on_tag(node_list, "master")
-
-
-def templates(node_list):
-    return filter_on_tag(node_list, "template")
-
-
-def constraints(node_list):
-    return filter_on_tag(node_list, "rsc_location") \
-        + filter_on_tag(node_list, "rsc_colocation") \
-        + filter_on_tag(node_list, "rsc_order") \
-        + filter_on_tag(node_list, "rsc_ticket")
-
-
-def properties(node_list):
-    return filter_on_tag(node_list, "cluster_property_set") \
-        + filter_on_tag(node_list, "rsc_defaults") \
-        + filter_on_tag(node_list, "op_defaults")
-
-
-def acls(node_list):
-    return filter_on_tag(node_list, "acl_role") \
-        + filter_on_tag(node_list, "acl_user")
-
-
-def fencing_topology(node_list):
-    return filter_on_tag(node_list, "fencing-topology")
+_SORT_LAST = 1000
 
 
 def processing_sort(nl):
@@ -880,98 +824,31 @@ def processing_sort(nl):
     It's usually important to process cib objects in this order,
     i.e. simple objects first.
     '''
-    return nodes(nl) + templates(nl) + primitives(nl) + groups(nl) + mss(nl) + clones(nl) \
-        + constraints(nl) + fencing_topology(nl) + properties(nl) + acls(nl)
-
-
-def obj_cmp(obj1, obj2):
-    return cmp(obj1.obj_id, obj2.obj_id)
-
-
-def filter_on_type(cl, obj_type):
-    if isinstance(cl[0], list):
-        l = [cli_list for cli_list in cl if cli_list[0][0] == obj_type]
-        if config.core.sort_elements:
-            l.sort(cmp=cmp)
+    if config.core.sort_elements:
+        sortfn = lambda k: (_sort_xml_order.get(k.tag, _SORT_LAST), k.get('id'))
     else:
-        l = [obj for obj in cl if obj.obj_type == obj_type]
-        if config.core.sort_elements:
-            l.sort(cmp=obj_cmp)
-    return l
-
-
-def nodes_cli(cl):
-    return filter_on_type(cl, "node")
-
-
-def primitives_cli(cl):
-    return filter_on_type(cl, "primitive")
-
-
-def groups_cli(cl):
-    return filter_on_type(cl, "group")
-
-
-def clones_cli(cl):
-    return filter_on_type(cl, "clone")
-
-
-def mss_cli(cl):
-    return filter_on_type(cl, "ms") + filter_on_type(cl, "master")
-
-
-def templates_cli(cl):
-    return filter_on_type(cl, "rsc_template")
-
-
-def constraints_cli(node_list):
-    return filter_on_type(node_list, "location") \
-        + filter_on_type(node_list, "colocation") \
-        + filter_on_type(node_list, "collocation") \
-        + filter_on_type(node_list, "order") \
-        + filter_on_type(node_list, "rsc_ticket")
-
-
-def properties_cli(cl):
-    return filter_on_type(cl, "property") \
-        + filter_on_type(cl, "rsc_defaults") \
-        + filter_on_type(cl, "op_defaults")
-
-
-def fencing_topology_cli(cl):
-    return filter_on_type(cl, "fencing_topology")
-
-
-def acls_cli(cl):
-    return filter_on_type(cl, "role") \
-        + filter_on_type(cl, "user")
-
-
-def ops_cli(cl):
-    return filter_on_type(cl, "op")
+        sortfn = lambda k: _sort_xml_order.get(k.tag, _SORT_LAST)
+    return sorted(nl, key=sortfn)
 
 
 def processing_sort_cli(cl):
     '''
-    Return the given list in this order:
-    nodes, primitives, groups, ms, clones, constraints, rest
-    Both a list of objects (CibObject) and list of cli
-    representations accepted.
+    cl: list of objects (CibObject)
+    Returns the given list in order
     '''
-    if not cl:
-        return []
-    return nodes_cli(cl) + templates_cli(cl) + primitives_cli(cl) \
-        + groups_cli(cl) + mss_cli(cl) + clones_cli(cl) \
-        + constraints_cli(cl) + fencing_topology_cli(cl) + properties_cli(cl) \
-        + ops_cli(cl) + acls_cli(cl)
+    if config.core.sort_elements:
+        sortfn = lambda k: (_sort_cli_order.get(k.obj_type, _SORT_LAST), k.obj_id)
+    else:
+        sortfn = lambda k: _sort_cli_order.get(k.obj_type, _SORT_LAST)
+    return sorted(cl, key=sortfn)
 
 
 def is_resource_cli(s):
-    return s in olist(vars.resource_cli_names)
+    return s in olist(constants.resource_cli_names)
 
 
 def is_constraint_cli(s):
-    return s in olist(vars.constraint_cli_names)
+    return s in olist(constants.constraint_cli_names)
 
 
 def referenced_resources(node):
@@ -1002,7 +879,7 @@ def rename_id(node, old_id, new_id):
 def rename_rscref_simple(c_obj, old_id, new_id):
     c_modified = False
     for attr in c_obj.node.keys():
-        if attr in vars.constraint_rsc_refs and \
+        if attr in constants.constraint_rsc_refs and \
                 c_obj.node.get(attr) == old_id:
             c_obj.node.set(attr, new_id)
             c_obj.updated = True
@@ -1013,7 +890,7 @@ def rename_rscref_simple(c_obj, old_id, new_id):
 def delete_rscref_simple(c_obj, rsc_id):
     c_modified = False
     for attr in c_obj.node.keys():
-        if attr in vars.constraint_rsc_refs and \
+        if attr in constants.constraint_rsc_refs and \
                 c_obj.node.get(attr) == rsc_id:
             del c_obj.node.attrib[attr]
             c_obj.updated = True
@@ -1118,7 +995,6 @@ def rename_rscref_rset(c_obj, old_id, new_id):
 
 
 def rename_rscref(c_obj, old_id, new_id):
-    err_buf = ErrorBuffer.getInstance()
     if rename_rscref_simple(c_obj, old_id, new_id) or \
             rename_rscref_rset(c_obj, old_id, new_id):
         err_buf.info("resource references in %s updated" % str(c_obj))
@@ -1141,7 +1017,7 @@ def silly_constraint(c_node, rsc_id):
     cnt = 0  # total count of referenced resources have to be at least two
     rsc_cnt = 0
     for attr in c_node.keys():
-        if attr in vars.constraint_rsc_refs:
+        if attr in constants.constraint_rsc_refs:
             cnt += 1
             if c_node.get(attr) == rsc_id:
                 rsc_cnt += 1
@@ -1362,7 +1238,7 @@ def merge_attributes(dnode, snode, tag):
 def merge_nodes(dnode, snode):
     '''
     Import elements from snode into dnode.
-    If an element is attributes set (vars.nvpairs_tags) or
+    If an element is attributes set (constants.nvpairs_tags) or
     "operations", then merge attributes in the children.
     Otherwise, replace the whole element. (TBD)
     '''
@@ -1373,10 +1249,10 @@ def merge_nodes(dnode, snode):
     for sc in snode.iterchildren():
         dc = lookup_node(sc, dnode, ignore_id=True)
         if dc is None:
-            if sc.tag in vars.nvpairs_tags or sc.tag == "operations":
+            if sc.tag in constants.nvpairs_tags or sc.tag == "operations":
                 add_children.append(sc)
                 rc = True
-        elif dc.tag in vars.nvpairs_tags:
+        elif dc.tag in constants.nvpairs_tags:
             rc = merge_attributes(dc, sc, "nvpair") or rc
         elif dc.tag == "operations":
             rc = merge_attributes(dc, sc, "op") or rc
@@ -1406,5 +1282,4 @@ def merge_tmpl_into_prim(prim_node, tmpl_node):
     return dnode
 
 
-schema = Schema.getInstance()
 # vim:ts=4:sw=4:et:
