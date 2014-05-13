@@ -207,7 +207,10 @@ def copy_nvpairs(tonode, fromnode):
                                  'nvpair',
                                  name=n,
                                  value=nvp.get('value'))
-            m.set('id', idmgmt.new(m, id_hint))
+            if 'id' in nvp.attrib:
+                m.set('id', nvp.get('id'))
+            else:
+                m.set('id', idmgmt.new(m, id_hint))
             tonode.append(m)
 
     def copy_id(node):
@@ -219,6 +222,7 @@ def copy_nvpairs(tonode, fromnode):
         else:
             tonode.append(copy.deepcopy(node))
 
+    common_debug("copy_nvpairs: %s" % (etree.tostring(fromnode)))
     id_hint = tonode.get('id')
     for c in fromnode:
         if is_comment(c):

@@ -936,7 +936,7 @@ class FencingOrderParser(BaseParser):
         from cibconfig import cib_factory
         if raw_levels[0][0] == "@@":
             def node_levels():
-                for node in reversed(cib_factory.node_id_list()):
+                for node in cib_factory.node_id_list():
                     for target, devices in raw_levels:
                         yield node, devices
             lvl_generator = node_levels
@@ -946,10 +946,10 @@ class FencingOrderParser(BaseParser):
         out = xmlbuilder.new('fencing-topology')
         targets = defaultdict(repeat(1).next)
         for target, devices in lvl_generator():
-            lvl = xmlbuilder.child(out, 'fencing-level',
-                                   target=target,
-                                   index=str(targets[target]),
-                                   devices=devices)
+            xmlbuilder.child(out, 'fencing-level',
+                             target=target,
+                             index=str(targets[target]),
+                             devices=devices)
             targets[target] += 1
 
         return out

@@ -19,6 +19,7 @@ import constants
 import copy
 from msg import common_error, common_debug, id_used_err
 import xmlutil
+from lxml import etree
 
 
 '''
@@ -58,6 +59,7 @@ def new(node, pfx):
     '''
     Create a unique id for the xml node.
     '''
+    common_debug("idmgmt.new: node=%s, pfx=%s" % (etree.tostring(node), pfx))
     name = node.get("name")
     if node.tag == "nvpair":
         node_id = "%s-%s" % (pfx, name)
@@ -194,7 +196,8 @@ def set(node, oldnode, id_hint, id_required=True):
     new_id = node.get("id") or old_id or node.get("uname")
     from msg import common_debug
     from lxml import etree
-    common_debug("idmgmt.set: %s, %s, %s" % (etree.tostring(node), new_id, old_id))
+    common_debug("idmgmt.set: node=%s, new_id=%s, old_id=%s, id_hint=%s" %
+                 (etree.tostring(node), new_id, old_id, id_hint))
     if new_id:
         save(new_id)
     elif id_required:
