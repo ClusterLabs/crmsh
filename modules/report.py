@@ -71,28 +71,32 @@ def set_year(ts=None):
     common_debug("setting year to %s (ts: %s)" % (YEAR, str(ts)))
 
 
-def make_datetime(t):
+def make_time(t):
     '''
     t: time in seconds / datetime / other
-    returns: datetime object
+    returns: time in floating point
     '''
     if t is None:
         return None
     elif isinstance(t, datetime.datetime):
-        return t
-    return datetime.datetime.fromtimestamp(t)
+        return convert_dt(t)
+    return t
 
 
 def syslog_ts(s):
+    """
+    Finds the timestamp in the given line
+    Returns as floating point, seconds
+    """
     try:
         # strptime defaults year to 1900 (sigh)
         # strptime returns a time_struct
         tm = time.strptime(' '.join([YEAR] + s.split()[0:3]),
                            "%Y %b %d %H:%M:%S")
-        return make_datetime(time.mktime(tm))
+        return time.mktime(tm)
     except:  # try the rfc5424
         try:
-            return parse_time(s.split()[0])
+            return convert_dt(parse_time(s.split()[0]))
         except Exception:
             common_debug("malformed line: %s" % s)
             return None
@@ -155,7 +159,7 @@ def log_seek(f, ts, to_end=False):
     badline = 0
     maxbadline = 10
     common_debug("seek %s:%s in %s" %
-                 (ts,
+                 (time.ctime(ts),
                   to_end and "end" or "start",
                   f.name))
     while first <= last:
@@ -256,8 +260,13 @@ def last_log_lines(log_l):
 
 
 def convert_dt(dt):
+    """
+    Convert a datetime object into a floating-point second value
+    """
     try:
-        return time.mktime(dt.timetuple())
+        ts = time.mktime(dt.timetuple())
+        ts += dt.microsecond / 1000000.0
+        return ts
     except:
         return None
 
@@ -305,8 +314,8 @@ class LogSyslog(object):
         find out start/end file positions. Logs need to be
         already open.
         '''
-        self.from_ts = make_datetime(from_dt)
-        self.to_ts = make_datetime(to_dt)
+        self.from_ts = make_time(from_dt)
+        self.to_ts = make_time(to_dt)
         bad_logs = []
         for log in self.f:
             f = self.f[log]
@@ -395,7 +404,7 @@ class LogSyslog(object):
             l.append(top_line[first])
             top_line[first] = self.get_match_line(fl[first], patt)[0]
             if not top_line[first]:
-                top_line_ts[first] = datetime.datetime.now()
+                top_line_ts[first] = time.time()
             else:
                 top_line_ts[first] = syslog_ts(top_line[first])
         return l
@@ -542,7 +551,7 @@ class Transition(object):
         else:
             common_warn("end of transition %s not found in logs (transition not complete yet?)" %
                         self)
-            self.end_ts = datetime.datetime.now()
+            self.end_ts = time.time()
 
     def actions_count(self):
         if self.run_msg:
@@ -1300,7 +1309,7 @@ class Report(object):
                 myts = min([syslog_ts(x) for x in first_log_lines(self.log_l)])
             elif whence == "bottom":
                 myts = max([syslog_ts(x) for x in last_log_lines(self.log_l)])
-            return myts
+            return datetime.datetime.fromtimestamp(myts)
         except:
             return None
 
