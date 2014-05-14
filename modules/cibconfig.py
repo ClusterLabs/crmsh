@@ -887,6 +887,10 @@ class CibObject(object):
     def __str__(self):
         return "%s:%s" % (self.obj_type, self.obj_id)
 
+    def set_updated(self):
+        self.updated = True
+        self.propagate_updated()
+
     def _dump_state(self):
         'Print object status'
         print self.state_fmt % (self.obj_id,
@@ -977,10 +981,20 @@ class CibObject(object):
 
         also show rule expressions if found
         '''
+
+        has_nvpairs = len(node.xpath('.//nvpair')) > 0
+        idref = node.get('id-ref')
+
+        # empty set
+        if not (has_nvpairs or idref is not None):
+            return ''
+
         ret = "%s " % (clidisplay.keyword(self.set_names[node.tag]))
         node_id = node.get("id")
-        if cib_factory.is_id_refd(node.tag, node_id):
+        if node_id is not None and cib_factory.is_id_refd(node.tag, node_id):
             ret += "%s " % (nvpair_format("$id", node_id))
+        elif idref is not None:
+            ret += "%s " % (nvpair_format("$id-ref", idref))
 
         score = node.get("score")
         if score:
@@ -1400,9 +1414,7 @@ class CibPrimitive(CibObject):
             node.remove(comment)
         if comments and self.node is not None:
             stuff_comments(self.node, [c.text for c in comments])
-        # the resource is updated
-        self.updated = True
-        self.propagate_updated()
+        self.set_updated()
         return self
 
     def del_operation(self, op_node):
@@ -1413,8 +1425,7 @@ class CibPrimitive(CibObject):
         idmgmt.remove_xml(op_node)
         if len(ops_node) == 0:
             rmnode(ops_node)
-        self.updated = True
-        self.propagate_updated()
+        self.set_updated()
 
     def is_dummy_operation(self, op_node):
         '''If the op has just name, id, and interval=0, then it's
@@ -1434,8 +1445,7 @@ class CibPrimitive(CibObject):
         new_op_node = op_obj.mkxml()
         self._append_op(new_op_node)
         # the resource is updated
-        self.updated = True
-        self.propagate_updated()
+        self.set_updated()
         return new_op_node
 
     def del_op_attr(self, op_node, attr_n):
@@ -1444,9 +1454,7 @@ class CibPrimitive(CibObject):
         op_obj.del_attr(attr_n)
         new_op_node = op_obj.mkxml()
         self._append_op(new_op_node)
-        # the resource is updated
-        self.updated = True
-        self.propagate_updated()
+        self.set_updated()
         return new_op_node
 
     def check_sanity(self):
@@ -2635,8 +2643,7 @@ class CibFactory(object):
                 else:
                     obj_modified = True
             if obj_modified:
-                obj.updated = True
-                obj.propagate_updated()
+                obj.set_updated()
         return rc
 
     def is_id_refd(self, attr_list_type, id):
@@ -2864,7 +2871,7 @@ class CibFactory(object):
             topnode.append(obj.node)
             self.cib_objects.append(obj)
         copy_nvpairs(obj.node, node)
-        obj.updated = True
+        obj.set_updated()
         return obj
 
     def add_op(self, node):
@@ -2952,8 +2959,7 @@ class CibFactory(object):
             common_debug("update_element: validation failed (%s, %s)" % (obj, etree.tostring(newnode)))
             obj.nocli_warn = True
             obj.nocli = True
-        obj.updated = True
-        obj.propagate_updated()
+        obj.set_updated()
         return True
 
     def merge_from_cli(self, obj, node):
@@ -2963,8 +2969,7 @@ class CibFactory(object):
         else:
             rc = merge_nodes(obj.node, node)
         if rc:
-            obj.updated = True
-            obj.propagate_updated()
+            obj.set_updated()
         return True
 
     def _cli_set_update(self, edit_d, mk_set, upd_set, del_set, method):
@@ -3137,6 +3142,24 @@ class CibFactory(object):
         self.cib_objects.append(obj)
         return obj
 
+    def _add_children(self, obj_type, node):
+        """
+        Called from create_from_node
+        In case this is a clone/group/master create from XML,
+        and the child node(s) haven't been added as a separate objects.
+        """
+        if obj_type not in constants.container_tags:
+            return True
+
+        for c in node.iterchildren('primitive'):
+            pid = c.get('id')
+            child_obj = self.find_object(pid)
+            if child_obj is None:
+                child_obj = self.create_from_node(copy.deepcopy(c))
+                if not child_obj:
+                    return False
+        return True
+
     def create_from_node(self, node):
         'Create a new cib object from a document node.'
         if node is None:
@@ -3152,6 +3175,10 @@ class CibFactory(object):
             if node is None:
                 common_debug("create_from_node: get_rscop_defaults_meta_node failed")
                 return None
+
+        if not self._add_children(obj_type, node):
+            return None
+
         obj = self.new_object(obj_type, node.get("id"))
         if not obj:
             return None
@@ -3303,8 +3330,7 @@ class CibFactory(object):
         rename_id(obj.node, old_id, new_id)
         obj.obj_id = new_id
         idmgmt.rename(old_id, new_id)
-        obj.updated = True
-        obj.propagate_updated()
+        obj.set_updated()
 
     def erase(self):
         "Remove all cib objects."

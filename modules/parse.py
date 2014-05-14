@@ -316,7 +316,7 @@ class RuleParser(BaseParser):
         if self.try_match(self._SCORE_RE):
             score = self.matched(1)
         rules = self.match_rules()
-        values = self.match_nvpairs(minpairs=1)
+        values = self.match_nvpairs(minpairs=0)
         return xmlbuilder.attributes(tag, rules, values, xmlid=xmlid, score=score)
 
     def match_attr_lists(self, name_map):

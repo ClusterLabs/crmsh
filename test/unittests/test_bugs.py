@@ -18,6 +18,7 @@
 
 import cibconfig
 from lxml import etree
+from nose.tools import eq_
 import xmlutil
 
 factory = cibconfig.cib_factory
@@ -37,10 +38,7 @@ def test_bug41660_1():
     </primitive>
 """
     data = etree.fromstring(xml)
-    obj = factory.new_object('primitive', 'bug41660')
-    assert obj is not None
-    obj.node = data
-    obj.set_id()
+    obj = factory.create_from_node(data)
     print etree.tostring(obj.node)
     data = obj.repr_cli(format=-1)
     print data
@@ -48,30 +46,15 @@ def test_bug41660_1():
     assert data == exp
     assert obj.cli_use_validate()
 
-    def mock_commit_rsc(node):
-        xmlutil.xml_processnodes(node, xmlutil.is_emptynvpairs, xmlutil.rmnodes)
-        xmlutil.xml_processnodes(node, xmlutil.is_emptyops, xmlutil.rmnodes)
-        assert 'name="target-role" value="Started"' in etree.tostring(node)
-        return True
-
-    def mock_cibdump2elem(section=None):
-        if section == 'configuration':
-            return xmlutil.cibtext2elem(
-                """<configuration><resources>""" + xml +
-                """</resources></configuration>""")
-        assert False
-
-    commit_rsc_holder = xmlutil.commit_rsc
-    cibdump2elem_holder = xmlutil.cibdump2elem
+    commit_holder = factory.commit
     try:
-        xmlutil.commit_rsc = mock_commit_rsc
-        xmlutil.cibdump2elem = mock_cibdump2elem
-
+        factory.commit = lambda *args: True
         from ui_resource import set_deep_meta_attr
-        set_deep_meta_attr("target-role", "Started", "bug41660")
+        set_deep_meta_attr("bug41660", "target-role", "Started")
+        eq_(['Started'],
+            obj.node.xpath('.//nvpair[@name="target-role"]/@value'))
     finally:
-        xmlutil.commit_rsc = commit_rsc_holder
-        xmlutil.cibdump2elem = cibdump2elem_holder
+        factory.commit = commit_holder
 
 
 def test_bug41660_2():
@@ -93,41 +76,27 @@ def test_bug41660_2():
 </clone>
 """
     data = etree.fromstring(xml)
-    obj = factory.new_object('clone', 'libvirtd-clone')
+    obj = factory.create_from_node(data)
     assert obj is not None
-    obj.node = data
-    obj.set_id()
-    data = obj.repr_cli(format=-1)
-    print data
-    exp = 'clone libvirtd-clone libvirtd meta interleave=true ordered=true target-role=Stopped'
-    assert data == exp
+    #data = obj.repr_cli(format=-1)
+    #print data
+    #exp = 'clone libvirtd-clone libvirtd meta interleave=true ordered=true target-role=Stopped'
+    #assert data == exp
     #assert obj.cli_use_validate()
 
-    def mock_commit_rsc(node):
-        xmlutil.xml_processnodes(node, xmlutil.is_emptynvpairs, xmlutil.rmnodes)
-        xmlutil.xml_processnodes(node, xmlutil.is_emptyops, xmlutil.rmnodes)
-        print etree.tostring(node)
-        assert etree.tostring(node).count('name="target-role" value="Started"') == 1
-        return True
+    print etree.tostring(obj.node)
 
-    def mock_cibdump2elem(section=None):
-        if section == 'configuration':
-            return xmlutil.cibtext2elem(
-                """<configuration><resources>""" + xml +
-                """</resources></configuration>""")
-        assert False
-
-    commit_rsc_holder = xmlutil.commit_rsc
-    cibdump2elem_holder = xmlutil.cibdump2elem
+    commit_holder = factory.commit
     try:
-        xmlutil.commit_rsc = mock_commit_rsc
-        xmlutil.cibdump2elem = mock_cibdump2elem
-
+        factory.commit = lambda *args: True
         from ui_resource import set_deep_meta_attr
-        set_deep_meta_attr("target-role", "Started", "libvirtd-clone")
+        print "PRE", etree.tostring(obj.node)
+        set_deep_meta_attr("libvirtd-clone", "target-role", "Started")
+        print "POST", etree.tostring(obj.node)
+        eq_(['Started'],
+            obj.node.xpath('.//nvpair[@name="target-role"]/@value'))
     finally:
-        xmlutil.commit_rsc = commit_rsc_holder
-        xmlutil.cibdump2elem = cibdump2elem_holder
+        factory.commit = commit_holder
 
 
 def test_bug41660_3():
@@ -147,41 +116,24 @@ def test_bug41660_3():
 </clone>
 """
     data = etree.fromstring(xml)
-    obj = factory.new_object('clone', 'libvirtd-clone')
+    obj = factory.create_from_node(data)
     assert obj is not None
-    obj.node = data
-    obj.set_id()
     data = obj.repr_cli(format=-1)
     print data
     exp = 'clone libvirtd-clone libvirtd meta target-role=Stopped'
     assert data == exp
-    #assert obj.cli_use_validate()
+    assert obj.cli_use_validate()
 
-    def mock_commit_rsc(node):
-        xmlutil.xml_processnodes(node, xmlutil.is_emptynvpairs, xmlutil.rmnodes)
-        xmlutil.xml_processnodes(node, xmlutil.is_emptyops, xmlutil.rmnodes)
-        print etree.tostring(node)
-        assert etree.tostring(node).count('name="target-role" value="Started"') == 1
-        return True
-
-    def mock_cibdump2elem(section=None):
-        if section == 'configuration':
-            return xmlutil.cibtext2elem(
-                """<configuration><resources>""" + xml +
-                """</resources></configuration>""")
-        assert False
-
-    commit_rsc_holder = xmlutil.commit_rsc
-    cibdump2elem_holder = xmlutil.cibdump2elem
+    commit_holder = factory.commit
     try:
-        xmlutil.commit_rsc = mock_commit_rsc
-        xmlutil.cibdump2elem = mock_cibdump2elem
-
+        factory.commit = lambda *args: True
         from ui_resource import set_deep_meta_attr
-        set_deep_meta_attr("target-role", "Started", "libvirtd-clone")
+        set_deep_meta_attr("libvirtd-clone", "target-role", "Started")
+        eq_(['Started'],
+            obj.node.xpath('.//nvpair[@name="target-role"]/@value'))
     finally:
-        xmlutil.commit_rsc = commit_rsc_holder
-        xmlutil.cibdump2elem = cibdump2elem_holder
+        factory.commit = commit_holder
+
 
 def test_comments():
     xml = """<cib epoch="25" num_updates="1" admin_epoch="0" validate-with="pacemaker-1.2" cib-last-written="Thu Mar  6 15:53:49 2014" update-origin="beta1" update-client="cibadmin" update-user="root" crm_feature_set="3.0.8" have-quorum="1" dc-uuid="1">
@@ -273,7 +225,7 @@ def test_pcs_interop_1():
     elem = etree.fromstring(xml)
     from ui_resource import set_deep_meta_attr_node
 
-    assert len(elem.xpath("//meta_attributes/nvpair[@name='target-role']")) == 1
+    assert len(elem.xpath(".//meta_attributes/nvpair[@name='target-role']")) == 1
 
     print "BEFORE:", etree.tostring(elem)
 
@@ -281,4 +233,4 @@ def test_pcs_interop_1():
 
     print "AFTER:", etree.tostring(elem)
 
-    assert len(elem.xpath("//meta_attributes/nvpair[@name='target-role']")) == 1
+    assert len(elem.xpath(".//meta_attributes/nvpair[@name='target-role']")) == 1

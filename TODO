@@ -20,15 +20,13 @@ Features
 
 . CIB features
 
-    - Rules in primitive attribute declarations
+    - Support ACL commands in Pacemaker 1.1.12>
 
-        primitive dummy ocf:heartbeat:IPaddr2 \
-          params 3: rule 0: #uname eq pcmk-1 nic=eth1 \
-          params 2: rule 1: #uname eq pcmk-2 nic=eth2 \
-          params 1: netmask=32 ip=127.0.0.1 nic=eth0
+. Command features
 
-      Adding parser support is easy.
+    - Relative commands: /status from configure, ../resource stop foo
+      from configure, cib/new from configure... for example.
 
-      Difficulty is adding support for multiple sets of parameters
-      with different scores
-      (right now they are all aggregated) in cibconfig.py
+      Tricky part: Have to push/pop levels invisibly, resource
+      commands modify CIB while CIB is edited in configure. Similar
+      races could occur with other commands.

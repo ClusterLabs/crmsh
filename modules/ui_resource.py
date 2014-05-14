@@ -93,17 +93,8 @@ def set_deep_meta_attr_node(target_node, attr, value):
     return True
 
 
-def set_deep_meta_attr_tag(tag, attr, value):
+def set_deep_meta_attr(rsc, attr, value, commit=True):
     """
-    tag: an etree tag node
-    TODO: make transactional (shadow CIB?)
-    """
-    return all(set_deep_meta_attr(attr, value, ref.get('id'))
-               for ref in tag.xpath("./obj_ref"))
-
-
-def set_deep_meta_attr(attr, value, rsc_id):
-    '''
     If the referenced rsc is a primitive that belongs to a group,
     then set its attribute.
     Otherwise, go up to the topmost resource which contains this
@@ -113,20 +104,53 @@ def set_deep_meta_attr(attr, value, rsc_id):
     the attribute set to a value different from the one given,
     then ask the user whether to reset them or not (exact
     behaviour depends on the value of config.core.manage_children).
-    '''
-    target_node = xmlutil.RscState().rsc2node(rsc_id)
-    if target_node is None:
-        common_error("resource %s does not exist" % rsc_id)
+    """
+
+    def update_obj(obj):
+        """
+        set the meta attribute in the given object
+        """
+        node = obj.node
+        obj.set_updated()
+        if not (node.tag == "primitive" and
+                node.getparent().tag == "group"):
+            node = xmlutil.get_topmost_rsc(node)
+        return set_deep_meta_attr_node(node, attr, value)
+
+    def flatten(objs):
+        for obj in objs:
+            if isinstance(obj, list):
+                for subobj in obj:
+                    yield subobj
+            else:
+                yield obj
+
+    def resolve(obj):
+        if obj.obj_type == 'tag':
+            return [cib_factory.find_object(o) for o in obj.node.xpath('./obj_ref/@id')]
+        return obj
+
+    objs = cib_factory.find_objects(rsc)
+    while any(obj for obj in objs if obj.obj_type == 'tag'):
+        objs = list(flatten(resolve(obj) for obj in objs))
+    common_debug("set_deep_meta_attr: %s" % (', '.join([obj.obj_id for obj in objs])))
+    if not objs:
+        common_error("Resource not found: %s" % (rsc))
         return False
 
-    if target_node.tag == 'tag':
-        return set_deep_meta_attr_tag(target_node, attr, value)
-    if not (target_node.tag == "primitive" and
-            target_node.getparent().tag == "group"):
-        target_node = xmlutil.get_topmost_rsc(target_node)
-    if not set_deep_meta_attr_node(target_node, attr, value):
+    ok = all(update_obj(obj) for obj in objs)
+    if not ok:
+        common_error("Failed to update meta attributes for %s" % (rsc))
         return False
-    return xmlutil.commit_rsc(target_node)
+
+    if not commit:
+        return True
+
+    ok = cib_factory.commit()
+    if not ok:
+        common_error("Failed to commit updates to %s" % (rsc))
+        return False
+    return True
 
 
 def cleanup_resource(rsc, node=''):
@@ -209,35 +233,40 @@ class RscMgmt(command.UI):
         else:
             return utils.ext_cmd(self.rsc_status_all) == 0
 
+    def _commit_meta_attr(self, context, rsc, name, value):
+        """
+        Perform change to resource
+        """
+        if not utils.is_name_sane(rsc):
+            return False
+        commit = not cib_factory.has_cib_changed()
+        if not commit:
+            context.info("Currently editing the CIB, changes will not be committed")
+        return set_deep_meta_attr(rsc, name, value, commit=commit)
+
     @command.wait
     @command.completers(compl.resources)
     def do_start(self, context, rsc):
         "usage: start <rsc>"
-        if not utils.is_name_sane(rsc):
-            return False
-        return set_deep_meta_attr("target-role", "Started", rsc)
-
-    @command.wait
-    @command.completers(compl.resources)
-    def do_restart(self, context, rsc):
-        "usage: restart <rsc>"
-        if not utils.is_name_sane(rsc):
-            return False
-        common_info("ordering %s to stop" % rsc)
-        if not self.do_stop(context, rsc):
-            return False
-        if not utils.wait4dc("stop", not options.batch):
-            return False
-        common_info("ordering %s to start" % rsc)
-        return self.do_start(context, rsc)
+        return self._commit_meta_attr(context, rsc, "target-role", "Started")
 
     @command.wait
     @command.completers(compl.resources)
     def do_stop(self, context, rsc):
         "usage: stop <rsc>"
-        if not utils.is_name_sane(rsc):
+        return self._commit_meta_attr(context, rsc, "target-role", "Stopped")
+
+    @command.wait
+    @command.completers(compl.resources)
+    def do_restart(self, context, rsc):
+        "usage: restart <rsc>"
+        common_info("ordering %s to stop" % rsc)
+        if not self._commit_meta_attr(context, rsc, "target-role", "Stopped"):
             return False
-        return set_deep_meta_attr("target-role", "Stopped", rsc)
+        if not utils.wait4dc("stop", not options.batch):
+            return False
+        common_info("ordering %s to start" % rsc)
+        return self._commit_meta_attr(context, rsc, "target-role", "Started")
 
     @command.wait
     @command.completers(compl.resources)
@@ -273,16 +302,12 @@ class RscMgmt(command.UI):
     @command.completers(compl.resources)
     def do_manage(self, context, rsc):
         "usage: manage <rsc>"
-        if not utils.is_name_sane(rsc):
-            return False
-        return set_deep_meta_attr("is-managed", "true", rsc)
+        return self._commit_meta_attr(context, rsc, "is-managed", "true")
 
     @command.completers(compl.resources)
     def do_unmanage(self, context, rsc):
         "usage: unmanage <rsc>"
-        if not utils.is_name_sane(rsc):
-            return False
-        return set_deep_meta_attr("is-managed", "false", rsc)
+        return self._commit_meta_attr(context, rsc, "is-managed", "false")
 
     @command.alias('move')
     @command.skill_level('administrator')
