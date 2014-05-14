@@ -887,6 +887,10 @@ class CibObject(object):
     def __str__(self):
         return "%s:%s" % (self.obj_type, self.obj_id)
 
+    def set_updated(self):
+        self.updated = True
+        self.propagate_updated()
+
     def _dump_state(self):
         'Print object status'
         print self.state_fmt % (self.obj_id,
@@ -1410,9 +1414,7 @@ class CibPrimitive(CibObject):
             node.remove(comment)
         if comments and self.node is not None:
             stuff_comments(self.node, [c.text for c in comments])
-        # the resource is updated
-        self.updated = True
-        self.propagate_updated()
+        self.set_updated()
         return self
 
     def del_operation(self, op_node):
@@ -1423,8 +1425,7 @@ class CibPrimitive(CibObject):
         idmgmt.remove_xml(op_node)
         if len(ops_node) == 0:
             rmnode(ops_node)
-        self.updated = True
-        self.propagate_updated()
+        self.set_updated()
 
     def is_dummy_operation(self, op_node):
         '''If the op has just name, id, and interval=0, then it's
@@ -1444,8 +1445,7 @@ class CibPrimitive(CibObject):
         new_op_node = op_obj.mkxml()
         self._append_op(new_op_node)
         # the resource is updated
-        self.updated = True
-        self.propagate_updated()
+        self.set_updated()
         return new_op_node
 
     def del_op_attr(self, op_node, attr_n):
@@ -1454,9 +1454,7 @@ class CibPrimitive(CibObject):
         op_obj.del_attr(attr_n)
         new_op_node = op_obj.mkxml()
         self._append_op(new_op_node)
-        # the resource is updated
-        self.updated = True
-        self.propagate_updated()
+        self.set_updated()
         return new_op_node
 
     def check_sanity(self):
@@ -2645,8 +2643,7 @@ class CibFactory(object):
                 else:
                     obj_modified = True
             if obj_modified:
-                obj.updated = True
-                obj.propagate_updated()
+                obj.set_updated()
         return rc
 
     def is_id_refd(self, attr_list_type, id):
@@ -2874,7 +2871,7 @@ class CibFactory(object):
             topnode.append(obj.node)
             self.cib_objects.append(obj)
         copy_nvpairs(obj.node, node)
-        obj.updated = True
+        obj.set_updated()
         return obj
 
     def add_op(self, node):
@@ -2962,8 +2959,7 @@ class CibFactory(object):
             common_debug("update_element: validation failed (%s, %s)" % (obj, etree.tostring(newnode)))
             obj.nocli_warn = True
             obj.nocli = True
-        obj.updated = True
-        obj.propagate_updated()
+        obj.set_updated()
         return True
 
     def merge_from_cli(self, obj, node):
@@ -2973,8 +2969,7 @@ class CibFactory(object):
         else:
             rc = merge_nodes(obj.node, node)
         if rc:
-            obj.updated = True
-            obj.propagate_updated()
+            obj.set_updated()
         return True
 
     def _cli_set_update(self, edit_d, mk_set, upd_set, del_set, method):
@@ -3335,8 +3330,7 @@ class CibFactory(object):
         rename_id(obj.node, old_id, new_id)
         obj.obj_id = new_id
         idmgmt.rename(old_id, new_id)
-        obj.updated = True
-        obj.propagate_updated()
+        obj.set_updated()
 
     def erase(self):
         "Remove all cib objects."

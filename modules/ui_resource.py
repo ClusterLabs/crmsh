@@ -93,7 +93,7 @@ def set_deep_meta_attr_node(target_node, attr, value):
     return True
 
 
-def set_deep_meta_attr(rsc, attr, value):
+def set_deep_meta_attr(rsc, attr, value, commit=True):
     """
     If the referenced rsc is a primitive that belongs to a group,
     then set its attribute.
@@ -106,10 +106,12 @@ def set_deep_meta_attr(rsc, attr, value):
     behaviour depends on the value of config.core.manage_children).
     """
 
-    def update_node(node):
+    def update_obj(obj):
         """
-        node should be a resource, not a tag
+        set the meta attribute in the given object
         """
+        node = obj.node
+        obj.set_updated()
         if not (node.tag == "primitive" and
                 node.getparent().tag == "group"):
             node = xmlutil.get_topmost_rsc(node)
@@ -136,10 +138,13 @@ def set_deep_meta_attr(rsc, attr, value):
         common_error("Resource not found: %s" % (rsc))
         return False
 
-    ok = all(update_node(obj.node) for obj in objs)
+    ok = all(update_obj(obj) for obj in objs)
     if not ok:
         common_error("Failed to update meta attributes for %s" % (rsc))
         return False
+
+    if not commit:
+        return True
 
     ok = cib_factory.commit()
     if not ok:
@@ -228,35 +233,40 @@ class RscMgmt(command.UI):
         else:
             return utils.ext_cmd(self.rsc_status_all) == 0
 
+    def _commit_meta_attr(self, context, rsc, name, value):
+        """
+        Perform change to resource
+        """
+        if not utils.is_name_sane(rsc):
+            return False
+        commit = not cib_factory.has_cib_changed()
+        if not commit:
+            context.info("Currently editing the CIB, changes will not be committed")
+        return set_deep_meta_attr(rsc, name, value, commit=commit)
+
     @command.wait
     @command.completers(compl.resources)
     def do_start(self, context, rsc):
         "usage: start <rsc>"
-        if not utils.is_name_sane(rsc):
-            return False
-        return set_deep_meta_attr(rsc, "target-role", "Started")
-
-    @command.wait
-    @command.completers(compl.resources)
-    def do_restart(self, context, rsc):
-        "usage: restart <rsc>"
-        if not utils.is_name_sane(rsc):
-            return False
-        common_info("ordering %s to stop" % rsc)
-        if not self.do_stop(context, rsc):
-            return False
-        if not utils.wait4dc("stop", not options.batch):
-            return False
-        common_info("ordering %s to start" % rsc)
-        return self.do_start(context, rsc)
+        return self._commit_meta_attr(context, rsc, "target-role", "Started")
 
     @command.wait
     @command.completers(compl.resources)
     def do_stop(self, context, rsc):
         "usage: stop <rsc>"
-        if not utils.is_name_sane(rsc):
+        return self._commit_meta_attr(context, rsc, "target-role", "Stopped")
+
+    @command.wait
+    @command.completers(compl.resources)
+    def do_restart(self, context, rsc):
+        "usage: restart <rsc>"
+        common_info("ordering %s to stop" % rsc)
+        if not self._commit_meta_attr(context, rsc, "target-role", "Stopped"):
             return False
-        return set_deep_meta_attr(rsc, "target-role", "Stopped")
+        if not utils.wait4dc("stop", not options.batch):
+            return False
+        common_info("ordering %s to start" % rsc)
+        return self._commit_meta_attr(context, rsc, "target-role", "Started")
 
     @command.wait
     @command.completers(compl.resources)
@@ -292,16 +302,12 @@ class RscMgmt(command.UI):
     @command.completers(compl.resources)
     def do_manage(self, context, rsc):
         "usage: manage <rsc>"
-        if not utils.is_name_sane(rsc):
-            return False
-        return set_deep_meta_attr(rsc, "is-managed", "true")
+        return self._commit_meta_attr(context, rsc, "is-managed", "true")
 
     @command.completers(compl.resources)
     def do_unmanage(self, context, rsc):
         "usage: unmanage <rsc>"
-        if not utils.is_name_sane(rsc):
-            return False
-        return set_deep_meta_attr(rsc, "is-managed", "false")
+        return self._commit_meta_attr(context, rsc, "is-managed", "false")
 
     @command.alias('move')
     @command.skill_level('administrator')
