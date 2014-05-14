@@ -977,10 +977,20 @@ class CibObject(object):
 
         also show rule expressions if found
         '''
+
+        has_nvpairs = len(node.xpath('.//nvpair')) > 0
+        idref = node.get('id-ref')
+
+        # empty set
+        if not (has_nvpairs or idref is not None):
+            return ''
+
         ret = "%s " % (clidisplay.keyword(self.set_names[node.tag]))
         node_id = node.get("id")
-        if cib_factory.is_id_refd(node.tag, node_id):
+        if node_id is not None and cib_factory.is_id_refd(node.tag, node_id):
             ret += "%s " % (nvpair_format("$id", node_id))
+        elif idref is not None:
+            ret += "%s " % (nvpair_format("$id-ref", idref))
 
         score = node.get("score")
         if score:
@@ -3137,6 +3147,24 @@ class CibFactory(object):
         self.cib_objects.append(obj)
         return obj
 
+    def _add_children(self, obj_type, node):
+        """
+        Called from create_from_node
+        In case this is a clone/group/master create from XML,
+        and the child node(s) haven't been added as a separate objects.
+        """
+        if obj_type not in constants.container_tags:
+            return True
+
+        for c in node.iterchildren('primitive'):
+            pid = c.get('id')
+            child_obj = self.find_object(pid)
+            if child_obj is None:
+                child_obj = self.create_from_node(copy.deepcopy(c))
+                if not child_obj:
+                    return False
+        return True
+
     def create_from_node(self, node):
         'Create a new cib object from a document node.'
         if node is None:
@@ -3152,6 +3180,10 @@ class CibFactory(object):
             if node is None:
                 common_debug("create_from_node: get_rscop_defaults_meta_node failed")
                 return None
+
+        if not self._add_children(obj_type, node):
+            return None
+
         obj = self.new_object(obj_type, node.get("id"))
         if not obj:
             return None
