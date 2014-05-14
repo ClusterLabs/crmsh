@@ -124,17 +124,6 @@ def cibdump2elem(section=None):
         common_error("running %s: %s" % (cmd, err_outp))
         return None
 
-cib_piped = "cibadmin -p"
-
-
-def commit_rsc(node):
-    "Replace a resource definition using cibadmin -R"
-    xml_processnodes(node, is_emptynvpairs, rmnodes)
-    xml_processnodes(node, is_emptyops, rmnodes)
-    rc = pipe_string("%s -R -o %s" % (cib_piped, "resources"),
-                     etree.tostring(node))
-    return rc == 0
-
 
 def read_cib(fun, params=None):
     cib_elem = fun(params)
