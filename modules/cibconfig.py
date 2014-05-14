@@ -2626,13 +2626,11 @@ class CibFactory(object):
                 adv_timeout = ra.get_adv_timeout(op)
                 if not adv_timeout:
                     continue
-                head_pl = ["op", []]
-                head_pl[1].append(["name", op])
-                head_pl[1].append(["timeout", adv_timeout])
-                head_pl[1].append(["interval", "0"])
-                cli_list = []
-                cli_list.append(head_pl)
-                if not obj.add_operation(cli_list):
+                n = etree.Element('op')
+                n.set('name', op)
+                n.set('timeout', adv_timeout)
+                n.set('interval', '0')
+                if not obj.add_operation(n):
                     rc = False
                 else:
                     obj_modified = True

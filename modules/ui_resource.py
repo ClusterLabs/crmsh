@@ -444,13 +444,12 @@ class RscMgmt(command.UI):
             common_err("not allowed to create non-0 interval operation %s" % op)
             return False
         if op_node is None:
-            head_pl = ["op", []]
-            head_pl[1].append(["name", op])
-            head_pl[1].append(["interval", interval])
-            head_pl[1].append([constants.trace_ra_attr, "1"])
-            cli_list = []
-            cli_list.append(head_pl)
-            if not rsc.add_operation(cli_list):
+            from lxml import etree
+            n = etree.Element('op')
+            n.set('name', op)
+            n.set('interval', interval)
+            n.set(constants.trace_ra_attr, '1')
+            if not rsc.add_operation(n):
                 return False
         else:
             op_node = rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
