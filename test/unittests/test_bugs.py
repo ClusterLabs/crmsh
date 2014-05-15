@@ -234,3 +234,23 @@ def test_pcs_interop_1():
     print "AFTER:", etree.tostring(elem)
 
     assert len(elem.xpath(".//meta_attributes/nvpair[@name='target-role']")) == 1
+
+
+def test_bnc878128():
+    xml = """<rsc_location id="cli-prefer-dummy-resource" rsc="dummy-resource"
+role="Started">
+  <rule id="cli-prefer-rule-dummy-resource" score="INFINITY">
+    <expression id="cli-prefer-expr-dummy-resource" attribute="#uname"
+operation="eq" value="x64-4"/>
+    <date_expression id="cli-prefer-lifetime-end-dummy-resource" operation="lt"
+end="2014-05-17 17:56:11Z"/>
+  </rule>
+</rsc_location>"""
+    data = etree.fromstring(xml)
+    obj = factory.create_from_node(data)
+    assert obj is not None
+    data = obj.repr_cli(format=-1)
+    print "OUTPUT:", data
+    exp = 'location cli-prefer-dummy-resource dummy-resource role=Started rule #uname eq x64-4 and date lt "2014-05-17 17:56:11Z"'
+    assert data == exp
+    assert obj.cli_use_validate()

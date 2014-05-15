@@ -1621,16 +1621,16 @@ class CibLocation(CibObject):
         s = clidisplay.keyword(self.obj_type)
         id = clidisplay.id(self.obj_id)
         s = "%s %s %s" % (s, id, rsc)
+
+        role = self.node.get("role")
+        if role is not None:
+            s += " role=%s" % (role)
+
         pref_node = self.node.get("node")
         score = clidisplay.score(get_score(self.node))
         if pref_node is not None:
-            ret = "%s %s: %s" % (s, score, pref_node)
-            role = self.node.get("role")
-            if role is not None:
-                ret += " role=%s" % (role)
-            return ret
-        else:
-            return s
+            s = "%s %s: %s" % (s, score, pref_node)
+        return s
 
     def _repr_cli_child(self, c, format):
         if c.tag == "rule":

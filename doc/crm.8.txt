@@ -2406,9 +2406,9 @@ which specify a score to be awarded if the rule matches.
 
 Usage:
 ...............
-location <id> <rsc> {node_pref|rules}
+location <id> <rsc> [role=<role>] {node_pref|rules}
 
-node_pref :: <score>: <node> [role=<role>]
+node_pref :: <score>: <node>
 
 rules ::
   rule [id_spec] [$role=<role>] <score>: <expression>
