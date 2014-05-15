@@ -698,7 +698,7 @@ class ConstraintParser(RuleParser):
     def parse_location(self):
         """
         location <id> rsc <score>: <node> [role=<role>]
-        location <id> rsc [rule ...]
+        location <id> rsc [role=<role>] [rule ...]
         rsc :: /<rsc-pattern>/
             | { <rsc-set> }
             | <rsc>
@@ -716,12 +716,20 @@ class ConstraintParser(RuleParser):
                 out.append(rscset)
         else:
             out.set('rsc', self.match_resource())
+
+        if self.try_match(self._ROLE_RE) or self.try_match(self._ROLE2_RE):
+            out.set('role', self.matched(1))
+
+        score = False
         if self.try_match(self._SCORE_RE):
+            score = True
             out.set(*self.validate_score(self.matched(1)))
             out.set('node', self.match_identifier())
-            if self.try_match(self._ROLE_RE) or self.try_match(self._ROLE2_RE):
-                out.set('role', self.matched(1))
-        else:
+            # backwards compatibility: role used to be read here
+            if 'role' not in out:
+                if self.try_match(self._ROLE_RE) or self.try_match(self._ROLE2_RE):
+                    out.set('role', self.matched(1))
+        if not score:
             for rule in self.match_rules():
                 out.append(rule)
         return out
