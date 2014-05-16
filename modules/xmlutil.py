@@ -110,11 +110,47 @@ cib_piped = "cibadmin -p"
 
 
 def commit_rsc(node):
-    "Replace a resource definition using cibadmin -R"
+    "Replace a resource definition using cibadmin -R or cibadmin -P (if available)"
+    from utils import cibadmin_can_patch, filter_string
+
     xml_processnodes(node, is_emptynvpairs, rmnodes)
     xml_processnodes(node, is_emptyops, rmnodes)
-    rc = pipe_string("%s -R -o %s" % (cib_piped, "resources"),
-                     etree.tostring(node))
+
+    if cibadmin_can_patch():
+        nid = node.get('id')
+        current_cib = read_cib(cibdump2elem)
+        oldnode = current_cib.xpath('//configuration//%s[@id="%s"]' % (node.tag, nid))
+        if len(oldnode) != 1:
+            common_err("Resource to modify not found in CIB")
+            return False
+        oldnode = oldnode[0]
+
+        new_cib = copy.deepcopy(current_cib)
+        # bump epoch
+        if 'epoch' in new_cib.attrib:
+            new_cib.set('epoch', str(int(new_cib.get('epoch')) + 1))
+        else:
+            new_cib.set('epoch', 1)
+        new_node = new_cib.xpath('//configuration//%s[@id="%s"]' % (node.tag, nid))[0]
+
+        new_node.getparent().replace(new_node, node)
+
+        oldcib_s = etree.tostring(current_cib)
+        newcib_s = etree.tostring(new_cib)
+
+        tmpf = str2tmp(oldcib_s, suffix=".xml")
+        if not tmpf:
+            common_err("Failed to create temporary file")
+            return False
+        vars.tmpfiles.append(tmpf)
+        rc, diff = filter_string("crm_diff -o %s -n -" % (tmpf), newcib_s)
+        if not diff:
+            common_err("crm_diff failed to produce a diff (rc=%d)" % rc)
+            return False
+        rc = pipe_string("%s --patch" % (cib_piped), diff)
+    else:
+        rc = pipe_string("%s -R -o %s" % (cib_piped, "resources"),
+                         etree.tostring(node))
     return rc == 0
 
 
