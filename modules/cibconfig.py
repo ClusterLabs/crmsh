@@ -2352,6 +2352,7 @@ class CibFactory(object):
         properties and rsc/op_defaults hold stuff in a
         meta_attributes child.
         '''
+        assert node is not None
         if pnode is None:
             pnode = node
         obj = cib_object_map[pnode.tag][1](pnode.tag)
@@ -3108,9 +3109,14 @@ class CibFactory(object):
         # unlink all and find them in the new node
         for child in obj.children:
             oldnode = child.node
-            child.node = obj.find_child_in_node(child)
+            newnode = obj.find_child_in_node(child)
+            if newnode is None:
+                common_err("Child found in children list but not in node: %s, %s" % (obj, child))
+                return False
+            child.node = newnode
             if child.children:  # and children of children
-                self._update_children(child)
+                if not self._update_children(child):
+                    return False
             rmnode(oldnode)
             if child.parent:
                 child.parent.updated = True
@@ -3146,6 +3152,7 @@ class CibFactory(object):
                     child.node = c
 
     def _add_element(self, obj, node):
+        assert node is not None
         obj.node = node
         obj.set_id()
         pnode = get_topnode(self.cib_elem, obj.parent_type)
