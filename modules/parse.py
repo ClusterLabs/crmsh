@@ -324,15 +324,21 @@ def parse_location(s):
     head_pl.append(["id", s[1]])
     head_pl.append(["rsc", s[2]])
     cli_list.append([s[0].lower(), head_pl])
-    # the short node preference form
-    if len(s) in (5, 6) and not keyword_cmp(s[3], "rule"):
-        if not cli_parse_score(s[3], head_pl):
-            return False
-        head_pl.append(["node", s[4]])
-        if len(s) == 6 and s[5].startswith('role='):
-            head_pl.append(["role", s[5].split('=', 1)[1]])
-        return cli_list
+
     i = 3
+    if len(s) > i and s[i].startswith('role='):
+        head_pl.append(["role", s[i].split('=', 1)[1]])
+        i += 1
+
+    # the short node preference form
+    if len(s) > i and not keyword_cmp(s[i], "rule"):
+        if not cli_parse_score(s[i], head_pl):
+            return False
+        head_pl.append(["node", s[i + 1]])
+        if len(s) > (i + 2) and s[i + 2].startswith('role='):
+            head_pl.append(["role", s[i + 2].split('=', 1)[1]])
+        return cli_list
+
     while i < len(s):
         numtoks, l = parse_rule(s[i:])
         if not l:

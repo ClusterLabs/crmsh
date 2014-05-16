@@ -35,7 +35,7 @@ primitive s6 ocf:pacemaker:Stateful \
 	operations $id-ref=d1
 ms m5 s5
 ms m6 s6
-location l1 g1 100: node1
+location l1 g1 role=Started 100: node1
 location l2 c \
 	rule $id=l2-rule1 100: #uname eq node1
 location l3 m5 \
@@ -49,7 +49,7 @@ location l5 m5 \
 		date in_range start="2009-05-26" end="2009-07-26" and \
 		date in_range start="2009-05-26" years="2009" and \
 		date date_spec years="2009" hours="09-17"
-location l6 m5 \
+location l6 m5 role=Started \
 	rule $id-ref=l2-rule1
 location l7 m5 \
 	rule $id-ref=l2
