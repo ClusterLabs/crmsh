@@ -29,6 +29,7 @@
 .INP: primitive d3 ocf:heartbeat:Dummy
 .INP: group g2 d1 d2
 .INP: filter "sed '/g2/s/d1/p1/;/g1/s/p1/d1/'"
+ERROR: 27: Cannot create group:g2: Child primitive:p1 already in group:g1
 .INP: filter "sed '/g1/s/d1/p1/;/g2/s/p1/d1/'"
 .INP: filter "sed '$alocation loc-d1 d1 rule $id=r1 -inf: not_defined webserver rule $id=r2 webserver: defined webserver'"
 .INP: filter "sed 's/not_defined webserver/& or mem number:lte 0/'" loc-d1
