@@ -550,8 +550,7 @@ class CibConfig(command.UI):
                 not cib_factory.is_elem_supported(cmd):
             common_err("%s not supported by the RNG schema" % cmd)
             return False
-        f = lambda: cib_factory.create_object(cmd, *args)
-        return f()
+        return cib_factory.create_object(cmd, *args)
 
     @command.skill_level('administrator')
     @command.completers(_node_id_list, compl.choice(constants.node_attributes_keyw))

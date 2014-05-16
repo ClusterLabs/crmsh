@@ -2954,7 +2954,8 @@ class CibFactory(object):
         if oldnode.getparent() is not None:
             oldnode.getparent().replace(oldnode, newnode)
         obj.nocli = False  # try again after update
-        self._adjust_children(obj)
+        if not self._adjust_children(obj):
+            return False
         if not obj.cli_use_validate():
             common_debug("update_element: validation failed (%s, %s)" % (obj, etree.tostring(newnode)))
             obj.nocli_warn = True
@@ -3070,19 +3071,36 @@ class CibFactory(object):
         '''
         new_children_ids = get_rsc_children_ids(obj.node)
         if not new_children_ids:
-            return
+            return True
         old_children = [x for x in obj.children if x.parent == obj]
         obj.children = [self.find_object(x) for x in new_children_ids]
         # relink orphans to top
         for child in set(old_children) - set(obj.children):
             common_debug("relink child %s to top" % str(child))
             self._relink_child_to_top(child)
-        self._update_children(obj)
+        if not self._are_children_orphans(obj):
+            return False
+        return self._update_children(obj)
 
     def _relink_child_to_top(self, obj):
         'Relink a child to the top node.'
         get_topnode(self.cib_elem, obj.parent_type).append(obj.node)
         obj.parent = None
+
+    def _are_children_orphans(self, obj):
+        """
+        Check if we're adding a container containing objects
+        we've already added to a different container
+        """
+        for child in obj.children:
+            if not child.parent:
+                continue
+            if child.parent == obj or child.parent.obj_id == obj.obj_id:
+                continue
+            if child.parent.obj_type in constants.container_tags:
+                common_err("Cannot create %s: Child %s already in %s" % (obj, child, child.parent))
+                return False
+        return True
 
     def _update_children(self, obj):
         '''For composite objects: update all children nodes.
@@ -3094,9 +3112,10 @@ class CibFactory(object):
             if child.children:  # and children of children
                 self._update_children(child)
             rmnode(oldnode)
-            if child.parent and child.parent != obj:
-                child.parent.updated = True  # the other parent updated
+            if child.parent:
+                child.parent.updated = True
             child.parent = obj
+        return True
 
     def test_element(self, obj):
         if not obj.xml_obj_type in constants.defaults_tags:
@@ -3131,8 +3150,9 @@ class CibFactory(object):
         obj.set_id()
         pnode = get_topnode(self.cib_elem, obj.parent_type)
         common_debug("_add_element: append child %s to %s" % (obj.obj_id, pnode.tag))
+        if not self._adjust_children(obj):
+            return None
         pnode.append(node)
-        self._adjust_children(obj)
         self._redirect_children_constraints(obj)
         if not obj.cli_use_validate():
             self.nocli_warn = True

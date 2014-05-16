@@ -237,6 +237,9 @@ def test_pcs_interop_1():
 
 
 def test_bnc878128():
+    """
+    L3: "crm configure show" displays XML information instead of typical crm output.
+    """
     xml = """<rsc_location id="cli-prefer-dummy-resource" rsc="dummy-resource"
 role="Started">
   <rule id="cli-prefer-rule-dummy-resource" score="INFINITY">
@@ -254,3 +257,16 @@ end="2014-05-17 17:56:11Z"/>
     exp = 'location cli-prefer-dummy-resource dummy-resource role=Started rule #uname eq x64-4 and date lt "2014-05-17 17:56:11Z"'
     assert data == exp
     assert obj.cli_use_validate()
+
+
+def test_bnc878112():
+    """
+    crm configure group can hijack a cloned primitive (and then crash)
+    """
+    obj1 = factory.create_object('primitive', 'p1', 'Dummy')
+    assert obj1 is not None
+    obj2 = factory.create_object('group', 'g1', 'p1')
+    assert obj2 is not None
+    obj3 = factory.create_object('group', 'g2', 'p1')
+    print obj3
+    assert obj3 is False
