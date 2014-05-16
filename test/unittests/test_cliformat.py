@@ -25,9 +25,7 @@ factory = cibconfig.cib_factory
 
 
 def assert_is_not_none(thing):
-    if thing is None:
-        message = "%s was None" % (thing)
-        raise AssertionError(message)
+    assert thing is not None, "Expected non-None value"
 
 
 def roundtrip(cli, debug=False):

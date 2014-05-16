@@ -59,7 +59,7 @@ def new(node, pfx):
     '''
     Create a unique id for the xml node.
     '''
-    common_debug("idmgmt.new: node=%s, pfx=%s" % (etree.tostring(node), pfx))
+    #common_debug("idmgmt.new: node=%s, pfx=%s" % (etree.tostring(node), pfx))
     name = node.get("name")
     if node.tag == "nvpair":
         node_id = "%s-%s" % (pfx, name)
@@ -151,7 +151,7 @@ def id_in_use(obj_id):
 def save(node_id):
     if not node_id:
         return
-    common_debug("id_store: saved %s" % node_id)
+    #common_debug("id_store: saved %s" % node_id)
     _id_store[node_id] = 1
 
 
@@ -171,7 +171,7 @@ def remove(node_id):
         return
     try:
         del _id_store[node_id]
-        common_debug("id_store: removed %s" % node_id)
+        #common_debug("id_store: removed %s" % node_id)
     except KeyError:
         pass
 
@@ -194,10 +194,8 @@ def set(node, oldnode, id_hint, id_required=True):
     '''
     old_id = oldnode.get("id") if oldnode is not None else None
     new_id = node.get("id") or old_id or node.get("uname")
-    from msg import common_debug
-    from lxml import etree
-    common_debug("idmgmt.set: node=%s, new_id=%s, old_id=%s, id_hint=%s" %
-                 (etree.tostring(node), new_id, old_id, id_hint))
+    #common_debug("idmgmt.set: node=%s, new_id=%s, old_id=%s, id_hint=%s" %
+    #             (etree.tostring(node), new_id, old_id, id_hint))
     if new_id:
         save(new_id)
     elif id_required:
