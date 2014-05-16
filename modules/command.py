@@ -322,7 +322,7 @@ uncommitted changes to the configuration.
     def do_quit(self, context):
         context.quit()
 
-    @alias('?')
+    @alias('?', '-h', '--help')
     @help('''show help (help topics for list of topics)
 The help subsystem consists of the command reference and a list
 of topics. The former is what you need in order to get the
