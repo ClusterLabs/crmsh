@@ -332,17 +332,20 @@ def mk_rsc_type(n):
 
 
 def listnodes():
-    nodes_elem = cibdump2elem("nodes")
-    if nodes_elem is None:
+    cib = cibdump2elem()
+    if cib is None:
         return []
-    return [x.get("uname") for x in nodes_elem.iterchildren("node")
-            if is_normal_node(x)]
+    local_nodes = cib.xpath('/cib/configuration/nodes/node/@uname')
+    remote_nodes = cib.xpath('/cib/status/node_state[@remote_node="true"]/@uname')
+    return list(set([n for n in local_nodes + remote_nodes if n]))
 
 
 def is_our_node(s):
     '''
     Check if s is in a list of our nodes (ignore case).
     This is not fast, perhaps should be cached.
+
+    Includes remote nodes as well
     '''
     for n in listnodes():
         if n.lower() == s.lower():
