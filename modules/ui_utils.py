@@ -22,9 +22,10 @@ from msg import bad_usage, common_err
 import utils
 
 
-def _get_attr_cmd(attr_ext_commands, args):
+def _get_attr_cmd(attr_ext_commands, subcmd):
+    attr_ext_commands
     try:
-        attr_cmd = attr_ext_commands[args[1]]
+        attr_cmd = attr_ext_commands[subcmd]
         if attr_cmd:
             return attr_cmd
     except KeyError, msg:
@@ -32,38 +33,39 @@ def _get_attr_cmd(attr_ext_commands, args):
     raise ValueError("Bad attr_cmd " + repr(attr_ext_commands))
 
 
-def _dispatch_attr_cmd(cmd, attr_cmd, args):
-    if args[1] == 'set':
-        if len(args) != 4:
-            raise ValueError("Expected 4 arguments to 'set'")
-        if not utils.is_name_sane(args[0]) \
-                or not utils.is_name_sane(args[2]) \
-                or not utils.is_value_sane(args[3]):
-            raise ValueError("Argument failed sanity check")
-        return utils.ext_cmd(attr_cmd % (args[0], args[2], args[3])) == 0
-    elif args[1] in ('delete', 'show') or \
-            (cmd == "secret" and args[1] in ('stash', 'unstash', 'check')):
-        if len(args) != 3:
-            raise ValueError("Expected 3 arguments to " + args[1])
-        if not utils.is_name_sane(args[0]) \
-                or not utils.is_name_sane(args[2]):
-            raise ValueError("Argument failed sanity check")
-        return utils.ext_cmd(attr_cmd % (args[0], args[2])) == 0
-    raise ValueError("Unknown command " + repr(args[1]))
+def _dispatch_attr_cmd(cmd, attr_cmd, rsc, subcmd, attr, value):
+    def sanity_check(arg):
+        if not utils.is_name_sane(arg):
+            raise ValueError("Expected valid name, got '%s'" % (arg))
+    if subcmd == 'set':
+        if value is None:
+            raise ValueError("Missing value argument to set")
+        sanity_check(rsc)
+        sanity_check(attr)
+        sanity_check(value)
+        return utils.ext_cmd(attr_cmd % (rsc, attr, value)) == 0
+    elif subcmd in ('delete', 'show') or \
+            (cmd == "secret" and subcmd in ('stash', 'unstash', 'check')):
+        if value is not None:
+            raise ValueError("Too many arguments to %s" % (subcmd))
+        sanity_check(rsc)
+        sanity_check(attr)
+        return utils.ext_cmd(attr_cmd % (rsc, attr)) == 0
+    raise ValueError("Unknown command " + repr(subcmd))
 
 
-def manage_attr(cmd, attr_ext_commands, args):
+def manage_attr(cmd, attr_ext_commands, rsc, subcmd, attr, value):
     '''
     TODO: describe.
     '''
-    if len(args) < 3:
-        bad_usage(cmd, ' '.join(args), "Too few arguments")
-        return False
     try:
-        attr_cmd = _get_attr_cmd(attr_ext_commands, args)
-        return _dispatch_attr_cmd(cmd, attr_cmd, args)
+        attr_cmd = _get_attr_cmd(attr_ext_commands, subcmd)
+        return _dispatch_attr_cmd(cmd, attr_cmd, rsc, subcmd, attr, value)
     except ValueError, msg:
-        bad_usage(cmd, ' '.join(args), msg)
+        cmdline = [rsc, subcmd, attr]
+        if value is not None:
+            cmdline.append(value)
+        bad_usage(cmd, ' '.join(cmdline), msg)
         return False
 
 

@@ -312,28 +312,25 @@ class RscMgmt(command.UI):
     @command.alias('move')
     @command.skill_level('administrator')
     @command.completers_repeating(compl.resources, compl.nodes,
-                                  compl.choice(['lifetime', 'force']))
-    def do_migrate(self, context, *args):
+                                  compl.choice(['reboot', 'forever', 'force']))
+    def do_migrate(self, context, rsc, *args):
         """usage: migrate <rsc> [<node>] [<lifetime>] [force]"""
-        argl = list(args)
-        rsc = argl[0]
         if not utils.is_name_sane(rsc):
             return False
-        del argl[0]
         node = None
-        opt_l = utils.fetch_opts(argl, ["force"])
+        argl = list(args)
+        force = "force" in utils.fetch_opts(argl, ["force"])
         lifetime = utils.fetch_lifetime_opt(argl)
-        if len(argl) == 1:
-            if xmlutil.is_our_node(argl[0]):
-                node = argl[0]
-            else:
-                context.fatal_error("Not our node: " + argl[0])
+        if len(argl) > 0:
+            node = argl[0]
+            if not xmlutil.is_our_node(node):
+                context.fatal_error("Not our node: " + node)
         opts = ''
         if node:
             opts = "--node='%s'" % node
         if lifetime:
             opts = "%s --lifetime='%s'" % (opts, lifetime)
-        if "force" in opt_l or config.core.force:
+        if force or config.core.force:
             opts = "%s --force" % opts
         return utils.ext_cmd(self.rsc_migrate % (rsc, opts)) == 0
 
@@ -356,28 +353,30 @@ class RscMgmt(command.UI):
         return cleanup_resource(resource, node)
 
     @command.completers(compl.resources, _attrcmds, compl.nodes)
-    def do_failcount(self, context, *args):
+    def do_failcount(self, context, rsc, cmd, node, value=None):
         """usage:
         failcount <rsc> set <node> <value>
         failcount <rsc> delete <node>
         failcount <rsc> show <node>"""
-        return ui_utils.manage_attr(context.get_command_name(), self.rsc_failcount, args)
+        return ui_utils.manage_attr(context.get_command_name(), self.rsc_failcount,
+                                    rsc, cmd, node, value)
 
     @command.skill_level('administrator')
     @command.wait
     @command.completers(compl.resources, _attrcmds)
-    def do_param(self, context, *args):
+    def do_param(self, context, rsc, cmd, param, value=None):
         """usage:
         param <rsc> set <param> <value>
         param <rsc> delete <param>
         param <rsc> show <param>"""
-        return ui_utils.manage_attr(context.get_command_name(), self.rsc_param, args)
+        return ui_utils.manage_attr(context.get_command_name(), self.rsc_param,
+                                    rsc, cmd, param, value)
 
     @command.skill_level('administrator')
     @command.wait
     @command.completers(compl.resources,
                         compl.choice(['set', 'stash', 'unstash', 'delete', 'show', 'check']))
-    def do_secret(self, context, *args):
+    def do_secret(self, context, rsc, cmd, param, value=None):
         """usage:
         secret <rsc> set <param> <value>
         secret <rsc> stash <param>
@@ -385,27 +384,30 @@ class RscMgmt(command.UI):
         secret <rsc> delete <param>
         secret <rsc> show <param>
         secret <rsc> check <param>"""
-        return ui_utils.manage_attr(context.get_command_name(), self.rsc_secret, args)
+        return ui_utils.manage_attr(context.get_command_name(), self.rsc_secret,
+                                    rsc, cmd, param, value)
 
     @command.skill_level('administrator')
     @command.wait
     @command.completers(compl.resources, _attrcmds)
-    def do_meta(self, context, *args):
+    def do_meta(self, context, rsc, cmd, attr, value=None):
         """usage:
         meta <rsc> set <attr> <value>
         meta <rsc> delete <attr>
         meta <rsc> show <attr>"""
-        return ui_utils.manage_attr(context.get_command_name(), self.rsc_meta, args)
+        return ui_utils.manage_attr(context.get_command_name(), self.rsc_meta,
+                                    rsc, cmd, attr, value)
 
     @command.skill_level('administrator')
     @command.wait
     @command.completers(compl.resources, _attrcmds)
-    def do_utilization(self, context, *args):
+    def do_utilization(self, context, rsc, cmd, attr, value=None):
         """usage:
         utilization <rsc> set <attr> <value>
         utilization <rsc> delete <attr>
         utilization <rsc> show <attr>"""
-        return ui_utils.manage_attr(context.get_command_name(), self.rsc_utilization, args)
+        return ui_utils.manage_attr(context.get_command_name(), self.rsc_utilization,
+                                    rsc, cmd, attr, value)
 
     @command.completers(compl.nodes)
     def do_refresh(self, context, *args):

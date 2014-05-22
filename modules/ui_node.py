@@ -168,10 +168,9 @@ class NodeMgmt(command.UI):
         if not argl:
             node = utils.this_node()
         elif len(argl) == 1:
-            if xmlutil.is_our_node(args[0]):
-                node = args[0]
-            else:
-                common_err("%s: node name not recognized" % args[0])
+            node = args[0]
+            if not xmlutil.is_our_node(node):
+                common_err("%s: node name not recognized" % node)
                 return False
         else:
             syntax_err(args, context=context.get_command_name())
@@ -289,31 +288,34 @@ class NodeMgmt(command.UI):
 
     @command.wait
     @command.completers(compl.nodes, compl.choice(['set', 'delete', 'show']), compl.resources)
-    def do_attribute(self, context, *args):
+    def do_attribute(self, context, node, cmd, rsc, value=None):
         """usage:
         attribute <node> set <rsc> <value>
         attribute <node> delete <rsc>
         attribute <node> show <rsc>"""
-        return ui_utils.manage_attr(context.get_command_name(), self.node_attr, args)
+        return ui_utils.manage_attr(context.get_command_name(), self.node_attr,
+                                    node, cmd, rsc, value)
 
     @command.wait
     @command.completers(compl.nodes, compl.choice(['set', 'delete', 'show']), compl.resources)
-    def do_utilization(self, context, *args):
+    def do_utilization(self, context, node, cmd, rsc, value=None):
         """usage:
         utilization <node> set <rsc> <value>
         utilization <node> delete <rsc>
         utilization <node> show <rsc>"""
-        return ui_utils.manage_attr(context.get_command_name(), self.node_utilization, args)
+        return ui_utils.manage_attr(context.get_command_name(), self.node_utilization,
+                                    node, cmd, rsc, value)
 
     @command.wait
     @command.name('status-attr')
     @command.completers(compl.nodes, compl.choice(['set', 'delete', 'show']), compl.resources)
-    def do_status_attr(self, context, *args):
+    def do_status_attr(self, context, node, cmd, rsc, value=None):
         """usage:
         status-attr <node> set <rsc> <value>
         status-attr <node> delete <rsc>
         status-attr <node> show <rsc>"""
-        return ui_utils.manage_attr(context.get_command_name(), self.node_status, args)
+        return ui_utils.manage_attr(context.get_command_name(), self.node_status,
+                                    node, cmd, rsc, value)
 
 
 # vim:ts=4:sw=4:et:
