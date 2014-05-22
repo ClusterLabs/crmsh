@@ -59,8 +59,6 @@
 .EXT crm_resource --show-metadata ocf:pacemaker:Stateful
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .EXT pengine metadata
-WARNING: 50: s5: action monitor not advertised in meta-data, it may not be supported by the RA
-WARNING: 50: s6: action monitor not advertised in meta-data, it may not be supported by the RA
 .EXT crmd metadata
 .EXT cib metadata
 .INP: show
@@ -136,5 +134,3 @@ op_defaults opsdef2: \
 	record-pending=true
 tag t1: m5 m6
 .INP: commit
-WARNING: 52: s5: action monitor not advertised in meta-data, it may not be supported by the RA
-WARNING: 52: s6: action monitor not advertised in meta-data, it may not be supported by the RA
