@@ -777,7 +777,7 @@ def op2list(node):
 
 
 def get_rsc_operations(rsc_node):
-    actions = [op2list(op) for op in rsc_node.xpath('//operations/op')]
+    actions = [op2list(op) for op in rsc_node.xpath('.//operations/op')]
     actions = [[op, pl] for op, pl in actions if op]
     return actions
 
