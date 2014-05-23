@@ -446,11 +446,28 @@ class CibConfig(command.UI):
             rc = set_obj.graph_img(gtype, outf, ftype)
         return rc
 
+    def _stop_if_running(self, rscs):
+        rscstate = xmlutil.RscState()
+        to_stop = [rsc for rsc in rscs if rscstate.is_running(rsc)]
+        from ui_resource import set_deep_meta_attr
+        if len(to_stop) > 0:
+            ok = all(set_deep_meta_attr(rsc, 'target-role', 'Stopped',
+                                        commit=False) for rsc in to_stop)
+            if not ok or not cib_factory.commit():
+                raise ValueError("Failed to stop one or more running resources: %s" %
+                                 (', '.join(to_stop)))
+
     @command.skill_level('administrator')
     @command.completers_repeating(_id_list)
     def do_delete(self, context, *args):
-        "usage: delete <id> [<id>...]"
-        return cib_factory.delete(*args)
+        "usage: delete [-f|--force] <id> [<id>...]"
+        argl = list(args)
+        arg_force = argl and argl[0] == '--force'
+        if arg_force:
+            del argl[0]
+        if arg_force or config.core.force:
+            self._stop_if_running(argl)
+        return cib_factory.delete(*argl)
 
     @command.name('default-timeouts')
     @command.alias('default_timeouts')

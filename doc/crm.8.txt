@@ -2861,9 +2861,12 @@ a container object, such as a group, and it is the only resource
 in that container, then the container is deleted as well. Any
 related constraints are removed as well.
 
+If the object is a started resource, it will not be deleted unless the
+`--force` flag is passed to the command, or the `force` option is set.
+
 Usage:
 ...............
-delete <id> [<id>...]
+delete [--force] <id> [<id>...]
 ...............
 
 [[cmdhelp_configure_default-timeouts,set timeouts for operations to minimums from the meta-data]]
