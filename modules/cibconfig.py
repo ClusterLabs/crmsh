@@ -41,7 +41,7 @@ import utils
 from utils import ext_cmd, safe_open_w, pipe_string, safe_close_w, crm_msec
 from utils import ask, lines2cli, olist
 from utils import page_string, cibadmin_can_patch, str2tmp
-from utils import run_ptest, is_id_valid, edit_file, get_boolean, filter_string, find_value
+from utils import run_ptest, is_id_valid, edit_file, get_boolean, filter_string
 from ordereddict import odict
 from xmlutil import is_child_rsc, rsc_constraint, sanitize_cib, rename_id, get_interesting_nodes
 from xmlutil import is_pref_location, get_topnode, new_cib, get_rscop_defaults_meta_node
@@ -56,7 +56,7 @@ from xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_li
 from xmlutil import get_rsc_operations, delete_rscref, xml_equals, lookup_node, RscState
 from xmlutil import cibtext2elem
 from cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
-from cliformat import cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
+from cliformat import cli_nvpair, cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
 from cliformat import cli_operations, simple_rsc_constraint, cli_rule, cli_format
 
 
@@ -197,21 +197,19 @@ def copy_nvpairs(tonode, fromnode):
             tonode.append(copy.deepcopy(cnode))
 
     def copy_nvpair(nvp):
+        if 'value' not in nvp:
+            tonode.append(copy.deepcopy(nvp))
+            return
         n = nvp.get('name')
         for nvp2 in tonode:
             if nvp2.get('name') == n:
                 nvp2.set('value', nvp.get('value'))
                 break
         else:
-            m = etree.SubElement(tonode,
-                                 'nvpair',
-                                 name=n,
-                                 value=nvp.get('value'))
-            if 'id' in nvp.attrib:
-                m.set('id', nvp.get('id'))
-            else:
-                m.set('id', idmgmt.new(m, id_hint))
+            m = copy.deepcopy(nvp)
             tonode.append(m)
+            if 'id' not in m.attrib:
+                m.set('id', idmgmt.new(m, id_hint))
 
     def copy_id(node):
         nid = node.get('id')
@@ -469,18 +467,19 @@ class CibObjectSet(object):
             for a in r_node.iterchildren("instance_attributes"):
                 for p in a.iterchildren("nvpair"):
                     name = p.get("name")
+                    value = p.get("value")
                     # don't fail if the meta-data doesn't contain the
                     # expected attributes
-                    try:
-                        if ra_params[name].get("unique") == "1":
-                            value = p.get("value")
-                            k = (ra_class, ra_provider, ra_type, name, value)
-                            try:
-                                clash_dict[k].append(ra_id)
-                            except KeyError:
-                                clash_dict[k] = [ra_id]
-                    except KeyError:
-                        pass
+                    if value is not None:
+                        try:
+                            if ra_params[name].get("unique") == "1":
+                                k = (ra_class, ra_provider, ra_type, name, value)
+                                try:
+                                    clash_dict[k].append(ra_id)
+                                except KeyError:
+                                    clash_dict[k] = [ra_id]
+                        except KeyError:
+                            pass
             return
         # we check the whole CIB for clashes as a clash may originate between
         # an object already committed and a new one
@@ -764,12 +763,42 @@ def fix_node_ids(node, oldnode):
     recurse(node, oldnode, hint_map.get(node.tag, ''))
 
 
+def resolve_idref(node):
+    """
+    resolve id-ref references that refer
+    to object ids, not attribute lists
+    """
+    id_ref = node.get('id-ref')
+    attr_list_type = node.tag
+    obj = cib_factory.find_object(id_ref)
+    if obj:
+        nodes = obj.node.xpath(".//%s" % attr_list_type)
+        if len(nodes) > 1:
+            common_warn("%s contains more than one %s, using first" %
+                        (obj.obj_id, attr_list_type))
+        if len(nodes) > 0:
+            node_id = nodes[0].get("id")
+            if node_id:
+                return node_id
+    target = cib_factory.get_cib().xpath('.//*[@id="%s"]' % (id_ref))
+    if len(target) == 0:
+        common_err("Reference not found: %s" % id_ref)
+    elif len(target) > 1:
+        common_err("Ambiguous reference to %s" % id_ref)
+    return id_ref
+
+
 def resolve_references(node):
     """
     In the output from parse(), there are
     possible references to other nodes in
     the CIB. This resolves those references.
     """
+    idrefnodes = node.xpath('.//*[@id-ref]')
+    if 'id-ref' in node.attrib:
+        idrefnodes += [node]
+    for ref in idrefnodes:
+        ref.set('id-ref', resolve_idref(ref))
     for ref in node.iterchildren('crmsh-ref'):
         child_id = ref.get('id')
         obj = cib_factory.find_object(child_id)
@@ -1002,9 +1031,9 @@ class CibObject(object):
 
         for c in node.iterchildren():
             if c.tag == "rule":
-                ret += "%s %s " % (clidisplay.keyword("rule"), cli_rule(c, cib_factory.is_id_refd))
+                ret += "%s %s " % (clidisplay.keyword("rule"), cli_rule(c))
             elif c.tag == "nvpair":
-                ret += "%s " % (nvpair_format(c.get("name"), c.get("value")))
+                ret += "%s " % (cli_nvpair(c))
         if ret[-1] == ' ':
             ret = ret[:-1]
         return ret
@@ -1338,7 +1367,8 @@ class Op(object):
         for p in self.node.xpath("instance_attributes/nvpair"):
             n = p.get("name")
             v = p.get("value")
-            self.set_attr(n, v)
+            if n is not None and v is not None:
+                self.set_attr(n, v)
 
     def mkxml(self):
         # create an xml node
@@ -1635,7 +1665,7 @@ class CibLocation(CibObject):
     def _repr_cli_child(self, c, format):
         if c.tag == "rule":
             return "%s %s" % \
-                (clidisplay.keyword("rule"), cli_rule(c, cib_factory.is_id_refd))
+                (clidisplay.keyword("rule"), cli_rule(c))
 
     def check_sanity(self):
         '''
@@ -1836,9 +1866,9 @@ class CibProperty(CibObject):
     def _repr_cli_child(self, c, format):
         if c.tag == "rule":
             return ' '.join((clidisplay.keyword("rule"),
-                             cli_rule(c, cib_factory.is_id_refd)))
+                             cli_rule(c)))
         elif c.tag == "nvpair":
-            return nvpair_format(c.get("name"), c.get("value"))
+            return cli_nvpair(c)
         else:
             return ''
 
@@ -2034,11 +2064,7 @@ def default_id_for_obj(obj_type):
 
 
 def can_migrate(node):
-    for c in node.iterchildren("meta_attributes"):
-        pl = nvpairs2list(c)
-        if find_value(pl, "allow-migrate") == "true":
-            return True
-    return False
+    return 'true' in node.xpath('.//nvpair[@name="allow-migrate"]/@value')
 
 
 cib_upgrade = "cibadmin --upgrade --force"
@@ -2648,7 +2674,10 @@ class CibFactory(object):
         return rc
 
     def is_id_refd(self, attr_list_type, id):
-        '''Is this ID referenced anywhere?'''
+        '''
+        Is this ID referenced anywhere?
+        Used from cliformat
+        '''
         try:
             return self.id_refs[id] == attr_list_type
         except KeyError:
@@ -2661,36 +2690,32 @@ class CibFactory(object):
         one, i.e. if the former is the case to find the right
         id to reference.
         '''
-        obj = self.find_object(id_ref)
         self.id_refs[id_ref] = attr_list_type
+        obj = self.find_object(id_ref)
         if obj:
-            node_l = obj.node.xpath(".//%s" % attr_list_type)
-            if node_l:
-                if len(node_l) > 1:
-                    common_warn("%s contains more than one %s, using first" %
-                                (obj.obj_id, attr_list_type))
-                id = node_l[0].get("id")
-                if not id:
-                    common_err("%s reference not found" % id_ref)
-                    return id_ref  # hope that user will fix that
-                return id
-        # verify if id_ref exists
-        node_l = self.cib_elem.xpath(".//%s" % attr_list_type)
-        for node in node_l:
-            if node.get("id") == id_ref:
-                return id_ref
-        common_err("%s reference not found" % id_ref)
-        return id_ref  # hope that user will fix that
+            nodes = obj.node.xpath(".//%s" % attr_list_type)
+            if len(nodes) > 1:
+                common_warn("%s contains more than one %s, using first" %
+                            (obj.obj_id, attr_list_type))
+            if len(nodes) > 0:
+                node_id = nodes[0].get("id")
+                if node_id:
+                    return node_id
+        target = self.cib_elem.xpath('.//*[@id="%s"]' % (id_ref))
+        if len(target) == 0:
+            common_err("Reference not found: %s" % id_ref)
+        elif len(target) > 1:
+            common_err("Ambiguous reference to %s" % id_ref)
+        return id_ref
 
     def _get_attr_value(self, obj_type, attr):
         if not self.is_cib_sane():
             return None
         for obj in self.cib_objects:
             if obj.obj_type == obj_type and obj.node is not None:
-                pl = nvpairs2list(obj.node)
-                v = find_value(pl, attr)
-                if v:
-                    return v
+                for n in nvpairs2list(obj.node):
+                    if n.get('name') == attr:
+                        return n.get('value')
         return None
 
     def get_property(self, property):

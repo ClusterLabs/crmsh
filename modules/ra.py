@@ -557,16 +557,17 @@ class RAInfo(object):
                 return True
         return False
 
-    def sanity_check_params(self, id, pl, existence_only=False):
+    def sanity_check_params(self, id, nvpairs, existence_only=False):
         '''
-        pl is a list of (attribute, value) pairs.
+        nvpairs is a list of <nvpair> tags.
         - are all required parameters defined
         - do all parameters exist
         '''
         rc = 0
         d = {}
-        for p, v in pl:
-            d[p] = v
+        for nvp in nvpairs:
+            if 'name' in nvp.attrib and 'value' in nvp.attrib:
+                d[nvp.get('name')] = nvp.get('value')
         if not existence_only:
             for p in self.reqd_params_list():
                 if self.unreq_param(p):

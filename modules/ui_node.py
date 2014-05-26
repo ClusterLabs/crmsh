@@ -23,7 +23,7 @@ import ui_utils
 import utils
 import xmlutil
 from msg import common_err, syntax_err, no_prog_err, common_info, common_warn
-from cliformat import nvpairs2list
+from cliformat import cli_nvpair, nvpairs2list
 
 
 def _oneline(s):
@@ -50,9 +50,8 @@ def unpack_node_xmldata(node, is_offline):
             id = v
         else:
             other[attr] = v
-    for elem in node.iterchildren():
-        if elem.tag == "instance_attributes":
-            inst_attr += nvpairs2list(elem)
+    inst_attr = [cli_nvpair(nvpairs2list(elem))
+                 for elem in node.xpath('./instance_attributes')]
     return uname, id, type, other, inst_attr, is_offline(uname)
 
 
@@ -60,8 +59,8 @@ def print_node(uname, id, node_type, other, inst_attr, offline):
     """
     Try to pretty print a node from the cib. Sth like:
     uname(id): node_type
-        attr1: v1
-        attr2: v2
+        attr1=v1
+        attr2=v2
     """
     s_offline = offline and "(offline)" or ""
     if not node_type:
@@ -72,8 +71,8 @@ def print_node(uname, id, node_type, other, inst_attr, offline):
         print "%s(%s): %s%s" % (uname, id, node_type, s_offline)
     for a in other:
         print "\t%s: %s" % (a, other[a])
-    for a, v in inst_attr:
-        print "\t%s: %s" % (a, v)
+    for s in inst_attr:
+        print "\t%s" % (s)
 
 
 class NodeMgmt(command.UI):
