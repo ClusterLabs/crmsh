@@ -17,7 +17,6 @@
 
 import constants
 import clidisplay
-from msg import common_err, node_debug
 import utils
 import xmlutil
 
@@ -68,61 +67,74 @@ def nvpair_format(n, v):
         return '%s="%s"' % (clidisplay.attr_name(n), clidisplay.attr_value(v))
 
 
-def cli_pairs(pl):
-    'Return a string of name="value" pairs (passed in a list of pairs).'
-    l = []
-    for n, v in pl:
-        l.append(nvpair_format(n, v))
-    return ' '.join(l)
+def cli_nvpair(nvp):
+    'Converts an nvpair tag to CLI syntax'
+    from cibconfig import cib_factory
+    nodeid = nvp.get('id')
+    idref = nvp.get('id-ref')
+    name = nvp.get('name')
+    if idref is not None:
+        if name is not None:
+            return '@%s:%s' % (idref, name)
+        return '@%s' % (idref)
+    elif nodeid is not None and cib_factory.is_id_refd(nvp.tag, nodeid):
+        return '$%s:%s' % (nodeid, nvpair_format(name, nvp.get('value')))
+    return nvpair_format(name, nvp.get('value'))
+
+
+def cli_nvpairs(nvplist):
+    'Return a string of name="value" pairs (passed in a list of nvpairs).'
+    return ' '.join([cli_nvpair(nvp) for nvp in nvplist])
 
 
 def nvpairs2list(node, add_id=False):
     '''
-    Convert nvpairs to a list of pairs.
+    Convert an attribute node to a list of nvpairs.
+    Also converts an id-ref or id into plain nvpairs.
     The id attribute is normally skipped, since they tend to be
     long and therefore obscure the relevant content. For some
     elements, however, they are included (e.g. properties).
     '''
-    pl = []
-    # if there's id-ref, there can be then _only_ id-ref
-    value = node.get("id-ref")
-    if value:
-        pl.append(["$id-ref", value])
-        return pl
-    if add_id or \
-            (not len(node) and len(node.attrib) == 1):
-        value = node.get("id")
-        if value:
-            pl.append(["$id", value])
-    for c in node.iterchildren():
-        if c.tag == "attributes":
-            pl = nvpairs2list(c)
-        elif c.tag == "rule" or xmlutil.is_comment(c):
-            # skip rule expressions and comments
-            continue
-        elif c.tag != "nvpair":
-            node_debug("expected nvpair got", c)
-            continue
-        pl.append([c.get("name"), c.get("value")])
-    return pl
+    import xmlbuilder
+
+    ret = []
+    if 'id-ref' in node:
+        ret.append(xmlbuilder.nvpair('$id-ref', node.get('id-ref')))
+    nvpairs = node.xpath('./nvpair | ./attributes/nvpair')
+    if 'id' in node and (add_id or len(nvpairs) == 0):
+        ret.append(xmlbuilder.nvpair('$id', node.get('id')))
+    ret.extend(nvpairs)
+    return ret
+
+
+def cli_attributes(node, add_id=False):
+    '''
+    Convert an attribute tag to CLI syntax
+    Does not honor possible <rule> tags
+    '''
+    return ' '.join([cli_nvpair(nvp)
+                     for nvp in nvpairs2list(node, add_id=add_id)])
 
 
 def op_instattr(node):
+    """
+    Return nvpairs in <op><instance_attributes>...
+    """
     pl = []
-    for c in node.iterchildren():
-        if c.tag != "instance_attributes":
-            common_err("only instance_attributes are supported in operations")
-        else:
-            pl += nvpairs2list(c)
+    for c in node.xpath('./instance_attributes'):
+        pl.extend(nvpairs2list(c))
     return pl
 
 
 def cli_op(node):
+    "CLI format for an <op> tag"
     action, pl = xmlutil.op2list(node)
     if not action:
         return ""
-    pl += op_instattr(node)
-    return "%s %s %s" % (clidisplay.keyword("op"), action, cli_pairs(pl))
+    ret = ["%s %s" % (clidisplay.keyword("op"), action)]
+    ret += [nvpair_format(n, v) for n, v in pl]
+    ret += [cli_nvpair(v) for v in op_instattr(node)]
+    return ' '.join(ret)
 
 
 def date_exp2cli(node):
@@ -137,16 +149,12 @@ def date_exp2cli(node):
     else:
         if operation == 'in_range':
             for name in constants.in_range_attrs:
-                v = node.get(name)
-                if v:
-                    l.append(nvpair_format(name, v))
+                if name in node.attrib:
+                    l.append(nvpair_format(name, node.attrib[name]))
         for c in node.iterchildren():
             if c.tag in ("duration", "date_spec"):
-                pl = []
-                for name in c.keys():
-                    if name != "id":
-                        pl.append([name, c.get(name)])
-                l.append(cli_pairs(pl))
+                l.extend([nvpair_format(name, c.get(name))
+                          for name in c.keys() if name != 'id'])
     return ' '.join(l)
 
 
@@ -214,10 +222,11 @@ def cli_exprs(node):
     return (" %s " % clidisplay.keyword(bool_op)).join(exp)
 
 
-def cli_rule(node, is_id_refd):
+def cli_rule(node):
+    from cibconfig import cib_factory
     s = []
     node_id = node.get("id")
-    if node_id and is_id_refd(node.tag, node_id):
+    if node_id and cib_factory.is_id_refd(node.tag, node_id):
         s.append('$id="%s"' % node_id)
     else:
         idref = node.get("id-ref")

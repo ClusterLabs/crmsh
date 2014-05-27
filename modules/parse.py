@@ -37,7 +37,9 @@ class ParseError(Exception):
 
 
 class BaseParser(object):
-    _NVPAIR_RE = re.compile(r'([^=]+)=(.+)$')
+    _NVPAIR_RE = re.compile(r'([^=@$][^=]*)=(.+)$')
+    _NVPAIR_ID_RE = re.compile(r'\$([^:=]+)(?::(.+))?=(.+)$')
+    _NVPAIR_REF_RE = re.compile(r'@([^:]+)(?::(.+))?$')
     _IDENT_RE = re.compile(r'([a-z0-9_#$-][^=]*)$', re.IGNORECASE)
     _DISPATCH_RE = re.compile(r'[a-z0-9_]+$', re.IGNORECASE)
     _DESC_RE = re.compile(r'description=(.+)$', re.IGNORECASE)
@@ -170,13 +172,13 @@ class BaseParser(object):
 
     def match_nvpairs_bykey(self, valid_keys, minpairs=1):
         """
-        matches string of p=v tokens, but only
-        if p is in valid_keys
+        matches string of p=v tokens, but only if p is in valid_keys
+        Returns list of <nvpair> tags
         """
         _KEY_RE = re.compile(r'(%s)=(.+)$' % '|'.join(valid_keys))
         ret = []
         while self.try_match(_KEY_RE):
-            ret.append([self.matched(1), self.matched(2)])
+            ret.append(xmlbuilder.nvpair(self.matched(1), self.matched(2)))
         if len(ret) < minpairs:
             if minpairs == 1:
                 self.err("Expected at least one name-value pair")
@@ -187,10 +189,22 @@ class BaseParser(object):
     def match_nvpairs(self, minpairs=1):
         """
         Matches string of p=v tokens
+        Returns list of <nvpair> tags
         """
         ret = []
-        while self.try_match(self._NVPAIR_RE):
-            ret.append([self.matched(1), self.matched(2)])
+        while True:
+            if self.try_match(self._NVPAIR_REF_RE):
+                ret.append(xmlbuilder.nvpair_ref(self.matched(1),
+                                                 self.matched(2)))
+            elif self.try_match(self._NVPAIR_ID_RE):
+                ret.append(xmlbuilder.nvpair_id(self.matched(1),
+                                                self.matched(2),
+                                                self.matched(3)))
+            elif self.try_match(self._NVPAIR_RE):
+                ret.append(xmlbuilder.nvpair(self.matched(1),
+                                             self.matched(2)))
+            else:
+                break
         if len(ret) < minpairs:
             if minpairs == 1:
                 self.err("Expected at least one name-value pair")
@@ -544,19 +558,17 @@ class ResourceParser(RuleParser):
         op_type = self.match(self._OPTYPE_RE, errmsg="Expected operation type")
         all_attrs = self.match_nvpairs(minpairs=0)
         node = xmlbuilder.new('op', name=op_type)
-        if not any(k.lower() == 'interval' for k, _ in all_attrs):
-            all_attrs.append(('interval', '0'))
-        valid_attrs = set(self.validation.op_attributes())
+        if not any(nvp.get('name') == 'interval' for nvp in all_attrs):
+            all_attrs.append(xmlbuilder.nvpair('interval', '0'))
+        valid_attrs = self.validation.op_attributes()
         inst_attrs = None
-        for n, v in all_attrs:
-            if n in valid_attrs:
-                node.set(n, v)
-
-        for n, v in all_attrs:
-            if n not in valid_attrs:
+        for nvp in all_attrs:
+            if nvp.get('name') in valid_attrs:
+                node.set(nvp.get('name'), nvp.get('value'))
+            else:
                 if inst_attrs is None:
                     inst_attrs = xmlbuilder.child(node, 'instance_attributes')
-                inst_attrs.append(xmlbuilder.nvpair(n, v))
+                inst_attrs.append(nvp)
         out.append(node)
 
     def match_operations(self, out, match_id):
@@ -905,8 +917,8 @@ class PropertyParser(RuleParser):
             attrs.set(idkey, idval)
         for rule in self.match_rules():
             attrs.append(rule)
-        for n, v in self.match_nvpairs():
-            attrs.append(xmlbuilder.nvpair(n, v))
+        for nvp in self.match_nvpairs():
+            attrs.append(nvp)
         return root
 
 

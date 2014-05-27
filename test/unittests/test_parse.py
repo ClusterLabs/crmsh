@@ -180,6 +180,18 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(len(out), 1)
         self.assertEqual(['b'], out.xpath('/group/instance_attributes/nvpair[@name="a"]/@value'))
 
+    def test_nvpair_ref(self):
+        out = self.parser.parse('primitive dummy-0 Dummy params @foo')
+        self.assertEqual(out.get('id'), 'dummy-0')
+        self.assertEqual(out.get('class'), 'ocf')
+        self.assertEqual(['foo'], out.xpath('.//nvpair/@id-ref'))
+
+        out = self.parser.parse('primitive dummy-0 Dummy params @fiz:buz')
+        self.assertEqual(out.get('id'), 'dummy-0')
+        self.assertEqual(out.get('class'), 'ocf')
+        self.assertEqual(['fiz'], out.xpath('.//nvpair/@id-ref'))
+        self.assertEqual(['buz'], out.xpath('.//nvpair/@name'))
+
     def test_location(self):
         out = self.parser.parse('location loc-1 resource inf: foo')
         self.assertEqual(out.get('id'), 'loc-1')

@@ -38,12 +38,9 @@ def roundtrip(cli, debug=False):
     print xml
     obj.nocli = False
     s = obj.repr_cli(format=-1)
-    if s != cli:
+    if (s != cli) or debug:
         print "GOT:", s
         print "EXP:", cli
-    if debug:
-        print s
-        print cli
     assert obj.cli_use_validate()
     eq_(cli, s)
     assert not debug
@@ -101,6 +98,16 @@ def test_comment():
 
 def test_comment2():
     roundtrip("# comment 1\n# comment 2\n# comment 3\nprimitive d0 ocf:pacemaker:Dummy")
+
+
+def test_nvpair_ref1():
+    factory.create_from_cli("primitive dummy-0 Dummy params $fiz:buz=bin")
+    roundtrip('primitive dummy-1 Dummy params @fiz:boz')
+
+
+def test_idresolve():
+    factory.create_from_cli("primitive dummy-5 Dummy params buz=bin")
+    roundtrip('primitive dummy-1 Dummy params @dummy-5-instance_attributes-buz')
 
 
 def test_ordering():

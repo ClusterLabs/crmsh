@@ -2146,6 +2146,79 @@ To create multiple sets with both `sequential` and `require-all` set to
 true, explicitly set `sequential` in a parenthesis set:
 `A B ( C D sequential=true )`.
 
+==== References in attribute lists
+
+Attribute lists are used to set attributes and parameters for
+resources, constraints and property definitions. For example, to set
+the virtual IP used by an `IPAddr` resource the attribute `ip` can be
+set in an attribute list for that resource.
+
+Attribute lists can have identifiers that name them, and other
+resources can reuse the same attribute list by referring to that name
+using an `$id-ref`. For example, the following statement defines a
+simple dummy resource with an attribute list which sets the parameter
+`state to the value 1 and sets the identifier for the attribute list
+to `on-state`:
+
+..............
+primitive dummy-1 Dummy params $id=on-state state=1
+..............
+
+To refer to this attribute list from a different resource, refer to
+the `on-state` name using an id-ref:
+
+..............
+primitive dummy-2 Dummy params $id-ref=on-state
+..............
+
+The resource `dummy-2` will now also have the parameter `state` set to the value 1.
+
+===== Referencing individual attributes
+
+In some cases, referencing complete attribute lists is too
+coarse-grained, for example if two different parameters with different
+names should have the same value set. Instead of having to copy the
+value in multiple places, it is possible to create references to
+individual attributes in attribute lists.
+
+To name an attribute in order to be able to refer to it later, prefix
+the attribute name with a `$` character (as seen above with the
+special names `$id` and `$id-ref`:
+
+............
+primitive dummy-1 Dummy params $state=1
+............
+
+The identifier `state` can now be used to refer to this attribute from other
+primitives, using the `@<id>` syntax:
+
+............
+primitive dummy-2 Dummy params @state
+............
+
+In some cases, using the attribute name as the identifier doesn't work
+due to name clashes. In this case, the syntax `$<id>:<name>=<value>`
+can be used to give the attribute a different identifier:
+
+............
+primitive dummy-1 params $dummy-state-on:state=1
+primitive dummy-2 params @state
+............
+
+There is also the possibility that two resources both use the same
+attribute value but with different names. For example, a web server
+may have a parameter `server_ip` for setting the IP address where it
+listens for incoming requests, and a virtual IP resource may have a
+parameter called `ip` which sets the IP address it creates. To
+configure these two resources with an IP without repeating the value,
+the reference can be given a name using the syntax `@<id>:<name>`.
+
+Example:
+............
+primitive virtual-ip IPaddr2 params $vip:ip=192.168.1.100
+primitive webserver apache params @vip:server_ip
+............
+
 [[cmdhelp_configure_node,define a cluster node]]
 ==== `node`
 
