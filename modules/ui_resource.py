@@ -496,11 +496,9 @@ class RscMgmt(command.UI):
         rsc = self._get_trace_rsc(rsc_id)
         if not rsc:
             return False
-        if not interval:
-            interval = op == "monitor" and "non-0" or "0"
         if op == "probe":
             op = "monitor"
-        op_node = xmlutil.find_operation(rsc.node, op, interval)
+        op_node = xmlutil.find_operation(rsc.node, op, interval=interval)
         if op_node is None:
             common_err("operation %s does not exist in %s" % (op, rsc.obj_id))
             return False

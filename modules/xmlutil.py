@@ -740,11 +740,12 @@ def lookup_node(node, oldnode, location_only=False, ignore_id=False):
     return None
 
 
-def find_operation(rsc_node, name, interval="0"):
+def find_operation(rsc_node, name, interval=None):
     '''
     Setting interval to "non-0" means get the first op with interval
     different from 0.
     '''
+    interval = interval or "0"
     op_node_l = rsc_node.findall("operations")
     for ops in op_node_l:
         for c in ops.iterchildren("op"):
