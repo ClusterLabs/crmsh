@@ -1378,8 +1378,9 @@ class Op(object):
             idmgmt.remove_xml(self.node)
         self.node = etree.Element(self.elem_type)
         inst_attr = {}
+        valid_attrs = olist(schema.get('attr', 'op', 'a'))
         for n, v in self.attr_d.iteritems():
-            if n in olist(schema.get('attr', 'op', 'a')):
+            if n in valid_attrs:
                 self.node.set(n, v)
             else:
                 inst_attr[n] = v
@@ -1438,6 +1439,20 @@ class CibPrimitive(CibObject):
         # create an xml node
         if 'id' not in node.attrib:
             idmgmt.set(node, None, self.obj_id)
+        valid_attrs = olist(schema.get('attr', 'op', 'a'))
+        inst_attr = {}
+        for attr in node.attrib.keys():
+            if attr not in valid_attrs:
+                inst_attr[attr] = node.attrib[attr]
+                del node.attrib[attr]
+        if inst_attr:
+            attr_nodes = node.xpath('./instance_attributes')
+            if len(attr_nodes) == 1:
+                fill_nvpairs("instance_attributes", attr_nodes[0], inst_attr, node.get("id"))
+            else:
+                nia = mkxmlnvpairs("instance_attributes", inst_attr, node.get("id"))
+                node.append(nia)
+
         self._append_op(node)
         comments = find_comment_nodes(node)
         for comment in comments:
