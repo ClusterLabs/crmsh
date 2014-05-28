@@ -1511,11 +1511,11 @@ monitor, note that the number of trace files can grow very
 quickly.
 
 If no operation name is given, crmsh will attempt to trace all
-configured operations.
+configured operations as well as the start and stop operations.
 
 Usage:
 ...............
-trace <rsc> [<op>] [<interval>]
+trace <rsc> [<op> [<interval>] ]
 ...............
 Example:
 ...............
@@ -1531,7 +1531,7 @@ given, crmsh will attempt to stop tracing all operations in resource.
 
 Usage:
 ...............
-untrace <rsc> [<op>] [<interval>]
+untrace <rsc> [<op> [<interval>] ]
 ...............
 Example:
 ...............

@@ -463,6 +463,38 @@ class RscMgmt(command.UI):
         n.set(constants.trace_ra_attr, '1')
         return rsc.add_operation(n)
 
+    def _trace_resource(self, context, rsc_id, rsc):
+        op_nodes = rsc.node.xpath('.//op')
+        # start and stop can always be traced
+        if not any(o for o in op_nodes if o.get('name') == 'start'):
+            if not self._add_trace_op(rsc, 'start', '0'):
+                context.err("Failed to add trace for %s:start" % (rsc_id))
+        if not any(o for o in op_nodes if o.get('name') == 'stop'):
+            if not self._add_trace_op(rsc, 'stop', '0'):
+                context.err("Failed to add trace for %s:stop" % (rsc_id))
+        for op_node in op_nodes:
+            rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
+
+    def _trace_op(self, context, rsc_id, rsc, op):
+        op_nodes = rsc.node.xpath('.//op[@name="%s"]' % (op))
+        if not op_nodes:
+            if op == 'monitor':
+                context.err("No monitor operation configured for %s" % (rsc_id))
+            if not self._add_trace_op(rsc, op, '0'):
+                context.err("Failed to add trace for %s:%s" % (rsc_id, op))
+        for op_node in op_nodes:
+            rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
+
+    def _trace_op_interval(self, context, rsc_id, rsc, op, interval):
+        op_node = xmlutil.find_operation(rsc.node, op, interval)
+        if op_node is None and utils.crm_msec(interval) != 0:
+            context.err("Operation %s with interval %s not found in %s" % (op, interval, rsc_id))
+        if op_node is None:
+            if not self._add_trace_op(rsc, op, interval):
+                context.err("Failed to add trace for %s:%s" % (rsc_id, op))
+        else:
+            rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
+
     @command.wait
     @command.completers(compl.primitives, _raoperations)
     def do_trace(self, context, rsc_id, op=None, interval=None):
@@ -470,33 +502,23 @@ class RscMgmt(command.UI):
         rsc = self._get_trace_rsc(rsc_id)
         if not rsc:
             return False
-        if not interval:
-            interval = op == "monitor" and "non-0" or "0"
         if op == "probe":
             op = "monitor"
         if op is None:
-            op_nodes = rsc.node.xpath('.//op')
-            if not op_nodes:
-                common_err("No traceable operations configured for %s" % (rsc_id))
-                return False
-            for op_node in op_nodes:
-                rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
+            self._trace_resource(context, rsc_id, rsc)
+        elif interval is None:
+            self._trace_op(context, rsc_id, rsc, op)
         else:
-            op_node = xmlutil.find_operation(rsc.node, op, interval)
-            if op_node is None and utils.crm_msec(interval) != 0:
-                common_err("%s operation needs interval argument" % op)
-                return False
-            if op_node is None:
-                if not self._add_trace_op(rsc, op, interval):
-                    return False
-            else:
-                rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
+            self._trace_op_interval(context, rsc_id, rsc, op, interval)
         if not cib_factory.commit():
             return False
-        if op == "monitor" and utils.crm_msec(interval) != 0:
-            common_info("Periodic trace for %s:%s is written to %s/trace_ra/" %
+        if op is not None:
+            common_info("Trace for %s:%s is written to %s/trace_ra/" %
                         (rsc_id, op, config.path.heartbeat_dir))
-        elif op is not None:
+        else:
+            common_info("Trace for %s is written to %s/trace_ra/" %
+                        (rsc_id, config.path.heartbeat_dir))
+        if op is not None and op != "monitor":
             common_info("Trace set, restart %s to trace the %s operation" % (rsc_id, op))
         else:
             common_info("Trace set, restart %s to trace non-monitor operations" % (rsc_id))
