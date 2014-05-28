@@ -1511,7 +1511,8 @@ monitor, note that the number of trace files can grow very
 quickly.
 
 If no operation name is given, crmsh will attempt to trace all
-configured operations as well as the start and stop operations.
+operations for the RA. This includes any configured operations, start
+and stop as well as promote/demote for multistate resources.
 
 Usage:
 ...............

@@ -465,13 +465,16 @@ class RscMgmt(command.UI):
 
     def _trace_resource(self, context, rsc_id, rsc):
         op_nodes = rsc.node.xpath('.//op')
-        # start and stop can always be traced
-        if not any(o for o in op_nodes if o.get('name') == 'start'):
-            if not self._add_trace_op(rsc, 'start', '0'):
-                context.err("Failed to add trace for %s:start" % (rsc_id))
-        if not any(o for o in op_nodes if o.get('name') == 'stop'):
-            if not self._add_trace_op(rsc, 'stop', '0'):
-                context.err("Failed to add trace for %s:stop" % (rsc_id))
+
+        def trace(name):
+            if not any(o for o in op_nodes if o.get('name') == name):
+                if not self._add_trace_op(rsc, name, '0'):
+                    context.err("Failed to add trace for %s:%s" % (rsc_id, name))
+        trace('start')
+        trace('stop')
+        if xmlutil.is_ms(rsc.node):
+            trace('promote')
+            trace('demote')
         for op_node in op_nodes:
             rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
 
