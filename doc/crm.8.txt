@@ -1510,27 +1510,33 @@ stored in `$HA_VARLIB/trace_ra`. If the operation to be traced is
 monitor, note that the number of trace files can grow very
 quickly.
 
+If no operation name is given, crmsh will attempt to trace all
+configured operations.
+
 Usage:
 ...............
-trace <rsc> <op> [<interval>]
+trace <rsc> [<op>] [<interval>]
 ...............
 Example:
 ...............
 trace fs start
+trace webserver
 ...............
 
 [[cmdhelp_resource_untrace,stop RA tracing]]
 ==== `untrace`
 
-Stop tracing RA for the given operation.
+Stop tracing RA for the given operation. If no operation name is
+given, crmsh will attempt to stop tracing all operations in resource.
 
 Usage:
 ...............
-untrace <rsc> <op> [<interval>]
+untrace <rsc> [<op>] [<interval>]
 ...............
 Example:
 ...............
 untrace fs start
+untrace webserver
 ...............
 
 [[cmdhelp_resource_scores,Display resource scores]]

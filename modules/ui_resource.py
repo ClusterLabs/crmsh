@@ -455,10 +455,18 @@ class RscMgmt(command.UI):
             return None
         return rsc
 
+    def _add_trace_op(self, rsc, op, interval):
+        from lxml import etree
+        n = etree.Element('op')
+        n.set('name', op)
+        n.set('interval', interval)
+        n.set(constants.trace_ra_attr, '1')
+        return rsc.add_operation(n)
+
     @command.wait
     @command.completers(compl.primitives, _raoperations)
-    def do_trace(self, context, rsc_id, op, interval=None):
-        'usage: trace <rsc> <op> [<interval>]'
+    def do_trace(self, context, rsc_id, op=None, interval=None):
+        'usage: trace <rsc> [<op>] [<interval>]'
         rsc = self._get_trace_rsc(rsc_id)
         if not rsc:
             return False
@@ -466,43 +474,63 @@ class RscMgmt(command.UI):
             interval = op == "monitor" and "non-0" or "0"
         if op == "probe":
             op = "monitor"
-        op_node = xmlutil.find_operation(rsc.node, op, interval)
-        if op_node is None and utils.crm_msec(interval) != 0:
-            common_err("not allowed to create non-0 interval operation %s" % op)
-            return False
-        if op_node is None:
-            from lxml import etree
-            n = etree.Element('op')
-            n.set('name', op)
-            n.set('interval', interval)
-            n.set(constants.trace_ra_attr, '1')
-            if not rsc.add_operation(n):
+        if op is None:
+            op_nodes = rsc.node.xpath('.//op')
+            if not op_nodes:
+                common_err("No traceable operations configured for %s" % (rsc_id))
                 return False
+            for op_node in op_nodes:
+                rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
         else:
-            op_node = rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
+            op_node = xmlutil.find_operation(rsc.node, op, interval)
+            if op_node is None and utils.crm_msec(interval) != 0:
+                common_err("%s operation needs interval argument" % op)
+                return False
+            if op_node is None:
+                if not self._add_trace_op(rsc, op, interval):
+                    return False
+            else:
+                rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
         if not cib_factory.commit():
             return False
         if op == "monitor" and utils.crm_msec(interval) != 0:
-            common_warn("please CLEANUP the RA trace directory %s regularly!" %
-                        config.path.heartbeat_dir)
+            common_info("Periodic trace for %s:%s is written to %s/trace_ra/" %
+                        (rsc_id, op, config.path.heartbeat_dir))
+        elif op is not None:
+            common_info("Trace set, restart %s to trace the %s operation" % (rsc_id, op))
         else:
-            common_info("restart %s to get the trace" % rsc_id)
+            common_info("Trace set, restart %s to trace non-monitor operations" % (rsc_id))
         return True
+
+    def _remove_trace(self, rsc, op_node):
+        from lxml import etree
+        common_debug("op_node: %s" % (etree.tostring(op_node)))
+        op_node = rsc.del_op_attr(op_node, constants.trace_ra_attr)
+        if rsc.is_dummy_operation(op_node):
+            rsc.del_operation(op_node)
 
     @command.wait
     @command.completers(compl.primitives, _raoperations)
-    def do_untrace(self, context, rsc_id, op, interval=None):
-        'usage: untrace <rsc> <op> [<interval>]'
+    def do_untrace(self, context, rsc_id, op=None, interval=None):
+        'usage: untrace <rsc> [<op>] [<interval>]'
         rsc = self._get_trace_rsc(rsc_id)
         if not rsc:
             return False
         if op == "probe":
             op = "monitor"
-        op_node = xmlutil.find_operation(rsc.node, op, interval=interval)
-        if op_node is None:
-            common_err("operation %s does not exist in %s" % (op, rsc.obj_id))
-            return False
-        op_node = rsc.del_op_attr(op_node, constants.trace_ra_attr)
-        if rsc.is_dummy_operation(op_node):
-            rsc.del_operation(op_node)
+        if op is None:
+            n = 0
+            for tn in rsc.node.xpath('.//*[@%s]' % (constants.trace_ra_attr)):
+                self._remove_trace(rsc, tn)
+                n += 1
+            for tn in rsc.node.xpath('.//*[@name="%s"]' % (constants.trace_ra_attr)):
+                if tn.getparent().getparent().tag == 'op':
+                    self._remove_trace(rsc, tn.getparent().getparent())
+                    n += 1
+        else:
+            op_node = xmlutil.find_operation(rsc.node, op, interval=interval)
+            if op_node is None:
+                common_err("operation %s does not exist in %s" % (op, rsc.obj_id))
+                return False
+            self._remove_trace(rsc, op_node)
         return cib_factory.commit()

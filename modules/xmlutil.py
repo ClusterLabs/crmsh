@@ -744,17 +744,23 @@ def find_operation(rsc_node, name, interval=None):
     '''
     Setting interval to "non-0" means get the first op with interval
     different from 0.
+    Not setting interval at all means get the only matching op, or the
+    0 op (if any)
     '''
+    matching_name = []
+    for ops in rsc_node.findall("operations"):
+        matching_name.extend([op for op in ops.iterchildren("op")
+                              if op.get("name") == name])
+    if interval is None and len(matching_name) == 1:
+        return matching_name[0]
     interval = interval or "0"
-    op_node_l = rsc_node.findall("operations")
-    for ops in op_node_l:
-        for c in ops.iterchildren("op"):
-            if c.get("name") != name:
-                continue
-            if (interval == "non-0" and
-                    crm_msec(c.get("interval")) > 0) or \
-                    crm_time_cmp(c.get("interval"), interval) == 0:
-                return c
+    for op in matching_name:
+        opint = op.get("interval")
+        if interval == "non-0" and crm_msec(opint) > 0:
+            return op
+        if crm_time_cmp(opint, interval) == 0:
+            return op
+    return None
 
 
 def get_op_timeout(rsc_node, op, default_timeout):
