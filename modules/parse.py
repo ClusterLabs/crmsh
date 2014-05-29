@@ -917,7 +917,7 @@ class PropertyParser(RuleParser):
             attrs.set(idkey, idval)
         for rule in self.match_rules():
             attrs.append(rule)
-        for nvp in self.match_nvpairs():
+        for nvp in self.match_nvpairs(minpairs=0):
             attrs.append(nvp)
         return root
 

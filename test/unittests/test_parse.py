@@ -380,6 +380,15 @@ class TestCliParser(unittest.TestCase):
         out = self.parser.parse('rsc_defaults failure-timeout=3m foo:')
         self.assertFalse(out)
 
+    def test_empty_property_sets(self):
+        out = self.parser.parse('rsc_defaults defaults:')
+        self.assertEqual('<rsc_defaults><meta_attributes id="defaults"/></rsc_defaults>',
+                         etree.tostring(out))
+
+        out = self.parser.parse('op_defaults defaults:')
+        self.assertEqual('<op_defaults><meta_attributes id="defaults"/></op_defaults>',
+                         etree.tostring(out))
+
     def test_fencing(self):
         # num test nodes are 3
 
