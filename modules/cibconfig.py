@@ -58,6 +58,7 @@ from xmlutil import cibtext2elem
 from cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
 from cliformat import cli_nvpair, cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
 from cliformat import cli_operations, simple_rsc_constraint, cli_rule, cli_format
+from cliformat import cli_acl_role, cli_acl_permission
 
 
 def show_unrecognized_elems(cib_elem):
@@ -1990,6 +1991,9 @@ class CibFencingOrder(CibObject):
 class CibAcl(CibObject):
     '''
     User and role ACL.
+
+    Now with support for 1.1.12 style ACL rules.
+
     '''
 
     def _repr_cli_head(self, format):
@@ -2000,7 +2004,12 @@ class CibAcl(CibObject):
     def _repr_cli_child(self, c, format):
         if c.tag in constants.acl_rule_names:
             return cli_acl_rule(c, format)
-        return cli_acl_roleref(c, format)
+        elif c.tag == "role_ref":
+            return cli_acl_roleref(c, format)
+        elif c.tag == "role":
+            return cli_acl_role(c)
+        elif c.tag == "acl_permission":
+            return cli_acl_permission(c)
 
 
 class CibTag(CibObject):
@@ -2060,8 +2069,11 @@ cib_object_map = {
     "fencing-topology": ("fencing_topology", CibFencingOrder, "configuration"),
     "acl_role": ("role", CibAcl, "acls"),
     "acl_user": ("user", CibAcl, "acls"),
+    "acl_target": ("acl_target", CibAcl, "acls"),
+    "acl_group": ("acl_group", CibAcl, "acls"),
     "tag": ("tag", CibTag, "tags"),
 }
+
 
 # generate a translation cli -> tag
 backtrans = odict((item[0], key) for key, item in cib_object_map.iteritems())

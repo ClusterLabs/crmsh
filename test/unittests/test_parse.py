@@ -44,6 +44,9 @@ class MockValidation(parse.Validation):
                 'start-delay', 'interval-origin', 'timeout', 'enabled',
                 'record-pending', 'role', 'requires', 'on-fail']
 
+    def acl_2_0(self):
+        return True
+
 
 class TestBaseParser(unittest.TestCase):
     def setUp(self):
@@ -348,6 +351,18 @@ class TestCliParser(unittest.TestCase):
                                 "write location:bigdb " +
                                 "read ref:bigdb")
         self.assertEqual(4, len(out))
+
+        # new type of acls
+        out = self.parser.parse("acl_target foo a b c")
+        self.assertEqual('acl_target', out.tag)
+        self.assertEqual('foo', out.get('id'))
+        self.assertEqual(['a', 'b', 'c'], out.xpath('./role/@id'))
+        out = self.parser.parse("acl_group fee a b c")
+        self.assertEqual('acl_group', out.tag)
+        self.assertEqual('fee', out.get('id'))
+        self.assertEqual(['a', 'b', 'c'], out.xpath('./role/@id'))
+        out = self.parser.parse('role fum description="test" read a: description="test2" xpath:*[@name=\\"karl\\"]')
+        self.assertEqual(['*[@name="karl"]'], out.xpath('/acl_role/acl_permission/@xpath'))
 
     def test_xml(self):
         out = self.parser.parse('xml <node uname="foo-1"/>')

@@ -379,6 +379,36 @@ def cli_acl_roleref(node, format=1):
     return "%s:%s" % (clidisplay.keyword("role"),
                       clidisplay.attr_value(node.get("id")))
 
+
+def cli_acl_role(node):
+    return clidisplay.attr_value(node.get("id"))
+
+
+def cli_acl_spec2_format(xml_spec, v):
+    key_f = clidisplay.keyword(xml_spec)
+    if xml_spec == "xpath":
+        (shortcut, spec_l) = find_acl_shortcut(v)
+        if shortcut:
+            key_f = clidisplay.keyword(shortcut)
+            v_f = ':'.join([clidisplay.attr_value(x) for x in spec_l])
+        else:
+            v_f = '"%s"' % clidisplay.attr_value(v)
+    else:  # ref, type and attr
+        v_f = '%s' % clidisplay.attr_value(v)
+    return v_f and '%s:%s' % (key_f, v_f) or key_f
+
+
+def cli_acl_permission(node):
+    s = [clidisplay.keyword(node.get('kind'))]
+    if node.get('id'):
+        s.append(head_id_format(node.get('id')))
+    if node.get('description'):
+        s.append(nvpair_format('description', node.get('description')))
+    for attrname, cliname in constants.acl_spec_map_2_rev:
+        if attrname in node.attrib:
+            s.append(cli_acl_spec2_format(cliname, node.get(attrname)))
+    return ' '.join(s)
+
 #
 ################################################################
 

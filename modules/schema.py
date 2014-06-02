@@ -95,6 +95,12 @@ def test_schema(cib):
     return crm_schema.validate_name
 
 
+def validate_name():
+    if _crm_schema is None:
+        return 'pacemaker-2.0'
+    return _crm_schema.validate_name
+
+
 def get(t, name, set=None):
     if _crm_schema is None:
         return []
