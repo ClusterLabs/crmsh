@@ -90,7 +90,7 @@ def init_schema(cib):
     reset()
 
 
-def test_schema(self, cib):
+def test_schema(cib):
     crm_schema = _load_schema(cib)
     return crm_schema.validate_name
 
