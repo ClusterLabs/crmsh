@@ -90,9 +90,15 @@ def init_schema(cib):
     reset()
 
 
-def test_schema(self, cib):
+def test_schema(cib):
     crm_schema = _load_schema(cib)
     return crm_schema.validate_name
+
+
+def validate_name():
+    if _crm_schema is None:
+        return 'pacemaker-2.0'
+    return _crm_schema.validate_name
 
 
 def get(t, name, set=None):

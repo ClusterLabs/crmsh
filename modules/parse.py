@@ -1005,17 +1005,10 @@ class AclParser(BaseParser):
     _ROLE_REF_RE = re.compile(r'role:(.+)$', re.IGNORECASE)
 
     def can_parse(self):
-        return ('user', 'role')
+        return ('user', 'role', 'acl_target', 'acl_group')
 
     def parse(self, cmd):
         return self.begin_dispatch(cmd, min_args=2)
-
-    def parse_role(self):
-        out = xmlbuilder.new('acl_role')
-        out.set('id', self.match_identifier())
-        while self.has_tokens():
-            out.append(self._add_rule())
-        return out
 
     def parse_user(self):
         out = xmlbuilder.new('acl_user')
@@ -1028,6 +1021,61 @@ class AclParser(BaseParser):
             else:
                 out.append(self._add_rule())
         return out
+
+    def parse_acl_target(self):
+        out = xmlbuilder.new('acl_target')
+        out.set('id', self.match_identifier())
+        while self.has_tokens():
+            xmlbuilder.child(out, 'role', id=self.match_identifier())
+        return out
+
+    def parse_acl_group(self):
+        out = xmlbuilder.new('acl_group')
+        out.set('id', self.match_identifier())
+        while self.has_tokens():
+            xmlbuilder.child(out, 'role', id=self.match_identifier())
+        return out
+
+    def parse_role(self):
+        out = xmlbuilder.new('acl_role')
+        out.set('id', self.match_identifier())
+
+        if self.validation.acl_2_0():
+            xmlbuilder.maybe_set(out, "description", self.try_match_description())
+            while self.has_tokens():
+                out.append(self._add_permission())
+        else:
+            while self.has_tokens():
+                out.append(self._add_rule())
+        return out
+
+    _PERM_RE = re.compile(r"([^:]+)(?::(.+))?$", re.I)
+
+    def _is_permission(self, val):
+        def permission(x):
+            return x in constants.acl_spec_map_2 or x in constants.acl_shortcuts
+        x = val.split(':', 1)
+        return len(x) > 0 and permission(x[0])
+
+    def _add_permission(self):
+        rule = xmlbuilder.new('acl_permission')
+        rule.set('kind', self.match(self._ACL_RIGHT_RE).lower())
+        if self.try_match_initial_id():
+            rule.set('id', self.matched(1))
+        xmlbuilder.maybe_set(rule, "description", self.try_match_description())
+        while self.has_tokens():
+            if not self._is_permission(self.current_token()):
+                break
+            self.match(self._PERM_RE, errmsg="Expected <type>:<spec>")
+            typ = self.matched(1)
+            typ = constants.acl_spec_map_2.get(typ, typ)
+            val = self.matched(2)
+            if typ in constants.acl_shortcuts:
+                typ, val = self._expand_shortcuts_2(typ, val)
+            elif val is None:
+                self.err("Expected <type>:<spec>")
+            rule.set(typ, val)
+        return rule
 
     def _add_rule(self):
         rule = xmlbuilder.new(self.match(self._ACL_RIGHT_RE).lower())
@@ -1059,6 +1107,53 @@ class AclParser(BaseParser):
         except ValueError:
             pass
         return False
+
+    def _remove_spec_2(self, speclist, spec):
+        """
+        Remove spec from list of eligible specs.
+        Returns true if spec parse is complete.
+        """
+        try:
+            speclist.remove(spec)
+            if spec == 'xpath':
+                speclist.remove('reference')
+                speclist.remove('object-type')
+            elif spec in ('reference', 'object-type'):
+                speclist.remove('xpath')
+            else:
+                return True
+        except ValueError:
+            pass
+        return False
+
+    def _expand_shortcuts_2(self, typ, val):
+        '''
+        expand xpath shortcuts: the typ prefix names the shortcut
+        '''
+        expansion = constants.acl_shortcuts[typ]
+        if val is None:
+            if '@@' in expansion[0]:
+                self.err("Missing argument to ACL shortcut %s" % (typ))
+            return 'xpath', expansion[0]
+        a = val.split(':')
+        xpath = ""
+        exp_i = 0
+        for tok in a:
+            try:
+                # some expansions may contain no id placeholders
+                # of course, they don't consume input tokens
+                if '@@' not in expansion[exp_i]:
+                    xpath += expansion[exp_i]
+                    exp_i += 1
+                xpath += expansion[exp_i].replace('@@', tok)
+                exp_i += 1
+            except:
+                return []
+        # need to remove backslash chars which were there to escape
+        # special characters in expansions when used as regular
+        # expressions (mainly '[]')
+        val = xpath.replace("\\", "")
+        return 'xpath', val
 
     def _expand_shortcuts(self, l):
         '''
@@ -1345,6 +1440,14 @@ class Validation(object):
 
     def op_attributes(self):
         return olist(schema.get('attr', 'op', 'a'))
+
+    def acl_2_0(self):
+        vname = schema.validate_name()
+        sp = vname.split('-')
+        try:
+            return sp[0] == 'pacemaker' and float(sp[1]) >= 2.0
+        except Exception:
+            return False
 
 
 class CliParser(object):

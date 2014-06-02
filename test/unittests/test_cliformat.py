@@ -195,3 +195,7 @@ def test_param_rules():
               'params 3: rule #uname eq node1 interface=eth1 ' +
               'params 2: rule #uname eq node2 interface=eth2 port=8888 ' +
               'params 1: interface=eth0 port=9999')
+
+
+def test_new_acls():
+    roundtrip('role fum description=test read a: description=test2 xpath:"*[@name=karl]"')

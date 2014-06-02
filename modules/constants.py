@@ -77,6 +77,23 @@ acl_spec_map = {
     "tag": "tag",
     "attribute": "attribute",
 }
+# ACLs were rewritten in pacemaker 1.1.12
+# this is the new acl syntax
+acl_spec_map_2 = {
+    "xpath": "xpath",
+    "ref": "reference",
+    "reference": "reference",
+    "tag": "object-type",
+    "type": "object-type",
+    "attr": "attribute",
+    "attribute": "attribute"
+}
+
+acl_spec_map_2_rev = (('xpath', 'xpath'),
+                      ('reference', 'ref'),
+                      ('attribute', 'attr'),
+                      ('object-type', 'type'))
+
 acl_shortcuts = {
     "meta":
     (r"//primitive\[@id='@@'\]/meta_attributes", r"/nvpair\[@name='@@'\]"),

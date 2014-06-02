@@ -525,6 +525,15 @@ configuration cannot be saved.
 [[topics_Security,Access Control Lists (ACL)]]
 == Access Control Lists (ACL)
 
+.Note on ACLs in Pacemaker 1.1.12
+****************************
+The support for ACLs has been revised in Pacemaker version 1.1.12 and
+up. Depending on which version you are using, the information in this
+section may no longer be accurate. Look for the `acl_target` and
+`acl_group` configuration elements for more details on the new
+syntax.
+****************************
+
 By default, the users from the `haclient` group have full access
 to the cluster (or, more precisely, to the CIB). Access control
 lists allow for finer access control to the cluster.
@@ -2792,6 +2801,35 @@ user joe \
     role:app1_admin \
     role:read_all
 ...............
+
+[[cmdhelp_configure_acl_target,Define target access rights]]
+==== `acl_target`
+
+Defines an ACL target.
+
+Usage:
+................
+acl_target <tid> [<role> ...]
+................
+Example:
+................
+acl_target joe resource_admin constraint_editor
+................
+
+[[cmdhelp_configure_acl_group,Define group access rights]]
+==== `acl_group`
+
+Defines an ACL group.
+
+Usage:
+................
+acl_group <gid> [<role> ...]
+................
+Example:
+................
+acl_group hacluster operator
+................
+
 
 [[cmdhelp_configure_op_defaults,set resource operations defaults]]
 ==== `op_defaults`
