@@ -311,6 +311,7 @@ class RscMgmt(command.UI):
 
     @command.alias('move')
     @command.skill_level('administrator')
+    @command.wait
     @command.completers_repeating(compl.resources, compl.nodes,
                                   compl.choice(['reboot', 'forever', 'force']))
     def do_migrate(self, context, rsc, *args):
@@ -336,6 +337,7 @@ class RscMgmt(command.UI):
 
     @command.alias('unmove')
     @command.skill_level('administrator')
+    @command.wait
     @command.completers(compl.resources)
     def do_unmigrate(self, context, rsc):
         "usage: unmigrate <rsc>"
@@ -352,6 +354,7 @@ class RscMgmt(command.UI):
         # all live nodes.
         return cleanup_resource(resource, node)
 
+    @command.wait
     @command.completers(compl.resources, _attrcmds, compl.nodes)
     def do_failcount(self, context, rsc, cmd, node, value=None):
         """usage:
@@ -373,7 +376,6 @@ class RscMgmt(command.UI):
                                     rsc, cmd, param, value)
 
     @command.skill_level('administrator')
-    @command.wait
     @command.completers(compl.resources,
                         compl.choice(['set', 'stash', 'unstash', 'delete', 'show', 'check']))
     def do_secret(self, context, rsc, cmd, param, value=None):
@@ -498,7 +500,6 @@ class RscMgmt(command.UI):
         else:
             rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
 
-    @command.wait
     @command.completers(compl.primitives, _raoperations)
     def do_trace(self, context, rsc_id, op=None, interval=None):
         'usage: trace <rsc> [<op>] [<interval>]'
@@ -534,7 +535,6 @@ class RscMgmt(command.UI):
         if rsc.is_dummy_operation(op_node):
             rsc.del_operation(op_node)
 
-    @command.wait
     @command.completers(compl.primitives, _raoperations)
     def do_untrace(self, context, rsc_id, op=None, interval=None):
         'usage: untrace <rsc> [<op>] [<interval>]'
