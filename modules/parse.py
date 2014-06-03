@@ -662,12 +662,11 @@ class ResourceParser(RuleParser):
             out = xmlbuilder.new('master')
         out.set('id', self.match_identifier())
 
-        # FIXME: as a post-processing step in cib-factory, reshuffle entities
-        # so that the things that should be inside the container node are
-        xmlbuilder.child(out, 'crmsh-ref', id=self.match_resource())
+        child = xmlbuilder.new('crmsh-ref', id=self.match_resource())
         xmlbuilder.maybe_set(out, 'description', self.try_match_description())
         self.match_arguments(out, {'params': 'instance_attributes',
                                    'meta': 'meta_attributes'})
+        out.append(child)
         return out
 
     parse_master = _master_or_clone
@@ -690,11 +689,11 @@ class ResourceParser(RuleParser):
                 self.err("child %s listed more than once in group %s" %
                          (child, out.get('id')))
             children.append(child)
-        for child in children:
-            xmlbuilder.child(out, 'crmsh-ref', id=child)
         xmlbuilder.maybe_set(out, 'description', self.try_match_description())
         self.match_arguments(out, {'params': 'instance_attributes',
                                    'meta': 'meta_attributes'})
+        for child in children:
+            xmlbuilder.child(out, 'crmsh-ref', id=child)
         return out
 
 

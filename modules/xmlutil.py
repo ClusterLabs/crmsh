@@ -1180,6 +1180,8 @@ def xml_equals_unordered(a, b):
         return isinstance(x.tag, basestring) and x.tag or x.text
 
     def sortby(v):
+        if v.tag == 'primitive':
+            return v.tag
         return tagflat(v) + ''.join(sorted(v.attrib.keys() + v.attrib.values()))
 
     def safe_strip(text):
@@ -1197,6 +1199,9 @@ def xml_equals_unordered(a, b):
         return fail("number of children differ")
     elif len(a) == 0:
         return True
+
+    # order matters here, but in a strange way:
+    # all primitive tags should sort the same..
     sorted_children = zip(sorted(a, key=sortby), sorted(b, key=sortby))
     return all(xml_equals_unordered(a, b) for a, b in sorted_children)
 

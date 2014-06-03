@@ -154,19 +154,17 @@ class TestCliParser(unittest.TestCase):
         out = self.parser.parse('ms m0 resource params a=b')
         self.assertEqual(out.get('id'), 'm0')
         print etree.tostring(out)
-        self.assertEqual(out[0].tag, 'crmsh-ref')
-        self.assertEqual(out[0].get('id'), 'resource')
+        self.assertEqual(['resource'], out.xpath('./crmsh-ref/@id'))
         self.assertEqual(['b'], out.xpath('instance_attributes/nvpair[@name="a"]/@value'))
 
         out = self.parser.parse('master ma resource meta a=b')
         self.assertEqual(out.get('id'), 'ma')
-        self.assertEqual(out[0].tag, 'crmsh-ref')
-        self.assertEqual(out[0].get('id'), 'resource')
+        self.assertEqual(['resource'], out.xpath('./crmsh-ref/@id'))
         self.assertEqual(['b'], out.xpath('meta_attributes/nvpair[@name="a"]/@value'))
 
         out = self.parser.parse('clone clone-1 resource meta a=b')
         self.assertEqual(out.get('id'), 'clone-1')
-        self.assertEqual(out[0].get('id'), 'resource')
+        self.assertEqual(['resource'], out.xpath('./crmsh-ref/@id'))
         self.assertEqual(['b'], out.xpath('meta_attributes/nvpair[@name="a"]/@value'))
 
         out = self.parser.parse('group group-1 a')
@@ -577,7 +575,7 @@ class TestCliParser(unittest.TestCase):
             '<op name="monitor" role="Started" rsc="d2" interval="60s" timeout="30s"/>',
             '<group id="g1"><crmsh-ref id="d1"/><crmsh-ref id="d2"/></group>',
             '<primitive id="d3" class="ocf" provider="pacemaker" type="Dummy"/>',
-            '<clone id="c"><crmsh-ref id="d3"/><meta_attributes><nvpair name="clone-max" value="1"/></meta_attributes></clone>',
+            '<clone id="c"><meta_attributes><nvpair name="clone-max" value="1"/></meta_attributes><crmsh-ref id="d3"/></clone>',
             '<primitive id="d4" class="ocf" provider="pacemaker" type="Dummy"/>',
             '<master id="m"><crmsh-ref id="d4"/></master>',
             '<primitive id="s5" class="ocf" provider="pacemaker" type="Stateful"><operations id-ref="d1-ops"/></primitive>',
