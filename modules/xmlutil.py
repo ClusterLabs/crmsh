@@ -29,7 +29,7 @@ import constants
 from msg import common_err, common_error, common_debug, cib_parse_err, err_buf
 import userdir
 import utils
-from utils import add_sudo, str2file, str2tmp, pipe_string, get_boolean
+from utils import add_sudo, str2file, str2tmp, get_boolean
 from utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
 from utils import olist, get_cib_in_use, get_tempdir
 
@@ -693,7 +693,6 @@ def fix_comments(e):
 
 
 def set_id_used_attr(e):
-    common_debug("setting id used: %s" % (etree.tostring(e)))
     e.set("__id_used", "Yes")
 
 
@@ -707,7 +706,6 @@ def remove_id_used_attr(e, lvl):
 
 
 def remove_id_used_attributes(e):
-    common_debug("clearing id used: %s" % (etree.tostring(e)))
     if e is not None:
         xmltraverse(e, remove_id_used_attr)
 
