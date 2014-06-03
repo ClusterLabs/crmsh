@@ -1307,10 +1307,10 @@ def list_cluster_nodes():
     try:
         rc, outp = stdout2list(['crm_node', '-l'], stderr_on=False, shell=False)
         if rc != 0:
-            raise IOError("crm_node failed (RC=%s): %s" % (rc, outp))
+            raise ValueError("Error listing cluster nodes: crm_node (rc=%d)" % (rc))
         return [x for x in [getname(line.split()) for line in outp] if x and x != '(null)']
     except OSError, msg:
-        raise ValueError("Error getting list of nodes from crm_node: %s" % (msg))
+        raise ValueError("Error listing cluster nodes: %s" % (msg))
 
 
 def service_info(name):

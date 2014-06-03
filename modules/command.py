@@ -20,7 +20,6 @@
 #   Mostly, what these functions do is store extra metadata
 #   inside the functions.
 
-#from functools import wraps
 import inspect
 import help as help_module
 import ui_utils

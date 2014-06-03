@@ -25,7 +25,7 @@ import xmlutil
 import ui_utils
 import options
 
-from msg import common_error, common_err, common_info, common_debug, common_warn
+from msg import common_error, common_err, common_info, common_debug
 from msg import no_prog_err
 from cibconfig import cib_factory
 
