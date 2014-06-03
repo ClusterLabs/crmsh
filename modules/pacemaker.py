@@ -18,21 +18,12 @@
 import os
 import tempfile
 import copy
+import re
 from lxml import etree
 
 
 class PacemakerError(Exception):
     '''PacemakerError exceptions'''
-
-
-known_schemas = {
-    "pacemaker-0.7": ("rng", "pacemaker-1.0.rng"),
-    "pacemaker-1.0": ("rng", "pacemaker-1.0.rng"),
-    "pacemaker-1.1": ("rng", "pacemaker-1.1.rng"),
-    "pacemaker-1.2": ("rng", "pacemaker-1.2.rng"),
-    "pacemaker-1.3": ("rng", "pacemaker-1.3.rng"),
-    "pacemaker-2.0": ("rng", "pacemaker-2.0.rng"),
-}
 
 
 def get_validate_name(cib_elem):
@@ -44,17 +35,15 @@ def get_validate_name(cib_elem):
 
 def get_validate_type(cib_elem):
     validate_name = get_validate_name(cib_elem)
-    if validate_name is None or known_schemas.get(validate_name) is None:
-        return None
-    else:
-        return known_schemas.get(validate_name)[0]
+    if re.match(r"pacemaker-\d+\.\d+", validate_name):
+        return "rng"
+    return None
 
 
 def get_schema_filename(validate_name):
-    if validate_name is None or known_schemas.get(validate_name) is None:
-        return None
-    else:
-        return known_schemas.get(validate_name)[1]
+    if re.match(r"pacemaker-\d+\.\d+", validate_name):
+        return "%s.rng" % (validate_name)
+    return None
 
 
 def read_schema_local(validate_name, file_path):
