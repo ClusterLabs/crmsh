@@ -3040,7 +3040,8 @@ class CibFactory(object):
         for cli in processing_sort([edit_d[x] for x in mk_set]):
             obj = self.create_from_cli(cli)
             if not obj:
-                common_debug("create_from_cli '%s' failed" % (etree.tostring(cli)))
+                common_debug("create_from_cli '%s' failed" %
+                             (etree.tostring(cli, pretty_print=True)))
                 return False
             test_l.append(obj)
         for id in upd_set:
@@ -3048,7 +3049,7 @@ class CibFactory(object):
             if not obj:
                 common_debug("%s not found!" % (id))
                 return False
-            node, _, _ = postprocess_cli(edit_d[id])
+            node, _, _ = postprocess_cli(edit_d[id], oldnode=obj.node)
             if node is None:
                 common_debug("postprocess_cli failed: %s" % (id))
                 return False
