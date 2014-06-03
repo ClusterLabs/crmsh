@@ -155,9 +155,9 @@ class RaCrmResource(object):
         rc, l = stdout2list("crm_resource %s" % opts, stderr_on=False)
         # not clear when/why crm_resource exits with non-zero
         # code
-        if rc != 0:
-            common_debug("crm_resource %s exited with code %d" %
-                         (opts, rc))
+        #if rc != 0:
+        #    common_debug("crm_resource %s exited with code %d" %
+        #                 (opts, rc))
         return l
 
     def meta(self, ra_class, ra_type, ra_provider):
