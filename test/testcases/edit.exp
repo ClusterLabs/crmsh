@@ -120,9 +120,6 @@ property cib-bootstrap-options: \
 .TRY configure filter 'sed "s/stonith-enabled=true//"'
 .EXT crm_resource --list-standards
 .EXT crm_resource --list-ocf-alternatives Dummy
-.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
-.EXT crm_resource --show-metadata stonith:heartbeat:null
-.EXT stonithd metadata
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata
