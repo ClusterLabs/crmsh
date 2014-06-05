@@ -270,3 +270,31 @@ def test_bnc878112():
     obj3 = factory.create_object('group', 'g2', 'p1')
     print obj3
     assert obj3 is False
+
+
+def test_copy_nvpairs():
+    from cibconfig import copy_nvpairs
+
+    to = etree.fromstring('''
+    <node>
+    <nvpair name="stonith-enabled" value="true"/>
+    </node>
+    ''')
+    copy_nvpairs(to, etree.fromstring('''
+    <node>
+    <nvpair name="stonith-enabled" value="false"/>
+    </node>
+    '''))
+
+    eq_(['stonith-enabled'], to.xpath('./nvpair/@name'))
+    eq_(['false'], to.xpath('./nvpair/@value'))
+
+    copy_nvpairs(to, etree.fromstring('''
+    <node>
+    <nvpair name="stonith-enabled" value="true"/>
+    </node>
+    '''))
+
+    eq_(['stonith-enabled'], to.xpath('./nvpair/@name'))
+    eq_(['true'], to.xpath('./nvpair/@value'))
+

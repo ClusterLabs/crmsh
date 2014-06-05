@@ -185,6 +185,28 @@ def mkxmlnvpairs(name, attrs, id_hint):
     return fill_nvpairs(name, node, attrs, id_hint)
 
 
+def copy_nvpair(nvpairs, nvp, id_hint=None):
+    """
+    Copies the given nvpair into the given tag containing nvpairs
+    """
+    common_debug("copy_nvpair: %s" % (etree.tostring(nvp)))
+    if 'value' not in nvp.attrib:
+        nvpairs.append(copy.deepcopy(nvp))
+        return
+    n = nvp.get('name')
+    if id_hint is None:
+        id_hint = n
+    for nvp2 in nvpairs:
+        if nvp2.get('name') == n:
+            nvp2.set('value', nvp.get('value'))
+            break
+    else:
+        m = copy.deepcopy(nvp)
+        nvpairs.append(m)
+        if 'id' not in m.attrib:
+            m.set('id', idmgmt.new(m, id_hint))
+
+
 def copy_nvpairs(tonode, fromnode):
     """
     copy nvpairs from fromnode to tonode.
@@ -197,21 +219,6 @@ def copy_nvpairs(tonode, fromnode):
         else:
             tonode.append(copy.deepcopy(cnode))
 
-    def copy_nvpair(nvp):
-        if 'value' not in nvp:
-            tonode.append(copy.deepcopy(nvp))
-            return
-        n = nvp.get('name')
-        for nvp2 in tonode:
-            if nvp2.get('name') == n:
-                nvp2.set('value', nvp.get('value'))
-                break
-        else:
-            m = copy.deepcopy(nvp)
-            tonode.append(m)
-            if 'id' not in m.attrib:
-                m.set('id', idmgmt.new(m, id_hint))
-
     def copy_id(node):
         nid = node.get('id')
         for nvp2 in tonode:
@@ -221,13 +228,13 @@ def copy_nvpairs(tonode, fromnode):
         else:
             tonode.append(copy.deepcopy(node))
 
-    common_debug("copy_nvpairs: %s" % (etree.tostring(fromnode)))
+    common_debug("copy_nvpairs: %s -> %s" % (etree.tostring(fromnode), etree.tostring(tonode)))
     id_hint = tonode.get('id')
     for c in fromnode:
         if is_comment(c):
             copy_comment(c)
         elif c.tag == "nvpair":
-            copy_nvpair(c)
+            copy_nvpair(tonode, c, id_hint=id_hint)
         elif 'id' in c.attrib:  # ok, it has an id, we can work with this
             copy_id(c)
         else:  # no idea what this is, just copy it
