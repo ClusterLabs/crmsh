@@ -400,8 +400,8 @@ def cli_acl_spec2_format(xml_spec, v):
 
 def cli_acl_permission(node):
     s = [clidisplay.keyword(node.get('kind'))]
-    if node.get('id'):
-        s.append(head_id_format(node.get('id')))
+    #if node.get('id'):
+    #    s.append(head_id_format(node.get('id')))
     if node.get('description'):
         s.append(nvpair_format('description', node.get('description')))
     for attrname, cliname in constants.acl_spec_map_2_rev:

@@ -198,4 +198,4 @@ def test_param_rules():
 
 
 def test_new_acls():
-    roundtrip('role fum description=test read a: description=test2 xpath:"*[@name=karl]"')
+    roundtrip('role fum description=test read description=test2 xpath:"*[@name=karl]"')
