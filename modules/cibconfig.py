@@ -2318,7 +2318,7 @@ class CibFactory(Singleton):
         'Commit the configuration to the CIB.'
         if not self.is_cib_sane():
             return False
-        if cibadmin_can_patch():
+        if self.can_patch():
             rc = self._patch_cib(force)
         else:
             rc = self._replace_cib(force)
@@ -2330,6 +2330,20 @@ class CibFactory(Singleton):
             self.reset()
             self.initialize()
         return rc
+
+    def can_patch(self):
+        """
+        If patching seems OK, do it.
+        The v1 patch format cannot handle reordering,
+        so if there are any changes to any groups, don't
+        patch.
+        """
+        def group_changed():
+            for obj in self.cib_objects:
+                if obj.updated and obj.obj_type == "group":
+                    return True
+            return False
+        return cibadmin_can_patch() and not group_changed()
 
     def _update_schema(self):
         '''
