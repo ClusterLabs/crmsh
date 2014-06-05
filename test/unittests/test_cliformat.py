@@ -28,7 +28,7 @@ def assert_is_not_none(thing):
     assert thing is not None, "Expected non-None value"
 
 
-def roundtrip(cli, debug=False):
+def roundtrip(cli, debug=False, expected=None):
     node, _, _ = cibconfig.parse_cli_to_xml(cli, validation=MockValidation())
     assert_is_not_none(node)
     obj = factory.create_from_node(node)
@@ -42,7 +42,10 @@ def roundtrip(cli, debug=False):
         print "GOT:", s
         print "EXP:", cli
     assert obj.cli_use_validate()
-    eq_(cli, s)
+    if expected is not None:
+        eq_(expected, s)
+    else:
+        eq_(cli, s)
     assert not debug
 
 
@@ -199,3 +202,13 @@ def test_param_rules():
 
 def test_new_acls():
     roundtrip('role fum description=test read description=test2 xpath:"*[@name=karl]"')
+
+
+def test_acls_reftype():
+    roundtrip('role boo deny ref:d0 type:nvpair')
+
+
+def test_acls_oldsyntax():
+    roundtrip('role boo deny ref:d0 tag:nvpair',
+              expected='role boo deny ref:d0 type:nvpair')
+
