@@ -57,7 +57,7 @@ learn about the cluster configuration or facilitate testing
 procedures.
 
 The `crm` shell is line oriented: every command must start and finish
-on the same line. It is possible to use a continuation character (`\`)
+on the same line. It is possible to use a continuation character (+\+)
 to write one command in two or more lines. The continuation character
 is commonly used when displaying configurations.
 
@@ -65,18 +65,18 @@ is commonly used when displaying configurations.
 OPTIONS
 -------
 *-f, --file*='FILE'::
-    Load commands from the given file. If a dash `-` is used in place
+    Load commands from the given file. If a dash +-+ is used in place
     of a file name, `crm` will read commands from the shell standard
     input (`stdin`).
 
 *-c, --cib*='CIB'::
     Start the session using the given shadow CIB file.
-    Equivalent to `cib use <CIB>`.
+    Equivalent to +cib use <CIB>+.
 
 *-D, --display=*'OUTPUT_TYPE'::
-    Choose one of the output options: `plain`, `color`, or
-    `uppercase`. The default is `color` if the terminal emulation
-    supports colors. Otherwise, `plain` is used.
+    Choose one of the output options: +plain+, +color+, or
+    +uppercase+. The default is +color+ if the terminal emulation
+    supports colors. Otherwise, +plain+ is used.
 
 *-F, --force*::
     Make `crm` proceed with applying changes where it would normally
@@ -187,11 +187,11 @@ cluster, and to put a configuration together in a simple and concise manner.
 
 The `crm` interface is hierarchical, with commands organized into
 separate levels by functionality. To list the available levels and
-commands, either execute `help <level>`, or, if at the top level of
+commands, either execute +help <level>+, or, if at the top level of
 the shell, simply typing `help` will provide an overview of all
 available levels and commands.
 
-The `(live)` string in the `crm` prompt signifies that the current CIB
+The +(live)+ string in the `crm` prompt signifies that the current CIB
 in use is the cluster live configuration. It is also possible to
 work with so-called shadow CIBs. These are separate, inactive
 configurations stored in files, that can be applied and thereby
@@ -251,16 +251,16 @@ web2-d       web2     vip2     web3     vip      web
 
 We enter the `template` level from `configure`. Use the `list`
 command to show templates available on the system. The `new`
-command creates a configuration from the `apache` template. You
+command creates a configuration from the +apache+ template. You
 can use tab completion to pick templates. Note that the apache
 template depends on a virtual IP address which is automatically
-pulled along. The `list` command shows the just created `web`
+pulled along. The `list` command shows the just created +web+
 configuration, among other configurations (I hope that you,
 unlike me, will use more sensible and descriptive names).
 
 The `show` command, which displays the resulting configuration,
 may be used to get an idea about the minimum required changes
-which have to be done. All `ERROR` messages show the line numbers
+which have to be done. All +ERROR+ messages show the line numbers
 in which the respective parameters are to be defined:
 ...............
 crm(live)configure template# show
@@ -271,11 +271,11 @@ crm(live)configure template# edit
 ...............
 
 The `edit` command invokes the preferred text editor with the
-`web` configuration. At the top of the file, the user is advised
++web+ configuration. At the top of the file, the user is advised
 how to make changes. A good template should require from the user
-to specify only parameters. For example, the `web` configuration
+to specify only parameters. For example, the +web+ configuration
 we created above has the following required and optional
-parameters (all parameter lines start with `%%`):
+parameters (all parameter lines start with +%%+):
 ...............
 $ grep -n ^%% ~/.crmconf/web
 23:%% ip
@@ -321,7 +321,7 @@ group websvc \
 ...............
 
 The target resource of the apache template is a group which we
-named `websvc` in this sample session.
+named +websvc+ in this sample session.
 
 This configuration looks exactly as you could type it at the
 `configure` level. The point of templates is to save you some
@@ -347,7 +347,7 @@ group websvc apache virtual-ip
 ...............
 
 Note that this still does not commit the configuration to the CIB
-which is used in the shell, either the running one (`live`) or
+which is used in the shell, either the running one (+live+) or
 some shadow CIB. For that you still need to execute the `commit`
 command.
 
@@ -454,10 +454,10 @@ The `crm` makes extensive use of tab completion. The completion
 is both static (i.e. for `crm` commands) and dynamic. The latter
 takes into account the current status of the cluster or
 information from installed resource agents. Sometimes, completion
-may also be used to get short help on resource parameters. Here a
-few examples:
+may also be used to get short help on resource parameters. Here
+are a few examples:
+
 ...............
-crm(live)# resource
 crm(live)resource# <TAB><TAB>
 bye           failcount     move          restart       unmigrate
 cd            help          param         show          unmove
@@ -465,31 +465,26 @@ cleanup       list          promote       start         up
 demote        manage        quit          status        utilization
 end           meta          refresh       stop
 exit          migrate       reprobe       unmanage
-crm(live)resource# end
-crm(live)# configure
+
 crm(live)configure# primitive fence-1 <TAB><TAB>
 heartbeat:  lsb:    ocf:    stonith:
+
 crm(live)configure# primitive fence-1 stonith:<TAB><TAB>
 apcmaster                external/ippower9258     fence_legacy
 apcmastersnmp            external/kdumpcheck      ibmhmc
 apcsmart                 external/libvirt         ipmilan
-baytech                  external/nut             meatware
-bladehpi                 external/rackpdu         null
-cyclades                 external/riloe           nw_rpc100s
-drac3                    external/sbd             rcd_serial
-external/drac5           external/ssh             rps10
-external/dracmc-telnet   external/ssh-bad         ssh
-external/hmchttp         external/ssh-slow        suicide
-external/ibmrsa          external/vmware          wti_mpc
-external/ibmrsa-telnet   external/xen0            wti_nps
-external/ipmi            external/xen0-ha
+
 crm(live)configure# primitive fence-1 stonith:ipmilan params <TAB><TAB>
 auth=      hostname=  ipaddr=    login=     password=  port=      priv=
+
 crm(live)configure# primitive fence-1 stonith:ipmilan params auth=<TAB><TAB>
 auth* (string)
     The authorization type of the IPMI session ("none", "straight", "md2", or "md5")
-crm(live)configure# primitive fence-1 stonith:ipmilan params auth=
 ...............
+
+`crmsh` also comes with bash completion usable directly from the
+system shell. This should be installed automatically with the command
+itself.
 
 [[topics_Checks,Configuration semantic checks]]
 == Configuration semantic checks
@@ -518,8 +513,8 @@ User may tune the frequency of checks and the treatment of errors
 by the <<cmdhelp_options_check-frequency,`check-frequency`>> and
 <<cmdhelp_options_check-mode,`check-mode`>> preferences.
 
-Note that if the `check-frequency` is set to `always` and the
-`check-mode` to `strict`, errors are not tolerated and such
+Note that if the +check-frequency+ is set to +always+ and the
++check-mode+ to +strict+, errors are not tolerated and such
 configuration cannot be saved.
 
 [[topics_Security,Access Control Lists (ACL)]]
@@ -534,7 +529,7 @@ section may no longer be accurate. Look for the `acl_target` and
 syntax.
 ****************************
 
-By default, the users from the `haclient` group have full access
+By default, the users from the +haclient+ group have full access
 to the cluster (or, more precisely, to the CIB). Access control
 lists allow for finer access control to the cluster.
 
@@ -554,8 +549,8 @@ role bigdb_admin \
     read ref:bigdb
 ...............
 
-The first two rules allow modifying the `target-role` and
-`is-managed` meta attributes which effectively enables users in
+The first two rules allow modifying the +target-role+ and
++is-managed+ meta attributes which effectively enables users in
 this role to stop/start and manage/unmanage the resource. The
 constraints write access rule allows moving the resource around.
 Finally, the user is granted read access to the resource
@@ -585,9 +580,13 @@ It is however possible that some Pacemaker programs (e.g.
 readable.
 
 Some of the ACL rules in the examples above are expanded by the
-shell to XPath specifications. For instance,
-`meta:bigdb:target-role` is a shortcut for
-`//primitive[@id='bigdb']/meta_attributes/nvpair[@name='target-role']`.
+shell to XPath specifications. For instance, 
++meta:bigdb:target-role+ expands to:
+
+........
+//primitive[@id='bigdb']/meta_attributes/nvpair[@name='target-role']
+........
+
 You can see the expansion by showing XML:
 
 ...............
@@ -1987,25 +1986,25 @@ group svc fs virtual-ip \
     meta target-role=Stopped
 ...............
 
-Even though the element `svc` should be stopped, the group is
-actually running because all its members have the `target-role`
-set to `Started`:
+Even though the element +svc+ should be stopped, the group is
+actually running because all its members have the +target-role+
+set to +Started+:
 ...............
 crm(live)# resource show svc
 resource svc is running on: xen-f
 ...............
 
-Hence, if the user invokes `resource stop svc` the intention is
+Hence, if the user invokes +resource stop svc+ the intention is
 not clear. This preference gives the user an opportunity to
 better control what happens if attributes of group members have
 values which are in conflict with the same attribute of the group
 itself.
 
-Possible values are `ask` (the default), `always`, and `never`.
-If set to `always`, the crm shell removes all children attributes
-which have values different from the parent. If set to `never`,
+Possible values are +ask+ (the default), +always+, and +never+.
+If set to +always+, the crm shell removes all children attributes
+which have values different from the parent. If set to +never+,
 all children attributes are left intact. Finally, if set to
-`ask`, the user will be asked for each member what is to be done.
++ask+, the user will be asked for each member what is to be done.
 
 [[cmdhelp_options_show,show current user preference]]
 ==== `show`
@@ -2015,7 +2014,7 @@ Display all current settings.
 Given an option name as argument, `show` will display only the value
 of that argument.
 
-Given `all` as argument, `show` displays all available user options.
+Given +all+ as argument, `show` displays all available user options.
 
 Usage:
 ........
@@ -2033,10 +2032,10 @@ show all
 ==== `set`
 
 Sets the value of an option. Takes the fully qualified
-name of the option as argument, as displayed by `show all`.
+name of the option as argument, as displayed by +show all+.
 
 The modified option value is stored in the user-local
-configuration file, usually found in `~/.config/crm/crm.conf`.
+configuration file, usually found in +~/.config/crm/crm.conf+.
 
 Usage:
 ........
@@ -2052,14 +2051,14 @@ set editor nano
 [[cmdhelp_options_save,save the user preferences to the rc file]]
 ==== `save`
 
-Save current settings to the rc file (`$HOME/.config/crm/rc`). On
+Save current settings to the rc file (+$HOME/.config/crm/rc+). On
 further `crm` runs, the rc file is automatically read and parsed.
 
 [[cmdhelp_options_reset,reset user preferences to factory defaults]]
 ==== `reset`
 
 This command resets all user options to the defaults. If used as
-a single-shot command, the rc file (`$HOME/.config/crm/rc`) is
+a single-shot command, the rc file (+$HOME/.config/crm/rc+) is
 reset to the defaults too.
 
 [[cmdhelp_configure,CIB configuration]]
@@ -2113,16 +2112,22 @@ commands:
 
 In addition to the cluster configuration, the Access Control
 Lists (ACL) can be setup to allow access to parts of the CIB for
-users other than `root` and `hacluster`. The following commands
+users other than +root+ and +hacluster+. The following commands
 manage ACL:
 
 - `user`
 - `role`
 
+In Pacemaker 1.1.12 and up, these commands replace the `user` command
+for handling ACLs:
+
+- `acl_target`
+- `acl_group`
+
 The changes are applied to the current CIB only on ending the
 configuration session or using the `commit` command.
 
-Comments start with `#` in the first line. The comments are tied
+Comments start with +#+ in the first line. The comments are tied
 to the element which follows. If the element moves, its comments
 will follow.
 
@@ -2135,60 +2140,60 @@ the syntax provided by `crmsh`.
 
 Three different types of resource sets are provided by `crmsh`, and
 each one implies different values for the two resource set attributes,
-`sequential` and `require-all`.
++sequential+ and +require-all+.
 
-`sequential`::
++sequential+::
   If true, the resources in the set do not depend on each other
-  internally. Setting `sequential` to true implies a strict order of
+  internally. Setting +sequential+ to +true+ implies a strict order of
   dependency within the set.
 
-`require-all`::
++require-all+::
   If false, only one resource in the set is required to fulfil the
-  requirements of the set. The set of `A, B and C` with `require-all`
-  set to `false` is be read as `A OR B OR C` when its dependencies
+  requirements of the set. The set of A, B and C with +require-all+
+  set to +false+ is be read as "A OR B OR C" when its dependencies
   are resolved.
 
 The three types of resource sets modify the attributes in the
 following way:
 
-1. Implicit sets (no brackets). `sequential=true`, `require-all=true`
-2. Parenthesis set (`( ... )`). `sequential=false`, `require-all=true`
-3. Bracket set (`[ ... ]`). `sequential=false`, `require-all=false`
+1. Implicit sets (no brackets). +sequential=true+, +require-all=true+
+2. Parenthesis set (+(+ ... +)+). +sequential=false+, +require-all=true+
+3. Bracket set (+[+ ... +]+). +sequential=false+, +require-all=false+
 
-To create a set with the properties `sequential=true` and
-`require-all=false`, explicitly set `sequential` in a bracketed set,
-`[ A B C sequential=true ]`.
+To create a set with the properties +sequential=true+ and
++require-all=false+, explicitly set +sequential+ in a bracketed set,
++[ A B C sequential=true ]+.
 
-To create multiple sets with both `sequential` and `require-all` set to
-true, explicitly set `sequential` in a parenthesis set:
-`A B ( C D sequential=true )`.
+To create multiple sets with both +sequential+ and +require-all+ set to
+true, explicitly set +sequential+ in a parenthesis set:
++A B ( C D sequential=true )+.
 
 ==== References in attribute lists
 
 Attribute lists are used to set attributes and parameters for
 resources, constraints and property definitions. For example, to set
-the virtual IP used by an `IPAddr` resource the attribute `ip` can be
+the virtual IP used by an +IPAddr+ resource the attribute +ip+ can be
 set in an attribute list for that resource.
 
 Attribute lists can have identifiers that name them, and other
 resources can reuse the same attribute list by referring to that name
-using an `$id-ref`. For example, the following statement defines a
+using an +$id-ref+. For example, the following statement defines a
 simple dummy resource with an attribute list which sets the parameter
-`state to the value 1 and sets the identifier for the attribute list
-to `on-state`:
++state+ to the value 1 and sets the identifier for the attribute list
+to +on-state+:
 
 ..............
 primitive dummy-1 Dummy params $id=on-state state=1
 ..............
 
 To refer to this attribute list from a different resource, refer to
-the `on-state` name using an id-ref:
+the +on-state+ name using an id-ref:
 
 ..............
 primitive dummy-2 Dummy params $id-ref=on-state
 ..............
 
-The resource `dummy-2` will now also have the parameter `state` set to the value 1.
+The resource +dummy-2+ will now also have the parameter +state+ set to the value 1.
 
 ===== Referencing individual attributes
 
@@ -2199,22 +2204,22 @@ value in multiple places, it is possible to create references to
 individual attributes in attribute lists.
 
 To name an attribute in order to be able to refer to it later, prefix
-the attribute name with a `$` character (as seen above with the
-special names `$id` and `$id-ref`:
+the attribute name with a +$+ character (as seen above with the
+special names +$id+ and +$id-ref+:
 
 ............
 primitive dummy-1 Dummy params $state=1
 ............
 
-The identifier `state` can now be used to refer to this attribute from other
-primitives, using the `@<id>` syntax:
+The identifier +state+ can now be used to refer to this attribute from other
+primitives, using the +@<id>+ syntax:
 
 ............
 primitive dummy-2 Dummy params @state
 ............
 
 In some cases, using the attribute name as the identifier doesn't work
-due to name clashes. In this case, the syntax `$<id>:<name>=<value>`
+due to name clashes. In this case, the syntax +$<id>:<name>=<value>+
 can be used to give the attribute a different identifier:
 
 ............
@@ -2224,11 +2229,11 @@ primitive dummy-2 params @state
 
 There is also the possibility that two resources both use the same
 attribute value but with different names. For example, a web server
-may have a parameter `server_ip` for setting the IP address where it
+may have a parameter +server_ip+ for setting the IP address where it
 listens for incoming requests, and a virtual IP resource may have a
-parameter called `ip` which sets the IP address it creates. To
+parameter called +ip+ which sets the IP address it creates. To
 configure these two resources with an IP without repeating the value,
-the reference can be given a name using the syntax `@<id>:<name>`.
+the reference can be given a name using the syntax +@<id>:<name>+.
 
 Example:
 ............
@@ -2271,36 +2276,36 @@ referenced, then it is placed as a single resource in the CIB.
 
 Operations may be specified anonymously, as a group or by reference:
 
-* "Anonymous", as a list of `op` specifications. Use this
+* "Anonymous", as a list of +op+ specifications. Use this
   method if you don't need to reference the set of operations
   elsewhere. This is the most common way to define operations.
 
-* If reusing operation sets is desired, use the `operations` keyword
+* If reusing operation sets is desired, use the +operations+ keyword
   along with an id to give the operations set a name. Use the
-  `operations` keyword and an id-ref value set to the id of another
+  +operations+ keyword and an id-ref value set to the id of another
   operations set, to apply the same set of operations to this
   primitive.
 
 Operation attributes which are not recognized are saved as
 instance attributes of that operation. A typical example is
-`OCF_CHECK_LEVEL`.
++OCF_CHECK_LEVEL+.
 
-For multistate resources, roles are specified as `role=<role>`.
+For multistate resources, roles are specified as +role=<role>+.
 
 A template may be defined for resources which are of the same
 type and which share most of the configuration. See
 <<cmdhelp_configure_rsc_template,`rsc_template`>> for more information.
 
-Attributes containing time values, such as the `interval` attribute on
+Attributes containing time values, such as the +interval+ attribute on
 operations, are configured either as a plain number, which is
 interpreted as a time in seconds, or using one of the following
 suffixes:
 
-* `s`, `sec` - time in seconds (same as no suffix)
-* `ms`, `msec` - time in milliseconds
-* `us`, `usec` - time in microseconds
-* `m`, `min` - time in minutes
-* `h`, `hr` - time in hours
+* +s+, +sec+ - time in seconds (same as no suffix)
+* +ms+, +msec+ - time in milliseconds
+* +us+, +usec+ - time in microseconds
+* +m+, +min+ - time in minutes
+* +h+, +hr+ - time in hours
 
 Usage:
 ...............
@@ -2512,10 +2517,10 @@ which specify a score to be awarded if the rule matches.
 The resource referenced by the location constraint can be one of the
 following:
 
-* Plain resource reference: `location loc1 webserver 100: node1`
-* Resource set in curly brackets: `location loc1 { virtual-ip webserver } 100: node1`
-* Tag containing resource ids: `location loc1 tag1 100: node1`
-* Resource pattern: `location loc1 /web.*/ 100: node1`
+* Plain resource reference: +location loc1 webserver 100: node1+
+* Resource set in curly brackets: +location loc1 { virtual-ip webserver } 100: node1+
+* Tag containing resource ids: +location loc1 tag1 100: node1+
+* Resource pattern: +location loc1 /web.*/ 100: node1+
 
 For more details on how to configure resource sets, see
 <<cmdhelp_configure_resourcesets,`Resource sets`>>.
@@ -2583,20 +2588,20 @@ constraint is called a resource set.
 The score is used to indicate the priority of the constraint. A
 positive score indicates that the resources should run on the same
 node. A negative score that they should not run on the same
-node. Values of positive or negative `infinity` indicate a mandatory
+node. Values of positive or negative +infinity+ indicate a mandatory
 constraint.
 
-In the two resource form, the cluster will place `<with-rsc>` first,
-and then decide where to put the `<rsc>` resource.
+In the two resource form, the cluster will place +<with-rsc>+ first,
+and then decide where to put the +<rsc>+ resource.
 
-Collocation resource sets have an extra attribute (`sequential`)
+Collocation resource sets have an extra attribute (+sequential+)
 to allow for sets of resources which don't depend on each other
 in terms of state. The shell syntax for such sets is to put
 resources in parentheses.
 
 Sets cannot be nested.
 
-The optional `node-attribute` references an attribute in nodes'
+The optional +node-attribute+ references an attribute in nodes'
 instance attributes.
 
 For more details on how to configure resource sets, see
@@ -2628,14 +2633,14 @@ of resources whose actions may run in parallel. The shell syntax
 for such sets is to put resources in parentheses.
 
 If the subsequent resource can start or promote after any one of the
-resources in a set has done, enclose the set in brackets (`[` and `]`).
+resources in a set has done, enclose the set in brackets (+[+ and +]+).
 
 Sets cannot be nested.
 
 Three strings are reserved to specify a kind of order constraint:
-`Mandatory`, `Optional`, and `Serialize`. It is preferred to use
++Mandatory+, +Optional+, and +Serialize+. It is preferred to use
 one of these settings instead of score. Previous versions mapped
-scores `0` and `inf` to keywords `advisory` and `mandatory`.
+scores +0+ and +inf+ to keywords +advisory+ and +mandatory+.
 That is still valid but deprecated.
 
 For more details on how to configure resource sets, see
@@ -2663,9 +2668,9 @@ attributes, also known as tickets. Tickets are mainly used in
 geo-clusters, which consist of multiple sites. A ticket may be
 granted to a site, thus allowing resources to run there.
 
-The `loss-policy` attribute specifies what happens to the
+The +loss-policy+ attribute specifies what happens to the
 resource (or resources) if the ticket is revoked. The default is
-either `stop` or `demote` depending on whether a resource is
+either +stop+ or +demote+ depending on whether a resource is
 multi-state.
 
 See also the <<cmdhelp_site_ticket,`site`>> set of commands.
@@ -2688,7 +2693,7 @@ rsc_ticket ticket-B_storage ticket-B: drbd-a:Master drbd-b:Master
 [[cmdhelp_configure_property,set a cluster property]]
 ==== `property`
 
-Set the cluster (`crm_config`) options.
+Set the cluster (+crm_config+) options.
 
 Usage:
 ...............
@@ -2718,10 +2723,10 @@ rsc_defaults failure-timeout=3m
 ==== `fencing_topology`
 
 If multiple fencing (stonith) devices are available capable of
-fencing a node, their order may be specified by `fencing_topology`.
+fencing a node, their order may be specified by +fencing_topology+.
 The order is specified per node.
 
-Stonith resources can be separated by `,` in which case all of
+Stonith resources can be separated by +,+ in which case all of
 them need to succeed. If they fail, the next stonith resource (or
 set of resources) is used. In other words, use comma to separate
 resources which all need to succeed and whitespace for serial
@@ -2751,7 +2756,7 @@ fencing_topology \
 ==== `role`
 
 An ACL role is a set of rules which describe access rights to
-CIB. Rules consist of an access right `read`, `write`, or `deny`
+CIB. Rules consist of an access right +read+, +write+, or +deny+
 and a specification denoting part of the configuration to which
 the access right applies. The specification can be an XPath or a
 combination of tag and id references. If an attribute is
@@ -2759,12 +2764,12 @@ appended, then the specification applies only to that attribute
 of the matching element.
 
 There is a number of shortcuts for XPath specifications. The
-`meta,` `params`, and `utilization` shortcuts reference resource
++meta+, +params+, and +utilization+ shortcuts reference resource
 meta attributes, parameters, and utilization respectively. The
 `location` may be used to specify location constraints most of
 the time to allow resource `move` and `unmove` commands. The
 `property` references cluster properties. The `node` allows
-reading node attributes. `nodeattr` and `nodeutil` reference node
+reading node attributes. +nodeattr+ and +nodeutil+ reference node
 attributes and node capacity (utilization). The `status` shortcut
 references the whole status section of the CIB. Read access to
 status is necessary for various monitoring tools such as
@@ -2806,7 +2811,7 @@ role app1_admin \
 
 Users which normally cannot view or manage cluster configuration
 can be allowed access to parts of the CIB. The access is defined
-by a set of `read`, `write`, and `deny` rules as in role
+by a set of +read+, +write+, and +deny+ rules as in role
 definitions or by referencing roles. The latter is considered
 best practice.
 
@@ -2889,8 +2894,14 @@ tag web: p-webserver p-vip
 ==== `schema`
 
 CIB's content is validated by a RNG schema. Pacemaker supports
-several, depending on version. Currently supported schemas are
-`pacemaker-1.0`, `pacemaker-1.1`, and `pacemaker-1.2`.
+several, depending on version. At least the following schemas are
+accepted by `crmsh`:
+
+* +pacemaker-1.0+
+* +pacemaker-1.1+
+* +pacemaker-1.2+
+* +pacemaker-1.3+
+* +pacemaker-2.0+
 
 Use this command to display or switch to another RNG schema.
 
@@ -2913,7 +2924,7 @@ which were changed.
 Optionally, the XML code may be displayed instead of the CLI
 representation by passing `xml` as the first argument.
 
-To show all objects of a certain type, use the `type:` prefix.
+To show all objects of a certain type, use the +type:+ prefix.
 
 Usage:
 ...............
@@ -3002,7 +3013,7 @@ in that container, then the container is deleted as well. Any
 related constraints are removed as well.
 
 If the object is a started resource, it will not be deleted unless the
-`--force` flag is passed to the command, or the `force` option is set.
++--force+ flag is passed to the command, or the +force+ option is set.
 
 Usage:
 ...............
@@ -3106,10 +3117,10 @@ running but some imaginary cluster.
 If you have graphviz installed and X11 session, `dotty(1)` is run
 to display the changes graphically.
 
-Add a string of `v` characters to increase verbosity. `ptest`
-can also show allocation scores. `utilization` turns on
+Add a string of +v+ characters to increase verbosity. `ptest`
+can also show allocation scores. +utilization+ turns on
 information about the remaining capacity of nodes. With the
-`actions` option, `ptest` will print all resource actions.
++actions+ option, `ptest` will print all resource actions.
 
 The `ptest` program has been replaced by `crm_simulate` in newer
 Pacemaker versions. In some installations both could be
@@ -3171,8 +3182,8 @@ crm(live)configure# cib new test-2
 INFO: test-2 shadow CIB created
 crm(test-2)configure# commit
 ...............
-Note how the current CIB in the prompt changed from `live` to
-`test-2` after issuing the `cib new` command. See also the
+Note how the current CIB in the prompt changed from +live+ to
++test-2+ after issuing the `cib new` command. See also the
 <<cmdhelp_cib,CIB shadow management>> for more information.
 
 [[cmdhelp_configure_cibstatus,CIB status management and editing]]
@@ -3206,7 +3217,9 @@ effect on the CIB. All changes are applied at one point in time,
 either using `commit` or when the user leaves the configure
 level. In case the CIB in use changed in the meantime, presumably
 by somebody else, the crm shell will refuse to apply the changes.
-If you know that it's fine to still apply them add `force`.
+
+If you know that it's fine to still apply them, add +force+ to the
+command line.
 
 Usage:
 ...............
@@ -3246,7 +3259,7 @@ upgrade [force]
 ==== `save`
 
 Save the current configuration to a file. Optionally, as XML. Use
-`-` instead of file name to write the output to `stdout`.
++-+ instead of file name to write the output to `stdout`.
 
 Usage:
 ...............
@@ -3261,8 +3274,8 @@ save myfirstcib.txt
 ==== `load`
 
 Load a part of configuration (or all of it) from a local file or
-a network URL. The `replace` method replaces the current
-configuration with the one from the source. The `update` tries to
+a network URL. The +replace+ method replaces the current
+configuration with the one from the source. The +update+ tries to
 import the contents into the current configuration.
 The file may be a CLI file or an XML file.
 
@@ -3294,7 +3307,7 @@ produce an image instead.
 
 For more or different graphviz attributes, it is possible to save
 the default set of attributes to an ini file. If this file exists
-it will always override the builtin settings. The `exportsettings`
+it will always override the builtin settings. The +exportsettings+
 subcommand also prints the location of the ini file.
 
 Usage:
@@ -3303,7 +3316,7 @@ graph [<gtype> [<file> [<img_format>]]]
 graph exportsettings
 
 gtype :: dot
-img_format :: `dot` output format (see the `-T` option)
+img_format :: `dot` output format (see the +-T+ option)
 ...............
 Example:
 ...............
@@ -3349,7 +3362,7 @@ is possible to have a configuration name equal a template name.
 If you already know which parameters are required, you can set
 them directly on the command line.
 
-The parameter name `id` is set by default to the name of the
+The parameter name +id+ is set by default to the name of the
 configuration.
 
 Usage:
@@ -3441,7 +3454,7 @@ status section is essentially a read-only part of the CIB. The
 current status is never even written to disk, though it is
 available in the PE (Policy Engine) input files which represent
 the history of cluster motions. The current status may be read
-using the `cibadmin -Q` command.
+using the +cibadmin -Q+ command.
 
 It may sometimes be of interest to see how status changes would
 affect the Policy Engine. The set of `cibstatus` level commands
@@ -3461,11 +3474,11 @@ modification commands are implemented using `crm_simulate(8)`.
 ==== `load`
 
 Load a status section from a file, a shadow CIB, or the running
-cluster. By default, the current (`live`) status section is
-modified. Note that if the `live` status section is modified it
+cluster. By default, the current (+live+) status section is
+modified. Note that if the +live+ status section is modified it
 is not going to be updated if the cluster status changes, because
 that would overwrite the user changes. To make `crm` drop changes
-and resume use of the running cluster status, run `load live`.
+and resume use of the running cluster status, run +load live+.
 
 All CIB shadow configurations contain the status section which is
 a snapshot of the status section taken at the time the shadow was
@@ -3522,7 +3535,7 @@ origin
 ==== `show`
 
 Show the current status section in the XML format. Brace yourself
-for some unreadable output. Add `changed` option to get a human
+for some unreadable output. Add +changed+ option to get a human
 readable output of all changes.
 
 Usage:
@@ -3536,16 +3549,16 @@ show [changed]
 Change the node status. It is possible to throw a node out of
 the cluster, make it a member, or set its state to unclean.
 
-`online`:: Set the `node_state` `crmd` attribute to `online`
-and the `expected` and `join` attributes to `member`. The effect
++online+:: Set the +node_state+ `crmd` attribute to +online+
+and the +expected+ and +join+ attributes to +member+. The effect
 is that the node becomes a cluster member.
 
-`offline`:: Set the `node_state` `crmd` attribute to `offline`
-and the `expected` attribute to empty. This makes the node
++offline+:: Set the +node_state+ `crmd` attribute to +offline+
+and the +expected+ attribute to empty. This makes the node
 cleanly removed from the cluster.
 
-`unclean`:: Set the `node_state` `crmd` attribute to `offline`
-and the `expected` attribute to `member`. In this case the node
++unclean+:: Set the +node_state+ `crmd` attribute to +offline+
+and the +expected+ attribute to +member+. In this case the node
 has unexpectedly disappeared.
 
 Usage:
@@ -3564,7 +3577,7 @@ Edit the outcome of a resource operation. This way you can
 tell CRM that it ran an operation and that the resource agent
 returned certain exit code. It is also possible to change the
 operation's status. In case the operation status is set to
-something other than `done`, the exit code is effectively
+something other than +done+, the exit code is effectively
 ignored.
 
 Usage:
@@ -3624,8 +3637,8 @@ ticket ticketA grant
 
 Run the policy engine with the edited status section.
 
-Add a string of `v` characters to increase verbosity. Specify
-`scores` to see allocation scores also. `utilization` turns on
+Add a string of +v+ characters to increase verbosity. Specify
++scores+ to see allocation scores also. +utilization+ turns on
 information about the remaining capacity of nodes.
 
 If you have graphviz installed and X11 session, `dotty(1)` is run
@@ -3646,8 +3659,8 @@ run
 Run the policy engine with the edited status section and simulate
 the transition.
 
-Add a string of `v` characters to increase verbosity. Specify
-`scores` to see allocation scores also. `utilization` turns on
+Add a string of +v+ characters to increase verbosity. Specify
++scores+ to see allocation scores also. +utilization+ turns on
 information about the remaining capacity of nodes.
 
 If you have graphviz installed and X11 session, `dotty(1)` is run
@@ -3713,11 +3726,11 @@ otherwise specified, the last hour is considered. Logs and other
 relevant information is collected using `hb_report`. Since this
 process takes some time and we always need fresh logs,
 information is refreshed in a much faster way using `pssh(1)`. If
-`python-pssh` is not found on the system, examining live cluster
++python-pssh+ is not found on the system, examining live cluster
 is still possible though not as comfortable.
 
 Apart from examining live cluster, events may be retrieved from a
-report generated by `hb_report` (see also the `-H` option). In
+report generated by `hb_report` (see also the +-H+ option). In
 that case we assume that the period stretching the whole report
 needs to be investigated. Of course, it is still possible to
 further reduce the time range.
@@ -3834,10 +3847,10 @@ source
 [[cmdhelp_history_refresh,refresh live report]]
 ==== `refresh`
 
-This command makes sense only for the `live` source and makes
+This command makes sense only for the +live+ source and makes
 `crm` collect the latest logs and other relevant information from
 the logs. If you want to make a completely new report, specify
-`force`.
++force+.
 
 Usage:
 ...............
@@ -3943,7 +3956,7 @@ log node-a
 If a log is infested with irrelevant messages, those messages may
 be excluded by specifying a regular expression. The regular
 expressions used are Python extended. This command is additive.
-To drop all regular expressions, use `exclude clear`. Run
+To drop all regular expressions, use +exclude clear+. Run
 `exclude` only to see the current list of regular expressions.
 Excludes are saved along with the history sessions.
 
@@ -3962,7 +3975,7 @@ exclude kernel.*ocfs2
 Every event in the cluster results in generating one or more
 Policy Engine (PE) files. These files describe future motions of
 resources. The files are listed as full paths in the current
-report directory. Add `v` to also see the creation time stamps.
+report directory. Add +v+ to also see the creation time stamps.
 
 Usage:
 ...............
@@ -3985,8 +3998,8 @@ graphviz (`dotty`) to display a graphical representation of the
 transition. Of course, for the latter an X11 session is required.
 This command invokes `ptest(8)` in background.
 
-The `showdot` subcommand runs graphviz (`dotty`) to display a
-graphical representation of the `.dot` file which has been
+The +showdot+ subcommand runs graphviz (`dotty`) to display a
+graphical representation of the +.dot+ file which has been
 included in the report. Essentially, it shows the calculation
 produced by `pengine` which is installed on the node where the
 report was produced. In optimal case this output should not
@@ -4064,7 +4077,7 @@ Usage:
 graph <pe> [<gtype> [<file> [<img_format>]]]
 
 gtype :: dot
-img_format :: `dot` output format (see the `-T` option)
+img_format :: `dot` output format (see the +-T+ option)
 ...............
 Example:
 ...............
@@ -4081,7 +4094,7 @@ state. Use `diff` to see what has changed between two
 transitions.
 
 If you want to specify the current cluster configuration and
-status, use the string `live`.
+status, use the string +live+.
 
 Normally, the first transition specified should be the one which
 is older, but we are not going to enforce that.
@@ -4109,7 +4122,7 @@ state. Use `wdiff` to see what has changed between two
 transitions as word differences on a line-by-line basis.
 
 If you want to specify the current cluster configuration and
-status, use the string `live`.
+status, use the string +live+.
 
 Normally, the first transition specified should be the one which
 is older, but we are not going to enforce that.

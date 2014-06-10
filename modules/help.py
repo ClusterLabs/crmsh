@@ -52,6 +52,7 @@ class HelpFilter(object):
     _B0 = re.compile(r'^\.{4,}')
     _B1 = re.compile(r'^\*{4,}')
     _QUOTED = re.compile(r'`([^`]+)`')
+    _MONO = re.compile(r'\+([^+]+)\+')
     _TOPIC = re.compile(r'(.*)::$')
     _TOPIC2 = re.compile(r'^\.\w+')
 
@@ -70,6 +71,7 @@ class HelpFilter(object):
             if self._TOPIC2.match(line):
                 return clidisplay.help_topic(line[1:])
             line = self._QUOTED.sub(clidisplay.help_keyword(r'\1'), line)
+            line = self._MONO.sub(clidisplay.help_block(r'\1'), line)
             line = self._TOPIC.sub(clidisplay.help_topic(r'\1'), line)
             return line
         else:
