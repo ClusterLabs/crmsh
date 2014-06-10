@@ -2126,6 +2126,7 @@ Comments start with `#` in the first line. The comments are tied
 to the element which follows. If the element moves, its comments
 will follow.
 
+[[cmdhelp_configure_resourcesets,Resource sets]]
 ==== Resource sets
 
 Using resource sets can be a bit confusing unless one knows the
@@ -2508,9 +2509,24 @@ primitive xen1 @public_vm \
 resource. The location constraints consist of one or more rules
 which specify a score to be awarded if the rule matches.
 
+The resource referenced by the location constraint can be one of the
+following:
+
+* Plain resource reference: `location loc1 webserver 100: node1`
+* Resource set in curly brackets: `location loc1 { virtual-ip webserver } 100: node1`
+* Tag containing resource ids: `location loc1 tag1 100: node1`
+* Resource pattern: `location loc1 /web.*/ 100: node1`
+
+For more details on how to configure resource sets, see
+<<cmdhelp_configure_resourcesets,`Resource sets`>>.
+
 Usage:
 ...............
-location <id> <rsc> [role=<role>] {node_pref|rules}
+location <id> rsc [role=<role>] {node_pref|rules}
+
+rsc :: /<rsc-pattern>/
+        | { <rsc-set> }
+        | <rsc>
 
 node_pref :: <score>: <node>
 
@@ -2583,6 +2599,9 @@ Sets cannot be nested.
 The optional `node-attribute` references an attribute in nodes'
 instance attributes.
 
+For more details on how to configure resource sets, see
+<<cmdhelp_configure_resourcesets,`Resource sets`>>.
+
 Usage:
 ...............
 colocation <id> <score>: <rsc>[:<role>] <with-rsc>[:<role>]
@@ -2619,20 +2638,8 @@ one of these settings instead of score. Previous versions mapped
 scores `0` and `inf` to keywords `advisory` and `mandatory`.
 That is still valid but deprecated.
 
-.Note on resource sets' XML attributes
-****************************
-The XML attribute `require-all` controls whether all resources in
-a set are, well, required. The bracketed sets actually have this
-attribute as well as `sequential` set to `false`. If you need a
-different combination, for whatever reason, just set one of the
-attributes within the set. Something like this:
-
-...............
-crm(live)configure# order o1 Mandatory: [ A B sequential=true ] C
-...............
-It is up to you to find out whether such a combination makes
-sense.
-****************************
+For more details on how to configure resource sets, see
+<<cmdhelp_configure_resourcesets,`Resource sets`>>.
 
 Usage:
 ...............

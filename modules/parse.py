@@ -708,7 +708,7 @@ class ConstraintParser(RuleParser):
 
     def parse_location(self):
         """
-        location <id> rsc <score>: <node> [role=<role>]
+        location <id> rsc [role=<role>] <score>: <node>
         location <id> rsc [role=<role>] [rule ...]
         rsc :: /<rsc-pattern>/
             | { <rsc-set> }
