@@ -492,7 +492,7 @@ class RuleParser(BaseParser):
 
 
 class NodeParser(RuleParser):
-    _UNAME_RE = re.compile(r'([^:]+)(:(normal|member|ping))?$', re.IGNORECASE)
+    _UNAME_RE = re.compile(r'([^:]+)(:(normal|member|ping|remote))?$', re.IGNORECASE)
 
     def can_parse(self):
         return ('node',)
@@ -504,7 +504,7 @@ class NodeParser(RuleParser):
           [attributes <param>=<value> [<param>=<value>...]]
           [utilization <param>=<value> [<param>=<value>...]]
 
-        type :: normal | member | ping
+        type :: normal | member | ping | remote
         """
         self.begin(cmd, min_args=1)
         self.match('node')

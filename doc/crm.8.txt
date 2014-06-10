@@ -2253,7 +2253,7 @@ node [$id=<id>] <uname>[:<type>]
   [utilization [$id=<id>] [<score>:] [rule...]
     <param>=<value> [<param>=<value>...]] | $id-ref=<ref>
 
-type :: normal | member | ping
+type :: normal | member | ping | remote
 ...............
 Example:
 ...............
