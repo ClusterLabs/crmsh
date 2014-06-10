@@ -2268,15 +2268,19 @@ The primitive command describes a resource. It may be referenced
 only once in group, clone, or master-slave objects. If it's not
 referenced, then it is placed as a single resource in the CIB.
 
-Operations may be specified in three ways. "Anonymous" as a
-simple list of "op" specifications. Use that if you don't want to
-reference the set of operations elsewhere. That's by far the most
-common way to define operations. If reusing operation sets is
-desired, use the "operations" keyword along with the id to give
-the operations set a name and the id-ref to reference another set
-of operations.
+Operations may be specified anonymously, as a group or by reference:
 
-Operation's attributes which are not recognized are saved as
+* "Anonymous", as a list of `op` specifications. Use this
+  method if you don't need to reference the set of operations
+  elsewhere. This is the most common way to define operations.
+
+* If reusing operation sets is desired, use the `operations` keyword
+  along with an id to give the operations set a name. Use the
+  `operations` keyword and an id-ref value set to the id of another
+  operations set, to apply the same set of operations to this
+  primitive.
+
+Operation attributes which are not recognized are saved as
 instance attributes of that operation. A typical example is
 `OCF_CHECK_LEVEL`.
 
@@ -2285,6 +2289,17 @@ For multistate resources, roles are specified as `role=<role>`.
 A template may be defined for resources which are of the same
 type and which share most of the configuration. See
 <<cmdhelp_configure_rsc_template,`rsc_template`>> for more information.
+
+Attributes containing time values, such as the `interval` attribute on
+operations, are configured either as a plain number, which is
+interpreted as a time in seconds, or using one of the following
+suffixes:
+
+* `s`, `sec` - time in seconds (same as no suffix)
+* `ms`, `msec` - time in milliseconds
+* `us`, `usec` - time in microseconds
+* `m`, `min` - time in minutes
+* `h`, `hr` - time in hours
 
 Usage:
 ...............
