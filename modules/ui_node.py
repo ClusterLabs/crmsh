@@ -23,7 +23,8 @@ import ui_utils
 import utils
 import xmlutil
 from msg import common_err, syntax_err, no_prog_err, common_info, common_warn
-from cliformat import cli_nvpair, nvpairs2list
+from cliformat import cli_nvpairs, nvpairs2list
+import term
 
 
 def _oneline(s):
@@ -50,7 +51,7 @@ def unpack_node_xmldata(node, is_offline):
             id = v
         else:
             other[attr] = v
-    inst_attr = [cli_nvpair(nvpairs2list(elem))
+    inst_attr = [cli_nvpairs(nvpairs2list(elem))
                  for elem in node.xpath('./instance_attributes')]
     return uname, id, type, other, inst_attr, is_offline(uname)
 
@@ -66,13 +67,13 @@ def print_node(uname, id, node_type, other, inst_attr, offline):
     if not node_type:
         node_type = "normal"
     if uname == id:
-        print "%s: %s%s" % (uname, node_type, s_offline)
+        print term.render("%s: %s%s" % (uname, node_type, s_offline))
     else:
-        print "%s(%s): %s%s" % (uname, id, node_type, s_offline)
+        print term.render("%s(%s): %s%s" % (uname, id, node_type, s_offline))
     for a in other:
-        print "\t%s: %s" % (a, other[a])
+        print term.render("\t%s: %s" % (a, other[a]))
     for s in inst_attr:
-        print "\t%s" % (s)
+        print term.render("\t%s" % (s))
 
 
 class NodeMgmt(command.UI):

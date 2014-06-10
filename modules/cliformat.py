@@ -68,18 +68,19 @@ def nvpair_format(n, v):
 
 
 def cli_nvpair(nvp):
-    'Converts an nvpair tag to CLI syntax'
+    'Converts an nvpair tag or a (name, value) pair to CLI syntax'
     from cibconfig import cib_factory
     nodeid = nvp.get('id')
     idref = nvp.get('id-ref')
     name = nvp.get('name')
+    value = nvp.get('value')
     if idref is not None:
         if name is not None:
             return '@%s:%s' % (idref, name)
         return '@%s' % (idref)
     elif nodeid is not None and cib_factory.is_id_refd(nvp.tag, nodeid):
-        return '$%s:%s' % (nodeid, nvpair_format(name, nvp.get('value')))
-    return nvpair_format(name, nvp.get('value'))
+        return '$%s:%s' % (nodeid, nvpair_format(name, value))
+    return nvpair_format(name, value)
 
 
 def cli_nvpairs(nvplist):
@@ -105,15 +106,6 @@ def nvpairs2list(node, add_id=False):
         ret.append(xmlbuilder.nvpair('$id', node.get('id')))
     ret.extend(nvpairs)
     return ret
-
-
-def cli_attributes(node, add_id=False):
-    '''
-    Convert an attribute tag to CLI syntax
-    Does not honor possible <rule> tags
-    '''
-    return ' '.join([cli_nvpair(nvp)
-                     for nvp in nvpairs2list(node, add_id=add_id)])
 
 
 def op_instattr(node):
