@@ -75,7 +75,7 @@ def test_bnc863736():
 
 
 def test_sequential():
-    roundtrip('colocation rsc_colocation-master inf: [ vip-master vip-rep sequential="true" ] [ msPostgresql:Master sequential="true" ]')
+    roundtrip('colocation rsc_colocation-master inf: [ vip-master vip-rep sequential=true ] [ msPostgresql:Master sequential=true ]')
 
 def test_broken_colo():
     xml = """<rsc_colocation id="colo-2" score="INFINITY">
@@ -91,7 +91,7 @@ def test_broken_colo():
     obj = factory.create_from_node(data)
     assert_is_not_none(obj)
     data = obj.repr_cli(format=-1)
-    eq_('colocation colo-2 inf: [ vip1 vip2 sequential="true" ] [ apache:Master sequential="true" ]', data)
+    eq_('colocation colo-2 inf: [ vip1 vip2 sequential=true ] [ apache:Master sequential=true ]', data)
     assert obj.cli_use_validate()
 
 
@@ -152,7 +152,9 @@ value="Stopped"/> \
     assert_is_not_none(obj)
     data = obj.repr_cli(format=-1)
     print data
-    exp = 'primitive dummy2 ocf:pacemaker:Dummy meta target-role=Stopped op start timeout=60 interval=0 op stop timeout=60 interval=0 op monitor interval=60 timeout=30'
+    exp = 'primitive dummy2 ocf:pacemaker:Dummy meta target-role=Stopped ' \
+          'op start timeout=60 interval=0 op stop timeout=60 interval=0 ' \
+          'op monitor interval=60 timeout=30'
     eq_(exp, data)
     assert obj.cli_use_validate()
 
@@ -211,4 +213,14 @@ def test_acls_reftype():
 def test_acls_oldsyntax():
     roundtrip('role boo deny ref:d0 tag:nvpair',
               expected='role boo deny ref:d0 type:nvpair')
+
+def test_rules():
+    roundtrip('primitive p1 Dummy params ' +
+              'rule $role=Started date in start=2009-05-26 end=2010-05-26 ' +
+              'or date gt 2014-01-01 state=2')
+
+
+def test_new_role():
+    roundtrip('role silly-role-2 read xpath:"//nodes//attributes" ' +
+              'deny type:nvpair deny ref:d0 deny ref:d0 type:nvpair')
 

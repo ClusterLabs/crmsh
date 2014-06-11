@@ -15,6 +15,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+from ordereddict import odict
+
 
 cib_cli_map = {
     "node": "node",
@@ -71,15 +73,15 @@ subpfx_list = {
     "deny": "deny",
 }
 acl_rule_names = ("read", "write", "deny")
-acl_spec_map = {
+acl_spec_map = odict({
     "xpath": "xpath",
     "ref": "ref",
     "tag": "tag",
     "attribute": "attribute",
-}
+})
 # ACLs were rewritten in pacemaker 1.1.12
 # this is the new acl syntax
-acl_spec_map_2 = {
+acl_spec_map_2 = odict({
     "xpath": "xpath",
     "ref": "reference",
     "reference": "reference",
@@ -87,7 +89,7 @@ acl_spec_map_2 = {
     "type": "object-type",
     "attr": "attribute",
     "attribute": "attribute"
-}
+})
 
 acl_spec_map_2_rev = (('xpath', 'xpath'),
                       ('reference', 'ref'),

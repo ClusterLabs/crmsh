@@ -67,7 +67,7 @@ node node1 \
 node node2 \
 	utilization cpu=4
 primitive d1 ocf:pacemaker:Dummy \
-	operations $id="d1-ops" \
+	operations $id=d1-ops \
 	op monitor interval=60m \
 	op monitor interval=120m OCF_CHECK_LEVEL=10 \
 	op monitor interval=60s timeout=30s
@@ -82,9 +82,9 @@ primitive d7 Dummy \
 	params rule #uname eq node1 fake=1 \
 	params rule #uname eq node2 fake=2
 primitive s5 ocf:pacemaker:Stateful \
-	operations  $id-ref="d1-ops"
+	operations  $id-ref=d1-ops
 primitive s6 ocf:pacemaker:Stateful \
-	operations  $id-ref="d1-ops"
+	operations  $id-ref=d1-ops
 primitive st stonith:ssh \
 	params hostlist="node1 node2" \
 	meta target-role=Started \
@@ -100,7 +100,7 @@ clone c d3 \
 	meta clone-max=1
 location l1 g1 100: node1
 location l2 c \
-	rule $id="l2-rule1" 100: #uname eq node1
+	rule $id=l2-rule1 100: #uname eq node1
 location l3 m5 \
 	rule #uname eq node1 and pingd gt 0
 location l4 m5 \
@@ -108,11 +108,11 @@ location l4 m5 \
 location l5 m5 \
 	rule -inf: not_defined pingd or pingd lte 0 \
 	rule #uname eq node1 and pingd gt 0 \
-	rule date lt "2009-05-26" and date in start=2009-05-26 end=2009-07-26 and date in start=2009-05-26 years=2009 and date spec years=2009 hours=09-17
+	rule date lt 2009-05-26 and date in start=2009-05-26 end=2009-07-26 and date in start=2009-05-26 years=2009 and date spec years=2009 hours=09-17
 location l6 m5 \
-	rule $id-ref="l2-rule1"
+	rule $id-ref=l2-rule1
 location l7 m5 \
-	rule $id-ref="l2-rule1"
+	rule $id-ref=l2-rule1
 colocation c1 inf: m6 m5
 colocation c2 inf: m5:Master d1:Started
 order o1 Mandatory: m5 m6

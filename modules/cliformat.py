@@ -33,23 +33,6 @@ def cli_format(pl, break_lines=True, xml=False):
         return ' '.join(pl)
 
 
-def cli_operations(node, break_lines=True):
-    l = []
-    node_id = node.get("id")
-    s = ''
-    if node_id:
-        s = '$id="%s"' % node_id
-    idref = node.get("id-ref")
-    if idref:
-        s = '%s $id-ref="%s"' % (s, idref)
-    if s:
-        l.append("%s %s" % (clidisplay.keyword("operations"), s))
-    for c in node.iterchildren():
-        if c.tag == "op":
-            l.append(cli_op(c))
-    return cli_format(l, break_lines=break_lines)
-
-
 def head_id_format(nodeid):
     "Special format for property list / node id"
     if utils.noquotes(nodeid):
@@ -58,13 +41,36 @@ def head_id_format(nodeid):
                         clidisplay.attr_value(nodeid))
 
 
+def quote_wrap(v):
+    if utils.noquotes(v):
+        return v
+    else:
+        return '"%s"' % v
+
+
 def nvpair_format(n, v):
     if v is None:
         return clidisplay.attr_name(n)
-    elif utils.noquotes(v):
-        return '%s=%s' % (clidisplay.attr_name(n), clidisplay.attr_value(v))
     else:
-        return '%s="%s"' % (clidisplay.attr_name(n), clidisplay.attr_value(v))
+        return '='.join((clidisplay.attr_name(n),
+                         clidisplay.attr_value(quote_wrap(v))))
+
+
+def cli_operations(node, break_lines=True):
+    l = []
+    node_id = node.get("id")
+    s = ''
+    if node_id:
+        s = nvpair_format('$id', node_id)
+    idref = node.get("id-ref")
+    if idref:
+        s = '%s %s' % (s, nvpair_format('$id-ref', idref))
+    if s:
+        l.append("%s %s" % (clidisplay.keyword("operations"), s))
+    for c in node.iterchildren():
+        if c.tag == "op":
+            l.append(cli_op(c))
+    return cli_format(l, break_lines=break_lines)
 
 
 def cli_nvpair(nvp):
@@ -137,7 +143,7 @@ def date_exp2cli(node):
     l.append(clidisplay.keyword(kwmap.get(operation, operation)))
     if operation in utils.olist(constants.simple_date_ops):
         value = node.get(utils.keyword_cmp(operation, 'lt') and "end" or "start")
-        l.append('"%s"' % clidisplay.attr_value(value))
+        l.append(clidisplay.attr_value(quote_wrap(value)))
     else:
         if operation == 'in_range':
             for name in constants.in_range_attrs:
@@ -219,14 +225,14 @@ def cli_rule(node):
     s = []
     node_id = node.get("id")
     if node_id and cib_factory.is_id_refd(node.tag, node_id):
-        s.append('$id="%s"' % node_id)
+        s.append(nvpair_format('$id', node_id))
     else:
         idref = node.get("id-ref")
         if idref:
-            return '$id-ref="%s"' % idref
+            return nvpair_format('$id-ref', idref)
     rsc_role = node.get("role")
     if rsc_role:
-        s.append('$role="%s"' % rsc_role)
+        s.append(nvpair_format('$role', rsc_role))
     score = cli_rule_score(node)
     if score:
         s.append("%s:" % (clidisplay.score(score)))
@@ -284,11 +290,11 @@ def rsc_set_constraint(node, obj_type):
             cnt += 1
         if require_all is False:
             if sequential in (None, True):
-                col.append('sequential="true"')
+                col.append(nvpair_format('sequential', 'true'))
             col.append("]")
         elif sequential is False:
             if require_all is False:
-                col.append('require-all="false"')
+                col.append(nvpair_format('require-all', 'false'))
             col.append(")")
     is_ticket = obj_type == 'rsc_ticket'
     is_location = obj_type == 'location'
@@ -348,7 +354,7 @@ def acl_spec_format(xml_spec, v):
             key_f = clidisplay.keyword(shortcut)
             v_f = ':'.join([clidisplay.attr_value(x) for x in spec_l])
         else:
-            v_f = '"%s"' % clidisplay.attr_value(v)
+            v_f = clidisplay.attr_value(quote_wrap(v))
     elif xml_spec == "ref":
         v_f = '%s' % clidisplay.attr_value(v)
     else:  # tag and attribute
@@ -384,9 +390,9 @@ def cli_acl_spec2_format(xml_spec, v):
             key_f = clidisplay.keyword(shortcut)
             v_f = ':'.join([clidisplay.attr_value(x) for x in spec_l])
         else:
-            v_f = '"%s"' % clidisplay.attr_value(v)
+            v_f = clidisplay.attr_value(quote_wrap(v))
     else:  # ref, type and attr
-        v_f = '%s' % clidisplay.attr_value(v)
+        v_f = clidisplay.attr_value(v)
     return v_f and '%s:%s' % (key_f, v_f) or key_f
 
 
