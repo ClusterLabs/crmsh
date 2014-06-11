@@ -2522,15 +2522,16 @@ following:
 * Tag containing resource ids: +location loc1 tag1 100: node1+
 * Resource pattern: +location loc1 /web.*/ 100: node1+
 
-For more details on how to configure resource sets, see
-<<cmdhelp_configure_resourcesets,`Resource sets`>>.
+The syntax for resource sets is described in detail for <<cmdhelp_configure_colocation,`colocation`>>.
+
+For more details on how to configure resource sets, see <<cmdhelp_configure_resourcesets,`Resource sets`>>.
 
 Usage:
 ...............
 location <id> rsc [role=<role>] {node_pref|rules}
 
 rsc :: /<rsc-pattern>/
-        | { <rsc-set> }
+        | { resource_sets }
         | <rsc>
 
 node_pref :: <score>: <node>
@@ -2612,8 +2613,16 @@ Usage:
 colocation <id> <score>: <rsc>[:<role>] <with-rsc>[:<role>]
   [node-attribute=<node_attr>]
 
-colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>] ...
+colocation <id> <score>: resource_sets
   [node-attribute=<node_attr>]
+
+resource_sets :: resource_set [resource_set ...]
+
+resource_set :: ["("|"["] <rsc>[:<role>] [<rsc>[:<role>] ...] \
+                [attributes]  [")"|"]"]
+
+attributes :: [require-all=(true|false)] [sequential=(true|false)]
+
 ...............
 Example:
 ...............
@@ -2648,10 +2657,23 @@ For more details on how to configure resource sets, see
 
 Usage:
 ...............
-order <id> {kind|<score>}: <rsc>[:<action>] <rsc>[:<action>] ...
-  [symmetrical=<bool>]
+order <id> {kind|<score>}: first then [symmetrical=<bool>]
+
+order <id> {kind|<score>}: resource_sets [symmetrical=<bool>]
 
 kind :: Mandatory | Optional | Serialize
+
+first :: <rsc>[:<action>]
+
+then ::  <rsc>[:<action>]
+
+resource_sets :: resource_set [resource_set ...]
+
+resource_set :: ["["|"("] <rsc>[:<action>] [<rsc>[:<action>] ...] \
+                [attributes] ["]"|")"]
+
+attributes :: [require-all=(true|false)] [sequential=(true|false)]
+
 ...............
 Example:
 ...............
