@@ -2,8 +2,6 @@
 .INP: configure
 .INP: # erase to start from scratch
 .INP: erase
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 .INP: erase nodes
 .INP: node node1
 .INP: # create one stonith so that verify does not complain

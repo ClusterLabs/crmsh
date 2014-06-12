@@ -2,8 +2,6 @@
 .INP: configure
 .INP: _regtest on
 .INP: erase
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 .INP: erase nodes
 .INP: schema pacemaker-1.2
 .INP: node node1

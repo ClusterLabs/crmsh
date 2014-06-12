@@ -6,6 +6,12 @@
 .INP: property default-action-timeout=2m
 .INP: primitive st stonith:null 	params hostlist='node1' 	meta yoyo-meta="yoyo 2" 	op start requires=nothing 	op monitor interval=60m
 .INP: commit
+.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT stonithd metadata
+.EXT crmd metadata
+.EXT pengine metadata
+.EXT cib metadata
+ERROR: 7: st: attribute yoyo-meta does not exist
 .INP: node node1 	attributes mem=16G
 .INP: primitive p1 ocf:heartbeat:Dummy 	op monitor interval=60m 	op monitor interval=120m OCF_CHECK_LEVEL=10
 .INP: primitive p2 ocf:heartbeat:Dummy
@@ -19,6 +25,7 @@
 .INP: primitive d2 ocf:heartbeat:Dummy
 .INP: primitive d3 ocf:heartbeat:Dummy
 .INP: commit
+.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: rename p3 pp3
 INFO: 21: resource references in location:l1 updated
 INFO: 21: resource references in colocation:cl1 updated
@@ -42,28 +49,29 @@ INFO: 24: resource references in order:o1 updated
 .INP: commit
 .INP: _test
 .INP: verify
+ERROR: 35: st: attribute yoyo-meta does not exist
 .INP: show
 node node1 \
-	attributes mem="16G"
-primitive d1 ocf:heartbeat:Dummy
-primitive d3 ocf:heartbeat:Dummy
-primitive p1 ocf:heartbeat:Dummy \
-	op monitor interval="60m" \
-	op monitor interval="120m" OCF_CHECK_LEVEL="10"
-primitive p2 ocf:heartbeat:Dummy
-primitive p3 ocf:heartbeat:Dummy
+	attributes mem=16G
+primitive d1 Dummy
+primitive d3 Dummy
+primitive p1 Dummy \
+	op monitor interval=60m \
+	op monitor interval=120m OCF_CHECK_LEVEL=10
+primitive p2 Dummy
+primitive p3 Dummy
 primitive st stonith:null \
-	params hostlist="node1" \
+	params hostlist=node1 \
 	meta yoyo-meta="yoyo 2" \
-	op start interval="0" requires="nothing" \
-	op monitor interval="60m"
-group g1 d1 p2
+	op start requires=nothing interval=0 \
+	op monitor interval=60m
+group g1 p2 d1
 group g2 d3
 location l1 p3 100: node1
 colocation cl1 inf: g1 p3
 order o1 inf: p3 g1
-property $id="cib-bootstrap-options" \
-	default-action-timeout="2m"
+property cib-bootstrap-options: \
+	default-action-timeout=2m
 .INP: commit
 INFO: 37: apparently there is nothing to commit
 INFO: 37: try changing something first

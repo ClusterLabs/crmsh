@@ -1,6 +1,4 @@
 .TRY Shadow CIB management
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 .INP: cib
 .INP: new regtest force
 .EXT >/dev/null </dev/null crm_shadow -c 'regtest' --force

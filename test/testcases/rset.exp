@@ -2,14 +2,11 @@
 .INP: configure
 .INP: _regtest on
 .INP: erase
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 .INP: erase nodes
 .INP: node node1
 .INP: primitive st stonith:ssh 	params hostlist='node1' 	op start timeout=60s
 .INP: primitive d1 ocf:pacemaker:Dummy
 .INP: primitive d2 ocf:heartbeat:Dummy
-.EXT crm_resource --list-ocf-alternatives Dummy
 .INP: primitive d3 ocf:heartbeat:Dummy
 .INP: primitive d4 ocf:heartbeat:Dummy
 .INP: primitive d5 ocf:heartbeat:Dummy

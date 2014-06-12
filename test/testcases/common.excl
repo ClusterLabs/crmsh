@@ -6,6 +6,9 @@ Error performing operation: The object/attribute does not exist
 Error setting fail-count-p0=5 \(section=status, set=status-node1\): The object/attribute does not exist
 Error setting s1=1 2 3 \(section=status, set=status-node1\): The object/attribute does not exist
 Error signing on to the CRMd service
+.EXT crm_resource --list-standards
+.EXT crm_resource --list-ocf-alternatives Delay
+.EXT crm_resource --list-ocf-alternatives Dummy
 ^\.EXT crmd version
 ^\.EXT cibadmin \-Ql
 ^\.EXT crm_verify \-V \-p

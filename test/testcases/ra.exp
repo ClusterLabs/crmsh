@@ -2,10 +2,8 @@
 .INP: ra
 .INP: providers IPaddr
 
-.EXT crm_resource --list-ocf-alternatives IPaddr
 heartbeat
 .INP: providers Dummy
-
 heartbeat pacemaker
 .INP: info ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy

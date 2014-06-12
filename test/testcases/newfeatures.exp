@@ -2,14 +2,11 @@
 .INP: configure
 .INP: # erase to start from scratch
 .INP: erase
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 .INP: erase nodes
 .INP: node node1
 .INP: # create one stonith so that verify does not complain
 .INP: primitive st stonith:ssh 	params hostlist='node1' 	meta target-role="Started" 	op start requires=nothing timeout=60s 	op monitor interval=60m timeout=60s
 .INP: primitive p0 Dummy params $p0-state:state=1
-.EXT crm_resource --list-ocf-alternatives Dummy
 .INP: primitive p1 Dummy params     rule role=Started date in start=2009-05-26 end=2010-05-26 or date gt 2014-01-01     state=2
 .INP: primitive p2 Dummy params @p0-state
 nvpair_ref: 'p0-state' None

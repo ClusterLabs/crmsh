@@ -8,8 +8,6 @@ node1: normal
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -31,8 +29,6 @@ node1: normal
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -54,8 +50,6 @@ node1: normal
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -78,8 +72,6 @@ node1: normal
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -102,8 +94,6 @@ node1: normal
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -128,8 +118,6 @@ scope=nodes  name=a1 value=1 2 3
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
@@ -155,8 +143,6 @@ Deleted nodes attribute: id=nodes-node1-a1 name=a1
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 <?xml version="1.0" ?>
 <cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>

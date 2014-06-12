@@ -1,6 +1,4 @@
 .TRY configure save sample.txt
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 .EXT cat sample.txt
 node node1
 primitive p0 ocf:pacemaker:Dummy
@@ -15,11 +13,7 @@ clone c1 p1
 property cib-bootstrap-options: \
 	default-action-timeout=60s
 .TRY configure erase nodes
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 .TRY configure load replace sample.txt
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .EXT crm_resource --show-metadata stonith:heartbeat:null
@@ -32,8 +26,6 @@ property cib-bootstrap-options: \
 .TRY Load update
 .INP: configure
 .INP: delete m1 p1
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 .INP: property cluster-recheck-interval="10m"
 .INP: load update sample.txt
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
@@ -44,8 +36,6 @@ property cib-bootstrap-options: \
 .EXT pengine metadata
 .EXT cib metadata
 .TRY configure show
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 node node1
 primitive p0 ocf:pacemaker:Dummy
 primitive p1 ocf:pacemaker:Dummy

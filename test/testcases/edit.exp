@@ -2,14 +2,11 @@
 .INP: configure
 .INP: _regtest on
 .INP: erase
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 .INP: erase nodes
 .INP: property default-action-timeout=2m
 .INP: node node1 	attributes mem=16G
 .INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" 	op start requires=nothing 	op monitor interval=60m
 .INP: primitive p1 ocf:heartbeat:Dummy 	op monitor interval=60m 	op monitor interval=120m OCF_CHECK_LEVEL=10
-.EXT crm_resource --list-ocf-alternatives Dummy
 .INP: filter "sed '$aprimitive p2 ocf:heartbeat:Dummy'"
 .INP: filter "sed '$agroup g1 p1 p2'"
 .INP: filter "sed 's/p2/p3/;$aprimitive p3 ocf:heartbeat:Dummy'" g1
@@ -92,39 +89,25 @@ property cib-bootstrap-options: \
 	default-action-timeout=2m
 .INP: commit
 .TRY configure rsc_defaults $id="rsc_options" failure-timeout=10m
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Dummy
 .TRY configure filter "sed 's/2m/60s/'" cib-bootstrap-options
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Dummy
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata
 .TRY configure show rsc_options
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Dummy
 rsc_defaults rsc_options: \
 	failure-timeout=10m
 .TRY configure property stonith-enabled=true
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Dummy
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata
 .TRY configure show cib-bootstrap-options
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Dummy
 property cib-bootstrap-options: \
 	default-action-timeout=60s \
 	stonith-enabled=true
 .TRY configure filter 'sed "s/stonith-enabled=true//"'
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Dummy
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata
 .TRY configure show cib-bootstrap-options
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Dummy
 property cib-bootstrap-options: \
 	default-action-timeout=60s

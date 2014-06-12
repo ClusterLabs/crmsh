@@ -2,8 +2,6 @@
 .INP: configure
 .INP: _regtest on
 .INP: erase
-.EXT crm_resource --list-standards
-.EXT crm_resource --list-ocf-alternatives Delay
 .INP: erase nodes
 .INP: node node1
 .INP: delete node1
@@ -27,7 +25,6 @@
 .INP: ms m5 s5
 .INP: ms m6 s6
 .INP: primitive d7 Dummy 	params rule inf: #uname eq node1 fake=1 	params rule inf: #uname eq node2 fake=2
-.EXT crm_resource --list-ocf-alternatives Dummy
 .INP: location l1 g1 100: node1
 .INP: location l2 c 	rule $id=l2-rule1 100: #uname eq node1
 .INP: location l3 m5 	rule inf: #uname eq node1 and pingd gt 0
