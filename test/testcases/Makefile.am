@@ -27,7 +27,7 @@ testcases_DATA		=	basicset common.excl \
 	confbasic-xml.exp confbasic.exp delete.exp file.exp \
 	node.exp ra.exp resource.exp shadow.exp acl.exp options.exp \
 	edit.exp rset.exp rset-xml.exp history.exp history.excl \
-	newfeatures newfeatures.exp
+	newfeatures newfeatures.exp acl.excl
 
 confbasic-xml.filter:
 	ln xmlonly.sh $@
