@@ -23,6 +23,13 @@ import xmlutil
 from cibconfig import cib_factory
 
 
+def rmattrs(e, *attrs):
+    "remove the given attributes from an XML element"
+    for attr in attrs:
+        if attr in e.attrib:
+            del e.attrib[attr]
+
+
 class Assist(command.UI):
     '''
     The assist UI collects what could be called
@@ -40,14 +47,58 @@ class Assist(command.UI):
         if options.interactive:
             cib_factory.initialize()
 
-    #def do_distill(self, context):
-    #    '''
-    #    Detect and merge resources if the
-    #    resulting template makes for a smaller
-    #    configuration.
-    #    '''
-    #    # TODO
-    #    return True
+    @command.skill_level('administrator')
+    @command.completers_repeating(compl.call(cib_factory.prim_id_list))
+    def do_template(self, context, *primitives):
+        '''
+        Create a shared template for the given primitives
+        '''
+        if len(primitives) < 1:
+            context.fatal_error("Expected at least one primitive argument")
+        objs = [cib_factory.find_object(p) for p in primitives]
+        for prim, obj in zip(primitives, objs):
+            if obj is None:
+                context.fatal_error("Primitive %s not found" % (prim))
+        if objs and all(obj.obj_type == 'primitive' for obj in objs):
+            return self._template_primitives(context, objs)
+        context.fatal_error("Cannot create a template for the given resources")
+
+    def _template_primitives(self, context, primitives):
+        """
+        Try to template the given primitives:
+        Templating means creating a rsc_template and moving
+        shared attributes and other commonalities into that template
+        (this second step is currently not available)
+        """
+        shared_template = None
+        if all('template' in obj.node.attrib for obj in primitives):
+            return True
+        if len(set(xmlutil.mk_rsc_type(obj.node) for obj in primitives)) != 1:
+            context.fatal_error("Cannot template the given primitives")
+
+        node = primitives[0].node
+        template_name = self.make_unique_name('template-%s-' % (node.get('type').lower()))
+        shared_template = cib_factory.create_object('rsc_template', template_name,
+                                                    xmlutil.mk_rsc_type(node))
+        if not shared_template:
+            context.fatal_error("Error creating template")
+        for obj in primitives:
+            obj.node.set('template', template_name)
+            rmattrs(obj.node, 'class', 'provider', 'type')
+            obj.set_updated()
+
+        if not self._pull_attributes(context, shared_template, primitives):
+            context.fatal_error("Error when copying attributes into template")
+
+        context.info("Template created: %s" % (template_name))
+        return True
+
+    def _pull_attributes(self, context, template, primitives):
+        '''
+        TODO: take any attributes shared by all primitives and
+        move them into the shared template
+        '''
+        return True
 
     @command.skill_level('administrator')
     @command.completers_repeating(compl.call(cib_factory.prim_id_list))

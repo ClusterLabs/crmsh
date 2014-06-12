@@ -3729,6 +3729,18 @@ Usage:
 weak-bond resource-1 resource-2
 ........
 
+[[cmdhelp_assist_template,Create template for primitives]]
+==== `template`
+
+This command takes a list of primitives as argument, and creates a new
+`rsc_template` for these primitives. It can only do this if the
+primitives do not already share a template and are of the same type.
+
+Usage:
+........
+template primitive-1 primitive-2 primitive-3
+........
+
 [[cmdhelp_history,cluster history]]
 === `history`
 
