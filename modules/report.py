@@ -635,7 +635,7 @@ class Report(object):
         self.cibrsc_l = []
         self.cibnotcloned_l = []
         self.cibcloned_l = []
-        self.cibnode_l = []
+        self.node_l = []
         self.last_live_update = 0
         self.detail = 0
         self.log_filter_out = []
@@ -655,7 +655,7 @@ class Report(object):
         return self.cibgrp_d.keys() + self.cibcln_d.keys() + self.cibrsc_l
 
     def node_list(self):
-        return self.cibnode_l
+        return self.node_l
 
     def peinputs_list(self):
         return [x.pe_num for x in self.peinputs_l]
@@ -734,7 +734,7 @@ class Report(object):
         if not nl:
             self.error("no nodes in report")
             return False
-        for n in self.cibnode_l:
+        for n in self.node_l:
             if n not in nl:
                 self.warn("node %s not in report" % n)
             else:
@@ -806,7 +806,7 @@ class Report(object):
     def find_logs(self):
         'Return a list of logs found (one per node).'
         l = []
-        for node in self.get_nodes():
+        for node in self.node_l:
             log = self.find_node_log(node)
             if log:
                 l.append(log)
@@ -1006,10 +1006,9 @@ class Report(object):
         self.setnodes = args
 
     def get_cib_loc(self):
-        nl = self.get_nodes()
-        if not nl:
+        if not self.node_l:
             return ""
-        return os.path.join(self.loc, nl[0], "cib.xml")
+        return os.path.join(self.loc, self.node_l[0], "cib.xml")
 
     def read_cib(self):
         '''
@@ -1029,8 +1028,6 @@ class Report(object):
             return
         self.cibrsc_l = [x.get("id")
                          for x in conf.xpath("//resources//primitive")]
-        self.cibnode_l = [x.get("uname")
-                          for x in conf.xpath("//nodes/node")]
         self.cibgrp_d = {}
         for grp in conf.xpath("//resources/group"):
             self.cibgrp_d[grp.get("id")] = get_rsc_children_ids(grp)
@@ -1055,7 +1052,7 @@ class Report(object):
 
     def set_node_colors(self):
         i = 0
-        for n in self.get_nodes():
+        for n in self.node_l:
             self.nodecolor[n] = self.nodecolors[i]
             i = (i+1) % len(self.nodecolors)
 
@@ -1139,16 +1136,18 @@ class Report(object):
                 self.error("Invalid report: No description found")
                 return
 
+            self.node_l = self.get_nodes()
+            self.set_node_colors()
             self.log_l = self.find_logs()
             self.find_central_log()
             self.read_cib()
-            self.set_node_colors()
         elif self.change_origin == CH_UPD:
-            l = self.find_logs()
-            if self.log_l != l:
-                self.log_l = l
-                self.read_cib()
+            l = self.get_nodes()
+            if self.node_l != l:
+                self.node_l = l
                 self.set_node_colors()
+                self.log_l = self.find_logs()
+                self.read_cib()
         self.logobj = LogSyslog(self.central_log,
                                 self.log_l,
                                 self.from_dt,
@@ -1331,7 +1330,7 @@ class Report(object):
                                (self._str_dt(self.get_rpt_dt(self.from_dt, "top")),
                                 self._str_dt(self.get_rpt_dt(self.to_dt, "bottom"))),
                                "Nodes: %s" % ' '.join([self._str_nodecolor(x, x)
-                                                       for x in self.cibnode_l]),
+                                                       for x in self.node_l]),
                                "Groups: %s" % ' '.join(self.cibgrp_d.keys()),
                                "Resources: %s" % ' '.join(self.cibrsc_l),
                                "Transitions: %s" % self.short_peinputs_list()
@@ -1344,7 +1343,7 @@ class Report(object):
         rsc_l = self.cibnotcloned_l
         rsc_l += ["%s(?::[0-9]+)?" % x for x in self.cibcloned_l]
         all_re_l = self.build_re("resource", rsc_l) + \
-            self.build_re("node", self.cibnode_l) + \
+            self.build_re("node", self.node_l) + \
             self.build_re("events", [])
         if not all_re_l:
             self.error("no resources or nodes found")
@@ -1427,7 +1426,7 @@ class Report(object):
         else:
             l = []
             for n in args:
-                if n not in self.cibnode_l:
+                if n not in self.node_l:
                     self.warn("%s: no such node" % n)
                     continue
                 l.append(self.find_node_log(n))
