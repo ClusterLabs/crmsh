@@ -739,8 +739,6 @@ class Report(object):
                 self.warn("node %s not in report" % n)
             else:
                 nl.remove(n)
-        if nl:
-            self.warn("strange, extra node(s) %s in report" % ','.join(nl))
         return True
 
     def check_report(self):
