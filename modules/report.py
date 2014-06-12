@@ -726,7 +726,7 @@ class Report(object):
         return [os.path.basename(p)
                 for p in os.listdir(self.loc)
                 if os.path.isdir(os.path.join(self.loc, p)) and
-                os.path.isfile(os.path.join(self.loc, p, "cib.txt"))]
+                os.path.isfile(os.path.join(self.loc, p, "ha-log.txt"))]
 
     def check_nodes(self):
         'Verify if the nodes in cib match the nodes in the report.'
