@@ -29,6 +29,9 @@
       default: 5405
 
   steps:
+    - name: Configure SSH
+      apply_local: configure.py ssh
+
     - name: Check state of nodes
       collect: collect.py
 

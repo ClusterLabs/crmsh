@@ -1,7 +1,43 @@
 #!/usr/bin/env python
 import sys
+import os
 import crm_script
 import crm_init
+
+
+def _authorize_key(keypath):
+    "add key to authorized_keys"
+    pubkeypath = ''.join([keypath, '.pub'])
+    if os.path.exists('/root/.ssh/authorized_keys'):
+        pubkey = open(pubkeypath).read()
+        if pubkey not in open('/root/.ssh/authorized_keys').read():
+            crm_script.sudo_call("cat %s >> /root/.ssh/authorized_keys" % (pubkeypath))
+    else:
+        crm_script.sudo_call(["cp", pubkeypath, '/root/.ssh/authorized_keys'])
+
+
+def run_ssh():
+    try:
+        crm_script.service('sshd', 'start')
+        rc, _, _ = crm_script.sudo_call(["mkdir", "-m", "700", "-p", "/root/.ssh"])
+        if rc != 0:
+            crm_script.exit_fail("Failed to create /root/.ssh directory")
+        keypath = None
+        for key in ('id_rsa', 'id_dsa', 'id_ecdsa'):
+            if os.path.exists(os.path.join('/root/.ssh', key)):
+                keypath = os.path.join('/root/.ssh', key)
+                break
+        if not keypath:
+            keypath = os.path.join('/root/.ssh', 'id_rsa')
+            keygen = ['ssh-keygen', '-q', '-f', keypath,
+                      '-C', 'Cluster Internal', '-N', '']
+            rc, out, err = crm_script.sudo_call(keygen)
+            if rc != 0:
+                crm_script.exit_fail("Failed to generate SSH key")
+        _authorize_key(keypath)
+        crm_script.exit_ok(True)
+    except IOError, e:
+        crm_script.exit_fail(str(e))
 
 
 def run_install():
@@ -13,7 +49,7 @@ def run_install():
 
 def make_bindnetaddr():
     host = crm_script.host()
-    hostinfo = crm_script.output(1)[host]
+    hostinfo = crm_script.output(2)[host]
     ba = crm_script.param('bindnetaddr')
     if ba:
         return ba
@@ -45,7 +81,7 @@ def make_bindnetaddr():
 def run_corosync():
     # create corosync.conf
 
-    nodelist = crm_script.output(1).keys()
+    nodelist = crm_script.output(2).keys()
     nodelist_txt = ""
     for i, node in enumerate(nodelist):
         nodelist_txt += """
@@ -88,6 +124,8 @@ def run_corosync():
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         crm_script.exit_fail("Missing argument to configure.py")
+    elif sys.argv[1] == 'ssh':
+        run_ssh()
     elif sys.argv[1] == 'install':
         run_install()
     elif sys.argv[1] == 'corosync':

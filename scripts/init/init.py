@@ -16,7 +16,7 @@ if check_for_primitives():
     crm_script.exit_ok(True)
 
 try:
-    nodelist = crm_script.output(1).keys()
+    nodelist = crm_script.param('nodes')
     if len(nodelist) < 3:
         policy = 'ignore'
     else:

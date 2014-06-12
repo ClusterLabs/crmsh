@@ -4,7 +4,7 @@ import os
 import stat
 
 host = crm_script.host()
-others = crm_script.output(1).keys()
+others = crm_script.output(2).keys()
 others.remove(host)
 
 COROSYNC_AUTH = '/etc/corosync/authkey'

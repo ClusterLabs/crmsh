@@ -99,18 +99,24 @@ def call(cmd, shell=False):
     return p.returncode, out.strip(), err.strip()
 
 
+def use_sudo():
+    return getpass.getuser() != 'root' and is_true(param('sudo')) and _stdin_data.get('sudo')
+
+
 def sudo_call(cmd, shell=False):
-    if getpass.getuser() == 'root' or not is_true(param('sudo')) or not _stdin_data.get('sudo'):
+    if not use_sudo():
         return call(cmd, shell=shell)
     debug("crm_script(sudo_call): %s" % (cmd))
     os.unsetenv('SSH_ASKPASS')
     call(['sudo', '-k'], shell=False)
     sudo_prompt = 'crm_script_sudo_prompt'
-    cmd = ['sudo', '-H', '-S', '-p', sudo_prompt] + cmd
+    if isinstance(cmd, basestring):
+        cmd = "sudo -H -S -p '%s' %s" % (sudo_prompt, cmd)
+    else:
+        cmd = ['sudo', '-H', '-S', '-p', sudo_prompt] + cmd
     p = proc.Popen(cmd, shell=shell, stdin=proc.PIPE, stdout=proc.PIPE, stderr=proc.PIPE)
     sudo_pass = "%s\n" % (_stdin_data.get('sudo', 'linux'))
-    print >>sys.stderr, "CMD: %s" % (str(cmd))
-    print >>sys.stderr, "SUDO: %s" % (repr(sudo_pass))
+    debug("CMD(SUDO): %s" % (str(cmd)))
     out, err = p.communicate(input=sudo_pass)
     return p.returncode, out.strip(), err.strip()
 

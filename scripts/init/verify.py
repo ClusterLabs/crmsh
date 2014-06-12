@@ -32,7 +32,7 @@ def make_mcastaddr():
     return "%d.%d.%d.%d" % (239, b, c, d)
 
 try:
-    data = crm_script.output(1)
+    data = crm_script.output(2)
 
     crm_init.verify(data)
 
