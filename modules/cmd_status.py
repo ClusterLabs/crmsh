@@ -63,6 +63,7 @@ def cmd_status(args):
 
     rc, s = crm_mon(extra_options)
     if rc != 0:
-        raise IOError("crm_mon exited with code %d. Output: '%s'" % (rc, s))
+        raise IOError("crm_mon (rc=%d): %s" % (rc, s))
 
     utils.page_string(s)
+    return True

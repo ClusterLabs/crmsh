@@ -238,10 +238,10 @@ class CibConfig(command.UI):
         command.UI.__init__(self)
         # for interactive use, we want to populate the CIB
         # immediately so that tab completion works
-        if options.interactive or options.shell_completion:
-            cib_factory.initialize()
 
     def requires(self):
+        if not cib_factory.initialize():
+            return False
         # see the configure ptest/simulate command
         has_ptest = utils.is_program('ptest')
         has_simulate = utils.is_program('crm_simulate')

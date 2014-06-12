@@ -42,10 +42,9 @@ class Assist(command.UI):
 
     def __init__(self):
         command.UI.__init__(self)
-        # for interactive use, we want to populate the CIB
-        # immediately so that tab completion works
-        if options.interactive:
-            cib_factory.initialize()
+
+    def requires(self):
+        return cib_factory.initialize()
 
     @command.skill_level('administrator')
     @command.completers_repeating(compl.call(cib_factory.prim_id_list))

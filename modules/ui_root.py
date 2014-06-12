@@ -175,7 +175,7 @@ option :: bynode | inactive | ops | timing | failcounts
 ...............
 ''')
     def do_status(self, context, *args):
-        cmd_status.cmd_status(args)
+        return cmd_status.cmd_status(args)
 
 # this will initialize _children for all levels under the root
 Root.init_ui()
