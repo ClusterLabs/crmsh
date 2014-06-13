@@ -639,8 +639,8 @@ def remove_text(e_list):
 def sanitize_cib(doc):
     xml_processnodes(doc, is_status_node, rmnodes)
     #xml_processnodes(doc, true, printid)
-    xml_processnodes(doc, is_emptynvpairs, rmnodes)
-    xml_processnodes(doc, is_emptyops, rmnodes)
+    #xml_processnodes(doc, is_emptynvpairs, rmnodes)
+    #xml_processnodes(doc, is_emptyops, rmnodes)
     xml_processnodes(doc, is_entity, rmnodes)
     #xml_processnodes(doc, is_comment, rmnodes)
     xml_processnodes(doc, is_container, sort_container_children)

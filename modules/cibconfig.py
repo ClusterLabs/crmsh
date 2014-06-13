@@ -1022,9 +1022,11 @@ class CibObject(object):
         has_nvpairs = len(node.xpath('.//nvpair')) > 0
         idref = node.get('id-ref')
 
+        # don't skip empty sets: skipping these breaks
+        # patching
         # empty set
-        if not (has_nvpairs or idref is not None):
-            return ''
+        # if not (has_nvpairs or idref is not None):
+        #    return ''
 
         ret = "%s " % (clidisplay.keyword(self.set_names[node.tag]))
         node_id = node.get("id")
@@ -2261,6 +2263,7 @@ class CibFactory(object):
             self.cib_attrs["epoch"] = str(int(self.cib_attrs["epoch"])+1)
         except:
             self.cib_attrs["epoch"] = "1"
+        common_debug("Bump epoch to %s" % (self.cib_attrs["epoch"]))
 
     def _get_cib_attributes(self, cib):
         for attr in cib.keys():
@@ -3468,6 +3471,7 @@ class CibFactory(object):
         self.reset()
         self.initialize()
         return self.is_cib_sane()
+
 
 cib_factory = CibFactory()
 

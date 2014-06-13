@@ -78,6 +78,8 @@ def set_deep_meta_attr_node(target_node, attr, value):
                              (attr, c.get("id")))
                 rm_meta_attribute(c, attr, nvpair_l, force_children=True)
     xmlutil.rmnodes(list(set(nvpair_l)))
+    xmlutil.xml_processnodes(target_node,
+                             xmlutil.is_emptynvpairs, xmlutil.rmnodes)
 
     # work around issue with pcs interoperability
     # by finding exising nvpairs -- if there are any, just

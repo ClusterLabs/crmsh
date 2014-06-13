@@ -183,7 +183,9 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
     <crm_config/>
     <nodes/>
     <resources>
-      <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy"/>
+      <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <instance_attributes id="p0-instance_attributes"/>
+      </primitive>
     </resources>
     <constraints/>
   </configuration>
@@ -201,6 +203,7 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
     <nodes/>
     <resources>
       <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <instance_attributes id="p0-instance_attributes"/>
         <meta_attributes id="p0-meta_attributes">
           <nvpair id="p0-meta_attributes-m0" name="m0" value="123"/>
         </meta_attributes>
@@ -223,6 +226,7 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
     <nodes/>
     <resources>
       <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <instance_attributes id="p0-instance_attributes"/>
         <meta_attributes id="p0-meta_attributes">
           <nvpair id="p0-meta_attributes-m0" name="m0" value="123"/>
         </meta_attributes>
@@ -244,7 +248,10 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
     <crm_config/>
     <nodes/>
     <resources>
-      <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy"/>
+      <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <instance_attributes id="p0-instance_attributes"/>
+        <meta_attributes id="p0-meta_attributes"/>
+      </primitive>
     </resources>
     <constraints/>
   </configuration>
@@ -261,7 +268,10 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
     <nodes/>
     <resources>
       <group id="g">
-        <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy"/>
+        <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+          <instance_attributes id="p0-instance_attributes"/>
+          <meta_attributes id="p0-meta_attributes"/>
+        </primitive>
         <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
           <meta_attributes id="p3-meta_attributes">
             <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
@@ -284,7 +294,10 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
     <nodes/>
     <resources>
       <group id="g">
-        <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy"/>
+        <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+          <instance_attributes id="p0-instance_attributes"/>
+          <meta_attributes id="p0-meta_attributes"/>
+        </primitive>
         <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
           <meta_attributes id="p3-meta_attributes">
             <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
