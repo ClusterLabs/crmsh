@@ -53,9 +53,6 @@ class History(command.UI):
         self.current_session = None
         self._source_inited = False
 
-    def _no_source(self):
-        common_err("we have no source set yet! please use the source command")
-
     def _init_source(self):
         if self._source_inited:
             return True
