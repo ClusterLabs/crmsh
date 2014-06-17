@@ -981,11 +981,16 @@ class Report(object):
         Set from/to_dt.
         '''
         common_debug("setting report times: <%s> - <%s>" % (from_dt, to_dt))
-        need_refresh = (self.source == "live") and self.ready and \
-            (from_dt and self.get_rpt_dt(None, "top") > from_dt)
         self.from_dt = from_dt
         self.to_dt = to_dt
-        if need_refresh:
+
+        refresh = False
+        if self.source == "live" and self.ready:
+            top_dt = self.get_rpt_dt(None, "top")
+            if top_dt is None:
+                return False
+            refresh = from_dt and top_dt > from_dt
+        if refresh:
             self.set_change_origin(CH_UPD)
             self.refresh_source(force=True)
         else:
@@ -1307,9 +1312,12 @@ class Report(object):
                 myts = min([syslog_ts(x) for x in first_log_lines(self.log_l)])
             elif whence == "bottom":
                 myts = max([syslog_ts(x) for x in last_log_lines(self.log_l)])
-            return datetime.datetime.fromtimestamp(myts)
-        except:
-            return None
+            if myts:
+                return datetime.datetime.fromtimestamp(myts)
+            common_debug("No log lines with timestamps found in report")
+        except Exception, e:
+            common_debug("Error: %s" % (e))
+        return None
 
     def _str_dt(self, dt):
         return dt and human_date(dt) or "--/--/-- --:--:--"
