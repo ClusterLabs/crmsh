@@ -358,15 +358,14 @@ pkg_mgr_list() {
 Try:.zypper.install zypper
 EOF
 }
-MYBINARIES="crmd|pengine|lrmd|attrd|cib|mgmtd|stonithd|corosync|libplumb|libpils"
 listpkg_zypper() {
 	local bins
 	local binary=$1 core=$2
 	gdb $binary $core </dev/null 2>&1 |
-	awk -v bins="$MYBINARIES" '
+	awk '
 	n>0 && /^Try: zypper install/ {gsub("\"",""); print $NF}
 	n>0 {n=0}
-	/Missing separate debuginfo/ && match($NF, bins) {n=1}
+	/Missing separate debuginfo/ {n=1}
 	' | sort -u
 }
 fetchpkg_zypper() {
