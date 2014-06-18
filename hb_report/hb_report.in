@@ -1056,7 +1056,7 @@ pickcompress() {
 }
 # get the right part of the log
 getlog() {
-	local getstampproc cnt
+	local cnt
 	local outf
 	outf=$WORKDIR/$HALOG_F
 
@@ -1106,7 +1106,7 @@ getlog() {
 # get all other info (config, stats, etc)
 #
 collect_info() {
-	local getstampproc l
+	local l
 	sys_info > $WORKDIR/$SYSINFO_F 2>&1 &
 	sys_stats > $WORKDIR/$SYSSTATS_F 2>&1 &
 	getconfig $WORKDIR
