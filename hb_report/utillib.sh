@@ -393,7 +393,7 @@ get_debuginfo() {
 	local binary=$1 core=$2
 	local pkg_mgr pkgs
 	gdb $binary $core </dev/null 2>/dev/null |
-		grep 'no debugging symbols found' > /dev/null ||
+		egrep 'Missing.*debuginfo|no debugging symbols found' > /dev/null ||
 		return  # no missing debuginfo
 	pkg_mgr=`find_pkgmgr $binary $core`
 	if [ -z "$pkg_mgr" ]; then
