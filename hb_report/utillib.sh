@@ -175,10 +175,21 @@ getstamp_legacy() {
 getstamp_rfc5424() {
 	awk '{print $1}'
 }
+get_ts() {
+	local l="$1" ts
+	ts=$(str2time `echo "$l" | $getstampproc`)
+	if [ -z "$ts" ]; then
+		local fmt
+		for fmt in rfc5424 syslog legacy; do
+			[ "getstamp_$fmt" = "$getstampproc" ] && continue
+			ts=$(str2time `echo "$l" | getstamp_$fmt`)
+			[ -n "$ts" ] && break
+		done
+	fi
+	echo $ts
+}
 linetime() {
-	local l
-	l=`tail -n +$2 $1 | head -1 | $getstampproc`
-	str2time "$l"
+	get_ts "`tail -n +$2 $1 | head -1`"
 }
 find_getstampproc() {
 	local t l func trycnt
@@ -210,7 +221,7 @@ find_getstampproc() {
 find_first_ts() {
 	local l ts
 	while read l; do
-		ts=$(str2time "`echo $l | $getstampproc`")
+		ts=`get_ts "$l"`
 		[ "$ts" ] && break
 		warning "cannot extract time: |$l|; will try the next one"
 	done
