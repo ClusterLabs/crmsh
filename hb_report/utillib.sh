@@ -358,15 +358,18 @@ pkg_mgr_list() {
 Try:.zypper.install zypper
 EOF
 }
-MYBINARIES="crmd|pengine|lrmd|attrd|cib|mgmtd|stonithd|corosync|libplumb|libpils"
 listpkg_zypper() {
 	local bins
 	local binary=$1 core=$2
 	gdb $binary $core </dev/null 2>&1 |
-	awk -v bins="$MYBINARIES" '
+	awk '
+	# this zypper version dumps all packages on a single line
+	/Missing separate debuginfos.*zypper.install/ {
+		sub(".*zypper.install ",""); print
+		exit}
 	n>0 && /^Try: zypper install/ {gsub("\"",""); print $NF}
 	n>0 {n=0}
-	/Missing separate debuginfo/ && match($NF, bins) {n=1}
+	/Missing separate debuginfo/ {n=1}
 	' | sort -u
 }
 fetchpkg_zypper() {
@@ -390,7 +393,7 @@ get_debuginfo() {
 	local binary=$1 core=$2
 	local pkg_mgr pkgs
 	gdb $binary $core </dev/null 2>/dev/null |
-		grep 'no debugging symbols found' > /dev/null ||
+		egrep 'Missing.*debuginfo|no debugging symbols found' > /dev/null ||
 		return  # no missing debuginfo
 	pkg_mgr=`find_pkgmgr $binary $core`
 	if [ -z "$pkg_mgr" ]; then
