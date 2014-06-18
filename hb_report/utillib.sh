@@ -366,7 +366,7 @@ pkg_mgr_list() {
 # regex pkg_mgr
 # no spaces allowed in regex
 	cat<<EOF
-Try:.zypper.install zypper
+zypper.install zypper
 EOF
 }
 listpkg_zypper() {
@@ -384,9 +384,12 @@ listpkg_zypper() {
 	' | sort -u
 }
 fetchpkg_zypper() {
+	local pkg
 	debug "get debuginfo packages using zypper: $@"
 	zypper -qn ref > /dev/null
-	zypper -qn install -C $@ >/dev/null
+	for pkg in $@; do
+		zypper -qn install -C $pkg >/dev/null
+	done
 }
 find_pkgmgr() {
 	local binary=$1 core=$2
