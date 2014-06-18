@@ -363,6 +363,10 @@ listpkg_zypper() {
 	local binary=$1 core=$2
 	gdb $binary $core </dev/null 2>&1 |
 	awk '
+	# this zypper version dumps all packages on a single line
+	/Missing separate debuginfos.*zypper.install/ {
+		sub(".*zypper.install ",""); print
+		exit}
 	n>0 && /^Try: zypper install/ {gsub("\"",""); print $NF}
 	n>0 {n=0}
 	/Missing separate debuginfo/ {n=1}
