@@ -50,11 +50,14 @@ class History(command.UI):
 
     def __init__(self):
         command.UI.__init__(self)
-        self._set_source(options.history)
         self.current_session = None
+        self._source_inited = False
 
-    def _no_source(self):
-        common_err("we have no source set yet! please use the source command")
+    def _init_source(self):
+        if self._source_inited:
+            return True
+        self._source_inited = True
+        return self._set_source(options.history)
 
     def _set_period(self, from_time='', to_time=''):
         '''
@@ -103,6 +106,7 @@ class History(command.UI):
     @command.skill_level('administrator')
     def do_source(self, context, src=None):
         "usage: source {<dir>|<file>|live}"
+        self._init_source()
         if src != options.history:
             return self._set_source(src)
 
@@ -110,6 +114,7 @@ class History(command.UI):
     @command.alias('timeframe')
     def do_limit(self, context, from_time='', to_time=''):
         "usage: limit [<from_time> [<to_time>]]"
+        self._init_source()
         if options.history == "live" and not from_time:
             from_time = time.ctime(time.time() - 60*60)
         return self._set_period(from_time, to_time)
@@ -117,6 +122,7 @@ class History(command.UI):
     @command.skill_level('administrator')
     def do_refresh(self, context, force=''):
         "usage: refresh"
+        self._init_source()
         if options.history != "live":
             common_info("nothing to refresh if source isn't live")
             return False
@@ -129,6 +135,7 @@ class History(command.UI):
     @command.skill_level('administrator')
     def do_detail(self, context, detail_lvl):
         "usage: detail <detail_level>"
+        self._init_source()
         detail_num = utils.convert2ints(detail_lvl)
         if not (isinstance(detail_num, int) and int(detail_num) >= 0):
             bad_usage(context.get_command_name(), detail_lvl)
@@ -139,6 +146,7 @@ class History(command.UI):
     @command.completers_repeating(compl.call(crm_report.node_list))
     def do_setnodes(self, context, *args):
         "usage: setnodes <node> [<node> ...]"
+        self._init_source()
         if options.history != "live":
             common_info("setting nodes not necessary for existing reports, proceeding anyway")
         return crm_report.set_nodes(*args)
@@ -146,11 +154,13 @@ class History(command.UI):
     @command.skill_level('administrator')
     def do_info(self, context):
         "usage: info"
+        self._init_source()
         return crm_report.info()
 
     @command.skill_level('administrator')
     def do_latest(self, context):
         "usage: latest"
+        self._init_source()
         if not utils.wait4dc("transition", not options.batch):
             return False
         self._set_source("live")
@@ -164,6 +174,7 @@ class History(command.UI):
     @command.completers_repeating(compl.call(crm_report.rsc_list))
     def do_resource(self, context, *args):
         "usage: resource <rsc> [<rsc> ...]"
+        self._init_source()
         return crm_report.resource(*args)
 
     @command.skill_level('administrator')
@@ -171,12 +182,14 @@ class History(command.UI):
     @command.completers_repeating(compl.call(crm_report.node_list))
     def do_node(self, context, *args):
         "usage: node <node> [<node> ...]"
+        self._init_source()
         return crm_report.node(*args)
 
     @command.skill_level('administrator')
     @command.completers_repeating(compl.call(crm_report.node_list))
     def do_log(self, context, *args):
         "usage: log [<node> ...]"
+        self._init_source()
         return crm_report.log(*args)
 
     def ptest(self, nograph, scores, utilization, actions, verbosity):
@@ -195,6 +208,7 @@ class History(command.UI):
                                              compl.choice(['v'])))
     def do_peinputs(self, context, *args):
         """usage: peinputs [{<range>|<number>} ...] [v]"""
+        self._init_source()
         argl = list(args)
         opt_l = utils.fetch_opts(argl, ["v"])
         if argl:
@@ -289,6 +303,7 @@ class History(command.UI):
         transition showdot [<number>|<index>|<file>]
         transition log [<number>|<index>|<file>]
         transition save [<number>|<index>|<file> [name]]"""
+        self._init_source()
         argl = list(args)
         subcmd = "show"
         if argl and argl[0] in ("showdot", "log", "save"):
@@ -488,6 +503,7 @@ class History(command.UI):
         NB: The configuration is color rendered, but note that
         that depends on the current value of the TERM variable.
         '''
+        self._init_source()
         opt_l = []
         if not self._common_pe_render_check(context, opt_l, *args):
             return False
@@ -506,6 +522,7 @@ class History(command.UI):
                         compl.choice(['status']))
     def do_show(self, context, t, *args):
         "usage: show <pe> [status]"
+        self._init_source()
         opt_l = []
         if not self._common_pe_render_check(context, opt_l, *args):
             return False
@@ -523,6 +540,7 @@ class History(command.UI):
     @command.completers(compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])))
     def do_graph(self, context, t, *args):
         "usage: graph <pe> [<gtype> [<file> [<img_format>]]]"
+        self._init_source()
         pe_f = self._get_diff_pe_input(t)
         if not pe_f:
             return False
@@ -548,6 +566,7 @@ class History(command.UI):
                         compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])))
     def do_diff(self, context, t1, t2, *args):
         "usage: diff <pe> <pe> [status] [html]"
+        self._init_source()
         opt_l = []
         if not self._common_pe_render_check(context, opt_l, *args):
             return False
@@ -572,6 +591,7 @@ class History(command.UI):
                         compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])))
     def do_wdiff(self, context, t1, t2, *args):
         "usage: wdiff <pe> <pe> [status]"
+        self._init_source()
         opt_l = []
         if not self._common_pe_render_check(context, opt_l, *args):
             return False
@@ -590,6 +610,7 @@ class History(command.UI):
                         compl.call(crm_report.session_list))
     def do_session(self, context, subcmd=None, name=None):
         "usage: session [{save|load|delete} <name> | pack [<name>] | update | list]"
+        self._init_source()
         if not subcmd:
             print "current session: %s" % self.current_session
             return True
@@ -629,6 +650,7 @@ class History(command.UI):
     @command.completers(compl.choice(['clear']))
     def do_exclude(self, context, arg=None):
         "usage: exclude [<regex>|clear]"
+        self._init_source()
         if not arg:
             rc = crm_report.manage_excludes("show")
         elif arg == "clear":
