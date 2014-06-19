@@ -106,6 +106,9 @@ class History(command.UI):
     @command.skill_level('administrator')
     def do_source(self, context, src=None):
         "usage: source {<dir>|<file>|live}"
+        if src is None:
+            print "Current source: %s" % (options.history)
+            return True
         self._init_source()
         if src != options.history:
             return self._set_source(src)
