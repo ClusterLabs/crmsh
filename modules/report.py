@@ -689,6 +689,7 @@ class Report(object):
         if os.path.isdir(loc):
             if (os.stat(bfname).st_mtime - os.stat(loc).st_mtime) < 60:
                 return loc
+            rmdir_r(loc)
         cwd = os.getcwd()
         if parentdir:
             try:
