@@ -172,7 +172,7 @@ setvarsanddefaults() {
 }
 chkname() {
 	[ "$1" ] || usage short
-	echo $1 | grep -qs '[^a-zA-Z0-9@_+=:-]' &&
+	echo $1 | grep -qs '[^a-zA-Z0-9@_+=:.-]' &&
 		fatal "$1 contains illegal characters"
 }
 set_dest() {
