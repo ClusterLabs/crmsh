@@ -61,7 +61,7 @@ on the same line. It is possible to use a continuation character (+\+)
 to write one command in two or more lines. The continuation character
 is commonly used when displaying configurations.
 
-[[topics_CommandLine,Available command line options]]
+[[topics_CommandLine,Command line options]]
 OPTIONS
 -------
 *-f, --file*='FILE'::
@@ -111,17 +111,34 @@ OPTIONS
     Extra directory where crm looks for cluster scripts. Can be a semi-colon
     separated list of directories.
 
-[[topics_Introduction,Introduction to the user interface]]
-== Introduction to the user interface
+[[topics_Introduction,Introduction]]
+== Introduction
 
-Arguably the most important aspect of `crm` is the user
-interface. We begin with an informal introduction so that the
-reader may get acquainted with it and get a general feeling of
-the tool. It is probably best just to give some examples:
+This section of the user guide covers general topics about the user
+interface and describes some of the features of `crmsh` in detail.
 
-The main purpose of `crm` is to provide a simple yet powerful
-interface to the cluster stack. To get started and to give new users a
-feel for how to use it, lets just jump straight into some examples:
+[[topics_Introduction_Interface,User interface]]
+=== User interface
+
+The main purpose of `crmsh` is to provide a simple yet powerful
+interface to the cluster stack. There are two main modes of operation
+with the user interface of `crmsh`:
+
+* Command line (single-shot) use - Use `crm` as a regular UNIX command
+  from your usual shell. `crm` has full bash completion built in, so
+  using it in this manner should be as comfortable and familiar as
+  using any other command-line tool.
+
+* Interactive mode - By calling `crm` without arguments, or by calling
+  it with only a sublevel as argument, `crm` enters the interactive
+  mode. In this mode, it acts as its own command shell, which
+  remembers which sublevel you are currently in and allows for rapid
+  and convenient execution of multiple commands within the same
+  sublevel. This mode also has full tab completion, as well as
+  built-in interactive help and syntax highlighting.
+
+Here are a few examples of using `crm` both as a command-line tool and
+as an interactive shell:
 
 .Command line (one-shot) use:
 ........
@@ -180,11 +197,6 @@ crm(live)# node standby node4
 EOF
 ........
 
-If you have ever done a CRM style configuration before, the examples
-above should be immediately understandable without too much
-difficulty. The `crm` provides a means to efficiently manage a
-cluster, and to put a configuration together in a simple and concise manner.
-
 The `crm` interface is hierarchical, with commands organized into
 separate levels by functionality. To list the available levels and
 commands, either execute +help <level>+, or, if at the top level of
@@ -193,12 +205,61 @@ available levels and commands.
 
 The +(live)+ string in the `crm` prompt signifies that the current CIB
 in use is the cluster live configuration. It is also possible to
-work with so-called shadow CIBs. These are separate, inactive
+work with so-called <<topics_Features_Shadows,shadow CIBs>>. These are separate, inactive
 configurations stored in files, that can be applied and thereby
 replace the live configuration at any time.
 
-[[topics_Shadows,Shadow CIB usage]]
-== Shadow CIB usage
+[[topics_Introcution_Completion,Tab completion]]
+=== Tab completion
+
+The `crm` makes extensive use of tab completion. The completion
+is both static (i.e. for `crm` commands) and dynamic. The latter
+takes into account the current status of the cluster or
+information from installed resource agents. Sometimes, completion
+may also be used to get short help on resource parameters. Here
+are a few examples:
+
+...............
+crm(live)resource# <TAB><TAB>
+bye           failcount     move          restart       unmigrate
+cd            help          param         show          unmove
+cleanup       list          promote       start         up
+demote        manage        quit          status        utilization
+end           meta          refresh       stop
+exit          migrate       reprobe       unmanage
+
+crm(live)configure# primitive fence-1 <TAB><TAB>
+heartbeat:  lsb:    ocf:    stonith:
+
+crm(live)configure# primitive fence-1 stonith:<TAB><TAB>
+apcmaster                external/ippower9258     fence_legacy
+apcmastersnmp            external/kdumpcheck      ibmhmc
+apcsmart                 external/libvirt         ipmilan
+
+crm(live)configure# primitive fence-1 stonith:ipmilan params <TAB><TAB>
+auth=      hostname=  ipaddr=    login=     password=  port=      priv=
+
+crm(live)configure# primitive fence-1 stonith:ipmilan params auth=<TAB><TAB>
+auth* (string)
+    The authorization type of the IPMI session ("none", "straight", "md2", or "md5")
+...............
+
+`crmsh` also comes with bash completion usable directly from the
+system shell. This should be installed automatically with the command
+itself.
+
+[[topics_Features,Features]]
+== Features
+
+The feature set of crmsh covers a wide range of functionality, and
+understanding how and when to use the various features of the shell
+can be difficult. This section of the guide describes some of the
+features and use cases of `crmsh` in more depth. The intention is to
+provide a deeper understanding of these features, but also to serve as
+a guide to using them.
+
+[[topics_Features_Shadows,Shadow CIB usage]]
+=== Shadow CIB usage
 
 A Shadow CIB is a normal cluster configuration stored in a file.
 They may be manipulated in much the same way as the _live_ CIB, with
@@ -224,8 +285,39 @@ INFO: test-2 shadow CIB created
 crm(test-2)configure# commit
 ...............
 
-[[topics_Templates,Configuration templates]]
-== Configuration templates
+[[topics_Features_Checks,Configuration semantic checks]]
+=== Configuration semantic checks
+
+Resource definitions may be checked against the meta-data
+provided with the resource agents. These checks are currently
+carried out:
+
+- are required parameters set
+- existence of defined parameters
+- timeout values for operations
+
+The parameter checks are obvious and need no further explanation.
+Failures in these checks are treated as configuration errors.
+
+The timeouts for operations should be at least as long as those
+recommended in the meta-data. Too short timeout values are a
+common mistake in cluster configurations and, even worse, they
+often slip through if cluster testing was not thorough. Though
+operation timeouts issues are treated as warnings, make sure that
+the timeouts are usable in your environment. Note also that the
+values given are just _advisory minimum_---your resources may
+require longer timeouts.
+
+User may tune the frequency of checks and the treatment of errors
+by the <<cmdhelp_options_check-frequency,`check-frequency`>> and
+<<cmdhelp_options_check-mode,`check-mode`>> preferences.
+
+Note that if the +check-frequency+ is set to +always+ and the
++check-mode+ to +strict+, errors are not tolerated and such
+configuration cannot be saved.
+
+[[topics_Features_Templates,Configuration templates]]
+=== Configuration templates
 
 Configuration templates are ready made configurations created by
 cluster experts. They are designed in such a way so that users
@@ -381,8 +473,8 @@ following steps:
 - `show`: see if the configuration is valid
 - `apply`: apply the configuration to the `configure` level
 
-[[topics_Testing,Resource testing]]
-== Resource testing
+[[topics_Features_Testing,Resource testing]]
+=== Resource testing
 
 The amount of detail in a cluster makes all configurations prone
 to errors. By far the largest number of issues in a cluster is
@@ -447,78 +539,8 @@ doesn't know if a resource can run on a node at all in case of an
 asymmetric cluster. It is up to the user to specify a list of
 eligible nodes if a resource is not meant to run on every node.
 
-[[topics_Completion,Tab completion]]
-== Tab completion
-
-The `crm` makes extensive use of tab completion. The completion
-is both static (i.e. for `crm` commands) and dynamic. The latter
-takes into account the current status of the cluster or
-information from installed resource agents. Sometimes, completion
-may also be used to get short help on resource parameters. Here
-are a few examples:
-
-...............
-crm(live)resource# <TAB><TAB>
-bye           failcount     move          restart       unmigrate
-cd            help          param         show          unmove
-cleanup       list          promote       start         up
-demote        manage        quit          status        utilization
-end           meta          refresh       stop
-exit          migrate       reprobe       unmanage
-
-crm(live)configure# primitive fence-1 <TAB><TAB>
-heartbeat:  lsb:    ocf:    stonith:
-
-crm(live)configure# primitive fence-1 stonith:<TAB><TAB>
-apcmaster                external/ippower9258     fence_legacy
-apcmastersnmp            external/kdumpcheck      ibmhmc
-apcsmart                 external/libvirt         ipmilan
-
-crm(live)configure# primitive fence-1 stonith:ipmilan params <TAB><TAB>
-auth=      hostname=  ipaddr=    login=     password=  port=      priv=
-
-crm(live)configure# primitive fence-1 stonith:ipmilan params auth=<TAB><TAB>
-auth* (string)
-    The authorization type of the IPMI session ("none", "straight", "md2", or "md5")
-...............
-
-`crmsh` also comes with bash completion usable directly from the
-system shell. This should be installed automatically with the command
-itself.
-
-[[topics_Checks,Configuration semantic checks]]
-== Configuration semantic checks
-
-Resource definitions may be checked against the meta-data
-provided with the resource agents. These checks are currently
-carried out:
-
-- are required parameters set
-- existence of defined parameters
-- timeout values for operations
-
-The parameter checks are obvious and need no further explanation.
-Failures in these checks are treated as configuration errors.
-
-The timeouts for operations should be at least as long as those
-recommended in the meta-data. Too short timeout values are a
-common mistake in cluster configurations and, even worse, they
-often slip through if cluster testing was not thorough. Though
-operation timeouts issues are treated as warnings, make sure that
-the timeouts are usable in your environment. Note also that the
-values given are just _advisory minimum_---your resources may
-require longer timeouts.
-
-User may tune the frequency of checks and the treatment of errors
-by the <<cmdhelp_options_check-frequency,`check-frequency`>> and
-<<cmdhelp_options_check-mode,`check-mode`>> preferences.
-
-Note that if the +check-frequency+ is set to +always+ and the
-+check-mode+ to +strict+, errors are not tolerated and such
-configuration cannot be saved.
-
-[[topics_Security,Access Control Lists (ACL)]]
-== Access Control Lists (ACL)
+[[topics_Features_Security,Access Control Lists (ACL)]]
+=== Access Control Lists (ACL)
 
 .Note on ACLs in Pacemaker 1.1.12
 ****************************
@@ -611,6 +633,118 @@ XPath is a powerful language, but you should try to keep your ACL
 xpaths simple and the builtin shortcuts should be used whenever
 possible.
 
+[[topics_Features_Resourcesets,Syntax: Resource sets]]
+=== Syntax: Resource sets
+
+Using resource sets can be a bit confusing unless one knows the
+details of the implementation in Pacemaker as well as how to interpret
+the syntax provided by `crmsh`.
+
+Three different types of resource sets are provided by `crmsh`, and
+each one implies different values for the two resource set attributes,
++sequential+ and +require-all+.
+
++sequential+::
+  If true, the resources in the set do not depend on each other
+  internally. Setting +sequential+ to +true+ implies a strict order of
+  dependency within the set.
+
++require-all+::
+  If false, only one resource in the set is required to fulfil the
+  requirements of the set. The set of A, B and C with +require-all+
+  set to +false+ is be read as "A OR B OR C" when its dependencies
+  are resolved.
+
+The three types of resource sets modify the attributes in the
+following way:
+
+1. Implicit sets (no brackets). +sequential=true+, +require-all=true+
+2. Parenthesis set (+(+ ... +)+). +sequential=false+, +require-all=true+
+3. Bracket set (+[+ ... +]+). +sequential=false+, +require-all=false+
+
+To create a set with the properties +sequential=true+ and
++require-all=false+, explicitly set +sequential+ in a bracketed set,
++[ A B C sequential=true ]+.
+
+To create multiple sets with both +sequential+ and +require-all+ set to
+true, explicitly set +sequential+ in a parenthesis set:
++A B ( C D sequential=true )+.
+
+[[topics_Features_AttributeListReferences,Syntax: Attribute list references]]
+=== Syntax: Attribute list references
+
+Attribute lists are used to set attributes and parameters for
+resources, constraints and property definitions. For example, to set
+the virtual IP used by an +IPAddr+ resource the attribute +ip+ can be
+set in an attribute list for that resource.
+
+Attribute lists can have identifiers that name them, and other
+resources can reuse the same attribute list by referring to that name
+using an +$id-ref+. For example, the following statement defines a
+simple dummy resource with an attribute list which sets the parameter
++state+ to the value 1 and sets the identifier for the attribute list
+to +on-state+:
+
+..............
+primitive dummy-1 Dummy params $id=on-state state=1
+..............
+
+To refer to this attribute list from a different resource, refer to
+the +on-state+ name using an id-ref:
+
+..............
+primitive dummy-2 Dummy params $id-ref=on-state
+..............
+
+The resource +dummy-2+ will now also have the parameter +state+ set to the value 1.
+
+[[topics_Features_AttributeReferences,Syntax: Attribute references]]
+=== Syntax: Attribute references
+
+In some cases, referencing complete attribute lists is too
+coarse-grained, for example if two different parameters with different
+names should have the same value set. Instead of having to copy the
+value in multiple places, it is possible to create references to
+individual attributes in attribute lists.
+
+To name an attribute in order to be able to refer to it later, prefix
+the attribute name with a +$+ character (as seen above with the
+special names +$id+ and +$id-ref+:
+
+............
+primitive dummy-1 Dummy params $state=1
+............
+
+The identifier +state+ can now be used to refer to this attribute from other
+primitives, using the +@<id>+ syntax:
+
+............
+primitive dummy-2 Dummy params @state
+............
+
+In some cases, using the attribute name as the identifier doesn't work
+due to name clashes. In this case, the syntax +$<id>:<name>=<value>+
+can be used to give the attribute a different identifier:
+
+............
+primitive dummy-1 params $dummy-state-on:state=1
+primitive dummy-2 params @state
+............
+
+There is also the possibility that two resources both use the same
+attribute value but with different names. For example, a web server
+may have a parameter +server_ip+ for setting the IP address where it
+listens for incoming requests, and a virtual IP resource may have a
+parameter called +ip+ which sets the IP address it creates. To
+configure these two resources with an IP without repeating the value,
+the reference can be given a name using the syntax +@<id>:<name>+.
+
+Example:
+............
+primitive virtual-ip IPaddr2 params $vip:ip=192.168.1.100
+primitive webserver apache params @vip:server_ip
+............
+
 [[topics_Reference,Command reference]]
 == Command reference
 
@@ -663,7 +797,7 @@ start
 .........
 
 [[cmdhelp_cluster_stop,Stop cluster services]]
-==== `start`
+==== `stop`
 
 Stops the cluster-related system services on this node.
 
@@ -1791,7 +1925,7 @@ level :: operator | administrator | expert
 ****************************
 The `skill-level` option is advisory only. There is nothing
 stopping any users change their skill level (see
-<<topics_Security,Access Control Lists (ACL)>> on how to enforce
+<<topics_Features_Security,Access Control Lists (ACL)>> on how to enforce
 access control).
 ****************************
 
@@ -1925,7 +2059,7 @@ The checks require that resource agents are present. If they are
 not installed at the configuration time set this preference to
 `never`.
 
-See <<topics_Checks,Configuration semantic checks>> for more details.
+See <<topics_Features_Checks,Configuration semantic checks>> for more details.
 
 [[cmdhelp_options_check-mode,how to treat semantic errors]]
 ==== `check-mode`
@@ -1935,7 +2069,7 @@ done in the `strict` mode or in the `relaxed` mode. In the former
 certain problems are treated as configuration errors. In the
 `relaxed` mode all are treated as warnings. The default is `strict`.
 
-See <<topics_Checks,Configuration semantic checks>> for more details.
+See <<topics_Features_Checks,Configuration semantic checks>> for more details.
 
 [[cmdhelp_options_add-quotes,add quotes around parameters containing spaces]]
 ==== `add-quotes`
@@ -2130,116 +2264,6 @@ configuration session or using the `commit` command.
 Comments start with +#+ in the first line. The comments are tied
 to the element which follows. If the element moves, its comments
 will follow.
-
-[[cmdhelp_configure_resourcesets,Resource sets]]
-==== Resource sets
-
-Using resource sets can be a bit confusing unless one knows the
-details of the implementation in Pacemaker as well as how to interpret
-the syntax provided by `crmsh`.
-
-Three different types of resource sets are provided by `crmsh`, and
-each one implies different values for the two resource set attributes,
-+sequential+ and +require-all+.
-
-+sequential+::
-  If true, the resources in the set do not depend on each other
-  internally. Setting +sequential+ to +true+ implies a strict order of
-  dependency within the set.
-
-+require-all+::
-  If false, only one resource in the set is required to fulfil the
-  requirements of the set. The set of A, B and C with +require-all+
-  set to +false+ is be read as "A OR B OR C" when its dependencies
-  are resolved.
-
-The three types of resource sets modify the attributes in the
-following way:
-
-1. Implicit sets (no brackets). +sequential=true+, +require-all=true+
-2. Parenthesis set (+(+ ... +)+). +sequential=false+, +require-all=true+
-3. Bracket set (+[+ ... +]+). +sequential=false+, +require-all=false+
-
-To create a set with the properties +sequential=true+ and
-+require-all=false+, explicitly set +sequential+ in a bracketed set,
-+[ A B C sequential=true ]+.
-
-To create multiple sets with both +sequential+ and +require-all+ set to
-true, explicitly set +sequential+ in a parenthesis set:
-+A B ( C D sequential=true )+.
-
-==== References in attribute lists
-
-Attribute lists are used to set attributes and parameters for
-resources, constraints and property definitions. For example, to set
-the virtual IP used by an +IPAddr+ resource the attribute +ip+ can be
-set in an attribute list for that resource.
-
-Attribute lists can have identifiers that name them, and other
-resources can reuse the same attribute list by referring to that name
-using an +$id-ref+. For example, the following statement defines a
-simple dummy resource with an attribute list which sets the parameter
-+state+ to the value 1 and sets the identifier for the attribute list
-to +on-state+:
-
-..............
-primitive dummy-1 Dummy params $id=on-state state=1
-..............
-
-To refer to this attribute list from a different resource, refer to
-the +on-state+ name using an id-ref:
-
-..............
-primitive dummy-2 Dummy params $id-ref=on-state
-..............
-
-The resource +dummy-2+ will now also have the parameter +state+ set to the value 1.
-
-===== Referencing individual attributes
-
-In some cases, referencing complete attribute lists is too
-coarse-grained, for example if two different parameters with different
-names should have the same value set. Instead of having to copy the
-value in multiple places, it is possible to create references to
-individual attributes in attribute lists.
-
-To name an attribute in order to be able to refer to it later, prefix
-the attribute name with a +$+ character (as seen above with the
-special names +$id+ and +$id-ref+:
-
-............
-primitive dummy-1 Dummy params $state=1
-............
-
-The identifier +state+ can now be used to refer to this attribute from other
-primitives, using the +@<id>+ syntax:
-
-............
-primitive dummy-2 Dummy params @state
-............
-
-In some cases, using the attribute name as the identifier doesn't work
-due to name clashes. In this case, the syntax +$<id>:<name>=<value>+
-can be used to give the attribute a different identifier:
-
-............
-primitive dummy-1 params $dummy-state-on:state=1
-primitive dummy-2 params @state
-............
-
-There is also the possibility that two resources both use the same
-attribute value but with different names. For example, a web server
-may have a parameter +server_ip+ for setting the IP address where it
-listens for incoming requests, and a virtual IP resource may have a
-parameter called +ip+ which sets the IP address it creates. To
-configure these two resources with an IP without repeating the value,
-the reference can be given a name using the syntax +@<id>:<name>+.
-
-Example:
-............
-primitive virtual-ip IPaddr2 params $vip:ip=192.168.1.100
-primitive webserver apache params @vip:server_ip
-............
 
 [[cmdhelp_configure_node,define a cluster node]]
 ==== `node`
@@ -2524,7 +2548,8 @@ following:
 
 The syntax for resource sets is described in detail for <<cmdhelp_configure_colocation,`colocation`>>.
 
-For more details on how to configure resource sets, see <<cmdhelp_configure_resourcesets,`Resource sets`>>.
+For more details on how to configure resource sets, see
+<<topics_Features_Resourcesets,`Syntax: Resource sets`>>.
 
 Usage:
 ...............
@@ -2606,7 +2631,7 @@ The optional +node-attribute+ references an attribute in nodes'
 instance attributes.
 
 For more details on how to configure resource sets, see
-<<cmdhelp_configure_resourcesets,`Resource sets`>>.
+<<topics_Features_Resourcesets,`Syntax: Resource sets`>>.
 
 Usage:
 ...............
@@ -2653,7 +2678,7 @@ scores +0+ and +inf+ to keywords +advisory+ and +mandatory+.
 That is still valid but deprecated.
 
 For more details on how to configure resource sets, see
-<<cmdhelp_configure_resourcesets,`Resource sets`>>.
+<<topics_Features_Resourcesets,`Syntax: Resource sets`>>.
 
 Usage:
 ...............

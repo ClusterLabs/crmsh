@@ -1,0 +1,11 @@
+= News
+
+link:/news/2014-06-30-release-2_1[2014-06-30 09:00]
+
+:leveloffset: 1
+include::news/2014-06-30-release-2_1.txt[]
+:leveloffset: 0
+
+''''
+
+link:https://savannah.nongnu.org/news/?group_id=10890[Old News Archive]

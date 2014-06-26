@@ -1,0 +1,9 @@
+404: Page not found
+===================
+
+Apologies, but there is nothing here!
+
+The page you are looking for may have moved.
+
+* link:/documentation[Documentation]
+* link:/faq[Frequently Asked Questions]

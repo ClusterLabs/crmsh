@@ -35,7 +35,7 @@ following distros:
     * Red Hat Linux
 
 More information can be found on the
-link:documentation.html#_installation[Documentation] page.
+link:/documentation#_installation[Documentation] page.
 
 == Didn't crm use to be part of Pacemaker?
 

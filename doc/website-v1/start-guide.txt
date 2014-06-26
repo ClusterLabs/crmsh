@@ -1,0 +1,189 @@
+= Getting Started
+
+So, you've successfully installed `crmsh` on one or more machines, and
+now you want to configure a basic cluster. This guide is intended to
+provide step-by-step instructions for configuring Pacemaker
+with a single resource capable of failing over between a pair of
+nodes, and then builds on that base to cover some more advanced topics
+of cluster management.
+
+****
+Haven't installed yet? Please follow the 
+link:/installation[installation instructions]
+before continuing this guide. Only `crmsh` and
+its dependencies need to be installed before 
+following this guide.
+****
+
+Before continuing, make sure that this command executes successfully
+on all nodes, and returns a version number that is `2.1` or higher:
+
+........
+crm version
+........
+
+.Example cluster
+**************************
+
+These are the machines used as an example in this guide. Please
+replace the references to these names and IP addresses to the values
+appropriate for your cluster:
+
+
+[options="header,footer"]
+|=======================
+|Name  |IP
+|alice |10.0.0.2
+|bob   |10.0.0.3
+|=======================
+**************************
+
+
+== The cluster stack
+
+The composition of the GNU/Linux cluster stack has changed somewhat
+over the years. The stack described here is the currently most common
+variant, but there are other ways of configuring these tools.
+
+Simply put, a High Availability cluster is a set of machines (commonly
+referred to as *nodes*) with redundant capacity, such that if one or
+more of these machines experience failure of any kind, the other nodes
+in the cluster can take over the responsibilities previously handled
+by the failed node.
+
+The cluster stack is a set of programs running on all of these nodes,
+communicating with each other over the network to monitor each other
+and deciding where, when and how resources are stopped, started or
+reconfigured.
+
+The main component of the stack is *Pacemaker*, the software
+responsible for managing cluster resources, allocating them to cluster
+nodes according to the rules specified in the *CIB*.
+
+The CIB is an XML document maintained by Pacemaker, which describes
+all cluster resources, their configuration and the constraints that
+decide where and how they are managed. This document is not edited
+directly, and with the help of `crmsh` it is possible to avoid
+exposure to the underlying XML at all.
+
+Beneath Pacemaker in the stack sits *Corosync*, a cluster
+communication system. Corosync provides the communication capabilities
+and cluster membership functionality used by Pacemaker. Corosync is
+configured through the file `/etc/corosync/corosync.conf`. `crmsh`
+provides tools for configuring corosync similar to Pacemaker.
+
+Aside from these two components, the stack also consists of a
+collection of *Resource Agents*. These are basically scripts that wrap
+software that the cluster needs to manage, providing a unified
+interface to configuration, supervision and management of the
+software. For example, there are agents that handle virtual IP
+resources, web servers, databases and filesystems.
+
+`crmsh` is a command line tool which interfaces against all of these
+components, providing a unified interface for configuration and
+management of the whole cluster stack.
+
+== SSH
+
+`crmsh` runs as a command line tool on any one of the cluster
+nodes. In order for to to control all cluster nodes, it needs to be
+able to execute commands remotely. `crmsh` does this by invoking
+`ssh`.
+
+Configure `/etc/hosts` on each of the nodes so that the names of the
+other nodes map to the IP addresses of those nodes. For example in a
+cluster consisting of `alice` and `bob`, executing `ping bob` when
+logged in as root on `alice` should successfully locate `bob` on the
+network. If the IP address of `bob` is `10.0.0.3`, this means the
+following line should be entered into `/etc/hosts` on `alice`:
+
+........
+10.0.0.3      bob
+........
+
+Once this is done, `crmsh` can handle the rest.
+
+== Install and configure
+
+To create the necessary SSH keys, install the basic packages and
+configure `systemd` to manage Corosync and Pacemaker, the following
+command is provided by `crmsh`:
+
+........
+crm cluster init nodes=alice,bob
+........
+
+== Start Pacemaker
+
+To start Corosync and Pacemaker, the following command can be used:
+
+........
+crm cluster start
+........
+
+== Check cluster status
+
+To see if Pacemaker is running, what nodes are part of the cluster and
+what resources are active, use the `status` command:
+
+.........
+crm status
+.........
+
+If this command fails or times out, there is some problem with
+Pacemaker or Corosync on the local machine. Perhaps some dependency is
+missing, a firewall is blocking cluster communication or some other
+unrelated problem has occurred. If this is the case, the `cluster
+health` command may be of use.
+
+== Cluster health check
+
+To check the health status of the machines in the cluster, use the
+following command:
+
+........
+crm cluster health
+........
+
+This command will perform multiple diagnostics on all nodes in the
+cluster, and return information about low disk space, communication
+issues or problems with mismatching software versions between nodes,
+for example.
+
+If no cluster has been configured or there is some fundamental problem
+with cluster communications, `crmsh` may be unable to figure out what
+nodes are part of the cluster. If this is the case, the list of nodes
+can be provided to the health command directly:
+
+........
+crm cluster health nodes=alice,bob
+........
+
+== Adding a resource
+
+To test the cluster and make sure it is working properly, we can
+configure a Dummy resource. The Dummy resource agent is a simple
+resource that doesn't actually manage any software. It exposes a
+single numerical parameter called `state` which can be used to test
+the basic functionality of the cluster before introducing the
+complexities of actual resources.
+
+To configure a Dummy resource, run the following command:
+
+........
+crm configure primitive p0 Dummy
+........
+
+This creates a new resource, gives it the name `p0` and sets the
+agent for the resource to be the `Dummy` agent.
+
+`crm status` should now show the `p0` resource as started on one
+of the cluster nodes.
+
+The resource can be stopped or started using the `resource start` and
+`resource stop` commands:
+
+........
+crm resource stop p0
+crm resource start p0
+........

@@ -16,18 +16,18 @@ all very much welcome!
 </ul>
 ++++
 
-== Building crmsh ==
+== Get the source ==
 
 The source code for `crmsh` is kept in a
 http://git-scm.com/[git] repository
-hosted at https://github.com[github]. Use the
-command-line tool +git+ to get a working copy:
+hosted at https://github.com[github]. Use +git+ to get a working copy:
 
 ----
 git clone https://github.com/crmsh/crmsh.git
 ----
 
-`crmsh` needs the source code to `cluster-glue` and `pacemaker` when
+`crmsh` needs the development headers for link:http://hg.linux-ha.org/glue[cluster-glue] and 
+link:https://github.com/ClusterLabs/pacemaker[pacemaker] when
 installing. On openSUSE, these are packaged as `libglue-devel` and
 `libpacemaker-devel`.
 
@@ -39,9 +39,9 @@ make
 make install
 ----
 
-=== Unit tests ===
+=== Tests ===
 
-The test suite uses nose. On most distributions, this can be installed
+The unit tests for `crmsh` require +nose+ to run. On most distributions, this can be installed
 by installing the package +python-nose+, or using +pip+.
 
 To run the unit test suite, go to the source code directory of `crmsh`
@@ -51,11 +51,10 @@ and call:
 ./test/unit-tests.sh
 ----
 
-=== Regression tests ===
+`crmsh` also comes with a comprehensive regression test suite. The regression tests need
+to run after installation, on a system which has both crmsh and pacemaker installed.
 
-`crmsh` comes with a regression test suite. The regression tests need
-to run after installation, on a system which has pacemaker
-installed. To execute the tests, call:
+To execute the tests, call:
 
 ----
 /usr/share/crmsh/tests/regression.sh

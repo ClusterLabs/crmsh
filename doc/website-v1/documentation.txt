@@ -1,14 +1,29 @@
 = Documentation =
 
-== Usage ==
+`crmsh` begun as a bundled interface to the Pacemaker cluster manager,
+but has grown beyond simply configuring Pacemaker to handling many
+more aspects of the Linux HA stack. It also serves as the backend for
+the Hawk web interface.
 
-* link:crm.8.html[Man page (development version)]
-* link:crm.2.0.0.html[Man page (stable version 2.0.0)]
-* link:crm.1.2.6.html[Man page (old stable version 1.2.6)]
-* link:configuration.html[Configuration]
-* link:scripts.html[Cluster scripts]
-* link:tutorials.html[Guides & Tutorials]
-* link:faq.html[FAQ]
+The main documentation for `crmsh` comes in the form of the 
+_manual_, which is the same help as found using the `help`
+command in the interactive shell.
+
+Beyond this, we've also written a couple of guides and other documents
+that will hopefully make using the shell as simple and painless as
+possible.
+
+== Documents ==
+
+* link:/man[Manual (Development)], link:/man-2.0[(Release 2.0)], link:/man-1.2[(Release 1.2)]
+* link:/installation[Installation]
+* link:/start-guide[Getting Started]
+* link:/rsctest-guide[Resource Testing Guide]
+* link:/configuration[Configuration]
+* link:/scripts[Cluster scripts]
+* link:/faq[Frequently Asked Questions]
+
+== External documentation ==
 
 The SUSE
 https://www.suse.com/documentation/sle_ha/book_sleha/?page=/documentation/sle_ha/book_sleha/data/book_sleha.html[High
@@ -24,64 +39,5 @@ On the Pacemaker website, there is a set of guides to configuring
 Pacemaker using `crmsh`. To find these guides, go to the documentation
 page and search for `crmsh`.
 
-For details on command line usage, see the link:crm.8.html[man page].
+For details on command line usage, see the link:/man[Manual].
 
-== Installation ==
-
-Packages for several popular distributions are hosted at the open
-build service. Get the *current stable version* of the `crm` shell
-here:
-
-* https://build.opensuse.org/package/show/network:ha-clustering:Stable/crmsh[OBS Project Page]
-
-* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/[Direct package downloads]
-
-For other distributions, packages may be available in the respective
-package repositories.
-
-=== openSUSE
-
-On openSUSE, you will want to add the
-http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/[network:ha-clustering:Stable] repository, to get the latest stable version of the `crm` shell:
-
-==== Repository links ====
-
-* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/openSUSE_12.3/[openSUSE 12.3]
-* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/openSUSE_13.1/[openSUSE 13.1]
-
-
-.Adding a repository using zypper:
-----
-zypper ar <repository> network:ha-clustering:Stable
-----
-
-Once added, you can run
-
-----
-zypper in crmsh
-----
-
-=== Fedora 19
-
-Download http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/Fedora_19/network:ha-clustering:Stable.repo[network:ha-clustering:Stable.repo]
-and copy it to the '/etc/yum.repos.d/' directory as `root`.
-
-Then, you can run
-
-----
-yum install crmsh
-----
-
-=== Debian
-
-Packages for Debian are provided by the Debian HA maintainers. For more
-information, see the Debian packages list:
-
-- http://packages.debian.org/search?keywords=crmsh
-
-=== Ubuntu
-
-There are packages that are fairly up-to-date in the more recent
-versions of Ubuntu:
-
-- https://launchpad.net/ubuntu/+source/crmsh

@@ -10,7 +10,7 @@
 body {
     font-family:'Open Sans', 'lucida grande',verdana,helvetica,arial,sans-serif;
     font-size: 100%;
-    line-height: 1.3636em;
+    line-height: 1.3636rem;
     margin: 0px 0px;
     padding: 0px;
     width: 100%;
@@ -24,21 +24,20 @@ em {
 
 strong {
     font-weight:bold;
-    color:#000;
 }
 
 .monospaced {
     font-family:'Ubuntu Mono', consolas, 'lucida console', 'bitstream vera sans mono', 'courier new', monospace;
-    color:#000;
+    color: #211;
 }
 
 p {
-    margin-bottom: 1em;
+    margin-bottom: 1.3636rem;
 }
 
 ul, ol, dl {
-    margin-top: 1em;
-    margin-bottom: 2em;
+    margin-top: 1rem;
+    margin-bottom: 2rem;
 }
 
 ul p {
@@ -60,71 +59,77 @@ h1, h2, h3, h4, h5 {
     color:#000;
 }
 
+h2, h3, h4, h5 {
+    padding-bottom: 0.333rem;
+    border-bottom: 1px solid #eee;
+}
+
 h1 {
-    font-size:34px;
+    font-size:2.6rem;
     line-height:1.428;
     margin:0px;
-    margin-top: 40px;
+    margin-top: 48px;
 }
 
 h2 {
-    font-size:23px;
+    font-size:2rem;
     line-height:1.36363636; /* repeating, of course */
-    margin: 0px;
-    margin-top: 30px;
+    margin-top: 36px;
+    margin-bottom: 1.5rem;
 }
 
 h2 + .sectionbody {}
 
 h3 {
-    font-size:18px;
+    font-size:1.6rem;
     line-height:1.1;
     margin: 0px;
     margin-top: 30px;
 }
 
 h4 {
-    font-size:13px;
-    font-weight:bold;
+    font-weight: bold;
+    font-size:1.3rem;
     line-height:1.538;
 }
 
 h5 {
-    font-size:13px;
+    font-size:1.2rem;
     font-style:italic;
     line-height:1.538;
 }
 
 pre {
-    font-size:large;
-    color: #111;
+    font-family:'Ubuntu Mono', consolas, 'lucida console', 'bitstream vera sans mono', 'courier new', monospace;
+    color: #211;
 }
 
 #header {
     background: #faf8f6;
     padding-left: 24px;
-    padding-top: 8px;
+    padding-top: 4px;
     padding-bottom: 0px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 2px solid #efefea;
 }
 
 #header h1 {
     margin: 0px;
-    font-size: 50px;
+    font-size: 42px;
     display: inline;
 }
 
 #header a {
     text-decoration: none;
-    color: #444;
+    color: #34495e;
 }
 
 #header a:hover {
-    color: #aa2200;
+    color:#ee3300;
 }
 
 #topbar {
     display: inline;
+    font-size: 18px;
 }
 
 #topbar ul {
@@ -135,12 +140,13 @@ pre {
 #topbar li {
     list-style: none;
     display: inline;
-    padding-right: 1em;
+    padding-right: 1rem;
 }
 
 #container {
     max-width: 720px;
-    margin: 0px auto;
+    margin-left: 240px;
+    padding-left: 8px;
     text-align:left;
 }
 
@@ -148,12 +154,9 @@ pre {
     color:#999;
 }
 
-a:link {
- color:#419eda;
-}
-
-a:visited {
- color:#cc1100;
+a {
+    text-decoration: none;
+    color:#419eda;
 }
 
 a:active {
@@ -162,11 +165,26 @@ a:active {
 
 a:hover {
  color:#ee3300;
+ text-decoration: underline;
 }
 
 
 #content {
     text-align: justify;
+}
+
+h1 {
+    margin-left: auto;
+    margin-right: auto;
+    width: 551px;
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.frontpage-image {
+    margin-left: auto;
+    margin-right: auto;
+    width: 551px;
 }
 
 .title, .sidebar-title {
@@ -200,8 +218,18 @@ div.admonitionblock td.icon {
 
 div.listingblock .content {
     border-left:4px solid #419eda;
-    background: #faf8f6;
     padding:8px;
+
+    background: #faf7f8;
+
+    background-image: -moz-linear-gradient(left, right,
+                                           from(#faf7f8),
+                                           to(#ffffff));
+
+    background-image: -webkit-gradient(linear, left top, right bottom,
+                                       color-stop(0.00, #faf7f8),
+                                       color-stop(1.00, #ffffff));
+
 }
 
 div.listingblock .content pre {
@@ -216,20 +244,34 @@ div.verseblock .content {
     white-space:pre
 }
 
+div.sidebarblock {
+    margin-top: 1.5rem;
+    margin-bottom: 2rem;
+}
+
 div.sidebarblock > div.content {
     border-left:4px solid #419eda;
-    background: #faf8f6;
+    background: #faf7f8;
     padding:0 10px;
     color:#222;
     font-size:smaller;
     line-height:1.5;
     max-width: 720px;
+
+    background-image: -moz-linear-gradient(left, right,
+                                           from(#faf7f8),
+                                           to(#ffffff));
+
+    background-image: -webkit-gradient(linear, left top, right bottom,
+                                       color-stop(0.00, #faf7f8),
+                                       color-stop(1.00, #ffffff));
+
 }
 
 div.sidebarblock .title {
     margin:10px 0;
     font-weight:bold;
-    font-size: 1.1em;
+    font-size: 1.1rem;
     color:#442;
 }
 
@@ -265,7 +307,7 @@ div.sidebarblock .title {
     font-size:11px;
     color:#888;
     margin-top:40px;
-    text-align: center;
+    text-align: right;
 }
 
 .nav {
@@ -275,7 +317,7 @@ div.sidebarblock .title {
 }
 
 .nav li {
-    line-height: 4em;
+    line-height: 4rem;
 }
 
 .nav a {
@@ -300,10 +342,17 @@ div.sidebarblock .title {
 
 @media screen {
     #toc {
-        text-align: left;
-        font-size: 90%;
-        line-height: 1.1em;
-        margin: 8px;
+        position: fixed;
+        top: 120px;
+        left: 0;
+        margin: 0px;
+        font-size: small;
+        line-height: 1rem;
+    }
+
+    #toc a .monospaced {
+        font-size: small;
+        color:#419eda;
     }
 
     #toc a {
@@ -311,45 +360,55 @@ div.sidebarblock .title {
     }
 
     #toc .toclevel1 {
-        margin-top: 0.5em;
+        font-weight: bold;
+        padding: 1px;
     }
 
     #toc .toclevel2 {
-        margin-top: 0.25em;
-        margin-left: 24px;
-        display: list-item;
+        font-weight: bold;
+        font-style: italic;
+        margin-left: 8px;
         color: #aaaaaa;
+        padding-left: 4px;
+        line-height: 1.2rem;
     }
 
     #toc .toclevel3 {
-        margin-top: 0.25em;
-        margin-left: 32px;
-        display: list-item;
+        font-size: 0.8rem;
+        line-height: 1rem;
+        margin-left: 24px;
         color: #aaaaaa;
+        padding-left: 4px;
     }
 
     #toctitle {
-        font-size:23px;
-        line-height:1.1;
+        font-size:1.2rem;
+        line-height:1.1rem;
         margin:20px 0;
 
     }
 }
 
-@media screen and (max-width: 1024px) {
+@media screen and (max-width: 900px) {
     #toc {
         display: none;
     }
+
+    #container {
+        max-width: 720px;
+        margin: 0px auto;
+        text-align:left;
+    }
+
 }
 
-@media screen and (min-width: 1024px) {
+@media screen and (min-width: 900px) {
     #toc {
         position: absolute;
         overflow: hidden;
-        top: 0px;
+        top: 120px;
         left: 0px;
-        margin-top: 120px;
-        max-width: 140px;
+        max-width: 240px;
     }
 }
 

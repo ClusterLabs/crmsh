@@ -5,14 +5,10 @@ import sys
 import re
 import argparse
 
-TOC_PAGES = ['crm.8.html',
-             'crm.1.2.6.html']
-V2_PAGES = ['quickstart.html',
-            'manual.html',
-            'faq.html',
-            'documentation.html',
-            'development.html',
-            'scripts.html']
+TOC_PAGES = ['man/index.html',
+             'man-2.0/index.html',
+             'man-1.2/index.html']
+V2_PAGES = ['index.html']
 INSERT_AFTER = '<!--TOC-->'
 
 def read_toc_data(infile, debug):
@@ -26,7 +22,10 @@ def read_toc_data(infile, debug):
             short_help = short_help.strip()
             info_split = info.split('_')
             if info_split[0] == 'topics':
-                topics_data.append((short_help, info))
+                if len(info_split) == 2:
+                    topics_data.append((1, short_help, info))
+                elif len(info_split) >= 3:
+                    topics_data.append((2, short_help, info))
             elif info_split[0] == 'cmdhelp':
                 if len(info_split) == 2:
                     commands_data.append((2, info_split[1], info))
@@ -35,9 +34,9 @@ def read_toc_data(infile, debug):
     toc = ''
     if len(topics_data) > 0 or len(commands_data) > 0:
         toc = '<div id="toc">\n'
-        for text, link in topics_data:
-            toc += '<div class="toclevel1"><a href="#%s">%s</a></div>\n' % (
-                link, text)
+        for depth, text, link in topics_data:
+            toc += '<div class="toclevel%s"><a href="#%s">%s</a></div>\n' % (
+                depth, link, text)
         for depth, text, link in commands_data:
             toc += '<div class="toclevel%s"><a href="#%s">%s</a></div>\n' % (
                 depth, link, text)
@@ -126,12 +125,15 @@ def main():
     outfile = args.output
     infile = args.input
     print "+ %s -> %s" % (infile, outfile)
+    gen = False
     for tocpage in TOC_PAGES:
-        if outfile.endswith(tocpage):
+        if not gen and outfile.endswith(tocpage):
             generate_toc(infile, outfile, debug)
+            gen = True
     for tocpage in V2_PAGES:
-        if outfile.endswith(tocpage):
+        if not gen and outfile.endswith(tocpage):
             generate_v2(outfile, debug)
+            gen = True
 
 if __name__ == "__main__":
     main()
