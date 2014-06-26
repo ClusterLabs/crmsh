@@ -11,7 +11,8 @@ all very much welcome!
 <li><a href="https://github.com/crmsh/crmsh"><i class="fa fa-archive fa-3x fa-fw"></i> Source Repository</a></li>
 <li><a href="http://lists.linux-ha.org/mailman/listinfo/linux-ha"><i class="fa fa-envelope fa-3x fa-fw"></i> Mailing List</a></li>
 <li><a href="https://github.com/crmsh/crmsh/issues"><i class="fa fa-bug fa-3x fa-fw"></i> Issue Tracker</a></li>
-<li><a href="irc://freenode.net/#linux-ha"><i class="fa fa-comments fa-3x fa-fw"></i> IRC: #linux-ha</a></li>
+<li><a href="irc://freenode.net/#linux-ha"><i class="fa fa-comments fa-3x fa-fw"></i> IRC: #linux-ha on Freenode</a></li>
+<li><a href="https://github.com/crmsh/crmsh/commits/master.atom"><i class="fa fa-rss fa-3x fa-fw"></i> Atom feed</a></li>
 </ul>
 ++++
 
