@@ -2,7 +2,7 @@
 
 == Authors ==
 
-include::../AUTHORS[]
+include::../../AUTHORS[]
 
 == Site ==
 

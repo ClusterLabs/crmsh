@@ -1,5 +1,5 @@
 ASCIIDOC := asciidoc
-SRC := index.txt crm.8.txt faq.txt documentation.txt development.txt \
+SRC := index.txt faq.txt documentation.txt development.txt \
 	configuration.txt about.txt tutorials.txt rsctest-tutorial.txt \
 	history-tutorial.txt crm.1.2.6.txt scripts.txt crm.2.0.0.txt
 TGT := $(patsubst %.txt,gen/%.html,$(SRC))
@@ -18,7 +18,14 @@ XDGOPEN := xdg-open
 
 .PHONY: all clean deploy open
 
+all: site
+
 gen/%.html: %.txt crm.conf
+	@mkdir -p gen
+	@$(ASCIIDOC) --unsafe -b html5 -f crm.conf -o $@ $<
+	@python ./postprocess.py -o $@ $<
+
+gen/crm.8.html: ../crm.8.txt
 	@mkdir -p gen
 	@$(ASCIIDOC) --unsafe -b html5 -f crm.conf -o $@ $<
 	@python ./postprocess.py -o $@ $<
@@ -43,7 +50,7 @@ gen/fonts/%: fonts/%
 	@cp -r $< $@
 	@echo "+ $@"
 
-site: $(TGT) $(CSS) $(JS) $(IMG) $(FONTS)
+site: gen/crm.8.html $(TGT) $(CSS) $(JS) $(IMG) $(FONTS)
 
 deploy: site
 	@echo "TODO: CVS upload"
@@ -56,5 +63,3 @@ watch:
 
 clean:
 	-@$(RM) -rf gen/*.html gen/css gen/js gen/img gen/fonts
-
-all: site
