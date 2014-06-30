@@ -301,7 +301,7 @@ def _load_help():
         info = info.split('_')
         if info[0] == 'topics':
             entry['type'] = 'topic'
-            entry['name'] = info[1]
+            entry['name'] = info[-1]
         elif info[0] == 'cmdhelp':
             if len(info) == 2:
                 entry['type'] = 'level'
