@@ -1,3 +1,92 @@
+* Mon Jun 30 2014 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- Release 2.1
+- Add atom feed to development page
+- Medium: hb_report: dot is not illegal in file names (bnc#884079, debian#715391)
+- Low: history: remove existing report directory on refresh
+- medium: ui_history: Print source if given no argument (bnc#883437)
+- Medium: hb_report: update interface to zypper (bnc#883186)
+- Medium: hb_report: support logs with varied timestamps (bnc#883186)
+- Low: hb_report: getstampproc is global (bnc#883186)
+- Low: hb_report: gdb debug symbols output change (bnc#883186)
+- Low: hb_report: don't restrict debuginfo to cluster stack binaries (zypper) (bnc#883186)
+- high: ui_history: Lazily fetch report data on command (bnc#882959)
+- medium: report: Make setting report period more robust (bnc#882959)
+- medium: ui_resource: Remove empty attrlists when overriding children (bnc#882655)
+- high: cibconfig: Retain empty attribute sets (bnc#882655)
+- Low: report: unpack tarball if it's newer than the existing directory
+- Low: report: get node list based on collected logs, not from cib
+- Low: report: test for ha-log.txt instead of cib.txt when listing nodes
+- Low: report: don't warn on extra nodes in the report
+- medium: ui_configure: Nicer error when pacemaker is not running (bnc#882475)
+- medium: scripts: configure SSH in cluster init (bnc#882476)
+- medium: ui_assist: add template command (bnc#882477)
+- medium: cliformat: Fix CLI formatting for rules and id-refs
+- doc: Update documentation for location constraints (bnc#873781)
+- doc: Document interval suffixes (bnc#873677)
+- medium: ui_node: Fix display of node attributes
+- medium: parse: Allow remote as node type
+- low: cliformat: Don't show extraneous id for acl rules
+- high: cibconfig: Fix bug when copying nvpairs (bnc#881369)
+- high: parse: Try to retain ordering if possible (bnc#880371)
+- high: cibconfig: Enable use of v2 patches in Pacemaker (bnc#880371)
+- medium: pacemaker: Don't hardcode list of supported schemas
+- Medium: resource: modify some command wait options (bnc#880982)
+- high: parse: Support for ACL schema 2.0 (bnc#880371)
+- medium: schema: Fix typo in test_schema()
+- medium: parse: Allow empty property sets (bnc#880632)
+- medium: ui_resource: Also trace promote/demote for multistate resources
+- medium: ui_resource: allow trace of resource without specific operation
+- medium: ui_resource: Make op an optional argument to trace/untrace
+- low: ui_resource: Allow untrace without explicit interval
+- high: cibconfig: adjust attributes when adding operations (bnc#880052)
+- high: parse: Support id-ref in nvpairs (fate#316118)
+- low: ui_configure: Add --force flag to configure delete
+- medium: xmlutil: Limit xpath search to children (bnc#879419)
+- medium: ui: Fix argument check in resource commands (gh#crmsh/crmsh#29)
+- high: xmlutil: Include remote nodes in nodelist (bnc#878112)
+- medium: cibconfig: Detect broken child relationship (bnc#878112)
+- high: cibconfig: Ban containers stealing children (bnc#878112)
+- low: command: Add -h and --help as aliases to help
+- high: parse: Allow role in rule-based location constraints (bnc#878128)
+- medium: report: Return to handling timestamps internally (bnc#877495)
+- medium: ui_resource: Fix race in start/stop/manage/unmanage (bnc#877640)
+- medium: parse: Allow empty attribute lists
+- medium: cibconfig: Fix uses of add_operation
+- medium: report: Make regexp groups non-capturing to avoid limit (bnc#877484)
+- medium: doc: Document rules in attribute lists (bnc#865292)
+- medium: constants: Rename cluster attribute to cluster-name (fate#316118)
+- medium: idmgmt: Fix id assignment and update regression tests (bnc#865292)
+- medium: cibconfig: Enable score for instance_attributes (bnc#865292)
+- high: cibconfig: Support rules in attribute lists (bnc#865292)
+- low: cibconfig: Better error when referring to non-existant template
+- medium: scripts: Handle percent characters in script output (bnc#876882)
+- pacemaker: Support 2.0 schema
+- vars: Rename property: s/site/cluster (fate#316118)
+- Medium: hb_report: fix ssh passwords again (bnc#867365)
+- vars: Add site to list of extra cluster properties (fate#316118)
+- parse: Fix check for action/role in resource set parser (#14)
+- report: More problems with datetime (bnc#874162)
+- report: Resolve datetime/timestamp mixup (bnc#874162)
+- utils: Handle datetime objects in shorttime/shortdate (bnc#874162)
+- main: Fix reference before assignment (#7)
+- crm: Check and complain about python version < 2.6 (#11)
+- parse: Unify API for err(), fix error
+- Fix garbage characters in prompt (issue#7)
+- Medium: cibconf: add comments in the right order (bnc#866434)
+- site: pass --force flag through to crm_ticket (bnc#873200)
+- Low: report: Use subsecond precision if possible (bnc#872932)
+- Low: hb_report: pcmk lib changed permissions (bnc#872958)
+- Low: history: set colours for all nodes found (bnc#872936)
+- ui_resource: Allow setting meta attributes on tags (fate#315101)
+- ui_configure: tag command  (fate#315101)
+- parse: Support cib object tags (fate#315101)
+- cibconfig: Support filename-style globs in show/edit (bnc#864346)
+- ui_resource: Only search in top-level (bnc#865024)
+- ui_resource: Don't create extra nvpairs (bnc#865024)
+- utils: Don't crash on missing reply to y/n question
+- Allow building crmsh without PyYAML
+- Support for pacemaker-1.3 RNG schema
+
 * Thu Apr 4 2014 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - release 2.0
 - Improve output from history explorer when using a crm_report-generated
