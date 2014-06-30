@@ -21,8 +21,9 @@ from the Stable repository at the OBS:
 
 * http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/
 
-Zip archive of the tagged release:
+Archives of the tagged release:
 
+* https://github.com/crmsh/crmsh/archive/2.1.0.tar.gz
 * https://github.com/crmsh/crmsh/archive/2.1.0.zip
 
 Here are some of the highlights of this release:

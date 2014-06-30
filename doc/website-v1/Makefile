@@ -69,9 +69,9 @@ gen/fonts/%: fonts/%
 	@cp -r $< $@
 	@echo "+ $@"
 
-gen/atom.xml: $(NEWS)
-	@echo "atom:" $(NEWS)
-	python ./make-news.py gen/atom.xml $^
+gen/atom.xml: $(NEWSDOC)
+	@echo "atom:" $(NEWSDOC)
+	python ./make-news.py gen/atom.xml $(NEWS)
 
 site: gen/atom.xml gen/index.html gen/404.html gen/news/index.html gen/man/index.html $(TGT) $(CSS) $(IMG) $(FONTS) $(NEWSDOC)
 
