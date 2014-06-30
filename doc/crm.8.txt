@@ -897,7 +897,7 @@ run "cat /proc/uptime"
 ...............
 
 [[cmdhelp_script,Cluster script management]]
-=== `cluster`
+=== `script`
 
 Cluster scripts can perform cluster-wide configuration,
 validation and management. See the `list` command for
