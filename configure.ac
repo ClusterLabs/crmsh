@@ -208,12 +208,18 @@ fi
 AC_SUBST(OCF_ROOT_DIR)
 
 AC_PATH_PROGS(HG, hg false)
+AC_PATH_PROGS(GIT, git false)
 AC_MSG_CHECKING(build version)
 BUILD_VERSION=unknown
 if test -f $srcdir/.hg_archival.txt; then
    BUILD_VERSION=`cat $srcdir/.hg_archival.txt | awk '/node:/ { print $2 }'`
 elif test -x $HG -a -d .hg; then
    BUILD_VERSION=`$HG id -i`
+   if test $? != 0; then
+       BUILD_VERSION=unknown
+   fi
+elif test -x $GIT -a -d .git; then
+   BUILD_VERSION=`$GIT describe`
    if test $? != 0; then
        BUILD_VERSION=unknown
    fi
