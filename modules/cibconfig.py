@@ -1216,7 +1216,8 @@ class CibNode(CibObject):
             s = '%s $id="%s"' % (s, self.obj_id)
         s = '%s %s' % (s, cli_display.id(uname))
         type = self.node.get("type")
-        if type and type != vars.node_default_type:
+        # default check disabled to allow mixed clusters (krig: bnc#884442)
+        if type: # and type != vars.node_default_type:
             s = '%s:%s' % (s, type)
         return s
 

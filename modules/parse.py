@@ -682,9 +682,10 @@ def parse_node(s):
         return False
     head.append(["id", id and id or uname])
     # drop type if default
-    type = find_value(head, "type")
-    if type == vars.node_default_type:
-        head.remove(["type", type])
+    # disabled to allow mixed clusters (krig: bnc#884442)
+    # type = find_value(head, "type")
+    #if type == vars.node_default_type:
+    #    head.remove(["type", type])
     cli_list.append([s[0], head])
     if len(s) == i:
         return cli_list
