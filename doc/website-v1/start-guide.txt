@@ -94,24 +94,104 @@ Configure `/etc/hosts` on each of the nodes so that the names of the
 other nodes map to the IP addresses of those nodes. For example in a
 cluster consisting of `alice` and `bob`, executing `ping bob` when
 logged in as root on `alice` should successfully locate `bob` on the
-network. If the IP address of `bob` is `10.0.0.3`, this means the
-following line should be entered into `/etc/hosts` on `alice`:
+network. Given the IP addresses of `alice` and `bob` above, the
+following should be entered into `/etc/hosts` on both nodes:
 
 ........
+10.0.0.2      alice
 10.0.0.3      bob
 ........
 
-Once this is done, `crmsh` can handle the rest.
+Once this is done, SSH keys need to be installed for password-less
+access between the nodes. This is something that will hopefully be
+automated in the future, but is unfortunately a manual step at this
+point in time.
+
+The following commands should be executed as `root` on one of the
+nodes (in this example, `alice`):
+
+...............
+# ensure that the ssh server is started
+sudo systemctl start sshd
+# create the shared key
+mkdir -m 700 -p /root/.ssh
+ssh-keygen -q -f /root/.ssh/id_rsa -C "Cluster Internal" -N ''
+cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
+...............
+
+On the other nodes in the cluster (in this example, `bob`), execute
+the following as `root`:
+
+...............
+mkdir -m 700 -p /root/.ssh
+scp -oStrictHostKeyChecking=no \
+    root@alice:'/root/.ssh/id_rsa*' /root/.ssh
+grep -q -s "$(cat /root/.ssh/id_rsa.pub)" /root/.ssh/authorized_keys \
+    || append /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
+...............
+
+This enables SSH to connect without prompting for a password between
+the nodes. Make sure this works before continuing with this guide.
 
 == Install and configure
 
-To create the necessary SSH keys, install the basic packages and
-configure `systemd` to manage Corosync and Pacemaker, the following
-command is provided by `crmsh`:
+To install the basic packages and configure `systemd` to manage
+Corosync and Pacemaker, the following command is provided by `crmsh`:
 
 ........
 crm cluster init nodes=alice,bob
 ........
+
+== Firewall
+
+If your cluster nodes have a firewall configured, you will need to
+open the following ports to ensure cluster configuration:
+
+* TCP: 5560
+* UDP: 5404, 5405
+* TCP: 21064 (if using DLM)
+* TCP: 30865 (if using csync2)
+* TCP: 7630 (if using the hawk web UI)
+
+== Quorum
+
+At this point, corosync needs to be configured for the particular
+cluster being created. First of all, `quorum` needs to taken into
+consideration. To make things as easy as possible, it is advisable to
+have a total number of nodes in the cluster that is not divisible by
+two. In other words, the number of nodes in the cluster should usually
+be either 3 or 5. This is to ensure __quorum__, that is, in the case
+of a loss of network connectivity between some subsets of nodes, one
+of the network partitions will either have more members than the
+others, or every node in the cluster will be isolated.
+
+To configure corosync to manage quorum for you, you need to enable
+`votequorum` in the corosync configuration. To do this, the following
+command can be used:
+
+........
+crm corosync set quorum.provider corosync_votequorum
+........
+
+Corosync also needs to know the number of nodes required to be
+considered a majority vote. Usually, this should be set to 2:
+
+........
+crm corosync set quorum.expected_votes 2
+........
+
+After changing the quorum settings, the changes need to be propagated
+across the cluster and corosync needs to be restarted. To do this, the
+following sequence of commands can be used:
+
+........
+crm corosync push
+crm cluster stop
+crm cluster start
+........
+
+Note start restarting the cluster is only necessary if the cluster has
+already been started.
 
 == Start Pacemaker
 
@@ -178,7 +258,23 @@ This creates a new resource, gives it the name `p0` and sets the
 agent for the resource to be the `Dummy` agent.
 
 `crm status` should now show the `p0` resource as started on one
-of the cluster nodes.
+of the cluster nodes:
+
+........
+# crm status
+Last updated: Wed Jul  2 21:49:26 2014
+Last change: Wed Jul  2 21:49:19 2014
+Stack: corosync
+Current DC: alice (2) - partition with quorum
+Version: 1.1.11-c3f1a7f
+2 Nodes configured
+1 Resources configured
+
+
+Online: [ alice bob ]
+
+ p0	(ocf::heartbeat:Dummy):	Started alice
+........
 
 The resource can be stopped or started using the `resource start` and
 `resource stop` commands:
