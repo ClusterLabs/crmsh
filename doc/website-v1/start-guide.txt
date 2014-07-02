@@ -126,8 +126,7 @@ the following as `root`:
 mkdir -m 700 -p /root/.ssh
 scp -oStrictHostKeyChecking=no \
     root@alice:'/root/.ssh/id_rsa*' /root/.ssh
-grep -q -s "$(cat /root/.ssh/id_rsa.pub)" /root/.ssh/authorized_keys \
-    || append /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
+cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
 ...............
 
 This enables SSH to connect without prompting for a password between
