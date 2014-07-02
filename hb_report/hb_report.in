@@ -973,24 +973,6 @@ events() {
 }
 
 #
-# if there is no central log, let's combine logs from individual
-# nodes; the ordering may not be perfect, but then centralized
-# logging doesn't guarantee the order of messages either
-# (network delay, machine load)
-#
-combine_logs() {
-	local destdir
-	destdir=$1
-	test $NODECNT -gt 1 ||
-		return
-	test -x $HA_NOARCHBIN/combine-logs.pl ||
-		warning "cannot combine logs: no $HA_NOARCHBIN/combine-logs.pl"
-	$HA_NOARCHBIN/combine-logs.pl $destdir/*/$HALOG_F > $destdir/$HALOG_F
-	loginfo $destdir/$HALOG_F combined > $destdir/$HALOG_F.info
-	$HA_NOARCHBIN/combine-logs.pl $destdir/*/events.txt > $destdir/events.txt
-}
-
-#
 # description template, editing, and other notes
 #
 mktemplate() {
@@ -1439,8 +1421,6 @@ else
 		read junk
 		edittemplate $WORKDIR/$DESCRIPTION_F
 	}
-	test -f $WORKDIR/$HALOG_F ||
-		combine_logs $WORKDIR
 	wait
 	if [ "$COMPRESS" = "1" ]; then
 		pickcompress
