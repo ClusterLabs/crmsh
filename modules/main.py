@@ -332,7 +332,8 @@ def mv_user_files():
 def compatibility_setup():
     if is_pcmk_118():
         vars.node_type_opt = True
-        vars.attr_defaults["node"] = {"type": "normal"}
+        # default check disabled to allow mixed clusters (krig: bnc#884442)
+        #vars.attr_defaults["node"] = {"type": "normal"}
         vars.cib_no_section_rc = 6
     # see the configure ptest/simulate command
     if not is_program("ptest"):
