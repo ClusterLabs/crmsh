@@ -145,13 +145,19 @@ crm cluster init nodes=alice,bob
 == Firewall
 
 If your cluster nodes have a firewall configured, you will need to
-open the following ports to ensure cluster configuration:
+open the following ports:
 
 * TCP: 5560
 * UDP: 5404, 5405
 * TCP: 21064 (if using DLM)
 * TCP: 30865 (if using csync2)
 * TCP: 7630 (if using the hawk web UI)
+
+TIP: Issues with the firewall may manifest itself by cluster nodes
+     being shown as `UNCLEAN` in the `crm status` output. If you see
+     this, it is likely that a firewall rule is blocking cluster
+     communications, or there may be some other problem with the
+     network connection between the nodes.
 
 == Quorum
 
@@ -190,8 +196,8 @@ crm cluster stop
 crm cluster start
 ........
 
-Note start restarting the cluster is only necessary if the cluster has
-already been started.
+NOTE: Restarting the cluster is only necessary if the cluster has
+      already been started.
 
 == Start Pacemaker
 
