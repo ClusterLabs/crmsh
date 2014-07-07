@@ -2682,9 +2682,9 @@ For more details on how to configure resource sets, see
 
 Usage:
 ...............
-order <id> {kind|<score>}: first then [symmetrical=<bool>]
+order <id> [{kind|<score>}:] first then [symmetrical=<bool>]
 
-order <id> {kind|<score>}: resource_sets [symmetrical=<bool>]
+order <id> [{kind|<score>}:] resource_sets [symmetrical=<bool>]
 
 kind :: Mandatory | Optional | Serialize
 
@@ -2702,9 +2702,10 @@ attributes :: [require-all=(true|false)] [sequential=(true|false)]
 ...............
 Example:
 ...............
-order c_apache_1 Mandatory: apache:start ip_1
-order o1 Serialize: A ( B C )
-order order_2 Mandatory: [ A B ] C
+order o-1 Mandatory: apache:start ip_1
+order o-2 Serialize: A ( B C )
+order o-3 inf: [ A B ] C
+order o-4 first-resource then-resource
 ...............
 
 [[cmdhelp_configure_rsc_ticket,resources ticket dependency]]

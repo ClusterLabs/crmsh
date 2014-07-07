@@ -259,6 +259,22 @@ end="2014-05-17 17:56:11Z"/>
     assert obj.cli_use_validate()
 
 
+def test_order_without_score_kind():
+    """
+    Spec says order doesn't require score or kind to be set
+    """
+    xml = '<rsc_order first="a" first-action="promote" id="order-a-b" then="b" then-action="start"/>'
+    data = etree.fromstring(xml)
+    obj = factory.create_from_node(data)
+    assert obj is not None
+    data = obj.repr_cli(format=-1)
+    print "OUTPUT:", data
+    exp = 'order order-a-b a:promote b:start'
+    assert data == exp
+    assert obj.cli_use_validate()
+
+
+
 def test_bnc878112():
     """
     crm configure group can hijack a cloned primitive (and then crash)
