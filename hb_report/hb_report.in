@@ -1233,7 +1233,7 @@ fi
 	is_collector || {
 		info "high debug level, please read debug.out"
 	}
-	PS4='+ ${FUNCNAME[0]:+${FUNCNAME[0]}:}${LINENO}: '
+	PS4='+ `date +"%T"`: ${FUNCNAME[0]:+${FUNCNAME[0]}:}${LINENO}: '
 	if echo "$SHELL" | grep bash > /dev/null &&
 			[ ${BASH_VERSINFO[0]} = "4" ]; then
 		exec 3>>$WORKDIR/debug.out
