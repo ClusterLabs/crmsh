@@ -168,7 +168,15 @@ setvarsanddefaults() {
 	TRY_SSH="root hacluster"
 	SLAVEPIDS=""
 	NO_DESCRIPTION="1"
+	SKIP_LVL=0
 	VERBOSITY=0
+}
+#
+# caller may skip collecting information if the skip level
+# exceeds the given value
+#
+skip_lvl() {
+	[ $SKIP_LVL -ge $1 ]
 }
 chkname() {
 	[ "$1" ] || usage short
@@ -527,6 +535,7 @@ MASTER_IS_HOSTLOG=$MASTER_IS_HOSTLOG
 UNIQUE_MSG=$UNIQUE_MSG
 SANITIZE="$SANITIZE"
 DO_SANITIZE="$DO_SANITIZE"
+SKIP_LVL="$SKIP_LVL"
 EXTRA_LOGS="$EXTRA_LOGS"
 USER_CLUSTER_TYPE="$USER_CLUSTER_TYPE"
 CONF="$CONF"
@@ -672,7 +681,7 @@ getpeinputs() {
 	}
 	if [ `echo $flist | wc -w` -le 20 ]; then
 		for f in $flist; do
-			pe2dot $3/`basename $pe_dir`/`basename $f`
+			skip_lvl 1 || pe2dot $3/`basename $pe_dir`/`basename $f`
 		done
 	else
 		debug "too many PE inputs to create dot files"
@@ -733,7 +742,7 @@ sys_info() {
 	echo "resource-agents: `grep 'Build version:' @OCF_ROOT_DIR@/lib/heartbeat/ocf-shellfuncs`"
 	crm_info
 	pkg_versions $PACKAGES
-	verify_packages $PACKAGES
+	skip_lvl 1 || verify_packages $PACKAGES
 	echo "Platform: `uname`"
 	echo "Kernel release: `uname -r`"
 	echo "Architecture: `uname -m`"
@@ -1095,7 +1104,7 @@ collect_info() {
 	getconfig $WORKDIR
 	getpeinputs $FROM_TIME $TO_TIME $WORKDIR &
 	crmconfig $WORKDIR &
-	touch_DC_if_dc $WORKDIR &
+	skip_lvl 1 || touch_DC_if_dc $WORKDIR &
 	getbacktraces $FROM_TIME $TO_TIME $WORKDIR/$BT_F
 	getconfigurations $WORKDIR
 	check_perms > $WORKDIR/$PERMISSIONS_F 2>&1
@@ -1104,7 +1113,7 @@ collect_info() {
 	corosync_blackbox $FROM_TIME $TO_TIME $WORKDIR/$COROSYNC_RECORDER_F
 	getratraces $FROM_TIME $TO_TIME $WORKDIR
 	wait
-	sanitize $WORKDIR
+	skip_lvl 1 || sanitize $WORKDIR
 
 	for l in $EXTRA_LOGS; do
 		[ "$NO_str2time" ] && break
@@ -1164,7 +1173,7 @@ if ! is_collector; then
 	userargs="$@"
 	DESTDIR=.
 	DEST="hb_report-"`date +"%a-%d-%b-%Y"`
-	while getopts f:t:l:u:p:L:e:E:n:MSDCZAVsvhd o; do
+	while getopts f:t:l:u:p:L:e:E:n:MSDCZAVsvhdQ o; do
 		case "$o" in
 			h) usage;;
 			V) version;;
@@ -1189,6 +1198,7 @@ if ! is_collector; then
 			e) EDITOR="$OPTARG";;
 			p) SANITIZE="$SANITIZE $OPTARG";;
 			s) DO_SANITIZE="1";;
+			Q) SKIP_LVL=$((SKIP_LVL + 1));;
 			L) LOG_PATTERNS="$LOG_PATTERNS $OPTARG";;
 			S) NO_SSH=1;;
 			D) NO_DESCRIPTION=1;;

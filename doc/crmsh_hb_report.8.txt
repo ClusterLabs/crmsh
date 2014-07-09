@@ -13,7 +13,8 @@ crmsh_hb_report - create report for CRM based clusters (Pacemaker)
 SYNOPSIS
 --------
 *crm report* -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
-       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDCZAVsvhd] [dest]
+       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog]
+	   [-MSDCZAQVsvhd] [dest]
 
 
 DESCRIPTION
@@ -73,6 +74,14 @@ dest::
 *-p* patt::
 	Additional patterns to match parameter name which contain
 	sensitive information. This option is additive (default: "passw.*").
+
+*-Q*::
+	Quick run. Gathering some system information can be expensive.
+	With this option, such operations are skipped and thus
+	information collecting sped up. The operations considered
+	I/O or CPU intensive: verifying installed packages content,
+	sanitizing files for sensitive information, and producing dot
+	files from PE inputs.
 
 *-A*::
 	This is an OpenAIS cluster. `crm report` has some heuristics to
