@@ -1793,7 +1793,7 @@ class CibSimpleConstraint(CibObject):
     def _repr_cli_head(self, format):
         s = clidisplay.keyword(self.obj_type)
         id = clidisplay.id(self.obj_id)
-        score = clidisplay.score(get_score(self.node) or get_kind(self.node))
+        score = get_score(self.node) or get_kind(self.node)
         if self.node.find("resource_set") is not None:
             col = rsc_set_constraint(self.node, self.obj_type)
         else:
@@ -1808,7 +1808,10 @@ class CibSimpleConstraint(CibObject):
             node_attr = self.node.get("node-attribute")
             if node_attr:
                 col.append("node-attribute=%s" % node_attr)
-        return "%s %s %s: %s" % (s, id, score, ' '.join(col))
+        s = "%s %s " % (s, id)
+        if score != '':
+            s += "%s: " % (clidisplay.score(score))
+        return s + ' '.join(col)
 
     def _mk_optional_set(self, gv_obj, n):
         '''
