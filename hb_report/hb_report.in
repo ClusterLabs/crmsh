@@ -732,7 +732,8 @@ sys_info() {
 	@datadir@/@PACKAGE_NAME@/hb_report -V # our info
 	echo "resource-agents: `grep 'Build version:' @OCF_ROOT_DIR@/lib/heartbeat/ocf-shellfuncs`"
 	crm_info
-	pkg_ver $PACKAGES
+	pkg_versions $PACKAGES
+	verify_packages $PACKAGES
 	echo "Platform: `uname`"
 	echo "Kernel release: `uname -r`"
 	echo "Architecture: `uname -m`"

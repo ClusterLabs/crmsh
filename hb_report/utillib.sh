@@ -688,13 +688,10 @@ distro() {
 
 pkg_ver_deb() {
 	dpkg-query -f '${Name} ${Version}' -W $* 2>/dev/null
-	debsums -s $* 2>/dev/null
 }
 pkg_ver_rpm() {
-	{
-	rpm -q --qf '%{name} %{version}-%{release} - %{distribution} %{arch}\n' $*
-	rpm --verify $*
-	} 2>&1 | grep -v 'not installed'
+	rpm -q --qf '%{name} %{version}-%{release} - %{distribution} %{arch}\n' $* 2>&1 |
+		grep -v 'not installed'
 }
 pkg_ver_pkg_info() {
 	for pkg; do
@@ -706,7 +703,20 @@ pkg_ver_pkginfo() {
 		pkginfo $pkg | awk '{print $3}'  # format?
 	done
 }
-pkg_ver() {
+verify_deb() {
+	debsums -s $* 2>/dev/null
+}
+verify_rpm() {
+	rpm --verify $* 2>&1 | grep -v 'not installed'
+}
+verify_pkg_info() {
+	:
+}
+verify_pkginfo() {
+	:
+}
+
+get_pkg_mgr() {
 	local pkg_mgr
 	if which dpkg >/dev/null 2>&1 ; then
 		pkg_mgr="deb"
@@ -717,11 +727,24 @@ pkg_ver() {
 	elif which pkginfo >/dev/null 2>&1 ; then 
 		pkg_mgr="pkginfo"
 	else
-		echo "Unknown package manager!"
+		warning "Unknown package manager!"
 		return
 	fi
+	echo $pkg_mgr
+}
+
+pkg_versions() {
+	local pkg_mgr=`get_pkg_mgr`
+	[ -z "$pkg_mgr" ] &&
+		return
 	debug "the package manager is $pkg_mgr"
 	pkg_ver_$pkg_mgr $*
+}
+verify_packages() {
+	local pkg_mgr=`get_pkg_mgr`
+	[ -z "$pkg_mgr" ] &&
+		return
+	verify_$pkg_mgr $*
 }
 
 crm_info() {
