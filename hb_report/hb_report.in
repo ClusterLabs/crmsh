@@ -68,7 +68,7 @@ fi
 usage() {
 	cat<<EOF
 usage: report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
-       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDZAVsvhd] [dest]
+       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDZAQVsvhd] [dest]
 
 	-f time: time to start from or a CTS test number
 	-t time: time to finish at (dflt: now)
@@ -87,6 +87,7 @@ usage: report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
 	-L patt: regular expression to match in log files for analysis;
 	         this option is additive (dflt: $LOG_PATTERNS)
 	-e prog: your favourite editor
+	-Q     : don't run resource intensive operations (speed up)
 	-M     : don't collect extra logs (/var/log/messages)
 	-D     : don't invoke editor to write description
 	-Z     : if destination directories exist, remove them instead of exiting
