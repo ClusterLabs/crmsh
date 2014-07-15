@@ -166,8 +166,8 @@ class opt_color(object):
 
 DEFAULTS = {
     'core': {
-        'editor': opt_program('$EDITOR', ('vim', 'vi', 'emacs', 'nano')),
-        'pager': opt_program('$PAGER', ('less', 'more', 'pg')),
+        'editor': opt_program('EDITOR', ('vim', 'vi', 'emacs', 'nano')),
+        'pager': opt_program('PAGER', ('less', 'more', 'pg')),
         'user': opt_string(''),
         'skill_level': opt_choice('expert', ('operator', 'administrator', 'expert')),
         'sort_elements': opt_boolean('yes'),
