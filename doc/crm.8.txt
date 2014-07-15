@@ -728,7 +728,7 @@ can be used to give the attribute a different identifier:
 
 ............
 primitive dummy-1 params $dummy-state-on:state=1
-primitive dummy-2 params @state
+primitive dummy-2 params @dummy-state-on
 ............
 
 There is also the possibility that two resources both use the same
