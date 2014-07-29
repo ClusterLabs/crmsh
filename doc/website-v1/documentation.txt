@@ -15,7 +15,7 @@ possible.
 
 == Documents ==
 
-* link:/man[Manual (Development)], link:/man-2.0[(Release 2.0)], link:/man-1.2[(Release 1.2)]
+* link:/man[Manual (Development)], link:/man-2.0[(Release 2.x)], link:/man-1.2[(Release 1.2)]
 * link:/installation[Installation]
 * link:/start-guide[Getting Started]
 * link:/rsctest-guide[Resource Testing Guide]
