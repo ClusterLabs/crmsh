@@ -687,7 +687,7 @@ class Report(object):
             return None
         self.set_change_origin(CH_SRC)
         if os.path.isdir(loc):
-            if (os.stat(bfname).st_mtime - os.stat(loc).st_mtime) < 60:
+            if (os.stat(tarball).st_mtime - os.stat(loc).st_mtime) < 60:
                 return loc
             rmdir_r(loc)
         cwd = os.getcwd()
