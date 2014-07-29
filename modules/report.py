@@ -967,6 +967,9 @@ class Report(object):
                 self.error("hb_report failed")
                 return None
         self.last_live_update = time.time()
+        if not os.path.isfile(tarball):
+            self.error("Report file not found: %s" % (tarball))
+            return None
         return self.unpack_report(tarball)
 
     def set_source(self, src):
