@@ -1723,10 +1723,12 @@ show [<node>]
 ==== `standby`
 
 Set a node to standby status. The node parameter defaults to the
-node where the command is run. Additionally, you may specify a
-lifetime for the standby---if set to `reboot`, the node will be
-back online once it reboots. `forever` will keep the node in
-standby after reboot.
+node where the command is run.
+
+Additionally, you may specify a lifetime for the standby---if set to
+`reboot`, the node will be back online once it reboots. `forever` will
+keep the node in standby after reboot. The life time defaults to
+`forever`.
 
 Usage:
 ...............
@@ -1735,11 +1737,18 @@ standby [<node>] [<lifetime>]
 lifetime :: reboot | forever
 ...............
 
+Example:
+...............
+standby bob reboot
+...............
+
+
 [[cmdhelp_node_online,set node online]]
 ==== `online`
 
-Set a node to online status. The node parameter
-defaults to the node where the command is run.
+Set a node to online status.
+
+The node parameter defaults to the node where the command is run.
 
 Usage:
 ...............
@@ -1751,8 +1760,9 @@ online [<node>]
 
 Set the node status to maintenance. This is equivalent to the
 cluster-wide `maintenance-mode` property but puts just one node
-into the maintenance mode. The node parameter defaults to the
-node where the command is run.
+into the maintenance mode.
+
+The node parameter defaults to the node where the command is run.
 
 Usage:
 ...............
@@ -1766,6 +1776,8 @@ Set the node's maintenance status to `off`. The node should be
 now again fully operational and capable of running resource
 operations.
 
+The node parameter defaults to the node where the command is run.
+
 Usage:
 ...............
 ready [<node>]
@@ -1778,13 +1790,15 @@ Make CRM fence a node. This functionality depends on stonith
 resources capable of fencing the specified node. No such stonith
 resources, no fencing will happen.
 
+The node parameter defaults to the node where the command is run.
+
 Usage:
 ...............
-fence <node>
+fence [<node>]
 ...............
 
 [[cmdhelp_node_clearstate,Clear node state]]
-==== `clearnodestate`
+==== `clearstate`
 
 Resets and clears the state of the specified node. This node is
 afterwards assumed clean and offline. This command can be used to
@@ -1794,9 +1808,11 @@ Be careful! This can cause data corruption if you confirm that a node is
 down that is, in fact, not cleanly down - the cluster will proceed as if
 the fence had succeeded, possibly starting resources multiple times.
 
+The node parameter defaults to the node where the command is run.
+
 Usage:
 ...............
-clearstate <node>
+clearstate [<node>]
 ...............
 
 [[cmdhelp_node_delete,delete node]]
