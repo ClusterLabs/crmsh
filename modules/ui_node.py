@@ -214,10 +214,8 @@ class NodeMgmt(command.UI):
 
     @command.wait
     @command.completers(compl.nodes)
-    def do_fence(self, context, node=None):
+    def do_fence(self, context, node):
         'usage: fence <node>'
-        if not node:
-            node = utils.this_node()
         if not utils.is_name_sane(node):
             return False
         if not config.core.force and \

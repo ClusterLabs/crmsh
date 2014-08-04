@@ -1790,11 +1790,9 @@ Make CRM fence a node. This functionality depends on stonith
 resources capable of fencing the specified node. No such stonith
 resources, no fencing will happen.
 
-The node parameter defaults to the node where the command is run.
-
 Usage:
 ...............
-fence [<node>]
+fence <node>
 ...............
 
 [[cmdhelp_node_clearstate,Clear node state]]
@@ -1808,11 +1806,9 @@ Be careful! This can cause data corruption if you confirm that a node is
 down that is, in fact, not cleanly down - the cluster will proceed as if
 the fence had succeeded, possibly starting resources multiple times.
 
-The node parameter defaults to the node where the command is run.
-
 Usage:
 ...............
-clearstate [<node>]
+clearstate <node>
 ...............
 
 [[cmdhelp_node_delete,delete node]]
