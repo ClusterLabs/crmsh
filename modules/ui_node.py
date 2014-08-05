@@ -216,8 +216,6 @@ class NodeMgmt(command.UI):
     @command.completers(compl.nodes)
     def do_fence(self, context, node):
         'usage: fence <node>'
-        if not node:
-            node = utils.this_node()
         if not utils.is_name_sane(node):
             return False
         if not config.core.force and \
@@ -227,8 +225,10 @@ class NodeMgmt(command.UI):
 
     @command.wait
     @command.completers(compl.nodes)
-    def do_clearstate(self, context, node):
+    def do_clearstate(self, context, node=None):
         'usage: clearstate <node>'
+        if not node:
+            node = utils.this_node()
         if not utils.is_name_sane(node):
             return False
         if not config.core.force and \
