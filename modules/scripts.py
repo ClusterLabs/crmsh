@@ -699,7 +699,11 @@ def run(name, args):
     args: list of nvpairs
     '''
     if not has_pssh:
-        raise ValueError("PSSH library is not installed or is not up to date.")
+        try:
+            from psshlib.task import Task
+        except ImportError:
+            raise ValueError("The pssh library is not installed or is not up to date.")
+        raise ValueError("The installed pssh library lacks the API patch.")
     workdir = _generate_workdir_name()
     main, filename, script_dir = _open_script(name)
     params = _parse_parameters(name, args, main)

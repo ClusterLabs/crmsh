@@ -24,11 +24,28 @@ from psshlib.manager import Manager, FatalError
 from psshlib.task import Task
 from psshlib.cli import common_parser, common_defaults
 
+try:
+    from psshlib import api as pssh_api
+    has_patched_pssh = True
+except ImportError:
+    has_patched_pssh = False
+
 from msg import common_err, common_debug, common_warn
 
 
 _DEFAULT_TIMEOUT = 60
 _EC_LOGROT = 120
+
+
+def make_pssh_opts(outdir, errdir):
+    '''
+    -q is only available if pssh has been
+    patched
+    '''
+    if has_patched_pssh:
+        return ["-q", "-o", outdir, "-e", errdir]
+    else:
+        return ["-o", outdir, "-e", errdir]
 
 
 def option_parser():
@@ -170,8 +187,7 @@ def next_loglines(a, outdir, errdir):
                      (logfile, node, nextpos))
         cmdline = "perl -e 'exit(%d) if (stat(\"%s\"))[7]<%d' && tail -c +%d %s" % (
             _EC_LOGROT, logfile, nextpos-1, nextpos, logfile)
-        myopts = ["-q", "-o", outdir, "-e", errdir]
-        opts, args = parse_args(myopts)
+        opts, args = parse_args(make_pssh_opts(outdir, errdir))
         l.append([node, cmdline])
     statuses = do_pssh(l, opts)
     if statuses:
@@ -194,8 +210,7 @@ def next_peinputs(node_pe_l, outdir, errdir):
         red_pe_l = [x.replace("%s/" % r.group(1), "") for x in pe_l]
         common_debug("getting new PE inputs %s from %s" % (red_pe_l, node))
         cmdline = "tar -C %s -cf - %s" % (dir, ' '.join(red_pe_l))
-        myopts = ["-q", "-o", outdir, "-e", errdir]
-        opts, args = parse_args(myopts)
+        opts, args = parse_args(make_pssh_opts(outdir, errdir))
         l.append([node, cmdline])
     if not l:
         # is this a failure?
@@ -216,8 +231,7 @@ def do_pssh_cmd(cmd, node_l, outdir, errdir, timeout=20000):
         l.append([node, cmd])
     if not l:
         return True
-    myopts = ["-q", "-o", outdir, "-e", errdir]
-    opts, args = parse_args(myopts, t=str(int(timeout/1000)))
+    opts, args = parse_args(make_pssh_opts(outdir, errdir), t=str(int(timeout/1000)))
     return do_pssh(l, opts)
 
 # vim:ts=4:sw=4:et:
