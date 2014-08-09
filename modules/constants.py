@@ -145,7 +145,7 @@ rsc_meta_attributes = (
     "allow-migrate", "is-managed", "interval-origin",
     "migration-threshold", "priority", "multiple-active",
     "failure-timeout", "resource-stickiness", "target-role",
-    "restart-type", "description", "remote-node",
+    "restart-type", "description", "remote-node", "requires",
 )
 group_meta_attributes = ("container", )
 clone_meta_attributes = (
