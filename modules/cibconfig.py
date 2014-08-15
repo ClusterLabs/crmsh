@@ -2124,6 +2124,7 @@ class CibFactory(object):
         self._no_constraint_rm_msg = False
         # FIXME
         self.supported_cib_re = "^pacemaker-[12][.][0123]$"
+        self._crm_diff_cmd = None
 
     def is_cib_sane(self):
         # try to initialize
@@ -2393,10 +2394,20 @@ class CibFactory(object):
             return False
         tmpfiles.add(tmpf)
         cibadmin_opts = force and "-P --force" or "-P"
+
+        # check if crm_diff supports --no-version
+        if self._crm_diff_cmd is None:
+            rc, out = utils.get_stdout("crm_diff --help")
+            if "--no-version" in out:
+                self._crm_diff_cmd = 'crm_diff --no-version'
+            else:
+                self._crm_diff_cmd = 'crm_diff'
+
         # produce a diff:
         # dump_new_conf | crm_diff -o self.cib_orig -n -
         common_debug("Input: %s" % (etree.tostring(self.cib_elem)))
-        rc, cib_diff = filter_string("crm_diff -o %s -n -" % tmpf,
+        rc, cib_diff = filter_string("%s -o %s -n -" %
+                                     (self._crm_diff_cmd, tmpf),
                                      etree.tostring(self.cib_elem))
         if not cib_diff:
             common_err("crm_diff apparently failed to produce the diff (rc=%d)" % rc)
