@@ -65,7 +65,7 @@ primitive st stonith:null \
 	meta yoyo-meta="yoyo 2" \
 	op start requires=nothing interval=0 \
 	op monitor interval=60m
-group g1 p2 d1
+group g1 d1 p2
 group g2 d3
 location l1 p3 100: node1
 colocation cl1 inf: g1 p3
