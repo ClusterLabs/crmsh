@@ -139,11 +139,11 @@ class TerminalController(Singleton):
         the corresponding terminal control string (if it's defined) or
         '' (if it's not).
         """
-        return re.sub(r'\$\$|\${\w+}', self._render_sub, template)
+        return re.sub(r'\${\w+}', self._render_sub, template)
     def _render_sub(self, match):
         s = match.group()
         try:
-            return getattr(self, s[2:-1])
+            return getattr(self, s[2:-1], '')
         except IndexError:
             return s
     def is_color(self, s):
