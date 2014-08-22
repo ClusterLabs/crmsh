@@ -157,8 +157,8 @@ def render(template):
     """
     def render_sub(match):
         s = match.group()
-        return getattr(colors, s[2:-1].upper(), s)
-    return re.sub(r'\$\$|\${\w+}', render_sub, template)
+        return getattr(colors, s[2:-1].upper(), '')
+    return re.sub(r'\${\w+}', render_sub, template)
 
 
 def is_color(s):
