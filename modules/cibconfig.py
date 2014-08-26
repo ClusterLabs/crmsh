@@ -59,6 +59,7 @@ from cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, n
 from cliformat import cli_nvpair, cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
 from cliformat import cli_operations, simple_rsc_constraint, cli_rule, cli_format
 from cliformat import cli_acl_role, cli_acl_permission
+import cibverify
 
 
 def show_unrecognized_elems(cib_elem):
@@ -640,9 +641,6 @@ class CibObjectSetCli(CibObjectSet):
         return rc
 
 
-cib_verify = "crm_verify -V -p"
-
-
 class CibObjectSetRaw(CibObjectSet):
     '''
     Edit or display one or more CIB objects (XML).
@@ -702,10 +700,12 @@ class CibObjectSetRaw(CibObjectSet):
         if not self.obj_set:
             return True
         clidisplay.disable_pretty()
-        rc = pipe_string(cib_verify, self.repr(format=-1))
+        cib = self.repr(format=-1)
         clidisplay.enable_pretty()
+        rc = cibverify.verify(cib)
+
         if rc not in (0, 1):
-            common_debug("verify (rc=%s): %s" % (rc, self.repr()))
+            common_debug("verify (rc=%s): %s" % (rc, cib))
         return rc in (0, 1)
 
     def ptest(self, nograph, scores, utilization, actions, verbosity):
