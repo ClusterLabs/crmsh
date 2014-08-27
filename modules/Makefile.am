@@ -23,6 +23,7 @@ modules =	__init__.py \
 			cache.py \
 			cibconfig.py \
 			cibstatus.py \
+			cibverify.py \
 			clidisplay.py \
 			cliformat.py \
 			cmd_status.py \
