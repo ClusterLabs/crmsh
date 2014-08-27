@@ -1,11 +1,12 @@
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes>
       <node uname="node1" id="node1"/>
     </nodes>
     <resources>
+      <primitive id="d5" class="ocf" provider="heartbeat" type="Dummy"/>
       <primitive id="st" class="stonith" type="ssh">
         <instance_attributes id="st-instance_attributes">
           <nvpair name="hostlist" value="node1" id="st-instance_attributes-hostlist"/>
@@ -14,20 +15,19 @@
           <op name="start" timeout="60s" interval="0" id="st-start-0"/>
         </operations>
       </primitive>
-      <primitive id="d5" class="ocf" provider="heartbeat" type="Dummy"/>
       <primitive id="d3" class="ocf" provider="heartbeat" type="Dummy"/>
       <primitive id="d1" class="ocf" provider="pacemaker" type="Dummy"/>
     </resources>
     <constraints>
       <rsc_colocation id="c2" score="INFINITY" rsc="d3" with-rsc="d1"/>
       <rsc_colocation id="c1" score="INFINITY">
-        <resource_set id="c1-1" sequential="false">
+        <resource_set sequential="false" id="c1-1">
           <resource_ref id="d1"/>
           <resource_ref id="d3"/>
         </resource_set>
       </rsc_colocation>
-      <rsc_colocation id="c3" score="INFINITY" rsc="d3" with-rsc="d1"/>
       <rsc_order id="o1" kind="Serialize" first="d1" then="d3"/>
+      <rsc_colocation id="c3" score="INFINITY" rsc="d3" with-rsc="d1"/>
     </constraints>
   </configuration>
 </cib>

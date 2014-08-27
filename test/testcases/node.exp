@@ -9,7 +9,7 @@ node1: normal
 .INP: _regtest on
 .INP: show xml node1
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes>
@@ -30,7 +30,7 @@ node1: normal
 .INP: _regtest on
 .INP: show xml node1
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes>
@@ -51,7 +51,7 @@ node1: normal
 .INP: _regtest on
 .INP: show xml node1
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes>
@@ -73,7 +73,7 @@ node1: normal
 .INP: _regtest on
 .INP: show xml node1
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes>
@@ -95,7 +95,7 @@ node1: normal
 .INP: _regtest on
 .INP: show xml node1
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes>
@@ -119,7 +119,7 @@ scope=nodes  name=a1 value=1 2 3
 .INP: _regtest on
 .INP: show xml node1
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes>
@@ -144,7 +144,7 @@ Deleted nodes attribute: id=nodes-node1-a1 name=a1
 .INP: _regtest on
 .INP: show xml node1
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes>

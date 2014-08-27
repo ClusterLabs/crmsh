@@ -7,7 +7,7 @@ resource p0 is NOT running
 .INP: _regtest on
 .INP: show xml p3
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -27,7 +27,7 @@ resource p0 is NOT running
 .INP: _regtest on
 .INP: show xml p3
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -48,7 +48,7 @@ resource p0 is NOT running
 .INP: _regtest on
 .INP: show xml c1
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -69,7 +69,7 @@ resource p0 is NOT running
 .INP: _regtest on
 .INP: show xml c1
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -92,7 +92,7 @@ resource p0 is NOT running
 .INP: _regtest on
 .INP: show xml cli-prefer-p3
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -113,7 +113,7 @@ resource p0 is NOT running
 .INP: _regtest on
 .INP: show xml cli-prefer-p3
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -134,7 +134,7 @@ resource p0 is NOT running
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -156,7 +156,7 @@ resource p0 is NOT running
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -178,7 +178,7 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -197,7 +197,7 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -220,7 +220,7 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -243,7 +243,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -262,7 +262,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -288,7 +288,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -314,7 +314,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -340,7 +340,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -370,7 +370,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -400,7 +400,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -432,7 +432,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -464,7 +464,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -492,7 +492,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -516,7 +516,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -540,7 +540,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -568,7 +568,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>
@@ -592,7 +592,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .INP: _regtest on
 .INP: show xml p0
 <?xml version="1.0" ?>
-<cib admin_epoch="0" epoch="1" num_updates="1" validate-with="pacemaker-1.2" cib-last-written="Sun Apr 12 21:37:48 2009">
+<cib num_updates="0" crm_feature_set="3.0.9" validate-with="pacemaker-2.0" epoch="1" admin_epoch="0" cib-last-written="Sun Apr 12 21:37:48 2009">
   <configuration>
     <crm_config/>
     <nodes/>

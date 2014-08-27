@@ -276,5 +276,6 @@ Report saved in '/root/_crmsh_regtest.tar.bz2'
 .TRY History 2
 .INP: history
 .INP: session load _crmsh_regtest
+.EXT tar -xj < history-test.tar.bz2
 .INP: exclude
 corosync|crmd|pengine|stonith-ng|cib|attrd|mgmtd|sshd
