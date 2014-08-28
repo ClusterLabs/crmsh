@@ -351,6 +351,17 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(4, len(out))
 
         # new type of acls
+
+        out = self.parser.parse("acl_target foo a")
+        self.assertEqual('acl_target', out.tag)
+        self.assertEqual('foo', out.get('id'))
+        self.assertEqual(['a'], out.xpath('./role/@id'))
+
+        out = self.parser.parse("acl_target foo a b")
+        self.assertEqual('acl_target', out.tag)
+        self.assertEqual('foo', out.get('id'))
+        self.assertEqual(['a', 'b'], out.xpath('./role/@id'))
+
         out = self.parser.parse("acl_target foo a b c")
         self.assertEqual('acl_target', out.tag)
         self.assertEqual('foo', out.get('id'))

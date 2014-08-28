@@ -32,6 +32,8 @@ cib_cli_map = {
     "cluster_property_set": "property",
     "rsc_defaults": "rsc_defaults",
     "op_defaults": "op_defaults",
+    "acl_target": "acl_target",
+    "acl_group": "acl_group",
     "acl_user": "user",
     "acl_role": "role",
     "fencing-topology": "fencing_topology",
