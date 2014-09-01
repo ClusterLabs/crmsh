@@ -3131,6 +3131,28 @@ Examples:
 modgroup share1 add storage2 before share1-fs
 ...............
 
+[[cmdhelp_configure_set,set an attribute value]]
+==== `set`
+
+Set the value of a configured attribute. The attribute must
+have a value configured previously, and can be an agent
+parameter, meta attribute or utilization value.
+
+The first argument to the command is a path to an attribute.
+This is a dot-separated sequence beginning with the name of
+the resource, and ending with the name of the attribute to
+set.
+
+Usage:
+...............
+set <path> <value>
+...............
+Examples:
+...............
+set vip1.ip 192.168.20.5
+set vm-a.force_stop 1
+...............
+
 [[cmdhelp_configure_refresh,refresh from CIB]]
 ==== `refresh`
 
