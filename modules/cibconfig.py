@@ -2560,6 +2560,8 @@ class CibFactory(object):
         if not self.is_cib_sane():
             return None
         objs = self.find_objects(obj_id)
+        if objs is None:
+            return None
         if len(objs) > 0:
             return objs[0]
         return None
@@ -2822,7 +2824,7 @@ class CibFactory(object):
             elif spec.startswith("type:"):
                 obj_set |= set(self.get_elems_on_type(spec))
             else:
-                objs = self.find_objects(spec)
+                objs = self.find_objects(spec) or []
                 for obj in objs:
                     obj_set.add(obj)
                 if len(objs) == 0:
