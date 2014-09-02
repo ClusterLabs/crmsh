@@ -309,6 +309,29 @@ class CibConfig(command.UI):
         return set_obj.filter(filterprog)
 
     @command.skill_level('administrator')
+    @command.completers(_id_list)
+    def do_set(self, context, path, value):
+        "usage: set <path> <value>"
+        def split_path():
+            for oid in cib_factory.id_list():
+                if path.startswith(oid + "."):
+                    return oid, path[len(oid)+1:]
+            context.fatal_error("Invalid path: " + path)
+        obj_id, obj_attr = split_path()
+        rsc = cib_factory.find_object(obj_id)
+        if not rsc:
+            context.fatal_error("Resource %s not found" % (obj_id))
+        nvpairs = rsc.node.xpath(".//nvpair[@name='%s']" % (obj_attr))
+        if not nvpairs:
+            context.fatal_error("Attribute not found: %s" % (path))
+        if len(nvpairs) != 1:
+            context.fatal_error("Expected 1 attribute named %s, found %s" %
+                                (obj_attr, len(nvpairs)))
+        rsc.set_updated()
+        nvpairs[0].set("value", value)
+        return True
+
+    @command.skill_level('administrator')
     @command.completers(_f_group_id_list, compl.choice(['add', 'remove']),
                         _prim_id_list, compl.choice(['after', 'before']), _prim_id_list)
     def do_modgroup(self, context, group_id, subcmd, prim_id, *args):
