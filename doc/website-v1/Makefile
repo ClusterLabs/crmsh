@@ -1,8 +1,8 @@
 ASCIIDOC := asciidoc
-SRC := faq.txt documentation.txt development.txt installation.txt \
-	configuration.txt about.txt rsctest-guide.txt \
-	history-guide.txt start-guide.txt man-1.2.txt scripts.txt man-2.0.txt
-TGT := $(patsubst %.txt,gen/%/index.html,$(SRC))
+SRC := faq.adoc documentation.adoc development.adoc installation.adoc \
+	configuration.adoc about.adoc rsctest-guide.adoc \
+	history-guide.adoc start-guide.adoc man-1.2.adoc scripts.adoc man-2.0.adoc
+TGT := $(patsubst %.adoc,gen/%/index.html,$(SRC))
 CSS := css/crm.css css/font-awesome.min.css
 CSS := $(patsubst %,gen/%,$(CSS))
 IMG := img/loader.gif img/laptop.png img/servers.gif
@@ -13,38 +13,38 @@ FONTS := fonts/FontAwesome.otf fonts/fontawesome-webfont.eot \
 FONTS := $(patsubst %,gen/%,$(FONTS))
 WATCHDIR := watchdir
 XDGOPEN := xdg-open
-NEWS := $(wildcard news/*.txt)
-NEWSDOC := $(patsubst %.txt,gen/%/index.html,$(NEWS))
+NEWS := $(wildcard news/*.adoc)
+NEWSDOC := $(patsubst %.adoc,gen/%/index.html,$(NEWS))
 
 .PHONY: all clean deploy open
 
 all: site
 
-gen/index.html: index.txt crm.conf
+gen/index.html: index.adoc crm.conf
 	@mkdir -p $(dir $@)
 	@$(ASCIIDOC) --unsafe -b html5 -f crm.conf -o $@ $<
 	@python ./postprocess.py -o $@ $<
 
-gen/%/index.html: %.txt crm.conf
+gen/%/index.html: %.adoc crm.conf
 	@mkdir -p $(dir $@)
 	@$(ASCIIDOC) --unsafe -b html5 -f crm.conf -o $@ $<
 	@python ./postprocess.py -o $@ $<
 
-gen/man/index.html: ../crm.8.txt crm.conf
+gen/man/index.html: ../crm.8.adoc crm.conf
 	@mkdir -p $(dir $@)
 	@$(ASCIIDOC) --unsafe -b html5 -f crm.conf -o $@ $<
 	@python ./postprocess.py -o $@ $<
 
-gen/404.html: 404.txt crm.conf
+gen/404.html: 404.adoc crm.conf
 	@mkdir -p $(dir $@)
 	@$(ASCIIDOC) --unsafe -b html5 -f crm.conf -o $@ $<
 	@python ./postprocess.py -o $@ $<
 
-news.txt: $(NEWS) crm.conf
+news.adoc: $(NEWS) crm.conf
 	@echo "news:" $(NEWS)
 	python ./make-news.py $@ $(NEWS)
 
-gen/news/index.html: news.txt
+gen/news/index.html: news.adoc
 	@mkdir -p $(dir $@)
 	$(ASCIIDOC) --unsafe -b html5 -f crm.conf -o $@ $<
 	@python ./postprocess.py -o $@ $<
@@ -85,4 +85,4 @@ watch:
 	@$(WATCHDIR) --verbose --cmd "make" . css img fonts
 
 clean:
-	-@$(RM) -rf gen/* news.txt
+	-@$(RM) -rf gen/* news.adoc

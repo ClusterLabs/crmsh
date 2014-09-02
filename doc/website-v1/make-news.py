@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Output a combined news.txt document
+Output a combined news.adoc document
 Also write an Atom feed document
 """
 

@@ -85,7 +85,7 @@ def level(level_class):
 def help(doc):
     '''
     Use to set a help text for a command or level
-    which isn't documented in crm.8.txt.
+    which isn't documented in crm.8.adoc.
 
     The first line of the doc string will be used as
     the short help, the rest will be used as the full

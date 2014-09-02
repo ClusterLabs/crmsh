@@ -13,7 +13,7 @@ if os.path.exists(os.path.join(parent, 'modules')):
 from modules.ui_root import Root
 import modules.help
 
-modules.help.HELP_FILE = "doc/crm.8.txt"
+modules.help.HELP_FILE = "doc/crm.8.adoc"
 modules.help._load_help()
 
 _IGNORED_COMMANDS = ('help', 'quit', 'cd', 'up', 'ls')

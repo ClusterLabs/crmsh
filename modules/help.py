@@ -18,7 +18,7 @@
 
 '''
 The commands exposed by this module all
-get their data from the doc/crm.8.txt text
+get their data from the doc/crm.8.adoc text
 file. In that file, there are help for
  - topics
  - levels
@@ -124,7 +124,7 @@ class HelpEntry(object):
         return str(self)
 
 
-HELP_FILE = os.path.join(config.path.sharedir, 'crm.8.txt')
+HELP_FILE = os.path.join(config.path.sharedir, 'crm.8.adoc')
 
 _DEFAULT = HelpEntry('No help available', long_help='', alias_for=None, generated=True)
 _REFERENCE_RE = re.compile(r'<<[^,]+,(.+)>>')
@@ -285,7 +285,7 @@ def add_help(entry, topic=None, level=None, command=None):
 
 def _load_help():
     '''
-    Lazily load and parse crm.8.txt.
+    Lazily load and parse crm.8.adoc.
     '''
     global _LOADED
     if _LOADED:

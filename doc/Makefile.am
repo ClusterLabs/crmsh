@@ -21,23 +21,23 @@ MAINTAINERCLEANFILES    = Makefile.in
 
 helpdir     = $(datadir)/$(PACKAGE)
 
-asciiman	= crm.8.txt crmsh_hb_report.8.txt
-help_DATA	= crm.8.txt
+asciiman	= crm.8.adoc crmsh_hb_report.8.adoc
+help_DATA	= crm.8.adoc
 doc_DATA	= $(generated_docs)
 
 generated_docs	=
 generated_mans	=
 
 if BUILD_ASCIIDOC
-generated_docs	+= $(ascii:%.txt=%.html) $(asciiman:%.txt=%.html)
-generated_mans	+= $(asciiman:%.8.txt=%.8)
+generated_docs	+= $(ascii:%.adoc=%.html) $(asciiman:%.adoc=%.html)
+generated_mans	+= $(asciiman:%.8.adoc=%.8)
 $(generated_mans): $(asciiman)
 man8_MANS	= $(generated_mans)
 endif
 
-%.html: %.txt
+%.html: %.adoc
 	$(ASCIIDOC) --unsafe --backend=xhtml11 $<
-%.8: %.8.txt
+%.8: %.8.adoc
 	a2x -f manpage $<
 clean-local:
 	-rm -rf $(generated_docs) $(generated_mans)

@@ -44,7 +44,7 @@ modules/help.py::
 	anchors to demarcate help topics and command help text. See
 	the +HelpSystem+ class for more information.
 
-doc/crm.8.txt::
+doc/crm.8.adoc::
 
 	Online help in asciidoc format. Several help topics (search
 	for +[[topic_+) and command reference (search for
