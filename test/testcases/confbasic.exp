@@ -47,6 +47,7 @@
 .INP: rsc_defaults failure-timeout=10m
 .INP: op_defaults $id=opsdef2 rule 100: #uname eq node1 record-pending=true
 .INP: tag t1: m5 m6
+.INP: set d2.mondelay 45
 .INP: _test
 .INP: verify
 .EXT crm_resource --show-metadata stonith:heartbeat:ssh
@@ -69,7 +70,7 @@ primitive d1 ocf:pacemaker:Dummy \
 	op monitor interval=120m OCF_CHECK_LEVEL=10 \
 	op monitor interval=60s timeout=30s
 primitive d2 Delay \
-	params mondelay=60 \
+	params mondelay=45 \
 	op start timeout=60s interval=0 \
 	op stop timeout=60s interval=0 \
 	op monitor role=Started interval=60s timeout=30s

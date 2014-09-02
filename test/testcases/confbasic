@@ -71,6 +71,7 @@ property $id=cpset2 maintenance-mode=true
 rsc_defaults failure-timeout=10m
 op_defaults $id=opsdef2 rule 100: #uname eq node1 record-pending=true
 tag t1: m5 m6
+set d2.mondelay 45
 _test
 verify
 .
