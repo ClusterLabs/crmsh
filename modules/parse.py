@@ -1041,7 +1041,7 @@ class AclParser(BaseParser):
         if self.validation.acl_2_0():
             xmlbuilder.maybe_set(out, "description", self.try_match_description())
             while self.has_tokens():
-                out.append(self._add_permission())
+                self._add_permission(out)
         else:
             while self.has_tokens():
                 out.append(self._add_rule())
@@ -1055,12 +1055,15 @@ class AclParser(BaseParser):
         x = val.split(':', 1)
         return len(x) > 0 and permission(x[0])
 
-    def _add_permission(self):
+    def _add_permission(self, out):
         rule = xmlbuilder.new('acl_permission')
         rule.set('kind', self.match(self._ACL_RIGHT_RE).lower())
         if self.try_match_initial_id():
             rule.set('id', self.matched(1))
         xmlbuilder.maybe_set(rule, "description", self.try_match_description())
+
+        attributes = {}
+
         while self.has_tokens():
             if not self._is_permission(self.current_token()):
                 break
@@ -1072,8 +1075,29 @@ class AclParser(BaseParser):
                 typ, val = self._expand_shortcuts_2(typ, val)
             elif val is None:
                 self.err("Expected <type>:<spec>")
-            rule.set(typ, val)
-        return rule
+            attributes[typ] = val
+        # valid combinations of rule attributes:
+        # xpath
+        # reference
+        # object-type + attribute
+        # split other combinations here
+        from copy import deepcopy
+        if 'xpath' in attributes:
+            rule2 = deepcopy(rule)
+            rule2.set('xpath', attributes['xpath'])
+            out.append(rule2)
+        if 'reference' in attributes:
+            rule2 = deepcopy(rule)
+            rule2.set('reference', attributes['reference'])
+            out.append(rule2)
+        if 'object-type' in attributes:
+            rule2 = deepcopy(rule)
+            rule2.set('object-type', attributes['object-type'])
+            if 'attribute' in attributes:
+                rule2.set('attribute', attributes['attribute'])
+            out.append(rule2)
+        if 'attribute' in attributes and 'object-type' not in attributes:
+            self.err("attribute is only valid in combination with tag/object-type")
 
     def _add_rule(self):
         rule = xmlbuilder.new(self.match(self._ACL_RIGHT_RE).lower())
