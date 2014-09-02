@@ -207,12 +207,13 @@ def test_new_acls():
 
 
 def test_acls_reftype():
-    roundtrip('role boo deny ref:d0 type:nvpair')
+    roundtrip('role boo deny ref:d0 type:nvpair',
+              expected='role boo deny ref:d0 deny type:nvpair')
 
 
 def test_acls_oldsyntax():
     roundtrip('role boo deny ref:d0 tag:nvpair',
-              expected='role boo deny ref:d0 type:nvpair')
+              expected='role boo deny ref:d0 deny type:nvpair')
 
 def test_rules():
     roundtrip('primitive p1 Dummy params ' +
@@ -222,5 +223,5 @@ def test_rules():
 
 def test_new_role():
     roundtrip('role silly-role-2 read xpath:"//nodes//attributes" ' +
-              'deny type:nvpair deny ref:d0 deny ref:d0 type:nvpair')
+              'deny type:nvpair deny ref:d0 deny type:nvpair')
 
