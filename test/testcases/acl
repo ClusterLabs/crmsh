@@ -1,6 +1,6 @@
 show ACL
-schema pacemaker-1.2
 node node1
+property enable-acl=true
 primitive st stonith:ssh \
 	params hostlist='node1' \
 	meta target-role="Started" \
@@ -9,27 +9,24 @@ primitive st stonith:ssh \
 primitive d0 ocf:pacemaker:Dummy
 primitive d1 ocf:pacemaker:Dummy
 role basic-read \
-	read status \
-	read node attribute:uname \
-	read node attribute:type \
-	read property
+       read status \
+       read type:node attribute:uname \
+       read type:node attribute:type \
+       read property
 role basic-read-basic \
 	read cib
 role d0-admin \
 	write meta:d0:target-role \
 	write meta:d0:is-managed \
-	write location:d0 \
 	read ref:d0
 role silly-role \
 	write meta:d0:target-role \
 	write meta:d0:is-managed \
-	write location:d0 \
 	read ref:d0 \
 	read status \
-	read node attribute:uname \
-	read node attribute:type \
+	read type:node attribute:uname \
+	read type:node attribute:type \
 	read utilization:d0 \
-	write location:d0 \
 	read property:stonith-enabled \
 	write property \
 	read node \
@@ -40,27 +37,25 @@ role silly-role \
 	read nodeutil:node1 \
 	read status \
 	read cib
-role silly-role-2 \
+role silly-role-two \
 	read xpath:"//nodes//attributes" \
 	deny tag:nvpair \
-	deny ref:d0 \
-	deny tag:nvpair ref:d0
-user alice \
-	role:basic-read-basic
-user bob \
-	role:d0-admin \
-	role:basic-read-basic
-user cyrus \
+	deny ref:d0
+acl_target alice \
+	basic-read-basic
+acl_target bob \
+	d0-admin \
+	basic-read-basic
+role cyrus-role \
 	write meta:d0:target-role \
 	write meta:d0:is-managed \
-	write location:d0 \
 	read ref:d0 \
 	read status \
-	read node attribute:uname \
-	read node attribute:type \
+	read type:node attribute:uname \
+	read type:node attribute:type \
 	read property
-
-
+acl_target cyrus cyrus-role
+acl_group newbies basic-read-basic
 _test
 verify
 .
