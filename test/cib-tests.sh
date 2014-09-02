@@ -27,7 +27,7 @@ logt() {
 }
 
 difft() {
-	crm_diff -V --filter -o $1 -n $2
+	crm_diff -V -u -o $1 -n $2
 }
 
 run() {
@@ -38,7 +38,7 @@ run() {
 	local out
 
 	echo $(date) "$1" >>$LOGF
-	$1 >>$LOGF 2>&1 ; rc=$?
+	CIB_file=$CIB_file $1 >>$LOGF 2>&1 ; rc=$?
 	echo $(date) "Returned: $rc (expected $erc)" >>$LOGF
 	if [ $erc != "I" ]; then
 		if [ $rc -ne $erc ]; then
@@ -56,6 +56,12 @@ runt() {
 	local CIBE="$BASE/$(basename $T .input).exp.xml"
 	cp $BASE/shadow.base $CIB_file
 	run "crm" 0 "Running testcase: $T" <$T
+
+	# strip <cib> attributes from CIB_file
+	echo "<cib>" > $CIB_file.$$
+	tail -n +2 $CIB_file >> $CIB_file.$$
+	mv $CIB_file.$$ $CIB_file
+
 	local rc
 	if [ ! -e $CIBE ]; then
 		if [ "$AUTOCREATE" = "1" ]; then
@@ -68,7 +74,7 @@ runt() {
 		fi
 	fi
 
-	if ! crm_diff --filter -o $CIBE -n $CIB_file >/dev/null 2>&1 ; then
+	if ! crm_diff -u -o $CIBE -n $CIB_file >/dev/null 2>&1 ; then
 		logt "$T: XML: $CIBE does not match $CIB_file"
 		difft $CIBE $CIB_file
 		return 1
@@ -89,10 +95,11 @@ done
 
 if [ $failed -gt 0 ]; then
 	logt "$failed tests failed!"
+	echo "Log:" $LOGF "CIB:" $CIB_file
 	exit 1
 fi
 
 logt "All tests passed!"
-rm $LOGF $CIB_file
+#rm $LOGF $CIB_file
 exit 0
 

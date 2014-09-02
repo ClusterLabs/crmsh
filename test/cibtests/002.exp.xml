@@ -1,4 +1,4 @@
-<cib epoch="2" num_updates="1" admin_epoch="0" validate-with="pacemaker-1.0" cib-last-written="Tue Mar 31 14:52:24 2009">
+<cib>
   <configuration>
     <crm_config>
       <cluster_property_set id="cib-bootstrap-options">
@@ -22,6 +22,7 @@
       </clone>
     </resources>
     <constraints/>
+    <acls/>
   </configuration>
   <status/>
 </cib>
