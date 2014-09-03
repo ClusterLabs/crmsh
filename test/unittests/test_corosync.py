@@ -85,6 +85,36 @@ class TestCorosyncParser(unittest.TestCase):
         self.assertEqual(p.get_all('nodelist.node.nodeid'),
                          ['1', '2', '3'])
 
+    def test_add_node_no_nodelist(self):
+        "test checks that if there is no nodelist, no node is added"
+        from corosync import make_section, make_value, next_nodeid
+
+        p = Parser(F1)
+        _valid(p)
+        nid = next_nodeid(p)
+        self.assertEqual(p.count('nodelist.node'), nid - 1)
+        p.add('nodelist',
+              make_section('nodelist.node',
+                           make_value('nodelist.node.ring0_addr', 'foo') +
+                           make_value('nodelist.node.nodeid', str(nid))))
+        _valid(p)
+        self.assertEqual(p.count('nodelist.node'), nid - 1)
+
+    def test_add_node_nodelist(self):
+        from corosync import make_section, make_value, next_nodeid
+
+        p = Parser(F2)
+        _valid(p)
+        nid = next_nodeid(p)
+        c = p.count('nodelist.node')
+        p.add('nodelist',
+              make_section('nodelist.node',
+                           make_value('nodelist.node.ring0_addr', 'foo') +
+                           make_value('nodelist.node.nodeid', str(nid))))
+        _valid(p)
+        self.assertEqual(p.count('nodelist.node'), c + 1)
+        self.assertEqual(next_nodeid(p), nid + 1)
+
     def test_remove_node(self):
         p = Parser(F2)
         _valid(p)

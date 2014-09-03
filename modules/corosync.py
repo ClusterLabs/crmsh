@@ -24,7 +24,7 @@ import re
 import utils
 import tmpfiles
 import socket
-from msg import err_buf
+from msg import err_buf, common_debug
 
 
 def conf():
@@ -218,11 +218,12 @@ class Parser(object):
 
     def add(self, path, tokens):
         """Adds tokens to a section"""
+        common_debug("corosync.add (%s) (%s)" % (path, tokens))
         if not path:
             self._tokens += tokens
             return
         start = self.find(path)
-        if not start:
+        if start < 0:
             return None
         depth = 0
         end = None
