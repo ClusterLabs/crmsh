@@ -482,6 +482,7 @@ class CibConfig(command.UI):
 
     @command.skill_level('administrator')
     @command.completers_repeating(_id_list)
+    @command.alias('rm')
     def do_delete(self, context, *args):
         "usage: delete [-f|--force] <id> [<id>...]"
         argl = list(args)
