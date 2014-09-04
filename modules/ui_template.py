@@ -195,12 +195,17 @@ class Template(command.UI):
             pass
         return rc
 
-    @command.completers(compl.choice(['templates']))
+    @command.completers(compl.choice(['configs', 'templates']))
     def do_list(self, context, templates=''):
-        "usage: list [templates]"
+        "usage: list [configs|templates]"
         if templates == "templates":
             utils.multicolumn(utils.listtemplates())
+        elif templates == "configs":
+            utils.multicolumn(utils.listconfigs())
         else:
+            print "Templates:"
+            utils.multicolumn(utils.listtemplates())
+            print "\nConfigurations:"
             utils.multicolumn(utils.listconfigs())
 
     def init_dir(self):
