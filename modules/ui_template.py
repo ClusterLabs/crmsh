@@ -39,6 +39,16 @@ def check_transition(inp, state, possible_l):
     return True
 
 
+def _unique_config_name(tmpl):
+    n = 0
+    while n < 99:
+        c = "%s-%d" % (tmpl, n)
+        if not os.path.isfile("%s/%s" % (userdir.CRMCONF_DIR, c)):
+            return c
+        n += 1
+    raise ValueError("Failed to generate unique configuration name")
+
+
 class Template(command.UI):
     '''
     Configuration templates.
@@ -59,6 +69,10 @@ class Template(command.UI):
         if os.path.isfile("%s/%s" % (userdir.CRMCONF_DIR, name)):
             common_err("config %s exists; delete it first" % name)
             return False
+        if not args and name in utils.listtemplates():
+            tmpl = name
+            name = _unique_config_name(tmpl)
+            args = [tmpl]
         lt = LoadTemplate(name)
         rc = True
         mode = 0
@@ -141,8 +155,8 @@ class Template(command.UI):
 
     @command.skill_level('administrator')
     @command.completers(compl.join(compl.call(utils.listconfigs),
-                                       compl.choice(['replace', 'update'])),
-                            compl.call(utils.listconfigs))
+                                   compl.choice(['replace', 'update'])),
+                        compl.call(utils.listconfigs))
     def do_apply(self, context, *args):
         "usage: apply [<method>] [<config>]"
         method = "replace"
