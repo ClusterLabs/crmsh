@@ -138,6 +138,11 @@ class opt_dir(object):
             for dd in self.opts[t]:
                 if os.path.isdir(path % {t: dd}):
                     self.default = path % {t: dd}
+                    break
+            else:
+                self.default = path % {t: self.opts[t][0]}
+        else:
+            self.default = path
 
     def validate(self, val):
         if not os.path.isdir(val):
