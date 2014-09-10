@@ -3,6 +3,7 @@ Features
 . Audit
 
 	- add user auditing, i.e. save all commands that were run
+      (DONE: see the -R flag)
 
 	- save to a local file (distributed DB would probably be an
 	  overkill)
@@ -21,6 +22,7 @@ Features
 . CIB features
 
     - Support ACL commands in Pacemaker 1.1.12>
+      (DONE)
 
 . Command features
 
