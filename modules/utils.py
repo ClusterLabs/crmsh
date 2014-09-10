@@ -33,10 +33,25 @@ import term
 from msg import common_warn, common_info, common_debug, common_err, err_buf
 
 
+class memoize:
+    "Decorator to invoke a function once only for any argument"
+    def __init__(self, function):
+        self.function = function
+        self.memoized = {}
+
+    def __call__(self, *args):
+        try:
+            return self.memoized[args]
+        except KeyError:
+            self.memoized[args] = self.function(*args)
+            return self.memoized[args]
+
+
 getuser = userdir.getuser
 gethomedir = userdir.gethomedir
 
 
+@memoize
 def this_node():
     'returns name of this node (hostname)'
     return os.uname()[1]
@@ -68,10 +83,10 @@ def get_tempdir():
 
 def is_program(prog):
     """Is this program available?"""
-    for p in os.getenv("PATH").split(os.pathsep):
-        filename = os.path.join(p, prog)
-        if os.path.isfile(filename) and os.access(filename, os.X_OK):
-            return True
+    def isexec(filename):
+        return os.path.isfile(filename) and os.access(filename, os.X_OK)
+    return any(isexec(f) for f in (os.path.join(p, prog)
+                                   for p in os.getenv("PATH").split(os.pathsep)))
 
 
 def can_ask():
@@ -830,6 +845,7 @@ def is_process(s):
     return proc.returncode == 0
 
 
+@memoize
 def cluster_stack():
     if is_process("heartbeat:.[m]aster"):
         return "heartbeat"
@@ -1180,25 +1196,21 @@ def is_pcmk_118(cib_f=None):
     return is_min_pcmk_ver("1.1.8", cib_f=cib_f)
 
 
-_cibadmin_features_cached = None
-
+@memoize
 def cibadmin_features():
     '''
     # usage example:
     if 'corosync-plugin' in cibadmin_features()
     '''
-    global _cibadmin_features_cached
-    if _cibadmin_features_cached is None:
-        _cibadmin_features_cached = []
-        rc, outp = get_stdout(['cibadmin', '-!'], shell=False)
-        if rc == 0:
-            outp = outp.strip()
-            m = re.match(r'Pacemaker\s(\S+)\s\(Build: ([^\)]+)\):\s(.*)', outp)
-            if m and len(m.groups()) > 2:
-                _cibadmin_features_cached = m.group(3).split()
-    return _cibadmin_features_cached
+    rc, outp = get_stdout(['cibadmin', '-!'], shell=False)
+    if rc == 0:
+        m = re.match(r'Pacemaker\s(\S+)\s\(Build: ([^\)]+)\):\s(.*)', outp.strip())
+        if m and len(m.groups()) > 2:
+            return m.group(3).split()
+    return []
 
 
+@memoize
 def cibadmin_can_patch():
     # cibadmin -P doesn't handle comments in <1.1.11 (unless patched)
     return is_min_pcmk_ver("1.1.11")
