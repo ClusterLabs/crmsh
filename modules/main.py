@@ -384,5 +384,7 @@ def run():
     except KeyboardInterrupt:
         print "Ctrl-C, leaving"
         sys.exit(1)
+    except ValueError, e:
+        common_err(str(e))
 
 # vim:ts=4:sw=4:et:
