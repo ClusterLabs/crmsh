@@ -52,7 +52,7 @@ class Corosync(command.UI):
         if len(stack) > 0 and stack != 'corosync':
             err_buf.warning("Unsupported cluster stack %s detected." % (stack))
             return False
-        return True
+        return corosync.check_tools()
 
     def do_status(self, context):
         '''
