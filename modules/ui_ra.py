@@ -55,7 +55,9 @@ class RA(command.UI):
         "usage: classes"
         for c in ra.ra_classes():
             if c in self.provider_classes:
-                print "%s / %s" % (c, ' '.join(ra.ra_providers_all(c)))
+                providers = ra.ra_providers_all(c)
+                if providers:
+                    print "%s / " % (c, ' '.join(providers))
             else:
                 print "%s" % c
 

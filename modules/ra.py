@@ -242,13 +242,11 @@ def ra_providers_all(ra_class="ocf"):
     id = "ra_providers_all-%s" % ra_class
     if cache.is_cached(id):
         return cache.retrieve(id)
-    dir = "%s/resource.d" % os.environ["OCF_ROOT"]
-    l = []
-    for s in os.listdir(dir):
-        if os.path.isdir("%s/%s" % (dir, s)):
-            l.append(s)
-    l.sort()
-    return cache.store(id, l)
+    ocf = os.path.join(os.environ["OCF_ROOT"], "resource.d")
+    if os.path.isdir(ocf):
+        return cache.store(id, sorted([s for s in os.listdir(ocf)
+                                       if os.path.isdir(os.path.join(ocf, s))]))
+    return []
 
 
 def ra_types(ra_class="ocf", ra_provider=""):
