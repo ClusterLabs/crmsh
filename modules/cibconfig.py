@@ -22,6 +22,7 @@ import sys
 import re
 import fnmatch
 import time
+from collections import defaultdict
 import config
 import options
 import constants
@@ -413,9 +414,8 @@ class CibObjectSet(object):
 
     def show(self):
         s = self.repr()
-        if not s:
-            return self.search_rc
-        page_string(s)
+        if s:
+            page_string(s)
         return self.search_rc
 
     def import_file(self, method, fname):
@@ -470,22 +470,14 @@ class CibObjectSet(object):
             if ra.mk_ra_node() is None:  # no RA found?
                 return
             ra_params = ra.params()
-            for a in r_node.iterchildren("instance_attributes"):
-                for p in a.iterchildren("nvpair"):
-                    name = p.get("name")
-                    value = p.get("value")
-                    # don't fail if the meta-data doesn't contain the
-                    # expected attributes
-                    if value is not None:
-                        try:
-                            if ra_params[name].get("unique") == "1":
-                                k = (ra_class, ra_provider, ra_type, name, value)
-                                try:
-                                    clash_dict[k].append(ra_id)
-                                except KeyError:
-                                    clash_dict[k] = [ra_id]
-                        except KeyError:
-                            pass
+            for p in r_node.xpath("./instance_attributes/nvpair"):
+                name, value = p.get("name"), p.get("value")
+                if value is None:
+                    continue
+                # don't fail if the meta-data doesn't contain the
+                # expected attributes
+                if name in ra_params and ra_params[name].get("unique") == "1":
+                    clash_dict[(ra_class, ra_provider, ra_type, name, value)].append(ra_id)
             return
         # we check the whole CIB for clashes as a clash may originate between
         # an object already committed and a new one
@@ -494,7 +486,7 @@ class CibObjectSet(object):
                          if o.obj_type == "primitive"])
         if not check_set:
             return 0
-        clash_dict = {}
+        clash_dict = defaultdict(list)
         for obj in set_obj_all.obj_set:
             node = obj.node
             if is_primitive(node):
