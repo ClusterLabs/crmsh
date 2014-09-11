@@ -89,18 +89,14 @@ class RA(command.UI):
         if len(args) == 0:
             context.fatal_error("Expected [<class>:[<provider>:]]<type>")
         elif len(args) > 1:  # obsolete syntax
-            ra_type = args[0]
-            ra_class = args[1]
             if len(args) < 3:
-                ra_provider = "heartbeat"
+                ra_type, ra_class, ra_provider = args[0], args[1], "heartbeat"
             else:
-                ra_provider = args[2]
+                ra_type, ra_class, ra_provider = args[0], args[1], args[2]
+        elif args[0] in constants.meta_progs:
+            ra_class, ra_provider, ra_type = args[0], None, None
         else:
-            if args[0] in constants.meta_progs:
-                ra_class = args[0]
-                ra_provider = ra_type = None
-            else:
-                ra_class, ra_provider, ra_type = ra.disambiguate_ra_type(args[0])
+            ra_class, ra_provider, ra_type = ra.disambiguate_ra_type(args[0])
         agent = ra.RAInfo(ra_class, ra_type, ra_provider)
         if agent.mk_ra_node() is None:
             return False
