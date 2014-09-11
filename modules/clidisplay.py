@@ -36,6 +36,19 @@ def disable_pretty():
     _pretty = False
 
 
+class nopretty(object):
+    def __init__(self, cond=True):
+        self.cond = cond
+
+    def __enter__(self):
+        if self.cond:
+            disable_pretty()
+
+    def __exit__(self, type, value, traceback):
+        if self.cond:
+            enable_pretty()
+
+
 def colors_enabled():
     return 'color' in config.color.style and _pretty
 
