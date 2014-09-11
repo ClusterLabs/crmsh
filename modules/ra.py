@@ -114,7 +114,7 @@ class RaOS(object):
 
     def classes(self):
         'List of classes.'
-        return "heartbeat lsb nagios ocf stonith".split()
+        return "heartbeat lsb nagios ocf stonith systemd".split()
 
     def types(self, ra_class="ocf", ra_provider=""):
         'List of types for a class.'
@@ -125,19 +125,36 @@ class RaOS(object):
         elif ra_class == "lsb":
             l = os_types_list("/etc/init.d/*")
         elif ra_class == "stonith":
-            rc, l = stdout2list("stonith -L")
-            if rc != 0:
-                # stonith(8) may not be installed
-                common_debug("stonith exited with code %d" % rc)
-                l = []
-            for ra in os_types_list("/usr/sbin/fence_*"):
-                if ra not in ("fence_ack_manual", "fence_pcmk", "fence_legacy"):
-                    l.append(ra)
+            l = self._stonith_types()
         elif ra_class == "nagios":
-            l = os_types_list("%s/check_*" % config.path.nagios_plugins)
-            l = [x.replace("check_", "") for x in l]
+            l = [x.replace("check_", "")
+                 for x in os_types_list("%s/check_*" % config.path.nagios_plugins)]
+        elif ra_class == "systemd":
+            l = self._systemd_types()
         l = list(set(l))
         l.sort()
+        return l
+
+    def _stonith_types(self):
+        rc, l = stdout2list("stonith -L")
+        if rc != 0:
+            # stonith(8) may not be installed
+            common_debug("stonith exited with code %d" % rc)
+            l = []
+        for ra in os_types_list("/usr/sbin/fence_*"):
+            if ra not in ("fence_ack_manual", "fence_pcmk", "fence_legacy"):
+                l.append(ra)
+
+    def _systemd_types(self):
+        l = []
+        rc, lines = stdout2list("systemctl list-unit-files --full")
+        if rc != 0:
+            return l
+        t = re.compile(r'^(.+)\.service')
+        for line in lines:
+            m = t.search(line)
+            if m:
+                l.append(m.group(1))
         return l
 
 
@@ -206,10 +223,13 @@ def ra_if():
     if constants.ra_if:
         return constants.ra_if
     if crm_resource_support():
+        common_debug("Using crm_resource for agent discovery")
         constants.ra_if = RaCrmResource()
     elif can_use_lrmadmin():
+        common_debug("Using lrmd for agent discovery")
         constants.ra_if = RaLrmd()
     if not constants.ra_if or not constants.ra_if.good:
+        common_debug("Using OS for agent discovery")
         constants.ra_if = RaOS()
     return constants.ra_if
 
