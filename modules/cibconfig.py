@@ -327,9 +327,8 @@ class CibObjectSet(object):
         if options.batch:
             common_info("edit not allowed in batch mode")
             return False
-        clidisplay.disable_pretty()
-        s = self.repr()
-        clidisplay.enable_pretty()
+        with clidisplay.nopretty():
+            s = self.repr()
         # don't allow edit if one or more elements were not
         # found
         if not self.search_rc:
@@ -349,9 +348,8 @@ class CibObjectSet(object):
         return self.save(outp)
 
     def filter(self, filter):
-        clidisplay.disable_pretty()
-        s = self.repr(format=-1)
-        clidisplay.enable_pretty()
+        with clidisplay.nopretty():
+            s = self.repr(format=-1)
         # don't allow filter if one or more elements were not
         # found
         if not self.search_rc:
@@ -363,9 +361,8 @@ class CibObjectSet(object):
         if not f:
             return False
         rc = True
-        clidisplay.disable_pretty()
-        s = self.repr()
-        clidisplay.enable_pretty()
+        with clidisplay.nopretty():
+            s = self.repr()
         if s:
             f.write(s)
             f.write('\n')
@@ -534,10 +531,8 @@ class CibObjectSetCli(CibObjectSet):
         CibObjectSet.__init__(self, *args)
 
     def repr_nopretty(self, format=1):
-        clidisplay.disable_pretty()
-        s = self.repr(format=format)
-        clidisplay.enable_pretty()
-        return s
+        with clidisplay.nopretty():
+            return self.repr(format=format)
 
     def repr(self, format=1):
         "Return a string containing cli format of all objects."
@@ -644,9 +639,8 @@ class CibObjectSetRaw(CibObjectSet):
     def verify(self):
         if not self.obj_set:
             return True
-        clidisplay.disable_pretty()
-        cib = self.repr(format=-1)
-        clidisplay.enable_pretty()
+        with clidisplay.nopretty():
+            cib = self.repr(format=-1)
         rc = cibverify.verify(cib)
 
         if rc not in (0, 1):
@@ -886,16 +880,11 @@ class CibObject(object):
                                 len(self.children))
 
     def _repr_cli_xml(self, format):
-        if format < 0:
-            clidisplay.disable_pretty()
-        try:
+        with clidisplay.nopretty(format < 0):
             h = clidisplay.keyword("xml")
             l = etree.tostring(self.node, pretty_print=True).split('\n')
             l = [x for x in l if x]  # drop empty lines
             return "%s %s" % (h, cli_format(l, break_lines=(format > 0), xml=True))
-        finally:
-            if format < 0:
-                clidisplay.enable_pretty()
 
     def _gv_rsc_id(self):
         if self.parent and self.parent.obj_type in constants.clonems_tags:
@@ -936,9 +925,7 @@ class CibObject(object):
         if self.nocli:
             return self._repr_cli_xml(format)
         l = []
-        if format < 0:
-            clidisplay.disable_pretty()
-        try:
+        with clidisplay.nopretty(format < 0):
             head_s = self._repr_cli_head(format)
             # everybody must have a head
             if not head_s:
@@ -956,9 +943,6 @@ class CibObject(object):
                 if s:
                     l.append(s)
             return self._cli_format_and_comment(l, comments, break_lines=(format > 0))
-        finally:
-            if format < 0:
-                clidisplay.enable_pretty()
 
     def _attr_set_str(self, node):
         '''
@@ -1112,9 +1096,8 @@ class CibObject(object):
         '''
         if self.node is None:
             return True
-        clidisplay.disable_pretty()
-        cli_text = self.repr_cli(format=0)
-        clidisplay.enable_pretty()
+        with clidisplay.nopretty():
+            cli_text = self.repr_cli(format=0)
         if not cli_text:
             common_debug("validation failed: %s" % (etree.tostring(self.node)))
             return False
