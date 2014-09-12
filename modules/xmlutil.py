@@ -57,32 +57,35 @@ def file2cib_elem(s):
 cib_dump = "cibadmin -Ql"
 
 
-def cibdump2file(fname):
-    cmd = add_sudo(cib_dump)
+def sudocall(cmd):
+    cmd = add_sudo(cmd)
     if options.regression_tests:
         print ".EXT", cmd
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
-        s = ''.join(p.stdout)
+        outp, errp = p.communicate()
         p.wait()
+        return p.returncode, outp, errp
     except IOError, msg:
-        common_err(msg)
-        return None
-    return str2file(s, fname)
+        common_err("running %s: %s" % (cmd, msg))
+        return None, None, None
+
+
+def cibdump2file(fname):
+    _, outp, _ = sudocall(cib_dump)
+    if outp is not None:
+        return str2file(outp, fname)
+    return None
 
 
 def cibdump2tmp():
-    cmd = add_sudo(cib_dump)
-    if options.regression_tests:
-        print ".EXT", cmd
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     try:
-        tmpf = str2tmp(''.join(p.stdout))
-        p.wait()
+        _, outp, _ = sudocall(cib_dump)
+        if outp is not None:
+            return str2tmp(outp)
     except IOError, msg:
         common_err(msg)
-        return None
-    return tmpf
+    return None
 
 
 def cibtext2elem(cibtext):
@@ -102,27 +105,12 @@ def cibdump2elem(section=None):
         cmd = "%s -o %s" % (cib_dump, section)
     else:
         cmd = cib_dump
-    cmd = add_sudo(cmd)
-    if options.regression_tests:
-        print ".EXT", cmd
-    p = subprocess.Popen(cmd,
-                         shell=True,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
-    try:
-        (outp, err_outp) = p.communicate()
-        p.wait()
-        rc = p.returncode
-    except IOError, msg:
-        common_err("running %s: %s" % (cmd, msg))
-        return None
+    rc, outp, errp = sudocall(cmd)
     if rc == 0:
         return cibtext2elem(outp)
-    elif rc == constants.cib_no_section_rc:
-        return None
-    else:
-        common_error("running %s: %s" % (cmd, err_outp))
-        return None
+    elif rc != constants.cib_no_section_rc:
+        common_error("running %s: %s" % (cmd, errp))
+    return None
 
 
 def read_cib(fun, params=None):
@@ -193,13 +181,11 @@ class RscState(object):
         self.rsc_dflt_elem = None
 
     def _init_cib(self):
-        self.current_cib = cibdump2elem("configuration")
-        self.rsc_elem = \
-            get_first_conf_elem(self.current_cib, "resources")
-        self.prop_elem = \
-            get_first_conf_elem(self.current_cib, "crm_config/cluster_property_set")
-        self.rsc_dflt_elem = \
-            get_first_conf_elem(self.current_cib, "rsc_defaults/meta_attributes")
+        cib = cibdump2elem("configuration")
+        self.current_cib = cib
+        self.rsc_elem = get_first_conf_elem(cib, "resources")
+        self.prop_elem = get_first_conf_elem(cib, "crm_config/cluster_property_set")
+        self.rsc_dflt_elem = get_first_conf_elem(cib, "rsc_defaults/meta_attributes")
 
     def rsc2node(self, id):
         '''
@@ -294,8 +280,7 @@ def resources_xml():
 
 
 def is_normal_node(n):
-    return n.tag == "node" and \
-        (n.get("type") == "normal" or not n.get("type"))
+    return n.tag == "node" and (n.get("type") in (None, "normal", ""))
 
 
 def unique_ra(typ, klass, provider):
