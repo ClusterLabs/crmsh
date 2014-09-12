@@ -293,34 +293,27 @@ class CibObjectSet(object):
         allow user to reedit.
         If no changes are done, return silently.
         '''
-        s = self._pre_edit(s)
-        tmp = str2tmp(s)
-        if not tmp:
-            return False
-        filehash = hash(s)
         rc = False
-        while True:
-            if edit_file(tmp) != 0:
-                break
-            try:
-                f = open(tmp, 'r')
-            except IOError, msg:
-                common_err(msg)
-                break
-            s = ''.join(f)
-            f.close()
-            if hash(s) == filehash:  # file unchanged
-                rc = True
-                break
-            if not self.save(self._post_edit(s)):
-                if ask("Do you want to edit again?"):
-                    continue
-            rc = True
-            break
         try:
+            s = self._pre_edit(s)
+            filehash = hash(s)
+            tmp = str2tmp(s)
+            if not tmp:
+                return False
+            while not rc:
+                if edit_file(tmp) != 0:
+                    break
+                with open(tmp, 'r') as f:
+                    s = ''.join(f)
+                if hash(s) != filehash and (not self.save(self._post_edit(s))
+                                            and ask("Do you want to edit again?")):
+                    continue
+                rc = True
             os.unlink(tmp)
-        except OSError:
-            pass
+        except OSError, e:
+            common_debug("unlink(%s) failure: %s" % (tmp, e))
+        except IOError, msg:
+            common_err(msg)
         return rc
 
     def edit(self):
