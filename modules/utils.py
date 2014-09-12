@@ -337,13 +337,10 @@ def file2list(fname):
     Read a file into a list (newlines dropped).
     '''
     try:
-        f = open(fname, "r")
+        return open(fname).read().split('\n')
     except IOError, msg:
         common_err(msg)
         return None
-    l = ''.join(f).split('\n')
-    f.close()
-    return l
 
 
 def safe_open_w(fname):
@@ -565,20 +562,11 @@ def stdout2list(cmd, stderr_on=True, shell=True):
 def append_file(dest, src):
     'Append src to dest'
     try:
-        dest_f = open(dest, "a")
+        open(dest).write(open(src).read())
+        return True
     except IOError, msg:
-        common_err("open %s: %s" % (dest, msg))
+        common_err("append %s to %s: %s" % (src, dest, msg))
         return False
-    try:
-        f = open(src)
-    except IOError, msg:
-        common_err("open %s: %s" % (src, msg))
-        dest_f.close()
-        return False
-    dest_f.write(''.join(f))
-    f.close()
-    dest_f.close()
-    return True
 
 
 def get_dc():
@@ -1160,14 +1148,14 @@ def get_cib_attributes(cib_f, tag, attr_l, dflt_l):
     val_patt_l = [re.compile('%s="([^"]+)"' % x) for x in attr_l]
     val_l = []
     try:
-        f = open(cib_f, "r")
+        f = open(cib_f).read()
     except IOError, msg:
         common_err(msg)
         return dflt_l
     if os.path.splitext(cib_f)[-1] == '.bz2':
-        cib_s = bz2.decompress(''.join(f))
+        cib_s = bz2.decompress(f)
     else:
-        cib_s = ''.join(f)
+        cib_s = f
     for s in cib_s.split('\n'):
         if s.startswith(open_t):
             i = 0
@@ -1176,7 +1164,6 @@ def get_cib_attributes(cib_f, tag, attr_l, dflt_l):
                 val_l.append(r and r.group(1) or dflt_l[i])
                 i += 1
             break
-    f.close()
     return val_l
 
 

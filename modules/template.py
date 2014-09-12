@@ -125,11 +125,10 @@ class LoadTemplate(object):
 
     def load_template(self, tmpl):
         try:
-            f = open(os.path.join(config.path.sharedir, 'templates', tmpl))
+            l = open(os.path.join(config.path.sharedir, 'templates', tmpl)).read().split('\n')
         except IOError, msg:
             common_err("open: %s" % msg)
             return ''
-        l = (''.join(f)).split('\n')
         if not validate_template(l):
             return ''
         common_info("pulling in template %s" % tmpl)

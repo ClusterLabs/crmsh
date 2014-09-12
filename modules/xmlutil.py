@@ -374,23 +374,19 @@ def shadowfile(name):
 def pe2shadow(pe_file, name):
     '''Copy a PE file (or any CIB file) to a shadow.'''
     try:
-        f = open(pe_file)
+        s = open(pe_file).read()
     except IOError, msg:
         common_err("open: %s" % msg)
         return False
-    s = ''.join(f)
-    f.close()
     # decompresed if it ends with .bz2
     if pe_file.endswith(".bz2"):
         s = bz2.decompress(s)
     # copy input to the shadow
     try:
-        f = open(shadowfile(name), "w")
+        open(shadowfile(name), "w").write(s)
     except IOError, msg:
         common_err("open: %s" % msg)
         return False
-    f.write(s)
-    f.close()
     return True
 
 

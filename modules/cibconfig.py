@@ -303,8 +303,7 @@ class CibObjectSet(object):
             while not rc:
                 if edit_file(tmp) != 0:
                     break
-                with open(tmp, 'r') as f:
-                    s = ''.join(f)
+                s = open(tmp).read()
                 if hash(s) != filehash and (not self.save(self._post_edit(s))
                                             and ask("Do you want to edit again?")):
                     continue
@@ -420,7 +419,7 @@ class CibObjectSet(object):
         f = self._open_url(fname)
         if not f:
             return False
-        s = ''.join(f)
+        s = f.read()
         if f != sys.stdin:
             f.close()
         return self.save(s, no_remove=True, method=method)
