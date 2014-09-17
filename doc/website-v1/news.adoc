@@ -3,7 +3,7 @@
 link:/news/2014-06-30-release-2_1[2014-06-30 09:00]
 
 :leveloffset: 1
-include::news/2014-06-30-release-2_1.txt[]
+include::news/2014-06-30-release-2_1.adoc[]
 :leveloffset: 0
 
 ''''

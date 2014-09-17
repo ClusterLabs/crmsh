@@ -1,5 +1,5 @@
 :man source:   crm
-:man version:  1.3.0
+:man version:  2.1.1
 :man manual:   crmsh documentation
 
 crm(8)
@@ -748,15 +748,22 @@ primitive webserver apache params @vip:server_ip
 [[topics_Reference,Command reference]]
 == Command reference
 
-We define a small and simple language. Most commands consist of
-just a list of simple tokens. The only complex constructs are
-found at the `configure` level.
+Commands in crmsh follow a bash-like grammar to simplify the command
+line mode. Whitespace is significant, meaning that +key=value+ is
+different from +key = value+. In some cases, the underlying Pacemaker
+grammar uses characters otherwise used by bash which need to be
+quoted. This includes the single and double quote characters, the hash
+or pound sign (`#`) and whitespace.
 
-The syntax is described in a somewhat informal manner: `<>`
-denotes a string, `[]` means that the construct is optional, the
-ellipsis (`...`) signifies that the previous construct may be
-repeated, `|` means pick one of many, and the rest are literals
-(strings, `:`, `=`).
+The syntax for the commands is given below in an informal, BNF-like
+grammar.
+
+* `<value>` denotes a string.
+* `[value]` means that the construct is optional.
+* The ellipsis (`...`) signifies that the previous construct may be
+  repeated.
+* `first|second` means either first or second.
+* The rest are literals (strings, `:`, `=`).
 
 [[cmdhelp_root_status,Cluster status]]
 === `status`
@@ -773,7 +780,7 @@ option :: bynode | inactive | ops | timing | failcounts
 ...............
 
 [[cmdhelp_cluster,Cluster setup and management]]
-=== `cluster`
+=== `cluster` - Cluster setup and management
 
 Whole-cluster configuration management with High Availability
 awareness.
@@ -897,7 +904,7 @@ run "cat /proc/uptime"
 ...............
 
 [[cmdhelp_script,Cluster script management]]
-=== `script`
+=== `script` - Cluster script management
 
 Cluster scripts can perform cluster-wide configuration,
 validation and management. See the `list` command for
@@ -973,7 +980,7 @@ run init nodes="node-1 node-2 node-3"
 .............
 
 [[cmdhelp_corosync,Corosync management]]
-=== `corosync`
+=== `corosync` - Corosync management
 
 Corosync is the underlying messaging layer for most HA clusters.
 This level provides commands for editing and managing the corosync
@@ -1142,7 +1149,7 @@ set quorum.expected_votes 2
 .........
 
 [[cmdhelp_cib,CIB shadow management]]
-=== `cib` (shadow CIBs)
+=== `cib` - CIB shadow management
 
 This level is for management of shadow CIBs. It is available both
 at the top level and the `configure` level.
@@ -1277,7 +1284,7 @@ Enter edit and manage the CIB status section level. See the
 <<cmdhelp_cibstatus,CIB status management section>>.
 
 [[cmdhelp_ra,Resource Agents (RA) lists and documentation]]
-=== `ra`
+=== `ra` - Resource Agents (RA) lists and documentation
 
 This level contains commands which show various information about
 the installed resource agents. It is available both at the top
@@ -1348,7 +1355,7 @@ providers apache
 ...............
 
 [[cmdhelp_resource,Resource management]]
-=== `resource`
+=== `resource` - Resource management
 
 At this level resources may be managed.
 
@@ -1683,7 +1690,7 @@ untrace webserver
 ...............
 
 [[cmdhelp_resource_scores,Display resource scores]]
-=== `scores`
+==== `scores`
 
 Display the allocation scores for all resources.
 
@@ -1692,8 +1699,8 @@ Usage:
 scores
 ................
 
-[[cmdhelp_node,Nodes management]]
-=== `node`
+[[cmdhelp_node,Node management]]
+=== `node` - Node management
 
 Node management and status commands.
 
@@ -1885,8 +1892,8 @@ Example:
 status-attr node_1 show pingd
 ...............
 
-[[cmdhelp_site,site support]]
-=== `site`
+[[cmdhelp_site,GEO clustering site support]]
+=== `site` - GEO clustering site support
 
 A cluster may consist of two or more subclusters in different and
 distant locations. This set of commands supports such setups.
@@ -1910,8 +1917,8 @@ Example:
 ticket grant ticket1
 ...............
 
-[[cmdhelp_options,user preferences]]
-=== `options`
+[[cmdhelp_options,User preferences]]
+=== `options` - User preferences
 
 The user may set various options for the crm shell itself.
 
@@ -2208,7 +2215,7 @@ a single-shot command, the rc file (+$HOME/.config/crm/rc+) is
 reset to the defaults too.
 
 [[cmdhelp_configure,CIB configuration]]
-=== `configure`
+=== `configure` - CIB configuration
 
 This level enables all CIB object definition commands.
 
@@ -3253,7 +3260,7 @@ rsctest websvc nodeB
 ...............
 
 [[cmdhelp_configure_cib,CIB shadow management]]
-=== `cib` (shadow CIBs)
+==== `cib` = CIB shadow management
 
 This level is for management of shadow CIBs. It is available at
 the `configure` level to enable saving intermediate changes to a
@@ -3425,7 +3432,7 @@ xml <xml>
 ...............
 
 [[cmdhelp_template,edit and import a configuration from a template]]
-=== `template`
+=== `template` - Import configuration from templates
 
 User may be assisted in the cluster configuration by templates
 prepared in advance. Templates consist of a typical ready
@@ -3525,7 +3532,7 @@ show [<config>]
 ...............
 
 [[cmdhelp_cibstatus,CIB status management and editing]]
-=== `cibstatus`
+=== `cibstatus` - CIB status management and editing
 
 The `status` section of the CIB keeps the current status of nodes
 and resources. It is modified _only_ on events, i.e. when some
@@ -3758,7 +3765,7 @@ simulate
 ...............
 
 [[cmdhelp_assist,Configuration assistant]]
-=== `assist`
+=== `assist` - Configuration assistant
 
 The `assist` sublevel is a collection of helper
 commands that create or modify resources and
@@ -3801,8 +3808,8 @@ Usage:
 template primitive-1 primitive-2 primitive-3
 ........
 
-[[cmdhelp_history,cluster history]]
-=== `history`
+[[cmdhelp_history,Cluster history]]
+=== `history` - Cluster history
 
 Examining Pacemaker's history is a particularly involved task.
 The number of subsystems to be considered, the complexity of the
