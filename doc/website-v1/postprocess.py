@@ -30,7 +30,7 @@ def read_toc_data(infile, debug):
                 if len(info_split) == 2:
                     commands_data.append((2, info_split[1], info))
                 elif len(info_split) >= 3:
-                    commands_data.append((3, info_split[2], info))
+                    commands_data.append((3, '_'.join(info_split[2:]), info))
     toc = ''
     if len(topics_data) > 0 or len(commands_data) > 0:
         toc = '<div id="toc">\n'
