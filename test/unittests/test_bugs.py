@@ -314,3 +314,31 @@ def test_copy_nvpairs():
     eq_(['stonith-enabled'], to.xpath('./nvpair/@name'))
     eq_(['true'], to.xpath('./nvpair/@value'))
 
+
+def test_pengine_test():
+    xml = '''<primitive class="ocf" id="rsc1" provider="pacemaker" type="Dummy">
+        <instance_attributes id="rsc1-instance_attributes-1">
+          <nvpair id="rsc1-instance_attributes-1-state" name="state" value="/var/run/Dummy-rsc1-clusterA"/>
+          <rule id="rsc1-instance_attributes-1-rule-1" score="0">
+            <expression id="rsc1-instance_attributes-1-rule-1-expr-1" attribute="#cluster-name" operation="eq" value="clusterA"/>
+          </rule>
+        </instance_attributes>
+        <instance_attributes id="rsc1-instance_attributes-2">
+          <nvpair id="rsc1-instance_attributes-2-state" name="state" value="/var/run/Dummy-rsc1-clusterB"/>
+          <rule id="rsc1-instance_attributes-2-rule-1" score="0">
+            <expression id="rsc1-instance_attributes-2-rule-1-expr-1" attribute="#cluster-name" operation="eq" value="clusterB"/>
+          </rule>
+        </instance_attributes>
+        <operations>
+          <op id="rsc1-monitor-10" interval="10" name="monitor"/>
+        </operations>
+      </primitive>'''
+    data = etree.fromstring(xml)
+    obj = factory.create_from_node(data)
+    assert obj is not None
+    data = obj.repr_cli(format=-1)
+    print "OUTPUT:", data
+    exp = 'primitive rsc1 ocf:pacemaker:Dummy params rule 0: #cluster-name eq clusterA state="/var/run/Dummy-rsc1-clusterA" params rule 0: #cluster-name eq clusterB state="/var/run/Dummy-rsc1-clusterB" op monitor interval=10'
+    assert data == exp
+    assert obj.cli_use_validate()
+

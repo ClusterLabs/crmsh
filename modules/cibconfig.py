@@ -1010,7 +1010,8 @@ class CibObject(object):
         for c in node.iterchildren():
             if c.tag == "rule":
                 ret += "%s %s " % (clidisplay.keyword("rule"), cli_rule(c))
-            elif c.tag == "nvpair":
+        for c in node.iterchildren():
+            if c.tag == "nvpair":
                 ret += "%s " % (cli_nvpair(c))
         if ret[-1] == ' ':
             ret = ret[:-1]
