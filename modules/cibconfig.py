@@ -2779,6 +2779,16 @@ class CibFactory(object):
         t = spec[5:]
         return [x for x in self.cib_objects if x.obj_type == t]
 
+    def get_elems_on_tag(self, spec):
+        if not spec.startswith("tag:"):
+            return []
+        t = spec[4:]
+        matching_tags = [x for x in self.cib_objects if x.obj_type == 'tag' and x.obj_id == t]
+        ret = []
+        for mt in matching_tags:
+            ret += [cib_factory.find_object(o) for o in mt.node.xpath('./obj_ref/@id')]
+        return ret
+
     def mkobj_set(self, *args):
         if not args:
             return True, copy.copy(self.cib_objects)
@@ -2791,6 +2801,8 @@ class CibFactory(object):
                 obj_set |= set(self.modified_elems())
             elif spec.startswith("type:"):
                 obj_set |= set(self.get_elems_on_type(spec))
+            elif spec.startswith("tag:"):
+                obj_set |= set(self.get_elems_on_tag(spec))
             else:
                 objs = self.find_objects(spec) or []
                 for obj in objs:
