@@ -2985,6 +2985,7 @@ Optionally, the XML code may be displayed instead of the CLI
 representation by passing `xml` as the first argument.
 
 To show all objects of a certain type, use the +type:+ prefix.
+To show all objects in a given tag, use the +tag:+ prefix.
 
 Usage:
 ...............
@@ -2997,6 +2998,7 @@ Example:
 show webapp
 show type:primitive
 show xml type:node
+show tag:web
 ...............
 
 [[cmdhelp_configure_edit,edit CIB objects]]
