@@ -342,3 +342,13 @@ def test_pengine_test():
     assert data == exp
     assert obj.cli_use_validate()
 
+
+def test_tagset():
+    xml = '''<primitive class="ocf" id="%s" provider="pacemaker" type="Dummy"/>'''
+    tag = '''<tag id="t0"><obj_ref id="r1"/><obj_ref id="r2"/></tag>'''
+    factory.create_from_node(etree.fromstring(xml % ('r1')))
+    factory.create_from_node(etree.fromstring(xml % ('r2')))
+    factory.create_from_node(etree.fromstring(xml % ('r3')))
+    factory.create_from_node(etree.fromstring(tag))
+    elems = factory.get_elems_on_tag("tag:t0")
+    assert set(x.obj_id for x in elems) == set(['r1', 'r2'])
