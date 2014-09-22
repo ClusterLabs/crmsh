@@ -323,13 +323,12 @@ def prog_meta(prog):
     '''
     Do external program metadata.
     '''
-    l = []
     if is_program(prog):
         rc, l = stdout2list("%s metadata" % prog)
-        if rc != 0:
-            common_debug("%s metadata exited with code %d" % (prog, rc))
-            l = []
-    return l
+        if rc == 0:
+            return l
+        common_debug("%s metadata exited with code %d" % (prog, rc))
+    return []
 
 
 def get_nodes_text(n, tag):
@@ -623,7 +622,7 @@ class RAInfo(object):
             if self.ra_class == "stonith" and op in ("start", "stop"):
                 continue
             if op not in self.actions():
-                common_warn("%s: action %s not advertised in meta-data, it may not be supported by the RA"  % (id, op))
+                common_warn("%s: action '%s' not found in Resource Agent meta-data" % (id, op))
                 rc |= 1
             if "interval" in n_ops[op]:
                 v = n_ops[op]["interval"]
@@ -724,16 +723,14 @@ class RAInfo(object):
         return s
 
     def format_parameter(self, n):
-        l = []
         head = self.meta_param_head(n)
         if not head:
             self.error("no name attribute for parameter")
             return ""
-        l.append(head)
+        l = [head]
         longdesc = get_nodes_text(n, "longdesc")
         if longdesc:
-            longdesc = self.ra_tab + longdesc.replace("\n", "\n" + self.ra_tab) + '\n'
-            l.append(longdesc)
+            l.append(self.ra_tab + longdesc.replace("\n", "\n" + self.ra_tab) + '\n')
         return '\n'.join(l)
 
     def meta_parameter(self, param):
