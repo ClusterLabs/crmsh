@@ -8,10 +8,10 @@
 .INP: commit
 .EXT crm_resource --show-metadata stonith:heartbeat:null
 .EXT stonithd metadata
-ERROR: 7: st: attribute yoyo-meta does not exist
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata
+ERROR: 7: st: attribute yoyo-meta does not exist
 .INP: node node1 	attributes mem=16G
 .INP: primitive p1 ocf:heartbeat:Dummy 	op monitor interval=60m 	op monitor interval=120m OCF_CHECK_LEVEL=10
 .INP: primitive p2 ocf:heartbeat:Dummy

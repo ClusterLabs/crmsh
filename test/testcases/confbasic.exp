@@ -56,8 +56,8 @@
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .EXT crm_resource --show-metadata ocf:pacemaker:Stateful
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
-.EXT pengine metadata
 .EXT crmd metadata
+.EXT pengine metadata
 .EXT cib metadata
 .INP: show
 node node1 \
