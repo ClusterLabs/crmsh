@@ -42,9 +42,6 @@ class RaLrmd(object):
     '''
     Getting information from the resource agents.
     '''
-    def __init__(self):
-        self.good = self.is_lrmd_accessible()
-
     def lrmadmin(self, opts, xml=False):
         '''
         Get information directly from lrmd using lrmadmin.
@@ -84,9 +81,6 @@ class RaOS(object):
     '''
     Getting information from the resource agents (direct).
     '''
-    def __init__(self):
-        self.good = True
-
     def meta(self, ra_class, ra_type, ra_provider):
         l = []
         if ra_class == "ocf":
@@ -162,9 +156,6 @@ class RaCrmResource(object):
     '''
     Getting information from the resource agents via new crm_resource.
     '''
-    def __init__(self):
-        self.good = True
-
     def crm_resource(self, opts):
         '''
         Get information from crm_resource.
@@ -210,8 +201,13 @@ def can_use_lrmadmin():
         return False
     v_min = version.LooseVersion(minimum_glue)
     v_this = version.LooseVersion(glue_ver)
-    return v_this >= v_min or \
-        (userdir.getuser() in ("root", config.path.crm_daemon_user))
+    if v_this < v_min:
+        return False
+    if userdir.getuser() not in ("root", config.path.crm_daemon_user):
+        return False
+    if not (is_program(lrmadmin_prog) and is_process("lrmd")):
+        return False
+    return utils.ext_cmd(">/dev/null 2>&1 %s -C" % lrmadmin_prog) == 0
 
 
 def crm_resource_support():
@@ -219,19 +215,16 @@ def crm_resource_support():
     return s != ""
 
 
+@utils.memoize
 def ra_if():
-    if constants.ra_if:
-        return constants.ra_if
     if crm_resource_support():
         common_debug("Using crm_resource for agent discovery")
-        constants.ra_if = RaCrmResource()
-    elif can_use_lrmadmin():
+        return RaCrmResource()
+    if can_use_lrmadmin():
         common_debug("Using lrmd for agent discovery")
-        constants.ra_if = RaLrmd()
-    if not constants.ra_if or not constants.ra_if.good:
-        common_debug("Using OS for agent discovery")
-        constants.ra_if = RaOS()
-    return constants.ra_if
+        return RaLrmd()
+    common_debug("Using OS for agent discovery")
+    return RaOS()
 
 
 def ra_classes():
@@ -288,43 +281,37 @@ def ra_types(ra_class="ocf", ra_provider=""):
     return cache.store(id, list)
 
 
+@utils.memoize
 def get_pe_meta():
-    if not constants.pe_metadata:
-        constants.pe_metadata = RAInfo("pengine", "metadata")
-    return constants.pe_metadata
+    return RAInfo("pengine", "metadata")
 
 
+@utils.memoize
 def get_crmd_meta():
-    if not constants.crmd_metadata:
-        constants.crmd_metadata = RAInfo("crmd", "metadata")
-        constants.crmd_metadata.exclude_from_completion(
-            constants.crmd_metadata_do_not_complete)
-    return constants.crmd_metadata
+    info = RAInfo("crmd", "metadata")
+    info.exclude_from_completion(constants.crmd_metadata_do_not_complete)
+    return info
 
 
+@utils.memoize
 def get_stonithd_meta():
-    if not constants.stonithd_metadata:
-        constants.stonithd_metadata = RAInfo("stonithd", "metadata")
-    return constants.stonithd_metadata
+    return RAInfo("stonithd", "metadata")
 
 
+@utils.memoize
 def get_cib_meta():
-    if not constants.cib_metadata:
-        constants.cib_metadata = RAInfo("cib", "metadata")
-    return constants.cib_metadata
+    return RAInfo("cib", "metadata")
 
 
+@utils.memoize
 def get_properties_meta():
-    if not constants.crm_properties_metadata:
-        get_pe_meta()
-        get_crmd_meta()
-        get_cib_meta()
-        constants.crm_properties_metadata = copy.deepcopy(constants.crmd_metadata)
-        constants.crm_properties_metadata.add_ra_params(constants.pe_metadata)
-        constants.crm_properties_metadata.add_ra_params(constants.cib_metadata)
-    return constants.crm_properties_metadata
+    meta = copy.deepcopy(get_crmd_meta())
+    meta.add_ra_params(get_pe_meta())
+    meta.add_ra_params(get_cib_meta())
+    return meta
 
 
+@utils.memoize
 def get_properties_list():
     try:
         return get_properties_meta().params().keys()

@@ -254,12 +254,6 @@ simulate_programs = {
     "simulate": "crm_simulate",
 }
 
-ra_if = None  # class interface to RA
-stonithd_metadata = None  # stonithd meta data
-pe_metadata = None  # PE meta data
-crmd_metadata = None  # crmd meta data
-cib_metadata = None  # cib meta data
-crm_properties_metadata = None  # PE + crmd + cib meta data
 meta_progs = ("crmd", "pengine", "stonithd", "cib")
 # elide these properties from tab completion
 crmd_metadata_do_not_complete = ("dc-version",
