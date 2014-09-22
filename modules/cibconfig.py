@@ -499,7 +499,7 @@ class CibObjectSet(object):
         Test objects for sanity. This is about semantics.
         '''
         rc = self.__check_unique_clash(set_obj_all)
-        for obj in self.obj_set:
+        for obj in sorted(self.obj_set, key=lambda x: x.obj_id):
             rc |= obj.check_sanity()
         return rc
 
