@@ -200,9 +200,7 @@ def add_quotes(args):
     return l
 
 
-def do_work(context, user_args):
-    compatibility_setup()
-
+def handle_noninteractive_use(context, user_args):
     if options.shadow:
         if not context.run("cib use " + options.shadow):
             return 1
@@ -228,7 +226,24 @@ def do_work(context, user_args):
                 err_buf.reset_lineno(-1)
         else:
             return 1
+    return None
 
+
+def render_prompt(context):
+    rendered_prompt = constants.prompt
+    if options.interactive and not options.batch:
+        # TODO: fix how color interacts with readline,
+        # seems the color prompt messes it up
+        promptstr = "crm(%s)%s# " % (cib_prompt(), context.prompt())
+        constants.prompt = promptstr
+        if clidisplay.colors_enabled():
+            rendered_prompt = term.render(clidisplay.prompt(promptstr))
+        else:
+            rendered_prompt = promptstr
+    return rendered_prompt
+
+
+def setup_context(context):
     if options.input_file and options.input_file != "-":
         try:
             sys.stdin = open(options.input_file)
@@ -239,20 +254,19 @@ def do_work(context, user_args):
     if options.interactive and not options.batch:
         context.setup_readline()
 
+
+def do_work(context, user_args):
+    compatibility_setup()
+    rc = handle_noninteractive_use(context, user_args)
+    if rc is not None:
+        return rc
+
+    setup_context(context)
+
     rc = 0
     while True:
         try:
-            rendered_prompt = constants.prompt
-            if options.interactive and not options.batch:
-                # TODO: fix how color interacts with readline,
-                # seems the color prompt messes it up
-                promptstr = "crm(%s)%s# " % (cib_prompt(), context.prompt())
-                constants.prompt = promptstr
-                if clidisplay.colors_enabled():
-                    rendered_prompt = term.render(clidisplay.prompt(promptstr))
-                else:
-                    rendered_prompt = promptstr
-            inp = utils.multi_input(rendered_prompt)
+            inp = utils.multi_input(render_prompt(context))
             if inp is None:
                 if options.interactive:
                     rc = 0
