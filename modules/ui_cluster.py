@@ -157,7 +157,7 @@ class Cluster(command.UI):
         '''
         stack = utils.cluster_stack()
         if not stack:
-            err_buf.error("Cluster stack not detected!")
+            err_buf.error("No supported cluster stack found (tried heartbeat|openais|corosync)")
         if utils.cluster_stack() == 'corosync':
             print "Services:"
             for svc in ["corosync", "pacemaker"]:
