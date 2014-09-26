@@ -37,15 +37,15 @@ class ParseError(Exception):
 
 
 class BaseParser(object):
-    _NVPAIR_RE = re.compile(r'([^=@$][^=]*)=(.+)$')
-    _NVPAIR_ID_RE = re.compile(r'\$([^:=]+)(?::(.+))?=(.+)$')
+    _NVPAIR_RE = re.compile(r'([^=@$][^=]*)=(.*)$')
+    _NVPAIR_ID_RE = re.compile(r'\$([^:=]+)(?::(.+))?=(.*)$')
     _NVPAIR_REF_RE = re.compile(r'@([^:]+)(?::(.+))?$')
     _IDENT_RE = re.compile(r'([a-z0-9_#$-][^=]*)$', re.IGNORECASE)
     _DISPATCH_RE = re.compile(r'[a-z0-9_]+$', re.IGNORECASE)
     _DESC_RE = re.compile(r'description=(.+)$', re.IGNORECASE)
     _RESOURCE_RE = re.compile(r'([a-z_#$][^=]*)$', re.IGNORECASE)
     _IDSPEC_RE = re.compile(r'(\$id-ref|\$id)=(.*)$', re.IGNORECASE)
-    _ID_RE = re.compile(r'\$id=(.+)$', re.IGNORECASE)
+    _ID_RE = re.compile(r'\$id=(.*)$', re.IGNORECASE)
     _ID_NEW_RE = re.compile(r'([\w-]+):$', re.IGNORECASE)
 
     def can_parse(self):

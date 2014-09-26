@@ -148,6 +148,9 @@ class TestCliParser(unittest.TestCase):
         out = self.parser.parse('primitive st stonith:ssh params hostlist=node1 meta target-role=Started op start requires=nothing timeout=60s op monitor interval=60m timeout=60s')
         self.assertEqual(out.get('id'), 'st')
 
+        out = self.parser.parse('primitive st stonith:ssh params hostlist= meta')
+        self.assertEqual(out.get('id'), 'st')
+
         out = self.parser.parse('primitive st stonith:null params hostlist=node1 meta description="some description here" op start requires=nothing op monitor interval=60m')
         self.assertEqual(out.get('id'), 'st')
 
