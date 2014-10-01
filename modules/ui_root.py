@@ -35,16 +35,17 @@ import command
 import cmd_status
 import ui_cib
 import ui_cluster
-import ui_corosync
-import ui_resource
 import ui_configure
+import ui_corosync
 import ui_history
-import ui_ra
-import ui_site
+import ui_maintenance
 import ui_node
-import ui_report
 import ui_options
+import ui_ra
+import ui_report
+import ui_resource
 import ui_script
+import ui_site
 
 
 class Root(command.UI):
@@ -54,32 +55,6 @@ class Root(command.UI):
 
     # name is the user-visible name of this CLI level.
     name = 'root'
-
-    @command.level(ui_cluster.Cluster)
-    @command.help('''Cluster setup and management
-Commands at this level enable low-level cluster configuration
-management with HA awareness.
-''')
-    def do_cluster(self):
-        pass
-
-    @command.level(ui_corosync.Corosync)
-    @command.help('''Corosync configuration management
-Corosync is the underlying messaging layer for most HA clusters.
-This level provides commands for editing and managing the corosync
-configuration.
-''')
-    def do_corosync(self):
-        pass
-
-    @command.level(ui_script.Script)
-    @command.help('''Cluster scripts
-Cluster scripts can perform cluster-wide configuration,
-validation and management. See the `list` command for
-an overview of available scripts.
-''')
-    def do_script(self):
-        pass
 
     @command.level(ui_cib.CibShadow)
     @command.help('''manage shadow CIBs
@@ -91,13 +66,12 @@ A shadow CIB may be applied to the cluster in one step.
     def do_cib(self):
         pass
 
-    @command.level(ui_resource.RscMgmt)
-    @command.help('''resources management
-Everything related to resources management is available at this
-level. Most commands are implemented using the crm_resource(8)
-program.
+    @command.level(ui_cluster.Cluster)
+    @command.help('''Cluster setup and management
+Commands at this level enable low-level cluster configuration
+management with HA awareness.
 ''')
-    def do_resource(self):
+    def do_cluster(self):
         pass
 
     @command.level(ui_configure.CibConfig)
@@ -109,6 +83,32 @@ advisable to configure shadow CIBs and then commit them to the
 cluster.
 ''')
     def do_configure(self):
+        pass
+
+    @command.level(ui_corosync.Corosync)
+    @command.help('''Corosync configuration management
+Corosync is the underlying messaging layer for most HA clusters.
+This level provides commands for editing and managing the corosync
+configuration.
+''')
+    def do_corosync(self):
+        pass
+
+    @command.level(ui_history.History)
+    @command.help('''CRM cluster history
+The history level.
+
+Examine Pacemaker's history: node and resource events, logs.
+''')
+    def do_history(self):
+        pass
+
+    @command.level(ui_maintenance.Maintenance)
+    @command.help('''maintenance
+Commands that should only be executed while in
+maintenance mode.
+''')
+    def do_maintenance(self):
         pass
 
     @command.level(ui_node.NodeMgmt)
@@ -127,24 +127,6 @@ to save the preferences to a startup file.
     def do_options(self):
         pass
 
-    @command.level(ui_history.History)
-    @command.help('''CRM cluster history
-The history level.
-
-Examine Pacemaker's history: node and resource events, logs.
-''')
-    def do_history(self):
-        pass
-
-    @command.level(ui_site.Site)
-    @command.help('''Geo-cluster support
-The site level.
-
-Geo-cluster related management.
-''')
-    def do_site(self):
-        pass
-
     @command.level(ui_ra.RA)
     @command.help('''resource agents information center
 This level contains commands which show various information about
@@ -161,6 +143,33 @@ crmsh over the given period of time.
 ''')
     def do_report(self, context, *args):
         return ui_report.create_report(context, args)
+
+    @command.level(ui_resource.RscMgmt)
+    @command.help('''resources management
+Everything related to resources management is available at this
+level. Most commands are implemented using the crm_resource(8)
+program.
+''')
+    def do_resource(self):
+        pass
+
+    @command.level(ui_script.Script)
+    @command.help('''Cluster scripts
+Cluster scripts can perform cluster-wide configuration,
+validation and management. See the `list` command for
+an overview of available scripts.
+''')
+    def do_script(self):
+        pass
+
+    @command.level(ui_site.Site)
+    @command.help('''Geo-cluster support
+The site level.
+
+Geo-cluster related management.
+''')
+    def do_site(self):
+        pass
 
     @command.help('''show cluster status
 Show cluster status. The status is displayed by `crm_mon`. Supply

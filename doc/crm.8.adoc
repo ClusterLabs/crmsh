@@ -3808,6 +3808,97 @@ Usage:
 weak-bond resource-1 resource-2
 ........
 
+[[cmdhelp_maintenance,Maintenance mode commands]]
+=== `maintenance` - Maintenance mode commands
+
+Maintenance mode commands are commands that manipulate resources
+directly without going through the cluster infrastructure. Therefore,
+it is essential to ensure that the cluster does not attempt to monitor
+or manipulate the resources while these commands are being executed.
+
+To ensure this, these commands require that maintenance mode is set
+either for the particular resource, or for the whole cluster.
+
+[[cmdhelp_maintenance_on,Enable maintenance mode]]
+==== `on`
+
+Enables maintenances mode, either for the whole cluster
+or for the given resource.
+
+Usage:
+...............
+on
+on <rsc>
+...............
+Example:
+...............
+on rsc1
+...............
+
+[[cmdhelp_maintenance_off,Disable maintenance mode]]
+==== `off`
+
+Disables maintenances mode, either for the whole cluster
+or for the given resource.
+
+Usage:
+...............
+off
+off <rsc>
+...............
+Example:
+...............
+off rsc1
+...............
+
+[[cmdhelp_maintenance_action,Invoke a resource action]]
+==== `action`
+
+Invokes the given action for the resource. This is
+done directly via the resource agent, so the command must
+be issued while the cluster or the resource is in 
+maintenance mode.
+
+Unless the action is `start` or `monitor`, the action must be invoked
+on the same node as where the resource is running. If the resource is
+running on multiple nodes, the command will fail.
+
+To use pssh for executing resource actions on multiple nodes, use the
+command <<cmdhelp_maintenance_actionssh,actionssh>>.
+
+Usage:
+...............
+action <rsc> <action>
+...............
+Example:
+...............
+action webserver reload
+...............
+
+[[cmdhelp_maintenance_actionssh,Invoke a resource action (via ssh)]]
+==== `actionssh`
+
+Invokes the given action for the resource. This is
+done directly via the resource agent, so the command must
+be issued while the cluster or the resource is in 
+maintenance mode.
+
+If the action is `start`, `promote`, `demote`, `recover` or
+`meta-data`, the action is only invoked on the current node.
+
+If the action is `stop` or `reload`, the action is invoked on all
+nodes where the resource is running.
+
+Usage:
+...............
+actionssh <rsc> <action>
+...............
+Example:
+...............
+actionssh webserver reload
+...............
+
+
 [[cmdhelp_history,Cluster history]]
 === `history` - Cluster history
 

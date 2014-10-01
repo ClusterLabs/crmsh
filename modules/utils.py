@@ -1329,6 +1329,23 @@ def service_info(name):
     return None
 
 
+def running_on(resource):
+    "returns list of node names where the given resource is running"
+    rsc_locate = "crm_resource --resource '%s' --locate"
+    rc, out, err = get_stdout_stderr(rsc_locate % (resource))
+    if rc != 0:
+        return []
+    nodes = []
+    head = "resource %s is running on: " % (resource)
+    for line in out.split('\n'):
+        if line.strip().startswith(head):
+            w = line[len(head):].split()
+            if w:
+                nodes.append(w[0])
+    common_debug("%s running on: %s" % (resource, nodes))
+    return nodes
+
+
 # This RE matches nvpair values that can
 # be left unquoted
 _NOQUOTES_RE = re.compile(r'^[\w\.-]+$')
