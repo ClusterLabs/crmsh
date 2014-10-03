@@ -308,6 +308,31 @@ class RALSB(RADriver):
         return cmd
 
 
+class RASystemd(RADriver):
+    '''
+    Execute operations on systemd resources.
+    '''
+
+    # Error codes are meaningless for systemd...
+    SYSD_OK = 0
+    SYSD_ERR_GENERIC = 1
+    SYSD_NOT_RUNNING = 3
+
+    def __init__(self, *args):
+        RADriver.__init__(self, *args)
+        self.ec_ok = self.SYSD_OK
+        self.ec_stopped = self.SYSD_NOT_RUNNING
+        self.ec_master = self.unused
+
+    def set_rscenv(self, op):
+        RADriver.set_rscenv(self, op)
+
+    def exec_cmd(self, op):
+        op = "status" if op == "monitor" else op
+        cmd = "systemctl %s %s.service" % (op, self.ra_type)
+        return cmd
+
+
 class RAStonith(RADriver):
     '''
     Execute operations on Stonith resources.
@@ -358,7 +383,8 @@ class RAStonith(RADriver):
 ra_driver = {
     "ocf": RAOCF,
     "lsb": RALSB,
-    "stonith": RAStonith
+    "stonith": RAStonith,
+    "systemd": RASystemd
 }
 
 
