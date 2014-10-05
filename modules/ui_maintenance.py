@@ -34,7 +34,6 @@ class Maintenance(command.UI):
     name = "maintenance"
 
     rsc_maintenance = "crm_resource -r '%s' --meta -p maintenance -v '%s'"
-    rsc_locate = "crm_resource --resource '%s' --locate"
 
     def __init__(self):
         command.UI.__init__(self)
