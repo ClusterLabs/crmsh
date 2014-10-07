@@ -74,8 +74,8 @@ class Maintenance(command.UI):
         return set(nodes) == set([utils.this_node()])
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.call(cib_factory.rsc_id_list), _compl_actions)
-    def do_action(self, context, resource, action):
+    @command.completers(compl.call(cib_factory.rsc_id_list), _compl_actions, compl.choice(["ssh"]))
+    def do_action(self, context, resource, action, ssh=None):
         '''
         Issue action out-of-band to the given resource, making
         sure that the resource is in maintenance mode first
@@ -88,32 +88,21 @@ class Maintenance(command.UI):
         if not self._in_maintenance_mode(obj):
             context.fatal_error("Not in maintenance mode.")
 
-        if action not in ('start', 'monitor'):
-            if not self._runs_on_this_node(resource):
-                context.fatal_error("Resource %s must be running on this node (%s)" %
-                                    (resource, utils.this_node()))
+        if ssh is None:
+            if action not in ('start', 'monitor'):
+                if not self._runs_on_this_node(resource):
+                    context.fatal_error("Resource %s must be running on this node (%s)" %
+                                        (resource, utils.this_node()))
 
-        import rsctest
-        return rsctest.call_resource(obj.node, action, [utils.this_node()], local_only=True)
-
-    @command.skill_level('administrator')
-    @command.completers_repeating(compl.call(cib_factory.rsc_id_list), _compl_actions)
-    def do_actionssh(self, context, resource, action):
-        '''
-        Issue action out-of-band to the given resource, making
-        sure that the resource is in maintenance mode first
-        '''
-        obj = cib_factory.find_object(resource)
-        if not obj:
-            context.fatal_error("Resource not found: %s" % (resource))
-        if not xmlutil.is_resource(obj.node):
-            context.fatal_error("Not a resource: %s" % (resource))
-        if not self._in_maintenance_mode(obj):
-            context.fatal_error("Not in maintenance mode.")
-
-        import rsctest
-        if action in ('start', 'promote', 'demote', 'recover', 'meta-data'):
+            import rsctest
             return rsctest.call_resource(obj.node, action, [utils.this_node()], local_only=True)
+        elif ssh == "ssh":
+            import rsctest
+            if action in ('start', 'promote', 'demote', 'recover', 'meta-data'):
+                return rsctest.call_resource(obj.node, action,
+                                             [utils.this_node()], local_only=True)
+            else:
+                all_nodes = cib_factory.node_id_list()
+                return rsctest.call_resource(obj.node, action, all_nodes, local_only=False)
         else:
-            all_nodes = cib_factory.node_id_list()
-            return rsctest.call_resource(obj.node, action, all_nodes, local_only=False)
+            context.fatal_error("Unknown argument: %s" % (ssh))

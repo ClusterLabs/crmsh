@@ -3863,41 +3863,20 @@ Unless the action is `start` or `monitor`, the action must be invoked
 on the same node as where the resource is running. If the resource is
 running on multiple nodes, the command will fail.
 
-To use pssh for executing resource actions on multiple nodes, use the
-command <<cmdhelp_maintenance_actionssh,actionssh>>.
+To use pssh for executing resource actions on multiple nodes, append
+`ssh` after the action name. This requires SSH access to be configured
+between the nodes and the pssh package to be installed.
 
 Usage:
 ...............
 action <rsc> <action>
+action <rsc> <action> ssh
 ...............
 Example:
 ...............
 action webserver reload
+action webserver monitor ssh
 ...............
-
-[[cmdhelp_maintenance_actionssh,Invoke a resource action (via ssh)]]
-==== `actionssh`
-
-Invokes the given action for the resource. This is
-done directly via the resource agent, so the command must
-be issued while the cluster or the resource is in 
-maintenance mode.
-
-If the action is `start`, `promote`, `demote`, `recover` or
-`meta-data`, the action is only invoked on the current node.
-
-If the action is `stop` or `reload`, the action is invoked on all
-nodes where the resource is running.
-
-Usage:
-...............
-actionssh <rsc> <action>
-...............
-Example:
-...............
-actionssh webserver reload
-...............
-
 
 [[cmdhelp_history,Cluster history]]
 === `history` - Cluster history
