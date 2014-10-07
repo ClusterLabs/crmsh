@@ -1201,6 +1201,11 @@ class CibObject(object):
         else:
             return self
 
+    def meta_attributes(self, name):
+        "Returns all meta attribute values with the given name"
+        v = self.node.xpath('./meta_attributes/nvpair[@name="%s"]/@value' % (name))
+        return v
+
     def find_child_in_node(self, child):
         for c in self.node.iterchildren():
             if c.tag == child.obj_type and \

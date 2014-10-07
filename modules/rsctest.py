@@ -18,7 +18,7 @@
 import os
 import sys
 from msg import common_err, common_debug, common_warn, common_info
-from utils import rmdir_r, quote
+from utils import rmdir_r, quote, this_node, ext_cmd
 from xmlutil import get_topmost_rsc, get_op_timeout, get_child_nvset_node, is_ms, is_cloned
 
 
@@ -166,11 +166,10 @@ class RADriver(object):
         '''defined in subclasses'''
         pass
 
-    def runop(self, op, nodes=None):
+    def runop(self, op, nodes=None, local_only=False):
         '''
         Execute an operation.
         '''
-        from crm_pssh import do_pssh_cmd
         if not nodes or self.run_on_all(op):
             nodes = self.nodes
         self.last_op = op
@@ -182,12 +181,16 @@ class RADriver(object):
             # shell doesn't allow "-" in var names
             envvar = attr.replace("-", "_")
             cmd = "%s=%s %s" % (envvar, quote(self.rscenv[attr]), cmd)
-        statuses = do_pssh_cmd(cmd, nodes, self.outdir, self.errdir, self.timeout)
-        for i in range(len(nodes)):
-            try:
-                self.ec_l[nodes[i]] = statuses[i]
-            except:
-                self.ec_l[nodes[i]] = self.undef
+        if local_only:
+            self.ec_l[this_node()] = ext_cmd(cmd)
+        else:
+            from crm_pssh import do_pssh_cmd
+            statuses = do_pssh_cmd(cmd, nodes, self.outdir, self.errdir, self.timeout)
+            for i in range(len(nodes)):
+                try:
+                    self.ec_l[nodes[i]] = statuses[i]
+                except:
+                    self.ec_l[nodes[i]] = self.undef
         return
 
     def stop(self, node):
@@ -305,6 +308,31 @@ class RALSB(RADriver):
         return cmd
 
 
+class RASystemd(RADriver):
+    '''
+    Execute operations on systemd resources.
+    '''
+
+    # Error codes are meaningless for systemd...
+    SYSD_OK = 0
+    SYSD_ERR_GENERIC = 1
+    SYSD_NOT_RUNNING = 3
+
+    def __init__(self, *args):
+        RADriver.__init__(self, *args)
+        self.ec_ok = self.SYSD_OK
+        self.ec_stopped = self.SYSD_NOT_RUNNING
+        self.ec_master = self.unused
+
+    def set_rscenv(self, op):
+        RADriver.set_rscenv(self, op)
+
+    def exec_cmd(self, op):
+        op = "status" if op == "monitor" else op
+        cmd = "systemctl %s %s.service" % (op, self.ra_type)
+        return cmd
+
+
 class RAStonith(RADriver):
     '''
     Execute operations on Stonith resources.
@@ -355,7 +383,8 @@ class RAStonith(RADriver):
 ra_driver = {
     "ocf": RAOCF,
     "lsb": RALSB,
-    "stonith": RAStonith
+    "stonith": RAStonith,
+    "systemd": RASystemd
 }
 
 
@@ -429,5 +458,32 @@ def test_resources(resources, nodes, all_nodes):
     for node in nodes:
         rc |= test_node(node)
     return rc
+
+
+def call_resource(rsc, cmd, nodes, local_only):
+    """
+    Calls the given operation on the resource.
+    local_only: Only performs the call locally (don't use pssh).
+    """
+    ra_class = rsc.get("class")
+    if ra_class not in ra_driver:
+        common_err("Calling '%s' for resource not supported" % (cmd))
+        return False
+    d = ra_driver[ra_class](rsc, [])
+
+    import ra
+    agent = ra.get_ra(rsc)
+    actions = agent.actions().keys() + ['meta-data', 'validate-all']
+
+    if cmd not in actions:
+        common_err("action '%s' not supported by %s" % (cmd, ra.name))
+        return False
+    d.runop(cmd, nodes, local_only=local_only)
+    for node in nodes:
+        ok = d.is_ok(node)
+        if not ok:
+            common_err("%s failed with rc=%d on %s" %
+                       (cmd, d.op_status(node), node))
+    return all(d.is_ok(node) for node in nodes)
 
 # vim:ts=4:sw=4:et:
