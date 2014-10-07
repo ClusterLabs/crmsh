@@ -476,7 +476,7 @@ def call_resource(rsc, cmd, nodes, local_only):
     actions = agent.actions().keys() + ['meta-data', 'validate-all']
 
     if cmd not in actions:
-        common_err("Unsupported action '%s' not in %s" % (cmd, actions))
+        common_err("action '%s' not supported by %s" % (cmd, ra.name))
         return False
     d.runop(cmd, nodes, local_only=local_only)
     for node in nodes:
