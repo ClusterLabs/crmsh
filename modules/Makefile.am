@@ -59,6 +59,7 @@ modules =	__init__.py \
 			ui_context.py \
 			ui_corosync.py \
 			ui_history.py \
+			ui_maintenance.py \
 			ui_node.py \
 			ui_options.py \
 			ui_ra.py \
