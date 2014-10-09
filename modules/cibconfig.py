@@ -304,9 +304,10 @@ class CibObjectSet(object):
                 if edit_file(tmp) != 0:
                     break
                 s = open(tmp).read()
-                if hash(s) != filehash and (not self.save(self._post_edit(s))
-                                            and ask("Do you want to edit again?")):
-                    continue
+                if hash(s) != filehash:
+                    ok = self.save(self._post_edit(s))
+                    if not ok and ask("Edit or discard changes (yes to edit, no to discard)?"):
+                        continue
                 rc = True
             os.unlink(tmp)
         except OSError, e:
