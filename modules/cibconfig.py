@@ -2346,7 +2346,6 @@ class CibFactory(object):
             if is_live_cib():
                 self.last_commit_time = t
             self.reset()
-            self.initialize()
         return rc
 
     def _update_schema(self):
