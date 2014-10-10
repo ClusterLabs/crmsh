@@ -1,4 +1,5 @@
 ASCIIDOC := asciidoc
+CRMCONF := crm.conf
 SRC := faq.adoc documentation.adoc development.adoc installation.adoc \
 	configuration.adoc about.adoc rsctest-guide.adoc \
 	history-guide.adoc start-guide.adoc man-1.2.adoc scripts.adoc man-2.0.adoc
@@ -20,33 +21,33 @@ NEWSDOC := $(patsubst %.adoc,gen/%/index.html,$(NEWS))
 
 all: site
 
-gen/index.html: index.adoc crm.conf
+gen/index.html: index.adoc $(CRMCONF)
 	@mkdir -p $(dir $@)
-	@$(ASCIIDOC) --unsafe -b html5 -f crm.conf -o $@ $<
+	@$(ASCIIDOC) --unsafe -b html5 -f $(CRMCONF) -o $@ $<
 	@python ./postprocess.py -o $@ $<
 
-gen/%/index.html: %.adoc crm.conf
+gen/%/index.html: %.adoc $(CRMCONF)
 	@mkdir -p $(dir $@)
-	@$(ASCIIDOC) --unsafe -b html5 -f crm.conf -o $@ $<
+	@$(ASCIIDOC) --unsafe -b html5 -f $(CRMCONF) -o $@ $<
 	@python ./postprocess.py -o $@ $<
 
-gen/man/index.html: ../crm.8.adoc crm.conf
+gen/man/index.html: ../crm.8.adoc $(CRMCONF)
 	@mkdir -p $(dir $@)
-	@$(ASCIIDOC) --unsafe -b html5 -f crm.conf -o $@ $<
+	@$(ASCIIDOC) --unsafe -b html5 -f $(CRMCONF) -o $@ $<
 	@python ./postprocess.py -o $@ $<
 
-gen/404.html: 404.adoc crm.conf
+gen/404.html: 404.adoc $(CRMCONF)
 	@mkdir -p $(dir $@)
-	@$(ASCIIDOC) --unsafe -b html5 -f crm.conf -o $@ $<
+	@$(ASCIIDOC) --unsafe -b html5 -f $(CRMCONF) -o $@ $<
 	@python ./postprocess.py -o $@ $<
 
-news.adoc: $(NEWS) crm.conf
+news.adoc: $(NEWS) $(CRMCONF)
 	@echo "news:" $(NEWS)
 	python ./make-news.py $@ $(NEWS)
 
 gen/news/index.html: news.adoc
 	@mkdir -p $(dir $@)
-	$(ASCIIDOC) --unsafe -b html5 -f crm.conf -o $@ $<
+	$(ASCIIDOC) --unsafe -b html5 -f $(CRMCONF) -o $@ $<
 	@python ./postprocess.py -o $@ $<
 
 gen/css/%.css: css/%.css
