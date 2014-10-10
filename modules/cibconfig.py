@@ -549,7 +549,7 @@ class CibObjectSetCli(CibObjectSet):
     '''
     Edit or display a set of cib objects (using cli notation).
     '''
-    vim_stx_str = "#vim:set syntax=pcmk\n"
+    vim_stx_str = "# vim: set filetype=pcmk:\n"
 
     def __init__(self, *args):
         CibObjectSet.__init__(self, *args)
