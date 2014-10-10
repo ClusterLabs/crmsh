@@ -305,11 +305,14 @@ logmark() {
 #
 findlog() {
 	local logf=""
+	collect_journal $FROM_TIME $TO_TIME $WORKDIR/$JOURNAL_F
 	if [ "$HA_LOGFACILITY" ]; then
 		logf=`findmsg $UNIQUE_MSG | awk '{print $1}'`
 	fi
 	if [ -f "$logf" ]; then
 		echo $logf
+	elif [ -f "$WORKDIR/$JOURNAL_F" ]; then
+		echo $WORKDIR/$JOURNAL_F
 	else
 		echo ${HA_DEBUGFILE:-$HA_LOGFILE}
 		[ "${HA_DEBUGFILE:-$HA_LOGFILE}" ] &&
@@ -1094,6 +1097,29 @@ getlog() {
 		fi
 	fi
 }
+collect_journal() {
+	local from_time to_time outf
+	from_time="$1"
+	to_time="$2"
+	outf="$3"
+	if which journalctl > /dev/null 2>&1; then
+		if isnumber "$from_time" && [ $from_time -eq 0 ]; then
+			from_time=$(date "+%Y-%m-%d %H:%M")
+		elif isnumber "$from_time"; then
+			from_time=$(echo "$from_time" | awk '{ print strftime("%Y-%m-%d %H:%M", $1); }')
+		fi
+		if isnumber "$to_time" && [ $to_time -eq 0 ]; then
+			to_time=$(date "+%Y-%m-%d %H:%M")
+		elif isnumber "$to_time"; then
+			to_time=$(echo "$to_time" | awk '{ print strftime("%Y-%m-%d %H:%M", $1); }')
+		fi
+		if [ -f $outf ]; then
+			warning "$outf already exists"
+		fi
+		debug "journalctl from: '$1' until: '$2' from_time '$from_time' to_time: '$to_time' > $outf"
+		journalctl --since "$from_time" --until "$to_time" --no-pager | tail -n +2 > $outf
+	fi
+}
 #
 # get all other info (config, stats, etc)
 #
@@ -1314,12 +1340,13 @@ fi
 ANALYSIS_F=analysis.txt
 DESCRIPTION_F=description.txt
 HALOG_F=ha-log.txt
+JOURNAL_F=journal.log
 BT_F=backtraces.txt
 SYSINFO_F=sysinfo.txt
 SYSSTATS_F=sysstats.txt
 DLM_DUMP_F=dlm_dump.txt
 TIME_F=time.txt
-export ANALYSIS_F DESCRIPTION_F HALOG_F BT_F SYSINFO_F SYSSTATS_F DLM_DUMP_F TIME_F
+export ANALYSIS_F DESCRIPTION_F HALOG_F JOURNAL_F BT_F SYSINFO_F SYSSTATS_F DLM_DUMP_F TIME_F
 CRM_MON_F=crm_mon.txt
 MEMBERSHIP_F=members.txt
 HB_UUID_F=hb_uuid.txt
