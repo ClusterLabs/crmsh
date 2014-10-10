@@ -105,6 +105,7 @@ session from that level.
 
 See the crm(8) man page or call %prog help for more details.""",
                           version="%prog " + config.CRM_VERSION)
+    parser.disable_interspersed_args()
     parser.add_option("-f", "--file", dest="filename", metavar="FILE",
                       help="Load commands from the given file. If a dash (-) " +
                       "is used in place of a file name, crm will read commands " +
