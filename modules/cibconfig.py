@@ -312,7 +312,7 @@ class CibObjectSet(object):
                 rc = True
                 break
             if not self.save(self._post_edit(s)):
-                if ask("Do you want to edit again?"):
+                if ask("Edit or discard changes (yes to edit, no to discard)?"):
                     continue
             rc = True
             break
