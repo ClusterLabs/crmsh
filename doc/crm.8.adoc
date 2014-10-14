@@ -2439,9 +2439,13 @@ default-timeouts <id> [<id>...]
 
 .Note on `default-timeouts`
 ****************************
-You may be happy using this, but your applications may not. And
-it will tell you so at the worst possible moment. You have been
-warned.
+The use of this command is discouraged in favor of manually
+determining the best timeouts required for the particular
+configuration. Relying on the resource agent to supply appropriate
+timeouts can cause the resource to fail at the worst possible moment.
+
+Appropriate timeouts for resource actions are context-sensitive, and
+should be carefully considered with the whole configuration in mind.
 ****************************
 
 [[cmdhelp_configure_delete,delete CIB objects]]
