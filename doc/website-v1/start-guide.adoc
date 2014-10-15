@@ -19,7 +19,7 @@ Before continuing, make sure that this command executes successfully
 on all nodes, and returns a version number that is `2.1` or higher:
 
 ........
-crm version
+crm --version
 ........
 
 .Example cluster
