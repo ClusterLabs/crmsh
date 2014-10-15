@@ -35,9 +35,5 @@ its backend.
 For more information on Pacemaker in general, see the
 http://clusterlabs.org/doc/[Pacemaker documentation] at `clusterlabs.org`.
 
-On the Pacemaker website, there is a set of guides to configuring
-Pacemaker using `crmsh`. To find these guides, go to the documentation
-page and search for `crmsh`.
-
 For details on command line usage, see the link:/man[Manual].
 
