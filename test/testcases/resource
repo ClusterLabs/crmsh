@@ -33,3 +33,7 @@ resource start cg
 resource stop p0
 resource start cg
 resource stop cg
+resource stop p3
+configure rename p3 p4
+configure primitive p3 Dummy
+resource stop p3
