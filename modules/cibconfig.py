@@ -3421,6 +3421,10 @@ class CibFactory(object):
         rename_id(obj.node, old_id, new_id)
         obj.obj_id = new_id
         idmgmt.rename(old_id, new_id)
+        # FIXME: (bnc#901543)
+        # for each child node; if id starts with "%(old_id)s-" and
+        # is not referenced by anything, change that id as well?
+        # otherwise inner ids will resemble old name, not new
         obj.set_updated()
 
     def erase(self):
