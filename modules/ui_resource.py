@@ -49,7 +49,7 @@ def get_children_with_different_attr(node, attr, value):
     l = []
     for p in node.xpath(".//primitive"):
         diff_attr = False
-        for meta_set in xmlutil.get_set_nodes(p, "meta_attributes", 0):
+        for meta_set in xmlutil.get_set_nodes(p, "meta_attributes", create=False):
             p_value = xmlutil.get_attr_value(meta_set, attr)
             if p_value is not None and p_value != value:
                 diff_attr = True
@@ -90,7 +90,7 @@ def set_deep_meta_attr_node(target_node, attr, value):
         for nvpair in nvpairs:
             nvpair.set("value", value)
     else:
-        for n in xmlutil.get_set_nodes(target_node, "meta_attributes", 1):
+        for n in xmlutil.get_set_nodes(target_node, "meta_attributes", create=True):
             xmlutil.set_attr(n, attr, value)
     return True
 
