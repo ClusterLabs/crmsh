@@ -112,7 +112,10 @@ def get_prim_token(words, n):
 
 def ra_agent_for_template(tmpl):
     '''@template -> ra.agent'''
-    return ra.get_ra(cib_factory.find_object(tmpl[1:]).node)
+    obj = cib_factory.find_object(tmpl[1:])
+    if obj is None:
+        return None
+    return ra.get_ra(obj.node)
 
 
 def ra_agent_for_cpt(cpt):
@@ -210,6 +213,8 @@ def primitive_complete_complex(args):
         agent = ra_agent_for_template(type_word)
     else:
         agent = ra_agent_for_cpt(type_word)
+    if agent is None:
+        return []
 
     completers_set = {
         "params": _prim_params_completer,
