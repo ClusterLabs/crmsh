@@ -2543,7 +2543,7 @@ class CibFactory(object):
 
     def find_objects(self, obj_id):
         "Find objects for id (can be a wildcard-glob)."
-        if not self.is_cib_sane():
+        if not self.is_cib_sane() or obj_id is None:
             return None
         matchfn = lambda x: x and fnmatch.fnmatch(x, obj_id)
         objs = []
