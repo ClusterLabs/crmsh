@@ -846,7 +846,7 @@ def referenced_resources(node):
         rsc_list = [node.get("first"), node.get("then")]
     elif xml_obj_type == "rsc_ticket":
         rsc_list = [node.get("rsc")]
-    return rsc_list
+    return [rsc for rsc in rsc_list if rsc is not None]
 
 
 def rename_id(node, old_id, new_id):
