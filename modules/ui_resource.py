@@ -129,7 +129,9 @@ def set_deep_meta_attr(rsc, attr, value, commit=True):
 
     def resolve(obj):
         if obj.obj_type == 'tag':
-            return [cib_factory.find_object(o) for o in obj.node.xpath('./obj_ref/@id')]
+            ret = [cib_factory.find_object(o) for o in obj.node.xpath('./obj_ref/@id')]
+            ret = [r for r in ret if r is not None]
+            return ret
         return obj
 
     objs = cib_factory.find_objects(rsc)

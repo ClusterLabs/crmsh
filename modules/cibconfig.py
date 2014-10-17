@@ -1099,6 +1099,8 @@ class CibObject(object):
         '''
         Return False if this object can't be renamed.
         '''
+        if self.obj_id is None:
+            return False
         rscstat = RscState()
         if not rscstat.can_delete(self.obj_id):
             common_err("cannot rename a running resource (%s)" % self.obj_id)
@@ -2791,7 +2793,8 @@ class CibFactory(object):
         matching_tags = [x for x in self.cib_objects if x.obj_type == 'tag' and x.obj_id == t]
         ret = []
         for mt in matching_tags:
-            ret += [cib_factory.find_object(o) for o in mt.node.xpath('./obj_ref/@id')]
+            matches = [cib_factory.find_object(o) for o in mt.node.xpath('./obj_ref/@id')]
+            ret += [m for m in matches if m is not None]
         return ret
 
     def mkobj_set(self, *args):
@@ -3138,7 +3141,9 @@ class CibFactory(object):
         if not new_children_ids:
             return True
         old_children = [x for x in obj.children if x.parent == obj]
-        obj.children = [self.find_object(x) for x in new_children_ids]
+        new_children = [self.find_object(x) for x in new_children_ids]
+        new_children = [c for c in new_children if c is not None]
+        obj.children = new_children
         # relink orphans to top
         for child in set(old_children) - set(obj.children):
             common_debug("relink child %s to top" % str(child))
@@ -3406,7 +3411,7 @@ class CibFactory(object):
           deleted and the one with the new name created
         - rename old id to new id in the object
         '''
-        if not self.is_cib_sane():
+        if not self.is_cib_sane() or not new_id:
             return False
         if idmgmt.id_in_use(new_id):
             return False
