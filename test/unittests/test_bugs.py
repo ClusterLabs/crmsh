@@ -352,3 +352,21 @@ def test_tagset():
     factory.create_from_node(etree.fromstring(tag))
     elems = factory.get_elems_on_tag("tag:t0")
     assert set(x.obj_id for x in elems) == set(['r1', 'r2'])
+
+def test_ratrace():
+    xml = '''<primitive class="ocf" id="%s" provider="pacemaker" type="Dummy"/>'''
+    factory.create_from_node(etree.fromstring(xml % ('r1')))
+    factory.create_from_node(etree.fromstring(xml % ('r2')))
+    factory.create_from_node(etree.fromstring(xml % ('r3')))
+
+    context = object()
+
+    from ui_resource import RscMgmt
+    obj = factory.find_object('r1')
+    RscMgmt()._trace_resource(context, 'r1', obj)
+
+    obj = factory.find_object('r1')
+    ops = obj.node.xpath('./operations/op')
+    for op in ops:
+        assert op.xpath('./instance_attributes/nvpair[@name="trace_ra"]/@value') == ["1"]
+    assert set(obj.node.xpath('./operations/op/@name')) == set(['start', 'stop'])
