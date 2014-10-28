@@ -144,6 +144,8 @@ runtestcase() {
 	./evaltest.sh $testargs
 	) < $TESTDIR/$testcase > $outf 2>&1
 
+	perl -pi -e 's/\<cib[^>]*\>/\<cib\>/g' $outf
+
 	filter_output < $outf |
 	if [ "$prepare" ]; then
 		echo " saving to expect file" >&3
