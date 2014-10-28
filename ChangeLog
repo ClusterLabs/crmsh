@@ -1,3 +1,54 @@
+* Tue Oct 28 2014 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- Pre-release 2.2.0-rc1
+- cibconfig: Clean up output from crm_verify (bnc#893138)
+- high: constants: Add acl_target and acl_group to cib_cli_map (bnc#894041)
+- medium: cibconfig: Add set command
+- doc: Rename asciidoc files to %.adoc
+- high: parse: split shortcuts into valid rules
+- medium: Handle broken CIB in find_objects
+- high: scripts: Handle corosync.conf without nodelist in add-node (bnc#862577)
+- low: template: Add 'new <template>' shortcut
+- low: ui_configure: add rm as alias for delete
+- low: ui_template: List both templates and configs by default
+- medium: config: Assign default path in all cases
+- low: main: Catch any ValueErrors that may leak through
+- doc: Update TODO
+- low: corosync: Check tools before use
+- low: ui_ra: Don't crash when no OCF agents installed
+- low: ra: Add systemd-support to RaOS
+- doc: Updated documentation
+- doc: Handle command names with underscore
+- doc: Add tool to sort command list in documentation
+- doc: Sort command list in documentation alphabetically
+- high: cibconfig: Generate valid CLI syntax for attribute lists (bnc#897462)
+- high: cibconfig: Add tag:<tag> to get all resources in tag
+- low: report: Sort list of nodes
+- low: ui_cluster: More informative error message
+- low: main: Replace getopt with optparse
+- high: parse: Allow empty attribute values in nvpairs (bnc#898625)
+- high: ui_maintenance: Add maintenance sublevel (bnc#899234)
+- medium: rsctest: Add basic support for systemd services
+- medium: ui_maintenance: Combine action and actionssh into a single command
+- low: rsctest: Better error message for unsupported action
+- low: cibconfig: Improve wording of commit prompt
+- high: cibconfig: Delay reinitialization after commit
+- doc: Add website template for the nongnu page
+- medium: main: Disable interspersed args
+- low: cibconfig: Fix vim modeline
+- high: report: Find nodes for any log type (boo#900654)
+- high: hb_report: Collect logs from journald (boo#900654)
+- doc: Clarified note for default-timeouts
+- doc: Remove reference to crmsh documentation at clusterlabs.org
+- doc: start-guide: Fix version check
+- medium: xmlutil: Use idmgmt when creating new elements (bnc#901543)
+- doc: cibconfig: Add note on inner ids after rename
+- high: cibconfig: Don't crash if given an invalid pattern (bnc#901714)
+- high: xmlutil: Filter list of referenced resources (bnc#901714)
+- medium: ui_resource: Only act on resources (#64)
+- medium: ui_resource: Flatten, then filter (#64)
+- high: ui_resource: Use correct name for error function (bnc#901453)
+- high: ui_resource: resource trace failed if operation existed (bnc#901453)
+
 * Mon Jun 30 2014 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - Release 2.1
 - Add atom feed to development page
