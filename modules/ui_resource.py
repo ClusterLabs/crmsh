@@ -480,9 +480,11 @@ class RscMgmt(command.UI):
         op_nodes = rsc.node.xpath('.//op')
 
         def trace(name):
-            if not any(o for o in op_nodes if o.get('name') == name):
-                if not self._add_trace_op(rsc, name, '0'):
-                    context.fatal_error("Failed to add trace for %s:%s" % (rsc_id, name))
+            for o in op_nodes:
+                if o.get('name') == name:
+                    return
+            if not self._add_trace_op(rsc, name, '0'):
+                context.fatal_error("Failed to add trace for %s:%s" % (rsc_id, name))
         trace('start')
         trace('stop')
         if xmlutil.is_ms(rsc.node):
