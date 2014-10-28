@@ -482,7 +482,7 @@ class RscMgmt(command.UI):
         def trace(name):
             if not any(o for o in op_nodes if o.get('name') == name):
                 if not self._add_trace_op(rsc, name, '0'):
-                    context.err("Failed to add trace for %s:%s" % (rsc_id, name))
+                    context.fatal_error("Failed to add trace for %s:%s" % (rsc_id, name))
         trace('start')
         trace('stop')
         if xmlutil.is_ms(rsc.node):
@@ -495,19 +495,19 @@ class RscMgmt(command.UI):
         op_nodes = rsc.node.xpath('.//op[@name="%s"]' % (op))
         if not op_nodes:
             if op == 'monitor':
-                context.err("No monitor operation configured for %s" % (rsc_id))
+                context.fatal_error("No monitor operation configured for %s" % (rsc_id))
             if not self._add_trace_op(rsc, op, '0'):
-                context.err("Failed to add trace for %s:%s" % (rsc_id, op))
+                context.fatal_error("Failed to add trace for %s:%s" % (rsc_id, op))
         for op_node in op_nodes:
             rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
 
     def _trace_op_interval(self, context, rsc_id, rsc, op, interval):
         op_node = xmlutil.find_operation(rsc.node, op, interval)
         if op_node is None and utils.crm_msec(interval) != 0:
-            context.err("Operation %s with interval %s not found in %s" % (op, interval, rsc_id))
+            context.fatal_error("Operation %s with interval %s not found in %s" % (op, interval, rsc_id))
         if op_node is None:
             if not self._add_trace_op(rsc, op, interval):
-                context.err("Failed to add trace for %s:%s" % (rsc_id, op))
+                context.fatal_error("Failed to add trace for %s:%s" % (rsc_id, op))
         else:
             rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
 
