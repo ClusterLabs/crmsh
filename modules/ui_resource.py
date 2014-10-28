@@ -134,10 +134,14 @@ def set_deep_meta_attr(rsc, attr, value, commit=True):
             return ret
         return obj
 
+    def is_resource(obj):
+        return xmlutil.is_resource(obj.node)
+
     objs = cib_factory.find_objects(rsc)
     if objs is None:
         common_error("CIB is not valid!")
         return False
+    objs = filter(is_resource, objs)
     while any(obj for obj in objs if obj.obj_type == 'tag'):
         objs = list(flatten(resolve(obj) for obj in objs))
     common_debug("set_deep_meta_attr: %s" % (', '.join([obj.obj_id for obj in objs])))
