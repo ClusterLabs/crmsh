@@ -1,11 +1,14 @@
 = News
 
-link:/news/2014-06-30-release-2_1[2014-06-30 09:00]
+link:/news/2014-10-28-release-2_1_1[2014-10-29 00:20]
 
 :leveloffset: 1
-include::news/2014-06-30-release-2_1.adoc[]
+
+include::news/2014-10-28-release-2_1_1.adoc[]
+
 :leveloffset: 0
 
 ''''
+* link:/news/2014-06-30-release-2_1[2014-06-30 09:00 Announcing crmsh release 2.1]
 
 link:https://savannah.nongnu.org/news/?group_id=10890[Old News Archive]

@@ -1,0 +1,58 @@
+Announcing crmsh release 2.1.1
+==============================
+:Author: Kristoffer Gronlund
+:Email: kgronlund@suse.com
+:Date: 2014-10-29 00:20
+
+Today we are proud to announce the release of `crmsh` version 2.1.1!
+This version primarily fixes all known issues found since the release
+of `crmsh` 2.1 in June. We recommend that all users of crmsh upgrade
+to this version, especially if using Pacemaker 1.1.12 or newer.
+
+A massive thank you to everyone who has helped out with bug fixes,
+comments and contributions for this release!
+
+For a complete list of changes since the previous version, please
+refer to the changelog:
+
+* https://github.com/crmsh/crmsh/blob/2.1.1/ChangeLog
+
+Packages for several popular Linux distributions can be downloaded
+from the Stable repository at the OBS:
+
+* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/
+
+Archives of the tagged release:
+
+* https://github.com/crmsh/crmsh/archive/2.1.1.tar.gz
+* https://github.com/crmsh/crmsh/archive/2.1.1.zip
+
+Changes since the previous release:
+
+ - cibconfig: Clean up output from crm_verify (bnc#893138)
+ - high: constants: Add acl_target and acl_group to cib_cli_map (bnc#894041)
+ - high: parse: split shortcuts into valid rules
+ - medium: Handle broken CIB in find_objects
+ - high: scripts: Handle corosync.conf without nodelist in add-node (bnc#862577)
+ - medium: config: Assign default path in all cases
+ - high: cibconfig: Generate valid CLI syntax for attribute lists (bnc#897462)
+ - high: cibconfig: Add tag:<tag> to get all resources in tag
+ - doc: Documentation for show tag:<tag>
+ - low: report: Sort list of nodes
+ - high: parse: Allow empty attribute values in nvpairs (bnc#898625)
+ - high: cibconfig: Delay reinitialization after commit
+ - low: cibconfig: Improve wording of commit prompt
+ - low: cibconfig: Fix vim modeline
+ - high: report: Find nodes for any log type (boo#900654)
+ - high: hb_report: Collect logs from journald (boo#900654)
+ - high: cibconfig: Don't crash if given an invalid pattern (bnc#901714)
+ - high: xmlutil: Filter list of referenced resources (bnc#901714)
+ - medium: ui_resource: Only act on resources (#64)
+ - medium: ui_resource: Flatten, then filter (#64)
+ - high: ui_resource: Use correct name for error function (bnc#901453)
+ - high: ui_resource: resource trace failed if operation existed (bnc#901453)
+ - Improved test suite
+
+Thank you,
+
+Kristoffer and Dejan

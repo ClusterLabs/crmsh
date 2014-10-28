@@ -121,8 +121,8 @@ def main():
         output.write(OUTPUT_HEADER)
         e = inputs[0]
         output.write("link:/news/%s[%s]\n\n" % (e.name, e.date))
-        output.write(":leveloffset: 1\n")
-        output.write("include::%s[]\n" % (e.filename))
+        output.write(":leveloffset: 1\n\n")
+        output.write("include::%s[]\n\n" % (e.filename))
         output.write(":leveloffset: 0\n\n")
 
         output.write("''''\n")
