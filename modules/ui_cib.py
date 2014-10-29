@@ -60,7 +60,7 @@ class CibShadow(command.UI):
         argl = list(args)
         opt_l = utils.fetch_opts(argl, ["force", "--force", "withstatus", "empty"])
         if len(argl) > 1:
-            context.fatal_error("Unexpected argument(s): " + ','.join(argl))
+            context.fatal_error("Unexpected argument(s): " + ' '.join(argl))
 
         name = None
         if argl:
