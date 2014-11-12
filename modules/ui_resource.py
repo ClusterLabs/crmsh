@@ -221,10 +221,10 @@ class RscMgmt(command.UI):
         'show': "cibsecret get '%s' '%s'",
         'check': "cibsecret check '%s' '%s'",
     }
-    rsc_refresh = "crm_resource -R"
-    rsc_refresh_node = "crm_resource -R -H '%s'"
-    rsc_reprobe = "crm_resource -P"
-    rsc_reprobe_node = "crm_resource -P -H '%s'"
+    rsc_refresh = "crm_resource -C"
+    rsc_refresh_node = "crm_resource -C -H '%s'"
+    rsc_reprobe = "crm_resource -C"
+    rsc_reprobe_node = "crm_resource -C -H '%s'"
 
     def requires(self):
         for program in ('crm_resource', 'crm_attribute'):
