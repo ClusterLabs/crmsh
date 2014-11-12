@@ -20,6 +20,12 @@ resource param p0 delete a0
 resource meta p0 set m0 123
 resource meta p0 show m0
 resource meta p0 delete m0
+resource trace p0 probe
+resource trace p0 start
+resource trace p0 stop
+resource untrace p0 probe
+resource untrace p0 start
+resource untrace p0 stop
 configure group g p0 p3
 options manage-children never
 resource start g

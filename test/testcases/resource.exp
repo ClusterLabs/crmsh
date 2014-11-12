@@ -257,6 +257,181 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
   </configuration>
 </cib>
 
+.TRY resource trace p0 probe
+INFO: Trace for p0:monitor is written to /var/lib/heartbeat/trace_ra/
+INFO: Trace set, restart p0 to trace non-monitor operations
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <instance_attributes id="p0-instance_attributes"/>
+        <meta_attributes id="p0-meta_attributes"/>
+        <operations>
+          <op name="monitor" interval="0" id="p0-monitor-0">
+            <instance_attributes id="p0-monitor-0-instance_attributes">
+              <nvpair name="trace_ra" value="1" id="p0-monitor-0-instance_attributes-trace_ra"/>
+            </instance_attributes>
+          </op>
+        </operations>
+      </primitive>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource trace p0 start
+INFO: Trace for p0:start is written to /var/lib/heartbeat/trace_ra/
+INFO: Trace set, restart p0 to trace the start operation
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <instance_attributes id="p0-instance_attributes"/>
+        <meta_attributes id="p0-meta_attributes"/>
+        <operations>
+          <op name="monitor" interval="0" id="p0-monitor-0">
+            <instance_attributes id="p0-monitor-0-instance_attributes">
+              <nvpair name="trace_ra" value="1" id="p0-monitor-0-instance_attributes-trace_ra"/>
+            </instance_attributes>
+          </op>
+          <op name="start" interval="0" id="p0-start-0">
+            <instance_attributes id="p0-start-0-instance_attributes">
+              <nvpair name="trace_ra" value="1" id="p0-start-0-instance_attributes-trace_ra"/>
+            </instance_attributes>
+          </op>
+        </operations>
+      </primitive>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource trace p0 stop
+INFO: Trace for p0:stop is written to /var/lib/heartbeat/trace_ra/
+INFO: Trace set, restart p0 to trace the stop operation
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <instance_attributes id="p0-instance_attributes"/>
+        <meta_attributes id="p0-meta_attributes"/>
+        <operations>
+          <op name="monitor" interval="0" id="p0-monitor-0">
+            <instance_attributes id="p0-monitor-0-instance_attributes">
+              <nvpair name="trace_ra" value="1" id="p0-monitor-0-instance_attributes-trace_ra"/>
+            </instance_attributes>
+          </op>
+          <op name="start" interval="0" id="p0-start-0">
+            <instance_attributes id="p0-start-0-instance_attributes">
+              <nvpair name="trace_ra" value="1" id="p0-start-0-instance_attributes-trace_ra"/>
+            </instance_attributes>
+          </op>
+          <op name="stop" interval="0" id="p0-stop-0">
+            <instance_attributes id="p0-stop-0-instance_attributes">
+              <nvpair name="trace_ra" value="1" id="p0-stop-0-instance_attributes-trace_ra"/>
+            </instance_attributes>
+          </op>
+        </operations>
+      </primitive>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource untrace p0 probe
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <instance_attributes id="p0-instance_attributes"/>
+        <meta_attributes id="p0-meta_attributes"/>
+        <operations>
+          <op name="start" interval="0" id="p0-start-0">
+            <instance_attributes id="p0-start-0-instance_attributes">
+              <nvpair name="trace_ra" value="1" id="p0-start-0-instance_attributes-trace_ra"/>
+            </instance_attributes>
+          </op>
+          <op name="stop" interval="0" id="p0-stop-0">
+            <instance_attributes id="p0-stop-0-instance_attributes">
+              <nvpair name="trace_ra" value="1" id="p0-stop-0-instance_attributes-trace_ra"/>
+            </instance_attributes>
+          </op>
+        </operations>
+      </primitive>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource untrace p0 start
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <instance_attributes id="p0-instance_attributes"/>
+        <meta_attributes id="p0-meta_attributes"/>
+        <operations>
+          <op name="stop" interval="0" id="p0-stop-0">
+            <instance_attributes id="p0-stop-0-instance_attributes">
+              <nvpair name="trace_ra" value="1" id="p0-stop-0-instance_attributes-trace_ra"/>
+            </instance_attributes>
+          </op>
+        </operations>
+      </primitive>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource untrace p0 stop
+.INP: configure
+.INP: _regtest on
+.INP: show xml p0
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <instance_attributes id="p0-instance_attributes"/>
+        <meta_attributes id="p0-meta_attributes"/>
+      </primitive>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
 .TRY configure group g p0 p3
 .INP: configure
 .INP: _regtest on
