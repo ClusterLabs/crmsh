@@ -2101,7 +2101,7 @@ class CibFactory(object):
         # internal (just not to produce silly messages)
         self._no_constraint_rm_msg = False
         # FIXME
-        self.supported_cib_re = "^pacemaker-[12][.][0123]$"
+        self.supported_cib_re = "^pacemaker-.+$"
         self._crm_diff_cmd = None
 
     def is_cib_sane(self):
@@ -2175,8 +2175,7 @@ class CibFactory(object):
             common_info("already using schema %s" % schema_st)
             return True
         if not re.match(self.supported_cib_re, schema_st):
-            common_err("schema %s not supported by the shell" % schema_st)
-            return False
+            common_warn("schema %s is not supported by the shell" % schema_st)
         self.cib_elem.set("validate-with", schema_st)
         if not schema.test_schema(self.cib_elem):
             self.cib_elem.set("validate-with", self.get_schema())
@@ -2230,8 +2229,7 @@ class CibFactory(object):
         if self.cib_elem is None:
             return False
         if not self.is_cib_supported():
-            self.reset()
-            return False
+            common_warn("CIB schema is not supported by the shell")
         self._get_cib_attributes(self.cib_elem)
         schema.init_schema(self.cib_elem)
         return True
