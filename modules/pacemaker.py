@@ -37,12 +37,16 @@ def get_validate_type(cib_elem):
     validate_name = get_validate_name(cib_elem)
     if re.match(r"pacemaker-\d+\.\d+", validate_name):
         return "rng"
+    elif validate_name == "pacemaker-next":
+        return "rng"
     return None
 
 
 def get_schema_filename(validate_name):
     if re.match(r"pacemaker-\d+\.\d+", validate_name):
         return "%s.rng" % (validate_name)
+    elif validate_name == "pacemaker-next":
+        return "pacemaker-next.rng"
     return None
 
 
