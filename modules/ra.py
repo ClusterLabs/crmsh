@@ -323,7 +323,13 @@ def prog_meta(prog):
     '''
     Do external program metadata.
     '''
-    if is_program(prog):
+    if prog == "crmd" and os.path.isfile(os.path.join(config.path.crm_daemon_dir, 'crmd')):
+        prog = os.path.join(config.path.crm_daemon_dir, 'crmd')
+        rc, l = stdout2list("%s metadata" % prog)
+        if rc == 0:
+            return l
+        common_debug("%s metadata exited with code %d" % (prog, rc))
+    elif is_program(prog):
         rc, l = stdout2list("%s metadata" % prog)
         if rc == 0:
             return l
