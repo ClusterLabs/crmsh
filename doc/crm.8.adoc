@@ -1497,6 +1497,12 @@ promote <rsc>
 
 Refresh CIB from the LRM status.
 
+.Note
+****************************
+`refresh` has been deprecated and is now
+an alias for `cleanup`.
+****************************
+
 Usage:
 ...............
 refresh [<node>]
@@ -1506,6 +1512,12 @@ refresh [<node>]
 ==== `reprobe`
 
 Probe for resources not started by the CRM.
+
+.Note
+****************************
+`reprobe` has been deprecated and is now
+an alias for `cleanup`.
+****************************
 
 Usage:
 ...............
