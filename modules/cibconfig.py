@@ -1653,9 +1653,11 @@ class CibLocation(CibObject):
         id = clidisplay.id(self.obj_id)
         s = "%s %s %s" % (s, id, rsc)
 
-        role = self.node.get("role")
-        if role is not None:
-            s += " role=%s" % (role)
+        known_attrs = ['role', 'resource-discovery']
+        for attr in known_attrs:
+            val = self.node.get(attr)
+            if val is not None:
+                s += " %s=%s" % (attr, val)
 
         pref_node = self.node.get("node")
         score = clidisplay.score(get_score(self.node))
