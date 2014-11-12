@@ -43,6 +43,7 @@ class BaseParser(object):
     _IDENT_RE = re.compile(r'([a-z0-9_#$-][^=]*)$', re.IGNORECASE)
     _DISPATCH_RE = re.compile(r'[a-z0-9_]+$', re.IGNORECASE)
     _DESC_RE = re.compile(r'description=(.+)$', re.IGNORECASE)
+    _ATTR_RE = re.compile(r'\$?([^=]+)=(.*)$')
     _RESOURCE_RE = re.compile(r'([a-z_#$][^=]*)$', re.IGNORECASE)
     _IDSPEC_RE = re.compile(r'(\$id-ref|\$id)=(.*)$', re.IGNORECASE)
     _ID_RE = re.compile(r'\$id=(.*)$', re.IGNORECASE)
@@ -708,11 +709,12 @@ class ConstraintParser(RuleParser):
 
     def parse_location(self):
         """
-        location <id> rsc [role=<role>] <score>: <node>
-        location <id> rsc [role=<role>] [rule ...]
+        location <id> rsc [[$]<attribute>=<value>] <score>: <node>
+        location <id> rsc [[$]<attribute>=<value>] [rule ...]
         rsc :: /<rsc-pattern>/
             | { <rsc-set> }
             | <rsc>
+        attribute :: role | resource-discovery
         """
         out = xmlbuilder.new('rsc_location', id=self.match_identifier())
         if self.try_match('^/(.+)/$'):
@@ -727,6 +729,9 @@ class ConstraintParser(RuleParser):
                 out.append(rscset)
         else:
             out.set('rsc', self.match_resource())
+
+        while self.try_match(self._ATTR_RE):
+            out.set(self.matched(1), self.matched(2))
 
         if self.try_match(self._ROLE_RE) or self.try_match(self._ROLE2_RE):
             out.set('role', self.matched(1))
