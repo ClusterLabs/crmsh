@@ -1628,6 +1628,10 @@ If no operation name is given, crmsh will attempt to trace all
 operations for the RA. This includes any configured operations, start
 and stop as well as promote/demote for multistate resources.
 
+To trace the probe operation which exists for all resources, either
+set a trace for `monitor` with interval `0`, or use `probe` as the
+operation name.
+
 Usage:
 ...............
 trace <rsc> [<op> [<interval>] ]
@@ -1636,6 +1640,8 @@ Example:
 ...............
 trace fs start
 trace webserver
+trace webserver probe
+trace fs monitor 0
 ...............
 
 [[cmdhelp_resource_unmanage,put a resource into unmanaged mode]]
