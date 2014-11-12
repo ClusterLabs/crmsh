@@ -521,6 +521,8 @@ class RscMgmt(command.UI):
             return False
         if op == "probe":
             op = "monitor"
+            if interval is None:
+                interval = "0"
         if op is None:
             self._trace_resource(context, rsc_id, rsc)
         elif interval is None:
