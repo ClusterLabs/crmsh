@@ -251,6 +251,10 @@ class _Configuration(object):
         if os.path.isfile(_SYSTEMWIDE):
             self._systemwide = ConfigParser.SafeConfigParser()
             self._systemwide.read([_SYSTEMWIDE])
+        # for backwards compatibility with <=2.1.1 due to ridiculous bug
+        elif os.path.isfile("/etc/crm/crmsh.conf"):
+            self._systemwide = ConfigParser.SafeConfigParser()
+            self._systemwide.read(["/etc/crm/crmsh.conf"])
         if os.path.isfile(_PERUSER):
             self._user = ConfigParser.SafeConfigParser()
             self._user.read([_PERUSER])
