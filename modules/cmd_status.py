@@ -18,13 +18,7 @@
 
 import utils
 
-crm_mon_prog = "crm_mon"
-
-
-def has_crm_mon():
-    p = crm_mon_prog
-    if not utils.is_program(p):
-        raise IOError("%s not available, check your installation" % crm_mon_prog)
+_crm_mon = None
 
 
 def crm_mon(opts=''):
@@ -33,8 +27,17 @@ def crm_mon(opts=''):
     opts: Additional options to pass to crm_mon
     returns: rc, stdout
     """
-    has_crm_mon()
-    status_cmd = "%s -1 %s" % (crm_mon_prog, opts)
+    global _crm_mon
+    if _crm_mon is None:
+        if not utils.is_program("crm_mon"):
+            raise IOError("crm_mon not available, check your installation")
+        _, out = utils.get_stdout("crm_mon --help")
+        if "--pending" in out:
+            _crm_mon = "crm_mon -1 -j"
+        else:
+            _crm_mon = "crm_mon -1"
+
+    status_cmd = "%s %s" % (_crm_mon, opts)
     return utils.get_stdout(utils.add_sudo(status_cmd))
 
 
@@ -42,26 +45,26 @@ def cmd_status(args):
     '''
     Calls crm_mon -1, passing optional extra arguments.
     Displays the output, paging if necessary.
-    Raises ValueError if an illegal argument is passed.
     Raises IOError if crm_mon fails.
     '''
-    crm_mon_opts = {
+    opts = {
         "bynode": "-n",
         "inactive": "-r",
         "ops": "-o",
         "timing": "-t",
         "failcounts": "-f",
+        "verbose": "-V",
+        "quiet": "-Q",
+        "html": "--as-html",
+        "xml": "--as-xml",
+        "simple": "-s",
+        "tickets": "-c",
+        "noheaders": "-D",
+        "detail": "-R",
+        "brief": "-b",
     }
-
-    has_crm_mon()
-
-    def check(arg, val):
-        if not val:
-            raise ValueError("Unknown argument to status: " + str(arg))
-        return val
-    extra_options = ' '.join(check(arg, crm_mon_opts.get(arg)) for arg in args)
-
-    rc, s = crm_mon(extra_options)
+    extra = ' '.join(opts.get(arg, arg) for arg in args)
+    rc, s = crm_mon(extra)
     if rc != 0:
         raise IOError("crm_mon (rc=%d): %s" % (rc, s))
 
