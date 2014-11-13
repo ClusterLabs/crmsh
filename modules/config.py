@@ -24,7 +24,7 @@ import ConfigParser
 import userdir
 
 
-_SYSTEMWIDE = '/etc/crm/crmsh.conf'
+_SYSTEMWIDE = '/etc/crm/crm.conf'
 _PERUSER = os.getenv("CRM_CONFIG_FILE") or os.path.join(userdir.CONFIG_HOME, 'crm.conf')
 
 
