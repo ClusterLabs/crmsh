@@ -19,7 +19,7 @@
 MAINTAINERCLEANFILES = Makefile.in
 
 testcasesdir		= 	$(datadir)/$(PACKAGE)/tests/testcases
-testcases_SCRIPTS	=	ra.filter xmlonly.sh history.pre history.post
+testcases_SCRIPTS	=	ra.filter common.filter xmlonly.sh history.pre history.post
 testcases_DATA		=	basicset common.excl \
 	confbasic confbasic-xml delete file \
 	node ra resource shadow acl options \
