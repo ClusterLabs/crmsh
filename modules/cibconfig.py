@@ -2357,18 +2357,6 @@ class CibFactory(object):
         current_cib = read_cib(cibdump2elem)
         if current_cib is None:
             return False
-        self._get_cib_attributes(current_cib)
-        self._set_cib_attributes(self.cib_orig)
-        current_cib = None  # don't need that anymore
-        # now increase the epoch by 1
-        self.bump_epoch()
-        self._set_cib_attributes(self.cib_elem)
-        cib_s = etree.tostring(self.cib_orig, pretty_print=True)
-        tmpf = str2tmp(cib_s, suffix=".xml")
-        if not tmpf:
-            return False
-        tmpfiles.add(tmpf)
-        cibadmin_opts = force and "-P --force" or "-P"
 
         # check if crm_diff supports --no-version
         if self._crm_diff_cmd is None:
@@ -2377,6 +2365,22 @@ class CibFactory(object):
                 self._crm_diff_cmd = 'crm_diff --no-version'
             else:
                 self._crm_diff_cmd = 'crm_diff'
+
+        self._get_cib_attributes(current_cib)
+        self._set_cib_attributes(self.cib_orig)
+        current_cib = None  # don't need that anymore
+        # only bump epoch if we don't have support for --no-version
+        # TODO: strip version information before generating patch
+        if not self._crm_diff_cmd.endswith('--no-version'):
+            # now increase the epoch by 1
+            self.bump_epoch()
+        self._set_cib_attributes(self.cib_elem)
+        cib_s = etree.tostring(self.cib_orig, pretty_print=True)
+        tmpf = str2tmp(cib_s, suffix=".xml")
+        if not tmpf:
+            return False
+        tmpfiles.add(tmpf)
+        cibadmin_opts = force and "-P --force" or "-P"
 
         # produce a diff:
         # dump_new_conf | crm_diff -o self.cib_orig -n -
