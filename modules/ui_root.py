@@ -34,7 +34,6 @@
 import command
 import cmd_status
 import ui_cib
-import ui_cluster
 import ui_corosync
 import ui_resource
 import ui_configure
@@ -44,7 +43,6 @@ import ui_site
 import ui_node
 import ui_report
 import ui_options
-import ui_script
 
 
 class Root(command.UI):
@@ -55,14 +53,6 @@ class Root(command.UI):
     # name is the user-visible name of this CLI level.
     name = 'root'
 
-    @command.level(ui_cluster.Cluster)
-    @command.help('''Cluster setup and management
-Commands at this level enable low-level cluster configuration
-management with HA awareness.
-''')
-    def do_cluster(self):
-        pass
-
     @command.level(ui_corosync.Corosync)
     @command.help('''Corosync configuration management
 Corosync is the underlying messaging layer for most HA clusters.
@@ -70,15 +60,6 @@ This level provides commands for editing and managing the corosync
 configuration.
 ''')
     def do_corosync(self):
-        pass
-
-    @command.level(ui_script.Script)
-    @command.help('''Cluster scripts
-Cluster scripts can perform cluster-wide configuration,
-validation and management. See the `list` command for
-an overview of available scripts.
-''')
-    def do_script(self):
         pass
 
     @command.level(ui_cib.CibShadow)
