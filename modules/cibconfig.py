@@ -74,7 +74,7 @@ def show_unrecognized_elems(cib_elem):
         if is_defaults(topnode) or topnode.tag == "fencing-topology":
             continue
         for c in topnode.iterchildren():
-            if not c.tag in cib_object_map:
+            if c.tag not in cib_object_map:
                 common_warn("unrecognized CIB element %s" % c.tag)
                 rc = False
     return rc
@@ -874,6 +874,7 @@ def parse_cli_to_xml(cli, oldnode=None, validation=None):
         return None, None, None
     return postprocess_cli(node, oldnode)
 
+
 #
 # cib element classes (CibObject the parent class)
 #
@@ -885,7 +886,7 @@ class CibObject(object):
     set_names = {}
 
     def __init__(self, xml_obj_type):
-        if not xml_obj_type in cib_object_map:
+        if xml_obj_type not in cib_object_map:
             unsupported_err(xml_obj_type)
             return
         self.obj_type = cib_object_map[xml_obj_type][0]
@@ -988,7 +989,7 @@ class CibObject(object):
         also show rule expressions if found
         '''
 
-        has_nvpairs = len(node.xpath('.//nvpair')) > 0
+        # has_nvpairs = len(node.xpath('.//nvpair')) > 0
         idref = node.get('id-ref')
 
         # don't skip empty sets: skipping these breaks
@@ -2100,8 +2101,6 @@ class CibFactory(object):
         self.last_commit_time = 0
         # internal (just not to produce silly messages)
         self._no_constraint_rm_msg = False
-        # FIXME
-        self.supported_cib_re = "^pacemaker-.+$"
         self._crm_diff_cmd = None
 
     def is_cib_sane(self):
@@ -2122,7 +2121,7 @@ class CibFactory(object):
     #
 
     def _check_parent(self, obj, parent):
-        if not obj in parent.children:
+        if obj not in parent.children:
             common_err("object %s does not reference its child %s" %
                        (parent.obj_id, obj.obj_id))
             return False
@@ -2174,7 +2173,7 @@ class CibFactory(object):
         if schema_st == self.get_schema():
             common_info("already using schema %s" % schema_st)
             return True
-        if not re.match(self.supported_cib_re, schema_st):
+        if schema.is_supported(schema_st):
             common_warn("schema %s is not supported by the shell" % schema_st)
         self.cib_elem.set("validate-with", schema_st)
         if not schema.test_schema(self.cib_elem):
@@ -2185,13 +2184,13 @@ class CibFactory(object):
         rc = True
         for obj in self.cib_objects:
             if schema.get('sub', obj.node.tag, 'a') is None:
-                common_err("%s not supported by the RNG schema" % obj.node.tag)
+                common_err("%s not supported by the RNG schema %s" % (obj.node.tag, schema_st))
                 rc = False
         if not rc:
             # revert, as some elements won't validate
             self.cib_elem.set("validate-with", self.get_schema())
             schema.init_schema(self.cib_elem)
-            common_err("current configuration not valid with %s, cannot change schema" % schema_st)
+            common_err("Schema %s conflicts with current configuration" % schema_st)
             return 4
         self.cib_attrs["validate-with"] = schema_st
         self.new_schema = True
@@ -2210,7 +2209,8 @@ class CibFactory(object):
         'Do we support this CIB?'
         req = self.cib_elem.get("crm_feature_set")
         validator = self.cib_elem.get("validate-with")
-        if validator and re.match(self.supported_cib_re, validator):
+        # if no schema is configured, just assume that it validates
+        if not validator or schema.is_supported(validator):
             return True
         cib_ver_unsupported_err(validator, req)
         return False
@@ -2887,7 +2887,7 @@ class CibFactory(object):
         if child.parent and child.parent.obj_id != obj_id:
             common_err("%s already in use at %s" % (child_id, child.parent.obj_id))
             return False
-        if not child.obj_type in constants.children_tags:
+        if child.obj_type not in constants.children_tags:
             common_err("%s may contain a primitive or a group; %s is %s" %
                        (parent_tag, child_id, child.obj_type))
             return False
@@ -3193,7 +3193,7 @@ class CibFactory(object):
         return True
 
     def test_element(self, obj):
-        if not obj.xml_obj_type in constants.defaults_tags:
+        if obj.xml_obj_type not in constants.defaults_tags:
             if not self._verify_element(obj):
                 return False
         if utils.is_check_always() and obj.check_sanity() > 1:

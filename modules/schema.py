@@ -16,7 +16,26 @@
 #
 
 import config
+import re
 from pacemaker import CrmSchema
+
+
+def is_supported(name):
+    """
+    Check if the given name is a supported schema name
+    A short form is also accepted where the prefix
+    pacemaker- is implied.
+    """
+    shortform = re.compile(r'^(\d+\.\d+)|next$')
+    slist = config.core.supported_schemas
+    for s in slist:
+        if s == name:
+            return True
+        elif shortform.match(s) and 'pacemaker-' + s == name:
+            return True
+        elif shortform.match(name) and 'pacemaker-' + name == s:
+            return True
+    return False
 
 
 def get_attrs(schema, name):

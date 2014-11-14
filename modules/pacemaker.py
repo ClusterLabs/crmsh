@@ -18,7 +18,6 @@
 import os
 import tempfile
 import copy
-import re
 from lxml import etree
 
 
@@ -34,20 +33,13 @@ def get_validate_name(cib_elem):
 
 
 def get_validate_type(cib_elem):
-    validate_name = get_validate_name(cib_elem)
-    if re.match(r"pacemaker-\d+\.\d+", validate_name):
-        return "rng"
-    elif validate_name == "pacemaker-next":
-        return "rng"
-    return None
+    return "rng"
 
 
 def get_schema_filename(validate_name):
-    if re.match(r"pacemaker-\d+\.\d+", validate_name):
+    if not validate_name.endswith('.rng'):
         return "%s.rng" % (validate_name)
-    elif validate_name == "pacemaker-next":
-        return "pacemaker-next.rng"
-    return None
+    return validate_name
 
 
 def read_schema_local(validate_name, file_path):

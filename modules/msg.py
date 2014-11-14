@@ -252,9 +252,11 @@ def cib_no_elem_err(el_name):
 
 
 def cib_ver_unsupported_err(validator, rel):
-    err_buf.error("CIB not supported: validator '%s', release '%s'" %
+    err_buf.error("Unsupported CIB: validator '%s', release '%s'" %
                   (validator, rel))
-    err_buf.error("You may try the upgrade command")
+    err_buf.error("To upgrade an old (<1.0) schema, use the upgrade command.")
+    schemas = config.core.supported_schemas
+    err_buf.error("core.supported_schemas: %s" % (', '.join(schemas)))
 
 
 def update_err(obj_id, cibadm_opt, xml, rc):
