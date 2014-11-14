@@ -36,8 +36,8 @@ def cli_format(pl, break_lines=True, xml=False):
 def head_id_format(nodeid):
     "Special format for property list / node id"
     if utils.noquotes(nodeid):
-        return "%s:" % (clidisplay.attr_value(nodeid))
-    return '%s="%s"' % (clidisplay.attr_name('$id'),
+        return "%s:" % (clidisplay.id(nodeid))
+    return '%s="%s"' % (clidisplay.id('$id'),
                         clidisplay.attr_value(nodeid))
 
 
