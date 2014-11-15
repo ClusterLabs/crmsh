@@ -2306,11 +2306,11 @@ class CibFactory(object):
             for obj in self.remove_queue:
                 obj._dump_state()
 
-    def commit(self, force=False):
+    def commit(self, force=False, replace=False):
         'Commit the configuration to the CIB.'
         if not self.is_cib_sane():
             return False
-        if cibadmin_can_patch():
+        if not replace and cibadmin_can_patch():
             rc = self._patch_cib(force)
         else:
             rc = self._replace_cib(force)

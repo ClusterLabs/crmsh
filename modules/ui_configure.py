@@ -541,34 +541,43 @@ class CibConfig(command.UI):
         set_obj = mkset_obj("xml")
         return ui_utils.ptestlike(set_obj.ptest, 'vv', context.get_command_name(), args)
 
-    def _commit(self, force=None):
-        if force and force != "force":
+    def _commit(self, force=False, replace=False):
+        if force:
             syntax_err(('configure.commit', force))
             return False
         if not cib_factory.has_cib_changed():
             common_info("apparently there is nothing to commit")
             common_info("try changing something first")
             return True
+        replace = replace or not utils.cibadmin_can_patch()
         rc1 = True
-        if not (force or utils.cibadmin_can_patch()):
+        if replace and not force:
             rc1 = cib_factory.is_current_cib_equal()
         rc2 = cib_factory.has_no_primitives() or \
             self._verify(mkset_obj("xml", "changed"), mkset_obj("xml"))
         if rc1 and rc2:
-            return cib_factory.commit()
+            return cib_factory.commit(replace=replace)
         if force or config.core.force:
             common_info("commit forced")
-            return cib_factory.commit(force=True)
+            return cib_factory.commit(force=True, replace=replace)
         if utils.ask("Do you still want to commit?"):
-            return cib_factory.commit(force=True)
+            return cib_factory.commit(force=True, replace=replace)
         return False
 
     @command.skill_level('administrator')
     @command.wait
-    @command.completers(compl.choice(['force']))
-    def do_commit(self, context, force=None):
-        "usage: commit [force]"
-        return self._commit(force=force)
+    @command.completers(compl.choice(['force', 'replace']), compl.choice(['force', 'replace']))
+    def do_commit(self, context, arg0=None, arg1=None):
+        "usage: commit [force] [replace]"
+        force = "force" in [arg0, arg1]
+        replace = "replace" in [arg0, arg1]
+        if arg0 is not None and arg0 not in ("force", "replace"):
+            syntax_err(('configure.commit', arg0))
+            return False
+        if arg1 is not None and arg1 not in ("force", "replace"):
+            syntax_err(('configure.commit', arg1))
+            return False
+        return self._commit(force=force, replace=replace)
 
     @command.skill_level('administrator')
     @command.completers(compl.choice(['force']))

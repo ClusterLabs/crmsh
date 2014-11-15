@@ -2438,9 +2438,14 @@ by somebody else, the crm shell will refuse to apply the changes.
 If you know that it's fine to still apply them, add +force+ to the
 command line.
 
+To disable CIB patching and apply the changes by replacing the CIB
+completely, add +replace+ to the command line. Note that this can lead
+to previous changes being overwritten if some other process
+concurrently modifies the CIB.
+
 Usage:
 ...............
-commit [force]
+commit [force] [replace]
 ...............
 
 [[cmdhelp_configure_default-timeouts,set timeouts for operations to minimums from the meta-data]]
