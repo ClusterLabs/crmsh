@@ -17,7 +17,6 @@
 
 import shlex
 import sys
-import readline
 import config
 import utils
 import options
@@ -102,7 +101,7 @@ class Context(object):
         A space at the end of the line is significant.
         '''
         complete_next = line.endswith(' ')
-        #if complete_next:
+        # if complete_next:
         #    print >>sys.stderr, "complete_next is on"
 
         # copy current state
@@ -156,6 +155,7 @@ class Context(object):
             self.command_info = prev_info
 
     def setup_readline(self):
+        import readline
         readline.set_history_length(100)
         for v in ('tab: complete',
                   #'set bell-style visible',
@@ -176,6 +176,8 @@ class Context(object):
         self._rl_words = []
 
     def readline_completer(self, text, state):
+        import readline
+
         def matching(word):
             'we are only completing the last word in the line'
             return word.split()[-1].startswith(text)
