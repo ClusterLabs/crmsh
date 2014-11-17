@@ -409,17 +409,12 @@ class CibConfig(command.UI):
 
     @command.skill_level('administrator')
     def do_save(self, context, *args):
-        "usage: save [xml] <filename>"
+        "usage: save [xml] [<id>...] <filename>"
         if not args:
             context.fatal_error("Expected 1 argument (0 given)")
-        if args[0] == "xml":
-            if len(args) != 2:
-                context.fatal_error("Expected 2 arguments (%d given)" % (len(args)))
-            filename = args[1]
-            set_obj = mkset_obj("xml")
-        else:
-            filename = args[0]
-            set_obj = mkset_obj()
+        filename = args[-1]
+        setargs = args[:-1]
+        set_obj = mkset_obj(*setargs)
         return set_obj.save_to_file(filename)
 
     @command.skill_level('administrator')

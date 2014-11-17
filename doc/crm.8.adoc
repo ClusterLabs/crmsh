@@ -3277,11 +3277,12 @@ Save the current configuration to a file. Optionally, as XML. Use
 
 Usage:
 ...............
-save [xml] <file>
+save [xml] [<id>...] <file>
 ...............
 Example:
 ...............
 save myfirstcib.txt
+save web-server server-config.txt
 ...............
 
 [[cmdhelp_configure_schema,set or display current CIB RNG schema]]
