@@ -1087,7 +1087,7 @@ class RscMgmt(UserInterface):
             if xmlutil.is_our_node(argl[0]):
                 node = argl[0]
             else:
-                syntax_err((cmd, args))
+                common_err("Not our node: " + argl[0])
                 return False
         opts = ''
         if node:
