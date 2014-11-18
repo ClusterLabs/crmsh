@@ -1509,6 +1509,8 @@ class CibPrimitive(CibObject):
         if ra.mk_ra_node() is None:  # no RA found?
             if cib_factory.is_asymm_cluster():
                 return rc3
+            if config.core.ignore_missing_metadata:
+                return rc3
             ra.error("no such resource agent")
             return utils.get_check_rc()
         actions = get_rsc_operations(r_node)

@@ -199,7 +199,8 @@ DEFAULTS = {
         'ptest': opt_program('', ('ptest', 'crm_simulate')),
         'dotty': opt_program('', ('dotty',)),
         'dot': opt_program('', ('dot',)),
-        'supported_schemas': opt_list(_SUPPORTED_SCHEMAS)
+        'supported_schemas': opt_list(_SUPPORTED_SCHEMAS),
+        'ignore_missing_metadata': opt_boolean('no'),
     },
     'path': {
         'sharedir': opt_dir('%(datadir)s/crmsh'),
