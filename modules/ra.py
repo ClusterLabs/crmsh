@@ -427,7 +427,8 @@ class RAInfo(object):
             self.ra_elem = etree.fromstring('\n'.join(meta))
         except Exception:
             if not meta:
-                self.error("got no meta-data, does this RA exist?")
+                if not config.core.ignore_missing_metadata:
+                    self.error("got no meta-data, does this RA exist?")
             else:
                 self.error("meta-data is no good XML")
             return None

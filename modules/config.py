@@ -185,7 +185,8 @@ DEFAULTS = {
         'debug': opt_boolean('no'),
         'ptest': opt_program('', ('ptest', 'crm_simulate')),
         'dotty': opt_program('', ('dotty',)),
-        'dot': opt_program('', ('dot',))
+        'dot': opt_program('', ('dot',)),
+        'ignore_missing_metadata': opt_boolean('no'),
     },
     'path': {
         'sharedir': opt_dir('%(datadir)s/crmsh'),
