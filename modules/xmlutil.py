@@ -1242,13 +1242,6 @@ def get_topnode(cib_elem, tag):
     return e
 
 
-def new_cib_element(e, tagname, id_pfx):
-    base_id = e.get("id")
-    new_e = etree.SubElement(e, tagname)
-    new_e.set("id", "%s-%s" % (base_id, id_pfx))
-    return new_e
-
-
 def get_attr_in_set(e, attr):
     if e is None:
         return None
@@ -1271,9 +1264,16 @@ def set_attr(e, attr, value):
     '''
     nvpair = get_attr_in_set(e, attr)
     if nvpair is None:
-        nvpair = new_cib_element(e, "nvpair", attr)
-    nvpair.set("name", attr)
-    nvpair.set("value", value)
+        from idmgmt import IdMgmt
+        id_store = IdMgmt.getInstance()
+        nvpair = etree.SubElement(e, "nvpair")
+        nvpair.set("id", "temp")
+        nvpair.set("name", attr)
+        nvpair.set("id", id_store.new(nvpair, e.get("id")))
+        nvpair.set("value", value)
+    else:
+        nvpair.set("name", attr)
+        nvpair.set("value", value)
 
 
 def get_set_nodes(e, setname, create=0):
@@ -1282,7 +1282,11 @@ def get_set_nodes(e, setname, create=0):
     if l:
         return l
     if create:
-        l.append(new_cib_element(e, setname, setname))
+        from idmgmt import IdMgmt
+        id_store = IdMgmt.getInstance()
+        elem = etree.SubElement(e, setname)
+        elem.set("id", id_store.new(elem, e.get("id")))
+        l.append(elem)
     return l
 
 

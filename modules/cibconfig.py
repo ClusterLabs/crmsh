@@ -2530,6 +2530,21 @@ class CibFactory(Singleton):
                 return obj
         return None
 
+    def find_objects(self, obj_id):
+        "Find objects for id"
+        if not self.is_cib_sane() or obj_id is None:
+            return None
+        matchfn = lambda x: x and x == obj_id
+        objs = []
+        for obj in self.cib_objects:
+            if matchfn(obj.obj_id):
+                objs.append(obj)
+            # special case for Heartbeat nodes which have id
+            # different from uname
+            elif obj.obj_type == "node" and matchfn(obj.node.get("uname")):
+                objs.append(obj)
+        return objs
+
     #
     # tab completion functions
     #

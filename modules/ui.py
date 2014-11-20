@@ -825,24 +825,37 @@ def set_deep_meta_attr_node(target_node, attr, value):
             if xmlutil.is_child_rsc(c):
                 rm_meta_attribute(c, attr, nvpair_l)
     if user_prefs.manage_children != "never" and \
-            (xmlutil.is_group(target_node) or \
-            (xmlutil.is_clone(target_node) and xmlutil.cloned_el(target_node) == "group")):
+            (xmlutil.is_group(target_node) or
+             (xmlutil.is_clone(target_node) and xmlutil.cloned_el(target_node) == "group")):
         odd_children = get_children_with_different_attr(target_node, attr, value)
         for c in odd_children:
             if user_prefs.manage_children == "always" or \
-                    (user_prefs.manage_children == "ask" and \
-                    utils.ask("Do you want to override %s for child resource %s?" % (attr, c.get("id")))):
+                    (user_prefs.manage_children == "ask" and
+                     utils.ask("Do you want to override %s for child resource %s?" %
+                               (attr, c.get("id")))):
                 common_debug("force remove meta attr %s from %s" %
                              (attr, c.get("id")))
                 rm_meta_attribute(c, attr, nvpair_l, force_children=True)
     xmlutil.rmnodes(list(set(nvpair_l)))
-    for n in xmlutil.get_set_nodes(target_node, "meta_attributes", 1):
-        xmlutil.set_attr(n, attr, value)
-    return xmlutil.commit_rsc(target_node)
+    xmlutil.xml_processnodes(target_node,
+                             xmlutil.is_emptynvpairs, xmlutil.rmnodes)
+
+    # work around issue with pcs interoperability
+    # by finding exising nvpairs -- if there are any, just
+    # set the value in those. Otherwise fall back to adding
+    # to all meta_attributes tags
+    nvpairs = target_node.xpath("./meta_attributes/nvpair[@name='%s']" % (attr))
+    if len(nvpairs) > 0:
+        for nvpair in nvpairs:
+            nvpair.set("value", value)
+    else:
+        for n in xmlutil.get_set_nodes(target_node, "meta_attributes", create=True):
+            xmlutil.set_attr(n, attr, value)
+    return True
 
 
-def set_deep_meta_attr(attr, value, rsc_id):
-    '''
+def set_deep_meta_attr(rsc, attr, value, commit=True):
+    """
     If the referenced rsc is a primitive that belongs to a group,
     then set its attribute.
     Otherwise, go up to the topmost resource which contains this
@@ -851,16 +864,64 @@ def set_deep_meta_attr(attr, value, rsc_id):
     If it's a group then check its children. If any of them has
     the attribute set to a value different from the one given,
     then ask the user whether to reset them or not (exact
-    behaviour depends on the value of user_prefs.manage_children).
-    '''
-    target_node = xmlutil.RscState().rsc2node(rsc_id)
-    if target_node is None:
-        common_error("resource %s does not exist" % rsc_id)
+    behaviour depends on the value of config.core.manage_children).
+    """
+
+    def update_obj(obj):
+        """
+        set the meta attribute in the given object
+        """
+        node = obj.node
+        obj.updated = True
+        obj.propagate_updated()
+        if not (node.tag == "primitive" and
+                node.getparent().tag == "group"):
+            node = xmlutil.get_topmost_rsc(node)
+        return set_deep_meta_attr_node(node, attr, value)
+
+    def flatten(objs):
+        for obj in objs:
+            if isinstance(obj, list):
+                for subobj in obj:
+                    yield subobj
+            else:
+                yield obj
+
+    def resolve(obj):
+        if obj.obj_type == 'tag':
+            ret = [cib_factory.find_object(o) for o in obj.node.xpath('./obj_ref/@id')]
+            ret = [r for r in ret if r is not None]
+            return ret
+        return obj
+
+    def is_resource(obj):
+        return xmlutil.is_resource(obj.node)
+
+    objs = cib_factory.find_objects(rsc)
+    if objs is None:
+        common_error("CIB is not valid!")
         return False
-    if not (target_node.tag == "primitive" and \
-        target_node.getparent().tag == "group"):
-        target_node = xmlutil.get_topmost_rsc(target_node)
-    return set_deep_meta_attr_node(target_node, attr, value)
+    while any(obj for obj in objs if obj.obj_type == 'tag'):
+        objs = list(flatten(resolve(obj) for obj in objs))
+    objs = filter(is_resource, objs)
+    common_debug("set_deep_meta_attr: %s" % (', '.join([obj.obj_id for obj in objs])))
+    if not objs:
+        common_error("Resource not found: %s" % (rsc))
+        return False
+
+    ok = all(update_obj(obj) for obj in objs)
+    if not ok:
+        common_error("Failed to update meta attributes for %s" % (rsc))
+        return False
+
+    if not commit:
+        return True
+
+    ok = cib_factory.commit()
+    if not ok:
+        common_error("Failed to commit updates to %s" % (rsc))
+        return False
+    return True
 
 
 def cleanup_resource(rsc, node=''):
@@ -948,6 +1009,17 @@ class RscMgmt(UserInterface):
         })
         utils.setup_aliases(self)
 
+    def _commit_meta_attr(self, rsc, name, value):
+        """
+        Perform change to resource
+        """
+        if not utils.is_name_sane(rsc):
+            return False
+        commit = not cib_factory.has_cib_changed()
+        if not commit:
+            common_info("Currently editing the CIB, changes will not be committed")
+        return set_deep_meta_attr(rsc, name, value, commit=commit)
+
     def status(self, cmd, rsc=None):
         "usage: status [<rsc>]"
         if rsc:
@@ -959,14 +1031,10 @@ class RscMgmt(UserInterface):
 
     def start(self, cmd, rsc):
         "usage: start <rsc>"
-        if not utils.is_name_sane(rsc):
-            return False
-        return set_deep_meta_attr("target-role", "Started", rsc)
+        return self._commit_meta_attr(rsc, "target-role", "Started")
 
     def restart(self, cmd, rsc):
         "usage: restart <rsc>"
-        if not utils.is_name_sane(rsc):
-            return False
         common_info("ordering %s to stop" % rsc)
         if not self.stop("stop", rsc):
             return False
@@ -977,9 +1045,7 @@ class RscMgmt(UserInterface):
 
     def stop(self, cmd, rsc):
         "usage: stop <rsc>"
-        if not utils.is_name_sane(rsc):
-            return False
-        return set_deep_meta_attr("target-role", "Stopped", rsc)
+        return self._commit_meta_attr(rsc, "target-role", "Stopped")
 
     def promote(self, cmd, rsc):
         "usage: promote <rsc>"
@@ -1001,15 +1067,11 @@ class RscMgmt(UserInterface):
 
     def manage(self, cmd, rsc):
         "usage: manage <rsc>"
-        if not utils.is_name_sane(rsc):
-            return False
-        return set_deep_meta_attr("is-managed", "true", rsc)
+        return self._commit_meta_attr(rsc, "is-managed", "true")
 
     def unmanage(self, cmd, rsc):
         "usage: unmanage <rsc>"
-        if not utils.is_name_sane(rsc):
-            return False
-        return set_deep_meta_attr("is-managed", "false", rsc)
+        return self._commit_meta_attr(rsc, "is-managed", "false")
 
     def migrate(self, cmd, *args):
         """usage: migrate <rsc> [<node>] [<lifetime>] [force]"""
