@@ -216,7 +216,7 @@ DEFAULTS = {
         'nagios_plugins': opt_dir('%(libdir)s/nagios/plugins')
     },
     'color': {
-        'style': opt_multichoice('color', ('plain', 'color', 'uppercase')),
+        'style': opt_multichoice('color', ('plain', 'color-always', 'color', 'uppercase')),
         'error': opt_color('red bold'),
         'ok': opt_color('green bold'),
         'warn': opt_color('yellow bold'),

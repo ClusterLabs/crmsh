@@ -112,7 +112,8 @@ def _init():
         sys.stderr.write("INFO: no curses support: you won't see colors\n")
         return
     # If the stream isn't a tty, then assume it has no capabilities.
-    if not _term_stream.isatty():
+    import config
+    if not _term_stream.isatty() and 'color-always' not in config.color.style:
         return
     # Check the terminal type.  If we fail, then assume that the
     # terminal has no capabilities.
@@ -145,8 +146,6 @@ def _init():
     if set_bg_ansi:
         for i, color in zip(range(len(_ANSICOLORS)), _ANSICOLORS):
             setattr(colors, 'BG_'+color, curses.tparm(set_bg_ansi, i) or '')
-
-_init()
 
 
 def render(template):
