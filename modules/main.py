@@ -114,7 +114,7 @@ See the crm(8) man page or call %prog help for more details.""",
                       help="Start the session using the given shadow CIB file. " +
                       "Equivalent to `cib use <CIB>`.")
     parser.add_option("-D", "--display", dest="display", metavar="OUTPUT_TYPE",
-                      help="Choose one of the output options: plain, color, or uppercase. " +
+                      help="Choose one of the output options: plain, color-always, color, or uppercase. " +
                       "The default is color if the terminal emulation supports colors, " +
                       "else plain.")
     parser.add_option("-F", "--force", action="store_true", default=False, dest="force",
@@ -350,6 +350,7 @@ def run():
             err_buf.reset_lineno()
             options.batch = True
         user_args = parse_options()
+        term._init()
         if options.profile:
             return profile_run(context, user_args)
         else:

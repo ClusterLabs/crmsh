@@ -74,8 +74,8 @@ OPTIONS
     Equivalent to +cib use <CIB>+.
 
 *-D, --display=*'OUTPUT_TYPE'::
-    Choose one of the output options: +plain+, +color+, or
-    +uppercase+. The default is +color+ if the terminal emulation
+    Choose one of the output options: +plain+, +color-always+, +color+,
+    or +uppercase+. The default is +color+ if the terminal emulation
     supports colors. Otherwise, +plain+ is used.
 
 *-F, --force*::
@@ -2084,10 +2084,13 @@ all children attributes are left intact. Finally, if set to
 
 `crm` can adorn configurations in two ways: in color (similar to
 for instance the `ls --color` command) and by showing keywords in
-upper case. Possible values are `plain`, `color`, and
-'uppercase'. It is possible to combine the latter two in order to
-get an upper case xmass tree. Just set this option to
-`color,uppercase`.
+upper case. Possible values are `plain`, `color-always`, `color`,
+and 'uppercase'. It is possible to combine `uppercase` with one
+of the color values in order to get an upper case xmass tree. Just
+set this option to `color,uppercase` or `color-always,uppercase`.
+In case you need color codes in pipes, `color-always` forces color
+codes even in case the terminal is not a tty (just like `ls
+--color=always`).
 
 [[cmdhelp_options_pager,set preferred pager program]]
 ==== `pager`

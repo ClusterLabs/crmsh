@@ -110,7 +110,9 @@ class CliOptions(command.UI):
     @command.completers(_getprefs('output'))
     def do_output(self, context, output_type):
         "usage: output <type>"
-        return _legacy_set_pref("output", output_type)
+        _legacy_set_pref("output", output_type)
+        import term
+        term._init()
 
     def do_colorscheme(self, context, colors):
         "usage: colorscheme <colors>"
