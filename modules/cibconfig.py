@@ -3057,6 +3057,19 @@ class CibFactory(object):
         '''
         common_debug("_cli_set_update: %s, %s, %s" % (mk_set, upd_set, del_set))
         test_l = []
+
+        def obj_is_container(x):
+            obj = self.find_object(x)
+            return obj and is_container(obj.node)
+
+        del_containers = [x for x in del_set if obj_is_container(x)]
+        del_objs = [x for x in del_set if not obj_is_container(x)]
+
+        # delete containers first in case objects are moved elsewhere
+        if not self.delete(*del_containers):
+            common_debug("delete %s failed" % (list(del_set)))
+            return False
+
         for cli in processing_sort([edit_d[x] for x in mk_set]):
             obj = self.create_from_cli(cli)
             if not obj:
@@ -3064,6 +3077,7 @@ class CibFactory(object):
                              (etree.tostring(cli, pretty_print=True)))
                 return False
             test_l.append(obj)
+
         for id in upd_set:
             obj = self.find_object(id)
             if not obj:
@@ -3078,7 +3092,7 @@ class CibFactory(object):
                              (obj, etree.tostring(node), method))
                 return False
             test_l.append(obj)
-        if not self.delete(*list(del_set)):
+        if not self.delete(*del_objs):
             common_debug("delete %s failed" % (list(del_set)))
             return False
         rc = True
