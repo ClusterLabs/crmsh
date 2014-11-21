@@ -745,6 +745,71 @@ primitive virtual-ip IPaddr2 params $vip:ip=192.168.1.100
 primitive webserver apache params @vip:server_ip
 ............
 
+[[topics_Syntax_RuleExpressions,Syntax: Rule expressions]]
+=== Syntax: Rule expressions
+
+Many of the configuration commands in `crmsh` now support the use of
+_rule expressions_, which can influence what attributes apply to a
+resource or under which conditions a constraint is applied, depending
+on changing conditions like date, time, the value of attributes and
+more.
+
+Here is an example of a simple rule expression used to apply a
+a different resource parameter on the node named `node1`:
+
+..............
+primitive my_resource Special \
+  params 2: rule #uname eq node1 interface=eth1 \
+  params 1: interface=eth0
+..............
+
+This primitive resource has two lists of parameters with descending
+priority. The parameter list with the highest priority is applied
+first, but only if the rule expressions for that parameter list all
+apply. In this case, the rule `#uname eq node1` limits the parameter
+list so that it is only applied on `node1.
+
+Note that rule expressions are not terminated and are immediately
+followed by the data to which the rule is applied. In this case, the
+name-value pair `interface=eth1`.
+
+Rule expressions can contain multiple expressions connected using the
+boolean operator `or` and `and`. The full syntax for rule expressions
+is listed below.
+
+..............
+rules ::
+  rule [id_spec] [$role=<role>] <score>: <expression>
+  [rule [id_spec] [$role=<role>] <score>: <expression> ...]
+
+id_spec :: $id=<id> | $id-ref=<id>
+score :: <number> | <attribute> | [-]inf
+expression :: <simple_exp> [bool_op <simple_exp> ...]
+bool_op :: or | and
+simple_exp :: <attribute> [type:]<binary_op> <value>
+          | <unary_op> <attribute>
+          | date <date_expr>
+type :: string | version | number
+binary_op :: lt | gt | lte | gte | eq | ne
+unary_op :: defined | not_defined
+
+date_expr :: lt <end>
+         | gt <start>
+         | in start=<start> end=<end>
+         | in start=<start> <duration>
+         | spec <date_spec>
+duration|date_spec ::
+         hours=<value>
+         | monthdays=<value>
+         | weekdays=<value>
+         | yearsdays=<value>
+         | months=<value>
+         | weeks=<value>
+         | years=<value>
+         | weekyears=<value>
+         | moon=<value>
+..............
+
 [[topics_Reference,Command reference]]
 == Command reference
 
