@@ -3027,11 +3027,14 @@ primitive mySpecialRsc Special \
 [[cmdhelp_configure_property,set a cluster property]]
 ==== `property`
 
-Set the cluster (+crm_config+) options.
+Set cluster configuration properties. To list the
+available cluster configuration properties, use the
+<<cmdhelp_ra_info,`ra info`>> command with +pengine+, +crmd+,
++cib+ and +stonithd+ as arguments.
 
 Usage:
 ...............
-property [$id=<set_id>] [rule ...] <option>=<value> [<option>=<value> ...]
+property [<set_id>:] [rule ...] <option>=<value> [<option>=<value> ...]
 ...............
 Example:
 ...............
