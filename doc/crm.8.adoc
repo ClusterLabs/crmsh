@@ -2772,10 +2772,14 @@ following:
 * Tag containing resource ids: +location loc1 tag1 100: node1+
 * Resource pattern: +location loc1 /web.*/ 100: node1+
 
-The syntax for resource sets is described in detail for <<cmdhelp_configure_colocation,`colocation`>>.
+The syntax for resource sets is described in detail for
+<<cmdhelp_configure_colocation,`colocation`>>.
 
 For more details on how to configure resource sets, see
 <<topics_Features_Resourcesets,`Syntax: Resource sets`>>.
+
+For more information on rule expressions, see
+<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
 
 Usage:
 ...............
@@ -2941,6 +2945,9 @@ node big_node attributes memory=64
 
 Set defaults for the operations meta attributes.
 
+For more information on rule expressions, see
+<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
+
 Usage:
 ...............
 op_defaults [$id=<set_id>] [rule ...] <option>=<value> [<option>=<value> ...]
@@ -3097,6 +3104,9 @@ available cluster configuration properties, use the
 <<cmdhelp_ra_info,`ra info`>> command with +pengine+, +crmd+,
 +cib+ and +stonithd+ as arguments.
 
+For more information on rule expressions, see
+<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
+
 Usage:
 ...............
 property [<set_id>:] [rule ...] <option>=<value> [<option>=<value> ...]
@@ -3197,6 +3207,9 @@ references the whole status section of the CIB. Read access to
 status is necessary for various monitoring tools such as
 `crm_mon(8)` (aka `crm status`).
 
+For more information on rule expressions, see
+<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
+
 Usage:
 ...............
 role <role-id> rule [rule ...]
@@ -3233,9 +3246,12 @@ role app1_admin \
 
 Set defaults for the resource meta attributes.
 
+For more information on rule expressions, see
+<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
+
 Usage:
 ...............
-rsc_defaults [$id=<set_id>] [rule ...] <option>=<value> [<option>=<value> ...]
+rsc_defaults [<set_id>:] [rule ...] <option>=<value> [<option>=<value> ...]
 ...............
 Example:
 ...............
@@ -3488,6 +3504,9 @@ can be allowed access to parts of the CIB. The access is defined
 by a set of +read+, +write+, and +deny+ rules as in role
 definitions or by referencing roles. The latter is considered
 best practice.
+
+For more information on rule expressions, see
+<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
 
 Usage:
 ...............
