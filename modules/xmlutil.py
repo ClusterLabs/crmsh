@@ -267,12 +267,21 @@ class RscState(object):
         rc, outp = get_stdout(self.rsc_status % test_id, stderr_on=False)
         return outp.find("running") > 0 and outp.find("NOT") == -1
 
+    def is_group(self, id):
+        '''
+        Test if the resource is a group
+        '''
+        rsc_node = self.rsc2node(id)
+        if rsc_node is None:
+            return False
+        return is_group(rsc_node)
+
     def can_delete(self, id):
         '''
         Can a resource be deleted?
         The order below is important!
         '''
-        return not (self.is_running(id) and self.is_managed(id))
+        return not (self.is_running(id) and not self.is_group(id) and self.is_managed(id))
 
 
 def resources_xml():
