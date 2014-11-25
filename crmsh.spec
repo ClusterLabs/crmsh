@@ -41,14 +41,10 @@ Name:           crmsh
 Summary:        High Availability cluster command-line interface
 License:        GPL-2.0+
 Group:          %{pkg_group}
-Version:        2.0
+Version:        2.2.0~rc1
 Release:        %{?crmsh_release}%{?dist}
 Url:            http://crmsh.github.io
 Source0:        crmsh.tar.bz2
-# PATCH-FEATURE-OPENSUSE crmsh-cibadmin_can_patch.patch
-# dejan@suse.de -- enable atomic CIB updates here, because our
-# pacemaker version has been fixed in the meantime
-Patch11:        crmsh-cibadmin_can_patch.patch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Requires(pre):  pacemaker
 Requires:       pssh
@@ -60,7 +56,6 @@ BuildRequires:  python-lxml
 
 %if 0%{?suse_version}
 Requires:       python-PyYAML
-BuildRequires:  python-PyYAML
 # Suse splits this off into a separate package
 Requires:       python-curses
 BuildRequires:  fdupes
@@ -74,7 +69,6 @@ BuildRequires:  pacemaker-libs-devel
 
 %if 0%{?fedora_version}
 Requires:       PyYAML
-BuildRequires:  PyYAML
 %endif
 
 # Required for core functionality
@@ -122,7 +116,6 @@ Authors: Dejan Muhamedagic <dejan@suse.de> and many others
 
 %prep
 %setup -q -n %{upstream_prefix}
-%patch11 -p1
 
 # Force the local time
 #
