@@ -49,12 +49,17 @@ def _type_completions():
     return ['type:%s' % (t) for t in typelist]
 
 
+def _tag_completions():
+    "completer for tag: use in show"
+    return ['tag:%s' % (t) for t in cib_factory.tag_list()]
+
 # Tab completion helpers
 _id_list = compl.call(cib_factory.id_list)
 _id_xml_list = compl.join(_id_list, compl.choice(['xml']))
 _id_show_list = compl.join(_id_list,
                            compl.choice(['xml', 'changed']),
-                           compl.call(_type_completions))
+                           compl.call(_type_completions),
+                           compl.call(_tag_completions))
 _prim_id_list = compl.call(cib_factory.prim_id_list)
 _f_prim_free_id_list = compl.call(cib_factory.f_prim_free_id_list)
 _f_group_id_list = compl.call(cib_factory.f_group_id_list)
@@ -408,6 +413,7 @@ class CibConfig(command.UI):
         return self._verify(set_obj_all, set_obj_all)
 
     @command.skill_level('administrator')
+    @command.completers_repeating(_id_show_list)
     def do_save(self, context, *args):
         "usage: save [xml] [<id>...] <filename>"
         if not args:

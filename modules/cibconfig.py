@@ -2558,6 +2558,10 @@ class CibFactory(object):
         "List of object types (for completion)"
         return list(set([x.obj_type for x in self.cib_objects]))
 
+    def tag_list(self):
+        "List of tags (for completion)"
+        return list(set([x.obj_id for x in self.cib_objects if x.obj_type == "tag"]))
+
     def prim_id_list(self):
         "List of primitives ids (for group completion)."
         return [x.obj_id for x in self.cib_objects if x.obj_type == "primitive"]

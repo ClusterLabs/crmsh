@@ -3362,9 +3362,13 @@ rsctest websvc nodeB
 Save the current configuration to a file. Optionally, as XML. Use
 +-+ instead of file name to write the output to `stdout`.
 
+The `save` command accepts the same selection arguments as the `show`
+command. See the <<cmdhelp_configure_show,help section>> for `show`
+for more details.
+
 Usage:
 ...............
-save [xml] [<id>...] <file>
+save [xml] [<id> | type:<type | tag:<tag> | changed ...] <file>
 ...............
 Example:
 ...............
@@ -3421,26 +3425,45 @@ set vm-a.force_stop 1
 [[cmdhelp_configure_show,display CIB objects]]
 ==== `show`
 
-The `show` command displays objects. It may display all objects
-or a set of objects. The user may also choose to see only objects
-which were changed.
+The `show` command displays CIB objects. Without any argument, it
+displays all objects in the CIB, but the set of objects displayed by
+`show` can be limited to only objects with the given IDs or by using
+one or more of the special prefixes described below.
 
-Optionally, the XML code may be displayed instead of the CLI
-representation by passing `xml` as the first argument.
+The XML representation for the objects can be displayed by passing
++xml+ as the first argument.
+
+To show one or more specific objects, pass the object IDs as
+arguments.
 
 To show all objects of a certain type, use the +type:+ prefix.
 
+To show all objects in a tag, use the +tag:+ prefix.
+
+To show all modified objects, pass the argument +changed+.
+
+The prefixes can be used together on a single command line. For
+example, to show both the tag itself and the objects tagged by it the
+following combination can be used: +show tag:my-tag my-tag+.
+
 Usage:
 ...............
-show [xml] [<id> ...]
-show [xml] changed
+show [xml] [<id> | changed | type:<type> | tag:<id> ...]
+
+type :: node | primitive | group | clone | ms | rsc_template
+      | location | colocation | order
+      | rsc_ticket
+      | property | rsc_defaults | op_defaults
+      | fencing_topology
+      | role | user | acl_target | acl_group
+      | tag
 ...............
 
 Example:
 ...............
 show webapp
 show type:primitive
-show xml type:node
+show xml tag:db tag:fs
 ...............
 
 [[cmdhelp_configure_tag,Define resource tags]]
