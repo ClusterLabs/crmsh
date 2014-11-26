@@ -8,10 +8,15 @@ to be improved. Still, you may want to edit a more colorful
 configuration. To have that in "crm configure edit" do the
 following:
 
-Copy one of them to ~/.vim/syntax/pcmk.vim.
+ 1. Copy one of them to ~/.vim/syntax/pcmk.vim.
 
-Don't forget to put "syntax on" in the VIM rc file (~/.vimrc or
-~/.exrc).
+ 2. Make sure the following is added to your VIM rc file
+    (~/.vimrc or ~/.exrc):
+
+
+    syntax on
+    modeline on
+
 
 If you're editing a file directly, just type:
 
