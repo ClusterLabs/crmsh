@@ -15,7 +15,8 @@ following:
 
 
     syntax on
-    modeline on
+    set modeline
+    set modelines=5
 
 
 If you're editing a file directly, just type:
