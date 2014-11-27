@@ -363,8 +363,9 @@ class History(command.UI):
         rendered using the repr() method.'''
         self._setup_cib_env(pe_f)
         if not cib_factory.refresh():
-            return False
-        set_obj = mkset_obj()
+            set_obj = mkset_obj("NOOBJ")
+        else:
+            set_obj = mkset_obj()
         return set_obj
 
     def _pe_config_noclr(self, pe_f):
