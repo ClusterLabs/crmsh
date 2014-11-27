@@ -562,7 +562,7 @@ def stdout2list(cmd, stderr_on=True, shell=True):
 def append_file(dest, src):
     'Append src to dest'
     try:
-        open(dest).write(open(src).read())
+        open(dest, "a").write(open(src).read())
         return True
     except IOError, msg:
         common_err("append %s to %s: %s" % (src, dest, msg))
