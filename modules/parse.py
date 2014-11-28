@@ -37,9 +37,10 @@ class ParseError(Exception):
 
 
 class BaseParser(object):
-    _NVPAIR_RE = re.compile(r'([^=@$][^=]*)=(.*)?$')
+    _NVPAIR_RE = re.compile(r'([^=@$][^=]*)=(.*)$')
     _NVPAIR_ID_RE = re.compile(r'\$([^:=]+)(?::(.+))?=(.*)$')
     _NVPAIR_REF_RE = re.compile(r'@([^:]+)(?::(.+))?$')
+    _NVPAIR_KEY_RE = re.compile(r'([^:=]+)$', re.IGNORECASE)
     _IDENT_RE = re.compile(r'([a-z0-9_#$-][^=]*)$', re.IGNORECASE)
     _DISPATCH_RE = re.compile(r'[a-z0-9_]+$', re.IGNORECASE)
     _DESC_RE = re.compile(r'description=(.+)$', re.IGNORECASE)
@@ -173,37 +174,17 @@ class BaseParser(object):
 
     def match_nvpairs_bykey(self, valid_keys, minpairs=1):
         """
-        matches string of p=v tokens, but only if p is in valid_keys
+        matches string of p=v | p tokens, but only if p is in valid_keys
         Returns list of <nvpair> tags
         """
         _KEY_RE = re.compile(r'(%s)=(.+)$' % '|'.join(valid_keys))
-        ret = []
-        while self.try_match(_KEY_RE):
-            ret.append(xmlbuilder.nvpair(self.matched(1), self.matched(2)))
-        if len(ret) < minpairs:
-            if minpairs == 1:
-                self.err("Expected at least one name-value pair")
-            else:
-                self.err("Expected at least %d name-value pairs" % (minpairs))
-        return ret
-
-    def match_nvpairs(self, minpairs=1):
-        """
-        Matches string of p=v tokens
-        Returns list of <nvpair> tags
-        """
+        _NOVAL_RE = re.compile(r'(%s)$' % '|'.join(valid_keys))
         ret = []
         while True:
-            if self.try_match(self._NVPAIR_REF_RE):
-                ret.append(xmlbuilder.nvpair_ref(self.matched(1),
-                                                 self.matched(2)))
-            elif self.try_match(self._NVPAIR_ID_RE):
-                ret.append(xmlbuilder.nvpair_id(self.matched(1),
-                                                self.matched(2),
-                                                self.matched(3)))
-            elif self.try_match(self._NVPAIR_RE):
-                ret.append(xmlbuilder.nvpair(self.matched(1),
-                                             self.matched(2)))
+            if self.try_match(_KEY_RE):
+                ret.append(xmlbuilder.nvpair(self.matched(1), self.matched(2)))
+            elif self.try_match(_NOVAL_RE):
+                ret.append(xmlbuilder.nvpair(self.matched(1), ""))
             else:
                 break
         if len(ret) < minpairs:
@@ -213,12 +194,48 @@ class BaseParser(object):
                 self.err("Expected at least %d name-value pairs" % (minpairs))
         return ret
 
-    def try_match_nvpairs(self, name):
+    def match_nvpairs(self, terminator=None, minpairs=1):
+        """
+        Matches string of p=v tokens
+        Returns list of <nvpair> tags
+        if terminator is non-empty, p tokens
+        are also accepted as equivalent to p=,
+        as long as they are not in the terminator list
+        """
+        ret = []
+        if terminator is None:
+            terminator = RuleParser._TERMINATORS
+        while True:
+            tok = self.current_token()
+            if tok is not None and tok.lower() in terminator:
+                break
+            elif self.try_match(self._NVPAIR_REF_RE):
+                ret.append(xmlbuilder.nvpair_ref(self.matched(1),
+                                                 self.matched(2)))
+            elif self.try_match(self._NVPAIR_ID_RE):
+                ret.append(xmlbuilder.nvpair_id(self.matched(1),
+                                                self.matched(2),
+                                                self.matched(3)))
+            elif self.try_match(self._NVPAIR_RE):
+                ret.append(xmlbuilder.nvpair(self.matched(1),
+                                             self.matched(2)))
+            elif len(terminator) and self.try_match(self._NVPAIR_KEY_RE):
+                ret.append(xmlbuilder.nvpair(self.matched(1), ""))
+            else:
+                break
+        if len(ret) < minpairs:
+            if minpairs == 1:
+                self.err("Expected at least one name-value pair")
+            else:
+                self.err("Expected at least %d name-value pairs" % (minpairs))
+        return ret
+
+    def try_match_nvpairs(self, name, terminator=None):
         """
         Matches sequence of <name> [<key>=<value> [<key>=<value> ...] ...]
         """
         if self.try_match(name):
-            self._lastmatch = self.match_nvpairs(minpairs=1)
+            self._lastmatch = self.match_nvpairs(terminator=terminator, minpairs=1)
         else:
             self._lastmatch = []
         return self._lastmatch
@@ -310,6 +327,8 @@ class RuleParser(BaseParser):
     _BOOLOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.boolean_ops)), re.IGNORECASE)
     _UNARYOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.unary_ops)), re.IGNORECASE)
     _BINOP_RE = None
+
+    _TERMINATORS = ('params', 'meta', 'utilization', 'operations', 'op', 'rule')
 
     def match_attr_list(self, name, tag):
         """

@@ -414,7 +414,7 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(['3m'], out.xpath('//nvpair[@name="failure-timeout"]/@value'))
 
         out = self.parser.parse('rsc_defaults failure-timeout=3m foo:')
-        self.assertFalse(out)
+        self.assertEqual(False, out)
 
     def test_empty_property_sets(self):
         out = self.parser.parse('rsc_defaults defaults:')
@@ -453,7 +453,7 @@ class TestCliParser(unittest.TestCase):
     def _parse_lines(self, lines):
         out = []
         for line in lines2cli(lines):
-            if line:
+            if line is not None:
                 tmp = self.parser.parse(line.strip())
                 self.assertNotEqual(tmp, False)
                 if tmp is not None:
