@@ -3054,7 +3054,7 @@ Usage:
 ...............
 primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>}
   [description=<description>]
-  [params attr_list]
+  [[params] attr_list]
   [meta attr_list]
   [utilization attr_list]
   [operations id_spec]
@@ -3073,7 +3073,7 @@ primitive apcfence stonith:apcsmart \
   op monitor interval=30m timeout=60s
 
 primitive www8 apache \
-  params configfile=/etc/apache/www8.conf \
+  configfile=/etc/apache/www8.conf \
   operations $id-ref=apache_ops
 
 primitive db0 mysql \
@@ -3086,8 +3086,7 @@ primitive r0 ocf:linbit:drbd \
   op monitor role=Master interval=60s \
   op monitor role=Slave interval=300s
 
-primitive xen0 @vm_scheme1 \
-  params xmfile=/etc/xen/vm/xen0
+primitive xen0 @vm_scheme1 xmfile=/etc/xen/vm/xen0
 
 primitive mySpecialRsc Special \
   params 3: rule #uname eq node1 interface=eth1 \
