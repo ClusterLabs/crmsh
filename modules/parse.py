@@ -37,7 +37,7 @@ class ParseError(Exception):
 
 
 class BaseParser(object):
-    _NVPAIR_RE = re.compile(r'([^=@$][^=]*)=(.*)$')
+    _NVPAIR_RE = re.compile(r'([^=@$][^=]*)=(.*)?$')
     _NVPAIR_ID_RE = re.compile(r'\$([^:=]+)(?::(.+))?=(.*)$')
     _NVPAIR_REF_RE = re.compile(r'@([^:]+)(?::(.+))?$')
     _IDENT_RE = re.compile(r'([a-z0-9_#$-][^=]*)$', re.IGNORECASE)
