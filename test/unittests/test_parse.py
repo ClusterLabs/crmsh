@@ -157,6 +157,11 @@ class TestCliParser(unittest.TestCase):
         out = self.parser.parse('primitive st stonith:ssh params hostlist=node1 meta target-role=Started op start requires=nothing timeout=60s op monitor interval=60m timeout=60s')
         self.assertEqual(out.get('id'), 'st')
 
+        out2 = self.parser.parse('primitive st stonith:ssh hostlist=node1 meta target-role=Started op start requires=nothing timeout=60s op monitor interval=60m timeout=60s')
+        self.assertEqual(out2.get('id'), 'st')
+
+        self.assertEqual(etree.tostring(out), etree.tostring(out2))
+
         out = self.parser.parse('primitive st stonith:ssh params hostlist= meta')
         self.assertEqual(out.get('id'), 'st')
 
@@ -168,6 +173,10 @@ class TestCliParser(unittest.TestCase):
         print etree.tostring(out)
         self.assertEqual(['resource'], out.xpath('./crmsh-ref/@id'))
         self.assertEqual(['b'], out.xpath('instance_attributes/nvpair[@name="a"]/@value'))
+
+        out2 = self.parser.parse('ms m0 resource a=b')
+        self.assertEqual(out.get('id'), 'm0')
+        self.assertEqual(etree.tostring(out), etree.tostring(out2))
 
         out = self.parser.parse('master ma resource meta a=b')
         self.assertEqual(out.get('id'), 'ma')
