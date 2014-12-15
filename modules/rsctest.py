@@ -447,7 +447,7 @@ def test_resources(resources, nodes, all_nodes):
     try:
         import crm_pssh
     except ImportError:
-        common_err("pssh not installed, rsctest can not be executed")
+        common_err("Parallax SSH not installed, rsctest can not be executed")
         return False
     if not check_test_support(resources):
         return False
@@ -463,7 +463,7 @@ def test_resources(resources, nodes, all_nodes):
 def call_resource(rsc, cmd, nodes, local_only):
     """
     Calls the given operation on the resource.
-    local_only: Only performs the call locally (don't use pssh).
+    local_only: Only performs the call locally (don't use SSH).
     """
     ra_class = rsc.get("class")
     if ra_class not in ra_driver:

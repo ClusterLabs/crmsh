@@ -43,9 +43,9 @@ def gen_authkey():
 
 def run_copy():
     try:
-        from psshlib import api as pssh
+        import parallax as pssh
     except ImportError:
-        crm_script.exit_fail("Command node needs pssh installed")
+        crm_script.exit_fail("Command node needs parallax installed")
     opts = make_opts()
     results = pssh.copy(others, COROSYNC_AUTH, COROSYNC_AUTH, opts)
     check_results(pssh, results)

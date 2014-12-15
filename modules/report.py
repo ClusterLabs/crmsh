@@ -934,7 +934,7 @@ class Report(object):
                     self.set_change_origin(CH_UPD)
                     return self._live_loc()
             else:
-                warn_once("pssh not installed, slow live updates ahead")
+                warn_once("parallax library not installed, slow live updates ahead")
         return self.get_live_report()
 
     def new_live_report(self):
