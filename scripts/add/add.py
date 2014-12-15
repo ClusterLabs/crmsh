@@ -21,8 +21,8 @@ def run_collect():
 
 
 def make_opts():
-    from psshlib import api as pssh
-    opts = pssh.Options()
+    import parallax
+    opts = parallax.Options()
     opts.timeout = 60
     opts.recursive = True
     opts.user = 'root'
@@ -34,9 +34,9 @@ def make_opts():
 
 def run_validate():
     try:
-        from psshlib import api
+        import parallax
     except ImportError:
-        crm_script.exit_fail("Command node needs pssh installed")
+        crm_script.exit_fail("Command node needs parallax installed")
 
     if host in add_nodes:
         crm_script.exit_fail("Run script from node in cluster")
@@ -52,10 +52,10 @@ def run_install():
     crm_script.exit_ok(host)
 
 
-def check_results(pssh, results):
+def check_results(parallax, results):
     failures = []
     for host, result in results.items():
-        if isinstance(result, pssh.Error):
+        if isinstance(result, parallax.Error):
             failures.add("%s: %s" % (host, str(result)))
     if failures:
         crm_script.exit_fail(', '.join(failures))
@@ -63,18 +63,18 @@ def check_results(pssh, results):
 
 def run_copy():
     try:
-        from psshlib import api as pssh
+        import parallax
     except ImportError:
-        crm_script.exit_fail("Command node needs pssh installed")
+        crm_script.exit_fail("Command node needs parallax installed")
     opts = make_opts()
     has_auth = os.path.isfile(COROSYNC_AUTH)
     if has_auth:
-        results = pssh.copy(add_nodes, COROSYNC_AUTH, COROSYNC_AUTH, opts)
-        check_results(pssh, results)
-        results = pssh.call(add_nodes,
-                            "chown root:root %s;chmod 400 %s" % (COROSYNC_AUTH, COROSYNC_AUTH),
-                            opts)
-        check_results(pssh, results)
+        results = parallax.copy(add_nodes, COROSYNC_AUTH, COROSYNC_AUTH, opts)
+        check_results(parallax, results)
+        results = parallax.call(add_nodes,
+                                "chown root:root %s;chmod 400 %s" % (COROSYNC_AUTH, COROSYNC_AUTH),
+                                opts)
+        check_results(parallax, results)
 
     # Add new nodes to corosync.conf before copying
     for node in add_nodes:
@@ -82,8 +82,8 @@ def run_copy():
         if rc != 0:
             crm_script.exit_fail('Failed to add %s to corosync.conf: %s' % (node, err))
 
-    results = pssh.copy(add_nodes, COROSYNC_CONF, COROSYNC_CONF, opts)
-    check_results(pssh, results)
+    results = parallax.copy(add_nodes, COROSYNC_CONF, COROSYNC_CONF, opts)
+    check_results(parallax, results)
 
     # reload corosync config here?
     rc, _, err = crm_script.call(['crm', 'corosync', 'reload'])

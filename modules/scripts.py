@@ -28,7 +28,7 @@ from msg import err_buf
 import userdir
 
 try:
-    from psshlib import api as pssh
+    import parallax as pssh
     has_pssh = True
 except ImportError:
     has_pssh = False
@@ -699,11 +699,7 @@ def run(name, args):
     args: list of nvpairs
     '''
     if not has_pssh:
-        try:
-            from psshlib.task import Task
-        except ImportError:
-            raise ValueError("The pssh library is not installed or is not up to date.")
-        raise ValueError("The installed pssh library lacks the API patch.")
+        raise ValueError("The parallax library is not installed or is not up to date.")
     workdir = _generate_workdir_name()
     main, filename, script_dir = _open_script(name)
     params = _parse_parameters(name, args, main)

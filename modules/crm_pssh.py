@@ -16,19 +16,9 @@ import sys
 import glob
 import re
 
-parent, bindir = os.path.split(os.path.dirname(os.path.abspath(sys.argv[0])))
-if os.path.exists(os.path.join(parent, 'psshlib')):
-    sys.path.insert(0, parent)
-
-from psshlib.manager import Manager, FatalError
-from psshlib.task import Task
-from psshlib.cli import common_parser, common_defaults
-
-try:
-    from psshlib import api as pssh_api
-    has_patched_pssh = True
-except ImportError:
-    has_patched_pssh = False
+from parallax.manager import Manager, FatalError
+from parallax.task import Task
+from parallax import Options
 
 from msg import common_err, common_debug, common_warn
 
@@ -37,45 +27,16 @@ _DEFAULT_TIMEOUT = 60
 _EC_LOGROT = 120
 
 
-def make_pssh_opts(outdir, errdir):
-    '''
-    -q is only available if pssh has been
-    patched
-    '''
-    if has_patched_pssh:
-        return ["-q", "-o", outdir, "-e", errdir]
-    else:
-        return ["-o", outdir, "-e", errdir]
-
-
-def option_parser():
-    '''
-    Create commandline option parser.
-    '''
-    parser = common_parser()
-    parser.usage = "%prog [OPTIONS] command [...]"
-    parser.epilog = "Example: pssh -h hosts.txt -l irb2 -o /tmp/foo uptime"
-
-    parser.add_option('-i', '--inline', dest='inline', action='store_true',
-                      help='inline aggregated output for each server')
-    parser.add_option('-I', '--send-input', dest='send_input',
-                      action='store_true',
-                      help='read from standard input and send as input to ssh')
-    parser.add_option('-P', '--print', dest='print_out', action='store_true',
-                      help='print output as we get it')
-
-    return parser
-
-
-def parse_args(myargs, t=_DEFAULT_TIMEOUT):
+def parse_args(outdir, errdir, t=_DEFAULT_TIMEOUT):
     '''
     Parse the given commandline arguments.
     '''
-    parser = option_parser()
-    defaults = common_defaults(timeout=t)
-    parser.set_defaults(**defaults)
-    opts, args = parser.parse_args(myargs)
-    return opts, args
+    opts = Options()
+    opts.timeout = t
+    opts.quiet = True
+    opts.outdir = outdir
+    opts.errdir = errdir
+    return opts
 
 
 def get_output(dir, host):
@@ -187,7 +148,7 @@ def next_loglines(a, outdir, errdir):
                      (logfile, node, nextpos))
         cmdline = "perl -e 'exit(%d) if (stat(\"%s\"))[7]<%d' && tail -c +%d %s" % (
             _EC_LOGROT, logfile, nextpos-1, nextpos, logfile)
-        opts, args = parse_args(make_pssh_opts(outdir, errdir))
+        opts = parse_args(outdir, errdir)
         l.append([node, cmdline])
     statuses = do_pssh(l, opts)
     if statuses:
@@ -210,7 +171,7 @@ def next_peinputs(node_pe_l, outdir, errdir):
         red_pe_l = [x.replace("%s/" % r.group(1), "") for x in pe_l]
         common_debug("getting new PE inputs %s from %s" % (red_pe_l, node))
         cmdline = "tar -C %s -cf - %s" % (dir, ' '.join(red_pe_l))
-        opts, args = parse_args(make_pssh_opts(outdir, errdir))
+        opts = parse_args(outdir, errdir)
         l.append([node, cmdline])
     if not l:
         # is this a failure?
@@ -231,7 +192,7 @@ def do_pssh_cmd(cmd, node_l, outdir, errdir, timeout=20000):
         l.append([node, cmd])
     if not l:
         return True
-    opts, args = parse_args(make_pssh_opts(outdir, errdir), t=str(int(timeout/1000)))
+    opts = parse_args(outdir, errdir, t=str(int(timeout/1000)))
     return do_pssh(l, opts)
 
 # vim:ts=4:sw=4:et:

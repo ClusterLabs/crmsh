@@ -12,7 +12,7 @@ COROSYNC_CONF = '/etc/corosync/corosync.conf'
 
 
 def make_opts():
-    from psshlib import api as pssh
+    import parallax as pssh
     opts = pssh.Options()
     opts.timeout = 60
     opts.recursive = True

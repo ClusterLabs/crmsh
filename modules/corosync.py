@@ -294,7 +294,7 @@ def push_configuration(nodes):
     Push the local configuration to the list of remote nodes
     '''
     try:
-        from psshlib import api as pssh
+        import parallax as pssh
         _has_pssh = True
     except ImportError:
         _has_pssh = False

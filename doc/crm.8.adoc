@@ -4003,9 +4003,9 @@ Unless the action is `start` or `monitor`, the action must be invoked
 on the same node as where the resource is running. If the resource is
 running on multiple nodes, the command will fail.
 
-To use pssh for executing resource actions on multiple nodes, append
+To use SSH for executing resource actions on multiple nodes, append
 `ssh` after the action name. This requires SSH access to be configured
-between the nodes and the pssh package to be installed.
+between the nodes and the parallax python package to be installed.
 
 Usage:
 ...............
@@ -4036,8 +4036,8 @@ first say which period he or she wants to analyze. If not
 otherwise specified, the last hour is considered. Logs and other
 relevant information is collected using `hb_report`. Since this
 process takes some time and we always need fresh logs,
-information is refreshed in a much faster way using `pssh(1)`. If
-+python-pssh+ is not found on the system, examining live cluster
+information is refreshed in a much faster way using the python parallax module. If
++python-parallax+ is not found on the system, examining live cluster
 is still possible though not as comfortable.
 
 Apart from examining live cluster, events may be retrieved from a

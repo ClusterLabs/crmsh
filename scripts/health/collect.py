@@ -8,7 +8,7 @@ data = crm_script.get_input()
 PACKAGES = ['booth', 'cluster-glue', 'corosync', 'crmsh', 'csync2', 'drbd',
             'fence-agents', 'gfs2', 'gfs2-utils', 'ha-cluster-bootstrap',
             'haproxy', 'hawk', 'libdlm', 'libqb', 'ocfs2', 'ocfs2-tools',
-            'pacemaker', 'pacemaker-mgmt', 'pssh', 'resource-agents', 'sbd']
+            'pacemaker', 'pacemaker-mgmt', 'resource-agents', 'sbd']
 
 def rpm_info():
     return crm_script.rpmcheck(PACKAGES)

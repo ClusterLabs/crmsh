@@ -47,9 +47,9 @@ Url:            http://crmsh.github.io
 Source0:        crmsh.tar.bz2
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Requires(pre):  pacemaker
-Requires:       pssh
 Requires:       python >= 2.6
 Requires:       python-dateutil
+Requires:       python-parallax
 Requires:       python-lxml
 Requires:       which
 BuildRequires:  python-lxml
@@ -104,7 +104,6 @@ BuildRequires:  python-dateutil
 BuildRequires:  python-nose
 BuildRequires:  vim
 Requires:       pacemaker
-Requires:       pssh
 %endif
 %description test
 The crm shell is a command-line interface for High-Availability
