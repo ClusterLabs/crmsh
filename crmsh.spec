@@ -131,24 +131,12 @@ find . -exec touch \{\} \;
 %build
 ./autogen.sh
 
-# RHEL <= 5 does not support --docdir
-# SLES <= 10 does not support ./configure --docdir=,
-# hence, use this ugly hack
-%if 0%{?suse_version} < 1020
-export docdir=%{crmsh_docdir}
-%{configure}            \
-    --sysconfdir=%{_sysconfdir} \
-    --localstatedir=%{_var}             \
-    --with-pkg-name=%{name} \
-    --with-version=%{version}-%{release}
-%else
 %{configure}            \
     --sysconfdir=%{_sysconfdir} \
     --localstatedir=%{_var}             \
     --with-pkg-name=%{name}     \
     --with-version=%{version}-%{release}    \
     --docdir=%{crmsh_docdir}
-%endif
 
 make %{_smp_mflags} docdir=%{crmsh_docdir}
 
