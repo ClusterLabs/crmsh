@@ -31,7 +31,9 @@ AC_ARG_WITH(pkg-name,
     [  --with-pkg-name=name     Override package name (if you're a packager needing to pretend) ],
     [ PACKAGE_NAME="$withval" ])
 
-AM_INIT_AUTOMAKE($PACKAGE_NAME, $PACKAGE_VERSION)
+AM_INIT_AUTOMAKE([no-define])
+AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE_NAME")
+AC_DEFINE_UNQUOTED(VERSION, "$PACKAGE_VERSION")
 AC_DEFINE_UNQUOTED(PACEMAKER_VERSION, "$PACKAGE_VERSION", Current crmsh version)
 
 PACKAGE_SERIES=`echo $PACKAGE_VERSION | awk -F. '{ print $1"."$2 }'`
