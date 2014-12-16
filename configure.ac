@@ -8,7 +8,7 @@ dnl License: GNU General Public License (GPL)
 dnl ===============================================
 dnl Bootstrap 
 dnl ===============================================
-AC_PREREQ(2.53)
+AC_PREREQ([2.69])
 
 dnl Suggested structure:
 dnl     information on the package
@@ -21,7 +21,7 @@ dnl     checks for compiler characteristics
 dnl     checks for library functions
 dnl     checks for system services
 
-AC_INIT(crmsh, 2.2.0-rc1, linux-ha@lists.linux-ha.org)
+AC_INIT([crmsh],[2.2.0-rc1],[linux-ha@lists.linux-ha.org])
 
 AC_ARG_WITH(version,
     [  --with-version=version   Override package version (if you're a packager needing to pretend) ],
@@ -254,21 +254,6 @@ fi
 
 dnl The Makefiles and shell scripts we output
 AC_CONFIG_FILES(Makefile \
-doc/Makefile             \
-contrib/Makefile         \
-templates/Makefile       \
-utils/Makefile           \
-scripts/Makefile         \
-scripts/health/Makefile  \
-scripts/check-uptime/Makefile  \
-scripts/init/Makefile  \
-scripts/add/Makefile  \
-scripts/remove/Makefile  \
-test/Makefile            \
-test/testcases/Makefile  \
-test/cibtests/Makefile   \
-modules/Makefile         \
-hb_report/Makefile       \
 hb_report/hb_report      \
 crm.conf                 \
 version                  \
@@ -276,7 +261,7 @@ version                  \
 
 dnl Now process the entire list of files added by previous 
 dnl  calls to AC_CONFIG_FILES()
-AC_OUTPUT()
+AC_OUTPUT
 
 dnl *****************
 dnl Configure summary
