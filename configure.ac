@@ -31,6 +31,28 @@ AC_ARG_WITH(pkg-name,
     [  --with-pkg-name=name     Override package name (if you're a packager needing to pretend) ],
     [ PACKAGE_NAME="$withval" ])
 
+OCF_ROOT_DIR="/usr/lib/ocf"
+AC_ARG_WITH(ocf-root,
+    [  --with-ocf-root=DIR      directory for OCF scripts [${OCF_ROOT_DIR}]],
+    [ if test x"$withval" = xprefix; then OCF_ROOT_DIR=${prefix}; else
+	 OCF_ROOT_DIR="$withval"; fi ])
+
+AC_ARG_WITH(
+  daemon-group,
+    [  --with-daemon-group=GROUP_NAME
+                          Group to run our programs as. [default=haclient]  ],
+    [ CRM_DAEMON_GROUP="$withval" ],
+    [ CRM_DAEMON_GROUP="haclient" ],
+  )
+
+AC_ARG_WITH(
+  daemon-user,
+    [  --with-daemon-user=USER_NAME
+                          User to run privileged non-root things as. [default=hacluster]  ],
+    [ CRM_DAEMON_USER="$withval" ],
+    [ CRM_DAEMON_USER="hacluster" ],
+  )
+
 AM_INIT_AUTOMAKE([no-define])
 AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE_NAME")
 AC_DEFINE_UNQUOTED(VERSION, "$PACKAGE_VERSION")
@@ -44,22 +66,6 @@ dnl normal compilation.  When a failure occurs, it will then display the full
 dnl command line
 dnl Wrap in m4_ifdef to avoid breaking on older platforms
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES])
-
-dnl ===============================================
-dnl Helpers 
-dnl ===============================================
-extract_header_define() {
-	  AC_MSG_CHECKING(for $2 in $1)
-	  Cfile=$srcdir/extract_define.$2.${$}
-	  printf "#include <stdio.h>\n" > ${Cfile}.c
-	  printf "#include <%s>\n" $1 >> ${Cfile}.c
-	  printf "int main(int argc, char **argv) { printf(\"%%s\", %s); return 0; }\n" $2 >> ${Cfile}.c
-	  $CC $CFLAGS ${Cfile}.c -o ${Cfile}
-	  value=`${Cfile}`
-	  AC_MSG_RESULT($value)
-	  printf $value
-	  rm -f ${Cfile}.c ${Cfile}
-	}
 
 dnl ===============================================
 dnl General Processing
@@ -141,43 +147,22 @@ do
   fi
 done
 
-AC_CHECK_HEADERS(crm_config.h)
-AC_CHECK_HEADERS(glue_config.h)
-GLUE_HEADER=none
-if test "$ac_cv_header_glue_config_h" = "yes";  then
-   GLUE_HEADER=glue_config.h
-
-elif test "$ac_cv_header_hb_config_h" = "yes"; then
-   GLUE_HEADER=hb_config.h
-
-else
-   AC_MSG_FAILURE(Core development headers were not found)
-fi
-
 dnl Variables needed for substitution
-CRM_DAEMON_USER=`extract_header_define crm_config.h CRM_DAEMON_USER`
-AC_DEFINE_UNQUOTED(CRM_DAEMON_USER,"$CRM_DAEMON_USER", User to run Pacemaker daemons as)
-AC_SUBST(CRM_DAEMON_USER)
 
-CRM_DAEMON_GROUP=`extract_header_define crm_config.h CRM_DAEMON_GROUP`
-AC_DEFINE_UNQUOTED(CRM_DAEMON_GROUP,"$CRM_DAEMON_GROUP", Group to run Pacemaker daemons as)
-AC_SUBST(CRM_DAEMON_GROUP)
-
-CRM_STATE_DIR=`extract_header_define crm_config.h CRM_STATE_DIR`
+CRM_STATE_DIR=${localstatedir}/run/crm
 AC_DEFINE_UNQUOTED(CRM_STATE_DIR,"$CRM_STATE_DIR", Where to keep state files and sockets)
 AC_SUBST(CRM_STATE_DIR)
 
-PE_STATE_DIR=`extract_header_define crm_config.h PE_STATE_DIR`
+PE_STATE_DIR="${localstatedir}/lib/pacemaker/pengine"
 AC_DEFINE_UNQUOTED(PE_STATE_DIR,"$PE_STATE_DIR", Where to keep PEngine outputs)
 AC_SUBST(PE_STATE_DIR)
 
-dnl Eventually move out of the heartbeat dir tree and create compatability code
-CRM_CONFIG_DIR=`extract_header_define crm_config.h CRM_CONFIG_DIR`
-AC_DEFINE_UNQUOTED(CRM_CONFIG_DIR,"$CRM_CONFIG_DIR", Where to keep CIB configuration files)
+CRM_CONFIG_DIR="${localstatedir}/lib/pacemaker/cib"
+AC_DEFINE_UNQUOTED(CRM_CONFIG_DIR,"$CRM_CONFIG_DIR", Where to keep configuration files)
 AC_SUBST(CRM_CONFIG_DIR)
 
-CRM_DTD_DIRECTORY=`extract_header_define crm_config.h CRM_DTD_DIRECTORY`
-AC_DEFINE_UNQUOTED(CRM_DTD_DIRECTORY,"$CRM_DTD_DIRECTORY", Where to keep CIB configuration files)
+CRM_DTD_DIRECTORY="${datadir}/pacemaker"
+AC_DEFINE_UNQUOTED(CRM_DTD_DIRECTORY,"$CRM_DTD_DIRECTORY", Location for the Pacemaker Relax-NG Schema)
 AC_SUBST(CRM_DTD_DIRECTORY)
 
 AC_PATH_PROGS(PKGCONFIG, pkg-config)
@@ -185,13 +170,7 @@ if test x"${PKGCONFIG}" = x""; then
    AC_MSG_ERROR(You need pkgconfig installed in order to build ${PACKAGE})
 fi
 
-CRM_DAEMON_DIR=`$PKGCONFIG pcmk --variable=daemondir`
-if test "X$CRM_DAEMON_DIR" = X; then
-	CRM_DAEMON_DIR=`$PKGCONFIG pacemaker --variable=daemondir`
-fi
-if test "X$CRM_DAEMON_DIR" = X; then
-	CRM_DAEMON_DIR=`extract_header_define $GLUE_HEADER GLUE_DAEMON_DIR`
-fi
+CRM_DAEMON_DIR="${libexecdir}/pacemaker"
 AC_DEFINE_UNQUOTED(CRM_DAEMON_DIR,"$CRM_DAEMON_DIR", Location for Pacemaker daemons)
 AC_SUBST(CRM_DAEMON_DIR)
 
@@ -199,15 +178,10 @@ CRM_CACHE_DIR=${localstatedir}/cache/crm
 AC_DEFINE_UNQUOTED(CRM_CACHE_DIR,"$CRM_CACHE_DIR", Where crm shell keeps the cache)
 AC_SUBST(CRM_CACHE_DIR)
 
-dnl Needed for the location of hostcache in CTS.py
-HA_VARLIBHBDIR=`extract_header_define $GLUE_HEADER HA_VARLIBHBDIR`
+dnl Eventually move out of the heartbeat dir tree and create symlinks when needed
+HA_VARLIBHBDIR=${localstatedir}/lib/heartbeat
+AC_DEFINE_UNQUOTED(HA_VARLIBHBDIR,"$HA_VARLIBHBDIR", Whatever this used to mean)
 AC_SUBST(HA_VARLIBHBDIR)
-
-OCF_ROOT_DIR=`extract_header_define $GLUE_HEADER OCF_ROOT_DIR`
-if test "X$OCF_ROOT_DIR" = X; then
-  AC_MSG_ERROR(Could not locate OCF directory)
-fi
-AC_SUBST(OCF_ROOT_DIR)
 
 AC_PATH_PROGS(HG, hg false)
 AC_PATH_PROGS(GIT, git false)

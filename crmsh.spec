@@ -59,12 +59,7 @@ Requires:       python-PyYAML
 # Suse splits this off into a separate package
 Requires:       python-curses
 BuildRequires:  fdupes
-BuildRequires:  libglue-devel
-BuildRequires:  libpacemaker-devel
 BuildRequires:  python-curses
-%else
-BuildRequires:  cluster-glue-libs-devel
-BuildRequires:  pacemaker-libs-devel
 %endif
 
 %if 0%{?fedora_version}
@@ -104,6 +99,15 @@ BuildRequires:  python-dateutil
 BuildRequires:  python-nose
 BuildRequires:  vim
 Requires:       pacemaker
+
+%if 0%{?suse_version}
+BuildRequires:  libglue-devel
+BuildRequires:  libpacemaker-devel
+%else
+BuildRequires:  cluster-glue-libs-devel
+BuildRequires:  pacemaker-libs-devel
+%endif
+
 %endif
 %description test
 The crm shell is a command-line interface for High-Availability
