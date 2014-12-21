@@ -19,17 +19,17 @@
 ; dot = dot
 
 [path]
-sharedir = @datadir@/@PACKAGE@
-cache = @CRM_CACHE_DIR@
-crm_config = @CRM_CONFIG_DIR@
-crm_daemon_dir = @CRM_DAEMON_DIR@
+; sharedir = @datadir@/@PACKAGE@
+; cache = @CRM_CACHE_DIR@
+; crm_config = @CRM_CONFIG_DIR@
+; crm_daemon_dir = @CRM_DAEMON_DIR@
 crm_daemon_user = @CRM_DAEMON_USER@
 ocf_root = @OCF_ROOT_DIR@
-crm_dtd_dir = @CRM_DTD_DIRECTORY@
-pe_state_dir = @PE_STATE_DIR@
-heartbeat_dir = @HA_VARLIBHBDIR@
-hb_delnode = @datadir@/heartbeat/hb_delnode
-nagios_plugins = @libdir@/nagios/plugins
+; crm_dtd_dir = @CRM_DTD_DIRECTORY@
+; pe_state_dir = @PE_STATE_DIR@
+; heartbeat_dir = @HA_VARLIBHBDIR@
+; hb_delnode = @datadir@/heartbeat/hb_delnode
+; nagios_plugins = @libdir@/nagios/plugins
 
 ; [color]
 ; style = color

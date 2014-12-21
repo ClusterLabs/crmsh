@@ -28,6 +28,27 @@ _SYSTEMWIDE = '/etc/crm/crm.conf'
 _PERUSER = os.getenv("CRM_CONFIG_FILE") or os.path.join(userdir.CONFIG_HOME, 'crm.conf')
 _SUPPORTED_SCHEMAS = ('1.0', '1.1', '1.2', '1.3', '2.0', '2.1', '2.2', 'next')
 
+_PATHLIST = {
+    'datadir': ('/usr/share', '/usr/local/share', '/opt'),
+    'cachedir': ('/var/cache', '/opt/cache'),
+    'libdir': ('/usr/lib64', '/usr/libexec', '/usr/lib',
+               '/usr/local/lib64', '/usr/local/libexec', '/usr/local/lib'),
+    'varlib': ('/var/lib', '/opt/var/lib')
+}
+
+
+def make_path(path):
+    """input: path containing %(?)s-statements
+    output: path with no such statements"""
+    m = re.match(r'\%\(([^\)]+)\)(.+)', path)
+    if m:
+        t = m.group(1)
+        for dd in _PATHLIST[t]:
+            if os.path.isdir(path % {t: dd}):
+                return path % {t: dd}
+        return path % {t: _PATHLIST[t][0]}
+    return path
+
 
 # opt_ classes
 # members: default, completions, validate()
@@ -39,21 +60,33 @@ class opt_program(object):
             self.default = os.getenv(envvar)
         else:
             for prog in proglist:
-                if self._is_program(prog):
-                    self.default = prog
+                p = self._find_program(prog)
+                if p is not None:
+                    self.default = p
                     break
         self.completions = proglist
 
-    def _is_program(self, prog):
+    def _find_program(self, prog):
         """Is this program available?"""
-        for p in os.getenv("PATH").split(os.pathsep):
-            filename = os.path.join(p, prog)
+        if prog.startswith('/'):
+            filename = make_path(prog)
             if os.path.isfile(filename) and os.access(filename, os.X_OK):
-                return True
-        return False
+                return filename
+        elif prog.startswith('%'):
+            prog = make_path(prog)
+            for p in os.getenv("PATH").split(os.pathsep):
+                filename = os.path.join(p, prog)
+                if os.path.isfile(filename) and os.access(filename, os.X_OK):
+                    return filename
+        else:
+            for p in os.getenv("PATH").split(os.pathsep):
+                filename = make_path(os.path.join(p, prog))
+                if os.path.isfile(filename) and os.access(filename, os.X_OK):
+                    return filename
+        return None
 
     def validate(self, prog):
-        if not self._is_program(prog):
+        if self._find_program(prog) is None:
             raise ValueError("%s does not exist or is not a program" % prog)
 
     def get(self, value):
@@ -97,7 +130,7 @@ class opt_multichoice(object):
     def validate(self, val):
         vals = [x.strip() for x in val.split(',')]
         for otype in vals:
-            if not otype in self.completions:
+            if otype not in self.completions:
                 raise ValueError("%s not in %s" % (val, ', '.join(self.completions)))
 
     def get(self, value):
@@ -122,28 +155,10 @@ class opt_boolean(object):
 
 
 class opt_dir(object):
-    opts = {
-        'datadir': ('/usr/share', '/usr/local/share', '/opt'),
-        'cachedir': ('/var/cache', '/opt/cache'),
-        'libdir': ('/usr/lib64', '/usr/libexec', '/usr/lib',
-                   '/usr/local/lib64', '/usr/local/libexec', '/usr/local/lib'),
-        'varlib': ('/var/lib', '/opt/var/lib')
-    }
-
     def __init__(self, path):
         self.default = ''
         self.completions = []
-        m = re.match(r'\%\(([^\)]+)\)s(.+)', path)
-        if m:
-            t = m.group(1)
-            for dd in self.opts[t]:
-                if os.path.isdir(path % {t: dd}):
-                    self.default = path % {t: dd}
-                    break
-            else:
-                self.default = path % {t: self.opts[t][0]}
-        else:
-            self.default = path
+        self.default = make_path(path)
 
     def validate(self, val):
         if not os.path.isdir(val):
