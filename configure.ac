@@ -149,6 +149,10 @@ done
 
 dnl Variables needed for substitution
 
+AC_SUBST(OCF_ROOT_DIR)
+AC_SUBST(CRM_DAEMON_GROUP)
+AC_SUBST(CRM_DAEMON_USER)
+
 CRM_STATE_DIR=${localstatedir}/run/crm
 AC_DEFINE_UNQUOTED(CRM_STATE_DIR,"$CRM_STATE_DIR", Where to keep state files and sockets)
 AC_SUBST(CRM_STATE_DIR)
