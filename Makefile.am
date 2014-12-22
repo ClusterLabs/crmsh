@@ -129,7 +129,6 @@ install-exec-local:
 		--record $(DESTDIR)$(pkgpythondir)/install_files.txt \
 		--verbose
 	$(INSTALL) -d -m 770 $(DESTDIR)/$(CRM_CACHE_DIR)
-	-chown $(CRM_DAEMON_USER):$(CRM_DAEMON_GROUP) $(DESTDIR)/$(CRM_CACHE_DIR)
 	-rm -rf $(generated_docs) $(generated_mans)
 
 uninstall-local:
