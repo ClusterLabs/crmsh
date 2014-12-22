@@ -98,65 +98,6 @@ hanoarch_SCRIPTS          = hb_report/hb_report
 
 EXTRA_DIST = crm $(template_DATA) $(contrib_DATA) $(utils_DATA) $(utils_SCRIPTS) $(health_DATA) $(health_SCRIPTS) $(test_DATA) $(testcases_SCRIPTS) $(testcases_DATA) $(cibtests_DATA) $(hanoarch_DATA) $(uptime_DATA) $(uptime_SCRIPTS) $(scriptinit_DATA) $(scriptinit_SCRIPTS) $(scriptadd_DATA) $(scriptadd_SCRIPTS) $(scriptremove_DATA) $(scriptremove_SCRIPTS)
 
-shelllibdir	= $(pyexecdir)/crmsh
-shelllib_PYTHON = modules/__init__.py \
-			modules/cache.py \
-			modules/cibconfig.py \
-			modules/cibstatus.py \
-			modules/cibverify.py \
-			modules/clidisplay.py \
-			modules/cliformat.py \
-			modules/cmd_status.py \
-			modules/command.py \
-			modules/completers.py \
-			modules/config.py \
-			modules/corosync.py \
-			modules/crm_gv.py \
-			modules/crm_pssh.py \
-			modules/help.py \
-			modules/idmgmt.py \
-			modules/log_patterns_118.py \
-			modules/log_patterns.py \
-			modules/main.py \
-			modules/msg.py \
-			modules/options.py \
-			modules/ordereddict.py \
-			modules/pacemaker.py \
-			modules/parse.py \
-			modules/ra.py \
-			modules/report.py \
-			modules/rsctest.py \
-			modules/schema.py \
-			modules/scripts.py \
-			modules/template.py \
-			modules/term.py \
-			modules/tmpfiles.py \
-			modules/ui_assist.py \
-			modules/ui_cib.py \
-			modules/ui_cibstatus.py \
-			modules/ui_cluster.py \
-			modules/ui_configure.py \
-			modules/ui_context.py \
-			modules/ui_corosync.py \
-			modules/ui_history.py \
-			modules/ui_maintenance.py \
-			modules/ui_node.py \
-			modules/ui_options.py \
-			modules/ui_ra.py \
-			modules/ui_report.py \
-			modules/ui_resource.py \
-			modules/ui_root.py \
-			modules/ui_script.py \
-			modules/ui_site.py \
-			modules/ui_template.py \
-			modules/ui_utils.py \
-			modules/userdir.py \
-			modules/utils.py \
-			modules/constants.py \
-			modules/xmlbuilder.py \
-			modules/xmlutil.py
-
-
 helpdir     = $(datadir)/$(PACKAGE)
 
 asciiman	= doc/crm.8.adoc doc/crmsh_hb_report.8.adoc
@@ -177,10 +118,23 @@ endif
 %.8: %.8.adoc
 	a2x -f manpage $<
 
+all-local:
+	(cd $(srcdir); $(PYTHON) setup.py build \
+		--build-base $(shell readlink -f $(builddir))/build \
+		--verbose)
+
 install-exec-local:
+	$(PYTHON) $(srcdir)/setup.py install \
+		--root=${DESTDIR} --prefix=${prefix} \
+		--record $(DESTDIR)$(pkgpythondir)/install_files.txt \
+		--verbose
 	$(INSTALL) -d -m 770 $(DESTDIR)/$(CRM_CACHE_DIR)
 	-chown $(CRM_DAEMON_USER):$(CRM_DAEMON_GROUP) $(DESTDIR)/$(CRM_CACHE_DIR)
 	-rm -rf $(generated_docs) $(generated_mans)
+
+uninstall-local:
+	cat $(DESTDIR)$(pkgpythondir)/install_files.txt | xargs rm -rf
+	rm -rf $(DESTDIR)$(pkgpythondir)
 
 clean-generic:
 	rm -f $(TARFILE) *.tar.bz2 *.sed
