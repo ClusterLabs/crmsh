@@ -17,19 +17,21 @@
 ; ptest = ptest, crm_simulate
 ; dotty = dotty
 ; dot = dot
+; supported_schemas = 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, next
+; ignore_missing_metadata = no
 
 [path]
-; sharedir = @datadir@/@PACKAGE@
-; cache = @CRM_CACHE_DIR@
-; crm_config = @CRM_CONFIG_DIR@
-; crm_daemon_dir = @CRM_DAEMON_DIR@
+; sharedir = <detected>
+; cache = <detected>
+; crm_config = <detected>
+; crm_daemon_dir = <detected>
 crm_daemon_user = @CRM_DAEMON_USER@
 ocf_root = @OCF_ROOT_DIR@
-; crm_dtd_dir = @CRM_DTD_DIRECTORY@
-; pe_state_dir = @PE_STATE_DIR@
-; heartbeat_dir = @HA_VARLIBHBDIR@
-; hb_delnode = @datadir@/heartbeat/hb_delnode
-; nagios_plugins = @libdir@/nagios/plugins
+; crm_dtd_dir = <detected>
+; pe_state_dir = <detected>
+; heartbeat_dir = <detected>
+; hb_delnode = /usr/share/heartbeat/hb_delnode
+; nagios_plugins = /usr/lib/nagios/plugins
 
 ; [color]
 ; style = color

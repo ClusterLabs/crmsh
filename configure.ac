@@ -38,14 +38,6 @@ AC_ARG_WITH(ocf-root,
 	 OCF_ROOT_DIR="$withval"; fi ])
 
 AC_ARG_WITH(
-  daemon-group,
-    [  --with-daemon-group=GROUP_NAME
-                          Group to run our programs as. [default=haclient]  ],
-    [ CRM_DAEMON_GROUP="$withval" ],
-    [ CRM_DAEMON_GROUP="haclient" ],
-  )
-
-AC_ARG_WITH(
   daemon-user,
     [  --with-daemon-user=USER_NAME
                           User to run privileged non-root things as. [default=hacluster]  ],
@@ -56,10 +48,6 @@ AC_ARG_WITH(
 AM_INIT_AUTOMAKE([no-define])
 AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE_NAME")
 AC_DEFINE_UNQUOTED(VERSION, "$PACKAGE_VERSION")
-AC_DEFINE_UNQUOTED(PACEMAKER_VERSION, "$PACKAGE_VERSION", Current crmsh version)
-
-PACKAGE_SERIES=`echo $PACKAGE_VERSION | awk -F. '{ print $1"."$2 }'`
-AC_SUBST(PACKAGE_SERIES)
 
 dnl automake >= 1.11 offers --enable-silent-rules for suppressing the output from
 dnl normal compilation.  When a failure occurs, it will then display the full 
@@ -150,42 +138,16 @@ done
 dnl Variables needed for substitution
 
 AC_SUBST(OCF_ROOT_DIR)
-AC_SUBST(CRM_DAEMON_GROUP)
 AC_SUBST(CRM_DAEMON_USER)
-
-CRM_STATE_DIR=${localstatedir}/run/crm
-AC_DEFINE_UNQUOTED(CRM_STATE_DIR,"$CRM_STATE_DIR", Where to keep state files and sockets)
-AC_SUBST(CRM_STATE_DIR)
-
-PE_STATE_DIR="${localstatedir}/lib/pacemaker/pengine"
-AC_DEFINE_UNQUOTED(PE_STATE_DIR,"$PE_STATE_DIR", Where to keep PEngine outputs)
-AC_SUBST(PE_STATE_DIR)
-
-CRM_CONFIG_DIR="${localstatedir}/lib/pacemaker/cib"
-AC_DEFINE_UNQUOTED(CRM_CONFIG_DIR,"$CRM_CONFIG_DIR", Where to keep configuration files)
-AC_SUBST(CRM_CONFIG_DIR)
-
-CRM_DTD_DIRECTORY="${datadir}/pacemaker"
-AC_DEFINE_UNQUOTED(CRM_DTD_DIRECTORY,"$CRM_DTD_DIRECTORY", Location for the Pacemaker Relax-NG Schema)
-AC_SUBST(CRM_DTD_DIRECTORY)
 
 AC_PATH_PROGS(PKGCONFIG, pkg-config)
 if test x"${PKGCONFIG}" = x""; then
    AC_MSG_ERROR(You need pkgconfig installed in order to build ${PACKAGE})
 fi
 
-CRM_DAEMON_DIR="${libexecdir}/pacemaker"
-AC_DEFINE_UNQUOTED(CRM_DAEMON_DIR,"$CRM_DAEMON_DIR", Location for Pacemaker daemons)
-AC_SUBST(CRM_DAEMON_DIR)
-
 CRM_CACHE_DIR=${localstatedir}/cache/crm
 AC_DEFINE_UNQUOTED(CRM_CACHE_DIR,"$CRM_CACHE_DIR", Where crm shell keeps the cache)
 AC_SUBST(CRM_CACHE_DIR)
-
-dnl Eventually move out of the heartbeat dir tree and create symlinks when needed
-HA_VARLIBHBDIR=${localstatedir}/lib/heartbeat
-AC_DEFINE_UNQUOTED(HA_VARLIBHBDIR,"$HA_VARLIBHBDIR", Whatever this used to mean)
-AC_SUBST(HA_VARLIBHBDIR)
 
 AC_PATH_PROGS(HG, hg false)
 AC_PATH_PROGS(GIT, git false)
@@ -260,3 +222,6 @@ AC_MSG_RESULT([  Header files             = ${includedir}])
 AC_MSG_RESULT([  Arch-independent files   = ${datadir}])
 AC_MSG_RESULT([  State information        = ${localstatedir}])
 AC_MSG_RESULT([  System configuration     = ${sysconfdir}])
+AC_MSG_RESULT([  Cache dir                = ${CRM_CACHE_DIR}]) 
+AC_MSG_RESULT([  OCF root dir             = ${OCF_ROOT_DIR}]) 
+AC_MSG_RESULT([  CRM daemon user          = ${CRM_DAEMON_USER}]) 
