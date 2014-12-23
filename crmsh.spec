@@ -30,12 +30,7 @@
 %define pkg_group Productivity/Clustering/HA
 %endif
 
-# Compatibility macros for distros (fedora) that don't provide Python macros by default
-# Do this instead of trying to conditionally include {_rpmconfigdir}/macros.python
-%{!?py_ver:     %{expand: %%global py_ver      %%(echo `python -c "import sys; print sys.version[:3]"`)}}
-%{!?py_prefix:  %{expand: %%global py_prefix   %%(echo `python -c "import sys; print sys.prefix"`)}}
-%{!?py_libdir:  %{expand: %%global py_libdir   %%{expand:%%%%{py_prefix}/%%%%{_lib}/python%%%%{py_ver}}}}
-%{!?py_sitedir: %{expand: %%global py_sitedir  %%{expand:%%%%{py_libdir}/site-packages}}}
+%{!?python_sitelib: %define python_sitelib %(python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 
 Name:           crmsh
 Summary:        High Availability cluster command-line interface
@@ -49,10 +44,11 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Requires(pre):  pacemaker
 Requires:       python >= 2.6
 Requires:       python-dateutil
-Requires:       python-parallax
 Requires:       python-lxml
+Requires:       python-parallax
 Requires:       which
 BuildRequires:  python-lxml
+BuildRequires:  python-setuptools
 
 %if 0%{?suse_version}
 Requires:       python-PyYAML
@@ -80,6 +76,10 @@ BuildRequires:  python
 BuildRequires:  libxslt-tools
 %endif
 
+%if 0%{?suse_version} > 1110
+BuildArch:      noarch
+%endif
+
 %description
 The crm shell is a command-line interface for High-Availability
 cluster management on GNU/Linux systems. It simplifies the
@@ -99,6 +99,10 @@ BuildRequires:  python-dateutil
 BuildRequires:  python-nose
 BuildRequires:  vim
 Requires:       pacemaker
+
+%if 0%{?suse_version} > 1110
+BuildArch:      noarch
+%endif
 
 %if 0%{?suse_version}
 BuildRequires:  libglue-devel
@@ -182,7 +186,8 @@ fi
 %defattr(-,root,root)
 
 %{_sbindir}/crm
-%{py_sitedir}/crmsh
+%{python_sitelib}/crmsh
+%{python_sitelib}/crmsh*.egg-info
 
 %{_datadir}/%{name}
 %exclude %{_datadir}/%{name}/tests
