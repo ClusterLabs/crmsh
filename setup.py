@@ -13,6 +13,4 @@ setup(name='crmsh',
       author_email='dejan@suse.de',
       url='http://crmsh.github.io/',
       packages=['crmsh'],
-      package_dir={'crmsh': SRC_PATH},
-      scripts=['crm']
-     )
+      package_dir={'crmsh': SRC_PATH})
