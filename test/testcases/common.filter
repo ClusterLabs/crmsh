@@ -1,4 +1,5 @@
 #!/usr/bin/awk -f
 # 1. replace .EXT [path/]<cmd> <parameter> with .EXT <cmd> <parameter>
-/\.EXT \/(.+) \w+/ { gsub(/\/.*\//, "", $2) }
+/\.EXT \/(.+)/ { gsub(/\/.*\//, "", $2) }
+/\.EXT >\/dev\/null 2>&1 \/(.+)/ { gsub(/\/.*\//, "", $4) }
 { print }
