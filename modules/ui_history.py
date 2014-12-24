@@ -39,7 +39,10 @@ import cmd_status
 
 ptest_options = ["@v+", "nograph", "scores", "actions", "utilization"]
 
-crm_report = report.Report()
+
+@utils.memoize
+def crm_report():
+    return report.Report()
 
 
 class History(command.UI):
@@ -75,7 +78,7 @@ class History(command.UI):
         if to_dt and to_dt <= from_dt:
             common_err("%s - %s: bad period" % (from_time, to_time))
             return False
-        return crm_report.set_period(from_dt, to_dt)
+        return crm_report().set_period(from_dt, to_dt)
 
     def _check_source(self, src):
         'a (very) quick source check'
@@ -93,7 +96,7 @@ class History(command.UI):
         common_debug("setting source to %s" % src)
         if not self._check_source(src):
             return False
-        crm_report.set_source(src)
+        crm_report().set_source(src)
         options.history = src
         self.current_session = None
         to_time = ''
@@ -133,7 +136,7 @@ class History(command.UI):
             if force != "force" and force != "--force":
                 context.fatal_error("Expected 'force' or '--force' (was '%s')" % (force))
             force = True
-        return crm_report.refresh_source(force)
+        return crm_report().refresh_source(force)
 
     @command.skill_level('administrator')
     def do_detail(self, context, detail_lvl):
@@ -143,22 +146,22 @@ class History(command.UI):
         if not (isinstance(detail_num, int) and int(detail_num) >= 0):
             bad_usage(context.get_command_name(), detail_lvl)
             return False
-        return crm_report.set_detail(detail_lvl)
+        return crm_report().set_detail(detail_lvl)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.call(crm_report.node_list))
+    @command.completers_repeating(compl.call(lambda: crm_report().node_list()))
     def do_setnodes(self, context, *args):
         "usage: setnodes <node> [<node> ...]"
         self._init_source()
         if options.history != "live":
             common_info("setting nodes not necessary for existing reports, proceeding anyway")
-        return crm_report.set_nodes(*args)
+        return crm_report().set_nodes(*args)
 
     @command.skill_level('administrator')
     def do_info(self, context):
         "usage: info"
         self._init_source()
-        return crm_report.info()
+        return crm_report().info()
 
     @command.skill_level('administrator')
     def do_latest(self, context):
@@ -167,33 +170,33 @@ class History(command.UI):
         if not utils.wait4dc("transition", not options.batch):
             return False
         self._set_source("live")
-        crm_report.refresh_source()
+        crm_report().refresh_source()
         f = self._get_pe_byidx(-1)
         if not f:
             return False
-        crm_report.show_transition_log(f)
+        crm_report().show_transition_log(f)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.call(crm_report.rsc_list))
+    @command.completers_repeating(compl.call(lambda: crm_report().rsc_list()))
     def do_resource(self, context, *args):
         "usage: resource <rsc> [<rsc> ...]"
         self._init_source()
-        return crm_report.resource(*args)
+        return crm_report().resource(*args)
 
     @command.skill_level('administrator')
     @command.wait
-    @command.completers_repeating(compl.call(crm_report.node_list))
+    @command.completers_repeating(compl.call(lambda: crm_report().node_list()))
     def do_node(self, context, *args):
         "usage: node <node> [<node> ...]"
         self._init_source()
-        return crm_report.node(*args)
+        return crm_report().node(*args)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.call(crm_report.node_list))
+    @command.completers_repeating(compl.call(lambda: crm_report().node_list()))
     def do_log(self, context, *args):
         "usage: log [<node> ...]"
         self._init_source()
-        return crm_report.log(*args)
+        return crm_report().log(*args)
 
     def ptest(self, nograph, scores, utilization, actions, verbosity):
         'Send a decompressed self.pe_file to ptest'
@@ -205,7 +208,7 @@ class History(command.UI):
         return utils.run_ptest(s, nograph, scores, utilization, actions, verbosity)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.join(compl.call(crm_report.peinputs_list),
+    @command.completers_repeating(compl.join(compl.call(lambda: crm_report().peinputs_list()),
                                              compl.choice(['v'])))
     def do_peinputs(self, context, *args):
         """usage: peinputs [{<range>|<number>} ...] [v]"""
@@ -219,16 +222,16 @@ class History(command.UI):
                 if a and len(a) == 2 and not utils.check_range(a):
                     common_err("%s: invalid peinputs range" % a)
                     return False
-                l += crm_report.pelist(a, long=("v" in opt_l))
+                l += crm_report().pelist(a, long=("v" in opt_l))
         else:
-            l = crm_report.pelist(long=("v" in opt_l))
+            l = crm_report().pelist(long=("v" in opt_l))
         if not l:
             return False
         s = '\n'.join(l)
         utils.page_string(s)
 
     def _get_pe_byname(self, s):
-        l = crm_report.find_pe_files(s)
+        l = crm_report().find_pe_files(s)
         if len(l) == 0:
             common_err("%s: path not found" % s)
             return None
@@ -238,7 +241,7 @@ class History(command.UI):
         return l[0]
 
     def _get_pe_byidx(self, idx):
-        l = crm_report.pelist()
+        l = crm_report().pelist()
         if len(l) < abs(idx):
             if idx == -1:
                 common_err("no transitions found in the source")
@@ -248,7 +251,7 @@ class History(command.UI):
         return l[idx]
 
     def _get_pe_bynum(self, n):
-        l = crm_report.pelist([n])
+        l = crm_report().pelist([n])
         if len(l) == 0:
             common_err("PE file %d not found" % n)
             return None
@@ -275,13 +278,13 @@ class History(command.UI):
     def _show_pe(self, f, opt_l):
         self.pe_file = f  # self.pe_file needed by self.ptest
         ui_utils.ptestlike(self.ptest, 'vv', "transition", opt_l)
-        return crm_report.show_transition_log(f)
+        return crm_report().show_transition_log(f)
 
     def _display_dot(self, f):
         if not config.core.dotty:
             common_err("install graphviz to draw transition graphs")
             return False
-        f = crm_report.pe2dot(f)
+        f = crm_report().pe2dot(f)
         if not f:
             common_err("dot file not found in the report")
             return False
@@ -297,7 +300,7 @@ class History(command.UI):
         return xmlutil.pe2shadow(f, name)
 
     @command.skill_level('administrator')
-    @command.completers(compl.join(compl.call(crm_report.peinputs_list),
+    @command.completers(compl.join(compl.call(lambda: crm_report().peinputs_list()),
                                    compl.choice(['log', 'showdot', 'save'])))
     def do_transition(self, context, *args):
         """usage: transition [<number>|<index>|<file>] [nograph] [v...] [scores] [actions] [utilization]
@@ -331,7 +334,7 @@ class History(command.UI):
         elif subcmd == "save":
             rc = self._pe2shadow(f, argl)
         else:
-            rc = crm_report.show_transition_log(f, True)
+            rc = crm_report().show_transition_log(f, True)
         return rc
 
     def _save_cib_env(self):
@@ -520,7 +523,8 @@ class History(command.UI):
         print utils.str2tmp(s)
 
     @command.skill_level('administrator')
-    @command.completers(compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])),
+    @command.completers(compl.join(compl.call(lambda: crm_report().peinputs_list()),
+                                   compl.choice(['live'])),
                         compl.choice(['status']))
     def do_show(self, context, t, *args):
         "usage: show <pe> [status]"
@@ -539,7 +543,8 @@ class History(command.UI):
         utils.page_string(s)
 
     @command.skill_level('administrator')
-    @command.completers(compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])))
+    @command.completers(compl.join(compl.call(lambda: crm_report().peinputs_list()),
+                                   compl.choice(['live'])))
     def do_graph(self, context, t, *args):
         "usage: graph <pe> [<gtype> [<file> [<img_format>]]]"
         self._init_source()
@@ -564,8 +569,10 @@ class History(command.UI):
         return rc
 
     @command.skill_level('administrator')
-    @command.completers(compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])),
-                        compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])))
+    @command.completers(compl.join(compl.call(lambda: crm_report().peinputs_list()),
+                                   compl.choice(['live'])),
+                        compl.join(compl.call(lambda: crm_report().peinputs_list()),
+                                   compl.choice(['live'])))
     def do_diff(self, context, t1, t2, *args):
         "usage: diff <pe> <pe> [status] [html]"
         self._init_source()
@@ -589,8 +596,10 @@ class History(command.UI):
             sys.stdout.writelines(s)
 
     @command.skill_level('administrator')
-    @command.completers(compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])),
-                        compl.join(compl.call(crm_report.peinputs_list), compl.choice(['live'])))
+    @command.completers(compl.join(compl.call(lambda: crm_report().peinputs_list()),
+                                   compl.choice(['live'])),
+                        compl.join(compl.call(lambda: crm_report().peinputs_list()),
+                                   compl.choice(['live'])))
     def do_wdiff(self, context, t1, t2, *args):
         "usage: wdiff <pe> <pe> [status]"
         self._init_source()
@@ -608,8 +617,8 @@ class History(command.UI):
         utils.page_string(s)
 
     @command.skill_level('administrator')
-    @command.completers(compl.call(crm_report.session_subcmd_list),
-                        compl.call(crm_report.session_list))
+    @command.completers(compl.call(lambda: crm_report().session_subcmd_list()),
+                        compl.call(lambda: crm_report().session_list()))
     def do_session(self, context, subcmd=None, name=None):
         "usage: session [{save|load|delete} <name> | pack [<name>] | update | list]"
         self._init_source()
@@ -636,11 +645,11 @@ class History(command.UI):
         if not name:
             # some commands work on the existing session
             name = self.current_session
-        rc = crm_report.manage_session(subcmd, name)
+        rc = crm_report().manage_session(subcmd, name)
         # set source appropriately
         if rc and subcmd in ("save", "load"):
-            options.history = crm_report.get_source()
-            crm_report.prepare_source()
+            options.history = crm_report().get_source()
+            crm_report().prepare_source()
             self.current_session = name
         elif rc and subcmd == "delete":
             if name == self.current_session:
@@ -654,11 +663,11 @@ class History(command.UI):
         "usage: exclude [<regex>|clear]"
         self._init_source()
         if not arg:
-            rc = crm_report.manage_excludes("show")
+            rc = crm_report().manage_excludes("show")
         elif arg == "clear":
-            rc = crm_report.manage_excludes("clear")
+            rc = crm_report().manage_excludes("clear")
         else:
-            rc = crm_report.manage_excludes("add", arg)
+            rc = crm_report().manage_excludes("add", arg)
         return rc
 
 # vim:ts=4:sw=4:et:

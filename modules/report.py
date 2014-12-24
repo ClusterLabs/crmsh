@@ -68,7 +68,7 @@ def set_year(ts=None):
     '''
     global YEAR
     YEAR = time.strftime("%Y", time.localtime(ts))
-    common_debug("setting year to %s (ts: %s)" % (YEAR, str(ts)))
+    common_debug("report: setting year to %s (ts: %s)" % (YEAR, str(ts)))
 
 
 def make_time(t):
