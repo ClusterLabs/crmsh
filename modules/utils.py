@@ -896,6 +896,15 @@ def term_render(s):
         return s
 
 
+def get_pager_cmd(*extra_opts):
+    'returns a commandline which calls the configured pager'
+    cmdline = [config.core.pager]
+    if os.path.basename(config.core.pager) == "less":
+        cmdline.append('-R')
+    cmdline.extend(extra_opts)
+    return ' '.join(cmdline)
+
+
 def page_string(s):
     'Page string rendered for TERM.'
     if not s:
@@ -906,20 +915,14 @@ def page_string(s):
     elif not config.core.pager or not can_ask() or options.batch:
         print term_render(s)
     else:
-        opts = ""
-        if config.core.pager == "less":
-            opts = "-R"
-        pipe_string("%s %s" % (config.core.pager, opts), term_render(s))
+        pipe_string(get_pager_cmd(), term_render(s))
 
 
 def page_file(filename):
     'Open file in pager'
     if not os.path.isfile(filename):
         return
-    cmd = config.core.pager
-    if config.core.pager == "less":
-        cmd += " -R"
-    return ext_cmd_nosudo(cmd + ' ' + filename, shell=True)
+    return ext_cmd_nosudo(get_pager_cmd(filename), shell=True)
 
 
 def get_winsize():
