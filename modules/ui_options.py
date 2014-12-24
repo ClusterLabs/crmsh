@@ -156,21 +156,22 @@ class CliOptions(command.UI):
     @command.completers(completers.choice(config.get_all_options()))
     def do_show(self, context, option=None):
         "usage: show [all | <option>]"
-        if option is None or option == 'all':
-            opts = None
-            if option == 'all':
-                opts = config.get_all_options()
-            else:
-                opts = config.get_configured_options()
+        import utils
+        opts = config.get_configured_options() if option is None else config.get_all_options()
+
+        def show_options(fn):
+            s = ''
             for opt in opts:
-                parts = opt.split('.')
-                print "%s = %s" % (opt, config.get_option(parts[0], parts[1], raw=True))
+                if fn(opt):
+                    parts = opt.split('.')
+                    val = (opt, config.get_option(parts[0], parts[1], raw=True))
+                    s += "%s = %s\n" % val
+            utils.page_string(s)
+
+        if option == 'all' or option is None:
+            show_options(lambda o: True)
         else:
-            parts = option.split('.')
-            if len(parts) != 2:
-                context.fatal_error("Unknown option: " + option)
-            val = config.get_option(parts[0], parts[1], raw=True)
-            print "%s = %s" % (option, val)
+            show_options(lambda o: o.startswith(option) or o.endswith(option))
 
     def do_save(self, context):
         "usage: save"
