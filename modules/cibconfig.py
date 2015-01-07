@@ -2395,7 +2395,10 @@ class CibFactory(object):
         if not self._crm_diff_cmd.endswith('--no-version'):
             # skip the version information for source and target
             # if we dont have support for --no-version
-            cib_diff = re.sub(r'<(target|source).*', r'<\1/>', cib_diff)
+            e = etree.fromstring(cib_diff)
+            for tag in e.xpath("./version/*[self::target or self::source]"):
+                tag.attrib.clear()
+            cib_diff = etree.tostring(e)
         common_debug("Diff: %s" % (cib_diff))
         rc = pipe_string("%s %s" % (cib_piped, cibadmin_opts),
                          cib_diff)
