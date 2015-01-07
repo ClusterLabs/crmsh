@@ -2393,8 +2393,9 @@ class CibFactory(object):
             common_err("crm_diff apparently failed to produce the diff (rc=%d)" % rc)
             return False
         if not self._crm_diff_cmd.endswith('--no-version'):
-            # if we dont have support for --no-version skip the version information for source and target
-            cib_diff = re.sub(r'<(target|source).*', r'<\1/>', cib_diff);
+            # skip the version information for source and target
+            # if we dont have support for --no-version
+            cib_diff = re.sub(r'<(target|source).*', r'<\1/>', cib_diff)
         common_debug("Diff: %s" % (cib_diff))
         rc = pipe_string("%s %s" % (cib_piped, cibadmin_opts),
                          cib_diff)
