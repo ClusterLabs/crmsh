@@ -75,7 +75,7 @@ class Gv(object):
             self.norank_nodes.append(id)
 
     def my_edge(self, e):
-        return [self.gv_id(x) for x in e]
+        return [self.gv_id(x) for x in e if x is not None]
 
     def new_edge(self, e):
         ne = self.my_edge(e)
