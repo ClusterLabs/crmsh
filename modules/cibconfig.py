@@ -1718,13 +1718,14 @@ class CibLocation(CibObject):
             score_n = self.node.findall("rule")[0]
             exp = self.node.xpath("rule/expression")[0]
             pref_node = exp.get("value")
-        else:
+        if pref_node is None:
             return
         rsc_id = gv_first_rsc(self.node.get("rsc"))
-        e = [pref_node, rsc_id]
-        e_id = gv_obj.new_edge(e)
-        self._set_edge_attrs(gv_obj, e_id)
-        gv_edge_score_label(gv_obj, e_id, score_n)
+        if rsc_id is not None:
+            e = [pref_node, rsc_id]
+            e_id = gv_obj.new_edge(e)
+            self._set_edge_attrs(gv_obj, e_id)
+            gv_edge_score_label(gv_obj, e_id, score_n)
 
 
 def _opt_set_name(n):
