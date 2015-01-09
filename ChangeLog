@@ -1,3 +1,46 @@
+* Fri Jan  9 2015 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- medium: ui_resource: Set probe interval 0 if not set (bnc#905050)
+- doc: Document probe op in resource trace (bnc#905050)
+- low: ui_resource: --reprobe and --refresh are deprecated (bnc#905092)
+- doc: Document deprecation of refresh and reprobe (bnc#905092)
+- medium: parse: Support resource-discovery in location constraints
+- medium: pacemaker: Support pacemaker-next as schema
+- medium: cibconfig: Allow unsupported schemas with warning
+- medium: ra: Use correct path for crmd (#67)
+- medium: cmd_status: Show pending if available, enable extra options
+- high: config: Fix path to system-wide crm.conf (#67)
+- medium: config: Fall back to /etc/crm/crmsh.conf (#67)
+- low: cliformat: Colorize id: as identifier (boo#905338)
+- medium: cibconfig: Revised CIB schema handling
+- medium: ui_configure: Add replace option to commit
+- medium: cibconfig: Don't bump epoch if stripping version
+- medium: ui_context: Lazily import readline
+- medium: ui_configure: selectors in save command
+- medium: config: Add core.ignore_missing_metadata (#68) (boo#905910)
+- Medium: config: add alwayscolor to display output option
+- doc: Clarify documentation for property (boo#905637)
+- doc: Add documentation section describing rule expressions (boo#905637)
+- doc: Link to documentation on rule expressions
+- medium: Allow removing groups even if is_running (boo#905271)
+- medium: cibconfig: Delete containers first in edits (boo#905268)
+- doc: Improved documentation for show and save
+- doc: Add note about modeline for vim syntax
+- medium: ui_history: Fix crash using empty object set
+- utils: append_file: open destination in append-mode (boo#907528)
+- medium: parse: Allow nvpair with no value using name= syntax (#71)
+- medium: parse: Enable name[=value] for nvpair (#71)
+- Low: term: get rid of annying ^O in piped-to-less-R output
+- high: parse: Implicit initial parameter list
+- high: crm_pssh: Switch to python-parallax over pssh (bnc#905116)
+- low: report: Fix references to PSSH
+- low: report: Delay Report creation until use
+- medium: utils: Check if path basename is less (#74)
+- medium: ui_options: Accept prefix or suffix of option as argument
+- medium: Remove CIB version in case no --no-version.
+- low: cibconfig: Use LXML to remove version data more robustly (#75)
+- low: crm_gv: Avoid crashing if passed None in my_edge
+- low: cibconfig: Protect against dereferencing None when building graph
+
 * Tue Oct 28 2014 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - Pre-release 2.2.0-rc1
 - cibconfig: Clean up output from crm_verify (bnc#893138)
