@@ -255,6 +255,7 @@ def cib_ver_unsupported_err(validator, rel):
     err_buf.error("Unsupported CIB: validator '%s', release '%s'" %
                   (validator, rel))
     err_buf.error("To upgrade an old (<1.0) schema, use the upgrade command.")
+    err_buf.error("Edit the core.supported_schemas option to add schemas manually.")
     schemas = config.core.supported_schemas
     err_buf.error("core.supported_schemas: %s" % (', '.join(schemas)))
 
