@@ -85,8 +85,11 @@ def is_program(prog):
     """Is this program available?"""
     def isexec(filename):
         return os.path.isfile(filename) and os.access(filename, os.X_OK)
-    return any(isexec(f) for f in (os.path.join(p, prog)
-                                   for p in os.getenv("PATH").split(os.pathsep)))
+    for p in os.getenv("PATH").split(os.pathsep):
+        f = os.path.join(p, prog)
+        if isexec(f):
+            return f
+    return None
 
 
 def can_ask():
@@ -403,10 +406,11 @@ def show_dot_graph(dotfile, keep_file=False, desc="transition graph"):
 
 
 def ext_cmd(cmd, shell=True):
+    cmd = add_sudo(cmd)
     if options.regression_tests:
         print ".EXT", cmd
-    common_debug("invoke: %s" % add_sudo(cmd))
-    return subprocess.call(add_sudo(cmd), shell=shell)
+    common_debug("invoke: %s" % cmd)
+    return subprocess.call(cmd, shell=shell)
 
 
 def ext_cmd_nosudo(cmd, shell=True):
@@ -1090,8 +1094,9 @@ def load_graphviz_file(ini_f):
 def get_pcmk_version(dflt):
     version = dflt
 
-    if is_program('crmd'):
-        cmd = 'crmd'
+    crmd = is_program('crmd')
+    if crmd:
+        cmd = crmd
     else:
         return version
 
@@ -1314,8 +1319,9 @@ def list_cluster_nodes():
 
 
 def service_info(name):
-    if is_program('systemctl'):
-        rc, outp = get_stdout(['systemctl', 'show',
+    p = is_program('systemctl')
+    if p:
+        rc, outp = get_stdout([p, 'show',
                                '-p', 'UnitFileState',
                                '-p', 'ActiveState',
                                '-p', 'SubState',
