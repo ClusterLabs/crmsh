@@ -318,13 +318,12 @@ def prog_meta(prog):
     '''
     Do external program metadata.
     '''
-    l = []
     if is_program(prog):
         rc, l = stdout2list("%s metadata" % prog)
-        if rc != 0:
-            common_debug("%s metadata exited with code %d" % (prog, rc))
-            l = []
-    return l
+        if rc == 0:
+            return l
+        common_debug("%s metadata exited with code %d" % (prog, rc))
+    return []
 
 
 def get_nodes_text(n, tag):

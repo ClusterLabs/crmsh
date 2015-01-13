@@ -1088,8 +1088,6 @@ def get_pcmk_version(dflt):
 
     if is_program('crmd'):
         cmd = 'crmd'
-    elif os.path.isfile(os.path.join(config.path.crm_daemon_dir, 'crmd')):
-        cmd = os.path.join(config.path.crm_daemon_dir, 'crmd')
     else:
         return version
 
