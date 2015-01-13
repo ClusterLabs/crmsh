@@ -298,11 +298,14 @@ class _Configuration(object):
             fp.close()
 
     def get_impl(self, section, name):
-        if self._user and self._user.has_option(section, name):
-            return self._user.get(section, name) or ''
-        if self._systemwide and self._systemwide.has_option(section, name):
-            return self._systemwide.get(section, name) or ''
-        return self._defaults.get(section, name) or ''
+        try:
+            if self._user and self._user.has_option(section, name):
+                return self._user.get(section, name) or ''
+            if self._systemwide and self._systemwide.has_option(section, name):
+                return self._systemwide.get(section, name) or ''
+            return self._defaults.get(section, name) or ''
+        except ConfigParser.NoOptionError, e:
+            raise ValueError(e)
 
     def get(self, section, name, raw=False):
         if raw:
