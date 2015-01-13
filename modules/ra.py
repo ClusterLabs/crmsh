@@ -318,7 +318,8 @@ def prog_meta(prog):
     '''
     Do external program metadata.
     '''
-    if is_program(prog):
+    prog = is_program(prog)
+    if prog:
         rc, l = stdout2list("%s metadata" % prog)
         if rc == 0:
             return l

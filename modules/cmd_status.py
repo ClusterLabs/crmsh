@@ -29,13 +29,14 @@ def crm_mon(opts=''):
     """
     global _crm_mon
     if _crm_mon is None:
-        if not utils.is_program("crm_mon"):
+        prog = utils.is_program("crm_mon")
+        if not prog:
             raise IOError("crm_mon not available, check your installation")
-        _, out = utils.get_stdout("crm_mon --help")
+        _, out = utils.get_stdout("%s --help" % (prog))
         if "--pending" in out:
-            _crm_mon = "crm_mon -1 -j"
+            _crm_mon = "%s -1 -j" % (prog)
         else:
-            _crm_mon = "crm_mon -1"
+            _crm_mon = "%s -1" % (prog)
 
     status_cmd = "%s %s" % (_crm_mon, opts)
     return utils.get_stdout(utils.add_sudo(status_cmd))
