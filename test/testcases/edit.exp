@@ -51,6 +51,20 @@ ERROR: 43: a group may contain only primitives; c1 is clone
 .INP: modgroup g1 add nosuch
 ERROR: 44: g1 refers to missing object nosuch
 .INP: filter "sed 's/^/# this is a comment\n/'" loc-d1
+.INP: rsc_defaults $id="rsc_options" failure-timeout=10m
+.INP: filter "sed 's/2m/60s/'" cib-bootstrap-options
+.INP: show rsc_options
+rsc_defaults rsc_options: \
+	failure-timeout=10m
+.INP: property stonith-enabled=true
+.INP: show cib-bootstrap-options
+property cib-bootstrap-options: \
+	default-action-timeout=60s \
+	stonith-enabled=true
+.INP: filter 'sed "s/stonith-enabled=true//"'
+.INP: show cib-bootstrap-options
+property cib-bootstrap-options: \
+	default-action-timeout=60s
 .INP: _test
 .INP: verify
 .EXT crm_resource --show-metadata stonith:heartbeat:null
@@ -86,28 +100,7 @@ location loc-d1 d1 \
 	rule webserver: defined webserver
 order o1 inf: p3 c1
 property cib-bootstrap-options: \
-	default-action-timeout=2m
-.INP: commit
-.TRY configure rsc_defaults $id="rsc_options" failure-timeout=10m
-.TRY configure filter "sed 's/2m/60s/'" cib-bootstrap-options
-.EXT crmd metadata
-.EXT pengine metadata
-.EXT cib metadata
-.TRY configure show rsc_options
+	default-action-timeout=60s
 rsc_defaults rsc_options: \
 	failure-timeout=10m
-.TRY configure property stonith-enabled=true
-.EXT crmd metadata
-.EXT pengine metadata
-.EXT cib metadata
-.TRY configure show cib-bootstrap-options
-property cib-bootstrap-options: \
-	default-action-timeout=60s \
-	stonith-enabled=true
-.TRY configure filter 'sed "s/stonith-enabled=true//"'
-.EXT crmd metadata
-.EXT pengine metadata
-.EXT cib metadata
-.TRY configure show cib-bootstrap-options
-property cib-bootstrap-options: \
-	default-action-timeout=60s
+.INP: commit
