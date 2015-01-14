@@ -46,7 +46,7 @@ Requires:       python >= 2.6
 Requires:       python-dateutil
 Requires:       python-lxml
 Requires:       python-parallax
-Requires:       which
+Requires:       /usr/bin/which
 BuildRequires:  python-lxml
 BuildRequires:  python-setuptools
 
