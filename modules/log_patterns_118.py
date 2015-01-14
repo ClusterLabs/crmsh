@@ -65,11 +65,11 @@ log_patterns = {
 	),
 	"events": (
 		( # detail 0
-			"CRIT:",
-			"ERROR:",
+			"(?:CRIT|crit):",
+			"(?:ERROR|error):",
 		),
 		( # detail 1
-			"WARN:",
+			"(?:WARN|warning):",
 		),
 	),
 }
