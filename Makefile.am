@@ -78,7 +78,8 @@ testcases_DATA		=	test/testcases/basicset test/testcases/common.excl \
 	test/testcases/confbasic-xml.exp test/testcases/confbasic.exp test/testcases/delete.exp test/testcases/file.exp \
 	test/testcases/node.exp test/testcases/ra.exp test/testcases/resource.exp test/testcases/shadow.exp test/testcases/acl.exp test/testcases/options.exp \
 	test/testcases/edit.exp test/testcases/rset.exp test/testcases/rset-xml.exp test/testcases/history.exp test/testcases/history.excl \
-	test/testcases/newfeatures test/testcases/newfeatures.exp test/testcases/acl.excl test/testcases/commit test/testcases/commit.exp
+	test/testcases/newfeatures test/testcases/newfeatures.exp test/testcases/acl.excl test/testcases/commit test/testcases/commit.exp \
+	test/testcases/bugs test/testcases/bugs.exp
 
 test/testcases/confbasic-xml.filter:
 	ln test/testcases/xmlonly.sh $@

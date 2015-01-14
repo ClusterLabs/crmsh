@@ -1,0 +1,16 @@
+show Configuration bugs
+primitive st stonith:null \
+	params hostlist='node1' \
+	meta description="some description here" \
+	op start requires=nothing \
+	op monitor interval=60m
+primitive p1 Dummy
+primitive p2 Dummy
+primitive p3 Dummy
+primitive p4 Dummy
+colocation c1 inf: p1 p2
+filter "sed 's/p1 p2/& p3/'" c1
+commit
+_test
+verify
+.
