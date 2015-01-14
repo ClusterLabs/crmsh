@@ -1,1 +1,33 @@
-# nothing
+.TRY Configuration bugs
+.INP: configure
+.INP: _regtest on
+.INP: erase
+.INP: erase nodes
+.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" 	op start requires=nothing 	op monitor interval=60m
+.INP: primitive p1 Dummy
+.INP: primitive p2 Dummy
+.INP: primitive p3 Dummy
+.INP: primitive p4 Dummy
+.INP: colocation c1 inf: p1 p2
+.INP: filter "sed 's/p1 p2/& p3/'" c1
+.INP: commit
+.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT stonithd metadata
+.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
+.EXT pengine metadata
+.INP: _test
+.INP: verify
+.INP: show
+primitive p1 Dummy
+primitive p2 Dummy
+primitive p3 Dummy
+primitive p4 Dummy
+primitive st stonith:null \
+	params hostlist=node1 \
+	meta description="some description here" \
+	op start requires=nothing interval=0 \
+	op monitor interval=60m
+colocation c1 inf: p1 p2 p3
+.INP: commit
+INFO: 16: apparently there is nothing to commit
+INFO: 16: try changing something first
