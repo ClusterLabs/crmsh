@@ -125,9 +125,10 @@ all-local:
 		--verbose)
 
 install-exec-local:
+	-mkdir -p $(DESTDIR)$(pkgpythondir)
 	$(PYTHON) $(srcdir)/setup.py install \
-		--root=${DESTDIR} --prefix=${prefix} \
-		--record $(DESTDIR)$(pkgpythondir)/install_files.txt \
+		--root=$(DESTDIR) --prefix=$(prefix) \
+		--record-rpm $(DESTDIR)$(pkgpythondir)/install_files.txt \
 		--verbose
 	$(INSTALL) -d -m 770 $(DESTDIR)/$(CRM_CACHE_DIR)
 	-rm -rf $(generated_docs) $(generated_mans)
