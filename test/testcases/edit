@@ -47,13 +47,13 @@ modgroup g1 remove nosuch
 modgroup g1 add c1
 modgroup g1 add nosuch
 filter "sed 's/^/# this is a comment\\n/'" loc-d1
+rsc_defaults $id="rsc_options" failure-timeout=10m
+filter "sed 's/2m/60s/'" cib-bootstrap-options
+show rsc_options
+property stonith-enabled=true
+show cib-bootstrap-options
+filter 'sed "s/stonith-enabled=true//"'
+show cib-bootstrap-options
 _test
 verify
 .
-configure rsc_defaults $id="rsc_options" failure-timeout=10m
-configure filter "sed 's/2m/60s/'" cib-bootstrap-options
-configure show rsc_options
-configure property stonith-enabled=true
-configure show cib-bootstrap-options
-configure filter 'sed "s/stonith-enabled=true//"'
-configure show cib-bootstrap-options
