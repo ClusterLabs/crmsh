@@ -76,10 +76,6 @@ def do_pssh(l, opts):
         os.makedirs(opts.outdir)
     if opts.errdir and not os.path.exists(opts.errdir):
         os.makedirs(opts.errdir)
-    if opts.send_input:
-        stdin = sys.stdin.read()
-    else:
-        stdin = None
     manager = Manager(opts)
     user = ""
     port = ""
@@ -101,7 +97,14 @@ def do_pssh(l, opts):
         if cmdline:
             cmd.append(cmdline)
         hosts.append(host)
-        t = Task(host, port, user, cmd, opts, stdin)
+        t = Task(host, port, user, cmd,
+                 stdin=opts.input_stream,
+                 verbose=opts.verbose,
+                 quiet=opts.quiet,
+                 print_out=opts.print_out,
+                 inline=opts.inline,
+                 inline_stdout=opts.inline_stdout,
+                 default_user=opts.default_user)
         manager.add_task(t)
     try:
         return manager.run()  # returns a list of exit codes
