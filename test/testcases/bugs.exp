@@ -10,6 +10,13 @@
 .INP: primitive p4 Dummy
 .INP: colocation c1 inf: p1 p2
 .INP: filter "sed 's/p1 p2/& p3/'" c1
+.INP: show c1
+colocation c1 inf: p1 p2 p3
+.INP: delete c1
+.INP: colocation c2 inf: [ p1 p2 ] p3 p4
+.INP: filter "sed 's/[/(/;s/]/)/'" c2
+.INP: show c2
+colocation c2 inf: ( p1 p2 ) p3 p4
 .INP: commit
 .EXT crm_resource --show-metadata stonith:heartbeat:null
 .EXT stonithd metadata
@@ -27,7 +34,7 @@ primitive st stonith:null \
 	meta description="some description here" \
 	op start requires=nothing interval=0 \
 	op monitor interval=60m
-colocation c1 inf: p1 p2 p3
+colocation c2 inf: ( p1 p2 ) p3 p4
 .INP: commit
-INFO: 16: apparently there is nothing to commit
-INFO: 16: try changing something first
+INFO: 21: apparently there is nothing to commit
+INFO: 21: try changing something first

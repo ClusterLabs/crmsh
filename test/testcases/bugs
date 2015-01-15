@@ -10,6 +10,11 @@ primitive p3 Dummy
 primitive p4 Dummy
 colocation c1 inf: p1 p2
 filter "sed 's/p1 p2/& p3/'" c1
+show c1
+delete c1
+colocation c2 inf: [ p1 p2 ] p3 p4
+filter "sed 's/\[/(/;s/\]/)/'" c2
+show c2
 commit
 _test
 verify
