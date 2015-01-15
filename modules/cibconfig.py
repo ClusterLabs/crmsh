@@ -306,7 +306,10 @@ class CibObjectSet(object):
                 s = open(tmp).read()
                 if hash(s) != filehash:
                     ok = self.save(self._post_edit(s))
-                    if not ok and ask("Edit or discard changes (yes to edit, no to discard)?"):
+                    if not ok and config.core.force:
+                        common_err("Save failed and --force is set, " +
+                                   "aborting edit to avoid infinite loop")
+                    elif not ok and ask("Edit or discard changes (yes to edit, no to discard)?"):
                         continue
                 rc = True
             os.unlink(tmp)
