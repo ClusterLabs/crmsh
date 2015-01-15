@@ -168,16 +168,14 @@ rm -rf %{buildroot}
 %post test
 if [ ! -e /tmp/.crmsh_regression_tests_ran ]; then
     touch /tmp/.crmsh_regression_tests_ran
-    if ! %{_datadir}/%{name}/tests/regression.sh ; then
-        echo "Regression tests failed."
-        cat crmtestout/regression.out
-        exit 1
-    fi
+	%{_datadir}/%{name}/tests/regression.sh
+	result1=$?
 	cd %{_datadir}/%{name}/tests
-	if ! ./cib-tests.sh ; then
-		echo "CIB tests failed."
-		exit 1
-	fi
+	./cib-tests.sh
+	result2=$?
+	[ $result1 -ne 0 ] && (echo "Regression tests failed."; cat ${buildroot}/crmtestout/regression.out)
+	[ $result2 -ne 0 ] && echo "CIB tests failed."
+	[ $result1 -ne 0 -o $result2 -ne 0 ] && exit 1
 fi
 %endif
 
