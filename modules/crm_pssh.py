@@ -85,14 +85,14 @@ def do_pssh(l, opts):
                '-o', 'PasswordAuthentication=no',
                '-o', 'SendEnv=PSSH_NODENUM',
                '-o', 'StrictHostKeyChecking=no']
-        if opts.options:
+        if hasattr(opts, 'options'):
             for opt in opts.options:
                 cmd += ['-o', opt]
         if user:
             cmd += ['-l', user]
         if port:
             cmd += ['-p', port]
-        if opts.extra:
+        if hasattr(opts, 'extra'):
             cmd.extend(opts.extra)
         if cmdline:
             cmd.append(cmdline)
