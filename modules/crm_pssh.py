@@ -85,14 +85,14 @@ def do_pssh(l, opts):
                '-o', 'PasswordAuthentication=no',
                '-o', 'SendEnv=PSSH_NODENUM',
                '-o', 'StrictHostKeyChecking=no']
-        if opts.options:
+        if hasattr(opts, 'options'):
             for opt in opts.options:
                 cmd += ['-o', opt]
         if user:
             cmd += ['-l', user]
         if port:
             cmd += ['-p', port]
-        if opts.extra:
+        if hasattr(opts, 'extra'):
             cmd.extend(opts.extra)
         if cmdline:
             cmd.append(cmdline)
@@ -173,7 +173,7 @@ def next_peinputs(node_pe_l, outdir, errdir):
         dir = "/%s" % r.group(1)
         red_pe_l = [x.replace("%s/" % r.group(1), "") for x in pe_l]
         common_debug("getting new PE inputs %s from %s" % (red_pe_l, node))
-        cmdline = "tar -C %s -cf - %s" % (dir, ' '.join(red_pe_l))
+        cmdline = "tar -C %s -chf - %s" % (dir, ' '.join(red_pe_l))
         opts = parse_args(outdir, errdir)
         l.append([node, cmdline])
     if not l:
