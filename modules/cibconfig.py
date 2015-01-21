@@ -2399,7 +2399,6 @@ class CibFactory(object):
         self._set_cib_attributes(self.cib_orig)
         current_cib = None  # don't need that anymore
         # only bump epoch if we don't have support for --no-version
-        # TODO: strip version information before generating patch
         if not self._crm_diff_cmd.endswith('--no-version'):
             # now increase the epoch by 1
             self.bump_epoch()
@@ -2420,6 +2419,20 @@ class CibFactory(object):
         if not cib_diff:
             common_err("crm_diff apparently failed to produce the diff (rc=%d)" % rc)
             return False
+        if not self._crm_diff_cmd.endswith('--no-version'):
+            # skip the version information for source and target
+            # if we dont have support for --no-version
+            e = etree.fromstring(cib_diff)
+            for tag in e.xpath("./version/*[self::target or self::source]"):
+                tag.attrib.clear()
+            cib_diff = etree.tostring(e)
+        # for v1 diffs, strip the digest
+        if "<diff" in cib_diff and "digest=" in cib_diff:
+            e = etree.fromstring(cib_diff)
+            for tag in e.xpath("/diff"):
+                if "digest" in tag.attrib:
+                    del tag.attrib["digest"]
+            cib_diff = etree.tostring(e)
         common_debug("Diff: %s" % (cib_diff))
         rc = pipe_string("%s %s" % (cib_piped, cibadmin_opts),
                          cib_diff)
