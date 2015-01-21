@@ -2403,6 +2403,13 @@ class CibFactory(object):
             for tag in e.xpath("./version/*[self::target or self::source]"):
                 tag.attrib.clear()
             cib_diff = etree.tostring(e)
+        # for v1 diffs, strip the digest
+        if "<diff" in cib_diff and "digest=" in cib_diff:
+            e = etree.fromstring(cib_diff)
+            for tag in e.xpath("/diff"):
+                if "digest" in tag.attrib:
+                    del tag.attrib["digest"]
+            cib_diff = etree.tostring(e)
         common_debug("Diff: %s" % (cib_diff))
         rc = pipe_string("%s %s" % (cib_piped, cibadmin_opts),
                          cib_diff)
