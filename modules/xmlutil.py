@@ -813,9 +813,8 @@ def processing_sort(nl):
     '''
     if config.core.sort_elements:
         sortfn = lambda k: (_sort_xml_order.get(k.tag, _SORT_LAST), k.get('id'))
-    else:
-        sortfn = lambda k: _sort_xml_order.get(k.tag, _SORT_LAST)
-    return sorted(nl, key=sortfn)
+        return sorted(nl, key=sortfn)
+    return nl
 
 
 def processing_sort_cli(cl):
@@ -825,9 +824,8 @@ def processing_sort_cli(cl):
     '''
     if config.core.sort_elements:
         sortfn = lambda k: (_sort_cli_order.get(k.obj_type, _SORT_LAST), k.obj_id)
-    else:
-        sortfn = lambda k: _sort_cli_order.get(k.obj_type, _SORT_LAST)
-    return sorted(cl, key=sortfn)
+        return sorted(cl, key=sortfn)
+    return cl
 
 
 def is_resource_cli(s):
