@@ -8,7 +8,7 @@
 #
 # This template generates a cloned instance of the ocfs2 filesystem
 #
-# NB: You need only one dlm, regardless of how many
+# NB: You need only one dlm/o2cb/clvm, regardless of how many
 # filesystems. In other words, you can use this template only for
 # one filesystem and to make another one, you'll have to edit the
 # resulting configuration yourself.
@@ -16,8 +16,12 @@
 %required
 
 # Name the ocfs2 filesystem (for example: bigfs)
+# The filesystem resource will be in a cloned group with the rest
+# of the prerequisite resources. The clone is going to be named c-<id>
+# (e.g. c-bigfs)
 # Example:
 # %% id bigfs
+
 %% id 
 
 # The mount point
@@ -48,14 +52,26 @@ primitive %_:id ocf:heartbeat:Filesystem
 	op start timeout=60s
 	op stop timeout=60s
 
-monitor %_:id 20s:40s
+monitor %_:id 30s:60s
 
 primitive dlm ocf:pacemaker:controld
 	op start timeout=90s
 	op stop timeout=100s
-	op monitor interval=60s timeout=60s
+    op monitor interval=60s timeout=60s
 
-clone base-%_:id dlm meta interleave="true"
-clone clusterfs-%_:id clusterfs meta interleave="true"
-order base-then-clusterfs-%_:id inf: base-%_:id clusterfs-%_:id
-colocation clusterfs-with-base-%_:id inf: clusterfs-%_:id base-%_:id
+primitive o2cb ocf:ocfs2:o2cb
+	op start timeout=90s
+	op stop timeout=100s
+    op monitor interval=60s timeout=60s
+
+primitive clvm ocf:lvm2:clvmd
+	op start timeout=90s
+	op stop timeout=100s
+
+primitive cmirror ocf:lvm2:cmirrord
+	op start timeout=90s
+	op stop timeout=100s
+
+group g-%_:id dlm clvm o2cb cmirror %_:id
+
+clone c-%_:id g-%_:id meta interleave="true"
