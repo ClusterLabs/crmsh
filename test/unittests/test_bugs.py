@@ -370,3 +370,19 @@ def test_ratrace():
     for op in ops:
         assert op.xpath('./instance_attributes/nvpair[@name="trace_ra"]/@value') == ["1"]
     assert set(obj.node.xpath('./operations/op/@name')) == set(['start', 'stop'])
+
+
+def test_op_role():
+    xml = '''<primitive class="ocf" id="rsc2" provider="pacemaker" type="Dummy">
+        <operations>
+          <op id="rsc2-monitor-10" interval="10" name="monitor" role="Stopped"/>
+        </operations>
+      </primitive>'''
+    data = etree.fromstring(xml)
+    obj = factory.create_from_node(data)
+    assert obj is not None
+    data = obj.repr_cli(format=-1)
+    print "OUTPUT:", data
+    exp = 'primitive rsc2 ocf:pacemaker:Dummy op monitor interval=10 role=Stopped'
+    assert data == exp
+    assert obj.cli_use_validate()
