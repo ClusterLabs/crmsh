@@ -278,7 +278,7 @@ pcmk_version = ""  # set later
 # r.group(3) file number
 transition_patt = [
     # transition start
-    "pengine.* process_pe_message: Calculated Transition ([0-9]+): (.*/pe-[^-]+-(%%)[.]bz2)",
+    "pengine.* process_pe_message: .*Transition ([0-9]+): .*([^ ]*/pe-[^-]+-(%%)[.]bz2)",
     # r.group(1) transition number (a different thing from file number)
     # r.group(2) contains full path
     # r.group(3) transition status
