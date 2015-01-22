@@ -43,3 +43,41 @@ colocation c2 inf: ( p1 p2 ) p3 p4
 .EXT pengine metadata
 .INP: _test
 .INP: verify
+.TRY Unordered load file
+.INP: options
+.INP: sort_elements false
+.INP: up
+.INP: configure
+.INP: load update bugs-test.txt
+.INP: show
+node node1
+primitive st stonith:null \
+	params hostlist=node1
+primitive p4 Dummy
+primitive p3 Dummy
+primitive p2 Dummy
+primitive p1 Dummy
+primitive p5 Dummy
+primitive p6 Dummy
+primitive gr1 Dummy
+primitive gr2 Dummy
+primitive gr3 Dummy
+primitive gr4 Dummy
+group g1 gr1 gr2
+group g2 gr3
+group g3 gr4
+clone cl-p5 p5
+location loc1 g1 \
+	rule 200: #uname eq node1
+colocation c2 inf: ( p1 p2 ) p3 p4
+property cib-bootstrap-options: \
+	default-action-timeout=60s
+.INP: commit
+.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT stonithd metadata
+.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
+.EXT crmd metadata
+.EXT pengine metadata
+.EXT cib metadata
+.INP: _test
+.INP: verify

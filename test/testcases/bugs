@@ -28,3 +28,14 @@ commit
 _test
 verify
 .
+session Unordered load file
+options
+sort_elements false
+up
+configure
+load update bugs-test.txt
+show
+commit
+_test
+verify
+.

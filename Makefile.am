@@ -67,7 +67,7 @@ scriptremove_SCRIPTS	= scripts/remove/remove.py
 testdir		= 	$(datadir)/$(PACKAGE)/tests
 test_SCRIPTS	=	test/regression.sh test/evaltest.sh test/cib-tests.sh
 test_DATA	=	test/README.regression test/defaults test/descriptions \
-			test/crm-interface test/history-test.tar.bz2
+			test/crm-interface test/history-test.tar.bz2 test/bugs-test.txt
 
 testcasesdir		= 	$(datadir)/$(PACKAGE)/tests/testcases
 testcases_SCRIPTS	=	test/testcases/ra.filter test/testcases/common.filter test/testcases/xmlonly.sh test/testcases/history.pre test/testcases/history.post

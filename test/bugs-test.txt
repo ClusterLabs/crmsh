@@ -1,0 +1,11 @@
+node node1
+primitive st stonith:null params hostlist=node1
+property default-action-timeout=60s
+group g1 gr1 gr2
+group g2 gr3
+group g3 gr4
+primitive gr1 Dummy
+primitive gr2 Dummy
+primitive gr3 Dummy
+primitive gr4 Dummy
+location loc1 g1 rule 200: #uname eq node1
