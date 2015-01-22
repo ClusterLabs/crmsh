@@ -1,13 +1,19 @@
-show Configuration bugs
+session Configuration bugs
+options
+sort_elements false
+up
+configure
+erase
+erase nodes
 primitive st stonith:null \
 	params hostlist='node1' \
 	meta description="some description here" \
 	op start requires=nothing \
 	op monitor interval=60m
-primitive p1 Dummy
-primitive p2 Dummy
-primitive p3 Dummy
 primitive p4 Dummy
+primitive p3 Dummy
+primitive p2 Dummy
+primitive p1 Dummy
 colocation c1 inf: p1 p2
 filter "sed 's/p1 p2/& p3/'" c1
 show c1
@@ -15,6 +21,10 @@ delete c1
 colocation c2 inf: [ p1 p2 ] p3 p4
 filter "sed 's/\\\[/\\\(/;s/\\\]/\\\)/'" c2
 show c2
+primitive p5 Dummy
+primitive p6 Dummy
+clone cl-p5 p5
+show
 commit
 _test
 verify
