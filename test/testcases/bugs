@@ -4,7 +4,6 @@ sort_elements false
 up
 configure
 erase
-erase nodes
 primitive st stonith:null \
 	params hostlist='node1' \
 	meta description="some description here" \

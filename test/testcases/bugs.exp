@@ -4,7 +4,6 @@
 .INP: up
 .INP: configure
 .INP: erase
-.INP: erase nodes
 .INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" 	op start requires=nothing 	op monitor interval=60m
 .INP: primitive p4 Dummy
 .INP: primitive p3 Dummy
@@ -23,6 +22,7 @@ colocation c2 inf: ( p1 p2 ) p3 p4
 .INP: primitive p6 Dummy
 .INP: clone cl-p5 p5
 .INP: show
+node node1
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" \
@@ -32,10 +32,10 @@ primitive p4 Dummy
 primitive p3 Dummy
 primitive p2 Dummy
 primitive p1 Dummy
-colocation c2 inf: ( p1 p2 ) p3 p4
 primitive p5 Dummy
 primitive p6 Dummy
 clone cl-p5 p5
+colocation c2 inf: ( p1 p2 ) p3 p4
 .INP: commit
 .EXT crm_resource --show-metadata stonith:heartbeat:null
 .EXT stonithd metadata
