@@ -89,6 +89,7 @@ class CliOptions(command.UI):
         config.set_option(parts[0], parts[1], value)
 
     @command.name('skill-level')
+    @command.alias('skill_level')
     @command.completers(_getprefs('skill_level'))
     def do_skill_level(self, context, level):
         """usage: skill-level <level>
@@ -117,18 +118,21 @@ class CliOptions(command.UI):
         return _legacy_set_pref("colorscheme", colors)
 
     @command.name('check-frequency')
+    @command.alias('check_frequency')
     @command.completers(_getprefs('check_frequency'))
     def do_check_frequency(self, context, freq):
         "usage: check-frequency <freq>"
         return _legacy_set_pref("check-frequency", freq)
 
     @command.name('check-mode')
+    @command.alias('check_mode')
     @command.completers(_getprefs('check_mode'))
     def do_check_mode(self, context, mode):
         "usage: check-mode <mode>"
         return _legacy_set_pref("check-mode", mode)
 
     @command.name('sort-elements')
+    @command.alias('sort_elements')
     @command.completers(_yesno)
     def do_sort_elements(self, context, opt):
         "usage: sort-elements {yes|no}"
@@ -140,12 +144,14 @@ class CliOptions(command.UI):
         return _legacy_set_pref("wait", opt)
 
     @command.name('add-quotes')
+    @command.alias('add_quotes')
     @command.completers(_yesno)
     def do_add_quotes(self, context, opt):
         "usage: add-quotes {yes|no}"
         return _legacy_set_pref("add-quotes", opt)
 
     @command.name('manage-children')
+    @command.alias('manage_children')
     @command.completers(_getprefs('manage_children'))
     def do_manage_children(self, context, opt):
         "usage: manage-children <option>"
