@@ -3,6 +3,7 @@
 .INP: source history-test.tar.bz2
 .INP: info
 .EXT tar -xj < history-test.tar.bz2
+WARNING: 3: end of transition xen-e:pe-input-47 not found in logs (transition not complete yet?)
 Source: history-test.tar.bz2
 Created on: Fri 14 Dec 19:08:38 UTC 2012
 By: unknown
@@ -10,7 +11,7 @@ Period: 2012-12-14 20:06:34 - 2012-12-14 20:08:44
 Nodes: xen-d xen-e
 Groups: 
 Resources: d1 s-libvirt
-Transitions: 43 44 45 46 48 272 49 50
+Transitions: 43 44 45 46 47 48 272 49 50
 .INP: node xen-d
 Dec 14 20:06:35 xen-d corosync[5649]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
 Dec 14 20:06:36 xen-d corosync[5649]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
@@ -182,6 +183,7 @@ history-test/xen-e/pengine/pe-input-43.bz2
 history-test/xen-e/pengine/pe-input-44.bz2
 history-test/xen-e/pengine/pe-input-45.bz2
 history-test/xen-e/pengine/pe-input-46.bz2
+history-test/xen-e/pengine/pe-input-47.bz2
 history-test/xen-e/pengine/pe-input-48.bz2
 history-test/xen-e/pengine/pe-warn-272.bz2
 history-test/xen-e/pengine/pe-input-49.bz2
@@ -193,6 +195,7 @@ Date       Start    End       Filename      Client     User       Origin
 2012-12-14 20:07:19 20:07:23  pe-input-44   cibadmin   root       xen-d
 2012-12-14 20:07:29 20:07:29  pe-input-45   cibadmin   root       xen-d
 2012-12-14 20:07:29 20:07:29  pe-input-46   cibadmin   root       xen-d
+2012-12-14 20:07:37 15:30:26  pe-input-47   cibadmin   root       xen-d
 2012-12-14 20:07:37 20:07:42  pe-input-48   cibadmin   root       xen-d
 2012-12-14 20:07:54 20:07:56  pe-warn-272   cibadmin   root       xen-d
 2012-12-14 20:07:56 20:07:57  pe-input-49   cibadmin   root       xen-d
@@ -214,7 +217,9 @@ Dec 14 20:08:43 xen-e lrmd: [24225]: info: rsc:d1 stop[11] (pid 24774)
 Dec 14 20:08:43 xen-e crmd: [24228]: info: process_lrm_event: LRM operation d1_stop_0 (call=11, rc=0, cib-update=125, confirmed=true) ok
 .INP: # reduce report span
 .INP: timeframe "2012-12-14 20:07:30"
+WARNING: 19: end of transition xen-e:pe-input-47 not found in logs (transition not complete yet?)
 .INP: peinputs
+history-test/xen-e/pengine/pe-input-47.bz2
 history-test/xen-e/pengine/pe-input-48.bz2
 history-test/xen-e/pengine/pe-warn-272.bz2
 history-test/xen-e/pengine/pe-input-49.bz2
@@ -265,6 +270,7 @@ Dec 14 20:07:57 xen-d logd: [1790]: info: Exiting write process
 Dec 14 20:07:57 xen-d haveged: haveged stopping due to signal 15
 .INP: # reset timeframe
 .INP: timeframe
+WARNING: 29: end of transition xen-e:pe-input-47 not found in logs (transition not complete yet?)
 .INP: session save _crmsh_regtest
 .EXT mkdir -p /var/cache/crm/history/session/_crmsh_regtest
 .INP: session load _crmsh_regtest
@@ -277,5 +283,6 @@ Report saved in '/root/_crmsh_regtest.tar.bz2'
 .INP: history
 .INP: session load _crmsh_regtest
 .EXT tar -xj < history-test.tar.bz2
+WARNING: 2: end of transition xen-e:pe-input-47 not found in logs (transition not complete yet?)
 .INP: exclude
 corosync|crmd|pengine|stonith-ng|cib|attrd|mgmtd|sshd
