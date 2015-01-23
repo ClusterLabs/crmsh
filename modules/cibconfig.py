@@ -2403,8 +2403,11 @@ class CibFactory(object):
             for tag in e.xpath("./version/*[self::target or self::source]"):
                 tag.attrib.clear()
             cib_diff = etree.tostring(e)
-        # for v1 diffs, strip the digest
+        # for v1 diffs, fall back to non-patching if
+        # any containers are modified, else strip the digest
         if "<diff" in cib_diff and "digest=" in cib_diff:
+            if not self.can_patch_v1():
+                return self._replace_cib(force)
             e = etree.fromstring(cib_diff)
             for tag in e.xpath("/diff"):
                 if "digest" in tag.attrib:
@@ -2417,6 +2420,23 @@ class CibFactory(object):
             update_err("cib", cibadmin_opts, cib_diff, rc)
             return False
         return True
+
+    def can_patch_v1(self):
+        """
+        The v1 patch format cannot handle reordering,
+        so if there are any changes to any containers
+        or acl tags, don't patch.
+        """
+        def group_changed():
+            for obj in self.cib_objects:
+                if not obj.updated:
+                    continue
+                if obj.obj_type in constants.container_tags:
+                    return True
+                if obj.obj_type in ('user', 'role', 'acl_target', 'acl_group'):
+                    return True
+            return False
+        return not group_changed()
 
     #
     # initialize cib_objects from CIB
