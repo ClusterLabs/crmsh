@@ -789,19 +789,22 @@ def make_sort_map(*order):
     return m
 
 
-_sort_xml_order = make_sort_map('node', 'template', 'primitive',
-                                'group', 'master', 'clone',
-                                'rsc_location', 'rsc_colocation',
-                                'rsc_order', 'rsc_ticket', 'fencing-topology',
+_sort_xml_order = make_sort_map('node',
+                                'template', 'primitive', 'group', 'master', 'clone', 'op',
+                                'tag',
+                                ['rsc_location', 'rsc_colocation', 'rsc_order'],
+                                ['rsc_ticket', 'fencing-topology'],
                                 'cluster_property_set', 'rsc_defaults', 'op_defaults',
-                                'op', 'acl_role', 'acl_user', 'tag')
+                                'acl_role', ['acl_target', 'acl_group', 'acl_user'])
 
-_sort_cli_order = make_sort_map('node', 'rsc_template', 'primitive',
-                                'group', 'ms', 'master', 'clone',
-                                'location', 'colocation', 'collocation',
-                                'order', 'rsc_ticket', 'fencing_topology',
+_sort_cli_order = make_sort_map('node',
+                                'rsc_template', 'primitive', 'group',
+                                ['ms', 'master'], 'clone', 'op',
+                                'tag',
+                                ['location', 'colocation', 'collocation', 'order'],
+                                ['rsc_ticket', 'fencing_topology'],
                                 'property', 'rsc_defaults', 'op_defaults',
-                                'op', 'role', 'user', 'tag')
+                                'role', ['acl_target', 'acl_group', 'user'])
 
 _SORT_LAST = 1000
 
