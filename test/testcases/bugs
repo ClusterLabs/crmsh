@@ -27,6 +27,7 @@ show
 commit
 _test
 verify
+show
 .
 session Unordered load file
 options
