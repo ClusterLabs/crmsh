@@ -813,6 +813,8 @@ def processing_sort(nl):
     '''
     It's usually important to process cib objects in this order,
     i.e. simple objects first.
+
+    TODO: if sort_elements is disabled, only sort to resolve inter-dependencies.
     '''
     if config.core.sort_elements:
         sortfn = lambda k: (_sort_xml_order.get(k.tag, _SORT_LAST), k.get('id'))
@@ -825,6 +827,8 @@ def processing_sort_cli(cl):
     '''
     cl: list of objects (CibObject)
     Returns the given list in order
+
+    TODO: if sort_elements is disabled, only sort to resolve inter-dependencies.
     '''
     if config.core.sort_elements:
         sortfn = lambda k: (_sort_cli_order.get(k.obj_type, _SORT_LAST), k.obj_id)
