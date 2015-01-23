@@ -760,13 +760,17 @@ def crm_time_cmp(a, b):
 def shorttime(ts):
     if isinstance(ts, datetime.datetime):
         return ts.strftime("%X")
-    return time.strftime("%X", time.localtime(ts))
+    if ts is not None:
+        return time.strftime("%X", time.localtime(ts))
+    return time.strftime("%X", time.localtime(0))
 
 
 def shortdate(ts):
     if isinstance(ts, datetime.datetime):
         return ts.strftime("%F")
-    return time.strftime("%F", time.localtime(ts))
+    if ts is not None:
+        return time.strftime("%F", time.localtime(ts))
+    return time.strftime("%F", time.localtime(0))
 
 
 def sort_by_mtime(l):
