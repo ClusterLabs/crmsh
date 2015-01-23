@@ -551,7 +551,7 @@ class Transition(object):
         else:
             common_warn("end of transition %s not found in logs (transition not complete yet?)" %
                         self)
-            self.end_ts = time.time()
+            self.end_ts = self.start_ts
 
     def actions_count(self):
         if self.run_msg:
