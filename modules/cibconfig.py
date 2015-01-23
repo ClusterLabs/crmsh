@@ -44,6 +44,7 @@ from utils import ask, lines2cli, olist
 from utils import page_string, cibadmin_can_patch, str2tmp
 from utils import run_ptest, is_id_valid, edit_file, get_boolean, filter_string
 from ordereddict import odict
+from orderedset import oset
 from xmlutil import is_child_rsc, rsc_constraint, sanitize_cib, rename_id, get_interesting_nodes
 from xmlutil import is_pref_location, get_topnode, new_cib, get_rscop_defaults_meta_node
 from xmlutil import rename_rscref, is_ms, silly_constraint, is_container, fix_comments
@@ -258,8 +259,8 @@ class CibObjectSet(object):
         rc, self.obj_set = cib_factory.mkobj_set(*self.args)
         self.search_rc = rc
         self.all_set = cib_factory.get_all_obj_set()
-        self.obj_ids = set([o.obj_id for o in self.obj_set])
-        self.all_ids = set([o.obj_id for o in self.all_set])
+        self.obj_ids = oset([o.obj_id for o in self.obj_set])
+        self.all_ids = oset([o.obj_id for o in self.all_set])
         self.locked_ids = self.all_ids - self.obj_ids
 
     def _open_url(self, src):
@@ -584,8 +585,8 @@ class CibObjectSetCli(CibObjectSet):
         changes are made.
         '''
         edit_d = {}
-        id_set = set()
-        del_set = set()
+        id_set = oset()
+        del_set = oset()
         rc = True
         err_buf.start_tmp_lineno()
         cp = CliParser()
@@ -652,8 +653,8 @@ class CibObjectSetRaw(CibObjectSet):
         if not show_unrecognized_elems(cib_elem):
             return False
         rc = True
-        id_set = set()
-        del_set = set()
+        id_set = oset()
+        del_set = oset()
         edit_d = {}
         for node in get_top_cib_nodes(cib_elem, []):
             id = self._get_id(node)
@@ -2850,14 +2851,14 @@ class CibFactory(object):
         if args[0] == "NOOBJ":
             return True, []
         rc = True
-        obj_set = set([])
+        obj_set = oset([])
         for spec in args:
             if spec == "changed":
-                obj_set |= set(self.modified_elems())
+                obj_set |= oset(self.modified_elems())
             elif spec.startswith("type:"):
-                obj_set |= set(self.get_elems_on_type(spec))
+                obj_set |= oset(self.get_elems_on_type(spec))
             elif spec.startswith("tag:"):
-                obj_set |= set(self.get_elems_on_tag(spec))
+                obj_set |= oset(self.get_elems_on_tag(spec))
             else:
                 objs = self.find_objects(spec) or []
                 for obj in objs:
