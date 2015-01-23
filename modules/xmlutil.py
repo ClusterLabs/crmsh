@@ -136,7 +136,7 @@ def sanity_check_nvpairs(id, node, attr_list):
     rc = 0
     for nvpair in node.iterchildren("nvpair"):
         n = nvpair.get("name")
-        if n and not n in attr_list:
+        if n and n not in attr_list:
             common_err("%s: attribute %s does not exist" % (id, n))
             rc |= utils.get_check_rc()
     return rc
