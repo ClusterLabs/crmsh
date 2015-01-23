@@ -294,8 +294,7 @@ def resources_xml():
 
 
 def is_normal_node(n):
-    return n.tag == "node" and \
-        (n.get("type") == "normal" or not n.get("type"))
+    return n.tag == "node" and (n.get("type") in (None, "normal", "member", ""))
 
 
 def unique_ra(typ, klass, provider):
