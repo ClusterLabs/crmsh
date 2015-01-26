@@ -1,3 +1,40 @@
+* Mon Jan 26 2015 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- Release 2.1.2
+- medium: ui_resource: Set probe interval 0 if not set (bnc#905050)
+- doc: Document probe op in resource trace (bnc#905050)
+- high: config: Fix path to system-wide crm.conf (#67)
+- medium: config: Fall back to /etc/crm/crmsh.conf (#67)
+- low: cliformat: Colorize id: as identifier (boo#905338)
+- medium: cibconfig: Don't bump epoch if stripping version
+- medium: ui_context: Lazily import readline
+- medium: config: Add core.ignore_missing_metadata (#68) (boo#905910)
+- medium: cibconfig: Strip digest from v1 diffs (bnc#914098)
+- medium: cibconfig: Detect v1 format and don't patch container changes (bnc#914098)
+- high: xmlutil: Treat node type=member as normal (boo#904698)
+- medium: xmlutil: Use idmgmt when creating new elements (bnc#901543)
+- low: ui_resource: --reprobe and --refresh are deprecated (bnc#905092)
+- doc: Document deprecation of refresh and reprobe (bnc#905092)
+- medium: parse: Support resource-discovery in location constraints
+- medium: Allow removing groups even if is_running (boo#905271)
+- medium: cibconfig: Delete containers first in edits (boo#905268)
+- medium: ui_history: Fix crash using empty object set
+- Low: term: get rid of annying ^O in piped-to-less-R output
+- medium: parse: Allow nvpair with no value using name= syntax (#71)
+- medium: parse: Enable name[=value] for nvpair (#71)
+- medium: utils: Check if path basename is less (#74)
+- medium: utils: crm_daemon_dir is added to PATH in envsetup (#67)
+- medium: cmd_status: Show pending if available, enable extra options
+- high: utils: Locate binaries across sudo boundary (bnc#912483)
+- Medium: history: match error/crit messages of pcmk 1.1.12
+- low: ui_options: Add underscore aliases for legacy options
+- medium: constants: Fix transition start detection
+- medium: constants: Update transition regex (#77)
+- medium: orderedset: Add OrderedSet type
+- medium: cibconfig: Use orderedset to avoid reordering bugs (#79)
+- low: xmlutil: logic bug in sanity_check_nvpairs
+- medium: util: Don't fall back to current time
+- medium: report: Fall back to end_ts = start_ts
+
 * Tue Oct 28 2014 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - Release 2.1.1
 - cibconfig: Clean up output from crm_verify (bnc#893138)
