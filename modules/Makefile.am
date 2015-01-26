@@ -41,6 +41,7 @@ modules =	__init__.py \
 			msg.py \
 			options.py \
 			ordereddict.py \
+			orderedset.py \
 			pacemaker.py \
 			parse.py \
 			ra.py \
