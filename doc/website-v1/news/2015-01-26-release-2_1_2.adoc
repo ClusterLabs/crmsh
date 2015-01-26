@@ -1,0 +1,76 @@
+Announcing crmsh release 2.1.2
+==============================
+:Author: Kristoffer Gronlund
+:Email: kgronlund@suse.com
+:Date: 2015-01-26 11:05
+
+Today we are proud to announce the release of `crmsh` version 2.1.2!
+This version primarily fixes all known issues found since the release
+of `crmsh` 2.1.1 in October. We recommend that all users of crmsh upgrade
+to this version, especially if using Pacemaker 1.1.12 or newer.
+
+A massive thank you to everyone who has helped out with bug fixes,
+comments and contributions for this release!
+
+For a complete list of changes since the previous version, please
+refer to the changelog:
+
+* https://github.com/crmsh/crmsh/blob/2.1.2/ChangeLog
+
+Packages for several popular Linux distributions can be downloaded
+from the Stable repository at the OBS:
+
+* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/
+
+Archives of the tagged release:
+
+* https://github.com/crmsh/crmsh/archive/2.1.2.tar.gz
+* https://github.com/crmsh/crmsh/archive/2.1.2.zip
+
+Changes since the previous release:
+
+ - medium: ui_resource: Set probe interval 0 if not set (bnc#905050)
+ - doc: Document probe op in resource trace (bnc#905050)
+ - low: ui_resource: --reprobe and --refresh are deprecated (bnc#905092)
+ - doc: Document deprecation of refresh and reprobe (bnc#905092)
+ - medium: parse: Support resource-discovery in location constraints
+ - medium: pacemaker: Support pacemaker-next as schema
+ - medium: cibconfig: Allow unsupported schemas with warning
+ - medium: ra: Use correct path for crmd (#67)
+ - medium: cmd_status: Show pending if available, enable extra options
+ - high: config: Fix path to system-wide crm.conf (#67)
+ - medium: config: Fall back to /etc/crm/crmsh.conf (#67)
+ - low: cliformat: Colorize id: as identifier (boo#905338)
+ - medium: cibconfig: Revised CIB schema handling
+ - medium: ui_configure: Add replace option to commit
+ - medium: cibconfig: Don't bump epoch if stripping version
+ - medium: ui_context: Lazily import readline
+ - medium: ui_configure: selectors in save command
+ - medium: config: Add core.ignore_missing_metadata (#68) (boo#905910)
+ - Medium: config: add alwayscolor to display output option
+ - doc: Clarify documentation for property (boo#905637)
+ - doc: Add documentation section describing rule expressions (boo#905637)
+ - doc: Link to documentation on rule expressions
+ - medium: Allow removing groups even if is_running (boo#905271)
+ - medium: cibconfig: Delete containers first in edits (boo#905268)
+ - doc: Improved documentation for show and save
+ - doc: Add note about modeline for vim syntax
+ - medium: ui_history: Fix crash using empty object set
+ - utils: append_file: open destination in append-mode (boo#907528)
+ - medium: parse: Allow nvpair with no value using name= syntax (#71)
+ - medium: parse: Enable name[=value] for nvpair (#71)
+ - Low: term: get rid of annying ^O in piped-to-less-R output
+ - high: parse: Implicit initial parameter list
+ - high: crm_pssh: Switch to python-parallax over pssh (bnc#905116)
+ - low: report: Fix references to PSSH
+ - low: report: Delay Report creation until use
+ - medium: utils: Check if path basename is less (#74)
+ - medium: ui_options: Accept prefix or suffix of option as argument
+ - medium: Remove CIB version in case no --no-version.
+ - low: cibconfig: Use LXML to remove version data more robustly (#75)
+ - low: crm_gv: Avoid crashing if passed None in my_edge
+ - low: cibconfig: Protect against dereferencing None when building graph
+
+Thank you,
+
+Kristoffer and Dejan
