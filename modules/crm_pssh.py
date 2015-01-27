@@ -12,7 +12,6 @@ corresponding remote node's hostname or IP address.
 """
 
 import os
-import sys
 import glob
 import re
 
