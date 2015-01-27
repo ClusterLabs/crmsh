@@ -212,3 +212,22 @@ class Cluster(command.UI):
                     err_buf.error("[%s]: rc=%s\n%s\n%s" % (host, result[0], result[1], result[2]))
                 else:
                     err_buf.ok("[%s]\n%s" % (host, result[1]))
+
+    def do_diff(self, context, filename, *nodes):
+        "usage: diff <filename> [--checksum] [nodes...]. Diff file across cluster."
+        this_node = utils.this_node()
+        checksum = False
+        if len(nodes) and nodes[0] == '--checksum':
+            nodes = nodes[1:]
+            checksum = True
+        if not nodes:
+            nodes = utils.list_cluster_nodes()
+        if checksum:
+            utils.remote_checksum(filename, nodes, this_node)
+        elif len(nodes) == 1:
+            utils.remote_diff_this(filename, nodes, this_node)
+        elif this_node in nodes:
+            nodes.remove(this_node)
+            utils.remote_diff_this(filename, nodes, this_node)
+        elif len(nodes):
+            utils.remote_diff(filename, nodes)

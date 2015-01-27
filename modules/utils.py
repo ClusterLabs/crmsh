@@ -1366,4 +1366,71 @@ def noquotes(v):
     return _NOQUOTES_RE.match(v) is not None
 
 
+def remote_diff_slurp(nodes, filename):
+    try:
+        import parallax
+    except ImportError:
+        raise ValueError("Parallax is required to diff")
+    import tmpfiles
+
+    tmpdir = tmpfiles.create_dir()
+    opts = parallax.Options()
+    opts.localdir = tmpdir
+    dst = os.path.basename(filename)
+    return parallax.slurp(nodes, filename, dst, opts).items()
+
+
+def remote_diff_this(local_path, nodes, this_node):
+    try:
+        import parallax
+    except ImportError:
+        raise ValueError("Parallax is required to diff")
+
+    by_host = remote_diff_slurp(nodes, local_path)
+    for host, result in by_host:
+        if isinstance(result, parallax.Error):
+            raise ValueError("Failed on %s: %s" % (host, str(result)))
+        _, _, _, path = result
+        _, s = get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
+                          (host, this_node, path, local_path))
+        page_string(s)
+
+
+def remote_diff(local_path, nodes):
+    try:
+        import parallax
+    except ImportError:
+        raise ValueError("parallax is required to diff")
+
+    by_host = remote_diff_slurp(nodes, local_path)
+    for host, result in by_host:
+        if isinstance(result, parallax.Error):
+            raise ValueError("Failed on %s: %s" % (host, str(result)))
+    h1, r1 = by_host[0]
+    h2, r2 = by_host[1]
+    _, s = get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
+                      (h1, h2, r1[3], r2[3]))
+    page_string(s)
+
+
+def remote_checksum(local_path, nodes, this_node):
+    try:
+        import parallax
+    except ImportError:
+        raise ValueError("Parallax is required to diff")
+    import hashlib
+
+    by_host = remote_diff_slurp(nodes, local_path)
+    for host, result in by_host:
+        if isinstance(result, parallax.Error):
+            raise ValueError(str(result))
+
+    print "%-16s  SHA1 checksum of %s" % ('Host', local_path)
+    if this_node not in nodes:
+        print "%-16s: %s" % (this_node, hashlib.sha1(open(local_path).read()).hexdigest())
+    for host, result in by_host:
+        _, _, _, path = result
+        print "%-16s: %s" % (host, hashlib.sha1(open(path).read()).hexdigest())
+
+
 # vim:ts=4:sw=4:et:

@@ -968,6 +968,25 @@ Usage:
 wait_for_startup
 ........
 
+[[cmdhelp_cluster_diff,Diff file across cluster]]
+==== `diff`
+
+Displays the difference, if any, between a given file
+on different nodes. If the second argument is `--checksum`,
+a checksum of the file will be calculated and displayed for
+each node.
+
+Usage:
+...............
+diff <file> [--checksum] [nodes...]
+...............
+
+Example:
+...............
+diff /etc/crm/crm.conf node2
+diff /etc/resolv.conf --checksum
+...............
+
 [[cmdhelp_script,Cluster script management]]
 === `script` - Cluster script management
 
@@ -1085,10 +1104,8 @@ Diffs the corosync configurations on different nodes. If no nodes are
 given as arguments, the corosync configurations on all nodes in the
 cluster are compared.
 
-`diff` takes an option argument `--checksum`, to force checksum mode.
-
-If the number of nodes to compare are greater than two, `diff`
-automatically switches to checksum mode.
+`diff` takes an option argument `--checksum`, to display a checksum
+for each file instead of calculating a diff.
 
 Usage:
 .........
