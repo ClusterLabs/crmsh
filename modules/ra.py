@@ -519,7 +519,7 @@ class RAInfo(object):
         for op in d.keys():
             if re.match("monitor_[^0-9]", op):
                 norole_op = re.sub(r'monitor_[^0-9_]+_(.*)', r'monitor_\1', op)
-                if not norole_op in d:
+                if norole_op not in d:
                     d2[norole_op] = d[op]
         d.update(d2)
         return cache.store(id, d)

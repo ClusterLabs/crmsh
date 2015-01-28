@@ -1213,7 +1213,7 @@ class Report(object):
             from log_patterns_118 import log_patterns
         else:
             from log_patterns import log_patterns
-        if not type in log_patterns:
+        if type not in log_patterns:
             common_error("%s not featured in log patterns" % type)
             return None
         return log_patterns[type][0:self.detail+1]

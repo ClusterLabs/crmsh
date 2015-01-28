@@ -194,7 +194,7 @@ def add_quotes(args):
     for s in args:
         if config.core.add_quotes and ' ' in s:
             q = '"' in s and "'" or '"'
-            if not q in s:
+            if q not in s:
                 s = "%s%s%s" % (q, s, q)
         l.append(s)
     return l

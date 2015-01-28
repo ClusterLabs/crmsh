@@ -98,7 +98,7 @@ class CibShadow(command.UI):
             context.fatal_error("no %s pe input file" % infile)
         if len(fl) > 1:
             context.fatal_error("more than one %s pe input file: %s" %
-                          (infile, ' '.join(fl)))
+                                (infile, ' '.join(fl)))
         if not fl[0]:
             context.fatal_error("bad %s pe input file" % infile)
         return fl[0]

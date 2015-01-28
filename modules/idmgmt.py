@@ -200,5 +200,4 @@ def set(node, oldnode, id_hint, id_required=True):
             xmlutil.set_id_used_attr(oldnode)
 
 
-
 # vim:ts=4:sw=4:et:

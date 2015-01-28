@@ -68,9 +68,9 @@ class RA(command.UI):
     @command.completers(compl.call(ra.ra_classes), lambda args: ra.ra_providers_all(args[1]))
     def do_list(self, context, class_, provider_=None):
         "usage: list <class> [<provider>]"
-        if not class_ in ra.ra_classes():
+        if class_ not in ra.ra_classes():
             context.fatal_error("class %s does not exist" % class_)
-        if provider_ and not provider_ in ra.ra_providers_all(class_):
+        if provider_ and provider_ not in ra.ra_providers_all(class_):
             context.fatal_error("there is no provider %s for class %s" % (provider_, class_))
         types = ra.ra_types(class_, provider_)
         if options.regression_tests:
