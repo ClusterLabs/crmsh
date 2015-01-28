@@ -67,8 +67,8 @@ def get_status_ops(status_node, rsc, op, interval, node=''):
             for o in r.iterchildren("lrm_rsc_op"):
                 if o.get("operation") != op:
                     continue
-                if o.get("interval") == interval or \
-                  (interval == "-1" and o.get("interval") != "0"):
+                iv = o.get("interval")
+                if iv == interval or (interval == "-1" and iv != "0"):
                     l.append(o)
     return l
 
@@ -324,7 +324,7 @@ class CibStatus(object):
         '''
         if self.get_status() is None:
             return False
-        if not state in self.node_ops:
+        if state not in self.node_ops:
             common_err("unknown state %s" % state)
             return False
         node_node = get_tag_by_id(self.status_node, "node_state", node)
@@ -345,7 +345,7 @@ class CibStatus(object):
         '''
         if self.get_status() is None:
             return False
-        if not subcmd in self.ticket_ops:
+        if subcmd not in self.ticket_ops:
             common_err("unknown ticket command %s" % subcmd)
             return False
         rc = self.inject("%s %s" % (self.ticket_ops[subcmd], ticket))
