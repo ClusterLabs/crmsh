@@ -451,7 +451,7 @@ def xmltraverse_thin(e, fun, ts=0):
     never on cib or configuration!
     '''
     for c in e.iterchildren():
-        if not c.tag in ('primitive', 'group'):
+        if c.tag not in ('primitive', 'group'):
             xmltraverse_thin(c, fun, ts+1)
     fun(e, ts)
 
@@ -973,7 +973,7 @@ def rename_rscref_rset(c_obj, old_id, new_id):
             rsc_id = new_id
             c_obj.updated = True
             c_modified = True
-        if not rsc_id in d:
+        if rsc_id not in d:
             d[rsc_id] = 1
         else:
             d[rsc_id] += 1

@@ -33,7 +33,7 @@ from msg import syntax_err, err_buf
 
 
 def check_transition(inp, state, possible_l):
-    if not state in possible_l:
+    if state not in possible_l:
         common_err("input (%s) in wrong state %s" % (inp, state))
         return False
     return True

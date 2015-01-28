@@ -84,7 +84,9 @@ def ra_classes_or_tmpl(args):
 
 
 def op_attr_list(args):
-    return [schema.g_schema.get('attr', 'op', 'o') + '='] + [s + '=' for s in constants.op_extra_attrs]
+    schema_attr = [schema.g_schema.get('attr', 'op', 'o') + '=']
+    extra_attrs = [s + '=' for s in constants.op_extra_attrs]
+    return schema_attr + extra_attrs
 
 
 def node_id_colon_list(args):

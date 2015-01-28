@@ -102,7 +102,7 @@ class ErrorBuffer(object):
         self._prefix(clidisplay.warn("WARNING"), s)
 
     def one_warning(self, s):
-        if not s in self.written:
+        if s not in self.written:
             self.written[s] = 1
             self.writemsg(self._render(clidisplay.warn("WARNING")) + ": %s" %
                           self.add_lineno(s))

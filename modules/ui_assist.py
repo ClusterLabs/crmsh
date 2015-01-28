@@ -18,7 +18,6 @@
 import utils
 import command
 import completers as compl
-import options
 import xmlutil
 from cibconfig import cib_factory
 
