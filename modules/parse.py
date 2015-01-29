@@ -198,9 +198,8 @@ class BaseParser(object):
         """
         Matches string of p=v tokens
         Returns list of <nvpair> tags
-        if terminator is non-empty, p tokens
-        are also accepted as equivalent to p=,
-        as long as they are not in the terminator list
+        p tokens are also accepted and an nvpair tag with no value attribute
+        is created, as long as they are not in the terminator list
         """
         ret = []
         if terminator is None:
@@ -220,7 +219,7 @@ class BaseParser(object):
                 ret.append(xmlbuilder.nvpair(self.matched(1),
                                              self.matched(2)))
             elif len(terminator) and self.try_match(self._NVPAIR_KEY_RE):
-                ret.append(xmlbuilder.nvpair(self.matched(1), ""))
+                ret.append(xmlbuilder.new("nvpair", name=self.matched(1)))
             else:
                 break
         if len(ret) < minpairs:
