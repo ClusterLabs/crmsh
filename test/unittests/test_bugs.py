@@ -370,3 +370,37 @@ def test_ratrace():
     for op in ops:
         assert op.xpath('./instance_attributes/nvpair[@name="trace_ra"]/@value') == ["1"]
     assert set(obj.node.xpath('./operations/op/@name')) == set(['start', 'stop'])
+
+
+def test_op_role():
+    xml = '''<primitive class="ocf" id="rsc2" provider="pacemaker" type="Dummy">
+        <operations>
+          <op id="rsc2-monitor-10" interval="10" name="monitor" role="Stopped"/>
+        </operations>
+      </primitive>'''
+    data = etree.fromstring(xml)
+    obj = factory.create_from_node(data)
+    assert obj is not None
+    data = obj.repr_cli(format=-1)
+    print "OUTPUT:", data
+    exp = 'primitive rsc2 ocf:pacemaker:Dummy op monitor interval=10 role=Stopped'
+    assert data == exp
+    assert obj.cli_use_validate()
+
+
+def test_nvpair_no_value():
+    xml = '''<primitive class="ocf" id="rsc3" provider="heartbeat" type="Dummy">
+        <instance_attributes id="rsc3-instance_attributes-1">
+          <nvpair id="rsc3-instance_attributes-1-verbose" name="verbose"/>
+          <nvpair id="rsc3-instance_attributes-1-verbase" name="verbase" value=""/>
+          <nvpair id="rsc3-instance_attributes-1-verbese" name="verbese" value=" "/>
+        </instance_attributes>
+      </primitive>'''
+    data = etree.fromstring(xml)
+    obj = factory.create_from_node(data)
+    assert obj is not None
+    data = obj.repr_cli(format=-1)
+    print "OUTPUT:", data
+    exp = 'primitive rsc3 Dummy params verbose verbase="" verbese=" "'
+    assert data == exp
+    assert obj.cli_use_validate()
