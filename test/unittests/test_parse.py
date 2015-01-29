@@ -21,6 +21,7 @@ import unittest
 import shlex
 from utils import lines2cli
 from lxml import etree
+from nose.tools import ok_, eq_
 
 
 class MockValidation(parse.Validation):
@@ -502,6 +503,24 @@ class TestCliParser(unittest.TestCase):
 
         out = self.parser.parse('GROUP web-server virtual-ip apache META target-role=Started')
         self.assertEqual(out.get('id'), 'web-server')
+
+    def test_nvpair_novalue(self):
+        inp = """primitive stonith_ipmi-karl stonith:fence_ipmilan \
+        params pcmk_host_list=karl verbose action=reboot \
+        ipaddr=10.43.242.221 login=root passwd=dummy method=onoff \
+        op start interval=0 timeout=60 \
+        op stop interval=0 timeout=60 \
+        op monitor interval=600 timeout=60 \
+        meta target-role=Started"""
+
+        outp = self._parse_lines(inp)
+        eq_(len(outp), 1)
+        eq_('primitive', outp[0].tag)
+        # print etree.tostring(outp[0])
+        verbose = outp[0].xpath('//nvpair[@name="verbose"]')
+        eq_(len(verbose), 1)
+        ok_('value' not in verbose[0].attrib)
+
 
     def test_configs(self):
         outp = self._parse_lines('''
