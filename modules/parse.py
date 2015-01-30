@@ -1565,7 +1565,7 @@ class CliParser(object):
         '''
         if isinstance(s, unicode):
             try:
-                s = s.encode('ascii')
+                s = s.encode('ascii', errors='xmlcharrefreplace')
             except Exception, e:
                 common_err(e)
                 return False
