@@ -1,5 +1,5 @@
 :man source:   crm
-:man version:  2.1.1
+:man version:  2.1.2
 :man manual:   crmsh documentation
 
 crm(8)
@@ -22,6 +22,8 @@ The `crm` shell is a command-line based cluster configuration and
 management tool. Its goal is to assist as much as possible with the
 configuration and maintenance of Pacemaker-based High Availability
 clusters.
+
+For more information on Pacemaker clusters, see http://clusterlabs.org/.
 
 `crm` works both as a command-line tool to be called directly from the
 system shell, and as an interactive shell with extensive tab
@@ -675,7 +677,7 @@ true, explicitly set +sequential+ in a parenthesis set:
 
 Attribute lists are used to set attributes and parameters for
 resources, constraints and property definitions. For example, to set
-the virtual IP used by an +IPAddr+ resource the attribute +ip+ can be
+the virtual IP used by an +IPAddr2+ resource the attribute +ip+ can be
 set in an attribute list for that resource.
 
 Attribute lists can have identifiers that name them, and other
