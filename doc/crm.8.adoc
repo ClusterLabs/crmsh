@@ -3386,7 +3386,8 @@ for more details.
 
 Usage:
 ...............
-save [xml] [<id> | type:<type | tag:<tag> | changed ...] <file>
+save [xml] [<id> | type:<type | tag:<tag> |
+            related:<obj> | changed ...] <file>
 ...............
 Example:
 ...............
@@ -3458,6 +3459,8 @@ To show all objects of a certain type, use the +type:+ prefix.
 
 To show all objects in a tag, use the +tag:+ prefix.
 
+To show all constraints related to a primitive, use the +related:+ prefix.
+
 To show all modified objects, pass the argument +changed+.
 
 The prefixes can be used together on a single command line. For
@@ -3466,7 +3469,7 @@ following combination can be used: +show tag:my-tag my-tag+.
 
 Usage:
 ...............
-show [xml] [<id> | changed | type:<type> | tag:<id> ...]
+show [xml] [<id> | changed | type:<type> | tag:<id> | related:<obj> ...]
 
 type :: node | primitive | group | clone | ms | rsc_template
       | location | colocation | order
@@ -3482,6 +3485,7 @@ Example:
 show webapp
 show type:primitive
 show xml tag:db tag:fs
+show related:webapp
 ...............
 
 [[cmdhelp_configure_tag,Define resource tags]]
