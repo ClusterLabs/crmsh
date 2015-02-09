@@ -2859,6 +2859,12 @@ class CibFactory(object):
                 obj_set |= oset(self.get_elems_on_type(spec))
             elif spec.startswith("tag:"):
                 obj_set |= oset(self.get_elems_on_tag(spec))
+            elif spec.startswith("related:"):
+                name = spec[len("related:"):]
+                obj_set |= oset(self.find_objects(name) or [])
+                obj = self.find_object(name)
+                if obj is not None:
+                    obj_set |= oset(self.related_constraints(obj))
             else:
                 objs = self.find_objects(spec) or []
                 for obj in objs:
