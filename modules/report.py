@@ -357,9 +357,14 @@ class LogSyslog(object):
         '''
         Search logs for re_s and sort by time.
         '''
-        patt = None
-        if re_s:
-            patt = re.compile(re_s)
+        try:
+            patt = None
+            if re_s:
+                patt = re.compile(re_s)
+        except re.error, e:
+            common_debug("RE compilation failed: %s" % (e))
+            raise ValueError("Error in search expression")
+
         # if there's central log, there won't be merge
         if self.central_log:
             fl = [self.f[f] for f in self.f]
