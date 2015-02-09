@@ -65,6 +65,17 @@ property cib-bootstrap-options: \
 .INP: show cib-bootstrap-options
 property cib-bootstrap-options: \
 	default-action-timeout=60s
+.INP: primitive d4 ocf:heartbeat:Dummy
+.INP: primitive d5 ocf:heartbeat:Dummy
+.INP: primitive d6 ocf:heartbeat:Dummy
+.INP: order o-d456 d4 d5 d6
+.INP: tag t-d45: d4 d5
+.INP: show type:order
+order o-d456 d4 d5 d6
+order o1 inf: p3 c1
+.INP: show related:d4
+primitive d4 Dummy
+order o-d456 d4 d5 d6
 .INP: _test
 .INP: verify
 .EXT crm_resource --show-metadata stonith:heartbeat:null
@@ -79,6 +90,9 @@ node node1 \
 primitive d1 Dummy
 primitive d2 Dummy
 primitive d3 Dummy
+primitive d4 Dummy
+primitive d5 Dummy
+primitive d6 Dummy
 primitive p1 Dummy \
 	op monitor interval=60m \
 	op monitor interval=120m OCF_CHECK_LEVEL=10
@@ -92,12 +106,14 @@ primitive st stonith:null \
 group g1 p1 p2 d3
 group g2 d1 d2
 clone c1 g1
+tag t-d45: d4 d5
 location l1 p3 100: node1
 # this is a comment
 location loc-d1 d1 \
 	rule -inf: not_defined webserver or mem number:lte 0 \
 	rule -inf: not_defined a2 \
 	rule webserver: defined webserver
+order o-d456 d4 d5 d6
 order o1 inf: p3 c1
 property cib-bootstrap-options: \
 	default-action-timeout=60s

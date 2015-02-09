@@ -54,6 +54,13 @@ property stonith-enabled=true
 show cib-bootstrap-options
 filter 'sed "s/stonith-enabled=true//"'
 show cib-bootstrap-options
+primitive d4 ocf:heartbeat:Dummy
+primitive d5 ocf:heartbeat:Dummy
+primitive d6 ocf:heartbeat:Dummy
+order o-d456 d4 d5 d6
+tag t-d45: d4 d5
+show type:order
+show related:d4
 _test
 verify
 .
