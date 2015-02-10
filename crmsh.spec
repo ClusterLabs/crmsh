@@ -1,7 +1,7 @@
 #
 # spec file for package crmsh
 #
-# Copyright (c) 2014 SUSE LINUX Products GmbH, Nuernberg, Germany.
+# Copyright (c) 2015 SUSE LINUX GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -51,11 +51,11 @@ Source0:        crmsh.tar.bz2
 Patch11:        crmsh-cibadmin_can_patch.patch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Requires(pre):  pacemaker
+Requires:       /usr/bin/which
 Requires:       pssh
 Requires:       python >= 2.6
 Requires:       python-dateutil
 Requires:       python-lxml
-Requires:       which
 BuildRequires:  python-lxml
 
 %if 0%{?suse_version}
@@ -186,10 +186,11 @@ if [ ! -e /tmp/.crmsh_regression_tests_ran ]; then
         exit 1
     fi
 	cd %{_datadir}/%{name}/tests
-	if ! ./cib-tests.sh ; then
-		echo "CIB tests failed."
-		exit 1
-	fi
+	./cib-tests.sh
+	result2=$?
+	[ $result1 -ne 0 ] && (echo "Regression tests failed."; cat ${buildroot}/crmtestout/regression.out)
+	[ $result2 -ne 0 ] && echo "CIB tests failed."
+	[ $result1 -eq 0 -a $result2 -eq 0 ]
 fi
 %endif
 
