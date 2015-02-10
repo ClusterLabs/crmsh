@@ -75,6 +75,7 @@ order o-d456 d4 d5 d6
 order o1 inf: p3 c1
 .INP: show related:d4
 primitive d4 Dummy
+tag t-d45: d4 d5
 order o-d456 d4 d5 d6
 .INP: _test
 .INP: verify

@@ -573,6 +573,26 @@ def rsc_constraint(rsc_id, con_elem):
     return False
 
 
+def is_related(rsc_id, node):
+    """
+    checks if the given node is an element
+    that has a direct relation to rsc_id. That is,
+    if it contains it, if it references it...
+    """
+    if is_constraint(node) and rsc_constraint(rsc_id, node):
+        return True
+    if node.tag == 'tag':
+        if len(node.xpath('.//obj_ref[@id="%s"]' % (rsc_id))) > 0:
+            return True
+        return False
+    if is_container(node):
+        for tag in ('primitive', 'group', 'clone', 'master'):
+            if len(node.xpath('.//%s[@id="%s"]' % (tag, rsc_id))) > 0:
+                return True
+        return False
+    return False
+
+
 def sort_container_children(e_list):
     '''
     Make sure that attributes's nodes are first, followed by the

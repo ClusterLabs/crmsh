@@ -56,7 +56,7 @@ from xmlutil import remove_id_used_attributes, get_top_cib_nodes
 from xmlutil import merge_attributes, is_cib_element, sanity_check_meta
 from xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
 from xmlutil import get_rsc_operations, delete_rscref, xml_equals, lookup_node, RscState
-from xmlutil import cibtext2elem
+from xmlutil import cibtext2elem, is_related
 from cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
 from cliformat import cli_nvpair, cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
 from cliformat import cli_operations, simple_rsc_constraint, cli_rule, cli_format
@@ -2864,7 +2864,7 @@ class CibFactory(object):
                 obj_set |= oset(self.find_objects(name) or [])
                 obj = self.find_object(name)
                 if obj is not None:
-                    obj_set |= oset(self.related_constraints(obj))
+                    obj_set |= oset(self.related_elements(obj))
             else:
                 objs = self.find_objects(spec) or []
                 for obj in objs:
@@ -3376,15 +3376,17 @@ class CibFactory(object):
                 err_buf.info("constraint %s updated" % str(c_obj))
 
     def related_constraints(self, obj):
+        def related_constraint(obj2):
+            return is_constraint(obj2.node) and rsc_constraint(obj.obj_id, obj2.node)
         if not is_resource(obj.node):
             return []
-        c_list = []
-        for obj2 in self.cib_objects:
-            if not is_constraint(obj2.node):
-                continue
-            if rsc_constraint(obj.obj_id, obj2.node):
-                c_list.append(obj2)
-        return c_list
+        return [x for x in self.cib_objects if related_constraint(x)]
+
+    def related_elements(self, obj):
+        "Both constraints, groups, tags, ..."
+        if not is_resource(obj.node):
+            return []
+        return [x for x in self.cib_objects if is_related(obj.obj_id, x.node)]
 
     def _redirect_children_constraints(self, obj):
         '''
