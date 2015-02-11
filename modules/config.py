@@ -147,6 +147,7 @@ class opt_boolean(object):
             val = 'true'
         elif val is False:
             val = 'false'
+        val = val.lower()
         if val not in self.completions:
             raise ValueError("Not a boolean: %s" % (val))
 
