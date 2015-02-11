@@ -87,7 +87,7 @@ primitive st stonith:ssh \
 	op monitor interval=60m timeout=60s
 location d1-pref d1 100: node1
 .INP: verify
-.EXT crm_resource --show-metadata stonith:heartbeat:ssh
+.EXT crm_resource --show-metadata stonith:ssh
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT pengine metadata

@@ -53,7 +53,7 @@ ERROR: 44: g1 refers to missing object nosuch
 .INP: filter "sed 's/^/# this is a comment\n/'" loc-d1
 .INP: _test
 .INP: verify
-.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .EXT crmd metadata

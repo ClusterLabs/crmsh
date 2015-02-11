@@ -642,7 +642,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .TRY configure rename p3 p4
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
-.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .INP: configure
 .INP: _regtest on
@@ -674,7 +674,7 @@ Deleted p0 option: id=p0-meta_attributes-m0 name=m0
 .TRY configure primitive p3 Dummy
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
-.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: configure
