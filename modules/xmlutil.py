@@ -51,6 +51,30 @@ def file2cib_elem(s):
         return None
     cib_elem = xmlparse(f)
     f.close()
+    if options.regression_tests and cib_elem is None:
+        print "Failed to read CIB from file: %s" % (s)
+    return cib_elem
+
+
+def compressed_file_to_cib(s):
+    try:
+        if s.endswith('.bz2'):
+            import bz2
+            f = bz2.BZ2File(s)
+        elif s.endswith('.gz'):
+            import gzip
+            f = gzip.open(s)
+        else:
+            f = open(s)
+    except IOError, msg:
+        common_err(msg)
+        return None
+    cib_elem = xmlparse(f)
+    if options.regression_tests and cib_elem is None:
+        print "Failed to read CIB from file %s" % (s)
+        f.seek(0)
+        print f.read()
+    f.close()
     return cib_elem
 
 
