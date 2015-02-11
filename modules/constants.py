@@ -140,6 +140,7 @@ lrm_status_codes = {
     "notsupported": "3",
     "error": "4",
 }
+cib_user_attrs = ("validate-with",)
 node_states = ("online", "offline", "unclean")
 precious_attrs = ("id-ref",)
 op_extra_attrs = ("interval",)

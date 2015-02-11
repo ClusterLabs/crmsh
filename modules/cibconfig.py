@@ -2285,6 +2285,13 @@ class CibFactory(object):
         for attr in self.cib_attrs:
             cib.set(attr, self.cib_attrs[attr])
 
+    def _copy_cib_attributes(self, src_cib, cib):
+        for attr in self.cib_attrs:
+            if attr in constants.cib_user_attrs: # preserve user attributes
+                continue
+            self.cib_attrs[attr] = src_cib.get(attr)
+            cib.set(attr, self.cib_attrs[attr])
+
     def obj_set2cib(self, obj_set, obj_filter=None):
         '''
         Return document containing objects in obj_set.
@@ -2398,8 +2405,7 @@ class CibFactory(object):
             else:
                 self._crm_diff_cmd = 'crm_diff'
 
-        self._get_cib_attributes(current_cib)
-        self._set_cib_attributes(self.cib_orig)
+        self._copy_cib_attributes(current_cib, self.cib_orig)
         current_cib = None  # don't need that anymore
         # only bump epoch if we don't have support for --no-version
         if not self._crm_diff_cmd.endswith('--no-version'):
