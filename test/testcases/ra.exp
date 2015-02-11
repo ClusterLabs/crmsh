@@ -41,7 +41,7 @@ Operations' defaults (advisory minimum):
     migrate_to    timeout=20
     migrate_from  timeout=20
 .INP: info stonith:external/ssh
-.EXT crm_resource --show-metadata stonith:heartbeat:external/ssh
+.EXT crm_resource --show-metadata stonith:external/ssh
 .EXT stonithd metadata
 ssh STONITH device (stonith:external/ssh)
 

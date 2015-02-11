@@ -50,7 +50,7 @@
 .INP: set d2.mondelay 45
 .INP: _test
 .INP: verify
-.EXT crm_resource --show-metadata stonith:heartbeat:ssh
+.EXT crm_resource --show-metadata stonith:ssh
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay

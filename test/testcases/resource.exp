@@ -817,7 +817,7 @@ INFO: Trace set, restart p0 to trace the stop operation
 .TRY configure rename p3 p4
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
-.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .INP: configure
 .INP: _regtest on
@@ -849,7 +849,7 @@ INFO: Trace set, restart p0 to trace the stop operation
 .TRY configure primitive p3 Dummy
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
-.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: configure

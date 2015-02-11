@@ -37,7 +37,7 @@ primitive p6 Dummy
 clone cl-p5 p5
 colocation c2 inf: ( p1 p2 ) p3 p4
 .INP: commit
-.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .EXT pengine metadata
@@ -88,7 +88,7 @@ location loc1 g1 \
 property cib-bootstrap-options: \
 	default-action-timeout=60s
 .INP: commit
-.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .EXT crmd metadata

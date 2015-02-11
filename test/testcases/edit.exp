@@ -79,7 +79,7 @@ tag t-d45: d4 d5
 order o-d456 d4 d5 d6
 .INP: _test
 .INP: verify
-.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .EXT crmd metadata

@@ -16,7 +16,7 @@ property cib-bootstrap-options: \
 .TRY configure load replace sample.txt
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
-.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crmd metadata
 .EXT pengine metadata
@@ -30,7 +30,7 @@ property cib-bootstrap-options: \
 .INP: load update sample.txt
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
-.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crmd metadata
 .EXT pengine metadata

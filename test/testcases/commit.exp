@@ -6,7 +6,7 @@
 .INP: property default-action-timeout=2m
 .INP: primitive st stonith:null 	params hostlist='node1' 	meta yoyo-meta="yoyo 2" 	op start requires=nothing 	op monitor interval=60m
 .INP: commit
-.EXT crm_resource --show-metadata stonith:heartbeat:null
+.EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crmd metadata
 .EXT pengine metadata
