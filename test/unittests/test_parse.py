@@ -203,6 +203,14 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(len(out), 1)
         self.assertEqual(['b'], out.xpath('/group/instance_attributes/nvpair[@name="a"]/@value'))
 
+    def test_heartbeat_class(self):
+        out = self.parser.parse('primitive p_node-activate heartbeat:node-activate')
+        self.assertEqual(out.get('id'), 'p_node-activate')
+        self.assertEqual(out.get('class'), 'heartbeat')
+        self.assertEqual(out.get('provider'), None)
+        self.assertEqual(out.get('type'), 'node-activate')
+
+
     def test_nvpair_ref(self):
         out = self.parser.parse('primitive dummy-0 Dummy params @foo')
         self.assertEqual(out.get('id'), 'dummy-0')
