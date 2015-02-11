@@ -161,7 +161,10 @@ class RaCrmResource(object):
         return l
 
     def meta(self, ra_class, ra_type, ra_provider):
-        return self.crm_resource("--show-metadata %s:%s:%s" % (ra_class, ra_provider, ra_type))
+        if ra_provider:
+            return self.crm_resource("--show-metadata %s:%s:%s" % (ra_class, ra_provider, ra_type))
+        else:
+            return self.crm_resource("--show-metadata %s:%s" % (ra_class, ra_type))
 
     def providers(self, ra_type, ra_class="ocf"):
         'List of providers for OCF:type.'
@@ -367,7 +370,7 @@ class RAInfo(object):
         self.ra_class = ra_class
         self.ra_type = ra_type
         self.ra_provider = ra_provider
-        if not self.ra_provider:
+        if ra_class == 'ocf' and not self.ra_provider:
             self.ra_provider = "heartbeat"
         self.ra_elem = None
         self.broken_ra = False
