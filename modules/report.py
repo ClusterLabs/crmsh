@@ -1079,6 +1079,15 @@ class Report(object):
             re_s = '|'.join(trans_re_l)
             return [x for x in msg_l if re.search(re_s, x)]
 
+    def is_empty_transition(self, t0, t1):
+        num_actions = t1.actions_count()
+        if num_actions == 0:
+            return True  # no actions in transition
+        return False
+        # TODO
+        # no_config_change = epoch == prev_epoch && admin_epoch == prev_admin_epoch
+        # return num_actions == 0 and no_config_change  # empty transition
+
     def list_transitions(self, msg_l=None, future_pe=False):
         '''
         List transitions by reading logs.
@@ -1104,11 +1113,11 @@ class Report(object):
             common_warn("Processing %s transitions..." %
                         (len(trans_msg_l)))
             progress = True
+        prev_transition = None
         for msg in trans_start_msg_l:
             run_msg = get_matching_run_msg(msg, trans_msg_l)
             t_obj = Transition(msg, run_msg)
-            num_actions = t_obj.actions_count()
-            if num_actions == 0:  # empty transition
+            if self.is_empty_transition(prev_transition, t_obj):
                 common_debug("skipping empty transition (%s)" % t_obj)
                 continue
             if not future_pe:
@@ -1120,6 +1129,7 @@ class Report(object):
             if progress:
                 sys.stdout.write('.')
                 sys.stdout.flush()
+            prev_transition = t_obj
             yield t_obj
 
     def report_setup(self):
