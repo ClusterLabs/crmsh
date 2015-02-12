@@ -179,7 +179,6 @@ attr_defaults = {
     "resource_set": {"sequential": "true", "require-all": "true"},
     "rule": {"boolean-op": "and"},
 }
-node_type_opt = True
 cib_no_section_rc = 6
 # Graphviz attributes for various CIB elements.
 # Shared for edge and node and graph attributes.

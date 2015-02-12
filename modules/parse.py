@@ -1523,7 +1523,11 @@ class Validation(object):
             return False
 
     def node_type_optional(self):
-        return constants.node_type_opt
+        ns = {'t': 'http://relaxng.org/ns/structure/1.0'}
+        path = '//t:element[@name="nodes"]'
+        path = path + '//t:element[@name="node"]/t:optional/t:attribute[@name="type"]'
+        has_optional = schema.rng_xpath(path, namespaces=ns)
+        return len(has_optional) > 0
 
 
 class CliParser(object):
