@@ -271,6 +271,21 @@ class RngSchema(Schema):
                 return (grammar, elem_node)
         return None
 
+    def rng_xpath(self, xpath, namespaces=None):
+        ret = []
+        thing = self.find_elem('node')
+        if thing:
+            grammar, elem_node = thing
+            tree = etree.ElementTree(grammar)
+            print tree.getpath(elem_node)
+        for grammar, start_node in self.rng_docs.values():
+            if '<element name="node"' in etree.tostring(grammar):
+                print grammar, etree.tostring(grammar)
+                outp = grammar.xpath(xpath, namespaces=namespaces)
+                print outp
+                ret.extend(outp)
+        return ret
+
     def get_sub_rng_nodes(self, grammar, rng_node):
         sub_rng_nodes = []
         for child_node in rng_node.iterchildren():
@@ -367,6 +382,8 @@ class RngSchema(Schema):
         grammar, rng_node = rng_obj
         if rng_node is None:
             return None
+
+        print etree.tostring(rng_node)
 
         selected = []
         sub_rng_nodes = self.get_sub_rng_nodes(grammar, rng_node)

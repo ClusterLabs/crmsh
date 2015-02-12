@@ -173,7 +173,6 @@ def set_interactive():
 
 def compatibility_setup():
     if not utils.is_pcmk_118():
-        constants.node_type_opt = False
         del constants.attr_defaults["node"]
         constants.cib_no_section_rc = 22
 
