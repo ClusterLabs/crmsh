@@ -14,12 +14,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-
-
 import cibconfig
 from lxml import etree
 from nose.tools import eq_
-import xmlutil
 import copy
 
 factory = cibconfig.cib_factory
@@ -41,3 +38,4 @@ def test_cib_schema_change():
     factory.cib_objects = tmp_cib_objects
     factory._copy_cib_attributes(copy_of_cib, factory.cib_orig)
     eq_(factory.cib_attrs["validate-with"], "pacemaker-1.1")
+    eq_(factory.cib_elem.get("validate-with"), "pacemaker-1.1")
