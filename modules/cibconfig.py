@@ -2216,7 +2216,9 @@ class CibFactory(object):
         rc = True
         for obj in self.cib_objects:
             if schema.get('sub', obj.node.tag, 'a') is None:
-                common_err("%s not supported by the RNG schema" % obj.node.tag)
+                common_err("Element '%s' is not supported by the RNG schema %s" %
+                           (obj.node.tag, schema_st))
+                common_debug("Offending object: %s" % (etree.tostring(obj.node)))
                 rc = False
         if not rc:
             # revert, as some elements won't validate
