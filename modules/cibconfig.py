@@ -2288,11 +2288,18 @@ class CibFactory(object):
             cib.set(attr, self.cib_attrs[attr])
 
     def _copy_cib_attributes(self, src_cib, cib):
-        for attr in self.cib_attrs:
-            if attr in constants.cib_user_attrs: # preserve user attributes
-                continue
-            self.cib_attrs[attr] = src_cib.get(attr)
-            cib.set(attr, self.cib_attrs[attr])
+        """
+        Copy CIB attributes from src_cib to cib.
+        Also updates self.cib_attrs.
+        Preserves attributes that may be modified by
+        the user (for example validate-with).
+        """
+        attrs = ((attr, src_cib.get(attr))
+                 for attr in self.cib_attrs
+                 if attr not in constants.cib_user_attrs)
+        for attr, value in attrs:
+            self.cib_attrs[attr] = value
+            cib.set(attr, value)
 
     def obj_set2cib(self, obj_set, obj_filter=None):
         '''
