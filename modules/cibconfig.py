@@ -2180,7 +2180,7 @@ class CibFactory(object):
         if schema_st == self.get_schema():
             common_info("already using schema %s" % schema_st)
             return True
-        if schema.is_supported(schema_st):
+        if not schema.is_supported(schema_st):
             common_warn("schema %s is not supported by the shell" % schema_st)
         self.cib_elem.set("validate-with", schema_st)
         if not schema.test_schema(self.cib_elem):
