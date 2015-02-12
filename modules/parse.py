@@ -531,10 +531,10 @@ class NodeParser(RuleParser):
         xmlbuilder.maybe_set(out, "id", self.try_match_initial_id() and self.matched(1))
         self.match(self._UNAME_RE, errmsg="Expected uname[:type]")
         out.set("uname", self.matched(1))
-        nodetype = self.matched(3)
-        if not constants.node_type_opt and not nodetype:
-            nodetype = constants.node_default_type
-        xmlbuilder.maybe_set(out, "type", nodetype)
+        if self.validation.node_type_optional():
+            xmlbuilder.maybe_set(out, "type", self.matched(3))
+        else:
+            out.set("type", self.matched(3) or constants.node_default_type)
         xmlbuilder.maybe_set(out, "description", self.try_match_description())
         for attr_list in self.match_attr_lists({'attributes': 'instance_attributes',
                                                 'utilization': 'utilization'}):
@@ -1493,6 +1493,9 @@ class Validation(object):
             return sp[0] == 'pacemaker' and float(sp[1]) >= 2.0
         except Exception:
             return False
+
+    def node_type_optional(self):
+        return constants.node_type_opt
 
 
 class CliParser(object):
