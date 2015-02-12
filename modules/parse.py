@@ -1518,7 +1518,7 @@ class Validation(object):
         vname = schema.validate_name()
         sp = vname.split('-')
         try:
-            return sp[0] == 'pacemaker' and float(sp[1]) >= 2.0
+            return sp[0] == 'pacemaker' and sp[1] == 'next' or float(sp[1]) >= 2.0
         except Exception:
             return False
 
