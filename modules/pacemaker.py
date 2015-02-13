@@ -372,8 +372,6 @@ class RngSchema(Schema):
         if rng_node is None:
             return None
 
-        print etree.tostring(rng_node)
-
         selected = []
         sub_rng_nodes = self.get_sub_rng_nodes(grammar, rng_node)
         for node in sub_rng_nodes:
