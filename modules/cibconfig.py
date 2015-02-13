@@ -2434,7 +2434,10 @@ class CibFactory(object):
         rc, cib_diff = filter_string("%s -o %s -n -" %
                                      (self._crm_diff_cmd, tmpf),
                                      etree.tostring(self.cib_elem))
-        if not cib_diff:
+        if not cib_diff and (rc == 0):
+            # no diff = no action
+            return True
+        elif not cib_diff:
             common_err("crm_diff apparently failed to produce the diff (rc=%d)" % rc)
             return False
         if not self._crm_diff_cmd.endswith('--no-version'):
