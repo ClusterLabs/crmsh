@@ -106,7 +106,7 @@ class opt_multichoice(object):
 class opt_boolean(object):
     def __init__(self, dflt):
         self.default = dflt
-        self.completions = ('yes', 'true', 'on', 'no', 'false', 'off')
+        self.completions = ('yes', 'true', 'on', '1', 'no', 'false', 'off', '0')
 
     def validate(self, val):
         if val is True:
@@ -115,10 +115,11 @@ class opt_boolean(object):
             val = 'false'
         val = val.lower()
         if val not in self.completions:
-            raise ValueError("Not a boolean: %s" % (val))
+            raise ValueError("Not a boolean: %s (try one of: %s)" % (
+                val, ', '.join(self.completions)))
 
     def get(self, value):
-        return value.lower() in ('yes', 'true', 'on')
+        return value.lower() in ('yes', 'true', 'on', '1')
 
 
 class opt_dir(object):
