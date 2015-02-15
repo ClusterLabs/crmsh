@@ -16,7 +16,8 @@
 #
 
 import config
-from pacemaker import CrmSchema
+from pacemaker import CrmSchema, PacemakerError
+from msg import common_err
 
 
 def get_attrs(schema, name):
@@ -91,7 +92,11 @@ def init_schema(cib):
 
 
 def test_schema(cib):
-    crm_schema = _load_schema(cib)
+    try:
+        crm_schema = _load_schema(cib)
+    except PacemakerError, msg:
+        common_err(msg)
+        return None
     return crm_schema.validate_name
 
 
