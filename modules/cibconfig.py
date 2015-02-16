@@ -3464,9 +3464,9 @@ class CibFactory(object):
             obj = self.find_object(obj_id)
             if not obj:
                 # If --force is set:
-                # Print error, but unless something more
-                # serious goes wrong here, don't return
-                # an error code. This should help scripted
+                # Unless something more serious goes wrong here,
+                # don't return an error code if the object
+                # to remove doesn't exist. This should help scripted
                 # workflows without compromising an interactive
                 # use.
                 if not config.core.force:
