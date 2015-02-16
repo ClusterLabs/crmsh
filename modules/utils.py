@@ -1105,11 +1105,15 @@ def get_pcmk_version(dflt):
         return version
 
     try:
-        rc, s = get_stdout("%s version" % (cmd))
+        rc, s, err = get_stdout_stderr("%s version" % (cmd))
         if rc != 0:
-            common_err("%s exited with %d" % (cmd, rc))
+            common_err("%s exited with %d [err: %s][out: %s]" % (cmd, rc, err, s))
         else:
-            version = s.split()[2]
+            common_debug("pacemaker version: [err: %s][out: %s]" % (err, s))
+            if err.startswith("CRM Version:"):
+                version = s.split()[0]
+            else:
+                version = s.split()[2]
             common_debug("found pacemaker version: %s" % version)
     except Exception, msg:
         common_warn("could not get the pacemaker version, bad installation?")
