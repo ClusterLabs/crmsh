@@ -3463,8 +3463,12 @@ class CibFactory(object):
         for obj_id in args:
             obj = self.find_object(obj_id)
             if not obj:
+                # Print error, but unless something more
+                # serious goes wrong here, don't return
+                # an error code. This should help scripted
+                # workflows without compromising an interactive
+                # use.
                 no_object_err(obj_id)
-                rc = False
                 continue
             if not rscstat.can_delete(obj_id):
                 common_err("resource %s is running, can't delete it" % obj_id)
