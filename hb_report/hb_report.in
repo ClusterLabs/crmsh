@@ -67,8 +67,9 @@ fi
 
 usage() {
 	cat<<EOF
-usage: $PROG -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
-       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog] [-MSDZAQVsvhd] [dest]
+usage: $PROG -f {time|"cts:"testnum} [-t time]
+       [-u user] [-X ssh-options] [-l file] [-n nodes] [-E files]
+       [-p patt] [-L patt] [-e prog] [-MSDZAQVsvhd] [dest]
 
 	-f time: time to start from or a CTS test number
 	-t time: time to finish at (dflt: now)
@@ -78,6 +79,7 @@ usage: $PROG -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
 	         if you run $PROG on the loghost or use autojoin,
 	         it is highly recommended to set this option
 	-u user: ssh user to access other nodes (dflt: empty, root, hacluster)
+	-X ssh-options: extra ssh(1) options
 	-l file: log file
 	-E file: extra logs to collect; this option is additive
 	         (dflt: /var/log/messages)
@@ -1200,7 +1202,7 @@ if ! is_collector; then
 	userargs="$@"
 	DESTDIR=.
 	DEST="hb_report-"`date +"%a-%d-%b-%Y"`
-	while getopts f:t:l:u:p:L:e:E:n:MSDCZAVsvhdQ o; do
+	while getopts f:t:l:u:X:p:L:e:E:n:MSDCZAVsvhdQ o; do
 		case "$o" in
 			h) usage;;
 			V) version;;
@@ -1221,6 +1223,7 @@ if ! is_collector; then
 				USER_NODES="$USER_NODES $OPTARG"
 			;;
 			u) SSH_USER="$OPTARG";;
+			X) SSH_OPTS="$SSH_OPTS $OPTARG";;
 			l) HA_LOG="$OPTARG";;
 			e) EDITOR="$OPTARG";;
 			p) SANITIZE="$SANITIZE $OPTARG";;
