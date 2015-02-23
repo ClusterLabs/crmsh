@@ -995,12 +995,9 @@ mktemplate() {
 	cat<<EOF
 Please edit this template and describe the issue/problem you
 encountered. Then, post to
-	Linux-HA@lists.linux-ha.org
+	http://clusterlabs.org/mailman/listinfo/users
 or file a bug at
-	http://developerbugs.linux-foundation.org/
-
-See http://linux-ha.org/wiki/ReportingProblems for detailed
-description on how to report problems.
+	https://github.com/ClusterLabs/crmsh/issues
 
 Thank you.
 
