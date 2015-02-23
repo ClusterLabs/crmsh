@@ -456,7 +456,7 @@ Written by Dejan Muhamedagic, <dejan@suse.de>
 
 RESOURCES
 ---------
-Pacemaker: <http://clusterlabs.org/>
+ClusterLabs: <http://clusterlabs.org/>
 
 Heartbeat and other Linux HA resources: <http://linux-ha.org/wiki>
 

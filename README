@@ -1,9 +1,10 @@
 # INTRODUCTION
 
 crmsh is a command-line interface for High-Availability cluster
-management on GNU/Linux systems. It simplifies the configuration,
-management and troubleshooting of Pacemaker-based clusters, by
-providing a powerful and intuitive set of features.
+management on GNU/Linux systems, and part of the Clusterlabs
+project. It simplifies the configuration, management and
+troubleshooting of Pacemaker-based clusters, by providing a powerful
+and intuitive set of features.
 
 crmsh can function both as an interactive shell with tab completion
 and inline documentation, and as a command-line tool. It can also be
@@ -17,7 +18,7 @@ The website for crmsh is:
 
 Documentation for the latest stable release is found at:
 
-  * http://crmsh.github.io/documentation.html
+  * http://crmsh.github.io/documentation/
 
 # DEVELOPMENT
 
@@ -25,16 +26,16 @@ crmsh is implemented in Python. The source code for crmsh is kept in a
 git source repository. To check out the latest development
 version, install git and run this command:
 
-    git clone https://github.com/crmsh/crmsh
+    git clone https://github.com/ClusterLabs/crmsh
 
 Bugs and issues can be reported here:
 
- * https://github.com/crmsh/crmsh/issues
+ * https://github.com/ClusterLabs/crmsh/issues
 
-Any other questions or comments can be made on the linux-ha mailing
-list at:
+Any other questions or comments can be made on the Clusterlabs users
+mailing list at:
 
- * http://lists.linux-ha.org/mailman/listinfo/linux-ha
+ * http://clusterlabs.org/mailman/listinfo/users
 
 # INSTALLING
 

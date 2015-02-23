@@ -8,11 +8,11 @@ all very much welcome!
 
 ++++
 <ul class="nav">
-<li><a href="https://github.com/crmsh/crmsh"><i class="fa fa-archive fa-3x fa-fw"></i> Source Repository</a></li>
-<li><a href="http://lists.linux-ha.org/mailman/listinfo/linux-ha"><i class="fa fa-envelope fa-3x fa-fw"></i> Mailing List</a></li>
-<li><a href="https://github.com/crmsh/crmsh/issues"><i class="fa fa-bug fa-3x fa-fw"></i> Issue Tracker</a></li>
-<li><a href="irc://freenode.net/#linux-ha"><i class="fa fa-comments fa-3x fa-fw"></i> IRC: #linux-ha on Freenode</a></li>
-<li><a href="https://github.com/crmsh/crmsh/commits/master.atom"><i class="fa fa-rss fa-3x fa-fw"></i> Atom feed</a></li>
+<li><a href="https://github.com/ClusterLabs/crmsh"><i class="fa fa-archive fa-3x fa-fw"></i> Source Repository</a></li>
+<li><a href="http://clusterlabs.org/mailman/listinfo/users"><i class="fa fa-envelope fa-3x fa-fw"></i> Mailing List</a></li>
+<li><a href="https://github.com/ClusterLabs/crmsh/issues"><i class="fa fa-bug fa-3x fa-fw"></i> Issue Tracker</a></li>
+<li><a href="irc://freenode.net/#clusterlabs"><i class="fa fa-comments fa-3x fa-fw"></i> IRC: #clusterlabs on Freenode</a></li>
+<li><a href="https://github.com/ClusterLabs/crmsh/commits/master.atom"><i class="fa fa-rss fa-3x fa-fw"></i> Atom feed</a></li>
 </ul>
 ++++
 
@@ -23,7 +23,7 @@ http://git-scm.com/[git] repository
 hosted at https://github.com[github]. Use +git+ to get a working copy:
 
 ----
-git clone https://github.com/crmsh/crmsh.git
+git clone https://github.com/ClusterLabs/crmsh.git
 ----
 
 `crmsh` needs the development headers for link:http://hg.linux-ha.org/glue[cluster-glue] and 
