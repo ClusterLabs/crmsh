@@ -815,12 +815,21 @@ duration|date_spec ::
 [[topics_Reference,Command reference]]
 == Command reference
 
-Commands in crmsh follow a bash-like grammar to simplify the command
-line mode. Whitespace is significant, meaning that +key=value+ is
-different from +key = value+. In some cases, the underlying Pacemaker
-grammar uses characters otherwise used by bash which need to be
-quoted. This includes the single and double quote characters, the hash
-or pound sign (`#`) and whitespace.
+The commands are structured to be compatible with the shell command
+line. Sometimes, the underlying Pacemaker grammar uses characters that
+have special meaning in bash, that will need to be quoted. This
+includes the hash or pound sign (`#`), single and double quotes, and
+any significant whitespace.
+
+Whitespace is also significant when assigning values, meaning that
++key=value+ is different from +key = value+.
+
+Commands can be referenced using short-hand as long as the short-hand
+is unique. This can be either a prefix of the command name or a prefix
+string of characters found in the name.
+
+For example, +status+ can be abbreviated as +st+ or +su+, and
++configure+ as +conf+ or +cfg+.
 
 The syntax for the commands is given below in an informal, BNF-like
 grammar.
