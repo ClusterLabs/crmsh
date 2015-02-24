@@ -187,6 +187,10 @@ def add_quotes(args):
 
 
 def handle_noninteractive_use(context, user_args):
+    """
+    returns: either a status code of 0 or 1, or
+    None to indicate that nothing was done here.
+    """
     if options.shadow:
         if not context.run("cib use " + options.shadow):
             return 1
@@ -241,7 +245,11 @@ def setup_context(context):
         context.setup_readline()
 
 
-def do_work(context, user_args):
+def main_input_loop(context, user_args):
+    """
+    Main input loop for crmsh. Parses input
+    line by line.
+    """
     compatibility_setup()
     rc = handle_noninteractive_use(context, user_args)
     if rc is not None:
@@ -318,7 +326,7 @@ def parse_options():
 
 def profile_run(context, user_args):
     import cProfile
-    cProfile.runctx('do_work(context, user_args)',
+    cProfile.runctx('main_input_loop(context, user_args)',
                     globals(),
                     {'context': context, 'user_args': user_args},
                     filename=options.profile)
@@ -354,7 +362,7 @@ def run():
         if options.profile:
             return profile_run(context, user_args)
         else:
-            return do_work(context, user_args)
+            return main_input_loop(context, user_args)
     except KeyboardInterrupt:
         print "Ctrl-C, leaving"
         sys.exit(1)
