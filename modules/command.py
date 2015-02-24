@@ -350,8 +350,34 @@ Examples:
         '''
         Returns child info for the given name, or None
         if the child is not found.
+
+        This tries very hard to find a matching child:
+        If none is found, a fuzzy matcher is used to
+        pick a close match
         '''
-        return self._children.get(child)
+        found = self._children.get(child)
+        if found:
+            return found
+        import re
+
+        def fuzzy_match(rx):
+            matcher = re.compile(rx)
+            matches = [c
+                       for m, c in self._children.iteritems()
+                       if matcher.match(m)]
+            if len(matches) == 1:
+                return matches[0]
+            return None
+
+        # prefix match
+        m = fuzzy_match(child + '.*')
+        if m:
+            return m
+        # substring match
+        m = fuzzy_match('.*'.join(child) + '.*')
+        if m:
+            return m
+        return None
 
     def is_sublevel(self, child):
         '''
