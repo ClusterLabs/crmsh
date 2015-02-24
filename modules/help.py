@@ -206,7 +206,8 @@ def help_level(level):
     Returns a help entry for a given level.
     '''
     _load_help()
-    return _LEVELS.get(level, _DEFAULT)
+    from command import fuzzy_get
+    return fuzzy_get(_LEVELS, level) or _DEFAULT
 
 
 def help_command(level, command):
@@ -214,10 +215,11 @@ def help_command(level, command):
     Returns a help entry for a given command
     '''
     _load_help()
-    lvlhelp = _COMMANDS.get(level)
+    from command import fuzzy_get
+    lvlhelp = fuzzy_get(_COMMANDS, level)
     if not lvlhelp:
         raise ValueError("Undocumented topic '%s'" % (level))
-    cmdhelp = lvlhelp.get(command)
+    cmdhelp = fuzzy_get(lvlhelp, command)
     if not cmdhelp:
         raise ValueError("Undocumented topic '%s' in '%s'" % (command, level))
     return cmdhelp
@@ -228,11 +230,13 @@ def _is_help_topic(arg):
 
 
 def _is_command(level, command):
-    return level in _COMMANDS and command in _COMMANDS[level]
+    from command import fuzzy_get
+    return level in _COMMANDS and fuzzy_get(_COMMANDS[level], command)
 
 
 def _is_level(level):
-    return level in _LEVELS
+    from command import fuzzy_get
+    return fuzzy_get(_LEVELS, level)
 
 
 def help_contextual(context, subject, subtopic):
@@ -244,10 +248,6 @@ def help_contextual(context, subject, subtopic):
         if context == 'root':
             return help_overview()
         return help_level(context)
-    if subject.lower() == 'overview':
-        return help_overview()
-    if subject.lower() == 'topics':
-        return help_topics()
     if _is_help_topic(subject):
         return help_topic(subject)
     if subtopic is not None:
@@ -256,7 +256,11 @@ def help_contextual(context, subject, subtopic):
         return help_command(context, subject)
     if _is_level(subject):
         return help_level(subject)
-    raise ValueError("Undocumented topic '%s'" % (subject))
+    from command import fuzzy_get
+    t = fuzzy_get(_TOPICS, subject.lower())
+    if t:
+        return t
+    raise ValueError("No help found for '%s'! 'overview' lists all help entries" % (subject))
 
 
 def add_help(entry, topic=None, level=None, command=None):
@@ -377,6 +381,11 @@ def _load_help():
         from ui_root import Root
         add_aliases_for_level(Root)
 
+    def fixup_topics():
+        "fix entries for topics and overview"
+        _TOPICS["Overview"] = help_overview()
+        _TOPICS["Topics"] = help_topics()
+
     try:
         name = os.getenv("CRM_HELP_FILE") or HELP_FILE
         helpfile = open(name, 'r')
@@ -397,6 +406,7 @@ def _load_help():
         append_cmdinfos()
         fixup_root_commands()
         fixup_help_aliases()
+        fixup_topics()
     except IOError, msg:
         common_err("Help text not found! %s" % (msg))
 

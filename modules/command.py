@@ -204,6 +204,40 @@ def _help_completer(args, context):
     return help_module.list_help_topics() + context.current_level().get_completions()
 
 
+def fuzzy_get(items, s):
+    """
+    Finds s in items using a fuzzy
+    matching algorithm:
+
+    1. if exact match, return value
+    2. if unique prefix, return value
+    3. if unique prefix substring, return value
+    """
+    found = items.get(s)
+    if found:
+        return found
+    import re
+
+    def fuzzy_match(rx):
+        matcher = re.compile(rx, re.I)
+        matches = [c
+                   for m, c in items.iteritems()
+                   if matcher.match(m)]
+        if len(matches) == 1:
+            return matches[0]
+        return None
+
+    # prefix match
+    m = fuzzy_match(s + '.*')
+    if m:
+        return m
+    # substring match
+    m = fuzzy_match('.*'.join(s) + '.*')
+    if m:
+        return m
+    return None
+
+
 class UI(object):
     '''
     Base class for all ui levels.
@@ -355,29 +389,7 @@ Examples:
         If none is found, a fuzzy matcher is used to
         pick a close match
         '''
-        found = self._children.get(child)
-        if found:
-            return found
-        import re
-
-        def fuzzy_match(rx):
-            matcher = re.compile(rx)
-            matches = [c
-                       for m, c in self._children.iteritems()
-                       if matcher.match(m)]
-            if len(matches) == 1:
-                return matches[0]
-            return None
-
-        # prefix match
-        m = fuzzy_match(child + '.*')
-        if m:
-            return m
-        # substring match
-        m = fuzzy_match('.*'.join(child) + '.*')
-        if m:
-            return m
-        return None
+        return fuzzy_get(self._children, child)
 
     def is_sublevel(self, child):
         '''
