@@ -383,7 +383,7 @@ Examples:
         '''
         True if the given name is a sublevel of this level
         '''
-        sub = self._children.get(child)
+        sub = self.get_child(child)
         return sub and sub.type == 'level'
 
     @classmethod
