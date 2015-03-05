@@ -3651,11 +3651,16 @@ edit [<config>]
 [[cmdhelp_template_list,list configurations/templates]]
 ==== `list`
 
-List existing configurations or templates.
+When called with no argument, lists existing templates and
+configurations.
+
+Given the argument +templates+, lists the available templates.
+
+Given the argument +configs+, lists the available configurations.
 
 Usage:
 ...............
-list [templates]
+list [templates|configs]
 ...............
 
 [[cmdhelp_template_load,load a configuration]]
@@ -3682,15 +3687,21 @@ them directly on the command line.
 The parameter name +id+ is set by default to the name of the
 configuration.
 
+If no parameters are being set and you don't want a particular name
+for your configuration, you can call this command with a template name
+as the only parameter. A unique configuration name based on the
+template name will be generated.
+
 Usage:
 ...............
-new <config> <template> [<template> ...] [params name=value ...]
+new [<config>] <template> [<template> ...] [params name=value ...]
 ...............
 
 Example:
 ...............
 new vip virtual-ip
 new bigfs ocfs2 params device=/dev/sdx8 directory=/bigfs
+new apache
 ...............
 
 [[cmdhelp_template_show,show the processed configuration]]

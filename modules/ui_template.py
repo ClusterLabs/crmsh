@@ -63,7 +63,7 @@ class Template(command.UI):
     @command.skill_level('administrator')
     @command.completers_repeating(compl.null, compl.call(utils.listtemplates))
     def do_new(self, context, name, *args):
-        "usage: new <config> <template> [<template> ...] [params name=value ...]"
+        "usage: new [<config>] <template> [<template> ...] [params name=value ...]"
         if not utils.is_filename_sane(name):
             return False
         if os.path.isfile("%s/%s" % (userdir.CRMCONF_DIR, name)):
