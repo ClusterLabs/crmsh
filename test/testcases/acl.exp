@@ -17,7 +17,6 @@
 .INP: acl_target bob 	d0-admin 	basic-read-basic
 .INP: role cyrus-role 	write meta:d0:target-role 	write meta:d0:is-managed 	read ref:d0 	read status 	read type:node attribute:uname 	read type:node attribute:type 	read property
 .INP: acl_target cyrus cyrus-role
-.INP: acl_group newbies basic-read-basic
 .INP: _test
 .INP: verify
 .EXT crm_resource --show-metadata stonith:ssh
@@ -85,6 +84,4 @@ acl_target bob \
 	basic-read-basic
 acl_target cyrus \
 	cyrus-role
-acl_group newbies \
-	basic-read-basic
 .INP: commit

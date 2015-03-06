@@ -548,9 +548,8 @@ eligible nodes if a resource is not meant to run on every node.
 ****************************
 The support for ACLs has been revised in Pacemaker version 1.1.12 and
 up. Depending on which version you are using, the information in this
-section may no longer be accurate. Look for the `acl_target` and
-`acl_group` configuration elements for more details on the new
-syntax.
+section may no longer be accurate. Look for the `acl_target`
+configuration element for more details on the new syntax.
 ****************************
 
 By default, the users from the +haclient+ group have full access
@@ -2284,11 +2283,10 @@ manage ACL:
 - `user`
 - `role`
 
-In Pacemaker 1.1.12 and up, these commands replace the `user` command
+In Pacemaker 1.1.12 and up, this command replaces the `user` command
 for handling ACLs:
 
 - `acl_target`
-- `acl_group`
 
 The changes are applied to the current CIB only on ending the
 configuration session or using the `commit` command.
@@ -2922,21 +2920,6 @@ Example:
 ................
 acl_target joe resource_admin constraint_editor
 ................
-
-[[cmdhelp_configure_acl_group,Define group access rights]]
-==== `acl_group`
-
-Defines an ACL group.
-
-Usage:
-................
-acl_group <gid> [<role> ...]
-................
-Example:
-................
-acl_group hacluster operator
-................
-
 
 [[cmdhelp_configure_op_defaults,set resource operations defaults]]
 ==== `op_defaults`

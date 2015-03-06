@@ -55,7 +55,6 @@ role cyrus-role \
 	read type:node attribute:type \
 	read property
 acl_target cyrus cyrus-role
-acl_group newbies basic-read-basic
 _test
 verify
 .
