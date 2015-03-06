@@ -787,10 +787,6 @@ class CibConfig(command.UI):
     def do_acl_target(self, context, *args):
         return self.__conf_object(context.get_command_name(), *args)
 
-    @command.skill_level('expert')
-    def do_acl_group(self, context, *args):
-        return self.__conf_object(context.get_command_name(), *args)
-
     @command.skill_level('administrator')
     @command.completers_repeating(compl.null, top_rsc_tmpl_id_list)
     def do_tag(self, context, *args):
