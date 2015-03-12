@@ -404,3 +404,23 @@ def test_nvpair_no_value():
     exp = 'primitive rsc3 Dummy params verbose verbase="" verbese=" "'
     assert data == exp
     assert obj.cli_use_validate()
+
+
+def test_delete_ticket():
+    xml0 = '<primitive id="daa0" class="ocf" provider="heartbeat" type="Dummy"/>'
+    xml1 = '<primitive id="daa1" class="ocf" provider="heartbeat" type="Dummy"/>'
+    xml2 = '''<rsc_ticket id="taa0" ticket="taaA">
+        <resource_set id="taa0-0">
+          <resource_ref id="daa0"/>
+          <resource_ref id="daa1"/>
+        </resource_set>
+      </rsc_ticket>'''
+    for x in (xml0, xml1, xml2):
+        data = etree.fromstring(x)
+        obj = factory.create_from_node(data)
+        assert obj is not None
+        data = obj.repr_cli(format=-1)
+
+    factory.delete('daa0')
+    assert factory.find_object('daa0') is None
+    assert factory.find_object('taa0') is not None

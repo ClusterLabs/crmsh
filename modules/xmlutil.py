@@ -1051,7 +1051,10 @@ def silly_constraint(c_node, rsc_id):
     if c_node.xpath("resource_set/resource_ref"):
         # it's a resource set
         # the resource sets have already been uniq-ed
-        return len(c_node.xpath("resource_set/resource_ref")) <= 1
+        cnt = len(c_node.xpath("resource_set/resource_ref"))
+        if c_node.tag in ("rsc_location", "rsc_ticket"):  # locations and tickets are never silly
+            return cnt < 1
+        return cnt <= 1
     cnt = 0  # total count of referenced resources have to be at least two
     rsc_cnt = 0
     for attr in c_node.keys():
