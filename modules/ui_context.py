@@ -44,6 +44,7 @@ class Context(object):
         self.stack = [root]
         self._mark = 0
         self._in_transit = False
+        self._wait_for_dc = False
 
         # holds information about the currently
         # executing command
@@ -65,6 +66,7 @@ class Context(object):
 
         self._mark = len(self.stack)
         self._in_transit = False
+        self._wait_for_dc = False
 
         rv = True
         cmd = False
@@ -92,6 +94,10 @@ class Context(object):
             rv = False
         if cmd or (rv is False):
             rv = self._back_out() and rv
+
+        # wait for dc if wait flag set
+        if rv and self._wait_for_dc:
+            return utils.wait4dc(self.command_name, not options.batch)
         return rv
 
     def complete(self, line):
@@ -247,8 +253,7 @@ class Context(object):
 
         # should we wait till the command takes effect?
         if rv and self.should_wait():
-            if not utils.wait4dc(self.command_name, not options.batch):
-                return False
+            self._wait_for_dc = True
         return rv
 
     def should_wait(self):
