@@ -15,12 +15,15 @@
 %required
 
 # The resource id (name).
+# Example:
+# %% id stonith-sbd
 %% id 
 
 # Name of the device (shared disk).
 # NB: Make sure that the device remains the same on reboots. It's
 # preferable to use udev generated names rather than the usual
 # /dev/sd?
+# %% sbd_device /dev/sda
 %% sbd_device 
 
 %generate

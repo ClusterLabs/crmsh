@@ -21,10 +21,14 @@
 # of the prerequisite resources. The clone is going to be named c-<id>
 # (e.g. c-vg-1)
 
+# For example, to name the resource vg-1, edit the line below
+# as follows:
+# %% id vg-1
 %% id 
 
 # The volume group name
-
+# Example:
+# %% volgrpname myvolgroup
 %% volgrpname 
 
 %generate

@@ -24,12 +24,14 @@
 %required
 
 # Name the apache resource
-# (for example: web-1)
-
-%% id 
+# For example, to name the resource web-1, edit the line below
+# as follows:
+# %% id web-1
+%% id
 
 # The full pathname of the Apache configuration file
-
+# Example:
+# %% configfile /etc/apache2/httpd.conf
 %% configfile 
 
 %optional
