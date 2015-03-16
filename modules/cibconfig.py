@@ -813,7 +813,9 @@ def id_for_node(node, id_hint=None):
     else:
         obj_id = node.get('id') or node.get('uname')
     if obj_id is None:
-        if node.tag == 'op' and id_hint:
+        if node.tag == 'op':
+            if id_hint is None:
+                id_hint = node.get("rsc")
             idmgmt.set(node, None, id_hint)
             obj_id = node.get('id')
         else:
