@@ -13,12 +13,18 @@
 
 # The name of block device for the filesystem, or -U, -L
 # options for mount, or NFS mount specification.
+# Example:
+# %% device /dev/hda
 %% device 
 
 # The mount point for the filesystem.
+# Example:
+# %% directory /mnt/fs
 %% directory 
 
 # The type of filesystem to be mounted.
+# Example:
+# %% fstype xfs
 %% fstype 
 
 %optional

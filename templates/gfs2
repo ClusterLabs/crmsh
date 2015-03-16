@@ -25,11 +25,13 @@
 # Name the gfs2 filesystem
 # (for example: bigfs)
 # NB: The clone is going to be named c-<id> (e.g. c-bigfs)
-
+# Example:
+# %% id bigfs
 %% id 
 
 # The mount point
-
+# Example:
+# %% directory /mnt/bigfs
 %% directory 
 
 # The device

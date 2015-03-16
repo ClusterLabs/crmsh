@@ -12,6 +12,8 @@
 
 # Specify an IP address
 # (for example: 192.168.1.101)
+# Example:
+# %% ip 192.168.1.101
 
 %% ip 
 
@@ -20,6 +22,8 @@
 # If your network has a mask different from its class mask, then
 # specify it here either in CIDR format or as a dotted quad
 # (for example: 24 or 255.255.255.0)
+# Example:
+# %% netmask 24
 
 %% netmask 
 

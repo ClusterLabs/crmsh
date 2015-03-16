@@ -16,11 +16,13 @@
 %required
 
 # Name the ocfs2 filesystem (for example: bigfs)
-
+# Example:
+# %% id bigfs
 %% id 
 
 # The mount point
-
+# Example:
+# %% directory /mnt/bigfs
 %% directory 
 
 # The device
