@@ -76,10 +76,9 @@ class Template(command.UI):
         lt = LoadTemplate(name)
         rc = True
         mode = 0
-        params = {}
+        params = {"id": name}
         for s in args:
             if mode == 0 and s == "params":
-                params["id"] = name
                 mode = 1
             elif mode == 1:
                 a = s.split('=')
