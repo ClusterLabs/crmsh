@@ -8,7 +8,7 @@ dnl License: GNU General Public License (GPL)
 dnl ===============================================
 dnl Bootstrap 
 dnl ===============================================
-AC_PREREQ([2.69])
+AC_PREREQ([2.53])
 
 dnl Suggested structure:
 dnl     information on the package
@@ -45,7 +45,8 @@ AC_ARG_WITH(
     [ CRM_DAEMON_USER="hacluster" ],
   )
 
-AM_INIT_AUTOMAKE([1.11 no-define silent-rules])
+AM_INIT_AUTOMAKE([no-define])
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE_NAME")
 AC_DEFINE_UNQUOTED(VERSION, "$PACKAGE_VERSION")
 
