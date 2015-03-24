@@ -124,10 +124,16 @@ all-local:
 		--build-base $(shell readlink -f $(builddir))/build \
 		--verbose)
 
+if PREFIX_IS_USR
+python_prefix = --root=$(DESTDIR)
+else
+python_prefix = --prefix=$(DESTDIR)$(prefix)
+endif
+
 install-exec-local:
 	-mkdir -p $(DESTDIR)$(pkgpythondir)
 	$(PYTHON) $(srcdir)/setup.py install \
-		--prefix=$(DESTDIR)$(prefix) \
+		$(python_prefix) \
 		--record $(DESTDIR)$(pkgpythondir)/install_files.txt \
 		--verbose
 	$(INSTALL) -d -m 770 $(DESTDIR)/$(CRM_CACHE_DIR)

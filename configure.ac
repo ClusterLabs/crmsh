@@ -114,6 +114,8 @@ eval libdir="`eval echo ${libdir}`"
 eval infodir="`eval echo ${infodir}`"
 eval mandir="`eval echo ${mandir}`"
 
+AM_CONDITIONAL([PREFIX_IS_USR], [test "${prefix}" = "/usr"])
+
 dnl Home-grown variables
 eval docdir="`eval echo ${docdir}`"
 if test x"${docdir}" = x""; then
