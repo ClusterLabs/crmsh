@@ -22,7 +22,7 @@ MAINTAINERCLEANFILES    = Makefile.in aclocal.m4 configure
 
 sbin_SCRIPTS		= crm
 
-doc_DATA = AUTHORS COPYING README ChangeLog $(generated_docs)
+doc_DATA = AUTHORS COPYING README.md ChangeLog $(generated_docs)
 
 crmversiondir=$(datadir)/@PACKAGE@
 crmversion_DATA = version
