@@ -63,7 +63,6 @@ dnl ===============================================
 INIT_EXT=""
 echo Our Host OS: $host_os/$host
 
-
 AC_MSG_NOTICE(Sanitizing prefix: ${prefix})
 case $prefix in
   NONE)	prefix=/usr;;
@@ -114,7 +113,7 @@ eval libdir="`eval echo ${libdir}`"
 eval infodir="`eval echo ${infodir}`"
 eval mandir="`eval echo ${mandir}`"
 
-AM_CONDITIONAL([PREFIX_IS_USR], [test "${prefix}" = "/usr"])
+AM_CONDITIONAL([UNAME_IS_DEBIAN], [test x`uname -v | grep -oh Debian` = x"Debian"])
 
 dnl Home-grown variables
 eval docdir="`eval echo ${docdir}`"
