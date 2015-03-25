@@ -22,7 +22,7 @@ MAINTAINERCLEANFILES    = Makefile.in aclocal.m4 configure
 
 sbin_SCRIPTS		= crm
 
-doc_DATA = AUTHORS COPYING README ChangeLog $(generated_docs)
+doc_DATA = AUTHORS COPYING README.md ChangeLog $(generated_docs)
 
 crmversiondir=$(datadir)/@PACKAGE@
 crmversion_DATA = version
@@ -124,8 +124,9 @@ all-local:
 		--build-base $(shell readlink -f $(builddir))/build \
 		--verbose)
 
-if PREFIX_IS_USR
-python_prefix = --root=$(DESTDIR)
+# Fix for GNU/Linux
+if UNAME_IS_DEBIAN
+python_prefix = 
 else
 python_prefix = --prefix=$(DESTDIR)$(prefix)
 endif

@@ -6,3 +6,9 @@ Makefile.in
 autom4te.cache
 patches/*
 
+# Tool specific files
+.README.md.html
+.*.*~
+.project
+.settings
+.pydevproject

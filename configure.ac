@@ -45,7 +45,7 @@ AC_ARG_WITH(
     [ CRM_DAEMON_USER="hacluster" ],
   )
 
-AM_INIT_AUTOMAKE([no-define])
+AM_INIT_AUTOMAKE([foreign])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE_NAME")
 AC_DEFINE_UNQUOTED(VERSION, "$PACKAGE_VERSION")
@@ -62,7 +62,6 @@ dnl ===============================================
 
 INIT_EXT=""
 echo Our Host OS: $host_os/$host
-
 
 AC_MSG_NOTICE(Sanitizing prefix: ${prefix})
 case $prefix in
@@ -114,7 +113,7 @@ eval libdir="`eval echo ${libdir}`"
 eval infodir="`eval echo ${infodir}`"
 eval mandir="`eval echo ${mandir}`"
 
-AM_CONDITIONAL([PREFIX_IS_USR], [test "${prefix}" = "/usr"])
+AM_CONDITIONAL([UNAME_IS_DEBIAN], [test x`uname -v | grep -oh Debian` = x"Debian"])
 
 dnl Home-grown variables
 eval docdir="`eval echo ${docdir}`"
