@@ -36,10 +36,10 @@ Name:           crmsh
 Summary:        High Availability cluster command-line interface
 License:        GPL-2.0+
 Group:          %{pkg_group}
-Version:        2.2.0~rc2
-Release:        %{?crmsh_release}%{?dist}
+Version:        2.2.0~rc2+git.1426543208.fb920e3
+Release:        0%{?crmsh_release}%{?dist}
 Url:            http://crmsh.github.io
-Source0:        crmsh.tar.bz2
+Source0:        %{name}-%{version}.tar.bz2
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Requires(pre):  pacemaker
 Requires:       /usr/bin/which
@@ -122,7 +122,7 @@ clusters, by providing a powerful and intuitive set of features.
 Authors: Dejan Muhamedagic <dejan@suse.de> and many others
 
 %prep
-%setup -q -n %{upstream_prefix}
+%setup -q
 
 # Force the local time
 #
@@ -196,7 +196,7 @@ fi
 %{crmsh_docdir}/crm.8.html
 %{crmsh_docdir}/crmsh_hb_report.8.html
 %{crmsh_docdir}/ChangeLog
-%{crmsh_docdir}/README
+%{crmsh_docdir}/README.md
 %{crmsh_docdir}/contrib/*
 
 %config %{_sysconfdir}/crm
