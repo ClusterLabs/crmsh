@@ -239,7 +239,7 @@ class NodeMgmt(command.UI):
             cib_elem = xmlutil.cibdump2elem()
             if cib_elem is None:
                 return False
-            node_state = cib_elem.xpath("//node_state[@uname=\"%s\"]/@crmd")
+            node_state = cib_elem.xpath("//node_state[@uname=\"%s\"]/@crmd" % node)
             if node_state == ['online']:
                 return utils.ext_cmd(self.node_cleanup_resources % node) == 0
             else:
