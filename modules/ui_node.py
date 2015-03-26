@@ -86,6 +86,7 @@ class NodeMgmt(command.UI):
     node_maint = "crm_attribute -t nodes -N '%s' -n maintenance -v '%s'"
     node_delete = """cibadmin -D -o nodes -X '<node uname="%s"/>'"""
     node_delete_status = """cibadmin -D -o status -X '<node_state uname="%s"/>'"""
+    node_cleanup_resources = "crm_resource --cleanup --node '%s'"
     node_clear_state = _oneline("""cibadmin %s
       -o status --xml-text
       '<node_state id="%s"
@@ -235,7 +236,14 @@ class NodeMgmt(command.UI):
                 not utils.ask("Do you really want to drop state for node %s?" % node):
             return False
         if utils.is_pcmk_118():
-            return utils.ext_cmd(self.node_clear_state_118 % node) == 0
+            cib_elem = xmlutil.cibdump2elem()
+            if cib_elem is None:
+                return False
+            node_state = cib_elem.xpath("//node_state[@uname=\"%s\"]/@crmd")
+            if node_state == ['online']:
+                return utils.ext_cmd(self.node_cleanup_resources % node) == 0
+            else:
+                return utils.ext_cmd(self.node_clear_state_118 % node) == 0
         else:
             return utils.ext_cmd(self.node_clear_state % ("-M -c", node, node)) == 0 and \
                 utils.ext_cmd(self.node_clear_state % ("-R", node, node)) == 0
