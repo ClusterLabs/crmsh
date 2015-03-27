@@ -127,12 +127,31 @@ class TerminalController(Singleton):
             for i, color in zip(range(len(self._ANSICOLORS)), self._ANSICOLORS):
                 setattr(self, 'BG_'+color, curses.tparm(set_bg_ansi, i) or '')
     def _tigetstr(self, cap_name):
+        import curses
+        cap = curses.tigetstr(cap_name) or ''
+
         # String capabilities can include "delays" of the form "$<2>".
         # For any modern terminal, we should be able to just ignore
         # these, so strip them out.
-        import curses
-        cap = curses.tigetstr(cap_name) or ''
-        return re.sub(r'\$<\d+>[/*]?', '', cap)
+        # terminof(5) states that:
+        #   A "/" suffix indicates that the padding is mandatory and forces a
+        #   delay of the given number of milliseconds even on devices for which
+        #   xon is present to indicate flow control.
+        # So let's respect that. But not the optional ones.
+        cap = re.sub(r'\$<\d+>[*]?', '', cap)
+
+        # To switch back to "NORMAL", we use sgr0, which resets "everything" to defaults.
+        # That on some terminals includes ending "alternate character set mode".
+        # Which is usually done by appending '\017'.  Unfortunately, less -R
+        # does not eat that, but shows it as an annoying inverse '^O'
+        # Instead of falling back to less -r, which would have other implications as well,
+        # strip off that '\017': we don't use the alternative character set,
+        # so we won't need to reset it either.
+        if cap_name == 'sgr0':
+            cap = re.sub(r'\017$', '', cap)
+
+        return cap
+
     def render(self, template):
         """
         Replace each $-substitutions in the given template string with
