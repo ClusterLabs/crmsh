@@ -69,14 +69,11 @@ class Template(command.UI):
         if os.path.isfile("%s/%s" % (userdir.CRMCONF_DIR, name)):
             common_err("config %s exists; delete it first" % name)
             return False
-        if not args and name in utils.listtemplates():
-            tmpl = name
-            name = _unique_config_name(tmpl)
-            args = [tmpl]
         lt = LoadTemplate(name)
         rc = True
         mode = 0
         params = {"id": name}
+        loaded_template = False
         for s in args:
             if mode == 0 and s == "params":
                 mode = 1
@@ -87,8 +84,18 @@ class Template(command.UI):
                     rc = False
                 else:
                     params[a[0]] = a[1]
-            elif not lt.load_template(s):
+            elif lt.load_template(s):
+                loaded_template = True
+            else:
                 rc = False
+        if not loaded_template:
+            if name not in utils.listtemplates():
+                common_err("Expected template argument")
+                return False
+            tmpl = name
+            name = _unique_config_name(tmpl)
+            lt = LoadTemplate(name)
+            lt.load_template(tmpl)
         if rc:
             lt.post_process(params)
         if not rc or not lt.write_config(name):
