@@ -728,7 +728,7 @@ class ConstraintParser(RuleParser):
     def parse_location(self):
         """
         location <id> rsc [[$]<attribute>=<value>] <score>: <node>
-        location <id> rsc [[$]<attribute>=<value>] [rule ...]
+        location <id> rsc [[$]<attribute>=<value>] <rule> [<rule> ...]
         rsc :: /<rsc-pattern>/
             | { <rsc-set> }
             | <rsc>
@@ -764,8 +764,10 @@ class ConstraintParser(RuleParser):
                 if self.try_match(self._ROLE_RE) or self.try_match(self._ROLE2_RE):
                     out.set('role', self.matched(1))
         if not score:
-            for rule in self.match_rules():
-                out.append(rule)
+            rules = self.match_rules()
+            out.extend(rules)
+            if not rules:
+                self.err("expected <score>: <node> or <rule> [<rule> ...]")
         return out
 
     def parse_colocation(self):
