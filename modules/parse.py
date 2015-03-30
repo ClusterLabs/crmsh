@@ -851,9 +851,15 @@ class ConstraintParser(RuleParser):
         if simple:
             for n, v in resources:
                 out.set(n, v)
-        else:
+        elif resources:
             for rscset in resources:
                 out.append(rscset)
+        else:
+            def repeat(v, n):
+                for _ in range(0, n):
+                    yield v
+            self.err("Expected %s | resource_sets" %
+                     " ".join(repeat("<rsc>[:<%s>]" % (suffix_type), simple_count)))
 
     def try_match_tail(self, rx):
         "ugly hack to prematurely extract a tail attribute"
