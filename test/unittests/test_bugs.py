@@ -424,3 +424,23 @@ def test_delete_ticket():
     factory.delete('daa0')
     assert factory.find_object('daa0') is None
     assert factory.find_object('taa0') is not None
+
+
+def test_quotes():
+    """
+    Parsing escaped quotes
+    """
+    xml = '''<primitive class="ocf" id="q1" provider="pacemaker" type="Dummy">
+        <instance_attributes id="q1-instance_attributes-1">
+          <nvpair id="q1-instance_attributes-1-state" name="state" value="foo&quot;foo&quot;"/>
+        </instance_attributes>
+    </primitive>
+    '''
+    data = etree.fromstring(xml)
+    obj = factory.create_from_node(data)
+    assert obj is not None
+    data = obj.repr_cli(format=-1)
+    print "OUTPUT:", data
+    exp = 'primitive q1 ocf:pacemaker:Dummy params state="foo\\"foo\\""'
+    assert data == exp
+    assert obj.cli_use_validate()
