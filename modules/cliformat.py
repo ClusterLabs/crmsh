@@ -44,6 +44,8 @@ def head_id_format(nodeid):
 def quote_wrap(v):
     if utils.noquotes(v):
         return v
+    elif '"' in v:
+        return '"%s"' % v.replace('"', '\\"')
     else:
         return '"%s"' % v
 
