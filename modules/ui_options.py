@@ -159,6 +159,7 @@ class CliOptions(command.UI):
         "usage: manage-children <option>"
         return _legacy_set_pref("manage-children", opt)
 
+    @command.alias('list')
     @command.completers(completers.choice(config.get_all_options()))
     def do_show(self, context, option=None):
         "usage: show [all | <option>]"
