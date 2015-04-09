@@ -213,13 +213,11 @@ time2str() {
 }
 # try to figure out where pacemaker ... etc
 get_pe_state_dir() {
-	PE_STATE_DIR=`strings $CRM_DAEMON_DIR/pengine |
-		awk 'NF==1&&/var\/lib\/.*pengine$/'`
+	PE_STATE_DIR=`python -c "import crmsh.config; print crmsh.config.path.pe_state_dir"`
 	test -d "$PE_STATE_DIR"
 }
 get_cib_dir() {
-	CIB_DIR=`strings $CRM_DAEMON_DIR/crmd |
-		awk 'NF==1&&/var\/lib\/.*(cib|crm)$/'`
+	CIB_DIR=`python -c "import crmsh.config; print crmsh.config.path.crm_config"`
 	test -d "$CIB_DIR"
 }
 get_pe_state_dir2() {
