@@ -841,6 +841,16 @@ def is_process(s):
     return proc.returncode == 0
 
 
+def print_stacktrace():
+    """
+    Print the stack at the site of call
+    """
+    import traceback
+    import inspect
+    sf = inspect.currentframe().f_back.f_back
+    traceback.print_stack(sf)
+
+
 @memoize
 def cluster_stack():
     if is_process("heartbeat:.[m]aster"):
