@@ -619,12 +619,8 @@ class CibConfig(command.UI):
     def do_upgrade(self, context, force=None):
         "usage: upgrade [force]"
         if force and force != "force":
-            syntax_err((context.get_command_name(), force))
-            return False
-        if config.core.force or force:
-            return cib_factory.upgrade_cib_06to10(True)
-        else:
-            return cib_factory.upgrade_cib_06to10()
+            context.fatal_error("Expected 'force' or no argument")
+        return cib_factory.upgrade_validate_with(force=config.core.force or force)
 
     @command.skill_level('administrator')
     def do_schema(self, context, schema_st=None):

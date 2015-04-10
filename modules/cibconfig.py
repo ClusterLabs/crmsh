@@ -2226,8 +2226,13 @@ class CibFactory(object):
         cib_ver_unsupported_err(validator, req)
         return False
 
-    def upgrade_cib_06to10(self, force=False):
-        'Upgrade the CIB from 0.6 to 1.0.'
+    def upgrade_validate_with(self, force=False):
+        """Upgrade the CIB.
+
+        Requires the force argument to be set if
+        validate-with is configured to anything other than
+        0.6.
+        """
         if not self.is_cib_sane():
             return False
         validator = self.cib_elem.get("validate-with")
