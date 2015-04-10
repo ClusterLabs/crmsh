@@ -167,16 +167,16 @@ def multi_input(prompt=''):
 
 
 def verify_boolean(opt):
-    return opt.lower() in ("yes", "true", "on") or \
-        opt.lower() in ("no", "false", "off")
+    return opt.lower() in ("yes", "true", "on", "1") or \
+        opt.lower() in ("no", "false", "off", "0")
 
 
 def is_boolean_true(opt):
-    return opt.lower() in ("yes", "true", "on")
+    return opt.lower() in ("yes", "true", "on", "1")
 
 
 def is_boolean_false(opt):
-    return opt.lower() in ("no", "false", "off")
+    return opt.lower() in ("no", "false", "off", "0")
 
 
 def get_boolean(opt, dflt=False):
