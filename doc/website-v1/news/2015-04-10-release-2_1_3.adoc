@@ -1,0 +1,68 @@
+Announcing crmsh stable release 2.1.3
+=====================================
+:Author: Kristoffer Gronlund
+:Email: kgronlund@suse.com
+:Date: 2015-04-10 12:30
+
+Today we are proud to announce the release of `crmsh` version 2.1.3!
+This version fixes all known issues found since the release of `crmsh`
+2.1.2 in January. We recommend that all users of crmsh upgrade 
+to this version, especially if using Pacemaker 1.1.12 or newer.
+
+A massive thank you to everyone who has helped out with bug fixes,
+comments and contributions for this release!
+
+For a complete list of changes since the previous version, please
+refer to the changelog:
+
+* https://github.com/crmsh/crmsh/blob/2.1.3/ChangeLog
+
+Packages for several popular Linux distributions can be downloaded
+from the Stable repository at the OBS:
+
+* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/
+
+Archives of the tagged release:
+
+* https://github.com/crmsh/crmsh/archive/2.1.3.tar.gz
+* https://github.com/crmsh/crmsh/archive/2.1.3.zip
+
+Changes since the previous release:
+
+ - medium: parse: nvpair attributes with no value = <nvpair name=".."/> (#71)
+ - doc: Add link to clusterlabs.org
+ - medium: report: Convert RE exception to simpler UI output
+ - medium: report: Include transitions with configuration changes (bnc#917131)
+ - medium: config: Fix case-sensitivity for booleans
+ - medium: ra: Handle non-OCF agent meta-data better
+ - Medium: cibconf: preserve cib user attributes
+ - low: cibconfig: Improved debug output when schema change fails
+ - medium: parse: Treat pacemaker-next schema as 2.0+
+ - medium: schema: Test if node type is optional via schema
+ - medium: schema: Remove extra debug output
+ - low: pacemaker: Remove debug output
+ - medium: cibconfig: If a change results in no diff, exit silently
+ - medium: cibconfig: Allow delete of objects that don't exist without returning error code
+ - medium: cibconfig: Allow removal of non-existing elements if --force is set
+ - low: allow (0,1) as option booleans
+ - low: allow pacemaker 1.0 version detection
+ - Low: hb_report: add -Q to usage
+ - Low: hb_report: add -X option for extra ssh options
+ - doc: Move the main crmsh repository to the ClusterLabs organization on github
+ - high: ui_configure: Remove acl_group command (bnc#921056)
+ - high: cibconfig: Don't delete valid tickets when removing referenced objects (bnc#922039)
+ - high: ui_context: Wait for DC after commit, not before (#85)
+ - medium: templates: Clearer descriptions for editing templates (boo#921028)
+ - high: cibconfig: Derive id for ops from referenced resource name (boo#921028)
+ - medium: ui_template: Always generate id unless explicitly defined (boo#921028)
+ - low: template: Add 'new <template>' shortcut
+ - medium: ui_template: Make new command more robust (bnc#924641)
+ - medium: parse: Disallow location rules without resources
+ - high: parse: Don't allow constraints without applicants
+ - medium: cliformat: Escape double-quotes in nvpair values
+ - low: hb_report: Use crmsh config to find pengine/cib dirs (bsc#926377)
+ - low: main: Catch any ValueErrors that may leak through
+
+Thank you,
+
+Kristoffer and Dejan
