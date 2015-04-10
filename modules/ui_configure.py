@@ -313,6 +313,38 @@ class CibConfig(command.UI):
         set_obj = mkset_obj(*args)
         return set_obj.show()
 
+    @command.name("show-property")
+    @command.alias("show_property")
+    @command.skill_level('administrator')
+    @command.completers_repeating(compl.call(ra.get_properties_list))
+    def do_show_property(self, context, *args):
+        "usage: show-property [-t|--true [<name>...]"
+        properties = [a for a in args if a not in ('-t', '--true')]
+        truth = any(a for a in args if a in ('-t', '--true'))
+
+        if not properties:
+            utils.multicolumn(ra.get_properties_list())
+            return
+
+        def print_value(v):
+            if truth:
+                print utils.canonical_boolean(v)
+            else:
+                print v
+        for p in properties:
+            v = cib_factory.get_property(p)
+            if v is None:
+                try:
+                    v = ra.get_properties_meta().param_default(p)
+                except:
+                    pass
+            if v is not None:
+                print_value(v)
+            elif truth:
+                print "false"
+            else:
+                context.fatal_error("%s: Property not set" % (p))
+
     @command.skill_level('administrator')
     @command.completers_repeating(compl.null, _id_xml_list, _id_list)
     def do_filter(self, context, filterprog, *args):

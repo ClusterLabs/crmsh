@@ -2040,10 +2040,10 @@ cib_piped = "cibadmin -p"
 
 def get_default_timeout():
     t = cib_factory.get_op_default("timeout")
-    if t:
+    if t is not None:
         return t
     t = cib_factory.get_property("default-action-timeout")
-    if t:
+    if t is not None:
         return t
     try:
         return get_pe_meta().param_default("default-action-timeout")
