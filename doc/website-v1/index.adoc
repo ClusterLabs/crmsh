@@ -16,4 +16,9 @@ view of what your cluster is doing.
 
 For more information, see the link:/documentation[Documentation]!
 
+**Quick Links**:
 
+* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/[Stable Release Binaries]
+* http://download.opensuse.org/repositories/network:/ha-clustering:/Factory/[Development Snapshots]
+* https://github.com/ClusterLabs/crmsh/[Source Repository]
+* http://crmsh.github.io/man/[Manual]
