@@ -33,6 +33,7 @@ def parse_args(outdir, errdir, t=_DEFAULT_TIMEOUT):
     opts = Options()
     opts.timeout = t
     opts.quiet = True
+    opts.inline = False
     opts.outdir = outdir
     opts.errdir = errdir
     return opts

@@ -259,6 +259,7 @@ def param_completion_list(name):
 def _make_options(params):
     "Setup pssh options."
     opts = pssh.Options()
+    opts.inline = True
     opts.timeout = int(params['timeout'])
     opts.recursive = True
     opts.ssh_options += [
