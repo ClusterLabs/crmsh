@@ -16,10 +16,10 @@
 #
 # unit tests for parse.py
 
-import parse
+from crmsh import parse
 import unittest
 import shlex
-from utils import lines2cli
+from crmsh.utils import lines2cli
 from lxml import etree
 from nose.tools import ok_, eq_
 

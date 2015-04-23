@@ -18,14 +18,14 @@
 import shlex
 import re
 from lxml import etree
-import constants
-from ra import disambiguate_ra_type, ra_type_validate
-import schema
-from utils import keyword_cmp, verify_boolean, lines2cli
-from utils import get_boolean, olist, canonical_boolean
-from msg import common_err, syntax_err
-import xmlbuilder
-import xmlutil
+from . import constants
+from .ra import disambiguate_ra_type, ra_type_validate
+from . import schema
+from .utils import keyword_cmp, verify_boolean, lines2cli
+from .utils import get_boolean, olist, canonical_boolean
+from .msg import common_err, syntax_err
+from . import xmlbuilder
+from . import xmlutil
 
 
 class ParseError(Exception):
@@ -335,7 +335,7 @@ class RuleParser(BaseParser):
         if matchname is False, matches:
         <n>=<v> <n>=<v> ...
         """
-        from cibconfig import cib_factory
+        from .cibconfig import cib_factory
 
         self.match(name)
         xmlid = None
@@ -376,7 +376,7 @@ class RuleParser(BaseParser):
 
     def match_rules(self):
         '''parse rule definitions'''
-        from cibconfig import cib_factory
+        from .cibconfig import cib_factory
 
         rules = []
         while self.try_match('rule'):
@@ -604,7 +604,7 @@ class ResourceParser(RuleParser):
         out.append(node)
 
     def match_operations(self, out, match_id):
-        from cibconfig import cib_factory
+        from .cibconfig import cib_factory
 
         def is_op():
             return self.has_tokens() and self.current_token().lower() == 'op'
@@ -951,7 +951,7 @@ class PropertyParser(RuleParser):
         return ('property', 'rsc_defaults', 'op_defaults')
 
     def parse(self, cmd):
-        from cibconfig import cib_factory
+        from .cibconfig import cib_factory
 
         setmap = {'property': 'cluster_property_set',
                   'rsc_defaults': 'meta_attributes',
@@ -1010,7 +1010,7 @@ class FencingOrderParser(BaseParser):
     def _postprocess_levels(self, raw_levels):
         from collections import defaultdict
         from itertools import repeat
-        from cibconfig import cib_factory
+        from .cibconfig import cib_factory
         if raw_levels[0][0] == "@@":
             def node_levels():
                 for node in cib_factory.node_id_list():

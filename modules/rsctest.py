@@ -17,9 +17,9 @@
 
 import os
 import sys
-from msg import common_err, common_debug, common_warn, common_info
-from utils import rmdir_r, quote, this_node, ext_cmd
-from xmlutil import get_topmost_rsc, get_op_timeout, get_child_nvset_node, is_ms, is_cloned
+from .msg import common_err, common_debug, common_warn, common_info
+from .utils import rmdir_r, quote, this_node, ext_cmd
+from .xmlutil import get_topmost_rsc, get_op_timeout, get_child_nvset_node, is_ms, is_cloned
 
 
 #
@@ -147,7 +147,7 @@ class RADriver(object):
         '''
         Execute an operation.
         '''
-        from crm_pssh import show_output
+        from .crm_pssh import show_output
         sys.stderr.write("host %s (%s)\n" %
                          (host, self.explain_op_status(host)))
         show_output(self.errdir, (host,), "stderr")
@@ -184,7 +184,7 @@ class RADriver(object):
         if local_only:
             self.ec_l[this_node()] = ext_cmd(cmd)
         else:
-            from crm_pssh import do_pssh_cmd
+            from .crm_pssh import do_pssh_cmd
             statuses = do_pssh_cmd(cmd, nodes, self.outdir, self.errdir, self.timeout)
             for i in range(len(nodes)):
                 try:
@@ -445,7 +445,7 @@ def test_resources(resources, nodes, all_nodes):
         return True
 
     try:
-        import crm_pssh
+        from . import crm_pssh
     except ImportError:
         common_err("Parallax SSH not installed, rsctest can not be executed")
         return False
@@ -471,7 +471,7 @@ def call_resource(rsc, cmd, nodes, local_only):
         return False
     d = ra_driver[ra_class](rsc, [])
 
-    import ra
+    from . import ra
     agent = ra.get_ra(rsc)
     actions = agent.actions().keys() + ['meta-data', 'validate-all']
 

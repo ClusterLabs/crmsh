@@ -17,11 +17,12 @@
 #
 
 import os
-import utils
-import config
-import options
 import subprocess
 from signal import signal, SIGPIPE, SIG_DFL
+
+from . import utils
+from . import config
+from . import options
 
 
 def create_report(context, args):

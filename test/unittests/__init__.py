@@ -1,6 +1,14 @@
 import os
-import msg
-import config
+import sys
+
+try:
+    import modules
+    sys.modules['crmsh'] = sys.modules['modules']
+except ImportError, e:
+    pass
+
+from crmsh import msg
+from crmsh import config
 msg.ERR_STREAM = None
 config.core.debug = True
 _here = os.path.dirname(__file__)
@@ -9,7 +17,7 @@ config.path.crm_dtd_dir = os.path.join(_here, "schemas")
 
 
 # install a basic CIB
-import cibconfig
+from crmsh import cibconfig
 
 _CIB = """
 <cib epoch="0" num_updates="0" admin_epoch="0" validate-with="pacemaker-1.2" cib-last-written="Mon Mar  3 23:58:36 2014" update-origin="ha-one" update-client="crmd" update-user="hacluster" crm_feature_set="3.0.9" have-quorum="1" dc-uuid="1">
@@ -52,3 +60,4 @@ _CIB = """
 """
 
 cibconfig.cib_factory.initialize(cib=_CIB)
+

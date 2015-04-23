@@ -24,7 +24,7 @@ import shutil
 import atexit
 from tempfile import mkstemp, mkdtemp
 
-import utils
+from . import utils
 
 _FILES = []
 _DIRS = []

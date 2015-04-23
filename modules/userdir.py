@@ -54,7 +54,7 @@ def mv_user_files():
     global CRMCONF_DIR
 
     def _xdg_file(name, xdg_name, chk_fun, directory):
-        from msg import common_warn, common_info, common_debug
+        from .msg import common_warn, common_info, common_debug
         if not name:
             return name
         if not os.path.isdir(directory):

@@ -15,10 +15,10 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-import constants
+from . import constants
 import copy
-from msg import common_error, id_used_err
-import xmlutil
+from .msg import common_error, id_used_err
+from . import xmlutil
 
 
 '''

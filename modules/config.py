@@ -21,7 +21,7 @@ Holds user-configurable options.
 import os
 import re
 import ConfigParser
-import userdir
+from . import userdir
 
 
 _SYSTEMWIDE = '/etc/crm/crm.conf'

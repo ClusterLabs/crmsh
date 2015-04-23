@@ -20,17 +20,17 @@ import os
 import atexit
 import random
 
-import config
-import options
-import constants
-from msg import err_buf, common_err
-import clidisplay
-import term
-import utils
-import userdir
+from . import config
+from . import options
+from . import constants
+from .msg import err_buf, common_err
+from . import clidisplay
+from . import term
+from . import utils
+from . import userdir
 
-import ui_root
-import ui_context
+from . import ui_root
+from . import ui_context
 
 
 random.seed()

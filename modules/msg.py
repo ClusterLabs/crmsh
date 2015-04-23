@@ -17,9 +17,9 @@
 
 import sys
 from lxml import etree
-import config
-import clidisplay
-import options
+from . import config
+from . import clidisplay
+from . import options
 
 ERR_STREAM = sys.stderr
 
@@ -30,7 +30,7 @@ class ErrorBuffer(object):
     '''
     def __init__(self):
         try:
-            import term
+            from . import term
             self._term = term
         except:
             self._term = None

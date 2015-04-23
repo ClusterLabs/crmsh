@@ -21,20 +21,20 @@ import sys
 import time
 import re
 import bz2
-import config
-import command
-import completers as compl
-import utils
-import ui_utils
-import userdir
-import xmlutil
-import constants
-import options
-from cibconfig import mkset_obj, cib_factory
-from msg import common_err, common_debug, common_info
-from msg import syntax_err, bad_usage
-import report
-import cmd_status
+from . import config
+from . import command
+from . import completers as compl
+from . import utils
+from . import ui_utils
+from . import userdir
+from . import xmlutil
+from . import constants
+from . import options
+from .cibconfig import mkset_obj, cib_factory
+from .msg import common_err, common_debug, common_info
+from .msg import syntax_err, bad_usage
+from . import report
+from . import cmd_status
 
 
 ptest_options = ["@v+", "nograph", "scores", "actions", "utilization"]

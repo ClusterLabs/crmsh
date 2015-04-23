@@ -16,8 +16,8 @@
 #
 
 import re
-import utils
-from msg import err_buf
+from . import utils
+from .msg import err_buf
 
 
 cib_verify = "crm_verify --verbose -p"

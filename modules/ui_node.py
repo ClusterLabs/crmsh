@@ -16,15 +16,15 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import config
-import command
-import completers as compl
-import ui_utils
-import utils
-import xmlutil
-from msg import common_err, syntax_err, no_prog_err, common_info, common_warn
-from cliformat import cli_nvpairs, nvpairs2list
-import term
+from . import config
+from . import command
+from . import completers as compl
+from . import ui_utils
+from . import utils
+from . import xmlutil
+from .msg import common_err, syntax_err, no_prog_err, common_info, common_warn
+from .cliformat import cli_nvpairs, nvpairs2list
+from . import term
 
 
 def _oneline(s):

@@ -16,12 +16,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import command
-import completers as compl
-import utils
-import ui_utils
-import constants
-from cibstatus import cib_status
+from . import command
+from . import completers as compl
+from . import utils
+from . import ui_utils
+from . import constants
+from .cibstatus import cib_status
 
 
 _status_node_list = compl.call(cib_status.status_node_list)

@@ -17,11 +17,11 @@
 #
 
 import time
-import command
-import completers as compl
-import config
-import utils
-from msg import no_prog_err
+from . import command
+from . import completers as compl
+from . import config
+from . import utils
+from .msg import no_prog_err
 
 _ticket_commands = {
     'grant': "%s -t '%s' -g",

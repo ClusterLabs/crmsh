@@ -22,10 +22,10 @@ import os
 import shutil
 import getpass
 import subprocess
-import config
-import options
-from msg import err_buf
-import userdir
+from . import config
+from . import options
+from .msg import err_buf
+from . import userdir
 
 try:
     import parallax as pssh
@@ -33,7 +33,7 @@ try:
 except ImportError:
     has_pssh = False
 
-import utils
+from . import utils
 
 try:
     import json
@@ -206,7 +206,7 @@ def describe(name):
     Prints information about the given script.
     '''
     script = load_script(name)
-    from help import HelpEntry
+    from .help import HelpEntry
 
     def rewrap(txt):
         import textwrap

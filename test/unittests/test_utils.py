@@ -18,8 +18,8 @@
 
 import os
 from itertools import chain
-import utils
-import config
+from crmsh import utils
+from crmsh import config
 
 
 def test_systeminfo():

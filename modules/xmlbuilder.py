@@ -16,7 +16,7 @@
 #
 
 from lxml import etree
-import constants
+from . import constants
 
 
 def new(tag, **attributes):

@@ -18,19 +18,19 @@
 
 import os
 import glob
-import command
-import xmlutil
-import utils
-import ui_cibstatus
-import constants
-import config
-import options
-from msg import no_prog_err
-from cibstatus import cib_status
-from cibconfig import cib_factory
-import tmpfiles
+from . import command
+from . import xmlutil
+from . import utils
+from . import ui_cibstatus
+from . import constants
+from . import config
+from . import options
+from .msg import no_prog_err
+from .cibstatus import cib_status
+from .cibconfig import cib_factory
+from . import tmpfiles
 
-import completers as compl
+from . import completers as compl
 
 _NEWARGS = ('force', '--force', 'withstatus', 'empty')
 

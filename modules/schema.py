@@ -15,10 +15,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import config
+from . import config
 import re
-from pacemaker import CrmSchema, PacemakerError
-from msg import common_err
+from .pacemaker import CrmSchema, PacemakerError
+from .msg import common_err
 
 
 def is_supported(name):

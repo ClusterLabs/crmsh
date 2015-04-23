@@ -31,21 +31,21 @@
 #   This is so that crmsh can be installed with minimal prereqs,
 #   and use cluster sublevel to install all requirements
 
-import command
-import cmd_status
-import ui_cib
-import ui_cluster
-import ui_configure
-import ui_corosync
-import ui_history
-import ui_maintenance
-import ui_node
-import ui_options
-import ui_ra
-import ui_report
-import ui_resource
-import ui_script
-import ui_site
+from . import command
+from . import cmd_status
+from . import ui_cib
+from . import ui_cluster
+from . import ui_configure
+from . import ui_corosync
+from . import ui_history
+from . import ui_maintenance
+from . import ui_node
+from . import ui_options
+from . import ui_ra
+from . import ui_report
+from . import ui_resource
+from . import ui_script
+from . import ui_site
 
 
 class Root(command.UI):

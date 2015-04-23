@@ -16,18 +16,18 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import command
-import completers as compl
-import constants
-import config
-import utils
-import xmlutil
-import ui_utils
-import options
+from . import command
+from . import completers as compl
+from . import constants
+from . import config
+from . import utils
+from . import xmlutil
+from . import ui_utils
+from . import options
 
-from msg import common_error, common_err, common_info, common_debug
-from msg import no_prog_err
-from cibconfig import cib_factory
+from .msg import common_error, common_err, common_info, common_debug
+from .msg import no_prog_err
+from .cibconfig import cib_factory
 
 
 def rm_meta_attribute(node, attr, l, force_children=False):

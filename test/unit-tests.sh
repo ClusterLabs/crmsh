@@ -1,13 +1,13 @@
 #!/bin/sh
 case `pwd` in
 	*/test/unittests)
-		PYTHONPATH=../../modules nosetests -w . "$@"
+		PYTHONPATH=../.. nosetests . "$@"
 		;;
 	*/test)
-		PYTHONPATH=../modules nosetests -w unittests "$@"
+		PYTHONPATH=.. nosetests unittests "$@"
 		;;
 	*)
-		PYTHONPATH=modules nosetests -w test/unittests "$@"
+		PYTHONPATH=. nosetests test/unittests "$@"
 		;;
 esac
 

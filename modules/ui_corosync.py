@@ -16,11 +16,11 @@
 #
 
 import os
-import command
-import completers
-import utils
-from msg import err_buf
-import corosync
+from . import command
+from . import completers
+from . import utils
+from .msg import err_buf
+from . import corosync
 
 
 def _push_completer(args):

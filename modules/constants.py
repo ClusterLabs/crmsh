@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from ordereddict import odict
+from .ordereddict import odict
 
 
 cib_cli_map = {

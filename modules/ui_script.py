@@ -15,10 +15,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import command
-import scripts
+from . import command
+from . import scripts
 
-from msg import err_buf
+from .msg import err_buf
 
 
 class Script(command.UI):

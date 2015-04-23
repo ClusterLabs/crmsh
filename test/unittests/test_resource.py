@@ -15,8 +15,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
-import ui_resource
-import utils
+from crmsh import ui_resource
+from crmsh import utils
 
 
 def test_maintenance():

@@ -21,9 +21,9 @@
 #   inside the functions.
 
 import inspect
-import help as help_module
-import ui_utils
-from msg import common_debug
+from . import help as help_module
+from . import ui_utils
+from .msg import common_debug
 
 
 def name(n):

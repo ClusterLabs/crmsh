@@ -17,12 +17,12 @@
 
 import shlex
 import sys
-import config
-import utils
-import options
-from msg import common_err, common_info, common_warn
-import ui_utils
-import userdir
+from . import config
+from . import utils
+from . import options
+from .msg import common_err, common_info, common_warn
+from . import ui_utils
+from . import userdir
 
 
 #import logging

@@ -15,11 +15,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import utils
-import command
-import completers as compl
-import xmlutil
-from cibconfig import cib_factory
+from . import utils
+from . import command
+from . import completers as compl
+from . import xmlutil
+from .cibconfig import cib_factory
 
 
 def rmattrs(e, *attrs):

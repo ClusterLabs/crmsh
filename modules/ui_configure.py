@@ -17,30 +17,30 @@
 #
 
 import time
-import command
-import completers as compl
-import config
-import utils
-import constants
-import userdir
-import xmlutil
-import ra
-from cibconfig import mkset_obj, cib_factory
-import clidisplay
-import term
-import options
-from msg import common_err, common_info, common_warn
-from msg import err_buf, syntax_err
-import rsctest
-import schema
-import ui_cib
-import ui_cibstatus
-import ui_ra
-import ui_template
-import ui_history
-import ui_utils
-import ui_assist
-from crm_gv import gv_types
+from . import command
+from . import completers as compl
+from . import config
+from . import utils
+from . import constants
+from . import userdir
+from . import xmlutil
+from . import ra
+from .cibconfig import mkset_obj, cib_factory
+from . import clidisplay
+from . import term
+from . import options
+from .msg import common_err, common_info, common_warn
+from .msg import err_buf, syntax_err
+from . import rsctest
+from . import schema
+from . import ui_cib
+from . import ui_cibstatus
+from . import ui_ra
+from . import ui_template
+from . import ui_history
+from . import ui_utils
+from . import ui_assist
+from .crm_gv import gv_types
 
 
 def _type_completions():
@@ -313,8 +313,8 @@ class CibConfig(command.UI):
         set_obj = mkset_obj(*args)
         return set_obj.show()
 
-    @command.name("show-property")
-    @command.alias("show_property")
+    @command.name("show_property")
+    @command.alias("show-property")
     @command.skill_level('administrator')
     @command.completers_repeating(compl.call(ra.get_properties_list))
     def do_show_property(self, context, *args):
@@ -512,7 +512,7 @@ class CibConfig(command.UI):
     def _stop_if_running(self, rscs):
         rscstate = xmlutil.RscState()
         to_stop = [rsc for rsc in rscs if rscstate.is_running(rsc)]
-        from ui_resource import set_deep_meta_attr
+        from .ui_resource import set_deep_meta_attr
         if len(to_stop) > 0:
             ok = all(set_deep_meta_attr(rsc, 'target-role', 'Stopped',
                                         commit=False) for rsc in to_stop)

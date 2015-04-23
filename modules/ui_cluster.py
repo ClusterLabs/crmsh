@@ -16,11 +16,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import command
-import utils
-from msg import err_buf
-import scripts
-import completers as compl
+from . import command
+from . import utils
+from .msg import err_buf
+from . import scripts
+from . import completers as compl
 
 
 def _remove_completer(args):
@@ -194,7 +194,7 @@ class Cluster(command.UI):
         Execute the given command on all nodes, report outcome
         '''
         try:
-            from psshlib import api as pssh
+            import parallax as pssh
             _has_pssh = True
         except ImportError:
             _has_pssh = False

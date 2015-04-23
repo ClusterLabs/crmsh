@@ -17,7 +17,7 @@
 
 # Helper completers
 
-import xmlutil
+from . import xmlutil
 
 
 def choice(lst):

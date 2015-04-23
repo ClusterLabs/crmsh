@@ -22,16 +22,16 @@ import copy
 import bz2
 from collections import defaultdict
 
-import config
-import options
-import schema
-import constants
-from msg import common_err, common_error, common_debug, cib_parse_err, err_buf
-import userdir
-import utils
-from utils import add_sudo, str2file, str2tmp, get_boolean
-from utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
-from utils import olist, get_cib_in_use, get_tempdir
+from . import config
+from . import options
+from . import schema
+from . import constants
+from .msg import common_err, common_error, common_debug, cib_parse_err, err_buf
+from . import userdir
+from . import utils
+from .utils import add_sudo, str2file, str2tmp, get_boolean
+from .utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
+from .utils import olist, get_cib_in_use, get_tempdir
 
 
 def xmlparse(f):
@@ -1189,7 +1189,7 @@ def set_attr(e, attr, value):
     '''
     nvpair = get_attr_in_set(e, attr)
     if nvpair is None:
-        import idmgmt
+        from . import idmgmt
         nvpair = etree.SubElement(e, "nvpair", id="", name=attr, value=value)
         nvpair.set("id", idmgmt.new(nvpair, e.get("id")))
     else:
@@ -1205,7 +1205,7 @@ def get_set_nodes(e, setname, create=False):
     if l:
         return l
     if create:
-        import idmgmt
+        from . import idmgmt
         elem = etree.SubElement(e, setname, id="")
         elem.set("id", idmgmt.new(elem, e.get("id")))
         l.append(elem)

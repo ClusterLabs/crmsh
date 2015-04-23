@@ -16,12 +16,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import command
-import completers as compl
-import utils
-import ra
-import constants
-import options
+from . import command
+from . import completers as compl
+from . import utils
+from . import ra
+from . import constants
+from . import options
 
 
 def complete_class_provider_type(args):

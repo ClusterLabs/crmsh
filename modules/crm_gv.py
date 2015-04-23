@@ -15,11 +15,11 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-import config
-import tmpfiles
-import utils
-from msg import common_err
-from ordereddict import odict
+from . import config
+from . import tmpfiles
+from . import utils
+from .msg import common_err
+from .ordereddict import odict
 
 # graphviz stuff
 

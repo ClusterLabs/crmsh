@@ -16,9 +16,9 @@
 #
 # unit tests for cliformat.py
 
-import cibconfig
+from crmsh import cibconfig
 from lxml import etree
-from test_parse import MockValidation
+from .test_parse import MockValidation
 from nose.tools import eq_
 
 factory = cibconfig.cib_factory

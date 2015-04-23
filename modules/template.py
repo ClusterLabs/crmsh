@@ -17,9 +17,9 @@
 
 import os
 import re
-import config
-import userdir
-from msg import common_err, common_info, common_warn
+from . import config
+from . import userdir
+from .msg import common_err, common_info, common_warn
 
 
 def get_var(l, key):

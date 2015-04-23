@@ -23,45 +23,45 @@ import re
 import fnmatch
 import time
 from collections import defaultdict
-import config
-import options
-import constants
-import tmpfiles
-from parse import CliParser
-import clidisplay
-from cibstatus import cib_status
-import idmgmt
-from ra import get_ra, get_properties_list, get_pe_meta
-import schema
-from crm_gv import gv_types
-from msg import common_warn, common_err, common_debug, common_info, err_buf
-from msg import common_error, constraint_norefobj_err, cib_parse_err, no_object_err
-from msg import missing_obj_err, common_warning, update_err, unsupported_err, empty_cib_err
-from msg import invalid_id_err, cib_ver_unsupported_err
-import utils
-from utils import ext_cmd, safe_open_w, pipe_string, safe_close_w, crm_msec
-from utils import ask, lines2cli, olist
-from utils import page_string, cibadmin_can_patch, str2tmp
-from utils import run_ptest, is_id_valid, edit_file, get_boolean, filter_string
-from ordereddict import odict
-from orderedset import oset
-from xmlutil import is_child_rsc, rsc_constraint, sanitize_cib, rename_id, get_interesting_nodes
-from xmlutil import is_pref_location, get_topnode, new_cib, get_rscop_defaults_meta_node
-from xmlutil import rename_rscref, is_ms, silly_constraint, is_container, fix_comments
-from xmlutil import sanity_check_nvpairs, merge_nodes, op2list, mk_rsc_type, is_resource
-from xmlutil import stuff_comments, is_comment, is_constraint, read_cib, processing_sort_cli
-from xmlutil import find_operation, get_rsc_children_ids, is_primitive, referenced_resources
-from xmlutil import cibdump2elem, processing_sort, get_rsc_ref_ids, merge_tmpl_into_prim
-from xmlutil import remove_id_used_attributes, get_top_cib_nodes
-from xmlutil import merge_attributes, is_cib_element, sanity_check_meta
-from xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
-from xmlutil import get_rsc_operations, delete_rscref, xml_equals, lookup_node, RscState
-from xmlutil import cibtext2elem, is_related
-from cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
-from cliformat import cli_nvpair, cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
-from cliformat import cli_operations, simple_rsc_constraint, cli_rule, cli_format
-from cliformat import cli_acl_role, cli_acl_permission
-import cibverify
+from . import config
+from . import options
+from . import constants
+from . import tmpfiles
+from .parse import CliParser
+from . import clidisplay
+from .cibstatus import cib_status
+from . import idmgmt
+from .ra import get_ra, get_properties_list, get_pe_meta
+from . import schema
+from .crm_gv import gv_types
+from .msg import common_warn, common_err, common_debug, common_info, err_buf
+from .msg import common_error, constraint_norefobj_err, cib_parse_err, no_object_err
+from .msg import missing_obj_err, common_warning, update_err, unsupported_err, empty_cib_err
+from .msg import invalid_id_err, cib_ver_unsupported_err
+from . import utils
+from .utils import ext_cmd, safe_open_w, pipe_string, safe_close_w, crm_msec
+from .utils import ask, lines2cli, olist
+from .utils import page_string, cibadmin_can_patch, str2tmp
+from .utils import run_ptest, is_id_valid, edit_file, get_boolean, filter_string
+from .ordereddict import odict
+from .orderedset import oset
+from .xmlutil import is_child_rsc, rsc_constraint, sanitize_cib, rename_id, get_interesting_nodes
+from .xmlutil import is_pref_location, get_topnode, new_cib, get_rscop_defaults_meta_node
+from .xmlutil import rename_rscref, is_ms, silly_constraint, is_container, fix_comments
+from .xmlutil import sanity_check_nvpairs, merge_nodes, op2list, mk_rsc_type, is_resource
+from .xmlutil import stuff_comments, is_comment, is_constraint, read_cib, processing_sort_cli
+from .xmlutil import find_operation, get_rsc_children_ids, is_primitive, referenced_resources
+from .xmlutil import cibdump2elem, processing_sort, get_rsc_ref_ids, merge_tmpl_into_prim
+from .xmlutil import remove_id_used_attributes, get_top_cib_nodes
+from .xmlutil import merge_attributes, is_cib_element, sanity_check_meta
+from .xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
+from .xmlutil import get_rsc_operations, delete_rscref, xml_equals, lookup_node, RscState
+from .xmlutil import cibtext2elem, is_related
+from .cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
+from .cliformat import cli_nvpair, cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
+from .cliformat import cli_operations, simple_rsc_constraint, cli_rule, cli_format
+from .cliformat import cli_acl_role, cli_acl_permission
+from . import cibverify
 
 
 def show_unrecognized_elems(cib_elem):

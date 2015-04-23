@@ -18,8 +18,8 @@
 
 import re
 import inspect
-from msg import bad_usage, common_err
-import utils
+from .msg import bad_usage, common_err
+from . import utils
 
 
 def _get_attr_cmd(attr_ext_commands, subcmd):
@@ -98,7 +98,7 @@ def graph_args(args):
         configure graph [<gtype> [<file> [<img_format>]]]
         history graph <pe> [<gtype> [<file> [<img_format>]]]
     '''
-    from crm_gv import gv_types
+    from .crm_gv import gv_types
     gtype, outf, ftype = None, None, None
     try:
         gtype = args[0]

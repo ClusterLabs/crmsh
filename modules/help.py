@@ -41,11 +41,11 @@ Help for the level itself is like this:
 
 import os
 import re
-from utils import page_string
-from msg import common_err
-import config
-import clidisplay
-from ordereddict import odict
+from .utils import page_string
+from .msg import common_err
+from . import config
+from . import clidisplay
+from .ordereddict import odict
 
 
 class HelpFilter(object):
@@ -206,7 +206,7 @@ def help_level(level):
     Returns a help entry for a given level.
     '''
     _load_help()
-    from command import fuzzy_get
+    from .command import fuzzy_get
     return fuzzy_get(_LEVELS, level) or _DEFAULT
 
 
@@ -215,7 +215,7 @@ def help_command(level, command):
     Returns a help entry for a given command
     '''
     _load_help()
-    from command import fuzzy_get
+    from .command import fuzzy_get
     lvlhelp = fuzzy_get(_COMMANDS, level)
     if not lvlhelp:
         raise ValueError("Undocumented topic '%s'" % (level))
@@ -230,12 +230,12 @@ def _is_help_topic(arg):
 
 
 def _is_command(level, command):
-    from command import fuzzy_get
+    from .command import fuzzy_get
     return level in _COMMANDS and fuzzy_get(_COMMANDS[level], command)
 
 
 def _is_level(level):
-    from command import fuzzy_get
+    from .command import fuzzy_get
     return fuzzy_get(_LEVELS, level)
 
 
@@ -256,7 +256,7 @@ def help_contextual(context, subject, subtopic):
         return help_command(context, subject)
     if _is_level(subject):
         return help_level(subject)
-    from command import fuzzy_get
+    from .command import fuzzy_get
     t = fuzzy_get(_TOPICS, subject.lower())
     if t:
         return t
@@ -378,7 +378,7 @@ def _load_help():
                     add_help_for_alias(lvl.name, info.name, alias)
                 if info.level:
                     add_aliases_for_level(info.level)
-        from ui_root import Root
+        from .ui_root import Root
         add_aliases_for_level(Root)
 
     def fixup_topics():

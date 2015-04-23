@@ -21,10 +21,10 @@ configuration file, and also the corosync-* utilities.
 
 import os
 import re
-import utils
-import tmpfiles
 import socket
-from msg import err_buf, common_debug
+from . import utils
+from . import tmpfiles
+from .msg import err_buf, common_debug
 
 
 def conf():

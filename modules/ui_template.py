@@ -19,17 +19,17 @@
 import os
 import re
 import shlex
-import command
-import completers as compl
-import utils
-import config
-import userdir
-import options
-from template import LoadTemplate
-from cliformat import cli_format
-from cibconfig import mkset_obj, cib_factory
-from msg import common_err, common_warn
-from msg import syntax_err, err_buf
+from . import command
+from . import completers as compl
+from . import utils
+from . import config
+from . import userdir
+from . import options
+from .template import LoadTemplate
+from .cliformat import cli_format
+from .cibconfig import mkset_obj, cib_factory
+from .msg import common_err, common_warn
+from .msg import syntax_err, err_buf
 
 
 def check_transition(inp, state, possible_l):

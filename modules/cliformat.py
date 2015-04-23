@@ -15,10 +15,10 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-import constants
-import clidisplay
-import utils
-import xmlutil
+from . import constants
+from . import clidisplay
+from . import utils
+from . import xmlutil
 
 
 #
@@ -77,7 +77,7 @@ def cli_operations(node, break_lines=True):
 
 def cli_nvpair(nvp):
     'Converts an nvpair tag or a (name, value) pair to CLI syntax'
-    from cibconfig import cib_factory
+    from .cibconfig import cib_factory
     nodeid = nvp.get('id')
     idref = nvp.get('id-ref')
     name = nvp.get('name')
@@ -104,7 +104,7 @@ def nvpairs2list(node, add_id=False):
     long and therefore obscure the relevant content. For some
     elements, however, they are included (e.g. properties).
     '''
-    import xmlbuilder
+    from . import xmlbuilder
 
     ret = []
     if 'id-ref' in node:
@@ -223,7 +223,7 @@ def cli_exprs(node):
 
 
 def cli_rule(node):
-    from cibconfig import cib_factory
+    from .cibconfig import cib_factory
     s = []
     node_id = node.get("id")
     if node_id and cib_factory.is_id_refd(node.tag, node_id):

@@ -19,7 +19,7 @@
 Display output for various syntax elements.
 """
 
-import config
+from . import config
 
 
 # Enable colors/upcasing

@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-import cibconfig
+from crmsh import cibconfig
 from lxml import etree
 from nose.tools import eq_
 import copy
@@ -24,7 +24,7 @@ factory = cibconfig.cib_factory
 
 def setup_func():
     "set up test fixtures"
-    import idmgmt
+    from crmsh import idmgmt
     idmgmt.clear()
 
 

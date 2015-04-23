@@ -23,20 +23,20 @@ import re
 import glob
 import ConfigParser
 
-import config
-import constants
-import userdir
-from msg import common_debug, common_warn, common_err, common_error, common_info, warn_once
-from xmlutil import file2cib_elem, get_rsc_children_ids, get_prim_children_ids
-from xmlutil import compressed_file_to_cib
-from utils import file2str, shortdate, acquire_lock, append_file, ext_cmd, shorttime
-from utils import page_string, release_lock, rmdir_r, parse_time, get_cib_attributes
-from utils import is_pcmk_118, pipe_cmd_nosudo, file_find_by_name
+from . import config
+from . import constants
+from . import userdir
+from .msg import common_debug, common_warn, common_err, common_error, common_info, warn_once
+from .xmlutil import file2cib_elem, get_rsc_children_ids, get_prim_children_ids
+from .xmlutil import compressed_file_to_cib
+from .utils import file2str, shortdate, acquire_lock, append_file, ext_cmd, shorttime
+from .utils import page_string, release_lock, rmdir_r, parse_time, get_cib_attributes
+from .utils import is_pcmk_118, pipe_cmd_nosudo, file_find_by_name
 
 _NO_PSSH = False
 
 try:
-    from crm_pssh import next_loglines, next_peinputs
+    from .crm_pssh import next_loglines, next_peinputs
 except:
     _NO_PSSH = True
 
@@ -1235,9 +1235,9 @@ class Report(object):
         if self.source != "live" or self.central_log:
             cib_f = self.get_cib_loc()
         if is_pcmk_118(cib_f=cib_f):
-            from log_patterns_118 import log_patterns
+            from .log_patterns_118 import log_patterns
         else:
-            from log_patterns import log_patterns
+            from .log_patterns import log_patterns
         if type not in log_patterns:
             common_error("%s not featured in log patterns" % type)
             return None

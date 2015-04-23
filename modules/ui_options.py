@@ -16,10 +16,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import command
-import completers
-import config
-import options
+from . import command
+from . import completers
+from . import config
+from . import options
 
 _yesno = completers.choice(['yes', 'no'])
 
@@ -112,7 +112,7 @@ class CliOptions(command.UI):
     def do_output(self, context, output_type):
         "usage: output <type>"
         _legacy_set_pref("output", output_type)
-        import term
+        from . import term
         term._init()
 
     def do_colorscheme(self, context, colors):
@@ -163,7 +163,7 @@ class CliOptions(command.UI):
     @command.completers(completers.choice(config.get_all_options()))
     def do_show(self, context, option=None):
         "usage: show [all | <option>]"
-        import utils
+        from . import utils
         opts = config.get_configured_options() if option is None else config.get_all_options()
 
         def show_options(fn):

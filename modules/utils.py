@@ -25,12 +25,12 @@ import time
 import datetime
 import shutil
 import bz2
-import config
-import userdir
-import constants
-import options
-import term
-from msg import common_warn, common_info, common_debug, common_err, err_buf
+from . import config
+from . import userdir
+from . import constants
+from . import options
+from . import term
+from .msg import common_warn, common_info, common_debug, common_err, err_buf
 
 
 class memoize:
@@ -1385,7 +1385,7 @@ def remote_diff_slurp(nodes, filename):
         import parallax
     except ImportError:
         raise ValueError("Parallax is required to diff")
-    import tmpfiles
+    from . import tmpfiles
 
     tmpdir = tmpfiles.create_dir()
     opts = parallax.Options()

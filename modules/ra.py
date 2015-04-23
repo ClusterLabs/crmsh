@@ -21,16 +21,16 @@ import copy
 from lxml import etree
 import re
 import glob
-import cache
-import constants
-import config
-import options
-import userdir
-import utils
-from utils import stdout2list, is_program, is_process, add_sudo
-from utils import os_types_list, get_stdout, find_value
-from utils import crm_msec, crm_time_cmp
-from msg import common_debug, common_err, common_warn, common_info
+from . import cache
+from . import constants
+from . import config
+from . import options
+from . import userdir
+from . import utils
+from .utils import stdout2list, is_program, is_process, add_sudo
+from .utils import os_types_list, get_stdout, find_value
+from .utils import crm_msec, crm_time_cmp
+from .msg import common_debug, common_err, common_warn, common_info
 
 #
 # Resource Agents interface (meta-data, parameters, etc)

@@ -16,7 +16,7 @@
 #
 
 
-import cibconfig
+from crmsh import cibconfig
 from nose.tools import eq_
 
 factory = cibconfig.cib_factory

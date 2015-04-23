@@ -130,7 +130,7 @@ def _init():
         sys.stderr.write("INFO: no curses support: you won't see colors\n")
         return
     # If the stream isn't a tty, then assume it has no capabilities.
-    import config
+    from . import config
     if not _term_stream.isatty() and 'color-always' not in config.color.style:
         return
     # Check the terminal type.  If we fail, then assume that the

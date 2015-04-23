@@ -17,13 +17,13 @@
 
 import os
 from lxml import etree
-import tmpfiles
+from . import tmpfiles
 from tempfile import mkstemp
-from utils import ext_cmd, show_dot_graph, page_string
-from msg import common_err, common_info, common_warn
-import xmlutil
-import utils
-import config
+from .utils import ext_cmd, show_dot_graph, page_string
+from .msg import common_err, common_info, common_warn
+from . import xmlutil
+from . import utils
+from . import config
 
 
 def get_tag_by_id(node, tag, id):

@@ -16,14 +16,15 @@
 #
 # unit tests for parse.py
 
+import os
 import unittest
-import corosync
-from corosync import Parser, make_section, make_value
+from crmsh import corosync
+from crmsh.corosync import Parser, make_section, make_value
 
 
-F1 = open('corosync.conf.1').read()
-F2 = open('corosync.conf.2').read()
-F3 = open('bug-862577_corosync.conf').read()
+F1 = open(os.path.join(os.path.dirname(__file__), 'corosync.conf.1')).read()
+F2 = open(os.path.join(os.path.dirname(__file__), 'corosync.conf.2')).read()
+F3 = open(os.path.join(os.path.dirname(__file__), 'bug-862577_corosync.conf')).read()
 
 
 def _valid(parser):
@@ -87,7 +88,7 @@ class TestCorosyncParser(unittest.TestCase):
 
     def test_add_node_no_nodelist(self):
         "test checks that if there is no nodelist, no node is added"
-        from corosync import make_section, make_value, next_nodeid
+        from crmsh.corosync import make_section, make_value, next_nodeid
 
         p = Parser(F1)
         _valid(p)
@@ -101,7 +102,7 @@ class TestCorosyncParser(unittest.TestCase):
         self.assertEqual(p.count('nodelist.node'), nid - 1)
 
     def test_add_node_nodelist(self):
-        from corosync import make_section, make_value, next_nodeid
+        from crmsh.corosync import make_section, make_value, next_nodeid
 
         p = Parser(F2)
         _valid(p)

@@ -19,7 +19,7 @@ from parallax.manager import Manager, FatalError
 from parallax.task import Task
 from parallax import Options
 
-from msg import common_err, common_debug, common_warn
+from .msg import common_err, common_debug, common_warn
 
 
 _DEFAULT_TIMEOUT = 60

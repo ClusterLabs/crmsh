@@ -15,11 +15,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import command
-import completers as compl
-from cibconfig import cib_factory
-import utils
-import xmlutil
+from . import command
+from . import completers as compl
+from .cibconfig import cib_factory
+from . import utils
+from . import xmlutil
 
 _compl_actions = compl.choice(['start', 'stop', 'monitor', 'meta-data', 'validate-all',
                                'promote', 'demote', 'notify', 'reload', 'migrate_from',
@@ -94,10 +94,10 @@ class Maintenance(command.UI):
                     context.fatal_error("Resource %s must be running on this node (%s)" %
                                         (resource, utils.this_node()))
 
-            import rsctest
+            from . import rsctest
             return rsctest.call_resource(obj.node, action, [utils.this_node()], local_only=True)
         elif ssh == "ssh":
-            import rsctest
+            from . import rsctest
             if action in ('start', 'promote', 'demote', 'recover', 'meta-data'):
                 return rsctest.call_resource(obj.node, action,
                                              [utils.this_node()], local_only=True)

@@ -16,17 +16,17 @@
 #
 
 
-import cibconfig
+from crmsh import cibconfig
 from lxml import etree
 from nose.tools import eq_
-import xmlutil
+from crmsh import xmlutil
 
 factory = cibconfig.cib_factory
 
 
 def setup_func():
     "set up test fixtures"
-    import idmgmt
+    from crmsh import idmgmt
     idmgmt.clear()
 
 
@@ -49,7 +49,7 @@ def test_bug41660_1():
     commit_holder = factory.commit
     try:
         factory.commit = lambda *args: True
-        from ui_resource import set_deep_meta_attr
+        from crmsh.ui_resource import set_deep_meta_attr
         set_deep_meta_attr("bug41660", "target-role", "Started")
         eq_(['Started'],
             obj.node.xpath('.//nvpair[@name="target-role"]/@value'))
@@ -89,7 +89,7 @@ def test_bug41660_2():
     commit_holder = factory.commit
     try:
         factory.commit = lambda *args: True
-        from ui_resource import set_deep_meta_attr
+        from crmsh.ui_resource import set_deep_meta_attr
         print "PRE", etree.tostring(obj.node)
         set_deep_meta_attr("libvirtd-clone", "target-role", "Started")
         print "POST", etree.tostring(obj.node)
@@ -127,7 +127,7 @@ def test_bug41660_3():
     commit_holder = factory.commit
     try:
         factory.commit = lambda *args: True
-        from ui_resource import set_deep_meta_attr
+        from crmsh.ui_resource import set_deep_meta_attr
         set_deep_meta_attr("libvirtd-clone", "target-role", "Started")
         eq_(['Started'],
             obj.node.xpath('.//nvpair[@name="target-role"]/@value'))
@@ -223,7 +223,7 @@ def test_pcs_interop_1():
         <primitive id="dummy-1" class="ocf" provider="heartbeat" type="Dummy"/>
       </clone>"""
     elem = etree.fromstring(xml)
-    from ui_resource import set_deep_meta_attr_node
+    from crmsh.ui_resource import set_deep_meta_attr_node
 
     assert len(elem.xpath(".//meta_attributes/nvpair[@name='target-role']")) == 1
 
@@ -289,7 +289,7 @@ def test_bnc878112():
 
 
 def test_copy_nvpairs():
-    from cibconfig import copy_nvpairs
+    from crmsh.cibconfig import copy_nvpairs
 
     to = etree.fromstring('''
     <node>
@@ -361,7 +361,7 @@ def test_ratrace():
 
     context = object()
 
-    from ui_resource import RscMgmt
+    from crmsh.ui_resource import RscMgmt
     obj = factory.find_object('r1')
     RscMgmt()._trace_resource(context, 'r1', obj)
 
