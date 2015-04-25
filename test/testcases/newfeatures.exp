@@ -13,6 +13,7 @@ nvpair_ref: 'p0-state' None
 nvpair_ref: 'p0-state' None
 .INP: property rule #uname eq node1 stonith-enabled=no
 .INP: tag tag1: p0 p1 p2
+.INP: tag tag2 p0 p1 p2
 .INP: location l1 { p0 p1 p2 } inf: node1
 .INP: show
 node node1
@@ -27,7 +28,8 @@ primitive st stonith:ssh \
 	meta target-role=Started \
 	op start requires=nothing timeout=60s interval=0 \
 	op monitor interval=60m timeout=60s
-tag tag1: p0 p1 p2
+tag tag1 p0 p1 p2
+tag tag2 p0 p1 p2
 location l1 { p0 p1 p2 } inf: node1
 property cib-bootstrap-options: \
 	rule #uname eq node1 \

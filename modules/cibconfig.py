@@ -2021,11 +2021,10 @@ class CibTag(CibObject):
     '''
 
     def _repr_cli_head(self, fmt):
-        s = clidisplay.keyword(self.obj_type)
-        id_ = clidisplay.id(self.obj_id)
-        sub = ' '.join(clidisplay.rscref(c.get('id'))
-                       for c in self.node.iterchildren() if not is_comment(c))
-        return "%s %s: %s" % (s, id_, sub)
+        return ' '.join([clidisplay.keyword(self.obj_type),
+                         clidisplay.id(self.obj_id)] +
+                        [clidisplay.rscref(c.get('id'))
+                         for c in self.node.iterchildren() if not is_comment(c)])
 
 
 #

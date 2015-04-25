@@ -75,7 +75,7 @@ order o-d456 d4 d5 d6
 order o1 inf: p3 c1
 .INP: show related:d4
 primitive d4 Dummy
-tag t-d45: d4 d5
+tag t-d45 d4 d5
 order o-d456 d4 d5 d6
 .INP: _test
 .INP: verify
@@ -107,7 +107,7 @@ primitive st stonith:null \
 group g1 p1 p2 d3
 group g2 d1 d2
 clone c1 g1
-tag t-d45: d4 d5
+tag t-d45 d4 d5
 location l1 p3 100: node1
 # this is a comment
 location loc-d1 d1 \

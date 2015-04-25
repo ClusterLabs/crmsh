@@ -1039,7 +1039,7 @@ class TagParser(BaseParser):
       ...
     </tag>
     """
-    _TAG_RE = re.compile(r"([^:]+):$")
+    _TAG_RE = re.compile(r"([a-zA-Z_][^\s:]*):?$")
 
     def can_parse(self):
         return ('tag',)
@@ -1047,7 +1047,7 @@ class TagParser(BaseParser):
     def parse(self, cmd):
         self.begin(cmd, min_args=2)
         self.match('tag')
-        self.match(self._TAG_RE)
+        self.match(self._TAG_RE, errmsg="Expected tag name")
         out = xmlbuilder.new('tag', id=self.matched(1))
         while self.has_tokens():
             e = xmlbuilder.new('obj_ref', id=self.match_resource())
