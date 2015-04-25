@@ -459,6 +459,10 @@ class TestCliParser(unittest.TestCase):
         out = self.parser.parse('tag tag1:: foo')
         self.assertFalse(out)
 
+        out = self.parser.parse('tag tag1 foo bar')
+        self.assertEqual(out.get('id'), 'tag1')
+        self.assertEqual(['foo', 'bar'], out.xpath('/tag/obj_ref/@id'))
+
     def _parse_lines(self, lines):
         out = []
         for line in lines2cli(lines):
