@@ -3549,23 +3549,26 @@ Example:
 template two-apaches.txt
 ...............
 
-[[cmdhelp_configure_upgrade,upgrade the CIB to version 1.0]]
+[[cmdhelp_configure_upgrade,upgrade the CIB]]
 ==== `upgrade`
 
-If you get the `CIB not supported` error, which typically means
-that the current CIB version is coming from the older release,
-you may try to upgrade it to the latest revision. The command
-to perform the upgrade is:
-...............
-# cibadmin --upgrade --force
-...............
+Attempts to upgrade the CIB to validate with the current
+version. Commonly, this is required if the error
+`CIB not supported` occurs. It typically means that the
+active CIB version is coming from an older release.
 
-If we don't recognize the current CIB as the old one, but you're
-sure that it is, you may force the command.
+As a safety precaution, the force argument is required if the
++validation-with+ attribute is set to anything other than
++0.6+. Thus in most cases, it is required.
 
 Usage:
 ...............
 upgrade [force]
+...............
+
+Example:
+...............
+upgrade force
 ...............
 
 [[cmdhelp_configure_user,define user access rights]]
