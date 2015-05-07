@@ -1447,4 +1447,30 @@ def remote_checksum(local_path, nodes, this_node):
         print "%-16s: %s" % (host, hashlib.sha1(open(path).read()).hexdigest())
 
 
+def cluster_copy_file(local_path, nodes=None):
+    """
+    Copies given file to all other cluster nodes.
+    """
+    try:
+        import parallax
+    except ImportError:
+        raise ValueError("parallax is required to copy cluster files")
+    if not nodes:
+        nodes = list_cluster_nodes()
+        nodes.remove(this_node())
+        opts = parallax.Options()
+    opts.timeout = 60
+    opts.ssh_options += ['ControlPersist=no']
+    ok = True
+    for host, result in parallax.copy(nodes,
+                                      local_path,
+                                      local_path, opts).iteritems():
+        if isinstance(result, parallax.Error):
+            err_buf.error("Failed to push %s to %s: %s" % (local_path, host, result))
+            ok = False
+        else:
+            err_buf.ok(host)
+    return ok
+
+
 # vim:ts=4:sw=4:et:

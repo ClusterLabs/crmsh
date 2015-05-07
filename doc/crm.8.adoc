@@ -933,6 +933,24 @@ Example:
 run "cat /proc/uptime"
 ...............
 
+[[cmdhelp_cluster_copy,Copy file to other cluster nodes]]
+==== `copy`
+
+Copy file to other cluster nodes.
+
+Copies the given file to all other nodes unless given a
+list of nodes to copy to as argument.
+
+Usage:
+...............
+copy <filename> [nodes ...]
+...............
+
+Example:
+...............
+copy /etc/motd
+...............
+
 [[cmdhelp_cluster_start,Start cluster services]]
 ==== `start`
 

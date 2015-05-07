@@ -293,26 +293,7 @@ def push_configuration(nodes):
     '''
     Push the local configuration to the list of remote nodes
     '''
-    try:
-        import parallax
-    except ImportError:
-        raise ValueError("parallax is required to push")
-
-    local_path = conf()
-
-    opts = parallax.Options()
-    opts.timeout = 60
-    opts.ssh_options += ['ControlPersist=no']
-    ok = True
-    for host, result in parallax.copy(nodes,
-                                      local_path,
-                                      local_path, opts).iteritems():
-        if isinstance(result, parallax.Error):
-            err_buf.error("Failed to push configuration to %s: %s" % (host, result))
-            ok = False
-        else:
-            err_buf.ok(host)
-    return ok
+    return utils.cluster_copy_file(conf(), nodes)
 
 
 def pull_configuration(from_node):

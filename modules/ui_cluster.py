@@ -213,6 +213,14 @@ class Cluster(command.UI):
                 else:
                     err_buf.ok("[%s]\n%s" % (host, result[1]))
 
+    def do_copy(self, context, local_file, *nodes):
+        '''
+        usage: copy <filename> [nodes ...]
+        Copy file to other cluster nodes.
+        If given no nodes as arguments, copy to all other cluster nodes.
+        '''
+        return utils.cluster_copy_file(local_file, nodes)
+
     def do_diff(self, context, filename, *nodes):
         "usage: diff <filename> [--checksum] [nodes...]. Diff file across cluster."
         this_node = utils.this_node()
