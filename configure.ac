@@ -109,6 +109,7 @@ eval datadir="`eval echo ${datadir}`"
 eval sysconfdir="`eval echo ${sysconfdir}`"
 eval sharedstatedir="`eval echo ${sharedstatedir}`"
 eval localstatedir="`eval echo ${localstatedir}`"
+eval includedir="`eval echo ${includedir}`"
 eval libdir="`eval echo ${libdir}`"
 eval infodir="`eval echo ${infodir}`"
 eval mandir="`eval echo ${mandir}`"
@@ -123,7 +124,7 @@ if test x"${docdir}" = x""; then
 fi
 AC_SUBST(docdir)
 
-CFLAGS="$CFLAGS -I${prefix}/include/heartbeat -I${prefix}/include/pacemaker"
+CFLAGS="$CFLAGS -I${prefix}/include/heartbeat -I${includedir}/heartbeat -I${prefix}/include/pacemaker -I${includedir}/pacemaker"
 
 for j in prefix exec_prefix bindir sbindir libexecdir datadir sysconfdir \
     sharedstatedir localstatedir libdir infodir \
