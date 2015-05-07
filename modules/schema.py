@@ -106,7 +106,10 @@ def _load_schema(cib):
 
 def init_schema(cib):
     global _crm_schema
-    _crm_schema = _load_schema(cib)
+    try:
+        _crm_schema = _load_schema(cib)
+    except PacemakerError, msg:
+        common_err(msg)
     reset()
 
 

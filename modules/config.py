@@ -158,9 +158,8 @@ class opt_boolean(object):
 
 class opt_dir(object):
     def __init__(self, path):
-        self.default = ''
-        self.completions = []
         self.default = make_path(path)
+        self.completions = []
 
     def validate(self, val):
         if not os.path.isdir(val):
