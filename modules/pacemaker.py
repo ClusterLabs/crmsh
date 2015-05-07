@@ -44,13 +44,10 @@ def get_schema_filename(validate_name):
 
 def read_schema_local(validate_name, file_path):
     try:
-        f = open(file_path)
-        schema = f.read()
+        with open(file_path) as f:
+            return f.read()
     except IOError, msg:
-        raise PacemakerError("Cannot read the schema file: " + str(msg))
-
-    f.close()
-    return schema
+        raise PacemakerError("Cannot read schema file '%s': %s" % (file_path, msg))
 
 
 def delete_dir(dir_path):
