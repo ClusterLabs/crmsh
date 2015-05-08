@@ -526,11 +526,11 @@ class CibConfig(command.UI):
     def do_delete(self, context, *args):
         "usage: delete [-f|--force] <id> [<id>...]"
         argl = list(args)
-        arg_force = argl and argl[0] == '--force'
-        if arg_force:
-            del argl[0]
+        arg_force = any((x in ('-f', '--force')) for x in argl)
+        argl = [x for x in argl if (x not in ('-f', '--force'))]
         if arg_force or config.core.force:
             self._stop_if_running(argl)
+            utils.wait4dc(what="Stopping %s" % (", ".join(argl)))
         return cib_factory.delete(*argl)
 
     @command.name('default-timeouts')
