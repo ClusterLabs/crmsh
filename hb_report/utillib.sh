@@ -387,6 +387,10 @@ fetchpkg_zypper() {
 	local pkg
 	debug "get debuginfo packages using zypper: $@"
 	zypper -qn ref > /dev/null
+	# use --ignore-unknown if available, much faster
+	# (2 is zypper exit code for syntax/usage)
+	zypper -qn --ignore-unknown install -C $@ >/dev/null
+	[ $? -ne 2 ] && return
 	for pkg in $@; do
 		zypper -qn install -C $pkg >/dev/null
 	done
