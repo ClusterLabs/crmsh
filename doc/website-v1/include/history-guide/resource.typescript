@@ -1,0 +1,6 @@
+[32mcrm(live)history# [0;10mresource small-apache
+[32mApr 15 20:29:59 sle12-c crmd[1136]:   notice: te_rsc_command: Initiating action 60: stop small-apache_stop_0 on sle12-a[0;10m
+[0;10mApr 15 20:29:59 sle12-a apache(small-apache)[1366]: INFO: Attempting graceful stop of apache PID 9155[0;10m
+[0;10mApr 15 20:30:01 sle12-a apache(small-apache)[1366]: INFO: apache stopped.[0;10m
+[0;10mApr 15 20:30:14 sle12-a apache(small-apache)[1586]: INFO: AH00558: httpd2: Could not reliably determine the server's fully qualified domain name, using 10.2.12.51. Set the 'ServerName' directive globally to suppress this message[0;10m
+[32mApr 15 20:30:14 sle12-c crmd[1136]:   notice: te_rsc_command: Initiating action 60: start small-apache_start_0 on sle12-a[0;10m

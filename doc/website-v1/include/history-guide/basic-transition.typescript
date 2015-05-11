@@ -1,0 +1,22 @@
+[32mcrm(live)history# [0;10mtransition <1>
+[36mINFO[0;10m: running ptest with /var/cache/crm/history/live/sle12-c/pengine/pe-input-1907.bz2
+[36mINFO[0;10m: starting dotty to show transition graph <2>
+Current cluster status: <3>
+Online: [ sle12-a sle12-c ]
+ s-libvirt	(stonith:external/libvirt):	Started sle12-c 
+ ...
+ small-apache	(ocf::heartbeat:apache):	Stopped 
+Transition Summary:
+ * Start   small-apache	(sle12-a)
+Executing cluster transition:
+ * Resource action: small-apache    start on sle12-a
+Revised cluster status:
+Online: [ sle12-a sle12-c ]
+ s-libvirt	(stonith:external/libvirt):	Started sle12-c 
+ ...
+ small-apache	(ocf::heartbeat:apache):	Started sle12-a
+
+Transition sle12-c:pe-input-1907 (20:30:14 - 20:30:15): <4>
+	total 1 actions: 1 Complete
+[32mApr 15 20:30:14 sle12-c crmd[1136]:   notice: te_rsc_command: Initiating action 60: start small-apache_start_0 on sle12-a[0;10m
+[0;10mApr 15 20:30:14 sle12-a apache(small-apache)[1586]: INFO: AH00558: httpd2: Could not reliably determine the server's fully qualified domain name, using 10.2.12.51. Set the 'ServerName' directive globally to suppress this message[0;10m

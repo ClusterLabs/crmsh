@@ -1,0 +1,11 @@
+[32mcrm(live)history# [0;10mdiff -1 0 <1>
+--- -1
++++ 0
+@@ -11 +11 @@
+-[33mprimitive[0;10m [0;10msmall-apache[0;10m apache [33mparams[0;10m [36mconfigfile[0;10m=[31m"/etc/apache2/small.conf"[0;10m [33mmeta[0;10m [36mtarget-role[0;10m=[31mStopped[0;10m
++[33mprimitive[0;10m [0;10msmall-apache[0;10m apache [33mparams[0;10m [36mconfigfile[0;10m=[31m"/etc/apache2/small.conf"[0;10m [33mmeta[0;10m [36mtarget-role[0;10m=[31mStarted[0;10m
+[32mcrm(live)history# [0;10mdiff -1 0 status <2>
+--- -1
++++ 0
+@@ -15 +14,0 @@
+- small-apache	(ocf::heartbeat:apache):	Started sle12-a

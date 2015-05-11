@@ -18,6 +18,7 @@ possible.
 * link:/man[Manual (Development)], link:/man-2.0[(Release 2.x)], link:/man-1.2[(Release 1.2)]
 * link:/installation[Installation]
 * link:/start-guide[Getting Started]
+* link:/history-guide[History Guide]
 * link:/rsctest-guide[Resource Testing Guide]
 * link:/configuration[Configuration]
 * link:/scripts[Cluster scripts]

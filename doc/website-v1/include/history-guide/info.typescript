@@ -1,0 +1,16 @@
+# crm history
+[32mcrm(live)history# [0;10mtimeframe "Apr 15 20:25" "Apr 15 20:35"
+[32mcrm(live)history# [0;10minfo
+Source: live
+Created on: Thu Apr 16 11:32:36 CEST 2015
+By: report -Z -Q -f Wed Apr 15 20:25:00 2015 -t 2015-04-15 20:35:00 /var/cache/crm/history/live
+Period: 2015-04-15 20:25:00 - 2015-04-15 20:35:00
+Nodes: [0;10msle12-a[0;10m [32msle12-c[0;10m
+Groups: nfs-srv nfs-disk
+Resources: s-libvirt p_drbd_nfs nfs-vg fs1 virtual-ip nfs-server websrv websrv-ip small-apache
+Transitions: [32m1906[0;10m [32m1907[0;10m
+[32mcrm(live)history# [0;10mpeinputs v
+Date       Start    End       Filename      Client     User       Origin
+====       =====    ===       ========      ======     ====       ======
+2015-04-15 20:29:59 20:30:01  [32mpe-input-1906[0;10m no-client  no-user    no-origin
+2015-04-15 20:30:14 20:30:15  [32mpe-input-1907[0;10m no-client  no-user    no-origin

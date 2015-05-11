@@ -1,0 +1,7 @@
+# crm resource trace nfs-server monitor 0
+[36mINFO[0;10m: Trace for nfs-server:monitor is written to /var/lib/heartbeat/trace_ra/
+[36mINFO[0;10m: Trace set, restart nfs-server to trace non-monitor operations
+# crm resource cleanup nfs-server
+Cleaning up nfs-server on sle12-a
+Cleaning up nfs-server on sle12-c
+Waiting for 2 replies from the CRMd.. OK

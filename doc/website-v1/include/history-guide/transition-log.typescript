@@ -1,0 +1,13 @@
+[32mcrm(live)history# [0;10mtransition log
+[36mINFO[0;10m: retrieving information from cluster nodes, please wait ...
+[32mApr 15 20:30:14 sle12-c crmd[1136]:   notice: do_state_transition: State transition S_IDLE -> S_POLICY_ENGINE [ input=I_PE_CALC cause=C_FSA_INTERNAL origin=abort_transition_graph ][0;10m
+[32mApr 15 20:30:14 sle12-c stonithd[1132]:   notice: unpack_config: On loss of CCM Quorum: Ignore[0;10m
+[32mApr 15 20:30:14 sle12-c pengine[1135]:   notice: unpack_config: On loss of CCM Quorum: Ignore[0;10m
+[32mApr 15 20:30:14 sle12-c pengine[1135]:   notice: LogActions: Start   small-apache#011(sle12-a)[0;10m
+[32mApr 15 20:30:14 sle12-c crmd[1136]:   notice: do_te_invoke: Processing graph 123 (ref=pe_calc-dc-1429122614-234) derived from /var/lib/pacemaker/pengine/pe-input-1907.bz2[0;10m
+[32mApr 15 20:30:14 sle12-c crmd[1136]:   notice: te_rsc_command: Initiating action 60: start small-apache_start_0 on sle12-a[0;10m
+[32mApr 15 20:30:14 sle12-c pengine[1135]:   notice: process_pe_message: Calculated Transition 123: /var/lib/pacemaker/pengine/pe-input-1907.bz2[0;10m
+[0;10mApr 15 20:30:14 sle12-a stonithd[1160]:   notice: unpack_config: On loss of CCM Quorum: Ignore[0;10m
+[0;10mApr 15 20:30:14 sle12-a apache(small-apache)[1586]: INFO: AH00558: httpd2: Could not reliably determine the server's fully qualified domain name, using 10.2.12.51. Set the 'ServerName' directive globally to suppress this message[0;10m
+[0;10mApr 15 20:30:14 sle12-a crmd[1164]:   notice: process_lrm_event: Operation small-apache_start_0: ok (node=sle12-a, call=69, rc=0, cib-update=48, confirmed=true)[0;10m
+[32mApr 15 20:30:15 sle12-c crmd[1136]:   notice: run_graph: Transition 123 (Complete=1, Pending=0, Fired=0, Skipped=0, Incomplete=0, Source=/var/lib/pacemaker/pengine/pe-input-1907.bz2): Complete[0;10m

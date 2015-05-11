@@ -1,0 +1,54 @@
+node 167906357: sle12-c
+node 167906355: sle12-a
+primitive s-libvirt stonith:external/libvirt \
+	params hostlist="sle12-a sle12-c" hypervisor_uri="qemu+ssh://hex-10.suse.de/system?keyfile=/root/.ssh/xen" reset_method=reboot \
+	op monitor interval=5m timeout=60s
+primitive p_drbd_nfs ocf:linbit:drbd \
+	params drbd_resource=nfs \
+	op monitor interval=15 role=Master \
+	op monitor interval=30 role=Slave \
+	op start interval=0 timeout=300 \
+	op stop interval=0 timeout=120
+primitive nfs-vg LVM \
+	params volgrpname=nfs-vg
+primitive fs1 Filesystem \
+	params device="/dev/nfs-vg/fs1" directory="/srv/nfs" fstype=ext3 \
+	op monitor interval=30s
+primitive virtual-ip IPaddr2 \
+	params ip=10.2.12.100
+primitive nfs-server nfsserver \
+	params nfs_shared_infodir="/srv/nfs/state" nfs_ip=10.2.12.100 \
+	op monitor interval=30s
+primitive websrv apache \
+	params configfile="/etc/apache2/httpd.conf" \
+	op monitor interval=30
+primitive websrv-ip IPaddr2 \
+	params ip=10.2.12.101
+primitive small-apache apache \
+	params configfile="/etc/apache2/small.conf"
+group nfs-disk nfs-vg fs1
+group nfs-srv virtual-ip nfs-server
+ms ms_drbd_nfs p_drbd_nfs \
+	meta notify=true clone-max=2
+location nfs-pref virtual-ip 100: sle12-a
+location websrv-pref websrv 100: sle12-c
+colocation vg-with-drbd inf: nfs-vg ms_drbd_nfs:Master
+colocation c-nfs inf: nfs-srv nfs-disk
+colocation c-websrv inf: websrv websrv-ip
+colocation small-apache-with-virtual-ip inf: small-apache virtual-ip
+# need fs1 for the NFS server
+order o-nfs inf: nfs-disk nfs-srv
+# websrv serves requests at IP websrv-ip
+order o-websrv inf: websrv-ip websrv
+# small apache serves requests at IP virtual-ip
+order virtual-ip-before-small-apache inf: virtual-ip small-apache
+# drbd device is the nfs-vg PV
+order drbd-before-nfs-vg inf: ms_drbd_nfs:promote nfs-vg:start
+property cib-bootstrap-options: \
+	dc-version=1.1.12-ad083a8 \
+	cluster-infrastructure=corosync \
+	cluster-name=sle12-test3l-public \
+	no-quorum-policy=ignore \
+	last-lrm-refresh=1429192263
+op_defaults op-options: \
+	timeout=120s
