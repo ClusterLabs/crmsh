@@ -18,7 +18,7 @@
 import re
 
 
-_RESULT_KEY = ":result:"
+RESULT = ":result:"
 
 
 def _resolve(path, values):
@@ -81,11 +81,12 @@ def parse(template, values):
                 ret += parse(body, values2)
             template = template[tailidx + len(tailtag):]
         elif isinstance(obj, dict):
-            result = obj.get(_RESULT_KEY)
+            result = obj.get(RESULT)
             if result is not None:
                 ret += str(result)
             else:
                 raise ValueError("%s references non-value object" % (head.group(0)))
+            template = template[head.end(0):]
         elif obj is not None:
             ret += str(obj)
             template = template[head.end(0):]

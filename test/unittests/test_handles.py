@@ -29,14 +29,34 @@ def test_basic():
     eq_("", handles.parse(t, {'foo': {'bar': 'hello'}}))
     t = """{{foo}}.{{wiz}}"""
     eq_("a.b", handles.parse(t, {'foo': "a", 'wiz': "b"}))
-
+    t = """Here's a line of text
+    followed by another line
+    followed by some {{foo}}.{{wiz}}
+    and then some at the end"""
+    eq_("""Here's a line of text
+    followed by another line
+    followed by some a.b
+    and then some at the end""", handles.parse(t, {'foo': "a", 'wiz': "b"}))
 
 
 def test_conditional():
-    t = """{{#foo}}!{{foo:bar}}!{{/foo}}"""
-    eq_("!hello!", handles.parse(t, {'foo': {'bar': 'hello'}}))
+    t = """{{#foo}}before{{foo:bar}}after{{/foo}}"""
+    eq_("beforehelloafter", handles.parse(t, {'foo': {'bar': 'hello'}}))
+    eq_("", handles.parse(t, {'faa': {'bar': 'hello'}}))
 
 
 def test_iteration():
     t = """{{#foo}}!{{foo:bar}}!{{/foo}}"""
     eq_("!hello!!there!", handles.parse(t, {'foo': [{'bar': 'hello'}, {'bar': 'there'}]}))
+
+
+def test_result():
+    t = """{{obj}}
+    group g1 {{obj:id}}
+"""
+    eq_("""primitive d0 Dummy
+    group g1 d0
+""", handles.parse(t, {'obj':
+                       {'id': 'd0',
+                        handles.RESULT: 'primitive d0 Dummy'}}))
+    eq_("\n    group g1 \n", handles.parse(t, {}))
