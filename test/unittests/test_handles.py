@@ -136,3 +136,41 @@ bar
 No repos :(
 bar
 """, handles.parse(t, v))
+
+
+def test_cib():
+    t = """{{filesystem}}
+{{exportfs}}
+{{rootfs}}
+{{virtual-ip}}
+clone c-{{rootfs:id}} {{rootfs:id}}
+group g-nfs
+  {{exportfs:id}}
+  {{virtual-ip:id}}
+order base-then-nfs inf: {{filesystem:id}} g-nfs
+colocation nfs-with-base inf: g-nfs {{filesystem:id}}
+order rootfs-before-nfs inf: c-{{rootfs:id}} g-nfs:start
+colocation nfs-with-rootfs inf: g-nfs c-{{rootfs:id}}
+"""
+    r = """primitive fs1 Filesystem
+primitive efs exportfs
+primitive rfs rootfs
+primitive vip IPaddr2
+  params ip=192.168.0.2
+clone c-rfs rfs
+group g-nfs
+  efs
+  vip
+order base-then-nfs inf: fs1 g-nfs
+colocation nfs-with-base inf: g-nfs fs1
+order rootfs-before-nfs inf: c-rfs g-nfs:start
+colocation nfs-with-rootfs inf: g-nfs c-rfs
+"""
+    v = {
+        'filesystem': handles.value({'id': 'fs1'}, 'primitive fs1 Filesystem'),
+        'exportfs': handles.value({'id': 'efs'}, 'primitive efs exportfs'),
+        'rootfs': handles.value({'id': 'rfs'}, 'primitive rfs rootfs'),
+        'virtual-ip': handles.value({'id': 'vip'},
+                                    'primitive vip IPaddr2\n  params ip=192.168.0.2'),
+    }
+    eq_(r, handles.parse(t, v))
