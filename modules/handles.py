@@ -21,13 +21,16 @@ import re
 RESULT = ":result:"
 
 
+def _join(d1, d2):
+    d = d1.copy()
+    d.update(d2)
+    return d
+
+
 def _resolve(path, values):
     p = values
-    while path:
-        p = p.get(path[0])
-        if p is None:
-            return None
-        path = path[1:]
+    while path and p is not None:
+        p, path = p.get(path[0]), path[1:]
     return p
 
 
@@ -56,7 +59,7 @@ def parse(template, values):
             ret += template[:istart]
         path = key.split(':')
         if not path:
-            raise ValueError("empty {{}} tag found")
+            raise ValueError("empty {{}} block found")
         obj = _resolve(path, values)
         is_block = prefix == '#'
         is_invert = prefix == '^'
@@ -70,20 +73,15 @@ def parse(template, values):
             if body.startswith('\n') and (not ret or ret.endswith('\n')):
                 ret = ret[:-1]
             if is_block:
-                if obj is not None:
-                    if isinstance(obj, tuple) or isinstance(obj, list):
-                        for it in obj:
-                            values2 = values.copy()
-                            values2.update({key: it})
-                            ret += parse(body, values2)
-                    else:
-                        values2 = values.copy()
-                        values2.update({key: obj})
-                        ret += parse(body, values2)
+                if obj in (None, False):
+                    pass
+                elif isinstance(obj, tuple) or isinstance(obj, list):
+                    for it in obj:
+                        ret += parse(body, _join(values, {key: it}))
+                else:
+                    ret += parse(body, _join(values, {key: obj}))
             elif not obj:
-                values2 = values.copy()
-                values2.update({key: ""})
-                ret += parse(body, values2)
+                ret += parse(body, _join(values, {key: ""}))
             if ret.endswith('\n') and template[iend:].startswith('\n'):
                 iend += 1
         elif isinstance(obj, dict):
