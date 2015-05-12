@@ -1,0 +1,20 @@
+# crm history resource nfs-server
+[36mINFO[0;10m: fetching new logs, please wait ...
+[32mDec 16 11:53:23 sle12-c nfsserver(nfs-server)[14911]: <1> ERROR: NFS server is up, but the locking daemons are down[0;10m
+[32mDec 16 11:53:23 sle12-c crmd[2823]:   notice: te_rsc_command: Initiating action 54: stop nfs-server_stop_0 on sle12-a[0;10m
+[32mDec 16 11:53:23 sle12-c crmd[2823]:   notice: te_rsc_command: Initiating action 3: stop nfs-server_stop_0 on sle12-c (local)[0;10m
+[32mDec 16 11:53:23 sle12-c nfsserver(nfs-server)[14944]: INFO: Stopping NFS server ...[0;10m
+[32mDec 16 11:53:23 sle12-c nfsserver(nfs-server)[14944]: INFO: Stopping sm-notify[0;10m
+[32mDec 16 11:53:23 sle12-c nfsserver(nfs-server)[14944]: INFO: Stopping rpc.statd[0;10m
+[32mDec 16 11:53:23 sle12-c nfsserver(nfs-server)[14944]: INFO: NFS server stopped[0;10m
+[32mDec 16 11:53:23 sle12-c crmd[2823]:   notice: te_rsc_command: Initiating action 55: start nfs-server_start_0 on sle12-a[0;10m
+[0;10mDec 16 11:53:23 sle12-a nfsserver(nfs-server)[23255]: INFO: Stopping NFS server ...[0;10m
+[0;10mDec 16 11:53:23 sle12-a nfsserver(nfs-server)[23255]: INFO: Stopping sm-notify[0;10m
+[0;10mDec 16 11:53:23 sle12-a nfsserver(nfs-server)[23255]: INFO: Stopping rpc.statd[0;10m
+[0;10mDec 16 11:53:23 sle12-a nfsserver(nfs-server)[23255]: INFO: NFS server stopped[0;10m
+[0;10mDec 16 11:53:23 sle12-a nfsserver(nfs-server)[23320]: INFO: Starting NFS server ...[0;10m
+[0;10mDec 16 11:53:23 sle12-a nfsserver(nfs-server)[23320]: INFO: Starting rpc.statd.[0;10m
+[0;10mDec 16 11:53:24 sle12-a nfsserver(nfs-server)[23320]: INFO: executing sm-notify[0;10m
+[0;10mDec 16 11:53:24 sle12-a nfsserver(nfs-server)[23320]: INFO: NFS server started[0;10m
+[0;10mDec 16 11:53:24 sle12-a lrmd[6904]: <2>  notice: operation_finished: nfs-server_start_0:23320:stderr [ id: rpcuser: no such user ][0;10m
+[0;10mDec 16 11:53:24 sle12-a lrmd[6904]: message repeated 3 times: [   notice: operation_finished: nfs-server_start_0:23320:stderr [ id: rpcuser: no such user ]][0;10m

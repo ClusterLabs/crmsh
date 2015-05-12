@@ -70,8 +70,7 @@ class Entry(object):
 
     def date_obj(self):
         from dateutil import parser
-        return (parser.parse(self.date) -
-                datetime.datetime(1970, 1, 1)).total_seconds()
+        return (parser.parse(self.date))
 
     def atom_content(self):
         return escape('<pre>\n' + self.content + '\n</pre>\n')

@@ -1,0 +1,15 @@
+# crm status
+Last updated: Tue Dec 16 11:57:04 2014
+Last change: Tue Dec 16 11:53:22 2014
+Stack: corosync
+Current DC: sle12-c (167906357) - partition with quorum
+Version: 1.1.12-ad083a8
+2 Nodes configured
+10 Resources configured
+Online: [ sle12-a sle12-c ]
+[...]
+     nfs-server	(ocf::heartbeat:nfsserver):	Started sle12-a 
+[...]
+Failed actions:
+    nfs-server_monitor_0 on sle12-c 'unknown error' (1): call=298, status=complete,
+    last-rc-change='Tue Dec 16 11:53:23 2014', queued=0ms, exec=135ms

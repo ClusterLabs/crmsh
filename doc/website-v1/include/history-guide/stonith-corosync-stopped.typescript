@@ -1,0 +1,8 @@
+# crm history node sle12-c
+[36mINFO[0;10m: fetching new logs, please wait ...
+[32mDec 19 14:36:18 sle12-c corosync[29551]:   [MAIN  ] Corosync Cluster Engine ('2.3.3'): started and ready to provide service.[0;10m
+[32mDec 19 14:36:19 sle12-c corosync[29545]: Starting Corosync Cluster Engine (corosync): [  OK  ][0;10m
+[0;10mDec 19 14:36:20 sle12-a pengine[6906]:  warning: pe_fence_node: Node sle12-c will be fenced because our peer process is no longer available[0;10m
+[0;10mDec 19 14:36:20 sle12-a pengine[6906]:  warning: stage6: Scheduling Node sle12-c for STONITH[0;10m
+[0;10mDec 19 14:36:20 sle12-a crmd[6907]:   notice: te_fence_node: Executing reboot fencing operation (65) on sle12-c (timeout=60000)[0;10m
+[0;10mDec 19 14:36:20 sle12-a crmd[6907]:   notice: peer_update_callback: Node return implies stonith of sle12-c (action 65) completed[0;10m
