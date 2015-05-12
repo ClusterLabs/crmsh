@@ -43,53 +43,43 @@ def parse(template, values):
     is a list, process text for each item in the list
     (can't nest these for items with the same name)
     """
-    REHEAD = re.compile(r'\{\{(\#?[A-Za-z0-9:_-]+)\}\}')
+    head_re = re.compile(r'\{\{(\#)?([A-Za-z0-9:_-]+)\}\}')
     ret = ""
     while template:
-        head = REHEAD.search(template)
+        head = head_re.search(template)
         if head is None:
             ret += template
             break
-        idx = head.start(0)
-        if idx > 0:
-            ret += template[:idx]
-        key = head.group(1)
-        is_block = key.startswith('#')
-        if is_block:
-            key = key[1:]
+        istart, iend, is_block, key = head.start(0), head.end(0), head.group(1), head.group(2)
+        if istart > 0:
+            ret += template[:istart]
         path = key.split(':')
         if not path:
             raise ValueError("empty {{}} tag found")
         obj = _resolve(path, values)
         if is_block:
             tailtag = '{{/%s}}' % (key)
-            tailidx_offset = template[head.end(0):].find(tailtag)
-            if tailidx_offset < 0:
+            tailidx = iend + template[head.end(0):].find(tailtag)
+            if tailidx < iend:
                 raise ValueError("Unclosed conditional: %s" % head.group(0))
-            tailidx = head.end(0) + tailidx_offset
+            iend = tailidx + len(tailtag)
             body = template[head.end(0):tailidx]
-            if obj is None:
-                pass
-            elif isinstance(obj, tuple) or isinstance(obj, list):
-                for it in obj:
+            if obj is not None:
+                if isinstance(obj, tuple) or isinstance(obj, list):
+                    for it in obj:
+                        values2 = values.copy()
+                        values2.update({key: it})
+                        ret += parse(body, values2)
+                else:
                     values2 = values.copy()
-                    values2.update({key: it})
+                    values2.update({key: obj})
                     ret += parse(body, values2)
-            else:
-                values2 = values.copy()
-                values2.update({key: obj})
-                ret += parse(body, values2)
-            template = template[tailidx + len(tailtag):]
         elif isinstance(obj, dict):
             result = obj.get(RESULT)
-            if result is not None:
-                ret += str(result)
-            else:
+            if result is None:
                 raise ValueError("%s references non-value object" % (head.group(0)))
-            template = template[head.end(0):]
+            ret += str(result)
         elif obj is not None:
             ret += str(obj)
-            template = template[head.end(0):]
-        else:
-            template = template[head.end(0):]
+        template = template[iend:]
     return ret
