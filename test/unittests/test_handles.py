@@ -56,9 +56,7 @@ def test_result():
 """
     eq_("""primitive d0 Dummy
     group g1 d0
-""", handles.parse(t, {'obj':
-                       {'id': 'd0',
-                        handles.RESULT: 'primitive d0 Dummy'}}))
+""", handles.parse(t, {'obj': handles.value({'id': 'd0'}, 'primitive d0 Dummy')}))
     eq_("\n    group g1 \n", handles.parse(t, {}))
 
 
@@ -72,9 +70,7 @@ def test_result2():
     eq_("""primitive d0 Dummy
     group g1 d0
 primitive d0 Dummy
-""", handles.parse(t, {'obj':
-                       {'id': 'd0',
-                        handles.RESULT: 'primitive d0 Dummy'}}))
+""", handles.parse(t, {'obj': handles.value({'id': 'd0'}, 'primitive d0 Dummy')}))
     eq_("\n    group g1 \n", handles.parse(t, {}))
 
 

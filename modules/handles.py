@@ -18,7 +18,17 @@
 import re
 
 
-RESULT = ":result:"
+class value(object):
+    """
+    An object that is indexable in mustasches,
+    but also evaluates to a value itself.
+    """
+    def __init__(self, obj, value):
+        self.value = value
+        self.get = obj.get
+
+    def __call__(self):
+        return self.value
 
 
 def _join(d1, d2):
@@ -31,7 +41,7 @@ def _resolve(path, values):
     p = values
     while path and p is not None:
         p, path = p.get(path[0]), path[1:]
-    return p
+    return p() if callable(p) else p
 
 
 def parse(template, values):
@@ -39,13 +49,12 @@ def parse(template, values):
     Takes as input a template string and a dict
     of values, and replaces the following:
     {{object:key}} = look up key in object and insert value
-    {{object}} = if object is found in the dict and is a dict itself,
-    insert the value of the special key ":result:", if object is in the dict and is
-    a value, insert the value
+    {{object}} = insert value if not None or False.
     {{#object}} ... {{/object}} = if object is a dict or value, process text. if object
     is a list, process text for each item in the list
     (can't nest these for items with the same name)
     {{^object}} ... {{/object}} = if object is falsy, process text.
+    If a path evaluates to a callable, the callable will be invoked to get the value.
     """
     head_re = re.compile(r'\{\{(\#|\^)?([A-Za-z0-9:_-]+)\}\}')
     ret = ""
@@ -57,13 +66,11 @@ def parse(template, values):
         istart, iend, prefix, key = head.start(0), head.end(0), head.group(1), head.group(2)
         if istart > 0:
             ret += template[:istart]
-        path = key.split(':')
+        path, block, invert = key.split(':'), prefix == '#', prefix == '^'
         if not path:
             raise ValueError("empty {{}} block found")
         obj = _resolve(path, values)
-        is_block = prefix == '#'
-        is_invert = prefix == '^'
-        if is_block or is_invert:
+        if block or invert:
             tailtag = '{{/%s}}' % (key)
             tailidx = iend + template[head.end(0):].find(tailtag)
             if tailidx < iend:
@@ -72,7 +79,7 @@ def parse(template, values):
             body = template[head.end(0):tailidx]
             if body.startswith('\n') and (not ret or ret.endswith('\n')):
                 ret = ret[:-1]
-            if is_block:
+            if block:
                 if obj in (None, False):
                     pass
                 elif isinstance(obj, tuple) or isinstance(obj, list):
@@ -84,11 +91,6 @@ def parse(template, values):
                 ret += parse(body, _join(values, {key: ""}))
             if ret.endswith('\n') and template[iend:].startswith('\n'):
                 iend += 1
-        elif isinstance(obj, dict):
-            result = obj.get(RESULT)
-            if result is None:
-                raise ValueError("%s references non-value object" % (head.group(0)))
-            ret += str(result)
         elif obj is not None:
             ret += str(obj)
         template = template[iend:]
