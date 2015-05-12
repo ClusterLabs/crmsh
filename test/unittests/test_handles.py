@@ -39,6 +39,13 @@ def test_basic():
     and then some at the end""", handles.parse(t, {'foo': "a", 'wiz': "b"}))
 
 
+def test_weird_chars():
+    t = "{{foo#_bar}}"
+    eq_("hello", handles.parse(t, {'foo#_bar': 'hello'}))
+    t = "{{_foo$bar_}}"
+    eq_("hello", handles.parse(t, {'_foo$bar_': 'hello'}))
+
+
 def test_conditional():
     t = """{{#foo}}before{{foo:bar}}after{{/foo}}"""
     eq_("beforehelloafter", handles.parse(t, {'foo': {'bar': 'hello'}}))

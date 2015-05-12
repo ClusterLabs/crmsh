@@ -56,7 +56,7 @@ def parse(template, values):
     {{^object}} ... {{/object}} = if object is falsy, process text.
     If a path evaluates to a callable, the callable will be invoked to get the value.
     """
-    head_re = re.compile(r'\{\{(\#|\^)?([A-Za-z0-9:_-]+)\}\}')
+    head_re = re.compile(r'\{\{(\#|\^)?([A-Za-z0-9\#\$:_-]+)\}\}')
     ret = ""
     while template:
         head = head_re.search(template)
