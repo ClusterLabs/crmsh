@@ -28,10 +28,10 @@ from .msg import err_buf
 from . import userdir
 
 try:
-    import parallax as pssh
-    has_pssh = True
+    import parallax
+    has_parallax = True
 except ImportError:
-    has_pssh = False
+    has_parallax = False
 
 from . import utils
 
@@ -66,18 +66,18 @@ def _check_control_persist():
     return "Bad configuration option" not in err
 
 
-def _pssh_call(hosts, cmd, opts):
-    "pssh.call with debug logging"
+def _parallax_call(hosts, cmd, opts):
+    "parallax.call with debug logging"
     if config.core.debug or options.regression_tests:
-        err_buf.debug("pssh.call(%s, %s)" % (repr(hosts), cmd))
-    return pssh.call(hosts, cmd, opts)
+        err_buf.debug("parallax.call(%s, %s)" % (repr(hosts), cmd))
+    return parallax.call(hosts, cmd, opts)
 
 
-def _pssh_copy(hosts, src, dst, opts):
-    "pssh.copy with debug logging"
+def _parallax_copy(hosts, src, dst, opts):
+    "parallax.copy with debug logging"
     if config.core.debug or options.regression_tests:
-        err_buf.debug("pssh.copy(%s, %s, %s)" % (repr(hosts), src, dst))
-    return pssh.copy(hosts, src, dst, opts)
+        err_buf.debug("parallax.copy(%s, %s, %s)" % (repr(hosts), src, dst))
+    return parallax.copy(hosts, src, dst, opts)
 
 
 def _generate_workdir_name():
@@ -257,8 +257,8 @@ def param_completion_list(name):
 
 
 def _make_options(params):
-    "Setup pssh options."
-    opts = pssh.Options()
+    "Setup parallax options."
+    opts = parallax.Options()
     opts.inline = True
     opts.timeout = int(params['timeout'])
     opts.recursive = True
@@ -352,7 +352,7 @@ def _set_controlpersist(opts):
     #    opts.ssh_options += ["ControlMaster=auto",
     #                         "ControlPersist=30s",
     #                         "ControlPath=/tmp/crm-ssh-%r@%h:%p"]
-    # unfortunately, due to bad interaction between pssh and ssh,
+    # unfortunately, due to bad interaction between parallax and ssh,
     # ControlPersist is broken
     # See: http://code.google.com/p/parallel-ssh/issues/detail?id=67
     # Fixed in openssh 6.3
@@ -387,10 +387,10 @@ def _copy_utils(dst):
 def _create_remote_workdirs(hosts, path, opts):
     "Create workdirs on remote hosts"
     ok = True
-    for host, result in _pssh_call(hosts,
-                                   "mkdir -p %s" % (os.path.dirname(path)),
-                                   opts).iteritems():
-        if isinstance(result, pssh.Error):
+    for host, result in _parallax_call(hosts,
+                                       "mkdir -p %s" % (os.path.dirname(path)),
+                                       opts).iteritems():
+        if isinstance(result, parallax.Error):
             err_buf.error("[%s]: Start: %s" % (host, result))
             ok = False
     if not ok:
@@ -402,10 +402,10 @@ def _create_remote_workdirs(hosts, path, opts):
 def _copy_to_remote_dirs(hosts, path, opts):
     "Copy a local folder to same location on remote hosts"
     ok = True
-    for host, result in _pssh_copy(hosts,
-                                   path,
-                                   path, opts).iteritems():
-        if isinstance(result, pssh.Error):
+    for host, result in _parallax_copy(hosts,
+                                       path,
+                                       path, opts).iteritems():
+        if isinstance(result, parallax.Error):
             err_buf.error("[%s]: %s" % (host, result))
             ok = False
     if not ok:
@@ -417,9 +417,9 @@ def _copy_to_all(workdir, hosts, local_node, src, dst, opts):
     Copy src to dst both locally and remotely
     """
     ok = True
-    ret = _pssh_copy(hosts, src, dst, opts)
+    ret = _parallax_copy(hosts, src, dst, opts)
     for host, result in ret.iteritems():
-        if isinstance(result, pssh.Error):
+        if isinstance(result, parallax.Error):
             err_buf.error("[%s]: %s" % (host, result))
             ok = False
         else:
@@ -603,10 +603,10 @@ class RunStep(object):
         else:
             self.opts.input_stream = None
 
-        for host, result in _pssh_call(self.hosts,
-                                       cmdline,
-                                       self.opts).iteritems():
-            if isinstance(result, pssh.Error):
+        for host, result in _parallax_call(self.hosts,
+                                           cmdline,
+                                           self.opts).iteritems():
+            if isinstance(result, parallax.Error):
                 self.error("[%s]: %s", host, result)
                 ok = False
             else:
@@ -666,11 +666,11 @@ def _run_cleanup(local_node, hosts, workdir, opts):
     "Clean up after the cluster script"
     if hosts and workdir:
         cleanscript = os.path.join(workdir, 'crm_clean.py')
-        for host, result in _pssh_call(hosts,
-                                       "%s %s" % (cleanscript,
-                                                  workdir),
-                                       opts).iteritems():
-            if isinstance(result, pssh.Error):
+        for host, result in _parallax_call(hosts,
+                                           "%s %s" % (cleanscript,
+                                                      workdir),
+                                           opts).iteritems():
+            if isinstance(result, parallax.Error):
                 err_buf.debug("[%s]: Failed to clean up %s" % (host, workdir))
                 err_buf.error("[%s]: Clean: %s" % (host, result))
             else:
@@ -681,10 +681,10 @@ def _run_cleanup(local_node, hosts, workdir, opts):
 def _print_debug(local_node, hosts, workdir, opts):
     "Print debug output (if any)"
     dbglog = os.path.join(workdir, 'crm_script.debug')
-    for host, result in _pssh_call(hosts,
-                                   "[ -f '%s' ] && cat '%s'" % (dbglog, dbglog),
-                                   opts).iteritems():
-        if isinstance(result, pssh.Error):
+    for host, result in _parallax_call(hosts,
+                                       "[ -f '%s' ] && cat '%s'" % (dbglog, dbglog),
+                                       opts).iteritems():
+        if isinstance(result, parallax.Error):
             err_buf.error("[%s]: %s" % (host, result))
         else:
             _print_output(host, *result)
@@ -699,7 +699,7 @@ def run(name, args):
     name: a cluster script is a folder <name> containing a main.yml file
     args: list of nvpairs
     '''
-    if not has_pssh:
+    if not has_parallax:
         raise ValueError("The parallax library is not installed or is not up to date.")
     workdir = _generate_workdir_name()
     main, filename, script_dir = _open_script(name)
