@@ -60,3 +60,76 @@ def test_result():
                        {'id': 'd0',
                         handles.RESULT: 'primitive d0 Dummy'}}))
     eq_("\n    group g1 \n", handles.parse(t, {}))
+
+
+def test_result2():
+    t = """{{obj}}
+    group g1 {{obj:id}}
+{{#obj}}
+{{obj}}
+{{/obj}}
+"""
+    eq_("""primitive d0 Dummy
+    group g1 d0
+primitive d0 Dummy
+""", handles.parse(t, {'obj':
+                       {'id': 'd0',
+                        handles.RESULT: 'primitive d0 Dummy'}}))
+    eq_("\n    group g1 \n", handles.parse(t, {}))
+
+
+def test_mustasche():
+    t = """Hello {{name}}
+You have just won {{value}} dollars!
+{{#in_ca}}
+Well, {{taxed_value}} dollars, after taxes.
+{{/in_ca}}
+"""
+    v = {
+        "name": "Chris",
+        "value": 10000,
+        "taxed_value": 10000 - (10000 * 0.4),
+        "in_ca": True
+    }
+
+    eq_("""Hello Chris
+You have just won 10000 dollars!
+Well, 6000.0 dollars, after taxes.
+""", handles.parse(t, v))
+
+
+def test_invert():
+    t = """{{#repo}}
+<b>{{name}}</b>
+{{/repo}}
+{{^repo}}
+No repos :(
+{{/repo}}
+"""
+    v = {
+        "repo": []
+    }
+
+    eq_("""
+No repos :(
+""", handles.parse(t, v))
+
+
+def test_invert_2():
+    t = """foo
+{{#repo}}
+<b>{{name}}</b>
+{{/repo}}
+{{^repo}}
+No repos :(
+{{/repo}}
+bar
+"""
+    v = {
+        "repo": []
+    }
+
+    eq_("""foo
+No repos :(
+bar
+""", handles.parse(t, v))
