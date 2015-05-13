@@ -49,6 +49,10 @@ I presented Hawk [1] and the History Explorer interface which
 builds upon the crmsh history feature at openSUSE conf in The Hague
 earlier this month. The video of that presentation is online here:
 
+++++++++++++
+<iframe width="420" height="315" src="https://www.youtube.com/embed/mngfxzXkFLw" frameborder="0" allowfullscreen></iframe>
+++++++++++++
+
 https://www.youtube.com/watch?v=mngfxzXkFLw
 
 [1]: https://github.com/ClusterLabs/hawk
