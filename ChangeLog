@@ -1,3 +1,11 @@
+* Wed May 13 2015 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- Release 2.1.4
+- Medium: hb_report: use faster zypper interface if available
+- medium: ui_configure: Wait for DC when removing running resource
+- low: schema: Don't leak PacemakerError exceptions (#93)
+- parse: Don't require trailing colon in tag definitions
+- medium: utils: Allow 1/0 as boolean values for parameters
+
 * Fri Apr 10 2015 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - Release 2.1.3
 - medium: parse: nvpair attributes with no value = <nvpair name=".."/> (#71)
