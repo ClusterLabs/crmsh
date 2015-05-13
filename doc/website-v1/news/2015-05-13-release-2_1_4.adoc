@@ -1,0 +1,122 @@
+Announcing crmsh stable release 2.1.4
+=====================================
+:Author: Kristoffer Gronlund
+:Email: kgronlund@suse.com
+:Date: 2015-05-13 15:30
+
+Today we are proud to announce the release of `crmsh` version 2.1.4!
+2.1.4 is a minor bug fix release with no major issues, so users
+already running 2.1.3 are mostly fine. Instead, the main reason
+for releasing 2.1.4 is as an excuse to talk about some other things
+that are happening with crmsh!
+
+The details for this release are available below.
+
+History Guide
+~~~~~~~~~~~~~
+
+Dejan has written a guide to using the crmsh history
+command. For those who are unfamiliar with the history explorer or
+want to know more about how to use it, this guide is a great
+introduction to what it does and how to use it.
+
+History is not a new crmsh feature, but, as we failed to
+advertise it and nothing works without proper marketing, it
+probably hasn't seen a very wide use. That's surely a pity and we
+hope that this gentle history guide is going to help. 
+
+So, if you use crmsh and if you need help troubleshooting
+clusters (I surely do!), take a look here:
+
+http://crmsh.github.io/history-guide/
+
+FYI, the comprehensive crmsh help also has a short description of
+the feature:
+
+........
+crm history help
+........
+
+Goes without saying: all commands are described too.
+
+If you don't use crmsh, you'll still find a lot of useful
+information in the guide, so don't skip it.
+
+Hawk Presentation
+~~~~~~~~~~~~~~~~~
+
+I presented Hawk [1] and the History Explorer interface which
+builds upon the crmsh history feature at openSUSE conf in The Hague
+earlier this month. The video of that presentation is online here:
+
+https://www.youtube.com/watch?v=mngfxzXkFLw
+
+[1]: https://github.com/ClusterLabs/hawk
+
+
+2.2.0 Development News
+~~~~~~~~~~~~~~~~~~~~~~~
+
+While 2.1.4 is the latest stable release, I am also working on releasing
+2.2.0 which will come with a bunch of new features. I'm still working
+on some of these and not everything is in the repository yet, so
+2.2.0 is probably at least a month or so away still. I was perhaps
+a bit optimistic when I tagged RC1 back in October last year. ;)
+
+However, right now I'd like to focus on one thing that is already in
+2.2.0 and which is available if you use the development packages from
+OBS: command shorthands. This makes crmsh a lot more convenient to use
+from the command line. Basically, you can use any unambiguous subset
+of a command name to refer to that command, and crmsh will figure out
+what you mean. This may sound confusing, so an example will help with
+explaining what I mean:
+
+This is one way of showing the current cluster configuration:
+
+........
+crm configure show
+........
+
+However, now you can shorten this to the following:
+
+........
+crm cfg show
+........
+
+Other examples of shorthand are `crm rsc stop r1` or `crm st`
+for status. And of course, tab completion in bash still works for
+the shorthand variants.
+
+The examples used here are not comprehensive. crmsh is pretty clever
+at figuring out which command was intended. Download the development
+release and try it out!
+
+2.1.4 Details
+~~~~~~~~~~~~~
+
+For a complete list of changes since the previous version, please
+refer to the changelog:
+
+* https://github.com/ClusterLabs/crmsh/blob/2.1.4/ChangeLog
+
+Packages for several popular Linux distributions can be downloaded
+from the Stable repository at the OBS:
+
+* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/
+
+Archives of the tagged release:
+
+* https://github.com/ClusterLabs/crmsh/archive/2.1.4.tar.gz
+* https://github.com/ClusterLabs/crmsh/archive/2.1.4.zip
+
+Changes since the previous release:
+
+- Medium: hb_report: use faster zypper interface if available
+- medium: ui_configure: Wait for DC when removing running resource
+- low: schema: Don't leak PacemakerError exceptions (#93)
+- parse: Don't require trailing colon in tag definitions
+- medium: utils: Allow 1/0 as boolean values for parameters
+
+Thank you,
+
+Kristoffer and Dejan
