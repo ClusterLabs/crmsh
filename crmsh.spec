@@ -145,7 +145,7 @@ find . -exec touch \{\} \;
 make %{_smp_mflags} docdir=%{crmsh_docdir}
 
 %if 0%{?with_regression_tests}
-	./test/unit-tests.sh --quiet
+	./test/run --quiet
     if [ ! $? ]; then
         echo "Unit tests failed."
         exit 1

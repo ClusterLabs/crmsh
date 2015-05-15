@@ -9,8 +9,10 @@ except ImportError, e:
 
 from crmsh import msg
 from crmsh import config
+from crmsh import options
 msg.ERR_STREAM = None
 config.core.debug = True
+options.regression_tests = True
 _here = os.path.dirname(__file__)
 config.path.sharedir = os.path.join(_here, "../../doc")
 config.path.crm_dtd_dir = os.path.join(_here, "schemas")
