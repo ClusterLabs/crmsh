@@ -329,15 +329,14 @@ class RuleParser(BaseParser):
 
     _TERMINATORS = ('params', 'meta', 'utilization', 'operations', 'op', 'rule')
 
-    def match_attr_list(self, name, tag):
+    def match_attr_list(self, name, tag, allow_empty=True):
         """
-        matches <name> [$id=<id>] [<score>:] <n>=<v> <n>=<v> ... | $id-ref=<id-ref>
+        matches [$id=<id>] [<score>:] <n>=<v> <n>=<v> ... | $id-ref=<id-ref>
         if matchname is False, matches:
         <n>=<v> <n>=<v> ...
         """
         from .cibconfig import cib_factory
 
-        self.match(name)
         xmlid = None
         if self.try_match_idspec():
             if self.matched(1) == '$id-ref':
@@ -352,6 +351,8 @@ class RuleParser(BaseParser):
             score = self.matched(1)
         rules = self.match_rules()
         values = self.match_nvpairs(minpairs=0)
+        if (allow_empty, xmlid, score, len(rules), len(values)) == (False, None, None, 0, 0):
+            return None
         return xmlbuilder.attributes(tag, rules, values, xmlid=xmlid, score=score)
 
     def match_attr_lists(self, name_map, implicit_initial=None):
@@ -362,16 +363,15 @@ class RuleParser(BaseParser):
         to_match = '|'.join(name_map.keys())
         if self.try_match(to_match):
             name = self.matched(0).lower()
-            self.rewind()
             yield self.match_attr_list(name, name_map[name])
         elif implicit_initial is not None:
-            values = self.match_nvpairs(minpairs=0)
-            if len(values):
-                yield xmlbuilder.attributes(name_map[implicit_initial],
-                                            [], values, xmlid=None, score=None)
+            attrs = self.match_attr_list(implicit_initial,
+                                         name_map[implicit_initial],
+                                         allow_empty=False)
+            if attrs is not None:
+                yield attrs
         while self.try_match(to_match):
             name = self.matched(0).lower()
-            self.rewind()
             yield self.match_attr_list(name, name_map[name])
 
     def match_rules(self):
