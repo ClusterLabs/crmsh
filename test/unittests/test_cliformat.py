@@ -193,11 +193,11 @@ def test_master():
 
 def test_param_rules():
     roundtrip('primitive foo Dummy ' +
-              'rule #uname eq wizbang laser=yes ' +
+              'params rule #uname eq wizbang laser=yes ' +
               'params rule #uname eq gandalf staff=yes')
 
     roundtrip('primitive mySpecialRsc me:Special ' +
-              '3: rule #uname eq node1 interface=eth1 ' +
+              'params 3: rule #uname eq node1 interface=eth1 ' +
               'params 2: rule #uname eq node2 interface=eth2 port=8888 ' +
               'params 1: interface=eth0 port=9999')
 

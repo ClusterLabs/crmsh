@@ -338,7 +338,10 @@ def test_pengine_test():
     assert obj is not None
     data = obj.repr_cli(format=-1)
     print "OUTPUT:", data
-    exp = 'primitive rsc1 ocf:pacemaker:Dummy rule 0: #cluster-name eq clusterA state="/var/run/Dummy-rsc1-clusterA" params rule 0: #cluster-name eq clusterB state="/var/run/Dummy-rsc1-clusterB" op monitor interval=10'
+    exp = ('primitive rsc1 ocf:pacemaker:Dummy ' +
+           'params rule 0: #cluster-name eq clusterA state="/var/run/Dummy-rsc1-clusterA" ' +
+           'params rule 0: #cluster-name eq clusterB state="/var/run/Dummy-rsc1-clusterB" ' +
+           'op monitor interval=10')
     assert data == exp
     assert obj.cli_use_validate()
 

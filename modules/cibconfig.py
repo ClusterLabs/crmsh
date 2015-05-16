@@ -989,6 +989,20 @@ class CibObject(object):
                     first = False
             return self._cli_format_and_comment(l, comments, break_lines=(format > 0))
 
+    def _may_elide_initial(self, xml_attr_list_name):
+        """
+        If true, may generate elided initial attribute
+        list typename. The idea is that this will be
+        false where there are multiple attribute lists.
+        """
+        attr_list_name = self.set_names[xml_attr_list_name]
+        initial = constants.implicit_initial.get(self.xml_obj_type)
+        if len(self.node.xpath('./%s' % (xml_attr_list_name))) > 1:
+            return False
+        if initial is None:
+            return False
+        return initial == attr_list_name
+
     def _attr_set_str(self, node, first):
         '''
         Add $id=<id> if the set id is referenced by another
@@ -997,7 +1011,7 @@ class CibObject(object):
         also show rule expressions if found
         '''
 
-        # has_nvpairs = len(node.xpath('.//nvpair')) > 0
+        has_nvpairs = len(node.xpath('.//nvpair')) > 0
         idref = node.get('id-ref')
 
         # don't skip empty sets: skipping these breaks
@@ -1005,13 +1019,10 @@ class CibObject(object):
         # empty set
         # if not (has_nvpairs or idref is not None):
         #    return ''
-        ret = ""
-        set_name = self.set_names[node.tag]
-        initial = constants.implicit_initial.get(self.xml_obj_type)
-        if first and initial is not None and initial == set_name:
-            ret += ""
+        if first and (has_nvpairs or idref is not None) and self._may_elide_initial(node.tag):
+            ret = ""
         else:
-            ret += "%s " % (clidisplay.keyword(self.set_names[node.tag]))
+            ret = "%s " % (clidisplay.keyword(self.set_names[node.tag]))
         node_id = node.get("id")
         if node_id is not None and cib_factory.is_id_refd(node.tag, node_id):
             ret += "%s " % (nvpair_format("$id", node_id))
