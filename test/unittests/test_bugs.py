@@ -338,7 +338,7 @@ def test_pengine_test():
     assert obj is not None
     data = obj.repr_cli(format=-1)
     print "OUTPUT:", data
-    exp = 'primitive rsc1 ocf:pacemaker:Dummy params rule 0: #cluster-name eq clusterA state="/var/run/Dummy-rsc1-clusterA" params rule 0: #cluster-name eq clusterB state="/var/run/Dummy-rsc1-clusterB" op monitor interval=10'
+    exp = 'primitive rsc1 ocf:pacemaker:Dummy rule 0: #cluster-name eq clusterA state="/var/run/Dummy-rsc1-clusterA" params rule 0: #cluster-name eq clusterB state="/var/run/Dummy-rsc1-clusterB" op monitor interval=10'
     assert data == exp
     assert obj.cli_use_validate()
 
@@ -401,7 +401,7 @@ def test_nvpair_no_value():
     assert obj is not None
     data = obj.repr_cli(format=-1)
     print "OUTPUT:", data
-    exp = 'primitive rsc3 Dummy params verbose verbase="" verbese=" "'
+    exp = 'primitive rsc3 Dummy verbose verbase="" verbese=" "'
     assert data == exp
     assert obj.cli_use_validate()
 
@@ -441,6 +441,6 @@ def test_quotes():
     assert obj is not None
     data = obj.repr_cli(format=-1)
     print "OUTPUT:", data
-    exp = 'primitive q1 ocf:pacemaker:Dummy params state="foo\\"foo\\""'
+    exp = 'primitive q1 ocf:pacemaker:Dummy state="foo\\"foo\\""'
     assert data == exp
     assert obj.cli_use_validate()

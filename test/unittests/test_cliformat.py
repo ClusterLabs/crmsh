@@ -67,7 +67,7 @@ def test_rscset():
 
 def test_group():
     factory.create_from_cli('primitive p1 Dummy')
-    roundtrip('group g1 p1 params target-role=Stopped')
+    roundtrip('group g1 p1 target-role=Stopped')
 
 
 def test_bnc863736():
@@ -104,13 +104,13 @@ def test_comment2():
 
 
 def test_nvpair_ref1():
-    factory.create_from_cli("primitive dummy-0 Dummy params $fiz:buz=bin")
-    roundtrip('primitive dummy-1 Dummy params @fiz:boz')
+    factory.create_from_cli("primitive dummy-0 Dummy $fiz:buz=bin")
+    roundtrip('primitive dummy-1 Dummy @fiz:boz')
 
 
 def test_idresolve():
-    factory.create_from_cli("primitive dummy-5 Dummy params buz=bin")
-    roundtrip('primitive dummy-1 Dummy params @dummy-5-instance_attributes-buz')
+    factory.create_from_cli("primitive dummy-5 Dummy buz=bin")
+    roundtrip('primitive dummy-1 Dummy @dummy-5-instance_attributes-buz')
 
 
 def test_ordering():
@@ -193,11 +193,11 @@ def test_master():
 
 def test_param_rules():
     roundtrip('primitive foo Dummy ' +
-              'params rule #uname eq wizbang laser=yes ' +
+              'rule #uname eq wizbang laser=yes ' +
               'params rule #uname eq gandalf staff=yes')
 
     roundtrip('primitive mySpecialRsc me:Special ' +
-              'params 3: rule #uname eq node1 interface=eth1 ' +
+              '3: rule #uname eq node1 interface=eth1 ' +
               'params 2: rule #uname eq node2 interface=eth2 port=8888 ' +
               'params 1: interface=eth0 port=9999')
 
@@ -216,7 +216,7 @@ def test_acls_oldsyntax():
               expected='role boo deny ref:d0 deny type:nvpair')
 
 def test_rules():
-    roundtrip('primitive p1 Dummy params ' +
+    roundtrip('primitive p1 Dummy ' +
               'rule $role=Started date in start=2009-05-26 end=2010-05-26 ' +
               'or date gt 2014-01-01 state=2')
 

@@ -39,6 +39,15 @@ cib_cli_map = {
     "fencing-topology": "fencing_topology",
     "tag": "tag"
 }
+# xml name => implicit initial
+implicit_initial = {
+    "node": "attributes",
+    "primitive": "params",
+    "template": "params",
+    "master": "params",
+    "clone": "params",
+    "group": "params"
+}
 container_tags = ("group", "clone", "ms", "master")
 clonems_tags = ("clone", "ms", "master")
 resource_tags = ("primitive", "group", "clone", "ms", "master", "template")
