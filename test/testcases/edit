@@ -1,9 +1,9 @@
 show Configuration editing
 property default-action-timeout=2m
 node node1 \
-	attributes mem=16G
+	mem=16G
 primitive st stonith:null \
-	params hostlist='node1' \
+	hostlist='node1' \
 	meta description="some description here" \
 	op start requires=nothing \
 	op monitor interval=60m

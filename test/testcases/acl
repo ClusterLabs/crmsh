@@ -2,7 +2,7 @@ show ACL
 node node1
 property enable-acl=true
 primitive st stonith:ssh \
-	params hostlist='node1' \
+	hostlist='node1' \
 	meta target-role="Started" \
 	op start requires=nothing timeout=60s \
 	op monitor interval=60m timeout=60s

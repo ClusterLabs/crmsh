@@ -1,7 +1,7 @@
 showxml Resource sets
 node node1
 primitive st stonith:ssh \
-	params hostlist='node1' \
+	hostlist='node1' \
 	op start timeout=60s
 primitive d1 ocf:pacemaker:Dummy
 primitive d2 ocf:heartbeat:Dummy

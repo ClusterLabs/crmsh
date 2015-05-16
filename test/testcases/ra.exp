@@ -61,9 +61,6 @@ livedangerously (enum): Live Dangerously!!
     setting this parameter to yes makes it an even worse idea.
     Viva la Vida Loca!
 
-stonith-timeout (time, [60s]): How long to wait for the STONITH action to complete per a stonith device.
-    Overrides the stonith-timeout cluster property
-
 priority (integer, [0]): The priority of the stonith resource. Devices are tried in order of highest priority to lowest.
 pcmk_host_argument (string, [port]): Advanced use only: An alternate parameter to supply instead of 'port'
     Some devices do not support the standard 'port' parameter or may provide additional ones.

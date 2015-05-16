@@ -4,7 +4,7 @@
 .INP: up
 .INP: configure
 .INP: erase
-.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" 	op start requires=nothing 	op monitor interval=60m
+.INP: primitive st stonith:null 	hostlist='node1' 	meta description="some description here" 	op start requires=nothing 	op monitor interval=60m
 .INP: primitive p4 Dummy
 .INP: primitive p3 Dummy
 .INP: primitive p2 Dummy
@@ -24,7 +24,7 @@ colocation c2 inf: ( p1 p2 ) p3 p4
 .INP: show
 node node1
 primitive st stonith:null \
-	params hostlist=node1 \
+	hostlist=node1 \
 	meta description="some description here" \
 	op start requires=nothing interval=0 \
 	op monitor interval=60m
@@ -46,7 +46,7 @@ colocation c2 inf: ( p1 p2 ) p3 p4
 .INP: show
 node node1
 primitive st stonith:null \
-	params hostlist=node1 \
+	hostlist=node1 \
 	meta description="some description here" \
 	op start requires=nothing interval=0 \
 	op monitor interval=60m
@@ -67,7 +67,7 @@ colocation c2 inf: ( p1 p2 ) p3 p4
 .INP: show
 node node1
 primitive st stonith:null \
-	params hostlist=node1
+	hostlist=node1
 primitive p4 Dummy
 primitive p3 Dummy
 primitive p2 Dummy

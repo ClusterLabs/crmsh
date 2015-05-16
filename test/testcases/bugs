@@ -5,7 +5,7 @@ up
 configure
 erase
 primitive st stonith:null \
-	params hostlist='node1' \
+	hostlist='node1' \
 	meta description="some description here" \
 	op start requires=nothing \
 	op monitor interval=60m

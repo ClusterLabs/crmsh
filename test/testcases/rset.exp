@@ -4,7 +4,7 @@
 .INP: erase
 .INP: erase nodes
 .INP: node node1
-.INP: primitive st stonith:ssh 	params hostlist='node1' 	op start timeout=60s
+.INP: primitive st stonith:ssh 	hostlist='node1' 	op start timeout=60s
 .INP: primitive d1 ocf:pacemaker:Dummy
 .INP: primitive d2 ocf:heartbeat:Dummy
 .INP: primitive d3 ocf:heartbeat:Dummy
@@ -47,7 +47,7 @@ primitive d1 ocf:pacemaker:Dummy
 primitive d3 Dummy
 primitive d5 Dummy
 primitive st stonith:ssh \
-	params hostlist=node1 \
+	hostlist=node1 \
 	op start timeout=60s interval=0
 colocation c1 inf: ( d1 d3 )
 colocation c2 inf: d3 d1

@@ -5,10 +5,10 @@
 .INP: erase nodes
 .INP: node node1
 .INP: # create one stonith so that verify does not complain
-.INP: primitive st stonith:ssh 	params hostlist='node1' 	meta target-role="Started" 	op start requires=nothing timeout=60s 	op monitor interval=60m timeout=60s
-.INP: primitive p0 Dummy params $p0-state:state=1
-.INP: primitive p1 Dummy params     rule role=Started date in start=2009-05-26 end=2010-05-26 or date gt 2014-01-01     state=2
-.INP: primitive p2 Dummy params @p0-state
+.INP: primitive st stonith:ssh 	hostlist='node1' 	meta target-role="Started" 	op start requires=nothing timeout=60s 	op monitor interval=60m timeout=60s
+.INP: primitive p0 Dummy $p0-state:state=1
+.INP: primitive p1 Dummy     rule role=Started date in start=2009-05-26 end=2010-05-26 or date gt 2014-01-01     state=2
+.INP: primitive p2 Dummy @p0-state
 nvpair_ref: 'p0-state' None
 nvpair_ref: 'p0-state' None
 .INP: property rule #uname eq node1 stonith-enabled=no
@@ -18,13 +18,13 @@ nvpair_ref: 'p0-state' None
 .INP: show
 node node1
 primitive p0 Dummy \
-	params state=1
+	state=1
 primitive p1 Dummy \
-	params rule $role=Started date in start=2009-05-26 end=2010-05-26 or date gt 2014-01-01 state=2
+	rule $role=Started date in start=2009-05-26 end=2010-05-26 or date gt 2014-01-01 state=2
 primitive p2 Dummy \
-	params @p0-state
+	@p0-state
 primitive st stonith:ssh \
-	params hostlist=node1 \
+	hostlist=node1 \
 	meta target-role=Started \
 	op start requires=nothing timeout=60s interval=0 \
 	op monitor interval=60m timeout=60s
