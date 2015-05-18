@@ -738,7 +738,8 @@ class ResourceParser(RuleParser):
             children.append(child)
         xmlbuilder.maybe_set(out, 'description', self.try_match_description())
         self.match_arguments(out, {'params': 'instance_attributes',
-                                   'meta': 'meta_attributes'})
+                                   'meta': 'meta_attributes'},
+                             implicit_initial='params')
         for child in children:
             xmlbuilder.child(out, 'crmsh-ref', id=child)
         return out
