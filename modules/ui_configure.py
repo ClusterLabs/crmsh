@@ -648,6 +648,7 @@ class CibConfig(command.UI):
 
     @command.skill_level('administrator')
     @command.completers_repeating(compl.null, ra_classes_or_tmpl, primitive_complete_complex)
+    @command.alias('resource')
     def do_primitive(self, context, *args):
         """usage: primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>}
         [params <param>=<value> [<param>=<value>...]]
