@@ -99,7 +99,7 @@ class TestBaseParser(unittest.TestCase):
         self._reset('foo=bar wiz="fizz buzz" bug= bug2=')
         ret = self.base.match_nvpairs()
         self.assertEqual(len(ret), 4)
-        retdict = {r.get('name'): r.get('value') for r in ret}
+        retdict = dict([(r.get('name'), r.get('value')) for r in ret])
         self.assertEqual(retdict['foo'], 'bar')
         self.assertEqual(retdict['bug'], '')
         self.assertEqual(retdict['wiz'], 'fizz buzz')
