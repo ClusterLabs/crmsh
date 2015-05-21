@@ -30,6 +30,12 @@ def _attr_str(attr_d):
                      for k, v in attr_d.iteritems()])
 
 
+def _quoted(name):
+    if re.match('^[0-9_]', name):
+        return '"%s"' % (name)
+    return name
+
+
 class Gv(object):
     '''
     graph.
@@ -52,10 +58,7 @@ class Gv(object):
         self.norank_nodes = []
 
     def gv_id(self, n):
-        n = n.replace('-', '_').replace('.', '_')
-        if re.match('^[0-9_]', n):
-            return '"%s"' % (n)
-        return n
+        return n.replace('-', '_').replace('.', '_')
 
     def new_graph_attr(self, attr, v):
         self.graph_attrs[attr] = v
@@ -99,7 +102,7 @@ class Gv(object):
         self.edge_attrs[e_id][attr_n] = attr_v
 
     def edge_str(self, e_id):
-        e_s = self.EDGEOP.join(self.edges[e_id])
+        e_s = self.EDGEOP.join(_quoted(x) for x in self.edges[e_id])
         if e_id < len(self.edge_attrs):
             return('%s [%s]' % (e_s, _attr_str(self.edge_attrs[e_id])))
         else:
@@ -109,7 +112,7 @@ class Gv(object):
         attrs = 'style="invis"'
         if node in self.norank_nodes:
             attrs = '%s,constraint="false"' % attrs
-        return '%s [%s];' % (self.EDGEOP.join([tn, node]), attrs)
+        return '%s [%s];' % (self.EDGEOP.join([_quoted(tn), _quoted(node)]), attrs)
 
     def invisible_edges(self):
         '''
@@ -149,7 +152,7 @@ class Gv(object):
             l.append('\t%s;' % self.edge_str(e_id))
         for n, attr_d in self.attrs.iteritems():
             attr_s = _attr_str(attr_d)
-            l.append('\t%s [%s];' % (n, attr_s))
+            l.append('\t%s [%s];' % (_quoted(n), attr_s))
         l += self.invisible_edges()
         l.append(self.footer())
         return l
