@@ -194,18 +194,18 @@ class Cluster(command.UI):
         Execute the given command on all nodes, report outcome
         '''
         try:
-            import parallax as pssh
-            _has_pssh = True
+            import parallax
+            _has_parallax = True
         except ImportError:
-            _has_pssh = False
+            _has_parallax = False
 
-        if not _has_pssh:
-            context.fatal_error("PSSH not found")
+        if not _has_parallax:
+            context.fatal_error("python package parallax is needed for this command")
 
         hosts = utils.list_cluster_nodes()
-        opts = pssh.Options()
-        for host, result in pssh.call(hosts, cmd, opts).iteritems():
-            if isinstance(result, pssh.Error):
+        opts = parallax.Options()
+        for host, result in parallax.call(hosts, cmd, opts).iteritems():
+            if isinstance(result, parallax.Error):
                 err_buf.error("[%s]: %s" % (host, result))
             else:
                 if result[0] != 0:

@@ -109,7 +109,7 @@ def do_pssh(l, opts):
     try:
         return manager.run()  # returns a list of exit codes
     except FatalError:
-        common_err("pssh to nodes failed")
+        common_err("SSH to nodes failed")
         show_output(opts.errdir, hosts, "stderr")
         return False
 

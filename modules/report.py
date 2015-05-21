@@ -31,12 +31,12 @@ from .utils import file2str, shortdate, acquire_lock, append_file, ext_cmd, shor
 from .utils import page_string, release_lock, rmdir_r, parse_time, get_cib_attributes
 from .utils import is_pcmk_118, pipe_cmd_nosudo, file_find_by_name
 
-_NO_PSSH = False
+_NO_PARALLAX = False
 
 try:
     from .crm_pssh import next_loglines, next_peinputs
 except:
-    _NO_PSSH = True
+    _NO_PARALLAX = True
 
 
 YEAR = None
@@ -875,7 +875,7 @@ class Report(object):
     def read_new_log(self, node):
         '''
         Get a list of log lines.
-        The log is put in self.outdir/node by pssh.
+        The log is put in self.outdir/node by parallax.
         '''
         if not os.path.isdir(self.outdir):
             return []
@@ -957,7 +957,7 @@ class Report(object):
             # try just to refresh the live report
             if self.to_dt or self.is_live_very_recent() or no_live_update:
                 return self._live_loc()
-            if not _NO_PSSH:
+            if not _NO_PARALLAX:
                 if not acquire_lock(self.report_cache_dir):
                     return None
                 rc = self.update_live_report()

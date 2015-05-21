@@ -12,8 +12,8 @@ COROSYNC_CONF = '/etc/corosync/corosync.conf'
 
 
 def make_opts():
-    import parallax as pssh
-    opts = pssh.Options()
+    import parallax
+    opts = parallax.Options()
     opts.timeout = 60
     opts.recursive = True
     opts.user = 'root'
@@ -23,10 +23,10 @@ def make_opts():
     return opts
 
 
-def check_results(pssh, results):
+def check_results(parallax, results):
     failures = []
     for host, result in results.items():
-        if isinstance(result, pssh.Error):
+        if isinstance(result, parallax.Error):
             failures.add("%s: %s" % (host, str(result)))
     if failures:
         crm_script.exit_fail(', '.join(failures))
@@ -43,16 +43,16 @@ def gen_authkey():
 
 def run_copy():
     try:
-        import parallax as pssh
+        import parallax
     except ImportError:
         crm_script.exit_fail("Command node needs parallax installed")
     opts = make_opts()
-    results = pssh.copy(others, COROSYNC_AUTH, COROSYNC_AUTH, opts)
-    check_results(pssh, results)
-    results = pssh.call(others,
+    results = parallax.copy(others, COROSYNC_AUTH, COROSYNC_AUTH, opts)
+    check_results(parallax, results)
+    results = parallax.call(others,
                         "chown root:root %s;chmod 400 %s" % (COROSYNC_AUTH, COROSYNC_AUTH),
                         opts)
-    check_results(pssh, results)
+    check_results(parallax, results)
 
 
 if __name__ == "__main__":
