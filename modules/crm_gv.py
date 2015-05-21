@@ -15,6 +15,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
+import re
 import config
 import tmpfiles
 import utils
@@ -51,7 +52,10 @@ class Gv(object):
         self.norank_nodes = []
 
     def gv_id(self, n):
-        return n.replace('-', '_').replace('.', '_')
+        n = n.replace('-', '_').replace('.', '_')
+        if re.match('^[0-9_]', n):
+            return '"%s"' % (n)
+        return n
 
     def new_graph_attr(self, attr, v):
         self.graph_attrs[attr] = v
