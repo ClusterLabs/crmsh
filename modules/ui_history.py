@@ -82,11 +82,11 @@ class History(command.UI):
 
     def _check_source(self, src):
         'a (very) quick source check'
-        if src == "live" or os.path.isfile(src) or os.path.isdir(src):
+        if src == "live":
             return True
-        else:
-            common_err("source %s doesn't exist" % src)
-            return False
+        if os.path.isfile(src) or os.path.isdir(src):
+            return True
+        return False
 
     def _set_source(self, src, live_from_time=None):
         '''
@@ -95,6 +95,15 @@ class History(command.UI):
         '''
         common_debug("setting source to %s" % src)
         if not self._check_source(src):
+            if os.path.exists(crm_report().get_session_dir(src)):
+                common_debug("Interpreting %s as session" % src)
+                if crm_report().load_state(crm_report().get_session_dir(src)):
+                    options.history = crm_report().get_source()
+                    crm_report().prepare_source()
+                    self.current_session = src
+                    return True
+            else:
+                common_err("source %s doesn't exist" % src)
             return False
         crm_report().set_source(src)
         options.history = src
