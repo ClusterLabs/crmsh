@@ -319,9 +319,9 @@ def is_normal_node(n):
 def unique_ra(typ, klass, provider):
     """
     Unique:
-    * it's explicitly ocf:heartbeat: or ocf:pacemaker:
+    * it's explicitly ocf:heartbeat:
     * no explicit class or provider
-    * only one provider (heartbeat and pacemaker counts as one provider)
+    * only one provider (heartbeat counts as one provider)
     Not unique:
     * class is not ocf
     * multiple providers
