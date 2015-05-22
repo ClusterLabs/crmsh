@@ -57,10 +57,18 @@ def cli_operations(node, format=1):
     return cli_format(l, format)
 
 
+def quote_wrap(v):
+    if '"' in v:
+        return '"%s"' % v.replace('"', '\\"')
+    else:
+        return '"%s"' % v
+
+
 def nvpair_format(n, v):
     if v is None:
         return cli_display.attr_name(n)
-    return '%s="%s"' % (cli_display.attr_name(n), cli_display.attr_value(v))
+    return '='.join((cli_display.attr_name(n),
+                     cli_display.attr_value(quote_wrap(v))))
 
 
 def cli_pairs(pl):
@@ -129,7 +137,7 @@ def date_exp2cli(node):
     l.append(cli_display.keyword(operation))
     if operation in utils.olist(vars.simple_date_ops):
         value = node.get(utils.keyword_cmp(operation, 'lt') and "end" or "start")
-        l.append('"%s"' % cli_display.attr_value(value))
+        l.append(cli_display.attr_value(quote_wrap(value)))
     else:
         if operation == 'in_range':
             for name in vars.in_range_attrs:
@@ -321,7 +329,7 @@ def acl_spec_format(xml_spec, v):
             key_f = cli_display.keyword(shortcut)
             v_f = ':'.join([cli_display.attr_value(x) for x in spec_l])
         else:
-            v_f = '"%s"' % cli_display.attr_value(v)
+            v_f = cli_display.attr_value(quote_wrap(v))
     elif xml_spec == "ref":
         v_f = '%s' % cli_display.attr_value(v)
     else:  # tag and attribute
