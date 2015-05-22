@@ -207,7 +207,7 @@ def log2node(log):
     return os.path.basename(os.path.dirname(log))
 
 
-def filter(sl, log_l):
+def filter_log(sl, log_l):
     '''
     Filter list of messages to get only those from the given log
     files list.
@@ -310,17 +310,18 @@ class LogSyslog(object):
             del self.f[log]
             self.log_l.remove(log)
 
-    def get_match_line(self, f, patt):
+    def get_match_line(self, f, relist):
         '''
-        Get first line from f that matches re_s, but is not
-        behind endpos[f].
+        Get first line from f that matches one of
+        the REs in relist, but is not behind endpos[f].
+        if relist is empty, return all lines
         '''
         while f.tell() < self.endpos[f]:
             fpos = f.tell()
             s = f.readline().rstrip()
             if not s:
                 continue
-            if not patt or patt.search(s):
+            if not relist or any(r.search(s) for r in relist):
                 return s, fpos
         return '', -1
 
@@ -333,13 +334,10 @@ class LogSyslog(object):
             l.append(s)
         return l
 
-    def search_logs(self, log_l, re_s=''):
+    def search_logs(self, log_l, relist):
         '''
-        Search logs for re_s and sort by time.
+        Search logs for any of the regexps in relist.
         '''
-        patt = None
-        if re_s:
-            patt = re.compile(re_s)
         # if there's central log, there won't be merge
         if self.central_log:
             fl = [self.f[f] for f in self.f]
@@ -348,7 +346,7 @@ class LogSyslog(object):
         for f in fl:
             f.seek(self.startpos[f])
         # get head lines of all nodes
-        top_line = [self.get_match_line(x, patt)[0] for x in fl]
+        top_line = [self.get_match_line(x, relist)[0] for x in fl]
         top_line_ts = []
         rm_idx_l = []
         # calculate time stamps for head lines
@@ -361,12 +359,12 @@ class LogSyslog(object):
         rm_idx_l.reverse()
         for i in rm_idx_l:
             del fl[i], top_line[i]
-        common_debug("search <%s> in %s" % (re_s, [f.name for f in fl]))
+        common_debug("search in %s" % ", ".join(f.name for f in fl))
         if len(fl) == 0:  # nothing matched ?
             return []
         if len(fl) == 1:
             # no need to merge if there's only one log
-            return [top_line[0]] + self.single_log_list(fl[0], patt)
+            return [top_line[0]] + self.single_log_list(fl[0], relist)
         # search through multiple logs, merge sorted by time
         l = []
         first = 0
@@ -381,7 +379,7 @@ class LogSyslog(object):
             if not top_line[first]:
                 break
             l.append(top_line[first])
-            top_line[first] = self.get_match_line(fl[first], patt)[0]
+            top_line[first] = self.get_match_line(fl[first], relist)[0]
             if not top_line[first]:
                 top_line_ts[first] = time.time()
             else:
@@ -392,19 +390,10 @@ class LogSyslog(object):
         '''
         Return a list of log messages which
         match one of the regexes in re_l.
+        if re_l is an empty list, return all lines.
         '''
-        if not log_l:
-            log_l = self.log_l
-        re_s = '|'.join(re_l)
-        return filter(self.search_logs(log_l, re_s), log_l)
-        # caching is not ready!
-        # gets complicated because of different time frames
-        # (TODO)
-        #if not re_s: # just list logs
-        #    return filter(self.search_logs(log_l), log_l)
-        #if re_s not in self.cache: # cache regex search
-        #    self.cache[re_s] = self.search_logs(log_l, re_s)
-        #return filter(self.cache[re_s], log_l)
+        log_l = log_l or self.log_l
+        return filter_log(self.search_logs(log_l, re_l), log_l)
 
 
 def human_date(dt):
@@ -481,19 +470,65 @@ def extract_pe_file(msg):
     return msg_a[-1]
 
 
+def transition_start_re(number_re):
+    """
+    Return regular expression matching transition start.
+    number_re can be a specific transition or a regexp matching
+    any transition number.
+    The resulting RE has groups
+    1: transition number
+    2: full path of pe file
+    3: pe file number
+    """
+    m1 = "crmd.* do_te_invoke: Processing graph ([0-9]+) .*derived from (.*/pe-[^-]+-(%s)[.]bz2)" % (number_re)
+    m2 = "pengine.* process_pe_message: .*Transition ([0-9]+): .*([^ ]*/pe-[^-]+-(%s)[.]bz2)" % (number_re)
+    try:
+        return re.compile("(?:%s)|(?:%s)" % (m1, m2))
+    except re.error, e:
+        common_debug("RE compilation failed: %s" % (e))
+        raise ValueError("Error in search expression")
+
+
+def transition_end_re(number_re):
+    """
+    Return RE matching transition end.
+    See transition_start_re for more details.
+    """
+    try:
+        return re.compile("crmd.* run_graph: .*Transition ([0-9]+).*Source=(.*/pe-[^-]+-(%s)[.]bz2).: (Stopped|Complete|Terminated)" % (number_re))
+    except re.error, e:
+        common_debug("RE compilation failed: %s" % (e))
+        raise ValueError("Error in search expression")
+
+
+def find_transition_end(trnum, messages):
+    """
+    Find the end of the given transition in the list of messages
+    """
+    matcher = transition_end_re(trnum)
+    for msg in messages:
+        if matcher.search(msg):
+            return msg
+    matcher = transition_start_re(str(int(trnum) + 1))
+    for msg in messages:
+        if matcher.search(msg):
+            return msg
+    return None
+
+
+
+
 def get_matching_run_msg(te_invoke_msg, trans_msg_l):
-    run_msg = ""
+    """
+    Given the start of a transition log message, find
+    and return the end of the transition log messages.
+    """
     pe_file = extract_pe_file(te_invoke_msg)
     pe_num = get_pe_num(pe_file)
     if pe_num == "-1":
         common_warn("%s: strange, transition number not found" % pe_file)
         return ""
-    run_patt = vars.transition_patt[1].replace("%%", pe_num)
-    for msg in trans_msg_l:
-        if re.search(run_patt, msg):
-            run_msg = msg
-            break
-    return run_msg
+    return find_transition_end(pe_num, trans_msg_l) or ""
 
 
 def trans_str(node, pe_file):
@@ -1032,16 +1067,15 @@ class Report(Singleton):
             i = (i+1) % len(self.nodecolors)
 
     def get_invoke_trans_msgs(self, msg_l):
-        te_invoke_patt = vars.transition_patt[0].replace("%%", "[0-9]+")
-        return [x for x in msg_l if re.search(te_invoke_patt, x)]
+        te_invoke_patt = transition_start_re("[0-9]+")
+        return [x for x in msg_l if te_invoke_patt.search(x)]
 
     def get_all_trans_msgs(self, msg_l=None):
-        trans_re_l = [x.replace("%%", "[0-9]+") for x in vars.transition_patt]
-        if not msg_l:
+        trans_re_l = (transition_start_re("[0-9]+"), transition_end_re("[0-9]+"))
+        if msg_l is None:
             return self.logobj.get_matches(trans_re_l)
         else:
-            re_s = '|'.join(trans_re_l)
-            return [x for x in msg_l if re.search(re_s, x)]
+            return [x for x in msg_l if trans_re_l[0].search(x) or trans_re_l[1].search(x)]
 
     def list_transitions(self, msg_l=None, future_pe=False):
         '''
@@ -1058,13 +1092,20 @@ class Report(Singleton):
         WARN: We rely here on the message format (syslog,
         pacemaker).
         '''
+        def is_empty_transition(t0, t1):
+            if not (t0 and t1):
+                return False
+            old_pe_l_file = self.pe_report_path(t0)
+            new_pe_l_file = self.pe_report_path(t1)
+            return not (os.path.isfile(old_pe_l_file) or os.path.isfile(new_pe_l_file))
+
         trans_msg_l = self.get_all_trans_msgs(msg_l)
         trans_start_msg_l = self.get_invoke_trans_msgs(trans_msg_l)
+        prev_transition = None
         for msg in trans_start_msg_l:
             run_msg = get_matching_run_msg(msg, trans_msg_l)
             t_obj = Transition(msg, run_msg)
-            num_actions = t_obj.actions_count()
-            if num_actions == 0:  # empty transition
+            if is_empty_transition(prev_transition, t_obj):
                 common_debug("skipping empty transition (%s)" % t_obj)
                 continue
             if not future_pe:
@@ -1073,6 +1114,7 @@ class Report(Singleton):
                     warn_once("%s in the logs, but not in the report" % t_obj)
                     continue
             common_debug("found PE input: %s" % t_obj)
+            prev_transition = t_obj
             yield t_obj
 
     def report_setup(self):
@@ -1205,12 +1247,14 @@ class Report(Singleton):
         '''
         Print log lines, either matched by re_l or all.
         '''
+        def process(r):
+            return re.compile(r) if isinstance(r, basestring) else r
         if not log_l:
             log_l = self.log_l
         if not self.central_log and not log_l:
             self.error("no logs found")
             return
-        self.display_logs(self.logobj.get_matches(re_l, log_l))
+        self.display_logs(self.logobj.get_matches([process(r) for r in re_l], log_l))
 
     def get_source(self):
         return self.source
