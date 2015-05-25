@@ -105,6 +105,7 @@ eval exec_prefix="`eval echo ${exec_prefix}`"
 eval bindir="`eval echo ${bindir}`"
 eval sbindir="`eval echo ${sbindir}`"
 eval libexecdir="`eval echo ${libexecdir}`"
+eval datarootdir="`eval echo ${datarootdir}`"
 eval datadir="`eval echo ${datadir}`"
 eval sysconfdir="`eval echo ${sysconfdir}`"
 eval sharedstatedir="`eval echo ${sharedstatedir}`"
@@ -152,22 +153,11 @@ CRM_CACHE_DIR=${localstatedir}/cache/crm
 AC_DEFINE_UNQUOTED(CRM_CACHE_DIR,"$CRM_CACHE_DIR", Where crm shell keeps the cache)
 AC_SUBST(CRM_CACHE_DIR)
 
-AC_PATH_PROGS(HG, hg false)
-AC_PATH_PROGS(GIT, git false)
 AC_MSG_CHECKING(build version)
-BUILD_VERSION=unknown
-if test -f $srcdir/.hg_archival.txt; then
-   BUILD_VERSION=`cat $srcdir/.hg_archival.txt | awk '/node:/ { print $2 }'`
-elif test -x $HG -a -d .hg; then
-   BUILD_VERSION=`$HG id -i`
-   if test $? != 0; then
-       BUILD_VERSION=unknown
-   fi
-elif test -x $GIT -a -d .git; then
-   BUILD_VERSION=`$GIT describe`
-   if test $? != 0; then
-       BUILD_VERSION=unknown
-   fi
+if test -f .git/HEAD; then
+   BUILD_VERSION=$(cat .git/$(cat .git/HEAD | awk '{print $2}') | cut -c -7)
+else
+   BUILD_VERSION=unknown
 fi
 
 AC_DEFINE_UNQUOTED(BUILD_VERSION, "$BUILD_VERSION", Build version)
