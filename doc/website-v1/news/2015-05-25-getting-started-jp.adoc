@@ -1,0 +1,17 @@
+Getting Started translated to Japanese
+======================================
+:Author: Kristoffer Gronlund
+:Email: kgronlund@suse.com
+:Date: 2015-05-25 13:30
+
+Many thanks to Motoharu Kubo at 3ware for offering to translate the
+`crmsh` documentation to Japanese!
+
+The first document to be translated is the link:/start-guide/[Getting Started] guide,
+now available in Japanese at the following location:
+
+* https://blog.3ware.co.jp/2015/05/crmsh-getting-started/
+
+Thank you,
+Kristoffer and Dejan
+

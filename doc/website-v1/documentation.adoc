@@ -24,6 +24,10 @@ possible.
 * link:/scripts[Cluster scripts]
 * link:/faq[Frequently Asked Questions]
 
+== Translations ==
+
+* https://blog.3ware.co.jp/2015/05/crmsh-getting-started/[Getting Started (Japanese)]
+
 == External documentation ==
 
 The SUSE
