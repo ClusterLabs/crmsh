@@ -178,7 +178,7 @@ class Yum(PackageManager):
 
         cmd = [self._yum,
                '--assumeyes',
-               '-d', 2,
+               '-d', '2',
                'install',
                name]
         rc, stdout, stderr = run(cmd)
@@ -195,7 +195,7 @@ class Yum(PackageManager):
         pre_version = self.get_version(name)
         cmd = [self._yum,
                '--assumeyes',
-               '-d', 2,
+               '-d', '2',
                'update',
                name]
         rc, stdout, stderr = run(cmd)
@@ -212,7 +212,7 @@ class Yum(PackageManager):
 
         cmd = [self._yum,
                '--assumeyes',
-               '-d', 2,
+               '-d', '2',
                'erase',
                name]
         rc, stdout, stderr = run(cmd)
