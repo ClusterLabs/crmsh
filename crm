@@ -18,10 +18,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-minimum_version = '2.6'
 import sys
-
 from distutils import version
+
+minimum_version = '2.6'
 v_min = version.StrictVersion(minimum_version)
 v_this = version.StrictVersion(sys.version[:3])
 if v_min > v_this:
@@ -30,30 +30,39 @@ if v_min > v_this:
     sys.exit(-1)
 
 try:
-    from crmsh import main
-except ImportError, msg:
     try:
-        # Perhaps we're running from the source directory
-        import modules
-        sys.modules['crmsh'] = sys.modules['modules']
         from crmsh import main
-    except ImportError, msg2:
-        sys.stderr.write('''Fatal error:
-    %s
-    %s
+    except ImportError as msg:
+        try:
+            # Perhaps we're running from the source directory
+            import modules
+            sys.modules['crmsh'] = sys.modules['modules']
+            from crmsh import main
+        except ImportError as msg2:
+            sys.stderr.write('''Fatal error:
+        %s
+        %s
 
-Failed to start the crm shell! This is likely due to
-a broken installation or a missing dependency.
+    Failed to start crmsh! This is likely due to a broken
+    installation or a missing dependency.
 
-If you are using a packaged version of the crm shell,
-please try reinstalling the package. Also check your
-PYTHONPATH and make sure that the crmsh module is
-reachable.
+    If you are using a packaged version of crmsh, please try
+    reinstalling the package. Also check your PYTHONPATH and
+    make sure that the crmsh module is reachable.
 
-Please file an issue describing your installation at
-https://github.com/Clusterlabs/crmsh/issues/ .
+    Please file an issue describing your installation at
+    https://github.com/Clusterlabs/crmsh/issues/ .
 ''' % (msg, msg2))
-        sys.exit(-1)
+            sys.exit(-1)
+except AttributeError as msg:
+    sys.stderr.write('''Fatal error: %s
+
+    Failed to start crmsh! This is likely due to having
+    configured Python 3 as the default python version.
+    crmsh requires Python 2.6 or higher, but not (yet)
+    Python 3.
+''' % (msg))
+    sys.exit(-1)
 
 rc = main.run()
 sys.exit(rc)
