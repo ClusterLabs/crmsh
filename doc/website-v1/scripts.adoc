@@ -31,7 +31,7 @@ otherwise be tedious, repetitive and error-prone. The scripts
 functionality in the crm shell is mainly inspired by Ansible, a
 light-weight and efficient configuration management tool.
 
-Scripts are implemented using the `parallel-ssh` package which
+Scripts are implemented using the python `parallax` package which
 provides a thin wrapper on top of SSH. This allows the scripts to
 function through the usual SSH channels used for system maintenance,
 requiring no additional software to be installed or maintained.
