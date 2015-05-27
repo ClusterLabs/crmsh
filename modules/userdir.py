@@ -58,7 +58,7 @@ def mv_user_files():
         if not name:
             return name
         if not os.path.isdir(directory):
-            os.makedirs(directory, 0700)
+            os.makedirs(directory, 0o700)
         new = os.path.join(directory, xdg_name)
         if directory == CONFIG_HOME and chk_fun(new) and chk_fun(name):
             common_warn("both %s and %s exist, please cleanup" % (name, new))
