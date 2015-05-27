@@ -20,7 +20,10 @@ Holds user-configurable options.
 
 import os
 import re
-import ConfigParser
+try:
+    import ConfigParser
+except ImportError:
+    import configparser as ConfigParser
 from . import userdir
 
 
@@ -305,7 +308,7 @@ class _Configuration(object):
             if self._systemwide and self._systemwide.has_option(section, name):
                 return self._systemwide.get(section, name) or ''
             return self._defaults.get(section, name) or ''
-        except ConfigParser.NoOptionError, e:
+        except ConfigParser.NoOptionError as e:
             raise ValueError(e)
 
     def get(self, section, name, raw=False):

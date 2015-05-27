@@ -54,7 +54,7 @@ def load_rc(context, rcfile):
         try:
             if not context.run(inp):
                 raise ValueError("Error in RC file: " + rcfile)
-        except ValueError, msg:
+        except ValueError as msg:
             common_err(msg)
     f.close()
     sys.stdin = save_stdin
@@ -235,7 +235,7 @@ def setup_context(context):
     if options.input_file and options.input_file != "-":
         try:
             sys.stdin = open(options.input_file)
-        except IOError, msg:
+        except IOError as msg:
             common_err(msg)
             usage(2)
 
@@ -266,12 +266,12 @@ def main_input_loop(context, user_args):
             try:
                 if not context.run(inp):
                     rc = 1
-            except ValueError, msg:
+            except ValueError as msg:
                 rc = 1
                 common_err(msg)
         except KeyboardInterrupt:
             if options.interactive and not options.batch:
-                print "Ctrl-C, leaving"
+                print("Ctrl-C, leaving")
             context.quit(1)
     return rc
 
@@ -299,10 +299,10 @@ def compgen():
     if len(last_word) > 1 and ':' in last_word[1]:
         idx = last_word[1].rfind(':')
         for w in context.complete(line):
-            print w[idx+1:]
+            print(w[idx+1:])
     else:
         for w in context.complete(line):
-            print w
+            print(w)
 
 
 def parse_options():
@@ -334,7 +334,7 @@ def profile_run(context, user_args):
         stats_cmd = "; ".join(['import pstats',
                                's = pstats.Stats("%s")' % options.profile,
                                's.sort_stats("cumulative").print_stats()'])
-        print "python -c '%s' | less" % (stats_cmd)
+        print("python -c '%s' | less" % (stats_cmd))
     return 0
 
 
@@ -362,9 +362,9 @@ def run():
         else:
             return main_input_loop(context, user_args)
     except KeyboardInterrupt:
-        print "Ctrl-C, leaving"
+        print("Ctrl-C, leaving")
         sys.exit(1)
-    except ValueError, e:
+    except ValueError as e:
         common_err(str(e))
 
 # vim:ts=4:sw=4:et:
