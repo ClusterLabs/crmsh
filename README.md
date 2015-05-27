@@ -1,5 +1,7 @@
 # crmsh
 
+[![Build Status](https://travis-ci.org/ClusterLabs/crmsh.svg?branch=master)](https://travis-ci.org/ClusterLabs/crmsh)
+
 crmsh is a command-line interface for High-Availability cluster
 management on GNU/Linux systems, and part of the Clusterlabs
 project. It simplifies the configuration, management and
