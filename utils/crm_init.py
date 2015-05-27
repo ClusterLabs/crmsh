@@ -82,7 +82,7 @@ def net_info():
     try:
         ip = socket.gethostbyname(hostname)
         ret['hostname'] = {'name': hostname, 'ip': ip}
-    except Exception, e:
+    except Exception as e:
         ret['hostname'] = {'error': str(e)}
     return ret
 
@@ -203,7 +203,7 @@ def install_packages(packages):
     for pkg in packages:
         try:
             crm_script.package(pkg, 'latest')
-        except Exception, e:
+        except Exception as e:
             crm_script.exit_fail("Failed to install %s: %s" % (pkg, e))
 
 
