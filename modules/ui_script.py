@@ -18,8 +18,6 @@
 from . import command
 from . import scripts
 
-from .msg import err_buf
-
 
 class Script(command.UI):
     '''
@@ -37,32 +35,41 @@ class Script(command.UI):
         List available scripts.
         '''
         for name in scripts.list_scripts():
-            main = scripts.load_script(name)
-            print "%-16s %s" % (name, main.get('name', ''))
-
-    def do_verify(self, context, name):
-        '''
-        Verify the given script.
-        '''
-        if scripts.verify(name):
-            err_buf.ok(name)
+            script = scripts.load_script(name)
+            if script is not None:
+                print(script.summary())
 
     def do_describe(self, context, name):
         '''
         Describe the given script.
         '''
-        return scripts.describe(name)
+        script = scripts.load_script(name)
+        if script is not None:
+            return script.describe(name)
+        return False
 
-    def do_steps(self, context, name):
+    def do_verify(self, context, name, *args):
         '''
-        Print names of steps in script
+        Verify the script parameters
         '''
-        main = scripts.load_script(name)
-        for step in main['steps']:
-            print step['name']
+        script = scripts.load_script(name)
+        if script is None:
+            return False
+        ret = script.verify(args)
+        if ret is None:
+            return False
+        for nodes, action in ret:
+            print action
 
     def do_run(self, context, name, *args):
         '''
         Run the given script.
         '''
-        return scripts.run(name, args)
+        try:
+            import parallax
+        except ImportError:
+            raise ValueError("The parallax python package is missing")
+        script = scripts.load_script(name)
+        if script is not None:
+            return script.run(name, args)
+        return False

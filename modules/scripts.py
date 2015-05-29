@@ -1,4 +1,4 @@
-# Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
+# Copyright (C) 2015 Kristoffer Gronlund <kgronlund@suse.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -14,26 +14,18 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
+#
+# A rewrite of cluster scripts with more functionality built in
+# (including a mustashe-like templating language), and a JSON API
+# for Hawk to use.
 
-import sys
-import time
-import random
 import os
-import shutil
-import getpass
+import sys
 import subprocess
-from . import config
-from . import options
-from .msg import err_buf
-from . import userdir
-
-try:
-    import parallax
-    has_parallax = True
-except ImportError:
-    has_parallax = False
-
-from . import utils
+import getpass
+import time
+import shutil
+import random
 
 try:
     import json
@@ -41,14 +33,263 @@ except ImportError:
     import simplejson as json
 
 
-def script_dirs():
-    ret = []
-    for d in options.scriptdir.split(';'):
-        if d and os.path.isdir(d):
-            ret.append(d)
-    ret.append(os.path.join(userdir.CONFIG_HOME, 'scripts'))
-    ret.append(os.path.join(config.path.sharedir, 'scripts'))
-    return ret
+try:
+    import parallax
+except ImportError:
+    pass
+
+
+from . import config
+from . import handles
+from . import options
+from . import userdir
+from . import utils
+from .msg import err_buf
+
+
+_main_files = ('main.yml', 'main.xml')
+
+
+class Actions(object):
+    """
+    Each method in this class handles a particular step action.
+    """
+    def collect(self, step):
+        step.set_nodes()
+        step.run_command()
+        step.record_json()
+
+    def validate(self, step):
+        step.set_local()
+        step.run_command()
+        step.validate_json()
+
+    def apply(self, step):
+        step.set_nodes()
+        step.run_command()
+        step.record_json()
+
+    def apply_local(self, step):
+        step.set_local()
+        step.run_command()
+        step.record_json()
+
+    def report(self, step):
+        step.set_local()
+        step.run_command()
+        step.out()
+
+    def call(self, step):
+        step.set_nodes()
+        step.execute_shell()
+
+    def cib(self, step):
+        # generate cib
+        # runner.execute_local("crm configure load update ./step_cib")
+        txt = step.parse_text()
+        fn = utils.str2tmp(txt)
+        step.set_local()
+        step.execute(['crm', 'configure', 'load', 'update', fn])
+
+    def install(self, step):
+        step.set_nodes()
+        step.copy_and_run('''#!/usr/bin/env python
+import crm_script
+import crm_init
+
+crm_init.install_packages(%s)
+crm_script.exit_ok(True)
+        ''' % (step.data['packages']))
+
+    def service(self, step):
+        services = "\n".join([('crm_script.service(%s, %s)' % (s['name'], s['action']))
+                              for s in step.data['services']])
+        step.set_nodes()
+        step.copy_and_run('''#!/usr/bin/env python
+import crm_script
+import crm_init
+
+%s
+crm_script.exit_ok(True)
+''' % (services))
+
+
+def _make_options(params):
+    "Setup parallax options."
+    opts = parallax.Options()
+    opts.inline = True
+    opts.timeout = int(params['timeout'])
+    opts.recursive = True
+    opts.ssh_options += [
+        'KbdInteractiveAuthentication=no',
+        'PreferredAuthentications=gssapi-with-mic,gssapi-keyex,hostbased,publickey',
+        'PasswordAuthentication=no',
+        'StrictHostKeyChecking=no',
+        'ControlPersist=no']
+    if options.regression_tests:
+        opts.ssh_extra += ['-vvv']
+    return opts
+
+
+class Step(object):
+    """
+    Describes an action to take.
+    Has a list of nodes to execute on, and
+    a generate() method.
+    generate() outputs a snippet of bash
+    which is to be executed on each node.
+    """
+
+
+class Agent(object):
+    """
+    An agent is like a partial Script. It refers
+    to a resource agent of some sort, merged with
+    any additional metadata from.
+    """
+    def __init__(self):
+        self.value = handles.value(obj={}, value="")
+
+
+class Script(object):
+    """
+    DESCRIBE: list parameters (grouped), options, information
+    VERIFY: given these parameter values, describe actions that would be taken
+    RUN: given these parameter values, apply actions
+
+    """
+
+    def __init__(self, name):
+        self.name = ""
+        self.shortdesc = ""
+        self.longdesc = ""
+        self.category = ""
+        self.parameters = []
+        self.agents = []
+        self.steps = []
+
+        self.filename = None
+        self.script_dir = None
+
+    def summary(self):
+        return "%-16s %s" % (self.name, self.shortdesc)
+
+    def describe(self):
+        """
+        Generate a textual description of
+        the script.
+        """
+
+    def verify(self, values):
+        """
+        generate a list of (nodes, action) tuples
+        where nodes is a list of nodes to execute the step on,
+        and action is the code to run on those nodes
+        """
+
+    def run(self, args):
+        '''
+        Run the given script on the given set of hosts
+        name: a cluster script is a folder <name> containing a main.yml or main.xml file
+        args: list of nvpairs
+        '''
+        workdir = _generate_workdir_name()
+        params = _parse_parameters(self.name, args, self.name)
+        hosts = params['nodes']
+        err_buf.info(main['name'])
+        err_buf.info("Nodes: " + ', '.join([x[0] for x in hosts]))
+        local_node, hosts = _extract_localnode(hosts)
+        opts = _make_options(params)
+        _set_controlpersist(opts)
+
+        try:
+            _create_script_workdir(script_dir, workdir)
+            _copy_utils(workdir)
+            _create_remote_workdirs(hosts, workdir, opts)
+            _copy_to_remote_dirs(hosts, workdir, opts)
+            # make sure all path references are relative to the script directory
+            os.chdir(workdir)
+
+            stepper = RunStep(main, params, local_node, hosts, opts, workdir)
+            step = params['step']
+            statefile = params['statefile']
+            if step or statefile:
+                if not step or not statefile:
+                    raise ValueError("Must set both step and statefile")
+                return stepper.single_step(step, statefile)
+            else:
+                return stepper.all_steps()
+
+        except (OSError, IOError), e:
+            import traceback
+            traceback.print_exc()
+            raise ValueError("Internal error while running %s: %s" % (name, e))
+        finally:
+            if not config.core.debug:
+                _run_cleanup(local_node, hosts, workdir, opts)
+            else:
+                _print_debug(local_node, hosts, workdir, opts)
+
+
+def _parse_script(scriptfile):
+    data = None
+    try:
+        import yaml
+        with open(scriptfile) as f:
+            data = yaml.load(f)[0]
+    except ImportError as e:
+        raise ValueError("Failed to load yaml module: %s" % (e))
+    return data
+
+
+def _subdirs(path):
+    for f in os.listdir(path):
+        if os.path.isdir(os.path.join(path, f)):
+            yield f
+
+
+def _combine(p0, p1):
+    if p0:
+        return os.path.join(p0, p1)
+    return p1
+
+
+def list_scripts():
+    '''
+    List the available cluster installation scripts.
+    '''
+    l = []
+
+    def recurse(root, prefix):
+        try:
+            curdir = _combine(root, prefix)
+            for f in _subdirs(curdir):
+                for n in _main_files:
+                    if os.path.isfile(os.path.join(curdir, f, n)):
+                        l.append(_combine(prefix, f))
+                        break
+                else:
+                    recurse(root, _combine(prefix, f))
+        except OSError:
+            pass
+    for d in _script_dirs():
+        recurse(d, '')
+    return sorted(l)
+
+
+def load_script(script):
+    main = _resolve_script(script)
+    if main and os.path.isfile(main):
+        parsed = _parse_script(main)
+        return Script(script, parsed)
+    return None
+
+
+def _script_dirs():
+    "list of directories that may contain cluster scripts"
+    ret = [d for d in options.scriptdir.split(';') if d and os.path.isdir(d)]
+    return ret + [os.path.join(userdir.CONFIG_HOME, 'scripts'),
+                  os.path.join(config.path.sharedir, 'scripts')]
 
 
 def _check_control_persist():
@@ -58,7 +299,7 @@ def _check_control_persist():
     '''
     cmd = 'ssh -o ControlPersist'.split()
     if options.regression_tests:
-        print ".EXT", cmd
+        print(".EXT", cmd)
     cmd = subprocess.Popen(cmd,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
@@ -71,6 +312,15 @@ def _parallax_call(hosts, cmd, opts):
     if config.core.debug or options.regression_tests:
         err_buf.debug("parallax.call(%s, %s)" % (repr(hosts), cmd))
     return parallax.call(hosts, cmd, opts)
+
+
+def _resolve_script(name):
+    for d in _script_dirs():
+        for n in _main_files:
+            script_main = os.path.join(d, name, n)
+            if os.path.isfile(script_main):
+                return script_main
+    return None
 
 
 def _parallax_copy(hosts, src, dst, opts):
@@ -91,97 +341,76 @@ def _generate_workdir_name():
     return basetmp
 
 
-def resolve_script(name):
-    for d in script_dirs():
-        script_main = os.path.join(d, name, 'main.yml')
-        if os.path.isfile(script_main):
-            return script_main
-    return None
+def _print_output(host, rc, out, err):
+    "Print the output from a process that ran on host"
+    if out:
+        err_buf.ok("[%s]: %s" % (host, out))
+    if err:
+        err_buf.error("[%s]: %s" % (host, err))
 
 
-def list_scripts():
-    '''
-    List the available cluster installation scripts.
-    '''
-    l = []
-
-    def path_combine(p0, p1):
-        if p0:
-            return os.path.join(p0, p1)
-        return p1
-
-    def recurse(root, prefix):
-        try:
-            curdir = path_combine(root, prefix)
-            for f in os.listdir(curdir):
-                if os.path.isdir(os.path.join(curdir, f)):
-                    if os.path.isfile(os.path.join(curdir, f, 'main.yml')):
-                        l.append(path_combine(prefix, f))
-                    else:
-                        recurse(root, path_combine(prefix, f))
-        except OSError:
-            pass
-    for d in script_dirs():
-        recurse(d, '')
-    return sorted(l)
+def _print_debug(local_node, hosts, workdir, opts):
+    "Print debug output (if any)"
+    dbglog = os.path.join(workdir, 'crm_script.debug')
+    for host, result in _parallax_call(hosts,
+                                       "[ -f '%s' ] && cat '%s'" % (dbglog, dbglog),
+                                       opts).iteritems():
+        if isinstance(result, parallax.Error):
+            err_buf.error("[%s]: %s" % (host, result))
+        else:
+            _print_output(host, *result)
+    if os.path.isfile(dbglog):
+        f = open(dbglog).read()
+        err_buf.ok("[%s]: %s" % (local_node, f))
 
 
-def load_script(script):
-    main = resolve_script(script)
-    if main and os.path.isfile(main):
-        try:
-            import yaml
-            return yaml.load(open(main))[0]
-        except ImportError, e:
-            raise ValueError("PyYAML error: %s" % (e))
-    return None
+def _cleanup_local(workdir):
+    "clean up the local tmp dir"
+    if workdir and os.path.isdir(workdir):
+        cleanscript = os.path.join(workdir, 'crm_clean.py')
+        if os.path.isfile(cleanscript):
+            if subprocess.call([cleanscript, workdir], shell=False) != 0:
+                shutil.rmtree(workdir)
+        else:
+            shutil.rmtree(workdir)
 
 
-def _step_action(step):
-    name = step.get('name')
-    if 'type' in step:
-        return name, step.get('type'), step.get('call')
-    else:
-        for typ in ['collect', 'validate', 'apply', 'apply_local', 'report']:
-            if typ in step:
-                return name, typ, step[typ].strip()
-    return name, None, None
+def _run_cleanup(local_node, hosts, workdir, opts):
+    "Clean up after the cluster script"
+    if hosts and workdir:
+        cleanscript = os.path.join(workdir, 'crm_clean.py')
+        for host, result in _parallax_call(hosts,
+                                           "%s %s" % (cleanscript,
+                                                      workdir),
+                                           opts).iteritems():
+            if isinstance(result, parallax.Error):
+                err_buf.debug("[%s]: Failed to clean up %s" % (host, workdir))
+                err_buf.error("[%s]: Clean: %s" % (host, result))
+            else:
+                _print_output(host, *result)
+    _cleanup_local(workdir)
 
 
-def arg0(cmd):
-    return cmd.split()[0]
+def _extract_localnode(hosts):
+    """
+    Remove loal node from hosts list, so
+    we can treat it separately
+    """
+    this_node = utils.this_node()
+    hosts2 = []
+    local_node = None
+    for h, p, u in hosts:
+        if h != this_node:
+            hosts2.append((h, p, u))
+        else:
+            local_node = (h, p, u)
+    err_buf.debug("Local node: %s, Remote hosts: %s" % (
+        local_node,
+        ', '.join(h[0] for h in hosts2)))
+    return local_node, hosts2
 
 
-def _verify_step(scriptdir, scriptname, step):
-    step_name, step_type, step_call = _step_action(step)
-    if not step_name:
-        raise ValueError("Error in %s: Step missing name" % (scriptname))
-    if not step_type:
-        raise ValueError("Error in %s: Step '%s' has no action defined" %
-                         (scriptname, step_name))
-    if not step_call:
-        raise ValueError("Error in %s: Step '%s' has no call defined" %
-                         (scriptname, step_name))
-    if not os.path.isfile(os.path.join(scriptdir, arg0(step_call))):
-        raise ValueError("Error in %s: Step '%s' file not found: %s" %
-                         (scriptname, step_name, step_call))
-
-
-def verify(name):
-    script = resolve_script(name)
-    if not script:
-        raise ValueError("%s not found" % (name))
-    script_dir = os.path.dirname(script)
-    main = load_script(name)
-    for key in ['name', 'description', 'parameters', 'steps']:
-        if key not in main:
-            raise ValueError("Error in %s: Missing %s" % (name, key))
-    for step in main.get('steps', []):
-        _verify_step(script_dir, name, step)
-    return main
-
-
-def common_params():
+def _common_params():
     "Parameters common to all cluster scripts"
     return [('nodes', None, 'List of nodes to execute the script for'),
             ('dry_run', 'no', 'If set, only execute collecting and validating steps'),
@@ -194,92 +423,11 @@ def common_params():
             ('timeout', '600', 'Execution timeout in seconds')]
 
 
-def common_param_default(name):
-    for param, default, _ in common_params():
+def _common_param_default(name):
+    for param, default, _ in _common_params():
         if param == name:
             return default
     return None
-
-
-def describe(name):
-    '''
-    Prints information about the given script.
-    '''
-    script = load_script(name)
-    from .help import HelpEntry
-
-    def rewrap(txt):
-        import textwrap
-        paras = []
-        for para in txt.split('\n'):
-            paras.append('\n'.join(textwrap.wrap(para)))
-        return '\n\n'.join(paras)
-    desc = rewrap(script.get('description', 'No description available'))
-
-    params = script.get('parameters', [])
-    desc += "Parameters (* = Required):\n"
-    for name, value, description in common_params():
-        if value is not None:
-            defval = ' (default: %s)' % (value)
-        else:
-            defval = ''
-        desc += "  %-24s %s%s\n" % (name, description, defval)
-    for p in params:
-        rq = ''
-        if p.get('required'):
-            rq = '*'
-        defval = p.get('default', None)
-        if defval is not None:
-            defval = ' (default: %s)' % (defval)
-        else:
-            defval = ''
-        desc += "  %-24s %s%s\n" % (p['name'] + rq, p.get('description', ''), defval)
-
-    desc += "\nSteps:\n"
-    for step in script.get('steps', []):
-        name = step.get('name')
-        if name:
-            desc += "  * %s\n" % (name)
-
-    e = HelpEntry(script.get('name', name), desc)
-    e.paginate()
-
-
-def param_completion_list(name):
-    "Returns completions for the given script"
-    try:
-        script = load_script(name)
-        ps = [p['name'] + '=' for p in script.get('parameters', [])]
-        ps += [p[0] + '=' for p in common_params()]
-        return ps
-    except Exception:
-        return [p[0] + '=' for p in common_params()]
-
-
-def _make_options(params):
-    "Setup parallax options."
-    opts = parallax.Options()
-    opts.inline = True
-    opts.timeout = int(params['timeout'])
-    opts.recursive = True
-    opts.ssh_options += [
-        'KbdInteractiveAuthentication=no',
-        'PreferredAuthentications=gssapi-with-mic,gssapi-keyex,hostbased,publickey',
-        'PasswordAuthentication=no',
-        'StrictHostKeyChecking=no',
-        'ControlPersist=no']
-    if options.regression_tests:
-        opts.ssh_extra += ['-vvv']
-    return opts
-
-
-def _open_script(name):
-    filename = resolve_script(name)
-    main = verify(name)
-    if main is None or filename is None:
-        raise ValueError('Loading script failed: ' + name)
-    script_dir = os.path.dirname(filename)
-    return main, filename, script_dir
 
 
 def _filter_dict(d, name, fn, *args):
@@ -305,7 +453,7 @@ def _parse_parameters(name, args, main):
     '''
     args = utils.nvpairs2dict(args)
     params = {}
-    for key, default, _ in common_params():
+    for key, default, _ in _common_params():
         params[key] = default
     for key, val in args.iteritems():
         params[key] = val
@@ -327,25 +475,6 @@ def _parse_parameters(name, args, main):
     return params
 
 
-def _extract_localnode(hosts):
-    """
-    Remove loal node from hosts list, so
-    we can treat it separately
-    """
-    this_node = utils.this_node()
-    hosts2 = []
-    local_node = None
-    for h, p, u in hosts:
-        if h != this_node:
-            hosts2.append((h, p, u))
-        else:
-            local_node = (h, p, u)
-    err_buf.debug("Local node: %s, Remote hosts: %s" % (
-        local_node,
-        ', '.join(h[0] for h in hosts2)))
-    return local_node, hosts2
-
-
 def _set_controlpersist(opts):
     #_has_controlpersist = _check_control_persist()
     #if _has_controlpersist:
@@ -357,6 +486,59 @@ def _set_controlpersist(opts):
     # See: http://code.google.com/p/parallel-ssh/issues/detail?id=67
     # Fixed in openssh 6.3
     pass
+
+
+def arg0(cmd):
+    return cmd.split()[0]
+
+
+def _step_action(step):
+    name = step.get('name')
+    if 'type' in step:
+        return name, step.get('type'), step.get('call')
+    else:
+        for typ in ['collect', 'validate', 'apply', 'apply_local', 'report']:
+            if typ in step:
+                return name, typ, step[typ].strip()
+    return name, None, None
+
+
+def _verify_step(scriptdir, scriptname, step):
+    step_name, step_type, step_call = _step_action(step)
+    if not step_name:
+        raise ValueError("Error in %s: Step missing name" % (scriptname))
+    if not step_type:
+        raise ValueError("Error in %s: Step '%s' has no action defined" %
+                         (scriptname, step_name))
+    if not step_call:
+        raise ValueError("Error in %s: Step '%s' has no call defined" %
+                         (scriptname, step_name))
+    if not os.path.isfile(os.path.join(scriptdir, arg0(step_call))):
+        raise ValueError("Error in %s: Step '%s' file not found: %s" %
+                         (scriptname, step_name, step_call))
+
+
+def _verify(name):
+    script = _resolve_script(name)
+    if not script:
+        raise ValueError("%s not found" % (name))
+    script_dir = os.path.dirname(script)
+    main = load_script(name)
+    for key in ['name', 'description', 'parameters', 'steps']:
+        if key not in main:
+            raise ValueError("Error in %s: Missing %s" % (name, key))
+    for step in main.get('steps', []):
+        _verify_step(script_dir, name, step)
+    return main
+
+
+def _open_script(name):
+    filename = _resolve_script(name)
+    main = _verify(name)
+    if main is None or filename is None:
+        raise ValueError('Loading script failed: ' + name)
+    script_dir = os.path.dirname(filename)
+    return main, filename, script_dir
 
 
 def _create_script_workdir(scriptdir, workdir):
@@ -643,64 +825,12 @@ class RunStep(object):
         return out
 
 
-def _cleanup_local(workdir):
-    "clean up the local tmp dir"
-    if workdir and os.path.isdir(workdir):
-        cleanscript = os.path.join(workdir, 'crm_clean.py')
-        if os.path.isfile(cleanscript):
-            if subprocess.call([cleanscript, workdir], shell=False) != 0:
-                shutil.rmtree(workdir)
-        else:
-            shutil.rmtree(workdir)
-
-
-def _print_output(host, rc, out, err):
-    "Print the output from a process that ran on host"
-    if out:
-        err_buf.ok("[%s]: %s" % (host, out))
-    if err:
-        err_buf.error("[%s]: %s" % (host, err))
-
-
-def _run_cleanup(local_node, hosts, workdir, opts):
-    "Clean up after the cluster script"
-    if hosts and workdir:
-        cleanscript = os.path.join(workdir, 'crm_clean.py')
-        for host, result in _parallax_call(hosts,
-                                           "%s %s" % (cleanscript,
-                                                      workdir),
-                                           opts).iteritems():
-            if isinstance(result, parallax.Error):
-                err_buf.debug("[%s]: Failed to clean up %s" % (host, workdir))
-                err_buf.error("[%s]: Clean: %s" % (host, result))
-            else:
-                _print_output(host, *result)
-    _cleanup_local(workdir)
-
-
-def _print_debug(local_node, hosts, workdir, opts):
-    "Print debug output (if any)"
-    dbglog = os.path.join(workdir, 'crm_script.debug')
-    for host, result in _parallax_call(hosts,
-                                       "[ -f '%s' ] && cat '%s'" % (dbglog, dbglog),
-                                       opts).iteritems():
-        if isinstance(result, parallax.Error):
-            err_buf.error("[%s]: %s" % (host, result))
-        else:
-            _print_output(host, *result)
-    if os.path.isfile(dbglog):
-        f = open(dbglog).read()
-        err_buf.ok("[%s]: %s" % (local_node, f))
-
-
 def run(name, args):
     '''
     Run the given script on the given set of hosts
-    name: a cluster script is a folder <name> containing a main.yml file
+    name: a cluster script is a folder <name> containing a main.yml or main.xml file
     args: list of nvpairs
     '''
-    if not has_parallax:
-        raise ValueError("The parallax library is not installed or is not up to date.")
     workdir = _generate_workdir_name()
     main, filename, script_dir = _open_script(name)
     params = _parse_parameters(name, args, main)

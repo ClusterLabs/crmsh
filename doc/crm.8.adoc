@@ -1021,10 +1021,20 @@ Cluster scripts can perform cluster-wide configuration,
 validation and management. See the `list` command for
 an overview of available scripts.
 
-[[cmdhelp_script_describe,Describe the cluster script]]
+[[cmdhelp_script_list,List available scripts]]
+==== `list`
+
+Lists the available scripts.
+
+Usage:
+............
+list
+............
+
+[[cmdhelp_script_describe,Describe the script]]
 ==== `describe`
 
-Prints a description and short summary of the cluster script, with
+Prints a description and short summary of the script, with
 descriptions of all parameters, both required and optional.
 
 Usage:
@@ -1032,26 +1042,33 @@ Usage:
 describe <script>
 ............
 
-[[cmdhelp_script_list,List available scripts]]
-==== `list`
+[[cmdhelp_script_verify,Verify the script]]
+==== `verify`
 
-Lists the available cluster scripts.
+Checks the given parameter values, and returns a list
+of steps that will be executed when running the script
+given the same parameters.
 
 Usage:
 ............
-list
+verify <script> [args...]
 ............
 
-[[cmdhelp_script_run,Execute the cluster script]]
+Example:
+............
+verify init nodes="node-1 node-2 node-3"
+............
+
+[[cmdhelp_script_run,Run the script]]
 ==== `run`
 
-Runs a cluster script. Can optionally take at least two arguments:
+Runs a script. Can optionally take at least two arguments:
 * `nodes=<nodes>`: List of nodes that the script runs over
 * `dry_run=yes|no`: If set, the script will not perform any modifications.
 
-Additional arguments may be available depending on the cluster
-script. Use the `describe` command to see what arguments are
-provided.
+Additional parameters may be available depending on the script.
+
+Use the `describe` command to see what parameters are available.
 
 Usage:
 .............
@@ -1063,32 +1080,6 @@ Example:
 run health dry_run=yes verbose=yes
 run init nodes="node-1 node-2 node-3"
 .............
-
-[[cmdhelp_script_steps,List steps in cluster script]]
-==== `steps`
-
-List the names of all steps in the cluster script.
-
-This command is intended for use by automated tools
-and the web frontend.
-
-Usage:
-............
-steps <script>
-............
-
-
-[[cmdhelp_script_verify,Verify the cluster script]]
-==== `verify`
-
-Mainly useful when creating new scripts, this command
-verifies that the script definition has all necessary
-fields and that the referenced actions exist.
-
-Usage:
-............
-verify <script>
-............
 
 [[cmdhelp_corosync,Corosync management]]
 === `corosync` - Corosync management
