@@ -36,7 +36,7 @@ Name:           crmsh
 Summary:        High Availability cluster command-line interface
 License:        GPL-2.0+
 Group:          %{pkg_group}
-Version:        2.2.0~rc2+git.1426543208.fb920e3
+Version:        2.2.0~rc2+git.1432560022.4e7baf3
 Release:        0%{?crmsh_release}%{?dist}
 Url:            http://crmsh.github.io
 Source0:        %{name}-%{version}.tar.bz2
@@ -93,7 +93,6 @@ Summary:        Test package for crmsh
 Group:          %{pkg_group}
 Requires:       crmsh
 %if 0%{?with_regression_tests}
-BuildRequires:  corosync
 BuildRequires:  procps
 BuildRequires:  python-dateutil
 BuildRequires:  python-nose
