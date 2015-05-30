@@ -204,6 +204,12 @@ class Script(object):
     def summary(self):
         return "%-16s %s" % (self.name, self.shortdesc)
 
+    def __str__(self):
+        return self.summary()
+
+    def __repr__(self):
+        return repr(self.data)
+
     def describe(self):
         """
         Generate a textual description of
@@ -329,7 +335,7 @@ def _parse_xml(scriptfile):
         'include': []
     }
     xml = etree.parse(scriptfile).getroot()
-    data['version'] = xml.get('version', '')
+    data['version'] = float(xml.get('version', '2.2'))
     data['shortdesc'] = ''.join(xml.xpath('./shortdesc/text()'))
     data['longdesc'] = ''.join(xml.xpath('./longdesc/text()'))
     data['category'] = xml.get('category')
