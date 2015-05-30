@@ -1,0 +1,58 @@
+---
+
+- types:
+  - name: ipaddress
+    shortdesc: "IP Address (v4 or v6)"
+    re: "(^[0-9]{1,3}(\\.[0-9]{1,3}){3}$)|([0-9:]+)"
+  - name: port
+    shortdesc: "Port"
+    range_min: 0
+    range_max: 65535
+  - type: iface
+    shortdesc: "Interface Name"
+    re: "[a-zA-Z0-9_-]+"
+  - type: iflabel
+    shortdesc: "Interface Label"
+    re: "[a-zA-Z0-9]{,15}"
+  - type: cidr
+    shortdesc: "CIDR Network Mask"
+    range_min: 0
+    range_max: 128
+- agents:
+  - agent: ocf:heartbeat:IPaddr2
+    category: Network
+    basic: [ip, cidr_netmask]
+    parameters:
+      - name: ip
+        type: ipaddress
+        example: "192.168.0.10"
+      - name: nic
+        type: iface
+        example: "eth0"
+      - name: cidr_netmask
+        type: cidr
+        example: "24"
+      - name: broadcast
+        type: ipaddress
+      - name: iflabel
+        type: "/[a-zA-Z0-9]{,15}/"
+  - agent: ocf:heartbeat:apache
+    category: Network
+    basic: [configfile, port]
+    parameters:
+      - name: configfile
+        type: file
+      - name: port
+        type: 0 - 65535
+  - agent: systemd:haproxy
+    category: Network
+    cib: |
+      primitive {{id}} systemd:haproxy
+        op start interval=0 timeout=60s
+        op stop interval=0 timeout=120s
+        op monitor interval=20 timeout=30s
+  - agent: ocf:heartbeat:mysql
+    category: Database
+    basic: [config, datadir]
+  - agent: ocf:heartbeat:pgsql
+    category: Database

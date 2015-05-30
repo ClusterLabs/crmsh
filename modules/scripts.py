@@ -151,6 +151,24 @@ class Agent(object):
         self.value = handles.value(obj={}, value="")
 
 
+class Param(object):
+    """
+    Describes a parameter. This is integrated
+    from agent information, script data, agents metascript...
+    """
+    def __init__(self):
+        self.name = ""
+        self.type = ""  # should be a JS-compatible regular expression, a base type or integer range
+        self.shortdesc = ""
+        self.longdesc = ""
+        self.value = ""  # default value (if any)
+        self.example = None  # optional example value
+        self.when = None  # optional condition variable
+        self.unique = False  # from resource agents
+        self.required = False  # from resource agents
+        self.group = None  # grouped by agent or category
+
+
 class Script(object):
     """
     DESCRIBE: list parameters (grouped), options, information
@@ -159,17 +177,28 @@ class Script(object):
 
     """
 
-    def __init__(self, name):
-        self.name = ""
+    def __init__(self, name, mainfile, data):
+        self.name = name
         self.shortdesc = ""
-        self.longdesc = ""
-        self.category = ""
-        self.parameters = []
-        self.agents = []
+        self.longdesc = None
+        self.category = None
+        self.params = []
+        self.include = []
         self.steps = []
 
-        self.filename = None
-        self.script_dir = None
+        self.filename = mainfile
+        self.script_dir = os.path.dirname(mainfile)
+        self.data = data
+
+        self._init()
+
+    def _init(self):
+        if 'version' not in self.data or self.data['version'] != '2.2':
+            raise ValueError("TODO: Implement legacy parser")
+        self.version = float(self.data.get('version', '2.0'))
+        self.shortdesc = self.data.get('shortdesc', '')
+        self.longdesc = self.data.get('longdesc')
+        self.category = self.data.get('category', 'Basic')
 
     def summary(self):
         return "%-16s %s" % (self.name, self.shortdesc)
@@ -179,6 +208,23 @@ class Script(object):
         Generate a textual description of
         the script.
         """
+        def describe_param(p):
+            return "    %s" % (p.name)
+        vals = {
+            'name': self.name,
+            'category': self.category,
+            'shortdesc': self.shortdesc,
+            'longdesc': self.longdesc,
+            'parameters': "\n".join((describe_param(p) for p in self.params))}
+        return """%(name)s (%(category)s)
+%(shortdesc)s
+
+%(longdesc)s
+
+Parameters:
+
+%(parameters)s
+""" % vals
 
     def verify(self, values):
         """
@@ -193,6 +239,7 @@ class Script(object):
         name: a cluster script is a folder <name> containing a main.yml or main.xml file
         args: list of nvpairs
         '''
+        """
         workdir = _generate_workdir_name()
         params = _parse_parameters(self.name, args, self.name)
         hosts = params['nodes']
@@ -229,9 +276,10 @@ class Script(object):
                 _run_cleanup(local_node, hosts, workdir, opts)
             else:
                 _print_debug(local_node, hosts, workdir, opts)
+        """
 
 
-def _parse_script(scriptfile):
+def _parse_yaml(scriptfile):
     data = None
     try:
         import yaml
@@ -239,6 +287,59 @@ def _parse_script(scriptfile):
             data = yaml.load(f)[0]
     except ImportError as e:
         raise ValueError("Failed to load yaml module: %s" % (e))
+    return data
+
+
+def _parse_xml(scriptfile):
+    """
+    TODO: read xml object into a structure like the parsed yaml object
+    TODO: read hawk workflows
+    TODO: parse hawk <if>, <insert> tags
+    """
+    from lxml import etree
+    data = {
+        'version': None,
+        'shortdesc': '',
+        'longdesc': '',
+        'category': None,
+        'parameters': [],
+        'steps': [],
+        'include': []
+    }
+    xml = etree.parse(scriptfile)
+    data['version'] = xml.attrib.get('version', '')
+    data['shortdesc'] = ''.join(xml.xpath('./shortdesc/text()'))
+    data['longdesc'] = ''.join(xml.xpath('./longdesc/text()'))
+    data['category'] = xml.attrib.get('category')
+
+    for item in xml.xpath('./include/*'):
+        obj = {}
+        obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
+        obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
+        obj['error'] = ''.join(item.xpath('./error/text()'))
+        obj['when'] = item.xpath('./when/text()')
+        obj['nodes'] = ' '.join(item.xpath('./nodes/text()'))
+        data['include'].append(obj)
+
+    for item in xml.xpath('./parameters/*'):
+        obj = {}
+        obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
+        obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
+        obj['error'] = ''.join(item.xpath('./error/text()'))
+        obj['when'] = item.xpath('./when/text()')
+        obj['nodes'] = ' '.join(item.xpath('./nodes/text()'))
+        data['parameters'].append(obj)
+
+    for item in xml.xpath('./steps/*'):
+        obj = {}
+        obj[item.attrib['type']] = item.text
+        obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
+        obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
+        obj['error'] = ''.join(item.xpath('./error/text()'))
+        obj['when'] = item.xpath('./when/text()')
+        obj['nodes'] = ' '.join(item.xpath('./nodes/text()'))
+        data['steps'].append(obj)
+
     return data
 
 
@@ -280,8 +381,13 @@ def list_scripts():
 def load_script(script):
     main = _resolve_script(script)
     if main and os.path.isfile(main):
-        parsed = _parse_script(main)
-        return Script(script, parsed)
+        if main.endswith('.yml'):
+            parsed = _parse_yaml(main)
+        elif main.endswith('.xml'):
+            parsed = _parse_xml(main)
+        if parsed is None:
+            return None
+        return Script(script, main, parsed)
     return None
 
 
