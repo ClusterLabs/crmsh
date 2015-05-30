@@ -1,0 +1,44 @@
+---
+- version: 2.2
+  shortdesc: SQL Database
+  longdesc: >
+    Configure a SQL Database. At the moment, the only supported
+    database is a standalone MariaDB database instance.
+  category: Database
+  include:
+    - agent: ocf:heartbeat:mysql
+  parameters:
+    - name: id
+      shortdesc: Resource ID
+      longdesc: ID for the database resource
+      default: sqldb
+      type: id
+      required: true
+    - name: datadir
+      from: mysql
+    - name: config
+      from: mysql
+    - name: user
+      from: mysql
+    - name: group
+      from: mysql
+    - name: test_table
+      from: mysql
+      default: ""
+  steps:
+    - install: mariadb
+      shortdesc: Install packages
+      when: install
+    - service:
+        - name: mysql
+          action: disable
+      shortdesc: Let cluster manage the database
+      when: install
+    - cib: |
+        primitive {{id}} ocf:heartbeat:mysql
+          params
+            {{#test_table}}test_table={{test_table}}{{/test_table}}
+            {{#datadir}}datadir={{datadir}}{{/datadir}}
+            {{#config}}config={{config}}{{/config}}
+            {{#user}}user={{user}}{{/user}}
+            {{#group}}group={{group}}{{/group}}

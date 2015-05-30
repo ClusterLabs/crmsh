@@ -1,0 +1,53 @@
+---
+- version: 2.2
+  shortdesc: Apache Webserver
+  longdesc: >
+    Configure a resource group containing a virtual IP address and
+    an instance of the Apache web server. You can optionally configure
+    a Filesystem resource which will be mounted before the web server
+    is started. You can also optionally configure a database resource
+    which will be started before the web server but after mounting the
+    optional filesystem.
+  category: Server
+  include:
+    - agent: ocf:heartbeat:apache
+    - script: virtual-ip
+      shortdesc: The IP address configured here will start before the Apache instance.
+    - script: filesystem
+      shortdesc: Optional filesystem mounted before the web server is started.
+      required: false
+    - script: database
+      shortdesc: Optional database started before the web server is started.
+      required: false
+  parameters:
+    - name: id
+      shortdesc: ID for the web server resource group
+      example: web-server
+      type: resource-id
+    - name: install
+      type: option
+      shortdesc: Install and configure apache
+      default: true
+  steps:
+    - install: apache2
+      shortdesc: Install the apache package
+      when: install
+    - service:
+        - name: apache
+          action: disable
+      shortdesc: Let cluster manage apache
+      when: install
+    - call: a2enmod status
+      shortdesc: Enable status module
+      when: install
+    - cib: |
+      {{filesystem}}
+      {{database}}
+      {{virtual-ip}}
+      {{apache}}
+      monitor {{apache:id}} 120s:60s
+      group {{id}}
+        {{filesystem:id}}
+        {{database:id}}
+        {{virtual-ip:id}}
+        {{apache:id}}
