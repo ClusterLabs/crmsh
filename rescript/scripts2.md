@@ -280,3 +280,16 @@ able to be mostly backwards-compatible with earlier scripts.
 There's no reason this shouldn't be doable either! Just need a
 
 XML -> Script() parser.
+
+
+# simplified agent inheritance
+
+When an agent is included, you could of course insert it in a CIB and
+a reasonable default primitive will be created for it.
+
+The required parameters of that agent will be exposed as parameters
+for the script, unless there are explicit parameters in the script
+that override those parameters. For example, if there is a "ip"
+parameter that has "from: IPaddr2", then the ip parameter of IPaddr2
+will not be directly exposed, but the default description and value,
+etc. for the ip parameter will be taken from the IPaddr2 metadata.

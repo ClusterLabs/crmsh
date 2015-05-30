@@ -37,16 +37,33 @@ class Script(command.UI):
         for name in scripts.list_scripts():
             script = scripts.load_script(name)
             if script is not None:
-                print(script.summary())
+                print("%-16s %s" (script.name, script.shortdesc))
 
     def do_describe(self, context, name):
         '''
         Describe the given script.
         '''
         script = scripts.load_script(name)
-        if script is not None:
-            return script.describe(name)
-        return False
+        if script is None:
+            return False
+
+        def describe_param(p):
+            return "    %s" % (p.name)
+        vals = {
+            'name': script.name,
+            'category': script.category,
+            'shortdesc': script.shortdesc,
+            'longdesc': script.longdesc,
+            'parameters': "\n".join((describe_param(p) for p in script.params))}
+        return """%(name)s (%(category)s)
+%(shortdesc)s
+
+%(longdesc)s
+
+Parameters:
+
+%(parameters)s
+""" % vals
 
     def do_verify(self, context, name, *args):
         '''

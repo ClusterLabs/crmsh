@@ -44,10 +44,11 @@ from . import handles
 from . import options
 from . import userdir
 from . import utils
-from .msg import err_buf
+from .msg import err_buf, common_debug
 
 
 _main_files = ('main.yml', 'main.xml')
+_loaded_scripts = {}
 
 
 class Actions(object):
@@ -113,6 +114,18 @@ import crm_init
 crm_script.exit_ok(True)
 ''' % (services))
 
+_actions = dict([(n, getattr(Actions, n)) for n in dir(Actions) if not n.startswith('_')])
+
+print _actions
+
+
+def _find_action(step):
+    """return name of action for step"""
+    for a in _actions.keys():
+        if a in step:
+            return a
+    return None
+
 
 def _make_options(params):
     "Setup parallax options."
@@ -139,6 +152,19 @@ class Step(object):
     generate() outputs a snippet of bash
     which is to be executed on each node.
     """
+    def __init__(self, index, action, data):
+        self.index = index
+        self.type = action
+        self.text = data[action]
+        self.method = _actions[action]
+        self.when = data.get('when')
+        self.nodes = data.get('nodes')
+        self.shortdesc = data.get('shortdesc', '')
+        self.longdesc = data.get('longdesc', '')
+        self.error = data.get('error', '')
+        self.data = data
+
+        common_debug("Step: %s. %s = %s" % (index, action, self.text))
 
 
 class Agent(object):
@@ -147,8 +173,21 @@ class Agent(object):
     to a resource agent of some sort, merged with
     any additional metadata from.
     """
-    def __init__(self):
-        self.value = handles.value(obj={}, value="")
+    def __init__(self, data):
+        self.data = data
+        common_debug("Agent %s" % (data))
+
+
+class ScriptInclude(object):
+    """
+    A reference to an included Script, plus
+    any metadata that the include adds to it.
+    Can be overriding the description, required
+    """
+    def __init__(self, data):
+        self.data = data
+        self.script = load_script(data['script'])
+        common_debug("ScriptInclude %s" % (data['script']))
 
 
 class Param(object):
@@ -156,17 +195,20 @@ class Param(object):
     Describes a parameter. This is integrated
     from agent information, script data, agents metascript...
     """
-    def __init__(self):
-        self.name = ""
-        self.type = ""  # should be a JS-compatible regular expression, a base type or integer range
-        self.shortdesc = ""
-        self.longdesc = ""
-        self.value = ""  # default value (if any)
-        self.example = None  # optional example value
-        self.when = None  # optional condition variable
-        self.unique = False  # from resource agents
-        self.required = False  # from resource agents
-        self.group = None  # grouped by agent or category
+    def __init__(self, data):
+        self.name = data['name']
+        # should be a JS-compatible regular expression, a base type or integer range
+        self.type = data.get('type', 'string')
+        self.shortdesc = data.get('shortdesc')
+        self.longdesc = data.get('longdesc')
+        self._from = data.get('from')
+        self.value = data.get('default')  # default value (if any)
+        self.example = data.get('example')  # optional example value
+        self.when = data.get('when')  # optional condition variable
+        self.unique = data.get('unique')  # from resource agents
+        self.required = data.get('required')  # from resource agents
+        self.group = data.get('group')  # grouped by agent or category
+        common_debug("Param %s: %s" % (self.name, self.shortdesc))
 
 
 class Script(object):
@@ -183,55 +225,45 @@ class Script(object):
         self.longdesc = None
         self.category = None
         self.params = []
-        self.include = []
+        self.include = []  # includes can be agents or other scripts
         self.steps = []
 
         self.filename = mainfile
         self.script_dir = os.path.dirname(mainfile)
         self.data = data
 
-        self._init()
-
-    def _init(self):
-        ver = self.data.get('version')
+        ver = data.get('version')
         if ver is None or str(ver) != '2.2':
             raise ValueError("Unsupported script version: v = %s" % (repr(ver)))
         self.version = ver or '2.2'
-        self.shortdesc = self.data.get('shortdesc', '')
-        self.longdesc = self.data.get('longdesc')
-        self.category = self.data.get('category', 'Basic')
+        self.shortdesc = data.get('shortdesc', '')
+        self.longdesc = data.get('longdesc')
+        self.category = data.get('category') or 'Custom'
 
-    def summary(self):
-        return "%-16s %s" % (self.name, self.shortdesc)
+        for inc in self.data.get('include', []):
+            if 'agent' in inc:
+                obj = Agent(inc)
+                self.include.append(obj)
+            elif 'script' in inc:
+                obj = ScriptInclude(inc)
+                self.include.append(obj)
+
+        for param in self.data.get('parameters', []):
+            obj = Param(param)
+            self.params.append(obj)
+
+        for i, step in enumerate(self.data.get('steps', [])):
+            action = _find_action(step)
+            if action is None:
+                raise ValueError("Unknown step type: %s" % (step.keys()))
+            obj = Step(i + 1, action, step)
+            self.steps.append(obj)
 
     def __str__(self):
-        return self.summary()
+        return str(self.data)
 
     def __repr__(self):
         return repr(self.data)
-
-    def describe(self):
-        """
-        Generate a textual description of
-        the script.
-        """
-        def describe_param(p):
-            return "    %s" % (p.name)
-        vals = {
-            'name': self.name,
-            'category': self.category,
-            'shortdesc': self.shortdesc,
-            'longdesc': self.longdesc,
-            'parameters': "\n".join((describe_param(p) for p in self.params))}
-        return """%(name)s (%(category)s)
-%(shortdesc)s
-
-%(longdesc)s
-
-Parameters:
-
-%(parameters)s
-""" % vals
 
     def verify(self, values):
         """
@@ -294,6 +326,8 @@ def _parse_yaml(scriptfile):
             data = yaml.load(f)[0]
     except ImportError as e:
         raise ValueError("Failed to load yaml module: %s" % (e))
+    except Exception as e:
+        raise ValueError("Failed to parse script main: %s" % (e))
 
     if data:
         ver = data.get('version')
@@ -407,6 +441,8 @@ def list_scripts():
 
 
 def load_script(script):
+    if script in _loaded_scripts:
+        return _loaded_scripts[script]
     main = _resolve_script(script)
     if main and os.path.isfile(main):
         if main.endswith('.yml'):
@@ -415,7 +451,9 @@ def load_script(script):
             parsed = _parse_xml(main)
         if parsed is None:
             return None
-        return Script(script, main, parsed)
+        obj = Script(script, main, parsed)
+        _loaded_scripts[script] = obj
+        return obj
     return None
 
 

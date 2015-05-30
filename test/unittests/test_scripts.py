@@ -31,18 +31,17 @@ def test_load_legacy():
     script = scripts.load_script('legacy')
     assert script is not None
     eq_('legacy', script.name)
-    eq_({}, script)
 
 
 def test_load_xml():
     script = scripts.load_script('xml')
     assert script is not None
     eq_('xml', script.name)
-    eq_({}, script)
 
 
 def test_load_v2():
     script = scripts.load_script('v2')
     assert script is not None
     eq_('v2', script.name)
+    eq_('Apache Webserver', script.shortdesc)
     eq_({}, script)

@@ -8,37 +8,37 @@
     is started. You can also optionally configure a database resource
     which will be started before the web server but after mounting the
     optional filesystem.
-  category: Basic
+  category: Server
   include:
     - agent: ocf:heartbeat:apache
       name: apache
     - agent: ocf:heartbeat:IPaddr2
       name: virtual-ip
-      description: The IP address configured here will start before the Apache instance.
+      shortdesc: The IP address configured here will start before the Apache instance.
     - agent: ocf:heartbeat:Filesystem
       name: filesystem
-      optional: true
+      required: false
     - agents: database
       name: database
-      optional: true
+      required: false
   parameters:
     - name: id
-      description: The ID specified here is for the web server resource group.
+      shortdesc: The ID specified here is for the web server resource group.
     - name: install
       type: option
       default: true
-      description: Disable if no installation should be performed
+      shortdesc: Disable if no installation should be performed
   steps:
     - call: test -b {{filesystem:device}}
-      shortdesc: Verify filesystem device
-      error: Invalid filesystem device
+      shortdesc: Verify filesystem device {{filesystem:device}}
+      error: Invalid filesystem device {{filesystem:device}}
       nodes: all
       when: filesystem
     - install:
         - apache2
       when: install
     - call: a2enable mod_status
-      description: Enable status module
+      shortdesc: Enable status module
       nodes: all
       when: install
     - cib: |
