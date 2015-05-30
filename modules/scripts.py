@@ -193,9 +193,10 @@ class Script(object):
         self._init()
 
     def _init(self):
-        if 'version' not in self.data or self.data['version'] != '2.2':
-            raise ValueError("TODO: Implement legacy parser")
-        self.version = float(self.data.get('version', '2.0'))
+        ver = self.data.get('version')
+        if ver is None or str(ver) != '2.2':
+            raise ValueError("Unsupported script version: v = %s" % (repr(ver)))
+        self.version = ver or '2.2'
         self.shortdesc = self.data.get('shortdesc', '')
         self.longdesc = self.data.get('longdesc')
         self.category = self.data.get('category', 'Basic')
@@ -287,6 +288,27 @@ def _parse_yaml(scriptfile):
             data = yaml.load(f)[0]
     except ImportError as e:
         raise ValueError("Failed to load yaml module: %s" % (e))
+
+    if data:
+        ver = data.get('version')
+        if ver is None or str(ver) != '2.2':
+            data = _upgrade_yaml(data)
+    return data
+
+
+def _upgrade_yaml(data):
+    """
+    Upgrade a parsed yaml document from
+    an older version.
+    """
+    data['version'] = 2.2
+    if 'name' in data:
+        data['shortdesc'] = data['name']
+        del data['name']
+    if 'description' in data:
+        data['longdesc'] = data['description']
+        del data['description']
+
     return data
 
 
@@ -306,11 +328,11 @@ def _parse_xml(scriptfile):
         'steps': [],
         'include': []
     }
-    xml = etree.parse(scriptfile)
-    data['version'] = xml.attrib.get('version', '')
+    xml = etree.parse(scriptfile).getroot()
+    data['version'] = xml.get('version', '')
     data['shortdesc'] = ''.join(xml.xpath('./shortdesc/text()'))
     data['longdesc'] = ''.join(xml.xpath('./longdesc/text()'))
-    data['category'] = xml.attrib.get('category')
+    data['category'] = xml.get('category')
 
     for item in xml.xpath('./include/*'):
         obj = {}
@@ -332,7 +354,7 @@ def _parse_xml(scriptfile):
 
     for item in xml.xpath('./steps/*'):
         obj = {}
-        obj[item.attrib['type']] = item.text
+        obj[item.get('type')] = item.text
         obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
         obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
         obj['error'] = ''.join(item.xpath('./error/text()'))
