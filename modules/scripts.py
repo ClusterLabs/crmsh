@@ -118,8 +118,6 @@ crm_script.exit_ok(True)
 
 _actions = dict([(n, getattr(Actions, n)) for n in dir(Actions) if not n.startswith('_')])
 
-print _actions
-
 
 def _find_action(step):
     """return name of action for step"""
@@ -335,8 +333,10 @@ def _parse_hawk_workflow(scriptname, scriptfile):
 
     _append_cib_action(data['actions'], _hawk_to_handles('', xml.xpath('./crm_script')[0]))
 
-    import pprint
-    pprint.pprint(data)
+    if config.core.debug:
+        import pprint
+        print("Parsed hawk workflow:")
+        pprint.pprint(data)
     return data
 
 
