@@ -1,59 +1,51 @@
-%name clvm
+---
+- version: 2.2
+  shortdesc: Cluster-aware lvm (cloned)
+  longdesc: >
+    This template generates a cloned instance of clvm and one
+    volume group
 
-# Copyright (C) 2009 Dejan Muhamedagic
-#
-# License: GNU General Public License (GPL)
+    NB: You need just one clvm, regardless of how many volume
+    groups. In other words, you can use this template only for one
+    volume group and to make another one, you'll have to edit the
+    resulting configuration yourself.
+  category: Filesystem
+  parameters:
+    - name: id
+      shortdesc: Cluster resource name
+      longdesc: >-
+        The LVM resource will be in a cloned group with the rest
+        of the prerequisite resources. The clone is going to be named c-<id>
+        (e.g. c-vg-1)
+      default: vg-1
+      type: resource-id
+    - name: volgrpname
+      shortdesc: Volume group name
+      type: string
+      example: myvolgroup
+  actions:
+    - cib: |
+        primitive {{id}} ocf:heartbeat:LVM
+          params volgrpname="{{volgrpname}}"
+          op start timeout=60s
+          op stop timeout=60s
+          op monitor interval=30s timeout=60s
 
-# Cluster-aware lvm (cloned)
-#
-# This template generates a cloned instance of clvm and one
-# volume group
-#
-# NB: You need just one clvm, regardless of how many volume
-# groups. In other words, you can use this template only for one
-# volume group and to make another one, you'll have to edit the
-# resulting configuration yourself.
+        primitive dlm ocf:pacemaker:controld
+          op start timeout=90s
+          op stop timeout=100s
 
-%required
+        primitive clvm ocf:lvm2:clvmd
+          params daemon_timeout="30"
+          op start timeout=90s
+          op stop timeout=100s
 
-# Name the volume group (for example: vg-1)
-# The LVM resource will be in a cloned group with the rest
-# of the prerequisite resources. The clone is going to be named c-<id>
-# (e.g. c-vg-1)
+        primitive cmirror ocf:lvm2:cmirrord
+          params daemon_timeout="30"
+          op start timeout=90s
+          op stop timeout=100s
 
-# For example, to name the resource vg-1, edit the line below
-# as follows:
-# %% id vg-1
-%% id 
+        group g-{{id}} dlm clvm cmirror {{id}}
 
-# The volume group name
-# Example:
-# %% volgrpname myvolgroup
-%% volgrpname 
-
-%generate
-
-primitive %_:id ocf:heartbeat:LVM
-	params volgrpname="%_:volgrpname"
-	op start timeout=60s
-	op stop timeout=60s
-	op monitor interval=30s timeout=60s
-
-primitive dlm ocf:pacemaker:controld
-	op start timeout=90s
-	op stop timeout=100s
-
-primitive clvm ocf:lvm2:clvmd
-	params daemon_timeout="30"
-	op start timeout=90s
-	op stop timeout=100s
-
-primitive cmirror ocf:lvm2:cmirrord
-	params daemon_timeout="30"
-	op start timeout=90s
-	op stop timeout=100s
-
-group g-%_:id dlm clvm cmirror %_:id
-
-clone c-%_:id g-%_:id
-	meta interleave="true" ordered="true"
+        clone c-{{id}} g-{{id}}
+          meta interleave="true" ordered="true"

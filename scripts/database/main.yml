@@ -25,7 +25,7 @@
     - name: test_table
       from: mysql
       default: ""
-  steps:
+  actions:
     - install: mariadb
       shortdesc: Install packages
       when: install

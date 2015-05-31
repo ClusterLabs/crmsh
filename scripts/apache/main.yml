@@ -1,3 +1,7 @@
+# Copyright (C) 2009 Dejan Muhamedagic
+# Copyright (C) 2015 Kristoffer Gronlund
+#
+# License: GNU General Public License (GPL)
 ---
 - version: 2.2
   shortdesc: Apache Webserver
@@ -43,7 +47,7 @@
       type: option
       shortdesc: Install and configure apache
       default: true
-  steps:
+  actions:
     - install: apache2
       shortdesc: Install the apache package
       when: install
@@ -56,19 +60,19 @@
       shortdesc: Enable status module
       when: install
     - cib: |
-      {{filesystem}}
-      {{database}}
-      {{virtual-ip}}
-      primitive p-{{id}} ocf:heartbeat:apache
-        params
+        {{filesystem}}
+        {{database}}
+        {{virtual-ip}}
+        primitive p-{{id}} ocf:heartbeat:apache
+          params
           configfile="{{configfile}}"
           {{#options}}options="{{options}}"{{/options}}
           {{#envfiles}}envfiles="{{envfiles}}"{{/envfiles}}
-        op start timeout="40"
-        op stop timeout="60"
-        op monitor interval="10" timeout="20"
-      group g-{{id}}
-        {{filesystem:id}}
-        {{database:id}}
-        {{virtual-ip:id}}
-        p-{{id}}
+          op start timeout="40"
+          op stop timeout="60"
+          op monitor interval="10" timeout="20"
+        group g-{{id}}
+          {{filesystem:id}}
+          {{database:id}}
+          {{virtual-ip:id}}
+          p-{{id}}

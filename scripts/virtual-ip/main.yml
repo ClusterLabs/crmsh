@@ -1,19 +1,11 @@
 ---
 - version: 2.2
-  agent: ocf:heartbeat:IPaddr2
-  parameters:
-    - name: ip
-      type: ipaddress
-      category: basic
-    - name: cidr_netmask
-      type: 0-32
-      category: basic
-    - name: lvs_support
-      category: basic
-  steps:
+  shortdesc: Virtual IP
+  include:
+    - agent: ocf:heartbeat:IPaddr2
+      name: virtual-ip
+  actions:
     - cib: |
-        primitive {{id}} {{agent}}
-          params
-          {{parameters}}
-          op start timeout="20" op stop timeout="20"
-          op monitor interval="10" timeout="20"
+        {{virtual-ip}}
+            op start timeout="20" op stop timeout="20"
+            op monitor interval="10" timeout="20"

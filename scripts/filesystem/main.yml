@@ -3,7 +3,6 @@
   include:
     - agent: ocf:heartbeat:Filesystem
       name: filesystem
-  cib: |
-    primitive {{id}} ocf:heartbeat:Filesystem
-      params
-        
+  actions:
+    - cib: |
+        {{filesystem}}

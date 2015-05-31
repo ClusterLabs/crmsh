@@ -1,74 +1,65 @@
-%name gfs2
-
 # Copyright (C) 2009 Andrew Beekhof
+# Copyright (C) 2015 Kristoffer Gronlund
 #
 # License: GNU General Public License (GPL)
+---
+- version: 2.2
+  shortdesc: gfs2 filesystem (cloned)
+  longdesc: >- 
+    This template generates a cloned instance of the ocfs2 filesystem
 
-# gfs2 filesystem (cloned)
-#
-# This template generates a cloned instance of the ocfs2 filesystem
-#
-# The filesystem should be on the device, unless clvm is used
-# To use clvm, pull it along with this template:
-# new myfs ocfs2 clvm
-#
-# NB: You need just one dlm and o2cb, regardless of how many
-# filesystems. In other words, you can use this template only for
-# one filesystem and to make another one, you'll have to edit the
-# resulting configuration yourself.
+    The filesystem should be on the device, unless clvm is used
+    To use clvm, pull it along with this template:
+    new myfs ocfs2 clvm
 
-%depends_on gfs2-base
-%suggests clvm 
+    NB: You need just one dlm and o2cb, regardless of how many
+    filesystems. In other words, you can use this template only for
+    one filesystem and to make another one, you'll have to edit the
+    resulting configuration yourself.
+  category: Filesystem
+  include:
+    - script: gfs2-base
+    - script: clvm
+      required: false
+  parameters:
+    - name: id
+      shortdesc: Name the gfs2 filesystem
+      longdesc: >-
+        NB: The clone is going to be named c-<id> (e.g. c-bigfs)
+      example: bigfs
+      required: true
+      type: resource-id
+    - name: directory
+      shortdesc: The mount point
+      example: /mnt/bigfs
+      required: true
+    - name: device
+      shortdesc: The device
+      required: true
+    - name: options
+      shortdesc: mount options
+  actions:
+    - cib: |
+        {{gfs2-base}}
+        {{clvm}}
+        primitive {{id}} ocf:heartbeat:Filesystem
+          params
+          directory="{{directory}}"
+          fstype="gfs2"
+          device="{{device}}"
+          {{#options}}options="{{options}}"{{/options}}
 
-%required
+        monitor {{id}} 20:40
 
-# Name the gfs2 filesystem
-# (for example: bigfs)
-# NB: The clone is going to be named c-<id> (e.g. c-bigfs)
-# Example:
-# %% id bigfs
-%% id 
+        clone c-{{id}} {{id}}
+          meta interleave="true" ordered="true"
 
-# The mount point
-# Example:
-# %% directory /mnt/bigfs
-%% directory 
+        colocation colo-{{id}}-gfs inf: c-{{id}} gfs-clone
 
-# The device
+        order order-{{id}}-gfs inf: gfs-clone c-{{id}}
 
-%% device 
+        {{#clvm}}
+        colocation colo-{{id}}-{{clvm:id}} inf: c-{{id}} c-{{clvm:id}}
 
-# optional parameters for the gfs2 filesystem
-
-%optional
-
-# mount options
-
-%% options
-
-%generate
-
-primitive %_:id ocf:heartbeat:Filesystem
-	params
-		directory="%_:directory"
-		fstype="gfs2"
-		device="%_:device"
-		opt options="%_:options"
-
-monitor %_:id 20:40
-
-clone c-%_:id %_:id
-	meta interleave="true" ordered="true"
-
-colocation colo-%_:id-gfs inf: c-%_:id gfs-clone
-
-order order-%_:id-gfs inf: gfs-clone c-%_:id
-
-# if there's clvm, generate some constraints too
-#
-
-%if %clvm
-colocation colo-%_:id-%clvm:id inf: c-%_:id c-%clvm:id
-
-order order-%_:id-%clvm:id inf: c-%clvm:id c-%_:id
-%fi
+        order order-{{id}}-{{clvm:id}} inf: c-{{clvm:id}} c-{{id}}
+        {{/clvm}}
