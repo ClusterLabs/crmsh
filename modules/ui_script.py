@@ -90,3 +90,14 @@ Parameters:
         if script is not None:
             return scripts.run(script, args)
         return False
+
+    @command.name('_print')
+    @command.skill_level('administrator')
+    def do_print(self, context, name):
+        '''
+        Debug print the given script.
+        '''
+        script = scripts.load_script(name)
+        if script is not None:
+            print(script)
+        return False

@@ -633,6 +633,31 @@ def arg0(cmd):
     return cmd.split()[0]
 
 
+def _flatten_parameters(steps):
+    pret = []
+    for step in steps:
+        stepname = step.get('name', '')
+        for param in step.get('parameters', []):
+            if stepname:
+                pret.append('%s:%s' % (stepname, param['name']))
+            else:
+                pret.append(param['name'])
+    return pret
+
+
+def param_completion_list(name):
+    """
+    Returns completions for the given script
+    """
+    try:
+        script = load_script(name)
+        params = _flatten_parameters(script.get('steps', []))
+        ps = [p['name'] + '=' for p in params]
+        return ps
+    except Exception:
+        return []
+
+
 def _step_action(step):
     name = step.get('name')
     if 'type' in step:
