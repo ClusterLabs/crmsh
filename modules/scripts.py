@@ -419,6 +419,17 @@ def _postprocess_script(data):
         item['_name'] = action
         item['_text'] = item[action]
         del item[action]
+        if 'shortdesc' not in item:
+            if item['_name'] == 'cib':
+                item['shortdesc'] = "Install CIB configuration"
+            elif item['_name'] == 'install':
+                item['shortdesc'] = "Ensure packages are installed"
+            elif item['_name'] == 'call':
+                item['shortdesc'] = "Execute command on nodes"
+            else:
+                item['shortdesc'] = ''
+        if 'longdesc' not in item:
+            item['longdesc'] = ''
 
     return data
 
@@ -1063,4 +1074,4 @@ def verify(script, values):
 
     TODO FIXME
     """
-    return script['actions']
+    return [{'shortdesc': action['shortdesc']} for action in script['actions']]

@@ -80,7 +80,7 @@ Steps:
         if ret is None:
             return False
         for i, action in enumerate(ret):
-            print("%s. %s" % (i, action))
+            print("%s. %s" % (i + 1, action['shortdesc']))
 
     def do_run(self, context, name, *args):
         '''
