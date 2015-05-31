@@ -5,7 +5,7 @@
 ---
 - version: 2.2
   shortdesc: Shared storage based fencing
-  longdesc: 
+  longdesc: >
     This template generates a single instance of external/sbd.
 
     There is quite a bit more to do to make this stonith operational.
@@ -18,7 +18,7 @@
       type: resource-id
     - name: sbd_device
       shortdesc: Name of the device (shared disk)
-      longdesc: >- 
+      longdesc: >
         NB: Make sure that the device remains the same on reboots. It's
         preferable to use udev generated names rather than the usual
         /dev/sd?

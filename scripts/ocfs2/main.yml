@@ -5,7 +5,7 @@
 ---
 - version: 2.2
   shortdesc: ocfs2 filesystem (cloned)
-  longdesc: >- 
+  longdesc: >
     This template generates a cloned instance of the ocfs2 filesystem
 
     NB: You need only one dlm, regardless of how many

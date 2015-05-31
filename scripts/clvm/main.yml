@@ -13,7 +13,7 @@
   parameters:
     - name: id
       shortdesc: Cluster resource name
-      longdesc: >-
+      longdesc: >
         The LVM resource will be in a cloned group with the rest
         of the prerequisite resources. The clone is going to be named c-<id>
         (e.g. c-vg-1)

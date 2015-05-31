@@ -16,7 +16,7 @@
   include:
     - agent: ocf:heartbeat:apache
       name: apache
-      longdesc: >-
+      longdesc: >
         The Apache configuration file specified here must be available via the
         same path on all cluster nodes, and Apache must be configured with
         mod_status enabled.  If in doubt, try running Apache manually via
