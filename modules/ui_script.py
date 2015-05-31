@@ -37,8 +37,9 @@ class Script(command.UI):
         for fn in scripts.list_scripts():
             script = scripts.load_script(fn)
             if script is not None:
-                print("%-16s %s" (script['name'], script['shortdesc']))
+                print("%-16s %s" % (script['name'], script['shortdesc']))
 
+    @command.alias('info')
     def do_describe(self, context, name):
         '''
         Describe the given script.
@@ -47,23 +48,26 @@ class Script(command.UI):
         if script is None:
             return False
 
-        def describe_param(p):
-            return "    %s" % (p['stepdesc'])
+        def describe_step(i, s):
+            ret = "%s. %s\n" % (i, s['stepdesc'].strip() or 'Parameters')
+            for p in s['parameters']:
+                ret += "  %-16s %s\n" % (p['name'], p['shortdesc'])
+            return ret
         vals = {
             'name': script['name'],
             'category': script['category'],
             'shortdesc': script['shortdesc'],
             'longdesc': script['longdesc'],
-            'steps': "\n".join((describe_param(p) for p in script['steps']))}
-        return """%(name)s (%(category)s)
+            'steps': "\n".join((describe_step(i + 1, s) for i, s in enumerate(script['steps'])))}
+        print("""%(name)s (%(category)s)
 %(shortdesc)s
 
 %(longdesc)s
 
-Parameters:
+Steps:
 
-%(parameters)s
-""" % vals
+%(steps)s
+""" % vals)
 
     def do_verify(self, context, name, *args):
         '''
@@ -99,5 +103,6 @@ Parameters:
         '''
         script = scripts.load_script(name)
         if script is not None:
-            print(script)
+            import pprint
+            pprint.pprint(script)
         return False

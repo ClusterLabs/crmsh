@@ -163,6 +163,8 @@ def _parse_yaml(scriptname, scriptfile):
     if 'parameters' in data:
         data['steps'] = [{'parameters': data['parameters']}]
         del data['parameters']
+    else:
+        data['steps'] = []
 
     if 'name' not in data:
         data['name'] = scriptname
@@ -180,6 +182,7 @@ def _upgrade_yaml(data):
         raise ValueError("Unknown version (expected < %s, got %s)" % (_script_version, data['version']))
 
     data['version'] = _script_version
+    data['category'] = 'Script'
     if 'name' in data:
         data['shortdesc'] = data['name']
         del data['name']
@@ -189,13 +192,15 @@ def _upgrade_yaml(data):
 
     data['actions'] = data['steps']
     paramstep = {'parameters': data['parameters']}
-    data['steps'] = []
+    data['steps'] = [paramstep]
     del data['parameters']
 
     for p in paramstep['parameters']:
         if 'description' in p:
             p['shortdesc'] = p['description']
             del p['description']
+        if 'required' not in p:
+            p['required'] = 'default' not in p
 
     for action in data['actions']:
         if 'name' in action:
@@ -366,7 +371,7 @@ def list_scripts():
     return sorted(_script_cache.keys())
 
 
-def _flatten_script(data):
+def _postprocess_script(data):
     """
     Post-process the parsed script into an executable
     form. This means parsing all included agents and
@@ -396,11 +401,24 @@ def _flatten_script(data):
     for inc in data.get('include', []):
         pass
 
+    for step in data['steps']:
+        if 'stepdesc' not in step:
+            step['stepdesc'] = ''
+            if 'shortdesc' in step:
+                step['stepdesc'] = step['shortdesc']
+        for p in step['parameters']:
+            if 'name' not in p:
+                raise ValueError("Parameter has no name: %s" % (p.keys()))
+            if 'shortdesc' not in p:
+                p['shortdesc'] = ''
+
     for item in data.get('actions', []):
         action = _find_action(item)
         if action is None:
             raise ValueError("Unknown action: %s" % (item.keys()))
-        item['_method'] = action
+        item['_name'] = action
+        item['_text'] = item[action]
+        del item[action]
 
     return data
 
@@ -418,7 +436,7 @@ def load_script(script):
         if parsed is None:
             raise ValueError("Failed to parse script: %s (%s)" % (script, s))
 
-        obj = _flatten_script(parsed)
+        obj = _postprocess_script(parsed)
         _script_cache[script] = obj
         return obj
     return s
