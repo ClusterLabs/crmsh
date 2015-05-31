@@ -190,6 +190,16 @@ class ScriptInclude(object):
         common_debug("ScriptInclude %s" % (data['script']))
 
 
+class ParamGroup(object):
+    """
+    A group of parameters.
+    """
+    def __init__(self):
+        self.description = ""
+        self.required = False
+        self.params = []
+
+
 class Param(object):
     """
     Describes a parameter. This is integrated
@@ -225,7 +235,6 @@ class Script(object):
         self.longdesc = None
         self.category = None
         self.params = []
-        self.include = []  # includes can be agents or other scripts
         self.steps = []
 
         self.filename = mainfile
@@ -240,13 +249,15 @@ class Script(object):
         self.longdesc = data.get('longdesc')
         self.category = data.get('category') or 'Custom'
 
+        # includes can add parameters and steps
+        include = []
         for inc in self.data.get('include', []):
             if 'agent' in inc:
                 obj = Agent(inc)
-                self.include.append(obj)
+                include.append(obj)
             elif 'script' in inc:
                 obj = ScriptInclude(inc)
-                self.include.append(obj)
+                include.append(obj)
 
         for param in self.data.get('parameters', []):
             obj = Param(param)

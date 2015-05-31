@@ -293,3 +293,90 @@ that override those parameters. For example, if there is a "ip"
 parameter that has "from: IPaddr2", then the ip parameter of IPaddr2
 will not be directly exposed, but the default description and value,
 etc. for the ip parameter will be taken from the IPaddr2 metadata.
+
+# parameters and options
+
+Options should be merged across scripts. So an option "install" would
+appear as a single option, and apply to all included scripts as well,
+if they have such an option.
+
+Really, the include structure should be quite simple. I don't know how
+complex it is in the crmsh templates, but it only needs to be complex
+enough to replace what templates can do now. And in hawk, workflows
+can include templates, but templates don't include other templates (do
+they?)
+
+Really, maybe this is what I want:
+
+- scripts can include agents, but not other scripts? Is that good
+enough for now?
+
+- agents can be amended with agents.yml / something like that. Maybe
+  an agents subfolder where
+
+
+### improving agent metadata
+
+The agent metadata is deficient:
+
+1. parameters are not categorized as basic or advanced
+2. parameters don't have validation info beyond basic types
+3. 
+
+
+### reboot
+
+
+A configuration script has a description, a set of parameters, a set
+of referenced resource agents and a set of referenced configuration
+scripts. It then distills this down to
+
+1. a grouped list of parameters (so each parameter is in a group) -
+   parameters are either required or optional, and can also have a
+   category which is basic (default), advanced or something else. By
+   default only the basic parameters are shown. If requested, the
+   advanced parameters are also shown. In the webui, this is done by
+   requesting all and hiding the advanced parameters.
+   Parameters have validation. This is either coming from the agent,
+   or from some augmentation of the agents.
+   The groups have a description and a required yes/no flag. If not
+   required, the whole group can be skipped. This then also disables
+   the steps associated with the group (or partial cib template...)
+
+2. A linear sequence of steps to execute. This is performed in order
+   when applying the configuration script.
+
+
+This is distinct from the input. The input can be a hawk workflow, or
+a configuration script for crmsh 2+.
+
+The crmsh templates are still there but deprecated and will eventually
+be removed.
+
+
+The trick is to parse a hawk workflow or a configuration script into
+this thing that can then output the list of parameters, and given
+values for those parameters, a list of steps to perform (or actually
+performing the steps)
+
+Parameter groups beyond the first need a name. This is used on the
+commandline so install=true virtual-ip:ip="..." can be used to disambiguate.
+
+
+The parameter lists are
+
+[{ "description": "Parameters",
+   "required": true,
+   "parameters": [
+   {"name", "shortdesc", "longdesc", "type", "default"}]
+   },
+   { "name", "description": "Virtual IP",
+   "required": true,
+   "parameters": [
+   }
+
+[{"install":true}, {"ip":"192.168.0.3"}]
+
+
+
+So! Scripts are either that, or a describing a single resource.

@@ -11,10 +11,17 @@
   category: Server
   include:
     - agent: ocf:heartbeat:apache
+      name: apache
+      longdesc: >-
+        The Apache configuration file specified here must be available via the
+        same path on all cluster nodes, and Apache must be configured with
+        mod_status enabled.  If in doubt, try running Apache manually via
+        its init script first, and ensure http://localhost:80/server-status is
+        accessible.
     - script: virtual-ip
-      shortdesc: The IP address configured here will start before the Apache instance.
+      longdesc: The IP address configured here will start before the Apache instance.
     - script: filesystem
-      shortdesc: Optional filesystem mounted before the web server is started.
+      longdesc: Optional filesystem mounted before the web server is started.
       required: false
     - script: database
       shortdesc: Optional database started before the web server is started.
@@ -24,6 +31,14 @@
       shortdesc: ID for the web server resource group
       example: web-server
       type: resource-id
+    - name: configfile
+      from: apache
+    - name: options
+      from: apache
+      required: false
+    - name: envfiles
+      from: apache
+      required: false
     - name: install
       type: option
       shortdesc: Install and configure apache
@@ -44,10 +59,16 @@
       {{filesystem}}
       {{database}}
       {{virtual-ip}}
-      {{apache}}
-      monitor {{apache:id}} 120s:60s
-      group {{id}}
+      primitive p-{{id}} ocf:heartbeat:apache
+        params
+          configfile="{{configfile}}"
+          {{#options}}options="{{options}}"{{/options}}
+          {{#envfiles}}envfiles="{{envfiles}}"{{/envfiles}}
+        op start timeout="40"
+        op stop timeout="60"
+        op monitor interval="10" timeout="20"
+      group g-{{id}}
         {{filesystem:id}}
         {{database:id}}
         {{virtual-ip:id}}
-        {{apache:id}}
+        p-{{id}}
