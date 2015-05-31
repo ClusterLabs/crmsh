@@ -298,7 +298,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
         'longdesc': ''.join(xml.xpath('./longdesc/text()')),
         'category': 'Wizard',
         'include': [],
-        'parameters': [],
+        'steps': [],
         'actions': [],
     }
 
@@ -308,7 +308,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
         'stepdesc': ''.join(xml.xpath('./parameters/stepdesc/text()')),
         'parameters': []
     }
-    data['parameters'].append(paramstep)
+    data['steps'].append(paramstep)
     for item in xml.xpath('./parameters/parameter'):
         obj = {}
         obj['name'] = item.get('name')
@@ -331,7 +331,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
             'required': item.get('required'),
             'parameters': []
         }
-        data['parameters'].append(templatestep)
+        data['steps'].append(templatestep)
 
         _parse_hawk_template(scriptfile, item.get('name'), item.get('type', item.get('name')),
                              templatestep, data['actions'])
