@@ -28,7 +28,7 @@
       type: option
       default: true
       shortdesc: Disable if no installation should be performed
-  steps:
+  actions:
     - call: test -b {{filesystem:device}}
       shortdesc: Verify filesystem device {{filesystem:device}}
       error: Invalid filesystem device {{filesystem:device}}

@@ -24,7 +24,8 @@ scripts._script_dirs = lambda: [path.join(path.dirname(__file__), 'scripts')]
 
 
 def test_list():
-    eq_(set(['v2', 'legacy', 'xml']), set(scripts.list_scripts()))
+    eq_(set(['v2', 'legacy', '10-webserver']),
+        set(s for s in scripts.list_scripts()))
 
 
 def test_load_legacy():
@@ -33,15 +34,15 @@ def test_load_legacy():
     eq_('legacy', script.name)
 
 
-def test_load_xml():
-    script = scripts.load_script('xml')
-    assert script is not None
-    eq_('xml', script.name)
-
-
 def test_load_v2():
     script = scripts.load_script('v2')
     assert script is not None
     eq_('v2', script.name)
-    eq_('Apache Webserver', script.shortdesc)
+    assert len(script.shortdesc) > 0
+
+
+def test_load_workflow():
+    script = scripts.load_script('10-webserver')
+    assert script is not None
+    eq_('10-webserver', script.name)
     eq_({}, script)

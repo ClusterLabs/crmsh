@@ -34,8 +34,8 @@ class Script(command.UI):
         '''
         List available scripts.
         '''
-        for name in scripts.list_scripts():
-            script = scripts.load_script(name)
+        for fn in scripts.list_scripts():
+            script = scripts.load_script(fn)
             if script is not None:
                 print("%-16s %s" (script.name, script.shortdesc))
 

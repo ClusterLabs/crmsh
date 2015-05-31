@@ -26,6 +26,8 @@ import getpass
 import time
 import shutil
 import random
+from glob import glob
+from lxml import etree
 
 try:
     import json
@@ -47,8 +49,7 @@ from . import utils
 from .msg import err_buf, common_debug
 
 
-_main_files = ('main.yml', 'main.xml')
-_loaded_scripts = {}
+_script_cache = None
 
 
 class Actions(object):
@@ -144,7 +145,7 @@ def _make_options(params):
     return opts
 
 
-class Step(object):
+class Action(object):
     """
     Describes an action to take.
     Has a list of nodes to execute on, and
@@ -164,7 +165,7 @@ class Step(object):
         self.error = data.get('error', '')
         self.data = data
 
-        common_debug("Step: %s. %s = %s" % (index, action, self.text))
+        common_debug("Action: %s. %s = %s" % (index, action, self.text))
 
 
 class Agent(object):
@@ -190,16 +191,6 @@ class ScriptInclude(object):
         common_debug("ScriptInclude %s" % (data['script']))
 
 
-class ParamGroup(object):
-    """
-    A group of parameters.
-    """
-    def __init__(self):
-        self.description = ""
-        self.required = False
-        self.params = []
-
-
 class Param(object):
     """
     Describes a parameter. This is integrated
@@ -221,6 +212,19 @@ class Param(object):
         common_debug("Param %s: %s" % (self.name, self.shortdesc))
 
 
+class Step(object):
+    """
+    A group of parameters.
+    """
+    def __init__(self, data):
+        self.name = data.get('name', '')
+        self.stepdesc = data.get('stepdesc', '')
+        self.shortdesc = data.get('shortdesc', '')
+        self.longdesc = data.get('longdesc', '')
+        self.required = data.get('required', True)
+        self.parameters = [Param(p) for p in data['parameters']]
+
+
 class Script(object):
     """
     DESCRIBE: list parameters (grouped), options, information
@@ -234,8 +238,8 @@ class Script(object):
         self.shortdesc = ""
         self.longdesc = None
         self.category = None
-        self.params = []
         self.steps = []
+        self.actions = []
 
         self.filename = mainfile
         self.script_dir = os.path.dirname(mainfile)
@@ -259,16 +263,16 @@ class Script(object):
                 obj = ScriptInclude(inc)
                 include.append(obj)
 
-        for param in self.data.get('parameters', []):
-            obj = Param(param)
-            self.params.append(obj)
-
-        for i, step in enumerate(self.data.get('steps', [])):
-            action = _find_action(step)
-            if action is None:
-                raise ValueError("Unknown step type: %s" % (step.keys()))
-            obj = Step(i + 1, action, step)
+        for step in self.data.get('steps', []):
+            obj = Step(step)
             self.steps.append(obj)
+
+        for i, data in enumerate(self.data.get('actions', [])):
+            action = _find_action(data)
+            if action is None:
+                raise ValueError("Unknown action: %s" % (data.keys()))
+            obj = Action(i + 1, action, data)
+            self.actions.append(obj)
 
     def __str__(self):
         return str(self.data)
@@ -344,6 +348,11 @@ def _parse_yaml(scriptfile):
         ver = data.get('version')
         if ver is None or str(ver) != '2.2':
             data = _upgrade_yaml(data)
+
+    if 'parameters' in data:
+        data['steps'] = [{'parameters': data['parameters']}]
+        del data['parameters']
+
     return data
 
 
@@ -360,112 +369,167 @@ def _upgrade_yaml(data):
         data['longdesc'] = data['description']
         del data['description']
 
+    data['actions'] = data['steps']
+    del data['steps']
+
     return data
 
 
-def _parse_xml(scriptfile):
+def _append_cib_action(actions, text):
     """
-    TODO: read xml object into a structure like the parsed yaml object
-    TODO: read hawk workflows
-    TODO: parse hawk <if>, <insert> tags
+    append the given cib action to the list
+    of actions. If the previous action is a
+    cib action with no special conditions,
+    merge the two.
     """
-    from lxml import etree
-    data = {
-        'version': None,
-        'shortdesc': '',
-        'longdesc': '',
-        'category': None,
-        'parameters': [],
-        'steps': [],
-        'include': []
-    }
+    if len(actions) and actions[-1].keys() == ['cib']:
+        actions[-1]['cib'] = "\n".join([actions[-1]['cib'], text])
+    else:
+        actions.append({'cib': text})
+
+
+def _parse_hawk_template(workflow, name, type, step, actions):
+    """
+    TODO: convert hawk <if>, <insert> tags into handles
+    """
+    path = os.path.join(os.path.dirname(workflow), '../templates')
+    for t in glob(os.path.join(path, '*.xml')):
+        xml = etree.parse(t).getroot()
+        if xml.get('name') == type:
+            common_debug("Found matching template: %s" % (t))
+            break
+    else:
+        raise ValueError("Template not found: %s" % (name))
+
+    step['shortdesc'] = ''.join(xml.xpath('./shortdesc/text()'))
+    step['longdesc'] = ''.join(xml.xpath('./longdesc/text()'))
+
+    _append_cib_action(actions, _hawk_to_handles(name, xml.xpath('./crm_script')[0]))
+
+    for item in xml.xpath('./parameters/parameter'):
+        obj = {}
+        obj['name'] = item.get('name')
+        obj['required'] = item.get('required', False)
+        content = next(item.iter('content'))
+        obj['type'] = content.get('type', 'string')
+        obj['default'] = content.get('default', None)
+        obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
+        obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
+        obj['error'] = ''
+        obj['when'] = ''
+        step['parameters'].append(obj)
+
+
+def _hawk_to_handles(context, tag):
+    """
+    input: a context name to prefix variable references with (may be empty)
+    and a crm_script tag
+    output: text with {{handles}}
+    """
+    return etree.tostring(tag)
+
+
+def _parse_hawk_workflow(scriptfile):
+    """
+    TODO: convert hawk <if>, <insert> tags into handles
+    """
     xml = etree.parse(scriptfile).getroot()
-    data['version'] = float(xml.get('version', '2.2'))
-    data['shortdesc'] = ''.join(xml.xpath('./shortdesc/text()'))
-    data['longdesc'] = ''.join(xml.xpath('./longdesc/text()'))
-    data['category'] = xml.get('category')
+    if xml.tag != "workflow":
+        raise ValueError("Not a hawk workflow: %s" % (scriptfile))
+    data = {
+        'version': 2.2,
+        'name': xml.get('name'),
+        'shortdesc': ''.join(xml.xpath('./shortdesc/text()')),
+        'longdesc': ''.join(xml.xpath('./longdesc/text()')),
+        'category': 'Wizard',
+        'include': [],
+        'parameters': [],
+        'actions': [],
+    }
 
-    for item in xml.xpath('./include/*'):
+    # the parameters together form a step with an optional stepdesc
+    # then each template becomes an additional step with an optional stepdesc
+    paramstep = {
+        'stepdesc': ''.join(xml.xpath('./parameters/stepdesc/text()')),
+        'parameters': []
+    }
+    data['parameters'].append(paramstep)
+    for item in xml.xpath('./parameters/parameter'):
         obj = {}
+        obj['name'] = item.get('name')
+        obj['required'] = item.get('required', False)
+        content = next(item.iter('content'))
+        obj['type'] = content.get('type', 'string')
+        obj['default'] = content.get('default', None)
         obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
         obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
-        obj['error'] = ''.join(item.xpath('./error/text()'))
-        obj['when'] = item.xpath('./when/text()')
-        obj['nodes'] = ' '.join(item.xpath('./nodes/text()'))
-        data['include'].append(obj)
+        obj['error'] = ''
+        obj['when'] = ''
+        paramstep['parameters'].append(obj)
 
-    for item in xml.xpath('./parameters/*'):
-        obj = {}
-        obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
-        obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
-        obj['error'] = ''.join(item.xpath('./error/text()'))
-        obj['when'] = item.xpath('./when/text()')
-        obj['nodes'] = ' '.join(item.xpath('./nodes/text()'))
-        data['parameters'].append(obj)
+    data['actions'] = []
 
-    for item in xml.xpath('./steps/*'):
-        obj = {}
-        obj[item.get('type')] = item.text
-        obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
-        obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
-        obj['error'] = ''.join(item.xpath('./error/text()'))
-        obj['when'] = item.xpath('./when/text()')
-        obj['nodes'] = ' '.join(item.xpath('./nodes/text()'))
-        data['steps'].append(obj)
+    for item in xml.xpath('./templates/template'):
+        templatestep = {
+            'stepdesc': ''.join(item.xpath('./stepdesc/text()')),
+            'name': item.get('name'),
+            'required': item.get('required'),
+            'parameters': []
+        }
+        data['parameters'].append(templatestep)
 
+        _parse_hawk_template(scriptfile, item.get('name'), item.get('type', item.get('name')),
+                             templatestep, data['actions'])
+
+    _append_cib_action(data['actions'], _hawk_to_handles('', xml.xpath('./crm_script')[0]))
+
+    import pprint
+    pprint.pprint(data)
     return data
 
 
-def _subdirs(path):
-    for f in os.listdir(path):
-        if os.path.isdir(os.path.join(path, f)):
-            yield f
-
-
-def _combine(p0, p1):
-    if p0:
-        return os.path.join(p0, p1)
-    return p1
+def _build_script_cache():
+    global _script_cache
+    if _script_cache is not None:
+        return
+    _script_cache = {}
+    for d in _script_dirs():
+        if d:
+            for s in glob(os.path.join(d, '*/main.yml')):
+                name = os.path.dirname(s).split('/')[-1]
+                if name not in _script_cache:
+                    _script_cache[name] = os.path.join(d, s)
+            for s in glob(os.path.join(d, 'workflows/*.xml')):
+                name = os.path.splitext(os.path.basename(s))[0]
+                if name not in _script_cache:
+                    _script_cache[name] = os.path.join(d, s)
 
 
 def list_scripts():
     '''
     List the available cluster installation scripts.
+    Yields the names of the main script files.
     '''
-    l = []
-
-    def recurse(root, prefix):
-        try:
-            curdir = _combine(root, prefix)
-            for f in _subdirs(curdir):
-                for n in _main_files:
-                    if os.path.isfile(os.path.join(curdir, f, n)):
-                        l.append(_combine(prefix, f))
-                        break
-                else:
-                    recurse(root, _combine(prefix, f))
-        except OSError:
-            pass
-    for d in _script_dirs():
-        recurse(d, '')
-    return sorted(l)
+    _build_script_cache()
+    return sorted(_script_cache.keys())
 
 
 def load_script(script):
-    if script in _loaded_scripts:
-        return _loaded_scripts[script]
-    main = _resolve_script(script)
-    if main and os.path.isfile(main):
-        if main.endswith('.yml'):
-            parsed = _parse_yaml(main)
-        elif main.endswith('.xml'):
-            parsed = _parse_xml(main)
+    _build_script_cache()
+    if script not in _script_cache:
+        raise ValueError("Script not found: %s" % (script))
+    s = _script_cache[script]
+    if isinstance(s, basestring):
+        if s.endswith('.yml'):
+            parsed = _parse_yaml(s)
+        elif s.endswith('.xml'):
+            parsed = _parse_hawk_workflow(s)
         if parsed is None:
-            return None
-        obj = Script(script, main, parsed)
-        _loaded_scripts[script] = obj
+            raise ValueError("Failed to parse script: %s (%s)" % (script, s))
+        obj = Script(script, s, parsed)
+        _script_cache[script] = obj
         return obj
-    return None
+    return s
 
 
 def _script_dirs():
@@ -498,11 +562,13 @@ def _parallax_call(hosts, cmd, opts):
 
 
 def _resolve_script(name):
-    for d in _script_dirs():
-        for n in _main_files:
-            script_main = os.path.join(d, name, n)
-            if os.path.isfile(script_main):
-                return script_main
+    for p in list_scripts():
+        if p.endswith('.yml'):
+            if os.path.dirname(p).endswith('/' + name):
+                return p
+        elif p.endswith('.xml'):
+            if os.path.splitext(os.path.basename(p))[0] == name:
+                return p
     return None
 
 
