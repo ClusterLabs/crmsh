@@ -37,7 +37,7 @@ class Script(command.UI):
         for fn in scripts.list_scripts():
             script = scripts.load_script(fn)
             if script is not None:
-                print("%-16s %s" (script.name, script.shortdesc))
+                print("%-16s %s" (script['name'], script['shortdesc']))
 
     def do_describe(self, context, name):
         '''
@@ -48,13 +48,13 @@ class Script(command.UI):
             return False
 
         def describe_param(p):
-            return "    %s" % (p.name)
+            return "    %s" % (p['stepdesc'])
         vals = {
-            'name': script.name,
-            'category': script.category,
-            'shortdesc': script.shortdesc,
-            'longdesc': script.longdesc,
-            'parameters': "\n".join((describe_param(p) for p in script.params))}
+            'name': script['name'],
+            'category': script['category'],
+            'shortdesc': script['shortdesc'],
+            'longdesc': script['longdesc'],
+            'steps': "\n".join((describe_param(p) for p in script['steps']))}
         return """%(name)s (%(category)s)
 %(shortdesc)s
 
@@ -72,11 +72,11 @@ Parameters:
         script = scripts.load_script(name)
         if script is None:
             return False
-        ret = script.verify(args)
+        ret = scripts.verify(script, args)
         if ret is None:
             return False
-        for nodes, action in ret:
-            print action
+        for i, action in enumerate(ret):
+            print("%s. %s" % (i, action))
 
     def do_run(self, context, name, *args):
         '''
@@ -88,5 +88,5 @@ Parameters:
             raise ValueError("The parallax python package is missing")
         script = scripts.load_script(name)
         if script is not None:
-            return script.run(name, args)
+            return scripts.run(script, args)
         return False

@@ -50,6 +50,7 @@ from .msg import err_buf, common_debug
 
 
 _script_cache = None
+_script_version = 2.2
 
 
 class Actions(object):
@@ -145,195 +146,7 @@ def _make_options(params):
     return opts
 
 
-class Action(object):
-    """
-    Describes an action to take.
-    Has a list of nodes to execute on, and
-    a generate() method.
-    generate() outputs a snippet of bash
-    which is to be executed on each node.
-    """
-    def __init__(self, index, action, data):
-        self.index = index
-        self.type = action
-        self.text = data[action]
-        self.method = _actions[action]
-        self.when = data.get('when')
-        self.nodes = data.get('nodes')
-        self.shortdesc = data.get('shortdesc', '')
-        self.longdesc = data.get('longdesc', '')
-        self.error = data.get('error', '')
-        self.data = data
-
-        common_debug("Action: %s. %s = %s" % (index, action, self.text))
-
-
-class Agent(object):
-    """
-    An agent is like a partial Script. It refers
-    to a resource agent of some sort, merged with
-    any additional metadata from.
-    """
-    def __init__(self, data):
-        self.data = data
-        common_debug("Agent %s" % (data))
-
-
-class ScriptInclude(object):
-    """
-    A reference to an included Script, plus
-    any metadata that the include adds to it.
-    Can be overriding the description, required
-    """
-    def __init__(self, data):
-        self.data = data
-        self.script = load_script(data['script'])
-        common_debug("ScriptInclude %s" % (data['script']))
-
-
-class Param(object):
-    """
-    Describes a parameter. This is integrated
-    from agent information, script data, agents metascript...
-    """
-    def __init__(self, data):
-        self.name = data['name']
-        # should be a JS-compatible regular expression, a base type or integer range
-        self.type = data.get('type', 'string')
-        self.shortdesc = data.get('shortdesc')
-        self.longdesc = data.get('longdesc')
-        self._from = data.get('from')
-        self.value = data.get('default')  # default value (if any)
-        self.example = data.get('example')  # optional example value
-        self.when = data.get('when')  # optional condition variable
-        self.unique = data.get('unique')  # from resource agents
-        self.required = data.get('required')  # from resource agents
-        self.group = data.get('group')  # grouped by agent or category
-        common_debug("Param %s: %s" % (self.name, self.shortdesc))
-
-
-class Step(object):
-    """
-    A group of parameters.
-    """
-    def __init__(self, data):
-        self.name = data.get('name', '')
-        self.stepdesc = data.get('stepdesc', '')
-        self.shortdesc = data.get('shortdesc', '')
-        self.longdesc = data.get('longdesc', '')
-        self.required = data.get('required', True)
-        self.parameters = [Param(p) for p in data['parameters']]
-
-
-class Script(object):
-    """
-    DESCRIBE: list parameters (grouped), options, information
-    VERIFY: given these parameter values, describe actions that would be taken
-    RUN: given these parameter values, apply actions
-
-    """
-
-    def __init__(self, name, mainfile, data):
-        self.name = name
-        self.shortdesc = ""
-        self.longdesc = None
-        self.category = None
-        self.steps = []
-        self.actions = []
-
-        self.filename = mainfile
-        self.script_dir = os.path.dirname(mainfile)
-        self.data = data
-
-        ver = data.get('version')
-        if ver is None or str(ver) != '2.2':
-            raise ValueError("Unsupported script version: v = %s" % (repr(ver)))
-        self.version = ver or '2.2'
-        self.shortdesc = data.get('shortdesc', '')
-        self.longdesc = data.get('longdesc')
-        self.category = data.get('category') or 'Custom'
-
-        # includes can add parameters and steps
-        include = []
-        for inc in self.data.get('include', []):
-            if 'agent' in inc:
-                obj = Agent(inc)
-                include.append(obj)
-            elif 'script' in inc:
-                obj = ScriptInclude(inc)
-                include.append(obj)
-
-        for step in self.data.get('steps', []):
-            obj = Step(step)
-            self.steps.append(obj)
-
-        for i, data in enumerate(self.data.get('actions', [])):
-            action = _find_action(data)
-            if action is None:
-                raise ValueError("Unknown action: %s" % (data.keys()))
-            obj = Action(i + 1, action, data)
-            self.actions.append(obj)
-
-    def __str__(self):
-        return str(self.data)
-
-    def __repr__(self):
-        return repr(self.data)
-
-    def verify(self, values):
-        """
-        generate a list of (nodes, action) tuples
-        where nodes is a list of nodes to execute the step on,
-        and action is the code to run on those nodes
-        """
-
-    def run(self, args):
-        '''
-        Run the given script on the given set of hosts
-        name: a cluster script is a folder <name> containing a main.yml or main.xml file
-        args: list of nvpairs
-        '''
-        """
-        workdir = _generate_workdir_name()
-        params = _parse_parameters(self.name, args, self.name)
-        hosts = params['nodes']
-        err_buf.info(main['name'])
-        err_buf.info("Nodes: " + ', '.join([x[0] for x in hosts]))
-        local_node, hosts = _extract_localnode(hosts)
-        opts = _make_options(params)
-        _set_controlpersist(opts)
-
-        try:
-            _create_script_workdir(script_dir, workdir)
-            _copy_utils(workdir)
-            _create_remote_workdirs(hosts, workdir, opts)
-            _copy_to_remote_dirs(hosts, workdir, opts)
-            # make sure all path references are relative to the script directory
-            os.chdir(workdir)
-
-            stepper = RunStep(main, params, local_node, hosts, opts, workdir)
-            step = params['step']
-            statefile = params['statefile']
-            if step or statefile:
-                if not step or not statefile:
-                    raise ValueError("Must set both step and statefile")
-                return stepper.single_step(step, statefile)
-            else:
-                return stepper.all_steps()
-
-        except (OSError, IOError), e:
-            import traceback
-            traceback.print_exc()
-            raise ValueError("Internal error while running %s: %s" % (name, e))
-        finally:
-            if not config.core.debug:
-                _run_cleanup(local_node, hosts, workdir, opts)
-            else:
-                _print_debug(local_node, hosts, workdir, opts)
-        """
-
-
-def _parse_yaml(scriptfile):
+def _parse_yaml(scriptname, scriptfile):
     data = None
     try:
         import yaml
@@ -346,12 +159,15 @@ def _parse_yaml(scriptfile):
 
     if data:
         ver = data.get('version')
-        if ver is None or str(ver) != '2.2':
+        if ver is None or str(ver) != str(_script_version):
             data = _upgrade_yaml(data)
 
     if 'parameters' in data:
         data['steps'] = [{'parameters': data['parameters']}]
         del data['parameters']
+
+    if 'name' not in data:
+        data['name'] = scriptname
 
     return data
 
@@ -361,7 +177,11 @@ def _upgrade_yaml(data):
     Upgrade a parsed yaml document from
     an older version.
     """
-    data['version'] = 2.2
+
+    if 'version' in data and data['version'] > _script_version:
+        raise ValueError("Unknown version (expected < %s, got %s)" % (_script_version, data['version']))
+
+    data['version'] = _script_version
     if 'name' in data:
         data['shortdesc'] = data['name']
         del data['name']
@@ -370,7 +190,19 @@ def _upgrade_yaml(data):
         del data['description']
 
     data['actions'] = data['steps']
-    del data['steps']
+    paramstep = {'parameters': data['parameters']}
+    data['steps'] = []
+    del data['parameters']
+
+    for p in paramstep['parameters']:
+        if 'description' in p:
+            p['shortdesc'] = p['description']
+            del p['description']
+
+    for action in data['actions']:
+        if 'name' in action:
+            action['shortdesc'] = action['name']
+            del action['name']
 
     return data
 
@@ -426,10 +258,30 @@ def _hawk_to_handles(context, tag):
     and a crm_script tag
     output: text with {{handles}}
     """
-    return etree.tostring(tag)
+    def mkhandle(pfx, scope, text):
+        if scope:
+            return '{{%s%s:%s}}' % (pfx, scope, text)
+        else:
+            return '{{%s%s}}' % (pfx, text)
+
+    s = ""
+    s += tag.text
+    for c in tag:
+        if c.tag == 'if':
+            cond = c.get('set')
+            if cond:
+                s += mkhandle('#', context, cond)
+                s += _hawk_to_handles(context, c)
+                s += mkhandle('/', context, cond)
+        elif c.tag == 'insert':
+            param = c.get('param')
+            src = c.get('from_template') or context
+            s += mkhandle('', src, param)
+        s += c.tail
+    return s
 
 
-def _parse_hawk_workflow(scriptfile):
+def _parse_hawk_workflow(scriptname, scriptfile):
     """
     TODO: convert hawk <if>, <insert> tags into handles
     """
@@ -514,6 +366,45 @@ def list_scripts():
     return sorted(_script_cache.keys())
 
 
+def _flatten_script(data):
+    """
+    Post-process the parsed script into an executable
+    form. This means parsing all included agents and
+    scripts, merging parameters, steps and actions.
+    """
+    ver = data.get('version')
+    if ver is None or str(ver) != str(_script_version):
+        raise ValueError("Unsupported script version (expected %s, got %s)" % (_script_version, repr(ver)))
+
+    if 'shortdesc' not in data:
+        data['shortdesc'] = ''
+
+    if 'longdesc' not in data:
+        data['longdesc'] = ''
+
+    if 'category' not in data:
+        data['category'] = 'Custom'
+
+    if 'actions' not in data:
+        data['actions'] = []
+
+    # includes add parameter steps and actions
+    # an agent include works like a hawk template:
+    # it adds a parameter step and a cib action
+    # a script include however adds any number of
+    # parameter steps and actions
+    for inc in data.get('include', []):
+        pass
+
+    for item in data.get('actions', []):
+        action = _find_action(item)
+        if action is None:
+            raise ValueError("Unknown action: %s" % (item.keys()))
+        item['_method'] = action
+
+    return data
+
+
 def load_script(script):
     _build_script_cache()
     if script not in _script_cache:
@@ -521,12 +412,13 @@ def load_script(script):
     s = _script_cache[script]
     if isinstance(s, basestring):
         if s.endswith('.yml'):
-            parsed = _parse_yaml(s)
+            parsed = _parse_yaml(script, s)
         elif s.endswith('.xml'):
-            parsed = _parse_hawk_workflow(s)
+            parsed = _parse_hawk_workflow(script, s)
         if parsed is None:
             raise ValueError("Failed to parse script: %s (%s)" % (script, s))
-        obj = Script(script, s, parsed)
+
+        obj = _flatten_script(parsed)
         _script_cache[script] = obj
         return obj
     return s
@@ -1117,3 +1009,15 @@ def run(name, args):
             _run_cleanup(local_node, hosts, workdir, opts)
         else:
             _print_debug(local_node, hosts, workdir, opts)
+
+
+def verify(script, values):
+    """
+    Verify the given parameter values, reporting
+    errors where such are detected.
+
+    Return a list of actions to perform.
+
+    TODO FIXME
+    """
+    return script['actions']

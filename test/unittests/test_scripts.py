@@ -31,18 +31,18 @@ def test_list():
 def test_load_legacy():
     script = scripts.load_script('legacy')
     assert script is not None
-    eq_('legacy', script.name)
+    eq_('legacy', script['name'])
 
 
 def test_load_v2():
     script = scripts.load_script('v2')
     assert script is not None
-    eq_('v2', script.name)
-    assert len(script.shortdesc) > 0
+    eq_('v2', script['name'])
+    assert len(script['shortdesc']) > 0
 
 
 def test_load_workflow():
     script = scripts.load_script('10-webserver')
     assert script is not None
-    eq_('10-webserver', script.name)
+    eq_('10-webserver', script['name'])
     eq_({}, script)
