@@ -83,6 +83,7 @@ class Script(command.UI):
             return False
         for i, action in enumerate(ret):
             print("%s. %s" % (i + 1, action['shortdesc']))
+            print('')
             if action['text']:
                 for line in action['text'].split('\n'):
                     print("\t%s" % (line))

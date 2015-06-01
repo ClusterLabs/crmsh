@@ -58,40 +58,70 @@ class Actions(object):
     """
     Each method in this class handles a particular step action.
     """
+    @staticmethod
+    def _parse(action, data):
+        """
+        This special method parses the action data into a
+        form that the particular action can handle. It's here
+        to bring it closer to the actual actions. I want to
+        do this conversion as early in the parse as possible,
+        so the verify output can be as useful as possible.
+        """
+        data['_value'] = data[action]
+        del data[action]
+        data['_text'] = ''
+        if action == 'install':
+            if isinstance(data['_value'], basestring):
+                data['_value'] = data['_value'].split()
+            data['_text'] = ' '.join(data['_value'])
+        # service takes a list of objects with a single key;
+        # mapping service: state
+        # the text field will be converted to lines where
+        # each line is <service> -> <state>
+        elif action == 'service':
+            if isinstance(data['_value'], basestring):
+                data['_value'] = [dict([v.split(':', 1)]) for v in data['_value'].split()]
+
+            def arrow(v):
+                return ' -> '.join(x.items()[0])
+            data['_text'] = '\n'.join([arrow(x) for x in data['_value']])
+        elif action == 'cib':
+            data['_text'] = data['_value']
+
     def collect(self, run, action):
         "input: shell command"
-        run.run_command(action.get('nodes'), action['_text'])
+        run.run_command(action.get('nodes'), action['_value'])
         run.record_json()
 
     def validate(self, run, action):
         "input: shell command"
-        run.run_command(action.get('nodes'), action['_text'])
+        run.run_command(action.get('nodes'), action['_value'])
         run.validate_json()
 
     def apply(self, run, action):
         "input: shell command"
-        run.run_command(action.get('nodes', 'all'), action['_text'])
+        run.run_command(action.get('nodes', 'all'), action['_value'])
         run.record_json()
 
     def apply_local(self, run, action):
         "input: shell command"
-        run.run_command(action.get('nodes'), action['_text'])
+        run.run_command(action.get('nodes'), action['_value'])
         run.record_json()
 
     def report(self, run, action):
         "input: shell command"
-        run.run_command(action.get('nodes'), action['_text'])
+        run.run_command(action.get('nodes'), action['_value'])
         run.report_result()
 
     def call(self, run, action):
         "input: shell command / script"
-        run.execute_shell(action.get('nodes'), action['_text'])
+        run.execute_shell(action.get('nodes'), action['_value'])
 
     def cib(self, run, action):
         "input: cli configuration script"
         # generate cib
         # runner.execute_local("crm configure load update ./step_cib")
-        txt = _join_script_lines(action['_text'])
+        txt = _join_script_lines(action['_value'])
         txt = handles.parse(txt, run.context_values())
         fn = utils.str2tmp(txt)
         run.call(None, ['crm', 'configure', 'load', 'update', fn])
@@ -360,10 +390,10 @@ def _build_script_cache():
                 name = os.path.dirname(s).split('/')[-1]
                 if name not in _script_cache:
                     _script_cache[name] = os.path.join(d, s)
+            # workflows have to be fully parsed to find the name
             for s in glob(os.path.join(d, 'workflows/*.xml')):
                 name = os.path.splitext(os.path.basename(s))[0]
-                if name not in _script_cache:
-                    _script_cache[name] = os.path.join(d, s)
+                _load_script_file(name, s)
 
 
 def list_scripts():
@@ -415,18 +445,31 @@ def _postprocess_script(data):
                 raise ValueError("Parameter has no name: %s" % (p.keys()))
             if 'shortdesc' not in p:
                 p['shortdesc'] = ''
+            if 'value' in p and 'default' not in p:
+                p['default'] = p['value']
+                del p['value']
+            if 'required' not in p and 'default' in p:
+                p['required'] = False
+            elif 'required' not in p:
+                p['required'] = True
+            else:
+                p['required'] = _make_boolean(p['required'])
+            if 'when' not in p:
+                p['when'] = ''
+            if 'error' not in p:
+                p['error'] = ''
+            if 'type' not in p or p['type'] == '':
+                if p['name'] == 'id':
+                    p['type'] = 'resource-id'
+                else:
+                    p['type'] = 'string'
 
     for item in data.get('actions', []):
         action = _find_action(item)
         if action is None:
             raise ValueError("Unknown action: %s" % (item.keys()))
         item['_name'] = action
-        if isinstance(item[action], basestring):
-            item['_text'] = item[action]
-        else:
-            item['_text'] = ''
-        item['_value'] = item[action]
-        del item[action]
+        Actions._parse(action, item)
         if 'shortdesc' not in item:
             if item['_name'] == 'cib':
                 item['shortdesc'] = "Install CIB configuration"
@@ -459,6 +502,21 @@ def _join_script_lines(txt):
     return s
 
 
+def _load_script_file(script, filename):
+    if filename.endswith('.yml'):
+        parsed = _parse_yaml(script, filename)
+    elif filename.endswith('.xml'):
+        parsed = _parse_hawk_workflow(script, filename)
+    if parsed is None:
+        raise ValueError("Failed to parse script: %s (%s)" % (script, filename))
+    obj = _postprocess_script(parsed)
+    if 'name' in obj:
+        script = obj['name']
+    if script not in _script_cache or isinstance(_script_cache[script], basestring):
+        _script_cache[script] = obj
+    return obj
+
+
 def load_script(script):
     _build_script_cache()
     if script not in _script_cache:
@@ -466,16 +524,7 @@ def load_script(script):
         raise ValueError("Script not found: %s" % (script))
     s = _script_cache[script]
     if isinstance(s, basestring):
-        if s.endswith('.yml'):
-            parsed = _parse_yaml(script, s)
-        elif s.endswith('.xml'):
-            parsed = _parse_hawk_workflow(script, s)
-        if parsed is None:
-            raise ValueError("Failed to parse script: %s (%s)" % (script, s))
-
-        obj = _postprocess_script(parsed)
-        _script_cache[script] = obj
-        return obj
+        return _load_script_file(script, s)
     return s
 
 
@@ -1103,3 +1152,9 @@ def verify(script, values):
     TODO FIXME
     """
     return [{'shortdesc': action['shortdesc'], 'text': action['_text']} for action in script['actions']]
+
+
+def _make_boolean(v):
+    if isinstance(v, basestring):
+        return utils.get_boolean(v)
+    return v not in (False, None)
