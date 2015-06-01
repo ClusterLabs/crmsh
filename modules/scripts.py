@@ -21,6 +21,7 @@
 
 import os
 import sys
+import re
 import subprocess
 import getpass
 import time
@@ -57,58 +58,61 @@ class Actions(object):
     """
     Each method in this class handles a particular step action.
     """
-    def collect(self, step):
-        step.set_nodes()
-        step.run_command()
-        step.record_json()
+    def collect(self, run, action):
+        "input: shell command"
+        run.run_command(action.get('nodes'), action['_text'])
+        run.record_json()
 
-    def validate(self, step):
-        step.set_local()
-        step.run_command()
-        step.validate_json()
+    def validate(self, run, action):
+        "input: shell command"
+        run.run_command(action.get('nodes'), action['_text'])
+        run.validate_json()
 
-    def apply(self, step):
-        step.set_nodes()
-        step.run_command()
-        step.record_json()
+    def apply(self, run, action):
+        "input: shell command"
+        run.run_command(action.get('nodes', 'all'), action['_text'])
+        run.record_json()
 
-    def apply_local(self, step):
-        step.set_local()
-        step.run_command()
-        step.record_json()
+    def apply_local(self, run, action):
+        "input: shell command"
+        run.run_command(action.get('nodes'), action['_text'])
+        run.record_json()
 
-    def report(self, step):
-        step.set_local()
-        step.run_command()
-        step.out()
+    def report(self, run, action):
+        "input: shell command"
+        run.run_command(action.get('nodes'), action['_text'])
+        run.report_result()
 
-    def call(self, step):
-        step.set_nodes()
-        step.execute_shell()
+    def call(self, run, action):
+        "input: shell command / script"
+        run.execute_shell(action.get('nodes'), action['_text'])
 
-    def cib(self, step):
+    def cib(self, run, action):
+        "input: cli configuration script"
         # generate cib
         # runner.execute_local("crm configure load update ./step_cib")
-        txt = step.parse_text()
+        txt = _join_script_lines(action['_text'])
+        txt = handles.parse(txt, run.context_values())
         fn = utils.str2tmp(txt)
-        step.set_local()
-        step.execute(['crm', 'configure', 'load', 'update', fn])
+        run.call(None, ['crm', 'configure', 'load', 'update', fn])
 
-    def install(self, step):
-        step.set_nodes()
-        step.copy_and_run('''#!/usr/bin/env python
+    def install(self, run, action):
+        """
+        input: list of packages
+        or: map of <os>: <packages>
+        """
+        run.execute_shell(action.get('nodes'), '''#!/usr/bin/env python
 import crm_script
 import crm_init
 
 crm_init.install_packages(%s)
 crm_script.exit_ok(True)
-        ''' % (step.data['packages']))
+        ''' % (action['_value']))
 
-    def service(self, step):
+    def service(self, run, action):
         services = "\n".join([('crm_script.service(%s, %s)' % (s['name'], s['action']))
-                              for s in step.data['services']])
-        step.set_nodes()
-        step.copy_and_run('''#!/usr/bin/env python
+                              for s in action['_value']])
+        run.execute_shell(action.get('nodes'), '''#!/usr/bin/env python
 import crm_script
 import crm_init
 
@@ -417,7 +421,11 @@ def _postprocess_script(data):
         if action is None:
             raise ValueError("Unknown action: %s" % (item.keys()))
         item['_name'] = action
-        item['_text'] = item[action]
+        if isinstance(item[action], basestring):
+            item['_text'] = item[action]
+        else:
+            item['_text'] = ''
+        item['_value'] = item[action]
         del item[action]
         if 'shortdesc' not in item:
             if item['_name'] == 'cib':
@@ -434,9 +442,27 @@ def _postprocess_script(data):
     return data
 
 
+def _join_script_lines(txt):
+    s = ""
+    current_line = ""
+    for line in [line for line in txt.split('\n')]:
+        if not line.strip():
+            pass
+        elif re.match('^\s', line):
+            current_line += line
+        else:
+            if current_line:
+                s += current_line + "\n"
+            current_line = line
+    if current_line:
+        s += current_line + "\n"
+    return s
+
+
 def load_script(script):
     _build_script_cache()
     if script not in _script_cache:
+        common_debug("cache: %s" % (_script_cache.keys()))
         raise ValueError("Script not found: %s" % (script))
     s = _script_cache[script]
     if isinstance(s, basestring):
@@ -1076,4 +1102,4 @@ def verify(script, values):
 
     TODO FIXME
     """
-    return [{'shortdesc': action['shortdesc']} for action in script['actions']]
+    return [{'shortdesc': action['shortdesc'], 'text': action['_text']} for action in script['actions']]

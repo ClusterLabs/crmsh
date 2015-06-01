@@ -37,7 +37,7 @@ class Script(command.UI):
         for fn in scripts.list_scripts():
             script = scripts.load_script(fn)
             if script is not None:
-                print("%-16s %s" % (script['name'], script['shortdesc']))
+                print("%-16s %s" % (script['name'], script['shortdesc'].strip()))
 
     @command.alias('info')
     def do_describe(self, context, name):
@@ -49,22 +49,24 @@ class Script(command.UI):
             return False
 
         def describe_step(i, s):
-            ret = "%s. %s\n" % (i, s['stepdesc'].strip() or 'Parameters')
-            for p in s['parameters']:
-                ret += "  %-16s %s\n" % (p['name'], p['shortdesc'])
+            ret = "%s. %s\n\n" % (i, s['stepdesc'].strip() or 'Parameters')
+            if s.get('name'):
+                for p in s['parameters']:
+                    ret += "  %-16s %s\n" % (':'.join((s['name'], p['name'])), p['shortdesc'].strip())
+            else:
+                for p in s['parameters']:
+                    ret += "  %-16s %s\n" % (p['name'], p['shortdesc'].strip())
             return ret
         vals = {
             'name': script['name'],
             'category': script['category'],
-            'shortdesc': script['shortdesc'],
-            'longdesc': script['longdesc'],
+            'shortdesc': script['shortdesc'].strip(),
+            'longdesc': script['longdesc'].strip(),
             'steps': "\n".join((describe_step(i + 1, s) for i, s in enumerate(script['steps'])))}
         print("""%(name)s (%(category)s)
 %(shortdesc)s
 
 %(longdesc)s
-
-Steps:
 
 %(steps)s
 """ % vals)
@@ -81,6 +83,10 @@ Steps:
             return False
         for i, action in enumerate(ret):
             print("%s. %s" % (i + 1, action['shortdesc']))
+            if action['text']:
+                for line in action['text'].split('\n'):
+                    print("\t%s" % (line))
+                print('')
 
     def do_run(self, context, name, *args):
         '''

@@ -48,12 +48,12 @@
       shortdesc: Install and configure apache
       default: true
   actions:
-    - install: apache2
+    - install:
+        - apache2
       shortdesc: Install the apache package
       when: install
     - service:
-        - name: apache
-          action: disable
+        - apache: disable
       shortdesc: Let cluster manage apache
       when: install
     - call: a2enmod status
