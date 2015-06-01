@@ -44,7 +44,7 @@ def _resolve(path, values):
     return p() if callable(p) else p
 
 
-def parse(template, values):
+def parse(template, values, strict=False):
     """
     Takes as input a template string and a dict
     of values, and replaces the following:
@@ -81,7 +81,8 @@ def parse(template, values):
                 ret = ret[:-1]
             if block:
                 if obj in (None, False):
-                    pass
+                    if obj is None and strict:
+                        raise ValueError("Not set: %s" % (key))
                 elif isinstance(obj, tuple) or isinstance(obj, list):
                     for it in obj:
                         ret += parse(body, _join(values, {key: it}))
