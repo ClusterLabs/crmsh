@@ -34,6 +34,7 @@
 from . import command
 from . import cmd_status
 from . import ui_cib
+from . import ui_cibstatus
 from . import ui_cluster
 from . import ui_configure
 from . import ui_corosync
@@ -64,6 +65,13 @@ same way as the live CIB (i.e. the current cluster configuration).
 A shadow CIB may be applied to the cluster in one step.
 ''')
     def do_cib(self):
+        pass
+
+    @command.level(ui_cibstatus.CibStatusUI)
+    @command.help('''CIB status management and editing
+Enter edit and manage the CIB status section level.
+''')
+    def do_cibstatus(self):
         pass
 
     @command.level(ui_cluster.Cluster)
