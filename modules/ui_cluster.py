@@ -101,7 +101,7 @@ class Cluster(command.UI):
             return args + ['%s=%s' % (name, ','.join(vals))]
         return args
 
-    @command.completers_repeating(compl.choice(scripts.param_completion_list('init')))
+    @command.completers_repeating(compl.call(scripts.param_completion_list, 'init'))
     @command.skill_level('administrator')
     def do_init(self, context, *args):
         '''
@@ -109,7 +109,7 @@ class Cluster(command.UI):
         '''
         return scripts.run('init', self._args_implicit(context, args, 'nodes'))
 
-    @command.completers_repeating(compl.choice(scripts.param_completion_list('add')))
+    @command.completers_repeating(compl.call(scripts.param_completion_list, 'add'))
     @command.skill_level('administrator')
     def do_add(self, context, *args):
         '''
@@ -140,7 +140,7 @@ class Cluster(command.UI):
         params = self._args_implicit(context, args, 'node')
         return scripts.run('remove', params)
 
-    @command.completers_repeating(compl.choice(scripts.param_completion_list('health')))
+    @command.completers_repeating(compl.call(scripts.param_completion_list, 'health'))
     def do_health(self, context, *args):
         '''
         Extensive health check.
