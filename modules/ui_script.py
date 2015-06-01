@@ -18,6 +18,7 @@
 from . import command
 from . import scripts
 from . import utils
+from . import completers as compl
 
 
 class Script(command.UI):
@@ -35,11 +36,12 @@ class Script(command.UI):
         '''
         List available scripts.
         '''
-        for fn in scripts.list_scripts():
-            script = scripts.load_script(fn)
+        for name in scripts.list_scripts():
+            script = scripts.load_script(name)
             if script is not None:
                 print("%-16s %s" % (script['name'], script['shortdesc'].strip()))
 
+    @command.completers_repeating(compl.call(scripts.list_scripts))
     @command.alias('info')
     def do_describe(self, context, name):
         '''
@@ -72,6 +74,7 @@ class Script(command.UI):
 %(steps)s
 """ % vals)
 
+    @command.completers(compl.call(scripts.list_scripts))
     def do_verify(self, context, name, *args):
         '''
         Verify the script parameters
@@ -82,6 +85,8 @@ class Script(command.UI):
         ret = scripts.verify(script, utils.nvpairs2dict(args))
         if ret is None:
             return False
+        if not ret:
+            print("OK (no actions)")
         for i, action in enumerate(ret):
             print("%s. %s" % (i + 1, action['shortdesc']))
             print('')
@@ -90,6 +95,7 @@ class Script(command.UI):
                     print("\t%s" % (line))
                 print('')
 
+    @command.completers(compl.call(scripts.list_scripts))
     def do_run(self, context, name, *args):
         '''
         Run the given script.
@@ -105,6 +111,7 @@ class Script(command.UI):
 
     @command.name('_print')
     @command.skill_level('administrator')
+    @command.completers(compl.call(scripts.list_scripts))
     def do_print(self, context, name):
         '''
         Debug print the given script.
