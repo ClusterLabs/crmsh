@@ -265,18 +265,25 @@ def _append_cib_action(actions, text):
         actions.append({'cib': text})
 
 
+_hawk_template_cache = {}
+
+
 def _parse_hawk_template(workflow, name, type, step, actions):
     """
     TODO: convert hawk <if>, <insert> tags into handles
     """
     path = os.path.join(os.path.dirname(workflow), '../templates')
-    for t in glob(os.path.join(path, '*.xml')):
-        xml = etree.parse(t).getroot()
-        if xml.get('name') == type:
-            common_debug("Found matching template: %s" % (t))
-            break
+    if path in _hawk_template_cache:
+        xml = _hawk_template_cache[path]
     else:
-        raise ValueError("Template not found: %s" % (name))
+        for t in glob(os.path.join(path, '*.xml')):
+            xml = etree.parse(t).getroot()
+            if xml.get('name') == type:
+                common_debug("Found matching template: %s" % (t))
+                break
+            _hawk_template_cache[path] = xml
+        else:
+            raise ValueError("Template not found: %s" % (name))
 
     step['shortdesc'] = ''.join(xml.xpath('./shortdesc/text()'))
     step['longdesc'] = ''.join(xml.xpath('./longdesc/text()'))
@@ -356,6 +363,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
         obj = {}
         obj['name'] = item.get('name')
         obj['required'] = item.get('required', False)
+        obj['unique'] = item.get('unique', False)
         content = next(item.iter('content'))
         obj['type'] = content.get('type', 'string')
         obj['default'] = content.get('default', None)
@@ -722,19 +730,29 @@ def _parse_parameters(script, args):
     Parameters are given as step:name, or simply name
     for common parameters or step-zero-parameters.
     '''
+    errors = []
     params = {}
     for key, default, _ in _common_params():
         params[key] = default
     for key, val in args.iteritems():
         params[key] = val
     for step in script['steps']:
+        scope = step.get('name')
         for param in step['parameters']:
             name = param['name']
-            scoped = _scoped_param(step, name)
+            scoped = _scoped_param(scope, name)
             if scoped not in params:
-                if 'default' not in param or param['required']:
-                    raise ValueError("Missing required parameter: %s" % (scoped))
-                params[scoped] = param['default']
+                if 'required' in param:
+                    if param['required'] is True:
+                        errors.append(scoped)
+                    elif 'default' in param:
+                        params[scoped] = param['default']
+                elif 'default' in param:
+                    params[scoped] = param['default']
+                else:
+                    errors.append(scoped)
+    if errors:
+        raise ValueError("Missing required parameter(s): %s" % (', '.join(errors)))
 
     user = params['user']
     port = params['port']
@@ -752,24 +770,30 @@ def _extract_actions(script, params):
     Pull out the actions to perform based
     on the actual parameter values (parsing
     when statements)
-    TODO: parse when statements
+    TODO: parse when statements - when statements
+    are context-dependent, but the context needs
+    to be resolved as part of the include processing.
     """
     ret = []
     for action in script['actions']:
         when = action.get('when')
+        when = when.strip() if when else when
         if when:
-            pass
-        ret.append(action)
+            if params.get(when):
+                ret.append(action)
+        else:
+            ret.append(action)
     return ret
 
 
 def _has_remote_actions(actions):
     """
     True if any actions execute on remote nodes
-    TODO: check nodes value
     """
     for action in actions:
         if action['_name'] in ('collect', 'apply', 'install', 'service'):
+            return True
+        if action.get('nodes') == 'all':
             return True
     return False
 
@@ -1192,11 +1216,13 @@ def verify(script, args):
     Return a list of actions to perform.
 
     TODO FIXME
+
+    TODO: fix handles call parameters, clean up handles output
     """
     params = _parse_parameters(script, args)
     actions = _extract_actions(script, params)
     return [{'shortdesc': action['shortdesc'],
-             'text': action['_text']}
+             'text': handles.parse(action['_text'], params, strict=True).strip()}
             for action in actions]
 
 
