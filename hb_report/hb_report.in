@@ -167,7 +167,7 @@ setvarsanddefaults() {
 	# logs to collect in addition
 	# NB: they all have to be in syslog format
 	#
-	EXTRA_LOGS="/var/log/messages"
+	EXTRA_LOGS="/var/log/messages /var/log/pacemaker.log"
 	# used only by the master
 	NO_SSH=""
 	SSH_USER=""
