@@ -25,7 +25,7 @@
     - name: id
       shortdesc: The ID specified here is for the web server resource group.
     - name: install
-      type: option
+      type: boolean
       default: true
       shortdesc: Disable if no installation should be performed
   actions:

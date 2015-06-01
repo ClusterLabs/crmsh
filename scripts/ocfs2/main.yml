@@ -34,7 +34,7 @@
     - name: dlm
       shortdesc: Disable if dlm is already configured
       default: true
-      type: option
+      type: boolean
   actions:
     - cib: |
         primitive {{id}} ocf:heartbeat:Filesystem

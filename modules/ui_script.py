@@ -17,6 +17,7 @@
 
 from . import command
 from . import scripts
+from . import utils
 
 
 class Script(command.UI):
@@ -78,7 +79,7 @@ class Script(command.UI):
         script = scripts.load_script(name)
         if script is None:
             return False
-        ret = scripts.verify(script, args)
+        ret = scripts.verify(script, utils.nvpairs2dict(args))
         if ret is None:
             return False
         for i, action in enumerate(ret):
@@ -99,7 +100,7 @@ class Script(command.UI):
             raise ValueError("The parallax python package is missing")
         script = scripts.load_script(name)
         if script is not None:
-            return scripts.run(script, args)
+            return scripts.run(script, utils.nvpairs2dict(args))
         return False
 
     @command.name('_print')

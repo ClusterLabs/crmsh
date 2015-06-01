@@ -25,7 +25,7 @@
     - name: id
       description: The ID specified here is for the web server resource group.
     - name: install
-      type: option
+      type: boolean
       default: true
       description: Disable if no installation should be performed
   steps:

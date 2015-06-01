@@ -33,7 +33,7 @@
       require: [id]
   parameters:
     - name: install
-      type: option
+      type: boolean
       default: true
       shortdesc: Disable if no installation should be performed
       longdesc: Requires root access if enabled

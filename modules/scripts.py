@@ -56,7 +56,7 @@ _script_version = 2.2
 
 class Actions(object):
     """
-    Each method in this class handles a particular step action.
+    Each method in this class handles a particular action.
     """
     @staticmethod
     def _parse(action, data):
@@ -87,6 +87,12 @@ class Actions(object):
             data['_text'] = '\n'.join([arrow(x) for x in data['_value']])
         elif action == 'cib':
             data['_text'] = data['_value']
+
+    @staticmethod
+    def needs_sudo(action):
+        if action['_name'] == 'call' and action.get('sudo'):
+            return True
+        return action['_name'] in ('apply', 'apply_local', 'install', 'service')
 
     def collect(self, run, action):
         "input: shell command"
@@ -120,7 +126,7 @@ class Actions(object):
     def cib(self, run, action):
         "input: cli configuration script"
         # generate cib
-        # runner.execute_local("crm configure load update ./step_cib")
+        # runner.execute_local("crm configure load update ./action_cib")
         txt = _join_script_lines(action['_value'])
         txt = handles.parse(txt, run.context_values())
         fn = utils.str2tmp(txt)
@@ -153,10 +159,10 @@ crm_script.exit_ok(True)
 _actions = dict([(n, getattr(Actions, n)) for n in dir(Actions) if not n.startswith('_')])
 
 
-def _find_action(step):
-    """return name of action for step"""
+def _find_action(action):
+    """return name of action for action"""
     for a in _actions.keys():
-        if a in step:
+        if a in action:
             return a
     return None
 
@@ -202,6 +208,8 @@ def _parse_yaml(scriptname, scriptfile):
 
     if 'name' not in data:
         data['name'] = scriptname
+
+    data['dir'] = os.path.dirname(scriptfile)
 
     return data
 
@@ -331,6 +339,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
         'shortdesc': ''.join(xml.xpath('./shortdesc/text()')),
         'longdesc': ''.join(xml.xpath('./longdesc/text()')),
         'category': 'Wizard',
+        'dir': None,
         'include': [],
         'steps': [],
         'actions': [],
@@ -454,6 +463,8 @@ def _postprocess_script(data):
                 p['required'] = True
             else:
                 p['required'] = _make_boolean(p['required'])
+            if 'default' in p and p['default'] is None:
+                del p['default']
             if 'when' not in p:
                 p['when'] = ''
             if 'error' not in p:
@@ -585,6 +596,8 @@ def _generate_workdir_name():
     # TODO: make use of /tmp configurable
     basefile = 'crm-tmp-%s-%s' % (time.time(), random.randint(0, 2**48))
     basetmp = os.path.join(utils.get_tempdir(), basefile)
+    if os.path.isdir(basetmp):
+        raise ValueError("Invalid temporary workdir %s" % (basetmp))
     return basetmp
 
 
@@ -622,9 +635,9 @@ def _cleanup_local(workdir):
             shutil.rmtree(workdir)
 
 
-def _run_cleanup(local_node, hosts, workdir, opts):
+def _run_cleanup(has_remote_actions, local_node, hosts, workdir, opts):
     "Clean up after the cluster script"
-    if hosts and workdir:
+    if has_remote_actions and hosts and workdir:
         cleanscript = os.path.join(workdir, 'crm_clean.py')
         for host, result in _parallax_call(hosts,
                                            "%s %s" % (cleanscript,
@@ -660,8 +673,8 @@ def _extract_localnode(hosts):
 def _common_params():
     "Parameters common to all cluster scripts"
     return [('nodes', None, 'List of nodes to execute the script for'),
-            ('dry_run', 'no', 'If set, only execute collecting and validating steps'),
-            ('step', None, 'If set, only execute the named step'),
+            ('dry_run', 'no', 'If set, simulate execution only'),
+            ('action', None, 'If set, only execute a single action (index, as returned by verify)'),
             ('statefile', None, 'When single-stepping, the state is saved in the given file'),
             ('user', config.core.user or None, 'Run script as the given user'),
             ('sudo', 'no',
@@ -694,22 +707,34 @@ def _filter_nodes(nodes, user, port):
     return nodes
 
 
-def _parse_parameters(name, args, main):
+def _scoped_param(scope, name):
+    if scope:
+        return ':'.join((scope, name))
+    return name
+
+
+def _parse_parameters(script, args):
     '''
-    Parse run parameters into a dict.
+    Process parameter list from command line
+    into an actual list of parameters (add
+    optional parameters with defaults, etc.)
+
+    Parameters are given as step:name, or simply name
+    for common parameters or step-zero-parameters.
     '''
-    args = utils.nvpairs2dict(args)
     params = {}
     for key, default, _ in _common_params():
         params[key] = default
     for key, val in args.iteritems():
         params[key] = val
-    for param in main['parameters']:
-        name = param['name']
-        if name not in params:
-            if 'default' not in param:
-                raise ValueError("Missing required parameter %s" % (name))
-            params[name] = param['default']
+    for step in script['steps']:
+        for param in step['parameters']:
+            name = param['name']
+            scoped = _scoped_param(step, name)
+            if scoped not in params:
+                if 'default' not in param or param['required']:
+                    raise ValueError("Missing required parameter: %s" % (scoped))
+                params[scoped] = param['default']
 
     user = params['user']
     port = params['port']
@@ -720,6 +745,33 @@ def _parse_parameters(name, args, main):
     if config.core.debug:
         params['debug'] = True
     return params
+
+
+def _extract_actions(script, params):
+    """
+    Pull out the actions to perform based
+    on the actual parameter values (parsing
+    when statements)
+    TODO: parse when statements
+    """
+    ret = []
+    for action in script['actions']:
+        when = action.get('when')
+        if when:
+            pass
+        ret.append(action)
+    return ret
+
+
+def _has_remote_actions(actions):
+    """
+    True if any actions execute on remote nodes
+    TODO: check nodes value
+    """
+    for action in actions:
+        if action['_name'] in ('collect', 'apply', 'install', 'service'):
+            return True
+    return False
 
 
 def _set_controlpersist(opts):
@@ -775,44 +827,6 @@ def _step_action(step):
     return name, None, None
 
 
-def _verify_step(scriptdir, scriptname, step):
-    step_name, step_type, step_call = _step_action(step)
-    if not step_name:
-        raise ValueError("Error in %s: Step missing name" % (scriptname))
-    if not step_type:
-        raise ValueError("Error in %s: Step '%s' has no action defined" %
-                         (scriptname, step_name))
-    if not step_call:
-        raise ValueError("Error in %s: Step '%s' has no call defined" %
-                         (scriptname, step_name))
-    if not os.path.isfile(os.path.join(scriptdir, arg0(step_call))):
-        raise ValueError("Error in %s: Step '%s' file not found: %s" %
-                         (scriptname, step_name, step_call))
-
-
-def _verify(name):
-    script = _resolve_script(name)
-    if not script:
-        raise ValueError("%s not found" % (name))
-    script_dir = os.path.dirname(script)
-    main = load_script(name)
-    for key in ['name', 'description', 'parameters', 'steps']:
-        if key not in main:
-            raise ValueError("Error in %s: Missing %s" % (name, key))
-    for step in main.get('steps', []):
-        _verify_step(script_dir, name, step)
-    return main
-
-
-def _open_script(name):
-    filename = _resolve_script(name)
-    main = _verify(name)
-    if main is None or filename is None:
-        raise ValueError('Loading script failed: ' + name)
-    script_dir = os.path.dirname(filename)
-    return main, filename, script_dir
-
-
 def _create_script_workdir(scriptdir, workdir):
     "Create workdir and copy contents of scriptdir into it"
     cmd = ["mkdir", "-p", os.path.dirname(workdir)]
@@ -820,10 +834,11 @@ def _create_script_workdir(scriptdir, workdir):
         print ".EXT", cmd
     if subprocess.call(cmd, shell=False) != 0:
         raise ValueError("Failed to create temporary working directory")
-    try:
-        shutil.copytree(scriptdir, workdir)
-    except (IOError, OSError), e:
-        raise ValueError(e)
+    if scriptdir is not None:
+        try:
+            shutil.copytree(scriptdir, workdir)
+        except (IOError, OSError), e:
+            raise ValueError(e)
 
 
 def _copy_utils(dst):
@@ -894,10 +909,11 @@ def _copy_to_all(workdir, hosts, local_node, src, dst, opts):
     return ok
 
 
-class RunStep(object):
-    def __init__(self, main, params, local_node, hosts, opts, workdir):
-        self.main = main
+class RunActions(object):
+    def __init__(self, script, params, actions, local_node, hosts, opts, workdir):
+        self.script = script
         self.data = [params]
+        self.actions = actions
         self.local_node = local_node
         self.hosts = hosts
         self.opts = opts
@@ -908,32 +924,43 @@ class RunStep(object):
         self.dstfile = os.path.join(self.workdir, 'script.input')
         self.in_progress = False
         self.sudo_pass = None
+        self.result = None
+        self.output = None
+        self.rc = False
 
-    def _build_cmdline(self, sname, stype, scall):
-        cmdline = 'cd "%s"; ./%s' % (self.workdir, scall)
-        if config.core.debug:
-            import pprint
-            print "** %s [%s] - %s" % (sname, stype, scall)
-            print cmdline
-            pprint.pprint(self.data)
-        return cmdline
-
-    def single_step(self, step_name, statefile):
+    def single_action(self, action_index, statefile):
         self.statefile = statefile
-        for step in self.main['steps']:
-            name, action, call = _step_action(step)
-            if name == step_name:
-                # if this is not the first step, load step data
-                if step != self.main['steps'][0]:
-                    if os.path.isfile(statefile):
-                        self.data = json.load(open(statefile))
-                    else:
-                        raise ValueError("No state for step: %s" % (step_name))
-                result = self.run_step(name, action, call)
-                json.dump(self.data, open(self.statefile, 'w'))
-                return result
-        err_buf.error("%s: Step not found" % (step_name))
-        return False
+        try:
+            action_index = int(action_index) - 1
+        except ValueError:
+            raise ValueError("action parameter must be an index")
+        if action_index < 1 or action_index >= len(self.actions):
+            raise ValueError("action index out of range")
+
+        action = self.actions[action_index]
+        common_debug("Execute: %s" % (action))
+        # if this is not the first action, load action data
+        if action_index != 1:
+            if not os.path.isfile(statefile):
+                raise ValueError("No state for action: %s" % (action_index))
+            self.data = json.load(open(statefile))
+        if Actions.needs_sudo(action):
+            self._check_sudo_pass()
+        result = self._run_action(action)
+        json.dump(self.data, open(self.statefile, 'w'))
+        return result
+
+    def all_actions(self):
+        # TODO: run asynchronously on remote nodes
+        # run on remote nodes
+        # run on local nodes
+        # TODO: wait for remote results
+        for action in self.actions:
+            if Actions.needs_sudo(action):
+                self._check_sudo_pass()
+            if not self._run_action(action):
+                return False
+        return True
 
     def _update_state(self):
         json.dump(self.data, open(self.statefile, 'w'))
@@ -974,71 +1001,77 @@ class RunStep(object):
     def debug(self, msg):
         err_buf.debug(msg)
 
-    def run_step(self, name, action, call):
-        """
-        Execute a single step
-        """
+    def run_command(self, nodes, command):
+        "called by Actions"
+        cmdline = 'cd "%s"; ./%s' % (self.workdir, command)
+        if config.core.debug:
+            import pprint
+            print "** [%s] - %s" % (nodes, command)
+            print cmdline
+            pprint.pprint(self.data)
+        if not self._update_state():
+            raise ValueError("Failed when updating input, aborting.")
+        if nodes == 'all':
+            self.result = self._process_remote(cmdline)
+        else:
+            self.result = self._process_local(cmdline)
 
-        self.start('%s...' % (name))
+    def record_json(self):
+        "called by Actions"
+        if self.result is not None:
+            if self.result:
+                self.result = json.loads(self.result)
+            else:
+                self.result = {}
+            self.data.append(self.result)
+            self.rc = True
+        else:
+            self.rc = False
+
+    def validate_json(self):
+        "called by Actions"
+        if self.result is not None:
+            if self.result:
+                self.result = json.loads(self.result)
+            else:
+                self.result = {}
+            self.data.append(self.result)
+            if isinstance(self.result, dict):
+                for k, v in self.result.iteritems():
+                    self.data[0][k] = v
+            self.rc = True
+        else:
+            self.rc = False
+
+    def report_result(self):
+        "called by Actions"
+        if self.result is not None:
+            self.output = self.result
+            self.rc = True
+        else:
+            self.rc = False
+
+    def _run_action(self, action):
+        """
+        Execute a single action
+        """
+        desc = action['shortdesc'] or action['_name']
+
+        method = _actions[action['_name']]
+        self.start('%s...' % (desc))
         try:
-            cmdline = self._build_cmdline(name, action, call)
-            if not self._update_state():
-                raise ValueError("Failed when updating input, aborting.")
-            output = None
-            ok = False
-            if action in ('collect', 'apply'):
-                result = self._process_remote(cmdline)
-                if result is not None:
-                    self.data.append(result)
-                    ok = True
-            elif action == 'validate':
-                result = self._process_local(cmdline)
-                if result is not None:
-                    if result:
-                        result = json.loads(result)
-                    else:
-                        result = {}
-                    self.data.append(result)
-                    if isinstance(result, dict):
-                        for k, v in result.iteritems():
-                            self.data[0][k] = v
-                    ok = True
-            elif action == 'apply_local':
-                result = self._process_local(cmdline)
-                if result is not None:
-                    if result:
-                        result = json.loads(result)
-                    else:
-                        result = {}
-                    self.data.append(result)
-                    ok = True
-            elif action == 'report':
-                result = self._process_local(cmdline)
-                if result is not None:
-                    output = result
-                    ok = True
-            if ok:
-                self.ok(name)
-            if output:
-                self.out(output)
-            return ok
+            self.output = None
+            self.result = None
+            self.rc = False
+            method(self, action)
+            if self.rc:
+                self.ok(desc)
+            if self.output:
+                self.out(self.output)
+            return self.rc
         finally:
             self.flush()
-
-    def all_steps(self):
-        # TODO: run asynchronously on remote nodes
-        # run on remote nodes
-        # run on local nodes
-        # TODO: wait for remote results
-        for step in self.main['steps']:
-            name, action, call = _step_action(step)
-            if action in ('apply', 'apply_local'):
-                if self.dry_run:
-                    break
-                self._check_sudo_pass()
-            if not self.run_step(name, action, call):
-                return False
-        return True
+        return False
 
     def _check_sudo_pass(self):
         if self.sudo and not self.sudo_pass:
@@ -1047,10 +1080,10 @@ class RunStep(object):
 
     def _process_remote(self, cmdline):
         """
-        Handle a step that executes on all nodes
+        Handle an action that executes on all nodes
         """
         ok = True
-        step_result = {}
+        action_result = {}
 
         if self.sudo_pass:
             self.opts.input_stream = u'sudo: %s\n' % (self.sudo_pass)
@@ -1069,21 +1102,21 @@ class RunStep(object):
                     self.error("[%s]: %s%s", host, out, err)
                     ok = False
                 else:
-                    step_result[host] = json.loads(out)
+                    action_result[host] = json.loads(out)
         if self.local_node:
             ret = self._process_local(cmdline)
             if ret is None:
                 ok = False
             else:
-                step_result[self.local_node[0]] = json.loads(ret)
+                action_result[self.local_node[0]] = json.loads(ret)
         if ok:
-            self.debug("%s" % repr(step_result))
-            return step_result
+            self.debug("%s" % repr(action_result))
+            return action_result
         return None
 
     def _process_local(self, cmdline):
         """
-        Handle a step that executes locally
+        Handle an action that executes locally
         """
         if self.sudo_pass:
             input_s = u'sudo: %s\n' % (self.sudo_pass)
@@ -1097,39 +1130,48 @@ class RunStep(object):
         return out
 
 
-def run(name, args):
+def run(script, args):
     '''
     Run the given script on the given set of hosts
     name: a cluster script is a folder <name> containing a main.yml or main.xml file
     args: list of nvpairs
     '''
     workdir = _generate_workdir_name()
-    main, filename, script_dir = _open_script(name)
-    params = _parse_parameters(name, args, main)
+    params = _parse_parameters(script, args)
+    name = script['name']
+    script_dir = script['dir']
     hosts = params['nodes']
-    err_buf.info(main['name'])
+    if script['shortdesc']:
+        err_buf.info(script['shortdesc'])
     err_buf.info("Nodes: " + ', '.join([x[0] for x in hosts]))
     local_node, hosts = _extract_localnode(hosts)
     opts = _make_options(params)
     _set_controlpersist(opts)
 
+    # pull out the actions to perform based on the actual
+    # parameter values (so discard actions conditional on
+    # conditions that are false)
+    actions = _extract_actions(script, params)
+    has_remote_actions = _has_remote_actions(actions)
+
     try:
         _create_script_workdir(script_dir, workdir)
         _copy_utils(workdir)
-        _create_remote_workdirs(hosts, workdir, opts)
-        _copy_to_remote_dirs(hosts, workdir, opts)
+        if has_remote_actions:
+            _create_remote_workdirs(hosts, workdir, opts)
+            _copy_to_remote_dirs(hosts, workdir, opts)
         # make sure all path references are relative to the script directory
         os.chdir(workdir)
 
-        stepper = RunStep(main, params, local_node, hosts, opts, workdir)
-        step = params['step']
+        runner = RunActions(script, params, actions, local_node, hosts, opts, workdir)
+        action = params['action']
         statefile = params['statefile']
-        if step or statefile:
-            if not step or not statefile:
-                raise ValueError("Must set both step and statefile")
-            return stepper.single_step(step, statefile)
+        if action or statefile:
+            if not action or not statefile:
+                raise ValueError("Must set both action and statefile")
+            return runner.single_action(action, statefile)
         else:
-            return stepper.all_steps()
+            return runner.all_actions()
 
     except (OSError, IOError), e:
         import traceback
@@ -1137,12 +1179,12 @@ def run(name, args):
         raise ValueError("Internal error while running %s: %s" % (name, e))
     finally:
         if not config.core.debug:
-            _run_cleanup(local_node, hosts, workdir, opts)
+            _run_cleanup(has_remote_actions, local_node, hosts, workdir, opts)
         else:
             _print_debug(local_node, hosts, workdir, opts)
 
 
-def verify(script, values):
+def verify(script, args):
     """
     Verify the given parameter values, reporting
     errors where such are detected.
@@ -1151,7 +1193,11 @@ def verify(script, values):
 
     TODO FIXME
     """
-    return [{'shortdesc': action['shortdesc'], 'text': action['_text']} for action in script['actions']]
+    params = _parse_parameters(script, args)
+    actions = _extract_actions(script, params)
+    return [{'shortdesc': action['shortdesc'],
+             'text': action['_text']}
+            for action in actions]
 
 
 def _make_boolean(v):

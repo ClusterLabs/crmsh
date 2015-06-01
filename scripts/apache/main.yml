@@ -44,7 +44,7 @@
       from: apache
       required: false
     - name: install
-      type: option
+      type: boolean
       shortdesc: Install and configure apache
       default: true
   actions:
