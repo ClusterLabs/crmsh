@@ -120,8 +120,11 @@ class Actions(object):
         run.report_result()
 
     def call(self, run, action):
-        "input: shell command / script"
-        run.execute_shell(action.get('nodes'), action['_value'])
+        """
+        input: shell command / script
+        TODO: actually allow script here
+        """
+        run.call(action.get('nodes'), action['_value'])
 
     def cib(self, run, action):
         "input: cli configuration script"
@@ -131,7 +134,7 @@ class Actions(object):
         txt = handles.parse(txt, run.handles_values())
         txt = _join_script_lines(txt)
         fn = utils.str2tmp(txt)
-        run.call(None, ['crm', 'configure', 'load', 'update', fn])
+        run.call(None, 'crm configure load update %s' % (fn))
 
     def install(self, run, action):
         """
@@ -1132,6 +1135,31 @@ class RunActions(object):
         if self.sudo and not self.sudo_pass:
             prompt = "sudo password: "
             self.sudo_pass = getpass.getpass(prompt=prompt)
+
+    def call(self, nodes, cmdline):
+        if nodes == 'all':
+            self.result = self._process_remote(cmdline)
+        else:
+            self.result = self._process_local(cmdline)
+
+    def execute_shell(self, nodes, cmdscript):
+        """
+        execute the shell script...
+        """
+        tmpf = utils.str2tmp(cmdscript)
+        if nodes == 'all':
+            ok = _copy_to_remote_dirs(self.hosts,
+                                      tmpf,
+                                      self.opts)
+            if not ok:
+                self.result = False
+            else:
+                cmdline = "sh %s" % (tmpf)
+                self.result = self._process_remote(cmdline)
+        else:
+            tmpf = utils.str2tmp(cmdscript)
+            cmdline = "sh %s" % (tmpf)
+            self.result = self._process_local(cmdline)
 
     def _process_remote(self, cmdline):
         """
