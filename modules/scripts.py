@@ -127,8 +127,9 @@ class Actions(object):
         "input: cli configuration script"
         # generate cib
         # runner.execute_local("crm configure load update ./action_cib")
-        txt = _join_script_lines(action['_value'])
-        txt = handles.parse(txt, run.context_values())
+        txt = action['_value']
+        txt = handles.parse(txt, run.handles_values())
+        txt = _join_script_lines(txt)
         fn = utils.str2tmp(txt)
         run.call(None, ['crm', 'configure', 'load', 'update', fn])
 
@@ -280,8 +281,8 @@ def _parse_hawk_template(workflow, name, type, step, actions):
             xml = etree.parse(t).getroot()
             if xml.get('name') == type:
                 common_debug("Found matching template: %s" % (t))
+                _hawk_template_cache[path] = xml
                 break
-            _hawk_template_cache[path] = xml
         else:
             raise ValueError("Template not found: %s" % (name))
 
@@ -510,10 +511,10 @@ def _join_script_lines(txt):
     for line in [line for line in txt.split('\n')]:
         if not line.strip():
             pass
-        elif re.match('^\s', line):
+        elif re.match('^\s+\S', line):
             current_line += line
         else:
-            if current_line:
+            if current_line.strip():
                 s += current_line + "\n"
             current_line = line
     if current_line:
@@ -765,6 +766,44 @@ def _parse_parameters(script, args):
     return params
 
 
+def _handles_values(script, values):
+    """
+    TODO FIXME
+
+    Given a particular script and
+    values for the parameters of
+    the script, produce the values
+    argument to pass to handles.parse.
+
+    For sub-scripts and agent includes,
+    this involves resolving the "value"
+    of a particular include. The include
+    will be a step in steps, and needs
+    some meta-data to tell us what it
+    generates.
+
+    If a non-required step lacks values,
+    it should be added to the output as a
+    false value.
+    """
+    ret = {}
+    for step in script['steps']:
+        if step.get('name'):
+            obj = {}
+            scope = step['name']
+            ret[scope] = handles.value(obj, 'TODO')
+        else:
+            scope = ''
+            obj = ret
+        for param in step['parameters']:
+            scoped = _scoped_param(scope, param['name'])
+            if scoped in values:
+                obj[param['name']] = values[scoped]
+            else:
+                obj[param['name']] = None
+    return ret
+
+
 def _extract_actions(script, params):
     """
     Pull out the actions to perform based
@@ -838,17 +877,6 @@ def param_completion_list(name):
         return ps
     except Exception:
         return []
-
-
-def _step_action(step):
-    name = step.get('name')
-    if 'type' in step:
-        return name, step.get('type'), step.get('call')
-    else:
-        for typ in ['collect', 'validate', 'apply', 'apply_local', 'report']:
-            if typ in step:
-                return name, typ, step[typ].strip()
-    return name, None, None
 
 
 def _create_script_workdir(scriptdir, workdir):
@@ -1024,6 +1052,9 @@ class RunActions(object):
 
     def debug(self, msg):
         err_buf.debug(msg)
+
+    def handles_values(self):
+        return _handles_values(self.script, self.data[0])
 
     def run_command(self, nodes, command):
         "called by Actions"
@@ -1208,6 +1239,10 @@ def run(script, args):
             _print_debug(local_node, hosts, workdir, opts)
 
 
+def _remove_empty_lines(txt):
+    return '\n'.join(line for line in txt.split('\n') if line.strip())
+
+
 def verify(script, args):
     """
     Verify the given parameter values, reporting
@@ -1222,7 +1257,10 @@ def verify(script, args):
     params = _parse_parameters(script, args)
     actions = _extract_actions(script, params)
     return [{'shortdesc': action['shortdesc'],
-             'text': handles.parse(action['_text'], params, strict=True).strip()}
+             'text': _remove_empty_lines(handles.parse(action['_text'],
+                                                       _handles_values(script, params),
+                                                       strict=True)).strip(),
+             'nodes': action.get('nodes')}
             for action in actions]
 
 
