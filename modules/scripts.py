@@ -133,7 +133,7 @@ class Actions(object):
         txt = action['_value']
         txt = handles.parse(txt, run.handles_values())
         txt = _join_script_lines(txt)
-        fn = utils.str2tmp(txt)
+        fn = run.str2tmp(txt)
         run.call(None, 'crm configure load update %s' % (fn))
 
     def install(self, run, action):
@@ -600,13 +600,19 @@ def _parallax_copy(hosts, src, dst, opts):
     return parallax.copy(hosts, src, dst, opts)
 
 
+def _tempname(prefix):
+    return '%s-%s%s' % (prefix,
+                        hex(int(time.time()))[2:],
+                        hex(random.randint(0, 2**48))[2:])
+
+
 def _generate_workdir_name():
     '''
     Generate a temporary folder name to use while
     running the script
     '''
     # TODO: make use of /tmp configurable
-    basefile = 'crm-tmp-%s-%s' % (time.time(), random.randint(0, 2**48))
+    basefile = _tempname('crm-tmp')
     basetmp = os.path.join(utils.get_tempdir(), basefile)
     if os.path.isdir(basetmp):
         raise ValueError("Invalid temporary workdir %s" % (basetmp))
@@ -1146,7 +1152,7 @@ class RunActions(object):
         """
         execute the shell script...
         """
-        tmpf = utils.str2tmp(cmdscript)
+        tmpf = run.str2tmp(cmdscript)
         if nodes == 'all':
             ok = _copy_to_remote_dirs(self.hosts,
                                       tmpf,
@@ -1157,9 +1163,26 @@ class RunActions(object):
                 cmdline = "sh %s" % (tmpf)
                 self.result = self._process_remote(cmdline)
         else:
-            tmpf = utils.str2tmp(cmdscript)
             cmdline = "sh %s" % (tmpf)
             self.result = self._process_local(cmdline)
+
+    def str2tmp(self, s):
+        """
+        Create a temporary file in the temp workdir
+        Returns path to file
+        """
+        fn = os.path.join(self.workdir, _tempname('str2tmp'))
+        try:
+            with open(fn, "w") as f:
+                f.write(s)
+                if not s.endswith('\n'):
+                    f.write("\n")
+        except IOError, msg:
+            err_buf.error(msg)
+            return
+        return fn
+
+        return utils.str2tmp(s)
 
     def _process_remote(self, cmdline):
         """
