@@ -185,11 +185,12 @@ class RscMgmt(command.UI):
     name = "resource"
 
     rsc_status_all = "crm_resource -L"
-    rsc_status = "crm_resource -W -r '%s'"
+    rsc_status = "crm_resource --locate -r '%s'"
     rsc_showxml = "crm_resource -q -r '%s'"
     rsc_setrole = "crm_resource --meta -r '%s' -p target-role -v '%s'"
-    rsc_migrate = "crm_resource -M -r '%s' %s"
-    rsc_unmigrate = "crm_resource -U -r '%s'"
+    rsc_migrate = "crm_resource --move -r '%s' %s"
+    rsc_unmigrate = "crm_resource --clear -r '%s'"
+    rsc_ban = "crm_resource --ban -r '%s' %s"
     rsc_cleanup = "crm_resource -C -r '%s' -H '%s'"
     rsc_cleanup_all = "crm_resource -C -r '%s'"
     rsc_maintenance = "crm_resource -r '%s' --meta -p maintenance -v '%s'"
@@ -346,7 +347,32 @@ class RscMgmt(command.UI):
             opts = "%s --force" % opts
         return utils.ext_cmd(self.rsc_migrate % (rsc, opts)) == 0
 
+    @command.skill_level('administrator')
+    @command.wait
+    @command.completers_repeating(compl.resources, compl.nodes)
+    def do_ban(self, context, rsc, *args):
+        """usage: ban <rsc> [<node>] [<lifetime>] [force]"""
+        if not utils.is_name_sane(rsc):
+            return False
+        node = None
+        argl = list(args)
+        force = "force" in utils.fetch_opts(argl, ["force"])
+        lifetime = utils.fetch_lifetime_opt(argl)
+        if len(argl) > 0:
+            node = argl[0]
+            if not xmlutil.is_our_node(node):
+                context.fatal_error("Not our node: " + node)
+        opts = ''
+        if node:
+            opts = "--node='%s'" % node
+        if lifetime:
+            opts = "%s --lifetime='%s'" % (opts, lifetime)
+        if force or config.core.force:
+            opts = "%s --force" % opts
+        return utils.ext_cmd(self.rsc_ban % (rsc, opts)) == 0
+
     @command.alias('unmove')
+    @command.alias('unban')
     @command.skill_level('administrator')
     @command.wait
     @command.completers(compl.resources)

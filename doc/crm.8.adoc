@@ -1574,6 +1574,20 @@ Usage:
 migrate <rsc> [<node>] [<lifetime>] [force]
 ...............
 
+[[cmdhelp_resource_ban,ban a resource from a node]]
+==== `ban`
+
+Ban a resource from running on a certain node. If no node is given
+as argument, the resource is banned from the current location.
+
+See `migrate` for details on other arguments.
+
+Usage:
+...............
+ban <rsc> [<node>] [<lifetime>] [force]
+...............
+
+
 [[cmdhelp_resource_param,manage a parameter of a resource]]
 ==== `param`
 
