@@ -51,6 +51,10 @@ def test_conditional():
     eq_("beforehelloafter", handles.parse(t, {'foo': {'bar': 'hello'}}))
     eq_("", handles.parse(t, {'faa': {'bar': 'hello'}}))
 
+    t = """{{#cond}}before{{foo:bar}}after{{/cond}}"""
+    eq_("beforehelloafter", handles.parse(t, {'foo': {'bar': 'hello'}, 'cond': True}))
+    eq_("", handles.parse(t, {'foo': {'bar': 'hello'}, 'cond': False}))
+
 
 def test_iteration():
     t = """{{#foo}}!{{foo:bar}}!{{/foo}}"""

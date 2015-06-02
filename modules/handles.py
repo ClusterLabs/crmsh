@@ -25,10 +25,17 @@ class value(object):
     """
     def __init__(self, obj, value):
         self.value = value
+        self.obj = obj
         self.get = obj.get
 
     def __call__(self):
         return self.value
+
+    def __repr__(self):
+        return repr((self.value, self.obj))
+
+    def __str__(self):
+        return str((self.value, self.obj))
 
 
 def _join(d1, d2):
@@ -37,10 +44,12 @@ def _join(d1, d2):
     return d
 
 
-def _resolve(path, values):
+def _resolve(path, values, strict):
     p = values
     while path and p is not None:
         p, path = p.get(path[0]), path[1:]
+    if strict and path:
+        raise ValueError("Not set: %s" % (':'.join(path)))
     return p() if callable(p) else p
 
 
@@ -69,7 +78,7 @@ def parse(template, values, strict=False):
         path, block, invert = key.split(':'), prefix == '#', prefix == '^'
         if not path:
             raise ValueError("empty {{}} block found")
-        obj = _resolve(path, values)
+        obj = _resolve(path, values, strict)
         if block or invert:
             tailtag = '{{/%s}}' % (key)
             tailidx = iend + template[head.end(0):].find(tailtag)
@@ -81,8 +90,7 @@ def parse(template, values, strict=False):
                 ret = ret[:-1]
             if block:
                 if obj in (None, False):
-                    if obj is None and strict:
-                        raise ValueError("Not set: %s" % (key))
+                    pass
                 elif isinstance(obj, tuple) or isinstance(obj, list):
                     for it in obj:
                         ret += parse(body, _join(values, {key: it}))
