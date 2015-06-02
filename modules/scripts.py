@@ -890,7 +890,7 @@ def param_completion_list(name):
 
 def _create_script_workdir(scriptdir, workdir):
     "Create workdir and copy contents of scriptdir into it"
-    cmd = ["mkdir", "-p", os.path.dirname(workdir)]
+    cmd = ["mkdir", "-p", workdir]
     if options.regression_tests:
         print ".EXT", cmd
     if subprocess.call(cmd, shell=False) != 0:
@@ -918,7 +918,7 @@ def _create_remote_workdirs(hosts, path, opts):
     "Create workdirs on remote hosts"
     ok = True
     for host, result in _parallax_call(hosts,
-                                       "mkdir -p %s" % (os.path.dirname(path)),
+                                       "mkdir -p %s" % (path),
                                        opts).iteritems():
         if isinstance(result, parallax.Error):
             err_buf.error("[%s]: Start: %s" % (host, result))
@@ -1127,7 +1127,10 @@ class RunActions(object):
             self.output = None
             self.result = None
             self.rc = False
-            method(self, action)
+            if self.dry_run:
+                self.rc = True
+            else:
+                method(self, action)
             if self.rc:
                 self.ok(desc)
             if self.output:
