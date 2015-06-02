@@ -44,12 +44,12 @@ def _join(d1, d2):
     return d
 
 
-def _resolve(path, values, strict):
+def _resolve(key, path, values, strict):
     p = values
     while path and p is not None:
         p, path = p.get(path[0]), path[1:]
     if strict and path:
-        raise ValueError("Not set: %s" % (':'.join(path)))
+        raise ValueError("Not set: %s" % (key))
     return p() if callable(p) else p
 
 
@@ -78,7 +78,7 @@ def parse(template, values, strict=False):
         path, block, invert = key.split(':'), prefix == '#', prefix == '^'
         if not path:
             raise ValueError("empty {{}} block found")
-        obj = _resolve(path, values, strict)
+        obj = _resolve(key, path, values, strict)
         if block or invert:
             tailtag = '{{/%s}}' % (key)
             tailidx = iend + template[head.end(0):].find(tailtag)
