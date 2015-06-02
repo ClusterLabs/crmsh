@@ -351,7 +351,6 @@ def _parse_hawk_workflow(scriptname, scriptfile):
         'longdesc': ''.join(xml.xpath('./longdesc/text()')),
         'category': 'Wizard',
         'dir': None,
-        'include': [],
         'steps': [],
         'actions': [],
     }
@@ -426,6 +425,71 @@ def list_scripts():
     return sorted(_script_cache.keys())
 
 
+def _meta_text(meta, tag):
+    for c in meta.iterchildren(tag):
+        return c.text
+    return ''
+
+
+def _listfindpend(needle, haystack, keyfn, orfn):
+    for x in haystack:
+        if keyfn(x) == needle:
+            break
+    else:
+        x = orfn()
+        haystack.append(x)
+    return x
+
+
+def _process_include(data, include):
+    """
+    includes add parameter steps and actions
+    an agent include works like a hawk template:
+    it adds a parameter step and a cib action
+    a script include however adds any number of
+    parameter steps and actions
+    """
+    if 'agent' in include:
+        import ra
+        agent = include['agent']
+        info = ra.get_ra_cpt(agent)
+        meta = info.meta()
+        if meta is None:
+            raise ValueError("Unknown resource type: %s" % (agent))
+        name = include.get('name', meta.get('name'))
+        step = _listfindpend(name, data['steps'], lambda x: x.get('name'), lambda: {
+            'name': name,
+            'longdesc': '',
+            'shortdesc': '',
+            'stepdesc': '',
+            'parameters': [],
+        })
+        step['longdesc'] = include.get('longdesc') or _meta_text(meta, 'longdesc')
+        step['shortdesc'] = include.get('shortdesc') or _meta_text(meta, 'shortdesc')
+        step['stepdesc'] = include.get('stepdesc') or step['shortdesc']
+        step['required'] = include.get('required', True)
+        for param in meta.xpath('./parameters/parameter'):
+            pname = param.get('name')
+            pobj = _listfindpend(pname, step['parameters'], lambda x: x.get('name'), lambda: {'name': pname})
+            pobj['required'] = param.get('required', '0')
+            pobj['unique'] = param.get('unique', '0')
+            pobj['longdesc'] = _meta_text(param, 'longdesc')
+            pobj['shortdesc'] = _meta_text(param, 'shortdesc')
+            ctype = param.xpath('./content/@type')
+            cdefault = param.xpath('./content/@default')
+            if ctype:
+                pobj['type'] = ctype[0]
+            if cdefault:
+                pobj['default'] = cdefault[0]
+
+    elif 'script' in include:
+        script = load_script(include['script'])
+        # TODO: rewrite references in script to
+        # maintain scope - is there a better way?
+    else:
+        raise ValueError("Unknown include type: %s" % (', '.join(include.keys())))
+
+
 def _postprocess_script(data):
     """
     Post-process the parsed script into an executable
@@ -447,14 +511,6 @@ def _postprocess_script(data):
 
     if 'actions' not in data:
         data['actions'] = []
-
-    # includes add parameter steps and actions
-    # an agent include works like a hawk template:
-    # it adds a parameter step and a cib action
-    # a script include however adds any number of
-    # parameter steps and actions
-    for inc in data.get('include', []):
-        pass
 
     for step in data['steps']:
         if 'stepdesc' not in step:
@@ -486,6 +542,9 @@ def _postprocess_script(data):
                     p['type'] = 'resource-id'
                 else:
                     p['type'] = 'string'
+
+    for inc in data.get('include', []):
+        _process_include(data, inc)
 
     for item in data.get('actions', []):
         action = _find_action(item)
@@ -1310,9 +1369,11 @@ def verify(script, args):
     """
     params = _parse_parameters(script, args)
     actions = _extract_actions(script, params)
+    hava = _handles_values(script, params)
+    print hava
     return [{'shortdesc': action['shortdesc'],
              'text': _remove_empty_lines(handles.parse(action['_text'],
-                                                       _handles_values(script, params),
+                                                       hava,
                                                        strict=True)).strip(),
              'nodes': action.get('nodes')}
             for action in actions]

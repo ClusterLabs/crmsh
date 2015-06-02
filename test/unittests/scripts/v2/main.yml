@@ -5,9 +5,7 @@
     Configure a resource group containing a virtual IP address and
     an instance of the Apache web server. You can optionally configure
     a Filesystem resource which will be mounted before the web server
-    is started. You can also optionally configure a database resource
-    which will be started before the web server but after mounting the
-    optional filesystem.
+    is started.
   category: Server
   include:
     - agent: ocf:heartbeat:apache
@@ -17,9 +15,6 @@
       shortdesc: The IP address configured here will start before the Apache instance.
     - agent: ocf:heartbeat:Filesystem
       name: filesystem
-      required: false
-    - agents: database
-      name: database
       required: false
   parameters:
     - name: id
@@ -43,11 +38,9 @@
       when: install
     - cib: |
         {{filesystem}}
-        {{database}}
         {{apache}}
         {{virtual-ip}}
         group {{id}}
           {{filesystem:id}}
-          {{database:id}}
           {{virtual-ip:id}}
           {{apache:id}}

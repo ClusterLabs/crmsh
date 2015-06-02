@@ -431,15 +431,11 @@ class RAInfo(object):
             return None
         self.broken_ra = True
         meta = self.meta()
-        try:
-            self.ra_elem = etree.fromstring('\n'.join(meta))
-        except Exception:
-            if not meta:
-                if not config.core.ignore_missing_metadata:
-                    self.error("got no meta-data, does this RA exist?")
-            else:
-                self.error("meta-data is no good XML")
+        if not meta:
+            if not config.core.ignore_missing_metadata:
+                self.error("got no meta-data, does this RA exist?")
             return None
+        self.ra_elem = meta
         try:
             assert self.ra_elem.tag == 'resource-agent'
         except Exception:
@@ -662,6 +658,7 @@ class RAInfo(object):
     def meta(self):
         '''
         RA meta-data as raw xml.
+        Returns an etree xml object.
         '''
         sid = "ra_meta-%s" % self.ra_string()
         if cache.is_cached(sid):
@@ -672,8 +669,13 @@ class RAInfo(object):
             l = ra_if().meta(self.ra_class, self.ra_type, self.ra_provider)
         if not l:
             return None
+        try:
+            xml = etree.fromstring('\n'.join(l))
+        except Exception:
+            self.error("Cannot parse meta-data XML")
+            return None
         self.debug("read and cached meta-data")
-        return cache.store(sid, l)
+        return cache.store(sid, xml)
 
     def meta_pretty(self):
         '''
@@ -784,6 +786,14 @@ class RAInfo(object):
 
 def get_ra(r):
     return RAInfo(r.get("class"), r.get("type"), r.get("provider"))
+
+
+def get_ra_cpt(cpt):
+    """
+    cpt = [class:[provider:]]type
+    """
+    c, p, t = disambiguate_ra_type(cpt)
+    return RAInfo(c, t, p)
 
 
 #
