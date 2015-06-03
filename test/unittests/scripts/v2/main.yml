@@ -3,19 +3,13 @@
   shortdesc: Apache Webserver
   longdesc: >
     Configure a resource group containing a virtual IP address and
-    an instance of the Apache web server. You can optionally configure
-    a Filesystem resource which will be mounted before the web server
-    is started.
+    an instance of the Apache web server.
   category: Server
   include:
-    - agent: ocf:heartbeat:apache
+    - agent: test:apache
       name: apache
-    - agent: ocf:heartbeat:IPaddr2
+    - agent: test:virtual-ip
       name: virtual-ip
-      shortdesc: The IP address configured here will start before the Apache instance.
-    - agent: ocf:heartbeat:Filesystem
-      name: filesystem
-      required: false
   parameters:
     - name: id
       shortdesc: The ID specified here is for the web server resource group.
@@ -24,11 +18,6 @@
       default: true
       shortdesc: Disable if no installation should be performed
   actions:
-    - call: test -b {{filesystem:device}}
-      shortdesc: Verify filesystem device {{filesystem:device}}
-      error: Invalid filesystem device {{filesystem:device}}
-      nodes: all
-      when: filesystem
     - install:
         - apache2
       when: install
@@ -36,11 +25,9 @@
       shortdesc: Enable status module
       nodes: all
       when: install
+    - include: apache
+    - include: virtual-ip
     - cib: |
-        {{filesystem}}
-        {{apache}}
-        {{virtual-ip}}
         group {{id}}
-          {{filesystem:id}}
           {{virtual-ip:id}}
           {{apache:id}}

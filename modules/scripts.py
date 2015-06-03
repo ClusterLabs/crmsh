@@ -53,43 +53,94 @@ from .msg import err_buf, common_debug
 _script_cache = None
 _script_version = 2.2
 
+_action_shortdescs = {
+    'cib': 'Configure CIB',
+    'install': 'Install packages',
+    'call': 'Run command on nodes',
+    'copy': 'Install file on nodes',
+    'crm': 'Run crm command',
+    'collect': 'Collect data from nodes',
+    'verify': 'Verify collected data',
+    'apply': 'Apply changes to nodes',
+    'apply_local': 'Apply changes to cluster'
+}
+
 
 class Actions(object):
     """
     Each method in this class handles a particular action.
     """
     @staticmethod
-    def _parse(action, data):
+    def _parse(action, params, values):
         """
-        This special method parses the action data into a
+        This special method parses the action action into a
         form that the particular action can handle. It's here
         to bring it closer to the actual actions. I want to
         do this conversion as early in the parse as possible,
         so the verify output can be as useful as possible.
+
+        action: action data (dict)
+        params: flat list of parameter values
+        values: processed list of parameter values (for handles.parse)
+
+        returns: True to process, False to exclude
+
+        TODO:
+        validate the action given actual parameters:
+        we want to pass most values through handles,
+        for example for the copy action, we should be
+        able to use configurable parameters as arguments
+        here using {{this syntax}}.
+        In fact, all the handles-parsing should happen here,
+        so we can verify that it parses OK before the
+        actions start running.
         """
-        data['_value'] = data[action]
-        del data[action]
-        data['_text'] = ''
-        if action == 'install':
-            if isinstance(data['_value'], basestring):
-                data['_value'] = data['_value'].split()
-            data['_text'] = ' '.join(data['_value'])
+        name = action['_name']
+        action['_value'] = action[name]
+        del action[name]
+        action['_text'] = ''
+        if name == 'install':
+            if isinstance(action['_value'], basestring):
+                action['_value'] = action['_value'].split()
+            action['_text'] = ' '.join(action['_value'])
         # service takes a list of objects with a single key;
         # mapping service: state
         # the text field will be converted to lines where
         # each line is <service> -> <state>
-        elif action == 'service':
-            if isinstance(data['_value'], basestring):
-                data['_value'] = [dict([v.split(':', 1)]) for v in data['_value'].split()]
+        elif name == 'service':
+            if isinstance(action['_value'], basestring):
+                action['_value'] = [dict([v.split(':', 1)]) for v in action['_value'].split()]
 
             def arrow(v):
                 return ' -> '.join(x.items()[0])
-            data['_text'] = '\n'.join([arrow(x) for x in data['_value']])
-        elif action == 'cib' or action == 'crm':
-            data['_text'] = data['_value']
+            action['_text'] = '\n'.join([arrow(x) for x in action['_value']])
+        elif name == 'cib' or name == 'crm':
+            action['_value'] = _remove_empty_lines(handles.parse(action['_value'], values, strict=True)).strip()
+            action['_text'] = action['_value']
+        elif name == 'copy':
+            action['_value'] = _remove_empty_lines(handles.parse(action['_value'], values, strict=True)).strip()
+            action['_to'] = _remove_empty_lines(handles.parse(action['_to'], values, strict=True)).strip()
+            action['_text'] = "%s -> %s" % (action['_value'], action['to'])
+
+        if 'shortdesc' not in action:
+            action['shortdesc'] = _action_shortdescs.get(name, '')
+        else:
+            action['shortdesc'] = handles.parse(action['shortdesc'], values, strict=True)
+        if 'longdesc' not in action:
+            action['longdesc'] = ''
+        else:
+            action['longdesc'] = handles.parse(action['longdesc'], values, strict=True)
+
+        when = handles.parse(action.get('when', ''), values, strict=True)
+        when = when.strip() if when else when
+        if when:
+            if params.get(when):
+                return True
+            return False
+        return True
 
     @staticmethod
-    def needs_sudo(action):
+    def _needs_sudo(action):
         if action['_name'] == 'call' and action.get('sudo'):
             return True
         return action['_name'] in ('apply', 'apply_local', 'install', 'service')
@@ -125,6 +176,16 @@ class Actions(object):
         TODO: actually allow script here
         """
         run.call(action.get('nodes'), action['_value'])
+
+    def copy(self, run, action):
+        """
+        copy: <from>
+        to: <path>
+        template: true|false
+        """
+        fil = action['_value']
+        if not os.path.isfile(fil):
+            raise ValueError("File not found: %s" % (fil))
 
     def crm(self, run, action):
         """
@@ -571,24 +632,6 @@ def _postprocess_script(data):
     for inc in data.get('include', []):
         _process_include(data, inc)
 
-    for item in data.get('actions', []):
-        action = _find_action(item)
-        if action is None:
-            raise ValueError("Unknown action: %s" % (item.keys()))
-        item['_name'] = action
-        Actions._parse(action, item)
-        if 'shortdesc' not in item:
-            if item['_name'] == 'cib':
-                item['shortdesc'] = "Install CIB configuration"
-            elif item['_name'] == 'install':
-                item['shortdesc'] = "Ensure packages are installed"
-            elif item['_name'] == 'call':
-                item['shortdesc'] = "Execute command on nodes"
-            else:
-                item['shortdesc'] = ''
-        if 'longdesc' not in item:
-            item['longdesc'] = ''
-
     return data
 
 
@@ -897,27 +940,6 @@ def _handles_values(script, values):
     return ret
 
 
-def _extract_actions(script, params):
-    """
-    Pull out the actions to perform based
-    on the actual parameter values (parsing
-    when statements)
-    TODO: parse when statements - when statements
-    are context-dependent, but the context needs
-    to be resolved as part of the include processing.
-    """
-    ret = []
-    for action in script['actions']:
-        when = action.get('when')
-        when = when.strip() if when else when
-        if when:
-            if params.get(when):
-                ret.append(action)
-        else:
-            ret.append(action)
-    return ret
-
-
 def _has_remote_actions(actions):
     """
     True if any actions execute on remote nodes
@@ -1085,7 +1107,7 @@ class RunActions(object):
             if not os.path.isfile(statefile):
                 raise ValueError("No state for action: %s" % (action_index))
             self.data = json.load(open(statefile))
-        if Actions.needs_sudo(action):
+        if Actions._needs_sudo(action):
             self._check_sudo_pass()
         result = self._run_action(action)
         json.dump(self.data, open(self.statefile, 'w'))
@@ -1099,7 +1121,7 @@ class RunActions(object):
         # TODO: combine consecutive actions
         # where possible (CIB applications etc.)
         for action in self.actions:
-            if Actions.needs_sudo(action):
+            if Actions._needs_sudo(action):
                 self._check_sudo_pass()
             if not self._run_action(action):
                 return False
@@ -1342,7 +1364,7 @@ def run(script, args):
     # pull out the actions to perform based on the actual
     # parameter values (so discard actions conditional on
     # conditions that are false)
-    actions = _extract_actions(script, params)
+    actions = _process_actions(script, params)
     has_remote_actions = _has_remote_actions(actions)
 
     try:
@@ -1379,6 +1401,30 @@ def _remove_empty_lines(txt):
     return '\n'.join(line for line in txt.split('\n') if line.strip())
 
 
+def _expand_include_actions(script, params, values):
+    from copy import deepcopy
+    return deepcopy(script['actions'])
+
+
+def _process_actions(script, params):
+    """
+    Given parameter values, we can process
+    all the handles data and generate all the
+    actions to perform, validate and check conditions.
+    """
+    values = _handles_values(script, params)
+    actions = _expand_include_actions(script, params, values)
+    ret = []
+    for action in actions:
+        name = _find_action(action)
+        if name is None:
+            raise ValueError("Unknown action: %s" % (action.keys()))
+        action['_name'] = name
+        if Actions._parse(action, params, values):
+            ret.append(action)
+    return ret
+
+
 def verify(script, args):
     """
     Verify the given parameter values, reporting
@@ -1391,15 +1437,14 @@ def verify(script, args):
     TODO: fix handles call parameters, clean up handles output
     """
     params = _parse_parameters(script, args)
-    actions = _extract_actions(script, params)
-    hava = _handles_values(script, params)
-    print hava
-    return [{'shortdesc': action['shortdesc'],
-             'text': _remove_empty_lines(handles.parse(action['_text'],
-                                                       hava,
-                                                       strict=True)).strip(),
-             'nodes': action.get('nodes')}
-            for action in actions]
+    actions = _process_actions(script, params)
+    ret = []
+    for action in actions:
+        ret.append({
+            'shortdesc': action['shortdesc'],
+            'text': action['_text'],
+            'nodes': action.get('nodes', '')})
+    return ret
 
 
 def _make_boolean(v):
