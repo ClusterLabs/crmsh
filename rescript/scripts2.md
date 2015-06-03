@@ -380,3 +380,46 @@ The parameter lists are
 
 
 So! Scripts are either that, or a describing a single resource.
+
+
+## handling script includes
+
+For hawk, including templates is easy: Just merge the CIB output of
+the included templates into the output of the main workflow.
+
+However, for me it's not so easy: I want to give more control over
+what happens, to elements can be initialized in the right order. For
+example, configuring one resource first, then the next.
+
+When it comes to CIB and agents, it's pretty easy. Just {{agent}} to
+insert the CIB resource for the agent.
+
+But for scripts? Scripts consists of multiple steps. There needs to be
+a script or include action, to put where the script steps should be.
+
+- script: filesystem
+
+or
+
+- include: filesystem
+
+"include" would also work for agents, so instead of - cib: {{agent}}
+you can do - include: agent. But I still want to allow {{agent}}
+right? Yes. Because in that way, the agent output gets merged into the
+CIB. Maybe for scripts, I can have a special rule that says that any
+script that is referenced like that, the {{scriptname}} output will be
+the output of the **last** cib action in that script. Does that make
+sense? Or the output of the first applicable cib action? like, maybe
+there's an optional cib action, but if that option is disabled, the
+next cib action is used. Hmm. Seems confusing. Better to take either
+the first or the last cib action.
+
+Hmm, but it works, I think. I just inject the actions at any point I
+see a include for the name, and I merge the parameters wherever the
+step names match.
+
+That also works for the agent-wrapper scripts: They just have one
+action. include: <agent>
+
+Yep, this is better. And doable.
+

@@ -85,7 +85,7 @@ class Actions(object):
             def arrow(v):
                 return ' -> '.join(x.items()[0])
             data['_text'] = '\n'.join([arrow(x) for x in data['_value']])
-        elif action == 'cib':
+        elif action == 'cib' or action == 'crm':
             data['_text'] = data['_value']
 
     @staticmethod
@@ -126,6 +126,16 @@ class Actions(object):
         """
         run.call(action.get('nodes'), action['_value'])
 
+    def crm(self, run, action):
+        """
+        input: crm command sequence
+        """
+        txt = action['_value']
+        txt = handles.parse(txt, run.handles_values())
+        txt = _join_script_lines(txt)
+        fn = run.str2tmp(txt)
+        run.call(None, 'crm -f %s' % (fn))
+
     def cib(self, run, action):
         "input: cli configuration script"
         # generate cib
@@ -159,6 +169,16 @@ import crm_init
 %s
 crm_script.exit_ok(True)
 ''' % (services))
+
+    def include(self, run, action):
+        """
+        Treated differently: at parse time,
+        the include actions should disappear
+        and be replaced with actions generated
+        from the include. Either from an included
+        script, or a cib generated from an agent
+        include.
+        """
 
 _actions = dict([(n, getattr(Actions, n)) for n in dir(Actions) if not n.startswith('_')])
 
@@ -484,6 +504,11 @@ def _process_include(data, include):
 
     elif 'script' in include:
         script = load_script(include['script'])
+        for step in script['steps']:
+            for param in step['parameters']:
+                pass
+        for action in script['actions']:
+            pass
         # TODO: rewrite references in script to
         # maintain scope - is there a better way?
     else:
@@ -918,10 +943,6 @@ def _set_controlpersist(opts):
     pass
 
 
-def arg0(cmd):
-    return cmd.split()[0]
-
-
 def _flatten_parameters(steps):
     pret = []
     for step in steps:
@@ -1075,6 +1096,8 @@ class RunActions(object):
         # run on remote nodes
         # run on local nodes
         # TODO: wait for remote results
+        # TODO: combine consecutive actions
+        # where possible (CIB applications etc.)
         for action in self.actions:
             if Actions.needs_sudo(action):
                 self._check_sudo_pass()
