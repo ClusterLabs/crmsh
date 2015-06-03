@@ -16,7 +16,7 @@
 #
 import cibconfig
 from lxml import etree
-from nose.tools import eq_
+from nose.tools import eq_, with_setup
 import copy
 
 factory = cibconfig.cib_factory
@@ -28,6 +28,11 @@ def setup_func():
     idmgmt.clear()
 
 
+def teardown_func():
+    pass
+
+
+@with_setup(setup_func, teardown_func)
 def test_cib_schema_change():
     "Changing the validate-with CIB attribute"
     copy_of_cib = copy.copy(factory.cib_orig)
