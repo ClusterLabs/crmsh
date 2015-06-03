@@ -529,6 +529,8 @@ def _process_include(data, include):
     it adds a parameter step and a cib action
     a script include however adds any number of
     parameter steps and actions
+
+    expands its actions in place of any -include: <name> action
     """
     if 'agent' in include:
         import ra
@@ -538,6 +540,9 @@ def _process_include(data, include):
         if meta is None:
             raise ValueError("Unknown resource type: %s" % (agent))
         name = include.get('name', meta.get('name'))
+        if not name:
+            raise ValueError("Agent needs explicit name: %s" % (agent))
+        print "name:", name
         step = _listfindpend(name, data['steps'], lambda x: x.get('name'), lambda: {
             'name': name,
             'longdesc': '',
@@ -1401,11 +1406,6 @@ def _remove_empty_lines(txt):
     return '\n'.join(line for line in txt.split('\n') if line.strip())
 
 
-def _expand_include_actions(script, params, values):
-    from copy import deepcopy
-    return deepcopy(script['actions'])
-
-
 def _process_actions(script, params):
     """
     Given parameter values, we can process
@@ -1413,7 +1413,8 @@ def _process_actions(script, params):
     actions to perform, validate and check conditions.
     """
     values = _handles_values(script, params)
-    actions = _expand_include_actions(script, params, values)
+    from copy import deepcopy
+    actions = deepcopy(script['actions'])
     ret = []
     for action in actions:
         name = _find_action(action)

@@ -5,11 +5,6 @@
     Configure a resource group containing a virtual IP address and
     an instance of the Apache web server.
   category: Server
-  include:
-    - agent: test:apache
-      name: apache
-    - agent: test:virtual-ip
-      name: virtual-ip
   parameters:
     - name: id
       shortdesc: The ID specified here is for the web server resource group.
@@ -17,6 +12,20 @@
       type: boolean
       default: true
       shortdesc: Disable if no installation should be performed
+  include:
+    - agent: test:apache
+      parameters:
+        - name: id
+          value: "{{id}}-server"
+        - name: configfile
+          type: file
+    - agent: test:virtual-ip
+      name: virtual-ip
+      parameters:
+        - name: id
+          value: "{{id}}-ip"
+        - name: ip
+          type: ip-address
   actions:
     - install:
         - apache2
