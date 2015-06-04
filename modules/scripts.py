@@ -71,7 +71,7 @@ class Actions(object):
     Each method in this class handles a particular action.
     """
     @staticmethod
-    def _parse(action, params, values):
+    def _parse(script, action, params, values):
         """
         This special method parses the action action into a
         form that the particular action can handle. It's here
@@ -121,6 +121,12 @@ class Actions(object):
             action['_value'] = _remove_empty_lines(handles.parse(action['_value'], values, strict=True)).strip()
             action['_to'] = _remove_empty_lines(handles.parse(action['_to'], values, strict=True)).strip()
             action['_text'] = "%s -> %s" % (action['_value'], action['to'])
+        elif name == 'include':
+            stepname = action['_value']
+            for step in script['steps']:
+                if step.get('name') == stepname:
+                    action['_value'] = _remove_empty_lines(handles.parse(step['_value'], values, strict=True)).strip()
+                    action['_text'] = action['_value']
 
         if 'shortdesc' not in action:
             action['shortdesc'] = _action_shortdescs.get(name, '')
@@ -515,18 +521,32 @@ def _meta_text(meta, tag):
 def _listfindpend(needle, haystack, keyfn, orfn):
     for x in haystack:
         if keyfn(x) == needle:
-            break
-    else:
-        x = orfn()
-        haystack.append(x)
+            return x
+    x = orfn()
+    haystack.append(x)
     return x
 
 
-def _process_include(data, include):
+def _make_cib_for_agent(agent, data):
+    template = """primitive {{%(name)s:id}} %(agent)s
+    %(params)s
+    %(ops)s
+"""
+    params = ""
+    ops = ""
+    return template % {
+        'name': data['name'],
+        'agent': agent,
+        'params': params,
+        'ops': ops
+    }
+
+
+def _process_include(script, include):
     """
     includes add parameter steps and actions
     an agent include works like a hawk template:
-    it adds a parameter step and a cib action
+    it adds a parameter step
     a script include however adds any number of
     parameter steps and actions
 
@@ -543,7 +563,7 @@ def _process_include(data, include):
         if not name:
             raise ValueError("Agent needs explicit name: %s" % (agent))
         print "name:", name
-        step = _listfindpend(name, data['steps'], lambda x: x.get('name'), lambda: {
+        step = _listfindpend(name, script['steps'], lambda x: x.get('name'), lambda: {
             'name': name,
             'longdesc': '',
             'shortdesc': '',
@@ -554,6 +574,14 @@ def _process_include(data, include):
         step['shortdesc'] = include.get('shortdesc') or _meta_text(meta, 'shortdesc')
         step['stepdesc'] = include.get('stepdesc') or step['shortdesc']
         step['required'] = include.get('required', True)
+        step['parameters'].append({
+            'name': 'id',
+            'shortdesc': 'Identifier for the cluster resource',
+            'longdesc': '',
+            'required': True,
+            'unique': True,
+            'type': 'resource-id',
+        })
         for param in meta.xpath('./parameters/parameter'):
             pname = param.get('name')
             pobj = _listfindpend(pname, step['parameters'], lambda x: x.get('name'), lambda: {'name': pname})
@@ -568,6 +596,8 @@ def _process_include(data, include):
             if cdefault:
                 pobj['default'] = cdefault[0]
 
+        step['_value'] = _make_cib_for_agent(agent, step)
+
     elif 'script' in include:
         script = load_script(include['script'])
         for step in script['steps']:
@@ -581,29 +611,29 @@ def _process_include(data, include):
         raise ValueError("Unknown include type: %s" % (', '.join(include.keys())))
 
 
-def _postprocess_script(data):
+def _postprocess_script(script):
     """
     Post-process the parsed script into an executable
     form. This means parsing all included agents and
     scripts, merging parameters, steps and actions.
     """
-    ver = data.get('version')
+    ver = script.get('version')
     if ver is None or str(ver) != str(_script_version):
         raise ValueError("Unsupported script version (expected %s, got %s)" % (_script_version, repr(ver)))
 
-    if 'shortdesc' not in data:
-        data['shortdesc'] = ''
+    if 'shortdesc' not in script:
+        script['shortdesc'] = ''
 
-    if 'longdesc' not in data:
-        data['longdesc'] = ''
+    if 'longdesc' not in script:
+        script['longdesc'] = ''
 
-    if 'category' not in data:
-        data['category'] = 'Custom'
+    if 'category' not in script:
+        script['category'] = 'Custom'
 
-    if 'actions' not in data:
-        data['actions'] = []
+    if 'actions' not in script:
+        script['actions'] = []
 
-    for step in data['steps']:
+    for step in script['steps']:
         if 'stepdesc' not in step:
             step['stepdesc'] = ''
             if 'shortdesc' in step:
@@ -634,10 +664,10 @@ def _postprocess_script(data):
                 else:
                     p['type'] = 'string'
 
-    for inc in data.get('include', []):
-        _process_include(data, inc)
+    for inc in script.get('include', []):
+        _process_include(script, inc)
 
-    return data
+    return script
 
 
 def _join_script_lines(txt):
@@ -1421,7 +1451,7 @@ def _process_actions(script, params):
         if name is None:
             raise ValueError("Unknown action: %s" % (action.keys()))
         action['_name'] = name
-        if Actions._parse(action, params, values):
+        if Actions._parse(script, action, params, values):
             ret.append(action)
     return ret
 
