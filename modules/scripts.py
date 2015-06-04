@@ -547,6 +547,11 @@ def _make_cib_for_agent(name, agent, data):
     }
 
 
+def _merge_objects(o1, o2):
+    for key, value in o2.iteritems():
+        o1[key] = value
+
+
 def _process_include(script, include):
     """
     includes add parameter steps and actions
@@ -599,8 +604,8 @@ def _process_include(script, include):
         for param in meta.xpath('./parameters/parameter'):
             pname = param.get('name')
             pobj = _listfindpend(pname, step['parameters'], lambda x: x.get('name'), lambda: {'name': pname})
-            pobj['required'] = param.get('required', '0')
-            pobj['unique'] = param.get('unique', '0')
+            pobj['required'] = _make_boolean(param.get('required', False))
+            pobj['unique'] = _make_boolean(param.get('unique', False))
             pobj['longdesc'] = _meta_text(param, 'longdesc')
             pobj['shortdesc'] = _meta_text(param, 'shortdesc')
             ctype = param.xpath('./content/@type')
@@ -609,6 +614,12 @@ def _process_include(script, include):
                 pobj['type'] = ctype[0]
             if cdefault:
                 pobj['default'] = cdefault[0]
+
+        for param in include.get('parameters', []):
+            pname = param['name']
+            pobj = _listfindpend(pname, step['parameters'], lambda x: x.get('name'), lambda: {'name': pname})
+            for key, value in param.iteritems():
+                pobj[key] = value
 
         step['_value'] = _make_cib_for_agent(name, agent, step)
 
@@ -649,6 +660,9 @@ def _postprocess_script(script):
     if 'actions' not in script:
         script['actions'] = []
 
+    for inc in script.get('include', []):
+        _process_include(script, inc)
+
     for step in script['steps']:
         step['required'] = _make_boolean(step.get('required', True))
         if 'stepdesc' not in step:
@@ -669,6 +683,8 @@ def _postprocess_script(script):
                 p['required'] = True
             else:
                 p['required'] = _make_boolean(p['required'])
+            if 'unique' in p:
+                p['unique'] = _make_boolean(p['unique'])
             if 'default' in p and p['default'] is None:
                 del p['default']
             if 'when' not in p:
@@ -680,9 +696,6 @@ def _postprocess_script(script):
                     p['type'] = 'resource-id'
                 else:
                     p['type'] = 'string'
-
-    for inc in script.get('include', []):
-        _process_include(script, inc)
 
     return script
 
