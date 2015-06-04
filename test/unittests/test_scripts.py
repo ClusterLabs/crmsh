@@ -434,11 +434,11 @@ IP address goes away.
 </resource-agent>
 '''
 
-_saved_cpt = ra.get_ra_cpt
+_saved_get_ra = ra.get_ra
 
 
 def setup_func():
-    "hijack ra.get_ra_cpt to add new resource class (of sorts)"
+    "hijack ra.get_ra to add new resource class (of sorts)"
     class Agent(object):
         def __init__(self, name):
             self.name = name
@@ -449,15 +449,15 @@ def setup_func():
             else:
                 return etree.fromstring(_virtual_ip)
 
-    def _get_ra_cpt(agent):
+    def _get_ra(agent):
         if agent.startswith('test:'):
             return Agent(agent[5:])
-        return _saved_cpt(agent)
-    ra.get_ra_cpt = _get_ra_cpt
+        return _saved_get_ra(agent)
+    ra.get_ra = _get_ra
 
 
 def teardown_func():
-    ra.get_ra_cpt = _saved_cpt
+    ra.get_ra = _saved_get_ra
 
 
 def test_list():

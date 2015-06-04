@@ -22,10 +22,14 @@
         mod_status enabled.  If in doubt, try running Apache manually via
         its init script first, and ensure http://localhost:80/server-status is
         accessible.
+      ops: |
+        op start timeout="40"
+        op stop timeout="60"
+        op monitor interval="10" timeout="20"
     - script: virtual-ip
-      longdesc: The IP address configured here will start before the Apache instance.
+      shortdesc: The IP address configured here will start before the Apache instance.
     - script: filesystem
-      longdesc: Optional filesystem mounted before the web server is started.
+      shortdesc: Optional filesystem mounted before the web server is started.
       required: false
     - script: database
       shortdesc: Optional database started before the web server is started.
@@ -35,14 +39,6 @@
       shortdesc: ID for the web server resource group
       example: web-server
       type: resource-id
-    - name: configfile
-      from: apache
-    - name: options
-      from: apache
-      required: false
-    - name: envfiles
-      from: apache
-      required: false
     - name: install
       type: boolean
       shortdesc: Install and configure apache
@@ -59,18 +55,11 @@
     - call: a2enmod status
       shortdesc: Enable status module
       when: install
+    - include: filesystem
+    - include: database
+    - include: virtual-ip
+    - include: apache
     - cib: |
-        {{filesystem}}
-        {{database}}
-        {{virtual-ip}}
-        primitive p-{{id}} ocf:heartbeat:apache
-          params
-          configfile="{{configfile}}"
-          {{#options}}options="{{options}}"{{/options}}
-          {{#envfiles}}envfiles="{{envfiles}}"{{/envfiles}}
-          op start timeout="40"
-          op stop timeout="60"
-          op monitor interval="10" timeout="20"
         group g-{{id}}
           {{filesystem:id}}
           {{database:id}}

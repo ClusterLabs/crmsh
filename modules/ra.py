@@ -785,15 +785,11 @@ class RAInfo(object):
 
 
 def get_ra(r):
-    return RAInfo(r.get("class"), r.get("type"), r.get("provider"))
-
-
-def get_ra_cpt(cpt):
-    """
-    cpt = [class:[provider:]]type
-    """
-    c, p, t = disambiguate_ra_type(cpt)
-    return RAInfo(c, t, p)
+    if isinstance(r, basestring):
+        cls, provider, type = disambiguate_ra_type(r)
+    else:
+        cls, provider, type = r.get('class'), r.get('type'), r.get('provider')
+    return RAInfo(cls, type, provider)
 
 
 #

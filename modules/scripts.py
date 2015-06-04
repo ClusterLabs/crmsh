@@ -395,31 +395,32 @@ def _parse_hawk_template(workflow, name, type, step, actions):
         step['parameters'].append(obj)
 
 
+def _mkhandle(pfx, scope, text):
+    if scope:
+        return '{{%s%s:%s}}' % (pfx, scope, text)
+    else:
+        return '{{%s%s}}' % (pfx, text)
+
+
 def _hawk_to_handles(context, tag):
     """
     input: a context name to prefix variable references with (may be empty)
     and a crm_script tag
     output: text with {{handles}}
     """
-    def mkhandle(pfx, scope, text):
-        if scope:
-            return '{{%s%s:%s}}' % (pfx, scope, text)
-        else:
-            return '{{%s%s}}' % (pfx, text)
-
     s = ""
     s += tag.text
     for c in tag:
         if c.tag == 'if':
             cond = c.get('set')
             if cond:
-                s += mkhandle('#', context, cond)
+                s += _mkhandle('#', context, cond)
                 s += _hawk_to_handles(context, c)
-                s += mkhandle('/', context, cond)
+                s += _mkhandle('/', context, cond)
         elif c.tag == 'insert':
             param = c.get('param')
             src = c.get('from_template') or context
-            s += mkhandle('', src, param)
+            s += _mkhandle('', src, param)
         s += c.tail
     return s
 
@@ -527,15 +528,19 @@ def _listfindpend(needle, haystack, keyfn, orfn):
     return x
 
 
-def _make_cib_for_agent(agent, data):
+def _make_cib_for_agent(name, agent, data):
     template = """primitive {{%(name)s:id}} %(agent)s
     %(params)s
     %(ops)s
 """
     params = ""
     ops = ""
+    for param in data['parameters']:
+        paramname = param['name']
+        path = _mkhandle('', name, paramname)
+        params += '{{#%(path)s}}%(name)s="{{%(path)s}}"{{/%(path)s}}' % {'path': path, 'name': paramname}
     return template % {
-        'name': data['name'],
+        'name': name,
         'agent': agent,
         'params': params,
         'ops': ops
@@ -550,19 +555,28 @@ def _process_include(script, include):
     a script include however adds any number of
     parameter steps and actions
 
-    expands its actions in place of any -include: <name> action
+    OK. here's what to do: Don't rescope the steps
+    and actions. Instead, keep the actions attached
+    to script step 0, as above. And for each step, add
+    a scope which states its scope. Then, when evaluating
+    handles, build custom environments for those scopes to
+    pass into handles.parse.
+
+    This is just for scripts, no need to do this for agents.
+    Of course, how about scripts that include other scripts?
+    _scope has to be a list which gets expanded...
     """
     if 'agent' in include:
         import ra
         agent = include['agent']
-        info = ra.get_ra_cpt(agent)
+        info = ra.get_ra(agent)
         meta = info.meta()
         if meta is None:
             raise ValueError("Unknown resource type: %s" % (agent))
         name = include.get('name', meta.get('name'))
         if not name:
-            raise ValueError("Agent needs explicit name: %s" % (agent))
-        print "name:", name
+            cls, provider, type = ra.disambiguate_ra_type(agent)
+            name = type
         step = _listfindpend(name, script['steps'], lambda x: x.get('name'), lambda: {
             'name': name,
             'longdesc': '',
@@ -596,19 +610,21 @@ def _process_include(script, include):
             if cdefault:
                 pobj['default'] = cdefault[0]
 
-        step['_value'] = _make_cib_for_agent(agent, step)
+        step['_value'] = _make_cib_for_agent(name, agent, step)
 
     elif 'script' in include:
-        script = load_script(include['script'])
-        for step in script['steps']:
-            for param in step['parameters']:
-                pass
-        for action in script['actions']:
-            pass
-        # TODO: rewrite references in script to
-        # maintain scope - is there a better way?
+        from copy import deepcopy
+        name = include['script']
+        subscript = load_script(name)
+        if not subscript['steps']:
+            return
+        steps = deepcopy(subscript['steps'])
+        for step in steps:
+            step['_scope'] = [name] + step.get('_scope', [])
+        steps[0]['_actions'] = deepcopy(subscript['actions'])
+        script['steps'].extend(steps)
     else:
-        raise ValueError("Unknown include type: %s" % (', '.join(include.keys())))
+        raise ValueError("Unknown include type in (%s): %s" % (script['name'], ', '.join(include.keys())))
 
 
 def _postprocess_script(script):
@@ -634,6 +650,7 @@ def _postprocess_script(script):
         script['actions'] = []
 
     for step in script['steps']:
+        step['required'] = _make_boolean(step.get('required', True))
         if 'stepdesc' not in step:
             step['stepdesc'] = ''
             if 'shortdesc' in step:
@@ -910,18 +927,20 @@ def _parse_parameters(script, args):
         params[key] = val
     for step in script['steps']:
         scope = step.get('name')
+        step_required = step['required']
         for param in step['parameters']:
             name = param['name']
             scoped = _scoped_param(scope, name)
             if scoped not in params:
                 if 'required' in param:
                     if param['required'] is True:
-                        errors.append(scoped)
+                        if step_required:
+                            errors.append(scoped)
                     elif 'default' in param:
                         params[scoped] = param['default']
                 elif 'default' in param:
                     params[scoped] = param['default']
-                else:
+                elif step_required:
                     errors.append(scoped)
     if errors:
         raise ValueError("Missing required parameter(s): %s" % (', '.join(errors)))

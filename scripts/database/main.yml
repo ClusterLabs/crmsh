@@ -8,23 +8,9 @@
   include:
     - agent: ocf:heartbeat:mysql
   parameters:
-    - name: id
-      shortdesc: Resource ID
-      longdesc: ID for the database resource
-      default: sqldb
-      type: id
-      required: true
-    - name: datadir
-      from: mysql
-    - name: config
-      from: mysql
-    - name: user
-      from: mysql
-    - name: group
-      from: mysql
-    - name: test_table
-      from: mysql
-      default: ""
+    - name: install
+      type: boolean
+      default: true
   actions:
     - install: mariadb
       shortdesc: Install packages
@@ -34,11 +20,4 @@
           action: disable
       shortdesc: Let cluster manage the database
       when: install
-    - cib: |
-        primitive {{id}} ocf:heartbeat:mysql
-          params
-            {{#test_table}}test_table={{test_table}}{{/test_table}}
-            {{#datadir}}datadir={{datadir}}{{/datadir}}
-            {{#config}}config={{config}}{{/config}}
-            {{#user}}user={{user}}{{/user}}
-            {{#group}}group={{group}}{{/group}}
+    - include: mysql

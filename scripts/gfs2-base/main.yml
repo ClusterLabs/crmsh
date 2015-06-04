@@ -19,28 +19,25 @@
   include:
     - script: clvm
       required: False
-    - actions:
-        - cib: |
-            primitive dlm ocf:pacemaker:controld
+  actions:
+    - cib: |
+        primitive dlm ocf:pacemaker:controld
 
-            clone dlm-clone dlm
-                meta interleave="true" ordered="true"
+        clone dlm-clone dlm
+          meta interleave="true" ordered="true"
 
-            primitive gfs-controld ocf:pacemaker:controld
+        primitive gfs-controld ocf:pacemaker:controld
 
-            clone gfs-clone gfs-controld
-                meta interleave="true" ordered="true"
+        clone gfs-clone gfs-controld
+          meta interleave="true" ordered="true"
 
-            colocation colo-gfs-dlm inf: gfs-clone dlm-clone
+        colocation colo-gfs-dlm inf: gfs-clone dlm-clone
 
-            order order-gfs-dlm inf: dlm-clone gfs-clone
+        order order-gfs-dlm inf: dlm-clone gfs-clone
 
-            # if there's clvm, generate some constraints too
-            #
-
-            {{#clvm}}
-            {{clvm}}
-            colocation colo-clvm-dlm inf: clvm-clone dlm-clone
-
-            order order-clvm-dlm inf: dlm-clone clvm-clone
-            {{/clvm}}
+        # if there's clvm, generate some constraints too
+        {{#clvm}}
+        {{clvm}}
+        colocation colo-clvm-dlm inf: clvm-clone dlm-clone
+        order order-clvm-dlm inf: dlm-clone clvm-clone
+        {{/clvm}}

@@ -4,5 +4,4 @@
     - agent: ocf:heartbeat:Filesystem
       name: filesystem
   actions:
-    - cib: |
-        {{filesystem}}
+    - include: filesystem

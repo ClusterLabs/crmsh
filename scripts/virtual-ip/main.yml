@@ -4,8 +4,8 @@
   include:
     - agent: ocf:heartbeat:IPaddr2
       name: virtual-ip
+      ops: |
+        op start timeout="20" op stop timeout="20"
+        op monitor interval="10" timeout="20"
   actions:
-    - cib: |
-        {{virtual-ip}}
-            op start timeout="20" op stop timeout="20"
-            op monitor interval="10" timeout="20"
+    - include: virtual-ip
