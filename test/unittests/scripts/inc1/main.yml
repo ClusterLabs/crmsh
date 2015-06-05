@@ -1,0 +1,17 @@
+---
+- version: 2.2
+  shortdesc: Include test script 1
+  longdesc: Test if includes work ok
+  parameters:
+    - name: foo
+      type: boolean
+      shortdesc: An optional feature
+    - name: bar
+      type: string
+      shortdesc: A string of characters
+      default: the name is the game
+  actions:
+    - call: ls /tmp
+      when: foo
+    - call: "echo '{{foo}}'"
+    - call: "echo '{{bar}}'"

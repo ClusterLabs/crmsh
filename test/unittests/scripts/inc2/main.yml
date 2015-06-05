@@ -1,0 +1,16 @@
+---
+- version: 2.2
+  shortdesc: Includes another script
+  longdesc: This one includes another script
+  parameters:
+    - name: wiz
+      type: string
+    - name: foo
+      type: boolean
+      shortdesc: A different foo
+  include:
+    - script: inc1
+  actions:
+    - call: "echo 'before {{wiz}}'"
+    - include: inc1
+    - call: "echo 'after {{foo}}'"
