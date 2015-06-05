@@ -34,9 +34,9 @@
       shortdesc: Enable status module
       nodes: all
       when: install
-    - include: apache
-    - include: virtual-ip
     - cib: |
+        {{virtual-ip}}
+        {{apache}}
         group {{id}}
           {{virtual-ip:id}}
           {{apache:id}}

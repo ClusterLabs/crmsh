@@ -125,12 +125,6 @@ class Actions(object):
             action['value'] = handles.parse(action['value'], values, strict=True).strip()
             action['to'] = handles.parse(action['to'], values, strict=True).strip()
             action['text'] = "%s -> %s" % (action['value'], action['to'])
-        elif name == 'include':
-            stepname = action['value']
-            for step in script['steps']:
-                if step.get('name') == stepname:
-                    action['value'] = handles.parse(step['value'], values, strict=True).strip()
-                    action['text'] = action['value']
 
         if 'shortdesc' not in action:
             action['shortdesc'] = _action_shortdescs.get(name, '')
@@ -538,7 +532,6 @@ def _make_cib_for_agent(name, agent, data, ops):
         path = ':'.join((name, paramname)) if name else paramname
         params.append('{{#%s}}%s="{{%s}}"{{/%s}}' % (path, paramname, path, path))
     ret = ' '.join(template + params + ops)
-    common_debug(ret)
     return ret
 
 
@@ -618,17 +611,15 @@ def _process_include(script, include):
 
         step['value'] = _make_cib_for_agent(name, agent, step, include.get('ops', ''))
 
+        for action in script['actions']:
+            if 'include' in action and action['include'] == name:
+                del action['include']
+                action['cib'] = step['value']
+
     elif 'script' in include:
-        from copy import deepcopy
         name = include['script']
         subscript = load_script(name)
-        if not subscript['steps']:
-            return
-        steps = deepcopy(subscript['steps'])
-        for step in steps:
-            step['scope'] = [name] + step.get('scope', [])
-        steps[0]['actions'] = deepcopy(subscript['actions'])
-        script['steps'].extend(steps)
+        include['sub-script'] = subscript
     else:
         raise ValueError("Unknown include type in (%s): %s" % (script['name'], ', '.join(include.keys())))
 
@@ -912,13 +903,10 @@ def _filter_nodes(nodes, user, port):
     return nodes
 
 
-def _scoped_param(scope, step_name, name):
-    lst = []
-    lst.extend(scope)
+def _scoped_param(step_name, name):
     if step_name:
-        lst.append(step_name)
-    lst.append(name)
-    return ':'.join(lst)
+        return ':'.join((step_name, name))
+    return name
 
 
 def _parse_parameters(script, args):
@@ -937,12 +925,11 @@ def _parse_parameters(script, args):
     for key, val in args.iteritems():
         params[key] = val
     for step in script['steps']:
-        scope = step.get('scope', [])
         step_name = step.get('name')
         step_required = step['required']
         for param in step['parameters']:
             name = param['name']
-            scoped = _scoped_param(scope, step_name, name)
+            scoped = _scoped_param(step_name, name)
             if scoped not in params:
                 if 'required' in param:
                     if param['required'] is True:
@@ -968,7 +955,7 @@ def _parse_parameters(script, args):
     return params
 
 
-def _handles_values(steps, values, rootscope=None):
+def _handles_values(steps, params):
     """
     TODO FIXME
 
@@ -988,34 +975,29 @@ def _handles_values(steps, values, rootscope=None):
     it should be added to the output as a
     false value.
     """
+    # postfill holds values that may themselves
+    # be unexpanded templates, and in need of
+    # expansion
+    postfill = []
     ret = {}
     for step in steps:
-        scope = step.get('scope', [])
-        if scope:
-            if scope[0] in ret:
-                scopeobj = ret[scope[0]].obj
-            else:
-                scopeobj = {}
-                ret[scope[0]] = handles.value(scopeobj, step.get('value', '# placeholder'))
-        else:
-            scopeobj = ret
         name = step.get('name', '')
         if name:
             obj = {}
-            scopeobj[scope] = handles.value(obj, step.get('value', '# placeholder'))
+            vobj = handles.value(obj, '# %s' % (name))
+            ret[name] = vobj
+            postfill.append((vobj, step.get('value', vobj.value)))
         else:
             obj = ret
-        rscope = []
-        if rootscope:
-            rscope.extend(rootscope)
-        rscope.extend(scope)
         for param in step['parameters']:
             pname = param['name']
-            scoped = _scoped_param(rscope, name, pname)
-            if scoped in values:
-                obj[pname] = values[scoped]
+            scoped = _scoped_param(name, pname)
+            if scoped in params:
+                obj[pname] = params[scoped]
             else:
                 obj[pname] = None
+    for vobj, value in postfill:
+        vobj.value = handles.parse(value, ret)
     return ret
 
 
@@ -1483,6 +1465,16 @@ def _process_actions(script, params):
     all the handles data and generate all the
     actions to perform, validate and check conditions.
     """
+    subactions = {}
+    for inc in script.get('include', []):
+        obj = inc.get('sub-script')
+        if obj:
+            try:
+                subparams = params.get(inc['script'], {})
+                subactions[inc['script']] = _process_actions(obj, subparams)
+            except ValueError as err:
+                raise ValueError("Error in included script %s: %s" % (inc['script'], err))
+
     values = _handles_values(script['steps'], params)
     from copy import deepcopy
     actions = deepcopy(script['actions'])
@@ -1492,7 +1484,9 @@ def _process_actions(script, params):
         if name is None:
             raise ValueError("Unknown action: %s" % (action.keys()))
         action['name'] = name
-        if Actions._parse(script, action, params, values):
+        if name == 'include':
+            ret.extend(subactions[action['include']])
+        elif Actions._parse(script, action, params, values):
             ret.append(action)
     return ret
 

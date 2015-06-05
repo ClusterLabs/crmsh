@@ -495,7 +495,7 @@ def test_v2():
          'virtual-ip:ip': '192.168.1.100',
          'install': False,
          'nodes': 'a b c'})
-    eq_(len(actions), 3)
+    eq_(len(actions), 1)
 
     actions = scripts.verify(
         script,
@@ -505,9 +505,7 @@ def test_v2():
          'virtual-ip:ip': '192.168.1.100',
          'install': True,
          'nodes': 'a b c'})
-    eq_(len(actions), 5)
-    pprint.pprint(actions)
-    eq_(len(actions), 0)
+    eq_(len(actions), 3)
 
 
 def test_agent_include():
