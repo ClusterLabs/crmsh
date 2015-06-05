@@ -17,6 +17,7 @@
 
 
 from os import path
+import pprint
 from nose.tools import eq_, with_setup
 from lxml import etree
 from crmsh import scripts
@@ -461,7 +462,7 @@ def teardown_func():
 
 
 def test_list():
-    eq_(set(['v2', 'legacy', '10-webserver']),
+    eq_(set(['v2', 'legacy', '10-webserver', 'inc1', 'inc2']),
         set(s for s in scripts.list_scripts()))
 
 
@@ -505,3 +506,19 @@ def test_v2():
          'install': True,
          'nodes': 'a b c'})
     eq_(len(actions), 5)
+    pprint.pprint(actions)
+    eq_(len(actions), 0)
+
+
+def test_agent_include():
+    inc2 = scripts.load_script('inc2')
+    actions = scripts.verify(
+        inc2,
+        {'wiz': 'abc',
+         'foo': 'cde',
+         'inc1:foo': True,
+         'inc1:bar': 'bah bah',
+         'nodes': 'a b c'})
+    pprint.pprint(inc2)
+    pprint.pprint(actions)
+    eq_(len(actions), 4)

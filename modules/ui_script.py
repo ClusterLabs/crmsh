@@ -88,10 +88,11 @@ class Script(command.UI):
         if not ret:
             print("OK (no actions)")
         for i, action in enumerate(ret):
-            print("%s. %s" % (i + 1, action['shortdesc']))
-            print('')
-            if action['text']:
-                for line in action['text'].split('\n'):
+            shortdesc = action.get('shortdesc', '')
+            text = action.get('text') or action.get('longdesc', '')
+            print("%s. %s\n" % (i + 1, shortdesc))
+            if text:
+                for line in text.split('\n'):
                     print("\t%s" % (line))
                 print('')
 

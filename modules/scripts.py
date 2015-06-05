@@ -95,38 +95,42 @@ class Actions(object):
         so we can verify that it parses OK before the
         actions start running.
         """
-        name = action['_name']
-        action['_value'] = action[name]
+        name = action['name']
+        action['value'] = action[name]
         del action[name]
-        action['_text'] = ''
+        action['text'] = ''
         if name == 'install':
-            if isinstance(action['_value'], basestring):
-                action['_value'] = action['_value'].split()
-            action['_text'] = ' '.join(action['_value'])
+            if isinstance(action['value'], basestring):
+                val = handles.parse(action['value'], values, strict=True).strip()
+                action['value'] = val
+            action['text'] = ' '.join(action['value'])
         # service takes a list of objects with a single key;
         # mapping service: state
         # the text field will be converted to lines where
         # each line is <service> -> <state>
         elif name == 'service':
-            if isinstance(action['_value'], basestring):
-                action['_value'] = [dict([v.split(':', 1)]) for v in action['_value'].split()]
+            if isinstance(action['value'], basestring):
+                val = handles.parse(action['value'], values, strict=True).strip()
+                action['value'] = [dict([v.split(':', 1)]) for v in val.split()]
 
             def arrow(v):
                 return ' -> '.join(x.items()[0])
-            action['_text'] = '\n'.join([arrow(x) for x in action['_value']])
+            action['text'] = '\n'.join([arrow(x) for x in action['value']])
         elif name == 'cib' or name == 'crm':
-            action['_value'] = _remove_empty_lines(handles.parse(action['_value'], values, strict=True)).strip()
-            action['_text'] = action['_value']
+            action['value'] = _remove_empty_lines(handles.parse(action['value'], values, strict=True)).strip()
+            action['text'] = action['value']
+        elif name == 'call':
+            action['value'] = handles.parse(action['value'], values, strict=True).strip()
         elif name == 'copy':
-            action['_value'] = _remove_empty_lines(handles.parse(action['_value'], values, strict=True)).strip()
-            action['_to'] = _remove_empty_lines(handles.parse(action['_to'], values, strict=True)).strip()
-            action['_text'] = "%s -> %s" % (action['_value'], action['to'])
+            action['value'] = handles.parse(action['value'], values, strict=True).strip()
+            action['to'] = handles.parse(action['to'], values, strict=True).strip()
+            action['text'] = "%s -> %s" % (action['value'], action['to'])
         elif name == 'include':
-            stepname = action['_value']
+            stepname = action['value']
             for step in script['steps']:
                 if step.get('name') == stepname:
-                    action['_value'] = _remove_empty_lines(handles.parse(step['_value'], values, strict=True)).strip()
-                    action['_text'] = action['_value']
+                    action['value'] = handles.parse(step['value'], values, strict=True).strip()
+                    action['text'] = action['value']
 
         if 'shortdesc' not in action:
             action['shortdesc'] = _action_shortdescs.get(name, '')
@@ -147,33 +151,33 @@ class Actions(object):
 
     @staticmethod
     def _needs_sudo(action):
-        if action['_name'] == 'call' and action.get('sudo'):
+        if action['name'] == 'call' and action.get('sudo'):
             return True
-        return action['_name'] in ('apply', 'apply_local', 'install', 'service')
+        return action['name'] in ('apply', 'apply_local', 'install', 'service')
 
     def collect(self, run, action):
         "input: shell command"
-        run.run_command(action.get('nodes'), action['_value'])
+        run.run_command(action.get('nodes'), action['value'])
         run.record_json()
 
     def validate(self, run, action):
         "input: shell command"
-        run.run_command(action.get('nodes'), action['_value'])
+        run.run_command(action.get('nodes'), action['value'])
         run.validate_json()
 
     def apply(self, run, action):
         "input: shell command"
-        run.run_command(action.get('nodes', 'all'), action['_value'])
+        run.run_command(action.get('nodes', 'all'), action['value'])
         run.record_json()
 
     def apply_local(self, run, action):
         "input: shell command"
-        run.run_command(action.get('nodes'), action['_value'])
+        run.run_command(action.get('nodes'), action['value'])
         run.record_json()
 
     def report(self, run, action):
         "input: shell command"
-        run.run_command(action.get('nodes'), action['_value'])
+        run.run_command(action.get('nodes'), action['value'])
         run.report_result()
 
     def call(self, run, action):
@@ -181,7 +185,7 @@ class Actions(object):
         input: shell command / script
         TODO: actually allow script here
         """
-        run.call(action.get('nodes'), action['_value'])
+        run.call(action.get('nodes'), action['value'])
 
     def copy(self, run, action):
         """
@@ -189,7 +193,7 @@ class Actions(object):
         to: <path>
         template: true|false
         """
-        fil = action['_value']
+        fil = action['value']
         if not os.path.isfile(fil):
             raise ValueError("File not found: %s" % (fil))
 
@@ -197,7 +201,7 @@ class Actions(object):
         """
         input: crm command sequence
         """
-        txt = action['_value']
+        txt = action['value']
         txt = handles.parse(txt, run.handles_values())
         txt = _join_script_lines(txt)
         fn = run.str2tmp(txt)
@@ -207,7 +211,7 @@ class Actions(object):
         "input: cli configuration script"
         # generate cib
         # runner.execute_local("crm configure load update ./action_cib")
-        txt = action['_value']
+        txt = action['value']
         txt = handles.parse(txt, run.handles_values())
         txt = _join_script_lines(txt)
         fn = run.str2tmp(txt)
@@ -224,11 +228,11 @@ import crm_init
 
 crm_init.install_packages(%s)
 crm_script.exit_ok(True)
-        ''' % (action['_value']))
+        ''' % (action['value']))
 
     def service(self, run, action):
         services = "\n".join([('crm_script.service(%s, %s)' % (s['name'], s['action']))
-                              for s in action['_value']])
+                              for s in action['value']])
         run.execute_shell(action.get('nodes'), '''#!/usr/bin/env python
 import crm_script
 import crm_init
@@ -528,23 +532,20 @@ def _listfindpend(needle, haystack, keyfn, orfn):
     return x
 
 
-def _make_cib_for_agent(name, agent, data):
-    template = """primitive {{%(name)s:id}} %(agent)s
-    %(params)s
-    %(ops)s
-"""
-    params = ""
-    ops = ""
+def _make_cib_for_agent(name, agent, data, ops):
+    template = ['primitive', "{{%s:id}}" % (name), agent]
+    params = []
+    ops = [op.strip() for op in ops.split('\n') if op.strip()]
     for param in data['parameters']:
         paramname = param['name']
-        path = _mkhandle('', name, paramname)
-        params += '{{#%(path)s}}%(name)s="{{%(path)s}}"{{/%(path)s}}' % {'path': path, 'name': paramname}
-    return template % {
-        'name': name,
-        'agent': agent,
-        'params': params,
-        'ops': ops
-    }
+        if paramname == 'id':
+            # FIXME: What if the resource actually has a parameter named id?
+            continue
+        path = ':'.join((name, paramname)) if name else paramname
+        params.append('{{#%s}}%s="{{%s}}"{{/%s}}' % (path, paramname, path, path))
+    ret = ' '.join(template + params + ops)
+    common_debug(ret)
+    return ret
 
 
 def _merge_objects(o1, o2):
@@ -609,11 +610,11 @@ def _process_include(script, include):
             pobj['longdesc'] = _meta_text(param, 'longdesc')
             pobj['shortdesc'] = _meta_text(param, 'shortdesc')
             ctype = param.xpath('./content/@type')
-            cdefault = param.xpath('./content/@default')
+            cexample = param.xpath('./content/@default')
             if ctype:
                 pobj['type'] = ctype[0]
-            if cdefault:
-                pobj['default'] = cdefault[0]
+            if cexample:
+                pobj['example'] = cexample[0]
 
         for param in include.get('parameters', []):
             pname = param['name']
@@ -621,7 +622,7 @@ def _process_include(script, include):
             for key, value in param.iteritems():
                 pobj[key] = value
 
-        step['_value'] = _make_cib_for_agent(name, agent, step)
+        step['value'] = _make_cib_for_agent(name, agent, step, include.get('ops', ''))
 
     elif 'script' in include:
         from copy import deepcopy
@@ -631,8 +632,8 @@ def _process_include(script, include):
             return
         steps = deepcopy(subscript['steps'])
         for step in steps:
-            step['_scope'] = [name] + step.get('_scope', [])
-        steps[0]['_actions'] = deepcopy(subscript['actions'])
+            step['scope'] = [name] + step.get('scope', [])
+        steps[0]['actions'] = deepcopy(subscript['actions'])
         script['steps'].extend(steps)
     else:
         raise ValueError("Unknown include type in (%s): %s" % (script['name'], ', '.join(include.keys())))
@@ -1012,7 +1013,7 @@ def _has_remote_actions(actions):
     True if any actions execute on remote nodes
     """
     for action in actions:
-        if action['_name'] in ('collect', 'apply', 'install', 'service'):
+        if action['name'] in ('collect', 'apply', 'install', 'service'):
             return True
         if action.get('nodes') == 'all':
             return True
@@ -1290,9 +1291,9 @@ class RunActions(object):
         """
         Execute a single action
         """
-        desc = action['shortdesc'] or action['_name']
+        desc = action['shortdesc'] or action['name']
 
-        method = _actions[action['_name']]
+        method = _actions[action['name']]
         self.start('%s...' % (desc))
         try:
             self.output = None
@@ -1482,7 +1483,7 @@ def _process_actions(script, params):
         name = _find_action(action)
         if name is None:
             raise ValueError("Unknown action: %s" % (action.keys()))
-        action['_name'] = name
+        action['name'] = name
         if Actions._parse(script, action, params, values):
             ret.append(action)
     return ret
@@ -1494,20 +1495,8 @@ def verify(script, args):
     errors where such are detected.
 
     Return a list of actions to perform.
-
-    TODO FIXME
-
-    TODO: fix handles call parameters, clean up handles output
     """
-    params = _parse_parameters(script, args)
-    actions = _process_actions(script, params)
-    ret = []
-    for action in actions:
-        ret.append({
-            'shortdesc': action['shortdesc'],
-            'text': action['_text'],
-            'nodes': action.get('nodes', '')})
-    return ret
+    return _process_actions(script, _parse_parameters(script, args))
 
 
 def _make_boolean(v):
