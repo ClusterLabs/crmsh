@@ -201,20 +201,14 @@ class Actions(object):
         """
         input: crm command sequence
         """
-        txt = action['value']
-        txt = handles.parse(txt, run.handles_values())
-        txt = _join_script_lines(txt)
-        fn = run.str2tmp(txt)
+        fn = run.str2tmp(action['value'])
         run.call(None, 'crm -f %s' % (fn))
 
     def cib(self, run, action):
         "input: cli configuration script"
         # generate cib
         # runner.execute_local("crm configure load update ./action_cib")
-        txt = action['value']
-        txt = handles.parse(txt, run.handles_values())
-        txt = _join_script_lines(txt)
-        fn = run.str2tmp(txt)
+        fn = run.str2tmp(action['value'])
         run.call(None, 'crm configure load update %s' % (fn))
 
     def install(self, run, action):
@@ -918,10 +912,13 @@ def _filter_nodes(nodes, user, port):
     return nodes
 
 
-def _scoped_param(scope, name):
-    if scope:
-        return ':'.join((scope, name))
-    return name
+def _scoped_param(scope, step_name, name):
+    lst = []
+    lst.extend(scope)
+    if step_name:
+        lst.append(step_name)
+    lst.append(name)
+    return ':'.join(lst)
 
 
 def _parse_parameters(script, args):
@@ -940,11 +937,12 @@ def _parse_parameters(script, args):
     for key, val in args.iteritems():
         params[key] = val
     for step in script['steps']:
-        scope = step.get('name')
+        scope = step.get('scope', [])
+        step_name = step.get('name')
         step_required = step['required']
         for param in step['parameters']:
             name = param['name']
-            scoped = _scoped_param(scope, name)
+            scoped = _scoped_param(scope, step_name, name)
             if scoped not in params:
                 if 'required' in param:
                     if param['required'] is True:
@@ -970,7 +968,7 @@ def _parse_parameters(script, args):
     return params
 
 
-def _handles_values(script, values):
+def _handles_values(steps, values, rootscope=None):
     """
     TODO FIXME
 
@@ -991,20 +989,33 @@ def _handles_values(script, values):
     false value.
     """
     ret = {}
-    for step in script['steps']:
-        if step.get('name'):
-            obj = {}
-            scope = step['name']
-            ret[scope] = handles.value(obj, 'TODO')
-        else:
-            scope = ''
-            obj = ret
-        for param in step['parameters']:
-            scoped = _scoped_param(scope, param['name'])
-            if scoped in values:
-                obj[param['name']] = values[scoped]
+    for step in steps:
+        scope = step.get('scope', [])
+        if scope:
+            if scope[0] in ret:
+                scopeobj = ret[scope[0]].obj
             else:
-                obj[param['name']] = None
+                scopeobj = {}
+                ret[scope[0]] = handles.value(scopeobj, step.get('value', '# placeholder'))
+        else:
+            scopeobj = ret
+        name = step.get('name', '')
+        if name:
+            obj = {}
+            scopeobj[scope] = handles.value(obj, step.get('value', '# placeholder'))
+        else:
+            obj = ret
+        rscope = []
+        if rootscope:
+            rscope.extend(rootscope)
+        rscope.extend(scope)
+        for param in step['parameters']:
+            pname = param['name']
+            scoped = _scoped_param(rscope, name, pname)
+            if scoped in values:
+                obj[pname] = values[scoped]
+            else:
+                obj[pname] = None
     return ret
 
 
@@ -1233,9 +1244,6 @@ class RunActions(object):
 
     def debug(self, msg):
         err_buf.debug(msg)
-
-    def handles_values(self):
-        return _handles_values(self.script, self.data[0])
 
     def run_command(self, nodes, command):
         "called by Actions"
@@ -1475,7 +1483,7 @@ def _process_actions(script, params):
     all the handles data and generate all the
     actions to perform, validate and check conditions.
     """
-    values = _handles_values(script, params)
+    values = _handles_values(script['steps'], params)
     from copy import deepcopy
     actions = deepcopy(script['actions'])
     ret = []
