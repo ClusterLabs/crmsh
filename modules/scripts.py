@@ -117,8 +117,8 @@ class Actions(object):
                 return ' -> '.join(x.items()[0])
             action['text'] = '\n'.join([arrow(x) for x in action['value']])
         elif name == 'cib' or name == 'crm':
-            action['value'] = _remove_empty_lines(handles.parse(action['value'], values, strict=True)).strip()
-            action['text'] = action['value']
+            action['text'] = handles.parse(action['value'], values, strict=True).strip()
+            action['value'] = _remove_empty_lines(action['text'])
         elif name == 'call':
             action['value'] = handles.parse(action['value'], values, strict=True).strip()
         elif name == 'copy':
@@ -1254,7 +1254,7 @@ class RunActions(object):
             if self.dry_run:
                 self.rc = True
             else:
-                method(self, action)
+                method(Actions(), self, action)
             self.printer.finish(action, self.rc, self.output)
             return self.rc
         finally:
