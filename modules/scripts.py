@@ -735,7 +735,8 @@ def _script_dirs():
     return ret + [os.path.join(userdir.CONFIG_HOME, 'scripts'),
                   os.path.join(config.path.sharedir, 'scripts'),
                   os.path.join(userdir.CONFIG_HOME, 'wizard'),
-                  os.path.join(config.path.sharedir, 'wizard')]
+                  os.path.join(config.path.sharedir, 'wizard'),
+                  config.path.hawk_wizards]
 
 
 def _check_control_persist():

@@ -36,7 +36,8 @@ _PATHLIST = {
     'cachedir': ('/var/cache', '/opt/cache'),
     'libdir': ('/usr/lib64', '/usr/libexec', '/usr/lib',
                '/usr/local/lib64', '/usr/local/libexec', '/usr/local/lib'),
-    'varlib': ('/var/lib', '/opt/var/lib')
+    'varlib': ('/var/lib', '/opt/var/lib'),
+    'wwwdir': ('/srv/www', '/var/www')
 }
 
 
@@ -232,7 +233,8 @@ DEFAULTS = {
         'pe_state_dir': opt_dir('%(varlib)s/pacemaker/pengine'),
         'heartbeat_dir': opt_dir('%(varlib)s/heartbeat'),
         'hb_delnode': opt_program('', ('%(datadir)s/heartbeat/hb_delnode',)),
-        'nagios_plugins': opt_dir('%(libdir)s/nagios/plugins')
+        'nagios_plugins': opt_dir('%(libdir)s/nagios/plugins'),
+        'hawk_wizards': opt_dir('%(wwwdir)s/hawk/config/wizard'),
     },
     'color': {
         'style': opt_multichoice('color', ('plain', 'color-always', 'color', 'uppercase')),
