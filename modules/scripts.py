@@ -20,7 +20,6 @@
 # for Hawk to use.
 
 import os
-import sys
 import re
 import subprocess
 import getpass
@@ -38,8 +37,9 @@ except ImportError:
 
 try:
     import parallax
+    has_parallax = True
 except ImportError:
-    pass
+    has_parallax = False
 
 
 from . import config
@@ -620,6 +620,9 @@ def _process_include(script, include):
         name = include['script']
         subscript = load_script(name)
         include['sub-script'] = subscript
+
+        # TODO: Add subscript steps to this script
+        # (nested: so TODO: handle nested steps everywhere)
     else:
         raise ValueError("Unknown include type in (%s): %s" % (script['name'], ', '.join(include.keys())))
 
@@ -648,6 +651,8 @@ def _postprocess_script(script):
 
     for inc in script.get('include', []):
         _process_include(script, inc)
+
+    script['steps'] = [step for step in script['steps'] if step['parameters']]
 
     for step in script['steps']:
         step['required'] = _make_boolean(step.get('required', True))
@@ -798,27 +803,19 @@ def _generate_workdir_name():
     return basetmp
 
 
-def _print_output(host, rc, out, err):
-    "Print the output from a process that ran on host"
-    if out:
-        err_buf.ok("[%s]: %s" % (host, out))
-    if err:
-        err_buf.error("[%s]: %s" % (host, err))
-
-
-def _print_debug(local_node, hosts, workdir, opts):
+def _print_debug(printer, local_node, hosts, workdir, opts):
     "Print debug output (if any)"
     dbglog = os.path.join(workdir, 'crm_script.debug')
     for host, result in _parallax_call(hosts,
                                        "[ -f '%s' ] && cat '%s'" % (dbglog, dbglog),
                                        opts).iteritems():
         if isinstance(result, parallax.Error):
-            err_buf.error("[%s]: %s" % (host, result))
+            printer.error(host, result)
         else:
-            _print_output(host, *result)
+            printer.output(host, *result)
     if os.path.isfile(dbglog):
         f = open(dbglog).read()
-        err_buf.ok("[%s]: %s" % (local_node, f))
+        printer.output(local_node, 0, f, '')
 
 
 def _cleanup_local(workdir):
@@ -832,7 +829,7 @@ def _cleanup_local(workdir):
             shutil.rmtree(workdir)
 
 
-def _run_cleanup(has_remote_actions, local_node, hosts, workdir, opts):
+def _run_cleanup(printer, has_remote_actions, local_node, hosts, workdir, opts):
     "Clean up after the cluster script"
     if has_remote_actions and hosts and workdir:
         cleanscript = os.path.join(workdir, 'crm_clean.py')
@@ -841,10 +838,10 @@ def _run_cleanup(has_remote_actions, local_node, hosts, workdir, opts):
                                                       workdir),
                                            opts).iteritems():
             if isinstance(result, parallax.Error):
-                err_buf.debug("[%s]: Failed to clean up %s" % (host, workdir))
-                err_buf.error("[%s]: Clean: %s" % (host, result))
+                printer.debug("[%s]: Failed to clean up %s" % (host, workdir))
+                printer.error(host, "Clean: %s" % (result))
             else:
-                _print_output(host, *result)
+                printer.output(host, *result)
     _cleanup_local(workdir)
 
 
@@ -1135,7 +1132,8 @@ def _copy_to_all(workdir, hosts, local_node, src, dst, opts):
 
 
 class RunActions(object):
-    def __init__(self, script, params, actions, local_node, hosts, opts, workdir):
+    def __init__(self, printer, script, params, actions, local_node, hosts, opts, workdir):
+        self.printer = printer
         self.script = script
         self.data = [params]
         self.actions = actions
@@ -1147,7 +1145,6 @@ class RunActions(object):
         self.workdir = workdir
         self.statefile = os.path.join(self.workdir, 'script.input')
         self.dstfile = os.path.join(self.workdir, 'script.input')
-        self.in_progress = False
         self.sudo_pass = None
         self.result = None
         self.output = None
@@ -1198,44 +1195,10 @@ class RunActions(object):
                             self.dstfile,
                             self.opts)
 
-    def start(self, txt):
-        if not options.batch:
-            sys.stdout.write(txt)
-            sys.stdout.flush()
-            self.in_progress = True
-
-    def flush(self):
-        if self.in_progress:
-            self.in_progress = False
-            sys.stdout.write('\r')
-            sys.stdout.flush()
-
-    def ok(self, fmt, *args):
-        self.flush()
-        err_buf.ok(fmt % args)
-
-    def out(self, fmt, *args):
-        self.flush()
-        if args:
-            print fmt % args
-        else:
-            print fmt
-
-    def error(self, fmt, *args):
-        self.flush()
-        err_buf.error(fmt % args)
-
-    def debug(self, msg):
-        err_buf.debug(msg)
-
     def run_command(self, nodes, command):
         "called by Actions"
         cmdline = 'cd "%s"; ./%s' % (self.workdir, command)
-        if config.core.debug:
-            import pprint
-            print "** [%s] - %s" % (nodes, command)
-            print cmdline
-            pprint.pprint(self.data)
+        self.printer.debug_command(nodes, command)
         if not self._update_state():
             raise ValueError("Failed when updating input, aborting.")
         if nodes == 'all':
@@ -1282,10 +1245,8 @@ class RunActions(object):
         """
         Execute a single action
         """
-        desc = action['shortdesc'] or action['name']
-
         method = _actions[action['name']]
-        self.start('%s...' % (desc))
+        self.printer.start(action)
         try:
             self.output = None
             self.result = None
@@ -1294,13 +1255,10 @@ class RunActions(object):
                 self.rc = True
             else:
                 method(self, action)
-            if self.rc:
-                self.ok(desc)
-            if self.output:
-                self.out(self.output)
+            self.printer.finish(action, self.rc, self.output)
             return self.rc
         finally:
-            self.flush()
+            self.printer.flush()
         return False
 
     def _check_sudo_pass(self):
@@ -1366,12 +1324,12 @@ class RunActions(object):
                                            cmdline,
                                            self.opts).iteritems():
             if isinstance(result, parallax.Error):
-                self.error("[%s]: %s", host, result)
+                self.printer.error(host, result)
                 ok = False
             else:
                 rc, out, err = result
                 if rc != 0:
-                    self.error("[%s]: %s%s", host, out, err)
+                    self.printer.error(host, "%s%s" % (out, err))
                     ok = False
                 else:
                     action_result[host] = json.loads(out)
@@ -1382,7 +1340,7 @@ class RunActions(object):
             else:
                 action_result[self.local_node[0]] = json.loads(ret)
         if ok:
-            self.debug("%s" % repr(action_result))
+            self.printer.debug("%s" % repr(action_result))
             return action_result
         return None
 
@@ -1396,26 +1354,25 @@ class RunActions(object):
             input_s = None
         rc, out, err = utils.get_stdout_stderr(cmdline, input_s=input_s, shell=True)
         if rc != 0:
-            self.error("[%s]: Error (%d): %s", self.local_node[0], rc, err)
+            self.printer.error(self.local_node[0], "Error (%d): %s" % (rc, err))
             return None
-        self.debug("%s" % repr(out))
+        self.printer.debug("%s" % repr(out))
         return out
 
 
-def run(script, args):
+def run(script, args, printer):
     '''
     Run the given script on the given set of hosts
     name: a cluster script is a folder <name> containing a main.yml or main.xml file
     args: list of nvpairs
+    printer: Object that receives and formats output
     '''
     workdir = _generate_workdir_name()
     params = _parse_parameters(script, args)
     name = script['name']
     script_dir = script['dir']
     hosts = params['nodes']
-    if script['shortdesc']:
-        err_buf.info(script['shortdesc'])
-    err_buf.info("Nodes: " + ', '.join([x[0] for x in hosts]))
+    printer.print_header(script, params, hosts)
     local_node, hosts = _extract_localnode(hosts)
     opts = _make_options(params)
     _set_controlpersist(opts)
@@ -1435,7 +1392,7 @@ def run(script, args):
         # make sure all path references are relative to the script directory
         os.chdir(workdir)
 
-        runner = RunActions(script, params, actions, local_node, hosts, opts, workdir)
+        runner = RunActions(printer, script, params, actions, local_node, hosts, opts, workdir)
         action = params['action']
         statefile = params['statefile']
         if action or statefile:
@@ -1451,9 +1408,9 @@ def run(script, args):
         raise ValueError("Internal error while running %s: %s" % (name, e))
     finally:
         if not config.core.debug:
-            _run_cleanup(has_remote_actions, local_node, hosts, workdir, opts)
+            _run_cleanup(printer, has_remote_actions, local_node, hosts, workdir, opts)
         else:
-            _print_debug(local_node, hosts, workdir, opts)
+            _print_debug(printer, local_node, hosts, workdir, opts)
 
 
 def _remove_empty_lines(txt):
