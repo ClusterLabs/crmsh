@@ -267,7 +267,7 @@ class Script(command.UI):
             raise ValueError("The parallax python package is missing")
         script = scripts.load_script(name)
         if script is not None:
-            return scripts.run(script, _nvpairs2parameters(args), _ConsolePrinter)
+            return scripts.run(script, _nvpairs2parameters(args), _ConsolePrinter())
         return False
 
     @command.name('_print')
