@@ -637,6 +637,9 @@ def _process_include(script, include):
             pobj['unique'] = _make_boolean(param.get('unique', False))
             pobj['longdesc'] = _meta_text(param, 'longdesc')
             pobj['shortdesc'] = _meta_text(param, 'shortdesc')
+            # set 'advanced' flag on all non-required agent parameters by default
+            # a UI should hide these parameters unless "show advanced" is set
+            pobj['advanced'] = not pobj['required']
             ctype = param.xpath('./content/@type')
             cexample = param.xpath('./content/@default')
             if ctype:
@@ -757,6 +760,10 @@ def _postprocess_script(script):
                 p['required'] = False
             else:
                 p['required'] = _make_boolean(p['required'])
+            if 'advanced' in p:
+                p['advanced'] = _make_boolean(p['advanced'])
+            else:
+                p['advanced'] = False
             if 'unique' in p:
                 p['unique'] = _make_boolean(p['unique'])
             else:
