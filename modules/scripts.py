@@ -469,6 +469,13 @@ def _parse_hawk_workflow(scriptname, scriptfile):
 
         _parse_hawk_template(scriptfile, item.get('name'), item.get('type', item.get('name')),
                              templatestep, data['actions'])
+        for override in item.xpath('/override'):
+            name = override.get("name")
+            for param in templatestep['parameters']:
+                if param['name'] == name:
+                    param['default'] = override.get("value")
+                    param['required'] = False
+                    break
 
     _append_cib_action(data['actions'], _hawk_to_handles('', xml.xpath('./crm_script')[0]))
 
