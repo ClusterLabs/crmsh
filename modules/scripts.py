@@ -352,18 +352,15 @@ def _parse_hawk_template(workflow, name, type, step, actions):
     """
     TODO: convert hawk <if>, <insert> tags into handles
     """
-    path = os.path.join(os.path.dirname(workflow), '../templates')
+    path = os.path.join(os.path.dirname(workflow), '../templates', type + '.xml')
     if path in _hawk_template_cache:
         xml = _hawk_template_cache[path]
+    elif os.path.isfile(path):
+        xml = etree.parse(path).getroot()
+        common_debug("Found matching template: %s" % (path))
+        _hawk_template_cache[path] = xml
     else:
-        for t in glob(os.path.join(path, '*.xml')):
-            xml = etree.parse(t).getroot()
-            if xml.get('name') == type:
-                common_debug("Found matching template: %s" % (t))
-                _hawk_template_cache[path] = xml
-                break
-        else:
-            raise ValueError("Template not found: %s" % (name))
+        raise ValueError("Template does not exist: %s" % (path))
 
     step['shortdesc'] = ''.join(xml.xpath('./shortdesc/text()'))
     step['longdesc'] = ''.join(xml.xpath('./longdesc/text()'))
@@ -470,7 +467,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
 
         _parse_hawk_template(scriptfile, item.get('name'), item.get('type', item.get('name')),
                              templatestep, data['actions'])
-        for override in item.xpath('/override'):
+        for override in item.xpath('./override'):
             name = override.get("name")
             for param in templatestep['parameters']:
                 if param['name'] == name:
@@ -678,7 +675,9 @@ def _postprocess_script(script):
             if 'default' in p and 'value' not in p:
                 p['value'] = p['default']
                 del p['default']
-            if 'required' not in p and 'value' in p:
+            if 'value' in p and p['value'] is None:
+                del p['value']
+            if 'value' in p:
                 p['required'] = False
             elif 'required' not in p:
                 p['required'] = True
@@ -686,8 +685,8 @@ def _postprocess_script(script):
                 p['required'] = _make_boolean(p['required'])
             if 'unique' in p:
                 p['unique'] = _make_boolean(p['unique'])
-            if 'value' in p and p['value'] is None:
-                del p['value']
+            else:
+                p['unique'] = False
             if 'when' not in p:
                 p['when'] = ''
             if 'error' not in p:
