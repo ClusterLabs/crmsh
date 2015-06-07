@@ -709,12 +709,6 @@ def _postprocess_script(script):
     if ver is None or str(ver) != str(_script_version):
         raise ValueError("Unsupported script version (expected %s, got %s)" % (_script_version, repr(ver)))
 
-    if 'shortdesc' not in script:
-        script['shortdesc'] = ''
-
-    if 'longdesc' not in script:
-        script['longdesc'] = ''
-
     if 'category' not in script:
         script['category'] = 'Custom'
 
@@ -769,6 +763,15 @@ def _postprocess_script(script):
 
     for step in script['steps']:
         _postprocess_step(step)
+
+    def _setdesc(name):
+        if name not in script:
+            script[name] = ''
+        if not script[name]:
+            if script['steps'] and script['steps'][0][name]:
+                script[name] = script['steps'][0][name]
+    _setdesc('shortdesc')
+    _setdesc('longdesc')
 
     return script
 

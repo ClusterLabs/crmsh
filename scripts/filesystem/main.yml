@@ -2,6 +2,5 @@
 - version: 2.2
   include:
     - agent: ocf:heartbeat:Filesystem
-      name: filesystem
   actions:
-    - include: filesystem
+    - include: Filesystem
