@@ -1160,16 +1160,22 @@ def param_completion_list(name):
 
 def _create_script_workdir(scriptdir, workdir):
     "Create workdir and copy contents of scriptdir into it"
-    cmd = ["mkdir", "-p", workdir]
-    if options.regression_tests:
-        print ".EXT", cmd
-    if subprocess.call(cmd, shell=False) != 0:
-        raise ValueError("Failed to create temporary working directory")
-    if scriptdir is not None:
-        try:
+    try:
+        if scriptdir is not None:
+            cmd = ["mkdir", "-p", os.path.dirname(workdir)]
+            if options.regression_tests:
+                print ".EXT", cmd
+            if subprocess.call(cmd, shell=False) != 0:
+                raise ValueError("Failed to create temporary working directory")
             shutil.copytree(scriptdir, workdir)
-        except (IOError, OSError), e:
-            raise ValueError(e)
+        else:
+            cmd = ["mkdir", "-p", workdir]
+            if options.regression_tests:
+                print ".EXT", cmd
+            if subprocess.call(cmd, shell=False) != 0:
+                raise ValueError("Failed to create temporary working directory")
+    except (IOError, OSError), e:
+        raise ValueError(e)
 
 
 def _copy_utils(dst):
@@ -1486,7 +1492,7 @@ def run(script, params, printer):
     opts = _make_options(params)
     _set_controlpersist(opts)
 
-    # pull out the actions to sperform based on the actual
+    # pull out the actions to perform based on the actual
     # parameter values (so discard actions conditional on
     # conditions that are false)
     actions = _process_actions(script, params)
