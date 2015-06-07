@@ -17,7 +17,7 @@
 
 
 from os import path
-import pprint
+from pprint import pprint
 from nose.tools import eq_, with_setup
 from lxml import etree
 from crmsh import scripts
@@ -490,21 +490,21 @@ def test_v2():
     actions = scripts.verify(
         script,
         {'id': 'www',
-         'apache:id': 'apache',
-         'virtual-ip:id': 'www-vip',
-         'virtual-ip:ip': '192.168.1.100',
+         'apache': {'id': 'apache'},
+         'virtual-ip': {'id': 'www-vip', 'ip': '192.168.1.100'},
          'install': False,
          'nodes': 'a b c'})
+    pprint(actions)
     eq_(len(actions), 1)
 
     actions = scripts.verify(
         script,
         {'id': 'www',
-         'apache:id': 'apache',
-         'virtual-ip:id': 'www-vip',
-         'virtual-ip:ip': '192.168.1.100',
+         'apache': {'id': 'apache'},
+         'virtual-ip': {'id': 'www-vip', 'ip': '192.168.1.100'},
          'install': True,
          'nodes': 'a b c'})
+    pprint(actions)
     eq_(len(actions), 3)
 
 
@@ -514,9 +514,7 @@ def test_agent_include():
         inc2,
         {'wiz': 'abc',
          'foo': 'cde',
-         'inc1:foo': True,
-         'inc1:bar': 'bah bah',
+         'inc1': {'foo': True, 'bar': 'bah bah'},
          'nodes': 'a b c'})
-    pprint.pprint(inc2)
-    pprint.pprint(actions)
-    eq_(len(actions), 4)
+    eq_(len(actions), 6)
+    eq_('33', actions[-1]['text'].strip())

@@ -26,6 +26,7 @@ import getpass
 import time
 import shutil
 import random
+from copy import deepcopy
 from glob import glob
 from lxml import etree
 
@@ -311,14 +312,15 @@ def _upgrade_yaml(data):
         raise ValueError("Unknown version (expected < %s, got %s)" % (_script_version, data['version']))
 
     data['version'] = _script_version
-    data['category'] = 'Script'
+    data['category'] = data.get('category', 'Script')
     _rename(data, 'name', 'shortdesc')
     _rename(data, 'description', 'longdesc')
 
-    data['actions'] = data['steps']
-    paramstep = {'parameters': data['parameters']}
+    data['actions'] = data.get('steps', [])
+    paramstep = {'parameters': data.get('parameters', [])}
     data['steps'] = [paramstep]
-    del data['parameters']
+    if 'parameters' in data:
+        del data['parameters']
 
     for p in paramstep['parameters']:
         _rename(p, 'description', 'shortdesc')
@@ -626,10 +628,47 @@ def _process_include(script, include):
     elif 'script' in include:
         name = include['script']
         subscript = load_script(name)
-        include['sub-script'] = subscript
 
         # TODO: Add subscript steps to this script
         # (nested: so TODO: handle nested steps everywhere)
+        scriptstep = {
+            'name': name,
+            'stepdesc': subscript['shortdesc'],
+            'longdesc': subscript['longdesc'],
+            'required': _make_boolean(include.get('required', True)),
+            'steps': deepcopy(subscript['steps']),
+            'sub-script': subscript,
+        }
+
+        def _lookup_step(steps, stepname):
+            for step in steps:
+                if step.get('name', '') == stepname:
+                    return step
+            raise ValueError("Referenced step '%s' not found in '%s'" % (stepname, name))
+
+        def _merge_step_params(step, params):
+            for param in params:
+                _merge_step_param(step, param)
+
+        def _merge_step_param(step, param):
+            for p in step.get('parameters', []):
+                if p['name'] == param['name']:
+                    for key, value in param.iteritems():
+                        p[key] = value
+                    if 'value' in p:
+                        p['required'] = False
+                    break
+            else:
+                raise ValueError("Referenced parameter '%s' not found in '%s'" % (param['name'], name))
+
+        # TODO: merge parameters in include with parameters in included script
+        for incparam in include.get('parameters', []):
+            if 'step' in incparam and 'name' not in incparam:
+                _merge_step_params(_lookup_step(scriptstep['steps'], incparam['step']), incparam['parameters'])
+            else:
+                _merge_step_param(_lookup_step(scriptstep['steps'], ''), incparam)
+
+        script['steps'].append(scriptstep)
     else:
         raise ValueError("Unknown include type in (%s): %s" % (script['name'], ', '.join(include.keys())))
 
@@ -658,16 +697,25 @@ def _postprocess_script(script):
 
     for inc in script.get('include', []):
         _process_include(script, inc)
+    if 'include' in script:
+        del script['include']
 
-    script['steps'] = [step for step in script['steps'] if step['parameters']]
+    def empty(step):
+        if 'parameters' in step:
+            return len(step['parameters']) == 0
+        if 'steps' in step:
+            return len(step['steps']) == 0
+        return True
 
-    for step in script['steps']:
+    script['steps'] = [step for step in script['steps'] if not empty(step)]
+
+    def _postprocess_step(step):
         step['required'] = _make_boolean(step.get('required', True))
         if 'stepdesc' not in step:
             step['stepdesc'] = ''
             if 'shortdesc' in step:
                 step['stepdesc'] = step['shortdesc']
-        for p in step['parameters']:
+        for p in step.get('parameters', []):
             if 'name' not in p:
                 raise ValueError("Parameter has no name: %s" % (p.keys()))
             if 'shortdesc' not in p:
@@ -696,6 +744,11 @@ def _postprocess_script(script):
                     p['type'] = 'resource-id'
                 else:
                     p['type'] = 'string'
+        for s in step.get('steps', []):
+            _postprocess_step(s)
+
+    for step in script['steps']:
+        _postprocess_step(step)
 
     return script
 
@@ -910,59 +963,59 @@ def _filter_nodes(nodes, user, port):
     return nodes
 
 
-def _scoped_param(step_name, name):
-    if step_name:
-        return ':'.join((step_name, name))
+def _scoped_param(context, name):
+    if context:
+        return ':'.join(context) + ':' + name
     return name
 
 
-def _parse_parameters(script, args):
+def _check_parameters(script, params):
     '''
-    Process parameter list from command line
-    into an actual list of parameters (add
-    optional parameters with defaults, etc.)
-
-    Parameters are given as step:name, or simply name
-    for common parameters or step-zero-parameters.
+    1. Fill in values where none are supplied and there's a value
+    in the step data
+    2. Check missing values
     '''
     errors = []
-    params = {}
+    params = deepcopy(params)
     for key, default, _ in _common_params():
-        params[key] = default
-    for key, val in args.iteritems():
-        params[key] = val
-    for step in script['steps']:
-        step_name = step.get('name')
-        step_required = step['required']
-        for param in step['parameters']:
-            name = param['name']
-            scoped = _scoped_param(step_name, name)
-            if scoped not in params:
-                if 'required' in param:
-                    if param['required'] is True:
-                        if step_required:
-                            errors.append(scoped)
-                    elif 'value' in param:
-                        params[scoped] = param['value']
-                elif 'value' in param:
-                    params[scoped] = param['value']
-                elif step_required:
-                    errors.append(scoped)
+        params[key] = params.get(key, default)
+
+    def _fill_values(path, into, source, srcreq):
+        for param in source.get('parameters', []):
+            if param['name'] not in into:
+                if 'value' in param:
+                    into[param['name']] = param['value']
+                elif srcreq and param['required']:
+                    errors.append(_scoped_param(path, param['name']))
+
+        for step in source.get('steps', []):
+            if 'name' not in step:
+                _fill_values(path, into, step, step.get('required', srcreq))
+            else:
+                if step['name'] not in into:
+                    into[step['name']] = {}
+                _fill_values(path + [step['name']], into[step['name']], step, step.get('required', srcreq))
+
+    _fill_values([], params, script, True)
+
     if errors:
         raise ValueError("Missing required parameter(s): %s" % (', '.join(errors)))
 
     user = params['user']
     port = params['port']
     _filter_dict(params, 'nodes', _filter_nodes, user, port)
-    _filter_dict(params, 'dry_run', utils.is_boolean_true)
-    _filter_dict(params, 'sudo', utils.is_boolean_true)
+    _filter_dict(params, 'dry_run', _make_boolean)
+    _filter_dict(params, 'sudo', _make_boolean)
     _filter_dict(params, 'statefile', lambda x: (x and os.path.abspath(x)) or x)
     if config.core.debug:
         params['debug'] = True
+
+    from pprint import pprint
+    pprint(params)
     return params
 
 
-def _handles_values(steps, params):
+def _handles_values(context, params):
     """
     TODO FIXME
 
@@ -986,25 +1039,35 @@ def _handles_values(steps, params):
     # be unexpanded templates, and in need of
     # expansion
     postfill = []
-    ret = {}
-    for step in steps:
-        name = step.get('name', '')
-        if name:
-            obj = {}
-            vobj = handles.value(obj, '# %s' % (name))
-            ret[name] = vobj
-            postfill.append((vobj, step.get('value', vobj.value)))
-        else:
-            obj = ret
-        for param in step['parameters']:
-            pname = param['name']
-            scoped = _scoped_param(name, pname)
-            if scoped in params:
-                obj[pname] = params[scoped]
+
+    def _process(to, context, params):
+        """
+        to: level writing to
+        context: source step
+        params: values for step
+        """
+        for param in context.get('parameters', []):
+            if param['name'] in params:
+                to[param['name']] = params[param['name']]
             else:
-                obj[pname] = None
-    for vobj, value in postfill:
-        vobj.value = handles.parse(value, ret)
+                to[param['name']] = None
+
+        for step in context.get('steps', []):
+            name = step.get('name', '')
+            if name:
+                obj = {}
+                vobj = handles.value(obj, '# %s' % (name))
+                to[name] = vobj
+                postfill.append((vobj, params, step.get('value', vobj.value)))
+                _process(obj, step, params.get(name, {}))
+            else:
+                _process(to, step, params)
+
+    ret = {}
+    _process(ret, context, params)
+
+    for vobj, params, value in postfill:
+        vobj.value = handles.parse(value, params, strict=True)
     return ret
 
 
@@ -1013,7 +1076,7 @@ def _has_remote_actions(actions):
     True if any actions execute on remote nodes
     """
     for action in actions:
-        if action['name'] in ('collect', 'apply', 'install', 'service'):
+        if action['name'] in ('collect', 'apply', 'install', 'service', 'copy'):
             return True
         if action.get('nodes') == 'all':
             return True
@@ -1029,7 +1092,8 @@ def _set_controlpersist(opts):
     # unfortunately, due to bad interaction between parallax and ssh,
     # ControlPersist is broken
     # See: http://code.google.com/p/parallel-ssh/issues/detail?id=67
-    # Fixed in openssh 6.3
+    # Supposedly fixed in openssh 6.3, but isn't: This may be an
+    # issue in parallel-ssh, not openssh
     pass
 
 
@@ -1369,15 +1433,15 @@ class RunActions(object):
         return out
 
 
-def run(script, args, printer):
+def run(script, params, printer):
     '''
     Run the given script on the given set of hosts
     name: a cluster script is a folder <name> containing a main.yml or main.xml file
-    args: list of nvpairs
+    params: a tree of parameters
     printer: Object that receives and formats output
     '''
     workdir = _generate_workdir_name()
-    params = _parse_parameters(script, args)
+    params = _check_parameters(script, params)
     name = script['name']
     script_dir = script['dir']
     hosts = params['nodes']
@@ -1433,17 +1497,16 @@ def _process_actions(script, params):
     actions to perform, validate and check conditions.
     """
     subactions = {}
-    for inc in script.get('include', []):
-        obj = inc.get('sub-script')
+    for step in script['steps']:
+        obj = step.get('sub-script')
         if obj:
             try:
-                subparams = params.get(inc['script'], {})
-                subactions[inc['script']] = _process_actions(obj, subparams)
+                subparams = params.get(step['name'], {})
+                subactions[step['name']] = _process_actions(obj, subparams)
             except ValueError as err:
-                raise ValueError("Error in included script %s: %s" % (inc['script'], err))
+                raise ValueError("Error in included script %s: %s" % (step['name'], err))
 
-    values = _handles_values(script['steps'], params)
-    from copy import deepcopy
+    values = _handles_values(script, params)
     actions = deepcopy(script['actions'])
     # TODO:
     # merge actions where possible
@@ -1466,17 +1529,17 @@ def _process_actions(script, params):
     return ret
 
 
-def verify(script, args):
+def verify(script, params):
     """
     Verify the given parameter values, reporting
     errors where such are detected.
 
     Return a list of actions to perform.
     """
-    return _process_actions(script, _parse_parameters(script, args))
+    return _process_actions(script, _check_parameters(script, params))
 
 
 def _make_boolean(v):
     if isinstance(v, basestring):
         return utils.get_boolean(v)
-    return v not in (False, None)
+    return v not in (0, False, None)

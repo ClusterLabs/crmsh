@@ -132,18 +132,43 @@ def describe_param(p, name):
     return s
 
 
-def describe_step(i, s):
-    ret = "%s. %s\n" % (i, s['stepdesc'].strip() or 'Parameters')
+def _scoped_name(context, name):
+    if context:
+        return ':'.join(context) + ':' + name
+    return name
+
+
+def describe_step(icontext, context, s):
+    ret = "%s. %s\n" % ('.'.join(icontext), s['stepdesc'].strip() or 'Parameters')
     if s.get('longdesc'):
         ret += s['longdesc']
     else:
         ret += '\n'
     if s.get('name'):
-        for p in s['parameters']:
-            ret += describe_param(p, ':'.join((s['name'], p['name'])))
-    else:
-        for p in s['parameters']:
-            ret += describe_param(p, p['name'])
+        context = context + [s['name']]
+    for p in s.get('parameters', []):
+        ret += describe_param(p, _scoped_name(context, p['name']))
+    for i, step in enumerate(s.get('steps', [])):
+        describe_step(icontext + [i], context, step)
+    return ret
+
+
+def _nvpairs2parameters(args):
+    """
+    input: list with name=value nvpairs, where each name is a :-path
+    output: dict tree of name:value, where value can be a nested dict tree
+    """
+    def _set(d, path, val):
+        if len(path) == 1:
+            d[path[0]] = val
+        else:
+            if path[0] not in d:
+                d[path[0]] = {}
+            _set(d[path[0]], path[1:], val)
+
+    ret = {}
+    for key, val in utils.nvpairs2dict(args):
+        _set(ret, key.split(':'), val)
     return ret
 
 
@@ -182,7 +207,7 @@ class Script(command.UI):
             'category': script['category'],
             'shortdesc': script['shortdesc'].strip(),
             'longdesc': script['longdesc'].strip(),
-            'steps': "\n".join((describe_step(i + 1, s) for i, s in enumerate(script['steps'])))}
+            'steps': "\n".join((describe_step([i + 1], s) for i, s in enumerate(script['steps'])))}
         print("""%(name)s (%(category)s)
 %(shortdesc)s
 
@@ -199,7 +224,7 @@ class Script(command.UI):
         script = scripts.load_script(name)
         if script is None:
             return False
-        ret = scripts.verify(script, utils.nvpairs2dict(args))
+        ret = scripts.verify(script, _nvpairs2parameters(args))
         if ret is None:
             return False
         if not ret:
@@ -222,7 +247,7 @@ class Script(command.UI):
             raise ValueError("The parallax python package is missing")
         script = scripts.load_script(name)
         if script is not None:
-            return scripts.run(script, utils.nvpairs2dict(args), _ConsolePrinter)
+            return scripts.run(script, _nvpairs2parameters(args), _ConsolePrinter)
         return False
 
     @command.name('_print')

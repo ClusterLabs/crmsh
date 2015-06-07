@@ -10,7 +10,15 @@
       shortdesc: A different foo
   include:
     - script: inc1
+      parameters:
+        - name: is-required
+          value: 33
   actions:
     - call: "echo 'before {{wiz}}'"
+      shortdesc: before wiz
     - include: inc1
     - call: "echo 'after {{foo}}'"
+      shortdesc: after foo
+    - cib: |
+        {{inc1:is-required}}
+      shortdesc: is-required

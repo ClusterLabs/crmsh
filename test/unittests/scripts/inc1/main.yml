@@ -10,8 +10,14 @@
       type: string
       shortdesc: A string of characters
       value: the name is the game
+    - name: is-required
+      type: int
+      required: true
   actions:
     - call: ls /tmp
       when: foo
+      shortdesc: ls
     - call: "echo '{{foo}}'"
+      shortdesc: foo
     - call: "echo '{{bar}}'"
+      shortdesc: bar
