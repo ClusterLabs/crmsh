@@ -122,6 +122,31 @@ class _JsonPrinter(object):
             pprint.pprint(self.data)
 
 
+def describe_param(p, name):
+    opt = ' (required) ' if p['required'] else ''
+    opt += ' (unique) ' if p['unique'] else ''
+    if 'value' in p:
+        opt += (' (default: %s)' % (p['value'])) if p['value'] else ''
+    s = "  %s%s\n" % (name, opt)
+    s += "      %s\n" % (p['shortdesc'])
+    return s
+
+
+def describe_step(i, s):
+    ret = "%s. %s\n" % (i, s['stepdesc'].strip() or 'Parameters')
+    if s.get('longdesc'):
+        ret += s['longdesc']
+    else:
+        ret += '\n'
+    if s.get('name'):
+        for p in s['parameters']:
+            ret += describe_param(p, ':'.join((s['name'], p['name'])))
+    else:
+        for p in s['parameters']:
+            ret += describe_param(p, p['name'])
+    return ret
+
+
 class Script(command.UI):
     '''
     Cluster scripts can perform cluster-wide configuration,
@@ -152,15 +177,6 @@ class Script(command.UI):
         if script is None:
             return False
 
-        def describe_step(i, s):
-            ret = "%s. %s\n\n" % (i, s['stepdesc'].strip() or 'Parameters')
-            if s.get('name'):
-                for p in s['parameters']:
-                    ret += "  %-16s %s\n" % (':'.join((s['name'], p['name'])), p['shortdesc'].strip())
-            else:
-                for p in s['parameters']:
-                    ret += "  %-16s %s\n" % (p['name'], p['shortdesc'].strip())
-            return ret
         vals = {
             'name': script['name'],
             'category': script['category'],
@@ -256,7 +272,7 @@ class Script(command.UI):
             name = cmd[1]
             script = scripts.load_script(name)
             if script is None:
-                print(json.dumps({'error': "Error describing %s" % (name)}))
+                return False
             print(json.dumps({'name': script['name'],
                               'category': script['category'],
                               'shortdesc': script['shortdesc'],
