@@ -61,6 +61,8 @@ class _ConsolePrinter(object):
         self.flush()
         if rc:
             err_buf.ok(action['shortdesc'] or action['name'])
+        else:
+            err_buf.error(action['shortdesc'] or action['name'])
         if output:
             print(output)
 
@@ -71,14 +73,13 @@ class _ConsolePrinter(object):
             sys.stdout.flush()
 
     def debug(self, msg):
+        self.flush()
         if config.core.debug:
             err_buf.debug(msg)
 
-    def debug_command(self, nodes, command):
-        if config.core.debug:
-            import pprint
-            print "** [%s] - %s" % (nodes, command)
-            pprint.pprint(self.data)
+    def print_command(self, nodes, command):
+        self.flush()
+        print("** %s - %s" % (nodes, command))
 
 
 class _JsonPrinter(object):
@@ -115,11 +116,8 @@ class _JsonPrinter(object):
         if config.core.debug:
             err_buf.debug(msg)
 
-    def debug_command(self, nodes, command):
-        if config.core.debug:
-            import pprint
-            print "** [%s] - %s" % (nodes, command)
-            pprint.pprint(self.data)
+    def print_command(self, nodes, command):
+        pass
 
 
 def describe_param(p, name):

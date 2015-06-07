@@ -226,15 +226,23 @@ class Actions(object):
         """
         input: crm command sequence
         """
-        fn = run.str2tmp(action['value'])
-        run.call(None, 'crm --force --wait -f %s' % (fn))
+        fn = run.str2tmp(_join_script_lines(action['value']))
+        if config.core.debug:
+            args = '-d --force --wait'
+        else:
+            args = '--force --wait'
+        run.call(None, 'crm %s -f %s' % (args, fn))
 
     def cib(self, run, action):
         "input: cli configuration script"
         # generate cib
         # runner.execute_local("crm configure load update ./action_cib")
-        fn = run.str2tmp(action['value'])
-        run.call(None, 'crm --force --wait configure load update %s' % (fn))
+        fn = run.str2tmp(_join_script_lines(action['value']))
+        if config.core.debug:
+            args = '-d --force --wait'
+        else:
+            args = '--force --wait'
+        run.call(None, 'crm %s configure load update %s' % (args, fn))
 
     def install(self, run, action):
         """
@@ -406,7 +414,7 @@ def _parse_hawk_template(workflow, name, type, step, actions):
         content = next(item.iter('content'))
         obj['type'] = content.get('type', 'string')
         val = content.get('default', content.get('value', None))
-        if val is not None:
+        if val:
             obj['value'] = val
         obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
         obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
@@ -1302,6 +1310,8 @@ class RunActions(object):
         return True
 
     def _update_state(self):
+        if self.dry_run:
+            return True
         json.dump(self.data, open(self.statefile, 'w'))
         return _copy_to_all(self.workdir,
                             self.hosts,
@@ -1313,7 +1323,6 @@ class RunActions(object):
     def run_command(self, nodes, command):
         "called by Actions"
         cmdline = 'cd "%s"; ./%s' % (self.workdir, command)
-        self.printer.debug_command(nodes, command)
         if not self._update_state():
             raise ValueError("Failed when updating input, aborting.")
         if nodes == 'all':
@@ -1335,6 +1344,10 @@ class RunActions(object):
 
     def validate_json(self):
         "called by Actions"
+        if self.dry_run:
+            self.rc = True
+            return
+
         if self.result is not None:
             if self.result:
                 self.result = json.loads(self.result)
@@ -1366,10 +1379,7 @@ class RunActions(object):
             self.output = None
             self.result = None
             self.rc = False
-            if self.dry_run:
-                self.rc = True
-            else:
-                method(Actions(), self, action)
+            method(Actions(), self, action)
             self.printer.finish(action, self.rc, self.output)
             return self.rc
         finally:
@@ -1391,6 +1401,11 @@ class RunActions(object):
         """
         execute the shell script...
         """
+        if self.dry_run:
+            self.printer.print_command(nodes, cmdscript)
+            self.result = ''
+            return
+
         tmpf = run.str2tmp(cmdscript)
         if nodes == 'all':
             ok = _copy_to_remote_dirs(self.hosts,
@@ -1411,17 +1426,18 @@ class RunActions(object):
         Returns path to file
         """
         fn = os.path.join(self.workdir, _tempname('str2tmp'))
+        if self.dry_run:
+            self.printer.print_command(self.local_node[0], 'temporary file <<END\n%s\nEND\n' % (s))
+            return fn
         try:
             with open(fn, "w") as f:
                 f.write(s)
                 if not s.endswith('\n'):
                     f.write("\n")
         except IOError, msg:
-            err_buf.error(msg)
+            self.printer.error(self.local_node[0], msg)
             return
         return fn
-
-        return utils.str2tmp(s)
 
     def _process_remote(self, cmdline):
         """
@@ -1434,6 +1450,11 @@ class RunActions(object):
             self.opts.input_stream = u'sudo: %s\n' % (self.sudo_pass)
         else:
             self.opts.input_stream = None
+
+        if self.dry_run:
+            self.printer.print_command(self.hosts, cmdline)
+            self.rc = True
+            return ''
 
         for host, result in _parallax_call(self.hosts,
                                            cmdline,
@@ -1467,6 +1488,10 @@ class RunActions(object):
             input_s = u'sudo: %s\n' % (self.sudo_pass)
         else:
             input_s = None
+        if self.dry_run:
+            self.printer.print_command(self.hosts, cmdline)
+            self.rc = True
+            return ''
         rc, out, err = utils.get_stdout_stderr(cmdline, input_s=input_s, shell=True)
         if rc != 0:
             self.printer.error(self.local_node[0], "Error (%d): %s" % (rc, err))
@@ -1492,6 +1517,8 @@ def run(script, params, printer):
     opts = _make_options(params)
     _set_controlpersist(opts)
 
+    dry_run = params.get('dry_run', False)
+
     # pull out the actions to perform based on the actual
     # parameter values (so discard actions conditional on
     # conditions that are false)
@@ -1499,13 +1526,14 @@ def run(script, params, printer):
     has_remote_actions = _has_remote_actions(actions)
 
     try:
-        _create_script_workdir(script_dir, workdir)
-        _copy_utils(workdir)
-        if has_remote_actions:
-            _create_remote_workdirs(hosts, workdir, opts)
-            _copy_to_remote_dirs(hosts, workdir, opts)
-        # make sure all path references are relative to the script directory
-        os.chdir(workdir)
+        if not dry_run:
+            _create_script_workdir(script_dir, workdir)
+            _copy_utils(workdir)
+            if has_remote_actions:
+                _create_remote_workdirs(hosts, workdir, opts)
+                _copy_to_remote_dirs(hosts, workdir, opts)
+            # make sure all path references are relative to the script directory
+            os.chdir(workdir)
 
         runner = RunActions(printer, script, params, actions, local_node, hosts, opts, workdir)
         action = params['action']
@@ -1522,10 +1550,11 @@ def run(script, params, printer):
         traceback.print_exc()
         raise ValueError("Internal error while running %s: %s" % (name, e))
     finally:
-        if not config.core.debug:
-            _run_cleanup(printer, has_remote_actions, local_node, hosts, workdir, opts)
-        else:
-            _print_debug(printer, local_node, hosts, workdir, opts)
+        if not dry_run:
+            if not config.core.debug:
+                _run_cleanup(printer, has_remote_actions, local_node, hosts, workdir, opts)
+            else:
+                _print_debug(printer, local_node, hosts, workdir, opts)
 
 
 def _remove_empty_lines(txt):
