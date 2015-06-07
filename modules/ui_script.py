@@ -139,7 +139,7 @@ def _scoped_name(context, name):
 
 
 def describe_step(icontext, context, s):
-    ret = "%s. %s\n" % ('.'.join(icontext), s['stepdesc'].strip() or 'Parameters')
+    ret = "%s. %s\n" % ('.'.join([str(i) for i in icontext]), s['stepdesc'].strip() or 'Parameters')
     if s.get('longdesc'):
         ret += s['longdesc']
     else:
@@ -207,7 +207,7 @@ class Script(command.UI):
             'category': script['category'],
             'shortdesc': script['shortdesc'].strip(),
             'longdesc': script['longdesc'].strip(),
-            'steps': "\n".join((describe_step([i + 1], s) for i, s in enumerate(script['steps'])))}
+            'steps': "\n".join((describe_step([i + 1], [], s) for i, s in enumerate(script['steps'])))}
         print("""%(name)s (%(category)s)
 %(shortdesc)s
 
