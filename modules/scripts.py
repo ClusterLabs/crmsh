@@ -297,23 +297,24 @@ def _parse_yaml(scriptname, scriptfile):
     return data
 
 
+def _rename(obj, key, to):
+    if key in obj:
+        obj[to] = obj[key]
+        del obj[key]
+
+
 def _upgrade_yaml(data):
     """
     Upgrade a parsed yaml document from
     an older version.
     """
-
     if 'version' in data and data['version'] > _script_version:
         raise ValueError("Unknown version (expected < %s, got %s)" % (_script_version, data['version']))
 
     data['version'] = _script_version
     data['category'] = 'Script'
-    if 'name' in data:
-        data['shortdesc'] = data['name']
-        del data['name']
-    if 'description' in data:
-        data['longdesc'] = data['description']
-        del data['description']
+    _rename(data, 'name', 'shortdesc')
+    _rename(data, 'description', 'longdesc')
 
     data['actions'] = data['steps']
     paramstep = {'parameters': data['parameters']}
@@ -321,16 +322,12 @@ def _upgrade_yaml(data):
     del data['parameters']
 
     for p in paramstep['parameters']:
-        if 'description' in p:
-            p['shortdesc'] = p['description']
-            del p['description']
+        _rename(p, 'description', 'shortdesc')
         if 'required' not in p:
             p['required'] = 'default' not in p
 
     for action in data['actions']:
-        if 'name' in action:
-            action['shortdesc'] = action['name']
-            del action['name']
+        _rename(p, 'name', 'shortdesc')
 
     return data
 
