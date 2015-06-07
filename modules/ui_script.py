@@ -172,6 +172,26 @@ def _nvpairs2parameters(args):
     return ret
 
 
+def _clean_steps(steps):
+    ret = []
+    for step in steps:
+        rstep = {}
+        if 'name' in step:
+            rstep['name'] = step['name']
+        if 'stepdesc' in step:
+            rstep['stepdesc'] = step['stepdesc']
+        if 'longdesc' in step:
+            rstep['longdesc'] = step['longdesc']
+        if 'required' in step:
+            rstep['required'] = step['required']
+        if 'parameters' in step:
+            rstep['parameters'] = step['parameters']
+        if 'steps' in step:
+            rstep['steps'] = _clean_steps(step['steps'])
+        ret.append(rstep)
+    return ret
+
+
 class Script(command.UI):
     '''
     Cluster scripts can perform cluster-wide configuration,
@@ -302,7 +322,7 @@ class Script(command.UI):
                               'category': script['category'],
                               'shortdesc': script['shortdesc'],
                               'longdesc': script['longdesc'],
-                              'steps': script['steps']}))
+                              'steps': _clean_steps(script['steps'])}))
         elif cmd[0] == "verify":
             name = cmd[1]
             params = cmd[2]
