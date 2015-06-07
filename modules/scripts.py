@@ -770,6 +770,7 @@ def _postprocess_script(script):
         if not script[name]:
             if script['steps'] and script['steps'][0][name]:
                 script[name] = script['steps'][0][name]
+                script['steps'][0][name] = ''
     _setdesc('shortdesc')
     _setdesc('longdesc')
 
