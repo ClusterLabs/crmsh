@@ -410,7 +410,6 @@ def _parse_hawk_template(workflow, name, type, step, actions):
             obj['value'] = val
         obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
         obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
-        obj['when'] = ''
         step['parameters'].append(obj)
 
 
@@ -481,7 +480,6 @@ def _parse_hawk_workflow(scriptname, scriptfile):
             obj['value'] = val
         obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
         obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
-        obj['when'] = ''
         paramstep['parameters'].append(obj)
 
     data['actions'] = []
@@ -761,8 +759,6 @@ def _postprocess_script(script):
                 p['unique'] = _make_boolean(p['unique'])
             else:
                 p['unique'] = False
-            if 'when' not in p:
-                p['when'] = ''
             if 'type' not in p or p['type'] == '':
                 if p['name'] == 'id':
                     p['type'] = 'resource-id'
