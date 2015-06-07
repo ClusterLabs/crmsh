@@ -278,10 +278,26 @@ class Script(command.UI):
         Debug print the given script.
         '''
         script = scripts.load_script(name)
-        if script is not None:
-            import pprint
-            pprint.pprint(script)
-        return False
+        if script is None:
+            return False
+        import pprint
+        pprint.pprint(script)
+
+    @command.name('_actions')
+    @command.skill_level('administrator')
+    @command.completers(compl.call(scripts.list_scripts))
+    def do_actions(self, context, name, *args):
+        '''
+        Debug print the actions for the given script.
+        '''
+        script = scripts.load_script(name)
+        if script is None:
+            return False
+        ret = scripts.verify(script, _nvpairs2parameters(args))
+        if ret is None:
+            return False
+        import pprint
+        pprint.pprint(ret)
 
     def do_json(self, context, command):
         """
