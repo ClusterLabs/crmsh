@@ -1,5 +1,6 @@
 ---
 - version: 2.2
+  category: Filesystem
   include:
     - agent: ocf:heartbeat:Filesystem
   actions:

@@ -1,6 +1,7 @@
 ---
 - version: 2.2
   shortdesc: Virtual IP
+  category: Basic
   include:
     - agent: ocf:heartbeat:IPaddr2
       name: virtual-ip

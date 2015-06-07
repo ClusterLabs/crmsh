@@ -16,6 +16,7 @@
     filesystems. In other words, you can use this template only for
     one filesystem and to make another one, you'll have to edit the
     resulting configuration yourself.
+  category: Filesystem
   include:
     - script: clvm
       required: False

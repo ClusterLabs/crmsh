@@ -205,10 +205,18 @@ class Script(command.UI):
         '''
         List available scripts.
         '''
+        categories = {}
         for name in scripts.list_scripts():
             script = scripts.load_script(name)
             if script is not None:
-                print("%-16s %s" % (script['name'], script['shortdesc'].strip()))
+                if script['category'] not in categories:
+                    categories[script['category']] = []
+                categories[script['category']].append("%-16s %s" % (script['name'], script['shortdesc'].strip()))
+        for c, lst in sorted(categories.iteritems(), key=lambda x: x[0]):
+            print("%s:\n" % (c))
+            for s in lst:
+                print(s)
+            print('')
 
     @command.completers_repeating(compl.call(scripts.list_scripts))
     @command.alias('info')

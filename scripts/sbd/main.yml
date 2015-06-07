@@ -10,6 +10,7 @@
 
     There is quite a bit more to do to make this stonith operational.
     See http://www.linux-ha.org/wiki/SBD_Fencing for information.
+  category: Stonith
   parameters:
     - name: id
       shortdesc: The resource id (name)
