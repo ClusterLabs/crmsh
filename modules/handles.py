@@ -95,7 +95,7 @@ def parse(template, values, strict=False):
                     for it in obj:
                         ret += parse(body, _join(values, {key: it}))
                 else:
-                    ret += parse(body, _join(values, {key: obj}))
+                    ret += parse(body, values)
             elif not obj:
                 ret += parse(body, _join(values, {key: ""}))
             if ret.endswith('\n') and template[iend:].startswith('\n'):

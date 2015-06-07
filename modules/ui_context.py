@@ -88,9 +88,15 @@ class Context(object):
             if cmd:
                 rv = self.execute_command() is not False
         except ValueError, msg:
+            if config.core.debug:
+                import traceback
+                traceback.print_exc()
             common_err("%s: %s" % (self.get_qualified_name(), msg))
             rv = False
         except IOError, msg:
+            if config.core.debug:
+                import traceback
+                traceback.print_exc()
             common_err("%s: %s" % (self.get_qualified_name(), msg))
             rv = False
         if cmd or (rv is False):

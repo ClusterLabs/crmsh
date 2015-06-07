@@ -167,7 +167,7 @@ def _nvpairs2parameters(args):
             _set(d[path[0]], path[1:], val)
 
     ret = {}
-    for key, val in utils.nvpairs2dict(args):
+    for key, val in utils.nvpairs2dict(args).iteritems():
         _set(ret, key.split(':'), val)
     return ret
 

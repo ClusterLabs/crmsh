@@ -365,6 +365,9 @@ def run():
         print("Ctrl-C, leaving")
         sys.exit(1)
     except ValueError as e:
+        if config.core.debug:
+            import traceback
+            traceback.print_exc()
         common_err(str(e))
 
 # vim:ts=4:sw=4:et:
