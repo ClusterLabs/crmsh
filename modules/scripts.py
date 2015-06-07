@@ -227,14 +227,14 @@ class Actions(object):
         input: crm command sequence
         """
         fn = run.str2tmp(action['value'])
-        run.call(None, 'crm -f %s' % (fn))
+        run.call(None, 'crm --force --wait -f %s' % (fn))
 
     def cib(self, run, action):
         "input: cli configuration script"
         # generate cib
         # runner.execute_local("crm configure load update ./action_cib")
         fn = run.str2tmp(action['value'])
-        run.call(None, 'crm configure load update %s' % (fn))
+        run.call(None, 'crm --force --wait configure load update %s' % (fn))
 
     def install(self, run, action):
         """
