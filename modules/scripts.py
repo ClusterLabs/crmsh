@@ -1445,16 +1445,24 @@ def _process_actions(script, params):
     values = _handles_values(script['steps'], params)
     from copy import deepcopy
     actions = deepcopy(script['actions'])
+    # TODO:
+    # merge actions where possible
+    # merge install actions
+    # merge service actions
+    # merge cib actions
+    # merge crm actions
     ret = []
     for action in actions:
         name = _find_action(action)
         if name is None:
             raise ValueError("Unknown action: %s" % (action.keys()))
         action['name'] = name
+        toadd = []
         if name == 'include':
-            ret.extend(subactions[action['include']])
+            toadd.extend(subactions[action['include']])
         elif Actions._parse(script, action, params, values):
-            ret.append(action)
+            toadd.append(action)
+        ret.extend(toadd)
     return ret
 
 
