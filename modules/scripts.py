@@ -103,7 +103,7 @@ class Actions(object):
         if name == 'install':
             if isinstance(action['value'], basestring):
                 val = handles.parse(action['value'], values, strict=True).strip()
-                action['value'] = val
+                action['value'] = val.split()
             action['text'] = ' '.join(action['value'])
         # service takes a list of objects with a single key;
         # mapping service: state
@@ -142,6 +142,36 @@ class Actions(object):
             if params.get(when):
                 return True
             return False
+        return True
+
+    @staticmethod
+    def _mergeable(action):
+        return action['name'] in ('cib', 'crm', 'install', 'service')
+
+    @staticmethod
+    def _merge(into, new):
+        "return true if actually merging"
+        # TODO:
+        # merge actions where possible
+        # merge install actions
+        # merge service actions
+        # merge crm actions
+        if into.get('nodes') != new.get('nodes'):
+            return False
+        if into['name'] in ('cib', 'crm'):
+            into['value'] = '\n'.join([into['value'], new['value']])
+            into['text'] = '\n'.join([into['text'], new['text']])
+            return True
+        if into['name'] == 'service':
+            into['value'].extend(new['value'])
+            into['text'] = '\n'.join([into['text'], new['text']])
+        if into['name'] == 'install':
+            into['value'].extend(new['value'])
+            into['text'] = ' '.join([into['text'], new['text']])
+        if new['shortdesc'] and new['shortdesc'] != into['shortdesc']:
+            into['shortdesc'] = new['shortdesc']
+        if new['longdesc'] and new['longdesc'] != into['longdesc']:
+            into['longdesc'] = new['longdesc']
         return True
 
     @staticmethod
@@ -1508,12 +1538,7 @@ def _process_actions(script, params):
 
     values = _handles_values(script, params)
     actions = deepcopy(script['actions'])
-    # TODO:
-    # merge actions where possible
-    # merge install actions
-    # merge service actions
-    # merge cib actions
-    # merge crm actions
+
     ret = []
     for action in actions:
         name = _find_action(action)
@@ -1525,7 +1550,15 @@ def _process_actions(script, params):
             toadd.extend(subactions[action['include']])
         elif Actions._parse(script, action, params, values):
             toadd.append(action)
-        ret.extend(toadd)
+        if ret:
+            for add in toadd:
+                if Actions._mergeable(add) and ret[-1]['name'] == add['name']:
+                    if not Actions._merge(ret[-1], add):
+                        ret.append(add)
+                else:
+                    ret.append(add)
+        else:
+            ret.extend(toadd)
     return ret
 
 

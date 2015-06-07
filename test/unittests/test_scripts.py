@@ -516,5 +516,6 @@ def test_agent_include():
          'foo': 'cde',
          'inc1': {'foo': True, 'bar': 'bah bah'},
          'nodes': 'a b c'})
+    pprint(actions)
     eq_(len(actions), 6)
-    eq_('33', actions[-1]['text'].strip())
+    eq_('33\nabc', actions[-1]['text'].strip())

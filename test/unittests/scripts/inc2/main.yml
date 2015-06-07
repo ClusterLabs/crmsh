@@ -21,4 +21,5 @@
       shortdesc: after foo
     - cib: |
         {{inc1:is-required}}
-      shortdesc: is-required
+    - cib: |
+        {{wiz}}
