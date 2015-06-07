@@ -755,10 +755,8 @@ def _postprocess_script(script):
                 del p['default']
             if 'value' in p and p['value'] is None:
                 del p['value']
-            if 'value' in p:
+            if 'required' not in p:
                 p['required'] = False
-            elif 'required' not in p:
-                p['required'] = True
             else:
                 p['required'] = _make_boolean(p['required'])
             if 'unique' in p:
