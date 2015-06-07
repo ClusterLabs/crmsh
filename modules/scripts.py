@@ -289,8 +289,7 @@ def _parse_yaml(scriptname, scriptfile):
     else:
         data['steps'] = []
 
-    if 'name' not in data:
-        data['name'] = scriptname
+    data['name'] = scriptname
 
     data['dir'] = os.path.dirname(scriptfile)
 
@@ -426,7 +425,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
         raise ValueError("Not a hawk workflow: %s" % (scriptfile))
     data = {
         'version': 2.2,
-        'name': xml.get('name'),
+        'name': scriptname,
         'shortdesc': ''.join(xml.xpath('./shortdesc/text()')),
         'longdesc': ''.join(xml.xpath('./longdesc/text()')),
         'category': 'Wizard',
@@ -499,10 +498,10 @@ def _build_script_cache():
                 name = os.path.dirname(s).split('/')[-1]
                 if name not in _script_cache:
                     _script_cache[name] = os.path.join(d, s)
-            # workflows have to be fully parsed to find the name
             for s in glob(os.path.join(d, 'workflows/*.xml')):
                 name = os.path.splitext(os.path.basename(s))[0]
-                _load_script_file(name, s)
+                if name not in _script_cache:
+                    _script_cache[name] = os.path.join(d, s)
 
 
 def list_scripts():
