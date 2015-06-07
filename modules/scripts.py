@@ -151,11 +151,6 @@ class Actions(object):
     @staticmethod
     def _merge(into, new):
         "return true if actually merging"
-        # TODO:
-        # merge actions where possible
-        # merge install actions
-        # merge service actions
-        # merge crm actions
         if into.get('nodes') != new.get('nodes'):
             return False
         if into['name'] in ('cib', 'crm'):
@@ -390,7 +385,7 @@ _hawk_template_cache = {}
 
 def _parse_hawk_template(workflow, name, type, step, actions):
     """
-    TODO: convert hawk <if>, <insert> tags into handles
+    Convert a hawk template into steps + a cib action
     """
     path = os.path.join(os.path.dirname(workflow), '../templates', type + '.xml')
     if path in _hawk_template_cache:
@@ -453,7 +448,9 @@ def _hawk_to_handles(context, tag):
 
 def _parse_hawk_workflow(scriptname, scriptfile):
     """
-    TODO: convert hawk <if>, <insert> tags into handles
+    Reads a hawk workflow into a script.
+
+    TODO: Parse hawk workflows that invoke legacy cluster scripts?
     """
     xml = etree.parse(scriptfile).getroot()
     if xml.tag != "workflow":
@@ -666,8 +663,6 @@ def _process_include(script, include):
         name = include['script']
         subscript = load_script(name)
 
-        # TODO: Add subscript steps to this script
-        # (nested: so TODO: handle nested steps everywhere)
         scriptstep = {
             'name': name,
             'stepdesc': subscript['shortdesc'],
@@ -698,7 +693,6 @@ def _process_include(script, include):
             else:
                 raise ValueError("Referenced parameter '%s' not found in '%s'" % (param['name'], name))
 
-        # TODO: merge parameters in include with parameters in included script
         for incparam in include.get('parameters', []):
             if 'step' in incparam and 'name' not in incparam:
                 _merge_step_params(_lookup_step(scriptstep['steps'], incparam['step']), incparam['parameters'])
@@ -1307,8 +1301,6 @@ class RunActions(object):
         # run on remote nodes
         # run on local nodes
         # TODO: wait for remote results
-        # TODO: combine consecutive actions
-        # where possible (CIB applications etc.)
         for action in self.actions:
             if Actions._needs_sudo(action):
                 self._check_sudo_pass()
