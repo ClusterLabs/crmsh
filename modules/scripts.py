@@ -327,7 +327,7 @@ def _upgrade_yaml(data):
             p['required'] = 'value' not in p
 
     for action in data['actions']:
-        _rename(p, 'name', 'shortdesc')
+        _rename(action, 'name', 'shortdesc')
 
     return data
 
