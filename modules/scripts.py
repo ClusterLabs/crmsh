@@ -323,8 +323,9 @@ def _upgrade_yaml(data):
 
     for p in paramstep['parameters']:
         _rename(p, 'description', 'shortdesc')
+        _rename(p, 'default', 'value')
         if 'required' not in p:
-            p['required'] = 'default' not in p
+            p['required'] = 'value' not in p
 
     for action in data['actions']:
         _rename(p, 'name', 'shortdesc')
@@ -376,7 +377,9 @@ def _parse_hawk_template(workflow, name, type, step, actions):
         obj['required'] = item.get('required', False)
         content = next(item.iter('content'))
         obj['type'] = content.get('type', 'string')
-        obj['default'] = content.get('default', None)
+        val = content.get('default', content.get('value', None))
+        if val is not None:
+            obj['value'] = val
         obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
         obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
         obj['error'] = ''
@@ -446,7 +449,9 @@ def _parse_hawk_workflow(scriptname, scriptfile):
         obj['unique'] = item.get('unique', False)
         content = next(item.iter('content'))
         obj['type'] = content.get('type', 'string')
-        obj['default'] = content.get('default', None)
+        val = content.get('default', content.get('value', None))
+        if val is not None:
+            obj['value'] = val
         obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
         obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
         obj['error'] = ''
@@ -470,7 +475,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
             name = override.get("name")
             for param in templatestep['parameters']:
                 if param['name'] == name:
-                    param['default'] = override.get("value")
+                    param['value'] = override.get("value")
                     param['required'] = False
                     break
 
@@ -612,6 +617,8 @@ def _process_include(script, include):
             pobj = _listfindpend(pname, step['parameters'], lambda x: x.get('name'), lambda: {'name': pname})
             for key, value in param.iteritems():
                 pobj[key] = value
+                if 'value' in pobj:
+                    pobj['required'] = False
 
         step['value'] = _make_cib_for_agent(name, agent, step, include.get('ops', ''))
 
@@ -669,10 +676,10 @@ def _postprocess_script(script):
                 raise ValueError("Parameter has no name: %s" % (p.keys()))
             if 'shortdesc' not in p:
                 p['shortdesc'] = ''
-            if 'value' in p and 'default' not in p:
-                p['default'] = p['value']
-                del p['value']
-            if 'required' not in p and 'default' in p:
+            if 'default' in p and 'value' not in p:
+                p['value'] = p['default']
+                del p['default']
+            if 'required' not in p and 'value' in p:
                 p['required'] = False
             elif 'required' not in p:
                 p['required'] = True
@@ -680,8 +687,8 @@ def _postprocess_script(script):
                 p['required'] = _make_boolean(p['required'])
             if 'unique' in p:
                 p['unique'] = _make_boolean(p['unique'])
-            if 'default' in p and p['default'] is None:
-                del p['default']
+            if 'value' in p and p['value'] is None:
+                del p['value']
             if 'when' not in p:
                 p['when'] = ''
             if 'error' not in p:
@@ -937,10 +944,10 @@ def _parse_parameters(script, args):
                     if param['required'] is True:
                         if step_required:
                             errors.append(scoped)
-                    elif 'default' in param:
-                        params[scoped] = param['default']
-                elif 'default' in param:
-                    params[scoped] = param['default']
+                    elif 'value' in param:
+                        params[scoped] = param['value']
+                elif 'value' in param:
+                    params[scoped] = param['value']
                 elif step_required:
                     errors.append(scoped)
     if errors:

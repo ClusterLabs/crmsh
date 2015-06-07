@@ -9,7 +9,7 @@
     - name: bar
       type: string
       shortdesc: A string of characters
-      default: the name is the game
+      value: the name is the game
   actions:
     - call: ls /tmp
       when: foo

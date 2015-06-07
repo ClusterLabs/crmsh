@@ -237,7 +237,7 @@ class Script(command.UI):
         ["describe", <name>]
         => [{name, shortdesc, longdesc, category, <<steps>>}]
         <<steps>> := [{stepname, shortdesc, longdesc, required, <<params>>}]
-        <<params>> := [{name, shortdesc, longdesc, required, unique, type, default, example}]
+        <<params>> := [{name, shortdesc, longdesc, required, unique, type, value, example}]
         ["verify", <name>, <values>]
         => [{shortdesc, longdesc, nodes}]
         ["run", <name>, <values>]

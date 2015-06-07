@@ -17,7 +17,7 @@
         The LVM resource will be in a cloned group with the rest
         of the prerequisite resources. The clone is going to be named c-<id>
         (e.g. c-vg-1)
-      default: vg-1
+      value: vg-1
       type: resource-id
     - name: volgrpname
       shortdesc: Volume group name

@@ -10,7 +10,7 @@
       shortdesc: The ID specified here is for the web server resource group.
     - name: install
       type: boolean
-      default: true
+      value: true
       shortdesc: Disable if no installation should be performed
   include:
     - agent: test:apache
