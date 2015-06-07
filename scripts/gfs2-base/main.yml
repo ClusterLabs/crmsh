@@ -35,8 +35,8 @@
 
         order order-gfs-dlm inf: dlm-clone gfs-clone
 
-        # if there's clvm, generate some constraints too
         {{#clvm}}
+        # if there's clvm, generate some constraints too
         {{clvm}}
         colocation colo-clvm-dlm inf: clvm-clone dlm-clone
         order order-clvm-dlm inf: dlm-clone clvm-clone

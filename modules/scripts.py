@@ -410,7 +410,6 @@ def _parse_hawk_template(workflow, name, type, step, actions):
             obj['value'] = val
         obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
         obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
-        obj['error'] = ''
         obj['when'] = ''
         step['parameters'].append(obj)
 
@@ -482,7 +481,6 @@ def _parse_hawk_workflow(scriptname, scriptfile):
             obj['value'] = val
         obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
         obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
-        obj['error'] = ''
         obj['when'] = ''
         paramstep['parameters'].append(obj)
 
@@ -765,8 +763,6 @@ def _postprocess_script(script):
                 p['unique'] = False
             if 'when' not in p:
                 p['when'] = ''
-            if 'error' not in p:
-                p['error'] = ''
             if 'type' not in p or p['type'] == '':
                 if p['name'] == 'id':
                     p['type'] = 'resource-id'
@@ -1038,12 +1034,14 @@ def _check_parameters(script, params):
     if config.core.debug:
         params['debug'] = True
 
-    from pprint import pprint
-    pprint(params)
+    if config.core.debug:
+        from pprint import pprint
+        print("Checked script parameters:")
+        pprint(params)
     return params
 
 
-def _handles_values(context, params):
+def _handles_values(context, params, subactions):
     """
     TODO FIXME
 
@@ -1083,19 +1081,29 @@ def _handles_values(context, params):
         for step in context.get('steps', []):
             name = step.get('name', '')
             if name:
-                obj = {}
-                vobj = handles.value(obj, '# %s' % (name))
-                to[name] = vobj
-                postfill.append((vobj, params, step.get('value', vobj.value)))
-                _process(obj, step, params.get(name, {}))
+                if not step['required'] and 'name' not in params:
+                    to[name] = None
+                else:
+                    obj = {}
+                    vobj = handles.value(obj, '# %s' % (name))
+                    to[name] = vobj
+                    subaction = None
+                    if step.get('sub-script'):
+                        subaction = subactions.get(step['sub-script']['name'])
+                    postfill.append((vobj, params, step.get('value', vobj.value), subaction))
+                    _process(obj, step, params.get(name, {}))
             else:
                 _process(to, step, params)
 
     ret = {}
     _process(ret, context, params)
 
-    for vobj, params, value in postfill:
-        vobj.value = handles.parse(value, params, strict=True)
+    for vobj, params, value, subaction in postfill:
+        # print "postfill", vobj, params, value, subaction
+        if subaction and subaction[-1]['name'] == 'cib':
+            vobj.value = subaction[-1]['value']
+        else:
+            vobj.value = handles.parse(value, params, strict=True)
     return ret
 
 
@@ -1478,7 +1486,7 @@ def run(script, params, printer):
     opts = _make_options(params)
     _set_controlpersist(opts)
 
-    # pull out the actions to perform based on the actual
+    # pull out the actions to sperform based on the actual
     # parameter values (so discard actions conditional on
     # conditions that are false)
     actions = _process_actions(script, params)
@@ -1534,7 +1542,7 @@ def _process_actions(script, params):
             except ValueError as err:
                 raise ValueError("Error in included script %s: %s" % (step['name'], err))
 
-    values = _handles_values(script, params)
+    values = _handles_values(script, params, subactions)
     actions = deepcopy(script['actions'])
 
     ret = []
