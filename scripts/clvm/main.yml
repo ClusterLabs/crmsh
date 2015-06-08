@@ -1,51 +1,42 @@
+# Copyright (C) 2015 Kristoffer Gronlund
+#
+# License: GNU General Public License (GPL)
 ---
 - version: 2.2
-  shortdesc: Cluster-aware lvm (cloned)
-  longdesc: >
-    This template generates a cloned instance of clvm and one
-    volume group
-
-    NB: You need just one clvm, regardless of how many volume
-    groups. In other words, you can use this template only for one
-    volume group and to make another one, you'll have to edit the
-    resulting configuration yourself.
   category: Filesystem
+  shortdesc: Cluster-aware LVM
+  longdesc: |
+    Configure a cloned instance of cLVM.
+
+    NB: Only one clvm cluster resource is necessary, regardless
+    of how many clustered volume groups are managed as resources.
+    To create volume groups after configuring cLVM, the wizard
+    for cLVM volume groups can be used.
+
   parameters:
     - name: id
-      shortdesc: Cluster resource name
+      shortdesc: Cluster group ID
       longdesc: >
-        The LVM resource will be in a cloned group with the rest
-        of the prerequisite resources. The clone is going to be named c-<id>
-        (e.g. c-vg-1)
-      value: vg-1
+        Base name for the ID of the cLVM volume group in the cluster.
+        The actual resources will be prefixed by g- or c- for the group and clone
+        respectively.
+      required: true
+      unique: true
       type: resource-id
-    - name: volgrpname
-      shortdesc: Volume group name
-      type: string
-      example: myvolgroup
+      value: vg1
+
   actions:
     - cib: |
-        primitive {{id}} ocf:heartbeat:LVM
-          params volgrpname="{{volgrpname}}"
-          op start timeout=60s
-          op stop timeout=60s
-          op monitor interval=30s timeout=60s
-
         primitive dlm ocf:pacemaker:controld
           op start timeout=90s
           op stop timeout=100s
 
         primitive clvm ocf:lvm2:clvmd
-          params daemon_timeout="30"
+          params daemon_timeout=30
           op start timeout=90s
           op stop timeout=100s
 
-        primitive cmirror ocf:lvm2:cmirrord
-          params daemon_timeout="30"
-          op start timeout=90s
-          op stop timeout=100s
-
-        group g-{{id}} dlm clvm cmirror {{id}}
-
+        group g-{{id}} dlm clvm
+        
         clone c-{{id}} g-{{id}}
-          meta interleave="true" ordered="true"
+          meta interleave=true ordered=true
