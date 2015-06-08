@@ -785,10 +785,15 @@ class RAInfo(object):
 
 
 def get_ra(r):
+    """
+    Argument is either an xml resource tag with class, provider and type attributes,
+    or a CLI style class:provider:type string.
+    """
     if isinstance(r, basestring):
         cls, provider, type = disambiguate_ra_type(r)
     else:
-        cls, provider, type = r.get('class'), r.get('type'), r.get('provider')
+        cls, provider, type = r.get('class'), r.get('provider'), r.get('type')
+    # note order of arguments!
     return RAInfo(cls, type, provider)
 
 
