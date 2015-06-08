@@ -149,5 +149,3 @@ clean-generic:
 
 dist-clean-local:
 	rm -f autoconf automake autoheader
-
-.PHONY: rpm pkg handy handy-copy
