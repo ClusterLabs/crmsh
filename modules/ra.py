@@ -431,7 +431,7 @@ class RAInfo(object):
             return None
         self.broken_ra = True
         meta = self.meta()
-        if not meta:
+        if meta is None:
             if not config.core.ignore_missing_metadata:
                 self.error("got no meta-data, does this RA exist?")
             return None
