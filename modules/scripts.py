@@ -1199,14 +1199,14 @@ def _copy_utils(dst):
         raise ValueError(e)
 
 
-def _create_remote_workdirs(hosts, path, opts):
+def _create_remote_workdirs(printer, hosts, path, opts):
     "Create workdirs on remote hosts"
     ok = True
     for host, result in _parallax_call(hosts,
                                        "mkdir -p %s" % (path),
                                        opts).iteritems():
         if isinstance(result, parallax.Error):
-            err_buf.error("[%s]: Start: %s" % (host, result))
+            printer.error(host, "Start: %s" % (result))
             ok = False
     if not ok:
         msg = "Failed to connect to one or more of these hosts via SSH: %s" % (
@@ -1214,14 +1214,14 @@ def _create_remote_workdirs(hosts, path, opts):
         raise ValueError(msg)
 
 
-def _copy_to_remote_dirs(hosts, path, opts):
+def _copy_to_remote_dirs(printer, hosts, path, opts):
     "Copy a local folder to same location on remote hosts"
     ok = True
     for host, result in _parallax_copy(hosts,
                                        path,
                                        path, opts).iteritems():
         if isinstance(result, parallax.Error):
-            err_buf.error("[%s]: %s" % (host, result))
+            printer.error(host, result)
             ok = False
     if not ok:
         raise ValueError("Failed when copying script data, aborting.")
@@ -1434,7 +1434,7 @@ class RunActions(object):
                 if not s.endswith('\n'):
                     f.write("\n")
         except IOError, msg:
-            self.printer.error(self.local_node[0], msg)
+            self.printer.error(self.local_node[0], "Write failed: %s" % (msg))
             return
         return fn
 
@@ -1529,8 +1529,8 @@ def run(script, params, printer):
             _create_script_workdir(script_dir, workdir)
             _copy_utils(workdir)
             if has_remote_actions:
-                _create_remote_workdirs(hosts, workdir, opts)
-                _copy_to_remote_dirs(hosts, workdir, opts)
+                _create_remote_workdirs(printer, hosts, workdir, opts)
+                _copy_to_remote_dirs(printer, hosts, workdir, opts)
             # make sure all path references are relative to the script directory
             os.chdir(workdir)
 

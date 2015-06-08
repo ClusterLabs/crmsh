@@ -62,7 +62,7 @@ class _ConsolePrinter(object):
         if rc:
             err_buf.ok(action['shortdesc'] or action['name'])
         else:
-            err_buf.error(action['shortdesc'] or action['name'])
+            err_buf.error("%s (rc=%s)" % (action['shortdesc'] or action['name']))
         if output:
             print(output)
 
