@@ -305,6 +305,38 @@ class Script(command.UI):
         import pprint
         pprint.pprint(ret)
 
+    @command.name('_convert')
+    def do_convert(self, context, fromdir, tgtdir):
+        """
+        Convert hawk wizards to cluster scripts
+        Needs more work to be really useful.
+        fromdir: hawk wizard directory
+        tgtdir: where the cluster script will be written
+        """
+        import yaml
+        import os
+        import glob
+        if not os.path.isdir(fromdir):
+            context.error("Expected <fromdir> <todir>")
+        scripts._build_script_cache()
+        if not os.path.isdir(tgtdir):
+            context.error("Expected <fromdir> <todir>")
+        for f in glob.glob(os.path.join(fromdir, 'workflows/*.xml')):
+            name = os.path.splitext(os.path.basename(f))[0]
+            script = scripts._load_script_file(name, f)
+            if script is not None:
+                try:
+                    os.mkdir(os.path.join(tgtdir, name))
+                except:
+                    pass
+                tgtfile = os.path.join(tgtdir, name, "main.yml")
+                with open(tgtfile, 'w') as tf:
+                    try:
+                        print("%s -> %s" % (f, tgtfile))
+                        yaml.dump(script, tf, default_flow_style=False)
+                    except Exception as err:
+                        print(err)
+
     def do_json(self, context, command):
         """
         JSON API for the scripts, for use in web frontends.
