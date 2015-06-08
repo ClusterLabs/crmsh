@@ -1194,7 +1194,7 @@ def _copy_utils(dst):
     try:
         import glob
         for f in glob.glob(os.path.join(config.path.sharedir, 'utils/*.py')):
-            shutil.copy(os.path.join(config.path.sharedir, f), dst)
+            shutil.copy(f, dst)
     except (IOError, OSError), e:
         raise ValueError(e)
 
