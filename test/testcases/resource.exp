@@ -1,5 +1,5 @@
 .TRY resource status p0
-.EXT crm_resource -W -r 'p0'
+.EXT crm_resource --locate -r 'p0'
 resource p0 is NOT running
 .SETENV showobj=p3
 .TRY resource start p3
@@ -87,7 +87,7 @@ resource p0 is NOT running
 
 .SETENV showobj=cli-prefer-p3
 .TRY resource migrate p3 node1
-.EXT crm_resource -M -r 'p3' --node='node1'
+.EXT crm_resource --move -r 'p3' --node='node1'
 .INP: configure
 .INP: _regtest on
 .INP: show xml cli-prefer-p3
@@ -105,10 +105,10 @@ resource p0 is NOT running
 
 .SETENV showobj=
 .TRY resource unmigrate p3
-.EXT crm_resource -U -r 'p3'
+.EXT crm_resource --clear -r 'p3'
 .SETENV showobj=cli-prefer-p3
 .TRY resource migrate p3 node1 force
-.EXT crm_resource -M -r 'p3' --node='node1' --force
+.EXT crm_resource --move -r 'p3' --node='node1' --force
 .INP: configure
 .INP: _regtest on
 .INP: show xml cli-prefer-p3
@@ -126,7 +126,7 @@ resource p0 is NOT running
 
 .SETENV showobj=
 .TRY resource unmigrate p3
-.EXT crm_resource -U -r 'p3'
+.EXT crm_resource --clear -r 'p3'
 .SETENV showobj=p0
 .TRY resource param p0 set a0 "1 2 3"
 .EXT crm_resource -r 'p0' -p 'a0' -v '1 2 3'
