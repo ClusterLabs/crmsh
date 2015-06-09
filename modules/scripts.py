@@ -825,7 +825,10 @@ def load_script(script):
         raise ValueError("Script not found: %s" % (script))
     s = _script_cache[script]
     if isinstance(s, basestring):
-        return _load_script_file(script, s)
+        try:
+            return _load_script_file(script, s)
+        except Exception as err:
+            raise ValueError("Error when loading script %s: %s" % (script, err))
     return s
 
 
