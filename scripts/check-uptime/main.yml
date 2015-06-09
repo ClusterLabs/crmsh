@@ -1,7 +1,7 @@
 ---
 - version: 2.2
   shortdesc: Check uptime of nodes
-  description: >
+  longdesc: >
     Fetches the uptime of all nodes and reports which
     node has lived longest.
 
