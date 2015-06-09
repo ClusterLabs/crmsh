@@ -71,7 +71,7 @@
     - script: sapdb
       required: true
 
-    - include: virtual-ip
+    - script: virtual-ip
       name: virtual-ip-db
       shortdesc: The Virtual IP address configured here will be for the SAP Database instance.
       required: true
@@ -84,7 +84,7 @@
           value: 24
         - name: nic
           value: eth0
-    - include: filesystem
+    - script: filesystem
       name: filesystem-db
       shortdesc: "Filesystem resource for the SAP database (typically /sapdb)."
       longdesc: >-
@@ -113,7 +113,7 @@
           value: NA0_ASCS00_sapna0as
         - name: START_PROFILE
           value: "/usr/sap/NA0/SYS/profile/START_ASCS00_sapna0as"
-    - include: virtual-ip
+    - script: virtual-ip
       name: virtual-ip-as
       shortdesc: The Virtual IP address configured here will be for the SAP ASCS instance.
       required: true
@@ -126,7 +126,7 @@
           value: 24
         - name: nic
           value: eth0
-    - include: filesystem
+    - script: filesystem
       name: filesystem-as
       shortdesc: "Filesystem resource for the /usr/sap/SID/ASCS## directory."
       longdesc: >-
@@ -155,7 +155,7 @@
           value: NA0_DVEBMGS01_sapna0ci
         - name: START_PROFILE
           value: "/usr/sap/NA0/SYS/profile/START_DVEBMGS01_sapna0ci"
-    - include: virtual-ip
+    - script: virtual-ip
       name: virtual-ip-ci
       shortdesc: The Virtual IP address configured here will be for the SAP Central instance.
       required: true
@@ -168,7 +168,7 @@
           value: 24
         - name: nic
           value: eth0
-    - include: filesystem
+    - script: filesystem
       name: filesystem-ci
       shortdesc: "Filesystem resource for the /usr/sap/SID/DVEBMGS## directory."
       longdesc: >-
