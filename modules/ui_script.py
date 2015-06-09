@@ -373,7 +373,7 @@ class Script(command.UI):
                 script = scripts.load_script(name)
                 if script is not None:
                     print(json.dumps({'name': script['name'],
-                                      'category': script['category'],
+                                      'category': script['category'].lower(),
                                       'shortdesc': script['shortdesc'],
                                       'longdesc': script['longdesc']}))
         elif cmd[0] == "describe":
@@ -382,7 +382,7 @@ class Script(command.UI):
             if script is None:
                 return False
             print(json.dumps({'name': script['name'],
-                              'category': script['category'],
+                              'category': script['category'].lower(),
                               'shortdesc': script['shortdesc'],
                               'longdesc': script['longdesc'],
                               'steps': _clean_steps(script['steps'])}))
