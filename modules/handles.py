@@ -32,10 +32,10 @@ class value(object):
         return self.value
 
     def __repr__(self):
-        return repr((self.value, self.obj))
+        return "handles.value(%s, %s)" % (repr(self.obj), repr(self.value))
 
     def __str__(self):
-        return str((self.value, self.obj))
+        return "handles.value(%s, %s)" % (repr(self.obj), repr(self.value))
 
 
 def _join(d1, d2):
