@@ -22,6 +22,7 @@ from nose.tools import eq_, with_setup
 from lxml import etree
 from crmsh import scripts
 from crmsh import ra
+from crmsh import utils
 
 scripts._script_dirs = lambda: [path.join(path.dirname(__file__), 'scripts')]
 
@@ -436,6 +437,7 @@ IP address goes away.
 '''
 
 _saved_get_ra = ra.get_ra
+_saved_cluster_nodes = utils.list_cluster_nodes
 
 
 def setup_func():
@@ -456,9 +458,12 @@ def setup_func():
         return _saved_get_ra(agent)
     ra.get_ra = _get_ra
 
+    utils.list_cluster_nodes = lambda: [utils.this_node(), 'a', 'b', 'c']
+
 
 def teardown_func():
     ra.get_ra = _saved_get_ra
+    utils.list_cluster_nodes = _saved_cluster_nodes
 
 
 def test_list():
@@ -492,8 +497,7 @@ def test_v2():
         {'id': 'www',
          'apache': {'id': 'apache'},
          'virtual-ip': {'id': 'www-vip', 'ip': '192.168.1.100'},
-         'install': False,
-         'nodes': 'a b c'})
+         'install': False})
     pprint(actions)
     eq_(len(actions), 1)
 
@@ -502,20 +506,19 @@ def test_v2():
         {'id': 'www',
          'apache': {'id': 'apache'},
          'virtual-ip': {'id': 'www-vip', 'ip': '192.168.1.100'},
-         'install': True,
-         'nodes': 'a b c'})
+         'install': True})
     pprint(actions)
     eq_(len(actions), 3)
 
 
+@with_setup(setup_func, teardown_func)
 def test_agent_include():
     inc2 = scripts.load_script('inc2')
     actions = scripts.verify(
         inc2,
         {'wiz': 'abc',
          'foo': 'cde',
-         'inc1': {'foo': True, 'bar': 'bah bah'},
-         'nodes': 'a b c'})
+         'inc1': {'foo': True, 'bar': 'bah bah'}})
     pprint(actions)
     eq_(len(actions), 6)
     eq_('33\nabc', actions[-1]['text'].strip())
@@ -529,5 +532,7 @@ def test_vipinc():
         script,
         {'vip': {'id': 'vop', 'ip': '10.0.0.4'}})
     eq_(len(actions), 1)
+    pprint(actions)
+    assert actions[0]['text'].find('primitive vop test:virtual-ip ip="10.0.0.4"') >= 0
     assert actions[0]['text'].find("clone c-vop vop") >= 0
 
