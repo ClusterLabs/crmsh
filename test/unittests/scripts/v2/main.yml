@@ -27,7 +27,7 @@
         - name: id
           value: "{{id}}-ip"
         - name: ip
-          type: ip-address
+          type: ip_address
       ops: |
         op monitor interval=20s timeout=20s
   actions:
