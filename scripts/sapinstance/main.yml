@@ -1,0 +1,48 @@
+---
+- version: 2.2
+  category: Script
+  shortdesc: SAP Instance
+  longdesc: Create a single SAP Instance.
+  parameters:
+    - name: id
+      required: true
+      shortdesc: Resource ID
+      longdesc: Unique ID for this SAP instance resource in the cluster.
+      type: resource-id
+      value: sapinstance
+    - name: InstanceName
+      required: true
+      shortdesc: Instance Name
+      longdesc: The name of the SAP instance.
+      type: string
+      value: sapinstance
+    - name: START_PROFILE
+      required: true
+      shortdesc: Start Profile
+      longdesc: This defines the path and the file name of the SAP start profile of this particular instance.
+      type: string
+    - name: AUTOMATIC_RECOVER
+      required: true
+      shortdesc: Automatic Recover
+      longdesc: >-
+        The SAPInstance resource agent tries to recover a failed start
+        attempt automaticaly one time. This is done by killing runing
+        instance processes, removing the kill.sap file and executing
+        cleanipc. Sometimes a crashed SAP instance leaves some
+        processes and/or shared memory segments behind. Setting this
+        option to true will try to remove those leftovers during a
+        start operation. That is to reduce manual work for the
+        administrator.
+      type: boolean
+      value: true
+
+    actions:
+      - cib: |
+          primitive {{id}} ocf:heartbeat:SAPInstance
+            params
+              InstanceName="{{InstanceName}}"
+              AUTOMATIC_RECOVER="{{AUTOMATIC_RECOVER}}"
+              START_PROFILE="{{START_PROFILE}}"
+            op monitor interval="180" timeout="60" start_delay="240"
+            op start timeout="240"
+            op stop timeout="240" on_fail="block"

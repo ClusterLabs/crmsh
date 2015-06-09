@@ -4,6 +4,7 @@
 # License: GNU General Public License (GPL)
 ---
 - version: 2.2
+  category: Server
   shortdesc: Apache Webserver
   longdesc: >
     Configure a resource group containing a virtual IP address and
@@ -12,7 +13,6 @@
     is started. You can also optionally configure a database resource
     which will be started before the web server but after mounting the
     optional filesystem.
-  category: Server
   include:
     - agent: ocf:heartbeat:apache
       name: apache
@@ -35,10 +35,6 @@
       shortdesc: Optional database started before the web server is started.
       required: false
   parameters:
-    - name: id
-      shortdesc: ID for the web server resource group
-      example: web-server
-      type: resource-id
     - name: install
       type: boolean
       shortdesc: Install and configure apache
@@ -60,8 +56,8 @@
     - include: virtual-ip
     - include: apache
     - cib: |
-        group g-{{id}}
+        group g-{{apache:id}}
           {{filesystem:id}}
           {{database:id}}
           {{virtual-ip:id}}
-          p-{{id}}
+          {{apache:id}}

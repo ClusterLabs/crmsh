@@ -1,6 +1,7 @@
 ---
-- name: Add a new node to an already existing cluster
-  description: >
+- version: 2.2
+  shortdesc: Add a new node to an already existing cluster
+  longdesc: >
     Installs missing packages and copies corosync.conf
     from one of the existing cluster nodes.
 
@@ -12,23 +13,26 @@
     provided via the cluster add command.
   parameters:
     - name: node
-      description: Node to add to the cluster
-  steps:
-    - name: Check cluster
+      shortdesc: Node to add to the cluster
+      type: string
+      required: true
+
+  actions:
+    - shortdesc: Check cluster
       collect: add.py collect
 
-    - name: Validate parameters
+    - shortdesc: Validate parameters
       validate: add.py validate
 
-    - name: Install required packages
+    - shortdesc: Install required packages
       apply: add.py install
 
-    - name: Copy configuration files
+    - shortdesc: Copy configuration files
       apply_local: add.py copy
 
-    - name: Configure firewall
+    - shortdesc: Configure firewall
       apply: add.py firewall
 
-    - name: Start cluster on new node
+    - shortdesc: Start cluster on new node
       apply: add.py start
 

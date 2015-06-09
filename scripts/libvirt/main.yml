@@ -5,7 +5,8 @@
 - version: 2.2
   shortdesc: STONITH for a libvirt managed hypervisor (kvm/Xen)
   longdesc: >
-    Uses libvirt as a STONITH device to control guest.
+    Uses libvirt as a STONITH device to fence a guest node.
+    Create a separate resource for each guest node in the cluster.
   category: Stonith
   parameters:
     - name: id

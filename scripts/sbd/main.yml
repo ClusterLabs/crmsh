@@ -4,17 +4,26 @@
 # License: GNU General Public License (GPL)
 ---
 - version: 2.2
-  shortdesc: Shared storage based fencing
+  category: Stonith
+  shortdesc: "SBD, Shared storage based fencing"
   longdesc: >
-    This template generates a single instance of external/sbd.
+    Create a SBD STONITH resource. SBD must be configured to use
+    a particular shared storage device using /etc/sysconfig/sbd.
+
+    You need to configure an SBD resource for each node to manage.
 
     There is quite a bit more to do to make this stonith operational.
-    See http://www.linux-ha.org/wiki/SBD_Fencing for information.
-  category: Stonith
+    See http://www.linux-ha.org/wiki/SBD_Fencing for information, or
+    the sbd(8) manual page.
+
   parameters:
     - name: id
       shortdesc: The resource id (name)
       example: stonith-sbd
+      required: true
+      type: resource-id
+    - name: node
+      shortdesc: The node id that this stonith resource manages.
       required: true
       type: resource-id
     - name: sbd_device
@@ -25,9 +34,12 @@
         /dev/sd?
       type: device
       required: true
+
   actions:
     - cib: |
         primitive {{id}} stonith:external/sbd
           params sbd_device="{{sbd_device}}"
           op monitor interval=15s timeout=60s
           op start timeout=60s
+
+        location loc-{{id}}-fences-{{node}} {{id}} -inf: {{node}}

@@ -1,17 +1,19 @@
 ---
-- name: Check uptime of nodes
+- version: 2.2
+  shortdesc: Check uptime of nodes
   description: >
     Fetches the uptime of all nodes and reports which
     node has lived longest.
 
   parameters:
     - name: show_all
-      description: Show all uptimes
-      default: false
+      shortdesc: Show all uptimes
+      type: boolean
+      value: false
 
-  steps:
-    - name: Fetch uptimes
+  actions:
+    - shortdesc: Fetch uptimes
       collect: fetch.py
 
-    - name: Report uptime
+    - shortdesc: Report uptime
       report: report.py

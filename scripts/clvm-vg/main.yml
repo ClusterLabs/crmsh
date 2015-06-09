@@ -9,6 +9,9 @@
     Configures an cLVM volume group instance. Once created,
     this resource is added to the cLVM group resource.
 
+    The cLVM group resource is assumed to be named g-clvm. This
+    is the name of the resource created by the clvm wizard.
+
   parameters:
     - name: id
       shortdesc: Volume group instance ID
@@ -18,19 +21,19 @@
       type: resource-id
       value: vg1
 
-    - name: group
-      shortdesc: Volume group ID
-      longdesc: ID of the previously created group resource for all volume group resources.
-      required: true
-      type: resource-id
-      value: g-vg1
-
     - name: volgrpname
       shortdesc: Volume Group Name
       longdesc: LVM volume group name.
       required: true
       type: string
       value: vg1
+
+    - name: clvm-group
+      shortdesc: cLVM Resource Group ID
+      longdesc: ID of the cLVM resource group.
+      type: resource-id
+      required: false
+      value: g-clvm
 
   actions:
     - cib: |
@@ -40,5 +43,5 @@
           op stop timeout=60s
           op monitor interval=30s timeout=60s
 
-    - crm: configure modgroup {{group}} add {{id}}
+    - crm: configure modgroup {{clvm-group}} add {{id}}
       shortdesc: Add volume group to the cLVM group resource

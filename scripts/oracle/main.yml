@@ -1,0 +1,51 @@
+---
+- version: 2.2
+  shortdesc: Oracle Database
+  longdesc: Configure an Oracle Database cluster resource.
+  parameters:
+    - name: id
+      required: true
+      shortdesc: Resource ID
+      longdesc: Unique ID for the database cluster resource.
+      type: resource-id
+      value: oracle
+    - name: sid
+      required: true
+      shortdesc: Database SID
+      type: string
+      value: OracleDB
+    - name: listener
+      shortdesc: Listener.
+      required: true
+      type: string
+      value: LISTENER
+    - name: home
+      required: true
+      shortdesc: Database Home.
+      type: string
+      value: /srv/oracledb
+    - name: user
+      required: true
+      shortdesc: Database User.
+      type: string
+      default: oracle
+  actions:
+    - cib: |
+        primitive lsn-{{id}} ocf:heartbeat:oralsnr
+          params
+            sid="{{sid}}"
+            home="{{home}}"
+            user="{{user}}"
+            listener="{{listener}}"
+          op monitor interval="30" timeout="60" depth="0"
+
+        primitive {{id}} ocf:heartbeat:oracle
+          params
+            sid="{{sid}}"
+            home="{{home}}"
+            user="{{user}}"
+          op monitor interval="120s"
+
+        colocation lsn-with-{{id}} inf: {{id}} lsn-{{id}}
+        order lsn-before-{{id}} inf: lsn-{{id}} {{id}}
+    

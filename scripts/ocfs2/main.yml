@@ -4,18 +4,17 @@
 # License: GNU General Public License (GPL)
 ---
 - version: 2.2
-  shortdesc: ocfs2 filesystem (cloned)
-  longdesc: >
-    This template generates a cloned instance of the ocfs2 filesystem
-
-    NB: You need only one dlm, regardless of how many
-    filesystems. In other words, you can use this template only for
-    one filesystem and to make another one, you'll have to edit the
-    resulting configuration yourself.
   category: Filesystem
+  shortdesc: OCFS2 filesystem (cloned)
+  longdesc: >
+    Configure a cloned cluster resource for an OCFS2 filesystem.
+
+    Note that the OCFS2 Filesystem will be stopped initially, in case
+    you need to run mkfs to create the filesystem after DLM is running.
+
   parameters:
     - name: id
-      shortdesc: Name the ocfs2 filesystem
+      shortdesc: Name the ocfs2 filesystem resource
       example: bigfs
       type: resource-id
       required: true
@@ -31,10 +30,12 @@
     - name: options
       shortdesc: mount options
       type: string
-    - name: dlm
-      shortdesc: Disable if dlm is already configured
-      value: true
-      type: boolean
+    - name: clvm-group
+      shortdesc: cLVM Resource Group ID
+      longdesc: Optional ID of a cLVM resource group to add this filesystem to.
+      type: resource-id
+      required: False
+
   actions:
     - cib: |
         primitive {{id}} ocf:heartbeat:Filesystem
@@ -45,17 +46,12 @@
                 {{#options}}options="{{options}}"{{/options}}
             op start timeout=60s
             op stop timeout=60s
+            op monitor interval=20s timeout=40s
 
-        monitor {{id}} 20s:40s
+        clone c-{{id}} {{id}}
+          meta interleave=true target-role=Stopped
 
-        {{#dlm}}
-        primitive dlm ocf:pacemaker:controld
-            op start timeout=90s
-            op stop timeout=100s
-            op monitor interval=60s timeout=60s
-        {{/dlm}}
+    - crm: configure modgroup {{clvm-group}} add c-{{id}}
+      shortdesc: Add cloned OCFS2 filesystem to cLVM group
+      when: clvm-group
 
-        clone base-{{id}} dlm meta interleave="true"
-        clone clusterfs-{{id}} clusterfs meta interleave="true"
-        order base-then-clusterfs-{{id}} inf: base-{{id}} clusterfs-{{id}}
-        colocation clusterfs-with-base-{{id}} inf: clusterfs-{{id}} base-{{id}}

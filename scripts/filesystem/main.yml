@@ -3,5 +3,10 @@
   category: Filesystem
   include:
     - agent: ocf:heartbeat:Filesystem
+      ops: |
+        op start timeout=60s
+        op stop timeout=60s
+        op monitor interval=20s timeout=40s
+        
   actions:
     - include: Filesystem

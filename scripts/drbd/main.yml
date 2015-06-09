@@ -1,0 +1,32 @@
+---
+- version: 2.2
+  category: Filesystem
+  shortdesc: DRBD Block Device
+  longdesc: >-
+    Distributed Replicated Block Device. Configure a DRBD cluster resource.
+
+    Also creates a multistate resource managing the state of DRBD.
+
+  include:
+    - agent: ocf:linbit:drbd
+      ops: |
+        op monitor depth="0" timeout="20" interval="20" role="Slave" 
+        op monitor depth="0" timeout="20" interval="10" role="Master"
+      parameters:
+        - name: id
+          shortdesc: DRBD Cluster Resource ID.
+          required: true
+          value: drbd-data
+          type: resource-id
+        - name: drbd_resource
+          required: true
+          value: drbd0
+          type: string
+        - name: drbdconf
+          value: "/etc/drbd.conf"
+  actions:
+    - include: drbd
+    - cib: |
+        ms ms-{{drbd:id}} {{drbd:id}}
+          params master-max=1 master-node-max=1 clone-max=2 clone-node-max=1
+          meta notify=true

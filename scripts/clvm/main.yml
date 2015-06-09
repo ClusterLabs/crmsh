@@ -13,18 +13,6 @@
     To create volume groups after configuring cLVM, the wizard
     for cLVM volume groups can be used.
 
-  parameters:
-    - name: id
-      shortdesc: Cluster group ID
-      longdesc: >
-        Base name for the ID of the cLVM volume group in the cluster.
-        The actual resources will be prefixed by g- or c- for the group and clone
-        respectively.
-      required: true
-      unique: true
-      type: resource-id
-      value: vg1
-
   actions:
     - cib: |
         primitive dlm ocf:pacemaker:controld
@@ -36,7 +24,7 @@
           op start timeout=90s
           op stop timeout=100s
 
-        group g-{{id}} dlm clvm
+        group g-clvm dlm clvm
         
-        clone c-{{id}} g-{{id}}
+        clone c-clvm g-clvm
           meta interleave=true ordered=true

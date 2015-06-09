@@ -1,0 +1,72 @@
+# Copyright (C) 2015 Kristoffer Gronlund
+#
+# License: GNU General Public License (GPL)
+---
+- version: 2.2
+  category: Server
+  shortdesc: NFS Server
+  longdesc: >-
+    Configure an NFS server. Requires an existing filesystem resource,
+    for example a filesystem running on LVM on DRBD.
+
+  parameters:
+    - name: base-id
+      required: true
+      shortdesc: Base filesystem resource ID
+      longdesc: The ID of an existing filesystem resource.
+      type: resource-id
+      value: base-fs
+
+  include:
+    - name: rootfs
+      script: exportfs
+      required: false
+      shortdesc: NFSv4 Virtual File System root.
+      parameters:
+        - name: id
+          value: exportfs-root
+        - name: fsid
+          value: 0
+        - name: directory
+          value: /srv/nfs
+        - name: options
+          value: "rw,crossmnt"
+
+    - script: exportfs
+      required: true
+      shortdesc: Exported NFS mount point.
+      parameters:
+        - name: id
+          value: exportfs
+        - name: directory
+          value: /srv/nfs/example
+        - name: options
+          value: "rw,mountpoint"
+        - name: wait_for_leasetime_on_stop
+          value: true
+
+    - script: virtual-ip
+      required: true
+      shortdesc: Configure a Virtual IP address used to access the NFS mounts.
+
+  actions:
+    - install: nfs-client nfs-kernel-server
+      shortdesc: Install NFS packages
+    - service:
+        - nfsserver: enable
+        - nfsserver: start
+    - include: rootfs
+    - include: exportfs
+    - include: virtual-ip
+    - cib: |
+        group g-nfs {{exportfs:id}} {{virtual-ip:id}}
+        order base-then-nfs inf: {{base-id}} g-nfs
+        colocation nfs-with-base inf: g-nfs {{base-id}}
+        {{#rootfs}}
+        clone c-{{rootfs:id}} {{rootfs:id}}
+        order rootfs-before-nfs inf: c-{{rootfs:id}} g-nfs:start
+        colocation nfs-with-rootfs inf: g-nfs c-{{rootfs:id}}
+        {{/rootfs}}
+    - call: exportfs -v
+      error: Failed to configure NFS exportfs
+      shortdesc: Check result of exportfs -v
