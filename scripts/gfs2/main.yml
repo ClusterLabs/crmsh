@@ -47,6 +47,6 @@
         clone c-{{id}} {{id}}
           meta interleave="true" ordered="true"
 
-    - crm: configure modgroup {{gfs2-base:clvm-group}} add c-{{id}}
+    - crm: "configure modgroup {{gfs2-base:clvm-group}} add c-{{id}}"
       shortdesc: Add cloned filesystem to cLVM group
-      when: {{gfs2-base:clvm-group}}
+      when: "{{gfs2-base:clvm-group}}"

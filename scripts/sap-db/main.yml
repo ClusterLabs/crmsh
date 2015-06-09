@@ -20,7 +20,7 @@
   include:
     - script: sapdb
       required: true
-    - include: virtual-ip
+    - script: virtual-ip
       shortdesc: The Virtual IP address configured here will be for the SAP Database instance.
       required: true
       parameters:
@@ -32,7 +32,7 @@
           value: 24
         - name: nic
           value: eth0
-    - include: filesystem
+    - script: filesystem
       shortdesc: "Filesystem resource for the SAP database (typically /sapdb)."
       longdesc: >-
         If a filesystem does not already exist on the block device 

@@ -1,5 +1,6 @@
 ---
 - version: 2.2
+  category: Script
   shortdesc: Check uptime of nodes
   longdesc: >
     Fetches the uptime of all nodes and reports which

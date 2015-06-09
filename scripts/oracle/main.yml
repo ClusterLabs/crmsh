@@ -1,5 +1,6 @@
 ---
 - version: 2.2
+  category: Database
   shortdesc: Oracle Database
   longdesc: Configure an Oracle Database cluster resource.
   parameters:

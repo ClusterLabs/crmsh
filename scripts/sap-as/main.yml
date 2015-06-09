@@ -27,7 +27,7 @@
           value: NA0_ASCS00_sapna0as
         - name: START_PROFILE
           value: "/usr/sap/NA0/SYS/profile/START_ASCS00_sapna0as"
-    - include: virtual-ip
+    - script: virtual-ip
       shortdesc: The Virtual IP address configured here will be for the SAP ASCS instance.
       required: true
       parameters:
@@ -39,7 +39,7 @@
           value: 24
         - name: nic
           value: eth0
-    - include: filesystem
+    - script: filesystem
       shortdesc: "Filesystem resource for the /usr/sap/SID/ASCS## directory."
       longdesc: >-
         If a filesystem does not already exist on the block device 

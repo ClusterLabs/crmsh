@@ -1,5 +1,6 @@
 ---
 - version: 2.2
+  category: Script
   shortdesc: Add a new node to an already existing cluster
   longdesc: >
     Installs missing packages and copies corosync.conf

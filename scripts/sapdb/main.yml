@@ -3,6 +3,7 @@
   category: Script
   shortdesc: SAP Database Instance
   longdesc: Create a single SAP Database Instance.
+
   parameters:
     - name: id
       required: true
@@ -23,12 +24,12 @@
       value: ADA
       type: string
 
-    actions:
-      - cib: |
-          primitive {{id}} ocf:heartbeat:SAPdatabase
-            params
-              SID="{{SID}}"
-              DBTYPE="{{DBTYPE}}"
-            op monitor interval="120" timeout="60" start_delay="180"
-            op start timeout="1800"
-            op stop timeout="1800"
+  actions:
+    - cib: |
+        primitive {{id}} ocf:heartbeat:SAPdatabase
+          params
+            SID="{{SID}}"
+            DBTYPE="{{DBTYPE}}"
+          op monitor interval="120" timeout="60" start_delay="180"
+          op start timeout="1800"
+          op stop timeout="1800"

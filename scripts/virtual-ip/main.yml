@@ -5,6 +5,22 @@
   include:
     - agent: ocf:heartbeat:IPaddr2
       name: virtual-ip
+      parameters:
+        - name: id
+          type: resource-id
+          required: true
+        - name: ip
+          type: ipaddress
+          required: true
+        - name: cidr_netmask
+          type: integer
+          required: false
+        - name: broadcast
+          type: ipaddress
+          required: false
+        - name: lvs_support
+          required: false
+          type: boolean
       ops: |
         op start timeout="20" op stop timeout="20"
         op monitor interval="10" timeout="20"

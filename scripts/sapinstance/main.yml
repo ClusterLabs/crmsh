@@ -3,6 +3,7 @@
   category: Script
   shortdesc: SAP Instance
   longdesc: Create a single SAP Instance.
+
   parameters:
     - name: id
       required: true
@@ -36,13 +37,13 @@
       type: boolean
       value: true
 
-    actions:
-      - cib: |
-          primitive {{id}} ocf:heartbeat:SAPInstance
-            params
-              InstanceName="{{InstanceName}}"
-              AUTOMATIC_RECOVER="{{AUTOMATIC_RECOVER}}"
-              START_PROFILE="{{START_PROFILE}}"
-            op monitor interval="180" timeout="60" start_delay="240"
-            op start timeout="240"
-            op stop timeout="240" on_fail="block"
+  actions:
+    - cib: |
+        primitive {{id}} ocf:heartbeat:SAPInstance
+          params
+            InstanceName="{{InstanceName}}"
+            AUTOMATIC_RECOVER="{{AUTOMATIC_RECOVER}}"
+            START_PROFILE="{{START_PROFILE}}"
+          op monitor interval="180" timeout="60" start_delay="240"
+          op start timeout="240"
+          op stop timeout="240" on_fail="block"

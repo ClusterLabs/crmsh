@@ -3,10 +3,27 @@
   category: Filesystem
   include:
     - agent: ocf:heartbeat:Filesystem
+      name: filesystem
+      parameters:
+        - name: id
+          required: true
+          type: resource-id
+        - name: device
+          required: true
+          type: device
+        - name: directory
+          required: true
+          type: directory
+        - name: fstype
+          required: true
+          type: string
+        - name: options
+          required: false
+          type: string
       ops: |
         op start timeout=60s
         op stop timeout=60s
         op monitor interval=20s timeout=40s
         
   actions:
-    - include: Filesystem
+    - include: filesystem

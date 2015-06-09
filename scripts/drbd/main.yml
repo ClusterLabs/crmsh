@@ -7,26 +7,27 @@
 
     Also creates a multistate resource managing the state of DRBD.
 
-  include:
-    - agent: ocf:linbit:drbd
-      ops: |
-        op monitor depth="0" timeout="20" interval="20" role="Slave" 
-        op monitor depth="0" timeout="20" interval="10" role="Master"
-      parameters:
-        - name: id
-          shortdesc: DRBD Cluster Resource ID.
-          required: true
-          value: drbd-data
-          type: resource-id
-        - name: drbd_resource
-          required: true
-          value: drbd0
-          type: string
-        - name: drbdconf
-          value: "/etc/drbd.conf"
+  parameters:
+    - name: id
+      shortdesc: DRBD Cluster Resource ID.
+      required: true
+      value: drbd-data
+      type: resource-id
+    - name: drbd_resource
+      required: true
+      value: drbd0
+      type: string
+    - name: drbdconf
+      value: "/etc/drbd.conf"
+
   actions:
-    - include: drbd
+    - install: drbd drbd-kmp-default
     - cib: |
+        primitive {{id}} ocf:linbit:drbd
+          params
+            drbd_resource="{{drbd_resource}}"
+            drbdconf="{{drbdconf}}"
+          op monitor interval="29s" role="Master"
+          op monitor interval="31s" role="Slave"
         ms ms-{{drbd:id}} {{drbd:id}}
-          params master-max=1 master-node-max=1 clone-max=2 clone-node-max=1
-          meta notify=true
+          meta master-max=1 master-node-max=1 clone-max=2 clone-node-max=1 notify=true
