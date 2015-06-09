@@ -9,7 +9,7 @@
       required: true
       shortdesc: Resource ID
       longdesc: Unique ID for this SAP instance resource in the cluster.
-      type: resource-id
+      type: resource
       value: rsc_sabdb_NA0
     - name: SID
       required: true

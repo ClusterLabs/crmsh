@@ -6,7 +6,7 @@
         - name: id
           required: true
           shortdesc: Unique ID for this export in the cluster.
-          type: resource-id
+          type: resource
           value: exportfs
         - name: fsid
           required: true
@@ -14,7 +14,7 @@
           value: 1
         - name: directory
           required: true
-          type: directory
+          type: string
           shortdesc: Mount point
           longdesc: "The mount point for the filesystem, e.g.: /srv/nfs/home"
         - name: options

@@ -11,7 +11,7 @@
 
   parameters:
     - name: node
-      type: resource-id
+      type: resource
       shortdesc: Node to remove from the cluster
 
   actions:

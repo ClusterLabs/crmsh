@@ -18,16 +18,16 @@
       longdesc: "NB: The clone is going to be named c-<id> (e.g. c-bigfs)"
       example: bigfs
       required: true
-      type: resource-id
+      type: resource
     - name: directory
       shortdesc: The mount point
       example: /mnt/bigfs
       required: true
-      type: directory
+      type: string
     - name: device
       shortdesc: The device
       required: true
-      type: device
+      type: string
     - name: options
       shortdesc: mount options
       type: string

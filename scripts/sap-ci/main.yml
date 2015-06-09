@@ -14,7 +14,7 @@
       shortdesc: SAP Central Resource Group ID
       longdesc: Unique ID for the SAP Central instance resource group in the cluster.
       required: true
-      type: resource-id
+      type: resource
       value: grp_sap_NA0_sapna0ci
 
   include:

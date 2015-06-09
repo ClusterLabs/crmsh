@@ -7,16 +7,16 @@
       name: virtual-ip
       parameters:
         - name: id
-          type: resource-id
+          type: resource
           required: true
         - name: ip
-          type: ipaddress
+          type: ip_address
           required: true
         - name: cidr_netmask
           type: integer
           required: false
         - name: broadcast
-          type: ipaddress
+          type: ip_address
           required: false
         - name: lvs_support
           required: false

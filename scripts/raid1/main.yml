@@ -10,9 +10,9 @@
           value: raid1
         - name: raidconf
           required: true
-          type: file
+          type: string
         - name: raiddev
           required: true
-          type: device
+          type: string
       ops: |
         op monitor interval=60s timeout=130s on_fail=fence

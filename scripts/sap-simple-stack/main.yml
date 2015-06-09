@@ -16,7 +16,7 @@
       shortdesc: SAP Simple Stack Resource Group ID
       longdesc: Unique ID for the SAP SimpleStack instance resource group in the cluster.
       required: true
-      type: resource-id
+      type: resource
       value: grp_sap_NA0
 
   include:

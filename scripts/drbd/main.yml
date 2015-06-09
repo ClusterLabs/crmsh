@@ -12,7 +12,7 @@
       shortdesc: DRBD Cluster Resource ID.
       required: true
       value: drbd-data
-      type: resource-id
+      type: resource
     - name: drbd_resource
       required: true
       value: drbd0

@@ -14,7 +14,7 @@
       required: true
       shortdesc: Base filesystem resource ID
       longdesc: The ID of an existing filesystem resource.
-      type: resource-id
+      type: resource
       value: base-fs
 
   include:

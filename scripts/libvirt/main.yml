@@ -13,10 +13,10 @@
       shortdesc: The resource id (name)
       example: stonith-libvirt
       required: true
-      type: resource-id
+      type: resource
     - name: target
       shortdesc: Node to manage with stonith device
-      type: resource-id
+      type: resource
       required: true
     - name: hostlist
       shortdesc: "List of controlled hosts: hostname[:domain_id].."

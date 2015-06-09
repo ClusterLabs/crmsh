@@ -14,7 +14,7 @@
       shortdesc: SAP Database Resource Group ID
       longdesc: Unique ID for the SAP Database instance resource group in the cluster.
       required: true
-      type: resource-id
+      type: resource
       value: grp_sapdb_NA0
 
   include:

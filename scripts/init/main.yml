@@ -22,12 +22,12 @@
 
     - name: bindnetaddr
       shortdesc: "Network address to bind to (e.g.: 192.168.1.0)"
-      type: ip-address
+      type: ip_address
       value: ""
 
     - name: mcastaddr
       shortdesc: "Multicast address (e.g.: 239.x.x.x)"
-      type: ip-address
+      type: ip_address
       value: ""
 
     - name: mcastport

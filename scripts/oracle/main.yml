@@ -8,7 +8,7 @@
       required: true
       shortdesc: Resource ID
       longdesc: Unique ID for the database cluster resource.
-      type: resource-id
+      type: resource
       value: oracle
     - name: sid
       required: true

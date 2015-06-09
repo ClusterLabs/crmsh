@@ -14,7 +14,7 @@
       shortdesc: SAP ASCS Resource Group ID
       longdesc: Unique ID for the SAP ASCS instance resource group in the cluster.
       required: true
-      type: resource-id
+      type: resource
       value: grp_sap_NA0_sapna0as
 
   include:

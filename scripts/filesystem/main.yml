@@ -7,13 +7,13 @@
       parameters:
         - name: id
           required: true
-          type: resource-id
+          type: resource
         - name: device
           required: true
-          type: device
+          type: string
         - name: directory
           required: true
-          type: directory
+          type: string
         - name: fstype
           required: true
           type: string

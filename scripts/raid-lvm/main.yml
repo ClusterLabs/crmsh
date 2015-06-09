@@ -7,7 +7,7 @@
     - name: id
       shortdesc: ID for the RAID and LVM group.
       longdesc: Filesystems that should be mounted in the LVM can be added to this group resource.
-      type: resource-id
+      type: resource
       value: g-raid
       required: true
   include:
@@ -15,8 +15,10 @@
       parameters:
         - name: raidconf
           value: /etc/mdadm.conf
+          type: string
         - name: raiddev
           value: /dev/md0
+          type: string
     - script: lvm
   actions:
     - include: lvm

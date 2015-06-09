@@ -16,16 +16,16 @@
     - name: id
       shortdesc: Name the ocfs2 filesystem resource
       example: bigfs
-      type: resource-id
+      type: resource
       required: true
     - name: directory
       shortdesc: The mount point
       example: /mnt/bigfs
-      type: directory
+      type: string
       required: true
     - name: device
       shortdesc: The device
-      type: device
+      type: string
       required: true
     - name: options
       shortdesc: mount options
@@ -33,7 +33,7 @@
     - name: clvm-group
       shortdesc: cLVM Resource Group ID
       longdesc: Optional ID of a cLVM resource group to add this filesystem to.
-      type: resource-id
+      type: resource
       required: False
 
   actions:

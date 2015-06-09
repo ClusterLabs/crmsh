@@ -21,18 +21,18 @@
       shortdesc: The resource id (name)
       example: stonith-sbd
       required: true
-      type: resource-id
+      type: resource
     - name: node
       shortdesc: The node id that this stonith resource manages.
       required: true
-      type: resource-id
+      type: resource
     - name: sbd_device
       shortdesc: Name of the device (shared disk)
       longdesc: >
         NB: Make sure that the device remains the same on reboots. It's
         preferable to use udev generated names rather than the usual
         /dev/sd?
-      type: device
+      type: string
       required: true
 
   actions:

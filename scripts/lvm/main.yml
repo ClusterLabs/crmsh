@@ -8,7 +8,7 @@
         - name: id
           required: true
           value: lvm
-          type: resource-id
+          type: resource
         - name: volgrpname
           required: true
           type: string

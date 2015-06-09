@@ -18,7 +18,7 @@
       longdesc: Unique ID for the volume group instance in the cluster.
       required: true
       unique: true
-      type: resource-id
+      type: resource
       value: vg1
 
     - name: volgrpname
@@ -31,7 +31,7 @@
     - name: clvm-group
       shortdesc: cLVM Resource Group ID
       longdesc: ID of the cLVM resource group.
-      type: resource-id
+      type: resource
       required: false
       value: g-clvm
 
