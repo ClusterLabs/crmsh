@@ -827,6 +827,8 @@ def load_script(script):
     if isinstance(s, basestring):
         try:
             return _load_script_file(script, s)
+        except KeyError as err:
+            raise ValueError("Error when loading script %s: Expected key %s not found" % (script, err))
         except Exception as err:
             raise ValueError("Error when loading script %s: %s" % (script, err))
     return s
