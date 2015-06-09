@@ -462,7 +462,7 @@ def teardown_func():
 
 
 def test_list():
-    eq_(set(['v2', 'legacy', '10-webserver', 'inc1', 'inc2']),
+    eq_(set(['v2', 'legacy', '10-webserver', 'inc1', 'inc2', 'vip', 'vipinc']),
         set(s for s in scripts.list_scripts()))
 
 
@@ -519,3 +519,15 @@ def test_agent_include():
     pprint(actions)
     eq_(len(actions), 6)
     eq_('33\nabc', actions[-1]['text'].strip())
+
+
+@with_setup(setup_func, teardown_func)
+def test_vipinc():
+    script = scripts.load_script('vipinc')
+    assert script is not None
+    actions = scripts.verify(
+        script,
+        {'vip': {'id': 'vop', 'ip': '10.0.0.4'}})
+    eq_(len(actions), 1)
+    assert actions[0]['text'].find("clone c-vop vop") >= 0
+

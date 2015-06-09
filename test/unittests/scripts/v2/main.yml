@@ -19,6 +19,8 @@
           value: "{{id}}-server"
         - name: configfile
           type: file
+      ops: |
+        op monitor interval=20s timeout=20s
     - agent: test:virtual-ip
       name: virtual-ip
       parameters:
@@ -26,6 +28,8 @@
           value: "{{id}}-ip"
         - name: ip
           type: ip-address
+      ops: |
+        op monitor interval=20s timeout=20s
   actions:
     - install:
         - apache2
