@@ -471,11 +471,50 @@ def test_list():
         set(s for s in scripts.list_scripts()))
 
 
+@with_setup(setup_func, teardown_func)
 def test_load_legacy():
     script = scripts.load_script('legacy')
     assert script is not None
     eq_('legacy', script['name'])
     assert len(script['shortdesc']) > 0
+    pprint(script)
+    actions = scripts.verify(script, {})
+    pprint(actions)
+    eq_([{'longdesc': '',
+          'name': 'apply_local',
+          'shortdesc': 'Configure SSH',
+          'text': '',
+          'value': 'configure.py ssh'},
+         {'longdesc': '',
+          'name': 'collect',
+          'shortdesc': 'Check state of nodes',
+          'text': '',
+          'value': 'collect.py'},
+         {'longdesc': '',
+          'name': 'validate',
+          'shortdesc': 'Verify parameters',
+          'text': '',
+          'value': 'verify.py'},
+         {'longdesc': '',
+          'name': 'apply',
+          'shortdesc': 'Install packages',
+          'text': '',
+          'value': 'configure.py install'},
+         {'longdesc': '',
+          'name': 'apply_local',
+          'shortdesc': 'Generate corosync authkey',
+          'text': '',
+          'value': 'authkey.py'},
+         {'longdesc': '',
+          'name': 'apply',
+          'shortdesc': 'Configure cluster nodes',
+          'text': '',
+          'value': 'configure.py corosync'},
+         {'longdesc': '',
+          'name': 'apply_local',
+          'shortdesc': 'Initialize cluster',
+          'text': '',
+          'value': 'init.py'}], actions)
 
 
 def test_load_workflow():
@@ -535,4 +574,3 @@ def test_vipinc():
     pprint(actions)
     assert actions[0]['text'].find('primitive vop test:virtual-ip ip="10.0.0.4"') >= 0
     assert actions[0]['text'].find("clone c-vop vop") >= 0
-
