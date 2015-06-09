@@ -212,14 +212,19 @@ class Script(command.UI):
         all = all == "all"
         categories = {}
         for name in scripts.list_scripts():
-            script = scripts.load_script(name)
-            if script is not None:
+            try:
+                script = scripts.load_script(name)
+                if script is None:
+                    continue
                 cat = script['category'].lower()
                 if not all and cat == 'script':
                     continue
                 if cat not in categories:
                     categories[cat] = []
                 categories[cat].append("%-16s %s" % (script['name'], script['shortdesc'].strip()))
+            except ValueError as err:
+                err_buf.error(str(err))
+                continue
         for c, lst in sorted(categories.iteritems(), key=lambda x: x[0]):
             if c:
                 print("%s:\n" % (c.capitalize()))
@@ -370,12 +375,16 @@ class Script(command.UI):
         cmd = json.loads(command)
         if cmd[0] == "list":
             for name in scripts.list_scripts():
-                script = scripts.load_script(name)
-                if script is not None:
-                    print(json.dumps({'name': script['name'],
-                                      'category': script['category'].lower(),
-                                      'shortdesc': script['shortdesc'],
-                                      'longdesc': script['longdesc']}))
+                try:
+                    script = scripts.load_script(name)
+                    if script is not None:
+                        print(json.dumps({'name': script['name'],
+                                          'category': script['category'].lower(),
+                                          'shortdesc': script['shortdesc'],
+                                          'longdesc': script['longdesc']}))
+                except ValueError as err:
+                    err_buf.debug(str(err))
+                    continue
         elif cmd[0] == "describe":
             name = cmd[1]
             script = scripts.load_script(name)
