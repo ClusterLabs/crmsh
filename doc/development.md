@@ -13,6 +13,24 @@ Whenever a file that is to be installed to `/usr/share/crmsh` is added,
 for example a cluster script or crmsh template, the `data-manifest`
 file needs to be regenerated, by running `./update-data-manifest.sh`.
 
+## Website
+
+To build the website, you will need **Asciidoc**, **Pygments** plus
+two special lexers for Pygments installed as a separate module. This
+module is included in the source tree for crmsh under `contrib`. To
+install the module and build the website, do the following:
+
+```
+cd contrib
+sudo python setup.py install
+cd ..
+cd doc/website-v1
+make
+```
+
+If everything worked out as it should, the website should now be
+generated in `doc/website-v1/gen`.
+
 ## Modules
 
 This is the list of all modules including short descriptions.
