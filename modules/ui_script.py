@@ -201,20 +201,29 @@ class Script(command.UI):
     '''
     name = "script"
 
-    def do_list(self, context):
+    def do_list(self, context, all=None):
         '''
         List available scripts.
+        hides scripts with category Script or '' by default,
+        unless "all" is passed as argument
         '''
+        if all not in ("all", None):
+            context.error("Unexpected argument '%s': expected  [all]" % (all))
+        all = all == "all"
         categories = {}
         for name in scripts.list_scripts():
             script = scripts.load_script(name)
             if script is not None:
-                if script['category'] not in categories:
-                    categories[script['category']] = []
-                categories[script['category']].append("%-16s %s" % (script['name'], script['shortdesc'].strip()))
+                cat = script['category'].lower()
+                if not all and cat == 'script':
+                    continue
+                if cat not in categories:
+                    categories[cat] = []
+                categories[cat].append("%-16s %s" % (script['name'], script['shortdesc'].strip()))
         for c, lst in sorted(categories.iteritems(), key=lambda x: x[0]):
-            print("%s:\n" % (c))
-            for s in lst:
+            if c:
+                print("%s:\n" % (c.capitalize()))
+            for s in sorted(lst):
                 print(s)
             print('')
 

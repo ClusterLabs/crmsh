@@ -345,7 +345,7 @@ def _upgrade_yaml(data):
         raise ValueError("Unknown version (expected < %s, got %s)" % (_script_version, data['version']))
 
     data['version'] = _script_version
-    data['category'] = data.get('category', 'Script')
+    data['category'] = data.get('category', 'Legacy')
     _rename(data, 'name', 'shortdesc')
     _rename(data, 'description', 'longdesc')
 
