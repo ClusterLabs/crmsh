@@ -578,6 +578,17 @@ def _merge_objects(o1, o2):
         o1[key] = value
 
 
+def _lookup_step(name, steps, stepname):
+    for step in steps:
+        if step.get('name', '') == stepname:
+            return step
+    if not stepname and len(steps) == 1:
+        return steps[0]
+    if not stepname:
+        raise ValueError("Parameter '%s' not found" % (name))
+    raise ValueError("Referenced step '%s' not found in '%s'" % (stepname, name))
+
+
 def _process_include(script, include):
     """
     includes add parameter steps and actions
@@ -625,7 +636,7 @@ def _process_include(script, include):
             'longdesc': '',
             'required': True,
             'unique': True,
-            'type': 'resource-id',
+            'type': 'resource',
         })
         for param in meta.xpath('./parameters/parameter'):
             pname = param.get('name')
@@ -672,14 +683,6 @@ def _process_include(script, include):
             'sub-script': subscript,
         }
 
-        def _lookup_step(steps, stepname):
-            for step in steps:
-                if step.get('name', '') == stepname:
-                    return step
-            if not stepname and len(steps) == 1:
-                return steps[0]
-            raise ValueError("Referenced step '%s' not found in '%s'" % (stepname, name))
-
         def _merge_step_params(step, params):
             for param in params:
                 _merge_step_param(step, param)
@@ -697,9 +700,11 @@ def _process_include(script, include):
 
         for incparam in include.get('parameters', []):
             if 'step' in incparam and 'name' not in incparam:
-                _merge_step_params(_lookup_step(scriptstep.get('steps', []), incparam['step']), incparam['parameters'])
+                _merge_step_params(_lookup_step(name, scriptstep.get('steps', []), incparam['step']),
+                                   incparam['parameters'])
             else:
-                _merge_step_param(_lookup_step(scriptstep.get('steps', []), ''), incparam)
+                _merge_step_param(_lookup_step(name, scriptstep.get('steps', []), ''),
+                                  incparam)
 
         script['steps'].append(scriptstep)
     else:
@@ -766,7 +771,7 @@ def _postprocess_script(script):
                 p['unique'] = False
             if 'type' not in p or p['type'] == '':
                 if p['name'] == 'id':
-                    p['type'] = 'resource-id'
+                    p['type'] = 'resource'
                 else:
                     p['type'] = 'string'
         for s in step.get('steps', []):
@@ -964,6 +969,9 @@ def _extract_localnode(hosts):
     return local_node, hosts2
 
 
+# TODO: remove common params?
+# Pass them in a separate list of options?
+# Right now these names are basically reserved..
 def _common_params():
     "Parameters common to all cluster scripts"
     return [('nodes', None, 'List of nodes to execute the script for'),
@@ -1007,16 +1015,191 @@ def _scoped_param(context, name):
     return name
 
 
+def _find_by_name(params, name):
+    try:
+        return next(x for x in params if x.get('name') == name)
+    except StopIteration:
+        return None
+
+
+_IDENT_RE = re.compile(r'([a-z0-9_#$-][^=]*)$', re.IGNORECASE)
+
+import socket
+
+
+def is_valid_ipv4_address(address):
+    try:
+        socket.inet_pton(socket.AF_INET, address)
+    except AttributeError:
+        try:
+            socket.inet_aton(address)
+        except socket.error:
+            return False
+        return address.count('.') == 3
+    except socket.error:  # not a valid address
+        return False
+
+    return True
+
+
+def is_valid_ipv6_address(address):
+    try:
+        socket.inet_pton(socket.AF_INET6, address)
+    except socket.error:  # not a valid address
+        return False
+    return True
+
+# Types:
+# OCF types
+#
+# string
+# integer
+# boolean
+#
+# Propose to add
+# resource ==> a valid resource identifier
+# node ==> name of a node in the cluster
+# ip_address ==> a valid ipv4 or ipv6 address
+# ip_network ==> a valid ipv4 or ipv6 network (or address without /XX)
+# port ==> integer between 0 and 65535
+# email ==> a valid email address
+# select <value>, <value>, <value>, ... ==> any of the values in the list.
+# range <n> <m> ==> integer in range
+# re <regexp> ==> anything matching the regular expression.
+
+
+def _verify_type(param, value, errors):
+    type = param.get('type')
+    if not type:
+        return value
+    elif type == 'integer' or type == 'port':
+        try:
+            value = int(value, base=0)
+            if type == 'port' and (value < 0 or value > 65535):
+                errors.append("%s=%s is out of port range" % (param.get('name'), value))
+        except ValueError:
+            errors.append("%s=%s is not %s" % (param.get('name'), value, type))
+    elif type == 'string':
+        if value is None:
+            return ''
+        return value
+    elif type == 'boolean' or type == 'bool':
+        return _make_boolean(value)
+    elif type == 'resource':
+        if not _IDENT_RE.match(value):
+            errors.append("%s=%s invalid resource identifier" % (param.get('name'), value))
+    elif type == 'ip_address':
+        if is_valid_ipv4_address(value) or is_valid_ipv6_address(value):
+            return value
+        errors.append("%s=%s is not %s" % (param.get('name'), value, type))
+    elif type == 'file':
+        if not value:
+            errors.append("%s=%s is not %s" % (param.get('value'), value, type))
+    elif type == 'directory':
+        if not value:
+            errors.append("%s=%s is not %s" % (param.get('value'), value, type))
+    elif type == 'device':
+        if not value.startswith('/dev'):
+            errors.append("%s=%s is not %s" % (param.get('value'), value, type))
+    else:
+        errors.append("%s=%s is unknown type %s" % (param.get('name'), value, type))
+    return value
+
+_NO_RESOLVE = object()
+
+
+def _resolve_direct(step, pname, pvalue, path, errors):
+    step_parameters = step.get('parameters', [])
+    step_steps = step.get('steps', [])
+    param = _find_by_name(step_parameters, pname)
+    if param is not None:
+        # resolved to a parameter... now verify the value type?
+        return _verify_type(param, pvalue, errors)
+    substep = _find_by_name(step_steps, pname)
+    if substep is not None:
+        # resolved to a step... recurse
+        return _resolve_params(substep, pvalue, path + [pname], errors)
+    return _NO_RESOLVE
+
+
+def _resolve_unnamed_step(step, pname, pvalue, path, errors):
+    step_steps = step.get('steps', [])
+    substep = _find_by_name(step_steps, '')
+    if substep is not None:
+        return _resolve_direct(substep, pname, pvalue, path, errors)
+    return _NO_RESOLVE
+
+
+def _resolve_single_step(step, pname, pvalue, path, errors):
+    step_steps = step.get('steps', [])
+    if len(step_steps) >= 1:
+        first_step = step_steps[0]
+        return _resolve_direct(first_step, pname, pvalue, path + [first_step.get('name')], errors)
+    return _NO_RESOLVE
+
+
+def _resolve_params(step, params, path, errors):
+    """
+    any parameter that doesn't resolve is an error
+    """
+    ret = {}
+
+    for pname, pvalue in params.iteritems():
+        result = _resolve_direct(step, pname, pvalue, path, errors)
+        if result is not _NO_RESOLVE:
+            ret[pname] = result
+            continue
+
+        result = _resolve_unnamed_step(step, pname, pvalue, path, errors)
+        if result is not _NO_RESOLVE:
+            ret[pname] = result
+            continue
+
+        result = _resolve_single_step(step, pname, pvalue, path, errors)
+        if result is not _NO_RESOLVE:
+            stepname = step['steps'][0].get('name', '')
+            if stepname not in ret:
+                ret[stepname] = {}
+            ret[stepname][pname] = result
+            ret[pname] = result
+            continue
+
+        errors.append("Unknown parameter %s" % (':'.join(path + [pname])))
+
+    return ret
+
+
 def _check_parameters(script, params):
     '''
     1. Fill in values where none are supplied and there's a value
     in the step data
     2. Check missing values
+    3. For each input parameter: look it up and adjust the path
     '''
     errors = []
-    params = deepcopy(params)
-    for key, default, _ in _common_params():
-        params[key] = params.get(key, default)
+    #params = deepcopy(params)
+    # recursively resolve parameters: report
+    # error if a parameter can't be resolved
+    # TODO: move "common params" out of the params dict completely
+    # pass as flags to command line
+
+    def _split_commons(params):
+        ret, cdict = {}, dict([(c, d) for c, d, _ in _common_params()])
+        for key, value in params.iteritems():
+            if key in cdict:
+                cdict[key] = value
+            else:
+                ret[key] = deepcopy(value)
+        return ret, cdict
+
+    params, commons = _split_commons(params)
+    params = _resolve_params(script, params, [], errors)
+
+    if errors:
+        raise ValueError('\n'.join(errors))
+
+    for key, value in commons.iteritems():
+        params[key] = value
 
     def _fill_values(path, into, source, srcreq):
         for param in source.get('parameters', []):
@@ -1070,10 +1253,6 @@ def _handles_values(context, params, subactions):
     will be a step in steps, and needs
     some meta-data to tell us what it
     generates.
-
-    If a non-required step lacks values,
-    it should be added to the output as a
-    false value.
     """
     # postfill holds values that may themselves
     # be unexpanded templates, and in need of
@@ -1086,18 +1265,17 @@ def _handles_values(context, params, subactions):
         context: source step
         params: values for step
         """
-        for param in context.get('parameters', []):
-            if param['name'] in params:
-                to[param['name']] = params[param['name']]
-            else:
-                to[param['name']] = None
+        #for param in context.get('parameters', []):
+        #    if param['name'] in params:
+        #        to[param['name']] = params[param['name']]
+        for key, value in params.iteritems():
+            if not isinstance(value, dict):
+                to[key] = value
 
         for step in context.get('steps', []):
             name = step.get('name', '')
             if name:
-                if not step['required'] and 'name' not in params:
-                    to[name] = None
-                else:
+                if step['required'] or 'name' in params:
                     obj = {}
                     vobj = handles.value(obj, '# %s' % (name))
                     to[name] = vobj
