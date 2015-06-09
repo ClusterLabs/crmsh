@@ -1,15 +1,15 @@
 ---
 - version: 2.2
+  category: Database
   shortdesc: MySQL/MariaDB Database
   longdesc: >
     Configure a MySQL or MariaDB SQL Database.
     Enable the install option to install the necessary
     packages for the database.
-  category: Database
   include:
     - agent: ocf:heartbeat:mysql
       parameters:
-        - id: test_table
+        - name: test_table
           value: ""
       ops: |
         op start timeout=120s
