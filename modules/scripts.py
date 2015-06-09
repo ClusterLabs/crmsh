@@ -676,6 +676,8 @@ def _process_include(script, include):
             for step in steps:
                 if step.get('name', '') == stepname:
                     return step
+            if not stepname and len(steps) == 1:
+                return steps[0]
             raise ValueError("Referenced step '%s' not found in '%s'" % (stepname, name))
 
         def _merge_step_params(step, params):
@@ -695,9 +697,9 @@ def _process_include(script, include):
 
         for incparam in include.get('parameters', []):
             if 'step' in incparam and 'name' not in incparam:
-                _merge_step_params(_lookup_step(scriptstep['steps'], incparam['step']), incparam['parameters'])
+                _merge_step_params(_lookup_step(scriptstep.get('steps', []), incparam['step']), incparam['parameters'])
             else:
-                _merge_step_param(_lookup_step(scriptstep['steps'], ''), incparam)
+                _merge_step_param(_lookup_step(scriptstep.get('steps', []), ''), incparam)
 
         script['steps'].append(scriptstep)
     else:
