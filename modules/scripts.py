@@ -1068,20 +1068,29 @@ def is_valid_ipv6_address(address):
 # email ==> a valid email address
 # select <value>, <value>, <value>, ... ==> any of the values in the list.
 # range <n> <m> ==> integer in range
-# re <regexp> ==> anything matching the regular expression.
+# rx <rx> ==> anything matching the regular expression.
 
+
+def _valid_integer(value):
+    try:
+        return True, int(value, base=0)
+    except ValueError:
+        return False, value
+
+
+def _valid_ip(value):
+    return is_valid_ipv4_address(value) or is_valid_ipv6_address(value)
 
 def _verify_type(param, value, errors):
     type = param.get('type')
     if not type:
         return value
     elif type == 'integer' or type == 'port':
-        try:
-            value = int(value, base=0)
-            if type == 'port' and (value < 0 or value > 65535):
-                errors.append("%s=%s is out of port range" % (param.get('name'), value))
-        except ValueError:
+        ok, value = _valid_integer(value)
+        if not ok:
             errors.append("%s=%s is not %s" % (param.get('name'), value, type))
+        elif type == 'port' and (value < 0 or value > 65535):
+            errors.append("%s=%s is out of port range" % (param.get('name'), value))
     elif type == 'string':
         if value is None:
             return ''
@@ -1092,9 +1101,11 @@ def _verify_type(param, value, errors):
         if not _IDENT_RE.match(value):
             errors.append("%s=%s invalid resource identifier" % (param.get('name'), value))
     elif type == 'ip_address':
-        if is_valid_ipv4_address(value) or is_valid_ipv6_address(value):
-            return value
-        errors.append("%s=%s is not %s" % (param.get('name'), value, type))
+        if not _valid_ip(value):
+            errors.append("%s=%s is not %s" % (param.get('name'), value, type))
+    elif type == 'email':
+        if not re.match(r'[^@]+@[^@]+\.[^@]+', value):
+            errors.append("%s=%s is not %s" % (param.get('value'), value, type))
     elif type == 'file':
         if not value:
             errors.append("%s=%s is not %s" % (param.get('value'), value, type))
@@ -1104,6 +1115,14 @@ def _verify_type(param, value, errors):
     elif type == 'device':
         if not value.startswith('/dev'):
             errors.append("%s=%s is not %s" % (param.get('value'), value, type))
+    elif type == 'ip_network':
+        sp = value.rsplit('/', 1)
+        if len(sp) == 1 and not (is_valid_ipv4_address(value) or is_valid_ipv6_address(value)):
+            errors.append("%s=%s is not %s" % (param.get('name'), value, type))
+        elif len(sp) == 2 and (not _valid_ip(sp[0]) or not _valid_integer(sp[1])):
+            errors.append("%s=%s is not %s" % (param.get('name'), value, type))
+        else:
+            errors.append("%s=%s is not %s" % (param.get('name'), value, type))
     else:
         errors.append("%s=%s is unknown type %s" % (param.get('name'), value, type))
     return value
