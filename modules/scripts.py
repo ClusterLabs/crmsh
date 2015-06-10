@@ -53,6 +53,7 @@ from .msg import err_buf, common_debug
 
 _script_cache = None
 _script_version = 2.2
+_strict_handles = False
 
 _action_shortdescs = {
     'cib': 'Configure CIB',
@@ -102,7 +103,7 @@ class Actions(object):
         action['text'] = ''
         if name == 'install':
             if isinstance(action['value'], basestring):
-                val = handles.parse(action['value'], values, strict=True).strip()
+                val = handles.parse(action['value'], values, strict=_strict_handles).strip()
                 action['value'] = val.split()
             action['text'] = ' '.join(action['value'])
         # service takes a list of objects with a single key;
@@ -111,32 +112,32 @@ class Actions(object):
         # each line is <service> -> <state>
         elif name == 'service':
             if isinstance(action['value'], basestring):
-                val = handles.parse(action['value'], values, strict=True).strip()
+                val = handles.parse(action['value'], values, strict=_strict_handles).strip()
                 action['value'] = [dict([v.split(':', 1)]) for v in val.split()]
 
             def arrow(v):
                 return ' -> '.join(x.items()[0])
             action['text'] = '\n'.join([arrow(x) for x in action['value']])
         elif name == 'cib' or name == 'crm':
-            action['text'] = handles.parse(action['value'], values, strict=True).strip()
+            action['text'] = handles.parse(action['value'], values, strict=_strict_handles).strip()
             action['value'] = _remove_empty_lines(action['text'])
         elif name == 'call':
-            action['value'] = handles.parse(action['value'], values, strict=True).strip()
+            action['value'] = handles.parse(action['value'], values, strict=_strict_handles).strip()
         elif name == 'copy':
-            action['value'] = handles.parse(action['value'], values, strict=True).strip()
-            action['to'] = handles.parse(action['to'], values, strict=True).strip()
+            action['value'] = handles.parse(action['value'], values, strict=_strict_handles).strip()
+            action['to'] = handles.parse(action['to'], values, strict=_strict_handles).strip()
             action['text'] = "%s -> %s" % (action['value'], action['to'])
 
         if 'shortdesc' not in action:
             action['shortdesc'] = _action_shortdescs.get(name, '')
         else:
-            action['shortdesc'] = handles.parse(action['shortdesc'], values, strict=True)
+            action['shortdesc'] = handles.parse(action['shortdesc'], values, strict=_strict_handles)
         if 'longdesc' not in action:
             action['longdesc'] = ''
         else:
-            action['longdesc'] = handles.parse(action['longdesc'], values, strict=True)
+            action['longdesc'] = handles.parse(action['longdesc'], values, strict=_strict_handles)
 
-        when = handles.parse(action.get('when', ''), values, strict=True)
+        when = handles.parse(action.get('when', ''), values, strict=_strict_handles)
         when = when.strip() if when else when
         if when:
             if params.get(when):
@@ -1317,7 +1318,7 @@ def _handles_values(context, params, subactions):
         if subaction and subaction[-1]['name'] == 'cib':
             vobj.value = subaction[-1]['value']
         else:
-            vobj.value = handles.parse(value, params, strict=True)
+            vobj.value = handles.parse(value, params, strict=_strict_handles)
     return ret
 
 
