@@ -1062,11 +1062,12 @@ def is_valid_ipv6_address(address):
 #
 # Propose to add
 # resource ==> a valid resource identifier
-# node ==> name of a node in the cluster
 # ip_address ==> a valid ipv4 or ipv6 address
 # ip_network ==> a valid ipv4 or ipv6 network (or address without /XX)
 # port ==> integer between 0 and 65535
 # email ==> a valid email address
+
+# node ==> name of a node in the cluster
 # select <value>, <value>, <value>, ... ==> any of the values in the list.
 # range <n> <m> ==> integer in range
 # rx <rx> ==> anything matching the regular expression.
@@ -1086,17 +1087,21 @@ def _verify_type(param, value, errors):
     type = param.get('type')
     if not type:
         return value
-    elif type == 'integer' or type == 'port':
+    elif type == 'integer':
         ok, value = _valid_integer(value)
         if not ok:
             errors.append("%s=%s is not %s" % (param.get('name'), value, type))
-        elif type == 'port' and (value < 0 or value > 65535):
+    elif type == 'port':
+        ok, value = _valid_integer(value)
+        if not ok:
+            errors.append("%s=%s is not %s" % (param.get('name'), value, type))
+        if value < 0 or value > 65535:
             errors.append("%s=%s is out of port range" % (param.get('name'), value))
     elif type == 'string':
         if value is None:
             return ''
         return value
-    elif type == 'boolean' or type == 'bool':
+    elif type == 'boolean':
         return _make_boolean(value)
     elif type == 'resource':
         if not _IDENT_RE.match(value):
@@ -1106,15 +1111,6 @@ def _verify_type(param, value, errors):
             errors.append("%s=%s is not %s" % (param.get('name'), value, type))
     elif type == 'email':
         if not re.match(r'[^@]+@[^@]+\.[^@]+', value):
-            errors.append("%s=%s is not %s" % (param.get('value'), value, type))
-    elif type == 'file':
-        if not value:
-            errors.append("%s=%s is not %s" % (param.get('value'), value, type))
-    elif type == 'directory':
-        if not value:
-            errors.append("%s=%s is not %s" % (param.get('value'), value, type))
-    elif type == 'device':
-        if not value.startswith('/dev'):
             errors.append("%s=%s is not %s" % (param.get('value'), value, type))
     elif type == 'ip_network':
         sp = value.rsplit('/', 1)
