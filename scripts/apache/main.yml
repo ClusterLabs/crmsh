@@ -28,6 +28,9 @@
         op monitor interval="10" timeout="20"
     - script: virtual-ip
       shortdesc: The IP address configured here will start before the Apache instance.
+      parameters:
+        - name: id
+          value: "{{apache:id}}-vip"
     - script: filesystem
       shortdesc: Optional filesystem mounted before the web server is started.
       required: false
