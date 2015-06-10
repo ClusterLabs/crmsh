@@ -56,7 +56,7 @@ _script_version = 2.2
 _strict_handles = False
 
 _action_shortdescs = {
-    'cib': 'Configure CIB',
+    'cib': 'Configure cluster resources',
     'install': 'Install packages',
     'call': 'Run command on nodes',
     'copy': 'Install file on nodes',
