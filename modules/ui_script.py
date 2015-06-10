@@ -120,7 +120,9 @@ class _JsonPrinter(object):
         pass
 
 
-def describe_param(p, name):
+def describe_param(p, name, all):
+    if not all and p['advanced']:
+        return ""
     opt = ' (required) ' if p['required'] else ''
     opt += ' (unique) ' if p['unique'] else ''
     if 'value' in p:
@@ -136,18 +138,18 @@ def _scoped_name(context, name):
     return name
 
 
-def describe_step(icontext, context, s):
-    ret = "%s. %s\n" % ('.'.join([str(i) for i in icontext]), s['stepdesc'].strip() or 'Parameters')
-    if s.get('longdesc'):
-        ret += s['longdesc']
-    else:
-        ret += '\n'
+def describe_step(icontext, context, s, all):
+    ret = "%s. %s" % ('.'.join([str(i) for i in icontext]), s['shortdesc'].strip() or 'Parameters')
+    if not s['required']:
+        ret += ' (optional)'
+    ret += '\n\n'
     if s.get('name'):
         context = context + [s['name']]
     for p in s.get('parameters', []):
-        ret += describe_param(p, _scoped_name(context, p['name']))
+        ret += describe_param(p, _scoped_name(context, p['name']), all)
     for i, step in enumerate(s.get('steps', [])):
-        describe_step(icontext + [i], context, step)
+        ret += describe_step(icontext + [i], context, step, all)
+    ret += '\n'
     return ret
 
 
@@ -176,8 +178,8 @@ def _clean_steps(steps):
         rstep = {}
         if 'name' in step:
             rstep['name'] = step['name']
-        if 'stepdesc' in step:
-            rstep['stepdesc'] = step['stepdesc']
+        if 'shortdesc' in step:
+            rstep['shortdesc'] = step['shortdesc']
         if 'longdesc' in step:
             rstep['longdesc'] = step['longdesc']
         if 'required' in step:
@@ -234,7 +236,7 @@ class Script(command.UI):
 
     @command.completers_repeating(compl.call(scripts.list_scripts))
     @command.alias('info')
-    def do_describe(self, context, name):
+    def do_describe(self, context, name, all=None):
         '''
         Describe the given script.
         '''
@@ -242,12 +244,14 @@ class Script(command.UI):
         if script is None:
             return False
 
+        all = all == 'all'
+
         vals = {
             'name': script['name'],
             'category': script['category'],
             'shortdesc': script['shortdesc'].strip(),
             'longdesc': script['longdesc'].strip(),
-            'steps': "\n".join((describe_step([i + 1], [], s) for i, s in enumerate(script['steps'])))}
+            'steps': "\n".join((describe_step([i + 1], [], s, all) for i, s in enumerate(script['steps'])))}
         print("""%(name)s (%(category)s)
 %(shortdesc)s
 
