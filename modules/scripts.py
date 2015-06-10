@@ -276,6 +276,11 @@ crm_script.exit_ok(True)
 _actions = dict([(n, getattr(Actions, n)) for n in dir(Actions) if not n.startswith('_')])
 
 
+def _format_desc(text, width=70):
+    import textwrap
+    return '\n\n'.join([textwrap.fill(para, width) for para in text.split('\n\n') if para.strip()])
+
+
 def _find_action(action):
     """return name of action for action"""
     for a in _actions.keys():
@@ -743,15 +748,16 @@ def _postprocess_script(script):
 
     def _postprocess_step(step):
         step['required'] = _make_boolean(step.get('required', True))
-        if 'stepdesc' not in step:
-            step['stepdesc'] = ''
-            if 'shortdesc' in step:
-                step['stepdesc'] = step['shortdesc']
+        step['stepdesc'] = _format_desc(step.get('stepdesc', ''))
+        step['shortdesc'] = _format_desc(step.get('shortdesc', ''))
+        step['longdesc'] = _format_desc(step.get('longdesc', ''))
+        if not step['stepdesc']:
+            step['stepdesc'] = step['shortdesc']
         for p in step.get('parameters', []):
             if 'name' not in p:
                 raise ValueError("Parameter has no name: %s" % (p.keys()))
-            if 'shortdesc' not in p:
-                p['shortdesc'] = ''
+            p['shortdesc'] = _format_desc(p.get('shortdesc', ''))
+            p['longdesc'] = _format_desc(p.get('longdesc', ''))
             if 'default' in p and 'value' not in p:
                 p['value'] = p['default']
                 del p['default']
@@ -781,12 +787,14 @@ def _postprocess_script(script):
         _postprocess_step(step)
 
     def _setdesc(name):
-        if name not in script:
-            script[name] = ''
-        if not script[name]:
+        desc = script.get(name)
+        if desc is None:
+            desc = ''
+        if not desc:
             if script['steps'] and script['steps'][0][name]:
-                script[name] = script['steps'][0][name]
+                desc = script['steps'][0][name]
                 script['steps'][0][name] = ''
+        script[name] = _format_desc(desc)
     _setdesc('shortdesc')
     _setdesc('longdesc')
 
