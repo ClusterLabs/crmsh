@@ -471,10 +471,10 @@ def _parse_hawk_workflow(scriptname, scriptfile):
         'actions': [],
     }
 
-    # the parameters together form a step with an optional stepdesc
-    # then each template becomes an additional step with an optional stepdesc
+    # the parameters together form a step with an optional shortdesc
+    # then each template becomes an additional step with an optional shortdesc
     paramstep = {
-        'stepdesc': ''.join(xml.xpath('./parameters/stepdesc/text()')),
+        'shortdesc': ''.join(xml.xpath('./parameters/stepdesc/text()')),
         'parameters': []
     }
     data['steps'].append(paramstep)
@@ -496,7 +496,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
 
     for item in xml.xpath('./templates/template'):
         templatestep = {
-            'stepdesc': ''.join(item.xpath('./stepdesc/text()')),
+            'shortdesc': ''.join(item.xpath('./stepdesc/text()')),
             'name': item.get('name'),
             'required': item.get('required'),
             'parameters': []
@@ -628,12 +628,10 @@ def _process_include(script, include):
             'name': name,
             'longdesc': '',
             'shortdesc': '',
-            'stepdesc': '',
             'parameters': [],
         })
         step['longdesc'] = include.get('longdesc') or _meta_text(meta, 'longdesc')
         step['shortdesc'] = include.get('shortdesc') or _meta_text(meta, 'shortdesc')
-        step['stepdesc'] = include.get('stepdesc') or step['shortdesc']
         step['required'] = include.get('required', True)
         step['parameters'].append({
             'name': 'id',
@@ -681,7 +679,7 @@ def _process_include(script, include):
 
         scriptstep = {
             'name': name,
-            'stepdesc': subscript['shortdesc'],
+            'shortdesc': subscript['shortdesc'],
             'longdesc': subscript['longdesc'],
             'required': _make_boolean(include.get('required', True)),
             'steps': deepcopy(subscript['steps']),
@@ -748,11 +746,8 @@ def _postprocess_script(script):
 
     def _postprocess_step(step):
         step['required'] = _make_boolean(step.get('required', True))
-        step['stepdesc'] = _format_desc(step.get('stepdesc', ''))
         step['shortdesc'] = _format_desc(step.get('shortdesc', ''))
         step['longdesc'] = _format_desc(step.get('longdesc', ''))
-        if not step['stepdesc']:
-            step['stepdesc'] = step['shortdesc']
         for p in step.get('parameters', []):
             if 'name' not in p:
                 raise ValueError("Parameter has no name: %s" % (p.keys()))
