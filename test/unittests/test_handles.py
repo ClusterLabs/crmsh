@@ -178,17 +178,3 @@ colocation nfs-with-rootfs inf: g-nfs c-rfs
                                     'primitive vip IPaddr2\n  params ip=192.168.0.2'),
     }
     eq_(r, handles.parse(t, v))
-
-
-def test_resolver_function():
-    def resolver(path):
-        if path == ['a']:
-            return "A"
-        if path == ['a', 'x']:
-            return "AX"
-        if path == ['foo', 'bar', 'baz']:
-            return "FOOBARBAZ"
-        return None
-
-    t = "{{a}} {{a:x}} {{foo:bar:baz}} {{unresolved}}"
-    eq_("A AX FOOBARBAZ ", handles.parse(t, resolver))

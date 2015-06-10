@@ -45,15 +45,12 @@ def _join(d1, d2):
 
 
 def _resolve(key, path, values, strict):
-    if isinstance(values, dict) or values is None:
-        p = values
-        while path and p is not None:
-            p, path = p.get(path[0]), path[1:]
-        if strict and path:
-            raise ValueError("Not set: %s" % (key))
-        return p() if callable(p) else p
-    else:
-        return values(path)
+    p = values
+    while path and p is not None:
+        p, path = p.get(path[0]), path[1:]
+    if strict and path:
+        raise ValueError("Not set: %s" % (key))
+    return p() if callable(p) else p
 
 
 def parse(template, values, strict=False):
