@@ -539,6 +539,7 @@ def test_v2():
          'install': False})
     pprint(actions)
     eq_(len(actions), 1)
+    assert str(actions[0]['text']).find('group www') >= 0
 
     actions = scripts.verify(
         script,
@@ -574,3 +575,39 @@ def test_vipinc():
     pprint(actions)
     assert actions[0]['text'].find('primitive vop test:virtual-ip ip="10.0.0.4"') >= 0
     assert actions[0]['text'].find("clone c-vop vop") >= 0
+
+
+@with_setup(setup_func, teardown_func)
+def test_value_replace_handles():
+    a = '''---
+- version: 2.2
+  category: Script
+  parameters:
+    - name: foo
+      value: bar
+'''
+    b = '''---
+- version: 2.2
+  category: Script
+  include:
+    - script: test-a
+      parameters:
+        - name: foo
+          value: "{{wiz}}+{{wiz}}"
+  parameters:
+    - name: wiz
+      required: true
+  actions:
+    - cib: "{{test-a:foo}}"
+'''
+
+    script_a = scripts.load_script_string('test-a', a)
+    script_b = scripts.load_script_string('test-b', b)
+    assert script_a is not None
+    assert script_b is not None
+    actions = scripts.verify(script_b,
+                             {'wiz': "SARUMAN"})
+    eq_(len(actions), 1)
+    pprint(actions)
+    assert actions[0]['text'] == "SARUMAN+SARUMAN"
+
