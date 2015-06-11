@@ -130,27 +130,14 @@ class Actions(object):
     @staticmethod
     def _parse(script, action):
         """
-        This special method parses the action action into a
-        form that the particular action can handle. It's here
-        to bring it closer to the actual actions. I want to
-        do this conversion as early in the parse as possible,
-        so the verify output can be as useful as possible.
-
         action: action data (dict)
         params: flat list of parameter values
         values: processed list of parameter values (for handles.parse)
 
-        returns: True to process, False to exclude
-
-        TODO:
-        validate the action given actual parameters:
-        we want to pass most values through handles,
-        for example for the copy action, we should be
-        able to use configurable parameters as arguments
-        here using {{this syntax}}.
-        In fact, all the handles-parsing should happen here,
-        so we can verify that it parses OK before the
-        actions start running.
+        Converts {'cib': "primitive..."} into {"name": "cib", "value": "primitive..."}
+        Each action has two values: "value" may be a non-textual object
+        depending on the type of action. "text" is visual context to display
+        to a user (so a cleaned up CIB, or the list of packages to install)
         """
         name = action['name']
         action['value'] = action[name]
@@ -236,6 +223,7 @@ class Actions(object):
         self._value = action['value']
         self._text = action['text']
         self._nodes = action.get('nodes', '')
+        self._to = action.get('to', None)
 
     def collect(self, run, action):
         "input: shell command"
@@ -265,6 +253,7 @@ class Actions(object):
     def call(self, run, action):
         """
         input: shell command / script
+
         TODO: actually allow script here
         """
         run.call(self._nodes, self._value)
@@ -275,10 +264,12 @@ class Actions(object):
         to: <path>
         template: true|false
 
-        TODO: FIXME: Implement this
+        TODO: FIXME: Implement template
+        TODO: FIXME: Verify that it works...
         """
         if not os.path.isfile(self._value):
             raise ValueError("File not found: %s" % (self._value))
+        run.copy_file(self._nodes, self._value, self._to)
 
     def crm(self, run, action):
         """
@@ -1340,19 +1331,8 @@ def _check_parameters(script, params):
 
 def _handles_values(script, params, subactions):
     """
-    TODO FIXME
-
-    Given a particular script and
-    values for the parameters of
-    the script, produce the values
-    argument to pass to handles.parse.
-
-    For sub-scripts and agent includes,
-    this involves resolving the "value"
-    of a particular include. The include
-    will be a step in steps, and needs
-    some meta-data to tell us what it
-    generates.
+    Generate a values structure that the handles
+    templates understands.
     """
     def _process(to, context, params):
         """
@@ -1360,9 +1340,6 @@ def _handles_values(script, params, subactions):
         context: source step
         params: values for step
         """
-        #for param in context.get('parameters', []):
-        #    if param['name'] in params:
-        #        to[param['name']] = params[param['name']]
         for key, value in params.iteritems():
             if not isinstance(value, dict):
                 to[key] = value
@@ -1503,21 +1480,8 @@ def _copy_to_remote_dirs(printer, hosts, path, opts):
         raise ValueError("Failed when copying script data, aborting.")
 
 
-def _copy_to_all(workdir, hosts, local_node, src, dst, opts):
-    """
-    Copy src to dst both locally and remotely
-    """
+def _copy_local(printer, workdir, local_node, src, dst):
     ok = True
-    ret = _parallax_copy(hosts, src, dst, opts)
-    for host, result in ret.iteritems():
-        if isinstance(result, parallax.Error):
-            err_buf.error("[%s]: %s" % (host, result))
-            ok = False
-        else:
-            rc, out, err = result
-            if rc != 0:
-                err_buf.error("[%s]: %s" % (host, err))
-                ok = False
     if local_node and not src.startswith(workdir):
         try:
             if os.path.abspath(src) != os.path.abspath(dst):
@@ -1525,10 +1489,28 @@ def _copy_to_all(workdir, hosts, local_node, src, dst, opts):
                     shutil.copy(src, dst)
                 else:
                     shutil.copytree(src, dst)
-        except (IOError, OSError, shutil.Error), e:
-            err_buf.error("[%s]: %s" % (local_node, e))
+        except (IOError, OSError, shutil.Error) as e:
+            printer.error(local_node, e)
             ok = False
     return ok
+
+
+def _copy_to_all(printer, workdir, hosts, local_node, src, dst, opts):
+    """
+    Copy src to dst both locally and remotely
+    """
+    ok = True
+    ret = _parallax_copy(hosts, src, dst, opts)
+    for host, result in ret.iteritems():
+        if isinstance(result, parallax.Error):
+            printer.error(host, result)
+            ok = False
+        else:
+            rc, out, err = result
+            if rc != 0:
+                printer.error(host, err)
+                ok = False
+    return _copy_local(printer, workdir, local_node, src, dst)
 
 
 class RunActions(object):
@@ -1604,6 +1586,24 @@ class RunActions(object):
             self.result = self._process_remote(cmdline)
         else:
             self.result = self._process_local(cmdline)
+
+    def copy_file(self, nodes, src, dst):
+        if nodes == 'all':
+            ok = _copy_to_all(self.printer,
+                              self.workdir,
+                              self.hosts,
+                              self.local_node,
+                              src,
+                              dst,
+                              self.opts)
+        else:
+            ok = _copy_local(self.printer,
+                             self.workdir,
+                             self.local_node,
+                             src,
+                             dst)
+        self.result = '' if ok else None
+        self.rc = ok
 
     def record_json(self):
         "called by Actions"
