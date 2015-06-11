@@ -166,7 +166,8 @@ class Actions(object):
             action['value'] = Text(script, value)
         elif name == 'copy':
             action['value'] = Text(script, value)
-            action['to'] = Text(script, action['to'])
+            action['template'] = _make_boolean(action.get('template', False))
+            action['to'] = Text(script, action.get('to', action['value']))
             action['text'] = "%s -> %s" % (action['value'], action['to'])
 
         if 'shortdesc' not in action:
@@ -220,10 +221,10 @@ class Actions(object):
 
     def __init__(self, run, action):
         self._run = run
-        self._value = action['value']
-        self._text = action['text']
-        self._nodes = action.get('nodes', '')
-        self._to = action.get('to', None)
+        self._action = action
+        self._value = str(action['value'])
+        self._text = str(action['text'])
+        self._nodes = str(action.get('nodes', ''))
 
     def collect(self, run, action):
         "input: shell command"
@@ -264,12 +265,15 @@ class Actions(object):
         to: <path>
         template: true|false
 
-        TODO: FIXME: Implement template
         TODO: FIXME: Verify that it works...
+        TODO: FIXME: Error handling
         """
-        if not os.path.isfile(self._value):
+        if not os.path.exists(self._value):
             raise ValueError("File not found: %s" % (self._value))
-        run.copy_file(self._nodes, self._value, self._to)
+        if self._action['template']:
+            fn = run.str2tmp(str(Text.cib(run.script, open(self._value).read())))
+            self._value = fn
+        run.copy_file(self._nodes, self._value, self._action['to'])
 
     def crm(self, run, action):
         """
@@ -1510,7 +1514,7 @@ def _copy_to_all(printer, workdir, hosts, local_node, src, dst, opts):
             if rc != 0:
                 printer.error(host, err)
                 ok = False
-    return _copy_local(printer, workdir, local_node, src, dst)
+    return ok and _copy_local(printer, workdir, local_node, src, dst)
 
 
 class RunActions(object):
