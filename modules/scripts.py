@@ -1664,6 +1664,17 @@ class RunActions(object):
         self.output = None
         self.rc = False
 
+    def prepare(self, has_remote_actions):
+        if not self.dry_run:
+            _create_script_workdir(self.script['dir'], self.workdir)
+            json.dump(self.data, open(self.statefile, 'w'))
+            _copy_utils(self.workdir)
+            if has_remote_actions:
+                _create_remote_workdirs(self.printer, self.hosts, self.workdir, self.opts)
+                _copy_to_remote_dirs(self.printer, self.hosts, self.workdir, self.opts)
+            # make sure all path references are relative to the script directory
+            os.chdir(self.workdir)
+
     def single_action(self, action_index, statefile):
         self.statefile = statefile
         try:
@@ -1822,10 +1833,10 @@ class RunActions(object):
             if not ok:
                 self.result = False
             else:
-                cmdline = "sh %s" % (tmpf)
+                cmdline = 'cd "%s"; %s' % (self.workdir, tmpf)
                 self.result = self._process_remote(cmdline)
         else:
-            cmdline = "sh %s" % (tmpf)
+            cmdline = 'cd "%s"; %s' % (self.workdir, tmpf)
             self.result = self._process_local(cmdline)
 
     def str2tmp(self, s):
@@ -1922,7 +1933,6 @@ def run(script, params, printer):
     params = _check_parameters(script, params)
     actions = _process_actions(script, params)
     name = script['name']
-    script_dir = script['dir']
     hosts = params['nodes']
     printer.print_header(script, params, hosts)
     local_node, hosts = _extract_localnode(hosts)
@@ -1934,16 +1944,8 @@ def run(script, params, printer):
     has_remote_actions = _has_remote_actions(actions)
 
     try:
-        if not dry_run:
-            _create_script_workdir(script_dir, workdir)
-            _copy_utils(workdir)
-            if has_remote_actions:
-                _create_remote_workdirs(printer, hosts, workdir, opts)
-                _copy_to_remote_dirs(printer, hosts, workdir, opts)
-            # make sure all path references are relative to the script directory
-            os.chdir(workdir)
-
         runner = RunActions(printer, script, params, actions, local_node, hosts, opts, workdir)
+        runner.prepare(has_remote_actions)
         action = params['action']
         statefile = params['statefile']
         if action or statefile:
