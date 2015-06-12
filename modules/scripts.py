@@ -1559,6 +1559,7 @@ def _copy_to_remote_dirs(printer, hosts, path, opts):
             ok = False
     if not ok:
         raise ValueError("Failed when copying script data, aborting.")
+    return ok
 
 
 def _copy_local(printer, workdir, local_node, src, dst):
@@ -1820,6 +1821,7 @@ class RunActions(object):
             self.result = self._process_remote(cmdline)
         else:
             self.result = self._process_local(cmdline)
+        self.rc = self.result not in (False, None)
 
     def execute_shell(self, nodes, cmdscript):
         """
