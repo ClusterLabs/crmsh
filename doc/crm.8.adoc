@@ -323,12 +323,13 @@ configuration cannot be saved.
 [[topics_Features_Templates,Configuration templates]]
 === Configuration templates
 
-.Deprecation node
-********************
+.Deprecation note
+****************************
 Configuration templates have been deprecated in favor of the more
 capable `cluster scripts`. To learn how to use cluster scripts, see
 the dedicated documentation on the `crmsh` website at
 http://crmsh.github.io/, or in the <<cmdhelp_script,Script section>>.
+****************************
 
 Configuration templates are ready made configurations created by
 cluster experts. They are designed in such a way so that users
@@ -456,12 +457,14 @@ command.
 
 To complete our example, we should also define the preferred node
 to run the service:
+
 ...............
 crm(live)configure# location websvc-pref websvc 100: xen-b
 ...............
 
 If you are not happy with some resource names which are provided
 by default, you can rename them now:
+
 ...............
 crm(live)configure# rename virtual-ip intranet-ip
 crm(live)configure# show
