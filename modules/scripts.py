@@ -107,7 +107,12 @@ class Text(object):
         self.type = type
 
     def _parse(self):
-        return handles.parse(self.text, self.script['__values__']).strip()
+        val = self.text
+        if val in (True, False):
+            return "true" if val else "false"
+        if not isinstance(val, basestring):
+            return str(val)
+        return handles.parse(val, self.script['__values__']).strip()
 
     def __repr__(self):
         return repr(self.text)
@@ -184,6 +189,14 @@ class Actions(object):
             action['longdesc'] = ''
         else:
             action['longdesc'] = Text.desc(script, action['longdesc'])
+        if 'when' in action:
+            when = action['when']
+            if re.search(r'\{\{.*\}\}', when):
+                action['when'] = Text(script, when)
+            elif when:
+                action['when'] = Text(script, '{{%s}}' % (when))
+            else:
+                del action['when']
 
     @staticmethod
     def _mergeable(action):
@@ -232,40 +245,40 @@ class Actions(object):
         self._text = str(action['text'])
         self._nodes = str(action.get('nodes', ''))
 
-    def collect(self, run, action):
+    def collect(self):
         "input: shell command"
-        run.run_command(self._nodes, self._value)
-        run.record_json()
+        self._run.run_command(self._nodes, self._value)
+        self._run.record_json()
 
-    def validate(self, run, action):
+    def validate(self):
         "input: shell command"
-        run.run_command(self._nodes, self._value)
-        run.validate_json()
+        self._run.run_command(self._nodes, self._value)
+        self._run.validate_json()
 
-    def apply(self, run, action):
+    def apply(self):
         "input: shell command"
-        run.run_command(self._nodes or 'all', self._value)
-        run.record_json()
+        self._run.run_command(self._nodes or 'all', self._value)
+        self._run.record_json()
 
-    def apply_local(self, run, action):
+    def apply_local(self):
         "input: shell command"
-        run.run_command(self._nodes, self._value)
-        run.record_json()
+        self._run.run_command(self._nodes, self._value)
+        self._run.record_json()
 
-    def report(self, run, action):
+    def report(self):
         "input: shell command"
-        run.run_command(self._nodes, self._value)
-        run.report_result()
+        self._run.run_command(self._nodes, self._value)
+        self._run.report_result()
 
-    def call(self, run, action):
+    def call(self):
         """
         input: shell command / script
 
         TODO: actually allow script here
         """
-        run.call(self._nodes, self._value)
+        self._run.call(self._nodes, self._value)
 
-    def copy(self, run, action):
+    def copy(self):
         """
         copy: <from>
         to: <path>
@@ -277,38 +290,38 @@ class Actions(object):
         if not os.path.exists(self._value):
             raise ValueError("File not found: %s" % (self._value))
         if self._action['template']:
-            fn = run.str2tmp(str(Text.cib(run.script, open(self._value).read())))
+            fn = self._run.str2tmp(str(Text.cib(self._run.script, open(self._value).read())))
             self._value = fn
-        run.copy_file(self._nodes, self._value, self._action['to'])
+        self._run.copy_file(self._nodes, self._value, self._action['to'])
 
-    def crm(self, run, action):
+    def crm(self):
         """
         input: crm command sequence
         """
-        fn = run.str2tmp(_join_script_lines(self._value))
+        fn = self._run.str2tmp(_join_script_lines(self._value))
         if config.core.debug:
             args = '-d --force --wait'
         else:
             args = '--force --wait'
-        run.call(None, 'crm %s -f %s' % (args, fn))
+        self._run.call(None, 'crm %s -f %s' % (args, fn))
 
-    def cib(self, run, action):
+    def cib(self):
         "input: cli configuration script"
         # generate cib
         # runner.execute_local("crm configure load update ./action_cib")
-        fn = run.str2tmp(_join_script_lines(self._value))
+        fn = self._run.str2tmp(_join_script_lines(self._value))
         if config.core.debug:
             args = '-d --force --wait'
         else:
             args = '--force --wait'
-        run.call(None, 'crm %s configure load update %s' % (args, fn))
+        self._run.call(None, 'crm %s configure load update %s' % (args, fn))
 
-    def install(self, run, action):
+    def install(self):
         """
         input: list of packages
         or: map of <os>: <packages>
         """
-        run.execute_shell(self._nodes, '''#!/usr/bin/env python
+        self._run.execute_shell(self._nodes, '''#!/usr/bin/env python
 import crm_script
 import crm_init
 
@@ -316,10 +329,10 @@ crm_init.install_packages(%s)
 crm_script.exit_ok(True)
         ''' % (self._value))
 
-    def service(self, run, action):
+    def service(self):
         services = "\n".join([('crm_script.service(%s, %s)' % (s['name'], s['action']))
                               for s in self._value])
-        run.execute_shell(self._nodes, '''#!/usr/bin/env python
+        self._run.execute_shell(self._nodes, '''#!/usr/bin/env python
 import crm_script
 import crm_init
 
@@ -327,7 +340,7 @@ import crm_init
 crm_script.exit_ok(True)
 ''' % (services))
 
-    def include(self, run, action):
+    def include(self):
         """
         Treated differently: at parse time,
         the include actions should disappear
@@ -597,6 +610,13 @@ def _meta_text(meta, tag):
     return ''
 
 
+def _listfind(needle, haystack, keyfn):
+    for x in haystack:
+        if keyfn(x) == needle:
+            return x
+    return None
+
+
 def _listfindpend(needle, haystack, keyfn, orfn):
     for x in haystack:
         if keyfn(x) == needle:
@@ -707,14 +727,23 @@ def _process_include(script, include):
             for key, value in param.iteritems():
                 if key in ('shortdesc', 'longdesc'):
                     pobj[key] = value
-                elif key == 'value' and Text.isa(value):
+                elif key == 'value':
                     pobj[key] = Text(script, value)
                 else:
                     pobj[key] = value
                 if 'value' in pobj:
                     pobj['required'] = False
 
-        step['value'] = Text.cib(script, _make_cib_for_agent(name, agent, step, include.get('ops', '')))
+        # If the script doesn't have any base parameters
+        # and the name of this step is the same as the
+        # script name itself, then make this the base step
+        if step['name'] == script['name']:
+            zerostep = _listfind('', script['steps'], lambda x: x.get('name', ''))
+            if not zerostep:
+                step['name'] = ''
+
+        # use step['name'] here in case we did the zerostep hoist
+        step['value'] = Text.cib(script, _make_cib_for_agent(step['name'], agent, step, include.get('ops', '')))
 
         for action in script['actions']:
             if 'include' in action and action['include'] == name:
@@ -784,15 +813,17 @@ def _postprocess_script(script):
         script['actions'] = []
 
     def empty(step):
-        if 'parameters' in step:
-            return len(step['parameters']) == 0
-        if 'steps' in step:
-            return len(step['steps']) == 0
+        if 'parameters' in step and len(step['parameters']) > 0:
+            return False
+        if 'steps' in step and len(step['steps']) > 0:
+            return False
         return True
 
     script['steps'] = [step for step in script['steps'] if not empty(step)]
 
     def _postprocess_step(step):
+        if 'name' in step and not step['name']:
+            del step['name']
         step['required'] = _make_boolean(step.get('required', True))
         step['shortdesc'] = step.get('shortdesc', '')
         step['longdesc'] = step.get('longdesc', '')
@@ -1166,25 +1197,25 @@ def _valid_ip(value):
 
 
 def _verify_type(param, value, errors):
+    if value is None:
+        value = ''
     type = param.get('type')
     if not type:
         return value
     elif type == 'integer':
-        ok, value = _valid_integer(value)
+        ok, _ = _valid_integer(value)
         if not ok:
             errors.append("%s=%s is not %s" % (param.get('name'), value, type))
     elif type == 'port':
-        ok, value = _valid_integer(value)
+        ok, ival = _valid_integer(value)
         if not ok:
             errors.append("%s=%s is not %s" % (param.get('name'), value, type))
-        if value < 0 or value > 65535:
+        if ival < 0 or ival > 65535:
             errors.append("%s=%s is out of port range" % (param.get('name'), value))
     elif type == 'string':
-        if value is None:
-            return ''
         return value
     elif type == 'boolean':
-        return _make_boolean(value)
+        return "true" if _make_boolean(value) else "false"
     elif type == 'resource':
         if not _IDENT_RE.match(value):
             errors.append("%s=%s invalid resource identifier" % (param.get('name'), value))
@@ -1876,8 +1907,11 @@ def _process_actions(script, params):
             toadd.extend(subactions[action['include']])
         else:
             Actions._parse(script, action)
-            when = str(action.get('when', '')).strip()
-            if (when and params.get(when)) or not when:
+            if 'when' in action:
+                when = str(action['when']).strip()
+                if when not in (False, None, '', 'false'):
+                    toadd.append(action)
+            else:
                 toadd.append(action)
         if ret:
             for add in toadd:
