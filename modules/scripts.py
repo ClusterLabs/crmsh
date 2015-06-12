@@ -109,7 +109,7 @@ class Text(object):
         return handles.parse(self.text, self.script['__values__']).strip()
 
     def __repr__(self):
-        return self.text
+        return repr(self.text)
 
     def __str__(self):
         if self.type == self.DESC:
