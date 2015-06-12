@@ -1396,15 +1396,6 @@ def _check_parameters(script, params):
     if errors:
         raise ValueError("Missing required parameter(s): %s" % (', '.join(errors)))
 
-    user = params['user']
-    port = params['port']
-    _filter_dict(params, 'nodes', _filter_nodes, user, port)
-    _filter_dict(params, 'dry_run', _make_boolean)
-    _filter_dict(params, 'sudo', _make_boolean)
-    _filter_dict(params, 'statefile', lambda x: (x and os.path.abspath(x)) or x)
-    if config.core.debug:
-        params['debug'] = True
-
     #if config.core.debug:
     #    from pprint import pprint
     #    print("Checked script parameters:")
@@ -1951,6 +1942,14 @@ def run(script, params, printer):
     # parameter values (so discard actions conditional on
     # conditions that are false)
     params = _check_parameters(script, params)
+    user = params['user']
+    port = params['port']
+    _filter_dict(params, 'nodes', _filter_nodes, user, port)
+    _filter_dict(params, 'dry_run', _make_boolean)
+    _filter_dict(params, 'sudo', _make_boolean)
+    _filter_dict(params, 'statefile', lambda x: (x and os.path.abspath(x)) or x)
+    if config.core.debug:
+        params['debug'] = True
     actions = _process_actions(script, params)
     name = script['name']
     hosts = params['nodes']
