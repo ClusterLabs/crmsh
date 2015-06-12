@@ -195,7 +195,7 @@ class Script(command.UI):
         '''
         for arg in args:
             if arg.lower() not in ("all", "names"):
-                context.fatal_error("Unexpected argument '%s': expected  [all|names]" % (all))
+                context.fatal_error("Unexpected argument '%s': expected  [all|names]" % (arg))
         all = any([x for x in args if x.lower() == 'all'])
         names = any([x for x in args if x.lower() == 'names'])
         if not names:
