@@ -1174,7 +1174,7 @@ def _find_by_name(params, name):
         return None
 
 
-_IDENT_RE = re.compile(r'([a-z0-9_#$-][^=]*)$', re.IGNORECASE)
+_IDENT_RE = re.compile(r'^([a-z0-9_#$-][^\s=]*)$', re.IGNORECASE)
 
 import socket
 
