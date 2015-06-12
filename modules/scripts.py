@@ -58,6 +58,7 @@ _strict_handles = False
 _action_shortdescs = {
     'cib': 'Configure cluster resources',
     'install': 'Install packages',
+    'service': 'Manage system services',
     'call': 'Run command on nodes',
     'copy': 'Install file on nodes',
     'crm': 'Run crm command',
@@ -1542,7 +1543,7 @@ class RunActions(object):
             action_index = int(action_index) - 1
         except ValueError:
             raise ValueError("action parameter must be an index")
-        if action_index < 1 or action_index >= len(self.actions):
+        if action_index < 0 or action_index >= len(self.actions):
             raise ValueError("action index out of range")
 
         action = self.actions[action_index]

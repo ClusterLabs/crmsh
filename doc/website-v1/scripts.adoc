@@ -89,41 +89,38 @@ run health verbose=true
 
 ==== Single-stepping a script ====
 
-It is possible to run a script step-by-step, with manual intervention
-between steps. First of all, list the steps of the script to run:
+It is possible to run a script action-by-action, with manual intervention
+between actions. First of all, list the actions to perform given a
+certain set of parameter values:
 
 ........
-crm script steps health
+crm script verify health
 ........
 
-To execute a single step, two things need to be provided:
+To execute a single action, two things need to be provided:
 
-1. The name of the step to execute (printed by `steps`)
+1. The index of the action to execute (printed by `verify`)
 2. a file in which `crmsh` stores the state of execution.
 
-Note that it is entirely possible to run steps out-of-order, however
-this is unlikely to work in practice since steps often rely on the
-output of previous steps.
+Note that it is entirely possible to run actions out-of-order, however
+this is unlikely to work in practice since actions often rely on the
+outcome of previous actions.
 
-The following command will execute the first step of the `health`
+The following command will execute the first action of the `health`
 script and store the output in a temporary file named `health.json`:
 
 ........
-crm script run health \
-    step='Collect cluster information' \
-    statefile='health.json'
+crm script run health action=1 statefile='health.json'
 ........
 
 The statefile contains the script parameters and the output of
 previous steps, encoded as `json` data.
 
-To continue executing the next step in sequence, replace the step name
-with the next step:
+To continue executing the next action in sequence, enter the next
+action index:
 
 ........
-crm script run health \
-    step='Report cluster state' \
-    statefile='health.json'
+crm script run health action=2 statefile='health.json'
 ........
 
 Note that the `dry_run` flag that can be used to do partial execution
@@ -138,11 +135,11 @@ script works as intended.
 
 === How scripts work, in detail ===
 
-When the script runs, the steps defined in `main.yml` as described
-below are executed one at a time. Each step describes an action that
-is applied to the cluster, either by calling out and running scripts
-on each of the cluster nodes, or by running a script locally on the
-node from which the command was executed.
+When the script runs, the actions defined in `main.yml` as described
+below are executed one at a time. Each action prescribes a
+modification that is applied to the cluster. Some actions work by
+calling out to scripts on each of the cluster nodes, and others apply
+only on the local node from which the script was executed.
 
 === Actions ===
 
@@ -153,31 +150,55 @@ type.
 
 Here are the types of script actions that can be performed:
 
-Collect::
+cib::
+  * Applies a new CIB configuration to the cluster
+
+install::
+  * Ensures that the given list of packages is installed on all
+    cluster nodes using the system package manager.
+
+service::
+  * Manages system services using the system init tools. The argument
+    should be a space-separated list of <service>:<state> pairs.
+
+call::
+  * Run a shell command as specified in the action, either on the
+    local node on or all nodes.
+
+copy::
+  * Installs a file on the cluster nodes.
+  * Using a configuration template, install a file on the cluster
+    nodes.
+
+crm::
+  * Runs the given command using the `crm` shell. This can be used to
+    start and stop resources, for example.
+
+collect::
   * Runs on all cluster nodes
   * Gathers information about the nodes, both general information and
     information specific to the script.
 
-Validate::
+validate::
   * Runs on the local node
   * Validate parameter values and node state based on collected
     information. Can modify default values and report issues that
     would prevent the script from applying successfully.
 
-Apply::
+apply::
   * Runs on all or any cluster nodes
   * Applies changes, returning information about the applied changes
     to the local node.
 
-Apply-Local::
+apply_local::
   * Runs on the local node
   * Applies changes to the cluster, where an action taken on a single
     node affect the entire cluster. This includes updating the CIB in
     Pacemaker, and also reloading the configuration for Corosync.
 
-Report::
+report::
   * Runs on the local node
-  * This is similar to the _Apply-Local_ action, with the difference
+  * This is similar to the _apply_local_ action, with the difference
     that the output of a Report action is not interpreted as JSON data
     to be passed to the next action. Instead, the output is printed to
     the screen.
@@ -217,20 +238,34 @@ each section means.
 ---
 # The triple-dash indicates that this is a yaml document.
 # All yaml documents should begin with this line.
-- name: Check uptime of nodes
-  description: >
+# The version must be exactly 2.2, and must always be
+# specified in the script. If the version is missing or
+# is less than 2.2, the script is assumed to be a legacy
+# script (specified in the format used before crmsh 2.2).
+- version: 2.2
+  shortdesc: Check uptime of nodes
+  longdesc: >
     This script will fetch the uptime of
     all nodes and report which node has been
     up the longest.
   parameters:
-    # Parameters must have a name and description.
+    # Parameters must have a name.
     # If a default value is provided, the parameter
     # is considered optional. Parameters without a
     # default value must be provided when running the
     # script.
+    # To require a parameter to be explicitly provided
+    # by the user, set required to true.
+    # To require the value of the parameter to be unique
+    # across the cluster, set unique to true. This setting
+    # is not enforced by crmsh, but can be useful as
+    # documentation.
     - name: show_all
-      description: Show all uptimes
-      default: false
+      shortdesc: Show all uptimes
+      longdesc: Enable to print all uptimes, not only a summary.
+      value: false
+      required: true
+      unique: false
   steps:
     # Steps consist of a descriptive name and an action which
     # calls a script to do its work. The script should be an
@@ -240,6 +275,25 @@ each section means.
     # the cluster nodes know how to execute them.
     #
     # These are the valid actions:
+    # cib:
+    #     Apply the given CIB configuration. The configuration
+    #     can refer to script variables using a mustaschioed
+    #     syntax described in the documentation.
+    # install:
+    #     Install the given space-separated list of packages
+    #     using the system package manager.
+    # service:
+    #     Manages system services using the system init tools.
+    #     The argument should be a space-separated list of
+    #     <service>:<state> pairs.
+    # call:
+    #     Runs a shell command either on the current node or
+    #     on all nodes in the cluster. If the shell command
+    #     fails, the action fails as well.
+    # crm:
+    #     Runs the given crm command line.
+    # copy:
+    #     Copy a file to all of the cluster nodes.
     # collect:
     #     Runs on all nodes. Should not perform changes, only
     #     gather and return information.
@@ -266,8 +320,11 @@ each section means.
       report: report.py
 ----
 
-The actions must not be Python scripts. They can be plain bash scripts
-or any other executable script as long as the nodes have the necessary
+=== Command arguments ===
+
+The actions that accept a command as argument must not refer to
+commands written in python. They can be plain bash scripts or any
+other executable script as long as the nodes have the necessary
 dependencies installed. However, see below why implementing scripts in
 Python is easier.
 
@@ -443,3 +500,21 @@ with producing output in the correct format, parsing the
     Converts a truth value from string to boolean.
 `call(cmd, shell=False)`::
     Perform a system call. Returns `(rc, stdout, stderr)`.
+
+=== The handles language ===
+
+CIB configurations and commands can refer to the value of parameters
+in the text of the action. This is done using a custom language,
+similar to handlebars.
+
+The language accepts the following constructions:
+
+............
+{{name}} = Inserts the value of the parameter <name>
+{{script:name}} = Inserts the value of the parameter <name> from the
+                  included script named <script>.
+{{#name}} ... {{/name}} = Inserts the text between the mustasches when
+                          name is truthy.
+{{^name}} ... {{/name}} = Inserts the text between the mustasches when
+                          name is falsy.
+............
