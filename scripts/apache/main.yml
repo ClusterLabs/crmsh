@@ -51,7 +51,7 @@
         - apache: disable
       shortdesc: Let cluster manage apache
       when: install
-    - call: a2enmod status
+    - call: a2enmod status; true
       shortdesc: Enable status module
       when: install
     - include: filesystem
