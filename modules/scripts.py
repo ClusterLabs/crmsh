@@ -165,7 +165,8 @@ class Actions(object):
         # each line is <service> -> <state>
         elif name == 'service':
             if Text.isa(value):
-                action['value'] = [dict([v.split(':', 1)]) for v in str(value).split()]
+                value = [dict([v.split(':', 1)]) for v in str(value).split()]
+                action['value'] = value
 
             def arrow(v):
                 return ' -> '.join(x.items()[0])
@@ -215,11 +216,10 @@ class Actions(object):
         if into['name'] in ('cib', 'crm'):
             into['value'] = '\n'.join([str(into['value']), str(new['value'])])
             into['text'] = '\n'.join([str(into['text']), str(new['text'])])
-            return True
-        if into['name'] == 'service':
+        elif into['name'] == 'service':
             into['value'].extend(new['value'])
             into['text'] = '\n'.join([str(into['text']), str(new['text'])])
-        if into['name'] == 'install':
+        elif into['name'] == 'install':
             into['value'].extend(new['value'])
             into['text'] = ' '.join([str(into['text']), str(new['text'])])
         if new['shortdesc']:
@@ -241,7 +241,9 @@ class Actions(object):
     def __init__(self, run, action):
         self._run = run
         self._action = action
-        self._value = str(action['value'])
+        self._value = action['value']
+        if not isinstance(self._value, list):
+            self._value = str(self._value)
         self._text = str(action['text'])
         self._nodes = str(action.get('nodes', ''))
 
@@ -321,7 +323,7 @@ class Actions(object):
         input: list of packages
         or: map of <os>: <packages>
         """
-        self._run.execute_shell(self._nodes, '''#!/usr/bin/env python
+        self._run.execute_shell(self._nodes or 'all', '''#!/usr/bin/env python
 import crm_script
 import crm_init
 
@@ -330,9 +332,12 @@ crm_script.exit_ok(True)
         ''' % (self._value))
 
     def service(self):
-        services = "\n".join([('crm_script.service(%s, %s)' % (s['name'], s['action']))
-                              for s in self._value])
-        self._run.execute_shell(self._nodes, '''#!/usr/bin/env python
+        values = []
+        for s in self._value:
+            for v in s.iteritems():
+                values.append(v)
+        services = "\n".join([('crm_script.service%s' % repr(v)) for v in values])
+        self._run.execute_shell(self._nodes or 'all', '''#!/usr/bin/env python
 import crm_script
 import crm_init
 
@@ -1089,7 +1094,6 @@ def _run_cleanup(printer, has_remote_actions, local_node, hosts, workdir, opts):
                                                       workdir),
                                            opts).iteritems():
             if isinstance(result, parallax.Error):
-                printer.debug("[%s]: Failed to clean up %s" % (host, workdir))
                 printer.error(host, "Clean: %s" % (result))
             else:
                 printer.output(host, *result)
@@ -1533,7 +1537,7 @@ def _create_remote_workdirs(printer, hosts, path, opts):
     "Create workdirs on remote hosts"
     ok = True
     for host, result in _parallax_call(hosts,
-                                       "mkdir -p %s" % (path),
+                                       "mkdir -p %s" % (os.path.dirname(path)),
                                        opts).iteritems():
         if isinstance(result, parallax.Error):
             printer.error(host, "Start: %s" % (result))
