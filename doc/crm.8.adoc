@@ -859,11 +859,32 @@ Show cluster status. The status is displayed by `crm_mon`. Supply
 additional arguments for more information or different format.
 See `crm_mon(8)` for more details.
 
+Example:
+...............
+status
+status simple
+status full
+...............
+
 Usage:
 ...............
 status [<option> ...]
 
-option :: bynode | inactive | ops | timing | failcounts
+option :: full
+        | bynode
+        | inactive
+        | ops
+        | timing
+        | failcounts
+        | verbose
+        | quiet
+        | html
+        | xml
+        | simple
+        | tickets
+        | noheaders
+        | detail
+        | brief
 ...............
 
 [[cmdhelp_cluster,Cluster setup and management]]

@@ -63,6 +63,7 @@ def cmd_status(args):
         "noheaders": "-D",
         "detail": "-R",
         "brief": "-b",
+        "full": "-ncrfjt",
     }
     extra = ' '.join(opts.get(arg, arg) for arg in args)
     rc, s = crm_mon(extra)
