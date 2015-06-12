@@ -1636,6 +1636,7 @@ def clean_run_params(params):
             clean_run_params(value)
         elif Text.isa(value):
             params[key] = str(value)
+    return params
 
 
 def _chmodx(path):
