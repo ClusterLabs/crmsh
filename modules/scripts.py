@@ -249,7 +249,7 @@ class Actions(object):
 
     def collect(self):
         "input: shell command"
-        self._run.run_command(self._nodes, self._value)
+        self._run.run_command(self._nodes or 'all', self._value)
         self._run.record_json()
 
     def validate(self):
@@ -1065,7 +1065,7 @@ def _print_debug(printer, local_node, hosts, workdir, opts):
     "Print debug output (if any)"
     dbglog = os.path.join(workdir, 'crm_script.debug')
     for host, result in _parallax_call(printer, hosts,
-                                       "[ -f '%s' ] && cat '%s'" % (dbglog, dbglog),
+                                       "if [ -f '%s' ]; then cat '%s'; fi" % (dbglog, dbglog),
                                        opts).iteritems():
         if isinstance(result, parallax.Error):
             printer.error(host, result)
@@ -1759,10 +1759,8 @@ class RunActions(object):
     def record_json(self):
         "called by Actions"
         if self.result is not None:
-            if self.result:
-                self.result = json.loads(self.result)
-            else:
-                self.result = {}
+            if not self.result:
+                self.result = ''
             self.data.append(self.result)
             self.rc = True
         else:
@@ -1775,10 +1773,8 @@ class RunActions(object):
             return
 
         if self.result is not None:
-            if self.result:
-                self.result = json.loads(self.result)
-            else:
-                self.result = {}
+            if not self.result:
+                self.result = ''
             self.data.append(self.result)
             if isinstance(self.result, dict):
                 for k, v in self.result.iteritems():
@@ -1830,7 +1826,7 @@ class RunActions(object):
         """
         if self.dry_run:
             self.printer.print_command(nodes, cmdscript)
-            self.result = {}
+            self.result = ''
             self.rc = True
             return
         elif config.core.debug:
