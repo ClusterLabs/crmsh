@@ -1128,6 +1128,45 @@ run apache install=true
 run sbd id=sbd-1 node=node1 sbd_device=/dev/disk/by-uuid/F00D-CAFE
 .............
 
+[[cmdhelp_script_json,JSON API for cluster scripts]]
+==== `json`
+
+This command provides a JSON API for the cluster scripts, intended for
+use in user interface tools that want to interact with the cluster via
+scripts.
+
+The command takes a single argument, which should be a JSON array with
+the first member identifying the command to perform.
+
+The output is line-based: Commands that return multiple results will
+return them line-by-line, ending with a terminator value: "end".
+
+When providing parameter values to this command, they should be
+provided as nested objects, so +virtual-ip:ip=192.168.0.5+ on the
+command line becomes the JSON object
++{"virtual-ip":{"ip":"192.168.0.5"}}+.
+
+API:
+........
+["list"]
+=> [{name, shortdesc, category}]
+
+["describe", <name>]
+=> [{name, shortdesc, longdesc, category, <<steps>>}]
+
+<<steps>> := [{name, shortdesc], longdesc, required, parameters, steps}]
+
+<<params>> := [{name, shortdesc, longdesc, required, unique, advanced,
+                type, value, example}]
+
+["verify", <name>, <<values>>]
+=> [{shortdesc, longdesc, text, nodes}]
+
+["run", <name>, <<values>>]
+=> [{shortdesc, rc, output|error}]
+........
+
+
 [[cmdhelp_corosync,Corosync management]]
 === `corosync` - Corosync management
 
