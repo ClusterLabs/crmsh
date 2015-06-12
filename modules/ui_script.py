@@ -71,16 +71,18 @@ class ConsolePrinter(object):
             self.in_progress = False
             if not config.core.debug:
                 sys.stdout.write('\r')
+            else:
+                sys.stdout.write('\n')
             sys.stdout.flush()
 
     def debug(self, msg):
-        self.flush()
-        if config.core.debug:
+        if config.core.debug or options.regression_tests:
+            self.flush()
             err_buf.debug(msg)
 
     def print_command(self, nodes, command):
         self.flush()
-        print("** %s - %s" % (nodes, command))
+        sys.stdout.write("** %s - %s\n" % (nodes, command))
 
 
 class JsonPrinter(object):

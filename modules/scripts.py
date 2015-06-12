@@ -1015,10 +1015,9 @@ def _check_control_persist():
     return "Bad configuration option" not in err
 
 
-def _parallax_call(hosts, cmd, opts):
+def _parallax_call(printer, hosts, cmd, opts):
     "parallax.call with debug logging"
-    if config.core.debug or options.regression_tests:
-        err_buf.debug("parallax.call(%s, %s)" % (repr(hosts), cmd))
+    printer.debug("parallax.call(%s, %s)" % (repr(hosts), cmd))
     return parallax.call(hosts, cmd, opts)
 
 
@@ -1033,10 +1032,9 @@ def _resolve_script(name):
     return None
 
 
-def _parallax_copy(hosts, src, dst, opts):
+def _parallax_copy(printer, hosts, src, dst, opts):
     "parallax.copy with debug logging"
-    if config.core.debug or options.regression_tests:
-        err_buf.debug("parallax.copy(%s, %s, %s)" % (repr(hosts), src, dst))
+    printer.debug("parallax.copy(%s, %s, %s)" % (repr(hosts), src, dst))
     return parallax.copy(hosts, src, dst, opts)
 
 
@@ -1062,7 +1060,7 @@ def _generate_workdir_name():
 def _print_debug(printer, local_node, hosts, workdir, opts):
     "Print debug output (if any)"
     dbglog = os.path.join(workdir, 'crm_script.debug')
-    for host, result in _parallax_call(hosts,
+    for host, result in _parallax_call(printer, hosts,
                                        "[ -f '%s' ] && cat '%s'" % (dbglog, dbglog),
                                        opts).iteritems():
         if isinstance(result, parallax.Error):
@@ -1089,7 +1087,7 @@ def _run_cleanup(printer, has_remote_actions, local_node, hosts, workdir, opts):
     "Clean up after the cluster script"
     if has_remote_actions and hosts and workdir:
         cleanscript = os.path.join(workdir, 'crm_clean.py')
-        for host, result in _parallax_call(hosts,
+        for host, result in _parallax_call(printer, hosts,
                                            "%s %s" % (cleanscript,
                                                       workdir),
                                            opts).iteritems():
@@ -1536,7 +1534,7 @@ def _copy_utils(dst):
 def _create_remote_workdirs(printer, hosts, path, opts):
     "Create workdirs on remote hosts"
     ok = True
-    for host, result in _parallax_call(hosts,
+    for host, result in _parallax_call(printer, hosts,
                                        "mkdir -p %s" % (os.path.dirname(path)),
                                        opts).iteritems():
         if isinstance(result, parallax.Error):
@@ -1551,10 +1549,11 @@ def _create_remote_workdirs(printer, hosts, path, opts):
 def _copy_to_remote_dirs(printer, hosts, path, opts):
     "Copy a local folder to same location on remote hosts"
     ok = True
-    for host, result in _parallax_copy(hosts,
+    for host, result in _parallax_copy(printer, hosts,
                                        path,
                                        path, opts).iteritems():
         if isinstance(result, parallax.Error):
+            printer.debug("_copy_to_remote_dirs failed: %s, %s, %s" % (hosts, path, opts))
             printer.error(host, result)
             ok = False
     if not ok:
@@ -1582,7 +1581,7 @@ def _copy_to_all(printer, workdir, hosts, local_node, src, dst, opts):
     Copy src to dst both locally and remotely
     """
     ok = True
-    ret = _parallax_copy(hosts, src, dst, opts)
+    ret = _parallax_copy(printer, hosts, src, dst, opts)
     for host, result in ret.iteritems():
         if isinstance(result, parallax.Error):
             printer.error(host, result)
@@ -1832,6 +1831,8 @@ class RunActions(object):
             self.result = {}
             self.rc = True
             return
+        elif config.core.debug:
+            self.printer.print_command(nodes, cmdscript)
 
         tmpf = self.str2tmp(cmdscript)
         _chmodx(tmpf)
@@ -1859,6 +1860,8 @@ class RunActions(object):
         if self.dry_run:
             self.printer.print_command(self.local_node[0], 'temporary file <<END\n%s\nEND\n' % (s))
             return fn
+        elif config.core.debug:
+            self.printer.print_command(self.local_node[0], 'temporary file <<END\n%s\nEND\n' % (s))
         try:
             with open(fn, "w") as f:
                 f.write(s)
@@ -1887,16 +1890,17 @@ class RunActions(object):
         elif config.core.debug:
             self.printer.print_command(self.hosts, cmdline)
 
-        for host, result in _parallax_call(self.hosts,
+        for host, result in _parallax_call(self.printer,
+                                           self.hosts,
                                            cmdline,
                                            self.opts).iteritems():
             if isinstance(result, parallax.Error):
-                self.printer.error(host, result)
+                self.printer.error(host, "Remote error: %s" % (result))
                 ok = False
             else:
                 rc, out, err = result
                 if rc != 0:
-                    self.printer.error(host, "%s%s" % (out, err))
+                    self.printer.error(host, "Remote error (rc=%s) %s%s" % (rc, out, err))
                     ok = False
                 else:
                     action_result[host] = json.loads(out)
@@ -1907,7 +1911,7 @@ class RunActions(object):
             else:
                 action_result[self.local_node[0]] = json.loads(ret)
         if ok:
-            self.printer.debug("%s" % repr(action_result))
+            self.printer.debug("Result: %s" % repr(action_result))
             return action_result
         return None
 
