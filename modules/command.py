@@ -297,10 +297,14 @@ at the current level.
         if context.previous_level():
             out = ['..']
         out += context.current_level().get_completions()
-        for i, o in enumerate(out):
+        i = 0
+        for o in out:
+            if o.startswith('-') or o.startswith('_'):
+                continue
             print '%-16s' % (o),
             if ((i - 2) % 3) == 0:
                 print ''
+            i += 1
         print ''
 
     @help('''Navigate the level structure

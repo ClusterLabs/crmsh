@@ -1,0 +1,62 @@
+# Copyright (C) 2015 Kristoffer Gronlund
+#
+# License: GNU General Public License (GPL)
+---
+- version: 2.2
+  shortdesc: STONITH for a libvirt managed hypervisor (kvm/Xen)
+  longdesc: >
+    Uses libvirt as a STONITH device to fence a guest node.
+    Create a separate resource for each guest node in the cluster.
+  category: Stonith
+  parameters:
+    - name: id
+      shortdesc: The resource id (name)
+      example: stonith-libvirt
+      required: true
+      type: resource
+    - name: target
+      shortdesc: Node to manage with stonith device
+      type: resource
+      required: true
+    - name: hostlist
+      shortdesc: "List of controlled hosts: hostname[:domain_id].."
+      longdesc: >
+        The optional domain_id defaults to the hostname.
+      type: string
+      required: true
+    - name: hypervisor_uri
+      longdesc: >
+        URI for connection to the hypervisor.
+        driver[+transport]://[username@][hostlist][:port]/[path][?extraparameters]
+        e.g.
+        qemu+ssh://my_kvm_server.mydomain.my/system   (uses ssh for root)
+        xen://my_kvm_server.mydomain.my/              (uses TLS for client)
+
+        virsh must be installed (e.g. libvirt-client package) and access control must
+        be configured for your selected URI.
+      example: qemu+ssh://my_kvm_server.example.com/system
+      required: true
+    - name: reset_method
+      required: false
+      example: power_cycle
+      shortdesc: How to reset a guest.
+      longdesc: >
+        A guest reset may be done by a sequence of off and on commands
+        (power_cycle) or by the reboot command. Which method works
+        depend on the hypervisor and guest configuration management.
+    - name: install
+      shortdesc: Enable to install required packages
+      required: false
+      value: true
+  actions:
+    - install: cluster-glue libvirt-client
+      nodes: all
+      when: install
+    - cib: |
+        primitive {{id}}-{{target}} stonith:external/libvirt
+          params
+            hostlist="{{hostlist}}"
+            hypervisor_uri="{{hypervisor_uri}}"
+            {{#reset_method}}reset_method="{{reset_method}}"{{/reset_method}}
+          op start timeout=60s
+        location l-{{id}}-{{target}} {{id}}-{{target}} -inf: {{target}}

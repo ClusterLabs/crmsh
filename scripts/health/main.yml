@@ -1,12 +1,12 @@
 ---
-- name: Check the health of the cluster
-  description: >
-    Runs various checks to verify the health of the cluster nodes
-  parameters: []
-  steps:
-    - name: Collect cluster information
-      collect: collect.py
-    - name: Run HA health check
-      apply_local: hahealth.py
-    - name: Report cluster state
-      report: report.py
+- version: 2.2
+  category: Script
+  shortdesc: Check the health of the cluster
+  longdesc: Runs various checks to verify the health of the cluster nodes
+  actions:
+    - collect: collect.py
+      shortdesc: Collect cluster information
+    - apply_local: hahealth.py
+      shortdesc: Run HA health check
+    - report: report.py
+      shortdesc: Report cluster state

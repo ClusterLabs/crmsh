@@ -16,9 +16,68 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+import re
+import clidisplay
 from . import utils
 
 _crm_mon = None
+
+_WARNS = ['pending',
+          'complete',
+          'Timed Out',
+          'NOT SUPPORTED',
+          'Error',
+          'Not installed',
+          r'UNKNOWN\!',
+          'Stopped',
+          'standby']
+_OKS = ['Online', 'online', 'ok', 'master', 'Started', 'Master', 'Slave']
+_ERRORS = ['not running',
+           'unknown error',
+           'invalid parameter',
+           'unimplemented feature',
+           'insufficient privileges',
+           'not installed',
+           'not configured',
+           'not running',
+           r'master \(failed\)',
+           'OCF_SIGNAL',
+           'OCF_NOT_SUPPORTED',
+           'OCF_TIMEOUT',
+           'OCF_OTHER_ERROR',
+           'OCF_DEGRADED',
+           'OCF_DEGRADED_MASTER',
+           'unknown',
+           'Unknown',
+           'OFFLINE',
+           'Failed actions'
+]
+
+
+class CrmMonFilter(object):
+    _OK = re.compile(r'(%s)' % '|'.join(_OKS))
+    _WARNS = re.compile(r'(%s)' % '|'.join(_WARNS))
+    _ERROR = re.compile(r'(%s)' % ('|'.join(_ERRORS)))
+    _NODES = re.compile(r'(\d+ Nodes configured)')
+    _RESOURCES = re.compile(r'(\d+ Resources configured)')
+
+    _RESOURCE = re.compile(r'(\S+)(\s+)\((\S+:\S+)\):')
+    _GROUP = re.compile(r'(Resource Group|Clone Set): (\S+)')
+
+    def _filter(self, line):
+        line = self._RESOURCE.sub("%s%s(%s):" % (clidisplay.help_header(r'\1'),
+                                                 r'\2',
+                                                 r'\3'), line)
+        line = self._NODES.sub(clidisplay.help_header(r'\1'), line)
+        line = self._RESOURCES.sub(clidisplay.help_header(r'\1'), line)
+        line = self._GROUP.sub(r'\1: ' + clidisplay.help_header(r'\2'), line)
+        line = self._WARNS.sub(clidisplay.warn(r'\1'), line)
+        line = self._OK.sub(clidisplay.ok(r'\1'), line)
+        line = self._ERROR.sub(clidisplay.error(r'\1'), line)
+        return line
+
+    def __call__(self, text):
+        return '\n'.join([self._filter(line) for line in text.splitlines()]) + '\n'
 
 
 def crm_mon(opts=''):
@@ -63,11 +122,14 @@ def cmd_status(args):
         "noheaders": "-D",
         "detail": "-R",
         "brief": "-b",
+        "full": "-ncrft",
     }
     extra = ' '.join(opts.get(arg, arg) for arg in args)
+    if not args:
+        extra = "-r"
     rc, s = crm_mon(extra)
     if rc != 0:
         raise IOError("crm_mon (rc=%d): %s" % (rc, s))
 
-    utils.page_string(s)
+    utils.page_string(CrmMonFilter()(s))
     return True

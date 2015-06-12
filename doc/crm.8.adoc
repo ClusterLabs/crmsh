@@ -1,5 +1,5 @@
 :man source:   crm
-:man version:  2.1.2
+:man version:  2.2.0
 :man manual:   crmsh documentation
 
 crm(8)
@@ -23,7 +23,7 @@ management tool. Its goal is to assist as much as possible with the
 configuration and maintenance of Pacemaker-based High Availability
 clusters.
 
-For more information on Pacemaker clusters, see http://clusterlabs.org/.
+For more information on Pacemaker itself, see http://clusterlabs.org/.
 
 `crm` works both as a command-line tool to be called directly from the
 system shell, and as an interactive shell with extensive tab
@@ -35,28 +35,13 @@ managing the creation and configuration of High Availability clusters
 from scratch. To learn more about this aspect of `crm`, see the
 `cluster` section below.
 
-The Pacemaker configuration is stored in something called a CIB file,
-where CIB stands for Cluster Information Base. The CIB is a set of
-instructions coded in XML which is synchronized across the cluster.
-
-Editing the CIB is a challenge, not only due to its complexity and
-wide variety of options, but also because XML is more computer than
-user friendly. To help with this task, the `crm` shell provides a
-small and simple line-oriented configuration language consistent with
-the other commands available in the shell. For more information about
-this language and how to use it, see the `configure` section below.
-
-`crm` provides a consistent and well-documented interface to most of
-the management tools included in Pacemaker, for example
-`crm_resource(8)` or `crm_attribute(8)`. Instead of having to remember
-the various flags and options available for each tool, `crm` hides all
-of the arcane detail.
-
-`crm` can also function as a cluster scripting tool, and can be fed
-multi-line sets of commands either directly from standard input or via
-a file. Templates with ready made configurations may help newbies
-learn about the cluster configuration or facilitate testing
-procedures.
+The `crm` shell can be used to manage every aspect of configuring and
+maintaining a cluster. It provides a simplified line-based syntax on
+top of the XML configuration format used by Pacemaker, commands for
+starting and stopping resources, tools for exploring the history of a
+cluster including log scraping and a set of cluster scripts useful for
+automating the setup and installation of services on the cluster
+nodes.
 
 The `crm` shell is line oriented: every command must start and finish
 on the same line. It is possible to use a continuation character (+\+)
@@ -109,8 +94,8 @@ OPTIONS
     tests. Logs all external calls made by crmsh.
 
 *--scriptdir*='DIR'::
-    Extra directory where crm looks for cluster scripts. Can be a semi-colon
-    separated list of directories.
+    Extra directory where crm looks for cluster scripts, or a list of
+    directories separated by semi-colons (e.g. +/dir1;/dir2;etc.+).
 
 [[topics_Introduction,Introduction]]
 == Introduction
@@ -210,7 +195,7 @@ work with so-called <<topics_Features_Shadows,shadow CIBs>>. These are separate,
 configurations stored in files, that can be applied and thereby
 replace the live configuration at any time.
 
-[[topics_Introcution_Completion,Tab completion]]
+[[topics_Introduction_Completion,Tab completion]]
 === Tab completion
 
 The `crm` makes extensive use of tab completion. The completion
@@ -248,6 +233,24 @@ auth* (string)
 `crmsh` also comes with bash completion usable directly from the
 system shell. This should be installed automatically with the command
 itself.
+
+[[topics_Introduction_Shorthand,Shorthand syntax]]
+=== Shorthand syntax
+
+When using the `crm` shell to manage clusters, you will end up typing
+a lot of commands many times over. Clear command names like
++configure+ help in understanding and learning to use the cluster
+shell, but is easy to misspell and is tedious to type repeatedly. The
+interactive mode and tab completion both help with this, but the `crm`
+shell also has the ability to understand a variety of shorthand
+aliases for all of the commands.
+
+For example, instead of typing `crm status`, you can type `crm st` or
+`crm stat`. Instead of `crm configure` you can type `crm cfg` or even
+`crm cf`. `crm resource` can be shorted as `crm rsc`, and so on.
+
+The exact list of accepted aliases is too long to print in full, but
+experimentation and typoes should help in discovering more of them.
 
 [[topics_Features,Features]]
 == Features
@@ -319,6 +322,14 @@ configuration cannot be saved.
 
 [[topics_Features_Templates,Configuration templates]]
 === Configuration templates
+
+.Deprecation note
+****************************
+Configuration templates have been deprecated in favor of the more
+capable `cluster scripts`. To learn how to use cluster scripts, see
+the dedicated documentation on the `crmsh` website at
+http://crmsh.github.io/, or in the <<cmdhelp_script,Script section>>.
+****************************
 
 Configuration templates are ready made configurations created by
 cluster experts. They are designed in such a way so that users
@@ -446,12 +457,14 @@ command.
 
 To complete our example, we should also define the preferred node
 to run the service:
+
 ...............
 crm(live)configure# location websvc-pref websvc 100: xen-b
 ...............
 
 If you are not happy with some resource names which are provided
 by default, you can rename them now:
+
 ...............
 crm(live)configure# rename virtual-ip intranet-ip
 crm(live)configure# show
@@ -846,11 +859,32 @@ Show cluster status. The status is displayed by `crm_mon`. Supply
 additional arguments for more information or different format.
 See `crm_mon(8)` for more details.
 
+Example:
+...............
+status
+status simple
+status full
+...............
+
 Usage:
 ...............
 status [<option> ...]
 
-option :: bynode | inactive | ops | timing | failcounts
+option :: full
+        | bynode
+        | inactive
+        | ops
+        | timing
+        | failcounts
+        | verbose
+        | quiet
+        | html
+        | xml
+        | simple
+        | tickets
+        | noheaders
+        | detail
+        | brief
 ...............
 
 [[cmdhelp_cluster,Cluster setup and management]]
@@ -1017,41 +1051,95 @@ diff /etc/resolv.conf --checksum
 [[cmdhelp_script,Cluster script management]]
 === `script` - Cluster script management
 
-Cluster scripts can perform cluster-wide configuration,
-validation and management. See the `list` command for
-an overview of available scripts.
+A big part of the configuration and management of a cluster is
+collecting information about all cluster nodes and deploying changes
+to those nodes. Often, just performing the same procedure on all nodes
+will encounter problems, due to subtle differences in the
+configuration.
 
-[[cmdhelp_script_describe,Describe the cluster script]]
-==== `describe`
+For example, when configuring a cluster for the first time, the
+software needs to be installed and configured on all nodes before the
+cluster software can be launched and configured using `crmsh`. This
+process is cumbersome and error-prone, and the goal is for scripts to
+make this process easier.
 
-Prints a description and short summary of the cluster script, with
-descriptions of all parameters, both required and optional.
-
-Usage:
-............
-describe <script>
-............
+Scripts are implemented using the python `parallax` package which
+provides a thin wrapper on top of SSH. This allows the scripts to
+function through the usual SSH channels used for system maintenance,
+requiring no additional software to be installed or maintained.
 
 [[cmdhelp_script_list,List available scripts]]
 ==== `list`
 
-Lists the available cluster scripts.
+Lists the available scripts, sorted by category. Scripts that have the
+special `Script` category are hidden by default, since they are mainly
+used by other scripts or commands. To also show these, pass `all` as
+argument.
+
+To get a flat list of script names, not sorted by category, pass
+`names` as an extra argument.
 
 Usage:
 ............
-list
+list [all] [names]
 ............
 
-[[cmdhelp_script_run,Execute the cluster script]]
+Example:
+............
+list
+list all names
+............
+
+[[cmdhelp_script_show,Describe the script]]
+==== `show`
+
+Prints a description and short summary of the script, with
+descriptions of the accepted parameters.
+
+Advanced parameters are hidden by default. To show the complete list
+of parameters accepted by the script, pass `all` as argument.
+
+Usage:
+............
+show <script> [all]
+............
+
+Example:
+............
+show virtual-ip
+............
+
+[[cmdhelp_script_verify,Verify the script]]
+==== `verify`
+
+Checks the given parameter values, and returns a list
+of actions that will be executed when running the script
+if provided the same list of parameter values.
+
+Usage:
+............
+verify <script> [args...]
+............
+
+Example:
+............
+verify sbd id=sbd-1 node=node1 sbd_device=/dev/disk/by-uuid/F00D-CAFE
+............
+
+[[cmdhelp_script_run,Run the script]]
 ==== `run`
 
-Runs a cluster script. Can optionally take at least two arguments:
+Given a list of parameter values, this command will execute the
+actions specified by the cluster script. The format for the parameter
+values is the same as for the `verify` command.
+
+Can optionally take at least two parameters:
 * `nodes=<nodes>`: List of nodes that the script runs over
 * `dry_run=yes|no`: If set, the script will not perform any modifications.
 
-Additional arguments may be available depending on the cluster
-script. Use the `describe` command to see what arguments are
-provided.
+Additional parameters may be available depending on the script.
+
+Use the `show` command to see what parameters are available.
 
 Usage:
 .............
@@ -1060,35 +1148,48 @@ run <script> [args...]
 
 Example:
 .............
-run health dry_run=yes verbose=yes
-run init nodes="node-1 node-2 node-3"
+run apache install=true
+run sbd id=sbd-1 node=node1 sbd_device=/dev/disk/by-uuid/F00D-CAFE
 .............
 
-[[cmdhelp_script_steps,List steps in cluster script]]
-==== `steps`
+[[cmdhelp_script_json,JSON API for cluster scripts]]
+==== `json`
 
-List the names of all steps in the cluster script.
+This command provides a JSON API for the cluster scripts, intended for
+use in user interface tools that want to interact with the cluster via
+scripts.
 
-This command is intended for use by automated tools
-and the web frontend.
+The command takes a single argument, which should be a JSON array with
+the first member identifying the command to perform.
 
-Usage:
-............
-steps <script>
-............
+The output is line-based: Commands that return multiple results will
+return them line-by-line, ending with a terminator value: "end".
 
+When providing parameter values to this command, they should be
+provided as nested objects, so +virtual-ip:ip=192.168.0.5+ on the
+command line becomes the JSON object
++{"virtual-ip":{"ip":"192.168.0.5"}}+.
 
-[[cmdhelp_script_verify,Verify the cluster script]]
-==== `verify`
+API:
+........
+["list"]
+=> [{name, shortdesc, category}]
 
-Mainly useful when creating new scripts, this command
-verifies that the script definition has all necessary
-fields and that the referenced actions exist.
+["show", <name>]
+=> [{name, shortdesc, longdesc, category, <<steps>>}]
 
-Usage:
-............
-verify <script>
-............
+<<steps>> := [{name, shortdesc], longdesc, required, parameters, steps}]
+
+<<params>> := [{name, shortdesc, longdesc, required, unique, advanced,
+                type, value, example}]
+
+["verify", <name>, <<values>>]
+=> [{shortdesc, longdesc, text, nodes}]
+
+["run", <name>, <<values>>]
+=> [{shortdesc, rc, output|error}]
+........
+
 
 [[cmdhelp_corosync,Corosync management]]
 === `corosync` - Corosync management

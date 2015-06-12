@@ -1,0 +1,29 @@
+---
+- version: 2.2
+  category: Filesystem
+  include:
+    - agent: ocf:heartbeat:Filesystem
+      name: filesystem
+      parameters:
+        - name: id
+          required: true
+          type: resource
+        - name: device
+          required: true
+          type: string
+        - name: directory
+          required: true
+          type: string
+        - name: fstype
+          required: true
+          type: string
+        - name: options
+          required: false
+          type: string
+      ops: |
+        op start timeout=60s
+        op stop timeout=60s
+        op monitor interval=20s timeout=40s
+        
+  actions:
+    - include: filesystem

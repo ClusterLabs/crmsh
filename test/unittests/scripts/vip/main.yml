@@ -1,0 +1,28 @@
+---
+- version: 2.2
+  shortdesc: Virtual IP
+  category: Basic
+  include:
+    - agent: test:virtual-ip
+      name: virtual-ip
+      parameters:
+        - name: id
+          type: resource
+          required: true
+        - name: ip
+          type: ip_address
+          required: true
+        - name: cidr_netmask
+          type: integer
+          required: false
+        - name: broadcast
+          type: ipaddress
+          required: false
+        - name: lvs_support
+          required: false
+          type: boolean
+      ops: |
+        op start timeout="20" op stop timeout="20"
+        op monitor interval="10" timeout="20"
+  actions:
+    - include: virtual-ip

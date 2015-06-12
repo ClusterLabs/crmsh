@@ -31,6 +31,16 @@ def _remove_completer(args):
     return scripts.param_completion_list('remove') + n
 
 
+def script_printer():
+    from .ui_script import ConsolePrinter
+    return ConsolePrinter()
+
+
+def script_args(args):
+    from .ui_script import _nvpairs2parameters
+    return _nvpairs2parameters(args)
+
+
 class Cluster(command.UI):
     '''
     Whole cluster management.
@@ -101,15 +111,19 @@ class Cluster(command.UI):
             return args + ['%s=%s' % (name, ','.join(vals))]
         return args
 
-    @command.completers_repeating(compl.choice(scripts.param_completion_list('init')))
+    @command.completers_repeating(compl.call(scripts.param_completion_list, 'init'))
     @command.skill_level('administrator')
     def do_init(self, context, *args):
         '''
         Initialize a cluster with the given hosts as nodes.
         '''
-        return scripts.run('init', self._args_implicit(context, args, 'nodes'))
+        args = self._args_implicit(context, args, 'nodes')
+        script = scripts.load_script('init')
+        if script is None:
+            raise ValueError("init script failed to load")
+        return scripts.run(script, script_args(args), script_printer())
 
-    @command.completers_repeating(compl.choice(scripts.param_completion_list('add')))
+    @command.completers_repeating(compl.call(scripts.param_completion_list, 'add'))
     @command.skill_level('administrator')
     def do_add(self, context, *args):
         '''
@@ -129,7 +143,10 @@ class Cluster(command.UI):
             nodes = utils.list_cluster_nodes()
         nodes += node
         params += ['nodes=%s' % (','.join(nodes))]
-        return scripts.run('add', params)
+        script = scripts.load_script('add')
+        if script is None:
+            raise ValueError("add script failed to load")
+        return scripts.run(script, script_args(params), script_printer())
 
     @command.completers_repeating(_remove_completer)
     @command.skill_level('administrator')
@@ -138,15 +155,21 @@ class Cluster(command.UI):
         Remove the given node(s) from the cluster.
         '''
         params = self._args_implicit(context, args, 'node')
-        return scripts.run('remove', params)
+        script = scripts.load_script('remove')
+        if script is None:
+            raise ValueError("remove script failed to load")
+        return scripts.run(script, script_args(params), script_printer())
 
-    @command.completers_repeating(compl.choice(scripts.param_completion_list('health')))
+    @command.completers_repeating(compl.call(scripts.param_completion_list, 'health'))
     def do_health(self, context, *args):
         '''
         Extensive health check.
         '''
         params = self._args_implicit(context, args, 'nodes')
-        return scripts.run('health', params)
+        script = scripts.load_script('health')
+        if script is None:
+            raise ValueError("health script failed to load")
+        return scripts.run(script, script_args(params), script_printer())
 
     def _node_in_cluster(self, node):
         return node in utils.list_cluster_nodes()

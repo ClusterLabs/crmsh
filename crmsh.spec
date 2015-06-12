@@ -36,12 +36,13 @@ Name:           crmsh
 Summary:        High Availability cluster command-line interface
 License:        GPL-2.0+
 Group:          %{pkg_group}
-Version:        2.2.0~rc2+git.1426543208.fb920e3
+Version:        2.2.0
 Release:        0%{?crmsh_release}%{?dist}
 Url:            http://crmsh.github.io
 Source0:        %{name}-%{version}.tar.bz2
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Requires(pre):  pacemaker
+Requires:       %{name}-scripts >= %{version}-%{release}
 Requires:       /usr/bin/which
 Requires:       python >= 2.6
 Requires:       python-dateutil
@@ -93,10 +94,10 @@ Summary:        Test package for crmsh
 Group:          %{pkg_group}
 Requires:       crmsh
 %if 0%{?with_regression_tests}
-BuildRequires:  corosync
 BuildRequires:  procps
 BuildRequires:  python-dateutil
 BuildRequires:  python-nose
+BuildRequires:  python-parallax
 BuildRequires:  vim
 Requires:       pacemaker
 
@@ -111,6 +112,11 @@ BuildRequires:  libpacemaker-devel
 BuildRequires:  cluster-glue-libs-devel
 BuildRequires:  pacemaker-libs-devel
 %endif
+%if 0%{?fedora_version}
+BuildRequires:  PyYAML
+%else
+BuildRequires:  python-PyYAML
+%endif
 
 %endif
 %description test
@@ -120,6 +126,18 @@ configuration, management and troubleshooting of Pacemaker-based
 clusters, by providing a powerful and intuitive set of features.
 
 Authors: Dejan Muhamedagic <dejan@suse.de> and many others
+
+%package scripts
+Summary:        Crm Shell Cluster Scripts
+Group:          Productivity/Clustering/HA
+
+%description scripts
+Cluster scripts for crm shell. The cluster scripts
+can be run directly from the crm command line, or
+used by user interfaces like hawk to implement
+configuration wizards.
+
+Authors: Kristoffer Gronlund <kgronlund@suse.com> and many others
 
 %prep
 %setup -q
@@ -138,11 +156,10 @@ find . -exec touch \{\} \;
 %{configure}            \
     --sysconfdir=%{_sysconfdir} \
     --localstatedir=%{_var}             \
-    --with-pkg-name=%{name}     \
     --with-version=%{version}-%{release}    \
     --docdir=%{crmsh_docdir}
 
-make %{_smp_mflags} docdir=%{crmsh_docdir}
+make %{_smp_mflags} VERSION="%{version}-%{release}" sysconfdir=%{_sysconfdir} localstatedir=%{_var}
 
 %if 0%{?with_regression_tests}
 	./test/run --quiet
@@ -189,6 +206,7 @@ fi
 
 %{_datadir}/%{name}
 %exclude %{_datadir}/%{name}/tests
+%exclude %{_datadir}/%{name}/scripts
 
 %doc %{_mandir}/man8/*
 %{crmsh_docdir}/COPYING
@@ -205,6 +223,10 @@ fi
 %dir %{crmsh_docdir}/contrib
 %dir %attr (770, %{uname}, %{gname}) %{_var}/cache/crm
 %config %{_sysconfdir}/bash_completion.d/crm.sh
+
+%files scripts
+%defattr(-,root,root)
+%{_datadir}/%{name}/scripts
 
 %files test
 %defattr(-,root,root)

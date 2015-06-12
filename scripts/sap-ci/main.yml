@@ -1,0 +1,69 @@
+---
+- version: 2.2
+  category: SAP
+  shortdesc: SAP Central Instance
+  longdesc: >
+    Configure a SAP Central Instance including:
+
+    1) Virtual IP address for the SAP Central instance,
+    2) A filesystem on shared storage (/usr/sap/SID/DVEBMGS##),
+    3) SAPInstance for the Central Instance.
+
+  parameters:
+    - name: id
+      shortdesc: SAP Central Resource Group ID
+      longdesc: Unique ID for the SAP Central instance resource group in the cluster.
+      required: true
+      type: resource
+      value: grp_sap_NA0_sapna0ci
+
+  include:
+    - script: sapinstance
+      required: true
+      parameters:
+        - name: id
+          value: rsc_sapinst_NA0_DVEBMGS01_sapna0ci
+        - name: InstanceName
+          value: NA0_DVEBMGS01_sapna0ci
+        - name: START_PROFILE
+          value: "/usr/sap/NA0/SYS/profile/START_DVEBMGS01_sapna0ci"
+    - script: virtual-ip
+      shortdesc: The Virtual IP address configured here will be for the SAP Central instance.
+      required: true
+      parameters:
+        - name: id
+          value: rsc_ip_NA0_sapna0ci
+        - name: ip
+          value: 172.17.2.55
+        - name: cidr_netmask
+          value: 24
+        - name: nic
+          value: eth0
+    - script: filesystem
+      shortdesc: "Filesystem resource for the /usr/sap/SID/DVEBMGS## directory."
+      longdesc: >-
+        If a filesystem does not already exist on the block device 
+        specified here, you will need to run mkfs to create it, prior 
+        to starting the filesystem resource.  You will also need
+        to create the mountpoint directory on all cluster nodes.
+      parameters:
+        - name: id
+          value: rsc_fs_NA0_sapna0ci
+        - name: directory
+          value: "/usr/sap/NA0/DVEBMGS01"
+        - name: options
+          value: "noatime,barrier=0,data=writeback"
+      ops: |
+        op stop timeout=300
+        op monitor interval=30 timeout=130          
+      
+  actions:
+    - include: sapinstance
+    - include: virtual-ip
+    - include: filesystem
+    - cib:
+        group {{id}}
+          {{virtual-ip:id}}
+          {{filesystem:id}}
+          {{sapinstance:id}}
+          meta target-role=Stopped

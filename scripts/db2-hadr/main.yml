@@ -1,0 +1,45 @@
+---
+- version: 2.2
+  category: Database
+  shortdesc: IBM DB2 Database with HADR
+  longdesc: >-
+    Configure an IBM DB2 database resource as active/passive HADR,
+    along with a Virtual IP.
+
+  include:
+    - agent: ocf:heartbeat:db2
+      parameters:
+        - name: id
+          required: true
+          shortdesc: DB2 Resource ID
+          longdesc: Unique ID for the database resource in the cluster.
+          type: string
+          value: db2-database
+        - name: instance
+          required: true
+          type: string
+          value: db2inst1
+        - name: dblist
+          value: db1
+      ops: |
+        op start interval="0" timeout="130"
+        op stop interval="0" timeout="120"
+        op promote interval="0" timeout="120"
+        op demote interval="0" timeout="120"
+        op monitor interval="30" timeout="60"
+        op monitor interval="45" role="Master" timeout="60"
+
+    - script: virtual-ip
+      shortdesc: The IP address configured here will start before the DB2 instance.
+      parameters:
+        - name: id
+          value: db2-virtual-ip
+  actions:
+    - include: virtual-ip
+    - include: db2
+    - cib: |
+        ms ms-{{id}} {{id}}
+          meta target-role=Stopped notify=true
+
+        colocation {{virtual-ip:id}}-with-master inf: {{virtual-ip:id}}:Started ms-{{id}}:Master
+        order {{virtual-ip:id}}-after-master inf: ms-{{id}}:promote {{virtual-ip:id}}:start

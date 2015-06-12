@@ -1,0 +1,46 @@
+---
+- version: 2.2
+  shortdesc: Apache Webserver
+  longdesc: >
+    Configure a resource group containing a virtual IP address and
+    an instance of the Apache web server.
+  category: Server
+  parameters:
+    - name: id
+      shortdesc: The ID specified here is for the web server resource group.
+    - name: install
+      type: boolean
+      value: true
+      shortdesc: Disable if no installation should be performed
+  include:
+    - agent: test:apache
+      parameters:
+        - name: id
+          value: "{{id}}-server"
+        - name: configfile
+          type: file
+      ops: |
+        op monitor interval=20s timeout=20s
+    - agent: test:virtual-ip
+      name: virtual-ip
+      parameters:
+        - name: id
+          value: "{{id}}-ip"
+        - name: ip
+          type: ip_address
+      ops: |
+        op monitor interval=20s timeout=20s
+  actions:
+    - install:
+        - apache2
+      when: install
+    - call: a2enable mod_status
+      shortdesc: Enable status module
+      nodes: all
+      when: install
+    - cib: |
+        {{virtual-ip}}
+        {{apache}}
+        group {{id}}
+          {{virtual-ip:id}}
+          {{apache:id}}

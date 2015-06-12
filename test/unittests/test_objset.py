@@ -17,7 +17,7 @@
 
 
 from crmsh import cibconfig
-from nose.tools import eq_
+from nose.tools import eq_, with_setup
 
 factory = cibconfig.cib_factory
 
@@ -30,10 +30,15 @@ def assert_in(needle, haystack):
 
 def setup_func():
     "set up test fixtures"
-    import idmgmt
+    from crmsh import idmgmt
     idmgmt.clear()
 
 
+def teardown_func():
+    pass
+
+
+@with_setup(setup_func, teardown_func)
 def test_nodes_nocli():
     for n in factory.node_id_list():
         obj = factory.find_object(n)
@@ -43,6 +48,7 @@ def test_nodes_nocli():
             eq_(False, obj.nocli)
 
 
+@with_setup(setup_func, teardown_func)
 def test_show():
     setobj = cibconfig.mkset_obj()
     s = setobj.repr_nopretty()

@@ -1,0 +1,52 @@
+---
+- name: Initialize a new cluster
+  description: >
+    Initializes a new cluster on the nodes provided. Will try to 
+    configure SSH if not already configured, and install missing 
+    packages.
+
+    A more user-friendly interface to this script is provided by the 
+    cluster init command.
+  parameters:
+    - name: iface
+      description: "Use the given interface. Try to auto-detect interface by default."
+      default: ""
+
+    - name: transport
+      description: "Corosync transport (mcast or udpu)"
+      default: "udpu"
+
+    - name: bindnetaddr
+      description: "Network address to bind to (e.g.: 192.168.1.0)"
+      default: ""
+
+    - name: mcastaddr
+      description: "Multicast address (e.g.: 239.x.x.x)"
+      default: ""
+
+    - name: mcastport
+      description: "Multicast port"
+      default: 5405
+
+  steps:
+    - name: Configure SSH
+      apply_local: configure.py ssh
+
+    - name: Check state of nodes
+      collect: collect.py
+
+    - name: Verify parameters
+      validate: verify.py
+
+    - name: Install packages
+      apply: configure.py install
+
+    - name: Generate corosync authkey
+      apply_local: authkey.py
+
+    - name: Configure cluster nodes
+      apply: configure.py corosync
+
+    - name: Initialize cluster
+      apply_local: init.py
+

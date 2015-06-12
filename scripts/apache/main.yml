@@ -1,0 +1,66 @@
+# Copyright (C) 2009 Dejan Muhamedagic
+# Copyright (C) 2015 Kristoffer Gronlund
+#
+# License: GNU General Public License (GPL)
+---
+- version: 2.2
+  category: Server
+  shortdesc: Apache Webserver
+  longdesc: >
+    Configure a resource group containing a virtual IP address and
+    an instance of the Apache web server. You can optionally configure
+    a Filesystem resource which will be mounted before the web server
+    is started. You can also optionally configure a database resource
+    which will be started before the web server but after mounting the
+    optional filesystem.
+  include:
+    - agent: ocf:heartbeat:apache
+      name: apache
+      longdesc: >
+        The Apache configuration file specified here must be available via the
+        same path on all cluster nodes, and Apache must be configured with
+        mod_status enabled.  If in doubt, try running Apache manually via
+        its init script first, and ensure http://localhost:80/server-status is
+        accessible.
+      ops: |
+        op start timeout="40"
+        op stop timeout="60"
+        op monitor interval="10" timeout="20"
+    - script: virtual-ip
+      shortdesc: The IP address configured here will start before the Apache instance.
+      parameters:
+        - name: id
+          value: "{{id}}-vip"
+    - script: filesystem
+      shortdesc: Optional filesystem mounted before the web server is started.
+      required: false
+    - script: database
+      shortdesc: Optional database started before the web server is started.
+      required: false
+  parameters:
+    - name: install
+      type: boolean
+      shortdesc: Install and configure apache
+      value: true
+  actions:
+    - install:
+        - apache2
+      shortdesc: Install the apache package
+      when: install
+    - service:
+        - apache: disable
+      shortdesc: Let cluster manage apache
+      when: install
+    - call: a2enmod status; true
+      shortdesc: Enable status module
+      when: install
+    - include: filesystem
+    - include: database
+    - include: virtual-ip
+    - include: apache
+    - cib: |
+        group g-{{id}}
+          {{filesystem:id}}
+          {{database:id}}
+          {{virtual-ip:id}}
+          {{id}}

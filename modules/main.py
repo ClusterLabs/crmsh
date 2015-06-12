@@ -135,8 +135,8 @@ See the crm(8) man page or call %prog help for more details.""",
                       help="Enables extra verbose trace logging used by the regression " +
                       "tests. Logs all external calls made by crmsh.")
     parser.add_option("--scriptdir", dest="scriptdir", metavar="DIR",
-                      help="Extra directory where crm looks for cluster scripts. Can be " +
-                      "a semicolon-separated list of directories.")
+                      help="Extra directory where crm looks for cluster scripts, or a list " +
+                      "of directories separated by semi-colons (e.g. /dir1;/dir2;etc.).")
     parser.add_option("-X", dest="profile", metavar="PROFILE",
                       help="Collect profiling data and save in PROFILE.")
     return parser
@@ -365,6 +365,9 @@ def run():
         print("Ctrl-C, leaving")
         sys.exit(1)
     except ValueError as e:
+        if config.core.debug:
+            import traceback
+            traceback.print_exc()
         common_err(str(e))
 
 # vim:ts=4:sw=4:et:

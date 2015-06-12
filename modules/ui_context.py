@@ -88,9 +88,15 @@ class Context(object):
             if cmd:
                 rv = self.execute_command() is not False
         except ValueError, msg:
+            if config.core.debug:
+                import traceback
+                traceback.print_exc()
             common_err("%s: %s" % (self.get_qualified_name(), msg))
             rv = False
         except IOError, msg:
+            if config.core.debug:
+                import traceback
+                traceback.print_exc()
             common_err("%s: %s" % (self.get_qualified_name(), msg))
             rv = False
         if cmd or (rv is False):
@@ -348,6 +354,13 @@ class Context(object):
         '''
         prev = self.previous_level()
         return prev and prev.name == level_name
+
+    def error(self, msg):
+        """
+        Too easy to misremember and type error()
+        when I meant fatal_error().
+        """
+        raise ValueError(msg)
 
     def fatal_error(self, msg):
         """

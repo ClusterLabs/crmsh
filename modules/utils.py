@@ -680,7 +680,7 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     common_debug("invoke: %s" % ptest)
     rc, s = get_stdout(ptest, input_s=graph_s)
     if rc != 0:
-        common_debug("%s exited with %d" % (ptest, rc))
+        common_debug("'%s' exited with (rc=%d)" % (ptest, rc))
         if actions and rc == 1:
             common_warn("No actions found.")
         else:

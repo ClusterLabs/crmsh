@@ -1,0 +1,12 @@
+session Cluster scripts
+script
+list
+list all
+list names
+list names all
+list all names
+list bogus
+show virtual-ip
+verify virtual-ip id=foo ip=10.0.0.5
+run virtual-ip id=foo ip=10.0.0.5 nodes=node1 dry_run=true
+.

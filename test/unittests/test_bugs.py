@@ -18,7 +18,7 @@
 
 from crmsh import cibconfig
 from lxml import etree
-from nose.tools import eq_
+from nose.tools import eq_, with_setup
 from crmsh import xmlutil
 
 factory = cibconfig.cib_factory
@@ -30,6 +30,11 @@ def setup_func():
     idmgmt.clear()
 
 
+def teardown_func():
+    pass
+
+
+@with_setup(setup_func, teardown_func)
 def test_bug41660_1():
     xml = """<primitive id="bug41660" class="ocf" provider="pacemaker" type="Dummy"> \
     <meta_attributes id="bug41660-meta"> \
@@ -57,6 +62,7 @@ def test_bug41660_1():
         factory.commit = commit_holder
 
 
+@with_setup(setup_func, teardown_func)
 def test_bug41660_2():
     xml = """
 <clone id="libvirtd-clone">
@@ -99,6 +105,7 @@ def test_bug41660_2():
         factory.commit = commit_holder
 
 
+@with_setup(setup_func, teardown_func)
 def test_bug41660_3():
     xml = """
 <clone id="libvirtd-clone">
@@ -135,6 +142,7 @@ def test_bug41660_3():
         factory.commit = commit_holder
 
 
+@with_setup(setup_func, teardown_func)
 def test_comments():
     xml = """<cib epoch="25" num_updates="1" admin_epoch="0" validate-with="pacemaker-1.2" cib-last-written="Thu Mar  6 15:53:49 2014" update-origin="beta1" update-client="cibadmin" update-user="root" crm_feature_set="3.0.8" have-quorum="1" dc-uuid="1">
   <configuration>
@@ -178,6 +186,7 @@ def test_comments():
     assert etree.tostring(elems).count("COMMENT TEXT") == 3
 
 
+@with_setup(setup_func, teardown_func)
 def test_eq1():
     xml1 = """<cluster_property_set id="cib-bootstrap-options">
     <nvpair id="cib-bootstrap-options-stonith-enabled" name="stonith-enabled" value="true"></nvpair>
@@ -208,6 +217,7 @@ def test_eq1():
     assert xmlutil.xml_equals(e1, e2, show=True)
 
 
+@with_setup(setup_func, teardown_func)
 def test_pcs_interop_1():
     """
     pcs<>crmsh interop bug
@@ -236,6 +246,7 @@ def test_pcs_interop_1():
     assert len(elem.xpath(".//meta_attributes/nvpair[@name='target-role']")) == 1
 
 
+@with_setup(setup_func, teardown_func)
 def test_bnc878128():
     """
     L3: "crm configure show" displays XML information instead of typical crm output.
@@ -259,6 +270,7 @@ end="2014-05-17 17:56:11Z"/>
     assert obj.cli_use_validate()
 
 
+@with_setup(setup_func, teardown_func)
 def test_order_without_score_kind():
     """
     Spec says order doesn't require score or kind to be set
@@ -275,6 +287,7 @@ def test_order_without_score_kind():
 
 
 
+@with_setup(setup_func, teardown_func)
 def test_bnc878112():
     """
     crm configure group can hijack a cloned primitive (and then crash)
@@ -288,6 +301,7 @@ def test_bnc878112():
     assert obj3 is False
 
 
+@with_setup(setup_func, teardown_func)
 def test_copy_nvpairs():
     from crmsh.cibconfig import copy_nvpairs
 
@@ -315,6 +329,7 @@ def test_copy_nvpairs():
     eq_(['true'], to.xpath('./nvpair/@value'))
 
 
+@with_setup(setup_func, teardown_func)
 def test_pengine_test():
     xml = '''<primitive class="ocf" id="rsc1" provider="pacemaker" type="Dummy">
         <instance_attributes id="rsc1-instance_attributes-1">
@@ -343,6 +358,7 @@ def test_pengine_test():
     assert obj.cli_use_validate()
 
 
+@with_setup(setup_func, teardown_func)
 def test_tagset():
     xml = '''<primitive class="ocf" id="%s" provider="pacemaker" type="Dummy"/>'''
     tag = '''<tag id="t0"><obj_ref id="r1"/><obj_ref id="r2"/></tag>'''
@@ -353,6 +369,7 @@ def test_tagset():
     elems = factory.get_elems_on_tag("tag:t0")
     assert set(x.obj_id for x in elems) == set(['r1', 'r2'])
 
+@with_setup(setup_func, teardown_func)
 def test_ratrace():
     xml = '''<primitive class="ocf" id="%s" provider="pacemaker" type="Dummy"/>'''
     factory.create_from_node(etree.fromstring(xml % ('r1')))
@@ -372,6 +389,7 @@ def test_ratrace():
     assert set(obj.node.xpath('./operations/op/@name')) == set(['start', 'stop'])
 
 
+@with_setup(setup_func, teardown_func)
 def test_op_role():
     xml = '''<primitive class="ocf" id="rsc2" provider="pacemaker" type="Dummy">
         <operations>
@@ -388,6 +406,7 @@ def test_op_role():
     assert obj.cli_use_validate()
 
 
+@with_setup(setup_func, teardown_func)
 def test_nvpair_no_value():
     xml = '''<primitive class="ocf" id="rsc3" provider="heartbeat" type="Dummy">
         <instance_attributes id="rsc3-instance_attributes-1">
@@ -406,6 +425,7 @@ def test_nvpair_no_value():
     assert obj.cli_use_validate()
 
 
+@with_setup(setup_func, teardown_func)
 def test_delete_ticket():
     xml0 = '<primitive id="daa0" class="ocf" provider="heartbeat" type="Dummy"/>'
     xml1 = '<primitive id="daa1" class="ocf" provider="heartbeat" type="Dummy"/>'
@@ -426,6 +446,7 @@ def test_delete_ticket():
     assert factory.find_object('taa0') is not None
 
 
+@with_setup(setup_func, teardown_func)
 def test_quotes():
     """
     Parsing escaped quotes

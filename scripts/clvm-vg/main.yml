@@ -1,0 +1,47 @@
+# Copyright (C) 2015 Kristoffer Gronlund
+#
+# License: GNU General Public License (GPL)
+---
+- version: 2.2
+  category: Filesystem
+  shortdesc: Cluster-aware LVM (Volume Group)
+  longdesc: |
+    Configures an cLVM volume group instance. Once created,
+    this resource is added to the cLVM group resource.
+
+    The cLVM group resource is assumed to be named g-clvm. This
+    is the name of the resource created by the clvm wizard.
+
+  parameters:
+    - name: id
+      shortdesc: Volume group instance ID
+      longdesc: Unique ID for the volume group instance in the cluster.
+      required: true
+      unique: true
+      type: resource
+      value: vg1
+
+    - name: volgrpname
+      shortdesc: Volume Group Name
+      longdesc: LVM volume group name.
+      required: true
+      type: string
+      value: vg1
+
+    - name: clvm-group
+      shortdesc: cLVM Resource Group ID
+      longdesc: ID of the cLVM resource group.
+      type: resource
+      required: false
+      value: g-clvm
+
+  actions:
+    - cib: |
+        primitive {{id}} ocf:heartbeat:LVM
+          params volgrpname="{{volgrpname}}"
+          op start timeout=60s
+          op stop timeout=60s
+          op monitor interval=30s timeout=60s
+
+    - crm: configure modgroup {{clvm-group}} add {{id}}
+      shortdesc: Add volume group to the cLVM group resource

@@ -19,7 +19,7 @@
 from crmsh import cibconfig
 from lxml import etree
 from .test_parse import MockValidation
-from nose.tools import eq_
+from nose.tools import eq_, with_setup
 
 factory = cibconfig.cib_factory
 
@@ -51,7 +51,7 @@ def roundtrip(cli, debug=False, expected=None):
 
 def setup_func():
     "set up test fixtures"
-    import idmgmt
+    from crmsh import idmgmt
     idmgmt.clear()
 
 
@@ -59,24 +59,30 @@ def teardown_func():
     "tear down test fixtures"
 
 
+@with_setup(setup_func, teardown_func)
 def test_rscset():
     roundtrip('colocation foo inf: a b')
     roundtrip('order order_2 Mandatory: [ A B ] C')
     roundtrip('rsc_template public_vm Xen')
 
 
+@with_setup(setup_func, teardown_func)
 def test_group():
     factory.create_from_cli('primitive p1 Dummy')
     roundtrip('group g1 p1 params target-role=Stopped')
 
 
+@with_setup(setup_func, teardown_func)
 def test_bnc863736():
     roundtrip('order order_3 Mandatory: [ A B ] C symmetrical=true')
 
 
+@with_setup(setup_func, teardown_func)
 def test_sequential():
     roundtrip('colocation rsc_colocation-master inf: [ vip-master vip-rep sequential=true ] [ msPostgresql:Master sequential=true ]')
 
+
+@with_setup(setup_func, teardown_func)
 def test_broken_colo():
     xml = """<rsc_colocation id="colo-2" score="INFINITY">
   <resource_set id="colo-2-0" require-all="false">
@@ -95,24 +101,29 @@ def test_broken_colo():
     assert obj.cli_use_validate()
 
 
+@with_setup(setup_func, teardown_func)
 def test_comment():
     roundtrip("# comment 1\nprimitive d0 ocf:pacemaker:Dummy")
 
 
+@with_setup(setup_func, teardown_func)
 def test_comment2():
     roundtrip("# comment 1\n# comment 2\n# comment 3\nprimitive d0 ocf:pacemaker:Dummy")
 
 
+@with_setup(setup_func, teardown_func)
 def test_nvpair_ref1():
     factory.create_from_cli("primitive dummy-0 Dummy params $fiz:buz=bin")
     roundtrip('primitive dummy-1 Dummy params @fiz:boz')
 
 
+@with_setup(setup_func, teardown_func)
 def test_idresolve():
     factory.create_from_cli("primitive dummy-5 Dummy params buz=bin")
     roundtrip('primitive dummy-1 Dummy params @dummy-5-instance_attributes-buz')
 
 
+@with_setup(setup_func, teardown_func)
 def test_ordering():
     xml = """<primitive id="dummy" class="ocf" provider="pacemaker" type="Dummy"> \
   <operations> \
@@ -135,6 +146,7 @@ value="Stopped"/> \
     assert obj.cli_use_validate()
 
 
+@with_setup(setup_func, teardown_func)
 def test_ordering2():
     xml = """<primitive id="dummy2" class="ocf" provider="pacemaker" type="Dummy"> \
   <meta_attributes id="dummy2-meta_attributes"> \
@@ -158,6 +170,8 @@ value="Stopped"/> \
     eq_(exp, data)
     assert obj.cli_use_validate()
 
+
+@with_setup(setup_func, teardown_func)
 def test_fencing():
     xml = """<fencing-topology>
     <fencing-level devices="st1" id="fencing" index="1"
@@ -177,6 +191,7 @@ target="ha-one"></fencing-level>
     assert obj.cli_use_validate()
 
 
+@with_setup(setup_func, teardown_func)
 def test_master():
     xml = """<master id="ms-1">
     <crmsh-ref id="dummy3" />
@@ -191,6 +206,7 @@ def test_master():
     assert obj.cli_use_validate()
 
 
+@with_setup(setup_func, teardown_func)
 def test_param_rules():
     roundtrip('primitive foo Dummy ' +
               'params rule #uname eq wizbang laser=yes ' +
@@ -202,25 +218,31 @@ def test_param_rules():
               'params 1: interface=eth0 port=9999')
 
 
+@with_setup(setup_func, teardown_func)
 def test_new_acls():
     roundtrip('role fum description=test read description=test2 xpath:"*[@name=karl]"')
 
 
+@with_setup(setup_func, teardown_func)
 def test_acls_reftype():
     roundtrip('role boo deny ref:d0 type:nvpair',
               expected='role boo deny ref:d0 deny type:nvpair')
 
 
+@with_setup(setup_func, teardown_func)
 def test_acls_oldsyntax():
     roundtrip('role boo deny ref:d0 tag:nvpair',
               expected='role boo deny ref:d0 deny type:nvpair')
 
+
+@with_setup(setup_func, teardown_func)
 def test_rules():
     roundtrip('primitive p1 Dummy params ' +
               'rule $role=Started date in start=2009-05-26 end=2010-05-26 ' +
               'or date gt 2014-01-01 state=2')
 
 
+@with_setup(setup_func, teardown_func)
 def test_new_role():
     roundtrip('role silly-role-2 read xpath:"//nodes//attributes" ' +
               'deny type:nvpair deny ref:d0 deny type:nvpair')
