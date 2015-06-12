@@ -69,7 +69,8 @@ class ConsolePrinter(object):
     def flush(self):
         if self.in_progress:
             self.in_progress = False
-            sys.stdout.write('\r')
+            if not config.core.debug:
+                sys.stdout.write('\r')
             sys.stdout.flush()
 
     def debug(self, msg):

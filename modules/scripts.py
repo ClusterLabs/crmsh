@@ -1730,6 +1730,7 @@ class RunActions(object):
             self.result = self._process_remote(cmdline)
         else:
             self.result = self._process_local(cmdline)
+        self.rc = self.result not in (None, False)
 
     def copy_file(self, nodes, src, dst):
         if nodes == 'all':
@@ -1822,7 +1823,8 @@ class RunActions(object):
         """
         if self.dry_run:
             self.printer.print_command(nodes, cmdscript)
-            self.result = ''
+            self.result = {}
+            self.rc = True
             return
 
         tmpf = self.str2tmp(cmdscript)
@@ -1839,6 +1841,7 @@ class RunActions(object):
         else:
             cmdline = 'cd "%s"; %s' % (self.workdir, tmpf)
             self.result = self._process_local(cmdline)
+        self.rc = self.result not in (None, False)
 
     def str2tmp(self, s):
         """
@@ -1873,8 +1876,9 @@ class RunActions(object):
 
         if self.dry_run:
             self.printer.print_command(self.hosts, cmdline)
-            self.rc = True
-            return ''
+            return {}
+        elif config.core.debug:
+            self.printer.print_command(self.hosts, cmdline)
 
         for host, result in _parallax_call(self.hosts,
                                            cmdline,
@@ -1909,9 +1913,10 @@ class RunActions(object):
         else:
             input_s = None
         if self.dry_run:
-            self.printer.print_command(self.hosts, cmdline)
-            self.rc = True
-            return ''
+            self.printer.print_command(self.local_node, cmdline)
+            return {}
+        elif config.core.debug:
+            self.printer.print_command(self.local_node, cmdline)
         rc, out, err = utils.get_stdout_stderr(cmdline, input_s=input_s, shell=True)
         if rc != 0:
             self.printer.error(self.local_node[0], "Error (%d): %s" % (rc, err))
