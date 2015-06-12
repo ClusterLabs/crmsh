@@ -51,7 +51,6 @@ def _resolve(path, context, strict):
     for values in context:
         r = path
         p = values
-        print p
         while r and p is not None:
             p, r = p.get(r[0]), r[1:]
         if strict and r:
