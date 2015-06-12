@@ -632,7 +632,8 @@ def _listfindpend(needle, haystack, keyfn, orfn):
 
 
 def _make_cib_for_agent(name, agent, data, ops):
-    template = ['primitive', "{{%s:id}}" % (name), agent]
+    aid = "{{%s:id}}" % (name) if name else "{{id}}"
+    template = ['primitive', aid, agent]
     params = []
     ops = [op.strip() for op in ops.split('\n') if op.strip()]
     for param in data['parameters']:
