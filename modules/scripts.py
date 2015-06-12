@@ -164,7 +164,7 @@ class Actions(object):
         # the text field will be converted to lines where
         # each line is <service> -> <state>
         elif name == 'service':
-            if isinstance(value, basestring):
+            if Text.isa(value):
                 action['value'] = [dict([v.split(':', 1)]) for v in str(value).split()]
 
             def arrow(v):
