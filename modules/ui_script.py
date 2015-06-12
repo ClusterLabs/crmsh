@@ -32,7 +32,7 @@ from . import completers as compl
 from .msg import err_buf
 
 
-class _ConsolePrinter(object):
+class ConsolePrinter(object):
     def __init__(self):
         self.in_progress = False
 
@@ -82,7 +82,7 @@ class _ConsolePrinter(object):
         print("** %s - %s" % (nodes, command))
 
 
-class _JsonPrinter(object):
+class JsonPrinter(object):
     def __init__(self):
         self.results = []
 
@@ -121,12 +121,12 @@ class _JsonPrinter(object):
 
 
 def describe_param(p, name, all):
-    if not all and p['advanced']:
+    if not all and p.get('advanced'):
         return ""
     opt = ' (required) ' if p['required'] else ''
     opt += ' (unique) ' if p['unique'] else ''
     if 'value' in p:
-        opt += (' (default: %s)' % (p['value'])) if p['value'] else ''
+        opt += (' (default: %s)' % (repr(p['value']))) if p['value'] else ''
     s = "  %s%s\n" % (name, opt)
     s += "      %s\n" % (p['shortdesc'])
     return s
@@ -139,7 +139,7 @@ def _scoped_name(context, name):
 
 
 def describe_step(icontext, context, s, all):
-    ret = "%s. %s" % ('.'.join([str(i) for i in icontext]), s['shortdesc'].strip() or 'Parameters')
+    ret = "%s. %s" % ('.'.join([str(i) for i in icontext]), scripts.format_desc(s['shortdesc']) or 'Parameters')
     if not s['required']:
         ret += ' (optional)'
     ret += '\n\n'
@@ -172,6 +172,26 @@ def _nvpairs2parameters(args):
     return ret
 
 
+def _clean_parameters(params):
+    ret = []
+    for param in params:
+        rp = {}
+        for elem in ('name', 'required', 'unique', 'advanced'):
+            if elem in param:
+                rp[elem] = param[elem]
+        if 'shortdesc' in param:
+            rp['shortdesc'] = scripts.format_desc(param['shortdesc'])
+        if 'longdesc' in param:
+            rp['longdesc'] = scripts.format_desc(param['longdesc'])
+        if 'value' in param:
+            val = param['value']
+            if isinstance(val, scripts.Text):
+                val = val.text
+            rp['value'] = val
+        ret.append(rp)
+    return ret
+
+
 def _clean_steps(steps):
     ret = []
     for step in steps:
@@ -179,13 +199,13 @@ def _clean_steps(steps):
         if 'name' in step:
             rstep['name'] = step['name']
         if 'shortdesc' in step:
-            rstep['shortdesc'] = step['shortdesc']
+            rstep['shortdesc'] = scripts.format_desc(step['shortdesc'])
         if 'longdesc' in step:
-            rstep['longdesc'] = step['longdesc']
+            rstep['longdesc'] = scripts.format_desc(step['longdesc'])
         if 'required' in step:
             rstep['required'] = step['required']
         if 'parameters' in step:
-            rstep['parameters'] = step['parameters']
+            rstep['parameters'] = _clean_parameters(step['parameters'])
         if 'steps' in step:
             rstep['steps'] = _clean_steps(step['steps'])
         ret.append(rstep)
@@ -227,7 +247,7 @@ class Script(command.UI):
                         continue
                     if cat not in categories:
                         categories[cat] = []
-                    categories[cat].append("%-16s %s" % (script['name'], script['shortdesc'].strip()))
+                    categories[cat].append("%-16s %s" % (script['name'], script['shortdesc']))
                 except ValueError as err:
                     err_buf.error(str(err))
                     continue
@@ -265,9 +285,9 @@ class Script(command.UI):
 
         vals = {
             'name': script['name'],
-            'category': script['category'],
-            'shortdesc': script['shortdesc'].strip(),
-            'longdesc': script['longdesc'].strip(),
+            'category': str(script['category']).capitalize(),
+            'shortdesc': str(script['shortdesc']),
+            'longdesc': scripts.format_desc(script['longdesc']),
             'steps': "\n".join((describe_step([i + 1], [], s, all) for i, s in enumerate(script['steps'])))}
         print("""%(name)s (%(category)s)
 %(shortdesc)s
@@ -292,10 +312,15 @@ class Script(command.UI):
             print("OK (no actions)")
         for i, action in enumerate(ret):
             shortdesc = action.get('shortdesc', '')
-            text = action.get('text') or action.get('longdesc', '')
+            text = str(action.get('text', ''))
+            longdesc = str(action.get('longdesc', ''))
             print("%s. %s\n" % (i + 1, shortdesc))
+            if longdesc:
+                for line in str(longdesc).split('\n'):
+                    print("\t%s" % (line))
+                print('')
             if text:
-                for line in text.split('\n'):
+                for line in str(text).split('\n'):
                     print("\t%s" % (line))
                 print('')
 
@@ -308,7 +333,7 @@ class Script(command.UI):
             raise ValueError("The parallax python package is missing")
         script = scripts.load_script(name)
         if script is not None:
-            return scripts.run(script, _nvpairs2parameters(args), _ConsolePrinter())
+            return scripts.run(script, _nvpairs2parameters(args), ConsolePrinter())
         return False
 
     @command.name('_print')
@@ -402,7 +427,7 @@ class Script(command.UI):
                         print(json.dumps({'name': script['name'],
                                           'category': script['category'].lower(),
                                           'shortdesc': script['shortdesc'],
-                                          'longdesc': script['longdesc']}))
+                                          'longdesc': scripts.format_desc(script['longdesc'])}))
                 except ValueError as err:
                     err_buf.debug(str(err))
                     continue
@@ -414,7 +439,7 @@ class Script(command.UI):
             print(json.dumps({'name': script['name'],
                               'category': script['category'].lower(),
                               'shortdesc': script['shortdesc'],
-                              'longdesc': script['longdesc'],
+                              'longdesc': scripts.format_desc(script['longdesc']),
                               'steps': _clean_steps(script['steps'])}))
         elif cmd[0] == "verify":
             name = cmd[1]
@@ -427,7 +452,8 @@ class Script(command.UI):
                 return False
             for action in ret:
                 print(json.dumps({'shortdesc': action.get('shortdesc', ''),
-                                  'longdesc': action.get('text') or action.get('longdesc', ''),
+                                  'longdesc': str(action.get('longdesc', '')),
+                                  'text': str(action.get('text', '')),
                                   'nodes': action.get('nodes', '')}))
         elif cmd[0] == "run":
             name = cmd[1]
@@ -437,7 +463,7 @@ class Script(command.UI):
             script = scripts.load_script(name)
             if script is None:
                 return False
-            scripts.run(script, params, _JsonPrinter())
+            scripts.run(script, params, JsonPrinter())
         else:
             raise ValueError("Unknown command: %s" % (cmd[0]))
         print('"end"')

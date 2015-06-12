@@ -114,14 +114,19 @@ class Text(object):
 
     def __str__(self):
         if self.type == self.DESC:
-            import textwrap
-            return '\n\n'.join([textwrap.fill(para) for para in self._parse().split('\n\n') if para.strip()])
+            return format_desc(self._parse())
         elif self.type == self.CIB:
+            # TODO
             pass
         return self._parse()
 
     def __eq__(self, obj):
         return str(self) == str(obj)
+
+
+def format_desc(desc):
+    import textwrap
+    return '\n\n'.join([textwrap.fill(para) for para in desc.split('\n\n') if para.strip()])
 
 
 class Actions(object):
@@ -668,8 +673,8 @@ def _process_include(script, include):
             'shortdesc': '',
             'parameters': [],
         })
-        step['longdesc'] = Text.desc(script, include.get('longdesc') or _meta_text(meta, 'longdesc'))
-        step['shortdesc'] = Text.desc(script, include.get('shortdesc') or _meta_text(meta, 'shortdesc'))
+        step['longdesc'] = include.get('longdesc') or _meta_text(meta, 'longdesc')
+        step['shortdesc'] = include.get('shortdesc') or _meta_text(meta, 'shortdesc')
         step['required'] = include.get('required', True)
         step['parameters'].append({
             'name': 'id',
@@ -701,7 +706,7 @@ def _process_include(script, include):
             pobj = _listfindpend(pname, step['parameters'], lambda x: x.get('name'), lambda: {'name': pname})
             for key, value in param.iteritems():
                 if key in ('shortdesc', 'longdesc'):
-                    pobj[key] = Text.desc(script, value)
+                    pobj[key] = value
                 elif key == 'value' and Text.isa(value):
                     pobj[key] = Text(script, value)
                 else:
@@ -738,7 +743,7 @@ def _process_include(script, include):
                 if p['name'] == param['name']:
                     for key, value in param.iteritems():
                         if key in ('shortdesc', 'longdesc'):
-                            p[key] = Text.desc(script, value)
+                            p[key] = value
                         elif key == 'value' and Text.isa(value):
                             p[key] = Text(script, value)
                         else:
@@ -789,13 +794,13 @@ def _postprocess_script(script):
 
     def _postprocess_step(step):
         step['required'] = _make_boolean(step.get('required', True))
-        step['shortdesc'] = Text.desc(script, step.get('shortdesc', ''))
-        step['longdesc'] = Text.desc(script, step.get('longdesc', ''))
+        step['shortdesc'] = step.get('shortdesc', '')
+        step['longdesc'] = step.get('longdesc', '')
         for p in step.get('parameters', []):
             if 'name' not in p:
                 raise ValueError("Parameter has no name: %s" % (p.keys()))
-            p['shortdesc'] = Text.desc(script, p.get('shortdesc', ''))
-            p['longdesc'] = Text.desc(script, p.get('longdesc', ''))
+            p['shortdesc'] = p.get('shortdesc', '')
+            p['longdesc'] = p.get('longdesc', '')
             if 'default' in p and 'value' not in p:
                 p['value'] = p['default']
                 del p['default']
@@ -1327,10 +1332,10 @@ def _check_parameters(script, params):
     if config.core.debug:
         params['debug'] = True
 
-    if config.core.debug:
-        from pprint import pprint
-        print("Checked script parameters:")
-        pprint(params)
+    #if config.core.debug:
+    #    from pprint import pprint
+    #    print("Checked script parameters:")
+    #    pprint(params)
     return params
 
 
