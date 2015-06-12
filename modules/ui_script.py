@@ -203,36 +203,53 @@ class Script(command.UI):
     '''
     name = "script"
 
-    def do_list(self, context, all=None):
+    @command.completers_repeating(compl.choice(['all', 'names']))
+    def do_list(self, context, *args):
         '''
         List available scripts.
         hides scripts with category Script or '' by default,
         unless "all" is passed as argument
         '''
-        if all not in ("all", None):
-            context.error("Unexpected argument '%s': expected  [all]" % (all))
-        all = all == "all"
-        categories = {}
-        for name in scripts.list_scripts():
-            try:
-                script = scripts.load_script(name)
-                if script is None:
+        for arg in args:
+            if arg.lower() not in ("all", "names"):
+                context.error("Unexpected argument '%s': expected  [all|names]" % (all))
+        all = any([x for x in args if x.lower() == 'all'])
+        names = any([x for x in args if x.lower() == 'names'])
+        if not names:
+            categories = {}
+            for name in scripts.list_scripts():
+                try:
+                    script = scripts.load_script(name)
+                    if script is None:
+                        continue
+                    cat = script['category'].lower()
+                    if not all and cat == 'script':
+                        continue
+                    if cat not in categories:
+                        categories[cat] = []
+                    categories[cat].append("%-16s %s" % (script['name'], script['shortdesc'].strip()))
+                except ValueError as err:
+                    err_buf.error(str(err))
                     continue
-                cat = script['category'].lower()
-                if not all and cat == 'script':
+            for c, lst in sorted(categories.iteritems(), key=lambda x: x[0]):
+                if c:
+                    print("%s:\n" % (c.capitalize()))
+                for s in sorted(lst):
+                    print(s)
+                print('')
+        elif all:
+            for name in scripts.list_scripts():
+                print(name)
+        else:
+            for name in scripts.list_scripts():
+                try:
+                    script = scripts.load_script(name)
+                    if script is None or script['category'] == 'script':
+                        continue
+                except ValueError as err:
+                    err_buf.error(str(err))
                     continue
-                if cat not in categories:
-                    categories[cat] = []
-                categories[cat].append("%-16s %s" % (script['name'], script['shortdesc'].strip()))
-            except ValueError as err:
-                err_buf.error(str(err))
-                continue
-        for c, lst in sorted(categories.iteritems(), key=lambda x: x[0]):
-            if c:
-                print("%s:\n" % (c.capitalize()))
-            for s in sorted(lst):
-                print(s)
-            print('')
+                print(name)
 
     @command.completers_repeating(compl.call(scripts.list_scripts))
     @command.alias('info')
