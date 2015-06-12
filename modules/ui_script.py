@@ -235,8 +235,8 @@ class Script(command.UI):
                 print(name)
 
     @command.completers_repeating(compl.call(scripts.list_scripts))
-    @command.alias('info')
-    def do_describe(self, context, name, all=None):
+    @command.alias('info', 'describe')
+    def do_show(self, context, name, all=None):
         '''
         Describe the given script.
         '''
@@ -372,7 +372,7 @@ class Script(command.UI):
 
         ["list"]
         => [{name, shortdesc, category}]
-        ["describe", <name>]
+        ["show", <name>]
         => [{name, shortdesc, longdesc, category, <<steps>>}]
         <<steps>> := [{stepname, shortdesc, longdesc, required, <<params>>}]
         <<params>> := [{name, shortdesc, longdesc, required, unique, type, value, example}]
@@ -395,7 +395,7 @@ class Script(command.UI):
                 except ValueError as err:
                     print(json.dumps({'name': name,
                                       'error': str(err)}))
-        elif cmd[0] == "describe":
+        elif cmd[0] == "show":
             name = cmd[1]
             script = scripts.load_script(name)
             if script is None:

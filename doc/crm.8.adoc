@@ -1066,8 +1066,8 @@ list
 list all names
 ............
 
-[[cmdhelp_script_describe,Describe the script]]
-==== `describe`
+[[cmdhelp_script_show,Describe the script]]
+==== `show`
 
 Prints a description and short summary of the script, with
 descriptions of the accepted parameters.
@@ -1077,12 +1077,12 @@ of parameters accepted by the script, pass `all` as argument.
 
 Usage:
 ............
-describe <script> [all]
+show <script> [all]
 ............
 
 Example:
 ............
-describe virtual-ip
+show virtual-ip
 ............
 
 [[cmdhelp_script_verify,Verify the script]]
@@ -1115,7 +1115,7 @@ Can optionally take at least two parameters:
 
 Additional parameters may be available depending on the script.
 
-Use the `describe` command to see what parameters are available.
+Use the `show` command to see what parameters are available.
 
 Usage:
 .............
@@ -1151,7 +1151,7 @@ API:
 ["list"]
 => [{name, shortdesc, category}]
 
-["describe", <name>]
+["show", <name>]
 => [{name, shortdesc, longdesc, category, <<steps>>}]
 
 <<steps>> := [{name, shortdesc], longdesc, required, parameters, steps}]
