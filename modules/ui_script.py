@@ -195,7 +195,7 @@ class Script(command.UI):
         '''
         for arg in args:
             if arg.lower() not in ("all", "names"):
-                context.error("Unexpected argument '%s': expected  [all|names]" % (all))
+                context.fatal_error("Unexpected argument '%s': expected  [all|names]" % (all))
         all = any([x for x in args if x.lower() == 'all'])
         names = any([x for x in args if x.lower() == 'names'])
         if not names:
@@ -340,10 +340,10 @@ class Script(command.UI):
         import os
         import glob
         if not os.path.isdir(fromdir):
-            context.error("Expected <fromdir> <todir>")
+            context.fatal_error("Expected <fromdir> <todir>")
         scripts._build_script_cache()
         if not os.path.isdir(tgtdir):
-            context.error("Expected <fromdir> <todir>")
+            context.fatal_error("Expected <fromdir> <todir>")
         for f in glob.glob(os.path.join(fromdir, 'workflows/*.xml')):
             name = os.path.splitext(os.path.basename(f))[0]
             script = scripts._load_script_file(name, f)

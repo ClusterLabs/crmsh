@@ -355,6 +355,13 @@ class Context(object):
         prev = self.previous_level()
         return prev and prev.name == level_name
 
+    def error(self, msg):
+        """
+        Too easy to misremember and type error()
+        when I meant fatal_error().
+        """
+        raise ValueError(msg)
+
     def fatal_error(self, msg):
         """
         TODO: Better error messages, with full context information
