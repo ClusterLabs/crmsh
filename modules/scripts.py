@@ -745,26 +745,29 @@ def _process_include(script, include):
         # If the script doesn't have any base parameters
         # and the name of this step is the same as the
         # script name itself, then make this the base step
+        hoist = False
+        hoist_from = None
         if step['name'] == script['name']:
             zerostep = _listfind('', script['steps'], lambda x: x.get('name', ''))
             if not zerostep:
-                step['name'] = ''
+                hoist = True
             elif zerostep.get('parameters'):
                 zp = zerostep['parameters']
                 for pname in [p['name'] for p in step['parameters']]:
                     if _listfind(pname, zp, lambda x: x['name']):
                         break
                 else:
-                    step['name'] = ''
-                    step['parameters'] = zerostep['parameters'] + step['parameters']
-                    script['steps'] = [s for s in script['steps'] if s != zerostep]
-            else:
-                step['name'] = ''
-                step['parameters'] = zerostep['parameters'] + step['parameters']
-                script['steps'] = [s for s in script['steps'] if s != zerostep]
+                    hoist, hoist_from = True, zerostep
 
         # use step['name'] here in case we did the zerostep hoist
-        step['value'] = Text.cib(script, _make_cib_for_agent(step['name'], agent, step, include.get('ops', '')))
+        step['value'] = Text.cib(script, _make_cib_for_agent('' if hoist else step['name'],
+                                                             agent, step, include.get('ops', '')))
+
+        if hoist:
+            step['name'] = ''
+            if hoist_from:
+                step['parameters'] = hoist_from['parameters'] + step['parameters']
+                script['steps'] = [s for s in script['steps'] if s != hoist_from]
 
         if not step['name']:
             del step['name']
