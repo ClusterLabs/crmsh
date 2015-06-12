@@ -75,6 +75,17 @@ def _push(path, value, context):
     return ret
 
 
+def _textify(obj):
+    if obj is None:
+        return ''
+    elif obj is True:
+        return 'true'
+    elif obj is False:
+        return 'false'
+    else:
+        return str(obj)
+
+
 def _parse(template, context, strict):
     ret = ""
     while template:
@@ -111,7 +122,7 @@ def _parse(template, context, strict):
             if ret.endswith('\n') and template[iend:].startswith('\n'):
                 iend += 1
         elif obj is not None:
-            ret += str(obj)
+            ret += _textify(obj)
         template = template[iend:]
     return ret
 
