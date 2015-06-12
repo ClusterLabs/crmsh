@@ -1409,7 +1409,7 @@ def _check_parameters(script, params):
     return params
 
 
-def _handles_values(script, params, subactions):
+def _handles_values(ret, script, params, subactions):
     """
     Generate a values structure that the handles
     templates understands.
@@ -1443,10 +1443,7 @@ def _handles_values(script, params, subactions):
             else:
                 _process(to, step, params)
 
-    ret = {}
     _process(ret, script, params)
-
-    return ret
 
 
 def _has_remote_actions(actions):
@@ -1995,8 +1992,13 @@ def _process_actions(script, params):
     all the handles data and generate all the
     actions to perform, validate and check conditions.
     """
+
     subactions = {}
+    values = {}
+    script['__values__'] = values
+
     for step in script['steps']:
+        _handles_values(values, script, params, subactions)
         if not step.get('required', True) and not params.get(step['name']):
             continue
         obj = step.get('sub-script')
@@ -2007,7 +2009,7 @@ def _process_actions(script, params):
             except ValueError as err:
                 raise ValueError("Error in included script %s: %s" % (step['name'], err))
 
-    script['__values__'] = _handles_values(script, params, subactions)
+    _handles_values(values, script, params, subactions)
     actions = deepcopy(script['actions'])
 
     ret = []
