@@ -1719,7 +1719,8 @@ class RunActions(object):
         if self.dry_run:
             return True
         json.dump(self.data, open(self.statefile, 'w'))
-        return _copy_to_all(self.workdir,
+        return _copy_to_all(self.printer,
+                            self.workdir,
                             self.hosts,
                             self.local_node,
                             self.statefile,
