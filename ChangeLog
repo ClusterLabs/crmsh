@@ -1,3 +1,179 @@
+* Sat Jun 13 2015 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- Pre-release 2.2.0-rc3
+- high: Merge rewizards development branch (fate#318211)
+  (fate#318384) (fate#318483) (fate#318482) (fate#318550)
+
+- Summary of some of the changes included in the merge of
+  the rewizards branch:
+
+  + Colorized status output
+  + New and more capable cluster script implementation
+  + Deprecated the crmsh templates (not the CIB templates,
+    the configuration templates)
+  + Implemented a JSON API interface to the cluster scripts
+    for hawk to use instead of having its own wizards
+  + Handlebars-like templating language for cluster scripts
+    that modify the CIB
+  + Collect metadata from resource agents to avoid duplication
+    in configuration scripts
+  + Extended validation support for parameter values
+  + New cluster scripts:
+
+   - Stonith: SBD and libvirt
+   - Apache web server
+   - NFS server
+   - cLVM
+   - Databases: MySQL / MariaDB / Oracle / DB2
+   - SAP
+   - OCFS2
+   - etc.
+
+  + Radically simplified automake and autoconf setup
+  + Improved completion performance
+  + Added pygment lexers used by the history guide as stand-alone
+    python module in contrib/
+  + Removed dependency on corosync for regression test suite
+  + Sort topics and commands in help output
+  + Hide internal commands in help and ls
+  + Clearer debug output when simulating
+  + Cleaned up and fixed documentation bugs
+
+- high: cmd_status: Colorize status output
+- low: cmd_status: Add full argument to status
+- low: scripts: Handle local runs even if nodelist doesn't contain local node
+- low: scripts: Stricter regexp for identifiers
+- doc: Fix unterminated block
+- low: command: Hide internal commands from ls
+- low: script: Rename describe to show
+- doc: Document the script JSON API
+- low: handles: Clean up special values
+- medium: help: Sort topics and commands in help output
+- doc: scripts: Basic documentation for the cluster scripts
+- doc: Describe website compilation process in development.md
+- contrib: Add pygment lexers used by the history guide
+- build: Add update-data-manifest.sh to generate datadir file list
+- medium: ui_script: Add JSON API
+- medium: config: add config.path.hawk_wizards
+- medium: handles: Fix error in strict parameter handling
+- scripts: Add placeholders for some basic scripts
+- WIP: in-progress notes etc.
+- doc: Update reference to parallax in scripts documentation
+- low: handles: Also allow # and $ in identifiers
+- medium: handles: Replace magic value with callables
+- medium: handles: {{^feature}}invert blocks{{/feature}}
+- medium: resource: Add ban command
+- medium: ui_root: Make the cibstatus command available directly from the root
+- medium: hb_report: Collect logs from pacemaker.log
+- low: crm: Detect and report use of python 3
+- doc: Link to japanese translation of Getting Started
+- medium: crm_pkg: Fix cluster init bug on RH-based systems
+- medium: crm_gv: Improved quoting of non-identifier node names (bsc#931837)
+- medium: crm_gv: Wrap non-identifier names in quotes (bsc#931837)
+- low: Fix references to pssh to refer to parallax
+- medium: report: Try to load source as session if possible (bsc#927407)
+- low: xmlutil: Update comment to match the code
+- Merge pull request #91 from krig/missing-transitions
+- high: report: New detection to fix missing transitions (bnc#917131)
+- medium: ui_configure: Add resource as an alias for primitive
+- medium: parse: Allow implicit initial for groups as well
+- medium: parse: More robust implicit initial parser
+- doc: website: Embedded hawk video in announcement
+- doc: news: News update for 2.1.4
+- Merge pull request #95 from dmuhamedagic/history-guide
+- Medium: doc: add history guide
+- Low: doc: simplify to make it work with python 2.6
+- Medium: hb_report: use faster zypper interface if available
+- medium: ui_configure: Wait for DC when removing running resource
+- Merge pull request #94 from rikkotec/patch-queue/debian-multiarch-compat
+- Fix CFLAGS for supporting triplet paths with pacemaker
+- low: schema: Don't leak PacemakerError exceptions (#93)
+- high: ui_cluster: Add copy command
+- doc: Update the documentation for the upgrade command
+- parse: Don't require trailing colon in tag definitions
+- high: crm_pssh: Explicitly set parallax inline option (krig/parallax#1)
+- doc: Add quick links to website
+- high: ui_configure: Add show-property command
+- medium: utils: Allow 1/0 as boolean values for parameters
+- doc: Correct the URL to point to the new upstream repository
+- doc: Add announcement for release 2.1.3
+- low: hb_report: Use crmsh config to find pengine/cib dirs (bsc#926377)
+- low: ui_options: add alias list for show
+- medium: cliformat: Escape double-quotes in nvpair values
+- high: parse: Don't allow constraints without applicants
+- medium: parse: Disallow location rules without resources
+- medium: ui_template: Make new command more robust (bnc#924641)
+- high: fix typo in previous commit
+- high: ui_node: Don't fence node in clearstate (boo#912919)
+- low: Replaced README with README.md
+- medium: ui_template: Always generate id unless explicitly defined (boo#921028)
+- high: cibconfig: Derive id for ops from referenced resource name (boo#921028)
+- medium: templates: Clearer descriptions for editing templates (boo#921028)
+- high: ui_context: Wait for DC after commit, not before (#85)
+- high: cibconfig: Don't delete valid tickets when removing referenced objects (bnc#922039)
+- high: ui_configure: Remove acl_group command (bnc#921056)
+- doc: Document changes to template list|new
+- medium: help: Teach help to fuzzy match topics
+- doc: Describe the shorthand syntax for commands
+- low: command: Use fuzzy match for sublevel check
+- medium: command: Fuzzy match command names
+- low: ui_context: Use true command name when reporting errors
+- doc: Move the main crmsh repository to the ClusterLabs organization on github
+- Merge pull request #82 from dmuhamedagic/sync_hb_report
+- Low: hb_report: add -X option for extra ssh options
+- Merge pull request #81 from lge/for-krig
+- fix: catch exception if schema file does not exist
+- low: allow pacemaker 1.0 version detection
+- low: allow (0,1) as option booleans
+- medium: cibconfig: Allow removal of non-existing elements if --force is set
+- medium: cibconfig: Allow delete of objects that don't exist without returning error code
+- medium: cibconfig: If a change results in no diff, exit silently
+- low: pacemaker: Remove debug output
+- medium: schema: Remove extra debug output
+- medium: schema: Test if node type is optional via schema
+- medium: parse: Treat pacemaker-next schema as 2.0+
+- low: cibconfig: Improved debug output when schema change fails
+- medium: cibconfig: Fix inverted logic causing spurious warning
+- Merge pull request #80 from dmuhamedagic/schema-update
+- Medium: cibconf: preserve cib user attributes
+- medium: ra: Handle non-OCF agent meta-data better
+- medium: config: Fix case-sensitivity for booleans
+- medium: report: Include transitions with configuration changes (bnc#917131)
+- medium: xmlutil: Improved check for related elements
+- doc: Documentation for show related:<obj>
+- medium: report: Convert RE exception to simpler UI output
+- medium: cibconfig: add show related:<obj>
+- doc: Add link to clusterlabs.org
+- medium: parse: Encode unicode using xmlcharrefreplace in parser
+- medium: parse: nvpair attributes with no value = <nvpair name=".."/> (#71)
+- medium: ui_cluster: Add diff command (bnc#914525)
+- doc: website: Fix changelog in news entry
+- doc: website: Add news release for 2.1.2
+- medium: report: Fall back to end_ts = start_ts
+- medium: util: Don't fall back to current time
+- high: xmlutil: Treat node type=member as normal (boo#904698)
+- low: xmlutil: logic bug in sanity_check_nvpairs
+- medium: xmlutil: Modify sort order of object types
+- medium: cibconfig: Use orderedset to avoid reordering bugs (#79)
+- medium: orderedset: Add OrderedSet type
+- medium: cibconfig: Detect v1 format and don't patch container changes (bnc#914098)
+- medium: constants: Update transition regex (#77)
+- Revert "high: xmlutil: Reorder elements only if sort_elements is set (#78)"
+- low: ui_options: Add underscore aliases for legacy options
+- high: xmlutil: Reorder elements only if sort_elements is set (#78)
+- medium: cibconfig: Strip digest from v1 diffs (bnc#914098)
+- Merge pull request #77 from krig/mail-patchset
+- medium: crm_pssh: Make tar follow symlinks
+- medium: constants: Fix transition start detection
+- medium: crm_pssh: Handle incomplete Option argument
+- high: crm_pssh: Use correct Task API in do_pssh (bnc#913261)
+- medium: cibconfig: Break infinite edit loop if --force is set
+- Merge pull request #76 from dmuhamedagic/log-patterns
+- high: utils: Locate binaries across sudo boundary (bnc#912483)
+- low: config: Convert NoOptionError to ValueError
+- low: msg: Add note on modifying supported schemas
+- medium: config: Add 2.3 to list of supported schemas
+- medium: utils: crm_daemon_dir is added to PATH in envsetup (#67)
+
 * Fri Jan  9 2015 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - medium: ui_resource: Set probe interval 0 if not set (bnc#905050)
 - doc: Document probe op in resource trace (bnc#905050)
