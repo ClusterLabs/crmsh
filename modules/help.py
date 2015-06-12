@@ -144,6 +144,8 @@ _TOPICS["Topics"] = HelpEntry("Available help topics", generated=True)
 def _titleline(title, desc, suffix=''):
     return '%-16s %s\n' % (('`%s`' % (title)) + suffix, desc)
 
+_hidden_commands = ('up', 'cd', 'help', 'quit', 'ls')
+
 
 def help_overview():
     '''
@@ -162,13 +164,11 @@ def help_overview():
             s += '\t' + _titleline(title, command.short)
     s += "\n"
 
-    hidden_commands = ('up', 'cd', 'help', 'quit', 'ls')
-
-    for title, level in _LEVELS.iteritems():
+    for title, level in sorted(_LEVELS.iteritems(), key=lambda x: x[0]):
         if title != 'root' and title in _COMMANDS:
             s += '\t' + _titleline(title, level.short, suffix='/')
-            for cmdname, cmd in _COMMANDS[title].iteritems():
-                if cmdname in hidden_commands:
+            for cmdname, cmd in sorted(_COMMANDS[title].iteritems(), key=lambda x: x[0]):
+                if cmdname in _hidden_commands or cmdname.startswith('_'):
                     continue
                 if not cmd.is_alias():
                     s += '\t\t' + _titleline(cmdname, cmd.short)
@@ -346,8 +346,14 @@ def _load_help():
         for lvlname, level in _LEVELS.iteritems():
             if lvlname in _COMMANDS:
                 level.long += "\n\nCommands:\n"
-                for cmdname, cmd in _COMMANDS[lvlname].iteritems():
+                for cmdname, cmd in sorted(_COMMANDS[lvlname].iteritems(), key=lambda x: x[0]):
+                    if cmdname in _hidden_commands or cmdname.startswith('_'):
+                        continue
                     level.long += "\t" + _titleline(cmdname, cmd.short)
+                level.long += "\n"
+                for cmdname, cmd in sorted(_COMMANDS[lvlname].iteritems(), key=lambda x: x[0]):
+                    if cmdname in _hidden_commands:
+                        level.long += "\t" + _titleline(cmdname, cmd.short)
 
     def fixup_root_commands():
         "root commands appear as levels"
