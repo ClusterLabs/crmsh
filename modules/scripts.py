@@ -1856,17 +1856,17 @@ class RunActions(object):
         """
         fn = os.path.join(self.workdir, _tempname('str2tmp'))
         if self.dry_run:
-            self.printer.print_command(self.local_node[0], 'temporary file <<END\n%s\nEND\n' % (s))
+            self.printer.print_command(self.local_node_name(), 'temporary file <<END\n%s\nEND\n' % (s))
             return fn
         elif config.core.debug:
-            self.printer.print_command(self.local_node[0], 'temporary file <<END\n%s\nEND\n' % (s))
+            self.printer.print_command(self.local_node_name(), 'temporary file <<END\n%s\nEND\n' % (s))
         try:
             with open(fn, "w") as f:
                 f.write(s)
                 if not s.endswith('\n'):
                     f.write("\n")
         except IOError, msg:
-            self.printer.error(self.local_node[0], "Write failed: %s" % (msg))
+            self.printer.error(self.local_node_name(), "Write failed: %s" % (msg))
             return
         return fn
 
@@ -1907,7 +1907,7 @@ class RunActions(object):
             if ret is None:
                 ok = False
             else:
-                action_result[self.local_node[0]] = json.loads(ret)
+                action_result[self.local_node_name()] = json.loads(ret)
         if ok:
             self.printer.debug("Result: %s" % repr(action_result))
             return action_result
@@ -1922,16 +1922,21 @@ class RunActions(object):
         else:
             input_s = None
         if self.dry_run:
-            self.printer.print_command(self.local_node, cmdline)
+            self.printer.print_command(self.local_node_name(), cmdline)
             return {}
         elif config.core.debug:
-            self.printer.print_command(self.local_node, cmdline)
+            self.printer.print_command(self.local_node_name(), cmdline)
         rc, out, err = utils.get_stdout_stderr(cmdline, input_s=input_s, shell=True)
         if rc != 0:
-            self.printer.error(self.local_node[0], "Error (%d): %s" % (rc, err))
+            self.printer.error(self.local_node_name(), "Error (%d): %s" % (rc, err))
             return None
         self.printer.debug("%s" % repr(out))
         return out
+
+    def local_node_name(self):
+        if self.local_node:
+            return self.local_node[0]
+        return "localhost"
 
 
 def run(script, params, printer):
