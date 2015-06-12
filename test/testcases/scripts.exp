@@ -1,1 +1,255 @@
-# nothing
+.TRY Cluster scripts
+.INP: script
+.INP: list
+.EXT crm_resource --show-metadata ocf:heartbeat:apache
+.EXT crm_resource --show-metadata ocf:heartbeat:IPaddr2
+.EXT crm_resource --show-metadata ocf:heartbeat:Filesystem
+.EXT crm_resource --show-metadata ocf:heartbeat:mysql
+.EXT crm_resource --show-metadata ocf:heartbeat:db2
+.EXT crm_resource --show-metadata ocf:heartbeat:exportfs
+.EXT crm_resource --show-metadata ocf:heartbeat:LVM
+.EXT crm_resource --show-metadata ocf:heartbeat:Raid1
+Basic:
+
+virtual-ip       Virtual IP
+
+Custom:
+
+exportfs         
+Manages NFS exports
+
+
+Database:
+
+database         MySQL/MariaDB Database
+db2              IBM DB2 Database
+db2-hadr         IBM DB2 Database with HADR
+oracle           Oracle Database
+
+Filesystem:
+
+clvm             Cluster-aware LVM
+clvm-vg          Cluster-aware LVM (Volume Group)
+drbd             DRBD Block Device
+filesystem       Manages filesystem mounts
+gfs2             gfs2 filesystem (cloned)
+gfs2-base        gfs2 filesystem base (cloned)
+ocfs2            OCFS2 filesystem (cloned)
+raid-lvm         RAID hosting LVM
+
+Sap:
+
+sap-as           SAP ASCS Instance
+sap-ci           SAP Central Instance
+sap-db           SAP Database Instance
+sap-simple-stack SAP Simple Stack Instance
+sap-simple-stack-plus SAP SimpleStack+ Instance
+
+Server:
+
+apache           Apache Webserver
+nfsserver        NFS Server
+
+Stonith:
+
+libvirt          STONITH for a libvirt managed hypervisor (kvm/Xen)
+sbd              SBD, Shared storage based fencing
+
+.INP: list all
+Basic:
+
+virtual-ip       Virtual IP
+
+Custom:
+
+exportfs         
+Manages NFS exports
+
+
+Database:
+
+database         MySQL/MariaDB Database
+db2              IBM DB2 Database
+db2-hadr         IBM DB2 Database with HADR
+oracle           Oracle Database
+
+Filesystem:
+
+clvm             Cluster-aware LVM
+clvm-vg          Cluster-aware LVM (Volume Group)
+drbd             DRBD Block Device
+filesystem       Manages filesystem mounts
+gfs2             gfs2 filesystem (cloned)
+gfs2-base        gfs2 filesystem base (cloned)
+ocfs2            OCFS2 filesystem (cloned)
+raid-lvm         RAID hosting LVM
+
+Sap:
+
+sap-as           SAP ASCS Instance
+sap-ci           SAP Central Instance
+sap-db           SAP Database Instance
+sap-simple-stack SAP Simple Stack Instance
+sap-simple-stack-plus SAP SimpleStack+ Instance
+
+Script:
+
+add              Add a new node to an already existing cluster
+check-uptime     Check uptime of nodes
+health           Check the health of the cluster
+init             Initialize a new cluster
+lvm              Controls the availability of an LVM Volume Group
+raid1            Manages Linux software RAID (MD) devices on shared storage
+remove           Remove node from cluster
+sapdb            SAP Database Instance
+sapinstance      SAP Instance
+
+Server:
+
+apache           Apache Webserver
+nfsserver        NFS Server
+
+Stonith:
+
+libvirt          STONITH for a libvirt managed hypervisor (kvm/Xen)
+sbd              SBD, Shared storage based fencing
+
+.INP: list names
+add
+apache
+check-uptime
+clvm
+clvm-vg
+database
+db2
+db2-hadr
+drbd
+exportfs
+filesystem
+gfs2
+gfs2-base
+health
+init
+libvirt
+lvm
+nfsserver
+ocfs2
+oracle
+raid-lvm
+raid1
+remove
+sap-as
+sap-ci
+sap-db
+sap-simple-stack
+sap-simple-stack-plus
+sapdb
+sapinstance
+sbd
+virtual-ip
+.INP: list names all
+add
+apache
+check-uptime
+clvm
+clvm-vg
+database
+db2
+db2-hadr
+drbd
+exportfs
+filesystem
+gfs2
+gfs2-base
+health
+init
+libvirt
+lvm
+nfsserver
+ocfs2
+oracle
+raid-lvm
+raid1
+remove
+sap-as
+sap-ci
+sap-db
+sap-simple-stack
+sap-simple-stack-plus
+sapdb
+sapinstance
+sbd
+virtual-ip
+.INP: list all names
+add
+apache
+check-uptime
+clvm
+clvm-vg
+database
+db2
+db2-hadr
+drbd
+exportfs
+filesystem
+gfs2
+gfs2-base
+health
+init
+libvirt
+lvm
+nfsserver
+ocfs2
+oracle
+raid-lvm
+raid1
+remove
+sap-as
+sap-ci
+sap-db
+sap-simple-stack
+sap-simple-stack-plus
+sapdb
+sapinstance
+sbd
+virtual-ip
+.INP: list bogus
+ERROR: 7: script.list: Unexpected argument 'bogus': expected  [all|names]
+.INP: show virtual-ip
+virtual-ip (Basic)
+Virtual IP
+
+ This Linux-specific resource manages IP alias IP addresses. It can
+add an IP alias, or remove one. In addition, it can implement Cluster
+Alias IP functionality if invoked as a clone resource.
+
+If used as a clone, you should explicitly set clone-node-max >= 2,
+and/or clone-max < number of nodes. In case of node failure, clone
+instances need to be re-allocated on surviving nodes. This would not
+be possible if there is already an instance on those nodes, and clone-
+node-max=1 (which is the default).
+
+1. Manages virtual IPv4 and IPv6 addresses (Linux specific version)
+
+  id (required)  (unique) 
+      Identifier for the cluster resource
+  ip (required)  (unique) 
+      IPv4 or IPv6 address
+
+
+
+.INP: verify virtual-ip id=foo ip=10.0.0.5
+1. Configure cluster resources
+
+	primitive foo ocf:heartbeat:IPaddr2 ip="10.0.0.5"                 op start timeout="20" op stop timeout="20" op monitor interval="10" timeout="20"
+
+.INP: run virtual-ip id=foo ip=10.0.0.5 nodes=node1 dry_run=true
+INFO: 10: Virtual IP
+INFO: 10: Nodes: node1
+** localhost - temporary file <<END
+primitive foo ocf:heartbeat:IPaddr2 ip="10.0.0.5"                 op start timeout="20" op stop timeout="20" op monitor interval="10" timeout="20"
+
+END
+
+** localhost - crm --force --wait configure load update <<temporary file>>
+OK: 10: Configure cluster resources

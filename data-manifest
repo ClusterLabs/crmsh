@@ -120,6 +120,7 @@ test/testcases/rset-xml.exp
 test/testcases/rset.exp
 test/testcases/scripts
 test/testcases/scripts.exp
+test/testcases/scripts.filter
 test/testcases/shadow
 test/testcases/shadow.exp
 test/testcases/xmlonly.sh
