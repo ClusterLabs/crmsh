@@ -1834,7 +1834,8 @@ class RunActions(object):
         tmpf = self.str2tmp(cmdscript)
         _chmodx(tmpf)
         if nodes == 'all':
-            ok = _copy_to_remote_dirs(self.hosts,
+            ok = _copy_to_remote_dirs(self.printer,
+                                      self.hosts,
                                       tmpf,
                                       self.opts)
             if not ok:
