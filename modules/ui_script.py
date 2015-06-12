@@ -381,19 +381,20 @@ class Script(command.UI):
         ["run", <name>, <values>]
         => [{shortdesc, rc, output|error}]
         """
+        ret = True
         cmd = json.loads(command)
         if cmd[0] == "list":
             for name in scripts.list_scripts():
                 try:
                     script = scripts.load_script(name)
                     if script is not None:
-                        print(json.dumps({'name': script['name'],
+                        print(json.dumps({'name': name,
                                           'category': script['category'].lower(),
                                           'shortdesc': script['shortdesc'],
                                           'longdesc': scripts.format_desc(script['longdesc'])}))
                 except ValueError as err:
-                    err_buf.debug(str(err))
-                    continue
+                    print(json.dumps({'name': name,
+                                      'error': str(err)}))
         elif cmd[0] == "describe":
             name = cmd[1]
             script = scripts.load_script(name)
@@ -404,20 +405,22 @@ class Script(command.UI):
                               'shortdesc': script['shortdesc'],
                               'longdesc': scripts.format_desc(script['longdesc']),
                               'steps': scripts.clean_steps(script['steps'])}))
+            return True
         elif cmd[0] == "verify":
             name = cmd[1]
             params = cmd[2]
             script = scripts.load_script(name)
             if script is None:
                 return False
-            ret = scripts.verify(script, params)
-            if ret is None:
-                return False
-            for action in ret:
-                print(json.dumps({'shortdesc': action.get('shortdesc', ''),
-                                  'longdesc': str(action.get('longdesc', '')),
-                                  'text': str(action.get('text', '')),
-                                  'nodes': action.get('nodes', '')}))
+            actions = scripts.verify(script, params)
+            if actions is None:
+                ret = False
+            else:
+                for action in actions:
+                    print(json.dumps({'shortdesc': action.get('shortdesc', ''),
+                                      'longdesc': str(action.get('longdesc', '')),
+                                      'text': str(action.get('text', '')),
+                                      'nodes': action.get('nodes', '')}))
         elif cmd[0] == "run":
             name = cmd[1]
             params = cmd[2]
@@ -426,7 +429,8 @@ class Script(command.UI):
             script = scripts.load_script(name)
             if script is None:
                 return False
-            scripts.run(script, params, JsonPrinter())
+            ret = scripts.run(script, params, JsonPrinter())
         else:
             raise ValueError("Unknown command: %s" % (cmd[0]))
         print('"end"')
+        return ret
