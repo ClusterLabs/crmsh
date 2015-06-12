@@ -1599,7 +1599,7 @@ def _clean_parameters(params):
     ret = []
     for param in params:
         rp = {}
-        for elem in ('name', 'required', 'unique', 'advanced'):
+        for elem in ('name', 'required', 'unique', 'advanced', 'type', 'example'):
             if elem in param:
                 rp[elem] = param[elem]
         if 'shortdesc' in param:
