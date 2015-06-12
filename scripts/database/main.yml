@@ -8,6 +8,7 @@
     packages for the database.
   include:
     - agent: ocf:heartbeat:mysql
+      name: database
       parameters:
         - name: test_table
           value: ""
@@ -31,4 +32,4 @@
           action: disable
       shortdesc: Let cluster manage the database
       when: install
-    - include: mysql
+    - include: database

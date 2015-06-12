@@ -118,7 +118,10 @@ class Cluster(command.UI):
         Initialize a cluster with the given hosts as nodes.
         '''
         args = self._args_implicit(context, args, 'nodes')
-        return scripts.run('init', script_args(args), script_printer())
+        script = scripts.load_script('init')
+        if script is None:
+            raise ValueError("init script failed to load")
+        return scripts.run(script, script_args(args), script_printer())
 
     @command.completers_repeating(compl.call(scripts.param_completion_list, 'add'))
     @command.skill_level('administrator')
@@ -140,7 +143,10 @@ class Cluster(command.UI):
             nodes = utils.list_cluster_nodes()
         nodes += node
         params += ['nodes=%s' % (','.join(nodes))]
-        return scripts.run('add', script_args(params), script_printer())
+        script = scripts.load_script('add')
+        if script is None:
+            raise ValueError("add script failed to load")
+        return scripts.run(script, script_args(params), script_printer())
 
     @command.completers_repeating(_remove_completer)
     @command.skill_level('administrator')
@@ -149,7 +155,10 @@ class Cluster(command.UI):
         Remove the given node(s) from the cluster.
         '''
         params = self._args_implicit(context, args, 'node')
-        return scripts.run('remove', script_args(params), script_printer())
+        script = scripts.load_script('remove')
+        if script is None:
+            raise ValueError("remove script failed to load")
+        return scripts.run(script, script_args(params), script_printer())
 
     @command.completers_repeating(compl.call(scripts.param_completion_list, 'health'))
     def do_health(self, context, *args):
@@ -157,7 +166,10 @@ class Cluster(command.UI):
         Extensive health check.
         '''
         params = self._args_implicit(context, args, 'nodes')
-        return scripts.run('health', script_args(params), script_printer())
+        script = scripts.load_script('health')
+        if script is None:
+            raise ValueError("health script failed to load")
+        return scripts.run(script, script_args(params), script_printer())
 
     def _node_in_cluster(self, node):
         return node in utils.list_cluster_nodes()

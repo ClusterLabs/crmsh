@@ -687,6 +687,8 @@ def _process_include(script, include):
         if not name:
             cls, provider, type = ra.disambiguate_ra_type(agent)
             name = type
+        if 'name' not in include:
+            include['name'] = name
         step = _listfindpend(name, script['steps'], lambda x: x.get('name'), lambda: {
             'name': name,
             'longdesc': '',
@@ -741,10 +743,28 @@ def _process_include(script, include):
             zerostep = _listfind('', script['steps'], lambda x: x.get('name', ''))
             if not zerostep:
                 step['name'] = ''
+            elif zerostep.get('parameters'):
+                zp = zerostep['parameters']
+                for pname in [p['name'] for p in step['parameters']]:
+                    if _listfind(pname, zp, lambda x: x['name']):
+                        break
+                else:
+                    step['name'] = ''
+                    step['parameters'] = zerostep['parameters'] + step['parameters']
+                    script['steps'] = [s for s in script['steps'] if s != zerostep]
+            else:
+                step['name'] = ''
+                step['parameters'] = zerostep['parameters'] + step['parameters']
+                script['steps'] = [s for s in script['steps'] if s != zerostep]
 
         # use step['name'] here in case we did the zerostep hoist
         step['value'] = Text.cib(script, _make_cib_for_agent(step['name'], agent, step, include.get('ops', '')))
 
+        if not step['name']:
+            del step['name']
+
+        # this works despite possible hoist above,
+        # since name is still the actual name
         for action in script['actions']:
             if 'include' in action and action['include'] == name:
                 del action['include']
@@ -752,6 +772,8 @@ def _process_include(script, include):
 
     elif 'script' in include:
         name = include['script']
+        if 'name' not in include:
+            include['name'] = name
         subscript = load_script(name)
 
         scriptstep = {
@@ -871,6 +893,14 @@ def _postprocess_script(script):
     # to this script.
     for inc in script.get('include', []):
         _process_include(script, inc)
+
+    for action in script['actions']:
+        if 'include' in action:
+            includes = [inc['name'] for inc in script.get('include', [])]
+            if action['include'] not in includes:
+                raise ValueError("Script references '%s', but only includes: %s" %
+                                 (action['include'], ', '.join(includes)))
+
     if 'include' in script:
         del script['include']
 
@@ -1334,6 +1364,9 @@ def _check_parameters(script, params):
         params[key] = value
 
     def _fill_values(path, into, source, srcreq):
+        if 'required' in source:
+            srcreq = source['required'] and srcreq
+
         for param in source.get('parameters', []):
             if param['name'] not in into:
                 if 'value' in param:
@@ -1342,12 +1375,15 @@ def _check_parameters(script, params):
                     errors.append(_scoped_param(path, param['name']))
 
         for step in source.get('steps', []):
+            required = step.get('required', True)
+            if not required and step['name'] not in into:
+                continue
             if 'name' not in step:
-                _fill_values(path, into, step, step.get('required', srcreq))
+                _fill_values(path, into, step, step.get('required') and srcreq)
             else:
                 if step['name'] not in into:
                     into[step['name']] = {}
-                _fill_values(path + [step['name']], into[step['name']], step, step.get('required', srcreq))
+                _fill_values(path + [step['name']], into[step['name']], step, step.get('required') and srcreq)
 
     _fill_values([], params, script, True)
 
@@ -1554,11 +1590,66 @@ def _copy_to_all(printer, workdir, hosts, local_node, src, dst, opts):
     return ok and _copy_local(printer, workdir, local_node, src, dst)
 
 
+def _clean_parameters(params):
+    ret = []
+    for param in params:
+        rp = {}
+        for elem in ('name', 'required', 'unique', 'advanced'):
+            if elem in param:
+                rp[elem] = param[elem]
+        if 'shortdesc' in param:
+            rp['shortdesc'] = format_desc(param['shortdesc'])
+        if 'longdesc' in param:
+            rp['longdesc'] = format_desc(param['longdesc'])
+        if 'value' in param:
+            val = param['value']
+            if isinstance(val, Text):
+                val = val.text
+            rp['value'] = val
+        ret.append(rp)
+    return ret
+
+
+def clean_steps(steps):
+    ret = []
+    for step in steps:
+        rstep = {}
+        if 'name' in step:
+            rstep['name'] = step['name']
+        if 'shortdesc' in step:
+            rstep['shortdesc'] = format_desc(step['shortdesc'])
+        if 'longdesc' in step:
+            rstep['longdesc'] = format_desc(step['longdesc'])
+        if 'required' in step:
+            rstep['required'] = step['required']
+        if 'parameters' in step:
+            rstep['parameters'] = _clean_parameters(step['parameters'])
+        if 'steps' in step:
+            rstep['steps'] = clean_steps(step['steps'])
+        ret.append(rstep)
+    return ret
+
+
+def clean_run_params(params):
+    for key, value in params.iteritems():
+        if isinstance(value, dict):
+            clean_run_params(value)
+        elif Text.isa(value):
+            params[key] = str(value)
+
+
+def _chmodx(path):
+    "chmod +x <path>"
+    mode = os.stat(path).st_mode
+    mode |= (mode & 0o444) >> 2
+    os.chmod(path, mode)
+
+
 class RunActions(object):
     def __init__(self, printer, script, params, actions, local_node, hosts, opts, workdir):
         self.printer = printer
         self.script = script
-        self.data = [params]
+        self.data = [clean_run_params(params)]
         self.actions = actions
         self.local_node = local_node
         self.hosts = hosts
@@ -1722,7 +1813,8 @@ class RunActions(object):
             self.result = ''
             return
 
-        tmpf = run.str2tmp(cmdscript)
+        tmpf = self.str2tmp(cmdscript)
+        _chmodx(tmpf)
         if nodes == 'all':
             ok = _copy_to_remote_dirs(self.hosts,
                                       tmpf,
@@ -1885,6 +1977,8 @@ def _process_actions(script, params):
     """
     subactions = {}
     for step in script['steps']:
+        if not step.get('required', True) and not params.get(step['name']):
+            continue
         obj = step.get('sub-script')
         if obj:
             try:
@@ -1904,7 +1998,8 @@ def _process_actions(script, params):
         action['name'] = name
         toadd = []
         if name == 'include':
-            toadd.extend(subactions[action['include']])
+            if action['include'] in subactions:
+                toadd.extend(subactions[action['include']])
         else:
             Actions._parse(script, action)
             if 'when' in action:

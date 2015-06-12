@@ -139,7 +139,7 @@ def _scoped_name(context, name):
 
 
 def describe_step(icontext, context, s, all):
-    ret = "%s. %s" % ('.'.join([str(i) for i in icontext]), scripts.format_desc(s['shortdesc']) or 'Parameters')
+    ret = "%s. %s" % ('.'.join([str(i + 1) for i in icontext]), scripts.format_desc(s['shortdesc']) or 'Parameters')
     if not s['required']:
         ret += ' (optional)'
     ret += '\n\n'
@@ -169,46 +169,6 @@ def _nvpairs2parameters(args):
     ret = {}
     for key, val in utils.nvpairs2dict(args).iteritems():
         _set(ret, key.split(':'), val)
-    return ret
-
-
-def _clean_parameters(params):
-    ret = []
-    for param in params:
-        rp = {}
-        for elem in ('name', 'required', 'unique', 'advanced'):
-            if elem in param:
-                rp[elem] = param[elem]
-        if 'shortdesc' in param:
-            rp['shortdesc'] = scripts.format_desc(param['shortdesc'])
-        if 'longdesc' in param:
-            rp['longdesc'] = scripts.format_desc(param['longdesc'])
-        if 'value' in param:
-            val = param['value']
-            if isinstance(val, scripts.Text):
-                val = val.text
-            rp['value'] = val
-        ret.append(rp)
-    return ret
-
-
-def _clean_steps(steps):
-    ret = []
-    for step in steps:
-        rstep = {}
-        if 'name' in step:
-            rstep['name'] = step['name']
-        if 'shortdesc' in step:
-            rstep['shortdesc'] = scripts.format_desc(step['shortdesc'])
-        if 'longdesc' in step:
-            rstep['longdesc'] = scripts.format_desc(step['longdesc'])
-        if 'required' in step:
-            rstep['required'] = step['required']
-        if 'parameters' in step:
-            rstep['parameters'] = _clean_parameters(step['parameters'])
-        if 'steps' in step:
-            rstep['steps'] = _clean_steps(step['steps'])
-        ret.append(rstep)
     return ret
 
 
@@ -288,7 +248,7 @@ class Script(command.UI):
             'category': str(script['category']).capitalize(),
             'shortdesc': str(script['shortdesc']),
             'longdesc': scripts.format_desc(script['longdesc']),
-            'steps': "\n".join((describe_step([i + 1], [], s, all) for i, s in enumerate(script['steps'])))}
+            'steps': "\n".join((describe_step([i], [], s, all) for i, s in enumerate(script['steps'])))}
         print("""%(name)s (%(category)s)
 %(shortdesc)s
 
@@ -440,7 +400,7 @@ class Script(command.UI):
                               'category': script['category'].lower(),
                               'shortdesc': script['shortdesc'],
                               'longdesc': scripts.format_desc(script['longdesc']),
-                              'steps': _clean_steps(script['steps'])}))
+                              'steps': scripts.clean_steps(script['steps'])}))
         elif cmd[0] == "verify":
             name = cmd[1]
             params = cmd[2]

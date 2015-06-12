@@ -30,7 +30,7 @@
       shortdesc: The IP address configured here will start before the Apache instance.
       parameters:
         - name: id
-          value: "{{apache:id}}-vip"
+          value: "{{id}}-vip"
     - script: filesystem
       shortdesc: Optional filesystem mounted before the web server is started.
       required: false
@@ -59,8 +59,8 @@
     - include: virtual-ip
     - include: apache
     - cib: |
-        group g-{{apache:id}}
+        group g-{{id}}
           {{filesystem:id}}
           {{database:id}}
           {{virtual-ip:id}}
-          {{apache:id}}
+          {{id}}
