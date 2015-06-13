@@ -20,7 +20,7 @@
 target=data-manifest
 [ -f $target ] && (printf "Removing $target..."; rm $target)
 printf "Generating $target..."
-cat > $target <<EOF
+cat <<EOF | sort > $target
 version
 hb_report/hb_report
 $(find hb_report -name '*.sh')
