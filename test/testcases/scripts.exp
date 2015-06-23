@@ -241,7 +241,10 @@ node-max=1 (which is the default).
 .INP: verify virtual-ip id=foo ip=10.0.0.5
 1. Configure cluster resources
 
-	primitive foo ocf:heartbeat:IPaddr2 ip="10.0.0.5"                 op start timeout="20" op stop timeout="20" op monitor interval="10" timeout="20"
+	primitive foo ocf:heartbeat:IPaddr2
+		ip="10.0.0.5"
+		op start timeout="20" op stop timeout="20"
+		op monitor interval="10" timeout="20"
 
 .INP: run virtual-ip id=foo ip=10.0.0.5 nodes=node1 dry_run=true
 INFO: 10: Virtual IP
