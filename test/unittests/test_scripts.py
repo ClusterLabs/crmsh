@@ -558,7 +558,7 @@ def test_agent_include():
         inc2,
         {'wiz': 'abc',
          'foo': 'cde',
-         'inc1': {'foo': True, 'bar': 'bah bah'}})
+         'included-script': {'foo': True, 'bar': 'bah bah'}})
     pprint(actions)
     eq_(len(actions), 6)
     eq_('33\n\nabc', actions[-1]['text'].strip())

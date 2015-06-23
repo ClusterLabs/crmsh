@@ -798,10 +798,11 @@ def _process_include(script, include):
                 action['cib'] = step['value']
 
     elif 'script' in include:
-        name = include['script']
+        script_name = include['script']
         if 'name' not in include:
-            include['name'] = name
-        subscript = load_script(name)
+            include['name'] = script_name
+        subscript = load_script(script_name)
+        name = include['name']
 
         scriptstep = {
             'name': name,
@@ -842,7 +843,7 @@ def _process_include(script, include):
 
         script['steps'].append(scriptstep)
     else:
-        raise ValueError("Unknown include type in (%s): %s" % (script['name'], ', '.join(include.keys())))
+        raise ValueError("Unknown include type in (%s): %s" % (script_name, ', '.join(include.keys())))
 
 
 def _postprocess_script(script):
