@@ -1442,7 +1442,7 @@ def _handles_values(ret, script, params, subactions):
             if name:
                 if step['required'] or 'name' in params:
                     obj = {}
-                    vobj = handles.value(obj, '# %s' % (name))
+                    vobj = handles.value(obj, '')
                     to[name] = vobj
                     subaction = None
                     if step.get('sub-script'):
