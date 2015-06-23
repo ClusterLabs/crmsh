@@ -561,7 +561,7 @@ def test_agent_include():
          'inc1': {'foo': True, 'bar': 'bah bah'}})
     pprint(actions)
     eq_(len(actions), 6)
-    eq_('33\nabc', actions[-1]['text'].strip())
+    eq_('33\n\nabc', actions[-1]['text'].strip())
 
 
 @with_setup(setup_func, teardown_func)
@@ -573,7 +573,7 @@ def test_vipinc():
         {'vip': {'id': 'vop', 'ip': '10.0.0.4'}})
     eq_(len(actions), 1)
     pprint(actions)
-    assert actions[0]['text'].find('primitive vop test:virtual-ip ip="10.0.0.4"') >= 0
+    assert actions[0]['text'].find('primitive vop test:virtual-ip\n\tip="10.0.0.4"') >= 0
     assert actions[0]['text'].find("clone c-vop vop") >= 0
 
 
