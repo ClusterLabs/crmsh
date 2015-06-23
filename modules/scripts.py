@@ -112,7 +112,7 @@ class Text(object):
             return "true" if val else "false"
         if not isinstance(val, basestring):
             return str(val)
-        return handles.parse(val, self.script['__values__']).strip()
+        return handles.parse(val, self.script.get('__values__', {})).strip()
 
     def __repr__(self):
         return repr(self.text)
