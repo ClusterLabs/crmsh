@@ -121,8 +121,7 @@ class Text(object):
         if self.type == self.DESC:
             return format_desc(self._parse())
         elif self.type == self.CIB:
-            # TODO
-            pass
+            return format_cib(self._parse())
         return self._parse()
 
     def __eq__(self, obj):
@@ -132,6 +131,25 @@ class Text(object):
 def format_desc(desc):
     import textwrap
     return '\n\n'.join([textwrap.fill(para) for para in desc.split('\n\n') if para.strip()])
+
+
+def format_cib(text):
+    text = re.sub(r'[ ]+', ' ', text)
+    text = re.sub(r'\n[ \t\f\v]+', '\n\t', text)
+    i = 0
+    while True:
+        i = text.find('\n\t\n')
+        if i < 0:
+            break
+        text = text[:i] + text[i+2:]
+    return text
+
+
+def space_cib(text):
+    """
+    After merging CIB commands, space separate lines out
+    """
+    return re.sub(r'\n([^\t])', r'\n\n\1', re.sub(r'[\n\r]+', r'\n', text))
 
 
 class Actions(object):
@@ -215,7 +233,7 @@ class Actions(object):
             return False
         if into['name'] in ('cib', 'crm'):
             into['value'] = '\n'.join([str(into['value']), str(new['value'])])
-            into['text'] = '\n'.join([str(into['text']), str(new['text'])])
+            into['text'] = space_cib('\n'.join([str(into['text']), str(new['text'])]))
         elif into['name'] == 'service':
             into['value'].extend(new['value'])
             into['text'] = '\n'.join([str(into['text']), str(new['text'])])
@@ -633,7 +651,7 @@ def _listfindpend(needle, haystack, keyfn, orfn):
 
 def _make_cib_for_agent(name, agent, data, ops):
     aid = "{{%s:id}}" % (name) if name else "{{id}}"
-    template = ['primitive', aid, agent]
+    template = ['primitive %s %s' % (aid, agent)]
     params = []
     ops = [op.strip() for op in ops.split('\n') if op.strip()]
     for param in data['parameters']:
@@ -643,7 +661,7 @@ def _make_cib_for_agent(name, agent, data, ops):
             continue
         path = ':'.join((name, paramname)) if name else paramname
         params.append('{{#%s}}%s="{{%s}}"{{/%s}}' % (path, paramname, path, path))
-    ret = ' '.join(template + params + ops)
+    ret = '\n\t'.join(template + params + ops)
     return ret
 
 
