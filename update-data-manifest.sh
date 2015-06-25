@@ -22,8 +22,6 @@ target=data-manifest
 printf "Generating $target..."
 cat <<EOF | sort > $target
 version
-hb_report/hb_report
-$(find hb_report -name '*.sh')
 $(git ls-files scripts templates utils test)
 EOF
 [ ! -f $target ] && printf "FAILED\n"

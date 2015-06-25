@@ -54,9 +54,13 @@ install-data-hook:
 	mkdir -p $(DESTDIR)$(datadir)/@PACKAGE@/; \
 	for d in $$(cat data-manifest); do \
 	install -D -m $$(test -x $$d && echo 0755 || echo 0644) $$d $(DESTDIR)$(datadir)/@PACKAGE@/$$d; done; \
-	chmod 0755 $(DESTDIR)$(datadir)/@PACKAGE@/hb_report/hb_report; \
 	mv $(DESTDIR)$(datadir)/@PACKAGE@/test $(DESTDIR)$(datadir)/@PACKAGE@/tests; \
 	cp test/testcases/xmlonly.sh $(DESTDIR)$(datadir)/@PACKAGE@/tests/testcases/configbasic-xml.filter
+
+hanoarchdir = $(datadir)/@PACKAGE@
+hanoarch_DATA = hb_report/utillib.sh hb_report/ha_cf_support.sh hb_report/openais_conf_support.sh
+hanoarch_SCRIPTS = hb_report/hb_report
+EXTRA_DIST = $(hanoarch_DATA)
 
 # Python module installation
 all-local:
