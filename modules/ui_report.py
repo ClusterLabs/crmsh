@@ -25,15 +25,18 @@ from . import config
 from . import options
 
 
-def create_report(context, args):
+def report_tool():
     toolopts = [os.path.join(config.path.sharedir, 'hb_report'),
                 'hb_report',
                 'crm_report']
-    extcmd = None
     for tool in toolopts:
         if utils.is_program(tool):
-            extcmd = tool
-            break
+            return tool
+    return None
+
+
+def create_report(context, args):
+    extcmd = report_tool()
     if not extcmd:
         context.fatal_error("No reporting tool found")
     cmd = [extcmd] + list(args)

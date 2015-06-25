@@ -150,7 +150,8 @@ configuration files, system information, etc) relevant to
 crmsh over the given period of time.
 ''')
     def do_report(self, context, *args):
-        return ui_report.create_report(context, args)
+        rc = ui_report.create_report(context, args)
+        return rc == 0
 
     @command.level(ui_resource.RscMgmt)
     @command.help('''resources management

@@ -988,8 +988,13 @@ class Report(object):
         if pipe_cmd_nosudo("mkdir -p %s" % os.path.dirname(d)) != 0:
             return None
         common_info("retrieving information from cluster nodes, please wait ...")
-        rc = pipe_cmd_nosudo("%s/hb_report -Z -Q -f '%s' %s %s %s" %
-                             (config.path.sharedir,
+        from . import ui_report
+        extcmd = ui_report.report_tool()
+        if extcmd is None:
+            self.error("No reporting tool found")
+            return None
+        rc = pipe_cmd_nosudo("%s -Z -Q -f '%s' %s %s %s" %
+                             (extcmd,
                               self.from_dt.ctime(),
                               to_option,
                               nodes_option,
