@@ -26,7 +26,7 @@ from . import options
 
 
 def report_tool():
-    toolopts = [os.path.join(config.path.sharedir, 'hb_report'),
+    toolopts = [os.path.join(config.path.sharedir, 'hb_report', 'hb_report'),
                 'hb_report',
                 'crm_report']
     for tool in toolopts:

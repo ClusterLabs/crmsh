@@ -57,7 +57,7 @@ install-data-hook:
 	mv $(DESTDIR)$(datadir)/@PACKAGE@/test $(DESTDIR)$(datadir)/@PACKAGE@/tests; \
 	cp test/testcases/xmlonly.sh $(DESTDIR)$(datadir)/@PACKAGE@/tests/testcases/configbasic-xml.filter
 
-hanoarchdir = $(datadir)/@PACKAGE@
+hanoarchdir = $(datadir)/@PACKAGE@/hb_report
 hanoarch_DATA = hb_report/utillib.sh hb_report/ha_cf_support.sh hb_report/openais_conf_support.sh
 hanoarch_SCRIPTS = hb_report/hb_report
 EXTRA_DIST = $(hanoarch_DATA)
