@@ -22,7 +22,7 @@
 prefix=@prefix@
 datarootdir=@datarootdir@
 datadir=@datadir@
-HA_NOARCHBIN=${datadir}/@PACKAGE_NAME@
+HA_NOARCHBIN=${datadir}/@PACKAGE_NAME@/hb_report
 
 . $HA_NOARCHBIN/utillib.sh
 
