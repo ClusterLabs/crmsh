@@ -68,7 +68,7 @@ def set_year(ts=None):
     global YEAR
     year = time.strftime("%Y", time.localtime(ts))
     if YEAR is not None:
-        t = (" (ts: %s" % (ts)) if ts is not None else ""
+        t = (" (ts: %s)" % (ts)) if ts is not None else ""
         common_debug("report: setting year to %s%s" % (year, t))
     YEAR = year
 
