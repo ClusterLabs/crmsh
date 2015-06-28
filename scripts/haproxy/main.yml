@@ -1,0 +1,37 @@
+---
+- version: 2.2
+  category: Server
+  shortdesc: HAProxy
+  longdesc: >-
+    HAProxy is a free, very fast and reliable solution offering
+    high availability, load balancing, and proxying for TCP and
+    HTTP-based applications. It is particularly suited for very
+    high traffic web sites and powers quite a number of the
+    world's most visited ones. NOTE: Installs a basic haproxy.cfg
+    configuration file. This will overwrite any existing
+    haproxy.cfg.
+
+  include:
+    - agent: systemd:haproxy
+      name: haproxy
+      ops: |
+        op monitor interval=10s
+
+  parameters:
+    - name: install
+      type: boolean
+      value: true
+      shortdesc: Install and configure HAProxy packages
+
+  actions:
+    - install: haproxy
+      nodes: all
+      when: install
+    - service: "haproxy:disable"
+      nodes: all
+      when: install
+    - copy: haproxy.cfg
+      to: /etc/haproxy/haproxy.cfg
+      nodes: all
+      when: install
+    - include: haproxy
