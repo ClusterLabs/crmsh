@@ -706,7 +706,7 @@ def _process_include(script, include):
         info = ra.get_ra(agent)
         meta = info.meta()
         if meta is None:
-            raise ValueError("Unknown resource type: %s" % (agent))
+            raise ValueError("No meta-data for agent: %s" % (agent))
         name = include.get('name', meta.get('name'))
         if not name:
             cls, provider, type = ra.disambiguate_ra_type(agent)
