@@ -432,16 +432,15 @@ color = _Section('color')
 
 
 def load_version():
-    version, build = 'dev', 'unknown'
+    version = 'dev'
     versioninfo_file = os.path.join(path.sharedir, 'version')
     if os.path.isfile(versioninfo_file):
         v = open(versioninfo_file).xreadlines()
         try:
             version = v.next().strip() or version
-            build = v.next().strip() or build
         except StopIteration:
             pass
-    return version, build
+    return version
 
-VERSION, BUILD_VERSION = load_version()
-CRM_VERSION = "%s (Build %s)" % (VERSION, BUILD_VERSION)
+VERSION = load_version()
+CRM_VERSION = str(VERSION)

@@ -145,7 +145,7 @@ EOF
 	exit
 }
 version() {
-	echo "@PACKAGE_NAME@: @PACKAGE_VERSION@ (@BUILD_VERSION@)"
+	echo "@PACKAGE_NAME@: @PACKAGE_VERSION@"
 	exit
 }
 #

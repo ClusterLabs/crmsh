@@ -50,17 +50,6 @@ CRM_CACHE_DIR=${localstatedir}/cache/crm
 AC_DEFINE_UNQUOTED(CRM_CACHE_DIR,"$CRM_CACHE_DIR", Where crm shell keeps the cache)
 AC_SUBST(CRM_CACHE_DIR)
 
-AC_MSG_CHECKING(build version)
-if test -f .git/HEAD; then
-   BUILD_VERSION=$(cat .git/$(cat .git/HEAD | awk '{print $2}') | cut -c -7)
-else
-   BUILD_VERSION=unknown
-fi
-
-AC_DEFINE_UNQUOTED(BUILD_VERSION, "$BUILD_VERSION", Build version)
-AC_MSG_RESULT($BUILD_VERSION)
-AC_SUBST(BUILD_VERSION)
-
 AM_PATH_PYTHON
 AC_PATH_PROGS(ASCIIDOC, asciidoc)
 
