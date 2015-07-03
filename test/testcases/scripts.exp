@@ -7,6 +7,8 @@
 .EXT crm_resource --show-metadata ocf:heartbeat:mysql
 .EXT crm_resource --show-metadata ocf:heartbeat:db2
 .EXT crm_resource --show-metadata ocf:heartbeat:exportfs
+.EXT crm_resource --show-metadata systemd:haproxy
+ERROR: 2: Error when loading script haproxy: No meta-data for agent: systemd:haproxy
 .EXT crm_resource --show-metadata ocf:heartbeat:LVM
 .EXT crm_resource --show-metadata ocf:heartbeat:Raid1
 Basic:
@@ -56,6 +58,8 @@ libvirt          STONITH for a libvirt managed hypervisor (kvm/Xen)
 sbd              SBD, Shared storage based fencing
 
 .INP: list all
+.EXT crm_resource --show-metadata systemd:haproxy
+ERROR: 3: Error when loading script haproxy: No meta-data for agent: systemd:haproxy
 Basic:
 
 virtual-ip       Virtual IP
@@ -128,6 +132,8 @@ exportfs
 filesystem
 gfs2
 gfs2-base
+.EXT crm_resource --show-metadata systemd:haproxy
+ERROR: 4: Error when loading script haproxy: No meta-data for agent: systemd:haproxy
 health
 init
 libvirt
@@ -161,6 +167,7 @@ exportfs
 filesystem
 gfs2
 gfs2-base
+haproxy
 health
 init
 libvirt
@@ -194,6 +201,7 @@ exportfs
 filesystem
 gfs2
 gfs2-base
+haproxy
 health
 init
 libvirt
