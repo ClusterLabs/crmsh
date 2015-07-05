@@ -1,4 +1,5 @@
 # Copyright (C) 2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
+# See COPYING for license information.
 #
 # log pattern specification
 #

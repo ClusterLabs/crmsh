@@ -1,4 +1,5 @@
 # Copyright (C) 2012 Dejan Muhamedagic <dmuhamedagic@suse.de>
+# See COPYING for license information.
 #
 # log pattern specification (for pacemaker v1.1.8)
 #
