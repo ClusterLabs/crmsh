@@ -887,37 +887,27 @@ class ConstraintParser(RuleParser):
         parser = ResourceSet(suffix_type, tokens, self)
         return simple, parser.parse()
 
-    def match_simple_role_set(self, count):
-        def rsc_role():
-            rsc, role = self.match_split()
-            role, t = self.validation.classify_role(role)
-            if role and not t:
-                self.err("Invalid role '%s' for '%s'" % (role, rsc))
-            return rsc, role, t
+    def _fmt(self, info, name):
+        if info[1]:
+            return [[name, info[0]], [name + '-' + info[2], info[1]]]
+        return [[name, info[0]]]
 
-        def fmt(info, name):
-            if info[1]:
-                return [[name, info[0]], [name + '-' + info[2], info[1]]]
-            return [[name, info[0]]]
-        ret = fmt(rsc_role(), 'rsc')
+    def _split_setref(self, typename, classifier):
+            rsc, typ = self.match_split()
+            typ, t = classifier(typ)
+            if typ and not t:
+                self.err("Invalid %s '%s' for '%s'" % (typename, typ, rsc))
+            return rsc, typ, t
+
+    def match_simple_role_set(self, count):
+        ret = self._fmt(self._split_setref('role', self.validation.classify_role), 'rsc')
         if count == 2:
-            ret += fmt(rsc_role(), 'with-rsc')
+            ret += self._fmt(self._split_setref('role', self.validation.classify_role), 'with-rsc')
         return ret
 
     def match_simple_action_set(self):
-        def rsc_action():
-            rsc, action = self.match_split()
-            action, t = self.validation.classify_action(action)
-            if action and not t:
-                self.err('invalid action: ' + action)
-            return rsc, action, t
-
-        def fmt(info, name):
-            if info[1]:
-                return [[name, info[0]], [name + '-' + info[2], info[1]]]
-            return [[name, info[0]]]
-        ret = fmt(rsc_action(), 'first')
-        return ret + fmt(rsc_action(), 'then')
+        ret = self._fmt(self._split_setref('action', self.validation.classify_action), 'first')
+        return ret + self._fmt(self._split_setref('action', self.validation.classify_action), 'then')
 
 
 class OpParser(BaseParser):
