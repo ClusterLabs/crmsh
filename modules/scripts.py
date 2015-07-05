@@ -314,25 +314,27 @@ class Actions(object):
             self._value = fn
         self._run.copy_file(self._nodes, self._value, self._action['to'])
 
-    def _crm_do(self, cmd):
+    def crm(self):
+        """
+        input: crm command sequence
+        """
         fn = self._run.str2tmp(_join_script_lines(self._value))
         if config.core.debug:
             args = '-d --force --wait'
         else:
             args = '--force --wait'
-        self._run.call(None, 'crm %s %s %s' % (args, cmd, fn))
-
-    def crm(self):
-        """
-        input: crm command sequence
-        """
-        self._crm_do('-f')
+        self._run.call(None, 'crm %s %s %s' % (args, '-f', fn))
 
     def cib(self):
         "input: cli configuration script"
         # generate cib
         # runner.execute_local("crm configure load update ./action_cib")
-        self._crm_do('configure load update')
+        fn = self._run.str2tmp(_join_script_lines(self._value))
+        if config.core.debug:
+            args = '-d --force --wait'
+        else:
+            args = '--force --wait'
+        self._run.call(None, 'crm %s %s %s' % (args, 'configure load update', fn))
 
     def install(self):
         """
