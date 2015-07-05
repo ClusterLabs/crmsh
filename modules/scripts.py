@@ -675,6 +675,154 @@ def _lookup_step(name, steps, stepname):
     raise ValueError("Referenced step '%s' not found in '%s'" % (stepname, name))
 
 
+def _process_agent_include(script, include):
+    import ra
+    agent = include['agent']
+    info = ra.get_ra(agent)
+    meta = info.meta()
+    if meta is None:
+        raise ValueError("No meta-data for agent: %s" % (agent))
+    name = include.get('name', meta.get('name'))
+    if not name:
+        cls, provider, type = ra.disambiguate_ra_type(agent)
+        name = type
+    if 'name' not in include:
+        include['name'] = name
+    step = _listfindpend(name, script['steps'], lambda x: x.get('name'), lambda: {
+        'name': name,
+        'longdesc': '',
+        'shortdesc': '',
+        'parameters': [],
+    })
+    step['longdesc'] = include.get('longdesc') or _meta_text(meta, 'longdesc')
+    step['shortdesc'] = include.get('shortdesc') or _meta_text(meta, 'shortdesc')
+    step['required'] = include.get('required', True)
+    step['parameters'].append({
+        'name': 'id',
+        'shortdesc': 'Identifier for the cluster resource',
+        'longdesc': '',
+        'required': True,
+        'unique': True,
+        'type': 'resource',
+    })
+
+    def newparamobj(param):
+        pname = param.get('name')
+        return _listfindpend(pname, step['parameters'], lambda x: x.get('name'), lambda: {'name': pname})
+
+    for param in meta.xpath('./parameters/parameter'):
+        pobj = newparamobj(param)
+        pobj['required'] = _make_boolean(param.get('required', False))
+        pobj['unique'] = _make_boolean(param.get('unique', False))
+        pobj['longdesc'] = _meta_text(param, 'longdesc')
+        pobj['shortdesc'] = _meta_text(param, 'shortdesc')
+        # set 'advanced' flag on all non-required agent parameters by default
+        # a UI should hide these parameters unless "show advanced" is set
+        pobj['advanced'] = not pobj['required']
+        ctype = param.xpath('./content/@type')
+        cexample = param.xpath('./content/@default')
+        if ctype:
+            pobj['type'] = ctype[0]
+        if cexample:
+            pobj['example'] = cexample[0]
+
+    for param in include.get('parameters', []):
+        pobj = newparamobj(param)
+        for key, value in param.iteritems():
+            if key in ('shortdesc', 'longdesc'):
+                pobj[key] = value
+            elif key == 'value':
+                pobj[key] = Text(script, value)
+            else:
+                pobj[key] = value
+            if 'value' in pobj:
+                pobj['required'] = False
+
+    # If the script doesn't have any base parameters
+    # and the name of this step is the same as the
+    # script name itself, then make this the base step
+    hoist = False
+    hoist_from = None
+    if step['name'] == script['name']:
+        zerostep = _listfind('', script['steps'], lambda x: x.get('name', ''))
+        if not zerostep:
+            hoist = True
+        elif zerostep.get('parameters'):
+            zp = zerostep['parameters']
+            for pname in [p['name'] for p in step['parameters']]:
+                if _listfind(pname, zp, lambda x: x['name']):
+                    break
+            else:
+                hoist, hoist_from = True, zerostep
+
+    # use step['name'] here in case we did the zerostep hoist
+    step['value'] = Text.cib(script, _make_cib_for_agent('' if hoist else step['name'],
+                                                         agent, step, include.get('ops', '')))
+
+    if hoist:
+        step['name'] = ''
+        if hoist_from:
+            step['parameters'] = hoist_from['parameters'] + step['parameters']
+            script['steps'] = [s for s in script['steps'] if s != hoist_from]
+
+    if not step['name']:
+        del step['name']
+
+    # this works despite possible hoist above,
+    # since name is still the actual name
+    for action in script['actions']:
+        if 'include' in action and action['include'] == name:
+            del action['include']
+            action['cib'] = step['value']
+
+
+def _process_script_include(script, include):
+    script_name = include['script']
+    if 'name' not in include:
+        include['name'] = script_name
+    subscript = load_script(script_name)
+    name = include['name']
+
+    scriptstep = {
+        'name': name,
+        'shortdesc': subscript['shortdesc'],
+        'longdesc': subscript['longdesc'],
+        'required': _make_boolean(include.get('required', True)),
+        'steps': deepcopy(subscript['steps']),
+        'sub-script': subscript,
+    }
+
+    def _merge_step_params(step, params):
+        for param in params:
+            _merge_step_param(step, param)
+
+    def _merge_step_param(step, param):
+        for p in step.get('parameters', []):
+            if p['name'] == param['name']:
+                for key, value in param.iteritems():
+                    if key in ('shortdesc', 'longdesc'):
+                        p[key] = value
+                    elif key == 'value' and Text.isa(value):
+                        p[key] = Text(script, value)
+                    else:
+                        p[key] = value
+                if 'value' in p:
+                    p['required'] = False
+                break
+        else:
+            raise ValueError("Referenced parameter '%s' not found in '%s'" % (param['name'], name))
+
+    for incparam in include.get('parameters', []):
+        if 'step' in incparam and 'name' not in incparam:
+            _merge_step_params(_lookup_step(name, scriptstep.get('steps', []), incparam['step']),
+                               incparam['parameters'])
+        else:
+            _merge_step_param(_lookup_step(name, scriptstep.get('steps', []), ''),
+                              incparam)
+
+    script['steps'].append(scriptstep)
+
+
 def _process_include(script, include):
     """
     includes add parameter steps and actions
@@ -695,152 +843,12 @@ def _process_include(script, include):
     _scope has to be a list which gets expanded...
     """
     if 'agent' in include:
-        import ra
-        agent = include['agent']
-        info = ra.get_ra(agent)
-        meta = info.meta()
-        if meta is None:
-            raise ValueError("No meta-data for agent: %s" % (agent))
-        name = include.get('name', meta.get('name'))
-        if not name:
-            cls, provider, type = ra.disambiguate_ra_type(agent)
-            name = type
-        if 'name' not in include:
-            include['name'] = name
-        step = _listfindpend(name, script['steps'], lambda x: x.get('name'), lambda: {
-            'name': name,
-            'longdesc': '',
-            'shortdesc': '',
-            'parameters': [],
-        })
-        step['longdesc'] = include.get('longdesc') or _meta_text(meta, 'longdesc')
-        step['shortdesc'] = include.get('shortdesc') or _meta_text(meta, 'shortdesc')
-        step['required'] = include.get('required', True)
-        step['parameters'].append({
-            'name': 'id',
-            'shortdesc': 'Identifier for the cluster resource',
-            'longdesc': '',
-            'required': True,
-            'unique': True,
-            'type': 'resource',
-        })
-
-        def newparamobj(param):
-            pname = param.get('name')
-            return _listfindpend(pname, step['parameters'], lambda x: x.get('name'), lambda: {'name': pname})
-
-        for param in meta.xpath('./parameters/parameter'):
-            pobj = newparamobj(param)
-            pobj['required'] = _make_boolean(param.get('required', False))
-            pobj['unique'] = _make_boolean(param.get('unique', False))
-            pobj['longdesc'] = _meta_text(param, 'longdesc')
-            pobj['shortdesc'] = _meta_text(param, 'shortdesc')
-            # set 'advanced' flag on all non-required agent parameters by default
-            # a UI should hide these parameters unless "show advanced" is set
-            pobj['advanced'] = not pobj['required']
-            ctype = param.xpath('./content/@type')
-            cexample = param.xpath('./content/@default')
-            if ctype:
-                pobj['type'] = ctype[0]
-            if cexample:
-                pobj['example'] = cexample[0]
-
-        for param in include.get('parameters', []):
-            pobj = newparamobj(param)
-            for key, value in param.iteritems():
-                if key in ('shortdesc', 'longdesc'):
-                    pobj[key] = value
-                elif key == 'value':
-                    pobj[key] = Text(script, value)
-                else:
-                    pobj[key] = value
-                if 'value' in pobj:
-                    pobj['required'] = False
-
-        # If the script doesn't have any base parameters
-        # and the name of this step is the same as the
-        # script name itself, then make this the base step
-        hoist = False
-        hoist_from = None
-        if step['name'] == script['name']:
-            zerostep = _listfind('', script['steps'], lambda x: x.get('name', ''))
-            if not zerostep:
-                hoist = True
-            elif zerostep.get('parameters'):
-                zp = zerostep['parameters']
-                for pname in [p['name'] for p in step['parameters']]:
-                    if _listfind(pname, zp, lambda x: x['name']):
-                        break
-                else:
-                    hoist, hoist_from = True, zerostep
-
-        # use step['name'] here in case we did the zerostep hoist
-        step['value'] = Text.cib(script, _make_cib_for_agent('' if hoist else step['name'],
-                                                             agent, step, include.get('ops', '')))
-
-        if hoist:
-            step['name'] = ''
-            if hoist_from:
-                step['parameters'] = hoist_from['parameters'] + step['parameters']
-                script['steps'] = [s for s in script['steps'] if s != hoist_from]
-
-        if not step['name']:
-            del step['name']
-
-        # this works despite possible hoist above,
-        # since name is still the actual name
-        for action in script['actions']:
-            if 'include' in action and action['include'] == name:
-                del action['include']
-                action['cib'] = step['value']
+        return _process_agent_include(script, include)
 
     elif 'script' in include:
-        script_name = include['script']
-        if 'name' not in include:
-            include['name'] = script_name
-        subscript = load_script(script_name)
-        name = include['name']
-
-        scriptstep = {
-            'name': name,
-            'shortdesc': subscript['shortdesc'],
-            'longdesc': subscript['longdesc'],
-            'required': _make_boolean(include.get('required', True)),
-            'steps': deepcopy(subscript['steps']),
-            'sub-script': subscript,
-        }
-
-        def _merge_step_params(step, params):
-            for param in params:
-                _merge_step_param(step, param)
-
-        def _merge_step_param(step, param):
-            for p in step.get('parameters', []):
-                if p['name'] == param['name']:
-                    for key, value in param.iteritems():
-                        if key in ('shortdesc', 'longdesc'):
-                            p[key] = value
-                        elif key == 'value' and Text.isa(value):
-                            p[key] = Text(script, value)
-                        else:
-                            p[key] = value
-                    if 'value' in p:
-                        p['required'] = False
-                    break
-            else:
-                raise ValueError("Referenced parameter '%s' not found in '%s'" % (param['name'], name))
-
-        for incparam in include.get('parameters', []):
-            if 'step' in incparam and 'name' not in incparam:
-                _merge_step_params(_lookup_step(name, scriptstep.get('steps', []), incparam['step']),
-                                   incparam['parameters'])
-            else:
-                _merge_step_param(_lookup_step(name, scriptstep.get('steps', []), ''),
-                                  incparam)
-
-        script['steps'].append(scriptstep)
+        return _process_script_include(script, include)
     else:
-        raise ValueError("Unknown include type in (%s): %s" % (script_name, ', '.join(include.keys())))
+        raise ValueError("Unknown include type: %s" % (', '.join(include.keys())))
 
 
 def _postprocess_script(script):
