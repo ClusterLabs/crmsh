@@ -56,7 +56,7 @@ from .xmlutil import remove_id_used_attributes, get_top_cib_nodes
 from .xmlutil import merge_attributes, is_cib_element, sanity_check_meta
 from .xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
 from .xmlutil import get_rsc_operations, delete_rscref, xml_equals, lookup_node, RscState
-from .xmlutil import cibtext2elem, is_related
+from .xmlutil import cibtext2elem, is_related, check_id_ref
 from .cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
 from .cliformat import cli_nvpair, cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
 from .cliformat import cli_operations, simple_rsc_constraint, cli_rule, cli_format
@@ -771,11 +771,7 @@ def resolve_idref(node):
             node_id = nodes[0].get("id")
             if node_id:
                 return node_id
-    target = cib_factory.get_cib().xpath('.//*[@id="%s"]' % (id_ref))
-    if len(target) == 0:
-        common_err("Reference not found: %s" % id_ref)
-    elif len(target) > 1:
-        common_err("Ambiguous reference to %s" % id_ref)
+    check_id_ref(cib_factory.get_cib(), id_ref)
     return id_ref
 
 
@@ -2801,11 +2797,7 @@ class CibFactory(object):
                 node_id = nodes[0].get("id")
                 if node_id:
                     return node_id
-        target = self.cib_elem.xpath('.//*[@id="%s"]' % (id_ref))
-        if len(target) == 0:
-            common_err("Reference not found: %s" % id_ref)
-        elif len(target) > 1:
-            common_err("Ambiguous reference to %s" % id_ref)
+        check_id_ref(self.cib_elem, id_ref)
         return id_ref
 
     def _get_attr_value(self, obj_type, attr):

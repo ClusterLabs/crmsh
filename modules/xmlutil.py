@@ -1329,4 +1329,12 @@ def merge_tmpl_into_prim(prim_node, tmpl_node):
     return dnode
 
 
+def check_id_ref(elem, id_ref):
+    target = elem.xpath('.//*[@id="%s"]' % (id_ref))
+    if len(target) == 0:
+        common_err("Reference not found: %s" % id_ref)
+    elif len(target) > 1:
+        common_err("Ambiguous reference to %s" % id_ref)
+
+
 # vim:ts=4:sw=4:et:
