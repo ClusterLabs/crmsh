@@ -314,27 +314,25 @@ class Actions(object):
             self._value = fn
         self._run.copy_file(self._nodes, self._value, self._action['to'])
 
-    def crm(self):
-        """
-        input: crm command sequence
-        """
+    def _crm_do(self, cmd):
         fn = self._run.str2tmp(_join_script_lines(self._value))
         if config.core.debug:
             args = '-d --force --wait'
         else:
             args = '--force --wait'
-        self._run.call(None, 'crm %s -f %s' % (args, fn))
+        self._run.call(None, 'crm %s %s %s' % (args, cmd, fn))
+
+    def crm(self):
+        """
+        input: crm command sequence
+        """
+        self._crm_do('-f')
 
     def cib(self):
         "input: cli configuration script"
         # generate cib
         # runner.execute_local("crm configure load update ./action_cib")
-        fn = self._run.str2tmp(_join_script_lines(self._value))
-        if config.core.debug:
-            args = '-d --force --wait'
-        else:
-            args = '--force --wait'
-        self._run.call(None, 'crm %s configure load update %s' % (args, fn))
+        self._crm_do('configure load update')
 
     def install(self):
         """
@@ -730,9 +728,13 @@ def _process_include(script, include):
             'unique': True,
             'type': 'resource',
         })
-        for param in meta.xpath('./parameters/parameter'):
+
+        def newparamobj(param):
             pname = param.get('name')
-            pobj = _listfindpend(pname, step['parameters'], lambda x: x.get('name'), lambda: {'name': pname})
+            return _listfindpend(pname, step['parameters'], lambda x: x.get('name'), lambda: {'name': pname})
+
+        for param in meta.xpath('./parameters/parameter'):
+            pobj = newparamobj(param)
             pobj['required'] = _make_boolean(param.get('required', False))
             pobj['unique'] = _make_boolean(param.get('unique', False))
             pobj['longdesc'] = _meta_text(param, 'longdesc')
@@ -748,8 +750,7 @@ def _process_include(script, include):
                 pobj['example'] = cexample[0]
 
         for param in include.get('parameters', []):
-            pname = param['name']
-            pobj = _listfindpend(pname, step['parameters'], lambda x: x.get('name'), lambda: {'name': pname})
+            pobj = newparamobj(param)
             for key, value in param.iteritems():
                 if key in ('shortdesc', 'longdesc'):
                     pobj[key] = value
@@ -1742,11 +1743,7 @@ class RunActions(object):
         cmdline = 'cd "%s"; ./%s' % (self.workdir, command)
         if not self._update_state():
             raise ValueError("Failed when updating input, aborting.")
-        if nodes == 'all':
-            self.result = self._process_remote(cmdline)
-        else:
-            self.result = self._process_local(cmdline)
-        self.rc = self.result not in (None, False)
+        self.call(nodes, cmdline)
 
     def copy_file(self, nodes, src, dst):
         if nodes == 'all':
