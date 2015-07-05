@@ -851,6 +851,60 @@ def _process_include(script, include):
         raise ValueError("Unknown include type: %s" % (', '.join(include.keys())))
 
 
+def _postprocess_script_step(script, step):
+    if 'name' in step and not step['name']:
+        del step['name']
+    step['required'] = _make_boolean(step.get('required', True))
+    step['shortdesc'] = step.get('shortdesc', '')
+    step['longdesc'] = step.get('longdesc', '')
+    for p in step.get('parameters', []):
+        if 'name' not in p:
+            raise ValueError("Parameter has no name: %s" % (p.keys()))
+        p['shortdesc'] = p.get('shortdesc', '')
+        p['longdesc'] = p.get('longdesc', '')
+        if 'default' in p and 'value' not in p:
+            p['value'] = p['default']
+            del p['default']
+        if 'value' in p:
+            if p['value'] is None:
+                del p['value']
+            elif isinstance(p['value'], basestring):
+                p['value'] = Text(script, p['value'])
+        if 'required' not in p:
+            p['required'] = False
+        else:
+            p['required'] = _make_boolean(p['required'])
+        if 'advanced' in p:
+            p['advanced'] = _make_boolean(p['advanced'])
+        else:
+            p['advanced'] = False
+        if 'unique' in p:
+            p['unique'] = _make_boolean(p['unique'])
+        else:
+            p['unique'] = False
+        if 'type' not in p or p['type'] == '':
+            if p['name'] == 'id':
+                p['type'] = 'resource'
+            else:
+                p['type'] = 'string'
+    for s in step.get('steps', []):
+        _postprocess_script_step(script, s)
+
+
+def _postprocess_script_steps(script):
+    def empty(step):
+        if 'parameters' in step and len(step['parameters']) > 0:
+            return False
+        if 'steps' in step and len(step['steps']) > 0:
+            return False
+        return True
+
+    script['steps'] = [step for step in script['steps'] if not empty(step)]
+
+    for step in script['steps']:
+        _postprocess_script_step(script, step)
+
+
 def _postprocess_script(script):
     """
     Post-process the parsed script into an executable
@@ -867,56 +921,7 @@ def _postprocess_script(script):
     if 'actions' not in script:
         script['actions'] = []
 
-    def empty(step):
-        if 'parameters' in step and len(step['parameters']) > 0:
-            return False
-        if 'steps' in step and len(step['steps']) > 0:
-            return False
-        return True
-
-    script['steps'] = [step for step in script['steps'] if not empty(step)]
-
-    def _postprocess_step(step):
-        if 'name' in step and not step['name']:
-            del step['name']
-        step['required'] = _make_boolean(step.get('required', True))
-        step['shortdesc'] = step.get('shortdesc', '')
-        step['longdesc'] = step.get('longdesc', '')
-        for p in step.get('parameters', []):
-            if 'name' not in p:
-                raise ValueError("Parameter has no name: %s" % (p.keys()))
-            p['shortdesc'] = p.get('shortdesc', '')
-            p['longdesc'] = p.get('longdesc', '')
-            if 'default' in p and 'value' not in p:
-                p['value'] = p['default']
-                del p['default']
-            if 'value' in p:
-                if p['value'] is None:
-                    del p['value']
-                elif isinstance(p['value'], basestring):
-                    p['value'] = Text(script, p['value'])
-            if 'required' not in p:
-                p['required'] = False
-            else:
-                p['required'] = _make_boolean(p['required'])
-            if 'advanced' in p:
-                p['advanced'] = _make_boolean(p['advanced'])
-            else:
-                p['advanced'] = False
-            if 'unique' in p:
-                p['unique'] = _make_boolean(p['unique'])
-            else:
-                p['unique'] = False
-            if 'type' not in p or p['type'] == '':
-                if p['name'] == 'id':
-                    p['type'] = 'resource'
-                else:
-                    p['type'] = 'string'
-        for s in step.get('steps', []):
-            _postprocess_step(s)
-
-    for step in script['steps']:
-        _postprocess_step(step)
+    _postprocess_script_steps(script)
 
     # Includes may add steps, or modify parameters,
     # but assume that any included data is already
