@@ -234,20 +234,16 @@ class Actions(object):
         if into['name'] in ('cib', 'crm'):
             into['value'] = '\n'.join([str(into['value']), str(new['value'])])
             into['text'] = space_cib('\n'.join([str(into['text']), str(new['text'])]))
-        elif into['name'] == 'service':
+        elif into['name'] in ('service', 'install'):
             into['value'].extend(new['value'])
-            into['text'] = '\n'.join([str(into['text']), str(new['text'])])
-        elif into['name'] == 'install':
-            into['value'].extend(new['value'])
-            into['text'] = ' '.join([str(into['text']), str(new['text'])])
-        if new['shortdesc']:
-            newd = str(new['shortdesc'])
-            if newd != str(into['shortdesc']):
-                into['shortdesc'] = newd
-        if new['longdesc']:
-            newd = str(new['longdesc'])
-            if newd != str(into['longdesc']):
-                into['longdesc'] = newd
+            joint = '\n' if into['name'] == 'service' else ' '
+            into['text'] = joint.join([str(into['text']), str(new['text'])])
+
+        for desc in ('shortdesc', 'longdesc'):
+            if new[desc]:
+                newd = str(new[desc])
+                if newd != str(into[desc]):
+                    into[desc] = newd
         return True
 
     @staticmethod
