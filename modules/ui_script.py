@@ -346,13 +346,77 @@ class Script(command.UI):
                     except Exception as err:
                         print(err)
 
+    def _json_list(self, context, cmd):
+        """
+        ["list"]
+        """
+        for name in scripts.list_scripts():
+            try:
+                script = scripts.load_script(name)
+                if script is not None:
+                    print(json.dumps({'name': name,
+                                      'category': script['category'].lower(),
+                                      'shortdesc': script['shortdesc'],
+                                      'longdesc': scripts.format_desc(script['longdesc'])}))
+            except ValueError as err:
+                print(json.dumps({'name': name,
+                                  'error': str(err)}))
+        return True
+
+    def _json_show(self, context, cmd):
+        """
+        ["show", <name>]
+        """
+        name = cmd[1]
+        script = scripts.load_script(name)
+        if script is None:
+            return False
+        print(json.dumps({'name': script['name'],
+                          'category': script['category'].lower(),
+                          'shortdesc': script['shortdesc'],
+                          'longdesc': scripts.format_desc(script['longdesc']),
+                          'steps': scripts.clean_steps(script['steps'])}))
+        return True
+
+    def _json_verify(self, context, cmd):
+        """
+        ["verify", <name>, <params>]
+        """
+        name = cmd[1]
+        params = cmd[2]
+        script = scripts.load_script(name)
+        if script is None:
+            return False
+        actions = scripts.verify(script, params)
+        if actions is None:
+            return False
+        else:
+            for action in actions:
+                print(json.dumps({'shortdesc': action.get('shortdesc', ''),
+                                  'longdesc': str(action.get('longdesc', '')),
+                                  'text': str(action.get('text', '')),
+                                  'nodes': action.get('nodes', '')}))
+        return True
+
+    def _json_run(self, context, cmd):
+        """
+        ["run", <name>, <params>]
+        """
+        name = cmd[1]
+        params = cmd[2]
+        if not scripts.has_parallax:
+            raise ValueError("The parallax python package is missing")
+        script = scripts.load_script(name)
+        if script is None:
+            return False
+        return scripts.run(script, params, JsonPrinter())
+
     def do_json(self, context, command):
         """
         JSON API for the scripts, for use in web frontends.
         Line-based output: enter a JSON command,
         get lines of output back. In the description below, the output is
-        described as an array, but really it is returned line-by-line with
-        a terminator value: "end"
+        described as an array, but really it is returned line-by-line.
 
         API:
 
@@ -367,56 +431,19 @@ class Script(command.UI):
         ["run", <name>, <values>]
         => [{shortdesc, rc, output|error}]
         """
-        ret = True
         cmd = json.loads(command)
-        if cmd[0] == "list":
-            for name in scripts.list_scripts():
-                try:
-                    script = scripts.load_script(name)
-                    if script is not None:
-                        print(json.dumps({'name': name,
-                                          'category': script['category'].lower(),
-                                          'shortdesc': script['shortdesc'],
-                                          'longdesc': scripts.format_desc(script['longdesc'])}))
-                except ValueError as err:
-                    print(json.dumps({'name': name,
-                                      'error': str(err)}))
-        elif cmd[0] == "show":
-            name = cmd[1]
-            script = scripts.load_script(name)
-            if script is None:
-                return False
-            print(json.dumps({'name': script['name'],
-                              'category': script['category'].lower(),
-                              'shortdesc': script['shortdesc'],
-                              'longdesc': scripts.format_desc(script['longdesc']),
-                              'steps': scripts.clean_steps(script['steps'])}))
-            return True
-        elif cmd[0] == "verify":
-            name = cmd[1]
-            params = cmd[2]
-            script = scripts.load_script(name)
-            if script is None:
-                return False
-            actions = scripts.verify(script, params)
-            if actions is None:
-                ret = False
+        try:
+            if cmd[0] == "list":
+                return self._json_list(context, cmd)
+            elif cmd[0] == "show":
+                return self._json_show(context, cmd)
+            elif cmd[0] == "verify":
+                return self._json_verify(context, cmd)
+            elif cmd[0] == "run":
+                return self._json_run(context, cmd)
             else:
-                for action in actions:
-                    print(json.dumps({'shortdesc': action.get('shortdesc', ''),
-                                      'longdesc': str(action.get('longdesc', '')),
-                                      'text': str(action.get('text', '')),
-                                      'nodes': action.get('nodes', '')}))
-        elif cmd[0] == "run":
-            name = cmd[1]
-            params = cmd[2]
-            if not scripts.has_parallax:
-                raise ValueError("The parallax python package is missing")
-            script = scripts.load_script(name)
-            if script is None:
+                print(json.dumps({'error': "Unknown command: %s" % (cmd[0])}))
                 return False
-            ret = scripts.run(script, params, JsonPrinter())
-        else:
-            raise ValueError("Unknown command: %s" % (cmd[0]))
-        print('"end"')
-        return ret
+        except ValueError, err:
+            print(json.dumps({'error': str(err)}))
+            return False
