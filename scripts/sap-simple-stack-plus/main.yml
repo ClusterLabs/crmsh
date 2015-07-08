@@ -6,9 +6,13 @@
     Configure a SAP instance including:
 
     1) Virtual IP addresses for each of the SAP instance services - ASCS, DB and CI,
+
     2) A RAID 1 host based mirror,
+
     3) A cluster manager LVM volume group and LVM volumes on the RAID 1 host based mirror,
+
     4) Filesystems on shared storage for sapmnt, /sapbd, /usr/sap/SID/ASCS## and /usr/sap/SID/DVEBMGS##,
+
     5) SAPinstance for - ASCS, a Database ,a Central Instance.
 
     The difference between this and the SimpleStack is that the ASCS and CI have their own

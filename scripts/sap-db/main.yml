@@ -6,7 +6,9 @@
     Configure a SAP database instance including:
 
     1) A virtual IP address for the SAP database instance,
+
     2) A filesystem on shared storage (/sapdb),
+
     3) SAPinstance for the database.
 
   parameters:

@@ -6,7 +6,9 @@
     Configure a SAP ASCS instance including:
 
     1) Virtual IP address for the SAP ASCS instance,
+
     2) A filesystem on shared storage (/usr/sap/SID/ASCS##),
+
     3) SAPInstance for ASCS.
 
   parameters:

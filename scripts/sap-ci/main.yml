@@ -6,7 +6,9 @@
     Configure a SAP Central Instance including:
 
     1) Virtual IP address for the SAP Central instance,
+
     2) A filesystem on shared storage (/usr/sap/SID/DVEBMGS##),
+
     3) SAPInstance for the Central Instance.
 
   parameters:
