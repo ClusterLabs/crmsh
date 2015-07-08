@@ -729,6 +729,9 @@ def _process_agent_include(script, include):
 
     for param in include.get('parameters', []):
         pobj = newparamobj(param)
+        # Make any overriden parameters non-advanced
+        # unless explicitly set to advanced
+        pobj['advanced'] = False
         for key, value in param.iteritems():
             if key in ('shortdesc', 'longdesc'):
                 pobj[key] = value
