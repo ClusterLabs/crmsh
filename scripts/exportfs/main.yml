@@ -1,5 +1,7 @@
 ---
 - version: 2.2
+  shortdesc: "NFS Exported File System"
+  category: Server
   include:
     - agent: ocf:heartbeat:exportfs
       parameters:
