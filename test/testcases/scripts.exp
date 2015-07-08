@@ -15,12 +15,6 @@ Basic:
 
 virtual-ip       Virtual IP
 
-Custom:
-
-exportfs         
-Manages NFS exports
-
-
 Database:
 
 database         MySQL/MariaDB Database
@@ -50,6 +44,7 @@ sap-simple-stack-plus SAP SimpleStack+ Instance
 Server:
 
 apache           Apache Webserver
+exportfs         NFS Exported File System
 nfsserver        NFS Server
 
 Stonith:
@@ -63,12 +58,6 @@ ERROR: 3: Error when loading script haproxy: No meta-data for agent: systemd:hap
 Basic:
 
 virtual-ip       Virtual IP
-
-Custom:
-
-exportfs         
-Manages NFS exports
-
 
 Database:
 
@@ -111,6 +100,7 @@ sapinstance      SAP Instance
 Server:
 
 apache           Apache Webserver
+exportfs         NFS Exported File System
 nfsserver        NFS Server
 
 Stonith:
