@@ -6,7 +6,7 @@
 - version: 2.2
   category: Filesystem
   shortdesc: gfs2 filesystem base (cloned)
-  longdesc: >-    
+  longdesc: |
     This template generates a cloned instance of the gfs2 filesystem.
     The filesystem should be on the device, unless clvm is used.
 

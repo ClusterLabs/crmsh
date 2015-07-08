@@ -2,7 +2,7 @@
 - version: 2.2
   category: SAP
   shortdesc: SAP ASCS Instance
-  longdesc: >
+  longdesc: |
     Configure a SAP ASCS instance including:
 
     1) Virtual IP address for the SAP ASCS instance,

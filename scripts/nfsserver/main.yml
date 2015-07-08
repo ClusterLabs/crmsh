@@ -5,7 +5,7 @@
 - version: 2.2
   category: Server
   shortdesc: NFS Server
-  longdesc: >-
+  longdesc: >
     Configure an NFS server. Requires an existing filesystem resource,
     for example a filesystem running on LVM on DRBD.
 

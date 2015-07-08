@@ -2,7 +2,7 @@
 - version: 2.2
   category: SAP
   shortdesc: SAP Simple Stack Instance
-  longdesc: >
+  longdesc: |
     Configure a SAP instance including:
 
     1) Virtual IP addresses for each of the SAP instance services - ASCS, DB and CI,

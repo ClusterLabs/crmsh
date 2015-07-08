@@ -6,7 +6,7 @@
 - version: 2.2
   category: Stonith
   shortdesc: "SBD, Shared storage based fencing"
-  longdesc: >
+  longdesc: |
     Create a SBD STONITH resource. SBD must be configured to use
     a particular shared storage device using /etc/sysconfig/sbd.
 
