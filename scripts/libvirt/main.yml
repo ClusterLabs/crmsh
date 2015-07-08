@@ -3,7 +3,7 @@
 # License: GNU General Public License (GPL)
 ---
 - version: 2.2
-  shortdesc: STONITH for a libvirt managed hypervisor (kvm/Xen)
+  shortdesc: STONITH for libvirt (kvm / Xen)
   longdesc: >
     Uses libvirt as a STONITH device to fence a guest node.
     Create a separate resource for each guest node in the cluster.
