@@ -67,6 +67,11 @@ class Text(object):
     """
     DESC = 1
     CIB = 2
+    SHORTDESC = 3
+
+    @staticmethod
+    def shortdesc(script, text):
+        return Text(script, text, type=Text.SHORTDESC)
 
     @staticmethod
     def desc(script, text):
@@ -102,12 +107,20 @@ class Text(object):
     def __str__(self):
         if self.type == self.DESC:
             return format_desc(self._parse())
+        elif self.type == self.SHORTDESC:
+            return self._parse()
         elif self.type == self.CIB:
             return format_cib(self._parse())
         return self._parse()
 
     def __eq__(self, obj):
         return str(self) == str(obj)
+
+
+def _strip(desc):
+    if desc is None:
+        return None
+    return desc.strip()
 
 
 def format_desc(desc):
@@ -185,7 +198,7 @@ class Actions(object):
         if 'shortdesc' not in action:
             action['shortdesc'] = _action_shortdescs.get(name, '')
         else:
-            action['shortdesc'] = Text.desc(script, action['shortdesc'])
+            action['shortdesc'] = Text.shortdesc(script, action['shortdesc'])
         if 'longdesc' not in action:
             action['longdesc'] = ''
         else:
@@ -225,7 +238,7 @@ class Actions(object):
         if new['shortdesc']:
             newd = str(new['shortdesc'])
             if newd != str(into['shortdesc']):
-                into['shortdesc'] = newd
+                into['shortdesc'] = _strip(newd)
         if new['longdesc']:
             newd = str(new['longdesc'])
             if newd != str(into['longdesc']):
@@ -463,7 +476,7 @@ def _parse_hawk_template(workflow, name, type, step, actions):
     else:
         raise ValueError("Template does not exist: %s" % (path))
 
-    step['shortdesc'] = ''.join(xml.xpath('./shortdesc/text()'))
+    step['shortdesc'] = _strip(''.join(xml.xpath('./shortdesc/text()')))
     step['longdesc'] = ''.join(xml.xpath('./longdesc/text()'))
 
     actions.append({'cib': _hawk_to_handles(name, xml.xpath('./crm_script')[0])})
@@ -477,7 +490,7 @@ def _parse_hawk_template(workflow, name, type, step, actions):
         val = content.get('default', content.get('value', None))
         if val:
             obj['value'] = val
-        obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
+        obj['shortdesc'] = _strip(''.join(item.xpath('./shortdesc/text()')))
         obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
         step['parameters'].append(obj)
 
@@ -524,7 +537,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
     data = {
         'version': 2.2,
         'name': scriptname,
-        'shortdesc': ''.join(xml.xpath('./shortdesc/text()')),
+        'shortdesc': _strip(''.join(xml.xpath('./shortdesc/text()'))),
         'longdesc': ''.join(xml.xpath('./longdesc/text()')),
         'category': 'Wizard',
         'dir': None,
@@ -535,7 +548,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
     # the parameters together form a step with an optional shortdesc
     # then each template becomes an additional step with an optional shortdesc
     paramstep = {
-        'shortdesc': ''.join(xml.xpath('./parameters/stepdesc/text()')),
+        'shortdesc': _strip(''.join(xml.xpath('./parameters/stepdesc/text()'))),
         'parameters': []
     }
     data['steps'].append(paramstep)
@@ -549,7 +562,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
         val = content.get('default', content.get('value', None))
         if val is not None:
             obj['value'] = val
-        obj['shortdesc'] = ''.join(item.xpath('./shortdesc/text()'))
+        obj['shortdesc'] = _strip(''.join(item.xpath('./shortdesc/text()')))
         obj['longdesc'] = ''.join(item.xpath('./longdesc/text()'))
         paramstep['parameters'].append(obj)
 
@@ -557,7 +570,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
 
     for item in xml.xpath('./templates/template'):
         templatestep = {
-            'shortdesc': ''.join(item.xpath('./stepdesc/text()')),
+            'shortdesc': _strip(''.join(item.xpath('./stepdesc/text()'))),
             'name': item.get('name'),
             'required': item.get('required'),
             'parameters': []
@@ -683,7 +696,7 @@ def _process_agent_include(script, include):
         'parameters': [],
     })
     step['longdesc'] = include.get('longdesc') or _meta_text(meta, 'longdesc')
-    step['shortdesc'] = include.get('shortdesc') or _meta_text(meta, 'shortdesc')
+    step['shortdesc'] = _strip(include.get('shortdesc') or _meta_text(meta, 'shortdesc'))
     step['required'] = include.get('required', True)
     step['parameters'].append({
         'name': 'id',
@@ -703,7 +716,7 @@ def _process_agent_include(script, include):
         pobj['required'] = _make_boolean(param.get('required', False))
         pobj['unique'] = _make_boolean(param.get('unique', False))
         pobj['longdesc'] = _meta_text(param, 'longdesc')
-        pobj['shortdesc'] = _meta_text(param, 'shortdesc')
+        pobj['shortdesc'] = _strip(_meta_text(param, 'shortdesc'))
         # set 'advanced' flag on all non-required agent parameters by default
         # a UI should hide these parameters unless "show advanced" is set
         pobj['advanced'] = not pobj['required']
@@ -843,12 +856,12 @@ def _postprocess_script_step(script, step):
     if 'name' in step and not step['name']:
         del step['name']
     step['required'] = _make_boolean(step.get('required', True))
-    step['shortdesc'] = step.get('shortdesc', '')
+    step['shortdesc'] = _strip(step.get('shortdesc', ''))
     step['longdesc'] = step.get('longdesc', '')
     for p in step.get('parameters', []):
         if 'name' not in p:
             raise ValueError("Parameter has no name: %s" % (p.keys()))
-        p['shortdesc'] = p.get('shortdesc', '')
+        p['shortdesc'] = _strip(p.get('shortdesc', ''))
         p['longdesc'] = p.get('longdesc', '')
         if 'default' in p and 'value' not in p:
             p['value'] = p['default']
@@ -1611,7 +1624,7 @@ def _clean_parameters(params):
             if elem in param:
                 rp[elem] = param[elem]
         if 'shortdesc' in param:
-            rp['shortdesc'] = format_desc(param['shortdesc'])
+            rp['shortdesc'] = _strip(param['shortdesc'])
         if 'longdesc' in param:
             rp['longdesc'] = format_desc(param['longdesc'])
         if 'value' in param:
@@ -1630,7 +1643,7 @@ def clean_steps(steps):
         if 'name' in step:
             rstep['name'] = step['name']
         if 'shortdesc' in step:
-            rstep['shortdesc'] = format_desc(step['shortdesc'])
+            rstep['shortdesc'] = _strip(step['shortdesc'])
         if 'longdesc' in step:
             rstep['longdesc'] = format_desc(step['longdesc'])
         if 'required' in step:
