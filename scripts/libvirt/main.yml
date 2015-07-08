@@ -39,6 +39,7 @@
     - name: reset_method
       required: false
       example: power_cycle
+      type: string
       shortdesc: How to reset a guest.
       longdesc: >
         A guest reset may be done by a sequence of off and on commands
@@ -46,6 +47,7 @@
         depend on the hypervisor and guest configuration management.
     - name: install
       shortdesc: Enable to install required packages
+      type: boolean
       required: false
       value: true
   actions:
