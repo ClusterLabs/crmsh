@@ -367,6 +367,9 @@ class Script(command.UI):
         """
         ["show", <name>]
         """
+        if len(cmd) < 2:
+            print(json.dumps({'error': 'Incorrect number of arguments: %s (expected %s)' % (len(cmd), 2)}))
+            return False
         name = cmd[1]
         script = scripts.load_script(name)
         if script is None:
@@ -382,6 +385,9 @@ class Script(command.UI):
         """
         ["verify", <name>, <params>]
         """
+        if len(cmd) < 3:
+            print(json.dumps({'error': 'Incorrect number of arguments: %s (expected %s)' % (len(cmd), 3)}))
+            return False
         name = cmd[1]
         params = cmd[2]
         script = scripts.load_script(name)
@@ -403,6 +409,9 @@ class Script(command.UI):
         """
         ["run", <name>, <params>]
         """
+        if len(cmd) < 3:
+            print(json.dumps({'error': 'Incorrect number of arguments: %s (expected %s)' % (len(cmd), 3)}))
+            return False
         name = cmd[1]
         params = cmd[2]
         if not scripts.has_parallax:
@@ -433,6 +442,9 @@ class Script(command.UI):
         => [{shortdesc, rc, output|error}]
         """
         cmd = json.loads(command)
+        if len(cmd) < 1:
+            print(json.dumps({'error': 'Failed to decode valid JSON command'}))
+            return False
         try:
             if cmd[0] == "list":
                 return self._json_list(context, cmd)
