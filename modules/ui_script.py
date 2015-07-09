@@ -79,23 +79,23 @@ class JsonPrinter(object):
         pass
 
     def error(self, host, message):
-        self.results.append({'host': host, 'error': message})
+        self.results.append({'host': str(host), 'error': str(message)})
 
     def output(self, host, rc, out, err):
-        ret = {'host': host, 'rc': rc, 'output': out}
+        ret = {'host': host, 'rc': rc, 'output': str(out)}
         if err:
-            ret['error'] = err
+            ret['error'] = str(err)
         self.results.append(ret)
 
     def start(self, action):
         pass
 
     def finish(self, action, rc, output):
-        ret = {'rc': rc, 'shortdesc': action['shortdesc']}
+        ret = {'rc': rc, 'shortdesc': str(action['shortdesc'])}
         if rc != 0:
-            ret['error'] = output
+            ret['error'] = str(output)
         else:
-            ret['output'] = output
+            ret['output'] = str(output)
         print(json.dumps(ret))
 
     def flush(self):
