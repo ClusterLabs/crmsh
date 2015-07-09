@@ -398,11 +398,11 @@ class Script(command.UI):
             return False
         else:
             for action in actions:
-                print(json.dumps({'name': action.get('name', ''),
-                                  'shortdesc': action.get('shortdesc', ''),
+                print(json.dumps({'name': str(action.get('name', '')),
+                                  'shortdesc': str(action.get('shortdesc', '')),
                                   'longdesc': str(action.get('longdesc', '')),
                                   'text': str(action.get('text', '')),
-                                  'nodes': action.get('nodes', '')}))
+                                  'nodes': str(action.get('nodes', ''))}))
         return True
 
     def _json_run(self, context, cmd):
