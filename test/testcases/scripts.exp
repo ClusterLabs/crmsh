@@ -27,7 +27,7 @@ Filesystem:
 clvm             Cluster-aware LVM
 clvm-vg          Cluster-aware LVM (Volume Group)
 drbd             DRBD Block Device
-filesystem       Manages filesystem mounts
+filesystem       Filesystem (mount point)
 gfs2             gfs2 filesystem (cloned)
 gfs2-base        gfs2 filesystem base (cloned)
 ocfs2            OCFS2 filesystem (cloned)
@@ -49,7 +49,7 @@ nfsserver        NFS Server
 
 Stonith:
 
-libvirt          STONITH for a libvirt managed hypervisor (kvm/Xen)
+libvirt          STONITH for libvirt (kvm / Xen)
 sbd              SBD, Shared storage based fencing
 
 .INP: list all
@@ -71,7 +71,7 @@ Filesystem:
 clvm             Cluster-aware LVM
 clvm-vg          Cluster-aware LVM (Volume Group)
 drbd             DRBD Block Device
-filesystem       Manages filesystem mounts
+filesystem       Filesystem (mount point)
 gfs2             gfs2 filesystem (cloned)
 gfs2-base        gfs2 filesystem base (cloned)
 ocfs2            OCFS2 filesystem (cloned)
@@ -105,7 +105,7 @@ nfsserver        NFS Server
 
 Stonith:
 
-libvirt          STONITH for a libvirt managed hypervisor (kvm/Xen)
+libvirt          STONITH for libvirt (kvm / Xen)
 sbd              SBD, Shared storage based fencing
 
 .INP: list names
@@ -233,6 +233,12 @@ node-max=1 (which is the default).
       Identifier for the cluster resource
   ip (required)  (unique) 
       IPv4 or IPv6 address
+  cidr_netmask
+      CIDR netmask
+  broadcast
+      Broadcast address
+  lvs_support
+      Enable support for LVS DR
 
 
 
