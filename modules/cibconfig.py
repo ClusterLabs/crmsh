@@ -1919,6 +1919,12 @@ class CibProperty(CibObject):
             return utils.get_check_rc()
         l = []
         if self.obj_type == "property":
+            # don't check property sets which are not
+            # "cib-bootstrap-options", they are probably used by
+            # some resource agents such as mysql to store RA
+            # specific state
+            if self.obj_id != cib_object_map[self.xml_obj_type][3]:
+                return 0
             l = get_properties_list()
             l += constants.extra_cluster_properties
         elif self.obj_type == "op_defaults":
