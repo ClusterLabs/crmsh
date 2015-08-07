@@ -14,10 +14,11 @@ def setup_func():
     "set up test fixtures"
     from crmsh import idmgmt
     idmgmt.clear()
+    factory._push_state()
 
 
 def teardown_func():
-    pass
+    factory._pop_state()
 
 
 @with_setup(setup_func, teardown_func)
