@@ -28,10 +28,11 @@ def setup_func():
     "set up test fixtures"
     import idmgmt
     idmgmt.clear()
+    factory._push_state()
 
 
 def teardown_func():
-    pass
+    factory._pop_state()
 
 
 @with_setup(setup_func, teardown_func)
