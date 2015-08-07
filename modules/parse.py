@@ -314,7 +314,7 @@ class RuleParser(BaseParser):
     _UNARYOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.unary_ops)), re.IGNORECASE)
     _BINOP_RE = None
 
-    _TERMINATORS = ('params', 'meta', 'utilization', 'operations', 'op', 'rule')
+    _TERMINATORS = ('params', 'meta', 'utilization', 'operations', 'op', 'rule', 'attributes')
 
     def match_attr_list(self, name, tag, allow_empty=True):
         """
