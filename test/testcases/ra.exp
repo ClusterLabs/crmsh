@@ -25,6 +25,9 @@ Parameters (*: required, []: default):
 state (string, [/var/run//Dummy-{OCF_RESOURCE_INSTANCE}.state]): State file
     Location to store the resource state in.
 
+passwd (string): Password
+    Fake password field
+
 fake (string, [dummy]): 
     Fake attribute that can be changed to cause a reload
 
