@@ -452,3 +452,27 @@ def test_quotes():
     exp = 'primitive q1 ocf:pacemaker:Dummy params state="foo\\"foo\\""'
     assert data == exp
     assert obj.cli_use_validate()
+
+
+@with_setup(setup_func, teardown_func)
+def test_nodeattrs():
+    """
+    bug with parsing node attrs
+    """
+    xml = '''<node id="1" uname="dell71"> \
+  <instance_attributes id="dell71-instance_attributes"> \
+    <nvpair name="staging-0-0-placement" value="true" id="dell71-instance_attributes-staging-0-0-placement"/> \
+    <nvpair name="meta-0-0-placement" value="true" id="dell71-instance_attributes-meta-0-0-placement"/> \
+  </instance_attributes> \
+  <instance_attributes id="nodes-1"> \
+    <nvpair id="nodes-1-standby" name="standby" value="off"/> \
+  </instance_attributes> \
+</node>'''
+
+    data = etree.fromstring(xml)
+    obj = factory.create_from_node(data)
+    assert obj is not None
+    data = obj.repr_cli(format=-1)
+    exp = 'node 1: dell71 attributes staging-0-0-placement=true meta-0-0-placement=true attributes standby=off'
+    assert data == exp
+    assert obj.cli_use_validate()
