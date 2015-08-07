@@ -206,6 +206,16 @@ def test_param_rules():
 
 
 @with_setup(setup_func, teardown_func)
+def test_multiple_attrsets():
+    roundtrip('primitive mySpecialRsc me:Special ' +
+              'params 3: interface=eth1 ' +
+              'params 2: port=8888')
+    roundtrip('primitive mySpecialRsc me:Special ' +
+              'meta 3: interface=eth1 ' +
+              'meta 2: port=8888')
+
+
+@with_setup(setup_func, teardown_func)
 def test_new_acls():
     roundtrip('role fum description=test read description=test2 xpath:"*[@name=karl]"')
 
