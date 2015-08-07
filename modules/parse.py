@@ -509,6 +509,43 @@ class RuleParser(BaseParser):
         else:
             return ['score-attribute', score]
 
+    def match_arguments(self, out, name_map, implicit_initial=None):
+        """
+        [<name> attr_list]
+        [operations id_spec]
+        [op op_type [<attribute>=<value> ...] ...]
+
+        attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
+        id_spec :: $id=<id> | $id-ref=<id>
+        op_type :: start | stop | monitor
+
+        implicit_initial: when matching attr lists, if none match at first
+        parse an implicit initial token and then continue.
+        This is so for example: primitive foo Dummy state=1 is accepted when
+        params is the implicit initial.
+        """
+        names = olist(name_map.keys())
+        oplist = olist([op for op in name_map if op.lower() in ('operations', 'op')])
+        for op in oplist:
+            del name_map[op]
+        initial = True
+        while self.has_tokens():
+            t = self.current_token().lower()
+            if t in names:
+                initial = False
+                if t in oplist:
+                    self.match_operations(out, t == 'operations')
+                else:
+                    for attr_list in self.match_attr_lists(name_map):
+                        out.append(attr_list)
+            elif initial:
+                initial = False
+                for attr_list in self.match_attr_lists(name_map,
+                                                       implicit_initial=implicit_initial):
+                    out.append(attr_list)
+            else:
+                break
+
 
 class NodeParser(RuleParser):
     _UNAME_RE = re.compile(r'([^:]+)(:(normal|member|ping|remote))?$', re.IGNORECASE)
@@ -536,9 +573,9 @@ class NodeParser(RuleParser):
         else:
             out.set("type", self.matched(3) or constants.node_default_type)
         xmlbuilder.maybe_set(out, "description", self.try_match_description())
-        for attr_list in self.match_attr_lists({'attributes': 'instance_attributes',
-                                                'utilization': 'utilization'}):
-            out.append(attr_list)
+        self.match_arguments(out, {'attributes': 'instance_attributes',
+                                   'utilization': 'utilization'},
+                             implicit_initial='attributes')
         return out
 
 
@@ -614,28 +651,6 @@ class ResourceParser(RuleParser):
 
         while is_op():
             self.match_op(node, pfx=pfx)
-
-    def match_arguments(self, out, name_map):
-        """
-        [<name> attr_list]
-        [operations id_spec]
-        [op op_type [<attribute>=<value> ...] ...]
-
-        attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
-        id_spec :: $id=<id> | $id-ref=<id>
-        op_type :: start | stop | monitor
-        """
-        names = olist(name_map.keys())
-        oplist = olist([op for op in name_map if op.lower() in ('operations', 'op')])
-        for op in oplist:
-            del name_map[op]
-        while self.has_tokens() and self.current_token() in names:
-            t = self.current_token().lower()
-            if t in oplist:
-                self.match_operations(out, t == 'operations')
-            else:
-                for attr_list in self.match_attr_lists(name_map):
-                    out.append(attr_list)
 
     def parse(self, cmd):
         return self.begin_dispatch(cmd, min_args=2)
