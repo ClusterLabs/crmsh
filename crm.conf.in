@@ -17,6 +17,7 @@
 ; ptest = ptest, crm_simulate
 ; dotty = dotty
 ; dot = dot
+; report_tool_options =
 
 [path]
 sharedir = @datadir@/@PACKAGE@

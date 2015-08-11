@@ -959,11 +959,12 @@ class Report(object):
         if pipe_cmd_nosudo("mkdir -p %s" % os.path.dirname(d)) != 0:
             return None
         common_info("retrieving information from cluster nodes, please wait ...")
-        rc = pipe_cmd_nosudo("%s/hb_report -Z -Q -f '%s' %s %s %s" %
+        rc = pipe_cmd_nosudo("%s/hb_report -Z -Q -f '%s' %s %s %s %s" %
                              (config.path.sharedir,
                               self.from_dt.ctime(),
                               to_option,
                               nodes_option,
+                              str(config.core.report_tool_options),
                               d))
         if rc != 0:
             if os.path.isfile(tarball):
