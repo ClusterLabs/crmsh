@@ -25,7 +25,8 @@ def create_report(context, args):
     extcmd = report_tool()
     if not extcmd:
         context.fatal_error("No reporting tool found")
-    cmd = [extcmd] + list(args)
+    extraopts = str(config.core.report_tool_options).strip().split()
+    cmd = [extcmd] + extraopts + list(args)
     if options.regression_tests:
         print ".EXT", cmd
     return subprocess.call(cmd, shell=False, preexec_fn=lambda: signal(SIGPIPE, SIG_DFL))

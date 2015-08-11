@@ -979,11 +979,12 @@ class Report(object):
         if extcmd is None:
             self.error("No reporting tool found")
             return None
-        rc = pipe_cmd_nosudo("%s -Z -Q -f '%s' %s %s %s" %
+        rc = pipe_cmd_nosudo("%s -Z -Q -f '%s' %s %s %s %s" %
                              (extcmd,
                               self.from_dt.ctime(),
                               to_option,
                               nodes_option,
+                              str(config.core.report_tool_options),
                               d))
         if rc != 0:
             if os.path.isfile(tarball):

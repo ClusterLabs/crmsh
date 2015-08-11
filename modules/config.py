@@ -207,6 +207,7 @@ DEFAULTS = {
         'dot': opt_program('', ('dot',)),
         'supported_schemas': opt_list(_SUPPORTED_SCHEMAS),
         'ignore_missing_metadata': opt_boolean('no'),
+        'report_tool_options': opt_string('')
     },
     'path': {
         'sharedir': opt_dir('%(datadir)s/crmsh'),
