@@ -275,14 +275,13 @@ def compgen():
 
     options.shell_completion = True
 
-    #point = int(args[0])
+    # point = int(args[0])
     line = args[1]
 
-    # remove crm from commandline
-    line_split = line.split(' ', 1)
-    if len(line_split) == 1:
-        return
-    line = line_split[1].lstrip()
+    # remove [*]crm from commandline
+    idx = line.find('crm')
+    if idx >= 0:
+        line = line[idx+3:].lstrip()
 
     options.interactive = False
     ui = ui_root.Root()
