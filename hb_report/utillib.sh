@@ -131,13 +131,23 @@ findmsg() {
 	favourites="ha-*"
 	mark=$1
 	log=""
-	for d in $syslogdirs; do
-		[ -d $d ] || continue
-		log=`grep -l -e "$mark" $d/$favourites` && break
-		test "$log" && break
-		log=`grep -l -e "$mark" $d/*` && break
-		test "$log" && break
-	done 2>/dev/null
+
+	if [ -f /var/log/pacemaker.log ]; then
+		log=`grep -l -e "$mark" /var/log/pacemaker.log`
+		if [ ! "$log" ]; then
+			log=`grep -l -e "$mark" /var/log/pacemaker.log*` && break
+		fi
+	fi
+
+	if [ ! "$log" ]; then
+		for d in $syslogdirs; do
+			[ -d $d ] || continue
+			log=`grep -l -e "$mark" $d/$favourites` && break
+			test "$log" && break
+			log=`grep -l -e "$mark" $d/*` && break
+			test "$log" && break
+		done 2>/dev/null
+	fi
 	[ "$log" ] &&
 		ls -t $log | tr '\n' ' '
 	[ "$log" ] &&
