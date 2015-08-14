@@ -552,11 +552,11 @@ start_slave_collector() {
 	dumpenv |
 	if [ "$node" = "$WE" ]; then
 		debug "running: $LOCAL_SUDO hb_report __slave"
-		$LOCAL_SUDO ${datadir}/@PACKAGE_NAME@/hb_report __slave
+		$LOCAL_SUDO ${HA_NOARCHBIN}/hb_report __slave
 	else
 		debug "running: ssh $SSH_OPTS $node \"$SUDO hb_report __slave"
 		ssh $SSH_OPTS $node \
-			"$SUDO ${datadir}/@PACKAGE_NAME@/hb_report __slave"
+			"$SUDO ${HA_NOARCHBIN}/hb_report __slave"
 	fi | (cd $WORKDIR && tar xf -)
 }
 
@@ -730,7 +730,7 @@ getconfigurations() {
 #
 sys_info() {
 	cluster_info
-	${datadir}/@PACKAGE_NAME@/hb_report -V # our info
+	${HA_NOARCHBIN}/hb_report -V # our info
 	echo "resource-agents: `grep 'Build version:' @OCF_ROOT_DIR@/lib/heartbeat/ocf-shellfuncs`"
 	crm_info
 	pkg_versions $PACKAGES
