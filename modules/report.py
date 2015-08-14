@@ -107,7 +107,29 @@ def syslog_ts(s):
 
 
 def syslog2node(s):
-    '''Get the node from a syslog line.'''
+    '''
+    Get the node from a syslog line.
+
+    old format:
+    Aug 14 11:07:04 <node> ...
+    new format:
+    Aug 14 11:07:04 [<PID>] <node> ...
+    RFC5424:
+    <TS> <node> ...
+    RFC5424 (2):
+    <TS> [<PID>] <node> ...
+    '''
+
+    fmt1 = re.compile(r'\w+ \d+ \d+:\d+:\d+ (?:\[\d+\])? (\w+)')
+    m = fmt1.search(s)
+    if m:
+        return m.group(1)
+
+    fmt2 = re.compile(r'\w+ (?:\[\d+\])? (\w+)')
+    m = fmt2.search(s)
+    if m:
+        return m.group(1)
+
     try:
         # strptime defaults year to 1900 (sigh)
         time.strptime(' '.join(s.split()[0:3]),
@@ -236,7 +258,9 @@ def filter_log(sl, log_l):
     files list.
     '''
     node_l = [log2node(x) for x in log_l if x]
-    return [x for x in sl if is_our_log(x, node_l)]
+    ret = [x for x in sl if is_our_log(x, node_l)]
+    common_debug("filter_log: %s in, %s out" % (len(sl), len(ret)))
+    return ret
 
 
 def first_log_lines(log_l):
@@ -505,8 +529,8 @@ def transition_start_re(number_re):
     2: full path of pe file
     3: pe file number
     """
-    m1 = "crmd.* do_te_invoke: Processing graph ([0-9]+) .*derived from (.*/pe-[^-]+-(%s)[.]bz2)" % (number_re)
-    m2 = "pengine.* process_pe_message: .*Transition ([0-9]+): .*([^ ]*/pe-[^-]+-(%s)[.]bz2)" % (number_re)
+    m1 = "crmd.*do_te_invoke:.*Processing graph ([0-9]+).*derived from (.*/pe-[^-]+-(%s)[.]bz2)" % (number_re)
+    m2 = "pengine.*process_pe_message:.*Transition ([0-9]+):.*([^ ]*/pe-[^-]+-(%s)[.]bz2)" % (number_re)
     try:
         return re.compile("(?:%s)|(?:%s)" % (m1, m2))
     except re.error, e:
@@ -520,7 +544,7 @@ def transition_end_re(number_re):
     See transition_start_re for more details.
     """
     try:
-        return re.compile("crmd.* run_graph: .*Transition ([0-9]+).*Source=(.*/pe-[^-]+-(%s)[.]bz2).: (Stopped|Complete|Terminated)" % (number_re))
+        return re.compile("crmd.*run_graph:.*Transition ([0-9]+).*Source=(.*/pe-[^-]+-(%s)[.]bz2).:.*(Stopped|Complete|Terminated)" % (number_re))
     except re.error, e:
         common_debug("RE compilation failed: %s" % (e))
         raise ValueError("Error in search expression")
