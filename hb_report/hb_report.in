@@ -153,6 +153,7 @@ setvarsanddefaults() {
 	# NB: they all have to be in syslog format
 	#
 	EXTRA_LOGS="/var/log/messages /var/log/pacemaker.log"
+	PCMK_LOG="/var/log/pacemaker.log"
 	# used only by the master
 	NO_SSH=""
 	SSH_USER=""
@@ -294,19 +295,29 @@ logmark() {
 #
 findlog() {
 	local logf=""
-	collect_journal $FROM_TIME $TO_TIME $WORKDIR/$JOURNAL_F
+	if [ -f "$PCMK_LOG" ]; then
+		echo $PCMK_LOG
+		return
+	fi
+
 	if [ "$HA_LOGFACILITY" ]; then
 		logf=`findmsg $UNIQUE_MSG | awk '{print $1}'`
 	fi
 	if [ -f "$logf" ]; then
 		echo $logf
-	elif [ -f "$WORKDIR/$JOURNAL_F" ]; then
-		echo $WORKDIR/$JOURNAL_F
-	else
-		echo ${HA_DEBUGFILE:-$HA_LOGFILE}
-		[ "${HA_DEBUGFILE:-$HA_LOGFILE}" ] &&
-			debug "will try with ${HA_DEBUGFILE:-$HA_LOGFILE}"
+		return
 	fi
+
+
+	collect_journal $FROM_TIME $TO_TIME $WORKDIR/$JOURNAL_F
+	if [ -f "$WORKDIR/$JOURNAL_F" ]; then
+		echo $WORKDIR/$JOURNAL_F
+		return
+	fi
+
+	echo ${HA_DEBUGFILE:-$HA_LOGFILE}
+	[ "${HA_DEBUGFILE:-$HA_LOGFILE}" ] &&
+		debug "will try with ${HA_DEBUGFILE:-$HA_LOGFILE}"
 }
 
 #
@@ -523,12 +534,12 @@ USER_NODES="$USER_NODES"
 NODES="$NODES"
 MASTER_NODE="$MASTER_NODE"
 HA_LOG=$HA_LOG
-MASTER_IS_HOSTLOG=$MASTER_IS_HOSTLOG
 UNIQUE_MSG=$UNIQUE_MSG
 SANITIZE="$SANITIZE"
 DO_SANITIZE="$DO_SANITIZE"
 SKIP_LVL="$SKIP_LVL"
 EXTRA_LOGS="$EXTRA_LOGS"
+PCMK_LOG="$PCMK_LOG"
 USER_CLUSTER_TYPE="$USER_CLUSTER_TYPE"
 CONF="$CONF"
 B_CONF="$B_CONF"
@@ -1037,7 +1048,6 @@ pickcompress() {
 }
 # get the right part of the log
 getlog() {
-	local cnt
 	local outf
 	outf=$WORKDIR/$HALOG_F
 
@@ -1050,8 +1060,6 @@ getlog() {
 	fi
 	if [ "$HA_LOG" = "" ]; then
 		HA_LOG=`findlog`
-		[ "$HA_LOG" ] &&
-			cnt=`fgrep -c $UNIQUE_MSG < $HA_LOG`
 	fi
 	if [ "$HA_LOG" = "" -o ! -f "$HA_LOG" ]; then
 		if [ "$CTS" ]; then
@@ -1060,10 +1068,6 @@ getlog() {
 			warning "no log at $WE"
 		fi
 		return
-	fi
-	if [ "$cnt" ] && [ $cnt -gt 1 -a $cnt -eq $NODECNT ]; then
-		MASTER_IS_HOSTLOG=1
-		info "found the central log!"
 	fi
 
 	if [ "$NO_str2time" ]; then
