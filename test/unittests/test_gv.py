@@ -16,8 +16,8 @@
 #
 
 
-from crmsh import crm_gv
-from crmsh import cibconfig
+import crm_gv
+import cibconfig
 from nose.tools import eq_
 
 
