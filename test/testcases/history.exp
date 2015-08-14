@@ -131,7 +131,6 @@ Dec 14 20:08:21 xen-d syslog-ng[1681]: syslog-ng starting up; version='2.0.9'
 Dec 14 20:08:21 xen-d iscsid: iSCSI logger with pid=1682 started!
 Dec 14 20:08:22 xen-d sm-notify[1716]: Version 1.2.3 starting
 Dec 14 20:08:22 xen-d haveged: haveged starting up
-Dec 14 20:08:22 xen-d haveged: arch:        x86 vendor:      amd generic:     0 i_cache:     64 d_cache:     64 loop_idx:    20 loop_idxmax: 40 loop_sz:     63724 loop_szmax:  124334 etime:       18207 havege_ndpt  0
 Dec 14 20:08:22 xen-d logd: [1789]: info: setting log facility to daemon
 Dec 14 20:08:22 xen-d logd: [1789]: info: logd started with /etc/logd.cf.
 Dec 14 20:08:22 xen-d iscsid: transport class version 2.0-870. iscsid version 2.0-872.suse
