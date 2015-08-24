@@ -1286,8 +1286,11 @@ def _verify_type(param, value, errors):
     elif type == 'boolean':
         return "true" if _make_boolean(value) else "false"
     elif type == 'resource':
-        if not _IDENT_RE.match(value):
-            errors.append("%s=%s invalid resource identifier" % (param.get('name'), value))
+        try:
+            if not _IDENT_RE.match(value):
+                errors.append("%s=%s invalid resource identifier" % (param.get('name'), value))
+        except TypeError as e:
+            errors.append("%s=%s %s" % (param.get('name'), value, str(e)))
     elif type == 'ip_address':
         if not _valid_ip(value):
             errors.append("%s=%s is not %s" % (param.get('name'), value, type))
