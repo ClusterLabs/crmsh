@@ -1406,7 +1406,7 @@ if is_collector && [ "$HA_LOGFACILITY" ]; then
 	logmark $HA_LOGFACILITY.$HA_LOGLEVEL $UNIQUE_MSG
 	# allow for the log message to get (hopefully) written to the
 	# log file
-	sleep 1
+	sleep 2
 fi
 
 #
