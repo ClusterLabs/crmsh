@@ -529,8 +529,8 @@ def transition_start_re(number_re):
     2: full path of pe file
     3: pe file number
     """
-    m1 = "crmd.*do_te_invoke:.*Processing graph ([0-9]+).*derived from (.*/pe-[^-]+-(%s)[.]bz2)" % (number_re)
-    m2 = "pengine.*process_pe_message:.*Transition ([0-9]+):.*([^ ]*/pe-[^-]+-(%s)[.]bz2)" % (number_re)
+    m1 = "crmd.*Processing graph ([0-9]+).*derived from (.*/pe-[^-]+-(%s)[.]bz2)" % (number_re)
+    m2 = "pengine.*Transition ([0-9]+):.*([^ ]*/pe-[^-]+-(%s)[.]bz2)" % (number_re)
     try:
         return re.compile("(?:%s)|(?:%s)" % (m1, m2))
     except re.error, e:
@@ -544,7 +544,7 @@ def transition_end_re(number_re):
     See transition_start_re for more details.
     """
     try:
-        return re.compile("crmd.*run_graph:.*Transition ([0-9]+).*Source=(.*/pe-[^-]+-(%s)[.]bz2).:.*(Stopped|Complete|Terminated)" % (number_re))
+        return re.compile("crmd.*Transition ([0-9]+).*Source=(.*/pe-[^-]+-(%s)[.]bz2).:.*(Stopped|Complete|Terminated)" % (number_re))
     except re.error, e:
         common_debug("RE compilation failed: %s" % (e))
         raise ValueError("Error in search expression")
