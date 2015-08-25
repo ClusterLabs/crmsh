@@ -295,10 +295,6 @@ logmark() {
 #
 findlog() {
 	local logf=""
-	if [ -f "$PCMK_LOG" ]; then
-		echo $PCMK_LOG
-		return
-	fi
 
 	if [ "$HA_LOGFACILITY" ]; then
 		logf=`findmsg $UNIQUE_MSG | awk '{print $1}'`
@@ -308,10 +304,13 @@ findlog() {
 		return
 	fi
 
-
-	collect_journal $FROM_TIME $TO_TIME $WORKDIR/$JOURNAL_F
 	if [ -f "$WORKDIR/$JOURNAL_F" ]; then
 		echo $WORKDIR/$JOURNAL_F
+		return
+	fi
+
+	if [ -f "$PCMK_LOG" ]; then
+		echo $PCMK_LOG
 		return
 	fi
 
@@ -1050,6 +1049,9 @@ pickcompress() {
 getlog() {
 	local outf
 	outf=$WORKDIR/$HALOG_F
+
+	# collect journal from systemd
+	collect_journal $FROM_TIME $TO_TIME $WORKDIR/$JOURNAL_F
 
 	if [ "$HA_LOG" ]; then  # log provided by the user?
 		[ -f "$HA_LOG" ] || {  # not present

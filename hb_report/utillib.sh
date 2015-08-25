@@ -118,22 +118,14 @@ findmsg() {
 	mark=$1
 	log=""
 
-	if [ -f /var/log/pacemaker.log ]; then
-		log=`grep -l -e "$mark" /var/log/pacemaker.log`
-		if [ ! "$log" ]; then
-			log=`grep -l -e "$mark" /var/log/pacemaker.log*` && break
-		fi
-	fi
+	for d in $syslogdirs; do
+		[ -d $d ] || continue
+		log=`grep -l -e "$mark" $d/$favourites` && break
+		test "$log" && break
+		log=`grep -l -e "$mark" $d/*` && break
+		test "$log" && break
+	done 2>/dev/null
 
-	if [ ! "$log" ]; then
-		for d in $syslogdirs; do
-			[ -d $d ] || continue
-			log=`grep -l -e "$mark" $d/$favourites` && break
-			test "$log" && break
-			log=`grep -l -e "$mark" $d/*` && break
-			test "$log" && break
-		done 2>/dev/null
-	fi
 	[ "$log" ] &&
 		ls -t $log | tr '\n' ' '
 	[ "$log" ] &&
