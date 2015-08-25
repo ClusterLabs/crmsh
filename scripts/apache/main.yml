@@ -44,7 +44,7 @@
     - name: install
       type: boolean
       shortdesc: Install and configure apache
-      value: true
+      value: false
   actions:
     - install:
         - apache2

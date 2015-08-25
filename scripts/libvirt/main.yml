@@ -49,7 +49,7 @@
       shortdesc: Enable to install required packages
       type: boolean
       required: false
-      value: true
+      value: false
   actions:
     - install: cluster-glue libvirt-client
       nodes: all

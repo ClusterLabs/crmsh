@@ -21,7 +21,7 @@
     - name: install
       shortdesc: Enable to install required packages
       type: boolean
-      value: true
+      value: false
 
   actions:
     - install: mariadb
