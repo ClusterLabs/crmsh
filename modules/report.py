@@ -106,6 +106,10 @@ def syslog_ts(s):
             return None
 
 
+_syslog2node_formats = (re.compile(r'\w+ \d+ \d+:\d+:\d+ (?:\[\d+\])? (\w+)'),
+                        re.compile(r'\w+ (?:\[\d+\])? (\w+)'))
+
+
 def syslog2node(s):
     '''
     Get the node from a syslog line.
@@ -120,12 +124,11 @@ def syslog2node(s):
     <TS> [<PID>] <node> ...
     '''
 
-    fmt1 = re.compile(r'\w+ \d+ \d+:\d+:\d+ (?:\[\d+\])? (\w+)')
+    fmt1, fmt2 = _syslog2node_formats
     m = fmt1.search(s)
     if m:
         return m.group(1)
 
-    fmt2 = re.compile(r'\w+ (?:\[\d+\])? (\w+)')
     m = fmt2.search(s)
     if m:
         return m.group(1)
