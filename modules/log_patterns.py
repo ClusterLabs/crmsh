@@ -22,36 +22,36 @@
 log_patterns = {
 	"resource": (
 		( # detail 0
-			"lrmd.*rsc:%% (?:start|stop|promote|demote|migrate)",
+			"lrmd.*%% (?:start|stop|promote|demote|migrate)",
 			"lrmd.*RA output: .%%:.*:stderr",
 			"lrmd.*WARN: Managed %%:.*exited",
 			"lrmd.*WARN: .* %% .*timed out$",
-			"crmd.*process_lrm_event: LRM operation %%_(?:start|stop|promote|demote|migrate)_.*confirmed=true",
-			"crmd.*process_lrm_event: LRM operation %%_.*Timed Out",
+			"crmd.*LRM operation %%_(?:start|stop|promote|demote|migrate)_.*confirmed=true",
+			"crmd.*LRM operation %%_.*Timed Out",
 			"[(]%%[)][[]",
 		),
 		( # detail 1
-			"lrmd.*rsc:%% (?:probe|notify)",
-			"lrmd.*info: Managed %%:.*exited",
+			"lrmd.*%% (?:probe|notify)",
+			"lrmd.*Managed %%:.*exited",
 		),
 	),
 	"node": (
 		( # detail 0
 			" %% .*Corosync.Cluster.Engine",
 			" %% .*Executive.Service.RELEASE",
-			" %% .*crm_shutdown:.Requesting.shutdown",
-			" %% .*pcmk_shutdown:.Shutdown.complete",
+			" %% .*Requesting.shutdown",
+			" %% .*Shutdown.complete",
 			" %% .*Configuration.validated..Starting.heartbeat",
 			"pengine.*Scheduling Node %% for STONITH",
-			"crmd.* tengine_stonith_callback: .* of %% failed",
-			"stonith-ng.*log_operation:.*host '%%'",
-			"te_fence_node: Exec.*on %% ",
-			"pe_fence_node: Node %% will be fenced",
-			"stonith-ng.*remote_op_timeout:.*for %% timed",
-			"stonith-ng.*can_fence_host_with_device:.*can not fence %%:",
+			"crmd.* of %% failed",
+			"stonith-ng.*host '%%'",
+			"Exec.*on %% ",
+			"Node %% will be fenced",
+			"stonith-ng.*for %% timed",
+			"stonith-ng.*can not fence %%:",
 			"stonithd.*Succeeded.*node %%:",
-			"pcmk_peer_update.*(?:lost|memb): %% ",
-			"crmd.*ccm_event.*(?:NEW|LOST):.* %% ",
+			"(?:lost|memb): %% ",
+			"crmd.*(?:NEW|LOST):.* %% ",
 			"Node return implies stonith of %% ",
 		),
 		( # detail 1
@@ -59,8 +59,8 @@ log_patterns = {
 	),
 	"quorum": (
 		( # detail 0
-			"crmd.*crm_update_quorum:.Updating.quorum.status",
-			"crmd.*ais.disp.*quorum.(?:lost|ac?quir)",
+			"crmd.*Updating.quorum.status",
+			"crmd.*quorum.(?:lost|ac?quir)",
 		),
 		( # detail 1
 		),
