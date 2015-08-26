@@ -10,7 +10,7 @@ Period: 2012-12-14 20:06:34 - 2012-12-14 20:08:44
 Nodes: xen-d xen-e
 Groups: 
 Resources: d1 s-libvirt
-Transitions: 43 44 45 46 47 48 272 49 50
+Transitions: 43 44 45 46 48 272 49 50
 .INP: node xen-d
 Dec 14 20:06:35 xen-d corosync[5649]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
 Dec 14 20:06:36 xen-d corosync[5649]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
@@ -29,6 +29,8 @@ Dec 14 20:08:40 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: x
 Dec 14 20:06:35 xen-e corosync[24218]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
 Dec 14 20:06:35 xen-d corosync[5649]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
 Dec 14 20:06:36 xen-d corosync[5649]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
+Dec 14 20:06:57 xen-d crmd: [5660]: info: do_election_count_vote: Election 2 (owner: xen-e) lost: vote from xen-e (Uptime)
+Dec 14 20:07:19 xen-d crmd: [5660]: info: do_election_count_vote: Election 3 (owner: xen-e) lost: vote from xen-e (Uptime)
 Dec 14 20:07:54 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: xen-e 923599370
 Dec 14 20:07:54 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: lost: xen-d 906822154
 Dec 14 20:07:54 xen-e pengine: [24227]: WARN: pe_fence_node: Node xen-d will be fenced because it is un-expectedly down
@@ -181,7 +183,6 @@ history-test/xen-e/pengine/pe-input-43.bz2
 history-test/xen-e/pengine/pe-input-44.bz2
 history-test/xen-e/pengine/pe-input-45.bz2
 history-test/xen-e/pengine/pe-input-46.bz2
-history-test/xen-e/pengine/pe-input-47.bz2
 history-test/xen-e/pengine/pe-input-48.bz2
 history-test/xen-e/pengine/pe-warn-272.bz2
 history-test/xen-e/pengine/pe-input-49.bz2
@@ -193,7 +194,6 @@ Date       Start    End       Filename      Client     User       Origin
 2012-12-14 20:07:19 20:07:23  pe-input-44   cibadmin   root       xen-d
 2012-12-14 20:07:29 20:07:29  pe-input-45   cibadmin   root       xen-d
 2012-12-14 20:07:29 20:07:29  pe-input-46   cibadmin   root       xen-d
-2012-12-14 20:07:37 20:07:37  pe-input-47   cibadmin   root       xen-d
 2012-12-14 20:07:37 20:07:42  pe-input-48   cibadmin   root       xen-d
 2012-12-14 20:07:54 20:07:56  pe-warn-272   cibadmin   root       xen-d
 2012-12-14 20:07:56 20:07:57  pe-input-49   cibadmin   root       xen-d
