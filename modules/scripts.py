@@ -318,7 +318,7 @@ class Actions(object):
             args = '-d --wait'
         else:
             args = '--wait'
-        if action.get('force'):
+        if self._action.get('force'):
             args = args + ' --force'
         self._run.call(None, 'crm %s %s %s' % (args, '-f', fn))
 
@@ -331,7 +331,7 @@ class Actions(object):
             args = '-d --wait'
         else:
             args = '--wait'
-        if action.get('force'):
+        if self._action.get('force'):
             args = args + ' --force'
         self._run.call(None, 'crm %s %s %s' % (args, 'configure load update', fn))
 
