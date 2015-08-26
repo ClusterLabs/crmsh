@@ -46,7 +46,7 @@
           value: true
 
     - script: virtual-ip
-      required: true
+      required: false
       shortdesc: Configure a Virtual IP address used to access the NFS mounts.
 
   actions:
