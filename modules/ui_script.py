@@ -419,7 +419,13 @@ class Script(command.UI):
         script = scripts.load_script(name)
         if script is None:
             return False
-        return scripts.run(script, params, JsonPrinter())
+        printer = JsonPrinter()
+        ret = scripts.run(script, params, printer)
+        if not ret and printer.results:
+            for result in printer.results:
+                if 'error' in result:
+                    print(json.dumps(result))
+        return ret
 
     def do_json(self, context, command):
         """
