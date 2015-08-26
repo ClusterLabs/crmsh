@@ -312,13 +312,10 @@ class Actions(object):
     def _crm_do(self, act):
         fn = self._run.str2tmp(_join_script_lines(self._value))
         if config.core.debug:
-            args = '-d --wait'
+            args = '-d --wait --no'
         else:
-            args = '--wait'
-        if 'force' in self._action:
-            if self._action['force']:
-                args = args + ' --force'
-        else:
+            args = '--wait --no'
+        if self._action.get('force'):
             args = args + ' --force'
         self._run.call(None, 'crm %s %s %s' % (args, act, fn))
 
