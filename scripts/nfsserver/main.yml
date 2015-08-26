@@ -50,6 +50,8 @@
       shortdesc: Configure a Virtual IP address used to access the NFS mounts.
 
   actions:
+    - crm: "configure show {{base-id}}"
+      shortdesc: Ensure that the Filesystem resource exists
     - install: nfs-client nfs-kernel-server
       shortdesc: Install NFS packages
     - service:
