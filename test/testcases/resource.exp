@@ -130,6 +130,7 @@ resource p0 is NOT running
 .SETENV showobj=p0
 .TRY resource param p0 set a0 "1 2 3"
 .EXT crm_resource -r 'p0' -p 'a0' -v '1 2 3'
+Set 'p0' option: id=p0-instance_attributes-a0 set=p0-instance_attributes name=a0=1 2 3
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -173,7 +174,7 @@ resource p0 is NOT running
 
 .TRY resource param p0 delete a0
 .EXT crm_resource -r 'p0' -d 'a0'
-Deleted p0 option: id=p0-instance_attributes-a0 name=a0
+Deleted 'p0' option: id=p0-instance_attributes-a0 name=a0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -193,6 +194,7 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
 
 .TRY resource meta p0 set m0 123
 .EXT crm_resource --meta -r 'p0' -p 'm0' -v '123'
+Set 'p0' option: id=p0-meta_attributes-m0 set=p0-meta_attributes name=m0=123
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -238,7 +240,7 @@ Deleted p0 option: id=p0-instance_attributes-a0 name=a0
 
 .TRY resource meta p0 delete m0
 .EXT crm_resource --meta -r 'p0' -d 'm0'
-Deleted p0 option: id=p0-meta_attributes-m0 name=m0
+Deleted 'p0' option: id=p0-meta_attributes-m0 name=m0
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
