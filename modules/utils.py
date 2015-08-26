@@ -83,7 +83,7 @@ def can_ask():
     Is user-interactivity possible?
     Checks if connected to a TTY.
     """
-    return sys.stdin.isatty()
+    return (not options.ask_no) and sys.stdin.isatty()
 
 
 def ask(msg):

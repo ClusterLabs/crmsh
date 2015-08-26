@@ -7,6 +7,7 @@ Session-only options (not saved).
 
 interactive = False
 batch = False
+ask_no = False
 regression_tests = False
 profile = ""
 history = "live"

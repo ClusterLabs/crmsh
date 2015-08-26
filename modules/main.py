@@ -108,6 +108,8 @@ See the crm(8) man page or call %prog help for more details.""",
                       help="Make crm proceed with applying changes where it would normally " +
                       "ask the user to confirm before proceeding. This option is mainly useful " +
                       "in scripts, and should be used with care.")
+    parser.add_option("-n", "--no", action="store_true", default=False, dest="ask_no",
+                      help="Automatically answer no when prompted")
     parser.add_option("-w", "--wait", action="store_true", default=False, dest="wait",
                       help="Make crm wait for the cluster transition to finish " +
                       "(for the changes to take effect) after each processed line.")
@@ -304,6 +306,7 @@ def parse_options():
     config.core.wait = opts.wait or config.core.wait
     options.shadow = opts.cib or options.shadow
     options.scriptdir = opts.scriptdir or options.scriptdir
+    options.ask_no = opts.ask_no
     return args
 
 
