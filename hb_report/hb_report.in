@@ -1289,7 +1289,7 @@ CORES_DIRS="`2>/dev/null ls -d $HA_VARLIB/cores $PCMK_LIB/cores | uniq`"
 PACKAGES="pacemaker libpacemaker3 
 pacemaker-pygui pacemaker-pymgmt pymgmt-client
 openais libopenais2 libopenais3 corosync libcorosync4
-resource-agents cluster-glue libglue2 ldirectord
+resource-agents cluster-glue libglue2 ldirectord libqb0
 heartbeat heartbeat-common heartbeat-resources libheartbeat2
 ocfs2-tools ocfs2-tools-o2cb ocfs2console
 ocfs2-kmp-default ocfs2-kmp-pae ocfs2-kmp-xen ocfs2-kmp-debug ocfs2-kmp-trace
