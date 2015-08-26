@@ -315,9 +315,11 @@ class Actions(object):
         """
         fn = self._run.str2tmp(_join_script_lines(self._value))
         if config.core.debug:
-            args = '-d --force --wait'
+            args = '-d --wait'
         else:
-            args = '--force --wait'
+            args = '--wait'
+        if action.get('force'):
+            args = args + ' --force'
         self._run.call(None, 'crm %s %s %s' % (args, '-f', fn))
 
     def cib(self):
@@ -326,9 +328,11 @@ class Actions(object):
         # runner.execute_local("crm configure load update ./action_cib")
         fn = self._run.str2tmp(_join_script_lines(self._value))
         if config.core.debug:
-            args = '-d --force --wait'
+            args = '-d --wait'
         else:
-            args = '--force --wait'
+            args = '--wait'
+        if action.get('force'):
+            args = args + ' --force'
         self._run.call(None, 'crm %s %s %s' % (args, 'configure load update', fn))
 
     def install(self):
