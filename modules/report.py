@@ -12,7 +12,7 @@ from . import config
 from . import constants
 from . import userdir
 from .msg import common_debug, common_warn, common_err, common_error, common_info, warn_once
-from .xmlutil import file2cib_elem, get_rsc_children_ids, get_prim_children_ids
+from .xmlutil import file2cib_elem, get_rsc_children_ids, get_prim_children_ids, compressed_file_to_cib
 from .utils import file2str, shortdate, acquire_lock, append_file, ext_cmd, shorttime
 from .utils import page_string, release_lock, rmdir_r, parse_time, get_cib_attributes
 from .utils import is_pcmk_118, pipe_cmd_nosudo, file_find_by_name
@@ -1132,7 +1132,18 @@ class Report(object):
             return False
         old_pe_l_file = self.pe_report_path(t0)
         new_pe_l_file = self.pe_report_path(t1)
-        return not (os.path.isfile(old_pe_l_file) or os.path.isfile(new_pe_l_file))
+        if not (os.path.isfile(old_pe_l_file) or os.path.isfile(new_pe_l_file)):
+            return True
+        num_actions = t1.actions_count()
+        old_cib = compressed_file_to_cib(old_pe_l_file)
+        new_cib = compressed_file_to_cib(new_pe_l_file)
+        if old_cib is None or new_cib is None:
+            return num_actions == 0
+        prev_epoch = old_cib.attrib.get("epoch", "0")
+        epoch = new_cib.attrib.get("epoch", "0")
+        prev_admin_epoch = old_cib.attrib.get("admin_epoch", "0")
+        admin_epoch = new_cib.attrib.get("admin_epoch", "0")
+        return num_actions == 0 and epoch == prev_epoch and admin_epoch == prev_admin_epoch
 
     def list_transitions(self, msg_l=None, future_pe=False):
         '''
