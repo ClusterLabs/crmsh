@@ -258,5 +258,5 @@ primitive foo ocf:heartbeat:IPaddr2 ip="10.0.0.5"                 op start timeo
 
 END
 
-** localhost - crm --force --wait configure load update <<temporary file>>
+** localhost - crm --wait --no configure load update <<temporary file>>
 OK: 10: Configure cluster resources
