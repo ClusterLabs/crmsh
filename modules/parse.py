@@ -495,7 +495,7 @@ class RuleParser(BaseParser):
 
     def validate_score(self, score, noattr=False):
         if not noattr and score in olist(constants.score_types):
-            return constants.score_types[score.lower()]
+            return ["score", constants.score_types[score.lower()]]
         elif re.match("^[+-]?(inf(inity)?|INF(INITY)?|[0-9]+)$", score):
             score = re.sub("inf(inity)?|INF(INITY)?", "INFINITY", score)
             return ["score", score]
