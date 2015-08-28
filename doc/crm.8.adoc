@@ -2608,8 +2608,11 @@ resources in parentheses.
 
 Sets cannot be nested.
 
-The optional +node-attribute+ references an attribute in nodes'
-instance attributes.
+The optional +node-attribute+ can be used to colocate resources on a
+set of nodes and not necessarily on the same node. For example, by
+setting a node attribute +color+ on all nodes and setting the
++node-attribute+ value to +color+ as well, the colocated resources
+will be placed on any node that has the same color.
 
 For more details on how to configure resource sets, see
 <<topics_Features_Resourcesets,`Syntax: Resource sets`>>.
