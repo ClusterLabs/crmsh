@@ -1,0 +1,25 @@
+---
+- version: 2.2
+  shortdesc: MailTo
+  category: Basic
+  include:
+    - agent: ocf:heartbeat:MailTo
+      name: mailto
+      parameters:
+        - name: id
+          type: resource
+          required: true
+        - name: email
+          type: email
+          required: true
+        - name: subject
+          type: string
+          required: false
+      ops: |
+        op start timeout="10"
+        op stop timeout="10"
+        op monitor interval="10" timeout="10"
+  actions:
+    - include: mailto
+    - cib: |
+        clone c-{{id}} {{id}}
