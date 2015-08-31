@@ -31,7 +31,7 @@ def parse_args(outdir, errdir, t=_DEFAULT_TIMEOUT):
     Parse the given commandline arguments.
     '''
     opts = Options()
-    opts.timeout = t
+    opts.timeout = int(t)
     opts.quiet = True
     opts.inline = False
     opts.outdir = outdir
@@ -195,7 +195,7 @@ def do_pssh_cmd(cmd, node_l, outdir, errdir, timeout=20000):
         l.append([node, cmd])
     if not l:
         return True
-    opts = parse_args(outdir, errdir, t=str(int(timeout/1000)))
+    opts = parse_args(outdir, errdir, t=int(timeout/1000))
     return do_pssh(l, opts)
 
 # vim:ts=4:sw=4:et:
