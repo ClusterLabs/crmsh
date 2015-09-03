@@ -1460,7 +1460,7 @@ def _handles_values(ret, script, params, subactions):
         for step in context.get('steps', []):
             name = step.get('name', '')
             if name:
-                if step['required'] or 'name' in params:
+                if step['required'] or name in params:
                     obj = {}
                     vobj = handles.value(obj, '')
                     to[name] = vobj

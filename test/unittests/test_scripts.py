@@ -637,8 +637,10 @@ def test_optional_step_ref():
     pprint(actions)
     assert actions[0]['text'] == "primitive apacho test:apache"
 
+    #import ipdb
+    #ipdb.set_trace()
     actions = scripts.verify(script_b,
                              {'wiz': "SARUMAN", "apache": {"id": "apacho"}})
     eq_(len(actions), 1)
     pprint(actions)
-    assert actions[0]['text'] == "primitive wiz apacho"
+    assert actions[0]['text'] == "primitive SARUMAN apacho"
