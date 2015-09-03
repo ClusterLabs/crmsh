@@ -18,9 +18,6 @@
         - name: broadcast
           type: ip_address
           required: false
-        - name: lvs_support
-          required: false
-          type: boolean
       ops: |
         op start timeout="20" op stop timeout="20"
         op monitor interval="10" timeout="20"
