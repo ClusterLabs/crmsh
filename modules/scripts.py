@@ -923,6 +923,11 @@ def _postprocess_script(script):
     if 'actions' not in script:
         script['actions'] = []
 
+        # if we include subscripts but have no defined actions, assume that's a
+        # mistake and generate include actions for all includes
+        for inc in [{"include": inc['name']} for inc in script.get('include', [])]:
+            script['actions'].append(inc)
+
     _postprocess_script_steps(script)
 
     # Includes may add steps, or modify parameters,
