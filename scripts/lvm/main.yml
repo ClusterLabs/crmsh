@@ -13,5 +13,5 @@
           required: true
           type: string
       ops: |
-        op monitor=130s timeout=130s
+        op monitor interval=130s timeout=130s
         op stop timeout=130s on_fail=fence
