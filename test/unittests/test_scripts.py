@@ -597,3 +597,48 @@ def test_value_replace_handles():
     pprint(actions)
     assert actions[0]['text'] == "SARUMAN+SARUMAN"
 
+
+@with_setup(setup_func, teardown_func)
+def test_optional_step_ref():
+    """
+    It seems I have a bug in referencing ids from substeps.
+    """
+    a = '''---
+- version: 2.2
+  category: Script
+  include:
+    - agent: test:apache
+      name: apache
+      parameters:
+        - name: id
+          required: true
+'''
+    b = '''---
+- version: 2.2
+  category: Script
+  include:
+    - script: apache
+      required: false
+  parameters:
+    - name: wiz
+      required: true
+  actions:
+    - cib: "primitive {{wiz}} {{apache:id}}"
+'''
+
+    script_a = scripts.load_script_string('apache', a)
+    script_b = scripts.load_script_string('test-b', b)
+    assert script_a is not None
+    assert script_b is not None
+
+    actions = scripts.verify(script_a,
+                             {"id": "apacho"})
+    eq_(len(actions), 1)
+    pprint(actions)
+    assert actions[0]['text'] == "primitive apacho test:apache"
+
+    actions = scripts.verify(script_b,
+                             {'wiz': "SARUMAN", "apache": {"id": "apacho"}})
+    eq_(len(actions), 1)
+    pprint(actions)
+    assert actions[0]['text'] == "primitive wiz apacho"
