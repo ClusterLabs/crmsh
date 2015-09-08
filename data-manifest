@@ -30,6 +30,7 @@ scripts/init/main.yml
 scripts/init/verify.py
 scripts/libvirt/main.yml
 scripts/lvm/main.yml
+scripts/mailto/main.yml
 scripts/nfsserver/main.yml
 scripts/ocfs2/main.yml
 scripts/oracle/main.yml
