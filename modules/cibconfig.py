@@ -1928,7 +1928,10 @@ class CibFencingOrder(CibObject):
         s = clidisplay.keyword(self.obj_type)
         d = odict()
         for c in self.node.iterchildren("fencing-level"):
-            target = c.get("target")
+            if "target-attribute" in c.attrib:
+                target = (c.get("target-attribute"), c.get("target-value"))
+            else:
+                target = c.get("target")
             if target not in d:
                 d[target] = {}
             d[target][c.get("index")] = c.get("devices")
@@ -1942,7 +1945,13 @@ class CibFencingOrder(CibObject):
             d2[devs_s] = 1
         if len(d2) == 1 and len(d) == len(cib_factory.node_id_list()):
             return "%s %s" % (s, devs_s)
-        return cli_format([s] + ["%s: %s" % (x, ' '.join(dd[x]))
+
+        def fmt_target(tgt):
+            if isinstance(tgt, tuple):
+                return "attr:%s=%s" % tgt
+            else:
+                return tgt + ":"
+        return cli_format([s] + ["%s %s" % (fmt_target(x), ' '.join(dd[x]))
                                  for x in dd.keys()],
                           break_lines=(format > 0))
 
