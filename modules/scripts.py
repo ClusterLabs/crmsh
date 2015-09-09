@@ -1299,7 +1299,7 @@ def _verify_type(param, value, errors):
             errors.append("%s=%s is not an IP address" % (param.get('name'), value))
     elif type == 'email':
         if not re.match(r'[^@]+@[^@]+', value):
-            errors.append("%s=%s is not a valid email address" % (param.get('value'), value))
+            errors.append("%s=%s is not a valid email address" % (param.get('name'), value))
     elif type == 'ip_network':
         sp = value.rsplit('/', 1)
         if len(sp) == 1 and not (is_valid_ipv4_address(value) or is_valid_ipv6_address(value)):
