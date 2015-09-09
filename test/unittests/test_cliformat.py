@@ -244,3 +244,7 @@ def test_new_role():
     roundtrip('role silly-role-2 read xpath:"//nodes//attributes" ' +
               'deny type:nvpair deny ref:d0 deny type:nvpair')
 
+
+@with_setup(setup_func, teardown_func)
+def test_topology_1114():
+    roundtrip('fencing_topology attr:rack=1 node1,node2')
