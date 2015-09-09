@@ -961,9 +961,17 @@ class FencingOrderParser(BaseParser):
     <fencing-topology>
     <fencing-level id=<id> target=<text> index=<+int> devices="\w,\w..."/>
     </fencing-topology>
+
+    new:
+
+    from 1.1.14 on, target can be a node attribute value mapping:
+
+    The syntax accepts either '=' or ':' as the separator for the name/value
+    pair. This means that target can be "rack=1:" or "rack:1:".
+
     """
 
-    _TARGET_RE = re.compile(r'([^:]+):$')
+    _TARGET_RE = re.compile(r'([\w=-]+:(?:[\w=-]+:)?)$')
 
     def can_parse(self):
         return ('fencing-topology', 'fencing_topology')
@@ -978,6 +986,8 @@ class FencingOrderParser(BaseParser):
         while self.has_tokens():
             if self.try_match(self._TARGET_RE):
                 target = self.matched(1)
+                if target.endswith(':'):
+                    target = target[:-1]
             else:
                 raw_levels.append((target, self.match_any()))
         if len(raw_levels) == 0:

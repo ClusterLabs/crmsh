@@ -434,7 +434,7 @@ class TestCliParser(unittest.TestCase):
         # num test nodes are 3
 
         out = self.parser.parse('fencing_topology poison-pill power')
-        self.assertEqual(6, len(out))
+        self.assertEqual("""<fencing-topology><fencing-level devices="poison-pill" index="1" target="ha-one"/><fencing-level devices="power" index="2" target="ha-one"/><fencing-level devices="poison-pill" index="1" target="ha-two"/><fencing-level devices="power" index="2" target="ha-two"/><fencing-level devices="poison-pill" index="1" target="ha-three"/><fencing-level devices="power" index="2" target="ha-three"/></fencing-topology>""", etree.tostring(out))
 
         out = self.parser.parse('fencing_topology node-a: poison-pill power node-b: ipmi serial')
         self.assertEqual(4, len(out))
@@ -442,7 +442,20 @@ class TestCliParser(unittest.TestCase):
         devs = ['stonith-vbox3-1-off', 'stonith-vbox3-2-off',
                 'stonith-vbox3-1-on', 'stonith-vbox3-2-on']
         out = self.parser.parse('fencing_topology vbox4: %s' % ','.join(devs))
+        print etree.tostring(out)
         self.assertEqual(1, len(out))
+
+    def test_fencing_1114(self):
+        """
+        Test node attribute fence target assignment
+        """
+        out = self.parser.parse('fencing_topology rack=1: poison-pill power')
+        expect = """<fencing-topology><fencing-level devices="poison-pill" index="1" target="rack=1"/><fencing-level devices="power" index="2" target="rack=1"/></fencing-topology>"""
+        self.assertEqual(expect, etree.tostring(out))
+
+        out = self.parser.parse('fencing_topology rack=1: poison-pill,power')
+        expect = '<fencing-topology><fencing-level devices="poison-pill,power" index="1" target="rack=1"/></fencing-topology>'
+        self.assertEqual(expect, etree.tostring(out))
 
     def test_tag(self):
         out = self.parser.parse('tag tag1: one two three')

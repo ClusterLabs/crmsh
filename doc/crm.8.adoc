@@ -2755,14 +2755,19 @@ order. It is not allowed to use whitespace around comma.
 If the node is left out, the order is used for all nodes.
 That should reduce the configuration size in some stonith setups.
 
+From Pacemaker version 1.1.14, it is possible to use a node attribute
+as the +target+ in a fencing topology. The syntax for this usage is
+described below.
+
 Usage:
 ...............
 fencing_topology stonith_resources [stonith_resources ...]
 fencing_topology fencing_order [fencing_order ...]
 
-fencing_order :: <node>: stonith_resources [stonith_resources ...]
+fencing_order :: target stonith_resources [stonith_resources ...]
 
 stonith_resources :: <rsc>[,<rsc>...]
+target :: <node>: | <node-attribute>=<value>: | <node-attribute>:<value>:
 ...............
 Example:
 ...............
