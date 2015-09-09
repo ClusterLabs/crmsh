@@ -449,12 +449,12 @@ class TestCliParser(unittest.TestCase):
         """
         Test node attribute fence target assignment
         """
-        out = self.parser.parse('fencing_topology rack=1: poison-pill power')
-        expect = """<fencing-topology><fencing-level devices="poison-pill" index="1" target="rack=1"/><fencing-level devices="power" index="2" target="rack=1"/></fencing-topology>"""
+        out = self.parser.parse('fencing_topology attr:rack=1 poison-pill power')
+        expect = """<fencing-topology><fencing-level devices="poison-pill" index="1" target-attribute="rack" target-value="1"/><fencing-level devices="power" index="2" target-attribute="rack" target-value="1"/></fencing-topology>"""
         self.assertEqual(expect, etree.tostring(out))
 
-        out = self.parser.parse('fencing_topology rack=1: poison-pill,power')
-        expect = '<fencing-topology><fencing-level devices="poison-pill,power" index="1" target="rack=1"/></fencing-topology>'
+        out = self.parser.parse('fencing_topology attr:rack=1 poison-pill,power')
+        expect = '<fencing-topology><fencing-level devices="poison-pill,power" index="1" target-attribute="rack" target-value="1"/></fencing-topology>'
         self.assertEqual(expect, etree.tostring(out))
 
     def test_tag(self):

@@ -966,12 +966,17 @@ class FencingOrderParser(BaseParser):
 
     from 1.1.14 on, target can be a node attribute value mapping:
 
-    The syntax accepts either '=' or ':' as the separator for the name/value
-    pair. This means that target can be "rack=1:" or "rack:1:".
+    attr:<name>=<value> maps to XML:
+
+    <fencing-topology>
+    <fencing-level id=<id> target-attribute=<text> target-value=<text>
+                   index=<+int> devices="\w,\w..."/>
+    </fencing-topology>
 
     """
 
-    _TARGET_RE = re.compile(r'([\w=-]+:(?:[\w=-]+:)?)$')
+    _TARGET_RE = re.compile(r'([\w=-]+):$')
+    _TARGET_ATTR_RE = re.compile(r'attr:([\w-]+)=([\w-]+)$')
 
     def can_parse(self):
         return ('fencing-topology', 'fencing_topology')
@@ -984,10 +989,10 @@ class FencingOrderParser(BaseParser):
         # (target, devices)
         raw_levels = []
         while self.has_tokens():
-            if self.try_match(self._TARGET_RE):
+            if self.try_match(self._TARGET_ATTR_RE):
+                target = (self.matched(1), self.matched(2))
+            elif self.try_match(self._TARGET_RE):
                 target = self.matched(1)
-                if target.endswith(':'):
-                    target = target[:-1]
             else:
                 raw_levels.append((target, self.match_any()))
         if len(raw_levels) == 0:
@@ -1005,16 +1010,26 @@ class FencingOrderParser(BaseParser):
                         yield node, devices
             lvl_generator = node_levels
         else:
-            lvl_generator = lambda: raw_levels
+            def wrap_levels():
+                return raw_levels
+            lvl_generator = wrap_levels
 
         out = xmlbuilder.new('fencing-topology')
         targets = defaultdict(repeat(1).next)
         for target, devices in lvl_generator():
-            xmlbuilder.child(out, 'fencing-level',
-                             target=target,
-                             index=str(targets[target]),
-                             devices=devices)
-            targets[target] += 1
+            if isinstance(target, tuple):
+                c = xmlbuilder.child(out, 'fencing-level',
+                                     index=str(targets[target[0]]),
+                                     devices=devices)
+                c.set('target-attribute', target[0])
+                c.set('target-value', target[1])
+                targets[target[0]] += 1
+            else:
+                xmlbuilder.child(out, 'fencing-level',
+                                 target=target,
+                                 index=str(targets[target]),
+                                 devices=devices)
+                targets[target] += 1
 
         return out
 

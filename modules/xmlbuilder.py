@@ -51,7 +51,6 @@ def nvpair_ref(idref, name=None):
     """
     <nvpair id-ref=<idref> [name=<name>]/>
     """
-    print "nvpair_ref:", repr(idref), repr(name)
     nvp = new("nvpair")
     nvp.set('id-ref', idref)
     if name is not None:

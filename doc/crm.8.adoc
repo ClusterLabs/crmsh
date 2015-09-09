@@ -2767,7 +2767,7 @@ fencing_topology fencing_order [fencing_order ...]
 fencing_order :: target stonith_resources [stonith_resources ...]
 
 stonith_resources :: <rsc>[,<rsc>...]
-target :: <node>: | <node-attribute>=<value>: | <node-attribute>:<value>:
+target :: <node>: | attr:<node-attribute>=<value>
 ...............
 Example:
 ...............
@@ -2775,6 +2775,7 @@ fencing_topology poison-pill power
 fencing_topology \
     node-a: poison-pill power
     node-b: ipmi serial
+fencing_topology attr:rack=1 apc01,apc02
 ...............
 
 [[cmdhelp_configure_filter,filter CIB objects]]
