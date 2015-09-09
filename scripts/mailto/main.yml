@@ -20,6 +20,9 @@
         op stop timeout="10"
         op monitor interval="10" timeout="10"
   actions:
+    - install:
+        - mailx
+      shortdesc: Ensure mail package is installed
     - include: mailto
     - cib: |
         clone c-{{id}} {{id}}
