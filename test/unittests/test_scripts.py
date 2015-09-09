@@ -4,7 +4,7 @@
 
 from os import path
 from pprint import pprint
-from nose.tools import eq_, with_setup
+from nose.tools import eq_, with_setup, assert_raises
 from lxml import etree
 from crmsh import scripts
 from crmsh import ra
@@ -644,3 +644,80 @@ def test_optional_step_ref():
     eq_(len(actions), 1)
     pprint(actions)
     assert actions[0]['text'] == "primitive SARUMAN apacho"
+
+
+@with_setup(setup_func, teardown_func)
+def test_enums_basic():
+    a = '''---
+- version: 2.2
+  category: Script
+  parameters:
+    - name: foo
+      required: true
+      type: enum
+      values:
+        - one
+        - two
+        - three
+  actions:
+    - cib: "{{foo}}"
+'''
+
+    script_a = scripts.load_script_string('test-a', a)
+    assert script_a is not None
+
+    actions = scripts.verify(script_a,
+                             {"foo": "one"})
+    eq_(len(actions), 1)
+    pprint(actions)
+    assert actions[0]['text'] == "one"
+
+    actions = scripts.verify(script_a,
+                             {"foo": "three"})
+    eq_(len(actions), 1)
+    pprint(actions)
+    assert actions[0]['text'] == "three"
+
+
+@with_setup(setup_func, teardown_func)
+def test_enums_fail():
+    a = '''---
+- version: 2.2
+  category: Script
+  parameters:
+    - name: foo
+      required: true
+      type: enum
+      values:
+        - one
+        - two
+        - three
+  actions:
+    - cib: "{{foo}}"
+'''
+    script_a = scripts.load_script_string('test-a', a)
+    assert script_a is not None
+
+    def ver():
+        return scripts.verify(script_a, {"foo": "wrong"})
+    assert_raises(ValueError, ver)
+
+
+@with_setup(setup_func, teardown_func)
+def test_enums_fail2():
+    a = '''---
+- version: 2.2
+  category: Script
+  parameters:
+    - name: foo
+      required: true
+      type: enum
+  actions:
+    - cib: "{{foo}}"
+'''
+    script_a = scripts.load_script_string('test-a', a)
+    assert script_a is not None
+
+    def ver():
+        return scripts.verify(script_a, {"foo": "one"})
+    assert_raises(ValueError, ver)

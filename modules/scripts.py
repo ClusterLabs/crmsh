@@ -1278,12 +1278,6 @@ def _verify_type(param, value, errors):
         ok, _ = _valid_integer(value)
         if not ok:
             errors.append("%s=%s is not an integer" % (param.get('name'), value))
-    elif type == 'port':
-        ok, ival = _valid_integer(value)
-        if not ok:
-            errors.append("%s=%s is not a valid port" % (param.get('name'), value))
-        if ival < 0 or ival > 65535:
-            errors.append("%s=%s is out of port range" % (param.get('name'), value))
     elif type == 'string':
         return value
     elif type == 'boolean':
@@ -1294,12 +1288,21 @@ def _verify_type(param, value, errors):
                 errors.append("%s=%s invalid resource identifier" % (param.get('name'), value))
         except TypeError as e:
             errors.append("%s=%s %s" % (param.get('name'), value, str(e)))
+    elif type == 'enum':
+        if 'values' not in param:
+            errors.append("%s=%s enum without list of values" % (param.get('name'), value))
+        else:
+            opts = param['values']
+            if isinstance(opts, basestring):
+                opts = opts.replace(',', ' ').split(' ')
+            for v in opts:
+                if value.lower() == v.lower():
+                    return v
+            else:
+                errors.append("%s=%s does not match '%s'" % (param.get('name'), value, "|".join(opts)))
     elif type == 'ip_address':
         if not _valid_ip(value):
             errors.append("%s=%s is not an IP address" % (param.get('name'), value))
-    elif type == 'email':
-        if not re.match(r'[^@]+@[^@]+', value):
-            errors.append("%s=%s is not a valid email address" % (param.get('name'), value))
     elif type == 'ip_network':
         sp = value.rsplit('/', 1)
         if len(sp) == 1 and not (is_valid_ipv4_address(value) or is_valid_ipv6_address(value)):
@@ -1308,6 +1311,15 @@ def _verify_type(param, value, errors):
             errors.append("%s=%s is not a valid IP network" % (param.get('name'), value))
         else:
             errors.append("%s=%s is not a valid IP network" % (param.get('name'), value))
+    elif type == 'port':
+        ok, ival = _valid_integer(value)
+        if not ok:
+            errors.append("%s=%s is not a valid port" % (param.get('name'), value))
+        if ival < 0 or ival > 65535:
+            errors.append("%s=%s is out of port range" % (param.get('name'), value))
+    elif type == 'email':
+        if not re.match(r'[^@]+@[^@]+', value):
+            errors.append("%s=%s is not a valid email address" % (param.get('name'), value))
     else:
         errors.append("%s=%s is unknown type %s" % (param.get('name'), value, type))
     return value
