@@ -989,6 +989,13 @@ class Report(object):
         '''
         Run hb_report to get logs now.
         '''
+        from . import ui_report
+
+        extcmd = ui_report.report_tool()
+        if extcmd is None:
+            self.error("No reporting tool found")
+            return None
+
         d = self._live_loc()
         rmdir_r(d)
         tarball = "%s.tar.bz2" % d
@@ -1000,12 +1007,7 @@ class Report(object):
             nodes_option = "'-n %s'" % ' '.join(self.setnodes)
         if pipe_cmd_nosudo("mkdir -p %s" % os.path.dirname(d)) != 0:
             return None
-        common_info("retrieving information from cluster nodes, please wait ...")
-        from . import ui_report
-        extcmd = ui_report.report_tool()
-        if extcmd is None:
-            self.error("No reporting tool found")
-            return None
+        common_info("Retrieving information from cluster nodes, please wait...")
         rc = pipe_cmd_nosudo("%s -Z -Q -f '%s' %s %s %s %s" %
                              (extcmd,
                               self.from_dt.ctime(),
