@@ -406,6 +406,7 @@ def ext_cmd_nosudo(cmd, shell=True):
 
 
 def rmdir_r(d):
+    # TODO: Make sure we're not deleting something we shouldn't!
     if d and os.path.isdir(d):
         shutil.rmtree(d)
 
