@@ -497,13 +497,17 @@ def run_graph_msg_actions(msg):
         s = s[r.end():]
 
 
-def extract_pe_file(msg):
+def extract_pe_file_num(msg):
+    """
+    Get PE file name and number from log message
+    Returns: (file, num)
+    """
     msg_a = msg.split()
     if len(msg_a) < 5:
         # this looks too short
         common_warn("log message <%s> unexpected format, please report a bug" % msg)
-        return ""
-    return msg_a[-1]
+        return ("", "-1")
+    return (msg_a[-1], get_pe_num(msg_a[-1]))
 
 
 def transition_start_re(number_re):
@@ -557,8 +561,7 @@ def find_transition_end_msg(transition_start_msg, trans_msg_l):
     Given the start of a transition log message, find
     and return the end of the transition log messages.
     """
-    pe_file = extract_pe_file(transition_start_msg)
-    pe_num = get_pe_num(pe_file)
+    pe_file, pe_num = extract_pe_file_num(transition_start_msg)
     if pe_num == "-1":
         common_warn("%s: strange, transition number not found" % pe_file)
         return ""
@@ -584,23 +587,18 @@ class Transition(object):
     def __init__(self, start_msg, end_msg):
         self.start_msg = start_msg
         self.end_msg = end_msg
-        self.parse_msgs()
         self.tags = set()
+        self.pe_file, self.pe_num = extract_pe_file_num(start_msg)
+        self.dc = syslog2node(start_msg)
+        self.start_ts = syslog_ts(start_msg)
+        if end_msg:
+            self.end_ts = syslog_ts(end_msg)
+        else:
+            common_warn("end of transition %s not found in logs (transition not complete yet?)" % self)
+            self.end_ts = self.start_ts
 
     def __str__(self):
         return trans_str(self.dc, self.pe_file)
-
-    def parse_msgs(self):
-        self.pe_file = extract_pe_file(self.start_msg)
-        self.pe_num = get_pe_num(self.pe_file)
-        self.dc = syslog2node(self.start_msg)
-        self.start_ts = syslog_ts(self.start_msg)
-        if self.end_msg:
-            self.end_ts = syslog_ts(self.end_msg)
-        else:
-            common_warn("end of transition %s not found in logs (transition not complete yet?)" %
-                        self)
-            self.end_ts = self.start_ts
 
     def actions_count(self):
         if self.end_msg:
