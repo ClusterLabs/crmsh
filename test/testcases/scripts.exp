@@ -10,9 +10,11 @@
 .EXT crm_resource --show-metadata systemd:haproxy
 ERROR: 2: Error when loading script haproxy: No meta-data for agent: systemd:haproxy
 .EXT crm_resource --show-metadata ocf:heartbeat:LVM
+.EXT crm_resource --show-metadata ocf:heartbeat:MailTo
 .EXT crm_resource --show-metadata ocf:heartbeat:Raid1
 Basic:
 
+mailto           MailTo
 virtual-ip       Virtual IP
 
 Database:
@@ -57,6 +59,7 @@ sbd              SBD, Shared storage based fencing
 ERROR: 3: Error when loading script haproxy: No meta-data for agent: systemd:haproxy
 Basic:
 
+mailto           MailTo
 virtual-ip       Virtual IP
 
 Database:
@@ -128,6 +131,7 @@ health
 init
 libvirt
 lvm
+mailto
 nfsserver
 ocfs2
 oracle
@@ -162,6 +166,7 @@ health
 init
 libvirt
 lvm
+mailto
 nfsserver
 ocfs2
 oracle
@@ -196,6 +201,7 @@ health
 init
 libvirt
 lvm
+mailto
 nfsserver
 ocfs2
 oracle
@@ -237,8 +243,6 @@ node-max=1 (which is the default).
       CIDR netmask
   broadcast
       Broadcast address
-  lvs_support
-      Enable support for LVS DR
 
 
 

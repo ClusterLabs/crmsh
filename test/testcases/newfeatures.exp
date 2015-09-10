@@ -9,8 +9,6 @@
 .INP: primitive p0 Dummy params $p0-state:state=1
 .INP: primitive p1 Dummy params     rule role=Started date in start=2009-05-26 end=2010-05-26 or date gt 2014-01-01     state=2
 .INP: primitive p2 Dummy params @p0-state
-nvpair_ref: 'p0-state' None
-nvpair_ref: 'p0-state' None
 .INP: property rule #uname eq node1 stonith-enabled=no
 .INP: tag tag1: p0 p1 p2
 .INP: tag tag2 p0 p1 p2
@@ -43,4 +41,3 @@ property cib-bootstrap-options: \
 .EXT pengine metadata
 .EXT cib metadata
 .INP: commit
-nvpair_ref: 'p0-state' None
