@@ -17,12 +17,12 @@ from .utils import file2str, shortdate, acquire_lock, append_file, ext_cmd, shor
 from .utils import page_string, release_lock, rmdir_r, parse_time, get_cib_attributes
 from .utils import is_pcmk_118, pipe_cmd_nosudo, file_find_by_name
 
-_NO_PARALLAX = False
-
+_HAS_PARALLAX = False
 try:
     from .crm_pssh import next_loglines, next_peinputs
+    _HAS_PARALLAX = True
 except:
-    _NO_PARALLAX = True
+    pass
 
 
 YEAR = None
@@ -688,7 +688,7 @@ class Report(object):
         self.detail = 0
         self.log_filter_out = []
         self.log_filter_out_re = []
-        # change_origin may be CH_SRC, CH_TIME, CH_UPD
+        # change_origin may be 0, CH_SRC, CH_TIME, CH_UPD
         # depending on the change_origin, we update our attributes
         self.change_origin = CH_SRC
         set_year()
@@ -973,7 +973,7 @@ class Report(object):
             # try just to refresh the live report
             if self.to_dt or self.is_live_very_recent() or no_live_update:
                 return self._live_loc()
-            if not _NO_PARALLAX:
+            if _HAS_PARALLAX:
                 if not acquire_lock(self.report_cache_dir):
                     return None
                 rc = self.update_live_report()
@@ -1046,7 +1046,7 @@ class Report(object):
             refresh = from_dt and top_dt > from_dt
         if refresh:
             self.set_change_origin(CH_UPD)
-            self.refresh_source(force=True)
+            return self.refresh_source(force=True)
         else:
             self.set_change_origin(CH_TIME)
             self.report_setup()
@@ -1178,52 +1178,62 @@ class Report(object):
             prev_transition = t_obj
             yield t_obj
 
-    def report_setup(self):
-        if not self.change_origin:
+    def _report_setup_source(self):
+        constants.pcmk_version = None
+        # is this an hb_report or a crm_report?
+        for descname in ("description.txt", "report.summary"):
+            self.desc = os.path.join(self.loc, descname)
+            if os.path.isfile(self.desc):
+                yr = os.stat(self.desc).st_mtime
+                common_debug("Found %s, created %s" % (descname, yr))
+                self._creation_time = time.strftime("%a %d %b %H:%M:%S %Z %Y",
+                                                    time.localtime(yr))
+                if descname == 'report.summary':
+                    self._creator = "crm_report"
+                else:
+                    self._creator = 'unknown'
+                set_year(yr)
+                break
+        else:
+            self.error("Invalid report: No description found")
             return
-        if not self.loc:
-            return
-        if self.change_origin == CH_SRC:
-            constants.pcmk_version = None
-            # is this an hb_report or a crm_report?
-            for descname in ("description.txt", "report.summary"):
-                self.desc = os.path.join(self.loc, descname)
-                if os.path.isfile(self.desc):
-                    yr = os.stat(self.desc).st_mtime
-                    common_debug("Found %s, created %s" % (descname, yr))
-                    self._creation_time = time.strftime("%a %d %b %H:%M:%S %Z %Y",
-                                                        time.localtime(yr))
-                    if descname == 'report.summary':
-                        self._creator = "crm_report"
-                    else:
-                        self._creator = 'unknown'
-                    set_year(yr)
-                    break
-            else:
-                self.error("Invalid report: No description found")
-                return
 
-            self.node_l = self.get_nodes()
+        self.node_l = self.get_nodes()
+        self.set_node_colors()
+        self.log_l = self.find_logs()
+        self.find_central_log()
+        self.read_cib()
+
+    def _report_setup_update(self):
+        l = self.get_nodes()
+        if self.node_l != l:
+            self.node_l = l
             self.set_node_colors()
             self.log_l = self.find_logs()
-            self.find_central_log()
             self.read_cib()
+
+    def report_setup(self):
+        if self.change_origin == 0:
+            return False
+        if not self.loc:
+            return False
+
+        if self.change_origin == CH_SRC:
+            self._report_setup_source()
         elif self.change_origin == CH_UPD:
-            l = self.get_nodes()
-            if self.node_l != l:
-                self.node_l = l
-                self.set_node_colors()
-                self.log_l = self.find_logs()
-                self.read_cib()
+            self._report_setup_update()
+
         self.logobj = LogSyslog(self.central_log,
                                 self.log_l,
                                 self.from_dt,
                                 self.to_dt)
+
         if self.change_origin != CH_UPD:
             common_debug("getting transitions from logs")
             self.peinputs_l = []
             for new_t_obj in self.list_transitions():
                 self.new_peinput(new_t_obj)
+
         self.ready = self.check_report()
         self.set_change_origin(0)
 
