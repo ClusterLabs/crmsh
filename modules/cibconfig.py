@@ -960,16 +960,32 @@ class CibObject(object):
             desc = self.node.get("description")
             if desc:
                 l.append(nvpair_format("description", desc))
+            first = True
             for c in self.node.iterchildren():
                 if is_comment(c):
                     comments.append(c.text)
                     continue
-                s = self._repr_cli_child(c, format)
+                s = self._repr_cli_child(c, format, first)
                 if s:
                     l.append(s)
+                    first = False
             return self._cli_format_and_comment(l, comments, break_lines=(format > 0))
 
-    def _attr_set_str(self, node):
+    def _may_elide_initial(self, xml_attr_list_name):
+        """
+        If true, may generate elided initial attribute
+        list typename. The idea is that this will be
+        false where there are multiple attribute lists.
+        """
+        attr_list_name = self.set_names[xml_attr_list_name]
+        initial = constants.implicit_initial.get(self.xml_obj_type)
+        if len(self.node.xpath('./%s' % (xml_attr_list_name))) > 1:
+            return False
+        if initial is None:
+            return False
+        return initial == attr_list_name
+
+    def _attr_set_str(self, node, first):
         '''
         Add $id=<id> if the set id is referenced by another
         element.
@@ -977,7 +993,7 @@ class CibObject(object):
         also show rule expressions if found
         '''
 
-        # has_nvpairs = len(node.xpath('.//nvpair')) > 0
+        has_nvpairs = len(node.xpath('.//nvpair')) > 0
         idref = node.get('id-ref')
 
         # don't skip empty sets: skipping these breaks
@@ -985,8 +1001,10 @@ class CibObject(object):
         # empty set
         # if not (has_nvpairs or idref is not None):
         #    return ''
-
-        ret = "%s " % (clidisplay.keyword(self.set_names[node.tag]))
+        if first and (has_nvpairs or idref is not None) and self._may_elide_initial(node.tag):
+            ret = ""
+        else:
+            ret = "%s " % (clidisplay.keyword(self.set_names[node.tag]))
         node_id = node.get("id")
         if node_id is not None and cib_factory.is_id_refd(node.tag, node_id):
             ret += "%s " % (nvpair_format("$id", node_id))
@@ -1003,13 +1021,11 @@ class CibObject(object):
         for c in node.iterchildren():
             if c.tag == "nvpair":
                 ret += "%s " % (cli_nvpair(c))
-        if ret[-1] == ' ':
-            ret = ret[:-1]
-        return ret
+        return ret.rstrip()
 
-    def _repr_cli_child(self, c, format):
+    def _repr_cli_child(self, c, format, first):
         if c.tag in self.set_names:
-            return self._attr_set_str(c)
+            return self._attr_set_str(c, first)
 
     def _get_oldnode(self):
         '''
@@ -1390,9 +1406,9 @@ class CibPrimitive(CibObject):
         id = clidisplay.id(self.obj_id)
         return "%s %s %s" % (s, id, rsc_spec)
 
-    def _repr_cli_child(self, c, format):
+    def _repr_cli_child(self, c, format, first):
         if c.tag in self.set_names:
-            return self._attr_set_str(c)
+            return self._attr_set_str(c, first)
         elif c.tag == "operations":
             return cli_operations(c, break_lines=(format > 0))
 
@@ -1656,7 +1672,7 @@ class CibLocation(CibObject):
             s = "%s %s: %s" % (s, score, pref_node)
         return s
 
-    def _repr_cli_child(self, c, format):
+    def _repr_cli_child(self, c, format, first):
         if c.tag == "rule":
             return "%s %s" % \
                 (clidisplay.keyword("rule"), cli_rule(c))
@@ -1861,7 +1877,7 @@ class CibProperty(CibObject):
         return "%s %s" % (clidisplay.keyword(self.obj_type),
                           head_id_format(self.obj_id))
 
-    def _repr_cli_child(self, c, format):
+    def _repr_cli_child(self, c, format, first):
         if c.tag == "rule":
             return ' '.join((clidisplay.keyword("rule"),
                              cli_rule(c)))
@@ -1955,7 +1971,7 @@ class CibFencingOrder(CibObject):
                                  for x in dd.keys()],
                           break_lines=(format > 0))
 
-    def _repr_cli_child(self, c, format):
+    def _repr_cli_child(self, c, format, first):
         pass  # no children here
 
     def check_sanity(self):
@@ -1998,7 +2014,7 @@ class CibAcl(CibObject):
         id = clidisplay.id(self.obj_id)
         return "%s %s" % (s, id)
 
-    def _repr_cli_child(self, c, format):
+    def _repr_cli_child(self, c, format, first):
         if c.tag in constants.acl_rule_names:
             return cli_acl_rule(c, format)
         elif c.tag == "role_ref":

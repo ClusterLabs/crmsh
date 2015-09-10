@@ -4,10 +4,10 @@ node node1
 primitive p0 ocf:pacemaker:Dummy
 primitive p1 ocf:pacemaker:Dummy
 primitive p2 Delay \
-	params startdelay=2 mondelay=2 stopdelay=2
+	startdelay=2 mondelay=2 stopdelay=2
 primitive p3 ocf:pacemaker:Dummy
 primitive st stonith:null \
-	params hostlist=node1
+	hostlist=node1
 ms m1 p2
 clone c1 p1
 property cib-bootstrap-options: \
@@ -40,10 +40,10 @@ node node1
 primitive p0 ocf:pacemaker:Dummy
 primitive p1 ocf:pacemaker:Dummy
 primitive p2 Delay \
-	params startdelay=2 mondelay=2 stopdelay=2
+	startdelay=2 mondelay=2 stopdelay=2
 primitive p3 ocf:pacemaker:Dummy
 primitive st stonith:null \
-	params hostlist=node1
+	hostlist=node1
 # comment
 ms m1 p2
 clone c1 p1

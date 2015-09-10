@@ -56,7 +56,7 @@ def test_rscset():
 @with_setup(setup_func, teardown_func)
 def test_group():
     factory.create_from_cli('primitive p1 Dummy')
-    roundtrip('group g1 p1 params target-role=Stopped')
+    roundtrip('group g1 p1 target-role=Stopped')
 
 
 @with_setup(setup_func, teardown_func)
@@ -100,14 +100,14 @@ def test_comment2():
 
 @with_setup(setup_func, teardown_func)
 def test_nvpair_ref1():
-    factory.create_from_cli("primitive dummy-0 Dummy params $fiz:buz=bin")
-    roundtrip('primitive dummy-1 Dummy params @fiz:boz')
+    factory.create_from_cli("primitive dummy-0 Dummy $fiz:buz=bin")
+    roundtrip('primitive dummy-1 Dummy @fiz:boz')
 
 
 @with_setup(setup_func, teardown_func)
 def test_idresolve():
-    factory.create_from_cli("primitive dummy-5 Dummy params buz=bin")
-    roundtrip('primitive dummy-1 Dummy params @dummy-5-instance_attributes-buz')
+    factory.create_from_cli("primitive dummy-5 Dummy buz=bin")
+    roundtrip('primitive dummy-1 Dummy @dummy-5-instance_attributes-buz')
 
 
 @with_setup(setup_func, teardown_func)
@@ -234,7 +234,7 @@ def test_acls_oldsyntax():
 
 @with_setup(setup_func, teardown_func)
 def test_rules():
-    roundtrip('primitive p1 Dummy params ' +
+    roundtrip('primitive p1 Dummy ' +
               'rule $role=Started date in start=2009-05-26 end=2010-05-26 ' +
               'or date gt 2014-01-01 state=2')
 

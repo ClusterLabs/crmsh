@@ -5,13 +5,13 @@
 .INP: erase nodes
 .INP: node node1
 .INP: delete node1
-.INP: node node1 	attributes mem=16G
+.INP: node node1 	mem=16G
 .INP: node node2 utilization cpu=4
-.INP: primitive st stonith:ssh 	params hostlist='node1 node2' 	meta target-role="Started" 	op start requires=nothing timeout=60s 	op monitor interval=60m timeout=60s
-.INP: primitive st2 stonith:ssh 	params hostlist='node1 node2'
+.INP: primitive st stonith:ssh 	hostlist='node1 node2' 	meta target-role="Started" 	op start requires=nothing timeout=60s 	op monitor interval=60m timeout=60s
+.INP: primitive st2 stonith:ssh 	hostlist='node1 node2'
 .INP: primitive d1 ocf:pacemaker:Dummy 	operations $id=d1-ops 	op monitor interval=60m 	op monitor interval=120m OCF_CHECK_LEVEL=10
 .INP: monitor d1 60s:30s
-.INP: primitive d2 ocf:heartbeat:Delay 	params mondelay=60 	op start timeout=60s 	op stop timeout=60s
+.INP: primitive d2 ocf:heartbeat:Delay 	mondelay=60 	op start timeout=60s 	op stop timeout=60s
 .INP: monitor d2:Started 60s:30s
 .INP: group g1 d1 d2
 .INP: primitive d3 ocf:pacemaker:Dummy
@@ -61,7 +61,7 @@
 .EXT cib metadata
 .INP: show
 node node1 \
-	attributes mem=16G
+	mem=16G
 node node2 \
 	utilization cpu=4
 primitive d1 ocf:pacemaker:Dummy \
@@ -70,7 +70,7 @@ primitive d1 ocf:pacemaker:Dummy \
 	op monitor interval=120m OCF_CHECK_LEVEL=10 \
 	op monitor interval=60s timeout=30s
 primitive d2 Delay \
-	params mondelay=45 \
+	mondelay=45 \
 	op start timeout=60s interval=0 \
 	op stop timeout=60s interval=0 \
 	op monitor role=Started interval=60s timeout=30s
@@ -84,12 +84,12 @@ primitive s5 ocf:pacemaker:Stateful \
 primitive s6 ocf:pacemaker:Stateful \
 	operations  $id-ref=d1-ops
 primitive st stonith:ssh \
-	params hostlist="node1 node2" \
+	hostlist="node1 node2" \
 	meta target-role=Started \
 	op start requires=nothing timeout=60s interval=0 \
 	op monitor interval=60m timeout=60s
 primitive st2 stonith:ssh \
-	params hostlist="node1 node2"
+	hostlist="node1 node2"
 group g1 d1 d2
 ms m d4
 ms m5 s5

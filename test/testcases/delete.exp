@@ -5,7 +5,7 @@
 .INP: erase nodes
 .INP: node node1
 .INP: # create one stonith so that verify does not complain
-.INP: primitive st stonith:ssh 	params hostlist='node1' 	meta target-role="Started" 	op start requires=nothing timeout=60s 	op monitor interval=60m timeout=60s
+.INP: primitive st stonith:ssh 	hostlist='node1' 	meta target-role="Started" 	op start requires=nothing timeout=60s 	op monitor interval=60m timeout=60s
 .INP: primitive d1 ocf:pacemaker:Dummy
 .INP: primitive d2 ocf:pacemaker:Dummy
 .INP: location d1-pref d1 100: node1
@@ -14,7 +14,7 @@ node node1
 primitive d1 ocf:pacemaker:Dummy
 primitive d2 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
-	params hostlist=node1 \
+	hostlist=node1 \
 	meta target-role=Started \
 	op start requires=nothing timeout=60s interval=0 \
 	op monitor interval=60m timeout=60s
@@ -27,7 +27,7 @@ node node1
 primitive d2 ocf:pacemaker:Dummy
 primitive p1 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
-	params hostlist=node1 \
+	hostlist=node1 \
 	meta target-role=Started \
 	op start requires=nothing timeout=60s interval=0 \
 	op monitor interval=60m timeout=60s
@@ -39,7 +39,7 @@ location d1-pref p1 100: node1
 node node1
 primitive p1 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
-	params hostlist=node1 \
+	hostlist=node1 \
 	meta target-role=Started \
 	op start requires=nothing timeout=60s interval=0 \
 	op monitor interval=60m timeout=60s
@@ -51,7 +51,7 @@ INFO: 20: hanging location:d1-pref deleted
 .INP: show
 node node1
 primitive st stonith:ssh \
-	params hostlist=node1 \
+	hostlist=node1 \
 	meta target-role=Started \
 	op start requires=nothing timeout=60s interval=0 \
 	op monitor interval=60m timeout=60s
@@ -68,7 +68,7 @@ INFO: 29: resource references in location:d1-pref updated
 node node1
 primitive d1 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
-	params hostlist=node1 \
+	hostlist=node1 \
 	meta target-role=Started \
 	op start requires=nothing timeout=60s interval=0 \
 	op monitor interval=60m timeout=60s
@@ -81,7 +81,7 @@ INFO: 33: resource references in location:d1-pref updated
 node node1
 primitive d1 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
-	params hostlist=node1 \
+	hostlist=node1 \
 	meta target-role=Started \
 	op start requires=nothing timeout=60s interval=0 \
 	op monitor interval=60m timeout=60s
@@ -105,7 +105,7 @@ node node1
 primitive d1 ocf:pacemaker:Dummy
 primitive d2 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
-	params hostlist=node1 \
+	hostlist=node1 \
 	meta target-role=Started \
 	op start requires=nothing timeout=60s interval=0 \
 	op monitor interval=60m timeout=60s
@@ -125,7 +125,7 @@ node node1
 primitive d1 ocf:pacemaker:Dummy
 primitive d2 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
-	params hostlist=node1 \
+	hostlist=node1 \
 	meta target-role=Started \
 	op start requires=nothing timeout=60s interval=0 \
 	op monitor interval=60m timeout=60s
@@ -143,7 +143,7 @@ INFO: 53: hanging location:d1-pref deleted
 .INP: show
 node node1
 primitive st stonith:ssh \
-	params hostlist=node1 \
+	hostlist=node1 \
 	meta target-role=Started \
 	op start requires=nothing timeout=60s interval=0 \
 	op monitor interval=60m timeout=60s
