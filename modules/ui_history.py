@@ -141,9 +141,8 @@ class History(command.UI):
         "usage: detail <detail_level>"
         self._init_source()
         detail_num = utils.convert2ints(detail_lvl)
-        if not (isinstance(detail_num, int) and int(detail_num) >= 0):
-            bad_usage(context.get_command_name(), detail_lvl)
-            return False
+        if detail_num is None or detail_num not in (0, 1):
+            context.fatal_error("Expected '0' or '1' (was '%s')" % (detail_lvl))
         return crm_report().set_detail(detail_lvl)
 
     @command.skill_level('administrator')

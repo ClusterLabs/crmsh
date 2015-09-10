@@ -4275,7 +4275,9 @@ crm(live)history#
 [[cmdhelp_history_detail,set the level of detail shown]]
 ==== `detail`
 
-How much detail to show from the logs.
+How much detail to show from the logs. Valid detail levels are either
+`0` or `1`, where `1` is the highest detail level. The default detail
+level is `0`.
 
 Usage:
 ...............
