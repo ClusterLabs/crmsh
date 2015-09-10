@@ -4389,30 +4389,33 @@ latest
 [[cmdhelp_history_limit,limit timeframe to be examined]]
 ==== `limit` (`timeframe`)
 
-All history commands look at events within certain period. It
-defaults to the last hour for the live cluster source. There is
-no limit for the `hb_report` source. Use this command to set the
-timeframe.
+This command can be used to modify the time span to examine. All
+history commands look at events within a certain time span.
 
-The time period is parsed by the dateutil python module. It
-covers wide range of date formats. For instance:
+For the `live` source, the default time span is the _last hour_.
 
-- 3:00      (today at 3am)
-- 15:00     (today at 3pm)
+There is no time span limit for the `hb_report` source.
+
+The time period is parsed by the `dateutil` python module. It
+covers a wide range of date formats. For instance:
+
+- 3:00          (today at 3am)
+- 15:00         (today at 3pm)
 - 2010/9/1 2pm  (September 1st 2010 at 2pm)
 
-We won't bother to give definition of the time specification in
-usage below. Either use common sense or read the
-http://labix.org/python-dateutil[dateutil] documentation.
+For more examples of valid time/date statements, please refer to the
+`python-dateutil` documentation:
 
-If dateutil is not available, then the time is parsed using
+- https://dateutil.readthedocs.org/[dateutil.readthedocs.org]
+
+If the dateutil module is not available, then the time is parsed using
 strptime and only the kind as printed by `date(1)` is allowed:
 
 - Tue Sep 15 20:46:27 CEST 2010
 
 Usage:
 ...............
-limit [<from_time> [<to_time>]]
+limit [<from_time>] [<to_time>]
 ...............
 Examples:
 ...............
