@@ -568,12 +568,12 @@ def find_transition_end(trnum, messages):
     return None
 
 
-def get_matching_run_msg(te_invoke_msg, trans_msg_l):
+def find_transition_end_msg(transition_start_msg, trans_msg_l):
     """
     Given the start of a transition log message, find
     and return the end of the transition log messages.
     """
-    pe_file = extract_pe_file(te_invoke_msg)
+    pe_file = extract_pe_file(transition_start_msg)
     pe_num = get_pe_num(pe_file)
     if pe_num == "-1":
         common_warn("%s: strange, transition number not found" % pe_file)
@@ -597,29 +597,30 @@ class Transition(object):
     Capture transition related information.
     '''
 
-    def __init__(self, te_invoke_msg, run_msg):
-        self.te_invoke_msg = te_invoke_msg
-        self.run_msg = run_msg
+    def __init__(self, start_msg, end_msg):
+        self.start_msg = start_msg
+        self.end_msg = end_msg
         self.parse_msgs()
+        self.tags = set()
 
     def __str__(self):
         return trans_str(self.dc, self.pe_file)
 
     def parse_msgs(self):
-        self.pe_file = extract_pe_file(self.te_invoke_msg)
+        self.pe_file = extract_pe_file(self.start_msg)
         self.pe_num = get_pe_num(self.pe_file)
-        self.dc = syslog2node(self.te_invoke_msg)
-        self.start_ts = syslog_ts(self.te_invoke_msg)
-        if self.run_msg:
-            self.end_ts = syslog_ts(self.run_msg)
+        self.dc = syslog2node(self.start_msg)
+        self.start_ts = syslog_ts(self.start_msg)
+        if self.end_msg:
+            self.end_ts = syslog_ts(self.end_msg)
         else:
             common_warn("end of transition %s not found in logs (transition not complete yet?)" %
                         self)
             self.end_ts = self.start_ts
 
     def actions_count(self):
-        if self.run_msg:
-            act_d = run_graph_msg_actions(self.run_msg)
+        if self.end_msg:
+            act_d = run_graph_msg_actions(self.end_msg)
             return sum(act_d.values())
         else:
             return -1
@@ -629,9 +630,9 @@ class Transition(object):
 
     def transition_info(self):
         print "Transition %s (%s -" % (self, shorttime(self.start_ts)),
-        if self.run_msg:
+        if self.end_msg:
             print "%s):" % shorttime(self.end_ts)
-            act_d = run_graph_msg_actions(self.run_msg)
+            act_d = run_graph_msg_actions(self.end_msg)
             total = sum(act_d.values())
             s = ", ".join(["%d %s" % (act_d[x], x) for x in act_d if act_d[x]])
             print "\ttotal %d actions: %s" % (total, s)
@@ -1175,8 +1176,8 @@ class Report(object):
         trans_start_msg_l = self.get_invoke_trans_msgs(trans_msg_l)
         prev_transition = None
         for msg in trans_start_msg_l:
-            run_msg = get_matching_run_msg(msg, trans_msg_l)
-            t_obj = Transition(msg, run_msg)
+            transition_end_msg = find_transition_end_msg(msg, trans_msg_l)
+            t_obj = Transition(msg, transition_end_msg)
             if self.is_empty_transition(prev_transition, t_obj):
                 common_debug("skipping empty transition (%s)" % t_obj)
                 continue
