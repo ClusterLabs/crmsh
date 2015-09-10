@@ -72,9 +72,12 @@ class History(command.UI):
             to_dt = utils.parse_time(to_time)
             if not to_dt:
                 return False
-        if to_dt and to_dt <= from_dt:
-            common_err("%s - %s: bad period" % (from_time, to_time))
-            return False
+        if to_dt and from_dt:
+            if to_dt < from_dt:
+                from_dt, to_dt = to_dt, from_dt
+            elif to_dt == from_dt:
+                common_err("%s - %s: To and from dates cannot be the same" % (from_time, to_time))
+                return False
         return crm_report.set_period(from_dt, to_dt)
 
     def _check_source(self, src):
