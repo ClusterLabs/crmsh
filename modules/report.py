@@ -1173,6 +1173,7 @@ class Report(object):
             if self.is_empty_transition(prev_transition, t_obj):
                 common_debug("skipping empty transition (%s)" % t_obj)
                 continue
+            self._set_transition_tags(t_obj)
             if not future_pe:
                 pe_l_file = self.pe_report_path(t_obj)
                 if not os.path.isfile(pe_l_file):
@@ -1372,9 +1373,13 @@ class Report(object):
         s = ""
         if len(self._transitions) > max_output:
             s = "... "
-        return "%s%s" % (s,
-                         ' '.join([self._str_nodecolor(x.dc, x.pe_num)
-                                   for x in self._transitions[-max_output:]]))
+
+        def fmt(t):
+            if 'error' in t.tags:
+                return self._str_nodecolor(t.dc, t.pe_num) + "*"
+            return self._str_nodecolor(t.dc, t.pe_num)
+
+        return "%s%s" % (s, ' '.join([fmt(x) for x in self._transitions[-max_output:]]))
 
     def get_rpt_dt(self, dt, whence):
         '''
@@ -1470,7 +1475,6 @@ class Report(object):
         if not t_obj:
             common_err("%s: transition not found" % rpt_pe_file)
             return False
-        self._set_transition_tags(t_obj)
         for tag in t_obj.tags:
             print tag
         return True
