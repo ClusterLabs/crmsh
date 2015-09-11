@@ -497,7 +497,7 @@ def run_graph_msg_actions(msg):
         s = s[r.end():]
 
 
-def extract_pe_file_num(msg):
+def get_pe_file_num_from_msg(msg):
     """
     Get PE file name and number from log message
     Returns: (file, num)
@@ -561,7 +561,7 @@ def find_transition_end_msg(transition_start_msg, trans_msg_l):
     Given the start of a transition log message, find
     and return the end of the transition log messages.
     """
-    pe_file, pe_num = extract_pe_file_num(transition_start_msg)
+    pe_file, pe_num = get_pe_file_num_from_msg(transition_start_msg)
     if pe_num == "-1":
         common_warn("%s: strange, transition number not found" % pe_file)
         return ""
@@ -569,7 +569,7 @@ def find_transition_end_msg(transition_start_msg, trans_msg_l):
 
 
 def trans_str(node, pe_file):
-    '''Convert node,pe_file to transition sting.'''
+    '''Convert node,pe_file to transition string.'''
     return "%s:%s" % (node, os.path.basename(pe_file).replace(".bz2", ""))
 
 
@@ -588,7 +588,7 @@ class Transition(object):
         self.start_msg = start_msg
         self.end_msg = end_msg
         self.tags = set()
-        self.pe_file, self.pe_num = extract_pe_file_num(start_msg)
+        self.pe_file, self.pe_num = get_pe_file_num_from_msg(start_msg)
         self.dc = syslog2node(start_msg)
         self.start_ts = syslog_ts(start_msg)
         if end_msg:
@@ -598,6 +598,9 @@ class Transition(object):
             self.end_ts = self.start_ts
 
     def __str__(self):
+        return self.get_node_file()
+
+    def get_node_file(self):
         return trans_str(self.dc, self.pe_file)
 
     def actions_count(self):
@@ -676,7 +679,7 @@ class Report(object):
         self.nodecolor = {}
         self.logobj = None
         self.desc = None
-        self.peinputs_l = []
+        self._transitions = []
         self.cibgrp_d = {}
         self.cibcln_d = {}
         self.cibrsc_l = []
@@ -705,7 +708,7 @@ class Report(object):
         return self.node_l
 
     def peinputs_list(self):
-        return [x.pe_num for x in self.peinputs_l]
+        return [x.pe_num for x in self._transitions]
 
     def session_subcmd_list(self):
         return ["save", "load", "pack", "delete", "list", "update"]
@@ -933,7 +936,7 @@ class Report(object):
                 continue
             pe_l = []
             for new_t_obj in self.list_transitions(log_l, future_pe=True):
-                self.new_peinput(new_t_obj)
+                self._new_transition(new_t_obj)
                 pe_l.append(new_t_obj.pe_file)
             if pe_l:
                 node_pe_l.append([node, pe_l])
@@ -1103,13 +1106,13 @@ class Report(object):
                 pass
         self.cibnotcloned_l = [x for x in self.cibrsc_l if x not in self.cibcloned_l]
 
-    def new_peinput(self, new_pe):
-        t_obj = self.find_peinput(str(new_pe))
+    def _new_transition(self, transition):
+        t_obj = self.find_transition(transition.get_node_file())
         if t_obj:
-            common_debug("duplicate %s, replacing older PE file" % t_obj)
-            self.peinputs_l.remove(t_obj)
-        common_debug("appending new PE %s" % new_pe)
-        self.peinputs_l.append(new_pe)
+            common_debug("duplicate %s, replacing older PE file" % transition)
+            self._transitions.remove(t_obj)
+        common_debug("appending new PE %s" % transition)
+        self._transitions.append(transition)
 
     def set_node_colors(self):
         i = 0
@@ -1231,9 +1234,9 @@ class Report(object):
 
         if self.change_origin != CH_UPD:
             common_debug("getting transitions from logs")
-            self.peinputs_l = []
+            self._transitions = []
             for new_t_obj in self.list_transitions():
-                self.new_peinput(new_t_obj)
+                self._new_transition(new_t_obj)
 
         self.ready = self.check_report()
         self.set_change_origin(0)
@@ -1367,11 +1370,11 @@ class Report(object):
         output'''
         max_output = 20
         s = ""
-        if len(self.peinputs_l) > max_output:
+        if len(self._transitions) > max_output:
             s = "... "
         return "%s%s" % (s,
                          ' '.join([self._str_nodecolor(x.dc, x.pe_num)
-                                   for x in self.peinputs_l[-max_output:]]))
+                                   for x in self._transitions[-max_output:]]))
 
     def get_rpt_dt(self, dt, whence):
         '''
@@ -1433,9 +1436,9 @@ class Report(object):
             return False
         self.show_logs(re_l=all_re_l)
 
-    def find_peinput(self, t_str):
-        for t_obj in self.peinputs_l:
-            if str(t_obj) == t_str:
+    def find_transition(self, t_str):
+        for t_obj in self._transitions:
+            if t_obj.get_node_file() == t_str:
                 return t_obj
         return None
 
@@ -1445,7 +1448,7 @@ class Report(object):
         '''
         if not self.prepare_source(no_live_update=self.prevent_live_update()):
             return False
-        t_obj = self.find_peinput(rpt_pe2t_str(rpt_pe_file))
+        t_obj = self.find_transition(rpt_pe2t_str(rpt_pe_file))
         if not t_obj:
             common_err("%s: transition not found" % rpt_pe_file)
             return False
@@ -1458,6 +1461,39 @@ class Report(object):
             self.events()
         self.logobj.set_log_timeframe(self.from_dt, self.to_dt)
         return True
+
+    def show_transition_tags(self, rpt_pe_file):
+        '''
+        prints the tags for the transition
+        '''
+        t_obj = self.find_transition(rpt_pe2t_str(rpt_pe_file))
+        if not t_obj:
+            common_err("%s: transition not found" % rpt_pe_file)
+            return False
+        self._set_transition_tags(t_obj)
+        for tag in t_obj.tags:
+            print tag
+        return True
+
+    def _set_transition_tags(self, transition):
+        # limit the log scope temporarily
+        self.logobj.set_log_timeframe(transition.start_ts, transition.end_ts)
+
+        # search log, match regexes to tags
+        regexes = [
+            re.compile(r"error: Resource ([\S]+)"),
+            re.compile(r"(error|unclean)", re.I),
+            # Sep 10 09:52:19 webui crmd[3086]: notice: Operation srv1_monitor_0: not running (node=webui, call=21, rc=7, cib-update=48, confirmed=true)
+            re.compile(r"crmd.*notice:\s+Operation\s+([^:]+):\s+(?!ok)"),
+        ]
+
+        for l in self.logobj.get_matches(regexes):
+            for rx in regexes:
+                m = rx.search(l)
+                if m:
+                    transition.tags.add(m.group(1).lower())
+
+        self.logobj.set_log_timeframe(self.from_dt, self.to_dt)
 
     def resource(self, *args):
         '''
@@ -1543,8 +1579,8 @@ class Report(object):
                 a.append(a[0])
         elif a is not None:
             a = [a, a]
-        l = [long and self.pe_detail_format(x) or self.pe_report_path(x)
-             for x in self.peinputs_l if pe_file_in_range(x.pe_file, a)]
+        l = [long and self.pe_detail_format(t_obj) or self.pe_report_path(t_obj)
+             for t_obj in self._transitions if pe_file_in_range(t_obj.pe_file, a)]
         if long:
             l = [self.pe_details_header, self.pe_details_separator] + l
         return l

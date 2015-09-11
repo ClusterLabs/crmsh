@@ -307,7 +307,7 @@ class History(command.UI):
         self._init_source()
         argl = list(args)
         subcmd = "show"
-        if argl and argl[0] in ("showdot", "log", "save"):
+        if argl and argl[0] in ("showdot", "log", "save", "tags"):
             subcmd = argl[0]
             del argl[0]
         if subcmd == "show":
@@ -330,6 +330,8 @@ class History(command.UI):
             rc = self._display_dot(f)
         elif subcmd == "save":
             rc = self._pe2shadow(f, argl)
+        elif subcmd == "tags":
+            rc = crm_report().show_transition_tags(f)
         else:
             rc = crm_report().show_transition_log(f, True)
         return rc

@@ -4649,12 +4649,18 @@ of the path to the file.
 After the `ptest` output, logs about events that happened during
 the transition are printed.
 
+The `tags` subcommand scans the logs for the transition and return a
+list of key events during that transition. For example, the tag
++error+ will be returned if there are any errors logged during the
+transition.
+
 Usage:
 ...............
 transition [<number>|<index>|<file>] [nograph] [v...] [scores] [actions] [utilization]
 transition showdot [<number>|<index>|<file>]
 transition log [<number>|<index>|<file>]
 transition save [<number>|<index>|<file> [name]]
+transition tags [<number>|<index>|<file>]
 ...............
 Examples:
 ...............
