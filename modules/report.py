@@ -1481,9 +1481,7 @@ class Report(object):
 
         # search log, match regexes to tags
         regexes = [
-            re.compile(r"error: Resource ([\S]+)"),
             re.compile(r"(error|unclean)", re.I),
-            # Sep 10 09:52:19 webui crmd[3086]: notice: Operation srv1_monitor_0: not running (node=webui, call=21, rc=7, cib-update=48, confirmed=true)
             re.compile(r"crmd.*notice:\s+Operation\s+([^:]+):\s+(?!ok)"),
         ]
 
