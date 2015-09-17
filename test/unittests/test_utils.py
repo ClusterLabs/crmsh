@@ -98,10 +98,8 @@ def test_sanity():
     insane_names = ["f'o"]
     for n in sane_names:
         assert utils.is_name_sane(n)
-        assert utils.is_value_sane(n)
     for n in insane_names:
         assert not utils.is_name_sane(n)
-        assert not utils.is_value_sane(n)
 
 
 def test_nvpairs2dict():

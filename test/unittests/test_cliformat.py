@@ -248,3 +248,13 @@ def test_new_role():
 @with_setup(setup_func, teardown_func)
 def test_topology_1114():
     roundtrip('fencing_topology attr:rack=1 node1,node2')
+
+
+@with_setup(setup_func, teardown_func)
+def test_is_value_sane():
+    roundtrip('''primitive p1 dummy params state="bo'o"''')
+
+
+@with_setup(setup_func, teardown_func)
+def test_is_value_sane_2():
+    roundtrip('primitive p1 dummy params state="bo\\"o"')
