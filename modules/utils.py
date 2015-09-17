@@ -375,13 +375,6 @@ def is_name_sane(name):
     return True
 
 
-def is_value_sane(name):
-    if re.search("[']", name):
-        common_err("%s: bad value" % name)
-        return False
-    return True
-
-
 def show_dot_graph(dotfile, keep_file=False, desc="transition graph"):
     cmd = "%s %s" % (config.core.dotty, dotfile)
     if not keep_file:

@@ -250,3 +250,12 @@ def test_new_role():
     roundtrip('role silly-role-2 read xpath:"//nodes//attributes" ' +
               'deny type:nvpair deny ref:d0 deny type:nvpair')
 
+
+@with_setup(setup_func, teardown_func)
+def test_is_value_sane():
+    roundtrip('''primitive p1 dummy params state="bo'o"''')
+
+
+@with_setup(setup_func, teardown_func)
+def test_is_value_sane_2():
+    roundtrip('primitive p1 dummy params state="bo\\"o"')
