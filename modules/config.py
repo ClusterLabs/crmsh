@@ -15,7 +15,6 @@ from . import userdir
 
 _SYSTEMWIDE = '/etc/crm/crm.conf'
 _PERUSER = os.getenv("CRM_CONFIG_FILE") or os.path.join(userdir.CONFIG_HOME, 'crm.conf')
-_SUPPORTED_SCHEMAS = ('1.0', '1.1', '1.2', '1.3', '2.0', '2.1', '2.2', '2.3', 'next')
 
 _PATHLIST = {
     'datadir': ('/usr/share', '/usr/local/share', '/opt'),
@@ -205,7 +204,6 @@ DEFAULTS = {
         'ptest': opt_program('', ('ptest', 'crm_simulate')),
         'dotty': opt_program('', ('dotty',)),
         'dot': opt_program('', ('dot',)),
-        'supported_schemas': opt_list(_SUPPORTED_SCHEMAS),
         'ignore_missing_metadata': opt_boolean('no'),
         'report_tool_options': opt_string('')
     },

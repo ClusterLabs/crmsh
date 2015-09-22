@@ -17,7 +17,6 @@
 ; ptest = ptest, crm_simulate
 ; dotty = dotty
 ; dot = dot
-; supported_schemas = 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, next
 ; ignore_missing_metadata = no
 ; report_tool_options =
 

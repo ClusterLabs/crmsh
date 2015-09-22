@@ -12,17 +12,16 @@ def is_supported(name):
     Check if the given name is a supported schema name
     A short form is also accepted where the prefix
     pacemaker- is implied.
+
+    Revision: The pacemaker schema version now
+    changes too often for a strict check to make sense.
+    Lets just check look for schemas we know we don't
+    support.
     """
-    shortform = re.compile(r'^(\d+\.\d+)|next$')
-    slist = config.core.supported_schemas
-    for s in slist:
-        if s == name:
-            return True
-        elif shortform.match(s) and 'pacemaker-' + s == name:
-            return True
-        elif shortform.match(name) and 'pacemaker-' + name == s:
-            return True
-    return False
+    name = re.match(r'pacemaker-(\d+\.\d+)$', name)
+    if name:
+        return float(name.group(1)) > 0.9
+    return True
 
 
 def get_attrs(schema, name):
