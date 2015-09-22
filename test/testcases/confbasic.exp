@@ -95,9 +95,6 @@ ms m5 s5
 ms m6 s6
 clone c d3 \
 	meta clone-max=1
-tag t1 m5 m6
-colocation c1 inf: m6 m5
-colocation c2 inf: m5:Master d1:Started
 location l1 g1 100: node1
 location l2 c \
 	rule $id=l2-rule1 100: #uname eq node1
@@ -132,5 +129,5 @@ rsc_defaults rsc-options: \
 op_defaults opsdef2: \
 	rule 100: #uname eq node1 \
 	record-pending=true
-tag t1: m5 m6
+tag t1 m5 m6
 .INP: commit
