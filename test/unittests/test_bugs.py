@@ -280,9 +280,9 @@ def test_bnc878112():
     crm configure group can hijack a cloned primitive (and then crash)
     """
     obj1 = factory.create_object('primitive', 'p1', 'Dummy')
-    assert obj1 is not None
+    assert obj1 is True
     obj2 = factory.create_object('group', 'g1', 'p1')
-    assert obj2 is not None
+    assert obj2 is True
     obj3 = factory.create_object('group', 'g2', 'p1')
     print obj3
     assert obj3 is False
@@ -476,3 +476,58 @@ def test_nodeattrs():
     exp = 'node 1: dell71 attributes staging-0-0-placement=true meta-0-0-placement=true attributes standby=off'
     assert data == exp
     assert obj.cli_use_validate()
+
+
+@with_setup(setup_func, teardown_func)
+def test_group_constraint_location():
+    """
+    configuring a constraint on a grouped resource is bad
+    """
+    factory.create_object('node', 'node1')
+    factory.create_object('primitive', 'p1', 'Dummy')
+    factory.create_object('primitive', 'p2', 'Dummy')
+    factory.create_object('group', 'g1', 'p1', 'p2')
+    factory.create_object('location', 'loc-p1', 'p1', 'inf:', 'node1')
+    c = factory.find_object('loc-p1')
+    assert c and c.check_sanity() > 0
+
+
+@with_setup(setup_func, teardown_func)
+def test_group_constraint_colocation():
+    """
+    configuring a constraint on a grouped resource is bad
+    """
+    factory.create_object('primitive', 'p1', 'Dummy')
+    factory.create_object('primitive', 'p2', 'Dummy')
+    factory.create_object('group', 'g1', 'p1', 'p2')
+    factory.create_object('colocation', 'coloc-p1-p2', 'inf:', 'p1', 'p2')
+    c = factory.find_object('coloc-p1-p2')
+    assert c and c.check_sanity() > 0
+
+
+@with_setup(setup_func, teardown_func)
+def test_group_constraint_colocation_rscset():
+    """
+    configuring a constraint on a grouped resource is bad
+    """
+    factory.create_object('primitive', 'p1', 'Dummy')
+    factory.create_object('primitive', 'p2', 'Dummy')
+    factory.create_object('primitive', 'p3', 'Dummy')
+    factory.create_object('group', 'g1', 'p1', 'p2')
+    factory.create_object('colocation', 'coloc-p1-p2-p3', 'inf:', 'p1', 'p2', 'p3')
+    c = factory.find_object('coloc-p1-p2-p3')
+    assert c and c.check_sanity() > 0
+
+
+@with_setup(setup_func, teardown_func)
+def test_clone_constraint_colocation_rscset():
+    """
+    configuring a constraint on a cloned resource is bad
+    """
+    factory.create_object('primitive', 'p1', 'Dummy')
+    factory.create_object('primitive', 'p2', 'Dummy')
+    factory.create_object('primitive', 'p3', 'Dummy')
+    factory.create_object('clone', 'c1', 'p1')
+    factory.create_object('colocation', 'coloc-p1-p2-p3', 'inf:', 'p1', 'p2', 'p3')
+    c = factory.find_object('coloc-p1-p2-p3')
+    assert c and c.check_sanity() > 0
