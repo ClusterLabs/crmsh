@@ -56,6 +56,7 @@
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .EXT crm_resource --show-metadata ocf:pacemaker:Stateful
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
+WARNING: 51: c2: resource d1 is grouped, constraints should apply to the group
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata
@@ -132,3 +133,4 @@ op_defaults opsdef2: \
 	rule 100: #uname eq node1 \
 	record-pending=true
 .INP: commit
+WARNING: 53: c2: resource d1 is grouped, constraints should apply to the group

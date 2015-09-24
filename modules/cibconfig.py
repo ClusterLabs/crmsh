@@ -1622,6 +1622,28 @@ class CibContainer(CibObject):
             child_rsc.repr_gv(sg_obj, from_grp=True)
 
 
+def _check_if_constraint_ref_is_child(obj):
+    """
+    Used by check_sanity for constraints to verify
+    that referenced resources are not children in
+    a container.
+    """
+    rc = 0
+    for rscid in obj._referenced_resources():
+        tgt = cib_factory.find_object(rscid)
+        if not tgt:
+            common_warn("%s: resource %s does not exist" % (obj.obj_id, rscid))
+            rc = 1
+        elif tgt.parent and tgt.parent.obj_type == "group":
+            if obj.obj_type != "order":
+                common_warn("%s: resource %s is grouped, constraints should apply to the group" % (obj.obj_id, rscid))
+                rc = 1
+        elif tgt.parent and tgt.parent.obj_type in constants.container_tags:
+            common_warn("%s: resource %s ambiguous, apply constraints to container" % (obj.obj_id, rscid))
+            rc = 1
+    return rc
+
+
 class CibLocation(CibObject):
     '''
     Location constraint.
@@ -1692,7 +1714,14 @@ class CibLocation(CibObject):
                 if uname and uname.lower() not in ids:
                     common_warn("%s: referenced node %s does not exist" % (self.obj_id, uname))
                     rc = 1
+        rc2 = _check_if_constraint_ref_is_child(self)
+        if rc2 > rc:
+            rc = rc2
         return rc
+
+    def _referenced_resources(self):
+        ret = self.node.xpath('.//resource_set/resource_ref/@id')
+        return ret or [self.node.get("rsc")]
 
     def repr_gv(self, gv_obj, from_grp=False):
         '''
@@ -1829,6 +1858,23 @@ class CibSimpleConstraint(CibObject):
             self._mk_one_edge(gv_obj, [
                 self.node.get("first"),
                 self.node.get("then")])
+
+    def _referenced_resources(self):
+        ret = self.node.xpath('.//resource_set/resource_ref/@id')
+        if ret:
+            return ret
+        if self.obj_type == "order":
+            return [self.node.get("first"), self.node.get("then")]
+        elif self.obj_type == "colocation":
+            return [self.node.get("rsc"), self.node.get("with-rsc")]
+        elif self.node.get("rsc"):
+            return [self.node.get("rsc")]
+
+    def check_sanity(self):
+        if self.node is None:
+            common_err("%s: no xml (strange)" % self.obj_id)
+            return utils.get_check_rc()
+        return _check_if_constraint_ref_is_child(self)
 
 
 class CibRscTicket(CibSimpleConstraint):
