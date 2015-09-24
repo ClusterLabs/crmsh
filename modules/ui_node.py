@@ -22,7 +22,7 @@ def unpack_node_xmldata(node, is_offline):
     """
     takes an XML element defining a node, and
     returns the data to pass to print_node
-    is_offline: function(uname) -> offline?
+    is_offline: true|false
     """
     type = uname = id = ""
     inst_attr = []
@@ -39,7 +39,7 @@ def unpack_node_xmldata(node, is_offline):
             other[attr] = v
     inst_attr = [cli_nvpairs(nvpairs2list(elem))
                  for elem in node.xpath('./instance_attributes')]
-    return uname, id, type, other, inst_attr, is_offline(uname)
+    return uname, id, type, other, inst_attr, is_offline
 
 
 def print_node(uname, id, node_type, other, inst_attr, offline):
@@ -124,26 +124,33 @@ class NodeMgmt(command.UI):
     @command.completers(compl.nodes)
     def do_show(self, context, node=None):
         'usage: show [<node>]'
-        cib_elem = xmlutil.cibdump2elem()
-        if cib_elem is None:
-            return False
-        try:
-            nodes_node = cib_elem.xpath("//configuration/nodes")[0]
-            status = cib_elem.findall("status")[0]
-            node_state = status.xpath(".//node_state")
-        except:
+        cib = xmlutil.cibdump2elem()
+        if cib is None:
             return False
 
-        def is_offline(uname):
-            for state in node_state:
-                if state.get("uname") == uname and state.get("crmd") == "offline":
-                    return True
-            return False
+        cfg_nodes = cib.xpath('/cib/configuration/nodes/node')
+        node_states = cib.xpath('/cib/status/node_state')
 
-        for c in nodes_node.iterchildren():
-            if c.tag != "node" or (node is not None and c.get("uname") != node):
-                continue
-            print_node(*unpack_node_xmldata(c, is_offline))
+        def find(it, lst):
+            for n in lst:
+                if n.get("uname") == it:
+                    return n
+            return None
+
+        def do_print(uname):
+            xml = find(uname, cfg_nodes)
+            state = find(uname, node_states)
+            if xml is not None or state is not None:
+                is_offline = state is not None and state.get("crmd") == "offline"
+                print_node(*unpack_node_xmldata(xml if xml is not None else state, is_offline))
+
+        if node is not None:
+            do_print(node)
+        else:
+            all_nodes = set([n.get("uname") for n in cfg_nodes + node_states])
+            for uname in sorted(all_nodes):
+                do_print(uname)
+        return True
 
     @command.wait
     @command.completers(compl.nodes)
