@@ -481,7 +481,7 @@ def test_nodeattrs():
 @with_setup(setup_func, teardown_func)
 def test_group_constraint_location():
     """
-    configuring a constraint on a grouped resource is bad
+    configuring a location constraint on a grouped resource is OK
     """
     factory.create_object('node', 'node1')
     factory.create_object('primitive', 'p1', 'Dummy')
@@ -489,13 +489,13 @@ def test_group_constraint_location():
     factory.create_object('group', 'g1', 'p1', 'p2')
     factory.create_object('location', 'loc-p1', 'p1', 'inf:', 'node1')
     c = factory.find_object('loc-p1')
-    assert c and c.check_sanity() > 0
+    assert c and c.check_sanity() == 0
 
 
 @with_setup(setup_func, teardown_func)
 def test_group_constraint_colocation():
     """
-    configuring a constraint on a grouped resource is bad
+    configuring a colocation constraint on a grouped resource is bad
     """
     factory.create_object('primitive', 'p1', 'Dummy')
     factory.create_object('primitive', 'p2', 'Dummy')
