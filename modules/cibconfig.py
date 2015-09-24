@@ -1635,8 +1635,9 @@ def _check_if_constraint_ref_is_child(obj):
             common_warn("%s: resource %s does not exist" % (obj.obj_id, rscid))
             rc = 1
         elif tgt.parent and tgt.parent.obj_type == "group":
-            common_warn("%s: resource %s is grouped, constraints should apply to the group" % (obj.obj_id, rscid))
-            rc = 1
+            if obj.obj_type != "order":
+                common_warn("%s: resource %s is grouped, constraints should apply to the group" % (obj.obj_id, rscid))
+                rc = 1
         elif tgt.parent and tgt.parent.obj_type in constants.container_tags:
             common_warn("%s: resource %s ambiguous, apply constraints to container" % (obj.obj_id, rscid))
             rc = 1

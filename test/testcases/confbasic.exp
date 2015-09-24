@@ -60,7 +60,6 @@ WARNING: 51: c2: resource d1 is grouped, constraints should apply to the group
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata
-WARNING: 51: o2: resource d1 is grouped, constraints should apply to the group
 .INP: show
 node node1 \
 	attributes mem=16G
@@ -135,4 +134,3 @@ op_defaults opsdef2: \
 	record-pending=true
 .INP: commit
 WARNING: 53: c2: resource d1 is grouped, constraints should apply to the group
-WARNING: 53: o2: resource d1 is grouped, constraints should apply to the group
