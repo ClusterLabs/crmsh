@@ -15,7 +15,7 @@ from .msg import common_debug, common_warn, common_err, common_error, common_inf
 from .xmlutil import file2cib_elem, get_rsc_children_ids, get_prim_children_ids, compressed_file_to_cib
 from .utils import file2str, shortdate, acquire_lock, append_file, ext_cmd, shorttime
 from .utils import page_string, release_lock, rmdir_r, parse_time, get_cib_attributes
-from .utils import is_pcmk_118, pipe_cmd_nosudo, file_find_by_name
+from .utils import is_pcmk_118, pipe_cmd_nosudo, file_find_by_name, get_stdout, quote
 
 _HAS_PARALLAX = False
 try:
@@ -732,6 +732,9 @@ class Report(object):
         elif bfname.endswith(".tar.gz"):  # hmm, must be ancient
             loc = tarball.replace(".tar.gz", "")
             tar_unpack_option = "z"
+        elif bfname.endswith(".tar.xz"):
+            loc = tarball.replace(".tar.xz", "")
+            tar_unpack_option = "J"
         else:
             self.error("this doesn't look like a report tarball")
             return None
@@ -747,11 +750,9 @@ class Report(object):
             except OSError, msg:
                 self.error(msg)
                 return None
-        import tarfile
         try:
-            tf = tarfile.open(bfname)
-            tf_loc = tf.getmembers()[0].name
-            if tf_loc != loc:
+            rc, tf_loc = get_stdout("tar -t%s < %s | head -1" % (tar_unpack_option, quote(bfname)))
+            if os.path.abspath(tf_loc) != os.path.abspath(loc):
                 common_debug("top directory in tarball: %s, doesn't match the tarball name: %s" %
                              (tf_loc, loc))
                 loc = os.path.join(os.path.dirname(loc), tf_loc)
