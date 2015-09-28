@@ -57,18 +57,20 @@ class opt_program(object):
 
     def _find_program(self, prog):
         """Is this program available?"""
+        paths = os.getenv("PATH").split(os.pathsep)
+        paths.extend(['/usr/bin', '/usr/sbin', '/bin', '/sbin'])
         if prog.startswith('/'):
             filename = make_path(prog)
             if os.path.isfile(filename) and os.access(filename, os.X_OK):
                 return filename
         elif prog.startswith('%'):
             prog = make_path(prog)
-            for p in os.getenv("PATH").split(os.pathsep):
+            for p in paths:
                 filename = os.path.join(p, prog)
                 if os.path.isfile(filename) and os.access(filename, os.X_OK):
                     return filename
         else:
-            for p in os.getenv("PATH").split(os.pathsep):
+            for p in paths:
                 filename = make_path(os.path.join(p, prog))
                 if os.path.isfile(filename) and os.access(filename, os.X_OK):
                     return filename
