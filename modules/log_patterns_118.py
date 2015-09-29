@@ -24,8 +24,8 @@ log_patterns = {
 		( # detail 0
 			"crmd.*Initiating.*%%_(?:start|stop|promote|demote|migrate)_",
 			"lrmd.*operation_finished: %%_",
-			"crmd.*process_lrm_event: LRM operation %%_(?:start|stop|promote|demote|migrate)_.*confirmed=true",
-			"crmd.*process_lrm_event: LRM operation %%_.*Timed Out",
+			"crmd.*LRM operation %%_(?:start|stop|promote|demote|migrate)_.*confirmed=true",
+			"crmd.*LRM operation %%_.*Timed Out",
 			"[(]%%[)][[]",
 		),
 		( # detail 1
@@ -40,16 +40,16 @@ log_patterns = {
 			" %% .*pcmk_shutdown:.Shutdown.complete",
 			" %% .*Configuration.validated..Starting.heartbeat",
 			"pengine.*Scheduling Node %% for STONITH",
-			"pengine.*pe_fence_node: Node %% will be fenced",
-			"crmd.* tengine_stonith_callback: .* for %% failed",
-			"stonith-ng.*log_operation:.*host '%%'",
-			"te_fence_node: Exec.*on %% ",
-			"pe_fence_node: Node %% will be fenced",
-			"stonith-ng.*remote_op_timeout.*on %% for.*timed out",
-			"stonith-ng.*can_fence_host_with_device:.*can not fence %%:",
+			"pengine.*Node %% will be fenced",
+			"crmd.*for %% failed",
+			"stonith-ng.*host '%%'",
+			"Exec.*on %% ",
+			"Node %% will be fenced",
+			"stonith-ng.*on %% for.*timed out",
+			"stonith-ng.*can not fence %%:",
 			"stonithd.*Succeeded.*node %%:",
-			"pcmk_peer_update.*(?:lost|memb): %% ",
-			"crmd.*ccm_event.*(?:NEW|LOST):.* %% ",
+			"(?:lost|memb): %% ",
+			"crmd.*(?:NEW|LOST):.* %% ",
 			"Node return implies stonith of %% ",
 		),
 		( # detail 1
@@ -57,8 +57,8 @@ log_patterns = {
 	),
 	"quorum": (
 		( # detail 0
-			"crmd.*crm_update_quorum:.Updating.quorum.status",
-			"crmd.*ais.disp.*quorum.(?:lost|ac?quir)",
+			"crmd.*Updating.quorum.status",
+			"crmd.*quorum.(?:lost|ac?quir)",
 		),
 		( # detail 1
 		),
