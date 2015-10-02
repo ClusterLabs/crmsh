@@ -53,7 +53,7 @@ class Assist(command.UI):
         '''
         if len(primitives) < 1:
             context.fatal_error("Expected at least one primitive argument")
-        objs = [cib_factory.find_object(p) for p in primitives]
+        objs = [cib_factory.find_resource(p) for p in primitives]
         for prim, obj in zip(primitives, objs):
             if obj is None:
                 context.fatal_error("Primitive %s not found" % (prim))
@@ -114,7 +114,7 @@ class Assist(command.UI):
             context.fatal_error("Need at least two arguments")
 
         for node in nodes:
-            obj = cib_factory.find_object(node)
+            obj = cib_factory.find_resource(node)
             if not obj:
                 context.fatal_error("Object not found: %s" % (node))
             if not xmlutil.is_primitive(obj.node):

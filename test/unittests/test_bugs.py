@@ -466,3 +466,61 @@ def test_quotes():
     exp = 'primitive q1 ocf:pacemaker:Dummy params state="foo\\"foo\\""'
     assert data == exp
     assert obj.cli_use_validate()
+
+
+@with_setup(setup_func, teardown_func)
+def test_nodeattrs():
+    """
+    bug with parsing node attrs
+    """
+    xml = '''<node id="1" uname="dell71"> \
+  <instance_attributes id="dell71-instance_attributes"> \
+    <nvpair name="staging-0-0-placement" value="true" id="dell71-instance_attributes-staging-0-0-placement"/> \
+    <nvpair name="meta-0-0-placement" value="true" id="dell71-instance_attributes-meta-0-0-placement"/> \
+  </instance_attributes> \
+  <instance_attributes id="nodes-1"> \
+    <nvpair id="nodes-1-standby" name="standby" value="off"/> \
+  </instance_attributes> \
+</node>'''
+
+    data = etree.fromstring(xml)
+    obj = factory.create_from_node(data)
+    assert obj is not None
+    data = obj.repr_cli(format=-1)
+    exp = 'node 1: dell71 attributes staging-0-0-placement=true meta-0-0-placement=true attributes standby=off'
+    assert data == exp
+    assert obj.cli_use_validate()
+
+
+@with_setup(setup_func, teardown_func)
+def test_group_constraint_location():
+    """
+    configuring a location constraint on a grouped resource is OK
+    """
+    factory.create_object('node', 'node1')
+    factory.create_object('primitive', 'p1', 'Dummy')
+    factory.create_object('primitive', 'p2', 'Dummy')
+    factory.create_object('group', 'g1', 'p1', 'p2')
+    factory.create_object('location', 'loc-p1', 'p1', 'inf:', 'node1')
+    c = factory.find_object('loc-p1')
+    assert c and c.check_sanity() == 0
+
+
+@with_setup(setup_func, teardown_func)
+def test_existing_node_resource():
+    factory.create_object('primitive', 'ha-one', 'Dummy')
+
+    n = factory.find_node('ha-one')
+    assert factory.test_element(n)
+
+    r = factory.find_resource('ha-one')
+    assert factory.test_element(r)
+
+    assert n != r
+
+    assert factory.check_structure()
+    factory.cli_use_validate_all()
+
+    ok, s = factory.mkobj_set('ha-one')
+    assert ok
+
