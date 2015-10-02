@@ -2,6 +2,7 @@
 .INP: history
 .INP: source history-test.tar.bz2
 .INP: info
+.EXT tar -tj < history-test.tar.bz2 2> /dev/null | head -1
 .EXT tar -xj < history-test.tar.bz2
 Source: history-test.tar.bz2
 Created on: Fri 14 Dec 19:08:38 UTC 2012
@@ -278,6 +279,7 @@ Report saved in '/root/_crmsh_regtest.tar.bz2'
 .TRY History 2
 .INP: history
 .INP: session load _crmsh_regtest
+.EXT tar -tj < history-test.tar.bz2 2> /dev/null | head -1
 .EXT tar -xj < history-test.tar.bz2
 .INP: exclude
 corosync|crmd|pengine|stonith-ng|cib|attrd|mgmtd|sshd

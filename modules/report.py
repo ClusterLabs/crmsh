@@ -751,7 +751,7 @@ class Report(object):
                 self.error(msg)
                 return None
         try:
-            rc, tf_loc = get_stdout("tar -t%s < %s | head -1" % (tar_unpack_option, quote(bfname)))
+            rc, tf_loc = get_stdout("tar -t%s < %s 2> /dev/null | head -1" % (tar_unpack_option, quote(bfname)))
             if os.path.abspath(tf_loc) != os.path.abspath(loc):
                 common_debug("top directory in tarball: %s, doesn't match the tarball name: %s" %
                              (tf_loc, loc))
