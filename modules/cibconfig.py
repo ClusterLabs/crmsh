@@ -586,6 +586,8 @@ class CibObjectSetCli(CibObjectSet):
                                etree.tostring(node, pretty_print=True))
                     rc = False
                 elif obj_id in id_set:
+                    # allow nodes and resources with same name
+                    # used by remote pacemaker
                     common_err("duplicate element %s" % obj_id)
                     rc = False
                 else:
@@ -1145,7 +1147,7 @@ class CibObject(object):
         Check if all operation attributes are supported by the
         schema.
         '''
-        rc = True
+        rc = 0
         op_id = op_node.get("name")
         for name in op_node.keys():
             vals = schema.rng_attr_values(op_node.tag, name)
@@ -1155,14 +1157,14 @@ class CibObject(object):
             if v not in vals:
                 common_warn("%s: op '%s' attribute '%s' value '%s' not recognized" %
                             (self.obj_id, op_id, name, v))
-                rc = False
+                rc = 1
         return rc
 
     def _check_ops_attributes(self):
         '''
         Check if operation attributes settings are valid.
         '''
-        rc = True
+        rc = 0
         if self.node is None:
             return rc
         for op_node in self.node.xpath("operations/op"):
@@ -2602,7 +2604,7 @@ class CibFactory(object):
         # need to get addresses of all new objects created by
         # deepcopy
         for obj in self.cib_objects:
-            obj.node = self.find_node(obj.xml_obj_type, obj.obj_id)
+            obj.node = self.find_xml_node(obj.xml_obj_type, obj.obj_id)
             self._update_links(obj)
         idmgmt.pop_state()
         return self.check_structure()
@@ -2649,7 +2651,32 @@ class CibFactory(object):
         if objs is None:
             return None
         if len(objs) > 0:
+            for obj in objs:
+                if obj.obj_type != 'node':
+                    return obj
             return objs[0]
+        return None
+
+    def find_resource(self, obj_id):
+        if not self.is_cib_sane():
+            return None
+        objs = self.find_objects(obj_id)
+        if objs is None:
+            return None
+        for obj in objs:
+            if obj.obj_type != 'node':
+                return obj
+        return None
+
+    def find_node(self, obj_id):
+        if not self.is_cib_sane():
+            return None
+        objs = self.find_objects(obj_id)
+        if objs is None:
+            return None
+        for obj in objs:
+            if obj.obj_type == 'node':
+                return obj
         return None
 
     #
@@ -2723,8 +2750,8 @@ class CibFactory(object):
                 return obj
         return None
 
-    def find_node(self, tag, id, strict=True):
-        "Find a node of this type with this id."
+    def find_xml_node(self, tag, id, strict=True):
+        "Find a xml node of this type with this id."
         try:
             if tag in constants.defaults_tags:
                 expr = '//%s/meta_attributes[@id="%s"]' % (tag, id)
@@ -2754,7 +2781,7 @@ class CibFactory(object):
             return False
         rc = True
         for obj_id in args:
-            obj = self.find_object(obj_id)
+            obj = self.find_resource(obj_id)
             if not obj:
                 no_object_err(obj_id)
                 rc = False
@@ -2834,7 +2861,7 @@ class CibFactory(object):
         id to reference.
         '''
         self.id_refs[id_ref] = attr_list_type
-        obj = self.find_object(id_ref)
+        obj = self.find_resource(id_ref)
         if obj:
             nodes = obj.node.xpath(".//%s" % attr_list_type)
             if len(nodes) > 1:
@@ -2904,7 +2931,7 @@ class CibFactory(object):
         matching_tags = [x for x in self.cib_objects if x.obj_type == 'tag' and x.obj_id == t]
         ret = []
         for mt in matching_tags:
-            matches = [cib_factory.find_object(o) for o in mt.node.xpath('./obj_ref/@id')]
+            matches = [cib_factory.find_resource(o) for o in mt.node.xpath('./obj_ref/@id')]
             ret += [m for m in matches if m is not None]
         return ret
 
@@ -2955,7 +2982,7 @@ class CibFactory(object):
         rc = True
         constraint_id = node.get("id")
         for obj_id in referenced_resources(node):
-            if not self.find_object(obj_id):
+            if not self.find_resource(obj_id):
                 constraint_norefobj_err(constraint_id, obj_id)
                 rc = False
         return rc
@@ -2993,7 +3020,7 @@ class CibFactory(object):
 
     def _verify_child(self, child_id, parent_tag, obj_id):
         'Check if child exists and obj_id is (or may become) its parent.'
-        child = self.find_object(child_id)
+        child = self.find_resource(child_id)
         if not child:
             no_object_err(child_id)
             return False
@@ -3062,7 +3089,7 @@ class CibFactory(object):
         '''Add an op to a primitive.'''
         # does the referenced primitive exist
         rsc_id = node.get('rsc')
-        rsc_obj = self.find_object(rsc_id)
+        rsc_obj = self.find_resource(rsc_id)
         if not rsc_obj:
             no_object_err(rsc_id)
             return None
@@ -3095,7 +3122,7 @@ class CibFactory(object):
         if obj_type == "op":
             return self.add_op(elem)
         if obj_type == "node":
-            obj = self.find_object(obj_id)
+            obj = self.find_node(obj_id)
             # make an exception and allow updating nodes
             if obj:
                 self.merge_from_cli(obj, elem)
@@ -3170,7 +3197,7 @@ class CibFactory(object):
         test_l = []
 
         def obj_is_container(x):
-            obj = self.find_object(x)
+            obj = self.find_resource(x)
             return obj and is_container(obj.node)
 
         del_containers = [x for x in del_set if obj_is_container(x)]
@@ -3229,7 +3256,7 @@ class CibFactory(object):
                 return False
             test_l.append(obj)
         for id in upd_set:
-            obj = self.find_object(id)
+            obj = self.find_resource(id)
             if not obj:
                 return False
             if not self.update_from_node(obj, edit_d[id]):
@@ -3272,7 +3299,7 @@ class CibFactory(object):
         if not new_children_ids:
             return True
         old_children = [x for x in obj.children if x.parent == obj]
-        new_children = [self.find_object(x) for x in new_children_ids]
+        new_children = [self.find_resource(x) for x in new_children_ids]
         new_children = [c for c in new_children if c is not None]
         obj.children = new_children
         # relink orphans to top
@@ -3380,7 +3407,7 @@ class CibFactory(object):
 
         for c in node.iterchildren('primitive'):
             pid = c.get('id')
-            child_obj = self.find_object(pid)
+            child_obj = self.find_resource(pid)
             if child_obj is None:
                 child_obj = self.create_from_node(copy.deepcopy(c))
                 if not child_obj:

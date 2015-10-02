@@ -105,7 +105,7 @@ def get_prim_token(words, n):
 
 def ra_agent_for_template(tmpl):
     '''@template -> ra.agent'''
-    obj = cib_factory.find_object(tmpl[1:])
+    obj = cib_factory.find_resource(tmpl[1:])
     if obj is None:
         return None
     return ra.get_ra(obj.node)

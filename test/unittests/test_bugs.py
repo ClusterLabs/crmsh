@@ -531,3 +531,42 @@ def test_clone_constraint_colocation_rscset():
     factory.create_object('colocation', 'coloc-p1-p2-p3', 'inf:', 'p1', 'p2', 'p3')
     c = factory.find_object('coloc-p1-p2-p3')
     assert c and c.check_sanity() > 0
+
+
+@with_setup(setup_func, teardown_func)
+def test_existing_node_resource():
+    factory.create_object('primitive', 'ha-one', 'Dummy')
+
+    n = factory.find_node('ha-one')
+    assert factory.test_element(n)
+
+    r = factory.find_resource('ha-one')
+    assert factory.test_element(r)
+
+    assert n != r
+
+    assert factory.check_structure()
+    factory.cli_use_validate_all()
+
+    ok, s = factory.mkobj_set('ha-one')
+    assert ok
+
+
+@with_setup(setup_func, teardown_func)
+def test_existing_node_resource_2():
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+
+    from crmsh import clidisplay
+    with clidisplay.nopretty():
+        text = obj.repr()
+    text += "\nprimitive ha-one Dummy"
+    ok = obj.save(text)
+    assert ok
+
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+    with clidisplay.nopretty():
+        text2 = obj.repr()
+
+    assert sorted(text.split('\n')) == sorted(text2.split('\n'))
