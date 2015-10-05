@@ -7,6 +7,8 @@ _here = os.path.dirname(__file__)
 config.path.sharedir = os.path.join(_here, "../../doc")
 config.path.crm_dtd_dir = os.path.join(_here, "schemas")
 
+os.environ["CIB_file"] = "test"
+
 
 # install a basic CIB
 import cibconfig
