@@ -570,9 +570,7 @@ class CibObjectSetCli(CibObjectSet):
         coming from edit). The original CIB is preserved and no
         changes are made.
         '''
-        edit_d = {}
-        id_set = oset()
-        del_set = oset()
+        diff = CibDiff(self)
         rc = True
         err_buf.start_tmp_lineno()
         cp = CliParser()
@@ -580,34 +578,17 @@ class CibObjectSetCli(CibObjectSet):
             err_buf.incr_lineno()
             node = cp.parse(cli_text)
             if node not in (False, None):
-                obj_id = id_for_node(node)
-                if obj_id is None:
-                    common_err("element %s has no id!" %
-                               etree.tostring(node, pretty_print=True))
-                    rc = False
-                elif obj_id in id_set:
-                    # allow nodes and resources with same name
-                    # used by remote pacemaker
-                    common_err("duplicate element %s" % obj_id)
-                    rc = False
-                else:
-                    id_set.add(obj_id)
-                    edit_d[obj_id] = node
+                rc = diff.add(node)
             elif node is False:
                 rc = False
         err_buf.stop_tmp_lineno()
+
         # we can't proceed if there was a syntax error, but we
         # can ask the user to fix problems
-        if not no_remove:
-            rc &= self.is_edit_valid(id_set)
-            del_set = self.obj_ids - id_set
         if not rc:
             return rc
-        mk_set = id_set - self.obj_ids
-        upd_set = id_set & self.obj_ids
 
-        rc = cib_factory.set_update(edit_d, mk_set, upd_set, del_set,
-                                    upd_type="cli", method=method)
+        rc = diff.apply(cib_factory, mode='cli', no_remove=no_remove, method=method)
         if not rc:
             self._initialize()
         return rc
@@ -641,29 +622,12 @@ class CibObjectSetRaw(CibObjectSet):
         if not show_unrecognized_elems(cib_elem):
             return False
         rc = True
-        id_set = oset()
-        del_set = oset()
-        edit_d = {}
+        diff = CibDiff(self)
         for node in get_top_cib_nodes(cib_elem, []):
-            id = self._get_id(node)
-            if id is None:
-                common_err("element %s has no id!" %
-                           etree.tostring(node, pretty_print=True))
-                rc = False
-            elif id in id_set:
-                common_err("duplicate element %s" % id)
-                rc = False
-            else:
-                id_set.add(id)
-                edit_d[id] = node
-        if not no_remove:
-            rc &= self.is_edit_valid(id_set)
-            del_set = self.obj_ids - id_set
+            rc = diff.add(node)
         if not rc:
             return rc
-        mk_set = id_set - self.obj_ids
-        upd_set = id_set & self.obj_ids
-        rc = cib_factory.set_update(edit_d, mk_set, upd_set, del_set, "xml", method)
+        rc = diff.apply(cib_factory, mode='xml', no_remove=no_remove, method=method)
         if not rc:
             self._initialize()
         return rc
@@ -2141,6 +2105,89 @@ def can_migrate(node):
 cib_upgrade = "cibadmin --upgrade --force"
 
 
+class CibDiff(object):
+    '''
+    Represents a cib edit order.
+    Is complicated by the fact that
+    nodes and resources can have
+    colliding ids.
+
+    Can carry changes either as CLI objects
+    or as XML statements.
+    '''
+    def __init__(self, objset):
+        self.objset = objset
+        self._node_set = oset()
+        self._nodes = {}
+        self._rsc_set = oset()
+        self._resources = {}
+
+    def add(self, item):
+        obj_id = id_for_node(item)
+        is_node = item.tag == 'node'
+        if obj_id is None:
+            common_err("element %s has no id!" %
+                       etree.tostring(item, pretty_print=True))
+            return False
+        elif is_node and obj_id in self._node_set:
+            common_err("Duplicate node: %s" % (obj_id))
+            return False
+        elif not is_node and obj_id in self._rsc_set:
+            common_err("Duplicate resource: %s" % (obj_id))
+            return False
+        elif is_node:
+            self._node_set.add(obj_id)
+            self._nodes[obj_id] = item
+        else:
+            self._rsc_set.add(obj_id)
+            self._resources[obj_id] = item
+        return True
+
+    def _obj_type(self, nid):
+        for obj in self.objset.all_set:
+            if obj.obj_id == nid:
+                return obj.obj_type
+        return None
+
+    def _obj_nodes(self):
+        return oset([n for n in self.objset.obj_ids
+                     if self._obj_type(n) == 'node'])
+
+    def _obj_resources(self):
+        return oset([n for n in self.objset.obj_ids
+                     if self._obj_type(n) != 'node'])
+
+    def apply(self, factory, mode='cli', no_remove=False, method='replace'):
+        rc = True
+
+        edited_nodes = self._nodes.copy()
+        edited_resources = self._resources.copy()
+
+        def calc_sets(input_set, existing):
+            rc = True
+            if not no_remove:
+                rc = self.objset.is_edit_valid(input_set)
+                del_set = existing - (input_set)
+            else:
+                del_set = oset()
+            mk_set = (input_set) - existing
+            upd_set = (input_set) & existing
+            return rc, mk_set, upd_set, del_set
+
+        if not rc:
+            return rc
+
+        for e, s, existing in ((edited_nodes, self._node_set, self._obj_nodes()),
+                               (edited_resources, self._rsc_set, self._obj_resources())):
+            rc, mk, upd, rm = calc_sets(s, existing)
+            if not rc:
+                return rc
+            rc = cib_factory.set_update(e, mk, upd, rm, upd_type=mode, method=method)
+            if not rc:
+                return rc
+        return rc
+
+
 class CibFactory(object):
     '''
     Juggle with CIB objects.
@@ -2714,8 +2761,8 @@ class CibFactory(object):
 
     def node_id_list(self):
         "List of node ids."
-        return [x.node.get("uname") for x in self.cib_objects
-                if x.obj_type == "node"]
+        return sorted([x.node.get("uname") for x in self.cib_objects
+                       if x.obj_type == "node"])
 
     def f_prim_free_id_list(self):
         "List of possible primitives ids (for group completion)."
@@ -3193,7 +3240,7 @@ class CibFactory(object):
         del_set is a set to be removed.
         method is either replace or update.
         '''
-        common_debug("_cli_set_update: %s, %s, %s" % (mk_set, upd_set, del_set))
+        common_debug("_cli_set_update: mk=%s, upd=%s, del=%s" % (mk_set, upd_set, del_set))
         test_l = []
 
         def obj_is_container(x):
@@ -3217,7 +3264,10 @@ class CibFactory(object):
             test_l.append(obj)
 
         for id in upd_set:
-            obj = self.find_object(id)
+            if edit_d[id].tag == 'node':
+                obj = self.find_node(id)
+            else:
+                obj = self.find_resource(id)
             if not obj:
                 common_debug("%s not found!" % (id))
                 return False
@@ -3256,7 +3306,10 @@ class CibFactory(object):
                 return False
             test_l.append(obj)
         for id in upd_set:
-            obj = self.find_resource(id)
+            if edit_d[id].tag == 'node':
+                obj = self.find_node(id)
+            else:
+                obj = self.find_resource(id)
             if not obj:
                 return False
             if not self.update_from_node(obj, edit_d[id]):

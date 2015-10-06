@@ -434,7 +434,8 @@ class TestCliParser(unittest.TestCase):
         # num test nodes are 3
 
         out = self.parser.parse('fencing_topology poison-pill power')
-        self.assertEqual("""<fencing-topology><fencing-level devices="poison-pill" index="1" target="ha-one"/><fencing-level devices="power" index="2" target="ha-one"/><fencing-level devices="poison-pill" index="1" target="ha-two"/><fencing-level devices="power" index="2" target="ha-two"/><fencing-level devices="poison-pill" index="1" target="ha-three"/><fencing-level devices="power" index="2" target="ha-three"/></fencing-topology>""", etree.tostring(out))
+        expect = '<fencing-topology><fencing-level devices="poison-pill" index="1" target="ha-one"/><fencing-level devices="power" index="2" target="ha-one"/><fencing-level devices="poison-pill" index="1" target="ha-three"/><fencing-level devices="power" index="2" target="ha-three"/><fencing-level devices="poison-pill" index="1" target="ha-two"/><fencing-level devices="power" index="2" target="ha-two"/></fencing-topology>'
+        self.assertEqual(expect, etree.tostring(out))
 
         out = self.parser.parse('fencing_topology node-a: poison-pill power node-b: ipmi serial')
         self.assertEqual(4, len(out))
@@ -661,7 +662,7 @@ class TestCliParser(unittest.TestCase):
             '<rsc_ticket id="ticket-A_m6" ticket="ticket-A" rsc="m6"/>',
             '<rsc_ticket id="ticket-B_m6_m5" ticket="ticket-B" loss-policy="fence"><resource_set><resource_ref id="m6"/><resource_ref id="m5"/></resource_set></rsc_ticket>',
             '<rsc_ticket id="ticket-C_master" ticket="ticket-C" loss-policy="fence"><resource_set><resource_ref id="m6"/></resource_set><resource_set role="Master"><resource_ref id="m5"/></resource_set></rsc_ticket>',
-            '<fencing-topology><fencing-level devices="st" index="1" target="ha-one"/><fencing-level devices="st2" index="2" target="ha-one"/><fencing-level devices="st" index="1" target="ha-two"/><fencing-level devices="st2" index="2" target="ha-two"/><fencing-level devices="st" index="1" target="ha-three"/><fencing-level devices="st2" index="2" target="ha-three"/></fencing-topology>',
+            '<fencing-topology><fencing-level devices="st" index="1" target="ha-one"/><fencing-level devices="st2" index="2" target="ha-one"/><fencing-level devices="st" index="1" target="ha-three"/><fencing-level devices="st2" index="2" target="ha-three"/><fencing-level devices="st" index="1" target="ha-two"/><fencing-level devices="st2" index="2" target="ha-two"/></fencing-topology>',
             '<cluster_property_set><nvpair name="stonith-enabled" value="true"/></cluster_property_set>',
             '<cluster_property_set id="cpset2"><nvpair name="maintenance-mode" value="true"/></cluster_property_set>',
             '<rsc_defaults><meta_attributes><nvpair name="failure-timeout" value="10m"/></meta_attributes></rsc_defaults>',
