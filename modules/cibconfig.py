@@ -3248,10 +3248,25 @@ class CibFactory(object):
             obj = self.find_resource(x)
             return obj and is_container(obj.node)
 
-        del_containers = [x for x in del_set if obj_is_container(x)]
-        del_objs = [x for x in del_set if not obj_is_container(x)]
+        def obj_is_constraint(x):
+            obj = self.find_resource(x)
+            return obj and is_constraint(obj.node)
 
-        # delete containers first in case objects are moved elsewhere
+        del_constraints = []
+        del_containers = []
+        del_objs = []
+        for x in del_set:
+            if obj_is_constraint(x):
+                del_constraints.append(x)
+            elif obj_is_container(x):
+                del_containers.append(x)
+            else:
+                del_objs.append(x)
+
+        # delete constraints and containers first in case objects are moved elsewhere
+        if not self.delete(*del_constraints):
+            common_debug("delete %s failed" % (list(del_set)))
+            return False
         if not self.delete(*del_containers):
             common_debug("delete %s failed" % (list(del_set)))
             return False
@@ -3281,7 +3296,8 @@ class CibFactory(object):
                              (obj, etree.tostring(node), method))
                 return False
             test_l.append(obj)
-        if not self.delete(*del_objs):
+
+        if not self.delete(*reversed(del_objs)):
             common_debug("delete %s failed" % (list(del_set)))
             return False
         rc = True
