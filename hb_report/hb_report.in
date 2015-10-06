@@ -330,8 +330,10 @@ find_decompressor() {
 		echo "gzip -dc"
 	elif echo $1 | grep -qs 'xz$'; then
 		echo "xz -dc"
-	else
+	elif file $1 | grep -qs 'text'; then
 		echo "cat"
+	else
+		echo "echo"
 	fi
 }
 #
