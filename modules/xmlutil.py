@@ -1021,7 +1021,7 @@ def rename_rscref_rset(c_obj, old_id, new_id):
 def rename_rscref(c_obj, old_id, new_id):
     if rename_rscref_simple(c_obj, old_id, new_id) or \
             rename_rscref_rset(c_obj, old_id, new_id):
-        err_buf.info("resource references in %s updated" % str(c_obj))
+        err_buf.info("modified %s from %s to %s" % (str(c_obj), old_id, new_id))
 
 
 def delete_rscref(c_obj, rsc_id):
