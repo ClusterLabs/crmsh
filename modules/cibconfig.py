@@ -523,28 +523,6 @@ class CibObjectSet(object):
             rc |= obj.check_sanity()
         return rc
 
-    def is_edit_valid(self, id_set):
-        '''
-        1. Cannot name any elements as those which exist but
-        were not picked for editing.
-        2. Cannot remove running resources.
-        '''
-        rc = True
-        not_allowed = id_set & self.locked_ids
-        rscstat = RscState()
-        if not_allowed:
-            common_err("Elements %s already exist" %
-                       ', '.join(list(not_allowed)))
-            rc = False
-        delete_set = self.obj_ids - id_set
-        cannot_delete = [x for x in delete_set
-                         if not rscstat.can_delete(x)]
-        if cannot_delete:
-            common_err("Cannot delete running resources: %s" %
-                       ', '.join(cannot_delete))
-            rc = False
-        return rc
-
 
 class CibObjectSetCli(CibObjectSet):
     '''
@@ -2142,6 +2120,29 @@ class CibDiff(object):
         return oset([n for n in self.objset.obj_ids
                      if self._obj_type(n) != 'node'])
 
+    def _is_edit_valid(self, id_set, existing):
+        '''
+        1. Cannot name any elements as those which exist but
+        were not picked for editing.
+        2. Cannot remove running resources.
+        '''
+        rc = True
+        not_allowed = id_set & self.objset.locked_ids
+        rscstat = RscState()
+        if not_allowed:
+            common_err("Elements %s already exist" %
+                       ', '.join(list(not_allowed)))
+            rc = False
+        delete_set = existing - id_set
+        cannot_delete = [x for x in delete_set
+                         if not rscstat.can_delete(x)]
+        if cannot_delete:
+            common_err("Cannot delete running resources: %s" %
+                       ', '.join(cannot_delete))
+            rc = False
+        return rc
+
+
     def apply(self, factory, mode='cli', no_remove=False, method='replace'):
         rc = True
 
@@ -2151,7 +2152,7 @@ class CibDiff(object):
         def calc_sets(input_set, existing):
             rc = True
             if not no_remove:
-                rc = self.objset.is_edit_valid(input_set)
+                rc = self._is_edit_valid(input_set, existing)
                 del_set = existing - (input_set)
             else:
                 del_set = oset()
