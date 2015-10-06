@@ -17,6 +17,8 @@ _here = os.path.dirname(__file__)
 config.path.sharedir = os.path.join(_here, "../../doc")
 config.path.crm_dtd_dir = os.path.join(_here, "schemas")
 
+os.environ["CIB_file"] = "test"
+
 
 # install a basic CIB
 from crmsh import cibconfig
@@ -35,9 +37,9 @@ _CIB = """
       </cluster_property_set>
     </crm_config>
     <nodes>
-      <node id="1" uname="ha-one"/>
-      <node id="2" uname="ha-two"/>
-      <node id="3" uname="ha-three"/>
+      <node id="ha-one" uname="ha-one"/>
+      <node id="ha-two" uname="ha-two"/>
+      <node id="ha-three" uname="ha-three"/>
     </nodes>
     <resources>
     </resources>

@@ -39,4 +39,4 @@ def test_show():
     setobj = cibconfig.mkset_obj()
     s = setobj.repr_nopretty()
     sp = s.splitlines()
-    assert_in("node 1: ha-one", sp[0:3])
+    assert_in("node ha-one", sp[0:3])
