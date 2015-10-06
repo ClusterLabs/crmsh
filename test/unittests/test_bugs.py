@@ -652,3 +652,98 @@ primitive p1 ocf:heartbeat:Dummy \
         print "*** NOW"
         print obj.repr()
         assert original_cib == obj.repr()
+
+
+@with_setup(setup_func, teardown_func)
+def test_id_collision_breakage_2():
+    from crmsh import clidisplay
+
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+    with clidisplay.nopretty():
+        original_cib = obj.repr()
+    print original_cib
+
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+
+    ok = obj.save("""node 168633610: webui
+node 168633611: node1
+rsc_template web-server apache \
+	params port=8000 \
+	op monitor interval=10s
+primitive d0 Dummy \
+	meta target-role=Started
+primitive d1 Dummy
+primitive d2 Dummy
+# Never use this STONITH agent in production!
+primitive development-stonith stonith:null \
+	params hostlist="webui node1 node2 node3"
+primitive proxy systemd:haproxy \
+	op monitor interval=10s
+primitive proxy-vip IPaddr2 \
+	params ip=10.13.37.20
+primitive srv1 @web-server
+primitive srv2 @web-server
+primitive vip1 IPaddr2 \
+	params ip=10.13.37.21 \
+	op monitor interval=20s
+primitive vip2 IPaddr2 \
+	params ip=10.13.37.22 \
+	op monitor interval=20s
+primitive virtual-ip IPaddr2 \
+	params ip=10.13.37.77 lvs_support=false \
+	op start timeout=20 interval=0 \
+	op stop timeout=20 interval=0 \
+	op monitor interval=10 timeout=20
+primitive yet-another-virtual-ip IPaddr2 \
+	params ip=10.13.37.72 cidr_netmask=24 \
+	op start interval=0 timeout=20 \
+	op stop interval=0 timeout=20 \
+	op monitor interval=10 timeout=20 \
+	meta target-role=Started
+group dovip d0 virtual-ip \
+	meta target-role=Stopped
+group g-proxy proxy-vip proxy
+group g-serv1 vip1 srv1
+group g-serv2 vip2 srv2
+clone d2-clone d2 \
+	meta target-role=Started
+tag dummytag d0 d1 d1-on-node1 d2 d2-clone
+# Never put the two web servers on the same node
+colocation co-serv -inf: g-serv1 g-serv2
+location d1-on-node1 d1 inf: node1
+# Never put any web server or haproxy on webui
+location l-avoid-webui { g-proxy g-serv1 g-serv2 } -inf: webui
+# Prever to spread groups across nodes
+location l-proxy g-proxy 200: node1
+location l-serv1 g-serv1 200: node2
+location l-serv2 g-serv2 200: node3
+property cib-bootstrap-options: \
+	have-watchdog=false \
+	dc-version="1.1.13+git20150917.20c2178-224.2-1.1.13+git20150917.20c2178" \
+	cluster-infrastructure=corosync \
+	cluster-name=hacluster \
+	stonith-enabled=true \
+	no-quorum-policy=ignore \
+	placement-strategy=balanced
+rsc_defaults rsc-options: \
+	resource-stickiness=1 \
+	migration-threshold=3
+op_defaults op-options: \
+	timeout=600 \
+	record-pending=true
+""")
+    assert ok
+
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+    ok = obj.save(original_cib)
+    assert ok
+    obj = cibconfig.mkset_obj()
+    with clidisplay.nopretty():
+        print "*** ORIGINAL"
+        print original_cib
+        print "*** NOW"
+        print obj.repr()
+        assert original_cib == obj.repr()
