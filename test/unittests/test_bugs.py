@@ -524,3 +524,84 @@ def test_existing_node_resource():
     ok, s = factory.mkobj_set('ha-one')
     assert ok
 
+
+@with_setup(setup_func, teardown_func)
+def test_id_collision_breakage_1():
+    from crmsh import clidisplay
+
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+    with clidisplay.nopretty():
+        original_cib = obj.repr()
+    print original_cib
+
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+
+    ok = obj.save("""node node1
+primitive p0 ocf:pacemaker:Dummy
+primitive p1 ocf:pacemaker:Dummy
+primitive p2 ocf:heartbeat:Delay \
+    params startdelay=2 mondelay=2 stopdelay=2
+primitive p3 ocf:pacemaker:Dummy
+primitive st stonith:null params hostlist=node1
+clone c1 p1
+ms m1 p2
+property default-action-timeout=60s
+""")
+    assert ok
+
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+    ok = obj.save("""property default-action-timeout=2m
+node node1 \
+    attributes mem=16G
+primitive st stonith:null \
+    params hostlist='node1' \
+    meta description="some description here" \
+    op start requires=nothing \
+    op monitor interval=60m
+primitive p1 ocf:heartbeat:Dummy \
+    op monitor interval=60m \
+    op monitor interval=120m OCF_CHECK_LEVEL=10
+""")
+    assert ok
+
+    obj = cibconfig.mkset_obj()
+    with clidisplay.nopretty():
+        text = obj.repr()
+    text = text + "\nprimitive p2 ocf:heartbeat:Dummy"
+    ok = obj.save(text)
+    assert ok
+
+    obj = cibconfig.mkset_obj()
+    with clidisplay.nopretty():
+        text = obj.repr()
+    text = text + "\ngroup g1 p1 p2"
+    ok = obj.save(text)
+    assert ok
+
+    obj = cibconfig.mkset_obj("g1")
+    with clidisplay.nopretty():
+        text = obj.repr()
+    text = text.replace("group g1 p1 p2", "group g1 p1 p3")
+    text = text + "\nprimitive p3 ocf:heartbeat:Dummy"
+    ok = obj.save(text)
+    assert ok
+
+    obj = cibconfig.mkset_obj("g1")
+    with clidisplay.nopretty():
+        print obj.repr().strip()
+        assert obj.repr().strip() == "group g1 p1 p3"
+
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+    ok = obj.save(original_cib)
+    assert ok
+    obj = cibconfig.mkset_obj()
+    with clidisplay.nopretty():
+        print "*** ORIGINAL"
+        print original_cib
+        print "*** NOW"
+        print obj.repr()
+        assert original_cib == obj.repr()

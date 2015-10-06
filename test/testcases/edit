@@ -12,7 +12,9 @@ primitive p1 ocf:heartbeat:Dummy \
 	op monitor interval=120m OCF_CHECK_LEVEL=10
 filter "sed '$aprimitive p2 ocf:heartbeat:Dummy'"
 filter "sed '$agroup g1 p1 p2'"
+show
 filter "sed 's/p2/p3/;$aprimitive p3 ocf:heartbeat:Dummy'" g1
+show
 filter "sed '$aclone c1 p2'"
 filter "sed 's/p2/g1/'" c1
 filter "sed '/clone/s/g1/p2/'" c1 g1
