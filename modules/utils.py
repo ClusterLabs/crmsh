@@ -1438,7 +1438,7 @@ def cluster_copy_file(local_path, nodes=None):
     if not nodes:
         nodes = list_cluster_nodes()
         nodes.remove(this_node())
-        opts = parallax.Options()
+    opts = parallax.Options()
     opts.timeout = 60
     opts.ssh_options += ['ControlPersist=no']
     ok = True
