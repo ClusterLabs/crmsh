@@ -797,12 +797,12 @@ rules ::
 
 id_spec :: $id=<id> | $id-ref=<id>
 score :: <number> | <attribute> | [-]inf
-expression :: <simple_exp> [bool_op <simple_exp> ...]
+expression :: <simple_exp> [<bool_op> <simple_exp> ...]
 bool_op :: or | and
 simple_exp :: <attribute> [type:]<binary_op> <value>
           | <unary_op> <attribute>
           | date <date_expr>
-type :: string | version | number
+type :: <string> | <version> | <number>
 binary_op :: lt | gt | lte | gte | eq | ne
 unary_op :: defined | not_defined
 
@@ -2574,8 +2574,8 @@ Usage:
 ...............
 clone <name> <rsc>
   [description=<description>]
-  [meta attr_list]
-  [params attr_list]
+  [meta <attr_list>]
+  [params <attr_list>]
 
 attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
 ...............
@@ -2622,13 +2622,13 @@ Usage:
 colocation <id> <score>: <rsc>[:<role>] <with-rsc>[:<role>]
   [node-attribute=<node_attr>]
 
-colocation <id> <score>: resource_sets
+colocation <id> <score>: <resource_sets>
   [node-attribute=<node_attr>]
 
-resource_sets :: resource_set [resource_set ...]
+resource_sets :: <resource_set> [<resource_set> ...]
 
 resource_set :: ["("|"["] <rsc>[:<role>] [<rsc>[:<role>] ...] \
-                [attributes]  [")"|"]"]
+                [<attributes>]  [")"|"]"]
 
 attributes :: [require-all=(true|false)] [sequential=(true|false)]
 
@@ -2935,7 +2935,7 @@ For more information on rule expressions, see
 
 Usage:
 ...............
-location <id> rsc [role=<role>] {node_pref|rules}
+location <id> <rsc> [role=<role>] {<node_pref>|<rules>}
 
 rsc :: /<rsc-pattern>/
         | { resource_sets }
@@ -2949,7 +2949,7 @@ rules ::
 
 id_spec :: $id=<id> | $id-ref=<id>
 score :: <number> | <attribute> | [-]inf
-expression :: <simple_exp> [bool_op <simple_exp> ...]
+expression :: <simple_exp> [<bool_op> <simple_exp> ...]
 bool_op :: or | and
 simple_exp :: <attribute> [type:]<binary_op> <value>
           | <unary_op> <attribute>
