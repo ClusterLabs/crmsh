@@ -2924,6 +2924,9 @@ following:
 * Tag containing resource ids: +location loc1 tag1 100: node1+
 * Resource pattern: +location loc1 /web.*/ 100: node1+
 
+The +resource-discovery+ attribute allows probes to be selectively
+enabled or disabled per resource and node.
+
 The syntax for resource sets is described in detail for
 <<cmdhelp_configure_colocation,`colocation`>>.
 
@@ -2935,11 +2938,13 @@ For more information on rule expressions, see
 
 Usage:
 ...............
-location <id> <rsc> [role=<role>] {<node_pref>|<rules>}
+location <id> <rsc> [<attributes>] {<node_pref>|<rules>}
 
 rsc :: /<rsc-pattern>/
         | { resource_sets }
         | <rsc>
+
+attributes :: role=<role> | resource-discovery=always|never|exclusive
 
 node_pref :: <score>: <node>
 
@@ -2984,6 +2989,9 @@ location conn_1 internal_www \
 
 location conn_2 dummy_float \
   rule -inf: not_defined pingd or pingd number:lte 0
+
+# never probe for rsc1 on node1
+location no-probe rsc1 resource-discovery=never -inf: node1
 ...............
 
 [[cmdhelp_configure_modgroup,modify group]]
