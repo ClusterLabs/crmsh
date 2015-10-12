@@ -18,7 +18,7 @@ from . import constants
 from . import options
 from .cibconfig import mkset_obj, cib_factory
 from .msg import common_err, common_debug, common_info
-from .msg import syntax_err, bad_usage
+from .msg import syntax_err
 from . import report
 from . import cmd_status
 
