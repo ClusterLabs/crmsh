@@ -245,7 +245,6 @@ node-max=1 (which is the default).
       Broadcast address
 
 
-
 .INP: verify virtual-ip id=foo ip=10.0.0.5
 1. Configure cluster resources
 
