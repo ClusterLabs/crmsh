@@ -2761,20 +2761,26 @@ described below.
 
 Usage:
 ...............
-fencing_topology stonith_resources [stonith_resources ...]
-fencing_topology fencing_order [fencing_order ...]
+fencing_topology <stonith_resources> [<stonith_resources> ...]
+fencing_topology <fencing_order> [<fencing_order> ...]
 
-fencing_order :: target stonith_resources [stonith_resources ...]
+fencing_order :: <target> <stonith_resources> [<stonith_resources> ...]
 
 stonith_resources :: <rsc>[,<rsc>...]
 target :: <node>: | attr:<node-attribute>=<value>
 ...............
 Example:
 ...............
+# Only kill the power if poison-pill fails
 fencing_topology poison-pill power
+
+# As above for node-a, but a different strategy for node-b
 fencing_topology \
-    node-a: poison-pill power
+    node-a: poison-pill power \
     node-b: ipmi serial
+
+# Fencing anything on rack 1 requires fencing via both APC 1 and 2,
+# to defeat the redundancy provided by two separate UPS units.
 fencing_topology attr:rack=1 apc01,apc02
 ...............
 
