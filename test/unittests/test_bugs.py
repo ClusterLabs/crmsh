@@ -655,6 +655,50 @@ primitive p1 ocf:heartbeat:Dummy \
 
 
 @with_setup(setup_func, teardown_func)
+def test_id_collision_breakage_3():
+    from crmsh import clidisplay
+
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+    with clidisplay.nopretty():
+        original_cib = obj.repr()
+    print original_cib
+
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+    ok = obj.save("""node node1
+primitive node1 Dummy params fake=something
+    """)
+    assert ok
+
+    print "** baseline"
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+    with clidisplay.nopretty():
+        print obj.repr()
+
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+    ok = obj.save("""primitive node1 Dummy params fake=something-else
+    """, no_remove=True, method='update')
+    assert ok
+
+    print "** end"
+
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+    ok = obj.save(original_cib, no_remove=False, method='replace')
+    assert ok
+    obj = cibconfig.mkset_obj()
+    with clidisplay.nopretty():
+        print "*** ORIGINAL"
+        print original_cib
+        print "*** NOW"
+        print obj.repr()
+        assert original_cib == obj.repr()
+
+
+@with_setup(setup_func, teardown_func)
 def test_id_collision_breakage_2():
     from crmsh import clidisplay
 

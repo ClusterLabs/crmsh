@@ -2127,13 +2127,25 @@ class CibDiff(object):
                 return obj.obj_type
         return None
 
+    def _is_node(self, nid):
+        for obj in self.objset.all_set:
+            if obj.obj_id == nid and obj.obj_type == 'node':
+                return True
+        return False
+
+    def _is_resource(self, nid):
+        for obj in self.objset.all_set:
+            if obj.obj_id == nid and obj.obj_type != 'node':
+                return True
+        return False
+
     def _obj_nodes(self):
         return oset([n for n in self.objset.obj_ids
-                     if self._obj_type(n) == 'node'])
+                     if self._is_node(n)])
 
     def _obj_resources(self):
         return oset([n for n in self.objset.obj_ids
-                     if self._obj_type(n) != 'node'])
+                     if self._is_resource(n)])
 
     def _is_edit_valid(self, id_set, existing):
         '''
