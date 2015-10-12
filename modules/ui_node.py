@@ -88,22 +88,22 @@ class NodeMgmt(command.UI):
     node_clear_state_118 = "stonith_admin --confirm %s"
     hb_delnode = config.path.hb_delnode + " '%s'"
     crm_node = "crm_node"
-    node_fence = "crm_attribute -t status -U '%s' -n terminate -v true"
+    node_fence = "crm_attribute -t status -N '%s' -n terminate -v true"
     dc = "crmadmin -D"
     node_attr = {
-        'set': "crm_attribute -t nodes -U '%s' -n '%s' -v '%s'",
-        'delete': "crm_attribute -D -t nodes -U '%s' -n '%s'",
-        'show': "crm_attribute -G -t nodes -U '%s' -n '%s'",
+        'set': "crm_attribute -t nodes -N '%s' -n '%s' -v '%s'",
+        'delete': "crm_attribute -D -t nodes -N '%s' -n '%s'",
+        'show': "crm_attribute -G -t nodes -N '%s' -n '%s'",
     }
     node_status = {
-        'set': "crm_attribute -t status -U '%s' -n '%s' -v '%s'",
-        'delete': "crm_attribute -D -t status -U '%s' -n '%s'",
-        'show': "crm_attribute -G -t status -U '%s' -n '%s'",
+        'set': "crm_attribute -t status -N '%s' -n '%s' -v '%s'",
+        'delete': "crm_attribute -D -t status -N '%s' -n '%s'",
+        'show': "crm_attribute -G -t status -N '%s' -n '%s'",
     }
     node_utilization = {
-        'set': "crm_attribute -z -t nodes -U '%s' -n '%s' -v '%s'",
-        'delete': "crm_attribute -z -D -t nodes -U '%s' -n '%s'",
-        'show': "crm_attribute -z -G -t nodes -U '%s' -n '%s'",
+        'set': "crm_attribute -z -t nodes -N '%s' -n '%s' -v '%s'",
+        'delete': "crm_attribute -z -D -t nodes -N '%s' -n '%s'",
+        'show': "crm_attribute -z -G -t nodes -N '%s' -n '%s'",
     }
 
     def requires(self):
