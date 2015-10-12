@@ -2773,7 +2773,7 @@ Example:
 ...............
 fencing_topology poison-pill power
 fencing_topology \
-    node-a: poison-pill power
+    node-a: poison-pill power \
     node-b: ipmi serial
 fencing_topology attr:rack=1 apc01,apc02
 ...............
