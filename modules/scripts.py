@@ -1160,7 +1160,7 @@ def _extract_localnode(hosts):
 # TODO: remove common params?
 # Pass them in a separate list of options?
 # Right now these names are basically reserved..
-def _common_params():
+def common_params():
     "Parameters common to all cluster scripts"
     return [('nodes', None, 'List of nodes to execute the script for'),
             ('dry_run', 'no', 'If set, simulate execution only'),
@@ -1174,7 +1174,7 @@ def _common_params():
 
 
 def _common_param_default(name):
-    for param, default, _ in _common_params():
+    for param, default, _ in common_params():
         if param == name:
             return default
     return None
@@ -1403,7 +1403,7 @@ def _check_parameters(script, params):
     # pass as flags to command line
 
     def _split_commons(params):
-        ret, cdict = {}, dict([(c, d) for c, d, _ in _common_params()])
+        ret, cdict = {}, dict([(c, d) for c, d, _ in common_params()])
         for key, value in params.iteritems():
             if key in cdict:
                 cdict[key] = value

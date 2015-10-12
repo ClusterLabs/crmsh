@@ -138,7 +138,6 @@ def describe_step(icontext, context, s, all):
         ret += describe_param(p, _scoped_name(context, p['name']), all)
     for i, step in enumerate(s.get('steps', [])):
         ret += describe_step(icontext + [i], context, step, all)
-    ret += '\n'
     return ret
 
 
@@ -238,13 +237,21 @@ class Script(command.UI):
             'shortdesc': str(script['shortdesc']),
             'longdesc': scripts.format_desc(script['longdesc']),
             'steps': "\n".join((describe_step([i], [], s, all) for i, s in enumerate(script['steps'])))}
-        print("""%(name)s (%(category)s)
+        output = """%(name)s (%(category)s)
 %(shortdesc)s
 
 %(longdesc)s
 
 %(steps)s
-""" % vals)
+""" % vals
+        if all:
+            output += "Common Parameters\n\n"
+            for name, defval, desc in scripts.common_params():
+                output += "  %s\n" % (name)
+                output += "      %s\n" % (desc)
+                if defval is not None:
+                    output += "      (default: %s)\n" % (defval)
+        utils.page_string(output)
 
     @command.completers(compl.call(scripts.list_scripts))
     def do_verify(self, context, name, *args):
