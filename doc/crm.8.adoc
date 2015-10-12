@@ -2761,10 +2761,10 @@ described below.
 
 Usage:
 ...............
-fencing_topology stonith_resources [stonith_resources ...]
-fencing_topology fencing_order [fencing_order ...]
+fencing_topology <stonith_resources> [<stonith_resources> ...]
+fencing_topology <fencing_order> [<fencing_order> ...]
 
-fencing_order :: target stonith_resources [stonith_resources ...]
+fencing_order :: <target> <stonith_resources> [<stonith_resources> ...]
 
 stonith_resources :: <rsc>[,<rsc>...]
 target :: <node>: | attr:<node-attribute>=<value>
