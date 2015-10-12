@@ -262,27 +262,27 @@ class Actions(object):
 
     def collect(self):
         "input: shell command"
-        self._run.run_command(self._nodes or 'all', self._value)
+        self._run.run_command(self._nodes or 'all', self._value, True)
         self._run.record_json()
 
     def validate(self):
         "input: shell command"
-        self._run.run_command(self._nodes, self._value)
+        self._run.run_command(None, self._value, True)
         self._run.validate_json()
 
     def apply(self):
         "input: shell command"
-        self._run.run_command(self._nodes or 'all', self._value)
+        self._run.run_command(self._nodes or 'all', self._value, True)
         self._run.record_json()
 
     def apply_local(self):
         "input: shell command"
-        self._run.run_command(self._nodes, self._value)
+        self._run.run_command(None, self._value, True)
         self._run.record_json()
 
     def report(self):
         "input: shell command"
-        self._run.run_command(self._nodes, self._value)
+        self._run.run_command(None, self._value, False)
         self._run.report_result()
 
     def call(self):
@@ -1769,15 +1769,15 @@ class RunActions(object):
                             self.dstfile,
                             self.opts)
 
-    def run_command(self, nodes, command):
+    def run_command(self, nodes, command, is_json_output):
         "called by Actions"
         cmdline = 'cd "%s"; ./%s' % (self.workdir, command)
         if not self._update_state():
             raise ValueError("Failed when updating input, aborting.")
-        self.call(nodes, cmdline)
+        self.call(nodes, cmdline, is_json_output)
 
     def copy_file(self, nodes, src, dst):
-        if nodes == 'all':
+        if not self._is_local(nodes):
             ok = _copy_to_all(self.printer,
                               self.workdir,
                               self.hosts,
@@ -1798,7 +1798,7 @@ class RunActions(object):
         "called by Actions"
         if self.result is not None:
             if not self.result:
-                self.result = ''
+                self.result = {}
             self.data.append(self.result)
             self.rc = True
         else:
@@ -1851,11 +1851,22 @@ class RunActions(object):
             prompt = "sudo password: "
             self.sudo_pass = getpass.getpass(prompt=prompt)
 
-    def call(self, nodes, cmdline):
+    def _is_local(self, nodes):
+        islocal = False
         if nodes == 'all':
-            self.result = self._process_remote(cmdline)
+            pass
+        elif nodes is not None and nodes != []:
+            islocal = nodes == [self.local_node_name()]
         else:
-            self.result = self._process_local(cmdline)
+            islocal = True
+        self.printer.debug("is_local (%s): %s" % (nodes, islocal))
+        return islocal
+
+    def call(self, nodes, cmdline, is_json_output=False):
+        if not self._is_local(nodes):
+            self.result = self._process_remote(cmdline, is_json_output)
+        else:
+            self.result = self._process_local(cmdline, is_json_output)
         self.rc = self.result not in (False, None)
 
     def execute_shell(self, nodes, cmdscript):
@@ -1872,7 +1883,7 @@ class RunActions(object):
 
         tmpf = self.str2tmp(cmdscript)
         _chmodx(tmpf)
-        if nodes == 'all':
+        if not self._is_local(nodes):
             ok = _copy_to_remote_dirs(self.printer,
                                       self.hosts,
                                       tmpf,
@@ -1881,10 +1892,10 @@ class RunActions(object):
                 self.result = False
             else:
                 cmdline = 'cd "%s"; %s' % (self.workdir, tmpf)
-                self.result = self._process_remote(cmdline)
+                self.result = self._process_remote(cmdline, False)
         else:
             cmdline = 'cd "%s"; %s' % (self.workdir, tmpf)
-            self.result = self._process_local(cmdline)
+            self.result = self._process_local(cmdline, False)
         self.rc = self.result not in (None, False)
 
     def str2tmp(self, s):
@@ -1908,7 +1919,7 @@ class RunActions(object):
             return
         return fn
 
-    def _process_remote(self, cmdline):
+    def _process_remote(self, cmdline, is_json_output):
         """
         Handle an action that executes on all nodes
         """
@@ -1938,20 +1949,24 @@ class RunActions(object):
                 if rc != 0:
                     self.printer.error(host, "Remote error (rc=%s) %s%s" % (rc, out, err))
                     ok = False
-                else:
+                elif is_json_output:
                     action_result[host] = json.loads(out)
+                else:
+                    action_result[host] = out
         if self.local_node:
-            ret = self._process_local(cmdline)
+            ret = self._process_local(cmdline, False)
             if ret is None:
                 ok = False
-            else:
+            elif is_json_output:
                 action_result[self.local_node_name()] = json.loads(ret)
+            else:
+                action_result[self.local_node_name()] = ret
         if ok:
             self.printer.debug("Result: %s" % repr(action_result))
             return action_result
         return None
 
-    def _process_local(self, cmdline):
+    def _process_local(self, cmdline, is_json_output):
         """
         Handle an action that executes locally
         """
@@ -1968,7 +1983,9 @@ class RunActions(object):
         if rc != 0:
             self.printer.error(self.local_node_name(), "Error (%d): %s" % (rc, err))
             return None
-        self.printer.debug("%s" % repr(out))
+        self.printer.debug("Result(local): %s" % repr(out))
+        if is_json_output:
+            out = json.loads(out)
         return out
 
     def local_node_name(self):
