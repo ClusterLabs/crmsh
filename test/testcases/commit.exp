@@ -27,17 +27,17 @@ ERROR: 7: st: attribute yoyo-meta does not exist
 .INP: commit
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: rename p3 pp3
-INFO: 21: resource references in colocation:cl1 updated
-INFO: 21: resource references in location:l1 updated
-INFO: 21: resource references in order:o1 updated
+INFO: 21: modified colocation:cl1 from p3 to pp3
+INFO: 21: modified location:l1 from p3 to pp3
+INFO: 21: modified order:o1 from p3 to pp3
 .INP: commit
 .INP: rename pp3 p3
-INFO: 23: resource references in colocation:cl1 updated
-INFO: 23: resource references in location:l1 updated
-INFO: 23: resource references in order:o1 updated
+INFO: 23: modified colocation:cl1 from pp3 to p3
+INFO: 23: modified location:l1 from pp3 to p3
+INFO: 23: modified order:o1 from pp3 to p3
 .INP: delete c1
-INFO: 24: resource references in colocation:cl1 updated
-INFO: 24: resource references in order:o1 updated
+INFO: 24: modified colocation:cl1 from c1 to g1
+INFO: 24: modified order:o1 from c1 to g1
 .INP: commit
 .INP: group g2 d1 d2
 .INP: commit

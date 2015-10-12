@@ -130,6 +130,7 @@ resource p0 is NOT running
 .SETENV showobj=p0
 .TRY resource param p0 set a0 "1 2 3"
 .EXT crm_resource -r 'p0' -p 'a0' -v '1 2 3'
+
 Set 'p0' option: id=p0-instance_attributes-a0 set=p0-instance_attributes name=a0=1 2 3
 .INP: configure
 .INP: _regtest on
@@ -194,6 +195,7 @@ Deleted 'p0' option: id=p0-instance_attributes-a0 name=a0
 
 .TRY resource meta p0 set m0 123
 .EXT crm_resource --meta -r 'p0' -p 'm0' -v '123'
+
 Set 'p0' option: id=p0-meta_attributes-m0 set=p0-meta_attributes name=m0=123
 .INP: configure
 .INP: _regtest on
