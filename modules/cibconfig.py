@@ -1957,7 +1957,7 @@ class CibFencingOrder(CibObject):
             return utils.get_check_rc()
         rc = 0
         nl = self.node.findall("fencing-level")
-        for target in [x.get("target") for x in nl]:
+        for target in [x.get("target") for x in nl if x.get("target") is not None]:
             if target.lower() not in [id.lower() for id in cib_factory.node_id_list()]:
                 common_warn("%s: target %s not a node" % (self.obj_id, target))
                 rc = 1

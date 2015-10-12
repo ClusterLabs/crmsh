@@ -791,3 +791,22 @@ op_defaults op-options: \
         print "*** NOW"
         print obj.repr()
         assert original_cib == obj.repr()
+
+
+@with_setup(setup_func, teardown_func)
+def test_bug_110():
+    """
+    configuring attribute-based fencing-topology
+    """
+    factory.create_object(*"primitive stonith-libvirt stonith:null".split())
+    factory.create_object(*"primitive fence-nova stonith:null".split())
+    cmd = "fencing_topology attr:OpenStack-role=compute stonith-libvirt,fence-nova".split()
+    ok = factory.create_object(*cmd)
+    assert ok
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+
+    for o in obj.obj_set:
+        if o.node.tag == 'fencing-topology':
+            assert o.check_sanity() == 0
+
