@@ -442,7 +442,7 @@ on each of the cluster nodes.
           {{database:id}}
           {{virtual-ip:id}}
           {{id}}
----
+----
 
 The language for referring to parameter values in `cib` actions is
 described below.
