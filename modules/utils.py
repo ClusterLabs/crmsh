@@ -1013,11 +1013,45 @@ def lines2cli(s):
     return [x for x in cl if x]
 
 
+def datetime_is_aware(dt):
+    """
+    Determines if a given datetime.datetime is aware.
+
+    The logic is described in Python's docs:
+    http://docs.python.org/library/datetime.html#datetime.tzinfo
+    """
+    return dt and dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None
+
+
+def make_datetime_naive(dt):
+    """
+    Ensures that the datetime is
+    not time zone-aware
+    """
+    if dt and datetime_is_aware(dt):
+        return dt.replace(tzinfo=None) - dt.utcoffset()
+    return dt
+
+
+def datetime_to_timestamp(dt):
+    """
+    Convert a datetime object into a floating-point second value
+    """
+    try:
+        return (make_datetime_naive(dt) - datetime.datetime(1970, 1, 1)).total_seconds()
+    except Exception as e:
+        common_err("datetime_to_timestamp error: %s" % (e))
+        return None
+
+
 def parse_time(t):
     '''
     Try to make sense of the user provided time spec.
     Use dateutil if available, otherwise strptime.
     Return the datetime value.
+
+    Also does time zone elimination by passing the datetime
+    through a timestamp conversion if necessary
     '''
     try:
         import dateutil.parser
@@ -1032,6 +1066,11 @@ def parse_time(t):
         except ValueError, msg:
             common_err("no dateutil, please provide times as printed by date(1)")
             return None
+    if datetime_is_aware(dt):
+        ts = datetime_to_timestamp(dt)
+        if ts is None:
+            return None
+        dt = datetime.datetime.fromtimestamp(ts)
     return dt
 
 

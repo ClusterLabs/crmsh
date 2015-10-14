@@ -16,6 +16,7 @@ from .xmlutil import file2cib_elem, get_rsc_children_ids, get_prim_children_ids,
 from .utils import file2str, shortdate, acquire_lock, append_file, ext_cmd, shorttime
 from .utils import page_string, release_lock, rmdir_r, parse_time, get_cib_attributes
 from .utils import is_pcmk_118, pipe_cmd_nosudo, file_find_by_name, get_stdout, quote
+from .utils import make_datetime_naive, datetime_to_timestamp
 
 _HAS_PARALLAX = False
 try:
@@ -67,7 +68,7 @@ def make_time(t):
     if t is None:
         return None
     elif isinstance(t, datetime.datetime):
-        return convert_dt(t)
+        return datetime_to_timestamp(t)
     return t
 
 
@@ -81,13 +82,14 @@ def syslog_ts(s):
         # strptime returns a time_struct
         tm = time.strptime(' '.join([YEAR] + s.split()[0:3]),
                            "%Y %b %d %H:%M:%S")
-        return time.mktime(tm)
+        ts = time.mktime(tm)
     except:  # try the rfc5424
         try:
-            return convert_dt(parse_time(s.split()[0]))
+            ts = datetime_to_timestamp(parse_time(s.split()[0]))
         except Exception:
             common_debug("malformed line: %s" % s)
             return None
+    return ts
 
 
 _syslog2node_formats = (re.compile(r'\w+ \d+ \d+:\d+:\d+ (?:\[\d+\])? (\w+)'),
@@ -274,18 +276,6 @@ def last_log_lines(log_l):
     return l
 
 
-def convert_dt(dt):
-    """
-    Convert a datetime object into a floating-point second value
-    """
-    try:
-        ts = time.mktime(dt.timetuple())
-        ts += dt.microsecond / 1000000.0
-        return ts
-    except:
-        return None
-
-
 class LogSyslog(object):
     '''
     Slice log, search log.
@@ -337,8 +327,10 @@ class LogSyslog(object):
             start = log_seek(f, self.from_ts)
             end = log_seek(f, self.to_ts, to_end=True)
             if start == -1 or end == -1:
+                common_debug("%s is a bad log" % (log))
                 bad_logs.append(log)
             else:
+                common_debug("%s start=%s, end=%s" % (log, start, end))
                 self.startpos[f] = start
                 self.endpos[f] = end
         for log in bad_logs:
@@ -435,7 +427,7 @@ class LogSyslog(object):
 def human_date(dt):
     'Some human date representation. Date defaults to now.'
     if not dt:
-        dt = datetime.datetime.now()
+        dt = make_datetime_naive(datetime.datetime.now())
     # drop microseconds
     return re.sub("[.].*", "", "%s %s" % (dt.date(), dt.time()))
 
