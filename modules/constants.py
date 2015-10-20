@@ -259,16 +259,18 @@ graph = {
     "node": {
         "style": "bold",
         "shape": "box",
-        "color": "blue",
+        "color": "#7ac142",
     },
     "primitive": {
-        "fillcolor": "lightgrey",
+        "fillcolor": "#e4e5e6",
+        "color": "#b9b9b9",
         "style": "filled",
     },
     "rsc_template": {
-        "fillcolor": "lightgrey",
-        "color": "mediumpurple",
+        "fillcolor": "#e4e5e6",
+        "color": "#b9b9b9",
         "style": "filled",
+        "shape": "invhouse",
     },
     "class:stonith": {
         "shape": "box",
@@ -279,14 +281,14 @@ graph = {
         "dir": "none",
     },
     "clone": {
-        "color": "red",
+        "color": "#ec008c",
     },
     "ms": {
-        "color": "maroon",
+        "color": "#f8981d",
     },
     "group": {
-        "color": "blue",
-        "group": "blue",
+        "color": "#00aeef",
+        "group": "#00aeef",
         "labelloc": "b",
         "labeljust": "r",
         "labelfontsize": "12",
@@ -295,7 +297,7 @@ graph = {
         "style": "dotted",
     },
     "template:edge": {
-        "color": "grey64",
+        "color": "#b9b9b9",
         "style": "dotted",
         "arrowtail": "open",
         "dir": "back",
