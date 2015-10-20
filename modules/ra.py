@@ -147,11 +147,7 @@ class RaCrmResource(object):
         Get information from crm_resource.
         '''
         rc, l = stdout2list("crm_resource %s" % opts, stderr_on=False)
-        # not clear when/why crm_resource exits with non-zero
-        # code
-        #if rc != 0:
-        #    common_debug("crm_resource %s exited with code %d" %
-        #                 (opts, rc))
+        # TODO: check rc
         return l
 
     def meta(self, ra_class, ra_type, ra_provider):
@@ -476,8 +472,7 @@ class RAInfo(object):
             return None
         return [c.get("name")
                 for c in self.ra_elem.xpath("//parameters/parameter")
-                if c.get("name")
-                and c.get("name") not in self.excluded_from_completion]
+                if c.get("name") and c.get("name") not in self.excluded_from_completion]
 
     def actions(self):
         '''

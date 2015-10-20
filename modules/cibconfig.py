@@ -2169,7 +2169,6 @@ class CibDiff(object):
             rc = False
         return rc
 
-
     def apply(self, factory, mode='cli', no_remove=False, method='replace'):
         rc = True
 
@@ -2691,9 +2690,10 @@ class CibFactory(object):
 
     def find_objects(self, obj_id):
         "Find objects for id (can be a wildcard-glob)."
+        def matchfn(x):
+            return x and fnmatch.fnmatch(x, obj_id)
         if not self.is_cib_sane() or obj_id is None:
             return None
-        matchfn = lambda x: x and fnmatch.fnmatch(x, obj_id)
         objs = []
         for obj in self.cib_objects:
             if matchfn(obj.obj_id):
@@ -3690,9 +3690,7 @@ class CibFactory(object):
         erase_ok = True
         l = []
         rscstat = RscState()
-        for obj in [obj for obj in self.cib_objects
-                    if not obj.children and not is_constraint(obj.node)
-                    and obj.obj_type != "node"]:
+        for obj in [obj for obj in self.cib_objects if not obj.children and not is_constraint(obj.node) and obj.obj_type != "node"]:
             if not rscstat.can_delete(obj.obj_id):
                 common_warn("resource %s is running, can't delete it" % obj.obj_id)
                 erase_ok = False

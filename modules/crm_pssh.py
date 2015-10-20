@@ -127,7 +127,7 @@ def examine_outcome(l, opts, statuses):
         show_output(opts.errdir, hosts, "stderr")
         return False
     # The any builtin was introduced in Python 2.5 (so we can't use it yet):
-    #elif any(x==255 for x in statuses):
+    # elif any(x==255 for x in statuses):
     for status in statuses:
         if status == 255:
             common_warn("ssh processes failed")

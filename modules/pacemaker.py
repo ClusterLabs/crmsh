@@ -124,11 +124,6 @@ class Schema(object):
 
         except etree.Error, msg:
             raise PacemakerError("Failed to parse the Relax-NG schema: " + str(msg))
-        #try:
-        #   schema.assertValid(cib_elem)
-        #except etree.DocumentInvalid, err_msg:
-        #   print err_msg
-        #   print schema.error_log
         try:
             etree.clear_error_log()
         except:
@@ -330,9 +325,6 @@ class RngSchema(Schema):
         attr_values = []
         sub_rng_nodes = self.sorted_sub_rng_nodes_by_node(*attr_rng_node[0])
         for sub_rng_node in sub_rng_nodes.get("value", []):
-            #print etree.tostring(sub_rng_node[0][1])
-            #print sub_rng_node[0][1].text
-            #attr_values.append(sub_rng_node[0][1].getchildren()[0].data)
             attr_values.append(sub_rng_node[0][1].text)
 
         return attr_values
@@ -361,7 +353,6 @@ class RngSchema(Schema):
             if selected.count(name):
                 continue
             # the complicated case: 'choice'
-            #if self.find_decl(sub_rng_node, "choice") != 0:
             optional = any(self.find_decl(node, opt) != 0
                            for opt in ("optional", "zeroOrMore"))
             if subset_select(sub_set, optional):

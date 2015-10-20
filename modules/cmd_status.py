@@ -36,8 +36,7 @@ _ERRORS = ['not running',
            'unknown',
            'Unknown',
            'OFFLINE',
-           'Failed actions'
-]
+           'Failed actions']
 
 
 class CrmMonFilter(object):

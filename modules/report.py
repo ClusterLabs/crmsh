@@ -1548,10 +1548,8 @@ class Report(object):
                 return False
             self.show_logs(log_l=l)
 
-    pe_details_header = \
-      "Date       Start    End       Filename      Client     User       Origin"
-    pe_details_separator = \
-      "====       =====    ===       ========      ======     ====       ======"
+    pe_details_header = "Date       Start    End       Filename      Client     User       Origin"
+    pe_details_separator = "====       =====    ===       ========      ======     ====       ======"
 
     def pe_detail_format(self, t_obj):
         l = [
