@@ -9,11 +9,12 @@
 
   parameters:
     - name: id
-      shortdesc: DRBD Cluster Resource ID.
+      shortdesc: DRBD Cluster Resource ID
       required: true
       value: drbd-data
       type: resource
     - name: drbd_resource
+      shortdesc: DRBD Resource Name
       required: true
       value: drbd0
       type: string
@@ -29,5 +30,5 @@
             drbdconf="{{drbdconf}}"
           op monitor interval="29s" role="Master"
           op monitor interval="31s" role="Slave"
-        ms ms-{{drbd:id}} {{drbd:id}}
+        ms ms-{{id}} {{id}}
           meta master-max=1 master-node-max=1 clone-max=2 clone-node-max=1 notify=true
