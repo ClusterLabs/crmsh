@@ -264,13 +264,14 @@ graph = {
     "primitive": {
         "fillcolor": "#e4e5e6",
         "color": "#b9b9b9",
-        "style": "filled",
+        "shape": "box",
+        "style": "rounded,filled",
     },
     "rsc_template": {
-        "fillcolor": "#e4e5e6",
+        "fillcolor": "#ffd457",
         "color": "#b9b9b9",
-        "style": "filled",
-        "shape": "invhouse",
+        "shape": "box",
+        "style": "rounded,filled,dashed",
     },
     "class:stonith": {
         "shape": "box",
