@@ -83,8 +83,6 @@ def syslog_ts(s):
     """
     fmt1, fmt2 = _syslog2node_formats
     m = fmt1.match(s)
-    ts = None
-
     if m:
         if YEAR is None:
             set_year()
