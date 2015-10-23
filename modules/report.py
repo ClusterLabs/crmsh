@@ -88,28 +88,32 @@ def make_time(t):
     return t
 
 
+_syslog2node_formats = (re.compile(r'^[a-zA-Z]{2,4} \d{1,2} \d{2}:\d{2}:\d{2}\s+(?:\[\d+\])?\s*([\S]+)'),
+                        re.compile(r'^\d{4}-\d{2}-\d{2}T\S+\s+(?:\[\d+\])?\s*([\S]+)'))
+
+
 def syslog_ts(s):
     """
     Finds the timestamp in the given line
     Returns as floating point, seconds
     """
-    try:
-        # strptime defaults year to 1900 (sigh)
-        # strptime returns a time_struct
-        tm = time.strptime(' '.join([YEAR] + s.split()[0:3]),
-                           "%Y %b %d %H:%M:%S")
-        ts = time.mktime(tm)
-    except:  # try the rfc5424
-        try:
-            ts = datetime_to_timestamp(parse_time(s.split()[0]))
-        except Exception:
-            common_debug("malformed line: %s" % s)
-            return None
-    return ts
+    fmt1, fmt2 = _syslog2node_formats
+    m = fmt1.match(s)
+    ts = None
 
+    if m:
+        if YEAR is None:
+            set_year()
+        tstr = ' '.join([YEAR] + s.split()[0:3])
+        return datetime_to_timestamp(parse_time(tstr))
 
-_syslog2node_formats = (re.compile(r'\w+ \d+ \d+:\d+:\d+ (?:\[\d+\])? (\w+)'),
-                        re.compile(r'\w+ (?:\[\d+\])? (\w+)'))
+    m = fmt2.match(s)
+    if m:
+        tstr = s.split()[0]
+        return datetime_to_timestamp(parse_time(tstr))
+
+    common_debug("malformed line: %s" % s)
+    return None
 
 
 def syslog2node(s):
