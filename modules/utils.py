@@ -1025,8 +1025,9 @@ def datetime_is_aware(dt):
 
 def make_datetime_naive(dt):
     """
-    Ensures that the datetime is
-    not time zone-aware
+    Ensures that the datetime is not time zone-aware:
+
+    The returned datetime object is a naive time in UTC.
     """
     if dt and datetime_is_aware(dt):
         return dt.replace(tzinfo=None) - dt.utcoffset()
@@ -1055,7 +1056,17 @@ def parse_time(t):
     '''
     try:
         import dateutil.parser
+        import dateutil.tz
         dt = dateutil.parser.parse(t)
+
+        if datetime_is_aware(dt):
+            ts = datetime_to_timestamp(dt)
+            if ts is None:
+                return None
+            dt = datetime.datetime.fromtimestamp(ts)
+        else:
+            # convert to UTC from local time
+            dt = make_datetime_naive(dt.replace(tzinfo=dateutil.tz.tzlocal()))
     except ValueError, msg:
         common_err("%s: %s" % (t, msg))
         return None
@@ -1066,11 +1077,6 @@ def parse_time(t):
         except ValueError, msg:
             common_err("no dateutil, please provide times as printed by date(1)")
             return None
-    if datetime_is_aware(dt):
-        ts = datetime_to_timestamp(dt)
-        if ts is None:
-            return None
-        dt = datetime.datetime.fromtimestamp(ts)
     return dt
 
 
