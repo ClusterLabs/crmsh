@@ -446,8 +446,10 @@ def human_date(dt):
     'Some human date representation. Date defaults to now.'
     if not dt:
         dt = make_datetime_naive(datetime.datetime.now())
+    # here, dt is in UTC. Convert to localtime:
+    localdt = datetime.datetime.fromtimestamp(datetime_to_timestamp(dt))
     # drop microseconds
-    return re.sub("[.].*", "", "%s %s" % (dt.date(), dt.time()))
+    return re.sub("[.].*", "", "%s %s" % (localdt.date(), localdt.time()))
 
 
 def is_log(p):
@@ -1380,7 +1382,8 @@ class Report(object):
             elif whence == "bottom":
                 myts = max([syslog_ts(x) for x in last_log_lines(self.log_l)])
             if myts:
-                return datetime.datetime.fromtimestamp(myts)
+                import dateutil.tz
+                return make_datetime_naive(datetime.datetime.fromtimestamp(myts).replace(tzinfo=dateutil.tz.tzlocal()))
             common_debug("No log lines with timestamps found in report")
         except Exception, e:
             common_debug("Error: %s" % (e))
