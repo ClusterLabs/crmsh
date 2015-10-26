@@ -1,4 +1,4 @@
 lxml
 PyYAML
 nosexcover
-dateutil
+python-dateutil
