@@ -160,6 +160,14 @@ def _nvpairs2parameters(args):
     return ret
 
 
+def _category_pretty(c):
+    if str(c).lower() == 'wizard':
+        return "Wizard (Legacy)"
+    elif str(c).lower() == 'sap':
+        return "SAP"
+    return str(c).capitalize()
+
+
 class Script(command.UI):
     '''
     Cluster scripts can perform cluster-wide configuration,
@@ -193,6 +201,7 @@ class Script(command.UI):
                     cat = script['category'].lower()
                     if not all and cat == 'script':
                         continue
+                    cat = _category_pretty(cat)
                     if cat not in categories:
                         categories[cat] = []
                     categories[cat].append("%-16s %s" % (script['name'], script['shortdesc']))
@@ -201,7 +210,7 @@ class Script(command.UI):
                     continue
             for c, lst in sorted(categories.iteritems(), key=lambda x: x[0]):
                 if c:
-                    print("%s:\n" % (c.capitalize()))
+                    print("%s:\n" % (c))
                 for s in sorted(lst):
                     print(s)
                 print('')
@@ -233,7 +242,7 @@ class Script(command.UI):
 
         vals = {
             'name': script['name'],
-            'category': str(script['category']).capitalize(),
+            'category': _category_pretty(script['category']),
             'shortdesc': str(script['shortdesc']),
             'longdesc': scripts.format_desc(script['longdesc']),
             'steps': "\n".join((describe_step([i], [], s, all) for i, s in enumerate(script['steps'])))}

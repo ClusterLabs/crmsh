@@ -35,7 +35,7 @@ gfs2-base        gfs2 filesystem base (cloned)
 ocfs2            OCFS2 filesystem (cloned)
 raid-lvm         RAID hosting LVM
 
-Sap:
+SAP:
 
 sap-as           SAP ASCS Instance
 sap-ci           SAP Central Instance
@@ -80,7 +80,7 @@ gfs2-base        gfs2 filesystem base (cloned)
 ocfs2            OCFS2 filesystem (cloned)
 raid-lvm         RAID hosting LVM
 
-Sap:
+SAP:
 
 sap-as           SAP ASCS Instance
 sap-ci           SAP Central Instance
