@@ -570,7 +570,8 @@ def _parse_hawk_workflow(scriptname, scriptfile):
         templatestep = {
             'shortdesc': _strip(''.join(item.xpath('./stepdesc/text()'))),
             'name': item.get('name'),
-            'required': item.get('required'),
+            # Optional steps in the legacy wizards was broken (!?)
+            'required': True, #item.get('required'),
             'parameters': []
         }
         data['steps'].append(templatestep)
