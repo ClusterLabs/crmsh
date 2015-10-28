@@ -591,7 +591,7 @@ class Transition(object):
             self.end_ts = syslog_ts(end_msg)
         else:
             common_warn("end of transition %s not found in logs (transition not complete yet?)" % self)
-            self.end_ts = (datetime.datetime(2525, 1, 1) - datetime.datetime(1970, 1, 1)).total_seconds()
+            self.end_ts = datetime_to_timestamp(datetime.datetime(2525, 1, 1))
 
     def __str__(self):
         return self.get_node_file()

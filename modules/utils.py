@@ -1034,12 +1034,22 @@ def make_datetime_naive(dt):
     return dt
 
 
+def total_seconds(td):
+    """
+    Backwards compatible implementation of timedelta.total_seconds()
+    """
+    if hasattr(datetime.timedelta, 'total_seconds'):
+        return td.total_seconds()
+    else:
+        return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
+
+
 def datetime_to_timestamp(dt):
     """
     Convert a datetime object into a floating-point second value
     """
     try:
-        return (make_datetime_naive(dt) - datetime.datetime(1970, 1, 1)).total_seconds()
+        return total_seconds(make_datetime_naive(dt) - datetime.datetime(1970, 1, 1))
     except Exception as e:
         common_err("datetime_to_timestamp error: %s" % (e))
         return None
