@@ -767,3 +767,48 @@ def test_two_substeps():
     eq_(len(actions), 1)
     pprint(actions)
     assert actions[0]['text'] == "primitive one test:apache\n\nprimitive two test:apache\n\nprimitive head one two"
+
+
+@with_setup(setup_func, teardown_func)
+def test_required_subscript_params():
+    """
+    If an optional subscript has multiple required parameters,
+    excluding all = ok
+    excluding one = fail
+    """
+
+    a = '''---
+- version: 2.2
+  category: Script
+  parameters:
+    - name: foo
+      required: true
+      type: string
+    - name: bar
+      required: true
+      type: string
+  actions:
+    - cib: "{{foo}} {{bar}}"
+'''
+
+    b = '''---
+- version: 2.2
+  category: Script
+  include:
+    - script: foofoo
+      required: false
+  actions:
+    - include: foofoo
+    - cib: "{{foofoo:foo}} {{foofoo:bar}"
+'''
+
+    script_a = scripts.load_script_string('foofoo', a)
+    script_b = scripts.load_script_string('test-b', b)
+    assert script_a is not None
+    assert script_b is not None
+
+    def ver():
+        actions = scripts.verify(script_b,
+                                 {"foofoo": {"foo": "one"}})
+        pprint(actions)
+    assert_raises(ValueError, ver)

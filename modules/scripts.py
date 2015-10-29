@@ -1422,8 +1422,15 @@ def _check_parameters(script, params):
         params[key] = value
 
     def _fill_values(path, into, source, srcreq):
+        """
+        Copy values into into while checking for missing required parameters.
+        If into has content, all required parameters ARE required, even if the
+        whole step is not required (since we're supplying it). This is checked
+        by checking if the step is not required, but there are some parameters
+        set by the user anyway.
+        """
         if 'required' in source:
-            srcreq = source['required'] and srcreq
+            srcreq = (source['required'] and srcreq) or (into and srcreq)
 
         for param in source.get('parameters', []):
             if param['name'] not in into:
@@ -1436,12 +1443,14 @@ def _check_parameters(script, params):
             required = step.get('required', True)
             if not required and step['name'] not in into:
                 continue
+            if not required and step['name'] in into and into[step['name']]:
+                required = True
             if 'name' not in step:
-                _fill_values(path, into, step, step.get('required') and srcreq)
+                _fill_values(path, into, step, required and srcreq)
             else:
                 if step['name'] not in into:
                     into[step['name']] = {}
-                _fill_values(path + [step['name']], into[step['name']], step, step.get('required') and srcreq)
+                _fill_values(path + [step['name']], into[step['name']], step, required and srcreq)
 
     _fill_values([], params, script, True)
 
