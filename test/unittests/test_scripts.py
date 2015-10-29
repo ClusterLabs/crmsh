@@ -721,3 +721,49 @@ def test_enums_fail2():
     def ver():
         return scripts.verify(script_a, {"foo": "one"})
     assert_raises(ValueError, ver)
+
+
+@with_setup(setup_func, teardown_func)
+def test_two_substeps():
+    """
+    There is a scoping bug
+    """
+    a = '''---
+- version: 2.2
+  category: Script
+  include:
+    - agent: test:apache
+      name: apache
+      parameters:
+        - name: id
+          required: true
+'''
+    b = '''---
+- version: 2.2
+  category: Script
+  include:
+    - script: apache
+      name: apache-a
+      required: true
+    - script: apache
+      name: apache-b
+      required: true
+  parameters:
+    - name: wiz
+      required: true
+  actions:
+    - include: apache-a
+    - include: apache-b
+    - cib: "primitive {{wiz}} {{apache-a:id}} {{apache-b:id}}"
+'''
+
+    script_a = scripts.load_script_string('apache', a)
+    script_b = scripts.load_script_string('test-b', b)
+    assert script_a is not None
+    assert script_b is not None
+
+    actions = scripts.verify(script_b,
+                             {'wiz': "head", "apache-a": {"id": "one"}, "apache-b": {"id": "two"}})
+    eq_(len(actions), 1)
+    pprint(actions)
+    assert actions[0]['text'] == "primitive one test:apache\n\nprimitive two test:apache\n\nprimitive head one two"

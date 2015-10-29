@@ -185,8 +185,8 @@ class Actions(object):
                 return ' -> '.join(x.items()[0])
             action['text'] = '\n'.join([arrow(x) for x in value])
         elif name == 'cib' or name == 'crm':
-            action['text'] = Text.cib(script, value)
-            action['value'] = _remove_empty_lines(str(action['text']))
+            action['text'] = str(Text.cib(script, value))
+            action['value'] = _remove_empty_lines(action['text'])
         elif name == 'call':
             action['value'] = Text(script, value)
         elif name == 'copy':
