@@ -2903,6 +2903,8 @@ configuration with the one from the source. The +update+ tries to
 import the contents into the current configuration.
 The file may be a CLI file or an XML file.
 
+If the URL is `-`, the configuration is read from standard input.
+
 Usage:
 ...............
 load [xml] <method> URL
