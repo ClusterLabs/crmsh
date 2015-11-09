@@ -307,7 +307,7 @@ class Actions(object):
         if self._action['template']:
             fn = self._run.str2tmp(str(Text.cib(self._run.script, open(self._value).read())))
             self._value = fn
-        self._run.copy_file(self._nodes, self._value, self._action['to'])
+        self._run.copy_file(self._nodes, self._value, str(self._action['to']))
 
     def _crm_do(self, act):
         fn = self._run.str2tmp(_join_script_lines(self._value))
