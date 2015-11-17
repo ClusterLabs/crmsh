@@ -810,3 +810,29 @@ def test_bug_110():
         if o.node.tag == 'fencing-topology':
             assert o.check_sanity() == 0
 
+
+@with_setup(setup_func, teardown_func)
+def test_reordering_resource_sets():
+    """
+    Can we reorder resource sets?
+    """
+    from crmsh import clidisplay
+    obj1 = factory.create_object('primitive', 'p1', 'Dummy')
+    assert obj1 is True
+    obj2 = factory.create_object('primitive', 'p2', 'Dummy')
+    assert obj2 is True
+    obj3 = factory.create_object('primitive', 'p3', 'Dummy')
+    assert obj3 is True
+    obj4 = factory.create_object('primitive', 'p4', 'Dummy')
+    assert obj4 is True
+    o1 = factory.create_object('order', 'o1', 'p1', 'p2', 'p3', 'p4')
+    assert o1 is True
+
+    obj = cibconfig.mkset_obj('o1')
+    assert obj is not None
+    rc = obj.save('order o1 p4 p3 p2 p1')
+    assert rc == True
+
+    obj2 = cibconfig.mkset_obj('o1')
+    with clidisplay.nopretty():
+        assert "order o1 p4 p3 p2 p1" == obj2.repr().strip()
