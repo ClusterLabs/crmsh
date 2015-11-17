@@ -1207,7 +1207,10 @@ _checker = doctestcompare.LXMLOutputChecker()
 
 
 def xml_equals_unordered(a, b):
-    "used by xml_equals to compare xml trees without ordering"
+    """
+    used by xml_equals to compare xml trees without ordering.
+    NOTE: resource_set children SHOULD be compared with ordering.
+    """
     def fail(msg):
         common_debug("%s!=%s: %s" % (a.tag, b.tag, msg))
         return False
@@ -1238,8 +1241,11 @@ def xml_equals_unordered(a, b):
 
     # order matters here, but in a strange way:
     # all primitive tags should sort the same..
-    sorted_children = zip(sorted(a, key=sortby), sorted(b, key=sortby))
-    return all(xml_equals_unordered(a, b) for a, b in sorted_children)
+    if a.tag == 'resource_set':
+        return all(xml_equals_unordered(a, b) for a, b in zip(a, b))
+    else:
+        sorted_children = zip(sorted(a, key=sortby), sorted(b, key=sortby))
+        return all(xml_equals_unordered(a, b) for a, b in sorted_children)
 
 
 def xml_equals(n, m, show=False):
