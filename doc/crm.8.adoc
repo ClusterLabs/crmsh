@@ -1748,21 +1748,22 @@ Usage:
 reprobe [<node>]
 ...............
 
-[[cmdhelp_resource_restart,restart a resource]]
+[[cmdhelp_resource_restart,restart resources]]
 ==== `restart`
 
-Restart a resource. This is essentially a shortcut for resource
-stop followed by a start. The shell is first going to wait for
-the stop to finish, that is for all resources to really stop, and
+Restart one or more resources. This is essentially a shortcut for
+resource stop followed by a start. The shell is first going to wait
+for the stop to finish, that is for all resources to really stop, and
 only then to order the start action. Due to this command
 entailing a whole set of operations, informational messages are
 printed to let the user see some progress.
 
-For details on group management see <<cmdhelp_options_manage-children,`options manage-children`>>.
+For details on group management see
+<<cmdhelp_options_manage-children,`options manage-children`>>.
 
 Usage:
 ...............
-restart <rsc>
+restart <rsc> [<rsc> ...]
 ...............
 Example:
 ...............
@@ -1811,45 +1812,48 @@ secret fence_1 stash password
 secret fence_1 set password secret_value
 ...............
 
-[[cmdhelp_resource_start,start a resource]]
+[[cmdhelp_resource_start,start resources]]
 ==== `start`
 
-Start a resource by setting the `target-role` attribute. If there
-are multiple meta attributes sets, the attribute is set in all of
-them. If the resource is a clone, all `target-role` attributes
-are removed from the children resources.
+Start one or more resources by setting the `target-role` attribute. If
+there are multiple meta attributes sets, the attribute is set in all
+of them. If the resource is a clone, all `target-role` attributes are
+removed from the children resources.
 
-For details on group management see <<cmdhelp_options_manage-children,`options manage-children`>>.
+For details on group management see
+<<cmdhelp_options_manage-children,`options manage-children`>>.
 
 Usage:
 ...............
-start <rsc>
+start <rsc> [<rsc> ...]
 ...............
 
 [[cmdhelp_resource_status,show status of resources]]
 ==== `status` (`show`, `list`)
 
-Print resource status. If the resource parameter is left out
-status of all resources is printed.
+Print resource status. More than one resource can be shown at once. If
+the resource parameter is left out, the status of all resources is
+printed.
 
 Usage:
 ...............
-status [<rsc>]
+status [<rsc> ...]
 ...............
 
-[[cmdhelp_resource_stop,stop a resource]]
+[[cmdhelp_resource_stop,stop resources]]
 ==== `stop`
 
-Stop a resource using the `target-role` attribute. If there
+Stop one or more resources using the `target-role` attribute. If there
 are multiple meta attributes sets, the attribute is set in all of
-them. If the resource is a clone, all `target-role` attributes
-are removed from the children resources.
+them. If the resource is a clone, all `target-role` attributes are
+removed from the children resources.
 
-For details on group management see <<cmdhelp_options_manage-children,`options manage-children`>>.
+For details on group management see
+<<cmdhelp_options_manage-children,`options manage-children`>>.
 
 Usage:
 ...............
-stop <rsc>
+stop <rsc> [<rsc> ...]
 ...............
 
 [[cmdhelp_resource_trace,start RA tracing]]

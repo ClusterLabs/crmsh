@@ -222,12 +222,15 @@ class RscMgmt(command.UI):
 
     @command.alias('show', 'list')
     @command.completers(compl.resources)
-    def do_status(self, context, rsc=None):
-        "usage: status [<rsc>]"
-        if rsc:
-            if not utils.is_name_sane(rsc):
-                return False
-            return utils.ext_cmd(self.rsc_status % rsc) == 0
+    def do_status(self, context, *resources):
+        "usage: status [<rsc> ...]"
+        if len(resources) > 0:
+            rc = True
+            for rsc in resources:
+                if not utils.is_name_sane(rsc):
+                    return False
+                rc = rc and (utils.ext_cmd(self.rsc_status % rsc) == 0)
+            return rc
         else:
             return utils.ext_cmd(self.rsc_status_all) == 0
 
@@ -242,29 +245,54 @@ class RscMgmt(command.UI):
             context.info("Currently editing the CIB, changes will not be committed")
         return set_deep_meta_attr(rsc, name, value, commit=commit)
 
-    @command.wait
-    @command.completers(compl.resources)
-    def do_start(self, context, rsc):
-        "usage: start <rsc>"
-        return self._commit_meta_attr(context, rsc, "target-role", "Started")
+    def _commit_meta_attrs(self, context, resources, name, value):
+        """
+        Perform change to list of resources
+        """
+        for rsc in resources:
+            if not utils.is_name_sane(rsc):
+                return False
+        commit = not cib_factory.has_cib_changed()
+        if not commit:
+            context.info("Currently editing the CIB, changes will not be committed")
+
+        rc = True
+        for rsc in resources:
+            rc = rc and set_deep_meta_attr(rsc, name, value, commit=False)
+        if commit and rc:
+            ok = cib_factory.commit()
+            if not ok:
+                common_error("Failed to commit updates to %s" % (rsc))
+            return ok
+        return rc
 
     @command.wait
     @command.completers(compl.resources)
-    def do_stop(self, context, rsc):
-        "usage: stop <rsc>"
-        return self._commit_meta_attr(context, rsc, "target-role", "Stopped")
+    def do_start(self, context, *resources):
+        "usage: start <rsc> [<rsc> ...]"
+        if len(resources) == 0:
+            context.error("Expected at least one resource as argument")
+        return self._commit_meta_attrs(context, resources, "target-role", "Started")
 
     @command.wait
     @command.completers(compl.resources)
-    def do_restart(self, context, rsc):
-        "usage: restart <rsc>"
-        common_info("ordering %s to stop" % rsc)
-        if not self._commit_meta_attr(context, rsc, "target-role", "Stopped"):
+    def do_stop(self, context, *resources):
+        "usage: stop <rsc> [<rsc> ...]"
+        if len(resources) == 0:
+            context.error("Expected at least one resource as argument")
+        return self._commit_meta_attrs(context, resources, "target-role", "Stopped")
+
+    @command.wait
+    @command.completers(compl.resources)
+    def do_restart(self, context, *resources):
+        "usage: restart <rsc> [<rsc> ...]"
+        common_info("ordering %s to stop" % ", ".join(resources))
+        if not self._commit_meta_attrs(context, resources, "target-role", "Stopped"):
             return False
         if not utils.wait4dc("stop", not options.batch):
             return False
-        common_info("ordering %s to start" % rsc)
-        return self._commit_meta_attr(context, rsc, "target-role", "Started")
+        common_info("ordering %s to start" % ", ".join(resources))
+        return self._commit_meta_attrs(context, resources, "target-role", "Started")
 
     @command.wait
     @command.completers(compl.resources)
