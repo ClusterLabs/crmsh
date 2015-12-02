@@ -2129,6 +2129,34 @@ def verify(script, params):
     """
     params = _check_parameters(script, params)
     actions = _process_actions(script, params)
+
+    if all(action['name'] == 'cib' for action in actions):
+        errors = set([])
+        cmd = ["cib new"]
+        for action in actions:
+            cmd.append(_join_script_lines(action['value']))
+
+        cmd.append("verify")
+        cmd.append("commit")
+        cmd.append("\n")
+        try:
+            import sys
+            p = subprocess.Popen([sys.argv[0], 'configure'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            out, err = p.communicate(input="\n".join(cmd))
+            errm = re.compile(r"^ERROR: \d+: (.*)$")
+            for l in (out or "").splitlines():
+                m = errm.match(l)
+                if m:
+                    errors.add(m.group(1))
+            for l in (err or "").splitlines():
+                m = errm.match(l)
+                if m:
+                    errors.append(m.group(1))
+        except OSError as e:
+            errors.add(str(e))
+        if len(errors):
+            raise ValueError("\n".join(errors))
+
     return actions
 
 
