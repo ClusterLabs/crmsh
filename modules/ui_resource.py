@@ -406,6 +406,23 @@ class RscMgmt(command.UI):
         return cleanup_resource(resource, node)
 
     @command.wait
+    @command.completers(compl.resources, compl.nodes)
+    def do_operations(self, context, resource=None, node=None):
+        "usage: operations [<rsc>] [<node>]"
+        cmd = "crm_resource -O"
+        if resource is None:
+            return utils.ext_cmd(cmd)
+        if node is None:
+            return utils.ext_cmd("%s -r '%s'" % (cmd, resource))
+        return utils.ext_cmd("%s -r '%s' -N '%s'" % (cmd, resource, node))
+
+    @command.wait
+    @command.completers(compl.resources)
+    def do_constraints(self, context, resource):
+        "usage: constraints <rsc>"
+        return utils.ext_cmd("crm_resource -a -r '%s'" % (resource))
+
+    @command.wait
     @command.completers(compl.resources, _attrcmds, compl.nodes)
     def do_failcount(self, context, rsc, cmd, node, value=None):
         """usage:

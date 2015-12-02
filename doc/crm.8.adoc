@@ -1774,6 +1774,27 @@ INFO: ordering g_webserver to start
 #
 ...............
 
+[[cmdhelp_resource_constraints,Show constraints affecting a resource]]
+==== `constraints`
+
+Display the location and colocation constraints affecting the
+resource.
+
+Usage:
+................
+constraints <rsc>
+................
+
+[[cmdhelp_resource_operations,Show active resource operations]]
+==== `operations`
+
+Show active operations, optionally filtered by resource and node.
+
+Usage:
+................
+operations [<rsc>] [<node>]
+................
+
 [[cmdhelp_resource_scores,Display resource scores]]
 ==== `scores`
 
