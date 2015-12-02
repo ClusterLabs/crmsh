@@ -8,6 +8,8 @@ from . import utils
 from . import ra
 from . import constants
 from . import options
+from . import config
+from . import msg as msglog
 
 
 def complete_class_provider_type(args):
@@ -90,3 +92,39 @@ class RA(command.UI):
             utils.page_string(agent.meta_pretty())
         except Exception, msg:
             context.fatal_error(msg)
+
+    @command.skill_level('administrator')
+    def do_validate(self, context, agentname, *params):
+        "usage: validate [<class>:[<provider>:]]<type> [<key>=<value> ...]"
+        c, p, t = ra.disambiguate_ra_type(agentname)
+        if c != "ocf":
+            context.error("Only OCF agents are supported by this command")
+        agent = ra.RAInfo(c, t, p)
+        if agent.mk_ra_node() is None:
+            return False
+        if len(agent.ra_elem.xpath('//actions/action[@name="validate-all"]')) < 1:
+            context.error("validate-all action not supported by agent")
+
+        import subprocess
+        import os
+        my_env = os.environ.copy()
+        my_env["OCF_ROOT"] = config.path.ocf_root
+        for param in params:
+            k, v = param.split('=', 1)
+            my_env["OCF_RESKEY_" + k] = v
+        p = subprocess.Popen([os.path.join(config.path.ocf_root, "resource.d", p, t), "validate-all"],
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=my_env)
+        out, _ = p.communicate()
+        for msg in out.splitlines():
+            if msg.startswith("ERROR: "):
+                msglog.err_buf.error(msg[7:])
+            elif msg.startswith("WARNING: "):
+                msglog.err_buf.warning(msg[9:])
+            elif msg.startswith("INFO: "):
+                msglog.err_buf.info(msg[6:])
+            elif msg.startswith("DEBUG: "):
+                msglog.err_buf.debug(msg[7:])
+            else:
+                msglog.err_buf.writemsg(msg)
+        p.wait()
+        return p.returncode == 0

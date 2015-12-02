@@ -1564,6 +1564,18 @@ Example:
 providers apache
 ...............
 
+[[cmdhelp_ra_validate,validate parameters for RA]]
+==== `validate`
+
+If the resource agent supports the `validate-all` action, this calls
+the action with the given parameters, printing any warnings or errors
+reported by the agent.
+
+Usage:
+................
+validate <agent> [<key>=<value> ...]
+................
+
 [[cmdhelp_resource,Resource management]]
 === `resource` - Resource management
 
