@@ -385,8 +385,7 @@ class RscMgmt(command.UI):
             opts = "%s --force" % opts
         return utils.ext_cmd(self.rsc_ban % (rsc, opts)) == 0
 
-    @command.alias('unmove')
-    @command.alias('unban')
+    @command.alias('unmove', 'unban')
     @command.skill_level('administrator')
     @command.wait
     @command.completers(compl.resources)
