@@ -219,45 +219,53 @@ sbd
 virtual-ip
 .INP: list bogus
 ERROR: 7: script.list: Unexpected argument 'bogus': expected  [all|names]
-.INP: show virtual-ip
-virtual-ip (Basic)
-Virtual IP
+.INP: show mailto
+mailto (Basic)
+MailTo
 
- This Linux-specific resource manages IP alias IP addresses. It can
-add an IP alias, or remove one. In addition, it can implement Cluster
-Alias IP functionality if invoked as a clone resource.
+ This is a resource agent for MailTo. It sends email to a sysadmin
+whenever  a takeover occurs.
 
-If used as a clone, you should explicitly set clone-node-max >= 2,
-and/or clone-max < number of nodes. In case of node failure, clone
-instances need to be re-allocated on surviving nodes. This would not
-be possible if there is already an instance on those nodes, and clone-
-node-max=1 (which is the default).
-
-1. Manages virtual IPv4 and IPv6 addresses (Linux specific version)
+1. Notifies recipients by email in the event of resource takeover
 
   id (required)  (unique) 
       Identifier for the cluster resource
-  ip (required)  (unique) 
-      IPv4 or IPv6 address
-  cidr_netmask
-      CIDR netmask
-  broadcast
-      Broadcast address
+  email (required) 
+      Email address
+  subject
+      Subject
 
 
-.INP: verify virtual-ip id=foo ip=10.0.0.5
-1. Configure cluster resources
+.INP: verify mailto id=foo email=test@example.com subject=hello
+1. Ensure mail package is installed
 
-	primitive foo ocf:heartbeat:IPaddr2
-		ip="10.0.0.5"
-		op start timeout="20" op stop timeout="20"
-		op monitor interval="10" timeout="20"
+	mailx
 
-.INP: run virtual-ip id=foo ip=10.0.0.5 nodes=node1 dry_run=true
-INFO: 10: Virtual IP
+2. Configure cluster resources
+
+	primitive foo ocf:heartbeat:MailTo
+		email="test@example.com"
+		subject="hello"
+		op start timeout="10"
+		op stop timeout="10"
+		op monitor interval="10" timeout="10"
+
+	clone c-foo foo
+
+.INP: run mailto id=foo email=test@example.com subject=hello nodes=node1 dry_run=true
+INFO: 10: MailTo
 INFO: 10: Nodes: node1
+** all - #!/usr/bin/env python
+import crm_script
+import crm_init
+
+crm_init.install_packages(['mailx'])
+crm_script.exit_ok(True)
+        
+OK: 10: Ensure mail package is installed
 ** localhost - temporary file <<END
-primitive foo ocf:heartbeat:IPaddr2 ip="10.0.0.5"                 op start timeout="20" op stop timeout="20" op monitor interval="10" timeout="20"
+primitive foo ocf:heartbeat:MailTo	email="test@example.com"	subject="hello"	op start timeout="10"	op stop timeout="10"	op monitor interval="10" timeout="10"
+clone c-foo foo
 
 END
 

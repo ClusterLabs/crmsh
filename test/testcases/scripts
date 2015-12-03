@@ -6,7 +6,7 @@ list names
 list names all
 list all names
 list bogus
-show virtual-ip
-verify virtual-ip id=foo ip=10.0.0.5
-run virtual-ip id=foo ip=10.0.0.5 nodes=node1 dry_run=true
+show mailto
+verify mailto id=foo email=test@example.com subject=hello
+run mailto id=foo email=test@example.com subject=hello nodes=node1 dry_run=true
 .

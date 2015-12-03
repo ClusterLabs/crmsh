@@ -18,3 +18,4 @@ Error signing on to the CRMd service
 ^\.EXT crm_diff \-\-no\-version \-o [^ ]+ \-n \-
 ^\.EXT sed ['][^']+
 ^\.EXT sed ["][^"]+
+^\.EXT [a-zA-Z]+ validate-all
