@@ -17,7 +17,7 @@ from .parse import CliParser
 from . import clidisplay
 from .cibstatus import cib_status
 from . import idmgmt
-from .ra import get_ra, get_properties_list, get_pe_meta
+from .ra import get_ra, get_properties_list, get_pe_meta, can_validate_agent, validate_agent
 from . import schema
 from .crm_gv import gv_types
 from .msg import common_warn, common_err, common_debug, common_info, err_buf
@@ -1455,6 +1455,12 @@ class CibPrimitive(CibObject):
         rc1 = ra.sanity_check_params(self.obj_id,
                                      params,
                                      existence_only=(self.obj_type != "primitive"))
+        if can_validate_agent(ra) and all(nvp.get('name') and nvp.get('value') for nvp in params):
+            paramhash = dict([(nvp.get('name'), nvp.get('value')) for nvp in params])
+            rc5, out = validate_agent(ra, paramhash)
+            if rc5 != 0:
+                common_err("%s: %s" % (self.obj_id, out))
+            return rc1 | rc2 | rc3 | rc4 | rc5
         return rc1 | rc2 | rc3 | rc4
 
     def repr_gv(self, gv_obj, from_grp=False):

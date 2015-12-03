@@ -828,4 +828,53 @@ def disambiguate_ra_type(s):
     pr = pick_provider(ra_providers(tp, cl)) if cl == 'ocf' else ''
     return cl, pr, tp
 
+
+def can_validate_agent(agent):
+    if isinstance(agent, basestring):
+        c, p, t = disambiguate_ra_type(agent)
+        if c != "ocf":
+            return False
+        agent = RAInfo(c, t, p)
+        if agent.mk_ra_node() is None:
+            return False
+    if len(agent.ra_elem.xpath('.//actions/action[@name="validate-all"]')) < 1:
+        return False
+    return True
+
+
+def validate_agent(agentname, params):
+    """
+    Call the validate-all action on the agent, given
+    the parameter hash params.
+    agent: either a c:p:t agent name, or an RAInfo instance
+    params: a hash of agent parameters
+    Returns: (rc, out)
+    """
+    if not can_validate_agent(agentname):
+        return (-1, "")
+    if isinstance(agentname, basestring):
+        c, p, t = disambiguate_ra_type(agentname)
+        if c != "ocf":
+            raise ValueError("Only OCF agents are supported by this command")
+        agent = RAInfo(c, t, p)
+        if agent.mk_ra_node() is None:
+            return (-1, "")
+    else:
+        agent = agentname
+    if len(agent.ra_elem.xpath('.//actions/action[@name="validate-all"]')) < 1:
+        raise ValueError("validate-all action not supported by agent")
+
+    my_env = os.environ.copy()
+    my_env["OCF_ROOT"] = config.path.ocf_root
+    for k, v in params.iteritems():
+        my_env["OCF_RESKEY_" + k] = v
+    cmd = [os.path.join(config.path.ocf_root, "resource.d", agent.ra_provider, agent.ra_type), "validate-all"]
+    if options.regression_tests:
+        print ".EXT", " ".join(cmd)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=my_env)
+    out, _ = p.communicate()
+    p.wait()
+    return p.returncode, out
+
+
 # vim:ts=4:sw=4:et:

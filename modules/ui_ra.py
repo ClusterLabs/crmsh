@@ -96,25 +96,7 @@ class RA(command.UI):
     @command.skill_level('administrator')
     def do_validate(self, context, agentname, *params):
         "usage: validate [<class>:[<provider>:]]<type> [<key>=<value> ...]"
-        c, p, t = ra.disambiguate_ra_type(agentname)
-        if c != "ocf":
-            context.error("Only OCF agents are supported by this command")
-        agent = ra.RAInfo(c, t, p)
-        if agent.mk_ra_node() is None:
-            return False
-        if len(agent.ra_elem.xpath('//actions/action[@name="validate-all"]')) < 1:
-            context.error("validate-all action not supported by agent")
-
-        import subprocess
-        import os
-        my_env = os.environ.copy()
-        my_env["OCF_ROOT"] = config.path.ocf_root
-        for param in params:
-            k, v = param.split('=', 1)
-            my_env["OCF_RESKEY_" + k] = v
-        p = subprocess.Popen([os.path.join(config.path.ocf_root, "resource.d", p, t), "validate-all"],
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=my_env)
-        out, _ = p.communicate()
+        rc, out = ra.validate_agent(agentname, dict([param.split('=', 1) for param in params]))
         for msg in out.splitlines():
             if msg.startswith("ERROR: "):
                 msglog.err_buf.error(msg[7:])
@@ -126,5 +108,4 @@ class RA(command.UI):
                 msglog.err_buf.debug(msg[7:])
             else:
                 msglog.err_buf.writemsg(msg)
-        p.wait()
-        return p.returncode == 0
+        return rc == 0
