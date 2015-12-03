@@ -830,6 +830,8 @@ def disambiguate_ra_type(s):
 
 
 def can_validate_agent(agent):
+    if utils.getuser() != 'root':
+        return False
     if isinstance(agent, basestring):
         c, p, t = disambiguate_ra_type(agent)
         if c != "ocf":
