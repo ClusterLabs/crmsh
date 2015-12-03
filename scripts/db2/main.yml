@@ -40,8 +40,8 @@
     - include: db2
     - cib: |
         group g-{{id}}
-          {{virtual-ip}}
-          {{filesystem}}
+          {{virtual-ip:id}}
+          {{filesystem:id}}
           {{id}}
           meta target-role=Stopped
 

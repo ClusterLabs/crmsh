@@ -244,10 +244,10 @@ def pipe_string(cmd, s):
     return rc
 
 
-def filter_string(cmd, s, stderr_on=True):
+def filter_string(cmd, s, stderr_on=True, shell=True):
     rc = -1  # command failed
     outp = ''
-    if stderr_on:
+    if stderr_on is True:
         stderr = None
     else:
         stderr = subprocess.PIPE
@@ -256,12 +256,16 @@ def filter_string(cmd, s, stderr_on=True):
     if options.regression_tests:
         print ".EXT", cmd
     p = subprocess.Popen(cmd,
-                         shell=True,
+                         shell=shell,
                          stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE,
                          stderr=stderr)
     try:
-        outp = p.communicate(s)[0]
+        ret = p.communicate(s)
+        if stderr_on == 'stdout':
+            outp = "\n".join(ret)
+        else:
+            outp = ret[0]
         p.wait()
         rc = p.returncode
     except OSError, (errno, strerror):

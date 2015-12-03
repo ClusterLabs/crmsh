@@ -20,9 +20,15 @@
       type: string
     - name: drbdconf
       value: "/etc/drbd.conf"
+    - name: install
+      type: boolean
+      shortdesc: Install packages for DRBD
+      value: false
 
   actions:
     - install: drbd drbd-kmp-default
+      shortdesc: Install packages for DRBD
+      when: install
     - cib: |
         primitive {{id}} ocf:linbit:drbd
           params

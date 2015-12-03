@@ -2135,23 +2135,18 @@ def verify(script, params):
         cmd = ["cib new"]
         for action in actions:
             cmd.append(_join_script_lines(action['value']))
-
-        cmd.append("verify")
-        cmd.append("commit")
-        cmd.append("\n")
+        cmd.extend(["verify", "commit", "\n"])
         try:
             import sys
-            p = subprocess.Popen([sys.argv[0], 'configure'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            out, err = p.communicate(input="\n".join(cmd))
+            common_debug("Try executing %s" % ("\n".join(cmd)))
+            rc, out = utils.filter_string([sys.argv[0], '-f', '-', 'configure'], "\n".join(cmd), stderr_on='stdout', shell=False)
             errm = re.compile(r"^ERROR: \d+: (.*)$")
             for l in (out or "").splitlines():
                 m = errm.match(l)
                 if m:
                     errors.add(m.group(1))
-            for l in (err or "").splitlines():
-                m = errm.match(l)
-                if m:
-                    errors.append(m.group(1))
+            if rc != 0 and len(errors) == 0:
+                errors.add("Failed to verify (rc=%s)" % (rc))
         except OSError as e:
             errors.add(str(e))
         if len(errors):

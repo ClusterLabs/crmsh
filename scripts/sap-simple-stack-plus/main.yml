@@ -206,8 +206,8 @@
     - include: sapinstance-ci
     - cib:
         group {{id}}
-          {{raid1}}
-          {{lvm}}
+          {{raid1:id}}
+          {{lvm:id}}
           {{virtual-ip-db:id}}
           {{filesystem-sapmnt:id}}
           {{filesystem-db:id}}

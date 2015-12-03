@@ -26,10 +26,8 @@
 
   actions:
     - cib: |
-        primitive {{id}} ocf:heartbeat:SAPdatabase
-          params
-            SID="{{SID}}"
-            DBTYPE="{{DBTYPE}}"
+        primitive {{id}} ocf:heartbeat:SAPDatabase
+          params SID="{{SID}}" DBTYPE="{{DBTYPE}}"
           op monitor interval="120" timeout="60" start_delay="180"
           op start timeout="1800"
           op stop timeout="1800"

@@ -13,7 +13,17 @@
     To create volume groups after configuring cLVM, the wizard
     for cLVM volume groups can be used.
 
+  parameters:
+    - name: install
+      type: boolean
+      shortdesc: Install packages for cLVM
+      value: false
+
   actions:
+    - install:
+        - lvm2-clvm
+      shortdesc: Install the clvm package
+      when: install
     - cib: |
         primitive dlm ocf:pacemaker:controld
           op start timeout=90s
@@ -25,6 +35,6 @@
           op stop timeout=100s
 
         group g-clvm dlm clvm
-        
+
         clone c-clvm g-clvm
           meta interleave=true ordered=true

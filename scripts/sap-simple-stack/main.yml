@@ -169,8 +169,8 @@
     - include: sapinstance-ci
     - cib:
         group {{id}}
-          {{raid1}}
-          {{lvm}}
+          {{raid1:id}}
+          {{lvm:id}}
           {{virtual-ip-ci:id}}
           {{virtual-ip-db:id}}
           {{virtual-ip-as:id}}

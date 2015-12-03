@@ -22,7 +22,7 @@
           required: false
           type: string
       ops: |
-        meta target-state=Stopped
+        meta target-role=Stopped
         op start timeout=60s
         op stop timeout=60s
         op monitor interval=20s timeout=40s
