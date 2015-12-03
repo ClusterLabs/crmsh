@@ -2120,7 +2120,7 @@ def _process_actions(script, params):
     return ret
 
 
-def verify(script, params):
+def verify(script, params, external_check=True):
     """
     Verify the given parameter values, reporting
     errors where such are detected.
@@ -2130,23 +2130,25 @@ def verify(script, params):
     params = _check_parameters(script, params)
     actions = _process_actions(script, params)
 
-    if all(action['name'] == 'cib' for action in actions):
+    if external_check and all(action['name'] == 'cib' for action in actions) and utils.is_program('crm'):
         errors = set([])
         cmd = ["cib new"]
         for action in actions:
             cmd.append(_join_script_lines(action['value']))
         cmd.extend(["verify", "commit", "\n"])
         try:
-            import sys
             common_debug("Try executing %s" % ("\n".join(cmd)))
-            rc, out = utils.filter_string([sys.argv[0], '-f', '-', 'configure'], "\n".join(cmd), stderr_on='stdout', shell=False)
+            rc, out = utils.filter_string(['crm', '-f', '-', 'configure'], "\n".join(cmd), stderr_on='stdout', shell=False)
             errm = re.compile(r"^ERROR: \d+: (.*)$")
+            outp = []
             for l in (out or "").splitlines():
                 m = errm.match(l)
                 if m:
                     errors.add(m.group(1))
+                else:
+                    outp.append(l)
             if rc != 0 and len(errors) == 0:
-                errors.add("Failed to verify (rc=%s)" % (rc))
+                errors.add("Failed to verify (rc=%s): %s" % (rc, "\n".join(outp)))
         except OSError as e:
             errors.add(str(e))
         if len(errors):

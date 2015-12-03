@@ -464,7 +464,7 @@ def test_load_legacy():
     eq_('legacy', script['name'])
     assert len(script['shortdesc']) > 0
     pprint(script)
-    actions = scripts.verify(script, {})
+    actions = scripts.verify(script, {}, external_check=False)
     pprint(actions)
     eq_([{'longdesc': '',
           'name': 'apply_local',
@@ -522,7 +522,7 @@ def test_v2():
         {'id': 'www',
          'apache': {'id': 'apache'},
          'virtual-ip': {'id': 'www-vip', 'ip': '192.168.1.100'},
-         'install': False})
+         'install': False}, external_check=False)
     pprint(actions)
     eq_(len(actions), 1)
     assert str(actions[0]['text']).find('group www') >= 0
@@ -532,7 +532,7 @@ def test_v2():
         {'id': 'www',
          'apache': {'id': 'apache'},
          'virtual-ip': {'id': 'www-vip', 'ip': '192.168.1.100'},
-         'install': True})
+         'install': True}, external_check=False)
     pprint(actions)
     eq_(len(actions), 3)
 
@@ -544,7 +544,7 @@ def test_agent_include():
         inc2,
         {'wiz': 'abc',
          'foo': 'cde',
-         'included-script': {'foo': True, 'bar': 'bah bah'}})
+         'included-script': {'foo': True, 'bar': 'bah bah'}}, external_check=False)
     pprint(actions)
     eq_(len(actions), 6)
     eq_('33\n\nabc', actions[-1]['text'].strip())
@@ -556,7 +556,7 @@ def test_vipinc():
     assert script is not None
     actions = scripts.verify(
         script,
-        {'vip': {'id': 'vop', 'ip': '10.0.0.4'}})
+        {'vip': {'id': 'vop', 'ip': '10.0.0.4'}}, external_check=False)
     eq_(len(actions), 1)
     pprint(actions)
     assert actions[0]['text'].find('primitive vop test:virtual-ip\n\tip="10.0.0.4"') >= 0
@@ -592,7 +592,7 @@ def test_value_replace_handles():
     assert script_a is not None
     assert script_b is not None
     actions = scripts.verify(script_b,
-                             {'wiz': "SARUMAN"})
+                             {'wiz': "SARUMAN"}, external_check=False)
     eq_(len(actions), 1)
     pprint(actions)
     assert actions[0]['text'] == "SARUMAN+SARUMAN"
@@ -632,7 +632,7 @@ def test_optional_step_ref():
     assert script_b is not None
 
     actions = scripts.verify(script_a,
-                             {"id": "apacho"})
+                             {"id": "apacho"}, external_check=False)
     eq_(len(actions), 1)
     pprint(actions)
     assert actions[0]['text'] == "primitive apacho test:apache"
@@ -640,7 +640,7 @@ def test_optional_step_ref():
     #import ipdb
     #ipdb.set_trace()
     actions = scripts.verify(script_b,
-                             {'wiz': "SARUMAN", "apache": {"id": "apacho"}})
+                             {'wiz': "SARUMAN", "apache": {"id": "apacho"}}, external_check=False)
     eq_(len(actions), 1)
     pprint(actions)
     assert actions[0]['text'] == "primitive SARUMAN apacho"
@@ -667,13 +667,13 @@ def test_enums_basic():
     assert script_a is not None
 
     actions = scripts.verify(script_a,
-                             {"foo": "one"})
+                             {"foo": "one"}, external_check=False)
     eq_(len(actions), 1)
     pprint(actions)
     assert actions[0]['text'] == "one"
 
     actions = scripts.verify(script_a,
-                             {"foo": "three"})
+                             {"foo": "three"}, external_check=False)
     eq_(len(actions), 1)
     pprint(actions)
     assert actions[0]['text'] == "three"
@@ -699,7 +699,7 @@ def test_enums_fail():
     assert script_a is not None
 
     def ver():
-        return scripts.verify(script_a, {"foo": "wrong"})
+        return scripts.verify(script_a, {"foo": "wrong"}, external_check=False)
     assert_raises(ValueError, ver)
 
 
@@ -719,7 +719,7 @@ def test_enums_fail2():
     assert script_a is not None
 
     def ver():
-        return scripts.verify(script_a, {"foo": "one"})
+        return scripts.verify(script_a, {"foo": "one"}, external_check=False)
     assert_raises(ValueError, ver)
 
 
@@ -763,7 +763,7 @@ def test_two_substeps():
     assert script_b is not None
 
     actions = scripts.verify(script_b,
-                             {'wiz': "head", "apache-a": {"id": "one"}, "apache-b": {"id": "two"}})
+                             {'wiz': "head", "apache-a": {"id": "one"}, "apache-b": {"id": "two"}}, external_check=False)
     eq_(len(actions), 1)
     pprint(actions)
     assert actions[0]['text'] == "primitive one test:apache\n\nprimitive two test:apache\n\nprimitive head one two"
@@ -809,6 +809,6 @@ def test_required_subscript_params():
 
     def ver():
         actions = scripts.verify(script_b,
-                                 {"foofoo": {"foo": "one"}})
+                                 {"foofoo": {"foo": "one"}}, external_check=False)
         pprint(actions)
     assert_raises(ValueError, ver)
