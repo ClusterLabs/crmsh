@@ -12,11 +12,9 @@
           <nvpair name="ordered" value="true" id="testfs-clone-meta_attributes-ordered"/>
           <nvpair name="interleave" value="true" id="testfs-clone-meta_attributes-interleave"/>
         </meta_attributes>
-        <primitive id="testfs" class="ocf" provider="heartbeat" type="Filesystem">
+        <primitive id="testfs" class="ocf" provider="heartbeat" type="Dummy">
           <instance_attributes id="testfs-instance_attributes">
-            <nvpair name="directory" value="/mnt" id="testfs-instance_attributes-directory"/>
-            <nvpair name="fstype" value="ocfs2" id="testfs-instance_attributes-fstype"/>
-            <nvpair name="device" value="/dev/sda1" id="testfs-instance_attributes-device"/>
+            <nvpair name="fake" value="1" id="testfs-instance_attributes-fake"/>
           </instance_attributes>
         </primitive>
       </clone>
