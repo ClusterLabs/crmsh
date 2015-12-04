@@ -537,7 +537,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
         'name': scriptname,
         'shortdesc': _strip(''.join(xml.xpath('./shortdesc/text()'))),
         'longdesc': ''.join(xml.xpath('./longdesc/text()')),
-        'category': 'Wizard',
+        'category': ''.join(xml.xpath('./@category')) or 'Wizard',
         'dir': None,
         'steps': [],
         'actions': [],
