@@ -331,36 +331,67 @@ class Script(command.UI):
         pprint.pprint(ret)
 
     @command.name('_convert')
-    def do_convert(self, context, fromdir, tgtdir):
+    def do_convert(self, context, workflow, outdir=".", category="basic"):
         """
         Convert hawk wizards to cluster scripts
         Needs more work to be really useful.
-        fromdir: hawk wizard directory
+        workflow: hawk workflow script
         tgtdir: where the cluster script will be written
+        category: category set in new wizard
         """
         import yaml
         import os
-        import glob
-        if not os.path.isdir(fromdir):
-            context.fatal_error("Expected <fromdir> <todir>")
+        from collections import OrderedDict
+
+        def flatten(script):
+            if not isinstance(script, dict):
+                return script
+
+            for k, v in script.iteritems():
+                if isinstance(v, scripts.Text):
+                    script[k] = str(v)
+                elif isinstance(v, dict):
+                    script[k] = flatten(v)
+                elif isinstance(v, tuple) or isinstance(v, list):
+                    script[k] = [flatten(vv) for vv in v]
+                elif isinstance(v, basestring):
+                    script[k] = v.strip()
+
+            return script
+
+        def order_rep(dumper, data):
+            return dumper.represent_mapping(u'tag:yaml.org,2002:map', data.items(), flow_style=False)
+
+        def scriptsorter(item):
+            order = ["version", "name", "category", "shortdesc", "longdesc", "include", "parameters", "steps", "actions"]
+            return order.index(item[0])
+
+        yaml.add_representer(OrderedDict, order_rep)
+        fromscript = os.path.abspath(workflow)
+        tgtdir = outdir
+
         scripts._build_script_cache()
-        if not os.path.isdir(tgtdir):
-            context.fatal_error("Expected <fromdir> <todir>")
-        for f in glob.glob(os.path.join(fromdir, 'workflows/*.xml')):
-            name = os.path.splitext(os.path.basename(f))[0]
-            script = scripts._load_script_file(name, f)
-            if script is not None:
+        name = os.path.splitext(os.path.basename(fromscript))[0]
+        script = scripts._load_script_file(name, fromscript)
+        script = flatten(script)
+        script["category"] = category
+        del script["name"]
+        del script["dir"]
+        script["actions"] = [{"cib": "\n\n".join([action["cib"] for action in script["actions"]])}]
+
+        script = OrderedDict(sorted(script.items(), key=scriptsorter))
+        if script is not None:
+            try:
+                os.mkdir(os.path.join(tgtdir, name))
+            except:
+                pass
+            tgtfile = os.path.join(tgtdir, name, "main.yml")
+            with open(tgtfile, 'w') as tf:
                 try:
-                    os.mkdir(os.path.join(tgtdir, name))
-                except:
-                    pass
-                tgtfile = os.path.join(tgtdir, name, "main.yml")
-                with open(tgtfile, 'w') as tf:
-                    try:
-                        print("%s -> %s" % (f, tgtfile))
-                        yaml.dump(script, tf, default_flow_style=False)
-                    except Exception as err:
-                        print(err)
+                    print("%s -> %s" % (fromscript, tgtfile))
+                    yaml.dump([script], tf, explicit_start=True, default_flow_style=False)
+                except Exception as err:
+                    print(err)
 
     def _json_list(self, context, cmd):
         """
