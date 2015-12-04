@@ -413,7 +413,7 @@ def _parse_yaml(scriptname, scriptfile):
     if 'parameters' in data:
         data['steps'] = [{'parameters': data['parameters']}]
         del data['parameters']
-    else:
+    elif 'steps' not in data:
         data['steps'] = []
     data['name'] = scriptname
     data['dir'] = os.path.dirname(scriptfile)
@@ -1005,7 +1005,7 @@ def load_script_string(script, yml):
     if 'parameters' in data:
         data['steps'] = [{'parameters': data['parameters']}]
         del data['parameters']
-    else:
+    elif 'steps' not in data:
         data['steps'] = []
     data['name'] = script
     data['dir'] = None
