@@ -399,7 +399,9 @@ def _parse_yaml(scriptname, scriptfile):
     try:
         import yaml
         with open(scriptfile) as f:
-            data = yaml.load(f)[0]
+            data = yaml.load(f)
+            if isinstance(data, list):
+                data = data[0]
     except ImportError as e:
         raise ValueError("Failed to load yaml module: %s" % (e))
     except Exception as e:
@@ -1001,7 +1003,9 @@ def load_script_string(script, yml):
     _build_script_cache()
     import cStringIO
     import yaml
-    data = yaml.load(cStringIO.StringIO(yml))[0]
+    data = yaml.load(cStringIO.StringIO(yml))
+    if isinstance(data, list):
+        data = data[0]
     if 'parameters' in data:
         data['steps'] = [{'parameters': data['parameters']}]
         del data['parameters']
