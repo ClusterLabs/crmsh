@@ -333,37 +333,34 @@ Here is an example `main.yml` file which wraps the resource agent
 
 [source,yaml]
 ----
----
-# The triple-dash indicates that this is a yaml document.
-# All yaml documents should begin with this line.
 # The version must be exactly 2.2, and must always be
 # specified in the script. If the version is missing or
 # is less than 2.2, the script is assumed to be a legacy
 # script (specified in the format used before crmsh 2.2).
-- version: 2.2
-  shortdesc: Virtual IP
-  category: Basic
-  include:
-    - agent: ocf:heartbeat:IPaddr2
-      name: virtual-ip
-      parameters:
-        - name: id
-          type: resource
-          required: true
-        - name: ip
-          type: ip_address
-          required: true
-        - name: cidr_netmask
-          type: integer
-          required: false
-        - name: broadcast
-          type: ip_address
-          required: false
-      ops: |
-        op start timeout="20" op stop timeout="20"
-        op monitor interval="10" timeout="20"
-  actions:
-    - include: virtual-ip
+version: 2.2
+shortdesc: Virtual IP
+category: Basic
+include:
+  - agent: ocf:heartbeat:IPaddr2
+    name: virtual-ip
+    parameters:
+      - name: id
+        type: resource
+        required: true
+      - name: ip
+        type: ip_address
+        required: true
+      - name: cidr_netmask
+        type: integer
+        required: false
+      - name: broadcast
+        type: ip_address
+        required: false
+    ops: |
+      op start timeout="20" op stop timeout="20"
+      op monitor interval="10" timeout="20"
+actions:
+  - include: virtual-ip
 ----
 
 For a bigger example, here is the `apache` agent which includes
@@ -377,71 +374,70 @@ on each of the cluster nodes.
 # Copyright (C) 2015 Kristoffer Gronlund
 #
 # License: GNU General Public License (GPL)
----
-- version: 2.2
-  category: Server
-  shortdesc: Apache Webserver
-  longdesc: |
-    Configure a resource group containing a virtual IP address and
-    an instance of the Apache web server.
+version: 2.2
+category: Server
+shortdesc: Apache Webserver
+longdesc: |
+  Configure a resource group containing a virtual IP address and
+  an instance of the Apache web server.
 
-    You can optionally configure a Filesystem resource which will be
-    mounted before the web server is started.
+  You can optionally configure a Filesystem resource which will be
+  mounted before the web server is started.
 
-    You can also optionally configure a database resource which will
-    be started before the web server but after mounting the optional
-    filesystem.
-  include:
-    - agent: ocf:heartbeat:apache
-      name: apache
-      longdesc: |
-        The Apache configuration file specified here must be available via the
-        same path on all cluster nodes, and Apache must be configured with
-        mod_status enabled.  If in doubt, try running Apache manually via
-        its init script first, and ensure http://localhost:80/server-status is
-        accessible.
-      ops: |
-        op start timeout="40"
-        op stop timeout="60"
-        op monitor interval="10" timeout="20"
-    - script: virtual-ip
-      shortdesc: The IP address configured here will start before the Apache instance.
-      parameters:
-        - name: id
-          value: "{{id}}-vip"
-    - script: filesystem
-      shortdesc: Optional filesystem mounted before the web server is started.
-      required: false
-    - script: database
-      shortdesc: Optional database started before the web server is started.
-      required: false
-  parameters:
-    - name: install
-      type: boolean
-      shortdesc: Install and configure apache
-      value: false
-  actions:
-    - install:
-        - apache2
-      shortdesc: Install the apache package
-      when: install
-    - service:
-        - apache: disable
-      shortdesc: Let cluster manage apache
-      when: install
-    - call: a2enmod status; true
-      shortdesc: Enable status module
-      when: install
-    - include: filesystem
-    - include: database
-    - include: virtual-ip
-    - include: apache
-    - cib: |
-        group g-{{id}}
-          {{filesystem:id}}
-          {{database:id}}
-          {{virtual-ip:id}}
-          {{id}}
+  You can also optionally configure a database resource which will
+  be started before the web server but after mounting the optional
+  filesystem.
+include:
+  - agent: ocf:heartbeat:apache
+    name: apache
+    longdesc: |
+      The Apache configuration file specified here must be available via the
+      same path on all cluster nodes, and Apache must be configured with
+      mod_status enabled.  If in doubt, try running Apache manually via
+      its init script first, and ensure http://localhost:80/server-status is
+      accessible.
+    ops: |
+      op start timeout="40"
+      op stop timeout="60"
+      op monitor interval="10" timeout="20"
+  - script: virtual-ip
+    shortdesc: The IP address configured here will start before the Apache instance.
+    parameters:
+      - name: id
+        value: "{{id}}-vip"
+  - script: filesystem
+    shortdesc: Optional filesystem mounted before the web server is started.
+    required: false
+  - script: database
+    shortdesc: Optional database started before the web server is started.
+    required: false
+parameters:
+  - name: install
+    type: boolean
+    shortdesc: Install and configure apache
+    value: false
+actions:
+  - install:
+      - apache2
+    shortdesc: Install the apache package
+    when: install
+  - service:
+      - apache: disable
+    shortdesc: Let cluster manage apache
+    when: install
+  - call: a2enmod status; true
+    shortdesc: Enable status module
+    when: install
+  - include: filesystem
+  - include: database
+  - include: virtual-ip
+  - include: apache
+  - cib: |
+      group g-{{id}}
+        {{filesystem:id}}
+        {{database:id}}
+        {{virtual-ip:id}}
+        {{id}}
 ----
 
 The language for referring to parameter values in `cib` actions is
