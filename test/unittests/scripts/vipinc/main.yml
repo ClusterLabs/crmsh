@@ -1,15 +1,14 @@
----
-- version: 2.2
-  category: Test
-  shortdesc: Test script include
-  include:
-    - script: vip
-      parameters:
-        - name: id
-          value: vip1
-        - name: ip
-          value: 192.168.200.100
-  actions:
-    - include: vip
-    - cib: |
-        clone c-{{vip:id}} {{vip:id}}
+version: 2.2
+category: Test
+shortdesc: Test script include
+include:
+  - script: vip
+    parameters:
+      - name: id
+        value: vip1
+      - name: ip
+        value: 192.168.200.100
+actions:
+  - include: vip
+  - cib: |
+      clone c-{{vip:id}} {{vip:id}}

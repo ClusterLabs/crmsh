@@ -453,7 +453,7 @@ def teardown_func():
 
 
 def test_list():
-    eq_(set(['v2', 'legacy', '10-webserver', 'inc1', 'inc2', 'vip', 'vipinc']),
+    eq_(set(['v2', 'legacy', '10-webserver', 'inc1', 'inc2', 'vip', 'vipinc', 'unified']),
         set(s for s in scripts.list_scripts()))
 
 
@@ -812,3 +812,15 @@ def test_required_subscript_params():
                                  {"foofoo": {"foo": "one"}}, external_check=False)
         pprint(actions)
     assert_raises(ValueError, ver)
+
+
+@with_setup(setup_func, teardown_func)
+def test_unified():
+    unified = scripts.load_script('unified')
+    actions = scripts.verify(
+        unified,
+        {'id': 'foo',
+         'vip': {'id': 'bar', 'ip': '192.168.0.15'}}, external_check=False)
+    pprint(actions)
+    eq_(len(actions), 1)
+    eq_('primitive bar IPaddr2 ip=192.168.0.15\ngroup g-foo foo bar', actions[-1]['text'].strip())

@@ -1,0 +1,26 @@
+version: 2.2
+shortdesc: Unified Script
+longdesc: >
+  Test if we can define multiple steps in a single script
+category: test
+steps:
+  - parameters:
+      - name: id
+        type: resource
+        required: true
+        shortdesc: Identifier
+  - name: vip
+    shortdesc: Configure the virtual IP
+    parameters:
+      - name: id
+        type: resource
+        required: true
+        shortdesc: IP Identifier
+      - name: ip
+        type: ip_address
+        required: true
+        shortdesc: The IP Address
+actions:
+  - cib: |
+      primitive {{vip:id}} IPaddr2 ip={{vip:ip}}
+      group g-{{id}} {{id}} {{vip:id}}

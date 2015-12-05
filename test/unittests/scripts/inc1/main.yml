@@ -1,23 +1,22 @@
----
-- version: 2.2
-  shortdesc: Include test script 1
-  longdesc: Test if includes work ok
-  parameters:
-    - name: foo
-      type: boolean
-      shortdesc: An optional feature
-    - name: bar
-      type: string
-      shortdesc: A string of characters
-      value: the name is the game
-    - name: is-required
-      type: int
-      required: true
-  actions:
-    - call: ls /tmp
-      when: foo
-      shortdesc: ls
-    - call: "echo '{{foo}}'"
-      shortdesc: foo
-    - call: "echo '{{bar}}'"
-      shortdesc: bar
+version: 2.2
+shortdesc: Include test script 1
+longdesc: Test if includes work ok
+parameters:
+  - name: foo
+    type: boolean
+    shortdesc: An optional feature
+  - name: bar
+    type: string
+    shortdesc: A string of characters
+    value: the name is the game
+  - name: is-required
+    type: int
+    required: true
+actions:
+  - call: ls /tmp
+    when: foo
+    shortdesc: ls
+  - call: "echo '{{foo}}'"
+    shortdesc: foo
+  - call: "echo '{{bar}}'"
+    shortdesc: bar
