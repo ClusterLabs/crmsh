@@ -1455,12 +1455,6 @@ class CibPrimitive(CibObject):
         rc1 = ra.sanity_check_params(self.obj_id,
                                      params,
                                      existence_only=(self.obj_type != "primitive"))
-        if can_validate_agent(ra) and all(nvp.get('name') and nvp.get('value') for nvp in params):
-            paramhash = dict([(nvp.get('name'), nvp.get('value')) for nvp in params])
-            rc5, out = validate_agent(ra, paramhash)
-            if rc5 != 0:
-                common_err("%s: %s" % (self.obj_id, out))
-            return rc1 | rc2 | rc3 | rc4 | rc5
         return rc1 | rc2 | rc3 | rc4
 
     def repr_gv(self, gv_obj, from_grp=False):

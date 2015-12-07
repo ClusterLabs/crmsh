@@ -8,7 +8,6 @@ from . import utils
 from . import ra
 from . import constants
 from . import options
-from . import config
 from . import msg as msglog
 
 

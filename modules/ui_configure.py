@@ -438,6 +438,47 @@ class CibConfig(command.UI):
         set_obj_all = mkset_obj("xml")
         return self._verify(set_obj_all, set_obj_all)
 
+    @command.name('validate-all')
+    @command.alias('validate_all')
+    @command.skill_level('administrator')
+    @command.completers_repeating(_id_list)
+    def do_validate_all(self, context, rsc):
+        "usage: validate-all <rsc>"
+        from . import ra
+        from . import cibconfig
+        from . import cliformat
+        from . import msg as msglog
+        obj = cib_factory.find_object(rsc)
+        if not obj:
+            context.error("Not found: %s" % (rsc))
+        if obj.obj_type != "primitive":
+            context.error("Not a primitive: %s" % (rsc))
+        rnode = cibconfig.reduce_primitive(obj.node)
+        if rnode is None:
+            context.error("No resource template %s for %s" % (self.node.get("template"), rsc))
+        params = []
+        for attrs in rnode.iterchildren("instance_attributes"):
+            params.extend(cliformat.nvpairs2list(attrs))
+        if not all(nvp.get('name') is not None and nvp.get('value') is not None for nvp in params):
+            context.error("Primitive too complex: %s" % (rsc))
+        params = dict([(nvp.get('name'), nvp.get('value')) for nvp in params])
+        agentname = xmlutil.mk_rsc_type(rnode)
+        if not ra.can_validate_agent(agentname):
+            context.error("%s: Cannot run validate-all for agent: %s" % (rsc, agentname))
+        rc, out = ra.validate_agent(agentname, params)
+        for msg in out.splitlines():
+            if msg.startswith("ERROR: "):
+                msglog.err_buf.error(msg[7:])
+            elif msg.startswith("WARNING: "):
+                msglog.err_buf.warning(msg[9:])
+            elif msg.startswith("INFO: "):
+                msglog.err_buf.info(msg[6:])
+            elif msg.startswith("DEBUG: "):
+                msglog.err_buf.debug(msg[7:])
+            else:
+                msglog.err_buf.writemsg(msg)
+        return rc == 0
+
     @command.skill_level('administrator')
     @command.completers_repeating(_id_show_list)
     def do_save(self, context, *args):

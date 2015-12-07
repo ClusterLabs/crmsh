@@ -3791,6 +3791,23 @@ user joe \
     role:read_all
 ...............
 
+[[cmdhelp_configure_validate_all,call agent validate-all for resource]]
+==== `validate-all`
+
+Call the `validate-all` action for the resource, if possible.
+
+Limitations:
+
+* The resource agent must implement the `validate-all` action.
+* The current user must be root.
+* The primitive resource must not use nvpair references.
+
+Usage:
+...............
+validate-all <rsc>
+...............
+
+
 [[cmdhelp_configure_verify,verify the CIB with crm_verify]]
 ==== `verify`
 
