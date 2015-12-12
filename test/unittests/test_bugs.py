@@ -479,6 +479,26 @@ def test_nodeattrs():
 
 
 @with_setup(setup_func, teardown_func)
+def test_nodeattrs2():
+    xml = """<node id="h04" uname="h04"> \
+ <utilization id="h04-utilization"> \
+   <nvpair id="h04-utilization-utl_ram" name="utl_ram" value="1200"/> \
+   <nvpair id="h04-utilization-utl_cpu" name="utl_cpu" value="200"/> \
+ </utilization> \
+ <instance_attributes id="nodes-h04"> \
+   <nvpair id="nodes-h04-standby" name="standby" value="off"/> \
+ </instance_attributes> \
+</node>"""
+    data = etree.fromstring(xml)
+    obj = factory.create_from_node(data)
+    assert obj is not None
+    data = obj.repr_cli(format=-1)
+    exp = 'node h04 utilization utl_ram=1200 utl_cpu=200 attributes standby=off'
+    assert data == exp
+    assert obj.cli_use_validate()
+
+
+@with_setup(setup_func, teardown_func)
 def test_group_constraint_location():
     """
     configuring a location constraint on a grouped resource is OK
