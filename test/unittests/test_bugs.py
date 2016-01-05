@@ -856,3 +856,35 @@ def test_reordering_resource_sets():
     obj2 = cibconfig.mkset_obj('o1')
     with clidisplay.nopretty():
         assert "order o1 p4 p3 p2 p1" == obj2.repr().strip()
+
+
+@with_setup(setup_func, teardown_func)
+def test_bug959895():
+    """
+    Allow importing XML with cloned groups
+    """
+    xml = """<clone id="c-bug959895">
+    <group id="g-bug959895">
+    <primitive id="p-bug959895-a" class="ocf" provider="pacemaker" type="Dummy" />
+    <primitive id="p-bug959895-b" class="ocf" provider="pacemaker" type="Dummy" />
+    </group>
+</clone>
+"""
+    data = etree.fromstring(xml)
+    obj = factory.create_from_node(data)
+    print etree.tostring(obj.node)
+    data = obj.repr_cli(format=-1)
+    print data
+    exp = 'clone c-bug959895 g-bug959895'
+    assert data == exp
+    assert obj.cli_use_validate()
+
+    commit_holder = factory.commit
+    try:
+        factory.commit = lambda *args: True
+        from crmsh.ui_resource import set_deep_meta_attr
+        set_deep_meta_attr("c-bug959895", "target-role", "Started")
+        eq_(['Started'],
+            obj.node.xpath('.//nvpair[@name="target-role"]/@value'))
+    finally:
+        factory.commit = commit_holder

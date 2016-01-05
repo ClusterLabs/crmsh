@@ -3487,7 +3487,10 @@ class CibFactory(object):
         if obj_type not in constants.container_tags:
             return True
 
-        for c in node.iterchildren('primitive'):
+        # bsc#959895: also process cloned groups
+        for c in node.iterchildren():
+            if c.tag not in ('primitive', 'group'):
+                continue
             pid = c.get('id')
             child_obj = self.find_resource(pid)
             if child_obj is None:
