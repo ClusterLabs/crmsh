@@ -90,7 +90,7 @@ node1: normal
 </cib>
 
 .TRY node attribute node1 set a1 "1 2 3"
-.EXT crm_attribute -t nodes -U 'node1' -n 'a1' -v '1 2 3'
+.EXT crm_attribute -t nodes -N 'node1' -n 'a1' -v '1 2 3'
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
@@ -113,7 +113,7 @@ node1: normal
 </cib>
 
 .TRY node attribute node1 show a1
-.EXT crm_attribute -G -t nodes -U 'node1' -n 'a1'
+.EXT crm_attribute -G -t nodes -N 'node1' -n 'a1'
 scope=nodes  name=a1 value=1 2 3
 .INP: configure
 .INP: _regtest on
@@ -137,7 +137,7 @@ scope=nodes  name=a1 value=1 2 3
 </cib>
 
 .TRY node attribute node1 delete a1
-.EXT crm_attribute -D -t nodes -U 'node1' -n 'a1'
+.EXT crm_attribute -D -t nodes -N 'node1' -n 'a1'
 Deleted nodes attribute: id=nodes-node1-a1 name=a1
 
 .INP: configure
