@@ -17,7 +17,7 @@ from .parse import CliParser
 from . import clidisplay
 from .cibstatus import cib_status
 from . import idmgmt
-from .ra import get_ra, get_properties_list, get_pe_meta, can_validate_agent, validate_agent
+from .ra import get_ra, get_properties_list, get_pe_meta, validate_agent
 from . import schema
 from .crm_gv import gv_types
 from .msg import common_warn, common_err, common_debug, common_info, err_buf
