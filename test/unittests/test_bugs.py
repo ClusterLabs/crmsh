@@ -888,3 +888,28 @@ def test_bug959895():
             obj.node.xpath('.//nvpair[@name="target-role"]/@value'))
     finally:
         factory.commit = commit_holder
+
+
+@with_setup(setup_func, teardown_func)
+def test_node_util_attr():
+    """
+    Handle node with utitilization before attributes correctly
+    """
+    xml = """<node id="aberfeldy" uname="aberfeldy">
+  <utilization id="nodes-aberfeldy-utilization">
+    <nvpair id="nodes-aberfeldy-utilization-cpu" name="cpu" value="2"/>
+    <nvpair id="nodes-aberfeldy-utilization-memory" name="memory" value="500"/>
+  </utilization>
+  <instance_attributes id="nodes-aberfeldy">
+    <nvpair id="nodes-aberfeldy-standby" name="standby" value="on"/>
+  </instance_attributes>
+</node>"""
+
+    data = etree.fromstring(xml)
+    obj = factory.create_from_node(data)
+    print etree.tostring(obj.node)
+    data = obj.repr_cli(format=-1)
+    print data
+    exp = 'node aberfeldy utilization cpu=2 memory=500 attributes standby=on'
+    assert data == exp
+    assert obj.cli_use_validate()
