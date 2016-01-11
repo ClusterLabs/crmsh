@@ -56,7 +56,7 @@ def set_year(ts=None):
     year = time.strftime("%Y", time.localtime(ts))
     if YEAR is not None:
         t = (" (ts: %s)" % (ts)) if ts is not None else ""
-        common_debug("report: setting year to %s%s" % (year, t))
+        common_debug("history: setting year to %s%s" % (year, t))
     YEAR = year
 
 
@@ -454,7 +454,7 @@ def read_log_info(log):
         logf, pos = s.split()
         return logf, int(pos)
     except:
-        warn_once("hb_report too old, you need to update cluster-glue")
+        warn_once("crm report too old, you need to update cluster-glue")
         return '', -1
 
 
@@ -807,7 +807,7 @@ class Report(object):
 
     def is_live_recent(self):
         '''
-        Look at the last live hb_report. If it's recent enough,
+        Look at the last live report. If it's recent enough,
         return True.
         '''
         try:
@@ -818,7 +818,7 @@ class Report(object):
 
     def is_live_very_recent(self):
         '''
-        Look at the last live hb_report. If it's recent enough,
+        Look at the last live report. If it's recent enough,
         return True.
         '''
         return (time.time() - self.last_live_update) <= self.short_live_recent
@@ -986,7 +986,7 @@ class Report(object):
 
     def new_live_report(self):
         '''
-        Run hb_report to get logs now.
+        Run the report command to get logs now.
         '''
         from . import ui_report
 
@@ -1016,9 +1016,9 @@ class Report(object):
                               d))
         if rc != 0:
             if os.path.isfile(tarball):
-                self.warn("hb_report thinks it failed, proceeding anyway")
+                self.warn("report thinks it failed, proceeding anyway")
             else:
-                self.error("hb_report failed")
+                self.error("report failed")
                 return None
         self.last_live_update = time.time()
         return self.unpack_report(tarball)
@@ -1241,8 +1241,8 @@ class Report(object):
 
     def prepare_source(self, no_live_update=False):
         '''
-        Unpack a hb_report tarball.
-        For "live", create an ad-hoc hb_report and unpack it
+        Unpack a report tarball.
+        For "live", create an ad-hoc report and unpack it
         somewhere in the cache area.
         Parse the period.
         '''

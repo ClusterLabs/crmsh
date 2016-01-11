@@ -19,7 +19,7 @@ from . import options
 from .cibconfig import mkset_obj, cib_factory
 from .msg import common_err, common_debug, common_info
 from .msg import syntax_err
-from . import report
+from . import history
 from . import cmd_status
 
 
@@ -28,7 +28,7 @@ ptest_options = ["@v+", "nograph", "scores", "actions", "utilization"]
 
 @utils.memoize
 def crm_report():
-    return report.Report()
+    return history.Report()
 
 
 class History(command.UI):

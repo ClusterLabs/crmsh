@@ -146,7 +146,7 @@ This is the list of all modules including short descriptions.
 
 	Resource tester (configure rsctest command).
 
-- `modules/report.py`
+- `modules/history.py`
 
 	Cluster history. Interface to logs and other artifacts left
 	on disk by the cluster.
