@@ -1,0 +1,56 @@
+Announcing crmsh stable release 2.1.5
+=====================================
+:Author: Kristoffer Gronlund
+:Email: kgronlund@suse.com
+:Date: 2016-01-12 10:00
+
+Today we are proud to announce the release of `crmsh` version 2.1.5!
+This release mainly consists of bug fixes, as well as compatibility
+with Pacemaker 1.1.14.
+
+For a complete list of changes since the previous version, please
+refer to the changelog:
+
+* https://github.com/ClusterLabs/crmsh/blob/2.1.5/ChangeLog
+
+Packages for several popular Linux distributions can be downloaded
+from the Stable repository at the OBS:
+
+* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/
+
+Archives of the tagged release:
+
+* https://github.com/ClusterLabs/crmsh/archive/2.1.5.tar.gz
+* https://github.com/ClusterLabs/crmsh/archive/2.1.5.zip
+
+Changes since the previous release:
+
+- medium: report: Try to load source as session if possible (bsc#927407)
+- medium: crm_gv: Wrap non-identifier names in quotes (bsc#931837)
+- medium: crm_gv: Improved quoting of non-identifier node names (bsc#931837)
+- medium: crm_pkg: Fix cluster init bug on RH-based systems
+- medium: hb_report: Collect logs from pacemaker.log
+- medium: constants: Add 'provides' meta attribute (bsc#936587)
+- high: parse: Add attributes to terminator set (bsc#940920)
+- Medium: cibconfig: skip sanity check for properties other than cib-bootstrap-options
+- medium: config: Add report_tool_options (bsc#917638)
+- low: main: Bash completion didn't handle sudo correctly
+- high: report: New detection to fix missing transitions (bnc#917131)
+- medium: report: Add pacemaker.log to find_node_log list (bsc#941734)
+- high: hb_report: Prefer pacemaker.log if it exists (bsc#941681)
+- high: report: Output format from pacemaker has changed (bsc#941681)
+- high: report: Update transition edge regexes (bsc#942906)
+- medium: report: Reintroduce empty transition pruning (bsc#943291)
+- medium: log_patterns: Remove reference to function name in log patterns (bsc#942906)
+- low: hb_report: Collect libqb version (bsc#943327)
+- high: parse: Fix crash when referencing score types by name (bsc#940194)
+- low: constants: Add meta attributes for remote nodes
+- low: ui_history: Swap from and to times if to < from
+- high: cibconfig: Do not fail on unknown pacemaker schemas (bsc#946893)
+- high: log_patterns_118: Update the correct set of log patterns (bsc#942906)
+- high: xmlutil: Order is significant in resource_set (bsc#955434)
+- high: cibconfig: Fix XML import bug for cloned groups (bsc#959895)
+
+Thank you,
+
+Kristoffer and Dejan
