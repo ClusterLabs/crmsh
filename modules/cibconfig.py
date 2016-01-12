@@ -2138,7 +2138,7 @@ class CibFactory(object):
         # internal (just not to produce silly messages)
         self._no_constraint_rm_msg = False
         # FIXME
-        self.supported_cib_re = "^pacemaker-[12][.][0123]$"
+        self.supported_cib_re = "^pacemaker-.+$"
         self._crm_diff_cmd = None
 
     def is_cib_sane(self):
