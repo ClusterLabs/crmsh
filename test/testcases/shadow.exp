@@ -1,18 +1,18 @@
 .TRY Shadow CIB management
 .INP: cib
 .INP: new regtest force
-.EXT >/dev/null </dev/null crm_shadow -c 'regtest' --force
+.EXT >/dev/null </dev/null crm_shadow -b -c 'regtest' --force
 INFO: 2: cib.new: regtest shadow CIB created
 .INP: reset regtest
-.EXT >/dev/null </dev/null crm_shadow -r 'regtest'
+.EXT >/dev/null </dev/null crm_shadow -b -r 'regtest'
 INFO: 3: cib.reset: copied live CIB to regtest
 .INP: use regtest
 .INP: commit regtest
-.EXT >/dev/null </dev/null crm_shadow -C 'regtest' --force
+.EXT >/dev/null </dev/null crm_shadow -b -C 'regtest' --force
 INFO: 5: cib.commit: committed 'regtest' shadow CIB to the cluster
 .INP: delete regtest
 ERROR: 6: cib.delete: regtest shadow CIB is in use
 .INP: use
 .INP: delete regtest
-.EXT >/dev/null </dev/null crm_shadow -D 'regtest' --force
+.EXT >/dev/null </dev/null crm_shadow -b -D 'regtest' --force
 INFO: 8: cib.delete: regtest shadow CIB deleted
