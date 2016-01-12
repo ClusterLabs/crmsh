@@ -26,8 +26,8 @@ class CibShadow(command.UI):
     CIB shadow management class
     '''
     name = "cib"
-    extcmd = ">/dev/null </dev/null crm_shadow"
-    extcmd_stdout = "</dev/null crm_shadow"
+    extcmd = ">/dev/null </dev/null crm_shadow -b"
+    extcmd_stdout = "</dev/null crm_shadow -b"
 
     def requires(self):
         if not utils.is_program('crm_shadow'):
