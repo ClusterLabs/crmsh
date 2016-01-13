@@ -436,15 +436,12 @@ class History(command.UI):
         f1 = utils.str2tmp(s1)
         f2 = utils.str2tmp(s2)
         if f1 and f2:
-            rc, s = utils.get_stdout("wdiff %s %s" % (f1, f2))
-        try:
-            os.unlink(f1)
-        except:
-            pass
-        try:
-            os.unlink(f2)
-        except:
-            pass
+            _, s = utils.get_stdout("wdiff %s %s" % (f1, f2))
+        for f in (f1, f2):
+            try:
+                os.unlink(f)
+            except:
+                pass
         return s
 
     def _unidiff(self, s1, s2, t1, t2):
@@ -452,16 +449,14 @@ class History(command.UI):
         f1 = utils.str2tmp(s1)
         f2 = utils.str2tmp(s2)
         if f1 and f2:
-            rc, s = utils.get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
+            _, s = utils.get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
                                      (t1, t2, f1, f2))
-        try:
-            os.unlink(f1)
-        except:
-            pass
-        try:
-            os.unlink(f2)
-        except:
-            pass
+
+        for f in (f1, f2):
+            try:
+                os.unlink(f)
+            except:
+                pass
         return s
 
     def _diffhtml(self, s1, s2, t1, t2):
@@ -662,11 +657,9 @@ class History(command.UI):
         "usage: exclude [<regex>|clear]"
         self._init_source()
         if not arg:
-            rc = crm_report().manage_excludes("show")
+            return crm_report().manage_excludes("show")
         elif arg == "clear":
-            rc = crm_report().manage_excludes("clear")
-        else:
-            rc = crm_report().manage_excludes("add", arg)
-        return rc
+            return crm_report().manage_excludes("clear")
+        return crm_report().manage_excludes("add", arg)
 
 # vim:ts=4:sw=4:et:
