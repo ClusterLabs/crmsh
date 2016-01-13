@@ -35,8 +35,8 @@ LOG_PATTERNS="CRIT: ERROR:"
 #  title extended_regexp
 # NB: don't use spaces in titles or regular expressions!
 EVENT_PATTERNS="
-membership crmd.*(NEW|LOST)|pcmk_peer_update.*(lost|memb):
-quorum crmd.*Updating.quorum.status|crmd.*ais.disp.*quorum.(lost|ac?quir)
+membership crmd.*(NEW|LOST)|pcmk.*(lost|memb|LOST|MEMB):
+quorum crmd.*Updating.quorum.status|crmd.*quorum.(lost|ac?quir)
 pause Process.pause.detected
 resources lrmd.*(start|stop)
 stonith crmd.*Exec|stonith-ng.*log_oper.*reboot|stonithd.*(requests|(Succeeded|Failed).to.STONITH|result=)
