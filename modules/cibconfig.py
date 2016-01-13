@@ -587,7 +587,7 @@ class CibObjectSetCli(CibObjectSet):
             err_buf.incr_lineno()
             node = cp.parse(cli_text)
             if node not in (False, None):
-                rc = diff.add(node)
+                rc = rc and diff.add(node)
             elif node is False:
                 rc = False
         err_buf.stop_tmp_lineno()
