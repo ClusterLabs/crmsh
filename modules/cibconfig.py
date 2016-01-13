@@ -2065,9 +2065,6 @@ def can_migrate(node):
     return 'true' in node.xpath('.//nvpair[@name="allow-migrate"]/@value')
 
 
-cib_upgrade = "cibadmin --upgrade --force"
-
-
 class CibDiff(object):
     '''
     Represents a cib edit order.
@@ -2328,7 +2325,7 @@ class CibFactory(object):
             return False
         validator = self.cib_elem.get("validate-with")
         if force or not validator or re.match("0[.]6", validator):
-            return ext_cmd(cib_upgrade) == 0
+            return ext_cmd("cibadmin --upgrade --force") == 0
 
     def _import_cib(self, cib_elem):
         'Parse the current CIB (from cibadmin -Q).'
@@ -2951,6 +2948,10 @@ class CibFactory(object):
     def new_object(self, obj_type, obj_id):
         "Create a new object of type obj_type."
         common_debug("new_object: %s:%s" % (obj_type, obj_id))
+        existing = self.find_object(obj_id)
+        if existing and [obj_type, existing.obj_type].count("node") != 1:
+            common_error("Cannot create %s:%s: Found existing %s:%s" % (obj_id, obj_type, obj_id, existing.obj_type))
+            return None
         xml_obj_type = backtrans.get(obj_type)
         v = cib_object_map.get(xml_obj_type)
         if v is None:

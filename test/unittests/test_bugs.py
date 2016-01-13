@@ -744,3 +744,98 @@ op_defaults op-options: \
         print "*** NOW"
         print obj.repr()
         assert original_cib == obj.repr()
+
+
+@with_setup(setup_func, teardown_func)
+def test_reordering_resource_sets():
+    """
+    Can we reorder resource sets?
+    """
+    from crmsh import clidisplay
+    obj1 = factory.create_object('primitive', 'p1', 'Dummy')
+    assert obj1 is True
+    obj2 = factory.create_object('primitive', 'p2', 'Dummy')
+    assert obj2 is True
+    obj3 = factory.create_object('primitive', 'p3', 'Dummy')
+    assert obj3 is True
+    obj4 = factory.create_object('primitive', 'p4', 'Dummy')
+    assert obj4 is True
+    o1 = factory.create_object('order', 'o1', 'p1', 'p2', 'p3', 'p4')
+    assert o1 is True
+
+    obj = cibconfig.mkset_obj('o1')
+    assert obj is not None
+    rc = obj.save('order o1 p4 p3 p2 p1')
+    assert rc == True
+
+    obj2 = cibconfig.mkset_obj('o1')
+    with clidisplay.nopretty():
+        assert "order o1 p4 p3 p2 p1" == obj2.repr().strip()
+
+
+@with_setup(setup_func, teardown_func)
+def test_bug959895():
+    """
+    Allow importing XML with cloned groups
+    """
+    xml = """<clone id="c-bug959895">
+    <group id="g-bug959895">
+    <primitive id="p-bug959895-a" class="ocf" provider="pacemaker" type="Dummy" />
+    <primitive id="p-bug959895-b" class="ocf" provider="pacemaker" type="Dummy" />
+    </group>
+</clone>
+"""
+    data = etree.fromstring(xml)
+    obj = factory.create_from_node(data)
+    print etree.tostring(obj.node)
+    data = obj.repr_cli(format=-1)
+    print data
+    exp = 'clone c-bug959895 g-bug959895'
+    assert data == exp
+    assert obj.cli_use_validate()
+
+    commit_holder = factory.commit
+    try:
+        factory.commit = lambda *args: True
+        from crmsh.ui_resource import set_deep_meta_attr
+        set_deep_meta_attr("c-bug959895", "target-role", "Started")
+        eq_(['Started'],
+            obj.node.xpath('.//nvpair[@name="target-role"]/@value'))
+    finally:
+        factory.commit = commit_holder
+
+
+@with_setup(setup_func, teardown_func)
+def test_node_util_attr():
+    """
+    Handle node with utitilization before attributes correctly
+    """
+    xml = """<node id="aberfeldy" uname="aberfeldy">
+  <utilization id="nodes-aberfeldy-utilization">
+    <nvpair id="nodes-aberfeldy-utilization-cpu" name="cpu" value="2"/>
+    <nvpair id="nodes-aberfeldy-utilization-memory" name="memory" value="500"/>
+  </utilization>
+  <instance_attributes id="nodes-aberfeldy">
+    <nvpair id="nodes-aberfeldy-standby" name="standby" value="on"/>
+  </instance_attributes>
+</node>"""
+
+    data = etree.fromstring(xml)
+    obj = factory.create_from_node(data)
+    print etree.tostring(obj.node)
+    data = obj.repr_cli(format=-1)
+    print data
+    exp = 'node aberfeldy utilization cpu=2 memory=500 attributes standby=on'
+    assert data == exp
+    assert obj.cli_use_validate()
+
+
+@with_setup(setup_func, teardown_func)
+def test_dup_create():
+    """
+    Creating two objects with the same name
+    """
+    ok = factory.create_object(*"primitive dup1 Dummy".split())
+    assert ok
+    ok = factory.create_object(*"primitive dup1 Dummy".split())
+    assert not ok
