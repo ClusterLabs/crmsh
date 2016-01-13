@@ -913,3 +913,14 @@ def test_node_util_attr():
     exp = 'node aberfeldy utilization cpu=2 memory=500 attributes standby=on'
     assert data == exp
     assert obj.cli_use_validate()
+
+
+@with_setup(setup_func, teardown_func)
+def test_dup_create():
+    """
+    Creating two objects with the same name
+    """
+    ok = factory.create_object(*"primitive dup1 Dummy".split())
+    assert ok
+    ok = factory.create_object(*"primitive dup1 Dummy".split())
+    assert not ok
