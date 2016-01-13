@@ -205,6 +205,12 @@ class History(command.UI):
         return utils.run_ptest(s, nograph, scores, utilization, actions, verbosity)
 
     @command.skill_level('administrator')
+    def do_events(self, context):
+        "usage: events"
+        self._init_source()
+        return crm_report().events()
+
+    @command.skill_level('administrator')
     @command.completers_repeating(compl.join(compl.call(lambda: crm_report().peinputs_list()),
                                              compl.choice(['v'])))
     def do_peinputs(self, context, *args):
