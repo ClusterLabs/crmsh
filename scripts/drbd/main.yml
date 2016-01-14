@@ -1,40 +1,39 @@
----
-- version: 2.2
-  category: Filesystem
-  shortdesc: DRBD Block Device
-  longdesc: >-
-    Distributed Replicated Block Device. Configure a DRBD cluster resource.
+version: 2.2
+category: Filesystem
+shortdesc: DRBD Block Device
+longdesc: >-
+  Distributed Replicated Block Device. Configure a DRBD cluster resource.
 
-    Also creates a multistate resource managing the state of DRBD.
+  Also creates a multistate resource managing the state of DRBD.
 
-  parameters:
-    - name: id
-      shortdesc: DRBD Cluster Resource ID
-      required: true
-      value: drbd-data
-      type: resource
-    - name: drbd_resource
-      shortdesc: DRBD Resource Name
-      required: true
-      value: drbd0
-      type: string
-    - name: drbdconf
-      value: "/etc/drbd.conf"
-    - name: install
-      type: boolean
-      shortdesc: Install packages for DRBD
-      value: false
+parameters:
+  - name: id
+    shortdesc: DRBD Cluster Resource ID
+    required: true
+    value: drbd-data
+    type: resource
+  - name: drbd_resource
+    shortdesc: DRBD Resource Name
+    required: true
+    value: drbd0
+    type: string
+  - name: drbdconf
+    value: "/etc/drbd.conf"
+  - name: install
+    type: boolean
+    shortdesc: Install packages for DRBD
+    value: false
 
-  actions:
-    - install: drbd drbd-kmp-default
-      shortdesc: Install packages for DRBD
-      when: install
-    - cib: |
-        primitive {{id}} ocf:linbit:drbd
-          params
-            drbd_resource="{{drbd_resource}}"
-            drbdconf="{{drbdconf}}"
-          op monitor interval="29s" role="Master"
-          op monitor interval="31s" role="Slave"
-        ms ms-{{id}} {{id}}
-          meta master-max=1 master-node-max=1 clone-max=2 clone-node-max=1 notify=true
+actions:
+  - install: drbd drbd-kmp-default
+    shortdesc: Install packages for DRBD
+    when: install
+  - cib: |
+      primitive {{id}} ocf:linbit:drbd
+        params
+          drbd_resource="{{drbd_resource}}"
+          drbdconf="{{drbdconf}}"
+        op monitor interval="29s" role="Master"
+        op monitor interval="31s" role="Slave"
+      ms ms-{{id}} {{id}}
+        meta master-max=1 master-node-max=1 clone-max=2 clone-node-max=1 notify=true

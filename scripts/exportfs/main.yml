@@ -1,36 +1,35 @@
----
-- version: 2.2
-  shortdesc: "NFS Exported File System"
-  category: Server
-  include:
-    - agent: ocf:heartbeat:exportfs
-      parameters:
-        - name: id
-          required: true
-          shortdesc: Unique ID for this export in the cluster.
-          type: resource
-          value: exportfs
-        - name: fsid
-          required: true
-          type: integer
-          value: 1
-        - name: directory
-          required: true
-          type: string
-          shortdesc: Mount point
-          longdesc: "The mount point for the filesystem, e.g.: /srv/nfs/home"
-        - name: options
-          required: true
-          shortdesc: Mount options
-          longdesc: "Any additional options to be given to the mount command, for example rw,mountpoint"
-          type: string
-        - name: wait_for_leasetime_on_stop
-          required: false
-          shortdesc: Wait for lease time on stop
-          longdesc: If set to true, wait for lease on stop.
-          type: boolean
-          value: true
-      ops: |
-        op monitor interval=30s
-  actions:
-    - include: exportfs
+version: 2.2
+shortdesc: "NFS Exported File System"
+category: Server
+include:
+  - agent: ocf:heartbeat:exportfs
+    parameters:
+      - name: id
+        required: true
+        shortdesc: Unique ID for this export in the cluster.
+        type: resource
+        value: exportfs
+      - name: fsid
+        required: true
+        type: integer
+        value: 1
+      - name: directory
+        required: true
+        type: string
+        shortdesc: Mount point
+        longdesc: "The mount point for the filesystem, e.g.: /srv/nfs/home"
+      - name: options
+        required: true
+        shortdesc: Mount options
+        longdesc: "Any additional options to be given to the mount command, for example rw,mountpoint"
+        type: string
+      - name: wait_for_leasetime_on_stop
+        required: false
+        shortdesc: Wait for lease time on stop
+        longdesc: If set to true, wait for lease on stop.
+        type: boolean
+        value: true
+    ops: |
+      op monitor interval=30s
+actions:
+  - include: exportfs

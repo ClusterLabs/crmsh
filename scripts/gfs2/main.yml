@@ -2,51 +2,50 @@
 # Copyright (C) 2015 Kristoffer Gronlund
 #
 # License: GNU General Public License (GPL)
----
-- version: 2.2
-  shortdesc: gfs2 filesystem (cloned)
-  longdesc: >- 
-    This template generates a cloned instance of the gfs2 filesystem.
-    The filesystem should be on the device, unless cLVM is used.
+version: 2.2
+shortdesc: gfs2 filesystem (cloned)
+longdesc: >- 
+  This template generates a cloned instance of the gfs2 filesystem.
+  The filesystem should be on the device, unless cLVM is used.
 
-  category: Filesystem
-  include:
-    - script: gfs2-base
-  parameters:
-    - name: id
-      shortdesc: Name the gfs2 filesystem
-      longdesc: "NB: The clone is going to be named c-<id> (e.g. c-bigfs)"
-      example: bigfs
-      required: true
-      type: resource
-    - name: directory
-      shortdesc: The mount point
-      example: /mnt/bigfs
-      required: true
-      type: string
-    - name: device
-      shortdesc: The device
-      required: true
-      type: string
-    - name: options
-      shortdesc: mount options
-      type: string
-      required: false
-  actions:
-    - include: gfs2-base
-    - cib: |
-        primitive {{id}} ocf:heartbeat:Filesystem
-          params
-          directory="{{directory}}"
-          fstype="gfs2"
-          device="{{device}}"
-          {{#options}}options="{{options}}"{{/options}}
+category: Filesystem
+include:
+  - script: gfs2-base
+parameters:
+  - name: id
+    shortdesc: Name the gfs2 filesystem
+    longdesc: "NB: The clone is going to be named c-<id> (e.g. c-bigfs)"
+    example: bigfs
+    required: true
+    type: resource
+  - name: directory
+    shortdesc: The mount point
+    example: /mnt/bigfs
+    required: true
+    type: string
+  - name: device
+    shortdesc: The device
+    required: true
+    type: string
+  - name: options
+    shortdesc: mount options
+    type: string
+    required: false
+actions:
+  - include: gfs2-base
+  - cib: |
+      primitive {{id}} ocf:heartbeat:Filesystem
+        params
+        directory="{{directory}}"
+        fstype="gfs2"
+        device="{{device}}"
+        {{#options}}options="{{options}}"{{/options}}
 
-        monitor {{id}} 20:40
+      monitor {{id}} 20:40
 
-        clone c-{{id}} {{id}}
-          meta interleave="true" ordered="true"
+      clone c-{{id}} {{id}}
+        meta interleave="true" ordered="true"
 
-    - crm: "configure modgroup {{gfs2-base:clvm-group}} add c-{{id}}"
-      shortdesc: Add cloned filesystem to cLVM group
-      when: "{{gfs2-base:clvm-group}}"
+  - crm: "configure modgroup {{gfs2-base:clvm-group}} add c-{{id}}"
+    shortdesc: Add cloned filesystem to cLVM group
+    when: "{{gfs2-base:clvm-group}}"

@@ -2,56 +2,55 @@
 # Copyright (C) 2015 Kristoffer Gronlund
 #
 # License: GNU General Public License (GPL)
----
-- version: 2.2
-  category: Filesystem
-  shortdesc: OCFS2 filesystem (cloned)
-  longdesc: >
-    Configure a cloned cluster resource for an OCFS2 filesystem.
+version: 2.2
+category: Filesystem
+shortdesc: OCFS2 filesystem (cloned)
+longdesc: >
+  Configure a cloned cluster resource for an OCFS2 filesystem.
 
-    Note that the OCFS2 Filesystem will be stopped initially, in case
-    you need to run mkfs to create the filesystem after DLM is running.
+  Note that the OCFS2 Filesystem will be stopped initially, in case
+  you need to run mkfs to create the filesystem after DLM is running.
 
-  parameters:
-    - name: id
-      shortdesc: Name the ocfs2 filesystem resource
-      example: bigfs
-      type: resource
-      required: true
-    - name: directory
-      shortdesc: The mount point
-      example: /mnt/bigfs
-      type: string
-      required: true
-    - name: device
-      shortdesc: The device
-      type: string
-      required: true
-    - name: options
-      shortdesc: mount options
-      type: string
-    - name: clvm-group
-      shortdesc: cLVM Resource Group ID
-      longdesc: Optional ID of a cLVM resource group to add this filesystem to.
-      type: resource
-      required: False
+parameters:
+  - name: id
+    shortdesc: Name the ocfs2 filesystem resource
+    example: bigfs
+    type: resource
+    required: true
+  - name: directory
+    shortdesc: The mount point
+    example: /mnt/bigfs
+    type: string
+    required: true
+  - name: device
+    shortdesc: The device
+    type: string
+    required: true
+  - name: options
+    shortdesc: mount options
+    type: string
+  - name: clvm-group
+    shortdesc: cLVM Resource Group ID
+    longdesc: Optional ID of a cLVM resource group to add this filesystem to.
+    type: resource
+    required: False
 
-  actions:
-    - cib: |
-        primitive {{id}} ocf:heartbeat:Filesystem
-            params
-                directory="{{directory}}"
-                fstype="ocfs2"
-                device="{{device}}"
-                {{#options}}options="{{options}}"{{/options}}
-            op start timeout=60s
-            op stop timeout=60s
-            op monitor interval=20s timeout=40s
+actions:
+  - cib: |
+      primitive {{id}} ocf:heartbeat:Filesystem
+          params
+              directory="{{directory}}"
+              fstype="ocfs2"
+              device="{{device}}"
+              {{#options}}options="{{options}}"{{/options}}
+          op start timeout=60s
+          op stop timeout=60s
+          op monitor interval=20s timeout=40s
 
-        clone c-{{id}} {{id}}
-          meta interleave=true target-role=Stopped
+      clone c-{{id}} {{id}}
+        meta interleave=true target-role=Stopped
 
-    - crm: configure modgroup {{clvm-group}} add c-{{id}}
-      shortdesc: Add cloned OCFS2 filesystem to cLVM group
-      when: clvm-group
+  - crm: configure modgroup {{clvm-group}} add c-{{id}}
+    shortdesc: Add cloned OCFS2 filesystem to cLVM group
+    when: clvm-group
 

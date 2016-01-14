@@ -1,12 +1,11 @@
----
-- version: 2.2
-  category: Script
-  shortdesc: Check the health of the cluster
-  longdesc: Runs various checks to verify the health of the cluster nodes
-  actions:
-    - collect: collect.py
-      shortdesc: Collect cluster information
-    - apply_local: hahealth.py
-      shortdesc: Run HA health check
-    - report: report.py
-      shortdesc: Report cluster state
+version: 2.2
+category: Script
+shortdesc: Check the health of the cluster
+longdesc: Runs various checks to verify the health of the cluster nodes
+actions:
+  - collect: collect.py
+    shortdesc: Collect cluster information
+  - apply_local: hahealth.py
+    shortdesc: Run HA health check
+  - report: report.py
+    shortdesc: Report cluster state

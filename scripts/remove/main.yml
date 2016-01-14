@@ -1,25 +1,24 @@
----
-- version: 2.2
-  category: Script
-  shortdesc: Remove node from cluster
-  longdesc: >
-    Removes the node from the cluster. Resources currently
-    allocated to the node will be moved elsewhere if possible.
+version: 2.2
+category: Script
+shortdesc: Remove node from cluster
+longdesc: >
+  Removes the node from the cluster. Resources currently
+  allocated to the node will be moved elsewhere if possible.
 
-    A more usable interface to this script is provided via
-    the cluster remove command.
+  A more usable interface to this script is provided via
+  the cluster remove command.
 
-  parameters:
-    - name: node
-      type: resource
-      shortdesc: Node to remove from the cluster
+parameters:
+  - name: node
+    type: resource
+    shortdesc: Node to remove from the cluster
 
-  actions:
-    - shortdesc: Check nodes
-      collect: remove.py collect
+actions:
+  - shortdesc: Check nodes
+    collect: remove.py collect
 
-    - shortdesc: Validate parameters
-      validate: remove.py validate
+  - shortdesc: Validate parameters
+    validate: remove.py validate
 
-    - shortdesc: Remove node from cluster
-      apply_local: remove.py apply
+  - shortdesc: Remove node from cluster
+    apply_local: remove.py apply

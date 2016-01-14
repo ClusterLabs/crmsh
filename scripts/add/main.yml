@@ -1,39 +1,39 @@
----
-- version: 2.2
-  category: Script
-  shortdesc: Add a new node to an already existing cluster
-  longdesc: >
-    Installs missing packages and copies corosync.conf
-    from one of the existing cluster nodes.
+version: 2.2
+category: Script
+shortdesc: Add a new node to an already existing cluster
+longdesc: >
+  Installs missing packages and copies corosync.conf
+  from one of the existing cluster nodes.
 
-    This script is somewhat special: The nodes parameter
-    must contain at least one node already in the cluster 
-    as well as the new node to add.
+  This script is somewhat special: The nodes parameter
+  must contain at least one node already in the cluster 
+  as well as the new node to add.
 
-    A more user-friendly interface to this script is 
-    provided via the cluster add command.
-  parameters:
-    - name: node
-      shortdesc: Node to add to the cluster
-      type: string
-      required: true
+  A more user-friendly interface to this script is 
+  provided via the cluster add command.
 
-  actions:
-    - shortdesc: Check cluster
-      collect: add.py collect
+parameters:
+  - name: node
+    shortdesc: Node to add to the cluster
+    type: string
+    required: true
 
-    - shortdesc: Validate parameters
-      validate: add.py validate
+actions:
+  - shortdesc: Check cluster
+    collect: add.py collect
 
-    - shortdesc: Install required packages
-      apply: add.py install
+  - shortdesc: Validate parameters
+    validate: add.py validate
 
-    - shortdesc: Copy configuration files
-      apply_local: add.py copy
+  - shortdesc: Install required packages
+    apply: add.py install
 
-    - shortdesc: Configure firewall
-      apply: add.py firewall
+  - shortdesc: Copy configuration files
+    apply_local: add.py copy
 
-    - shortdesc: Start cluster on new node
-      apply: add.py start
+  - shortdesc: Configure firewall
+    apply: add.py firewall
+
+  - shortdesc: Start cluster on new node
+    apply: add.py start
 

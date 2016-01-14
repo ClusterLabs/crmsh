@@ -1,20 +1,19 @@
----
-- version: 2.2
-  category: Script
-  shortdesc: Check uptime of nodes
-  longdesc: >
-    Fetches the uptime of all nodes and reports which
-    node has lived longest.
+version: 2.2
+category: Script
+shortdesc: Check uptime of nodes
+longdesc: >
+  Fetches the uptime of all nodes and reports which
+  node has lived longest.
 
-  parameters:
-    - name: show_all
-      shortdesc: Show all uptimes
-      type: boolean
-      value: false
+parameters:
+  - name: show_all
+    shortdesc: Show all uptimes
+    type: boolean
+    value: false
 
-  actions:
-    - shortdesc: Fetch uptimes
-      collect: fetch.py
+actions:
+  - shortdesc: Fetch uptimes
+    collect: fetch.py
 
-    - shortdesc: Report uptime
-      report: report.py
+  - shortdesc: Report uptime
+    report: report.py

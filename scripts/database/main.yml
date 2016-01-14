@@ -1,35 +1,34 @@
----
-- version: 2.2
-  category: Database
-  shortdesc: MySQL/MariaDB Database
-  longdesc: >
-    Configure a MySQL or MariaDB SQL Database.
-    Enable the install option to install the necessary
-    packages for the database.
-  include:
-    - agent: ocf:heartbeat:mysql
-      name: database
-      parameters:
-        - name: test_table
-          value: ""
-      ops: |
-        op start timeout=120s
-        op stop timeout=120s
-        op monitor interval=20s timeout=30s
+version: 2.2
+category: Database
+shortdesc: MySQL/MariaDB Database
+longdesc: >
+  Configure a MySQL or MariaDB SQL Database.
+  Enable the install option to install the necessary
+  packages for the database.
+include:
+  - agent: ocf:heartbeat:mysql
+    name: database
+    parameters:
+      - name: test_table
+        value: ""
+    ops: |
+      op start timeout=120s
+      op stop timeout=120s
+      op monitor interval=20s timeout=30s
 
-  parameters:
-    - name: install
-      shortdesc: Enable to install required packages
-      type: boolean
-      value: false
+parameters:
+  - name: install
+    shortdesc: Enable to install required packages
+    type: boolean
+    value: false
 
-  actions:
-    - install: mariadb
-      shortdesc: Install packages
-      when: install
-    - service:
-        - name: mysql
-          action: disable
-      shortdesc: Let cluster manage the database
-      when: install
-    - include: database
+actions:
+  - install: mariadb
+    shortdesc: Install packages
+    when: install
+  - service:
+      - name: mysql
+        action: disable
+    shortdesc: Let cluster manage the database
+    when: install
+  - include: database

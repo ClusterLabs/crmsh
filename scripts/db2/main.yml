@@ -1,48 +1,45 @@
----
-- version: 2.2
-  category: Database
-  shortdesc: IBM DB2 Database
-  longdesc: >-
-    Configure an IBM DB2 database resource, along with a Virtual IP and a Filesystem.
+version: 2.2
+category: Database
+shortdesc: IBM DB2 Database
+longdesc: >-
+  Configure an IBM DB2 database resource, along with a Virtual IP and a Filesystem.
 
-    Note that the filesystem will be stopped initially, in case you need to run mkfs.
+  Note that the filesystem will be stopped initially, in case you need to run mkfs.
 
-  include:
-    - agent: ocf:heartbeat:db2
-      parameters:
-        - name: id
-          required: true
-          shortdesc: DB2 Resource ID
-          longdesc: Unique ID for the database resource in the cluster.
-          type: string
-          value: db2-database
-        - name: instance
-          required: true
-          type: string
-          value: db2inst1
-    - script: virtual-ip
-      shortdesc: The IP address configured here will start before the DB2 instance.
-      parameters:
-        - name: id
-          value: db2-virtual-ip
-    - script: filesystem
-      shortdesc: The filesystem configured here will be mounted before the DB2 instance.
-      parameters:
-        - name: id
-          value: db2-fs
-        - name: fstype
-          value: xfs
-        - name: directory
-          value: "/db2/db2inst1"
-  actions:
-    - include: virtual-ip
-    - include: filesystem
-    - include: db2
-    - cib: |
-        group g-{{id}}
-          {{virtual-ip:id}}
-          {{filesystem:id}}
-          {{id}}
-          meta target-role=Stopped
-
-      
+include:
+  - agent: ocf:heartbeat:db2
+    parameters:
+      - name: id
+        required: true
+        shortdesc: DB2 Resource ID
+        longdesc: Unique ID for the database resource in the cluster.
+        type: string
+        value: db2-database
+      - name: instance
+        required: true
+        type: string
+        value: db2inst1
+  - script: virtual-ip
+    shortdesc: The IP address configured here will start before the DB2 instance.
+    parameters:
+      - name: id
+        value: db2-virtual-ip
+  - script: filesystem
+    shortdesc: The filesystem configured here will be mounted before the DB2 instance.
+    parameters:
+      - name: id
+        value: db2-fs
+      - name: fstype
+        value: xfs
+      - name: directory
+        value: "/db2/db2inst1"
+actions:
+  - include: virtual-ip
+  - include: filesystem
+  - include: db2
+  - cib: |
+      group g-{{id}}
+        {{virtual-ip:id}}
+        {{filesystem:id}}
+        {{id}}
+        meta target-role=Stopped

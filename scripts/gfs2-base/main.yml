@@ -2,27 +2,26 @@
 # Copyright (C) 2015 Kristoffer Gronlund
 #
 # License: GNU General Public License (GPL)
----
-- version: 2.2
-  category: Filesystem
-  shortdesc: gfs2 filesystem base (cloned)
-  longdesc: |
-    This template generates a cloned instance of the gfs2 filesystem.
-    The filesystem should be on the device, unless clvm is used.
+version: 2.2
+category: Filesystem
+shortdesc: gfs2 filesystem base (cloned)
+longdesc: |
+  This template generates a cloned instance of the gfs2 filesystem.
+  The filesystem should be on the device, unless clvm is used.
 
-  parameters:
-    - name: clvm-group
-      shortdesc: cLVM Resource Group ID
-      longdesc: Optional ID of a cLVM resource group.
-      required: False
+parameters:
+  - name: clvm-group
+    shortdesc: cLVM Resource Group ID
+    longdesc: Optional ID of a cLVM resource group.
+    required: False
 
-  actions:
-    - cib: |
-        primitive gfs-controld ocf:pacemaker:controld
+actions:
+  - cib: |
+      primitive gfs-controld ocf:pacemaker:controld
 
-        clone c-gfs gfs-controld
-          meta interleave="true" ordered="true"
+      clone c-gfs gfs-controld
+        meta interleave="true" ordered="true"
 
-    - crm: configure modgroup {{clvm-group}} add c-gfs
-      shortdesc: Add gfs controld to cLVM group
-      when: clvm-group
+  - crm: configure modgroup {{clvm-group}} add c-gfs
+    shortdesc: Add gfs controld to cLVM group
+    when: clvm-group
