@@ -7,6 +7,7 @@ import subprocess
 import getpass
 import time
 import shutil
+import socket
 import random
 from copy import deepcopy
 from glob import glob
@@ -573,7 +574,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
             'shortdesc': _strip(''.join(item.xpath('./stepdesc/text()'))),
             'name': item.get('name'),
             # Optional steps in the legacy wizards was broken (!?)
-            'required': True, #item.get('required'),
+            'required': True,  # item.get('required'),
             'parameters': []
         }
         data['steps'].append(templatestep)
@@ -1221,8 +1222,6 @@ def _find_by_name(params, name):
 
 _IDENT_RE = re.compile(r'^([a-z0-9_#$-][^\s=]*)$', re.IGNORECASE)
 
-import socket
-
 
 def is_valid_ipv4_address(address):
     try:
@@ -1405,7 +1404,7 @@ def _check_parameters(script, params):
     3. For each input parameter: look it up and adjust the path
     '''
     errors = []
-    #params = deepcopy(params)
+    # params = deepcopy(params)
     # recursively resolve parameters: report
     # error if a parameter can't be resolved
     # TODO: move "common params" out of the params dict completely
@@ -1465,7 +1464,7 @@ def _check_parameters(script, params):
     if errors:
         raise ValueError("Missing required parameter(s): %s" % (', '.join(errors)))
 
-    #if config.core.debug:
+    # if config.core.debug:
     #    from pprint import pprint
     #    print("Checked script parameters:")
     #    pprint(params)
@@ -1522,8 +1521,8 @@ def _has_remote_actions(actions):
 
 
 def _set_controlpersist(opts):
-    #_has_controlpersist = _check_control_persist()
-    #if _has_controlpersist:
+    # _has_controlpersist = _check_control_persist()
+    # if _has_controlpersist:
     #    opts.ssh_options += ["ControlMaster=auto",
     #                         "ControlPersist=30s",
     #                         "ControlPath=/tmp/crm-ssh-%r@%h:%p"]
