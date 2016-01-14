@@ -608,6 +608,10 @@ def _build_script_cache():
                 name = os.path.dirname(s).split('/')[-1]
                 if name not in _script_cache:
                     _script_cache[name] = os.path.join(d, s)
+            for s in glob(os.path.join(d, '*.yml')):
+                name = os.path.splitext(os.path.basename(s))[0]
+                if name not in _script_cache:
+                    _script_cache[name] = os.path.join(d, s)
             for s in glob(os.path.join(d, 'workflows/*.xml')):
                 name = os.path.splitext(os.path.basename(s))[0]
                 if name not in _script_cache:
@@ -1068,12 +1072,12 @@ def _parallax_call(printer, hosts, cmd, opts):
 
 def _resolve_script(name):
     for p in list_scripts():
-        if p.endswith('.yml'):
-            if os.path.dirname(p).endswith('/' + name):
-                return p
-        elif p.endswith('.xml'):
-            if os.path.splitext(os.path.basename(p))[0] == name:
-                return p
+        if p.endswith('main.yml') and os.path.dirname(p).endswith('/' + name):
+            return p
+        elif p.endswith('.yml') and os.path.splitext(os.path.basename(p))[0] == name:
+            return p
+        elif p.endswith('.xml') and os.path.splitext(os.path.basename(p))[0] == name:
+            return p
     return None
 
 
@@ -1556,16 +1560,22 @@ def param_completion_list(name):
         return []
 
 
-def _create_script_workdir(scriptdir, workdir):
+def _create_script_workdir(script, workdir):
     "Create workdir and copy contents of scriptdir into it"
+    scriptdir = script['dir']
     try:
         if scriptdir is not None:
-            cmd = ["mkdir", "-p", os.path.dirname(workdir)]
+            if os.path.basename(scriptdir) == script['name']:
+                cmd = ["mkdir", "-p", os.path.dirname(workdir)]
+            else:
+                cmd = ["mkdir", "-p", workdir]
             if options.regression_tests:
                 print ".EXT", cmd
             if subprocess.call(cmd, shell=False) != 0:
                 raise ValueError("Failed to create temporary working directory")
-            shutil.copytree(scriptdir, workdir)
+            # only copytree if script is a dir
+            if os.path.basename(scriptdir) == script['name']:
+                shutil.copytree(scriptdir, workdir)
         else:
             cmd = ["mkdir", "-p", workdir]
             if options.regression_tests:
@@ -1728,7 +1738,7 @@ class RunActions(object):
 
     def prepare(self, has_remote_actions):
         if not self.dry_run:
-            _create_script_workdir(self.script['dir'], self.workdir)
+            _create_script_workdir(self.script, self.workdir)
             json.dump(self.data, open(self.statefile, 'w'))
             _copy_utils(self.workdir)
             if has_remote_actions:
