@@ -937,8 +937,12 @@ class Report(object):
         Update or create live report.
         '''
         d = self._live_loc()
+
+        created_now = False
+
+        # Create live report if it doesn't exist
         if not d or not os.path.isdir(d):
-            return self.get_live_report()
+            created_now, d = True, self.get_live_report()
         if not self.loc:
             # the live report is there, but we were just invoked
             self.loc = d
@@ -957,7 +961,9 @@ class Report(object):
                     return self._live_loc()
             else:
                 warn_once("parallax library not installed, slow live updates ahead")
-        return self.get_live_report()
+        if not created_now:
+            return self.get_live_report()
+        return self.loc
 
     def new_live_report(self):
         '''
