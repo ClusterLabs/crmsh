@@ -283,9 +283,8 @@ class LogSyslog(object):
     Slice log, search log.
     '''
 
-    def __init__(self, central_log, log_l, from_dt, to_dt):
+    def __init__(self, log_l, from_dt, to_dt):
         self.log_l = log_l
-        self.central_log = central_log
         self.f = {}
         self.startpos = {}
         self.endpos = {}
@@ -307,13 +306,9 @@ class LogSyslog(object):
             common_err("open %s: %s" % (log, msg))
 
     def open_logs(self):
-        if self.central_log:
-            common_debug("opening central log %s" % self.central_log)
-            self.open_log(self.central_log)
-        else:
-            for log in self.log_l:
-                common_debug("opening log %s" % log)
-                self.open_log(log)
+        for log in self.log_l:
+            common_debug("opening log %s" % log)
+            self.open_log(log)
 
     def set_log_timeframe(self, from_dt, to_dt):
         '''
@@ -367,11 +362,7 @@ class LogSyslog(object):
         '''
         Search logs for any of the regexps in relist.
         '''
-        # if there's central log, there won't be merge
-        if self.central_log:
-            fl = [self.f[f] for f in self.f]
-        else:
-            fl = [self.f[f] for f in self.f if self.f[f].name in log_l]
+        fl = [self.f[f] for f in self.f if self.f[f].name in log_l]
         for f in fl:
             f.seek(self.startpos[f])
         # get head lines of all nodes
@@ -667,7 +658,6 @@ class Report(object):
         self.from_dt = None
         self.to_dt = None
         self.log_l = []
-        self.central_log = None
         self.setnodes = []  # optional
         # derived
         self.loc = None
@@ -835,21 +825,6 @@ class Report(object):
             if is_log(os.path.join(p, lf)):
                 return os.path.join(p, lf)
         return None
-
-    def find_central_log(self):
-        'Return common log, if found.'
-        central_log = os.path.join(self.loc, "ha-log.txt")
-        if is_log(central_log):
-            logf, pos = read_log_info(central_log)
-            if logf == '':
-                # assume it's not a central log (we don't
-                # know really)
-                return
-            if logf.startswith("synthetic"):
-                # not central log
-                return
-            common_debug("found central log %s" % logf)
-            self.central_log = central_log
 
     def find_logs(self):
         'Return a list of logs found (one per node).'
@@ -1074,8 +1049,7 @@ class Report(object):
     def read_cib(self):
         '''
         Get some information from the report's CIB (node list,
-        resource list, groups). If "live" and not central log,
-        then use cibadmin.
+        resource list, groups). If "live" then use cibadmin.
         '''
         cib_elem = None
         cib_f = self.get_cib_loc()
@@ -1203,7 +1177,6 @@ class Report(object):
         self.node_l = self.get_nodes()
         self.set_node_colors()
         self.log_l = self.find_logs()
-        self.find_central_log()
         self.read_cib()
 
     def _report_setup_update(self):
@@ -1225,8 +1198,7 @@ class Report(object):
         elif self.change_origin == CH_UPD:
             self._report_setup_update()
 
-        self.logobj = LogSyslog(self.central_log,
-                                self.log_l,
+        self.logobj = LogSyslog(self.log_l,
                                 self.from_dt,
                                 self.to_dt)
 
@@ -1280,7 +1252,7 @@ class Report(object):
         including current detail level
         '''
         cib_f = None
-        if self.source != "live" or self.central_log:
+        if self.source != "live":
             cib_f = self.get_cib_loc()
         if is_pcmk_118(cib_f=cib_f):
             from .log_patterns_118 import log_patterns
@@ -1342,7 +1314,7 @@ class Report(object):
             return re.compile(r) if isinstance(r, basestring) else r
         if not log_l:
             log_l = self.log_l
-        if not self.central_log and not log_l:
+        if not log_l:
             self.error("no logs found")
             return
         self.display_logs(self.logobj.get_matches([process(r) for r in re_l], log_l))
