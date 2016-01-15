@@ -68,12 +68,7 @@ all-local:
 		--build-base $(shell readlink -f $(builddir))/build \
 		--verbose)
 
-# Fix for GNU/Linux
-if UNAME_IS_DEBIAN
-python_prefix = 
-else
 python_prefix = --prefix=$(DESTDIR)$(prefix)
-endif
 
 install-exec-local:
 	-mkdir -p $(DESTDIR)$(pkgpythondir)
