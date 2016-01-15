@@ -718,7 +718,9 @@ def resolve_references(node):
         ref.set('id-ref', resolve_idref(ref))
     for ref in node.iterchildren('crmsh-ref'):
         child_id = ref.get('id')
-        obj = cib_factory.find_object(child_id)
+        # TODO: This always refers to a resource ATM.
+        # Handle case where it may refer to a node name?
+        obj = cib_factory.find_resource(child_id)
         common_debug("resolve_references: %s -> %s" % (child_id, obj))
         if obj is not None:
             newnode = copy.deepcopy(obj.node)
@@ -2797,13 +2799,12 @@ class CibFactory(object):
     #
     # a few helper functions
     #
-    def find_object_for_node(self, node):
-        "Find an object which matches a dom node."
-        for obj in self.cib_objects:
-            if node.tag == "fencing-topology" and \
-                    obj.xml_obj_type == "fencing-topology":
+    def find_container_child(self, node):
+        "Find an object which may be the child in a container."
+        for obj in reversed(self.cib_objects):
+            if node.tag == "fencing-topology" and obj.xml_obj_type == "fencing-topology":
                 return obj
-            if node.get("id") == obj.obj_id:
+            if node.tag == obj.node.tag and node.get("id") == obj.obj_id:
                 return obj
         return None
 
@@ -3451,7 +3452,7 @@ class CibFactory(object):
             return
         for c in obj.node.iterchildren():
             if is_child_rsc(c):
-                child = self.find_object_for_node(c)
+                child = self.find_container_child(c)
                 if not child:
                     missing_obj_err(c)
                     continue
