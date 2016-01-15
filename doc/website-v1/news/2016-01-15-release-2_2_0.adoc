@@ -1,0 +1,210 @@
+crmsh 2.2.0 is released
+============================
+:Author: Kristoffer Gronlund
+:Email: kgronlund@suse.com
+:Date: 2016-01-15 15:00
+
+In June of last year, I released Release Candidate 3 of crmsh 2.2.0,
+and I honestly expected to have the final version ready no more than a
+few weeks later. Well, it took around 6 months, but now it is finally
+here!
+
+The source code can be downloaded from Github:
+
+* https://github.com/ClusterLabs/crmsh/releases/tag/2.2.0
+
+Packages for several popular Linux distributions can be downloaded
+from the Stable repository at the OBS:
+
+* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/
+
+Archives of the tagged release:
+
+* https://github.com/ClusterLabs/crmsh/archive/2.2.0.tar.gz
+* https://github.com/ClusterLabs/crmsh/archive/2.2.0.zip
+
+There are many new features and quite a few bug fixes, but I'll try to
+describe some of the major changes below. For the full list of changes
+since version 2.1, see the ChangeLog. I am also including the list
+of changes since RC3 in the release notes below.
+
+* https://github.com/ClusterLabs/crmsh/blob/2.2.0/ChangeLog
+
+New features introduced in this version:
+
+* Support for many of the new features introduced in Pacemaker
+  1.1.14, including improved support for Pacemaker Remote and
+  pattern-based fencing topology configurations.
+
+* The cluster scripts have been greatly improved and are now used as
+  the wizards backend for hawk. Together with the improvements in the
+  cluster scripts, the crmsh template sublevel has been deprecated,
+  and all of the templates are now available as cluster scripts. The
+  template sublevel will be removed in a future version.
+
+* The history explorer now replaces the combined log and event files
+  from hb_report using the commands crm history log and crm history
+  events. Additionally, the info summary now highlights transitions
+  that contain error logs or other potentially interesting events.
+
+* Improved verification before committing new changes, for example
+  crmsh now warns if colocation constraints are applied to group
+  children.
+
+* resource start / stop / restart now take multiple resource arguments.
+
+* Added a maintenance sublevel with commands intended to simplify the
+  use of maintenance mode.
+
+* Switched to using the python parallax library instead of pssh for
+  remote node communication. Parallax is a fork of pssh with
+  additional features added specifically for using it as a python
+  library rather than a command line tool. Packages for
+  python-parallax can be downloaded from the OBS, or it can be
+  installed from PyPI.
+
+Full list of changes since 2.2.0-rc3:
+
+- medium: history: Fix live report refresh (bsc#950422) (bsc#927414)
+- medium: history: Ignore central log
+- medium: cibconfig: Detect false container children
+- low: clidisplay: Avoid crash when colorizing None
+- medium: scripts: Load single file yml scripts
+- medium: scripts: Reformat scripts to simplified form
+- medium: ui_history: Add events command (bsc#952449)
+- low: hb_report: Drop function from event patterns
+- high: cibconfig: Preserve failure through edit (bsc#959965)
+- high: cibconfig: fail if new object already exists (bsc#959965)
+- medium: ui_cib: Call crm_shadow in batch mode to avoid spawning subshell (bsc#961392)
+- high: cibconfig: Fix XML import bug for cloned groups (bsc#959895)
+- high: ui_configure: Move validate-all validation to a separate command (bsc#956442)
+- high: scripts: Don't require scripts to be an array of one element
+- medium: scripts: Enable setting category in legacy wizards (bnc#957926)
+- high: scripts: Don't delete steps from upgraded wizards (bnc#957925)
+- high: ra: Only run validate-all if current user is root
+- high: cibconfig: Call validate-all action on agent in verify (bsc#956442)
+- high: script: Fix issues found in cluster scripts
+- high: ui_ra: Add ra validate command (bsc#956442)
+- low: resource: Fix unban alias for unmigrate
+- high: ui_resource: Add constraints and operations commands
+- high: ui_resource: Enable start/stop/status for multiple resources at once (bsc#952775)
+- high: scripts: Conservatively verify scripts that modify the CIB (bsc#951954)
+- high: xmlutil: Order is significant in resource_set (bsc#955434)
+- medium: scripts: Lower copy target to string
+- doc: configure load can read from stdin
+- medium: script: (filesystem) create stopped (bsc#952670)
+- medium: scripts: Check required parameters for optional sub-steps
+- high: scripts: Eval CIB text in correct scope (bsc#952600)
+- medium: utils: Fix python 2.6 compatibility
+- medium: ui_script: Tag legacy wizards as legacy in show (bsc#952226)
+- medium: scripts: No optional steps in legacy wizards (bsc#952226)
+- high: utils: Revised time zone handling (bsc#951759)
+- high: report: Fix syslog parser regexps (bsc#951759)
+- low: constants: Tweaked graph colours
+- high: scripts: Fix DRBD script resource reference (bsc#951028)
+- low: constants: Tweaked graph colors
+- medium: report: Make transitions without end stretch to 2525
+- high: utils: Handle time zones in parse_time (bsc#949511)
+- medium: hb_report: Remove reference to function name in event patterns (bsc#942906)
+- medium: ui_script: Optionally print common params
+- medium: cibconfig: Fix sanity check for attribute-based fencing topology (#110)
+- high: cibconfig: Fix bug with node/resource collision
+- high: scripts: Determine output format of script correctly (bsc#949980)
+- doc: add explanatory comments to fencing_topology
+- doc: add missing backslash in fencing_topology example
+- doc: add missing <> to fencing_topology syntax
+- low: don't use deprecated crm_attribute -U option
+- doc: resource-discovery for location constraints
+- high: utils: Fix cluster_copy_file error when nodes provided
+- low: xmlutil: More informative message when updating resource references after rename
+- doc: fix some command syntax grammar in the man page
+- high: cibconfig: Delete constraints before resources
+- high: cibconfig: Fix bug in is_edit_valid (bsc#948547)
+- medium: hb_report: Don't cat binary logs
+- high: cibconfig: Allow node/rsc id collision in _set_update (bsc#948547)
+- low: report: Silence tar warning on early stream close
+- high: cibconfig: Allow nodes and resources with the same ID (bsc#948547)
+- high: log_patterns_118: Update the correct set of log patterns (bsc#942906)
+- low: ui_resource: Silence spurious migration non-warning from pacemaker
+- medium: config: Always fall back to /usr/bin:/usr/sbin:/bin:/sbin for programs (bsc#947818)
+- medium: report: Enable opening .xz-compressed report tarballs
+- medium: cibconfig: Only warn for grouped children in colocations (bsc#927423)
+- medium: cibconfig: Allow order constraints on group children (bsc#927423)
+- medium: cibconfig: Warn if configuring constraint on child resource (bsc#927423) (#101)
+- high: ui_node: Show remote nodes in crm node list (bsc#877962)
+- high: config: Remove config.core.supported_schemas (bsc#946893)
+- medium: report: Mark transitions with errors with a star in info output (bsc#943470)
+- low: report: Remove first transition tag regex
+- medium: report: Add transition tags command (bsc#943470)
+- low: ui_history: Better error handling and documentation for the detail command
+- low: ui_history: Swap from and to times if to < from
+- medium: cibconfig: XML parser support for node-attr fencing topology
+- medium: parse: Updated syntax for fencing-topology target attribute
+- medium: parse: Add support for node attribute as fencing topology target
+- high: scripts: Add enum type to script values
+- low: scripts: [MailTo] install mailx package
+- low: scripts: Fix typo in email type verifier
+- high: script: Fix subscript agent reference bug
+- low: constants: Add meta attributes for remote nodes
+- medium: scripts: Fix typo in lvm script
+- high: scripts: Generate actions for includes if none are defined
+- low: scripts: [virtual-ip] make lvs_support an advanced parameter
+- medium: crm_pssh: Timeout is an int (bsc#943820)
+- medium: scripts: Add MailTo script
+- low: scripts: Improved script parameter validation
+- high: parse: Fix crash when referencing score types by name (bsc#940194)
+- doc: Clarify documentation for colocations using node-attribute
+- high: ui_script: Print cached errors in json run
+- medium: scripts: Use --no option over --force unless force: true is set in the script
+- medium: options: Add --no option
+- high: scripts: Default to passing --force to crm after all
+- high: scripts: Add force parameter to cib and crm actions, and don't pass --force by default
+- low: scripts: Make virtual IP optional [nfsserver]
+- medium: scripts: Ensure that the Filesystem resource exists [nfsserver] (bsc#898658)
+- medium: report: Reintroduce empty transition pruning (bsc#943291)
+- low: hb_report: Collect libqb version (bsc#943327)
+- medium: log_patterns: Remove reference to function name in log patterns (bsc#942906)
+- low: hb_report: Increase time to wait for the logmark
+- high: hb_report: Always prefer syslog if available (bsc#942906)
+- high: report: Update transition edge regexes (bsc#942906)
+- medium: scripts: Switch install default to false
+- low: scripts: Catch attempt to pass dict as parameter value
+- high: report: Output format from pacemaker has changed (bsc#941681)
+- high: hb_report: Prefer pacemaker.log if it exists (bsc#941681)
+- medium: report: Add pacemaker.log to find_node_log list (bsc#941734)
+- high: hb_report: Correct path to hb_report after move to subdirectory (bsc#936026)
+- low: main: Bash completion didn't handle sudo correctly
+- medium: config: Add report_tool_options (bsc#917638)
+- high: parse: Add attributes to terminator set (bsc#940920)
+- Medium: cibconfig: skip sanity check for properties other than cib-bootstrap-options
+- medium: ui_script: Fix bug in verify json encoding
+- low: ui_script: Check JSON command syntax
+- medium: ui_script: Add name to action output (fate#318211)
+- low: scripts: Preserve formatting of longdescs
+- low: scripts: Clearer shortdesc for filesystem
+- low: scripts: Fix formatting for SAP scripts
+- low: scripts: add missing type annotations to libvirt script
+- low: scripts: make overridden parameters non-advanced by default
+- low: scripts: Tweak description for libvirt
+- low: scripts: Strip shortdesc for scripts and params
+- low: scripts: Title and category for exportfs
+- high: ui_script: drop end sentinel from API output (fate#318211)
+- low: scripts: Fix possible reference error in agent include
+- low: scripts: Clearer error message
+- low: Remove build revision from version
+- low: Add HAProxy script to data manifest
+- medium: constants: Add 'provides' meta attribute (bsc#936587)
+- medium: scripts: Add HAProxy script
+- high: hb_report: find utility scripts after move (bsc#936026)
+- high: ui_report: Move hb_report to subdirectory (bsc#936026)
+- high: Makefile: Don't unstall hb_report using data-manifest (bsc#936026)
+- medium: report: Fall back to cluster-glue hb_report if necessary (bsc#936026)
+- medium: scripts: stop inserting comments as values
+- high: scripts: subscript values not required if subscript has no parameters / all defaults (fate#318211)
+- medium: scripts: Fix name override for subscripts (fate#318211)
+- low: scripts: Clean up generated CIB (fate#318211)
+
+As usual, a huge thank you to all contributors and users of crmsh!
+
+Cheers,
+Kristoffer
