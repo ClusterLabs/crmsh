@@ -40,7 +40,7 @@ def colors_enabled():
 
 
 def _colorize(s, colors):
-    if colors_enabled():
+    if s and colors_enabled():
         return ''.join(('${%s}' % clr.upper()) for clr in colors) + s + '${NORMAL}'
     return s
 
