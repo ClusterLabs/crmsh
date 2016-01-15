@@ -1,5 +1,5 @@
 crmsh 2.2.0 is released
-============================
+=======================
 :Author: Kristoffer Gronlund
 :Email: kgronlund@suse.com
 :Date: 2016-01-15 15:00
