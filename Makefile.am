@@ -72,12 +72,13 @@ all-local:
 if UNAME_IS_DEBIAN
 python_prefix = 
 else
-python_prefix = --prefix=$(DESTDIR)$(prefix)
+python_prefix = --prefix=$(prefix)
 endif
 
 install-exec-local:
 	-mkdir -p $(DESTDIR)$(pkgpythondir)
 	$(PYTHON) $(srcdir)/setup.py install \
+		--root $(DESTDIR) \
 		$(python_prefix) \
 		--record $(DESTDIR)$(pkgpythondir)/install_files.txt \
 		--verbose
