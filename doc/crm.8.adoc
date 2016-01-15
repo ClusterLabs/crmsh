@@ -4524,6 +4524,27 @@ Example:
 log node-a
 ...............
 
+[[cmdhelp_history_events,Show events in log]]
+==== `events`
+
+By analysing the log output and looking for particular
+patterns, the `events` command helps sifting through
+the logs to find when particular events like resources
+changing state or node failure may have occurred.
+
+This can be used to generate a combined list of events
+from all nodes.
+
+Usage:
+...............
+events
+...............
+
+Example:
+...............
+events
+...............
+
 [[cmdhelp_history_node,node events]]
 ==== `node`
 
