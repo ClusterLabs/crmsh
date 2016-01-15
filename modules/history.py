@@ -1401,6 +1401,8 @@ class Report(object):
         '''
         Show all events.
         '''
+        if not self.prepare_source():
+            return False
         rsc_l = self.cibnotcloned_l
         rsc_l += ["%s(?::[0-9]+)?" % x for x in self.cibcloned_l]
         all_re_l = self.build_re("resource", rsc_l) + \
@@ -1409,7 +1411,7 @@ class Report(object):
         if not all_re_l:
             self.error("no resources or nodes found")
             return False
-        self.show_logs(re_l=all_re_l)
+        return self.show_logs(re_l=all_re_l)
 
     def find_transition(self, t_str):
         for t_obj in self._transitions:
