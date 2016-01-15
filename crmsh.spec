@@ -1,7 +1,7 @@
 #
 # spec file for package crmsh
 #
-# Copyright (c) 2015 SUSE LINUX GmbH, Nuernberg, Germany.
+# Copyright (c) 2016 SUSE LINUX GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -36,8 +36,8 @@ Name:           crmsh
 Summary:        High Availability cluster command-line interface
 License:        GPL-2.0+
 Group:          %{pkg_group}
-Version:        2.2.0~rc3
-Release:        0%{?crmsh_release}%{?dist}
+Version:        2.2.0
+Release:        0
 Url:            http://crmsh.github.io
 Source0:        %{name}-%{version}.tar.bz2
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
@@ -87,13 +87,12 @@ cluster management on GNU/Linux systems. It simplifies the
 configuration, management and troubleshooting of Pacemaker-based
 clusters, by providing a powerful and intuitive set of features.
 
-Authors: Dejan Muhamedagic <dejan@suse.de> and many others
-
 %package test
 Summary:        Test package for crmsh
 Group:          %{pkg_group}
 Requires:       crmsh
 %if 0%{?with_regression_tests}
+BuildRequires:  mailx
 BuildRequires:  procps
 BuildRequires:  python-dateutil
 BuildRequires:  python-nose
@@ -124,20 +123,16 @@ The crm shell is a command-line interface for High-Availability
 cluster management on GNU/Linux systems. It simplifies the
 configuration, management and troubleshooting of Pacemaker-based
 clusters, by providing a powerful and intuitive set of features.
-
-Authors: Dejan Muhamedagic <dejan@suse.de> and many others
+This package contains the regression test suite for crmsh.
 
 %package scripts
 Summary:        Crm Shell Cluster Scripts
 Group:          Productivity/Clustering/HA
 
 %description scripts
-Cluster scripts for crm shell. The cluster scripts
-can be run directly from the crm command line, or
-used by user interfaces like hawk to implement
-configuration wizards.
-
-Authors: Kristoffer Gronlund <kgronlund@suse.com> and many others
+Cluster scripts for crmsh. The cluster scripts can be run
+directly from the crm command line, or used by user interfaces
+like hawk to implement configuration wizards.
 
 %prep
 %setup -q
