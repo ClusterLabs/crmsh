@@ -27,8 +27,9 @@ strong {
 }
 
 .monospaced {
-    font-family:'Ubuntu Mono', consolas, 'lucida console', 'bitstream vera sans mono', 'courier new', monospace;
+    font-family: 'Menlo', 'Monaco', 'Consolas', 'lucida console', 'bitstream vera sans mono', 'courier new', monospace;
     color: #211;
+    background-color: #fafaf8;
 }
 
 p {
@@ -100,8 +101,10 @@ h5 {
 }
 
 pre {
-    font-family:'Ubuntu Mono', consolas, 'lucida console', 'bitstream vera sans mono', 'courier new', monospace;
+    font-family:'Menlo', 'Monaco', consolas, 'lucida console', 'bitstream vera sans mono', 'courier new', monospace;
     color: #211;
+    font-size: 85%;
+    overflow-x: auto;
 }
 
 #header {
@@ -237,7 +240,7 @@ div.listingblock .content pre {
 }
 
 div.literalblock .content {
-    margin-left:40px;
+    margin-left: 20px;
 }
 
 div.verseblock .content {
@@ -344,9 +347,9 @@ div.sidebarblock .title {
     #toc {
         position: fixed;
         top: 120px;
-        left: 0;
+        left: 4px;
         margin: 0px;
-        font-size: small;
+        font-size: 80%;
         line-height: 1rem;
     }
 
@@ -365,8 +368,6 @@ div.sidebarblock .title {
     }
 
     #toc .toclevel2 {
-        font-weight: bold;
-        font-style: italic;
         margin-left: 8px;
         color: #aaaaaa;
         padding-left: 4px;
@@ -402,16 +403,29 @@ div.sidebarblock .title {
 
 }
 
-@media screen and (min-width: 900px) {
+@media screen and (min-width: 900px) and (max-width: 1280px) {
     #toc {
         position: absolute;
         overflow: hidden;
         top: 120px;
-        left: 0px;
+        left: 4px;
         max-width: 240px;
     }
 }
 
+@media screen and (min-width: 1280px) {
+    #toc {
+        position: absolute;
+        overflow: hidden;
+        top: 120px;
+        left: 4px;
+        max-width: 240px;
+    }
+
+    #container {
+        max-width: 1024px;
+    }
+}
 
 /* pygments highlighting */
 

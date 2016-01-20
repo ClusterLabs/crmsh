@@ -130,6 +130,7 @@ gen/atom.xml: $(NEWSDOC)
 	python ./make-news.py gen/atom.xml $(NEWS)
 
 site: gen/atom.xml gen/index.html gen/404.html gen/news/index.html gen/man/index.html $(TGT) $(CSS) $(IMG) $(FONTS) $(NEWSDOC)
+	@which dos2unix >/dev/null && find gen -name "*.html" -type f -exec dos2unix {} \;
 
 deploy: site
 	@echo "TODO: CVS upload"
