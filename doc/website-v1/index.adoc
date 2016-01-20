@@ -1,5 +1,5 @@
-&nbsp;
-======
+Cluster Shell
+=============
 
 ++++
 <div class="frontpage-image">
