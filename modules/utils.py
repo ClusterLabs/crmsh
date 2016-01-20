@@ -1082,7 +1082,7 @@ def parse_time(t):
             # convert to UTC from local time
             dt = make_datetime_naive(dt.replace(tzinfo=dateutil.tz.tzlocal()))
     except ValueError, msg:
-        common_err("%s: %s" % (t, msg))
+        common_err("parse_time %s: %s" % (t, msg))
         return None
     except ImportError, msg:
         try:

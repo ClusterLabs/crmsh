@@ -73,29 +73,42 @@ def make_time(t):
 
 
 _syslog2node_formats = (re.compile(r'^[a-zA-Z]{2,4} \d{1,2} \d{2}:\d{2}:\d{2}\s+(?:\[\d+\])?\s*([\S]+)'),
-                        re.compile(r'^\d{4}-\d{2}-\d{2}T\S+\s+(?:\[\d+\])?\s*([\S]+)'))
+                        re.compile(r'^\d{4}-\d{2}-\d{2}T\S+\s+(?:\[\d+\])?\s*([\S]+)'),
+                        re.compile(r'^\d{4}\/\d{2}\/\d{2}_\d{2}:\d{2}:\d{2}'))
 
+_syslog_ts_prev = None
 
 def syslog_ts(s):
     """
     Finds the timestamp in the given line
     Returns as floating point, seconds
     """
-    fmt1, fmt2 = _syslog2node_formats
+    global _syslog_ts_prev
+    fmt1, fmt2, fmt3 = _syslog2node_formats
     m = fmt1.match(s)
     if m:
         if YEAR is None:
             set_year()
         tstr = ' '.join([YEAR] + s.split()[0:3])
-        return datetime_to_timestamp(parse_time(tstr))
+        _syslog_ts_prev = datetime_to_timestamp(parse_time(tstr))
+        return _syslog_ts_prev
 
     m = fmt2.match(s)
     if m:
         tstr = s.split()[0]
-        return datetime_to_timestamp(parse_time(tstr))
+        _syslog_ts_prev = datetime_to_timestamp(parse_time(tstr))
+        return _syslog_ts_prev
+
+    m = fmt3.match(s)
+    if m:
+        tstr = s.split()[0].replace('_', ' ')
+        _syslog_ts_prev = datetime_to_timestamp(parse_time(tstr))
+        return _syslog_ts_prev
 
     common_debug("malformed line: %s" % s)
-    return None
+    return _syslog_ts_prev
+
+_syslog_node_prev = None
 
 
 def syslog2node(s):
@@ -111,27 +124,36 @@ def syslog2node(s):
     RFC5424 (2):
     <TS> [<PID>] <node> ...
     '''
+    global _syslog_node_prev
 
-    fmt1, fmt2 = _syslog2node_formats
+    fmt1, fmt2, _ = _syslog2node_formats
     m = fmt1.search(s)
     if m:
-        return m.group(1)
+        _syslog_node_prev = m.group(1)
+        return _syslog_node_prev
 
     m = fmt2.search(s)
     if m:
-        return m.group(1)
+        _syslog_node_prev = m.group(1)
+        return _syslog_node_prev
 
     try:
         # strptime defaults year to 1900 (sigh)
         time.strptime(' '.join(s.split()[0:3]),
                       "%b %d %H:%M:%S")
-        return s.split()[3]
-    except:  # try the rfc5424
-        try:
-            parse_time(s.split()[0])
-            return s.split()[1]
-        except Exception:
-            return None
+        _syslog_node_prev = s.split()[3]
+        return _syslog_node_prev
+    except Exception:  # try the rfc5424
+        rfc5424 = s.split()[0]
+        if 'T' in rfc5424:
+            try:
+                parse_time(rfc5424)
+                _syslog_node_prev = s.split()[1]
+                return _syslog_node_prev
+            except Exception:
+                return _syslog_node_prev
+        else:
+            return _syslog_node_prev
 
 
 def seek_to_edge(f, ts, to_end):
