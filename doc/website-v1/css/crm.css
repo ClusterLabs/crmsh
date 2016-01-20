@@ -399,6 +399,7 @@ div.sidebarblock .title {
         max-width: 720px;
         margin: 0px auto;
         text-align:left;
+        padding-right: 8px;
     }
 
 }
