@@ -3679,8 +3679,8 @@ show xml tag:db tag:fs
 show related:webapp
 ...............
 
-[[cmdhelp_configure_show_property,Show property value]]
-==== `show-property`
+[[cmdhelp_configure_get_property,Get property value]]
+==== `get-property`
 
 Show the value of the given property. If the value is not set, the
 command will print the default value for the property, if known.
@@ -3692,19 +3692,19 @@ If the property is set multiple times, for example using multiple
 property sets with different rule expressions, the output of this
 command is undefined.
 
-Pass the argument +-t+ or +--true+ to `show-property` to translate
+Pass the argument +-t+ or +--true+ to `get-property` to translate
 the argument value into +true+ or +false+. If the value is not
 set, the command will print +false+.
 
 Usage:
 ...............
-show-property [-t|--true] [<name>]
+get-property [-t|--true] [<name>]
 ...............
 
 Example:
 ...............
-show-property stonith-enabled
-show-property -t maintenance-mode
+get-property stonith-enabled
+get-property -t maintenance-mode
 ...............
 
 [[cmdhelp_configure_tag,Define resource tags]]

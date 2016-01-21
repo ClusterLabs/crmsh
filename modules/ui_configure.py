@@ -305,12 +305,12 @@ class CibConfig(command.UI):
         set_obj = mkset_obj(*args)
         return set_obj.show()
 
-    @command.name("show_property")
-    @command.alias("show-property")
+    @command.name("get_property")
+    @command.alias("get-property")
     @command.skill_level('administrator')
     @command.completers_repeating(compl.call(ra.get_properties_list))
-    def do_show_property(self, context, *args):
-        "usage: show-property [-t|--true [<name>...]"
+    def do_get_property(self, context, *args):
+        "usage: get-property [-t|--true [<name>...]"
         properties = [a for a in args if a not in ('-t', '--true')]
         truth = any(a for a in args if a in ('-t', '--true'))
 
