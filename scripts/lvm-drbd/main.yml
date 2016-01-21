@@ -1,0 +1,62 @@
+# Copyright (C) 2016 Kristoffer Gronlund
+#
+# License: GNU General Public License (GPL)
+version: 2.2
+category: Filesystem
+shortdesc: LVM Group on DRBD
+longdesc: >
+  Configure a LVM resource group on top of DRBD.
+
+  A DRBD primitive and Multi-state resource is used to replicate
+  data between the nodes.
+
+  LVM and file system resources are used to make the file systems
+  available on the Primary node.
+
+  For more details on what needs to be prepared to use
+  this wizard, see the Highly Available NFS Storage with
+  DRBD and Pacemaker section of the SUSE Linux Enterprise
+  High Availability Extension 12 SP1 documentation.
+
+parameters:
+  - name: group_id
+    type: resource
+    required: true
+    shortdesc: Group resource ID
+    value: g-lvm
+
+include:
+  - name: drbd
+    script: drbd
+    required: true
+    parameters:
+      - name: drbd_resource
+        value: vg1
+
+  - name: lvm
+    script: lvm
+    required: true
+    parameters:
+      - name: volgrpname
+        value: vg1
+
+  - name: example_fs
+    shortdesc: Example filesystem resource
+    script: filesystem
+    required: false
+    parameters:
+      - name: device
+        value: /dev/example
+      - name: directory
+        value: /srv/example
+      - name: fstype
+        value: xfs
+
+actions:
+  - include: drbd
+  - include: lvm
+  - shortdesc: Configure LVM and filesystem group and constraints
+    cib: |
+      group {{group_id}} {{lvm:id}} {{#example_fs:id}}{{example_fs:id}}{{/example_fs:id}}
+      order o-drbd_before_{{group_id}} inf: ms-{{drbd:id}}:promote {{group_id}}:start
+      colocation c-{{group_id}}_on_drbd inf: {{group_id}} ms-{{drbd:id}}:Master
