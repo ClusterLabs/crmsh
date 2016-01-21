@@ -1,0 +1,136 @@
+# Copyright (C) 2015 Kristoffer Gronlund
+#
+# License: GNU General Public License (GPL)
+version: 2.2
+category: Server
+shortdesc: NFS Server on LVM and DRBD
+longdesc: >
+  Configure a highly available two-node NFS server on top of
+  LVM and DRBD.
+
+  A DRBD primitive and Multi-state resource is used to replicate
+  data between the nodes.
+
+  A NFS Kernel service resource ensures that the NFS server daemons
+  are always available.
+
+  LVM and file system resources are used to make the file systems
+  available on the Primary node.
+
+  A virtual NFS root export is needed for NFSv4 clients.
+
+  An example NFS export is configured, corresponding to a file system
+  mounted from the LVM logical volume.
+
+  Finally, a floating IP address resource allows clients to connect to
+  the service regardless of which physical node is primary.
+
+  For more details on what needs to be prepared to use
+  this wizard, see the Highly Available NFS Storage with
+  DRBD and Pacemaker section of the SUSE Linux Enterprise
+  High Availability Extension 12 SP1 documentation.
+
+parameters:
+  - name: nfsserver_id
+    type: resource
+    value: nfsserver
+    shortdesc: ID for the NFS Server cluster resource
+    required: true
+
+include:
+  - name: drbd
+    script: drbd
+    required: true
+    parameters:
+      - name: drbd_resource
+        value: nfs
+
+  - name: lvm
+    script: lvm
+    required: true
+    parameters:
+      - name: volgrpname
+        value: nfs
+
+  - name: example_fs
+    shortdesc: Example filesystem resource
+    script: filesystem
+    required: false
+    parameters:
+      - name: device
+        value: /dev/nfs/example
+      - name: directory
+        value: /srv/nfs/example
+      - name: fstype
+        value: xfs
+
+  - name: rootfs
+    script: exportfs
+    required: false
+    shortdesc: NFSv4 Virtual File System root.
+    parameters:
+      - name: id
+        value: exportfs-root
+      - name: fsid
+        value: 0
+      - name: directory
+        value: /srv/nfs
+      - name: options
+        value: "rw,crossmnt"
+
+  - script: exportfs
+    required: false
+    shortdesc: Exported NFS mount point.
+    parameters:
+      - name: id
+        value: exportfs
+      - name: directory
+        value: /srv/nfs/example
+      - name: options
+        value: "rw,mountpoint"
+      - name: wait_for_leasetime_on_stop
+        value: true
+
+  - script: virtual-ip
+    required: false
+    shortdesc: Configure a Virtual IP address used to access the NFS mounts.
+
+actions:
+  - shortdesc: Ensure NFS packages are installed
+    install: nfs-client nfs-kernel-server
+
+  - shortdesc: Configure cluster resource for the NFS server
+    cib: |
+      primitive {{nfsserver_id}} \
+        systemd:nfs-server \
+        op monitor interval=30s \
+      clone cl-{{nfsserver_id}} {{nfsserver_id}}
+
+  - include: drbd
+  - include: lvm
+
+  - shortdesc: Configure LVM and filesystem group and constraints
+    cib: |
+      group g-nfs {{lvm:id}} {{#example_fs:id}}{{example_fs:id}}{{/example_fs:id}}
+      order o-drbd_before_nfs inf: ms-{{drbd:id}}:promote g-nfs:start
+      colocation c-nfs_on_drbd inf: g-nfs ms-{{drbd:id}}:Master
+
+  - include: rootfs
+
+  - shortdesc: Clone root fs resource and configure constraints
+    cib: |
+      clone cl-{{rootfs:id}} {{rootfs:id}}
+      order o-root_before_nfs Mandatory: cl-{{rootfs:id}} g-nfs:start
+      colocation c-nfs_on_root inf: g-nfs cl-{{rootfs:id}}
+    when: rootfs
+  - include: exportfs
+  - shortdesc: Add exportfs resource to group
+    crm: "configure modgroup g-nfs add {{exportfs:id}}"
+    when: exportfs
+  - include: virtual-ip
+  - shortdesc: Add floating IP address to group
+    crm: "configure modgroup g-nfs add {{virtual-ip:id}}"
+    when: virtual-ip
+  - call: exportfs -v
+    error: Failed to configure NFS exportfs
+    shortdesc: Check result of exportfs -v
