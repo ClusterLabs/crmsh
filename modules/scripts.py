@@ -2008,7 +2008,8 @@ class RunActions(object):
             return None
         self.printer.debug("Result(local): %s" % repr(out))
         if is_json_output:
-            out = json.loads(out)
+            if out != '':
+                out = json.loads(out)
         return out
 
     def local_node_name(self):
