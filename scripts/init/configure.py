@@ -11,7 +11,7 @@ def _authorize_key(keypath):
     if os.path.exists('/root/.ssh/authorized_keys'):
         pubkey = open(pubkeypath).read()
         if pubkey not in open('/root/.ssh/authorized_keys').read():
-            crm_script.sudo_call("cat %s >> /root/.ssh/authorized_keys" % (pubkeypath))
+            crm_script.sudo_call("cat %s >> /root/.ssh/authorized_keys" % (pubkeypath), shell=True)
     else:
         crm_script.sudo_call(["cp", pubkeypath, '/root/.ssh/authorized_keys'])
 
