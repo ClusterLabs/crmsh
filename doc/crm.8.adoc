@@ -3653,6 +3653,11 @@ The prefixes can be used together on a single command line. For
 example, to show both the tag itself and the objects tagged by it the
 following combination can be used: +show tag:my-tag my-tag+.
 
+To refine a selection of objects using multiple modifiers, the keywords
++and+ and +or+ can be used. For example, to select all primitives tagged
++foo+, the following combination can be used:
++show type:primitive and tag:foo+.
+
 Usage:
 ...............
 show [xml] [<id>

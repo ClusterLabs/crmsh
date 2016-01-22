@@ -75,6 +75,10 @@ class OrderedSet(collections.MutableSet):
         self.discard(key)
         return key
 
+    def intersection(self, other):
+        # return set with all objects in self that are in other
+        return OrderedSet([x for x in self if x in other])
+
     def __repr__(self):
         if not self:
             return '%s()' % (self.__class__.__name__,)

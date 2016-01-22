@@ -2997,14 +2997,40 @@ class CibFactory(object):
             ret += [m for m in matches if m is not None]
         return ret
 
-    def mkobj_set(self, *args):
-        if not args:
+    def filter_objects(self, filters):
+        """
+        Filter out a set of objects given a list of filters.
+
+        Complication: We want to refine selections, for example
+        type:primitive tag:foo should give all primitives tagged foo,
+        or type:node boo should give the node boo, but not the primitive boo.
+
+        Add keywords and|or to influence selection?
+        Default to "or" between matches (like now)
+
+        type:primitive or type:group = all primitives and groups
+        type:primitive and foo = primitives with id foo
+        type:primitive and foo* = primitives that start with id foo
+        type:primitive or foo* = all that start with id foo plus all primitives
+        type:primitive and tag:foo
+
+        Returns:
+        True, set() on success
+        false, err on failure
+        """
+        if len(filters) == 0:
             return True, copy.copy(self.cib_objects)
-        if args[0] == "NOOBJ":
-            return True, []
-        rc = True
+        if filters[0] == 'NOOBJ':
+            return True, oset([])
         obj_set = oset([])
-        for spec in args:
+        and_filter, and_set = False, None
+        for spec in filters:
+            if spec == "or":
+                continue
+            elif spec == "and":
+                and_filter, and_set = True, obj_set
+                obj_set = oset([])
+                continue
             if spec == "changed":
                 obj_set |= oset(self.modified_elems())
             elif spec.startswith("type:"):
@@ -3022,8 +3048,18 @@ class CibFactory(object):
                 for obj in objs:
                     obj_set.add(obj)
                 if len(objs) == 0:
-                    no_object_err(spec)
-                    rc = False
+                    return False, spec
+            if and_filter is True:
+                and_filter, obj_set = False, obj_set.intersection(and_set)
+        if and_filter is True:
+            and_filter, obj_set = False, and_set
+        return True, obj_set
+
+    def mkobj_set(self, *args):
+        rc, obj_set = self.filter_objects(args)
+        if rc is False:
+            no_object_err(obj_set)
+            return False, oset([])
         return rc, obj_set
 
     def get_all_obj_set(self):
