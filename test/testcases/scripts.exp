@@ -32,7 +32,7 @@ drbd             DRBD Block Device
 filesystem       Filesystem (mount point)
 gfs2             gfs2 filesystem (cloned)
 gfs2-base        gfs2 filesystem base (cloned)
-ocfs2            OCFS2 filesystem (cloned)
+ocfs2            OCFS2 Filesystem
 raid-lvm         RAID hosting LVM
 
 SAP:
@@ -77,7 +77,7 @@ drbd             DRBD Block Device
 filesystem       Filesystem (mount point)
 gfs2             gfs2 filesystem (cloned)
 gfs2-base        gfs2 filesystem base (cloned)
-ocfs2            OCFS2 filesystem (cloned)
+ocfs2            OCFS2 Filesystem
 raid-lvm         RAID hosting LVM
 
 SAP:
