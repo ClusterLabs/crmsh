@@ -2936,8 +2936,11 @@ group vm-and-services vm vm-sshd meta container="vm"
 
 Load a part of configuration (or all of it) from a local file or
 a network URL. The +replace+ method replaces the current
-configuration with the one from the source. The +update+ tries to
-import the contents into the current configuration.
+configuration with the one from the source. The +update+ method
+tries to import the contents into the current configuration. The
++push+ method imports the contents into the current configuration
+and removes any lines that are not present in the given
+configuration.
 The file may be a CLI file or an XML file.
 
 If the URL is `-`, the configuration is read from standard input.
@@ -2946,12 +2949,13 @@ Usage:
 ...............
 load [xml] <method> URL
 
-method :: replace | update
+method :: replace | update | push
 ...............
 Example:
 ...............
 load xml update myfirstcib.xml
 load xml replace http://storage.big.com/cibs/bigcib.xml
+load xml push smallcib.xml
 ...............
 
 [[cmdhelp_configure_location,a location preference]]
