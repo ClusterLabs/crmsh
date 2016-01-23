@@ -403,7 +403,7 @@ class CibObjectSet(object):
 
     def import_file(self, method, fname):
         '''
-        method: update or replace
+        method: update or replace or push
         '''
         if not cib_factory.is_cib_sane():
             return False
@@ -413,7 +413,10 @@ class CibObjectSet(object):
         s = f.read()
         if f != sys.stdin:
             f.close()
-        return self.save(s, no_remove=True, method=method)
+        if method == 'push':
+            return self.save(s, no_remove=False, method='update')
+        else:
+            return self.save(s, no_remove=True, method=method)
 
     def repr(self, format=format):
         '''

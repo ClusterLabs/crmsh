@@ -87,7 +87,7 @@ def stonith_resource_list(args):
 
 def _load_2nd_completer(args):
     if args[1] == 'xml':
-        return ['replace', 'update']
+        return ['replace', 'update', 'push']
     return []
 
 
@@ -491,9 +491,9 @@ class CibConfig(command.UI):
         return set_obj.save_to_file(filename)
 
     @command.skill_level('administrator')
-    @command.completers(compl.choice(['xml', 'replace', 'update']), _load_2nd_completer)
+    @command.completers(compl.choice(['xml', 'replace', 'update', 'push']), _load_2nd_completer)
     def do_load(self, context, *args):
-        "usage: load [xml] {replace|update} {<url>|<path>}"
+        "usage: load [xml] {replace|update|push} {<url>|<path>}"
         if len(args) < 2:
             context.fatal_error("Expected 2 arguments (0 given)")
         if args[0] == "xml":
@@ -508,7 +508,7 @@ class CibConfig(command.UI):
             url = args[1]
             method = args[0]
             xml = False
-        if method not in ("replace", "update"):
+        if method not in ("replace", "update", "push"):
             context.fatal_error("Unknown method %s" % method)
         if method == "replace":
             if options.interactive and cib_factory.has_cib_changed():
