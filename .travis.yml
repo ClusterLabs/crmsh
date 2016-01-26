@@ -7,4 +7,5 @@ python:
 install:
   - "pip install -r requirements.txt"
 script: ./test/run --with-coverage
-
+notifications:
+  irc: "chat.freenode.net#clusterlabs-dev"
