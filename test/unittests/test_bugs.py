@@ -700,14 +700,14 @@ primitive node1 Dummy params fake=something
     obj = cibconfig.mkset_obj()
     assert obj is not None
     ok = obj.save("""primitive node1 Dummy params fake=something-else
-    """, no_remove=True, method='update')
+    """, remove=False, method='update')
     assert ok
 
     print "** end"
 
     obj = cibconfig.mkset_obj()
     assert obj is not None
-    ok = obj.save(original_cib, no_remove=False, method='replace')
+    ok = obj.save(original_cib, remove=True, method='replace')
     assert ok
     obj = cibconfig.mkset_obj()
     with clidisplay.nopretty():

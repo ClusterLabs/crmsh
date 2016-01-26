@@ -414,9 +414,9 @@ class CibObjectSet(object):
         if f != sys.stdin:
             f.close()
         if method == 'push':
-            return self.save(s, no_remove=False, method='update')
+            return self.save(s, remove=True, method='update')
         else:
-            return self.save(s, no_remove=True, method=method)
+            return self.save(s, remove=False, method=method)
 
     def repr(self, format=format):
         '''
@@ -425,7 +425,7 @@ class CibObjectSet(object):
         '''
         return ''
 
-    def save(self, s, no_remove=False, method='replace'):
+    def save(self, s, remove=True, method='replace'):
         '''
         For each object:
             - try to find a corresponding object in obj_set
@@ -541,7 +541,7 @@ class CibObjectSetCli(CibObjectSet):
             return node[0].get('id')
         return node.get('id')
 
-    def save(self, s, no_remove=False, method='replace'):
+    def save(self, s, remove=True, method='replace'):
         '''
         Save a user supplied cli format configuration.
         On errors user is typically asked to review the
@@ -569,7 +569,7 @@ class CibObjectSetCli(CibObjectSet):
         if not rc:
             return rc
 
-        rc = diff.apply(cib_factory, mode='cli', no_remove=no_remove, method=method)
+        rc = diff.apply(cib_factory, mode='cli', remove=remove, method=method)
         if not rc:
             self._initialize()
         return rc
@@ -593,7 +593,7 @@ class CibObjectSetRaw(CibObjectSet):
             return "fencing_topology"
         return node.get("id")
 
-    def save(self, s, no_remove=False, method='replace'):
+    def save(self, s, remove=True, method='replace'):
         try:
             cib_elem = etree.fromstring(s)
         except etree.ParseError, msg:
@@ -608,7 +608,7 @@ class CibObjectSetRaw(CibObjectSet):
             rc = diff.add(node)
         if not rc:
             return rc
-        rc = diff.apply(cib_factory, mode='xml', no_remove=no_remove, method=method)
+        rc = diff.apply(cib_factory, mode='xml', remove=remove, method=method)
         if not rc:
             self._initialize()
         return rc
@@ -2171,7 +2171,7 @@ class CibDiff(object):
             rc = False
         return rc
 
-    def apply(self, factory, mode='cli', no_remove=False, method='replace'):
+    def apply(self, factory, mode='cli', remove=True, method='replace'):
         rc = True
 
         edited_nodes = self._nodes.copy()
@@ -2179,7 +2179,7 @@ class CibDiff(object):
 
         def calc_sets(input_set, existing):
             rc = True
-            if not no_remove:
+            if remove:
                 rc = self._is_edit_valid(input_set, existing)
                 del_set = existing - (input_set)
             else:
