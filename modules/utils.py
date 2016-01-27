@@ -1337,6 +1337,25 @@ def resolve_hostnames(hostnames):
     return True, None
 
 
+def list_corosync_node_names():
+    '''
+    Returns list of nodes configured
+    in corosync.conf
+    '''
+    try:
+        cfg = os.getenv('COROSYNC_MAIN_CONFIG_FILE', '/etc/corosync/corosync.conf')
+        lines = open(cfg).read().split('\n')
+        name_re = re.compile(r'\s*name:\s+(.*)')
+        names = []
+        for line in lines:
+            name = name_re.match(line)
+            if name:
+                names.append(name.group(1))
+        return names
+    except Exception:
+        return []
+
+
 def list_corosync_nodes():
     '''
     Returns list of nodes configured

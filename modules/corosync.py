@@ -368,35 +368,45 @@ def set_value(path, value):
     f.close()
 
 
-def add_node(name):
+def add_node(addr, name=None):
     '''
     Add node to corosync.conf
     '''
     coronodes = None
     nodes = None
+    nodenames = None
     coronodes = utils.list_corosync_nodes()
+    nodenames = utils.list_corosync_node_names()
     try:
         nodes = utils.list_cluster_nodes()
     except Exception:
         nodes = []
-    ipaddr = get_ip(name)
-    if name in coronodes or (ipaddr and ipaddr in coronodes):
+    ipaddr = get_ip(addr)
+    if addr in nodenames + coronodes or (ipaddr and ipaddr in coronodes):
+        err_buf.warning("%s already in corosync.conf" % (addr))
+        return
+    if name and name in nodenames + coronodes:
         err_buf.warning("%s already in corosync.conf" % (name))
         return
-    if name in nodes:
+    if addr in nodes:
+        err_buf.warning("%s already in configuration" % (addr))
+        return
+    if name and name in nodes:
         err_buf.warning("%s already in configuration" % (name))
         return
 
     f = open(conf()).read()
     p = Parser(f)
 
-    node_addr = name
+    node_addr = addr
     node_id = next_nodeid(p)
+    node_name = name
+    node_value = (make_value('nodelist.node.ring0_addr', node_addr) +
+                  make_value('nodelist.node.nodeid', str(node_id)))
+    if node_name:
+        node_value += make_value('nodelist.node.name', node_name)
 
-    p.add('nodelist',
-          make_section('nodelist.node',
-                       make_value('nodelist.node.ring0_addr', node_addr) +
-                       make_value('nodelist.node.nodeid', str(node_id))))
+    p.add('nodelist', make_section('nodelist.node', node_value))
 
     num_nodes = p.count('nodelist.node')
     if num_nodes > 2:
@@ -414,6 +424,10 @@ def add_node(name):
         utils.ext_cmd(["corosync-cmapctl",
                        "-s", "nodelist.node.%s.ring0_addr" % (num_nodes - 1),
                        "str", node_addr], shell=False)
+        if node_name:
+                utils.ext_cmd(["corosync-cmapctl",
+                               "-s", "nodelist.node.%s.name" % (num_nodes - 1),
+                               "str", node_name], shell=False)
 
 
 def del_node(addr):
@@ -442,4 +456,6 @@ def del_node(addr):
         utils.ext_cmd(["corosync-cmapctl", "-D", "nodelist.node.%s.nodeid" % (nth)],
                       shell=False)
         utils.ext_cmd(["corosync-cmapctl", "-D", "nodelist.node.%s.ring0_addr" % (nth)],
+                      shell=False)
+        utils.ext_cmd(["corosync-cmapctl", "-D", "nodelist.node.%s.name" % (nth)],
                       shell=False)
