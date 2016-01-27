@@ -120,9 +120,9 @@ class Corosync(command.UI):
     @command.name('add-node')
     @command.alias('add_node')
     @command.skill_level('administrator')
-    def do_addnode(self, context, name):
+    def do_addnode(self, context, addr, name=None):
         "Add a node to the corosync nodelist"
-        corosync.add_node(name)
+        corosync.add_node(addr, name)
 
     @command.name('del-node')
     @command.alias('del_node')

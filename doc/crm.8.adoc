@@ -1211,7 +1211,7 @@ sets only the address for ring0.
 
 Usage:
 .........
-add-node <addr>
+add-node <addr> [name]
 .........
 
 [[cmdhelp_corosync_del-node,Remove a corosync node]]
