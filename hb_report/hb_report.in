@@ -543,7 +543,6 @@ FROM_TIME=$FROM_TIME
 TO_TIME=$TO_TIME
 USER_NODES="$USER_NODES"
 NODES="$NODES"
-MASTER_NODE="$MASTER_NODE"
 HA_LOG=$HA_LOG
 UNIQUE_MSG=$UNIQUE_MSG
 SANITIZE="$SANITIZE"
@@ -564,9 +563,6 @@ is_collector() {
 }
 is_node() {
 	test "$THIS_IS_NODE"
-}
-is_master() {
-	! is_collector && test "$WE" = "$MASTER_NODE"
 }
 start_slave_collector() {
 	local node=$1
@@ -1368,7 +1364,6 @@ export CONFIGURATIONS
 
 THIS_IS_NODE=""
 if ! is_collector; then
-	MASTER_NODE=$WE
 	NODES=`getnodes`
 	debug "nodes: `echo $NODES`"
 fi
@@ -1425,10 +1420,11 @@ fi
 # part 4: find the logs and cut out the segment for the period
 #
 
-# if the master is also a node, getlog is going to be invoked
-# from the collector
-(is_master && is_node) ||
-	getlog
+is_node && getlog
+
+#
+# Start slave collectors
+#
 
 if ! is_collector; then
 	for node in $NODES; do
