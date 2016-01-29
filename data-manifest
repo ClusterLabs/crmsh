@@ -147,6 +147,7 @@ test/unittests/scripts/inc2/main.yml
 test/unittests/scripts/legacy/main.yml
 test/unittests/scripts/templates/apache.xml
 test/unittests/scripts/templates/virtual-ip.xml
+test/unittests/scripts/unified/main.yml
 test/unittests/scripts/v2/main.yml
 test/unittests/scripts/vipinc/main.yml
 test/unittests/scripts/vip/main.yml
