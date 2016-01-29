@@ -8,29 +8,30 @@ import sys
 import re
 import fnmatch
 import time
-from collections import defaultdict
+import collections
 from . import config
 from . import options
 from . import constants
 from . import tmpfiles
-from .parse import CliParser
 from . import clidisplay
-from .cibstatus import cib_status
 from . import idmgmt
-from .ra import get_ra, get_properties_list, get_pe_meta, get_properties_meta
 from . import schema
-from .crm_gv import gv_types
+from . import utils
+from . import cibverify
+from . import parse
+from . import ordereddict
+from . import orderedset
+from . import cibstatus
+from . import crm_gv
+from .ra import get_ra, get_properties_list, get_pe_meta, get_properties_meta
 from .msg import common_warn, common_err, common_debug, common_info, err_buf
 from .msg import common_error, constraint_norefobj_err, cib_parse_err, no_object_err
 from .msg import missing_obj_err, common_warning, update_err, unsupported_err, empty_cib_err
 from .msg import invalid_id_err, cib_ver_unsupported_err
-from . import utils
 from .utils import ext_cmd, safe_open_w, pipe_string, safe_close_w, crm_msec
 from .utils import ask, lines2cli, olist
 from .utils import page_string, cibadmin_can_patch, str2tmp
 from .utils import run_ptest, is_id_valid, edit_file, get_boolean, filter_string
-from .ordereddict import odict
-from .orderedset import oset
 from .xmlutil import is_child_rsc, rsc_constraint, sanitize_cib, rename_id, get_interesting_nodes
 from .xmlutil import is_pref_location, get_topnode, new_cib, get_rscop_defaults_meta_node
 from .xmlutil import rename_rscref, is_ms, silly_constraint, is_container, fix_comments
@@ -47,7 +48,6 @@ from .cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, 
 from .cliformat import cli_nvpair, cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
 from .cliformat import cli_operations, simple_rsc_constraint, cli_rule, cli_format
 from .cliformat import cli_acl_role, cli_acl_permission
-from . import cibverify
 
 
 def show_unrecognized_elems(cib_elem):
@@ -245,8 +245,8 @@ class CibObjectSet(object):
         rc, self.obj_set = cib_factory.mkobj_set(*self.args)
         self.search_rc = rc
         self.all_set = cib_factory.get_all_obj_set()
-        self.obj_ids = oset([o.obj_id for o in self.obj_set])
-        self.all_ids = oset([o.obj_id for o in self.all_set])
+        self.obj_ids = orderedset.oset([o.obj_id for o in self.obj_set])
+        self.all_ids = orderedset.oset([o.obj_id for o in self.all_set])
         self.locked_ids = self.all_ids - self.obj_ids
 
     def _open_url(self, src):
@@ -357,10 +357,10 @@ class CibObjectSet(object):
     def _get_gv_obj(self, gtype):
         if not self.obj_set:
             return True, None
-        if gtype not in gv_types:
+        if gtype not in crm_gv.gv_types:
             common_err("graphviz type %s is not supported" % gtype)
             return False, None
-        gv_obj = gv_types[gtype]()
+        gv_obj = crm_gv.gv_types[gtype]()
         set_graph_attrs(gv_obj, ".")
         return True, gv_obj
 
@@ -472,7 +472,7 @@ class CibObjectSet(object):
                          if o.obj_type == "primitive"])
         if not check_set:
             return 0
-        clash_dict = defaultdict(list)
+        clash_dict = collections.defaultdict(list)
         for obj in set_obj_all.obj_set:
             node = obj.node
             if is_primitive(node):
@@ -554,7 +554,7 @@ class CibObjectSetCli(CibObjectSet):
         diff = CibDiff(self)
         rc = True
         err_buf.start_tmp_lineno()
-        cp = CliParser()
+        cp = parse.CliParser()
         for cli_text in lines2cli(s):
             err_buf.incr_lineno()
             node = cp.parse(cli_text)
@@ -628,7 +628,7 @@ class CibObjectSetRaw(CibObjectSet):
         if not cib_factory.is_cib_sane():
             return False
         cib_elem = cib_factory.obj_set2cib(self.obj_set)
-        status = cib_status.get_status()
+        status = cibstatus.cib_status.get_status()
         if status is None:
             common_err("no status section found")
             return False
@@ -795,7 +795,7 @@ def parse_cli_to_xml(cli, oldnode=None, validation=None):
     input: CLI text
     output: XML, obj_type, obj_id
     """
-    parser = CliParser()
+    parser = parse.CliParser()
     if validation is not None:
         for p in parser.parsers.values():
             p.validation = validation
@@ -1264,7 +1264,7 @@ class Op(object):
     def __init__(self, op_name, prim, node=None):
         self.prim = prim
         self.node = node
-        self.attr_d = odict()
+        self.attr_d = ordereddict.odict()
         self.attr_d["name"] = op_name
         if self.node is not None:
             self.xml2dict()
@@ -1921,7 +1921,7 @@ class CibFencingOrder(CibObject):
 
     def _repr_cli_head(self, format):
         s = clidisplay.keyword(self.obj_type)
-        d = odict()
+        d = ordereddict.odict()
         for c in self.node.iterchildren("fencing-level"):
             if "target-attribute" in c.attrib:
                 target = (c.get("target-attribute"), c.get("target-value"))
@@ -1930,7 +1930,7 @@ class CibFencingOrder(CibObject):
             if target not in d:
                 d[target] = {}
             d[target][c.get("index")] = c.get("devices")
-        dd = odict()
+        dd = ordereddict.odict()
         for target in d.keys():
             sorted_keys = sorted([int(i) for i in d[target].keys()])
             dd[target] = [d[target][str(x)] for x in sorted_keys]
@@ -2067,7 +2067,7 @@ cib_object_map = {
 
 
 # generate a translation cli -> tag
-backtrans = odict((item[0], key) for key, item in cib_object_map.iteritems())
+backtrans = ordereddict.odict((item[0], key) for key, item in cib_object_map.iteritems())
 
 
 def default_id_for_tag(tag):
@@ -2097,9 +2097,9 @@ class CibDiff(object):
     '''
     def __init__(self, objset):
         self.objset = objset
-        self._node_set = oset()
+        self._node_set = orderedset.oset()
         self._nodes = {}
-        self._rsc_set = oset()
+        self._rsc_set = orderedset.oset()
         self._resources = {}
 
     def add(self, item):
@@ -2142,12 +2142,12 @@ class CibDiff(object):
         return False
 
     def _obj_nodes(self):
-        return oset([n for n in self.objset.obj_ids
-                     if self._is_node(n)])
+        return orderedset.oset([n for n in self.objset.obj_ids
+                                if self._is_node(n)])
 
     def _obj_resources(self):
-        return oset([n for n in self.objset.obj_ids
-                     if self._is_resource(n)])
+        return orderedset.oset([n for n in self.objset.obj_ids
+                                if self._is_resource(n)])
 
     def _is_edit_valid(self, id_set, existing):
         '''
@@ -2183,7 +2183,7 @@ class CibDiff(object):
                 rc = self._is_edit_valid(input_set, existing)
                 del_set = existing - (input_set)
             else:
-                del_set = oset()
+                del_set = orderedset.oset()
             mk_set = (input_set) - existing
             upd_set = (input_set) & existing
             return rc, mk_set, upd_set, del_set
@@ -3019,20 +3019,20 @@ class CibFactory(object):
         if args[0] == "NOOBJ":
             return True, []
         rc = True
-        obj_set = oset([])
+        obj_set = orderedset.oset([])
         for spec in args:
             if spec == "changed":
-                obj_set |= oset(self.modified_elems())
+                obj_set |= orderedset.oset(self.modified_elems())
             elif spec.startswith("type:"):
-                obj_set |= oset(self.get_elems_on_type(spec))
+                obj_set |= orderedset.oset(self.get_elems_on_type(spec))
             elif spec.startswith("tag:"):
-                obj_set |= oset(self.get_elems_on_tag(spec))
+                obj_set |= orderedset.oset(self.get_elems_on_tag(spec))
             elif spec.startswith("related:"):
                 name = spec[len("related:"):]
-                obj_set |= oset(self.find_objects(name) or [])
+                obj_set |= orderedset.oset(self.find_objects(name) or [])
                 obj = self.find_object(name)
                 if obj is not None:
-                    obj_set |= oset(self.related_elements(obj))
+                    obj_set |= orderedset.oset(self.related_elements(obj))
             else:
                 objs = self.find_objects(spec) or []
                 for obj in objs:
