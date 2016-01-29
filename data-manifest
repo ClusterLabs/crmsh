@@ -29,8 +29,10 @@ scripts/init/init.py
 scripts/init/main.yml
 scripts/init/verify.py
 scripts/libvirt/main.yml
+scripts/lvm-drbd/main.yml
 scripts/lvm/main.yml
 scripts/mailto/main.yml
+scripts/nfsserver-lvm-drbd/main.yml
 scripts/nfsserver/main.yml
 scripts/ocfs2/main.yml
 scripts/oracle/main.yml
@@ -147,6 +149,7 @@ test/unittests/scripts/inc2/main.yml
 test/unittests/scripts/legacy/main.yml
 test/unittests/scripts/templates/apache.xml
 test/unittests/scripts/templates/virtual-ip.xml
+test/unittests/scripts/unified/main.yml
 test/unittests/scripts/v2/main.yml
 test/unittests/scripts/vipinc/main.yml
 test/unittests/scripts/vip/main.yml
