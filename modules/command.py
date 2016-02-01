@@ -379,7 +379,11 @@ Examples:
         If none is found, a fuzzy matcher is used to
         pick a close match
         '''
-        return fuzzy_get(self._children, child)
+        from . import options
+        if options.shell_completion:
+            return self._children.get(child)
+        else:
+            return fuzzy_get(self._children, child)
 
     def is_sublevel(self, child):
         '''
