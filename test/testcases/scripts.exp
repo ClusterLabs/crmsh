@@ -32,6 +32,7 @@ drbd             DRBD Block Device
 filesystem       Filesystem (mount point)
 gfs2             gfs2 filesystem (cloned)
 gfs2-base        gfs2 filesystem base (cloned)
+lvm-drbd         LVM Group on DRBD
 ocfs2            OCFS2 Filesystem
 raid-lvm         RAID hosting LVM
 
@@ -48,6 +49,7 @@ Server:
 apache           Apache Webserver
 exportfs         NFS Exported File System
 nfsserver        NFS Server
+nfsserver-lvm-drbd NFS Server on LVM and DRBD
 
 Stonith:
 
@@ -77,6 +79,7 @@ drbd             DRBD Block Device
 filesystem       Filesystem (mount point)
 gfs2             gfs2 filesystem (cloned)
 gfs2-base        gfs2 filesystem base (cloned)
+lvm-drbd         LVM Group on DRBD
 ocfs2            OCFS2 Filesystem
 raid-lvm         RAID hosting LVM
 
@@ -105,6 +108,7 @@ Server:
 apache           Apache Webserver
 exportfs         NFS Exported File System
 nfsserver        NFS Server
+nfsserver-lvm-drbd NFS Server on LVM and DRBD
 
 Stonith:
 
@@ -131,8 +135,10 @@ health
 init
 libvirt
 lvm
+lvm-drbd
 mailto
 nfsserver
+nfsserver-lvm-drbd
 ocfs2
 oracle
 raid-lvm
@@ -166,8 +172,10 @@ health
 init
 libvirt
 lvm
+lvm-drbd
 mailto
 nfsserver
+nfsserver-lvm-drbd
 ocfs2
 oracle
 raid-lvm
@@ -201,8 +209,10 @@ health
 init
 libvirt
 lvm
+lvm-drbd
 mailto
 nfsserver
+nfsserver-lvm-drbd
 ocfs2
 oracle
 raid-lvm
