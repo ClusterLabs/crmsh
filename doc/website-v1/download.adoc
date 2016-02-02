@@ -13,9 +13,23 @@ The easiest way to install `crmsh` is via the package manager of your distributi
 
 We try to build Red Hat / Fedora-compatible RPM packages on the OBS (see above).
 
+=== Fedora 22 ===
+
+Download http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/Fedora_22/network:ha-clustering:Stable.repo[network:ha-clustering:Stable.repo] and copy it to the '/etc/yum.repos.d/' directory as `root`.
+
+Then, run
+
+----
+yum install crmsh
+----
+
 == Debian ==
 
 The versions of `crmsh` and `pacemaker` currently available in the latest Debian release are quite old. Newer packages are available via the Debian-HA team https://wiki.debian.org/Debian-HA[wiki] and the distribution packages will hopefully be updated soon.
+
+== Ubuntu ==
+
+Packages for `crmsh` are available from the https://launchpad.net/ubuntu/+source/crmsh[Launchpad].
 
 == Gentoo ==
 

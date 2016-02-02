@@ -7,10 +7,14 @@ command in the interactive shell.
 Additionally, there are a couple of guides and other documents
 that will hopefully make using the shell as easy as possible.
 
-== Documents ==
+== Manual ==
 
-* link:/man[Manual (Development)], link:/man-2.0[(Release 2.x)], link:/man-1.2[(Release 1.2)]
-* link:/installation[Installation]
+* link:/man[Manual (Development)]
+* link:/man-2.0[Manual (v2.x)]
+* link:/man-1.2[Manual (v1.2.x)]
+
+== Guides ==
+
 * link:/start-guide[Getting Started]
 * link:/history-guide[History Guide]
 * link:/rsctest-guide[Resource Testing Guide]
@@ -33,6 +37,4 @@ its backend.
 
 For more information on Pacemaker in general, see the
 http://clusterlabs.org/doc/[Pacemaker documentation] at `clusterlabs.org`.
-
-For details on command line usage, see the link:/man[Manual].
 
