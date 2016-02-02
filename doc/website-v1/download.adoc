@@ -1,0 +1,30 @@
+= Download =
+
+The easiest way to install `crmsh` is via the package manager of your distribution.
+
+== SLES / openSUSE ==
+
+`crmsh` is commercially supported on SLE via the https://www.suse.com/products/highavailability/[SUSE Linux Enterprise High Availability Extension]. It is also available for openSUSE with the package name `crmsh`. Development packages can be downloaded from the OBS:
+
+* https://build.opensuse.org/package/show/network:ha-clustering:Stable/crmsh[Stable version]
+* https://build.opensuse.org/package/show/network:ha-clustering:Factory/crmsh[Development version]
+
+== Red Hat / Fedora ==
+
+We try to build Red Hat / Fedora-compatible RPM packages on the OBS (see above).
+
+== Debian ==
+
+The versions of `crmsh` and `pacemaker` currently available in the latest Debian release are quite old. Newer packages are available via the Debian-HA team https://wiki.debian.org/Debian-HA[wiki] and the distribution packages will hopefully be updated soon.
+
+== Gentoo ==
+
+A fairly up-to-date version is available https://packages.gentoo.org/packages/sys-cluster/crmsh[here].
+
+== Arch ==
+
+`crmsh` is available via the https://aur.archlinux.org/packages/ha-pacemaker-crmsh/[AUR]. Unfortunately the package seems somewhat out of date.
+
+== Source Packages ==
+
+Releases are available as `.tar.gz` or `.zip` archives via https://github.com/ClusterLabs/crmsh/releases[Github].

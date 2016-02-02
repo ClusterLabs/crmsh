@@ -1,22 +1,23 @@
-Cluster Shell
+The CRM Shell
 =============
 
 ++++
 <div class="frontpage-image">
+<br><br>
 <img src="/img/laptop.png">
+<br><br><br>
 </div>
 ++++
 
-The `crm` cluster management shell is a command line
-interface for the Pacemaker High Availability stack in
-GNU/Linux.
+*`crmsh` is a cluster management shell* for the Pacemaker High Availability stack.
 
-Configure, manage and troubleshoot HA clusters from the command line,
+Configure, manage and troubleshoot clusters from the command line,
 with full tab completion and extensive help. `crmsh` also provides
 advanced features like low-level cluster configuration, cluster scripting,
 package management, and history exploration tools giving you a complete
 insight into the state of your cluster.
 
-* https://github.com/ClusterLabs/crmsh/[Get the source]
-* http://crmsh.github.io/man-2.0/[Reference Manual (version 2.2.0)]
-* https://build.opensuse.org/package/show/network:ha-clustering:Stable/crmsh[RPMs for SUSE / Red Hat]
+* https://github.com/ClusterLabs/crmsh/[Source Code]
+* http://crmsh.github.io/man-2.0/[Reference Manual (v2.2.0)]
+* https://build.opensuse.org/package/show/network:ha-clustering:Stable/crmsh[Packages]
+* http://clusterlabs.org[Cluster Labs]

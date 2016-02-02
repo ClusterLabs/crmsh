@@ -1,9 +1,5 @@
 = Development =
 
-`crmsh` is a free software project and is open to contributors.
-Patches, comments, documentation, testing and so on are
-all very much welcome!
-
 == Tools ==
 
 ++++
@@ -16,7 +12,7 @@ all very much welcome!
 </ul>
 ++++
 
-== Get the source ==
+== Source Code ==
 
 The source code for `crmsh` is kept in a
 http://git-scm.com/[git] repository
@@ -65,8 +61,6 @@ and call:
 `crmsh` also comes with a comprehensive regression test suite. The regression tests need
 to run after installation, on a system which has both crmsh and pacemaker installed. You
 will also need to install +pacemaker+ and the +cluster-glue+ development headers.
-
-On SUSE-based systems, these dependencies are packaged as `libglue-devel` and `libpacemaker-devel`.
 
 * link:http://hg.linux-ha.org/glue[cluster-glue]
 * link:https://github.com/ClusterLabs/pacemaker[pacemaker]

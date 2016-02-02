@@ -1,7 +1,7 @@
 ASCIIDOC := asciidoc
 CRMCONF := crm.conf
 SRC := faq.adoc documentation.adoc development.adoc installation.adoc \
-	configuration.adoc about.adoc rsctest-guide.adoc \
+	configuration.adoc about.adoc rsctest-guide.adoc download.adoc \
 	history-guide.adoc start-guide.adoc man-1.2.adoc scripts.adoc man-2.0.adoc
 HISTORY_LISTINGS = include/history-guide/nfs-probe-err.typescript \
 	include/history-guide/sample-cluster.conf.crm \
