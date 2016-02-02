@@ -424,7 +424,15 @@ div.sidebarblock .title {
     }
 
     #container {
+        max-width: 960px;
+    }
+}
+
+@media screen and (min-width: 1500px) {
+    #container {
         max-width: 1024px;
+        margin-left: auto;
+        margin-right: auto;
     }
 }
 
