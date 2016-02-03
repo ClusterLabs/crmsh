@@ -7,15 +7,20 @@
    Kristoffer Gronlund <kgronlund@suse.com>
    --------------------------------------------------------------------------- */
 
+/* Fonts */
+
 body {
     font-family:'Open Sans', 'lucida grande',verdana,helvetica,arial,sans-serif;
-    font-size: 100%;
-    line-height: 1.3636rem;
-    margin: 0px 0px;
-    padding: 0px;
-    width: 100%;
-    color:#333;
-    background: #fff;
+    font-size: 16px;
+    line-height: 21px;
+}
+
+.small {
+  font-size: 12px; /* 75% of the baseline */
+}
+
+.large {
+  font-size: 20px; /* 125% of the baseline */
 }
 
 em {
@@ -28,6 +33,78 @@ strong {
 
 .monospaced {
     font-family: 'Menlo', 'Monaco', 'Consolas', 'lucida console', 'bitstream vera sans mono', 'courier new', monospace;
+}
+
+dt {
+    font-weight:normal;
+}
+
+h1, h2, h3, h4, h5 {
+    font-family:'Open Sans', 'lucida grande',verdana,helvetica,arial,sans-serif;
+    font-weight:normal;
+}
+
+h1 {
+    font-size:2.6rem;
+    line-height:1.428;
+}
+
+h2 {
+    font-size:2rem;
+    line-height:1.36363636; /* repeating, of course */
+}
+
+h3 {
+    font-size:1.6rem;
+    line-height:1.1;
+}
+
+h4 {
+    font-weight: bold;
+    font-size:1.3rem;
+    line-height:1.538;
+}
+
+h5 {
+    font-size:1.2rem;
+    font-style:italic;
+    line-height:1.538;
+}
+
+pre {
+    font-family:'Menlo', 'Monaco', consolas, 'lucida console', 'bitstream vera sans mono', 'courier new', monospace;
+    font-size: 14px;
+}
+
+#header h1 {
+    font-size: 42px;
+    margin: 0px;
+    display: inline;
+}
+
+#topbar {
+    display: inline;
+    font-size: 18px;
+}
+
+#topbar-small {
+    display: none;
+    font-size: 14px;
+}
+
+
+
+/* Style */
+
+body {
+    margin: 0px 0px;
+    padding: 0px;
+    width: 100%;
+    color:#333;
+    background: #fff;
+}
+
+.monospaced {
     color: #211;
     background-color: #fafaf8;
 }
@@ -50,13 +127,10 @@ dl {
 }
 
 dt {
-    font-weight:normal;
     color:#000;
 }
 
 h1, h2, h3, h4, h5 {
-    font-family:'Open Sans', 'lucida grande',verdana,helvetica,arial,sans-serif;
-    font-weight:normal;
     color:#000;
 }
 
@@ -66,44 +140,22 @@ h2, h3, h4, h5 {
 }
 
 h1 {
-    font-size:2.6rem;
-    line-height:1.428;
     margin:0px;
     margin-top: 48px;
 }
 
 h2 {
-    font-size:2rem;
-    line-height:1.36363636; /* repeating, of course */
     margin-top: 36px;
     margin-bottom: 1.5rem;
 }
 
-h2 + .sectionbody {}
-
 h3 {
-    font-size:1.6rem;
-    line-height:1.1;
     margin: 0px;
     margin-top: 30px;
 }
 
-h4 {
-    font-weight: bold;
-    font-size:1.3rem;
-    line-height:1.538;
-}
-
-h5 {
-    font-size:1.2rem;
-    font-style:italic;
-    line-height:1.538;
-}
-
 pre {
-    font-family:'Menlo', 'Monaco', consolas, 'lucida console', 'bitstream vera sans mono', 'courier new', monospace;
     color: #211;
-    font-size: 85%;
     overflow-x: auto;
 }
 
@@ -113,12 +165,9 @@ pre {
     padding-top: 4px;
     padding-bottom: 0px;
     border-bottom: 2px solid #efefea;
-}
-
-#header h1 {
-    margin: 0px;
-    font-size: 42px;
-    display: inline;
+    width: 100%;
+    height: 86px;
+    overflow: hidden;
 }
 
 #header a {
@@ -128,11 +177,6 @@ pre {
 
 #header a:hover {
     color:#ee3300;
-}
-
-#topbar {
-    display: inline;
-    font-size: 18px;
 }
 
 #topbar ul {
@@ -145,6 +189,19 @@ pre {
     display: inline;
     padding-right: 1rem;
 }
+
+#topbar-small ul {
+    list-style: none;
+    display: inline;
+    padding-left: 0.5rem;
+}
+
+#topbar-small li {
+    list-style: none;
+    display: inline;
+    padding-right: 0.5rem;
+}
+
 
 #container {
     max-width: 720px;
@@ -173,7 +230,6 @@ a:hover {
 
 
 #content {
-    text-align: justify;
 }
 
 h1 {
@@ -253,12 +309,12 @@ div.sidebarblock {
 }
 
 div.sidebarblock > div.content {
-    border-left:4px solid #419eda;
+    border-left:4px solid #ee3300;
     background: #faf7f8;
     padding:0 10px;
     color:#222;
-    font-size:smaller;
-    line-height:1.5;
+    font-size: 14px;
+    line-height:18px;
     max-width: 720px;
 
     background-image: -moz-linear-gradient(left, right,
@@ -274,7 +330,7 @@ div.sidebarblock > div.content {
 div.sidebarblock .title {
     margin:10px 0;
     font-weight:bold;
-    font-size: 1.1rem;
+    font-size: 14px;
     color:#442;
 }
 
@@ -307,7 +363,7 @@ div.sidebarblock .title {
 }
 
 #footer {
-    font-size:11px;
+    font-size: 12px;
     color:#888;
     margin-top:40px;
     text-align: right;
@@ -324,7 +380,7 @@ div.sidebarblock .title {
 }
 
 .nav a {
-    font-size: 120%;
+    font-size: 20px;
     text-decoration: none;
 }
 
@@ -349,12 +405,11 @@ div.sidebarblock .title {
         top: 120px;
         left: 4px;
         margin: 0px;
-        font-size: 80%;
-        line-height: 1rem;
+        font-size: 12px;
+        line-height: 1.2em;
     }
 
     #toc a .monospaced {
-        font-size: small;
         color:#419eda;
     }
 
@@ -363,28 +418,28 @@ div.sidebarblock .title {
     }
 
     #toc .toclevel1 {
-        font-weight: bold;
         padding: 1px;
+        margin-top: 8px;
+        font-size: 14px;
+        line-height: 16px;
     }
 
     #toc .toclevel2 {
         margin-left: 8px;
-        color: #aaaaaa;
         padding-left: 4px;
-        line-height: 1.2rem;
+        font-size: 12px;
+        line-height: 16px;
     }
 
     #toc .toclevel3 {
-        font-size: 0.8rem;
-        line-height: 1rem;
         margin-left: 24px;
-        color: #aaaaaa;
         padding-left: 4px;
+        font-size: 11px;
+        line-height: 15px;
+        font-weight: bold;
     }
 
     #toctitle {
-        font-size:1.2rem;
-        line-height:1.1rem;
         margin:20px 0;
 
     }
@@ -402,6 +457,13 @@ div.sidebarblock .title {
         padding-right: 8px;
     }
 
+    #topbar {
+        display: none;
+    }
+
+    #topbar-small {
+        display: inline;
+    }
 }
 
 @media screen and (min-width: 900px) and (max-width: 1280px) {
@@ -430,7 +492,6 @@ div.sidebarblock .title {
 
 @media screen and (min-width: 1500px) {
     #container {
-        max-width: 1024px;
         margin-left: auto;
         margin-right: auto;
     }

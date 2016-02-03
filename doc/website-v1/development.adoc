@@ -4,7 +4,7 @@
 
 ++++
 <ul class="nav">
-<li><a href="https://github.com/ClusterLabs/crmsh"><i class="fa fa-archive fa-3x fa-fw"></i> Source Repository</a></li>
+<li><a href="https://github.com/ClusterLabs/crmsh"><i class="fa fa-code-fork fa-3x fa-fw"></i> Source Repository</a></li>
 <li><a href="http://clusterlabs.org/mailman/listinfo/users"><i class="fa fa-envelope fa-3x fa-fw"></i> Mailing List</a></li>
 <li><a href="https://github.com/ClusterLabs/crmsh/issues"><i class="fa fa-bug fa-3x fa-fw"></i> Issue Tracker</a></li>
 <li><a href="irc://freenode.net/#clusterlabs"><i class="fa fa-comments fa-3x fa-fw"></i> IRC: #clusterlabs on Freenode</a></li>
