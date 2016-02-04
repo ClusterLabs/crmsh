@@ -3,11 +3,11 @@
 #
 # License: GNU General Public License (GPL)
 version: 2.2
-category: Filesystem
-shortdesc: gfs2 filesystem base (cloned)
+category: File System
+shortdesc: GFS2 File System Base (Cloned)
 longdesc: |
-  This template generates a cloned instance of the gfs2 filesystem.
-  The filesystem should be on the device, unless clvm is used.
+  This template generates a cloned instance of the GFS2 file system.
+  The file system should be on the device, unless cLVM is used.
 
 parameters:
   - name: clvm-group

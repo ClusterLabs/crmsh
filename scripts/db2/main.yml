@@ -2,9 +2,9 @@ version: 2.2
 category: Database
 shortdesc: IBM DB2 Database
 longdesc: >-
-  Configure an IBM DB2 database resource, along with a Virtual IP and a Filesystem.
+  Configure an IBM DB2 database resource, along with a Virtual IP and a file system mount point.
 
-  Note that the filesystem will be stopped initially, in case you need to run mkfs.
+  Note that the file system resource will be stopped initially, in case you need to run mkfs.
 
 include:
   - agent: ocf:heartbeat:db2
@@ -25,7 +25,7 @@ include:
       - name: id
         value: db2-virtual-ip
   - script: filesystem
-    shortdesc: The filesystem configured here will be mounted before the DB2 instance.
+    shortdesc: The file system configured here will be mounted before the DB2 instance.
     parameters:
       - name: id
         value: db2-fs

@@ -10,12 +10,12 @@ longdesc: |
 
   3) A cluster manager LVM volume group and LVM volumes on the RAID 1 host based mirror,
 
-  4) Filesystems on shared storage for sapmnt, /sapbd, /usr/sap/SID/ASCS## and /usr/sap/SID/DVEBMGS##,
+  4) File systems on shared storage for sapmnt, /sapbd, /usr/sap/SID/ASCS## and /usr/sap/SID/DVEBMGS##,
 
   5) SAPinstance for - ASCS, a Database, a Central Instance.
 
   The difference between this and the SimpleStack is that the ASCS and CI have their own
-  volumes/filesystems/mountpoints rather than just one volume/filesystem/mountpoint on /usr/sap.
+  volumes / file systems / mount points rather than just one volume / file system / mount point on /usr/sap.
 
 parameters:
   - name: id
@@ -36,7 +36,7 @@ include:
 
   - script: lvm
     required: true
-    shortdesc: LVM logical volumes for the SAP filesystems.
+    shortdesc: LVM logical volumes for the SAP file systems.
     parameters:
       - name: volgrpname
         value: sapvg
@@ -44,7 +44,7 @@ include:
   - script: filesystem
     name: filesystem-sapmnt
     required: true
-    shortdesc: Filesystem resource for the sapmnt directory.
+    shortdesc: File system resource for the sapmnt directory.
     parameters:
       - name: id
         value: rsc_fs_NA0_sapmnt
@@ -59,7 +59,7 @@ include:
   - script: filesystem
     name: filesystem-usrsap
     required: true
-    shortdesc: Filesystem resource for the /usr/sap directory.
+    shortdesc: File system resource for the /usr/sap directory.
     parameters:
       - name: id
         value: rsc_fs_NA0_usrsap
@@ -89,12 +89,12 @@ include:
         value: eth0
   - script: filesystem
     name: filesystem-db
-    shortdesc: "Filesystem resource for the SAP database (typically /sapdb)."
+    shortdesc: "File system resource for the SAP database (typically /sapdb)."
     longdesc: >-
-      If a filesystem does not already exist on the block device 
+      If a file system does not already exist on the block device 
       specified here, you will need to run mkfs to create it, prior 
-      to starting the filesystem resource.  You will also need
-      to create the mountpoint directory on all cluster nodes.
+      to starting the file system resource.  You will also need
+      to create the mount point directory on all cluster nodes.
     parameters:
       - name: id
         value: rsc_fs_NA0_sapna0db
@@ -131,12 +131,12 @@ include:
         value: eth0
   - script: filesystem
     name: filesystem-as
-    shortdesc: "Filesystem resource for the /usr/sap/SID/ASCS## directory."
+    shortdesc: "File system resource for the /usr/sap/SID/ASCS## directory."
     longdesc: >-
-      If a filesystem does not already exist on the block device 
+      If a file system does not already exist on the block device 
       specified here, you will need to run mkfs to create it, prior 
-      to starting the filesystem resource.  You will also need
-      to create the mountpoint directory on all cluster nodes.
+      to starting the file system resource.  You will also need
+      to create the mount point directory on all cluster nodes.
     parameters:
       - name: id
         value: rsc_fs_NA0_sapna0as
@@ -173,12 +173,12 @@ include:
         value: eth0
   - script: filesystem
     name: filesystem-ci
-    shortdesc: "Filesystem resource for the /usr/sap/SID/DVEBMGS## directory."
+    shortdesc: "File system resource for the /usr/sap/SID/DVEBMGS## directory."
     longdesc: >-
-      If a filesystem does not already exist on the block device 
+      If a file system does not already exist on the block device 
       specified here, you will need to run mkfs to create it, prior 
-      to starting the filesystem resource.  You will also need
-      to create the mountpoint directory on all cluster nodes.
+      to starting the file system resource.  You will also need
+      to create the mount point directory on all cluster nodes.
     parameters:
       - name: id
         value: rsc_fs_NA0_sapna0ci

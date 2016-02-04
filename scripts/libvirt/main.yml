@@ -9,12 +9,12 @@ longdesc: >
 category: Stonith
 parameters:
   - name: id
-    shortdesc: The resource id (name)
+    shortdesc: Resource ID (Name)
     example: stonith-libvirt
     required: true
     type: resource
   - name: target
-    shortdesc: Node to manage with stonith device
+    shortdesc: Node to Manage With STONITH Device
     type: resource
     required: true
   - name: hostlist
@@ -39,13 +39,13 @@ parameters:
     required: false
     example: power_cycle
     type: string
-    shortdesc: How to reset a guest.
+    shortdesc: Guest Reset Method
     longdesc: >
       A guest reset may be done by a sequence of off and on commands
       (power_cycle) or by the reboot command. Which method works
       depend on the hypervisor and guest configuration management.
   - name: install
-    shortdesc: Enable to install required packages
+    shortdesc: Enable to Install Required Packages
     type: boolean
     required: false
     value: false

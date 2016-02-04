@@ -9,12 +9,12 @@ longdesc: |
   Configure a resource group containing a virtual IP address and
   an instance of the Apache web server.
 
-  You can optionally configure a Filesystem resource which will be
+  You can optionally configure a file system resource which will be
   mounted before the web server is started.
 
   You can also optionally configure a database resource which will
   be started before the web server but after mounting the optional
-  filesystem.
+  file system.
 include:
   - agent: ocf:heartbeat:apache
     name: apache
@@ -34,7 +34,7 @@ include:
       - name: id
         value: "{{id}}-vip"
   - script: filesystem
-    shortdesc: Optional filesystem mounted before the web server is started.
+    shortdesc: Optional file system mounted before the web server is started.
     required: false
   - script: database
     shortdesc: Optional database started before the web server is started.

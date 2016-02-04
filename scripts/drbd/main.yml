@@ -1,5 +1,5 @@
 version: 2.2
-category: Filesystem
+category: File System
 shortdesc: DRBD Block Device
 longdesc: >-
   Distributed Replicated Block Device. Configure a DRBD cluster resource.

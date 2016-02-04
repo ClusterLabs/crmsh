@@ -5,14 +5,14 @@ version: 2.2
 category: Server
 shortdesc: NFS Server
 longdesc: >
-  Configure an NFS server. Requires an existing filesystem resource,
-  for example a filesystem running on LVM on DRBD.
+  Configure an NFS server. Requires an existing file system resource,
+  for example a file system running on LVM on DRBD.
 
 parameters:
   - name: base-id
     required: true
-    shortdesc: Base filesystem resource ID
-    longdesc: The ID of an existing filesystem resource.
+    shortdesc: Base File System Resource ID
+    longdesc: The ID of an existing file system resource.
     type: resource
     value: base-fs
 
@@ -20,7 +20,7 @@ include:
   - name: rootfs
     script: exportfs
     required: false
-    shortdesc: NFSv4 Virtual File System root.
+    shortdesc: NFSv4 Virtual File System Root
     parameters:
       - name: id
         value: exportfs-root
@@ -33,7 +33,7 @@ include:
 
   - script: exportfs
     required: true
-    shortdesc: Exported NFS mount point.
+    shortdesc: Exported NFS Mount Point
     parameters:
       - name: id
         value: exportfs
@@ -46,13 +46,13 @@ include:
 
   - script: virtual-ip
     required: false
-    shortdesc: Configure a Virtual IP address used to access the NFS mounts.
+    shortdesc: Virtual IP Address Used to Access the NFS Mounts
 
 actions:
   - crm: "configure show {{base-id}}"
-    shortdesc: Ensure that the Filesystem resource exists
+    shortdesc: Ensure That the File System Resource Exists
   - install: nfs-client nfs-kernel-server
-    shortdesc: Install NFS packages
+    shortdesc: Install NFS Packages
   - service:
       - nfsserver: enable
       - nfsserver: start
@@ -70,4 +70,4 @@ actions:
       {{/rootfs}}
   - call: exportfs -v
     error: Failed to configure NFS exportfs
-    shortdesc: Check result of exportfs -v
+    shortdesc: Check Result of exportfs -v

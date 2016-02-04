@@ -2,7 +2,7 @@
 #
 # License: GNU General Public License (GPL)
 version: 2.2
-category: Filesystem
+category: File System
 shortdesc: Cluster-aware LVM (Volume Group)
 longdesc: |
   Configures an cLVM volume group instance. Once created,
