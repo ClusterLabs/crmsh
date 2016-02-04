@@ -2,7 +2,7 @@
 #
 # License: GNU General Public License (GPL)
 version: 2.2
-category: Filesystem
+category: File System
 shortdesc: LVM Group on DRBD
 longdesc: >
   Configure a LVM resource group on top of DRBD.
@@ -22,7 +22,7 @@ parameters:
   - name: group_id
     type: resource
     required: true
-    shortdesc: Group resource ID
+    shortdesc: Group Resource ID
     value: g-lvm
 
 include:
@@ -41,7 +41,7 @@ include:
         value: vg1
 
   - name: example_fs
-    shortdesc: Example filesystem resource
+    shortdesc: Example File System Resource
     script: filesystem
     required: false
     parameters:
@@ -55,7 +55,7 @@ include:
 actions:
   - include: drbd
   - include: lvm
-  - shortdesc: Configure LVM and filesystem group and constraints
+  - shortdesc: Configure LVM and File System Group and Constraints
     cib: |
       group {{group_id}} {{lvm:id}} {{#example_fs:id}}{{example_fs:id}}{{/example_fs:id}}
       order o-drbd_before_{{group_id}} inf: ms-{{drbd:id}}:promote {{group_id}}:start

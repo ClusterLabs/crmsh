@@ -3,44 +3,44 @@
 #
 # License: GNU General Public License (GPL)
 version: 2.2
-category: Filesystem
-shortdesc: OCFS2 Filesystem
+category: File System
+shortdesc: OCFS2 File System
 longdesc: >
-  Configure an OCFS2 Filesystem resource and add
+  Configure an OCFS2 File System resource and add
   it to a cloned DLM base group. OCFS2 uses the
   cluster membership services from Pacemaker which
   run in user space. Therefore, DLM needs to be
   configured as a clone resource that is present on
   each node in the cluster.
 
-  The Filesystem resource should be added to a cloned
+  The file system resource should be added to a cloned
   group which includes the DLM resource. This wizard
   can optionally create both the required DLM resource
   and the cloned group. The wizard can be reused to create
-  additional OCFS2 Filesystem resources by setting the
+  additional OCFS2 file system resources by setting the
   group name to the name of an already-created cloned group.
 
   If you are using cLVM, create the DLM resource and clone
-  group using the cLVM wizard. OCFS2 Filesystem resources can
+  group using the cLVM wizard. OCFS2 file system resources can
   then be added to the group using this wizard.
 
 parameters:
   - name: id
-    shortdesc: Name the ocfs2 filesystem resource
+    shortdesc: OCFS2 File System Resource ID
     example: bigfs
     type: resource
     required: true
   - name: directory
-    shortdesc: The mount point
+    shortdesc: Mount Point
     example: /mnt/bigfs
     type: string
     required: true
   - name: device
-    shortdesc: The device
+    shortdesc: Device
     type: string
     required: true
   - name: options
-    shortdesc: mount options
+    shortdesc: Mount Options
     type: string
   - name: dlm
     shortdesc: Create DLM Resource and Cloned Group
@@ -73,4 +73,4 @@ actions:
           op monitor interval=20s timeout=40s
 
   - crm: configure modgroup {{group}} add {{id}}
-    shortdesc: Add the OCFS2 Filesystem to the cloned group
+    shortdesc: Add the OCFS2 File System to the Cloned Group

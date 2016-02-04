@@ -6,7 +6,7 @@ longdesc: |
 
   1) Virtual IP address for the SAP ASCS instance,
 
-  2) A filesystem on shared storage (/usr/sap/SID/ASCS##),
+  2) A file system on shared storage (/usr/sap/SID/ASCS##),
 
   3) SAPInstance for ASCS.
 
@@ -41,12 +41,12 @@ include:
       - name: nic
         value: eth0
   - script: filesystem
-    shortdesc: "Filesystem resource for the /usr/sap/SID/ASCS## directory."
+    shortdesc: "File system resource for the /usr/sap/SID/ASCS## directory"
     longdesc: >-
-      If a filesystem does not already exist on the block device 
+      If a file system does not already exist on the block device 
       specified here, you will need to run mkfs to create it, prior 
-      to starting the filesystem resource.  You will also need
-      to create the mountpoint directory on all cluster nodes.
+      to starting the file system resource.  You will also need
+      to create the mount point directory on all cluster nodes.
     parameters:
       - name: id
         value: rsc_fs_NA0_sapna0as

@@ -1,11 +1,11 @@
 version: 2.2
-category: Filesystem
-shortdesc: RAID hosting LVM
+category: File System
+shortdesc: RAID Hosting LVM
 longdesc: "Configure a RAID 1 host based mirror together with a cluster manager LVM volume group and LVM volumes."
 parameters:
   - name: id
-    shortdesc: ID for the RAID and LVM group.
-    longdesc: Filesystems that should be mounted in the LVM can be added to this group resource.
+    shortdesc: RAID and LVM Group ID
+    longdesc: File systems that should be mounted in the LVM can be added to this group resource.
     type: resource
     value: g-raid
     required: true

@@ -53,7 +53,7 @@ include:
         value: nfs
 
   - name: example_fs
-    shortdesc: Example filesystem resource
+    shortdesc: Example File System Resource
     script: filesystem
     required: false
     parameters:
@@ -109,7 +109,7 @@ actions:
   - include: drbd
   - include: lvm
 
-  - shortdesc: Configure LVM and filesystem group and constraints
+  - shortdesc: Configure LVM and File System Group and Constraints
     cib: |
       group g-nfs {{lvm:id}} {{#example_fs:id}}{{example_fs:id}}{{/example_fs:id}}
       order o-drbd_before_nfs inf: ms-{{drbd:id}}:promote g-nfs:start
@@ -117,20 +117,20 @@ actions:
 
   - include: rootfs
 
-  - shortdesc: Clone root fs resource and configure constraints
+  - shortdesc: Clone Root FS Resource and Configure Constraints
     cib: |
       clone cl-{{rootfs:id}} {{rootfs:id}}
       order o-root_before_nfs Mandatory: cl-{{rootfs:id}} g-nfs:start
       colocation c-nfs_on_root inf: g-nfs cl-{{rootfs:id}}
     when: rootfs
   - include: exportfs
-  - shortdesc: Add exportfs resource to group
+  - shortdesc: Add ExportFS Resource to Group
     crm: "configure modgroup g-nfs add {{exportfs:id}}"
     when: exportfs
   - include: virtual-ip
-  - shortdesc: Add floating IP address to group
+  - shortdesc: Add Floating IP Address to Group
     crm: "configure modgroup g-nfs add {{virtual-ip:id}}"
     when: virtual-ip
   - call: exportfs -v
     error: Failed to configure NFS exportfs
-    shortdesc: Check result of exportfs -v
+    shortdesc: Check Result of exportfs -v

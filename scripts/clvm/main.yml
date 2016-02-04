@@ -2,7 +2,7 @@
 #
 # License: GNU General Public License (GPL)
 version: 2.2
-category: Filesystem
+category: File System
 shortdesc: Cluster-aware LVM
 longdesc: |
   Configure a cloned instance of cLVM.

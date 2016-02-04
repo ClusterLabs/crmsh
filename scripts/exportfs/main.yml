@@ -6,26 +6,28 @@ include:
     parameters:
       - name: id
         required: true
-        shortdesc: Unique ID for this export in the cluster.
+        shortdesc: Resource ID
+        longdesc: Cluster Resource ID
         type: resource
         value: exportfs
       - name: fsid
+        shortdesc: Unique FSID Within Cluster or Starting FSID for Multiple Exports
         required: true
         type: integer
         value: 1
       - name: directory
         required: true
         type: string
-        shortdesc: Mount point
-        longdesc: "The mount point for the filesystem, e.g.: /srv/nfs/home"
+        shortdesc: Mount Point (Directory)
+        longdesc: "The mount point for the file system, e.g.: /srv/nfs/home"
       - name: options
         required: true
-        shortdesc: Mount options
+        shortdesc: Mount Options
         longdesc: "Any additional options to be given to the mount command, for example rw,mountpoint"
         type: string
       - name: wait_for_leasetime_on_stop
         required: false
-        shortdesc: Wait for lease time on stop
+        shortdesc: Wait for Lease Time on Stop
         longdesc: If set to true, wait for lease on stop.
         type: boolean
         value: true

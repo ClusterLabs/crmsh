@@ -15,12 +15,12 @@ longdesc: |
 
 parameters:
   - name: id
-    shortdesc: The resource id (name)
+    shortdesc: Resource ID (Name)
     example: stonith-sbd
     required: true
     type: resource
   - name: sbd_device
-    shortdesc: Name of the device (shared disk)
+    shortdesc: Device Name (Shared Disk)
     longdesc: >
       Shared device used by SBD. Make sure that the device
       remains the same on reboots. It's preferable to use
