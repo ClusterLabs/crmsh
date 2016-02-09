@@ -29,11 +29,11 @@ Filesystem:
 clvm             Cluster-aware LVM
 clvm-vg          Cluster-aware LVM (Volume Group)
 drbd             DRBD Block Device
-filesystem       Filesystem (mount point)
-gfs2             gfs2 filesystem (cloned)
-gfs2-base        gfs2 filesystem base (cloned)
-ocfs2            OCFS2 Filesystem
-raid-lvm         RAID hosting LVM
+filesystem       File System (mount point)
+gfs2             GFS2 File System (Cloned)
+gfs2-base        GFS2 File System Base (Cloned)
+ocfs2            OCFS2 File System
+raid-lvm         RAID Hosting LVM
 
 SAP:
 
@@ -74,11 +74,11 @@ Filesystem:
 clvm             Cluster-aware LVM
 clvm-vg          Cluster-aware LVM (Volume Group)
 drbd             DRBD Block Device
-filesystem       Filesystem (mount point)
-gfs2             gfs2 filesystem (cloned)
-gfs2-base        gfs2 filesystem base (cloned)
-ocfs2            OCFS2 Filesystem
-raid-lvm         RAID hosting LVM
+filesystem       File System (mount point)
+gfs2             GFS2 File System (Cloned)
+gfs2-base        GFS2 File System Base (Cloned)
+ocfs2            OCFS2 File System
+raid-lvm         RAID Hosting LVM
 
 SAP:
 
