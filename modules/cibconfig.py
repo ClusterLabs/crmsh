@@ -17,7 +17,7 @@ from .parse import CliParser
 from . import clidisplay
 from .cibstatus import cib_status
 from . import idmgmt
-from .ra import get_ra, get_properties_list, get_pe_meta
+from .ra import get_ra, get_properties_list, get_pe_meta, get_properties_meta
 from . import schema
 from .crm_gv import gv_types
 from .msg import common_warn, common_err, common_debug, common_info, err_buf
@@ -2950,6 +2950,19 @@ class CibFactory(object):
         Get the value of the given cluster property.
         '''
         return self._get_attr_value("property", property)
+
+    def get_property_w_default(self, prop):
+        '''
+        Get the value of the given property. If it is
+        not set, return the default value.
+        '''
+        v = self.get_property(prop)
+        if v is None:
+            try:
+                v = get_properties_meta().param_default(prop)
+            except:
+                pass
+        return v
 
     def get_op_default(self, attr):
         '''

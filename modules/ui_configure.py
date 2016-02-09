@@ -324,12 +324,7 @@ class CibConfig(command.UI):
             else:
                 print v
         for p in properties:
-            v = cib_factory.get_property(p)
-            if v is None:
-                try:
-                    v = ra.get_properties_meta().param_default(p)
-                except:
-                    pass
+            v = cib_factory.get_property_w_default(p)
             if v is not None:
                 print_value(v)
             elif truth:
