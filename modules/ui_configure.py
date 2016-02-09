@@ -463,6 +463,7 @@ class CibConfig(command.UI):
             if not ok or not cib_factory.commit():
                 raise ValueError("Failed to stop one or more running resources: %s" %
                                  (', '.join(to_stop)))
+        return len(to_stop)
 
     @command.skill_level('administrator')
     @command.completers_repeating(_id_list)
@@ -472,8 +473,8 @@ class CibConfig(command.UI):
         arg_force = any((x in ('-f', '--force')) for x in argl)
         argl = [x for x in argl if (x not in ('-f', '--force'))]
         if arg_force or config.core.force:
-            self._stop_if_running(argl)
-            utils.wait4dc(what="Stopping %s" % (", ".join(argl)))
+            if self._stop_if_running(argl) > 0:
+                utils.wait4dc(what="Stopping %s" % (", ".join(argl)))
         return cib_factory.delete(*argl)
 
     @command.name('default-timeouts')
