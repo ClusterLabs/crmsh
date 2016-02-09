@@ -158,10 +158,18 @@ def verify_boolean(opt):
 
 
 def is_boolean_true(opt):
+    if opt in (None, False):
+        return False
+    if opt is True:
+        return True
     return opt.lower() in ("yes", "true", "on", "1")
 
 
 def is_boolean_false(opt):
+    if opt in (None, False):
+        return True
+    if opt is True:
+        return False
     return opt.lower() in ("no", "false", "off", "0")
 
 
