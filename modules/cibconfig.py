@@ -23,7 +23,7 @@ from . import ordereddict
 from . import orderedset
 from . import cibstatus
 from . import crm_gv
-from .ra import get_ra, get_properties_list, get_pe_meta
+from .ra import get_ra, get_properties_list, get_pe_meta, get_properties_meta
 from .msg import common_warn, common_err, common_debug, common_info, err_buf
 from .msg import common_error, constraint_norefobj_err, cib_parse_err, no_object_err
 from .msg import missing_obj_err, common_warning, update_err, unsupported_err, empty_cib_err
@@ -2950,6 +2950,19 @@ class CibFactory(object):
         Get the value of the given cluster property.
         '''
         return self._get_attr_value("property", property)
+
+    def get_property_w_default(self, prop):
+        '''
+        Get the value of the given property. If it is
+        not set, return the default value.
+        '''
+        v = self.get_property(prop)
+        if v is None:
+            try:
+                v = get_properties_meta().param_default(prop)
+            except:
+                pass
+        return v
 
     def get_op_default(self, attr):
         '''
