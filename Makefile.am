@@ -78,7 +78,6 @@ install-exec-local:
 		--record $(DESTDIR)$(pkgpythondir)/install_files.txt \
 		--verbose
 	$(INSTALL) -d -m 770 $(DESTDIR)/$(CRM_CACHE_DIR)
-	-rm -rf $(generated_docs) $(generated_mans)
 
 uninstall-local:
 	cat $(DESTDIR)$(pkgpythondir)/install_files.txt | xargs rm -rf
