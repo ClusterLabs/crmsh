@@ -19,7 +19,9 @@ _PERUSER = os.getenv("CRM_CONFIG_FILE") or os.path.join(userdir.CONFIG_HOME, 'cr
 _PATHLIST = {
     'datadir': ('/usr/share', '/usr/local/share', '/opt'),
     'cachedir': ('/var/cache', '/opt/cache'),
-    'libdir': ('/usr/lib64', '/usr/libexec', '/usr/lib',
+    'libdir': ('/usr/lib64', '/usr/lib/x86_64-linux-gnu', '/usr/lib/i386-linux-gnu',
+               '/usr/libexec', '/usr/lib', '/usr/local/lib64',
+               '/usr/local/lib/x86_64-linux-gnu', '/usr/local/lib/i386-linux-gnu',
                '/usr/local/lib64', '/usr/local/libexec', '/usr/local/lib'),
     'varlib': ('/var/lib', '/opt/var/lib'),
     'wwwdir': ('/srv/www', '/var/www')
