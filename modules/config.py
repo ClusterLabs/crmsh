@@ -25,7 +25,7 @@ def configure_libdir():
         multiarch = sysconfig.get_config_var('MULTIARCH')
         if multiarch:
             dirs += ('/usr/lib/%s' % multiarch,
-                     '/usr/local/lib/%s' % multiarch) + _PATHLIST['libdir']
+                     '/usr/local/lib/%s' % multiarch)
     except ImportError:
         pass
     return dirs
