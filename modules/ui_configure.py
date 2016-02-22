@@ -606,9 +606,6 @@ class CibConfig(command.UI):
         return ui_utils.ptestlike(set_obj.ptest, 'vv', context.get_command_name(), args)
 
     def _commit(self, force=False, replace=False):
-        if force:
-            syntax_err(('configure.commit', force))
-            return False
         if not cib_factory.has_cib_changed():
             common_info("apparently there is nothing to commit")
             common_info("try changing something first")
