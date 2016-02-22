@@ -13,33 +13,35 @@ except ImportError:
 from . import userdir
 
 
+def configure_libdir():
+    '''
+    sysconfig is only available in 2.7 and above
+    MULTIARCH is a debian specific configuration variable
+    '''
+    dirs = ('/usr/lib64', '/usr/libexec', '/usr/lib',
+            '/usr/local/lib64', '/usr/local/libexec', '/usr/local/lib')
+    try:
+        import sysconfig
+        multiarch = sysconfig.get_config_var('MULTIARCH')
+        if multiarch:
+            dirs += ('/usr/lib/%s' % multiarch,
+                     '/usr/local/lib/%s' % multiarch) + _PATHLIST['libdir']
+    except ImportError:
+        pass
+    return dirs
+
+
 _SYSTEMWIDE = '/etc/crm/crm.conf'
 _PERUSER = os.getenv("CRM_CONFIG_FILE") or os.path.join(userdir.CONFIG_HOME, 'crm.conf')
 
 _PATHLIST = {
     'datadir': ('/usr/share', '/usr/local/share', '/opt'),
     'cachedir': ('/var/cache', '/opt/cache'),
-    'libdir': ('/usr/lib64', '/usr/libexec', '/usr/lib', '/usr/local/lib64',
-               '/usr/local/lib64', '/usr/local/libexec', '/usr/local/lib'),
+    'libdir': configure_libdir(),
     'varlib': ('/var/lib', '/opt/var/lib'),
     'wwwdir': ('/srv/www', '/var/www')
 }
 
-try:
-    '''
-    sysconfig is only available in 2.7 and above
-    MULTIARCH is a debian specific configuration variable
-    '''
-    import sysconfig
-    multiarch = sysconfig.get_config_var('MULTIARCH')
-    if multiarch:
-        _PATHLIST['libdir'] = (
-            '/usr/lib/%s' % multiarch, '/usr/lib64', '/usr/lib64',
-            '/usr/libexec', '/usr/lib', '/usr/local/lib/%s' % multiarch,
-            '/usr/local/libexec', '/usr/local/lib'
-        )
-except ImportError:
-    pass;
 
 def make_path(path):
     """input: path containing %(?)s-statements
