@@ -527,7 +527,7 @@ def test_existing_node_resource():
 
 @with_setup(setup_func, teardown_func)
 def test_id_collision_breakage_1():
-    from crmsh import clidisplay
+    import clidisplay
 
     obj = cibconfig.mkset_obj()
     assert obj is not None
@@ -609,7 +609,7 @@ primitive p1 ocf:heartbeat:Dummy \
 
 @with_setup(setup_func, teardown_func)
 def test_id_collision_breakage_3():
-    from crmsh import clidisplay
+    import clidisplay
 
     obj = cibconfig.mkset_obj()
     assert obj is not None
@@ -653,7 +653,7 @@ primitive node1 Dummy params fake=something
 
 @with_setup(setup_func, teardown_func)
 def test_id_collision_breakage_2():
-    from crmsh import clidisplay
+    import clidisplay
 
     obj = cibconfig.mkset_obj()
     assert obj is not None
@@ -751,7 +751,7 @@ def test_reordering_resource_sets():
     """
     Can we reorder resource sets?
     """
-    from crmsh import clidisplay
+    import clidisplay
     obj1 = factory.create_object('primitive', 'p1', 'Dummy')
     assert obj1 is True
     obj2 = factory.create_object('primitive', 'p2', 'Dummy')
@@ -797,7 +797,7 @@ def test_bug959895():
     commit_holder = factory.commit
     try:
         factory.commit = lambda *args: True
-        from crmsh.ui_resource import set_deep_meta_attr
+        from ui_resource import set_deep_meta_attr
         set_deep_meta_attr("c-bug959895", "target-role", "Started")
         eq_(['Started'],
             obj.node.xpath('.//nvpair[@name="target-role"]/@value'))

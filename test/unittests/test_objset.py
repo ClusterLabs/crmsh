@@ -30,7 +30,7 @@ def assert_in(needle, haystack):
 
 def setup_func():
     "set up test fixtures"
-    from crmsh import idmgmt
+    import idmgmt
     idmgmt.clear()
 
 

@@ -54,7 +54,7 @@ def roundtrip(cli, debug=False, expected=None):
 
 def setup_func():
     "set up test fixtures"
-    from crmsh import idmgmt
+    import idmgmt
     idmgmt.clear()
 
 
