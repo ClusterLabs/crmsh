@@ -213,7 +213,7 @@ class NodeMgmt(command.UI):
         if not utils.is_name_sane(node):
             return False
         if not config.core.force and \
-                not utils.ask("Do you really want to shoot %s?" % node):
+                not utils.ask("Fencing %s will shut down the node and migrate any resources that are running on it! Do you want to fence %s?" % node):
             return False
         return utils.ext_cmd(self.node_fence % (node)) == 0
 
