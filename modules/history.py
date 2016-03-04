@@ -25,6 +25,8 @@ try:
 except:
     pass
 
+_LOG_FILES = ("ha-log.txt", "messages", "journal.log", "pacemaker.log")
+
 
 YEAR = None
 
@@ -77,6 +79,7 @@ _syslog2node_formats = (re.compile(r'^[a-zA-Z]{2,4} \d{1,2} \d{2}:\d{2}:\d{2}\s+
                         re.compile(r'^\d{4}\/\d{2}\/\d{2}_\d{2}:\d{2}:\d{2}'))
 
 _syslog_ts_prev = None
+
 
 def syslog_ts(s):
     """
@@ -300,7 +303,7 @@ def last_log_lines(log_l):
     return l
 
 
-class LogSyslog(object):
+class Log(object):
     '''
     Slice log, search log.
     '''
@@ -312,7 +315,7 @@ class LogSyslog(object):
         self.endpos = {}
         self.cache = {}
         self.open_logs()
-        self.set_log_timeframe(from_dt, to_dt)
+        self.set_timeframe(from_dt, to_dt)
 
     def open_log(self, log):
         import bz2
@@ -332,7 +335,7 @@ class LogSyslog(object):
             common_debug("opening log %s" % log)
             self.open_log(log)
 
-    def set_log_timeframe(self, from_dt, to_dt):
+    def set_timeframe(self, from_dt, to_dt):
         '''
         Convert datetime to timestamps (i.e. seconds), then
         find out start/end file positions. Logs need to be
@@ -685,7 +688,7 @@ class Report(object):
         self.loc = None
         self.ready = False
         self.nodecolor = {}
-        self.logobj = None
+        self.log = None
         self.desc = None
         self._transitions = []
         self.cibgrp_d = {}
@@ -843,7 +846,7 @@ class Report(object):
 
     def find_node_log(self, node):
         p = os.path.join(self.loc, node)
-        for lf in ("ha-log.txt", "messages", "journal.log", "pacemaker.log"):
+        for lf in _LOG_FILES:
             if is_log(os.path.join(p, lf)):
                 return os.path.join(p, lf)
         return None
@@ -1126,7 +1129,7 @@ class Report(object):
     def get_all_trans_msgs(self, msg_l=None):
         trans_re_l = (transition_start_re("[0-9]+"), transition_end_re("[0-9]+"))
         if msg_l is None:
-            return self.logobj.get_matches(trans_re_l)
+            return self.log.get_matches(trans_re_l)
         else:
             return (x for x in msg_l if trans_re_l[0].search(x) or trans_re_l[1].search(x))
 
@@ -1157,7 +1160,7 @@ class Report(object):
         if the transition files exist.
         NB: future_pe means that the peinput has not been fetched yet.
         If the caller doesn't provide the message list, then we
-        build it from the collected log files (self.logobj).
+        build it from the collected log files (self.log).
         Otherwise, we get matches for transition patterns.
 
         WARN: We rely here on the message format (syslog,
@@ -1226,9 +1229,9 @@ class Report(object):
         elif self.change_origin == CH_UPD:
             self._report_setup_update()
 
-        self.logobj = LogSyslog(self.log_l,
-                                self.from_dt,
-                                self.to_dt)
+        self.log = Log(self.log_l,
+                          self.from_dt,
+                          self.to_dt)
 
         if self.change_origin != CH_UPD:
             common_debug("getting transitions from logs")
@@ -1345,7 +1348,7 @@ class Report(object):
         if not log_l:
             self.error("no logs found")
             return
-        self.display_logs(self.logobj.get_matches([process(r) for r in re_l], log_l))
+        self.display_logs(self.log.get_matches([process(r) for r in re_l], log_l))
 
     def get_source(self):
         return self.source
@@ -1458,13 +1461,13 @@ class Report(object):
             common_err("%s: transition not found" % rpt_pe_file)
             return False
         # limit the log scope temporarily
-        self.logobj.set_log_timeframe(t_obj.start_ts, t_obj.end_ts)
+        self.log.set_timeframe(t_obj.start_ts, t_obj.end_ts)
         if full_log:
             self.show_logs()
         else:
             t_obj.transition_info()
             self.events()
-        self.logobj.set_log_timeframe(self.from_dt, self.to_dt)
+        self.log.set_timeframe(self.from_dt, self.to_dt)
         return True
 
     def show_transition_tags(self, rpt_pe_file):
@@ -1481,7 +1484,7 @@ class Report(object):
 
     def _set_transition_tags(self, transition):
         # limit the log scope temporarily
-        self.logobj.set_log_timeframe(transition.start_ts, transition.end_ts)
+        self.log.set_timeframe(transition.start_ts, transition.end_ts)
 
         # search log, match regexes to tags
         regexes = [
@@ -1489,13 +1492,13 @@ class Report(object):
             re.compile(r"crmd.*notice:\s+Operation\s+([^:]+):\s+(?!ok)"),
         ]
 
-        for l in self.logobj.get_matches(regexes):
+        for l in self.log.get_matches(regexes):
             for rx in regexes:
                 m = rx.search(l)
                 if m:
                     transition.tags.add(m.group(1).lower())
 
-        self.logobj.set_log_timeframe(self.from_dt, self.to_dt)
+        self.log.set_timeframe(self.from_dt, self.to_dt)
 
     def resource(self, *args):
         '''
