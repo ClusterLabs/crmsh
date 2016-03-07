@@ -221,7 +221,10 @@ class NodeMgmt(command.UI):
         if not config.core.force and \
                 not utils.ask("Do you really want to shoot %s?" % node):
             return False
-        return utils.ext_cmd(self.node_fence % (node)) == 0
+        if utils.is_remote_node(node):
+            return utils.ext_cmd("stonith_admin -F '%s'" % (node)) == 0
+        else:
+            return utils.ext_cmd(self.node_fence % (node)) == 0
 
     @command.wait
     @command.completers(compl.nodes)
