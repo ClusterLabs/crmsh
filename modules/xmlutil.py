@@ -357,6 +357,14 @@ def is_our_node(s):
     return False
 
 
+def is_remote_node(n):
+    cib = cibdump2elem()
+    if cib is None:
+        return False
+    remote_nodes = cib.xpath('/cib/status/node_state[@remote_node="true"]/@uname')
+    return any(n == r for r in remote_nodes if r)
+
+
 def is_live_cib():
     '''We working with the live cluster?'''
     return not get_cib_in_use() and not os.getenv("CIB_file")
