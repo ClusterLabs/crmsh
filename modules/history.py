@@ -1,4 +1,5 @@
 # Copyright (C) 2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
+# Copyright (C) 2013-2016 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
 import os
@@ -18,6 +19,9 @@ from .utils import page_string, release_lock, rmdir_r, parse_time, get_cib_attri
 from .utils import is_pcmk_118, pipe_cmd_nosudo, file_find_by_name, get_stdout, quote
 from .utils import make_datetime_naive, datetime_to_timestamp
 
+from . import logtime
+
+
 _HAS_PARALLAX = False
 try:
     from .crm_pssh import next_loglines, next_peinputs
@@ -26,9 +30,6 @@ except:
     pass
 
 _LOG_FILES = ("ha-log.txt", "messages", "journal.log", "pacemaker.log")
-
-
-YEAR = None
 
 
 #
@@ -50,113 +51,6 @@ def mk_re_list(patt_l, repl):
     return l
 
 
-def set_year(ts=None):
-    '''
-    ts: optional time in seconds
-    '''
-    global YEAR
-    year = time.strftime("%Y", time.localtime(ts))
-    if YEAR is not None:
-        t = (" (ts: %s)" % (ts)) if ts is not None else ""
-        common_debug("history: setting year to %s%s" % (year, t))
-    YEAR = year
-
-
-def make_time(t):
-    '''
-    t: time in seconds / datetime / other
-    returns: time in floating point
-    '''
-    if t is None:
-        return None
-    elif isinstance(t, datetime.datetime):
-        return datetime_to_timestamp(t)
-    return t
-
-
-_syslog2node_formats = (re.compile(r'^[a-zA-Z]{2,4} \d{1,2} \d{2}:\d{2}:\d{2}\s+(?:\[\d+\])?\s*([\S]+)'),
-                        re.compile(r'^\d{4}-\d{2}-\d{2}T\S+\s+(?:\[\d+\])?\s*([\S]+)'),
-                        re.compile(r'^\d{4}\/\d{2}\/\d{2}_\d{2}:\d{2}:\d{2}'))
-
-_syslog_ts_prev = None
-
-
-def syslog_ts(s):
-    """
-    Finds the timestamp in the given line
-    Returns as floating point, seconds
-    """
-    global _syslog_ts_prev
-    fmt1, fmt2, fmt3 = _syslog2node_formats
-    m = fmt1.match(s)
-    if m:
-        if YEAR is None:
-            set_year()
-        tstr = ' '.join([YEAR] + s.split()[0:3])
-        _syslog_ts_prev = datetime_to_timestamp(parse_time(tstr))
-        return _syslog_ts_prev
-
-    m = fmt2.match(s)
-    if m:
-        tstr = s.split()[0]
-        _syslog_ts_prev = datetime_to_timestamp(parse_time(tstr))
-        return _syslog_ts_prev
-
-    m = fmt3.match(s)
-    if m:
-        tstr = s.split()[0].replace('_', ' ')
-        _syslog_ts_prev = datetime_to_timestamp(parse_time(tstr))
-        return _syslog_ts_prev
-
-    common_debug("malformed line: %s" % s)
-    return _syslog_ts_prev
-
-_syslog_node_prev = None
-
-
-def syslog2node(s):
-    '''
-    Get the node from a syslog line.
-
-    old format:
-    Aug 14 11:07:04 <node> ...
-    new format:
-    Aug 14 11:07:04 [<PID>] <node> ...
-    RFC5424:
-    <TS> <node> ...
-    RFC5424 (2):
-    <TS> [<PID>] <node> ...
-    '''
-    global _syslog_node_prev
-
-    fmt1, fmt2, _ = _syslog2node_formats
-    m = fmt1.search(s)
-    if m:
-        _syslog_node_prev = m.group(1)
-        return _syslog_node_prev
-
-    m = fmt2.search(s)
-    if m:
-        _syslog_node_prev = m.group(1)
-        return _syslog_node_prev
-
-    try:
-        # strptime defaults year to 1900 (sigh)
-        time.strptime(' '.join(s.split()[0:3]),
-                      "%b %d %H:%M:%S")
-        _syslog_node_prev = s.split()[3]
-        return _syslog_node_prev
-    except Exception:  # try the rfc5424
-        rfc5424 = s.split()[0]
-        if 'T' in rfc5424:
-            try:
-                parse_time(rfc5424)
-                _syslog_node_prev = s.split()[1]
-                return _syslog_node_prev
-            except Exception:
-                return _syslog_node_prev
-        else:
-            return _syslog_node_prev
 
 
 def seek_to_edge(f, ts, to_end):
@@ -180,7 +74,7 @@ def seek_to_edge(f, ts, to_end):
         s = f.readline()
         if not s:
             break
-        curr_ts = syslog_ts(s)
+        curr_ts = logtime.syslog_ts(s)
         if (to_end and curr_ts > ts) or \
                 (not to_end and curr_ts >= ts):
             break
@@ -257,11 +151,11 @@ def get_timestamp(f):
     f.seek(pos)        # ... and move the cursor back there
     if not s:          # definitely EOF (probably cannot happen)
         return None
-    return syslog_ts(s)
+    return logtime.syslog_ts(s)
 
 
 def is_our_log(s, node_l):
-    return syslog2node(s) in node_l
+    return logtime.syslog2node(s) in node_l
 
 
 def log2node(log):
@@ -341,8 +235,8 @@ class Log(object):
         find out start/end file positions. Logs need to be
         already open.
         '''
-        self.from_ts = make_time(from_dt)
-        self.to_ts = make_time(to_dt)
+        self.from_ts = logtime.make_time(from_dt)
+        self.to_ts = logtime.make_time(to_dt)
         bad_logs = []
         for log in self.f:
             f = self.f[log]
@@ -399,7 +293,7 @@ class Log(object):
             if not top_line[i]:
                 rm_idx_l.append(i)
             else:
-                top_line_ts.append(syslog_ts(top_line[i]))
+                top_line_ts.append(logtime.syslog_ts(top_line[i]))
         # remove files with no matches found
         rm_idx_l.reverse()
         for i in rm_idx_l:
@@ -429,7 +323,7 @@ class Log(object):
             if not top_line[first]:
                 top_line_ts[first] = time.time()
             else:
-                top_line_ts[first] = syslog_ts(top_line[first])
+                top_line_ts[first] = logtime.syslog_ts(top_line[first])
         return l
 
     def get_matches(self, re_l, log_l=None):
@@ -440,16 +334,6 @@ class Log(object):
         '''
         log_l = log_l or self.log_l
         return filter_log(self.search_logs(log_l, re_l), log_l)
-
-
-def human_date(dt):
-    'Some human date representation. Date defaults to now.'
-    if not dt:
-        dt = make_datetime_naive(datetime.datetime.now())
-    # here, dt is in UTC. Convert to localtime:
-    localdt = datetime.datetime.fromtimestamp(datetime_to_timestamp(dt))
-    # drop microseconds
-    return re.sub("[.].*", "", "%s %s" % (localdt.date(), localdt.time()))
 
 
 def is_log(p):
@@ -601,10 +485,10 @@ class Transition(object):
         self.end_msg = end_msg
         self.tags = set()
         self.pe_file, self.pe_num = get_pe_file_num_from_msg(start_msg)
-        self.dc = syslog2node(start_msg)
-        self.start_ts = syslog_ts(start_msg)
+        self.dc = logtime.syslog2node(start_msg)
+        self.start_ts = logtime.syslog_ts(start_msg)
         if end_msg:
-            self.end_ts = syslog_ts(end_msg)
+            self.end_ts = logtime.syslog_ts(end_msg)
         else:
             common_warn("end of transition %s not found in logs (transition not complete yet?)" % self)
             self.end_ts = datetime_to_timestamp(datetime.datetime(2525, 1, 1))
@@ -704,7 +588,7 @@ class Report(object):
         # change_origin may be 0, CH_SRC, CH_TIME, CH_UPD
         # depending on the change_origin, we update our attributes
         self.change_origin = CH_SRC
-        set_year()
+        logtime.set_year()
 
     def error(self, s):
         common_err("%s: %s" % (self.source, s))
@@ -1006,7 +890,7 @@ class Report(object):
         tarball = "%s.tar.bz2" % d
         to_option = ""
         if self.to_dt:
-            to_option = "-t '%s'" % human_date(self.to_dt)
+            to_option = "-t '%s'" % logtime.human_date(self.to_dt)
         nodes_option = ""
         if self.setnodes:
             nodes_option = "'-n %s'" % ' '.join(self.setnodes)
@@ -1199,7 +1083,7 @@ class Report(object):
                     self._creator = "crm_report"
                 else:
                     self._creator = 'unknown'
-                set_year(yr)
+                logtime.set_year(yr)
                 break
         else:
             self.error("Invalid report: No description found")
@@ -1321,7 +1205,7 @@ class Report(object):
 
     def disp(self, s):
         'color output'
-        node = syslog2node(s)
+        node = logtime.syslog2node(s)
         if node is None:
             return s
         return self._str_nodecolor(node, s)
@@ -1391,9 +1275,9 @@ class Report(object):
             return dt
         try:
             if whence == "top":
-                myts = min([syslog_ts(x) for x in first_log_lines(self.log_l)])
+                myts = min([logtime.syslog_ts(x) for x in first_log_lines(self.log_l)])
             elif whence == "bottom":
-                myts = max([syslog_ts(x) for x in last_log_lines(self.log_l)])
+                myts = max([logtime.syslog_ts(x) for x in last_log_lines(self.log_l)])
             if myts:
                 import dateutil.tz
                 return make_datetime_naive(datetime.datetime.fromtimestamp(myts).replace(tzinfo=dateutil.tz.tzlocal()))
@@ -1403,7 +1287,7 @@ class Report(object):
         return None
 
     def _str_dt(self, dt):
-        return dt and human_date(dt) or "--/--/-- --:--:--"
+        return dt and logtime.human_date(dt) or "--/--/-- --:--:--"
 
     def info(self):
         '''
@@ -1627,9 +1511,9 @@ class Report(object):
         p.set(self.rpt_section, 'dir',
               self.source == "live" and dir or self.source)
         p.set(self.rpt_section, 'from_time',
-              self.from_dt and human_date(self.from_dt) or '')
+              self.from_dt and logtime.human_date(self.from_dt) or '')
         p.set(self.rpt_section, 'to_time',
-              self.to_dt and human_date(self.to_dt) or '')
+              self.to_dt and logtime.human_date(self.to_dt) or '')
         p.set(self.rpt_section, 'detail', str(self.detail))
         self.manage_excludes("save", p)
         fname = os.path.join(dir, self.state_file)
