@@ -1423,7 +1423,7 @@ class Report(object):
             return False
         self.show_logs(re_l=node_re_l)
 
-    def log(self, *args):
+    def show_log(self, *args):
         '''
         Show logs for a node or all nodes.
         '''
