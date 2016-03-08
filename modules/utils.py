@@ -19,18 +19,16 @@ from . import term
 from .msg import common_warn, common_info, common_debug, common_err, err_buf
 
 
-class memoize:
+def memoize(function):
     "Decorator to invoke a function once only for any argument"
-    def __init__(self, function):
-        self.function = function
-        self.memoized = {}
-
-    def __call__(self, *args):
-        try:
-            return self.memoized[args]
-        except KeyError:
-            self.memoized[args] = self.function(*args)
-            return self.memoized[args]
+    memoized = {}
+    def inner(*args):
+        if args in memoized:
+            return memoized[args]
+        r = function(*args)
+        memoized[args] = r
+        return r
+    return inner
 
 
 getuser = userdir.getuser
