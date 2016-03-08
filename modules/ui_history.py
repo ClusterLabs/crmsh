@@ -193,7 +193,7 @@ class History(command.UI):
     def do_log(self, context, *args):
         "usage: log [<node> ...]"
         self._init_source()
-        return crm_report().log(*args)
+        return crm_report().show_log(*args)
 
     def ptest(self, nograph, scores, utilization, actions, verbosity):
         'Send a decompressed self.pe_file to ptest'
