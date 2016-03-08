@@ -22,13 +22,6 @@ from .utils import make_datetime_naive, datetime_to_timestamp
 from . import logtime
 
 
-_HAS_PARALLAX = False
-try:
-    from .crm_pssh import next_loglines, next_peinputs
-    _HAS_PARALLAX = True
-except:
-    pass
-
 _LOG_FILES = ("ha-log.txt", "messages", "journal.log", "pacemaker.log")
 
 
@@ -49,8 +42,6 @@ def mk_re_list(patt_l, repl):
     if not repl:
         l = [x.replace(".*.*", ".*") for x in l]
     return l
-
-
 
 
 def seek_to_edge(f, ts, to_end):
@@ -860,6 +851,12 @@ class Report(object):
             # try just to refresh the live report
             if self.to_dt or self.is_live_very_recent() or no_live_update:
                 return self._live_loc()
+            _HAS_PARALLAX = False
+            try:
+                from .crm_pssh import next_loglines, next_peinputs
+                _HAS_PARALLAX = True
+            except:
+                pass
             if _HAS_PARALLAX:
                 if not acquire_lock(self.report_cache_dir):
                     return None
