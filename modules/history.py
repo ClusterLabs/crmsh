@@ -778,7 +778,7 @@ class Report(object):
             return []
         return f.readlines()
 
-    def update_live_report(self):
+    def update_live_report(self, next_loglines, next_peinputs):
         '''
         Update the existing live report, if it's older than
         self.short_live_recent:
@@ -859,7 +859,7 @@ class Report(object):
             if _HAS_PARALLAX:
                 if not acquire_lock(self.report_cache_dir):
                     return None
-                rc = self.update_live_report()
+                rc = self.update_live_report(next_loglines, next_peinputs)
                 release_lock(self.report_cache_dir)
                 if rc:
                     self.set_change_origin(CH_UPD)
