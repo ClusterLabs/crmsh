@@ -10,11 +10,8 @@
 """
 
 
-import re
-
-from pygments.lexer import RegexLexer, bygroups, words, include, default
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
-    Number, Punctuation, Literal, Whitespace
+from pygments.lexer import RegexLexer, bygroups, words
+from pygments.token import Comment, Operator, Keyword, Name, String, Number, Punctuation, Whitespace
 
 __all__ = ['CrmshLexer']
 
@@ -47,8 +44,8 @@ class CrmshLexer(RegexLexer):
     acl_mod = (r'(?:tag|ref|reference|attribute|type|xpath)')
     bin_ops = (r'(?:lt|gt|lte|gte|eq|ne)')
     val_qual = (r'(?:string|version|number)')
-    rsc_role_action=(r'(?:Master|Started|Slave|Stopped|'
-        r'start|promote|demote|stop)')
+    rsc_role_action = (r'(?:Master|Started|Slave|Stopped|'
+                       r'start|promote|demote|stop)')
 
     tokens = {
         'root': [
@@ -68,7 +65,7 @@ class CrmshLexer(RegexLexer):
             (sub, Keyword),
             (acl, Keyword),
             # binary operators
-            (r'(?:%s:)?(%s)(?![\w#$-])' % (val_qual,bin_ops),
+            (r'(?:%s:)?(%s)(?![\w#$-])' % (val_qual, bin_ops),
                 Operator.Word),
             # other operators
             (bin_rel, Operator.Word),

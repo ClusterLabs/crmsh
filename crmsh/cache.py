@@ -1,9 +1,9 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
+#
+# Cache stuff. A naive implementation.
 
 import time
-
-"Cache stuff. A naive implementation."
 
 
 _max_cache_age = 600  # seconds

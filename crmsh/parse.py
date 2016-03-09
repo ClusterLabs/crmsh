@@ -879,11 +879,11 @@ class ConstraintParser(RuleParser):
         return [[name, info[0]]]
 
     def _split_setref(self, typename, classifier):
-            rsc, typ = self.match_split()
-            typ, t = classifier(typ)
-            if typ and not t:
-                self.err("Invalid %s '%s' for '%s'" % (typename, typ, rsc))
-            return rsc, typ, t
+        rsc, typ = self.match_split()
+        typ, t = classifier(typ)
+        if typ and not t:
+            self.err("Invalid %s '%s' for '%s'" % (typename, typ, rsc))
+        return rsc, typ, t
 
     def match_simple_role_set(self, count):
         ret = self._fmt(self._split_setref('role', self.validation.classify_role), 'rsc')

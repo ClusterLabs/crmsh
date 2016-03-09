@@ -318,26 +318,26 @@ class CibObjectSet(object):
             return self.search_rc
         return self._edit_save(s)
 
-    def _filter_save(self, filter, s):
+    def _filter_save(self, fltr, s):
         '''
         Pipe string s through a filter. Parse/save the output.
         If no changes are done, return silently.
         '''
-        rc, outp = filter_string(filter, s)
+        rc, outp = filter_string(fltr, s)
         if rc != 0:
             return False
         if hash(outp) == hash(s):
             return True
         return self.save(outp)
 
-    def filter(self, filter):
+    def filter(self, fltr):
         with clidisplay.nopretty():
             s = self.repr(format=-1)
         # don't allow filter if one or more elements were not
         # found
         if not self.search_rc:
             return self.search_rc
-        return self._filter_save(filter, s)
+        return self._filter_save(fltr, s)
 
     def save_to_file(self, fname):
         f = safe_open_w(fname)

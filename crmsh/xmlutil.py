@@ -370,8 +370,8 @@ def is_live_cib():
 
 
 def is_crmuser():
-    return (config.core.user in ("root", config.path.crm_daemon_user)
-            or userdir.getuser() in ("root", config.path.crm_daemon_user))
+    crmusers = ("root", config.path.crm_daemon_user)
+    return config.core.user in crmusers or userdir.getuser() in crmusers
 
 
 def cib_shadow_dir():

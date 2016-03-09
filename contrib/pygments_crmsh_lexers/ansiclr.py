@@ -9,9 +9,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer, include, bygroups
-from pygments.token import Generic, Comment, String, Text, Keyword, Name, \
-    Punctuation, Number
+from pygments.lexer import RegexLexer, bygroups
+from pygments.token import Generic, Text
 
 __all__ = ['ANSIColorsLexer']
 

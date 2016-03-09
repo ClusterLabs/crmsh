@@ -425,9 +425,9 @@ def add_node(addr, name=None):
                        "-s", "nodelist.node.%s.ring0_addr" % (num_nodes - 1),
                        "str", node_addr], shell=False)
         if node_name:
-                utils.ext_cmd(["corosync-cmapctl",
-                               "-s", "nodelist.node.%s.name" % (num_nodes - 1),
-                               "str", node_name], shell=False)
+            utils.ext_cmd(["corosync-cmapctl",
+                           "-s", "nodelist.node.%s.name" % (num_nodes - 1),
+                           "str", node_name], shell=False)
 
 
 def del_node(addr):
