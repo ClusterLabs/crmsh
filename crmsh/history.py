@@ -600,9 +600,8 @@ class Report(object):
         return ["save", "load", "pack", "delete", "list", "update"]
 
     def session_list(self):
-        l = os.listdir(self.get_session_dir(None))
-        l.sort()
-        return l
+        d = self.get_session_dir(None)
+        return os.listdir(d).sort() if os.path.isdir(d) else []
 
     def unpack_report(self, tarball):
         '''
@@ -1573,32 +1572,33 @@ class Report(object):
             self.change_origin = org
 
     def manage_session(self, subcmd, name):
-        dir = self.get_session_dir(name)
-        if subcmd == "save" and os.path.exists(dir):
+        session_dir = self.get_session_dir(name)
+        if subcmd == "save" and os.path.exists(session_dir):
             common_err("history session %s exists" % name)
             return False
-        elif subcmd in ("load", "pack", "update", "delete") and not os.path.exists(dir):
+        elif subcmd in ("load", "pack", "update", "delete") and not os.path.exists(session_dir):
             common_err("history session %s does not exist" % name)
             return False
         if subcmd == "save":
-            if pipe_cmd_nosudo("mkdir -p %s" % dir) != 0:
+            if pipe_cmd_nosudo("mkdir -p %s" % session_dir) != 0:
                 return False
             if self.source == "live":
                 rc = pipe_cmd_nosudo("tar -C '%s' -c . | tar -C '%s' -x" %
-                                     (self._live_loc(), dir))
+                                     (self._live_loc(), session_dir))
                 if rc != 0:
                     return False
-            return self.save_state(dir)
+            return self.save_state(session_dir)
         elif subcmd == "update":
-            return self.save_state(dir)
+            return self.save_state(session_dir)
         elif subcmd == "load":
-            return self.load_state(dir)
+            return self.load_state(session_dir)
         elif subcmd == "delete":
-            rmdir_r(dir)
+            rmdir_r(session_dir)
         elif subcmd == "list":
-            ext_cmd("ls %s" % self.get_session_dir(None))
+            for l in self.session_list():
+                print(l)
         elif subcmd == "pack":
-            return mkarchive(dir)
+            return mkarchive(session_dir)
         return True
     log_section = 'log'
 
