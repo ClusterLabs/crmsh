@@ -49,7 +49,7 @@ def make_time(t):
     if t is None:
         return None
     elif isinstance(t, datetime.datetime):
-        return datetime_to_timestamp(t)
+        return utils.datetime_to_timestamp(t)
     return t
 
 
