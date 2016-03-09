@@ -41,12 +41,12 @@ This is the list of all modules including short descriptions.
     missing crmsh module, and report an understandable error message
     in either case.
 
-- `modules/main.py`
+- `crmsh/main.py`
 
     This is where execution really starts. Verifies the environment
 	and detects the pacemaker version.
 
-- `modules/config.py`
+- `crmsh/config.py`
 
     Reads the `crm.conf` configuration file and tries to detect basic
     information about where pacemaker is located etc. Some magic is
@@ -54,19 +54,19 @@ This is the list of all modules including short descriptions.
     so that the rest of the code can access configuration variables
     directly.
 
-- `modules/constants.py`
+- `crmsh/constants.py`
 
     Various hard-coded constants. Many of these should probably be
     read from pacemaker metadata for better compatibility across
     different versions.
  
-- `modules/ui_*.py`
+- `crmsh/ui_*.py`
 
     The UI context (`ui_context.py`) parses the input command and
     keeps track of which is the current level in the UI. `ui_root.py`
     is the root of the UI hierarchy.
 
-- `modules/help.py`
+- `crmsh/help.py`
 
 	Reads help from a text file and presents parts of it in
 	response to the help command. The text file has special
@@ -80,7 +80,7 @@ This is the list of all modules including short descriptions.
 	reflected here. _Actually, every user interface change has to
 	start here_. A source for the +crm(8)+ man page too.
 
-- `modules/cibconfig.py`
+- `crmsh/cibconfig.py`
 
 	Configuration (CIB) manager. Implements the configure level.
 	The bigest and the most complex part. There are three major
@@ -98,91 +98,91 @@ This is the list of all modules including short descriptions.
 	of cib elements. Most operations are going via these
 	subclasses (+show+, +edit+, +save+, +filter+).
 
-- `modules/scripts.py`
+- `crmsh/scripts.py`
 
     Implements the cluster scripts. Reads multiple kinds of script
     definition languages including the XML wizard format used by
     Hawk.
 
-- `modules/handles.py`
+- `crmsh/handles.py`
 
     A primitive handlebar-style templating language used in cluster
     scripts.
 
-- `modules/idmgmt.py`
+- `crmsh/idmgmt.py`
 
 	CIB id management. Guarantees that all ids are unique.
 	A helper for CibFactory.
 
-- `modules/parse.py`
+- `crmsh/parse.py`
 
     Parses CLI -> XML.
 
-- `modules/cliformat.py`
+- `crmsh/cliformat.py`
 
     Parses XML -> CLI.
 
     Not as cleanly separated as the CLI parser, mostly a set of
     functions called from `cibconfig.py`.
 
-- `modules/clidisplay.py`, `modules/term.py`
+- `crmsh/clidisplay.py`, `crmsh/term.py`
 
 	Applies colors to terminal output.
 
-- `modules/crm_gv.py`
+- `crmsh/crm_gv.py`
 
 	Interface to GraphViz. Generates graph specs for dotty(1).
 
-- `modules/cibstatus.py`
+- `crmsh/cibstatus.py`
 
 	CIB status section editor and manipulator (cibstatus
 	level). Interface to crm_simulate.
 
-- `modules/ra.py`
+- `crmsh/ra.py`
 
 	Resource agents interface.
 
-- `modules/rsctest.py`
+- `crmsh/rsctest.py`
 
 	Resource tester (configure rsctest command).
 
-- `modules/history.py`
+- `crmsh/history.py`
 
 	Cluster history. Interface to logs and other artifacts left
 	on disk by the cluster.
 
-- `modules/log_patterns.py`, `log_patterns_118.py`
+- `crmsh/log_patterns.py`, `log_patterns_118.py`
 
 	Pacemaker subsystems' log patterns. For versions earlier than
 	1.1.8 and the latter.
 
-- `modules/schema.py`, `pacemaker.py`
+- `crmsh/schema.py`, `pacemaker.py`
 
 	Support for pacemaker RNG schema.
 
-- `modules/cache.py`
+- `crmsh/cache.py`
 
     A very rudimentary cache implementation. Used to cache
 	results of expensive operations (i.e. ra meta).
 
-- `modules/crm_pssh.py`
+- `crmsh/crm_pssh.py`
 
     Interface to the parallax library for remote SSH commands.
 
-- `modules/corosync.py`
+- `crmsh/corosync.py`
 
     Parse and edit the `corosync.conf` configuration file.
 
-- `modules/msg.py`
+- `crmsh/msg.py`
 
 	Messages for users. Can count lines and include line
 	numbers. Needs refinement.
 
-- `modules/utils.py`
+- `crmsh/utils.py`
 
 	A bag of useful functions. Needs more order.
 
-- `modules/xmlutil.py`
+- `crmsh/xmlutil.py`
 
 	A bag of useful XML functions. Needs more order.
 

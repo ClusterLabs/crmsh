@@ -8,7 +8,7 @@
 import sys
 from distutils import version
 
-minimum_version = '2.6'
+minimum_version = '2.7'
 v_min = version.StrictVersion(minimum_version)
 v_this = version.StrictVersion(sys.version[:3])
 if v_min > v_this:
@@ -20,14 +20,7 @@ try:
     try:
         from crmsh import main
     except ImportError as msg:
-        try:
-            # Perhaps we're running from the source directory
-            import modules
-            sys.modules['crmsh'] = sys.modules['modules']
-            from crmsh import main
-        except ImportError as msg2:
-            sys.stderr.write('''Fatal error:
-        %s
+        sys.stderr.write('''Fatal error:
         %s
 
     Failed to start crmsh! This is likely due to a broken
@@ -39,8 +32,8 @@ try:
 
     Please file an issue describing your installation at
     https://github.com/Clusterlabs/crmsh/issues/ .
-''' % (msg, msg2))
-            sys.exit(-1)
+''' % (msg))
+        sys.exit(-1)
 except AttributeError as msg:
     sys.stderr.write('''Fatal error: %s
 

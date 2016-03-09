@@ -34,7 +34,7 @@ make install
 
 ```shell
 ./doc: man page, source for the website and other documentation
-./modules: the code
+./crmsh: the code
 ./templates: configuration templates
 ./test: unit tests and regression tests
 ./contrib: vim highlighting scripts and other semi-related
