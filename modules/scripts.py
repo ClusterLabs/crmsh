@@ -72,27 +72,27 @@ class Text(object):
 
     @staticmethod
     def shortdesc(script, text):
-        return Text(script, text, type=Text.SHORTDESC)
+        return Text(script, text, kind=Text.SHORTDESC)
 
     @staticmethod
     def desc(script, text):
-        return Text(script, text, type=Text.DESC)
+        return Text(script, text, kind=Text.DESC)
 
     @staticmethod
     def cib(script, text):
-        return Text(script, text, type=Text.CIB)
+        return Text(script, text, kind=Text.CIB)
 
     @staticmethod
     def isa(obj):
         return isinstance(obj, basestring) or isinstance(obj, Text)
 
-    def __init__(self, script, text, type=None):
+    def __init__(self, script, text, kind=None):
         self.script = script
         if isinstance(text, Text):
             self.text = text.text
         else:
             self.text = text
-        self.type = type
+        self._kind = kind
 
     def _parse(self):
         val = self.text
@@ -106,11 +106,11 @@ class Text(object):
         return repr(self.text)
 
     def __str__(self):
-        if self.type == self.DESC:
+        if self._kind == self.DESC:
             return format_desc(self._parse())
-        elif self.type == self.SHORTDESC:
+        elif self._kind == self.SHORTDESC:
             return self._parse()
-        elif self.type == self.CIB:
+        elif self._kind == self.CIB:
             return format_cib(self._parse())
         return self._parse()
 
@@ -463,11 +463,11 @@ def _upgrade_yaml(data):
 _hawk_template_cache = {}
 
 
-def _parse_hawk_template(workflow, name, type, step, actions):
+def _parse_hawk_template(workflow, name, kind, step, actions):
     """
     Convert a hawk template into steps + a cib action
     """
-    path = os.path.join(os.path.dirname(workflow), '../templates', type + '.xml')
+    path = os.path.join(os.path.dirname(workflow), '../templates', kind + '.xml')
     if path in _hawk_template_cache:
         xml = _hawk_template_cache[path]
     elif os.path.isfile(path):
@@ -691,8 +691,7 @@ def _process_agent_include(script, include):
         raise ValueError("No meta-data for agent: %s" % (agent))
     name = include.get('name', meta.get('name'))
     if not name:
-        cls, provider, type = ra.disambiguate_ra_type(agent)
-        name = type
+        cls, provider, name = ra.disambiguate_ra_type(agent)
     if 'name' not in include:
         include['name'] = name
     step = _listfindpend(name, script['steps'], lambda x: x.get('name'), lambda: {
@@ -1279,24 +1278,24 @@ def _valid_ip(value):
 def _verify_type(param, value, errors):
     if value is None:
         value = ''
-    type = param.get('type')
-    if not type:
+    vtype = param.get('type')
+    if not vtype:
         return value
-    elif type == 'integer':
+    elif vtype == 'integer':
         ok, _ = _valid_integer(value)
         if not ok:
             errors.append("%s=%s is not an integer" % (param.get('name'), value))
-    elif type == 'string':
+    elif vtype == 'string':
         return value
-    elif type == 'boolean':
+    elif vtype == 'boolean':
         return "true" if _make_boolean(value) else "false"
-    elif type == 'resource':
+    elif vtype == 'resource':
         try:
             if not _IDENT_RE.match(value):
                 errors.append("%s=%s invalid resource identifier" % (param.get('name'), value))
         except TypeError as e:
             errors.append("%s=%s %s" % (param.get('name'), value, str(e)))
-    elif type == 'enum':
+    elif vtype == 'enum':
         if 'values' not in param:
             errors.append("%s=%s enum without list of values" % (param.get('name'), value))
         else:
@@ -1307,10 +1306,10 @@ def _verify_type(param, value, errors):
                 if value.lower() == v.lower():
                     return v
             errors.append("%s=%s does not match '%s'" % (param.get('name'), value, "|".join(opts)))
-    elif type == 'ip_address':
+    elif vtype == 'ip_address':
         if not _valid_ip(value):
             errors.append("%s=%s is not an IP address" % (param.get('name'), value))
-    elif type == 'ip_network':
+    elif vtype == 'ip_network':
         sp = value.rsplit('/', 1)
         if len(sp) == 1 and not (is_valid_ipv4_address(value) or is_valid_ipv6_address(value)):
             errors.append("%s=%s is not a valid IP network" % (param.get('name'), value))
@@ -1318,17 +1317,17 @@ def _verify_type(param, value, errors):
             errors.append("%s=%s is not a valid IP network" % (param.get('name'), value))
         else:
             errors.append("%s=%s is not a valid IP network" % (param.get('name'), value))
-    elif type == 'port':
+    elif vtype == 'port':
         ok, ival = _valid_integer(value)
         if not ok:
             errors.append("%s=%s is not a valid port" % (param.get('name'), value))
         if ival < 0 or ival > 65535:
             errors.append("%s=%s is out of port range" % (param.get('name'), value))
-    elif type == 'email':
+    elif vtype == 'email':
         if not re.match(r'[^@]+@[^@]+', value):
             errors.append("%s=%s is not a valid email address" % (param.get('name'), value))
     else:
-        errors.append("%s=%s is unknown type %s" % (param.get('name'), value, type))
+        errors.append("%s=%s is unknown type %s" % (param.get('name'), value, vtype))
     return value
 
 _NO_RESOLVE = object()

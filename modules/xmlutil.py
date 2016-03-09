@@ -416,8 +416,8 @@ def pe2shadow(pe_file, name):
     return True
 
 
-def is_xs_boolean_true(bool):
-    return bool.lower() in ("true", "1")
+def is_xs_boolean_true(b):
+    return b.lower() in ("true", "1")
 
 
 def cloned_el(node):
