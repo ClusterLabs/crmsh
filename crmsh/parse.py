@@ -1319,9 +1319,9 @@ class ResourceSet(object):
         '(': ')',
     }
 
-    def __init__(self, type, s, parent):
+    def __init__(self, q_attr, s, parent):
         self.parent = parent
-        self.q_attr = type
+        self.q_attr = q_attr
         self.tokens = s
         self.cli_list = []
         self.reset_set()

@@ -1338,8 +1338,8 @@ class CibPrimitive(CibObject):
         else:
             rsc_spec = mk_rsc_type(self.node)
         s = clidisplay.keyword(self.obj_type)
-        id = clidisplay.ident(self.obj_id)
-        return "%s %s %s" % (s, id, rsc_spec)
+        ident = clidisplay.ident(self.obj_id)
+        return "%s %s %s" % (s, ident, rsc_spec)
 
     def _repr_cli_child(self, c, format_mode):
         if c.tag in self.set_names:
@@ -1536,8 +1536,8 @@ class CibContainer(CibObject):
             elif self.obj_type in constants.clonems_tags and is_child_rsc(c):
                 children.append(clidisplay.rscref(c.get("id")))
         s = clidisplay.keyword(self.obj_type)
-        id = clidisplay.ident(self.obj_id)
-        return "%s %s %s" % (s, id, ' '.join(children))
+        ident = clidisplay.ident(self.obj_id)
+        return "%s %s %s" % (s, ident, ' '.join(children))
 
     def check_sanity(self):
         '''
@@ -1614,8 +1614,8 @@ class CibLocation(CibObject):
             common_err("%s: unknown rsc_location format" % self.obj_id)
             return None
         s = clidisplay.keyword(self.obj_type)
-        id = clidisplay.ident(self.obj_id)
-        s = "%s %s %s" % (s, id, rsc)
+        ident = clidisplay.ident(self.obj_id)
+        s = "%s %s %s" % (s, ident, rsc)
 
         known_attrs = ['role', 'resource-discovery']
         for attr in known_attrs:
@@ -1643,7 +1643,7 @@ class CibLocation(CibObject):
             return utils.get_check_rc()
         rc = 0
         uname = self.node.get("node")
-        if uname and uname.lower() not in [id.lower() for id in cib_factory.node_id_list()]:
+        if uname and uname.lower() not in [ident.lower() for ident in cib_factory.node_id_list()]:
             common_warn("%s: referenced node %s does not exist" % (self.obj_id, uname))
             rc = 1
         pattern = self.node.get("rsc-pattern")
@@ -1742,7 +1742,7 @@ class CibSimpleConstraint(CibObject):
 
     def _repr_cli_head(self, format_mode):
         s = clidisplay.keyword(self.obj_type)
-        id = clidisplay.ident(self.obj_id)
+        ident = clidisplay.ident(self.obj_id)
         score = get_score(self.node) or get_kind(self.node)
         if self.node.find("resource_set") is not None:
             col = rsc_set_constraint(self.node, self.obj_type)
@@ -1758,7 +1758,7 @@ class CibSimpleConstraint(CibObject):
             node_attr = self.node.get("node-attribute")
             if node_attr:
                 col.append("node-attribute=%s" % node_attr)
-        s = "%s %s " % (s, id)
+        s = "%s %s " % (s, ident)
         if score != '':
             s += "%s: " % (clidisplay.score(score))
         return s + ' '.join(col)
@@ -1835,7 +1835,7 @@ class CibRscTicket(CibSimpleConstraint):
 
     def _repr_cli_head(self, format_mode):
         s = clidisplay.keyword(self.obj_type)
-        id = clidisplay.ident(self.obj_id)
+        ident = clidisplay.ident(self.obj_id)
         ticket = clidisplay.ticket(self.node.get("ticket"))
         if self.node.find("resource_set") is not None:
             col = rsc_set_constraint(self.node, self.obj_type)
@@ -1846,7 +1846,7 @@ class CibRscTicket(CibSimpleConstraint):
         a = self.node.get("loss-policy")
         if a:
             col.append("loss-policy=%s" % a)
-        return "%s %s %s: %s" % (s, id, ticket, ' '.join(col))
+        return "%s %s %s: %s" % (s, ident, ticket, ' '.join(col))
 
 
 class CibProperty(CibObject):
@@ -1965,7 +1965,7 @@ class CibFencingOrder(CibObject):
         rc = 0
         nl = self.node.findall("fencing-level")
         for target in [x.get("target") for x in nl if x.get("target") is not None]:
-            if target.lower() not in [id.lower() for id in cib_factory.node_id_list()]:
+            if target.lower() not in [ident.lower() for ident in cib_factory.node_id_list()]:
                 common_warn("%s: target %s not a node" % (self.obj_id, target))
                 rc = 1
         stonith_rsc_l = [x.obj_id for x in
@@ -1992,8 +1992,8 @@ class CibAcl(CibObject):
 
     def _repr_cli_head(self, format_mode):
         s = clidisplay.keyword(self.obj_type)
-        id = clidisplay.ident(self.obj_id)
-        return "%s %s" % (s, id)
+        ident = clidisplay.ident(self.obj_id)
+        return "%s %s" % (s, ident)
 
     def _repr_cli_child(self, c, format_mode):
         if c.tag in constants.acl_rule_names:
@@ -2947,11 +2947,11 @@ class CibFactory(object):
                         return n.get('value')
         return None
 
-    def get_property(self, property):
+    def get_property(self, prop):
         '''
         Get the value of the given cluster property.
         '''
-        return self._get_attr_value("property", property)
+        return self._get_attr_value("property", prop)
 
     def get_property_w_default(self, prop):
         '''

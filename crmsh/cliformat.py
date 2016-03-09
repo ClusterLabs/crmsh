@@ -154,9 +154,9 @@ def binary_op_format(op):
 
 def exp2cli(node):
     operation = node.get("operation")
-    type = node.get("type")
-    if type:
-        operation = "%s:%s" % (type, operation)
+    typ = node.get("type")
+    if typ:
+        operation = "%s:%s" % (typ, operation)
     attribute = node.get("attribute")
     value = node.get("value")
     if not value:
