@@ -183,7 +183,7 @@ class Actions(object):
                 action['value'] = value
 
             def arrow(v):
-                return ' -> '.join(x.items()[0])
+                return ' -> '.join(v.items()[0])
             action['text'] = '\n'.join([arrow(x) for x in value])
         elif name == 'cib' or name == 'crm':
             action['text'] = str(Text.cib(script, value))
