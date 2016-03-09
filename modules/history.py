@@ -1217,12 +1217,14 @@ class Report(object):
             l = [x for x in l if not self.match_filter_out(x)]
         page_string('\n'.join([self.disp(x) for x in l]))
 
-    def show_logs(self, log_l=None, re_l=[]):
+    def show_logs(self, log_l=None, re_l=None):
         '''
         Print log lines, either matched by re_l or all.
         '''
         def process(r):
             return re.compile(r) if isinstance(r, basestring) else r
+        if re_l is None:
+            re_l = []
         if not log_l:
             log_l = self.log_l
         if not log_l:
