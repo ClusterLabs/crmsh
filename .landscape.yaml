@@ -1,0 +1,12 @@
+max-line-length: 140
+python-targets:
+  - 2
+ignore-paths:
+  - contrib
+pylint:
+  disable:
+    - unused-argument
+    - too-many-arguments
+    - too-many-statements
+    - too-many-locals
+    - too-many-branches
