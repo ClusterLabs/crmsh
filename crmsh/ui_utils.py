@@ -9,7 +9,6 @@ from . import utils
 
 
 def _get_attr_cmd(attr_ext_commands, subcmd):
-    attr_ext_commands
     try:
         attr_cmd = attr_ext_commands[subcmd]
         if attr_cmd:

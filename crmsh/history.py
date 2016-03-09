@@ -14,7 +14,7 @@ from . import constants
 from . import userdir
 from .msg import common_debug, common_warn, common_err, common_error, common_info, warn_once
 from .xmlutil import file2cib_elem, get_rsc_children_ids, get_prim_children_ids, compressed_file_to_cib
-from .utils import file2str, shortdate, acquire_lock, append_file, ext_cmd, shorttime
+from .utils import file2str, shortdate, acquire_lock, append_file, shorttime
 from .utils import page_string, release_lock, rmdir_r, parse_time, get_cib_attributes
 from .utils import is_pcmk_118, pipe_cmd_nosudo, file_find_by_name, get_stdout, quote
 from .utils import make_datetime_naive, datetime_to_timestamp
@@ -512,15 +512,15 @@ class Transition(object):
             print "[unfinished])"
 
 
-def mkarchive(dir):
+def mkarchive(idir):
     "Create an archive from a directory"
     home = userdir.gethomedir()
     if not home:
         common_err("no home directory, nowhere to pack report")
         return False
-    archive = '%s.tar.bz2' % os.path.join(home, os.path.basename(dir))
+    archive = '%s.tar.bz2' % os.path.join(home, os.path.basename(idir))
     cmd = "tar -C '%s/..' -cj -f '%s' %s" % \
-        (dir, archive, os.path.basename(dir))
+        (idir, archive, os.path.basename(idir))
     if pipe_cmd_nosudo(cmd) != 0:
         common_err('could not pack report, command "%s" failed' % cmd)
         return False
@@ -1157,7 +1157,7 @@ class Report(object):
         self.report_setup()
         return self.ready
 
-    def get_patt_l(self, type):
+    def get_patt_l(self, etype):
         '''
         get the list of patterns for this type, up to and
         including current detail level
@@ -1169,17 +1169,17 @@ class Report(object):
             from .log_patterns_118 import log_patterns
         else:
             from .log_patterns import log_patterns
-        if type not in log_patterns:
-            common_error("%s not featured in log patterns" % type)
+        if etype not in log_patterns:
+            common_error("%s not featured in log patterns" % etype)
             return None
-        return log_patterns[type][0:self.detail+1]
+        return log_patterns[etype][0:self.detail+1]
 
-    def build_re(self, type, args):
+    def build_re(self, etype, args):
         '''
         Prepare a regex string for the type and args.
         For instance, "resource" and rsc1, rsc2, ...
         '''
-        patt_l = self.get_patt_l(type)
+        patt_l = self.get_patt_l(etype)
         if not patt_l:
             return None
         if not args:
@@ -1456,7 +1456,7 @@ class Report(object):
                                 ("no-client", "no-user", "no-origin"))
         return '%s %s %s  %-13s %-10s %-10s %s' % tuple(l)
 
-    def pelist(self, a=None, long=False):
+    def pelist(self, a=None, verbose=False):
         if not self.prepare_source(no_live_update=self.prevent_live_update()):
             return []
         if isinstance(a, (tuple, list)):
@@ -1464,9 +1464,9 @@ class Report(object):
                 a.append(a[0])
         elif a is not None:
             a = [a, a]
-        l = [long and self.pe_detail_format(t_obj) or self.pe_report_path(t_obj)
+        l = [verbose and self.pe_detail_format(t_obj) or self.pe_report_path(t_obj)
              for t_obj in self._transitions if pe_file_in_range(t_obj.pe_file, a)]
-        if long:
+        if verbose:
             l = [self.pe_details_header, self.pe_details_separator] + l
         return l
 
@@ -1496,7 +1496,7 @@ class Report(object):
     state_file = 'history_state.cfg'
     rpt_section = 'report'
 
-    def save_state(self, dir):
+    def save_state(self, sdir):
         '''
         Save the current history state. It should include:
         - directory
@@ -1507,14 +1507,14 @@ class Report(object):
         p = ConfigParser.SafeConfigParser()
         p.add_section(self.rpt_section)
         p.set(self.rpt_section, 'dir',
-              self.source == "live" and dir or self.source)
+              self.source == "live" and sdir or self.source)
         p.set(self.rpt_section, 'from_time',
               self.from_dt and logtime.human_date(self.from_dt) or '')
         p.set(self.rpt_section, 'to_time',
               self.to_dt and logtime.human_date(self.to_dt) or '')
         p.set(self.rpt_section, 'detail', str(self.detail))
         self.manage_excludes("save", p)
-        fname = os.path.join(dir, self.state_file)
+        fname = os.path.join(sdir, self.state_file)
         try:
             f = open(fname, "wb")
         except IOError, msg:
@@ -1524,12 +1524,12 @@ class Report(object):
         f.close()
         return True
 
-    def load_state(self, dir):
+    def load_state(self, sdir):
         '''
         Load the history state from a file.
         '''
         p = ConfigParser.SafeConfigParser()
-        fname = os.path.join(dir, self.state_file)
+        fname = os.path.join(sdir, self.state_file)
         try:
             p.read(fname)
         except Exception, msg:

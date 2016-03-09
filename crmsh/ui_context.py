@@ -11,8 +11,8 @@ from . import ui_utils
 from . import userdir
 
 
-#import logging
-#logging.basicConfig(level=logging.DEBUG,
+# import logging
+# logging.basicConfig(level=logging.DEBUG,
 #                    filename='/tmp/crm-completion.log',
 #                    filemode='a')
 
@@ -140,10 +140,10 @@ class Context(object):
                 # not sure this is the right thing to do
                 return self.current_level().get_completions()
             except ValueError:
-                #common_err("%s: %s" % (self.get_qualified_name(), msg))
+                # common_err("%s: %s" % (self.get_qualified_name(), msg))
                 pass
             except IOError:
-                #common_err("%s: %s" % (self.get_qualified_name(), msg))
+                # common_err("%s: %s" % (self.get_qualified_name(), msg))
                 pass
             return []
         finally:
@@ -157,10 +157,10 @@ class Context(object):
         import readline
         readline.set_history_length(100)
         for v in ('tab: complete',
-                  #'set bell-style visible',
-                  #'set menu-complete-display-prefix on',
-                  #'set show-all-if-ambiguous on',
-                  #'set show-all-if-unmodified on',
+                  # 'set bell-style visible',
+                  # 'set menu-complete-display-prefix on',
+                  # 'set show-all-if-ambiguous on',
+                  # 'set show-all-if-unmodified on',
                   'set skip-completed-text on'):
             readline.parse_and_bind(v)
         readline.set_completer(self.readline_completer)
@@ -190,15 +190,15 @@ class Context(object):
                     self._rl_words = [w for w in completions if matching(w)]
                 else:
                     self._rl_words = completions
-            except Exception, msg:
-                #logging.exception(msg)
+            except Exception:  # , msg:
+                # logging.exception(msg)
                 self.clear_readline_cache()
 
         try:
             ret = self._rl_words[state]
         except IndexError:
             ret = None
-        #logging.debug("line:%s, text:%s, ret:%s, state:%s", repr(line), repr(text), ret, state)
+        # logging.debug("line:%s, text:%s, ret:%s, state:%s", repr(line), repr(text), ret, state)
         if not text or (ret and line.split()[-1].endswith(ret)):
             return ret + ' '
         return ret

@@ -39,7 +39,7 @@ def parse_args(outdir, errdir, t=_DEFAULT_TIMEOUT):
     return opts
 
 
-def get_output(dir, host):
+def get_output(odir, host):
     '''
     Looks for the output returned by the given host.
     This is somewhat problematic, since it is possible that
@@ -47,7 +47,7 @@ def get_output(dir, host):
     hosts "host.1" and "host.2" will confuse this code.
     '''
     l = []
-    for fname in ["%s/%s" % (dir, host)] + glob.glob("%s/%s.[0-9]*" % (dir, host)):
+    for fname in ["%s/%s" % (odir, host)] + glob.glob("%s/%s.[0-9]*" % (odir, host)):
         try:
             if os.path.isfile(fname):
                 l += open(fname).readlines()
@@ -56,12 +56,12 @@ def get_output(dir, host):
     return l
 
 
-def show_output(dir, hosts, desc):
+def show_output(odir, hosts, desc):
     '''
     Display output from hosts. See get_output for caveats.
     '''
     for host in hosts:
-        out_l = get_output(dir, host)
+        out_l = get_output(odir, host)
         if out_l:
             print "%s %s:" % (host, desc)
             print ''.join(out_l)
@@ -170,10 +170,10 @@ def next_peinputs(node_pe_l, outdir, errdir):
         if not r:
             common_err("strange, %s doesn't contain string pengine" % pe_l[0])
             continue
-        dir = "/%s" % r.group(1)
+        tdir = "/%s" % r.group(1)
         red_pe_l = [x.replace("%s/" % r.group(1), "") for x in pe_l]
         common_debug("getting new PE inputs %s from %s" % (red_pe_l, node))
-        cmdline = "tar -C %s -chf - %s" % (dir, ' '.join(red_pe_l))
+        cmdline = "tar -C %s -chf - %s" % (tdir, ' '.join(red_pe_l))
         opts = parse_args(outdir, errdir)
         l.append([node, cmdline])
     if not l:

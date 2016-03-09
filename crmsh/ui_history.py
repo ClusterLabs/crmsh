@@ -220,9 +220,9 @@ class History(command.UI):
                 if a and len(a) == 2 and not utils.check_range(a):
                     common_err("%s: invalid peinputs range" % a)
                     return False
-                l += crm_report().pelist(a, long=("v" in opt_l))
+                l += crm_report().pelist(a, verbose=("v" in opt_l))
         else:
-            l = crm_report().pelist(long=("v" in opt_l))
+            l = crm_report().pelist(verbose=("v" in opt_l))
         if not l:
             return False
         s = '\n'.join(l)
@@ -405,15 +405,11 @@ class History(command.UI):
                        (rc, s))
             return None
         l = s.split('\n')
-        for i, ln in enumerate(l):
-            if ln == "":
-                break
-        try:
-            while l[i] == "":
-                i += 1
-        except:
-            pass
-        return '\n'.join(l[i:])
+        while l and l[0] != "":
+            l = l[1:]
+        while l and l[0] == "":
+            l = l[1:]
+        return '\n'.join(l)
 
     def _get_diff_pe_input(self, t):
         if t != "live":
