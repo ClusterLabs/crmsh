@@ -45,7 +45,6 @@ def file2cib_elem(s):
 def compressed_file_to_cib(s):
     try:
         if s.endswith('.bz2'):
-            import bz2
             f = bz2.BZ2File(s)
         elif s.endswith('.gz'):
             import gzip
