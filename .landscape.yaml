@@ -1,4 +1,4 @@
-max-line-length: 140
+max-line-length: 160
 python-targets:
   - 2
 ignore-paths:
@@ -6,6 +6,7 @@ ignore-paths:
 pylint:
   disable:
     - unused-argument
+    - unused-variable
     - too-many-arguments
     - too-many-statements
     - too-many-locals

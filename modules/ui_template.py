@@ -300,7 +300,7 @@ class Template(command.UI):
             err_buf.incr_lineno()
             if inp.startswith('#'):
                 continue
-            if type(inp) == type(u''):
+            if isinstance(inp, unicode):
                 inp = inp.encode('ascii')
             inp = inp.strip()
             try:
