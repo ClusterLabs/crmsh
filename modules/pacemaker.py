@@ -201,23 +201,23 @@ class RngSchema(Schema):
         self.update_rng_docs(self.validate_name, self.schema_filename)
         return True
 
-    def update_rng_docs(self, validate_name="", file=""):
-        self.rng_docs[file] = self.find_start_rng_node(validate_name, file)
-        if self.rng_docs[file] is None:
+    def update_rng_docs(self, validate_name, filename):
+        self.rng_docs[filename] = self.find_start_rng_node(validate_name, filename)
+        if self.rng_docs[filename] is None:
             return
-        for extern_ref in self.rng_docs[file][0].xpath(self.expr, name="externalRef"):
+        for extern_ref in self.rng_docs[filename][0].xpath(self.expr, name="externalRef"):
             href_value = extern_ref.get("href")
             if self.rng_docs.get(href_value) is None:
                 self.update_rng_docs(validate_name, href_value)
 
-    def find_start_rng_node(self, validate_name="", file=""):
-        schema_info = validate_name + " " + file
+    def find_start_rng_node(self, validate_name, filename):
+        schema_info = validate_name + " " + filename
         crm_schema = self.get_schema_fn(validate_name,
-                                        os.path.join(self.local_dir, file))
+                                        os.path.join(self.local_dir, filename))
         if not crm_schema:
             raise PacemakerError("Cannot get the Relax-NG schema: " + schema_info)
 
-        self.schema_str_docs[file] = crm_schema
+        self.schema_str_docs[filename] = crm_schema
 
         try:
             grammar = etree.fromstring(crm_schema)

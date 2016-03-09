@@ -242,8 +242,8 @@ def ra_providers_all(ra_class="ocf"):
         return cache.retrieve(ident)
     ocf = os.path.join(os.environ["OCF_ROOT"], "resource.d")
     if os.path.isdir(ocf):
-        return cache.store(ident, sorted([s for s in os.listdir(ocf)
-                                          if os.path.isdir(os.path.join(ocf, s))]))
+        return cache.store(ident, sorted(s for s in os.listdir(ocf)
+                                         if os.path.isdir(os.path.join(ocf, s))))
     return []
 
 
@@ -256,14 +256,14 @@ def ra_types(ra_class="ocf", ra_provider=""):
     ident = "ra_types-%s-%s" % (ra_class, ra_provider)
     if cache.is_cached(ident):
         return cache.retrieve(ident)
-    list = []
-    for ra in ra_if().types(ra_class):
-        if (not ra_provider or
-                ra_provider in ra_providers(ra, ra_class)) \
-                and ra not in list:
-            list.append(ra)
-    list.sort()
-    return cache.store(ident, list)
+
+    if not ra_provider:
+        def include(ra):
+            return True
+    else:
+        def include(ra):
+            return ra_provider in ra_providers(ra, ra_class)
+    return cache.store(ident, sorted(list(set(ra for ra in ra_if().types(ra_class) if include(ra)))))
 
 
 @utils.memoize
@@ -431,9 +431,7 @@ class RAInfo(object):
     def param_type_default(self, n):
         try:
             content = n.find("content")
-            type = content.get("type")
-            default = content.get("default")
-            return type, default
+            return content.get("type"), content.get("default")
         except:
             return None, None
 
@@ -454,11 +452,11 @@ class RAInfo(object):
                 continue
             required = c.get("required")
             unique = c.get("unique")
-            type, default = self.param_type_default(c)
+            typ, default = self.param_type_default(c)
             d[name] = {
                 "required": required,
                 "unique": unique,
-                "type": type,
+                "type": typ,
                 "default": default,
             }
         return cache.store(ident, d)
@@ -771,11 +769,11 @@ def get_ra(r):
     or a CLI style class:provider:type string.
     """
     if isinstance(r, basestring):
-        cls, provider, type = disambiguate_ra_type(r)
+        cls, provider, typ = disambiguate_ra_type(r)
     else:
-        cls, provider, type = r.get('class'), r.get('provider'), r.get('type')
+        cls, provider, typ = r.get('class'), r.get('provider'), r.get('type')
     # note order of arguments!
-    return RAInfo(cls, type, provider)
+    return RAInfo(cls, typ, provider)
 
 
 #

@@ -1306,8 +1306,7 @@ def _verify_type(param, value, errors):
             for v in opts:
                 if value.lower() == v.lower():
                     return v
-            else:
-                errors.append("%s=%s does not match '%s'" % (param.get('name'), value, "|".join(opts)))
+            errors.append("%s=%s does not match '%s'" % (param.get('name'), value, "|".join(opts)))
     elif type == 'ip_address':
         if not _valid_ip(value):
             errors.append("%s=%s is not an IP address" % (param.get('name'), value))

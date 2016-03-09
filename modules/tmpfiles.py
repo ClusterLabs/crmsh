@@ -39,18 +39,18 @@ def add(filename):
     _FILES.append(filename)
 
 
-def create(dir=utils.get_tempdir(), prefix='crmsh_'):
+def create(directory=utils.get_tempdir(), prefix='crmsh_'):
     '''
     Create a temporary file and remove it at program exit.
     Returns (fd, filename)
     '''
-    fd, fname = mkstemp(dir=dir, prefix=prefix)
+    fd, fname = mkstemp(dir=directory, prefix=prefix)
     add(fname)
     return fd, fname
 
 
-def create_dir(dir=utils.get_tempdir(), prefix='crmsh_'):
-    ret = mkdtemp(dir=dir, prefix=prefix)
+def create_dir(directory=utils.get_tempdir(), prefix='crmsh_'):
+    ret = mkdtemp(dir=directory, prefix=prefix)
     if len(_FILES) + len(_DIRS) == 0:
         atexit.register(_exit_handler)
     _DIRS.append(ret)
