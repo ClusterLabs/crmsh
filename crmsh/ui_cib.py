@@ -58,7 +58,7 @@ class CibShadow(command.UI):
             del argl[0]
             constants.tmp_cib = False
         else:
-            fd, fname = tmpfiles.create(dir=xmlutil.cib_shadow_dir(), prefix="shadow.crmsh_")
+            fd, fname = tmpfiles.create(directory=xmlutil.cib_shadow_dir(), prefix="shadow.crmsh_")
             name = os.path.basename(fname).replace("shadow.", "")
             constants.tmp_cib = True
 
