@@ -11,3 +11,4 @@ pylint:
     - too-many-statements
     - too-many-locals
     - too-many-branches
+    - cyclic-import
