@@ -22,7 +22,7 @@ but moderate. The minimum timeouts should never be below 10 seconds.
 
 Parameters (*: required, []: default):
 
-state (string, [/var/run//Dummy-{OCF_RESOURCE_INSTANCE}.state]): State file
+state (string, [/var/run/Dummy-undef.state]): State file
     Location to store the resource state in.
 
 passwd (string): Password
@@ -80,6 +80,10 @@ pcmk_host_check (string, [dynamic-list]): How to determine which machines are co
 pcmk_delay_max (time, [0s]): Enable random delay for stonith actions and specify the maximum of random delay
     This prevents double fencing when using slow devices such as sbd.
     Use this to enable random delay for stonith actions and specify the maximum of random delay.
+
+pcmk_action_limit (integer, [1]): The maximum number of actions can be performed in parallel on this device
+    Pengine property concurrent-fencing=true needs to be configured first.
+    Then use this to specify the maximum number of actions can be performed in parallel on this device. -1 is unlimited.
 
 pcmk_reboot_action (string, [reboot]): Advanced use only: An alternate command to run instead of 'reboot'
     Some devices do not support the standard commands or may provide additional ones.
