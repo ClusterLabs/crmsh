@@ -69,21 +69,16 @@ class History(command.UI):
                 return False
         return crm_report().set_period(from_dt, to_dt)
 
-    def _check_source(self, src):
-        'a (very) quick source check'
-        if src == "live":
-            return True
-        if os.path.isfile(src) or os.path.isdir(src):
-            return True
-        return False
-
     def _set_source(self, src, live_from_time=None):
         '''
         Have the last history source survive the History
         and Report instances
         '''
+        def _check_source():
+            return (src == 'live') or os.path.isfile(src) or os.path.isdir(src)
+
         common_debug("setting source to %s" % src)
-        if not self._check_source(src):
+        if not _check_source():
             if os.path.exists(crm_report().get_session_dir(src)):
                 common_debug("Interpreting %s as session" % src)
                 if crm_report().load_state(crm_report().get_session_dir(src)):
