@@ -28,11 +28,11 @@ class Gv(object):
     '''
     EDGEOP = ''  # actually defined in subclasses
 
-    def __init__(self, id=None):
-        if id:
-            self.id = self.gv_id(id)
+    def __init__(self, ident=None):
+        if ident:
+            self.ident = self.gv_id(ident)
         else:
-            self.id = ""
+            self.ident = ""
         self.nodes = {}
         self.edges = []
         self.subgraphs = []
@@ -50,22 +50,22 @@ class Gv(object):
         self.graph_attrs[attr] = v
 
     def new_attr(self, n, attr_n, attr_v):
-        id = self.gv_id(n)
-        if id not in self.attrs:
-            self.attrs[id] = odict()
-        self.attrs[id][attr_n] = attr_v
+        ident = self.gv_id(n)
+        if ident not in self.attrs:
+            self.attrs[ident] = odict()
+        self.attrs[ident][attr_n] = attr_v
 
     def new_node(self, n, top_node=False, norank=False):
         '''
         Register every node.
         '''
-        id = self.gv_id(n)
+        ident = self.gv_id(n)
         if top_node:
-            self.top_nodes.append(id)
-        elif id not in self.nodes:
-            self.nodes[id] = 0
+            self.top_nodes.append(ident)
+        elif ident not in self.nodes:
+            self.nodes[ident] = 0
         if norank:
-            self.norank_nodes.append(id)
+            self.norank_nodes.append(ident)
 
     def my_edge(self, e):
         return [self.gv_id(x) for x in e if x is not None]
@@ -162,31 +162,31 @@ class GvDot(Gv):
     '''
     EDGEOP = ' -> '
 
-    def __init__(self, id=None):
-        Gv.__init__(self, id)
+    def __init__(self, ident=None):
+        Gv.__init__(self, ident)
 
     def header(self):
-        name = self.id and self.id or "G"
+        name = self.ident and self.ident or "G"
         return 'digraph %s {\n' % (name)
 
     def footer(self):
         return '}'
 
-    def group(self, members, id=None):
+    def group(self, members, ident=None):
         '''
         Groups are subgraphs.
         '''
-        sg_obj = SubgraphDot(id)
+        sg_obj = SubgraphDot(ident)
         sg_obj.new_edge(members)
         self.subgraphs.append(sg_obj)
         self.new_node(members[0])
         return sg_obj
 
-    def optional_set(self, members, id=None):
+    def optional_set(self, members, ident=None):
         '''
         Optional resource sets.
         '''
-        sg_obj = SubgraphDot(id)
+        sg_obj = SubgraphDot(ident)
         e_id = sg_obj.new_edge(members)
         sg_obj.new_edge_attr(e_id, 'style', 'invis')
         sg_obj.new_edge_attr(e_id, 'constraint', 'false')
@@ -219,12 +219,12 @@ class SubgraphDot(GvDot):
     '''
     graphviz subgraph.
     '''
-    def __init__(self, id=None):
-        Gv.__init__(self, id)
+    def __init__(self, ident=None):
+        GvDot.__init__(self, ident)
 
     def header(self):
-        if self.id:
-            return 'subgraph %s {' % self.id
+        if self.ident:
+            return 'subgraph %s {' % self.ident
         else:
             return '{'
 

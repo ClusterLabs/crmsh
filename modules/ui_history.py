@@ -377,7 +377,7 @@ class History(command.UI):
 
     def _pe_config_plain(self, pe_f):
         '''Configuration with no formatting (but with colors).'''
-        return self._pe_config_obj(pe_f).repr(format=0)
+        return self._pe_config_obj(pe_f).repr(format_mode=0)
 
     def _pe_config(self, pe_f):
         '''Formatted configuration.'''

@@ -22,8 +22,8 @@ def cli_format(pl, break_lines=True, xml=False):
 def head_id_format(nodeid):
     "Special format for property list / node id"
     if utils.noquotes(nodeid):
-        return "%s:" % (clidisplay.id(nodeid))
-    return '%s="%s"' % (clidisplay.id('$id'),
+        return "%s:" % (clidisplay.ident(nodeid))
+    return '%s="%s"' % (clidisplay.ident('$id'),
                         clidisplay.attr_value(nodeid))
 
 
@@ -350,7 +350,7 @@ def acl_spec_format(xml_spec, v):
     return v_f and '%s:%s' % (key_f, v_f) or key_f
 
 
-def cli_acl_rule(node, format=1):
+def cli_acl_rule(node, format_mode=1):
     l = []
     acl_rule_name = node.tag
     l.append(clidisplay.keyword(acl_rule_name))
@@ -361,7 +361,7 @@ def cli_acl_rule(node, format=1):
     return ' '.join(l)
 
 
-def cli_acl_roleref(node, format=1):
+def cli_acl_roleref(node, format_mode=1):
     return "%s:%s" % (clidisplay.keyword("role"),
                       clidisplay.attr_value(node.get("id")))
 

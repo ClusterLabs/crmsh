@@ -31,12 +31,12 @@ class RADriver(object):
             self.ra_class = rsc_node.get("class")
             self.ra_type = rsc_node.get("type")
             self.ra_provider = rsc_node.get("provider")
-            self.id = rsc_node.get("id")
+            self.ident = rsc_node.get("id")
         else:
             self.ra_class = None
             self.ra_type = None
             self.ra_provider = None
-            self.id = None
+            self.ident = None
         self.nodes = nodes
         self.outdir = mkdtemp(prefix="crmsh_out.")
         self.errdir = mkdtemp(prefix="crmsh_err.")
@@ -53,7 +53,7 @@ class RADriver(object):
         rmdir_r(self.errdir)
 
     def id_str(self):
-        return self.last_op and "%s:%s" % (self.id, self.last_op) or self.id
+        return self.last_op and "%s:%s" % (self.ident, self.last_op) or self.ident
 
     def err(self, s):
         common_err("%s: %s" % (self.id_str(), s))
@@ -248,7 +248,7 @@ class RAOCF(RADriver):
     def set_rscenv(self, op):
         RADriver.set_rscenv(self, op)
         self.nvset2env(get_child_nvset_node(self.rscdef_node, "instance_attributes"))
-        self.rscenv["OCF_RESOURCE_INSTANCE"] = self.id
+        self.rscenv["OCF_RESOURCE_INSTANCE"] = self.ident
         self.rscenv["OCF_ROOT"] = os.environ["OCF_ROOT"]
 
     def exec_cmd(self, op):
@@ -415,10 +415,10 @@ def test_resources(resources, nodes, all_nodes):
         started = []
         sys.stderr.write("testing on %s:" % node)
         for r in resources:
-            id = r.get("id")
+            ident = r.get("id")
             ra_class = r.get("class")
             drv = ra_driver[ra_class](r, (node,))
-            sys.stderr.write(" %s" % id)
+            sys.stderr.write(" %s" % ident)
             if drv.test_resource(node):
                 started.append(drv)
             else:

@@ -225,25 +225,25 @@ def ra_classes():
 
 def ra_providers(ra_type, ra_class="ocf"):
     'List of providers for a class:type.'
-    id = "ra_providers-%s-%s" % (ra_class, ra_type)
-    if cache.is_cached(id):
-        return cache.retrieve(id)
+    ident = "ra_providers-%s-%s" % (ra_class, ra_type)
+    if cache.is_cached(ident):
+        return cache.retrieve(ident)
     l = ra_if().providers(ra_type, ra_class)
     l.sort()
-    return cache.store(id, l)
+    return cache.store(ident, l)
 
 
 def ra_providers_all(ra_class="ocf"):
     '''
     List of providers for a class.
     '''
-    id = "ra_providers_all-%s" % ra_class
-    if cache.is_cached(id):
-        return cache.retrieve(id)
+    ident = "ra_providers_all-%s" % ra_class
+    if cache.is_cached(ident):
+        return cache.retrieve(ident)
     ocf = os.path.join(os.environ["OCF_ROOT"], "resource.d")
     if os.path.isdir(ocf):
-        return cache.store(id, sorted([s for s in os.listdir(ocf)
-                                       if os.path.isdir(os.path.join(ocf, s))]))
+        return cache.store(ident, sorted([s for s in os.listdir(ocf)
+                                          if os.path.isdir(os.path.join(ocf, s))]))
     return []
 
 
@@ -253,9 +253,9 @@ def ra_types(ra_class="ocf", ra_provider=""):
     '''
     if not ra_class:
         ra_class = "ocf"
-    id = "ra_types-%s-%s" % (ra_class, ra_provider)
-    if cache.is_cached(id):
-        return cache.retrieve(id)
+    ident = "ra_types-%s-%s" % (ra_class, ra_provider)
+    if cache.is_cached(ident):
+        return cache.retrieve(ident)
     list = []
     for ra in ra_if().types(ra_class):
         if (not ra_provider or
@@ -263,7 +263,7 @@ def ra_types(ra_class="ocf", ra_provider=""):
                 and ra not in list:
             list.append(ra)
     list.sort()
-    return cache.store(id, list)
+    return cache.store(ident, list)
 
 
 @utils.memoize
@@ -442,9 +442,9 @@ class RAInfo(object):
         Construct a dict of dicts: parameters are keys and
         dictionary of attributes/values are values. Cached too.
         '''
-        id = "ra_params-%s" % self.ra_string()
-        if cache.is_cached(id):
-            return cache.retrieve(id)
+        ident = "ra_params-%s" % self.ra_string()
+        if cache.is_cached(ident):
+            return cache.retrieve(ident)
         if self.mk_ra_node() is None:
             return None
         d = {}
@@ -461,7 +461,7 @@ class RAInfo(object):
                 "type": type,
                 "default": default,
             }
-        return cache.store(id, d)
+        return cache.store(ident, d)
 
     def completion_params(self):
         '''
@@ -479,9 +479,9 @@ class RAInfo(object):
         Construct a dict of dicts: actions are keys and
         dictionary of attributes/values are values. Cached too.
         '''
-        id = "ra_actions-%s" % self.ra_string()
-        if cache.is_cached(id):
-            return cache.retrieve(id)
+        ident = "ra_actions-%s" % self.ra_string()
+        if cache.is_cached(ident):
+            return cache.retrieve(ident)
         if self.mk_ra_node() is None:
             return None
         d = {}
@@ -507,7 +507,7 @@ class RAInfo(object):
                 if norole_op not in d:
                     d2[norole_op] = d[op]
         d.update(d2)
-        return cache.store(id, d)
+        return cache.store(ident, d)
 
     def reqd_params_list(self):
         '''
@@ -543,7 +543,7 @@ class RAInfo(object):
                 return True
         return False
 
-    def sanity_check_params(self, id, nvpairs, existence_only=False):
+    def sanity_check_params(self, ident, nvpairs, existence_only=False):
         '''
         nvpairs is a list of <nvpair> tags.
         - are all required parameters defined
@@ -559,14 +559,14 @@ class RAInfo(object):
                 if self.unreq_param(p):
                     continue
                 if p not in d:
-                    common_err("%s: required parameter %s not defined" % (id, p))
+                    common_err("%s: required parameter %s not defined" % (ident, p))
                     rc |= utils.get_check_rc()
         for p in d:
             if p.startswith("$"):
                 # these are special, non-RA parameters
                 continue
             if p not in self.params():
-                common_err("%s: parameter %s does not exist" % (id, p))
+                common_err("%s: parameter %s does not exist" % (ident, p))
                 rc |= utils.get_check_rc()
         return rc
 
@@ -580,7 +580,7 @@ class RAInfo(object):
         except:
             return None
 
-    def sanity_check_ops(self, id, ops, default_timeout):
+    def sanity_check_ops(self, ident, ops, default_timeout):
         '''
         ops is a list of operations
         - do all operations exist
@@ -604,19 +604,19 @@ class RAInfo(object):
             if self.ra_class == "stonith" and op in ("start", "stop"):
                 continue
             if op not in self.actions():
-                common_warn("%s: action '%s' not found in Resource Agent meta-data" % (id, op))
+                common_warn("%s: action '%s' not found in Resource Agent meta-data" % (ident, op))
                 rc |= 1
             if "interval" in n_ops[op]:
                 v = n_ops[op]["interval"]
                 v_msec = crm_msec(v)
                 if op in ("start", "stop") and v_msec != 0:
-                    common_warn("%s: Specified interval for %s is %s, it must be 0" % (id, op, v))
+                    common_warn("%s: Specified interval for %s is %s, it must be 0" % (ident, op, v))
                     rc |= 1
                 if op.startswith("monitor") and v_msec != 0:
                     if v_msec not in intervals:
                         intervals[v_msec] = 1
                     else:
-                        common_warn("%s: interval in %s must be unique" % (id, op))
+                        common_warn("%s: interval in %s must be unique" % (ident, op))
                         rc |= 1
             try:
                 adv_timeout = self.actions()[op]["timeout"]
@@ -632,7 +632,7 @@ class RAInfo(object):
                 continue
             if crm_time_cmp(adv_timeout, v) > 0:
                 common_warn("%s: %s %s for %s is smaller than the advised %s" %
-                            (id, timeout_string, v, op, adv_timeout))
+                            (ident, timeout_string, v, op, adv_timeout))
                 rc |= 1
         return rc
 
