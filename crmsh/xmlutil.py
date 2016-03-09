@@ -129,23 +129,23 @@ def read_cib(fun, params=None):
     return cib_elem
 
 
-def sanity_check_nvpairs(id, node, attr_list):
+def sanity_check_nvpairs(ident, node, attr_list):
     rc = 0
     for nvpair in node.iterchildren("nvpair"):
         n = nvpair.get("name")
         if n and n not in attr_list:
-            common_err("%s: attribute %s does not exist" % (id, n))
+            common_err("%s: attribute %s does not exist" % (ident, n))
             rc |= utils.get_check_rc()
     return rc
 
 
-def sanity_check_meta(id, node, attr_list):
+def sanity_check_meta(ident, node, attr_list):
     rc = 0
     if node is None or not attr_list:
         return rc
     for c in node.iterchildren():
         if c.tag == "meta_attributes":
-            rc |= sanity_check_nvpairs(id, c, attr_list)
+            rc |= sanity_check_nvpairs(ident, c, attr_list)
     return rc
 
 
@@ -196,7 +196,7 @@ class RscState(object):
         self.prop_elem = get_first_conf_elem(cib, "crm_config/cluster_property_set")
         self.rsc_dflt_elem = get_first_conf_elem(cib, "rsc_defaults/meta_attributes")
 
-    def rsc2node(self, id):
+    def rsc2node(self, ident):
         '''
         Get a resource XML element given the id.
         NB: this is called from almost all other methods.
@@ -208,27 +208,27 @@ class RscState(object):
         if self.rsc_elem is None:
             return None
         # does this need to be optimized?
-        expr = './/*[@id="%s"]' % id
+        expr = './/*[@id="%s"]' % ident
         try:
             return self.rsc_elem.xpath(expr)[0]
         except (IndexError, AttributeError):
             return None
 
-    def is_ms(self, id):
+    def is_ms(self, ident):
         '''
         Test if the resource is master-slave.
         '''
-        rsc_node = self.rsc2node(id)
+        rsc_node = self.rsc2node(ident)
         if rsc_node is None:
             return False
         return is_ms(rsc_node)
 
-    def rsc_clone(self, id):
+    def rsc_clone(self, ident):
         '''
         Return id of the clone/ms containing this resource
         or None if it's not cloned.
         '''
-        rsc_node = self.rsc2node(id)
+        rsc_node = self.rsc2node(ident)
         if rsc_node is None:
             return None
         pnode = rsc_node.getparent()
@@ -240,11 +240,11 @@ class RscState(object):
             return pnode.get("id")
         return None
 
-    def is_managed(self, id):
+    def is_managed(self, ident):
         '''
         Is this resource managed?
         '''
-        rsc_node = self.rsc2node(id)
+        rsc_node = self.rsc2node(ident)
         if rsc_node is None:
             return False
         # maintenance-mode, if true, overrides all
@@ -266,31 +266,31 @@ class RscState(object):
             return is_xs_boolean_true(attr)
         return True
 
-    def is_running(self, id):
+    def is_running(self, ident):
         '''
         Is this resource running?
         '''
         if not is_live_cib():
             return False
-        test_id = self.rsc_clone(id) or id
+        test_id = self.rsc_clone(ident) or ident
         rc, outp = get_stdout(self.rsc_status % test_id, stderr_on=False)
         return outp.find("running") > 0 and outp.find("NOT") == -1
 
-    def is_group(self, id):
+    def is_group(self, ident):
         '''
         Test if the resource is a group
         '''
-        rsc_node = self.rsc2node(id)
+        rsc_node = self.rsc2node(ident)
         if rsc_node is None:
             return False
         return is_group(rsc_node)
 
-    def can_delete(self, id):
+    def can_delete(self, ident):
         '''
         Can a resource be deleted?
         The order below is important!
         '''
-        return not (self.is_running(id) and not self.is_group(id) and self.is_managed(id))
+        return not (self.is_running(ident) and not self.is_group(ident) and self.is_managed(ident))
 
 
 def resources_xml():
@@ -637,9 +637,9 @@ def rmnodes(e_list):
 
 def printid(e_list):
     for e in e_list:
-        id = e.get("id")
-        if id:
-            print "element id:", id
+        ident = e.get("id")
+        if ident:
+            print "element id:", ident
 
 
 def remove_dflt_attrs(e_list):
@@ -984,7 +984,7 @@ def rset_convert(c_obj):
             del rset.attrib["sequential"]
         rsetcnt += 1
     c_obj.modified = True
-    cli = c_obj.repr_cli(format=-1)
+    cli = c_obj.repr_cli(format_mode=-1)
     cli = cli.replace("_rsc_set_ ", "")
     newnode = c_obj.cli2node(cli)
     if newnode is not None:

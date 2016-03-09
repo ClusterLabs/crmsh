@@ -688,15 +688,15 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     return True
 
 
-def is_id_valid(id):
+def is_id_valid(ident):
     """
     Verify that the id follows the definition:
     http://www.w3.org/TR/1999/REC-xml-names-19990114/#ns-qualnames
     """
-    if not id:
+    if not ident:
         return False
     id_re = r"^[A-Za-z_][\w._-]*$"
-    return re.match(id_re, id)
+    return re.match(id_re, ident)
 
 
 def check_range(a):

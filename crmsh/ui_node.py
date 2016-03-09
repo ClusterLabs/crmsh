@@ -24,7 +24,7 @@ def unpack_node_xmldata(node, is_offline):
     returns the data to pass to print_node
     is_offline: true|false
     """
-    type = uname = id = ""
+    type = uname = ident = ""
     inst_attr = []
     other = {}
     for attr in node.keys():
@@ -34,15 +34,15 @@ def unpack_node_xmldata(node, is_offline):
         elif attr == "uname":
             uname = v
         elif attr == "id":
-            id = v
+            ident = v
         else:
             other[attr] = v
     inst_attr = [cli_nvpairs(nvpairs2list(elem))
                  for elem in node.xpath('./instance_attributes')]
-    return uname, id, type, other, inst_attr, is_offline
+    return uname, ident, type, other, inst_attr, is_offline
 
 
-def print_node(uname, id, node_type, other, inst_attr, offline):
+def print_node(uname, ident, node_type, other, inst_attr, offline):
     """
     Try to pretty print a node from the cib. Sth like:
     uname(id): node_type
@@ -52,10 +52,10 @@ def print_node(uname, id, node_type, other, inst_attr, offline):
     s_offline = offline and "(offline)" or ""
     if not node_type:
         node_type = "normal"
-    if uname == id:
+    if uname == ident:
         print term.render("%s: %s%s" % (uname, node_type, s_offline))
     else:
-        print term.render("%s(%s): %s%s" % (uname, id, node_type, s_offline))
+        print term.render("%s(%s): %s%s" % (uname, ident, node_type, s_offline))
     for a in other:
         print term.render("\t%s: %s" % (a, other[a]))
     for s in inst_attr:

@@ -140,7 +140,6 @@ group g2 d1 d2
 clone c1 g1
 tag t-d45 d4 d5
 location l1 p3 100: node1
-# this is a comment
 location loc-d1 d1 \
 	rule -inf: not_defined webserver or mem number:lte 0 \
 	rule -inf: not_defined a2 \

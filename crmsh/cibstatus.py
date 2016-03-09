@@ -12,10 +12,10 @@ from . import utils
 from . import config
 
 
-def get_tag_by_id(node, tag, id):
+def get_tag_by_id(node, tag, ident):
     "Find a doc node which matches tag and id."
     for n in node.xpath(".//%s" % tag):
-        if n.get("id") == id:
+        if n.get("id") == ident:
             return n
     return None
 

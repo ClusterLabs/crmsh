@@ -332,7 +332,7 @@ class CibObjectSet(object):
 
     def filter(self, fltr):
         with clidisplay.nopretty():
-            s = self.repr(format=-1)
+            s = self.repr(format_mode=-1)
         # don't allow filter if one or more elements were not
         # found
         if not self.search_rc:
@@ -418,7 +418,7 @@ class CibObjectSet(object):
         else:
             return self.save(s, remove=False, method=method)
 
-    def repr(self, format=format):
+    def repr(self, format_mode=0):
         '''
         Return a string with objects's representations (either
         CLI or XML).
@@ -507,15 +507,15 @@ class CibObjectSetCli(CibObjectSet):
     def __init__(self, *args):
         CibObjectSet.__init__(self, *args)
 
-    def repr_nopretty(self, format=1):
+    def repr_nopretty(self, format_mode=1):
         with clidisplay.nopretty():
-            return self.repr(format=format)
+            return self.repr(format_mode=format_mode)
 
-    def repr(self, format=1):
+    def repr(self, format_mode=1):
         "Return a string containing cli format of all objects."
         if not self.obj_set:
             return ''
-        return '\n'.join(obj.repr_cli(format=format)
+        return '\n'.join(obj.repr_cli(format_mode=format_mode)
                          for obj in processing_sort_cli(list(self.obj_set)))
 
     def _pre_edit(self, s):
@@ -582,7 +582,7 @@ class CibObjectSetRaw(CibObjectSet):
     def __init__(self, *args):
         CibObjectSet.__init__(self, *args)
 
-    def repr(self, format="ignored"):
+    def repr(self, format_mode="ignored"):
         "Return a string containing xml of all objects."
         cib_elem = cib_factory.obj_set2cib(self.obj_set)
         s = etree.tostring(cib_elem, pretty_print=True)
@@ -617,7 +617,7 @@ class CibObjectSetRaw(CibObjectSet):
         if not self.obj_set:
             return True
         with clidisplay.nopretty():
-            cib = self.repr(format=-1)
+            cib = self.repr(format_mode=-1)
         rc = cibverify.verify(cib)
 
         if rc not in (0, 1):
@@ -853,12 +853,12 @@ class CibObject(object):
                                 self.parent and self.parent.obj_id or "",
                                 len(self.children))
 
-    def _repr_cli_xml(self, format):
-        with clidisplay.nopretty(format < 0):
+    def _repr_cli_xml(self, format_mode):
+        with clidisplay.nopretty(format_mode < 0):
             h = clidisplay.keyword("xml")
             l = etree.tostring(self.node, pretty_print=True).split('\n')
             l = [x for x in l if x]  # drop empty lines
-            return "%s %s" % (h, cli_format(l, break_lines=(format > 0), xml=True))
+            return "%s %s" % (h, cli_format(l, break_lines=(format_mode > 0), xml=True))
 
     def _gv_rsc_id(self):
         if self.parent and self.parent.obj_type in constants.clonems_tags:
@@ -887,20 +887,20 @@ class CibObject(object):
         '''
         pass
 
-    def _repr_cli_head(self, format):
+    def _repr_cli_head(self, format_mode):
         'implemented in subclasses'
         pass
 
-    def repr_cli(self, format=1):
+    def repr_cli(self, format_mode=1):
         '''
         CLI representation for the node.
         _repr_cli_head and _repr_cli_child in subclasess.
         '''
         if self.nocli:
-            return self._repr_cli_xml(format)
+            return self._repr_cli_xml(format_mode)
         l = []
-        with clidisplay.nopretty(format < 0):
-            head_s = self._repr_cli_head(format)
+        with clidisplay.nopretty(format_mode < 0):
+            head_s = self._repr_cli_head(format_mode)
             # everybody must have a head
             if not head_s:
                 return None
@@ -913,10 +913,10 @@ class CibObject(object):
                 if is_comment(c):
                     comments.append(c.text)
                     continue
-                s = self._repr_cli_child(c, format)
+                s = self._repr_cli_child(c, format_mode)
                 if s:
                     l.append(s)
-            return self._cli_format_and_comment(l, comments, break_lines=(format > 0))
+            return self._cli_format_and_comment(l, comments, format_mode=format_mode)
 
     def _attr_set_str(self, node):
         '''
@@ -956,7 +956,7 @@ class CibObject(object):
             ret = ret[:-1]
         return ret
 
-    def _repr_cli_child(self, c, format):
+    def _repr_cli_child(self, c, format_mode):
         if c.tag in self.set_names:
             return self._attr_set_str(c)
 
@@ -996,13 +996,15 @@ class CibObject(object):
         self.set_id()
         return self.node
 
-    def _cli_format_and_comment(self, l, comments, break_lines):
+    def _cli_format_and_comment(self, l, comments, format_mode):
         '''
         Format and add comment (if any).
         '''
-        s = cli_format(l, break_lines=break_lines)
+        s = cli_format(l, break_lines=(format_mode>0))
         cs = '\n'.join(comments)
-        return (comments and format >= 0) and '\n'.join([cs, s]) or s
+        if len(comments) and format_mode >= 0:
+            return '\n'.join([cs, s])
+        return s
 
     def move_comments(self):
         '''
@@ -1071,7 +1073,7 @@ class CibObject(object):
         if self.node is None:
             return True
         with clidisplay.nopretty():
-            cli_text = self.repr_cli(format=0)
+            cli_text = self.repr_cli(format_mode=0)
         if not cli_text:
             common_debug("validation failed: %s" % (etree.tostring(self.node)))
             return False
@@ -1210,7 +1212,7 @@ class CibNode(CibObject):
         "utilization": "utilization",
     }
 
-    def _repr_cli_head(self, format):
+    def _repr_cli_head(self, format_mode):
         uname = self.node.get("uname")
         s = clidisplay.keyword(self.obj_type)
         if self.obj_id != uname:
@@ -1218,10 +1220,10 @@ class CibNode(CibObject):
                 s = "%s %s:" % (s, self.obj_id)
             else:
                 s = '%s $id="%s"' % (s, self.obj_id)
-        s = '%s %s' % (s, clidisplay.id(uname))
-        type = self.node.get("type")
-        if type and type != constants.node_default_type:
-            s = '%s:%s' % (s, type)
+        s = '%s %s' % (s, clidisplay.ident(uname))
+        node_type = self.node.get("type")
+        if node_type and node_type != constants.node_default_type:
+            s = '%s:%s' % (s, node_type)
         return s
 
     def repr_gv(self, gv_obj, from_grp=False):
@@ -1326,7 +1328,7 @@ class CibPrimitive(CibObject):
         "utilization": "utilization",
     }
 
-    def _repr_cli_head(self, format):
+    def _repr_cli_head(self, format_mode):
         if self.obj_type == "primitive":
             template_ref = self.node.get("template")
         else:
@@ -1336,14 +1338,14 @@ class CibPrimitive(CibObject):
         else:
             rsc_spec = mk_rsc_type(self.node)
         s = clidisplay.keyword(self.obj_type)
-        id = clidisplay.id(self.obj_id)
+        id = clidisplay.ident(self.obj_id)
         return "%s %s %s" % (s, id, rsc_spec)
 
-    def _repr_cli_child(self, c, format):
+    def _repr_cli_child(self, c, format_mode):
         if c.tag in self.set_names:
             return self._attr_set_str(c)
         elif c.tag == "operations":
-            return cli_operations(c, break_lines=(format > 0))
+            return cli_operations(c, break_lines=(format_mode > 0))
 
     def _append_op(self, op_node):
         try:
@@ -1525,7 +1527,7 @@ class CibContainer(CibObject):
         "meta_attributes": "meta",
     }
 
-    def _repr_cli_head(self, format):
+    def _repr_cli_head(self, format_mode):
         children = []
         for c in self.node.iterchildren():
             if (self.obj_type == "group" and is_primitive(c)) or \
@@ -1534,7 +1536,7 @@ class CibContainer(CibObject):
             elif self.obj_type in constants.clonems_tags and is_child_rsc(c):
                 children.append(clidisplay.rscref(c.get("id")))
         s = clidisplay.keyword(self.obj_type)
-        id = clidisplay.id(self.obj_id)
+        id = clidisplay.ident(self.obj_id)
         return "%s %s %s" % (s, id, ' '.join(children))
 
     def check_sanity(self):
@@ -1598,7 +1600,7 @@ class CibLocation(CibObject):
     Location constraint.
     '''
 
-    def _repr_cli_head(self, format):
+    def _repr_cli_head(self, format_mode):
         rsc = None
         if "rsc" in self.node.keys():
             rsc = self.node.get("rsc")
@@ -1612,7 +1614,7 @@ class CibLocation(CibObject):
             common_err("%s: unknown rsc_location format" % self.obj_id)
             return None
         s = clidisplay.keyword(self.obj_type)
-        id = clidisplay.id(self.obj_id)
+        id = clidisplay.ident(self.obj_id)
         s = "%s %s %s" % (s, id, rsc)
 
         known_attrs = ['role', 'resource-discovery']
@@ -1627,7 +1629,7 @@ class CibLocation(CibObject):
             s = "%s %s: %s" % (s, score, pref_node)
         return s
 
-    def _repr_cli_child(self, c, format):
+    def _repr_cli_child(self, c, format_mode):
         if c.tag == "rule":
             return "%s %s" % \
                 (clidisplay.keyword("rule"), cli_rule(c))
@@ -1738,9 +1740,9 @@ class CibSimpleConstraint(CibObject):
     Colocation and order constraints.
     '''
 
-    def _repr_cli_head(self, format):
+    def _repr_cli_head(self, format_mode):
         s = clidisplay.keyword(self.obj_type)
-        id = clidisplay.id(self.obj_id)
+        id = clidisplay.ident(self.obj_id)
         score = get_score(self.node) or get_kind(self.node)
         if self.node.find("resource_set") is not None:
             col = rsc_set_constraint(self.node, self.obj_type)
@@ -1831,9 +1833,9 @@ class CibRscTicket(CibSimpleConstraint):
     rsc_ticket constraint.
     '''
 
-    def _repr_cli_head(self, format):
+    def _repr_cli_head(self, format_mode):
         s = clidisplay.keyword(self.obj_type)
-        id = clidisplay.id(self.obj_id)
+        id = clidisplay.ident(self.obj_id)
         ticket = clidisplay.ticket(self.node.get("ticket"))
         if self.node.find("resource_set") is not None:
             col = rsc_set_constraint(self.node, self.obj_type)
@@ -1852,11 +1854,11 @@ class CibProperty(CibObject):
     Cluster properties.
     '''
 
-    def _repr_cli_head(self, format):
+    def _repr_cli_head(self, format_mode):
         return "%s %s" % (clidisplay.keyword(self.obj_type),
                           head_id_format(self.obj_id))
 
-    def _repr_cli_child(self, c, format):
+    def _repr_cli_child(self, c, format_mode):
         if c.tag == "rule":
             return ' '.join((clidisplay.keyword("rule"),
                              cli_rule(c)))
@@ -1919,7 +1921,7 @@ class CibFencingOrder(CibObject):
         ''' Cannot rename this one. '''
         return False
 
-    def _repr_cli_head(self, format):
+    def _repr_cli_head(self, format_mode):
         s = clidisplay.keyword(self.obj_type)
         d = ordereddict.odict()
         for c in self.node.iterchildren("fencing-level"):
@@ -1948,9 +1950,9 @@ class CibFencingOrder(CibObject):
                 return tgt + ":"
         return cli_format([s] + ["%s %s" % (fmt_target(x), ' '.join(dd[x]))
                                  for x in dd.keys()],
-                          break_lines=(format > 0))
+                          break_lines=(format_mode > 0))
 
-    def _repr_cli_child(self, c, format):
+    def _repr_cli_child(self, c, format_mode):
         pass  # no children here
 
     def check_sanity(self):
@@ -1988,16 +1990,16 @@ class CibAcl(CibObject):
 
     '''
 
-    def _repr_cli_head(self, format):
+    def _repr_cli_head(self, format_mode):
         s = clidisplay.keyword(self.obj_type)
-        id = clidisplay.id(self.obj_id)
+        id = clidisplay.ident(self.obj_id)
         return "%s %s" % (s, id)
 
-    def _repr_cli_child(self, c, format):
+    def _repr_cli_child(self, c, format_mode):
         if c.tag in constants.acl_rule_names:
-            return cli_acl_rule(c, format)
+            return cli_acl_rule(c, format_mode)
         elif c.tag == "role_ref":
-            return cli_acl_roleref(c, format)
+            return cli_acl_roleref(c, format_mode)
         elif c.tag == "role":
             return cli_acl_role(c)
         elif c.tag == "acl_permission":
@@ -2014,7 +2016,7 @@ class CibTag(CibObject):
 
     def _repr_cli_head(self, fmt):
         return ' '.join([clidisplay.keyword(self.obj_type),
-                         clidisplay.id(self.obj_id)] +
+                         clidisplay.ident(self.obj_id)] +
                         [clidisplay.rscref(c.get('id'))
                          for c in self.node.iterchildren() if not is_comment(c)])
 
@@ -2811,19 +2813,19 @@ class CibFactory(object):
                 return obj
         return None
 
-    def find_xml_node(self, tag, id, strict=True):
+    def find_xml_node(self, tag, ident, strict=True):
         "Find a xml node of this type with this id."
         try:
             if tag in constants.defaults_tags:
-                expr = '//%s/meta_attributes[@id="%s"]' % (tag, id)
+                expr = '//%s/meta_attributes[@id="%s"]' % (tag, ident)
             elif tag == 'fencing-topology':
                 expr = '//fencing-topology' % tag
             else:
-                expr = '//%s[@id="%s"]' % (tag, id)
+                expr = '//%s[@id="%s"]' % (tag, ident)
             return self.cib_elem.xpath(expr)[0]
         except IndexError:
             if strict:
-                common_warn("strange, %s element %s not found" % (tag, id))
+                common_warn("strange, %s element %s not found" % (tag, ident))
             return None
 
     #
@@ -2904,13 +2906,13 @@ class CibFactory(object):
                 obj.set_updated()
         return rc
 
-    def is_id_refd(self, attr_list_type, id):
+    def is_id_refd(self, attr_list_type, ident):
         '''
         Is this ID referenced anywhere?
         Used from cliformat
         '''
         try:
-            return self.id_refs[id] == attr_list_type
+            return self.id_refs[ident] == attr_list_type
         except KeyError:
             return False
 
@@ -3345,17 +3347,17 @@ class CibFactory(object):
                 return False
             test_l.append(obj)
 
-        for id in upd_set:
-            if edit_d[id].tag == 'node':
-                obj = self.find_node(id)
+        for ident in upd_set:
+            if edit_d[ident].tag == 'node':
+                obj = self.find_node(ident)
             else:
-                obj = self.find_resource(id)
+                obj = self.find_resource(ident)
             if not obj:
-                common_debug("%s not found!" % (id))
+                common_debug("%s not found!" % (ident))
                 return False
-            node, _, _ = postprocess_cli(edit_d[id], oldnode=obj.node)
+            node, _, _ = postprocess_cli(edit_d[ident], oldnode=obj.node)
             if node is None:
-                common_debug("postprocess_cli failed: %s" % (id))
+                common_debug("postprocess_cli failed: %s" % (ident))
                 return False
             if not self.update_from_cli(obj, node, method):
                 common_debug("update_from_cli failed: %s, %s, %s" %
@@ -3388,14 +3390,14 @@ class CibFactory(object):
             if not obj:
                 return False
             test_l.append(obj)
-        for id in upd_set:
-            if edit_d[id].tag == 'node':
-                obj = self.find_node(id)
+        for ident in upd_set:
+            if edit_d[ident].tag == 'node':
+                obj = self.find_node(ident)
             else:
-                obj = self.find_resource(id)
+                obj = self.find_resource(ident)
             if not obj:
                 return False
-            if not self.update_from_node(obj, edit_d[id]):
+            if not self.update_from_node(obj, edit_d[ident]):
                 return False
             test_l.append(obj)
         if not self.delete(*list(del_set)):

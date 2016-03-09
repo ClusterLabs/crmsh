@@ -32,7 +32,7 @@ def test_bug41660_1():
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     print etree.tostring(obj.node)
-    data = obj.repr_cli(format=-1)
+    data = obj.repr_cli(format_mode=-1)
     print data
     exp = 'primitive bug41660 ocf:pacemaker:Dummy meta target-role=Stopped'
     assert data == exp
@@ -71,7 +71,7 @@ def test_bug41660_2():
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     assert obj is not None
-    #data = obj.repr_cli(format=-1)
+    #data = obj.repr_cli(format_mode=-1)
     #print data
     #exp = 'clone libvirtd-clone libvirtd meta interleave=true ordered=true target-role=Stopped'
     #assert data == exp
@@ -112,7 +112,7 @@ def test_bug41660_3():
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     assert obj is not None
-    data = obj.repr_cli(format=-1)
+    data = obj.repr_cli(format_mode=-1)
     print data
     exp = 'clone libvirtd-clone libvirtd meta target-role=Stopped'
     assert data == exp
@@ -250,7 +250,7 @@ end="2014-05-17 17:56:11Z"/>
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     assert obj is not None
-    data = obj.repr_cli(format=-1)
+    data = obj.repr_cli(format_mode=-1)
     print "OUTPUT:", data
     exp = 'location cli-prefer-dummy-resource dummy-resource role=Started rule #uname eq x64-4 and date lt "2014-05-17 17:56:11Z"'
     assert data == exp
@@ -266,7 +266,7 @@ def test_order_without_score_kind():
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     assert obj is not None
-    data = obj.repr_cli(format=-1)
+    data = obj.repr_cli(format_mode=-1)
     print "OUTPUT:", data
     exp = 'order order-a-b a:promote b:start'
     assert data == exp
@@ -338,7 +338,7 @@ def test_pengine_test():
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     assert obj is not None
-    data = obj.repr_cli(format=-1)
+    data = obj.repr_cli(format_mode=-1)
     print "OUTPUT:", data
     exp = 'primitive rsc1 ocf:pacemaker:Dummy params rule 0: #cluster-name eq clusterA state="/var/run/Dummy-rsc1-clusterA" params rule 0: #cluster-name eq clusterB state="/var/run/Dummy-rsc1-clusterB" op monitor interval=10'
     assert data == exp
@@ -386,7 +386,7 @@ def test_op_role():
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     assert obj is not None
-    data = obj.repr_cli(format=-1)
+    data = obj.repr_cli(format_mode=-1)
     print "OUTPUT:", data
     exp = 'primitive rsc2 ocf:pacemaker:Dummy op monitor interval=10 role=Stopped'
     assert data == exp
@@ -405,7 +405,7 @@ def test_nvpair_no_value():
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     assert obj is not None
-    data = obj.repr_cli(format=-1)
+    data = obj.repr_cli(format_mode=-1)
     print "OUTPUT:", data
     exp = 'primitive rsc3 Dummy params verbose verbase="" verbese=" "'
     assert data == exp
@@ -426,7 +426,7 @@ def test_delete_ticket():
         data = etree.fromstring(x)
         obj = factory.create_from_node(data)
         assert obj is not None
-        data = obj.repr_cli(format=-1)
+        data = obj.repr_cli(format_mode=-1)
 
     factory.delete('daa0')
     assert factory.find_object('daa0') is None
@@ -447,7 +447,7 @@ def test_quotes():
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     assert obj is not None
-    data = obj.repr_cli(format=-1)
+    data = obj.repr_cli(format_mode=-1)
     print "OUTPUT:", data
     exp = 'primitive q1 ocf:pacemaker:Dummy params state="foo\\"foo\\""'
     assert data == exp
@@ -472,7 +472,7 @@ def test_nodeattrs():
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     assert obj is not None
-    data = obj.repr_cli(format=-1)
+    data = obj.repr_cli(format_mode=-1)
     exp = 'node 1: dell71 attributes staging-0-0-placement=true meta-0-0-placement=true attributes standby=off'
     assert data == exp
     assert obj.cli_use_validate()
@@ -492,7 +492,7 @@ def test_nodeattrs2():
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     assert obj is not None
-    data = obj.repr_cli(format=-1)
+    data = obj.repr_cli(format_mode=-1)
     exp = 'node h04 utilization utl_ram=1200 utl_cpu=200 attributes standby=off'
     assert data == exp
     assert obj.cli_use_validate()
@@ -873,7 +873,7 @@ def test_bug959895():
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     print etree.tostring(obj.node)
-    data = obj.repr_cli(format=-1)
+    data = obj.repr_cli(format_mode=-1)
     print data
     exp = 'clone c-bug959895 g-bug959895'
     assert data == exp
@@ -908,7 +908,7 @@ def test_node_util_attr():
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     print etree.tostring(obj.node)
-    data = obj.repr_cli(format=-1)
+    data = obj.repr_cli(format_mode=-1)
     print data
     exp = 'node aberfeldy utilization cpu=2 memory=500 attributes standby=on'
     assert data == exp

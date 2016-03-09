@@ -15,7 +15,7 @@ def assert_is_not_none(thing):
     assert thing is not None, "Expected non-None value"
 
 
-def roundtrip(cli, debug=False, expected=None):
+def roundtrip(cli, debug=False, expected=None, format_mode=-1, strip_color=False):
     node, _, _ = cibconfig.parse_cli_to_xml(cli, validation=MockValidation())
     assert_is_not_none(node)
     obj = factory.find_object(node.get("id"))
@@ -24,10 +24,13 @@ def roundtrip(cli, debug=False, expected=None):
     obj = factory.create_from_node(node)
     assert_is_not_none(obj)
     obj.nocli = True
-    xml = obj.repr_cli(format=-1)
+    xml = obj.repr_cli(format_mode=format_mode)
     print xml
     obj.nocli = False
-    s = obj.repr_cli(format=-1)
+    s = obj.repr_cli(format_mode=format_mode)
+    if strip_color:
+        import re
+        s = re.sub(r"\$\{[^}]+\}", "", s)
     if (s != cli) or debug:
         print "GOT:", s
         print "EXP:", cli
@@ -86,19 +89,19 @@ def test_broken_colo():
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     assert_is_not_none(obj)
-    data = obj.repr_cli(format=-1)
+    data = obj.repr_cli(format_mode=-1)
     eq_('colocation colo-2 inf: [ vip1 vip2 sequential=true ] [ apache:Master sequential=true ]', data)
     assert obj.cli_use_validate()
 
 
 @with_setup(setup_func, teardown_func)
 def test_comment():
-    roundtrip("# comment 1\nprimitive d0 ocf:pacemaker:Dummy")
+    roundtrip("# comment 1\nprimitive d0 ocf:pacemaker:Dummy", format_mode=0, strip_color=True)
 
 
 @with_setup(setup_func, teardown_func)
 def test_comment2():
-    roundtrip("# comment 1\n# comment 2\n# comment 3\nprimitive d0 ocf:pacemaker:Dummy")
+    roundtrip("# comment 1\n# comment 2\n# comment 3\nprimitive d0 ocf:pacemaker:Dummy", format_mode=0, strip_color=True)
 
 
 @with_setup(setup_func, teardown_func)
@@ -129,7 +132,7 @@ value="Stopped"/> \
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     assert_is_not_none(obj)
-    data = obj.repr_cli(format=-1)
+    data = obj.repr_cli(format_mode=-1)
     print data
     exp = 'primitive dummy ocf:pacemaker:Dummy op start timeout=60 interval=0 op stop timeout=60 interval=0 op monitor interval=60 timeout=30 meta target-role=Stopped'
     eq_(exp, data)
@@ -152,7 +155,7 @@ value="Stopped"/> \
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     assert_is_not_none(obj)
-    data = obj.repr_cli(format=-1)
+    data = obj.repr_cli(format_mode=-1)
     print data
     exp = 'primitive dummy2 ocf:pacemaker:Dummy meta target-role=Stopped ' \
           'op start timeout=60 interval=0 op stop timeout=60 interval=0 ' \
@@ -174,7 +177,7 @@ target="ha-one"></fencing-level>
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
     assert_is_not_none(obj)
-    data = obj.repr_cli(format=-1)
+    data = obj.repr_cli(format_mode=-1)
     print data
     exp = 'fencing_topology st1'
     eq_(exp, data)

@@ -98,7 +98,7 @@ def help_block(s):
     return _colorize(s, config.color.help_block)
 
 
-def id(s):
+def ident(s):
     return _colorize(s, config.color.identifier)
 
 
