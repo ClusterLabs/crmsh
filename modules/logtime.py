@@ -71,20 +71,20 @@ def syslog_ts(s):
     if m:
         if YEAR is None:
             set_year()
-        tstr = ' '.join([YEAR] + s.split()[0:3])
-        _syslog_ts_prev = utils.datetime_to_timestamp(utils.parse_time(tstr))
+        tstr = ' '.join([YEAR] + s.split(' ', 3)[0:3])
+        _syslog_ts_prev = utils.parse_to_timestamp(tstr)
         return _syslog_ts_prev
 
     m = fmt2.match(s)
     if m:
-        tstr = s.split()[0]
-        _syslog_ts_prev = utils.datetime_to_timestamp(utils.parse_time(tstr))
+        tstr = s.split(' ', 1)[0]
+        _syslog_ts_prev = utils.parse_to_timestamp(tstr)
         return _syslog_ts_prev
 
     m = fmt3.match(s)
     if m:
-        tstr = s.split()[0].replace('_', ' ')
-        _syslog_ts_prev = utils.datetime_to_timestamp(utils.parse_time(tstr))
+        tstr = s.split(' ', 1)[0].replace('_', ' ')
+        _syslog_ts_prev = utils.parse_to_timestamp(tstr)
         return _syslog_ts_prev
 
     crmlog.common_debug("malformed line: %s" % s)
@@ -135,7 +135,7 @@ def syslog2node(s):
         rfc5424 = s.split()[0]
         if 'T' in rfc5424:
             try:
-                utils.parse_time(rfc5424)
+                utils.parse_to_timestamp(rfc5424)
                 _syslog_node_prev = s.split()[1]
                 return _syslog_node_prev
             except Exception:

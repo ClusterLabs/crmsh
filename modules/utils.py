@@ -1075,9 +1075,8 @@ def parse_time(t):
     through a timestamp conversion if necessary
     '''
     try:
-        import dateutil.parser
-        import dateutil.tz
-        dt = dateutil.parser.parse(t)
+        from dateutil import parser, tz
+        dt = parser.parse(t)
 
         if datetime_is_aware(dt):
             ts = datetime_to_timestamp(dt)
@@ -1086,7 +1085,7 @@ def parse_time(t):
             dt = datetime.datetime.fromtimestamp(ts)
         else:
             # convert to UTC from local time
-            dt = make_datetime_naive(dt.replace(tzinfo=dateutil.tz.tzlocal()))
+            dt = dt - tz.tzlocal().utcoffset(dt)
     except ValueError, msg:
         common_err("parse_time %s: %s" % (t, msg))
         return None
@@ -1098,6 +1097,35 @@ def parse_time(t):
             common_err("no dateutil, please provide times as printed by date(1)")
             return None
     return dt
+
+
+def parse_to_timestamp(t):
+    '''
+    Read a string and convert it into a UNIX timestamp.
+    Added as an optimization of parse_time to avoid
+    extra conversion steps when result would be converted
+    into a timestamp anyway
+    '''
+    try:
+        from dateutil import parser, tz
+        dt = parser.parse(t)
+
+        if datetime_is_aware(dt):
+            return datetime_to_timestamp(dt)
+        else:
+            # convert to UTC from local time
+            return total_seconds(dt - tz.tzlocal().utcoffset(dt) - datetime.datetime(1970, 1, 1))
+    except ValueError, msg:
+        common_err("parse_time %s: %s" % (t, msg))
+        return None
+    except ImportError, msg:
+        try:
+            tm = time.strptime(t)
+            dt = datetime.datetime(*tm[0:7])
+            return datetime_to_timestamp(dt)
+        except ValueError, msg:
+            common_err("no dateutil, please provide times as printed by date(1)")
+            return None
 
 
 def save_graphviz_file(ini_f, attr_d):
