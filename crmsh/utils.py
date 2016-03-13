@@ -256,7 +256,7 @@ def pipe_string(cmd, s):
         p.communicate(s)
         p.wait()
         rc = p.returncode
-    except IOError, msg:
+    except IOError as msg:
         if "Broken pipe" not in msg:
             common_err(msg)
     return rc
@@ -1078,6 +1078,8 @@ def parse_time(t):
 
     Also does time zone elimination by passing the datetime
     through a timestamp conversion if necessary
+
+    TODO: dateutil is very slow, avoid it if possible
     '''
     try:
         from dateutil import parser, tz
