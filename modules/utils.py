@@ -11,6 +11,7 @@ import time
 import datetime
 import shutil
 import bz2
+import fnmatch
 import gc
 from contextlib import contextmanager
 from . import config
@@ -781,29 +782,13 @@ def sort_by_mtime(l):
     return [x[1] for x in l2]
 
 
-def dirwalk(dir):
-    "walk a directory tree, using a generator"
-    # http://code.activestate.com/recipes/105873/
-    for f in os.listdir(dir):
-        fullpath = os.path.join(dir, f)
-        if os.path.isdir(fullpath) and not os.path.islink(fullpath):
-            for x in dirwalk(fullpath):  # recurse into subdir
-                yield x
-        else:
-            yield fullpath
-
-
-def file_find_by_name(dir, fname):
-    'Find a file within a tree matching fname.'
-    if not dir:
-        common_err("cannot dirwalk nothing!")
-        return None
-    if not fname:
-        common_err("file to find not provided")
-        return None
-    for f in dirwalk(dir):
-        if os.path.basename(f) == fname:
-            return f
+def file_find_by_name(root, filename):
+    'Find a file within a tree matching fname'
+    assert(root)
+    assert(filename)
+    for root, dirnames, filenames in os.walk(root):
+        for filename in fnmatch.filter(filenames, filename):
+            return os.path.join(root, filename)
     return None
 
 
