@@ -11,6 +11,8 @@ import time
 import datetime
 import shutil
 import bz2
+import gc
+from contextlib import contextmanager
 from . import config
 from . import userdir
 from . import constants
@@ -29,6 +31,15 @@ def memoize(function):
         memoized[args] = r
         return r
     return inner
+
+
+@contextmanager
+def nogc():
+    gc.disable()
+    try:
+        yield
+    finally:
+        gc.enable()
 
 
 getuser = userdir.getuser
