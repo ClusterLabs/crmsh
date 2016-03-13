@@ -1,6 +1,7 @@
 *.pyc
 *~
 #*.*#
+.#*
 doc/website-v1/gen
 Makefile.in
 autom4te.cache
