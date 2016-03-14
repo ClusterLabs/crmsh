@@ -582,7 +582,13 @@ class LogParser(object):
         o = {
             "version": _METADATA_VERSION,
             "events": self.events,
-            "transitions": [t.to_dict() for t in self.transitions]
+            "transitions": [t.to_dict() for t in self.transitions],
+            "cib": {
+                "nodes": self.cib.nodes,
+                "primitives": self.cib.primitives,
+                "groups": self.cib.groups,
+                "clones": self.cib.clones
+            }
         }
         return o
 
