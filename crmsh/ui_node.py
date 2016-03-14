@@ -321,5 +321,22 @@ class NodeMgmt(command.UI):
         return ui_utils.manage_attr(context.get_command_name(), self.node_status,
                                     node, cmd, rsc, value)
 
+    def do_server(self, context, *nodes):
+        """
+        usage:
+        server -- print server hostname / address for each node
+        server <node> ... -- print server hostname / address for node
+        """
+        cib = xmlutil.cibdump2elem()
+        for node in cib.xpath('/cib/configuration/nodes/node'):
+            if nodes and node not in nodes:
+                continue
+            name = node.get('uname') or node.get('id')
+            if node.get('type') == 'remote':
+                srv = cib.xpath("//primitive[@id='%s']/instance_attributes/nvpair[@name='server']" % (name))
+                if srv:
+                    print(srv[0].get('value'))
+                    continue
+            print(name)
 
 # vim:ts=4:sw=4:et:

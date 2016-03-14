@@ -2085,6 +2085,21 @@ Usage:
 ready [<node>]
 ...............
 
+[[cmdhelp_node_server,show node hostname or server address]]
+==== `server`
+
+Remote nodes may have a configured server address which should
+be used when contacting the node. This command prints the
+server address if configured, else the node name.
+
+If no parameter is given, the adresses or names for all nodes
+are printed.
+
+Usage:
+...............
+server [<node> ...]
+...............
+
 [[cmdhelp_node_show,show node]]
 ==== `show`
 
