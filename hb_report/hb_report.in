@@ -1161,7 +1161,9 @@ finalword() {
 }
 
 check_if_log_is_empty() {
-	find "$1" -iname $HALOG_F | grep '.*' >/dev/null 2>&1 || warning "Report contains no logs"
+	if ! find "$1" -iname $HALOG_F | grep -q .; then
+		warning "Report contains no logs; did you get the right timeframe?"
+	fi
 }
 
 [ $# -eq 0 ] && usage
