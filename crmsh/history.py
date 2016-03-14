@@ -798,7 +798,8 @@ class Report(object):
         rmdir_r(self.outdir)
         rmdir_r(self.errdir)
         self.last_live_update = time.time()
-        rc1 = next_loglines(a, self.outdir, self.errdir)
+        end_time = self._str_dt(self.get_rpt_dt(self.to_dt, "bottom"))
+        rc1 = next_loglines(a, self.outdir, self.errdir, end_time)
         self.append_newlogs(a)
         node_pe_l = []
         for node in [x[0] for x in a]:

@@ -20,6 +20,7 @@ from parallax.task import Task
 from parallax import Options
 
 from .msg import common_err, common_debug, common_warn
+from . import config
 
 
 _DEFAULT_TIMEOUT = 60
@@ -141,7 +142,7 @@ def examine_outcome(l, opts, statuses):
     return True
 
 
-def next_loglines(a, outdir, errdir):
+def next_loglines(a, outdir, errdir, from_time):
     '''
     pssh to nodes to collect new logs.
     '''
@@ -149,8 +150,11 @@ def next_loglines(a, outdir, errdir):
     for node, rptlog, logfile, nextpos in a:
         common_debug("updating %s from %s (pos %d)" %
                      (logfile, node, nextpos))
-        cmdline = "perl -e 'exit(%d) if (stat(\"%s\"))[7]<%d' && tail -c +%d %s" % (
-            _EC_LOGROT, logfile, nextpos-1, nextpos, logfile)
+        if logfile.startswith("/tmp") and logfile.endswith("/journal.log"):
+            cmdline = "/usr/bin/journalctl -o short-iso --since '%s' --no-pager" % (from_time)
+        else:
+            cmdline = "perl -e 'exit(%d) if (stat(\"%s\"))[7]<%d' && tail -c +%d %s" % (
+                _EC_LOGROT, logfile, nextpos-1, nextpos, logfile)
         opts = parse_args(outdir, errdir)
         l.append([node, cmdline])
     statuses = do_pssh(l, opts)
@@ -164,16 +168,13 @@ def next_peinputs(node_pe_l, outdir, errdir):
     '''
     pssh to nodes to collect new logs.
     '''
+    pe_dir = config.path.pe_state_dir
+    vardir = os.path.dirname(pe_dir)
     l = []
     for node, pe_l in node_pe_l:
-        r = re.search("(.*)/pengine/", pe_l[0])
-        if not r:
-            common_err("strange, %s doesn't contain string pengine" % pe_l[0])
-            continue
-        tdir = "/%s" % r.group(1)
-        red_pe_l = [x.replace("%s/" % r.group(1), "") for x in pe_l]
+        red_pe_l = [os.path.join("pengine", os.path.basename(x)) for x in pe_l]
+        cmdline = "tar -C %s -chf - %s" % (vardir, ' '.join(red_pe_l))
         common_debug("getting new PE inputs %s from %s" % (red_pe_l, node))
-        cmdline = "tar -C %s -chf - %s" % (tdir, ' '.join(red_pe_l))
         opts = parse_args(outdir, errdir)
         l.append([node, cmdline])
     if not l:
