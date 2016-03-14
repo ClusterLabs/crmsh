@@ -55,7 +55,7 @@ log_patterns = {
             "stonith-ng.*can not fence %%:",
             "stonithd.*Succeeded.*node %%:",
             "(?:lost|memb): %% ",
-            "crmd.*(?:NEW|LOST):.* %% ",
+            "crmd.*(?:NEW|LOST|new|lost):.* %% ",
             "Node return implies stonith of %% ",
         ),
         (  # detail 1
@@ -63,19 +63,18 @@ log_patterns = {
     ),
     "quorum": (
         (  # detail 0
-            "crmd.*Updating.quorum.status",
-            "crmd.*quorum.(?:lost|ac?quir)",
+            "crmd.*Updating.(quorum).status",
+            "crmd.*quorum.(?:lost|ac?quir[^\s]*)",
         ),
         (  # detail 1
         ),
     ),
     "events": (
         (  # detail 0
-            "(?:CRIT|crit):",
-            "(?:ERROR|error):",
+            "(CRIT|crit|ERROR|error|UNCLEAN|unclean):",
         ),
         (  # detail 1
-            "(?:WARN|warning):",
+            "(WARN|warning):",
         ),
     ),
 }
