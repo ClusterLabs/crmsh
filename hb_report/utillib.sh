@@ -517,18 +517,19 @@ crmconfig() {
 		CIB_file=$1/$CIB_F crm configure show >$1/$CIB_TXT_F 2>&1
 }
 get_crm_nodes() {
-	cibadmin -Ql -o nodes |
-	awk '
-	/<node / {
-		for( i=1; i<=NF; i++ )
-			if( $i~/^uname=/ ) {
-				sub("uname=.","",$i);
-				sub("\".*","",$i);
-				print $i;
-				next;
-			}
-	}
-	'
+	python <<EOF
+from lxml import etree
+import subprocess
+cib = etree.fromstring(subprocess.check_output(['/usr/sbin/cibadmin', '-Ql']))
+for node in cib.xpath('/cib/configuration/nodes/node'):
+    name = node.get('uname') or node.get('id')
+    if node.get('type') == 'remote':
+        srv = cib.xpath("//primitive[@id='%s']/instance_attributes/nvpair[@name='server']" % (name))
+        if srv:
+            print(srv[0].get('value'))
+            continue
+    print(name)
+EOF
 }
 get_live_nodes() {
 	if [ `id -u` = 0 ] && which fping >/dev/null 2>&1; then
