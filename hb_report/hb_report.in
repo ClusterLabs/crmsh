@@ -1155,6 +1155,7 @@ finalword() {
 	else
 		echo "The report is saved in $DESTDIR/$DEST"
 	fi
+	echo "Report timespan: $(time2str "$FROM_TIME") - $(time2str "$TO_TIME")"
 	echo " "
 	echo "Thank you for taking time to create this report."
 }
