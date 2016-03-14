@@ -1174,6 +1174,10 @@ finalword() {
 	echo "Thank you for taking time to create this report."
 }
 
+check_if_log_is_empty() {
+	find "$1" -iname $HALOG_F | grep '.*' >/dev/null 2>&1 || warning "Report contains no logs"
+}
+
 [ $# -eq 0 ] && usage
 
 # check for the major prereq for a) parameter parsing and b)
@@ -1459,6 +1463,7 @@ else
 	fi
 	analyze $WORKDIR > $WORKDIR/$ANALYSIS_F &
 	events $WORKDIR &
+	check_if_log_is_empty $WORKDIR
 	mktemplate > $WORKDIR/$DESCRIPTION_F
 	[ "$NO_DESCRIPTION" ] || {
 		echo press enter to edit the problem description...
