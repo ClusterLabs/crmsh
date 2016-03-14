@@ -53,9 +53,14 @@ def make_time(t):
     return t
 
 
-_syslog2node_formats = (re.compile(r'^[a-zA-Z]{2,4} \d{1,2} \d{2}:\d{2}:\d{2}\s+(?:\[\d+\])?\s*([\S]+)'),
-                        re.compile(r'^\d{4}-\d{2}-\d{2}T\S+\s+(?:\[\d+\])?\s*([\S]+)'),
-                        re.compile(r'^\d{4}\/\d{2}\/\d{2}_\d{2}:\d{2}:\d{2}'))
+# fmt1: group 11 is node
+# fmt2: group 2 is node
+# fmt3: group 2 is node
+# fmt4: node not available?
+_syslog2node_formats = (re.compile(r'^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}).(\d+)([+-])(\d{2}):(\d{2})\s+(?:\[\d+\])?\s*([\S]+)'),
+                        re.compile(r'^(\d{4}-\d{2}-\d{2}T\S+)\s+(?:\[\d+\])?\s*([\S]+)'),
+                        re.compile(r'^([a-zA-Z]{2,4}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+(?:\[\d+\])?\s*([\S]+)'),
+                        re.compile(r'^(\d{4}\/\d{2}\/\d{2}_\d{2}:\d{2}:\d{2})'))
 
 _syslog_ts_prev = None
 
@@ -66,34 +71,45 @@ def syslog_ts(s):
     Returns as floating point, seconds
     """
     global _syslog_ts_prev
-    fmt1, fmt2, fmt3 = _syslog2node_formats
+    fmt1, fmt2, fmt3, fmt4 = _syslog2node_formats
+
+    # RFC3339
     m = fmt1.match(s)
     if m:
-        if YEAR is None:
-            set_year()
-        tstr = ' '.join([YEAR] + s.split(' ', 3)[0:3])
-        _syslog_ts_prev = utils.parse_to_timestamp(tstr)
+        year, month, day, hour, minute, second, ms, tzsgn, tzh, tzm, _ = m.groups()
+        ts = time.mktime((int(year), int(month), int(day), int(hour), int(minute), int(second), 0, 0, -1))
+        if tzsgn == '+':
+            ts += (3600.0 * float(tzh) + 60.0 * float(tzm))
+        else:
+            ts -= (3600.0 * float(tzh) + 60.0 * float(tzm))
+        _syslog_ts_prev = ts
         return _syslog_ts_prev
 
     m = fmt2.match(s)
     if m:
-        tstr = s.split(' ', 1)[0]
-        _syslog_ts_prev = utils.parse_to_timestamp(tstr)
+        _syslog_ts_prev = utils.parse_to_timestamp(m.group(1))
         return _syslog_ts_prev
 
     m = fmt3.match(s)
     if m:
-        tstr = s.split(' ', 1)[0].replace('_', ' ')
+        if YEAR is None:
+            set_year()
+        tstr = YEAR + ' ' + m.group(1)
+
+        dt = datetime.datetime.strptime(tstr, '%Y %b %d %H:%M:%S')
+        from dateutil import tz
+        ts = utils.total_seconds(dt - tz.tzlocal().utcoffset(dt) - datetime.datetime(1970, 1, 1))
+        _syslog_ts_prev = ts
+        return _syslog_ts_prev
+
+    m = fmt4.match(s)
+    if m:
+        tstr = m.group(1).replace('_', ' ')
         _syslog_ts_prev = utils.parse_to_timestamp(tstr)
         return _syslog_ts_prev
 
     crmlog.common_debug("malformed line: %s" % s)
     return _syslog_ts_prev
-
-
-_syslog2node_formats = (re.compile(r'^[a-zA-Z]{2,4} \d{1,2} \d{2}:\d{2}:\d{2}\s+(?:\[\d+\])?\s*([\S]+)'),
-                        re.compile(r'^\d{4}-\d{2}-\d{2}T\S+\s+(?:\[\d+\])?\s*([\S]+)'),
-                        re.compile(r'^\d{4}\/\d{2}\/\d{2}_\d{2}:\d{2}:\d{2}'))
 
 
 _syslog_node_prev = None
@@ -114,15 +130,20 @@ def syslog2node(s):
     '''
     global _syslog_node_prev
 
-    fmt1, fmt2, _ = _syslog2node_formats
-    m = fmt1.search(s)
+    fmt1, fmt2, fmt3, _ = _syslog2node_formats
+    m = fmt1.match(s)
     if m:
-        _syslog_node_prev = m.group(1)
+        _syslog_node_prev = m.group(11)
         return _syslog_node_prev
 
-    m = fmt2.search(s)
+    m = fmt2.match(s)
     if m:
-        _syslog_node_prev = m.group(1)
+        _syslog_node_prev = m.group(2)
+        return _syslog_node_prev
+
+    m = fmt3.match(s)
+    if m:
+        _syslog_node_prev = m.group(2)
         return _syslog_node_prev
 
     try:
@@ -131,7 +152,10 @@ def syslog2node(s):
                       "%b %d %H:%M:%S")
         _syslog_node_prev = s.split()[3]
         return _syslog_node_prev
-    except Exception:  # try the rfc5424
+    except ValueError:  # try the rfc5424
+        ls = s.split()
+        if not ls:
+            return _syslog_node_prev
         rfc5424 = s.split()[0]
         if 'T' in rfc5424:
             try:
@@ -142,3 +166,51 @@ def syslog2node(s):
                 return _syslog_node_prev
         else:
             return _syslog_node_prev
+
+
+def syslog_ts_node(s):
+    """
+    Returns (timestamp, node) from a syslog log line
+    """
+    global _syslog_ts_prev
+    global _syslog_node_prev
+    fmt1, fmt2, fmt3, fmt4 = _syslog2node_formats
+
+    # RFC3339
+    m = fmt1.match(s)
+    if m:
+        year, month, day, hour, minute, second, ms, tzsgn, tzh, tzm, node = m.groups()
+        ts = time.mktime((int(year), int(month), int(day), int(hour), int(minute), int(second), 0, 0, -1))
+        if tzsgn == '+':
+            ts += (3600.0 * float(tzh) + 60.0 * float(tzm))
+        else:
+            ts -= (3600.0 * float(tzh) + 60.0 * float(tzm))
+        _syslog_ts_prev = ts
+        _syslog_node_prev = node
+        return _syslog_ts_prev, node
+
+    m = fmt2.match(s)
+    if m:
+        _syslog_ts_prev, _syslog_node_prev = utils.parse_to_timestamp(m.group(1)), m.group(2)
+        return _syslog_ts_prev, _syslog_node_prev
+
+    m = fmt3.match(s)
+    if m:
+        if YEAR is None:
+            set_year()
+        tstr = YEAR + ' ' + m.group(1)
+
+        dt = datetime.datetime.strptime(tstr, '%Y %b %d %H:%M:%S')
+        from dateutil import tz
+        ts = utils.total_seconds(dt - tz.tzlocal().utcoffset(dt) - datetime.datetime(1970, 1, 1))
+        _syslog_ts_prev, _syslog_node_prev = ts, m.group(2)
+        return _syslog_ts_prev, _syslog_node_prev
+
+    m = fmt4.match(s)
+    if m:
+        tstr = m.group(1).replace('_', ' ')
+        _syslog_ts_prev = utils.parse_to_timestamp(tstr)
+        return _syslog_ts_prev, _syslog_node_prev
+
+    crmlog.common_debug("malformed line: %s" % s)
+    return _syslog_ts_prev, _syslog_node_prev

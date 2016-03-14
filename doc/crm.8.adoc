@@ -4769,6 +4769,22 @@ transition log
 transition save 0 enigma-22
 ...............
 
+[[cmdhelp_history_transitions,List transitions]]
+==== `transitions`
+
+A transition represents a change in cluster configuration or
+state. This command lists the transitions in the current timeframe.
+
+Usage:
+...............
+transitions
+...............
+Example:
+...............
+transitions
+...............
+
+
 [[cmdhelp_history_wdiff,cluster states/transitions difference]]
 ==== `wdiff`
 

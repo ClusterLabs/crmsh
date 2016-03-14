@@ -122,9 +122,6 @@ class History(command.UI):
     def do_refresh(self, context, force=''):
         "usage: refresh"
         self._init_source()
-        if options.history != "live":
-            common_info("nothing to refresh if source isn't live")
-            return False
         if force:
             if force != "force" and force != "--force":
                 context.fatal_error("Expected 'force' or '--force' (was '%s')" % (force))
@@ -298,6 +295,12 @@ class History(command.UI):
         return xmlutil.pe2shadow(f, name)
 
     @command.skill_level('administrator')
+    def do_transitions(self, context):
+        self._init_source()
+        s = '\n'.join(crm_report().show_transitions())
+        utils.page_string(s)
+
+    @command.skill_level('administrator')
     @command.completers(compl.join(compl.call(lambda: crm_report().peinputs_list()),
                                    compl.choice(['log', 'showdot', 'save'])))
     def do_transition(self, context, *args):
@@ -332,7 +335,10 @@ class History(command.UI):
         elif subcmd == "save":
             rc = self._pe2shadow(f, argl)
         elif subcmd == "tags":
-            rc = crm_report().show_transition_tags(f)
+            tags = crm_report().get_transition_tags(f)
+            rc = tags is not None
+            if rc:
+                print(' '.join(tags) if len(tags) else "No tags.")
         else:
             rc = crm_report().show_transition_log(f, True)
         return rc
