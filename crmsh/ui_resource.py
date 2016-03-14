@@ -184,21 +184,25 @@ class RscMgmt(command.UI):
         'set': "crm_resource -r '%s' -p '%s' -v '%s'",
         'delete': "crm_resource -r '%s' -d '%s'",
         'show': "crm_resource -r '%s' -g '%s'",
+        'get': "crm_resource -r '%s' -g '%s'",
     }
     rsc_meta = {
         'set': "crm_resource --meta -r '%s' -p '%s' -v '%s'",
         'delete': "crm_resource --meta -r '%s' -d '%s'",
         'show': "crm_resource --meta -r '%s' -g '%s'",
+        'get': "crm_resource --meta -r '%s' -g '%s'",
     }
     rsc_failcount = {
         'set': "crm_attribute -t status -n 'fail-count-%s' -N '%s' -v '%s' -d 0",
         'delete': "crm_attribute -t status -n 'fail-count-%s' -N '%s' -D -d 0",
         'show': "crm_attribute -t status -n 'fail-count-%s' -N '%s' -G -d 0",
+        'get': "crm_attribute -t status -n 'fail-count-%s' -N '%s' -G -d 0",
     }
     rsc_utilization = {
         'set': "crm_resource -z -r '%s' -p '%s' -v '%s'",
         'delete': "crm_resource -z -r '%s' -d '%s'",
         'show': "crm_resource -z -r '%s' -g '%s'",
+        'get': "crm_resource -z -r '%s' -g '%s'",
     }
     rsc_secret = {
         'set': "cibsecret set '%s' '%s' '%s'",
@@ -206,6 +210,7 @@ class RscMgmt(command.UI):
         'unstash': "cibsecret unstash '%s' '%s'",
         'delete': "cibsecret delete '%s' '%s'",
         'show': "cibsecret get '%s' '%s'",
+        'get': "cibsecret get '%s' '%s'",
         'check': "cibsecret check '%s' '%s'",
     }
     rsc_refresh = "crm_resource -C"
