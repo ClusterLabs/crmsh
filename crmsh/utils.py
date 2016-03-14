@@ -1070,6 +1070,15 @@ def datetime_to_timestamp(dt):
         return None
 
 
+def timestamp_to_datetime(ts):
+    """
+    Convert a timestamp into a naive datetime object
+    """
+    import dateutil
+    import dateutil.tz
+    return make_datetime_naive(datetime.datetime.fromtimestamp(ts).replace(tzinfo=dateutil.tz.tzlocal()))
+
+
 def parse_time(t):
     '''
     Try to make sense of the user provided time spec.
