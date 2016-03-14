@@ -2,6 +2,7 @@ session History
 history
 source history-test.tar.bz2
 info
+events
 node xen-d
 node xen-e
 node .*
@@ -14,6 +15,7 @@ log
 exclude clear
 peinputs
 peinputs v
+transitions
 refresh
 resource d1
 # reduce report span
@@ -26,6 +28,7 @@ transition nograph
 transition -1 nograph
 transition save 0 _crmsh_regtest
 transition log 49
+transition tags 49
 # reset timeframe
 timeframe
 session save _crmsh_regtest
