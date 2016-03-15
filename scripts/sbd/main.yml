@@ -19,19 +19,10 @@ parameters:
     example: stonith-sbd
     required: true
     type: resource
-  - name: sbd_device
-    shortdesc: Device Name (Shared Disk)
-    longdesc: >
-      Shared device used by SBD. Make sure that the device
-      remains the same on reboots. It's preferable to use
-      udev generated names rather than the usual /dev/sd[N].
-    type: string
-    required: false
 
 actions:
   - cib: |
       primitive {{id}} stonith:external/sbd
-        {{#sbd_device}}
-        params sbd_device="{{sbd_device}}"
-        {{/sbd_device}}
         op start start-delay=15s timeout=60s
+
+      property stonith-enabled=true
