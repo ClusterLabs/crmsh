@@ -47,6 +47,7 @@ scripts/sapdb/main.yml
 scripts/sapinstance/main.yml
 scripts/sap-simple-stack/main.yml
 scripts/sap-simple-stack-plus/main.yml
+scripts/sbd-device/main.yml
 scripts/sbd/main.yml
 scripts/virtual-ip/main.yml
 templates/apache
@@ -74,6 +75,7 @@ test/descriptions
 test/evaltest.sh
 test/history-test.tar.bz2
 test/list-undocumented-commands.py
+test/profile-history.sh
 test/README.regression
 test/regression.sh
 test/run

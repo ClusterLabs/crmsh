@@ -16,13 +16,20 @@ longdesc: |
 parameters:
   - name: id
     shortdesc: Resource ID (Name)
-    example: stonith-sbd
+    value: sbd-fencing
+    example: sbd-fencing
     required: true
     type: resource
 
+include:
+  - script: sbd-device
+    required: false
+
 actions:
+  - include: sbd-device
+
   - cib: |
       primitive {{id}} stonith:external/sbd
-        op start start-delay=15s timeout=60s
+        pcmk_delay_max=30s
 
       property stonith-enabled=true

@@ -1,0 +1,63 @@
+# Copyright (C) 2016 Kristoffer Gronlund
+#
+# License: GNU General Public License (GPL)
+version: 2.2
+category: Script
+shortdesc: "Create SBD Device"
+longdesc: |
+  Optional step to initialize and configure the SBD Device.
+
+  Prerequisites:
+
+    * The environment must have shared storage reachable by all nodes.
+
+parameters:
+  - name: device
+    shortdesc: Shared Storage Device
+    example: /dev/disk/by-id/...
+    required: true
+    type: string
+
+  - name: watchdog
+    shortdesc: Watchdog Device
+    value: /dev/watchdog
+    type: string
+
+actions:
+  - shortdesc: Verify configuration
+    sudo: true
+    call: |
+      #!/bin/sh
+      set -e
+      systemctl is-active --quiet sbd && { echo "ERROR: SBD daemon is already running"; exit 1; } || true
+      test -b "{{device}}" || { echo "ERROR: Not a device: {{device}"; exit 1; }
+      lsmod | egrep "(wd|dog)" || { echo "ERROR: No watchdog kernel module loaded"; exit 1; }
+      test -b "{{watchdog}}" || { echo "ERROR: Not a device: {{watchdog}}"; exit 1; }
+
+  - shortdesc: Initialize the SBD device
+    sudo: true
+    nodes: local
+    call: |
+      #!/bin/sh
+      set -e
+      sbd -d "{{device}}" create
+
+  - shortdesc: Verify SBD Device
+    call: |
+      #!/bin/sh
+      sbd -d "{{device}}" list
+
+  - shortdesc: Configure SBD Daemon
+    sudo: true
+    call: |
+      #!/bin/sh
+      [ -f "/etc/sysconfig/sbd" ] && rm -f /etc/sysconfig/sbd || true
+      <<EOF
+      SBD_DEVICE="{{device}}"
+      SBD_WATCHDOG="yes"
+      SBD_WATCHDOG_DEV="{{watchdog}}"
+      EOF > /etc/sysconfig/sbd
+
+  - shortdesc: Enable SBD Daemon
+    service:
+      - sbd: start
