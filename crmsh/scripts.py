@@ -1876,6 +1876,8 @@ class RunActions(object):
         islocal = False
         if nodes == 'all':
             pass
+        elif nodes == 'local':
+            islocal = True
         elif nodes is not None and nodes != []:
             islocal = nodes == [self.local_node_name()]
         else:
@@ -1884,16 +1886,20 @@ class RunActions(object):
         return islocal
 
     def call(self, nodes, cmdline, is_json_output=False):
-        if not self._is_local(nodes):
-            self.result = self._process_remote(cmdline, is_json_output)
+        if cmdline.startswith("#!"):
+            self.execute_shell(nodes or 'all', cmdline)
         else:
-            self.result = self._process_local(cmdline, is_json_output)
-        self.rc = self.result not in (False, None)
+            if not self._is_local(nodes):
+                self.result = self._process_remote(cmdline, is_json_output)
+            else:
+                self.result = self._process_local(cmdline, is_json_output)
+            self.rc = self.result not in (False, None)
 
     def execute_shell(self, nodes, cmdscript):
         """
         execute the shell script...
         """
+        cmdscript = str(cmdscript).rstrip() + '\n'
         if self.dry_run:
             self.printer.print_command(nodes, cmdscript)
             self.result = ''
