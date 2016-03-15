@@ -97,7 +97,7 @@ include:
 
 actions:
   - shortdesc: Ensure NFS packages are installed
-    install: nfs-client nfs-kernel-server
+    install: nfs-client nfs-kernel-server nfs-utils
 
   - shortdesc: Configure cluster resource for the NFS server
     cib: |

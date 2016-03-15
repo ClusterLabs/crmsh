@@ -51,7 +51,7 @@ include:
 actions:
   - crm: "configure show {{base-id}}"
     shortdesc: Ensure That the File System Resource Exists
-  - install: nfs-client nfs-kernel-server
+  - install: nfs-client nfs-kernel-server nfs-utils
     shortdesc: Install NFS Packages
   - service:
       - nfsserver: enable
