@@ -1868,7 +1868,7 @@ class RunActions(object):
         return False
 
     def _check_sudo_pass(self):
-        if self.sudo and not self.sudo_pass:
+        if self.sudo and not self.sudo_pass and userdir.getuser() != 'root':
             prompt = "sudo password: "
             self.sudo_pass = getpass.getpass(prompt=prompt)
 
