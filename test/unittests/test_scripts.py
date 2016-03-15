@@ -824,3 +824,54 @@ def test_unified():
     pprint(actions)
     eq_(len(actions), 1)
     eq_('primitive bar IPaddr2 ip=192.168.0.15\ngroup g-foo foo bar', actions[-1]['text'].strip())
+
+
+class TestPrinter(object):
+    def __init__(self):
+        import types
+        self.actions = []
+
+        def add_capture(name):
+            def capture(obj, *args):
+                obj.actions.append((name, args))
+            self.__dict__[name] = types.MethodType(capture, self)
+        for name in ('print_header', 'debug', 'error', 'start', 'flush', 'print_command', 'finish'):
+            add_capture(name)
+
+@with_setup(setup_func, teardown_func)
+def test_inline_script():
+    """
+    Test inline script feature for call actions
+    """
+
+    a = '''---
+- version: 2.2
+  category: Script
+  parameters:
+    - name: foo
+      required: true
+      type: string
+  actions:
+    - call: |
+        #!/bin/sh
+        echo "{{foo}}"
+      nodes: local
+'''
+
+    script_a = scripts.load_script_string('foofoo', a)
+    assert script_a is not None
+
+    actions = scripts.verify(script_a,
+                             {"foo": "hello world"}, external_check=False)
+    pprint(actions)
+    assert len(actions) == 1
+    assert actions[0]['name'] == 'call'
+    assert actions[0]['value'] == '#!/bin/sh\necho "hello world"'
+    tp = TestPrinter()
+    scripts.run(script_a,
+                {"foo": "hello world"}, tp)
+
+    for action, args in tp.actions:
+        print action, args
+        if action == 'finish':
+            assert args[0]['value'] == '#!/bin/sh\necho "hello world"'
