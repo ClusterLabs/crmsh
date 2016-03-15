@@ -131,6 +131,7 @@ actions:
   - shortdesc: Add Floating IP Address to Group
     crm: "configure modgroup g-nfs add {{virtual-ip:id}}"
     when: virtual-ip
-  - call: exportfs -v
+  - call: /usr/sbin/exportfs -v
     error: Failed to configure NFS exportfs
     shortdesc: Check Result of exportfs -v
+    sudo: true

@@ -68,6 +68,7 @@ actions:
       order rootfs-before-nfs inf: c-{{rootfs:id}} g-nfs:start
       colocation nfs-with-rootfs inf: g-nfs c-{{rootfs:id}}
       {{/rootfs}}
-  - call: exportfs -v
+  - call: /usr/sbin/exportfs -v
     error: Failed to configure NFS exportfs
     shortdesc: Check Result of exportfs -v
+    sudo: true
