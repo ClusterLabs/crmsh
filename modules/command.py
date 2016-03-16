@@ -205,12 +205,15 @@ def fuzzy_get(items, s):
     import re
 
     def fuzzy_match(rx):
-        matcher = re.compile(rx, re.I)
-        matches = [c
-                   for m, c in items.iteritems()
-                   if matcher.match(m)]
-        if len(matches) == 1:
-            return matches[0]
+        try:
+            matcher = re.compile(rx, re.I)
+            matches = [c
+                       for m, c in items.iteritems()
+                       if matcher.match(m)]
+            if len(matches) == 1:
+                return matches[0]
+        except re.error as e:
+            raise ValueError(e)
         return None
 
     # prefix match
