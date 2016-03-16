@@ -1,5 +1,7 @@
 version: 2.2
-shortdesc: MailTo
+shortdesc: E-Mail
+longdesc: |
+  Notifies recipient by e-mail in the event of a resource takeover.
 category: Basic
 include:
   - agent: ocf:heartbeat:MailTo

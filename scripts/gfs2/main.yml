@@ -34,17 +34,15 @@ parameters:
 actions:
   - include: gfs2-base
   - cib: |
-      primitive {{id}} ocf:heartbeat:Filesystem
-        params
+      primitive {{id}} Filesystem
         directory="{{directory}}"
-        fstype="gfs2"
         device="{{device}}"
+        fstype=gfs2
         {{#options}}options="{{options}}"{{/options}}
-
-      monitor {{id}} 20:40
+        op monitor interval=20s timeout=40s
 
       clone c-{{id}} {{id}}
-        meta interleave="true" ordered="true"
+        meta interleave=true ordered=true
 
   - crm: "configure modgroup {{gfs2-base:clvm-group}} add c-{{id}}"
     shortdesc: Add cloned file system to cLVM group

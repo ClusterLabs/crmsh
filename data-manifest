@@ -72,6 +72,7 @@ test/descriptions
 test/evaltest.sh
 test/history-test.tar.bz2
 test/list-undocumented-commands.py
+test/profile-history.sh
 test/README.regression
 test/regression.sh
 test/run
