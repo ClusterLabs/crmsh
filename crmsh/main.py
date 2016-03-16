@@ -127,6 +127,10 @@ See the crm(8) man page or call %prog help for more details.""",
                       "of directories separated by semi-colons (e.g. /dir1;/dir2;etc.).")
     parser.add_option("-X", dest="profile", metavar="PROFILE",
                       help="Collect profiling data and save in PROFILE.")
+    parser.add_option("-o", "--opt", action="append", type="string", metavar="OPTION=VALUE",
+                      help="Set crmsh option temporarily. If the options are saved using" +
+                      "+options save+ then the value passed here will also be saved." +
+                      "Multiple options can be set by using +-o+ multiple times.")
     return parser
 
 
@@ -307,6 +311,13 @@ def parse_options():
     options.shadow = opts.cib or options.shadow
     options.scriptdir = opts.scriptdir or options.scriptdir
     options.ask_no = opts.ask_no
+    for opt in opts.opt or []:
+        try:
+            k, v = opt.split('=')
+            s, n = k.split('.')
+            config.set_option(s, n, v)
+        except ValueError as e:
+            raise ValueError("Expected -o <section>.<name>=<value>: %s" % (e))
     return args
 
 
