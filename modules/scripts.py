@@ -204,14 +204,22 @@ class Actions(object):
             action['longdesc'] = ''
         else:
             action['longdesc'] = Text.desc(script, action['longdesc'])
+
+        hre = handles.headmatcher
+
         if 'when' in action:
             when = action['when']
-            if re.search(r'\{\{.*\}\}', when):
+            if hre.search(when):
                 action['when'] = Text(script, when)
             elif when:
                 action['when'] = Text(script, '{{%s}}' % (when))
             else:
                 del action['when']
+        for k, v in action.iteritems():
+            if isinstance(v, basestring) and hre.search(v):
+                v = Text(script, v)
+            if Text.isa(v):
+                action[k] = str(v).strip()
 
     @staticmethod
     def _mergeable(action):
