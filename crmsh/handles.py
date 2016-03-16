@@ -4,7 +4,7 @@
 import re
 
 
-_head_re = re.compile(r'\{\{(\#|\^)?([A-Za-z0-9\#\$:_-]+)\}\}')
+headmatcher = re.compile(r'\{\{(\#|\^)?([A-Za-z0-9\#\$:_-]+)\}\}')
 
 
 class value(object):
@@ -75,7 +75,7 @@ def _textify(obj):
 def _parse(template, context, strict):
     ret = ""
     while template:
-        head = _head_re.search(template)
+        head = headmatcher.search(template)
         if head is None:
             ret += template
             break
