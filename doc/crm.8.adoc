@@ -97,6 +97,11 @@ OPTIONS
     Extra directory where crm looks for cluster scripts, or a list of
     directories separated by semi-colons (e.g. +/dir1;/dir2;etc.+).
 
+*-o, --opt*='OPTION=VALUE'::
+     Set crmsh option temporarily. If the options are saved using
+     +options save+ then the value passed here will also be saved.
+     Multiple options can be set by using +-o+ multiple times.
+
 [[topics_Introduction,Introduction]]
 == Introduction
 
