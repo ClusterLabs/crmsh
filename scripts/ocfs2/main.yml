@@ -5,7 +5,7 @@
 version: 2.2
 category: File System
 shortdesc: OCFS2 File System
-longdesc: >
+longdesc: |
   Configure an OCFS2 File System resource and add
   it to a cloned DLM base group. OCFS2 uses the
   cluster membership services from Pacemaker which

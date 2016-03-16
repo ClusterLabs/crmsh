@@ -2,9 +2,9 @@
 #
 # License: GNU General Public License (GPL)
 version: 2.2
-category: Server
+category: NFS
 shortdesc: NFS Server
-longdesc: >
+longdesc: |
   Configure an NFS server. Requires an existing file system resource,
   for example a file system running on LVM on DRBD.
 

@@ -14,7 +14,7 @@ ERROR: 2: Error when loading script haproxy: No meta-data for agent: systemd:hap
 .EXT crm_resource --show-metadata ocf:heartbeat:Raid1
 Basic:
 
-mailto           MailTo
+mailto           E-Mail
 virtual-ip       Virtual IP
 
 Database:
@@ -31,10 +31,15 @@ clvm-vg          Cluster-aware LVM (Volume Group)
 drbd             DRBD Block Device
 filesystem       File System (mount point)
 gfs2             GFS2 File System (Cloned)
-gfs2-base        GFS2 File System Base (Cloned)
 lvm-drbd         LVM Group on DRBD
 ocfs2            OCFS2 File System
 raid-lvm         RAID Hosting LVM
+
+NFS:
+
+exportfs         NFS Exported File System
+nfsserver        NFS Server
+nfsserver-lvm-drbd NFS Server on LVM and DRBD
 
 SAP:
 
@@ -47,9 +52,6 @@ sap-simple-stack-plus SAP SimpleStack+ Instance
 Server:
 
 apache           Apache Webserver
-exportfs         NFS Exported File System
-nfsserver        NFS Server
-nfsserver-lvm-drbd NFS Server on LVM and DRBD
 
 Stonith:
 
@@ -61,7 +63,7 @@ sbd              SBD, Shared storage based fencing
 ERROR: 3: Error when loading script haproxy: No meta-data for agent: systemd:haproxy
 Basic:
 
-mailto           MailTo
+mailto           E-Mail
 virtual-ip       Virtual IP
 
 Database:
@@ -78,10 +80,15 @@ clvm-vg          Cluster-aware LVM (Volume Group)
 drbd             DRBD Block Device
 filesystem       File System (mount point)
 gfs2             GFS2 File System (Cloned)
-gfs2-base        GFS2 File System Base (Cloned)
 lvm-drbd         LVM Group on DRBD
 ocfs2            OCFS2 File System
 raid-lvm         RAID Hosting LVM
+
+NFS:
+
+exportfs         NFS Exported File System
+nfsserver        NFS Server
+nfsserver-lvm-drbd NFS Server on LVM and DRBD
 
 SAP:
 
@@ -95,6 +102,7 @@ Script:
 
 add              Add a new node to an already existing cluster
 check-uptime     Check uptime of nodes
+gfs2-base        GFS2 File System Base (Cloned)
 health           Check the health of the cluster
 init             Initialize a new cluster
 lvm              Controls the availability of an LVM Volume Group
@@ -107,9 +115,6 @@ sbd-device       Create SBD Device
 Server:
 
 apache           Apache Webserver
-exportfs         NFS Exported File System
-nfsserver        NFS Server
-nfsserver-lvm-drbd NFS Server on LVM and DRBD
 
 Stonith:
 
@@ -235,10 +240,9 @@ virtual-ip
 ERROR: 7: script.list: Unexpected argument 'bogus': expected  [all|names]
 .INP: show mailto
 mailto (Basic)
-MailTo
+E-Mail
 
- This is a resource agent for MailTo. It sends email to a sysadmin
-whenever  a takeover occurs.
+Notifies recipient by e-mail in the event of a resource takeover.
 
 1. Notifies recipients by email in the event of resource takeover
 
@@ -267,7 +271,7 @@ whenever  a takeover occurs.
 	clone c-foo foo
 
 .INP: run mailto id=foo email=test@example.com subject=hello nodes=node1 dry_run=true
-INFO: 10: MailTo
+INFO: 10: E-Mail
 INFO: 10: Nodes: node1
 ** all - #!/usr/bin/env python
 import crm_script

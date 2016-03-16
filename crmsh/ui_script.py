@@ -159,12 +159,17 @@ def _nvpairs2parameters(args):
         _set(ret, key.split(':'), val)
     return ret
 
+_fixups = {
+    'wizard': 'Legacy Wizards',
+    'sap': 'SAP',
+    'nfs': 'NFS'
+}
+
 
 def _category_pretty(c):
-    if str(c).lower() == 'wizard':
-        return "Wizard (Legacy)"
-    elif str(c).lower() == 'sap':
-        return "SAP"
+    v = _fixups.get(str(c).lower())
+    if v is not None:
+        return v
     return str(c).capitalize()
 
 

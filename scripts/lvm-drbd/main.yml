@@ -4,7 +4,7 @@
 version: 2.2
 category: File System
 shortdesc: LVM Group on DRBD
-longdesc: >
+longdesc: |
   Configure a LVM resource group on top of DRBD.
 
   A DRBD primitive and Multi-state resource is used to replicate

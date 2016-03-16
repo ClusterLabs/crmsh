@@ -2,9 +2,9 @@
 #
 # License: GNU General Public License (GPL)
 version: 2.2
-category: Server
+category: NFS
 shortdesc: NFS Server on LVM and DRBD
-longdesc: >
+longdesc: |
   Configure a highly available two-node NFS server on top of
   LVM and DRBD.
 
