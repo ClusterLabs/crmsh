@@ -2982,7 +2982,7 @@ If you think you may have found a bug or just need clarification
 from developers or your support, the `session pack` command can
 help create a report. This is an example:
 ...............
-    crm(live)history# timeframe "Jul 18 12:00" "Jul 18 12:30"
+    crm(live)history# limit "Jul 18 12:00" "Jul 18 12:30"
     crm(live)history# session save strange_restart
     crm(live)history# session pack
     Report saved in .../strange_restart.tar.bz2
