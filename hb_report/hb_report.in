@@ -25,7 +25,7 @@ LOGD_CF=`findlogdcf @sysconfdir@ $HA_DIR`
 export LOGD_CF
 
 SSH_PASSWORD_NODES=""
-: ${SSH_OPTS="-o StrictHostKeyChecking=no -o EscapeChar=none"}
+: ${SSH_OPTS="-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"}
 LOG_PATTERNS="CRIT: ERROR:"
 # PEINPUTS_PATT="peng.*PEngine Input stored"
 
