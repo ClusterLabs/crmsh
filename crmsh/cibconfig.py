@@ -127,7 +127,7 @@ def fill_nvpairs(name, node, attrs, id_hint):
         nvpair = etree.SubElement(node, "nvpair", name=n)
         if v is not None:
             nvpair.set("value", v)
-        idmgmt.set(nvpair, None, nvpair_pfx)
+        idmgmt.set_id(nvpair, None, nvpair_pfx)
     return node
 
 
@@ -170,7 +170,7 @@ def mkxmlnvpairs(name, attrs, id_hint):
         node.set("id", id_hint)
     else:
         # operations don't need no id
-        idmgmt.set(node, None, id_hint, id_required=notops)
+        idmgmt.set_id(node, None, id_hint, id_required=notops)
     return fill_nvpairs(name, node, attrs, id_hint)
 
 
@@ -678,7 +678,7 @@ def fix_node_ids(node, oldnode):
     def recurse(node, oldnode, prefix):
         refnode = lookup_node(node, oldnode)
         if needs_id(node):
-            idmgmt.set(node, refnode, prefix, id_required=(node.tag not in idless))
+            idmgmt.set_id(node, refnode, prefix, id_required=(node.tag not in idless))
         prefix = next_prefix(node, refnode, prefix)
         for c in node.iterchildren():
             if not is_comment(c):
@@ -747,7 +747,7 @@ def id_for_node(node, id_hint=None):
         if node.tag == 'op':
             if id_hint is None:
                 id_hint = node.get("rsc")
-            idmgmt.set(node, None, id_hint)
+            idmgmt.set_id(node, None, id_hint)
             obj_id = node.get('id')
         else:
             defid = default_id_for_tag(root.tag)
@@ -1310,7 +1310,7 @@ class Op(object):
                 self.node.set(n, v)
             else:
                 inst_attr[n] = v
-        idmgmt.set(self.node, None, self.prim)
+        idmgmt.set_id(self.node, None, self.prim)
         if inst_attr:
             nia = mkxmlnvpairs("instance_attributes", inst_attr, self.node.get("id"))
             self.node.append(nia)
@@ -1364,7 +1364,7 @@ class CibPrimitive(CibObject):
             return None
         # create an xml node
         if 'id' not in node.attrib:
-            idmgmt.set(node, None, self.obj_id)
+            idmgmt.set_id(node, None, self.obj_id)
         valid_attrs = olist(schema.get('attr', 'op', 'a'))
         inst_attr = {}
         for attr in node.attrib.keys():

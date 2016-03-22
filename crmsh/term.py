@@ -6,29 +6,27 @@ import re
 
 # from: http://code.activestate.com/recipes/475116/
 
-"""
-A module that can be used to portably generate formatted output to
-a terminal.
-Defines a set of instance variables whose
-values are initialized to the control sequence necessary to
-perform a given action.  These can be simply included in normal
-output to the terminal:
-    >>> print 'This is '+term.colors.GREEN+'green'+term.colors.NORMAL
-Alternatively, the `render()` method can used, which replaces
-'${action}' with the string required to perform 'action':
-    >>> print term.render('This is ${GREEN}green${NORMAL}')
-If the terminal doesn't support a given action, then the value of
-the corresponding instance variable will be set to ''.  As a
-result, the above code will still work on terminals that do not
-support color, except that their output will not be colored.
-Also, this means that you can test whether the terminal supports a
-given action by simply testing the truth value of the
-corresponding instance variable:
-    >>> if term.colors.CLEAR_SCREEN:
-    ...     print 'This terminal supports clearning the screen.'
-Finally, if the width and height of the terminal are known, then
-they will be stored in the `COLS` and `LINES` attributes.
-"""
+# A module that can be used to portably generate formatted output to
+# a terminal.
+# Defines a set of instance variables whose
+# values are initialized to the control sequence necessary to
+# perform a given action.  These can be simply included in normal
+# output to the terminal:
+#     >>> print 'This is '+term.colors.GREEN+'green'+term.colors.NORMAL
+# Alternatively, the `render()` method can used, which replaces
+# '${action}' with the string required to perform 'action':
+#     >>> print term.render('This is ${GREEN}green${NORMAL}')
+# If the terminal doesn't support a given action, then the value of
+# the corresponding instance variable will be set to ''.  As a
+# result, the above code will still work on terminals that do not
+# support color, except that their output will not be colored.
+# Also, this means that you can test whether the terminal supports a
+# given action by simply testing the truth value of the
+# corresponding instance variable:
+#     >>> if term.colors.CLEAR_SCREEN:
+#     ...     print 'This terminal supports clearning the screen.'
+# Finally, if the width and height of the terminal are known, then
+# they will be stored in the `COLS` and `LINES` attributes.
 
 
 class colors(object):

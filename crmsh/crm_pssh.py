@@ -13,7 +13,6 @@ corresponding remote node's hostname or IP address.
 
 import os
 import glob
-import re
 
 from parallax.manager import Manager, FatalError
 from parallax.task import Task
