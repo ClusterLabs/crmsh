@@ -24,13 +24,13 @@ def unpack_node_xmldata(node, is_offline):
     returns the data to pass to print_node
     is_offline: true|false
     """
-    type = uname = ident = ""
+    typ = uname = ident = ""
     inst_attr = []
     other = {}
     for attr in node.keys():
         v = node.get(attr)
         if attr == "type":
-            type = v
+            typ = v
         elif attr == "uname":
             uname = v
         elif attr == "id":
@@ -39,7 +39,7 @@ def unpack_node_xmldata(node, is_offline):
             other[attr] = v
     inst_attr = [cli_nvpairs(nvpairs2list(elem))
                  for elem in node.xpath('./instance_attributes')]
-    return uname, ident, type, other, inst_attr, is_offline
+    return uname, ident, typ, other, inst_attr, is_offline
 
 
 def print_node(uname, ident, node_type, other, inst_attr, offline):

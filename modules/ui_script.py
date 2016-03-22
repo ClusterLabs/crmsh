@@ -194,7 +194,7 @@ class Script(command.UI):
         for arg in args:
             if arg.lower() not in ("all", "names"):
                 context.fatal_error("Unexpected argument '%s': expected  [all|names]" % (arg))
-        all = any([x for x in args if x.lower() == 'all'])
+        show_all = any([x for x in args if x.lower() == 'all'])
         names = any([x for x in args if x.lower() == 'names'])
         if not names:
             categories = {}
@@ -204,7 +204,7 @@ class Script(command.UI):
                     if script is None:
                         continue
                     cat = script['category'].lower()
-                    if not all and cat == 'script':
+                    if not show_all and cat == 'script':
                         continue
                     cat = _category_pretty(cat)
                     if cat not in categories:
@@ -219,7 +219,7 @@ class Script(command.UI):
                 for s in sorted(lst):
                     print(s)
                 print('')
-        elif all:
+        elif show_all:
             for name in scripts.list_scripts():
                 print(name)
         else:
@@ -235,7 +235,7 @@ class Script(command.UI):
 
     @command.completers_repeating(compl.call(scripts.list_scripts))
     @command.alias('info', 'describe')
-    def do_show(self, context, name, all=None):
+    def do_show(self, context, name, show_all=None):
         '''
         Describe the given script.
         '''
@@ -243,14 +243,14 @@ class Script(command.UI):
         if script is None:
             return False
 
-        all = all == 'all'
+        show_all = show_all == 'all'
 
         vals = {
             'name': script['name'],
             'category': _category_pretty(script['category']),
             'shortdesc': str(script['shortdesc']),
             'longdesc': scripts.format_desc(script['longdesc']),
-            'steps': "\n".join((describe_step([i], [], s, all) for i, s in enumerate(script['steps'])))}
+            'steps': "\n".join((describe_step([i], [], s, show_all) for i, s in enumerate(script['steps'])))}
         output = """%(name)s (%(category)s)
 %(shortdesc)s
 
@@ -258,7 +258,7 @@ class Script(command.UI):
 
 %(steps)s
 """ % vals
-        if all:
+        if show_all:
             output += "Common Parameters\n\n"
             for name, defval, desc in scripts.common_params():
                 output += "  %s\n" % (name)

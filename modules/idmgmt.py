@@ -1,15 +1,13 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
+#
+# Make sure that ids are unique.
 
 from . import constants
 import copy
 from .msg import common_error, id_used_err
 from . import xmlutil
 
-
-'''
-Make sure that ids are unique.
-'''
 _id_store = {}
 _state = []
 ok = True  # error var
@@ -165,7 +163,7 @@ def clear():
     _state = []
 
 
-def set(node, oldnode, id_hint, id_required=True):
+def set_id(node, oldnode, id_hint, id_required=True):
     '''
     Set the id attribute for the node.
     - if the node already contains "id", keep it
