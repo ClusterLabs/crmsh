@@ -82,6 +82,8 @@ def syslog_ts(s):
             ts += (3600.0 * float(tzh) + 60.0 * float(tzm))
         else:
             ts -= (3600.0 * float(tzh) + 60.0 * float(tzm))
+        if ms:
+            ts += float("0.%s" % ms)
         _syslog_ts_prev = ts
         return _syslog_ts_prev
 
