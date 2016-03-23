@@ -256,8 +256,8 @@ class Actions(object):
 
     @staticmethod
     def _needs_sudo(action):
-        if action['name'] == 'call' and action.get('sudo'):
-            return True
+        if action['name'] == 'call':
+            return action.get('sudo') or action.get('nodes') != 'local'
         return action['name'] in ('apply', 'apply_local', 'install', 'service')
 
     def __init__(self, run, action):
