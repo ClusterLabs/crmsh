@@ -741,6 +741,7 @@ sys_info() {
 	${HA_NOARCHBIN}/hb_report -V # our info
 	echo "resource-agents: `grep 'Build version:' @OCF_ROOT_DIR@/lib/heartbeat/ocf-shellfuncs`"
 	crm_info
+	booth --version
 	pkg_versions $PACKAGES
 	skip_lvl 1 || verify_packages $PACKAGES
 	echo "Platform: `uname`"
@@ -1286,6 +1287,7 @@ pacemaker-pygui pacemaker-pymgmt pymgmt-client
 openais libopenais2 libopenais3 corosync libcorosync4
 resource-agents cluster-glue libglue2 ldirectord libqb0
 heartbeat heartbeat-common heartbeat-resources libheartbeat2
+booth
 ocfs2-tools ocfs2-tools-o2cb ocfs2console
 ocfs2-kmp-default ocfs2-kmp-pae ocfs2-kmp-xen ocfs2-kmp-debug ocfs2-kmp-trace
 drbd drbd-kmp-xen drbd-kmp-pae drbd-kmp-default drbd-kmp-debug drbd-kmp-trace
