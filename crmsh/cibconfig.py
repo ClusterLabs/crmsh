@@ -261,7 +261,7 @@ class CibObjectSet(object):
         try:
             ret = open(src)
             return ret
-        except IOError, e:
+        except IOError as e:
             common_err("could not open %s: %s" % (src, e))
         return False
 
@@ -300,9 +300,9 @@ class CibObjectSet(object):
                         continue
                 rc = True
             os.unlink(tmp)
-        except OSError, e:
+        except OSError as e:
             common_debug("unlink(%s) failure: %s" % (tmp, e))
-        except IOError, msg:
+        except IOError as msg:
             common_err(msg)
         return rc
 
@@ -596,7 +596,7 @@ class CibObjectSetRaw(CibObjectSet):
     def save(self, s, remove=True, method='replace'):
         try:
             cib_elem = etree.fromstring(s)
-        except etree.ParseError, msg:
+        except etree.ParseError as msg:
             cib_parse_err(msg, s)
             return False
         sanitize_cib(cib_elem)
@@ -754,7 +754,7 @@ def id_for_node(node, id_hint=None):
             if defid is not None:
                 try:
                     node.set('id', defid)
-                except TypeError, e:
+                except TypeError as e:
                     raise ValueError('Internal error: %s (%s)' % (e, etree.tostring(node)))
                 obj_id = node.get('id')
                 idmgmt.save(obj_id)
@@ -1000,7 +1000,7 @@ class CibObject(object):
         '''
         Format and add comment (if any).
         '''
-        s = cli_format(l, break_lines=(format_mode>0))
+        s = cli_format(l, break_lines=(format_mode > 0))
         cs = '\n'.join(comments)
         if len(comments) and format_mode >= 0:
             return '\n'.join([cs, s])
