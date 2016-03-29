@@ -14,6 +14,7 @@ from . import msg as crmlog
 from . import xmlutil
 from . import logtime
 from . import utils
+from . import log_patterns
 
 
 _METADATA_FILENAME = "__meta.json"
@@ -221,13 +222,10 @@ class CibInfo(object):
         self.clones = {}
         self.cloned_resources = set()
         self.not_cloned_resources = set()
-        self.pcmk_118 = False
 
         if self.filename:
-            self.pcmk_118 = utils.is_pcmk_118(self.filename)
             cib_elem = xmlutil.file2cib_elem(self.filename)
 
-        # no cib?
         if cib_elem is None:
             return
 
@@ -552,14 +550,11 @@ class LogParser(object):
         get the list of patterns for this type, up to and
         including current detail level
         '''
-        if self.cib.pcmk_118:
-            from .log_patterns_118 import log_patterns
-        else:
-            from .log_patterns import log_patterns
-        if etype not in log_patterns:
+        patterns = log_patterns.patterns(cib_f=self.cib.filename)
+        if etype not in patterns:
             crmlog.common_error("%s not featured in log patterns" % etype)
             return None
-        return log_patterns[etype][0:self.detail+1]
+        return patterns[etype][0:self.detail+1]
 
     def _build_re(self, etype, args):
         '''
