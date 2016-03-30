@@ -238,9 +238,14 @@ class Report(object):
         return pe_file.replace("%s/" % self.loc, "")
 
     def get_nodes(self):
+        def check_node(p):
+            pp = os.path.join(self.loc, p)
+            if os.path.isfile(os.path.join(pp, 'cib.xml')):
+                return p
+            return os.path.isdir(pp) and self.find_node_log(p)
         return sorted([os.path.basename(p)
                        for p in os.listdir(self.loc)
-                       if self.find_node_log(p) is not None])
+                       if check_node(p)])
 
     def check_nodes(self):
         'Verify if the nodes in cib match the nodes in the report.'
