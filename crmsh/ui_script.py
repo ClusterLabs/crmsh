@@ -377,7 +377,7 @@ class Script(command.UI):
 
         scripts.build_script_cache()
         name = os.path.splitext(os.path.basename(fromscript))[0]
-        script = scripts._load_script_file(name, fromscript)
+        script = scripts.load_script_file(name, fromscript)
         script = flatten(script)
         script["category"] = category
         del script["name"]

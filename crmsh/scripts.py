@@ -996,7 +996,7 @@ def _join_script_lines(txt):
     return s
 
 
-def _load_script_file(script, filename):
+def load_script_file(script, filename):
     if filename.endswith('.yml'):
         parsed = _parse_yaml(script, filename)
     elif filename.endswith('.xml'):
@@ -1041,7 +1041,7 @@ def load_script(script):
     s = _script_cache[script]
     if isinstance(s, basestring):
         try:
-            return _load_script_file(script, s)
+            return load_script_file(script, s)
         except KeyError as err:
             raise ValueError("Error when loading script %s: Expected key %s not found" % (script, err))
         except Exception as err:
