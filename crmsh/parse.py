@@ -12,7 +12,6 @@ from . import schema
 from .utils import keyword_cmp, verify_boolean, lines2cli
 from .utils import get_boolean, olist, canonical_boolean
 from .msg import common_err, syntax_err
-from . import xmlbuilder
 from . import xmlutil
 
 
@@ -260,9 +259,9 @@ class BaseParser(object):
         ret = []
         while True:
             if self.try_match(_KEY_RE):
-                ret.append(xmlbuilder.nvpair(self.matched(1), self.matched(2)))
+                ret.append(xmlutil.nvpair(self.matched(1), self.matched(2)))
             elif self.try_match(_NOVAL_RE):
-                ret.append(xmlbuilder.nvpair(self.matched(1), ""))
+                ret.append(xmlutil.nvpair(self.matched(1), ""))
             else:
                 break
         if len(ret) < minpairs:
@@ -287,17 +286,17 @@ class BaseParser(object):
             if tok is not None and tok.lower() in terminator:
                 break
             elif self.try_match(_NVPAIR_REF_RE):
-                ret.append(xmlbuilder.nvpair_ref(self.matched(1),
-                                                 self.matched(2)))
+                ret.append(xmlutil.nvpair_ref(self.matched(1),
+                                              self.matched(2)))
             elif self.try_match(_NVPAIR_ID_RE):
-                ret.append(xmlbuilder.nvpair_id(self.matched(1),
-                                                self.matched(2),
-                                                self.matched(3)))
+                ret.append(xmlutil.nvpair_id(self.matched(1),
+                                             self.matched(2),
+                                             self.matched(3)))
             elif self.try_match(_NVPAIR_RE):
-                ret.append(xmlbuilder.nvpair(self.matched(1),
-                                             self.matched(2)))
+                ret.append(xmlutil.nvpair(self.matched(1),
+                                          self.matched(2)))
             elif len(terminator) and self.try_match(_NVPAIR_KEY_RE):
-                ret.append(xmlbuilder.new("nvpair", name=self.matched(1)))
+                ret.append(xmlutil.new("nvpair", name=self.matched(1)))
             else:
                 break
         if len(ret) < minpairs:
@@ -405,7 +404,7 @@ class BaseParser(object):
         xmlid = None
         if self.try_match_idspec():
             if self.matched(1) == '$id-ref':
-                r = xmlbuilder.new(tag)
+                r = xmlutil.new(tag)
                 ref = cib_factory.resolve_id_ref(name, self.matched(2))
                 r.set('id-ref', ref)
                 return r
@@ -418,7 +417,7 @@ class BaseParser(object):
         values = self.match_nvpairs(minpairs=0)
         if (allow_empty, xmlid, score, len(rules), len(values)) == (False, None, None, 0, 0):
             return None
-        return xmlbuilder.attributes(tag, rules, values, xmlid=xmlid, score=score)
+        return xmlutil.attributes(tag, rules, values, xmlid=xmlid, score=score)
 
     def match_attr_lists(self, name_map, implicit_initial=None):
         """
@@ -445,7 +444,7 @@ class BaseParser(object):
 
         rules = []
         while self.try_match('rule'):
-            rule = xmlbuilder.new('rule')
+            rule = xmlutil.new('rule')
             rules.append(rule)
             idref = False
             if self.try_match_idspec():
@@ -512,7 +511,7 @@ class BaseParser(object):
         elif self.try_match(_UNARYOP_RE):
             unary_op = self.matched(1)
             attr = self.match_identifier()
-            return xmlbuilder.new('expression', operation=unary_op, attribute=attr)
+            return xmlutil.new('expression', operation=unary_op, attribute=attr)
         else:
             attr = self.match_identifier()
             if not self._BINOP_RE:
@@ -523,11 +522,11 @@ class BaseParser(object):
             optype = self.matched(2)
             binop = self.matched(3)
             val = self.match_any()
-            node = xmlbuilder.new('expression',
-                                  operation=binop,
-                                  attribute=attr,
-                                  value=val)
-            xmlbuilder.maybe_set(node, 'type', optype)
+            node = xmlutil.new('expression',
+                               operation=binop,
+                               attribute=attr,
+                               value=val)
+            xmlutil.maybe_set(node, 'type', optype)
             return node
 
     def match_date(self):
@@ -537,7 +536,7 @@ class BaseParser(object):
         <date_spec hours="9-16"/>
         </date_expression>
         """
-        node = xmlbuilder.new('date_expression')
+        node = xmlutil.new('date_expression')
 
         date_ops = validator.date_ops()
         # spec -> date_spec
@@ -563,11 +562,11 @@ class BaseParser(object):
             # date in start=<start> <duration>
             valid_keys = list(constants.in_range_attrs) + constants.date_spec_names
             vals = self.match_nvpairs_bykey(valid_keys, minpairs=2)
-            return xmlbuilder.set_date_expression(node, 'duration', vals)
+            return xmlutil.set_date_expression(node, 'duration', vals)
         elif op in ('date_spec', 'spec'):
             valid_keys = constants.date_spec_names
             vals = self.match_nvpairs_bykey(valid_keys, minpairs=1)
-            return xmlbuilder.set_date_expression(node, 'date_spec', vals)
+            return xmlutil.set_date_expression(node, 'date_spec', vals)
         else:
             self.err("Unknown date operation '%s', please upgrade crmsh" % (op))
 
@@ -654,15 +653,15 @@ def parse_node(self, cmd):
     """
     self.begin(cmd, min_args=1)
     self.match('node')
-    out = xmlbuilder.new('node')
-    xmlbuilder.maybe_set(out, "id", self.try_match_initial_id() and self.matched(1))
+    out = xmlutil.new('node')
+    xmlutil.maybe_set(out, "id", self.try_match_initial_id() and self.matched(1))
     self.match(_UNAME_RE, errmsg="Expected uname[:type]")
     out.set("uname", self.matched(1))
     if validator.node_type_optional():
-        xmlbuilder.maybe_set(out, "type", self.matched(3))
+        xmlutil.maybe_set(out, "type", self.matched(3))
     else:
         out.set("type", self.matched(3) or constants.node_default_type)
-    xmlbuilder.maybe_set(out, "description", self.try_match_description())
+    xmlutil.maybe_set(out, "description", self.try_match_description())
     self.match_arguments(out, {'attributes': 'instance_attributes',
                                'utilization': 'utilization'},
                          implicit_initial='attributes')
@@ -679,9 +678,9 @@ class ResourceParser(BaseParser):
         if not cpt:
             self.err("Unknown resource type")
         self.match_any()
-        xmlbuilder.maybe_set(out, 'class', cpt[0])
-        xmlbuilder.maybe_set(out, 'provider', cpt[1])
-        xmlbuilder.maybe_set(out, 'type', cpt[2])
+        xmlutil.maybe_set(out, 'class', cpt[0])
+        xmlutil.maybe_set(out, 'provider', cpt[1])
+        xmlutil.maybe_set(out, 'type', cpt[2])
 
     def match_op(self, out, pfx='op'):
         """
@@ -697,9 +696,9 @@ class ResourceParser(BaseParser):
         self.match('op')
         op_type = self.match(_OPTYPE_RE, errmsg="Expected operation type")
         all_attrs = self.match_nvpairs(minpairs=0)
-        node = xmlbuilder.new('op', name=op_type)
+        node = xmlutil.new('op', name=op_type)
         if not any(nvp.get('name') == 'interval' for nvp in all_attrs):
-            all_attrs.append(xmlbuilder.nvpair('interval', '0'))
+            all_attrs.append(xmlutil.nvpair('interval', '0'))
         valid_attrs = validator.op_attributes()
         inst_attrs = None
         for nvp in all_attrs:
@@ -707,7 +706,7 @@ class ResourceParser(BaseParser):
                 node.set(nvp.get('name'), nvp.get('value'))
             else:
                 if inst_attrs is None:
-                    inst_attrs = xmlbuilder.child(node, 'instance_attributes')
+                    inst_attrs = xmlutil.child(node, 'instance_attributes')
                 inst_attrs.append(nvp)
         out.append(node)
 
@@ -718,7 +717,7 @@ class ResourceParser(BaseParser):
             return self.has_tokens() and self.current_token().lower() == 'op'
         if match_id:
             self.match('operations')
-        node = xmlbuilder.child(out, 'operations')
+        node = xmlutil.child(out, 'operations')
         if match_id:
             self.match_idspec()
             match_id = self.matched(1)[1:].lower()
@@ -754,15 +753,15 @@ class ResourceParser(BaseParser):
         """
         t = self.matched(0).lower()
         if t == 'primitive':
-            out = xmlbuilder.new('primitive')
+            out = xmlutil.new('primitive')
         else:
-            out = xmlbuilder.new('template')
+            out = xmlutil.new('template')
         out.set('id', self.match_identifier())
         if t == 'primitive' and self.try_match(_TEMPLATE_RE):
             out.set('template', self.matched(1))
         else:
             self.match_ra_type(out)
-        xmlbuilder.maybe_set(out, 'description', self.try_match_description())
+        xmlutil.maybe_set(out, 'description', self.try_match_description())
         self.match_arguments(out, {'params': 'instance_attributes',
                                    'meta': 'meta_attributes',
                                    'utilization': 'utilization',
@@ -775,13 +774,13 @@ class ResourceParser(BaseParser):
 
     def _master_or_clone(self):
         if self.matched(0).lower() == 'clone':
-            out = xmlbuilder.new('clone')
+            out = xmlutil.new('clone')
         else:
-            out = xmlbuilder.new('master')
+            out = xmlutil.new('master')
         out.set('id', self.match_identifier())
 
-        child = xmlbuilder.new('crmsh-ref', id=self.match_resource())
-        xmlbuilder.maybe_set(out, 'description', self.try_match_description())
+        child = xmlutil.new('crmsh-ref', id=self.match_resource())
+        xmlutil.maybe_set(out, 'description', self.try_match_description())
         self.match_arguments(out, {'params': 'instance_attributes',
                                    'meta': 'meta_attributes'}, implicit_initial='params')
         out.append(child)
@@ -798,7 +797,7 @@ class ResourceParser(BaseParser):
         return self.match_any()
 
     def parse_group(self):
-        out = xmlbuilder.new('group')
+        out = xmlutil.new('group')
         out.set('id', self.match_identifier())
         children = []
         while self._try_group_resource():
@@ -807,12 +806,12 @@ class ResourceParser(BaseParser):
                 self.err("child %s listed more than once in group %s" %
                          (child, out.get('id')))
             children.append(child)
-        xmlbuilder.maybe_set(out, 'description', self.try_match_description())
+        xmlutil.maybe_set(out, 'description', self.try_match_description())
         self.match_arguments(out, {'params': 'instance_attributes',
                                    'meta': 'meta_attributes'},
                              implicit_initial='params')
         for child in children:
-            xmlbuilder.child(out, 'crmsh-ref', id=child)
+            xmlutil.child(out, 'crmsh-ref', id=child)
         return out
 
 
@@ -830,7 +829,7 @@ class ConstraintParser(BaseParser):
             | <rsc>
         attribute :: role | resource-discovery
         """
-        out = xmlbuilder.new('rsc_location', id=self.match_identifier())
+        out = xmlutil.new('rsc_location', id=self.match_identifier())
         if self.try_match('^/(.+)/$'):
             out.set('rsc-pattern', self.matched(1))
         elif self.try_match('{'):
@@ -871,7 +870,7 @@ class ConstraintParser(BaseParser):
         colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>] ...
           [node-attribute=<node_attr>]
         """
-        out = xmlbuilder.new('rsc_colocation', id=self.match_identifier())
+        out = xmlutil.new('rsc_colocation', id=self.match_identifier())
         self.match(_SCORE_RE, errmsg="Expected <score>:")
         out.set(*self.validate_score(self.matched(1)))
         if self.try_match_tail('node-attribute=(.+)$'):
@@ -888,7 +887,7 @@ class ConstraintParser(BaseParser):
 
         kind :: Mandatory | Optional | Serialize
         '''
-        out = xmlbuilder.new('rsc_order', id=self.match_identifier())
+        out = xmlutil.new('rsc_order', id=self.match_identifier())
         if self.try_match('(%s):$' % ('|'.join(validator.rsc_order_kinds()))):
             out.set('kind', validator.canonize(
                 self.matched(1), validator.rsc_order_kinds()))
@@ -906,7 +905,7 @@ class ConstraintParser(BaseParser):
 
         loss_policy_action :: stop | demote | fence | freeze
         '''
-        out = xmlbuilder.new('rsc_ticket', id=self.match_identifier())
+        out = xmlutil.new('rsc_ticket', id=self.match_identifier())
         self.match(_SCORE_RE, errmsg="Expected <ticket-id>:")
         out.set('ticket', self.matched(1))
         if self.try_match_tail('loss-policy=(stop|demote|fence|freeze)$'):
@@ -983,7 +982,7 @@ class OpParser(BaseParser):
         return self.begin_dispatch(cmd, min_args=2)
 
     def parse_monitor(self):
-        out = xmlbuilder.new('op', name="monitor")
+        out = xmlutil.new('op', name="monitor")
         resource, role = self.match_split()
         if role:
             role, role_class = validator.classify_role(role)
@@ -992,8 +991,8 @@ class OpParser(BaseParser):
             out.set(role_class, role)
         out.set('rsc', resource)
         interval, timeout = self.match_split()
-        xmlbuilder.maybe_set(out, 'interval', interval)
-        xmlbuilder.maybe_set(out, 'timeout', timeout)
+        xmlutil.maybe_set(out, 'interval', interval)
+        xmlutil.maybe_set(out, 'timeout', timeout)
         return out
 
 
@@ -1012,10 +1011,10 @@ def property_parser(self, cmd):
     self.begin(cmd, min_args=1)
     self.match('(%s)$' % '|'.join(self.can_parse))
     if self.matched(1) in constants.defaults_tags:
-        root = xmlbuilder.new(self.matched(1))
-        attrs = xmlbuilder.child(root, setmap[self.matched(1)])
+        root = xmlutil.new(self.matched(1))
+        attrs = xmlutil.child(root, setmap[self.matched(1)])
     else:  # property -> cluster_property_set
-        root = xmlbuilder.new(setmap[self.matched(1)])
+        root = xmlutil.new(setmap[self.matched(1)])
         attrs = root
     if self.try_match_initial_id():
         attrs.set('id', self.matched(1))
@@ -1084,21 +1083,21 @@ class FencingOrderParser(BaseParser):
                 return raw_levels
             lvl_generator = wrap_levels
 
-        out = xmlbuilder.new('fencing-topology')
+        out = xmlutil.new('fencing-topology')
         targets = defaultdict(repeat(1).next)
         for target, devices in lvl_generator():
             if isinstance(target, tuple):
-                c = xmlbuilder.child(out, 'fencing-level',
-                                     index=str(targets[target[0]]),
-                                     devices=devices)
+                c = xmlutil.child(out, 'fencing-level',
+                                  index=str(targets[target[0]]),
+                                  devices=devices)
                 c.set('target-attribute', target[0])
                 c.set('target-value', target[1])
                 targets[target[0]] += 1
             else:
-                xmlbuilder.child(out, 'fencing-level',
-                                 target=target,
-                                 index=str(targets[target]),
-                                 devices=devices)
+                xmlutil.child(out, 'fencing-level',
+                              target=target,
+                              index=str(targets[target]),
+                              devices=devices)
                 targets[target] += 1
 
         return out
@@ -1115,9 +1114,9 @@ def parse_tag(self, cmd):
     self.begin(cmd, min_args=2)
     self.match('tag')
     self.match(_TAG_RE, errmsg="Expected tag name")
-    out = xmlbuilder.new('tag', id=self.matched(1))
+    out = xmlutil.new('tag', id=self.matched(1))
     while self.has_tokens():
-        e = xmlbuilder.new('obj_ref', id=self.match_resource())
+        e = xmlutil.new('obj_ref', id=self.match_resource())
         out.append(e)
     if len(out) == 0:
         self.err("Expected at least one resource")
@@ -1130,37 +1129,37 @@ class AclParser(BaseParser):
         return self.begin_dispatch(cmd, min_args=2)
 
     def parse_user(self):
-        out = xmlbuilder.new('acl_user')
+        out = xmlutil.new('acl_user')
         out.set('id', self.match_identifier())
         while self.has_tokens():
             # role identifier
             if self.try_match(_ROLE_REF_RE):
-                xmlbuilder.child(out, 'role_ref', id=self.matched(1))
+                xmlutil.child(out, 'role_ref', id=self.matched(1))
             # acl right rule
             else:
                 out.append(self._add_rule())
         return out
 
     def parse_acl_target(self):
-        out = xmlbuilder.new('acl_target')
+        out = xmlutil.new('acl_target')
         out.set('id', self.match_identifier())
         while self.has_tokens():
-            xmlbuilder.child(out, 'role', id=self.match_identifier())
+            xmlutil.child(out, 'role', id=self.match_identifier())
         return out
 
     def parse_acl_group(self):
-        out = xmlbuilder.new('acl_group')
+        out = xmlutil.new('acl_group')
         out.set('id', self.match_identifier())
         while self.has_tokens():
-            xmlbuilder.child(out, 'role', id=self.match_identifier())
+            xmlutil.child(out, 'role', id=self.match_identifier())
         return out
 
     def parse_role(self):
-        out = xmlbuilder.new('acl_role')
+        out = xmlutil.new('acl_role')
         out.set('id', self.match_identifier())
 
         if validator.acl_2_0():
-            xmlbuilder.maybe_set(out, "description", self.try_match_description())
+            xmlutil.maybe_set(out, "description", self.try_match_description())
             while self.has_tokens():
                 self._add_permission(out)
         else:
@@ -1175,11 +1174,11 @@ class AclParser(BaseParser):
         return len(x) > 0 and permission(x[0])
 
     def _add_permission(self, out):
-        rule = xmlbuilder.new('acl_permission')
+        rule = xmlutil.new('acl_permission')
         rule.set('kind', self.match(_ACL_RIGHT_RE).lower())
         if self.try_match_initial_id():
             rule.set('id', self.matched(1))
-        xmlbuilder.maybe_set(rule, "description", self.try_match_description())
+        xmlutil.maybe_set(rule, "description", self.try_match_description())
 
         attributes = {}
 
@@ -1219,7 +1218,7 @@ class AclParser(BaseParser):
             self.err("attribute is only valid in combination with tag/object-type")
 
     def _add_rule(self):
-        rule = xmlbuilder.new(self.match(_ACL_RIGHT_RE).lower())
+        rule = xmlutil.new(self.match(_ACL_RIGHT_RE).lower())
         eligible_specs = constants.acl_spec_map.values()
         while self.has_tokens():
             a = self._expand_shortcuts(self.current_token().split(':', 1))
@@ -1399,7 +1398,7 @@ class ResourceSet(object):
         self.tokens = newtoks
 
     def reset_set(self):
-        self.set_pl = xmlbuilder.new("resource_set")
+        self.set_pl = xmlutil.new("resource_set")
         self.prev_q = ''  # previous qualifier (action or role)
         self.curr_attr = ''  # attribute (action or role)
 
@@ -1509,7 +1508,7 @@ class ResourceSet(object):
                     self.curr_attr = self.q_attr
             else:
                 self.curr_attr = ''
-            self.set_pl.append(xmlbuilder.new("resource_ref", id=rsc))
+            self.set_pl.append(xmlutil.new("resource_ref", id=rsc))
         if self.opened:  # no close
             self.err('Unmatched opening bracket',
                      token=self.tokens[tokpos])

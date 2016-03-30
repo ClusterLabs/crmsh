@@ -90,14 +90,12 @@ def nvpairs2list(node, add_id=False):
     long and therefore obscure the relevant content. For some
     elements, however, they are included (e.g. properties).
     '''
-    from . import xmlbuilder
-
     ret = []
     if 'id-ref' in node:
-        ret.append(xmlbuilder.nvpair('$id-ref', node.get('id-ref')))
+        ret.append(xmlutil.nvpair('$id-ref', node.get('id-ref')))
     nvpairs = node.xpath('./nvpair | ./attributes/nvpair')
     if 'id' in node and (add_id or len(nvpairs) == 0):
-        ret.append(xmlbuilder.nvpair('$id', node.get('id')))
+        ret.append(xmlutil.nvpair('$id', node.get('id')))
     ret.extend(nvpairs)
     return ret
 
