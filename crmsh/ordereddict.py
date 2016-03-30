@@ -49,9 +49,9 @@ class OrderedDict(dict, DictMixin):
 
     def __delitem__(self, key):
         dict.__delitem__(self, key)
-        key, prev, next = self.__map.pop(key)
-        prev[2] = next
-        next[1] = prev
+        key, prev, next_ = self.__map.pop(key)
+        prev[2] = next_
+        next_[1] = prev
 
     def __iter__(self):
         end = self.__end

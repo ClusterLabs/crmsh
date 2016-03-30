@@ -113,15 +113,15 @@ def validate_name():
     return _crm_schema.validate_name
 
 
-def get(t, name, set=None):
+def get(t, name, subset=None):
     if _crm_schema is None:
         return []
     if t not in _store:
         _store[t] = {}
     if name not in _store[t]:
         _store[t][name] = _cache_funcs[t](_crm_schema, name)
-    if set:
-        return _store[t][name][set]
+    if subset:
+        return _store[t][name][subset]
     else:
         return _store[t][name]
 

@@ -461,31 +461,31 @@ _LOCKDIR = ".lockdir"
 _PIDF = "pid"
 
 
-def check_locker(dir):
-    if not os.path.isdir(os.path.join(dir, _LOCKDIR)):
+def check_locker(lockdir):
+    if not os.path.isdir(os.path.join(lockdir, _LOCKDIR)):
         return
-    s = file2str(os.path.join(dir, _LOCKDIR, _PIDF))
+    s = file2str(os.path.join(lockdir, _LOCKDIR, _PIDF))
     pid = convert2ints(s)
     if not isinstance(pid, int):
         common_warn("history: removing malformed lock")
-        rmdir_r(os.path.join(dir, _LOCKDIR))
+        rmdir_r(os.path.join(lockdir, _LOCKDIR))
         return
     try:
         os.kill(pid, 0)
     except OSError, (errno, strerror):
         if errno == os.errno.ESRCH:
             common_info("history: removing stale lock")
-            rmdir_r(os.path.join(dir, _LOCKDIR))
+            rmdir_r(os.path.join(lockdir, _LOCKDIR))
         else:
             common_err("%s: %s" % (_LOCKDIR, strerror))
 
 
-def acquire_lock(dir):
-    check_locker(dir)
+def acquire_lock(lockdir):
+    check_locker(lockdir)
     while True:
         try:
-            os.makedirs(os.path.join(dir, _LOCKDIR))
-            str2file("%d" % os.getpid(), os.path.join(dir, _LOCKDIR, _PIDF))
+            os.makedirs(os.path.join(lockdir, _LOCKDIR))
+            str2file("%d" % os.getpid(), os.path.join(lockdir, _LOCKDIR, _PIDF))
             return True
         except OSError, (errno, strerror):
             if errno != os.errno.EEXIST:
@@ -497,8 +497,8 @@ def acquire_lock(dir):
             return False
 
 
-def release_lock(dir):
-    rmdir_r(os.path.join(dir, _LOCKDIR))
+def release_lock(lockdir):
+    rmdir_r(os.path.join(lockdir, _LOCKDIR))
 
 
 def pipe_cmd_nosudo(cmd):
