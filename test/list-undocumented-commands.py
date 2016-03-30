@@ -19,7 +19,7 @@ modules.help._load_help()
 _IGNORED_COMMANDS = ('help', 'quit', 'cd', 'up', 'ls')
 
 def check_help(ui):
-    for name, child in ui._children.iteritems():
+    for name, child in ui.children().iteritems():
         if child.type == 'command':
             try:
                 h = modules.help.help_command(ui.name, name)

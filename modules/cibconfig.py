@@ -845,7 +845,7 @@ class CibObject(object):
         self.updated = True
         self.propagate_updated()
 
-    def _dump_state(self):
+    def dump_state(self):
         'Print object status'
         print self.state_fmt % (self.obj_id,
                                 self.origin,
@@ -1580,7 +1580,7 @@ def _check_if_constraint_ref_is_child(obj):
     a container.
     """
     rc = 0
-    for rscid in obj._referenced_resources():
+    for rscid in obj.referenced_resources():
         tgt = cib_factory.find_object(rscid)
         if not tgt:
             common_warn("%s: resource %s does not exist" % (obj.obj_id, rscid))
@@ -1670,7 +1670,7 @@ class CibLocation(CibObject):
             rc = rc2
         return rc
 
-    def _referenced_resources(self):
+    def referenced_resources(self):
         ret = self.node.xpath('.//resource_set/resource_ref/@id')
         return ret or [self.node.get("rsc")]
 
@@ -1810,7 +1810,7 @@ class CibSimpleConstraint(CibObject):
                 self.node.get("first"),
                 self.node.get("then")])
 
-    def _referenced_resources(self):
+    def referenced_resources(self):
         ret = self.node.xpath('.//resource_set/resource_ref/@id')
         if ret:
             return ret
@@ -2437,11 +2437,11 @@ class CibFactory(object):
     def showobjects(self):
         self._state_header()
         for obj in self.cib_objects:
-            obj._dump_state()
+            obj.dump_state()
         if self.remove_queue:
             print "Remove queue:"
             for obj in self.remove_queue:
-                obj._dump_state()
+                obj.dump_state()
 
     def commit(self, force=False, replace=False):
         'Commit the configuration to the CIB.'

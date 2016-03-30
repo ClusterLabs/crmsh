@@ -375,7 +375,7 @@ class Script(command.UI):
         fromscript = os.path.abspath(workflow)
         tgtdir = outdir
 
-        scripts._build_script_cache()
+        scripts.build_script_cache()
         name = os.path.splitext(os.path.basename(fromscript))[0]
         script = scripts._load_script_file(name, fromscript)
         script = flatten(script)

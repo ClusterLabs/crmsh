@@ -99,7 +99,7 @@ class CliOptions(command.UI):
         "usage: output <type>"
         _legacy_set_pref("output", output_type)
         from . import term
-        term._init()
+        term.init()
 
     def do_colorscheme(self, context, colors):
         "usage: colorscheme <colors>"

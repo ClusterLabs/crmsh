@@ -355,7 +355,7 @@ def run():
             err_buf.reset_lineno()
             options.batch = True
         user_args = parse_options()
-        term._init()
+        term.init()
         if options.profile:
             return profile_run(context, user_args)
         else:

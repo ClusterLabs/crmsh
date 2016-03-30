@@ -365,7 +365,7 @@ def _load_help():
             _COMMANDS[lvlname][alias] = HelpEntry(info.short, info.long, (alias, command))
 
         def add_aliases_for_level(lvl):
-            for name, info in lvl._children.iteritems():
+            for name, info in lvl.children().iteritems():
                 for alias in info.aliases:
                     add_help_for_alias(lvl.name, info.name, alias)
                 if info.level:

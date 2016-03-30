@@ -72,7 +72,7 @@ _COLORS = """BLACK BLUE GREEN CYAN RED MAGENTA YELLOW WHITE""".split()
 _ANSICOLORS = "BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE".split()
 
 
-def _init():
+def init():
     """
     Initialize attributes with appropriate values for the current terminal.
 
