@@ -109,8 +109,8 @@ class JsonPrinter(object):
         pass
 
 
-def describe_param(p, name, all):
-    if not all and p.get('advanced'):
+def describe_param(p, name, getall):
+    if not getall and p.get('advanced'):
         return ""
     opt = ' (required) ' if p['required'] else ''
     opt += ' (unique) ' if p['unique'] else ''
@@ -127,7 +127,7 @@ def _scoped_name(context, name):
     return name
 
 
-def describe_step(icontext, context, s, all):
+def describe_step(icontext, context, s, getall):
     ret = "%s. %s" % ('.'.join([str(i + 1) for i in icontext]), scripts.format_desc(s['shortdesc']) or 'Parameters')
     if not s['required']:
         ret += ' (optional)'
@@ -135,9 +135,9 @@ def describe_step(icontext, context, s, all):
     if s.get('name'):
         context = context + [s['name']]
     for p in s.get('parameters', []):
-        ret += describe_param(p, _scoped_name(context, p['name']), all)
+        ret += describe_param(p, _scoped_name(context, p['name']), getall)
     for i, step in enumerate(s.get('steps', [])):
-        ret += describe_step(icontext + [i], context, step, all)
+        ret += describe_step(icontext + [i], context, step, getall)
     return ret
 
 
