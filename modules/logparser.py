@@ -521,7 +521,7 @@ class LogParser(object):
 
         if rxes is not None:
             for log in eventlogs:
-                for _, f, pos in self.events[log]:
+                for _, f, pos in self.events.get(log, []):
                     self.fileobjs[f].seek(pos)
                     msg = self.fileobjs[f].readline()
                     if any(rx.search(msg) for rx in rxes):
@@ -530,7 +530,7 @@ class LogParser(object):
                             yield msg
         else:
             for log in eventlogs:
-                for _, f, pos in self.events[log]:
+                for _, f, pos in self.events.get(log, []):
                     self.fileobjs[f].seek(pos)
                     msg = self.fileobjs[f].readline()
                     ts = logtime.syslog_ts(msg)
