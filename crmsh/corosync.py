@@ -337,7 +337,7 @@ def next_nodeid(parser):
 def get_ip(node):
     try:
         return socket.gethostbyname(node)
-    except:
+    except socket.error:
         return None
 
 

@@ -51,7 +51,7 @@ def get_output(odir, host):
         try:
             if os.path.isfile(fname):
                 l += open(fname).readlines()
-        except:
+        except IOError:
             continue
     return l
 
