@@ -396,6 +396,10 @@ Examples:
         return sub and sub.type == 'level'
 
     @classmethod
+    def children(self):
+        return self._children
+
+    @classmethod
     def init_ui(cls):
         def get_if_command(attr):
             "Return the named attribute if it's a command"

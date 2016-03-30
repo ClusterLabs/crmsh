@@ -190,7 +190,7 @@ class BaseParser(object):
         """
         ret = []
         if terminator is None:
-            terminator = RuleParser._TERMINATORS
+            terminator = RuleParser.TERMINATORS
         while True:
             tok = self.current_token()
             if tok is not None and tok.lower() in terminator:
@@ -314,7 +314,7 @@ class RuleParser(BaseParser):
     _UNARYOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.unary_ops)), re.IGNORECASE)
     _BINOP_RE = None
 
-    _TERMINATORS = ('params', 'meta', 'utilization', 'operations', 'op', 'rule', 'attributes')
+    TERMINATORS = ('params', 'meta', 'utilization', 'operations', 'op', 'rule', 'attributes')
 
     def match_attr_list(self, name, tag, allow_empty=True):
         """

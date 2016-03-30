@@ -153,7 +153,7 @@ class Actions(object):
     Each method in this class handles a particular action.
     """
     @staticmethod
-    def _parse(script, action):
+    def parse(script, action):
         """
         action: action data (dict)
         params: flat list of parameter values
@@ -222,11 +222,11 @@ class Actions(object):
                 action[k] = str(v).strip()
 
     @staticmethod
-    def _mergeable(action):
+    def mergeable(action):
         return action['name'] in ('cib', 'crm', 'install', 'service')
 
     @staticmethod
-    def _merge(into, new):
+    def merge(into, new):
         """
         Merge neighbour actions.
         Note: When this is called, all text values
@@ -255,7 +255,7 @@ class Actions(object):
         return True
 
     @staticmethod
-    def _needs_sudo(action):
+    def needs_sudo(action):
         if action['name'] == 'call':
             return action.get('sudo') or action.get('nodes') != 'local'
         return action['name'] in ('apply', 'apply_local', 'install', 'service')
@@ -606,7 +606,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
     return data
 
 
-def _build_script_cache():
+def build_script_cache():
     global _script_cache
     if _script_cache is not None:
         return
@@ -632,7 +632,7 @@ def list_scripts():
     List the available cluster installation scripts.
     Yields the names of the main script files.
     '''
-    _build_script_cache()
+    build_script_cache()
     return sorted(_script_cache.keys())
 
 
@@ -1012,7 +1012,7 @@ def _load_script_file(script, filename):
 
 
 def load_script_string(script, yml):
-    _build_script_cache()
+    build_script_cache()
     import cStringIO
     import yaml
     data = yaml.load(cStringIO.StringIO(yml))
@@ -1034,7 +1034,7 @@ def load_script_string(script, yml):
 
 
 def load_script(script):
-    _build_script_cache()
+    build_script_cache()
     if script not in _script_cache:
         common_debug("cache: %s" % (_script_cache.keys()))
         raise ValueError("Script not found: %s" % (script))
@@ -1768,7 +1768,7 @@ class RunActions(object):
             if not os.path.isfile(statefile):
                 raise ValueError("No state for action: %s" % (action_index))
             self.data = json.load(open(statefile))
-        if Actions._needs_sudo(action):
+        if Actions.needs_sudo(action):
             self._check_sudo_pass()
         result = self._run_action(action)
         json.dump(self.data, open(self.statefile, 'w'))
@@ -1780,7 +1780,7 @@ class RunActions(object):
         # run on local nodes
         # TODO: wait for remote results
         for action in self.actions:
-            if Actions._needs_sudo(action):
+            if Actions.needs_sudo(action):
                 self._check_sudo_pass()
             if not self._run_action(action):
                 return False
@@ -2127,7 +2127,7 @@ def _process_actions(script, params):
             if action['include'] in subactions:
                 toadd.extend(subactions[action['include']])
         else:
-            Actions._parse(script, action)
+            Actions.parse(script, action)
             if 'when' in action:
                 when = str(action['when']).strip()
                 if when not in (False, None, '', 'false'):
@@ -2136,8 +2136,8 @@ def _process_actions(script, params):
                 toadd.append(action)
         if ret:
             for add in toadd:
-                if Actions._mergeable(add) and ret[-1]['name'] == add['name']:
-                    if not Actions._merge(ret[-1], add):
+                if Actions.mergeable(add) and ret[-1]['name'] == add['name']:
+                    if not Actions.merge(ret[-1], add):
                         ret.append(add)
                 else:
                     ret.append(add)
