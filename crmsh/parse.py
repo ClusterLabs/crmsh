@@ -45,9 +45,6 @@ class BaseParser(object):
         "Called by do_parse(). Raises ParseError if parsing fails."
         raise NotImplementedError
 
-    def init(self, validation):
-        self.validation = validation
-
     def err(self, errmsg):
         "Report a parse error and abort."
         token = None
@@ -1540,91 +1537,67 @@ class Validation(object):
         return len(has_optional) > 0
 
 
-class CliParser(object):
+def parse(s, comments=None):
+    '''
+    Input: a list of tokens (or a CLI format string).
+    Return: a cibobject
+    On failure, returns either False or None.
+    comments holds comment state between parses
+    Handles basic normalization of the input string.
+    Converts unicode to ascii, XML data to CLI format,
+    lexing etc.
+    '''
+    if comments is None:
+        comments = []
+    validation = Validation()
     parsers = {}
+    for Parser in (ResourceParser, ConstraintParser, OpParser, NodeParser, PropertyParser, FencingOrderParser, AclParser, RawXMLParser, TagParser):
+        parser = Parser()
+        parser.validation = validation
+        for n in parser.can_parse():
+            parsers[n] = parser
 
-    def __init__(self):
-        self.comments = []
-        validation = Validation()
-        if not self.parsers:
-            def add(*parsers):
-                for pcls in parsers:
-                    p = pcls()
-                    p.init(validation)
-                    for n in p.can_parse():
-                        self.parsers[n] = p
-            add(ResourceParser,
-                ConstraintParser,
-                OpParser,
-                NodeParser,
-                PropertyParser,
-                FencingOrderParser,
-                AclParser,
-                RawXMLParser,
-                TagParser)
-
-    def _xml_lex(self, s):
+    if isinstance(s, unicode):
         try:
-            l = lines2cli(s)
-            a = []
-            for p in l:
-                a += p.split()
-            return a
-        except ValueError, e:
+            s = s.encode('ascii', errors='xmlcharrefreplace')
+        except Exception, e:
             common_err(e)
             return False
-
-    def _normalize(self, s):
-        '''
-        Handles basic normalization of the input string.
-        Converts unicode to ascii, XML data to CLI format,
-        lexing etc.
-        '''
-        if isinstance(s, unicode):
+    if isinstance(s, str):
+        if s and s.startswith('#'):
+            comments.append(s)
+            return None
+        if s.startswith('xml'):
             try:
-                s = s.encode('ascii', errors='xmlcharrefreplace')
-            except Exception, e:
+                s = [x for p in lines2cli(s) for x in p.split()]
+            except ValueError, e:
                 common_err(e)
                 return False
-        if isinstance(s, str):
-            if s and s.startswith('#'):
-                self.comments.append(s)
-                return None
-            if s.startswith('xml'):
-                s = self._xml_lex(s)
-            else:
-                s = shlex.split(s)
-        # but there shouldn't be any newlines (?)
-        while '\n' in s:
-            s.remove('\n')
-        if s:
-            s[0] = s[0].lower()
+        else:
+            s = shlex.split(s)
+    # but there shouldn't be any newlines (?)
+    while '\n' in s:
+        s.remove('\n')
+    if s:
+        s[0] = s[0].lower()
+    if not s:
         return s
-
-    def parse(self, s):
-        '''
-        Input: a list of tokens (or a CLI format string).
-        Return: a cibobject
-            On failure, returns either False or None.
-        '''
-        s = self._normalize(s)
-        if not s:
-            return s
-        kw = s[0]
-        if kw in self.parsers:
-            parser = self.parsers[kw]
-            try:
-                ret = parser.do_parse(s)
-                if ret is not None and len(self.comments) > 0:
-                    if ret.tag in constants.defaults_tags:
-                        xmlutil.stuff_comments(ret[0], self.comments)
-                    else:
-                        xmlutil.stuff_comments(ret, self.comments)
-                    self.comments = []
-                return ret
-            except ParseError:
-                return False
+    kw = s[0]
+    if kw not in parsers:
         syntax_err(s, token=s[0], msg="Unknown command")
+        return False
+
+    parser = parsers[kw]
+    try:
+        ret = parser.do_parse(s)
+        if ret is not None and len(comments) > 0:
+            if ret.tag in constants.defaults_tags:
+                xmlutil.stuff_comments(ret[0], comments)
+            else:
+                xmlutil.stuff_comments(ret, comments)
+            del comments[:]
+        return ret
+    except ParseError:
         return False
 
 # vim:ts=4:sw=4:et:

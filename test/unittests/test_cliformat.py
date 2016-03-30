@@ -4,6 +4,7 @@
 # unit tests for cliformat.py
 
 from crmsh import cibconfig
+from crmsh import parse
 from lxml import etree
 from .test_parse import MockValidation
 from nose.tools import eq_, with_setup
@@ -16,7 +17,8 @@ def assert_is_not_none(thing):
 
 
 def roundtrip(cli, debug=False, expected=None, format_mode=-1, strip_color=False):
-    node, _, _ = cibconfig.parse_cli_to_xml(cli, validation=MockValidation())
+    parse.Validation = MockValidation
+    node, _, _ = cibconfig.parse_cli_to_xml(cli)
     assert_is_not_none(node)
     obj = factory.find_object(node.get("id"))
     if obj:

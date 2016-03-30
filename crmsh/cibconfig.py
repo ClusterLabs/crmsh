@@ -554,10 +554,10 @@ class CibObjectSetCli(CibObjectSet):
         diff = CibDiff(self)
         rc = True
         err_buf.start_tmp_lineno()
-        cp = parse.CliParser()
+        comments = []
         for cli_text in lines2cli(s):
             err_buf.incr_lineno()
-            node = cp.parse(cli_text)
+            node = parse.parse(cli_text, comments=comments)
             if node not in (False, None):
                 rc = rc and diff.add(node)
             elif node is False:
@@ -790,21 +790,18 @@ def postprocess_cli(node, oldnode=None, id_hint=None):
     return node, obj_type, obj_id
 
 
-def parse_cli_to_xml(cli, oldnode=None, validation=None):
+def parse_cli_to_xml(cli, oldnode=None):
     """
     input: CLI text
     output: XML, obj_type, obj_id
     """
-    parser = parse.CliParser()
-    if validation is not None:
-        for p in parser.parsers.values():
-            p.validation = validation
     node = None
+    comments = []
     if isinstance(cli, basestring):
         for s in lines2cli(cli):
-            node = parser.parse(s)
+            node = parse.parse(s, comments=comments)
     else:  # should be a pre-tokenized list
-        node = parser.parse(cli)
+        node = parse.parse(cli, comments=comments)
     if node is False:
         return None, None, None
     elif node is None:

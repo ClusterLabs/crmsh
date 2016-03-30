@@ -94,104 +94,105 @@ class TestBaseParser(unittest.TestCase):
 
 class TestCliParser(unittest.TestCase):
     def setUp(self):
-        self.parser = parse.CliParser()
-        mockv = MockValidation()
-        for n, p in self.parser.parsers.iteritems():
-            p.validation = mockv
+        parse.Validation = MockValidation
+        self.comments = []
+
+    def _parse(self, s):
+        return parse.parse(s, comments=self.comments)
 
     def test_node(self):
-        out = self.parser.parse('node node-1')
+        out = self._parse('node node-1')
         self.assertEqual(out.get('uname'), 'node-1')
 
-        out = self.parser.parse('node $id=testid node-1')
+        out = self._parse('node $id=testid node-1')
         self.assertEqual(out.get('id'), 'testid')
         self.assertEqual(out.get('uname'), 'node-1')
 
-        out = self.parser.parse('node 1: node-1')
+        out = self._parse('node 1: node-1')
         self.assertEqual(out.get('id'), '1')
         self.assertEqual(out.get('uname'), 'node-1')
 
-        out = self.parser.parse('node testid: node-1')
+        out = self._parse('node testid: node-1')
         self.assertEqual(out.get('id'), 'testid')
         self.assertEqual(out.get('uname'), 'node-1')
 
-        out = self.parser.parse('node $id=testid node-1:ping')
+        out = self._parse('node $id=testid node-1:ping')
         self.assertEqual(out.get('id'), 'testid')
         self.assertEqual(out.get('uname'), 'node-1')
         self.assertEqual(out.get('type'), 'ping')
 
-        out = self.parser.parse('node node-1:unknown')
+        out = self._parse('node node-1:unknown')
         self.assertFalse(out)
 
-        out = self.parser.parse('node node-1 description="foo bar" attributes foo=bar')
+        out = self._parse('node node-1 description="foo bar" attributes foo=bar')
         self.assertEqual(out.get('description'), 'foo bar')
         self.assertEqual(['bar'], out.xpath('instance_attributes/nvpair[@name="foo"]/@value'))
 
-        out = self.parser.parse('node node-1 attributes foo=bar utilization wiz=bang')
+        out = self._parse('node node-1 attributes foo=bar utilization wiz=bang')
         self.assertEqual(['bar'], out.xpath('instance_attributes/nvpair[@name="foo"]/@value'))
         self.assertEqual(['bang'], out.xpath('utilization/nvpair[@name="wiz"]/@value'))
 
     def test_resources(self):
-        out = self.parser.parse('primitive www ocf:heartbeat:apache op monitor timeout=10s')
+        out = self._parse('primitive www ocf:heartbeat:apache op monitor timeout=10s')
         self.assertEqual(out.get('id'), 'www')
         self.assertEqual(out.get('class'), 'ocf')
         self.assertEqual(['monitor'], out.xpath('//op/@name'))
 
-        out = self.parser.parse('rsc_template public_vm ocf:heartbeat:Xen op start timeout=300s op stop timeout=300s op monitor interval=30s timeout=60s op migrate_from timeout=600s op migrate_to timeout=600s')
+        out = self._parse('rsc_template public_vm ocf:heartbeat:Xen op start timeout=300s op stop timeout=300s op monitor interval=30s timeout=60s op migrate_from timeout=600s op migrate_to timeout=600s')
         self.assertEqual(out.get('id'), 'public_vm')
         self.assertEqual(out.get('class'), 'ocf')
         #print out
 
-        out = self.parser.parse('primitive st stonith:ssh params hostlist=node1 meta target-role=Started op start requires=nothing timeout=60s op monitor interval=60m timeout=60s')
+        out = self._parse('primitive st stonith:ssh params hostlist=node1 meta target-role=Started op start requires=nothing timeout=60s op monitor interval=60m timeout=60s')
         self.assertEqual(out.get('id'), 'st')
 
-        out2 = self.parser.parse('primitive st stonith:ssh hostlist=node1 meta target-role=Started op start requires=nothing timeout=60s op monitor interval=60m timeout=60s')
+        out2 = self._parse('primitive st stonith:ssh hostlist=node1 meta target-role=Started op start requires=nothing timeout=60s op monitor interval=60m timeout=60s')
         self.assertEqual(out2.get('id'), 'st')
 
         self.assertEqual(etree.tostring(out), etree.tostring(out2))
 
-        out = self.parser.parse('primitive st stonith:ssh params hostlist= meta')
+        out = self._parse('primitive st stonith:ssh params hostlist= meta')
         self.assertEqual(out.get('id'), 'st')
 
-        out = self.parser.parse('primitive st stonith:null params hostlist=node1 meta description="some description here" op start requires=nothing op monitor interval=60m')
+        out = self._parse('primitive st stonith:null params hostlist=node1 meta description="some description here" op start requires=nothing op monitor interval=60m')
         self.assertEqual(out.get('id'), 'st')
 
-        out = self.parser.parse('ms m0 resource params a=b')
+        out = self._parse('ms m0 resource params a=b')
         self.assertEqual(out.get('id'), 'm0')
         print etree.tostring(out)
         self.assertEqual(['resource'], out.xpath('./crmsh-ref/@id'))
         self.assertEqual(['b'], out.xpath('instance_attributes/nvpair[@name="a"]/@value'))
 
-        out2 = self.parser.parse('ms m0 resource a=b')
+        out2 = self._parse('ms m0 resource a=b')
         self.assertEqual(out.get('id'), 'm0')
         self.assertEqual(etree.tostring(out), etree.tostring(out2))
 
-        out = self.parser.parse('master ma resource meta a=b')
+        out = self._parse('master ma resource meta a=b')
         self.assertEqual(out.get('id'), 'ma')
         self.assertEqual(['resource'], out.xpath('./crmsh-ref/@id'))
         self.assertEqual(['b'], out.xpath('meta_attributes/nvpair[@name="a"]/@value'))
 
-        out = self.parser.parse('clone clone-1 resource meta a=b')
+        out = self._parse('clone clone-1 resource meta a=b')
         self.assertEqual(out.get('id'), 'clone-1')
         self.assertEqual(['resource'], out.xpath('./crmsh-ref/@id'))
         self.assertEqual(['b'], out.xpath('meta_attributes/nvpair[@name="a"]/@value'))
 
-        out = self.parser.parse('group group-1 a')
+        out = self._parse('group group-1 a')
         self.assertEqual(out.get('id'), 'group-1')
         self.assertEqual(len(out), 1)
 
-        out = self.parser.parse('group group-1 a b c')
+        out = self._parse('group group-1 a b c')
         self.assertEqual(len(out), 3)
 
-        out = self.parser.parse('group group-1')
+        out = self._parse('group group-1')
         self.assertFalse(out)
 
-        out = self.parser.parse('group group-1 params a=b')
+        out = self._parse('group group-1 params a=b')
         self.assertEqual(len(out), 1)
         self.assertEqual(['b'], out.xpath('/group/instance_attributes/nvpair[@name="a"]/@value'))
 
     def test_heartbeat_class(self):
-        out = self.parser.parse('primitive p_node-activate heartbeat:node-activate')
+        out = self._parse('primitive p_node-activate heartbeat:node-activate')
         self.assertEqual(out.get('id'), 'p_node-activate')
         self.assertEqual(out.get('class'), 'heartbeat')
         self.assertEqual(out.get('provider'), None)
@@ -199,131 +200,131 @@ class TestCliParser(unittest.TestCase):
 
 
     def test_nvpair_ref(self):
-        out = self.parser.parse('primitive dummy-0 Dummy params @foo')
+        out = self._parse('primitive dummy-0 Dummy params @foo')
         self.assertEqual(out.get('id'), 'dummy-0')
         self.assertEqual(out.get('class'), 'ocf')
         self.assertEqual(['foo'], out.xpath('.//nvpair/@id-ref'))
 
-        out = self.parser.parse('primitive dummy-0 Dummy params @fiz:buz')
+        out = self._parse('primitive dummy-0 Dummy params @fiz:buz')
         self.assertEqual(out.get('id'), 'dummy-0')
         self.assertEqual(out.get('class'), 'ocf')
         self.assertEqual(['fiz'], out.xpath('.//nvpair/@id-ref'))
         self.assertEqual(['buz'], out.xpath('.//nvpair/@name'))
 
     def test_location(self):
-        out = self.parser.parse('location loc-1 resource inf: foo')
+        out = self._parse('location loc-1 resource inf: foo')
         self.assertEqual(out.get('id'), 'loc-1')
         self.assertEqual(out.get('rsc'), 'resource')
         self.assertEqual(out.get('score'), 'INFINITY')
         self.assertEqual(out.get('node'), 'foo')
 
-        out = self.parser.parse('location loc-1 /foo.*/ inf: bar')
+        out = self._parse('location loc-1 /foo.*/ inf: bar')
         self.assertEqual(out.get('id'), 'loc-1')
         self.assertEqual(out.get('rsc-pattern'), 'foo.*')
         self.assertEqual(out.get('score'), 'INFINITY')
         self.assertEqual(out.get('node'), 'bar')
         #print out
 
-        out = self.parser.parse('location loc-1 // inf: bar')
+        out = self._parse('location loc-1 // inf: bar')
         self.assertFalse(out)
 
-        out = self.parser.parse('location loc-1 { one ( two three ) four } inf: bar')
+        out = self._parse('location loc-1 { one ( two three ) four } inf: bar')
         self.assertEqual(out.get('id'), 'loc-1')
         self.assertEqual(['one', 'two', 'three', 'four'], out.xpath('//resource_ref/@id'))
         self.assertEqual(out.get('score'), 'INFINITY')
         self.assertEqual(out.get('node'), 'bar')
         #print out
 
-        out = self.parser.parse('location loc-1 thing rule role=slave -inf: #uname eq madrid')
+        out = self._parse('location loc-1 thing rule role=slave -inf: #uname eq madrid')
         self.assertEqual(out.get('id'), 'loc-1')
         self.assertEqual(out.get('rsc'), 'thing')
         self.assertEqual(out.get('score'), None)
 
-        out = self.parser.parse('location l { a:foo b:bar }')
+        out = self._parse('location l { a:foo b:bar }')
         self.assertFalse(out)
 
     def test_colocation(self):
-        out = self.parser.parse('colocation col-1 inf: foo:master ( bar wiz sequential=yes )')
+        out = self._parse('colocation col-1 inf: foo:master ( bar wiz sequential=yes )')
         self.assertEqual(out.get('id'), 'col-1')
         self.assertEqual(['foo', 'bar', 'wiz'], out.xpath('//resource_ref/@id'))
         self.assertEqual([], out.xpath('//resource_set[@name="sequential"]/@value'))
 
-        out = self.parser.parse(
+        out = self._parse(
             'colocation col-1 -20: foo:Master ( bar wiz ) ( zip zoo ) node-attribute="fiz"')
         self.assertEqual(out.get('id'), 'col-1')
         self.assertEqual(out.get('score'), '-20')
         self.assertEqual(['foo', 'bar', 'wiz', 'zip', 'zoo'], out.xpath('//resource_ref/@id'))
         self.assertEqual(['fiz'], out.xpath('//@node-attribute'))
 
-        out = self.parser.parse('colocation col-1 0: a:master b')
+        out = self._parse('colocation col-1 0: a:master b')
         self.assertEqual(out.get('id'), 'col-1')
 
-        out = self.parser.parse('colocation col-1 10: ) bar wiz')
+        out = self._parse('colocation col-1 10: ) bar wiz')
         self.assertFalse(out)
 
-        out = self.parser.parse('colocation col-1 10: ( bar wiz')
+        out = self._parse('colocation col-1 10: ( bar wiz')
         self.assertFalse(out)
 
-        out = self.parser.parse('colocation col-1 10: ( bar wiz ]')
+        out = self._parse('colocation col-1 10: ( bar wiz ]')
         self.assertFalse(out)
 
     def test_order(self):
-        out = self.parser.parse('order o1 Mandatory: [ A B sequential=true ] C')
+        out = self._parse('order o1 Mandatory: [ A B sequential=true ] C')
         print etree.tostring(out)
         self.assertEqual(['Mandatory'], out.xpath('/rsc_order/@kind'))
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         self.assertEqual(['false'], out.xpath('/rsc_order/resource_set/@require-all'))
         self.assertEqual(['A', 'B', 'C'], out.xpath('//resource_ref/@id'))
 
-        out = self.parser.parse('order o1 Mandatory: [ A B sequential=false ] C')
+        out = self._parse('order o1 Mandatory: [ A B sequential=false ] C')
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         #self.assertTrue(['require-all', 'false'] in out.resources[0][1])
         #self.assertTrue(['sequential', 'false'] in out.resources[0][1])
         self.assertEqual(out.get('id'), 'o1')
 
-        out = self.parser.parse('order o1 Mandatory: A B C sequential=false')
+        out = self._parse('order o1 Mandatory: A B C sequential=false')
         self.assertEqual(1, len(out.xpath('/rsc_order/resource_set')))
         #self.assertTrue(['sequential', 'false'] in out.resources[0][1])
         self.assertEqual(out.get('id'), 'o1')
 
-        out = self.parser.parse('order o1 Mandatory: A B C sequential=true')
+        out = self._parse('order o1 Mandatory: A B C sequential=true')
         self.assertEqual(1, len(out.xpath('/rsc_order/resource_set')))
         #self.assertTrue(['sequential', 'true'] not in out.resources[0][1])
         self.assertEqual(out.get('id'), 'o1')
 
-        out = self.parser.parse('order c_apache_1 Mandatory: apache:start ip_1')
+        out = self._parse('order c_apache_1 Mandatory: apache:start ip_1')
         self.assertEqual(out.get('id'), 'c_apache_1')
 
-        out = self.parser.parse('order c_apache_2 Mandatory: apache:start ip_1 ip_2 ip_3')
+        out = self._parse('order c_apache_2 Mandatory: apache:start ip_1 ip_2 ip_3')
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         self.assertEqual(out.get('id'), 'c_apache_2')
 
-        out = self.parser.parse('order o1 Serialize: A ( B C )')
+        out = self._parse('order o1 Serialize: A ( B C )')
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         self.assertEqual(out.get('id'), 'o1')
 
-        out = self.parser.parse('order o1 Serialize: A ( B C ) symmetrical=false')
+        out = self._parse('order o1 Serialize: A ( B C ) symmetrical=false')
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         self.assertEqual(out.get('id'), 'o1')
         self.assertEqual(['false'], out.xpath('//@symmetrical'))
 
-        out = self.parser.parse('order o1 Serialize: A ( B C ) symmetrical=true')
+        out = self._parse('order o1 Serialize: A ( B C ) symmetrical=true')
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         self.assertEqual(out.get('id'), 'o1')
         self.assertEqual(['true'], out.xpath('//@symmetrical'))
 
         inp = 'colocation rsc_colocation-master INFINITY: [ vip-master vip-rep sequential=true ] [ msPostgresql:Master sequential=true ]'
-        out = self.parser.parse(inp)
+        out = self._parse(inp)
         self.assertEqual(2, len(out.xpath('/rsc_colocation/resource_set')))
         self.assertEqual(out.get('id'), 'rsc_colocation-master')
 
-        out = self.parser.parse('order order_2 Mandatory: [ A B ] C')
+        out = self._parse('order order_2 Mandatory: [ A B ] C')
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         self.assertEqual(out.get('id'), 'order_2')
         self.assertEqual(['Mandatory'], out.xpath('/rsc_order/@kind'))
         self.assertEqual(['false'], out.xpath('//resource_set/@sequential'))
 
-        out = self.parser.parse('order order-1 Optional: group1:stop group2:start')
+        out = self._parse('order order-1 Optional: group1:stop group2:start')
         self.assertEqual(out.get('id'), 'order-1')
         self.assertEqual(['Optional'], out.xpath('/rsc_order/@kind'))
         self.assertEqual(['group1'], out.xpath('/rsc_order/@first'))
@@ -332,117 +333,117 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(['start'], out.xpath('/rsc_order/@then-action'))
 
     def test_ticket(self):
-        out = self.parser.parse('rsc_ticket ticket-A_public-ip ticket-A: public-ip')
+        out = self._parse('rsc_ticket ticket-A_public-ip ticket-A: public-ip')
         self.assertEqual(out.get('id'), 'ticket-A_public-ip')
 
-        out = self.parser.parse('rsc_ticket ticket-A_bigdb ticket-A: bigdb loss-policy=fence')
+        out = self._parse('rsc_ticket ticket-A_bigdb ticket-A: bigdb loss-policy=fence')
         self.assertEqual(out.get('id'), 'ticket-A_bigdb')
 
-        out = self.parser.parse(
+        out = self._parse(
             'rsc_ticket ticket-B_storage ticket-B: drbd-a:Master drbd-b:Master')
         self.assertEqual(out.get('id'), 'ticket-B_storage')
 
     def test_op(self):
-        out = self.parser.parse('monitor apache:Master 10s:20s')
+        out = self._parse('monitor apache:Master 10s:20s')
         self.assertEqual(out.get('rsc'), 'apache')
         self.assertEqual(out.get('role'), 'Master')
         self.assertEqual(out.get('interval'), '10s')
         self.assertEqual(out.get('timeout'), '20s')
 
-        out = self.parser.parse('monitor apache 60m')
+        out = self._parse('monitor apache 60m')
         self.assertEqual(out.get('rsc'), 'apache')
         self.assertEqual(out.get('role'), None)
         self.assertEqual(out.get('interval'), '60m')
 
     def test_acl(self):
-        out = self.parser.parse('role user-1 error')
+        out = self._parse('role user-1 error')
         self.assertFalse(out)
-        out = self.parser.parse('user user-1 role:user-1')
+        out = self._parse('user user-1 role:user-1')
         self.assertNotEqual(out, False)
 
-        out = self.parser.parse("role bigdb_admin " +
-                                "write meta:bigdb:target-role " +
-                                "write meta:bigdb:is-managed " +
-                                "write location:bigdb " +
-                                "read ref:bigdb")
+        out = self._parse("role bigdb_admin " +
+                          "write meta:bigdb:target-role " +
+                          "write meta:bigdb:is-managed " +
+                          "write location:bigdb " +
+                          "read ref:bigdb")
         self.assertEqual(4, len(out))
 
         # new type of acls
 
-        out = self.parser.parse("acl_target foo a")
+        out = self._parse("acl_target foo a")
         self.assertEqual('acl_target', out.tag)
         self.assertEqual('foo', out.get('id'))
         self.assertEqual(['a'], out.xpath('./role/@id'))
 
-        out = self.parser.parse("acl_target foo a b")
+        out = self._parse("acl_target foo a b")
         self.assertEqual('acl_target', out.tag)
         self.assertEqual('foo', out.get('id'))
         self.assertEqual(['a', 'b'], out.xpath('./role/@id'))
 
-        out = self.parser.parse("acl_target foo a b c")
+        out = self._parse("acl_target foo a b c")
         self.assertEqual('acl_target', out.tag)
         self.assertEqual('foo', out.get('id'))
         self.assertEqual(['a', 'b', 'c'], out.xpath('./role/@id'))
-        out = self.parser.parse("acl_group fee a b c")
+        out = self._parse("acl_group fee a b c")
         self.assertEqual('acl_group', out.tag)
         self.assertEqual('fee', out.get('id'))
         self.assertEqual(['a', 'b', 'c'], out.xpath('./role/@id'))
-        out = self.parser.parse('role fum description="test" read a: description="test2" xpath:*[@name=\\"karl\\"]')
+        out = self._parse('role fum description="test" read a: description="test2" xpath:*[@name=\\"karl\\"]')
         self.assertEqual(['*[@name="karl"]'], out.xpath('/acl_role/acl_permission/@xpath'))
 
     def test_xml(self):
-        out = self.parser.parse('xml <node uname="foo-1"/>')
+        out = self._parse('xml <node uname="foo-1"/>')
         self.assertEqual('node', out.tag)
         self.assertEqual('foo-1', out.get('uname'))
 
     def test_property(self):
-        out = self.parser.parse('property stonith-enabled=true')
+        out = self._parse('property stonith-enabled=true')
         self.assertEqual(['true'], out.xpath('//nvpair[@name="stonith-enabled"]/@value'))
 
         # missing score
-        out = self.parser.parse('property rule #uname eq node1 stonith-enabled=no')
+        out = self._parse('property rule #uname eq node1 stonith-enabled=no')
         self.assertEqual(['INFINITY'], out.xpath('//@score'))
 
-        out = self.parser.parse('property rule 10: #uname eq node1 stonith-enabled=no')
+        out = self._parse('property rule 10: #uname eq node1 stonith-enabled=no')
         self.assertEqual(['no'], out.xpath('//nvpair[@name="stonith-enabled"]/@value'))
         self.assertEqual(['node1'], out.xpath('//expression[@attribute="#uname"]/@value'))
 
-        out = self.parser.parse('property rule +inf: date spec years=2014 stonith-enabled=no')
+        out = self._parse('property rule +inf: date spec years=2014 stonith-enabled=no')
         self.assertEqual(['no'], out.xpath('//nvpair[@name="stonith-enabled"]/@value'))
         self.assertEqual(['2014'], out.xpath('//date_spec/@years'))
 
-        out = self.parser.parse('rsc_defaults failure-timeout=3m')
+        out = self._parse('rsc_defaults failure-timeout=3m')
         self.assertEqual(['3m'], out.xpath('//nvpair[@name="failure-timeout"]/@value'))
 
-        out = self.parser.parse('rsc_defaults foo: failure-timeout=3m')
+        out = self._parse('rsc_defaults foo: failure-timeout=3m')
         self.assertEqual('foo', out[0].get('id'))
         self.assertEqual(['3m'], out.xpath('//nvpair[@name="failure-timeout"]/@value'))
 
-        out = self.parser.parse('rsc_defaults failure-timeout=3m foo:')
+        out = self._parse('rsc_defaults failure-timeout=3m foo:')
         self.assertEqual(False, out)
 
     def test_empty_property_sets(self):
-        out = self.parser.parse('rsc_defaults defaults:')
+        out = self._parse('rsc_defaults defaults:')
         self.assertEqual('<rsc_defaults><meta_attributes id="defaults"/></rsc_defaults>',
                          etree.tostring(out))
 
-        out = self.parser.parse('op_defaults defaults:')
+        out = self._parse('op_defaults defaults:')
         self.assertEqual('<op_defaults><meta_attributes id="defaults"/></op_defaults>',
                          etree.tostring(out))
 
     def test_fencing(self):
         # num test nodes are 3
 
-        out = self.parser.parse('fencing_topology poison-pill power')
+        out = self._parse('fencing_topology poison-pill power')
         expect = '<fencing-topology><fencing-level devices="poison-pill" index="1" target="ha-one"/><fencing-level devices="power" index="2" target="ha-one"/><fencing-level devices="poison-pill" index="1" target="ha-three"/><fencing-level devices="power" index="2" target="ha-three"/><fencing-level devices="poison-pill" index="1" target="ha-two"/><fencing-level devices="power" index="2" target="ha-two"/></fencing-topology>'
         self.assertEqual(expect, etree.tostring(out))
 
-        out = self.parser.parse('fencing_topology node-a: poison-pill power node-b: ipmi serial')
+        out = self._parse('fencing_topology node-a: poison-pill power node-b: ipmi serial')
         self.assertEqual(4, len(out))
 
         devs = ['stonith-vbox3-1-off', 'stonith-vbox3-2-off',
                 'stonith-vbox3-1-on', 'stonith-vbox3-2-on']
-        out = self.parser.parse('fencing_topology vbox4: %s' % ','.join(devs))
+        out = self._parse('fencing_topology vbox4: %s' % ','.join(devs))
         print etree.tostring(out)
         self.assertEqual(1, len(out))
 
@@ -450,26 +451,26 @@ class TestCliParser(unittest.TestCase):
         """
         Test node attribute fence target assignment
         """
-        out = self.parser.parse('fencing_topology attr:rack=1 poison-pill power')
+        out = self._parse('fencing_topology attr:rack=1 poison-pill power')
         expect = """<fencing-topology><fencing-level devices="poison-pill" index="1" target-attribute="rack" target-value="1"/><fencing-level devices="power" index="2" target-attribute="rack" target-value="1"/></fencing-topology>"""
         self.assertEqual(expect, etree.tostring(out))
 
-        out = self.parser.parse('fencing_topology attr:rack=1 poison-pill,power')
+        out = self._parse('fencing_topology attr:rack=1 poison-pill,power')
         expect = '<fencing-topology><fencing-level devices="poison-pill,power" index="1" target-attribute="rack" target-value="1"/></fencing-topology>'
         self.assertEqual(expect, etree.tostring(out))
 
     def test_tag(self):
-        out = self.parser.parse('tag tag1: one two three')
+        out = self._parse('tag tag1: one two three')
         self.assertEqual(out.get('id'), 'tag1')
         self.assertEqual(['one', 'two', 'three'], out.xpath('/tag/obj_ref/@id'))
 
-        out = self.parser.parse('tag tag1:')
+        out = self._parse('tag tag1:')
         self.assertFalse(out)
 
-        out = self.parser.parse('tag tag1:: foo')
+        out = self._parse('tag tag1:: foo')
         self.assertFalse(out)
 
-        out = self.parser.parse('tag tag1 foo bar')
+        out = self._parse('tag tag1 foo bar')
         self.assertEqual(out.get('id'), 'tag1')
         self.assertEqual(['foo', 'bar'], out.xpath('/tag/obj_ref/@id'))
 
@@ -477,7 +478,7 @@ class TestCliParser(unittest.TestCase):
         out = []
         for line in lines2cli(lines):
             if line is not None:
-                tmp = self.parser.parse(line.strip())
+                tmp = self._parse(line.strip())
                 self.assertNotEqual(tmp, False)
                 if tmp is not None:
                     out.append(tmp)
@@ -509,21 +510,21 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual('primitive', outp[0].tag)
         self.assertEqual('clone', outp[1].tag)
 
-        out = self.parser.parse('LOCATION loc-1 resource INF: foo')
+        out = self._parse('LOCATION loc-1 resource INF: foo')
         self.assertEqual(out.get('id'), 'loc-1')
         self.assertEqual(out.get('rsc'), 'resource')
         self.assertEqual(out.get('score'), 'INFINITY')
         self.assertEqual(out.get('node'), 'foo')
 
-        out = self.parser.parse('NODE node-1 ATTRIBUTES foo=bar UTILIZATION wiz=bang')
+        out = self._parse('NODE node-1 ATTRIBUTES foo=bar UTILIZATION wiz=bang')
         self.assertEqual('node-1', out.get('uname'))
         self.assertEqual(['bar'], out.xpath('/node/instance_attributes/nvpair[@name="foo"]/@value'))
         self.assertEqual(['bang'], out.xpath('/node/utilization/nvpair[@name="wiz"]/@value'))
 
-        out = self.parser.parse('PRIMITIVE virtual-ip ocf:heartbeat:IPaddr2 PARAMS ip=192.168.122.13 lvs_support=false OP start timeout=20 interval=0 OP stop timeout=20 interval=0 OP monitor interval=10 timeout=20')
+        out = self._parse('PRIMITIVE virtual-ip ocf:heartbeat:IPaddr2 PARAMS ip=192.168.122.13 lvs_support=false OP start timeout=20 interval=0 OP stop timeout=20 interval=0 OP monitor interval=10 timeout=20')
         self.assertEqual(['192.168.122.13'], out.xpath('//instance_attributes/nvpair[@name="ip"]/@value'))
 
-        out = self.parser.parse('GROUP web-server virtual-ip apache META target-role=Started')
+        out = self._parse('GROUP web-server virtual-ip apache META target-role=Started')
         self.assertEqual(out.get('id'), 'web-server')
 
     def test_nvpair_novalue(self):
