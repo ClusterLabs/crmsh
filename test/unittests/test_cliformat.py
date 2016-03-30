@@ -17,7 +17,7 @@ def assert_is_not_none(thing):
 
 
 def roundtrip(cli, debug=False, expected=None, format_mode=-1, strip_color=False):
-    parse.Validation = MockValidation
+    parse.validator = MockValidation()
     node, _, _ = cibconfig.parse_cli_to_xml(cli)
     assert_is_not_none(node)
     obj = factory.find_object(node.get("id"))

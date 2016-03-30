@@ -1,9 +1,10 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
-# Copyright (C) 2013-2015 Kristoffer Gronlund <kgronlund@suse.com>
+# Copyright (C) 2013-2016 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
 import shlex
 import re
+import inspect
 from lxml import etree
 from . import constants
 from .ra import disambiguate_ra_type, ra_type_validate
@@ -15,6 +16,36 @@ from . import xmlbuilder
 from . import xmlutil
 
 
+_NVPAIR_RE = re.compile(r'([^=@$][^=]*)=(.*)$')
+_NVPAIR_ID_RE = re.compile(r'\$([^:=]+)(?::(.+))?=(.*)$')
+_NVPAIR_REF_RE = re.compile(r'@([^:]+)(?::(.+))?$')
+_NVPAIR_KEY_RE = re.compile(r'([^:=]+)$', re.IGNORECASE)
+_IDENT_RE = re.compile(r'([a-z0-9_#$-][^=]*)$', re.IGNORECASE)
+_DISPATCH_RE = re.compile(r'[a-z0-9_]+$', re.IGNORECASE)
+_DESC_RE = re.compile(r'description=(.+)$', re.IGNORECASE)
+_ATTR_RE = re.compile(r'\$?([^=]+)=(.*)$')
+_RESOURCE_RE = re.compile(r'([a-z_#$][^=]*)$', re.IGNORECASE)
+_IDSPEC_RE = re.compile(r'(\$id-ref|\$id)=(.*)$', re.IGNORECASE)
+_ID_RE = re.compile(r'\$id=(.*)$', re.IGNORECASE)
+_ID_NEW_RE = re.compile(r'([\w-]+):$', re.IGNORECASE)
+_SCORE_RE = re.compile(r"([^:]+):$")
+_ROLE_RE = re.compile(r"\$?role=(.+)$", re.IGNORECASE)
+_BOOLOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.boolean_ops)), re.IGNORECASE)
+_UNARYOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.unary_ops)), re.IGNORECASE)
+_ACL_RIGHT_RE = re.compile(r'(%s)$' % ('|'.join(constants.acl_rule_names)), re.IGNORECASE)
+_ROLE_REF_RE = re.compile(r'role:(.+)$', re.IGNORECASE)
+_PERM_RE = re.compile(r"([^:]+)(?::(.+))?$", re.I)
+_UNAME_RE = re.compile(r'([^:]+)(:(normal|member|ping|remote))?$', re.IGNORECASE)
+_TEMPLATE_RE = re.compile(r'@(.+)$')
+_RA_TYPE_RE = re.compile(r'[a-z0-9_:-]+$', re.IGNORECASE)
+_OPTYPE_RE = re.compile(r'(%s)$' % ('|'.join(constants.op_cli_names)), re.IGNORECASE)
+_TAG_RE = re.compile(r"([a-zA-Z_][^\s:]*):?$")
+_ROLE2_RE = re.compile(r"role=(.+)$", re.IGNORECASE)
+_TARGET_RE = re.compile(r'([\w=-]+):$')
+_TARGET_ATTR_RE = re.compile(r'attr:([\w-]+)=([\w-]+)$')
+TERMINATORS = ('params', 'meta', 'utilization', 'operations', 'op', 'rule', 'attributes')
+
+
 class ParseError(Exception):
     '''
     Raised by parsers when parsing fails.
@@ -23,23 +54,86 @@ class ParseError(Exception):
     '''
 
 
-class BaseParser(object):
-    _NVPAIR_RE = re.compile(r'([^=@$][^=]*)=(.*)$')
-    _NVPAIR_ID_RE = re.compile(r'\$([^:=]+)(?::(.+))?=(.*)$')
-    _NVPAIR_REF_RE = re.compile(r'@([^:]+)(?::(.+))?$')
-    _NVPAIR_KEY_RE = re.compile(r'([^:=]+)$', re.IGNORECASE)
-    _IDENT_RE = re.compile(r'([a-z0-9_#$-][^=]*)$', re.IGNORECASE)
-    _DISPATCH_RE = re.compile(r'[a-z0-9_]+$', re.IGNORECASE)
-    _DESC_RE = re.compile(r'description=(.+)$', re.IGNORECASE)
-    _ATTR_RE = re.compile(r'\$?([^=]+)=(.*)$')
-    _RESOURCE_RE = re.compile(r'([a-z_#$][^=]*)$', re.IGNORECASE)
-    _IDSPEC_RE = re.compile(r'(\$id-ref|\$id)=(.*)$', re.IGNORECASE)
-    _ID_RE = re.compile(r'\$id=(.*)$', re.IGNORECASE)
-    _ID_NEW_RE = re.compile(r'([\w-]+):$', re.IGNORECASE)
+class Validation(object):
+    def resource_roles(self):
+        'returns list of valid resource roles'
+        return schema.rng_attr_values('resource_set', 'role')
 
-    def can_parse(self):
-        "Returns a list of commands this parser understands"
-        raise NotImplementedError
+    def resource_actions(self):
+        'returns list of valid resource actions'
+        return schema.rng_attr_values('resource_set', 'action')
+
+    def date_ops(self):
+        'returns list of valid date operations'
+        return schema.rng_attr_values_l('date_expression', 'operation')
+
+    def expression_types(self):
+        'returns list of valid expression types'
+        return schema.rng_attr_values_l('expression', 'type')
+
+    def rsc_order_kinds(self):
+        return schema.rng_attr_values('rsc_order', 'kind')
+
+    def class_provider_type(self, value):
+        """
+        Unravel [class:[provider:]]type
+        returns: (class, provider, type)
+        """
+        c_p_t = disambiguate_ra_type(value)
+        if not ra_type_validate(value, *c_p_t):
+            return None
+        return c_p_t
+
+    def canonize(self, value, lst):
+        'case-normalizes value to what is in lst'
+        value = value.lower()
+        for x in lst:
+            if value == x.lower():
+                return x
+        return None
+
+    def classify_role(self, role):
+        if not role:
+            return role, None
+        elif role in olist(self.resource_roles()):
+            return self.canonize(role, self.resource_roles()), 'role'
+        elif role.isdigit():
+            return role, 'instance'
+        return role, None
+
+    def classify_action(self, action):
+        if not action:
+            return action, None
+        elif action in olist(self.resource_actions()):
+            return self.canonize(action, self.resource_actions()), 'action'
+        elif action.isdigit():
+            return action, 'instance'
+        return action, None
+
+    def op_attributes(self):
+        return olist(schema.get('attr', 'op', 'a'))
+
+    def acl_2_0(self):
+        vname = schema.validate_name()
+        sp = vname.split('-')
+        try:
+            return sp[0] == 'pacemaker' and sp[1] == 'next' or float(sp[1]) >= 2.0
+        except Exception:
+            return False
+
+    def node_type_optional(self):
+        ns = {'t': 'http://relaxng.org/ns/structure/1.0'}
+        path = '//t:element[@name="nodes"]'
+        path = path + '//t:element[@name="node"]/t:optional/t:attribute[@name="type"]'
+        has_optional = schema.rng_xpath(path, namespaces=ns)
+        return len(has_optional) > 0
+
+
+validator = Validation()
+
+
+class BaseParser(object):
+    _BINOP_RE = None
 
     def parse(self, cmd):
         "Called by do_parse(). Raises ParseError if parsing fails."
@@ -187,22 +281,22 @@ class BaseParser(object):
         """
         ret = []
         if terminator is None:
-            terminator = RuleParser.TERMINATORS
+            terminator = TERMINATORS
         while True:
             tok = self.current_token()
             if tok is not None and tok.lower() in terminator:
                 break
-            elif self.try_match(self._NVPAIR_REF_RE):
+            elif self.try_match(_NVPAIR_REF_RE):
                 ret.append(xmlbuilder.nvpair_ref(self.matched(1),
                                                  self.matched(2)))
-            elif self.try_match(self._NVPAIR_ID_RE):
+            elif self.try_match(_NVPAIR_ID_RE):
                 ret.append(xmlbuilder.nvpair_id(self.matched(1),
                                                 self.matched(2),
                                                 self.matched(3)))
-            elif self.try_match(self._NVPAIR_RE):
+            elif self.try_match(_NVPAIR_RE):
                 ret.append(xmlbuilder.nvpair(self.matched(1),
                                              self.matched(2)))
-            elif len(terminator) and self.try_match(self._NVPAIR_KEY_RE):
+            elif len(terminator) and self.try_match(_NVPAIR_KEY_RE):
                 ret.append(xmlbuilder.new("nvpair", name=self.matched(1)))
             else:
                 break
@@ -224,10 +318,10 @@ class BaseParser(object):
         return self._lastmatch
 
     def match_identifier(self):
-        return self.match(self._IDENT_RE, errmsg="Expected identifier")
+        return self.match(_IDENT_RE, errmsg="Expected identifier")
 
     def match_resource(self):
-        return self.match(self._RESOURCE_RE, errmsg="Expected resource")
+        return self.match(_RESOURCE_RE, errmsg="Expected resource")
 
     def match_idspec(self):
         """
@@ -235,7 +329,7 @@ class BaseParser(object):
         matched(1) = $id|$id-ref
         matched(2) = <id>
         """
-        return self.match(self._IDSPEC_RE, errmsg="Expected $id-ref=<id> or $id=<id>")
+        return self.match(_IDSPEC_RE, errmsg="Expected $id-ref=<id> or $id=<id>")
 
     def try_match_idspec(self):
         """
@@ -243,7 +337,7 @@ class BaseParser(object):
         matched(1) = $id|$id-ref
         matched(2) = <value>
         """
-        return self.try_match(self._IDSPEC_RE)
+        return self.try_match(_IDSPEC_RE)
 
     def try_match_initial_id(self):
         """
@@ -253,10 +347,10 @@ class BaseParser(object):
         or
         node <id>:
         """
-        m = self.try_match(self._ID_RE)
+        m = self.try_match(_ID_RE)
         if m:
             return m
-        return self.try_match(self._ID_NEW_RE)
+        return self.try_match(_ID_NEW_RE)
 
     def match_split(self):
         """
@@ -279,7 +373,7 @@ class BaseParser(object):
         If found, the named function is called.
         Else, an error is reported.
         """
-        t = self.match(self._DISPATCH_RE, errmsg=errmsg)
+        t = self.match(_DISPATCH_RE, errmsg=errmsg)
         t = 'parse_' + t.lower()
         if hasattr(self, t) and callable(getattr(self, t)):
             return getattr(self, t)()
@@ -290,7 +384,7 @@ class BaseParser(object):
         """
         reads a description=? token if one is next
         """
-        if self.try_match(self._DESC_RE):
+        if self.try_match(_DESC_RE):
             return self.matched(1)
         return None
 
@@ -299,19 +393,6 @@ class BaseParser(object):
         while self.current_token() is not None and self.current_token() != end_token:
             tokens.append(self.match_any())
         return tokens
-
-
-class RuleParser(BaseParser):
-    """
-    Adds matchers to parse rule expressions.
-    """
-    _SCORE_RE = re.compile(r"([^:]+):$")
-    _ROLE_RE = re.compile(r"\$?role=(.+)$", re.IGNORECASE)
-    _BOOLOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.boolean_ops)), re.IGNORECASE)
-    _UNARYOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.unary_ops)), re.IGNORECASE)
-    _BINOP_RE = None
-
-    TERMINATORS = ('params', 'meta', 'utilization', 'operations', 'op', 'rule', 'attributes')
 
     def match_attr_list(self, name, tag, allow_empty=True):
         """
@@ -331,7 +412,7 @@ class RuleParser(BaseParser):
             else:
                 xmlid = self.matched(2)
         score = None
-        if self.try_match(self._SCORE_RE):
+        if self.try_match(_SCORE_RE):
             score = self.matched(1)
         rules = self.match_rules()
         values = self.match_nvpairs(minpairs=0)
@@ -373,11 +454,11 @@ class RuleParser(BaseParser):
                     idval = cib_factory.resolve_id_ref('rule', idval)
                     idref = True
                 rule.set(idtyp, idval)
-            if self.try_match(self._ROLE_RE):
+            if self.try_match(_ROLE_RE):
                 rule.set('role', self.matched(1))
             if idref:
                 continue
-            if self.try_match(self._SCORE_RE):
+            if self.try_match(_SCORE_RE):
                 rule.set(*self.validate_score(self.matched(1)))
             else:
                 rule.set('score', 'INFINITY')
@@ -417,7 +498,7 @@ class RuleParser(BaseParser):
         """
         boolop = None
         exprs = [self._match_simple_exp()]
-        while self.try_match(self._BOOLOP_RE):
+        while self.try_match(_BOOLOP_RE):
             if boolop and self.matched(1) != boolop:
                 self.err("Mixing bool ops not allowed: %s != %s" % (boolop, self.matched(1)))
             else:
@@ -428,7 +509,7 @@ class RuleParser(BaseParser):
     def _match_simple_exp(self):
         if self.try_match('date'):
             return self.match_date()
-        elif self.try_match(self._UNARYOP_RE):
+        elif self.try_match(_UNARYOP_RE):
             unary_op = self.matched(1)
             attr = self.match_identifier()
             return xmlbuilder.new('expression', operation=unary_op, attribute=attr)
@@ -436,7 +517,7 @@ class RuleParser(BaseParser):
             attr = self.match_identifier()
             if not self._BINOP_RE:
                 self._BINOP_RE = re.compile(r'((%s):)?(%s)$' % (
-                    '|'.join(self.validation.expression_types()),
+                    '|'.join(validator.expression_types()),
                     '|'.join(constants.binary_ops)), re.IGNORECASE)
             self.match(self._BINOP_RE)
             optype = self.matched(2)
@@ -458,7 +539,7 @@ class RuleParser(BaseParser):
         """
         node = xmlbuilder.new('date_expression')
 
-        date_ops = self.validation.date_ops()
+        date_ops = validator.date_ops()
         # spec -> date_spec
         if 'date_spec' in date_ops:
             date_ops.append('spec')
@@ -498,7 +579,7 @@ class RuleParser(BaseParser):
             return ["score", score]
         if noattr:
             # orders have the special kind attribute
-            kind = self.validation.canonize(score, self.validation.rsc_order_kinds())
+            kind = validator.canonize(score, validator.rsc_order_kinds())
             if not kind:
                 self.err("Invalid kind: " + score)
             return ['kind', kind]
@@ -543,51 +624,58 @@ class RuleParser(BaseParser):
                 break
 
 
-class NodeParser(RuleParser):
-    _UNAME_RE = re.compile(r'([^:]+)(:(normal|member|ping|remote))?$', re.IGNORECASE)
+_parsers = {}
 
-    def can_parse(self):
-        return ('node',)
 
-    def parse(self, cmd):
-        """
-        node [<id>:|$id=<id>] <uname>[:<type>]
-          [description=<description>]
-          [attributes <param>=<value> [<param>=<value>...]]
-          [utilization <param>=<value> [<param>=<value>...]]
-
-        type :: normal | member | ping | remote
-        """
-        self.begin(cmd, min_args=1)
-        self.match('node')
-        out = xmlbuilder.new('node')
-        xmlbuilder.maybe_set(out, "id", self.try_match_initial_id() and self.matched(1))
-        self.match(self._UNAME_RE, errmsg="Expected uname[:type]")
-        out.set("uname", self.matched(1))
-        if self.validation.node_type_optional():
-            xmlbuilder.maybe_set(out, "type", self.matched(3))
+def parser_for(*lst):
+    def decorator(thing):
+        if inspect.isfunction(thing):
+            def parse(self, cmd):
+                return thing(self, cmd)
+            ret = type("Parser-" + '-'.join(lst), (BaseParser,), {'parse': parse})
         else:
-            out.set("type", self.matched(3) or constants.node_default_type)
-        xmlbuilder.maybe_set(out, "description", self.try_match_description())
-        self.match_arguments(out, {'attributes': 'instance_attributes',
-                                   'utilization': 'utilization'},
-                             implicit_initial='attributes')
-        return out
+            ret = thing
+        ret.can_parse = lst
+        for x in lst:
+            _parsers[x] = ret()
+        return ret
+    return decorator
 
 
-class ResourceParser(RuleParser):
-    _TEMPLATE_RE = re.compile(r'@(.+)$')
-    _RA_TYPE_RE = re.compile(r'[a-z0-9_:-]+$', re.IGNORECASE)
-    _OPTYPE_RE = re.compile(r'(%s)$' % ('|'.join(constants.op_cli_names)), re.IGNORECASE)
+@parser_for('node')
+def parse_node(self, cmd):
+    """
+    node [<id>:|$id=<id>] <uname>[:<type>]
+      [description=<description>]
+      [attributes <param>=<value> [<param>=<value>...]]
+      [utilization <param>=<value> [<param>=<value>...]]
 
-    def can_parse(self):
-        return ('primitive', 'group', 'clone', 'ms', 'master', 'rsc_template')
+    type :: normal | member | ping | remote
+    """
+    self.begin(cmd, min_args=1)
+    self.match('node')
+    out = xmlbuilder.new('node')
+    xmlbuilder.maybe_set(out, "id", self.try_match_initial_id() and self.matched(1))
+    self.match(_UNAME_RE, errmsg="Expected uname[:type]")
+    out.set("uname", self.matched(1))
+    if validator.node_type_optional():
+        xmlbuilder.maybe_set(out, "type", self.matched(3))
+    else:
+        out.set("type", self.matched(3) or constants.node_default_type)
+    xmlbuilder.maybe_set(out, "description", self.try_match_description())
+    self.match_arguments(out, {'attributes': 'instance_attributes',
+                               'utilization': 'utilization'},
+                         implicit_initial='attributes')
+    return out
 
+
+@parser_for('primitive', 'group', 'clone', 'ms', 'master', 'rsc_template')
+class ResourceParser(BaseParser):
     def match_ra_type(self, out):
         "[<class>:[<provider>:]]<type>"
         if not self.current_token():
             self.err("Expected resource type")
-        cpt = self.validation.class_provider_type(self.current_token())
+        cpt = validator.class_provider_type(self.current_token())
         if not cpt:
             self.err("Unknown resource type")
         self.match_any()
@@ -607,12 +695,12 @@ class ResourceParser(RuleParser):
           </op>
         """
         self.match('op')
-        op_type = self.match(self._OPTYPE_RE, errmsg="Expected operation type")
+        op_type = self.match(_OPTYPE_RE, errmsg="Expected operation type")
         all_attrs = self.match_nvpairs(minpairs=0)
         node = xmlbuilder.new('op', name=op_type)
         if not any(nvp.get('name') == 'interval' for nvp in all_attrs):
             all_attrs.append(xmlbuilder.nvpair('interval', '0'))
-        valid_attrs = self.validation.op_attributes()
+        valid_attrs = validator.op_attributes()
         inst_attrs = None
         for nvp in all_attrs:
             if nvp.get('name') in valid_attrs:
@@ -670,7 +758,7 @@ class ResourceParser(RuleParser):
         else:
             out = xmlbuilder.new('template')
         out.set('id', self.match_identifier())
-        if t == 'primitive' and self.try_match(self._TEMPLATE_RE):
+        if t == 'primitive' and self.try_match(_TEMPLATE_RE):
             out.set('template', self.matched(1))
         else:
             self.match_ra_type(out)
@@ -728,12 +816,8 @@ class ResourceParser(RuleParser):
         return out
 
 
-class ConstraintParser(RuleParser):
-    _ROLE2_RE = re.compile(r"role=(.+)$", re.IGNORECASE)
-
-    def can_parse(self):
-        return ('location', 'colocation', 'collocation', 'order', 'rsc_ticket')
-
+@parser_for('location', 'colocation', 'collocation', 'order', 'rsc_ticket')
+class ConstraintParser(BaseParser):
     def parse(self, cmd):
         return self.begin_dispatch(cmd, min_args=2)
 
@@ -760,20 +844,20 @@ class ConstraintParser(RuleParser):
         else:
             out.set('rsc', self.match_resource())
 
-        while self.try_match(self._ATTR_RE):
+        while self.try_match(_ATTR_RE):
             out.set(self.matched(1), self.matched(2))
 
-        if self.try_match(self._ROLE_RE) or self.try_match(self._ROLE2_RE):
+        if self.try_match(_ROLE_RE) or self.try_match(_ROLE2_RE):
             out.set('role', self.matched(1))
 
         score = False
-        if self.try_match(self._SCORE_RE):
+        if self.try_match(_SCORE_RE):
             score = True
             out.set(*self.validate_score(self.matched(1)))
             out.set('node', self.match_identifier())
             # backwards compatibility: role used to be read here
             if 'role' not in out:
-                if self.try_match(self._ROLE_RE) or self.try_match(self._ROLE2_RE):
+                if self.try_match(_ROLE_RE) or self.try_match(_ROLE2_RE):
                     out.set('role', self.matched(1))
         if not score:
             rules = self.match_rules()
@@ -788,7 +872,7 @@ class ConstraintParser(RuleParser):
           [node-attribute=<node_attr>]
         """
         out = xmlbuilder.new('rsc_colocation', id=self.match_identifier())
-        self.match(self._SCORE_RE, errmsg="Expected <score>:")
+        self.match(_SCORE_RE, errmsg="Expected <score>:")
         out.set(*self.validate_score(self.matched(1)))
         if self.try_match_tail('node-attribute=(.+)$'):
             out.set('node-attribute', self.matched(1).lower())
@@ -805,10 +889,10 @@ class ConstraintParser(RuleParser):
         kind :: Mandatory | Optional | Serialize
         '''
         out = xmlbuilder.new('rsc_order', id=self.match_identifier())
-        if self.try_match('(%s):$' % ('|'.join(self.validation.rsc_order_kinds()))):
-            out.set('kind', self.validation.canonize(
-                self.matched(1), self.validation.rsc_order_kinds()))
-        elif self.try_match(self._SCORE_RE):
+        if self.try_match('(%s):$' % ('|'.join(validator.rsc_order_kinds()))):
+            out.set('kind', validator.canonize(
+                self.matched(1), validator.rsc_order_kinds()))
+        elif self.try_match(_SCORE_RE):
             out.set(*self.validate_score(self.matched(1), noattr=True))
         if self.try_match_tail('symmetrical=(true|false|yes|no|on|off)$'):
             out.set('symmetrical', canonical_boolean(self.matched(1)))
@@ -823,7 +907,7 @@ class ConstraintParser(RuleParser):
         loss_policy_action :: stop | demote | fence | freeze
         '''
         out = xmlbuilder.new('rsc_ticket', id=self.match_identifier())
-        self.match(self._SCORE_RE, errmsg="Expected <ticket-id>:")
+        self.match(_SCORE_RE, errmsg="Expected <ticket-id>:")
         out.set('ticket', self.matched(1))
         if self.try_match_tail('loss-policy=(stop|demote|fence|freeze)$'):
             out.set('loss-policy', self.matched(1))
@@ -883,20 +967,18 @@ class ConstraintParser(RuleParser):
         return rsc, typ, t
 
     def match_simple_role_set(self, count):
-        ret = self._fmt(self._split_setref('role', self.validation.classify_role), 'rsc')
+        ret = self._fmt(self._split_setref('role', validator.classify_role), 'rsc')
         if count == 2:
-            ret += self._fmt(self._split_setref('role', self.validation.classify_role), 'with-rsc')
+            ret += self._fmt(self._split_setref('role', validator.classify_role), 'with-rsc')
         return ret
 
     def match_simple_action_set(self):
-        ret = self._fmt(self._split_setref('action', self.validation.classify_action), 'first')
-        return ret + self._fmt(self._split_setref('action', self.validation.classify_action), 'then')
+        ret = self._fmt(self._split_setref('action', validator.classify_action), 'first')
+        return ret + self._fmt(self._split_setref('action', validator.classify_action), 'then')
 
 
+@parser_for('monitor')
 class OpParser(BaseParser):
-    def can_parse(self):
-        return ('monitor',)
-
     def parse(self, cmd):
         return self.begin_dispatch(cmd, min_args=2)
 
@@ -904,7 +986,7 @@ class OpParser(BaseParser):
         out = xmlbuilder.new('op', name="monitor")
         resource, role = self.match_split()
         if role:
-            role, role_class = self.validation.classify_role(role)
+            role, role_class = validator.classify_role(role)
             if not role_class:
                 self.err("Invalid role '%s' for resource '%s'" % (role, resource))
             out.set(role_class, role)
@@ -915,44 +997,42 @@ class OpParser(BaseParser):
         return out
 
 
-class PropertyParser(RuleParser):
+@parser_for('property', 'rsc_defaults', 'op_defaults')
+def property_parser(self, cmd):
     """
     property = <cluster_property_set>...</>
     rsc_defaults = <rsc_defaults><meta_attributes>...</></>
     op_defaults = <op_defaults><meta_attributes>...</></>
     """
-    def can_parse(self):
-        return ('property', 'rsc_defaults', 'op_defaults')
+    from .cibconfig import cib_factory
 
-    def parse(self, cmd):
-        from .cibconfig import cib_factory
-
-        setmap = {'property': 'cluster_property_set',
-                  'rsc_defaults': 'meta_attributes',
-                  'op_defaults': 'meta_attributes'}
-        self.begin(cmd, min_args=1)
-        self.match('(%s)$' % '|'.join(self.can_parse()))
-        if self.matched(1) in constants.defaults_tags:
-            root = xmlbuilder.new(self.matched(1))
-            attrs = xmlbuilder.child(root, setmap[self.matched(1)])
-        else:  # property -> cluster_property_set
-            root = xmlbuilder.new(setmap[self.matched(1)])
-            attrs = root
-        if self.try_match_initial_id():
-            attrs.set('id', self.matched(1))
-        elif self.try_match_idspec():
-            idkey = self.matched(1)[1:]
-            idval = self.matched(2)
-            if idkey == 'id-ref':
-                idval = cib_factory.resolve_id_ref(attrs.tag, idval)
-            attrs.set(idkey, idval)
-        for rule in self.match_rules():
-            attrs.append(rule)
-        for nvp in self.match_nvpairs(minpairs=0):
-            attrs.append(nvp)
-        return root
+    setmap = {'property': 'cluster_property_set',
+              'rsc_defaults': 'meta_attributes',
+              'op_defaults': 'meta_attributes'}
+    self.begin(cmd, min_args=1)
+    self.match('(%s)$' % '|'.join(self.can_parse))
+    if self.matched(1) in constants.defaults_tags:
+        root = xmlbuilder.new(self.matched(1))
+        attrs = xmlbuilder.child(root, setmap[self.matched(1)])
+    else:  # property -> cluster_property_set
+        root = xmlbuilder.new(setmap[self.matched(1)])
+        attrs = root
+    if self.try_match_initial_id():
+        attrs.set('id', self.matched(1))
+    elif self.try_match_idspec():
+        idkey = self.matched(1)[1:]
+        idval = self.matched(2)
+        if idkey == 'id-ref':
+            idval = cib_factory.resolve_id_ref(attrs.tag, idval)
+        attrs.set(idkey, idval)
+    for rule in self.match_rules():
+        attrs.append(rule)
+    for nvp in self.match_nvpairs(minpairs=0):
+        attrs.append(nvp)
+    return root
 
 
+@parser_for('fencing-topology', 'fencing_topology')
 class FencingOrderParser(BaseParser):
     """
     <fencing-topology>
@@ -971,13 +1051,6 @@ class FencingOrderParser(BaseParser):
     </fencing-topology>
 
     """
-
-    _TARGET_RE = re.compile(r'([\w=-]+):$')
-    _TARGET_ATTR_RE = re.compile(r'attr:([\w-]+)=([\w-]+)$')
-
-    def can_parse(self):
-        return ('fencing-topology', 'fencing_topology')
-
     def parse(self, cmd):
         self.begin(cmd, min_args=1)
         if not self.try_match("fencing-topology"):
@@ -986,9 +1059,9 @@ class FencingOrderParser(BaseParser):
         # (target, devices)
         raw_levels = []
         while self.has_tokens():
-            if self.try_match(self._TARGET_ATTR_RE):
+            if self.try_match(_TARGET_ATTR_RE):
                 target = (self.matched(1), self.matched(2))
-            elif self.try_match(self._TARGET_RE):
+            elif self.try_match(_TARGET_RE):
                 target = self.matched(1)
             else:
                 raw_levels.append((target, self.match_any()))
@@ -1031,38 +1104,28 @@ class FencingOrderParser(BaseParser):
         return out
 
 
-class TagParser(BaseParser):
+@parser_for('tag')
+def parse_tag(self, cmd):
     """
     <tag id=id>
       <obj_ref id=rsc/>
       ...
     </tag>
     """
-    _TAG_RE = re.compile(r"([a-zA-Z_][^\s:]*):?$")
-
-    def can_parse(self):
-        return ('tag',)
-
-    def parse(self, cmd):
-        self.begin(cmd, min_args=2)
-        self.match('tag')
-        self.match(self._TAG_RE, errmsg="Expected tag name")
-        out = xmlbuilder.new('tag', id=self.matched(1))
-        while self.has_tokens():
-            e = xmlbuilder.new('obj_ref', id=self.match_resource())
-            out.append(e)
-        if len(out) == 0:
-            self.err("Expected at least one resource")
-        return out
+    self.begin(cmd, min_args=2)
+    self.match('tag')
+    self.match(_TAG_RE, errmsg="Expected tag name")
+    out = xmlbuilder.new('tag', id=self.matched(1))
+    while self.has_tokens():
+        e = xmlbuilder.new('obj_ref', id=self.match_resource())
+        out.append(e)
+    if len(out) == 0:
+        self.err("Expected at least one resource")
+    return out
 
 
+@parser_for('user', 'role', 'acl_target', 'acl_group')
 class AclParser(BaseParser):
-    _ACL_RIGHT_RE = re.compile(r'(%s)$' % ('|'.join(constants.acl_rule_names)), re.IGNORECASE)
-    _ROLE_REF_RE = re.compile(r'role:(.+)$', re.IGNORECASE)
-
-    def can_parse(self):
-        return ('user', 'role', 'acl_target', 'acl_group')
-
     def parse(self, cmd):
         return self.begin_dispatch(cmd, min_args=2)
 
@@ -1071,7 +1134,7 @@ class AclParser(BaseParser):
         out.set('id', self.match_identifier())
         while self.has_tokens():
             # role identifier
-            if self.try_match(self._ROLE_REF_RE):
+            if self.try_match(_ROLE_REF_RE):
                 xmlbuilder.child(out, 'role_ref', id=self.matched(1))
             # acl right rule
             else:
@@ -1096,7 +1159,7 @@ class AclParser(BaseParser):
         out = xmlbuilder.new('acl_role')
         out.set('id', self.match_identifier())
 
-        if self.validation.acl_2_0():
+        if validator.acl_2_0():
             xmlbuilder.maybe_set(out, "description", self.try_match_description())
             while self.has_tokens():
                 self._add_permission(out)
@@ -1104,8 +1167,6 @@ class AclParser(BaseParser):
             while self.has_tokens():
                 out.append(self._add_rule())
         return out
-
-    _PERM_RE = re.compile(r"([^:]+)(?::(.+))?$", re.I)
 
     def _is_permission(self, val):
         def permission(x):
@@ -1115,7 +1176,7 @@ class AclParser(BaseParser):
 
     def _add_permission(self, out):
         rule = xmlbuilder.new('acl_permission')
-        rule.set('kind', self.match(self._ACL_RIGHT_RE).lower())
+        rule.set('kind', self.match(_ACL_RIGHT_RE).lower())
         if self.try_match_initial_id():
             rule.set('id', self.matched(1))
         xmlbuilder.maybe_set(rule, "description", self.try_match_description())
@@ -1125,7 +1186,7 @@ class AclParser(BaseParser):
         while self.has_tokens():
             if not self._is_permission(self.current_token()):
                 break
-            self.match(self._PERM_RE, errmsg="Expected <type>:<spec>")
+            self.match(_PERM_RE, errmsg="Expected <type>:<spec>")
             typ = self.matched(1)
             typ = constants.acl_spec_map_2.get(typ, typ)
             val = self.matched(2)
@@ -1158,7 +1219,7 @@ class AclParser(BaseParser):
             self.err("attribute is only valid in combination with tag/object-type")
 
     def _add_rule(self):
-        rule = xmlbuilder.new(self.match(self._ACL_RIGHT_RE).lower())
+        rule = xmlbuilder.new(self.match(_ACL_RIGHT_RE).lower())
         eligible_specs = constants.acl_spec_map.values()
         while self.has_tokens():
             a = self._expand_shortcuts(self.current_token().split(':', 1))
@@ -1275,26 +1336,23 @@ class AclParser(BaseParser):
         return l
 
 
-class RawXMLParser(BaseParser):
-    def can_parse(self):
-        return ('xml',)
-
-    def parse(self, cmd):
-        self.begin(cmd, min_args=1)
-        self.match('xml')
-        if not self.has_tokens():
-            self.err("Expected XML data")
-        xml_data = ' '.join(self.match_rest())
-        # strip spaces between elements
-        # they produce text elements
-        try:
-            e = etree.fromstring(xml_data)
-        except Exception, e:
-            common_err("Cannot parse XML data: %s" % xml_data)
-            self.err(e)
-        if e.tag not in constants.cib_cli_map:
-            self.err("Element %s not recognized" % (e.tag))
-        return e
+@parser_for('xml')
+def parse_xml(self, cmd):
+    self.begin(cmd, min_args=1)
+    self.match('xml')
+    if not self.has_tokens():
+        self.err("Expected XML data")
+    xml_data = ' '.join(self.match_rest())
+    # strip spaces between elements
+    # they produce text elements
+    try:
+        e = etree.fromstring(xml_data)
+    except Exception, e:
+        common_err("Cannot parse XML data: %s" % xml_data)
+        self.err(e)
+    if e.tag not in constants.cib_cli_map:
+        self.err("Element %s not recognized" % (e.tag))
+    return e
 
 
 class ResourceSet(object):
@@ -1381,13 +1439,13 @@ class ResourceSet(object):
         l = p.split(':')
         if len(l) == 2:
             if self.q_attr == 'action':
-                l[1] = self.parent.validation.canonize(
+                l[1] = validator.canonize(
                     l[1],
-                    self.parent.validation.resource_actions())
+                    validator.resource_actions())
             else:
-                l[1] = self.parent.validation.canonize(
+                l[1] = validator.canonize(
                     l[1],
-                    self.parent.validation.resource_roles())
+                    validator.resource_roles())
             if not l[1]:
                 self.err('Invalid %s for %s' % (self.q_attr, p))
         elif len(l) == 1:
@@ -1462,81 +1520,6 @@ class ResourceSet(object):
         return ret
 
 
-class Validation(object):
-    def resource_roles(self):
-        'returns list of valid resource roles'
-        return schema.rng_attr_values('resource_set', 'role')
-
-    def resource_actions(self):
-        'returns list of valid resource actions'
-        return schema.rng_attr_values('resource_set', 'action')
-
-    def date_ops(self):
-        'returns list of valid date operations'
-        return schema.rng_attr_values_l('date_expression', 'operation')
-
-    def expression_types(self):
-        'returns list of valid expression types'
-        return schema.rng_attr_values_l('expression', 'type')
-
-    def rsc_order_kinds(self):
-        return schema.rng_attr_values('rsc_order', 'kind')
-
-    def class_provider_type(self, value):
-        """
-        Unravel [class:[provider:]]type
-        returns: (class, provider, type)
-        """
-        c_p_t = disambiguate_ra_type(value)
-        if not ra_type_validate(value, *c_p_t):
-            return None
-        return c_p_t
-
-    def canonize(self, value, lst):
-        'case-normalizes value to what is in lst'
-        value = value.lower()
-        for x in lst:
-            if value == x.lower():
-                return x
-        return None
-
-    def classify_role(self, role):
-        if not role:
-            return role, None
-        elif role in olist(self.resource_roles()):
-            return self.canonize(role, self.resource_roles()), 'role'
-        elif role.isdigit():
-            return role, 'instance'
-        return role, None
-
-    def classify_action(self, action):
-        if not action:
-            return action, None
-        elif action in olist(self.resource_actions()):
-            return self.canonize(action, self.resource_actions()), 'action'
-        elif action.isdigit():
-            return action, 'instance'
-        return action, None
-
-    def op_attributes(self):
-        return olist(schema.get('attr', 'op', 'a'))
-
-    def acl_2_0(self):
-        vname = schema.validate_name()
-        sp = vname.split('-')
-        try:
-            return sp[0] == 'pacemaker' and sp[1] == 'next' or float(sp[1]) >= 2.0
-        except Exception:
-            return False
-
-    def node_type_optional(self):
-        ns = {'t': 'http://relaxng.org/ns/structure/1.0'}
-        path = '//t:element[@name="nodes"]'
-        path = path + '//t:element[@name="node"]/t:optional/t:attribute[@name="type"]'
-        has_optional = schema.rng_xpath(path, namespaces=ns)
-        return len(has_optional) > 0
-
-
 def parse(s, comments=None):
     '''
     Input: a list of tokens (or a CLI format string).
@@ -1549,13 +1532,6 @@ def parse(s, comments=None):
     '''
     if comments is None:
         comments = []
-    validation = Validation()
-    parsers = {}
-    for Parser in (ResourceParser, ConstraintParser, OpParser, NodeParser, PropertyParser, FencingOrderParser, AclParser, RawXMLParser, TagParser):
-        parser = Parser()
-        parser.validation = validation
-        for n in parser.can_parse():
-            parsers[n] = parser
 
     if isinstance(s, unicode):
         try:
@@ -1583,11 +1559,11 @@ def parse(s, comments=None):
     if not s:
         return s
     kw = s[0]
-    if kw not in parsers:
+    parser = _parsers.get(kw)
+    if parser is None:
         syntax_err(s, token=s[0], msg="Unknown command")
         return False
 
-    parser = parsers[kw]
     try:
         ret = parser.do_parse(s)
         if ret is not None and len(comments) > 0:

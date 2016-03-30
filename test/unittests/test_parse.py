@@ -94,7 +94,7 @@ class TestBaseParser(unittest.TestCase):
 
 class TestCliParser(unittest.TestCase):
     def setUp(self):
-        parse.Validation = MockValidation
+        parse.validator = MockValidation()
         self.comments = []
 
     def _parse(self, s):
