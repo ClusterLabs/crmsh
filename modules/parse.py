@@ -976,7 +976,7 @@ class FencingOrderParser(BaseParser):
     """
 
     _TARGET_RE = re.compile(r'([\w=-]+):$')
-    _TARGET_ATTR_RE = re.compile(r'attr:([\w-]+)=([\w-]+)$')
+    _TARGET_ATTR_RE = re.compile(r'attr:([\w-]+)=([\w-]+)$', re.IGNORECASE)
 
     def can_parse(self):
         return ('fencing-topology', 'fencing_topology')
