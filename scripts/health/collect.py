@@ -27,7 +27,7 @@ def sys_info():
     #processes. The last column displays the last process ID used.
     system, node, release, version, machine, processor = platform.uname()
     distname, distver, distid = platform.linux_distribution()
-    hostname = platform.node().split('.')[0]
+    hostname = os.uname()[1]
 
     uptime = open('/proc/uptime').read().split()
     loadavg = open('/proc/loadavg').read().split()
