@@ -67,8 +67,8 @@ class OrderedSet(collections.MutableSet):
             yield curr[KEY]
             curr = curr[PREV]
 
-    def pop(self, last=True):
-        # changed default to last=False - by default, treat as queue.
+    def pop(self):
+        last = True
         if not self:
             raise KeyError('set is empty')
         key = next(reversed(self)) if last else next(iter(self))
