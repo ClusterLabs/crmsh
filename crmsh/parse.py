@@ -138,12 +138,13 @@ class BaseParser(object):
         "Called by do_parse(). Raises ParseError if parsing fails."
         raise NotImplementedError
 
-    def err(self, errmsg):
+    def err(self, msg, context=None, token=None):
         "Report a parse error and abort."
-        token = None
-        if self.has_tokens():
+        if token is None and self.has_tokens():
             token = self._cmd[self._currtok]
-        syntax_err(self._cmd, context=self._cmd[0], token=token, msg=errmsg)
+        if context is None:
+            context = self._cmd[0]
+        syntax_err(self._cmd, context=context, token=token, msg=msg)
         raise ParseError
 
     def begin(self, cmd, min_args=-1):
@@ -1452,11 +1453,7 @@ class ResourceSet(object):
         return l
 
     def err(self, errmsg, token=''):
-        syntax_err(self.parent._cmd,
-                   context=self.q_attr,
-                   token=token,
-                   msg=errmsg)
-        raise ParseError
+        self.parent.err(msg=errmsg, context=self.q_attr, token=token)
 
     def update_attrs(self, bracket, tokpos):
         if bracket in ('(', '['):

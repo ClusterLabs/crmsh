@@ -437,7 +437,7 @@ class CibObjectSet(object):
         '''
         pass
 
-    def __check_unique_clash(self, set_obj_all):
+    def _check_unique_clash(self, set_obj_all):
         'Check whether resource parameters with attribute "unique" clash'
         def process_primitive(prim, clash_dict):
             '''
@@ -492,7 +492,7 @@ class CibObjectSet(object):
         '''
         Test objects for sanity. This is about semantics.
         '''
-        rc = self.__check_unique_clash(set_obj_all)
+        rc = self._check_unique_clash(set_obj_all)
         for obj in sorted(self.obj_set, key=lambda x: x.obj_id):
             rc |= obj.check_sanity()
         return rc
