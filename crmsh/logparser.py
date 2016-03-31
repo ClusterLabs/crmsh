@@ -167,18 +167,18 @@ class Transition(object):
         """
         old_pe_l_file = prev.path()
         new_pe_l_file = self.path()
+        no_actions = self.actions_count() == 0
         if not os.path.isfile(old_pe_l_file) or not os.path.isfile(new_pe_l_file):
-            return self.actions_count() == 0
-        num_actions = self.actions_count()
+            return no_actions
         old_cib = xmlutil.compressed_file_to_cib(old_pe_l_file)
         new_cib = xmlutil.compressed_file_to_cib(new_pe_l_file)
         if old_cib is None or new_cib is None:
-            return num_actions == 0
+            return no_actions
         prev_epoch = old_cib.attrib.get("epoch", "0")
         epoch = new_cib.attrib.get("epoch", "0")
         prev_admin_epoch = old_cib.attrib.get("admin_epoch", "0")
         admin_epoch = new_cib.attrib.get("admin_epoch", "0")
-        return num_actions == 0 and epoch == prev_epoch and admin_epoch == prev_admin_epoch
+        return no_actions and epoch == prev_epoch and admin_epoch == prev_admin_epoch
 
     def transition_info(self):
         print "Transition %s (%s -" % (self, utils.shorttime(self.start_ts)),
@@ -196,8 +196,8 @@ class Transition(object):
         Serialize to dict (for cache)
         """
         o = {"tags": list(self.tags)}
-        for k in dir(self):
-            if k.startswith('__') or k in ("loc", "tags") or hasattr(getattr(self, k), '__call__'):
+        for k in self.__slots__:
+            if k in ("loc", "tags"):
                 continue
             o[k] = getattr(self, k)
         return o
@@ -206,10 +206,7 @@ class Transition(object):
     def from_dict(cls, loc, obj):
         t = Transition(loc, None, None, None, None, None)
         for k, v in obj.iteritems():
-            if k == "tags":
-                setattr(t, k, set(v))
-            else:
-                setattr(t, k, v)
+            setattr(t, k, set(v) if k == "tags" else v)
         return t
 
 
@@ -280,7 +277,6 @@ class LogParser(object):
 
         self.events = {}
         self.transitions = []
-        self.transitions_map = {}
 
         self.from_ts = None
         self.to_ts = None
@@ -329,8 +325,9 @@ class LogParser(object):
         self.events = collections.defaultdict(list)
 
         self.transitions = []
+
         # trans_num:pe_num -> Transition()
-        self.transitions_map = {}
+        transitions_map = {}
 
         startre = _transition_start_re()
         endre = _transition_end_re()
@@ -367,11 +364,11 @@ class LogParser(object):
                     if ts is None or dc is None:
                         continue
                     id_ = trans_str(dc, pe_file)
-                    transition = self.transitions_map.get(id_)
+                    transition = transitions_map.get(id_)
                     if transition is None:
                         transition = Transition(self.loc, dc, ts, trans_num, pe_file, pe_num)
                         self.transitions.append(transition)
-                        self.transitions_map[id_] = transition
+                        transitions_map[id_] = transition
                         crmlog.common_debug("{Transition: %s" % (transition))
 
                         if not os.path.isfile(transition.path()):
@@ -389,7 +386,7 @@ class LogParser(object):
                         ts, dc = logtime.syslog_ts_node(line)
                         if ts is None or dc is None:
                             continue
-                        transition = self.transitions_map.get(trans_str(dc, pe_file))
+                        transition = transitions_map.get(trans_str(dc, pe_file))
                         if transition is None:
                             # transition end without previous begin...
                             crmlog.common_debug("Found transition end without start: %s: %s - %s:%s" % (ts, filename, trans_num, pe_file))
@@ -429,8 +426,6 @@ class LogParser(object):
             if t.empty(self.transitions[i - 1]):
                 empties.append(t)
         self.transitions = [t for t in self.transitions if t not in empties]
-        for e in empties:
-            del self.transitions_map[trans_str(e.dc, e.pe_file)]
         self._save_cache()
         if missing_pefiles:
             rdict = collections.defaultdict(list)
@@ -595,9 +590,6 @@ class LogParser(object):
             return False
         self.events = obj["events"]
         self.transitions = [Transition.from_dict(self.loc, t) for t in obj["transitions"]]
-        self.transitions_map = {}
-        for t in self.transitions:
-            self.transitions_map[trans_str(t.dc, t.pe_file)] = t
         return True
 
     def _metafile(self):
