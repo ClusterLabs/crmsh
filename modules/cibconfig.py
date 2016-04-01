@@ -1170,7 +1170,7 @@ class CibObject(object):
 
     def find_child_in_node(self, child):
         for c in self.node.iterchildren():
-            if c.tag == child.obj_type and \
+            if c.tag == child.node.tag and \
                     c.get("id") == child.obj_id:
                 return c
         return None
@@ -3058,7 +3058,7 @@ class CibFactory(object):
         if child.parent and child.parent.obj_id != obj_id:
             common_err("%s already in use at %s" % (child_id, child.parent.obj_id))
             return False
-        if not child.obj_type in constants.children_tags:
+        if child.node.tag not in constants.children_tags:
             common_err("%s may contain a primitive or a group; %s is %s" %
                        (parent_tag, child_id, child.obj_type))
             return False
