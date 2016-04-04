@@ -1117,13 +1117,14 @@ def _generate_workdir_name():
 def _print_debug(printer, local_node, hosts, workdir, opts):
     "Print debug output (if any)"
     dbglog = os.path.join(workdir, 'crm_script.debug')
-    for host, result in _parallax_call(printer, hosts,
-                                       "if [ -f '%s' ]; then cat '%s'; fi" % (dbglog, dbglog),
-                                       opts).iteritems():
-        if isinstance(result, parallax.Error):
-            printer.error(host, result)
-        else:
-            printer.output(host, *result)
+    if hosts:
+        for host, result in _parallax_call(printer, hosts,
+                                           "if [ -f '%s' ]; then cat '%s'; fi" % (dbglog, dbglog),
+                                           opts).iteritems():
+            if isinstance(result, parallax.Error):
+                printer.error(host, result)
+            else:
+                printer.output(host, *result)
     if os.path.isfile(dbglog):
         f = open(dbglog).read()
         printer.output(local_node, 0, f, '')
@@ -2082,8 +2083,10 @@ def run(script, params, printer):
         if not dry_run:
             if not config.core.debug:
                 _run_cleanup(printer, has_remote_actions, local_node, hosts, workdir, opts)
-            else:
+            elif has_remote_actions:
                 _print_debug(printer, local_node, hosts, workdir, opts)
+            else:
+                _print_debug(printer, local_node, None, workdir, opts)
 
 
 def _remove_empty_lines(txt):
