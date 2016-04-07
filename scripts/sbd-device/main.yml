@@ -32,7 +32,7 @@ actions:
       systemctl is-active --quiet sbd && { echo "ERROR: SBD daemon is already running"; exit 1; } || true
       test -b "{{device}}" || { echo "ERROR: Not a device: {{device}"; exit 1; }
       lsmod | egrep "(wd|dog)" || { echo "ERROR: No watchdog kernel module loaded"; exit 1; }
-      test -b "{{watchdog}}" || { echo "ERROR: Not a device: {{watchdog}}"; exit 1; }
+      test -c "{{watchdog}}" || { echo "ERROR: Not a device: {{watchdog}}"; exit 1; }
 
   - shortdesc: Initialize the SBD device
     sudo: true
@@ -40,7 +40,8 @@ actions:
     call: |
       #!/bin/sh
       set -e
-      sbd -d "{{device}}" create
+      sbd dump &> /dev/null || sbd -d "{{device}}" create
+      # sbd allocate "$(uname -n)" # FIXME
 
   - shortdesc: Verify SBD Device
     call: |
