@@ -67,7 +67,7 @@ class TestCorosyncParser(unittest.TestCase):
         p.add('nodelist',
               make_section('nodelist.node',
                            make_value('nodelist.node.ring0_addr', '10.10.10.10') +
-                           make_value('nodelist.node.nodeid', str(corosync.next_nodeid(p)))))
+                           make_value('nodelist.node.nodeid', str(corosync.get_free_nodeid(p)))))
         _valid(p)
         self.assertEqual(p.count('nodelist.node'), 6)
         self.assertEqual(p.get_all('nodelist.node.nodeid'),
@@ -75,11 +75,11 @@ class TestCorosyncParser(unittest.TestCase):
 
     def test_add_node_no_nodelist(self):
         "test checks that if there is no nodelist, no node is added"
-        from crmsh.corosync import make_section, make_value, next_nodeid
+        from crmsh.corosync import make_section, make_value, get_free_nodeid
 
         p = Parser(F1)
         _valid(p)
-        nid = next_nodeid(p)
+        nid = get_free_nodeid(p)
         self.assertEqual(p.count('nodelist.node'), nid - 1)
         p.add('nodelist',
               make_section('nodelist.node',
@@ -89,11 +89,11 @@ class TestCorosyncParser(unittest.TestCase):
         self.assertEqual(p.count('nodelist.node'), nid - 1)
 
     def test_add_node_nodelist(self):
-        from crmsh.corosync import make_section, make_value, next_nodeid
+        from crmsh.corosync import make_section, make_value, get_free_nodeid
 
         p = Parser(F2)
         _valid(p)
-        nid = next_nodeid(p)
+        nid = get_free_nodeid(p)
         c = p.count('nodelist.node')
         p.add('nodelist',
               make_section('nodelist.node',
@@ -101,7 +101,7 @@ class TestCorosyncParser(unittest.TestCase):
                            make_value('nodelist.node.nodeid', str(nid))))
         _valid(p)
         self.assertEqual(p.count('nodelist.node'), c + 1)
-        self.assertEqual(next_nodeid(p), nid + 1)
+        self.assertEqual(get_free_nodeid(p), nid + 1)
 
     def test_remove_node(self):
         p = Parser(F2)
@@ -117,6 +117,16 @@ class TestCorosyncParser(unittest.TestCase):
         p = Parser(F3)
         _valid(p)
         self.assertEqual(p.count('service.ver'), 1)
+
+    def test_get_free_nodeid(self):
+        def ids(*lst):
+            class Ids(object):
+                def get_all(self, _arg):
+                    return lst
+            return Ids()
+        self.assertEqual(1, corosync.get_free_nodeid(ids('2', '5')))
+        self.assertEqual(3, corosync.get_free_nodeid(ids('1', '2', '5')))
+        self.assertEqual(4, corosync.get_free_nodeid(ids('1', '2', '3')))
 
 if __name__ == '__main__':
     unittest.main()
