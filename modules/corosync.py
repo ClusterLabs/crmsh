@@ -327,11 +327,16 @@ def diff_configuration(nodes, checksum=False):
         utils.remote_diff(local_path, nodes)
 
 
-def next_nodeid(parser):
+def get_free_nodeid(parser):
     ids = parser.get_all('nodelist.node.nodeid')
     if not ids:
         return 1
-    return max([int(i) for i in ids]) + 1
+    ids = [int(i) for i in ids]
+    max_id = max(ids) + 1
+    for i in xrange(1, max_id):
+        if i not in ids:
+            return i
+    return max_id
 
 
 def get_ip(node):
@@ -399,7 +404,7 @@ def add_node(addr, name=None):
     p = Parser(f)
 
     node_addr = addr
-    node_id = next_nodeid(p)
+    node_id = get_free_nodeid(p)
     node_name = name
     node_value = (make_value('nodelist.node.ring0_addr', node_addr) +
                   make_value('nodelist.node.nodeid', str(node_id)))
