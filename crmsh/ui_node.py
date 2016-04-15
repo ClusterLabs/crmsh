@@ -215,7 +215,7 @@ class NodeMgmt(command.UI):
         if not config.core.force and \
                 not utils.ask("Fencing %s will shut down the node and migrate any resources that are running on it! Do you want to fence %s?" % node):
             return False
-        if utils.is_remote_node(node):
+        if xmlutil.is_remote_node(node):
             return utils.ext_cmd("stonith_admin -F '%s'" % (node)) == 0
         else:
             return utils.ext_cmd(self.node_fence % (node)) == 0
