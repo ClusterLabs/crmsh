@@ -114,7 +114,8 @@ op_cli_names = ("monitor",
                 "migrate_from",
                 "promote",
                 "demote",
-                "notify")
+                "notify",
+                "reload")
 ra_operations = ("probe", "monitor", "start", "stop",
                  "promote", "demote", "notify", "migrate_to", "migrate_from")
 subpfx_list = {
