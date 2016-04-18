@@ -574,7 +574,7 @@ class ResourceParser(RuleParser):
           </op>
         """
         self.match('op')
-        op_type = self.match(self._OPTYPE_RE, errmsg="Expected operation type")
+        op_type = self.match_identifier()
         all_attrs = self.match_nvpairs(minpairs=0)
         node = xmlbuilder.new('op', name=op_type)
         if not any(nvp.get('name') == 'interval' for nvp in all_attrs):
