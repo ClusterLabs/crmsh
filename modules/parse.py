@@ -582,7 +582,6 @@ class NodeParser(RuleParser):
 class ResourceParser(RuleParser):
     _TEMPLATE_RE = re.compile(r'@(.+)$')
     _RA_TYPE_RE = re.compile(r'[a-z0-9_:-]+$', re.IGNORECASE)
-    _OPTYPE_RE = re.compile(r'(%s)$' % ('|'.join(constants.op_cli_names)), re.IGNORECASE)
 
     def can_parse(self):
         return ('primitive', 'group', 'clone', 'ms', 'master', 'rsc_template')
@@ -611,7 +610,7 @@ class ResourceParser(RuleParser):
           </op>
         """
         self.match('op')
-        op_type = self.match(self._OPTYPE_RE, errmsg="Expected operation type")
+        op_type = self.match_identifier()
         all_attrs = self.match_nvpairs(minpairs=0)
         node = xmlbuilder.new('op', name=op_type)
         if not any(nvp.get('name') == 'interval' for nvp in all_attrs):
