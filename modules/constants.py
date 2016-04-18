@@ -116,8 +116,8 @@ op_cli_names = ("monitor",
                 "demote",
                 "notify",
                 "reload")
-ra_operations = ("probe", "monitor", "start", "stop",
-                 "promote", "demote", "notify", "migrate_to", "migrate_from")
+ra_operations = tuple(["probe"] + list(op_cli_names))
+
 subpfx_list = {
     "instance_attributes": "instance_attributes",
     "meta_attributes": "meta_attributes",
