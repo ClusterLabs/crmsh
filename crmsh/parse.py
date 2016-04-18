@@ -37,7 +37,6 @@ _PERM_RE = re.compile(r"([^:]+)(?::(.+))?$", re.I)
 _UNAME_RE = re.compile(r'([^:]+)(:(normal|member|ping|remote))?$', re.IGNORECASE)
 _TEMPLATE_RE = re.compile(r'@(.+)$')
 _RA_TYPE_RE = re.compile(r'[a-z0-9_:-]+$', re.IGNORECASE)
-_OPTYPE_RE = re.compile(r'(%s)$' % ('|'.join(constants.op_cli_names)), re.IGNORECASE)
 _TAG_RE = re.compile(r"([a-zA-Z_][^\s:]*):?$")
 _ROLE2_RE = re.compile(r"role=(.+)$", re.IGNORECASE)
 _TARGET_RE = re.compile(r'([\w=-]+):$')
@@ -695,7 +694,7 @@ class ResourceParser(BaseParser):
           </op>
         """
         self.match('op')
-        op_type = self.match(_OPTYPE_RE, errmsg="Expected operation type")
+        op_type = self.match_identifier()
         all_attrs = self.match_nvpairs(minpairs=0)
         node = xmlutil.new('op', name=op_type)
         if not any(nvp.get('name') == 'interval' for nvp in all_attrs):
