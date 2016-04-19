@@ -39,7 +39,6 @@ actions:
     nodes: local
     call: |
       #!/bin/sh
-      set -e
       sbd dump &> /dev/null || sbd -d "{{device}}" create
       # sbd allocate "$(uname -n)" # FIXME
 
