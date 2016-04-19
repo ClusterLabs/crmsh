@@ -1,0 +1,56 @@
+# Copyright (C) 2016 Kristoffer Gronlund
+#
+# License: GNU General Public License (GPL)
+version: 2.2
+category: Stonith
+shortdesc: VMWare vCenter / ESX Server Fencing 
+longdesc: >
+  Fencing for VMware virtualized hosts using ESX Server or vCenter.
+
+  This wizard configures a fencing resource for a single node.
+  You will need to run the wizard for each node to fence.
+
+  Prerequisites
+
+  1. Install the vSphere Web Services SDK on all nodes.
+
+  2. Generate vCenter credentials using credstore_admin.pl
+
+  3. Copy credentials to the same location on all nodes.
+
+parameters:
+  - name: id
+    type: resource
+    shortdesc: Base Resource ID
+    value: vcenter-fencing
+    required: true
+  - name: node_name
+    type: string
+    shortdesc: Name of node to fence
+    required: true
+  - name: machine_name
+    type: string
+    shortdesc: Name of machine in vCenter inventory
+    required: true
+  - name: server
+    type: string
+    shortdesc: VCenter server URL
+    required: true
+    example: vcenter.example.com
+  - name: credstore
+    type: string
+    shortdesc: Credentials file name
+    required: true
+
+actions:
+  - cib: |
+      primitive {{id}}-{{node_name}} stonith:external/vcenter
+          VI_SERVER="{{server}}"
+          VI_CREDSTORE="{{credstore}}"
+          HOSTLIST="{{node_name}}={{machine_name}}"
+          RESETPOWERON="0"
+          pcmk_host_check="static-list"
+          pcmk_host_list="{{node_name}}"
+          op monitor interval="60s"
+      location loc-{{id}}-{{node_name}} {{id}}-{{node_name}} -inf: {{node_name}}
+      property stonith-enabled=true
