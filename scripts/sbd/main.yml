@@ -9,9 +9,11 @@ longdesc: |
   Create a SBD STONITH resource. SBD must be configured to use
   a particular shared storage device using /etc/sysconfig/sbd.
 
-  There is quite a bit more to do to make this SBD operational.
-  See http://www.linux-ha.org/wiki/SBD_Fencing for information, or
-  the sbd(8) manual page.
+  This wizard can optionally create and configure a SBD device.
+  A shared device must be available and visible on all nodes.
+
+  For more information, see http://www.linux-ha.org/wiki/SBD_Fencing
+  or the sbd(8) manual page.
 
 parameters:
   - name: id
