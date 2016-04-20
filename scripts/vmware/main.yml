@@ -4,7 +4,7 @@
 version: 2.2
 category: Stonith
 shortdesc: VMWare vCenter / ESX Server Fencing 
-longdesc: >
+longdesc: |
   Fencing for VMware virtualized hosts using ESX Server or vCenter.
 
   This wizard configures a fencing resource for a single node.
