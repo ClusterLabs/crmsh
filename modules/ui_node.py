@@ -213,7 +213,7 @@ class NodeMgmt(command.UI):
         if not utils.is_name_sane(node):
             return False
         if not config.core.force and \
-                not utils.ask("Fencing %s will shut down the node and migrate any resources that are running on it! Do you want to fence %s?" % node):
+                not utils.ask("Fencing %s will shut down the node and migrate any resources that are running on it! Do you want to fence %s?" % (node, node)):
             return False
         if xmlutil.is_remote_node(node):
             return utils.ext_cmd("stonith_admin -F '%s'" % (node)) == 0
