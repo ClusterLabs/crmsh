@@ -21,7 +21,13 @@ used in batch mode to execute commands from files.
 
 ## Installation
 
-Autoconf is used to take care of platform dependent locations. It is mainly inherited from the Pacemaker source.
+The GNU Autotools suite is used to configure the OCF root directory,
+the Asciidoc tool which is used to generate documentation and the
+default daemon user (usually hacluster).
+
+It then calls the python setuptools setup.py to actually process the
+Python module sources and install into the Python system site-packages
+directory.
 
 ```shell
 ./autogen.sh
@@ -50,6 +56,14 @@ version, install git and run this command:
 
 ```shell
 git clone https://github.com/ClusterLabs/crmsh
+```
+
+There is a git `pre-commit` hook used to update the data-manifest
+which lists all the data files to be installed. To install this, run
+
+```shell
+cp contrib/git-hook-pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
 ```
 
 ## Community
