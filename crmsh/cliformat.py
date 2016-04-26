@@ -250,6 +250,10 @@ def mkrscaction(node, n):
         return rsc
 
 
+def cli_path(p):
+    return clidisplay.attr_value(quote_wrap(p))
+
+
 def boolean_maybe(v):
     "returns True/False or None"
     if v is None:
