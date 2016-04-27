@@ -87,8 +87,7 @@ def make_time(t):
         return datetime_to_timestamp(t)
     return t
 
-
-_syslog2node_formats = (re.compile(r'^[a-zA-Z]{2,4} \d{1,2} \d{2}:\d{2}:\d{2}\s+(?:\[\d+\])?\s*([\S]+)'),
+_syslog2node_formats = (re.compile(r'^[a-zA-Z]{2,4}\s+\d{1,2} \d{2}:\d{2}:\d{2}\s+(?:\[\d+\])?\s*([\S]+)'),
                         re.compile(r'^\d{4}-\d{2}-\d{2}T\S+\s+(?:\[\d+\])?\s*([\S]+)'),
                         re.compile(r'^\d{4}\/\d{2}\/\d{2}_\d{2}:\d{2}:\d{2}'))
 
