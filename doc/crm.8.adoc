@@ -1,5 +1,5 @@
 :man source:   crm
-:man version:  2.2.0
+:man version:  2.3-dev
 :man manual:   crmsh documentation
 
 crm(8)

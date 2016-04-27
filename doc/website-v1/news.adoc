@@ -1,14 +1,15 @@
 = News
 
-link:/news/2016-01-15-release-2_2_0[2016-01-15 15:00]
+link:/news/2016-04-28-release-2_2_1[2016-04-28 01:00]
 
 :leveloffset: 1
 
-include::news/2016-01-15-release-2_2_0.adoc[]
+include::news/2016-04-28-release-2_2_1.adoc[]
 
 :leveloffset: 0
 
 ''''
+* link:/news/2016-01-15-release-2_2_0[2016-01-15 15:00 crmsh 2.2.0 is released]
 * link:/news/2016-01-12-release-2_1_5[2016-01-12 10:00 Announcing crmsh stable release 2.1.5]
 * link:/news/2015-05-25-getting-started-jp[2015-05-25 13:30 Getting Started translated to Japanese]
 * link:/news/2015-05-13-release-2_1_4[2015-05-13 15:30 Announcing crmsh stable release 2.1.4]

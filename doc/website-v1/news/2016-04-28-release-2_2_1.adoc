@@ -1,0 +1,73 @@
+crmsh 2.2.1 and 2.1.6 are released
+==================================
+:Author: Kristoffer Gronlund
+:Email: kgronlund@suse.com
+:Date: 2016-04-28 01:00
+
+Today I'm announcing two new releases of crmsh: 2.2.1 and 2.1.6.
+
+Both are stable releases, and I would recommend all users to
+upgrade to crmsh 2.2.1 if they can.
+
+== crmsh 2.2.1
+
+Here is a brief list of the most significant changes in this release:
+
+* Rewritten history explorer internally to improve performance significantly
+* Allow configuring reload operation
+* Fix fencing for remote nodes
+* Recycle corosync node IDs when possible
+* Several bug fixes in crm report
+* Warn if generated report is empty
+* Improved SBD cluster script
+* Add push method for configure load
+* Fixed cluster init
+
+The source code can be downloaded from Github:
+
+* https://github.com/ClusterLabs/crmsh/releases/tag/2.2.1
+
+Packages for several popular Linux distributions can be downloaded
+from the Stable repository at the OBS:
+
+* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/
+
+Archives of the tagged release:
+
+* https://github.com/ClusterLabs/crmsh/archive/2.2.1.tar.gz
+* https://github.com/ClusterLabs/crmsh/archive/2.2.1.zip
+
+For the full list of changes since version 2.2.0, see the ChangeLog,
+available at:
+
+* https://github.com/ClusterLabs/crmsh/blob/2.2.1/ChangeLog
+
+== crmsh 2.1.6
+
+This is a bug fix release.
+Most fixes are minor or related to time handling in reports.
+
+For a complete list of changes since the previous version, please
+refer to the changelog:
+
+* https://github.com/ClusterLabs/crmsh/blob/2.1.6/ChangeLog
+
+Currently I'm not building binary releases for 2.1.6 as the stable
+series (at OBS) is at 2.2. This release is intended for users of
+the 2.1 series who have yet to migrate to 2.2.
+
+Archives of the tagged release:
+
+https://github.com/ClusterLabs/crmsh/archive/2.1.6.tar.gz
+https://github.com/ClusterLabs/crmsh/archive/2.1.6.zip
+
+For the full list of changes since version 2.1.5, see the ChangeLog,
+available at:
+
+* https://github.com/ClusterLabs/crmsh/blob/2.1.5/ChangeLog
+
+
+As usual, a huge thank you to all contributors and users of crmsh!
+
+Cheers,
+Kristoffer

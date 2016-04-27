@@ -1,5 +1,5 @@
 :man source:   crm
-:man version:  2.2.0
+:man version:  2.2.1
 :man manual:   crmsh documentation
 
 crm(8)
@@ -96,6 +96,11 @@ OPTIONS
 *--scriptdir*='DIR'::
     Extra directory where crm looks for cluster scripts, or a list of
     directories separated by semi-colons (e.g. +/dir1;/dir2;etc.+).
+
+*-o, --opt*='OPTION=VALUE'::
+     Set crmsh option temporarily. If the options are saved using
+     +options save+ then the value passed here will also be saved.
+     Multiple options can be set by using +-o+ multiple times.
 
 [[topics_Introduction,Introduction]]
 == Introduction
@@ -1211,7 +1216,7 @@ sets only the address for ring0.
 
 Usage:
 .........
-add-node <addr>
+add-node <addr> [name]
 .........
 
 [[cmdhelp_corosync_del-node,Remove a corosync node]]
@@ -2085,6 +2090,21 @@ Usage:
 ready [<node>]
 ...............
 
+[[cmdhelp_node_server,show node hostname or server address]]
+==== `server`
+
+Remote nodes may have a configured server address which should
+be used when contacting the node. This command prints the
+server address if configured, else the node name.
+
+If no parameter is given, the adresses or names for all nodes
+are printed.
+
+Usage:
+...............
+server [<node> ...]
+...............
+
 [[cmdhelp_node_show,show node]]
 ==== `show`
 
@@ -2936,8 +2956,11 @@ group vm-and-services vm vm-sshd meta container="vm"
 
 Load a part of configuration (or all of it) from a local file or
 a network URL. The +replace+ method replaces the current
-configuration with the one from the source. The +update+ tries to
-import the contents into the current configuration.
+configuration with the one from the source. The +update+ method
+tries to import the contents into the current configuration. The
++push+ method imports the contents into the current configuration
+and removes any lines that are not present in the given
+configuration.
 The file may be a CLI file or an XML file.
 
 If the URL is `-`, the configuration is read from standard input.
@@ -2946,12 +2969,13 @@ Usage:
 ...............
 load [xml] <method> URL
 
-method :: replace | update
+method :: replace | update | push
 ...............
 Example:
 ...............
 load xml update myfirstcib.xml
 load xml replace http://storage.big.com/cibs/bigcib.xml
+load xml push smallcib.xml
 ...............
 
 [[cmdhelp_configure_location,a location preference]]
@@ -3653,6 +3677,11 @@ The prefixes can be used together on a single command line. For
 example, to show both the tag itself and the objects tagged by it the
 following combination can be used: +show tag:my-tag my-tag+.
 
+To refine a selection of objects using multiple modifiers, the keywords
++and+ and +or+ can be used. For example, to select all primitives tagged
++foo+, the following combination can be used:
++show type:primitive and tag:foo+.
+
 Usage:
 ...............
 show [xml] [<id>
@@ -3679,8 +3708,8 @@ show xml tag:db tag:fs
 show related:webapp
 ...............
 
-[[cmdhelp_configure_show_property,Show property value]]
-==== `show-property`
+[[cmdhelp_configure_get_property,Get property value]]
+==== `get-property`
 
 Show the value of the given property. If the value is not set, the
 command will print the default value for the property, if known.
@@ -3692,19 +3721,19 @@ If the property is set multiple times, for example using multiple
 property sets with different rule expressions, the output of this
 command is undefined.
 
-Pass the argument +-t+ or +--true+ to `show-property` to translate
+Pass the argument +-t+ or +--true+ to `get-property` to translate
 the argument value into +true+ or +false+. If the value is not
 set, the command will print +false+.
 
 Usage:
 ...............
-show-property [-t|--true] [<name>]
+get-property [-t|--true] [<name>]
 ...............
 
 Example:
 ...............
-show-property stonith-enabled
-show-property -t maintenance-mode
+get-property stonith-enabled
+get-property -t maintenance-mode
 ...............
 
 [[cmdhelp_configure_tag,Define resource tags]]
@@ -4764,6 +4793,22 @@ transition showdot 444
 transition log
 transition save 0 enigma-22
 ...............
+
+[[cmdhelp_history_transitions,List transitions]]
+==== `transitions`
+
+A transition represents a change in cluster configuration or
+state. This command lists the transitions in the current timeframe.
+
+Usage:
+...............
+transitions
+...............
+Example:
+...............
+transitions
+...............
+
 
 [[cmdhelp_history_wdiff,cluster states/transitions difference]]
 ==== `wdiff`
