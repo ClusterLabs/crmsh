@@ -1,3 +1,33 @@
+* Thu Apr 28 2016 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- Release 2.1.6
+- medium: report: Handle multiple spaces in syslog timestamp (#129)
+- low: parse: Don't validate operation name in parser (bsc#975357)
+- medium: ui_node: Fix "crm node fence" (bsc#974902) (#134)
+- low: report: add information about booth
+- medium: hb_report: Add timeout to SSH connection (bsc#971690)
+- low: hb_report: Suggest user checks timeframe on empty logs (bsc#970823)
+- medium: hb_report: Use server attribute for remote nodes if set (bsc#970819)
+- low: hb_report: Warn if generated report is empty (bsc#970823)
+- dev: hb_report: Specify log output format of journalctl
+- low: hb_report: Print covered time span at exit (bsc#970823)
+- medium: ui_node: Use stonith_admin -F to fence remote nodes (bsc#967907)
+- high: hb_report: Always prefer syslog if available (bsc#942906)
+- high: history: Parse log lines without timestamp (bsc#955581)
+- medium: history: Fix live report refresh (bsc#950422) (bsc#927414)
+- medium: utils: Fix python 2.6 compatibility
+- high: utils: Revised time zone handling (bsc#951759)
+- dev: report: Remove unused variable
+- high: report: Fix syslog parser regexps (bsc#951759)
+- medium: report: Make transitions without end stretch to 2525
+- dev: report: Minor refactoring
+- high: utils: Handle time zones in parse_time (bsc#949511)
+- dev: report: clearer variable names
+- low: clidisplay: Avoid crash when colorizing None
+- low: hb_report: Drop function from event patterns
+- medium: hb_report: Remove reference to function name in event patterns (bsc#942906)
+- test: Update crm_shadow use in regression tests
+- medium: ui_cib: Call crm_shadow in batch mode to avoid spawning subshell (bsc#961392)
+
 * Tue Jan 12 2016 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - Release 2.1.5
 - medium: report: Try to load source as session if possible (bsc#927407)
