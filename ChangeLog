@@ -1,3 +1,63 @@
+* Thu Apr 28 2016 Kristoffer Gronlund <kgronlund@suse.com> and many others
+- Release 2.2.1
+- medium: ui_node: Fix crash in node fence command (bsc#974902)
+- low: parse: Don't validate operation name in parser (bsc#975357)
+- low: constants: Add missing reload operation to parser
+- medium: ui_node: Fix "crm node fence" (bsc#974902) (#134)
+- low: corosync: Recycle node IDs when possible
+- low: scripts: Only print debug output locally unless there were remote actions
+- low: cibconfig: Don't mix up CLI name with XML tag
+- low: parser: ignore case for attr: prefix
+- medium: scripts: Use os.uname() to find hostname (#128)
+- low: history: Don't skip nodes without logs
+- low: logparser: Don't crash on nodes without logs
+- low: report: if present, use the subsecond part from syslog timestamps
+- low: report: add information about booth
+- low: history: update the syslog format matching
+- low: scripts: Need sudo if non-local call
+- medium: hb_report: Add timeout to SSH connection (bsc#971690)
+- low: scripts: Clean up various scripts
+- medium: main: Add -o|--opt to pass extra options for crmsh
+- low: command: handle stray regex characters in input
+- low: doc: make history example consistent with timeframe deprecation
+- medium: scripts: Don't require sudo for root
+- medium: scripts: inline scripts for call actions
+- medium: scripts: Simplify SBD script (bsc#968076) (fate#318320)
+- low: logparser: Add cib info to __meta for hawk
+- low: hb_report: Suggest user checks timeframe on empty logs (bsc#970823)
+- medium: hb_report: Use server attribute for remote nodes if set (bsc#970819)
+- high: history: Faster log parsing (bsc#920278)
+- low: log_patterns_118: Add captures to log patterns for tagging (bsc#970278)
+- medium: crm_pssh: Fix live refresh of journalctl logs (bsc#970931)
+- low: hb_report: Warn if generated report is empty (bsc#970823)
+- low: hb_report: Print covered time span at exit (bsc#970823)
+- low: logtime: Improve performance of syslog_ts (bsc#970278)
+- low: scripts: Fix error in service action
+- low: history: use os.listdir to list history sessions
+- medium: ui_node: Use stonith_admin -F to fence remote nodes (bsc#967907)
+- low: ui_node: Less cryptic query when fencing node
+- low: config: Messed up previous fix (#119)
+- low: config: Clean up libdir configuration (#119)
+- medium: config: make multiarch dependency a dynamic include (#119)
+- high: ui_configure: Fix commit force (#120)
+- medium: config: add multiarch support for libdir
+- Makefile.am: do not remove generated docs
+- medium: hb_report: Don't collect logs on non-nodes (bsc#959031)
+- medium: ui_configure: Only wait for DC if resources were stopped (#117)
+- low: Fix title style vs. sentence style in cluster scripts (bsc#892108)
+- medium: command: Disable fuzzy matcher for completion (#116)
+- Remove fix for Debian
+- Remove AM_CONDITIONAL for UNAME_IS_DEBIAN
+- medium: corosync: added optional parameter [name] to "corosync add-node" function
+- added the "push" method to the "configure load" command which will remove any configuration lines that are not given in the cib/xml configuration file to import
+- medium: constants: clone-min meta attribute (new in Pacemaker 1.1.14)
+- Low: maintenance: allow action to be forced
+- Medium: history: update patterns for resource (new lrmd)
+- medium: scripts: Updated SBD cluster script
+- high: scripts: fix broken cluster init script (bsc#963135)
+- high: scripts: Improved OCFS2 cluster script (bsc#953984)
+- high: history: Parse log lines without timestamp (bsc#955581)
+
 * Fri Jan 15 2016 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - Release 2.2.0
 - medium: history: Fix live report refresh (bsc#950422) (bsc#927414)
