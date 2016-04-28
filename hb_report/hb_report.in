@@ -1424,9 +1424,8 @@ is_node && getlog
 #
 # Start slave collectors
 #
-
-if ! is_collector; then
-	for node in $NODES; do
+collect_for_nodes() {
+	for node in "$@"; do
 		if node_needs_pwd $node; then
 			info "Please provide password for `say_ssh_user` at $node"
 			info "Note that collecting data will take a while."
@@ -1436,6 +1435,14 @@ if ! is_collector; then
 			SLAVEPIDS="$SLAVEPIDS $!"
 		fi
 	done
+}
+
+if ! is_collector; then
+	if [ -z "$NO_SSH" ]; then
+		collect_for_nodes $NODES
+	elif is_node; then
+		collect_for_nodes "$WE"
+	fi
 fi
 
 #
