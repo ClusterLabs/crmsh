@@ -892,6 +892,26 @@ option :: full
         | brief
 ...............
 
+[[cmdhelp_root_verify,Verify cluster status]]
+=== `verify`
+
+Performs basic checks for the cluster configuration and
+current status, reporting potential issues.
+
+See `crm_verify(8)` and `crm_simulate(8)` for more details.
+
+Example:
+...............
+verify
+verify scores
+...............
+
+Usage:
+...............
+verify [scores]
+...............
+
+
 [[cmdhelp_cluster,Cluster setup and management]]
 === `cluster` - Cluster setup and management
 

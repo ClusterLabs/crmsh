@@ -118,3 +118,24 @@ def cmd_status(args):
 
     utils.page_string(CrmMonFilter()(s))
     return True
+
+
+def cmd_verify(args):
+    '''
+    Calls crm_verify -LV; ptest -L -VVVV
+    '''
+    from . import config
+    from . import clidisplay
+    if "ptest" in config.core.ptest:
+        cmd1 = "crm_verify -LV; %s -L -VVVV" % (config.core.ptest)
+    else:
+        cmd1 = "crm_verify -LV; %s -LjV" % (config.core.ptest)
+
+        if "scores" in args:
+            cmd1 += " -s"
+
+    cmd1 = utils.add_sudo(cmd1)
+    rc, s, e = utils.get_stdout_stderr(cmd1)
+    e = '\n'.join(clidisplay.error(l) for l in e.split('\n')).strip()
+    utils.page_string("\n".join((s, e)))
+    return rc == 0 and not e

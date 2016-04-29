@@ -181,6 +181,19 @@ option :: bynode | inactive | ops | timing | failcounts
     def do_status(self, context, *args):
         return cmd_status.cmd_status(args)
 
+    @command.help('''Verify cluster state
+Performs basic checks for the cluster configuration and
+current status, reporting potential issues.
+
+Usage:
+.................
+verify [scores]
+.................
+''')
+    def do_verify(self, context, *args):
+        return cmd_status.cmd_verify(args)
+
+
 # this will initialize _children for all levels under the root
 Root.init_ui()
 
