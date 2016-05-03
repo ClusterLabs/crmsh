@@ -50,6 +50,7 @@ scripts/sap-simple-stack-plus/main.yml
 scripts/sbd-device/main.yml
 scripts/sbd/main.yml
 scripts/virtual-ip/main.yml
+scripts/vmware/main.yml
 templates/apache
 templates/clvm
 templates/filesystem
