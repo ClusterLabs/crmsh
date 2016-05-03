@@ -73,11 +73,11 @@ python_prefix = --prefix=$(prefix)
 install-exec-local:
 	-mkdir -p $(DESTDIR)$(pkgpythondir)
 	$(PYTHON) $(srcdir)/setup.py install \
-		--root $(DESTDIR) \
+		--root $(DESTDIR)/// \
 		$(python_prefix) \
 		--record $(DESTDIR)$(pkgpythondir)/install_files.txt \
 		--verbose
-	$(INSTALL) -d -m 770 $(DESTDIR)/$(CRM_CACHE_DIR)
+	$(INSTALL) -d -m 770 $(DESTDIR)$(CRM_CACHE_DIR)
 
 uninstall-local:
 	cat $(DESTDIR)$(pkgpythondir)/install_files.txt | xargs rm -rf
