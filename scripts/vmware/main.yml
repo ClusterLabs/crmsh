@@ -3,12 +3,16 @@
 # License: GNU General Public License (GPL)
 version: 2.2
 category: Stonith
-shortdesc: VMWare vCenter / ESX Server Fencing 
+shortdesc: Fencing using vCenter / ESX Server
 longdesc: |
+  Note that SBD is the recommended fencing mechanism for VMware
+  hosts! Please refer to the documentation for more details on
+  recommended fencing configurations.
+
   Fencing for VMware virtualized hosts using ESX Server or vCenter.
 
   This wizard configures a fencing resource for a single node.
-  You will need to run the wizard for each node to fence.
+  It is necessary to run the wizard for each node to fence.
 
   Prerequisites
 
