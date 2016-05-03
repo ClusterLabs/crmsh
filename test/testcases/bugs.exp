@@ -120,40 +120,18 @@ property SAPHanaSR: \
 .INP: _test
 .INP: verify
 .INP: property SAPHanaSR_2:     hana_ha1_site_iss_WDF1=cde     hana_ha1_site_bss_WDF1=abc
-.INP: show xml
-<?xml version="1.0" ?>
-<cib>
-  <configuration>
-    <crm_config>
-      <cluster_property_set id="SAPHanaSR_2">
-        <nvpair name="hana_ha1_site_iss_WDF1" value="cde" id="SAPHanaSR_2-hana_ha1_site_iss_WDF1"/>
-        <nvpair name="hana_ha1_site_bss_WDF1" value="abc" id="SAPHanaSR_2-hana_ha1_site_bss_WDF1"/>
-      </cluster_property_set>
-      <cluster_property_set id="SAPHanaSR">
-        <nvpair name="hana_ha1_site_lss_WDF1" value="4" id="SAPHanaSR-hana_ha1_site_lss_WDF1"/>
-      </cluster_property_set>
-    </crm_config>
-    <nodes>
-      <node uname="node1" id="node1"/>
-    </nodes>
-    <resources>
-      <primitive id="st" class="stonith" type="null">
-        <instance_attributes id="st-instance_attributes">
-          <nvpair name="hostlist" value="node1" id="st-instance_attributes-hostlist"/>
-        </instance_attributes>
-        <meta_attributes id="st-meta_attributes">
-          <nvpair name="description" value="some description here" id="st-meta_attributes-description"/>
-        </meta_attributes>
-        <operations>
-          <op name="start" requires="nothing" interval="0" id="st-start-0"/>
-          <op name="monitor" interval="60m" id="st-monitor-60m"/>
-        </operations>
-      </primitive>
-    </resources>
-    <constraints/>
-  </configuration>
-</cib>
-
+.INP: show
+node node1
+primitive st stonith:null \
+	params hostlist=node1 \
+	meta description="some description here" \
+	op start requires=nothing interval=0 \
+	op monitor interval=60m
+property SAPHanaSR: \
+	hana_ha1_site_lss_WDF1=4
+property SAPHanaSR_2: \
+	hana_ha1_site_iss_WDF1=cde \
+	hana_ha1_site_bss_WDF1=abc
 .INP: commit
 .INP: _test
 .INP: verify

@@ -911,3 +911,44 @@ INFO: Trace set, restart p0 to trace the stop operation
   </configuration>
 </cib>
 
+.SETENV showobj=
+.TRY configure rm cg
+.TRY configure ms msg g
+.TRY resource scores
+.EXT crm_simulate -sL
+3 of 6 resources DISABLED and 0 BLOCKED from being started due to failures
+
+Current cluster status:
+Node node1: UNCLEAN (offline)
+
+ st	(stonith:null):	Stopped 
+ Clone Set: c1 [p1] (unmanaged)
+     Stopped: [ node1 ]
+ Master/Slave Set: m1 [p2]
+     Stopped: [ node1 ]
+ p3	(ocf::heartbeat:Dummy):	Stopped ( disabled ) 
+ Master/Slave Set: msg [g]
+     Stopped: [ node1 ]
+
+Allocation scores:
+native_color: st allocation score on node1: 0
+clone_color: c1 allocation score on node1: 0
+clone_color: p1:0 allocation score on node1: 0
+native_color: p1:0 allocation score on node1: -INFINITY
+clone_color: m1 allocation score on node1: 0
+clone_color: p2:0 allocation score on node1: 0
+native_color: p2:0 allocation score on node1: -INFINITY
+p2:0 promotion score on none: 0
+native_color: p3 allocation score on node1: -INFINITY
+clone_color: msg allocation score on node1: 0
+clone_color: g:0 allocation score on node1: 0
+clone_color: p0:0 allocation score on node1: 0
+clone_color: p4:0 allocation score on node1: 0
+group_color: g:0 allocation score on node1: -INFINITY
+group_color: p0:0 allocation score on node1: -INFINITY
+group_color: p4:0 allocation score on node1: -INFINITY
+native_color: p0:0 allocation score on node1: -INFINITY
+native_color: p4:0 allocation score on node1: -INFINITY
+g:0 promotion score on none: 0
+
+Transition Summary:
