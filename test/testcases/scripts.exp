@@ -57,6 +57,7 @@ Stonith:
 
 libvirt          STONITH for libvirt (kvm / Xen)
 sbd              SBD, Shared storage based fencing
+vmware           Fencing using vCenter / ESX Server
 
 .INP: list all
 .EXT crm_resource --show-metadata systemd:haproxy
@@ -120,6 +121,7 @@ Stonith:
 
 libvirt          STONITH for libvirt (kvm / Xen)
 sbd              SBD, Shared storage based fencing
+vmware           Fencing using vCenter / ESX Server
 
 .INP: list names
 add
@@ -160,6 +162,7 @@ sapinstance
 sbd
 sbd-device
 virtual-ip
+vmware
 .INP: list names all
 add
 apache
@@ -198,6 +201,7 @@ sapinstance
 sbd
 sbd-device
 virtual-ip
+vmware
 .INP: list all names
 add
 apache
@@ -236,6 +240,7 @@ sapinstance
 sbd
 sbd-device
 virtual-ip
+vmware
 .INP: list bogus
 ERROR: 7: script.list: Unexpected argument 'bogus': expected  [all|names]
 .INP: show mailto

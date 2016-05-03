@@ -40,3 +40,25 @@ commit
 _test
 verify
 .
+session Unknown properties
+configure
+erase
+primitive st stonith:null \
+	params hostlist='node1' \
+	meta description="some description here" \
+	op start requires=nothing \
+	op monitor interval=60m
+property SAPHanaSR: \
+    hana_ha1_site_lss_WDF1=4
+show
+commit
+_test
+verify
+property SAPHanaSR_2: \
+    hana_ha1_site_iss_WDF1=cde \
+    hana_ha1_site_bss_WDF1=abc
+show xml
+commit
+_test
+verify
+.

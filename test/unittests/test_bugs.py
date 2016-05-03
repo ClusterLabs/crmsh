@@ -924,3 +924,14 @@ def test_dup_create():
     assert ok
     ok = factory.create_object(*"primitive dup1 Dummy".split())
     assert not ok
+
+
+@with_setup(setup_func, teardown_func)
+def test_dup_create():
+    """
+    Creating property sets with unknown properties
+    """
+    ok = factory.create_object(*"property hana_test1: hana_attribute_1=5 hana_attribute_2=mohican".split())
+    assert ok
+    ok = factory.create_object(*"property hana_test2: hana_attribute_1=5s a-b-c-d=e-f-g".split())
+    assert ok
