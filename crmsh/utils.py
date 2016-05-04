@@ -619,13 +619,17 @@ def wait4dc(what="", show_progress=True):
         if 0 < delaymsec:
             common_info("The crmd-transition-delay is configured. Waiting %d msec before check DC status." % delaymsec)
             time.sleep(delaymsec / 1000)
-    cmd = "crmadmin -S %s" % dc
     cnt = 0
     output_started = 0
     init_sleep = 0.25
     max_sleep = 1.00
     sleep_time = init_sleep
     while True:
+        dc = get_dc()
+        if not dc:
+            common_warn("DC lost during wait")
+            return False
+        cmd = "crmadmin -S %s" % dc
         rc, s = get_stdout(add_sudo(cmd))
         if not s.startswith("Status"):
             common_warn("%s unexpected output: %s (exit code: %d)" %
