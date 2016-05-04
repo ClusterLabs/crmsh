@@ -1,5 +1,5 @@
 version: 2.2
-category: File System
+category: Filesystem
 shortdesc: RAID Hosting LVM
 longdesc: "Configure a RAID 1 host based mirror together with a cluster manager LVM volume group and LVM volumes."
 parameters:

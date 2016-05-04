@@ -8,7 +8,7 @@ longdesc: >-
   This template generates a cloned instance of the GFS2 file system.
   The file system should be on the device, unless cLVM is used.
 
-category: File System
+category: Filesystem
 include:
   - script: gfs2-base
 parameters:

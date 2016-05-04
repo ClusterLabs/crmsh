@@ -1,5 +1,5 @@
 version: 2.2
-category: File System
+category: Filesystem
 shortdesc: File System (mount point)
 include:
   - agent: ocf:heartbeat:Filesystem
