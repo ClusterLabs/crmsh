@@ -1684,24 +1684,6 @@ Usage:
 locate [<rsc> ...]
 ...............
 
-[[cmdhelp_resource_move,Move a resource to another node]]
-==== `move` (`migrate`)
-
-Move a resource away from its current location.
-
-If the destination node is left out, the resource is migrated by
-creating a constraint which prevents it from running on the current
-node. For this type of constraint to be created, the +force+ argument
-is required.
-
-A lifetime may be given for the constraint. Once it expires, the
-location constraint will no longer be active.
-
-Usage:
-...............
-move <rsc> [<node>] [<lifetime>] [force]
-...............
-
 [[cmdhelp_resource_maintenance,Enable/disable per-resource maintenance mode]]
 ==== `maintenance`
 
