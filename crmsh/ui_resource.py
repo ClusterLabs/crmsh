@@ -313,9 +313,9 @@ class RscMgmt(command.UI):
     def do_scores(self, context):
         "usage: scores"
         if utils.is_program('crm_simulate'):
-            utils.ext_cmd('crm_simulate -sL')
+            utils.ext_cmd('crm_simulate -sUL')
         elif utils.is_program('ptest'):
-            utils.ext_cmd('ptest -sL')
+            utils.ext_cmd('ptest -sUL')
         else:
             context.fatal_error("Need crm_simulate or ptest in path to display scores")
 
