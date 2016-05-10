@@ -319,6 +319,14 @@ class RscMgmt(command.UI):
         else:
             context.fatal_error("Need crm_simulate or ptest in path to display scores")
 
+    @command.completers(compl.resources)
+    def do_locate(self, context, *resources):
+        "usage: locate <rsc> [<rsc> ...]"
+        if len(resources) == 0:
+            context.error("Expected at least one resource as argument")
+        for rsc in resources:
+            utils.ext_cmd("crm_resource --resource '%s' --locate" % (rsc))
+
     @command.wait
     @command.completers(compl.resources)
     def do_demote(self, context, rsc):
@@ -340,13 +348,13 @@ class RscMgmt(command.UI):
         "usage: unmanage <rsc>"
         return self._commit_meta_attr(context, rsc, "is-managed", "false")
 
-    @command.alias('move')
+    @command.alias('migrate')
     @command.skill_level('administrator')
     @command.wait
     @command.completers_repeating(compl.resources, compl.nodes,
                                   compl.choice(['reboot', 'forever', 'force']))
-    def do_migrate(self, context, rsc, *args):
-        """usage: migrate <rsc> [<node>] [<lifetime>] [force]"""
+    def do_move(self, context, rsc, *args):
+        """usage: move <rsc> [<node>] [<lifetime>] [force]"""
         if not utils.is_name_sane(rsc):
             return False
         node = None
@@ -357,6 +365,11 @@ class RscMgmt(command.UI):
             node = argl[0]
             if not xmlutil.is_our_node(node):
                 context.fatal_error("Not our node: " + node)
+
+        if context.get_command_name() == 'move':
+            if not node and not force:
+                context.fatal_error("No target node: Move requires either a target node or 'force'")
+
         opts = ''
         if node:
             opts = "--node='%s'" % node
@@ -364,7 +377,13 @@ class RscMgmt(command.UI):
             opts = "%s --lifetime='%s'" % (opts, lifetime)
         if force or config.core.force:
             opts = "%s --force" % opts
-        return utils.ext_cmd(self.rsc_migrate % (rsc, opts)) == 0
+        rc = utils.ext_cmd(self.rsc_migrate % (rsc, opts))
+        if rc == 0:
+            if node:
+                common_info("Move constraint created for %s to %s" % (rsc, node))
+            else:
+                common_info("Move constraint created for %s" % (rsc))
+        return rc == 0
 
     @command.skill_level('administrator')
     @command.wait
@@ -388,17 +407,26 @@ class RscMgmt(command.UI):
             opts = "%s --lifetime='%s'" % (opts, lifetime)
         if force or config.core.force:
             opts = "%s --force" % opts
-        return utils.ext_cmd(self.rsc_ban % (rsc, opts)) == 0
+        rc = utils.ext_cmd(self.rsc_ban % (rsc, opts))
+        if rc == 0:
+            if node:
+                common_info("Ban constraint created for %s on %s" % (rsc, node))
+            else:
+                common_info("Ban constraint created for %s" % (rsc))
+        return rc == 0
 
-    @command.alias('unmove', 'unban')
+    @command.alias('unmove', 'unban', 'unmigrate')
     @command.skill_level('administrator')
     @command.wait
     @command.completers(compl.resources)
-    def do_unmigrate(self, context, rsc):
-        "usage: unmigrate <rsc>"
+    def do_clear(self, context, rsc):
+        "usage: clear <rsc>"
         if not utils.is_name_sane(rsc):
             return False
-        return utils.ext_cmd(self.rsc_unmigrate % rsc) == 0
+        rc = utils.ext_cmd(self.rsc_unmigrate % rsc)
+        if rc == 0:
+            common_info("Removed migration constraints for %s" % (rsc))
+        return rc == 0
 
     @command.skill_level('administrator')
     @command.wait
