@@ -88,6 +88,7 @@ resource p0 is NOT running
 .SETENV showobj=cli-prefer-p3
 .TRY resource migrate p3 node1
 .EXT crm_resource --quiet --move -r 'p3' --node='node1'
+INFO: Move constraint created for p3 to node1
 .INP: configure
 .INP: _regtest on
 .INP: show xml cli-prefer-p3
@@ -106,9 +107,11 @@ resource p0 is NOT running
 .SETENV showobj=
 .TRY resource unmigrate p3
 .EXT crm_resource --quiet --clear -r 'p3'
+INFO: Removed migration constraints for p3
 .SETENV showobj=cli-prefer-p3
 .TRY resource migrate p3 node1 force
 .EXT crm_resource --quiet --move -r 'p3' --node='node1' --force
+INFO: Move constraint created for p3 to node1
 .INP: configure
 .INP: _regtest on
 .INP: show xml cli-prefer-p3
@@ -127,6 +130,7 @@ resource p0 is NOT running
 .SETENV showobj=
 .TRY resource unmigrate p3
 .EXT crm_resource --quiet --clear -r 'p3'
+INFO: Removed migration constraints for p3
 .SETENV showobj=p0
 .TRY resource param p0 set a0 "1 2 3"
 .EXT crm_resource -r 'p0' -p 'a0' -v '1 2 3'
@@ -915,7 +919,7 @@ INFO: Trace set, restart p0 to trace the stop operation
 .TRY configure rm cg
 .TRY configure ms msg g
 .TRY resource scores
-.EXT crm_simulate -sL
+.EXT crm_simulate -sUL
 3 of 6 resources DISABLED and 0 BLOCKED from being started due to failures
 
 Current cluster status:
@@ -930,7 +934,8 @@ Node node1: UNCLEAN (offline)
  Master/Slave Set: msg [g]
      Stopped: [ node1 ]
 
-Allocation scores:
+Allocation scores and utilization information:
+Original: node1 capacity:
 native_color: st allocation score on node1: 0
 clone_color: c1 allocation score on node1: 0
 clone_color: p1:0 allocation score on node1: 0
@@ -950,5 +955,6 @@ group_color: p4:0 allocation score on node1: -INFINITY
 native_color: p0:0 allocation score on node1: -INFINITY
 native_color: p4:0 allocation score on node1: -INFINITY
 g:0 promotion score on none: 0
+Remaining: node1 capacity:
 
 Transition Summary:
