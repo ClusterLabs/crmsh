@@ -942,6 +942,43 @@ Usage:
 add <node>
 ...............
 
+[[cmdhelp_cluster_copy,Copy file to other cluster nodes]]
+==== `copy`
+
+Copy file to other cluster nodes.
+
+Copies the given file to all other nodes unless given a
+list of nodes to copy to as argument.
+
+Usage:
+...............
+copy <filename> [nodes ...]
+...............
+
+Example:
+...............
+copy /etc/motd
+...............
+
+[[cmdhelp_cluster_diff,Diff file across cluster]]
+==== `diff`
+
+Displays the difference, if any, between a given file
+on different nodes. If the second argument is `--checksum`,
+a checksum of the file will be calculated and displayed for
+each node.
+
+Usage:
+...............
+diff <file> [--checksum] [nodes...]
+...............
+
+Example:
+...............
+diff /etc/crm/crm.conf node2
+diff /etc/resolv.conf --checksum
+...............
+
 [[cmdhelp_cluster_health,Cluster health check]]
 ==== `health`
 
@@ -991,24 +1028,6 @@ Example:
 run "cat /proc/uptime"
 ...............
 
-[[cmdhelp_cluster_copy,Copy file to other cluster nodes]]
-==== `copy`
-
-Copy file to other cluster nodes.
-
-Copies the given file to all other nodes unless given a
-list of nodes to copy to as argument.
-
-Usage:
-...............
-copy <filename> [nodes ...]
-...............
-
-Example:
-...............
-copy /etc/motd
-...............
-
 [[cmdhelp_cluster_start,Start cluster services]]
 ==== `start`
 
@@ -1054,25 +1073,6 @@ Usage:
 wait_for_startup
 ........
 
-[[cmdhelp_cluster_diff,Diff file across cluster]]
-==== `diff`
-
-Displays the difference, if any, between a given file
-on different nodes. If the second argument is `--checksum`,
-a checksum of the file will be calculated and displayed for
-each node.
-
-Usage:
-...............
-diff <file> [--checksum] [nodes...]
-...............
-
-Example:
-...............
-diff /etc/crm/crm.conf node2
-diff /etc/resolv.conf --checksum
-...............
-
 [[cmdhelp_script,Cluster script management]]
 === `script` - Cluster script management
 
@@ -1092,90 +1092,6 @@ Scripts are implemented using the python `parallax` package which
 provides a thin wrapper on top of SSH. This allows the scripts to
 function through the usual SSH channels used for system maintenance,
 requiring no additional software to be installed or maintained.
-
-[[cmdhelp_script_list,List available scripts]]
-==== `list`
-
-Lists the available scripts, sorted by category. Scripts that have the
-special `Script` category are hidden by default, since they are mainly
-used by other scripts or commands. To also show these, pass `all` as
-argument.
-
-To get a flat list of script names, not sorted by category, pass
-`names` as an extra argument.
-
-Usage:
-............
-list [all] [names]
-............
-
-Example:
-............
-list
-list all names
-............
-
-[[cmdhelp_script_show,Describe the script]]
-==== `show`
-
-Prints a description and short summary of the script, with
-descriptions of the accepted parameters.
-
-Advanced parameters are hidden by default. To show the complete list
-of parameters accepted by the script, pass `all` as argument.
-
-Usage:
-............
-show <script> [all]
-............
-
-Example:
-............
-show virtual-ip
-............
-
-[[cmdhelp_script_verify,Verify the script]]
-==== `verify`
-
-Checks the given parameter values, and returns a list
-of actions that will be executed when running the script
-if provided the same list of parameter values.
-
-Usage:
-............
-verify <script> [args...]
-............
-
-Example:
-............
-verify sbd id=sbd-1 node=node1 sbd_device=/dev/disk/by-uuid/F00D-CAFE
-............
-
-[[cmdhelp_script_run,Run the script]]
-==== `run`
-
-Given a list of parameter values, this command will execute the
-actions specified by the cluster script. The format for the parameter
-values is the same as for the `verify` command.
-
-Can optionally take at least two parameters:
-* `nodes=<nodes>`: List of nodes that the script runs over
-* `dry_run=yes|no`: If set, the script will not perform any modifications.
-
-Additional parameters may be available depending on the script.
-
-Use the `show` command to see what parameters are available.
-
-Usage:
-.............
-run <script> [args...]
-.............
-
-Example:
-.............
-run apache install=true
-run sbd id=sbd-1 node=node1 sbd_device=/dev/disk/by-uuid/F00D-CAFE
-.............
 
 [[cmdhelp_script_json,JSON API for cluster scripts]]
 ==== `json`
@@ -1215,6 +1131,90 @@ API:
 => [{shortdesc, rc, output|error}]
 ........
 
+
+[[cmdhelp_script_list,List available scripts]]
+==== `list`
+
+Lists the available scripts, sorted by category. Scripts that have the
+special `Script` category are hidden by default, since they are mainly
+used by other scripts or commands. To also show these, pass `all` as
+argument.
+
+To get a flat list of script names, not sorted by category, pass
+`names` as an extra argument.
+
+Usage:
+............
+list [all] [names]
+............
+
+Example:
+............
+list
+list all names
+............
+
+[[cmdhelp_script_run,Run the script]]
+==== `run`
+
+Given a list of parameter values, this command will execute the
+actions specified by the cluster script. The format for the parameter
+values is the same as for the `verify` command.
+
+Can optionally take at least two parameters:
+* `nodes=<nodes>`: List of nodes that the script runs over
+* `dry_run=yes|no`: If set, the script will not perform any modifications.
+
+Additional parameters may be available depending on the script.
+
+Use the `show` command to see what parameters are available.
+
+Usage:
+.............
+run <script> [args...]
+.............
+
+Example:
+.............
+run apache install=true
+run sbd id=sbd-1 node=node1 sbd_device=/dev/disk/by-uuid/F00D-CAFE
+.............
+
+[[cmdhelp_script_show,Describe the script]]
+==== `show`
+
+Prints a description and short summary of the script, with
+descriptions of the accepted parameters.
+
+Advanced parameters are hidden by default. To show the complete list
+of parameters accepted by the script, pass `all` as argument.
+
+Usage:
+............
+show <script> [all]
+............
+
+Example:
+............
+show virtual-ip
+............
+
+[[cmdhelp_script_verify,Verify the script]]
+==== `verify`
+
+Checks the given parameter values, and returns a list
+of actions that will be executed when running the script
+if provided the same list of parameter values.
+
+Usage:
+............
+verify <script> [args...]
+............
+
+Example:
+............
+verify sbd id=sbd-1 node=node1 sbd_device=/dev/disk/by-uuid/F00D-CAFE
+............
 
 [[cmdhelp_corosync,Corosync management]]
 === `corosync` - Corosync management
@@ -1651,6 +1651,17 @@ unmigrate <rsc>
 unban <rsc>
 ...............
 
+[[cmdhelp_resource_constraints,Show constraints affecting a resource]]
+==== `constraints`
+
+Display the location and colocation constraints affecting the
+resource.
+
+Usage:
+................
+constraints <rsc>
+................
+
 [[cmdhelp_resource_demote,demote a master-slave resource]]
 ==== `demote`
 
@@ -1756,6 +1767,16 @@ Usage:
 move <rsc> [<node>] [<lifetime>] [force]
 ...............
 
+[[cmdhelp_resource_operations,Show active resource operations]]
+==== `operations`
+
+Show active operations, optionally filtered by resource and node.
+
+Usage:
+................
+operations [<rsc>] [<node>]
+................
+
 [[cmdhelp_resource_param,manage a parameter of a resource]]
 ==== `param`
 
@@ -1840,27 +1861,6 @@ waiting for stop to finish .... done
 INFO: ordering g_webserver to start
 #
 ...............
-
-[[cmdhelp_resource_constraints,Show constraints affecting a resource]]
-==== `constraints`
-
-Display the location and colocation constraints affecting the
-resource.
-
-Usage:
-................
-constraints <rsc>
-................
-
-[[cmdhelp_resource_operations,Show active resource operations]]
-==== `operations`
-
-Show active operations, optionally filtered by resource and node.
-
-Usage:
-................
-operations [<rsc>] [<node>]
-................
 
 [[cmdhelp_resource_scores,Display resource scores]]
 ==== `scores`
@@ -2975,6 +2975,34 @@ to supply the filter command as standard input. See the last example
 above.
 **************************
 
+[[cmdhelp_configure_get_property,Get property value]]
+==== `get-property`
+
+Show the value of the given property. If the value is not set, the
+command will print the default value for the property, if known.
+
+If no property name is passed to the command, the list of known
+cluster properties is printed.
+
+If the property is set multiple times, for example using multiple
+property sets with different rule expressions, the output of this
+command is undefined.
+
+Pass the argument +-t+ or +--true+ to `get-property` to translate
+the argument value into +true+ or +false+. If the value is not
+set, the command will print +false+.
+
+Usage:
+...............
+get-property [-t|--true] [<name>]
+...............
+
+Example:
+...............
+get-property stonith-enabled
+get-property -t maintenance-mode
+...............
+
 [[cmdhelp_configure_graph,generate a directed graph]]
 ==== `graph`
 
@@ -3801,34 +3829,6 @@ show xml tag:db tag:fs
 show related:webapp
 ...............
 
-[[cmdhelp_configure_get_property,Get property value]]
-==== `get-property`
-
-Show the value of the given property. If the value is not set, the
-command will print the default value for the property, if known.
-
-If no property name is passed to the command, the list of known
-cluster properties is printed.
-
-If the property is set multiple times, for example using multiple
-property sets with different rule expressions, the output of this
-command is undefined.
-
-Pass the argument +-t+ or +--true+ to `get-property` to translate
-the argument value into +true+ or +false+. If the value is not
-set, the command will print +false+.
-
-Usage:
-...............
-get-property [-t|--true] [<name>]
-...............
-
-Example:
-...............
-get-property stonith-enabled
-get-property -t maintenance-mode
-...............
-
 [[cmdhelp_configure_tag,Define resource tags]]
 ==== `tag`
 
@@ -4355,38 +4355,6 @@ or manipulate the resources while these commands are being executed.
 To ensure this, these commands require that maintenance mode is set
 either for the particular resource, or for the whole cluster.
 
-[[cmdhelp_maintenance_on,Enable maintenance mode]]
-==== `on`
-
-Enables maintenances mode, either for the whole cluster
-or for the given resource.
-
-Usage:
-...............
-on
-on <rsc>
-...............
-Example:
-...............
-on rsc1
-...............
-
-[[cmdhelp_maintenance_off,Disable maintenance mode]]
-==== `off`
-
-Disables maintenances mode, either for the whole cluster
-or for the given resource.
-
-Usage:
-...............
-off
-off <rsc>
-...............
-Example:
-...............
-off rsc1
-...............
-
 [[cmdhelp_maintenance_action,Invoke a resource action]]
 ==== `action`
 
@@ -4412,6 +4380,38 @@ Example:
 ...............
 action webserver reload
 action webserver monitor ssh
+...............
+
+[[cmdhelp_maintenance_off,Disable maintenance mode]]
+==== `off`
+
+Disables maintenances mode, either for the whole cluster
+or for the given resource.
+
+Usage:
+...............
+off
+off <rsc>
+...............
+Example:
+...............
+off rsc1
+...............
+
+[[cmdhelp_maintenance_on,Enable maintenance mode]]
+==== `on`
+
+Enables maintenances mode, either for the whole cluster
+or for the given resource.
+
+Usage:
+...............
+on
+on <rsc>
+...............
+Example:
+...............
+on rsc1
 ...............
 
 [[cmdhelp_history,Cluster history]]
@@ -4507,6 +4507,27 @@ Examples:
 ...............
 diff 2066 2067
 diff pe-input-2080.bz2 live status
+...............
+
+[[cmdhelp_history_events,Show events in log]]
+==== `events`
+
+By analysing the log output and looking for particular
+patterns, the `events` command helps sifting through
+the logs to find when particular events like resources
+changing state or node failure may have occurred.
+
+This can be used to generate a combined list of events
+from all nodes.
+
+Usage:
+...............
+events
+...............
+
+Example:
+...............
+events
 ...............
 
 [[cmdhelp_history_exclude,exclude log messages]]
@@ -4643,27 +4664,6 @@ log [<node> [<node> ...] ]
 Example:
 ...............
 log node-a
-...............
-
-[[cmdhelp_history_events,Show events in log]]
-==== `events`
-
-By analysing the log output and looking for particular
-patterns, the `events` command helps sifting through
-the logs to find when particular events like resources
-changing state or node failure may have occurred.
-
-This can be used to generate a combined list of events
-from all nodes.
-
-Usage:
-...............
-events
-...............
-
-Example:
-...............
-events
 ...............
 
 [[cmdhelp_history_node,node events]]
