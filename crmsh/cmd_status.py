@@ -3,7 +3,7 @@
 # See COPYING for license information.
 
 import re
-import clidisplay
+from . import clidisplay
 from . import utils
 
 _crm_mon = None
@@ -125,7 +125,6 @@ def cmd_verify(args):
     Calls crm_verify -LV; ptest -L -VVVV
     '''
     from . import config
-    from . import clidisplay
     if "ptest" in config.core.ptest:
         cmd1 = "crm_verify -LV; %s -L -VVVV" % (config.core.ptest)
     else:
