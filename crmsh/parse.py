@@ -23,6 +23,7 @@ _IDENT_RE = re.compile(r'([a-z0-9_#$-][^=]*)$', re.IGNORECASE)
 _DISPATCH_RE = re.compile(r'[a-z0-9_]+$', re.IGNORECASE)
 _DESC_RE = re.compile(r'description=(.+)$', re.IGNORECASE)
 _ATTR_RE = re.compile(r'\$?([^=]+)=(.*)$')
+_ALERT_PATH_RE = re.compile(r'(.*)$')
 _RESOURCE_RE = re.compile(r'([a-z_#$][^=]*)$', re.IGNORECASE)
 _IDSPEC_RE = re.compile(r'(\$id-ref|\$id)=(.*)$', re.IGNORECASE)
 _ID_RE = re.compile(r'\$id=(.*)$', re.IGNORECASE)
@@ -393,7 +394,7 @@ class BaseParser(object):
             tokens.append(self.match_any())
         return tokens
 
-    def match_attr_list(self, name, tag, allow_empty=True):
+    def match_attr_list(self, name, tag, allow_empty=True, terminator=None):
         """
         matches [$id=<id>] [<score>:] <n>=<v> <n>=<v> ... | $id-ref=<id-ref>
         if matchname is False, matches:
@@ -414,12 +415,12 @@ class BaseParser(object):
         if self.try_match(_SCORE_RE):
             score = self.matched(1)
         rules = self.match_rules()
-        values = self.match_nvpairs(minpairs=0)
+        values = self.match_nvpairs(minpairs=0, terminator=terminator)
         if (allow_empty, xmlid, score, len(rules), len(values)) == (False, None, None, 0, 0):
             return None
         return xmlutil.attributes(tag, rules, values, xmlid=xmlid, score=score)
 
-    def match_attr_lists(self, name_map, implicit_initial=None):
+    def match_attr_lists(self, name_map, implicit_initial=None, terminator=None):
         """
         generator which matches attr_lists
         name_map: maps CLI name to XML name
@@ -427,16 +428,17 @@ class BaseParser(object):
         to_match = '|'.join(name_map.keys())
         if self.try_match(to_match):
             name = self.matched(0).lower()
-            yield self.match_attr_list(name, name_map[name])
+            yield self.match_attr_list(name, name_map[name], terminator=terminator)
         elif implicit_initial is not None:
             attrs = self.match_attr_list(implicit_initial,
                                          name_map[implicit_initial],
-                                         allow_empty=False)
+                                         allow_empty=False,
+                                         terminator=terminator)
             if attrs is not None:
                 yield attrs
         while self.try_match(to_match):
             name = self.matched(0).lower()
-            yield self.match_attr_list(name, name_map[name])
+            yield self.match_attr_list(name, name_map[name], terminator=terminator)
 
     def match_rules(self):
         '''parse rule definitions'''
@@ -585,7 +587,7 @@ class BaseParser(object):
         else:
             return ['score-attribute', score]
 
-    def match_arguments(self, out, name_map, implicit_initial=None):
+    def match_arguments(self, out, name_map, implicit_initial=None, terminator=None):
         """
         [<name> attr_list]
         [operations id_spec]
@@ -612,12 +614,13 @@ class BaseParser(object):
                 if t in oplist:
                     self.match_operations(out, t == 'operations')
                 else:
-                    for attr_list in self.match_attr_lists(name_map):
+                    for attr_list in self.match_attr_lists(name_map, terminator=terminator):
                         out.append(attr_list)
             elif initial:
                 initial = False
                 for attr_list in self.match_attr_lists(name_map,
-                                                       implicit_initial=implicit_initial):
+                                                       implicit_initial=implicit_initial,
+                                                       terminator=terminator):
                     out.append(attr_list)
             else:
                 break
@@ -1352,6 +1355,57 @@ def parse_xml(self, cmd):
     if e.tag not in constants.cib_cli_map:
         self.err("Element %s not recognized" % (e.tag))
     return e
+
+
+@parser_for('alert')
+def parse_alert(self, cmd):
+    """
+    <alerts>
+    <alert id=ID path=PATH>
+      <recipient id=RID value=VALUE/>
+      <meta_attributes ..>
+      <instance_attributes ..>
+      ...
+
+      meta attributes "timeout", "tstamp_format"
+    </tag>
+
+    alert ID PATH [attributes ...] [meta ...] [to [{] recipient [}] ...]
+    recipient :: PATH [attributes ...] [meta ...]
+    """
+    self.begin(cmd, min_args=2)
+    self.match('alert')
+    alertid = self.match_identifier()
+    path = self.match(_ALERT_PATH_RE, errmsg="Expected path")
+    out = xmlutil.new('alert', id=alertid, path=path)
+    desc = self.try_match_description()
+    if desc is not None:
+        out.attrib['description'] = desc
+    rcount = 1
+    while self.has_tokens():
+        if self.current_token() in ('attributes', 'meta'):
+            self.match_arguments(out, {'attributes': 'instance_attributes',
+                                       'meta': 'meta_attributes'},
+                                 terminator=['attributes', 'meta', 'to'])
+            continue
+        self.match('to')
+        rid = '%s-recipient-%s' % (alertid, rcount)
+        rcount += 1
+        bracer = self.try_match('{')
+        elem = xmlutil.new('recipient', id=rid, value=self.match_any())
+        desc = self.try_match_description()
+        terminators = ['attributes', 'meta', 'to']
+        if bracer:
+            terminators.append('}')
+        if desc is not None:
+            elem.attrib['description'] = desc
+        self.match_arguments(elem, {'attributes': 'instance_attributes',
+                                    'meta': 'meta_attributes'},
+                             terminator=terminators)
+        if bracer:
+            self.match('}')
+        out.append(elem)
+    return out
 
 
 class ResourceSet(object):

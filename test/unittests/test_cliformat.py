@@ -266,3 +266,24 @@ def test_is_value_sane():
 @with_setup(setup_func, teardown_func)
 def test_is_value_sane_2():
     roundtrip('primitive p1 dummy params state="bo\\"o"')
+
+
+@with_setup(setup_func, teardown_func)
+def test_alerts_1():
+    roundtrip('alert alert1 "/tmp/foo.sh" to "/tmp/bar.log"')
+
+@with_setup(setup_func, teardown_func)
+def test_alerts_2():
+    roundtrip('alert alert2 "/tmp/foo.sh" attributes foo=bar to "/tmp/bar.log"')
+
+@with_setup(setup_func, teardown_func)
+def test_alerts_3():
+    roundtrip('alert alert3 "a path here" meta baby to "/tmp/bar.log"')
+
+@with_setup(setup_func, teardown_func)
+def test_alerts_4():
+    roundtrip('alert alert4 "/also/a/path"')
+
+@with_setup(setup_func, teardown_func)
+def test_alerts_5():
+    roundtrip('alert alert5 "/a/path" to { "/another/path" } meta timeout=30s')

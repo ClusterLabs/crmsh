@@ -218,6 +218,9 @@ clone_meta_attributes = (
 ms_meta_attributes = (
     "master-max", "master-node-max", "description",
 )
+alert_meta_attributes = (
+    "timeout", "timestamp-format"
+)
 trace_ra_attr = "trace_ra"
 score_types = {'advisory': '0', 'mandatory': 'INFINITY'}
 boolean_ops = ('or', 'and')
