@@ -150,13 +150,14 @@ def set_deep_meta_attr(rsc, attr, value, commit=True):
     return True
 
 
-def cleanup_resource(rsc, node=''):
+def cleanup_resource(rsc, node='', force=False):
     if not utils.is_name_sane(rsc) or not utils.is_name_sane(node):
         return False
+    forces = " -f" if force else ""
     if not node:
-        rc = utils.ext_cmd(RscMgmt.rsc_cleanup_all % (rsc)) == 0
+        rc = utils.ext_cmd((RscMgmt.rsc_cleanup_all % (rsc)) + forces) == 0
     else:
-        rc = utils.ext_cmd(RscMgmt.rsc_cleanup % (rsc, node)) == 0
+        rc = utils.ext_cmd((RscMgmt.rsc_cleanup % (rsc, node)) + forces) == 0
     return rc
 
 
@@ -346,7 +347,7 @@ class RscMgmt(command.UI):
             return False
         node = None
         argl = list(args)
-        force = "force" in utils.fetch_opts(argl, ["force"])
+        force = "force" in utils.fetch_opts(argl, ["force"]) or config.core.force
         lifetime = utils.fetch_lifetime_opt(argl)
         if len(argl) > 0:
             node = argl[0]
@@ -370,7 +371,7 @@ class RscMgmt(command.UI):
             return False
         node = None
         argl = list(args)
-        force = "force" in utils.fetch_opts(argl, ["force"])
+        force = "force" in utils.fetch_opts(argl, ["force"]) or config.core.force
         lifetime = utils.fetch_lifetime_opt(argl)
         if len(argl) > 0:
             node = argl[0]
@@ -381,7 +382,7 @@ class RscMgmt(command.UI):
             opts = "--node='%s'" % node
         if lifetime:
             opts = "%s --lifetime='%s'" % (opts, lifetime)
-        if force or config.core.force:
+        if force:
             opts = "%s --force" % opts
         return utils.ext_cmd(self.rsc_ban % (rsc, opts)) == 0
 
@@ -398,11 +399,14 @@ class RscMgmt(command.UI):
     @command.skill_level('administrator')
     @command.wait
     @command.completers(compl.resources, compl.nodes)
-    def do_cleanup(self, context, resource, node=''):
-        "usage: cleanup <rsc> [<node>]"
+    def do_cleanup(self, context, resource, *args):
+        "usage: cleanup <rsc> [<node>] [force]"
         # Cleanup a resource on a node. Omit node to cleanup on
         # all live nodes.
-        return cleanup_resource(resource, node)
+        argl = list(args)
+        force = "force" in utils.fetch_opts(argl, ["force"]) or config.core.force
+        node = argl[0] if len(argl) > 0 else ''
+        return cleanup_resource(resource, node, force=force)
 
     @command.wait
     @command.completers(compl.resources, compl.nodes)
