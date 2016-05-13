@@ -9,4 +9,5 @@ setup(name='crmsh',
       author='Kristoffer Gronlund',
       author_email='kgronlund@suse.com',
       url='http://crmsh.github.io/',
-      packages=['crmsh'])
+      packages=['crmsh'],
+      scripts=['crm'])
