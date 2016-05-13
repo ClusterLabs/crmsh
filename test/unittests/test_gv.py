@@ -2,9 +2,10 @@
 # See COPYING for license information.
 
 
+import re
+
 from crmsh import crm_gv
 from crmsh import cibconfig
-from nose.tools import eq_
 
 
 def test_digits_ident():
@@ -16,11 +17,19 @@ def test_digits_ident():
     g.new_node("a", top_node=True)
     g.new_attr("a", 'label', "a")
 
-    eq_("""digraph G {
+    expected = [
+        'fontname="Helvetica";',
+        'fontsize="11";',
+        'compound="true";',
+        '"1a" [label="1a"];',
+        'a [label="a"];',
+    ]
+    out = '\n'.join(g.repr()).replace('\t', '')
 
-fontname="Helvetica";
-fontsize="11";
-compound="true";
-"1a" [label="1a"];
-a [label="a"];
-}""", '\n'.join(g.repr()).replace('\t', ''))
+    for line in re.match(
+            r'^digraph G {\n\n(?P<expected>.*)\n}$', out, re.M | re.S
+    ).group('expected').split('\n'):
+        assert line in expected
+        expected.remove(line)
+
+    assert len(expected) == 0
