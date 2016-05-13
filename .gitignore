@@ -17,3 +17,5 @@ patches/*
 contrib/build/
 contrib/dist/
 contrib/pygments_crmsh_lexers.egg-info/
+
+.tox/
