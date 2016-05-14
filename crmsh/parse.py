@@ -30,6 +30,8 @@ _ID_RE = re.compile(r'\$id=(.*)$', re.IGNORECASE)
 _ID_NEW_RE = re.compile(r'([\w-]+):$', re.IGNORECASE)
 _SCORE_RE = re.compile(r"([^:]+):$")
 _ROLE_RE = re.compile(r"\$?role=(.+)$", re.IGNORECASE)
+_VERSION_RE = re.compile(r"^\d+(\.\d+)*$")
+_IN_RANGE_VERSION_RE = re.compile(r"^\d+(\.\d+)*\-\d+$")
 _BOOLOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.boolean_ops)), re.IGNORECASE)
 _UNARYOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.unary_ops)), re.IGNORECASE)
 _ACL_RIGHT_RE = re.compile(r'(%s)$' % ('|'.join(constants.acl_rule_names)), re.IGNORECASE)
@@ -61,6 +63,10 @@ class Validation(object):
     def resource_actions(self):
         'returns list of valid resource actions'
         return schema.rng_attr_values('resource_set', 'action')
+
+    def resource_version_ops(self):
+        'return list of valid resource version ops'
+        return schema.rng_attr_values('resource_set', 'op')
 
     def date_ops(self):
         'returns list of valid date operations'
@@ -108,6 +114,21 @@ class Validation(object):
         elif action.isdigit():
             return action, 'instance'
         return action, None
+
+    def classify_version(self, version, in_range=False):
+        if not version:
+            return version, None
+        elif ((not in_range and _VERSION_RE.match(version))
+          or (in_range and _IN_RANGE_VERSION_RE.match(version))):
+            return version, 'version'
+        return version, None
+
+    def classify_op(self, op):
+        if not op:
+            return op, None
+        elif op in olist(self.resource_version_ops()):
+            return op, 'op'
+        return op, None
 
     def op_attributes(self):
         return olist(schema.get('attr', 'op', 'a'))
@@ -770,6 +791,11 @@ class ResourceParser(BaseParser):
                                    'utilization': 'utilization',
                                    'operations': 'operations',
                                    'op': 'op'}, implicit_initial='params')
+        version = out.xpath('.//nvpair[@name="version"]/@value')
+        if version:
+            version, v = validator.classify_version(version[0])
+            if version and not v:
+                self.err("Invalid version '%s'" % version)
         return out
 
     parse_primitive = _primitive_or_template
@@ -825,7 +851,7 @@ class ConstraintParser(BaseParser):
 
     def parse_location(self):
         """
-        location <id> <rsc> [[$]<attribute>=<value>] <score>: <node>
+        location <id> <rsc>[:<version>][:<op>] [[$]<attribute>=<value>] <score>: <node>
         location <id> <rsc> [[$]<attribute>=<value>] <rule> [<rule> ...]
         rsc :: /<rsc-pattern>/
             | { <rsc-set> }
@@ -844,7 +870,7 @@ class ConstraintParser(BaseParser):
             for rscset in parser.parse():
                 out.append(rscset)
         else:
-            out.set('rsc', self.match_resource())
+            self.set_location_resource_attrs(out, *self.match_resource().split(':'))
 
         while self.try_match(_ATTR_RE):
             out.set(self.matched(1), self.matched(2))
@@ -870,7 +896,7 @@ class ConstraintParser(BaseParser):
 
     def parse_colocation(self):
         """
-        colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>] ...
+        colocation <id> <score> <op>: <rsc>[:<role>][:<version>][:<op>] <rsc>[:<role>][:<version>][:<op>] ...
           [node-attribute=<node_attr>]
         """
         out = xmlutil.new('rsc_colocation', id=self.match_identifier())
@@ -956,27 +982,69 @@ class ConstraintParser(BaseParser):
         parser = ResourceSet(suffix_type, tokens, self)
         return simple, parser.parse()
 
-    def _fmt(self, info, name):
-        if info[1]:
-            return [[name, info[0]], [name + '-' + info[2], info[1]]]
-        return [[name, info[0]]]
+    def _fmt(self, name, rsc, ver, v, op, o, typ, t):
+        ans = [[name, rsc]]
+        if ver:
+            ans.append([name + '-' + v, ver])
+        if op:
+            ans.append([name + '-' + o, op])
+        if typ:
+            ans.append([name + '-' + t, typ])
+        return ans
 
-    def _split_setref(self, typename, classifier):
-        rsc, typ = self.match_split()
-        typ, t = classifier(typ)
+    def match_split(self):
+        """
+        matches value[:value][:value][:value]
+        """
+        if not self.current_token():
+            self.err("Expected value[:value][:value][:value]")
+        sp = self.current_token().split(':')
+        if len(sp) > 4:
+            self.err("Expected value[:value][:value][:value]")
+        while len(sp) < 4:
+            sp.append(None)
+        self.match_any()
+        return sp
+
+    def _split_setref(self, typename, type_classifier):
+        rsc, typ, ver, op = self.match_split()
+        typ, t = type_classifier(typ)
         if typ and not t:
             self.err("Invalid %s '%s' for '%s'" % (typename, typ, rsc))
-        return rsc, typ, t
+        if not ver and op:
+            self.err("Op and no version specified for '%s'" % rsc)
+        op, o = validator.classify_op(op)
+        if op and not o:
+            self.err("Invalid op '%s' for '%s'" % (op, rsc))
+        ver, v = validator.classify_version(ver, op == 'in_range')
+        if ver and not v:
+            self.err("Invalid version '%s' for '%s'" % (ver, rsc))
+        return rsc, ver, v, op, o, typ, t
 
     def match_simple_role_set(self, count):
-        ret = self._fmt(self._split_setref('role', validator.classify_role), 'rsc')
+        ret = self._fmt('rsc', *self._split_setref('role', validator.classify_role))
         if count == 2:
-            ret += self._fmt(self._split_setref('role', validator.classify_role), 'with-rsc')
+            ret += self._fmt('with-rsc', *self._split_setref('role', validator.classify_role))
         return ret
 
     def match_simple_action_set(self):
-        ret = self._fmt(self._split_setref('action', validator.classify_action), 'first')
-        return ret + self._fmt(self._split_setref('action', validator.classify_action), 'then')
+        ret = self._fmt('first', *self._split_setref('action', validator.classify_action))
+        return ret + self._fmt('then', *self._split_setref('action', validator.classify_action))
+
+    def set_location_resource_attrs(self, out, resource, version=None, operation=None):
+        out.set('rsc', resource)
+        if not version and operation:
+            self.err("Op and no version stated for '%s'" % resource)
+        if operation:
+            operation, o = validator.classify_op(operation)
+            if not o:
+                self.err("Invalid op '%s' for '%s'" % (operation, resource))
+            out.set('rsc-op', operation)
+        if version:
+            version, v = validator.classify_version(version, operation == 'in_range')
+            if not v:
+                self.err("Invalid version '%s' for '%s'" % (version, resource))
+            out.set('rsc-version', version)
 
 
 @parser_for('monitor')

@@ -1614,6 +1614,12 @@ class CibLocation(CibObject):
         s = clidisplay.keyword(self.obj_type)
         ident = clidisplay.ident(self.obj_id)
         s = "%s %s %s" % (s, ident, rsc)
+        rsc_version = self.node.get("rsc-version")
+        if rsc_version:
+            s = "%s:%s" % (s, rsc_version)
+        rsc_op = self.node.get("rsc-op")
+        if rsc_op:
+            s = "%s:%s" % (s, rsc_op)
 
         known_attrs = ['role', 'resource-discovery']
         for attr in known_attrs:

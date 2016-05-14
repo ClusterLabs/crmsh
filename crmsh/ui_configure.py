@@ -724,7 +724,7 @@ class CibConfig(command.UI):
     @command.skill_level('administrator')
     @command.completers(compl.null, _top_rsc_id_list)
     def do_location(self, context, *args):
-        """usage: location <id> <rsc> {node_pref|rules}
+        """usage: location <id> <rsc>[:<version>][:<op>] {node_pref|rules}
 
         node_pref :: <score>: <node>
 
@@ -748,7 +748,7 @@ class CibConfig(command.UI):
     @command.skill_level('administrator')
     @command.completers_repeating(compl.null, compl.null, top_rsc_tmpl_id_list)
     def do_colocation(self, context, *args):
-        """usage: colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>] ...
+        """usage: colocation <id> <score>: <rsc>[:<role>][:<version>][:<op>] <rsc>[:<role>][:<version>][:<op>] ...
         [node-attribute=<node_attr>]"""
         return self.__conf_object(context.get_command_name(), *args)
 
@@ -757,7 +757,7 @@ class CibConfig(command.UI):
                                   compl.call(schema.rng_attr_values, 'rsc_order', 'kind'),
                                   top_rsc_tmpl_id_list)
     def do_order(self, context, *args):
-        """usage: order <id> {kind|<score>}: <rsc>[:<action>] <rsc>[:<action>] ...
+        """usage: order <id> {kind|<score>}: <rsc>[:<action>][:<version>][:<op>] <rsc>[:<action>][:<version>][:<op>] ...
         [symmetrical=<bool>]"""
         return self.__conf_object(context.get_command_name(), *args)
 

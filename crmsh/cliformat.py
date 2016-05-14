@@ -230,24 +230,42 @@ def mkrscrole(node, n):
     rsc = clidisplay.rscref(node.get(n))
     rsc_role = node.get(n + "-role")
     rsc_instance = node.get(n + "-instance")
+    rsc_version = node.get(n + "-version")
+    rsc_op = node.get(n + "-op")
     if rsc_role:
-        return "%s:%s" % (rsc, rsc_role)
+        result = '%s:%s' % (rsc, rsc_role)
     elif rsc_instance:
-        return "%s:%s" % (rsc, rsc_instance)
+        result = '%s:%s' % (rsc, rsc_instance)
     else:
-        return rsc
+        result = rsc
+    if rsc_version:
+        if not (rsc_role or rsc_instance):
+            result += ':'
+        result += ':%s' % rsc_version
+        if rsc_op:
+            result += ':%s' % rsc_op
+    return result
 
 
 def mkrscaction(node, n):
     rsc = clidisplay.rscref(node.get(n))
     rsc_action = node.get(n + "-action")
     rsc_instance = node.get(n + "-instance")
+    rsc_version = node.get(n + "-version")
+    rsc_op = node.get(n + "-op")
     if rsc_action:
-        return "%s:%s" % (rsc, rsc_action)
+        result = "%s:%s" % (rsc, rsc_action)
     elif rsc_instance:
-        return "%s:%s" % (rsc, rsc_instance)
+        result = "%s:%s" % (rsc, rsc_instance)
     else:
-        return rsc
+        result = rsc
+    if rsc_version:
+        if not (rsc_action or rsc_instance):
+            result += ':'
+        result += ':%s' % rsc_version
+        if rsc_op:
+            result += ':%s' % rsc_op
+    return result
 
 
 def cli_path(p):
