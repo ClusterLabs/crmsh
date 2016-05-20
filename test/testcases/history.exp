@@ -374,12 +374,12 @@ d1
 .INP: # reset timeframe
 .INP: timeframe
 .INP: session save _crmsh_regtest
-.EXT mkdir -p /var/cache/crm/history/session/_crmsh_regtest
+.EXT mkdir -p /var/cache/crm/history-root/session/_crmsh_regtest
 .INP: session load _crmsh_regtest
 .INP: session
 current session: _crmsh_regtest
 .INP: session pack
-.EXT tar -C '/var/cache/crm/history/session/_crmsh_regtest/..' -cj -f '/root/_crmsh_regtest.tar.bz2' _crmsh_regtest
+.EXT tar -C '/var/cache/crm/history-root/session/_crmsh_regtest/..' -cj -f '/root/_crmsh_regtest.tar.bz2' _crmsh_regtest
 Report saved in '/root/_crmsh_regtest.tar.bz2'
 .TRY History 2
 .INP: history
