@@ -606,9 +606,12 @@ class LogParser(object):
         Save state to cache file
         """
         fn = self._metafile()
-        with open(fn, 'wb') as f:
-            json.dump(self.to_dict(), f, indent=2)
-            crmlog.common_debug("Transition metadata saved to %s" % (fn))
+        try:
+            with open(fn, 'wb') as f:
+                json.dump(self.to_dict(), f, indent=2)
+                crmlog.common_debug("Transition metadata saved to %s" % (fn))
+        except IOError as e:
+            crmlog.common_debug("Could not update metadata cache: %s" % (e))
 
     def _load_cache(self):
         """
@@ -616,12 +619,15 @@ class LogParser(object):
         """
         fn = self._metafile()
         if os.path.isfile(fn) and time.time() - os.stat(fn).st_mtime < _METADATA_CACHE_AGE:
-            with open(fn, 'rb') as f:
-                try:
-                    if not self.from_dict(json.load(f)):
-                        return False
-                    crmlog.common_debug("Transition metadata loaded from %s" % (fn))
-                    return True
-                except ValueError as e:
-                    crmlog.common_debug("Failed to load metadata: %s" % (e))
+            try:
+                with open(fn, 'rb') as f:
+                    try:
+                        if not self.from_dict(json.load(f)):
+                            return False
+                        crmlog.common_debug("Transition metadata loaded from %s" % (fn))
+                        return True
+                    except ValueError as e:
+                        crmlog.common_debug("Failed to load metadata: %s" % (e))
+            except IOError as e:
+                return False
         return False
