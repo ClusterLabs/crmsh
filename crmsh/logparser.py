@@ -220,10 +220,12 @@ class CibInfo(object):
         self.cloned_resources = set()
         self.not_cloned_resources = set()
 
+        cib_elem = None
         if self.filename:
             cib_elem = xmlutil.file2cib_elem(self.filename)
 
         if cib_elem is None:
+            self.nodes = utils.list_cluster_nodes()
             return
 
         self.nodes = [x.get("uname") or x.get("id") for x in cib_elem.xpath("/cib/configuration/nodes/node")]
