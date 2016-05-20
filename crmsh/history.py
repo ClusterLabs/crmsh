@@ -394,10 +394,9 @@ class Report(object):
         return rc1 and rc2
 
     def get_live_report(self):
-        if not utils.acquire_lock(self.report_cache_dir):
-            return None
-        loc = self.new_live_report()
-        utils.release_lock(self.report_cache_dir)
+        loc = None
+        with utils.lock(self.report_cache_dir):
+            loc = self.new_live_report()
         return loc
 
     def manage_live_report(self, force=False, no_live_update=False):
@@ -426,10 +425,11 @@ class Report(object):
             except:
                 pass
             if _HAS_PARALLAX:
-                if not utils.acquire_lock(self.report_cache_dir):
+                rc = None
+                with utils.lock(self.report_cache_dir):
+                    rc = self.update_live_report(next_loglines, next_peinputs)
+                if rc is None:
                     return None
-                rc = self.update_live_report(next_loglines, next_peinputs)
-                utils.release_lock(self.report_cache_dir)
                 if rc:
                     self.set_change_origin(CH_UPD)
                     return self._live_loc()
@@ -912,7 +912,7 @@ class Report(object):
         try:
             f = open(fname, "wb")
         except IOError, msg:
-            common_err(msg)
+            common_err("Failed to save state: %s" % (msg))
             return False
         p.write(f)
         f.close()
@@ -927,7 +927,7 @@ class Report(object):
         try:
             p.read(fname)
         except Exception, msg:
-            common_err(msg)
+            common_err("Failed to load state: %s" % (msg))
             return False
         rc = True
         try:

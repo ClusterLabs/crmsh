@@ -480,25 +480,35 @@ def check_locker(lockdir):
             common_err("%s: %s" % (_LOCKDIR, strerror))
 
 
-def acquire_lock(lockdir):
-    check_locker(lockdir)
-    while True:
-        try:
-            os.makedirs(os.path.join(lockdir, _LOCKDIR))
-            str2file("%d" % os.getpid(), os.path.join(lockdir, _LOCKDIR, _PIDF))
-            return True
-        except OSError, (errno, strerror):
-            if errno != os.errno.EEXIST:
-                common_err(strerror)
+@contextmanager
+def lock(lockdir):
+    """
+    Ensure that the lock is released properly
+    even in the face of an exception between
+    acquire and release.
+    """
+    def acquire_lock():
+        check_locker(lockdir)
+        while True:
+            try:
+                os.makedirs(os.path.join(lockdir, _LOCKDIR))
+                str2file("%d" % os.getpid(), os.path.join(lockdir, _LOCKDIR, _PIDF))
+                return True
+            except OSError, (errno, strerror):
+                if errno != os.errno.EEXIST:
+                    common_err("Failed to acquire lock to %s: %s" %(lockdir, strerror))
+                    return False
+                time.sleep(0.1)
+                continue
+            else:
                 return False
-            time.sleep(0.1)
-            continue
-        else:
-            return False
 
-
-def release_lock(lockdir):
-    rmdir_r(os.path.join(lockdir, _LOCKDIR))
+    has_lock = acquire_lock()
+    try:
+        yield
+    finally:
+        if has_lock:
+            rmdir_r(os.path.join(lockdir, _LOCKDIR))
 
 
 def pipe_cmd_nosudo(cmd):
