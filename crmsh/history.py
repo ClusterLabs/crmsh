@@ -322,9 +322,11 @@ class Report(object):
                 if self.source == "live" and node == utils.this_node():
                     self.warn("Data collection fails if '%s' is not in sudoers file" % (utils.getuser()))
         if len(l) == 0:
-            global_log = os.path.join(self.loc, 'ha-log.txt')
-            if os.path.isfile(global_log):
-                l.append(global_log)
+            for lf in _LOG_FILES:
+                global_log = os.path.join(self.loc, lf)
+                if os.path.isfile(global_log):
+                    l.append(global_log)
+                    break
         return l
 
     def unpack_new_peinputs(self, node, pe_l):
