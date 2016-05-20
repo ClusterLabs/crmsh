@@ -130,9 +130,9 @@ class Report(object):
                   "BLUE",
                   "RED")
     session_sub = "session"
-    report_cache_dir = os.path.join(config.path.cache, 'history')
-    outdir = os.path.join(config.path.cache, 'history', "psshout")
-    errdir = os.path.join(config.path.cache, 'history', "pssherr")
+    report_cache_dir = os.path.join(config.path.cache, 'history-%s' % (utils.getuser()))
+    outdir = os.path.join(report_cache_dir, "psshout")
+    errdir = os.path.join(report_cache_dir, "pssherr")
 
     def __init__(self):
         # main source attributes
