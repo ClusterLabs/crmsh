@@ -243,9 +243,12 @@ class Report(object):
             if os.path.isfile(os.path.join(pp, 'cib.xml')):
                 return p
             return os.path.isdir(pp) and self.find_node_log(p)
-        return sorted([os.path.basename(p)
-                       for p in os.listdir(self.loc)
-                       if check_node(p)])
+        nodes = sorted([os.path.basename(p)
+                        for p in os.listdir(self.loc)
+                        if check_node(p)])
+        if self.source == "live" and len(nodes) == 0:
+            nodes = [utils.this_node()]
+        return nodes
 
     def check_nodes(self):
         'Verify if the nodes in cib match the nodes in the report.'
@@ -316,6 +319,12 @@ class Report(object):
                 l.append(log)
             else:
                 self.warn("no log found for node %s" % node)
+                if self.source == "live" and node == utils.this_node():
+                    self.warn("Data collection fails if '%s' is not in sudoers file" % (utils.getuser()))
+        if len(l) == 0:
+            global_log = os.path.join(self.loc, 'ha-log.txt')
+            if os.path.isfile(global_log):
+                l.append(global_log)
         return l
 
     def unpack_new_peinputs(self, node, pe_l):
