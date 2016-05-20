@@ -20,8 +20,6 @@
 #
 MAINTAINERCLEANFILES    = Makefile.in aclocal.m4 configure
 
-sbin_SCRIPTS		= crm
-
 # in .spec, set --sysconfdir=/etc
 
 # Documentation
