@@ -259,6 +259,11 @@ def test_topology_1114():
 
 
 @with_setup(setup_func, teardown_func)
+def test_locrule():
+    roundtrip('location loc-testfs-with-eth1 testfs rule ethmonitor-eth1 eq 1')
+
+
+@with_setup(setup_func, teardown_func)
 def test_is_value_sane():
     roundtrip('''primitive p1 dummy params state="bo'o"''')
 
