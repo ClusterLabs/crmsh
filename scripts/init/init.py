@@ -17,13 +17,8 @@ if check_for_primitives():
 
 try:
     nodelist = crm_script.param('nodes')
-    if len(nodelist) < 3:
-        policy = 'ignore'
-    else:
-        policy = 'stop'
     crm_script.save_template('./basic.cib.template',
-                             './basic.cib',
-                             no_quorum_policy=policy)
+                             './basic.cib')
 except IOError, e:
     crm_script.exit_fail("IO error: %s" % (str(e)))
 except ValueError, e:

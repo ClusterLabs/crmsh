@@ -1,13 +1,12 @@
 # Note: STONITH must be enabled for proper functionality!
-property $id="cib-bootstrap-options" \
-    stonith-enabled="false" \
-    no-quorum-policy="%(no_quorum_policy)s" \
-    placement-strategy="balanced"
+property cib-bootstrap-options: \
+    stonith-enabled=false \
+    placement-strategy=balanced
 
-op_defaults $id="op-options" \
-    timeout="600" \
-    record-pending="true"
+op_defaults op-options: \
+    timeout=600 \
+    record-pending=true
 
-rsc_defaults $id="rsc-options" \
-    resource-stickiness="1" \
-    migration-threshold="3"
+rsc_defaults rsc-options: \
+    resource-stickiness=1 \
+    migration-threshold=3
