@@ -203,7 +203,7 @@ node_states = ("online", "offline", "unclean")
 precious_attrs = ("id-ref",)
 op_extra_attrs = ("interval",)
 rsc_meta_attributes = (
-    "allow-migrate", "is-managed", "interval-origin",
+    "allow-migrate", "maintenance", "is-managed", "interval-origin",
     "migration-threshold", "priority", "multiple-active",
     "failure-timeout", "resource-stickiness", "target-role",
     "restart-type", "description", "remote-node", "requires",
