@@ -91,16 +91,14 @@ def run_corosync():
     }
 """ % (node, i + 1)
 
-    quorum_txt = ""
-    if len(nodelist) == 1:
-        quorum_txt = ''
-    if len(nodelist) == 2:
-        quorum_txt = """    two_node: 1
-"""
-    else:
-        quorum_txt = """    provider: corosync_votequorum
+    twonode = 1 if len(nodelist) == 2 else 0
+    expected_votes = len(nodelist)
+
+    quorum_txt = """
+    provider: corosync_votequorum
+    two_node: %s
     expected_votes: %s
-""" % ((len(nodelist) / 2) + 1)
+    """ % (twonode, expected_votes)
 
     try:
         crm_script.save_template('./corosync.conf.template',

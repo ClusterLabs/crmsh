@@ -486,8 +486,7 @@ def add_node(name):
                        make_value('nodelist.node.nodeid', str(node_id))))
 
     num_nodes = p.count('nodelist.node')
-    if num_nodes > 2:
-        p.remove('quorum.two_node')
+    p.set('quorum.two_node', '1' if num_nodes == 2 else '0')
 
     f = open(conf(), 'w')
     f.write(p.to_string())
@@ -513,8 +512,7 @@ def del_node(addr):
     if nth == -1:
         return
 
-    if p.count('nodelist.node') <= 2:
-        p.set('quorum.two_node', '1')
+    p.set('quorum.two_node', '1' if num_nodes == 2 else '0')
 
     f = open(conf(), 'w')
     f.write(p.to_string())
