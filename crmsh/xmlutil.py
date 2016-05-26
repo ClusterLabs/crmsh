@@ -13,7 +13,7 @@ from . import config
 from . import options
 from . import schema
 from . import constants
-from .msg import common_err, common_error, common_debug, cib_parse_err, err_buf
+from .msg import common_err, common_error, common_warn, common_debug, cib_parse_err, err_buf
 from . import userdir
 from . import utils
 from .utils import add_sudo, str2file, str2tmp, get_boolean
@@ -135,8 +135,8 @@ def sanity_check_nvpairs(ident, node, attr_list):
     for nvpair in node.iterchildren("nvpair"):
         n = nvpair.get("name")
         if n and n not in attr_list:
-            common_err("%s: attribute %s does not exist" % (ident, n))
-            rc |= utils.get_check_rc()
+            common_warn("%s: unknown attribute '%s'" % (ident, n))
+            rc |= 1
     return rc
 
 
