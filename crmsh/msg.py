@@ -139,36 +139,8 @@ def no_prog_err(name):
     err_buf.error("%s not available, check your installation" % name)
 
 
-def no_file_err(name):
-    err_buf.error("%s does not exist" % name)
-
-
-def missing_prog_warn(name):
-    err_buf.warning("could not find any %s on the system" % name)
-
-
-def node_err(msg, node):
-    err_buf.error("%s: %s" % (msg, etree.tostring(node, pretty_print=True)))
-
-
-def node_debug(msg, node):
-    err_buf.debug("%s: %s" % (msg, etree.tostring(node, pretty_print=True)))
-
-
-def no_attribute_err(attr, obj_type):
-    err_buf.error("required attribute %s not found in %s" % (attr, obj_type))
-
-
-def bad_def_err(what, msg):
-    err_buf.error("bad %s definition: %s" % (what, msg))
-
-
 def unsupported_err(name):
     err_buf.error("%s is not supported" % name)
-
-
-def no_such_obj_err(name):
-    err_buf.error("%s object is not supported" % name)
 
 
 def missing_obj_err(node):
@@ -181,10 +153,6 @@ def constraint_norefobj_err(constraint_id, obj_id):
                   (constraint_id, obj_id))
 
 
-def obj_exists_err(name):
-    err_buf.error("object %s already exists" % name)
-
-
 def no_object_err(name):
     err_buf.error("object %s does not exist" % name)
 
@@ -195,10 +163,6 @@ def invalid_id_err(obj_id):
 
 def id_used_err(node_id):
     err_buf.error("%s: id is already in use" % node_id)
-
-
-def skill_err(s):
-    err_buf.error("%s: this command is not allowed at this skill level" % s)
 
 
 def syntax_err(s, token='', context='', msg=''):
@@ -233,10 +197,6 @@ def cib_parse_err(msg, s):
     err_buf.info("offending string: %s" % s)
 
 
-def cib_no_elem_err(el_name):
-    err_buf.error("CIB contains no '%s' element!" % el_name)
-
-
 def cib_ver_unsupported_err(validator, rel):
     err_buf.error("Unsupported CIB: validator '%s', release '%s'" %
                   (validator, rel))
@@ -259,10 +219,6 @@ def update_err(obj_id, cibadm_opt, xml, rc):
         err_buf.info("offending xml diff: %s" % xml)
     else:
         err_buf.info("offending xml: %s" % xml)
-
-
-def not_impl_info(s):
-    err_buf.info("%s is not implemented yet" % s)
 
 
 err_buf = ErrorBuffer()
