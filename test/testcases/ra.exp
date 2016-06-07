@@ -35,6 +35,14 @@ op_sleep (string, [0]): Operation sleep duration in seconds.
     Number of seconds to sleep during operations.  This can be used to test how
     the cluster reacts to operation timeouts.
 
+fail_start_on (string): Report bogus start failure on specified host
+    Start actions will return failure if running on the host specified here, but
+    the resource will start successfully anyway (future monitor calls will find it
+    running). This can be used to test on-fail=ignore.
+
+envfile (string): Environment dump file
+    If this is set, the environment will be dumped to this file for every call.
+
 Operations' defaults (advisory minimum):
 
     start         timeout=20

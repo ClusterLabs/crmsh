@@ -11,7 +11,7 @@
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata
-ERROR: 7: st: attribute yoyo-meta does not exist
+WARNING: 7: st: unknown attribute 'yoyo-meta'
 .INP: node node1 	attributes mem=16G
 .INP: primitive p1 ocf:heartbeat:Dummy 	op monitor interval=60m 	op monitor interval=120m OCF_CHECK_LEVEL=10
 .INP: primitive p2 ocf:heartbeat:Dummy
@@ -49,7 +49,7 @@ INFO: 24: modified order:o1 from c1 to g1
 .INP: commit
 .INP: _test
 .INP: verify
-ERROR: 35: st: attribute yoyo-meta does not exist
+WARNING: 35: st: unknown attribute 'yoyo-meta'
 .INP: show
 node node1 \
 	attributes mem=16G
