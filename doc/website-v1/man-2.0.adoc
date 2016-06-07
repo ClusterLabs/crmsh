@@ -333,7 +333,7 @@ configuration cannot be saved.
 Configuration templates have been deprecated in favor of the more
 capable `cluster scripts`. To learn how to use cluster scripts, see
 the dedicated documentation on the `crmsh` website at
-http://crmsh.github.io/, or in the <<cmdhelp_script,Script section>>.
+https://crmsh.github.io/, or in the <<cmdhelp_script,Script section>>.
 ****************************
 
 Configuration templates are ready made configurations created by
