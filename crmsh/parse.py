@@ -40,7 +40,7 @@ _TEMPLATE_RE = re.compile(r'@(.+)$')
 _RA_TYPE_RE = re.compile(r'[a-z0-9_:-]+$', re.IGNORECASE)
 _TAG_RE = re.compile(r"([a-zA-Z_][^\s:]*):?$")
 _ROLE2_RE = re.compile(r"role=(.+)$", re.IGNORECASE)
-_TARGET_RE = re.compile(r'([\w=-]+):$')
+_TARGET_RE = re.compile(r'([^:]+):$')
 _TARGET_ATTR_RE = re.compile(r'attr:([\w-]+)=([\w-]+)$', re.IGNORECASE)
 TERMINATORS = ('params', 'meta', 'utilization', 'operations', 'op', 'rule', 'attributes')
 
