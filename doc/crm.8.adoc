@@ -2688,8 +2688,8 @@ alert alert-1 /srv/pacemaker/pcmk_alert_sample.sh \
     to /var/log/cluster-alerts.log
 
 alert alert-2 /srv/pacemaker/example_alert.sh \
-    to { /var/log/cluster-alerts.log } \
-    meta timeout=60s
+    meta timeout=60s \
+    to { /var/log/cluster-alerts.log }
 ...............
 
 [[cmdhelp_configure_cib,CIB shadow management]]
