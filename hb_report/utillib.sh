@@ -220,7 +220,7 @@ findln_by_time() {
 	local tm=$2
 	local first=1
 	local last=`wc -l < $logf`
-	local tmid mid trycnt
+	local tmid mid trycnt prevmid
 	while [ $first -le $last ]; do
 		mid=$((($last+$first)/2))
 		trycnt=10
@@ -230,9 +230,16 @@ findln_by_time() {
 			warning "cannot extract time: $logf:$mid; will try the next one"
 			trycnt=$(($trycnt-1))
 			# shift the whole first-last segment
-			first=$(($first-1))
-			last=$(($last-1))
-			mid=$((($last+$first)/2))
+			prevmid=$mid
+			while [ $prevmid -eq $mid ]; do
+				first=$(($first-1))
+				[ $first -lt 1 ] && first=1
+				last=$(($last-1))
+				[ $last -lt $first ] && last=$first
+				prevmid=$mid
+				mid=$((($last+$first)/2))
+				[ $first -eq $last ] && break
+			done
 		done
 		if [ -z "$tmid" ]; then
 			warning "giving up on log..."
