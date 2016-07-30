@@ -691,7 +691,7 @@ def _lookup_step(name, steps, stepname):
 
 
 def _process_agent_include(script, include):
-    import ra
+    from . import ra
     agent = include['agent']
     info = ra.get_ra(agent)
     meta = info.meta()
