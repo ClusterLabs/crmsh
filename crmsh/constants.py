@@ -30,6 +30,7 @@ keywords = {
     "fencing_topology": "element",
     "fencing-topology": "element",
     "tag": "element",
+    "alert": "element",
     "monitor": "element",
     "params": "subelement",
     "meta": "subelement",
@@ -38,6 +39,7 @@ keywords = {
     "operations": "subelement",
     "op": "subelement",
     "rule": "subelement",
+    "to": "subelement",
     "inf": "value",
     "INFINITY": "value",
     "and": "op",
@@ -94,7 +96,8 @@ cib_cli_map = {
     "acl_user": "user",
     "acl_role": "role",
     "fencing-topology": "fencing_topology",
-    "tag": "tag"
+    "tag": "tag",
+    "alert": "alert",
 }
 container_tags = ("group", "clone", "ms", "master")
 clonems_tags = ("clone", "ms", "master")
