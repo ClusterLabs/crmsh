@@ -21,6 +21,12 @@ tag tag2 p0 p1 p2
 location l1 { p0 p1 p2 } inf: node1
 primitive node1 Dummy
 tag ones l1 p1
+alert notify_9 /usr/share/pacemaker/alerts/alert_snmp.sh \
+        attributes \
+        trap_add_hires_timestamp_oid="false" \
+        trap_node_states="non-trap" \
+        trap_resource_tasks="start,stop,monitor,promote,demote" \
+        to "192.168.40.9"
 show tag:ones and type:location
 show tag:ones and p1
 show
