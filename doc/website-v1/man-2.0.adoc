@@ -1,5 +1,5 @@
 :man source:   crm
-:man version:  2.2.1
+:man version:  2.3.0
 :man manual:   crmsh documentation
 
 crm(8)
@@ -333,7 +333,7 @@ configuration cannot be saved.
 Configuration templates have been deprecated in favor of the more
 capable `cluster scripts`. To learn how to use cluster scripts, see
 the dedicated documentation on the `crmsh` website at
-https://crmsh.github.io/, or in the <<cmdhelp_script,Script section>>.
+http://crmsh.github.io/, or in the <<cmdhelp_script,Script section>>.
 ****************************
 
 Configuration templates are ready made configurations created by
@@ -892,6 +892,26 @@ option :: full
         | brief
 ...............
 
+[[cmdhelp_root_verify,Verify cluster status]]
+=== `verify`
+
+Performs basic checks for the cluster configuration and
+current status, reporting potential issues.
+
+See `crm_verify(8)` and `crm_simulate(8)` for more details.
+
+Example:
+...............
+verify
+verify scores
+...............
+
+Usage:
+...............
+verify [scores]
+...............
+
+
 [[cmdhelp_cluster,Cluster setup and management]]
 === `cluster` - Cluster setup and management
 
@@ -920,6 +940,43 @@ This command should be executed from a node already in the cluster.
 Usage:
 ...............
 add <node>
+...............
+
+[[cmdhelp_cluster_copy,Copy file to other cluster nodes]]
+==== `copy`
+
+Copy file to other cluster nodes.
+
+Copies the given file to all other nodes unless given a
+list of nodes to copy to as argument.
+
+Usage:
+...............
+copy <filename> [nodes ...]
+...............
+
+Example:
+...............
+copy /etc/motd
+...............
+
+[[cmdhelp_cluster_diff,Diff file across cluster]]
+==== `diff`
+
+Displays the difference, if any, between a given file
+on different nodes. If the second argument is `--checksum`,
+a checksum of the file will be calculated and displayed for
+each node.
+
+Usage:
+...............
+diff <file> [--checksum] [nodes...]
+...............
+
+Example:
+...............
+diff /etc/crm/crm.conf node2
+diff /etc/resolv.conf --checksum
 ...............
 
 [[cmdhelp_cluster_health,Cluster health check]]
@@ -971,24 +1028,6 @@ Example:
 run "cat /proc/uptime"
 ...............
 
-[[cmdhelp_cluster_copy,Copy file to other cluster nodes]]
-==== `copy`
-
-Copy file to other cluster nodes.
-
-Copies the given file to all other nodes unless given a
-list of nodes to copy to as argument.
-
-Usage:
-...............
-copy <filename> [nodes ...]
-...............
-
-Example:
-...............
-copy /etc/motd
-...............
-
 [[cmdhelp_cluster_start,Start cluster services]]
 ==== `start`
 
@@ -1034,25 +1073,6 @@ Usage:
 wait_for_startup
 ........
 
-[[cmdhelp_cluster_diff,Diff file across cluster]]
-==== `diff`
-
-Displays the difference, if any, between a given file
-on different nodes. If the second argument is `--checksum`,
-a checksum of the file will be calculated and displayed for
-each node.
-
-Usage:
-...............
-diff <file> [--checksum] [nodes...]
-...............
-
-Example:
-...............
-diff /etc/crm/crm.conf node2
-diff /etc/resolv.conf --checksum
-...............
-
 [[cmdhelp_script,Cluster script management]]
 === `script` - Cluster script management
 
@@ -1072,90 +1092,6 @@ Scripts are implemented using the python `parallax` package which
 provides a thin wrapper on top of SSH. This allows the scripts to
 function through the usual SSH channels used for system maintenance,
 requiring no additional software to be installed or maintained.
-
-[[cmdhelp_script_list,List available scripts]]
-==== `list`
-
-Lists the available scripts, sorted by category. Scripts that have the
-special `Script` category are hidden by default, since they are mainly
-used by other scripts or commands. To also show these, pass `all` as
-argument.
-
-To get a flat list of script names, not sorted by category, pass
-`names` as an extra argument.
-
-Usage:
-............
-list [all] [names]
-............
-
-Example:
-............
-list
-list all names
-............
-
-[[cmdhelp_script_show,Describe the script]]
-==== `show`
-
-Prints a description and short summary of the script, with
-descriptions of the accepted parameters.
-
-Advanced parameters are hidden by default. To show the complete list
-of parameters accepted by the script, pass `all` as argument.
-
-Usage:
-............
-show <script> [all]
-............
-
-Example:
-............
-show virtual-ip
-............
-
-[[cmdhelp_script_verify,Verify the script]]
-==== `verify`
-
-Checks the given parameter values, and returns a list
-of actions that will be executed when running the script
-if provided the same list of parameter values.
-
-Usage:
-............
-verify <script> [args...]
-............
-
-Example:
-............
-verify sbd id=sbd-1 node=node1 sbd_device=/dev/disk/by-uuid/F00D-CAFE
-............
-
-[[cmdhelp_script_run,Run the script]]
-==== `run`
-
-Given a list of parameter values, this command will execute the
-actions specified by the cluster script. The format for the parameter
-values is the same as for the `verify` command.
-
-Can optionally take at least two parameters:
-* `nodes=<nodes>`: List of nodes that the script runs over
-* `dry_run=yes|no`: If set, the script will not perform any modifications.
-
-Additional parameters may be available depending on the script.
-
-Use the `show` command to see what parameters are available.
-
-Usage:
-.............
-run <script> [args...]
-.............
-
-Example:
-.............
-run apache install=true
-run sbd id=sbd-1 node=node1 sbd_device=/dev/disk/by-uuid/F00D-CAFE
-.............
 
 [[cmdhelp_script_json,JSON API for cluster scripts]]
 ==== `json`
@@ -1195,6 +1131,90 @@ API:
 => [{shortdesc, rc, output|error}]
 ........
 
+
+[[cmdhelp_script_list,List available scripts]]
+==== `list`
+
+Lists the available scripts, sorted by category. Scripts that have the
+special `Script` category are hidden by default, since they are mainly
+used by other scripts or commands. To also show these, pass `all` as
+argument.
+
+To get a flat list of script names, not sorted by category, pass
+`names` as an extra argument.
+
+Usage:
+............
+list [all] [names]
+............
+
+Example:
+............
+list
+list all names
+............
+
+[[cmdhelp_script_run,Run the script]]
+==== `run`
+
+Given a list of parameter values, this command will execute the
+actions specified by the cluster script. The format for the parameter
+values is the same as for the `verify` command.
+
+Can optionally take at least two parameters:
+* `nodes=<nodes>`: List of nodes that the script runs over
+* `dry_run=yes|no`: If set, the script will not perform any modifications.
+
+Additional parameters may be available depending on the script.
+
+Use the `show` command to see what parameters are available.
+
+Usage:
+.............
+run <script> [args...]
+.............
+
+Example:
+.............
+run apache install=true
+run sbd id=sbd-1 node=node1 sbd_device=/dev/disk/by-uuid/F00D-CAFE
+.............
+
+[[cmdhelp_script_show,Describe the script]]
+==== `show`
+
+Prints a description and short summary of the script, with
+descriptions of the accepted parameters.
+
+Advanced parameters are hidden by default. To show the complete list
+of parameters accepted by the script, pass `all` as argument.
+
+Usage:
+............
+show <script> [all]
+............
+
+Example:
+............
+show virtual-ip
+............
+
+[[cmdhelp_script_verify,Verify the script]]
+==== `verify`
+
+Checks the given parameter values, and returns a list
+of actions that will be executed when running the script
+if provided the same list of parameter values.
+
+Usage:
+............
+verify <script> [args...]
+............
+
+Example:
+............
+verify sbd id=sbd-1 node=node1 sbd_device=/dev/disk/by-uuid/F00D-CAFE
+............
 
 [[cmdhelp_corosync,Corosync management]]
 === `corosync` - Corosync management
@@ -1589,6 +1609,19 @@ At this level resources may be managed.
 All (or almost all) commands are implemented with the CRM tools
 such as `crm_resource(8)`.
 
+[[cmdhelp_resource_ban,ban a resource from a node]]
+==== `ban`
+
+Ban a resource from running on a certain node. If no node is given
+as argument, the resource is banned from the current location.
+
+See `move` for details on other arguments.
+
+Usage:
+...............
+ban <rsc> [<node>] [<lifetime>] [force]
+...............
+
 [[cmdhelp_resource_cleanup,cleanup resource status]]
 ==== `cleanup`
 
@@ -1596,10 +1629,38 @@ Cleanup resource status. Typically done after the resource has
 temporarily failed. If a node is omitted, cleanup on all nodes.
 If there are many nodes, the command may take a while.
 
++(Pacemaker 1.1.14)+ Pass force to cleanup the resource itself,
+otherwise the cleanup command will apply to the parent resource (if
+any).
+
 Usage:
 ...............
-cleanup <rsc> [<node>]
+cleanup <rsc> [<node>] [force]
 ...............
+
+[[cmdhelp_resource_clear,Clear any relocation constraint]]
+==== `clear` (`unmove`, `unmigrate`, `unban`)
+
+Remove any relocation constraint created by
+the `move`, `migrate` or `ban` command.
+
+Usage:
+...............
+clear <rsc>
+unmigrate <rsc>
+unban <rsc>
+...............
+
+[[cmdhelp_resource_constraints,Show constraints affecting a resource]]
+==== `constraints`
+
+Display the location and colocation constraints affecting the
+resource.
+
+Usage:
+................
+constraints <rsc>
+................
 
 [[cmdhelp_resource_demote,demote a master-slave resource]]
 ==== `demote`
@@ -1626,6 +1687,16 @@ failcount <rsc> show <node>
 Example:
 ...............
 failcount fs_0 delete node2
+...............
+
+[[cmdhelp_resource_locate,show the location of resources]]
+==== `locate`
+
+Show the current location of one or more resources.
+
+Usage:
+...............
+locate [<rsc> ...]
 ...............
 
 [[cmdhelp_resource_maintenance,Enable/disable per-resource maintenance mode]]
@@ -1678,33 +1749,33 @@ Example:
 meta ip_0 set target-role stopped
 ...............
 
-[[cmdhelp_resource_migrate,migrate a resource to another node]]
-==== `migrate` (`move`)
+[[cmdhelp_resource_move,Move a resource to another node]]
+==== `move` (`migrate`)
 
-Migrate a resource to a different node. If node is left out, the
-resource is migrated by creating a constraint which prevents it from
-running on the current node. Additionally, you may specify a
-lifetime for the constraint---once it expires, the location
-constraint will no longer be active.
+Move a resource away from its current location.
 
-Usage:
-...............
-migrate <rsc> [<node>] [<lifetime>] [force]
-...............
+If the destination node is left out, the resource is migrated by
+creating a constraint which prevents it from running on the current
+node. For this type of constraint to be created, the +force+ argument
+is required.
 
-[[cmdhelp_resource_ban,ban a resource from a node]]
-==== `ban`
-
-Ban a resource from running on a certain node. If no node is given
-as argument, the resource is banned from the current location.
-
-See `migrate` for details on other arguments.
+A lifetime may be given for the constraint. Once it expires, the
+location constraint will no longer be active.
 
 Usage:
 ...............
-ban <rsc> [<node>] [<lifetime>] [force]
+move <rsc> [<node>] [<lifetime>] [force]
 ...............
 
+[[cmdhelp_resource_operations,Show active resource operations]]
+==== `operations`
+
+Show active operations, optionally filtered by resource and node.
+
+Usage:
+................
+operations [<rsc>] [<node>]
+................
 
 [[cmdhelp_resource_param,manage a parameter of a resource]]
 ==== `param`
@@ -1790,27 +1861,6 @@ waiting for stop to finish .... done
 INFO: ordering g_webserver to start
 #
 ...............
-
-[[cmdhelp_resource_constraints,Show constraints affecting a resource]]
-==== `constraints`
-
-Display the location and colocation constraints affecting the
-resource.
-
-Usage:
-................
-constraints <rsc>
-................
-
-[[cmdhelp_resource_operations,Show active resource operations]]
-==== `operations`
-
-Show active operations, optionally filtered by resource and node.
-
-Usage:
-................
-operations [<rsc>] [<node>]
-................
 
 [[cmdhelp_resource_scores,Display resource scores]]
 ==== `scores`
@@ -1935,16 +1985,6 @@ For details on group management see <<cmdhelp_options_manage-children,`options m
 Usage:
 ...............
 unmanage <rsc>
-...............
-
-[[cmdhelp_resource_unmigrate,unmigrate a resource to another node]]
-==== `unmigrate` (`unmove`)
-
-Remove the constraint generated by the previous migrate command.
-
-Usage:
-...............
-unmigrate <rsc>
 ...............
 
 [[cmdhelp_resource_untrace,stop RA tracing]]
@@ -2599,6 +2639,59 @@ Example:
 acl_target joe resource_admin constraint_editor
 ................
 
+[[cmdhelp_configure_alert,Event-driven alerts]]
+==== `alert`
+
+.Version note
+****************************
+This feature is only available
+in Pacemaker 1.1.15+.
+****************************
+
+Event-driven alerts enables calling scripts whenever interesting
+events occur in the cluster (nodes joining or leaving, resources
+starting or stopping, etc.).
+
+The +path+ is an arbitrary file path to an alert script.  Existing
+external scripts used with ClusterMon resources can be used as alert
+scripts, since the interface is compatible.
+
+Each alert may have a number of receipients configured.  These will be
+passed to the script as arguments. The first recipient will also be
+passed as the +CRM_alert_recipient+ environment variable, for
+compatibility with existing scripts that only support one recipient.
+
+The available meta attributes are +timeout+ (default 30s) and
++timestamp-format+ (default `"%H:%M:%S.%06N"`).
+
+Some configurations may require each recipient to be delimited by
+brackets, to avoid ambiguity. In the example +alert-2+ below, the meta
+attribute for `timeout` is defined after the recipient, so the
+brackets are used to ensure that the meta attribute is set for the
+alert and not just the recipient. This can be avoided by setting any
+alert attributes before defining the recipients.
+
+Usage:
+...............
+alert <id> <path> \
+  [attributes <nvpair> ...] \
+  [meta <nvpair> ...] \
+  [to [{] <recipient>
+    [attributes <nvpair> ...] \
+    [meta <nvpair> ...] [}] \
+    ...]
+...............
+
+Example:
+...............
+alert alert-1 /srv/pacemaker/pcmk_alert_sample.sh \
+    to /var/log/cluster-alerts.log
+
+alert alert-2 /srv/pacemaker/example_alert.sh \
+    meta timeout=60s \
+    to { /var/log/cluster-alerts.log }
+...............
+
 [[cmdhelp_configure_cib,CIB shadow management]]
 ==== `cib`
 
@@ -2881,6 +2974,34 @@ bash does its own quotation parsing. In these cases, it can be easier
 to supply the filter command as standard input. See the last example
 above.
 **************************
+
+[[cmdhelp_configure_get_property,Get property value]]
+==== `get-property`
+
+Show the value of the given property. If the value is not set, the
+command will print the default value for the property, if known.
+
+If no property name is passed to the command, the list of known
+cluster properties is printed.
+
+If the property is set multiple times, for example using multiple
+property sets with different rule expressions, the output of this
+command is undefined.
+
+Pass the argument +-t+ or +--true+ to `get-property` to translate
+the argument value into +true+ or +false+. If the value is not
+set, the command will print +false+.
+
+Usage:
+...............
+get-property [-t|--true] [<name>]
+...............
+
+Example:
+...............
+get-property stonith-enabled
+get-property -t maintenance-mode
+...............
 
 [[cmdhelp_configure_graph,generate a directed graph]]
 ==== `graph`
@@ -3708,34 +3829,6 @@ show xml tag:db tag:fs
 show related:webapp
 ...............
 
-[[cmdhelp_configure_get_property,Get property value]]
-==== `get-property`
-
-Show the value of the given property. If the value is not set, the
-command will print the default value for the property, if known.
-
-If no property name is passed to the command, the list of known
-cluster properties is printed.
-
-If the property is set multiple times, for example using multiple
-property sets with different rule expressions, the output of this
-command is undefined.
-
-Pass the argument +-t+ or +--true+ to `get-property` to translate
-the argument value into +true+ or +false+. If the value is not
-set, the command will print +false+.
-
-Usage:
-...............
-get-property [-t|--true] [<name>]
-...............
-
-Example:
-...............
-get-property stonith-enabled
-get-property -t maintenance-mode
-...............
-
 [[cmdhelp_configure_tag,Define resource tags]]
 ==== `tag`
 
@@ -3754,7 +3847,6 @@ Example:
 tag web: p-webserver p-vip
 tag ips server-vip admin-vip
 ...............
-
 
 [[cmdhelp_configure_template,edit and import a configuration from a template]]
 ==== `template`
@@ -4263,38 +4355,6 @@ or manipulate the resources while these commands are being executed.
 To ensure this, these commands require that maintenance mode is set
 either for the particular resource, or for the whole cluster.
 
-[[cmdhelp_maintenance_on,Enable maintenance mode]]
-==== `on`
-
-Enables maintenances mode, either for the whole cluster
-or for the given resource.
-
-Usage:
-...............
-on
-on <rsc>
-...............
-Example:
-...............
-on rsc1
-...............
-
-[[cmdhelp_maintenance_off,Disable maintenance mode]]
-==== `off`
-
-Disables maintenances mode, either for the whole cluster
-or for the given resource.
-
-Usage:
-...............
-off
-off <rsc>
-...............
-Example:
-...............
-off rsc1
-...............
-
 [[cmdhelp_maintenance_action,Invoke a resource action]]
 ==== `action`
 
@@ -4320,6 +4380,38 @@ Example:
 ...............
 action webserver reload
 action webserver monitor ssh
+...............
+
+[[cmdhelp_maintenance_off,Disable maintenance mode]]
+==== `off`
+
+Disables maintenances mode, either for the whole cluster
+or for the given resource.
+
+Usage:
+...............
+off
+off <rsc>
+...............
+Example:
+...............
+off rsc1
+...............
+
+[[cmdhelp_maintenance_on,Enable maintenance mode]]
+==== `on`
+
+Enables maintenances mode, either for the whole cluster
+or for the given resource.
+
+Usage:
+...............
+on
+on <rsc>
+...............
+Example:
+...............
+on rsc1
 ...............
 
 [[cmdhelp_history,Cluster history]]
@@ -4415,6 +4507,27 @@ Examples:
 ...............
 diff 2066 2067
 diff pe-input-2080.bz2 live status
+...............
+
+[[cmdhelp_history_events,Show events in log]]
+==== `events`
+
+By analysing the log output and looking for particular
+patterns, the `events` command helps sifting through
+the logs to find when particular events like resources
+changing state or node failure may have occurred.
+
+This can be used to generate a combined list of events
+from all nodes.
+
+Usage:
+...............
+events
+...............
+
+Example:
+...............
+events
 ...............
 
 [[cmdhelp_history_exclude,exclude log messages]]
@@ -4551,27 +4664,6 @@ log [<node> [<node> ...] ]
 Example:
 ...............
 log node-a
-...............
-
-[[cmdhelp_history_events,Show events in log]]
-==== `events`
-
-By analysing the log output and looking for particular
-patterns, the `events` command helps sifting through
-the logs to find when particular events like resources
-changing state or node failure may have occurred.
-
-This can be used to generate a combined list of events
-from all nodes.
-
-Usage:
-...............
-events
-...............
-
-Example:
-...............
-events
 ...............
 
 [[cmdhelp_history_node,node events]]

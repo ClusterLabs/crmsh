@@ -18,6 +18,6 @@ package management, and history exploration tools giving you a complete
 insight into the state of your cluster.
 
 * https://github.com/ClusterLabs/crmsh/[Source Code]
-* http://crmsh.github.io/man-2.0/[Reference Manual (v2.2.1)]
+* http://crmsh.github.io/man-2.0/[Reference Manual (v2.3.0)]
 * https://build.opensuse.org/package/show/network:ha-clustering:Stable/crmsh[Packages]
 * http://clusterlabs.org[Cluster Labs]

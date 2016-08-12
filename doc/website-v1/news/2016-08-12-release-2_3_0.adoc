@@ -1,0 +1,76 @@
+Releasing crmsh version 2.3.0
+==================================
+:Author: Kristoffer Gronlund
+:Email: kgronlund@suse.com
+:Date: 2016-08-12 10:30
+
+Hello everyone!
+
+I am proud to present crmsh version 2.3.0, the latest stable
+release. I would recommend all users to upgrade to 2.3.0 if they
+can.
+
+For this release, I would like to begin by highlighting the new
+contributors to crmsh since 2.2.0 was released in January:
+
+* Marc A. Smith added the new subcommand "configure load push", which
+  removes any configuration lines that aren't included in the cib
+  provided when pushing.
+
+* Andrei Maruha added an optional name parameter to the "corosync
+  add-node" command, and made the add-node command recycle old node
+  IDs if possible.
+
+* Kai Kang fixed a build system bug when removing generated docs,
+  causing issues with parallel make.
+
+* Daniel Hoffend contributed various fixes improving support for
+  building crmsh for Debian and Ubuntu.
+
+* Pedro Salgado fixed a bug in the graph rendering code in crmsh,
+  added a tox configuration file to make testing with multiple
+  versions of Python easy, and updated the Travis CI configuration to
+  use tox.
+
+* Nate Clark fixed a bug in the parser for fencing hierarchies.
+
+I would also like to thank all the other contributors, testers and
+users who have helped in making this release as stable and reliable as
+possible.
+
+Some of the other major features in 2.3.0 include:
+
+* Support for the new event-based alerts feature in Pacemaker 1.1.15
+
+* Greatly improved timezone handling in crm report and the history
+  explorer
+
+* Improvements to the cluster scripts / wizards, as well as new
+  wizards for LVM on DRBD, and NFS on LVM and DRBD and VMware/vCenter
+
+* Better support for fencing remote nodes
+
+The source code can be downloaded from Github:
+
+* https://github.com/ClusterLabs/crmsh/releases/tag/2.3.0
+
+Packages for several popular Linux distributions can be downloaded
+from the Stable repository at the OBS:
+
+* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/
+
+Archives of the tagged release:
+
+* https://github.com/ClusterLabs/crmsh/archive/2.3.0.tar.gz
+* https://github.com/ClusterLabs/crmsh/archive/2.3.0.zip
+
+For the full list of changes since version 2.3.0, see the ChangeLog,
+available at:
+
+* https://github.com/ClusterLabs/crmsh/blob/2.3.0/ChangeLog
+
+
+As usual, a huge thank you to all contributors and users of crmsh!
+
+Cheers,
+Kristoffer

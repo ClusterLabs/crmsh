@@ -1,3 +1,97 @@
+* Fri Aug 12 2016 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- Release 2.3.0
+- medium: constants: Add missing alerts constants (#150) (bsc#992789)
+- high: hb_report: Don't collect logs from journalctl if -M is set (bsc#990025)
+- high: hb_report: Skip lines without timestamps in log correctly (bsc#989810)
+- low: scripts: Fix use of non-relative import for ra
+- medium: tmpfiles: Create temporary directory if non-existing (bsc#981583)
+- medium: xmlutil: reduce unknown attribute to warning (bsc#981659)
+- high: constants: Add maintenance to set of known attributes (bsc#981659)
+- medium: scripts: no-quorum-policy=ignore is deprecated (bsc#981056)
+- low: history: fall back to any log file in report root
+- medium: history: Report better error when history user is not sudoer (bsc#980924)
+- high: history: Store live report in per-user directory (bsc#980924)
+- medium: logparser: Fix use-before-declaration error in logparser
+- low: utils: Clearer error if permission denied when locking (bsc#980924)
+- medium: logparser: Handle read-only access to metadata cache (bsc#980924)
+- doc: Add @steenzout to AUTHORS
+- fix issue #144 by comparing output line by line (#146)
+- fixed version number (#142)
+- added crm to scripts (#143)
+- doc: sort subcommands in the documentation
+- high: parse: Support for event-driven alerts (fate#320855) (#136)
+- medium: ui_resource: Add force argument to resource cleanup (bsc#979420)
+- high: ui_resource: Improved resource move/clear/locate commands
+- medium: ui_resource: Show utilization in output from crm resource scores
+- high: utils: Avoid deadlock if DC changes during idle wait (bsc#978480)
+- low: scripts: Note SBD recommendation in libvirt script (fate#318320)
+- low: scripts: Note SBD recommendation in vmware script (fate#318320)
+- high: ui_root: Add crm verify command
+- low: hb_report: Fix spurious error on missing events.txt
+- medium: hb_report: Fix broken -S option (#137)
+- medium: ui_node: Fix crash in node fence command (bsc#974902)
+- low: scripts: Better description for sbd
+- low: scripts: Preserve formatting in description for vmware wizard
+- medium: scripts: Add vmware to data manifest (fate#318320)
+- high: scripts: VMware fencing using vCenter (fate#318320)
+- low: scripts: Shouldn't set -e here (fate#318320)
+- low: parse: Don't validate operation name in parser (bsc#975357)
+- low: constants: Add missing reload operation to parser
+- medium: ui_node: Fix "crm node fence" (bsc#974902) (#134)
+- low: corosync: Recycle node IDs when possible
+- low: scripts: Fix watchdog test in sbd-device (fate#318320)
+- low: scripts: Only print debug output locally unless there were remote actions
+- low: cibconfig: Don't mix up CLI name with XML tag
+- low: parser: ignore case for attr: prefix
+- medium: scripts: Use os.uname() to find hostname (#128)
+- low: history: Don't skip nodes without logs
+- low: logparser: Don't crash on nodes without logs
+- low: scripts: Need sudo if non-local call
+- medium: hb_report: Add timeout to SSH connection (bsc#971690)
+- low: scripts: Clean up various scripts
+- medium: main: Add -o|--opt to pass extra options for crmsh
+- low: command: handle stray regex characters in input
+- medium: scripts: SBD wizard which configures SBD itself (fate#318320)
+- medium: scripts: Add nfs-utils to list of packages for nfsserver
+- medium: scripts: Set sudo and full path for exportfs -v in nfs scripts
+- medium: scripts: Don't require sudo for root
+- medium: scripts: inline scripts for call actions
+- medium: scripts: Simplify SBD script (bsc#968076) (fate#318320)
+- low: logparser: Add cib info to __meta for hawk
+- low: hb_report: Suggest user checks timeframe on empty logs (bsc#970823)
+- medium: ui_node: Add crm node server command
+- medium: hb_report: Use server attribute for remote nodes if set (bsc#970819)
+- low: ui_resource: alias show to get
+- high: history: Faster log parsing (bsc#920278)
+- low: log_patterns_118: Add captures to log patterns for tagging (bsc#970278)
+- medium: crm_pssh: Fix live refresh of journalctl logs (bsc#970931)
+- low: hb_report: Warn if generated report is empty (bsc#970823)
+- low: hb_report: Print covered time span at exit (bsc#970823)
+- low: logtime: Improve performance of syslog_ts (bsc#970278)
+- low: scripts: Fix error in service action
+- low: history: use os.listdir to list history sessions
+- medium: ui_node: Use stonith_admin -F to fence remote nodes (bsc#967907)
+- low: ui_node: Less cryptic query when fencing node
+- low: config: Messed up previous fix (#119)
+- low: config: Clean up libdir configuration (#119)
+- medium: config: make multiarch dependency a dynamic include (#119)
+- high: ui_configure: Fix commit force (#120)
+- medium: hb_report: Don't collect logs on non-nodes (bsc#959031)
+- medium: ui_configure: Only wait for DC if resources were stopped (#117)
+- low: Fix title style vs. sentence style in cluster scripts (bsc#892108)
+- medium: command: Disable fuzzy matcher for completion (#116)
+- Merge pull request #115 from rikkotec/patch-queue/remove-fix-for-debian
+- medium: corosync: added optional parameter [name] to "corosync add-node" function
+- medium: constants: clone-min meta attribute (new in Pacemaker 1.1.14)
+- medium: cibconfig: add and|or filter combinators to influence filtering (fate#320401)
+- high: scripts: fix broken cluster init script (bsc#963135)
+- high: scripts: Add LVM on DRBD cluster script (bsc#951132)
+- high: scripts: Add NFS on LVM and DRBD cluster script (bsc#951132)
+- medium: ui_configure: Rename show-property to get-property
+- high: scripts: Improved OCFS2 cluster script (bsc#953984)
+- medium: scripts: Updated SBD cluster script
+- high: history: Parse log lines without timestamp (bsc#955581)
+
 * Fri Jan 15 2016 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - Release 2.2.0
 - medium: history: Fix live report refresh (bsc#950422) (bsc#927414)
