@@ -36,12 +36,16 @@ Name:           crmsh
 Summary:        High Availability cluster command-line interface
 License:        GPL-2.0+
 Group:          %{pkg_group}
-Version:        2.2.0
+Version:        2.3.0
 Release:        0
 Url:            http://crmsh.github.io
 Source0:        %{name}-%{version}.tar.bz2
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
+%if 0%{?suse_version}
+# Requiring pacemaker makes crmsh harder to build on other distributions,
+# and is mostly a convenience feature. So only do it for SUSE.
 Requires(pre):  pacemaker
+%endif
 Requires:       %{name}-scripts >= %{version}-%{release}
 Requires:       /usr/bin/which
 Requires:       python >= 2.6
@@ -77,7 +81,7 @@ BuildRequires:  python
 BuildRequires:  libxslt-tools
 %endif
 
-%if 0%{?suse_version} > 1110
+%if 0%{?suse_version} > 1110 || 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version} || 0%{?rhel} || 0%{?fedora}
 BuildArch:      noarch
 %endif
 
@@ -92,29 +96,26 @@ Summary:        Test package for crmsh
 Group:          %{pkg_group}
 Requires:       crmsh
 %if 0%{?with_regression_tests}
-BuildRequires:  mailx
-BuildRequires:  procps
-BuildRequires:  python-dateutil
-BuildRequires:  python-nose
-BuildRequires:  python-parallax
-BuildRequires:  vim
-Requires:       pacemaker
+Requires(post):  mailx
+Requires(post):  procps
+Requires(post):  python-dateutil
+Requires(post):  python-nose
+Requires(post):  python-parallax
+Requires(post):  pacemaker
 
 %if 0%{?suse_version} > 1110
 BuildArch:      noarch
 %endif
 
 %if 0%{?suse_version}
-BuildRequires:  libglue-devel
-BuildRequires:  libpacemaker-devel
+Requires(post):  libglue-devel
 %else
-BuildRequires:  cluster-glue-libs-devel
-BuildRequires:  pacemaker-libs-devel
+Requires(post):  cluster-glue-libs-devel
 %endif
 %if 0%{?fedora_version}
-BuildRequires:  PyYAML
+Requires(post):  PyYAML
 %else
-BuildRequires:  python-PyYAML
+Requires(post):  python-PyYAML
 %endif
 
 %endif
@@ -143,7 +144,7 @@ like hawk to implement configuration wizards.
 # This can result in files having been created in the future
 # when building on machines in timezones 'behind' the one the
 # commit occurred in - which seriously confuses 'make'
-find . -exec touch \{\} \;
+find . -mtime -0 -exec touch \{\} \;
 
 %build
 ./autogen.sh
@@ -151,10 +152,10 @@ find . -exec touch \{\} \;
 %{configure}            \
     --sysconfdir=%{_sysconfdir} \
     --localstatedir=%{_var}             \
-    --with-version=%{version}-%{release}    \
+    --with-version=%{version}    \
     --docdir=%{crmsh_docdir}
 
-make %{_smp_mflags} VERSION="%{version}-%{release}" sysconfdir=%{_sysconfdir} localstatedir=%{_var}
+make %{_smp_mflags} VERSION="%{version}" sysconfdir=%{_sysconfdir} localstatedir=%{_var}
 
 %if 0%{?with_regression_tests}
 	./test/run --quiet
@@ -167,6 +168,10 @@ make %{_smp_mflags} VERSION="%{version}-%{release}" sysconfdir=%{_sysconfdir} lo
 %install
 make DESTDIR=%{buildroot} docdir=%{crmsh_docdir} install
 install -Dm0644 contrib/bash_completion.sh %{buildroot}%{_sysconfdir}/bash_completion.d/crm.sh
+if [ -f %{buildroot}%{_bindir}/crm ]; then
+	install -Dm0755 %{buildroot}%{_bindir}/crm %{buildroot}%{_sbindir}/crm
+	rm %{buildroot}%{_bindir}/crm
+fi
 %if 0%{?suse_version}
 %fdupes %{buildroot}
 %endif
@@ -196,8 +201,7 @@ fi
 %defattr(-,root,root)
 
 %{_sbindir}/crm
-%{python_sitelib}/crmsh
-%{python_sitelib}/crmsh*.egg-info
+%{python_sitelib}/crmsh*
 
 %{_datadir}/%{name}
 %exclude %{_datadir}/%{name}/tests
