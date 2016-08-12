@@ -1,5 +1,5 @@
 Releasing crmsh version 2.3.0
-==================================
+=============================
 :Author: Kristoffer Gronlund
 :Email: kgronlund@suse.com
 :Date: 2016-08-12 10:30
