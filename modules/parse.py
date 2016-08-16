@@ -509,7 +509,7 @@ class RuleParser(BaseParser):
         else:
             return ['score-attribute', score]
 
-    def match_arguments(self, out, name_map, implicit_initial=None):
+    def match_arguments(self, out, name_map):
         """
         [<name> attr_list]
         [operations id_spec]
@@ -518,11 +518,6 @@ class RuleParser(BaseParser):
         attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
         id_spec :: $id=<id> | $id-ref=<id>
         op_type :: start | stop | monitor
-
-        implicit_initial: when matching attr lists, if none match at first
-        parse an implicit initial token and then continue.
-        This is so for example: primitive foo Dummy state=1 is accepted when
-        params is the implicit initial.
         """
         names = olist(name_map.keys())
         oplist = olist([op for op in name_map if op.lower() in ('operations', 'op')])
@@ -540,8 +535,7 @@ class RuleParser(BaseParser):
                         out.append(attr_list)
             elif initial:
                 initial = False
-                for attr_list in self.match_attr_lists(name_map,
-                                                       implicit_initial=implicit_initial):
+                for attr_list in self.match_attr_lists(name_map):
                     out.append(attr_list)
             else:
                 break
@@ -574,8 +568,7 @@ class NodeParser(RuleParser):
             out.set("type", self.matched(3) or constants.node_default_type)
         xmlbuilder.maybe_set(out, "description", self.try_match_description())
         self.match_arguments(out, {'attributes': 'instance_attributes',
-                                   'utilization': 'utilization'},
-                             implicit_initial='attributes')
+                                   'utilization': 'utilization'})
         return out
 
 
