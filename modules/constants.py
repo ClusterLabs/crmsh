@@ -37,7 +37,8 @@ cib_cli_map = {
     "acl_user": "user",
     "acl_role": "role",
     "fencing-topology": "fencing_topology",
-    "tag": "tag"
+    "tag": "tag",
+    "alert": "alert"
 }
 container_tags = ("group", "clone", "ms", "master")
 clonems_tags = ("clone", "ms", "master")
@@ -158,6 +159,9 @@ clone_meta_attributes = (
 )
 ms_meta_attributes = (
     "master-max", "master-node-max", "description",
+)
+alert_meta_attributes = (
+    "timeout", "timestamp-format"
 )
 trace_ra_attr = "trace_ra"
 score_types = {'advisory': '0', 'mandatory': 'INFINITY'}

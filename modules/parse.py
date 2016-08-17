@@ -329,7 +329,7 @@ class RuleParser(BaseParser):
 
     _TERMINATORS = ('params', 'meta', 'utilization', 'operations', 'op', 'rule', 'attributes')
 
-    def match_attr_list(self, name, tag):
+    def match_attr_list(self, name, tag, terminator=None):
         """
         matches <name> [$id=<id>] [<score>:] <n>=<v> <n>=<v> ... | $id-ref=<id-ref>
         """
@@ -349,10 +349,10 @@ class RuleParser(BaseParser):
         if self.try_match(self._SCORE_RE):
             score = self.matched(1)
         rules = self.match_rules()
-        values = self.match_nvpairs(minpairs=0)
+        values = self.match_nvpairs(minpairs=0, terminator=terminator)
         return xmlbuilder.attributes(tag, rules, values, xmlid=xmlid, score=score)
 
-    def match_attr_lists(self, name_map):
+    def match_attr_lists(self, name_map, terminator=None):
         """
         generator which matches attr_lists
         name_map: maps CLI name to XML name
@@ -360,7 +360,7 @@ class RuleParser(BaseParser):
         while self.try_match('|'.join(name_map.keys())):
             name = self.matched(0).lower()
             self.rewind()
-            yield self.match_attr_list(name, name_map[name])
+            yield self.match_attr_list(name, name_map[name], terminator=terminator)
 
     def match_rules(self):
         '''parse rule definitions'''
@@ -509,6 +509,37 @@ class RuleParser(BaseParser):
         else:
             return ['score-attribute', score]
 
+    def match_arguments(self, out, name_map, terminator=None):
+        """
+        [<name> attr_list]
+        [operations id_spec]
+        [op op_type [<attribute>=<value> ...] ...]
+
+        attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
+        id_spec :: $id=<id> | $id-ref=<id>
+        op_type :: start | stop | monitor
+        """
+        names = olist(name_map.keys())
+        oplist = olist([op for op in name_map if op.lower() in ('operations', 'op')])
+        for op in oplist:
+            del name_map[op]
+        initial = True
+        while self.has_tokens():
+            t = self.current_token().lower()
+            if t in names:
+                initial = False
+                if t in oplist:
+                    self.match_operations(out, t == 'operations')
+                else:
+                    for attr_list in self.match_attr_lists(name_map, terminator=terminator):
+                        out.append(attr_list)
+            elif initial:
+                initial = False
+                for attr_list in self.match_attr_lists(name_map, terminator=terminator):
+                    out.append(attr_list)
+            else:
+                break
+
 
 class NodeParser(RuleParser):
     _UNAME_RE = re.compile(r'([^:]+)(:(normal|member|ping|remote))?$', re.IGNORECASE)
@@ -614,28 +645,6 @@ class ResourceParser(RuleParser):
 
         while is_op():
             self.match_op(node, pfx=pfx)
-
-    def match_arguments(self, out, name_map):
-        """
-        [<name> attr_list]
-        [operations id_spec]
-        [op op_type [<attribute>=<value> ...] ...]
-
-        attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
-        id_spec :: $id=<id> | $id-ref=<id>
-        op_type :: start | stop | monitor
-        """
-        names = olist(name_map.keys())
-        oplist = olist([op for op in name_map if op.lower() in ('operations', 'op')])
-        for op in oplist:
-            del name_map[op]
-        while self.has_tokens() and self.current_token() in names:
-            t = self.current_token().lower()
-            if t in oplist:
-                self.match_operations(out, t == 'operations')
-            else:
-                for attr_list in self.match_attr_lists(name_map):
-                    out.append(attr_list)
 
     def parse(self, cmd):
         return self.begin_dispatch(cmd, min_args=2)
@@ -1027,6 +1036,47 @@ class TagParser(BaseParser):
         if len(out) == 0:
             self.err("Expected at least one resource")
         return out
+
+
+class AlertParser(RuleParser):
+    _ALERT_PATH_RE = re.compile(r'(.+)$')
+
+    def can_parse(self):
+        return ('alert',)
+
+    def parse(self, cmd):
+        self.begin(cmd, min_args=2)
+        self.match('alert')
+        alertid = self.match_identifier()
+        path = self.match(self._ALERT_PATH_RE, errmsg="Expected path")
+        out = xmlbuilder.new('alert', id=alertid, path=path)
+        desc = self.try_match_description()
+        if desc is not None:
+            out.attrib['description'] = desc
+        rcount = 1
+        while self.has_tokens():
+            if self.current_token() in ('attributes', 'meta'):
+                self.match_arguments(out, {'attributes': 'instance_attributes',
+                                           'meta': 'meta_attributes'})
+                continue
+            self.match('to')
+            rid = '%s-recipient-%s' % (alertid, rcount)
+            rcount += 1
+            bracer = self.try_match('{')
+            elem = xmlbuilder.new('recipient', id=rid, value=self.match_any())
+            desc = self.try_match_description()
+            terminators = ['attributes', 'meta', 'to']
+            if bracer:
+                terminators.append('}')
+            if desc is not None:
+                elem.attrib['description'] = desc
+            self.match_arguments(elem, {'attributes': 'instance_attributes',
+                                        'meta': 'meta_attributes'}, terminator=terminators)
+            if bracer:
+                self.match('}')
+            out.append(elem)
+        return out
+
 
 
 class AclParser(BaseParser):
@@ -1531,7 +1581,8 @@ class CliParser(object):
                 FencingOrderParser,
                 AclParser,
                 RawXMLParser,
-                TagParser)
+                TagParser,
+                AlertParser)
 
     def _xml_lex(self, s):
         try:

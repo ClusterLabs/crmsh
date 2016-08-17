@@ -2920,6 +2920,59 @@ Example:
 acl_target joe resource_admin constraint_editor
 ................
 
+[[cmdhelp_configure_alert,Event-driven alerts]]
+==== `alert`
+
+.Version note
+****************************
+This feature is only available
+in Pacemaker 1.1.15+.
+****************************
+
+Event-driven alerts enables calling scripts whenever interesting
+events occur in the cluster (nodes joining or leaving, resources
+starting or stopping, etc.).
+
+The +path+ is an arbitrary file path to an alert script.  Existing
+external scripts used with ClusterMon resources can be used as alert
+scripts, since the interface is compatible.
+
+Each alert may have a number of receipients configured.  These will be
+passed to the script as arguments. The first recipient will also be
+passed as the +CRM_alert_recipient+ environment variable, for
+compatibility with existing scripts that only support one recipient.
+
+The available meta attributes are +timeout+ (default 30s) and
++timestamp-format+ (default `"%H:%M:%S.%06N"`).
+
+Some configurations may require each recipient to be delimited by
+brackets, to avoid ambiguity. In the example +alert-2+ below, the meta
+attribute for `timeout` is defined after the recipient, so the
+brackets are used to ensure that the meta attribute is set for the
+alert and not just the recipient. This can be avoided by setting any
+alert attributes before defining the recipients.
+
+Usage:
+...............
+alert <id> <path> \
+  [attributes <nvpair> ...] \
+  [meta <nvpair> ...] \
+  [to [{] <recipient>
+    [attributes <nvpair> ...] \
+    [meta <nvpair> ...] [}] \
+    ...]
+...............
+
+Example:
+...............
+alert alert-1 /srv/pacemaker/pcmk_alert_sample.sh \
+    to /var/log/cluster-alerts.log
+
+alert alert-2 /srv/pacemaker/example_alert.sh \
+    meta timeout=60s \
+    to { /var/log/cluster-alerts.log }
+...............
+
 [[cmdhelp_configure_op_defaults,set resource operations defaults]]
 ==== `op_defaults`
 

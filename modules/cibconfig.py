@@ -59,7 +59,7 @@ from xmlutil import cibtext2elem
 from cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
 from cliformat import cli_nvpair, cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
 from cliformat import cli_operations, simple_rsc_constraint, cli_rule, cli_format
-from cliformat import cli_acl_role, cli_acl_permission
+from cliformat import cli_acl_role, cli_acl_permission, cli_path
 import cibverify
 
 
@@ -742,6 +742,7 @@ def fix_node_ids(node, oldnode):
         'rsc_location': 'location',
         'fencing-topology': 'fencing',
         'tags': 'tag',
+        'alerts': 'alert',
         }
 
     idless = set(['operations', 'fencing-topology'])
@@ -2054,6 +2055,52 @@ class CibTag(CibObject):
                         [clidisplay.rscref(c.get('id'))
                          for c in self.node.iterchildren() if not is_comment(c)])
 
+class CibAlert(CibObject):
+    '''
+    Alert objects
+
+    TODO: check_sanity, repr_gv
+
+    FIXME: display instance / meta attributes, description
+
+    '''
+    set_names = {
+        "instance_attributes": "attributes",
+        "meta_attributes": "meta",
+    }
+
+    def _repr_cli_head(self, fmt):
+        ret = [clidisplay.keyword(self.obj_type),
+               clidisplay.id(self.obj_id),
+               cli_path(self.node.get('path'))]
+        return ' '.join(ret)
+
+    def _repr_cli_child(self, c, format_mode):
+        if c.tag in self.set_names:
+            return self._attr_set_str(c)
+        elif c.tag == "recipient":
+            r = ["to"]
+            complex = self._is_complex()
+            if complex:
+                r.append('{')
+            r.append(cli_path(c.get('value')))
+            for subset in c.xpath('instance_attributes|meta_attributes'):
+                r.append(self._attr_set_str(subset))
+            if complex:
+                r.append('}')
+            return ' '.join(r)
+
+    def _is_complex(self):
+        '''
+        True if this alert is ambiguous wrt meta attributes in recipient tags
+        '''
+        children = [c.tag for c in self.node.xpath('recipient|instance_attributes|meta_attributes')]
+        ri = children.index('recipient')
+        if ri < 0:
+            return False
+        children = children[ri+1:]
+        return 'instance_attributes' in children or 'meta_attributes' in children
+
 
 #
 ################################################################
@@ -2099,6 +2146,7 @@ cib_object_map = {
     "acl_target": ("acl_target", CibAcl, "acls"),
     "acl_group": ("acl_group", CibAcl, "acls"),
     "tag": ("tag", CibTag, "tags"),
+    "alert": ("alert", CibAlert, "alerts"),
 }
 
 

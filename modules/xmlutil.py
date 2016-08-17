@@ -699,7 +699,9 @@ match_list = defaultdict(tuple,
                           "op": ("name", "interval"),
                           "rule": ("score", "score-attribute", "role"),
                           "expression": ("attribute", "operation", "value"),
-                          "fencing-level": ("target", "devices")})
+                          "fencing-level": ("target", "devices"),
+                          "alert": ("path",),
+                          "recipient": ("value",)})
 
 
 def add_comment(e, s):
@@ -844,14 +846,14 @@ _sort_xml_order = make_sort_map('node', 'template', 'primitive',
                                 'rsc_location', 'rsc_colocation',
                                 'rsc_order', 'rsc_ticket', 'fencing-topology',
                                 'cluster_property_set', 'rsc_defaults', 'op_defaults',
-                                'op', 'acl_role', 'acl_user', 'tag')
+                                'op', 'acl_role', 'acl_user', 'tag', 'alert')
 
 _sort_cli_order = make_sort_map('node', 'rsc_template', 'primitive',
                                 'group', 'ms', 'master', 'clone',
                                 'location', 'colocation', 'collocation',
                                 'order', 'rsc_ticket', 'fencing_topology',
                                 'property', 'rsc_defaults', 'op_defaults',
-                                'op', 'role', 'user', 'tag')
+                                'op', 'role', 'user', 'tag', 'alert')
 
 _SORT_LAST = 1000
 

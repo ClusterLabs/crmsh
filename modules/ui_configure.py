@@ -754,6 +754,10 @@ class CibConfig(command.UI):
     def do_tag(self, context, *args):
         return self.__conf_object(context.get_command_name(), *args)
 
+    @command.skill_level('administrator')
+    def do_alert(self, context, *args):
+        return self.__conf_object(context.get_command_name(), *args)
+
     @command.skill_level('expert')
     @command.completers_repeating(_rsc_id_list)
     def do_rsctest(self, context, *args):
