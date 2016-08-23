@@ -186,7 +186,7 @@ This is the list of all modules including short descriptions.
 
 	A bag of useful XML functions. Needs more order.
 
-## Code improvements
+## Code improvements / TODO
 
 These are some thoughts on how to improve maintainability and
 make crmsh nicer. Mostly for people looking at the code, the
@@ -194,6 +194,58 @@ users shouldn't notice much (or any) difference.
 
 Everybody's invited to comment and make further suggestions, in
 particular experienced pythonistas.
+
+### Syntax bug with automatic constraint handling
+
+See issue on github https://github.com/ClusterLabs/crmsh/issues/140 .
+
+The problem is the sequence of modifications: crmsh tries to be too
+smart and changes the constraint which refers to all members of the
+group so that it now refers to the group. But when the group is
+then deleted, the constraint is also deleted.
+
+### Rewrite the hb_report script completely in Python
+
+Right now, the `hb_report` script is written in bash. This means it
+has some duplicated code, for example finding pacemaker binaries,
+with crmsh. It also means that it can be difficult to debug and
+maintain. It would be better if it was completely implemented in
+Python.
+
+### Python 3 compatibility
+
+The code is currently only compatible with Python 2.7. We will need
+to port crmsh to Python 3 eventually. The best solution for this is
+probably using the six python library which enables code which is
+both Python 2 and Python 3-compatible.
+
+### Validate more using pacemaker schema
+
+- We have the pacemaker CIB schema available (see schema.py),
+however using it is difficult and so it is not used in enough
+places.
+
+### Investigate switching to python-prompt-toolkit
+
+Either switch crmsh over to using the prompt toolkit for
+implementing the interactive mode, or at least look at it
+to see what ideas we can lift.
+
+https://github.com/jonathanslenders/python-prompt-toolkit
+
+### History transition should be able to save the graph to a file
+
+See https://github.com/ClusterLabs/crmsh/issues/98
+
+### Add support for ordering attribute on resource sets
+
+See https://github.com/ClusterLabs/crmsh/issues/84
+
+### Better version detection
+
+Be better at detecting and handling the Pacemaker version.
+Ensure backwards compatibility, for example with old vs.
+new ACL command syntax.
 
 ### Syntax highlighting
 
@@ -222,4 +274,4 @@ particular experienced pythonistas.
 ### Bad namespace separation
 
 - xmlutil and utils are just a loose collection of functions,
-  need to be organized better (get rid of 'from xyz import *')
+need to be organized better (get rid of 'from xyz import *')
