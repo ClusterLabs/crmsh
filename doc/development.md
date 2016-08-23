@@ -31,6 +31,43 @@ make
 If everything worked out as it should, the website should now be
 generated in `doc/website-v1/gen`.
 
+## Test suite
+
+There are two separate test suites for crmsh:
+
+* `test/unittests` - These are unit tests that test small pieces of
+  code or functionality. To run these tests, run the `test/run` script
+  from the project root.
+
+* `test/testcases` - These are larger integration tests which require
+  a Pacemaker installation on the machine where the tests are to
+  run. Usually, we run these tests using the OBS and the `osc` command
+  line tool:
+
+  1. Check out the crmsh python package to a directory (usually
+  `~/build-service/network:ha-clustering:Factory/crmsh`)
+
+  2. Replace the tarball for crmsh in the OBS project with an archive
+  built from the current source tree. Replace the version number with
+  whatever version is the current one on OBS:
+
+    git archive --format=tar --prefix=crmsh-2.3.0+git.1470991992.7deaa3a/ -o <tmpdir>/crmsh-2.3.0+git.1470991992.7deaa3a.tar HEAD
+    bzip2 <tmpdir>/crmsh-2.3.0+git.1470991992.7deaa3a.tar
+    cp <tmpdir>/crmsh-2.3.0+git.1470991992.7deaa3a.tar.bz2 ~/build-service/network:ha-clustering:Factory/crmsh/crmsh-2.3.0+git.1470991992.7deaa3a.tar.bz2
+
+  3. Build the rpm package for crmsh with the `with_regression_tests`
+  flag set to 1:
+
+    cd ~/build-service/network:ha-clustering:Factory/crmsh
+    osc build -d --no-verify --release=1 --define with_regression_tests 1 openSUSE_Tumbleweed x86_64 crmsh.spec
+
+To simplify this process, there is a utility called `obs` which can be
+downloaded here: https://github.com/krig/obs-scripts
+
+Using the `obs` script, the above is reduced to calling `obs test
+factory`, given an appropriate `obs.conf` file. See the README in the
+obs-scripts project for more details on using `obs`.
+
 ## Modules
 
 This is the list of all modules including short descriptions.
