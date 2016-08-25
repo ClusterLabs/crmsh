@@ -1055,9 +1055,10 @@ class AlertParser(RuleParser):
             out.attrib['description'] = desc
         rcount = 1
         while self.has_tokens():
+            terminators = ['attributes', 'meta', 'to']
             if self.current_token() in ('attributes', 'meta'):
                 self.match_arguments(out, {'attributes': 'instance_attributes',
-                                           'meta': 'meta_attributes'})
+                                           'meta': 'meta_attributes'}, terminator=terminators)
                 continue
             self.match('to')
             rid = '%s-recipient-%s' % (alertid, rcount)
@@ -1065,7 +1066,6 @@ class AlertParser(RuleParser):
             bracer = self.try_match('{')
             elem = xmlbuilder.new('recipient', id=rid, value=self.match_any())
             desc = self.try_match_description()
-            terminators = ['attributes', 'meta', 'to']
             if bracer:
                 terminators.append('}')
             if desc is not None:
