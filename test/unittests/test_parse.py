@@ -484,6 +484,16 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(['10s'],
                          out.xpath('/alert/recipient/meta_attributes/nvpair[@name="timeout"]/@value'))
 
+    def test_alerts_attrs(self):
+        "Test alert with attributes and recipient"
+        out = self.parser.parse('alert notify_9 "/usr/share/pacemaker/alerts/alert_snmp.sh" attributes trap_add_hires_timestamp_oid=false trap_node_states=non-trap trap_resource_tasks="start,stop,monitor,promote,demote" to 192.168.40.9')
+        assert(out is not False)
+        self.assertEqual(out.get('id'), 'notify_9')
+        self.assertEqual(['/usr/share/pacemaker/alerts/alert_snmp.sh'],
+                         out.xpath('/alert/@path'))
+        self.assertEqual(['192.168.40.9'],
+                         out.xpath('/alert/recipient/@value'))
+
     def _parse_lines(self, lines):
         out = []
         for line in lines2cli(lines):

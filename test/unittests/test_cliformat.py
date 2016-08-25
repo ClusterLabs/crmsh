@@ -241,11 +241,11 @@ def test_alerts_1():
 
 @with_setup(setup_func, teardown_func)
 def test_alerts_2():
-    roundtrip('alert alert2 "/tmp/foo.sh" attributes foo=bar to /tmp/bar.log')
+    roundtrip('alert alert2 "/tmp/foo.sh" attributes foo=bar to "/tmp/bar.log"')
 
 @with_setup(setup_func, teardown_func)
 def test_alerts_3():
-    roundtrip('alert alert3 "a path here" meta baby to /tmp/bar.log')
+    roundtrip('alert alert3 "a path here" meta baby to "/tmp/bar.log"')
 
 @with_setup(setup_func, teardown_func)
 def test_alerts_4():
