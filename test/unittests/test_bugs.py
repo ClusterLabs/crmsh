@@ -839,3 +839,12 @@ def test_dup_create():
     assert ok
     ok = factory.create_object(*"primitive dup1 Dummy".split())
     assert not ok
+
+
+@with_setup(setup_func, teardown_func)
+def test_bad_syntax():
+    """
+    Trying to use modern crm syntax on SP4 version
+    """
+    ok = factory.create_object(*"primitive real6-pinger ocf:pacemaker:ping host_list=2001::11 op start timeout=60 op stop timeout=20 op monitor timeout=60 interval=10 meta target-role=Started".split())
+    assert not ok
