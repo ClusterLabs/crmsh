@@ -661,11 +661,13 @@ class CibConfig(command.UI):
     @command.alias('resource')
     def do_primitive(self, context, *args):
         """usage: primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>}
-        [params <param>=<value> [<param>=<value>...]]
+        [[params] <param>=<value> [<param>=<value>...]]
         [meta <attribute>=<value> [<attribute>=<value>...]]
         [utilization <attribute>=<value> [<attribute>=<value>...]]
         [operations id_spec
-            [op op_type [<attribute>=<value>...] ...]]"""
+            [op op_type [<attribute>=<value>...]
+                        [[op_params] <param>=<value> [<param>=<value>...]]
+                        [op_meta <attribute>=<value> [<attribute>=<value>...]] ...]]"""
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')

@@ -3705,7 +3705,9 @@ primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>}
   [meta attr_list]
   [utilization attr_list]
   [operations id_spec]
-    [op op_type [<attribute>=<value>...] ...]
+    [op op_type [<attribute>=<value>...]
+                [[op_params] attr_list]
+                [op_meta attr_list] ...]
 
 attr_list :: [$id=<id>] [<score>:] [rule...]
              <attr>=<val> [<attr>=<val>...]] | $id-ref=<id>
@@ -3740,6 +3742,10 @@ primitive mySpecialRsc Special \
   params 2: rule #uname eq node2 interface=eth2 port=8888 \
   params 1: interface=eth0 port=9999
 
+primitive A ocf:pacemaker:Dummy \
+  op start \
+    op_meta 2: rule #ra-version version:gt 1.0 timeout=120s \
+    op_meta 1: timeout=60s
 ...............
 
 [[cmdhelp_configure_property,set a cluster property]]
