@@ -44,23 +44,6 @@ def nvpair_format(n, v):
                          clidisplay.attr_value(quote_wrap(v))))
 
 
-def cli_operations(node, break_lines=True):
-    l = []
-    node_id = node.get("id")
-    s = ''
-    if node_id:
-        s = nvpair_format('$id', node_id)
-    idref = node.get("id-ref")
-    if idref:
-        s = '%s %s' % (s, nvpair_format('$id-ref', idref))
-    if s:
-        l.append("%s %s" % (clidisplay.keyword("operations"), s))
-    for c in node.iterchildren():
-        if c.tag == "op":
-            l.append(cli_op(c))
-    return cli_format(l, break_lines=break_lines)
-
-
 def cli_nvpair(nvp):
     'Converts an nvpair tag or a (name, value) pair to CLI syntax'
     from .cibconfig import cib_factory
@@ -100,27 +83,6 @@ def nvpairs2list(node, add_id=False):
         ret.append(xmlutil.nvpair('$id', node.get('id')))
     ret.extend(nvpairs)
     return ret
-
-
-def op_instattr(node):
-    """
-    Return nvpairs in <op><instance_attributes>...
-    """
-    pl = []
-    for c in node.xpath('./instance_attributes'):
-        pl.extend(nvpairs2list(c))
-    return pl
-
-
-def cli_op(node):
-    "CLI format for an <op> tag"
-    action, pl = xmlutil.op2list(node)
-    if not action:
-        return ""
-    ret = ["%s %s" % (clidisplay.keyword("op"), action)]
-    ret += [nvpair_format(n, v) for n, v in pl]
-    ret += [cli_nvpair(v) for v in op_instattr(node)]
-    return ' '.join(ret)
 
 
 def date_exp2cli(node):
