@@ -48,7 +48,7 @@ from .xmlutil import get_rsc_operations, delete_rscref, xml_equals, lookup_node,
 from .xmlutil import cibtext2elem, is_related, check_id_ref
 from .cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
 from .cliformat import cli_nvpair, cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
-from .cliformat import cli_operations, simple_rsc_constraint, cli_rule, cli_format
+from .cliformat import simple_rsc_constraint, cli_rule, cli_format
 from .cliformat import cli_acl_role, cli_acl_permission, cli_path
 
 
@@ -1339,6 +1339,25 @@ class Op(object):
         return self.node
 
 
+class CibOp(CibObject):
+    '''
+    Operations
+    '''
+
+    set_names = {
+        "instance_attributes": "op_params",
+        "meta_attributes": "op_meta"
+    }
+
+    def _repr_cli_head(self, format_mode):
+        action, pl = op2list(self.node)
+        if not action:
+            return ""
+        ret = ["%s %s" % (clidisplay.keyword("op"), action)]
+        ret += [nvpair_format(n, v) for n, v in pl]
+        return ' '.join(ret)
+
+
 class CibPrimitive(CibObject):
     '''
     Primitives.
@@ -1367,7 +1386,21 @@ class CibPrimitive(CibObject):
         if c.tag in self.set_names:
             return self._attr_set_str(c)
         elif c.tag == "operations":
-            return cli_operations(c, break_lines=(format_mode > 0))
+            l = []
+            s = ''
+            c_id = c.get("id")
+            if c_id:
+                s = nvpair_format('$id', c_id)
+            idref = c.get("id-ref")
+            if idref:
+                s = '%s %s' % (s, nvpair_format('$id-ref', idref))
+            if s:
+                l.append("%s %s" % (clidisplay.keyword("operations"), s))
+            for op_node in c.iterchildren():
+                op_obj = cib_object_map[op_node.tag][1](op_node.tag)
+                op_obj.set_node(op_node)
+                l.append(op_obj.repr_cli(format_mode > 0))
+            return cli_format(l, break_lines=(format_mode > 0))
 
     def _append_op(self, op_node):
         try:
@@ -2120,6 +2153,7 @@ def get_default_timeout():
 cib_object_map = {
     # xml_tag: ( cli_name, element class, parent element tag, id hint )
     "node": ("node", CibNode, "nodes"),
+    "op": ("op", CibOp, "operations"),
     "primitive": ("primitive", CibPrimitive, "resources"),
     "group": ("group", CibContainer, "resources"),
     "clone": ("clone", CibContainer, "resources"),

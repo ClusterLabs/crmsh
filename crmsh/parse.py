@@ -43,7 +43,7 @@ _ROLE2_RE = re.compile(r"role=(.+)$", re.IGNORECASE)
 _TARGET_RE = re.compile(r'([^:]+):$')
 _TARGET_ATTR_RE = re.compile(r'attr:([\w-]+)=([\w-]+)$', re.IGNORECASE)
 _TARGET_PATTERN_RE = re.compile(r'pattern:(.+)$', re.IGNORECASE)
-TERMINATORS = ('params', 'meta', 'utilization', 'operations', 'op', 'rule', 'attributes')
+TERMINATORS = ('params', 'meta', 'utilization', 'operations', 'op', 'op_params', 'op_meta', 'rule', 'attributes')
 
 
 class ParseError(Exception):
@@ -740,6 +740,64 @@ class ResourceParser(BaseParser):
         xmlutil.maybe_set(out, 'class', cpt[0])
         xmlutil.maybe_set(out, 'provider', cpt[1])
         xmlutil.maybe_set(out, 'type', cpt[2])
+
+    def match_op(self, out, pfx='op'):
+        """
+        op <optype> [<n>=<v> ...]
+
+        to:
+          <op name="monitor" timeout="30" interval="10" id="p_mysql-monitor-10">
+            <instance_attributes id="p_mysql-monitor-10-instance_attributes">
+              <nvpair name="depth" value="0" id="p_mysql-monitor-10-instance_attributes-depth"/>
+            </instance_attributes>
+          </op>
+        """
+        self.match('op')
+        op_type = self.match_identifier()
+        all_attrs = self.match_nvpairs(minpairs=0)
+        node = xmlutil.new('op', name=op_type)
+        if not any(nvp.get('name') == 'interval' for nvp in all_attrs):
+            all_attrs.append(xmlutil.nvpair('interval', '0'))
+        valid_attrs = validator.op_attributes()
+        inst_attrs = None
+        nvpairs_missed = 0
+        for nvp in all_attrs:
+            if nvp.get('name') in valid_attrs:
+                node.set(nvp.get('name'), nvp.get('value'))
+            else:
+                nvpairs_missed += 1
+        for i in range(nvpairs_missed):
+            self.rewind()
+        for attr_list in self.match_attr_lists({'op_params': 'instance_attributes',
+                                                'op_meta': 'meta_attributes'},
+                                                implicit_initial='op_params'):
+            node.append(attr_list)
+        out.append(node)
+
+    def match_operations(self, out, match_id):
+        from .cibconfig import cib_factory
+
+        def is_op():
+            return self.has_tokens() and self.current_token().lower() == 'op'
+        if match_id:
+            self.match('operations')
+        node = xmlutil.child(out, 'operations')
+        if match_id:
+            self.match_idspec()
+            match_id = self.matched(1)[1:].lower()
+            idval = self.matched(2)
+            if match_id == 'id-ref':
+                idval = cib_factory.resolve_id_ref('operations', idval)
+
+            node.set(match_id, idval)
+
+        # The ID assignment skips the operations node if possible,
+        # so we need to pass the prefix (id of the owner node)
+        # to match_op
+        pfx = out.get('id') or 'op'
+
+        while is_op():
+            self.match_op(node, pfx=pfx)
 
     def parse(self, cmd):
         return self.begin_dispatch(cmd, min_args=2)
