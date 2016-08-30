@@ -24,7 +24,7 @@
 .INP: primitive s6 ocf:pacemaker:Stateful 	operations $id-ref=d1
 .INP: ms m5 s5
 .INP: ms m6 s6
-.INP: primitive d7 Dummy 	params rule inf: #uname eq node1 fake=1 	params rule inf: #uname eq node2 fake=2
+.INP: primitive d7 Dummy 	params rule inf: #uname eq node1 fake=1 	params rule inf: #uname eq node2 fake=2         op start interval=0 timeout=60s         op_params 2: rule #uname eq node1 op_param=dummy         op_params 1: op_param=smart         op_meta 2: rule #ra-version version:gt 1.0 start-delay=120m         op_meta 1: start-delay=60m
 .INP: location l1 g1 100: node1
 .INP: location l2 c 	rule $id=l2-rule1 100: #uname eq node1
 .INP: location l3 m5 	rule inf: #uname eq node1 and pingd gt 0
@@ -80,7 +80,12 @@ primitive d3 ocf:pacemaker:Dummy
 primitive d4 ocf:pacemaker:Dummy
 primitive d7 Dummy \
 	params rule #uname eq node1 fake=1 \
-	params rule #uname eq node2 fake=2
+	params rule #uname eq node2 fake=2 \
+	op start interval=0 timeout=60s \
+	op_params 2: rule #uname eq node1 op_param=dummy \
+	op_params 1: op_param=smart \
+	op_meta 2: rule #ra-version version:gt 1.0 start-delay=120m \
+	op_meta 1: start-delay=60m
 primitive s5 ocf:pacemaker:Stateful \
 	operations  $id-ref=d1-ops
 primitive s6 ocf:pacemaker:Stateful \

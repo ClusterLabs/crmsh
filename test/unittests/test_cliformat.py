@@ -236,6 +236,16 @@ def test_param_rules():
 
 
 @with_setup(setup_func, teardown_func)
+def test_operation_rules():
+    roundtrip('primitive test Dummy ' +
+              'op start interval=0 '
+              'op_params 2: rule #uname eq node1 fake=fake ' +
+              'op_params 1: fake=real ' +
+              'op_meta 2: rule #ra-version version:gt 1.0 timeout=120s ' +
+              'op_meta 1: timeout=60s')
+
+
+@with_setup(setup_func, teardown_func)
 def test_multiple_attrsets():
     roundtrip('primitive mySpecialRsc me:Special ' +
               'params 3: interface=eth1 ' +
