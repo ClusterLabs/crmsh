@@ -1,0 +1,46 @@
+Announcing crmsh stable release 2.1.7
+=====================================
+:Author: Kristoffer Gronlund
+:Email: kgronlund@suse.com
+:Date: 2016-09-01 09:00
+
+Today I are proud to announce the release of `crmsh` version 2.1.7!
+The major new thing in this release is a backports of the events-based
+alerts support from the 2.3 branch.
+
+Big thanks to Hideo Yamauchi for his patience and testing of the
+alerts backport.
+
+This time, the list of changes is small enough that I can add it right
+here:
+
+- high: parse: Backport of event-driven alerts parser (#150)
+- high: hb_report: Don't collect logs from journalctl if -M is set (bsc#990025)
+- high: hb_report: Skip lines without timestamps in log correctly (bsc#989810)
+- high: constants: Add maintenance to set of known attributes (bsc#981659)
+- high: utils: Avoid deadlock if DC changes during idle wait (bsc#978480)
+- medium: scripts: no-quorum-policy=ignore is deprecated (bsc#981056)
+- low: cibconfig: Don't mix up CLI name with XML tag
+
+You can also get the list of changes from the changelog:
+
+* https://github.com/ClusterLabs/crmsh/blob/2.1.7/ChangeLog
+
+Right now, I don't have a set of pre-built rpm packages for Linux
+distributions ready, but I am going to make this available soon. This
+is in particular for centOS 6.x which still relies on Python 2.6
+support which makes running the later releases there more
+difficult. These packages will most likely appear as a subrepository
+here (more details coming soon):
+
+* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/
+
+Archives of the tagged release:
+
+* https://github.com/ClusterLabs/crmsh/archive/2.1.7.tar.gz
+* https://github.com/ClusterLabs/crmsh/archive/2.1.7.zip
+
+
+Thank you,
+
+Kristoffer
