@@ -1,4 +1,4 @@
-* Thu Aug 1 2016 Kristoffer Grönlund <kgronlund@suse.com> and many others
+* Thu Sep 1 2016 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - Release 2.1.7
 - high: parse: Backport of event-driven alerts parser (#150)
 - high: parse: Detect to as terminator correctly (#150)
