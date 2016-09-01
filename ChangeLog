@@ -1,3 +1,14 @@
+* Thu Aug 1 2016 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- Release 2.1.7
+- high: parse: Backport of event-driven alerts parser (#150)
+- high: parse: Detect to as terminator correctly (#150)
+- high: hb_report: Don't collect logs from journalctl if -M is set (bsc#990025)
+- high: hb_report: Skip lines without timestamps in log correctly (bsc#989810)
+- high: constants: Add maintenance to set of known attributes (bsc#981659)
+- high: utils: Avoid deadlock if DC changes during idle wait (bsc#978480)
+- medium: scripts: no-quorum-policy=ignore is deprecated (bsc#981056)
+- low: cibconfig: Don't mix up CLI name with XML tag
+
 * Thu Apr 28 2016 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - Release 2.1.6
 - medium: report: Handle multiple spaces in syslog timestamp (#129)
