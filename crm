@@ -22,7 +22,7 @@
 import sys
 from distutils import version
 
-minimum_version = '2.7'
+minimum_version = '2.6'
 v_min = version.StrictVersion(minimum_version)
 v_this = version.StrictVersion(sys.version[:3])
 if v_min > v_this:

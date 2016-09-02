@@ -346,7 +346,7 @@ class Script(command.UI):
         """
         import yaml
         import os
-        from collections import OrderedDict
+        from .ordereddict import OrderedDict
 
         def flatten(script):
             if not isinstance(script, dict):

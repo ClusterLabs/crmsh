@@ -251,7 +251,7 @@ Python.
 
 ### Python 3 compatibility
 
-The code is currently only compatible with Python 2.7. We will need
+The code is currently only compatible with Python 2.6+. We will need
 to port crmsh to Python 3 eventually. The best solution for this is
 probably using the six python library which enables code which is
 both Python 2 and Python 3-compatible.
