@@ -1,0 +1,33 @@
+Releasing crmsh version 2.3.1
+=============================
+:Author: Kristoffer Gronlund
+:Email: kgronlund@suse.com
+:Date: 2016-09-02 10:00
+
+Hello everyone!
+
+Today I am releasing crmsh version 2.3.1. The only change this time is
+to lower the Python version requirement from 2.7 to 2.6. This is so
+that crmsh remains compatible with centOS 6, where there is no
+standardized Python 2.7 version available. For users of other
+distributions where Python 2.7 is available, there are no other
+changes in this release and no need to upgrade.
+
+The source code can be downloaded from Github:
+
+* https://github.com/ClusterLabs/crmsh/releases/tag/2.3.1
+
+Packages for several popular Linux distributions can be downloaded
+from the Stable repository at the OBS:
+
+* http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/
+
+Archives of the tagged release:
+
+* https://github.com/ClusterLabs/crmsh/archive/2.3.1.tar.gz
+* https://github.com/ClusterLabs/crmsh/archive/2.3.1.zip
+
+As usual, a huge thank you to all contributors and users of crmsh!
+
+Cheers,
+Kristoffer
