@@ -1,3 +1,7 @@
+* Fri Sep 2 2016 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- Release 2.3.1
+- Require Python 2.6+, not 2.7 (bsc#995611) (#152)
+
 * Fri Aug 12 2016 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - Release 2.3.0
 - medium: constants: Add missing alerts constants (#150) (bsc#992789)
