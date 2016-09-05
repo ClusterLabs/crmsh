@@ -1,0 +1,36 @@
+Releasing crmsh version 2.2.2
+=============================
+:Author: Kristoffer Gronlund
+:Email: kgronlund@suse.com
+:Date: 2016-09-05 19:00
+
+Hello everyone!
+
+Today I am releasing crmsh version 2.2.2. The biggest change in this
+release is the backport of the support for event-based alerts from the
+2.3 branch. The full list of changes follows below:
+
+- high: parse: Backport of event-driven alerts parser (#150)
+- high: hb_report: Don't collect logs from journalctl if -M is set (bsc#990025)
+- high: hb_report: Skip lines without timestamps in log correctly (bsc#989810)
+- high: constants: Add maintenance to set of known attributes (bsc#981659)
+- high: utils: Avoid deadlock if DC changes during idle wait (bsc#978480)
+- medium: scripts: no-quorum-policy=ignore is deprecated (bsc#981056)
+- medium: tmpfiles: Create temporary directory if non-existing (bsc#981583)
+- medium: xmlutil: reduce unknown attribute to warning (bsc#981659)
+- medium: ui_resource: Add force argument to resource cleanup (bsc#979420)
+- parse: Use original _TARGET_RE
+
+The source code can be downloaded from Github:
+
+* https://github.com/ClusterLabs/crmsh/releases/tag/2.2.2
+
+Archives of the tagged release:
+
+* https://github.com/ClusterLabs/crmsh/archive/2.2.2.tar.gz
+* https://github.com/ClusterLabs/crmsh/archive/2.2.2.zip
+
+As usual, a huge thank you to all contributors and users of crmsh!
+
+Cheers,
+Kristoffer
