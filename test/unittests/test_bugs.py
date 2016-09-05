@@ -924,3 +924,27 @@ def test_dup_create():
     assert ok
     ok = factory.create_object(*"primitive dup1 Dummy".split())
     assert not ok
+
+
+@with_setup(setup_func, teardown_func)
+def test_alerts():
+    """
+    Parsing alerts statement
+    """
+    xml = '''<alert id="notify_9" path="/usr/share/pacemaker/alerts/alert_snmp.sh">
+        <instance_attributes id="notify_9-instance_attributes">
+          <nvpair name="trap_add_hires_timestamp_oid" value="false" id="notify_9-instance_attributes-trap_add_hires_timestamp_oid"/>
+          <nvpair name="trap_node_states" value="non-trap" id="notify_9-instance_attributes-trap_node_states"/>
+          <nvpair name="trap_resource_tasks" value="start,stop,monitor,promote,demote" id="notify_9-instance_attributes-trap_resource_tasks"/>
+        </instance_attributes>
+        <recipient id="notify_9-recipient-1" value="192.168.40.9"/>
+      </alert>
+    '''
+    data = etree.fromstring(xml)
+    obj = factory.create_from_node(data)
+    assert obj is not None
+    data = obj.repr_cli(format_mode=-1)
+    print "OUTPUT:", data
+    exp = 'alert notify_9 "/usr/share/pacemaker/alerts/alert_snmp.sh" attributes trap_add_hires_timestamp_oid=false trap_node_states=non-trap trap_resource_tasks="start,stop,monitor,promote,demote" to 192.168.40.9'
+    assert data == exp
+    assert obj.cli_use_validate()

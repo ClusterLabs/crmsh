@@ -473,6 +473,26 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.get('id'), 'tag1')
         self.assertEqual(['foo', 'bar'], out.xpath('/tag/obj_ref/@id'))
 
+    def test_alerts(self):
+        "Test alerts (1.1.15+)"
+        out = self.parser.parse('alert alert1 /tmp/foo.sh to /tmp/bar.log')
+        self.assertEqual(out.get('id'), 'alert1')
+        self.assertEqual(['/tmp/foo.sh'],
+                         out.xpath('/alert/@path'))
+        self.assertEqual(['/tmp/bar.log'],
+                         out.xpath('/alert/recipient/@value'))
+
+    def test_alerts_brackets(self):
+        "Test alerts w/ brackets (1.1.15+)"
+        out = self.parser.parse('alert alert2 /tmp/foo.sh to { /tmp/bar.log meta timeout=10s }')
+        self.assertEqual(out.get('id'), 'alert2')
+        self.assertEqual(['/tmp/foo.sh'],
+                         out.xpath('/alert/@path'))
+        self.assertEqual(['/tmp/bar.log'],
+                         out.xpath('/alert/recipient/@value'))
+        self.assertEqual(['10s'],
+                         out.xpath('/alert/recipient/meta_attributes/nvpair[@name="timeout"]/@value'))
+
     def _parse_lines(self, lines):
         out = []
         for line in lines2cli(lines):
