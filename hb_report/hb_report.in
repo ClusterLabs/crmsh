@@ -305,6 +305,13 @@ findlog() {
 	fi
 
 	if [ -n "$EXTRA_LOGS" ]; then
+		for l in $EXTRA_LOGS; do
+			if [ -f "$l" ] && [ "$l" != "$PCMK_LOG" ]; then
+				echo $l
+				return
+			fi
+		done
+
 		if [ -f "$WORKDIR/$JOURNAL_F" ]; then
 			echo $WORKDIR/$JOURNAL_F
 			return

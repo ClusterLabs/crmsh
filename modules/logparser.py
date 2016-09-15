@@ -615,13 +615,20 @@ class LogParser(object):
         Load state from cache file
         """
         fn = self._metafile()
-        if os.path.isfile(fn) and time.time() - os.stat(fn).st_mtime < _METADATA_CACHE_AGE:
-            with open(fn, 'rb') as f:
+        if os.path.isfile(fn):
+            meta_mtime = os.stat(fn).st_mtime
+            logf_mtime = max([os.stat(f).st_mtime for f in self.filenames if os.path.isfile(f)])
+
+            if meta_mtime >= logf_mtime and time.time() - meta_mtime < _METADATA_CACHE_AGE:
                 try:
-                    if not self.from_dict(json.load(f)):
-                        return False
-                    crmlog.common_debug("Transition metadata loaded from %s" % (fn))
-                    return True
-                except ValueError as e:
-                    crmlog.common_debug("Failed to load metadata: %s" % (e))
+                    with open(fn, 'rb') as f:
+                        try:
+                            if not self.from_dict(json.load(f)):
+                                return False
+                            crmlog.common_debug("Transition metadata loaded from %s" % (fn))
+                            return True
+                        except ValueError as e:
+                            crmlog.common_debug("Failed to load metadata: %s" % (e))
+                except IOError as e:
+                    return False
         return False
