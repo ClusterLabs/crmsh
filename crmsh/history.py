@@ -18,7 +18,7 @@ from . import utils
 from .msg import common_debug, common_warn, common_err, common_error, common_info, warn_once
 
 
-_LOG_FILES = ("ha-log.txt", "ha-log", "cluster-log.txt", "messages", "journal.log", "pacemaker.log")
+_LOG_FILES = ("messages", "ha-log.txt", "ha-log", "cluster-log.txt", "journal.log", "pacemaker.log")
 
 
 #
