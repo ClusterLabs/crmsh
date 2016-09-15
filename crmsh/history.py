@@ -225,8 +225,8 @@ class Report(object):
         except Exception, msg:
             common_err("%s: %s" % (tarball, msg))
             return None
-        common_debug("tar -x%s < %s" % (tar_unpack_option, bfname))
-        rc = utils.pipe_cmd_nosudo("tar -x%s < %s" % (tar_unpack_option, bfname))
+        common_debug("tar -x%s < %s" % (tar_unpack_option, utils.quote(bfname)))
+        rc = utils.pipe_cmd_nosudo("tar -x%s < %s" % (tar_unpack_option, utils.quote(bfname)))
         if self.source == "live":
             os.remove(bfname)
         os.chdir(cwd)
