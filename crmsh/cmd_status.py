@@ -17,7 +17,7 @@ _WARNS = ['pending',
           r'UNKNOWN\!',
           'Stopped',
           'standby']
-_OKS = ['Online', 'online', 'ok', 'master', 'Started', 'Master', 'Slave']
+_OKS = ['Masters', 'Slaves', 'Started', 'Master', 'Slave', 'Online', 'online', 'ok', 'master']
 _ERRORS = ['not running',
            'unknown error',
            'invalid parameter',
@@ -40,14 +40,14 @@ _ERRORS = ['not running',
 
 
 class CrmMonFilter(object):
-    _OK = re.compile(r'(%s)' % '|'.join(_OKS))
+    _OK = re.compile(r'(%s)' % '|'.join(r"(?:\b%s\b)" % (w) for w in _OKS))
     _WARNS = re.compile(r'(%s)' % '|'.join(_WARNS))
     _ERROR = re.compile(r'(%s)' % ('|'.join(_ERRORS)))
     _NODES = re.compile(r'(\d+ Nodes configured)')
     _RESOURCES = re.compile(r'(\d+ Resources configured)')
 
     _RESOURCE = re.compile(r'(\S+)(\s+)\((\S+:\S+)\):')
-    _GROUP = re.compile(r'(Resource Group|Clone Set): (\S+)')
+    _GROUP = re.compile(r'((?:Resource Group)|(?:Clone Set)|(?:Master/Slave Set)): (\S+)')
 
     def _filter(self, line):
         line = self._RESOURCE.sub("%s%s(%s):" % (clidisplay.help_header(r'\1'),
@@ -55,10 +55,11 @@ class CrmMonFilter(object):
                                                  r'\3'), line)
         line = self._NODES.sub(clidisplay.help_header(r'\1'), line)
         line = self._RESOURCES.sub(clidisplay.help_header(r'\1'), line)
-        line = self._GROUP.sub(r'\1: ' + clidisplay.help_header(r'\2'), line)
-        line = self._WARNS.sub(clidisplay.warn(r'\1'), line)
-        line = self._OK.sub(clidisplay.ok(r'\1'), line)
-        line = self._ERROR.sub(clidisplay.error(r'\1'), line)
+        line, ngroups = self._GROUP.subn(r'\1: ' + clidisplay.help_header(r'\2'), line)
+        if ngroups == 0:
+            line = self._WARNS.sub(clidisplay.warn(r'\1'), line)
+            line = self._OK.sub(clidisplay.ok(r'\1'), line)
+            line = self._ERROR.sub(clidisplay.error(r'\1'), line)
         return line
 
     def __call__(self, text):
