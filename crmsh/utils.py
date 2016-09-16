@@ -1594,5 +1594,27 @@ def cluster_copy_file(local_path, nodes=None):
             err_buf.ok(host)
     return ok
 
+# a set of fnmatch patterns to match attributes whose values
+# should be obscured as a sequence of **** when printed
+_obscured_nvpairs = []
+
+def obscured(key, value):
+    if key is not None and value is not None:
+        for o in _obscured_nvpairs:
+            if fnmatch.fnmatch(key, o):
+                return '*' * 6
+    return value
+
+@contextmanager
+def obscure(obscure_list):
+    global _obscured_nvpairs
+    prev = _obscured_nvpairs
+    _obscured_nvpairs = obscure_list
+    try:
+        yield
+    finally:
+        _obscured_nvpairs = prev
+
+
 
 # vim:ts=4:sw=4:et:

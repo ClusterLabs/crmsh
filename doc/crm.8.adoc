@@ -3803,6 +3803,12 @@ To refine a selection of objects using multiple modifiers, the keywords
 +foo+, the following combination can be used:
 +show type:primitive and tag:foo+.
 
+To hide values when displaying the configuration, use the
++obscure:<glob>+ argument. This can be useful when sending the
+configuration over a public channel, to avoid exposing potentially
+sensitive information. The +<glob>+ argument is a bash-style pattern
+matching attribute keys.
+
 Usage:
 ...............
 show [xml] [<id>
@@ -3810,6 +3816,7 @@ show [xml] [<id>
            | type:<type>
            | tag:<id>
            | related:<obj>
+           | obscure:<glob>
            ...]
 
 type :: node | primitive | group | clone | ms | rsc_template
@@ -3827,6 +3834,7 @@ show webapp
 show type:primitive
 show xml tag:db tag:fs
 show related:webapp
+show type:primitive obscure:passwd
 ...............
 
 [[cmdhelp_configure_tag,Define resource tags]]

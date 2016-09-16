@@ -302,8 +302,12 @@ class CibConfig(command.UI):
     @command.completers_repeating(_id_show_list)
     def do_show(self, context, *args):
         "usage: show [xml] [<id>...]"
-        set_obj = mkset_obj(*args)
-        return set_obj.show()
+        from .utils import obscure
+        osargs = [arg[8:] for arg in args if arg.startswith('obscure:')]
+        args = [arg for arg in args if not arg.startswith('obscure:')]
+        with obscure(osargs):
+            set_obj = mkset_obj(*args)
+            return set_obj.show()
 
     @command.name("get_property")
     @command.alias("get-property")

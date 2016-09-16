@@ -585,6 +585,12 @@ class CibObjectSetRaw(CibObjectSet):
     def repr(self, format_mode="ignored"):
         "Return a string containing xml of all objects."
         cib_elem = cib_factory.obj_set2cib(self.obj_set)
+
+        from .utils import obscured
+        for nvp in cib_elem.xpath('//nvpair'):
+            if 'value' in nvp.attrib:
+                nvp.set('value', obscured(nvp.get('name'), nvp.get('value')))
+
         s = etree.tostring(cib_elem, pretty_print=True)
         return '<?xml version="1.0" ?>\n' + s
 
