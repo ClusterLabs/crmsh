@@ -226,6 +226,19 @@ def add_sudo(cmd):
     return cmd
 
 
+def ensure_sudo_readable(f):
+    # make sure the tempfile is readable to crm_diff (bsc#999683)
+    if config.core.user:
+        from pwd import getpwnam
+        uid = getpwnam(config.core.user).pw_uid
+        try:
+            os.chown(tmpf, uid, -1)
+        except os.error as err:
+            common_err('Failed setting temporary file permissions: %s' % (err))
+            return False
+    return True
+
+
 def pipe_string(cmd, s):
     rc = -1  # command failed
     cmd = add_sudo(cmd)

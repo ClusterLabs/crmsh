@@ -40,7 +40,7 @@ from msg import invalid_id_err, cib_ver_unsupported_err
 import utils
 from utils import ext_cmd, safe_open_w, pipe_string, safe_close_w, crm_msec
 from utils import ask, lines2cli, olist
-from utils import page_string, cibadmin_can_patch, str2tmp
+from utils import page_string, cibadmin_can_patch, str2tmp, ensure_sudo_readable
 from utils import run_ptest, is_id_valid, edit_file, get_boolean, filter_string
 from ordereddict import odict
 from orderedset import oset
@@ -2479,13 +2479,14 @@ class CibFactory(object):
         self._set_cib_attributes(self.cib_elem)
         cib_s = etree.tostring(self.cib_orig, pretty_print=True)
         tmpf = str2tmp(cib_s, suffix=".xml")
-        if not tmpf:
+        if not tmpf or not ensure_sudo_readable(tmpf):
             return False
         tmpfiles.add(tmpf)
         cibadmin_opts = force and "-P --force" or "-P"
 
         # produce a diff:
         # dump_new_conf | crm_diff -o self.cib_orig -n -
+
         common_debug("Input: %s" % (etree.tostring(self.cib_elem)))
         rc, cib_diff = filter_string("%s -o %s -n -" %
                                      (self._crm_diff_cmd, tmpf),
