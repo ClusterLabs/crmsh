@@ -1,3 +1,7 @@
+* Mon Sep 26 2016 Kristoffer Grönlund <kgronlund@suse.com>
+- Release 2.1.8
+- medium: ui_resource: Add force argument to resource cleanup (bsc#979420)
+
 * Thu Sep 1 2016 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - Release 2.1.7
 - high: parse: Backport of event-driven alerts parser (#150)
