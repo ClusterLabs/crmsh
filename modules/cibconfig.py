@@ -3556,6 +3556,16 @@ class CibFactory(object):
         rmnode(obj.node)
         self._add_to_remove_queue(obj)
         self.cib_objects.remove(obj)
+        for tag in self.related_tags(obj):
+            # remove self from tag
+            # remove tag if self is last tagged object in tag
+            selfies = [x for x in tag.node.iterchildren() if x.get('id') == obj.obj_id]
+            for c in selfies:
+                rmnode(c)
+            if len(tag.node.xpath('./obj_ref')) == 0:
+                self._remove_obj(tag)
+                if not self._no_constraint_rm_msg:
+                    err_buf.info("hanging %s deleted" % str(tag))
         for c_obj in self.related_constraints(obj):
             if is_simpleconstraint(c_obj.node) and obj.children:
                 # the first child inherits constraints
@@ -3570,6 +3580,16 @@ class CibFactory(object):
                     err_buf.info("hanging %s deleted" % str(c_obj))
             elif deleted:
                 err_buf.info("constraint %s updated" % str(c_obj))
+
+    def related_tags(self, obj):
+        def related_tag(tobj):
+            if tobj.obj_type != 'tag':
+                return False
+            for c in tobj.node.iterchildren():
+                if c.get('id') == obj.obj_id:
+                    return True
+            return False
+        return [x for x in self.cib_objects if related_tag(x)]
 
     def related_constraints(self, obj):
         def related_constraint(obj2):
