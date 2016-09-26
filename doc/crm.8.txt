@@ -1631,9 +1631,13 @@ Cleanup resource status. Typically done after the resource has
 temporarily failed. If a node is omitted, cleanup on all nodes.
 If there are many nodes, the command may take a while.
 
++(Pacemaker 1.1.14)+ Pass force to cleanup the resource itself,
+otherwise the cleanup command will apply to the parent resource (if
+any).
+
 Usage:
 ...............
-cleanup <rsc> [<node>]
+cleanup <rsc> [<node>] [force]
 ...............
 
 [[cmdhelp_resource_refresh,refresh CIB from the LRM status]]
