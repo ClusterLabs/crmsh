@@ -251,7 +251,7 @@ def ensure_sudo_readable(f):
         from pwd import getpwnam
         uid = getpwnam(config.core.user).pw_uid
         try:
-            os.chown(tmpf, uid, -1)
+            os.chown(f, uid, -1)
         except os.error as err:
             common_err('Failed setting temporary file permissions: %s' % (err))
             return False
