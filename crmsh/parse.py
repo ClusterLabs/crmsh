@@ -42,6 +42,7 @@ _TAG_RE = re.compile(r"([a-zA-Z_][^\s:]*):?$")
 _ROLE2_RE = re.compile(r"role=(.+)$", re.IGNORECASE)
 _TARGET_RE = re.compile(r'([^:]+):$')
 _TARGET_ATTR_RE = re.compile(r'attr:([\w-]+)=([\w-]+)$', re.IGNORECASE)
+_TARGET_PATTERN_RE = re.compile(r'pattern:(.+)$', re.IGNORECASE)
 TERMINATORS = ('params', 'meta', 'utilization', 'operations', 'op', 'rule', 'attributes')
 
 
@@ -1052,6 +1053,19 @@ class FencingOrderParser(BaseParser):
                    index=<+int> devices="\w,\w..."/>
     </fencing-topology>
 
+    from 1.1.14 on, target can be a regexp pattern:
+
+    pattern:<pattern> maps to XML:
+
+    <fencing-topology>
+    <fencing-level id=<id> target-pattern=<pattern>
+                   index=<+int> devices="\w,\w..."/>
+    </fencing-topology>
+
+    fencing-topology \
+      pcmk-1: poison-pill power \
+      pcmk-2: disk,network power
+
     """
     def parse(self, cmd):
         self.begin(cmd, min_args=1)
@@ -1063,6 +1077,8 @@ class FencingOrderParser(BaseParser):
         while self.has_tokens():
             if self.try_match(_TARGET_ATTR_RE):
                 target = (self.matched(1), self.matched(2))
+            elif self.try_match(_TARGET_PATTERN_RE):
+                target = (None, self.matched(1))
             elif self.try_match(_TARGET_RE):
                 target = self.matched(1)
             else:
@@ -1090,12 +1106,20 @@ class FencingOrderParser(BaseParser):
         targets = defaultdict(repeat(1).next)
         for target, devices in lvl_generator():
             if isinstance(target, tuple):
-                c = xmlutil.child(out, 'fencing-level',
-                                  index=str(targets[target[0]]),
-                                  devices=devices)
-                c.set('target-attribute', target[0])
-                c.set('target-value', target[1])
-                targets[target[0]] += 1
+                if target[0] is None:
+                    # pattern
+                    c = xmlutil.child(out, 'fencing-level',
+                                      index=str(targets[target[1]]),
+                                      devices=devices)
+                    c.set('target-pattern', target[1])
+                    targets[target[1]] += 1
+                else:
+                    c = xmlutil.child(out, 'fencing-level',
+                                      index=str(targets[target[0]]),
+                                      devices=devices)
+                    c.set('target-attribute', target[0])
+                    c.set('target-value', target[1])
+                    targets[target[0]] += 1
             else:
                 xmlutil.child(out, 'fencing-level',
                               target=target,

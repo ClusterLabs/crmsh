@@ -187,6 +187,28 @@ target="ha-one"></fencing-level>
 
 
 @with_setup(setup_func, teardown_func)
+def test_fencing2():
+    xml = """<fencing-topology>
+    <fencing-level devices="apple" id="fencing" index="1"
+target-pattern="green.*"></fencing-level>
+    <fencing-level devices="pear" id="fencing" index="2"
+target-pattern="green.*"></fencing-level>
+    <fencing-level devices="pear" id="fencing" index="1"
+target-pattern="red.*"></fencing-level>
+    <fencing-level devices="apple" id="fencing" index="2"
+target-pattern="red.*"></fencing-level>
+  </fencing-topology>"""
+    data = etree.fromstring(xml)
+    obj = factory.create_from_node(data)
+    assert_is_not_none(obj)
+    data = obj.repr_cli(format_mode=-1)
+    print data
+    exp = 'fencing_topology pattern:green.* apple pear pattern:red.* pear apple'
+    eq_(exp, data)
+    assert obj.cli_use_validate()
+
+
+@with_setup(setup_func, teardown_func)
 def test_master():
     xml = """<master id="ms-1">
     <crmsh-ref id="dummy3" />
@@ -256,6 +278,10 @@ def test_new_role():
 @with_setup(setup_func, teardown_func)
 def test_topology_1114():
     roundtrip('fencing_topology attr:rack=1 node1,node2')
+
+@with_setup(setup_func, teardown_func)
+def test_topology_1114_pattern():
+    roundtrip('fencing_topology pattern:.* network disk')
 
 
 @with_setup(setup_func, teardown_func)

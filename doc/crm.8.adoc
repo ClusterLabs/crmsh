@@ -2909,6 +2909,10 @@ From Pacemaker version 1.1.14, it is possible to use a node attribute
 as the +target+ in a fencing topology. The syntax for this usage is
 described below.
 
+From Pacemaker version 1.1.14, it is also possible to use regular
+expression patterns as the +target+ in a fencing topology. The configured
+fencing sequence then applies to all devices matching the pattern.
+
 Usage:
 ...............
 fencing_topology <stonith_resources> [<stonith_resources> ...]
@@ -2917,7 +2921,7 @@ fencing_topology <fencing_order> [<fencing_order> ...]
 fencing_order :: <target> <stonith_resources> [<stonith_resources> ...]
 
 stonith_resources :: <rsc>[,<rsc>...]
-target :: <node>: | attr:<node-attribute>=<value>
+target :: <node>: | attr:<node-attribute>=<value> | pattern:<pattern>
 ...............
 Example:
 ...............
@@ -2932,6 +2936,13 @@ fencing_topology \
 # Fencing anything on rack 1 requires fencing via both APC 1 and 2,
 # to defeat the redundancy provided by two separate UPS units.
 fencing_topology attr:rack=1 apc01,apc02
+
+# Fencing for all machines named green.* is done using the pear
+# fencing device first, while all machines named red.* are fenced
+# using the apple fencing device first.
+fencing_topology \
+    pattern:green.* pear apple \
+    pattern:red.* apple pear
 ...............
 
 [[cmdhelp_configure_filter,filter CIB objects]]

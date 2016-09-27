@@ -1929,7 +1929,9 @@ class CibFencingOrder(CibObject):
         s = clidisplay.keyword(self.obj_type)
         d = ordereddict.odict()
         for c in self.node.iterchildren("fencing-level"):
-            if "target-attribute" in c.attrib:
+            if "target-pattern" in c.attrib:
+                target = (None, c.get("target-pattern"))
+            elif "target-attribute" in c.attrib:
                 target = (c.get("target-attribute"), c.get("target-value"))
             else:
                 target = c.get("target")
@@ -1949,9 +1951,10 @@ class CibFencingOrder(CibObject):
 
         def fmt_target(tgt):
             if isinstance(tgt, tuple):
+                if tgt[0] is None:
+                    return "pattern:%s" % (tgt[1])
                 return "attr:%s=%s" % tgt
-            else:
-                return tgt + ":"
+            return tgt + ":"
         return cli_format([s] + ["%s %s" % (fmt_target(x), ' '.join(dd[x]))
                                  for x in dd.keys()],
                           break_lines=(format_mode > 0))
