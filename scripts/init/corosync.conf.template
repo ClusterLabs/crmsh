@@ -1,9 +1,17 @@
 # Please read the corosync.conf.5 manual page
 totem {
 	version: 2
+	secauth: on
+	crypto_hash: sha1
+	crypto_cipher: aes256
+	cluster_name: hacluster
+	clear_node_high_bit: yes
 
-	crypto_cipher: none
-	crypto_hash: none
+	token: 5000
+	token_retransmits_before_loss_const: 10
+	join: 60
+	consensus: 6000
+	max_messages: 20
 
 	interface {
 		ringnumber: 0
@@ -17,9 +25,10 @@ totem {
 
 logging {
 	fileline: off
+	to_stderr: no
 	to_logfile: no
-	to_syslog: yes
 	logfile: /var/log/cluster/corosync.log
+	to_syslog: yes
 	debug: off
 	timestamp: on
 	logger_subsys {
