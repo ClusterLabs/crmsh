@@ -14,10 +14,7 @@ def rpm_info():
     return crm_script.rpmcheck(PACKAGES)
 
 def logrotate_info():
-    rc, _, _ = crm_script.call(
-        'grep -r corosync.conf /etc/logrotate.d',
-        shell=True)
-    return {'corosync.conf': rc == 0}
+    return {}
 
 def sys_info():
     sysname, nodename, release, version, machine = os.uname()
