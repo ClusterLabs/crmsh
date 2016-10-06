@@ -785,7 +785,7 @@ This primitive resource has two lists of parameters with descending
 priority. The parameter list with the highest priority is applied
 first, but only if the rule expressions for that parameter list all
 apply. In this case, the rule `#uname eq node1` limits the parameter
-list so that it is only applied on `node1.
+list so that it is only applied on `node1`.
 
 Note that rule expressions are not terminated and are immediately
 followed by the data to which the rule is applied. In this case, the
