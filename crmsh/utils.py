@@ -327,17 +327,76 @@ def str2tmp(s, suffix=".pcmk"):
     return tmp
 
 
+@contextmanager
+def create_tempfile(suffix='', dir=None):
+    """ Context for temporary file.
+
+    Will find a free temporary filename upon entering
+    and will try to delete the file on leaving, even in case of an exception.
+
+    Parameters
+    ----------
+    suffix : string
+        optional file suffix
+    dir : string
+        optional directory to save temporary file in
+
+    (from http://stackoverflow.com/a/29491523)
+    """
+    import tempfile
+    tf = tempfile.NamedTemporaryFile(delete=False, suffix=suffix, dir=dir)
+    tf.file.close()
+    try:
+        yield tf.name
+    finally:
+        try:
+            os.remove(tf.name)
+        except OSError as e:
+            if e.errno == 2:
+                pass
+            else:
+                raise
+
+@contextmanager
+def open_atomic(filepath, mode="r", buffering=-1, fsync=False):
+    """ Open temporary file object that atomically moves to destination upon
+    exiting.
+
+    Allows reading and writing to and from the same filename.
+
+    The file will not be moved to destination in case of an exception.
+
+    Parameters
+    ----------
+    filepath : string
+        the file path to be opened
+    fsync : bool
+        whether to force write the file to disk
+
+    (from http://stackoverflow.com/a/29491523)
+    """
+
+    with create_tempfile(dir=os.path.dirname(os.path.abspath(filepath))) as tmppath:
+        with open(tmppath, mode, buffering) as file:
+            try:
+                yield file
+            finally:
+                if fsync:
+                    file.flush()
+                    os.fsync(file.fileno())
+        os.rename(tmppath, filepath)
+
+
 def str2file(s, fname):
     '''
     Write a string to a file.
     '''
     try:
-        f = open(fname, "w")
+        with open_atomic(fname, 'w') as dst:
+            dst.write(s)
     except IOError, msg:
         common_err(msg)
         return False
-    f.write(s)
-    f.close()
     return True
 
 
