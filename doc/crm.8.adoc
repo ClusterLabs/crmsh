@@ -663,7 +663,7 @@ each one implies different values for the two resource set attributes,
 +sequential+ and +require-all+.
 
 +sequential+::
-  If true, the resources in the set do not depend on each other
+  If false, the resources in the set do not depend on each other
   internally. Setting +sequential+ to +true+ implies a strict order of
   dependency within the set.
 
