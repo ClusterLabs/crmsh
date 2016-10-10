@@ -444,6 +444,7 @@ def del_node(addr):
     if nth == -1:
         return
 
+    num_nodes = p.count('nodelist.node')
     p.set('quorum.two_node', '1' if num_nodes == 2 else '0')
 
     f = open(conf(), 'w')
