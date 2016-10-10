@@ -10,6 +10,7 @@ import glob
 import time
 import datetime
 import shutil
+import shlex
 import bz2
 import fnmatch
 import gc
@@ -1598,6 +1599,33 @@ _NOQUOTES_RE = re.compile(r'^[\w\.-]+$')
 
 def noquotes(v):
     return _NOQUOTES_RE.match(v) is not None
+
+
+def unquote(s):
+    """
+    Reverse shell-quoting a string, so the string '"a b c"'
+    becomes 'a b c'
+    """
+    sp = shlex.split(s)
+    if len(sp) > 0:
+        return sp[0]
+    return ""
+
+
+def parse_sysconfig(sysconfig_file):
+    """
+    Reads a sysconfig file into a dict
+    """
+    ret = {}
+    vre = re.compile(r"(\S+)\s*=\s*(.*)")
+    if os.path.isfile(sysconfig_file):
+        for line in open(sysconfig_file).readlines():
+            if line.lstrip().startswith('#'):
+                continue
+            m = vre.match(line)
+            if m:
+                ret[m.group(1)] = unquote(m.group(2))
+    return ret
 
 
 def remote_diff_slurp(nodes, filename):
