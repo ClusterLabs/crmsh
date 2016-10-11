@@ -26,6 +26,7 @@ from .msg import common_warn, common_info, common_debug, common_err, err_buf
 def memoize(function):
     "Decorator to invoke a function once only for any argument"
     memoized = {}
+
     def inner(*args):
         if args in memoized:
             return memoized[args]
@@ -384,6 +385,7 @@ def create_tempfile(suffix='', dir=None):
             else:
                 raise
 
+
 @contextmanager
 def open_atomic(filepath, mode="r", buffering=-1, fsync=False):
     """ Open temporary file object that atomically moves to destination upon
@@ -595,7 +597,7 @@ def lock(lockdir):
                 return True
             except OSError, (errno, strerror):
                 if errno != os.errno.EEXIST:
-                    common_err("Failed to acquire lock to %s: %s" %(lockdir, strerror))
+                    common_err("Failed to acquire lock to %s: %s" % (lockdir, strerror))
                     return False
                 time.sleep(0.1)
                 continue
@@ -1047,6 +1049,7 @@ def page_gen(g):
             sys.stdout.write(term_render(line))
     else:
         pipe_string(get_pager_cmd(), term_render("".join(g)))
+
 
 def page_file(filename):
     'Open file in pager'
@@ -1646,7 +1649,6 @@ def sysconfig_set(sysconfig_file, **values):
     """
     vre = re.compile(r"(\S+)\s*=\s*(.*)")
     outp = ""
-    remaining = dict(valuepairs)
     if os.path.isfile(sysconfig_file):
         for line in open(sysconfig_file).readlines():
             if line.lstrip().startswith('#'):
@@ -1764,12 +1766,14 @@ def cluster_copy_file(local_path, nodes=None):
 # should be obscured as a sequence of **** when printed
 _obscured_nvpairs = []
 
+
 def obscured(key, value):
     if key is not None and value is not None:
         for o in _obscured_nvpairs:
             if fnmatch.fnmatch(key, o):
                 return '*' * 6
     return value
+
 
 @contextmanager
 def obscure(obscure_list):
@@ -1780,7 +1784,6 @@ def obscure(obscure_list):
         yield
     finally:
         _obscured_nvpairs = prev
-
 
 
 # vim:ts=4:sw=4:et:
