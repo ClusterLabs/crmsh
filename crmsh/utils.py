@@ -1446,6 +1446,17 @@ def quote(s):
     return "'" + s.replace("'", "'\"'\"'") + "'"
 
 
+def doublequote(s):
+    """Return a shell-escaped version of the string *s*."""
+    if not s:
+        return '""'
+    if _find_unsafe(s) is None:
+        return s
+
+    # use double quotes
+    return '"' + s.replace('"', "\\\"") + '"'
+
+
 def fetch_opts(args, opt_l):
     '''
     Get and remove option keywords from args.
@@ -1626,6 +1637,35 @@ def parse_sysconfig(sysconfig_file):
             if m:
                 ret[m.group(1)] = unquote(m.group(2))
     return ret
+
+
+def sysconfig_set(sysconfig_file, **values):
+    """
+    Set the values in the sysconfig file, updating the variables
+    if they exist already, appending them if not.
+    """
+    vre = re.compile(r"(\S+)\s*=\s*(.*)")
+    outp = ""
+    remaining = dict(valuepairs)
+    if os.path.isfile(sysconfig_file):
+        for line in open(sysconfig_file).readlines():
+            if line.lstrip().startswith('#'):
+                outp += line
+            else:
+                matched = False
+                m = vre.match(line)
+                if m:
+                    for k, v in values.iteritems():
+                        if k == m.group(1):
+                            matched = True
+                            outp += '%s=%s\n' % (k, doublequote(v))
+                            del values[k]
+                            break
+                if not matched:
+                    outp += line
+    for k, v in values.iteritems():
+        outp += '%s = %s\n' % (k, doublequote(v))
+    str2file(outp, sysconfig_file)
 
 
 def remote_diff_slurp(nodes, filename):
