@@ -665,11 +665,11 @@ def remove_text(e_list):
 
 def sanitize_cib(doc):
     xml_processnodes(doc, is_status_node, rmnodes)
-    #xml_processnodes(doc, true, printid)
-    #xml_processnodes(doc, is_emptynvpairs, rmnodes)
-    #xml_processnodes(doc, is_emptyops, rmnodes)
+    # xml_processnodes(doc, true, printid)
+    # xml_processnodes(doc, is_emptynvpairs, rmnodes)
+    # xml_processnodes(doc, is_emptyops, rmnodes)
     xml_processnodes(doc, is_entity, rmnodes)
-    #xml_processnodes(doc, is_comment, rmnodes)
+    # xml_processnodes(doc, is_comment, rmnodes)
     xml_processnodes(doc, is_container, sort_container_children)
     xml_processnodes(doc, true, remove_dflt_attrs)
     xml_processnodes(doc, true, remove_text)
@@ -857,25 +857,29 @@ def processing_sort(nl):
 
     TODO: if sort_elements is disabled, only sort to resolve inter-dependencies.
     '''
-    if config.core.sort_elements:
-        sortfn = lambda k: (_sort_xml_order.get(k.tag, _SORT_LAST), k.get('id'))
-    else:
-        sortfn = lambda k: _sort_xml_order.get(k.tag, _SORT_LAST)
-    return sorted(nl, key=sortfn)
+    def sort_elements(k):
+        return _sort_xml_order.get(k.tag, _SORT_LAST), k.get('id')
+
+    def sort_type(k):
+        return _sort_xml_order.get(k.tag, _SORT_LAST)
+
+    return sorted(nl, key=sort_elements if config.core.sort_elements else sort_type)
 
 
-def processing_sort_cli(cl):
+def processing_sort_cli(nl):
     '''
-    cl: list of objects (CibObject)
+    nl: list of objects (CibObject)
     Returns the given list in order
 
     TODO: if sort_elements is disabled, only sort to resolve inter-dependencies.
     '''
-    if config.core.sort_elements:
-        sortfn = lambda k: (_sort_cli_order.get(k.obj_type, _SORT_LAST), k.obj_id)
-    else:
-        sortfn = lambda k: _sort_cli_order.get(k.obj_type, _SORT_LAST)
-    return sorted(cl, key=sortfn)
+    def sort_elements(k):
+        return _sort_cli_order.get(k.obj_type, _SORT_LAST), k.obj_id
+
+    def sort_type(k):
+        return _sort_cli_order.get(k.obj_type, _SORT_LAST)
+
+    return sorted(nl, key=sort_elements if config.core.sort_elements else sort_type)
 
 
 def is_resource_cli(s):
