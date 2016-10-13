@@ -127,9 +127,9 @@ def cmd_verify(args):
     '''
     from . import config
     if "ptest" in config.core.ptest:
-        cmd1 = "crm_verify -LV; %s -L -VVVV" % (config.core.ptest)
+        cmd1 = "crm_verify -LVVV; %s -L -VVVV" % (config.core.ptest)
     else:
-        cmd1 = "crm_verify -LV; %s -LjV" % (config.core.ptest)
+        cmd1 = "crm_verify -LVVV; %s -LjV" % (config.core.ptest)
 
         if "scores" in args:
             cmd1 += " -s"
