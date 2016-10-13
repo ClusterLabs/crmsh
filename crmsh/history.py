@@ -50,6 +50,7 @@ def get_pe_num(pe_file):
         return m.group(1)
     return "-1"
 
+
 def pe_file_in_range(pe_f, a):
     if not a:
         return pe_f
