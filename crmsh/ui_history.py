@@ -434,53 +434,36 @@ class History(command.UI):
         self._reset_cib_env()
         return s
 
-    def _worddiff(self, s1, s2):
-        s = None
-        f1 = utils.str2tmp(s1)
-        f2 = utils.str2tmp(s2)
-        if f1 and f2:
-            _, s = utils.get_stdout("wdiff %s %s" % (f1, f2))
-        for f in (f1, f2):
-            try:
-                os.unlink(f)
-            except:
-                pass
-        return s
-
-    def _unidiff(self, s1, s2, t1, t2):
-        s = None
-        f1 = utils.str2tmp(s1)
-        f2 = utils.str2tmp(s2)
-        if f1 and f2:
-            _, s = utils.get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
-                                     (t1, t2, f1, f2))
-
-        for f in (f1, f2):
-            try:
-                os.unlink(f)
-            except:
-                pass
-        return s
-
-    def _diffhtml(self, s1, s2, t1, t2):
-        import difflib
-        fromlines = s1.split('\n')
-        tolines = s2.split('\n')
-        diff_l = difflib.HtmlDiff(wrapcolumn=60).make_table(
-            fromlines, tolines, t1, t2)
-        return ''.join(diff_l)
-
     def _diff(self, pe_fun, t1, t2, html=False, wdiff=False):
+        def _diff_impl(s1, s2, cmd):
+            s = None
+            f1 = utils.str2tmp(s1)
+            f2 = utils.str2tmp(s2)
+            try:
+                if f1 and f2:
+                    _, s = utils.get_stdout(cmd.format(f1=f1, f2=f2))
+            finally:
+                for f in (f1, f2):
+                    try:
+                        os.unlink(f)
+                    except os.error:
+                        pass
+            return s
+
+        def _diffhtml(s1, s2, t1, t2):
+            import difflib
+            return ''.join(difflib.HtmlDiff(wrapcolumn=60).make_table(s1.split('\n'), s2.split('\n'), t1, t2))
+
         s1 = self._render_pe(pe_fun, t1)
         s2 = self._render_pe(pe_fun, t2)
         if not s1 or not s2:
             return None
         if html:
-            s = self._diffhtml(s1, s2, t1, t2)
+            s = _diffhtml(s1, s2, t1, t2)
         elif wdiff:
-            s = self._worddiff(s1, s2)
+            s = _diff_impl(s1, s2, "wdiff {f1} {f2}")
         else:
-            s = self._unidiff(s1, s2, t1, t2)
+            s = _diff_impl(s1, s2, "diff -U 0 -d -b --label %s --label %s {f1} {f2}" % (t1, t2))
         return s
 
     def _common_pe_render_check(self, context, opt_l, *args):
