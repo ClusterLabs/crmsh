@@ -273,6 +273,20 @@ def add_sudo(cmd):
     return cmd
 
 
+def chown(path, user, group):
+    if isinstance(user, int):
+        uid = user
+    else:
+        import pwd
+        uid = pwd.getpwnam(user).pw_uid
+    if isinstance(group, int):
+        gid = group
+    else:
+        import grp
+        gid = grp.getgrnam(group).gr_gid
+    os.chown(path, uid, gid)
+
+
 def ensure_sudo_readable(f):
     # make sure the tempfile is readable to crm_diff (bsc#999683)
     if config.core.user:
@@ -610,6 +624,12 @@ def lock(lockdir):
     finally:
         if has_lock:
             rmdir_r(os.path.join(lockdir, _LOCKDIR))
+
+
+def mkdirp(d, mode=0777):
+    if os.path.isdir(d):
+        return True
+    os.makedirs(d, mode=mode)
 
 
 def pipe_cmd_nosudo(cmd):
