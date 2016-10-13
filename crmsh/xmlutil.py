@@ -15,7 +15,6 @@ from . import schema
 from . import constants
 from .msg import common_err, common_error, common_warn, common_debug, cib_parse_err, err_buf
 from . import userdir
-from . import utils
 from .utils import add_sudo, str2file, str2tmp, get_boolean
 from .utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
 from .utils import olist, get_cib_in_use, get_tempdir

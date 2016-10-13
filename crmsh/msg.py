@@ -2,7 +2,6 @@
 # See COPYING for license information.
 
 import sys
-from lxml import etree
 from . import config
 from . import clidisplay
 from . import options
