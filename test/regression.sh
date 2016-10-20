@@ -195,6 +195,6 @@ if egrep -wv '(BEGIN|END) testcase' $OUTF >/dev/null
 then
 	echo "seems like some tests failed or else something not expected"
 	echo "check $OUTF and diff files in $OUTDIR"
-	echo "in case you wonder what lrmd was doing, read $CRM_LOGF and $CRM_DEBUGF"
+	echo "in case you wonder what lrmd was doing, read $(abspath $CRM_LOGF) and $(abspath $CRM_DEBUGF)"
 	exit 1
 fi >&3

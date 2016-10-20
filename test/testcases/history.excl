@@ -1,1 +1,3 @@
 ^ptest.*:
+^\.EXT tar -C ['][^']+['] -cj -f ['][^']+['] _crmsh_regtest
+^Report saved in ['][^']+

@@ -3,7 +3,7 @@
 # See COPYING for license information.
 
 : ${TESTDIR:=testcases}
-: ${CRM:=/usr/sbin/crm}
+: ${CRM:=crm}
 CRM_NO_REG="$CRM"
 CRM="$CRM -R"
 export PYTHONUNBUFFERED=1
