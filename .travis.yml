@@ -1,15 +1,29 @@
 ---
-sudo: false
+sudo: required
+dist: trusty
 language: python
 python:
-  - 2.6
-  - 2.7
+  - "2.6"
+  - "2.7_with_system_site_packages"
+
+before_install:
+  - sudo add-apt-repository ppa:syseleven-platform/linux-ha -y
+  - sudo apt-get -qq update
+  - sudo apt-get install -y pacemaker libcluster-glue-dev automake autoconf python-lxml python-dateutil python-setuptools python-yaml asciidoc pkg-config
+  - sudo dpkg -r --force-depends crmsh
 
 install:
   - pip install tox-travis
 
 script:
   - tox
+  - test/travis-tests.sh
+
+after_failure:
+  - sudo cat $TRAVIS_BUILD_DIR/crmtestout/regression.out $TRAVIS_BUILD_DIR/crmtestout/crm.* /etc/apt/sources.list
+  - lsb_release -a
+  - whoami
+  - printenv | sort
 
 notifications:
   irc:
