@@ -7,7 +7,7 @@ import os
 SRC_PATH = os.path.relpath(os.path.join(os.path.dirname(__file__), "modules"))
 
 setup(name='crmsh',
-      version='2.2.2',
+      version='2.2.3',
       description='Command-line interface for High-Availability cluster management',
       author='Kristoffer Gronlund',
       author_email='kgronlund@suse.com',

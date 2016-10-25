@@ -1,3 +1,15 @@
+* Tue Oct 25 2016 Kristoffer Gronlund <kgronlund@suse.com> and many others
+- Release 2.2.3
+- high: history: Prefer /var/log/messages over ha-log.txt (bsc#998891)
+- high: history: Quote archive tarball name if it contains spaces (bsc#998959)
+- high: cibconfig: Ensure temp CIB is readable by crm_diff (bsc#999683)
+- medium: scripts: Better corosync defaults (bsc#1001164)
+- medium: cibconfig: Remove from tags when removing object
+- medium: corosync: Fix missing variable in del-node
+- low: cmd_status: Highlight plural forms (bsc#996806)
+- low: crm_pssh: Fix nodenum envvar name
+- doc: Fix inverted boolean in resource set documentation
+
 * Mon Sep 5 2016 Kristoffer Gronlund <kgronlund@suse.com> and many others
 - Release 2.2.2
 - high: parse: Backport of event-driven alerts parser (#150)
