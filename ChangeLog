@@ -1,3 +1,19 @@
+* Tue Oct 25 2016 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- Release 2.3.2
+- high: history: Quote archive tarball name if it contains spaces (bsc#998959)
+- high: history: Prefer /var/log/messages over ha-log.txt (bsc#998891)
+- high: parse: Support target pattern in fencing topology
+- high: cibconfig: Ensure temp CIB is readable by crm_diff (bsc#999683)
+- medium: corosync: Fix missing variable in del-node
+- medium: scripts: Drop logrotate check from cluster health
+- medium: scripts: Better corosync defaults (bsc#1001164)
+- medium: cibconfig: Remove from tags when removing object
+- medium: ui_configure: option to obscure passwords
+- low: cmd_status: More detail in verify output
+- low: crm_pssh: Fix nodenum envvar name
+- low: cmd_status: Highlight plural forms (bsc#996806)
+- doc: Fix inverted boolean in resource set documentation
+
 * Fri Sep 2 2016 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - Release 2.3.1
 - Require Python 2.6+, not 2.7 (bsc#995611) (#152)
