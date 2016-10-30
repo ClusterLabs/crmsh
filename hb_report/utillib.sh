@@ -524,7 +524,7 @@ crmconfig() {
 		CIB_file=$1/$CIB_F crm configure show >$1/$CIB_TXT_F 2>&1
 }
 get_crm_nodes() {
-	/usr/sbin/crm node server
+	crm node server
 }
 get_live_nodes() {
 	if [ `id -u` = 0 ] && which fping >/dev/null 2>&1; then
