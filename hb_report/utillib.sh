@@ -219,7 +219,8 @@ findln_by_time() {
 	local logf=$1
 	local tm=$2
 	local first=1
-	local last=`wc -l < $logf`
+	local last
+	last=`wc -l < $logf`
 	local tmid mid trycnt prevmid
 	while [ $first -le $last ]; do
 		mid=$((($last+$first)/2))
@@ -722,14 +723,16 @@ get_pkg_mgr() {
 }
 
 pkg_versions() {
-	local pkg_mgr=`get_pkg_mgr`
+	local pkg_mgr
+	pkg_mgr=`get_pkg_mgr`
 	[ -z "$pkg_mgr" ] &&
 		return
 	debug "the package manager is $pkg_mgr"
 	pkg_ver_$pkg_mgr $*
 }
 verify_packages() {
-	local pkg_mgr=`get_pkg_mgr`
+	local pkg_mgr
+	pkg_mgr=`get_pkg_mgr`
 	[ -z "$pkg_mgr" ] &&
 		return
 	verify_$pkg_mgr $*
