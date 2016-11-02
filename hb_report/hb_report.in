@@ -186,7 +186,7 @@ set_dest() {
 	chkname $DEST
 	if [ -z "$COMPRESS" -a -e "$DESTDIR/$DEST" ]; then
 		if [ "$FORCE_REMOVE_DEST" -o "$CTS" ]; then
-			rm -rf $DESTDIR/$DEST
+			rm -rf "${DESTDIR:?}/$DEST"
 		else
 			fatal "destination directory $DESTDIR/$DEST exists, please cleanup or use -Z" 
 		fi
