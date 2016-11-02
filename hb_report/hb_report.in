@@ -137,7 +137,8 @@ version() {
 # these are "global" variables
 #
 setvarsanddefaults() {
-	local now=`perl -e 'print time()'`
+	local now
+	now=`perl -e 'print time()'`
 	# used by all
 	DEST=""
 	FROM_TIME=""
@@ -353,7 +354,8 @@ is_our_log() {
 	local from_time=$2
 	local to_time=$3
 
-	local cat=`find_decompressor $logf`
+	local cat
+	cat=`find_decompressor $logf`
 	local first_time="`$cat $logf | head -10 | find_first_ts`"
 	local last_time="`$cat $logf | tail -10 | tac | find_first_ts`"
 	if [ x = "x$first_time" -o x = "x$last_time" ]; then
@@ -407,7 +409,8 @@ arch_logs() {
 # print part of the log
 #
 print_log() {
-	local cat=`find_decompressor $1`
+	local cat
+	cat=`find_decompressor $1`
 	$cat $1
 }
 print_logseg() {
@@ -422,7 +425,8 @@ print_logseg() {
 	local tmp sourcef
 
 	# uncompress to a temp file (if necessary)
-	local cat=`find_decompressor $logf`
+	local cat
+	cat=`find_decompressor $logf`
 	if [ "$cat" != "cat" ]; then
 		tmp=`mktemp` ||
 			fatal "disk full"
@@ -462,7 +466,8 @@ print_logseg() {
 loginfo() {
 	local logf=$1
 	local fake=$2
-	local nextpos=`python -c "f=open('$logf');f.seek(0,2);print f.tell()+1"`
+	local nextpos
+	nextpos=`python -c "f=open('$logf');f.seek(0,2);print f.tell()+1"`
 	if [ "$fake" ]; then
 		echo "synthetic:$logf $nextpos"
 	else
@@ -477,15 +482,20 @@ dumplogset() {
 	local from_time=$2
 	local to_time=$3
 
-	local logf_set=`arch_logs $logf $from_time $to_time`
+	local logf_set
+	logf_set=`arch_logs $logf $from_time $to_time`
 	if [ x = "x$logf_set" ]; then
 		return
 	fi
 
-	local num_logs=`echo "$logf_set" | wc -l`
-	local oldest=`echo $logf_set | awk '{print $NF}'`
-	local newest=`echo $logf_set | awk '{print $1}'`
-	local mid_logfiles=`echo $logf_set | awk '{for(i=NF-1; i>1; i--) print $i}'`
+	local num_logs
+	num_logs=`echo "$logf_set" | wc -l`
+	local oldest
+	oldest=`echo $logf_set | awk '{print $NF}'`
+	local newest
+	newest=`echo $logf_set | awk '{print $1}'`
+	local mid_logfiles
+	mid_logfiles=`echo $logf_set | awk '{for(i=NF-1; i>1; i--) print $i}'`
 
 	# the first logfile: from $from_time to $to_time (or end)
 	# logfiles in the middle: all
@@ -661,8 +671,10 @@ getbacktraces() {
 	}
 }
 pe2dot() {
-	local pef=`basename $1`
-	local dotf=`basename $pef .bz2`.dot
+	local pef
+	pef=`basename $1`
+	local dotf
+	dotf=`basename $pef .bz2`.dot
 	test -z "$PTEST" && return
 	(
 	cd `dirname $1`
