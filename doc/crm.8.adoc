@@ -2137,7 +2137,7 @@ Remote nodes may have a configured server address which should
 be used when contacting the node. This command prints the
 server address if configured, else the node name.
 
-If no parameter is given, the adresses or names for all nodes
+If no parameter is given, the addresses or names for all nodes
 are printed.
 
 Usage:
