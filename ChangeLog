@@ -1,3 +1,7 @@
+* Thu Nov 3 2016 Kristoffer Grönlund <kgronlund@suse.com>
+- Release 2.1.9
+- high: utils: Fix typo in tmpf patch (bsc#999683)
+
 * Mon Sep 26 2016 Kristoffer Grönlund <kgronlund@suse.com>
 - Release 2.1.8
 - medium: ui_resource: Add force argument to resource cleanup (bsc#979420)
