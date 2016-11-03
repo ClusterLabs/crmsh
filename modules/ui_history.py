@@ -95,11 +95,11 @@ class History(command.UI):
         '''
         common_debug("setting source to %s" % src)
         if not self._check_source(src):
-            if os.path.exists(crm_report().get_session_dir(src)):
+            if os.path.exists(crm_report.get_session_dir(src)):
                 common_debug("Interpreting %s as session" % src)
-                if crm_report().load_state(crm_report().get_session_dir(src)):
-                    options.history = crm_report().get_source()
-                    crm_report().prepare_source()
+                if crm_report.load_state(crm_report.get_session_dir(src)):
+                    options.history = crm_report.get_source()
+                    crm_report.prepare_source()
                     self.current_session = src
                     return True
             else:
