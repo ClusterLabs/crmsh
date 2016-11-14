@@ -3037,7 +3037,7 @@ class CibFactory(object):
         common_debug("new_object: %s:%s" % (obj_type, obj_id))
         existing = self.find_object(obj_id)
         if existing and [obj_type, existing.obj_type].count("node") != 1:
-            common_error("Cannot create %s:%s: Found existing %s:%s" % (obj_id, obj_type, obj_id, existing.obj_type))
+            common_error("Cannot create %s with ID '%s': Found existing %s with same ID." % (obj_type, obj_id, existing.obj_type))
             return None
         xml_obj_type = backtrans.get(obj_type)
         v = cib_object_map.get(xml_obj_type)
