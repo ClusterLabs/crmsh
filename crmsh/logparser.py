@@ -50,7 +50,7 @@ def _transition_start_re():
     3: pe file number
     """
     m1 = "crmd.*Processing graph ([0-9]+).*derived from (.*/pe-[^-]+-([0-9]+)[.]bz2)"
-    m2 = "pengine.*Transition ([0-9]+):.*([^ ]*/pe-[^-]+-([0-9]+)[.]bz2)"
+    m2 = "pengine.*[Tt]ransition ([0-9]+).*([^ ]*/pe-[^-]+-([0-9]+)[.]bz2)"
     try:
         return re.compile("(?:%s)|(?:%s)" % (m1, m2))
     except re.error, e:
