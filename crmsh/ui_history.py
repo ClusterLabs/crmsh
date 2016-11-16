@@ -452,7 +452,7 @@ class History(command.UI):
 
         def _diffhtml(s1, s2, t1, t2):
             import difflib
-            return ''.join(difflib.HtmlDiff(wrapcolumn=60).make_table(s1.split('\n'), s2.split('\n'), t1, t2))
+            return ''.join(difflib.HtmlDiff(tabsize=2, wrapcolumn=120).make_table(s1.split('\n'), s2.split('\n'), t1, t2)).replace('&nbsp;&nbsp;', '&nbsp;')
 
         s1 = self._render_pe(pe_fun, t1)
         s2 = self._render_pe(pe_fun, t2)
