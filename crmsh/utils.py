@@ -1686,7 +1686,7 @@ def sysconfig_set(sysconfig_file, **values):
                 if not matched:
                     outp += line
     for k, v in values.iteritems():
-        outp += '%s = %s\n' % (k, doublequote(v))
+        outp += '%s=%s\n' % (k, doublequote(v))
     str2file(outp, sysconfig_file)
 
 
