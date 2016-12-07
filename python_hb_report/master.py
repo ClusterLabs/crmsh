@@ -13,6 +13,7 @@ import	collector
 import	paramiko
 import	tempfile
 import	tarfile
+import	time
 
 from crmsh	import logtime
 from crmsh	import utils
@@ -21,9 +22,9 @@ from node	import node
 from multiprocessing import Process
 
 class master(node):
-	SUDO = ''
-	LOCAL_SUDO = ''
-	COLLECTOR_PIDS =[]
+#	SUDO = ''
+#	LOCAL_SUDO = ''
+	PIDS =[]
 
 	def version(self):
 		print "crmsh: 2.2.0+git.1464769043.9e4df55"
@@ -169,31 +170,105 @@ class master(node):
 			envir.SSH_USER.append("root")
 			envir.SSH_USER.append("hacluster")
 
-	def cts_findlogseg(self):
+	def txtdiff(self,file1,file2):
+		pass
+
+	def diffcheck(self,file1,file2):
 		'''
+		if file1 not as same as file2, return True
+		else return False
 		'''
-		#TODO
-		return 'test message'
-		utillib.debug('This is cts find log function, need to be finished later!:)')
-	def is_node(self):
-		pass
+		dir1 = utillib.dirname(file1)
+		dir2 = utillib.dirname(file2)
 
-	def find_ssh_user(self):
-		pass
+		outf = os.path.join(self.WORKDIR,envir.ANALYSIS_F)
+		if not os.path.isfile(file1):
+			utillib.writefile(outf,file1+' does not exist')
+			return False
 
-#	def change_to_timestamp(self,time):
-#		ds = utils.parse_to_timestamp(time)
-#		return ds
+		if not os.path.isfile(file2):
+			utillib.writefile(outf,file1+' does not exist')
+			return False
 
-	def analyzed(self):
-		pass
+		base = utillib.basename(file1)
+
+		if base == envir.CIB_F:
+#			if ['RUNNING','STOPPED']in os.listdir(utillib.dirname(file1)).extend(os.listdir(utillib.dirname(file2))):
+			if (os.path.isfile(os.path.join(dir1,'RUNNING')) and os.path.isfile(os.path.join(dir2,'RUNNING'))) or (os.path.isfile(os.path.join(dir1,'STOPPED')) and os.path.isfile(os.path.join(dir2,'STOPPED'))):
+				msg = utillib.do_command(['crm_diff','-c','-n',file1,'-o',file2])
+#				print msg
+
+		elif base == envir.B_CONF:
+			pass
+		else:
+			pass
+
+	def analyze_one(self,files):
+		'''
+		if collector return different file then return True
+		else return False
+		'''
+		RC = True
+		nodes = ''
+		for n in envir.USER_NODES:
+			if len(nodes):
+				if not self.diffcheck(os.path.join(self.WORKDIR,nodes,files),os.path.join(self.WORKDIR,n,files)):
+					RC = False
+			else:
+				nodes = n
+
+		return RC
 
 	
-	def create_collector_dir(self):
+	def consoli_date(self):
+		pass
+	
+	def check_crmvfy(self):
 		pass
 
-	def start_slave_collector(self,nodes,port=22,username='root'):
+	def check_backtrace(self):
+		pass
 
+	def check_permissions(self):
+		pass
+	
+	def check_logs(self):
+		pass
+	
+	def consolidate(self,files):
+		pass
+
+	def analyze(self):
+		'''
+		Check every logs we need are collected
+		'''
+		outf = os.path.join(self.WORKDIR,envir.ANALYSIS_F)
+		fd = open(outf,'w')
+		ana_msg = ''
+		flist = [envir.HOSTCACHE,envir.MEMBERSHIP_F,envir.CIB_F,envir.CRM_MON_F,envir.B_CONF,envir.SYSINFO_F,'logd.cf']
+		dirs = LOG_NODES
+
+		for f in flist:
+			msg = 'Diff '+f+'...\n'
+			for d in dirs:
+				if f not in os.listdir(os.path.join(self.WORKDIR,d)):
+					ana_msg = ana_msg+'no '+f+':/\n'
+			if self.analyze_one(f):
+					ana_msg = ana_msg +'OK\n'
+					if f != envir.CIB_F:
+						self.consolidate(f)
+
+		self.check_crmvfy()
+		self.check_backtrace()
+		self.check_permissions()
+		self.check_logs()
+
+		fd.close()
+	
+	def start_slave_collector(self,nodes,port=22,username='root'):
+		
+		fdout = open(os.path.join(self.WORKDIR,'output.txt'),'a')
+		fderr = open(os.path.join(self.WORKDIR,'error.txt'),'a')
 		utillib.debug('running class collector function run to collect log on '+nodes)
 
 		paramiko.util.log_to_file('/tmp/paramiko.log')
@@ -204,11 +279,15 @@ class master(node):
 		path = os.path.join(envir.CRM_PATH,'collector.py')
 		utillib.debug(nodes+' collector script path :'+path)
 
-		#need to finish the hb_report path
-		stdin,stdout,stderr = client.exec_command('python ~/hb_report/hb_report __slave')
+		command= 'python '+envir.EXCUTE_PATH+'/hb_report __slave'
+		stdin,stdout,stderr = client.exec_command(command)
 		
-		print nodes,' output :',stdout.read()
-
+		outmsg = nodes+ ' output :'+stdout.read()
+		fdout.write(outmsg)
+		fdout.close()
+		errmsg = nodes+ ' error: '+stderr.read()
+		fderr.write(errmsg)
+		fderr.close()
 
 	def events(self):
 		pass
@@ -226,23 +305,18 @@ class master(node):
 		if not utillib.do_which('scp'):
 			utillib.fatal('Cannot find scp, does it is intalled?')
 		if nodes != self.WE:
-			command = 'scp '+os.path.join(envir.XML_PATH,envir.XML_NAME)+' root@'+nodes+':/tmp &>/dev/null'
+			command = 'scp '+os.path.join(envir.XML_PATH,envir.XML_NAME)+' root@'+nodes+':'+envir.XML_PATH+' &>/dev/null'
 			ret = os.system(command)
 			if ret:
 				utillib.fatal(nodes+' :scp envitonment file failed, please check cluster node can ssh or not')
 
 	def get_user_node_cts(self,ctslog):
 		#TODO
-		print 'This need to get cts user nodes'
-
+		utillib.debug('need to finish later')
 	
 	def get_cts_log(self):
-		ctslog = utillib.findmsg('CTS: Stack:')
-		debug_msg = 'Using CTS control file :'+ctslog
-		utillib.debug(debug_msg)
 		#TODO
-#		envir.USER_NODES = self.get_user_node_cts(ctslog)
-		envir.NODES_SOURCE = 'user'
+		utillib.debug('need to finish later')
 		
 	def is_member(self):
 		'''
@@ -253,9 +327,10 @@ class master(node):
 		envir.NODE_SOURCE can tell the func where did hv_report get node
 		only from user need to check
 		'''
+		#TODO
 		if envir.NODE_SOURCE != 'user':
 			return 
-		NODECNT = len(envir.NODE)
+		NODECNT = len(envir.USER_NODES)
 		if not NODECNT:
 			utillib.fatal('could not figure out a list of nodes; is this a cluster node?')
 
@@ -284,7 +359,7 @@ class master(node):
 
 	def findsshuser(self):
 		'''
-		If user not provide ssh users, then hb_report find ssh user by it self
+		If user not provide ssh users, find ssh user by itself
 		'''
 		rc = 0
 
@@ -321,7 +396,7 @@ class master(node):
 				envir.SSH_PASSWD_NODES = envir.SSH_PASSWD_NODES+n
 
 		if len(envir.SSH_PASSWD_NODES):
-			utillib.warn('passwordless ssh to node(s) '+envir.SSH_PASSWD_NODES+' does not work')
+			utillib.warning('passwordless ssh to node(s) '+envir.SSH_PASSWD_NODES+' does not work')
 		
 		if ssh_user == '__undef':
 			return 1
@@ -331,12 +406,27 @@ class master(node):
 			
 		return 0
 
+	def get_result(self):
+
+#		for p in self.PIDS:
+#			pid, status = os.waitpid(p.pid,0)	
+		global LOG_NODES
+		LOG_NODES = []
+		for n in envir.USER_NODES:
+			if n+'.tar' not in os.listdir(self.WORKDIR):
+				utillib.warning('NOTICE: '+n+' not return logs!')
+			else:
+				LOG_NODES.append(n)	
+				tar = tarfile.open(os.path.join(self.WORKDIR,n+'.tar'),'r:')
+				tar.extractall(path=self.WORKDIR)
+				tar.close()
+				self.RM_FILES.append(os.path.join(self.WORKDIR,n+'.tar'))
+
 
 def run():
 	'''
 	This method do most of the job that master node should do
 	'''
-
 	
 	utillib.check_user()
 	utillib.setvarsanddefaults()
@@ -348,7 +438,8 @@ def run():
 
 	#who am i
 	mtr.WE= socket.gethostname()
-	
+	envir.MASTER = mtr.WE
+
 	#get WORKDIR
 	mtr.WORKDIR = mtr.mktemp(envir.DEST)
 	mtr.WORKDIR = os.path.join(mtr.WORKDIR,envir.DEST)
@@ -374,10 +465,10 @@ def run():
 
 	for n in envir.USER_NODES:
 		if n == mtr.WE:
-			THIS_IS_NODE = 1
+			mtr.THIS_IS_NODE = 1
 
 	if not mtr.is_node and envir.NODE_SOUECE != 'user':
-		utillib.warn('this is not a node and you didn\'t specify a list of nodes using -n')
+		utillib.warning('this is not a node and you didn\'t specify a list of nodes using -n')
 	
 #
 #part 2: ssh business
@@ -404,12 +495,11 @@ def run():
 #
 #part 4: find the logs and cut out the segment for the period
 #
-	if THIS_IS_NODE:
+	if mtr.THIS_IS_NODE:
 		mtr.getlog()
 	
 	#create xml before collect
 	utillib.creat_xml()
-	
 	#then scp the file to collector
 	for n in envir.USER_NODES:
 
@@ -422,14 +512,24 @@ def run():
 		mtr.collecct_for_nodes([mtr.WE])
 
 #
-#part 5: endgame:
-#		 slaves  tar their result to stdout, the master wait
-#		 for them, analyses result, asks the user to edit the
+#part 5:
+#		 slaves  tar their result to stdout, send it to master,
+#		 then master analyses result, asks the user to edit the
 #		 problem description template, and print final words
 #
 
-	p = Process()
-	print 'master workdir is ',mtr.WORKDIR
+	mtr.get_result()
+
+	analyze_p = Process(target = mtr.analyze)
+	analyze_p.start()
+
+#
+#part 6: endgame: 
+#		 remove tmpfiles and logs we do not need
+
+
+	utillib.remove_files(mtr)
+
 
 #try:
 run()

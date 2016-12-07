@@ -11,6 +11,8 @@ import	threading
 import	shutil
 import	tempfile
 import	tarfile
+import  time
+import StringIO
 
 from node import node
 
@@ -293,6 +295,12 @@ class collector(node):
 						utillib.warning('some PE or CIB file contain possibly sensitive data')
 						utillib.warning('you may not want to send this report to a public mailing list')
 
+	def mvenv(self):
+		env_src_path = os.path.join(envir.XML_PATH,envir.XML_NAME)
+		env_dst_path = os.path.join(self.WORKDIR,envir.XML_NAME)
+#		shutil.copyfile(env_src_path,self.WORKDIR)
+		shutil.move(env_src_path,self.WORKDIR)
+		return 
 
 	def collect_info(self):
 		getstampproc = ''
@@ -309,9 +317,9 @@ class collector(node):
 		utillib.check_perms(os.path.join(self.WORKDIR,envir.PERMISSIONS_F),self)
 		self.dlm_dump()
 		self.time_status()
+		self.getlog()
 		self.corosync_blackbox()
 		self.getratraces()
-
 		if not self.skip_lvl(1):
 			self.sanitize()
 
@@ -325,14 +333,34 @@ class collector(node):
 
 	def return_result(self):
 		'''
-		Return logs to master through stdout
+		Return logs to master through scp
 		create tarfile in WORKDIR
-		do not know how to send log to master node
 		'''
-		print 'workdir is',self.WORKDIR
+		tarname = self.WE+'.tar'
+		tarpath = os.path.join(self.WORKDIR,tarname)
+		start=time.time()
+		tar = tarfile.open(tarpath, 'w')
+
+		curr_dir = os.getcwd()
+		os.chdir(utillib.dirname(self.WORKDIR))
+		tar.add(utillib.basename(self.WORKDIR))
+		tar.close()
+		
+		os.chdir(curr_dir)
+
+		command = ['scp',tarpath,'root@'+envir.MASTER+':'+envir.MASTER_WORKDIR]
+		print command
+
+		msg = utillib.do_command(command)
+		print msg
+
+		self.RM_FILES.append(self.WORKDIR)
+		self.RM_FILES.append(tarpath)
+
 
 
 def run(master_flag):
+
 	sla = collector()
 
 	#if this is master node, then flag THIS_IS_NDOE is 1, else case it is 0
@@ -343,6 +371,7 @@ def run(master_flag):
 
 	#who am i
 	sla.WE = socket.gethostname()
+	print 'start collector on ',sla.WE
 
 	utillib.parse_xml()
 	
@@ -370,5 +399,9 @@ def run(master_flag):
 	sla.collect_info()
 	sla.return_result()
 
-#run()
 #
+#part 4: endgames:
+#		 remove tmpfile and logs we do not need
+#
+#	utillib.remove_files(sla)
+
