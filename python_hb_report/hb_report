@@ -1,0 +1,50 @@
+#!/usr/bin/python
+#
+#
+
+import sys
+from distutils import version
+
+minimum_version = '2.7'
+v_min = version.StrictVersion(minimum_version)
+v_this = version.StrictVersion(sys.version[:3])
+if v_min > v_this:
+    sys.stderr.write("abort: minimum python version support is %s\n" %
+                     minimum_version)
+    sys.exit(-1)
+
+try:
+    try:
+		if sys.argv[1] == '__slave':
+			import collector
+			collector.run(0)
+#		else:
+#			from hb_report import master
+#			master.run()
+
+    except ImportError as msg:
+        sys.stderr.write('''Fatal error:
+        %s
+
+    Failed to start hb_report! This is likely due to a broken
+    installation or a missing dependency.
+
+    If you are using a packaged version of crmsh, please try
+    reinstalling the package. Also check your PYTHONPATH and
+    make sure that the crmsh module is reachable.
+
+    Please file an issue describing your installation at
+    https://github.com/Clusterlabs/crmsh/issues/ .
+''' % (msg))
+        sys.exit(-1)
+except AttributeError as msg:
+    sys.stderr.write('''Fatal error: %s
+
+    Failed to start hb_report! This is likely due to having
+    configured Python 3 as the default python version.
+    crmsh requires Python 2.6 or higher, but not (yet)
+    Python 3.
+''' % (msg))
+    sys.exit(-1)
+
+# vim:ts=4:sw=4:et:

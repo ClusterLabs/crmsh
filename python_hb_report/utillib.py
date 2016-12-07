@@ -44,7 +44,7 @@ def fatal(msg):
 	print >> sys.stderr,socket.gethostname(),"ERROR:",msg
 	sys.exit(1)
 
-def warn(msg):
+def warning(msg):
 	print >>sys.stderr,socket.gethostname(),"WARN:",msg
 
 def info(msg):
@@ -100,8 +100,8 @@ def get_ocf_directories():
 
 def logd_getcfvar(pattern):
 	'''
-	TODO
 	'''
+	#TODO
 	f = open(envir.LOGD_CF)
 	for line in f:
 		if line.startswith('#'):
@@ -258,10 +258,10 @@ def get_crm_nodes():
 
 
 def get_nodes():
-	# 1. set bu user
+	# 1. set by user
 	if len(envir.USER_NODES):
 		print envir.USER_NODES
-	# 2. running cr,
+	# 2. running crm
 	elif iscrmrunning():
 		debug('querying CRM for nodes')
 		get_crm_nodes()
@@ -378,18 +378,7 @@ def findmsg():
 	
 	return log
 
-
-def finf_getstampproc():
-	t = 0
-	l = ''
-	func = ''
-	trycnt = 10
-
-	#TODO
-	pass
-
 def creat_xml():
-
 	root = ET.Element('root')
 
 	ET.SubElement(root,'DEST').text = envir.DEST
@@ -413,6 +402,7 @@ def creat_xml():
 	ET.SubElement(root,'XML_NAME').text = str(envir.XML_NAME)
 	ET.SubElement(root,'HA_BIN').text = str(envir.HA_BIN)
 	ET.SubElement(root,'MASTER_WORKDIR').text = str(envir.MASTER_WORKDIR)
+	ET.SubElement(root,'MASTER').text = str(envir.MASTER)
 
 
 
@@ -424,9 +414,6 @@ def creat_xml():
 	f = open(path,'w')
 	f.write(tree)
 	f.close()
-
-#	tree = ET.ElementTree(root)
-#	tree.write('envir.xml')
 
 def parse_xml():
 	'''
@@ -478,8 +465,8 @@ def parse_xml():
 			envir.HA_BIN = t.text
 		if t.tag == 'MASTER_WORKDIR':
 			envir.MASTER_WORKDIR = t.text
-
-#		os.remove(path)
+		if t.tag == 'MASTER':
+			envir.MASTER = t.text
 
 def check_user():
 	'''
@@ -553,7 +540,6 @@ def pkg_ver_rpm():
 	return pkg_info
 
 def pkg_version():
-
 	pkg_mgr = get_pkg_mgr()
 
 	if not len(pkg_mgr):
@@ -584,19 +570,16 @@ def get_pkg_mgr():
 	return pkg_mgr
 
 def verify_rpm():
-
 	argv = ['rpm','--verify']
 	argv.extend(envir.PACKAGES)
 
 	rpm_pro = subprocess.Popen(argv,stdout = subprocess.PIPE,stderr = subprocess.STDOUT)
-#	rpm_pro.wait()
 	grep_pro = subprocess.Popen(['grep','-v',"not installed"],stdin = rpm_pro.stdout,stdout = subprocess.PIPE,stderr = subprocess.STDOUT)
 
 	rpm_msg = grep_pro.communicate()[0]
 	return rpm_msg
 
 def verify_deb():
-	
 	argv = ['debsums','-s']
 	argv.extend(envir.PACKAGES)
 
@@ -617,7 +600,6 @@ def verify_pkginfo():
 	pass
 
 def verify_packages():
-
 	pkg_mgr = get_pkg_mgr()
 
 	if not len(pkg_mgr):
@@ -660,7 +642,6 @@ def writefile(path,msg):
 		faral('Can not collect file :'+path+'on '+socket.gethostname())
 
 def get_membership_tool():
-
 	mem_tool = ['ccm_tool','crm_node']
 
 	for m in mem_tool:
@@ -668,7 +649,6 @@ def get_membership_tool():
 			return m
 
 def dumpstate(workdir):
-
 	crm_pro = subprocess.Popen(['crm_mon','-1'],stdout = subprocess.PIPE,stderr = subprocess.STDOUT)
 	grep_pro = subprocess.Popen(['grep','-v',"^Last upd"],stdin = crm_pro.stdout,stderr = subprocess.STDOUT,stdout = subprocess.PIPE)
 
@@ -684,7 +664,6 @@ def dumpstate(workdir):
 	writefile(os.path.join(workdir,envir.MEMBERSHIP_F),mbsp_info)
 
 def getconfig(workdir):
-
 	if os.path.isfile(envir.CONF):
 		shutil.copyfile(envir.CONF,os.path.join(workdir,basename(envir.CONF)))
 	
@@ -717,7 +696,6 @@ def touchfile(time):
 	return tmp
 
 def add_tmpfiles(files):
-	
 	if not os.path.isfile(envir.__TMPFLIST):
 		return
 	f = open(envir.__TMPFLIST,'a')
@@ -726,10 +704,6 @@ def add_tmpfiles(files):
 
 
 def find_files(dirs):
-	'''
-	dirs is list
-	'''
-
 	from_time = envir.FROM_TIME
 	to_time = envir.TO_TIME
 
@@ -763,7 +737,6 @@ def find_files(dirs):
 		return msg.split('\n')
 
 def crmconfig(workdir):
-
 	if os.path.isfile(os.path.join(workdir,envir.CIB_F)):
 		if do_which('crm'):
 			CIB_file = os.path.join(workdir,envir.CIB_F)
@@ -786,7 +759,6 @@ def num_id(passwd,uid):
 	return n_uid 
 
 def chk_id(ids,n_id):
-	
 	if n_id != 0:
 		return False
 	print ids,'is not found'
@@ -824,7 +796,6 @@ def check_perms(output,sla):
 	writefile(output,msg)
 
 def pl_checkperms(filename,perms,in_uid,in_gid):
-
 	mode = os.stat(filename).st_mode
 	uid = os.stat(filename).st_uid
 	gid  = os.stat(filename).st_gid
@@ -899,7 +870,12 @@ def find_getstampproc(sla,filepath):
 	'''
 	pass
 
-
+def remove_files(nodes):
+	for f in nodes.RM_FILES:
+		if os.path.isfile(f):
+			os.remove(f)
+		elif os.path.isdir(f):
+			shutil.rmtree(f)
 
 	
 
