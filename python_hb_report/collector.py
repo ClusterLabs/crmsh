@@ -32,35 +32,18 @@ class collector(node):
 		cluster_version = support.cluster_info()
 		msg = cluster_version
 
-		hbrp_ver = utillib.do_command([envir.HA_NOARCHBIN+'/hb_report','-V'])
-		msg = msg+hbrp_ver
-
-		rsag_ver = utillib.do_grep_file('/usr/lib/ocf/lib/heartbeat/ocf-shellfuncs','Build version:')
-		rsag_ver = 'resource-agents: '+rsag_ver
-		msg = msg + rsag_ver
-
-		crm_version = utillib.crm_info()
-		msg = msg+crm_version
-
-		booth_info = utillib.do_command(['booth','--version'])
-		msg = msg+booth_info
-		
-		pkg_info = utillib.pkg_version()
-		msg = msg + pkg_info
-		f.write(pkg_info)
+		msg = msg + utillib.do_command([envir.HA_NOARCHBIN+'/hb_report','-V'])
+		msg = msg + 'resource-agents: ' + utillib.do_grep_file('/usr/lib/ocf/lib/heartbeat/ocf-shellfuncs','Build version:')
+		msg = msg + utillib.crm_info()
+		msg = msg + utillib.do_command(['booth','--version'])
+		msg = msg + utillib.pkg_version()
 		
 		if envir.SKIP_LVL >= 1:
-			vrf_info = utillib.verify_packages()
-			msg = msg + vrf_info
+			msg = msg + utillib.verify_packages()
 
-		sys_name = 'Platform: '+ platform.system()+'\n'
-		msg = msg+sys_name
-
-		knl_name = 'Kernel release: '+platform.release()+'\n'
-		msg = msg+knl_name
-		
-		arch_name = 'Architecture: '+platform.machine()+'\n'
-		msg = msg+arch_name
+		msg = msg + 'Platform: '+ platform.system()+'\n'
+		msg = msg + 'Kernel release: '+platform.release()+'\n'
+		msg = msg + 'Architecture: '+platform.machine()+'\n'
 
 		if platform.system() == 'Linux':
 			dist_name = utillib.distro()+'\n'
@@ -75,27 +58,13 @@ class collector(node):
 		f = open(os.path.join(self.WORKDIR,envir.SYSSTATS_F),'w')
 
 		msg = msg + self.WE+'\n'
-
-		uptime = utillib.do_command(['uptime'])
-		msg = msg+uptime
-
-		ps_info = utillib.do_command(['ps','axf'])
-		msg = msg+ps_info
-	
-		ps_info = utillib.do_command(['ps','auxw'])
-		msg = msg + ps_info
-
-		top_info = utillib.do_command(['top','-b','-n','1'])
-		msg = msg + top_info
-
-		ip_info = utillib.do_command(['ip','addr'])
-		msg = msg+'\n'+ip_info
-
-		net_info = utillib.do_command(['netstat','-i'])
-		msg = msg +'\n'+net_info
-
-		arp_info = utillib.do_command(['arp','-an'])
-		msg = msg + '\n' + arp_info
+		msg = msg + utillib.do_command(['uptime'])
+#		msg = msg + utillib.do_command(['ps','axf'])
+		msg = msg + utillib.do_command(['ps','auxw'])
+		msg = msg + utillib.do_command(['top','-b','-n','1'])
+		msg = msg + utillib.do_command(['ip','addr'])
+		msg = msg + utillib.do_command(['netstat','-i'])
+		msg = msg + utillib.do_command(['arp','-an'])
 
 		if os.path.isdir('/proc'):
 			cpu_f =open('/proc/cpuinfo','r')
@@ -104,14 +73,9 @@ class collector(node):
 				msg = msg + cpu_info
 				cpu_info = cpu_f.readline()
 
-		scsi_info = utillib.do_command(['lsscsi'])
-		msg = msg +'\n'+ scsi_info
-
-		pci_info = utillib.do_command(['lspci'])
-		msg = msg +'\n'+ pci_info
-
-		mount_info = utillib.do_command(['mount'])
-		msg = msg +'\n' + mount_info
+		msg = msg + utillib.do_command(['lsscsi'])
+		msg = msg + utillib.do_command(['lspci'])
+		msg = msg + utillib.do_command(['mount'])
 
 		#df can block, run in background, allow for 5 seconds
 		df_pro = subprocess.Popen(['df'],stderr = subprocess.STDOUT,stdout = subprocess.PIPE)
@@ -162,9 +126,6 @@ class collector(node):
 
 		utillib.writefile(output,dlm_file_info)
 
-
-
-
 	def getpeinputs(self,workdir):
 		i = 0
 
@@ -178,9 +139,8 @@ class collector(node):
 			pengine_dir = os.path.join(workdir,filename)
 			os.mkdir(pengine_dir)
 			for f in flist:
-#				os.symlink(f,os.path.join(pengine_dir,utillib.basename(f)))
 				os.symlink(f,pengine_dir)
-				utillib.do_command(['ln','-s',f,pengine_dir])
+#				utillib.do_command(['ln','-s',f,pengine_dir])
 				i = i + 1
 			utillib.debug('found '+str(i)+' pengine input files in '+envir.PE_STATE_DIR)
 
@@ -266,9 +226,11 @@ class collector(node):
 		Replace sensitive info with ****
 		'''
 		need_replace_files = []
-		for f in os.path.join(self.WORKDIR,envir.B_CONF).split():
-			if os.path.isfile(f):
-				utillib.sanitize_one(f)
+		for b in envir.B_CONF.split():
+			print b
+			for f in os.path.join(self.WORKDIR,b).split():
+				if os.path.isfile(f):
+					utillib.sanitize_one(f)
 		rc = 0
 
 		try:

@@ -86,28 +86,3 @@ def essential_files():
 	
 	return file_info
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

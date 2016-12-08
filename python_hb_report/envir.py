@@ -1,10 +1,3 @@
-#!/usr/bin/python3.5
-# _*_ coding: utf-8 _*_
-# File Name: envir.py
-# mail: wenshizhang555@hoxmail.com
-# Created Time: Thu 27 Oct 2016 02:00:16 PM CST
-# Description:
-#########################################################################
 import os
 import datetime
 import sys
