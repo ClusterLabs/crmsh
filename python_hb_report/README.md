@@ -1,5 +1,5 @@
 #Descriptions
-This directory include hb_report all the codes(implement with python). There are three classed, one environment variable configure and one lib. The following documents explain these files.
+This directory include hb_report all the codes(implements with python). There are three classed, one environment variable configure and one lib. The following documents explain these files.
 
 #Explainations
 ##master.py
@@ -13,7 +13,7 @@ The defination of master class, when user use the hb_report command, in the crm 
 ####MEMBER FUNCTIONS
 * version: print hb_report version information
 * usage: print help message
-* analyzed_argvment: analyze parameters user input
+* analyzed_argument: analyze parameters user input
 * cts_findlogseg: base on CTS time to find log segment
 * analyzed: analyzed logs are collected
 * start_slave_collect: ssh to collector node and excute hb_report script
@@ -47,7 +47,7 @@ This is functions library.
 
 ##corosync_conf_support.py
 
-This is the corosync cluster support script, this script implement some unique function for corosync cluster
+This is the corosync cluster support script, this script implements some unique function for corosync cluster
 
 ###FUNCTIIONS
 

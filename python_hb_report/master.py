@@ -14,6 +14,7 @@ import	paramiko
 import	tempfile
 import	tarfile
 import	time
+import	shutil
 
 from crmsh	import logtime
 from crmsh	import utils
@@ -170,10 +171,7 @@ class master(node):
 			envir.SSH_USER.append("root")
 			envir.SSH_USER.append("hacluster")
 
-	def txtdiff(self,file1,file2):
-		pass
-
-	def diffcheck(self,file1,file2):
+	def diffcheck(self,file1,file2,outfd):
 		'''
 		if file1 not as same as file2, return True
 		else return False
@@ -193,35 +191,38 @@ class master(node):
 		base = utillib.basename(file1)
 
 		if base == envir.CIB_F:
-#			if ['RUNNING','STOPPED']in os.listdir(utillib.dirname(file1)).extend(os.listdir(utillib.dirname(file2))):
 			if (os.path.isfile(os.path.join(dir1,'RUNNING')) and os.path.isfile(os.path.join(dir2,'RUNNING'))) or (os.path.isfile(os.path.join(dir1,'STOPPED')) and os.path.isfile(os.path.join(dir2,'STOPPED'))):
 				msg = utillib.do_command(['crm_diff','-c','-n',file1,'-o',file2])
-#				print msg
+				outfd.write(msg)
+			else:
+				outfd.write('cannot compare cibs from running and stop systems')
+		
+		#confdiff
+		#elif base == envir.B_CONF:
 
-		elif base == envir.B_CONF:
-			pass
 		else:
-			pass
+			msg = utillib.do_command(['diff','-bBu',file1,file2])
+			outfd.write(msg)
 
-	def analyze_one(self,files):
+		return len(msg)
+
+	def analyze_one(self,files,outfd):
 		'''
 		if collector return different file then return True
 		else return False
 		'''
-		RC = True
+		#RC -- repeat counter
+		RC = 0
 		nodes = ''
 		for n in envir.USER_NODES:
 			if len(nodes):
-				if not self.diffcheck(os.path.join(self.WORKDIR,nodes,files),os.path.join(self.WORKDIR,n,files)):
-					RC = False
+				if not self.diffcheck(os.path.join(self.WORKDIR,nodes,files),os.path.join(self.WORKDIR,n,files),outfd):
+					RC += 1
 			else:
 				nodes = n
 
 		return RC
 
-	
-	def consoli_date(self):
-		pass
 	
 	def check_crmvfy(self):
 		pass
@@ -236,7 +237,23 @@ class master(node):
 		pass
 	
 	def consolidate(self,files):
-		pass
+		'''
+		Remove same file,create symbolic link instead
+		'''
+		try:
+			for l in LOG_NODES:
+				if os.path.isfile(os.path.join(self.WORKDIR,files)):
+					os.remove(os.path.join(self.WORKDIR,l,files))
+				else:
+					shutil.move(os.path.join(self.WORKDIR,l,files),os.path.join(self.WORKDIR,files))
+
+				os.symlink(os.path.join(self.WORKDIR,files),os.path.join(self.WORKDIR,l,files))
+
+		except IOError:
+			#cache IOError means no such file 
+			#then do not need to remove this file or make a link
+			#do nothing and return 
+			return 
 
 	def analyze(self):
 		'''
@@ -249,20 +266,24 @@ class master(node):
 		dirs = LOG_NODES
 
 		for f in flist:
-			msg = 'Diff '+f+'...\n'
+			fd.write('Diff '+f+'...\n')
 			for d in dirs:
 				if f not in os.listdir(os.path.join(self.WORKDIR,d)):
-					ana_msg = ana_msg+'no '+f+':/\n'
-			if self.analyze_one(f):
-					ana_msg = ana_msg +'OK\n'
-					if f != envir.CIB_F:
-						self.consolidate(f)
+					fd.write('\t\tno '+f+' on '+d+':/\n')
+			
+			#analyze_one return 0 if file do not exists or all node have this file 
+			#if all node have same file and this file exists
+			#then call consolidate remove extra file
+
+			if self.analyze_one(f,fd) == len(LOG_NODES)-1 and os.path.isfile(os.path.join(self.WORKDIR,dirs[0],f)): 
+				fd.write('OK\n')
+				if f != envir.CIB_F:
+					self.consolidate(f)
 
 		self.check_crmvfy()
 		self.check_backtrace()
 		self.check_permissions()
 		self.check_logs()
-
 		fd.close()
 	
 	def start_slave_collector(self,nodes,port=22,username='root'):
