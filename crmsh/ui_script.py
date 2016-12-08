@@ -194,8 +194,8 @@ class Script(command.UI):
         for arg in args:
             if arg.lower() not in ("all", "names"):
                 context.fatal_error("Unexpected argument '%s': expected  [all|names]" % (arg))
-        show_all = any([x for x in args if x.lower() == 'all'])
-        names = any([x for x in args if x.lower() == 'names'])
+        show_all = any(x.lower() == 'all' for x in args)
+        names = any(x.lower() == 'names' for x in args)
         if not names:
             categories = {}
             for name in scripts.list_scripts():
@@ -226,7 +226,7 @@ class Script(command.UI):
             for name in scripts.list_scripts():
                 try:
                     script = scripts.load_script(name)
-                    if script is None or script['category'] == 'script':
+                    if script is None or script['category'].lower() == 'script':
                         continue
                 except ValueError as err:
                     err_buf.error(str(err))
