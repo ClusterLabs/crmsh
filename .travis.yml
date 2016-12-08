@@ -3,14 +3,19 @@ sudo: required
 dist: trusty
 language: python
 python:
-  - "2.6"
   - "2.7_with_system_site_packages"
 
 before_install:
-  - sudo add-apt-repository ppa:syseleven-platform/linux-ha -y
-  - sudo apt-get -qq update
-  - sudo apt-get install -y pacemaker libcluster-glue-dev automake autoconf python-lxml python-dateutil python-setuptools python-yaml asciidoc pkg-config
+  - sudo apt-get install -qq automake autoconf chrpath libglib2.0-dev perl net-tools python libtool libxml2-dev bison flex uuid-dev libbz2-dev zlib1g-dev libltdl3-dev libgnutls-dev python-dev libpam0g-dev libncurses5-dev libcorosync-dev libxslt1-dev libdbus-1-dev
+  - sudo apt-get install -qq heartbeat-dev libheartbeat2-dev
+  - sudo apt-get install -qq libqb-dev
+  - sudo apt-get install -y python-lxml python-dateutil python-setuptools python-yaml asciidoc pkg-config
   - sudo dpkg -r --force-depends crmsh
+  - sudo dpkg -r --force-depends pacemaker
+  - wget https://github.com/ClusterLabs/cluster-glue/archive/master.tar.gz && tar xzf master.tar.gz
+  - cd cluster-glue-master && ./autogen.sh && ./configure && sudo make install && cd ..
+  - wget https://github.com/ClusterLabs/pacemaker/archive/Pacemaker-1.1.16.tar.gz && tar xzf Pacemaker-1.1.16.tar.gz
+  - cd pacemaker-Pacemaker-1.1.16 && ./autogen.sh && ./configure && sudo make install && cd ..
 
 install:
   - pip install tox-travis
