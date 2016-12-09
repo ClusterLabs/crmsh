@@ -108,7 +108,7 @@ class Cluster(command.UI):
             sectionlist = bootstrap.INIT_STAGES
             return all(not (l.startswith('-') or l in sectionlist) for l in lst)
         if '--dry-run' in args or looks_like_hostnames(args):
-            context.error("init has changed: see help for more information")
+            args = ['--yes', '--nodes'] + [arg for arg in args if arg != '--dry-run']
         parser = OptParser(usage="usage: init [options] [STAGE]", epilog="""
 
 Stage can be one of:
