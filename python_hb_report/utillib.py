@@ -9,6 +9,7 @@ import StringIO
 import subprocess
 import shutil
 import tempfile
+import stat
 
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
@@ -50,33 +51,25 @@ def warning(msg):
 def info(msg):
 	print >> sys.stderr,socket.gethostname(),"INFO:",msg
 
-def get_value(line,key):
+def get_value(line):
 	'''
 	Base on parameter key to search and get the value in string line
 	'''
+
 	value = line.split("=")
-	value = str(value[1:])
-	value = value[2:len(value)-5]
+	
+	#only want right part of =
+	value = str(value[1])
+
+	#cut off the '}\n'
+	value = value[0:len(value)-2]
+	
+	#if some variable's value composed of other variable
+	#then replace it
+	m = re.search('([A-Z]+_){0,}[A-Z]{1,}',value)
+	if m:
+		value = re.sub('\$([A-Z]+_){0,}[A-Z]{1,}',getattr(envir,m.group()),value)
 	return value
-
-def dirname(path):
-	if path.endswith("/"):
-		path = path[1:len(path)-1]
-
-	index = path.rfind("/")
-	dirname = path[0:index]
-	
-	return dirname
-
-def basename(path):
-	if path.endswith("/"):
-		path = path[1:len(path)-1]
-	
-	index = path.rfind("/")
-	basename = path[index+1:]
-	
-	return basename
-
 
 def get_ocf_directories():
 	'''
@@ -86,16 +79,17 @@ def get_ocf_directories():
 	line = f.readline()
 	while len(line) >0:
 		if line.find("HA_DIR:=") != -1:
-			envir.HA_DIR = get_value(line,"HA_DIR")
-		
+			envir.HA_DIR = get_value(line)
+		#TODO
+		# ha_cf not right
 		if line.find("HA_CF:=") != -1:
-			envir.HA_CF = get_value(line,"HA_CF")
+			envir.HA_CF = get_value(line)
 		
 		if line.find("HA_VARLIB:=") != -1:
-			envir.HA_VARLIB = get_value(line,"HA_VARLIB")
+			envir.HA_VARLIB = get_value(line)
 
 		if line.find("HA_BIN:=") != -1:
-			envir.HA_BIN = get_value(line,"HA_BIN")
+			envir.HA_BIN = get_value(line)
 		line = f.readline()
 
 def logd_getcfvar(pattern):
@@ -665,10 +659,10 @@ def dumpstate(workdir):
 
 def getconfig(workdir):
 	if os.path.isfile(envir.CONF):
-		shutil.copyfile(envir.CONF,os.path.join(workdir,basename(envir.CONF)))
+		shutil.copyfile(envir.CONF,os.path.join(workdir,os.path.basename(envir.CONF)))
 	
 	if os.path.isfile(envir.LOGD_CF):
-		shutil.copyfile(envir.LOGD_CF,os.path.join(workdir,basename(envir.LOGD_CF)))
+		shutil.copyfile(envir.LOGD_CF,os.path.join(workdir,os.path.basename(envir.LOGD_CF)))
 
 	if iscrmrunning():
 		dumpstate(workdir)
@@ -856,7 +850,7 @@ def sanitize_xml_attr(files):
 
 def sanitize_one(files):
 
-	if basename(files) == 'ha.cf':
+	if os.path.basename(files) == 'ha.cf':
 		sanitize_hacf()
 	else:
 		sanitize_xml_attr(files)
@@ -877,24 +871,13 @@ def remove_files(nodes):
 		elif os.path.isdir(f):
 			shutil.rmtree(f)
 
-	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+def is_socket(path):
+	'''
+	True if path exists and is socket
+	'''
+	if os.path.exists(path):
+		mode = os.stat(path).st_mode
+		if stat.S_ISSOCK(mode):
+			return True
+	return False
 

@@ -91,7 +91,7 @@ class collector(node):
 		f.close()
 
 	def pe2dot(self,path):
-		pef = utillib.basename(path)
+		pef = os.path.basename(path)
 		if pef.endswith('.bz2'):
 			dotf = pef[0:len(pef)-4]
 
@@ -135,7 +135,7 @@ class collector(node):
 		flist = grep_pro.communicate(' '.join(flist))[0].split()
 		
 		if len(flist):
-			filename = utillib.basename(envir.PE_STATE_DIR)
+			filename = os.path.basename(envir.PE_STATE_DIR)
 			pengine_dir = os.path.join(workdir,filename)
 			os.mkdir(pengine_dir)
 			for f in flist:
@@ -147,8 +147,8 @@ class collector(node):
 		if i >= 20:
 			for f in flist:
 				if not self.skip_lvl(1):
-					path = os.path.join(workdir,utillib.basename(envir.PE_STATE_DIR))
-					path = os.path.join(path,utillib.basename(f))
+					path = os.path.join(workdir,os.path.basename(envir.PE_STATE_DIR))
+					path = os.path.join(path,os.path.basename(f))
 					self.pe2dot(path)
 		else:
 			utillib.debug('too many PE inputs to create dot files')
@@ -163,7 +163,7 @@ class collector(node):
 		flist = []
 		bt_files = utillib.find_files(envir.CORES_DIRS)
 		for f in bt_files:
-			bf = utillib.basename(f)
+			bf = os.path.basename(f)
 			bf_num  = utillib.do_command(['expr','match',bf,'core'])
 			if bf_num > 0:
 				flist.append(f)
@@ -176,10 +176,10 @@ class collector(node):
 
 		for conf in envir.CONFIGURATIONS:
 			if os.path.isfile(conf):
-				shutil.copyfile(conf,os.path.join(dest,utillib.basename(conf)))
+				shutil.copyfile(conf,os.path.join(dest,os.path.basename(conf)))
 			elif os.path.isdir(conf):
 				files = os.listdir(conf)
-				dst = os.path.join(self.WORKDIR,utillib.basename(conf))
+				dst = os.path.join(self.WORKDIR,os.path.basename(conf))
 				os.mkdir(dst)
 				for f in files:
 					src = os.path.join(conf,f)
@@ -212,7 +212,7 @@ class collector(node):
 			return False
 
 		utillib.debug('looking for RA trace files in '+trace_dir)
-		sed_pro = subprocess.Popen(['sed',"s,"+utillib.dirname(trace_dir)+"/,,g"],stdin = subprocess.PIPE,stdout = subprocess.PIPE)
+		sed_pro = subprocess.Popen(['sed',"s,"+os.path.dirname(trace_dir)+"/,,g"],stdin = subprocess.PIPE,stdout = subprocess.PIPE)
 		flist = sed_pro.communicate(' '.join(utillib.find_file(trace_dir)))[0].split('\n')
 
 		if len(flist):
@@ -290,7 +290,7 @@ class collector(node):
 				continue
 
 			if l == envir.HA_LOG and l != envir.HALOG_F:
-				os.symlink(envir.HALOG_F,os.path.join(self.WORKDIR,utillib.basename(l)))
+				os.symlink(envir.HALOG_F,os.path.join(self.WORKDIR,os.path.basename(l)))
 				continue
 
 	def return_result(self):
@@ -304,8 +304,8 @@ class collector(node):
 		tar = tarfile.open(tarpath, 'w')
 
 		curr_dir = os.getcwd()
-		os.chdir(utillib.dirname(self.WORKDIR))
-		tar.add(utillib.basename(self.WORKDIR))
+		os.chdir(os.path.dirname(self.WORKDIR))
+		tar.add(os.path.basename(self.WORKDIR))
 		tar.close()
 		
 		os.chdir(curr_dir)
@@ -365,5 +365,5 @@ def run(master_flag):
 #part 4: endgames:
 #		 remove tmpfile and logs we do not need
 #
-#	utillib.remove_files(sla)
+	utillib.remove_files(sla)
 

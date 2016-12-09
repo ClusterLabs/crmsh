@@ -45,7 +45,7 @@ class node:
 		'''
 		Get envir.CRM_DARMON_DIR
 		'''
-		libdir = utillib.dirname(envir.HA_BIN)
+		libdir = os.path.dirname(envir.HA_BIN)
 		for p in ['/pacemaker','/heartbeat']:
 			if os.access(libdir+p+'/crmd',os.X_OK):
 				utillib.debug("setting CRM_DAEMON_DIR to"+libdir+p)
@@ -227,7 +227,7 @@ class node:
 		'''
 		Failed to get PE_STATE_DIR from crmsh
 		'''
-		localstatedir = utillib.dirname(envir.HA_VARLIB)
+		localstatedir = os.path.dirname(envir.HA_VARLIB)
 		found = utillib.find_dir("pengine","/var/lib")
 		files = os.listdir(found)
 		for i in files:
@@ -235,7 +235,7 @@ class node:
 				lastf = os.path.join(found,i)
 
 		if os.path.isfile(lastf):
-			envir.PE_STATE_DIR = utillib.dirname(lastf)
+			envir.PE_STATE_DIR = os.path.dirname(lastf)
 
 		else:
 			for p in ['pacemaker/pengine','pengine','heartbeat/pengine']:
@@ -256,7 +256,7 @@ class node:
 		Failed to get CIB_DIR from crmsh
 		HA_VARKIB is nornally set to {localstatedir}/heartbeat
 		'''
-		localstatedir = utillib.dirname(envir.HA_VARLIB)
+		localstatedir = os.path.dirname(envir.HA_VARLIB)
 		
 		for p in ['pacemaker/cib','heartbeat/crm']:
 			if os.path.isfile(localstatedir+'/'+p+'/cib.xml'):
@@ -269,7 +269,7 @@ class node:
 
 		for f in ptest_progs:
 			if utillib.which(f):
-				return utillib.basename(utillib.which(f))
+				return os.path.basename(utillib.which(f))
 
 
 	def compabitility_pcmk(self):				
@@ -286,7 +286,7 @@ class node:
 			self.get_cib_dir2()
 
 		utillib.debug("setting PCMK_LIB to `dirname $CIB_DIR`")
-		envir.PCMK_LIB = utillib.dirname(envir.CIB_DIR)
+		envir.PCMK_LIB = os.path.dirname(envir.CIB_DIR)
 
 		envir.PTEST = self.echo_ptest_tool()
 
@@ -342,7 +342,7 @@ class node:
 			envir.CF_SUPPORT = envir.HA_NOARCHBIN+'/ha_cf_support.sh'
 			envir.MEMBERSHIP_TOOL_OPTS = '-H'
 
-		envir.B_CONF = utillib.basename(envir.CONF)
+		envir.B_CONF = os.path.basename(envir.CONF)
 		
 		if not os.path.isfile(envir.CF_SUPPORT):
 			utillib.fatal('no stack specific support:'+envir.CF_SUPPORT)

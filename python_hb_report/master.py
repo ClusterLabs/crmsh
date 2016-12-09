@@ -15,6 +15,7 @@ import	tempfile
 import	tarfile
 import	time
 import	shutil
+import	stat
 
 from crmsh	import logtime
 from crmsh	import utils
@@ -176,8 +177,8 @@ class master(node):
 		if file1 not as same as file2, return True
 		else return False
 		'''
-		dir1 = utillib.dirname(file1)
-		dir2 = utillib.dirname(file2)
+		dir1 = os.path.dirname(file1)
+		dir2 = os.path.dirname(file2)
 
 		outf = os.path.join(self.WORKDIR,envir.ANALYSIS_F)
 		if not os.path.isfile(file1):
@@ -188,7 +189,7 @@ class master(node):
 			utillib.writefile(outf,file1+' does not exist')
 			return False
 
-		base = utillib.basename(file1)
+		base = os.path.basename(file1)
 
 		if base == envir.CIB_F:
 			if (os.path.isfile(os.path.join(dir1,'RUNNING')) and os.path.isfile(os.path.join(dir2,'RUNNING'))) or (os.path.isfile(os.path.join(dir1,'STOPPED')) and os.path.isfile(os.path.join(dir2,'STOPPED'))):
@@ -224,18 +225,57 @@ class master(node):
 		return RC
 
 	
-	def check_crmvfy(self):
-		pass
+	def check_files(self,outf,files):
+		'''
+		If path exists and is a socket
+		write warning message and path content to analyzed.txt
+		'''
+		for l in LOG_NODES:
+			if utillib.is_socket(os.path.join(self.WORKDIR,l,files)):
+				fd = open(os.path.join(self.WORKDIR,l,files))
+				outf.write('WARN:'+files[0:len(files)-4]+'reported warnings at '+l)
+				outf.write(fd.readlines())
+				fd.close()
 
-	def check_backtrace(self):
-		pass
+	def check_backtrace(self,outf):
+		for l in LOG_NODES:
+			if utillib.is_socket(os.path.join(self.WORKDIR,l,envir.BT_F)):
+				fd = open(os.path.join(self.WORKDIR,l,envir.BT_F))
+				outf.write('WARN: coredumps found at '+l+':')
+				outf.write(fd.readlines())
+				fd.close()
 
-	def check_permissions(self):
-		pass
-	
-	def check_logs(self):
-		pass
-	
+	def check_logs(self,outf):
+		logs = []
+		
+		#change EXTRA_LOGS
+		envir.EXTRA_LOGS.append(envir.HALOG_F)
+
+		outf.write('Log patterns:\n')
+
+		for f in envir.EXTRA_LOGS:
+			print os.path.join(self.WORKDIR,os.path.basename(f))
+			if os.path.isfile(os.path.join(self.WORKDIR,os.path.basename(f))):
+				logs.append(os.path.join(self.WORKDIR,os.path.basename(f)))
+			for l in LOG_NODES:
+				print os.path.join(self.WORKDIR,l,os.path.basename(f))
+				if os.path.isfile(os.path.join(self.WORKDIR,l,os.path.basename(f))):
+					logs.append(os.path.join(self.WORKDIR,l,os.path.basename(f)))
+
+		if not len(logs):
+			return
+		for l in logs:
+			fd = open(l,'r')
+			line = fd.readline()
+			while line:
+				for patt in envir.LOG_PATTERNS:
+					if line.find(patt) != -1:
+						print line
+						outf.write(line)
+					line = fd.readline()
+		#change back
+		envir.EXTRA_LOGS.remove(envir.HALOG_F)
+
 	def consolidate(self,files):
 		'''
 		Remove same file,create symbolic link instead
@@ -246,13 +286,11 @@ class master(node):
 					os.remove(os.path.join(self.WORKDIR,l,files))
 				else:
 					shutil.move(os.path.join(self.WORKDIR,l,files),os.path.join(self.WORKDIR,files))
-
 				os.symlink(os.path.join(self.WORKDIR,files),os.path.join(self.WORKDIR,l,files))
 
 		except IOError:
-			#cache IOError means no such file 
-			#then do not need to remove this file or make a link
-			#do nothing and return 
+			#if no such file 
+			#do not need to remove this file
 			return 
 
 	def analyze(self):
@@ -280,10 +318,10 @@ class master(node):
 				if f != envir.CIB_F:
 					self.consolidate(f)
 
-		self.check_crmvfy()
-		self.check_backtrace()
-		self.check_permissions()
-		self.check_logs()
+		self.check_files(fd,envir.CRM_VERIFY_F)
+		self.check_backtrace(fd)
+		self.check_files(fd,envir.PERMISSIONS_F)
+		self.check_logs(fd)
 		fd.close()
 	
 	def start_slave_collector(self,nodes,port=22,username='root'):
