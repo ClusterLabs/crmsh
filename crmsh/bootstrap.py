@@ -1693,9 +1693,6 @@ def bootstrap_init_geo(quiet, yes_to_all, arbitrator, clusters, tickets):
     global _context
     _context = Context(quiet=quiet, yes_to_all=yes_to_all)
 
-    cluster_name = corosync.get_values('totem.cluster_name')[0]
-    if cluster_name not in clusters.keys():
-        error("Local cluster name is {}, expected {}".format(cluster_name, "|".join(clusters.keys())))
     if os.path.exists(BOOTH_CFG) and not confirm("This will overwrite {} - continue?".format(BOOTH_CFG)):
         return
     if os.path.exists(BOOTH_AUTH) and not confirm("This will overwrite {} - continue?".format(BOOTH_AUTH)):
@@ -1713,18 +1710,7 @@ def bootstrap_init_geo(quiet, yes_to_all, arbitrator, clusters, tickets):
     status("Sync booth configuration across cluster")
     csync2_update("/etc/booth")
     init_csync2_geo()
-
-    status("Configure cluster resources for booth")
-    crm_template = Template("""
-primitive booth-ip ocf:heartbeat:IPaddr2 $iprules
-primitive booth-site ocf:pacemaker:booth-site \
-  meta resource-stickiness="INFINITY" \
-  params config=booth op monitor interval="10s"
-group g-booth booth-ip booth-site meta target-role=Stopped
-""")
-    iprule = 'params rule #cluster-name eq {} ip="{}"'
-
-    crm_configure_load("update", crm_template.substitute(iprules=" ".join(iprule.format(k, v) for k, v in clusters.iteritems())))
+    geo_cib_config(clusters)
 
 
 def geo_fetch_config(node):
@@ -1740,7 +1726,24 @@ def geo_fetch_config(node):
     os.chmod(BOOTH_CFG, 0o644)
 
 
-def bootstrap_join_geo(quiet, yes_to_all, node):
+def geo_cib_config(clusters):
+    cluster_name = corosync.get_values('totem.cluster_name')[0]
+    if cluster_name not in clusters.keys():
+        error("Local cluster name is {}, expected {}".format(cluster_name, "|".join(clusters.keys())))
+
+    status("Configure cluster resources for booth")
+    crm_template = Template("""
+primitive booth-ip ocf:heartbeat:IPaddr2 $iprules
+primitive booth-site ocf:pacemaker:booth-site \
+  meta resource-stickiness="INFINITY" \
+  params config=booth op monitor interval="10s"
+group g-booth booth-ip booth-site meta target-role=Stopped
+""")
+    iprule = 'params rule #cluster-name eq {} ip="{}"'
+
+    crm_configure_load("update", crm_template.substitute(iprules=" ".join(iprule.format(k, v) for k, v in clusters.iteritems())))
+
+def bootstrap_join_geo(quiet, yes_to_all, node, clusters):
     """
     Run on second cluster to add to a geo configuration.
     It fetches its booth configuration from the other node (cluster node or arbitrator).
@@ -1752,11 +1755,7 @@ def bootstrap_join_geo(quiet, yes_to_all, node):
     geo_fetch_config(node)
     status("Sync booth configuration across cluster")
     csync2_update("/etc/booth")
-    cluster_name = corosync.get_values('totem.cluster_name')[0]
-    cfg = xmlutil.cibdump2elem(section="configuration")
-    clusters = [e.get("value") for e in cfg.xpath('//expression[@attribute="#cluster-name" and @operation="eq"]')]
-    if cluster_name not in clusters:
-        error("Local cluster name is {}, expected {}".format(cluster_name, "|".join(clusters)))
+    geo_cib_config(clusters)
 
 
 def bootstrap_arbitrator(quiet, yes_to_all, node):

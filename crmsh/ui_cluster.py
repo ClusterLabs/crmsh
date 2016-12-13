@@ -302,6 +302,12 @@ If stage is not specified, each stage will be invoked in sequence.
                     yes_to_all=options.yes_to_all)
         return True
 
+    def _parse_clustermap(self, clusters):
+        try:
+            return dict([re.split('[=:]+', o) for o in re.split('[ ,;]+', clusters)])
+        except ValueError:
+            return None
+
     @command.name("geo-init")
     @command.skill_level('administrator')
     def do_geo_init(self, context, *args):
@@ -344,9 +350,8 @@ Cluster Description
                 errs.append("The --arbitrator argument is required.")
             parser.error(" ".join(errs))
 
-        try:
-            clustermap = dict([re.split('[=:]+', o) for o in re.split('[ ,;]+', options.clusters)])
-        except ValueError:
+        clustermap = self._parse_clustermap(options.clusters)
+        if clustermap is None:
             parser.error("Invalid cluster description format")
         ticketlist = []
         if options.tickets is not None:
@@ -365,8 +370,12 @@ Cluster Description
         '''
         parser = OptParser(usage="usage: geo-join [options]")
         parser.add_option("-c", "--cluster-node", help="IP address of an already-configured geo cluster or arbitrator", dest="node", metavar="IP")
+        parser.add_option("--clusters", help="Cluster description (see geo-init for details)", dest="clusters", metavar="DESC")
         options, args = parser.parse_args(list(args))
-        bootstrap.bootstrap_join_geo(options.quiet, options.yes_to_all, options.node)
+        clustermap = self._parse_clustermap(options.clusters)
+        if clustermap is None:
+            parser.error("Invalid cluster description format")
+        bootstrap.bootstrap_join_geo(options.quiet, options.yes_to_all, options.node, clustermap)
         return True
 
     @command.name("geo-init-arbitrator")
