@@ -8,6 +8,11 @@
 #
 # Implemented as a straight-forward set of python functions for
 # simplicity and flexibility.
+#
+# TODO: Firewall handling for non-SUSE platforms
+# TODO: Make csync2 usage optional
+# TODO: Make hawk optional
+# TODO: Configuration file for bootstrap?
 
 import os
 import sys
@@ -477,6 +482,7 @@ def init_cluster_local():
     # evil, but necessary
     invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
 
+    # TODO: only try to start hawk if hawk is installed
     start_service("hawk.service")
     status("  HA Web Konsole is now running, to see cluster status go to:")
     status("    https://%s:7630/" % (_context.ip_address))
