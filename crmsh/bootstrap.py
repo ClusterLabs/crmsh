@@ -35,7 +35,6 @@ LOG_FILE = "/var/log/ha-cluster-bootstrap.log"
 CSYNC2_KEY = "/etc/csync2/key_hagroup"
 CSYNC2_CFG = "/etc/csync2/csync2.cfg"
 COROSYNC_AUTH = "/etc/corosync/authkey"
-COROSYNC_CONF = "/etc/corosync/corosync.conf"
 SYSCONFIG_SBD = "/etc/sysconfig/sbd"
 SYSCONFIG_FW = "/etc/sysconfig/SuSEfirewall2"
 SYSCONFIG_FW_CLUSTER = "/etc/sysconfig/SuSEfirewall2.d/services/cluster"
@@ -649,8 +648,8 @@ Configure Corosync (unicast):
   active interface).
 """ % (_context.nic))
 
-    if os.path.exists(COROSYNC_CONF):
-        if not confirm("%s already exists - overwrite?" % (COROSYNC_CONF)):
+    if os.path.exists(corosync.conf()):
+        if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
     bindnetaddr = prompt_for_string(
@@ -663,59 +662,12 @@ Configure Corosync (unicast):
     if not mcastport:
         error("No value for mcastport")
 
-    utils.str2file("""# Please read the corosync.conf.5 manual page
-
-totem {
-    version:    2
-    secauth:    on
-    crypto_hash:    sha1
-    crypto_cipher:  aes256
-    cluster_name:   %(clustername)s
-    clear_node_high_bit: yes
-
-    token:      5000
-    token_retransmits_before_loss_const: 10
-    join:       60
-    consensus:  6000
-    max_messages:   20
-
-    interface {
-        ringnumber:     0
-        bindnetaddr:    %(bindnetaddr)s
-        mcastport:  %(mcastport)s
-        ttl:        1
-    }
-
-    transport: udpu
-}
-logging {
-    fileline:   off
-    to_stderr:  no
-    to_logfile:     no
-    logfile:    /var/log/cluster/corosync.log
-    to_syslog:  yes
-    debug:      off
-    timestamp:  on
-    logger_subsys {
-        subsys:     QUORUM
-        debug:  off
-    }
-}
-nodelist {
-    node {
-        ring0_addr: %(hostname)s
-        nodeid: 1
-    }
-}
-quorum {
-    # Enable and configure quorum subsystem (default: off)
-    # see also corosync.conf.5 and votequorum.5
-    provider: corosync_votequorum
-    expected_votes: 1
-    two_node: 0
-}
-""" % {"clustername": _context.cluster_name, "hostname": utils.this_node(), "bindnetaddr": bindnetaddr, "mcastport": mcastport}, COROSYNC_CONF)
-    csync2_update(COROSYNC_CONF)
+    corosync.create_configuration(
+        clustername=_context.cluster_name,
+        bindnetaddr=bindnetaddr,
+        mcastport=mcastport,
+        transport="udpu")
+    csync2_update(corosync.conf())
 
 
 def init_corosync_multicast():
@@ -736,8 +688,8 @@ Configure Corosync:
   active interface).
 """ % (_context.nic))
 
-    if os.path.exists(COROSYNC_CONF):
-        if not confirm("%s already exists - overwrite?" % (COROSYNC_CONF)):
+    if os.path.exists(corosync.conf()):
+        if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
     bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)', '([0-9]+\.){3}[0-9]+', _context.ip_network)
@@ -745,59 +697,19 @@ Configure Corosync:
         error("No value for bindnetaddr")
 
     mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)', '([0-9]+\.){3}[0-9]+', gen_mcastaddr())
-    if not bindnetaddr:
+    if not mcastaddr:
         error("No value for mcastaddr")
 
     mcastport = prompt_for_string('Multicast port', '[0-9]+', "5405")
     if not mcastport:
         error("No value for mcastport")
 
-    utils.str2file("""# Please read the corosync.conf.5 manual page
-
-totem {
-    version:    2
-    secauth:    on
-    crypto_hash:    sha1
-    crypto_cipher:  aes256
-    cluster_name:   %(clustername)s
-    clear_node_high_bit: yes
-
-    token:      5000
-    token_retransmits_before_loss_const: 10
-    join:       60
-    consensus:  6000
-    max_messages:   20
-
-    interface {
-        ringnumber:     0
-        bindnetaddr:    %(bindnetaddr)s
-        mcastaddr:  %(mcastaddr)s
-        mcastport:  %(mcastport)s
-        ttl:        1
-    }
-}
-logging {
-    fileline:   off
-    to_stderr:  no
-    to_logfile:     no
-    logfile:    /var/log/cluster/corosync.log
-    to_syslog:  yes
-    debug:      off
-    timestamp:  on
-    logger_subsys {
-        subsys:     QUORUM
-        debug:  off
-    }
-}
-quorum {
-    # Enable and configure quorum subsystem (default: off)
-    # see also corosync.conf.5 and votequorum.5
-    provider: corosync_votequorum
-    expected_votes: 1
-    two_node: 0
-}
-""" % {"clustername": _context.cluster_name, "hostname": utils.this_node(), "bindnetaddr": bindnetaddr, "mcastaddr": mcastaddr, "mcastport": mcastport}, COROSYNC_CONF)
-    csync2_update(COROSYNC_CONF)
+    corosync.create_configuration(
+        clustername=_context.cluster_name,
+        bindnetaddr=bindnetaddr,
+        mcastaddr=mcastaddr,
+        mcastport=mcastport)
+    csync2_update(corosync.conf())
 
 
 def init_corosync():
@@ -1281,12 +1193,12 @@ def join_cluster(seed_host):
     # Bump expected_votes in corosync.conf
     # TODO(must): this is rather fragile (see related code in ha-cluster-remove)
 
-    # If COROSYNC_CONF doesn't exist or is empty, we will fail here. (bsc#943227)
-    if not os.path.exists(COROSYNC_CONF):
-        error("{} is not readable. Please ensure that hostnames are resolvable.".format(COROSYNC_CONF))
+    # If corosync.conf() doesn't exist or is empty, we will fail here. (bsc#943227)
+    if not os.path.exists(corosync.conf()):
+        error("{} is not readable. Please ensure that hostnames are resolvable.".format(corosync.conf()))
 
-    # if unicast, we need to add our node to $COROSYNC_CONF
-    is_unicast = "nodelist" in open(COROSYNC_CONF).read()
+    # if unicast, we need to add our node to $corosync.conf()
+    is_unicast = "nodelist" in open(corosync.conf()).read()
     if is_unicast:
         corosync.add_node(utils.this_node())
 
@@ -1296,7 +1208,7 @@ def join_cluster(seed_host):
         new_quorum = int(v) + 1
         corosync.set_value("quorum.expected_votes", str(new_quorum))
     corosync.set_value("quorum.two_node", 1 if new_quorum == 2 else 0)
-    csync2_update(COROSYNC_CONF)
+    csync2_update(corosync.conf())
 
     # ...now that that's out of the way, let's initialize the cluster.
     init_cluster_local()
@@ -1397,7 +1309,7 @@ def remove_cluster():
             error("Stopping corosync on {} failed".format(_context.connect_name))
 
         # delete configuration files from the node to be removed
-        toremove = [SYSCONFIG_SBD, CSYNC2_CFG, COROSYNC_CONF, CSYNC2_KEY, COROSYNC_AUTH]
+        toremove = [SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY, COROSYNC_AUTH]
         if not invoke('ssh root@{} "bash -c \\\"rm -f {} && rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*\\\""'.format(node, " ".join(toremove))):
             error("Deleting the configuration files failed")
     else:
@@ -1416,7 +1328,7 @@ def remove_cluster():
         error("Removing the node {} from {} failed".format(node, CSYNC2_CFG))
 
     # Remove node from nodelist if this is a unicast configuration
-    if "nodelist" in open(COROSYNC_CONF).read():
+    if "nodelist" in open(corosync.conf()).read():
         corosync.del_node(node)
 
     # Decrement expected_votes in corosync.conf
@@ -1616,7 +1528,7 @@ def bootstrap_remove(cluster_node=None, quiet=False, yes_to_all=False):
 
             # remove all trace of cluster from this node
             # delete configuration files from the node to be removed
-            toremove = [SYSCONFIG_SBD, CSYNC2_CFG, COROSYNC_CONF, CSYNC2_KEY, COROSYNC_AUTH]
+            toremove = [SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY, COROSYNC_AUTH]
             if not invoke('bash -c "rm -f {} && rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*"'.format(" ".join(toremove))):
                 error("Deleting the configuration files failed")
     else:

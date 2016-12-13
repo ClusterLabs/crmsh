@@ -463,3 +463,90 @@ def del_node(addr):
                       shell=False)
         utils.ext_cmd(["corosync-cmapctl", "-D", "nodelist.node.%s.name" % (nth)],
                       shell=False)
+
+
+_COROSYNC_CONF_TEMPLATE = """# Please read the corosync.conf.5 manual page
+
+totem {
+    version:    2
+    secauth:    on
+    crypto_hash:    sha1
+    crypto_cipher:  aes256
+    cluster_name:   %(clustername)s
+    clear_node_high_bit: yes
+
+    token:      5000
+    token_retransmits_before_loss_const: 10
+    join:       60
+    consensus:  6000
+    max_messages:   20
+
+    interface {
+        ringnumber:     0
+        bindnetaddr:    %(bindnetaddr)s
+%(mcast)s
+        ttl:        1
+    }
+
+%(transport)s
+}
+logging {
+    fileline:   off
+    to_stderr:  no
+    to_logfile:     no
+    logfile:    /var/log/cluster/corosync.log
+    to_syslog:  yes
+    debug:      off
+    timestamp:  on
+    logger_subsys {
+        subsys:     QUORUM
+        debug:  off
+    }
+}
+%(nodelist)s
+quorum {
+    # Enable and configure quorum subsystem (default: off)
+    # see also corosync.conf.5 and votequorum.5
+    provider: corosync_votequorum
+    expected_votes: 1
+    two_node: 0
+}
+"""
+
+
+def create_configuration(clustername="hacluster",
+                         bindnetaddr=None,
+                         mcastaddr=None,
+                         mcastport=None,
+                         transport=None):
+
+    if transport == "udpu":
+        nodelist_tmpl = """nodelist {
+    node {
+        ring0_addr: %(hostname)s
+        nodeid: 1
+    }
+}
+""" % {"hostname": utils.this_node()}
+    else:
+        nodelist_tmpl = ""
+
+    mcast_tmpl = ""
+    if mcastaddr is not None:
+        mcast_tmpl += "        mcastaddr:  {}\n".format(mcastaddr)
+    if mcastport is not None:
+        mcast_tmpl += "        mcastport:  {}\n".format(mcastport)
+
+    transport_tmpl = ""
+    if transport is not None:
+        transport_tmpl = "    transport: {}\n".format(transport)
+
+    config = {
+        "clustername": clustername,
+        "nodelist": nodelist_tmpl,
+        "bindnetaddr": bindnetaddr,
+        "mcast": mcast_tmpl,
+        "transport": transport_tmpl,
+    }
+
+    utils.str2file(_COROSYNC_CONF_TEMPLATE % config, conf())
