@@ -396,8 +396,8 @@ Examples:
         return sub and sub.type == 'level'
 
     @classmethod
-    def children(self):
-        return self._children
+    def children(cls):
+        return cls._children
 
     @classmethod
     def init_ui(cls):

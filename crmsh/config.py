@@ -405,7 +405,7 @@ def get_all_options():
 def get_configured_options():
     '''Returns a list of all options that have a non-default value'''
     ret = []
-    for sname in DEFAULTS.keys():
+    for sname in DEFAULTS:
         for key in _configuration.configured_keys(sname):
             ret.append('%s.%s' % (sname, key))
     return ret

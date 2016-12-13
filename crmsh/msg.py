@@ -22,6 +22,7 @@ class ErrorBuffer(object):
         self.msg_list = []
         self.mode = "immediate"
         self.lineno = -1
+        self.__save_lineno = -1
         self.written = {}
 
     def buffer(self):
@@ -62,11 +63,11 @@ class ErrorBuffer(object):
             self.lineno += 1
 
     def start_tmp_lineno(self):
-        self._save_lineno = self.lineno
+        self.__save_lineno = self.lineno
         self.reset_lineno()
 
     def stop_tmp_lineno(self):
-        self.lineno = self._save_lineno
+        self.lineno = self.__save_lineno
 
     def add_lineno(self, s):
         if self.lineno > 0:

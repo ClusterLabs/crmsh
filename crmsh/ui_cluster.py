@@ -286,7 +286,8 @@ If stage is not specified, each stage will be invoked in sequence.
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of cluster node which will be deleted", metavar="HOST")
 
-        options, args = parser.parse_args(list(args))
+        args = list(args)
+        options, args = parser.parse_args(args)
         if options.cluster_node is not None and options.cluster_node not in args:
             args.append(options.cluster_node)
         if len(args) == 0:
@@ -480,6 +481,7 @@ Cluster Description
 
     def do_diff(self, context, filename, *nodes):
         "usage: diff <filename> [--checksum] [nodes...]. Diff file across cluster."
+        nodes = list(nodes)
         this_node = utils.this_node()
         checksum = False
         if len(nodes) and nodes[0] == '--checksum':

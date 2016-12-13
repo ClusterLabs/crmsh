@@ -235,8 +235,7 @@ class Template(command.UI):
 
     def replace_params(self, s, user_data):
         change = False
-        for i in range(len(s)):
-            word = s[i]
+        for i, word in enumerate(s):
             for p in user_data:
                 # is parameter in the word?
                 pos = word.find('%' + p)

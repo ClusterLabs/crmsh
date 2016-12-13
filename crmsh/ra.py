@@ -499,7 +499,7 @@ class RAInfo(object):
         # add monitor ops without role, if they don't already
         # exist
         d2 = {}
-        for op in d.keys():
+        for op in d:
             if re.match("monitor_[^0-9]", op):
                 norole_op = re.sub(r'monitor_[^0-9_]+_(.*)', r'monitor_\1', op)
                 if norole_op not in d:

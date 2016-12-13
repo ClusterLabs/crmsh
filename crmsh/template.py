@@ -48,13 +48,13 @@ def validate_template(l):
 
 
 def fix_tmpl_refs(l, ident, pfx):
-    for i in range(len(l)):
-        l[i] = l[i].replace(ident, pfx)
+    for i, tmpl in enumerate(l):
+        l[i] = tmpl.replace(ident, pfx)
 
 
 def fix_tmpl_refs_re(l, regex, repl):
-    for i in range(len(l)):
-        l[i] = re.sub(regex, repl, l[i])
+    for i, tmpl in enumerate(l):
+        l[i] = re.sub(regex, repl, tmpl)
 
 
 class LoadTemplate(object):

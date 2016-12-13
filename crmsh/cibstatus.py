@@ -257,9 +257,7 @@ class CibStatus(object):
         '''
         if not self.origin:
             self.initialize()
-        if (self.status_node is None or
-            (self.origin == "live" and not self.modified)) \
-                and not self._load(self.origin):
+        if (self.status_node is None or (self.origin == "live" and not self.modified)) and not self._load(self.origin):
             return None
         return self.status_node
 

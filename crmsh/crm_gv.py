@@ -90,7 +90,7 @@ class Gv(object):
     def edge_str(self, e_id):
         e_s = self.EDGEOP.join(_quoted(x) for x in self.edges[e_id])
         if e_id < len(self.edge_attrs):
-            return('%s [%s]' % (e_s, _attr_str(self.edge_attrs[e_id])))
+            return '%s [%s]' % (e_s, _attr_str(self.edge_attrs[e_id]))
         else:
             return e_s
 

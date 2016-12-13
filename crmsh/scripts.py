@@ -601,7 +601,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
 
     if config.core.debug:
         import pprint
-        print("Parsed hawk workflow:")
+        print "Parsed hawk workflow:"
         pprint.pprint(data)
     return data
 

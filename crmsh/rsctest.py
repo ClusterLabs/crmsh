@@ -163,7 +163,7 @@ class RADriver(object):
         real_op = (op == "probe" and "monitor" or op)
         cmd = self.exec_cmd(real_op)
         common_debug("running %s on %s" % (real_op, nodes))
-        for attr in self.rscenv.keys():
+        for attr in self.rscenv:
             # shell doesn't allow "-" in var names
             envvar = attr.replace("-", "_")
             cmd = "%s=%s %s" % (envvar, quote(self.rscenv[attr]), cmd)
@@ -172,11 +172,11 @@ class RADriver(object):
         else:
             from .crm_pssh import do_pssh_cmd
             statuses = do_pssh_cmd(cmd, nodes, self.outdir, self.errdir, self.timeout)
-            for i in range(len(nodes)):
+            for i, node in enumerate(nodes):
                 try:
-                    self.ec_l[nodes[i]] = statuses[i]
+                    self.ec_l[node] = statuses[i]
                 except:
-                    self.ec_l[nodes[i]] = self.undef
+                    self.ec_l[node] = self.undef
         return
 
     def stop(self, node):
@@ -462,7 +462,7 @@ def call_resource(rsc, cmd, nodes, local_only):
     actions = agent.actions().keys() + ['meta-data', 'validate-all']
 
     if cmd not in actions:
-        common_err("action '%s' not supported by %s" % (cmd, ra.name))
+        common_err("action '%s' not supported by %s" % (cmd, agent.ra_string()))
         return False
     d.runop(cmd, nodes, local_only=local_only)
     for node in nodes:

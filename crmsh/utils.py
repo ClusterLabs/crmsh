@@ -747,7 +747,7 @@ def wait4dc(what="", show_progress=True):
     delay = get_stdout(add_sudo(cmd))[1]
     if delay:
         delaymsec = crm_msec(delay)
-        if 0 < delaymsec:
+        if delaymsec > 0:
             common_info("The crmd-transition-delay is configured. Waiting %d msec before check DC status." % delaymsec)
             time.sleep(delaymsec / 1000)
     cnt = 0
@@ -919,8 +919,8 @@ def sort_by_mtime(l):
 
 def file_find_by_name(root, filename):
     'Find a file within a tree matching fname'
-    assert(root)
-    assert(filename)
+    assert root
+    assert filename
     for root, dirnames, filenames in os.walk(root):
         for filename in fnmatch.filter(filenames, filename):
             return os.path.join(root, filename)
@@ -1132,9 +1132,9 @@ def find_value(pl, name):
 
 
 def cli_replace_attr(pl, name, new_val):
-    for i in range(len(pl)):
-        if pl[i][0] == name:
-            pl[i][1] = new_val
+    for i, attr in enumerate(pl):
+        if attr[0] == name:
+            attr[1] = new_val
             return
 
 

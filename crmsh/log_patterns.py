@@ -125,7 +125,7 @@ _patterns_118 = {
     "quorum": (
         (  # detail 0
             "crmd.*Updating.(quorum).status",
-            "crmd.*quorum.(?:lost|ac?quir[^\s]*)",
+            r"crmd.*quorum.(?:lost|ac?quir[^\s]*)",
         ),
         (  # detail 1
         ),

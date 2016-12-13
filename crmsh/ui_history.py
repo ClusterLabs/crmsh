@@ -338,7 +338,7 @@ class History(command.UI):
             tags = crm_report().get_transition_tags(f)
             rc = tags is not None
             if rc:
-                print(' '.join(tags) if len(tags) else "No tags.")
+                print ' '.join(tags) if len(tags) else "No tags."
         else:
             rc = crm_report().show_transition_log(f, True)
         return rc

@@ -639,17 +639,15 @@ class Report(object):
             self.report_setup()
             return self.ready
         else:
-            print("Refreshing log data...")
+            print "Refreshing log data..."
             if not self.ready:
                 self.set_change_origin(CH_TIME)
                 self.prepare_source()
             missing_pes = self.logparser.scan(mode='force')
             if len(missing_pes):
-                print("%d transitions, %d events and %d missing PE input files." %
-                      tuple(self.logparser.count() + (len(missing_pes),)))
+                print "%d transitions, %d events and %d missing PE input files." % tuple(self.logparser.count() + (len(missing_pes),))
             else:
-                print("%d transitions, %d events." %
-                      self.logparser.count())
+                print "%d transitions, %d events." % self.logparser.count()
 
     def _str_nodecolor(self, node, s):
         try:
@@ -1004,7 +1002,7 @@ class Report(object):
             utils.rmdir_r(session_dir)
         elif subcmd == "list":
             for l in self.session_list():
-                print(l)
+                print l
         elif subcmd == "pack":
             return mkarchive(session_dir)
         return True

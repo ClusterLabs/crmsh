@@ -70,7 +70,7 @@ def ra_classes_or_tmpl(args):
 
 
 def op_attr_list(args):
-    schema_attr = [schema.g_schema.get('attr', 'op', 'o') + '=']
+    schema_attr = [schema.get('attr', 'op', 'o') + '=']
     extra_attrs = [s + '=' for s in constants.op_extra_attrs]
     return schema_attr + extra_attrs
 
@@ -272,7 +272,7 @@ class CibConfig(command.UI):
     @command.skill_level('administrator')
     def do_keywords(self, context):
         for k, v in sorted(constants.keywords.iteritems(), key=lambda v: v[0].lower()):
-            print("%-16s %s" % (k, v))
+            print "%-16s %s" % (k, v)
 
     @command.level(ui_ra.RA)
     def do_ra(self):
@@ -454,7 +454,7 @@ class CibConfig(command.UI):
             context.error("Not a primitive: %s" % (rsc))
         rnode = cibconfig.reduce_primitive(obj.node)
         if rnode is None:
-            context.error("No resource template %s for %s" % (self.node.get("template"), rsc))
+            context.error("No resource template %s for %s" % (obj.node.get("template"), rsc))
         params = []
         for attrs in rnode.iterchildren("instance_attributes"):
             params.extend(cliformat.nvpairs2list(attrs))
@@ -560,7 +560,7 @@ class CibConfig(command.UI):
         "usage: delete [-f|--force] <id> [<id>...]"
         argl = list(args)
         arg_force = any((x in ('-f', '--force')) for x in argl)
-        argl = [x for x in argl if (x not in ('-f', '--force'))]
+        argl = [x for x in argl if x not in ('-f', '--force')]
         if arg_force or config.core.force:
             if self._stop_if_running(argl) > 0:
                 utils.wait4dc(what="Stopping %s" % (", ".join(argl)))

@@ -335,8 +335,8 @@ class NodeMgmt(command.UI):
             if node.get('type') == 'remote':
                 srv = cib.xpath("//primitive[@id='%s']/instance_attributes/nvpair[@name='server']" % (name))
                 if srv:
-                    print(srv[0].get('value'))
+                    print srv[0].get('value')
                     continue
-            print(name)
+            print name
 
 # vim:ts=4:sw=4:et:

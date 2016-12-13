@@ -242,7 +242,7 @@ class CibInfo(object):
         self.not_cloned_resources = set(x for x in self.primitives if x not in self.cloned_resources)
 
     def resources(self):
-        return self.primitives.keys() + self.groups.keys() + self.clones.keys()
+        return self.primitives + self.groups.keys() + self.clones.keys()
 
     def match_resources(self):
         """

@@ -49,7 +49,16 @@ class Context(object):
         self.nic = nic
         self.ip_address = ip_address
         self.ip_network = ip_network
+        self.cluster_name = None
         self.cluster_node = None
+        self.ocfs2_device = None
+        self.shared_device = None
+        self.sbd_device = None
+        self.unicast = None
+        self.admin_ip = None
+        self.watchdog = None
+        self.host_status = None
+        self.connect_name = None
 
 _context = None
 
@@ -613,7 +622,7 @@ def init_csync2_remote(newhost):
         _context.quiet = True
         # if host doesn't already exist in csync2 config, add it
         if not re.search(r"^\s*host.*\s+%s\s*;" % (newhost), curr_cfg, flags=re.M):
-            curr_cfg = re.sub(r"\bhost.*\s+\S+\s*;", "\g<0>\n\thost %s;" % (utils.doublequote(newhost)), curr_cfg, count=1)
+            curr_cfg = re.sub(r"\bhost.*\s+\S+\s*;", r"\g<0>\n\thost %s;" % (utils.doublequote(newhost)), curr_cfg, count=1)
             utils.str2file(curr_cfg, CSYNC2_CFG)
             invoke("csync2", "-c", CSYNC2_CFG)
         else:
@@ -654,7 +663,7 @@ Configure Corosync (unicast):
 
     bindnetaddr = prompt_for_string(
         'Network address to bind to (e.g.: 192.168.1.0)',
-        '([0-9]+\.){3}[0-9]+', _context.ip_network)
+        r'([0-9]+\.){3}[0-9]+', _context.ip_network)
     if not bindnetaddr:
         error("No value for bindnetaddr")
 
@@ -692,11 +701,11 @@ Configure Corosync:
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
-    bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)', '([0-9]+\.){3}[0-9]+', _context.ip_network)
+    bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)', r'([0-9]+\.){3}[0-9]+', _context.ip_network)
     if not bindnetaddr:
         error("No value for bindnetaddr")
 
-    mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)', '([0-9]+\.){3}[0-9]+', gen_mcastaddr())
+    mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)', r'([0-9]+\.){3}[0-9]+', gen_mcastaddr())
     if not mcastaddr:
         error("No value for mcastaddr")
 
@@ -736,7 +745,7 @@ def list_partitions(dev):
     rc, outp, errp = utils.get_stdout_stderr("parted -s %s print" % (dev))
     partitions = []
     for line in outp.splitlines():
-        m = re.match("^\s*([0-9]+)\s*", line)
+        m = re.match(r"^\s*([0-9]+)\s*", line)
         if m:
             partitions.append(m.group(1))
     if rc != 0:
@@ -779,7 +788,7 @@ Configure Shared Storage:
 """)
 
     while not dev_looks_sane:
-        dev = prompt_for_string('Path to storage device (e.g. /dev/disk/by-id/...)', '\/.*', dev)
+        dev = prompt_for_string('Path to storage device (e.g. /dev/disk/by-id/...)', r'\/.*', dev)
         if not dev:
             error("No value for shared storage device")
 
@@ -902,7 +911,7 @@ Configure SBD:
             warn("Not configuring SBD - STONITH will be disabled.")
             # Comment out SBD devices if present
             scfg = open(SYSCONFIG_SBD).read()
-            scfg, nmatches = re.subn('^\([^#].*\)$', '#\1', scfg)
+            scfg, nmatches = re.subn(r'^\([^#].*\)$', r'#\1', scfg)
             if nmatches > 0:
                 utils.str2file(scfg, SYSCONFIG_SBD)
                 csync2_update(SYSCONFIG_SBD)
@@ -911,7 +920,7 @@ Configure SBD:
         dev = ""
         dev_looks_sane = False
         while not dev_looks_sane:
-            dev = prompt_for_string('Path to storage device (e.g. /dev/disk/by-id/...)', '\/.*', dev)
+            dev = prompt_for_string('Path to storage device (e.g. /dev/disk/by-id/...)', r'\/.*', dev)
             if not is_block_device(dev):
                 print >>sys.stderr, "    That doesn't look like a block device"
             else:
@@ -1036,7 +1045,7 @@ Configure Administration IP Address:
         if not confirm("Do you wish to configure an administration IP?"):
             return
 
-        adminaddr = prompt_for_string('Administration Virtual IP', '([0-9]+\.){3}[0-9]+', "")
+        adminaddr = prompt_for_string('Administration Virtual IP', r'([0-9]+\.){3}[0-9]+', "")
         if not adminaddr:
             error("No value for admin address")
 
@@ -1255,7 +1264,7 @@ def remove_get_hostname(seed_host):
         _context.connect_name = seed_host
         _context.cluster_node = outp.strip()
         _context.host_status = 1
-    elif re.match('^[\[0-9].*', seed_host):
+    elif re.match(r'^[\[0-9].*', seed_host):
         # IP address
         warn("Could not connect to {}".format(seed_host))
         nodename = prompt_for_string('Please enter the hostname of the node to be removed', '.+' "")
@@ -1476,7 +1485,7 @@ def bootstrap_join(cluster_node=None, nic=None, quiet=False, yes_to_all=False, w
   passwordless ssh between nodes, you will be prompted for the root
   password of the existing node.
 """)
-            cluster_node = prompt_for_string("IP address or hostname of existing node (e.g.: 192.168.1.1)",  ".+")
+            cluster_node = prompt_for_string("IP address or hostname of existing node (e.g.: 192.168.1.1)", ".+")
             _context.cluster_node = cluster_node
 
         join_ssh(cluster_node)
@@ -1498,13 +1507,13 @@ def bootstrap_remove(cluster_node=None, quiet=False, yes_to_all=False):
     _context.cluster_node = cluster_node
 
     if not yes_to_all and cluster_node is None:
-            status("""Remove This Node from Cluster:
+        status("""Remove This Node from Cluster:
   You will be asked for the IP address or name of an existing node,
   which will be removed from the cluster. This command must be
   executed from a different node in the cluster.
 """)
-            cluster_node = prompt_for_string("IP address or hostname of cluster node (e.g.: 192.168.1.1)",  ".+")
-            _context.cluster_node = cluster_node
+        cluster_node = prompt_for_string("IP address or hostname of cluster node (e.g.: 192.168.1.1)", ".+")
+        _context.cluster_node = cluster_node
 
     init()
     remove_ssh()
@@ -1680,7 +1689,7 @@ def bootstrap_arbitrator(quiet, yes_to_all, node):
     init_common_geo()
     check_tty()
     geo_fetch_config(node)
-    if not os.path.is_file(BOOTH_CFG):
+    if not os.path.isfile(BOOTH_CFG):
         error("Failed to copy {} from {}".format(BOOTH_CFG, node))
     # TODO: verify that the arbitrator IP in the configuration is us?
     status("Enabling and starting the booth arbitrator service")
