@@ -2,7 +2,7 @@
 # Copyright (C) 2007 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
-rootdir=`dirname $0`
+rootdir="$(dirname "$0")"
 TESTDIR=${TESTDIR:-$rootdir/testcases}
 DFLT_TESTSET=basicset
 OUTDIR=${OUTDIR:-crmtestout}
@@ -10,19 +10,16 @@ CRM_OUTF="$OUTDIR/crm.out"
 CRM_LOGF="$OUTDIR/crm.log"
 CRM_DEBUGF="$OUTDIR/crm.debug"
 OUTF="$OUTDIR/regression.out"
-LRMD_OPTS=""
 DIFF_OPTS="--ignore-all-space -U 1"
 common_filter=$TESTDIR/common.filter
 common_exclf=$TESTDIR/common.excl
 export OUTDIR
 
 logmsg() {
-	echo "`date`: $*" | tee -a $CRM_DEBUGF | tee -a $CRM_LOGF
+	echo "$(date): $*" | tee -a "$CRM_DEBUGF" | tee -a "$CRM_LOGF"
 }
 abspath() {
-	echo $1 | grep -qs "^/" &&
-		echo $1 ||
-		echo `pwd`/$1
+	echo "$1" | grep -qs "^/" && echo "$1" || echo "$(pwd)/$1"
 }
 
 usage() {
@@ -46,19 +43,19 @@ if [ ! -d "$TESTDIR" ]; then
 	usage
 fi
 
-rm -f $CRM_LOGF $CRM_DEBUGF
+rm -f "$CRM_LOGF" "$CRM_DEBUGF"
 
 # make tools/lrmd/stonithd log to our files only
-HA_logfile=`abspath $CRM_LOGF`
-HA_debugfile=`abspath $CRM_DEBUGF`
+HA_logfile="$(abspath "$CRM_LOGF")"
+HA_debugfile="$(abspath "$CRM_DEBUGF")"
 HA_use_logd=no
 HA_logfacility=""
 export HA_logfile HA_debugfile HA_use_logd HA_logfacility
 
-mkdir -p $OUTDIR
+mkdir -p "$OUTDIR"
 . /etc/ha.d/shellfuncs
 
-args=`getopt hqPc:p:m: $*`
+args="$(getopt hqPc:p:m: "$*")"
 [ $? -ne 0 ] && usage
 eval set -- "$args"
 
@@ -66,7 +63,7 @@ output_mode="normal"
 while [ x"$1" != x ]; do
 	case "$1" in
 		-h) usage;;
-	        -m) output_mode=$2; shift 1;;	    
+	        -m) output_mode=$2; shift 1;;
 		-q) output_mode="silent";;
 		-P) do_profile=1;;
 	        -c) CRM=$2; export CRM; shift 1;;
@@ -77,13 +74,13 @@ while [ x"$1" != x ]; do
 	shift 1
 done
 
-exec >$OUTF 2>&1
+exec >"$OUTF" 2>&1
 
 # Where to send user output
 # evaltest.sh also uses >&3 for printing progress dots
-case $output_mode in 
+case $output_mode in
     silent) exec 3>/dev/null;;
-    buildbot) exec 3>$CRM_OUTF;;
+    buildbot) exec 3>"$CRM_OUTF";;
     *) exec 3>/dev/tty;;
 esac
 
@@ -174,15 +171,15 @@ if [ -n "$do_profile" ]; then
 fi
 
 for a; do
-	if [ "$a" -a -f "$TESTDIR/$a" ]; then
+	if [ "$a" ] && [ -f "$TESTDIR/$a" ]; then
 		testcase=$a
 		runtestcase
 	elif echo "$a" | grep -q "^set:"; then
-		TESTSET=$TESTDIR/`echo $a | sed 's/set://'`
+		TESTSET="$TESTDIR/$(echo $a | sed 's/set://')"
 		if [ -f "$TESTSET" ]; then
-			while read testcase; do
+			while read -r testcase; do
 				runtestcase
-			done < $TESTSET
+			done < "$TESTSET"
 		else
 			echo "testset $TESTSET does not exist" >&3
 		fi
@@ -191,10 +188,10 @@ for a; do
 	fi
 done
 
-if egrep -wv '(BEGIN|END) testcase' $OUTF >/dev/null
+if egrep -wv '(BEGIN|END) testcase' "$OUTF" >/dev/null
 then
 	echo "seems like some tests failed or else something not expected"
 	echo "check $OUTF and diff files in $OUTDIR"
-	echo "in case you wonder what lrmd was doing, read $(abspath $CRM_LOGF) and $(abspath $CRM_DEBUGF)"
+	echo "in case you wonder what lrmd was doing, read $(abspath "$CRM_LOGF") and $(abspath "$CRM_DEBUGF")"
 	exit 1
 fi >&3

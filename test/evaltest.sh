@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright (C) 2007 Dejan Muhamedagic <dejan@suse.de>
 # See COPYING for license information.
 
@@ -40,9 +40,9 @@ specopt_repeat() {
 	repeat_limit=$rest
 }
 specopt() {
-	cmd=`echo $cmd | sed 's/%//'`  # strip leading '%'
-	echo ".`echo $cmd | tr '[a-z]' '[A-Z]'` $rest"  # show what we got
-	specopt_$cmd  # do what they asked for
+	cmd=$(echo $cmd | sed 's/%//')  # strip leading '%'
+	echo ".$(echo "$cmd" | tr "[:lower:]" "[:upper:]") $rest"  # show what we got
+	"specopt_$cmd"  # do what they asked for
 }
 
 #
@@ -59,15 +59,15 @@ substvars() {
 dotest_session() {
 	echo -n "." >&3
 	test_cnt=$(($test_cnt+1))
-	describe_$cmd $*  # show what we are about to do
-	crm_$cmd |  # and execute the command
+	"describe_$cmd" "$*"  # show what we are about to do
+	"crm_$cmd" |  # and execute the command
 		{ [ "$extcheck" ] && $extcheck || cat;}
 }
 dotest_single() {
 	echo -n "." >&3
 	test_cnt=$(($test_cnt+1))
-	describe_single $* # show what we are about to do
-	crm_single $* |  # and execute the command
+	describe_single "$*" # show what we are about to do
+	crm_single "$*" |  # and execute the command
 		{ [ "$extcheck" ] && $extcheck || cat;}
 	if [ "$showobj" ]; then
 		crm_showobj $showobj
@@ -83,7 +83,7 @@ runtest_session() {
 }
 runtest_single() {
 	while [ $repeat_cnt -le $repeat_limit ]; do
-		dotest_single $*
+		dotest_single "$*"
 		resetvars  # unset all variables
 		repeat_cnt=$(($repeat_cnt+1))
 	done
