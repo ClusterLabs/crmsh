@@ -1,6 +1,5 @@
 #!/bin/sh
 set -ev
-patch -p1 < test/travis-ci-fix.patch
 ./autogen.sh
 ./configure --prefix=/usr
 sudo make install
