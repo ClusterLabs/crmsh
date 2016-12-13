@@ -312,7 +312,7 @@ def check_prereqs(stage):
         if not confirm("Do you want to continue anyway?"):
             return False
 
-    init_firewall()
+    firewall_open_basic_ports()
     return True
 
 
@@ -362,48 +362,84 @@ def init_network():
         warn("Could not detect network address for {}".format(nic))
 
 
-# Configure /etc/sysconfig/SuSEfirewall2.d/services/cluster in much the same
-# way as yast2-cluster does.  If that file doesn't exist but the firewall is
-# on, warn the user that they'll need to configure things manually (the
-# assumption here is that yast2-cluster is generally also installed, so that
-# file should be present, and should be formatted reasonably sensibly).
-# TODO(should): Create /etc/sysconfig/SuSEfirewall2.d/services/cluster
-# as yast2-cluster isn't present on openSUSE 13.1
-def init_firewall():
-    # if this is not a SUSE system, bail
-    if "SUSE" not in open("/proc/version").read():
-        return
+def configure_firewall(tcp=None, udp=None):
+    if tcp is None:
+        tcp = []
+    if udp is None:
+        udp = []
 
+    def init_firewall_suse(tcp, udp):
+        if os.path.exists(SYSCONFIG_FW_CLUSTER):
+            cluster = utils.parse_sysconfig(SYSCONFIG_FW_CLUSTER)
+            tcpcurr = set(cluster.get("TCP", "").split())
+            tcpcurr.update(tcp)
+            tcp = list(tcpcurr)
+            udpcurr = set(cluster.get("UDP", "").split())
+            udpcurr.update(udp)
+            udp = list(udpcurr)
+
+        utils.sysconfig_set(SYSCONFIG_FW_CLUSTER, TCP=" ".join(tcp), UDP=" ".join(udp))
+
+        ext = ""
+        if os.path.exists(SYSCONFIG_FW):
+            fw = utils.parse_sysconfig(SYSCONFIG_FW)
+            ext = fw.get("FW_CONFIGURATIONS_EXT", "")
+            if "cluster" not in ext.split():
+                ext = ext + " cluster"
+        utils.sysconfig_set(SYSCONFIG_FW, FW_CONFIGURATIONS_EXT=ext)
+
+        # No need to do anything else if the firewall is inactive
+        if not service_is_active("SuSEfirewall2"):
+            return
+
+        # Firewall is active, either restart or complain if we couldn't tweak it
+        status("Restarting firewall (tcp={}, udp={})".format(" ".join(tcp), " ".join(udp)))
+        if not invoke("rcSuSEfirewall2 restart"):
+            error("Failed to restart firewall")
+
+    def init_firewall_rhel7(tcp, udp):
+        for p in tcp:
+            if not invoke("firewall-cmd --zone=public --add-port={}/tcp --permanent".format(p)):
+                error("Failed to configure firewall")
+
+        for p in udp:
+            if not invoke("firewall-cmd --zone=public --add-port={}/udp --permanent".format(p)):
+                error("Failed to configure firewall")
+
+        if not service_is_active("firewalld"):
+            return
+
+        if not invoke("firewall-cmd --reload"):
+            warn("Failed to reload firewall configuration")
+
+    def init_firewall_ufw(tcp, udp):
+        """
+        try configuring firewall with ufw
+        """
+        for p in tcp:
+            if not invoke("ufw allow {}/tcp".format(p)):
+                error("Failed to configure firewall using ufw")
+        for p in udp:
+            if not invoke("ufw allow {}/udp".format(p)):
+                error("Failed to configure firewall using ufw")
+
+    version = open("/proc/version").read()
+    if "SUSE" in version:
+        init_firewall_suse(tcp, udp)
+    elif "Red Hat 7" in version:
+        init_firewall_rhel7(tcp, udp)
+    elif utils.is_program("ufw"):
+        init_firewall_ufw(tcp, udp)
+    else:
+        warn("Firewall: Could not open ports tcp={}, udp={}".format("|".join(tcp), "|".join(udp)))
+
+
+def firewall_open_basic_ports():
     # ports for csync2, mgmtd, hawk & dlm respectively
-    tcp = ["30865", "5560", "7630", "21064"]
-
-    if os.path.exists(SYSCONFIG_FW_CLUSTER):
-        cluster = utils.parse_sysconfig(SYSCONFIG_FW_CLUSTER)
-        tcpcurr = set(cluster.get("TCP", "").split())
-        tcpcurr.update(tcp)
-        tcp = list(tcpcurr)
-
-    utils.sysconfig_set(SYSCONFIG_FW_CLUSTER, TCP=" ".join(tcp))
-
-    ext = ""
-    if os.path.exists(SYSCONFIG_FW):
-        fw = utils.parse_sysconfig(SYSCONFIG_FW)
-        ext = fw.get("FW_CONFIGURATIONS_EXT", "")
-        if "cluster" not in ext.split():
-            ext = ext + " cluster"
-    utils.sysconfig_set(SYSCONFIG_FW, FW_CONFIGURATIONS_EXT=ext)
-
-    # No need to do anything else if the firewall is inactive
-    if not service_is_active("SuSEfirewall2"):
-        return
-
-    # Firewall is active, either restart or complain if we couldn't tweak it
-    status("Restarting firewall (TCP %s open)" % (" ".join(tcp)))
-    if not invoke("rcSuSEfirewall2 restart"):
-        error("Failed to restart firewall")
+    configure_firewall(tcp=["30865", "5560", "7630", "21064"])
 
 
-def init_firewall_corosync():
+def firewall_open_corosync_ports():
     """
     Have to do this separately, as we need general firewall config early
     so csync2 works, but need corosync config *after* corosync.conf has
@@ -412,39 +448,11 @@ def init_firewall_corosync():
     Please note corosync uses two UDP ports mcastport (for mcast
     receives) and mcastport - 1 (for mcast sends).
     """
-
-    # if this is not a SUSE system, bail
-    if "SUSE" not in open("/proc/version").read():
-        return
-
     # all mcastports defined in corosync config
     udp = corosync.get_values("totem.interface.mcastport")
     udp.extend([str(int(p) - 1) for p in udp])
 
-    if os.path.exists(SYSCONFIG_FW_CLUSTER):
-        cluster = utils.parse_sysconfig(SYSCONFIG_FW_CLUSTER)
-        udpcurr = set(cluster.get("UDP", "").split())
-        udpcurr.update(udp)
-        udp = list(udpcurr)
-
-    utils.sysconfig_set(SYSCONFIG_FW_CLUSTER, UDP=" ".join(udp))
-
-    ext = ""
-    if os.path.exists(SYSCONFIG_FW):
-        fw = utils.parse_sysconfig(SYSCONFIG_FW)
-        ext = fw.get("FW_CONFIGURATIONS_EXT", "")
-        if "cluster" not in ext.split():
-            ext = ext + " cluster"
-    utils.sysconfig_set(SYSCONFIG_FW, FW_CONFIGURATIONS_EXT=ext)
-
-    # No need to do anything else if the firewall is inactive
-    if not service_is_active("SuSEfirewall2"):
-        return
-
-    # Firewall is active, either restart or complain if we couldn't tweak it
-    status("Restarting firewall (UDP %s open)" % (" ".join(udp) or "(none)"))
-    if not invoke("rcSuSEfirewall2 restart"):
-        error("Failed to restart firewall")
+    configure_firewall(udp=udp)
 
 
 def init_cluster_local():
@@ -452,7 +460,7 @@ def init_cluster_local():
     if service_is_active("corosync.service"):
         error("corosync service is running!")
 
-    init_firewall_corosync()
+    firewall_open_corosync_ports()
 
     # reset password, but only if it's not already set
     _rc, outp = utils.get_stdout("passwd -S hacluster")
