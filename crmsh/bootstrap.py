@@ -587,9 +587,9 @@ include /etc/sysconfig/sbd;
 
 
 def csync2_update(path):
-    invoke("csync2 -m %s" % (path))
-    invoke("csync2 -f %s" % (path))
-    invoke("csync2 -xv %s" % (path))
+    invoke("csync2 -rm %s" % (path))
+    invoke("csync2 -rf %s" % (path))
+    invoke("csync2 -rxv %s" % (path))
 
 
 def init_csync2_remote(newhost):
