@@ -1711,7 +1711,7 @@ def bootstrap_init_geo(quiet, yes_to_all, arbitrator, clusters, tickets):
     create_booth_authkey()
     create_booth_config(arbitrator, clusters, tickets)
     status("Sync booth configuration across cluster")
-    csync2_update(BOOTH_CFG)
+    csync2_update("/etc/booth")
     init_csync2_geo()
 
     status("Configure cluster resources for booth")
@@ -1751,7 +1751,7 @@ def bootstrap_join_geo(quiet, yes_to_all, node):
     check_tty()
     geo_fetch_config(node)
     status("Sync booth configuration across cluster")
-    csync2_update(BOOTH_CFG)
+    csync2_update("/etc/booth")
     cluster_name = corosync.get_values('totem.cluster_name')[0]
     cfg = xmlutil.cibdump2elem(section="configuration")
     clusters = [e.get("value") for e in cfg.xpath('//expression[@attribute="#cluster-name" and @operation="eq"]')]
