@@ -1756,7 +1756,7 @@ def bootstrap_join_geo(quiet, yes_to_all, node):
     cfg = xmlutil.cibdump2elem(section="configuration")
     clusters = [e.get("value") for e in cfg.xpath('//expression[@attribute="#cluster-name" and @operation="eq"]')]
     if cluster_name not in clusters:
-        error("Local cluster name is {}, expected {}".format(cluster_name, "|".join(clusters.keys())))
+        error("Local cluster name is {}, expected {}".format(cluster_name, "|".join(clusters)))
 
 
 def bootstrap_arbitrator(quiet, yes_to_all, node):
