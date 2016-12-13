@@ -369,6 +369,8 @@ Cluster Description
         Join this cluster to a geo configuration.
         '''
         parser = OptParser(usage="usage: geo-join [options]")
+        parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
+        parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", help="IP address of an already-configured geo cluster or arbitrator", dest="node", metavar="IP")
         parser.add_option("--clusters", help="Cluster description (see geo-init for details)", dest="clusters", metavar="DESC")
         options, args = parser.parse_args(list(args))
@@ -385,6 +387,8 @@ Cluster Description
         Make this node a geo arbitrator.
         '''
         parser = OptParser(usage="usage: geo-init-arbitrator [options]")
+        parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
+        parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", help="IP address of an already-configured geo cluster", dest="other", metavar="IP")
         options, args = parser.parse_args(list(args))
         bootstrap.bootstrap_arbitrator(options.quiet, options.yes_to_all, options.other)
