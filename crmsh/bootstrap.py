@@ -1514,7 +1514,7 @@ def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None, shared
         init_csync2()
         init_corosync()
         if template == 'ocfs2':
-            if sbd_device is None or ocfs_device is None:
+            if sbd_device is None or ocfs2_device is None:
                 init_storage()
         init_sbd()
         init_cluster()
