@@ -1606,7 +1606,7 @@ def bootstrap_remove(cluster_node=None, quiet=False, yes_to_all=False):
         if othernode is not None:
             # remove from other node
             cmd = "crm cluster remove{} -c {}".format(" -y" if yes_to_all else "", me)
-            rc = utils.ext_cmd_nosudo("ssh{} -o StrictHostKeyChecking=no '{}'".format("" if yes_to_all else " -t", othernode, cmd))
+            rc = utils.ext_cmd_nosudo("ssh{} -o StrictHostKeyChecking=no {} '{}'".format("" if yes_to_all else " -t", othernode, cmd))
             if rc != 0:
                 error("Failed to remove this node from {}".format(othernode))
         else:
