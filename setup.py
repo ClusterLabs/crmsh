@@ -11,6 +11,6 @@ setup(name='crmsh',
       url='http://crmsh.github.io/',
       packages=['crmsh'],
       install_requires=['parallax', 'lxml', 'PyYAML', 'python-dateutil'],
-      scripts=['crm'],
+      scripts=['bin/crm'],
       data_files=[('/usr/share/crmsh', ['doc/crm.8.adoc'])],
       include_package_data=True)
