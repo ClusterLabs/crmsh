@@ -19,6 +19,7 @@ TO_TIME = 0
 #log time form
 FROM_T = ''
 TO_T = ''
+DATE = ''
 
 #from command patameters
 NODE_SOURCE = ''
@@ -29,7 +30,7 @@ SSH_OPTS = []
 DEST = ''
 DESTDIR = '.'
 NOW = ''
-CTS = 'TEST'
+CTS = ''
 HA_LOG = ''
 EDITOR = ''
 SANITIZE = []

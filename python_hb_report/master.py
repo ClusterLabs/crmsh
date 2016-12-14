@@ -254,11 +254,9 @@ class master(node):
 		outf.write('Log patterns:\n')
 
 		for f in envir.EXTRA_LOGS:
-			print os.path.join(self.WORKDIR,os.path.basename(f))
 			if os.path.isfile(os.path.join(self.WORKDIR,os.path.basename(f))):
 				logs.append(os.path.join(self.WORKDIR,os.path.basename(f)))
 			for l in LOG_NODES:
-				print os.path.join(self.WORKDIR,l,os.path.basename(f))
 				if os.path.isfile(os.path.join(self.WORKDIR,l,os.path.basename(f))):
 					logs.append(os.path.join(self.WORKDIR,l,os.path.basename(f)))
 
@@ -270,7 +268,6 @@ class master(node):
 			while line:
 				for patt in envir.LOG_PATTERNS:
 					if line.find(patt) != -1:
-						print line
 						outf.write(line)
 					line = fd.readline()
 		#change back
@@ -348,8 +345,30 @@ class master(node):
 		fderr.write(errmsg)
 		fderr.close()
 
+	def events_all(self,logf,outf):
+		epatt= []
+		logfd = open(logf,'r')
+		lines = logfd.readlines()
+		print lines
+
+		for patt in envir.EVENT_PATTERNS:
+			epatt.append(patt.split()[1])
+
+		for patt in epatt:
+			for l in lines:
+				if l.find(patt) != -1:
+					outf.write(l)
+
 	def events(self):
-		pass
+		logf = os.path.join(self.WORKDIR,envir.HALOG_F)
+		outf = os.path.join(self.WORKDIR,'events.txt')
+		outfd = open(outf,'w')
+
+		if os.path.isfile(logf):
+			self.events_all(logf,outfd)
+		
+		for l in LOG_NODES:
+			pass
 
 	def check_if_log_is_empty(self):
 		pass
@@ -578,9 +597,10 @@ def run():
 #
 
 	mtr.get_result()
+	Process(target = mtr.analyze).start()
+	Process(target = mtr.events).start()
 
-	analyze_p = Process(target = mtr.analyze)
-	analyze_p.start()
+
 
 #
 #part 6: endgame: 

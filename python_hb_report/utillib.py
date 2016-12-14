@@ -490,7 +490,7 @@ def crm_info():
 	return crm_pro.communicate()[0]
 
 
-def do_command(argv):
+def do_command(argv,inp = None):
 	'''
 	call subprocess do 
 	'''
@@ -502,9 +502,9 @@ def do_command(argv):
 		msg = command+' : command not found'
 		return msg
 
-	com_pro = subprocess.Popen(comm_list,stdout = subprocess.PIPE,stderr = subprocess.STDOUT)
+	com_pro = subprocess.Popen(comm_list,stdin = subprocess.PIPE,stdout = subprocess.PIPE,stderr = subprocess.STDOUT)
 
-	msg = com_pro.communicate()[0]
+	msg = com_pro.communicate(inp)[0]
 	return msg
 
 def pkg_ver_deb():
@@ -856,14 +856,50 @@ def sanitize_one(files):
 		sanitize_xml_attr(files)
 
 def getstamp_syslog(message):
-	return ''.join(message.split()[0:2])
+	if len(message.split())>3:
+		return ' '.join(message.split()[0:3])
+	else:
+		return message
 
-def find_getstampproc(sla,filepath):
+def getstamp_rfc5424(message):
+	if len(message):
+		return message.split()[0]
+
+def getstamp_legacy(message):
+	return message.split()[1].replace('_',' ')
+	
+def find_getstampproc(nodes):
 	'''
 	Now  we do not need to get log from /var/log/messages and /var/log/pacemaker.log
 	'''
-	pass
+	func = ''
+	trycnt = 10
 
+	inf = open(envir.HA_LOG,'r')
+	lines = inf.readlines()
+
+	for l in lines:
+		time = getstamp_syslog(l)
+		if nodes.change_to_timestamp(time):
+			func = 'getstamp_syslog'
+			debug('the log file is in the syslog format')
+			return func
+
+		time = getstamp_rfc5424(l)
+		if nodes.change_to_timestamp(time):
+			func = 'getstamp_rfc5424'
+			debug('the log file is in the rfc5424 format')
+			return func
+
+		time = getstamp_legacy(l)
+		if nodes.change_to_timestamp(time):
+			func = 'getstamp_legacy'
+			debug('the log file is in the legacy format(please consider switching to syslog format)')
+			return func
+		trycnt -= 1
+		if not trycnt:
+			return func
+		
 def remove_files(nodes):
 	for f in nodes.RM_FILES:
 		if os.path.isfile(f):
@@ -880,4 +916,26 @@ def is_socket(path):
 		if stat.S_ISSOCK(mode):
 			return True
 	return False
+
+def linetime(logf,num):
+	print logf
+#	log_msg = do_command(['head','-1'],do_command(['tail','-n','+'+str(num),logf]))
+	print log_msg
+
+def findln_by_time(logf,tm):
+	first = 1
+	last = len(logf)
+	print first,last
+
+	while first <= last:
+		mid = (first+last)/2
+		trycnt = 10
+		while trycnt > 0:
+			tmid = linetime(logf,str(mid))
+
+
+
+
+
+
 
