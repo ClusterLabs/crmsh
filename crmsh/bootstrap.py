@@ -1030,7 +1030,6 @@ def init_admin():
     # unless $ADMIN_IP is set
     adminaddr = _context.admin_ip
     if _context.yes_to_all and not adminaddr:
-        warn("Not configuring Admin IP.")
         return
 
     if not adminaddr:
