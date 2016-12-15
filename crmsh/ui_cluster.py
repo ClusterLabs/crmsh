@@ -197,13 +197,14 @@ Note:
         # if options.geo:
         #    bootstrap.bootstrap_init_geo()
 
-        nodelist = [n for n in re.split('[ ,;]+', options.nodes)]
-        for node in nodelist:
-            if node == utils.this_node():
-                continue
-            bootstrap.status("Add node {} (may prompt for root password):".format(node))
-            if not self._add_node(node, yes_to_all=options.yes_to_all):
-                return False
+        if options.nodes is not None:
+            nodelist = [n for n in re.split('[ ,;]+', options.nodes)]
+            for node in nodelist:
+                if node == utils.this_node():
+                    continue
+                bootstrap.status("Add node {} (may prompt for root password):".format(node))
+                if not self._add_node(node, yes_to_all=options.yes_to_all):
+                    return False
 
         return True
 
