@@ -1152,27 +1152,37 @@ def join_csync2(seed_host):
 def join_ssh_merge(_cluster_node):
     status("Merging known_hosts")
 
-    hosts = " ".join(m.group(1) for m in re.finditer(r"^\s*host\s*([^ ;]+)\s*;", open(CSYNC2_CFG).read(), re.M))
+    hosts = [m.group(1) for m in re.finditer(r"^\s*host\s*([^ ;]+)\s*;", open(CSYNC2_CFG).read(), re.M)]
     if len(hosts) == 0:
         error("Unable to extract host list from %s" % (CSYNC2_CFG))
 
-    tmpdir = tmpfiles.create_dir()
+    try:
+        import parallax
+    except ImportError:
+        error("parallax python library is missing")
+
+    opts = parallax.Options()
+    opts.ssh_options = ['StrictHostKeyChecking=no']
 
     # The act of using pssh to connect to every host (without strict host key
     # checking) ensures that at least *this* host has every other host in its
     # known_hosts
-    rc = invokerc("pssh -H \"{hosts}\" -O StrictHostKeyChecking=no -o {tmpdir} cat ~/.ssh/known_hosts".format(hosts=hosts, tmpdir=tmpdir))
-    # 0 == success, 5 == ssh OK but remote command failed - we're ignoring
-    # this because it's most likely known_hosts doesn't exist.
-    if rc not in (0, 5):
-        warn("pssh failed with rc={}, known_hosts collection may be incomplete".format(rc))
-    # Sort combines everything we grabbed with our latest local known_hosts
     known_hosts_new = set()
-    for hostlines in [open(f).read().splitlines() for f in os.listdir(tmpdir) if os.path.isfile(f)]:
-        known_hosts_new.update(hostlines)
-    utils.str2file("".join(sorted(known_hosts_new)), os.path.join(tmpdir, "known_hosts.new"))
-    if not invoke("pscp -H \"{hosts}\" -O StrictHostKeyChecking=no {tmpdir}/known_hosts.new ~/.ssh/known_hosts".format(hosts=hosts, tmpdir=tmpdir)):
-        warn("known_hosts merge may be incomplete")
+    log("parallax.call {} : {}".format(hosts, "cat /root/.ssh/known_hosts"))
+    results = parallax.call(hosts, "cat /root/.ssh/known_hosts", opts)
+    for host, result in results.iteritems():
+        if isinstance(result, parallax.Error):
+            warn("Failed to get known_hosts from {}: {}".format(host, str(result)))
+        else:
+            known_hosts_new.update(result[1].splitlines())
+    if known_hosts_new:
+        hoststxt = "\n".join(sorted(known_hosts_new))
+        tmpf = utils.str2tmp(hoststxt)
+        log("parallax.copy {} : {}".format(hosts, hoststxt))
+        results = parallax.copy(hosts, tmpf, "/root/.ssh/known_hosts")
+        for host, result in results.iteritems():
+            if isinstance(result, parallax.Error):
+                warn("scp to {} failed ({}), known_hosts update may be incomplete".format(host, str(result)))
 
 
 def join_cluster(seed_host):
@@ -1662,6 +1672,7 @@ group g-booth booth-ip booth-site meta target-role=Stopped
     iprule = 'params rule #cluster-name eq {} ip="{}"'
 
     crm_configure_load("update", crm_template.substitute(iprules=" ".join(iprule.format(k, v) for k, v in clusters.iteritems())))
+
 
 def bootstrap_join_geo(quiet, yes_to_all, node, clusters):
     """
