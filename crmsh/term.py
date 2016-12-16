@@ -72,57 +72,35 @@ _COLORS = """BLACK BLUE GREEN CYAN RED MAGENTA YELLOW WHITE""".split()
 _ANSICOLORS = "BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE".split()
 
 
-def init():
-    """
-    Initialize attributes with appropriate values for the current terminal.
+def _tigetstr(cap_name):
+    import curses
+    cap = curses.tigetstr(cap_name) or ''
 
-    `_term_stream` is the stream that will be used for terminal
-    output; if this stream is not a tty, then the terminal is
-    assumed to be a dumb terminal (i.e., have no capabilities).
-    """
-    def _tigetstr(cap_name):
-        import curses
-        cap = curses.tigetstr(cap_name) or ''
+    # String capabilities can include "delays" of the form "$<2>".
+    # For any modern terminal, we should be able to just ignore
+    # these, so strip them out.
+    # terminof(5) states that:
+    #   A "/" suffix indicates that the padding is mandatory and forces a
+    #   delay of the given number of milliseconds even on devices for which
+    #   xon is present to indicate flow control.
+    # So let's respect that. But not the optional ones.
+    cap = re.sub(r'\$<\d+>[*]?', '', cap)
 
-        # String capabilities can include "delays" of the form "$<2>".
-        # For any modern terminal, we should be able to just ignore
-        # these, so strip them out.
-        # terminof(5) states that:
-        #   A "/" suffix indicates that the padding is mandatory and forces a
-        #   delay of the given number of milliseconds even on devices for which
-        #   xon is present to indicate flow control.
-        # So let's respect that. But not the optional ones.
-        cap = re.sub(r'\$<\d+>[*]?', '', cap)
+    # To switch back to "NORMAL", we use sgr0, which resets "everything" to defaults.
+    # That on some terminals includes ending "alternate character set mode".
+    # Which is usually done by appending '\017'.  Unfortunately, less -R
+    # does not eat that, but shows it as an annoying inverse '^O'
+    # Instead of falling back to less -r, which would have other implications as well,
+    # strip off that '\017': we don't use the alternative character set,
+    # so we won't need to reset it either.
+    if cap_name == 'sgr0':
+        cap = re.sub(r'\017$', '', cap)
 
-        # To switch back to "NORMAL", we use sgr0, which resets "everything" to defaults.
-        # That on some terminals includes ending "alternate character set mode".
-        # Which is usually done by appending '\017'.  Unfortunately, less -R
-        # does not eat that, but shows it as an annoying inverse '^O'
-        # Instead of falling back to less -r, which would have other implications as well,
-        # strip off that '\017': we don't use the alternative character set,
-        # so we won't need to reset it either.
-        if cap_name == 'sgr0':
-            cap = re.sub(r'\017$', '', cap)
+    return cap
 
-        return cap
 
-    _term_stream = sys.stdout
-    # Curses isn't available on all platforms
-    try:
-        import curses
-    except:
-        sys.stderr.write("INFO: no curses support: you won't see colors\n")
-        return
-    # If the stream isn't a tty, then assume it has no capabilities.
-    from . import config
-    if not _term_stream.isatty() and 'color-always' not in config.color.style:
-        return
-    # Check the terminal type.  If we fail, then assume that the
-    # terminal has no capabilities.
-    try:
-        curses.setupterm()
-    except:
-        return
+def _lookup_caps():
+    import curses
 
     # Look up numeric capabilities.
     colors.COLS = curses.tigetnum('cols')
@@ -148,6 +126,35 @@ def init():
     if set_bg_ansi:
         for i, color in zip(range(len(_ANSICOLORS)), _ANSICOLORS):
             setattr(colors, 'BG_'+color, curses.tparm(set_bg_ansi, i) or '')
+
+
+def init():
+    """
+    Initialize attributes with appropriate values for the current terminal.
+
+    `_term_stream` is the stream that will be used for terminal
+    output; if this stream is not a tty, then the terminal is
+    assumed to be a dumb terminal (i.e., have no capabilities).
+    """
+    _term_stream = sys.stdout
+    # Curses isn't available on all platforms
+    try:
+        import curses
+    except ImportError:
+        sys.stderr.write("INFO: no curses support: you won't see colors\n")
+        return
+    # If the stream isn't a tty, then assume it has no capabilities.
+    from . import config
+    if not _term_stream.isatty() and 'color-always' not in config.color.style:
+        return
+    # Check the terminal type.  If we fail, then assume that the
+    # terminal has no capabilities.
+    try:
+        curses.setupterm()
+    except curses.error:
+        return
+
+    _lookup_caps()
 
 
 def render(template):
