@@ -12,9 +12,7 @@ from . import command
 from . import completers as compl
 from . import utils
 from . import ui_utils
-from . import userdir
 from . import xmlutil
-from . import constants
 from . import options
 from .cibconfig import mkset_obj, cib_factory
 from .msg import common_err, common_debug, common_info
@@ -531,19 +529,10 @@ class History(command.UI):
         pe_f = self._get_diff_pe_input(t)
         if not pe_f:
             return False
-        rc, gtype, outf, ftype = ui_utils.graph_args(args)
-        if not rc:
-            return False
-        rc, d = utils.load_graphviz_file(userdir.GRAPHVIZ_USER_FILE)
-        if rc and d:
-            constants.graph = d
         set_obj = self._pe_config_obj(pe_f)
-        if not outf:
-            rc = set_obj.show_graph(gtype)
-        elif gtype == ftype:
-            rc = set_obj.save_graph(gtype, outf)
-        else:
-            rc = set_obj.graph_img(gtype, outf, ftype)
+        rc = set_obj.query_graph(*args)
+        if rc is None:
+            return False
         if context.previous_level_is("cibconfig"):
             cib_factory.refresh()
         return rc

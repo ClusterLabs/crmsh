@@ -23,6 +23,8 @@ from . import ordereddict
 from . import orderedset
 from . import cibstatus
 from . import crm_gv
+from . import ui_utils
+from . import userdir
 from .ra import get_ra, get_properties_list, get_pe_meta, get_properties_meta
 from .msg import common_warn, common_err, common_debug, common_info, err_buf
 from .msg import common_error, constraint_norefobj_err, cib_parse_err, no_object_err
@@ -369,6 +371,22 @@ class CibObjectSet(object):
         '''
         for obj in processing_sort_cli(list(self.obj_set)):
             obj.repr_gv(gv_obj, from_grp=False)
+
+    def query_graph(self, *args):
+        "usage: graph <pe> [<gtype> [<file> [<img_format>]]]"
+        rc, gtype, outf, ftype = ui_utils.graph_args(args)
+        if not rc:
+            return None
+        rc, d = utils.load_graphviz_file(userdir.GRAPHVIZ_USER_FILE)
+        if rc and d:
+            constants.graph = d
+        if outf is not None:
+            return self.show_graph(gtype)
+        elif gtype == ftype:
+            rc = self.save_graph(gtype, outf)
+        else:
+            rc = self.graph_img(gtype, outf, ftype)
+        return rc
 
     def show_graph(self, gtype):
         '''Display graph using dotty'''

@@ -526,19 +526,10 @@ class CibConfig(command.UI):
         "usage: graph [<gtype> [<file> [<img_format>]]]"
         if args and args[0] == "exportsettings":
             return utils.save_graphviz_file(userdir.GRAPHVIZ_USER_FILE, constants.graph)
-        rc, gtype, outf, ftype = ui_utils.graph_args(args)
-        if not rc:
-            context.fatal_error("Failed to create graph")
-        rc, d = utils.load_graphviz_file(userdir.GRAPHVIZ_USER_FILE)
-        if rc and d:
-            constants.graph = d
         set_obj = mkset_obj()
-        if not outf:
-            rc = set_obj.show_graph(gtype)
-        elif gtype == ftype:
-            rc = set_obj.save_graph(gtype, outf)
-        else:
-            rc = set_obj.graph_img(gtype, outf, ftype)
+        rc = set_obj.query_graph(*args)
+        if rc is None:
+            context.fatal_error("Failed to create graph")
         return rc
 
     def _stop_if_running(self, rscs):
