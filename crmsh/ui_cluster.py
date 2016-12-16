@@ -140,7 +140,9 @@ Note:
                           help='Optionally configure cluster with template "name" (currently only "ocfs2" is valid here)')
         parser.add_option("-n", "--name", metavar="NAME", dest="name", default="hacluster",
                           help='Set the name of the configured cluster.')
-        parser.add_option("-N", "--nodes", metavar="NODES", dest="nodes", help='Additional nodes to add to the created cluster. May include the current node, which will always be the initial cluster node.')
+        parser.add_option("-N", "--nodes", metavar="NODES", dest="nodes",
+                          help='Additional nodes to add to the created cluster. ' +
+                          'May include the current node, which will always be the initial cluster node.')
         # parser.add_option("--quick-start", dest="quickstart", action="store_true", help="Perform basic system configuration (NTP, watchdog, /etc/hosts)")
         parser.add_option("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG",
                           help="Use the given watchdog device")
@@ -149,7 +151,8 @@ Note:
         network_group.add_option("-i", "--interface", dest="nic", metavar="IF",
                                  help="Bind to IP address on interface IF")
         network_group.add_option("-u", "--unicast", action="store_true", dest="unicast",
-                                 help="Configure corosync to communicate over unicast (UDP), and not multicast. Default is multicast unless an environment where multicast cannot be used is detected.")
+                                 help="Configure corosync to communicate over unicast (UDP), and not multicast. " +
+                                 "Default is multicast unless an environment where multicast cannot be used is detected.")
         network_group.add_option("-A", "--admin-ip", dest="admin_ip", metavar="IP",
                                  help="Configure IP address as an administration virtual IP")
         parser.add_option_group(network_group)

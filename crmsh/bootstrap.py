@@ -1202,7 +1202,10 @@ def join_cluster(seed_host):
         rc, outp = utils.get_stdout("ssh -o StrictHostKeyChecking=no root@{} 'cibadmin -Q --xpath \"//primitive\"'".format(seed_host))
         if len(outp):
             xml = etree.fromstring(outp)
-            mountpoints = xml.xpath('//primitive[@class="ocf" and @provider="heartbeat" and @type="Filesystem"]/instance_attributes/nvpair[@name="directory"]/@value')
+            mountpoints = xml.xpath(' and '.join(['//primitive[@class="ocf"',
+                                                  '@provider="heartbeat"',
+                                                  '@type="Filesystem"]']) +
+                                    '/instance_attributes/nvpair[@name="directory"]/@value')
             for m in mountpoints:
                 invoke("mkdir -p {}".format(m))
     else:
@@ -1376,7 +1379,10 @@ def remove_localhost_check():
     return nodename == utils.this_node()
 
 
-def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None, shared_device=None, sbd_device=None, quiet=False, template=None, admin_ip=None, yes_to_all=False, unicast=False, watchdog=None, stage=None):
+def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
+                   shared_device=None, sbd_device=None, quiet=False,
+                   template=None, admin_ip=None, yes_to_all=False,
+                   unicast=False, watchdog=None, stage=None):
     """
     -i <nic>
     -o <ocfs2-device>
