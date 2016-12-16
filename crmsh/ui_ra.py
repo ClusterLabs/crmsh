@@ -8,7 +8,6 @@ from . import utils
 from . import ra
 from . import constants
 from . import options
-from . import msg as msglog
 
 
 def complete_class_provider_type(args):
@@ -95,16 +94,5 @@ class RA(command.UI):
     @command.skill_level('administrator')
     def do_validate(self, context, agentname, *params):
         "usage: validate [<class>:[<provider>:]]<type> [<key>=<value> ...]"
-        rc, out = ra.validate_agent(agentname, dict([param.split('=', 1) for param in params]))
-        for msg in out.splitlines():
-            if msg.startswith("ERROR: "):
-                msglog.err_buf.error(msg[7:])
-            elif msg.startswith("WARNING: "):
-                msglog.err_buf.warning(msg[9:])
-            elif msg.startswith("INFO: "):
-                msglog.err_buf.info(msg[6:])
-            elif msg.startswith("DEBUG: "):
-                msglog.err_buf.debug(msg[7:])
-            else:
-                msglog.err_buf.writemsg(msg)
+        rc, _ = ra.validate_agent(agentname, dict([param.split('=', 1) for param in params]), log=True)
         return rc == 0

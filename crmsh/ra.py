@@ -842,7 +842,7 @@ def can_validate_agent(agent):
     return True
 
 
-def validate_agent(agentname, params):
+def validate_agent(agentname, params, log=False):
     """
     Call the validate-all action on the agent, given
     the parameter hash params.
@@ -874,6 +874,20 @@ def validate_agent(agentname, params):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=my_env)
     out, _ = p.communicate()
     p.wait()
+
+    if log is True:
+        from . import msg as msglog
+        for msg in out.splitlines():
+            if msg.startswith("ERROR: "):
+                msglog.err_buf.error(msg[7:])
+            elif msg.startswith("WARNING: "):
+                msglog.err_buf.warning(msg[9:])
+            elif msg.startswith("INFO: "):
+                msglog.err_buf.info(msg[6:])
+            elif msg.startswith("DEBUG: "):
+                msglog.err_buf.debug(msg[7:])
+            else:
+                msglog.err_buf.writemsg(msg)
     return p.returncode, out
 
 

@@ -446,7 +446,6 @@ class CibConfig(command.UI):
         from . import ra
         from . import cibconfig
         from . import cliformat
-        from . import msg as msglog
         obj = cib_factory.find_object(rsc)
         if not obj:
             context.error("Not found: %s" % (rsc))
@@ -464,18 +463,7 @@ class CibConfig(command.UI):
         agentname = xmlutil.mk_rsc_type(rnode)
         if not ra.can_validate_agent(agentname):
             context.error("%s: Cannot run validate-all for agent: %s" % (rsc, agentname))
-        rc, out = ra.validate_agent(agentname, params)
-        for msg in out.splitlines():
-            if msg.startswith("ERROR: "):
-                msglog.err_buf.error(msg[7:])
-            elif msg.startswith("WARNING: "):
-                msglog.err_buf.warning(msg[9:])
-            elif msg.startswith("INFO: "):
-                msglog.err_buf.info(msg[6:])
-            elif msg.startswith("DEBUG: "):
-                msglog.err_buf.debug(msg[7:])
-            else:
-                msglog.err_buf.writemsg(msg)
+        rc, _ = ra.validate_agent(agentname, params, log=True)
         return rc == 0
 
     @command.skill_level('administrator')
