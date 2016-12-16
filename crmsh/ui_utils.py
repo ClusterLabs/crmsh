@@ -83,25 +83,24 @@ def graph_args(args):
         configure graph [<gtype> [<file> [<img_format>]]]
         history graph <pe> [<gtype> [<file> [<img_format>]]]
     '''
+    def tryarg(n, orelse):
+        try:
+            return args[n]
+        except IndexError:
+            return orelse
+        except TypeError:
+            return orelse
+
     from .crm_gv import gv_types
     gtype, outf, ftype = None, None, None
-    try:
-        gtype = args[0]
-        if gtype not in gv_types:
-            common_err("graph type %s is not supported" % gtype)
-            return False, gtype, outf, ftype
-    except:
-        gtype = "dot"
-    try:
-        outf = args[1]
-        if not utils.is_path_sane(outf):
-            return False, gtype, outf, ftype
-    except:
-        outf = None
-    try:
-        ftype = args[2]
-    except:
-        ftype = gtype
+    gtype = tryarg(0, "dot")
+    if gtype not in gv_types:
+        common_err("graph type %s is not supported" % gtype)
+        return False, gtype, outf, ftype
+    outf = tryarg(1, None)
+    if outf is not None and not utils.is_path_sane(outf):
+        return False, gtype, outf, ftype
+    ftype = tryarg(2, gtype)
     return True, gtype, outf, ftype
 
 
