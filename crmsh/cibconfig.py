@@ -2071,13 +2071,13 @@ class CibAlert(CibObject):
             return self._attr_set_str(c)
         elif c.tag == "recipient":
             r = ["to"]
-            complex = self._is_complex()
-            if complex:
+            is_complex = self._is_complex()
+            if is_complex:
                 r.append('{')
             r.append(cli_path(c.get('value')))
             for subset in c.xpath('instance_attributes|meta_attributes'):
                 r.append(self._attr_set_str(subset))
-            if complex:
+            if is_complex:
                 r.append('}')
             return ' '.join(r)
 
