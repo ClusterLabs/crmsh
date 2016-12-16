@@ -133,7 +133,12 @@ class RADriver(object):
         '''
         Execute an operation.
         '''
-        from .crm_pssh import show_output
+        try:
+            from .crm_pssh import show_output
+        except ImportError:
+            common_err("Parallax SSH not installed, rsctest can not be executed")
+            return
+
         sys.stderr.write("host %s (%s)\n" %
                          (host, self.explain_op_status(host)))
         show_output(self.errdir, (host,), "stderr")
@@ -170,7 +175,12 @@ class RADriver(object):
         if local_only:
             self.ec_l[this_node()] = ext_cmd(cmd)
         else:
-            from .crm_pssh import do_pssh_cmd
+            try:
+                from .crm_pssh import do_pssh_cmd
+            except ImportError:
+                common_err("Parallax SSH not installed, rsctest can not be executed")
+                return
+
             statuses = do_pssh_cmd(cmd, nodes, self.outdir, self.errdir, self.timeout)
             for i, node in enumerate(nodes):
                 try:
@@ -430,11 +440,6 @@ def test_resources(resources, nodes, all_nodes):
         stop_all(started, node)
         return True
 
-    try:
-        from . import crm_pssh
-    except ImportError:
-        common_err("Parallax SSH not installed, rsctest can not be executed")
-        return False
     if not check_test_support(resources):
         return False
     if not are_all_stopped(resources, all_nodes):
