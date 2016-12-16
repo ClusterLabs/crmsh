@@ -2,9 +2,8 @@ import os
 import sys
 
 try:
-    import modules
-    sys.modules['crmsh'] = sys.modules['modules']
-except ImportError, e:
+    import crmsh
+except ImportError as e:
     pass
 
 from crmsh import msg

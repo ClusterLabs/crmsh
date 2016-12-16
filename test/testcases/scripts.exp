@@ -101,14 +101,11 @@ sap-simple-stack-plus SAP SimpleStack+ Instance
 
 Script:
 
-add              Add a new node to an already existing cluster
 check-uptime     Check uptime of nodes
 gfs2-base        GFS2 File System Base (Cloned)
 health           Check the health of the cluster
-init             Initialize a new cluster
 lvm              Controls the availability of an LVM Volume Group
 raid1            Manages Linux software RAID (MD) devices on shared storage
-remove           Remove node from cluster
 sapdb            SAP Database Instance
 sapinstance      SAP Instance
 sbd-device       Create SBD Device
@@ -124,9 +121,7 @@ sbd              SBD, Shared storage based fencing
 vmware           Fencing using vCenter / ESX Server
 
 .INP: list names
-add
 apache
-check-uptime
 clvm
 clvm-vg
 database
@@ -136,13 +131,9 @@ drbd
 exportfs
 filesystem
 gfs2
-gfs2-base
 .EXT crm_resource --show-metadata systemd:haproxy
 ERROR: 4: Error when loading script haproxy: No meta-data for agent: systemd:haproxy
-health
-init
 libvirt
-lvm
 lvm-drbd
 mailto
 nfsserver
@@ -150,21 +141,15 @@ nfsserver-lvm-drbd
 ocfs2
 oracle
 raid-lvm
-raid1
-remove
 sap-as
 sap-ci
 sap-db
 sap-simple-stack
 sap-simple-stack-plus
-sapdb
-sapinstance
 sbd
-sbd-device
 virtual-ip
 vmware
 .INP: list names all
-add
 apache
 check-uptime
 clvm
@@ -179,7 +164,6 @@ gfs2
 gfs2-base
 haproxy
 health
-init
 libvirt
 lvm
 lvm-drbd
@@ -190,7 +174,6 @@ ocfs2
 oracle
 raid-lvm
 raid1
-remove
 sap-as
 sap-ci
 sap-db
@@ -203,7 +186,6 @@ sbd-device
 virtual-ip
 vmware
 .INP: list all names
-add
 apache
 check-uptime
 clvm
@@ -218,7 +200,6 @@ gfs2
 gfs2-base
 haproxy
 health
-init
 libvirt
 lvm
 lvm-drbd
@@ -229,7 +210,6 @@ ocfs2
 oracle
 raid-lvm
 raid1
-remove
 sap-as
 sap-ci
 sap-db

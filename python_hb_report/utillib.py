@@ -490,7 +490,11 @@ def crm_info():
 	return crm_pro.communicate()[0]
 
 
+<<<<<<< HEAD
 def do_command(argv,inp = None):
+=======
+def do_command(argv):
+>>>>>>> clusterlab/hb_report.py
 	'''
 	call subprocess do 
 	'''
@@ -502,9 +506,15 @@ def do_command(argv,inp = None):
 		msg = command+' : command not found'
 		return msg
 
+<<<<<<< HEAD
 	com_pro = subprocess.Popen(comm_list,stdin = subprocess.PIPE,stdout = subprocess.PIPE,stderr = subprocess.STDOUT)
 
 	msg = com_pro.communicate(inp)[0]
+=======
+	com_pro = subprocess.Popen(comm_list,stdout = subprocess.PIPE,stderr = subprocess.STDOUT)
+
+	msg = com_pro.communicate()[0]
+>>>>>>> clusterlab/hb_report.py
 	return msg
 
 def pkg_ver_deb():
@@ -856,6 +866,7 @@ def sanitize_one(files):
 		sanitize_xml_attr(files)
 
 def getstamp_syslog(message):
+<<<<<<< HEAD
 	if len(message.split())>3:
 		return ' '.join(message.split()[0:3])
 	else:
@@ -900,6 +911,16 @@ def find_getstampproc(nodes):
 		if not trycnt:
 			return func
 		
+=======
+	return ''.join(message.split()[0:2])
+
+def find_getstampproc(sla,filepath):
+	'''
+	Now  we do not need to get log from /var/log/messages and /var/log/pacemaker.log
+	'''
+	pass
+
+>>>>>>> clusterlab/hb_report.py
 def remove_files(nodes):
 	for f in nodes.RM_FILES:
 		if os.path.isfile(f):
@@ -917,6 +938,7 @@ def is_socket(path):
 			return True
 	return False
 
+<<<<<<< HEAD
 def linetime(logf,num):
 	print logf
 #	log_msg = do_command(['head','-1'],do_command(['tail','-n','+'+str(num),logf]))
@@ -939,3 +961,5 @@ def findln_by_time(logf,tm):
 
 
 
+=======
+>>>>>>> clusterlab/hb_report.py

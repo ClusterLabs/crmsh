@@ -22,7 +22,7 @@ but moderate. The minimum timeouts should never be below 10 seconds.
 
 Parameters (*: required, []: default):
 
-state (string, [/var/run/Dummy-Dummy.state]): State file
+state (string, [state-file]): State file
     Location to store the resource state in.
 
 passwd (string): Password

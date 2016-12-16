@@ -1,6 +1,6 @@
 #!/bin/sh
 set -ev
-patch -p1 < test/travis-expected-pacemaker-1.1.12.patch
+patch -p1 < test/travis-ci-fix.patch
 ./autogen.sh
 ./configure --prefix=/usr
 sudo make install

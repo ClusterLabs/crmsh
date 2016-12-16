@@ -6,9 +6,13 @@
 # Description:
 #########################################################################
 import	os
+<<<<<<< HEAD
 import	re
 import	sys
 import	time
+=======
+import	sys
+>>>>>>> clusterlab/hb_report.py
 import	tempfile
 import	envir
 import	utillib
@@ -118,11 +122,14 @@ class node:
 		if os.path.isfile(logf):
 			return logf
 
+<<<<<<< HEAD
 		if len(envir.EXTRA_LOGS):
 			for l in envir.EXTRA_LOGS:
 				if os.path.isfile(l) and l != envir.PCMK_LOG:
 					return l
 
+=======
+>>>>>>> clusterlab/hb_report.py
 		if os.path.isfile(os.path.join(self.WORKDIR,envir.JOURNAL_F)):
 			return os.path.join(self.WORKDIR,envir.JOURNAL_F)
 
@@ -139,6 +146,7 @@ class node:
 		if len(snd_logf):
 			utillib.debug('will try with '+snd_logf)
 
+<<<<<<< HEAD
 	def find_decompressor(self,logf):
 		'''
 		if system log is compressed , we need find uncompress command
@@ -282,14 +290,23 @@ class node:
 			self.find_logseg(newest,0,to_time)
 
 		return ''
+=======
+	def dumplogset():
+		#TODO
+		pass
+>>>>>>> clusterlab/hb_report.py
 	
 	def getlog(self):
 		'''
 		Get Specify Logs
 		'''
+<<<<<<< HEAD
 		global getstampproc
 		outf = os.path.join(self.WORKDIR,envir.HALOG_F)
 		outfd = open(outf,'w')
+=======
+		outf = os.path.join(self.WORKDIR,envir.HALOG_F)
+>>>>>>> clusterlab/hb_report.py
 
 		#collect journal from systemd
 		self.collect_journal(self.WORKDIR)
@@ -298,6 +315,7 @@ class node:
 			if not os.path.isfile(envir.HA_LOG):
 				utillib.warning(envir.HA_LOG+' not found; We will try to find log ourselves')
 			envir.HA_LOG = ''
+<<<<<<< HEAD
 		if not len(envir.HA_LOG):
 			envir.HA_LOG = self.findlog()
 
@@ -306,11 +324,26 @@ class node:
 				#argvment is envir.CTS
 				msg = self.cts_findlogseg()
 				outfd.write(msg)
+=======
+		
+		if envir.HA_LOG == '':
+			envir.HA_LOG = self.findlog()
+
+		if len(envir.HA_LOG) or not os.path.isfile(envir.HA_LOG):
+			if len(envir.CTS):
+				#argvment is envir.CTS
+				msg = self.cts_findlogseg()
+
+				fd = open(outf,"a")
+				fd.write(msg)
+				fd.close()
+>>>>>>> clusterlab/hb_report.py
 			else:
 				utillib.warning('no log at'+self.WE)
 				return 
 		if not envir.FROM_TIME:
 			utillib.warning("a log found; but we cannot slice it")
+<<<<<<< HEAD
 			utillib.warning("please check the from time you input")
 		
 		elif len(envir.CTS):
@@ -327,6 +360,29 @@ class node:
 			else:
 				utillib.warning('could not figure out the log format of '+envir.HA_LOG)
 
+=======
+			utillib.warning("please check the time you input")
+		elif len(envir.CTS):
+			#argvment is envir.CTS and envir.HA_LOG
+			msg = self.cts_findlogseg()
+
+			fd = open(outf,"a")
+			fd.write(msg)
+			fd.close()
+
+		else:
+			global getstampproc
+			getstampproc = utillib.find_getstampproc()
+			if len(getstampproc):
+				msg = self.dumplogset()
+				f = open(outf,'a')
+				if not f.write(msg):
+					utillib.fatal('disk full')
+			else:
+				utillib.warning('could not figure out the log format of '+envir.HA_LOG)
+
+
+>>>>>>> clusterlab/hb_report.py
 	def node_need_pwd(self,nodes):
 		pass
 
@@ -471,6 +527,7 @@ class node:
 		packages = 'pacemaker libpacemaker3 pacemaker-pygui pacemaker-pymgmt pymgmt-client openais libopenais2 libopenais3 corosync libcorosync4 resource-agents cluster-glue libglue2 ldirectord libqb0 heartbeat heartbeat-common heartbeat-resources libheartbeat2 booth ocfs2-tools ocfs2-tools-o2cb ocfs2console ocfs2-kmp-default ocfs2-kmp-pae ocfs2-kmp-xen ocfs2-kmp-debug ocfs2-kmp-trace drbd drbd-kmp-xen drbd-kmp-pae drbd-kmp-default drbd-kmp-debug drbd-kmp-trace drbd-heartbeat drbd-pacemaker drbd-utils drbd-bash-completion drbd-xen lvm2 lvm2-clvm cmirrord libdlm libdlm2 libdlm3 hawk ruby lighttpd kernel-default kernel-pae kernel-xen glibc'
 		envir.PACKAGES = packages.split(" ")
 
+<<<<<<< HEAD
 		event_patterns = '''membership crmd.*(NEW|LOST)|pmck.*(lost|memb|LOST|MEMB):
 quorum crmd.*Updating.quorum.status|crmd.*quorum.(lost|ac?quir)
 pause Process.pause.detected
@@ -479,6 +536,8 @@ stonith crmd.*Exec|stonith-ng.*log_oper.*reboot|stonithd.*(requests|(Succeeded|F
 start_stop Configuration.validated..Starting.heartbeat|Corosync.Cluster.Engine|Executive.Service.RELEASE|Requesting.shutdown|Shutdown.complete'''
 		envir.EVENT_PATTERNS = event_patterns.split('\n')
 
+=======
+>>>>>>> clusterlab/hb_report.py
 		if envir.USER_CLUSTER_TYPE == 'corosync':
 			envir.CONF = '/etc/corosync/corosync.conf'
 			envir.CORES_DIRS.append('/var/lib/corosync')
@@ -516,6 +575,7 @@ start_stop Configuration.validated..Starting.heartbeat|Corosync.Cluster.Engine|E
 				utillib.debug('reading log settings from '+envir.LOGD_CF)
 				corosync.get_logd_logvars()
 	
+<<<<<<< HEAD
 	def change_to_timestamp(self,times):
 		if not len(envir.DATE):
 			if len(times.split()) > 1:
@@ -531,6 +591,11 @@ start_stop Configuration.validated..Starting.heartbeat|Corosync.Cluster.Engine|E
 			return ds
 		except:
 			return 0
+=======
+	def change_to_timestamp(self,time):
+		ds = utils.parse_to_timestamp(time)
+		return ds
+>>>>>>> clusterlab/hb_report.py
 
 	def import_support(self):
 		global support

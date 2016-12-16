@@ -19,7 +19,10 @@ TO_TIME = 0
 #log time form
 FROM_T = ''
 TO_T = ''
+<<<<<<< HEAD
 DATE = ''
+=======
+>>>>>>> clusterlab/hb_report.py
 
 #from command patameters
 NODE_SOURCE = ''
@@ -30,7 +33,11 @@ SSH_OPTS = []
 DEST = ''
 DESTDIR = '.'
 NOW = ''
+<<<<<<< HEAD
 CTS = ''
+=======
+CTS = 'TEST'
+>>>>>>> clusterlab/hb_report.py
 HA_LOG = ''
 EDITOR = ''
 SANITIZE = []

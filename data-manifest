@@ -1,5 +1,3 @@
-scripts/add/add.py
-scripts/add/main.yml
 scripts/apache/main.yml
 scripts/check-uptime/fetch.py
 scripts/check-uptime/main.yml
@@ -20,14 +18,6 @@ scripts/health/collect.py
 scripts/health/hahealth.py
 scripts/health/main.yml
 scripts/health/report.py
-scripts/init/authkey.py
-scripts/init/basic.cib.template
-scripts/init/collect.py
-scripts/init/configure.py
-scripts/init/corosync.conf.template
-scripts/init/init.py
-scripts/init/main.yml
-scripts/init/verify.py
 scripts/libvirt/main.yml
 scripts/lvm-drbd/main.yml
 scripts/lvm/main.yml
@@ -38,8 +28,6 @@ scripts/ocfs2/main.yml
 scripts/oracle/main.yml
 scripts/raid1/main.yml
 scripts/raid-lvm/main.yml
-scripts/remove/main.yml
-scripts/remove/remove.py
 scripts/sap-as/main.yml
 scripts/sap-ci/main.yml
 scripts/sap-db/main.yml
@@ -127,7 +115,7 @@ test/testcases/scripts.filter
 test/testcases/shadow
 test/testcases/shadow.exp
 test/testcases/xmlonly.sh
-test/travis-expected-pacemaker-1.1.12.patch
+test/travis-ci-fix.patch
 test/travis-tests.sh
 test/unittests/bug-862577_corosync.conf
 test/unittests/corosync.conf.1
