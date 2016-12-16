@@ -985,7 +985,7 @@ def _join_script_lines(txt):
     for line in [line for line in txt.split('\n')]:
         if not line.strip():
             pass
-        elif re.match('^\s+\S', line):
+        elif re.match(r'^\s+\S', line):
             current_line += line
         else:
             if current_line.strip():
