@@ -288,8 +288,7 @@ If stage is not specified, each stage will be invoked in sequence.
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of cluster node which will be deleted", metavar="HOST")
 
-        args = args
-        options, args = parser.parse_args(args)
+        options, args = parser.parse_args(list(args))
         if options.cluster_node is not None and options.cluster_node not in args:
             args = list(args) + [options.cluster_node]
         if len(args) == 0:
