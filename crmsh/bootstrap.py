@@ -1176,7 +1176,7 @@ def join_ssh_merge(_cluster_node):
         if isinstance(result, parallax.Error):
             warn("Failed to get known_hosts from {}: {}".format(host, str(result)))
         else:
-            known_hosts_new.update(result[1].splitlines())
+            known_hosts_new.update((result[1] or "").splitlines())
     if known_hosts_new:
         hoststxt = "\n".join(sorted(known_hosts_new))
         tmpf = utils.str2tmp(hoststxt)
