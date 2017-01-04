@@ -1169,8 +1169,9 @@ def join_ssh_merge(_cluster_node):
     # checking) ensures that at least *this* host has every other host in its
     # known_hosts
     known_hosts_new = set()
-    log("parallax.call {} : {}".format(hosts, "cat /root/.ssh/known_hosts"))
-    results = parallax.call(hosts, "cat /root/.ssh/known_hosts", opts)
+    cat_cmd = "[ -e /root/.ssh/known_hosts ] && cat /root/.ssh/known_hosts || true"
+    log("parallax.call {} : {}".format(hosts, cat_cmd))
+    results = parallax.call(hosts, cat_cmd, opts)
     for host, result in results.iteritems():
         if isinstance(result, parallax.Error):
             warn("Failed to get known_hosts from {}: {}".format(host, str(result)))
