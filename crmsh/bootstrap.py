@@ -1435,9 +1435,10 @@ def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
             error("Cluster is currently active - can't run %s stage" % (stage))
 
     # Need hostname resolution to work, want NTP (but don't block ssh_remote or csync2_remote)
-    check_tty()
-    if not check_prereqs(stage):
-        return
+    if stage not in ('ssh_remote', 'csync2_remote'):
+        check_tty()
+        if not check_prereqs(stage):
+            return
 
     init()
 
