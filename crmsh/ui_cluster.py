@@ -192,7 +192,8 @@ Note:
             yes_to_all=options.yes_to_all,
             unicast=options.unicast,
             watchdog=options.watchdog,
-            stage=stage)
+            stage=stage,
+            args=args)
 
         # if options.geo:
         #    bootstrap.bootstrap_init_geo()

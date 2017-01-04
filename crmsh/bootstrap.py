@@ -600,7 +600,7 @@ def csync2_update(path):
     invoke("csync2 -rxv %s" % (path))
 
 
-def init_csync2_remote(newhost):
+def init_csync2_remote():
     """
     It would be nice if we could just have csync2.cfg include a directory,
     which in turn included one file per node which would be referenced via
@@ -612,6 +612,7 @@ def init_csync2_remote(newhost):
     remote node to csync2 config on some existing node.  It is intentionally
     not documented in ha-cluster-init's user-visible usage information.
     """
+    newhost = _context.cluster_node
     if not newhost:
         error("Hostname not specified")
 
@@ -1382,7 +1383,7 @@ def remove_localhost_check():
 def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
                    shared_device=None, sbd_device=None, quiet=False,
                    template=None, admin_ip=None, yes_to_all=False,
-                   unicast=False, watchdog=None, stage=None):
+                   unicast=False, watchdog=None, stage=None, args=None):
     """
     -i <nic>
     -o <ocfs2-device>
@@ -1439,11 +1440,16 @@ def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
         check_tty()
         if not check_prereqs(stage):
             return
+    elif stage == 'csync2_remote':
+        log("args: {}".format(args))
+        if len(args) != 2:
+            error("Expected NODE argument to csync2_remote")
+        _context.cluster_node = args[1]
 
     init()
 
     if stage != "":
-        locals()["init_" + stage]()
+        globals()["init_" + stage]()
     else:
         if watchdog is not None:
             init_watchdog()
@@ -1492,7 +1498,7 @@ def bootstrap_join(cluster_node=None, nic=None, quiet=False, yes_to_all=False, w
     init()
 
     if stage != "":
-        locals()["join_" + stage](cluster_node)
+        globals()["join_" + stage](cluster_node)
     else:
         if not yes_to_all and cluster_node is None:
             status("""Join This Node to Cluster:
