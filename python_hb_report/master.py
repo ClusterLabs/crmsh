@@ -254,17 +254,9 @@ class master(node):
 		outf.write('Log patterns:\n')
 
 		for f in envir.EXTRA_LOGS:
-<<<<<<< HEAD
 			if os.path.isfile(os.path.join(self.WORKDIR,os.path.basename(f))):
 				logs.append(os.path.join(self.WORKDIR,os.path.basename(f)))
 			for l in LOG_NODES:
-=======
-			print os.path.join(self.WORKDIR,os.path.basename(f))
-			if os.path.isfile(os.path.join(self.WORKDIR,os.path.basename(f))):
-				logs.append(os.path.join(self.WORKDIR,os.path.basename(f)))
-			for l in LOG_NODES:
-				print os.path.join(self.WORKDIR,l,os.path.basename(f))
->>>>>>> clusterlab/hb_report.py
 				if os.path.isfile(os.path.join(self.WORKDIR,l,os.path.basename(f))):
 					logs.append(os.path.join(self.WORKDIR,l,os.path.basename(f)))
 
@@ -276,10 +268,6 @@ class master(node):
 			while line:
 				for patt in envir.LOG_PATTERNS:
 					if line.find(patt) != -1:
-<<<<<<< HEAD
-=======
-						print line
->>>>>>> clusterlab/hb_report.py
 						outf.write(line)
 					line = fd.readline()
 		#change back
@@ -357,7 +345,6 @@ class master(node):
 		fderr.write(errmsg)
 		fderr.close()
 
-<<<<<<< HEAD
 	def events_all(self,logf,outf):
 		epatt= []
 		logfd = open(logf,'r')
@@ -382,10 +369,6 @@ class master(node):
 		
 		for l in LOG_NODES:
 			pass
-=======
-	def events(self):
-		pass
->>>>>>> clusterlab/hb_report.py
 
 	def check_if_log_is_empty(self):
 		pass
@@ -614,16 +597,9 @@ def run():
 #
 
 	mtr.get_result()
-<<<<<<< HEAD
 	Process(target = mtr.analyze).start()
 	Process(target = mtr.events).start()
 
-
-=======
-
-	analyze_p = Process(target = mtr.analyze)
-	analyze_p.start()
->>>>>>> clusterlab/hb_report.py
 
 #
 #part 6: endgame: 
