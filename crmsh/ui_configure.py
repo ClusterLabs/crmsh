@@ -174,7 +174,7 @@ def _prim_op_completer(agent, args):
     if completing == 'op':
         return ['op']
     if args[-2] == 'op':
-        return constants.op_cli_names
+        return list(constants.op_cli_names)
 
     return []
 
