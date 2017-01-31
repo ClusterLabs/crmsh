@@ -297,6 +297,10 @@ def grep_file(fn, txt):
     return os.path.exists(fn) and txt in open(fn).read()
 
 
+def service_is_available(svcname):
+    return grep_output("systemctl list-unit-files {}".format(svcname), svcname)
+
+
 def my_hostname_resolves():
     import socket
     hostname = utils.this_node()
@@ -317,7 +321,7 @@ def check_prereqs(stage):
         warned = True
 
     ntpd = "ntp.service"
-    if grep_output("systemctl list-unit-files", "ntpd.service"):
+    if service_is_available("ntpd.service"):
         ntpd = "ntpd.service"
 
     if not service_is_enabled(ntpd):
@@ -499,7 +503,7 @@ def init_cluster_local():
     invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
 
     # only try to start hawk if hawk is installed
-    if package_is_installed("hawk2") or package_is_installed("hawk"):
+    if service_is_available("hawk.service"):
         start_service("hawk.service")
         status("  Hawk cluster interface is now running. To see cluster status, open:")
         status("    https://%s:7630/" % (_context.ip_address))
