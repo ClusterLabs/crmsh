@@ -9,19 +9,15 @@ The easiest way to install `crmsh` is via the package manager of your distributi
 * https://build.opensuse.org/package/show/network:ha-clustering:Stable/crmsh[Stable version]
 * https://build.opensuse.org/package/show/network:ha-clustering:Factory/crmsh[Development version]
 
-== Red Hat / Fedora ==
+== Red Hat / CentOS / Fedora ==
 
-We try to build Red Hat / Fedora-compatible RPM packages on the OBS (see above).
+We try to build Red Hat / CentOS / Fedora-compatible RPM packages on the OBS (see above).
 
-=== Fedora 22 ===
+=== CentOS 7 ===
 
-Download http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/Fedora_22/network:ha-clustering:Stable.repo[network:ha-clustering:Stable.repo] and copy it to the '/etc/yum.repos.d/' directory as `root`.
-
-Then, run
-
-----
-yum install crmsh
-----
+---
+dnf config-manager --add-repo http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/CentOS_CentOS-7/network:ha-clustering:Stable.repo
+---
 
 == Debian ==
 

@@ -30,9 +30,10 @@ Building and installing crmsh requires Python version 2.6 and up (but not 3, yet
 Additionally, the following Python modules are needed:
 
 * `lxml`
+* `PyYAML`
 * `setuptools`
 * `parallax`
-* `dateutil`
+* `python-dateutil`
 
 Building
 ~~~~~~~~
