@@ -11,7 +11,6 @@
 #
 # TODO: Firewall handling for non-SUSE platforms
 # TODO: Make csync2 usage optional
-# TODO: Make hawk optional
 # TODO: Configuration file for bootstrap?
 
 import os
@@ -300,9 +299,9 @@ def grep_file(fn, txt):
 
 def my_hostname_resolves():
     import socket
-    hn = utils.this_node()
+    hostname = utils.this_node()
     try:
-        socket.gethostbyname(hn)
+        socket.gethostbyname(hostname)
         return True
     except socket.error:
         return False
@@ -312,7 +311,9 @@ def check_prereqs(stage):
     warned = False
 
     if not my_hostname_resolves():
-        warn("Hostname '$(hostname)' is unresolvable - csync2 won't work. Please add an entry to /etc/hosts or configure DNS.")
+        warn("Hostname '{}' is unresolvable. {}".format(
+            utils.this_node(),
+            "Please add an entry to /etc/hosts or configure DNS."))
         warned = True
 
     ntpd = "ntp.service"
