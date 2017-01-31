@@ -210,6 +210,13 @@ def service_is_active(service):
     return rc == 0
 
 
+def package_is_installed(pkg):
+    """
+    Check if package is installed
+    """
+    return invoke("rpm -q --quiet {}".format(pkg))
+
+
 def sleep(t):
     """
     Sleep for t seconds.
@@ -490,11 +497,14 @@ def init_cluster_local():
     # evil, but necessary
     invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
 
-    # TODO: only try to start hawk if hawk is installed
-    start_service("hawk.service")
-    status("  HA Web Konsole is now running, to see cluster status go to:")
-    status("    https://%s:7630/" % (_context.ip_address))
-    status("  Log in with username 'hacluster'%s" % (pass_msg))
+    # only try to start hawk if hawk is installed
+    if package_is_installed("hawk2") or package_is_installed("hawk"):
+        start_service("hawk.service")
+        status("  Hawk cluster interface is now running. To see cluster status, open:")
+        status("    https://%s:7630/" % (_context.ip_address))
+        status("  Log in with username 'hacluster'%s" % (pass_msg))
+    else:
+        warn("Hawk not installed - not configuring web management interface.")
 
     if pass_msg:
         warn("You should change the hacluster password to something more secure!")
@@ -1571,7 +1581,7 @@ def init_common_geo():
     """
     Tasks to do both on first and other geo nodes.
     """
-    if not invoke("rpm --quiet -q booth"):
+    if not package_is_installed("booth"):
         error("Booth not installed - Not configurable as a geo cluster node.")
 
 
