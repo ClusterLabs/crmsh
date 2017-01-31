@@ -36,7 +36,7 @@ def join(*fns):
     def completer(args):
         ret = []
         for fn in fns:
-            ret += fn(args)
+            ret += list(fn(args))
         return ret
     return completer
 

@@ -189,7 +189,7 @@ class Context(object):
                 if text:
                     self._rl_words = [w for w in completions if matching(w)]
                 else:
-                    self._rl_words = completions
+                    self._rl_words = list(completions)
             except Exception:  # , msg:
                 # logging.exception(msg)
                 self.clear_readline_cache()
