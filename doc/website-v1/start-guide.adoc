@@ -16,11 +16,19 @@ following this guide.
 ****
 
 Before continuing, make sure that this command executes successfully
-on all nodes, and returns a version number that is `2.1` or higher:
+on all nodes, and returns a version number that is `3.0` or higher:
 
 ........
 crm --version
 ........
+
+****
+In crmsh 3, the cluster init commands were replaced by the SLE HA
+bootstrap scripts. These rely on `csync2` for configuration file
+management, so make sure that you have the `csync2` command
+installed before proceeding. This requirement may be removed in
+the future.
+****
 
 .Example cluster
 **************************
@@ -102,109 +110,19 @@ following should be entered into `/etc/hosts` on both nodes:
 10.0.0.3      bob
 ........
 
-Once this is done, SSH keys need to be installed for password-less
-access between the nodes. This is something that will hopefully be
-automated in the future, but is unfortunately a manual step at this
-point in time.
-
-The following commands should be executed as `root` on one of the
-nodes (in this example, `alice`):
-
-...............
-# ensure that the ssh server is started
-sudo systemctl start sshd
-# create the shared key
-mkdir -m 700 -p /root/.ssh
-ssh-keygen -q -f /root/.ssh/id_rsa -C "Cluster Internal" -N ''
-cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
-...............
-
-On the other nodes in the cluster (in this example, `bob`), execute
-the following as `root`:
-
-...............
-mkdir -m 700 -p /root/.ssh
-scp -oStrictHostKeyChecking=no \
-    root@alice:'/root/.ssh/id_rsa*' /root/.ssh
-cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
-...............
-
-This enables SSH to connect without prompting for a password between
-the nodes. Make sure this works before continuing with this guide.
-
 == Install and configure
 
-To install the basic packages and configure `systemd` to manage
-Corosync and Pacemaker, the following command is provided by `crmsh`:
+To configure the basic cluster, we use the `cluster init` command
+provided by `crmsh`. This command has quite a few options for
+setting up the cluster, but we will use a fairly basic configuration.
 
 ........
-crm cluster init nodes=alice,bob
+crm cluster init --name demo-cluster --nodes "alice bob"
 ........
 
-== Firewall
-
-If your cluster nodes have a firewall configured, you will need to
-open the following ports:
-
-* TCP: 5560
-* UDP: 5404, 5405
-* TCP: 21064 (if using DLM)
-* TCP: 30865 (if using csync2)
-* TCP: 7630 (if using the hawk web UI)
-
-TIP: Issues with the firewall may manifest itself by cluster nodes
-     being shown as `UNCLEAN` in the `crm status` output. If you see
-     this, it is likely that a firewall rule is blocking cluster
-     communications, or there may be some other problem with the
-     network connection between the nodes.
-
-== Quorum
-
-At this point, corosync needs to be configured for the particular
-cluster being created. First of all, `quorum` needs to taken into
-consideration. To make things as easy as possible, it is advisable to
-have a total number of nodes in the cluster that is not divisible by
-two. In other words, the number of nodes in the cluster should usually
-be either 3 or 5. This is to ensure __quorum__, that is, in the case
-of a loss of network connectivity between some subsets of nodes, one
-of the network partitions will either have more members than the
-others, or every node in the cluster will be isolated.
-
-To configure corosync to manage quorum for you, you need to enable
-`votequorum` in the corosync configuration. To do this, the following
-command can be used:
-
-........
-crm corosync set quorum.provider corosync_votequorum
-........
-
-Corosync also needs to know the number of nodes required to be
-considered a majority vote. Usually, this should be set to 2:
-
-........
-crm corosync set quorum.expected_votes 2
-........
-
-After changing the quorum settings, the changes need to be propagated
-across the cluster and corosync needs to be restarted. To do this, the
-following sequence of commands can be used:
-
-........
-crm corosync push
-crm cluster stop
-crm cluster start
-........
-
-NOTE: Restarting the cluster is only necessary if the cluster has
-      already been started.
-
-== Start Pacemaker
-
-To start Corosync and Pacemaker, the following command can be used:
-
-........
-crm cluster start
-........
+The initialization tool will now ask a series of questions about the
+configuration, and then proceed to configure and start the cluster
+on both nodes.
 
 == Check cluster status
 
