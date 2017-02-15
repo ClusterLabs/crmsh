@@ -1070,7 +1070,7 @@ class FencingOrderParser(BaseParser):
 
     """
     def parse(self, cmd):
-        self.begin(cmd, min_args=1)
+        self.begin(cmd)
         if not self.try_match("fencing-topology"):
             self.match("fencing_topology")
         target = "@@"
@@ -1085,15 +1085,17 @@ class FencingOrderParser(BaseParser):
                 target = self.matched(1)
             else:
                 raw_levels.append((target, self.match_any()))
-        if len(raw_levels) == 0:
-            self.err("Missing list of devices")
         return self._postprocess_levels(raw_levels)
 
     def _postprocess_levels(self, raw_levels):
         from collections import defaultdict
         from itertools import repeat
         from .cibconfig import cib_factory
-        if raw_levels[0][0] == "@@":
+        if len(raw_levels) == 0:
+            def no_levels():
+                return []
+            lvl_generator = no_levels
+        elif raw_levels[0][0] == "@@":
             def node_levels():
                 for node in cib_factory.node_id_list():
                     for target, devices in raw_levels:
