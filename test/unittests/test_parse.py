@@ -434,6 +434,10 @@ class TestCliParser(unittest.TestCase):
     def test_fencing(self):
         # num test nodes are 3
 
+        out = self._parse('fencing_topology')
+        expect = '<fencing-topology/>'
+        self.assertEqual(expect, etree.tostring(out))
+
         out = self._parse('fencing_topology poison-pill power')
         expect = '<fencing-topology><fencing-level devices="poison-pill" index="1" target="ha-one"/><fencing-level devices="power" index="2" target="ha-one"/><fencing-level devices="poison-pill" index="1" target="ha-three"/><fencing-level devices="power" index="2" target="ha-three"/><fencing-level devices="poison-pill" index="1" target="ha-two"/><fencing-level devices="power" index="2" target="ha-two"/></fencing-topology>'
         self.assertEqual(expect, etree.tostring(out))
