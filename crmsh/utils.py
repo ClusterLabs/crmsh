@@ -952,7 +952,7 @@ def is_int(s):
 
 
 def is_process(s):
-    cmd = "ps -e -o pid,command | grep -qs '%s'" % s
+    cmd = "ps -ef -o comm= | grep -v grep | grep -qsE '\b%s\b'" % s
     if options.regression_tests:
         print ".EXT", cmd
     proc = subprocess.Popen(cmd,
