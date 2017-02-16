@@ -952,14 +952,25 @@ def is_int(s):
 
 
 def is_process(s):
-    cmd = "ps -e -o pid,command | grep -qs '%s'" % s
-    if options.regression_tests:
-        print ".EXT", cmd
-    proc = subprocess.Popen(cmd,
-                            shell=True,
-                            stdout=subprocess.PIPE)
-    proc.wait()
-    return proc.returncode == 0
+    """
+    Returns true if argument is the name of a running process.
+
+    s: process name
+    returns Boolean
+    """
+    from os.path import join, basename
+    # find pids of running processes
+    pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
+    for pid in pids:
+        try:
+            cmdline = open(join('/proc', pid, 'cmdline'), 'rb').read()
+            procname = basename(cmdline.replace('\x00', ' ').split(' ')[0])
+            if procname == s:
+                return True
+        except os.error:
+            # a process may have died since we got the list of pids
+            pass
+    return False
 
 
 def print_stacktrace():
