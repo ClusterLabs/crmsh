@@ -104,8 +104,9 @@ class Cluster(command.UI):
         def looks_like_hostnames(lst):
             sectionlist = bootstrap.INIT_STAGES
             return all(not (l.startswith('-') or l in sectionlist) for l in lst)
-        if '--dry-run' in args or looks_like_hostnames(args):
-            args = ['--yes', '--nodes'] + [arg for arg in args if arg != '--dry-run']
+        if len(args) > 0:
+            if '--dry-run' in args or looks_like_hostnames(args):
+                args = ['--yes', '--nodes'] + [arg for arg in args if arg != '--dry-run']
         parser = OptParser(usage="usage: init [options] [STAGE]", epilog="""
 
 Stage can be one of:
