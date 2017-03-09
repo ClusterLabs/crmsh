@@ -940,7 +940,7 @@ Configure SBD:
             if not is_block_device(dev):
                 print >>sys.stderr, "    That doesn't look like a block device"
             else:
-                status("All data on $dev will be destroyed")
+                warn("All data on {} will be destroyed!".format(dev))
                 if confirm('Are you sure you wish to use this device'):
                     dev_looks_sane = True
                 else:
