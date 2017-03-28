@@ -1,13 +1,19 @@
 #!/bin/sh
+if which nosetests-2.7 1>/dev/null 2>&1; then
+	testexec="nosetests-2.7"
+else
+	testexec="nosetests"
+fi
+
 case `pwd` in
 	*/test/unittests)
-		PYTHONPATH=../.. nosetests -w . "$@"
+		PYTHONPATH=../.. $testexec -w . "$@"
 		;;
 	*/test)
-		PYTHONPATH=.. nosetests -w unittests "$@"
+		PYTHONPATH=.. $testexec -w unittests "$@"
 		;;
 	*)
-		PYTHONPATH=. nosetests -w test/unittests "$@"
+		PYTHONPATH=. $testexec -w test/unittests "$@"
 		;;
 esac
 
