@@ -446,5 +446,6 @@ def load_version():
             pass
     return version
 
+
 VERSION = load_version()
 CRM_VERSION = str(VERSION)

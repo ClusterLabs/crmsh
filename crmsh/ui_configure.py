@@ -39,6 +39,7 @@ def _tag_completions():
     "completer for tag: use in show"
     return ['tag:%s' % (t) for t in cib_factory.tag_list()]
 
+
 # Tab completion helpers
 _id_list = compl.call(cib_factory.id_list)
 _id_xml_list = compl.join(_id_list, compl.choice(['xml']))

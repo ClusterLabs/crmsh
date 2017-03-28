@@ -41,6 +41,7 @@ def log2node(log):
 def is_log(p):
     return os.path.isfile(p) and os.path.getsize(p) > 0
 
+
 _PE_NUM_RE = re.compile("pe-[^-]+-([0-9]+)[.]")
 
 
@@ -112,6 +113,7 @@ def mkarchive(idir):
     else:
         print "Report saved in '%s'" % archive
     return True
+
 
 CH_SRC, CH_TIME, CH_UPD = 1, 2, 3
 

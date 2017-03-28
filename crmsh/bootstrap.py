@@ -59,6 +59,7 @@ class Context(object):
         self.host_status = None
         self.connect_name = None
 
+
 _context = None
 
 

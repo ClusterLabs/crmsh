@@ -62,6 +62,7 @@ class colors(object):
     RLIGNOREBEGIN = '\001'
     RLIGNOREEND = '\002'
 
+
 _STRING_CAPABILITIES = """
 BOL=cr UP=cuu1 DOWN=cud1 LEFT=cub1 RIGHT=cuf1
 CLEAR_SCREEN=clear CLEAR_EOL=el CLEAR_BOL=el1 CLEAR_EOS=ed BOLD=bold

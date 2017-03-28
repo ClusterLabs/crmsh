@@ -33,6 +33,7 @@ def cfgtool(*args):
 def quorumtool(*args):
     return utils.get_stdout(['corosync-quorumtool'] + list(args), shell=False)
 
+
 _tCOMMENT = 0
 _tBEGIN = 1
 _tEND = 2

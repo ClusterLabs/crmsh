@@ -382,6 +382,7 @@ class CibStatus(object):
         self.modified = True
         return True
 
+
 cib_status = CibStatus()
 
 # vim:ts=4:sw=4:et:

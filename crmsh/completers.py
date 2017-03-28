@@ -59,6 +59,7 @@ def primitives(args):
     nodes = xmlutil.get_interesting_nodes(cib_el, [])
     return [x.get("id") for x in nodes if xmlutil.is_primitive(x)]
 
+
 nodes = call(xmlutil.listnodes)
 
 shadows = call(xmlutil.listshadows)

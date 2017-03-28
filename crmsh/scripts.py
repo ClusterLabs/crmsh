@@ -375,6 +375,7 @@ crm_script.exit_ok(True)
         include.
         """
 
+
 _actions = dict([(n, getattr(Actions, n)) for n in dir(Actions) if not n.startswith('_')])
 
 
@@ -1338,6 +1339,7 @@ def _verify_type(param, value, errors):
     else:
         errors.append("%s=%s is unknown type %s" % (param.get('name'), value, vtype))
     return value
+
 
 _NO_RESOLVE = object()
 

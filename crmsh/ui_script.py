@@ -159,6 +159,7 @@ def _nvpairs2parameters(args):
         _set(ret, key.split(':'), val)
     return ret
 
+
 _fixups = {
     'wizard': 'Legacy Wizards',
     'sap': 'SAP',

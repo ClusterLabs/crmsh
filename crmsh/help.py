@@ -130,6 +130,7 @@ _TOPICS["Topics"] = HelpEntry("Available help topics", generated=True)
 def _titleline(title, desc, suffix=''):
     return '%-16s %s\n' % (('`%s`' % (title)) + suffix, desc)
 
+
 _hidden_commands = ('up', 'cd', 'help', 'quit', 'ls')
 
 

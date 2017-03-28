@@ -13,6 +13,7 @@ def getuser():
 def gethomedir(user=''):
     return os.path.expanduser("~" + user)
 
+
 # see http://standards.freedesktop.org/basedir-spec
 CONFIG_HOME = os.path.join(os.path.expanduser("~/.config"), 'crm')
 CACHE_HOME = os.path.join(os.path.expanduser("~/.cache"), 'crm')

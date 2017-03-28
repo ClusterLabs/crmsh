@@ -150,6 +150,7 @@ def ask(msg):
             if ans in 'yn':
                 return ans == 'y'
 
+
 # holds part of line before \ split
 # for a multi-line input
 _LINE_BUFFER = ''
@@ -1792,6 +1793,7 @@ def cluster_copy_file(local_path, nodes=None):
         else:
             err_buf.ok(host)
     return ok
+
 
 # a set of fnmatch patterns to match attributes whose values
 # should be obscured as a sequence of **** when printed

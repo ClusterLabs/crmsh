@@ -2115,6 +2115,7 @@ def get_default_timeout():
     except:
         return 0
 
+
 # xml -> cli translations (and classes)
 cib_object_map = {
     # xml_tag: ( cli_name, element class, parent element tag, id hint )

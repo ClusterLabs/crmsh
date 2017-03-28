@@ -228,6 +228,7 @@ class SubgraphDot(GvDot):
         else:
             return '{'
 
+
 gv_types = {
     "dot": GvDot,
 }
