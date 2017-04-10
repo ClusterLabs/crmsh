@@ -1234,16 +1234,38 @@ def join_cluster(seed_host):
     if is_unicast:
         corosync.add_node(utils.this_node())
 
-    # Increase expected_votes
-    new_quorum = 0
-    for v in corosync.get_values("quorum.expected_votes"):
-        new_quorum = int(v) + 1
-        corosync.set_value("quorum.expected_votes", str(new_quorum))
-    corosync.set_value("quorum.two_node", 1 if new_quorum == 2 else 0)
-    csync2_update(corosync.conf())
-
-    # ...now that that's out of the way, let's initialize the cluster.
+    # Initialize the cluster before adjusting quorum. This is so
+    # that we can query the cluster to find out how many nodes
+    # there are (so as not to adjust multiple times if a previous
+    # attempt to join the cluster failed)
     init_cluster_local()
+
+    def update_expected_votes():
+        # get a list of nodes, excluding remote nodes
+        nodelist = None
+        rc, nodelist_text = utils.get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
+        if rc == 0:
+            try:
+                nodelist_xml = etree.fromstring(nodelist_text)
+                nodelist = [n.get('uname') for n in nodelist_xml.xpath('//node_state') if n.get('remote_node') != 'true']
+            except Exception:
+                pass
+
+        # Increase expected_votes
+        # TODO: wait to adjust expected_votes until after cluster join,
+        # so that we can ask the cluster for the current membership list
+        if nodelist is None:
+            nodecount = 0
+            for v in corosync.get_values("quorum.expected_votes"):
+                nodecount = int(v) + 1
+                corosync.set_value("quorum.expected_votes", str(nodecount))
+                corosync.set_value("quorum.two_node", 1 if nodecount == 2 else 0)
+        else:
+            nodecount = len(nodelist)
+            corosync.set_value("quorum.expected_votes", str(nodecount))
+            corosync.set_value("quorum.two_node", 1 if nodecount == 2 else 0)
+        csync2_update(corosync.conf())
+    update_expected_votes()
 
     # Trigger corosync config reload to ensure expected_votes is propagated
     invoke("corosync-cfgtool -R")
