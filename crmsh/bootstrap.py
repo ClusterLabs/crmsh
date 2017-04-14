@@ -678,19 +678,13 @@ Configure Corosync (unicast):
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
-    bindnetaddr = prompt_for_string(
-        'Network address to bind to (e.g.: 192.168.1.0)',
-        r'([0-9]+\.){3}[0-9]+', _context.ip_network)
-    if not bindnetaddr:
-        error("No value for bindnetaddr")
-
     mcastport = prompt_for_string('Port', '[0-9]+', "5405")
     if not mcastport:
         error("No value for mcastport")
 
     corosync.create_configuration(
         clustername=_context.cluster_name,
-        bindnetaddr=bindnetaddr,
+        bindnetaddr=None,
         mcastport=mcastport,
         transport="udpu")
     csync2_update(corosync.conf())

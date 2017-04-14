@@ -484,7 +484,7 @@ totem {
 
     interface {
         ringnumber:     0
-        bindnetaddr:    %(bindnetaddr)s
+        %(bindnetaddr)s
 %(mcast)s
         ttl:        1
     }
@@ -542,10 +542,15 @@ def create_configuration(clustername="hacluster",
     if transport is not None:
         transport_tmpl = "    transport: {}\n".format(transport)
 
+    if bindnetaddr is None:
+        bindnetaddr_tmpl = ""
+    else:
+        bindnetaddr_tmpl = "bindnetaddr: %s" % bindnetaddr
+
     config = {
         "clustername": clustername,
         "nodelist": nodelist_tmpl,
-        "bindnetaddr": bindnetaddr,
+        "bindnetaddr": bindnetaddr_tmpl,
         "mcast": mcast_tmpl,
         "transport": transport_tmpl,
     }
