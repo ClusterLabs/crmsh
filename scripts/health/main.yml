@@ -1,11 +1,16 @@
 version: 2.2
-category: Script
-shortdesc: Check the health of the cluster
-longdesc: Runs various checks to verify the health of the cluster nodes
+category: Basic
+shortdesc: Verify health and configuration
+longdesc: |
+  Checks and detects issues with the cluster, by creating and
+  analysing a cluster report.
+
+  Requires SSH access between cluster nodes. This command is
+  also available from the command line as "crm cluster health".
 actions:
   - collect: collect.py
-    shortdesc: Collect cluster information
+    shortdesc: Collect information
   - apply_local: hahealth.py
-    shortdesc: Run HA health check
+    shortdesc: Run cluster health check
   - report: report.py
     shortdesc: Report cluster state
