@@ -237,6 +237,8 @@ def ra_providers_all(ra_class="ocf"):
     '''
     List of providers for a class.
     '''
+    if ra_class != "ocf":
+        return []
     ident = "ra_providers_all-%s" % ra_class
     if cache.is_cached(ident):
         return cache.retrieve(ident)
