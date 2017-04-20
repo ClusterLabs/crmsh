@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import pwd
 import hashlib
 import platform
 import crm_script
@@ -15,6 +16,9 @@ def rpm_info():
 
 def logrotate_info():
     return {}
+
+def get_user():
+    return pwd.getpwuid(os.getuid()).pw_name
 
 def sys_info():
     sysname, nodename, release, version, machine = os.uname()
@@ -38,7 +42,7 @@ def sys_info():
             'distname': distname,
             'distver': distver,
             'distid': distid,
-            'user': os.getlogin(),
+            'user': get_user(),
             'hostname': hostname,
             'uptime': uptime[0],
             'idletime': uptime[1],

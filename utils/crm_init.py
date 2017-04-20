@@ -1,4 +1,5 @@
 import os
+import pwd
 import re
 import platform
 import socket
@@ -43,6 +44,8 @@ def services_info():
     'check enabled/active services'
     return [service_info(service) for service in SERVICES]
 
+def get_user():
+    return pwd.getpwuid(os.getuid()).pw_name
 
 def sys_info():
     'system information'
@@ -58,7 +61,7 @@ def sys_info():
             'distname': distname,
             'distver': distver,
             'distid': distid,
-            'user': os.getlogin(),
+            'user': get_user(),
             'hostname': hostname,
             'fqdn': socket.getfqdn()}
 
