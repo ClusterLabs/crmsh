@@ -134,6 +134,7 @@ validator = Validation()
 
 class BaseParser(object):
     _BINOP_RE = None
+    _VALUE_SOURCE_RE = None
 
     def parse(self, cmd):
         "Called by do_parse(). Raises ParseError if parsing fails."
@@ -526,12 +527,17 @@ class BaseParser(object):
             self.match(self._BINOP_RE)
             optype = self.matched(2)
             binop = self.matched(3)
-            val = self.match_any()
-            node = xmlutil.new('expression',
-                               operation=binop,
-                               attribute=attr,
-                               value=val)
+            node = xmlutil.new('expression', operation=binop, attribute=attr)
             xmlutil.maybe_set(node, 'type', optype)
+            val = self.match_any()
+            if not self._VALUE_SOURCE_RE:
+                self._VALUE_SOURCE_RE = re.compile(r"^(?P<val_src>[^\s{}]+)({(?P<val>\S+)})?$")
+            val_src_match = re.match(self._VALUE_SOURCE_RE, val)
+            if val_src_match.group('val') is None:
+                node.set('value', val)
+            else:
+                node.set('value', val_src_match.group('val'))
+                node.set('value-source', val_src_match.group('val_src'))
             return node
 
     def match_date(self):
