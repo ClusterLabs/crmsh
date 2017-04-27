@@ -380,7 +380,7 @@ class CibObjectSet(object):
         rc, d = utils.load_graphviz_file(userdir.GRAPHVIZ_USER_FILE)
         if rc and d:
             constants.graph = d
-        if outf is not None:
+        if outf is None:
             return self.show_graph(gtype)
         elif gtype == ftype:
             rc = self.save_graph(gtype, outf)
