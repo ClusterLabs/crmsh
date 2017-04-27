@@ -162,7 +162,11 @@ def exp2cli(node):
     if not value:
         return "%s %s" % (binary_op_format(operation), attribute)
     else:
-        return "%s %s %s" % (attribute, binary_op_format(operation), value)
+        value_source = node.get("value-source")
+        if not value_source or value_source == "literal":
+            return "%s %s %s" % (attribute, binary_op_format(operation), value)
+        else:
+            return "%s %s %s{%s}" % (attribute, binary_op_format(operation), value_source, value)
 
 
 def abs_pos_score(score):
