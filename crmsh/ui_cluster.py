@@ -311,7 +311,8 @@ If stage is not specified, each stage will be invoked in sequence.
         except ValueError:
             return None
 
-    @command.name("geo-init")
+    @command.name("geo_init")
+    @command.alias("geo-init")
     @command.skill_level('administrator')
     def do_geo_init(self, context, *args):
         '''
@@ -365,7 +366,8 @@ Cluster Description
         bootstrap.bootstrap_init_geo(options.quiet, options.yes_to_all, options.arbitrator, clustermap, ticketlist)
         return True
 
-    @command.name("geo-join")
+    @command.name("geo_join")
+    @command.alias("geo-join")
     @command.skill_level('administrator')
     def do_geo_join(self, context, *args):
         '''
@@ -383,7 +385,8 @@ Cluster Description
         bootstrap.bootstrap_join_geo(options.quiet, options.yes_to_all, options.node, clustermap)
         return True
 
-    @command.name("geo-init-arbitrator")
+    @command.name("geo_init_arbitrator")
+    @command.alias("geo-init-arbitrator")
     @command.skill_level('administrator')
     def do_geo_init_arbitrator(self, context, *args):
         '''
