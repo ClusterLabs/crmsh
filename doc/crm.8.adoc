@@ -1063,12 +1063,15 @@ an existing cluster.
 
 Options:
 
+*--clusters=DESC*::
+    Cluster description (see +geo-init+ for details)
+
 *-c IP, --cluster-node=IP*::
     IP address of an already-configured geo cluster or arbitrator
 
 Usage:
 ...............
-geo-join [options]
+geo-join --cluster-node <node> --clusters <description>
 ...............
 
 
