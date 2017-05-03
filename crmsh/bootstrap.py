@@ -1694,12 +1694,15 @@ def geo_fetch_config(node):
     status("Retrieving configuration - This may prompt for root@%s:" % (node))
     tmpdir = tmpfiles.create_dir()
     invoke("scp root@%s:'/etc/booth/*' %s/" % (node, tmpdir))
-    if os.path.isfile("%s/authkey" % (tmpdir)):
-        invoke("mv %s/authkey %s" % (tmpdir, BOOTH_AUTH))
-    if os.path.isfile("%s/booth.conf" % (tmpdir)):
-        invoke("mv %s/booth.conf %s" % (tmpdir, BOOTH_CFG))
-    os.chmod(BOOTH_AUTH, 0o600)
-    os.chmod(BOOTH_CFG, 0o644)
+    try:
+        if os.path.isfile("%s/authkey" % (tmpdir)):
+            invoke("mv %s/authkey %s" % (tmpdir, BOOTH_AUTH))
+            os.chmod(BOOTH_AUTH, 0o600)
+        if os.path.isfile("%s/booth.conf" % (tmpdir)):
+            invoke("mv %s/booth.conf %s" % (tmpdir, BOOTH_CFG))
+            os.chmod(BOOTH_CFG, 0o644)
+    except OSError as err:
+        raise ValueError("Problem encountered with booth configuration from {}: {}".format(node, err))
 
 
 def geo_cib_config(clusters):
