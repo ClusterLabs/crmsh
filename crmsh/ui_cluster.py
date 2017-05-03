@@ -306,8 +306,17 @@ If stage is not specified, each stage will be invoked in sequence.
         return True
 
     def _parse_clustermap(self, clusters):
+        '''
+        Helper function to parse the cluster map into a dictionary:
+
+        name=ip; name2=ip2 -> { name: ip, name2: ip2 }
+        '''
+        if clusters is None:
+            return None
         try:
             return dict([re.split('[=:]+', o) for o in re.split('[ ,;]+', clusters)])
+        except TypeError:
+            return None
         except ValueError:
             return None
 
@@ -379,6 +388,13 @@ Cluster Description
         parser.add_option("-c", "--cluster-node", help="IP address of an already-configured geo cluster or arbitrator", dest="node", metavar="IP")
         parser.add_option("--clusters", help="Cluster description (see geo-init for details)", dest="clusters", metavar="DESC")
         options, args = parser.parse_args(list(args))
+        errs = []
+        if options.node is None:
+            errs.append("The --cluster-node argument is required.")
+        if options.clusters is None:
+            errs.append("The --clusters argument is required.")
+        if len(errs) > 0:
+            parser.error(" ".join(errs))
         clustermap = self._parse_clustermap(options.clusters)
         if clustermap is None:
             parser.error("Invalid cluster description format")
