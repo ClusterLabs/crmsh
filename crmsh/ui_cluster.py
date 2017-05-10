@@ -328,9 +328,9 @@ If stage is not specified, each stage will be invoked in sequence.
         Make this cluster a geo cluster.
         Needs some information to set up.
 
-        * arbitrator IP / hostname
         * cluster map: "cluster-name=ip cluster-name=ip"
-        * list of tickets
+        * arbitrator IP / hostname (optional)
+        * list of tickets (can be empty)
         '''
         parser = OptParser(usage="usage: geo-init [options]", epilog="""
 
@@ -355,12 +355,10 @@ Cluster Description
         parser.add_option("--tickets", help="Tickets to create (space-separated)", dest="tickets", metavar="LIST")
         options, args = parser.parse_args(list(args))
 
-        if options.clusters is None or options.arbitrator is None:
+        if options.clusters is None:
             errs = []
             if options.clusters is None:
                 errs.append("The --clusters argument is required.")
-            if options.arbitrator is None:
-                errs.append("The --arbitrator argument is required.")
             parser.error(" ".join(errs))
 
         clustermap = self._parse_clustermap(options.clusters)
