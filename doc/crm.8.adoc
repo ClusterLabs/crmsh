@@ -996,11 +996,11 @@ Options:
 *-y, --yes*::
     Answer "yes" to all prompts (use with caution)
 
-*--arbitrator=IP*::
-    IP address of geo cluster arbitrator
-
 *--clusters=DESC*::
     Cluster description (see details below)
+
+*--arbitrator=IP*::
+    IP address of geo cluster arbitrator (optional)
 
 *--tickets=LIST*::
     Tickets to create (space-separated)

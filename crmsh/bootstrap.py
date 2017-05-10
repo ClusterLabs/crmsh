@@ -1630,7 +1630,7 @@ def create_booth_authkey():
 def create_booth_config(arbitrator, clusters, tickets):
     status("Configure booth")
 
-    config_template = Template("""# The booth configuration file is "/etc/booth/booth.conf". You need to
+    config_template = """# The booth configuration file is "/etc/booth/booth.conf". You need to
 # prepare the same booth configuration file on each arbitrator and
 # each node in the cluster sites where the booth daemon can be launched.
 
@@ -1638,21 +1638,16 @@ def create_booth_config(arbitrator, clusters, tickets):
 # Currently only "UDP" is supported.
 transport="UDP"
 port="9929"
-arbitrator="$arbitrator"
-$sites
-authfile="$authkey"
-$tickets
-""")
-    ticket_template = Template("""ticket="$name"
-     expire="600"
-""")
-    site_template = Template('site="$site"\n')
-
-    cfg = config_template.substitute(
-        arbitrator=arbitrator,
-        sites="".join(site_template.substitute(site=s) for s in clusters.itervalues()),
-        authkey=BOOTH_AUTH,
-        tickets="".join(ticket_template.substitute(name=t) for t in tickets))
+"""
+    cfg = [config_template]
+    if arbitrator is not None:
+        cfg.append("arbitrator=\"{}\"".format(arbitrator))
+    for s in clusters.itervalues():
+        cfg.append("site=\"{}\"".format(s))
+    cfg.append("authfile=\"{}\"".format(BOOTH_AUTH))
+    for t in tickets:
+        cfg.append("ticket=\"{}\"\nexpire=\"600\"".format(t))
+    cfg = "\n".join(cfg) + "\n"
 
     if os.path.exists(BOOTH_CFG):
         invoke("rm -f {}".format(BOOTH_CFG))
