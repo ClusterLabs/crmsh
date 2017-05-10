@@ -828,6 +828,28 @@ duration|date_spec ::
          | moon=<value>
 ..............
 
+[[topics_Lifetime,Lifetime parameter format]]
+== Lifetime parameter format
+
+Lifetimes can be specified in the ISO 8601 time format or the ISO 8601
+duration format. To distinguish between months and minutes, use the PT
+prefix before specifying minutes. The duration format is one of
++PnYnMnDTnHnMnS+, +PnW+, +P<date>T<time>+.
+
+P = duration. Y = year. M = month. W = week. D = day. T = time. H =
+hour. M = minute. S = second.
+
+Examples:
+................
+PT5M = 5 minutes later.
+3D = 3 days later.
+PT1H = 1 hour later.
+.................
+
+The cluster checks lifetimes at an interval defined by the
+cluster-recheck-interval property (default 15 minutes).
+
+
 [[topics_Reference,Command reference]]
 == Command reference
 
