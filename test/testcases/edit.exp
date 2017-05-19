@@ -14,7 +14,8 @@ node node1 \
 	attributes mem=16G
 primitive p1 Dummy \
 	op monitor interval=60m \
-	op monitor interval=120m OCF_CHECK_LEVEL=10
+	op monitor interval=120m \
+	op_params OCF_CHECK_LEVEL=10
 primitive p2 Dummy
 primitive st stonith:null \
 	params hostlist=node1 \
@@ -30,7 +31,8 @@ node node1 \
 	attributes mem=16G
 primitive p1 Dummy \
 	op monitor interval=60m \
-	op monitor interval=120m OCF_CHECK_LEVEL=10
+	op monitor interval=120m \
+	op_params OCF_CHECK_LEVEL=10
 primitive p2 Dummy
 primitive p3 Dummy
 primitive st stonith:null \
@@ -127,7 +129,8 @@ primitive d5 Dummy
 primitive d6 Dummy
 primitive p1 Dummy \
 	op monitor interval=60m \
-	op monitor interval=120m OCF_CHECK_LEVEL=10
+	op monitor interval=120m \
+	op_params OCF_CHECK_LEVEL=10
 primitive p2 Dummy
 primitive p3 Dummy
 primitive st stonith:null \

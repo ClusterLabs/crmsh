@@ -57,7 +57,8 @@ primitive d1 Dummy
 primitive d3 Dummy
 primitive p1 Dummy \
 	op monitor interval=60m \
-	op monitor interval=120m OCF_CHECK_LEVEL=10
+	op monitor interval=120m \
+	op_params OCF_CHECK_LEVEL=10
 primitive p2 Dummy
 primitive p3 Dummy
 primitive st stonith:null \

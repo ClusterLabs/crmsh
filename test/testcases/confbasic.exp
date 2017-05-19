@@ -68,7 +68,8 @@ node node2 \
 primitive d1 ocf:pacemaker:Dummy \
 	operations $id=d1-ops \
 	op monitor interval=60m \
-	op monitor interval=120m OCF_CHECK_LEVEL=10 \
+	op monitor interval=120m \
+	op_params OCF_CHECK_LEVEL=10 \
 	op monitor interval=60s timeout=30s
 primitive d2 Delay \
 	params mondelay=45 \
