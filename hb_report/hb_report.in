@@ -14,6 +14,7 @@ import constants
 import utillib
 from crmsh import utils as crmutils
 
+
 def collect_for_nodes(nodes, arg_str):
     for node in nodes.split():
         if utillib.node_needs_pwd(node):
@@ -25,6 +26,7 @@ def collect_for_nodes(nodes, arg_str):
             p.start()
             p.join()
 
+
 def dump_env():
     env_dict = {}
     env_dict["DEST"] = constants.DEST
@@ -33,7 +35,7 @@ def dump_env():
     env_dict["USER_NODES"] = constants.USER_NODES
     env_dict["NODES"] = constants.NODES
     env_dict["HA_LOG"] = constants.HA_LOG
-    #env_dict["UNIQUE_MSG"] = constants.UNIQUE_MSG
+    # env_dict["UNIQUE_MSG"] = constants.UNIQUE_MSG
     env_dict["SANITIZE"] = constants.SANITIZE
     env_dict["DO_SANITIZE"] = int(constants.DO_SANITIZE)
     env_dict["SKIP_LVL"] = int(constants.SKIP_LVL)
@@ -46,30 +48,31 @@ def dump_env():
         res_str += " {}={}".format(k, v)
     return res_str
 
+
 def get_log():
     outf = os.path.join(constants.WORKDIR, constants.HALOG_F)
 
     # collect journal from systemd unless -M was passed
     if constants.EXTRA_LOGS:
-        utillib.collect_journal(constants.FROM_TIME, \
-                                constants.TO_TIME, \
+        utillib.collect_journal(constants.FROM_TIME,
+                                constants.TO_TIME,
                                 os.path.join(constants.WORKDIR, constants.JOURNAL_F))
 
     if constants.HA_LOG and not os.path.isfile(constants.HA_LOG):
         if not is_collector():
-            utillib.log_warning("%s not found; we will try to find log ourselves" % ha_log)
+            utillib.log_warning("%s not found; we will try to find log ourselves" % constants.HA_LOG)
             constants.HA_LOG = ""
     if not constants.HA_LOG:
         constants.HA_LOG = utillib.find_log()
     if (not constants.HA_LOG) or (not os.path.isfile(constants.HA_LOG)):
         if constants.CTS:
-            pass #TODO
+            pass  # TODO
         else:
             utillib.log_warning("not log at %s" % constants.WE)
         return
 
     if constants.CTS:
-        pass #TODO
+        pass  # TODO
     else:
         getstampproc = utillib.find_getstampproc(constants.HA_LOG)
         if getstampproc:
@@ -79,10 +82,12 @@ def get_log():
         else:
             utillib.log_warning("could not figure out the log format of %s" % constants.HA_LOG)
 
+
 def is_collector():
     if sys.argv[1] == "__slave":
         return True
     return False
+
 
 def load_env(env_str):
     list_ = []
@@ -102,13 +107,14 @@ def load_env(env_str):
     constants.USER_NODES = env_dict["USER_NODES"]
     constants.NODES = env_dict["NODES"]
     constants.HA_LOG = env_dict["HA_LOG"]
-    #constants.UNIQUE_MSG = env_dict["UNIQUE_MSG"]
+    # constants.UNIQUE_MSG = env_dict["UNIQUE_MSG"]
     constants.SANITIZE = env_dict["SANITIZE"]
     constants.DO_SANITIZE = int(env_dict["DO_SANITIZE"])
     constants.SKIP_LVL = int(env_dict["SKIP_LVL"])
     constants.EXTRA_LOGS = env_dict["EXTRA_LOGS"]
     constants.PCMK_LOG = env_dict["PCMK_LOG"]
     constants.VERBOSITY = int(env_dict["VERBOSITY"])
+
 
 def parse_argument(argv):
     try:
@@ -168,6 +174,7 @@ def parse_argument(argv):
         if args == '-d':
             constants.COMPRESS = ""
 
+
 def run():
     if len(sys.argv) == 1:
         usage()
@@ -195,12 +202,12 @@ def run():
 
     if not is_collector():
         constants.NODES = ' '.join(utillib.get_nodes())
-        utillib.log_debug("nodes: %s"%constants.NODES)
+        utillib.log_debug("nodes: %s" % constants.NODES)
     if constants.NODES == "":
         utillib.log_fatal("could not figure out a list of nodes; is this a cluster node?")
     if constants.WE in constants.NODES.split():
-        constants.THIS_IS_NODE = 1 
-  
+        constants.THIS_IS_NODE = 1
+
     if not is_collector():
         if constants.THIS_IS_NODE != 1:
             utillib.log_warning("this is not a node and you didn't specify a list of nodes using -n")
@@ -249,13 +256,14 @@ def run():
 
         if constants.COMPRESS == 1:
             utillib.pick_compress()
-            cmd = r"(cd %s/.. && tar cf - %s)|%s > %s/%s.tar%s" % (\
-                  constants.WORKDIR, constants.DEST, constants.COMPRESS_PROG,\
-                  constants.DESTDIR, constants.DEST, constants.COMPRESS_EXT)
+            cmd = r"(cd %s/.. && tar cf - %s)|%s > %s/%s.tar%s" % (
+                constants.WORKDIR, constants.DEST, constants.COMPRESS_PROG,
+                constants.DESTDIR, constants.DEST, constants.COMPRESS_EXT)
             crmutils.ext_cmd(cmd)
         else:
             shutil.move(constants.WORKDIR, constants.DESTDIR)
         utillib.finalword()
+
 
 def set_dest(dest):
     if dest:
@@ -267,9 +275,10 @@ def set_dest(dest):
         utillib.log_fatal("%s contains illegal characters" % constants.DEST)
     if not constants.COMPRESS and os.path.isdir(os.path.join(constants.DESTDIR, constants.DEST)):
         if constants.FORCE_REMOVE_DEST:
-            shutil.rmtree(os.path.join(constants.DESTDIR, constants.DEST))   
+            shutil.rmtree(os.path.join(constants.DESTDIR, constants.DEST))
         else:
             utillib.log_fatal("destination directory DESTDIR/DEST exists, please cleanup or use -Z")
+
 
 def usage(short_msg=''):
     print("""
@@ -343,9 +352,13 @@ usage: report -f {time} [-t time]
         """)
     sys.exit(1)
 
+
 def version():
     print utillib.crmsh_info().strip('\n')
     sys.exit(0)
 
-run()
+
+if __name__ == "__main__":
+    run()
+
 # vim:ts=4:sw=4:et:

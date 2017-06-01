@@ -1,10 +1,8 @@
 
-import datetime
 import socket
 
-#HA_NOARCHBIN = "/usr/share/crmsh/hb_report"
+# HA_NOARCHBIN = "/usr/share/crmsh/hb_report"
 
-###############constants##########
 ARGOPTS_VALUE = "f:t:l:u:X:p:L:e:E:n:MSDZVsvhdQ"
 B_CONF = None
 CIB_DIR = None
@@ -30,7 +28,7 @@ HA_LOGLEVEL = "info"
 HA_BIN = None
 HA_VARLIB = None
 LOCAL_SUDO = ""
-LOG_PATTERNS="CRIT: ERROR:"
+LOG_PATTERNS = "CRIT: ERROR:"
 NO_DESCRIPTION = 1
 NO_SSH = ""
 NODES = ""
@@ -53,15 +51,14 @@ TMP = None
 TMPFLIST = None
 TO_TIME = 0
 TRY_SSH = "root hacluster"
-#UNIQUE_MSG = "Mark:HB_REPORT:%d" % now_second
+# UNIQUE_MSG = "Mark:HB_REPORT:%d" % now_second
 USER_CLUSTER_TYPE = "Corosync/Pacemaker"
 USER_NODES = ""
 VERBOSITY = 0
 WE = socket.gethostname()
 WORKDIR = None
-###############constants end##########
 
-###############some long######################
+
 # Important events
 #
 # Patterns format:
@@ -76,7 +73,7 @@ stonith crmd.*Exec|stonith-ng.*log_oper.*reboot|stonithd.*(requests|(Succeeded|F
 start_stop Configuration.validated..Starting.heartbeat|Corosync.Cluster.Engine|Executive.Service.RELEASE|Requesting.shutdown|Shutdown.complete
 """
 
-PACKAGES="""pacemaker libpacemaker3 
+PACKAGES = """pacemaker libpacemaker3
 pacemaker-pygui pacemaker-pymgmt pymgmt-client
 openais libopenais2 libopenais3 corosync libcorosync4
 resource-agents cluster-glue libglue2 ldirectord libqb0
@@ -107,20 +104,19 @@ By: report {1}
 Subject: [short problem description]
 Severity: [choose one] enhancement minor normal major critical blocking
 Component: [choose one] CRM LRM CCM RA fencing openais comm GUI tools other
---------------------------------------------------------    
+--------------------------------------------------------
 
-Detailed description:         
+Detailed description:
 
 """
-###############some long end######################
 
-###############goods##################
+
 ANALYSIS_F = "analysis.txt"
 BT_F = "backtraces.txt"
 CIB_F = "cib.xml"
 CIB_TXT_F = "cib.txt"
-CONFIGURATIONS = ["/etc/drbd.conf", 
-                  "/etc/drbd.d", 
+CONFIGURATIONS = ["/etc/drbd.conf",
+                  "/etc/drbd.d",
                   "/etc/booth/booth.conf"]
 COROSYNC_RECORDER_F = "fdata.txt"
 CRM_MON_F = "crm_mon.txt"
@@ -136,4 +132,3 @@ PERMISSIONS_F = "permissions.txt"
 SYSINFO_F = "sysinfo.txt"
 SYSSTATS_F = "sysstats.txt"
 TIME_F = "time.txt"
-###############goods end##############

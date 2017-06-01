@@ -24,6 +24,7 @@ import crmsh.config
 from crmsh import msg as crmmsg
 from crmsh import utils as crmutils
 
+
 def _mkdir(directory):
     """
     from crmsh/tmpfiles.py
@@ -32,7 +33,8 @@ def _mkdir(directory):
         try:
             os.makedirs(directory)
         except OSError as err:
-            log_fatal("Failed to create directory: %s"%(err))
+            log_fatal("Failed to create directory: %s" % (err))
+
 
 def add_tmpfiles(contents):
     """
@@ -41,8 +43,9 @@ def add_tmpfiles(contents):
     with open(constants.TMPFLIST, 'a') as f:
         f.write(contents+'\n')
 
+
 # go through archived logs (timewise backwards) and see if there
-# are lines belonging to us   
+# are lines belonging to us
 # (we rely on untouched log files, i.e. that modify time
 # hasn't been changed)
 def arch_logs(logf, from_time, to_time):
@@ -64,6 +67,7 @@ def arch_logs(logf, from_time, to_time):
             break
     return ret
 
+
 def analyze():
     workdir = constants.WORKDIR
     out_string = ""
@@ -72,7 +76,7 @@ def analyze():
              constants.B_CONF, constants.SYSINFO_F, constants.CIB_F]
     for f in flist:
         out_string += "Diff %s... " % f
-        if not glob.glob("%s/*/%s"%(workdir, f)):
+        if not glob.glob("%s/*/%s" % (workdir, f)):
             out_string += "no %s/*/%s :/\n" % (workdir, f)
             continue
         code, tmp_string = analyze_one(workdir, f)
@@ -92,6 +96,7 @@ def analyze():
     analyze_f = os.path.join(workdir, constants.ANALYSIS_F)
     crmutils.str2file(out_string, analyze_f)
 
+
 def analyze_one(workdir, file_):
     out_string = ""
     tmp_string = ""
@@ -107,14 +112,17 @@ def analyze_one(workdir, file_):
             node0 = n
     return (rc, out_string)
 
+
 def base_check():
     if not which("which"):
         log_fatal("please install the which(1) program")
+
 
 def booth_info():
     if not which("booth"):
         return ""
     return get_command_info("booth --version")[1]
+
 
 def check_backtraces(workdir):
     out_string = ""
@@ -127,6 +135,7 @@ def check_backtraces(workdir):
                 out_string += "    %s\n" % line
     return out_string
 
+
 def check_crmvfy(workdir):
     out_string = ""
     for n in constants.NODES.split():
@@ -136,16 +145,19 @@ def check_crmvfy(workdir):
             out_string += open(crm_verify_f).read()
     return out_string
 
-def check_env():   
+
+def check_env():
     set_env()
     base_check()
     get_ocf_dir()
     load_ocf_dirs()
 
+
 def check_if_log_is_empty():
     for f in find_files_all(constants.HALOG_F, constants.WORKDIR):
         if os.stat(f).st_size == 0:
             log_warning("Report contains no logs; did you get the right timeframe?")
+
 
 def check_logs(workdir):
     out_string = ""
@@ -162,6 +174,7 @@ def check_logs(workdir):
             out_string += '\n'.join(grep(log_patterns, infile=f))
     return out_string
 
+
 def check_permissions(workdir):
     out_string = ""
     for n in constants.NODES.split():
@@ -170,6 +183,7 @@ def check_permissions(workdir):
             out_string += "Checking problems with permissions/ownership at %s:\n" % n
             out_string += open(permissions_f).read()
     return out_string
+
 
 def check_perms():
     out_string = ""
@@ -184,24 +198,26 @@ def check_perms():
             continue
         if stat_info.st_uid != pwd.getpwnam('hacluster')[2] or\
            stat_info.st_gid != pwd.getpwnam('hacluster')[3] or\
-           "%04o"%(stat_info.st_mode&07777) != "0750":
+           "%04o" % (stat_info.st_mode & 07777) != "0750":
             flag = 1
             out_string += "\nwrong permissions or ownership for %s: " % check_dir
-            out_string += get_command_info("ls -ld %s"%check_dir)[1] + '\n'
+            out_string += get_command_info("ls -ld %s" % check_dir)[1] + '\n'
         if flag == 0:
             out_string += "OK\n"
 
     perms_f = os.path.join(constants.WORKDIR, constants.PERMISSIONS_F)
     crmutils.str2file(out_string, perms_f)
 
+
 def check_time(var, option):
     if not var:
-        log_fatal("""bad time specification: %s 
+        log_fatal("""bad time specification: %s
                         try these like: 2pm
                                         1:00
                                         "2007/9/5 12:30"
                                         "09-Sep-07 2:00"
-                  """%option)
+                  """ % option)
+
 
 def cib_diff(file1, file2):
     code = 0
@@ -209,12 +225,12 @@ def cib_diff(file1, file2):
     tmp_string = ""
     d1 = os.path.dirname(file1)
     d2 = os.path.dirname(file2)
-    if (os.path.isfile(os.path.join(d1, "RUNNING")) and \
+    if (os.path.isfile(os.path.join(d1, "RUNNING")) and
         os.path.isfile(os.path.join(d2, "RUNNING"))) or \
-       (os.path.isfile(os.path.join(d1, "STOPPED")) and \
-        os.path.isfile(os.path.join(d2, "STOPPED"))):
+        (os.path.isfile(os.path.join(d1, "STOPPED")) and
+         os.path.isfile(os.path.join(d2, "STOPPED"))):
         if which("crm_diff"):
-            code, tmp_string = get_command_info("crm_diff -c -n %s -o %s"%(file1, file2))
+            code, tmp_string = get_command_info("crm_diff -c -n %s -o %s" % (file1, file2))
             out_string += tmp_string
         else:
             code = 1
@@ -224,8 +240,10 @@ def cib_diff(file1, file2):
         out_string += "can't compare cibs from running and stopped systems\n"
     return code, out_string
 
+
 def cluster_info():
     return get_command_info("corosync -v")[1]
+
 
 def collect_info():
     process_list = []
@@ -269,6 +287,7 @@ def collect_info():
         else:
             log_warning("could not figure out the log format of %s" % l)
 
+
 def collect_journal(from_t, to_t, outf):
     if not which("journalctl"):
         log_warning("Command journalctl not found")
@@ -285,20 +304,21 @@ def collect_journal(from_t, to_t, outf):
     if os.path.isfile(outf):
         log_warning("%s already exists" % outf)
 
-    log_debug("journalctl from: '%d' until: '%d' from_time: '%s' to_time: '%s' > %s" % \
-             (from_t, to_t, from_time, to_time, outf))
+    log_debug("journalctl from: '%d' until: '%d' from_time: '%s' to_time: '%s' > %s" %
+              (from_t, to_t, from_time, to_time, outf))
     cmd = 'journalctl -o short-iso --since "%s" --until "%s" --no-pager | tail -n +2' % \
           (from_time, to_time)
     crmutils.str2file(get_command_info(cmd)[1], outf)
 
-def compatibility_pcmk():     
-    get_crm_daemon_dir()      
+
+def compatibility_pcmk():
+    get_crm_daemon_dir()
     if not constants.CRM_DAEMON_DIR:
         log_fatal("cannot find pacemaker daemon directory!")
-    get_pe_state_dir()        
-    if not constants.PE_STATE_DIR:     
+    get_pe_state_dir()
+    if not constants.PE_STATE_DIR:
         log_fatal("cannot find pe daemon directory!")
-    get_cib_dir()  
+    get_cib_dir()
     if not constants.CIB_DIR:
         log_fatal("cannot find cib daemon directory!")
 
@@ -306,9 +326,10 @@ def compatibility_pcmk():
     log_debug("setting PCMK_LIB to %s" % constants.PCMK_LIB)
     constants.CORES_DIRS = os.path.join(constants.PCMK_LIB, "cores")
     constants.CONF = "/etc/corosync/corosync.conf"
-    if os.path.isfile(constants.CONF): 
+    if os.path.isfile(constants.CONF):
         constants.CORES_DIRS += " /var/lib/corosync"
     constants.B_CONF = os.path.basename(constants.CONF)
+
 
 def consolidate(workdir, f):
     for n in constants.NODES.split():
@@ -316,7 +337,8 @@ def consolidate(workdir, f):
             os.remove(os.path.join(workdir, n, f))
         else:
             shutil.move(os.path.join(workdir, n, f), workdir)
-        os.symlink("../%s"%f, os.path.join(workdir, n, f))
+        os.symlink("../%s" % f, os.path.join(workdir, n, f))
+
 
 def corosync_blackbox():
     fdata_list = []
@@ -327,8 +349,9 @@ def corosync_blackbox():
         blackbox_f = os.path.join(constants.WORKDIR, constants.COROSYNC_RECORDER_F)
         crmutils.str2file(get_command_info("corosync-blackbox")[1], blackbox_f)
 
-def create_tempfile(time=None):        
-    random_str = random_string(4)  
+
+def create_tempfile(time=None):
+    random_str = random_string(4)
     try:
         filename = tempfile.mkstemp(suffix=random_str, prefix="tmp.")[1]
     except:
@@ -337,21 +360,26 @@ def create_tempfile(time=None):
         os.utime(filename, (time, time))
     return filename
 
+
 def crm_config():
     workdir = constants.WORKDIR
     if os.path.isfile(os.path.join(workdir, constants.CIB_F)):
         cmd = r"CIB_file=%s/%s crm configure show" % (workdir, constants.CIB_F)
         crmutils.str2file(get_command_info(cmd)[1], os.path.join(workdir, constants.CIB_TXT_F))
 
+
 def crm_info():
     return get_command_info("%s/crmd version" % constants.CRM_DAEMON_DIR)[1]
+
 
 def crmsh_info():
     res = grep("^Version", incmd="rpm -qi crmsh")
     return res[0].split()[-1]
 
+
 def date():
     return datetime.datetime.now().strftime("%a %b %-d %H:%M:%S CST %Y")
+
 
 def diff_check(file1, file2):
     out_string = ""
@@ -364,6 +392,7 @@ def diff_check(file1, file2):
     else:
         return (0, txt_diff(file1, file2))
 
+
 def distro():
     ret = ""
     if which("lsb_release"):
@@ -373,9 +402,11 @@ def distro():
             ret = ' '.join(res.split()[1:])
         return ret
 
+
 def dlm_dump():
-    #TODO
+    # TODO
     pass
+
 
 def drop_tempfiles():
     with open(constants.TMPFLIST, 'r') as f:
@@ -386,10 +417,12 @@ def drop_tempfiles():
                 os.remove(line)
     os.remove(constants.TMPFLIST)
 
+
 def dump_log(logf, from_line, to_line):
     if not from_line:
         return
     return filter_lines(logf, from_line, to_line)
+
 
 def dump_logset(logf, from_time, to_time, outf):
     """
@@ -416,6 +449,7 @@ def dump_logset(logf, from_time, to_time, outf):
 
     crmutils.str2file(out_string, outf)
 
+
 def dump_state(workdir):
     res = grep("^Last upd", incmd="crm_mon -1", flag="v")
     crmutils.str2file('\n'.join(res), os.path.join(workdir, constants.CRM_MON_F))
@@ -423,6 +457,7 @@ def dump_state(workdir):
     crmutils.str2file(get_command_info(cmd)[1], os.path.join(workdir, constants.CIB_F))
     cmd = "crm_node -p"
     crmutils.str2file(get_command_info(cmd)[1], os.path.join(workdir, constants.MEMBERSHIP_F))
+
 
 def events(destdir):
     events_f = os.path.join(destdir, "events.txt")
@@ -435,7 +470,7 @@ def events(destdir):
         for n in constants.NODES.split():
             if os.path.isdir(os.path.join(destdir, n)):
                 events_node_f = os.path.join(destdir, n, "events.txt")
-                out_string = '\n'.join(grep(" %s "%n, infile=events_f))
+                out_string = '\n'.join(grep(" %s " % n, infile=events_f))
                 crmutils.str2file(out_string, events_node_f)
     else:
         for n in constants.NODES.split():
@@ -444,6 +479,7 @@ def events(destdir):
                 continue
             out_string = '\n'.join(grep(pattern, infile=halog_f))
             crmutils.str2file(out_string, os.path.join(destdir, n, "events.text"))
+
 
 def find_decompressor(log_file):
     decompressor = "echo"
@@ -457,6 +493,7 @@ def find_decompressor(log_file):
         if re.search("text", get_command_info("file %s" % log_file)[1]):
             decompressor = "cat"
     return decompressor
+
 
 def find_files(dirs, from_time, to_time):
     res = []
@@ -481,6 +518,7 @@ def find_files(dirs, from_time, to_time):
 
     return res
 
+
 def find_files_all(name, path):
     result = []
     for root, dirs, files in os.walk(path):
@@ -488,12 +526,14 @@ def find_files_all(name, path):
             result.append(os.path.join(root, name))
     return result
 
+
 def find_first_ts(data):
     for line in data:
         ts = get_ts(line)
         if ts:
             break
     return ts
+
 
 def filter_lines(logf, from_line, to_line=None):
     out_string = ""
@@ -510,15 +550,17 @@ def filter_lines(logf, from_line, to_line=None):
             count += 1
     return out_string
 
+
 def finalword():
     if constants.COMPRESS == 1:
         log_info("The report is saved in %s/%s.tar%s" % (constants.DESTDIR, constants.DEST, constants.COMPRESS_EXT))
     else:
         log_info("The report is saved in %s/%s" % (constants.DESTDIR, constants.DEST))
-    log_info("Report timespan: %s - %s" % \
-            (ts_to_dt(constants.FROM_TIME).strftime("%x %X"), \
-            ts_to_dt(constants.TO_TIME).strftime("%x %X")))
+    log_info("Report timespan: %s - %s" %
+             (ts_to_dt(constants.FROM_TIME).strftime("%x %X"),
+              ts_to_dt(constants.TO_TIME).strftime("%x %X")))
     log_info("Thank you for taking time to create this report.")
+
 
 def find_getstampproc(log_file):
     func = None
@@ -534,6 +576,7 @@ def find_getstampproc(log_file):
                 if func:
                     break
     return func
+
 
 def find_getstampproc_raw(line):
     func = None
@@ -554,6 +597,7 @@ def find_getstampproc_raw(line):
         return func
     return func
 
+
 def find_log():
     if constants.EXTRA_LOGS:
         for l in constants.EXTRA_LOGS.split():
@@ -570,6 +614,7 @@ def find_log():
     if constants.HA_DEBUGFILE:
         log_debug("will try with %s" % constants.HA_DEBUGFILE)
     return constants.HA_DEBUGFILE
+
 
 def find_ssh_user():
     ssh_user = "__undef"
@@ -605,6 +650,7 @@ def find_ssh_user():
         return
     if ssh_user != "__default":
         constants.SSH_USER = ssh_user
+
 
 def findln_by_time(logf, tm):
     tmid = None
@@ -643,6 +689,7 @@ def findln_by_time(logf, tm):
             break
     return mid
 
+
 def get_backtraces():
     flist = []
     for f in find_files(constants.CORES_DIRS, constants.FROM_TIME, constants.TO_TIME):
@@ -653,6 +700,7 @@ def get_backtraces():
         get_bt(flist)
         log_debug("found backtraces: %s" % ' '.join(flist))
 
+
 def get_cib_dir():
     try:
         constants.CIB_DIR = crmsh.config.path.crm_config
@@ -661,16 +709,19 @@ def get_cib_dir():
     if not os.path.isdir(constants.CIB_DIR):
         constants.CIB_DIR = None
 
+
 def get_command_info(cmd):
     code, out, err = crmutils.get_stdout_stderr(cmd)
     if out:
-        return (code, out + '\n')  
+        return (code, out + '\n')
     else:
         return (code, "")
 
+
 def get_command_info_timeout(cmd, timeout=5):
-    #Phthon 101: How to timeout a subprocess
-    kill = lambda process: process.kill()
+    # Python 101: How to timeout a subprocess
+    def kill(process):
+        process.kill()
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     my_timer = Timer(timeout, kill, [proc])
     try:
@@ -684,13 +735,15 @@ def get_command_info_timeout(cmd, timeout=5):
     else:
         return ""
 
+
 def get_conf_var(option, default=None):
     ret = default
     with open(constants.CONF, 'r') as f:
         for line in f.read().split('\n'):
-            if re.match("^\s*%s\s*:"%option, line):
+            if re.match("^\s*%s\s*:" % option, line):
                 ret = line.split(':')[1].lstrip()
     return ret
+
 
 def get_config():
     workdir = constants.WORKDIR
@@ -698,15 +751,14 @@ def get_config():
         shutil.copy2(constants.CONF, workdir)
     if crmutils.is_process("crmd"):
         dump_state(workdir)
-        with open(os.path.join(workdir, "RUNNING"), 'w') as f:
-            pass
+        open(os.path.join(workdir, "RUNNING"), 'w')
     else:
         shutil.copy2(os.path.join(constants.CIB_DIR, constants.CIB_F), workdir)
-        with open(os.path.join(workdir, "STOPPED"), 'w') as f:
-            pass
+        open(os.path.join(workdir, "STOPPED"), 'w')
     if os.path.isfile(os.path.join(workdir, constants.CIB_F)):
         cmd = "crm_verify -V -x %s" % os.path.join(workdir, constants.CIB_F)
         crmutils.str2file(get_command_info(cmd)[1], os.path.join(workdir, constants.CRM_VERIFY_F))
+
 
 def get_configurations():
     workdir = constants.WORKDIR
@@ -715,6 +767,7 @@ def get_configurations():
             shutil.copy2(conf, workdir)
         elif os.path.isdir(conf):
             shutil.copytree(conf, os.path.join(workdir, os.path.basename(conf)))
+
 
 def get_crm_daemon_dir():
     try:
@@ -725,11 +778,13 @@ def get_crm_daemon_dir():
        not is_exec(os.path.join(constants.CRM_DAEMON_DIR, "crmd")):
         constants.CRM_DAEMON_DIR = None
 
+
 def get_dirname(path):
     tmp = os.path.dirname(path)
     if not tmp:
         tmp = "."
     return tmp
+
 
 def get_local_ip():
     local_ip = []
@@ -737,6 +792,7 @@ def get_local_ip():
     for line in grep(ip_pattern, incmd="corosync-cfgtool -s"):
         local_ip.append(line.split()[2])
     return local_ip
+
 
 def get_log_vars():
     if is_conf_set("debug"):
@@ -747,8 +803,9 @@ def get_log_vars():
     elif is_conf_set("to_syslog"):
         constants.HA_LOGFACILITY = get_conf_var("syslog_facility", default="daemon")
 
-    log_debug("log settings: facility=%s logfile=%s debugfile=%s" % \
-             (constants.HA_LOGFACILITY, constants.HA_LOGFILE, constants.HA_DEBUGFILE))
+    log_debug("log settings: facility=%s logfile=%s debugfile=%s" %
+              (constants.HA_LOGFACILITY, constants.HA_LOGFILE, constants.HA_DEBUGFILE))
+
 
 def get_nodes():
     nodes = []
@@ -766,6 +823,7 @@ def get_nodes():
 
     return nodes
 
+
 def get_ratraces():
     trace_dir = os.path.join(constants.HA_VARLIB, "trace_ra")
     if not os.path.isdir(trace_dir):
@@ -778,6 +836,7 @@ def get_ratraces():
         cmd = "tar -cf - -C `dirname %s` %s | tar -xf - -C %s" % (trace_dir, ' '.join(flist), constants.WORKDIR)
         crmutils.ext_cmd(cmd)
         log_debug("found %d RA trace files in %s" % (len(flist), trace_dir))
+
 
 def get_pe_inputs():
     from_time = constants.FROM_TIME
@@ -806,6 +865,7 @@ def get_pe_inputs():
     else:
         log_debug("too many PE inputs to create dot files")
 
+
 def get_peer_ip():
     local_ip = get_local_ip()
     peer_ip = []
@@ -815,6 +875,7 @@ def get_peer_ip():
             if ip not in local_ip:
                 peer_ip.append(ip)
     return peer_ip
+
 
 def get_ocf_dir():
     ocf_dir = None
@@ -826,6 +887,7 @@ def get_ocf_dir():
         log_fatal("Directory %s is not OCF_ROOT_DIR!" % ocf_dir)
     constants.OCF_DIR = ocf_dir
 
+
 def get_pe_state_dir():
     try:
         constants.PE_STATE_DIR = crmsh.config.path.pe_state_dir
@@ -833,6 +895,7 @@ def get_pe_state_dir():
         return
     if not os.path.isdir(constants.PE_STATE_DIR):
         constants.PE_STATE_DIR = None
+
 
 def get_pkg_mgr():
     pkg_mgr = None
@@ -850,26 +913,30 @@ def get_pkg_mgr():
 
     return pkg_mgr
 
-def get_stamp_legacy(line):   
+
+def get_stamp_legacy(line):
     try:
         res = crmutils.parse_time(line.split()[1])
     except:
         return None
     return res
 
-def get_stamp_rfc5424(line):  
+
+def get_stamp_rfc5424(line):
     try:
         res = crmutils.parse_time(line.split()[0])
     except:
         return None
     return res
 
-def get_stamp_syslog(line):   
+
+def get_stamp_syslog(line):
     try:
         res = crmutils.parse_time(' '.join(line.split()[0:3]))
     except:
         return None
     return res
+
 
 def get_ts(line):
     ts = None
@@ -886,6 +953,7 @@ def get_ts(line):
             if func == "legacy":
                 ts = crmutils.parse_to_timestamp(line.split()[1])
     return ts
+
 
 def grep(pattern, infile=None, incmd=None, flag=None):
     res = []
@@ -909,6 +977,7 @@ def grep(pattern, infile=None, incmd=None, flag=None):
         return len(res) != 0
     return res
 
+
 def grep_file(pattern, infile, flag):
     res = []
     with open(infile, 'r') as fd:
@@ -917,6 +986,7 @@ def grep_file(pattern, infile, flag):
             if flag and "l" in flag:
                 return [infile]
         return res
+
 
 def grep_row(pattern, indata, flag):
     INVERT = False
@@ -939,18 +1009,20 @@ def grep_row(pattern, indata, flag):
         if re.search(pattern, line, reflag):
             if not INVERT:
                 if SHOWNUM:
-                    res.append("%d:%s"%(count, line))
+                    res.append("%d:%s" % (count, line))
                 else:
                     res.append(line)
         elif INVERT:
             if SHOWNUM:
-                res.append("%d:%s"%(count, line))
+                res.append("%d:%s" % (count, line))
             else:
                 res.append(line)
     return res
 
-def head(n, indata):          
+
+def head(n, indata):
     return indata.split('\n')[:n]
+
 
 def is_conf_set(option, subsys=None):
     subsys_start = 0
@@ -965,8 +1037,10 @@ def is_conf_set(option, subsys=None):
                     return True
     return False
 
+
 def is_exec(filename):
     return os.path.isfile(filename) and os.access(filename, os.X_OK)
+
 
 #
 # check if the log contains a piece of our segment
@@ -978,22 +1052,24 @@ def is_our_log(logf, from_time, to_time):
         last_time = find_first_ts(tail(10, data)[::-1])
 
     if (not first_time) or (not last_time):
-        return 0 # skip (empty log?)
+        return 0  # skip (empty log?)
     if from_time > last_time:
-        # we shouldn't get here anyway if the logs are in order 
-        return 2 # we're past good logs; exit
+        # we shouldn't get here anyway if the logs are in order
+        return 2  # we're past good logs; exit
     if from_time >= first_time:
-        return 3 # this is the last good log
+        return 3  # this is the last good log
     if to_time == 0 or to_time >= first_time:
-        return 1 # include this log
+        return 1  # include this log
     else:
-        return 0 # don't include this log
+        return 0  # don't include this log
+
 
 def line_time(logf, line_num):
     ts = None
     with open(logf, 'r') as fd:
         ts = get_ts(tail(line_num, fd.read())[0])
     return ts
+
 
 def load_ocf_dirs():
     inf = "%s/lib/heartbeat/ocf-directories" % constants.OCF_DIR
@@ -1002,33 +1078,40 @@ def load_ocf_dirs():
     constants.HA_VARLIB = grep("HA_VARLIB:=", infile=inf)[0].split(':=')[1].strip('}')
     constants.HA_BIN = grep("HA_BIN:=", infile=inf)[0].split(':=')[1].strip('}')
 
-def log_debug(msg):           
+
+def log_debug(msg):
     if constants.VERBOSITY > 0 or crmsh.config.core.debug:
         crmmsg.common_info("%s# %s" % (constants.WE, msg))
+
 
 def log_info(msg):
     crmmsg.common_info("%s# %s" % (constants.WE, msg))
 
+
 def log_fatal(msg):
     crmmsg.common_err("%s# %s" % (constants.WE, msg))
     sys.exit(1)
+
 
 def log_size(logf, outf):
     l_size = os.stat(logf).st_size + 1
     out_string = "%s %d" % (logf, l_size)
     crmutils.str2file(out_string, outf)
 
+
 def log_warning(msg):
     crmmsg.common_warn("%s# %s" % (constants.WE, msg))
 
-def make_temp_dir():          
+
+def make_temp_dir():
     dir_path = r"/tmp/.hb_report.workdir.%s" % random_string(6)
-    _mkdir(dir_path)          
+    _mkdir(dir_path)
     return dir_path
+
 
 def mktemplate(argv):
     workdir = constants.WORKDIR
-    out_string = constants.EMAIL_TMPLATE.format("%s"%date(), ' '.join(argv[1:]))
+    out_string = constants.EMAIL_TMPLATE.format("%s" % date(), ' '.join(argv[1:]))
     sysinfo_f = os.path.join(workdir, constants.SYSINFO_F)
     if os.path.isfile(sysinfo_f):
         out_string += "Common saystem info found:\n"
@@ -1043,11 +1126,13 @@ def mktemplate(argv):
                 out_string += "\n"
     crmutils.str2file(out_string, os.path.join(workdir, constants.DESCRIPTION_F))
 
+
 def node_needs_pwd(node):
     for n in constants.SSH_PASSWORD_NODES.split():
         if n == node:
             return True
     return False
+
 
 def pe_to_dot(pe_file):
     dotf = '.'.join(pe_file.split('.')[:-1]) + '.dot'
@@ -1055,6 +1140,7 @@ def pe_to_dot(pe_file):
     code, _ = crmutils.get_stdout(cmd)
     if code != 0:
         log_warning("pe_to_dot: %s -> %s failed" % (pe_file, dotf))
+
 
 def pick_compress():
     constants.COMPRESS_PROG = pick_first(["bzip2", "gzip", "xz"])
@@ -1070,25 +1156,30 @@ def pick_compress():
                      the resulting tarball may be huge")
         constants.COMPRESS_PROG = "cat"
 
+
 def pick_first(choice):
     for tmp in choice:
         if crmutils.is_program(tmp):
             return tmp
     return None
 
+
 def pkg_ver_deb(packages):
     pass
+
 
 def pkg_ver_pkg_info(packages):
     pass
 
+
 def pkg_ver_pkginfo(packages):
     pass
+
 
 def pkg_ver_rpm(packages):
     res = ""
     for pack in packages.split():
-        code, out = get_command_info("rpm -qi %s"%pack)
+        code, out = get_command_info("rpm -qi %s" % pack)
         if code != 0:
             continue
         for line in out.split('\n'):
@@ -1106,6 +1197,7 @@ def pkg_ver_rpm(packages):
         res += "%s %s-%s - %s %s\n" % (name, version, release, distro, arch)
     return res
 
+
 def pkg_versions(packages):
     pkg_mgr = get_pkg_mgr()
     if not pkg_mgr:
@@ -1120,11 +1212,13 @@ def pkg_versions(packages):
     if pkg_mgr == "pkginfo":
         return pkg_ver_pkginfo(packages)
 
+
 def print_log(logf):
     cat = find_decompressor(logf)
     cmd = "%s %s" % (cat, logf)
-    _. out = crmutils.get_stdout(cmd)
+    out = crmutils.get_stdout(cmd)
     return out
+
 
 def print_logseg(logf, from_time, to_time):
     cat = find_decompressor(logf)
@@ -1159,6 +1253,7 @@ def print_logseg(logf, from_time, to_time):
     log_debug("including segment [%s-%s] from %s" % (FROM_LINE, TO_LINE, sourcef))
     return dump_log(sourcef, FROM_LINE, TO_LINE)
 
+
 def ra_build_info():
     inf = "%s/lib/heartbeat/ocf-shellfuncs" % constants.OCF_DIR
     out = grep("Build version:", infile=inf)[0]
@@ -1166,12 +1261,14 @@ def ra_build_info():
         out = "UNKnown"
     return "resource-agents: %s\n" % out
 
-def random_string(num):       
+
+def random_string(num):
     tmp = []
     if crmutils.is_int(num) and num > 0:
         s = string.letters + string.digits
         tmp = random.sample(s, num)
     return ''.join(tmp)
+
 
 def sanitize():
     workdir = constants.WORKDIR
@@ -1189,6 +1286,7 @@ def sanitize():
     if rc != 0:
         log_warning("some PE or CIB files contain possibly sensitive data")
         log_warning("you may not want to send this report to a public mailing list")
+
 
 def sanitize_one(in_file, mode=None):
     open_ = None
@@ -1216,11 +1314,13 @@ def sanitize_one(in_file, mode=None):
 
     touch_r(ref, in_file)
 
+
 def say_ssh_user():
     if not constants.SSH_USER:
         return "you user"
     else:
         return constants.SSH_USER
+
 
 def sed_inplace(filename, pattern, repl):
     out_string = ""
@@ -1232,8 +1332,10 @@ def sed_inplace(filename, pattern, repl):
 
     return out_string
 
+
 def set_env():
     os.environ["LC_ALL"] = "POSIX"
+
 
 @contextlib.contextmanager
 def stdchannel_redirected(stdchannel, dest_filename):
@@ -1257,6 +1359,7 @@ def stdchannel_redirected(stdchannel, dest_filename):
         if dest_file is not None:
             dest_file.close()
 
+
 def start_slave_collector(node, arg_str):
     if node == constants.WE:
         cmd = r"hb_report __slave".format(os.getcwd())
@@ -1268,7 +1371,7 @@ def start_slave_collector(node, arg_str):
 
     else:
         cmd = r'ssh {} {} "{} hb_report __slave"'.\
-              format(constants.SSH_OPTS, node, \
+              format(constants.SSH_OPTS, node,
                      constants.SUDO, os.getcwd())
         for item in arg_str.split():
             cmd += " {}".format(str(item))
@@ -1286,6 +1389,7 @@ def start_slave_collector(node, arg_str):
         cmd = r"(cd {} && tar xf -)".format(constants.WORKDIR)
         crmutils.get_stdout(cmd, input_s=out)
 
+
 def sub_string(in_string,
                pattern=constants.SANITIZE,
                sub_pattern=' value=".*" ',
@@ -1293,7 +1397,7 @@ def sub_string(in_string,
     res_string = ""
     pattern_string = re.sub(" ", "|", pattern)
     for line in in_string.split('\n')[:-1]:
-        if re.search('name="%s"'%pattern_string, line):
+        if re.search('name="%s"' % pattern_string, line):
             res_string += re.sub(sub_pattern, repl, line) + '\n'
         else:
             res_string += line + '\n'
@@ -1303,9 +1407,10 @@ def sub_string(in_string,
 def sub_string_test(in_string, pattern=constants.SANITIZE):
     pattern_string = re.sub(" ", "|", pattern)
     for line in in_string.split('\n'):
-        if re.search('name="%s"'%pattern_string, line):
+        if re.search('name="%s"' % pattern_string, line):
             return True
     return False
+
 
 def sys_info():
     out_string = "#####Cluster info:\n"
@@ -1330,10 +1435,11 @@ def sys_info():
     sys_info_f = os.path.join(constants.WORKDIR, constants.SYSINFO_F)
     crmutils.str2file(out_string, sys_info_f)
 
+
 def sys_stats():
     out_string = ""
-    cmd_list = ["hostname", "uptime", "ps axf", "ps auxw", "top -b -n 1",\
-                "ip addr", "netstat -i", "arp -an", "lsscsi", "lspci",\
+    cmd_list = ["hostname", "uptime", "ps axf", "ps auxw", "top -b -n 1",
+                "ip addr", "netstat -i", "arp -an", "lsscsi", "lspci",
                 "mount", "cat /proc/cpuinfo", "df"]
     for cmd in cmd_list:
         out_string += "##### run \"%s\" on %s\n" % (cmd, constants.WE)
@@ -1345,8 +1451,10 @@ def sys_stats():
     sys_stats_f = os.path.join(constants.WORKDIR, constants.SYSSTATS_F)
     crmutils.str2file(out_string, sys_stats_f)
 
+
 def tail(n, indata):
     return indata.split('\n')[n-1:-1]
+
 
 def test_ssh_conn(addr):
     cmd = r"ssh %s -T -o Batchmode=yes %s true" % (constants.SSH_OPTS, addr)
@@ -1355,6 +1463,7 @@ def test_ssh_conn(addr):
         return True
     else:
         return False
+
 
 def time_status():
     out_string = "Time: "
@@ -1365,13 +1474,14 @@ def time_status():
     time_f = os.path.join(constants.WORKDIR, constants.TIME_F)
     crmutils.str2file(out_string, time_f)
 
+
 def touch_dc():
     if constants.SKIP_LVL == 1:
         return
     node = crmutils.get_dc()
     if node and node == constants.WE:
-        with open(os.path.join(constants.WORKDIR, "DC"), 'w') as f:
-            pass
+        open(os.path.join(constants.WORKDIR, "DC"), 'w')
+
 
 def touch_r(src, dst):
     """
@@ -1383,6 +1493,7 @@ def touch_r(src, dst):
     stat_info = os.stat(src)
     os.utime(dst, (stat_info.st_atime, stat_info.st_mtime))
 
+
 def ts_to_dt(timestamp):
     """
     timestamp convert to datetime; consider local timezone
@@ -1391,11 +1502,14 @@ def ts_to_dt(timestamp):
     dt += tz.tzlocal().utcoffset(dt)
     return dt
 
+
 def txt_diff(file1, file2):
-    return get_command_info("diff -bBu %s %s"%(file1, file2))[1]
+    return get_command_info("diff -bBu %s %s" % (file1, file2))[1]
+
 
 def verify_deb(packages):
     pass
+
 
 def verify_packages(packages):
     pkg_mgr = get_pkg_mgr()
@@ -1410,11 +1524,14 @@ def verify_packages(packages):
     if pkg_mgr == "pkginfo":
         return verify_pkginfo(packages)
 
+
 def verify_pkg_info(packages):
     pass
 
+
 def verify_pkginfo(packages):
     pass
+
 
 def verify_rpm(packages):
     res = ""
@@ -1425,6 +1542,7 @@ def verify_rpm(packages):
             res = "For package %s:\n" % pack
             res += out + "\n"
     return res
+
 
 def which(prog):
     code, _ = get_command_info("which %s" % prog)
