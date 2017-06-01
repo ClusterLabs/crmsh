@@ -691,14 +691,46 @@ def findln_by_time(logf, tm):
 
 
 def get_backtraces():
-    flist = []
-    for f in find_files(constants.CORES_DIRS, constants.FROM_TIME, constants.TO_TIME):
-        bf = os.path.basename(f)
-        if re.search("core", bf):
-            flist.append(f)
+    """
+    Check CORES_DIRS for core dumps within the report timeframe and
+    use gdb to get the backtraces
+    """
+    cores = find_files(constants.CORES_DIRS, constants.FROM_TIME, constants.TO_TIME)
+    flist = [f for f in cores if "core" in os.path.basename(f)]
     if flist:
-        get_bt(flist)
+        print_core_backtraces(flist)
         log_debug("found backtraces: %s" % ' '.join(flist))
+
+
+def find_binary_for_core(corefile):
+    """
+    Given a core file, try to find the
+    binary that generated it
+    Returns a path or None
+    """
+    return None
+
+
+def print_core_backtraces(flist):
+    """
+    Use gdb to get backtrace from core files.
+    flist: names of core files to check
+    """
+    if not which("gdb"):
+        log_warning("Please install gdb to get backtraces")
+        return
+    for corefile in flist:
+        absbinpath = find_binary_for_core(corefile)
+        if absbinpath is None:
+            continue
+        get_debuginfo(absbinpath, corefile)
+        bt_opts = os.environ.get("BT_OPTS", "thread apply all bt full")
+        print "====================== start backtrace ======================"
+        print get_command_info_timeout(["ls", "-l", corefile])
+        print get_command_info_timeout(["gdb", "-batch", "-n", "-quiet",
+                                        "-ex", bt_opts, "-ex", "quit",
+                                        absbinpath, corefile])
+        print "======================= end backtrace ======================="
 
 
 def get_cib_dir():
