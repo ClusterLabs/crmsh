@@ -19,6 +19,7 @@
 ; dot = dot
 ; ignore_missing_metadata = no
 ; report_tool_options =
+; use_prompt_toolkit = no
 
 [path]
 ; sharedir = <detected>
