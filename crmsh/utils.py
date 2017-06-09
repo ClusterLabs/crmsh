@@ -1,5 +1,6 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
+from __future__ import unicode_literals
 
 import os
 import sys
@@ -21,6 +22,12 @@ from . import constants
 from . import options
 from . import term
 from .msg import common_warn, common_info, common_debug, common_err, err_buf
+
+from prompt_toolkit import prompt as pt_prompt
+from prompt_toolkit.key_binding.bindings.completion import display_completions_like_readline
+from prompt_toolkit.key_binding.defaults import load_key_bindings
+from prompt_toolkit.keys import Keys
+from . import pt_completer
 
 
 def memoize(function):
@@ -159,18 +166,30 @@ _LINE_BUFFER = ''
 def get_line_buffer():
     return _LINE_BUFFER
 
+def pt_exit(event):
+    sys.exit()
 
-def multi_input(prompt=''):
+
+def multi_input(python_prompt, context, prompt=''):
     """
     Get input from user
     Allow multiple lines using a continuation character
     """
+    if python_prompt != "no":
+        registry = load_key_bindings()
+        registry.add_binding(Keys.ControlI)(display_completions_like_readline)
+        registry.add_binding(Keys.ControlC)(pt_exit)
+
     global _LINE_BUFFER
     line = []
     _LINE_BUFFER = ''
     while True:
         try:
-            text = raw_input(prompt)
+            if python_prompt == "no":
+                text = raw_input(prompt)
+            else:
+                text = pt_prompt(unicode(prompt, "utf-8"), completer=pt_completer.CrmshCompleter(context.complete), 
+                                 key_bindings_registry=registry, complete_while_typing=False)
         except EOFError:
             return None
         err_buf.incr_lineno()
@@ -184,7 +203,7 @@ def multi_input(prompt=''):
             line.append(stripped)
             _LINE_BUFFER += stripped
             if prompt:
-                prompt = '   > '
+                prompt = '   > '.encode("utf-8")
         else:
             line.append(stripped)
             break
