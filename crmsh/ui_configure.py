@@ -130,19 +130,25 @@ class CompletionHelp(object):
     lasttopic = ''
 
     @classmethod
-    def help(cls, topic, helptxt):
+    def help(cls, topic, helptxt, args):
         if cls.lasttopic == topic and \
                 time.time() - cls.laststamp < cls.timeout:
             return
         if helptxt:
-            import readline
-            cmdline = readline.get_line_buffer()
             print "\n%s" % helptxt
-            if clidisplay.colors_enabled():
-                print "%s%s" % (term.render(clidisplay.prompt_noreadline(constants.prompt)),
-                                cmdline),
+            if config.core.use_prompt_toolkit == "no":
+                import readline
+                cmdline = readline.get_line_buffer()
+                if clidisplay.colors_enabled():
+                    print "%s%s" % (term.render(clidisplay.prompt_noreadline(constants.prompt)),
+                                    cmdline),
+                else:
+                    print "%s%s" % (constants.prompt, cmdline),
             else:
-                print "%s%s" % (constants.prompt, cmdline),
+                if constants.prompt.endswith("configure# "):
+                    print "%s%s" % (constants.prompt, " ".join(args)),
+                else:
+                    print "%s%s" % (constants.prompt, "configure %s" % " ".join(args)),
             cls.laststamp = time.time()
             cls.lasttopic = topic
 
@@ -154,7 +160,7 @@ def _prim_params_completer(agent, args):
     if completing.endswith('='):
         if len(completing) > 1 and options.interactive:
             topic = completing[:-1]
-            CompletionHelp.help(topic, agent.meta_parameter(topic))
+            CompletionHelp.help(topic, agent.meta_parameter(topic), args)
         return []
     elif '=' in completing:
         return []
