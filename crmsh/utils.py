@@ -27,6 +27,7 @@ from prompt_toolkit import prompt as pt_prompt
 from prompt_toolkit.key_binding.bindings.completion import display_completions_like_readline
 from prompt_toolkit.key_binding.defaults import load_key_bindings
 from prompt_toolkit.keys import Keys
+from prompt_toolkit.history import FileHistory
 from . import pt_completer
 
 
@@ -188,8 +189,9 @@ def multi_input(python_prompt, context, prompt=''):
             if python_prompt == "no":
                 text = raw_input(prompt)
             else:
+                file_history = os.path.join(userdir.CONFIG_HOME, ".crmsh_history")
                 text = pt_prompt(unicode(prompt, "utf-8"), completer=pt_completer.CrmshCompleter(context.complete), 
-                                 key_bindings_registry=registry, complete_while_typing=False)
+                                 key_bindings_registry=registry, complete_while_typing=False, history=FileHistory(file_history))
         except EOFError:
             return None
         err_buf.incr_lineno()
