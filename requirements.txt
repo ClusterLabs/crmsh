@@ -3,3 +3,4 @@ PyYAML
 nosexcover
 python-dateutil
 parallax
+prompt_toolkit
