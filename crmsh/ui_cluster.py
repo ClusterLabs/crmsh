@@ -288,6 +288,7 @@ If stage is not specified, each stage will be invoked in sequence.
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of cluster node which will be deleted", metavar="HOST")
+        parser.add_option("-F", "--force", dest="force", help="Remove current node", action="store_true")
 
         options, args = parser.parse_args(list(args))
         if options.cluster_node is not None and options.cluster_node not in args:
@@ -302,7 +303,8 @@ If stage is not specified, each stage will be invoked in sequence.
                 bootstrap.bootstrap_remove(
                     cluster_node=node,
                     quiet=options.quiet,
-                    yes_to_all=options.yes_to_all)
+                    yes_to_all=options.yes_to_all,
+                    force=options.force)
         return True
 
     def _parse_clustermap(self, clusters):
