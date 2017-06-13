@@ -52,6 +52,7 @@ Requires:       python >= 2.6
 Requires:       python-dateutil
 Requires:       python-lxml
 Requires:       python-parallax
+Requires:       python-prompt_toolkit
 BuildRequires:  python-lxml
 BuildRequires:  python-setuptools
 
@@ -101,6 +102,7 @@ Requires(post):  procps
 Requires(post):  python-dateutil
 Requires(post):  python-nose
 Requires(post):  python-parallax
+Requires(post):  python-prompt_toolkit
 Requires(post):  pacemaker
 
 %if 0%{?suse_version} > 1110
