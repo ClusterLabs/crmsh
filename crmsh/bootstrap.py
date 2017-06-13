@@ -82,12 +82,22 @@ def warn(*args):
         print term.render(clidisplay.warn("! {}".format(" ".join(str(arg) for arg in args))))
 
 
+@utils.memoize
+def log_file_fallback():
+    return os.path.join(utils.get_tempdir(), "ha-cluster-bootstrap.log")
+
+
 def log(*args):
+    global LOG_FILE
     try:
         with open(LOG_FILE, "a") as logfile:
             logfile.write(" ".join([str(arg) for arg in args]) + "\n")
     except IOError:
-        die("Can't append to {} - aborting".format(LOG_FILE))
+        if LOG_FILE != log_file_fallback():
+            LOG_FILE = log_file_fallback()
+            log(*args)
+        else:
+            die("Can't append to {} - aborting".format(LOG_FILE))
 
 
 def prompt_for_string(msg, match=None, default=''):
