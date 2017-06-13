@@ -1550,11 +1550,12 @@ def bootstrap_join(cluster_node=None, nic=None, quiet=False, yes_to_all=False, w
     status("Done (log saved to %s)" % (LOG_FILE))
 
 
-def bootstrap_remove(cluster_node=None, quiet=False, yes_to_all=False):
+def bootstrap_remove(cluster_node=None, quiet=False, yes_to_all=False, force=False):
     """
     -c <cluster-node> - node to remove from cluster
     -q - quiet
     -y - yes to all
+    -f - force removal of self
     """
     global _context
     _context = Context(quiet=quiet, yes_to_all=yes_to_all)
@@ -1572,7 +1573,7 @@ def bootstrap_remove(cluster_node=None, quiet=False, yes_to_all=False):
     init()
     remove_ssh()
     if remove_localhost_check():
-        if not config.core.force:
+        if not config.core.force and not force:
             error("Removing self requires --force")
         # get list of cluster nodes
         me = utils.this_node()
