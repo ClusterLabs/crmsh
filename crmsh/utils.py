@@ -28,6 +28,8 @@ from prompt_toolkit.key_binding.bindings.completion import display_completions_l
 from prompt_toolkit.key_binding.defaults import load_key_bindings
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.history import FileHistory
+from prompt_toolkit.styles import style_from_dict
+from prompt_toolkit.token import Token
 from . import pt_completer
 
 
@@ -176,10 +178,19 @@ def multi_input(python_prompt, context, prompt=''):
     Get input from user
     Allow multiple lines using a continuation character
     """
+    def get_prompt_tokens(cli):
+        return [(Token.Green, prompt)]
+
     if python_prompt != "no":
         registry = load_key_bindings()
         registry.add_binding(Keys.ControlI)(display_completions_like_readline)
         registry.add_binding(Keys.ControlC)(pt_exit)
+
+        pt_style = style_from_dict({
+            Token.Green: '#ansigreen bold',
+        })
+        
+        file_history = os.path.join(userdir.CONFIG_HOME, ".crmsh_history")
 
     global _LINE_BUFFER
     line = []
@@ -189,9 +200,12 @@ def multi_input(python_prompt, context, prompt=''):
             if python_prompt == "no":
                 text = raw_input(prompt)
             else:
-                file_history = os.path.join(userdir.CONFIG_HOME, ".crmsh_history")
-                text = pt_prompt(unicode(prompt, "utf-8"), completer=pt_completer.CrmshCompleter(context.complete), 
-                                 key_bindings_registry=registry, complete_while_typing=False, history=FileHistory(file_history))
+                text = pt_prompt(get_prompt_tokens=get_prompt_tokens, 
+                                 completer=pt_completer.CrmshCompleter(context.complete), 
+                                 key_bindings_registry=registry, 
+                                 complete_while_typing=False, 
+                                 history=FileHistory(file_history), 
+                                 style=pt_style)
         except EOFError:
             return None
         err_buf.incr_lineno()
