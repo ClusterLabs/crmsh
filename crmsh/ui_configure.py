@@ -1,6 +1,10 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
+from __future__ import unicode_literals
+from prompt_toolkit.shortcuts import print_tokens
+from prompt_toolkit.styles import style_from_dict
+from prompt_toolkit.token import Token
 
 import time
 from . import command
@@ -145,10 +149,12 @@ class CompletionHelp(object):
                 else:
                     print "%s%s" % (constants.prompt, cmdline),
             else:
+                style = style_from_dict({Token.Green: "#ansigreen bold",})
                 if constants.prompt.endswith("configure# "):
-                    print "%s%s" % (constants.prompt, " ".join(args)),
+                    tokens = [(Token.Green, constants.prompt), (Token, " ".join(args))]
                 else:
-                    print "%s%s" % (constants.prompt, "configure %s" % " ".join(args)),
+                    tokens = [(Token.Green, constants.prompt), (Token, "configure %s" % " ".join(args))]
+                print_tokens(tokens, style=style)
             cls.laststamp = time.time()
             cls.lasttopic = topic
 
