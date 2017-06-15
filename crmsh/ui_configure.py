@@ -254,27 +254,6 @@ class CibConfig(command.UI):
             constants.simulate_programs["simulate"] = ""
         return True
 
-    @command.name('_test')
-    @command.skill_level('administrator')
-    def do_check_structure(self, context):
-        return cib_factory.check_structure()
-
-    @command.name('_regtest')
-    @command.skill_level('administrator')
-    def do_regression_testing(self, context, param):
-        return cib_factory.regression_testing(param)
-
-    @command.name('_objects')
-    @command.skill_level('administrator')
-    def do_showobjects(self, context):
-        cib_factory.showobjects()
-
-    @command.name('_keywords')
-    @command.skill_level('administrator')
-    def do_keywords(self, context):
-        for k, v in sorted(constants.keywords.iteritems(), key=lambda v: v[0].lower()):
-            print "%-16s %s" % (k, v)
-
     @command.level(ui_ra.RA)
     def do_ra(self):
         pass
