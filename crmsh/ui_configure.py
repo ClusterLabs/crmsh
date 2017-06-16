@@ -125,15 +125,8 @@ class CompletionHelp(object):
     '''
     Print some help on whatever last word in the line.
     '''
-    timeout = 60  # don't print again and again
-    laststamp = 0
-    lasttopic = ''
-
     @classmethod
     def help(cls, topic, helptxt):
-        if cls.lasttopic == topic and \
-                time.time() - cls.laststamp < cls.timeout:
-            return
         if helptxt:
             import readline
             cmdline = readline.get_line_buffer()
@@ -143,8 +136,6 @@ class CompletionHelp(object):
                                 cmdline),
             else:
                 print "%s%s" % (constants.prompt, cmdline),
-            cls.laststamp = time.time()
-            cls.lasttopic = topic
 
 
 def _prim_params_completer(agent, args):
