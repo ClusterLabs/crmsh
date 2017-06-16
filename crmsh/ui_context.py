@@ -182,7 +182,7 @@ class Context(object):
             return word.split()[-1].startswith(text)
 
         line = utils.get_line_buffer() + readline.get_line_buffer()
-        if line != self._rl_line:
+        if line != self._rl_line or line.endswith("="):
             try:
                 self._rl_line = line
                 completions = self.complete(line)
