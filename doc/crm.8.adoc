@@ -1118,6 +1118,9 @@ Options:
 *-w WATCHDOG, --watchdog=WATCHDOG*::
     Use the given watchdog device.
 
+*-S, --enable-sbd*::
+    Enable SBD even if no SBD device is configured (diskless mode).
+
 Network configuration:
 
 Options for configuring the network and messaging layer.
