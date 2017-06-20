@@ -187,9 +187,9 @@ class Context(object):
                 self._rl_line = line
                 completions = self.complete(line)
                 if text:
-                    self._rl_words = [w for w in completions if matching(w)]
+                    self._rl_words = [w for w in completions if matching(w) and not w.startswith("_")]
                 else:
-                    self._rl_words = list(completions)
+                    self._rl_words = [w for w in completions if not w.startswith("_")]
             except Exception:  # , msg:
                 # logging.exception(msg)
                 self.clear_readline_cache()
