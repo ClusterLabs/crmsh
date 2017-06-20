@@ -53,6 +53,7 @@ class Context(object):
         self.ocfs2_device = None
         self.shared_device = None
         self.sbd_device = None
+        self.diskless_sbd = False  # if True, enable SBD for diskless operation
         self.unicast = None
         self.admin_ip = None
         self.watchdog = None
@@ -525,7 +526,9 @@ def init_cluster_local():
     if pass_msg:
         warn("You should change the hacluster password to something more secure!")
 
-    if configured_sbd_device():
+    # for cluster join, diskless_sbd flag is set in join_cluster() if
+    # sbd is running on seed host
+    if configured_sbd_device() or _context.diskless_sbd:
         invoke("systemctl enable sbd.service")
     else:
         invoke("systemctl disable sbd.service")
@@ -886,9 +889,9 @@ Configure Shared Storage:
     status("Created %s for OCFS2 partition" % (_context.ocfs2_device))
 
 
-def check_watchdog():
+def detect_watchdog_device():
     """
-    Verify watchdog device. Fall back to /dev/watchdog.
+    Find the watchdog device. Fall back to /dev/watchdog.
     """
     wdconf = "/etc/modules-load.d/watchdog.conf"
     watchdog_dev = "/dev/watchdog"
@@ -898,15 +901,66 @@ def check_watchdog():
             m = re.match(r'^\s*watchdog-device\s*=\s*(.*)$', line)
             if m:
                 watchdog_dev = m.group(1)
+    return watchdog_dev
+
+
+def check_watchdog():
+    """
+    Verify watchdog device. Fall back to /dev/watchdog.
+    """
+    watchdog_dev = detect_watchdog_device()
     rc, _out, _err = utils.get_stdout_stderr("wdctl %s" % (watchdog_dev))
     return rc == 0
+
+
+def sysconfig_comment_out(scfile, key):
+    """
+    Comments out the given key in the sysconfig file
+    """
+    matcher = re.compile(r'^\s*{}\s*='.format(key))
+    outp, ncomments = "", 0
+    for line in scfile.readlines():
+        if matcher.match(line):
+            outp += '#' + line
+            ncomments += 1
+        else:
+            outp += line
+    return outp, ncomments
+
+
+def init_sbd_diskless():
+    """
+    Initialize SBD in diskless mode.
+    """
+    status_long("Initializing diskless SBD...")
+    if os.path.isfile(SYSCONFIG_SBD):
+        log("Overwriting {} with diskless configuration".format(SYSCONFIG_SBD))
+        scfg, nmatches = sysconfig_comment_out(open(SYSCONFIG_SBD), "SBD_DEVICE")
+        if nmatches > 0:
+            utils.str2file(scfg, SYSCONFIG_SBD)
+    else:
+        log("Creating {} with diskless configuration".format(SYSCONFIG_SBD))
+    utils.sysconfig_set(SYSCONFIG_SBD,
+                        SBD_WATCHDOG="yes",
+                        SBD_PACEMAKER="yes",
+                        SBD_STARTMODE="always",
+                        SBD_DELAY_START="no",
+                        SBD_WATCHDOG_DEVICE=detect_watchdog_device())
+    csync2_update(SYSCONFIG_SBD)
+    status_done()
 
 
 def init_sbd():
     """
     Configure SBD (Storage-based fencing).
+
+    SBD can also run in diskless mode if no device
+    is configured.
     """
-    if not _context.sbd_device:
+    if not _context.sbd_device and _context.diskless_sbd:
+        init_sbd_diskless()
+        return
+    elif not _context.sbd_device:
         # SBD device not set up by init_storage (ocfs2 template) and
         # also not passed in as command line argument - prompt user
         if _context.yes_to_all:
@@ -931,17 +985,21 @@ Configure SBD:
         if not confirm("Do you wish to use SBD?"):
             warn("Not configuring SBD - STONITH will be disabled.")
             # Comment out SBD devices if present
-            scfg = open(SYSCONFIG_SBD).read()
-            scfg, nmatches = re.subn(r'^\([^#].*\)$', r'#\1', scfg)
-            if nmatches > 0:
-                utils.str2file(scfg, SYSCONFIG_SBD)
-                csync2_update(SYSCONFIG_SBD)
+            if os.path.isfile(SYSCONFIG_SBD):
+                scfg, nmatches = sysconfig_comment_out(open(SYSCONFIG_SBD), "SBD_DEVICE")
+                if nmatches > 0:
+                    utils.str2file(scfg, SYSCONFIG_SBD)
+                    csync2_update(SYSCONFIG_SBD)
             return
 
         dev = ""
         dev_looks_sane = False
         while not dev_looks_sane:
-            dev = prompt_for_string('Path to storage device (e.g. /dev/disk/by-id/...)', r'\/.*', dev)
+            dev = prompt_for_string('Path to storage device (e.g. /dev/disk/by-id/...), or "none"', r'none|\/.*', dev)
+            if dev == "none":
+                _context.diskless_sbd = True
+                init_sbd_diskless()
+                return
             if not is_block_device(dev):
                 print >>sys.stderr, "    That doesn't look like a block device"
             else:
@@ -988,11 +1046,14 @@ op_defaults op-options: timeout=600 record-pending=true
 rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
 """)
 
-    if utils.parse_sysconfig(SYSCONFIG_SBD).get("SBD_DEVICE"):
+    if configured_sbd_device():
         if not invoke("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"):
             error("Can't create stonith-sbd primitive")
         if not invoke("crm configure property stonith-enabled=true"):
-            error("Can't enable STONITH")
+            error("Can't enable STONITH for SBD")
+    elif _context.diskless_sbd:
+        if not invoke("crm configure property stonith-enabled=true"):
+            error("Can't enable STONITH for diskless SBD")
 
 
 def init_vgfs():
@@ -1245,6 +1306,11 @@ def join_cluster(seed_host):
     if is_unicast:
         corosync.add_node(utils.this_node())
 
+    # if no SBD devices are configured,
+    # check the existing cluster if the sbd service is enabled
+    if not configured_sbd_device() and invoke("ssh root@{} systemctl is-enabled sbd.service".format(seed_host)):
+        _context.diskless_sbd = True
+
     # Initialize the cluster before adjusting quorum. This is so
     # that we can query the cluster to find out how many nodes
     # there are (so as not to adjust multiple times if a previous
@@ -1424,7 +1490,7 @@ def remove_localhost_check():
 
 
 def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
-                   shared_device=None, sbd_device=None, quiet=False,
+                   shared_device=None, sbd_device=None, diskless_sbd=False, quiet=False,
                    template=None, admin_ip=None, yes_to_all=False,
                    unicast=False, watchdog=None, stage=None, args=None):
     """
@@ -1432,6 +1498,7 @@ def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
     -o <ocfs2-device>
     -p <shared-device>
     -s <sbd-device>
+    -S - configure SBD without disk
     -t <template>
     -A [<admin-ip>]
     -q - quiet
@@ -1457,6 +1524,7 @@ def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
     _context.ocfs2_device = ocfs2_device
     _context.shared_device = shared_device
     _context.sbd_device = sbd_device
+    _context.diskless_sbd = diskless_sbd
     _context.unicast = unicast
     _context.admin_ip = admin_ip
     _context.watchdog = watchdog
