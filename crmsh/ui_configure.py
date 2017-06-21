@@ -69,6 +69,17 @@ def ra_classes_or_tmpl(args):
         return cib_factory.rsc_template_list()
     return ui_ra.complete_class_provider_type(args)
 
+def mini_help(args):
+    if args[-1]:
+        return
+    print "\nHints: need an unique id after \"%s\"" % args[0]
+    import readline
+    cmdline = readline.get_line_buffer()
+    if clidisplay.colors_enabled():
+        print "%s%s" % (term.render(clidisplay.prompt_noreadline(constants.prompt)),
+                        cmdline),
+    else:
+        print "%s%s" % (constants.prompt, cmdline),
 
 def op_attr_list(args):
     schema_attr = [schema.get('attr', 'op', 'o') + '=']
@@ -657,7 +668,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.null, ra_classes_or_tmpl, primitive_complete_complex)
+    @command.completers_repeating(mini_help, ra_classes_or_tmpl, primitive_complete_complex)
     @command.alias('resource')
     def do_primitive(self, context, *args):
         """usage: primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>}
@@ -671,7 +682,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.null, _group_completer)
+    @command.completers_repeating(mini_help, _group_completer)
     def do_group(self, context, *args):
         """usage: group <name> <rsc> [<rsc>...]
         [params <param>=<value> [<param>=<value>...]]
@@ -679,7 +690,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.null, _f_children_id_list, _clone_completer)
+    @command.completers_repeating(mini_help, _f_children_id_list, _clone_completer)
     def do_clone(self, context, *args):
         """usage: clone <name> <rsc>
         [params <param>=<value> [<param>=<value>...]]
@@ -688,7 +699,7 @@ class CibConfig(command.UI):
 
     @command.alias('master')
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.null, _f_children_id_list, _ms_completer)
+    @command.completers_repeating(mini_help, _f_children_id_list, _ms_completer)
     def do_ms(self, context, *args):
         """usage: ms <name> <rsc>
         [params <param>=<value> [<param>=<value>...]]
