@@ -142,6 +142,8 @@ Note:
                           help='Additional nodes to add to the created cluster. ' +
                           'May include the current node, which will always be the initial cluster node.')
         # parser.add_option("--quick-start", dest="quickstart", action="store_true", help="Perform basic system configuration (NTP, watchdog, /etc/hosts)")
+        parser.add_option("-S", "--enable-sbd", dest="diskless_sbd", action="store_true",
+                          help="Enable SBD even if no SBD device is configured (diskless mode)")
         parser.add_option("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG",
                           help="Use the given watchdog device")
 
@@ -187,6 +189,7 @@ Note:
             ocfs2_device=options.ocfs2_device,
             shared_device=options.shared_device,
             sbd_device=options.sbd_device,
+            diskless_sbd=options.diskless_sbd,
             quiet=options.quiet,
             template=options.template,
             admin_ip=options.admin_ip,
