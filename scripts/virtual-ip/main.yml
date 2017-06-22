@@ -15,7 +15,7 @@ include:
         type: integer
         required: false
       - name: broadcast
-        type: ip_address
+        type: string
         required: false
     ops: |
       op start timeout="20" op stop timeout="20"
