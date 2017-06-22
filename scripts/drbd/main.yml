@@ -6,6 +6,8 @@ longdesc: >-
 
   Also creates a multistate resource managing the state of DRBD.
 
+  Does not create or modify the referenced DRBD configuration.
+
 parameters:
   - name: id
     shortdesc: DRBD Cluster Resource ID

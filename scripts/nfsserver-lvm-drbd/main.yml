@@ -28,7 +28,7 @@ longdesc: |
   For more details on what needs to be prepared to use
   this wizard, see the Highly Available NFS Storage with
   DRBD and Pacemaker section of the SUSE Linux Enterprise
-  High Availability Extension 12 SP1 documentation.
+  High Availability Extension documentation.
 
 parameters:
   - name: nfsserver_id
