@@ -930,11 +930,10 @@ def init_sbd_diskless():
     else:
         log("Creating {} with diskless configuration".format(SYSCONFIG_SBD))
     utils.sysconfig_set(SYSCONFIG_SBD,
-                        SBD_WATCHDOG="yes",
                         SBD_PACEMAKER="yes",
                         SBD_STARTMODE="always",
                         SBD_DELAY_START="no",
-                        SBD_WATCHDOG_DEVICE=detect_watchdog_device())
+                        SBD_WATCHDOG_DEV=detect_watchdog_device())
     csync2_update(SYSCONFIG_SBD)
     status_done()
 
@@ -1041,7 +1040,8 @@ rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
         if not invoke("crm configure property stonith-enabled=true"):
             error("Can't enable STONITH for SBD")
     elif _context.diskless_sbd:
-        if not invoke("crm configure property stonith-enabled=true"):
+        # TODO: configure stonith-watchdog-timeout correctly
+        if not invoke("crm configure property stonith-enabled=true stonith-watchdog-timeout=5s"):
             error("Can't enable STONITH for diskless SBD")
 
 
