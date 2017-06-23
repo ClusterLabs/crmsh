@@ -70,7 +70,7 @@ def ra_classes_or_tmpl(args):
     return ui_ra.complete_class_provider_type(args)
 
 def mini_help(args):
-    if args[-1]:
+    if not options.interactive or args[-1]:
         return
     print "\nHints: need an unique id after \"%s\"" % args[0]
     import readline
