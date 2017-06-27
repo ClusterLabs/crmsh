@@ -10,7 +10,7 @@ import inspect
 from . import help as help_module
 from . import ui_utils
 from .msg import common_debug
-
+import re
 
 def name(n):
     '''
@@ -177,10 +177,29 @@ def completers_repeating(*fns):
 
 
 def _cd_completer(args, context):
-    'TODO: make better completion'
+    """
+    more like bash cd completion
+    """
+    # prevent '..' completion happend many times
+    if len(args) == 3 and not args[-1]:
+        return
+    # like bash
+    if args[-1] == "..":
+        return ["../"]
+
     ret = []
+    previous_item = []
     if context.previous_level():
         ret += ['..']
+        # get previous sublevel completions
+        previous_item = [ l for l in context.previous_level().get_completions()
+                          if context.previous_level().is_sublevel(l)]
+
+    if re.search(r'\.\./.*', args[-1]):
+        # like bash, complete after '../'
+        return previous_item
+
+    # complete on the current level   
     return ret + [l for l in context.current_level().get_completions()
                   if context.current_level().is_sublevel(l)]
 

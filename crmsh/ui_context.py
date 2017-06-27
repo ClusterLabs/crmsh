@@ -9,6 +9,7 @@ from . import options
 from .msg import common_err, common_info, common_warn
 from . import ui_utils
 from . import userdir
+import re
 
 
 # import logging
@@ -131,7 +132,10 @@ class Context(object):
                         # use the completer for the command
                         ret = self.command_info.complete(self, tokens)
                         if tokens:
-                            ret = [t for t in ret if t.startswith(tokens[-1])]
+                            if not re.search(r'\.\./.*', tokens[0]):
+                                ret = [t for t in ret if t.startswith(tokens[-1])]
+                            else:
+                                ret = [t for t in ret]
                         return ret
                 # reached the end on a valid level.
                 # return the completions for the previous level.
@@ -177,19 +181,26 @@ class Context(object):
     def readline_completer(self, text, state):
         import readline
 
-        def matching(word):
+        def matching(word, starts_text=text):
             'we are only completing the last word in the line'
-            return word.split()[-1].startswith(text)
+            return word.split()[-1].startswith(starts_text)
 
         line = utils.get_line_buffer() + readline.get_line_buffer()
         if line != self._rl_line:
             try:
                 self._rl_line = line
                 completions = self.complete(line)
-                if text:
+
+                if text and not re.search(r'\.\./.*', text):
                     self._rl_words = [w for w in completions if matching(w) and not w.startswith("_")]
                 else:
-                    self._rl_words = [w for w in completions if not w.startswith("_")]
+                    if re.search(r'\.\./.+', text):
+                        self._rl_words = ['../'+w for w in completions 
+                                          if matching(w, starts_text=text.split('/')[1]) 
+                                          and not w.startswith("_")]
+                    else:
+                        self._rl_words = [w for w in completions if not w.startswith("_")]
+
             except Exception:  # , msg:
                 # logging.exception(msg)
                 self.clear_readline_cache()
