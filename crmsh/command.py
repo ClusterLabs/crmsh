@@ -465,6 +465,8 @@ Examples:
 
         children = {}
         for child_name in dir(cls):
+            if child_name == 'do_up' and re.search("ui_root.Root", str(cls)):
+                continue
             child = get_if_command(child_name)
             if child:
                 prepare(children, child)
