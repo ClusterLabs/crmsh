@@ -302,18 +302,22 @@ at the current level.
         Shows list of places to go and commands to call
         '''
         out = []
+        res = []
         if context.previous_level():
             out = ['..']
         out += context.current_level().get_completions()
-        i = 0
-        for o in out:
+        for o in sorted(out):
             if o.startswith('-') or o.startswith('_'):
                 continue
-            print '%-16s' % (o),
-            if ((i - 2) % 3) == 0:
-                print ''
-            i += 1
-        print ''
+            res.append(o)
+        
+        colnum = 3
+        rownum = len(res)/colnum
+        for i in range(rownum):
+            for x in res[i::rownum]:
+                print "%-16s" % (x),
+            print ''
+
 
     @help('''Navigate the level structure
 This command works similar to how `cd` works in a regular unix
