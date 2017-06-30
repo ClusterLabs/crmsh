@@ -1,5 +1,6 @@
 # Copyright (C) 2017 Xin Liang <XLiang@suse.com>
 # See COPYING for license information.
+
 import bz2
 import datetime
 import glob
@@ -44,24 +45,28 @@ def add_tmpfiles(contents):
         f.write(contents+'\n')
 
 
-# go through archived logs (timewise backwards) and see if there
-# are lines belonging to us
-# (we rely on untouched log files, i.e. that modify time
-# hasn't been changed)
 def arch_logs(logf, from_time, to_time):
+    """
+    go through archived logs (timewise backwards) and see if there
+    are lines belonging to us
+    (we rely on untouched log files, i.e. that modify time
+    hasn't been changed)
+    """
     ret = []
     files = [logf]
-    files += glob.glob(logf+"*[0-z9]")
+    files += glob.glob(logf+"*[0-9z]")
     for f in sorted(files, key=os.path.getctime):
+        # reset this var to check every file's format
+        constants.GET_STAMP_FUNC = None
         res = is_our_log(f, from_time, to_time)
-        if res == 0:
+        if res == 0: # noop, continue
             continue
-        elif res == 1:
+        elif res == 1: # include log and continue
             ret.append(f)
             log_debug("found log %s" % f)
-        elif res == 2:
+        elif res == 2: # don't go through older logs!
             break
-        elif res == 3:
+        elif res == 3: # include log and continue
             ret.append(f)
             log_debug("found log %s" % f)
             break
@@ -80,9 +85,11 @@ def analyze():
             out_string += "no %s/*/%s :/\n" % (workdir, f)
             continue
         code, tmp_string = analyze_one(workdir, f)
-        out_string += tmp_string
-        if code == 0:
+        if tmp_string:
+            out_string += "\n" + tmp_string + "\n\n"
+        else:
             out_string += "OK\n"
+        if code == 0:
             if f != constants.CIB_F:
                 consolidate(workdir, f)
 
@@ -137,6 +144,9 @@ def check_backtraces(workdir):
 
 
 def check_crmvfy(workdir):
+    """
+    some basic analysis of the report
+    """
     out_string = ""
     for n in constants.NODES.split():
         crm_verify_f = os.path.join(workdir, n, constants.CRM_VERIFY_F)
@@ -220,6 +230,9 @@ def check_time(var, option):
 
 
 def cib_diff(file1, file2):
+    """
+    check if files have same content in the cluster
+    """
     code = 0
     out_string = ""
     tmp_string = ""
@@ -246,6 +259,9 @@ def cluster_info():
 
 
 def collect_info():
+    """
+    get all other info (config, stats, etc)
+    """
     process_list = []
     process_list.append(multiprocessing.Process(target=sys_info))
     process_list.append(multiprocessing.Process(target=sys_stats))
@@ -332,6 +348,9 @@ def compatibility_pcmk():
 
 
 def consolidate(workdir, f):
+    """
+    remove duplicates if files are same, make links instead
+    """
     for n in constants.NODES.split():
         if os.path.isfile(os.path.join(workdir, f)):
             os.remove(os.path.join(workdir, n, f))
@@ -392,8 +411,10 @@ def diff_check(file1, file2):
     else:
         return (0, txt_diff(file1, file2))
 
-
 def distro():
+    """
+    get some system info
+    """
     ret = ""
     if which("lsb_release"):
         log_debug("using lsb_release for distribution info")
@@ -409,6 +430,9 @@ def dlm_dump():
 
 
 def drop_tempfiles():
+    """
+    tmp files business
+    """
     with open(constants.TMPFLIST, 'r') as f:
         for line in f.read().split('\n'):
             if os.path.isdir(line):
@@ -438,6 +462,10 @@ def dump_logset(logf, from_time, to_time, outf):
     newest = logf_set[0]
     mid_logfiles = logf_set[1:-1]
     out_string = ""
+
+    # the first logfile: from $from_time to $to_time (or end)
+    # logfiles in the middle: all
+    # the last logfile: from beginning to $to_time (or end)
     if num_logs == 1:
         out_string += print_logseg(newest, from_time, to_time)
     else:
@@ -528,6 +556,7 @@ def find_files_all(name, path):
 
 
 def find_first_ts(data):
+    ts = None
     for line in data:
         ts = get_ts(line)
         if ts:
@@ -556,9 +585,13 @@ def finalword():
         log_info("The report is saved in %s/%s.tar%s" % (constants.DESTDIR, constants.DEST, constants.COMPRESS_EXT))
     else:
         log_info("The report is saved in %s/%s" % (constants.DESTDIR, constants.DEST))
+    if constants.TO_TIME == 0:
+        to_time = datetime.datetime.now().strftime("%x %X")
+    else:
+        to_time = ts_to_dt(constants.TO_TIME).strftime("%x %X")
     log_info("Report timespan: %s - %s" %
              (ts_to_dt(constants.FROM_TIME).strftime("%x %X"),
-              ts_to_dt(constants.TO_TIME).strftime("%x %X")))
+              to_time))
     log_info("Thank you for taking time to create this report.")
 
 
@@ -599,6 +632,10 @@ def find_getstampproc_raw(line):
 
 
 def find_log():
+    """
+    first try syslog files, if none found then use the
+    logfile/debugfile settings
+    """
     if constants.EXTRA_LOGS:
         for l in constants.EXTRA_LOGS.split():
             if os.path.isfile(l) and l != constants.PCMK_LOG:
@@ -666,6 +703,7 @@ def findln_by_time(logf, tm):
                 break
             log_debug("cannot extract time: %s:%d; will try the next one" % (logf, mid))
             trycnt -= 1
+            # shift the whole first-last segment
             prevmid = mid
             while prevmid == mid:
                 first -= 1
@@ -867,6 +905,9 @@ def get_log_vars():
 
 
 def get_nodes():
+    """
+    find nodes for this cluster
+    """
     nodes = []
     # 1. set by user?
     if constants.USER_NODES:
@@ -1101,14 +1142,14 @@ def is_exec(filename):
     return os.path.isfile(filename) and os.access(filename, os.X_OK)
 
 
-#
-# check if the log contains a piece of our segment
-#
 def is_our_log(logf, from_time, to_time):
+    """
+    check if the log contains a piece of our segment
+    """
     with open(logf, 'r') as fd:
         data = fd.read()
         first_time = find_first_ts(head(10, data))
-        last_time = find_first_ts(tail(10, data)[::-1])
+        last_time = find_first_ts(tail(10, data))
 
     if (not first_time) or (not last_time):
         return 0  # skip (empty log?)
@@ -1126,7 +1167,9 @@ def is_our_log(logf, from_time, to_time):
 def line_time(logf, line_num):
     ts = None
     with open(logf, 'r') as fd:
-        ts = get_ts(tail(line_num, fd.read())[0])
+        line_res = head(line_num, fd.read())
+        if line_res:
+            ts = get_ts(line_res[-1])
     return ts
 
 
@@ -1169,6 +1212,9 @@ def make_temp_dir():
 
 
 def mktemplate(argv):
+    """
+    description template, editing, and other notes
+    """
     workdir = constants.WORKDIR
     out_string = constants.EMAIL_TMPLATE.format("%s" % date(), ' '.join(argv[1:]))
     sysinfo_f = os.path.join(workdir, constants.SYSINFO_F)
@@ -1241,8 +1287,8 @@ def pkg_ver_rpm(packages):
         code, out = get_command_info("rpm -qi %s" % pack)
         if code != 0:
             continue
+        distro = "Unknown"
         for line in out.split('\n'):
-            distro = "Unknown"
             if re.match("^Name\s*:", line):
                 name = line.split(':')[1].lstrip()
             elif re.match("^Version\s*:", line):
@@ -1273,6 +1319,9 @@ def pkg_versions(packages):
 
 
 def print_log(logf):
+    """
+    print part of the log
+    """
     cat = find_decompressor(logf)
     cmd = "%s %s" % (cat, logf)
     out = crmutils.get_stdout(cmd)
@@ -1314,10 +1363,11 @@ def print_logseg(logf, from_time, to_time):
 
 
 def ra_build_info():
+    out = "UNKnown"
     inf = "%s/lib/heartbeat/ocf-shellfuncs" % constants.OCF_DIR
-    out = grep("Build version:", infile=inf)[0]
-    if re.search(r"\$Format:%H\$", out):
-        out = "UNKnown"
+    res = grep("Build version:", infile=inf)
+    if res and not re.search(r"\$Format:%H\$", res[0]):
+        out = res[0]
     return "resource-agents: %s\n" % out
 
 
@@ -1330,6 +1380,9 @@ def random_string(num):
 
 
 def sanitize():
+    """
+    replace sensitive info with '****'
+    """
     workdir = constants.WORKDIR
     conf = os.path.join(workdir, constants.B_CONF)
     if os.path.isfile(conf):
@@ -1472,6 +1525,9 @@ def sub_string_test(in_string, pattern=constants.SANITIZE):
 
 
 def sys_info():
+    """
+    some basic system info and stats
+    """
     out_string = "#####Cluster info:\n"
     out_string += cluster_info()
     out_string += crmsh_info()
@@ -1512,7 +1568,7 @@ def sys_stats():
 
 
 def tail(n, indata):
-    return indata.split('\n')[n-1:-1]
+    return indata.split('\n')[-n:]
 
 
 def test_ssh_conn(addr):
@@ -1609,3 +1665,5 @@ def which(prog):
         return True
     else:
         return False
+
+# vim:ts=4:sw=4:et:

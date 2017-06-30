@@ -1,7 +1,7 @@
+# Copyright (C) 2017 Xin Liang <XLiang@suse.com>
+# See COPYING for license information.
 
 import socket
-
-# HA_NOARCHBIN = "/usr/share/crmsh/hb_report"
 
 ARGOPTS_VALUE = "f:t:l:u:X:p:L:e:E:n:MSDZVsvhdQ"
 B_CONF = None
@@ -132,3 +132,5 @@ PERMISSIONS_F = "permissions.txt"
 SYSINFO_F = "sysinfo.txt"
 SYSSTATS_F = "sysstats.txt"
 TIME_F = "time.txt"
+
+# vim:ts=4:sw=4:et:
