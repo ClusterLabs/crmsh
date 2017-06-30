@@ -8,27 +8,54 @@ from . import utils
 from . import ra
 from . import constants
 from . import options
-
+import re
 
 def complete_class_provider_type(args):
-    '''
-    This is just too complicated to complete properly...
-    '''
-    ret = set([])
+    c = args[-1]
     classes = ra.ra_classes()
-    for c in classes:
-        if c != 'ocf':
-            types = ra.ra_types(c)
-            for t in types:
-                ret.add('%s:%s' % (c, t))
+    if not c:
+        return [l+":" for l in classes]
 
+    ret = set([])
     providers = ra.ra_providers_all('ocf')
-    for p in providers:
-        types = ra.ra_types('ocf', p)
-        for t in types:
-            ret.add('ocf:%s:%s' % (p, t))
-    return list(ret)
+    # for ocf
+    if c == 'ocf:':
+        for p in providers:
+            if p == '.isolation':
+                continue
+            ret.add('%s:%s:' % ('ocf', p))
+        return list(ret)
 
+    if re.search(r'ocf:.+:', c):
+        for p in providers:
+            if p == '.isolation':
+                continue
+            types = ra.ra_types('ocf', p)
+            for t in types:
+                ret.add('%s:%s:%s' % ('ocf', p, t))
+        return list(ret)
+
+    if re.search(r'ocf:.+', c):
+        for p in providers:
+            if p == '.isolation':
+                continue
+            ret.add('%s:%s:' % ('ocf', p))
+        return list(ret)
+
+    # for other types
+    if c.endswith(':') and c.strip(':') in classes:
+        types = ra.ra_types(c)
+        for t in types:
+            ret.add('%s:%s' % (c.strip(':'), t))
+        return list(ret)
+        
+    if re.search(r'.+:.+', c):
+        types = ra.ra_types(c.split(':')[0])
+        for t in types:
+            ret.add('%s:%s' % (c.split(':')[0], t))
+        return list(ret)
+    
+    return [l+":" for l in classes]
 
 class RA(command.UI):
     '''
