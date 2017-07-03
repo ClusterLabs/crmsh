@@ -1018,13 +1018,13 @@ Options:
 *-y, --yes*::
     Answer "yes" to all prompts (use with caution)
 
-*--clusters=DESC*::
+*-s DESC, --sites=DESC*::
     Cluster description (see details below)
 
-*--arbitrator=IP*::
+*-a IP, --arbitrator=IP*::
     IP address of geo cluster arbitrator (optional)
 
-*--tickets=LIST*::
+*-t LIST, --tickets=LIST*::
     Tickets to create (space-separated)
 
 
@@ -1038,7 +1038,7 @@ configuration.
 Example with two clusters named paris and amsterdam:
 
 ............
-  --clusters "paris=192.168.10.10 amsterdam=192.168.10.11"
+  --sites "paris=192.168.10.10 amsterdam=192.168.10.11"
 ............
 
 Name clusters using the +--name+ parameter to `init`.
@@ -1057,9 +1057,6 @@ requires an existing geo cluster or geo arbitrator from which
 to get the geo cluster configuration.
 
 Options:
-
-*--clusters=DESC*::
-    Cluster description (see +geo-init+ for details)
 
 *-c IP, --cluster-node=IP*::
     IP address of an already-configured geo cluster
@@ -1085,7 +1082,7 @@ an existing cluster.
 
 Options:
 
-*--clusters=DESC*::
+*-s DESC, --sites=DESC*::
     Cluster description (see +geo-init+ for details)
 
 *-c IP, --cluster-node=IP*::
