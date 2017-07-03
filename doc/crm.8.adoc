@@ -1089,7 +1089,10 @@ Options:
     Cluster description (see +geo-init+ for details)
 
 *-c IP, --cluster-node=IP*::
-    IP address of an already-configured geo cluster or arbitrator
+    IP address of an already-configured geo cluster node
+    or arbitrator. This argument can also be a virtual IP
+    as long as it resolves to a node in an existing geo
+    cluster.
 
 Usage:
 ...............
