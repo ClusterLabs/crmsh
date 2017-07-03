@@ -136,6 +136,10 @@ class Context(object):
                                 ret = [t for t in ret if t.startswith(tokens[-1])]
                             else:
                                 ret = [t for t in ret]
+
+                        if not ret or self.command_info.aliases:
+                            if not token in self.current_level().get_completions():
+                                return self.current_level().get_completions()
                         return ret
                 # reached the end on a valid level.
                 # return the completions for the previous level.
