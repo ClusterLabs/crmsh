@@ -348,7 +348,7 @@ Cluster Description
 
   Example with two clusters named paris and amsterdam:
 
-  --sites "paris=192.168.10.10 amsterdam=192.168.10.11"
+  --clusters "paris=192.168.10.10 amsterdam=192.168.10.11"
 
   Name clusters using the --name parameter to
   crm bootstrap init.
@@ -356,14 +356,14 @@ Cluster Description
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-a", "--arbitrator", help="IP address of geo cluster arbitrator", dest="arbitrator", metavar="IP")
-        parser.add_option("-s", "--sites", help="Cluster description (see details below)", dest="clusters", metavar="DESC")
+        parser.add_option("-s", "--clusters", help="Geo cluster description (see details below)", dest="clusters", metavar="DESC")
         parser.add_option("-t", "--tickets", help="Tickets to create (space-separated)", dest="tickets", metavar="LIST")
         options, args = parser.parse_args(list(args))
 
         if options.clusters is None:
             errs = []
             if options.clusters is None:
-                errs.append("The --sites argument is required.")
+                errs.append("The --clusters argument is required.")
             parser.error(" ".join(errs))
 
         clustermap = self._parse_clustermap(options.clusters)
@@ -389,13 +389,13 @@ Cluster Description
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", help="IP address of an already-configured geo cluster or arbitrator", dest="node", metavar="IP")
-        parser.add_option("-s", "--sites", help="Cluster description (see geo-init for details)", dest="clusters", metavar="DESC")
+        parser.add_option("-s", "--clusters", help="Geo cluster description (see geo-init for details)", dest="clusters", metavar="DESC")
         options, args = parser.parse_args(list(args))
         errs = []
         if options.node is None:
             errs.append("The --cluster-node argument is required.")
         if options.clusters is None:
-            errs.append("The --sites argument is required.")
+            errs.append("The --clusters argument is required.")
         if len(errs) > 0:
             parser.error(" ".join(errs))
         clustermap = self._parse_clustermap(options.clusters)

@@ -1018,7 +1018,7 @@ Options:
 *-y, --yes*::
     Answer "yes" to all prompts (use with caution)
 
-*-s DESC, --sites=DESC*::
+*-s DESC, --clusters=DESC*::
     Geo cluster description (see details below)
 
 *-a IP, --arbitrator=IP*::
@@ -1038,7 +1038,7 @@ configuration.
 Example with two clusters named paris and amsterdam:
 
 ............
-  --sites "paris=192.168.10.10 amsterdam=192.168.10.11"
+  --clusters "paris=192.168.10.10 amsterdam=192.168.10.11"
 ............
 
 Name clusters using the +--name+ parameter to `init`.
@@ -1082,7 +1082,7 @@ an existing cluster.
 
 Options:
 
-*-s DESC, --sites=DESC*::
+*-s DESC, --clusters=DESC*::
     Geo cluster description (see +geo-init+ for details)
 
 *-c IP, --cluster-node=IP*::
@@ -1093,7 +1093,7 @@ Options:
 
 Usage:
 ...............
-geo-join --cluster-node <node> --sites <description>
+geo-join --cluster-node <node> --clusters <description>
 ...............
 
 
