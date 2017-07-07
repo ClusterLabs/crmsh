@@ -123,3 +123,7 @@ if warnings:
 
 if not errors and not warnings:
     print "No issues found."
+
+import os
+workdir = os.path.dirname(crm_script.__file__)
+print "\nINFO: health-report in directory \"%s\"" % workdir

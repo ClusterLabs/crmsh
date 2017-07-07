@@ -18,7 +18,24 @@ for f in sys.argv[1:]:
         elif os.path.isdir(f):
             if os.path.isfile(os.path.join(f, 'crm_script.debug')):
                 print open(os.path.join(f, 'crm_script.debug')).read()
-            shutil.rmtree(f)
+
+            # to check whether this clean request came from health
+            # if it does, delete all except health-report
+            del_flag = 0
+            for x in os.listdir(f):
+                if x.startswith("health-report"):
+                    del_flag = 1
+
+            if del_flag == 1:
+                for x in os.listdir(f):
+                    if x.startswith("health-report"):
+                        continue
+                    if os.path.isfile(x):
+                        os.remove(x)
+                    elif os.path.isdir(x):
+                        shutil.rmtree(x)
+            else:
+                shutil.rmtree(f)
     except OSError, e:
         errors.append(e)
 if errors:
