@@ -1651,6 +1651,10 @@ def bootstrap_remove(cluster_node=None, quiet=False, yes_to_all=False, force=Fal
 
     init()
     remove_ssh()
+
+    if not confirm("Do you want to remove node \"{}\" anyway?".format(cluster_node)):
+        return  
+
     if remove_localhost_check():
         if not config.core.force and not force:
             error("Removing self requires --force")
