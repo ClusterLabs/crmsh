@@ -32,6 +32,7 @@ class Context(object):
         self._mark = 0
         self._in_transit = False
         self._wait_for_dc = False
+        self._complete_flag = True
 
         # holds information about the currently
         # executing command
@@ -42,6 +43,12 @@ class Context(object):
         # readline cache
         self._rl_line = None
         self._rl_words = []
+
+    def enable_complete(self):
+        self._complete_flag = True
+
+    def disable_complete(self):
+        self._complete_flag = False
 
     def run(self, line):
         '''
@@ -183,6 +190,9 @@ class Context(object):
         self._rl_words = []
 
     def readline_completer(self, text, state):
+        if not self._complete_flag:
+            return
+
         import readline
 
         def matching(word, starts_text=text):
