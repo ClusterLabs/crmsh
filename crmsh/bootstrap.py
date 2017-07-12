@@ -1394,7 +1394,7 @@ def remove_get_hostname(seed_host):
             _context.host_status = 2
     else:
         if seed_host not in xmlutil.listnodes():
-            error("Specified node {} is not configured in cluster, can not remove".format(nodename))
+            error("Specified node {} is not configured in cluster, can not remove".format(seed_host))
 
         warn("Could not resolve hostname {}".format(seed_host))
         nodename = prompt_for_string('Please enter the IP address of the node to be removed (e.g: 192.168.0.1)', r'([0-9]+\.){3}[0-9]+', "")
