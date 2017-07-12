@@ -303,19 +303,25 @@ at the current level.
         '''
         out = []
         res = []
+        max_width = 16
         if context.previous_level():
             out = ['..']
         out += context.current_level().get_completions()
         for o in sorted(out):
             if o.startswith('-') or o.startswith('_'):
                 continue
+            if max_width < len(o):
+                max_width = len(o)
             res.append(o)
-        
+
+        if max_width >= 16:
+            max_width += 2   
+
         colnum = 3
         rownum = len(res)/colnum
         for i in range(rownum):
             for x in res[i::rownum]:
-                print "%-16s" % (x),
+                print "%-0*s" % (max_width, x),
             print ''
 
 
