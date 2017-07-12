@@ -281,6 +281,7 @@ If stage is not specified, each stage will be invoked in sequence.
             if not self._add_node(node, yes_to_all=options.yes_to_all):
                 return False
 
+    @command.alias("delete")
     @command.completers_repeating(_remove_completer)
     @command.skill_level('administrator')
     def do_remove(self, context, *args):
