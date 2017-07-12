@@ -81,6 +81,36 @@ class Cluster(command.UI):
 
         # TODO: optionally stop services on all nodes or specific node
 
+    @command.skill_level('administrator')
+    def do_enable(self, context):
+        '''
+        Enable the cluster services on this node
+        '''
+        if utils.is_program('systemctl'):
+            rc, out, err = utils.get_stdout_stderr('systemctl enable pacemaker')
+            if rc != 0:
+                context.fatal_error("Failed to enable pacemaker service: %s" % (err))
+            err_buf.info("Cluster services enabled")
+        else:
+            pass # TODO: for the os using chkconfig
+
+        # TODO: optionally enable services on all nodes or specific node
+
+    @command.skill_level('administrator')
+    def do_disable(self, context):
+        '''
+        Disable the cluster services on this node
+        '''
+        if utils.is_program('systemctl'):
+            rc, out, err = utils.get_stdout_stderr('systemctl disable pacemaker')
+            if rc != 0:
+                context.fatal_error("Failed to disable pacemaker service: %s" % (err))
+            err_buf.info("Cluster services disabled")
+        else:
+            pass # TODO: for the os using chkconfig
+
+        # TODO: optionally disable services on all nodes or specific node
+
     def _args_implicit(self, context, args, name):
         '''
         handle early non-nvpair arguments as

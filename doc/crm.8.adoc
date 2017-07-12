@@ -1001,6 +1001,26 @@ diff /etc/crm/crm.conf node2
 diff /etc/resolv.conf --checksum
 ...............
 
+[[cmdhelp_cluster_disable,Disable cluster services]]
+==== `disable`
+
+Disable the cluster-related system services on this node.
+
+Usage:
+...............
+disable
+...............
+
+[[cmdhelp_cluster_enable,Enable cluster services]]
+==== `enable`
+
+Enable the cluster-related system services on this node.
+
+Usage:
+...............
+enable
+...............
+
 [[cmdhelp_cluster_geo_init,Configure cluster as geo cluster]]
 ==== `geo-init`
 
