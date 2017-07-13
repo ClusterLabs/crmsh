@@ -180,28 +180,47 @@ def _cd_completer(args, context):
     """
     more like bash cd completion
     """
-    # prevent '..' completion happend many times
+    def current_completions():
+        return context.current_level().get_completions()
+
+    def is_sublevel(l):
+        return context.current_level().is_sublevel(l)
+
+    def next_completions(token):
+        info = context.current_level().get_child(token)
+        context.enter_level(info.level)
+        return [l for l in current_completions() if is_sublevel(l)]
+
+    def prev_completions():
+        return [l for l in context.previous_level().get_completions() 
+                        if context.previous_level().is_sublevel(l)]
+
+    if len(args) == 1 and args[0] == 'cd':
+        # complete the 'cd' command self
+        return current_completions()
+    if len(args) == 2:
+        if args[1] in current_completions():
+            return [args[1] + '/']
+        if args[1] == '..' and context.previous_level():
+            return ['../']
+        if args[1] == '../' and context.previous_level():
+            return [args[1] + l for l in prev_completions()]
+        if args[1].endswith("/"):
+            return [args[1]+l for l in next_completions(args[1].strip('/'))]
+        if re.search(r'\.\./.+', args[1]):
+            return ['../' + l for l in prev_completions()]
+        if re.search(r'.+/.+', args[1]):
+            token = args[1].split('/')[0]
+            return [token+'/'+l for l in next_completions(token)]
     if len(args) == 3 and not args[-1]:
+        # prevent '..' completion happend many times triggerd by Tab
         return
-    # like bash
-    if args[-1] == "..":
-        return ["../"]
 
     ret = []
-    previous_item = []
     if context.previous_level():
         ret += ['..']
-        # get previous sublevel completions
-        previous_item = [ l for l in context.previous_level().get_completions()
-                          if context.previous_level().is_sublevel(l)]
-
-    if re.search(r'\.\./.*', args[-1]):
-        # like bash, complete after '../'
-        return previous_item
-
-    # complete on the current level   
-    return ret + [l for l in context.current_level().get_completions()
-                  if context.current_level().is_sublevel(l)]
+    # look out where 'cd' command can enter
+    return ret + [l for l in current_completions() if is_sublevel(l)]
 
 
 def _help_completer(args, context):

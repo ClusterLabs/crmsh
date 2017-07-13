@@ -9,7 +9,6 @@ from . import options
 from .msg import common_err, common_info, common_warn
 from . import ui_utils
 from . import userdir
-import re
 
 
 # import logging
@@ -132,10 +131,7 @@ class Context(object):
                         # use the completer for the command
                         ret = self.command_info.complete(self, tokens)
                         if tokens:
-                            if not re.search(r'\.\./.*', tokens[0]):
-                                ret = [t for t in ret if t.startswith(tokens[-1])]
-                            else:
-                                ret = [t for t in ret]
+                            ret = [t for t in ret if t.startswith(tokens[-1])]
 
                         if not ret or self.command_info.aliases:
                             if not token in self.current_level().get_completions():
@@ -185,24 +181,19 @@ class Context(object):
     def readline_completer(self, text, state):
         import readline
 
-        def matching(word, starts_text=text):
+        def matching(word):
             'we are only completing the last word in the line'
-            return word.split()[-1].startswith(starts_text)
+            return word.split()[-1].startswith(text)
 
         line = utils.get_line_buffer() + readline.get_line_buffer()
         if line != self._rl_line:
             try:
                 self._rl_line = line
                 completions = self.complete(line)
-
-                if text and not re.search(r'\.\./.*', text):
+                if text:
                     self._rl_words = [w for w in completions if matching(w)]
                 else:
-                    if re.search(r'\.\./.+', text):
-                        self._rl_words = ['../'+w for w in completions 
-                                          if matching(w, starts_text=text.split('/')[1])]
-                    else:
-                        self._rl_words = [w for w in completions]
+                    self._rl_words = list(completions)
 
             except Exception:  # , msg:
                 # logging.exception(msg)
