@@ -159,7 +159,9 @@ Note:
     To use storage you have already configured, pass -s and -o to specify
     the block devices for SBD and OCFS2, and the automatic partitioning
     will be skipped.
-""")
+""", add_help_option=False)
+
+        parser.add_option("-h", "--help",action="store_true", dest="help", help="Show this help message")
         parser.add_option("-q", "--quiet", action="store_true", dest="quiet",
                           help="Be quiet (don't describe what's happening, just do it)")
         parser.add_option("-y", "--yes", action="store_true", dest="yes_to_all",
@@ -197,6 +199,9 @@ Note:
         parser.add_option_group(storage_group)
 
         options, args = parser.parse_args(list(args))
+        if options.help:
+            parser.print_help()
+            return
 
         stage = ""
         if len(args):
@@ -258,7 +263,8 @@ Stage can be one of:
     cluster     Start the cluster on this node
 
 If stage is not specified, each stage will be invoked in sequence.
-""")
+""", add_help_option=False)
+        parser.add_option("-h", "--help",action="store_true", dest="help", help="Show this help message")
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG", help="Use the given watchdog device")
@@ -269,6 +275,9 @@ If stage is not specified, each stage will be invoked in sequence.
         parser.add_option_group(network_group)
 
         options, args = parser.parse_args(list(args))
+        if options.help:
+            parser.print_help()
+            return
 
         stage = ""
         if len(args) == 1:
@@ -304,9 +313,13 @@ If stage is not specified, each stage will be invoked in sequence.
         Installs packages, sets up corosync and pacemaker, etc.
         Must be executed from a node in the existing cluster.
         '''
-        parser = OptParser(usage="usage: add [options] [node ...]")
+        parser = OptParser(usage="usage: add [options] [node ...]", add_help_option=False)
+        parser.add_option("-h", "--help",action="store_true", dest="help", help="Show this help message")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         options, args = parser.parse_args(list(args))
+        if options.help:
+            parser.print_help()
+            return
         for node in args:
             if not self._add_node(node, yes_to_all=options.yes_to_all):
                 return False
@@ -318,13 +331,17 @@ If stage is not specified, each stage will be invoked in sequence.
         '''
         Remove the given node(s) from the cluster.
         '''
-        parser = OptParser(usage="usage: remove [options] [<node> ...]")
+        parser = OptParser(usage="usage: remove [options] [<node> ...]", add_help_option=False)
+        parser.add_option("-h", "--help",action="store_true", dest="help", help="Show this help message")
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of cluster node which will be deleted", metavar="HOST")
         parser.add_option("-F", "--force", dest="force", help="Remove current node", action="store_true")
 
         options, args = parser.parse_args(list(args))
+        if options.help:
+            parser.print_help()
+            return
         if options.cluster_node is not None and options.cluster_node not in args:
             args = list(args) + [options.cluster_node]
         if len(args) == 0:
@@ -383,13 +400,17 @@ Cluster Description
 
   Name clusters using the --name parameter to
   crm bootstrap init.
-""")
+""", add_help_option=False)
+        parser.add_option("-h", "--help",action="store_true", dest="help", help="Show this help message")
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-a", "--arbitrator", help="IP address of geo cluster arbitrator", dest="arbitrator", metavar="IP")
         parser.add_option("-s", "--clusters", help="Geo cluster description (see details below)", dest="clusters", metavar="DESC")
         parser.add_option("-t", "--tickets", help="Tickets to create (space-separated)", dest="tickets", metavar="LIST")
         options, args = parser.parse_args(list(args))
+        if options.help:
+            parser.print_help()
+            return
 
         if options.clusters is None:
             errs = []
@@ -416,12 +437,16 @@ Cluster Description
         '''
         Join this cluster to a geo configuration.
         '''
-        parser = OptParser(usage="usage: geo-join [options]")
+        parser = OptParser(usage="usage: geo-join [options]", add_help_option=False)
+        parser.add_option("-h", "--help",action="store_true", dest="help", help="Show this help message")
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", help="IP address of an already-configured geo cluster or arbitrator", dest="node", metavar="IP")
         parser.add_option("-s", "--clusters", help="Geo cluster description (see geo-init for details)", dest="clusters", metavar="DESC")
         options, args = parser.parse_args(list(args))
+        if options.help:
+            parser.print_help()
+            return
         errs = []
         if options.node is None:
             errs.append("The --cluster-node argument is required.")
@@ -442,11 +467,15 @@ Cluster Description
         '''
         Make this node a geo arbitrator.
         '''
-        parser = OptParser(usage="usage: geo-init-arbitrator [options]")
+        parser = OptParser(usage="usage: geo-init-arbitrator [options]", add_help_option=False)
+        parser.add_option("-h", "--help",action="store_true", dest="help", help="Show this help message")
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", help="IP address of an already-configured geo cluster", dest="other", metavar="IP")
         options, args = parser.parse_args(list(args))
+        if options.help:
+            parser.print_help()
+            return
         bootstrap.bootstrap_arbitrator(options.quiet, options.yes_to_all, options.other)
         return True
 
