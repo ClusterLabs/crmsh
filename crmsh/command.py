@@ -465,6 +465,8 @@ Examples:
             if info.type == 'command' and not is_valid_command_function(info.function):
                 raise ValueError("Invalid command function: %s.%s" %
                                  (cls.__name__, info.function.__name__))
+            if info.name.startswith("_"):
+                return
             children[info.name] = info
             add_aliases(children, info)
             add_help(info)
