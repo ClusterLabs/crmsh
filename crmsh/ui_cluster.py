@@ -22,6 +22,9 @@ def _remove_completer(args):
         n = utils.list_cluster_nodes()
     except:
         n = []
+    for node in args[1:]:
+        if node in n:
+            n.remove(node)   
     return scripts.param_completion_list('remove') + n
 
 
