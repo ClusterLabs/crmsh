@@ -10,6 +10,8 @@ from .msg import err_buf
 from . import scripts
 from . import completers as compl
 from . import bootstrap
+from . import corosync
+from .cibconfig import cib_factory
 
 
 class OptParser(optparse.OptionParser):
@@ -340,6 +342,37 @@ If stage is not specified, each stage will be invoked in sequence.
                     yes_to_all=options.yes_to_all,
                     force=options.force)
         return True
+
+    @command.skill_level('administrator')
+    def do_rename(self, context, *args):
+        '''
+        Rename the cluster.
+        '''
+        if not bootstrap.service_is_active("corosync.service"):
+            context.fatal_error("Can't rename cluster when cluster service is stopped")
+        if len(args) != 1:
+            context.fatal_error("Expected <clustername>")
+        new_name = args[0]
+        old_name = cib_factory.get_property_w_default('cluster-name')
+        if old_name and new_name == old_name:
+            context.fatal_error("Expected a different name")
+
+        # Update config file with the new name on all nodes
+        nodes = utils.list_cluster_nodes()
+        corosync.set_value('totem.cluster_name', new_name)
+        if len(nodes) > 1:
+            nodes.remove(utils.this_node())
+            context.info("Copy cluster config file to \"{}\"".format(' '.join(nodes)))
+            corosync.push_configuration(nodes)
+
+        # Change the cluster-name property in the CIB
+        cib_factory.create_object("property", "cluster-name={}".format(new_name))
+        if not cib_factory.commit():
+            context.fatal_error("Change property cluster-name failed!")
+
+        # Change in corosync-cmapctl
+        context.info("Reload the configuration on all nodes")
+        self.do_run(context, "corosync-cmapctl -s totem.cluster_name str {}".format(new_name))
 
     def _parse_clustermap(self, clusters):
         '''
