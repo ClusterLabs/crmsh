@@ -1321,6 +1321,17 @@ remove [options] [<node> ...]
 ...............
 
 
+[[cmdhelp_cluster_rename,Rename the cluster]]
+==== `rename`
+
+Rename the cluster name 
+
+Usage:
+...............
+rename <new_cluster_name>
+...............
+
+
 [[cmdhelp_cluster_run,Execute an arbitrary command on all nodes]]
 ==== `run`
 
