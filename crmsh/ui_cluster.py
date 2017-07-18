@@ -133,6 +133,7 @@ class Cluster(command.UI):
         '''
         Initialize a cluster.
         '''
+        context.disable_complete()
         def looks_like_hostnames(lst):
             sectionlist = bootstrap.INIT_STAGES
             return all(not (l.startswith('-') or l in sectionlist) for l in lst)
@@ -205,10 +206,12 @@ Note:
             stage = args[0]
         if stage not in bootstrap.INIT_STAGES and stage != "":
             parser.error("Invalid stage (%s)" % (stage))
+            context.enable_complete()
             return False
 
         if options.template and options.template != "ocfs2":
             parser.error("Invalid template (%s)" % (options.template))
+            context.enable_complete()
             return False
 
         # if options.geo and options.name == "hacluster":
@@ -241,8 +244,9 @@ Note:
                     continue
                 bootstrap.status("Add node {} (may prompt for root password):".format(node))
                 if not self._add_node(node, yes_to_all=options.yes_to_all):
+                    context.enable_complete()
                     return False
-
+        context.enable_complete()
         return True
 
     @command.skill_level('administrator')
@@ -250,6 +254,7 @@ Note:
         '''
         Join this node to an existing cluster
         '''
+        context.disable_complete()
         parser = OptParser(usage="usage: join [options] [STAGE]", epilog="""
 
 Stage can be one of:
@@ -277,6 +282,7 @@ If stage is not specified, each stage will be invoked in sequence.
             stage = args[0]
         if stage not in ("ssh", "csync2", "ssh_merge", "cluster", ""):
             parser.error("Invalid stage (%s)" % (stage))
+            context.enable_complete()
             return False
 
         bootstrap.bootstrap_join(
@@ -286,7 +292,7 @@ If stage is not specified, each stage will be invoked in sequence.
             yes_to_all=options.yes_to_all,
             watchdog=options.watchdog,
             stage=stage)
-
+        context.enable_complete()
         return True
 
     def _add_node(self, node, yes_to_all=False):
@@ -320,6 +326,7 @@ If stage is not specified, each stage will be invoked in sequence.
         '''
         Remove the given node(s) from the cluster.
         '''
+        context.disable_complete()
         parser = OptParser(usage="usage: remove [options] [<node> ...]")
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
@@ -341,6 +348,7 @@ If stage is not specified, each stage will be invoked in sequence.
                     quiet=options.quiet,
                     yes_to_all=options.yes_to_all,
                     force=options.force)
+        context.enable_complete()
         return True
 
     @command.skill_level('administrator')
@@ -401,6 +409,7 @@ If stage is not specified, each stage will be invoked in sequence.
         * arbitrator IP / hostname (optional)
         * list of tickets (can be empty)
         '''
+        context.disable_complete()
         parser = OptParser(usage="usage: geo-init [options]", epilog="""
 
 Cluster Description
@@ -440,6 +449,7 @@ Cluster Description
             except ValueError:
                 parser.error("Invalid ticket list")
         bootstrap.bootstrap_init_geo(options.quiet, options.yes_to_all, options.arbitrator, clustermap, ticketlist)
+        context.enable_complete()
         return True
 
     @command.name("geo_join")
@@ -449,6 +459,7 @@ Cluster Description
         '''
         Join this cluster to a geo configuration.
         '''
+        context.disable_complete()
         parser = OptParser(usage="usage: geo-join [options]")
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
@@ -466,6 +477,7 @@ Cluster Description
         if clustermap is None:
             parser.error("Invalid cluster description format")
         bootstrap.bootstrap_join_geo(options.quiet, options.yes_to_all, options.node, clustermap)
+        context.enable_complete()
         return True
 
     @command.name("geo_init_arbitrator")
@@ -475,12 +487,14 @@ Cluster Description
         '''
         Make this node a geo arbitrator.
         '''
+        context.disable_complete()
         parser = OptParser(usage="usage: geo-init-arbitrator [options]")
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", help="IP address of an already-configured geo cluster", dest="other", metavar="IP")
         options, args = parser.parse_args(list(args))
         bootstrap.bootstrap_arbitrator(options.quiet, options.yes_to_all, options.other)
+        context.enable_complete()
         return True
 
     @command.completers_repeating(compl.call(scripts.param_completion_list, 'health'))
