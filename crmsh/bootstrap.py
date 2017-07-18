@@ -101,7 +101,7 @@ def log(*args):
             die("Can't append to {} - aborting".format(LOG_FILE))
 
 
-def prompt_for_string(msg, match=None, default=''):
+def prompt_for_string(msg, match=None, default='', valid_func=None):
     if _context.yes_to_all:
         return default
     while True:
@@ -111,7 +111,8 @@ def prompt_for_string(msg, match=None, default=''):
         if match is None:
             return val
         if re.match(match, val) is not None:
-            return val
+            if not valid_func or valid_func(val):
+                return val
         print >>sys.stderr, "    Invalid value entered"
 
 
@@ -675,6 +676,12 @@ def init_corosync_auth():
     invoke("corosync-keygen -l")
 
 
+def valid_port(port):
+    if int(port) >= 1024 and int(port) <= 65535:
+        return True
+    return False
+
+
 def init_corosync_unicast():
     if _context.yes_to_all:
         status("Configuring corosync (unicast)")
@@ -691,7 +698,7 @@ Configure Corosync (unicast):
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
-    mcastport = prompt_for_string('Port', '[0-9]+', "5405")
+    mcastport = prompt_for_string('Port', '[0-9]+', "5405", valid_port)
     if not mcastport:
         error("No value for mcastport")
 
@@ -733,7 +740,7 @@ Configure Corosync:
     if not mcastaddr:
         error("No value for mcastaddr")
 
-    mcastport = prompt_for_string('Multicast port', '[0-9]+', "5405")
+    mcastport = prompt_for_string('Multicast port', '[0-9]+', "5405", valid_port)
     if not mcastport:
         error("No value for mcastport")
 
