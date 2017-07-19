@@ -364,7 +364,7 @@ If stage is not specified, each stage will be invoked in sequence.
         if len(args) != 1:
             context.fatal_error("Expected <clustername>")
         new_name = args[0]
-        old_name = cib_factory.get_property_w_default('cluster-name')
+        old_name = cib_factory.get_property('cluster-name')
         if old_name and new_name == old_name:
             context.fatal_error("Expected a different name")
 
