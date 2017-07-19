@@ -40,6 +40,17 @@ def script_args(args):
     return _nvpairs2parameters(args)
 
 
+def get_cluster_name():
+    cluster_name = None
+    if not bootstrap.service_is_active("corosync.service"):
+        name = corosync.get_values('totem.cluster_name')
+        if name:
+            cluster_name = name[0]
+    else:
+        cluster_name = cib_factory.get_property('cluster-name')
+    return cluster_name
+    
+
 class Cluster(command.UI):
     '''
     Whole cluster management.
@@ -382,7 +393,7 @@ If stage is not specified, each stage will be invoked in sequence.
         if len(args) != 1:
             context.fatal_error("Expected <clustername>")
         new_name = args[0]
-        old_name = cib_factory.get_property_w_default('cluster-name')
+        old_name = cib_factory.get_property('cluster-name')
         if old_name and new_name == old_name:
             context.fatal_error("Expected a different name")
 
@@ -551,10 +562,12 @@ Cluster Description
         '''
         Quick cluster health status. Corosync status, DRBD status...
         '''
+
         stack = utils.cluster_stack()
         if not stack:
             err_buf.error("No supported cluster stack found (tried heartbeat|openais|corosync)")
         if utils.cluster_stack() == 'corosync':
+            print "Name: {}\n".format(get_cluster_name())
             print "Services:"
             for svc in ["corosync", "pacemaker"]:
                 info = utils.service_info(svc)
