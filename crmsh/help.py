@@ -127,11 +127,21 @@ _TOPICS["Overview"] = HelpEntry("Available help topics and commands", generated=
 _TOPICS["Topics"] = HelpEntry("Available help topics", generated=True)
 
 
-def _titleline(title, desc, suffix=''):
-    return '%-16s %s\n' % (('`%s`' % (title)) + suffix, desc)
+def _titleline(title, desc, suffix='', width=16):
+    return '%-0*s %s\n' % (width, ('`%s`' % (title)) + suffix, desc)
 
 
 _hidden_commands = ('up', 'cd', 'help', 'quit', 'ls')
+
+
+def get_max_width(dict_):
+    max_width = 16
+    for key in dict_.keys():
+        if max_width < len(key):
+            max_width = len(key)
+    if max_width >= 16:
+        max_width += 2
+    return max_width
 
 
 def help_overview():
@@ -141,24 +151,28 @@ def help_overview():
     '''
     _load_help()
     s = "Available topics:\n\n"
+    max_width = get_max_width(_TOPICS)
     for title, topic in _TOPICS.iteritems():
-        s += '\t' + _titleline(title, topic.short)
+        s += '\t' + _titleline(title, topic.short, width=max_width)
     s += "\n"
     s += "Available commands:\n\n"
 
+    max_width = get_max_width(_COMMANDS.get('root', {}))
     for title, command in _COMMANDS.get('root', {}).iteritems():
         if not command.is_alias():
-            s += '\t' + _titleline(title, command.short)
+            s += '\t' + _titleline(title, command.short, width=max_width)
     s += "\n"
 
+    max_width_1 = get_max_width(_LEVELS)
     for title, level in sorted(_LEVELS.iteritems(), key=lambda x: x[0]):
         if title != 'root' and title in _COMMANDS:
-            s += '\t' + _titleline(title, level.short, suffix='/')
+            s += '\t' + _titleline(title, level.short, suffix='/', width=max_width_1)
+            max_width_2 = get_max_width(_COMMANDS[title])
             for cmdname, cmd in sorted(_COMMANDS[title].iteritems(), key=lambda x: x[0]):
                 if cmdname in _hidden_commands or cmdname.startswith('_'):
                     continue
                 if not cmd.is_alias():
-                    s += '\t\t' + _titleline(cmdname, cmd.short)
+                    s += '\t\t' + _titleline(cmdname, cmd.short, width=max_width_2)
             s += "\n"
     return HelpEntry('Help overview for crmsh\n', s, generated=True)
 
@@ -170,8 +184,9 @@ def help_topics():
     '''
     _load_help()
     s = ''
+    max_width = get_max_width(_TOPICS)
     for title, topic in _TOPICS.iteritems():
-        s += '\t' + _titleline(title, topic.short)
+        s += '\t' + _titleline(title, topic.short, width=max_width)
     return HelpEntry('Available topics\n', s, generated=True)
 
 
@@ -333,14 +348,15 @@ def _load_help():
         for lvlname, level in _LEVELS.iteritems():
             if lvlname in _COMMANDS:
                 level.long += "\n\nCommands:\n"
+                max_width = get_max_width(_COMMANDS[lvlname])
                 for cmdname, cmd in sorted(_COMMANDS[lvlname].iteritems(), key=lambda x: x[0]):
                     if cmdname in _hidden_commands or cmdname.startswith('_'):
                         continue
-                    level.long += "\t" + _titleline(cmdname, cmd.short)
+                    level.long += "\t" + _titleline(cmdname, cmd.short, width=max_width)
                 level.long += "\n"
                 for cmdname, cmd in sorted(_COMMANDS[lvlname].iteritems(), key=lambda x: x[0]):
                     if cmdname in _hidden_commands:
-                        level.long += "\t" + _titleline(cmdname, cmd.short)
+                        level.long += "\t" + _titleline(cmdname, cmd.short, width=max_width)
 
     def fixup_root_commands():
         "root commands appear as levels"
