@@ -49,7 +49,10 @@ def resources(args):
     if cib_el is None:
         return []
     nodes = xmlutil.get_interesting_nodes(cib_el, [])
-    return [x.get("id") for x in nodes if xmlutil.is_resource(x)]
+    res = [x.get("id") for x in nodes if xmlutil.is_resource(x)]
+    if args and args[0] in ['promote', 'demote']:
+        return filter(xmlutil.RscState().is_ms, res)
+    return res
 
 
 def primitives(args):
