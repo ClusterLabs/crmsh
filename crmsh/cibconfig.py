@@ -2565,7 +2565,7 @@ class CibFactory(object):
             common_debug("CIB commit successful at %s" % (t))
             if is_live_cib():
                 self.last_commit_time = t
-            self.reset()
+            self.refresh()
         return rc
 
     def _update_schema(self):
