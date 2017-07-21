@@ -1,3 +1,27 @@
+* Fri Jul 21 2017 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- high: bootstrap: Add option to enable diskless SBD mode to cluster init (bsc#1045118)
+- high: cibconfig: Graph file output option was reversed (bsc#1036595)
+- medium: bootstrap: replace 'nodename' to 'seed_host'
+- medium: bootstrap: Fix watchdog SBD envvars (bsc#1045118)
+- medium: scripts: Relax broadcast IP validation (bsc#1044233)
+- medium: scripts: Clarify help text for NFS wizard (bsc#1044244)
+- medium: ui_cluster: Add --force to ha-cluster-remove (bsc#1044071)
+- medium: history: Revert preference of messages over ha-log.txt (bsc#1031138)
+- medium: bootstrap: Make arbitrator argument optional (bsc#1038386)
+- medium: bootstrap: Check required arguments to geo-join (bsc#1037421)
+- medium: bootstrap: Handle failure to fetch config gracefully (bsc#1037423)
+- medium: bootstrap: Enable "help geo-init" etc. (bsc#1037417)
+- medium: bootstrap: Set expected_votes based on actual node count (bsc#1033288)
+- medium: scripts/health: Make health script available as wizard (fate#320848) (fate#320866)
+- medium: ui_cluster: Fix init with no arguments (bsc#1028735)
+- low: utils: Use /proc for process discovery
+- low: bootstrap: Fix warning for formatting SBD device (bsc#1028704)
+- low: ui_cluster: when have an error for optparse, just return and stay at shell
+- low: ui_cluster: when use help option, do not exit, just print help messages and return
+- doc: geo-join requires --clusters argument (bsc#1037442)
+- remove bindnetaddr for unicast(bsc#1030437)
+- Allow empty fencing_topology (bsc#1025393)
+
 * Tue Jan 31 2017 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - Release 3.0.0
 - high: bootstrap: Add bootstrap commands (fate#321114)
