@@ -23,6 +23,11 @@ from . import term
 from .msg import common_warn, common_info, common_debug, common_err, err_buf
 
 
+network_regrex = r'((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}0'
+ipv4_regrex = r'((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
+mcast_regrex = r'2(?:2[4-9]|3\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d?|0)){3}'
+
+
 def memoize(function):
     "Decorator to invoke a function once only for any argument"
     memoized = {}

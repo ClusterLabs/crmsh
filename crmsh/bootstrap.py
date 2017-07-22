@@ -732,11 +732,15 @@ Configure Corosync:
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
-    bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)', r'([0-9]+\.){3}[0-9]+', _context.ip_network)
+    bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)', 
+                                    r'^{}$'.format(utils.network_regrex), 
+                                    _context.ip_network)
     if not bindnetaddr:
         error("No value for bindnetaddr")
 
-    mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)', r'([0-9]+\.){3}[0-9]+', gen_mcastaddr())
+    mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)', 
+                                  r'^{}$'.format(utils.mcast_regrex), 
+                                  gen_mcastaddr())
     if not mcastaddr:
         error("No value for mcastaddr")
 
@@ -1133,7 +1137,9 @@ Configure Administration IP Address:
         if not confirm("Do you wish to configure an administration IP?"):
             return
 
-        adminaddr = prompt_for_string('Administration Virtual IP', r'([0-9]+\.){3}[0-9]+', "")
+        adminaddr = prompt_for_string('Administration Virtual IP', 
+                                      r'^{}$'.format(utils.ipv4_regrex), 
+                                      "")
         if not adminaddr:
             error("No value for admin address")
 
