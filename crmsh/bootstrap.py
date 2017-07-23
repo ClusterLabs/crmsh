@@ -113,7 +113,7 @@ def prompt_for_string(msg, match=None, default='', valid_func=None):
         if re.match(match, val) is not None:
             if not valid_func or valid_func(val):
                 return val
-        print >>sys.stderr, "    Invalid value entered"
+        print term.render(clidisplay.error("    Invalid value entered"))
 
 
 def confirm(msg):
