@@ -676,6 +676,15 @@ def init_corosync_auth():
     invoke("corosync-keygen -l")
 
 
+def valid_network(addr):
+    all_ = utils.get_all_networks()
+    if all_ and addr in all_:
+        return True
+    else:
+        print term.render(clidisplay.error("    Must one of {}".format(all_)))
+        return False
+
+
 def valid_port(port):
     if int(port) >= 1024 and int(port) <= 65535:
         return True
@@ -734,7 +743,8 @@ Configure Corosync:
 
     bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)', 
                                     r'^{}$'.format(utils.network_regrex), 
-                                    _context.ip_network)
+                                    _context.ip_network,
+                                    valid_network)
     if not bindnetaddr:
         error("No value for bindnetaddr")
 

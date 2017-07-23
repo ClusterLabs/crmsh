@@ -86,6 +86,18 @@ def network_defaults(interface=None):
     return tuple(info)
 
 
+def get_all_networks():
+    """
+    return all the network at local node
+    """
+    all_networks = []
+    _, outp = get_stdout("/sbin/ip -o route show")
+    for l in outp.split('\n'):
+        if re.search(r'^{}/[0-9]+ '.format(network_regrex), l):
+            all_networks.append(l.split('/')[0])
+    return all_networks
+
+
 _cib_shadow = 'CIB_shadow'
 _cib_in_use = ''
 
