@@ -101,7 +101,7 @@ def log(*args):
             die("Can't append to {} - aborting".format(LOG_FILE))
 
 
-def prompt_for_string(msg, match=None, default='', valid_func=None):
+def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=None):
     if _context.yes_to_all:
         return default
     while True:
@@ -111,7 +111,7 @@ def prompt_for_string(msg, match=None, default='', valid_func=None):
         if match is None:
             return val
         if re.match(match, val) is not None:
-            if not valid_func or valid_func(val):
+            if not valid_func or valid_func(val, prev_value):
                 return val
         print term.render(clidisplay.error("    Invalid value entered"))
 
@@ -676,7 +676,10 @@ def init_corosync_auth():
     invoke("corosync-keygen -l")
 
 
-def valid_network(addr):
+def valid_network(addr, prev_value=None):
+    if prev_value and addr == prev_value[0]:
+        print term.render(clidisplay.error("    {} has been used".format(addr)))
+        return False
     all_ = utils.get_all_networks()
     networks = [x.split('/')[0] for x in all_]
     if all_ and addr in networks:
@@ -686,13 +689,17 @@ def valid_network(addr):
         return False
 
 
-def valid_port(port):
+def valid_port(port, prev_value=None):
+    if prev_value:
+        if abs(int(port) - int(prev_value[0])) <= 1:
+            print term.render(clidisplay.error("    The gap between two ports must larger than 1"))
+            return False
     if int(port) >= 1024 and int(port) <= 65535:
         return True
     return False
 
 
-def valid_adminIP(ip):
+def valid_adminIP(ip, prev_value=None):
     all_ = utils.get_all_networks()
     networks = []
     for net,bits in [x.split('/') for x in all_]:
@@ -754,28 +761,51 @@ Configure Corosync:
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
-    bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)', 
-                                    r'^{}$'.format(utils.network_regrex), 
-                                    _context.ip_network,
-                                    valid_network)
-    if not bindnetaddr:
-        error("No value for bindnetaddr")
+    bindnetaddr_res = []
+    mcastaddr_res = []
+    mcastport_res = []
+    two_rings = False
+    default_networks = utils.get_all_networks()
+    default_ports = 5405
+    for i in 0, 1:
+        bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)', 
+                                        r'^{}$'.format(utils.network_regrex), 
+                                        default_networks[i].split('/')[0],
+                                        valid_network,
+                                        bindnetaddr_res)
+        if not bindnetaddr:
+            error("No value for bindnetaddr")
+        bindnetaddr_res.append(bindnetaddr)
 
-    mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)', 
-                                  r'^{}$'.format(utils.mcast_regrex), 
-                                  gen_mcastaddr())
-    if not mcastaddr:
-        error("No value for mcastaddr")
+        mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)', 
+                                      r'^{}$'.format(utils.mcast_regrex), 
+                                      gen_mcastaddr())
+        if not mcastaddr:
+            error("No value for mcastaddr")
+        mcastaddr_res.append(mcastaddr)
 
-    mcastport = prompt_for_string('Multicast port', '[0-9]+', "5405", valid_port)
-    if not mcastport:
-        error("No value for mcastport")
+        mcastport = prompt_for_string('Multicast port', 
+                                      '[0-9]+', 
+                                      str(default_ports), 
+                                      valid_port,
+                                      mcastport_res)
+        if not mcastport:
+            error("No value for mcastport")
+        mcastport_res.append(mcastport)
+
+        if i==1 or \
+           len(default_networks) < 2 or \
+           not confirm("Add another heartbeat line?"):
+            break
+        two_rings = True
+        default_ports += 2
 
     corosync.create_configuration(
         clustername=_context.cluster_name,
-        bindnetaddr=bindnetaddr,
-        mcastaddr=mcastaddr,
-        mcastport=mcastport)
+        bindnetaddr=bindnetaddr_res,
+        mcastaddr=mcastaddr_res,
+        mcastport=mcastport_res,
+        two_rings=two_rings)
     csync2_update(corosync.conf())
 
 
