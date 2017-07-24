@@ -678,10 +678,11 @@ def init_corosync_auth():
 
 def valid_network(addr):
     all_ = utils.get_all_networks()
-    if all_ and addr in all_:
+    networks = [x.split('/')[0] for x in all_]
+    if all_ and addr in networks:
         return True
     else:
-        print term.render(clidisplay.error("    Must one of {}".format(all_)))
+        print term.render(clidisplay.error("    Must one of {}".format(networks)))
         return False
 
 
@@ -690,6 +691,18 @@ def valid_port(port):
         return True
     return False
 
+
+def valid_adminIP(ip):
+    all_ = utils.get_all_networks()
+    networks = []
+    for net,bits in [x.split('/') for x in all_]:
+        networks.append(net)
+        if utils.ipv4_in_network(ip, net, bits):
+            return True
+
+    print term.render(clidisplay.error("    Must in one of these networks {}".format(networks)))
+    return False
+    
 
 def init_corosync_unicast():
     if _context.yes_to_all:
@@ -1149,7 +1162,8 @@ Configure Administration IP Address:
 
         adminaddr = prompt_for_string('Administration Virtual IP', 
                                       r'^{}$'.format(utils.ipv4_regrex), 
-                                      "")
+                                      "",
+                                      valid_adminIP)
         if not adminaddr:
             error("No value for admin address")
 

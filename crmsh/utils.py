@@ -88,14 +88,43 @@ def network_defaults(interface=None):
 
 def get_all_networks():
     """
-    return all the network at local node
+    return all the network/bits at local node
     """
     all_networks = []
     _, outp = get_stdout("/sbin/ip -o route show")
     for l in outp.split('\n'):
         if re.search(r'^{}/[0-9]+ '.format(network_regrex), l):
-            all_networks.append(l.split('/')[0])
+            all_networks.append(l.split()[0])
     return all_networks
+
+
+def ipv4_in_network(addr, net, bits):
+    """
+    check if an ip is in a network
+    """
+    # learn from 
+    # https://stackoverflow.com/questions/819355/how-can-i-check-if-an-ip-is-in-a-network-in-python
+    import socket, struct
+
+    def make_mask(n):
+        "return a mask of n bits as long integer"
+        return (2L<<n-1) - 1
+
+    def dotted_quad_to_num(ip):
+        "convert decimal dotted quad string to long integer"
+        return struct.unpack('<L', socket.inet_aton(ip))[0]
+
+    def network_mask(ip, bits):
+        "convert a network address to a long integer"
+        return dotted_quad_to_num(ip) & make_mask(bits)
+
+    def address_in_network(ip, net):
+        "is an address in a network"
+        return ip & net == net
+
+    address = dotted_quad_to_num(addr)
+    network = network_mask(net, int(bits))
+    return address_in_network(address, network)
 
 
 _cib_shadow = 'CIB_shadow'
