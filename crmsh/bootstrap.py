@@ -1188,8 +1188,8 @@ def join_ssh(seed_host):
     # authorized_keys file (again, to help with the case where the
     # user has done manual initial setup without the assistance of
     # ha-cluster-init).
-    if not invoke("ssh root@%s ha-cluster-init ssh_remote" % (seed_host)):
-        error("Can't invoke ha-cluster-init ssh_remote on %s" % (seed_host))
+    if not invoke("ssh root@%s crm cluster init ssh_remote" % (seed_host)):
+        error("Can't invoke crm cluster init ssh_remote on %s" % (seed_host))
 
 
 def join_csync2(seed_host):
@@ -1209,8 +1209,8 @@ def join_csync2(seed_host):
 
     # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
     # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
-    if not invoke("ssh root@{} ha-cluster-init csync2_remote {}".format(seed_host, utils.this_node())):
-        error("Can't invoke ha-cluster-init csync2_remote on {}".format(seed_host))
+    if not invoke("ssh root@{} crm cluster init csync2_remote {}".format(seed_host, utils.this_node())):
+        error("Can't invoke crm cluster init init csync2_remote on {}".format(seed_host))
 
     # This is necessary if syncing /etc/hosts (to ensure everyone's got the
     # same list of hosts)
