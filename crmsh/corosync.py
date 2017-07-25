@@ -466,7 +466,7 @@ def del_node(addr):
                       shell=False)
 
 
-_COROSYNC_CONF_TEMPLATE = """# Please read the corosync.conf.5 manual page
+_COROSYNC_CONF_TEMPLATE_HEAD = """# Please read the corosync.conf.5 manual page
 
 totem {
     version:    2
@@ -481,15 +481,10 @@ totem {
     join:       60
     consensus:  6000
     max_messages:   20
-
-    interface {
-        ringnumber:     0
-        %(bindnetaddr)s
-%(mcast)s
-        ttl:        1
-    }
-
-%(transport)s
+"""
+_COROSYNC_CONF_TEMPLATE_TAIL = """
+    %(rrp_mode)s
+    %(transport)s
 }
 logging {
     fileline:   off
@@ -513,13 +508,22 @@ quorum {
     two_node: 0
 }
 """
+_COROSYNC_CONF_TEMPLATE_RING = """
+    interface {
+        ringnumber:  %(number)d
+        %(bindnetaddr)s
+%(mcast)s
+        ttl:  1
+    }
+"""
 
 
 def create_configuration(clustername="hacluster",
                          bindnetaddr=None,
                          mcastaddr=None,
                          mcastport=None,
-                         transport=None):
+                         transport=None,
+                         two_rings=False):
 
     if transport == "udpu":
         nodelist_tmpl = """nodelist {
@@ -532,27 +536,48 @@ def create_configuration(clustername="hacluster",
     else:
         nodelist_tmpl = ""
 
-    mcast_tmpl = ""
-    if mcastaddr is not None:
-        mcast_tmpl += "        mcastaddr:  {}\n".format(mcastaddr)
-    if mcastport is not None:
-        mcast_tmpl += "        mcastport:  {}\n".format(mcastport)
-
     transport_tmpl = ""
     if transport is not None:
         transport_tmpl = "    transport: {}\n".format(transport)
 
-    if bindnetaddr is None:
-        bindnetaddr_tmpl = ""
-    else:
-        bindnetaddr_tmpl = "bindnetaddr: %s" % bindnetaddr
+    rrp_mode_tmpl = ""
+    if two_rings:
+        rrp_mode_tmpl = "rrp_mode:  passive" 
 
-    config = {
+    config_commom = {
         "clustername": clustername,
         "nodelist": nodelist_tmpl,
-        "bindnetaddr": bindnetaddr_tmpl,
-        "mcast": mcast_tmpl,
-        "transport": transport_tmpl,
+        "rrp_mode": rrp_mode_tmpl,
+        "transport": transport_tmpl
     }
 
-    utils.str2file(_COROSYNC_CONF_TEMPLATE % config, conf())
+    _COROSYNC_CONF_TEMPLATE_RING_ALL = ""
+    mcast_tmpl = []
+    bindnetaddr_tmpl = []
+    config_ring = []
+    for i in 0, 1:
+        mcast_tmpl.append("")
+        if mcastaddr is not None:
+            mcast_tmpl[i] += "        mcastaddr:  {}\n".format(mcastaddr[i])
+        if mcastport is not None:
+            mcast_tmpl[i] += "        mcastport:  {}\n".format(mcastport[i])
+        
+        bindnetaddr_tmpl.append("")
+        if bindnetaddr is None:
+            bindnetaddr_tmpl[i] = ""
+        else:
+            bindnetaddr_tmpl[i] = "bindnetaddr: %s" % bindnetaddr[i]
+    
+        config_ring.append("")
+        config_ring[i] = {
+            "bindnetaddr": bindnetaddr_tmpl[i],
+            "mcast": mcast_tmpl[i],
+            "number": i,
+        }
+        _COROSYNC_CONF_TEMPLATE_RING_ALL += _COROSYNC_CONF_TEMPLATE_RING % config_ring[i]
+
+        if not two_rings:
+            break
+
+    _COROSYNC_CONF_TEMPLATE = _COROSYNC_CONF_TEMPLATE_HEAD+_COROSYNC_CONF_TEMPLATE_RING_ALL+_COROSYNC_CONF_TEMPLATE_TAIL
+    utils.str2file(_COROSYNC_CONF_TEMPLATE % config_commom, conf())
