@@ -980,6 +980,9 @@ Configure SBD:
                     csync2_update(SYSCONFIG_SBD)
             return
 
+        if utils.is_program("sbd") is None:
+            error("sbd executable not found! Cannot configure SBD.")
+
         dev = ""
         dev_looks_sane = False
         while not dev_looks_sane:
