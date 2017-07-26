@@ -1281,7 +1281,7 @@ def join_cluster(seed_host):
     # that yet, so the following crawling horror takes a punt on the seed
     # node being up, then asks it for a list of mountpoints...
     if _context.cluster_node:
-        rc, outp = utils.get_stdout("ssh -o StrictHostKeyChecking=no root@{} 'cibadmin -Q --xpath \"//primitive\"'".format(seed_host))
+        rc, outp, _ = utils.get_stdout_stderr("ssh -o StrictHostKeyChecking=no root@{} 'cibadmin -Q --xpath \"//primitive\"'".format(seed_host))
         if len(outp):
             xml = etree.fromstring(outp)
             mountpoints = xml.xpath(' and '.join(['//primitive[@class="ocf"',
