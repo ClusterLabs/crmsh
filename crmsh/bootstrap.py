@@ -1585,6 +1585,7 @@ def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
         if template == 'ocfs2':
             init_vgfs()
         init_admin()
+        csync2_update('/')
 
     status("Done (log saved to %s)" % (LOG_FILE))
 
