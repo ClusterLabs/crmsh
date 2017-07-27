@@ -81,6 +81,22 @@ def network_defaults(interface=None):
     return tuple(info)
 
 
+def network_v6_all():
+    _, outp = get_stdout("/sbin/ip -6 -o addr show")
+    dict_ = {}
+    for line in outp.split('\n'):
+        if re.search(r' ::1/| [Ff][Ee]80:', line):
+            # skip local address and link-local address
+            continue
+        dict_[line.split()[1]] = []
+    for line in outp.split('\n'):
+        if re.search(r' ::1/| [Ff][Ee]80:', line):
+            # skip local address and link-local address
+            continue
+        dict_[line.split()[1]].append(line.split()[3])
+    return dict_
+
+
 _cib_shadow = 'CIB_shadow'
 _cib_in_use = ''
 
@@ -1817,6 +1833,116 @@ def obscure(obscure_list):
         yield
     finally:
         _obscured_nvpairs = prev
+
+
+def valid_ip_addr(addr, version=4):
+    import socket
+    try:
+        if version == 4:
+            socket.inet_pton(socket.AF_INET, addr)
+        elif version == 6:
+            socket.inet_pton(socket.AF_INET6, addr)
+        else:
+            return False
+    except socket.error:
+        return False
+    return True
+
+
+def get_ipv6_network(addr_with_mask):
+    return Network(addr_with_mask).network().to_compressed()
+
+
+def gen_nodeid_from_ipv6(addr):
+    return IP(addr).ip_long() % 1000000000
+
+
+MAX_IPV6 = (1 << 128) - 1
+
+class IP(object):
+    """
+    learn from https://github.com/tehmaze/ipcalc
+    just for handling IPv6
+    """
+    def __init__(self, ip, mask=None, version=0):
+        """Initialize a new IPv6 address."""
+        if isinstance(ip, long):
+            self.ip = long(ip)
+            self.v = version or 6
+            self.dq = self._itodq(ip)
+        else:
+            # If string is in CIDR or netmask notation
+            if '/' in ip:
+                ip, mask = ip.split('/', 1)
+                self.mask = int(mask)
+            if not valid_ip_addr(ip, 6):
+                raise ValueError('%s: IPv6 address invalid' % ip)
+            self.v = version or 0
+            self.dq = ip
+            self.ip = self._dqtoi(ip)
+
+    def _itodq(self, n):
+        n = '%032x' % n
+        return ':'.join(n[4 * x:4 * x + 4] for x in range(0, 8))
+
+    def _dqtoi(self, dq):
+        # Split hextets
+        hx = dq.split(':')
+        if len(hx) < 8:
+            ix = hx.index('')
+            px = len(hx[ix + 1:])
+            for x in range(ix + px + 1, 8):
+                hx.insert(ix, '0')
+        elif dq.endswith('::'):
+            pass
+        ip = ''
+        hx = [x == '' and '0' or x for x in hx]
+        for h in hx:
+            if len(h) < 4:
+                h = '%04x' % int(h, 16)
+            ip += h
+        self.v = 6
+        return int(ip, 16)
+
+    def __str__(self):
+        return self.dq
+
+    def ip_long(self):
+        return self.ip
+
+    def to_compressed(self):
+        quads = map(lambda q: '%x' % (int(q, 16)), self.dq.split(':'))
+        quadc = ':%s:' % (':'.join(quads),)
+        zeros = [0, -1]
+
+        # Find the largest group of zeros
+        for match in re.finditer(r'(:[:0]+)', quadc):
+            count = len(match.group(1)) - 1
+            if count > zeros[0]:
+                zeros = [count, match.start(1)]
+
+        count, where = zeros
+        if count:
+            quadc = quadc[:where] + ':' + quadc[where + count:]
+
+        quadc = re.sub(r'((^:)|(:$))', '', quadc)
+        quadc = re.sub(r'((^:)|(:$))', '::', quadc)
+        return quadc    
+
+
+class Network(IP):
+    """
+    learn from https://github.com/tehmaze/ipcalc
+    just for handling IPv6
+    """
+    def network(self):
+        return IP(self.network_long(), version=6)
+
+    def netmask_long(self):
+        return (MAX_IPV6 >> (128 - self.mask)) << (128 - self.mask)
+
+    def network_long(self):
+        return self.ip & self.netmask_long()
 
 
 # vim:ts=4:sw=4:et:
