@@ -598,9 +598,9 @@ Cluster Description
             context.fatal_error("Timed out waiting for cluster (rc = %s)" % (ret))
 
     @command.skill_level('expert')
-    def do_run(self, context, cmd):
+    def do_run(self, context, cmd, node=None):
         '''
-        Execute the given command on all nodes, report outcome
+        Execute the given command on all nodes/specific node, report outcome
         '''
         try:
             import parallax
@@ -614,6 +614,8 @@ Cluster Description
         hosts = utils.list_cluster_nodes()
         opts = parallax.Options()
         for host, result in parallax.call(hosts, cmd, opts).iteritems():
+            if node and host != node:
+                continue
             if isinstance(result, parallax.Error):
                 err_buf.error("[%s]: %s" % (host, result))
             else:
