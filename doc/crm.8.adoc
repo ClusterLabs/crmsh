@@ -1332,20 +1332,22 @@ rename <new_cluster_name>
 ...............
 
 
-[[cmdhelp_cluster_run,Execute an arbitrary command on all nodes]]
+[[cmdhelp_cluster_run,Execute an arbitrary command on all nodes/specific node]]
 ==== `run`
 
 This command takes a shell statement as argument, executes that
-statement on all nodes in the cluster, and reports the result.
+statement on all nodes or a specific node in the cluster, 
+and reports the result.
 
 Usage:
 ...............
-run <command>
+run <command> [node]
 ...............
 
 Example:
 ...............
-run "cat /proc/uptime"
+run "cat /proc/uptime" 
+run "ls" node2 
 ...............
 
 [[cmdhelp_cluster_start,Start cluster services]]
