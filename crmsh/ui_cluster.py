@@ -216,7 +216,7 @@ Note:
             for node in nodelist:
                 if node == utils.this_node():
                     continue
-                bootstrap.status("Add node {} (may prompt for root password):".format(node))
+                bootstrap.status("\n\nAdd node {} (may prompt for root password):".format(node))
                 if not self._add_node(node, yes_to_all=options.yes_to_all):
                     return False
 
