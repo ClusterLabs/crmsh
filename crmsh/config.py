@@ -171,7 +171,7 @@ class opt_dir(object):
 
     def validate(self, val):
         if not os.path.isdir(val):
-            raise ValueError("Directory not found: " % (val))
+            raise ValueError("Directory not found: %s" % (val))
 
     def get(self, value):
         return value
