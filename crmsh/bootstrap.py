@@ -55,6 +55,7 @@ class Context(object):
         self.sbd_device = None
         self.diskless_sbd = False  # if True, enable SBD for diskless operation
         self.unicast = None
+        self.ipv6 = None
         self.admin_ip = None
         self.watchdog = None
         self.host_status = None
@@ -387,7 +388,16 @@ def init_network():
     up. If $IP_ADDRESS is overridden, network detect shouldn't work,
     because "ip route" won't be able to help us.
     """
-    nic, ipaddr, ipnetwork, _prefix = utils.network_defaults(_context.nic)
+    if not _context.ipv6:
+        nic, ipaddr, ipnetwork, _prefix = utils.network_defaults(_context.nic)
+    else:
+        all_ = utils.network_v6_all()
+        if not all_:
+            error("Doesn't have any usable IPv6 addresses!")
+        nic = sorted(all_.keys())[0]
+        ipaddr = all_[nic][0].split('/')[0]
+        ipnetwork = utils.get_ipv6_network(all_[nic][0])
+
     if _context.nic is None:
         _context.nic = nic
     if _context.ip_address is None:
@@ -712,10 +722,15 @@ Configure Corosync (unicast):
 
 def init_corosync_multicast():
     def gen_mcastaddr():
-        return "239.%d.%d.%d" % (
-            random.randint(0, 255),
-            random.randint(0, 255),
-            random.randint(1, 255))
+        if _context.ipv6:
+            return "ff3e::%s:%d" % (
+                ''.join([random.choice('0123456789abcdef') for _ in range(4)]),
+                random.randint(0, 9))
+        else:
+            return "239.%d.%d.%d" % (
+                random.randint(0, 255),
+                random.randint(0, 255),
+                random.randint(1, 255))
 
     if _context.yes_to_all:
         status("Configuring corosync")
@@ -732,13 +747,25 @@ Configure Corosync:
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
-    bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)', r'([0-9]+\.){3}[0-9]+', _context.ip_network)
-    if not bindnetaddr:
-        error("No value for bindnetaddr")
+    nodeid = None
+    if _context.ipv6:
+        bindnetaddr = prompt_for_string('Network address to bind to', r'.*(::|0)$', _context.ip_network)
+        if not bindnetaddr:
+            error("No value for bindnetaddr")
+    
+        mcastaddr = prompt_for_string('Multicast address', r'^[Ff][Ff].*', gen_mcastaddr())
+        if not mcastaddr:
+            error("No value for mcastaddr")
+  
+        nodeid = utils.gen_nodeid_from_ipv6(_context.ip_address)
+    else:
+        bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)', r'([0-9]+\.){3}[0-9]+', _context.ip_network)
+        if not bindnetaddr:
+            error("No value for bindnetaddr")
 
-    mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)', r'([0-9]+\.){3}[0-9]+', gen_mcastaddr())
-    if not mcastaddr:
-        error("No value for mcastaddr")
+        mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)', r'([0-9]+\.){3}[0-9]+', gen_mcastaddr())
+        if not mcastaddr:
+            error("No value for mcastaddr")
 
     mcastport = prompt_for_string('Multicast port', '[0-9]+', "5405", valid_port)
     if not mcastport:
@@ -748,7 +775,9 @@ Configure Corosync:
         clustername=_context.cluster_name,
         bindnetaddr=bindnetaddr,
         mcastaddr=mcastaddr,
-        mcastport=mcastport)
+        mcastport=mcastport,
+        ipv6=_context.ipv6,
+        nodeid = nodeid)
     csync2_update(corosync.conf())
 
 
@@ -1281,6 +1310,29 @@ def join_ssh_merge(_cluster_node):
 def join_cluster(seed_host):
     """
     """
+    def get_local_nodeid():
+        # for IPv6
+        all_ = utils.network_v6_all()
+        if not all_:
+            error("Doesn't have any usable IPv6 addresses!")
+        nic = sorted(all_.keys())[0]
+        ipaddr = all_[nic][0].split('/')[0]
+        return utils.gen_nodeid_from_ipv6(ipaddr)        
+
+    def update_nodeid(nodeid, node=None):
+        # for IPv6
+        if node and node != utils.this_node():
+            cmd = "crm corosync set totem.nodeid %d" % nodeid
+            invoke("crm cluster run '{}' {}".format(cmd, node))
+        else:
+            corosync.set_value("totem.nodeid", nodeid)
+
+    # check if use IPv6
+    ipv6_flag = False
+    ipv6 = corosync.get_value("totem.ip_version")
+    if ipv6 and ipv6 == "ipv6":
+        ipv6_flag = True
+
     # Need to do this if second (or subsequent) node happens to be up and
     # connected to storage while it's being repartitioned on the first node.
     probe_partitions()
@@ -1321,11 +1373,24 @@ def join_cluster(seed_host):
     if not configured_sbd_device() and invoke("ssh root@{} systemctl is-enabled sbd.service".format(seed_host)):
         _context.diskless_sbd = True
 
+    if ipv6_flag:
+        # using ipv6 need nodeid configured
+        local_nodeid = get_local_nodeid()
+        update_nodeid(local_nodeid)
+
     # Initialize the cluster before adjusting quorum. This is so
     # that we can query the cluster to find out how many nodes
     # there are (so as not to adjust multiple times if a previous
     # attempt to join the cluster failed)
     init_cluster_local()
+
+    if ipv6_flag:
+        nodeid_dict = {}
+        _rc, outp, _ = utils.get_stdout_stderr("crm_node -l")
+        if _rc == 0:
+            for line in outp.split('\n'):
+                tmp = line.split()
+                nodeid_dict[tmp[1]] = tmp[0]
 
     def update_expected_votes():
         # get a list of nodes, excluding remote nodes
@@ -1366,6 +1431,15 @@ def join_cluster(seed_host):
     # on the other nodes
     if is_unicast:
         invoke("crm cluster run 'crm corosync reload'")
+
+    if ipv6_flag:
+        # after csync2_update, all config files are same
+        # but nodeid must be uniqe
+        for node in nodeid_dict.keys():
+            if node == utils.this_node():
+                continue
+            update_nodeid(int(nodeid_dict[node]), node)
+        update_nodeid(local_nodeid)
 
 
 def remove_ssh():
@@ -1502,7 +1576,7 @@ def remove_localhost_check():
 def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
                    shared_device=None, sbd_device=None, diskless_sbd=False, quiet=False,
                    template=None, admin_ip=None, yes_to_all=False,
-                   unicast=False, watchdog=None, stage=None, args=None):
+                   unicast=False, ipv6=False, watchdog=None, stage=None, args=None):
     """
     -i <nic>
     -o <ocfs2-device>
@@ -1536,6 +1610,7 @@ def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
     _context.sbd_device = sbd_device
     _context.diskless_sbd = diskless_sbd
     _context.unicast = unicast
+    _context.ipv6 = ipv6
     _context.admin_ip = admin_ip
     _context.watchdog = watchdog
 
