@@ -37,6 +37,7 @@ COROSYNC_AUTH = "/etc/corosync/authkey"
 SYSCONFIG_SBD = "/etc/sysconfig/sbd"
 SYSCONFIG_FW = "/etc/sysconfig/SuSEfirewall2"
 SYSCONFIG_FW_CLUSTER = "/etc/sysconfig/SuSEfirewall2.d/services/cluster"
+JOIN_LOCK_FILE = "/etc/corosync/.join_lock"
 
 INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin")
 
@@ -1632,11 +1633,48 @@ def bootstrap_join(cluster_node=None, nic=None, quiet=False, yes_to_all=False, w
             _context.cluster_node = cluster_node
 
         join_ssh(cluster_node)
+        if is_join_locked(cluster_node):
+            wait_for_joinlock(cluster_node)
+        join_lock(cluster_node)
         join_csync2(cluster_node)
         join_ssh_merge(cluster_node)
         join_cluster(cluster_node)
+        join_unlock(cluster_node)
 
     status("Done (log saved to %s)" % (LOG_FILE))
+
+
+def join_lock(node):
+    if not invoke("ssh root@{} 'touch {}'".format(node, JOIN_LOCK_FILE)):
+        error("touch join lock faild!")
+
+
+def join_unlock(node):
+    if not invoke("ssh root@{} 'rm -f {}'".format(node, JOIN_LOCK_FILE)):
+        error("remove join lock faild!")
+
+
+def is_join_locked(node):
+    if invoke("ssh root@{} 'test -f {}'".format(node, JOIN_LOCK_FILE)):
+        return True
+    else:
+        return False
+
+
+def wait_for_joinlock(node):
+    status_long("Waiting for other node joining cluster")
+    count = 1
+    while True:
+        if not is_join_locked(node):
+            print ""
+            break
+        if count % 10 == 0:
+            if not confirm("\nStill want to wait?"):
+                break
+            status_long("Waiting for other node joining cluster")
+        status_progress()
+        sleep(3)
+        count += 1
 
 
 def bootstrap_remove(cluster_node=None, quiet=False, yes_to_all=False, force=False):
