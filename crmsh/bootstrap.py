@@ -1304,6 +1304,7 @@ def join_cluster(seed_host):
     is_unicast = "nodelist" in open(corosync.conf()).read()
     if is_unicast:
         corosync.add_node(utils.this_node())
+        csync2_update(corosync.conf())
 
     # if no SBD devices are configured,
     # check the existing cluster if the sbd service is enabled
@@ -1316,16 +1317,29 @@ def join_cluster(seed_host):
     # attempt to join the cluster failed)
     init_cluster_local()
 
+    # apply nodelist in cluster
+    if is_unicast:
+        invoke("crm cluster run 'crm corosync reload'")
+
     def update_expected_votes():
         # get a list of nodes, excluding remote nodes
         nodelist = None
-        rc, nodelist_text = utils.get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
-        if rc == 0:
-            try:
-                nodelist_xml = etree.fromstring(nodelist_text)
-                nodelist = [n.get('uname') for n in nodelist_xml.xpath('//node_state') if n.get('remote_node') != 'true']
-            except Exception:
-                pass
+        loop_count = 0
+        while True:
+            rc, nodelist_text = utils.get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
+            if rc == 0:
+                try:
+                    nodelist_xml = etree.fromstring(nodelist_text)
+                    nodelist = [n.get('uname') for n in nodelist_xml.xpath('//node_state') if n.get('remote_node') != 'true']
+                    if len(nodelist) >= 2:
+                        break
+                except Exception:
+                    break
+            # timeout: 10 seconds
+            if loop_count == 10:
+                break
+            loop_count += 1
+            sleep(1)
 
         # Increase expected_votes
         # TODO: wait to adjust expected_votes until after cluster join,
