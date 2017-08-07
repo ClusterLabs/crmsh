@@ -1576,6 +1576,7 @@ def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
         if watchdog is not None:
             init_watchdog()
         init_ssh()
+        join_lock()
         init_csync2()
         init_corosync()
         if template == 'ocfs2':
@@ -1586,6 +1587,7 @@ def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
         if template == 'ocfs2':
             init_vgfs()
         init_admin()
+        join_unlock()
 
     status("Done (log saved to %s)" % (LOG_FILE))
 
@@ -1644,14 +1646,22 @@ def bootstrap_join(cluster_node=None, nic=None, quiet=False, yes_to_all=False, w
     status("Done (log saved to %s)" % (LOG_FILE))
 
 
-def join_lock(node):
-    if not invoke("ssh root@{} 'touch {}'".format(node, JOIN_LOCK_FILE)):
-        error("touch join lock faild!")
+def join_lock(node=None):
+    if not node:
+        if not invoke("touch {}".format(JOIN_LOCK_FILE)):
+            error("touch join lock faild!")
+    else:
+        if not invoke("ssh root@{} 'touch {}'".format(node, JOIN_LOCK_FILE)):
+            error("touch join lock faild!")
 
 
-def join_unlock(node):
-    if not invoke("ssh root@{} 'rm -f {}'".format(node, JOIN_LOCK_FILE)):
-        error("remove join lock faild!")
+def join_unlock(node=None):
+    if not node:
+        if not invoke("rm -f {}".format(JOIN_LOCK_FILE)):
+            error("remove join lock faild!")
+    else:
+        if not invoke("ssh root@{} 'rm -f {}'".format(node, JOIN_LOCK_FILE)):
+            error("remove join lock faild!")
 
 
 def is_join_locked(node):
