@@ -410,9 +410,8 @@ If stage is not specified, each stage will be invoked in sequence.
         if not cib_factory.commit():
             context.fatal_error("Change property cluster-name failed!")
 
-        # Change in corosync-cmapctl
-        context.info("Reload the configuration on all nodes")
-        self.do_run(context, "corosync-cmapctl -s totem.cluster_name str {}".format(new_name))
+        # it's a safe way to give user a hints that need to restart service
+        context.info("To apply the change, restart the cluster service at convenient time")
 
     def _parse_clustermap(self, clusters):
         '''
