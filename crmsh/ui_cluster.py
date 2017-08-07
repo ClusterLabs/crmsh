@@ -194,6 +194,7 @@ Note:
 
         bootstrap.bootstrap_init(
             cluster_name=options.name,
+            ui_context=context,
             nic=options.nic,
             ocfs2_device=options.ocfs2_device,
             shared_device=options.shared_device,
@@ -264,6 +265,7 @@ If stage is not specified, each stage will be invoked in sequence.
 
         bootstrap.bootstrap_join(
             cluster_node=options.cluster_node,
+            ui_context=context,
             nic=options.nic,
             quiet=options.quiet,
             yes_to_all=options.yes_to_all,
@@ -327,12 +329,14 @@ If stage is not specified, each stage will be invoked in sequence.
         if len(args) == 0:
             bootstrap.bootstrap_remove(
                 cluster_node=None,
+                ui_context=context,
                 quiet=options.quiet,
                 yes_to_all=options.yes_to_all)
         else:
             for node in args:
                 bootstrap.bootstrap_remove(
                     cluster_node=node,
+                    ui_context=context,
                     quiet=options.quiet,
                     yes_to_all=options.yes_to_all,
                     force=options.force)
@@ -410,7 +414,7 @@ Cluster Description
                 ticketlist = [t for t in re.split('[ ,;]+', options.tickets)]
             except ValueError:
                 parser.error("Invalid ticket list")
-        bootstrap.bootstrap_init_geo(options.quiet, options.yes_to_all, options.arbitrator, clustermap, ticketlist)
+        bootstrap.bootstrap_init_geo(options.quiet, options.yes_to_all, options.arbitrator, clustermap, ticketlist, ui_context=context)
         return True
 
     @command.name("geo_join")
@@ -443,7 +447,7 @@ Cluster Description
         clustermap = self._parse_clustermap(options.clusters)
         if clustermap is None:
             parser.error("Invalid cluster description format")
-        bootstrap.bootstrap_join_geo(options.quiet, options.yes_to_all, options.node, clustermap)
+        bootstrap.bootstrap_join_geo(options.quiet, options.yes_to_all, options.node, clustermap, ui_context=context)
         return True
 
     @command.name("geo_init_arbitrator")
@@ -465,7 +469,7 @@ Cluster Description
         if options.help:
             parser.print_help()
             return
-        bootstrap.bootstrap_arbitrator(options.quiet, options.yes_to_all, options.other)
+        bootstrap.bootstrap_arbitrator(options.quiet, options.yes_to_all, options.other, ui_context=context)
         return True
 
     @command.completers_repeating(compl.call(scripts.param_completion_list, 'health'))
