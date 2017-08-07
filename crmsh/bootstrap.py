@@ -1635,6 +1635,8 @@ def bootstrap_join(cluster_node=None, nic=None, quiet=False, yes_to_all=False, w
             _context.cluster_node = cluster_node
 
         join_ssh(cluster_node)
+        # lock the joining node self
+        join_lock() 
         if is_join_locked(cluster_node):
             wait_for_joinlock(cluster_node)
         join_lock(cluster_node)
@@ -1642,6 +1644,8 @@ def bootstrap_join(cluster_node=None, nic=None, quiet=False, yes_to_all=False, w
         join_ssh_merge(cluster_node)
         join_cluster(cluster_node)
         join_unlock(cluster_node)
+        # unlock the joining node self
+        join_unlock()
 
     status("Done (log saved to %s)" % (LOG_FILE))
 
