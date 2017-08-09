@@ -1201,7 +1201,7 @@ def join_csync2(seed_host):
     """
     if not seed_host:
         error("No existing IP/hostname specified (use -c option)")
-    status("Configuring csync2")
+    status_long("Configuring csync2")
 
     # Necessary if re-running join on a node that's been configured before.
     invoke("rm -f /var/lib/csync2/{}.db3".format(utils.this_node()))
@@ -1239,6 +1239,8 @@ def join_csync2(seed_host):
     # when it updates expected_votes.  Grrr...
     if not invoke('ssh root@%s "csync2 -mr / ; csync2 -fr / ; csync2 -xv"' % (seed_host)):
         warn("csync2 run failed - some files may not be sync'd")
+
+    status_done()
 
 
 def join_ssh_merge(_cluster_node):
