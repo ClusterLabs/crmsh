@@ -716,7 +716,8 @@ Configure Corosync (unicast):
         clustername=_context.cluster_name,
         bindnetaddr=None,
         mcastport=mcastport,
-        transport="udpu")
+        transport="udpu",
+        ipv6=_context.ipv6)
     csync2_update(corosync.conf())
 
 
@@ -1374,7 +1375,8 @@ def join_cluster(seed_host):
     if not configured_sbd_device() and invoke("ssh root@{} systemctl is-enabled sbd.service".format(seed_host)):
         _context.diskless_sbd = True
 
-    if ipv6_flag:
+    if ipv6_flag and not is_unicast:
+        # for ipv6 mcast
         # using ipv6 need nodeid configured
         local_nodeid = get_local_nodeid()
         update_nodeid(local_nodeid)
@@ -1385,7 +1387,8 @@ def join_cluster(seed_host):
     # attempt to join the cluster failed)
     init_cluster_local()
 
-    if ipv6_flag:
+    if ipv6_flag and not is_unicast:
+        # for ipv6 mcast
         nodeid_dict = {}
         _rc, outp, _ = utils.get_stdout_stderr("crm_node -l")
         if _rc == 0:
@@ -1446,7 +1449,8 @@ def join_cluster(seed_host):
     if is_unicast:
         invoke("crm cluster run 'crm corosync reload'")
 
-    if ipv6_flag:
+    if ipv6_flag and not is_unicast:
+        # for ipv6 mcast
         # after csync2_update, all config files are same
         # but nodeid must be uniqe
         for node in nodeid_dict.keys():

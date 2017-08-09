@@ -555,7 +555,8 @@ def create_configuration(clustername="hacluster",
     ipv6_nodeid = ""
     if ipv6:
         ipv6_tmpl = "ip_version:  ipv6"
-        ipv6_nodeid = "nodeid:  %d" % nodeid
+        if transport != "udpu":
+            ipv6_nodeid = "nodeid:  %d" % nodeid
 
     config = {
         "clustername": clustername,
