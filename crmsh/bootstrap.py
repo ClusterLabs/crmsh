@@ -1407,6 +1407,8 @@ def join_cluster(seed_host):
     # attempt to join the cluster failed)
     init_cluster_local()
 
+    status_long("Reloading cluster configuration")
+ 
     if ipv6_flag and not is_unicast:
         # for ipv6 mcast
         nodeid_dict = {}
@@ -1478,6 +1480,8 @@ def join_cluster(seed_host):
                 continue
             update_nodeid(int(nodeid_dict[node]), node)
         update_nodeid(local_nodeid)
+
+    status_done()
 
 
 def remove_ssh():
