@@ -203,6 +203,8 @@ Note:
                                  "Default is multicast unless an environment where multicast cannot be used is detected.")
         network_group.add_option("-A", "--admin-ip", dest="admin_ip", metavar="IP",
                                  help="Configure IP address as an administration virtual IP")
+        network_group.add_option("-I", "--ipv6", action="store_true", dest="ipv6",
+                                 help="Configure corosync use IPv6")
         parser.add_option_group(network_group)
 
         storage_group = optparse.OptionGroup(parser, "Storage configuration", "Options for configuring shared storage.")
@@ -249,6 +251,7 @@ Note:
             admin_ip=options.admin_ip,
             yes_to_all=options.yes_to_all,
             unicast=options.unicast,
+            ipv6=options.ipv6,
             watchdog=options.watchdog,
             stage=stage,
             args=args)

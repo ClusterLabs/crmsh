@@ -490,6 +490,8 @@ totem {
     }
 
 %(transport)s
+    %(ipv6)s
+    %(ipv6_nodeid)s
 }
 logging {
     fileline:   off
@@ -519,7 +521,9 @@ def create_configuration(clustername="hacluster",
                          bindnetaddr=None,
                          mcastaddr=None,
                          mcastport=None,
-                         transport=None):
+                         transport=None,
+                         ipv6=False,
+                         nodeid=None):
 
     if transport == "udpu":
         nodelist_tmpl = """nodelist {
@@ -547,12 +551,21 @@ def create_configuration(clustername="hacluster",
     else:
         bindnetaddr_tmpl = "bindnetaddr: %s" % bindnetaddr
 
+    ipv6_tmpl = ""
+    ipv6_nodeid = ""
+    if ipv6:
+        ipv6_tmpl = "ip_version:  ipv6"
+        if transport != "udpu":
+            ipv6_nodeid = "nodeid:  %d" % nodeid
+
     config = {
         "clustername": clustername,
         "nodelist": nodelist_tmpl,
         "bindnetaddr": bindnetaddr_tmpl,
         "mcast": mcast_tmpl,
         "transport": transport_tmpl,
+        "ipv6": ipv6_tmpl,
+        "ipv6_nodeid": ipv6_nodeid
     }
 
     utils.str2file(_COROSYNC_CONF_TEMPLATE % config, conf())
