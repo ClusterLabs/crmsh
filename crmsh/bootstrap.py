@@ -28,6 +28,7 @@ from . import corosync
 from . import tmpfiles
 from . import clidisplay
 from . import term
+import readline
 
 
 LOG_FILE = "/var/log/ha-cluster-bootstrap.log"
@@ -105,9 +106,13 @@ def prompt_for_string(msg, match=None, default='', valid_func=None):
     if _context.yes_to_all:
         return default
     while True:
+        disable_completion()
         val = utils.multi_input('  %s [%s]' % (msg, default))
+        enable_completion()
         if val is None or len(val) == 0:
             val = default
+        else:
+            readline.remove_history_item(readline.get_current_history_length()-1)
         if match is None:
             return val
         if re.match(match, val) is not None:
@@ -117,7 +122,23 @@ def prompt_for_string(msg, match=None, default='', valid_func=None):
 
 
 def confirm(msg):
-    return _context.yes_to_all or utils.ask(msg)
+    if _context.yes_to_all:
+        return True
+    disable_completion()
+    rc = utils.ask(msg)
+    enable_completion()
+    readline.remove_history_item(readline.get_current_history_length()-1)
+    return rc
+
+
+def disable_completion():
+    if _context.ui_context:
+        _context.ui_context.disable_completion()
+
+
+def enable_completion():
+    if _context.ui_context:
+        _context.ui_context.setup_readline()
 
 
 def invoke(*args):
@@ -1513,7 +1534,7 @@ def remove_localhost_check():
     return nodename == utils.this_node()
 
 
-def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
+def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_device=None,
                    shared_device=None, sbd_device=None, diskless_sbd=False, quiet=False,
                    template=None, admin_ip=None, yes_to_all=False,
                    unicast=False, watchdog=None, stage=None, args=None):
@@ -1552,6 +1573,7 @@ def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
     _context.unicast = unicast
     _context.admin_ip = admin_ip
     _context.watchdog = watchdog
+    _context.ui_context = ui_context
 
     if stage is None:
         stage = ""
@@ -1603,7 +1625,7 @@ def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
     status("Done (log saved to %s)" % (LOG_FILE))
 
 
-def bootstrap_join(cluster_node=None, nic=None, quiet=False, yes_to_all=False, watchdog=None, stage=None):
+def bootstrap_join(cluster_node=None, ui_context=None, nic=None, quiet=False, yes_to_all=False, watchdog=None, stage=None):
     """
     -c <cluster-node>
     -i <nic>
@@ -1620,6 +1642,7 @@ def bootstrap_join(cluster_node=None, nic=None, quiet=False, yes_to_all=False, w
     _context = Context(quiet=quiet, yes_to_all=yes_to_all, nic=nic)
     _context.cluster_node = cluster_node
     _context.watchdog = watchdog
+    _context.ui_context = ui_context
 
     check_tty()
 
@@ -1653,7 +1676,7 @@ def bootstrap_join(cluster_node=None, nic=None, quiet=False, yes_to_all=False, w
     status("Done (log saved to %s)" % (LOG_FILE))
 
 
-def bootstrap_remove(cluster_node=None, quiet=False, yes_to_all=False, force=False):
+def bootstrap_remove(cluster_node=None, ui_context=None, quiet=False, yes_to_all=False, force=False):
     """
     -c <cluster-node> - node to remove from cluster
     -q - quiet
@@ -1663,6 +1686,7 @@ def bootstrap_remove(cluster_node=None, quiet=False, yes_to_all=False, force=Fal
     global _context
     _context = Context(quiet=quiet, yes_to_all=yes_to_all)
     _context.cluster_node = cluster_node
+    _context.ui_context = ui_context
 
     if not yes_to_all and cluster_node is None:
         status("""Remove This Node from Cluster:
@@ -1764,12 +1788,13 @@ port="9929"
     os.chmod(BOOTH_CFG, 0o644)
 
 
-def bootstrap_init_geo(quiet, yes_to_all, arbitrator, clusters, tickets):
+def bootstrap_init_geo(quiet, yes_to_all, arbitrator, clusters, tickets, ui_context=None):
     """
     Configure as a geo cluster member.
     """
     global _context
     _context = Context(quiet=quiet, yes_to_all=yes_to_all)
+    _context.ui_context = ui_context
 
     if os.path.exists(BOOTH_CFG) and not confirm("This will overwrite {} - continue?".format(BOOTH_CFG)):
         return
@@ -1825,13 +1850,14 @@ group g-booth booth-ip booth-site meta target-role=Stopped
     crm_configure_load("update", crm_template.substitute(iprules=" ".join(iprule.format(k, v) for k, v in clusters.iteritems())))
 
 
-def bootstrap_join_geo(quiet, yes_to_all, node, clusters):
+def bootstrap_join_geo(quiet, yes_to_all, node, clusters, ui_context=None):
     """
     Run on second cluster to add to a geo configuration.
     It fetches its booth configuration from the other node (cluster node or arbitrator).
     """
     global _context
     _context = Context(quiet=quiet, yes_to_all=yes_to_all)
+    _context.ui_context = ui_context
     init_common_geo()
     check_tty()
     geo_fetch_config(node)
@@ -1840,13 +1866,14 @@ def bootstrap_join_geo(quiet, yes_to_all, node, clusters):
     geo_cib_config(clusters)
 
 
-def bootstrap_arbitrator(quiet, yes_to_all, node):
+def bootstrap_arbitrator(quiet, yes_to_all, node, ui_context=None):
     """
     Configure this machine as an arbitrator.
     It fetches its booth configuration from a cluster node already in the cluster.
     """
     global _context
     _context = Context(quiet=quiet, yes_to_all=yes_to_all)
+    _context.ui_context = ui_context
     init_common_geo()
     check_tty()
     geo_fetch_config(node)
