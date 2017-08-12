@@ -696,6 +696,42 @@ def init_corosync_auth():
     invoke("corosync-keygen -l")
 
 
+def valid_network(addr):
+    """
+    bindnetaddr(IPv4) must one of the local networks
+    """
+    all_ = utils.network_all()
+    if all_ and addr in all_:
+        return True
+    else:
+        print term.render(clidisplay.error("    Must one of {}".format(all_)))
+        return False
+
+
+def valid_v6_network(addr):
+    """
+    bindnetaddr(IPv6) must one of the local networks
+    """
+    network_list = []
+    all_ = utils.network_v6_all()
+    # the format of return example:
+    # {'eth2': ['2002:db8::3/64'], 'eth1': ['2001:db8::3/64']}
+    if not all_:
+        return False
+    for item in all_.values():
+        network_list.extend(item)
+    network_list = map(lambda x:utils.get_ipv6_network(x), network_list)
+    if addr in network_list:
+        return True
+    else:
+        print term.render(clidisplay.error("    Must one of {}".format(network_list)))
+        return False
+
+
+def valid_ipv6_addr(addr):
+    return utils.valid_ip_addr(addr, 6)
+
+
 def valid_port(port):
     if int(port) >= 1024 and int(port) <= 65535:
         return True
@@ -760,21 +796,34 @@ Configure Corosync:
 
     nodeid = None
     if _context.ipv6:
-        bindnetaddr = prompt_for_string('Network address to bind to', r'.*(::|0)$', _context.ip_network)
+        bindnetaddr = prompt_for_string('Network address to bind to', 
+                                        r'.*(::|0)$', 
+                                        _context.ip_network,
+                                        valid_v6_network)
         if not bindnetaddr:
             error("No value for bindnetaddr")
         
-        mcastaddr = prompt_for_string('Multicast address', r'^[Ff][Ff].*', gen_mcastaddr())
+        mcastaddr = prompt_for_string('Multicast address', 
+                                      r'^[Ff][Ff].*', 
+                                      gen_mcastaddr(),
+                                      valid_ipv6_addr)
         if not mcastaddr:
             error("No value for mcastaddr")
 
         nodeid = utils.gen_nodeid_from_ipv6(_context.ip_address)
+
     else:
-        bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)', r'([0-9]+\.){3}[0-9]+', _context.ip_network)
+        bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)', 
+                                        r'([0-9]+\.){3}0$', 
+                                        _context.ip_network,
+                                        valid_network)
         if not bindnetaddr:
             error("No value for bindnetaddr")
 
-        mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)', r'([0-9]+\.){3}[0-9]+', gen_mcastaddr())
+        mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)', 
+                                      utils.mcast_regrex, 
+                                      gen_mcastaddr(),
+                                      utils.valid_ip_addr)
         if not mcastaddr:
             error("No value for mcastaddr")
 
