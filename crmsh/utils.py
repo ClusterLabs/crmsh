@@ -23,6 +23,9 @@ from . import term
 from .msg import common_warn, common_info, common_debug, common_err, err_buf
 
 
+mcast_regrex = r'2(?:2[4-9]|3\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d?|0)){3}'
+
+
 def memoize(function):
     "Decorator to invoke a function once only for any argument"
     memoized = {}
@@ -79,6 +82,18 @@ def network_defaults(interface=None):
     if info[0] is None:
         raise ValueError("Failed to determine default network interface")
     return tuple(info)
+
+
+def network_all():
+    """
+    return all the network at local node
+    """
+    all_networks = []
+    _, outp = get_stdout("/sbin/ip -o route show")
+    for l in outp.split('\n'):
+        if re.search(r'\.0/[0-9]+ ', l):
+            all_networks.append(l.split('/')[0])
+    return all_networks
 
 
 def network_v6_all():
