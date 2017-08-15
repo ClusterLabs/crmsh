@@ -1684,17 +1684,26 @@ def list_cluster_nodes():
     '''
     Returns a list of nodes in the cluster.
     '''
-
-    def getname(toks):
-        if toks and len(toks) >= 2:
-            return toks[1]
-        return None
-
     try:
-        rc, outp = stdout2list(['crm_node', '-l'], stderr_on=False, shell=False)
-        if rc != 0:
-            raise ValueError("Error listing cluster nodes: crm_node (rc=%d)" % (rc))
-        return [x for x in [getname(line.split()) for line in outp] if x and x != '(null)']
+        CIB_DIR = config.path.crm_config
+        cib_file = r"%s/%s" % (CIB_DIR, "cib.xml")
+        if not os.path.isfile(cib_file):
+            raise ValueError("Error listing cluster nodes: cib.xml not exists")
+
+        from . import xmlutil
+        node_list = []
+        os.environ['CIB_file'] = cib_file
+        cib = xmlutil.cibdump2elem()
+        if cib is None:
+            return None
+        for node in cib.xpath('/cib/configuration/nodes/node'):
+            name = node.get('uname') or node.get('id')
+            if node.get('type') == 'remote':
+                srv = cib.xpath("//primitive[@id='%s']/instance_attributes/nvpair[@name='server']" % (name))
+                if srv:
+                    continue
+            node_list.append(name)
+        return node_list
     except OSError, msg:
         raise ValueError("Error listing cluster nodes: %s" % (msg))
 
