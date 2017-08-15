@@ -87,7 +87,7 @@ def network_defaults(interface=None):
     return tuple(info)
 
 
-def network_all():
+def network_all(with_mask=False):
     """
     return all the network at local node
     """
@@ -95,7 +95,10 @@ def network_all():
     _, outp = get_stdout("/sbin/ip -o route show")
     for l in outp.split('\n'):
         if re.search(r'\.0/[0-9]+ ', l):
-            all_networks.append(l.split('/')[0])
+            if with_mask:
+                all_networks.append(l.split()[0])
+            else:
+                all_networks.append(l.split('/')[0])
     return all_networks
 
 

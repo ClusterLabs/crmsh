@@ -728,6 +728,31 @@ def valid_v6_network(addr):
         return False
 
 
+def valid_adminIP(addr):
+    """
+    valid adminIP for IPv4/IPv6
+    """
+    try:
+        ip = utils.IP(addr)
+    except ValueError as err:
+        print term.render(clidisplay.error("    {}".format(err)))
+        return False
+    else:
+        all_ = []
+        if ip.version() == 4:
+            all_ = utils.network_all(with_mask=True)
+        else:
+            # for IPv6
+            network_list = utils.network_v6_all()
+            for item in network_list.values():
+                all_.extend(item)
+        for net in all_:
+            if utils.Network(net).has_key(addr):     
+                return True      
+        print term.render(clidisplay.error("    Must in one of these networks {}".format(all_)))
+        return False 
+
+
 def valid_ipv6_addr(addr):
     return utils.valid_ip_addr(addr, 6)
 
@@ -1232,7 +1257,7 @@ Configure Administration IP Address:
         if not confirm("Do you wish to configure an administration IP?"):
             return
 
-        adminaddr = prompt_for_string('Administration Virtual IP', r'([0-9]+\.){3}[0-9]+', "")
+        adminaddr = prompt_for_string('Administration Virtual IP', r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:', "", valid_adminIP)
         if not adminaddr:
             error("No value for admin address")
 
