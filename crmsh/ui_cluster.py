@@ -628,7 +628,10 @@ Cluster Description
                 if result[0] != 0:
                     err_buf.error("[%s]: rc=%s\n%s\n%s" % (host, result[0], result[1], result[2]))
                 else:
-                    err_buf.ok("[%s]\n%s" % (host, result[1]))
+                    if not result[1]:
+                        err_buf.ok("[%s]" % host)
+                    else:
+                        err_buf.ok("[%s]\n%s" % (host, result[1]))
 
     def do_copy(self, context, local_file, *nodes):
         '''
