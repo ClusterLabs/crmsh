@@ -328,6 +328,8 @@ class NodeMgmt(command.UI):
         server <node> ... -- print server hostname / address for node
         """
         cib = xmlutil.cibdump2elem()
+        if cib is None:
+            return False
         for node in cib.xpath('/cib/configuration/nodes/node'):
             if nodes and node not in nodes:
                 continue
