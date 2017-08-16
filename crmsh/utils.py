@@ -1622,7 +1622,16 @@ def list_cluster_nodes():
     '''
     Returns a list of nodes in the cluster.
     '''
+    def getname(toks):
+        if toks and len(toks) >= 2:
+            return toks[1]
+        return None
+
     try:
+        rc, outp = stdout2list(['crm_node', '-l'], stderr_on=False, shell=False)
+        if rc == 0:
+            return [x for x in [getname(line.split()) for line in outp] if x and x != '(null)']
+
         CIB_DIR = config.path.crm_config
         cib_file = r"%s/%s" % (CIB_DIR, "cib.xml")
         if not os.path.isfile(cib_file):
