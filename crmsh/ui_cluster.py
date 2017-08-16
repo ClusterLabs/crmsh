@@ -30,6 +30,13 @@ def _remove_completer(args):
     return scripts.param_completion_list('remove') + n
 
 
+def _all_nodes(args):
+    try:
+        return utils.list_cluster_nodes()
+    except:
+        return []
+
+
 def script_printer():
     from .ui_script import ConsolePrinter
     return ConsolePrinter()
@@ -73,59 +80,41 @@ class Cluster(command.UI):
         self._inventory_nodes = None
         self._inventory_target = None
 
+    @command.completers(_all_nodes)
     @command.skill_level('administrator')
-    def do_start(self, context):
+    def do_start(self, context, node=None):
         '''
-        Starts the cluster services on this node
+        Starts the cluster services on all nodes or specific node
         '''
-        rc, out, err = utils.get_stdout_stderr('service pacemaker start')
-        if rc != 0:
-            context.fatal_error("Failed to start pacemaker service: %s" % (err))
-        err_buf.info("Cluster services started")
+        cmd = "service pacemaker start"
+        self.do_run(context, cmd, node=node)   
 
-        # TODO: optionally start services on all nodes or specific node
-
+    @command.completers(_all_nodes)
     @command.skill_level('administrator')
-    def do_stop(self, context):
+    def do_stop(self, context, node=None):
         '''
-        Stops the cluster services on this node
+        Stops the cluster services on all nodes or specific node
         '''
-        rc, out, err = utils.get_stdout_stderr('service pacemaker stop')
-        if rc != 0:
-            context.fatal_error("Failed to stop pacemaker service: %s" % (err))
-        err_buf.info("Cluster services stopped")
+        cmd = "service pacemaker stop"
+        self.do_run(context, cmd, node=node)   
 
-        # TODO: optionally stop services on all nodes or specific node
-
+    @command.completers(_all_nodes)
     @command.skill_level('administrator')
-    def do_enable(self, context):
+    def do_enable(self, context, node=None):
         '''
-        Enable the cluster services on this node
+        Enable the cluster services on all nodes or specific node
         '''
-        if utils.is_program('systemctl'):
-            rc, out, err = utils.get_stdout_stderr('systemctl enable pacemaker')
-            if rc != 0:
-                context.fatal_error("Failed to enable pacemaker service: %s" % (err))
-            err_buf.info("Cluster services enabled")
-        else:
-            pass # TODO: for the os using chkconfig
+        cmd = "systemctl enable pacemaker"
+        self.do_run(context, cmd, node=node)   
 
-        # TODO: optionally enable services on all nodes or specific node
-
+    @command.completers(_all_nodes)
     @command.skill_level('administrator')
-    def do_disable(self, context):
+    def do_disable(self, context, node=None):
         '''
-        Disable the cluster services on this node
+        Disable the cluster services on all nodes or specific node
         '''
-        if utils.is_program('systemctl'):
-            rc, out, err = utils.get_stdout_stderr('systemctl disable pacemaker')
-            if rc != 0:
-                context.fatal_error("Failed to disable pacemaker service: %s" % (err))
-            err_buf.info("Cluster services disabled")
-        else:
-            pass # TODO: for the os using chkconfig
-
-        # TODO: optionally disable services on all nodes or specific node
+        cmd = "systemctl disable pacemaker"
+        self.do_run(context, cmd, node=node)   
 
     def _args_implicit(self, context, args, name):
         '''
