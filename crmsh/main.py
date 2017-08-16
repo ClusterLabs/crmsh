@@ -214,7 +214,7 @@ def render_prompt(context):
     if options.interactive and not options.batch:
         # TODO: fix how color interacts with readline,
         # seems the color prompt messes it up
-        promptstr = "crm(%s)%s# " % (cib_prompt(), context.prompt())
+        promptstr = "crm(%s/%s)%s# " % (cib_prompt(), utils.this_node(), context.prompt())
         constants.prompt = promptstr
         if clidisplay.colors_enabled():
             rendered_prompt = term.render(clidisplay.prompt(promptstr))
