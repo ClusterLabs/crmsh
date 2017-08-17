@@ -747,7 +747,8 @@ def valid_adminIP(addr):
             for item in network_list.values():
                 all_.extend(item)
         for net in all_:
-            if utils.Network(net).has_key(addr):     
+            if utils.Network(net).has_key(addr) and \
+               utils.Network(net).network_long() != utils.Network(addr).network_long():     
                 return True      
         print term.render(clidisplay.error("    Must in one of these networks {}".format(all_)))
         return False 
