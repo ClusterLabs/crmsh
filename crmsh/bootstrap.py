@@ -740,12 +740,17 @@ def valid_adminIP(addr):
     else:
         all_ = []
         if ip.version() == 4:
+            ping = "ping"
             all_ = utils.network_all(with_mask=True)
         else:
             # for IPv6
+            ping = "ping6"
             network_list = utils.network_v6_all()
             for item in network_list.values():
                 all_.extend(item)
+        if invoke("{} -c 1 {}".format(ping, addr)):
+            print term.render(clidisplay.error("    {} already exists".format(addr)))
+            return False
         for net in all_:
             if utils.Network(net).has_key(addr) and \
                utils.Network(net).network_long() != utils.Network(addr).network_long():     
