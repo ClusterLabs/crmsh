@@ -92,7 +92,7 @@ def log(*args):
         die("Can't append to {} - aborting".format(LOG_FILE))
 
 
-def prompt_for_string(msg, match=None, default='', valid_func=None):
+def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=None):
     if _context.yes_to_all:
         return default
     while True:
@@ -106,7 +106,7 @@ def prompt_for_string(msg, match=None, default='', valid_func=None):
         if match is None:
             return val
         if re.match(match, val) is not None:
-            if not valid_func or valid_func(val):
+            if not valid_func or valid_func(val, prev_value):
                 return val
         print term.render(clidisplay.error("    Invalid value entered"))
 
@@ -696,10 +696,13 @@ def init_corosync_auth():
     invoke("corosync-keygen -l")
 
 
-def valid_network(addr):
+def valid_network(addr, prev_value=None):
     """
     bindnetaddr(IPv4) must one of the local networks
     """
+    if prev_value and addr == prev_value[0]:
+        print term.render(clidisplay.error("    {} has been used".format(addr)))
+        return False
     all_ = utils.network_all()
     if all_ and addr in all_:
         return True
@@ -708,10 +711,13 @@ def valid_network(addr):
         return False
 
 
-def valid_v6_network(addr):
+def valid_v6_network(addr, prev_value=None):
     """
     bindnetaddr(IPv6) must one of the local networks
     """
+    if prev_value and addr == prev_value[0]:
+        print term.render(clidisplay.error("    {} has been used".format(addr)))
+        return False
     network_list = []
     all_ = utils.network_v6_all()
     # the format of return example:
@@ -728,7 +734,7 @@ def valid_v6_network(addr):
         return False
 
 
-def valid_adminIP(addr):
+def valid_adminIP(addr, prev_value=None):
     """
     valid adminIP for IPv4/IPv6
     """
@@ -759,11 +765,25 @@ def valid_adminIP(addr):
         return False 
 
 
-def valid_ipv6_addr(addr):
+def valid_ipv4_addr(addr, prev_value=None):
+    if prev_value and addr == prev_value[0]:
+        print term.render(clidisplay.error("    {} has been used".format(addr)))
+        return False
+    return utils.valid_ip_addr(addr)
+
+
+def valid_ipv6_addr(addr, prev_value=None):
+    if prev_value and addr == prev_value[0]:
+        print term.render(clidisplay.error("    {} has been used".format(addr)))
+        return False
     return utils.valid_ip_addr(addr, 6)
 
 
-def valid_port(port):
+def valid_port(port, prev_value=None):
+    if prev_value:
+        if abs(int(port) - int(prev_value[0])) <= 1:
+            print term.render(clidisplay.error("    The gap between two ports must larger than 1"))
+            return False 
     if int(port) >= 1024 and int(port) <= 65535:
         return True
     return False
@@ -785,14 +805,16 @@ Configure Corosync (unicast):
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
+    mcastport_res = []
     mcastport = prompt_for_string('Port', '[0-9]+', "5405", valid_port)
     if not mcastport:
         error("No value for mcastport")
+    mcastport_res.append(mcastport)
 
     corosync.create_configuration(
         clustername=_context.cluster_name,
         bindnetaddr=None,
-        mcastport=mcastport,
+        mcastport=mcastport_res,
         transport="udpu",
         ipv6=_context.ipv6)
     csync2_update(corosync.conf())
@@ -809,6 +831,12 @@ def init_corosync_multicast():
                 random.randint(0, 255),
                 random.randint(0, 255),
                 random.randint(1, 255))
+ 
+    def pick_default_value(vlist, ilist):  
+        # give a different value for second config items
+        if len(ilist) == 1:
+            vlist.remove(ilist[0])
+        return vlist[0]
 
     if _context.yes_to_all:
         status("Configuring corosync")
@@ -825,50 +853,90 @@ Configure Corosync:
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
+    bindnetaddr_res = []
+    mcastaddr_res = []
+    mcastport_res = []
+    default_ports = ["5045", "5047"]
+    two_rings = False
+    default_networks = []
+
+    if _context.ipv6:
+        network_list = []
+        all_ = utils.network_v6_all()
+        for item in all_.values():
+            network_list.extend(item)
+        default_networks = map(lambda x:utils.get_ipv6_network(x), network_list)
+    else:
+        default_networks = utils.network_all()
+    if len(default_networks) == 0:
+        error("No network configured at {}!".format(utils.this_node()))
+
+    for i in 0, 1:
+        if _context.ipv6:
+            bindnetaddr = prompt_for_string('Network address to bind to', 
+                                            r'.*(::|0)$', 
+                                            pick_default_value(default_networks, bindnetaddr_res),
+                                            valid_v6_network,
+                                            bindnetaddr_res)
+            if not bindnetaddr:
+                error("No value for bindnetaddr")
+            bindnetaddr_res.append(bindnetaddr)
+        
+            mcastaddr = prompt_for_string('Multicast address', 
+                                          r'^[Ff][Ff].*', 
+                                          gen_mcastaddr(),
+                                          valid_ipv6_addr,
+                                          mcastaddr_res)
+            if not mcastaddr:
+                error("No value for mcastaddr")
+            mcastaddr_res.append(mcastaddr)
+
+        else:
+            bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)', 
+                                            r'([0-9]+\.){3}0$', 
+                                            pick_default_value(default_networks, bindnetaddr_res),
+                                            valid_network,
+                                            bindnetaddr_res)
+            if not bindnetaddr:
+                error("No value for bindnetaddr")
+            bindnetaddr_res.append(bindnetaddr)
+
+            mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)', 
+                                          utils.mcast_regrex, 
+                                          gen_mcastaddr(),
+                                          valid_ipv4_addr,
+                                          mcastaddr_res)
+            if not mcastaddr:
+                error("No value for mcastaddr")
+            mcastaddr_res.append(mcastaddr)
+
+        mcastport = prompt_for_string('Multicast port', 
+                                      '[0-9]+', 
+                                      pick_default_value(default_ports, mcastport_res),
+                                      valid_port,
+                                      mcastport_res)
+        if not mcastport:
+            error("No value for mcastport")
+        mcastport_res.append(mcastport)
+
+        if i == 1 or \
+           len(default_networks) == 1 or \
+           not confirm("\nAdd another heartbeat line?"):
+            break
+        two_rings = True
+
     nodeid = None
     if _context.ipv6:
-        bindnetaddr = prompt_for_string('Network address to bind to', 
-                                        r'.*(::|0)$', 
-                                        _context.ip_network,
-                                        valid_v6_network)
-        if not bindnetaddr:
-            error("No value for bindnetaddr")
-        
-        mcastaddr = prompt_for_string('Multicast address', 
-                                      r'^[Ff][Ff].*', 
-                                      gen_mcastaddr(),
-                                      valid_ipv6_addr)
-        if not mcastaddr:
-            error("No value for mcastaddr")
-
         nodeid = utils.gen_nodeid_from_ipv6(_context.ip_address)
-
-    else:
-        bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)', 
-                                        r'([0-9]+\.){3}0$', 
-                                        _context.ip_network,
-                                        valid_network)
-        if not bindnetaddr:
-            error("No value for bindnetaddr")
-
-        mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)', 
-                                      utils.mcast_regrex, 
-                                      gen_mcastaddr(),
-                                      utils.valid_ip_addr)
-        if not mcastaddr:
-            error("No value for mcastaddr")
-
-    mcastport = prompt_for_string('Multicast port', '[0-9]+', "5405", valid_port)
-    if not mcastport:
-        error("No value for mcastport")
 
     corosync.create_configuration(
         clustername=_context.cluster_name,
-        bindnetaddr=bindnetaddr,
-        mcastaddr=mcastaddr,
-        mcastport=mcastport,
+        bindnetaddr=bindnetaddr_res,
+        mcastaddr=mcastaddr_res,
+        mcastport=mcastport_res,
         ipv6=_context.ipv6,
-        nodeid=nodeid)
+        nodeid=nodeid,
+        two_rings=two_rings)
     csync2_update(corosync.conf())
 
 
