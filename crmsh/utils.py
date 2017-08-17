@@ -1906,7 +1906,7 @@ class IP(object):
         self.mask = mask
         self.v = 0
 
-        if isinstance(ip, long):
+        if isinstance(ip, (int, long)):
             self.ip = int(ip)
             if self.ip <= MAX_IPV4:
                 self.v = version or 4
@@ -1924,6 +1924,11 @@ class IP(object):
 
         if self.mask is None:
             self.mask = {4: 32, 6: 128}[self.v]
+        elif isinstance(self.mask, (int, long)) or self.mask.isdigit():
+            self.mask = int(self.mask)
+
+    def __str__(self):
+        return self.dq
 
     def _dqtoi(self, dq):
         """Convert dotquad or hextet to long."""
