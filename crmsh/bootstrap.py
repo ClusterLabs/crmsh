@@ -1470,6 +1470,7 @@ def join_cluster(seed_host):
     # if unicast, we need to add our node to $corosync.conf()
     is_unicast = "nodelist" in open(corosync.conf()).read()
     if is_unicast:
+        invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
         corosync.add_node(utils.this_node())
         csync2_update(corosync.conf())
 
