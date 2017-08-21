@@ -1188,6 +1188,9 @@ Configure SBD:
                     csync2_update(SYSCONFIG_SBD)
             return
 
+        if not check_watchdog():
+            error("Watchdog device must be configured if want to use SBD!")
+
         if utils.is_program("sbd") is None:
             error("sbd executable not found! Cannot configure SBD.")
 
