@@ -2046,8 +2046,8 @@ class Network(IP):
     def check_collision(self, other):
         """Check another network against the given network."""
         other = Network(other)
-        return self.network_long() <= other.network_long() <= self.broadcast_long() or \
-            other.network_long() <= self.network_long() <= other.broadcast_long()
+        return self.network_long() < other.network_long() < self.broadcast_long() or \
+            other.network_long() < self.network_long() < other.broadcast_long()
 
     def __contains__(self, ip):
         return self.check_collision(ip)
