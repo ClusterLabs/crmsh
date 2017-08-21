@@ -968,7 +968,12 @@ def init_corosync():
 
 def is_block_device(dev):
     from stat import S_ISBLK
-    return S_ISBLK(os.stat(dev).st_mode)
+    try:
+        rc = S_ISBLK(os.stat(dev).st_mode)
+    except OSError as msg:
+        warn(msg)
+        return False
+    return rc
 
 
 def list_partitions(dev):
@@ -1197,6 +1202,9 @@ Configure SBD:
                     csync2_update(SYSCONFIG_SBD)
             return
 
+        if not check_watchdog():
+            error("Watchdog device must be configured if want to use SBD!")
+
         if utils.is_program("sbd") is None:
             error("sbd executable not found! Cannot configure SBD.")
 
@@ -1210,6 +1218,7 @@ Configure SBD:
                 return
             if not is_block_device(dev):
                 print >>sys.stderr, "    That doesn't look like a block device"
+                dev = ""
             else:
                 warn("All data on {} will be destroyed!".format(dev))
                 if confirm('Are you sure you wish to use this device?'):
