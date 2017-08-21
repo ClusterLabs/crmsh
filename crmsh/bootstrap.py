@@ -900,7 +900,12 @@ def init_corosync():
 
 def is_block_device(dev):
     from stat import S_ISBLK
-    return S_ISBLK(os.stat(dev).st_mode)
+    try:
+        rc = S_ISBLK(os.stat(dev).st_mode)
+    except OSError as msg:
+        warn(msg)
+        return False
+    return rc
 
 
 def list_partitions(dev):
