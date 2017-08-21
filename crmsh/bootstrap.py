@@ -758,8 +758,7 @@ def valid_adminIP(addr, prev_value=None):
             print term.render(clidisplay.error("    {} already exists".format(addr)))
             return False
         for net in all_:
-            if utils.Network(net).has_key(addr) and \
-               utils.Network(net).network_long() != utils.Network(addr).network_long():     
+            if utils.Network(net).has_key(addr):
                 return True      
         print term.render(clidisplay.error("    Must in one of these networks {}".format(all_)))
         return False 
