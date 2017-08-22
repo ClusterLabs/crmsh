@@ -285,7 +285,7 @@ def collect_info():
 
     for p in process_list:
         p.join()
-    if constants.SKIP_LVL == 0:
+    if not constants.SKIP_LVL:
         sanitize()
 
     for l in constants.EXTRA_LOGS.split():
@@ -959,7 +959,7 @@ def get_pe_inputs():
         log_debug("found %d pengine input files in %s" % (len(flist), pe_dir))
 
     if len(flist) <= 20:
-        if constants.SKIP_LVL == 0:
+        if not constants.SKIP_LVL:
             for f in flist:
                 pe_to_dot(os.path.join(flist_dir, os.path.basename(f)))
     else:
@@ -1502,6 +1502,10 @@ def start_slave_collector(node, arg_str):
         crmutils.get_stdout(cmd, input_s=out)
 
 
+def str_to_bool(v):
+    return v.lower() in ["true"]
+
+
 def sub_string(in_string,
                pattern=constants.SANITIZE,
                sub_pattern=' value=".*" ',
@@ -1537,7 +1541,7 @@ def sys_info():
     out_string += "\n"
     out_string += "#####Cluster related packages:\n"
     out_string += pkg_versions(constants.PACKAGES)
-    if constants.SKIP_LVL == 0:
+    if not constants.SKIP_LVL:
         out_string += verify_packages(constants.PACKAGES)
     out_string += "\n"
     out_string += "#####System info:\n"
@@ -1591,7 +1595,7 @@ def time_status():
 
 
 def touch_dc():
-    if constants.SKIP_LVL == 1:
+    if constants.SKIP_LVL:
         return
     node = crmutils.get_dc()
     if node and node == constants.WE:

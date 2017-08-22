@@ -258,6 +258,14 @@ DEFAULTS = {
         'id_reference': opt_color('green'),
         'score': opt_color('magenta'),
         'ticket': opt_color('magenta'),
+    },
+    'report': {
+        'from_time': opt_string('-12H'),
+        'compress': opt_boolean('yes'),
+        'speed_up': opt_boolean('no'),
+        'collect_extra_logs': opt_string('/var/log/messages /var/log/pacemaker.log'),
+        'remove_exist_dest': opt_boolean('no'),
+        'single_node': opt_boolean('no')
     }
 }
 
@@ -433,6 +441,7 @@ load()
 core = _Section('core')
 path = _Section('path')
 color = _Section('color')
+report = _Section('report')
 
 
 def load_version():

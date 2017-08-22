@@ -2,11 +2,12 @@
 # See COPYING for license information.
 
 import socket
+from crmsh import config
 
 ARGOPTS_VALUE = "f:t:l:u:X:p:L:e:E:n:MSDZVsvhdQ"
 B_CONF = None
 CIB_DIR = None
-COMPRESS = 1
+COMPRESS = config.report.compress
 COMPRESS_PROG = ""
 COMPRESS_EXT = ""
 CORES_DIRS = None
@@ -16,8 +17,8 @@ CTS = ""
 DEST = ""
 DESTDIR = ""
 DO_SANITIZE = 0
-EXTRA_LOGS = "/var/log/messages /var/log/pacemaker.log"
-FORCE_REMOVE_DEST = ""
+EXTRA_LOGS = config.report.collect_extra_logs
+FORCE_REMOVE_DEST = config.report.remove_exist_dest
 FROM_TIME = ""
 GET_STAMP_FUNC = None
 HA_DEBUGFILE = None
@@ -30,7 +31,7 @@ HA_VARLIB = None
 LOCAL_SUDO = ""
 LOG_PATTERNS = "CRIT: ERROR:"
 NO_DESCRIPTION = 1
-NO_SSH = ""
+NO_SSH = config.report.single_node
 NODES = ""
 OCF_DIR = None
 PACKAGES = None
@@ -39,7 +40,7 @@ PCMK_LOG = "/var/log/pacemaker.log"
 PE_STATE_DIR = None
 PTEST = "crm_simulate"
 SANITIZE = "passw.*"
-SKIP_LVL = 0
+SKIP_LVL = config.report.speed_up
 SLAVE = 0
 SLAVEPIDS = None
 SSH_OPTS = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"

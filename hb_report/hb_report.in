@@ -14,6 +14,7 @@ import shutil
 import constants
 import utillib
 from crmsh import utils as crmutils
+from crmsh import config
 
 def collect_for_nodes(nodes, arg_str):
     """
@@ -43,7 +44,7 @@ def dump_env():
     # env_dict["UNIQUE_MSG"] = constants.UNIQUE_MSG
     env_dict["SANITIZE"] = constants.SANITIZE
     env_dict["DO_SANITIZE"] = int(constants.DO_SANITIZE)
-    env_dict["SKIP_LVL"] = int(constants.SKIP_LVL)
+    env_dict["SKIP_LVL"] = constants.SKIP_LVL
     env_dict["EXTRA_LOGS"] = constants.EXTRA_LOGS
     env_dict["PCMK_LOG"] = constants.PCMK_LOG
     env_dict["VERBOSITY"] = int(constants.VERBOSITY)
@@ -95,7 +96,7 @@ def is_collector():
     the instance where user runs hb_report is the master
     the others are slaves
     """
-    if sys.argv[1] == "__slave":
+    if len(sys.argv) > 1 and sys.argv[1] == "__slave":
         return True
     return False
 
@@ -121,7 +122,7 @@ def load_env(env_str):
     # constants.UNIQUE_MSG = env_dict["UNIQUE_MSG"]
     constants.SANITIZE = env_dict["SANITIZE"]
     constants.DO_SANITIZE = int(env_dict["DO_SANITIZE"])
-    constants.SKIP_LVL = int(env_dict["SKIP_LVL"])
+    constants.SKIP_LVL = utillib.str_to_bool(env_dict["SKIP_LVL"])
     constants.EXTRA_LOGS = env_dict["EXTRA_LOGS"]
     constants.PCMK_LOG = env_dict["PCMK_LOG"]
     constants.VERBOSITY = int(env_dict["VERBOSITY"])
@@ -167,15 +168,15 @@ def parse_argument(argv):
         if args == "-s":
             constants.DO_SANITIZE = 1
         if args == "-Q":
-            constants.SKIP_LVL += 1
+            constants.SKIP_LVL = True
         if args == "-L":
             constants.LOG_PATTERNS += " %s" % option
         if args == "-S":
-            constants.NO_SSH = 1
+            constants.NO_SSH = True
         if args == "-D":
             constants.NO_DESCRIPTION = 1
         if args == "-Z":
-            constants.FORCE_REMOVE_DEST = 1
+            constants.FORCE_REMOVE_DEST = True
         if args == "-M":
             constants.EXTRA_LOGS = ""
         if args == "-E":
@@ -183,12 +184,30 @@ def parse_argument(argv):
         if args == "-v":
             constants.VERBOSITY += 1
         if args == '-d':
-            constants.COMPRESS = ""
+            constants.COMPRESS = False
+
+    if not constants.FROM_TIME:
+        from_time = config.report.from_time
+        if re.search("^-[1-9][0-9]*[YmdHM]$", from_time):
+            number = int(re.findall("[1-9][0-9]*", from_time)[0])
+            if re.search("^-[1-9][0-9]*Y$", from_time):
+                timedelta = datetime.timedelta(days = number * 365)
+            if re.search("^-[1-9][0-9]*m$", from_time):
+                timedelta = datetime.timedelta(days = number * 30)
+            if re.search("^-[1-9][0-9]*d$", from_time):
+                timedelta = datetime.timedelta(days = number)
+            if re.search("^-[1-9][0-9]*H$", from_time):
+                timedelta = datetime.timedelta(hours = number)
+            if re.search("^-[1-9][0-9]*M$", from_time):
+                timedelta = datetime.timedelta(minutes = number)
+            from_time = (datetime.datetime.now() - timedelta).strftime("%Y-%m-%d %H:%M")
+            constants.FROM_TIME = crmutils.parse_to_timestamp(from_time)
+            utillib.check_time(constants.FROM_TIME, from_time)
+        else:
+            utillib.log_fatal("Wrong format for from_time in /etc/crm/crm.conf; (-[1-9][0-9]*[YmdHM])")
 
 
 def run():
-    if len(sys.argv) == 1:
-        usage()
 
     utillib.check_env()
     constants.TMPFLIST = utillib.create_tempfile()
@@ -280,7 +299,7 @@ def run():
         for p in p_list:
             p.join()
 
-        if constants.COMPRESS == 1:
+        if constants.COMPRESS:
             utillib.pick_compress()
             cmd = r"(cd %s/.. && tar cf - %s)|%s > %s/%s.tar%s" % (
                 constants.WORKDIR, constants.DEST, constants.COMPRESS_PROG,
