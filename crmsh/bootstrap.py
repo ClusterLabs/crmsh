@@ -734,6 +734,17 @@ def valid_v6_network(addr, prev_value=None):
         return False
 
 
+def valid_ucastIP(addr, prev_value=None):
+    if prev_value and addr == prev_value[0]:
+        print(term.render(clidisplay.error("    {} has been used".format(addr))))
+        return False
+    ip_local = utils.ip_in_local(_context.ipv6)
+    if not addr in ip_local:
+        print(term.render(clidisplay.error("    Must one of {}".format(ip_local))))
+        return False
+    return True
+
+
 def valid_adminIP(addr, prev_value=None):
     """
     valid adminIP for IPv4/IPv6
@@ -789,6 +800,12 @@ def valid_port(port, prev_value=None):
 
 
 def init_corosync_unicast():
+    def pick_default_value(vlist, ilist):  
+        # give a different value for second config items
+        if len(ilist) == 1:
+            vlist.remove(ilist[0])
+        return vlist[0]
+
     if _context.yes_to_all:
         status("Configuring corosync (unicast)")
     else:
@@ -804,18 +821,56 @@ Configure Corosync (unicast):
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
+    ringXaddr_res = []    
     mcastport_res = []
-    mcastport = prompt_for_string('Port', '[0-9]+', "5405", valid_port)
-    if not mcastport:
-        error("No value for mcastport")
-    mcastport_res.append(mcastport)
+    default_ports = ["5045", "5047"]
+    two_rings = False
+    default_networks = []
+
+    if _context.ipv6:
+        network_list = []
+        all_ = utils.network_v6_all()
+        for item in all_.values():
+            network_list.extend(item)
+        default_networks = map(lambda x:utils.get_ipv6_network(x), network_list)
+    else:
+        default_networks = utils.network_all()
+    if len(default_networks) == 0:
+        error("No network configured at {}!".format(utils.this_node()))
+
+    for i in 0, 1:
+        ringXaddr = prompt_for_string('Address for ring{}'.format(i), 
+                                      r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:', 
+                                      "",
+                                      valid_ucastIP,
+                                      ringXaddr_res)
+        if not ringXaddr:
+            error("No value for ring{}".format(i))
+        ringXaddr_res.append(ringXaddr)
+
+        mcastport = prompt_for_string('Port for ring{}'.format(i), 
+                                      '[0-9]+', 
+                                      pick_default_value(default_ports, mcastport_res),
+                                      valid_port,
+                                      mcastport_res)
+        if not mcastport:
+            error("No value for mcastport")
+        mcastport_res.append(mcastport)
+
+        if i == 1 or \
+           len(default_networks) == 1 or \
+           not _context.second_hb or \
+           not confirm("\nAdd another heartbeat line?"):
+            break
+        two_rings = True
 
     corosync.create_configuration(
         clustername=_context.cluster_name,
-        bindnetaddr=None,
+        ringXaddr=ringXaddr_res,
         mcastport=mcastport_res,
         transport="udpu",
-        ipv6=_context.ipv6)
+        ipv6=_context.ipv6,
+        two_rings = two_rings)
     csync2_update(corosync.conf())
 
 
@@ -1508,6 +1563,13 @@ def join_cluster(seed_host):
     ipv6 = corosync.get_value("totem.ip_version")
     if ipv6 and ipv6 == "ipv6":
         ipv6_flag = True
+    _context.ipv6 = ipv6_flag
+
+    # check whether have two rings
+    rrp_flag = False
+    rrp = corosync.get_value("totem.rrp_mode")
+    if rrp:
+        rrp_flag = True
 
     # Need to do this if second (or subsequent) node happens to be up and
     # connected to storage while it's being repartitioned on the first node.
@@ -1542,9 +1604,35 @@ def join_cluster(seed_host):
     # if unicast, we need to add our node to $corosync.conf()
     is_unicast = "nodelist" in open(corosync.conf()).read()
     if is_unicast:
+        ringXaddr_res = []
+        print("")
+        for i in 0, 1:
+            while True:
+                ringXaddr = prompt_for_string('Address for ring{}'.format(i), 
+                                              r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:', 
+                                              "",
+                                              valid_ucastIP,
+                                              ringXaddr_res)
+                if not ringXaddr:
+                    error("No value for ring{}".format(i))
+
+                _, outp = utils.get_stdout("ip addr show")
+                tmp = re.findall(r' {}/[0-9]+ '.format(ringXaddr), outp, re.M)[0].strip()
+                peer_ip = corosync.get_value("nodelist.node.ring{}_addr".format(i))
+                # e.g. peer ring0_addr and local ring0_addr must int the same network
+                if not utils.Network(tmp).has_key(peer_ip):
+                    print(term.render(clidisplay.error("    shouldn't in network {}".format(tmp))))
+                    continue
+
+                ringXaddr_res.append(ringXaddr)
+                break
+            if not rrp_flag:
+                break
+        print("")
         invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
-        corosync.add_node(utils.this_node())
+        corosync.add_node_ucast(ringXaddr_res)
         csync2_update(corosync.conf())
+        invoke("ssh root@{} corosync-cfgtool -R".format(seed_host))
 
     # if no SBD devices are configured,
     # check the existing cluster if the sbd service is enabled
