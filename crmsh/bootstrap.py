@@ -788,9 +788,9 @@ def valid_adminIP(addr, prev_value=None):
             return False
         for net in all_:
             if utils.Network(net).has_key(addr):
-                return True      
+                return True
         print term.render(clidisplay.error("    Must in one of these networks {}".format(all_)))
-        return False 
+        return False
 
 
 def valid_ipv4_addr(addr, prev_value=None):
@@ -811,7 +811,7 @@ def valid_port(port, prev_value=None):
     if prev_value:
         if abs(int(port) - int(prev_value[0])) <= 1:
             print term.render(clidisplay.error("    The gap between two ports must larger than 1"))
-            return False 
+            return False
     if int(port) >= 1024 and int(port) <= 65535:
         return True
     return False
@@ -859,8 +859,8 @@ def init_corosync_multicast():
                 random.randint(0, 255),
                 random.randint(0, 255),
                 random.randint(1, 255))
- 
-    def pick_default_value(vlist, ilist):  
+
+    def pick_default_value(vlist, ilist):
         # give a different value for second config items
         if len(ilist) == 1:
             vlist.remove(ilist[0])
@@ -901,17 +901,17 @@ Configure Corosync:
 
     for i in 0, 1:
         if _context.ipv6:
-            bindnetaddr = prompt_for_string('Network address to bind to', 
-                                            r'.*(::|0)$', 
+            bindnetaddr = prompt_for_string('Network address to bind to',
+                                            r'.*(::|0)$',
                                             pick_default_value(default_networks, bindnetaddr_res),
                                             valid_v6_network,
                                             bindnetaddr_res)
             if not bindnetaddr:
                 error("No value for bindnetaddr")
             bindnetaddr_res.append(bindnetaddr)
-        
-            mcastaddr = prompt_for_string('Multicast address', 
-                                          r'^[Ff][Ff].*', 
+
+            mcastaddr = prompt_for_string('Multicast address',
+                                          r'^[Ff][Ff].*',
                                           gen_mcastaddr(),
                                           valid_ipv6_addr,
                                           mcastaddr_res)
@@ -920,8 +920,8 @@ Configure Corosync:
             mcastaddr_res.append(mcastaddr)
 
         else:
-            bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)', 
-                                            r'([0-9]+\.){3}0$', 
+            bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)',
+                                            r'([0-9]+\.){3}0$',
                                             pick_default_value(default_networks, bindnetaddr_res),
                                             valid_network,
                                             bindnetaddr_res)
@@ -929,8 +929,8 @@ Configure Corosync:
                 error("No value for bindnetaddr")
             bindnetaddr_res.append(bindnetaddr)
 
-            mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)', 
-                                          utils.mcast_regrex, 
+            mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)',
+                                          utils.mcast_regrex,
                                           gen_mcastaddr(),
                                           valid_ipv4_addr,
                                           mcastaddr_res)
@@ -938,8 +938,8 @@ Configure Corosync:
                 error("No value for mcastaddr")
             mcastaddr_res.append(mcastaddr)
 
-        mcastport = prompt_for_string('Multicast port', 
-                                      '[0-9]+', 
+        mcastport = prompt_for_string('Multicast port',
+                                      '[0-9]+',
                                       pick_default_value(default_ports, mcastport_res),
                                       valid_port,
                                       mcastport_res)
@@ -1520,7 +1520,7 @@ def join_cluster(seed_host):
             error("Doesn't have any usable IPv6 addresses!")
         nic = sorted(all_.keys())[0]
         ipaddr = all_[nic][0].split('/')[0]
-        return utils.gen_nodeid_from_ipv6(ipaddr)        
+        return utils.gen_nodeid_from_ipv6(ipaddr)
 
     def update_nodeid(nodeid, node=None):
         # for IPv6
@@ -1591,7 +1591,7 @@ def join_cluster(seed_host):
     init_cluster_local()
 
     status_long("Reloading cluster configuration")
- 
+
     if ipv6_flag and not is_unicast:
         # for ipv6 mcast
         nodeid_dict = {}
@@ -1966,7 +1966,7 @@ def bootstrap_remove(cluster_node=None, ui_context=None, quiet=False, yes_to_all
     remove_ssh()
 
     if not confirm("Do you want to remove node \"{}\" anyway?".format(cluster_node)):
-        return  
+        return
 
     if remove_localhost_check():
         if not config.core.force and not force:
