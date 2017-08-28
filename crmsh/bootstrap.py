@@ -483,10 +483,10 @@ def configure_firewall(tcp=None, udp=None):
             if not invoke("ufw allow {}/udp".format(p)):
                 error("Failed to configure firewall using ufw")
 
-    if package_is_installed("SuSEfirewall2"):
-        init_firewall_suse(tcp, udp)
-    elif package_is_installed("firewalld"):
+    if package_is_installed("firewalld"):
         init_firewall_firewalld(tcp, udp)
+    elif package_is_installed("SuSEfirewall2"):
+        init_firewall_suse(tcp, udp)
     elif package_is_installed("ufw"):
         init_firewall_ufw(tcp, udp)
     else:
