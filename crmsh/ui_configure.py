@@ -60,6 +60,19 @@ _clone_completer = compl.choice(['params', 'meta'])
 _ms_completer = compl.choice(['params', 'meta'])
 
 
+def _list_resource(args):
+    if len(args) > 3:
+        if args[2] == "remove":
+            return cib_factory.f_prim_list_in_group(args[1])
+        if args[2] == "add":
+            return cib_factory.f_prim_free_id_list()
+
+
+def _list_resource_2(args):
+    if len(args) > 5:
+        return cib_factory.f_prim_list_in_group(args[1])
+
+
 def top_rsc_tmpl_id_list(args):
     return cib_factory.top_rsc_id_list() + cib_factory.rsc_template_list()
 
@@ -369,7 +382,7 @@ class CibConfig(command.UI):
 
     @command.skill_level('administrator')
     @command.completers(_f_group_id_list, compl.choice(['add', 'remove']),
-                        _prim_id_list, compl.choice(['after', 'before']), _prim_id_list)
+                        _list_resource, compl.choice(['after', 'before']), _list_resource_2)
     def do_modgroup(self, context, group_id, subcmd, prim_id, *args):
         """usage: modgroup <id> add <id> [after <id>|before <id>]
         modgroup <id> remove <id>"""

@@ -2895,6 +2895,12 @@ class CibFactory(object):
         return [x.obj_id for x in self.cib_objects
                 if x.obj_type == "primitive" and not x.parent]
 
+    def f_prim_list_in_group(self, gname):
+        "List resources in a group"
+        return [x.obj_id for x in self.cib_objects
+                if x.obj_type == "primitive" and x.parent and \
+                x.parent.obj_id == gname]
+
     def f_group_id_list(self):
         "List of group ids."
         return [x.obj_id for x in self.cib_objects
