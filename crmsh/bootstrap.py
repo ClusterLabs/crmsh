@@ -9,7 +9,6 @@
 # Implemented as a straight-forward set of python functions for
 # simplicity and flexibility.
 #
-# TODO: Firewall handling for non-SUSE platforms
 # TODO: Make csync2 usage optional
 # TODO: Configuration file for bootstrap?
 
@@ -466,7 +465,7 @@ def configure_firewall(tcp=None, udp=None):
         if not invoke("rcSuSEfirewall2 restart"):
             error("Failed to restart firewall")
 
-    def init_firewall_rhel7(tcp, udp):
+    def init_firewall_firewalld(tcp, udp):
         for p in tcp:
             if not invoke("firewall-cmd --zone=public --add-port={}/tcp --permanent".format(p)):
                 error("Failed to configure firewall")
@@ -492,12 +491,11 @@ def configure_firewall(tcp=None, udp=None):
             if not invoke("ufw allow {}/udp".format(p)):
                 error("Failed to configure firewall using ufw")
 
-    version = open("/proc/version").read()
-    if "SUSE" in version:
+    if package_is_installed("SuSEfirewall2"):
         init_firewall_suse(tcp, udp)
-    elif "Red Hat 7" in version:
-        init_firewall_rhel7(tcp, udp)
-    elif utils.is_program("ufw"):
+    elif package_is_installed("firewalld"):
+        init_firewall_firewalld(tcp, udp)
+    elif package_is_installed("ufw"):
         init_firewall_ufw(tcp, udp)
     else:
         warn("Firewall: Could not open ports tcp={}, udp={}".format("|".join(tcp), "|".join(udp)))
