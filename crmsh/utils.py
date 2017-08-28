@@ -89,7 +89,7 @@ def network_defaults(interface=None):
 
 def network_all(with_mask=False):
     """
-    return all the network at local node
+    returns all networks on local node
     """
     all_networks = []
     _, outp = get_stdout("/sbin/ip -o route show")
