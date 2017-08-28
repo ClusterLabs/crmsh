@@ -343,12 +343,15 @@ def check_prereqs(stage):
             "Please add an entry to /etc/hosts or configure DNS."))
         warned = True
 
-    ntpd = "ntp.service"
-    if service_is_available("ntpd.service"):
-        ntpd = "ntpd.service"
+    timekeepers = ('chronyd.service', 'ntp.service', 'ntpd.service')
+    timekeeper = None
+    for tk in timekeepers:
+        if service_is_available(tk):
+            timekeeper = tk
+            break
 
-    if not service_is_enabled(ntpd):
-        warn("NTP is not configured to start at system boot.")
+    if not service_is_enabled(timekeeper):
+        warn("{} is not configured to start at system boot.".format(timekeeper))
         warned = True
 
     if stage in ("", "join", "sbd"):
