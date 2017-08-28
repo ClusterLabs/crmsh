@@ -1237,7 +1237,12 @@ Configure SBD:
         error("Failed to initialize SBD device %s" % (_context.sbd_device))
     status_done()
 
-    utils.sysconfig_set(SYSCONFIG_SBD, SBD_DEVICE=_context.sbd_device, SBD_WATCHDOG="yes")
+    utils.sysconfig_set(SYSCONFIG_SBD,
+                        SBD_DEVICE=_context.sbd_device,
+                        SBD_PACEMAKER="yes",
+                        SBD_STARTMODE="always",
+                        SBD_DELAY_START="no",
+                        SBD_WATCHDOG_DEV=detect_watchdog_device())
     csync2_update(SYSCONFIG_SBD)
 
 
