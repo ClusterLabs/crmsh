@@ -730,13 +730,13 @@ def valid_network(addr, prev_value=None):
     bindnetaddr(IPv4) must one of the local networks
     """
     if prev_value and addr == prev_value[0]:
-        print term.render(clidisplay.error("    {} has been used".format(addr)))
+        warn("  Network address '{}' is already in use!".format(addr))
         return False
     all_ = utils.network_all()
     if all_ and addr in all_:
         return True
     else:
-        print term.render(clidisplay.error("    Must one of {}".format(all_)))
+        warn("  Address '{}' invalid, expected one of {}".format(addr, all_))
         return False
 
 
@@ -745,7 +745,7 @@ def valid_v6_network(addr, prev_value=None):
     bindnetaddr(IPv6) must one of the local networks
     """
     if prev_value and addr == prev_value[0]:
-        print term.render(clidisplay.error("    {} has been used".format(addr)))
+        warn("  Network address '{}' is already in use!".format(addr))
         return False
     network_list = []
     all_ = utils.network_v6_all()
@@ -759,7 +759,7 @@ def valid_v6_network(addr, prev_value=None):
     if addr in network_list:
         return True
     else:
-        print term.render(clidisplay.error("    Must one of {}".format(network_list)))
+        warn("  Address '{}' invalid, expected one of {}".format(addr, network_list))
         return False
 
 
@@ -784,25 +784,25 @@ def valid_adminIP(addr, prev_value=None):
             for item in network_list.values():
                 all_.extend(item)
         if invoke("{} -c 1 {}".format(ping, addr)):
-            print term.render(clidisplay.error("    {} already exists".format(addr)))
+            warn("  Address already in use: {}".format(addr))
             return False
         for net in all_:
             if utils.Network(net).has_key(addr):
                 return True
-        print term.render(clidisplay.error("    Must in one of these networks {}".format(all_)))
+        warn("  Address '{}' invalid, expected one of {}".format(addr, all_))
         return False
 
 
 def valid_ipv4_addr(addr, prev_value=None):
     if prev_value and addr == prev_value[0]:
-        print term.render(clidisplay.error("    {} has been used".format(addr)))
+        warn("  Address already in use: {}".format(addr))
         return False
     return utils.valid_ip_addr(addr)
 
 
 def valid_ipv6_addr(addr, prev_value=None):
     if prev_value and addr == prev_value[0]:
-        print term.render(clidisplay.error("    {} has been used".format(addr)))
+        warn("  Address already in use: {}".format(addr))
         return False
     return utils.valid_ip_addr(addr, 6)
 
@@ -810,7 +810,7 @@ def valid_ipv6_addr(addr, prev_value=None):
 def valid_port(port, prev_value=None):
     if prev_value:
         if abs(int(port) - int(prev_value[0])) <= 1:
-            print term.render(clidisplay.error("    The gap between two ports must larger than 1"))
+            warn("  Port {} is already in use by corosync. Leave a gap between multiple rings.".format(port))
             return False
     if int(port) >= 1024 and int(port) <= 65535:
         return True
@@ -949,7 +949,7 @@ Configure Corosync:
 
         if i == 1 or \
            len(default_networks) == 1 or \
-           not confirm("\nAdd another heartbeat line?"):
+           not confirm("\nConfigure a second multicast ring?"):
             break
         two_rings = True
 
@@ -1069,7 +1069,7 @@ Configure Shared Storage:
             else:
                 # It's either broken, no partition table, or empty partition table
                 status("%s appears to be empty" % (dev))
-                if confirm("Are you sure you wish to use this device?"):
+                if confirm("Device appears empty (no partition table). Do you want to use {}?".format(dev)):
                     dev_looks_sane = True
                 else:
                     dev = ""
@@ -1363,15 +1363,15 @@ Configure Administration IP Address:
   with the cluster, rather than using the IP address
   of any specific cluster node.
 """)
-        if not confirm("Do you wish to configure an administration IP?"):
+        if not confirm("Do you wish to configure a virtual IP address?"):
             return
 
-        adminaddr = prompt_for_string('Administration Virtual IP', r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:', "", valid_adminIP)
+        adminaddr = prompt_for_string('Virtual IP', r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:', "", valid_adminIP)
         if not adminaddr:
-            error("No value for admin address")
+            error("Expected an IP address")
 
     crm_configure_load("update", 'primitive admin-ip IPaddr2 ip=%s op monitor interval=10 timeout=20' % (utils.doublequote(adminaddr)))
-    wait_for_resource("Waiting for Admin Address", "admin-ip")
+    wait_for_resource("Configuring virtual IP ({})".format(adminaddr), "admin-ip")
 
 
 def init():
