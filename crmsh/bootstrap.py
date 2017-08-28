@@ -42,6 +42,10 @@ INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "stor
 
 
 class Context(object):
+    """
+    Context object used to avoid having to pass these variables
+    to every bootstrap method.
+    """
     def __init__(self, quiet, yes_to_all, nic=None, ip_address=None, ip_network=None):
         self.quiet = quiet
         self.yes_to_all = yes_to_all
@@ -74,11 +78,18 @@ def die(*args):
 
 
 def error(*args):
+    """
+    Log an error message and raise ValueError to bail out of
+    bootstrap process.
+    """
     log("ERROR: {}".format(" ".join([str(arg) for arg in args])))
     die(*args)
 
 
 def warn(*args):
+    """
+    Log and display a warning message.
+    """
     log("WARNING: {}".format(" ".join(str(arg) for arg in args)))
     if not _context.quiet:
         print term.render(clidisplay.warn("! {}".format(" ".join(str(arg) for arg in args))))
@@ -86,6 +97,10 @@ def warn(*args):
 
 @utils.memoize
 def log_file_fallback():
+    """
+    If the standard log location isn't writable,
+    just log to the nearest temp dir.
+    """
     return os.path.join(utils.get_tempdir(), "ha-cluster-bootstrap.log")
 
 
@@ -416,7 +431,7 @@ def init_network():
     else:
         all_ = utils.network_v6_all()
         if not all_:
-            error("Doesn't have any usable IPv6 addresses!")
+            error("Unable to configure network: No usable IPv6 addresses found.")
         nic = sorted(all_.keys())[0]
         ipaddr = all_[nic][0].split('/')[0]
         ipnetwork = utils.get_ipv6_network(all_[nic][0])
@@ -430,7 +445,7 @@ def init_network():
     if _context.ip_address is None:
         warn("Could not detect IP address for {}".format(nic))
     if _context.ip_network is None:
-        warn("Could not detect network address for {}".format(nic))
+        warn("Could not detect IP network address for {}".format(nic))
 
 
 def configure_firewall(tcp=None, udp=None):
@@ -466,22 +481,22 @@ def configure_firewall(tcp=None, udp=None):
         # Firewall is active, either restart or complain if we couldn't tweak it
         status("Restarting firewall (tcp={}, udp={})".format(" ".join(tcp), " ".join(udp)))
         if not invoke("rcSuSEfirewall2 restart"):
-            error("Failed to restart firewall")
+            error("Failed to restart firewall (SuSEfirewall2)")
 
     def init_firewall_firewalld(tcp, udp):
         for p in tcp:
             if not invoke("firewall-cmd --zone=public --add-port={}/tcp --permanent".format(p)):
-                error("Failed to configure firewall")
+                error("Failed to configure firewall (firewalld via firewall-cmd)")
 
         for p in udp:
             if not invoke("firewall-cmd --zone=public --add-port={}/udp --permanent".format(p)):
-                error("Failed to configure firewall")
+                error("Failed to configure firewall (firewalld via firewall-cmd)")
 
         if not service_is_active("firewalld"):
             return
 
         if not invoke("firewall-cmd --reload"):
-            warn("Failed to reload firewall configuration")
+            warn("Failed to reload firewall configuration (firewalld via firewall-cmd)")
 
     def init_firewall_ufw(tcp, udp):
         """
@@ -489,10 +504,10 @@ def configure_firewall(tcp=None, udp=None):
         """
         for p in tcp:
             if not invoke("ufw allow {}/tcp".format(p)):
-                error("Failed to configure firewall using ufw")
+                error("Failed to configure firewall (ufw)")
         for p in udp:
             if not invoke("ufw allow {}/udp".format(p)):
-                error("Failed to configure firewall using ufw")
+                error("Failed to configure firewall (ufw)")
 
     if package_is_installed("firewalld"):
         init_firewall_firewalld(tcp, udp)
@@ -501,11 +516,13 @@ def configure_firewall(tcp=None, udp=None):
     elif package_is_installed("ufw"):
         init_firewall_ufw(tcp, udp)
     else:
-        warn("Firewall: Could not open ports tcp={}, udp={}".format("|".join(tcp), "|".join(udp)))
+        warn("Failed to detect firewall: Could not open ports tcp={}, udp={}".format("|".join(tcp), "|".join(udp)))
 
 
 def firewall_open_basic_ports():
-    # ports for csync2, mgmtd, hawk & dlm respectively
+    """
+    Open ports for csync2, mgmtd, hawk & dlm respectively
+    """
     configure_firewall(tcp=["30865", "5560", "7630", "21064"])
 
 
