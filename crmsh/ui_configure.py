@@ -195,11 +195,43 @@ def _prim_meta_completer(agent, args):
 
 
 def _prim_op_completer(agent, args):
+    actions = agent.actions()
     completing = args[-1]
     if completing == 'op':
         return ['op']
     if args[-2] == 'op':
-        return list(constants.op_cli_names)
+        # append action items which in agent default actions
+        # monitor_Master will be mapped to "monitor role=Master"
+        # monitor_Slave will be mapped to "monitor role=Slave"
+        op_list = list(constants.op_cli_names)
+        if "monitor_Master" in actions:
+            op_list.append("monitor_Master")
+        if "monitor_Slave" in actions:
+            op_list.append("monitor_Slave")
+        # remove action items which not in default actions
+        for item in ["monitor", "demote", "promote", "notify"]:
+            if item not in actions:
+                op_list.remove(item)
+        # remove action items which already used
+        for item in op_list:
+            if item in args[:-2]:
+                op_list.remove(item)
+        return op_list
+    if args[-3] == 'op':
+        res = []
+        # list all of default items
+        if actions and actions[args[-2]]:
+            for k, v in list(actions[args[-2]].items()):
+                res += ["%s=%s" % (k, v)]
+            return res
+    args.pop()
+    # make sure all of default items can be completed
+    if args[-2] in actions:
+        res = []
+        for k, v in actions[args[-2]].items():
+            res += ["%s=%s" % (k, v)]
+        res.remove(args[-1])
+        return res
 
     return []
 
@@ -692,7 +724,14 @@ class CibConfig(command.UI):
             [op op_type [<attribute>=<value>...]
                         [[op_params] <param>=<value> [<param>=<value>...]]
                         [op_meta <attribute>=<value> [<attribute>=<value>...]] ...]]"""
-        return self.__conf_object(context.get_command_name(), *args)
+        tmp = list(args)
+        for item in ['monitor_Master', 'monitor_Slave']:
+            if item in tmp:
+                idx = tmp.index(item)
+                tmp.remove(item)
+                tmp.insert(idx, "monitor")
+                tmp.insert(idx+1, "role=%s" % item.split('_')[1])
+        return self.__conf_object(context.get_command_name(), *tuple(tmp))
 
     @command.skill_level('administrator')
     @command.completers_repeating(compl.null, _group_completer)
