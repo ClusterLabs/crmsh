@@ -63,7 +63,11 @@ _ms_completer = compl.choice(['params', 'meta'])
 def _list_resource(args):
     if len(args) > 3:
         if args[2] == "remove":
-            return cib_factory.f_prim_list_in_group(args[1])
+            res = cib_factory.f_prim_list_in_group(args[1])
+            if len(res) <= 1:
+                return []
+            else:
+                return res
         if args[2] == "add":
             return cib_factory.f_prim_free_id_list()
 
