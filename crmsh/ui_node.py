@@ -42,6 +42,21 @@ def unpack_node_xmldata(node, is_offline):
     return uname, ident, typ, other, inst_attr, is_offline
 
 
+def _find_utilization(args):
+    """
+    complete utilization attrs
+    """
+    cib = xmlutil.cibdump2elem()
+    if cib is None:
+        return []
+
+    res = []
+    node_util = cib.xpath("//nodes/node[@uname='%s']/utilization/nvpair" % args[-3])
+    for item in node_util:
+        res.append(item.get("name"))
+    return res
+
+
 def print_node(uname, ident, node_type, other, inst_attr, offline):
     """
     Try to pretty print a node from the cib. Sth like:
@@ -301,14 +316,14 @@ class NodeMgmt(command.UI):
                                     node, cmd, rsc, value)
 
     @command.wait
-    @command.completers(compl.nodes, compl.choice(['set', 'delete', 'show']), compl.resources)
-    def do_utilization(self, context, node, cmd, rsc, value=None):
+    @command.completers(compl.nodes, compl.choice(['set', 'delete', 'show']), _find_utilization)
+    def do_utilization(self, context, node, cmd, attr, value=None):
         """usage:
-        utilization <node> set <rsc> <value>
-        utilization <node> delete <rsc>
-        utilization <node> show <rsc>"""
+        utilization <node> set <attr> <value>
+        utilization <node> delete <attr>
+        utilization <node> show <attr>"""
         return ui_utils.manage_attr(context.get_command_name(), self.node_utilization,
-                                    node, cmd, rsc, value)
+                                    node, cmd, attr, value)
 
     @command.wait
     @command.name('status-attr')
