@@ -73,6 +73,13 @@ def _list_resource_2(args):
         return cib_factory.f_prim_list_in_group(args[1])
 
 
+def _pick_position(args):
+    if args[2] == "remove":
+        return []
+    else:
+        return ["after", "before"]
+
+
 def top_rsc_tmpl_id_list(args):
     return cib_factory.top_rsc_id_list() + cib_factory.rsc_template_list()
 
@@ -382,7 +389,7 @@ class CibConfig(command.UI):
 
     @command.skill_level('administrator')
     @command.completers(_f_group_id_list, compl.choice(['add', 'remove']),
-                        _list_resource, compl.choice(['after', 'before']), _list_resource_2)
+                        _list_resource, _pick_position, _list_resource_2)
     def do_modgroup(self, context, group_id, subcmd, prim_id, *args):
         """usage: modgroup <id> add <id> [after <id>|before <id>]
         modgroup <id> remove <id>"""
