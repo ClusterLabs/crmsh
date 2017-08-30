@@ -1,7 +1,13 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2016 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+from builtins import zip
+from builtins import str
+from past.builtins import basestring
+from builtins import object
 import os
 import subprocess
 from lxml import etree, doctestcompare
@@ -23,7 +29,7 @@ from .utils import olist, get_cib_in_use, get_tempdir
 def xmlparse(f):
     try:
         cib_elem = etree.parse(f).getroot()
-    except Exception, msg:
+    except Exception as msg:
         common_err("cannot parse xml: %s" % msg)
         return None
     return cib_elem
@@ -32,13 +38,13 @@ def xmlparse(f):
 def file2cib_elem(s):
     try:
         f = open(s, 'r')
-    except IOError, msg:
+    except IOError as msg:
         common_err(msg)
         return None
     cib_elem = xmlparse(f)
     f.close()
     if options.regression_tests and cib_elem is None:
-        print "Failed to read CIB from file: %s" % (s)
+        print("Failed to read CIB from file: %s" % (s))
     return cib_elem
 
 
@@ -51,14 +57,14 @@ def compressed_file_to_cib(s):
             f = gzip.open(s)
         else:
             f = open(s)
-    except IOError, msg:
+    except IOError as msg:
         common_err(msg)
         return None
     cib_elem = xmlparse(f)
     if options.regression_tests and cib_elem is None:
-        print "Failed to read CIB from file %s" % (s)
+        print("Failed to read CIB from file %s" % (s))
         f.seek(0)
-        print f.read()
+        print(f.read())
     f.close()
     return cib_elem
 
@@ -69,13 +75,13 @@ cib_dump = "cibadmin -Ql"
 def sudocall(cmd):
     cmd = add_sudo(cmd)
     if options.regression_tests:
-        print ".EXT", cmd
+        print(".EXT", cmd)
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
         outp, errp = p.communicate()
         p.wait()
         return p.returncode, outp, errp
-    except IOError, msg:
+    except IOError as msg:
         common_err("running %s: %s" % (cmd, msg))
         return None, None, None
 
@@ -92,7 +98,7 @@ def cibdump2tmp():
         _, outp, _ = sudocall(cib_dump)
         if outp is not None:
             return str2tmp(outp)
-    except IOError, msg:
+    except IOError as msg:
         common_err(msg)
     return None
 
@@ -104,7 +110,7 @@ def cibtext2elem(cibtext):
     """
     try:
         return etree.fromstring(cibtext)
-    except Exception, err:
+    except Exception as err:
         cib_parse_err(err, cibtext)
         return None
 
@@ -401,7 +407,7 @@ def pe2shadow(pe_file, name):
     '''Copy a PE file (or any CIB file) to a shadow.'''
     try:
         s = open(pe_file).read()
-    except IOError, msg:
+    except IOError as msg:
         common_err("open: %s" % msg)
         return False
     # decompresed if it ends with .bz2
@@ -410,7 +416,7 @@ def pe2shadow(pe_file, name):
     # copy input to the shadow
     try:
         open(shadowfile(name), "w").write(s)
-    except IOError, msg:
+    except IOError as msg:
         common_err("open: %s" % msg)
         return False
     return True
@@ -452,7 +458,7 @@ def drop_attr_defaults(node, ts=0):
 
 def nameandid(e, level):
     if e.tag:
-        print level*' ', e.tag, e.get("id"), e.get("name")
+        print(level*' ', e.tag, e.get("id"), e.get("name"))
 
 
 def xmltraverse(e, fun, ts=0):
@@ -580,7 +586,7 @@ def is_defaults(node):
 
 
 def rsc_constraint(rsc_id, con_elem):
-    for attr in con_elem.keys():
+    for attr in list(con_elem.keys()):
         if attr in constants.constraint_rsc_refs \
                 and rsc_id == con_elem.get(attr):
             return True
@@ -639,7 +645,7 @@ def printid(e_list):
     for e in e_list:
         ident = e.get("id")
         if ident:
-            print "element id:", ident
+            print("element id:", ident)
 
 
 def remove_dflt_attrs(e_list):
@@ -649,7 +655,7 @@ def remove_dflt_attrs(e_list):
     for e in e_list:
         try:
             d = constants.attr_defaults[e.tag]
-            for a in d.keys():
+            for a in list(d.keys()):
                 if e.get(a) == d[a]:
                     del e.attrib[a]
         except:
@@ -800,7 +806,7 @@ def get_op_timeout(rsc_node, op, default_timeout):
 def op2list(node):
     pl = []
     action = ""
-    for name in node.keys():
+    for name in list(node.keys()):
         if name == "name":
             action = node.get(name)
         elif name != "id":  # skip the id
@@ -917,7 +923,7 @@ def rename_id(node, old_id, new_id):
 
 def rename_rscref_simple(c_obj, old_id, new_id):
     c_modified = False
-    for attr in c_obj.node.keys():
+    for attr in list(c_obj.node.keys()):
         if attr in constants.constraint_rsc_refs and \
                 c_obj.node.get(attr) == old_id:
             c_obj.node.set(attr, new_id)
@@ -928,7 +934,7 @@ def rename_rscref_simple(c_obj, old_id, new_id):
 
 def delete_rscref_simple(c_obj, rsc_id):
     c_modified = False
-    for attr in c_obj.node.keys():
+    for attr in list(c_obj.node.keys()):
         if attr in constants.constraint_rsc_refs and \
                 c_obj.node.get(attr) == rsc_id:
             del c_obj.node.attrib[attr]
@@ -1058,7 +1064,7 @@ def silly_constraint(c_node, rsc_id):
         return cnt <= 1
     cnt = 0  # total count of referenced resources have to be at least two
     rsc_cnt = 0
-    for attr in c_node.keys():
+    for attr in list(c_node.keys()):
         if attr in constants.constraint_rsc_refs:
             cnt += 1
             if c_node.get(attr) == rsc_id:
@@ -1231,7 +1237,7 @@ def xml_equals_unordered(a, b):
     def sortby(v):
         if v.tag == 'primitive':
             return v.tag
-        return tagflat(v) + ''.join(sorted(v.attrib.keys() + v.attrib.values()))
+        return tagflat(v) + ''.join(sorted(list(v.attrib.keys()) + list(v.attrib.values())))
 
     def safe_strip(text):
         return text is not None and text.strip() or ''
@@ -1254,7 +1260,7 @@ def xml_equals_unordered(a, b):
     if a.tag == 'resource_set':
         return all(xml_equals_unordered(a, b) for a, b in zip(a, b))
     else:
-        sorted_children = zip(sorted(a, key=sortby), sorted(b, key=sortby))
+        sorted_children = list(zip(sorted(a, key=sortby), sorted(b, key=sortby)))
         return all(xml_equals_unordered(a, b) for a, b in sorted_children)
 
 
@@ -1265,7 +1271,7 @@ def xml_equals(n, m, show=False):
         from doctest import Example
         example = Example("etree.tostring(n)", etree.tostring(n))
         got = etree.tostring(m)
-        print _checker.output_difference(example, got, 0)
+        print(_checker.output_difference(example, got, 0))
     return rc
 
 
@@ -1275,7 +1281,7 @@ def merge_attributes(dnode, snode, tag):
     for sc in snode.iterchildren(tag):
         dc = lookup_node(sc, dnode, ignore_id=True)
         if dc is not None:
-            for a, v in sc.items():
+            for a, v in list(sc.items()):
                 if a == "id":
                     continue
                 if v != dc.get(a):
@@ -1324,7 +1330,7 @@ def merge_tmpl_into_prim(prim_node, tmpl_node):
     merge_nodes(dnode, tmpl_node)
     merge_nodes(dnode, prim_node)
     # the resulting node should inherit all primitives attributes
-    for a, v in prim_node.items():
+    for a, v in list(prim_node.items()):
         dnode.set(a, v)
     # but class/provider/type are coming from the template
     # savannah#41410: stonith resources do not have the provider

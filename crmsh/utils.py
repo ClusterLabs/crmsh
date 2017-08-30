@@ -1,6 +1,17 @@
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import input
+from builtins import map
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import os
 import sys
 from tempfile import mkstemp
@@ -176,7 +187,7 @@ def ask(msg):
 
     while True:
         try:
-            ans = raw_input(msg)
+            ans = input(msg)
         except EOFError:
             ans = 'n'
         if ans:
@@ -204,12 +215,12 @@ def multi_input(prompt=''):
     _LINE_BUFFER = ''
     while True:
         try:
-            text = raw_input(prompt)
+            text = input(prompt)
         except EOFError:
             return None
         err_buf.incr_lineno()
         if options.regression_tests:
-            print ".INP:", text
+            print(".INP:", text)
             sys.stdout.flush()
             sys.stderr.flush()
         stripped = text.strip()
@@ -340,7 +351,7 @@ def pipe_string(cmd, s):
     cmd = add_sudo(cmd)
     common_debug("piping string to %s" % cmd)
     if options.regression_tests:
-        print ".EXT", cmd
+        print(".EXT", cmd)
     p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE)
     try:
         p.communicate(s)
@@ -362,7 +373,7 @@ def filter_string(cmd, s, stderr_on=True, shell=True):
     cmd = add_sudo(cmd)
     common_debug("pipe through %s" % cmd)
     if options.regression_tests:
-        print ".EXT", cmd
+        print(".EXT", cmd)
     p = subprocess.Popen(cmd,
                          shell=shell,
                          stdin=subprocess.PIPE,
@@ -376,11 +387,12 @@ def filter_string(cmd, s, stderr_on=True, shell=True):
             outp = ret[0]
         p.wait()
         rc = p.returncode
-    except OSError, (errno, strerror):
+    except OSError as xxx_todo_changeme1:
+        (errno, strerror) = xxx_todo_changeme1.args
         if errno != os.errno.EPIPE:
             common_err(strerror)
         common_info("from: %s" % cmd)
-    except Exception, msg:
+    except Exception as msg:
         common_err(msg)
         common_info("from: %s" % cmd)
     return rc, outp
@@ -394,7 +406,7 @@ def str2tmp(s, suffix=".pcmk"):
     fd, tmp = mkstemp(suffix=suffix)
     try:
         f = os.fdopen(fd, "w")
-    except IOError, msg:
+    except IOError as msg:
         common_err(msg)
         return
     f.write(s)
@@ -472,7 +484,7 @@ def str2file(s, fname):
     try:
         with open_atomic(fname, 'w') as dst:
             dst.write(s)
-    except IOError, msg:
+    except IOError as msg:
         common_err(msg)
         return False
     return True
@@ -484,7 +496,7 @@ def file2str(fname, noerr=True):
     '''
     try:
         f = open(fname, "r")
-    except IOError, msg:
+    except IOError as msg:
         if not noerr:
             common_err(msg)
         return None
@@ -499,7 +511,7 @@ def file2list(fname):
     '''
     try:
         return open(fname).read().split('\n')
-    except IOError, msg:
+    except IOError as msg:
         common_err(msg)
         return None
 
@@ -513,7 +525,7 @@ def safe_open_w(fname):
                 return None
         try:
             f = open(fname, "w")
-        except IOError, msg:
+        except IOError as msg:
             common_err(msg)
             return None
     return f
@@ -550,7 +562,7 @@ def show_dot_graph(dotfile, keep_file=False, desc="transition graph"):
     if not keep_file:
         cmd = "(%s; rm -f %s)" % (cmd, dotfile)
     if options.regression_tests:
-        print ".EXT", cmd
+        print(".EXT", cmd)
     subprocess.Popen(cmd, shell=True, bufsize=0,
                      stdin=None, stdout=None, stderr=None, close_fds=True)
     common_info("starting %s to show %s" % (config.core.dotty, desc))
@@ -559,14 +571,14 @@ def show_dot_graph(dotfile, keep_file=False, desc="transition graph"):
 def ext_cmd(cmd, shell=True):
     cmd = add_sudo(cmd)
     if options.regression_tests:
-        print ".EXT", cmd
+        print(".EXT", cmd)
     common_debug("invoke: %s" % cmd)
     return subprocess.call(cmd, shell=shell)
 
 
 def ext_cmd_nosudo(cmd, shell=True):
     if options.regression_tests:
-        print ".EXT", cmd
+        print(".EXT", cmd)
     return subprocess.call(cmd, shell=shell)
 
 
@@ -622,7 +634,8 @@ def check_locker(lockdir):
         return
     try:
         os.kill(pid, 0)
-    except OSError, (errno, strerror):
+    except OSError as xxx_todo_changeme2:
+        (errno, strerror) = xxx_todo_changeme2.args
         if errno == os.errno.ESRCH:
             common_info("history: removing stale lock")
             rmdir_r(os.path.join(lockdir, _LOCKDIR))
@@ -644,7 +657,8 @@ def lock(lockdir):
                 os.makedirs(os.path.join(lockdir, _LOCKDIR))
                 str2file("%d" % os.getpid(), os.path.join(lockdir, _LOCKDIR, _PIDF))
                 return True
-            except OSError, (errno, strerror):
+            except OSError as xxx_todo_changeme:
+                (errno, strerror) = xxx_todo_changeme.args
                 if errno != os.errno.EEXIST:
                     common_err("Failed to acquire lock to %s: %s" % (lockdir, strerror))
                     return False
@@ -661,7 +675,7 @@ def lock(lockdir):
             rmdir_r(os.path.join(lockdir, _LOCKDIR))
 
 
-def mkdirp(d, mode=0777):
+def mkdirp(d, mode=0o777):
     if os.path.isdir(d):
         return True
     os.makedirs(d, mode=mode)
@@ -669,7 +683,7 @@ def mkdirp(d, mode=0777):
 
 def pipe_cmd_nosudo(cmd):
     if options.regression_tests:
-        print ".EXT", cmd
+        print(".EXT", cmd)
     proc = subprocess.Popen(cmd,
                             shell=True,
                             stdout=subprocess.PIPE,
@@ -678,8 +692,8 @@ def pipe_cmd_nosudo(cmd):
     proc.wait()
     rc = proc.returncode
     if rc != 0:
-        print outp
-        print err_outp
+        print(outp)
+        print(err_outp)
     return rc
 
 
@@ -694,7 +708,7 @@ def get_stdout(cmd, input_s=None, stderr_on=True, shell=True):
     else:
         stderr = subprocess.PIPE
     if options.regression_tests:
-        print ".EXT", cmd
+        print(".EXT", cmd)
     proc = subprocess.Popen(cmd,
                             shell=shell,
                             stdin=subprocess.PIPE,
@@ -709,7 +723,7 @@ def get_stdout_stderr(cmd, input_s=None, shell=True):
     Run a cmd, return (rc, stdout, stderr)
     '''
     if options.regression_tests:
-        print ".EXT", cmd
+        print(".EXT", cmd)
     proc = subprocess.Popen(cmd,
                             shell=shell,
                             stdin=input_s and subprocess.PIPE or None,
@@ -736,7 +750,7 @@ def append_file(dest, src):
     try:
         open(dest, "a").write(open(src).read())
         return True
-    except IOError, msg:
+    except IOError as msg:
         common_err("append %s to %s: %s" % (src, dest, msg))
         return False
 
@@ -784,7 +798,7 @@ def wait4dc(what="", show_progress=True):
         delaymsec = crm_msec(delay)
         if delaymsec > 0:
             common_info("The crmd-transition-delay is configured. Waiting %d msec before check DC status." % delaymsec)
-            time.sleep(delaymsec / 1000)
+            time.sleep(old_div(delaymsec, 1000))
     cnt = 0
     output_started = 0
     init_sleep = 0.25
@@ -922,7 +936,7 @@ def crm_msec(t):
         mult, div = convtab[q]
     except KeyError:
         return -1
-    return (int(r.group(1))*mult)/div
+    return old_div((int(r.group(1))*mult),div)
 
 
 def crm_time_cmp(a, b):
@@ -1061,7 +1075,7 @@ def edit_file_ext(fname, template=''):
             f2.close()
         finally:
             os.unlink(tmpfile)
-    except OSError, e:
+    except OSError as e:
         raise IOError(e)
 
 
@@ -1071,7 +1085,7 @@ def need_pager(s, w, h):
     for l in s.split('\n'):
         # need to remove color codes
         l = re.sub(r'\${\w+}', '', l)
-        cnt += int(ceil((len(l) + 0.5)/w))
+        cnt += int(ceil(old_div((len(l) + 0.5),w)))
         if cnt >= h:
             return True
     return False
@@ -1100,9 +1114,9 @@ def page_string(s):
         return
     w, h = get_winsize()
     if not need_pager(s, w, h):
-        print term_render(s)
+        print(term_render(s))
     elif not config.core.pager or not can_ask() or options.batch:
-        print term_render(s)
+        print(term_render(s))
     else:
         pipe_string(get_pager_cmd(), term_render(s))
 
@@ -1151,11 +1165,11 @@ def multicolumn(l):
     for s in l:
         if len(s) > max_len:
             max_len = len(s)
-    cols = w/(max_len + min_gap)  # approx.
+    cols = old_div(w,(max_len + min_gap))  # approx.
     if not cols:
         cols = 1
-    col_len = w/cols
-    for i in range(len(l)/cols + 1):
+    col_len = old_div(w,cols)
+    for i in range(old_div(len(l),cols) + 1):
         s = ''
         for j in range(i * cols, (i + 1) * cols):
             if not j < len(l):
@@ -1167,7 +1181,7 @@ def multicolumn(l):
             else:
                 s = "%s%-*s" % (s, col_len, l[j])
         if s:
-            print s
+            print(s)
 
 
 def find_value(pl, name):
@@ -1238,7 +1252,7 @@ def total_seconds(td):
     if hasattr(datetime.timedelta, 'total_seconds'):
         return td.total_seconds()
     else:
-        return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
+        return old_div((td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6), 10**6)
 
 
 def datetime_to_timestamp(dt):
@@ -1284,14 +1298,14 @@ def parse_time(t):
         else:
             # convert to UTC from local time
             dt = dt - tz.tzlocal().utcoffset(dt)
-    except ValueError, msg:
+    except ValueError as msg:
         common_err("parse_time %s: %s" % (t, msg))
         return None
-    except ImportError, msg:
+    except ImportError as msg:
         try:
             tm = time.strptime(t)
             dt = datetime.datetime(*tm[0:7])
-        except ValueError, msg:
+        except ValueError as msg:
             common_err("no dateutil, please provide times as printed by date(1)")
             return None
     return dt
@@ -1313,15 +1327,15 @@ def parse_to_timestamp(t):
         else:
             # convert to UTC from local time
             return total_seconds(dt - tz.tzlocal().utcoffset(dt) - datetime.datetime(1970, 1, 1))
-    except ValueError, msg:
+    except ValueError as msg:
         common_err("parse_time %s: %s" % (t, msg))
         return None
-    except ImportError, msg:
+    except ImportError as msg:
         try:
             tm = time.strptime(t)
             dt = datetime.datetime(*tm[0:7])
             return datetime_to_timestamp(dt)
-        except ValueError, msg:
+        except ValueError as msg:
             common_err("no dateutil, please provide times as printed by date(1)")
             return None
 
@@ -1335,18 +1349,18 @@ def save_graphviz_file(ini_f, attr_d):
         return False
     try:
         f = open(ini_f, "wb")
-    except IOError, msg:
+    except IOError as msg:
         common_err(msg)
         return False
-    import ConfigParser
-    p = ConfigParser.SafeConfigParser()
-    for section, sect_d in attr_d.iteritems():
+    import configparser
+    p = configparser.SafeConfigParser()
+    for section, sect_d in attr_d.items():
         p.add_section(section)
-        for n, v in sect_d.iteritems():
+        for n, v in sect_d.items():
             p.set(section, n, v)
     try:
         p.write(f)
-    except IOError, msg:
+    except IOError as msg:
         common_err(msg)
         return False
     f.close()
@@ -1360,11 +1374,11 @@ def load_graphviz_file(ini_f):
     '''
     if not os.path.isfile(ini_f):
         return True, None
-    import ConfigParser
-    p = ConfigParser.SafeConfigParser()
+    import configparser
+    p = configparser.SafeConfigParser()
     try:
         p.read(ini_f)
-    except Exception, msg:
+    except Exception as msg:
         common_err(msg)
         return False, None
     _graph_d = {}
@@ -1396,7 +1410,7 @@ def get_pcmk_version(dflt):
             else:
                 version = s.split()[2]
             common_debug("found pacemaker version: %s" % version)
-    except Exception, msg:
+    except Exception as msg:
         common_warn("could not get the pacemaker version, bad installation?")
         common_warn(msg)
     return version
@@ -1414,7 +1428,7 @@ def get_cib_property(cib_f, attr, dflt):
     ver = dflt  # return some version in any case
     try:
         f = open(cib_f, "r")
-    except IOError, msg:
+    except IOError as msg:
         common_err(msg)
         return ver
     state = 0
@@ -1444,7 +1458,7 @@ def get_cib_attributes(cib_f, tag, attr_l, dflt_l):
     val_l = []
     try:
         f = open(cib_f).read()
-    except IOError, msg:
+    except IOError as msg:
         common_err(msg)
         return dflt_l
     if os.path.splitext(cib_f)[-1] == '.bz2':
@@ -1538,7 +1552,7 @@ def fetch_opts(args, opt_l):
         re_opt = re.compile("^%s$" % opt_l[0][1:])
         del opt_l[0]
     l = []
-    for i in reversed(range(len(args))):
+    for i in reversed(list(range(len(args)))):
         if (args[i] in opt_l) or (re_opt and re_opt.search(args[i])):
             l.append(args.pop())
         else:
@@ -1651,7 +1665,7 @@ def list_cluster_nodes():
                     continue
             node_list.append(name)
         return node_list
-    except OSError, msg:
+    except OSError as msg:
         raise ValueError("Error listing cluster nodes: %s" % (msg))
 
 
@@ -1741,7 +1755,7 @@ def sysconfig_set(sysconfig_file, **values):
                 matched = False
                 m = vre.match(line)
                 if m:
-                    for k, v in values.iteritems():
+                    for k, v in values.items():
                         if k == m.group(1):
                             matched = True
                             outp += '%s=%s\n' % (k, doublequote(v))
@@ -1749,7 +1763,7 @@ def sysconfig_set(sysconfig_file, **values):
                             break
                 if not matched:
                     outp += line
-    for k, v in values.iteritems():
+    for k, v in values.items():
         outp += '%s=%s\n' % (k, doublequote(v))
     str2file(outp, sysconfig_file)
 
@@ -1765,7 +1779,7 @@ def remote_diff_slurp(nodes, filename):
     opts = parallax.Options()
     opts.localdir = tmpdir
     dst = os.path.basename(filename)
-    return parallax.slurp(nodes, filename, dst, opts).items()
+    return list(parallax.slurp(nodes, filename, dst, opts).items())
 
 
 def remote_diff_this(local_path, nodes, this_node):
@@ -1813,12 +1827,12 @@ def remote_checksum(local_path, nodes, this_node):
         if isinstance(result, parallax.Error):
             raise ValueError(str(result))
 
-    print "%-16s  SHA1 checksum of %s" % ('Host', local_path)
+    print("%-16s  SHA1 checksum of %s" % ('Host', local_path))
     if this_node not in nodes:
-        print "%-16s: %s" % (this_node, hashlib.sha1(open(local_path).read()).hexdigest())
+        print("%-16s: %s" % (this_node, hashlib.sha1(open(local_path).read()).hexdigest()))
     for host, result in by_host:
         _, _, _, path = result
-        print "%-16s: %s" % (host, hashlib.sha1(open(path).read()).hexdigest())
+        print("%-16s: %s" % (host, hashlib.sha1(open(path).read()).hexdigest()))
 
 
 def cluster_copy_file(local_path, nodes=None):
@@ -1838,7 +1852,7 @@ def cluster_copy_file(local_path, nodes=None):
     ok = True
     for host, result in parallax.copy(nodes,
                                       local_path,
-                                      local_path, opts).iteritems():
+                                      local_path, opts).items():
         if isinstance(result, parallax.Error):
             err_buf.error("Failed to push %s to %s: %s" % (local_path, host, result))
             ok = False
@@ -1906,7 +1920,7 @@ class IP(object):
         self.mask = mask
         self.v = 0
 
-        if isinstance(ip, (int, long)):
+        if isinstance(ip, int):
             self.ip = int(ip)
             if self.ip <= MAX_IPV4:
                 self.v = version or 4
@@ -1924,7 +1938,7 @@ class IP(object):
 
         if self.mask is None:
             self.mask = {4: 32, 6: 128}[self.v]
-        elif isinstance(self.mask, (int, long)) or self.mask.isdigit():
+        elif isinstance(self.mask, int) or self.mask.isdigit():
             self.mask = int(self.mask)
 
     def __str__(self):
@@ -1990,7 +2004,7 @@ class IP(object):
         Compress an IP address to its shortest possible compressed form.
         """
         if self.v == 6:
-            quads = map(lambda q: '%x' % (int(q, 16)), self.dq.split(':'))
+            quads = ['%x' % (int(q, 16)) for q in self.dq.split(':')]
             quadc = ':%s:' % (':'.join(quads),)
             zeros = [0, -1]
 

@@ -1,6 +1,10 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
+from past.builtins import basestring
+from builtins import object
 import os
 import subprocess
 import copy
@@ -42,7 +46,7 @@ class RaLrmd(object):
             return False
         cmd = add_sudo(">/dev/null 2>&1 %s -C" % lrmadmin_prog)
         if options.regression_tests:
-            print ".EXT", cmd
+            print(".EXT", cmd)
         return subprocess.call(
             cmd,
             shell=True) == 0
@@ -301,7 +305,7 @@ def get_properties_meta():
 @utils.memoize
 def get_properties_list():
     try:
-        return get_properties_meta().params().keys()
+        return list(get_properties_meta().params().keys())
     except:
         return []
 
@@ -492,7 +496,7 @@ class RAInfo(object):
             if name == "monitor":
                 name = monitor_name_node(c)
             d[name] = {}
-            for a in c.attrib.keys():
+            for a in list(c.attrib.keys()):
                 if a in self.skip_op_attr:
                     continue
                 v = c.get(a)
@@ -746,7 +750,7 @@ class RAInfo(object):
         if name == "monitor":
             name = monitor_name_node(n)
         s = "%-13s" % name
-        for a in n.attrib.keys():
+        for a in list(n.attrib.keys()):
             if a in self.skip_op_attr:
                 continue
             v = n.get(a)
@@ -868,11 +872,11 @@ def validate_agent(agentname, params, log=False):
 
     my_env = os.environ.copy()
     my_env["OCF_ROOT"] = config.path.ocf_root
-    for k, v in params.iteritems():
+    for k, v in params.items():
         my_env["OCF_RESKEY_" + k] = v
     cmd = [os.path.join(config.path.ocf_root, "resource.d", agent.ra_provider, agent.ra_type), "validate-all"]
     if options.regression_tests:
-        print ".EXT", " ".join(cmd)
+        print(".EXT", " ".join(cmd))
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=my_env)
     out, _ = p.communicate()
     p.wait()

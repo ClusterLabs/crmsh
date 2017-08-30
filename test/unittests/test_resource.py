@@ -1,7 +1,11 @@
+from __future__ import unicode_literals
 # Copyright (C) 2014 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import object
 from crmsh import ui_resource
 from crmsh import utils
 

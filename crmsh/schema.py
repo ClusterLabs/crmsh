@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 # Copyright (C) 2012 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
@@ -93,7 +94,7 @@ def init_schema(cib):
     global _crm_schema
     try:
         _crm_schema = _load_schema(cib)
-    except PacemakerError, msg:
+    except PacemakerError as msg:
         common_err(msg)
     reset()
 
@@ -101,7 +102,7 @@ def init_schema(cib):
 def test_schema(cib):
     try:
         crm_schema = _load_schema(cib)
-    except PacemakerError, msg:
+    except PacemakerError as msg:
         common_err(msg)
         return None
     return crm_schema.validate_name

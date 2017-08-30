@@ -1,6 +1,15 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2015 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import next
+from builtins import hex
+from builtins import str
+from past.builtins import basestring
+from builtins import object
 import os
 import re
 import subprocess
@@ -183,7 +192,7 @@ class Actions(object):
                 action['value'] = value
 
             def arrow(v):
-                return ' -> '.join(v.items()[0])
+                return ' -> '.join(list(v.items())[0])
             action['text'] = '\n'.join([arrow(x) for x in value])
         elif name == 'cib' or name == 'crm':
             action['text'] = str(Text.cib(script, value))
@@ -215,7 +224,7 @@ class Actions(object):
                 action['when'] = Text(script, '{{%s}}' % (when))
             else:
                 del action['when']
-        for k, v in action.iteritems():
+        for k, v in action.items():
             if isinstance(v, basestring) and hre.search(v):
                 v = Text(script, v)
             if Text.isa(v):
@@ -354,7 +363,7 @@ crm_script.exit_ok(True)
     def service(self):
         values = []
         for s in self._value:
-            for v in s.iteritems():
+            for v in s.items():
                 values.append(v)
         services = "\n".join([('crm_script.service%s' % repr(v)) for v in values])
         self._run.execute_shell(self._nodes or 'all', '''#!/usr/bin/env python
@@ -381,7 +390,7 @@ _actions = dict([(n, getattr(Actions, n)) for n in dir(Actions) if not n.startsw
 
 def _find_action(action):
     """return name of action for action"""
-    for a in _actions.keys():
+    for a in list(_actions.keys()):
         if a in action:
             return a
     return None
@@ -602,7 +611,7 @@ def _parse_hawk_workflow(scriptname, scriptfile):
 
     if config.core.debug:
         import pprint
-        print "Parsed hawk workflow:"
+        print("Parsed hawk workflow:")
         pprint.pprint(data)
     return data
 
@@ -676,7 +685,7 @@ def _make_cib_for_agent(name, agent, data, ops):
 
 
 def _merge_objects(o1, o2):
-    for key, value in o2.iteritems():
+    for key, value in o2.items():
         o1[key] = value
 
 
@@ -746,7 +755,7 @@ def _process_agent_include(script, include):
         # Make any overriden parameters non-advanced
         # unless explicitly set to advanced
         pobj['advanced'] = False
-        for key, value in param.iteritems():
+        for key, value in param.items():
             if key in ('shortdesc', 'longdesc'):
                 pobj[key] = value
             elif key == 'value':
@@ -817,7 +826,7 @@ def _process_script_include(script, include):
     def _merge_step_param(step, param):
         for p in step.get('parameters', []):
             if p['name'] == param['name']:
-                for key, value in param.iteritems():
+                for key, value in param.items():
                     if key in ('shortdesc', 'longdesc'):
                         p[key] = value
                     elif key == 'value' and Text.isa(value):
@@ -866,7 +875,7 @@ def _process_include(script, include):
     elif 'script' in include:
         return _process_script_include(script, include)
     else:
-        raise ValueError("Unknown include type: %s" % (', '.join(include.keys())))
+        raise ValueError("Unknown include type: %s" % (', '.join(list(include.keys()))))
 
 
 def _postprocess_script_step(script, step):
@@ -877,7 +886,7 @@ def _postprocess_script_step(script, step):
     step['longdesc'] = step.get('longdesc', '')
     for p in step.get('parameters', []):
         if 'name' not in p:
-            raise ValueError("Parameter has no name: %s" % (p.keys()))
+            raise ValueError("Parameter has no name: %s" % (list(p.keys())))
         p['shortdesc'] = _strip(p.get('shortdesc', ''))
         p['longdesc'] = p.get('longdesc', '')
         if 'default' in p and 'value' not in p:
@@ -1014,9 +1023,9 @@ def load_script_file(script, filename):
 
 def load_script_string(script, yml):
     build_script_cache()
-    import cStringIO
+    import io
     import yaml
-    data = yaml.load(cStringIO.StringIO(yml))
+    data = yaml.load(io.StringIO(yml))
     if isinstance(data, list):
         data = data[0]
     if 'parameters' in data:
@@ -1037,7 +1046,7 @@ def load_script_string(script, yml):
 def load_script(script):
     build_script_cache()
     if script not in _script_cache:
-        common_debug("cache: %s" % (_script_cache.keys()))
+        common_debug("cache: %s" % (list(_script_cache.keys())))
         raise ValueError("Script not found: %s" % (script))
     s = _script_cache[script]
     if isinstance(s, basestring):
@@ -1065,7 +1074,7 @@ def _check_control_persist():
     '''
     cmd = 'ssh -o ControlPersist'.split()
     if options.regression_tests:
-        print(".EXT", cmd)
+        print((".EXT", cmd))
     cmd = subprocess.Popen(cmd,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
@@ -1121,7 +1130,7 @@ def _print_debug(printer, local_node, hosts, workdir, opts):
     if hosts:
         for host, result in _parallax_call(printer, hosts,
                                            "if [ -f '%s' ]; then cat '%s'; fi" % (dbglog, dbglog),
-                                           opts).iteritems():
+                                           opts).items():
             if isinstance(result, parallax.Error):
                 printer.error(host, result)
             else:
@@ -1149,7 +1158,7 @@ def _run_cleanup(printer, has_remote_actions, local_node, hosts, workdir, opts):
         for host, result in _parallax_call(printer, hosts,
                                            "%s %s" % (cleanscript,
                                                       workdir),
-                                           opts).iteritems():
+                                           opts).items():
             if isinstance(result, parallax.Error):
                 printer.error(host, "Clean: %s" % (result))
             else:
@@ -1380,7 +1389,7 @@ def _resolve_params(step, params, path, errors):
     """
     ret = {}
 
-    for pname, pvalue in params.iteritems():
+    for pname, pvalue in params.items():
         result = _resolve_direct(step, pname, pvalue, path, errors)
         if result is not _NO_RESOLVE:
             ret[pname] = result
@@ -1421,7 +1430,7 @@ def _check_parameters(script, params):
 
     def _split_commons(params):
         ret, cdict = {}, dict([(c, d) for c, d, _ in common_params()])
-        for key, value in params.iteritems():
+        for key, value in params.items():
             if key in cdict:
                 cdict[key] = value
             else:
@@ -1434,7 +1443,7 @@ def _check_parameters(script, params):
     if errors:
         raise ValueError('\n'.join(errors))
 
-    for key, value in commons.iteritems():
+    for key, value in commons.items():
         params[key] = value
 
     def _fill_values(path, into, source, srcreq):
@@ -1491,7 +1500,7 @@ def _handles_values(ret, script, params, subactions):
         context: source step
         params: values for step
         """
-        for key, value in params.iteritems():
+        for key, value in params.items():
             if not isinstance(value, dict):
                 to[key] = value
 
@@ -1578,7 +1587,7 @@ def _create_script_workdir(script, workdir):
             else:
                 cmd = ["mkdir", "-p", workdir]
             if options.regression_tests:
-                print ".EXT", cmd
+                print(".EXT", cmd)
             if subprocess.call(cmd, shell=False) != 0:
                 raise ValueError("Failed to create temporary working directory")
             # only copytree if script is a dir
@@ -1587,10 +1596,10 @@ def _create_script_workdir(script, workdir):
         else:
             cmd = ["mkdir", "-p", workdir]
             if options.regression_tests:
-                print ".EXT", cmd
+                print(".EXT", cmd)
             if subprocess.call(cmd, shell=False) != 0:
                 raise ValueError("Failed to create temporary working directory")
-    except (IOError, OSError), e:
+    except (IOError, OSError) as e:
         raise ValueError(e)
 
 
@@ -1602,7 +1611,7 @@ def _copy_utils(dst):
         import glob
         for f in glob.glob(os.path.join(config.path.sharedir, 'utils/*.py')):
             shutil.copy(f, dst)
-    except (IOError, OSError), e:
+    except (IOError, OSError) as e:
         raise ValueError(e)
 
 
@@ -1611,7 +1620,7 @@ def _create_remote_workdirs(printer, hosts, path, opts):
     ok = True
     for host, result in _parallax_call(printer, hosts,
                                        "mkdir -p %s" % (os.path.dirname(path)),
-                                       opts).iteritems():
+                                       opts).items():
         if isinstance(result, parallax.Error):
             printer.error(host, "Start: %s" % (result))
             ok = False
@@ -1626,7 +1635,7 @@ def _copy_to_remote_dirs(printer, hosts, path, opts):
     ok = True
     for host, result in _parallax_copy(printer, hosts,
                                        path,
-                                       path, opts).iteritems():
+                                       path, opts).items():
         if isinstance(result, parallax.Error):
             printer.debug("_copy_to_remote_dirs failed: %s, %s, %s" % (hosts, path, opts))
             printer.error(host, result)
@@ -1657,7 +1666,7 @@ def _copy_to_all(printer, workdir, hosts, local_node, src, dst, opts):
     """
     ok = True
     ret = _parallax_copy(printer, hosts, src, dst, opts)
-    for host, result in ret.iteritems():
+    for host, result in ret.items():
         if isinstance(result, parallax.Error):
             printer.error(host, result)
             ok = False
@@ -1710,7 +1719,7 @@ def clean_steps(steps):
 
 
 def clean_run_params(params):
-    for key, value in params.iteritems():
+    for key, value in params.items():
         if isinstance(value, dict):
             clean_run_params(value)
         elif Text.isa(value):
@@ -1847,7 +1856,7 @@ class RunActions(object):
                 self.result = ''
             self.data.append(self.result)
             if isinstance(self.result, dict):
-                for k, v in self.result.iteritems():
+                for k, v in self.result.items():
                     self.data[0][k] = v
             self.rc = True
         else:
@@ -1952,7 +1961,7 @@ class RunActions(object):
                 f.write(s)
                 if not s.endswith('\n'):
                     f.write("\n")
-        except IOError, msg:
+        except IOError as msg:
             self.printer.error(self.local_node_name(), "Write failed: %s" % (msg))
             return
         return fn
@@ -1978,7 +1987,7 @@ class RunActions(object):
         for host, result in _parallax_call(self.printer,
                                            self.hosts,
                                            cmdline,
-                                           self.opts).iteritems():
+                                           self.opts).items():
             if isinstance(result, parallax.Error):
                 self.printer.error(host, "Remote error: %s" % (result))
                 ok = False
@@ -2077,7 +2086,7 @@ def run(script, params, printer):
         else:
             return runner.all_actions()
 
-    except (OSError, IOError), e:
+    except (OSError, IOError) as e:
         import traceback
         traceback.print_exc()
         raise ValueError("Internal error while running %s: %s" % (name, e))
@@ -2125,7 +2134,7 @@ def _process_actions(script, params):
     for action in actions:
         name = _find_action(action)
         if name is None:
-            raise ValueError("Unknown action: %s" % (action.keys()))
+            raise ValueError("Unknown action: %s" % (list(action.keys())))
         action['name'] = name
         toadd = []
         if name == 'include':

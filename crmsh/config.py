@@ -3,11 +3,17 @@
 '''
 Holds user-configurable options.
 '''
+from __future__ import unicode_literals
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from past.builtins import basestring
+from builtins import object
 import os
 import re
 try:
-    import ConfigParser
+    import configparser
 except ImportError:
     import configparser as ConfigParser
 from . import userdir
@@ -282,21 +288,21 @@ class _Configuration(object):
         self._user = None
 
     def load(self):
-        self._defaults = ConfigParser.SafeConfigParser()
-        for section, keys in DEFAULTS.iteritems():
+        self._defaults = configparser.SafeConfigParser()
+        for section, keys in DEFAULTS.items():
             self._defaults.add_section(section)
-            for key, opt in keys.iteritems():
+            for key, opt in keys.items():
                 self._defaults.set(section, key, opt.default)
 
         if os.path.isfile(_SYSTEMWIDE):
-            self._systemwide = ConfigParser.SafeConfigParser()
+            self._systemwide = configparser.SafeConfigParser()
             self._systemwide.read([_SYSTEMWIDE])
         # for backwards compatibility with <=2.1.1 due to ridiculous bug
         elif os.path.isfile("/etc/crm/crmsh.conf"):
-            self._systemwide = ConfigParser.SafeConfigParser()
+            self._systemwide = configparser.SafeConfigParser()
             self._systemwide.read(["/etc/crm/crmsh.conf"])
         if os.path.isfile(_PERUSER):
-            self._user = ConfigParser.SafeConfigParser()
+            self._user = configparser.SafeConfigParser()
             self._user.read([_PERUSER])
 
     def save(self):
@@ -314,7 +320,7 @@ class _Configuration(object):
             if self._systemwide and self._systemwide.has_option(section, name):
                 return self._systemwide.get(section, name) or ''
             return self._defaults.get(section, name) or ''
-        except ConfigParser.NoOptionError as e:
+        except configparser.NoOptionError as e:
             raise ValueError(e)
 
     def get(self, section, name, raw=False):
@@ -329,7 +335,7 @@ class _Configuration(object):
             raise ValueError("Setting invalid option %s.%s" % (section, name))
         DEFAULTS[section][name].validate(value)
         if self._user is None:
-            self._user = ConfigParser.SafeConfigParser()
+            self._user = configparser.SafeConfigParser()
         if not self._user.has_section(section):
             self._user.add_section(section)
         self._user.set(section, name, _stringify(value))
@@ -347,7 +353,7 @@ class _Configuration(object):
 
     def reset(self):
         '''reset to what is on disk'''
-        self._user = ConfigParser.SafeConfigParser()
+        self._user = configparser.SafeConfigParser()
         self._user.read([_PERUSER])
 
 
@@ -397,8 +403,8 @@ def get_option(section, option, raw=False):
 def get_all_options():
     '''Returns a list of all configurable options'''
     ret = []
-    for sname, section in DEFAULTS.iteritems():
-        ret += ['%s.%s' % (sname, option) for option in section.keys()]
+    for sname, section in DEFAULTS.items():
+        ret += ['%s.%s' % (sname, option) for option in list(section.keys())]
     return sorted(ret)
 
 
@@ -439,7 +445,7 @@ def load_version():
     version = 'dev'
     versioninfo_file = os.path.join(path.sharedir, 'version')
     if os.path.isfile(versioninfo_file):
-        v = open(versioninfo_file).xreadlines()
+        v = open(versioninfo_file)
         try:
             version = v.next().strip() or version
         except StopIteration:

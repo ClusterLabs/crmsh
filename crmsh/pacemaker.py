@@ -1,6 +1,10 @@
+from __future__ import unicode_literals
 # Copyright (C) 2009 Yan Gao <ygao@novell.com>
 # See COPYING for license information.
 
+from builtins import str
+from past.builtins import basestring
+from builtins import object
 import os
 import tempfile
 import copy
@@ -32,7 +36,7 @@ def read_schema_local(validate_name, file_path):
     try:
         with open(file_path) as f:
             return f.read()
-    except IOError, msg:
+    except IOError as msg:
         raise PacemakerError("Cannot read schema file '%s': %s" % (file_path, msg))
 
 
@@ -107,7 +111,7 @@ class Schema(object):
         else:
             try:
                 tmp_f = self.tmp_schema_f()
-            except EnvironmentError, msg:
+            except EnvironmentError as msg:
                 raise PacemakerError("Cannot expand the Relax-NG schema: " + str(msg))
             if tmp_f is None:
                 raise PacemakerError("Cannot expand the Relax-NG schema")
@@ -116,13 +120,13 @@ class Schema(object):
 
         try:
             cib_elem = etree.fromstring(etree.tostring(new_cib_elem))
-        except etree.Error, msg:
+        except etree.Error as msg:
             raise PacemakerError("Failed to parse the CIB XML: " + str(msg))
 
         try:
             schema = etree.RelaxNG(file=schema_f)
 
-        except etree.Error, msg:
+        except etree.Error as msg:
             raise PacemakerError("Failed to parse the Relax-NG schema: " + str(msg))
         try:
             etree.clear_error_log()
@@ -146,7 +150,7 @@ class Schema(object):
         tmp_dir = tempfile.mkdtemp()
         for schema_doc_name in self.schema_str_docs:
             schema_doc_filename = os.path.join(tmp_dir, schema_doc_name)
-            fd = os.open(schema_doc_filename, os.O_RDWR | os.O_CREAT | os.O_TRUNC, 0644)
+            fd = os.open(schema_doc_filename, os.O_RDWR | os.O_CREAT | os.O_TRUNC, 0o644)
 
             schema_doc_str = self.schema_str_docs[schema_doc_name]
 
@@ -221,7 +225,7 @@ class RngSchema(Schema):
 
         try:
             grammar = etree.fromstring(crm_schema)
-        except Exception, msg:
+        except Exception as msg:
             raise PacemakerError("Failed to parse the Relax-NG schema: " + str(msg) + schema_info)
 
         start_nodes = grammar.xpath(self.expr, name="start")
@@ -239,7 +243,7 @@ class RngSchema(Schema):
 
     def find_elem(self, elem_name):
         elem_node = None
-        for (grammar, start_node) in self.rng_docs.values():
+        for (grammar, start_node) in list(self.rng_docs.values()):
             elem_node = self.find_in_grammar(grammar, 'element', elem_name)
             if elem_node is not None:
                 return (grammar, elem_node)
@@ -247,7 +251,7 @@ class RngSchema(Schema):
 
     def rng_xpath(self, xpath, namespaces=None):
         return [grammar.xpath(xpath, namespaces=namespaces)
-                for grammar, _ in self.rng_docs.values()]
+                for grammar, _ in list(self.rng_docs.values())]
 
     def get_sub_rng_nodes(self, grammar, rng_node):
         sub_rng_nodes = []

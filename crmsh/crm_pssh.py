@@ -10,7 +10,11 @@ For each node, this essentially does an "ssh host -l user prog [arg0] [arg1]
 directory.  Each output file in that directory will be named by the
 corresponding remote node's hostname or IP address.
 """
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
+from past.utils import old_div
 import os
 import glob
 
@@ -63,8 +67,8 @@ def show_output(odir, hosts, desc):
     for host in hosts:
         out_l = get_output(odir, host)
         if out_l:
-            print "%s %s:" % (host, desc)
-            print ''.join(out_l)
+            print("%s %s:" % (host, desc))
+            print(''.join(out_l))
 
 
 def do_pssh(l, opts):
@@ -195,7 +199,7 @@ def do_pssh_cmd(cmd, node_l, outdir, errdir, timeout=20000):
         l.append([node, cmd])
     if not l:
         return True
-    opts = parse_args(outdir, errdir, t=int(timeout/1000))
+    opts = parse_args(outdir, errdir, t=int(old_div(timeout,1000)))
     return do_pssh(l, opts)
 
 # vim:ts=4:sw=4:et:

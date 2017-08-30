@@ -1,6 +1,10 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
+from builtins import range
+from builtins import object
 import os
 import re
 from . import config
@@ -102,17 +106,17 @@ class LoadTemplate(object):
     def write_config(self, name):
         try:
             f = open("%s/%s" % (userdir.CRMCONF_DIR, name), "w")
-        except IOError, msg:
+        except IOError as msg:
             common_err("open: %s" % msg)
             return False
-        print >>f, self.generate()
+        print(self.generate(), file=f)
         f.close()
         return True
 
     def load_template(self, tmpl):
         try:
             l = open(os.path.join(config.path.sharedir, 'templates', tmpl)).read().split('\n')
-        except IOError, msg:
+        except IOError as msg:
             common_err("open: %s" % msg)
             return ''
         if not validate_template(l):

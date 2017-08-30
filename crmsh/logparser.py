@@ -1,6 +1,10 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2016 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+from builtins import zip
+from builtins import object
 import bz2
 import gzip
 import re
@@ -34,7 +38,7 @@ def _open_logfile(logfile):
         if logfile.endswith(".gz"):
             return gzip.open(logfile)
         return open(logfile)
-    except IOError, msg:
+    except IOError as msg:
         crmlog.common_error("open %s: %s" % (logfile, msg))
         return None
 
@@ -53,7 +57,7 @@ def _transition_start_re():
     m2 = "pengine.*[Tt]ransition ([0-9]+).*([^ ]*/pe-[^-]+-([0-9]+)[.]bz2)"
     try:
         return re.compile("(?:%s)|(?:%s)" % (m1, m2))
-    except re.error, e:
+    except re.error as e:
         crmlog.common_debug("RE compilation failed: %s" % (e))
         raise ValueError("Error in search expression")
 
@@ -79,7 +83,7 @@ def _transition_end_re():
     """
     try:
         return re.compile("crmd.*Transition ([0-9]+).*Source=(.*/pe-[^-]+-([0-9]+)[.]bz2).:.*(Stopped|Complete|Terminated)")
-    except re.error, e:
+    except re.error as e:
         crmlog.common_debug("RE compilation failed: %s" % (e))
         raise ValueError("Error in search expression")
 
@@ -181,15 +185,15 @@ class Transition(object):
         return no_actions and epoch == prev_epoch and admin_epoch == prev_admin_epoch
 
     def transition_info(self):
-        print "Transition %s (%s -" % (self, utils.shorttime(self.start_ts)),
+        print("Transition %s (%s -" % (self, utils.shorttime(self.start_ts)), end=' ')
         if self.end_ts:
-            print "%s):" % utils.shorttime(self.end_ts)
+            print("%s):" % utils.shorttime(self.end_ts))
             act_d = self.actions()
             total = self.actions_count()
             s = ", ".join(["%d %s" % (act_d[x], x) for x in act_d if act_d[x]])
-            print "\ttotal %d actions: %s" % (total, s)
+            print("\ttotal %d actions: %s" % (total, s))
         else:
-            print "[unfinished])"
+            print("[unfinished])")
 
     def to_dict(self):
         """
@@ -205,7 +209,7 @@ class Transition(object):
     @classmethod
     def from_dict(cls, loc, obj):
         t = Transition(loc, None, None, None, None, None)
-        for k, v in obj.iteritems():
+        for k, v in obj.items():
             setattr(t, k, set(v) if k == "tags" else v)
         return t
 
@@ -242,7 +246,7 @@ class CibInfo(object):
         self.not_cloned_resources = set(x for x in self.primitives if x not in self.cloned_resources)
 
     def resources(self):
-        return self.primitives + self.groups.keys() + self.clones.keys()
+        return self.primitives + list(self.groups.keys()) + list(self.clones.keys())
 
     def match_resources(self):
         """
@@ -400,7 +404,7 @@ class LogParser(object):
                         state = DEFAULT
 
                 # events
-                for etype, erx in eventre.iteritems():
+                for etype, erx in eventre.items():
                     for rx in erx:
                         m = rx.search(line)
                         if m:
@@ -408,7 +412,7 @@ class LogParser(object):
                             if ts is None:
                                 continue
                             crmlog.common_debug("+Event %s: %s" % (etype, ", ".join(m.groups())))
-                            sk = (long(ts) << 32) + long(spos)
+                            sk = (int(ts) << 32) + int(spos)
                             self.events[etype].append((sk, logidx, spos))
                             if transition is not None:
                                 for t in m.groups():
@@ -419,7 +423,7 @@ class LogParser(object):
                     transition = None
 
         self.transitions.sort(key=lambda t: t.start_ts)
-        for etype, logs in self.events.iteritems():
+        for etype, logs in self.events.items():
             logs.sort(key=lambda e: e[0])
         empties = []
         for i, t in enumerate(self.transitions):
@@ -492,7 +496,7 @@ class LogParser(object):
         if event is not None:
             eventlogs = [event]
         else:
-            eventlogs = self.events.keys()
+            eventlogs = list(self.events.keys())
 
         if nodes:
             rxes = self._build_re(event, nodes)
@@ -601,7 +605,7 @@ class LogParser(object):
         """
         Returns (num transitions, num events)
         """
-        return len(self.transitions), sum(len(e) for e in self.events.values())
+        return len(self.transitions), sum(len(e) for e in list(self.events.values()))
 
     def _save_cache(self):
         """

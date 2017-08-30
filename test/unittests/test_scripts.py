@@ -1,7 +1,11 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2014 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
 
+from builtins import str
+from builtins import object
 from os import path
 from pprint import pprint
 from nose.tools import eq_, with_setup, assert_raises
@@ -872,6 +876,6 @@ def test_inline_script():
                 {"foo": "hello world"}, tp)
 
     for action, args in tp.actions:
-        print action, args
+        print(action, args)
         if action == 'finish':
             assert args[0]['value'] == '#!/bin/sh\necho "hello world"'

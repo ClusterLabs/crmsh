@@ -1,12 +1,19 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013-2016 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from builtins import object
 import os
 import time
 import re
 import glob
-import ConfigParser
+import configparser
 
 from . import config
 from . import constants
@@ -88,7 +95,7 @@ def append_newlogs(outdir, to_update):
             f = open(rptlog + ".info", "w")
             f.write("%s %d\n" % (logfile, newpos))
             f.close()
-        except IOError, msg:
+        except IOError as msg:
             common_err("couldn't the update %s.info: %s" % (rptlog, msg))
 
 
@@ -111,7 +118,7 @@ def mkarchive(idir):
         common_err('could not pack report, command "%s" failed' % cmd)
         return False
     else:
-        print "Report saved in '%s'" % archive
+        print("Report saved in '%s'" % archive)
     return True
 
 
@@ -216,7 +223,7 @@ class Report(object):
         if parentdir:
             try:
                 os.chdir(parentdir)
-            except OSError, msg:
+            except OSError as msg:
                 self.error(msg)
                 return None
         try:
@@ -225,7 +232,7 @@ class Report(object):
                 common_debug("top directory in tarball: %s, doesn't match the tarball name: %s" %
                              (tf_loc, loc))
                 loc = os.path.join(os.path.dirname(loc), tf_loc)
-        except Exception, msg:
+        except Exception as msg:
             common_err("%s: %s" % (tarball, msg))
             return None
         common_debug("tar -x%s < %s" % (tar_unpack_option, utils.quote(bfname)))
@@ -356,7 +363,7 @@ class Report(object):
             return []
         try:
             f = open(fl[0])
-        except IOError, msg:
+        except IOError as msg:
             common_err("open %s: %s" % (fl[0], msg))
             return []
         return f.readlines()
@@ -641,15 +648,15 @@ class Report(object):
             self.report_setup()
             return self.ready
         else:
-            print "Refreshing log data..."
+            print("Refreshing log data...")
             if not self.ready:
                 self.set_change_origin(CH_TIME)
                 self.prepare_source()
             missing_pes = self.logparser.scan(mode='force')
             if len(missing_pes):
-                print "%d transitions, %d events and %d missing PE input files." % tuple(self.logparser.count() + (len(missing_pes),))
+                print("%d transitions, %d events and %d missing PE input files." % tuple(self.logparser.count() + (len(missing_pes),)))
             else:
-                print "%d transitions, %d events." % self.logparser.count()
+                print("%d transitions, %d events." % self.logparser.count())
 
     def _str_nodecolor(self, node, s):
         try:
@@ -690,7 +697,7 @@ class Report(object):
     def get_desc_line(self, fld):
         try:
             f = open(self.desc)
-        except IOError, msg:
+        except IOError as msg:
             common_err("open %s: %s" % (self.desc, msg))
             return
         for s in f:
@@ -767,8 +774,8 @@ class Report(object):
                         self._str_dt(self.get_rpt_dt(self.to_dt, "bottom"))),
                        "Nodes: %s" % ' '.join([self._str_nodecolor(x, x)
                                                for x in self.node_l]),
-                       "Groups: %s" % ' '.join(self.cib.groups.keys()),
-                       "Clones: %s" % ' '.join(self.cib.clones.keys()),
+                       "Groups: %s" % ' '.join(list(self.cib.groups.keys())),
+                       "Clones: %s" % ' '.join(list(self.cib.clones.keys())),
                        "Resources: %s" % ' '.join(self.cib.primitives),
                        "Transitions: %s" % self.short_peinputs_list())))
 
@@ -910,7 +917,7 @@ class Report(object):
         - detail
         TODO
         '''
-        p = ConfigParser.SafeConfigParser()
+        p = configparser.SafeConfigParser()
         p.add_section(self.rpt_section)
         p.set(self.rpt_section, 'dir',
               self.source == "live" and sdir or self.source)
@@ -923,7 +930,7 @@ class Report(object):
         fname = os.path.join(sdir, self.state_file)
         try:
             f = open(fname, "wb")
-        except IOError, msg:
+        except IOError as msg:
             common_err("Failed to save state: %s" % (msg))
             return False
         p.write(f)
@@ -934,11 +941,11 @@ class Report(object):
         '''
         Load the history state from a file.
         '''
-        p = ConfigParser.SafeConfigParser()
+        p = configparser.SafeConfigParser()
         fname = os.path.join(sdir, self.state_file)
         try:
             p.read(fname)
-        except Exception, msg:
+        except Exception as msg:
             common_err("Failed to load state: %s" % (msg))
             return False
         rc = True
@@ -960,10 +967,10 @@ class Report(object):
                     common_warn("unknown item %s in the session state file %s" %
                                 (n, fname))
             rc |= self.manage_excludes("load", p)
-        except ConfigParser.NoSectionError, msg:
+        except configparser.NoSectionError as msg:
             common_err("session state file %s: %s" % (fname, msg))
             rc = False
-        except Exception, msg:
+        except Exception as msg:
             common_err("%s: bad value '%s' for '%s' in session state file %s" %
                        (msg, v, n, fname))
             rc = False
@@ -1004,7 +1011,7 @@ class Report(object):
             utils.rmdir_r(session_dir)
         elif subcmd == "list":
             for l in self.session_list():
-                print l
+                print(l)
         elif subcmd == "pack":
             return mkarchive(session_dir)
         return True
@@ -1020,7 +1027,7 @@ class Report(object):
             return False
         rc = True
         if cmd == "show":
-            print '\n'.join(self.log_filter_out)
+            print('\n'.join(self.log_filter_out))
         elif cmd == "clear":
             self.log_filter_out = []
             self.log_filter_out_re = []
@@ -1029,7 +1036,7 @@ class Report(object):
                 regex = re.compile(arg)
                 self.log_filter_out.append(arg)
                 self.log_filter_out_re.append(regex)
-            except Exception, msg:
+            except Exception as msg:
                 common_err("bad regex %s: %s" % (arg, msg))
                 rc = False
         elif cmd == "save" and self.log_filter_out:
@@ -1046,7 +1053,7 @@ class Report(object):
                     else:
                         common_warn("unknown item %s in the section %s" %
                                     (n, self.log_section))
-            except ConfigParser.NoSectionError:
+            except configparser.NoSectionError:
                 pass
         return rc
 

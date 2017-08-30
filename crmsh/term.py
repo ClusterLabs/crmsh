@@ -1,6 +1,10 @@
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
+from builtins import zip
+from builtins import range
+from builtins import object
 import sys
 import re
 
@@ -113,19 +117,19 @@ def _lookup_caps():
     # Colors
     set_fg = _tigetstr('setf')
     if set_fg:
-        for i, color in zip(range(len(_COLORS)), _COLORS):
+        for i, color in zip(list(range(len(_COLORS))), _COLORS):
             setattr(colors, color, curses.tparm(set_fg, i) or '')
     set_fg_ansi = _tigetstr('setaf')
     if set_fg_ansi:
-        for i, color in zip(range(len(_ANSICOLORS)), _ANSICOLORS):
+        for i, color in zip(list(range(len(_ANSICOLORS))), _ANSICOLORS):
             setattr(colors, color, curses.tparm(set_fg_ansi, i) or '')
     set_bg = _tigetstr('setb')
     if set_bg:
-        for i, color in zip(range(len(_COLORS)), _COLORS):
+        for i, color in zip(list(range(len(_COLORS))), _COLORS):
             setattr(colors, 'BG_'+color, curses.tparm(set_bg, i) or '')
     set_bg_ansi = _tigetstr('setab')
     if set_bg_ansi:
-        for i, color in zip(range(len(_ANSICOLORS)), _ANSICOLORS):
+        for i, color in zip(list(range(len(_ANSICOLORS))), _ANSICOLORS):
             setattr(colors, 'BG_'+color, curses.tparm(set_bg_ansi, i) or '')
 
 

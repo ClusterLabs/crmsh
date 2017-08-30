@@ -2,6 +2,11 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+from __future__ import print_function
+from __future__ import unicode_literals
+from builtins import str
+from past.builtins import basestring
+from builtins import object
 import os
 import sys
 import subprocess
@@ -16,7 +21,7 @@ def get_platform():
 
 
 def fail(msg):
-    print >>sys.stderr, msg
+    print(msg, file=sys.stderr)
     sys.exit(1)
 
 
@@ -229,7 +234,7 @@ def manage_package(pkg, state):
         #'apt-get': Apt,
         #'pacman': Pacman
     }
-    for name, mgr in managers.iteritems():
+    for name, mgr in managers.items():
         exe = is_program(name)
         if exe:
             rc, stdout, stderr, changed = mgr().dispatch(pkg, state)
@@ -262,6 +267,6 @@ def main():
     if not args.name or not args.state:
         raise IOError("Bad arguments: %s" % (sys.argv))
     data = manage_package(args.name, args.state)
-    print json.dumps(data)
+    print(json.dumps(data))
 
 main()

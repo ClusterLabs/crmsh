@@ -1,7 +1,10 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+from builtins import str
 import os
 import glob
 from . import command
@@ -160,7 +163,7 @@ class CibShadow(command.UI):
         "usage: list"
         if options.regression_tests:
             for t in xmlutil.listshadows():
-                print t
+                print(t)
         else:
             utils.multicolumn(xmlutil.listshadows())
 

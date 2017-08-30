@@ -1,6 +1,8 @@
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
+from builtins import range
 from . import constants
 from . import clidisplay
 from . import utils
@@ -102,7 +104,7 @@ def date_exp2cli(node):
         for c in node.iterchildren():
             if c.tag in ("duration", "date_spec"):
                 l.extend([nvpair_format(name, c.get(name))
-                          for name in c.keys() if name != 'id'])
+                          for name in list(c.keys()) if name != 'id'])
     return ' '.join(l)
 
 

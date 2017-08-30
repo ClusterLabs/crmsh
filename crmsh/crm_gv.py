@@ -1,6 +1,9 @@
+from __future__ import unicode_literals
 # Copyright (C) 2013 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
+from builtins import range
+from builtins import object
 import re
 from . import config
 from . import tmpfiles
@@ -13,7 +16,7 @@ from .ordereddict import odict
 
 def _attr_str(attr_d):
     return ','.join(['%s="%s"' % (k, v)
-                     for k, v in attr_d.iteritems()])
+                     for k, v in attr_d.items()])
 
 
 def _quoted(name):
@@ -110,7 +113,7 @@ class Gv(object):
         '''
         l = []
         for tn in self.top_nodes:
-            for node, rank in self.nodes.iteritems():
+            for node, rank in self.nodes.items():
                 if rank > 0:
                     continue
                 l.append('\t%s' % self.invis_edge_str(tn, node))
@@ -130,13 +133,13 @@ class Gv(object):
         l.append(self.header())
         if self.node_attrs:
             l.append('\tnode [%s];' % _attr_str(self.node_attrs))
-        for attr, v in self.graph_attrs.iteritems():
+        for attr, v in self.graph_attrs.items():
             l.append('\t%s="%s";' % (attr, v))
         for sg in self.subgraphs:
             l.append('\t%s' % '\n\t'.join(sg.repr()))
         for e_id in range(len(self.edges)):
             l.append('\t%s;' % self.edge_str(e_id))
-        for n, attr_d in self.attrs.iteritems():
+        for n, attr_d in self.attrs.items():
             attr_s = _attr_str(attr_d)
             l.append('\t%s [%s];' % (_quoted(n), attr_s))
         l += self.invisible_edges()

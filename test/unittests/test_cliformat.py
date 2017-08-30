@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2014 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 #
@@ -27,15 +29,15 @@ def roundtrip(cli, debug=False, expected=None, format_mode=-1, strip_color=False
     assert_is_not_none(obj)
     obj.nocli = True
     xml = obj.repr_cli(format_mode=format_mode)
-    print xml
+    print(xml)
     obj.nocli = False
     s = obj.repr_cli(format_mode=format_mode)
     if strip_color:
         import re
         s = re.sub(r"\$\{[^}]+\}", "", s)
     if (s != cli) or debug:
-        print "GOT:", s
-        print "EXP:", cli
+        print("GOT:", s)
+        print("EXP:", cli)
     assert obj.cli_use_validate()
     if expected is not None:
         eq_(expected, s)
@@ -135,7 +137,7 @@ value="Stopped"/> \
     obj = factory.create_from_node(data)
     assert_is_not_none(obj)
     data = obj.repr_cli(format_mode=-1)
-    print data
+    print(data)
     exp = 'primitive dummy ocf:pacemaker:Dummy op start timeout=60 interval=0 op stop timeout=60 interval=0 op monitor interval=60 timeout=30 meta target-role=Stopped'
     eq_(exp, data)
     assert obj.cli_use_validate()
@@ -158,7 +160,7 @@ value="Stopped"/> \
     obj = factory.create_from_node(data)
     assert_is_not_none(obj)
     data = obj.repr_cli(format_mode=-1)
-    print data
+    print(data)
     exp = 'primitive dummy2 ocf:pacemaker:Dummy meta target-role=Stopped ' \
           'op start timeout=60 interval=0 op stop timeout=60 interval=0 ' \
           'op monitor interval=60 timeout=30'
@@ -180,7 +182,7 @@ target="ha-one"></fencing-level>
     obj = factory.create_from_node(data)
     assert_is_not_none(obj)
     data = obj.repr_cli(format_mode=-1)
-    print data
+    print(data)
     exp = 'fencing_topology st1'
     eq_(exp, data)
     assert obj.cli_use_validate()
@@ -202,7 +204,7 @@ target-pattern="red.*"></fencing-level>
     obj = factory.create_from_node(data)
     assert_is_not_none(obj)
     data = obj.repr_cli(format_mode=-1)
-    print data
+    print(data)
     exp = 'fencing_topology pattern:green.* apple pear pattern:red.* pear apple'
     eq_(exp, data)
     assert obj.cli_use_validate()
@@ -217,7 +219,7 @@ def test_master():
     data = etree.fromstring(xml)
     factory.create_from_cli("primitive dummy3 ocf:pacemaker:Dummy")
     data, _, _ = cibconfig.postprocess_cli(data)
-    print "after postprocess:", etree.tostring(data)
+    print("after postprocess:", etree.tostring(data))
     obj = factory.create_from_node(data)
     assert_is_not_none(obj)
     assert obj.cli_use_validate()

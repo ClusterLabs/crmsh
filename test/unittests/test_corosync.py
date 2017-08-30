@@ -1,8 +1,12 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 #
 # unit tests for parse.py
 
+from builtins import str
+from builtins import object
 import os
 import unittest
 from crmsh import corosync
@@ -31,7 +35,7 @@ def _valid(parser):
 
 
 def _print(parser):
-    print parser.to_string()
+    print(parser.to_string())
 
 
 class TestCorosyncParser(unittest.TestCase):

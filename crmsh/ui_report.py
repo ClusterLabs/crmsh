@@ -1,7 +1,10 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+from builtins import str
 import os
 import subprocess
 from signal import signal, SIGPIPE, SIG_DFL
@@ -28,5 +31,5 @@ def create_report(context, args):
     extraopts = str(config.core.report_tool_options).strip().split()
     cmd = [extcmd] + extraopts + list(args)
     if options.regression_tests:
-        print ".EXT", cmd
+        print(".EXT", cmd)
     return subprocess.call(cmd, shell=False, preexec_fn=lambda: signal(SIGPIPE, SIG_DFL))

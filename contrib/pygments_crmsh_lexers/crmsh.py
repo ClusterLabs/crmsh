@@ -8,6 +8,7 @@
     :copyright: Copyright 2006-2015 by the Pygments team, see AUTHORS.
     :license: BSD, see LICENSE for details.
 """
+from __future__ import unicode_literals
 
 
 from pygments.lexer import RegexLexer, bygroups, words

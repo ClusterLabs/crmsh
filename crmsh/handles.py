@@ -1,6 +1,9 @@
+from __future__ import unicode_literals
 # Copyright (C) 2015 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+from builtins import str
+from builtins import object
 import re
 
 

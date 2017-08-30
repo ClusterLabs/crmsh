@@ -1,6 +1,9 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
+from builtins import object
 import os
 from lxml import etree
 from . import tmpfiles
@@ -168,7 +171,7 @@ class CibStatus(object):
         d = {}
         for e in rsc_list:
             d[e] = 0
-        return d.keys()
+        return list(d.keys())
 
     def load(self, source):
         '''
@@ -215,7 +218,7 @@ class CibStatus(object):
         xml = etree.tostring(cib)
         try:
             f = open(dest_path, "w")
-        except IOError, msg:
+        except IOError as msg:
             common_err(msg)
             return False
         f.write(xml)
@@ -268,13 +271,13 @@ class CibStatus(object):
         if not self.modified:
             return True
         for node in self.node_changes:
-            print node, self.node_changes[node]
+            print(node, self.node_changes[node])
         for op in self.op_changes:
-            print op, self.op_changes[op]
+            print(op, self.op_changes[op])
         for ticket in self.ticket_changes:
-            print ticket, self.ticket_changes[ticket]
+            print(ticket, self.ticket_changes[ticket])
         if self.quorum:
-            print "quorum:", self.quorum
+            print("quorum:", self.quorum)
         return True
 
     def show(self):

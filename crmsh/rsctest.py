@@ -1,6 +1,9 @@
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
+from builtins import str
+from builtins import object
 import os
 import sys
 from .msg import common_err, common_debug, common_warn, common_info
@@ -464,7 +467,7 @@ def call_resource(rsc, cmd, nodes, local_only):
 
     from . import ra
     agent = ra.get_ra(rsc)
-    actions = agent.actions().keys() + ['meta-data', 'validate-all']
+    actions = list(agent.actions().keys()) + ['meta-data', 'validate-all']
 
     if cmd not in actions:
         common_err("action '%s' not supported by %s" % (cmd, agent.ra_string()))

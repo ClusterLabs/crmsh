@@ -1,7 +1,9 @@
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+from builtins import filter
 from . import command
 from . import completers as compl
 from . import constants
@@ -129,7 +131,7 @@ def set_deep_meta_attr(rsc, attr, value, commit=True):
         return False
     while any(obj for obj in objs if obj.obj_type == 'tag'):
         objs = list(flatten(resolve(obj) for obj in objs))
-    objs = filter(is_resource, objs)
+    objs = list(filter(is_resource, objs))
     common_debug("set_deep_meta_attr: %s" % (', '.join([obj.obj_id for obj in objs])))
     if not objs:
         common_error("Resource not found: %s" % (rsc))

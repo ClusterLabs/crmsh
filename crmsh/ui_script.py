@@ -1,7 +1,12 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
 
+from builtins import str
+from past.builtins import basestring
+from builtins import object
 import sys
 
 try:
@@ -50,7 +55,7 @@ class ConsolePrinter(object):
         else:
             err_buf.error("%s (rc=%s)" % (action['shortdesc'] or action['name'], rc))
         if output:
-            print output
+            print(output)
 
     def flush(self):
         if self.in_progress:
@@ -96,7 +101,7 @@ class JsonPrinter(object):
             ret['error'] = str(output) if output else ''
         else:
             ret['output'] = str(output) if output else ''
-        print json.dumps(ret)
+        print(json.dumps(ret))
 
     def flush(self):
         pass
@@ -155,7 +160,7 @@ def _nvpairs2parameters(args):
             _set(d[path[0]], path[1:], val)
 
     ret = {}
-    for key, val in utils.nvpairs2dict(args).iteritems():
+    for key, val in utils.nvpairs2dict(args).items():
         _set(ret, key.split(':'), val)
     return ret
 
@@ -214,15 +219,15 @@ class Script(command.UI):
                 except ValueError as err:
                     err_buf.error(str(err))
                     continue
-            for c, lst in sorted(categories.iteritems(), key=lambda x: x[0]):
+            for c, lst in sorted(iter(categories.items()), key=lambda x: x[0]):
                 if c:
-                    print "%s:\n" % (c)
+                    print("%s:\n" % (c))
                 for s in sorted(lst):
-                    print s
-                print ''
+                    print(s)
+                print('')
         elif show_all:
             for name in scripts.list_scripts():
-                print name
+                print(name)
         else:
             for name in scripts.list_scripts():
                 try:
@@ -232,7 +237,7 @@ class Script(command.UI):
                 except ValueError as err:
                     err_buf.error(str(err))
                     continue
-                print name
+                print(name)
 
     @command.completers_repeating(compl.call(scripts.list_scripts))
     @command.alias('info', 'describe')
@@ -280,20 +285,20 @@ class Script(command.UI):
         if ret is None:
             return False
         if not ret:
-            print "OK (no actions)"
+            print("OK (no actions)")
         for i, action in enumerate(ret):
             shortdesc = action.get('shortdesc', '')
             text = str(action.get('text', ''))
             longdesc = str(action.get('longdesc', ''))
-            print "%s. %s\n" % (i + 1, shortdesc)
+            print("%s. %s\n" % (i + 1, shortdesc))
             if longdesc:
                 for line in str(longdesc).split('\n'):
-                    print "\t%s" % (line)
-                print ''
+                    print("\t%s" % (line))
+                print('')
             if text:
                 for line in str(text).split('\n'):
-                    print "\t%s" % (line)
-                print ''
+                    print("\t%s" % (line))
+                print('')
 
     @command.completers(compl.call(scripts.list_scripts))
     def do_run(self, context, name, *args):
@@ -353,7 +358,7 @@ class Script(command.UI):
             if not isinstance(script, dict):
                 return script
 
-            for k, v in script.iteritems():
+            for k, v in script.items():
                 if isinstance(v, scripts.Text):
                     script[k] = str(v)
                 elif isinstance(v, dict):
@@ -366,7 +371,7 @@ class Script(command.UI):
             return script
 
         def order_rep(dumper, data):
-            return dumper.represent_mapping(u'tag:yaml.org,2002:map', data.items(), flow_style=False)
+            return dumper.represent_mapping(u'tag:yaml.org,2002:map', list(data.items()), flow_style=False)
 
         def scriptsorter(item):
             order = ["version", "name", "category", "shortdesc", "longdesc", "include", "parameters", "steps", "actions"]
@@ -385,7 +390,7 @@ class Script(command.UI):
         del script["dir"]
         script["actions"] = [{"cib": "\n\n".join([action["cib"] for action in script["actions"]])}]
 
-        script = OrderedDict(sorted(script.items(), key=scriptsorter))
+        script = OrderedDict(sorted(list(script.items()), key=scriptsorter))
         if script is not None:
             try:
                 os.mkdir(os.path.join(tgtdir, name))
@@ -394,10 +399,10 @@ class Script(command.UI):
             tgtfile = os.path.join(tgtdir, name, "main.yml")
             with open(tgtfile, 'w') as tf:
                 try:
-                    print "%s -> %s" % (fromscript, tgtfile)
+                    print("%s -> %s" % (fromscript, tgtfile))
                     yaml.dump([script], tf, explicit_start=True, default_flow_style=False)
                 except Exception as err:
-                    print err
+                    print(err)
 
     def _json_list(self, context, cmd):
         """
@@ -407,13 +412,13 @@ class Script(command.UI):
             try:
                 script = scripts.load_script(name)
                 if script is not None:
-                    print json.dumps({'name': name,
+                    print(json.dumps({'name': name,
                                       'category': script['category'].lower(),
                                       'shortdesc': script['shortdesc'],
-                                      'longdesc': scripts.format_desc(script['longdesc'])})
+                                      'longdesc': scripts.format_desc(script['longdesc'])}))
             except ValueError as err:
-                print json.dumps({'name': name,
-                                  'error': str(err)})
+                print(json.dumps({'name': name,
+                                  'error': str(err)}))
         return True
 
     def _json_show(self, context, cmd):
@@ -421,17 +426,17 @@ class Script(command.UI):
         ["show", <name>]
         """
         if len(cmd) < 2:
-            print json.dumps({'error': 'Incorrect number of arguments: %s (expected %s)' % (len(cmd), 2)})
+            print(json.dumps({'error': 'Incorrect number of arguments: %s (expected %s)' % (len(cmd), 2)}))
             return False
         name = cmd[1]
         script = scripts.load_script(name)
         if script is None:
             return False
-        print json.dumps({'name': script['name'],
+        print(json.dumps({'name': script['name'],
                           'category': script['category'].lower(),
                           'shortdesc': script['shortdesc'],
                           'longdesc': scripts.format_desc(script['longdesc']),
-                          'steps': scripts.clean_steps(script['steps'])})
+                          'steps': scripts.clean_steps(script['steps'])}))
         return True
 
     def _json_verify(self, context, cmd):
@@ -439,7 +444,7 @@ class Script(command.UI):
         ["verify", <name>, <params>]
         """
         if len(cmd) < 3:
-            print json.dumps({'error': 'Incorrect number of arguments: %s (expected %s)' % (len(cmd), 3)})
+            print(json.dumps({'error': 'Incorrect number of arguments: %s (expected %s)' % (len(cmd), 3)}))
             return False
         name = cmd[1]
         params = cmd[2]
@@ -458,7 +463,7 @@ class Script(command.UI):
                        'nodes': str(action.get('nodes', ''))}
                 if 'sudo' in action:
                     obj['sudo'] = action['sudo']
-                print json.dumps(obj)
+                print(json.dumps(obj))
         return True
 
     def _json_run(self, context, cmd):
@@ -466,7 +471,7 @@ class Script(command.UI):
         ["run", <name>, <params>]
         """
         if len(cmd) < 3:
-            print json.dumps({'error': 'Incorrect number of arguments: %s (expected %s)' % (len(cmd), 3)})
+            print(json.dumps({'error': 'Incorrect number of arguments: %s (expected %s)' % (len(cmd), 3)}))
             return False
         name = cmd[1]
         params = cmd[2]
@@ -480,7 +485,7 @@ class Script(command.UI):
         if not ret and printer.results:
             for result in printer.results:
                 if 'error' in result:
-                    print json.dumps(result)
+                    print(json.dumps(result))
         return ret
 
     def do_json(self, context, command):
@@ -505,7 +510,7 @@ class Script(command.UI):
         """
         cmd = json.loads(command)
         if len(cmd) < 1:
-            print json.dumps({'error': 'Failed to decode valid JSON command'})
+            print(json.dumps({'error': 'Failed to decode valid JSON command'}))
             return False
         try:
             if cmd[0] == "list":
@@ -517,8 +522,8 @@ class Script(command.UI):
             elif cmd[0] == "run":
                 return self._json_run(context, cmd)
             else:
-                print json.dumps({'error': "Unknown command: %s" % (cmd[0])})
+                print(json.dumps({'error': "Unknown command: %s" % (cmd[0])}))
                 return False
-        except ValueError, err:
-            print json.dumps({'error': str(err)})
+        except ValueError as err:
+            print(json.dumps({'error': str(err)}))
             return False

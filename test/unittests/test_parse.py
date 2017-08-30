@@ -1,8 +1,11 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 #
 # unit tests for parse.py
 
+from builtins import zip
 from crmsh import parse
 import unittest
 import shlex
@@ -159,7 +162,7 @@ class TestCliParser(unittest.TestCase):
 
         out = self._parse('ms m0 resource params a=b')
         self.assertEqual(out.get('id'), 'm0')
-        print etree.tostring(out)
+        print(etree.tostring(out))
         self.assertEqual(['resource'], out.xpath('./crmsh-ref/@id'))
         self.assertEqual(['b'], out.xpath('instance_attributes/nvpair[@name="a"]/@value'))
 
@@ -270,7 +273,7 @@ class TestCliParser(unittest.TestCase):
 
     def test_order(self):
         out = self._parse('order o1 Mandatory: [ A B sequential=true ] C')
-        print etree.tostring(out)
+        print(etree.tostring(out))
         self.assertEqual(['Mandatory'], out.xpath('/rsc_order/@kind'))
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         self.assertEqual(['false'], out.xpath('/rsc_order/resource_set/@require-all'))
@@ -448,7 +451,7 @@ class TestCliParser(unittest.TestCase):
         devs = ['stonith-vbox3-1-off', 'stonith-vbox3-2-off',
                 'stonith-vbox3-1-on', 'stonith-vbox3-2-on']
         out = self._parse('fencing_topology vbox4: %s' % ','.join(devs))
-        print etree.tostring(out)
+        print(etree.tostring(out))
         self.assertEqual(1, len(out))
 
     def test_fencing_1114(self):

@@ -1,8 +1,10 @@
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 #
 # Make sure that ids are unique.
 
+from builtins import range
 from . import constants
 import copy
 from .msg import common_error, id_used_err

@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
@@ -27,7 +29,7 @@ def unpack_node_xmldata(node, is_offline):
     typ = uname = ident = ""
     inst_attr = []
     other = {}
-    for attr in node.keys():
+    for attr in list(node.keys()):
         v = node.get(attr)
         if attr == "type":
             typ = v
@@ -68,13 +70,13 @@ def print_node(uname, ident, node_type, other, inst_attr, offline):
     if not node_type:
         node_type = "normal"
     if uname == ident:
-        print term.render("%s: %s%s" % (uname, node_type, s_offline))
+        print(term.render("%s: %s%s" % (uname, node_type, s_offline)))
     else:
-        print term.render("%s(%s): %s%s" % (uname, ident, node_type, s_offline))
+        print(term.render("%s(%s): %s%s" % (uname, ident, node_type, s_offline)))
     for a in other:
-        print term.render("\t%s: %s" % (a, other[a]))
+        print(term.render("\t%s: %s" % (a, other[a])))
     for s in inst_attr:
-        print term.render("\t%s" % (s))
+        print(term.render("\t%s" % (s)))
 
 
 class NodeMgmt(command.UI):
@@ -352,8 +354,8 @@ class NodeMgmt(command.UI):
             if node.get('type') == 'remote':
                 srv = cib.xpath("//primitive[@id='%s']/instance_attributes/nvpair[@name='server']" % (name))
                 if srv:
-                    print srv[0].get('value')
+                    print(srv[0].get('value'))
                     continue
-            print name
+            print(name)
 
 # vim:ts=4:sw=4:et:

@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2009 Raymond Hettinger
 
 #                          *** MIT License ***
@@ -21,9 +23,11 @@
 
 # {{{ http://code.activestate.com/recipes/576694/ (r7)
 
+from builtins import next
+from builtins import range
 import collections
 
-KEY, PREV, NEXT = range(3)
+KEY, PREV, NEXT = list(range(3))
 
 
 class OrderedSet(collections.MutableSet):
@@ -96,7 +100,7 @@ class OrderedSet(collections.MutableSet):
 oset = OrderedSet
 
 if __name__ == '__main__':
-    print OrderedSet('abracadaba')
-    print OrderedSet('simsalabim')
+    print(OrderedSet('abracadaba'))
+    print(OrderedSet('simsalabim'))
 
 # end of http://code.activestate.com/recipes/576694/ }}}

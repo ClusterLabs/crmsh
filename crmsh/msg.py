@@ -1,6 +1,11 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
+from builtins import input
+from past.builtins import basestring
+from builtins import object
 import sys
 from . import config
 from . import clidisplay
@@ -31,12 +36,12 @@ class ErrorBuffer(object):
     def release(self):
         if self.msg_list:
             if ERR_STREAM:
-                print >> ERR_STREAM, '\n'.join(self.msg_list)
+                print('\n'.join(self.msg_list), file=ERR_STREAM)
             else:
-                print '\n'.join(self.msg_list)
+                print('\n'.join(self.msg_list))
             if not options.batch:
                 try:
-                    raw_input("Press enter to continue... ")
+                    input("Press enter to continue... ")
                 except EOFError:
                     pass
             self.msg_list = []
@@ -49,9 +54,9 @@ class ErrorBuffer(object):
             msg = msg[:-1]
         if self.mode == "immediate":
             if options.regression_tests or not to:
-                print msg
+                print(msg)
             else:
-                print >> to, msg
+                print(msg, file=to)
         else:
             self.msg_list.append(msg)
 

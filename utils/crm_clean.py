@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import print_function
+from __future__ import unicode_literals
 import os
 import sys
 import shutil
@@ -17,7 +19,7 @@ for f in sys.argv[1:]:
             os.remove(f)
         elif os.path.isdir(f):
             if os.path.isfile(os.path.join(f, 'crm_script.debug')):
-                print open(os.path.join(f, 'crm_script.debug')).read()
+                print(open(os.path.join(f, 'crm_script.debug')).read())
 
             # to check whether this clean request came from health
             # if it does, delete all except health-report
@@ -36,8 +38,8 @@ for f in sys.argv[1:]:
                         shutil.rmtree(x)
             else:
                 shutil.rmtree(f)
-    except OSError, e:
+    except OSError as e:
         errors.append(e)
 if errors:
-    print >>sys.stderr, '\n'.join(errors)
+    print('\n'.join(errors), file=sys.stderr)
     sys.exit(1)

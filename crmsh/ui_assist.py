@@ -1,6 +1,9 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2014 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+from builtins import zip
 from . import utils
 from . import command
 from . import completers as compl
@@ -108,10 +111,10 @@ class Assist(command.UI):
 
         constraint_name = self.make_unique_name('place-constraint-')
         dummy_name = self.make_unique_name('place-dummy-')
-        print "Create weak bond / independent colocation"
-        print "The following elements will be created:"
-        print "   * Colocation constraint, ID: %s" % (constraint_name)
-        print "   * Dummy resource, ID: %s" % (dummy_name)
+        print("Create weak bond / independent colocation")
+        print("The following elements will be created:")
+        print("   * Colocation constraint, ID: %s" % (constraint_name))
+        print("   * Dummy resource, ID: %s" % (dummy_name))
         if not utils.can_ask() or utils.ask("Create resources?"):
             cib_factory.create_object('primitive', dummy_name, 'ocf:heartbeat:Dummy')
             colo = ['colocation', constraint_name, 'inf:', '(']

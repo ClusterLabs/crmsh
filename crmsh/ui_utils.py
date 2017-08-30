@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
@@ -13,7 +14,7 @@ def _get_attr_cmd(attr_ext_commands, subcmd):
         attr_cmd = attr_ext_commands[subcmd]
         if attr_cmd:
             return attr_cmd
-    except KeyError, msg:
+    except KeyError as msg:
         raise ValueError(msg)
     raise ValueError("Bad attr_cmd " + repr(attr_ext_commands))
 
@@ -46,7 +47,7 @@ def manage_attr(cmd, attr_ext_commands, rsc, subcmd, attr, value):
     try:
         attr_cmd = _get_attr_cmd(attr_ext_commands, subcmd)
         return _dispatch_attr_cmd(cmd, attr_cmd, rsc, subcmd, attr, value)
-    except ValueError, msg:
+    except ValueError as msg:
         cmdline = [rsc, subcmd, attr]
         if value is not None:
             cmdline.append(value)

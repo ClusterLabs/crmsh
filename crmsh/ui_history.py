@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
@@ -101,7 +103,7 @@ class History(command.UI):
     def do_source(self, context, src=None):
         "usage: source {<dir>|<file>|live}"
         if src is None:
-            print "Current source: %s" % (options.history)
+            print("Current source: %s" % (options.history))
             return True
         self._init_source()
         if src != options.history:
@@ -189,7 +191,7 @@ class History(command.UI):
         'Send a decompressed self.pe_file to ptest'
         try:
             s = bz2.decompress(open(self.pe_file).read())
-        except IOError, msg:
+        except IOError as msg:
             common_err("open: %s" % msg)
             return False
         return utils.run_ptest(s, nograph, scores, utilization, actions, verbosity)
@@ -336,7 +338,7 @@ class History(command.UI):
             tags = crm_report().get_transition_tags(f)
             rc = tags is not None
             if rc:
-                print ' '.join(tags) if len(tags) else "No tags."
+                print(' '.join(tags) if len(tags) else "No tags.")
         else:
             rc = crm_report().show_transition_log(f, True)
         return rc
@@ -498,7 +500,7 @@ class History(command.UI):
             cib_factory.refresh()
         if not s:
             return False
-        print utils.str2tmp(s)
+        print(utils.str2tmp(s))
 
     @command.skill_level('administrator')
     @command.completers(compl.join(compl.call(lambda: crm_report().peinputs_list()),
@@ -592,7 +594,7 @@ class History(command.UI):
         "usage: session [{save|load|delete} <name> | pack [<name>] | update | list]"
         self._init_source()
         if not subcmd:
-            print "current session: %s" % self.current_session
+            print("current session: %s" % self.current_session)
             return True
         # verify arguments
         if subcmd not in ("save", "load", "pack", "delete", "list", "update"):

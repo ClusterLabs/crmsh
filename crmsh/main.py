@@ -1,6 +1,9 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
+from builtins import str
 import sys
 import os
 import atexit
@@ -263,7 +266,7 @@ def main_input_loop(context, user_args):
                 common_err(msg)
         except KeyboardInterrupt:
             if options.interactive and not options.batch:
-                print "Ctrl-C, leaving"
+                print("Ctrl-C, leaving")
             context.quit(1)
     return rc
 
@@ -290,10 +293,10 @@ def compgen():
     if len(last_word) > 1 and ':' in last_word[1]:
         idx = last_word[1].rfind(':')
         for w in context.complete(line):
-            print w[idx+1:]
+            print(w[idx+1:])
     else:
         for w in context.complete(line):
-            print w
+            print(w)
 
 
 def parse_options():
@@ -333,7 +336,7 @@ def profile_run(context, user_args):
         stats_cmd = "; ".join(['import pstats',
                                's = pstats.Stats("%s")' % options.profile,
                                's.sort_stats("cumulative").print_stats()'])
-        print "python -c '%s' | less" % (stats_cmd)
+        print("python -c '%s' | less" % (stats_cmd))
     return 0
 
 
@@ -361,7 +364,7 @@ def run():
         else:
             return main_input_loop(context, user_args)
     except KeyboardInterrupt:
-        print "Ctrl-C, leaving"
+        print("Ctrl-C, leaving")
         sys.exit(1)
     except ValueError as e:
         if config.core.debug:

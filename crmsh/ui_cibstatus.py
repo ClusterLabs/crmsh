@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
@@ -33,7 +35,7 @@ class CibStatusUI(command.UI):
     def do_origin(self, context):
         "usage: origin"
         state = cib_status.modified and " (modified)" or ""
-        print "%s%s" % (cib_status.origin, state)
+        print("%s%s" % (cib_status.origin, state))
 
     @command.skill_level('administrator')
     @command.completers(compl.choice(['changed']))
@@ -60,7 +62,7 @@ class CibStatusUI(command.UI):
         return cib_status.edit_node(node, state)
 
     @command.skill_level('expert')
-    @command.completers(compl.null, compl.choice(cib_status.ticket_ops.keys()))
+    @command.completers(compl.null, compl.choice(list(cib_status.ticket_ops.keys())))
     def do_ticket(self, context, ticket, subcmd):
         "usage: ticket <ticket> {grant|revoke|activate|standby}"
         return cib_status.edit_ticket(ticket, subcmd)
@@ -68,8 +70,8 @@ class CibStatusUI(command.UI):
     @command.skill_level('expert')
     @command.completers(compl.choice(constants.ra_operations),
                         compl.call(cib_status.status_rsc_list),
-                        compl.choice(constants.lrm_exit_codes.keys()),
-                        compl.choice(constants.lrm_status_codes.keys()),
+                        compl.choice(list(constants.lrm_exit_codes.keys())),
+                        compl.choice(list(constants.lrm_status_codes.keys())),
                         compl.choice(constants.node_states))
     def do_op(self, context, op, rsc, rc, op_status=None, node=''):
         "usage: op <operation> <resource> <exit_code> [<op_status>] [<node>]"
