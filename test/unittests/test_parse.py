@@ -10,6 +10,7 @@ from crmsh import parse
 import unittest
 import shlex
 from crmsh.utils import lines2cli
+from crmsh.xmlutil import xml_tostring
 from lxml import etree
 from nose.tools import ok_, eq_
 
@@ -152,7 +153,7 @@ class TestCliParser(unittest.TestCase):
         out2 = self._parse('primitive st stonith:ssh hostlist=node1 meta target-role=Started op start requires=nothing timeout=60s op monitor interval=60m timeout=60s')
         self.assertEqual(out2.get('id'), 'st')
 
-        self.assertEqual(etree.tostring(out), etree.tostring(out2))
+        self.assertEqual(xml_tostring(out), xml_tostring(out2))
 
         out = self._parse('primitive st stonith:ssh params hostlist= meta')
         self.assertEqual(out.get('id'), 'st')
@@ -162,13 +163,13 @@ class TestCliParser(unittest.TestCase):
 
         out = self._parse('ms m0 resource params a=b')
         self.assertEqual(out.get('id'), 'm0')
-        print(etree.tostring(out))
+        print(xml_tostring(out))
         self.assertEqual(['resource'], out.xpath('./crmsh-ref/@id'))
         self.assertEqual(['b'], out.xpath('instance_attributes/nvpair[@name="a"]/@value'))
 
         out2 = self._parse('ms m0 resource a=b')
         self.assertEqual(out.get('id'), 'm0')
-        self.assertEqual(etree.tostring(out), etree.tostring(out2))
+        self.assertEqual(xml_tostring(out), xml_tostring(out2))
 
         out = self._parse('master ma resource meta a=b')
         self.assertEqual(out.get('id'), 'ma')
@@ -273,7 +274,7 @@ class TestCliParser(unittest.TestCase):
 
     def test_order(self):
         out = self._parse('order o1 Mandatory: [ A B sequential=true ] C')
-        print(etree.tostring(out))
+        print(xml_tostring(out))
         self.assertEqual(['Mandatory'], out.xpath('/rsc_order/@kind'))
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         self.assertEqual(['false'], out.xpath('/rsc_order/resource_set/@require-all'))
@@ -428,22 +429,22 @@ class TestCliParser(unittest.TestCase):
     def test_empty_property_sets(self):
         out = self._parse('rsc_defaults defaults:')
         self.assertEqual('<rsc_defaults><meta_attributes id="defaults"/></rsc_defaults>',
-                         etree.tostring(out))
+                         xml_tostring(out))
 
         out = self._parse('op_defaults defaults:')
         self.assertEqual('<op_defaults><meta_attributes id="defaults"/></op_defaults>',
-                         etree.tostring(out))
+                         xml_tostring(out))
 
     def test_fencing(self):
         # num test nodes are 3
 
         out = self._parse('fencing_topology')
         expect = '<fencing-topology/>'
-        self.assertEqual(expect, etree.tostring(out))
+        self.assertEqual(expect, xml_tostring(out))
 
         out = self._parse('fencing_topology poison-pill power')
         expect = '<fencing-topology><fencing-level devices="poison-pill" index="1" target="ha-one"/><fencing-level devices="power" index="2" target="ha-one"/><fencing-level devices="poison-pill" index="1" target="ha-three"/><fencing-level devices="power" index="2" target="ha-three"/><fencing-level devices="poison-pill" index="1" target="ha-two"/><fencing-level devices="power" index="2" target="ha-two"/></fencing-topology>'
-        self.assertEqual(expect, etree.tostring(out))
+        self.assertEqual(expect, xml_tostring(out))
 
         out = self._parse('fencing_topology node-a: poison-pill power node-b: ipmi serial')
         self.assertEqual(4, len(out))
@@ -451,7 +452,7 @@ class TestCliParser(unittest.TestCase):
         devs = ['stonith-vbox3-1-off', 'stonith-vbox3-2-off',
                 'stonith-vbox3-1-on', 'stonith-vbox3-2-on']
         out = self._parse('fencing_topology vbox4: %s' % ','.join(devs))
-        print(etree.tostring(out))
+        print(xml_tostring(out))
         self.assertEqual(1, len(out))
 
     def test_fencing_1114(self):
@@ -460,11 +461,11 @@ class TestCliParser(unittest.TestCase):
         """
         out = self._parse('fencing_topology attr:rack=1 poison-pill power')
         expect = """<fencing-topology><fencing-level devices="poison-pill" index="1" target-attribute="rack" target-value="1"/><fencing-level devices="power" index="2" target-attribute="rack" target-value="1"/></fencing-topology>"""
-        self.assertEqual(expect, etree.tostring(out))
+        self.assertEqual(expect, xml_tostring(out))
 
         out = self._parse('fencing_topology attr:rack=1 poison-pill,power')
         expect = '<fencing-topology><fencing-level devices="poison-pill,power" index="1" target-attribute="rack" target-value="1"/></fencing-topology>'
-        self.assertEqual(expect, etree.tostring(out))
+        self.assertEqual(expect, xml_tostring(out))
 
     def test_tag(self):
         out = self._parse('tag tag1: one two three')
@@ -516,7 +517,7 @@ class TestCliParser(unittest.TestCase):
         # comment
         node n1
         ''')
-        self.assertNotEqual(-1, etree.tostring(outp[0]).find('# comment'))
+        self.assertNotEqual(-1, xml_tostring(outp[0]).find('# comment'))
 
     def test_uppercase(self):
         outp = self._parse_lines('''
@@ -566,7 +567,7 @@ class TestCliParser(unittest.TestCase):
         outp = self._parse_lines(inp)
         eq_(len(outp), 1)
         eq_('primitive', outp[0].tag)
-        # print etree.tostring(outp[0])
+        # print xml_tostring(outp[0])
         verbose = outp[0].xpath('//nvpair[@name="verbose"]')
         eq_(len(verbose), 1)
         ok_('value' not in verbose[0].attrib)
@@ -655,7 +656,7 @@ class TestCliParser(unittest.TestCase):
             """op_defaults $id=opsdef2 record-pending=true"""]
 
         outp = self._parse_lines('\n'.join(inp))
-        a = [etree.tostring(x) for x in outp]
+        a = [xml_tostring(x) for x in outp]
         b = [
             '<node uname="node1"><instance_attributes><nvpair name="mem" value="16G"/></instance_attributes></node>',
             '<node uname="node2"><utilization><nvpair name="cpu" value="4"/></utilization></node>',

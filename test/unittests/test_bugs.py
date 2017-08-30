@@ -172,7 +172,7 @@ def test_comments():
 </cib>"""
     elems = etree.fromstring(xml)
     xmlutil.sanitize_cib(elems)
-    assert etree.tostring(elems).count("COMMENT TEXT") == 3
+    assert xmlutil.xml_tostring(elems).count("COMMENT TEXT") == 3
 
 
 @with_setup(setup_func, teardown_func)

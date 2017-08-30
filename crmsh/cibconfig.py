@@ -52,7 +52,7 @@ from .xmlutil import remove_id_used_attributes, get_top_cib_nodes
 from .xmlutil import merge_attributes, is_cib_element, sanity_check_meta
 from .xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
 from .xmlutil import get_rsc_operations, delete_rscref, xml_equals, lookup_node, RscState
-from .xmlutil import cibtext2elem, is_related, check_id_ref
+from .xmlutil import cibtext2elem, is_related, check_id_ref, xml_tostring
 from .cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
 from .cliformat import cli_nvpair, cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
 from .cliformat import simple_rsc_constraint, cli_rule, cli_format
@@ -885,7 +885,7 @@ class CibObject(object):
     def _repr_cli_xml(self, format_mode):
         with clidisplay.nopretty(format_mode < 0):
             h = clidisplay.keyword("xml")
-            l = etree.tostring(self.node, pretty_print=True).split('\n')
+            l = xml_tostring(self.node, pretty_print=True).split('\n')
             l = [x for x in l if x]  # drop empty lines
             return "%s %s" % (h, cli_format(l, break_lines=(format_mode > 0), xml=True))
 

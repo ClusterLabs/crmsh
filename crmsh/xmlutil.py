@@ -1269,11 +1269,19 @@ def xml_equals(n, m, show=False):
     if not rc and show and config.core.debug:
         # somewhat strange, but that's how this works
         from doctest import Example
-        example = Example("etree.tostring(n)", etree.tostring(n))
-        got = etree.tostring(m)
+        example = Example("etree.tostring(n)", xml_tostring(n))
+        got = xml_tostring(m)
         print(_checker.output_difference(example, got, 0))
     return rc
 
+
+def xml_tostring(*args, **kwargs):
+    """
+    Python 2/3 conversion utility:
+    etree.tostring returns a bytestring, but
+    we need actual Python strings.
+    """
+    return etree.tostring(*args, **kwargs).decode('utf-8')
 
 def merge_attributes(dnode, snode, tag):
     rc = False

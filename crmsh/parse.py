@@ -1682,6 +1682,7 @@ def parse(s, comments=None):
     if isinstance(s, str):
         try:
             s = s.encode('ascii', errors='xmlcharrefreplace')
+            s = s.decode('utf-8')
         except Exception as e:
             common_err(e)
             return False
