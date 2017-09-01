@@ -42,17 +42,26 @@ def unpack_node_xmldata(node, is_offline):
     return uname, ident, typ, other, inst_attr, is_offline
 
 
-def _find_utilization(args):
+def _find_attr(args):
     """
-    complete utilization attrs
+    complete utilization/attribute/status-attr attrs
     """
+    if not len(args) >= 2:
+        return []
     cib = xmlutil.cibdump2elem()
     if cib is None:
         return []
 
     res = []
-    node_util = cib.xpath("//nodes/node[@uname='%s']/utilization/nvpair" % args[-3])
-    for item in node_util:
+    if args[0] == "utilization":
+       xpath = "//nodes/node[@uname='%s']/utilization/nvpair" % args[1]
+    if args[0] == "attribute":
+       xpath = "//nodes/node[@uname='%s']/instance_attributes/nvpair" % args[1]
+    if args[0] == "status-attr":
+       xpath = "//status/node_state[@uname='%s']/\
+                transient_attributes/instance_attributes/nvpair" % args[1]
+    node_attr = cib.xpath(xpath)
+    for item in node_attr:
         res.append(item.get("name"))
     return res
 
@@ -306,17 +315,17 @@ class NodeMgmt(command.UI):
         return True
 
     @command.wait
-    @command.completers(compl.nodes, compl.choice(['set', 'delete', 'show']), compl.resources)
-    def do_attribute(self, context, node, cmd, rsc, value=None):
+    @command.completers(compl.nodes, compl.choice(['set', 'delete', 'show']), _find_attr)
+    def do_attribute(self, context, node, cmd, attr, value=None):
         """usage:
-        attribute <node> set <rsc> <value>
-        attribute <node> delete <rsc>
-        attribute <node> show <rsc>"""
+        attribute <node> set <attr> <value>
+        attribute <node> delete <attr>
+        attribute <node> show <attr>"""
         return ui_utils.manage_attr(context.get_command_name(), self.node_attr,
-                                    node, cmd, rsc, value)
+                                    node, cmd, attr, value)
 
     @command.wait
-    @command.completers(compl.nodes, compl.choice(['set', 'delete', 'show']), _find_utilization)
+    @command.completers(compl.nodes, compl.choice(['set', 'delete', 'show']), _find_attr)
     def do_utilization(self, context, node, cmd, attr, value=None):
         """usage:
         utilization <node> set <attr> <value>
@@ -327,14 +336,14 @@ class NodeMgmt(command.UI):
 
     @command.wait
     @command.name('status-attr')
-    @command.completers(compl.nodes, compl.choice(['set', 'delete', 'show']), compl.resources)
-    def do_status_attr(self, context, node, cmd, rsc, value=None):
+    @command.completers(compl.nodes, compl.choice(['set', 'delete', 'show']), _find_attr)
+    def do_status_attr(self, context, node, cmd, attr, value=None):
         """usage:
-        status-attr <node> set <rsc> <value>
-        status-attr <node> delete <rsc>
-        status-attr <node> show <rsc>"""
+        status-attr <node> set <attr> <value>
+        status-attr <node> delete <attr>
+        status-attr <node> show <attr>"""
         return ui_utils.manage_attr(context.get_command_name(), self.node_status,
-                                    node, cmd, rsc, value)
+                                    node, cmd, attr, value)
 
     def do_server(self, context, *nodes):
         """
