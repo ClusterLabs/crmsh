@@ -1,9 +1,6 @@
-from __future__ import unicode_literals
 # Copyright (C) 2013 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
-from builtins import range
-from builtins import object
 import re
 from . import config
 from . import tmpfiles

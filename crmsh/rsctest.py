@@ -1,9 +1,6 @@
-from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
-from builtins import str
-from builtins import object
 import os
 import sys
 from .msg import common_err, common_debug, common_warn, common_info

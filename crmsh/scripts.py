@@ -1,15 +1,6 @@
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2015 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
-from future import standard_library
-standard_library.install_aliases()
-from builtins import next
-from builtins import hex
-from builtins import str
-from past.builtins import basestring
-from builtins import object
 import os
 import re
 import subprocess

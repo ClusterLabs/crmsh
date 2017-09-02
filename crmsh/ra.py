@@ -1,10 +1,6 @@
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
-from past.builtins import basestring
-from builtins import object
 import os
 import subprocess
 import copy

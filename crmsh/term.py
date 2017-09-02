@@ -1,10 +1,6 @@
-from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
-from builtins import zip
-from builtins import range
-from builtins import object
 import sys
 import re
 

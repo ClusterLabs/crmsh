@@ -24,10 +24,7 @@ Help for the level itself is like this:
 
 [[cmdhelp_<level>,<short help text>]]
 '''
-from __future__ import unicode_literals
 
-from builtins import str
-from builtins import object
 import os
 import re
 from .utils import page_string

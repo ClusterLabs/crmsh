@@ -1,12 +1,7 @@
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
 
-from builtins import str
-from past.builtins import basestring
-from builtins import object
 import sys
 
 try:

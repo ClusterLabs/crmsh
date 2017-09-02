@@ -1,10 +1,6 @@
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2016 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
-from builtins import zip
-from builtins import object
 import bz2
 import gzip
 import re

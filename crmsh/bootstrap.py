@@ -1,5 +1,3 @@
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2016 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 #
@@ -14,10 +12,6 @@ from __future__ import unicode_literals
 # TODO: Make csync2 usage optional
 # TODO: Configuration file for bootstrap?
 
-from builtins import next
-from builtins import str
-from builtins import range
-from builtins import object
 import os
 import sys
 import random

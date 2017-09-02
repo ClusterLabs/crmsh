@@ -1,17 +1,6 @@
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
-from future import standard_library
-standard_library.install_aliases()
-from builtins import input
-from builtins import map
-from builtins import str
-from builtins import range
-from builtins import object
-from past.utils import old_div
 import os
 import sys
 from tempfile import mkstemp
@@ -798,7 +787,7 @@ def wait4dc(what="", show_progress=True):
         delaymsec = crm_msec(delay)
         if delaymsec > 0:
             common_info("The crmd-transition-delay is configured. Waiting %d msec before check DC status." % delaymsec)
-            time.sleep(old_div(delaymsec, 1000))
+            time.sleep(delaymsec // 1000)
     cnt = 0
     output_started = 0
     init_sleep = 0.25
@@ -936,7 +925,7 @@ def crm_msec(t):
         mult, div = convtab[q]
     except KeyError:
         return -1
-    return old_div((int(r.group(1))*mult),div)
+    return (int(r.group(1))*mult) // div
 
 
 def crm_time_cmp(a, b):
@@ -1085,7 +1074,7 @@ def need_pager(s, w, h):
     for l in s.split('\n'):
         # need to remove color codes
         l = re.sub(r'\${\w+}', '', l)
-        cnt += int(ceil(old_div((len(l) + 0.5),w)))
+        cnt += int(ceil((len(l) + 0.5) / w))
         if cnt >= h:
             return True
     return False
@@ -1165,11 +1154,11 @@ def multicolumn(l):
     for s in l:
         if len(s) > max_len:
             max_len = len(s)
-    cols = old_div(w,(max_len + min_gap))  # approx.
+    cols = w // (max_len + min_gap)  # approx.
     if not cols:
         cols = 1
-    col_len = old_div(w,cols)
-    for i in range(old_div(len(l),cols) + 1):
+    col_len = w // cols
+    for i in range(len(l) // cols + 1):
         s = ''
         for j in range(i * cols, (i + 1) * cols):
             if not j < len(l):
@@ -1252,7 +1241,7 @@ def total_seconds(td):
     if hasattr(datetime.timedelta, 'total_seconds'):
         return td.total_seconds()
     else:
-        return old_div((td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6), 10**6)
+        return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) // 10**6
 
 
 def datetime_to_timestamp(dt):

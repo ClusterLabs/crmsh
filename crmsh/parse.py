@@ -1,12 +1,7 @@
-from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013-2016 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
-from builtins import str
-from builtins import range
-from past.builtins import basestring
-from builtins import object
 import shlex
 import re
 import inspect

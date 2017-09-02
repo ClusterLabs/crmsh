@@ -4,7 +4,6 @@
 '''
 Files added to tmpfiles are removed at program exit.
 '''
-from __future__ import unicode_literals
 
 import os
 import shutil

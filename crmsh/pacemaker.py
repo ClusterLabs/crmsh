@@ -1,10 +1,6 @@
-from __future__ import unicode_literals
 # Copyright (C) 2009 Yan Gao <ygao@novell.com>
 # See COPYING for license information.
 
-from builtins import str
-from past.builtins import basestring
-from builtins import object
 import os
 import tempfile
 import copy
