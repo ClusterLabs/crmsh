@@ -439,11 +439,8 @@ def load_version():
     version = 'dev'
     versioninfo_file = os.path.join(path.sharedir, 'version')
     if os.path.isfile(versioninfo_file):
-        v = open(versioninfo_file)
-        try:
-            version = v.next().strip() or version
-        except StopIteration:
-            pass
+        with open(versioninfo_file) as f:
+            version = f.readline().strip() or version
     return version
 
 
