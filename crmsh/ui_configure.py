@@ -161,12 +161,12 @@ class CompletionHelp(object):
         if helptxt:
             import readline
             cmdline = readline.get_line_buffer()
-            print("\n%s" % helptxt)
+            print("\n%s" % helptxt, end='')
             if clidisplay.colors_enabled():
-                print("%s%s" % (term.render(clidisplay.prompt_noreadline(constants.prompt)),
+                print("\n%s%s" % (term.render(clidisplay.prompt_noreadline(constants.prompt)),
                                 cmdline), end=' ')
             else:
-                print("%s%s" % (constants.prompt, cmdline), end=' ')
+                print("\n%s%s" % (constants.prompt, cmdline), end=' ')
             cls.laststamp = time.time()
             cls.lasttopic = topic
 
