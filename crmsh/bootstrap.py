@@ -484,6 +484,9 @@ def configure_firewall(tcp=None, udp=None):
             error("Failed to restart firewall (SuSEfirewall2)")
 
     def init_firewall_firewalld(tcp, udp):
+        if not service_is_active("firewalld"):
+            warn("Unable to configure firewall: Not active")
+            return
         for p in tcp:
             if not invoke("firewall-cmd --zone=public --add-port={}/tcp --permanent".format(p)):
                 error("Failed to configure firewall (firewalld via firewall-cmd)")
