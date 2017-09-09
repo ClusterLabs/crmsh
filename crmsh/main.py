@@ -216,7 +216,7 @@ def render_prompt(context):
         # seems the color prompt messes it up
         promptstr = "crm(%s/%s)%s# " % (cib_prompt(), utils.this_node(), context.prompt())
         constants.prompt = promptstr
-        if clidisplay.colors_enabled():
+        if clidisplay.colors_enabled() and config.core.use_prompt_toolkit == "no":
             rendered_prompt = term.render(clidisplay.prompt(promptstr))
         else:
             rendered_prompt = promptstr
@@ -231,7 +231,7 @@ def setup_context(context):
             common_err(msg)
             usage(2)
 
-    if options.interactive and not options.batch:
+    if options.interactive and not options.batch and config.core.use_prompt_toolkit == "no":
         context.setup_readline()
 
 
@@ -250,7 +250,7 @@ def main_input_loop(context, user_args):
     rc = 0
     while True:
         try:
-            inp = utils.multi_input(render_prompt(context))
+            inp = utils.multi_input(config.core.use_prompt_toolkit, context, render_prompt(context))
             if inp is None:
                 if options.interactive:
                     rc = 0

@@ -1,6 +1,10 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
+from __future__ import unicode_literals
+from prompt_toolkit.shortcuts import print_tokens
+from prompt_toolkit.styles import style_from_dict
+from prompt_toolkit.token import Token
 
 import time
 from . import command
@@ -154,19 +158,27 @@ class CompletionHelp(object):
     lasttopic = ''
 
     @classmethod
-    def help(cls, topic, helptxt):
+    def help(cls, topic, helptxt, args):
         if cls.lasttopic == topic and \
                 time.time() - cls.laststamp < cls.timeout:
             return
         if helptxt:
-            import readline
-            cmdline = readline.get_line_buffer()
             print "\n%s" % helptxt
-            if clidisplay.colors_enabled():
-                print "%s%s" % (term.render(clidisplay.prompt_noreadline(constants.prompt)),
-                                cmdline),
+            if config.core.use_prompt_toolkit == "no":
+                import readline
+                cmdline = readline.get_line_buffer()
+                if clidisplay.colors_enabled():
+                    print "%s%s" % (term.render(clidisplay.prompt_noreadline(constants.prompt)),
+                                    cmdline),
+                else:
+                    print "%s%s" % (constants.prompt, cmdline),
             else:
-                print "%s%s" % (constants.prompt, cmdline),
+                style = style_from_dict({Token.Green: "#ansigreen bold",})
+                if constants.prompt.endswith("configure# "):
+                    tokens = [(Token.Green, constants.prompt), (Token, " ".join(args))]
+                else:
+                    tokens = [(Token.Green, constants.prompt), (Token, "configure %s" % " ".join(args))]
+                print_tokens(tokens, style=style)
             cls.laststamp = time.time()
             cls.lasttopic = topic
 
@@ -178,7 +190,7 @@ def _prim_params_completer(agent, args):
     if completing.endswith('='):
         if len(completing) > 1 and options.interactive:
             topic = completing[:-1]
-            CompletionHelp.help(topic, agent.meta_parameter(topic))
+            CompletionHelp.help(topic, agent.meta_parameter(topic), args)
         return []
     elif '=' in completing:
         return []
