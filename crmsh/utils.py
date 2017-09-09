@@ -115,6 +115,21 @@ def network_v6_all():
     return dict_
 
 
+def ip_in_local(IPv6=False):
+    if not IPv6:
+        regex = r' [0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]+ '
+    else:
+        regex = r' [0-9a-fA-F]{1,4}:.*:[0-9a-fA-F]{1,4}/[0-9]+ '
+
+    ip_local = []
+    _, outp = get_stdout("/sbin/ip addr show")
+    tmp = re.findall(regex, outp, re.M)
+    if tmp:
+        tmp = map(lambda x: x.split('/')[0].strip(), tmp)
+        ip_local += filter(lambda x: x != "127.0.0.1" and not re.search(r'^[Ff][Ee]80:', x), tmp)
+    return ip_local
+
+
 _cib_shadow = 'CIB_shadow'
 _cib_in_use = ''
 
