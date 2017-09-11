@@ -347,6 +347,12 @@ def check_etc_hosts(node):
     return False
 
 
+def check_peer_etc_hosts(peer, node):
+    if invoke("ssh root@{} \"grep -E '(\s|^){}(\s|$)' /etc/hosts\"".format(peer, node)):
+        return True
+    return False
+
+
 def grep_output(cmd, txt):
     _rc, outp, _err = utils.get_stdout_stderr(cmd)
     return txt in outp
@@ -2048,6 +2054,8 @@ def bootstrap_join(cluster_node=None, ui_context=None, nic=None, quiet=False, ye
             _context.cluster_node = cluster_node
 
         join_ssh(cluster_node)
+        if not check_peer_etc_hosts(cluster_node, utils.this_node()):
+            error("Need configure \"{}\" in /etc/hosts on {} if want to join it".format(utils.this_node(), cluster_node))
         join_csync2(cluster_node)
         join_ssh_merge(cluster_node)
         join_cluster(cluster_node)
