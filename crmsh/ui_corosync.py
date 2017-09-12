@@ -127,8 +127,12 @@ class Corosync(command.UI):
     @command.name('del-node')
     @command.alias('del_node')
     @command.skill_level('administrator')
+    @command.completers(_push_completer)
     def do_delnode(self, context, name):
         "Remove a node from the corosync nodelist"
+        transport = corosync.get_value('totem.transport')
+        if not transport or transport != "udpu":
+            context.fatal_error("Only support udpu transport now")
         corosync.del_node(name)
 
     @command.skill_level('administrator')
