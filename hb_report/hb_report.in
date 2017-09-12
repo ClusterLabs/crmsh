@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # Copyright (C) 2017 Xin Liang <XLiang@suse.com>
 # See COPYING for license information.
 
@@ -285,7 +285,7 @@ def run():
         utillib.collect_info()
         cmd = r"cd %s/.. && tar -h -cf - %s" % (constants.WORKDIR, constants.WE)
         code, out, err = crmutils.get_stdout_stderr(cmd)
-        print out
+        print(out)
     else:
         p_list = []
         p_list.append(multiprocessing.Process(target=utillib.analyze))
@@ -403,7 +403,7 @@ usage: report -f {time} [-t time]
 
 
 def version():
-    print utillib.crmsh_info().strip('\n')
+    print(utillib.crmsh_info().strip('\n'))
     sys.exit(0)
 
 
