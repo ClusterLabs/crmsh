@@ -858,7 +858,7 @@ def processing_sort(nl):
     TODO: if sort_elements is disabled, only sort to resolve inter-dependencies.
     '''
     def sort_elements(k):
-        return _sort_xml_order.get(k.tag, _SORT_LAST), k.get('id')
+        return _sort_xml_order.get(k.tag, _SORT_LAST)
 
     def sort_type(k):
         return _sort_xml_order.get(k.tag, _SORT_LAST)
