@@ -563,6 +563,8 @@ class CibConfig(command.UI):
     def do_delete(self, context, *args):
         "usage: delete [-f|--force] <id> [<id>...]"
         argl = list(args)
+        if not utils.ask("Really want to delete {}?".format(argl)):
+            return 
         arg_force = any((x in ('-f', '--force')) for x in argl)
         argl = [x for x in argl if x not in ('-f', '--force')]
         if arg_force or config.core.force:
