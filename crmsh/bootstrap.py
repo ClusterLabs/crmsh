@@ -952,6 +952,7 @@ Configure Corosync:
 
         if i == 1 or \
            len(default_networks) == 1 or \
+           not _context.second_hb or \
            not confirm("\nConfigure a second multicast ring?"):
             break
         two_rings = True
@@ -1805,7 +1806,7 @@ def remove_localhost_check():
 def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_device=None,
                    shared_device=None, sbd_device=None, diskless_sbd=False, quiet=False,
                    template=None, admin_ip=None, yes_to_all=False,
-                   unicast=False, ipv6=False, watchdog=None, stage=None, args=None):
+                   unicast=False, second_hb=False, ipv6=False, watchdog=None, stage=None, args=None):
     """
     -i <nic>
     -o <ocfs2-device>
@@ -1839,6 +1840,7 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     _context.sbd_device = sbd_device
     _context.diskless_sbd = diskless_sbd
     _context.unicast = unicast
+    _context.second_hb = second_hb
     _context.ipv6 = ipv6
     _context.admin_ip = admin_ip
     _context.watchdog = watchdog
