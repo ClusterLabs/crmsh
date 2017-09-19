@@ -283,7 +283,7 @@ class CibStatus(object):
         '''
         if self.get_status() is None:
             return False
-        page_string(etree.tostring(self.status_node, pretty_print=True))
+        page_string(xmlutil.xml_tostring(self.status_node, pretty_print=True))
         return True
 
     def inject(self, opts):
