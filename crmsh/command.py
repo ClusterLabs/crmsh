@@ -452,7 +452,7 @@ Examples:
         def get_if_command(attr):
             "Return the named attribute if it's a command"
             child = getattr(cls, attr)
-            return child if attr.startswith('do_') and inspect.ismethod(child) else None
+            return child if attr.startswith('do_') and inspect.isfunction(child) else None
 
         def add_aliases(children, info):
             "Add any aliases for command to child map"
