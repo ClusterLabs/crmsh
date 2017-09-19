@@ -397,14 +397,15 @@ def filter_string(cmd, s, stderr_on=True, shell=True):
     except Exception as msg:
         common_err(msg)
         common_info("from: %s" % cmd)
-    return rc, outp
+    return rc, to_ascii(outp)
 
 
-def str2tmp(s, suffix=".pcmk"):
+def str2tmp(_str, suffix=".pcmk"):
     '''
     Write the given string to a temporary file. Return the name
     of the file.
     '''
+    s = to_ascii(_str)
     fd, tmp = mkstemp(suffix=suffix)
     try:
         f = os.fdopen(fd, "w")
@@ -485,7 +486,7 @@ def str2file(s, fname):
     '''
     try:
         with open_atomic(fname, 'w') as dst:
-            dst.write(s)
+            dst.write(to_ascii(s))
     except IOError as msg:
         common_err(msg)
         return False
@@ -717,7 +718,7 @@ def get_stdout(cmd, input_s=None, stderr_on=True, shell=True):
                             stdout=subprocess.PIPE,
                             stderr=stderr)
     stdout_data, stderr_data = proc.communicate(input_s)
-    return proc.returncode, stdout_data.strip()
+    return proc.returncode, to_ascii(stdout_data).strip()
 
 
 def get_stdout_stderr(cmd, input_s=None, shell=True):
@@ -732,7 +733,7 @@ def get_stdout_stderr(cmd, input_s=None, shell=True):
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
     stdout_data, stderr_data = proc.communicate(input_s)
-    return proc.returncode, stdout_data.strip(), stderr_data.strip()
+    return proc.returncode, to_ascii(stdout_data).strip(), to_ascii(stderr_data).strip()
 
 
 def stdout2list(cmd, stderr_on=True, shell=True):
@@ -1015,7 +1016,7 @@ def is_process(s):
     for pid in pids:
         try:
             cmdline = open(join('/proc', pid, 'cmdline'), 'rb').read()
-            procname = basename(cmdline.replace('\x00', ' ').split(' ')[0])
+            procname = basename(to_ascii(cmdline).replace('\x00', ' ').split(' ')[0])
             if procname == s:
                 return True
         except os.error:

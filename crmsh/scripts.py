@@ -1984,6 +1984,7 @@ class RunActions(object):
                 ok = False
             else:
                 rc, out, err = result
+                out = utils.to_ascii(out)
                 if rc != 0:
                     self.printer.error(host, "Remote error (rc=%s) %s%s" % (rc, out, err))
                     ok = False

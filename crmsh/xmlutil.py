@@ -17,7 +17,7 @@ from .msg import common_err, common_error, common_warn, common_debug, cib_parse_
 from . import userdir
 from .utils import add_sudo, str2file, str2tmp, get_boolean
 from .utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
-from .utils import olist, get_cib_in_use, get_tempdir
+from .utils import olist, get_cib_in_use, get_tempdir, to_ascii
 
 
 def xmlparse(f):
@@ -74,7 +74,7 @@ def sudocall(cmd):
     try:
         outp, errp = p.communicate()
         p.wait()
-        return p.returncode, outp, errp
+        return p.returncode, to_ascii(outp), to_ascii(errp)
     except IOError as msg:
         common_err("running %s: %s" % (cmd, msg))
         return None, None, None
