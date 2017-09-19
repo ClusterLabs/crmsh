@@ -220,7 +220,7 @@ class RngSchema(Schema):
         self.schema_str_docs[filename] = crm_schema
 
         try:
-            grammar = etree.fromstring(crm_schema)
+            grammar = etree.fromstring(crm_schema.encode('utf-8'))
         except Exception as msg:
             raise PacemakerError("Failed to parse the Relax-NG schema: " + str(msg) + schema_info)
 

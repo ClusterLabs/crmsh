@@ -2170,7 +2170,7 @@ def verify(script, params, external_check=True):
         cmd.extend(["verify", "commit", "\n"])
         try:
             common_debug("Try executing %s" % ("\n".join(cmd)))
-            rc, out = utils.filter_string(['crm', '-f', '-', 'configure'], "\n".join(cmd), stderr_on='stdout', shell=False)
+            rc, out = utils.filter_string(['crm', '-f', '-', 'configure'], "\n".join(cmd).encode('utf-8'), stderr_on='stdout', shell=False)
             errm = re.compile(r"^ERROR: \d+: (.*)$")
             outp = []
             for l in (out or "").splitlines():

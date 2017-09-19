@@ -2657,7 +2657,7 @@ class CibFactory(object):
             cib_diff = etree.tostring(e)
         common_debug("Diff: %s" % (cib_diff))
         rc = pipe_string("%s %s" % (cib_piped, cibadmin_opts),
-                         cib_diff)
+                         cib_diff.encode('utf-8'))
         if rc != 0:
             update_err("cib", cibadmin_opts, cib_diff, rc)
             return False
