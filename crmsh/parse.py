@@ -183,7 +183,7 @@ class BaseParser(object):
         tok = self.current_token()
         if not tok:
             return None
-        if isinstance(rx, basestring):
+        if isinstance(rx, str):
             if not rx.endswith('$'):
                 rx = rx + '$'
             self._lastmatch = re.match(rx, tok, re.IGNORECASE)
@@ -206,7 +206,7 @@ class BaseParser(object):
         if not self.try_match(rx):
             if errmsg:
                 self.err(errmsg)
-            elif isinstance(rx, basestring):
+            elif isinstance(rx, str):
                 self.err("Expected " + rx)
             else:
                 self.err("Expected " + rx.pattern.rstrip('$'))

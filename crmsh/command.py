@@ -98,7 +98,7 @@ def skill_level(new_level):
         def do_rmrf(self, cmd, args):
             ...
     '''
-    if isinstance(new_level, basestring):
+    if isinstance(new_level, str):
         levels = {'operator': 0, 'administrator': 1, 'expert': 2}
         if new_level.lower() not in levels:
             raise ValueError("Unknown skill level: " + new_level)

@@ -770,7 +770,7 @@ def get_ra(r):
     Argument is either an xml resource tag with class, provider and type attributes,
     or a CLI style class:provider:type string.
     """
-    if isinstance(r, basestring):
+    if isinstance(r, str):
         cls, provider, typ = disambiguate_ra_type(r)
     else:
         cls, provider, typ = r.get('class'), r.get('provider'), r.get('type')
@@ -832,7 +832,7 @@ def disambiguate_ra_type(s):
 def can_validate_agent(agent):
     if utils.getuser() != 'root':
         return False
-    if isinstance(agent, basestring):
+    if isinstance(agent, str):
         c, p, t = disambiguate_ra_type(agent)
         if c != "ocf":
             return False
@@ -854,7 +854,7 @@ def validate_agent(agentname, params, log=False):
     """
     if not can_validate_agent(agentname):
         return (-1, "")
-    if isinstance(agentname, basestring):
+    if isinstance(agentname, str):
         c, p, t = disambiguate_ra_type(agentname)
         if c != "ocf":
             raise ValueError("Only OCF agents are supported by this command")

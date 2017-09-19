@@ -360,7 +360,7 @@ class Script(command.UI):
                     script[k] = flatten(v)
                 elif isinstance(v, tuple) or isinstance(v, list):
                     script[k] = [flatten(vv) for vv in v]
-                elif isinstance(v, basestring):
+                elif isinstance(v, str):
                     script[k] = v.strip()
 
             return script

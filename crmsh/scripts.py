@@ -84,7 +84,7 @@ class Text(object):
 
     @staticmethod
     def isa(obj):
-        return isinstance(obj, basestring) or isinstance(obj, Text)
+        return isinstance(obj, str) or isinstance(obj, Text)
 
     def __init__(self, script, text, kind=None):
         self.script = script
@@ -98,7 +98,7 @@ class Text(object):
         val = self.text
         if val in (True, False):
             return "true" if val else "false"
-        if not isinstance(val, basestring):
+        if not isinstance(val, str):
             return str(val)
         return handles.parse(val, self.script.get('__values__', {})).strip()
 
@@ -216,7 +216,7 @@ class Actions(object):
             else:
                 del action['when']
         for k, v in action.items():
-            if isinstance(v, basestring) and hre.search(v):
+            if isinstance(v, str) and hre.search(v):
                 v = Text(script, v)
             if Text.isa(v):
                 action[k] = str(v).strip()
@@ -886,7 +886,7 @@ def _postprocess_script_step(script, step):
         if 'value' in p:
             if p['value'] is None:
                 del p['value']
-            elif isinstance(p['value'], basestring):
+            elif isinstance(p['value'], str):
                 p['value'] = Text(script, p['value'])
         if 'required' not in p:
             p['required'] = False
@@ -1007,7 +1007,7 @@ def load_script_file(script, filename):
     obj = _postprocess_script(parsed)
     if 'name' in obj:
         script = obj['name']
-    if script not in _script_cache or isinstance(_script_cache[script], basestring):
+    if script not in _script_cache or isinstance(_script_cache[script], str):
         _script_cache[script] = obj
     return obj
 
@@ -1040,7 +1040,7 @@ def load_script(script):
         common_debug("cache: %s" % (list(_script_cache.keys())))
         raise ValueError("Script not found: %s" % (script))
     s = _script_cache[script]
-    if isinstance(s, basestring):
+    if isinstance(s, str):
         try:
             return load_script_file(script, s)
         except KeyError as err:
@@ -1310,7 +1310,7 @@ def _verify_type(param, value, errors):
             errors.append("%s=%s enum without list of values" % (param.get('name'), value))
         else:
             opts = param['values']
-            if isinstance(opts, basestring):
+            if isinstance(opts, str):
                 opts = opts.replace(',', ' ').split(' ')
             for v in opts:
                 if value.lower() == v.lower():
@@ -2189,6 +2189,6 @@ def verify(script, params, external_check=True):
 
 
 def _make_boolean(v):
-    if isinstance(v, basestring):
+    if isinstance(v, str):
         return utils.get_boolean(v)
     return v not in (0, False, None)

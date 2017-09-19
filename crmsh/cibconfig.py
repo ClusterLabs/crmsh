@@ -822,7 +822,7 @@ def parse_cli_to_xml(cli, oldnode=None):
     """
     node = None
     comments = []
-    if isinstance(cli, basestring):
+    if isinstance(cli, str):
         for s in lines2cli(cli):
             node = parse.parse(s, comments=comments)
     else:  # should be a pre-tokenized list
@@ -2730,7 +2730,7 @@ class CibFactory(object):
             return True
         if cib is None:
             cib = read_cib(cibdump2elem)
-        elif isinstance(cib, basestring):
+        elif isinstance(cib, str):
             cib = cibtext2elem(cib)
         if not self._import_cib(cib):
             return False
@@ -3339,7 +3339,7 @@ class CibFactory(object):
         if not self.is_cib_sane():
             common_debug("create_from_cli (%s): is_cib_sane() failed" % (cli))
             return None
-        if isinstance(cli, basestring) or isinstance(cli, list):
+        if isinstance(cli, str) or isinstance(cli, list):
             elem, obj_type, obj_id = parse_cli_to_xml(cli)
         else:
             elem, obj_type, obj_id = postprocess_cli(cli)

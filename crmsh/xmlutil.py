@@ -820,7 +820,7 @@ def get_rsc_operations(rsc_node):
 def make_sort_map(*order):
     m = {}
     for i, o in enumerate(order):
-        if isinstance(o, basestring):
+        if isinstance(o, str):
             m[o] = i
         else:
             for k in o:
@@ -1226,7 +1226,7 @@ def xml_equals_unordered(a, b):
         return False
 
     def tagflat(x):
-        return isinstance(x.tag, basestring) and x.tag or x.text
+        return isinstance(x.tag, str) and x.tag or x.text
 
     def sortby(v):
         if v.tag == 'primitive':

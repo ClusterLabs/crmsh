@@ -269,7 +269,7 @@ def _stringify(val):
         return 'true'
     elif val is False:
         return 'false'
-    elif isinstance(val, basestring):
+    elif isinstance(val, str):
         return val
     else:
         return str(val)

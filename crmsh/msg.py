@@ -172,7 +172,7 @@ def syntax_err(s, token='', context='', msg=''):
         err += context
     if msg:
         err += ": %s" % (msg)
-    if isinstance(s, basestring):
+    if isinstance(s, str):
         err += " parsing '%s'" % (s)
     elif token:
         err += " near <%s> parsing '%s'" % (token, ' '.join(s))

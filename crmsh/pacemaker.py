@@ -252,7 +252,7 @@ class RngSchema(Schema):
     def get_sub_rng_nodes(self, grammar, rng_node):
         sub_rng_nodes = []
         for child_node in rng_node.iterchildren():
-            if not isinstance(child_node.tag, basestring):
+            if not isinstance(child_node.tag, str):
                 continue
             local_tag = get_local_tag(child_node)
             if local_tag == "ref":
