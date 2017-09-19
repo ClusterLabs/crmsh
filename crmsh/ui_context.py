@@ -332,7 +332,10 @@ class Context(object):
         '''
         ok = self.current_level().end_game()
         if options.interactive and not options.batch:
-            print("bye")
+            if self.command_name != "help":
+                print("bye")
+            else:
+                utils.ext_cmd("reset")
         if ok is False and rc == 0:
             rc = 1
         sys.exit(rc)
