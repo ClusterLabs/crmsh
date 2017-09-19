@@ -26,6 +26,19 @@ from .msg import common_warn, common_info, common_debug, common_err, err_buf
 mcast_regrex = r'2(?:2[4-9]|3\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d?|0)){3}'
 
 
+def to_ascii(s):
+    """Convert the bytes string to a ASCII string
+    Usefull to remove accent (diacritics)"""
+    if s is None:
+        return s
+    if isinstance(s, str):
+        return s
+    try:
+        return str(s, 'utf-8')
+    except UnicodeDecodeError:
+        return s
+
+
 def memoize(function):
     "Decorator to invoke a function once only for any argument"
     memoized = {}
