@@ -90,9 +90,9 @@ class Cluster(command.UI):
         '''
         Stops the cluster services on this node
         '''
-        rc, out, err = utils.get_stdout_stderr('service pacemaker stop')
+        rc, out, err = utils.get_stdout_stderr('service corosync stop')
         if rc != 0:
-            context.fatal_error("Failed to stop pacemaker service: %s" % (err))
+            context.fatal_error("Failed to stop corosync service: %s" % (err))
         err_buf.info("Cluster services stopped")
 
         # TODO: optionally stop services on all nodes or specific node
