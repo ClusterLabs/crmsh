@@ -958,12 +958,14 @@ def get_pe_inputs():
             os.symlink(f, os.path.join(flist_dir, os.path.basename(f)))
         log_debug("found %d pengine input files in %s" % (len(flist), pe_dir))
 
-    if len(flist) <= 20:
-        if not constants.SKIP_LVL:
-            for f in flist:
-                pe_to_dot(os.path.join(flist_dir, os.path.basename(f)))
+        if len(flist) <= 20:
+            if not constants.SKIP_LVL:
+                for f in flist:
+                    pe_to_dot(os.path.join(flist_dir, os.path.basename(f)))
+        else:
+            log_debug("too many PE inputs to create dot files")
     else:
-        log_debug("too many PE inputs to create dot files")
+        log_debug("Nothing found for the giving time")
 
 
 def get_peer_ip():
@@ -1478,11 +1480,6 @@ def start_slave_collector(node, arg_str):
         for item in arg_str.split():
             cmd += " {}".format(str(item))
         _, out = crmutils.get_stdout(cmd)
-
-        cmd = r"(cd {} && tar xf -)".format(constants.WORKDIR)
-        # out's type is str, so need eval
-        crmutils.get_stdout(cmd, input_s=eval(out))
-
     else:
         cmd = r'ssh {} {} "{} hb_report __slave"'.\
               format(constants.SSH_OPTS, node,
@@ -1500,7 +1497,13 @@ def start_slave_collector(node, arg_str):
                     log_warning(err)
                 break
 
-        cmd = r"(cd {} && tar xf -)".format(constants.WORKDIR)
+    cmd = r"(cd {} && tar xf -)".format(constants.WORKDIR)
+    # typeof out here will always "str"
+    # input_s of get_stdout will always need bytes
+    # different situation depend on whether found pe file
+    if out.startswith("b'"):
+        crmutils.get_stdout(cmd, input_s=eval(out))
+    else:
         crmutils.get_stdout(cmd, input_s=out.encode('utf-8'))
 
 
