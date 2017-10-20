@@ -52,7 +52,14 @@ def get_cluster_name():
     else:
         cluster_name = cib_factory.get_property('cluster-name')
     return cluster_name
-    
+
+
+def valid_ip(addr):
+    if not utils.valid_ip_addr(addr):
+        if not utils.valid_ip_addr(addr, 6):
+            return False
+    return True
+
 
 class Cluster(command.UI):
     '''
@@ -435,7 +442,15 @@ If stage is not specified, each stage will be invoked in sequence.
         if clusters is None:
             return None
         try:
-            return dict([re.split('[=:]+', o) for o in re.split('[ ,;]+', clusters)])
+            res = dict([re.split('[=:]+', o) for o in re.split('[ ,;]+', clusters)])
+            if len(res) < 2:
+                err_buf.error("Geo cluster must have two sites")
+                return None
+            for k, v in list(res.items()):
+                if not valid_ip(v):
+                    err_buf.error("Invalid IP format for cluster {}".format(k))
+                    return None
+            return res
         except TypeError:
             return None
         except ValueError:
