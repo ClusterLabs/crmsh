@@ -573,6 +573,9 @@ Cluster Description
         if options.help:
             parser.print_help()
             return
+        if options.other is None:
+            parser.error("The --cluster-node argument is required.")
+            return False
         bootstrap.bootstrap_arbitrator(options.quiet, options.yes_to_all, options.other, ui_context=context)
         return True
 
