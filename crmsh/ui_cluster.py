@@ -18,6 +18,9 @@ class OptParser(optparse.OptionParser):
     def format_epilog(self, formatter):
         return self.epilog or ""
 
+    def error(self, msg):
+        self.print_usage()
+        err_buf.error(msg)
 
 def _remove_completer(args):
     try:
@@ -485,16 +488,19 @@ Cluster Description
             if options.clusters is None:
                 errs.append("The --clusters argument is required.")
             parser.error(" ".join(errs))
+            return False
 
         clustermap = self._parse_clustermap(options.clusters)
         if clustermap is None:
             parser.error("Invalid cluster description format")
+            return False
         ticketlist = []
         if options.tickets is not None:
             try:
                 ticketlist = [t for t in re.split('[ ,;]+', options.tickets)]
             except ValueError:
                 parser.error("Invalid ticket list")
+                return False
         bootstrap.bootstrap_init_geo(options.quiet, options.yes_to_all, options.arbitrator, clustermap, ticketlist, ui_context=context)
         return True
 
@@ -525,9 +531,11 @@ Cluster Description
             errs.append("The --clusters argument is required.")
         if len(errs) > 0:
             parser.error(" ".join(errs))
+            return False
         clustermap = self._parse_clustermap(options.clusters)
         if clustermap is None:
             parser.error("Invalid cluster description format")
+            return False
         bootstrap.bootstrap_join_geo(options.quiet, options.yes_to_all, options.node, clustermap, ui_context=context)
         return True
 
