@@ -922,7 +922,7 @@ class Report(object):
         self.manage_excludes("save", p)
         fname = os.path.join(sdir, self.state_file)
         try:
-            f = open(fname, "wb")
+            f = open(fname, "wt")
         except IOError as msg:
             common_err("Failed to save state: %s" % (msg))
             return False
