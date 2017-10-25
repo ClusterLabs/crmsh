@@ -686,7 +686,7 @@ def fix_node_ids(node, oldnode):
         'alerts': 'alert',
         }
 
-    idless = set(['operations', 'fencing-topology'])
+    idless = set(['operations', 'fencing-topology', 'network', 'docker', 'rkt', 'storage'])
     isref = set(['resource_ref', 'obj_ref', 'crmsh-ref'])
 
     def needs_id(node):
@@ -965,6 +965,17 @@ class CibObject(object):
             ret += "%s " % (nvpair_format("$id", node_id))
         elif idref is not None:
             ret += "%s " % (nvpair_format("$id-ref", idref))
+
+        if node.tag in ["docker", "network"]:
+            for item in node.keys():
+                ret += "%s " % nvpair_format(item, node.get(item))
+        if node.tag == "primitive":
+            ret += node.get('id')
+        for _type in ["port-mapping", "storage-mapping"]:
+            for c in node.iterchildren(_type):
+                ret += "%s " % _type
+                for item in c.keys():
+                    ret += "%s " % nvpair_format(item, c.get(item))
 
         score = node.get("score")
         if score:
@@ -1630,6 +1641,29 @@ class CibContainer(CibObject):
             child_rsc.repr_gv(sg_obj, from_grp=True)
 
 
+class CibBundle(CibObject):
+    '''
+    bundle type resource
+    '''
+    set_names = {
+        "instance_attributes": "params",
+        "meta_attributes": "meta",
+        "docker": "docker",
+        "network": "network",
+        "storage": "storage",
+        "primitive": "primitive",
+        "meta": "meta"
+    }
+
+    def _repr_cli_head(self, format_mode):
+        s = clidisplay.keyword(self.obj_type)
+        ident = clidisplay.ident(self.obj_id)
+        return "%s %s" % (s, ident)
+
+    def _repr_cli_child(self, c, format_mode):
+        return self._attr_set_str(c)
+
+
 def _check_if_constraint_ref_is_child(obj):
     """
     Used by check_sanity for constraints to verify
@@ -2161,6 +2195,7 @@ cib_object_map = {
     "clone": ("clone", CibContainer, "resources"),
     "master": ("ms", CibContainer, "resources"),
     "template": ("rsc_template", CibPrimitive, "resources"),
+    "bundle": ("bundle", CibBundle, "resources"),
     "rsc_location": ("location", CibLocation, "constraints"),
     "rsc_colocation": ("colocation", CibSimpleConstraint, "constraints"),
     "rsc_order": ("order", CibSimpleConstraint, "constraints"),

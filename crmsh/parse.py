@@ -615,6 +615,10 @@ class BaseParser(object):
         oplist = olist([op for op in name_map if op.lower() in ('operations', 'op')])
         for op in oplist:
             del name_map[op]
+        bundle_list = olist([op for op in name_map if op.lower()
+                            in ('docker', 'rkt', 'network', 'port-mapping', 'storage', 'primitive')])
+        for bl in bundle_list:
+            del name_map[bl]
         initial = True
         while self.has_tokens():
             t = self.current_token().lower()
@@ -622,7 +626,11 @@ class BaseParser(object):
                 initial = False
                 if t in oplist:
                     self.match_operations(out, t == 'operations')
+                if t in bundle_list:
+                    self.match_container(out, t)
                 else:
+                    if bundle_list:
+                        terminator = ['network', 'storage', 'primitive']
                     for attr_list in self.match_attr_lists(name_map, terminator=terminator):
                         out.append(attr_list)
             elif initial:
@@ -633,6 +641,34 @@ class BaseParser(object):
                     out.append(attr_list)
             else:
                 break
+
+    def match_container(self, out, _type):
+        container_node = None
+        self.match(_type)
+        all_attrs = self.match_nvpairs(minpairs=0, terminator=['network', 'storage', 'meta', 'primitive'])
+
+        if _type != "primitive":
+            exist_node = out.find(_type)
+            if exist_node is None:
+                container_node = xmlutil.new(_type)
+            else:
+                container_node = exist_node
+
+            child_flag = False
+            for nvp in all_attrs:
+                if nvp.get('name') in ['port-mapping', 'storage-mapping']:
+                    inst_attrs = xmlutil.child(container_node, nvp.get('name'))
+                    child_flag = True
+                    continue
+                if child_flag:
+                    inst_attrs.set(nvp.get('name'), nvp.get('value'))
+                else:
+                    container_node.set(nvp.get('name'), nvp.get('value'))
+            out.append(container_node)
+
+        else:
+            for nvp in all_attrs:
+                xmlutil.child(out, 'crmsh-ref', id=nvp.get('name'))
 
     def match_op(self, out, pfx='op'):
         """
@@ -733,7 +769,7 @@ def parse_node(self, cmd):
     return out
 
 
-@parser_for('primitive', 'group', 'clone', 'ms', 'master', 'rsc_template')
+@parser_for('primitive', 'group', 'clone', 'ms', 'master', 'rsc_template', 'bundle')
 class ResourceParser(BaseParser):
     def match_ra_type(self, out):
         "[<class>:[<provider>:]]<type>"
@@ -882,6 +918,19 @@ class ResourceParser(BaseParser):
                              implicit_initial='params')
         for child in children:
             xmlutil.child(out, 'crmsh-ref', id=child)
+        return out
+
+    def parse_bundle(self):
+        out = xmlutil.new('bundle')
+        out.set('id', self.match_identifier())
+        xmlutil.maybe_set(out, 'description', self.try_match_description())
+        self.match_arguments(out, {'docker': 'docker',
+                                   'rkt': 'rkt',
+                                   'network': 'network',
+                                   'port-mapping': 'port-mapping',
+                                   'storage': 'storage',
+                                   'meta': 'meta_attributes',
+                                   'primitive': 'primitive'})
         return out
 
 
