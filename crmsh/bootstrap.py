@@ -1,5 +1,3 @@
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2016 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 #
@@ -14,10 +12,6 @@ from __future__ import unicode_literals
 # TODO: Make csync2 usage optional
 # TODO: Configuration file for bootstrap?
 
-from builtins import next
-from builtins import str
-from builtins import range
-from builtins import object
 import os
 import sys
 import random
@@ -561,7 +555,7 @@ def init_cluster_local():
     pass_msg = ""
     if ps not in ("P", "PS"):
         log(': Resetting password of hacluster user')
-        rc, outp, errp = utils.get_stdout_stderr("passwd hacluster", input_s="linux\nlinux\n")
+        rc, outp, errp = utils.get_stdout_stderr("passwd hacluster", input_s=b"linux\nlinux\n")
         if rc != 0:
             warn("Failed to reset password of hacluster user: %s" % (outp + errp))
         else:
@@ -1505,7 +1499,8 @@ def join_ssh_merge(_cluster_node):
         if isinstance(result, parallax.Error):
             warn("Failed to get known_hosts from {}: {}".format(host, str(result)))
         else:
-            known_hosts_new.update((result[1] or "").splitlines())
+            if result[1]:
+                known_hosts_new.update((utils.to_ascii(result[1]) or "").splitlines())
     if known_hosts_new:
         hoststxt = "\n".join(sorted(known_hosts_new))
         tmpf = utils.str2tmp(hoststxt)

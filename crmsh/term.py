@@ -1,13 +1,8 @@
-from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
-from builtins import zip
-from builtins import range
-from builtins import object
 import sys
 import re
-
 # from: http://code.activestate.com/recipes/475116/
 
 # A module that can be used to portably generate formatted output to
@@ -79,7 +74,10 @@ _ANSICOLORS = "BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE".split()
 
 def _tigetstr(cap_name):
     import curses
-    cap = curses.tigetstr(cap_name) or ''
+    if not curses.tigetstr(cap_name):
+        return None
+    from .utils import to_ascii
+    cap = to_ascii(curses.tigetstr(cap_name)) or ''
 
     # String capabilities can include "delays" of the form "$<2>".
     # For any modern terminal, we should be able to just ignore
@@ -106,6 +104,7 @@ def _tigetstr(cap_name):
 
 def _lookup_caps():
     import curses
+    from .utils import to_ascii
 
     # Look up numeric capabilities.
     colors.COLS = curses.tigetnum('cols')
@@ -118,19 +117,19 @@ def _lookup_caps():
     set_fg = _tigetstr('setf')
     if set_fg:
         for i, color in zip(list(range(len(_COLORS))), _COLORS):
-            setattr(colors, color, curses.tparm(set_fg, i) or '')
+            setattr(colors, color, to_ascii(curses.tparm(set_fg.encode('utf-8'), i)) or '')
     set_fg_ansi = _tigetstr('setaf')
     if set_fg_ansi:
         for i, color in zip(list(range(len(_ANSICOLORS))), _ANSICOLORS):
-            setattr(colors, color, curses.tparm(set_fg_ansi, i) or '')
+            setattr(colors, color, to_ascii(curses.tparm(set_fg_ansi.encode('utf-8'), i)) or '')
     set_bg = _tigetstr('setb')
     if set_bg:
         for i, color in zip(list(range(len(_COLORS))), _COLORS):
-            setattr(colors, 'BG_'+color, curses.tparm(set_bg, i) or '')
+            setattr(colors, 'BG_'+color, to_ascii(curses.tparm(set_bg.encode('utf-8'), i)) or '')
     set_bg_ansi = _tigetstr('setab')
     if set_bg_ansi:
         for i, color in zip(list(range(len(_ANSICOLORS))), _ANSICOLORS):
-            setattr(colors, 'BG_'+color, curses.tparm(set_bg_ansi, i) or '')
+            setattr(colors, 'BG_'+color, to_ascii(curses.tparm(set_bg_ansi.encode('utf-8'), i)) or '')
 
 
 def init():

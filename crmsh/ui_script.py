@@ -1,12 +1,7 @@
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
 
-from builtins import str
-from past.builtins import basestring
-from builtins import object
 import sys
 
 try:
@@ -365,7 +360,7 @@ class Script(command.UI):
                     script[k] = flatten(v)
                 elif isinstance(v, tuple) or isinstance(v, list):
                     script[k] = [flatten(vv) for vv in v]
-                elif isinstance(v, basestring):
+                elif isinstance(v, str):
                     script[k] = v.strip()
 
             return script

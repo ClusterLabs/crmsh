@@ -1,13 +1,6 @@
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
-from future import standard_library
-standard_library.install_aliases()
-from builtins import str
-from past.builtins import basestring
-from builtins import object
 import copy
 from lxml import etree
 import os
@@ -616,7 +609,7 @@ class CibObjectSetRaw(CibObjectSet):
             if 'value' in nvp.attrib:
                 nvp.set('value', obscured(nvp.get('name'), nvp.get('value')))
 
-        s = etree.tostring(cib_elem, pretty_print=True)
+        s = xml_tostring(cib_elem, pretty_print=True)
         return '<?xml version="1.0" ?>\n' + s
 
     def _get_id(self, node):
@@ -829,7 +822,7 @@ def parse_cli_to_xml(cli, oldnode=None):
     """
     node = None
     comments = []
-    if isinstance(cli, basestring):
+    if isinstance(cli, str):
         for s in lines2cli(cli):
             node = parse.parse(s, comments=comments)
     else:  # should be a pre-tokenized list
@@ -2625,7 +2618,7 @@ class CibFactory(object):
             # now increase the epoch by 1
             self.bump_epoch()
         self._set_cib_attributes(self.cib_elem)
-        cib_s = etree.tostring(self.cib_orig, pretty_print=True)
+        cib_s = xml_tostring(self.cib_orig, pretty_print=True)
         tmpf = str2tmp(cib_s, suffix=".xml")
         if not tmpf or not ensure_sudo_readable(tmpf):
             return False
@@ -2651,7 +2644,7 @@ class CibFactory(object):
             e = etree.fromstring(cib_diff)
             for tag in e.xpath("./version/*[self::target or self::source]"):
                 tag.attrib.clear()
-            cib_diff = etree.tostring(e)
+            cib_diff = xml_tostring(e)
         # for v1 diffs, fall back to non-patching if
         # any containers are modified, else strip the digest
         if "<diff" in cib_diff and "digest=" in cib_diff:
@@ -2661,10 +2654,10 @@ class CibFactory(object):
             for tag in e.xpath("/diff"):
                 if "digest" in tag.attrib:
                     del tag.attrib["digest"]
-            cib_diff = etree.tostring(e)
+            cib_diff = xml_tostring(e)
         common_debug("Diff: %s" % (cib_diff))
         rc = pipe_string("%s %s" % (cib_piped, cibadmin_opts),
-                         cib_diff)
+                         cib_diff.encode('utf-8'))
         if rc != 0:
             update_err("cib", cibadmin_opts, cib_diff, rc)
             return False
@@ -2737,7 +2730,7 @@ class CibFactory(object):
             return True
         if cib is None:
             cib = read_cib(cibdump2elem)
-        elif isinstance(cib, basestring):
+        elif isinstance(cib, str):
             cib = cibtext2elem(cib)
         if not self._import_cib(cib):
             return False
@@ -3346,7 +3339,7 @@ class CibFactory(object):
         if not self.is_cib_sane():
             common_debug("create_from_cli (%s): is_cib_sane() failed" % (cli))
             return None
-        if isinstance(cli, basestring) or isinstance(cli, list):
+        if isinstance(cli, str) or isinstance(cli, list):
             elem, obj_type, obj_id = parse_cli_to_xml(cli)
         else:
             elem, obj_type, obj_id = postprocess_cli(cli)

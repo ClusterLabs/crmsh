@@ -1,6 +1,3 @@
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
@@ -9,11 +6,6 @@ from __future__ import unicode_literals
 #   Mostly, what these functions do is store extra metadata
 #   inside the functions.
 
-from builtins import str
-from builtins import range
-from past.builtins import basestring
-from builtins import object
-from past.utils import old_div
 import inspect
 from . import help as help_module
 from . import ui_utils
@@ -106,7 +98,7 @@ def skill_level(new_level):
         def do_rmrf(self, cmd, args):
             ...
     '''
-    if isinstance(new_level, basestring):
+    if isinstance(new_level, str):
         levels = {'operator': 0, 'administrator': 1, 'expert': 2}
         if new_level.lower() not in levels:
             raise ValueError("Unknown skill level: " + new_level)
@@ -345,7 +337,7 @@ at the current level.
             max_width += 2   
 
         colnum = 3
-        rownum = old_div(len(res),colnum)
+        rownum = len(res) // colnum
         for i in range(rownum):
             for x in res[i::rownum]:
                 print("%-0*s" % (max_width, x), end=' ')
@@ -460,7 +452,7 @@ Examples:
         def get_if_command(attr):
             "Return the named attribute if it's a command"
             child = getattr(cls, attr)
-            return child if attr.startswith('do_') and inspect.ismethod(child) else None
+            return child if attr.startswith('do_') and inspect.isfunction(child) else None
 
         def add_aliases(children, info):
             "Add any aliases for command to child map"

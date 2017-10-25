@@ -1,13 +1,7 @@
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2016 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
-from builtins import zip
-from builtins import str
-from past.builtins import basestring
-from builtins import object
 import os
 import subprocess
 from lxml import etree, doctestcompare
@@ -23,7 +17,7 @@ from .msg import common_err, common_error, common_warn, common_debug, cib_parse_
 from . import userdir
 from .utils import add_sudo, str2file, str2tmp, get_boolean
 from .utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
-from .utils import olist, get_cib_in_use, get_tempdir
+from .utils import olist, get_cib_in_use, get_tempdir, to_ascii
 
 
 def xmlparse(f):
@@ -80,7 +74,7 @@ def sudocall(cmd):
     try:
         outp, errp = p.communicate()
         p.wait()
-        return p.returncode, outp, errp
+        return p.returncode, to_ascii(outp), to_ascii(errp)
     except IOError as msg:
         common_err("running %s: %s" % (cmd, msg))
         return None, None, None
@@ -826,7 +820,7 @@ def get_rsc_operations(rsc_node):
 def make_sort_map(*order):
     m = {}
     for i, o in enumerate(order):
-        if isinstance(o, basestring):
+        if isinstance(o, str):
             m[o] = i
         else:
             for k in o:
@@ -864,7 +858,7 @@ def processing_sort(nl):
     TODO: if sort_elements is disabled, only sort to resolve inter-dependencies.
     '''
     def sort_elements(k):
-        return _sort_xml_order.get(k.tag, _SORT_LAST), k.get('id')
+        return _sort_xml_order.get(k.tag, _SORT_LAST)
 
     def sort_type(k):
         return _sort_xml_order.get(k.tag, _SORT_LAST)
@@ -1232,7 +1226,7 @@ def xml_equals_unordered(a, b):
         return False
 
     def tagflat(x):
-        return isinstance(x.tag, basestring) and x.tag or x.text
+        return isinstance(x.tag, str) and x.tag or x.text
 
     def sortby(v):
         if v.tag == 'primitive':

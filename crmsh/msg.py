@@ -1,11 +1,6 @@
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
-from builtins import input
-from past.builtins import basestring
-from builtins import object
 import sys
 from . import config
 from . import clidisplay
@@ -177,7 +172,7 @@ def syntax_err(s, token='', context='', msg=''):
         err += context
     if msg:
         err += ": %s" % (msg)
-    if isinstance(s, basestring):
+    if isinstance(s, str):
         err += " parsing '%s'" % (s)
     elif token:
         err += " near <%s> parsing '%s'" % (token, ' '.join(s))

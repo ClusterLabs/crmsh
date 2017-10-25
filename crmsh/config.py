@@ -3,13 +3,7 @@
 '''
 Holds user-configurable options.
 '''
-from __future__ import unicode_literals
 
-from future import standard_library
-standard_library.install_aliases()
-from builtins import str
-from past.builtins import basestring
-from builtins import object
 import os
 import re
 try:
@@ -264,6 +258,14 @@ DEFAULTS = {
         'id_reference': opt_color('green'),
         'score': opt_color('magenta'),
         'ticket': opt_color('magenta'),
+    },
+    'report': {
+        'from_time': opt_string('-12H'),
+        'compress': opt_boolean('yes'),
+        'speed_up': opt_boolean('no'),
+        'collect_extra_logs': opt_string('/var/log/messages /var/log/pacemaker.log'),
+        'remove_exist_dest': opt_boolean('no'),
+        'single_node': opt_boolean('no')
     }
 }
 
@@ -275,7 +277,7 @@ def _stringify(val):
         return 'true'
     elif val is False:
         return 'false'
-    elif isinstance(val, basestring):
+    elif isinstance(val, str):
         return val
     else:
         return str(val)
@@ -439,17 +441,15 @@ load()
 core = _Section('core')
 path = _Section('path')
 color = _Section('color')
+report = _Section('report')
 
 
 def load_version():
     version = 'dev'
     versioninfo_file = os.path.join(path.sharedir, 'version')
     if os.path.isfile(versioninfo_file):
-        v = open(versioninfo_file)
-        try:
-            version = v.next().strip() or version
-        except StopIteration:
-            pass
+        with open(versioninfo_file) as f:
+            version = f.readline().strip() or version
     return version
 
 

@@ -4,7 +4,6 @@
 '''
 Session-only options (not saved).
 '''
-from __future__ import unicode_literals
 
 interactive = False
 batch = False

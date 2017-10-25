@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 

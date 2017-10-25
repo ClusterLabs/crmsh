@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 # Copyright (C) 2014 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
@@ -20,7 +19,7 @@ def _prettify(line, indent=0):
 
 
 def verify(cib):
-    rc, _, stderr = utils.get_stdout_stderr(cib_verify, cib)
+    rc, _, stderr = utils.get_stdout_stderr(cib_verify, cib.encode('utf-8'))
     for i, line in enumerate(line for line in stderr.split('\n') if line):
         if i == 0:
             err_buf.error(_prettify(line, 0))

@@ -1,5 +1,3 @@
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2009 Raymond Hettinger
 
 #                          *** MIT License ***
@@ -23,8 +21,6 @@ from __future__ import unicode_literals
 
 # {{{ http://code.activestate.com/recipes/576694/ (r7)
 
-from builtins import next
-from builtins import range
 import collections
 
 KEY, PREV, NEXT = list(range(3))

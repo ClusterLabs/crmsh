@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 # Copyright (c) 2009 Raymond Hettinger
 #
 # Permission is hereby granted, free of charge, to any person
@@ -21,7 +20,6 @@ from __future__ import unicode_literals
 #     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 #     OTHER DEALINGS IN THE SOFTWARE.
 
-from builtins import zip
 try:
     from collections import OrderedDict
 except ImportError:

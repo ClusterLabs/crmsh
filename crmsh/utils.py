@@ -1,17 +1,6 @@
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
-from future import standard_library
-standard_library.install_aliases()
-from builtins import input
-from builtins import map
-from builtins import str
-from builtins import range
-from builtins import object
-from past.utils import old_div
 import os
 import sys
 from tempfile import mkstemp
@@ -35,6 +24,19 @@ from .msg import common_warn, common_info, common_debug, common_err, err_buf
 
 
 mcast_regrex = r'2(?:2[4-9]|3\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d?|0)){3}'
+
+
+def to_ascii(s):
+    """Convert the bytes string to a ASCII string
+    Usefull to remove accent (diacritics)"""
+    if s is None:
+        return s
+    if isinstance(s, str):
+        return s
+    try:
+        return str(s, 'utf-8')
+    except UnicodeDecodeError:
+        return s
 
 
 def memoize(function):
@@ -382,7 +384,7 @@ def filter_string(cmd, s, stderr_on=True, shell=True):
     try:
         ret = p.communicate(s)
         if stderr_on == 'stdout':
-            outp = "\n".join(ret)
+            outp = b"\n".join(ret)
         else:
             outp = ret[0]
         p.wait()
@@ -395,14 +397,15 @@ def filter_string(cmd, s, stderr_on=True, shell=True):
     except Exception as msg:
         common_err(msg)
         common_info("from: %s" % cmd)
-    return rc, outp
+    return rc, to_ascii(outp)
 
 
-def str2tmp(s, suffix=".pcmk"):
+def str2tmp(_str, suffix=".pcmk"):
     '''
     Write the given string to a temporary file. Return the name
     of the file.
     '''
+    s = to_ascii(_str)
     fd, tmp = mkstemp(suffix=suffix)
     try:
         f = os.fdopen(fd, "w")
@@ -483,7 +486,7 @@ def str2file(s, fname):
     '''
     try:
         with open_atomic(fname, 'w') as dst:
-            dst.write(s)
+            dst.write(to_ascii(s))
     except IOError as msg:
         common_err(msg)
         return False
@@ -715,7 +718,7 @@ def get_stdout(cmd, input_s=None, stderr_on=True, shell=True):
                             stdout=subprocess.PIPE,
                             stderr=stderr)
     stdout_data, stderr_data = proc.communicate(input_s)
-    return proc.returncode, stdout_data.strip()
+    return proc.returncode, to_ascii(stdout_data).strip()
 
 
 def get_stdout_stderr(cmd, input_s=None, shell=True):
@@ -730,7 +733,7 @@ def get_stdout_stderr(cmd, input_s=None, shell=True):
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
     stdout_data, stderr_data = proc.communicate(input_s)
-    return proc.returncode, stdout_data.strip(), stderr_data.strip()
+    return proc.returncode, to_ascii(stdout_data).strip(), to_ascii(stderr_data).strip()
 
 
 def stdout2list(cmd, stderr_on=True, shell=True):
@@ -798,7 +801,7 @@ def wait4dc(what="", show_progress=True):
         delaymsec = crm_msec(delay)
         if delaymsec > 0:
             common_info("The crmd-transition-delay is configured. Waiting %d msec before check DC status." % delaymsec)
-            time.sleep(old_div(delaymsec, 1000))
+            time.sleep(delaymsec // 1000)
     cnt = 0
     output_started = 0
     init_sleep = 0.25
@@ -936,7 +939,7 @@ def crm_msec(t):
         mult, div = convtab[q]
     except KeyError:
         return -1
-    return old_div((int(r.group(1))*mult),div)
+    return (int(r.group(1))*mult) // div
 
 
 def crm_time_cmp(a, b):
@@ -1013,7 +1016,7 @@ def is_process(s):
     for pid in pids:
         try:
             cmdline = open(join('/proc', pid, 'cmdline'), 'rb').read()
-            procname = basename(cmdline.replace('\x00', ' ').split(' ')[0])
+            procname = basename(to_ascii(cmdline).replace('\x00', ' ').split(' ')[0])
             if procname == s:
                 return True
         except os.error:
@@ -1085,7 +1088,7 @@ def need_pager(s, w, h):
     for l in s.split('\n'):
         # need to remove color codes
         l = re.sub(r'\${\w+}', '', l)
-        cnt += int(ceil(old_div((len(l) + 0.5),w)))
+        cnt += int(ceil((len(l) + 0.5) / w))
         if cnt >= h:
             return True
     return False
@@ -1118,7 +1121,7 @@ def page_string(s):
     elif not config.core.pager or not can_ask() or options.batch:
         print(term_render(s))
     else:
-        pipe_string(get_pager_cmd(), term_render(s))
+        pipe_string(get_pager_cmd(), term_render(s).encode('utf-8'))
 
 
 def page_gen(g):
@@ -1165,11 +1168,11 @@ def multicolumn(l):
     for s in l:
         if len(s) > max_len:
             max_len = len(s)
-    cols = old_div(w,(max_len + min_gap))  # approx.
+    cols = w // (max_len + min_gap)  # approx.
     if not cols:
         cols = 1
-    col_len = old_div(w,cols)
-    for i in range(old_div(len(l),cols) + 1):
+    col_len = w // cols
+    for i in range(len(l) // cols + 1):
         s = ''
         for j in range(i * cols, (i + 1) * cols):
             if not j < len(l):
@@ -1252,7 +1255,7 @@ def total_seconds(td):
     if hasattr(datetime.timedelta, 'total_seconds'):
         return td.total_seconds()
     else:
-        return old_div((td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6), 10**6)
+        return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) // 10**6
 
 
 def datetime_to_timestamp(dt):

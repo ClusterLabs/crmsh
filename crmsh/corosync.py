@@ -4,12 +4,7 @@
 Functions that abstract creating and editing the corosync.conf
 configuration file, and also the corosync-* utilities.
 '''
-from __future__ import print_function
-from __future__ import unicode_literals
 
-from builtins import str
-from builtins import range
-from builtins import object
 import os
 import re
 import socket

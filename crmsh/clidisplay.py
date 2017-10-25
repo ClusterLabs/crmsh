@@ -4,7 +4,6 @@
 """
 Display output for various syntax elements.
 """
-from __future__ import unicode_literals
 
 from contextlib import contextmanager
 

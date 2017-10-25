@@ -1,10 +1,6 @@
-from __future__ import unicode_literals
 # Copyright (C) 2009 Yan Gao <ygao@novell.com>
 # See COPYING for license information.
 
-from builtins import str
-from past.builtins import basestring
-from builtins import object
 import os
 import tempfile
 import copy
@@ -224,7 +220,7 @@ class RngSchema(Schema):
         self.schema_str_docs[filename] = crm_schema
 
         try:
-            grammar = etree.fromstring(crm_schema)
+            grammar = etree.fromstring(crm_schema.encode('utf-8'))
         except Exception as msg:
             raise PacemakerError("Failed to parse the Relax-NG schema: " + str(msg) + schema_info)
 
@@ -256,7 +252,7 @@ class RngSchema(Schema):
     def get_sub_rng_nodes(self, grammar, rng_node):
         sub_rng_nodes = []
         for child_node in rng_node.iterchildren():
-            if not isinstance(child_node.tag, basestring):
+            if not isinstance(child_node.tag, str):
                 continue
             local_tag = get_local_tag(child_node)
             if local_tag == "ref":

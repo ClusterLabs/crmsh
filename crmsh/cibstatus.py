@@ -1,9 +1,6 @@
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
-from builtins import object
 import os
 from lxml import etree
 from . import tmpfiles
@@ -286,7 +283,7 @@ class CibStatus(object):
         '''
         if self.get_status() is None:
             return False
-        page_string(etree.tostring(self.status_node, pretty_print=True))
+        page_string(xmlutil.xml_tostring(self.status_node, pretty_print=True))
         return True
 
     def inject(self, opts):

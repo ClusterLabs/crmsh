@@ -1,10 +1,7 @@
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
-from builtins import object
 import time
 from . import command
 from . import completers as compl
@@ -164,12 +161,12 @@ class CompletionHelp(object):
         if helptxt:
             import readline
             cmdline = readline.get_line_buffer()
-            print("\n%s" % helptxt)
+            print("\n%s" % helptxt, end='')
             if clidisplay.colors_enabled():
-                print("%s%s" % (term.render(clidisplay.prompt_noreadline(constants.prompt)),
+                print("\n%s%s" % (term.render(clidisplay.prompt_noreadline(constants.prompt)),
                                 cmdline), end=' ')
             else:
-                print("%s%s" % (constants.prompt, cmdline), end=' ')
+                print("\n%s%s" % (constants.prompt, cmdline), end=' ')
             cls.laststamp = time.time()
             cls.lasttopic = topic
 
