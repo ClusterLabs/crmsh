@@ -48,7 +48,7 @@ CRM_CACHE_DIR=${localstatedir}/cache/crm
 AC_DEFINE_UNQUOTED(CRM_CACHE_DIR,"$CRM_CACHE_DIR", Where crm shell keeps the cache)
 AC_SUBST(CRM_CACHE_DIR)
 
-AM_PATH_PYTHON
+AM_PATH_PYTHON([3])
 AC_PATH_PROGS(ASCIIDOC, asciidoc)
 
 AM_CONDITIONAL(BUILD_ASCIIDOC, test x"${ASCIIDOC}" != x"")
