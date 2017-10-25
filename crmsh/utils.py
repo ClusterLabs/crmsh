@@ -382,6 +382,9 @@ def filter_string(cmd, s, stderr_on=True, shell=True):
                          stdout=subprocess.PIPE,
                          stderr=stderr)
     try:
+        # bytes expected here
+        if isinstance(s, str):
+            s = s.encode('utf-8')
         ret = p.communicate(s)
         if stderr_on == 'stdout':
             outp = b"\n".join(ret)
