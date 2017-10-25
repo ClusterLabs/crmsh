@@ -36,6 +36,9 @@ def to_ascii(s):
     try:
         return str(s, 'utf-8')
     except UnicodeDecodeError:
+        if config.core.debug or options.regression_tests:
+            import traceback
+            traceback.print_exc()
         return s
 
 
