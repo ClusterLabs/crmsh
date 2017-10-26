@@ -724,12 +724,12 @@ class Report(object):
         '''
         def first_line(l):
             l.seek(0)
-            return l.readline().rstrip()
+            return utils.to_ascii(l.readline()).rstrip()
 
         def last_line(l):
             '''Note: assumes that the last log line isn't > 2048 characters'''
             l.seek(-2048, os.SEEK_END)
-            return l.readlines()[-1].rstrip()
+            return utils.to_ascii(l.readlines()[-1]).rstrip()
 
         if dt:
             return dt

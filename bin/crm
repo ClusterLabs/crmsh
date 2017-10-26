@@ -21,6 +21,10 @@
 
 import sys
 
+if int(sys.version[0]) < 3:
+    sys.stderr.write("Abort: crmsh only support python3\n")
+    sys.exit(-1)
+
 try:
     from crmsh import main
 except ImportError as msg:
