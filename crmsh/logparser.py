@@ -609,7 +609,7 @@ class LogParser(object):
         """
         fn = self._metafile()
         try:
-            with open(fn, 'wb') as f:
+            with open(fn, 'wt') as f:
                 json.dump(self.to_dict(), f, indent=2)
                 crmlog.common_debug("Transition metadata saved to %s" % (fn))
         except IOError as e:

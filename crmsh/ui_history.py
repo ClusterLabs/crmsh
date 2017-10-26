@@ -188,11 +188,11 @@ class History(command.UI):
     def ptest(self, nograph, scores, utilization, actions, verbosity):
         'Send a decompressed self.pe_file to ptest'
         try:
-            s = bz2.decompress(open(self.pe_file).read())
+            bits = bz2.decompress(open(self.pe_file, "rb").read())
         except IOError as msg:
             common_err("open: %s" % msg)
             return False
-        return utils.run_ptest(s, nograph, scores, utilization, actions, verbosity)
+        return utils.run_ptest(bits, nograph, scores, utilization, actions, verbosity)
 
     @command.skill_level('administrator')
     def do_events(self, context):
