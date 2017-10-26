@@ -4,13 +4,13 @@ dist: trusty
 group: deprecated-2017Q2
 language: python
 python:
-  - "2.7_with_system_site_packages"
+  - "3.6_with_system_site_packages"
 
 before_install:
-  - sudo apt-get install -qq automake autoconf chrpath libglib2.0-dev perl net-tools python libtool libxml2-dev bison flex uuid-dev libbz2-dev zlib1g-dev libltdl3-dev libgnutls-dev python-dev libpam0g-dev libncurses5-dev libcorosync-dev libxslt1-dev libdbus-1-dev
+  - sudo apt-get install -qq automake autoconf chrpath libglib2.0-dev perl net-tools python3 libtool libxml2-dev bison flex uuid-dev libbz2-dev zlib1g-dev libltdl3-dev libgnutls-dev python3-dev libpam0g-dev libncurses5-dev libcorosync-dev libxslt1-dev libdbus-1-dev
   - sudo apt-get install -qq heartbeat-dev libheartbeat2-dev
   - sudo apt-get install -qq libqb-dev
-  - sudo apt-get install -y python-lxml python-dateutil python-setuptools python-yaml asciidoc pkg-config
+  - sudo apt-get install -y python3-lxml python3-dateutil python3-setuptools python3-yaml asciidoc pkg-config
   - sudo dpkg -r --force-depends crmsh
   - sudo dpkg -r --force-depends pacemaker
   - wget https://github.com/ClusterLabs/cluster-glue/archive/master.tar.gz && tar xzf master.tar.gz
