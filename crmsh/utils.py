@@ -36,6 +36,9 @@ def to_ascii(s):
     try:
         return str(s, 'utf-8')
     except UnicodeDecodeError:
+        if config.core.debug or options.regression_tests:
+            import traceback
+            traceback.print_exc()
         return s
 
 
@@ -382,6 +385,9 @@ def filter_string(cmd, s, stderr_on=True, shell=True):
                          stdout=subprocess.PIPE,
                          stderr=stderr)
     try:
+        # bytes expected here
+        if isinstance(s, str):
+            s = s.encode('utf-8')
         ret = p.communicate(s)
         if stderr_on == 'stdout':
             outp = b"\n".join(ret)
@@ -1460,14 +1466,15 @@ def get_cib_attributes(cib_f, tag, attr_l, dflt_l):
     val_patt_l = [re.compile('%s="([^"]+)"' % x) for x in attr_l]
     val_l = []
     try:
-        f = open(cib_f).read()
+        f = open(cib_f, "rb").read()
     except IOError as msg:
         common_err(msg)
         return dflt_l
     if os.path.splitext(cib_f)[-1] == '.bz2':
-        cib_s = bz2.decompress(f)
+        cib_bits = bz2.decompress(f)
     else:
-        cib_s = f
+        cib_bits = f
+    cib_s = to_ascii(cib_bits)
     for s in cib_s.split('\n'):
         if s.startswith(open_t):
             i = 0
