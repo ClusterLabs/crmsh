@@ -626,7 +626,7 @@ class LogParser(object):
 
             if meta_mtime >= logf_mtime and time.time() - meta_mtime < _METADATA_CACHE_AGE:
                 try:
-                    with open(fn, 'rb') as f:
+                    with open(fn, 'r') as f:
                         try:
                             if not self.from_dict(json.load(f)):
                                 return False
