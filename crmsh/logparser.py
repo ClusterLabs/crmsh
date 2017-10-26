@@ -33,7 +33,7 @@ def _open_logfile(logfile):
             return bz2.BZ2File(logfile)
         if logfile.endswith(".gz"):
             return gzip.open(logfile)
-        return open(logfile)
+        return open(logfile, "rb")
     except IOError as msg:
         crmlog.common_error("open %s: %s" % (logfile, msg))
         return None
@@ -350,7 +350,7 @@ class LogParser(object):
             line = "a"
             while line != '':
                 spos = log.tell()
-                line = log.readline()
+                line = utils.to_ascii(log.readline())
                 m = startre.search(line)
                 if m:
                     # m.groups() is (transnum1, pefile1, penum1, transnum2, pefile2, penum2) where
@@ -459,7 +459,7 @@ class LogParser(object):
         for f in self.fileobjs:
             f.seek(0)
 
-        lines = [[None, f.readline(), f] for f in self.fileobjs]
+        lines = [[None, utils.to_ascii(f.readline()), f] for f in self.fileobjs]
         for i, line in enumerate(lines):
             if not line[1]:
                 line[0], line[2] = sys.float_info.max, None
@@ -474,7 +474,7 @@ class LogParser(object):
                 break
             if not (self.from_ts and x[0] < self.from_ts):
                 yield x[1]
-            x[1] = x[2].readline()
+            x[1] = utils.to_ascii(x[2].readline())
             if not x[1]:
                 x[0], x[2] = sys.float_info.max, None
             else:
@@ -520,7 +520,7 @@ class LogParser(object):
             for log in eventlogs:
                 for _, f, pos in self.events.get(log, []):
                     self.fileobjs[f].seek(pos)
-                    msg = self.fileobjs[f].readline()
+                    msg = utils.to_ascii(self.fileobjs[f].readline())
                     if any(rx.search(msg) for rx in rxes):
                         ts = logtime.syslog_ts(msg)
                         if not (self.from_ts and ts < self.from_ts) and not (self.to_ts and ts > self.to_ts):
@@ -529,7 +529,7 @@ class LogParser(object):
             for log in eventlogs:
                 for _, f, pos in self.events.get(log, []):
                     self.fileobjs[f].seek(pos)
-                    msg = self.fileobjs[f].readline()
+                    msg = utils.to_ascii(self.fileobjs[f].readline())
                     ts = logtime.syslog_ts(msg)
                     if not (self.from_ts and ts < self.from_ts) and not (self.to_ts and ts > self.to_ts):
                         yield msg
