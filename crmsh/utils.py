@@ -359,6 +359,9 @@ def pipe_string(cmd, s):
         print(".EXT", cmd)
     p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE)
     try:
+        # communicate() expects encoded bytes
+        if isinstance(s, str):
+            s = s.encode('utf-8')
         p.communicate(s)
         p.wait()
         rc = p.returncode
