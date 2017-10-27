@@ -492,7 +492,7 @@ class LogParser(object):
         if event is not None:
             eventlogs = [event]
         else:
-            eventlogs = list(self.events.keys())
+            eventlogs = sorted(list(self.events.keys()))
 
         if nodes:
             rxes = self._build_re(event, nodes)
