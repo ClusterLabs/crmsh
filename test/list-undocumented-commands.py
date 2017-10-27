@@ -2,6 +2,8 @@
 #
 # Script to discover and report undocumented commands.
 
+from __future__ import print_function
+from __future__ import unicode_literals
 from crmsh.ui_root import Root
 from crmsh import help
 
@@ -12,7 +14,7 @@ _IGNORED_COMMANDS = ('help', 'quit', 'cd', 'up', 'ls')
 
 
 def check_help(ui):
-    for name, child in ui.children().iteritems():
+    for name, child in ui.children().items():
         if child.type == 'command':
             try:
                 h = help.help_command(ui.name, name)

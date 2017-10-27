@@ -102,7 +102,7 @@ def date_exp2cli(node):
         for c in node.iterchildren():
             if c.tag in ("duration", "date_spec"):
                 l.extend([nvpair_format(name, c.get(name))
-                          for name in c.keys() if name != 'id'])
+                          for name in list(c.keys()) if name != 'id'])
     return ' '.join(l)
 
 

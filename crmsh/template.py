@@ -102,17 +102,17 @@ class LoadTemplate(object):
     def write_config(self, name):
         try:
             f = open("%s/%s" % (userdir.CRMCONF_DIR, name), "w")
-        except IOError, msg:
+        except IOError as msg:
             common_err("open: %s" % msg)
             return False
-        print >>f, self.generate()
+        print(self.generate(), file=f)
         f.close()
         return True
 
     def load_template(self, tmpl):
         try:
             l = open(os.path.join(config.path.sharedir, 'templates', tmpl)).read().split('\n')
-        except IOError, msg:
+        except IOError as msg:
             common_err("open: %s" % msg)
             return ''
         if not validate_template(l):

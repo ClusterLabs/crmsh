@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 # Copyright (C) 2014 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
@@ -31,9 +33,9 @@ def test_bug41660_1():
 """
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
-    print etree.tostring(obj.node)
+    print(etree.tostring(obj.node))
     data = obj.repr_cli(format_mode=-1)
-    print data
+    print(data)
     exp = 'primitive bug41660 ocf:pacemaker:Dummy meta target-role=Stopped'
     assert data == exp
     assert obj.cli_use_validate()
@@ -77,15 +79,15 @@ def test_bug41660_2():
     #assert data == exp
     #assert obj.cli_use_validate()
 
-    print etree.tostring(obj.node)
+    print(etree.tostring(obj.node))
 
     commit_holder = factory.commit
     try:
         factory.commit = lambda *args: True
         from crmsh.ui_resource import set_deep_meta_attr
-        print "PRE", etree.tostring(obj.node)
+        print("PRE", etree.tostring(obj.node))
         set_deep_meta_attr("libvirtd-clone", "target-role", "Started")
-        print "POST", etree.tostring(obj.node)
+        print("POST", etree.tostring(obj.node))
         eq_(['Started'],
             obj.node.xpath('.//nvpair[@name="target-role"]/@value'))
     finally:
@@ -113,7 +115,7 @@ def test_bug41660_3():
     obj = factory.create_from_node(data)
     assert obj is not None
     data = obj.repr_cli(format_mode=-1)
-    print data
+    print(data)
     exp = 'clone libvirtd-clone libvirtd meta target-role=Stopped'
     assert data == exp
     assert obj.cli_use_validate()
@@ -170,7 +172,7 @@ def test_comments():
 </cib>"""
     elems = etree.fromstring(xml)
     xmlutil.sanitize_cib(elems)
-    assert etree.tostring(elems).count("COMMENT TEXT") == 3
+    assert xmlutil.xml_tostring(elems).count("COMMENT TEXT") == 3
 
 
 @with_setup(setup_func, teardown_func)
@@ -224,11 +226,11 @@ def test_pcs_interop_1():
 
     assert len(elem.xpath(".//meta_attributes/nvpair[@name='target-role']")) == 1
 
-    print "BEFORE:", etree.tostring(elem)
+    print("BEFORE:", etree.tostring(elem))
 
     set_deep_meta_attr_node(elem, 'target-role', 'Stopped')
 
-    print "AFTER:", etree.tostring(elem)
+    print("AFTER:", etree.tostring(elem))
 
     assert len(elem.xpath(".//meta_attributes/nvpair[@name='target-role']")) == 1
 
@@ -251,7 +253,7 @@ end="2014-05-17 17:56:11Z"/>
     obj = factory.create_from_node(data)
     assert obj is not None
     data = obj.repr_cli(format_mode=-1)
-    print "OUTPUT:", data
+    print("OUTPUT:", data)
     exp = 'location cli-prefer-dummy-resource dummy-resource role=Started rule #uname eq x64-4 and date lt "2014-05-17 17:56:11Z"'
     assert data == exp
     assert obj.cli_use_validate()
@@ -267,7 +269,7 @@ def test_order_without_score_kind():
     obj = factory.create_from_node(data)
     assert obj is not None
     data = obj.repr_cli(format_mode=-1)
-    print "OUTPUT:", data
+    print("OUTPUT:", data)
     exp = 'order order-a-b a:promote b:start'
     assert data == exp
     assert obj.cli_use_validate()
@@ -284,7 +286,7 @@ def test_bnc878112():
     obj2 = factory.create_object('group', 'g1', 'p1')
     assert obj2 is True
     obj3 = factory.create_object('group', 'g2', 'p1')
-    print obj3
+    print(obj3)
     assert obj3 is False
 
 
@@ -339,7 +341,7 @@ def test_pengine_test():
     obj = factory.create_from_node(data)
     assert obj is not None
     data = obj.repr_cli(format_mode=-1)
-    print "OUTPUT:", data
+    print("OUTPUT:", data)
     exp = 'primitive rsc1 ocf:pacemaker:Dummy params rule 0: #cluster-name eq clusterA state="/var/run/Dummy-rsc1-clusterA" params rule 0: #cluster-name eq clusterB state="/var/run/Dummy-rsc1-clusterB" op monitor interval=10'
     assert data == exp
     assert obj.cli_use_validate()
@@ -387,7 +389,7 @@ def test_op_role():
     obj = factory.create_from_node(data)
     assert obj is not None
     data = obj.repr_cli(format_mode=-1)
-    print "OUTPUT:", data
+    print("OUTPUT:", data)
     exp = 'primitive rsc2 ocf:pacemaker:Dummy op monitor interval=10 role=Stopped'
     assert data == exp
     assert obj.cli_use_validate()
@@ -406,7 +408,7 @@ def test_nvpair_no_value():
     obj = factory.create_from_node(data)
     assert obj is not None
     data = obj.repr_cli(format_mode=-1)
-    print "OUTPUT:", data
+    print("OUTPUT:", data)
     exp = 'primitive rsc3 Dummy params verbose verbase="" verbese=" "'
     assert data == exp
     assert obj.cli_use_validate()
@@ -448,7 +450,7 @@ def test_quotes():
     obj = factory.create_from_node(data)
     assert obj is not None
     data = obj.repr_cli(format_mode=-1)
-    print "OUTPUT:", data
+    print("OUTPUT:", data)
     exp = 'primitive q1 ocf:pacemaker:Dummy params state="foo\\"foo\\""'
     assert data == exp
     assert obj.cli_use_validate()
@@ -600,7 +602,7 @@ def test_id_collision_breakage_1():
     assert obj is not None
     with clidisplay.nopretty():
         original_cib = obj.repr()
-    print original_cib
+    print(original_cib)
 
     obj = cibconfig.mkset_obj()
     assert obj is not None
@@ -658,7 +660,7 @@ primitive p1 ocf:heartbeat:Dummy \
 
     obj = cibconfig.mkset_obj("g1")
     with clidisplay.nopretty():
-        print obj.repr().strip()
+        print(obj.repr().strip())
         assert obj.repr().strip() == "group g1 p1 p3"
 
     obj = cibconfig.mkset_obj()
@@ -667,10 +669,10 @@ primitive p1 ocf:heartbeat:Dummy \
     assert ok
     obj = cibconfig.mkset_obj()
     with clidisplay.nopretty():
-        print "*** ORIGINAL"
-        print original_cib
-        print "*** NOW"
-        print obj.repr()
+        print("*** ORIGINAL")
+        print(original_cib)
+        print("*** NOW")
+        print(obj.repr())
         assert original_cib == obj.repr()
 
 
@@ -682,7 +684,7 @@ def test_id_collision_breakage_3():
     assert obj is not None
     with clidisplay.nopretty():
         original_cib = obj.repr()
-    print original_cib
+    print(original_cib)
 
     obj = cibconfig.mkset_obj()
     assert obj is not None
@@ -691,11 +693,11 @@ primitive node1 Dummy params fake=something
     """)
     assert ok
 
-    print "** baseline"
+    print("** baseline")
     obj = cibconfig.mkset_obj()
     assert obj is not None
     with clidisplay.nopretty():
-        print obj.repr()
+        print(obj.repr())
 
     obj = cibconfig.mkset_obj()
     assert obj is not None
@@ -703,7 +705,7 @@ primitive node1 Dummy params fake=something
     """, remove=False, method='update')
     assert ok
 
-    print "** end"
+    print("** end")
 
     obj = cibconfig.mkset_obj()
     assert obj is not None
@@ -711,10 +713,10 @@ primitive node1 Dummy params fake=something
     assert ok
     obj = cibconfig.mkset_obj()
     with clidisplay.nopretty():
-        print "*** ORIGINAL"
-        print original_cib
-        print "*** NOW"
-        print obj.repr()
+        print("*** ORIGINAL")
+        print(original_cib)
+        print("*** NOW")
+        print(obj.repr())
         assert original_cib == obj.repr()
 
 
@@ -726,7 +728,7 @@ def test_id_collision_breakage_2():
     assert obj is not None
     with clidisplay.nopretty():
         original_cib = obj.repr()
-    print original_cib
+    print(original_cib)
 
     obj = cibconfig.mkset_obj()
     assert obj is not None
@@ -806,10 +808,10 @@ op_defaults op-options: \
     assert ok
     obj = cibconfig.mkset_obj()
     with clidisplay.nopretty():
-        print "*** ORIGINAL"
-        print original_cib
-        print "*** NOW"
-        print obj.repr()
+        print("*** ORIGINAL")
+        print(original_cib)
+        print("*** NOW")
+        print(obj.repr())
         assert original_cib == obj.repr()
 
 
@@ -872,9 +874,9 @@ def test_bug959895():
 """
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
-    print etree.tostring(obj.node)
+    print(etree.tostring(obj.node))
     data = obj.repr_cli(format_mode=-1)
-    print data
+    print(data)
     exp = 'clone c-bug959895 g-bug959895'
     assert data == exp
     assert obj.cli_use_validate()
@@ -907,9 +909,9 @@ def test_node_util_attr():
 
     data = etree.fromstring(xml)
     obj = factory.create_from_node(data)
-    print etree.tostring(obj.node)
+    print(etree.tostring(obj.node))
     data = obj.repr_cli(format_mode=-1)
-    print data
+    print(data)
     exp = 'node aberfeldy utilization cpu=2 memory=500 attributes standby=on'
     assert data == exp
     assert obj.cli_use_validate()

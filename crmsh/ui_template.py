@@ -141,9 +141,9 @@ class Template(command.UI):
         if name:
             if not self.config_exists(name):
                 return False
-            print self.process(name)
+            print(self.process(name))
         else:
-            print self.process()
+            print(self.process())
 
     @command.skill_level('administrator')
     @command.completers(compl.join(compl.call(utils.listconfigs),
@@ -195,9 +195,9 @@ class Template(command.UI):
         elif templates == "configs":
             utils.multicolumn(utils.listconfigs())
         else:
-            print "Templates:"
+            print("Templates:")
             utils.multicolumn(utils.listtemplates())
-            print "\nConfigurations:"
+            print("\nConfigurations:")
             utils.multicolumn(utils.listconfigs())
 
     def init_dir(self):
@@ -205,7 +205,7 @@ class Template(command.UI):
         if not os.path.isdir(userdir.CRMCONF_DIR):
             try:
                 os.makedirs(userdir.CRMCONF_DIR)
-            except os.error, msg:
+            except os.error as msg:
                 common_err("makedirs: %s" % msg)
 
     def get_depends(self, tmpl):
@@ -214,7 +214,7 @@ class Template(command.UI):
         try:
             templatepath = os.path.join(config.path.sharedir, 'templates', tmpl)
             tf = open(templatepath, "r")
-        except IOError, msg:
+        except IOError as msg:
             common_err("open: %s" % msg)
             return
         l = []
@@ -281,7 +281,7 @@ class Template(command.UI):
         '''Create a cli configuration from the current config'''
         try:
             f = open("%s/%s" % (userdir.CRMCONF_DIR, config or self.curr_conf), 'r')
-        except IOError, msg:
+        except IOError as msg:
             common_err("open: %s" % msg)
             return ''
         l = []
@@ -299,12 +299,12 @@ class Template(command.UI):
             err_buf.incr_lineno()
             if inp.startswith('#'):
                 continue
-            if isinstance(inp, unicode):
+            if isinstance(inp, str):
                 inp = inp.encode('ascii')
             inp = inp.strip()
             try:
                 s = shlex.split(inp)
-            except ValueError, msg:
+            except ValueError as msg:
                 common_err(msg)
                 continue
             while '\n' in s:

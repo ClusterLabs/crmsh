@@ -464,7 +464,7 @@ def call_resource(rsc, cmd, nodes, local_only):
 
     from . import ra
     agent = ra.get_ra(rsc)
-    actions = agent.actions().keys() + ['meta-data', 'validate-all']
+    actions = list(agent.actions().keys()) + ['meta-data', 'validate-all']
 
     if cmd not in actions:
         common_err("action '%s' not supported by %s" % (cmd, agent.ra_string()))

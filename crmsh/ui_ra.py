@@ -76,14 +76,14 @@ class RA(command.UI):
             if c in self.provider_classes:
                 providers = ra.ra_providers_all(c)
                 if providers:
-                    print "%s / %s" % (c, ' '.join(providers))
+                    print("%s / %s" % (c, ' '.join(providers)))
             else:
-                print "%s" % c
+                print("%s" % c)
 
     @command.skill_level('administrator')
     def do_providers(self, context, ra_type, ra_class="ocf"):
         "usage: providers <ra> [<class>]"
-        print ' '.join(ra.ra_providers(ra_type, ra_class))
+        print(' '.join(ra.ra_providers(ra_type, ra_class)))
 
     @command.skill_level('administrator')
     @command.completers(compl.call(ra.ra_classes), lambda args: ra.ra_providers_all(args[1]))
@@ -96,7 +96,7 @@ class RA(command.UI):
         types = ra.ra_types(class_, provider_)
         if options.regression_tests:
             for t in types:
-                print t
+                print(t)
         else:
             utils.multicolumn(types)
 
@@ -121,7 +121,7 @@ class RA(command.UI):
             return False
         try:
             utils.page_string(agent.meta_pretty())
-        except Exception, msg:
+        except Exception as msg:
             context.fatal_error(msg)
 
     @command.skill_level('administrator')

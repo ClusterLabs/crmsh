@@ -161,12 +161,12 @@ class CompletionHelp(object):
         if helptxt:
             import readline
             cmdline = readline.get_line_buffer()
-            print "\n%s" % helptxt
+            print("\n%s" % helptxt, end='')
             if clidisplay.colors_enabled():
-                print "%s%s" % (term.render(clidisplay.prompt_noreadline(constants.prompt)),
-                                cmdline),
+                print("\n%s%s" % (term.render(clidisplay.prompt_noreadline(constants.prompt)),
+                                cmdline), end=' ')
             else:
-                print "%s%s" % (constants.prompt, cmdline),
+                print("\n%s%s" % (constants.prompt, cmdline), end=' ')
             cls.laststamp = time.time()
             cls.lasttopic = topic
 
@@ -240,7 +240,7 @@ def primitive_complete_complex(args):
         "op": _prim_op_completer,
     }
 
-    keywords = completers_set.keys()
+    keywords = list(completers_set.keys())
     if len(args) == 4:  # <cmd> <id> <type> <?>
         return keywords
 
@@ -296,8 +296,8 @@ class CibConfig(command.UI):
     @command.name('_keywords')
     @command.skill_level('administrator')
     def do_keywords(self, context):
-        for k, v in sorted(constants.keywords.iteritems(), key=lambda v: v[0].lower()):
-            print "%-16s %s" % (k, v)
+        for k, v in sorted(iter(constants.keywords.items()), key=lambda v: v[0].lower()):
+            print("%-16s %s" % (k, v))
 
     @command.level(ui_ra.RA)
     def do_ra(self):
@@ -349,15 +349,15 @@ class CibConfig(command.UI):
 
         def print_value(v):
             if truth:
-                print utils.canonical_boolean(v)
+                print(utils.canonical_boolean(v))
             else:
-                print v
+                print(v)
         for p in properties:
             v = cib_factory.get_property_w_default(p)
             if v is not None:
                 print_value(v)
             elif truth:
-                print "false"
+                print("false")
             else:
                 context.fatal_error("%s: Property not set" % (p))
 
@@ -534,7 +534,7 @@ class CibConfig(command.UI):
         return set_obj.import_file(method, url)
 
     @command.skill_level('administrator')
-    @command.completers(compl.choice(gv_types.keys() + ['exportsettings']))
+    @command.completers(compl.choice(list(gv_types.keys()) + ['exportsettings']))
     def do_graph(self, context, *args):
         "usage: graph [<gtype> [<file> [<img_format>]]]"
         if args and args[0] == "exportsettings":
@@ -660,13 +660,13 @@ class CibConfig(command.UI):
     def do_schema(self, context, schema_st=None):
         "usage: schema [<schema>]"
         if not schema_st:
-            print cib_factory.get_schema()
+            print(cib_factory.get_schema())
             return True
         return cib_factory.change_schema(schema_st)
 
     def __conf_object(self, cmd, *args):
         "The configure object command."
-        if cmd in constants.cib_cli_map.values() and \
+        if cmd in list(constants.cib_cli_map.values()) and \
                 not cib_factory.is_elem_supported(cmd):
             common_err("%s not supported by the RNG schema" % cmd)
             return False

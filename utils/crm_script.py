@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from builtins import str
+from past.builtins import basestring
 import os
 import sys
 import getpass
@@ -48,12 +52,12 @@ def output(step_idx):
 
 
 def exit_fail(msg):
-    print >>sys.stderr, msg
+    print(msg, file=sys.stderr)
     sys.exit(1)
 
 
 def exit_ok(data):
-    print json.dumps(data)
+    print(json.dumps(data))
     sys.exit(0)
 
 
@@ -87,7 +91,7 @@ def debug(msg):
                 dbglog.write('%s\n' % (msg))
             import syslog
             syslog.openlog("crmsh", 0, syslog.LOG_USER)
-            syslog.syslog(syslog.LOG_NOTICE, unicode(msg).encode('utf8'))
+            syslog.syslog(syslog.LOG_NOTICE, str(msg).encode('utf8'))
         except:
             pass
 
@@ -174,7 +178,7 @@ def save_template(template, dest, **kwargs):
     try:
         with open(dest, 'w') as f:
             f.write(tmpl)
-    except Exception, e:
+    except Exception as e:
         raise IOError("Failed to write %s from template %s: %s" % (dest, template, e))
     debug("crm_script(save_template): wrote %s" % (dest))
 

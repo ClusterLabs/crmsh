@@ -23,7 +23,7 @@
 
 import collections
 
-KEY, PREV, NEXT = range(3)
+KEY, PREV, NEXT = list(range(3))
 
 
 class OrderedSet(collections.MutableSet):
@@ -96,7 +96,7 @@ class OrderedSet(collections.MutableSet):
 oset = OrderedSet
 
 if __name__ == '__main__':
-    print OrderedSet('abracadaba')
-    print OrderedSet('simsalabim')
+    print(OrderedSet('abracadaba'))
+    print(OrderedSet('simsalabim'))
 
 # end of http://code.activestate.com/recipes/576694/ }}}

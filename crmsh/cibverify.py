@@ -19,7 +19,7 @@ def _prettify(line, indent=0):
 
 
 def verify(cib):
-    rc, _, stderr = utils.get_stdout_stderr(cib_verify, cib)
+    rc, _, stderr = utils.get_stdout_stderr(cib_verify, cib.encode('utf-8'))
     for i, line in enumerate(line for line in stderr.split('\n') if line):
         if i == 0:
             err_buf.error(_prettify(line, 0))

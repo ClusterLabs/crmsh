@@ -183,7 +183,7 @@ class BaseParser(object):
         tok = self.current_token()
         if not tok:
             return None
-        if isinstance(rx, basestring):
+        if isinstance(rx, str):
             if not rx.endswith('$'):
                 rx = rx + '$'
             self._lastmatch = re.match(rx, tok, re.IGNORECASE)
@@ -206,7 +206,7 @@ class BaseParser(object):
         if not self.try_match(rx):
             if errmsg:
                 self.err(errmsg)
-            elif isinstance(rx, basestring):
+            elif isinstance(rx, str):
                 self.err("Expected " + rx)
             else:
                 self.err("Expected " + rx.pattern.rstrip('$'))
@@ -429,7 +429,7 @@ class BaseParser(object):
         generator which matches attr_lists
         name_map: maps CLI name to XML name
         """
-        to_match = '|'.join(name_map.keys())
+        to_match = '|'.join(list(name_map.keys()))
         if self.try_match(to_match):
             name = self.matched(0).lower()
             yield self.match_attr_list(name, name_map[name], terminator=terminator)
@@ -611,7 +611,7 @@ class BaseParser(object):
         This is so for example: primitive foo Dummy state=1 is accepted when
         params is the implicit initial.
         """
-        names = olist(name_map.keys())
+        names = olist(list(name_map.keys()))
         oplist = olist([op for op in name_map if op.lower() in ('operations', 'op')])
         for op in oplist:
             del name_map[op]
@@ -1171,7 +1171,7 @@ class FencingOrderParser(BaseParser):
             lvl_generator = wrap_levels
 
         out = xmlutil.new('fencing-topology')
-        targets = defaultdict(repeat(1).next)
+        targets = defaultdict(repeat(1).__next__)
         for target, devices in lvl_generator():
             if isinstance(target, tuple):
                 if target[0] is None:
@@ -1314,7 +1314,7 @@ class AclParser(BaseParser):
 
     def _add_rule(self):
         rule = xmlutil.new(self.match(_ACL_RIGHT_RE).lower())
-        eligible_specs = constants.acl_spec_map.values()
+        eligible_specs = list(constants.acl_spec_map.values())
         while self.has_tokens():
             a = self._expand_shortcuts(self.current_token().split(':', 1))
             if len(a) != 2 or a[0] not in eligible_specs:
@@ -1674,10 +1674,11 @@ def parse(s, comments=None):
     if comments is None:
         comments = []
 
-    if isinstance(s, unicode):
+    if isinstance(s, str):
         try:
             s = s.encode('ascii', errors='xmlcharrefreplace')
-        except Exception, e:
+            s = s.decode('utf-8')
+        except Exception as e:
             common_err(e)
             return False
     if isinstance(s, str):
@@ -1687,7 +1688,7 @@ def parse(s, comments=None):
         if s.startswith('xml'):
             try:
                 s = [x for p in lines2cli(s) for x in p.split()]
-            except ValueError, e:
+            except ValueError as e:
                 common_err(e)
                 return False
         else:

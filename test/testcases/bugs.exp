@@ -99,9 +99,9 @@ property cib-bootstrap-options: \
 .TRY Unknown properties
 .INP: configure
 .INP: erase
+INFO: 2: constraint colocation:c2 updated
+INFO: 2: constraint colocation:c2 updated
 INFO: 2: modified location:loc1 from g1 to gr2
-INFO: 2: constraint colocation:c2 updated
-INFO: 2: constraint colocation:c2 updated
 .INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" 	op start requires=nothing 	op monitor interval=60m
 .INP: property SAPHanaSR:     hana_ha1_site_lss_WDF1=4
 .INP: show

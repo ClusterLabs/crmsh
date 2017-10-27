@@ -45,7 +45,7 @@ from .xmlutil import remove_id_used_attributes, get_top_cib_nodes
 from .xmlutil import merge_attributes, is_cib_element, sanity_check_meta
 from .xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
 from .xmlutil import get_rsc_operations, delete_rscref, xml_equals, lookup_node, RscState
-from .xmlutil import cibtext2elem, is_related, check_id_ref
+from .xmlutil import cibtext2elem, is_related, check_id_ref, xml_tostring
 from .cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
 from .cliformat import cli_nvpair, cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
 from .cliformat import simple_rsc_constraint, cli_rule, cli_format
@@ -82,12 +82,12 @@ def mkset_obj(*args):
 
 def set_graph_attrs(gv_obj, obj_type):
     try:
-        for attr, attr_v in constants.graph['*'].iteritems():
+        for attr, attr_v in constants.graph['*'].items():
             gv_obj.new_graph_attr(attr, attr_v)
     except KeyError:
         pass
     try:
-        for attr, attr_v in constants.graph[obj_type].iteritems():
+        for attr, attr_v in constants.graph[obj_type].items():
             gv_obj.new_graph_attr(attr, attr_v)
     except KeyError:
         pass
@@ -95,12 +95,12 @@ def set_graph_attrs(gv_obj, obj_type):
 
 def set_obj_attrs(gv_obj, obj_id, obj_type):
     try:
-        for attr, attr_v in constants.graph['*'].iteritems():
+        for attr, attr_v in constants.graph['*'].items():
             gv_obj.new_attr(obj_id, attr, attr_v)
     except KeyError:
         pass
     try:
-        for attr, attr_v in constants.graph[obj_type].iteritems():
+        for attr, attr_v in constants.graph[obj_type].items():
             gv_obj.new_attr(obj_id, attr, attr_v)
     except KeyError:
         pass
@@ -108,7 +108,7 @@ def set_obj_attrs(gv_obj, obj_id, obj_type):
 
 def set_edge_attrs(gv_obj, edge_id, obj_type):
     try:
-        for attr, attr_v in constants.graph[obj_type].iteritems():
+        for attr, attr_v in constants.graph[obj_type].items():
             gv_obj.new_edge_attr(edge_id, attr, attr_v)
     except KeyError:
         pass
@@ -125,7 +125,7 @@ def fill_nvpairs(name, node, attrs, id_hint):
     subpfx = constants.subpfx_list.get(name, '')
     subpfx = "%s_%s" % (id_hint, subpfx) if subpfx else id_hint
     nvpair_pfx = node.get("id") or subpfx
-    for n, v in attrs.iteritems():
+    for n, v in attrs.items():
         nvpair = etree.SubElement(node, "nvpair", name=n)
         if v is not None:
             nvpair.set("value", v)
@@ -254,11 +254,11 @@ class CibObjectSet(object):
     def _open_url(self, src):
         if src == "-":
             return sys.stdin
-        import urllib2
+        import urllib.request, urllib.error, urllib.parse
         try:
-            ret = urllib2.urlopen(src)
+            ret = urllib.request.urlopen(src)
             return ret
-        except (urllib2.URLError, ValueError):
+        except (urllib.error.URLError, ValueError):
             pass
         try:
             ret = open(src)
@@ -497,7 +497,7 @@ class CibObjectSet(object):
                 process_primitive(node, clash_dict)
         # but we only warn if a 'new' object is involved
         rc = 0
-        for param, resources in clash_dict.items():
+        for param, resources in list(clash_dict.items()):
             # at least one new object must be involved
             if len(resources) > 1 and len(set(resources) & check_set) > 0:
                 rc = 2
@@ -609,7 +609,7 @@ class CibObjectSetRaw(CibObjectSet):
             if 'value' in nvp.attrib:
                 nvp.set('value', obscured(nvp.get('name'), nvp.get('value')))
 
-        s = etree.tostring(cib_elem, pretty_print=True)
+        s = xml_tostring(cib_elem, pretty_print=True)
         return '<?xml version="1.0" ?>\n' + s
 
     def _get_id(self, node):
@@ -822,7 +822,7 @@ def parse_cli_to_xml(cli, oldnode=None):
     """
     node = None
     comments = []
-    if isinstance(cli, basestring):
+    if isinstance(cli, str):
         for s in lines2cli(cli):
             node = parse.parse(s, comments=comments)
     else:  # should be a pre-tokenized list
@@ -869,16 +869,16 @@ class CibObject(object):
 
     def dump_state(self):
         'Print object status'
-        print self.state_fmt % (self.obj_id,
+        print(self.state_fmt % (self.obj_id,
                                 self.origin,
                                 self.updated,
                                 self.parent and self.parent.obj_id or "",
-                                len(self.children))
+                                len(self.children)))
 
     def _repr_cli_xml(self, format_mode):
         with clidisplay.nopretty(format_mode < 0):
             h = clidisplay.keyword("xml")
-            l = etree.tostring(self.node, pretty_print=True).split('\n')
+            l = xml_tostring(self.node, pretty_print=True).split('\n')
             l = [x for x in l if x]  # drop empty lines
             return "%s %s" % (h, cli_format(l, break_lines=(format_mode > 0), xml=True))
 
@@ -1120,7 +1120,7 @@ class CibObject(object):
         '''
         rc = 0
         op_id = op_node.get("name")
-        for name in op_node.keys():
+        for name in list(op_node.keys()):
             vals = schema.rng_attr_values(op_node.tag, name)
             if not vals:
                 continue
@@ -1309,7 +1309,7 @@ class Op(object):
             pass
 
     def xml2dict(self):
-        for name in self.node.keys():
+        for name in list(self.node.keys()):
             if name != "id":  # skip the id
                 self.set_attr(name, self.node.get(name))
         for p in self.node.xpath("instance_attributes/nvpair"):
@@ -1327,7 +1327,7 @@ class Op(object):
         self.node = etree.Element(self.elem_type)
         inst_attr = {}
         valid_attrs = olist(schema.get('attr', 'op', 'a'))
-        for n, v in self.attr_d.iteritems():
+        for n, v in self.attr_d.items():
             if n in valid_attrs:
                 self.node.set(n, v)
             else:
@@ -1422,7 +1422,7 @@ class CibPrimitive(CibObject):
             idmgmt.set_id(node, None, self.obj_id)
         valid_attrs = olist(schema.get('attr', 'op', 'a'))
         inst_attr = {}
-        for attr in node.attrib.keys():
+        for attr in list(node.attrib.keys()):
             if attr not in valid_attrs:
                 inst_attr[attr] = node.attrib[attr]
                 del node.attrib[attr]
@@ -1657,9 +1657,9 @@ class CibLocation(CibObject):
 
     def _repr_cli_head(self, format_mode):
         rsc = None
-        if "rsc" in self.node.keys():
+        if "rsc" in list(self.node.keys()):
             rsc = self.node.get("rsc")
-        elif "rsc-pattern" in self.node.keys():
+        elif "rsc-pattern" in list(self.node.keys()):
             rsc = '/%s/' % (self.node.get("rsc-pattern"))
         if rsc is not None:
             rsc = clidisplay.rscref(rsc)
@@ -1705,11 +1705,11 @@ class CibLocation(CibObject):
         if pattern:
             try:
                 re.compile(pattern)
-            except IndexError, e:
+            except IndexError as e:
                 common_warn("%s: '%s' may not be a valid regular expression (%s)" %
                             (self.obj_id, pattern, e))
                 rc = 1
-            except re.error, e:
+            except re.error as e:
                 common_warn("%s: '%s' may not be a valid regular expression (%s)" %
                             (self.obj_id, pattern, e))
                 rc = 1
@@ -1990,11 +1990,11 @@ class CibFencingOrder(CibObject):
                 d[target] = {}
             d[target][c.get("index")] = c.get("devices")
         dd = ordereddict.odict()
-        for target in d.keys():
-            sorted_keys = sorted([int(i) for i in d[target].keys()])
+        for target in list(d.keys()):
+            sorted_keys = sorted([int(i) for i in list(d[target].keys())])
             dd[target] = [d[target][str(x)] for x in sorted_keys]
         d2 = {}
-        for target in dd.keys():
+        for target in list(dd.keys()):
             devs_s = ' '.join(dd[target])
             d2[devs_s] = 1
         if len(d2) == 1 and len(d) == len(cib_factory.node_id_list()):
@@ -2007,7 +2007,7 @@ class CibFencingOrder(CibObject):
                 return "attr:%s=%s" % tgt
             return tgt + ":"
         return cli_format([s] + ["%s %s" % (fmt_target(x), ' '.join(dd[x]))
-                                 for x in dd.keys()],
+                                 for x in list(dd.keys())],
                           break_lines=(format_mode > 0))
 
     def _repr_cli_child(self, c, format_mode):
@@ -2177,7 +2177,7 @@ cib_object_map = {
 
 
 # generate a translation cli -> tag
-backtrans = ordereddict.odict((item[0], key) for key, item in cib_object_map.iteritems())
+backtrans = ordereddict.odict((item[0], key) for key, item in cib_object_map.items())
 
 
 def default_id_for_tag(tag):
@@ -2477,7 +2477,7 @@ class CibFactory(object):
         common_debug("Bump epoch to %s" % (self.cib_attrs["epoch"]))
 
     def _get_cib_attributes(self, cib):
-        for attr in cib.keys():
+        for attr in list(cib.keys()):
             self.cib_attrs[attr] = cib.get(attr)
 
     def _set_cib_attributes(self, cib):
@@ -2539,15 +2539,15 @@ class CibFactory(object):
 
     def _state_header(self):
         'Print object status header'
-        print CibObject.state_fmt % \
-            ("", "origin", "updated", "parent", "children")
+        print(CibObject.state_fmt % \
+            ("", "origin", "updated", "parent", "children"))
 
     def showobjects(self):
         self._state_header()
         for obj in self.cib_objects:
             obj.dump_state()
         if self.remove_queue:
-            print "Remove queue:"
+            print("Remove queue:")
             for obj in self.remove_queue:
                 obj.dump_state()
 
@@ -2618,7 +2618,7 @@ class CibFactory(object):
             # now increase the epoch by 1
             self.bump_epoch()
         self._set_cib_attributes(self.cib_elem)
-        cib_s = etree.tostring(self.cib_orig, pretty_print=True)
+        cib_s = xml_tostring(self.cib_orig, pretty_print=True)
         tmpf = str2tmp(cib_s, suffix=".xml")
         if not tmpf or not ensure_sudo_readable(tmpf):
             return False
@@ -2644,7 +2644,7 @@ class CibFactory(object):
             e = etree.fromstring(cib_diff)
             for tag in e.xpath("./version/*[self::target or self::source]"):
                 tag.attrib.clear()
-            cib_diff = etree.tostring(e)
+            cib_diff = xml_tostring(e)
         # for v1 diffs, fall back to non-patching if
         # any containers are modified, else strip the digest
         if "<diff" in cib_diff and "digest=" in cib_diff:
@@ -2654,10 +2654,10 @@ class CibFactory(object):
             for tag in e.xpath("/diff"):
                 if "digest" in tag.attrib:
                     del tag.attrib["digest"]
-            cib_diff = etree.tostring(e)
+            cib_diff = xml_tostring(e)
         common_debug("Diff: %s" % (cib_diff))
         rc = pipe_string("%s %s" % (cib_piped, cibadmin_opts),
-                         cib_diff)
+                         cib_diff.encode('utf-8'))
         if rc != 0:
             update_err("cib", cibadmin_opts, cib_diff, rc)
             return False
@@ -2730,7 +2730,7 @@ class CibFactory(object):
             return True
         if cib is None:
             cib = read_cib(cibdump2elem)
-        elif isinstance(cib, basestring):
+        elif isinstance(cib, str):
             cib = cibtext2elem(cib)
         if not self._import_cib(cib):
             return False
@@ -3339,7 +3339,7 @@ class CibFactory(object):
         if not self.is_cib_sane():
             common_debug("create_from_cli (%s): is_cib_sane() failed" % (cli))
             return None
-        if isinstance(cli, basestring) or isinstance(cli, list):
+        if isinstance(cli, str) or isinstance(cli, list):
             elem, obj_type, obj_id = parse_cli_to_xml(cli)
         else:
             elem, obj_type, obj_id = postprocess_cli(cli)
@@ -3905,7 +3905,7 @@ class CibFactory(object):
             common_err("strange, but these objects remained:")
             for obj in self.cib_objects:
                 if obj.obj_type != "node":
-                    print >> sys.stderr, str(obj)
+                    print(str(obj), file=sys.stderr)
             self.cib_objects = []
         return True
 

@@ -63,8 +63,8 @@ def show_output(odir, hosts, desc):
     for host in hosts:
         out_l = get_output(odir, host)
         if out_l:
-            print "%s %s:" % (host, desc)
-            print ''.join(out_l)
+            print("%s %s:" % (host, desc))
+            print(''.join(out_l))
 
 
 def do_pssh(l, opts):
@@ -195,7 +195,7 @@ def do_pssh_cmd(cmd, node_l, outdir, errdir, timeout=20000):
         l.append([node, cmd])
     if not l:
         return True
-    opts = parse_args(outdir, errdir, t=int(timeout/1000))
+    opts = parse_args(outdir, errdir, t=int(timeout // 1000))
     return do_pssh(l, opts)
 
 # vim:ts=4:sw=4:et:

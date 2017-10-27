@@ -2,6 +2,8 @@
 # See COPYING for license information.
 
 
+#standard_library.install_aliases()
+from builtins import object
 from crmsh import ui_resource
 from crmsh import utils
 

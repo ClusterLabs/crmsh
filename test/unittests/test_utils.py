@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 # Copyright (C) 2014 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 #
@@ -129,11 +130,11 @@ def test_network():
     assert ip.version() == 6
 
     net = utils.Network('192.0.2.0/24')
-    assert net.has_key('192.168.2.0') is False
-    assert net.has_key('192.0.2.42') is True
+    assert ('192.168.2.0' in net) is False
+    assert ('192.0.2.42' in net) is True
 
     net = utils.Network('2001:db8::2/64')
-    assert net.has_key('2001:db3::1') is False
-    assert net.has_key('2001:db8::1') is True
+    assert ('2001:db3::1' in net) is False
+    assert ('2001:db8::1' in net) is True
 
     assert utils.get_ipv6_network("2002:db8::2/64") == "2002:db8::"

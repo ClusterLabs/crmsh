@@ -168,7 +168,7 @@ class CibStatus(object):
         d = {}
         for e in rsc_list:
             d[e] = 0
-        return d.keys()
+        return list(d.keys())
 
     def load(self, source):
         '''
@@ -215,7 +215,7 @@ class CibStatus(object):
         xml = etree.tostring(cib)
         try:
             f = open(dest_path, "w")
-        except IOError, msg:
+        except IOError as msg:
             common_err(msg)
             return False
         f.write(xml)
@@ -268,13 +268,13 @@ class CibStatus(object):
         if not self.modified:
             return True
         for node in self.node_changes:
-            print node, self.node_changes[node]
+            print(node, self.node_changes[node])
         for op in self.op_changes:
-            print op, self.op_changes[op]
+            print(op, self.op_changes[op])
         for ticket in self.ticket_changes:
-            print ticket, self.ticket_changes[ticket]
+            print(ticket, self.ticket_changes[ticket])
         if self.quorum:
-            print "quorum:", self.quorum
+            print("quorum:", self.quorum)
         return True
 
     def show(self):
@@ -283,7 +283,7 @@ class CibStatus(object):
         '''
         if self.get_status() is None:
             return False
-        page_string(etree.tostring(self.status_node, pretty_print=True))
+        page_string(xmlutil.xml_tostring(self.status_node, pretty_print=True))
         return True
 
     def inject(self, opts):

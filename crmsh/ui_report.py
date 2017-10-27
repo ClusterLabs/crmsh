@@ -28,5 +28,5 @@ def create_report(context, args):
     extraopts = str(config.core.report_tool_options).strip().split()
     cmd = [extcmd] + extraopts + list(args)
     if options.regression_tests:
-        print ".EXT", cmd
+        print(".EXT", cmd)
     return subprocess.call(cmd, shell=False, preexec_fn=lambda: signal(SIGPIPE, SIG_DFL))

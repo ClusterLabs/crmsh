@@ -160,7 +160,7 @@ class CibShadow(command.UI):
         "usage: list"
         if options.regression_tests:
             for t in xmlutil.listshadows():
-                print t
+                print(t)
         else:
             utils.multicolumn(xmlutil.listshadows())
 

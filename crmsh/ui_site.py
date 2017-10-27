@@ -23,9 +23,9 @@ _ticket_commands = {
 def _show(context, ticket, val):
     "Display status of ticket"
     if val == "false":
-        print "ticket %s is revoked" % ticket
+        print("ticket %s is revoked" % ticket)
     elif val == "true":
-        print "ticket %s is granted" % ticket
+        print("ticket %s is granted" % ticket)
     else:
         context.fatal_error("unexpected value for ticket %s: %s" % (ticket, val))
 
@@ -36,7 +36,7 @@ def _time(context, ticket, val):
         context.fatal_error("unexpected value for ticket %s: %s" % (ticket, val))
     if val == "-1":
         context.fatal_error("%s: no such ticket" % ticket)
-    print "ticket %s last time granted on %s" % (ticket, time.ctime(int(val)))
+    print("ticket %s last time granted on %s" % (ticket, time.ctime(int(val))))
 
 
 class Site(command.UI):
@@ -52,7 +52,7 @@ class Site(command.UI):
         return True
 
     @command.skill_level('administrator')
-    @command.completers(compl.choice(_ticket_commands.keys()))
+    @command.completers(compl.choice(list(_ticket_commands.keys())))
     def do_ticket(self, context, subcmd, ticket):
         "usage: ticket {grant|revoke|standby|activate|show|time|delete} <ticket>"
 
@@ -62,7 +62,7 @@ class Site(command.UI):
 
         attr_cmd = _ticket_commands.get(subcmd)
         if not attr_cmd:
-            context.fatal_error('Expected one of %s' % '|'.join(_ticket_commands.keys()))
+            context.fatal_error('Expected one of %s' % '|'.join(list(_ticket_commands.keys())))
         if not utils.is_name_sane(ticket):
             return False
         if subcmd not in ("show", "time"):

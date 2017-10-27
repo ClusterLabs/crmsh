@@ -31,12 +31,12 @@ class ErrorBuffer(object):
     def release(self):
         if self.msg_list:
             if ERR_STREAM:
-                print >> ERR_STREAM, '\n'.join(self.msg_list)
+                print('\n'.join(self.msg_list), file=ERR_STREAM)
             else:
-                print '\n'.join(self.msg_list)
+                print('\n'.join(self.msg_list))
             if not options.batch:
                 try:
-                    raw_input("Press enter to continue... ")
+                    input("Press enter to continue... ")
                 except EOFError:
                     pass
             self.msg_list = []
@@ -49,9 +49,9 @@ class ErrorBuffer(object):
             msg = msg[:-1]
         if self.mode == "immediate":
             if options.regression_tests or not to:
-                print msg
+                print(msg)
             else:
-                print >> to, msg
+                print(msg, file=to)
         else:
             self.msg_list.append(msg)
 
@@ -172,7 +172,7 @@ def syntax_err(s, token='', context='', msg=''):
         err += context
     if msg:
         err += ": %s" % (msg)
-    if isinstance(s, basestring):
+    if isinstance(s, str):
         err += " parsing '%s'" % (s)
     elif token:
         err += " near <%s> parsing '%s'" % (token, ' '.join(s))

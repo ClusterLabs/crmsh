@@ -44,8 +44,8 @@ class Corosync(command.UI):
         '''
         Quick cluster health status. Corosync status...
         '''
-        print corosync.cfgtool('-s')[1]
-        print corosync.quorumtool('-s')[1]
+        print(corosync.cfgtool('-s')[1])
+        print(corosync.quorumtool('-s')[1])
 
     @command.skill_level('administrator')
     def do_reload(self, context):
@@ -96,7 +96,7 @@ class Corosync(command.UI):
         cfg = corosync.conf()
         try:
             utils.edit_file_ext(cfg, template='')
-        except IOError, e:
+        except IOError as e:
             context.fatal_error(str(e))
 
     def do_show(self, context):
@@ -136,7 +136,7 @@ class Corosync(command.UI):
     def do_get(self, context, path):
         "Get a corosync configuration value"
         for v in corosync.get_values(path):
-            print v
+            print(v)
 
     @command.skill_level('administrator')
     def do_set(self, context, path, value):

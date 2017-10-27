@@ -14,6 +14,39 @@ Clones:
 Resources: d1 s-libvirt
 Transitions: 43 44* 45 46 47 48* 272* 49* 50*
 .INP: events
+Dec 14 20:06:57 xen-e pengine: [24227]: ERROR: unpack_resources: Resource start-up disabled since no STONITH resources have been defined
+Dec 14 20:06:57 xen-e pengine: [24227]: ERROR: unpack_resources: Either configure some or disable STONITH with the stonith-enabled option
+Dec 14 20:06:57 xen-e pengine: [24227]: ERROR: unpack_resources: NOTE: Clusters with shared data need STONITH to ensure data integrity
+Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24387]: ERROR: Failed to get status for xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen
+Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24393]: ERROR: setlocale: No such file or directory
+Dec 14 20:07:37 xen-e stonith-ng: [24224]: ERROR: log_operation: s-libvirt: Performing: stonith -t external/libvirt -S
+Dec 14 20:07:37 xen-e stonith: [24366]: ERROR: external/libvirt device not accessible.
+Dec 14 20:07:37 xen-e stonith-ng: [24224]: ERROR: log_operation: s-libvirt: failed:  1
+Dec 14 20:07:43 xen-d stonith-ng: [5656]: ERROR: ais_dispatch: Receiving message body failed: (2) Library error: Resource temporarily unavailable (11)
+Dec 14 20:07:43 xen-d cib: [5655]: ERROR: ais_dispatch: Receiving message body failed: (2) Library error: Resource temporarily unavailable (11)
+Dec 14 20:07:43 xen-d attrd: [5658]: ERROR: ais_dispatch: Receiving message body failed: (2) Library error: Resource temporarily unavailable (11)
+Dec 14 20:07:43 xen-d crmd: [5660]: ERROR: ais_dispatch: Receiving message body failed: (2) Library error: Resource temporarily unavailable (11)
+Dec 14 20:07:43 xen-d stonith-ng: [5656]: ERROR: ais_dispatch: AIS connection failed
+Dec 14 20:07:43 xen-d cib: [5655]: ERROR: ais_dispatch: AIS connection failed
+Dec 14 20:07:43 xen-d attrd: [5658]: ERROR: ais_dispatch: AIS connection failed
+Dec 14 20:07:43 xen-d crmd: [5660]: ERROR: ais_dispatch: AIS connection failed
+Dec 14 20:07:43 xen-d stonith-ng: [5656]: ERROR: stonith_peer_ais_destroy: AIS connection terminated
+Dec 14 20:07:43 xen-d cib: [5655]: ERROR: cib_ais_destroy: Corosync connection lost!  Exiting.
+Dec 14 20:07:43 xen-d attrd: [5658]: CRIT: attrd_ais_destroy: Lost connection to OpenAIS service!
+Dec 14 20:07:43 xen-d attrd: [5658]: ERROR: attrd_cib_connection_destroy: Connection to the CIB terminated...
+Dec 14 20:07:43 xen-d crmd: [5660]: CRIT: stonith_dispatch_internal: Lost connection to the STONITH service [5656/callback].
+Dec 14 20:07:43 xen-d crmd: [5660]: CRIT: stonith_dispatch_internal: Lost connection to the STONITH service [5656/command].
+Dec 14 20:07:43 xen-d crmd: [5660]: CRIT: tengine_stonith_connection_destroy: Fencing daemon connection failed
+Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: te_connect_stonith: Sign-in failed: triggered a retry
+Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: attrd_connection_destroy: Lost connection to attrd
+Dec 14 20:07:44 xen-d crmd: [5660]: CRIT: cib_native_dispatch: Lost connection to the CIB service [5655/callback].
+Dec 14 20:07:44 xen-d crmd: [5660]: CRIT: cib_native_dispatch: Lost connection to the CIB service [5655/command].
+Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: crmd_cib_connection_destroy: Connection to the CIB terminated...
+Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: do_log: FSA: Input I_ERROR from crmd_cib_connection_destroy() received in state S_NOT_DC
+Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: do_recover: Action A_RECOVER (0000000001000000) not supported
+Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: do_log: FSA: Input I_TERMINATE from do_recover() received in state S_RECOVERY
+Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: verify_stopped: Resource d1 was active at shutdown.  You may ignore this error if it is unmanaged.
+Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: do_exit: Could not recover from internal error
 Dec 14 20:06:35 xen-d corosync[5649]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
 Dec 14 20:06:35 xen-e corosync[24218]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
 Dec 14 20:06:36 xen-d corosync[5649]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
@@ -26,6 +59,11 @@ Dec 14 20:07:56 xen-e stonith-ng: [24224]: notice: log_operation: Operation 'reb
 Dec 14 20:08:23 xen-d corosync[1874]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
 Dec 14 20:08:23 xen-d corosync[1874]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
 Dec 14 20:08:40 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: xen-e 923599370
+Dec 14 20:06:36 xen-e crmd: [24228]: notice: ais_dispatch_message: Membership 1289820: quorum acquired
+Dec 14 20:06:36 xen-d crmd: [5660]: notice: ais_dispatch_message: Membership 1289820: quorum acquired
+Dec 14 20:07:54 xen-e crmd: [24228]: notice: ais_dispatch_message: Membership 1289824: quorum lost
+Dec 14 20:08:24 xen-d crmd: [1948]: notice: ais_dispatch_message: Membership 1289828: quorum acquired
+Dec 14 20:08:40 xen-e crmd: [24228]: notice: ais_dispatch_message: Membership 1289828: quorum acquired
 Dec 14 20:07:19 xen-d lrmd: [5657]: info: rsc:d1 start[4] (pid 5833)
 Dec 14 20:07:19 xen-d crmd: [5660]: info: process_lrm_event: LRM operation d1_start_0 (call=4, rc=0, cib-update=14, confirmed=true) ok
 Dec 14 20:07:19 xen-e lrmd: [24225]: info: rsc:s-libvirt start[4] (pid 24264)
@@ -63,44 +101,6 @@ Dec 14 20:08:36 xen-e external/libvirt(s-libvirt)[24717]: [24734]: notice: xen+s
 Dec 14 20:08:43 xen-e lrmd: [24225]: info: rsc:d1 stop[11] (pid 24774)
 Dec 14 20:08:43 xen-e crmd: [24228]: info: process_lrm_event: LRM operation d1_stop_0 (call=11, rc=0, cib-update=125, confirmed=true) ok
 Dec 14 20:08:43 xen-e external/libvirt(s-libvirt)[24748]: [24786]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:06:36 xen-e crmd: [24228]: notice: ais_dispatch_message: Membership 1289820: quorum acquired
-Dec 14 20:06:36 xen-d crmd: [5660]: notice: ais_dispatch_message: Membership 1289820: quorum acquired
-Dec 14 20:07:54 xen-e crmd: [24228]: notice: ais_dispatch_message: Membership 1289824: quorum lost
-Dec 14 20:08:24 xen-d crmd: [1948]: notice: ais_dispatch_message: Membership 1289828: quorum acquired
-Dec 14 20:08:40 xen-e crmd: [24228]: notice: ais_dispatch_message: Membership 1289828: quorum acquired
-Dec 14 20:06:57 xen-e pengine: [24227]: ERROR: unpack_resources: Resource start-up disabled since no STONITH resources have been defined
-Dec 14 20:06:57 xen-e pengine: [24227]: ERROR: unpack_resources: Either configure some or disable STONITH with the stonith-enabled option
-Dec 14 20:06:57 xen-e pengine: [24227]: ERROR: unpack_resources: NOTE: Clusters with shared data need STONITH to ensure data integrity
-Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24387]: ERROR: Failed to get status for xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen
-Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24393]: ERROR: setlocale: No such file or directory
-Dec 14 20:07:37 xen-e stonith-ng: [24224]: ERROR: log_operation: s-libvirt: Performing: stonith -t external/libvirt -S
-Dec 14 20:07:37 xen-e stonith: [24366]: ERROR: external/libvirt device not accessible.
-Dec 14 20:07:37 xen-e stonith-ng: [24224]: ERROR: log_operation: s-libvirt: failed:  1
-Dec 14 20:07:43 xen-d stonith-ng: [5656]: ERROR: ais_dispatch: Receiving message body failed: (2) Library error: Resource temporarily unavailable (11)
-Dec 14 20:07:43 xen-d cib: [5655]: ERROR: ais_dispatch: Receiving message body failed: (2) Library error: Resource temporarily unavailable (11)
-Dec 14 20:07:43 xen-d attrd: [5658]: ERROR: ais_dispatch: Receiving message body failed: (2) Library error: Resource temporarily unavailable (11)
-Dec 14 20:07:43 xen-d crmd: [5660]: ERROR: ais_dispatch: Receiving message body failed: (2) Library error: Resource temporarily unavailable (11)
-Dec 14 20:07:43 xen-d stonith-ng: [5656]: ERROR: ais_dispatch: AIS connection failed
-Dec 14 20:07:43 xen-d cib: [5655]: ERROR: ais_dispatch: AIS connection failed
-Dec 14 20:07:43 xen-d attrd: [5658]: ERROR: ais_dispatch: AIS connection failed
-Dec 14 20:07:43 xen-d crmd: [5660]: ERROR: ais_dispatch: AIS connection failed
-Dec 14 20:07:43 xen-d stonith-ng: [5656]: ERROR: stonith_peer_ais_destroy: AIS connection terminated
-Dec 14 20:07:43 xen-d cib: [5655]: ERROR: cib_ais_destroy: Corosync connection lost!  Exiting.
-Dec 14 20:07:43 xen-d attrd: [5658]: CRIT: attrd_ais_destroy: Lost connection to OpenAIS service!
-Dec 14 20:07:43 xen-d attrd: [5658]: ERROR: attrd_cib_connection_destroy: Connection to the CIB terminated...
-Dec 14 20:07:43 xen-d crmd: [5660]: CRIT: stonith_dispatch_internal: Lost connection to the STONITH service [5656/callback].
-Dec 14 20:07:43 xen-d crmd: [5660]: CRIT: stonith_dispatch_internal: Lost connection to the STONITH service [5656/command].
-Dec 14 20:07:43 xen-d crmd: [5660]: CRIT: tengine_stonith_connection_destroy: Fencing daemon connection failed
-Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: te_connect_stonith: Sign-in failed: triggered a retry
-Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: attrd_connection_destroy: Lost connection to attrd
-Dec 14 20:07:44 xen-d crmd: [5660]: CRIT: cib_native_dispatch: Lost connection to the CIB service [5655/callback].
-Dec 14 20:07:44 xen-d crmd: [5660]: CRIT: cib_native_dispatch: Lost connection to the CIB service [5655/command].
-Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: crmd_cib_connection_destroy: Connection to the CIB terminated...
-Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: do_log: FSA: Input I_ERROR from crmd_cib_connection_destroy() received in state S_NOT_DC
-Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: do_recover: Action A_RECOVER (0000000001000000) not supported
-Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: do_log: FSA: Input I_TERMINATE from do_recover() received in state S_RECOVERY
-Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: verify_stopped: Resource d1 was active at shutdown.  You may ignore this error if it is unmanaged.
-Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: do_exit: Could not recover from internal error
 .INP: node xen-d
 Dec 14 20:06:35 xen-d corosync[5649]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
 Dec 14 20:06:36 xen-d corosync[5649]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154

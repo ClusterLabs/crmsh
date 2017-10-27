@@ -289,7 +289,7 @@ def pull_configuration(from_node):
     '''
     local_path = conf()
     _, fname = tmpfiles.create()
-    print "Retrieving %s:%s..." % (from_node, local_path)
+    print("Retrieving %s:%s..." % (from_node, local_path))
     cmd = ['scp', '-qC',
            '-o', 'PasswordAuthentication=no',
            '-o', 'StrictHostKeyChecking=no',
@@ -303,9 +303,9 @@ def pull_configuration(from_node):
             oldata = open(local_path).read()
             oldhash = hash(oldata)
             if newhash == oldhash:
-                print "No change."
+                print("No change.")
                 return
-        print "Writing %s..."
+        print("Writing %s...")
         local_file = open(local_path, 'w')
         local_file.write(data)
         local_file.close()
@@ -334,7 +334,7 @@ def get_free_nodeid(parser):
         return 1
     ids = [int(i) for i in ids]
     max_id = max(ids) + 1
-    for i in xrange(1, max_id):
+    for i in range(1, max_id):
         if i not in ids:
             return i
     return max_id

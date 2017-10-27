@@ -13,7 +13,7 @@ def _get_attr_cmd(attr_ext_commands, subcmd):
         attr_cmd = attr_ext_commands[subcmd]
         if attr_cmd:
             return attr_cmd
-    except KeyError, msg:
+    except KeyError as msg:
         raise ValueError(msg)
     raise ValueError("Bad attr_cmd " + repr(attr_ext_commands))
 
@@ -46,7 +46,7 @@ def manage_attr(cmd, attr_ext_commands, rsc, subcmd, attr, value):
     try:
         attr_cmd = _get_attr_cmd(attr_ext_commands, subcmd)
         return _dispatch_attr_cmd(cmd, attr_cmd, rsc, subcmd, attr, value)
-    except ValueError, msg:
+    except ValueError as msg:
         cmdline = [rsc, subcmd, attr]
         if value is not None:
             cmdline.append(value)

@@ -129,7 +129,7 @@ def set_deep_meta_attr(rsc, attr, value, commit=True):
         return False
     while any(obj for obj in objs if obj.obj_type == 'tag'):
         objs = list(flatten(resolve(obj) for obj in objs))
-    objs = filter(is_resource, objs)
+    objs = list(filter(is_resource, objs))
     common_debug("set_deep_meta_attr: %s" % (', '.join([obj.obj_id for obj in objs])))
     if not objs:
         common_error("Resource not found: %s" % (rsc))

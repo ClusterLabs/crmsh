@@ -1,7 +1,7 @@
 #
 # spec file for package crmsh
 #
-# Copyright (c) 2016 SUSE LINUX GmbH, Nuernberg, Germany.
+# Copyright (c) 2017 SUSE LINUX GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -15,6 +15,8 @@
 # Please submit bugfixes or comments via http://bugs.opensuse.org/
 #
 
+
+%bcond_with regression_tests
 
 %global gname haclient
 %global uname hacluster
@@ -30,16 +32,15 @@
 %define pkg_group Productivity/Clustering/HA
 %endif
 
-%{!?python_sitelib: %define python_sitelib %(python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
-
 Name:           crmsh
 Summary:        High Availability cluster command-line interface
 License:        GPL-2.0+
 Group:          %{pkg_group}
-Version:        2.3.0
+Version:        3.1.0
 Release:        0
 Url:            http://crmsh.github.io
 Source0:        %{name}-%{version}.tar.bz2
+
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 %if 0%{?suse_version}
 # Requiring pacemaker makes crmsh harder to build on other distributions,
@@ -48,19 +49,29 @@ Requires(pre):  pacemaker
 %endif
 Requires:       %{name}-scripts >= %{version}-%{release}
 Requires:       /usr/bin/which
-Requires:       python >= 2.6
-Requires:       python-dateutil
-Requires:       python-lxml
+Requires:       python3 >= 3.6
+Requires:       python3-lxml
+Requires:       python3-python-dateutil
+%if 0%{?suse_version} > 1320
+Requires:       python3-parallax
+%else
 Requires:       python-parallax
-BuildRequires:  python-lxml
-BuildRequires:  python-setuptools
+%endif
+BuildRequires:  python3-lxml
+BuildRequires:  python3-setuptools
 
 %if 0%{?suse_version}
-Requires:       python-PyYAML
+# only require csync2 on SUSE since bootstrap
+# only works for SUSE at the moment anyway
+Requires:       csync2
+%endif
+
+%if 0%{?suse_version}
+Requires:       python3-PyYAML
 # Suse splits this off into a separate package
-Requires:       python-curses
+Requires:       python3-curses
 BuildRequires:  fdupes
-BuildRequires:  python-curses
+BuildRequires:  python3-curses
 %endif
 
 %if 0%{?fedora_version}
@@ -72,7 +83,7 @@ BuildRequires:  asciidoc
 BuildRequires:  autoconf
 BuildRequires:  automake
 BuildRequires:  pkgconfig
-BuildRequires:  python
+BuildRequires:  python3
 
 %if 0%{?suse_version} > 1210
 # xsltproc is necessary for manpage generation; this is split out into
@@ -95,18 +106,20 @@ clusters, by providing a powerful and intuitive set of features.
 Summary:        Test package for crmsh
 Group:          %{pkg_group}
 Requires:       crmsh
-%if 0%{?with_regression_tests}
+%if %{with regression_tests}
 Requires(post):  mailx
 Requires(post):  procps
-Requires(post):  python-dateutil
-Requires(post):  python-nose
+Requires(post):  python3-python-dateutil
+Requires(post):  python3-nose
+%if 0%{?suse_version} > 1320
+Requires(post):  python3-parallax
+%else
 Requires(post):  python-parallax
+%endif
 Requires(post):  pacemaker
-
 %if 0%{?suse_version} > 1110
 BuildArch:      noarch
 %endif
-
 %if 0%{?suse_version}
 Requires(post):  libglue-devel
 %else
@@ -115,10 +128,10 @@ Requires(post):  cluster-glue-libs-devel
 %if 0%{?fedora_version}
 Requires(post):  PyYAML
 %else
-Requires(post):  python-PyYAML
+Requires(post):  python3-PyYAML
+%endif
 %endif
 
-%endif
 %description test
 The crm shell is a command-line interface for High-Availability
 cluster management on GNU/Linux systems. It simplifies the
@@ -137,6 +150,12 @@ like hawk to implement configuration wizards.
 
 %prep
 %setup -q
+touch -r doc/crm.8.adoc{,.timestamp}
+
+# replace the shebang in all the scripts
+# with ${_bindir}/python3
+find . -type f -exec perl -pi -e 'BEGIN{undef $/};s[^#\!/usr/bin/python[3]?][#\!%{_bindir}/python3]' {} \;
+find . -type f -exec perl -pi -e 'BEGIN{undef $/};s[^#\!/usr/bin/env python[3]?][#\!%{_bindir}/python3]' {} \;
 
 # Force the local time
 #
@@ -145,6 +164,8 @@ like hawk to implement configuration wizards.
 # when building on machines in timezones 'behind' the one the
 # commit occurred in - which seriously confuses 'make'
 find . -mtime -0 -exec touch \{\} \;
+# keep the .adoc mtime because it gets embedded in crm.8.html
+touch -r doc/crm.8.adoc{.timestamp,}
 
 %build
 ./autogen.sh
@@ -157,12 +178,12 @@ find . -mtime -0 -exec touch \{\} \;
 
 make %{_smp_mflags} VERSION="%{version}" sysconfdir=%{_sysconfdir} localstatedir=%{_var}
 
-%if 0%{?with_regression_tests}
-	./test/run --quiet
-    if [ ! $? ]; then
-        echo "Unit tests failed."
-        exit 1
-    fi
+%if %{with regression_tests}
+./test/run --quiet
+if [ ! $? ]; then
+    echo "Unit tests failed."
+    exit 1
+fi
 %endif
 
 %install
@@ -176,24 +197,27 @@ fi
 %fdupes %{buildroot}
 %endif
 
-%clean
-rm -rf %{buildroot}
-
+%if %{with regression_tests}
 # Run regression tests after installing the package
 # NB: this is called twice by OBS, that's why we touch the file
-%if 0%{?with_regression_tests}
 %post test
-if [ ! -e /tmp/.crmsh_regression_tests_ran ]; then
-    touch /tmp/.crmsh_regression_tests_ran
-	%{_datadir}/%{name}/tests/regression.sh
-	result1=$?
-	cd %{_datadir}/%{name}/tests
-	./cib-tests.sh
-	result2=$?
-	[ $result1 -ne 0 ] && (echo "Regression tests failed."; cat ${buildroot}/crmtestout/regression.out)
-	[ $result2 -ne 0 ] && echo "CIB tests failed."
-	[ $result1 -eq 0 -a $result2 -eq 0 ]
+testfile=/tmp/.crmsh_regression_tests_ran
+# check if time in file is less than 2 minutes ago
+if [ -e $testfile ] && [ "$(( $(date +%s) - $(cat $testfile) ))" -lt 120 ]; then
+	echo "Skipping regression tests..."
+	exit 0
 fi
+# write current time to file
+rm -f "$testfile"
+echo "$(date +%s)" > "$testfile"
+%{_datadir}/%{name}/tests/regression.sh
+result1=$?
+cd %{_datadir}/%{name}/tests
+./cib-tests.sh
+result2=$?
+[ $result1 -ne 0 ] && (echo "Regression tests failed."; cat ${buildroot}/crmtestout/regression.out)
+[ $result2 -ne 0 ] && echo "CIB tests failed."
+[ $result1 -eq 0 -a $result2 -eq 0 ]
 %endif
 
 %files
@@ -201,7 +225,7 @@ fi
 %defattr(-,root,root)
 
 %{_sbindir}/crm
-%{python_sitelib}/crmsh*
+%{python3_sitelib}/crmsh*
 
 %{_datadir}/%{name}
 %exclude %{_datadir}/%{name}/tests

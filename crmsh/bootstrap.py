@@ -92,7 +92,7 @@ def warn(*args):
     """
     log("WARNING: {}".format(" ".join(str(arg) for arg in args)))
     if not _context.quiet:
-        print term.render(clidisplay.warn("! {}".format(" ".join(str(arg) for arg in args))))
+        print(term.render(clidisplay.warn("! {}".format(" ".join(str(arg) for arg in args)))))
 
 
 @utils.memoize
@@ -133,7 +133,7 @@ def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=N
         if re.match(match, val) is not None:
             if not valid_func or valid_func(val, prev_value):
                 return val
-        print term.render(clidisplay.error("    Invalid value entered"))
+        print(term.render(clidisplay.error("    Invalid value entered")))
 
 
 def confirm(msg):
@@ -276,7 +276,7 @@ def sleep(t):
 def status(msg):
     log("# " + msg)
     if not _context.quiet:
-        print "  {}".format(msg)
+        print("  {}".format(msg))
 
 
 def status_long(msg):
@@ -295,7 +295,7 @@ def status_progress():
 def status_done():
     log("# done")
     if not _context.quiet:
-        print "done"
+        print("done")
 
 
 def partprobe():
@@ -558,7 +558,7 @@ def init_cluster_local():
     pass_msg = ""
     if ps not in ("P", "PS"):
         log(': Resetting password of hacluster user')
-        rc, outp, errp = utils.get_stdout_stderr("passwd hacluster", input_s="linux\nlinux\n")
+        rc, outp, errp = utils.get_stdout_stderr("passwd hacluster", input_s=b"linux\nlinux\n")
         if rc != 0:
             warn("Failed to reset password of hacluster user: %s" % (outp + errp))
         else:
@@ -756,9 +756,9 @@ def valid_v6_network(addr, prev_value=None):
     # {'eth2': ['2002:db8::3/64'], 'eth1': ['2001:db8::3/64']}
     if not all_:
         return False
-    for item in all_.values():
+    for item in list(all_.values()):
         network_list.extend(item)
-    network_list = map(lambda x:utils.get_ipv6_network(x), network_list)
+    network_list = [utils.get_ipv6_network(x) for x in network_list]
     if addr in network_list:
         return True
     else:
@@ -773,7 +773,7 @@ def valid_adminIP(addr, prev_value=None):
     try:
         ip = utils.IP(addr)
     except ValueError as err:
-        print term.render(clidisplay.error("    {}".format(err)))
+        print(term.render(clidisplay.error("    {}".format(err))))
         return False
     else:
         all_ = []
@@ -784,13 +784,13 @@ def valid_adminIP(addr, prev_value=None):
             # for IPv6
             ping = "ping6"
             network_list = utils.network_v6_all()
-            for item in network_list.values():
+            for item in list(network_list.values()):
                 all_.extend(item)
         if invoke("{} -c 1 {}".format(ping, addr)):
             warn("  Address already in use: {}".format(addr))
             return False
         for net in all_:
-            if utils.Network(net).has_key(addr):
+            if addr in utils.Network(net):
                 return True
         warn("  Address '{}' invalid, expected one of {}".format(addr, all_))
         return False
@@ -894,9 +894,9 @@ Configure Corosync:
     if _context.ipv6:
         network_list = []
         all_ = utils.network_v6_all()
-        for item in all_.values():
+        for item in list(all_.values()):
             network_list.extend(item)
-        default_networks = map(lambda x:utils.get_ipv6_network(x), network_list)
+        default_networks = [utils.get_ipv6_network(x) for x in network_list]
     else:
         default_networks = utils.network_all()
     if len(default_networks) == 0:
@@ -1051,7 +1051,7 @@ Configure Shared Storage:
             if _context.yes_to_all:
                 error(dev + " is not a block device")
             else:
-                print >>sys.stderr, "    That doesn't look like a block device"
+                print("    That doesn't look like a block device", file=sys.stderr)
         else:
             #
             # Got something that looks like a block device, there
@@ -1237,7 +1237,7 @@ Configure SBD:
                 init_sbd_diskless()
                 return
             if not is_block_device(dev):
-                print >>sys.stderr, "    That doesn't look like a block device"
+                print("    That doesn't look like a block device", file=sys.stderr)
                 dev = ""
             else:
                 warn("All data on {} will be destroyed!".format(dev))
@@ -1498,17 +1498,18 @@ def join_ssh_merge(_cluster_node):
     cat_cmd = "[ -e /root/.ssh/known_hosts ] && cat /root/.ssh/known_hosts || true"
     log("parallax.call {} : {}".format(hosts, cat_cmd))
     results = parallax.call(hosts, cat_cmd, opts)
-    for host, result in results.iteritems():
+    for host, result in results.items():
         if isinstance(result, parallax.Error):
             warn("Failed to get known_hosts from {}: {}".format(host, str(result)))
         else:
-            known_hosts_new.update((result[1] or "").splitlines())
+            if result[1]:
+                known_hosts_new.update((utils.to_ascii(result[1]) or "").splitlines())
     if known_hosts_new:
         hoststxt = "\n".join(sorted(known_hosts_new))
         tmpf = utils.str2tmp(hoststxt)
         log("parallax.copy {} : {}".format(hosts, hoststxt))
         results = parallax.copy(hosts, tmpf, "/root/.ssh/known_hosts")
-        for host, result in results.iteritems():
+        for host, result in results.items():
             if isinstance(result, parallax.Error):
                 warn("scp to {} failed ({}), known_hosts update may be incomplete".format(host, str(result)))
 
@@ -1661,7 +1662,7 @@ def join_cluster(seed_host):
         # for ipv6 mcast
         # after csync2_update, all config files are same
         # but nodeid must be uniqe
-        for node in nodeid_dict.keys():
+        for node in list(nodeid_dict.keys()):
             if node == utils.this_node():
                 continue
             update_nodeid(int(nodeid_dict[node]), node)
@@ -2042,7 +2043,7 @@ port="9929"
     cfg = [config_template]
     if arbitrator is not None:
         cfg.append("arbitrator=\"{}\"".format(arbitrator))
-    for s in clusters.itervalues():
+    for s in clusters.values():
         cfg.append("site=\"{}\"".format(s))
     cfg.append("authfile=\"{}\"".format(BOOTH_AUTH))
     for t in tickets:
@@ -2102,8 +2103,8 @@ def geo_fetch_config(node):
 
 def geo_cib_config(clusters):
     cluster_name = corosync.get_values('totem.cluster_name')[0]
-    if cluster_name not in clusters.keys():
-        error("Local cluster name is {}, expected {}".format(cluster_name, "|".join(clusters.keys())))
+    if cluster_name not in list(clusters.keys()):
+        error("Local cluster name is {}, expected {}".format(cluster_name, "|".join(list(clusters.keys()))))
 
     status("Configure cluster resources for booth")
     crm_template = Template("""
@@ -2115,7 +2116,7 @@ group g-booth booth-ip booth-site meta target-role=Stopped
 """)
     iprule = 'params rule #cluster-name eq {} ip="{}"'
 
-    crm_configure_load("update", crm_template.substitute(iprules=" ".join(iprule.format(k, v) for k, v in clusters.iteritems())))
+    crm_configure_load("update", crm_template.substitute(iprules=" ".join(iprule.format(k, v) for k, v in clusters.items())))
 
 
 def bootstrap_join_geo(quiet, yes_to_all, node, clusters, ui_context=None):

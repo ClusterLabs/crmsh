@@ -33,8 +33,8 @@ def _open_logfile(logfile):
             return bz2.BZ2File(logfile)
         if logfile.endswith(".gz"):
             return gzip.open(logfile)
-        return open(logfile)
-    except IOError, msg:
+        return open(logfile, "rb")
+    except IOError as msg:
         crmlog.common_error("open %s: %s" % (logfile, msg))
         return None
 
@@ -53,7 +53,7 @@ def _transition_start_re():
     m2 = "pengine.*[Tt]ransition ([0-9]+).*([^ ]*/pe-[^-]+-([0-9]+)[.]bz2)"
     try:
         return re.compile("(?:%s)|(?:%s)" % (m1, m2))
-    except re.error, e:
+    except re.error as e:
         crmlog.common_debug("RE compilation failed: %s" % (e))
         raise ValueError("Error in search expression")
 
@@ -79,7 +79,7 @@ def _transition_end_re():
     """
     try:
         return re.compile("crmd.*Transition ([0-9]+).*Source=(.*/pe-[^-]+-([0-9]+)[.]bz2).:.*(Stopped|Complete|Terminated)")
-    except re.error, e:
+    except re.error as e:
         crmlog.common_debug("RE compilation failed: %s" % (e))
         raise ValueError("Error in search expression")
 
@@ -181,15 +181,15 @@ class Transition(object):
         return no_actions and epoch == prev_epoch and admin_epoch == prev_admin_epoch
 
     def transition_info(self):
-        print "Transition %s (%s -" % (self, utils.shorttime(self.start_ts)),
+        print("Transition %s (%s -" % (self, utils.shorttime(self.start_ts)), end=' ')
         if self.end_ts:
-            print "%s):" % utils.shorttime(self.end_ts)
+            print("%s):" % utils.shorttime(self.end_ts))
             act_d = self.actions()
             total = self.actions_count()
             s = ", ".join(["%d %s" % (act_d[x], x) for x in act_d if act_d[x]])
-            print "\ttotal %d actions: %s" % (total, s)
+            print("\ttotal %d actions: %s" % (total, s))
         else:
-            print "[unfinished])"
+            print("[unfinished])")
 
     def to_dict(self):
         """
@@ -205,7 +205,7 @@ class Transition(object):
     @classmethod
     def from_dict(cls, loc, obj):
         t = Transition(loc, None, None, None, None, None)
-        for k, v in obj.iteritems():
+        for k, v in obj.items():
             setattr(t, k, set(v) if k == "tags" else v)
         return t
 
@@ -242,7 +242,7 @@ class CibInfo(object):
         self.not_cloned_resources = set(x for x in self.primitives if x not in self.cloned_resources)
 
     def resources(self):
-        return self.primitives + self.groups.keys() + self.clones.keys()
+        return self.primitives + list(self.groups.keys()) + list(self.clones.keys())
 
     def match_resources(self):
         """
@@ -350,7 +350,7 @@ class LogParser(object):
             line = "a"
             while line != '':
                 spos = log.tell()
-                line = log.readline()
+                line = utils.to_ascii(log.readline())
                 m = startre.search(line)
                 if m:
                     # m.groups() is (transnum1, pefile1, penum1, transnum2, pefile2, penum2) where
@@ -400,7 +400,7 @@ class LogParser(object):
                         state = DEFAULT
 
                 # events
-                for etype, erx in eventre.iteritems():
+                for etype, erx in eventre.items():
                     for rx in erx:
                         m = rx.search(line)
                         if m:
@@ -408,7 +408,7 @@ class LogParser(object):
                             if ts is None:
                                 continue
                             crmlog.common_debug("+Event %s: %s" % (etype, ", ".join(m.groups())))
-                            sk = (long(ts) << 32) + long(spos)
+                            sk = (int(ts) << 32) + int(spos)
                             self.events[etype].append((sk, logidx, spos))
                             if transition is not None:
                                 for t in m.groups():
@@ -419,7 +419,7 @@ class LogParser(object):
                     transition = None
 
         self.transitions.sort(key=lambda t: t.start_ts)
-        for etype, logs in self.events.iteritems():
+        for etype, logs in self.events.items():
             logs.sort(key=lambda e: e[0])
         empties = []
         for i, t in enumerate(self.transitions):
@@ -459,7 +459,7 @@ class LogParser(object):
         for f in self.fileobjs:
             f.seek(0)
 
-        lines = [[None, f.readline(), f] for f in self.fileobjs]
+        lines = [[None, utils.to_ascii(f.readline()), f] for f in self.fileobjs]
         for i, line in enumerate(lines):
             if not line[1]:
                 line[0], line[2] = sys.float_info.max, None
@@ -474,7 +474,7 @@ class LogParser(object):
                 break
             if not (self.from_ts and x[0] < self.from_ts):
                 yield x[1]
-            x[1] = x[2].readline()
+            x[1] = utils.to_ascii(x[2].readline())
             if not x[1]:
                 x[0], x[2] = sys.float_info.max, None
             else:
@@ -492,7 +492,7 @@ class LogParser(object):
         if event is not None:
             eventlogs = [event]
         else:
-            eventlogs = self.events.keys()
+            eventlogs = sorted(list(self.events.keys()))
 
         if nodes:
             rxes = self._build_re(event, nodes)
@@ -520,7 +520,7 @@ class LogParser(object):
             for log in eventlogs:
                 for _, f, pos in self.events.get(log, []):
                     self.fileobjs[f].seek(pos)
-                    msg = self.fileobjs[f].readline()
+                    msg = utils.to_ascii(self.fileobjs[f].readline())
                     if any(rx.search(msg) for rx in rxes):
                         ts = logtime.syslog_ts(msg)
                         if not (self.from_ts and ts < self.from_ts) and not (self.to_ts and ts > self.to_ts):
@@ -529,7 +529,7 @@ class LogParser(object):
             for log in eventlogs:
                 for _, f, pos in self.events.get(log, []):
                     self.fileobjs[f].seek(pos)
-                    msg = self.fileobjs[f].readline()
+                    msg = utils.to_ascii(self.fileobjs[f].readline())
                     ts = logtime.syslog_ts(msg)
                     if not (self.from_ts and ts < self.from_ts) and not (self.to_ts and ts > self.to_ts):
                         yield msg
@@ -601,7 +601,7 @@ class LogParser(object):
         """
         Returns (num transitions, num events)
         """
-        return len(self.transitions), sum(len(e) for e in self.events.values())
+        return len(self.transitions), sum(len(e) for e in list(self.events.values()))
 
     def _save_cache(self):
         """
@@ -609,7 +609,7 @@ class LogParser(object):
         """
         fn = self._metafile()
         try:
-            with open(fn, 'wb') as f:
+            with open(fn, 'wt') as f:
                 json.dump(self.to_dict(), f, indent=2)
                 crmlog.common_debug("Transition metadata saved to %s" % (fn))
         except IOError as e:
@@ -626,7 +626,7 @@ class LogParser(object):
 
             if meta_mtime >= logf_mtime and time.time() - meta_mtime < _METADATA_CACHE_AGE:
                 try:
-                    with open(fn, 'rb') as f:
+                    with open(fn, 'r') as f:
                         try:
                             if not self.from_dict(json.load(f)):
                                 return False

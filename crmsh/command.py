@@ -98,7 +98,7 @@ def skill_level(new_level):
         def do_rmrf(self, cmd, args):
             ...
     '''
-    if isinstance(new_level, basestring):
+    if isinstance(new_level, str):
         levels = {'operator': 0, 'administrator': 1, 'expert': 2}
         if new_level.lower() not in levels:
             raise ValueError("Unknown skill level: " + new_level)
@@ -246,7 +246,7 @@ def fuzzy_get(items, s):
         try:
             matcher = re.compile(rx, re.I)
             matches = [c
-                       for m, c in items.iteritems()
+                       for m, c in items.items()
                        if matcher.match(m)]
             if len(matches) == 1:
                 return matches[0]
@@ -337,11 +337,11 @@ at the current level.
             max_width += 2   
 
         colnum = 3
-        rownum = len(res)/colnum
+        rownum = len(res) // colnum
         for i in range(rownum):
             for x in res[i::rownum]:
-                print "%-0*s" % (max_width, x),
-            print ''
+                print("%-0*s" % (max_width, x), end=' ')
+            print('')
 
 
     @help('''Navigate the level structure
@@ -419,7 +419,7 @@ Examples:
         '''
         return tab completions
         '''
-        return self._children.keys()
+        return list(self._children.keys())
 
     def get_child(self, child):
         '''
@@ -452,7 +452,7 @@ Examples:
         def get_if_command(attr):
             "Return the named attribute if it's a command"
             child = getattr(cls, attr)
-            return child if attr.startswith('do_') and inspect.ismethod(child) else None
+            return child if attr.startswith('do_') and inspect.isfunction(child) else None
 
         def add_aliases(children, info):
             "Add any aliases for command to child map"
@@ -580,7 +580,7 @@ def is_valid_command_function(fn):
 
 
 def _check_args(fn, expected):
-    argnames = fn.func_code.co_varnames[:fn.func_code.co_argcount]
+    argnames = fn.__code__.co_varnames[:fn.__code__.co_argcount]
     if argnames != expected:
         raise ValueError(fn.__name__ +
                          ": Expected method with signature " + repr(expected))

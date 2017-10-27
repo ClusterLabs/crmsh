@@ -2,6 +2,8 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+from __future__ import print_function
+from __future__ import unicode_literals
 import sys
 import json
 import subprocess
@@ -37,6 +39,6 @@ def package_data(pkg):
 
 def main():
     data = [package_data(pkg) for pkg in sys.argv[1:]]
-    print json.dumps(data)
+    print(json.dumps(data))
 
 main()

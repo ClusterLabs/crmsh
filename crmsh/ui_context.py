@@ -73,14 +73,14 @@ class Context(object):
                     break
             if cmd:
                 rv = self.execute_command() is not False
-        except ValueError, msg:
-            if config.core.debug:
+        except ValueError as msg:
+            if config.core.debug or options.regression_tests:
                 import traceback
                 traceback.print_exc()
             common_err("%s: %s" % (self.get_qualified_name(), msg))
             rv = False
-        except IOError, msg:
-            if config.core.debug:
+        except IOError as msg:
+            if config.core.debug or options.regression_tests:
                 import traceback
                 traceback.print_exc()
             common_err("%s: %s" % (self.get_qualified_name(), msg))
@@ -332,7 +332,7 @@ class Context(object):
         '''
         ok = self.current_level().end_game()
         if options.interactive and not options.batch:
-            print "bye"
+            print("bye")
         if ok is False and rc == 0:
             rc = 1
         sys.exit(rc)

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # crmsh, command line interface for Linux HA clusters
 # Copyright (C) 2008-2015 Dejan Muhamedagic <dmuhamedagic@suse.de>
@@ -20,44 +20,30 @@
 #
 
 import sys
-from distutils import version
 
-minimum_version = '2.6'
-v_min = version.StrictVersion(minimum_version)
-v_this = version.StrictVersion(sys.version[:3])
-if v_min > v_this:
-    sys.stderr.write("abort: minimum python version support is %s\n" %
-                     minimum_version)
+if int(sys.version[0]) < 3:
+    sys.stderr.write("Abort: crmsh only support python3\n")
     sys.exit(-1)
 
 try:
-    try:
-        from crmsh import main
-    except ImportError as msg:
-        sys.stderr.write('''Fatal error:
-        %s
+    from crmsh import main
+except ImportError as msg:
+    sys.stderr.write('''Fatal error:
+    %s
 
-    Failed to start crmsh! This is likely due to a broken
-    installation or a missing dependency.
+Failed to start crmsh! This is likely due to a broken
+installation or a missing dependency.
 
-    If you are using a packaged version of crmsh, please try
-    reinstalling the package. Also check your PYTHONPATH and
-    make sure that the crmsh module is reachable.
+If you are using a packaged version of crmsh, please try
+reinstalling the package. Also check your PYTHONPATH and
+make sure that the crmsh module is reachable.
 
-    Please file an issue describing your installation at
-    https://github.com/Clusterlabs/crmsh/issues/ .
-''' % (msg))
-        sys.exit(-1)
-except AttributeError as msg:
-    sys.stderr.write('''Fatal error: %s
-
-    Failed to start crmsh! This is likely due to having
-    configured Python 3 as the default python version.
-    crmsh requires Python 2.6 or higher, but not (yet)
-    Python 3.
+Please file an issue describing your installation at
+https://github.com/Clusterlabs/crmsh/issues/ .
 ''' % (msg))
     sys.exit(-1)
 
 rc = main.run()
 sys.exit(rc)
+
 # vim:ts=4:sw=4:et:

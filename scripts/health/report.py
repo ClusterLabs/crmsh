@@ -1,9 +1,11 @@
 #!/usr/bin/env python
+from __future__ import print_function
+from __future__ import unicode_literals
 import crm_script
 data = crm_script.get_input()
 health_report = data[1]
 
-print "Processing collected information..."
+print("Processing collected information...")
 
 CORE_PACKAGES = ['corosync', 'pacemaker', 'resource-agents']
 
@@ -22,7 +24,7 @@ rpm_versions = {}
 LOW_UPTIME = 60.0
 HIGH_LOAD = 1.0
 
-for node, info in health_report.iteritems():
+for node, info in health_report.items():
     if node != info['system']['hostname']:
         error("Hostname mismatch: %s is not %s" %
               (node, info['system']['hostname']))
@@ -57,7 +59,7 @@ for node, info in health_report.iteritems():
         if use > 90:
             warn("On %s, disk %s usage is %s%%", node, disk, use)
 
-    for logfile, state in info['logrotate'].iteritems():
+    for logfile, state in info['logrotate'].items():
         if not state:
             warn("%s: No log rotation configured for %s" % (node, logfile))
 
@@ -65,13 +67,13 @@ for cp in CORE_PACKAGES:
     if cp not in rpm_versions:
         error("Core package '%s' not installed on any node", cp)
 
-for name, versions in rpm_versions.iteritems():
+for name, versions in rpm_versions.items():
     if len(versions) > 1:
-        desc = ', '.join('%s (%s)' % (v, ', '.join(nodes)) for v, nodes in versions.items())
+        desc = ', '.join('%s (%s)' % (v, ', '.join(nodes)) for v, nodes in list(versions.items()))
         warn("Package %s: Versions differ! %s", name, desc)
 
-    all_hosts = set(sum([hosts for hosts in versions.values()], []))
-    for node in health_report.keys():
+    all_hosts = set(sum([hosts for hosts in list(versions.values())], []))
+    for node in list(health_report.keys()):
         if len(all_hosts) > 0 and node not in all_hosts:
             warn("Package '%s' not installed on host '%s'" % (name, node))
 
@@ -92,15 +94,15 @@ def compare_system(systems):
 def compare_files(systems):
     keys = set()
     for host, files in systems:
-        keys.update(files.keys())
+        keys.update(list(files.keys()))
     for filename in keys:
         vals = set([files.get(filename) for host, files in systems])
         if len(vals) > 1:
             info = ', '.join('%s: %s' % (h, files.get(filename)) for h, files in systems)
             warn("%s: %s" % ("Files differ", info))
 
-compare_system((h, info['system']) for h, info in health_report.iteritems())
-compare_files((h, info['files']) for h, info in health_report.iteritems())
+compare_system((h, info['system']) for h, info in health_report.items())
+compare_files((h, info['files']) for h, info in health_report.items())
 
 if crm_script.output(2):
     report = crm_script.output(2)
@@ -109,21 +111,21 @@ if crm_script.output(2):
     if status and not analysis:
         warn("Cluster report: %s" % (status))
     elif analysis:
-        print "INFO: Cluster report:"
-        print analysis
+        print("INFO: Cluster report:")
+        print(analysis)
     else:
         warn("No cluster report generated")
 
 if errors:
     for e in errors:
-        print "ERROR:", e
+        print("ERROR:", e)
 if warnings:
     for w in warnings:
-        print "WARNING:", w
+        print("WARNING:", w)
 
 if not errors and not warnings:
-    print "No issues found."
+    print("No issues found.")
 
 import os
 workdir = os.path.dirname(crm_script.__file__)
-print "\nINFO: health-report in directory \"%s\"" % workdir
+print("\nINFO: health-report in directory \"%s\"" % workdir)
