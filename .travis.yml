@@ -10,3 +10,6 @@ before_install:
 
 after_failure:
   - sudo cat $TRAVIS_BUILD_DIR/crmtestout/regression.out $TRAVIS_BUILD_DIR/crmtestout/crm.*
+
+script:
+  - yes
