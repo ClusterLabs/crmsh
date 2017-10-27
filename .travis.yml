@@ -6,7 +6,7 @@ services:
 
 before_install:
   - docker pull krig/crmsh:latest
-  - docker run -t -v $(pwd):/app krig/crmsh /bin/sh -c "cd /app; ./autogen.sh; ./configure --prefix /usr; make install; sh -x /usr/share/crmsh/tests/regression.sh"
+  - docker run -t -v "$(pwd):/app" krig/crmsh /bin/sh -c "systemctl start dbus; cd /app; ./test/run-in-container.sh"
 
 after_failure:
   - sudo cat $TRAVIS_BUILD_DIR/crmtestout/regression.out $TRAVIS_BUILD_DIR/crmtestout/crm.*
