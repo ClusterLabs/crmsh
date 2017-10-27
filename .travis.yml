@@ -1,39 +1,12 @@
 ---
 sudo: required
-dist: trusty
-group: deprecated-2017Q2
 language: python
-python:
-  - "3.6_with_system_site_packages"
+services:
+  - docker
 
 before_install:
-  - sudo apt-get install -qq automake autoconf chrpath libglib2.0-dev perl net-tools python3 libtool libxml2-dev bison flex uuid-dev libbz2-dev zlib1g-dev libltdl3-dev libgnutls-dev python3-dev libpam0g-dev libncurses5-dev libcorosync-dev libxslt1-dev libdbus-1-dev
-  - sudo apt-get install -qq heartbeat-dev libheartbeat2-dev
-  - sudo apt-get install -qq libqb-dev
-  - sudo apt-get install -y python3-lxml python3-dateutil python3-setuptools python3-yaml asciidoc pkg-config
-  - sudo dpkg -r --force-depends crmsh
-  - sudo dpkg -r --force-depends pacemaker
-  - wget https://github.com/ClusterLabs/cluster-glue/archive/master.tar.gz && tar xzf master.tar.gz
-  - cd cluster-glue-master && ./autogen.sh && ./configure && sudo make install && cd ..
-  - wget https://github.com/ClusterLabs/pacemaker/archive/Pacemaker-1.1.16.tar.gz && tar xzf Pacemaker-1.1.16.tar.gz
-  - cd pacemaker-Pacemaker-1.1.16 && ./autogen.sh && ./configure && sudo make install && cd ..
-
-install:
-  - pip install tox-travis
-
-script:
-  - tox
-  - test/travis-tests.sh
+  - docker pull krig/crmsh:latest
+  - docker run --mount type=bind,source="$(pwd)",target=/app krig/crmsh /bin/sh -c "cd /app; ./autogen.sh; ./configure --prefix /usr; make; make install; /usr/share/crmsh/tests/regression.sh"
 
 after_failure:
-  - sudo cat $TRAVIS_BUILD_DIR/crmtestout/regression.out $TRAVIS_BUILD_DIR/crmtestout/crm.* /etc/apt/sources.list
-  - lsb_release -a
-  - whoami
-  - printenv | sort
-
-notifications:
-  irc:
-    channels:
-      - "chat.freenode.net#clusterlabs-dev"
-    on_success: never
-    on_failure: change
+  - sudo cat $TRAVIS_BUILD_DIR/crmtestout/regression.out $TRAVIS_BUILD_DIR/crmtestout/crm.*
