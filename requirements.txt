@@ -1,5 +1,5 @@
 lxml
 PyYAML
 nosexcover
-python-dateutil
+py-dateutil
 parallax
