@@ -14,18 +14,6 @@ Clones:
 Resources: d1 s-libvirt
 Transitions: 43 44* 45 46 47 48* 272* 49* 50*
 .INP: events
-Dec 14 20:06:35 xen-d corosync[5649]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
-Dec 14 20:06:35 xen-e corosync[24218]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
-Dec 14 20:06:36 xen-d corosync[5649]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
-Dec 14 20:07:54 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: xen-e 923599370
-Dec 14 20:07:54 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: lost: xen-d 906822154
-Dec 14 20:07:54 xen-e pengine: [24227]: WARN: pe_fence_node: Node xen-d will be fenced because it is un-expectedly down
-Dec 14 20:07:54 xen-e crmd: [24228]: notice: te_fence_node: Executing reboot fencing operation (12) on xen-d (timeout=60000)
-Dec 14 20:07:54 xen-e pengine: [24227]: WARN: stage6: Scheduling Node xen-d for STONITH
-Dec 14 20:07:56 xen-e stonith-ng: [24224]: notice: log_operation: Operation 'reboot' [24519] (call 0 from c0c111a5-d332-48f7-9375-739b91e04f0e) for host 'xen-d' with device 's-libvirt' returned: 0
-Dec 14 20:08:23 xen-d corosync[1874]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
-Dec 14 20:08:23 xen-d corosync[1874]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
-Dec 14 20:08:40 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: xen-e 923599370
 Dec 14 20:07:19 xen-d lrmd: [5657]: info: rsc:d1 start[4] (pid 5833)
 Dec 14 20:07:19 xen-d crmd: [5660]: info: process_lrm_event: LRM operation d1_start_0 (call=4, rc=0, cib-update=14, confirmed=true) ok
 Dec 14 20:07:19 xen-e lrmd: [24225]: info: rsc:s-libvirt start[4] (pid 24264)
@@ -68,6 +56,18 @@ Dec 14 20:06:36 xen-d crmd: [5660]: notice: ais_dispatch_message: Membership 128
 Dec 14 20:07:54 xen-e crmd: [24228]: notice: ais_dispatch_message: Membership 1289824: quorum lost
 Dec 14 20:08:24 xen-d crmd: [1948]: notice: ais_dispatch_message: Membership 1289828: quorum acquired
 Dec 14 20:08:40 xen-e crmd: [24228]: notice: ais_dispatch_message: Membership 1289828: quorum acquired
+Dec 14 20:06:35 xen-d corosync[5649]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
+Dec 14 20:06:35 xen-e corosync[24218]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
+Dec 14 20:06:36 xen-d corosync[5649]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
+Dec 14 20:07:54 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: xen-e 923599370
+Dec 14 20:07:54 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: lost: xen-d 906822154
+Dec 14 20:07:54 xen-e pengine: [24227]: WARN: pe_fence_node: Node xen-d will be fenced because it is un-expectedly down
+Dec 14 20:07:54 xen-e crmd: [24228]: notice: te_fence_node: Executing reboot fencing operation (12) on xen-d (timeout=60000)
+Dec 14 20:07:54 xen-e pengine: [24227]: WARN: stage6: Scheduling Node xen-d for STONITH
+Dec 14 20:07:56 xen-e stonith-ng: [24224]: notice: log_operation: Operation 'reboot' [24519] (call 0 from c0c111a5-d332-48f7-9375-739b91e04f0e) for host 'xen-d' with device 's-libvirt' returned: 0
+Dec 14 20:08:23 xen-d corosync[1874]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
+Dec 14 20:08:23 xen-d corosync[1874]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
+Dec 14 20:08:40 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: xen-e 923599370
 Dec 14 20:06:57 xen-e pengine: [24227]: ERROR: unpack_resources: Resource start-up disabled since no STONITH resources have been defined
 Dec 14 20:06:57 xen-e pengine: [24227]: ERROR: unpack_resources: Either configure some or disable STONITH with the stonith-enabled option
 Dec 14 20:06:57 xen-e pengine: [24227]: ERROR: unpack_resources: NOTE: Clusters with shared data need STONITH to ensure data integrity
