@@ -305,7 +305,7 @@ def pull_configuration(from_node):
             if newhash == oldhash:
                 print("No change.")
                 return
-        print("Writing %s...")
+        print("Writing %s:%s..." % (utils.this_node(), local_path))
         local_file = open(local_path, 'w')
         local_file.write(data)
         local_file.close()
