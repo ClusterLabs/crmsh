@@ -1844,6 +1844,11 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     _context.watchdog = watchdog
     _context.ui_context = ui_context
 
+
+    def check_option():
+        if _context.admin_ip and not valid_adminIP(_context.admin_ip):
+            error("Invalid option: admin_ip")
+
     if stage is None:
         stage = ""
 
@@ -1860,6 +1865,8 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     elif stage not in ("ssh", "ssh_remote", "csync2", "csync2_remote"):
         if corosync_active:
             error("Cluster is currently active - can't run %s stage" % (stage))
+
+    check_option()
 
     # Need hostname resolution to work, want NTP (but don't block ssh_remote or csync2_remote)
     if stage not in ('ssh_remote', 'csync2_remote'):
