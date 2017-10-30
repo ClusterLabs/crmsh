@@ -2,11 +2,6 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
-from __future__ import print_function
-from __future__ import unicode_literals
-from builtins import str
-from past.builtins import basestring
-from builtins import object
 import os
 import sys
 import subprocess
@@ -81,9 +76,9 @@ class Zypper(PackageManager):
         return None
 
     def is_installed(self, name):
-        if not isinstance(self._rpm, basestring):
+        if not isinstance(self._rpm, str):
             raise IOError(str(self._rpm))
-        if not isinstance(name, basestring):
+        if not isinstance(name, str):
             raise IOError(str(name))
         cmd = [self._rpm, '--query', '--info', name]
         rc, stdout, stderr = run(cmd)

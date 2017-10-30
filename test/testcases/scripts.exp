@@ -270,7 +270,7 @@ Notifies recipient by e-mail in the event of a resource takeover.
 .INP: run mailto id=foo email=test@example.com subject=hello nodes=node1 dry_run=true
 INFO: 10: E-Mail
 INFO: 10: Nodes: node1
-** all - #!/usr/bin/env python
+** all - #!/usr/bin/env python3
 import crm_script
 import crm_init
 
