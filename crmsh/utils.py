@@ -1002,7 +1002,7 @@ def is_process(s):
             procname = basename(cmdline.replace('\x00', ' ').split(' ')[0])
             if procname == s:
                 return True
-        except IOError:
+        except EnvironmentError:
             # a process may have died since we got the list of pids
             pass
     return False
