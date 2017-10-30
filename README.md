@@ -22,6 +22,11 @@ used in batch mode to execute commands from files.
 
 ## Installation
 
+Crmsh is implemented in Python, and requires Python version 3.4 or
+newer. Versions of crmsh older than the 4 series ran on Python 2, so
+if you don't have access to a Python 3 interpreter, you will need to
+use one of the older releases.
+
 The GNU Autotools suite is used to configure the OCF root directory,
 the Asciidoc tool which is used to generate documentation and the
 default daemon user (usually hacluster).
@@ -51,9 +56,8 @@ make install
 
 ## Development
 
-crmsh is implemented in Python. The source code for crmsh is kept in a
-git source repository. To check out the latest development
-version, install git and run this command:
+The source code for crmsh is kept in a git source repository. To check
+out the latest development version, install git and run this command:
 
 ```shell
 git clone https://github.com/ClusterLabs/crmsh
