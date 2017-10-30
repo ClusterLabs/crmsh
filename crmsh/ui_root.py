@@ -18,6 +18,7 @@
 #   and use cluster sublevel to install all requirements
 
 from . import command
+from . import completers as compl
 from . import cmd_status
 from . import ui_cib
 from . import ui_cibstatus
@@ -166,6 +167,7 @@ Geo-cluster related management.
     def do_site(self):
         pass
 
+    @command.completers(compl.choice(compl.status_option))
     @command.help('''show cluster status
 Show cluster status. The status is displayed by `crm_mon`. Supply
 additional arguments for more information or different format.

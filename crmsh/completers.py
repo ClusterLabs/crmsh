@@ -79,3 +79,7 @@ def primitives(args):
 nodes = call(xmlutil.listnodes)
 
 shadows = call(xmlutil.listshadows)
+
+status_option = """full bynode inactive ops timing failcounts
+                   verbose quiet xml simple tickets noheaders
+                   detail brief""".split()
