@@ -18,9 +18,19 @@ def _push_completer(args):
         n = []
 
 
-def _all_nodes(args):
+def _diff_nodes(args):
     try:
-        return utils.list_cluster_nodes()
+        if len(args) > 3:
+            return []
+        n = utils.list_cluster_nodes()
+        if args[-1] in n:
+            # continue complete
+            return [args[-1]]
+        for item in args:
+            if item in n:
+                # remove already complete item
+                n.remove(item)
+        return n
     except:
         return []
 
@@ -75,7 +85,7 @@ class Corosync(command.UI):
         '''
         return corosync.pull_configuration(node)
 
-    @command.completers_repeating(_all_nodes)
+    @command.completers_repeating(_diff_nodes)
     def do_diff(self, context, *nodes):
         '''
         Compare corosync configuration between nodes.
