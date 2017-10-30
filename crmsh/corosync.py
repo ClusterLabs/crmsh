@@ -374,6 +374,27 @@ def set_value(path, value):
     f.close()
 
 
+def add_node_ucast(IParray, node_name=None):
+
+    f = open(conf()).read()
+    p = Parser(f)
+
+    node_id = get_free_nodeid(p)
+    node_value = []
+    for i in range(len(IParray)):
+        node_value += make_value('nodelist.node.ring{}_addr'.format(i), IParray[i])
+    node_value += make_value('nodelist.node.nodeid', str(node_id))
+
+    p.add('nodelist', make_section('nodelist.node', node_value))
+
+    num_nodes = p.count('nodelist.node')
+    p.set('quorum.two_node', '1' if num_nodes == 2 else '0')
+
+    f = open(conf(), 'w')
+    f.write(p.to_string())
+    f.close()
+
+
 def add_node(addr, name=None):
     '''
     Add node to corosync.conf
@@ -502,6 +523,7 @@ logging {
         debug:  off
     }
 }
+
 %(nodelist)s
 quorum {
     # Enable and configure quorum subsystem (default: off)
@@ -525,25 +547,32 @@ def create_configuration(clustername="hacluster",
                          bindnetaddr=None,
                          mcastaddr=None,
                          mcastport=None,
+                         ringXaddr=None,
                          transport=None,
                          ipv6=False,
                          nodeid=None,
                          two_rings=False):
 
     if transport == "udpu":
+        ring_tmpl = ""
+        for i in 0, 1:
+            ring_tmpl += "        ring{}_addr: {}\n".format(i, ringXaddr[i])
+            if not two_rings:
+                break
+
         nodelist_tmpl = """nodelist {
     node {
-        ring0_addr: %(hostname)s
+%(ringaddr)s       
         nodeid: 1
     }
 }
-""" % {"hostname": utils.this_node()}
+""" % {"ringaddr": ring_tmpl}
     else:
         nodelist_tmpl = ""
 
     transport_tmpl = ""
     if transport is not None:
-        transport_tmpl = "    transport: {}\n".format(transport)
+        transport_tmpl = "transport: {}\n".format(transport)
 
     rrp_mode_tmp = ""
     if two_rings:
