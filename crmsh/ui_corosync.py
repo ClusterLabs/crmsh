@@ -13,6 +13,12 @@ def _push_completer(args):
     try:
         n = utils.list_cluster_nodes()
         n.remove(utils.this_node())
+        if args[-1] in n:
+            # continue complete
+            return [args[-1]]
+        for item in args:
+            if item in n:
+                n.remove(item)
         return n
     except:
         n = []
