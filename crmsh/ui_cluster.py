@@ -18,6 +18,9 @@ class OptParser(optparse.OptionParser):
     def format_epilog(self, formatter):
         return self.epilog or ""
 
+    def error(self, msg):
+        self.print_usage()
+        err_buf.error(msg)
 
 def _remove_completer(args):
     try:
@@ -49,7 +52,14 @@ def get_cluster_name():
     else:
         cluster_name = cib_factory.get_property('cluster-name')
     return cluster_name
-    
+
+
+def valid_ip(addr):
+    if not utils.valid_ip_addr(addr):
+        if not utils.valid_ip_addr(addr, 6):
+            return False
+    return True
+
 
 class Cluster(command.UI):
     '''
@@ -432,7 +442,15 @@ If stage is not specified, each stage will be invoked in sequence.
         if clusters is None:
             return None
         try:
-            return dict([re.split('[=:]+', o) for o in re.split('[ ,;]+', clusters)])
+            res = dict([re.split('[=:]+', o) for o in re.split('[ ,;]+', clusters)])
+            if len(res) < 2:
+                err_buf.error("Geo cluster must have two sites")
+                return None
+            for k, v in list(res.items()):
+                if not valid_ip(v):
+                    err_buf.error("Invalid IP format for cluster {}".format(k))
+                    return None
+            return res
         except TypeError:
             return None
         except ValueError:
@@ -485,16 +503,19 @@ Cluster Description
             if options.clusters is None:
                 errs.append("The --clusters argument is required.")
             parser.error(" ".join(errs))
+            return False
 
         clustermap = self._parse_clustermap(options.clusters)
         if clustermap is None:
             parser.error("Invalid cluster description format")
+            return False
         ticketlist = []
         if options.tickets is not None:
             try:
                 ticketlist = [t for t in re.split('[ ,;]+', options.tickets)]
             except ValueError:
                 parser.error("Invalid ticket list")
+                return False
         bootstrap.bootstrap_init_geo(options.quiet, options.yes_to_all, options.arbitrator, clustermap, ticketlist, ui_context=context)
         return True
 
@@ -525,9 +546,11 @@ Cluster Description
             errs.append("The --clusters argument is required.")
         if len(errs) > 0:
             parser.error(" ".join(errs))
+            return False
         clustermap = self._parse_clustermap(options.clusters)
         if clustermap is None:
             parser.error("Invalid cluster description format")
+            return False
         bootstrap.bootstrap_join_geo(options.quiet, options.yes_to_all, options.node, clustermap, ui_context=context)
         return True
 
@@ -550,6 +573,9 @@ Cluster Description
         if options.help:
             parser.print_help()
             return
+        if options.other is None:
+            parser.error("The --cluster-node argument is required.")
+            return False
         bootstrap.bootstrap_arbitrator(options.quiet, options.yes_to_all, options.other, ui_context=context)
         return True
 
