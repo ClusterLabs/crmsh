@@ -96,7 +96,7 @@ class JsonPrinter(object):
             ret['error'] = str(output) if output else ''
         else:
             ret['output'] = str(output) if output else ''
-        print(json.dumps(ret))
+        print(json.dumps(ret, sort_keys=True))
 
     def flush(self):
         pass
@@ -410,10 +410,10 @@ class Script(command.UI):
                     print(json.dumps({'name': name,
                                       'category': script['category'].lower(),
                                       'shortdesc': script['shortdesc'],
-                                      'longdesc': scripts.format_desc(script['longdesc'])}))
+                                      'longdesc': scripts.format_desc(script['longdesc'])}, sort_keys=True))
             except ValueError as err:
                 print(json.dumps({'name': name,
-                                  'error': str(err)}))
+                                  'error': str(err)}, sort_keys=True))
         return True
 
     def _json_show(self, context, cmd):
@@ -431,7 +431,7 @@ class Script(command.UI):
                           'category': script['category'].lower(),
                           'shortdesc': script['shortdesc'],
                           'longdesc': scripts.format_desc(script['longdesc']),
-                          'steps': scripts.clean_steps(script['steps'])}))
+                          'steps': scripts.clean_steps(script['steps'])}, sort_keys=True))
         return True
 
     def _json_verify(self, context, cmd):
@@ -458,7 +458,7 @@ class Script(command.UI):
                        'nodes': str(action.get('nodes', ''))}
                 if 'sudo' in action:
                     obj['sudo'] = action['sudo']
-                print(json.dumps(obj))
+                print(json.dumps(obj, sort_keys=True))
         return True
 
     def _json_run(self, context, cmd):
@@ -480,7 +480,7 @@ class Script(command.UI):
         if not ret and printer.results:
             for result in printer.results:
                 if 'error' in result:
-                    print(json.dumps(result))
+                    print(json.dumps(result, sort_keys=True))
         return ret
 
     def do_json(self, context, command):
