@@ -629,12 +629,12 @@ Cluster Description
                 err_buf.error("[%s]: %s" % (host, result))
             else:
                 if result[0] != 0:
-                    err_buf.error("[%s]: rc=%s\n%s\n%s" % (host, result[0], result[1], result[2]))
+                    err_buf.error("[%s]: rc=%s\n%s\n%s" % (host, result[0], utils.to_ascii(result[1]), utils.to_ascii(result[2])))
                 else:
                     if not result[1]:
                         err_buf.ok("[%s]" % host)
                     else:
-                        err_buf.ok("[%s]\n%s" % (host, result[1]))
+                        err_buf.ok("[%s]\n%s" % (host, utils.to_ascii(result[1])))
 
     def do_copy(self, context, local_file, *nodes):
         '''

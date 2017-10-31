@@ -1,15 +1,16 @@
-#!/usr/bin/env python
-from __future__ import print_function
-from __future__ import unicode_literals
+#!/usr/bin/env python3
 import os
 import sys
 import shutil
 errors = []
 mydir = os.path.dirname(os.path.abspath(sys.modules[__name__].__file__))
+
+
 def bad(path):
     return ((not os.path.isabs(path)) or os.path.dirname(path) == '/' or
             path.startswith('/var') or path.startswith('/usr') or
             (not path.startswith(mydir)))
+
 for f in sys.argv[1:]:
     if bad(f):
         errors.append("cannot remove %s from %s" % (f, mydir))

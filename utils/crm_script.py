@@ -1,7 +1,3 @@
-from __future__ import print_function
-from __future__ import unicode_literals
-from builtins import str
-from past.builtins import basestring
 import os
 import sys
 import getpass
@@ -64,7 +60,7 @@ def exit_ok(data):
 def is_true(s):
     if s in (True, False):
         return s
-    return isinstance(s, basestring) and s.lower() in ('yes', 'true', '1', 'on')
+    return isinstance(s, str) and s.lower() in ('yes', 'true', '1', 'on')
 
 
 _debug_enabled = None
@@ -114,7 +110,7 @@ def sudo_call(cmd, shell=False):
     os.unsetenv('SSH_ASKPASS')
     call(['sudo', '-k'], shell=False)
     sudo_prompt = 'crm_script_sudo_prompt'
-    if isinstance(cmd, basestring):
+    if isinstance(cmd, str):
         cmd = "sudo -H -S -p '%s' %s" % (sudo_prompt, cmd)
     else:
         cmd = ['sudo', '-H', '-S', '-p', sudo_prompt] + cmd

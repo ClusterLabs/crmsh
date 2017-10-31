@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Note that this script only installs the python modules,
 # the other parts of crmsh are installed by autotools
 from setuptools import setup
