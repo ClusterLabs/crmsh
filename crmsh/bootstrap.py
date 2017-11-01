@@ -17,6 +17,7 @@ import sys
 import random
 import re
 import time
+import readline
 from string import Template
 from lxml import etree
 from . import config
@@ -27,7 +28,6 @@ from . import corosync
 from . import tmpfiles
 from . import clidisplay
 from . import term
-import readline
 
 
 LOG_FILE = "/var/log/ha-cluster-bootstrap.log"
@@ -64,6 +64,8 @@ class Context(object):
         self.watchdog = None
         self.host_status = None
         self.connect_name = None
+        self.second_hb = None
+        self.ui_context = None
 
 
 _context = None
@@ -124,7 +126,7 @@ def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=N
         disable_completion()
         val = utils.multi_input('  %s [%s]' % (msg, default))
         enable_completion()
-        if val is None or len(val) == 0:
+        if not val:
             val = default
         else:
             readline.remove_history_item(readline.get_current_history_length()-1)
@@ -738,9 +740,8 @@ def valid_network(addr, prev_value=None):
     all_ = utils.network_all()
     if all_ and addr in all_:
         return True
-    else:
-        warn("  Address '{}' invalid, expected one of {}".format(addr, all_))
-        return False
+    warn("  Address '{}' invalid, expected one of {}".format(addr, all_))
+    return False
 
 
 def valid_v6_network(addr, prev_value=None):
@@ -761,9 +762,8 @@ def valid_v6_network(addr, prev_value=None):
     network_list = [utils.get_ipv6_network(x) for x in network_list]
     if addr in network_list:
         return True
-    else:
-        warn("  Address '{}' invalid, expected one of {}".format(addr, network_list))
-        return False
+    warn("  Address '{}' invalid, expected one of {}".format(addr, network_list))
+    return False
 
 
 def valid_ucastIP(addr, prev_value=None):
@@ -771,7 +771,7 @@ def valid_ucastIP(addr, prev_value=None):
         print(term.render(clidisplay.error("    {} has been used".format(addr))))
         return False
     ip_local = utils.ip_in_local(_context.ipv6)
-    if not addr in ip_local:
+    if addr not in ip_local:
         print(term.render(clidisplay.error("    Must one of {}".format(ip_local))))
         return False
     return True
@@ -832,7 +832,7 @@ def valid_port(port, prev_value=None):
 
 
 def init_corosync_unicast():
-    def pick_default_value(vlist, ilist):  
+    def pick_default_value(vlist, ilist):
         # give a different value for second config items
         if len(ilist) == 1:
             vlist.remove(ilist[0])
@@ -853,7 +853,7 @@ Configure Corosync (unicast):
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
-    ringXaddr_res = []    
+    ringXaddr_res = []
     mcastport_res = []
     default_ports = ["5045", "5047"]
     two_rings = False
@@ -864,15 +864,15 @@ Configure Corosync (unicast):
         all_ = utils.network_v6_all()
         for item in all_.values():
             network_list.extend(item)
-        default_networks = map(lambda x:utils.get_ipv6_network(x), network_list)
+        default_networks = map(utils.get_ipv6_network, network_list)
     else:
         default_networks = utils.network_all()
-    if len(default_networks) == 0:
+    if not default_networks:
         error("No network configured at {}!".format(utils.this_node()))
 
     for i in 0, 1:
-        ringXaddr = prompt_for_string('Address for ring{}'.format(i), 
-                                      r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:', 
+        ringXaddr = prompt_for_string('Address for ring{}'.format(i),
+                                      r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:',
                                       "",
                                       valid_ucastIP,
                                       ringXaddr_res)
@@ -880,8 +880,8 @@ Configure Corosync (unicast):
             error("No value for ring{}".format(i))
         ringXaddr_res.append(ringXaddr)
 
-        mcastport = prompt_for_string('Port for ring{}'.format(i), 
-                                      '[0-9]+', 
+        mcastport = prompt_for_string('Port for ring{}'.format(i),
+                                      '[0-9]+',
                                       pick_default_value(default_ports, mcastport_res),
                                       valid_port,
                                       mcastport_res)
@@ -902,7 +902,7 @@ Configure Corosync (unicast):
         mcastport=mcastport_res,
         transport="udpu",
         ipv6=_context.ipv6,
-        two_rings = two_rings)
+        two_rings=two_rings)
     csync2_update(corosync.conf())
 
 
@@ -912,11 +912,10 @@ def init_corosync_multicast():
             return "ff3e::%s:%d" % (
                 ''.join([random.choice('0123456789abcdef') for _ in range(4)]),
                 random.randint(0, 9))
-        else:
-            return "239.%d.%d.%d" % (
-                random.randint(0, 255),
-                random.randint(0, 255),
-                random.randint(1, 255))
+        return "239.%d.%d.%d" % (
+            random.randint(0, 255),
+            random.randint(0, 255),
+            random.randint(1, 255))
 
     def pick_default_value(vlist, ilist):
         # give a different value for second config items
@@ -954,7 +953,7 @@ Configure Corosync:
         default_networks = [utils.get_ipv6_network(x) for x in network_list]
     else:
         default_networks = utils.network_all()
-    if len(default_networks) == 0:
+    if not default_networks:
         error("No network configured at {}!".format(utils.this_node()))
 
     for i in 0, 1:
@@ -1119,7 +1118,7 @@ Configure Shared Storage:
             #  4) Non-empty parition table
             #
             partitions = list_partitions(dev)
-            if len(partitions) > 0:
+            if partitions:
                 status("WARNING: Partitions exist on %s!" % (dev))
                 if confirm("Are you ABSOLUTELY SURE you want to overwrite?"):
                     dev_looks_sane = True
@@ -1133,7 +1132,7 @@ Configure Shared Storage:
                 else:
                     dev = ""
 
-    if len(partitions):
+    if partitions:
         if not confirm("Really?"):
             return
         status_long("Erasing existing partitions...")
@@ -1443,6 +1442,7 @@ def init():
 
 def join_ssh(seed_host):
     """
+    SSH configuration for joining node.
     """
     if not seed_host:
         error("No existing IP/hostname specified (use -c option)")
@@ -1487,6 +1487,7 @@ def join_ssh(seed_host):
 
 def join_csync2(seed_host):
     """
+    Csync2 configuration for joining node.
     """
     if not seed_host:
         error("No existing IP/hostname specified (use -c option)")
@@ -1536,7 +1537,7 @@ def join_ssh_merge(_cluster_node):
     status("Merging known_hosts")
 
     hosts = [m.group(1) for m in re.finditer(r"^\s*host\s*([^ ;]+)\s*;", open(CSYNC2_CFG).read(), re.M)]
-    if len(hosts) == 0:
+    if not hosts:
         error("Unable to extract host list from %s" % (CSYNC2_CFG))
 
     try:
@@ -1572,6 +1573,7 @@ def join_ssh_merge(_cluster_node):
 
 def join_cluster(seed_host):
     """
+    Cluster configuration for joining node.
     """
     def get_local_nodeid():
         # for IPv6
@@ -1614,8 +1616,8 @@ def join_cluster(seed_host):
     # that yet, so the following crawling horror takes a punt on the seed
     # node being up, then asks it for a list of mountpoints...
     if _context.cluster_node:
-        rc, outp, _ = utils.get_stdout_stderr("ssh -o StrictHostKeyChecking=no root@{} 'cibadmin -Q --xpath \"//primitive\"'".format(seed_host))
-        if len(outp):
+        _rc, outp, _ = utils.get_stdout_stderr("ssh -o StrictHostKeyChecking=no root@{} 'cibadmin -Q --xpath \"//primitive\"'".format(seed_host))
+        if outp:
             xml = etree.fromstring(outp)
             mountpoints = xml.xpath(' and '.join(['//primitive[@class="ocf"',
                                                   '@provider="heartbeat"',
@@ -1640,8 +1642,8 @@ def join_cluster(seed_host):
         print("")
         for i in 0, 1:
             while True:
-                ringXaddr = prompt_for_string('Address for ring{}'.format(i), 
-                                              r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:', 
+                ringXaddr = prompt_for_string('Address for ring{}'.format(i),
+                                              r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:',
                                               "",
                                               valid_ucastIP,
                                               ringXaddr_res)
@@ -1652,7 +1654,7 @@ def join_cluster(seed_host):
                 tmp = re.findall(r' {}/[0-9]+ '.format(ringXaddr), outp, re.M)[0].strip()
                 peer_ip = corosync.get_value("nodelist.node.ring{}_addr".format(i))
                 # e.g. peer ring0_addr and local ring0_addr must int the same network
-                if not utils.Network(tmp).has_key(peer_ip):
+                if peer_ip not in utils.Network(tmp):
                     print(term.render(clidisplay.error("    shouldn't in network {}".format(tmp))))
                     continue
 
@@ -1831,8 +1833,9 @@ def remove_get_hostname(seed_host):
             _context.host_status = 0
 
 
-def remove_cluster():
+def remove_node_from_cluster():
     """
+    Remove node from running cluster and the corosync / pacemaker configuration.
     """
     node = _context.cluster_node
 
@@ -1933,7 +1936,6 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     _context.admin_ip = admin_ip
     _context.watchdog = watchdog
     _context.ui_context = ui_context
-
 
     def check_option():
         if _context.admin_ip and not valid_adminIP(_context.admin_ip):
@@ -2093,7 +2095,7 @@ def bootstrap_remove(cluster_node=None, ui_context=None, quiet=False, yes_to_all
             if not invoke('bash -c "rm -f {} && rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*"'.format(" ".join(toremove))):
                 error("Deleting the configuration files failed")
     else:
-        remove_cluster()
+        remove_node_from_cluster()
 
 
 def init_common_geo():
