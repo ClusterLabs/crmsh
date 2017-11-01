@@ -7,10 +7,11 @@
 #   inside the functions.
 
 import inspect
+import re
 from . import help as help_module
 from . import ui_utils
 from .msg import common_debug
-import re
+
 
 def name(n):
     '''
@@ -143,7 +144,7 @@ def completers(*fns):
     Each completer gets as its argument the command line entered so far,
     and returns a list of possible completions.
     '''
-    def completer(args):
+    def cfn(args):
         nargs = len(args) - 1
         if nargs == 0:
             return [args[0]]
@@ -152,7 +153,7 @@ def completers(*fns):
         return []
 
     def inner(fn):
-        setattr(fn, '_completer', completer)
+        setattr(fn, '_completer', cfn)
         return fn
     return inner
 
@@ -162,7 +163,7 @@ def completers_repeating(*fns):
     Like completers, but calls the last completer
     for any additional arguments
     '''
-    def completer(args):
+    def cfn(args):
         nargs = len(args) - 1
         if nargs == 0:
             return [args[0]]
@@ -171,7 +172,7 @@ def completers_repeating(*fns):
         return fns[-1](args)
 
     def inner(fn):
-        setattr(fn, '_completer', completer)
+        setattr(fn, '_completer', cfn)
         return fn
     return inner
 
@@ -192,8 +193,8 @@ def _cd_completer(args, context):
         return [l for l in current_completions() if is_sublevel(l)]
 
     def prev_completions():
-        return [l for l in context.previous_level().get_completions() 
-                        if context.previous_level().is_sublevel(l)]
+        return [l for l in context.previous_level().get_completions()
+                if context.previous_level().is_sublevel(l)]
 
     if len(args) == 1 and args[0] == 'cd':
         # complete the 'cd' command self
@@ -240,7 +241,6 @@ def fuzzy_get(items, s):
     found = items.get(s)
     if found:
         return found
-    import re
 
     def fuzzy_match(rx):
         try:
@@ -334,7 +334,7 @@ at the current level.
             res.append(o)
 
         if max_width >= 16:
-            max_width += 2   
+            max_width += 2
 
         colnum = 3
         rownum = len(res) // colnum
@@ -559,7 +559,7 @@ class ChildInfo(object):
         '''
         ret = []
         if self.completer is not None:
-            specs = inspect.getargspec(self.completer)
+            specs = inspect.getfullargspec(self.completer)
             if 'context' in specs.args:
                 ret = self.completer([self.name] + args, context)
             else:
@@ -575,7 +575,7 @@ def is_valid_command_function(fn):
     Returns True if fn is a valid command function:
     named do_xxx, takes (self, context) as the first two parameters
     '''
-    specs = inspect.getargspec(fn)
+    specs = inspect.getfullargspec(fn)
     return len(specs.args) >= 2 and specs.args[0] == 'self' and specs.args[1] == 'context'
 
 
