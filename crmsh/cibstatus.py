@@ -2,14 +2,14 @@
 # See COPYING for license information.
 
 import os
+from tempfile import mkstemp
 from lxml import etree
 from . import tmpfiles
-from tempfile import mkstemp
-from .utils import ext_cmd, show_dot_graph, page_string
-from .msg import common_err, common_info, common_warn
 from . import xmlutil
 from . import utils
 from . import config
+from .utils import ext_cmd, show_dot_graph, page_string
+from .msg import common_err, common_info, common_warn
 
 
 def get_tag_by_id(node, tag, ident):
