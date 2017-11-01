@@ -42,6 +42,19 @@ make
 make install
 ```
 
+## Test suites
+
+There are two sets of tests: Unit tests and regression tests.
+
+To run the unit tests, call `test/run`. This uses `nosetests` to run a
+set of test cases that don't need a full Pacemaker environment.
+
+To run the regression tests in a docker container, use the
+`test/containerized-regression-tests.sh` script. This relies on having
+access to `docker` to pull down the base image and run the regression
+test suite. The docker base image used is defined in the `Dockerfile`
+included in the repository.
+
 ## Manifest
 
 ```shell
