@@ -164,7 +164,7 @@ class CompletionHelp(object):
             print("\n%s" % helptxt, end='')
             if clidisplay.colors_enabled():
                 print("\n%s%s" % (term.render(clidisplay.prompt_noreadline(constants.prompt)),
-                                cmdline), end=' ')
+                                  cmdline), end=' ')
             else:
                 print("\n%s%s" % (constants.prompt, cmdline), end=' ')
             cls.laststamp = time.time()
@@ -182,7 +182,7 @@ def _prim_params_completer(agent, args):
         return []
     elif '=' in completing:
         return []
-    return [s+'=' for s in agent.completion_params()]
+    return [s+'=' for s in agent.params(completion=True)]
 
 
 def _prim_meta_completer(agent, args):

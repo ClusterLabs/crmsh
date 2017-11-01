@@ -26,7 +26,7 @@ def _remove_completer(args):
         n = []
     for node in args[1:]:
         if node in n:
-            n.remove(node)   
+            n.remove(node)
     return scripts.param_completion_list('remove') + n
 
 
@@ -49,7 +49,7 @@ def get_cluster_name():
     else:
         cluster_name = cib_factory.get_property('cluster-name')
     return cluster_name
-    
+
 
 class Cluster(command.UI):
     '''
@@ -177,7 +177,7 @@ Note:
     will be skipped.
 """, add_help_option=False)
 
-        parser.add_option("-h", "--help",action="store_true", dest="help", help="Show this help message")
+        parser.add_option("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_option("-q", "--quiet", action="store_true", dest="quiet",
                           help="Be quiet (don't describe what's happening, just do it)")
         parser.add_option("-y", "--yes", action="store_true", dest="yes_to_all",
@@ -289,7 +289,7 @@ Stage can be one of:
 
 If stage is not specified, each stage will be invoked in sequence.
 """, add_help_option=False)
-        parser.add_option("-h", "--help",action="store_true", dest="help", help="Show this help message")
+        parser.add_option("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG", help="Use the given watchdog device")
@@ -342,7 +342,7 @@ If stage is not specified, each stage will be invoked in sequence.
         Must be executed from a node in the existing cluster.
         '''
         parser = OptParser(usage="usage: add [options] [node ...]", add_help_option=False)
-        parser.add_option("-h", "--help",action="store_true", dest="help", help="Show this help message")
+        parser.add_option("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         try:
             options, args = parser.parse_args(list(args))
@@ -363,7 +363,7 @@ If stage is not specified, each stage will be invoked in sequence.
         Remove the given node(s) from the cluster.
         '''
         parser = OptParser(usage="usage: remove [options] [<node> ...]", add_help_option=False)
-        parser.add_option("-h", "--help",action="store_true", dest="help", help="Show this help message")
+        parser.add_option("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of cluster node which will be deleted", metavar="HOST")
@@ -466,7 +466,7 @@ Cluster Description
   Name clusters using the --name parameter to
   crm bootstrap init.
 """, add_help_option=False)
-        parser.add_option("-h", "--help",action="store_true", dest="help", help="Show this help message")
+        parser.add_option("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-a", "--arbitrator", help="IP address of geo cluster arbitrator", dest="arbitrator", metavar="IP")
@@ -506,7 +506,7 @@ Cluster Description
         Join this cluster to a geo configuration.
         '''
         parser = OptParser(usage="usage: geo-join [options]", add_help_option=False)
-        parser.add_option("-h", "--help",action="store_true", dest="help", help="Show this help message")
+        parser.add_option("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", help="IP address of an already-configured geo cluster or arbitrator", dest="node", metavar="IP")
@@ -539,7 +539,7 @@ Cluster Description
         Make this node a geo arbitrator.
         '''
         parser = OptParser(usage="usage: geo-init-arbitrator [options]", add_help_option=False)
-        parser.add_option("-h", "--help",action="store_true", dest="help", help="Show this help message")
+        parser.add_option("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", help="IP address of an already-configured geo cluster", dest="other", metavar="IP")

@@ -2,13 +2,14 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+import re
 from . import command
 from . import completers as compl
 from . import utils
 from . import ra
 from . import constants
 from . import options
-import re
+
 
 def complete_class_provider_type(args):
     '''
@@ -52,14 +53,14 @@ def complete_class_provider_type(args):
         for t in types:
             ret.add('%s:%s' % (c.strip(':'), t))
         return list(ret)
-        
+
     if re.search(r'.+:.+', c):
         # Second completion: types of other classes
         types = ra.ra_types(c.split(':')[0])
         for t in types:
             ret.add('%s:%s' % (c.split(':')[0], t))
         return list(ret)
-    
+
     # First completion:  agent classes
     return [l+":" for l in classes]
 

@@ -776,7 +776,7 @@ class ResourceParser(BaseParser):
             self.rewind()
         for attr_list in self.match_attr_lists({'op_params': 'instance_attributes',
                                                 'op_meta': 'meta_attributes'},
-                                                implicit_initial='op_params'):
+                                               implicit_initial='op_params'):
             node.append(attr_list)
         out.append(node)
 
@@ -1103,9 +1103,9 @@ def property_parser(self, cmd):
 
 @parser_for('fencing-topology', 'fencing_topology')
 class FencingOrderParser(BaseParser):
-    """
+    '''
     <fencing-topology>
-    <fencing-level id=<id> target=<text> index=<+int> devices=r"\w,\w..."/>
+    <fencing-level id=<id> target=<text> index=<+int> devices=r"\\w,\\w..."/>
     </fencing-topology>
 
     new:
@@ -1116,7 +1116,7 @@ class FencingOrderParser(BaseParser):
 
     <fencing-topology>
     <fencing-level id=<id> target-attribute=<text> target-value=<text>
-                   index=<+int> devices=r"\w,\w..."/>
+                   index=<+int> devices=r"\\w,\\w..."/>
     </fencing-topology>
 
     from 1.1.14 on, target can be a regexp pattern:
@@ -1125,14 +1125,14 @@ class FencingOrderParser(BaseParser):
 
     <fencing-topology>
     <fencing-level id=<id> target-pattern=<pattern>
-                   index=<+int> devices=r"\w,\w..."/>
+                   index=<+int> devices=r"\\w,\\w..."/>
     </fencing-topology>
 
     fencing-topology \
       pcmk-1: poison-pill power \
       pcmk-2: disk,network power
 
-    """
+    '''
     def parse(self, cmd):
         self.begin(cmd)
         if not self.try_match("fencing-topology"):

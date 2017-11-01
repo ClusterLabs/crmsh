@@ -68,8 +68,7 @@ def _textify(obj):
         return 'true'
     elif obj is False:
         return 'false'
-    else:
-        return str(obj)
+    return str(obj)
 
 
 def _parse(template, context, strict):
@@ -98,7 +97,7 @@ def _parse(template, context, strict):
             if block:
                 if obj in (None, False):
                     pass
-                elif isinstance(obj, tuple) or isinstance(obj, list):
+                elif isinstance(obj, (tuple, list)):
                     for it in obj:
                         ret += _parse(body, _push(path, it, context), strict)
                 else:

@@ -381,7 +381,7 @@ def pipe_string(cmd, s):
         p.wait()
         rc = p.returncode
     except IOError as msg:
-        if "Broken pipe" not in msg:
+        if "Broken pipe" not in str(msg):
             common_err(msg)
     return rc
 
@@ -413,10 +413,9 @@ def filter_string(cmd, s, stderr_on=True, shell=True):
             outp = ret[0]
         p.wait()
         rc = p.returncode
-    except OSError as xxx_todo_changeme1:
-        (errno, strerror) = xxx_todo_changeme1.args
-        if errno != os.errno.EPIPE:
-            common_err(strerror)
+    except OSError as err:
+        if err.errno != os.errno.EPIPE:
+            common_err(err.strerror)
         common_info("from: %s" % cmd)
     except Exception as msg:
         common_err(msg)
@@ -643,7 +642,7 @@ def get_check_rc():
     return 2 which is the code for error. Otherwise, we
     pretend that errors are warnings.
     '''
-    return config.core.check_mode == "strict" and 2 or 1
+    return 2 if config.core.check_mode == "strict" else 1
 
 
 _LOCKDIR = ".lockdir"
@@ -661,13 +660,12 @@ def check_locker(lockdir):
         return
     try:
         os.kill(pid, 0)
-    except OSError as xxx_todo_changeme2:
-        (errno, strerror) = xxx_todo_changeme2.args
-        if errno == os.errno.ESRCH:
+    except OSError as err:
+        if err.errno == os.errno.ESRCH:
             common_info("history: removing stale lock")
             rmdir_r(os.path.join(lockdir, _LOCKDIR))
         else:
-            common_err("%s: %s" % (_LOCKDIR, strerror))
+            common_err("%s: %s" % (_LOCKDIR, err.strerror))
 
 
 @contextmanager
@@ -684,10 +682,9 @@ def lock(lockdir):
                 os.makedirs(os.path.join(lockdir, _LOCKDIR))
                 str2file("%d" % os.getpid(), os.path.join(lockdir, _LOCKDIR, _PIDF))
                 return True
-            except OSError as xxx_todo_changeme:
-                (errno, strerror) = xxx_todo_changeme.args
-                if errno != os.errno.EEXIST:
-                    common_err("Failed to acquire lock to %s: %s" % (lockdir, strerror))
+            except OSError as err:
+                if err.errno != os.errno.EEXIST:
+                    common_err("Failed to acquire lock to %s: %s" % (lockdir, err.strerror))
                     return False
                 time.sleep(0.1)
                 continue
@@ -768,8 +765,7 @@ def stdout2list(cmd, stderr_on=True, shell=True):
     rc, s = get_stdout(add_sudo(cmd), stderr_on=stderr_on, shell=shell)
     if not s:
         return rc, []
-    else:
-        return rc, s.split('\n')
+    return rc, s.split('\n')
 
 
 def append_file(dest, src):
@@ -1012,8 +1008,8 @@ def convert2ints(l):
     try:
         if isinstance(l, (tuple, list)):
             return [int(x) for x in l]
-        else:  # it's a string then
-            return int(l)
+        # it's a string then
+        return int(l)
     except ValueError:
         return None
 
@@ -1278,8 +1274,7 @@ def total_seconds(td):
     """
     if hasattr(datetime.timedelta, 'total_seconds'):
         return td.total_seconds()
-    else:
-        return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) // 10**6
+    return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) // 10**6
 
 
 def datetime_to_timestamp(dt):
@@ -1351,9 +1346,8 @@ def parse_to_timestamp(t):
 
         if datetime_is_aware(dt):
             return datetime_to_timestamp(dt)
-        else:
-            # convert to UTC from local time
-            return total_seconds(dt - tz.tzlocal().utcoffset(dt) - datetime.datetime(1970, 1, 1))
+        # convert to UTC from local time
+        return total_seconds(dt - tz.tzlocal().utcoffset(dt) - datetime.datetime(1970, 1, 1))
     except ValueError as msg:
         common_err("parse_time %s: %s" % (t, msg))
         return None
@@ -1747,7 +1741,7 @@ def unquote(s):
     becomes 'a b c'
     """
     sp = shlex.split(s)
-    if len(sp) > 0:
+    if sp:
         return sp[0]
     return ""
 
@@ -1966,7 +1960,7 @@ class IP(object):
 
         if self.mask is None:
             self.mask = {4: 32, 6: 128}[self.v]
-        elif isinstance(self.mask, int) or self.mask.isdigit():
+        elif isinstance(self.mask, str):
             self.mask = int(self.mask)
 
     def __str__(self):
@@ -2017,9 +2011,8 @@ class IP(object):
                 (n >> 8) & 0xff,
                 n & 0xff,
             ]))
-        else:
-            n = '%032x' % n
-            return ':'.join(n[4 * x:4 * x + 4] for x in range(0, 8))
+        n = '%032x' % n
+        return ':'.join(n[4 * x:4 * x + 4] for x in range(0, 8))
 
     def version(self):
         return self.v
@@ -2061,8 +2054,7 @@ class Network(IP):
         """
         if self.version() == 4:
             return (MAX_IPV4 >> (32 - self.mask)) << (32 - self.mask)
-        else:
-            return (MAX_IPV6 >> (128 - self.mask)) << (128 - self.mask)
+        return (MAX_IPV6 >> (128 - self.mask)) << (128 - self.mask)
 
     def network(self):
         """
@@ -2082,8 +2074,7 @@ class Network(IP):
         """
         if self.version() == 4:
             return self.network_long() | (MAX_IPV4 - self.netmask_long())
-        else:
-            return self.network_long() | (MAX_IPV6 - self.netmask_long())
+        return self.network_long() | (MAX_IPV6 - self.netmask_long())
 
     def check_collision(self, other):
         """Check another network against the given network."""

@@ -1,8 +1,8 @@
 # Copyright (C) 2012 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
-from . import config
 import re
+from . import config
 from .pacemaker import CrmSchema, PacemakerError
 from .msg import common_err
 

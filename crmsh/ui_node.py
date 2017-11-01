@@ -54,12 +54,12 @@ def _find_attr(args):
 
     res = []
     if args[0] == "utilization":
-       xpath = "//nodes/node[@uname='%s']/utilization/nvpair" % args[1]
+        xpath = "//nodes/node[@uname='%s']/utilization/nvpair" % args[1]
     if args[0] == "attribute":
-       xpath = "//nodes/node[@uname='%s']/instance_attributes/nvpair" % args[1]
+        xpath = "//nodes/node[@uname='%s']/instance_attributes/nvpair" % args[1]
     if args[0] == "status-attr":
-       xpath = "//status/node_state[@uname='%s']/\
-                transient_attributes/instance_attributes/nvpair" % args[1]
+        xpath = "//status/node_state[@uname='%s']/\
+        transient_attributes/instance_attributes/nvpair" % args[1]
     node_attr = cib.xpath(xpath)
     for item in node_attr:
         res.append(item.get("name"))

@@ -3,10 +3,10 @@
 #
 # Make sure that ids are unique.
 
-from . import constants
 import copy
-from .msg import common_error, id_used_err
+from . import constants
 from . import xmlutil
+from .msg import common_error, id_used_err
 
 _id_store = {}
 _state = []
