@@ -1188,14 +1188,14 @@ def set_attr(e, attr, value):
     '''
     Set an attribute in the attribute set.
     '''
-    nvpair = get_attr_in_set(e, attr)
-    if nvpair is None:
+    nvp = get_attr_in_set(e, attr)
+    if nvp is None:
         from . import idmgmt
-        nvpair = etree.SubElement(e, "nvpair", id="", name=attr, value=value)
-        nvpair.set("id", idmgmt.new(nvpair, e.get("id")))
+        nvp = etree.SubElement(e, "nvpair", id="", name=attr, value=value)
+        nvp.set("id", idmgmt.new(nvp, e.get("id")))
     else:
-        nvpair.set("name", attr)
-        nvpair.set("value", value)
+        nvp.set("name", attr)
+        nvp.set("value", value)
 
 
 def get_set_nodes(e, setname, create=False):
@@ -1276,6 +1276,7 @@ def xml_tostring(*args, **kwargs):
     we need actual Python strings.
     """
     return etree.tostring(*args, **kwargs).decode('utf-8')
+
 
 def merge_attributes(dnode, snode, tag):
     rc = False
