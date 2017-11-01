@@ -50,7 +50,6 @@ def get_user():
 def sys_info():
     'system information'
     system, node, release, version, machine, processor = platform.uname()
-    distname, distver, distid = platform.linux_distribution()
     hostname = platform.node().split('.')[0]
     return {'system': system,
             'node': node,
@@ -58,9 +57,6 @@ def sys_info():
             'version': version,
             'machine': machine,
             'processor': processor,
-            'distname': distname,
-            'distver': distver,
-            'distid': distid,
             'user': get_user(),
             'hostname': hostname,
             'fqdn': socket.getfqdn()}
@@ -172,8 +168,8 @@ def verify(data):
 
         check('machine', 'Architecture differs')
         #check('release', 'Kernel release differs')
-        check('distname', 'Distribution differs')
-        check('distver', 'Distribution version differs')
+        #check('distname', 'Distribution differs')
+        #check('distver', 'Distribution version differs')
         #check('version', 'Kernel version differs')
 
     for host, info in data.items():
