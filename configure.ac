@@ -57,6 +57,7 @@ AC_CONFIG_FILES(Makefile \
 hb_report/hb_report      \
 crm.conf                 \
 version                  \
+crmsh.spec               \
 )
 
 AC_OUTPUT
