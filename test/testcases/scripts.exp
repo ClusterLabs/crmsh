@@ -61,7 +61,6 @@ sbd              SBD, Shared storage based fencing
 vmware           Fencing using vCenter / ESX Server
 
 .INP: list all
-.EXT crm_resource --show-metadata systemd:haproxy
 ERROR: 3: Error when loading script haproxy: No meta-data for agent: systemd:haproxy
 Basic:
 
@@ -132,7 +131,6 @@ drbd
 exportfs
 filesystem
 gfs2
-.EXT crm_resource --show-metadata systemd:haproxy
 ERROR: 4: Error when loading script haproxy: No meta-data for agent: systemd:haproxy
 health
 libvirt

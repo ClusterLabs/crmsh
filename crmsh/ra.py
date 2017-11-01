@@ -4,16 +4,16 @@
 import os
 import subprocess
 import copy
-from lxml import etree
 import re
 import glob
+from lxml import etree
 from . import cache
 from . import constants
 from . import config
 from . import options
 from . import userdir
 from . import utils
-from .utils import stdout2list, is_program, is_process, add_sudo
+from .utils import stdout2list, is_program, is_process
 from .utils import os_types_list, get_stdout, find_value
 from .utils import crm_msec, crm_time_cmp
 from .msg import common_debug, common_err, common_warn, common_info
@@ -21,167 +21,35 @@ from .msg import common_debug, common_err, common_warn, common_info
 #
 # Resource Agents interface (meta-data, parameters, etc)
 #
+
 lrmadmin_prog = "lrmadmin"
 
 
-class RaLrmd(object):
+def lrmadmin(opts, xml=False):
+    """
+    Get information directly from lrmd using lrmadmin.
+    """
+    _rc, l = stdout2list("%s %s" % (lrmadmin_prog, opts))
+    if l and not xml:
+        l = l[1:]  # skip the first line
+    return l
+
+
+def crm_resource(opts):
     '''
-    Getting information from the resource agents.
+    Get information from crm_resource.
     '''
-    def lrmadmin(self, opts, xml=False):
-        '''
-        Get information directly from lrmd using lrmadmin.
-        '''
-        rc, l = stdout2list("%s %s" % (lrmadmin_prog, opts))
-        if l and not xml:
-            l = l[1:]  # skip the first line
-        return l
-
-    def is_lrmd_accessible(self):
-        if not (is_program(lrmadmin_prog) and is_process("lrmd")):
-            return False
-        cmd = add_sudo(">/dev/null 2>&1 %s -C" % lrmadmin_prog)
-        if options.regression_tests:
-            print(".EXT", cmd)
-        return subprocess.call(
-            cmd,
-            shell=True) == 0
-
-    def meta(self, ra_class, ra_type, ra_provider):
-        return self.lrmadmin("-M %s %s %s" % (ra_class, ra_type, ra_provider), True)
-
-    def providers(self, ra_type, ra_class="ocf"):
-        'List of providers for a class:type.'
-        return self.lrmadmin("-P %s %s" % (ra_class, ra_type), True)
-
-    def classes(self):
-        'List of classes.'
-        return self.lrmadmin("-C")
-
-    def types(self, ra_class="ocf", ra_provider=""):
-        'List of types for a class.'
-        return self.lrmadmin("-T %s" % ra_class)
+    _rc, l = stdout2list("crm_resource %s" % opts, stderr_on=False)
+    return l
 
 
-class RaOS(object):
-    '''
-    Getting information from the resource agents (direct).
-    '''
-    def meta(self, ra_class, ra_type, ra_provider):
-        l = []
-        if ra_class == "ocf":
-            rc, l = stdout2list("%s/resource.d/%s/%s meta-data" %
-                                (os.environ["OCF_ROOT"], ra_provider, ra_type))
-        elif ra_class == "stonith":
-            if ra_type.startswith("fence_") and os.path.exists("/usr/sbin/%s" % ra_type):
-                rc, l = stdout2list("/usr/sbin/%s -o metadata" % ra_type)
-            else:
-                rc, l = stdout2list("stonith -m -t %s" % ra_type)
-        elif ra_class == "nagios":
-            rc, l = stdout2list("%s/check_%s --metadata" %
-                                (config.path.nagios_plugins, ra_type))
-        return l
-
-    def providers(self, ra_type, ra_class="ocf"):
-        'List of providers for a class:type.'
-        l = []
-        if ra_class == "ocf":
-            for s in glob.glob("%s/resource.d/*/%s" % (os.environ["OCF_ROOT"], ra_type)):
-                a = s.split("/")
-                if len(a) == 7:
-                    l.append(a[5])
-        return l
-
-    def classes(self):
-        'List of classes.'
-        return "heartbeat lsb nagios ocf stonith systemd".split()
-
-    def types(self, ra_class="ocf", ra_provider=""):
-        'List of types for a class.'
-        l = []
-        prov = ra_provider and ra_provider or "*"
-        if ra_class == "ocf":
-            l = os_types_list("%s/resource.d/%s/*" % (os.environ["OCF_ROOT"], prov))
-        elif ra_class == "lsb":
-            l = os_types_list("/etc/init.d/*")
-        elif ra_class == "stonith":
-            l = self._stonith_types()
-        elif ra_class == "nagios":
-            l = [x.replace("check_", "")
-                 for x in os_types_list("%s/check_*" % config.path.nagios_plugins)]
-        elif ra_class == "systemd":
-            l = self._systemd_types()
-        l = list(set(l))
-        l.sort()
-        return l
-
-    def _stonith_types(self):
-        rc, l = stdout2list("stonith -L")
-        if rc != 0:
-            # stonith(8) may not be installed
-            common_debug("stonith exited with code %d" % rc)
-            l = []
-        for ra in os_types_list("/usr/sbin/fence_*"):
-            if ra not in ("fence_ack_manual", "fence_pcmk", "fence_legacy"):
-                l.append(ra)
-
-    def _systemd_types(self):
-        l = []
-        rc, lines = stdout2list("systemctl list-unit-files --full")
-        if rc != 0:
-            return l
-        t = re.compile(r'^(.+)\.service')
-        for line in lines:
-            m = t.search(line)
-            if m:
-                l.append(m.group(1))
-        return l
-
-
-class RaCrmResource(object):
-    '''
-    Getting information from the resource agents via new crm_resource.
-    '''
-    def crm_resource(self, opts):
-        '''
-        Get information from crm_resource.
-        '''
-        rc, l = stdout2list("crm_resource %s" % opts, stderr_on=False)
-        # TODO: check rc
-        return l
-
-    def meta(self, ra_class, ra_type, ra_provider):
-        if ra_provider:
-            return self.crm_resource("--show-metadata %s:%s:%s" % (ra_class, ra_provider, ra_type))
-        else:
-            return self.crm_resource("--show-metadata %s:%s" % (ra_class, ra_type))
-
-    def providers(self, ra_type, ra_class="ocf"):
-        'List of providers for OCF:type.'
-        if ra_class != "ocf":
-            common_err("no providers for class %s" % ra_class)
-            return []
-        return self.crm_resource("--list-ocf-alternatives %s" % ra_type)
-
-    def classes(self):
-        'List of classes.'
-        l = self.crm_resource("--list-standards")
-        return l
-
-    def types(self, ra_class="ocf", ra_provider=""):
-        'List of types for a class.'
-        if ra_provider:
-            return self.crm_resource("--list-agents %s:%s" % (ra_class, ra_provider))
-        else:
-            return self.crm_resource("--list-agents %s" % ra_class)
-
-
+@utils.memoize
 def can_use_lrmadmin():
     from distutils import version
     # after this glue release all users can get meta-data and
     # similar from lrmd
     minimum_glue = "1.0.10"
-    rc, glue_ver = get_stdout("%s -v" % lrmadmin_prog, stderr_on=False)
+    _rc, glue_ver = get_stdout("%s -v" % lrmadmin_prog, stderr_on=False)
     if not glue_ver:  # lrmadmin probably not found
         return False
     v_min = version.LooseVersion(minimum_glue)
@@ -195,21 +63,10 @@ def can_use_lrmadmin():
     return utils.ext_cmd(">/dev/null 2>&1 %s -C" % lrmadmin_prog) == 0
 
 
-def crm_resource_support():
-    rc, s = get_stdout("crm_resource --list-standards", stderr_on=False)
-    return s != ""
-
-
 @utils.memoize
-def ra_if():
-    if crm_resource_support():
-        common_debug("Using crm_resource for agent discovery")
-        return RaCrmResource()
-    if can_use_lrmadmin():
-        common_debug("Using lrmd for agent discovery")
-        return RaLrmd()
-    common_debug("Using OS for agent discovery")
-    return RaOS()
+def can_use_crm_resource():
+    _rc, s = get_stdout("crm_resource --list-standards", stderr_on=False)
+    return s != ""
 
 
 def ra_classes():
@@ -218,7 +75,12 @@ def ra_classes():
     '''
     if cache.is_cached("ra_classes"):
         return cache.retrieve("ra_classes")
-    l = ra_if().classes()
+    if can_use_crm_resource():
+        l = crm_resource("--list-standards")
+    elif can_use_lrmadmin():
+        l = lrmadmin("-C")
+    else:
+        l = ["heartbeat", "lsb", "nagios", "ocf", "stonith", "systemd"]
     l.sort()
     return cache.store("ra_classes", l)
 
@@ -228,7 +90,20 @@ def ra_providers(ra_type, ra_class="ocf"):
     ident = "ra_providers-%s-%s" % (ra_class, ra_type)
     if cache.is_cached(ident):
         return cache.retrieve(ident)
-    l = ra_if().providers(ra_type, ra_class)
+    if can_use_crm_resource():
+        if ra_class != "ocf":
+            common_err("no providers for class %s" % ra_class)
+            return []
+        l = crm_resource("--list-ocf-alternatives %s" % ra_type)
+    elif can_use_lrmadmin():
+        l = lrmadmin("-P %s %s" % (ra_class, ra_type), True)
+    else:
+        l = []
+        if ra_class == "ocf":
+            for s in glob.glob("%s/resource.d/*/%s" % (os.environ["OCF_ROOT"], ra_type)):
+                a = s.split("/")
+                if len(a) == 7:
+                    l.append(a[5])
     l.sort()
     return cache.store(ident, l)
 
@@ -249,10 +124,65 @@ def ra_providers_all(ra_class="ocf"):
     return []
 
 
+def os_types(ra_class):
+    'List of types for a class.'
+    def stonith_types():
+        rc, l = stdout2list("stonith -L")
+        if rc != 0:
+            # stonith(8) may not be installed
+            common_debug("stonith exited with code %d" % rc)
+            l = []
+        for ra in os_types_list("/usr/sbin/fence_*"):
+            if ra not in ("fence_ack_manual", "fence_pcmk", "fence_legacy"):
+                l.append(ra)
+        return l
+
+    def systemd_types():
+        l = []
+        rc, lines = stdout2list("systemctl list-unit-files --full")
+        if rc != 0:
+            return l
+        t = re.compile(r'^(.+)\.service')
+        for line in lines:
+            m = t.search(line)
+            if m:
+                l.append(m.group(1))
+        return l
+
+    l = []
+    if ra_class == "ocf":
+        l = os_types_list("%s/resource.d/*/*" % (os.environ["OCF_ROOT"]))
+    elif ra_class == "lsb":
+        l = os_types_list("/etc/init.d/*")
+    elif ra_class == "stonith":
+        l = stonith_types()
+    elif ra_class == "nagios":
+        l = [x.replace("check_", "")
+             for x in os_types_list("%s/check_*" % config.path.nagios_plugins)]
+    elif ra_class == "systemd":
+        l = systemd_types()
+    l = list(set(l))
+    l.sort()
+    return l
+
+
 def ra_types(ra_class="ocf", ra_provider=""):
     '''
     List of RA type for a class.
     '''
+
+    def find_types():
+        """
+        Actually go out and ask for the types of a class.
+        """
+        if can_use_crm_resource():
+            l = crm_resource("--list-agents %s" % ra_class)
+        elif can_use_lrmadmin():
+            l = lrmadmin("-T %s" % ra_class)
+        else:
+            l = os_types(ra_class)
+        return l
+
     if not ra_class:
         ra_class = "ocf"
     ident = "ra_types-%s-%s" % (ra_class, ra_provider)
@@ -265,7 +195,34 @@ def ra_types(ra_class="ocf", ra_provider=""):
     else:
         def include(ra):
             return ra_provider in ra_providers(ra, ra_class)
-    return cache.store(ident, sorted(list(set(ra for ra in ra_if().types(ra_class) if include(ra)))))
+    return cache.store(ident, sorted(list(set(ra for ra in find_types() if include(ra)))))
+
+
+@utils.memoize
+def ra_meta(ra_class, ra_type, ra_provider):
+    """
+    Return metadata for the given class/type/provider
+    """
+    if can_use_crm_resource():
+        if ra_provider:
+            return crm_resource("--show-metadata %s:%s:%s" % (ra_class, ra_provider, ra_type))
+        return crm_resource("--show-metadata %s:%s" % (ra_class, ra_type))
+    elif can_use_lrmadmin():
+        return lrmadmin("-M %s %s %s" % (ra_class, ra_type, ra_provider), True)
+    else:
+        l = []
+        if ra_class == "ocf":
+            _rc, l = stdout2list("%s/resource.d/%s/%s meta-data" %
+                                 (os.environ["OCF_ROOT"], ra_provider, ra_type))
+        elif ra_class == "stonith":
+            if ra_type.startswith("fence_") and os.path.exists("/usr/sbin/%s" % ra_type):
+                _rc, l = stdout2list("/usr/sbin/%s -o metadata" % ra_type)
+            else:
+                _rc, l = stdout2list("stonith -m -t %s" % ra_type)
+        elif ra_class == "nagios":
+            _rc, l = stdout2list("%s/check_%s --metadata" %
+                                 (config.path.nagios_plugins, ra_type))
+        return l
 
 
 @utils.memoize
@@ -275,9 +232,8 @@ def get_pe_meta():
 
 @utils.memoize
 def get_crmd_meta():
-    info = RAInfo("crmd", "metadata")
-    info.exclude_from_completion(constants.crmd_metadata_do_not_complete)
-    return info
+    return RAInfo("crmd", "metadata",
+                  exclude_from_completion=constants.crmd_metadata_do_not_complete)
 
 
 @utils.memoize
@@ -327,7 +283,7 @@ def get_nodes_text(n, tag):
 
 
 def mk_monitor_name(role, depth):
-    depth = depth != "0" and ("_%s" % depth) or ""
+    depth = ("_%s" % depth) if depth != "0" else ""
     return role and role != "Started" and \
         "monitor_%s%s" % (role, depth) or \
         "monitor%s" % depth
@@ -345,6 +301,17 @@ def monitor_name_pl(pl):
     return mk_monitor_name(role, depth)
 
 
+def _param_type_default(n):
+    """
+    Helper function to get (type, default) from XML parameter node
+    """
+    try:
+        content = n.find("content")
+        return content.get("type"), content.get("default")
+    except:
+        return None, None
+
+
 class RAInfo(object):
     '''
     A resource agent and whatever's useful about it.
@@ -354,8 +321,8 @@ class RAInfo(object):
     skip_ops = ("meta-data", "validate-all")
     skip_op_attr = ("name", "depth", "role")
 
-    def __init__(self, ra_class, ra_type, ra_provider="heartbeat"):
-        self.excluded_from_completion = []
+    def __init__(self, ra_class, ra_type, ra_provider="heartbeat", exclude_from_completion=None):
+        self.excluded_from_completion = exclude_from_completion or []
         self.ra_class = ra_class
         self.ra_type = ra_type
         self.ra_provider = ra_provider
@@ -364,29 +331,22 @@ class RAInfo(object):
         self.ra_elem = None
         self.broken_ra = False
 
-    def ra_string(self):
-        return self.ra_class == "ocf" and \
-            "%s:%s:%s" % (self.ra_class, self.ra_provider, self.ra_type) or \
-            "%s:%s" % (self.ra_class, self.ra_type)
+    def __str__(self):
+        return "%s:%s:%s" % (self.ra_class, self.ra_provider, self.ra_type) \
+            if self.ra_class == "ocf" \
+               else "%s:%s" % (self.ra_class, self.ra_type)
 
     def error(self, s):
-        common_err("%s: %s" % (self.ra_string(), s))
+        common_err("%s: %s" % (self, s))
 
     def warn(self, s):
-        common_warn("%s: %s" % (self.ra_string(), s))
+        common_warn("%s: %s" % (self, s))
 
     def info(self, s):
-        common_info("%s: %s" % (self.ra_string(), s))
+        common_info("%s: %s" % (self, s))
 
     def debug(self, s):
-        common_debug("%s: %s" % (self.ra_string(), s))
-
-    def exclude_from_completion(self, l):
-        """
-        Exclude given list of metadata params
-        from completion
-        """
-        self.excluded_from_completion = l
+        common_debug("%s: %s" % (self, s))
 
     def add_ra_params(self, ra):
         '''
@@ -430,19 +390,21 @@ class RAInfo(object):
         self.broken_ra = False
         return self.ra_elem
 
-    def param_type_default(self, n):
-        try:
-            content = n.find("content")
-            return content.get("type"), content.get("default")
-        except:
-            return None, None
-
-    def params(self):
+    def params(self, completion=False):
         '''
         Construct a dict of dicts: parameters are keys and
         dictionary of attributes/values are values. Cached too.
+
+        completion:
+        If true, filter some (advanced) parameters out.
         '''
-        ident = "ra_params-%s" % self.ra_string()
+        if completion:
+            if self.mk_ra_node() is None:
+                return None
+            return [c.get("name")
+                    for c in self.ra_elem.xpath("//parameters/parameter")
+                    if c.get("name") and c.get("name") not in self.excluded_from_completion]
+        ident = "ra_params-%s" % self
         if cache.is_cached(ident):
             return cache.retrieve(ident)
         if self.mk_ra_node() is None:
@@ -454,7 +416,7 @@ class RAInfo(object):
                 continue
             required = c.get("required")
             unique = c.get("unique")
-            typ, default = self.param_type_default(c)
+            typ, default = _param_type_default(c)
             d[name] = {
                 "required": required,
                 "unique": unique,
@@ -463,23 +425,12 @@ class RAInfo(object):
             }
         return cache.store(ident, d)
 
-    def completion_params(self):
-        '''
-        Extra method for completion, for we want to filter some
-        (advanced) parameters out. And we want this to be fast.
-        '''
-        if self.mk_ra_node() is None:
-            return None
-        return [c.get("name")
-                for c in self.ra_elem.xpath("//parameters/parameter")
-                if c.get("name") and c.get("name") not in self.excluded_from_completion]
-
     def actions(self):
         '''
         Construct a dict of dicts: actions are keys and
         dictionary of attributes/values are values. Cached too.
         '''
-        ident = "ra_actions-%s" % self.ra_string()
+        ident = "ra_actions-%s" % self
         if cache.is_cached(ident):
             return cache.retrieve(ident)
         if self.mk_ra_node() is None:
@@ -509,15 +460,6 @@ class RAInfo(object):
         d.update(d2)
         return cache.store(ident, d)
 
-    def reqd_params_list(self):
-        '''
-        List of required parameters.
-        '''
-        d = self.params()
-        if not d:
-            return []
-        return [x for x in d if d[x]["required"] == '1']
-
     def param_default(self, pname):
         '''
         Parameter's default.
@@ -528,35 +470,44 @@ class RAInfo(object):
         except:
             return None
 
-    def unreq_param(self, p):
-        '''
-        Allow for some exceptions.
-
-        - the rhcs stonith agents sometimes require "action" (in
-          the meta-data) and "port", but they're automatically
-          supplied by stonithd
-        '''
-        if self.ra_class == "stonith" and \
-            (self.ra_type.startswith("rhcs/") or
-             self.ra_type.startswith("fence_")):
-            if p in ("action", "port"):
-                return True
-        return False
-
     def sanity_check_params(self, ident, nvpairs, existence_only=False):
         '''
         nvpairs is a list of <nvpair> tags.
         - are all required parameters defined
         - do all parameters exist
         '''
+        def reqd_params_list():
+            '''
+            List of required parameters.
+            '''
+            d = self.params()
+            if not d:
+                return []
+            return [x for x in d if d[x]["required"] == '1']
+
+        def unreq_param(p):
+            '''
+            Allow for some exceptions.
+
+            - the rhcs stonith agents sometimes require "action" (in
+              the meta-data) and "port", but they're automatically
+              supplied by stonithd
+            '''
+            if self.ra_class == "stonith" and \
+                (self.ra_type.startswith("rhcs/") or
+                 self.ra_type.startswith("fence_")):
+                if p in ("action", "port"):
+                    return True
+            return False
+
         rc = 0
         d = {}
         for nvp in nvpairs:
             if 'name' in nvp.attrib and 'value' in nvp.attrib:
                 d[nvp.get('name')] = nvp.get('value')
         if not existence_only:
-            for p in self.reqd_params_list():
-                if self.unreq_param(p):
+            for p in reqd_params_list():
+                if unreq_param(p):
                     continue
                 if p not in d:
                     common_err("%s: required parameter %s not defined" % (ident, p))
@@ -586,23 +537,13 @@ class RAInfo(object):
         - do all operations exist
         - are timeouts sensible
         '''
-        rc = 0
-        n_ops = {}
-        for op in ops:
-            n_op = op[0] == "monitor" and monitor_name_pl(op[1]) or op[0]
-            n_ops[n_op] = {}
-            for p, v in op[1]:
-                if p in self.skip_op_attr:
-                    continue
-                n_ops[n_op][p] = v
-        for req_op in self.required_ops:
-            if req_op not in n_ops:
-                if not (self.ra_class == "stonith" and req_op in ("start", "stop")):
-                    n_ops[req_op] = {}
-        intervals = {}
-        for op in n_ops:
+        def sanity_check_op(op, n_ops, intervals):
+            """
+            Helper method used by sanity_check_ops.
+            """
+            rc = 0
             if self.ra_class == "stonith" and op in ("start", "stop"):
-                continue
+                return rc
             if op not in self.actions():
                 common_warn("%s: action '%s' not found in Resource Agent meta-data" % (ident, op))
                 rc |= 1
@@ -621,7 +562,7 @@ class RAInfo(object):
             try:
                 adv_timeout = self.actions()[op]["timeout"]
             except:
-                continue
+                return rc
             if "timeout" in n_ops[op]:
                 v = n_ops[op]["timeout"]
                 timeout_string = "specified timeout"
@@ -629,11 +570,29 @@ class RAInfo(object):
                 v = default_timeout
                 timeout_string = "default timeout"
             if crm_msec(v) < 0:
-                continue
+                return rc
             if crm_time_cmp(adv_timeout, v) > 0:
                 common_warn("%s: %s %s for %s is smaller than the advised %s" %
                             (ident, timeout_string, v, op, adv_timeout))
                 rc |= 1
+            return rc
+
+        rc = 0
+        n_ops = {}
+        for op in ops:
+            n_op = monitor_name_pl(op[1]) if op[0] == "monitor" else op[0]
+            n_ops[n_op] = {}
+            for p, v in op[1]:
+                if p in self.skip_op_attr:
+                    continue
+                n_ops[n_op][p] = v
+        for req_op in self.required_ops:
+            if req_op not in n_ops:
+                if not (self.ra_class == "stonith" and req_op in ("start", "stop")):
+                    n_ops[req_op] = {}
+        intervals = {}
+        for op in n_ops:
+            rc |= sanity_check_op(op, n_ops, intervals)
         return rc
 
     def meta(self):
@@ -641,13 +600,13 @@ class RAInfo(object):
         RA meta-data as raw xml.
         Returns an etree xml object.
         '''
-        sid = "ra_meta-%s" % self.ra_string()
+        sid = "ra_meta-%s" % self
         if cache.is_cached(sid):
             return cache.retrieve(sid)
         if self.ra_class in constants.meta_progs:
             l = prog_meta(self.ra_class)
         else:
-            l = ra_if().meta(self.ra_class, self.ra_type, self.ra_provider)
+            l = ra_meta(self.ra_class, self.ra_type, self.ra_provider)
         if not l:
             return None
         try:
@@ -688,30 +647,29 @@ class RAInfo(object):
         return ''
 
     def meta_title(self):
-        s = self.ra_string()
+        s = str(self)
         shortdesc = self.get_shortdesc(self.ra_elem)
         if shortdesc:
             s = "%s (%s)" % (shortdesc, s)
         return s
 
-    def meta_param_head(self, n):
-        name = n.get("name")
-        if not name:
-            return None
-        s = name
-        if n.get("required") == "1":
-            s = s + "*"
-        typ, default = self.param_type_default(n)
-        if typ and default:
-            s = "%s (%s, [%s])" % (s, typ, default)
-        elif typ:
-            s = "%s (%s)" % (s, typ)
-        shortdesc = self.get_shortdesc(n)
-        s = "%s: %s" % (s, shortdesc)
-        return s
-
     def format_parameter(self, n):
-        head = self.meta_param_head(n)
+        def meta_param_head():
+            name = n.get("name")
+            if not name:
+                return None
+            s = name
+            if n.get("required") == "1":
+                s = s + "*"
+            typ, default = _param_type_default(n)
+            if typ and default:
+                s = "%s (%s, [%s])" % (s, typ, default)
+            elif typ:
+                s = "%s (%s)" % (s, typ)
+            shortdesc = self.get_shortdesc(n)
+            s = "%s: %s" % (s, shortdesc)
+            return s
+        head = meta_param_head()
         if not head:
             self.error("no name attribute for parameter")
             return ""
@@ -739,28 +697,27 @@ class RAInfo(object):
         if l:
             return "Parameters (*: required, []: default):\n\n" + '\n'.join(l)
 
-    def meta_action_head(self, n):
-        name = n.get("name")
-        if not name or name in self.skip_ops:
-            return ''
-        if name == "monitor":
-            name = monitor_name_node(n)
-        s = "%-13s" % name
-        for a in list(n.attrib.keys()):
-            if a in self.skip_op_attr:
-                continue
-            v = n.get(a)
-            if v:
-                s = "%s %s=%s" % (s, a, v)
-        return s
-
     def meta_actions(self):
+        def meta_action_head(n):
+            name = n.get("name")
+            if not name or name in self.skip_ops:
+                return ''
+            if name == "monitor":
+                name = monitor_name_node(n)
+            s = "%-13s" % name
+            for a in list(n.attrib.keys()):
+                if a in self.skip_op_attr:
+                    continue
+                v = n.get(a)
+                if v:
+                    s = "%s %s=%s" % (s, a, v)
+            return s
         l = []
         for c in self.ra_elem.xpath("//actions/action"):
-            s = self.meta_action_head(c)
+            s = meta_action_head(c)
             if s:
                 l.append(self.ra_tab + s)
-        if len(l) == 0:
+        if not l:
             return None
         return "Operations' defaults (advisory minimum):\n\n" + '\n'.join(l)
 
@@ -852,19 +809,24 @@ def validate_agent(agentname, params, log=False):
     params: a hash of agent parameters
     Returns: (rc, out)
     """
-    if not can_validate_agent(agentname):
+    def find_agent():
+        if not can_validate_agent(agentname):
+            return None
+        if isinstance(agentname, str):
+            c, p, t = disambiguate_ra_type(agentname)
+            if c != "ocf":
+                raise ValueError("Only OCF agents are supported by this command")
+            agent = RAInfo(c, t, p)
+            if agent.mk_ra_node() is None:
+                return None
+        else:
+            agent = agentname
+        if len(agent.ra_elem.xpath('.//actions/action[@name="validate-all"]')) < 1:
+            raise ValueError("validate-all action not supported by agent")
+        return agent
+    agent = find_agent()
+    if agent is None:
         return (-1, "")
-    if isinstance(agentname, str):
-        c, p, t = disambiguate_ra_type(agentname)
-        if c != "ocf":
-            raise ValueError("Only OCF agents are supported by this command")
-        agent = RAInfo(c, t, p)
-        if agent.mk_ra_node() is None:
-            return (-1, "")
-    else:
-        agent = agentname
-    if len(agent.ra_elem.xpath('.//actions/action[@name="validate-all"]')) < 1:
-        raise ValueError("validate-all action not supported by agent")
 
     my_env = os.environ.copy()
     my_env["OCF_ROOT"] = config.path.ocf_root
