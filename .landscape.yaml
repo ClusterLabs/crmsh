@@ -1,6 +1,6 @@
 max-line-length: 160
 python-targets:
-  - 2
+  - 3
 ignore-paths:
   - contrib
 pylint:
