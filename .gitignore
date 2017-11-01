@@ -6,6 +6,7 @@ doc/website-v1/gen
 Makefile.in
 autom4te.cache
 patches/*
+build/*
 
 # Tool specific files
 .README.md.html
@@ -13,6 +14,7 @@ patches/*
 .project
 .settings
 .pydevproject
+.coverage
 
 contrib/build/
 contrib/dist/
