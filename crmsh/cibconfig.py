@@ -2,13 +2,13 @@
 # See COPYING for license information.
 
 import copy
-from lxml import etree
 import os
 import sys
 import re
 import fnmatch
 import time
 import collections
+from lxml import etree
 from . import config
 from . import options
 from . import constants
@@ -150,7 +150,7 @@ def mkxmlnvpairs(name, attrs, id_hint):
       This is important in case there are multiple sets.
 
     '''
-    xml_node_type = name in constants.defaults_tags and "meta_attributes" or name
+    xml_node_type = "meta_attributes" if name in constants.defaults_tags else name
     node = etree.Element(xml_node_type)
     notops = name != "operations"
 
@@ -254,7 +254,9 @@ class CibObjectSet(object):
     def _open_url(self, src):
         if src == "-":
             return sys.stdin
-        import urllib.request, urllib.error, urllib.parse
+        import urllib.request
+        import urllib.error
+        import urllib.parse
         try:
             ret = urllib.request.urlopen(src)
             return ret
@@ -2823,7 +2825,7 @@ class CibFactory(object):
         objs = self.find_objects(obj_id)
         if objs is None:
             return None
-        if len(objs) > 0:
+        if objs:
             for obj in objs:
                 if obj.obj_type != 'node':
                     return obj
@@ -3042,10 +3044,11 @@ class CibFactory(object):
         obj = self.find_resource(id_ref)
         if obj:
             nodes = obj.node.xpath(".//%s" % attr_list_type)
-            if len(nodes) > 1:
+            numnodes = len(nodes)
+            if numnodes > 1:
                 common_warn("%s contains more than one %s, using first" %
                             (obj.obj_id, attr_list_type))
-            if len(nodes) > 0:
+            if numnodes > 0:
                 node_id = nodes[0].get("id")
                 if node_id:
                     return node_id
@@ -3151,7 +3154,7 @@ class CibFactory(object):
         True, set() on success
         false, err on failure
         """
-        if len(filters) == 0:
+        if not filters:
             return True, copy.copy(self.cib_objects)
         if filters[0] == 'NOOBJ':
             return True, orderedset.oset([])
@@ -3180,7 +3183,7 @@ class CibFactory(object):
                 objs = self.find_objects(spec) or []
                 for obj in objs:
                     obj_set.add(obj)
-                if len(objs) == 0:
+                if not objs:
                     return False, spec
             if and_filter is True:
                 and_filter, obj_set = False, obj_set.intersection(and_set)
@@ -3339,7 +3342,7 @@ class CibFactory(object):
         if not self.is_cib_sane():
             common_debug("create_from_cli (%s): is_cib_sane() failed" % (cli))
             return None
-        if isinstance(cli, str) or isinstance(cli, list):
+        if isinstance(cli, (list, str)):
             elem, obj_type, obj_id = parse_cli_to_xml(cli)
         else:
             elem, obj_type, obj_id = postprocess_cli(cli)
@@ -3526,8 +3529,7 @@ class CibFactory(object):
     def _set_update(self, edit_d, mk_set, upd_set, del_set, upd_type, method):
         if upd_type == "xml":
             return self._xml_set_update(edit_d, mk_set, upd_set, del_set)
-        else:
-            return self._cli_set_update(edit_d, mk_set, upd_set, del_set, method)
+        return self._cli_set_update(edit_d, mk_set, upd_set, del_set, method)
 
     def set_update(self, edit_d, mk_set, upd_set, del_set, upd_type="cli", method='replace'):
         '''
@@ -3712,7 +3714,7 @@ class CibFactory(object):
             selfies = [x for x in tag.node.iterchildren() if x.get('id') == obj.obj_id]
             for c in selfies:
                 rmnode(c)
-            if len(tag.node.xpath('./obj_ref')) == 0:
+            if not tag.node.xpath('./obj_ref'):
                 self._remove_obj(tag)
                 if not self._no_constraint_rm_msg:
                     err_buf.info("hanging %s deleted" % str(tag))
