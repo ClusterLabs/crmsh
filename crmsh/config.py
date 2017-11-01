@@ -6,10 +6,7 @@ Holds user-configurable options.
 
 import os
 import re
-try:
-    import configparser
-except ImportError:
-    import configparser as ConfigParser
+import configparser
 from . import userdir
 
 
