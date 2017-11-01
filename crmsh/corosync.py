@@ -54,8 +54,7 @@ class Token(object):
             return "%s {" % (self.key)
         elif self.token == _tEND:
             return '}'
-        else:
-            return '%s: %s' % (self.key, self.value)
+        return '%s: %s' % (self.key, self.value)
 
 
 def corosync_tokenizer(stream):
@@ -324,7 +323,7 @@ def diff_configuration(nodes, checksum=False):
     elif this_node in nodes:
         nodes.remove(this_node)
         utils.remote_diff_this(local_path, nodes, this_node)
-    elif len(nodes):
+    elif nodes:
         utils.remote_diff(local_path, nodes)
 
 
@@ -381,8 +380,8 @@ def add_node_ucast(IParray, node_name=None):
 
     node_id = get_free_nodeid(p)
     node_value = []
-    for i in range(len(IParray)):
-        node_value += make_value('nodelist.node.ring{}_addr'.format(i), IParray[i])
+    for i, addr in enumerate(IParray):
+        node_value += make_value('nodelist.node.ring{}_addr'.format(i), addr)
     node_value += make_value('nodelist.node.nodeid', str(node_id))
 
     p.add('nodelist', make_section('nodelist.node', node_value))
