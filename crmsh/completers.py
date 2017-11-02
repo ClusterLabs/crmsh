@@ -16,7 +16,7 @@ def choice(lst):
 
 
 null = choice([])
-
+attr_id = choice(["id="])
 
 def call(fn, *fnargs):
     '''
