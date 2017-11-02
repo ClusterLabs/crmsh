@@ -12,13 +12,9 @@ INFO: 3: cib.reset: copied live CIB to regtest
 INFO: 5: cib.commit: committed 'regtest' shadow CIB to the cluster
 .INP: delete regtest
 Traceback (most recent call last):
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_context.py", line 75, in run
     rv = self.execute_command() is not False
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_context.py", line 259, in execute_command
     rv = self.command_info.function(*arglist)
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_cib.py", line 117, in do_delete
     context.fatal_error("%s shadow CIB is in use" % name)
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_context.py", line 370, in fatal_error
     raise ValueError(msg)
 ValueError: regtest shadow CIB is in use
 ERROR: 6: cib.delete: regtest shadow CIB is in use

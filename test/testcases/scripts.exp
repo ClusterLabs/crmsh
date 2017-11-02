@@ -223,13 +223,9 @@ virtual-ip
 vmware
 .INP: list bogus
 Traceback (most recent call last):
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_context.py", line 75, in run
     rv = self.execute_command() is not False
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_context.py", line 259, in execute_command
     rv = self.command_info.function(*arglist)
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_script.py", line 197, in do_list
     context.fatal_error("Unexpected argument '%s': expected  [all|names]" % (arg))
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_context.py", line 370, in fatal_error
     raise ValueError(msg)
 ValueError: Unexpected argument 'bogus': expected  [all|names]
 ERROR: 7: script.list: Unexpected argument 'bogus': expected  [all|names]

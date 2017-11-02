@@ -19,3 +19,4 @@ Error signing on to the CRMd service
 ^\.EXT sed ['][^']+
 ^\.EXT sed ["][^"]+
 ^\.EXT [a-zA-Z]+ validate-all
+^[ ]+File ["][^"]+

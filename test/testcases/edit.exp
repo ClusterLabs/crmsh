@@ -75,37 +75,25 @@ ERROR: 29: Cannot create group:g1: Child primitive:d1 already in group:g2
 ERROR: 1: syntax in group: child p1 listed more than once in group g1 parsing 'group g1 p1 p2 d3 p1'
 .INP: modgroup g1 remove st
 Traceback (most recent call last):
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_context.py", line 75, in run
     rv = self.execute_command() is not False
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_context.py", line 259, in execute_command
     rv = self.command_info.function(*arglist)
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_configure.py", line 423, in do_modgroup
     context.fatal_error("%s is not member of %s" % (prim_id, group_id))
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_context.py", line 370, in fatal_error
     raise ValueError(msg)
 ValueError: st is not member of g1
 ERROR: 42: configure.modgroup: st is not member of g1
 .INP: modgroup g1 remove c1
 Traceback (most recent call last):
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_context.py", line 75, in run
     rv = self.execute_command() is not False
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_context.py", line 259, in execute_command
     rv = self.command_info.function(*arglist)
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_configure.py", line 423, in do_modgroup
     context.fatal_error("%s is not member of %s" % (prim_id, group_id))
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_context.py", line 370, in fatal_error
     raise ValueError(msg)
 ValueError: c1 is not member of g1
 ERROR: 43: configure.modgroup: c1 is not member of g1
 .INP: modgroup g1 remove nosuch
 Traceback (most recent call last):
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_context.py", line 75, in run
     rv = self.execute_command() is not False
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_context.py", line 259, in execute_command
     rv = self.command_info.function(*arglist)
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_configure.py", line 423, in do_modgroup
     context.fatal_error("%s is not member of %s" % (prim_id, group_id))
-  File "/usr/lib/python3.4/site-packages/crmsh/ui_context.py", line 370, in fatal_error
     raise ValueError(msg)
 ValueError: nosuch is not member of g1
 ERROR: 44: configure.modgroup: nosuch is not member of g1
