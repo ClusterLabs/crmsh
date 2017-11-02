@@ -670,7 +670,12 @@ class CibConfig(command.UI):
                 not cib_factory.is_elem_supported(cmd):
             common_err("%s not supported by the RNG schema" % cmd)
             return False
-        return cib_factory.create_object(cmd, *args)
+        if args[0].startswith("id="):
+            object_id = args[0].strip("id=")
+        else:
+            object_id = args[0]
+        params = (object_id,) + args[1:]
+        return cib_factory.create_object(cmd, *params)
 
     @command.skill_level('administrator')
     @command.completers(_node_id_list, compl.choice(constants.node_attributes_keyw))
@@ -681,7 +686,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.null, ra_classes_or_tmpl, primitive_complete_complex)
+    @command.completers_repeating(compl.attr_id, ra_classes_or_tmpl, primitive_complete_complex)
     @command.alias('resource')
     def do_primitive(self, context, *args):
         """usage: primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>}
@@ -695,7 +700,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.null, _group_completer)
+    @command.completers_repeating(compl.attr_id, _group_completer)
     def do_group(self, context, *args):
         """usage: group <name> <rsc> [<rsc>...]
         [params <param>=<value> [<param>=<value>...]]
@@ -703,7 +708,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.null, _f_children_id_list, _clone_completer)
+    @command.completers_repeating(compl.attr_id, _f_children_id_list, _clone_completer)
     def do_clone(self, context, *args):
         """usage: clone <name> <rsc>
         [params <param>=<value> [<param>=<value>...]]
@@ -712,7 +717,7 @@ class CibConfig(command.UI):
 
     @command.alias('master')
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.null, _f_children_id_list, _ms_completer)
+    @command.completers_repeating(compl.attr_id, _f_children_id_list, _ms_completer)
     def do_ms(self, context, *args):
         """usage: ms <name> <rsc>
         [params <param>=<value> [<param>=<value>...]]
@@ -720,7 +725,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.null, ui_ra.complete_class_provider_type,
+    @command.completers_repeating(compl.attr_id, ui_ra.complete_class_provider_type,
                                   primitive_complete_complex)
     def do_rsc_template(self, context, *args):
         """usage: rsc_template <name> [<class>:[<provider>:]]<type>
@@ -732,7 +737,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers(compl.null, _top_rsc_id_list)
+    @command.completers(compl.attr_id, _top_rsc_id_list)
     def do_location(self, context, *args):
         """usage: location <id> <rsc> {node_pref|rules}
 
@@ -756,14 +761,14 @@ class CibConfig(command.UI):
 
     @command.alias('collocation')
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.null, compl.null, top_rsc_tmpl_id_list)
+    @command.completers_repeating(compl.attr_id, compl.null, top_rsc_tmpl_id_list)
     def do_colocation(self, context, *args):
         """usage: colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>] ...
         [node-attribute=<node_attr>]"""
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.null,
+    @command.completers_repeating(compl.attr_id,
                                   compl.call(schema.rng_attr_values, 'rsc_order', 'kind'),
                                   top_rsc_tmpl_id_list)
     def do_order(self, context, *args):
@@ -772,7 +777,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.null, compl.null, top_rsc_tmpl_id_list)
+    @command.completers_repeating(compl.attr_id, compl.null, top_rsc_tmpl_id_list)
     def do_rsc_ticket(self, context, *args):
         """usage: rsc_ticket <id> <ticket_id>: <rsc>[:<role>] [<rsc>[:<role>] ...]
         [loss-policy=<loss_policy_action>]"""
