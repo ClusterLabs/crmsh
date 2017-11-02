@@ -414,6 +414,7 @@ Examples:
         """usage: help topic|level|command"""
         h = help_module.help_contextual(context.level_name(), subject, subtopic)
         h.paginate()
+        context.command_name = ""
 
     def get_completions(self):
         '''
