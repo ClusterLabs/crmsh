@@ -1004,21 +1004,21 @@ diff /etc/resolv.conf --checksum
 [[cmdhelp_cluster_disable,Disable cluster services]]
 ==== `disable`
 
-Disable the cluster-related system services on this node.
+Disable the cluster-related system services on all nodes or a specific node.
 
 Usage:
 ...............
-disable
+disable [node]
 ...............
 
 [[cmdhelp_cluster_enable,Enable cluster services]]
 ==== `enable`
 
-Enable the cluster-related system services on this node.
+Enable the cluster-related system services on all nodes or a specific node.
 
 Usage:
 ...............
-enable
+enable [node]
 ...............
 
 [[cmdhelp_cluster_geo_init,Configure cluster as geo cluster]]
@@ -1353,11 +1353,11 @@ run "ls" node2
 [[cmdhelp_cluster_start,Start cluster services]]
 ==== `start`
 
-Starts the cluster-related system services on this node.
+Starts the cluster-related system services on all nodes or a specific node.
 
 Usage:
 .........
-start
+start [node]
 .........
 
 [[cmdhelp_cluster_status,Cluster status check]]
@@ -1374,11 +1374,11 @@ status
 [[cmdhelp_cluster_stop,Stop cluster services]]
 ==== `stop`
 
-Stops the cluster-related system services on this node.
+Stops the cluster-related system services on all nodes or a specific node.
 
 Usage:
 .........
-stop
+stop [node]
 .........
 
 [[cmdhelp_cluster_wait_for_startup,Wait for cluster to start]]
