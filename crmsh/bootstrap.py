@@ -944,7 +944,7 @@ Configure Corosync:
     bindnetaddr_res = []
     mcastaddr_res = []
     mcastport_res = []
-    default_ports = ["5045", "5047"]
+    default_ports = ["5405", "5407"]
     two_rings = False
     default_networks = []
 
