@@ -42,13 +42,11 @@ def to_ascii(s):
         return s
 
 
-def filter_exist_args(args, params_can_be_remove):
-    for item in args:
-        for start in params_can_be_remove:
-            if item.startswith(start):
-                params_can_be_remove.remove(start)
-                continue
-    return params_can_be_remove
+def not_completed(item, args, use='='):
+    for arg in args:
+        if arg.startswith(item+use):
+            return False
+    return True
 
 
 def memoize(function):
