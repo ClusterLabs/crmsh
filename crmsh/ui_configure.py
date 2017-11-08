@@ -659,10 +659,9 @@ class CibConfig(command.UI):
         if rc1 and rc2:
             return cib_factory.commit(replace=replace)
         if force or config.core.force:
-            common_info("commit forced")
+            common_warn("commit forced!")
             return cib_factory.commit(force=True, replace=replace)
-        if utils.ask("Do you still want to commit?"):
-            return cib_factory.commit(force=True, replace=replace)
+        cib_factory.reset()
         return False
 
     @command.skill_level('administrator')
