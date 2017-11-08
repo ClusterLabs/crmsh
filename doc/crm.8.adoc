@@ -3045,9 +3045,7 @@ single primitive resource or one group of resources.
 Usage:
 ...............
 clone <name> <rsc>
-  [description=<description>]
   [meta <attr_list>]
-  [params <attr_list>]
 
 attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
 ...............
@@ -3383,26 +3381,17 @@ Grouped resources are started in the order they appear in the group,
 and stopped in the reverse order. If a resource in the group cannot
 run anywhere, resources following it in the group will not start.
 
-`group` can be passed the "container" meta attribute, to indicate that
-it is to be used to group VM resources monitored using Nagios. The
-resource referred to by the container attribute must be of type
-`ocf:heartbeat:Xen`, `oxf:heartbeat:VirtualDomain` or `ocf:heartbeat:lxc`.
-
 Usage:
 ...............
 group <name> <rsc> [<rsc>...]
-  [description=<description>]
   [meta attr_list]
-  [params attr_list]
 
 attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
 ...............
 Example:
 ...............
 group internal_www disk0 fs0 internal_ip apache \
-  meta target_role=stopped
-
-group vm-and-services vm vm-sshd meta container="vm"
+  meta target-role=stopped
 ...............
 
 [[cmdhelp_configure_load,import the CIB from a file]]
@@ -3565,9 +3554,7 @@ single primitive resource or one group of resources.
 Usage:
 ...............
 ms <name> <rsc>
-  [description=<description>]
   [meta attr_list]
-  [params attr_list]
 
 attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
 ...............
