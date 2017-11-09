@@ -384,7 +384,10 @@ def check_prereqs(stage):
             timekeeper = tk
             break
 
-    if not service_is_enabled(timekeeper):
+    if timekeeper is None:
+        warn("No NTP service found.")
+        warned = True
+    elif not service_is_enabled(timekeeper):
         warn("{} is not configured to start at system boot.".format(timekeeper))
         warned = True
 
