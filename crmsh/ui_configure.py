@@ -742,7 +742,6 @@ class CibConfig(command.UI):
     @command.completers_repeating(compl.attr_id, _group_completer)
     def do_group(self, context, *args):
         """usage: group <name> <rsc> [<rsc>...]
-        [params <param>=<value> [<param>=<value>...]]
         [meta <attribute>=<value> [<attribute>=<value>...]]"""
         return self.__conf_object(context.get_command_name(), *args)
 
@@ -750,7 +749,6 @@ class CibConfig(command.UI):
     @command.completers_repeating(compl.attr_id, _f_children_id_list, _clone_completer)
     def do_clone(self, context, *args):
         """usage: clone <name> <rsc>
-        [params <param>=<value> [<param>=<value>...]]
         [meta <attribute>=<value> [<attribute>=<value>...]]"""
         return self.__conf_object(context.get_command_name(), *args)
 
@@ -759,7 +757,6 @@ class CibConfig(command.UI):
     @command.completers_repeating(compl.attr_id, _f_children_id_list, _ms_completer)
     def do_ms(self, context, *args):
         """usage: ms <name> <rsc>
-        [params <param>=<value> [<param>=<value>...]]
         [meta <attribute>=<value> [<attribute>=<value>...]]"""
         return self.__conf_object(context.get_command_name(), *args)
 
