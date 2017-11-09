@@ -182,7 +182,8 @@ def _prim_params_completer(agent, args):
         return []
     elif '=' in completing:
         return []
-    return [s+'=' for s in agent.params(completion=True)]
+    return [s+'=' for s in agent.params(completion=True)
+            if utils.any_startswith(args, s+'=') is None]
 
 
 def _prim_meta_completer(agent, args):
@@ -191,7 +192,8 @@ def _prim_meta_completer(agent, args):
         return ['meta']
     if '=' in completing:
         return []
-    return [s+'=' for s in constants.rsc_meta_attributes]
+    return [s+'=' for s in constants.rsc_meta_attributes
+            if utils.any_startswith(args, s+'=') is None]
 
 
 def _prim_op_completer(agent, args):
