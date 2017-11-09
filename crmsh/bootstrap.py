@@ -2078,7 +2078,7 @@ def bootstrap_remove(cluster_node=None, ui_context=None, quiet=False, yes_to_all
     init()
     remove_ssh()
 
-    if not confirm("Do you want to remove node \"{}\" anyway?".format(cluster_node)):
+    if not force and not confirm("Removing node \"{}\" from the cluster: Are you sure?".format(cluster_node)):
         return
 
     if remove_localhost_check():
