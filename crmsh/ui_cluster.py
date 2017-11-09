@@ -394,15 +394,12 @@ If stage is not specified, each stage will be invoked in sequence.
         return True
 
     @command.skill_level('administrator')
-    def do_rename(self, context, *args):
+    def do_rename(self, context, new_name):
         '''
         Rename the cluster.
         '''
         if not bootstrap.service_is_active("corosync.service"):
             context.fatal_error("Can't rename cluster when cluster service is stopped")
-        if len(args) != 1:
-            context.fatal_error("Expected <clustername>")
-        new_name = args[0]
         old_name = cib_factory.get_property('cluster-name')
         if old_name and new_name == old_name:
             context.fatal_error("Expected a different name")
