@@ -119,6 +119,12 @@ def log(*args):
             die("Can't append to {} - aborting".format(LOG_FILE))
 
 
+def drop_last_history():
+    hlen = readline.get_current_history_length()
+    if hlen > 0:
+        readline.remove_history_item(hlen - 1)
+
+
 def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=None):
     if _context.yes_to_all:
         return default
@@ -129,7 +135,7 @@ def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=N
         if not val:
             val = default
         else:
-            readline.remove_history_item(readline.get_current_history_length()-1)
+            drop_last_history()
         if match is None:
             return val
         if re.match(match, val) is not None:
@@ -144,7 +150,7 @@ def confirm(msg):
     disable_completion()
     rc = utils.ask(msg)
     enable_completion()
-    readline.remove_history_item(readline.get_current_history_length()-1)
+    drop_last_history()
     return rc
 
 
