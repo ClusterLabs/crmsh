@@ -42,6 +42,13 @@ def to_ascii(s):
         return s
 
 
+def not_completed(item, args, use='='):
+    for arg in args:
+        if arg.startswith(item+use):
+            return False
+    return True
+
+
 def memoize(function):
     "Decorator to invoke a function once only for any argument"
     memoized = {}

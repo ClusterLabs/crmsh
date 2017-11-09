@@ -48,14 +48,12 @@ _id_show_list = compl.join(_id_list,
                            compl.call(_type_completions),
                            compl.call(_tag_completions))
 _prim_id_list = compl.call(cib_factory.prim_id_list)
-_f_prim_free_id_list = compl.call(cib_factory.f_prim_free_id_list)
 _f_group_id_list = compl.call(cib_factory.f_group_id_list)
 _f_children_id_list = compl.call(cib_factory.f_children_id_list)
 _rsc_id_list = compl.call(cib_factory.rsc_id_list)
 _top_rsc_id_list = compl.call(cib_factory.top_rsc_id_list)
 _node_id_list = compl.call(cib_factory.node_id_list)
 _rsc_template_list = compl.call(cib_factory.rsc_template_list)
-_group_completer = compl.join(_f_prim_free_id_list, compl.choice(['params', 'meta']))
 _clone_completer = compl.choice(['params', 'meta'])
 _ms_completer = compl.choice(['params', 'meta'])
 
@@ -182,7 +180,7 @@ def _prim_params_completer(agent, args):
         return []
     elif '=' in completing:
         return []
-    return [s+'=' for s in agent.params(completion=True)]
+    return [s+'=' for s in agent.params(completion=True) if utils.not_completed(s, args)]
 
 
 def _prim_meta_completer(agent, args):
@@ -191,7 +189,7 @@ def _prim_meta_completer(agent, args):
         return ['meta']
     if '=' in completing:
         return []
-    return [s+'=' for s in constants.rsc_meta_attributes]
+    return [s+'=' for s in constants.rsc_meta_attributes if utils.not_completed(s, args)]
 
 
 def _prim_op_completer(agent, args):
@@ -281,6 +279,18 @@ def primitive_complete_complex(args):
         return []
 
     return completers_set[last_keyw](agent, args) + keywords
+
+
+def _group_completer(args):
+    id_list = cib_factory.f_prim_free_id_list()
+    # continue to complete
+    if args[-1] in id_list:
+        return [args[-1]]
+    # "5" means we suggest put atleast one primitive resource into group
+    # and leave meta at last
+    if "meta" in args and len(args) >= 5:
+        return [s+'=' for s in constants.rsc_meta_attributes if utils.not_completed(s, args)] + ["meta"]
+    return [i for i in id_list if i not in args] + ["meta"]
 
 
 class CibConfig(command.UI):
