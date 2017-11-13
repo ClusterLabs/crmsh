@@ -702,6 +702,8 @@ class CibConfig(command.UI):
                 not cib_factory.is_elem_supported(cmd):
             common_err("%s not supported by the RNG schema" % cmd)
             return False
+        if not args:
+            return cib_factory.create_object(cmd, *args)
         if args[0].startswith("id="):
             object_id = args[0].strip("id=")
         else:
