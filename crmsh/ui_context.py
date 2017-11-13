@@ -136,6 +136,8 @@ class Context(object):
                         if not ret or self.command_info.aliases:
                             if not token in self.current_level().get_completions():
                                 return self.current_level().get_completions()
+                        if self.command_name in self.command_info.aliases and not self.command_args:
+                            return [self.command_name]
                         return ret
                 # reached the end on a valid level.
                 # return the completions for the previous level.
