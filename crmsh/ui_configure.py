@@ -182,7 +182,17 @@ def _prim_params_completer(agent, args):
         return []
     elif '=' in completing:
         return []
-    return [s+'=' for s in agent.params(completion=True)]
+    required_params = agent.params(required=True)
+    if required_params:
+        count = 0
+        for item in required_params:
+            for arg in args:
+                if arg.startswith(item+'='):
+                    count += 1
+        # make sure we have inputed all of required params 
+        if len(required_params) != count:
+            return [s+'=' for s in agent.params(required=True)]
+    return [s+'=' for s in agent.params(advanced=True)]
 
 
 def _prim_meta_completer(agent, args):
