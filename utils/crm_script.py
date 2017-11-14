@@ -131,7 +131,7 @@ def package(name, state):
     rc, out, err = sudo_call(['./crm_pkg.py', '-n', name, '-s', state])
     if rc != 0:
         raise IOError("%s / %s" % (out, err))
-    outp = json.loads(out)
+    outp = json.loads(out.decode('utf-8'))
     if isinstance(outp, dict) and 'rc' in outp:
         rc = int(outp['rc'])
         if rc != 0:

@@ -71,7 +71,7 @@ class Zypper(PackageManager):
         rc, stdout, stderr = run(cmd)
         if rc == 0:
             for line in stdout.splitlines():
-                if name in line:
+                if name in line.decode('utf-8'):
                     return line.strip()
         return None
 
@@ -234,8 +234,8 @@ def manage_package(pkg, state):
         if exe:
             rc, stdout, stderr, changed = mgr().dispatch(pkg, state)
             return {'rc': rc,
-                    'stdout': stdout,
-                    'stderr': stderr,
+                    'stdout': stdout.decode('utf-8'),
+                    'stderr': stderr.decode('utf-8'),
                     'changed': changed
                     }
     fail(msg="No supported package manager found")
@@ -262,6 +262,6 @@ def main():
     if not args.name or not args.state:
         raise IOError("Bad arguments: %s" % (sys.argv))
     data = manage_package(args.name, args.state)
-    print(json.dumps(data))
+    print(json.dumps(str(data)))
 
 main()
