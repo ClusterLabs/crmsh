@@ -229,8 +229,9 @@ def _prim_op_completer(agent, args):
     if args[-2] in actions:
         res = []
         for k, v in actions[args[-2]].items():
+            if args[-1].startswith(k+'='):
+                continue
             res += ["%s=%s" % (k, v)]
-        res.remove(args[-1])
         return res
 
     return []
