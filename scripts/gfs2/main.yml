@@ -9,8 +9,6 @@ longdesc: >-
   The file system should be on the device, unless cLVM is used.
 
 category: File System
-include:
-  - script: gfs2-base
 parameters:
   - name: id
     shortdesc: File System Resource ID
@@ -31,19 +29,34 @@ parameters:
     shortdesc: Mount Options
     type: string
     required: false
+  - name: dlm
+    shortdesc: Create DLM Resource and Cloned Group
+    longdesc: If set, create the DLM resource and cloned resource group.
+    type: boolean
+    default: true
+  - name: group
+    shortdesc: Cloned Group Resource ID
+    longdesc: ID of cloned group
+    required: false
+    type: resource
+    default: g-dlm
 actions:
-  - include: gfs2-base
+  - when: dlm
+    cib: |
+      primitive dlm ocf:pacemaker:controld
+        op start timeout=90
+        op stop timeout=60
+      group {{group}} dlm
+      clone c-dlm {{group}} meta interleave=true
   - cib: |
-      primitive {{id}} Filesystem
-        directory="{{directory}}"
-        device="{{device}}"
-        fstype=gfs2
-        {{#options}}options="{{options}}"{{/options}}
-        op monitor interval=20s timeout=40s
+      primitive {{id}} ocf:heartbeat:Filesystem
+          directory="{{directory}}"
+          fstype="gfs2"
+          device="{{device}}"
+          {{#options}}options="{{options}}"{{/options}}
+          op start timeout=60s
+          op stop timeout=60s
+          op monitor interval=20s timeout=40s
 
-      clone c-{{id}} {{id}}
-        meta interleave=true ordered=true
-
-  - crm: "configure modgroup {{gfs2-base:clvm-group}} add c-{{id}}"
-    shortdesc: Add cloned file system to cLVM group
-    when: "{{gfs2-base:clvm-group}}"
+  - crm: configure modgroup {{group}} add {{id}}
+    shortdesc: Add the GFS2 File System to the Cloned Group
