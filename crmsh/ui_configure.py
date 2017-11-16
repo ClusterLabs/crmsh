@@ -56,8 +56,19 @@ _top_rsc_id_list = compl.call(cib_factory.top_rsc_id_list)
 _node_id_list = compl.call(cib_factory.node_id_list)
 _rsc_template_list = compl.call(cib_factory.rsc_template_list)
 _group_completer = compl.join(_f_prim_free_id_list, compl.choice(['params', 'meta']))
-_clone_completer = compl.choice(['params', 'meta'])
 _ms_completer = compl.choice(['params', 'meta'])
+
+
+def _clone_completer(args):
+    key_words = ["meta", "params"]
+    completing = args[-1]
+    if completing.endswith('='):
+        # TODO add some help messages
+        return []
+    keyw = last_keyword(args, key_words)
+    if keyw and keyw == "meta":
+        return [s+'=' for s in constants.clone_meta_attributes] + key_words
+    return key_words
 
 
 def _list_resource(args):

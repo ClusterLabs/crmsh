@@ -212,8 +212,9 @@ rsc_meta_attributes = (
     "restart-type", "description", "remote-node", "requires",
     "provides", "remote-port", "remote-addr", "remote-connect-timeout"
 )
+common_meta_attributes = ("priority", "target-role", "is-managed")
 group_meta_attributes = ("container", )
-clone_meta_attributes = (
+clone_meta_attributes = common_meta_attributes + (
     "ordered", "notify", "interleave", "globally-unique",
     "clone-max", "clone-node-max", "clone-state", "description",
     "clone-min",
