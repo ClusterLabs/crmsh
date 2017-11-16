@@ -1368,6 +1368,8 @@ def init_vgfs():
     Configure cluster OCFS2 device.
     """
     dev = _context.ocfs2_device
+    if not dev:
+        error("vgfs stage requires -o <dev>")
     mntpoint = "/srv/clusterfs"
 
     if not is_block_device(dev):
