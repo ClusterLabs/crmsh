@@ -1368,10 +1368,12 @@ def init_vgfs():
     Configure cluster OCFS2 device.
     """
     dev = _context.ocfs2_device
+    if not dev:
+        error("vgfs stage requires -o <dev>")
     mntpoint = "/srv/clusterfs"
 
     if not is_block_device(dev):
-        error("OCFS2 device $OCFS2_DEVICE does not exist")
+        error("OCFS2 device \"{}\" does not exist".format(dev))
 
     # TODO: configurable mountpoint and vg name
     crm_configure_load("update", """
@@ -1390,7 +1392,7 @@ colocation clusterfs-with-base inf: c-clusterfs base-clone
 
     _rc, blkid, _err = utils.get_stdout_stderr("blkid %s" % (dev))
     if "TYPE" in blkid:
-        if not confirm("Exiting filesystem found on $OCFS2_DEVICE - destroy?"):
+        if not confirm("Exiting filesystem found on \"{}\" - destroy?".format(dev)):
             for res in ("base-clone", "c-clusterfs"):
                 invoke("crm resource stop %s" % (res))
                 wait_for_stop("Waiting for resource %s to stop" % (res), res)
