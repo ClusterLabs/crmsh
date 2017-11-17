@@ -42,6 +42,14 @@ def to_ascii(s):
         return s
 
 
+def any_startswith(iterable, prefix):
+    """Return first element in iterable which startswith prefix, or None."""
+    for element in iterable:
+        if element.startswith(prefix):
+            return element
+    return None
+
+
 def memoize(function):
     "Decorator to invoke a function once only for any argument"
     memoized = {}
