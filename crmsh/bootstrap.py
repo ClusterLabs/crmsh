@@ -138,7 +138,7 @@ def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=N
             drop_last_history()
         if match is None:
             return val
-        if re.match(match, val) is not None:
+        if val and re.match(match, val) is not None:
             if not valid_func or valid_func(val, prev_value):
                 return val
         print(term.render(clidisplay.error("    Invalid value entered")))
