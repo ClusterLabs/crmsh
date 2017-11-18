@@ -55,19 +55,26 @@ _rsc_id_list = compl.call(cib_factory.rsc_id_list)
 _top_rsc_id_list = compl.call(cib_factory.top_rsc_id_list)
 _node_id_list = compl.call(cib_factory.node_id_list)
 _rsc_template_list = compl.call(cib_factory.rsc_template_list)
-_group_completer = compl.join(_f_prim_free_id_list, compl.choice(['params', 'meta']))
-_ms_completer = compl.choice(['params', 'meta'])
 
 
-def _clone_completer(args):
+def _advanced_completer(args):
+    '''
+    meta completers for group/ms/clone resource type 
+    '''
     key_words = ["meta", "params"]
     completing = args[-1]
+    resource_type = args[0]
     if completing.endswith('='):
         # TODO add some help messages
         return []
     keyw = last_keyword(args, key_words)
     if keyw and keyw == "meta":
-        return [s+'=' for s in constants.clone_meta_attributes] + key_words
+        if resource_type == "group":
+            return [s+'=' for s in constants.group_meta_attributes] + key_words
+        if resource_type == "clone":
+            return [s+'=' for s in constants.clone_meta_attributes] + key_words
+        if resource_type in ["ms", "master"]:
+            return [s+'=' for s in constants.ms_meta_attributes] + key_words
     return key_words
 
 
@@ -755,7 +762,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *tuple(tmp))
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.attr_id, _group_completer)
+    @command.completers_repeating(compl.attr_id, _f_prim_free_id_list, _advanced_completer)
     def do_group(self, context, *args):
         """usage: group <name> <rsc> [<rsc>...]
         [params <param>=<value> [<param>=<value>...]]
@@ -763,7 +770,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.attr_id, _f_children_id_list, _clone_completer)
+    @command.completers_repeating(compl.attr_id, _f_children_id_list, _advanced_completer)
     def do_clone(self, context, *args):
         """usage: clone <name> <rsc>
         [params <param>=<value> [<param>=<value>...]]
@@ -772,7 +779,7 @@ class CibConfig(command.UI):
 
     @command.alias('master')
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.attr_id, _f_children_id_list, _ms_completer)
+    @command.completers_repeating(compl.attr_id, _f_children_id_list, _advanced_completer)
     def do_ms(self, context, *args):
         """usage: ms <name> <rsc>
         [params <param>=<value> [<param>=<value>...]]
