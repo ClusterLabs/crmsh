@@ -213,14 +213,15 @@ rsc_meta_attributes = (
     "provides", "remote-port", "remote-addr", "remote-connect-timeout"
 )
 common_meta_attributes = ("priority", "target-role", "is-managed")
-group_meta_attributes = ("container", )
+group_meta_attributes = common_meta_attributes + ("container", )
 clone_meta_attributes = common_meta_attributes + (
     "ordered", "notify", "interleave", "globally-unique",
     "clone-max", "clone-node-max", "clone-state", "description",
     "clone-min",
 )
-ms_meta_attributes = (
-    "master-max", "master-node-max", "description",
+ms_meta_attributes = common_meta_attributes + (
+    "clone-max", "clone-node-max", "notify", "globally-unique", "ordered", 
+    "interleave", "master-max", "master-node-max", "description",
 )
 alert_meta_attributes = (
     "timeout", "timestamp-format"
