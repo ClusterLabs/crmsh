@@ -638,7 +638,7 @@ class RscMgmt(command.UI):
 
     def _remove_trace(self, rsc, op_node):
         from lxml import etree
-        common_debug("op_node: %s" % (etree.tostring(op_node)))
+        common_debug("op_node: %s" % (xmlutil.xml_tostring(op_node)))
         op_node = rsc.del_op_attr(op_node, constants.trace_ra_attr)
         if rsc.is_dummy_operation(op_node):
             rsc.del_operation(op_node)
