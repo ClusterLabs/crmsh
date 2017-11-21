@@ -15,7 +15,7 @@ def run(cmd):
                             stderr=subprocess.PIPE)
     out, err = proc.communicate(None)
     proc.wait()
-    return proc.returncode, out, err
+    return proc.returncode, out.decode('utf-8'), err.decode('utf-8')
 
 
 def package_data(pkg):
