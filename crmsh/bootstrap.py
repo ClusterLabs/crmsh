@@ -869,7 +869,7 @@ Configure Corosync (unicast):
     for i in 0, 1:
         ringXaddr = prompt_for_string('Address for ring{}'.format(i),
                                       r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:',
-                                      "",
+                                      _context.ip_address if i == 0 and _context.ip_address else "",
                                       valid_ucastIP,
                                       ringXaddr_res)
         if not ringXaddr:
