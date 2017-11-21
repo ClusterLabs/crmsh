@@ -180,7 +180,7 @@ def copy_nvpair(nvpairs, nvp, id_hint=None):
     """
     Copies the given nvpair into the given tag containing nvpairs
     """
-    common_debug("copy_nvpair: %s" % (etree.tostring(nvp)))
+    common_debug("copy_nvpair: %s" % (xml_tostring(nvp)))
     if 'value' not in nvp.attrib:
         nvpairs.append(copy.deepcopy(nvp))
         return
@@ -219,7 +219,7 @@ def copy_nvpairs(tonode, fromnode):
         else:
             tonode.append(copy.deepcopy(node))
 
-    common_debug("copy_nvpairs: %s -> %s" % (etree.tostring(fromnode), etree.tostring(tonode)))
+    common_debug("copy_nvpairs: %s -> %s" % (xml_tostring(fromnode), xml_tostring(tonode)))
     id_hint = tonode.get('id')
     for c in fromnode:
         if is_comment(c):
@@ -782,7 +782,7 @@ def id_for_node(node, id_hint=None):
                 try:
                     node.set('id', defid)
                 except TypeError as e:
-                    raise ValueError('Internal error: %s (%s)' % (e, etree.tostring(node)))
+                    raise ValueError('Internal error: %s (%s)' % (e, xml_tostring(node)))
                 obj_id = node.get('id')
                 idmgmt.save(obj_id)
     if root.tag != "node" and obj_id and not is_id_valid(obj_id):
@@ -806,7 +806,7 @@ def postprocess_cli(node, oldnode=None, id_hint=None):
             # In this case, we need to delay postprocessing
             # until we know where to insert the op
             return node, obj_type, None
-        common_err("No ID found for %s: %s" % (obj_type, etree.tostring(node)))
+        common_err("No ID found for %s: %s" % (obj_type, xml_tostring(node)))
         return None, None, None
     if node.tag in constants.defaults_tags:
         node = node[0]
@@ -1099,19 +1099,19 @@ class CibObject(object):
         with clidisplay.nopretty():
             cli_text = self.repr_cli(format_mode=0)
         if not cli_text:
-            common_debug("validation failed: %s" % (etree.tostring(self.node)))
+            common_debug("validation failed: %s" % (xml_tostring(self.node)))
             return False
         xml2 = self.cli2node(cli_text)
         if xml2 is None:
             common_debug("validation failed: %s -> %s" % (
-                etree.tostring(self.node),
+                xml_tostring(self.node),
                 cli_text))
             return False
         if not xml_equals(self.node, xml2, show=True):
             common_debug("validation failed: %s -> %s -> %s" % (
-                etree.tostring(self.node),
+                xml_tostring(self.node),
                 cli_text,
-                etree.tostring(xml2)))
+                xml_tostring(xml2)))
             return False
         return True
 
@@ -2219,7 +2219,7 @@ class CibDiff(object):
         is_node = item.tag == 'node'
         if obj_id is None:
             common_err("element %s has no id!" %
-                       etree.tostring(item, pretty_print=True))
+                       xml_tostring(item, pretty_print=True))
             return False
         elif is_node and obj_id in self._node_set:
             common_err("Duplicate node: %s" % (obj_id))
@@ -2412,7 +2412,7 @@ class CibFactory(object):
             if schema.get('sub', obj.node.tag, 'a') is None:
                 common_err("Element '%s' is not supported by the RNG schema %s" %
                            (obj.node.tag, schema_st))
-                common_debug("Offending object: %s" % (etree.tostring(obj.node)))
+                common_debug("Offending object: %s" % (xml_tostring(obj.node)))
                 rc = False
         if not rc:
             # revert, as some elements won't validate
@@ -2593,7 +2593,7 @@ class CibFactory(object):
         cibadmin_opts = force and "-R --force" or "-R"
         rc = pipe_string("%s %s" % (cib_piped, cibadmin_opts), etree.tostring(conf_el))
         if rc != 0:
-            update_err("cib", cibadmin_opts, etree.tostring(conf_el), rc)
+            update_err("cib", cibadmin_opts, xml_tostring(conf_el), rc)
             return False
         return True
 
@@ -2630,7 +2630,7 @@ class CibFactory(object):
         # produce a diff:
         # dump_new_conf | crm_diff -o self.cib_orig -n -
 
-        common_debug("Input: %s" % (etree.tostring(self.cib_elem)))
+        common_debug("Input: %s" % (xml_tostring(self.cib_elem)))
         rc, cib_diff = filter_string("%s -o %s -n -" %
                                      (self._crm_diff_cmd, tmpf),
                                      etree.tostring(self.cib_elem))
@@ -3350,7 +3350,7 @@ class CibFactory(object):
             # FIXME: raise error?
             common_debug("create_from_cli (%s): failed" % (cli))
             return None
-        common_debug("create_from_cli: %s, %s, %s" % (etree.tostring(elem), obj_type, obj_id))
+        common_debug("create_from_cli: %s, %s, %s" % (xml_tostring(elem), obj_type, obj_id))
         if obj_type in olist(constants.nvset_cli_names):
             return self.set_property_cli(obj_type, elem)
         if obj_type == "op":
@@ -3402,14 +3402,14 @@ class CibFactory(object):
         if not self._adjust_children(obj):
             return False
         if not obj.cli_use_validate():
-            common_debug("update_element: validation failed (%s, %s)" % (obj, etree.tostring(newnode)))
+            common_debug("update_element: validation failed (%s, %s)" % (obj, xml_tostring(newnode)))
             obj.nocli_warn = True
             obj.nocli = True
         obj.set_updated()
         return True
 
     def merge_from_cli(self, obj, node):
-        common_debug("merge_from_cli: %s %s" % (obj.obj_type, etree.tostring(node)))
+        common_debug("merge_from_cli: %s %s" % (obj.obj_type, xml_tostring(node)))
         if obj.obj_type in constants.nvset_cli_names:
             rc = merge_attributes(obj.node, node, "nvpair")
         else:
@@ -3461,7 +3461,7 @@ class CibFactory(object):
             obj = self.create_from_cli(cli)
             if not obj:
                 common_debug("create_from_cli '%s' failed" %
-                             (etree.tostring(cli, pretty_print=True)))
+                             (xml_tostring(cli, pretty_print=True)))
                 return False
             test_l.append(obj)
 
@@ -3479,7 +3479,7 @@ class CibFactory(object):
                 return False
             if not self.update_from_cli(obj, node, method):
                 common_debug("update_from_cli failed: %s, %s, %s" %
-                             (obj, etree.tostring(node), method))
+                             (obj, xml_tostring(node), method))
                 return False
             test_l.append(obj)
 
