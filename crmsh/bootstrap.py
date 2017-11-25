@@ -1040,6 +1040,8 @@ def init_corosync():
     """
     @utils.memoize
     def check_amazon():
+        if not is_program("dmidecode"):
+            return False
         _rc, outp = utils.get_stdout("dmidecode -s system-version")
         return re.search(r"\<.*\.amazon\>", outp) is not None
 

@@ -24,6 +24,7 @@ scripts/lvm/main.yml
 scripts/mailto/main.yml
 scripts/nfsserver-lvm-drbd/main.yml
 scripts/nfsserver/main.yml
+scripts/nginx/main.yml
 scripts/ocfs2/main.yml
 scripts/oracle/main.yml
 scripts/raid1/main.yml
