@@ -11,6 +11,7 @@
 ERROR: 2: Error when loading script haproxy: No meta-data for agent: systemd:haproxy
 .EXT crm_resource --show-metadata ocf:heartbeat:LVM
 .EXT crm_resource --show-metadata ocf:heartbeat:MailTo
+.EXT crm_resource --show-metadata ocf:heartbeat:nginx
 .EXT crm_resource --show-metadata ocf:heartbeat:Raid1
 Basic:
 
@@ -53,6 +54,7 @@ sap-simple-stack-plus SAP SimpleStack+ Instance
 Server:
 
 apache           Apache Webserver
+nginx            Nginx Webserver
 
 Stonith:
 
@@ -113,6 +115,7 @@ sbd-device       Create SBD Device
 Server:
 
 apache           Apache Webserver
+nginx            Nginx Webserver
 
 Stonith:
 
@@ -138,6 +141,7 @@ lvm-drbd
 mailto
 nfsserver
 nfsserver-lvm-drbd
+nginx
 ocfs2
 oracle
 raid-lvm
@@ -170,6 +174,7 @@ lvm-drbd
 mailto
 nfsserver
 nfsserver-lvm-drbd
+nginx
 ocfs2
 oracle
 raid-lvm
@@ -206,6 +211,7 @@ lvm-drbd
 mailto
 nfsserver
 nfsserver-lvm-drbd
+nginx
 ocfs2
 oracle
 raid-lvm
