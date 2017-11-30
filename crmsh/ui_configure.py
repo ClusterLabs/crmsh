@@ -726,7 +726,7 @@ class CibConfig(command.UI):
         if not args:
             return cib_factory.create_object(cmd, *args)
         if args[0].startswith("id="):
-            object_id = args[0].strip("id=")
+            object_id = args[0][3:]
         else:
             object_id = args[0]
         params = (object_id,) + args[1:]
