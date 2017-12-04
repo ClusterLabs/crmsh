@@ -109,8 +109,9 @@ def log_file_fallback():
 def log(*args):
     global LOG_FILE
     try:
-        with open(LOG_FILE, "a") as logfile:
-            logfile.write(" ".join([str(arg) for arg in args]) + "\n")
+        with open(LOG_FILE, "ab") as logfile:
+            text = " ".join([utils.to_ascii(arg) for arg in args]) + "\n"
+            logfile.write(text.decode('ascii', 'backslashreplace'))
     except IOError:
         if LOG_FILE != log_file_fallback():
             LOG_FILE = log_file_fallback()
