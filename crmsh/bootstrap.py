@@ -510,7 +510,8 @@ def configure_firewall(tcp=None, udp=None):
             cmd("--add-port={}/udp".format(p))
 
         if has_firewalld:
-            cmd("--reload")
+            if not invoke("firewall-cmd --reload"):
+                error("Failed to reload firewall configuration.")
 
     def init_firewall_ufw(tcp, udp):
         """
