@@ -77,6 +77,8 @@ test/testcases/acl.exp
 test/testcases/basicset
 test/testcases/bugs
 test/testcases/bugs.exp
+test/testcases/bundle
+test/testcases/bundle.exp
 test/testcases/commit
 test/testcases/commit.exp
 test/testcases/common.excl
