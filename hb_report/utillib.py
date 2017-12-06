@@ -1353,14 +1353,14 @@ def print_logseg(logf, from_time, to_time):
 
     if not FROM_LINE:
         log_warning("couldn't find line for time %d; corrupt log file?" % from_time)
-        return
+        return ""
 
     TO_LINE = ""
     if to_time != 0:
         TO_LINE = findln_by_time(sourcef, to_time)
         if not TO_LINE:
             log_warning("couldn't find line for time %d; corrupt log file?" % to_time)
-            return
+            return ""
 
     log_debug("including segment [%s-%s] from %s" % (FROM_LINE, TO_LINE, sourcef))
     return dump_log(sourcef, FROM_LINE, TO_LINE)
