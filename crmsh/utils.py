@@ -42,12 +42,21 @@ def to_ascii(s):
         return s
 
 
+def filter_keys(key_list, args, sign="="):
+    """Return list item which not be completed yet"""
+    return [s+sign for s in key_list if any_startswith(args, s+sign) is None]
+
+
 def any_startswith(iterable, prefix):
     """Return first element in iterable which startswith prefix, or None."""
     for element in iterable:
         if element.startswith(prefix):
             return element
     return None
+
+
+def rindex(iterable, value):
+    return len(iterable) - iterable[::-1].index(value) - 1
 
 
 def memoize(function):

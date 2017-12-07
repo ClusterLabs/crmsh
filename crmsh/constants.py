@@ -83,6 +83,7 @@ cib_cli_map = {
     "group": "group",
     "clone": "clone",
     "master": "ms",
+    "bundle": "bundle",
     "rsc_location": "location",
     "rsc_colocation": "colocation",
     "rsc_order": "order",
@@ -223,6 +224,7 @@ ms_meta_attributes = common_meta_attributes + (
     "clone-max", "clone-node-max", "notify", "globally-unique", "ordered", 
     "interleave", "master-max", "master-node-max", "description",
 )
+bundle_meta_attributes = common_meta_attributes
 alert_meta_attributes = (
     "timeout", "timestamp-format"
 )
@@ -337,5 +339,138 @@ extra_cluster_properties = ("dc-version",
                             "last-lrm-refresh",
                             "cluster-name")
 pcmk_version = ""  # set later
+
+container_type = ["docker", "rkt"]
+container_helptxt = {
+    "docker": {
+        "image": """image:(string)
+    Docker image tag(required)""",
+
+        "replicas": """replicas:(integer)
+    Default:Value of masters if that is positive, else 1
+    A positive integer specifying the number of container instances to launch""",
+
+        "replicas-per-host": """replicas-per-host:(integer)
+    Default:1
+    A positive integer specifying the number of container instances allowed to
+    run on a single node""",
+
+        "masters": """masters:(integer)
+    Default:0
+    A non-negative integer that, if positive, indicates that the containerized
+    service should be treated as a multistate service, with this many replicas
+    allowed to run the service in the master role""",
+
+        "run-command": """run-command:(string)
+    Default:/usr/sbin/pacemaker_remoted if bundle contains a primitive, otherwise none
+    This command will be run inside the container when launching it ("PID 1").
+    If the bundle contains a primitive, this command must start pacemaker_remoted
+    (but could, for example, be a script that does other stuff, too).""",
+
+        "options": """options:(string)
+    Extra command-line options to pass to docker run"""
+    },
+
+    "network": {
+        "ip-range-start": """ip-range-start:(IPv4 address)
+    If specified, Pacemaker will create an implicit ocf:heartbeat:IPaddr2 resource
+    for each container instance, starting with this IP address, using up to replicas
+    sequential addresses. These addresses can be used from the host’s network to
+    reach the service inside the container, though it is not visible within the
+    container itself. Only IPv4 addresses are currently supported.""",
+
+        "host-netmask": """host-netmask:(integer)
+    Default:32
+    If ip-range-start is specified, the IP addresses are created with this CIDR
+    netmask (as a number of bits).""",
+
+        "host-interface": """host-interface:(string)
+    If ip-range-start is specified, the IP addresses are created on this host
+    interface (by default, it will be determined from the IP address).""",
+
+        "control-port": """control-port:(integer)
+    Default: 3121
+    If the bundle contains a primitive, the cluster will use this integer TCP port
+    for communication with Pacemaker Remote inside the container. Changing this is
+    useful when the container is unable to listen on the default port, for example,
+    when the container uses the host’s network rather than ip-range-start (in which
+    case replicas-per-host must be 1), or when the bundle may run on a Pacemaker
+    Remote node that is already listening on the default port. Any PCMK_remote_port
+    environment variable set on the host or in the container is ignored for bundle
+    connections.""",
+
+        "port-mapping": {
+            "id": """id:(string)
+    A unique name for the port mapping (required)""",
+
+            "port": """port:(integer)
+    If this is specified, connections to this TCP port number on the host network
+    (on the container’s assigned IP address, if ip-range-start is specified) will
+    be forwarded to the container network. Exactly one of port or range must be
+    specified in a port-mapping.""",
+
+            "internal-port": """internal-port:(integer)
+    Default: value of port
+    If port and this are specified, connections to port on the host’s network will
+    be forwarded to this port on the container network.""",
+
+                "range": """range:(first_port-last_port)
+    If this is specified, connections to these TCP port numbers (expressed as
+    first_port-last_port) on the host network (on the container’s assigned IP address,
+    if ip-range-start is specified) will be forwarded to the same ports in the container
+    network. Exactly one of port or range must be specified in a port-mapping."""
+        }
+    },
+
+    "storage": {
+        "id": """id:(string)
+    A unique name for the storage mapping (required)""",
+
+        "source-dir": """source-dir:(string)
+    The absolute path on the host’s filesystem that will be mapped into the container.
+    Exactly one of source-dir and source-dir-root must be specified in a storage-mapping.""",
+
+        "source-dir-root": """source-dir-root:(string)
+    The start of a path on the host’s filesystem that will be mapped into the container,
+    using a different subdirectory on the host for each container instance. The subdirectory
+    will be named the same as the bundle host name, as described in the note for ip-range-start.
+    Exactly one of source-dir and source-dir-root must be specified in a storage-mapping.""",
+
+           "target-dir": """target-dir:(string)
+    The path name within the container where the host storage will be mapped (required)""",
+
+            "options": """options:(string)
+    File system mount options to use when mapping the storage"""
+    },
+
+    "rkt": {
+        "image": """image:(string)
+    Container image tag (required)""",
+
+        "replicas": """replicas:(integer)
+    Default:Value of masters if that is positive, else 1
+    A positive integer specifying the number of container instances to launch""",
+
+        "replicas-per-host": """replicas-per-host:(interval)
+    Default:1
+    A positive integer specifying the number of container instances allowed to
+    run on a single node""",
+
+        "masters": """masters:(integer)
+    Default:0
+    A non-negative integer that, if positive, indicates that the containerized
+    service should be treated as a multistate service, with this many replicas
+    allowed to run the service in the master role""",
+
+        "run-command": """run-command:(string)
+    Default:/usr/sbin/pacemaker_remoted if bundle contains a primitive, otherwise none
+    This command will be run inside the container when launching it ("PID 1").
+    If the bundle contains a primitive, this command must start pacemaker_remoted
+    (but could, for example, be a script that does other stuff, too).""",
+
+        "options": """options:(string)
+    Extra command-line options to pass to rkt run"""
+    }
+}
 
 # vim:ts=4:sw=4:et:

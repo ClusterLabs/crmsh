@@ -55,7 +55,7 @@ _rsc_id_list = compl.call(cib_factory.rsc_id_list)
 _top_rsc_id_list = compl.call(cib_factory.top_rsc_id_list)
 _node_id_list = compl.call(cib_factory.node_id_list)
 _rsc_template_list = compl.call(cib_factory.rsc_template_list)
-
+_container_type = compl.choice(constants.container_type)
 
 def _advanced_completer(args):
     '''
@@ -76,7 +76,6 @@ def _advanced_completer(args):
         if resource_type in ["ms", "master"]:
             return [s+'=' for s in constants.ms_meta_attributes] + key_words
     return key_words
-
 
 def _list_resource(args):
     if len(args) > 3:
@@ -302,6 +301,149 @@ def primitive_complete_complex(args):
         return []
 
     return completers_set[last_keyw](agent, args) + keywords
+
+
+def container_helptxt(params, helptxt, topic):
+    for item in reversed(params):
+        if item in ["storage", "network", "docker", "rkt"]:
+            return helptxt[item][topic] + "\n"
+        if item == "port-mapping":
+            return helptxt["network"][item][topic] + "\n"
+
+
+def _container_remove_exist_keywords(args, _keywords):
+    for item in ["network", "primitive"]:
+        if item in args:
+            _keywords.remove(item)
+
+
+def _container_network_completer(args, _help, _keywords):
+    key_words = ["network", "port-mapping"]
+    completing = args[-1]
+    token = args[-2]
+    if completing.endswith("="):
+        return []
+    if completing in key_words:
+        return [completing]
+
+    tmp = list(_help["network"].keys())
+    # port-mapping is element, not a network option
+    tmp.remove("port-mapping")
+    network_keys = utils.filter_keys(tmp, args)
+    # bundle contain just one <network>/<primitive> element
+    _container_remove_exist_keywords(args, _keywords)
+
+    last_keyw = last_keyword(args, key_words)
+    if last_keyw == "network":
+        if token == "network":
+            return network_keys
+        else:
+            # complete port-mapping or other parts
+            return network_keys + ["port-mapping"] + _keywords
+
+    if last_keyw == "port-mapping":
+        mapping_required = ["id"]
+        mapping_params = args[utils.rindex(args, "port-mapping"):]
+        mapping_keys = utils.filter_keys(_help["network"]["port-mapping"].keys(), mapping_params)
+        if token == "port-mapping":
+            return mapping_keys
+        # required options must be completed
+        for s in mapping_required:
+            if utils.any_startswith(mapping_params, s+'=') is None:
+                return mapping_keys
+        # complete port-mapping or other parts
+        return mapping_keys + ["port-mapping"] + _keywords
+
+
+def _container_storage_completer(args, _help, _keywords):
+    completing = args[-1]
+    if completing.endswith("="):
+        return []
+    if completing == "storage":
+        return [completing]
+    if args[-2] == "storage":
+        return ["storage-mapping"]
+
+    storage_required = ["id", "target-dir"]
+    # get last storage part
+    mapping_params = args[utils.rindex(args, "storage-mapping"):]
+    storage_keys = utils.filter_keys(_help["storage"].keys(), mapping_params)
+
+    # required options must be completed
+    for s in storage_required:
+        if utils.any_startswith(mapping_params, s+"=") is None:
+            return storage_keys
+    # bundle contain just one <network>/<primitive> element
+    _container_remove_exist_keywords(args, _keywords)
+    # complete storage or other parts
+    return storage_keys + _keywords
+
+
+def _container_primitive_completer(args, _help, _keywords):
+    completing = args[-1]
+    if completing == "primitive":
+        return [completing]
+
+    _id_list = cib_factory.f_prim_free_id_list()
+    if _id_list is None:
+        return []
+    # bundle contain just one <network>/<primitive> element
+    _container_remove_exist_keywords(args, _keywords)
+    if args[-3] == "primitive" and args[-2] in _id_list:
+        return _keywords
+    return _id_list
+
+
+def _container_meta_completer(args, helptxt, _keywords):
+    completing = args[-1]
+    if completing.endswith("="):
+        return []
+    if completing == "meta":
+        return [completing]
+
+    # bundle contain just one <network>/<primitive> element
+    _container_remove_exist_keywords(args, _keywords)
+
+    return utils.filter_keys(constants.bundle_meta_attributes, args) + _keywords
+
+
+def container_complete_complex(args):
+    '''
+    Complete five parts:
+    container options, network, storage, primitive and meta
+    '''
+    container_options_required = ["image"]
+    completing = args[-1]
+    container_type = args[2]
+
+    completers_set = {
+        "network": _container_network_completer,
+        "storage": _container_storage_completer,
+        "primitive": _container_primitive_completer,
+        "meta": _container_meta_completer
+    }
+    keywords = list(completers_set.keys())
+    last_keyw = last_keyword(args, keywords)
+
+    # to show help messages
+    if completing.endswith('='):
+        if len(completing) > 1 and options.interactive:
+            topic = completing[:-1]
+            CompletionHelp.help(topic, container_helptxt(args, constants.container_helptxt, topic))
+        return []
+
+    container_options = utils.filter_keys(constants.container_helptxt[container_type].keys(), args)
+
+    # required options must be completed
+    for s in container_options_required:
+        if utils.any_startswith(args, s+'=') is None:
+            return container_options
+
+    if last_keyw is None:
+        return container_options + keywords
+
+    # to complete network, storage, primitive and meta
+    return completers_set[last_keyw](args, constants.container_helptxt, keywords)
 
 
 class CibConfig(command.UI):
@@ -760,6 +902,14 @@ class CibConfig(command.UI):
                 tmp.insert(idx, "monitor")
                 tmp.insert(idx+1, "role=%s" % item.split('_')[1])
         return self.__conf_object(context.get_command_name(), *tuple(tmp))
+
+    @command.completers_repeating(compl.attr_id, _container_type, container_complete_complex)
+    def do_bundle(self, context, *args):
+        """usage: bundle <bundle id> <container type> [<container option>...]
+        network [<network option>...]
+        storage [<storage option>...]
+        primitive <resource id> {[<class>:[<provider>:]]<type>|@<template>}"""
+        return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
     @command.completers_repeating(compl.attr_id, _f_prim_free_id_list, _advanced_completer)
