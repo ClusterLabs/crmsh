@@ -347,6 +347,11 @@ class TestCliParser(unittest.TestCase):
             'rsc_ticket ticket-B_storage ticket-B: drbd-a:Master drbd-b:Master')
         self.assertEqual(out.get('id'), 'ticket-B_storage')
 
+    def test_bundle(self):
+        out = self._parse('bundle bundle-test1 docker image=test network ip-range-start=10.10.10.123 port-mapping port=80 storage storage-mapping target-dir=test source-dir=test')
+        self.assertEqual(out.get('id'), 'bundle-test1')
+        self.assertEqual(['test'], out.xpath('/bundle/docker/@image'))
+
     def test_op(self):
         out = self._parse('monitor apache:Master 10s:20s')
         self.assertEqual(out.get('rsc'), 'apache')
