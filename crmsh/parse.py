@@ -667,8 +667,9 @@ class BaseParser(object):
             out.append(container_node)
 
         else:
-            for nvp in all_attrs:
-                xmlutil.child(out, 'crmsh-ref', id=nvp.get('name'))
+            if len(all_attrs) != 1 or all_attrs[0].get('value'):
+                self.err("Expected primitive reference, got {}".format(", ".join("{}={}".format(nvp.get('name'), nvp.get('value') or "") for nvp in all_attrs)))
+            xmlutil.child(out, 'crmsh-ref', id=all_attrs[0].get('name'))
 
     def match_op(self, out, pfx='op'):
         """

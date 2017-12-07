@@ -348,10 +348,13 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.get('id'), 'ticket-B_storage')
 
     def test_bundle(self):
-        out = self._parse('bundle httpd docker image=pcmk:httpd replicas=3 network ip-range-start=10.10.10.123 host-netmask=24 port-mapping port=80 storage storage-mapping target-dir=/var/www/html source-dir=/srv/www options=rw primitive httpd-apache apache')
+        out = self._parse('bundle httpd docker image=pcmk:httpd replicas=3 network ip-range-start=10.10.10.123 host-netmask=24 port-mapping port=80 storage storage-mapping target-dir=/var/www/html source-dir=/srv/www options=rw primitive httpd-apache')
         self.assertEqual(out.get('id'), 'httpd')
         self.assertEqual(['pcmk:httpd'], out.xpath('/bundle/docker/@image'))
-        self.assertEqual(['apache'], out.xpath('/bundle/primitive/@type'))
+        self.assertEqual(['httpd-apache'], out.xpath('/bundle/crmsh-ref/@id'))
+
+        out = self._parse('bundle httpd docker image=pcmk:httpd primitive httpd-apache apache')
+        self.assertFalse(out)
 
     def test_op(self):
         out = self._parse('monitor apache:Master 10s:20s')
