@@ -1524,11 +1524,35 @@ def parse_alert(self, cmd):
     if desc is not None:
         out.attrib['description'] = desc
     rcount = 1
+    root_selector = [None]
+
+    def wrap_select(tag):
+        if tag[0] is None:
+            tag[0] = xmlutil.child(out, 'select')
+        return tag[0]
+
     while self.has_tokens():
         if self.current_token() in ('attributes', 'meta'):
             self.match_arguments(out, {'attributes': 'instance_attributes',
                                        'meta': 'meta_attributes'},
-                                 terminator=['attributes', 'meta', 'to'])
+                                 terminator=['attributes', 'meta', 'to', 'select'])
+            continue
+        if self.current_token() == 'select':
+            selector_types = ('nodes', 'fencing', 'resources', 'attributes')
+            self.match('select')
+            root_selector[0] = None
+            while self.current_token() in selector_types:
+                selector = self.match_identifier()
+                if selector == 'attributes':
+                    if not self.try_match('{'):
+                        self.rewind()
+                        break
+                seltag = xmlutil.child(wrap_select(root_selector), 'select_{}'.format(selector))
+                if selector == 'attributes':
+                    while self.current_token() != '}':
+                        name = self.match_identifier()
+                        xmlutil.child(seltag, 'attribute', name=name)
+                    self.match('}')
             continue
         self.match('to')
         rid = '%s-recipient-%s' % (alertid, rcount)

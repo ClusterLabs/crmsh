@@ -2138,6 +2138,17 @@ class CibAlert(CibObject):
     def _repr_cli_child(self, c, format_mode):
         if c.tag in self.set_names:
             return self._attr_set_str(c)
+        elif c.tag == "select":
+            r = ["select"]
+            for sel in c.iterchildren():
+                if not sel.tag.startswith('select_'):
+                    continue
+                r.append(sel.tag.lstrip('select_'))
+                if sel.tag == 'select_attributes':
+                    r.append('{')
+                    r.extend(sel.xpath('attribute/@name'))
+                    r.append('}')
+            return ' '.join(r)
         elif c.tag == "recipient":
             r = ["to"]
             is_complex = self._is_complex()
