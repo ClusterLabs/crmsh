@@ -57,6 +57,7 @@ _node_id_list = compl.call(cib_factory.node_id_list)
 _rsc_template_list = compl.call(cib_factory.rsc_template_list)
 _container_type = compl.choice(constants.container_type)
 
+
 def _advanced_completer(args):
     '''
     meta completers for group/ms/clone resource type 
@@ -64,18 +65,20 @@ def _advanced_completer(args):
     key_words = ["meta", "params"]
     completing = args[-1]
     resource_type = args[0]
+    return_list = []
     if completing.endswith('='):
         # TODO add some help messages
         return []
     keyw = last_keyword(args, key_words)
     if keyw and keyw == "meta":
         if resource_type == "group":
-            return [s+'=' for s in constants.group_meta_attributes] + key_words
+            return_list = utils.filter_keys(constants.group_meta_attributes, args)
         if resource_type == "clone":
-            return [s+'=' for s in constants.clone_meta_attributes] + key_words
+            return_list = utils.filter_keys(constants.clone_meta_attributes, args)
         if resource_type in ["ms", "master"]:
-            return [s+'=' for s in constants.ms_meta_attributes] + key_words
-    return key_words
+            return_list = utils.filter_keys(constants.ms_meta_attributes, args)
+    return return_list + key_words
+
 
 def _list_resource(args):
     if len(args) > 3:
@@ -199,8 +202,7 @@ def _prim_params_completer(agent, args):
         return []
     elif '=' in completing:
         return []
-    return [s+'=' for s in agent.params(completion=True)
-            if utils.any_startswith(args, s+'=') is None]
+    return utils.filter_keys(agent.params(completion=True), args)
 
 
 def _prim_meta_completer(agent, args):
@@ -209,8 +211,7 @@ def _prim_meta_completer(agent, args):
         return ['meta']
     if '=' in completing:
         return []
-    return [s+'=' for s in constants.rsc_meta_attributes
-            if utils.any_startswith(args, s+'=') is None]
+    return utils.filter_keys(constants.rsc_meta_attributes, args)
 
 
 def _prim_op_completer(agent, args):
