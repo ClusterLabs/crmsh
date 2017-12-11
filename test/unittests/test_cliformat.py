@@ -330,3 +330,11 @@ def test_alerts_4():
 @with_setup(setup_func, teardown_func)
 def test_alerts_5():
     roundtrip('alert alert5 "/a/path" to { "/another/path" } meta timeout=30s')
+
+@with_setup(setup_func, teardown_func)
+def test_alerts_6():
+    roundtrip('alert alert6 "/a/path" select fencing attributes { standby } to { "/another/path" } meta timeout=30s')
+
+@with_setup(setup_func, teardown_func)
+def test_alerts_7():
+    roundtrip('alert alert7 "/a/path" select fencing attributes foo=bar to { "/another/path" } meta timeout=30s')

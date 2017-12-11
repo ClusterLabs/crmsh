@@ -511,6 +511,16 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(['10s'],
                          out.xpath('/alert/recipient/meta_attributes/nvpair[@name="timeout"]/@value'))
 
+    def test_alerts_selectors(self):
+        "Test alerts w/ selectors (1.1.17+)"
+        out = self._parse('alert alert3 /tmp/foo.sh select nodes fencing attributes { standby shutdown } to { /tmp/bar.log meta timeout=10s }')
+        self.assertEqual(out.get('id'), 'alert3')
+        self.assertEqual(1, len(out.xpath('/alert/select/select_nodes')))
+        self.assertEqual(1, len(out.xpath('/alert/select/select_fencing')))
+        self.assertEqual(['standby', 'shutdown'],
+                         out.xpath('/alert/select/select_attributes/attribute/@name'))
+
+
     def _parse_lines(self, lines):
         out = []
         for line in lines2cli(lines):

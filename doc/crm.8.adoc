@@ -2998,6 +2998,7 @@ Usage:
 alert <id> <path> \
   [attributes <nvpair> ...] \
   [meta <nvpair> ...] \
+  [select [nodes | fencing | resources | attributes '{' <attribute> ... '}' ] ...] \
   [to [{] <recipient>
     [attributes <nvpair> ...] \
     [meta <nvpair> ...] [}] \
@@ -3012,6 +3013,11 @@ alert alert-1 /srv/pacemaker/pcmk_alert_sample.sh \
 alert alert-2 /srv/pacemaker/example_alert.sh \
     meta timeout=60s \
     to { /var/log/cluster-alerts.log }
+
+alert alert-3 /srv/pacemaker/example_alert.sh \
+    select fencing \
+    to { /var/log/fencing-alerts.log }
+
 ...............
 
 [[cmdhelp_configure_bundle,Container bundle]]
