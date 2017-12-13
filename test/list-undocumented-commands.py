@@ -1,9 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 #
 # Script to discover and report undocumented commands.
 
-from __future__ import print_function
-from __future__ import unicode_literals
 from crmsh.ui_root import Root
 from crmsh import help
 
