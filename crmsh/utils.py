@@ -1685,14 +1685,8 @@ def list_cluster_nodes():
         if rc == 0:
             return [x for x in [getname(line.split()) for line in outp] if x and x != '(null)']
 
-        CIB_DIR = config.path.crm_config
-        cib_file = r"%s/%s" % (CIB_DIR, "cib.xml")
-        if not os.path.isfile(cib_file):
-            raise ValueError("Error listing cluster nodes: cib.xml not exists")
-
         from . import xmlutil
         node_list = []
-        os.environ['CIB_file'] = cib_file
         cib = xmlutil.cibdump2elem()
         if cib is None:
             return None
