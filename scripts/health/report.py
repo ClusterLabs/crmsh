@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-from __future__ import print_function
-from __future__ import unicode_literals
+#!/usr/bin/python3
+import os
 import crm_script
 data = crm_script.get_input()
 health_report = data[1]
@@ -12,11 +11,14 @@ CORE_PACKAGES = ['corosync', 'pacemaker', 'resource-agents']
 warnings = []
 errors = []
 
+
 def warn(fmt, *args):
     warnings.append(fmt % args)
 
+
 def error(fmt, *args):
     errors.append(fmt % args)
+
 
 # sort {package: {version: [host]}}
 rpm_versions = {}
@@ -89,7 +91,8 @@ def compare_system(systems):
     check('release', 'Kernel release differs')
     check('distname', 'Distribution differs')
     check('distver', 'Distribution version differs')
-    #check('version', 'Kernel version differs')
+    # check('version', 'Kernel version differs')
+
 
 def compare_files(systems):
     keys = set()
@@ -100,6 +103,7 @@ def compare_files(systems):
         if len(vals) > 1:
             info = ', '.join('%s: %s' % (h, files.get(filename)) for h, files in systems)
             warn("%s: %s" % ("Files differ", info))
+
 
 compare_system((h, info['system']) for h, info in health_report.items())
 compare_files((h, info['files']) for h, info in health_report.items())
@@ -126,6 +130,5 @@ if warnings:
 if not errors and not warnings:
     print("No issues found.")
 
-import os
 workdir = os.path.dirname(crm_script.__file__)
 print("\nINFO: health-report in directory \"%s\"" % workdir)

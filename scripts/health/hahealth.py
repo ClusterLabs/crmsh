@@ -1,15 +1,17 @@
-#!/usr/bin/env python
-from __future__ import unicode_literals
+#!/usr/bin/python3
 import os
 import crm_script as crm
 
-if not os.path.isfile('/usr/sbin/crm'):
+
+if not os.path.isfile('/usr/sbin/crm') and not os.path.isfile('/usr/bin/crm'):
     # crm not installed
     crm.exit_ok({'status': 'crm not installed'})
+
 
 def get_from_date():
     rc, out, err = crm.call("date '+%F %H:%M' --date='1 day ago'", shell=True)
     return out.strip()
+
 
 def create_report():
     cmd = ['crm', 'report',
@@ -18,12 +20,15 @@ def create_report():
     rc, out, err = crm.call(cmd, shell=False)
     return rc == 0
 
+
 if not create_report():
     crm.exit_ok({'status': 'Failed to create report'})
+
 
 def extract_report():
     rc, out, err = crm.call(['tar', 'xjf', 'health-report.tar.bz2'], shell=False)
     return rc == 0
+
 
 if not extract_report():
     crm.exit_ok({'status': 'Failed to extract report'})

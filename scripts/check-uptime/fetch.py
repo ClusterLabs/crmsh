@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-from __future__ import unicode_literals
+#!/usr/bin/python3
 import crm_script
 try:
     uptime = open('/proc/uptime').read().split()[0]

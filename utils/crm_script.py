@@ -96,7 +96,7 @@ def call(cmd, shell=False):
     debug("crm_script(call): %s" % (cmd))
     p = proc.Popen(cmd, shell=shell, stdin=None, stdout=proc.PIPE, stderr=proc.PIPE)
     out, err = p.communicate()
-    return p.returncode, out.strip(), err.strip()
+    return p.returncode, out.decode('utf-8').strip(), err.decode('utf-8').strip()
 
 
 def use_sudo():
