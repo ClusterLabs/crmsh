@@ -477,30 +477,30 @@ With this knowledge, we can implement `fetch.py` and `report.py`.
 
 [source,python]
 ----
-#!/usr/bin/env python
+#!/usr/bin/python3
 import crm_script as crm
 try:
     uptime = open('/proc/uptime').read().split()[0]
     crm.exit_ok(uptime)
-except:
-    crm.exit_fail("Couldn't open /proc/uptime")
+except Exception as e:
+    crm.exit_fail("Couldn't open /proc/uptime: %s" % (e))
 ----
 
 `report.py`:
 
 [source,python]
 ----
-#!/usr/bin/env python
+#!/usr/bin/python3
 import crm_script as crm
 show_all = crm.is_true(crm.param('show_all'))
-uptimes = crm.output(1).items()
-max_uptime = 0, ''
+uptimes = list(crm.output(1).items())
+max_uptime = '', 0
 for host, uptime in uptimes:
-    if uptime > max_uptime[0]:
-        max_uptime = uptime, host
+    if float(uptime) > max_uptime[1]:
+        max_uptime = host, float(uptime)
 if show_all:
-    print "Uptimes: %s" % (', '.join("%s: %s" % v for v in uptimes))
-print "Longest uptime is %s seconds on host %s" % max_uptime
+    print("Uptimes: %s" % (', '.join("%s: %s" % v for v in uptimes)))
+print("Longest uptime is %s seconds on host %s" % (max_uptime[1], max_uptime[0]))
 ----
 
 See below for more details on the helper library `crm_script`.
