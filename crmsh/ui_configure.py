@@ -80,6 +80,26 @@ def _advanced_completer(args):
     return return_list + key_words
 
 
+def _location_completer(args):
+    completing = args[-1]
+    token = args[-2]
+    if len(args) == 4:
+        return ["on"]
+    if len(args) == 5:
+        return cib_factory.node_id_list()
+
+    if completing.endswith('='):
+        if len(completing) > 1 and options.interactive:
+            topic = completing[:-1]
+            if topic == "score":
+                CompletionHelp.help(topic, constants.score_helptxt)
+        return []
+
+    if len(args) == 6:
+        return ("score=", 1)
+
+
+
 def _list_resource(args):
     if len(args) > 3:
         if args[2] == "remove":
@@ -950,7 +970,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers(compl.attr_id, _top_rsc_id_list)
+    @command.completers_repeating(compl.attr_id, _top_rsc_id_list, _location_completer)
     def do_location(self, context, *args):
         """usage: location <id> <rsc> {node_pref|rules}
 

@@ -473,4 +473,14 @@ container_helptxt = {
     }
 }
 
+score_helptxt = """
+score:
+valid value include: (integer)|INFINITY|+INFINITY|-INFINITY
+
+Positive values indicate a preference for running the affected resource(s)
+on this node — the higher the value, the stronger the preference. Negative
+values indicate the resource(s) should avoid this node (a value of -INFINITY
+changes "should" to "must").
+"""
+
 # vim:ts=4:sw=4:et:

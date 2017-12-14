@@ -130,6 +130,8 @@ class Context(object):
                     else:
                         # use the completer for the command
                         ret = self.command_info.complete(self, tokens)
+                        if isinstance(ret, tuple):
+                            return ret
                         if tokens:
                             ret = [t for t in ret if t.startswith(tokens[-1])]
 
@@ -201,10 +203,14 @@ class Context(object):
             try:
                 self._rl_line = line
                 completions = self.complete(line)
-                if text:
-                    self._rl_words = [w for w in completions if matching(w) and not w.startswith("_")]
+                if isinstance(completions, tuple):
+                    self._rl_words = [completions[0]]
+                    text = completions[1]
                 else:
-                    self._rl_words = [w for w in completions if not w.startswith("_")]
+                    if text:
+                        self._rl_words = [w for w in completions if matching(w) and not w.startswith("_")]
+                    else:
+                        self._rl_words = [w for w in completions if not w.startswith("_")]
 
             except Exception:  # , msg:
                 # logging.exception(msg)
