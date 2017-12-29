@@ -195,9 +195,9 @@ class RscMgmt(command.UI):
     }
     rsc_failcount = {
         'set': "crm_attribute -t status -n 'fail-count-%s' -N '%s' -v '%s' -d 0",
-        'delete': "crm_attribute -t status -n 'fail-count-%s' -N '%s' -D -d 0",
-        'show': "crm_attribute -t status -n 'fail-count-%s' -N '%s' -G -d 0",
-        'get': "crm_attribute -t status -n 'fail-count-%s' -N '%s' -G -d 0",
+        'delete': "crm_failcount -D -r %s -N %s",
+        'show': "crm_failcount -G -r %s -N %s",
+        'get': "crm_failcount -G -r %s -N %s",
     }
     rsc_utilization = {
         'set': "crm_resource -z -r '%s' -p '%s' -v '%s'",
