@@ -141,7 +141,8 @@ def _load_2nd_completer(args):
 def get_prim_token(words, n):
     for key in ("primitive", "rsc_template"):
         try:
-            return words[words.index(key) + n - 1]
+            if key in words:
+                return words[words.index(key) + n - 1]
         except IndexError:
             pass
     return ''
