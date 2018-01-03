@@ -13,7 +13,7 @@ from . import config
 from . import options
 from . import userdir
 from . import utils
-from .utils import stdout2list, is_program, is_process
+from .utils import stdout2list, is_program, is_process, to_ascii
 from .utils import os_types_list, get_stdout, find_value
 from .utils import crm_msec, crm_time_cmp
 from .msg import common_debug, common_err, common_warn, common_info
@@ -836,7 +836,8 @@ def validate_agent(agentname, params, log=False):
     if options.regression_tests:
         print(".EXT", " ".join(cmd))
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=my_env)
-    out, _ = p.communicate()
+    _out, _ = p.communicate()
+    out = to_ascii(_out)
     p.wait()
 
     if log is True:
