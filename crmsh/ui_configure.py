@@ -109,9 +109,8 @@ def top_rsc_tmpl_id_list(args):
 
 
 def ra_classes_or_tmpl(args):
-    if args[-1].startswith('@'):
-        return cib_factory.rsc_template_list()
-    return ui_ra.complete_class_provider_type(args)
+    return ui_ra.complete_class_provider_type(args) + \
+           ['@'+x for x in cib_factory.rsc_template_list()]
 
 
 def op_attr_list(args):
