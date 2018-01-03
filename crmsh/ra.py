@@ -810,8 +810,6 @@ def validate_agent(agentname, params, log=False):
     Returns: (rc, out)
     """
     def find_agent():
-        if not can_validate_agent(agentname):
-            return None
         if isinstance(agentname, str):
             c, p, t = disambiguate_ra_type(agentname)
             if c != "ocf":
@@ -824,6 +822,7 @@ def validate_agent(agentname, params, log=False):
         if len(agent.ra_elem.xpath('.//actions/action[@name="validate-all"]')) < 1:
             raise ValueError("validate-all action not supported by agent")
         return agent
+
     agent = find_agent()
     if agent is None:
         return (-1, "")
