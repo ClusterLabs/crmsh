@@ -72,7 +72,7 @@
           <nvpair name="target-role" value="Started" id="st-meta_attributes-target-role"/>
         </meta_attributes>
         <operations>
-          <op name="start" requires="nothing" timeout="60s" interval="0" id="st-start-0"/>
+          <op name="start" timeout="60s" interval="0" id="st-start-0"/>
           <op name="monitor" interval="60m" timeout="60s" id="st-monitor-60m"/>
         </operations>
       </primitive>

@@ -5,7 +5,6 @@ node node1 \
 primitive st stonith:null \
 	params hostlist='node1' \
 	meta description="some description here" \
-	op start requires=nothing \
 	op monitor interval=60m
 primitive p1 ocf:heartbeat:Dummy \
 	op monitor interval=60m \

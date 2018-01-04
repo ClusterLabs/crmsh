@@ -7,7 +7,7 @@ node node2 utilization cpu=4
 primitive st stonith:ssh \
 	params hostlist='node1 node2' \
 	meta target-role=Started \
-	op start requires=nothing timeout=60s \
+	op start timeout=60s \
 	op monitor interval=60m timeout=60s
 primitive st2 stonith:ssh \
 	params hostlist='node1 node2'

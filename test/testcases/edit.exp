@@ -5,7 +5,7 @@
 .INP: erase nodes
 .INP: property default-action-timeout=2m
 .INP: node node1 	attributes mem=16G
-.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" 	op start requires=nothing 	op monitor interval=60m
+.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" 	op monitor interval=60m
 .INP: primitive p1 ocf:heartbeat:Dummy 	op monitor interval=60m 	op monitor interval=120m OCF_CHECK_LEVEL=10
 .INP: filter "sed '$aprimitive p2 ocf:heartbeat:Dummy'"
 .INP: filter "sed '$agroup g1 p1 p2'"
@@ -20,7 +20,6 @@ primitive p2 Dummy
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" \
-	op start requires=nothing interval=0 \
 	op monitor interval=60m
 group g1 p1 p2
 property cib-bootstrap-options: \
@@ -38,7 +37,6 @@ primitive p3 Dummy
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" \
-	op start requires=nothing interval=0 \
 	op monitor interval=60m
 group g1 p1 p3
 property cib-bootstrap-options: \
@@ -154,7 +152,6 @@ primitive p3 Dummy
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" \
-	op start requires=nothing interval=0 \
 	op monitor interval=60m
 group g1 p1 p2 d3
 group g2 d1 d2

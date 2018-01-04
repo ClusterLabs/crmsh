@@ -7,7 +7,7 @@
 .INP: delete node1
 .INP: node node1 	attributes mem=16G
 .INP: node node2 utilization cpu=4
-.INP: primitive st stonith:ssh 	params hostlist='node1 node2' 	meta target-role="Started" 	op start requires=nothing timeout=60s 	op monitor interval=60m timeout=60s
+.INP: primitive st stonith:ssh 	params hostlist='node1 node2' 	meta target-role="Started" 	op start timeout=60s 	op monitor interval=60m timeout=60s
 .INP: primitive st2 stonith:ssh 	params hostlist='node1 node2'
 .INP: primitive d1 ocf:pacemaker:Dummy 	operations $id=d1-ops 	op monitor interval=60m 	op monitor interval=120m OCF_CHECK_LEVEL=10
 .INP: monitor d1 60s:30s
@@ -93,7 +93,7 @@ primitive s6 ocf:pacemaker:Stateful \
 primitive st stonith:ssh \
 	params hostlist="node1 node2" \
 	meta target-role=Started \
-	op start requires=nothing timeout=60s interval=0 \
+	op start timeout=60s interval=0 \
 	op monitor interval=60m timeout=60s
 primitive st2 stonith:ssh \
 	params hostlist="node1 node2"

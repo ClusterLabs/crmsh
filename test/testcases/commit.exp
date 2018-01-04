@@ -4,7 +4,7 @@
 .INP: erase
 .INP: erase nodes
 .INP: property default-action-timeout=2m
-.INP: primitive st stonith:null 	params hostlist='node1' 	meta yoyo-meta="yoyo 2" 	op start requires=nothing 	op monitor interval=60m
+.INP: primitive st stonith:null 	params hostlist='node1' 	meta yoyo-meta="yoyo 2" 	op monitor interval=60m
 .INP: commit
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
@@ -64,7 +64,6 @@ primitive p3 Dummy
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta yoyo-meta="yoyo 2" \
-	op start requires=nothing interval=0 \
 	op monitor interval=60m
 group g1 d1 p2
 group g2 d3

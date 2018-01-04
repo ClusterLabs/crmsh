@@ -4,7 +4,7 @@
 .INP: up
 .INP: configure
 .INP: erase
-.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" 	op start requires=nothing 	op monitor interval=60m
+.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" 	op monitor interval=60m
 .INP: primitive p4 Dummy
 .INP: primitive p3 Dummy
 .INP: primitive p2 Dummy
@@ -26,7 +26,6 @@ node node1
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" \
-	op start requires=nothing interval=0 \
 	op monitor interval=60m
 primitive p4 Dummy
 primitive p3 Dummy
@@ -48,7 +47,6 @@ node node1
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" \
-	op start requires=nothing interval=0 \
 	op monitor interval=60m
 primitive p4 Dummy
 primitive p3 Dummy
@@ -102,14 +100,13 @@ property cib-bootstrap-options: \
 INFO: 2: constraint colocation:c2 updated
 INFO: 2: constraint colocation:c2 updated
 INFO: 2: modified location:loc1 from g1 to gr2
-.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" 	op start requires=nothing 	op monitor interval=60m
+.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" 	op monitor interval=60m
 .INP: property SAPHanaSR:     hana_ha1_site_lss_WDF1=4
 .INP: show
 node node1
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" \
-	op start requires=nothing interval=0 \
 	op monitor interval=60m
 property SAPHanaSR: \
 	hana_ha1_site_lss_WDF1=4
@@ -125,7 +122,6 @@ node node1
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" \
-	op start requires=nothing interval=0 \
 	op monitor interval=60m
 property SAPHanaSR: \
 	hana_ha1_site_lss_WDF1=4

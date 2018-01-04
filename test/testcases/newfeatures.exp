@@ -5,7 +5,7 @@
 .INP: erase nodes
 .INP: node node1
 .INP: # create one stonith so that verify does not complain
-.INP: primitive st stonith:ssh 	params hostlist='node1' 	meta target-role="Started" 	op start requires=nothing timeout=60s 	op monitor interval=60m timeout=60s
+.INP: primitive st stonith:ssh 	params hostlist='node1' 	meta target-role="Started" 	op start timeout=60s 	op monitor interval=60m timeout=60s
 .INP: primitive p0 Dummy params $p0-state:state=1
 .INP: primitive p1 Dummy params     rule role=Started date in start=2009-05-26 end=2010-05-26 or date gt 2014-01-01     state=2
 .INP: primitive p2 Dummy params @p0-state
@@ -33,7 +33,7 @@ primitive p2 Dummy \
 primitive st stonith:ssh \
 	params hostlist=node1 \
 	meta target-role=Started \
-	op start requires=nothing timeout=60s interval=0 \
+	op start timeout=60s interval=0 \
 	op monitor interval=60m timeout=60s
 tag ones l1 p1
 tag tag1 p0 p1 p2

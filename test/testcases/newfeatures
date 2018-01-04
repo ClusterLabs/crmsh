@@ -8,7 +8,7 @@ node node1
 primitive st stonith:ssh \
 	params hostlist='node1' \
 	meta target-role="Started" \
-	op start requires=nothing timeout=60s \
+	op start timeout=60s \
 	op monitor interval=60m timeout=60s
 primitive p0 Dummy params $p0-state:state=1
 primitive p1 Dummy params \
