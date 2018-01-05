@@ -7,7 +7,6 @@ erase
 primitive st stonith:null \
 	params hostlist='node1' \
 	meta description="some description here" \
-	op start requires=nothing \
 	op monitor interval=60m
 primitive p4 Dummy
 primitive p3 Dummy
@@ -46,7 +45,6 @@ erase
 primitive st stonith:null \
 	params hostlist='node1' \
 	meta description="some description here" \
-	op start requires=nothing \
 	op monitor interval=60m
 property SAPHanaSR: \
     hana_ha1_site_lss_WDF1=4

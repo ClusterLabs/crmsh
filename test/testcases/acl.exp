@@ -5,7 +5,7 @@
 .INP: erase nodes
 .INP: node node1
 .INP: property enable-acl=true
-.INP: primitive st stonith:ssh 	params hostlist='node1' 	meta target-role="Started" 	op start requires=nothing timeout=60s 	op monitor interval=60m timeout=60s
+.INP: primitive st stonith:ssh 	params hostlist='node1' 	meta target-role="Started" 	op start timeout=60s 	op monitor interval=60m timeout=60s
 .INP: primitive d0 ocf:pacemaker:Dummy
 .INP: primitive d1 ocf:pacemaker:Dummy
 .INP: role basic-read        read status        read type:node attribute:uname        read type:node attribute:type        read property
@@ -32,7 +32,7 @@ primitive d1 ocf:pacemaker:Dummy
 primitive st stonith:ssh \
 	params hostlist=node1 \
 	meta target-role=Started \
-	op start requires=nothing timeout=60s interval=0 \
+	op start timeout=60s interval=0 \
 	op monitor interval=60m timeout=60s
 property cib-bootstrap-options: \
 	enable-acl=true

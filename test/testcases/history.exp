@@ -5,7 +5,7 @@
 .EXT tar -tj < history-test.tar.bz2 2> /dev/null | head -1
 .EXT tar -xj < history-test.tar.bz2
 Source: history-test.tar.bz2
-Created on: Fri 14 Dec 19:08:38 UTC 2012
+Created on: Sat 15 Dec 03:08:38 CST 2012
 By: unknown
 Period: 2012-12-14 20:06:34 - 2012-12-14 20:08:44
 Nodes: xen-d xen-e

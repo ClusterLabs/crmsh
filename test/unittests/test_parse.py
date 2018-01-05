@@ -34,7 +34,7 @@ class MockValidation(parse.Validation):
     def op_attributes(self):
         return ['id', 'name', 'interval', 'timeout', 'description',
                 'start-delay', 'interval-origin', 'timeout', 'enabled',
-                'record-pending', 'role', 'requires', 'on-fail']
+                'record-pending', 'role', 'on-fail']
 
     def acl_2_0(self):
         return True
@@ -147,10 +147,10 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.get('class'), 'ocf')
         #print out
 
-        out = self._parse('primitive st stonith:ssh params hostlist=node1 meta target-role=Started op start requires=nothing timeout=60s op monitor interval=60m timeout=60s')
+        out = self._parse('primitive st stonith:ssh params hostlist=node1 meta target-role=Started op start timeout=60s op monitor interval=60m timeout=60s')
         self.assertEqual(out.get('id'), 'st')
 
-        out2 = self._parse('primitive st stonith:ssh hostlist=node1 meta target-role=Started op start requires=nothing timeout=60s op monitor interval=60m timeout=60s')
+        out2 = self._parse('primitive st stonith:ssh hostlist=node1 meta target-role=Started op start timeout=60s op monitor interval=60m timeout=60s')
         self.assertEqual(out2.get('id'), 'st')
 
         self.assertEqual(xml_tostring(out), xml_tostring(out2))
@@ -158,7 +158,7 @@ class TestCliParser(unittest.TestCase):
         out = self._parse('primitive st stonith:ssh params hostlist= meta')
         self.assertEqual(out.get('id'), 'st')
 
-        out = self._parse('primitive st stonith:null params hostlist=node1 meta description="some description here" op start requires=nothing op monitor interval=60m')
+        out = self._parse('primitive st stonith:null params hostlist=node1 meta description="some description here" op monitor interval=60m')
         self.assertEqual(out.get('id'), 'st')
 
         out = self._parse('ms m0 resource params a=b')
@@ -615,7 +615,7 @@ class TestCliParser(unittest.TestCase):
             """primitive st stonith:ssh \
             params hostlist='node1 node2' \
             meta target-role="Started" \
-            op start requires=nothing timeout=60s \
+            op start timeout=60s \
             op monitor interval=60m timeout=60s""",
             """primitive st2 stonith:ssh \
             params hostlist='node1 node2'""",
@@ -679,7 +679,7 @@ class TestCliParser(unittest.TestCase):
         b = [
             '<node uname="node1"><instance_attributes><nvpair name="mem" value="16G"/></instance_attributes></node>',
             '<node uname="node2"><utilization><nvpair name="cpu" value="4"/></utilization></node>',
-            '<primitive id="st" class="stonith" type="ssh"><instance_attributes><nvpair name="hostlist" value="node1 node2"/></instance_attributes><meta_attributes><nvpair name="target-role" value="Started"/></meta_attributes><operations><op name="start" requires="nothing" timeout="60s" interval="0"/><op name="monitor" interval="60m" timeout="60s"/></operations></primitive>',
+            '<primitive id="st" class="stonith" type="ssh"><instance_attributes><nvpair name="hostlist" value="node1 node2"/></instance_attributes><meta_attributes><nvpair name="target-role" value="Started"/></meta_attributes><operations><op name="start" timeout="60s" interval="0"/><op name="monitor" interval="60m" timeout="60s"/></operations></primitive>',
             '<primitive id="st2" class="stonith" type="ssh"><instance_attributes><nvpair name="hostlist" value="node1 node2"/></instance_attributes></primitive>',
             '<primitive id="d1" class="ocf" provider="pacemaker" type="Dummy"><operations id="d1-ops"><op name="monitor" interval="60m"/><op name="monitor" interval="120m"><instance_attributes><nvpair name="OCF_CHECK_LEVEL" value="10"/></instance_attributes></op></operations></primitive>',
             '<op name="monitor" rsc="d1" interval="60s" timeout="30s"/>',

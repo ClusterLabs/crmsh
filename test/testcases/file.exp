@@ -10,18 +10,12 @@ primitive st stonith:null \
 	params hostlist=node1
 ms m1 p2
 clone c1 p1
-property cib-bootstrap-options: \
-	default-action-timeout=60s
 .TRY configure erase nodes
 .TRY configure load replace sample.txt
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
-.EXT crmd metadata
-.EXT pengine metadata
-.EXT cib metadata
-.EXT sed -i 's/60s/2m/' sample.txt
 .EXT sed -i '8a # comment' sample.txt
 .TRY Load update
 .INP: configure
@@ -48,6 +42,5 @@ primitive st stonith:null \
 ms m1 p2
 clone c1 p1
 property cib-bootstrap-options: \
-	default-action-timeout=2m \
 	cluster-recheck-interval=10m
 .EXT rm sample.txt
