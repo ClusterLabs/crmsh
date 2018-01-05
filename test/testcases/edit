@@ -1,5 +1,4 @@
 show Configuration editing
-property default-action-timeout=2m
 node node1 \
 	attributes mem=16G
 primitive st stonith:null \
@@ -49,7 +48,6 @@ modgroup g1 add c1
 modgroup g1 add nosuch
 filter "sed 's/^/# this is a comment\\n/'" loc-d1
 rsc_defaults $id="rsc_options" failure-timeout=10m
-filter "sed 's/2m/60s/'" cib-bootstrap-options
 show rsc_options
 property stonith-enabled=true
 show cib-bootstrap-options

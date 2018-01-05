@@ -33,7 +33,6 @@ primitive p3 ocf:pacemaker:Dummy
 primitive st stonith:null params hostlist=node1
 clone c1 p1
 ms m1 p2
-property default-action-timeout=60s
 commit
 end
 EOF

@@ -616,14 +616,12 @@ primitive p3 ocf:pacemaker:Dummy
 primitive st stonith:null params hostlist=node1
 clone c1 p1
 ms m1 p2
-property default-action-timeout=60s
 """)
     assert ok
 
     obj = cibconfig.mkset_obj()
     assert obj is not None
-    ok = obj.save("""property default-action-timeout=2m
-node node1 \
+    ok = obj.save("""node node1 \
     attributes mem=16G
 primitive st stonith:null \
     params hostlist='node1' \
