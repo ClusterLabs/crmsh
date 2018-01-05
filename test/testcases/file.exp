@@ -16,9 +16,6 @@ clone c1 p1
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
-.EXT crmd metadata
-.EXT pengine metadata
-.EXT cib metadata
 .EXT sed -i '8a # comment' sample.txt
 .TRY Load update
 .INP: configure

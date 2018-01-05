@@ -39,7 +39,6 @@ colocation c2 inf: ( p1 p2 ) p3 p4
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
-.EXT pengine metadata
 .INP: _test
 .INP: verify
 .INP: show
@@ -87,9 +86,6 @@ location loc1 g1 \
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
-.EXT crmd metadata
-.EXT pengine metadata
-.EXT cib metadata
 .INP: _test
 .INP: verify
 .TRY Unknown properties
@@ -111,7 +107,6 @@ property SAPHanaSR: \
 .INP: commit
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
-.EXT pengine metadata
 .INP: _test
 .INP: verify
 .INP: property SAPHanaSR_2:     hana_ha1_site_iss_WDF1=cde     hana_ha1_site_bss_WDF1=abc
