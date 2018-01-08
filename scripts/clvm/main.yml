@@ -8,9 +8,10 @@ longdesc: |
   Configure a cloned lvmlockd resource.
 
   NB: Only one lvmlockd resource is necessary, regardless
-  of how many volume groups are managed as resources.
-  To monitor volume groups after configuring lvmlockd, the wizard
-  for activating volume groups can be used.
+  of how many volume groups are managed as resources. To
+  monitor volume groups after configuring lvmlockd, the wizard
+  for activating volume groups can be used. Refer to manpage
+  of lvmlockd for more information.
 
 parameters:
   - name: install
