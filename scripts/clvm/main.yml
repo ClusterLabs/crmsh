@@ -3,37 +3,36 @@
 # License: GNU General Public License (GPL)
 version: 2.2
 category: File System
-shortdesc: Cluster-aware LVM
+shortdesc: Cluster-aware LVM (lvmlockd)
 longdesc: |
-  Configure a cloned instance of cLVM.
+  Configure a cloned lvmlockd resource.
 
-  NB: Only one clvm cluster resource is necessary, regardless
-  of how many clustered volume groups are managed as resources.
-  To create volume groups after configuring cLVM, the wizard
-  for cLVM volume groups can be used.
+  NB: Only one lvmlockd resource is necessary, regardless
+  of how many volume groups are managed as resources.
+  To monitor volume groups after configuring lvmlockd, the wizard
+  for activating volume groups can be used.
 
 parameters:
   - name: install
     type: boolean
-    shortdesc: Install packages for cLVM
+    shortdesc: Install packages for lvmlockd
     value: false
 
 actions:
   - install:
-      - lvm2-clvm
-    shortdesc: Install the clvm package
+      - lvm2-lockd
+    shortdesc: Install the lvm2-lockd package
     when: install
   - cib: |
       primitive dlm ocf:pacemaker:controld
         op start timeout=90s
         op stop timeout=100s
 
-      primitive clvm ocf:lvm2:clvmd
-        params daemon_timeout=30
+      primitive lvmlockd ocf:heartbeat:lvmlockd
         op start timeout=90s
         op stop timeout=100s
 
-      group g-clvm dlm clvm
+      group g-clvm dlm lvmlockd
 
       clone c-clvm g-clvm
         meta interleave=true ordered=true
