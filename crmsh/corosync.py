@@ -57,6 +57,14 @@ class Token(object):
         return '%s: %s' % (self.key, self.value)
 
 
+class QDevice(object):
+    def __init__(self, ip, port=5403, algo="ffsplit", tie_breaker="lowest"):
+        self.ip = ip
+        self.port = port
+        self.algo = algo
+        self.tie_breaker = tie_breaker
+
+
 def corosync_tokenizer(stream):
     """Parses the corosync config file into a token stream"""
     section_re = re.compile(r'(\w+)\s*{')
@@ -524,13 +532,7 @@ logging {
 }
 
 %(nodelist)s
-quorum {
-    # Enable and configure quorum subsystem (default: off)
-    # see also corosync.conf.5 and votequorum.5
-    provider: corosync_votequorum
-    expected_votes: 1
-    two_node: 0
-}
+%(quorum)s
 """
 _COROSYNC_CONF_TEMPLATE_RING = """
     interface {
@@ -550,7 +552,8 @@ def create_configuration(clustername="hacluster",
                          transport=None,
                          ipv6=False,
                          nodeid=None,
-                         two_rings=False):
+                         two_rings=False,
+                         qdevice=None):
 
     if transport == "udpu":
         ring_tmpl = ""
@@ -561,7 +564,7 @@ def create_configuration(clustername="hacluster",
 
         nodelist_tmpl = """nodelist {
     node {
-%(ringaddr)s       
+%(ringaddr)s
         nodeid: 1
     }
 }
@@ -584,9 +587,39 @@ def create_configuration(clustername="hacluster",
         if transport != "udpu":
             ipv6_nodeid = "nodeid:  %d" % nodeid
 
+    quorum_tmpl = """quorum {
+    # Enable and configure quorum subsystem (default: off)
+    # see also corosync.conf.5 and votequorum.5
+    provider: corosync_votequorum
+    expected_votes: 1
+    two_node: 0
+}
+"""
+    if qdevice is not None:
+        quorum_tmpl = """quorum {
+    # Enable and configure quorum subsystem (default: off)
+    # see also corosync.conf.5 and votequorum.5
+    provider: corosync_votequorum
+    expected_votes: 1
+    two_node: 0
+    device {
+      votes: 1
+      model: net
+      net {
+        tls: off
+        host: %(ip)s
+        port: %(port)s
+        algorithm: %(algo)s
+        tie_breaker: %(tie_breaker)s
+      }
+    }
+}
+""" % qdevice.__dict__
+
     config_common = {
         "clustername": clustername,
         "nodelist": nodelist_tmpl,
+        "quorum": quorum_tmpl,
         "ipv6": ipv6_tmpl,
         "ipv6_nodeid": ipv6_nodeid,
         "rrp_mode": rrp_mode_tmp,

@@ -66,6 +66,7 @@ class Context(object):
         self.connect_name = None
         self.second_hb = None
         self.ui_context = None
+        self.qdevice = None
 
 
 _context = None
@@ -549,12 +550,16 @@ def firewall_open_corosync_ports():
 
     Please note corosync uses two UDP ports mcastport (for mcast
     receives) and mcastport - 1 (for mcast sends).
+
+    Also open QNetd/QDevice port if configured.
     """
     # all mcastports defined in corosync config
     udp = corosync.get_values("totem.interface.mcastport")
     udp.extend([str(int(p) - 1) for p in udp])
 
-    configure_firewall(udp=udp)
+    tcp = corosync.get_values("totem.quorum.device.net.port")
+
+    configure_firewall(tcp=tcp, udp=udp)
 
 
 def init_cluster_local():
@@ -912,7 +917,8 @@ Configure Corosync (unicast):
         mcastport=mcastport_res,
         transport="udpu",
         ipv6=_context.ipv6,
-        two_rings=two_rings)
+        two_rings=two_rings,
+        qdevice=_context.qdevice)
     csync2_update(corosync.conf())
 
 
@@ -1032,7 +1038,8 @@ Configure Corosync:
         mcastport=mcastport_res,
         ipv6=_context.ipv6,
         nodeid=nodeid,
-        two_rings=two_rings)
+        two_rings=two_rings,
+        qdevice=_context.qdevice)
     csync2_update(corosync.conf())
 
 
@@ -1742,16 +1749,27 @@ def join_cluster(seed_host):
         # Increase expected_votes
         # TODO: wait to adjust expected_votes until after cluster join,
         # so that we can ask the cluster for the current membership list
+        # Have to check if a qnetd device is configured and increase
+        # expected_votes in that case
+        qnetd_votes = 1 if corosync.get_value("quorum.device.model") == "net" else 0
         if nodelist is None:
             nodecount = 0
             for v in corosync.get_values("quorum.expected_votes"):
-                nodecount = int(v) + 1
+                nodecount = int(v) + 1 + qnetd_votes
                 corosync.set_value("quorum.expected_votes", str(nodecount))
                 corosync.set_value("quorum.two_node", 1 if nodecount == 2 else 0)
         else:
-            nodecount = len(nodelist)
-            corosync.set_value("quorum.expected_votes", str(nodecount))
+            nodecount = len(nodelist) + qnetd_votes
+            if corosync.get_value("quorum.expected_votes"):
+                corosync.set_value("quorum.expected_votes", str(nodecount))
             corosync.set_value("quorum.two_node", 1 if nodecount == 2 else 0)
+        if qnetd_votes > 0 and nodecount > 0:
+            device_votes = 1
+            if corosync.get_value("quorum.device.net.algorithm") == "lms":
+                device_votes = nodecount - 1
+            elif nodecount == 1:
+                device_votes = 0
+            corosync.set_value("quorum.device.votes", device_votes)
         csync2_update(corosync.conf())
     update_expected_votes()
 
@@ -1894,11 +1912,19 @@ def remove_node_from_cluster():
         corosync.del_node(node)
 
     # Decrement expected_votes in corosync.conf
-    votes = corosync.get_values("quorum.expected_votes")
-    for vote in votes:
-        new_quorum = int(vote) - 1
+    qnetd_votes = 1 if "net" in corosync.get_values("quorum.device.model") else 0
+    for vote in corosync.get_values("quorum.expected_votes"):
+        new_quorum = int(vote) - 1 + qnetd_votes
         corosync.set_value("quorum.expected_votes", str(new_quorum))
         corosync.set_value("quorum.two_node", 1 if new_quorum == 2 else 0)
+        if qnetd_votes > 0:
+            new_nodecount = int(vote) - 1
+            device_votes = 1
+            if corosync.get_value("quorum.device.net.algorithm") == "lms":
+                device_votes = new_nodecount - 1
+            elif new_nodecount == 1:
+                device_votes = 0
+            corosync.set_value("quorum.device.votes", device_votes)
 
     status("Propagating configuration changes across the remaining nodes")
     csync2_update(CSYNC2_CFG)
@@ -1923,7 +1949,7 @@ def remove_localhost_check():
 def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_device=None,
                    shared_device=None, sbd_device=None, diskless_sbd=False, quiet=False,
                    template=None, admin_ip=None, yes_to_all=False,
-                   unicast=False, second_hb=False, ipv6=False, watchdog=None, stage=None, args=None):
+                   unicast=False, second_hb=False, ipv6=False, watchdog=None, qdevice=None, stage=None, args=None):
     """
     -i <nic>
     -o <ocfs2-device>
@@ -1962,6 +1988,7 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     _context.admin_ip = admin_ip
     _context.watchdog = watchdog
     _context.ui_context = ui_context
+    _context.qdevice = qdevice
 
     def check_option():
         if _context.admin_ip and not valid_adminIP(_context.admin_ip):
