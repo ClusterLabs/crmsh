@@ -1804,6 +1804,13 @@ def remove_get_hostname(seed_host):
     """
     _context.connect_name = seed_host
     _context.host_status = 0
+
+    # if node is localhost, assume connected and hostname = cluster name
+    if seed_host == utils.this_node():
+        _context.cluster_node = seed_host
+        _context.host_status = 1
+        return
+
     _rc, outp, _errp = utils.get_stdout_stderr("ssh root@{} \"hostname\"".format(seed_host))
     if outp:
         _context.connect_name = seed_host
