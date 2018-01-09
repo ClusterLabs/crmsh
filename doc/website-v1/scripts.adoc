@@ -301,6 +301,22 @@ report::
     to be passed to the next action. Instead, the output is printed to
     the screen.
 
+==== When expressions ====
+
+Actions can be made conditional on the value of script parameters using
+the +when:+ expression. This expression has two basic forms.
+
+The first form is in the form of the name of a script parameter. For
+example, given a boolean script parameter named +install+, an action
+can be made conditional on that parameter being true using the syntax
++when: install+.
+
+The second form is a more complex expression. All parameters are
+interpreted as either a string value or None if no value was provided.
+These can be compared to string literals using python-style
+comparators. For example, an action can be conditional on the string
+parameter +mode+ having the value +"advanced"+ using the following
+syntax: +when: mode == "advanced"+.
 
 === Basic structure ===
 
@@ -641,3 +657,4 @@ The language accepts the following constructions:
 {{^name}} ... {{/name}} = Inserts the text between the mustasches when
                           name is falsy.
 ............
+

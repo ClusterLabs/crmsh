@@ -879,3 +879,48 @@ def test_inline_script():
         print(action, args)
         if action == 'finish':
             assert args[0]['value'] == '#!/bin/sh\necho "hello world"'
+
+
+@with_setup(setup_func, teardown_func)
+def test_when_expression():
+    """
+    Test when expressions
+    """
+    def runtest(when, val):
+        the_script = '''version: 2.2
+shortdesc: Test when expressions
+longdesc: See if more complicated expressions work
+parameters:
+  - name: stringtest
+    type: string
+    shortdesc: A test string
+actions:
+  - call: "echo '{{stringtest}}'"
+    when: %s
+'''
+        scrpt = scripts.load_script_string('{}_{}'.format(when, val), the_script % when)
+        assert scrpt is not None
+
+        a1 = scripts.verify(scrpt,
+                            {"stringtest": val},
+                            external_check=False)
+        pprint(a1)
+        return a1
+
+    a1 = runtest('stringtest == "balloon"', "balloon")
+    assert len(a1) == 1 and a1[0]['value'] == "echo 'balloon'"
+
+    a1 = runtest('stringtest == "balloon"', "not a balloon")
+    assert len(a1) == 0
+
+    a1 = runtest('stringtest != "balloon"', "not a balloon")
+    assert len(a1) == 1
+
+    a1 = runtest('stringtest != "balloon"', "balloon")
+    assert len(a1) == 0
+
+    a1 = runtest('stringtest == "{{dry_run}}"', "no")
+    assert len(a1) == 1
+
+    a1 = runtest('stringtest == "yes" or stringtest == "no"', "yes")
+    assert len(a1) == 1
