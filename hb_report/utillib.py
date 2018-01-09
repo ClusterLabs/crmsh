@@ -638,15 +638,16 @@ def find_log():
     """
     if constants.EXTRA_LOGS:
         for l in constants.EXTRA_LOGS.split():
-            if os.path.isfile(l) and l != constants.PCMK_LOG:
+            if os.path.isfile(l) and l not in constants.PCMK_LOG.split():
                 return l
 
         tmp_f = os.path.join(constants.WORKDIR, constants.JOURNAL_F)
         if os.path.isfile(tmp_f):
             return tmp_f
 
-        if os.path.isfile(constants.PCMK_LOG):
-            return constants.PCMK_LOG
+        for l in constants.PCMK_LOG.split():
+            if os.path.isfile(l):
+                return l
 
     if constants.HA_DEBUGFILE:
         log_debug("will try with %s" % constants.HA_DEBUGFILE)
