@@ -2102,7 +2102,7 @@ def bootstrap_remove(cluster_node=None, ui_context=None, quiet=False, yes_to_all
             error("Removing self requires --force")
         # get list of cluster nodes
         me = utils.this_node()
-        nodes = xmlutil.listnodes()
+        nodes = xmlutil.listnodes(include_remote_nodes=False)
         othernode = next((x for x in nodes if x != me), None)
         if othernode is not None:
             # remove from other node

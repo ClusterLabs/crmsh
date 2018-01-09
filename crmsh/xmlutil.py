@@ -334,12 +334,15 @@ def mk_rsc_type(n):
     return ''.join((s1, s2, ra_type))
 
 
-def listnodes():
+def listnodes(include_remote_nodes=True):
     cib = cibdump2elem()
     if cib is None:
         return []
     local_nodes = cib.xpath('/cib/configuration/nodes/node/@uname')
-    remote_nodes = cib.xpath('/cib/status/node_state[@remote_node="true"]/@uname')
+    if include_remote_nodes:
+        remote_nodes = cib.xpath('/cib/status/node_state[@remote_node="true"]/@uname')
+    else:
+        remote_nodes = []
     return list(set([n for n in local_nodes + remote_nodes if n]))
 
 
