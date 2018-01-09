@@ -118,6 +118,24 @@ class Text(object):
         return str(self) == str(obj)
 
 
+class WhenExpr(object):
+    def __init__(self, script, prog):
+        self.script = script
+        self.prog = prog
+
+    def __repr__(self):
+        return repr(self.prog)
+
+    def __str__(self):
+        lenv = self.script.get('__values__', {})
+        inp = handles.parse(self.prog, lenv).strip()
+        try:
+            from .minieval import minieval, InvalidExpression
+            return str(minieval(inp, lenv)).lower()
+        except InvalidExpression as err:
+            raise ValueError(str(err))
+
+
 def _strip(desc):
     if desc is None:
         return None
@@ -206,13 +224,14 @@ class Actions(object):
             action['longdesc'] = Text.desc(script, action['longdesc'])
 
         hre = handles.headmatcher
+        ident_re = re.compile(r'([a-z_-][a-z0-9_-]*)$', re.IGNORECASE)
 
         if 'when' in action:
             when = action['when']
-            if hre.search(when):
-                action['when'] = Text(script, when)
-            elif when:
+            if ident_re.match(when):
                 action['when'] = Text(script, '{{%s}}' % (when))
+            elif when:
+                action['when'] = WhenExpr(script, when)
             else:
                 del action['when']
         for k, v in action.items():
