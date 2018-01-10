@@ -2187,13 +2187,6 @@ def get_default_timeout():
     t = cib_factory.get_op_default("timeout")
     if t is not None:
         return t
-    t = cib_factory.get_property("default-action-timeout")
-    if t is not None:
-        return t
-    try:
-        return get_pe_meta().param_default("default-action-timeout")
-    except:
-        return 0
 
 
 # xml -> cli translations (and classes)
