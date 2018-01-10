@@ -28,8 +28,8 @@ oracle           Oracle Database
 
 Filesystem:
 
-clvm             Cluster-aware LVM
-clvm-vg          Cluster-aware LVM (Volume Group)
+clvm             Cluster-aware LVM (lvmlockd)
+clvm-vg          Cluster-aware LVM (auto activation)
 drbd             DRBD Block Device
 filesystem       File System (mount point)
 gfs2             GFS2 File System (Cloned)
@@ -79,8 +79,8 @@ oracle           Oracle Database
 
 Filesystem:
 
-clvm             Cluster-aware LVM
-clvm-vg          Cluster-aware LVM (Volume Group)
+clvm             Cluster-aware LVM (lvmlockd)
+clvm-vg          Cluster-aware LVM (auto activation)
 drbd             DRBD Block Device
 filesystem       File System (mount point)
 gfs2             GFS2 File System (Cloned)
