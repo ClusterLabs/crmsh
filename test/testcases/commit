@@ -1,9 +1,8 @@
 show Commits of all kinds
-property default-action-timeout=2m
+op_defaults timeout=2m
 primitive st stonith:null \
 	params hostlist='node1' \
-	meta yoyo-meta="yoyo 2" \
-	op start requires=nothing \
+	meta yoyo-meta="yoyo 2" requires=nothing \
 	op monitor interval=60m
 commit
 node node1 \

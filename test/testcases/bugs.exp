@@ -4,7 +4,7 @@
 .INP: up
 .INP: configure
 .INP: erase
-.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" 	op start requires=nothing 	op monitor interval=60m
+.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" requires=nothing 	op monitor interval=60m
 .INP: primitive p4 Dummy
 .INP: primitive p3 Dummy
 .INP: primitive p2 Dummy
@@ -25,8 +25,7 @@ colocation c2 inf: ( p1 p2 ) p3 p4
 node node1
 primitive st stonith:null \
 	params hostlist=node1 \
-	meta description="some description here" \
-	op start requires=nothing interval=0 \
+	meta description="some description here" requires=nothing \
 	op monitor interval=60m
 primitive p4 Dummy
 primitive p3 Dummy
@@ -46,8 +45,7 @@ colocation c2 inf: ( p1 p2 ) p3 p4
 node node1
 primitive st stonith:null \
 	params hostlist=node1 \
-	meta description="some description here" \
-	op start requires=nothing interval=0 \
+	meta description="some description here" requires=nothing \
 	op monitor interval=60m
 primitive p4 Dummy
 primitive p3 Dummy
@@ -84,15 +82,12 @@ clone cl-p5 p5
 colocation c2 inf: ( p1 p2 ) p3 p4
 location loc1 g1 \
 	rule 200: #uname eq node1
-property cib-bootstrap-options: \
-	default-action-timeout=60s
+op_defaults op-options: \
+	timeout=60s
 .INP: commit
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
-.EXT crmd metadata
-.EXT pengine metadata
-.EXT cib metadata
 .INP: _test
 .INP: verify
 .TRY Unknown properties
@@ -101,14 +96,13 @@ property cib-bootstrap-options: \
 INFO: 2: constraint colocation:c2 updated
 INFO: 2: constraint colocation:c2 updated
 INFO: 2: modified location:loc1 from g1 to gr2
-.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" 	op start requires=nothing 	op monitor interval=60m
+.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" requires=nothing 	op monitor interval=60m
 .INP: property SAPHanaSR:     hana_ha1_site_lss_WDF1=4
 .INP: show
 node node1
 primitive st stonith:null \
 	params hostlist=node1 \
-	meta description="some description here" \
-	op start requires=nothing interval=0 \
+	meta description="some description here" requires=nothing \
 	op monitor interval=60m
 property SAPHanaSR: \
 	hana_ha1_site_lss_WDF1=4
@@ -122,8 +116,7 @@ property SAPHanaSR: \
 node node1
 primitive st stonith:null \
 	params hostlist=node1 \
-	meta description="some description here" \
-	op start requires=nothing interval=0 \
+	meta description="some description here" requires=nothing \
 	op monitor interval=60m
 property SAPHanaSR: \
 	hana_ha1_site_lss_WDF1=4
