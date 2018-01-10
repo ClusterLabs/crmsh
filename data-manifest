@@ -164,6 +164,7 @@ test/unittests/test_resource.py
 test/unittests/test_scripts.py
 test/unittests/test_time.py
 test/unittests/test_utils.py
+test/update-expected-output.sh
 utils/crm_clean.py
 utils/crm_init.py
 utils/crm_pkg.py
