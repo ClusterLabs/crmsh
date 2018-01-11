@@ -78,10 +78,11 @@ class Cluster(command.UI):
         '''
         Starts the cluster services on this node
         '''
-        rc, out, err = utils.get_stdout_stderr('service pacemaker start')
-        if rc != 0:
-            context.fatal_error("Failed to start pacemaker service: %s" % (err))
-        err_buf.info("Cluster services started")
+        try:
+            utils.start_service("pacemaker")
+            err_buf.info("Cluster services started")
+        except IOError as err:
+            context.fatal_error(str(err))
 
         # TODO: optionally start services on all nodes or specific node
 
@@ -90,10 +91,11 @@ class Cluster(command.UI):
         '''
         Stops the cluster services on this node
         '''
-        rc, out, err = utils.get_stdout_stderr('service pacemaker stop')
-        if rc != 0:
-            context.fatal_error("Failed to stop pacemaker service: %s" % (err))
-        err_buf.info("Cluster services stopped")
+        try:
+            utils.stop_service("corosync")
+            err_buf.info("Cluster services stopped")
+        except IOError as err:
+            context.fatal_error(str(err))
 
         # TODO: optionally stop services on all nodes or specific node
 
@@ -102,13 +104,11 @@ class Cluster(command.UI):
         '''
         Enable the cluster services on this node
         '''
-        if utils.is_program('systemctl'):
-            rc, out, err = utils.get_stdout_stderr('systemctl enable pacemaker')
-            if rc != 0:
-                context.fatal_error("Failed to enable pacemaker service: %s" % (err))
+        try:
+            utils.enable_service("pacemaker")
             err_buf.info("Cluster services enabled")
-        else:
-            pass # TODO: for the os using chkconfig
+        except IOError as err:
+            context.fatal_error(str(err))
 
         # TODO: optionally enable services on all nodes or specific node
 
@@ -117,13 +117,11 @@ class Cluster(command.UI):
         '''
         Disable the cluster services on this node
         '''
-        if utils.is_program('systemctl'):
-            rc, out, err = utils.get_stdout_stderr('systemctl disable pacemaker')
-            if rc != 0:
-                context.fatal_error("Failed to disable pacemaker service: %s" % (err))
+        try:
+            utils.disable_service("pacemaker")
             err_buf.info("Cluster services disabled")
-        else:
-            pass # TODO: for the os using chkconfig
+        except IOError as err:
+            context.fatal_error(str(err))
 
         # TODO: optionally disable services on all nodes or specific node
 
