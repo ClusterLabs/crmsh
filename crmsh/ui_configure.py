@@ -795,7 +795,7 @@ class CibConfig(command.UI):
         return cib_factory.default_timeouts(*args)
 
     @command.skill_level('administrator')
-    @command.completers(_id_list, _id_list)
+    @command.completers(_id_list)
     def do_rename(self, context, old_id, new_id):
         "usage: rename <old_id> <new_id>"
         return cib_factory.rename(old_id, new_id)
