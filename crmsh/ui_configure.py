@@ -58,6 +58,27 @@ _rsc_template_list = compl.call(cib_factory.rsc_template_list)
 _container_type = compl.choice(constants.container_type)
 
 
+def _group_completer(args):
+    '''
+    completer for group resource
+    '''
+    completing = args[-1]
+    id_list = cib_factory.f_prim_free_id_list()
+    if completing in id_list:
+        return [completing]
+    # complete resources id first
+    if len(args) == 3:
+        return [s for s in id_list if s not in args]
+    # complete meta or params attributes
+    key_words = ["meta", "params"]
+    keyw = last_keyword(args, key_words)
+    if keyw in key_words:
+        return _advanced_completer(args)
+
+    # otherwise, complete resources ids and some key words
+    return [s for s in id_list if s not in args] + _advanced_completer(args)
+
+
 def _advanced_completer(args):
     '''
     meta completers for group/ms/clone resource type 
@@ -913,7 +934,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.attr_id, _f_prim_free_id_list, _advanced_completer)
+    @command.completers_repeating(compl.attr_id, _group_completer)
     def do_group(self, context, *args):
         """usage: group <name> <rsc> [<rsc>...]
         [params <param>=<value> [<param>=<value>...]]
