@@ -1666,7 +1666,7 @@ def bootstrap_remove(cluster_node=None, quiet=False, yes_to_all=False, force=Fal
         else:
             # stop cluster
             if not stop_service("corosync"):
-                error("Stopping corosync on failed")
+                error("Stopping corosync failed")
 
             # remove all trace of cluster from this node
             # delete configuration files from the node to be removed

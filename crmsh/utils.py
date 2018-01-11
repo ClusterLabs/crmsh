@@ -1620,6 +1620,45 @@ def service_info(name):
     return None
 
 
+def start_service(service, enable=False, start=True):
+    """
+    Start (and optionally enable) systemd service
+    TODO: support other init systems
+    """
+    if enable:
+        _rc, _out, _err = get_stdout_stderr("systemctl -q enable {}".format(service))
+    if start:
+        rc, _out, _err = get_stdout_stderr("systemctl -q is-active {}".format(service))
+        if rc != 0:
+            rc, _out, err = get_stdout_stderr("systemctl -q start {}".format(service))
+            if rc != 0:
+                raise IOError("systemd failed to start {}: {}".format(service, err))
+
+
+def stop_service(service, disable=False, stop=True):
+    """
+    Stop (and optionally disable) systemd service
+    TODO: support other init systems
+    """
+    rc, err = 0, ""
+    if stop:
+        rc, _out, err = get_stdout_stderr("systemctl -q stop {}".format(service))
+    if disable:
+        _rc, _out, _err = get_stdout_stderr("systemctl -q disable {}".format(service))
+    if rc != 0:
+        raise IOError("systemd failed to stop {}: {}".format(service, err))
+
+
+def enable_service(service, start=False):
+    "Enable (and optionally start) system service"
+    start_service(service, enable=True, start=start)
+
+
+def disable_service(service, stop=False):
+    "Enable (and optionally stop) system service"
+    stop_service(service, disable=True, stop=stop)
+
+
 def running_on(resource):
     "returns list of node names where the given resource is running"
     rsc_locate = "crm_resource --resource '%s' --locate"
