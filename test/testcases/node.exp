@@ -1,7 +1,7 @@
 .TRY node show
-node1: normal
+node1: member
 .TRY node show node1
-node1: normal
+node1: member
 .SETENV showobj=node1
 .TRY node standby node1
 .EXT crm_attribute -t nodes -N 'node1' -n standby -v 'on' --lifetime='forever'
