@@ -51,7 +51,7 @@ def print_node(uname, ident, node_type, other, inst_attr, offline):
     """
     s_offline = offline and "(offline)" or ""
     if not node_type:
-        node_type = "normal"
+        node_type = "member"
     if uname == ident:
         print term.render("%s: %s%s" % (uname, node_type, s_offline))
     else:
