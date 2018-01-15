@@ -396,6 +396,8 @@ def add_node_ucast(IParray, node_name=None):
 
     num_nodes = p.count('nodelist.node')
     p.set('quorum.two_node', '1' if num_nodes == 2 else '0')
+    if p.get("quorum.device.model") == "net":
+        p.set('quorum.two_node', '0')
 
     f = open(conf(), 'w')
     f.write(p.to_string())
@@ -444,6 +446,8 @@ def add_node(addr, name=None):
 
     num_nodes = p.count('nodelist.node')
     p.set('quorum.two_node', '1' if num_nodes == 2 else '0')
+    if p.get("quorum.device.model") == "net":
+        p.set('quorum.two_node', '0')
 
     f = open(conf(), 'w')
     f.write(p.to_string())
@@ -475,6 +479,8 @@ def del_node(addr):
 
     num_nodes = p.count('nodelist.node')
     p.set('quorum.two_node', '1' if num_nodes == 2 else '0')
+    if p.get("quorum.device.model") == "net":
+        p.set('quorum.two_node', '0')
 
     f = open(conf(), 'w')
     f.write(p.to_string())
@@ -603,7 +609,7 @@ def create_configuration(clustername="hacluster",
     expected_votes: 1
     two_node: 0
     device {
-      votes: 1
+      votes: 0
       model: net
       net {
         tls: off
