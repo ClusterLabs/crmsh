@@ -100,7 +100,7 @@ cib_cli_map = {
     "tag": "tag",
     "alert": "alert",
 }
-container_tags = ("group", "clone", "ms", "master")
+container_tags = ("group", "clone", "ms", "master", "bundle")
 clonems_tags = ("clone", "ms", "master")
 resource_tags = ("primitive", "group", "clone", "ms", "master", "template")
 constraint_tags = ("rsc_location", "rsc_colocation", "rsc_order", "rsc_ticket")
