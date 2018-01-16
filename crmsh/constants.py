@@ -11,6 +11,7 @@ keywords = {
     "primitive": "element",
     "resource": "element",
     "group": "element",
+    "bundle": "element",
     "clone": "element",
     "ms": "element",
     "master": "element",
@@ -102,13 +103,13 @@ cib_cli_map = {
 }
 container_tags = ("group", "clone", "ms", "master", "bundle")
 clonems_tags = ("clone", "ms", "master")
-resource_tags = ("primitive", "group", "clone", "ms", "master", "template")
+resource_tags = ("primitive", "group", "clone", "ms", "master", "template", "bundle")
 constraint_tags = ("rsc_location", "rsc_colocation", "rsc_order", "rsc_ticket")
 constraint_rsc_refs = ("rsc", "with-rsc", "first", "then")
 children_tags = ("group", "primitive")
 nvpairs_tags = ("meta_attributes", "instance_attributes", "utilization")
 defaults_tags = ("rsc_defaults", "op_defaults")
-resource_cli_names = ("primitive", "group", "clone", "ms", "master", "rsc_template")
+resource_cli_names = ("primitive", "group", "clone", "ms", "master", "rsc_template", "bundle")
 constraint_cli_names = ("location", "colocation", "collocation", "order", "rsc_ticket")
 nvset_cli_names = ("property", "rsc_defaults", "op_defaults")
 op_cli_names = ("monitor",
@@ -298,6 +299,10 @@ graph = {
     },
     "ms": {
         "color": "#f8981d",
+    },
+    "bundle": {
+        "color": "#00aeef",
+        "style": "rounded",
     },
     "group": {
         "color": "#00aeef",
