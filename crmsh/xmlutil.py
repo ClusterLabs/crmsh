@@ -832,7 +832,7 @@ def make_sort_map(*order):
 
 
 _sort_xml_order = make_sort_map('node',
-                                'template', 'primitive', 'group', 'master', 'clone', 'op',
+                                'template', 'primitive', 'bundle', 'group', 'master', 'clone', 'op',
                                 'tag',
                                 ['rsc_location', 'rsc_colocation', 'rsc_order'],
                                 ['rsc_ticket', 'fencing-topology'],
@@ -841,7 +841,7 @@ _sort_xml_order = make_sort_map('node',
                                 'alert')
 
 _sort_cli_order = make_sort_map('node',
-                                'rsc_template', 'primitive', 'group',
+                                'rsc_template', 'primitive', 'bundle', 'group',
                                 ['ms', 'master'], 'clone', 'op',
                                 'tag',
                                 ['location', 'colocation', 'collocation', 'order'],
