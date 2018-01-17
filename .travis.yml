@@ -8,7 +8,7 @@ before_install:
   - docker pull krig/crmsh:latest
 
 script:
-  - docker run -t -v "$(pwd):/app" krig/crmsh /bin/sh -c "systemctl start dbus; cd /app; ./test/run-in-container.sh"
+  - docker run -t -v "$(pwd):/app" krig/crmsh /bin/sh -c "systemctl start dbus; cd /app; ./test/run-in-container.sh $(whoami) $(id -u) $(id -g)"
 
 after_failure:
   - sudo cat $TRAVIS_BUILD_DIR/crmtestout/regression.out $TRAVIS_BUILD_DIR/crmtestout/crm.*
