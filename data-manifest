@@ -71,6 +71,7 @@ test/README.regression
 test/regression.sh
 test/run
 test/run-in-container.sh
+test/run-in-travis.sh
 test/testcases/acl
 test/testcases/acl.excl
 test/testcases/acl.exp
