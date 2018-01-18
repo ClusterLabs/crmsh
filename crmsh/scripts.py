@@ -2178,6 +2178,28 @@ def verify(script, params, external_check=True):
 
     Return a list of actions to perform.
     """
+    def do_validate(params):
+        result = ""
+        for item in params:
+            if re.search("primitive ", item):
+                result = ' '.join(item.split())
+                break
+        if not result:
+            return None
+
+        err_res = []
+        pattern = re.compile(r'(primitive .*?) op')
+        m = pattern.findall(result)
+        for item in m:
+            _res = item.split()
+            if "params" in _res:
+                _res.remove("params")
+            cmdline = "sudo crm ra validate " + ' '.join(_res[2:])
+            rc, out, err = utils.get_stdout_stderr(cmdline, shell=True)
+            if err:
+                err_res.append(err)
+        return err_res
+
     params = _check_parameters(script, params)
     actions = _process_actions(script, params)
 
@@ -2200,6 +2222,10 @@ def verify(script, params, external_check=True):
                     outp.append(l)
             if rc != 0 and len(errors) == 0:
                 errors.add("Failed to verify (rc=%s): %s" % (rc, "\n".join(outp)))
+            if rc == 0:
+                res = do_validate(cmd)
+                for item in res:
+                  errors.add(item)
         except OSError as e:
             errors.add(str(e))
         if len(errors):
