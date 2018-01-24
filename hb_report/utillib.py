@@ -265,6 +265,7 @@ def collect_info():
     process_list = []
     process_list.append(multiprocessing.Process(target=sys_info))
     process_list.append(multiprocessing.Process(target=sys_stats))
+    process_list.append(multiprocessing.Process(target=sbd_info))
     process_list.append(multiprocessing.Process(target=get_pe_inputs))
     process_list.append(multiprocessing.Process(target=crm_config))
     process_list.append(multiprocessing.Process(target=touch_dc))
@@ -1437,6 +1438,25 @@ def say_ssh_user():
         return "you user"
     else:
         return constants.SSH_USER
+
+
+def sbd_info():
+    """
+    sbd information
+    """
+    out_string = "#####SBD info:\n\n"
+    sbd_device = grep("(^|^\s*)SBD_DEVICE=.*", infile=constants.SBDCONF)
+    if sbd_device:
+        device = sbd_device[0].split('=')[-1]
+        for cmd in ["dump", "list"]:
+            out_string += "## sbd {}:\n".format(cmd)
+            out_string += get_command_info("sbd -d {} {}".format(device, cmd))[1] + '\n'
+        shutil.copy2(constants.SBDCONF, constants.WORKDIR)
+    else:
+        out_string += "None"
+
+    sbd_info_f = os.path.join(constants.WORKDIR, constants.SBDINFO_F)
+    crmutils.str2file(out_string, sbd_info_f)
 
 
 def sed_inplace(filename, pattern, repl):
