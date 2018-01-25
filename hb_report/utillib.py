@@ -1442,21 +1442,10 @@ def say_ssh_user():
 
 def sbd_info():
     """
-    sbd information
+    save sbd configuration file
     """
-    out_string = "#####SBD info:\n\n"
-    sbd_device = grep("(^|^\s*)SBD_DEVICE=.*", infile=constants.SBDCONF)
-    if sbd_device:
-        device = sbd_device[0].split('=')[-1]
-        for cmd in ["dump", "list"]:
-            out_string += "## sbd {}:\n".format(cmd)
-            out_string += get_command_info("sbd -d {} {}".format(device, cmd))[1] + '\n'
+    if os.path.exists(constants.SBDCONF):
         shutil.copy2(constants.SBDCONF, constants.WORKDIR)
-    else:
-        out_string += "None"
-
-    sbd_info_f = os.path.join(constants.WORKDIR, constants.SBDINFO_F)
-    crmutils.str2file(out_string, sbd_info_f)
 
 
 def sed_inplace(filename, pattern, repl):
