@@ -205,6 +205,18 @@ Note:
                                  help="Configure corosync with second heartbeat line")
         network_group.add_option("-I", "--ipv6", action="store_true", dest="ipv6",
                                  help="Configure corosync use IPv6")
+        network_group.add_option("--qdevice",
+                                 dest="qdevice", metavar="QDEVICE",
+                                 help="QDevice IP")
+        network_group.add_option("--qdevice-port",
+                                 dest="qdevice_port", metavar="QDEVICE_PORT", type="int", default=5403,
+                                 help="QDevice port")
+        network_group.add_option("--qdevice-algo",
+                                 dest="qdevice_algo", metavar="QDEVICE_ALGO", default="ffsplit",
+                                 help="QDevice algorithm")
+        network_group.add_option("--qdevice-tie-breaker",
+                                 dest="qdevice_tie_breaker", metavar="QDEVICE_TIE_BREAKER", default="lowest",
+                                 help="QDevice algorithm")
         parser.add_option_group(network_group)
 
         storage_group = optparse.OptionGroup(parser, "Storage configuration", "Options for configuring shared storage.")
@@ -238,6 +250,14 @@ Note:
         #    parser.error("For a geo cluster, each cluster must have a unique name (use --name to set)")
         #    return False
 
+        qdevice = None
+        if options.qdevice:
+            qdevice = corosync.QDevice(
+                options.qdevice,
+                port=options.qdevice_port,
+                algo=options.qdevice_algo,
+                tie_breaker=options.qdevice_tie_breaker)
+
         bootstrap.bootstrap_init(
             cluster_name=options.name,
             ui_context=context,
@@ -254,6 +274,7 @@ Note:
             second_hb=options.second_hb,
             ipv6=options.ipv6,
             watchdog=options.watchdog,
+            qdevice=qdevice,
             stage=stage,
             args=args)
 

@@ -66,6 +66,7 @@ class Context(object):
         self.connect_name = None
         self.second_hb = None
         self.ui_context = None
+        self.qdevice = None
 
 
 _context = None
@@ -549,12 +550,16 @@ def firewall_open_corosync_ports():
 
     Please note corosync uses two UDP ports mcastport (for mcast
     receives) and mcastport - 1 (for mcast sends).
+
+    Also open QNetd/QDevice port if configured.
     """
     # all mcastports defined in corosync config
     udp = corosync.get_values("totem.interface.mcastport")
     udp.extend([str(int(p) - 1) for p in udp])
 
-    configure_firewall(udp=udp)
+    tcp = corosync.get_values("totem.quorum.device.net.port")
+
+    configure_firewall(tcp=tcp, udp=udp)
 
 
 def init_cluster_local():
@@ -912,7 +917,8 @@ Configure Corosync (unicast):
         mcastport=mcastport_res,
         transport="udpu",
         ipv6=_context.ipv6,
-        two_rings=two_rings)
+        two_rings=two_rings,
+        qdevice=_context.qdevice)
     csync2_update(corosync.conf())
 
 
@@ -1032,7 +1038,8 @@ Configure Corosync:
         mcastport=mcastport_res,
         ipv6=_context.ipv6,
         nodeid=nodeid,
-        two_rings=two_rings)
+        two_rings=two_rings,
+        qdevice=_context.qdevice)
     csync2_update(corosync.conf())
 
 
@@ -1723,6 +1730,9 @@ def join_cluster(seed_host):
         # get a list of nodes, excluding remote nodes
         nodelist = None
         loop_count = 0
+        device_votes = 0
+        nodecount = 0
+        expected_votes = 0
         while True:
             rc, nodelist_text = utils.get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
             if rc == 0:
@@ -1742,16 +1752,55 @@ def join_cluster(seed_host):
         # Increase expected_votes
         # TODO: wait to adjust expected_votes until after cluster join,
         # so that we can ask the cluster for the current membership list
+        # Have to check if a qnetd device is configured and increase
+        # expected_votes in that case
+        use_qdevice = 1 if corosync.get_value("quorum.device.model") == "net" else 0
         if nodelist is None:
-            nodecount = 0
             for v in corosync.get_values("quorum.expected_votes"):
-                nodecount = int(v) + 1
-                corosync.set_value("quorum.expected_votes", str(nodecount))
-                corosync.set_value("quorum.two_node", 1 if nodecount == 2 else 0)
+                expected_votes = v
+                #for node >= 2, expected_votes = nodecount + device_votes
+                #asume nodecount is N, for ffsplit, qdevice only has one vote
+                #which means that device_votes is 1, ie:expected_votes = N + 1;
+                #while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
+                #and update quorum.device.net.algorithm based on device_votes
+
+                if corosync.get_value("quorum.device.net.algorithm") == "lms":
+                    device_votes = int((expected_votes - 1) / 2)
+                    nodecount = expected_votes - device_votes
+                    #as nodecount will increase 1, and device_votes is nodecount - 1
+                    #device_votes also increase 1
+                    device_votes += 1
+                elif corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
+                    device_votes = 1
+                    nodecount = expected_votes - device_votes
+                elif use_qdevice == 0:
+                    device_votes = 0
+                    nodecount = v
+
+                nodecount += 1
+                expected_votes = nodecount + device_votes
+                corosync.set_value("quorum.expected_votes", str(expected_votes))
         else:
             nodecount = len(nodelist)
-            corosync.set_value("quorum.expected_votes", str(nodecount))
-            corosync.set_value("quorum.two_node", 1 if nodecount == 2 else 0)
+            expected_votes = 0
+            #for node >= 2, expected_votes = nodecount + device_votes
+            #asume nodecount is N, for ffsplit, qdevice only has one vote
+            #which means that device_votes is 1, ie:expected_votes = N + 1;
+            #while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
+            if corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
+                device_votes = 1
+            if corosync.get_value("quorum.device.net.algorithm") == "lms":
+                device_votes = nodecount - 1
+
+            expected_votes = nodecount + device_votes
+
+            if corosync.get_value("quorum.expected_votes"):
+                corosync.set_value("quorum.expected_votes", str(expected_votes))
+        if use_qdevice == 0:
+            corosync.set_value("quorum.two_node", 1 if expected_votes == 2 else 0)
+        if use_qdevice:
+            corosync.set_value("quorum.device.votes", device_votes)
+
         csync2_update(corosync.conf())
     update_expected_votes()
 
@@ -1894,11 +1943,34 @@ def remove_node_from_cluster():
         corosync.del_node(node)
 
     # Decrement expected_votes in corosync.conf
-    votes = corosync.get_values("quorum.expected_votes")
-    for vote in votes:
-        new_quorum = int(vote) - 1
+    use_qdevice = 1 if "net" in corosync.get_values("quorum.device.model") else 0
+    for vote in corosync.get_values("quorum.expected_votes"):
+        quorum = int(vote)
+        new_quorum = quorum - 1
+        if use_qdevice > 0:
+            new_nodecount = 0
+            device_votes = 0
+            nodecount = 0
+
+            if corosync.get_value("quorum.device.net.algorithm") == "lms":
+                nodecount = int((quorum + 1)/2)
+                new_nodecount = nodecount - 1
+                device_votes = new_nodecount - 1
+
+            elif corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
+                device_votes = 1
+                nodecount = quorum - device_votes
+                new_nodecount = nodecount - 1
+
+            if new_nodecount == 1:
+                device_votes = 0
+
+            corosync.set_value("quorum.device.votes", device_votes)
+            new_quorum = new_nodecount + device_votes
+
+        if use_qdevice == 0:
+            corosync.set_value("quorum.two_node", 1 if new_quorum == 2 else 0)
         corosync.set_value("quorum.expected_votes", str(new_quorum))
-        corosync.set_value("quorum.two_node", 1 if new_quorum == 2 else 0)
 
     status("Propagating configuration changes across the remaining nodes")
     csync2_update(CSYNC2_CFG)
@@ -1923,7 +1995,7 @@ def remove_localhost_check():
 def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_device=None,
                    shared_device=None, sbd_device=None, diskless_sbd=False, quiet=False,
                    template=None, admin_ip=None, yes_to_all=False,
-                   unicast=False, second_hb=False, ipv6=False, watchdog=None, stage=None, args=None):
+                   unicast=False, second_hb=False, ipv6=False, watchdog=None, qdevice=None, stage=None, args=None):
     """
     -i <nic>
     -o <ocfs2-device>
@@ -1962,6 +2034,7 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     _context.admin_ip = admin_ip
     _context.watchdog = watchdog
     _context.ui_context = ui_context
+    _context.qdevice = qdevice
 
     def check_option():
         if _context.admin_ip and not valid_adminIP(_context.admin_ip):
