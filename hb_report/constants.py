@@ -74,12 +74,16 @@ stonith crmd.*Exec|stonith-ng.*log_oper.*reboot|stonithd.*(requests|(Succeeded|F
 start_stop Configuration.validated..Starting.heartbeat|Corosync.Cluster.Engine|Executive.Service.RELEASE|Requesting.shutdown|Shutdown.complete
 """
 
-PACKAGES = """pacemaker libpacemaker3
+PACKAGES = """pacemaker libpacemaker3 pacemaker-cli pacemaker-remote
 pacemaker-pygui pacemaker-pymgmt pymgmt-client
 openais libopenais2 libopenais3 corosync libcorosync4
+libcfg6 libcmap4 libcorosync_common4 libcpg4 libquorum5
+libsam4 libtotem_pg5 libvotequorum8
+corosync-qdevice corosync-qnetd
 resource-agents cluster-glue libglue2 ldirectord libqb0
 heartbeat heartbeat-common heartbeat-resources libheartbeat2
 booth
+sbd
 ocfs2-tools ocfs2-tools-o2cb ocfs2console
 ocfs2-kmp-default ocfs2-kmp-pae ocfs2-kmp-xen ocfs2-kmp-debug ocfs2-kmp-trace
 drbd drbd-kmp-xen drbd-kmp-pae drbd-kmp-default drbd-kmp-debug drbd-kmp-trace
@@ -130,6 +134,7 @@ HOSTCACHE = "hostcache"
 JOURNAL_F = "journal.log"
 MEMBERSHIP_F = "members.txt"
 PERMISSIONS_F = "permissions.txt"
+SBDCONF = "/etc/sysconfig/sbd"
 SYSINFO_F = "sysinfo.txt"
 SYSSTATS_F = "sysstats.txt"
 TIME_F = "time.txt"

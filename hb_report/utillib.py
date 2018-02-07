@@ -265,6 +265,7 @@ def collect_info():
     process_list = []
     process_list.append(multiprocessing.Process(target=sys_info))
     process_list.append(multiprocessing.Process(target=sys_stats))
+    process_list.append(multiprocessing.Process(target=sbd_info))
     process_list.append(multiprocessing.Process(target=get_pe_inputs))
     process_list.append(multiprocessing.Process(target=crm_config))
     process_list.append(multiprocessing.Process(target=touch_dc))
@@ -1459,6 +1460,14 @@ def say_ssh_user():
         return "you user"
     else:
         return constants.SSH_USER
+
+
+def sbd_info():
+    """
+    save sbd configuration file
+    """
+    if os.path.exists(constants.SBDCONF):
+        shutil.copy2(constants.SBDCONF, constants.WORKDIR)
 
 
 def sed_inplace(filename, pattern, repl):
