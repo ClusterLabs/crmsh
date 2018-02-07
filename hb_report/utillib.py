@@ -431,8 +431,21 @@ def distro():
 
 
 def dlm_dump():
-    # TODO
-    pass
+    """
+    get dlm info
+    """
+    if which("dlm_tool"):
+        out_string = "##### NOTICE - Lockspace overview:\n"
+        out_string += get_command_info("dlm_tool ls")[1] + '\n'
+        for item in grep("^name", incmd="dlm_tool ls"):
+            lock_name = item.split()[1]
+            out_string += "## NOTICE - Lockspace {}\n".format(lock_name)
+            out_string += get_command_info("dlm_tool lockdump {}".format(lock_name))[1] + '\n'
+        out_string += "##### NOTICE - Lockspace history:\n"
+        out_string += get_command_info("dlm_tool dump")[1] + '\n'
+
+        dlm_f = os.path.join(constants.WORKDIR, constants.DLM_DUMP_F)
+        crmutils.str2file(out_string, dlm_f)
 
 
 def drop_tempfiles():
