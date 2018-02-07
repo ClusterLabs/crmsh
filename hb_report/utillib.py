@@ -294,6 +294,12 @@ def collect_info():
         if l == constants.HA_LOG and l != constants.HALOG_F:
             os.symlink(constants.HALOG_F, os.path.join(constants.WORKDIR, os.path.basename(l)))
             continue
+        if is_our_log(l, constants.FROM_TIME, constants.TO_TIME) == 4:
+            log_warning("found irregular log file %s" % l)
+            outf = os.path.join(constants.WORKDIR, os.path.basename(l))
+            shutil.copy2(l, constants.WORKDIR)
+            log_size(l, outf+'.info')
+            continue
         getstampproc = find_getstampproc(l)
         if getstampproc:
             constants.GET_STAMP_FUNC = getstampproc
@@ -1157,6 +1163,8 @@ def is_our_log(logf, from_time, to_time):
         last_time = find_first_ts(tail(10, data))
 
     if (not first_time) or (not last_time):
+        if os.stat(logf).st_size > 0:
+            return 4 # irregular log, not empty
         return 0  # skip (empty log?)
     if from_time > last_time:
         # we shouldn't get here anyway if the logs are in order
