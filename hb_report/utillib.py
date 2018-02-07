@@ -304,8 +304,8 @@ def collect_info():
         if getstampproc:
             constants.GET_STAMP_FUNC = getstampproc
             outf = os.path.join(constants.WORKDIR, os.path.basename(l))
-            dump_logset(l, constants.FROM_TIME, constants.TO_TIME, outf)
-            log_size(l, outf+'.info')
+            if dump_logset(l, constants.FROM_TIME, constants.TO_TIME, outf):
+                log_size(l, outf+'.info')
         else:
             log_warning("could not figure out the log format of %s" % l)
 
@@ -459,10 +459,10 @@ def dump_logset(logf, from_time, to_time, outf):
     find log/set of logs which are interesting for us
     """
     if os.stat(logf).st_size == 0:
-        return
+        return False
     logf_set = arch_logs(logf, from_time, to_time)
     if not logf_set:
-        return
+        return False
     num_logs = len(logf_set)
     oldest = logf_set[-1]
     newest = logf_set[0]
@@ -482,6 +482,7 @@ def dump_logset(logf, from_time, to_time, outf):
         out_string += print_logseg(newest, 0, to_time)
 
     crmutils.str2file(out_string, outf)
+    return True
 
 
 def dump_state(workdir):

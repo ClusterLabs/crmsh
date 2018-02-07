@@ -85,8 +85,8 @@ def get_log():
         getstampproc = utillib.find_getstampproc(constants.HA_LOG)
         if getstampproc:
             constants.GET_STAMP_FUNC = getstampproc
-            utillib.dump_logset(constants.HA_LOG, constants.FROM_TIME, constants.TO_TIME, outf)
-            utillib.log_size(constants.HA_LOG, outf+'.info')
+            if utillib.dump_logset(constants.HA_LOG, constants.FROM_TIME, constants.TO_TIME, outf):
+                utillib.log_size(constants.HA_LOG, outf+'.info')
         else:
             utillib.log_warning("could not figure out the log format of %s" % constants.HA_LOG)
 
