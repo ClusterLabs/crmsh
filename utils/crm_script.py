@@ -22,6 +22,16 @@ while sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
         break
 
 
+def decode_utf8(s):
+    """
+    Convert the given byte sequence to a
+    utf8 string.
+    """
+    if s is None or isinstance(s, str):
+        return s
+    return s.decode('utf-8', 'ignore')
+
+
 def host():
     return os.uname()[1]
 
@@ -96,7 +106,7 @@ def call(cmd, shell=False):
     debug("crm_script(call): %s" % (cmd))
     p = proc.Popen(cmd, shell=shell, stdin=None, stdout=proc.PIPE, stderr=proc.PIPE)
     out, err = p.communicate()
-    return p.returncode, out.decode('utf-8').strip(), err.decode('utf-8').strip()
+    return p.returncode, decode_utf8(out).strip(), decode_utf8(err).strip()
 
 
 def use_sudo():
@@ -131,7 +141,7 @@ def package(name, state):
     rc, out, err = sudo_call(['./crm_pkg.py', '-n', name, '-s', state])
     if rc != 0:
         raise IOError("%s / %s" % (out, err))
-    outp = json.loads(out.decode('utf-8'))
+    outp = json.loads(decode_utf8(out))
     if isinstance(outp, dict) and 'rc' in outp:
         rc = int(outp['rc'])
         if rc != 0:
