@@ -65,17 +65,6 @@ def sys_info():
 def net_info():
     ret = {}
     interfaces = []
-    rc, out, err = crm_script.call(['netstat', '-nr'])
-    if rc == 0:
-        data = [l.split() for l in out.split('\n')]
-        if len(data) < 3:
-            return {'error': "Failed to parse netstat output"}
-        keys = data[1]
-        for line in data[2:]:
-            if len(line) == len(keys):
-                interfaces.append(dict(list(zip(keys, line))))
-    else:
-        interfaces.append({'error': err.strip()})
     ret['interfaces'] = interfaces
     hostname = platform.node().split('.')[0]
     try:

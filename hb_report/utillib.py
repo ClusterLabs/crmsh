@@ -1597,7 +1597,7 @@ def sys_info():
 def sys_stats():
     out_string = ""
     cmd_list = ["hostname", "uptime", "ps axf", "ps auxw", "top -b -n 1",
-                "ip addr", "netstat -i", "arp -an", "lsscsi", "lspci",
+                "ip addr", "ip -s link", "ip n show", "lsscsi", "lspci",
                 "mount", "cat /proc/cpuinfo", "df"]
     for cmd in cmd_list:
         out_string += "##### run \"%s\" on %s\n" % (cmd, constants.WE)
