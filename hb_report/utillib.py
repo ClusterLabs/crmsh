@@ -531,16 +531,13 @@ def events(destdir):
 
 
 def find_decompressor(log_file):
-    decompressor = "echo"
+    decompressor = "cat"
     if re.search("bz2$", log_file):
         decompressor = "bzip2 -dc"
     elif re.search("gz$", log_file):
         decompressor = "gzip -dc"
     elif re.search("xz$", log_file):
         decompressor = "xz -dc"
-    else:
-        if re.search("text", get_command_info("file %s" % log_file)[1]):
-            decompressor = "cat"
     return decompressor
 
 
