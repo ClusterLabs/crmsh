@@ -296,7 +296,7 @@ def collect_info():
             os.symlink(constants.HALOG_F, os.path.join(constants.WORKDIR, os.path.basename(l)))
             continue
         if is_our_log(l, constants.FROM_TIME, constants.TO_TIME) == 4:
-            log_warning("found irregular log file %s" % l)
+            log_debug("found irregular log file %s" % l)
             outf = os.path.join(constants.WORKDIR, os.path.basename(l))
             shutil.copy2(l, constants.WORKDIR)
             log_size(l, outf+'.info')
