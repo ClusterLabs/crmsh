@@ -37,6 +37,8 @@ COROSYNC_AUTH = "/etc/corosync/authkey"
 SYSCONFIG_SBD = "/etc/sysconfig/sbd"
 SYSCONFIG_FW = "/etc/sysconfig/SuSEfirewall2"
 SYSCONFIG_FW_CLUSTER = "/etc/sysconfig/SuSEfirewall2.d/services/cluster"
+PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
+
 
 INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin")
 
@@ -684,6 +686,7 @@ include /etc/multipath.conf;
 include /etc/samba/smb.conf;
 include /etc/sysconfig/pacemaker;
 include /etc/sysconfig/sbd;
+include /etc/pacemaker/authkey;
 }
     """ % (utils.this_node()), CSYNC2_CFG)
 
@@ -743,6 +746,26 @@ def init_corosync_auth():
         except os.error:
             error("Failed to remove %s" % (COROSYNC_AUTH))
     invoke("corosync-keygen -l")
+
+
+def init_remote_auth():
+    """
+    Generate the pacemaker-remote authkey
+    """
+    if os.path.exists(PCMK_REMOTE_AUTH):
+        if not confirm("%s already exists - overwrite?" % (PCMK_REMOTE_AUTH)):
+            return
+        try:
+            os.remove(PCMK_REMOTE_AUTH)
+        except os.error:
+            error("Failed to remove %s" % (PCMK_REMOTE_AUTH))
+
+    pcmk_remote_dir = os.path.dirname(PCMK_REMOTE_AUTH)
+    if not os.path.exists(pcmk_remote_dir):
+        invoke("mkdir -p --mode=0750 {}".format(pcmk_remote_dir))
+        invoke("chgrp haclient {}".format(pcmk_remote_dir))
+
+    invoke("dd if=/dev/urandom of={} bs=4096 count=1".format(PCMK_REMOTE_AUTH))
 
 
 def valid_network(addr, prev_value=None):
@@ -1550,6 +1573,7 @@ def join_csync2(seed_host):
     # subseqent join of another node can fail its sync of corosync.conf
     # when it updates expected_votes.  Grrr...
     if not invoke('ssh root@%s "csync2 -mr / ; csync2 -fr / ; csync2 -xv"' % (seed_host)):
+        print("")
         warn("csync2 run failed - some files may not be sync'd")
 
     status_done()
@@ -2080,6 +2104,7 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
         init_ssh()
         init_csync2()
         init_corosync()
+        init_remote_auth()
         if template == 'ocfs2':
             if sbd_device is None or ocfs2_device is None:
                 init_storage()
@@ -2136,11 +2161,21 @@ def bootstrap_join(cluster_node=None, ui_context=None, nic=None, quiet=False, ye
             _context.cluster_node = cluster_node
 
         join_ssh(cluster_node)
+        join_remote_auth(cluster_node)
         join_csync2(cluster_node)
         join_ssh_merge(cluster_node)
         join_cluster(cluster_node)
 
     status("Done (log saved to %s)" % (LOG_FILE))
+
+
+def join_remote_auth(node):
+    invoke("rm -f {}".format(PCMK_REMOTE_AUTH))
+    pcmk_remote_dir = os.path.dirname(PCMK_REMOTE_AUTH)
+    if not os.path.exists(pcmk_remote_dir):
+        invoke("mkdir -p --mode=0750 {}".format(pcmk_remote_dir))
+        invoke("chgrp haclient {}".format(pcmk_remote_dir))
+    invoke("touch {}".format(PCMK_REMOTE_AUTH))
 
 
 def bootstrap_remove(cluster_node=None, ui_context=None, quiet=False, yes_to_all=False, force=False):
