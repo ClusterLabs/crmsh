@@ -1282,11 +1282,6 @@ Configure SBD:
   specify here will be destroyed.
 """)
 
-        configured_dev = configured_sbd_device()
-        if configured_dev:
-            if not confirm("SBD is already configured to use %s - overwrite?" % (configured_dev)):
-                return
-
         if not confirm("Do you wish to use SBD?"):
             warn("Not configuring SBD - STONITH will be disabled.")
             # Comment out SBD devices if present
@@ -1302,6 +1297,11 @@ Configure SBD:
 
         if utils.is_program("sbd") is None:
             error("sbd executable not found! Cannot configure SBD.")
+
+        configured_dev = configured_sbd_device()
+        if configured_dev:
+            if not confirm("SBD is already configured to use %s - overwrite?" % (configured_dev)):
+                return
 
         dev = ""
         dev_looks_sane = False
