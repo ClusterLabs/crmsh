@@ -223,7 +223,7 @@ clone_meta_attributes = common_meta_attributes + (
 )
 ms_meta_attributes = common_meta_attributes + (
     "clone-max", "clone-node-max", "notify", "globally-unique", "ordered", 
-    "interleave", "master-max", "master-node-max", "description",
+    "interleave", "promoted-max", "promoted-node-max", "description",
 )
 bundle_meta_attributes = common_meta_attributes
 alert_meta_attributes = (
