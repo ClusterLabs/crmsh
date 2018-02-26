@@ -24,6 +24,11 @@ parameters:
     type: ip_address
     value: ""
 
+  - name: bindipaddr
+    shortdesc: "If true, bind to the local IP address"
+    type: boolean
+    value: false
+
   - name: mcastaddr
     shortdesc: "Multicast address (e.g.: 239.x.x.x)"
     type: ip_address
