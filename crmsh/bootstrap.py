@@ -623,6 +623,32 @@ def append(fromfile, tofile):
             tf.write(ff.read())
 
 
+def rmfile(path, ignore_errors=False):
+    """
+    Try to remove the given file, and
+    report an error on failure
+    """
+    try:
+        os.remove(path)
+    except os.error as err:
+        if not ignore_errors:
+            error("Failed to remove {}: {}".format(path, err))
+
+
+def mkdirs_owned(dirs, mode=0o777, uid=-1, gid=-1):
+    """
+    Create directory path, setting the mode and
+    ownership of the leaf directory to mode/uid/gid.
+    """
+    if not os.path.exists(dirs):
+        try:
+            os.makedirs(dirs, mode)
+        except OSError as err:
+            error("Failed to create {}: {}".format(dirs, err))
+        if uid != -1 or gid != -1:
+            utils.chown(dirs, uid, gid)
+
+
 def init_ssh():
     """
     Configure passwordless SSH.
@@ -632,10 +658,7 @@ def init_ssh():
     if os.path.exists("/root/.ssh/id_rsa"):
         if not confirm("/root/.ssh/id_rsa already exists - overwrite?"):
             return
-        try:
-            os.remove("/root/.ssh/id_rsa")
-        except os.error:
-            error("Failed to remove /root/.ssh/id_rsa")
+        rmfile("/root/.ssh/id_rsa")
     status("Generating SSH key")
     invoke("ssh-keygen -q -f /root/.ssh/id_rsa -C 'Cluster Internal' -N ''")
     append("/root/.ssh/id_rsa.pub", "/root/.ssh/authorized_keys")
@@ -741,10 +764,7 @@ def init_corosync_auth():
     if os.path.exists(COROSYNC_AUTH):
         if not confirm("%s already exists - overwrite?" % (COROSYNC_AUTH)):
             return
-        try:
-            os.remove(COROSYNC_AUTH)
-        except os.error:
-            error("Failed to remove %s" % (COROSYNC_AUTH))
+        rmfile(COROSYNC_AUTH)
     invoke("corosync-keygen -l")
 
 
@@ -755,17 +775,14 @@ def init_remote_auth():
     if os.path.exists(PCMK_REMOTE_AUTH):
         if not confirm("%s already exists - overwrite?" % (PCMK_REMOTE_AUTH)):
             return
-        try:
-            os.remove(PCMK_REMOTE_AUTH)
-        except os.error:
-            error("Failed to remove %s" % (PCMK_REMOTE_AUTH))
+        rmfile(PCMK_REMOTE_AUTH)
 
     pcmk_remote_dir = os.path.dirname(PCMK_REMOTE_AUTH)
-    if not os.path.exists(pcmk_remote_dir):
-        invoke("mkdir -p --mode=0750 {}".format(pcmk_remote_dir))
-        invoke("chgrp haclient {}".format(pcmk_remote_dir))
-
-    invoke("dd if=/dev/urandom of={} bs=4096 count=1".format(PCMK_REMOTE_AUTH))
+    mkdirs_owned(pcmk_remote_dir, mode=0o750, gid="haclient")
+    if not invoke("dd if=/dev/urandom of={} bs=4096 count=1".format(PCMK_REMOTE_AUTH)):
+        warn("Failed to create pacemaker authkey: {}".format(PCMK_REMOTE_AUTH))
+    utils.chown(PCMK_REMOTE_AUTH, "hacluster", "haclient")
+    os.chmod(PCMK_REMOTE_AUTH, 0o640)
 
 
 def valid_network(addr, prev_value=None):
@@ -1539,7 +1556,7 @@ def join_csync2(seed_host):
     status_long("Configuring csync2")
 
     # Necessary if re-running join on a node that's been configured before.
-    invoke("rm -f /var/lib/csync2/{}.db3".format(utils.this_node()))
+    rmfile("/var/lib/csync2/{}.db3".format(utils.this_node()), ignore_errors=True)
 
     # Not automatically updating /etc/hosts - risky in the general case.
     # etc_hosts_add_me
@@ -2170,11 +2187,10 @@ def bootstrap_join(cluster_node=None, ui_context=None, nic=None, quiet=False, ye
 
 
 def join_remote_auth(node):
-    invoke("rm -f {}".format(PCMK_REMOTE_AUTH))
+    if os.path.exists(PCMK_REMOTE_AUTH):
+        rmfile(PCMK_REMOTE_AUTH)
     pcmk_remote_dir = os.path.dirname(PCMK_REMOTE_AUTH)
-    if not os.path.exists(pcmk_remote_dir):
-        invoke("mkdir -p --mode=0750 {}".format(pcmk_remote_dir))
-        invoke("chgrp haclient {}".format(pcmk_remote_dir))
+    mkdirs_owned(pcmk_remote_dir, mode=0o750, gid="haclient")
     invoke("touch {}".format(PCMK_REMOTE_AUTH))
 
 
@@ -2225,8 +2241,15 @@ def bootstrap_remove(cluster_node=None, ui_context=None, quiet=False, yes_to_all
 
             # remove all trace of cluster from this node
             # delete configuration files from the node to be removed
-            toremove = [SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY, COROSYNC_AUTH]
-            if not invoke('bash -c "rm -f {} && rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*"'.format(" ".join(toremove))):
+            toremove = [
+                SYSCONFIG_SBD,
+                CSYNC2_CFG,
+                corosync.conf(),
+                CSYNC2_KEY,
+                COROSYNC_AUTH,
+                "/var/lib/heartbeat/crm/*",
+                "/var/lib/pacemaker/cib/*"]
+            if not invoke('bash -c "rm -f {}"'.format(" ".join(toremove))):
                 error("Deleting the configuration files failed")
     else:
         remove_node_from_cluster()
@@ -2256,7 +2279,7 @@ def init_csync2_geo():
 def create_booth_authkey():
     status("Create authentication key for booth")
     if os.path.exists(BOOTH_AUTH):
-        invoke("rm -f {}".format(BOOTH_AUTH))
+        rmfile(BOOTH_AUTH)
     if not invoke("booth-keygen {}".format(BOOTH_AUTH)):
         error("Failed to generate booth authkey")
 
@@ -2284,7 +2307,7 @@ port="9929"
     cfg = "\n".join(cfg) + "\n"
 
     if os.path.exists(BOOTH_CFG):
-        invoke("rm -f {}".format(BOOTH_CFG))
+        rmfile(BOOTH_CFG)
     utils.str2file(cfg, BOOTH_CFG)
     utils.chown(BOOTH_CFG, "hacluster", "haclient")
     os.chmod(BOOTH_CFG, 0o644)
