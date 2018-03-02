@@ -3423,7 +3423,7 @@ run anywhere, resources following it in the group will not start.
 `group` can be passed the "container" meta attribute, to indicate that
 it is to be used to group VM resources monitored using Nagios. The
 resource referred to by the container attribute must be of type
-`ocf:heartbeat:Xen`, `oxf:heartbeat:VirtualDomain` or `ocf:heartbeat:lxc`.
+`ocf:heartbeat:Xen`, `ocf:heartbeat:VirtualDomain` or `ocf:heartbeat:lxc`.
 
 Usage:
 ...............
