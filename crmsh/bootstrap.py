@@ -1799,17 +1799,18 @@ def join_cluster(seed_host):
         if nodelist is None:
             for v in corosync.get_values("quorum.expected_votes"):
                 expected_votes = v
-                #for node >= 2, expected_votes = nodecount + device_votes
-                #asume nodecount is N, for ffsplit, qdevice only has one vote
-                #which means that device_votes is 1, ie:expected_votes = N + 1;
-                #while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
-                #and update quorum.device.net.algorithm based on device_votes
+
+                # For node >= 2, expected_votes = nodecount + device_votes
+                # Assume nodecount is N, for ffsplit, qdevice only has one vote
+                # which means that device_votes is 1, ie:expected_votes = N + 1;
+                # while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
+                # and update quorum.device.net.algorithm based on device_votes
 
                 if corosync.get_value("quorum.device.net.algorithm") == "lms":
                     device_votes = int((expected_votes - 1) / 2)
                     nodecount = expected_votes - device_votes
-                    #as nodecount will increase 1, and device_votes is nodecount - 1
-                    #device_votes also increase 1
+                    # as nodecount will increase 1, and device_votes is nodecount - 1
+                    # device_votes also increase 1
                     device_votes += 1
                 elif corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
                     device_votes = 1
@@ -1824,10 +1825,10 @@ def join_cluster(seed_host):
         else:
             nodecount = len(nodelist)
             expected_votes = 0
-            #for node >= 2, expected_votes = nodecount + device_votes
-            #asume nodecount is N, for ffsplit, qdevice only has one vote
-            #which means that device_votes is 1, ie:expected_votes = N + 1;
-            #while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
+            # For node >= 2, expected_votes = nodecount + device_votes
+            # Assume nodecount is N, for ffsplit, qdevice only has one vote
+            # which means that device_votes is 1, ie:expected_votes = N + 1;
+            # while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
             if corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
                 device_votes = 1
             if corosync.get_value("quorum.device.net.algorithm") == "lms":
