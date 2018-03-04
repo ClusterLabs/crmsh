@@ -5,6 +5,26 @@
 doc/website-v1/gen
 Makefile.in
 autom4te.cache
+Makefile
+aclocal.m4
+autoconf
+autoheader
+automake
+config.log
+config.status
+configure
+crm.conf
+crmsh.spec
+install-sh
+missing
+version
+crmsh.egg-info/*
+crmtestout/*
+doc/crm.8
+doc/crm.8.html
+doc/crmsh_hb_report.8
+doc/crmsh_hb_report.8.html
+hb_report/hb_report
 patches/*
 build/*
 
