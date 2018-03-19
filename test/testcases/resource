@@ -40,10 +40,24 @@ resource stop p0
 resource start cg
 resource stop cg
 resource stop p3
+%setenv showobj=
 configure rename p3 p4
 configure primitive p3 Dummy
 resource stop p3
-%setenv showobj=
+resource start p3
+resource cleanup
+resource cleanup p3
+resource cleanup p3 node1
+resource cleanup force
+resource cleanup p3 force
+resource cleanup p3 node1 force
+resource refresh
+resource refresh p3
+resource refresh p3 node1
+resource refresh force
+resource refresh p3 force
+resource refresh p3 node1 force
+resource stop p3
 configure rm cg
 configure ms msg g
 resource scores

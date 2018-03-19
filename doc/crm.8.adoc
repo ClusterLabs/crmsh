@@ -217,7 +217,7 @@ cd            help          param         show          unmove
 cleanup       list          promote       start         up
 demote        manage        quit          status        utilization
 end           meta          refresh       stop
-exit          migrate       reprobe       unmanage
+exit          migrate       unmanage
 
 crm(live)configure# primitive fence-1 <TAB><TAB>
 heartbeat:  lsb:    ocf:    stonith:
@@ -1947,9 +1947,11 @@ ban <rsc> [<node>] [<lifetime>] [force]
 [[cmdhelp_resource_cleanup,cleanup resource status]]
 ==== `cleanup`
 
-Cleanup resource status. Typically done after the resource has
-temporarily failed. If a node is omitted, cleanup on all nodes.
-If there are many nodes, the command may take a while.
+If resource has any past failures, clear its history and fail
+count. Typically done after the resource has temporarily
+failed.
+
+If a node is omitted, cleanup on all nodes.
 
 +(Pacemaker 1.1.14)+ Pass force to cleanup the resource itself,
 otherwise the cleanup command will apply to the parent resource (if
@@ -1957,7 +1959,7 @@ any).
 
 Usage:
 ...............
-cleanup <rsc> [<node>] [force]
+cleanup [<rsc>] [<node>] [force]
 ...............
 
 [[cmdhelp_resource_clear,Clear any relocation constraint]]
@@ -2126,36 +2128,14 @@ Usage:
 promote <rsc>
 ...............
 
-[[cmdhelp_resource_refresh,refresh CIB from the LRM status]]
+[[cmdhelp_resource_refresh,Recheck current resource status and drop failure history]]
 ==== `refresh`
 
-Refresh CIB from the LRM status.
-
-.Note
-****************************
-`refresh` has been deprecated and is now
-an alias for `cleanup`.
-****************************
+Delete resource's history (including failures) so its current state is rechecked.
 
 Usage:
 ...............
-refresh [<node>]
-...............
-
-[[cmdhelp_resource_reprobe,probe for resources not started by the CRM]]
-==== `reprobe`
-
-Probe for resources not started by the CRM.
-
-.Note
-****************************
-`reprobe` has been deprecated and is now
-an alias for `cleanup`.
-****************************
-
-Usage:
-...............
-reprobe [<node>]
+refresh [<rsc>] [<node>] [force]
 ...............
 
 [[cmdhelp_resource_restart,restart resources]]

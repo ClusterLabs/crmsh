@@ -1,4 +1,4 @@
-# Copyright (C) 2014 Kristoffer Gronlund <kgronlund@suse.com>
+# Copyright (C) 2014-2018 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
 
@@ -26,10 +26,10 @@ def test_maintenance():
         utils.ext_cmd = mockcmd
         rscui = ui_resource.RscMgmt()
         assert rscui.do_maintenance(mc, 'rsc1') is True
-        assert commands[-1] == ("crm_resource -r 'rsc1' --meta -p maintenance -v 'true'",)
+        assert commands[-1] == ("crm_resource --resource 'rsc1' --meta --set-parameter maintenance --parameter-value 'true'",)
         assert rscui.do_maintenance(mc, 'rsc1', 'on') is True
-        assert commands[-1] == ("crm_resource -r 'rsc1' --meta -p maintenance -v 'true'",)
+        assert commands[-1] == ("crm_resource --resource 'rsc1' --meta --set-parameter maintenance --parameter-value 'true'",)
         assert rscui.do_maintenance(mc, 'rsc1', 'off') is True
-        assert commands[-1] == ("crm_resource -r 'rsc1' --meta -p maintenance -v 'false'",)
+        assert commands[-1] == ("crm_resource --resource 'rsc1' --meta --set-parameter maintenance --parameter-value 'false'",)
     finally:
         utils.ext_cmd = _pre_ext_cmd
