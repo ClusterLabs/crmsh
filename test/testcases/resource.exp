@@ -1,5 +1,5 @@
 .TRY resource status p0
-.EXT crm_resource --locate -r 'p0'
+.EXT crm_resource --locate --resource 'p0'
 resource p0 is NOT running
 .SETENV showobj=p3
 .TRY resource start p3
@@ -87,7 +87,7 @@ resource p0 is NOT running
 
 .SETENV showobj=cli-prefer-p3
 .TRY resource migrate p3 node1
-.EXT crm_resource --quiet --move -r 'p3' --node='node1'
+.EXT crm_resource --quiet --move --resource 'p3' --node 'node1'
 INFO: Move constraint created for p3 to node1
 .INP: configure
 .INP: _regtest on
@@ -106,11 +106,11 @@ INFO: Move constraint created for p3 to node1
 
 .SETENV showobj=
 .TRY resource unmigrate p3
-.EXT crm_resource --quiet --clear -r 'p3'
+.EXT crm_resource --quiet --clear --resource 'p3'
 INFO: Removed migration constraints for p3
 .SETENV showobj=cli-prefer-p3
 .TRY resource migrate p3 node1 force
-.EXT crm_resource --quiet --move -r 'p3' --node='node1' --force
+.EXT crm_resource --quiet --move --resource 'p3' --node 'node1' --force
 INFO: Move constraint created for p3 to node1
 .INP: configure
 .INP: _regtest on
@@ -129,11 +129,11 @@ INFO: Move constraint created for p3 to node1
 
 .SETENV showobj=
 .TRY resource unmigrate p3
-.EXT crm_resource --quiet --clear -r 'p3'
+.EXT crm_resource --quiet --clear --resource 'p3'
 INFO: Removed migration constraints for p3
 .SETENV showobj=p0
 .TRY resource param p0 set a0 "1 2 3"
-.EXT crm_resource -r 'p0' -p 'a0' -v '1 2 3'
+.EXT crm_resource --resource 'p0' --set-parameter 'a0' --parameter-value '1 2 3'
 
 Set 'p0' option: id=p0-instance_attributes-a0 set=p0-instance_attributes name=a0=1 2 3
 .INP: configure
@@ -156,7 +156,7 @@ Set 'p0' option: id=p0-instance_attributes-a0 set=p0-instance_attributes name=a0
 </cib>
 
 .TRY resource param p0 show a0
-.EXT crm_resource -r 'p0' -g 'a0'
+.EXT crm_resource --resource 'p0' --get-parameter 'a0'
 1 2 3
 .INP: configure
 .INP: _regtest on
@@ -178,7 +178,7 @@ Set 'p0' option: id=p0-instance_attributes-a0 set=p0-instance_attributes name=a0
 </cib>
 
 .TRY resource param p0 delete a0
-.EXT crm_resource -r 'p0' -d 'a0'
+.EXT crm_resource --resource 'p0' --delete-parameter 'a0'
 Deleted 'p0' option: id=p0-instance_attributes-a0 name=a0
 .INP: configure
 .INP: _regtest on
@@ -198,7 +198,7 @@ Deleted 'p0' option: id=p0-instance_attributes-a0 name=a0
 </cib>
 
 .TRY resource meta p0 set m0 123
-.EXT crm_resource --meta -r 'p0' -p 'm0' -v '123'
+.EXT crm_resource --meta --resource 'p0' --set-parameter 'm0' --parameter-value '123'
 
 Set 'p0' option: id=p0-meta_attributes-m0 set=p0-meta_attributes name=m0=123
 .INP: configure
@@ -222,7 +222,7 @@ Set 'p0' option: id=p0-meta_attributes-m0 set=p0-meta_attributes name=m0=123
 </cib>
 
 .TRY resource meta p0 show m0
-.EXT crm_resource --meta -r 'p0' -g 'm0'
+.EXT crm_resource --meta --resource 'p0' --get-parameter 'm0'
 123
 .INP: configure
 .INP: _regtest on
@@ -245,7 +245,7 @@ Set 'p0' option: id=p0-meta_attributes-m0 set=p0-meta_attributes name=m0=123
 </cib>
 
 .TRY resource meta p0 delete m0
-.EXT crm_resource --meta -r 'p0' -d 'm0'
+.EXT crm_resource --meta --resource 'p0' --delete-parameter 'm0'
 Deleted 'p0' option: id=p0-meta_attributes-m0 name=m0
 .INP: configure
 .INP: _regtest on
@@ -822,100 +822,57 @@ INFO: Trace set, restart p0 to trace the stop operation
   </configuration>
 </cib>
 
+.SETENV showobj=
 .TRY configure rename p3 p4
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
-.INP: configure
-.INP: _regtest on
-.INP: show xml p0
-<?xml version="1.0" ?>
-<cib>
-  <configuration>
-    <crm_config/>
-    <nodes/>
-    <resources>
-      <clone id="cg">
-        <meta_attributes id="cg-meta_attributes">
-          <nvpair id="cg-meta_attributes-target-role" name="target-role" value="Stopped"/>
-        </meta_attributes>
-        <group id="g">
-          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy"/>
-          <primitive id="p4" class="ocf" provider="pacemaker" type="Dummy">
-            <meta_attributes id="p3-meta_attributes">
-              <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
-            </meta_attributes>
-          </primitive>
-        </group>
-      </clone>
-    </resources>
-    <constraints/>
-  </configuration>
-</cib>
-
 .TRY configure primitive p3 Dummy
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
-.INP: configure
-.INP: _regtest on
-.INP: show xml p0
-<?xml version="1.0" ?>
-<cib>
-  <configuration>
-    <crm_config/>
-    <nodes/>
-    <resources>
-      <clone id="cg">
-        <meta_attributes id="cg-meta_attributes">
-          <nvpair id="cg-meta_attributes-target-role" name="target-role" value="Stopped"/>
-        </meta_attributes>
-        <group id="g">
-          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy"/>
-          <primitive id="p4" class="ocf" provider="pacemaker" type="Dummy">
-            <meta_attributes id="p3-meta_attributes">
-              <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
-            </meta_attributes>
-          </primitive>
-        </group>
-      </clone>
-    </resources>
-    <constraints/>
-  </configuration>
-</cib>
-
 .TRY resource stop p3
-.INP: configure
-.INP: _regtest on
-.INP: show xml p0
-<?xml version="1.0" ?>
-<cib>
-  <configuration>
-    <crm_config/>
-    <nodes/>
-    <resources>
-      <clone id="cg">
-        <meta_attributes id="cg-meta_attributes">
-          <nvpair id="cg-meta_attributes-target-role" name="target-role" value="Stopped"/>
-        </meta_attributes>
-        <group id="g">
-          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy"/>
-          <primitive id="p4" class="ocf" provider="pacemaker" type="Dummy">
-            <meta_attributes id="p3-meta_attributes">
-              <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
-            </meta_attributes>
-          </primitive>
-        </group>
-      </clone>
-    </resources>
-    <constraints/>
-  </configuration>
-</cib>
-
-.SETENV showobj=
+.TRY resource start p3
+.TRY resource cleanup
+.EXT crm_resource --cleanup
+Error performing operation: Transport endpoint is not connected
+.TRY resource cleanup p3
+.EXT crm_resource --cleanup --resource p3
+Error performing operation: Transport endpoint is not connected
+.TRY resource cleanup p3 node1
+.EXT crm_resource --cleanup --resource p3 --node node1
+Error performing operation: Transport endpoint is not connected
+.TRY resource cleanup force
+.EXT crm_resource --cleanup --force
+Error performing operation: Transport endpoint is not connected
+.TRY resource cleanup p3 force
+.EXT crm_resource --cleanup --resource p3 --force
+Error performing operation: Transport endpoint is not connected
+.TRY resource cleanup p3 node1 force
+.EXT crm_resource --cleanup --resource p3 --node node1 --force
+Error performing operation: Transport endpoint is not connected
+.TRY resource refresh
+.EXT crm_resource --refresh
+Error performing operation: Transport endpoint is not connected
+.TRY resource refresh p3
+.EXT crm_resource --refresh --resource p3
+Error performing operation: Transport endpoint is not connected
+.TRY resource refresh p3 node1
+.EXT crm_resource --refresh --resource p3 --node node1
+Error performing operation: Transport endpoint is not connected
+.TRY resource refresh force
+.EXT crm_resource --refresh --force
+Error performing operation: Transport endpoint is not connected
+.TRY resource refresh p3 force
+.EXT crm_resource --refresh --resource p3 --force
+Error performing operation: Transport endpoint is not connected
+.TRY resource refresh p3 node1 force
+.EXT crm_resource --refresh --resource p3 --node node1 --force
+Error performing operation: Transport endpoint is not connected
+.TRY resource stop p3
 .TRY configure rm cg
 .TRY configure ms msg g
 .TRY resource scores

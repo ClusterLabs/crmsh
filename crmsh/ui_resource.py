@@ -1,5 +1,5 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
-# Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
+# Copyright (C) 2013-2018 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
 from . import command
@@ -150,17 +150,6 @@ def set_deep_meta_attr(rsc, attr, value, commit=True):
     return True
 
 
-def cleanup_resource(rsc, node='', force=False):
-    if not utils.is_name_sane(rsc) or not utils.is_name_sane(node):
-        return False
-    forces = " -f" if force else ""
-    if not node:
-        rc = utils.ext_cmd((RscMgmt.rsc_cleanup_all % (rsc)) + forces) == 0
-    else:
-        rc = utils.ext_cmd((RscMgmt.rsc_cleanup % (rsc, node)) + forces) == 0
-    return rc
-
-
 _attrcmds = compl.choice(['delete', 'set', 'show'])
 _raoperations = compl.choice(constants.ra_operations)
 
@@ -171,27 +160,25 @@ class RscMgmt(command.UI):
     '''
     name = "resource"
 
-    rsc_status_all = "crm_resource -L"
-    rsc_status = "crm_resource --locate -r '%s'"
-    rsc_showxml = "crm_resource -q -r '%s'"
-    rsc_setrole = "crm_resource --meta -r '%s' -p target-role -v '%s'"
-    rsc_migrate = "crm_resource --quiet --move -r '%s' %s"
-    rsc_unmigrate = "crm_resource --quiet --clear -r '%s'"
-    rsc_ban = "crm_resource --ban -r '%s' %s"
-    rsc_cleanup = "crm_resource -C -r '%s' -H '%s'"
-    rsc_cleanup_all = "crm_resource -C -r '%s'"
-    rsc_maintenance = "crm_resource -r '%s' --meta -p maintenance -v '%s'"
+    rsc_status_all = "crm_resource --list"
+    rsc_status = "crm_resource --locate --resource '%s'"
+    rsc_showxml = "crm_resource --query-xml --resource '%s'"
+    rsc_setrole = "crm_resource --meta --resource '%s' --set-parameter target-role --parameter-value '%s'"
+    rsc_migrate = "crm_resource --quiet --move --resource '%s' %s"
+    rsc_unmigrate = "crm_resource --quiet --clear --resource '%s'"
+    rsc_ban = "crm_resource --ban --resource '%s' %s"
+    rsc_maintenance = "crm_resource --resource '%s' --meta --set-parameter maintenance --parameter-value '%s'"
     rsc_param = {
-        'set': "crm_resource -r '%s' -p '%s' -v '%s'",
-        'delete': "crm_resource -r '%s' -d '%s'",
-        'show': "crm_resource -r '%s' -g '%s'",
-        'get': "crm_resource -r '%s' -g '%s'",
+        'set': "crm_resource --resource '%s' --set-parameter '%s' --parameter-value '%s'",
+        'delete': "crm_resource --resource '%s' --delete-parameter '%s'",
+        'show': "crm_resource --resource '%s' --get-parameter '%s'",
+        'get': "crm_resource --resource '%s' --get-parameter '%s'",
     }
     rsc_meta = {
-        'set': "crm_resource --meta -r '%s' -p '%s' -v '%s'",
-        'delete': "crm_resource --meta -r '%s' -d '%s'",
-        'show': "crm_resource --meta -r '%s' -g '%s'",
-        'get': "crm_resource --meta -r '%s' -g '%s'",
+        'set': "crm_resource --meta --resource '%s' --set-parameter '%s' --parameter-value '%s'",
+        'delete': "crm_resource --meta --resource '%s' --delete-parameter '%s'",
+        'show': "crm_resource --meta --resource '%s' --get-parameter '%s'",
+        'get': "crm_resource --meta --resource '%s' --get-parameter '%s'",
     }
     rsc_failcount = {
         'set': "crm_attribute -t status -n 'fail-count-%s' -N '%s' -v '%s' -d 0",
@@ -200,10 +187,10 @@ class RscMgmt(command.UI):
         'get': "crm_failcount -G -r %s -N %s",
     }
     rsc_utilization = {
-        'set': "crm_resource -z -r '%s' -p '%s' -v '%s'",
-        'delete': "crm_resource -z -r '%s' -d '%s'",
-        'show': "crm_resource -z -r '%s' -g '%s'",
-        'get': "crm_resource -z -r '%s' -g '%s'",
+        'set': "crm_resource --utilization --resource '%s' --set-parameter '%s' --parameter-value '%s'",
+        'delete': "crm_resource --utilization --resource '%s' --delete-parameter '%s'",
+        'show': "crm_resource --utilization --resource '%s' --get-parameter '%s'",
+        'get': "crm_resource --utilization --resource '%s' --get-parameter '%s'",
     }
     rsc_secret = {
         'set': "cibsecret set '%s' '%s' '%s'",
@@ -214,10 +201,31 @@ class RscMgmt(command.UI):
         'get': "cibsecret get '%s' '%s'",
         'check': "cibsecret check '%s' '%s'",
     }
-    rsc_refresh = "crm_resource -C"
-    rsc_refresh_node = "crm_resource -C -H '%s'"
-    rsc_reprobe = "crm_resource -C"
-    rsc_reprobe_node = "crm_resource -C -H '%s'"
+
+    def _refresh_cleanup(self, action, rsc, node, force):
+        """
+        Implements the refresh and cleanup commands.
+        """
+        if rsc == "force":
+            rsc = None
+            force = True
+        if node == "force":
+            node = None
+            force = True
+        cmd = ["crm_resource", "--" + action]
+        if rsc:
+            if not utils.is_name_sane(rsc):
+                return False
+            cmd.append("--resource")
+            cmd.append(rsc)
+        if node:
+            if not utils.is_name_sane(node):
+                return False
+            cmd.append("--node")
+            cmd.append(node)
+        if force:
+            cmd.append("--force")
+        return utils.ext_cmd(" ".join(cmd)) == 0
 
     def requires(self):
         for program in ('crm_resource', 'crm_attribute'):
@@ -373,9 +381,9 @@ class RscMgmt(command.UI):
 
         opts = ''
         if node:
-            opts = "--node='%s'" % node
+            opts = "--node '%s'" % node
         if lifetime:
-            opts = "%s --lifetime='%s'" % (opts, lifetime)
+            opts = "%s --lifetime '%s'" % (opts, lifetime)
         if force or config.core.force:
             opts = "%s --force" % opts
         rc = utils.ext_cmd(self.rsc_migrate % (rsc, opts))
@@ -403,9 +411,9 @@ class RscMgmt(command.UI):
                 context.fatal_error("Not our node: " + node)
         opts = ''
         if node:
-            opts = "--node='%s'" % node
+            opts = "--node '%s'" % node
         if lifetime:
-            opts = "%s --lifetime='%s'" % (opts, lifetime)
+            opts = "%s --lifetime '%s'" % (opts, lifetime)
         if force:
             opts = "%s --force" % opts
         rc = utils.ext_cmd(self.rsc_ban % (rsc, opts))
@@ -432,14 +440,9 @@ class RscMgmt(command.UI):
     @command.skill_level('administrator')
     @command.wait
     @command.completers(compl.resources, compl.nodes)
-    def do_cleanup(self, context, resource, *args):
-        "usage: cleanup <rsc> [<node>] [force]"
-        # Cleanup a resource on a node. Omit node to cleanup on
-        # all live nodes.
-        argl = list(args)
-        force = "force" in utils.fetch_opts(argl, ["force"]) or config.core.force
-        node = argl[0] if len(argl) > 0 else ''
-        return cleanup_resource(resource, node, force=force)
+    def do_cleanup(self, context, rsc=None, node=None, force=False):
+        "usage: cleanup [<rsc>] [<node>] [force]"
+        return self._refresh_cleanup("cleanup", rsc, node, force)
 
     @command.wait
     @command.completers(compl.resources, compl.nodes)
@@ -515,26 +518,11 @@ class RscMgmt(command.UI):
         return ui_utils.manage_attr(context.get_command_name(), self.rsc_utilization,
                                     rsc, cmd, attr, value)
 
+    @command.alias('reprobe')
     @command.completers(compl.nodes)
-    def do_refresh(self, context, *args):
-        'usage: refresh [<node>]'
-        if len(args) == 1:
-            if not utils.is_name_sane(args[0]):
-                return False
-            return utils.ext_cmd(self.rsc_refresh_node % args[0]) == 0
-        else:
-            return utils.ext_cmd(self.rsc_refresh) == 0
-
-    @command.wait
-    @command.completers(compl.nodes)
-    def do_reprobe(self, context, *args):
-        'usage: reprobe [<node>]'
-        if len(args) == 1:
-            if not utils.is_name_sane(args[0]):
-                return False
-            return utils.ext_cmd(self.rsc_reprobe_node % args[0]) == 0
-        else:
-            return utils.ext_cmd(self.rsc_reprobe) == 0
+    def do_refresh(self, context, rsc=None, node=None, force=False):
+        'usage: refresh [<rsc>] [<node>] [force]'
+        return self._refresh_cleanup("refresh", rsc, node, force)
 
     @command.wait
     @command.completers(compl.resources, compl.choice(['on', 'off', 'true', 'false']))
