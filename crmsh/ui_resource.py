@@ -207,11 +207,9 @@ class RscMgmt(command.UI):
         Implements the refresh and cleanup commands.
         """
         if rsc == "force":
-            rsc = None
-            force = True
+            rsc, force = None, True
         if node == "force":
-            node = None
-            force = True
+            node, force = None, True
         cmd = ["crm_resource", "--" + action]
         if rsc:
             if not utils.is_name_sane(rsc):
