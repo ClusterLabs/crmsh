@@ -367,6 +367,7 @@ def run():
         if config.core.debug:
             import traceback
             traceback.print_exc()
+            sys.stdout.flush()
         common_err(str(e))
 
 # vim:ts=4:sw=4:et:

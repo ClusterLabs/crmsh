@@ -77,12 +77,14 @@ class Context(object):
             if config.core.debug or options.regression_tests:
                 import traceback
                 traceback.print_exc()
+                sys.stdout.flush()
             common_err("%s: %s" % (self.get_qualified_name(), msg))
             rv = False
         except IOError as msg:
             if config.core.debug or options.regression_tests:
                 import traceback
                 traceback.print_exc()
+                sys.stdout.flush()
             common_err("%s: %s" % (self.get_qualified_name(), msg))
             rv = False
         if cmd or (rv is False):
