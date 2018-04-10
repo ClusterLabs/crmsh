@@ -656,7 +656,7 @@ def find_log():
     """
     if constants.EXTRA_LOGS:
         for l in constants.EXTRA_LOGS.split():
-            if os.path.isfile(l) and l not in constants.PCMK_LOG.split():
+            if os.path.isfile(l):
                 return l
 
         tmp_f = os.path.join(constants.WORKDIR, constants.JOURNAL_F)
