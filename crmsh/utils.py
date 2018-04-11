@@ -491,7 +491,7 @@ def create_tempfile(suffix='', dir=None):
 
 
 @contextmanager
-def open_atomic(filepath, mode="r", buffering=-1, fsync=False):
+def open_atomic(filepath, mode="r", buffering=-1, fsync=False, encoding=None):
     """ Open temporary file object that atomically moves to destination upon
     exiting.
 
@@ -510,7 +510,7 @@ def open_atomic(filepath, mode="r", buffering=-1, fsync=False):
     """
 
     with create_tempfile(dir=os.path.dirname(os.path.abspath(filepath))) as tmppath:
-        with open(tmppath, mode, buffering) as file:
+        with open(tmppath, mode, buffering, encoding=encoding) as file:
             try:
                 yield file
             finally:
@@ -525,7 +525,7 @@ def str2file(s, fname):
     Write a string to a file.
     '''
     try:
-        with open_atomic(fname, 'w') as dst:
+        with open_atomic(fname, 'w', encoding='utf-8') as dst:
             dst.write(to_ascii(s))
     except IOError as msg:
         common_err(msg)
