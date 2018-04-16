@@ -840,7 +840,7 @@ P = duration. Y = year. M = month. W = week. D = day. T = time. H =
 hour. M = minute. S = second.
 
 Examples:
-................
+.................
 PT5M = 5 minutes later.
 3D = 3 days later.
 PT1H = 1 hour later.
