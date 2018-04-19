@@ -148,7 +148,15 @@ __crmcompadd ()
 	local i=0
 	for x in $1; do
 		if [[ "$x" == "$3"* ]]; then
+                    if [[ "$x" =~ .*(=|:)$ ]];then
+                        if [[ "$x" =~ ^id=$ ]];then
+                            :
+                        else
+			    COMPREPLY[i++]="$2$x"
+                        fi
+                    else
 			COMPREPLY[i++]="$2$x$4"
+                    fi
 		fi
 	done
 }
@@ -209,7 +217,7 @@ __crm_compgen ()
 		*:*) : great ;;
 		*)   pfx="${cur_%%:*}:" ;;
 		esac
-		cur_="${cur_#*:}"
+		cur_="${cur_##*:}"
 		;;
 	esac
 
