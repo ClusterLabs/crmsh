@@ -195,7 +195,7 @@ class CompletionHelp(object):
     lasttopic = ''
 
     @classmethod
-    def help(cls, topic, helptxt):
+    def help(cls, topic, helptxt, args):
         if cls.lasttopic == topic and \
                 time.time() - cls.laststamp < cls.timeout:
             return
@@ -203,11 +203,14 @@ class CompletionHelp(object):
             import readline
             cmdline = readline.get_line_buffer()
             print("\n%s" % helptxt, end='')
-            if clidisplay.colors_enabled():
-                print("\n%s%s" % (term.render(clidisplay.prompt_noreadline(constants.prompt)),
-                                  cmdline), end=' ')
+            if cmdline.split()[0] != args[0]:
+                prompt = '   > '
             else:
-                print("\n%s%s" % (constants.prompt, cmdline), end=' ')
+                if clidisplay.colors_enabled():
+                    prompt = term.render(clidisplay.prompt_noreadline(constants.prompt))
+                else:
+                    prompt = constants.prompt
+            print("\n%s%s" % (prompt, cmdline), end=' ')
             cls.laststamp = time.time()
             cls.lasttopic = topic
 
@@ -219,7 +222,7 @@ def _prim_params_completer(agent, args):
     if completing.endswith('='):
         if len(completing) > 1 and options.interactive:
             topic = completing[:-1]
-            CompletionHelp.help(topic, agent.meta_parameter(topic))
+            CompletionHelp.help(topic, agent.meta_parameter(topic), args)
         return []
     elif '=' in completing:
         return []
@@ -451,7 +454,7 @@ def container_complete_complex(args):
     if completing.endswith('='):
         if len(completing) > 1 and options.interactive:
             topic = completing[:-1]
-            CompletionHelp.help(topic, container_helptxt(args, constants.container_helptxt, topic))
+            CompletionHelp.help(topic, container_helptxt(args, constants.container_helptxt, topic), args)
         return []
 
     container_options = utils.filter_keys(constants.container_helptxt[container_type].keys(), args)
