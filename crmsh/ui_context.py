@@ -9,6 +9,7 @@ from . import options
 from .msg import common_err, common_info, common_warn
 from . import ui_utils
 from . import userdir
+from . import constants
 
 
 # import logging
@@ -338,10 +339,10 @@ class Context(object):
         '''
         ok = self.current_level().end_game()
         if options.interactive and not options.batch:
-            if self.command_name != "help":
-                print("bye")
-            else:
+            if constants.need_reset:
                 utils.ext_cmd("reset")
+            else:
+                print("bye")
         if ok is False and rc == 0:
             rc = 1
         sys.exit(rc)

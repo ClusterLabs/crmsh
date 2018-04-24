@@ -1152,6 +1152,7 @@ def page_string(s):
     'Page string rendered for TERM.'
     if not s:
         return
+    constants.need_reset = True
     w, h = get_winsize()
     if not need_pager(s, w, h):
         print(term_render(s))
@@ -1159,6 +1160,7 @@ def page_string(s):
         print(term_render(s))
     else:
         pipe_string(get_pager_cmd(), term_render(s).encode('utf-8'))
+    constants.need_reset = False
 
 
 def page_gen(g):

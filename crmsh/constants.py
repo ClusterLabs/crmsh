@@ -322,6 +322,7 @@ graph = {
     },
 }
 
+need_reset = False
 prompt = ''
 tmp_cib = False
 tmp_cib_prompt = "@tmp@"
