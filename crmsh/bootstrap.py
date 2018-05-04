@@ -589,9 +589,9 @@ def init_cluster_local():
     # only try to start hawk if hawk is installed
     if service_is_available("hawk.service"):
         start_service("hawk.service")
-        status("  Hawk cluster interface is now running. To see cluster status, open:")
-        status("    https://%s:7630/" % (_context.ip_address))
-        status("  Log in with username 'hacluster'%s" % (pass_msg))
+        status("Hawk cluster interface is now running. To see cluster status, open:")
+        status("  https://%s:7630/" % (_context.ip_address))
+        status("Log in with username 'hacluster'%s" % (pass_msg))
     else:
         warn("Hawk not installed - not configuring web management interface.")
 
