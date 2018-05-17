@@ -36,6 +36,8 @@ try:
 
     crm_init.verify(data)
 
+    if crm_script.param('bindipaddr') and crm_script.param('bindnetaddr'):
+        crm_script.exit_fail("You should use either 'bindipaddr' or 'bindnetaddr', but not both")
     ret = {}
     ret['iface'] = select_interfaces(crm_script.param('iface'), data)
 

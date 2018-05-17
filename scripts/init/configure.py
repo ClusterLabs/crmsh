@@ -50,6 +50,11 @@ def run_install():
 def make_bindnetaddr():
     host = crm_script.host()
     hostinfo = crm_script.output(2)[host]
+
+    # Bind to the local IP address
+    if crm_script.param('bindipaddr'):
+        return hostinfo['net']['hostname']['ip']
+
     ba = crm_script.param('bindnetaddr')
     if ba:
         return ba
