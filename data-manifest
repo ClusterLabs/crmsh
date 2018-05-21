@@ -102,6 +102,8 @@ test/testcases/history.post
 test/testcases/history.pre
 test/testcases/newfeatures
 test/testcases/newfeatures.exp
+test/testcases/new-syntax
+test/testcases/new-syntax.exp
 test/testcases/node
 test/testcases/node.exp
 test/testcases/options
