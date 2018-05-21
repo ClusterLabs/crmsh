@@ -29,6 +29,8 @@ _IDSPEC_RE = re.compile(r'(\$id-ref|\$id)=(.*)$', re.IGNORECASE)
 _ID_RE = re.compile(r'\$id=(.*)$', re.IGNORECASE)
 _ID_NEW_RE = re.compile(r'([\w-]+):$', re.IGNORECASE)
 _SCORE_RE = re.compile(r"([^:]+):$")
+_SCORE_RE2 = re.compile(r"score=(.+)$")
+_RSC_PATTERN_RE = re.compile(r"rsc-pattern=/?([^/]+)/?$")
 _ROLE_RE = re.compile(r"\$?role=(.+)$", re.IGNORECASE)
 _BOOLOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.boolean_ops)), re.IGNORECASE)
 _UNARYOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.unary_ops)), re.IGNORECASE)
@@ -39,10 +41,17 @@ _UNAME_RE = re.compile(r'([^:]+)(:(normal|member|ping|remote))?$', re.IGNORECASE
 _TEMPLATE_RE = re.compile(r'@(.+)$')
 _RA_TYPE_RE = re.compile(r'[a-z0-9_:-]+$', re.IGNORECASE)
 _TAG_RE = re.compile(r"([a-zA-Z_][^\s:]*):?$")
-_ROLE2_RE = re.compile(r"role=(.+)$", re.IGNORECASE)
+_ROLE2_RE = re.compile(r"(with_role|role)=(.+)$", re.IGNORECASE)
 _TARGET_RE = re.compile(r'([^:]+):$')
 _TARGET_ATTR_RE = re.compile(r'attr:([\w-]+)=([\w-]+)$', re.IGNORECASE)
 _TARGET_PATTERN_RE = re.compile(r'pattern:(.+)$', re.IGNORECASE)
+_ATTR_RE2 = re.compile(r'attribute=(.+)$')
+_OP_RE = re.compile(r'operation=(.+)$')
+_DATE_OP_RE = re.compile(r'operation="?(in_range|gt|lt|date_spec)"?$')
+_VALUE_RE = re.compile(r'value=(.+)$')
+_LOC_ON_RE = re.compile(r'on$')
+_COL_WITH = re.compile(r'with$')
+_OPTIONS_RE = re.compile(r'options$')
 TERMINATORS = ('params', 'meta', 'utilization', 'operations', 'op', 'op_params', 'op_meta', 'rule', 'attributes')
 
 
@@ -136,9 +145,34 @@ class BaseParser(object):
     _BINOP_RE = None
     _VALUE_SOURCE_RE = None
 
+    def __init__(self):
+        self._new_syntax = False
+
     def parse(self, cmd):
         "Called by do_parse(). Raises ParseError if parsing fails."
         raise NotImplementedError
+
+    def is_new_syntax(self):
+        if self._cmd[0] in ["node", "property"]:
+            like = 0
+            for item in self._cmd[1:]:
+                if _SCORE_RE2.match(item):
+                    like += 1
+                if _ATTR_RE2.match(item):
+                    like += 1
+                if _OP_RE.match(item):
+                    like += 1
+                if re.match(r'type=(.+)$', item):
+                    like += 1
+                if _SCORE_RE.match(item):
+                    return False
+                if re.search('.+:.+$', item):
+                    return False
+            if like > 0:
+                return True
+            else:
+                return False
+        return False
 
     def err(self, msg, context=None, token=None):
         "Report a parse error and abort."
@@ -172,7 +206,7 @@ class BaseParser(object):
         out = self.parse(cmd)
         if self.has_tokens():
             self.err("Unknown arguments: " + ' '.join(self._cmd[self._currtok:]))
-        return out
+        return out, self._new_syntax
 
     def try_match(self, rx):
         """
@@ -229,6 +263,9 @@ class BaseParser(object):
         if self._currtok > 0:
             self._currtok -= 1
 
+    def reset(self):
+        self._currtok = 1
+
     def current_token(self):
         if self.has_tokens():
             return self._cmd[self._currtok]
@@ -246,9 +283,12 @@ class BaseParser(object):
         self._currtok = len(self._cmd)
         return ret
 
-    def match_any(self):
+    def match_any(self, msg=None):
         if not self.has_tokens():
-            self.err("Unexpected end of line")
+            if msg:
+                self.err(msg + ", ")
+            else:
+                self.err("Unexpected end of line, ")
         tok = self.current_token()
         self._currtok += 1
         self._lastmatch = tok
@@ -379,8 +419,15 @@ class BaseParser(object):
         """
         t = self.match(_DISPATCH_RE, errmsg=errmsg)
         t = 'parse_' + t.lower()
-        if hasattr(self, t) and callable(getattr(self, t)):
-            return getattr(self, t)()
+        new = t + "_new"
+        if self.is_new_syntax():
+            self._new_syntax = True
+            if hasattr(self, new) and callable(getattr(self, new)):
+                return getattr(self, new)()
+        else:
+            self._new_syntax = False
+            if hasattr(self, t) and callable(getattr(self, t)):
+                return getattr(self, t)()
         self.rewind()  # rewind for more accurate error message
         self.err(errmsg)
 
@@ -394,11 +441,11 @@ class BaseParser(object):
 
     def match_until(self, end_token):
         tokens = []
-        while self.current_token() is not None and self.current_token() != end_token:
+        while self.current_token() is not None and not re.match(end_token, self.current_token()):
             tokens.append(self.match_any())
         return tokens
 
-    def match_attr_list(self, name, tag, allow_empty=True, terminator=None):
+    def match_attr_list(self, name, tag, allow_empty=True, terminator=None, new_syntax=False):
         """
         matches [$id=<id>] [<score>:] <n>=<v> <n>=<v> ... | $id-ref=<id-ref>
         if matchname is False, matches:
@@ -415,16 +462,43 @@ class BaseParser(object):
                 return r
             else:
                 xmlid = self.matched(2)
-        score = None
-        if self.try_match(_SCORE_RE):
-            score = self.matched(1)
-        rules = self.match_rules()
-        values = self.match_nvpairs(minpairs=0, terminator=terminator)
+
+        if new_syntax:
+            score = None
+            values = []
+            rules = []
+
+            if terminator:
+                terminator += ["extra", "meta", "op", "rule"]
+            else:
+                terminator = ["extra", "meta", "op", "rule"]
+            values = self.match_nvpairs(minpairs=0, terminator=terminator)
+            for value in values[:]:
+                if value.get('name') == "score":
+                    score = value.get('value')
+                    values.remove(value)
+                if value.get('name') == "op_type":
+                    if value.get('value') == "meta":
+                        tag = "meta_attributes"
+                    values.remove(value)
+            rules = self.match_rules_new()
+
+            if name != "extra" and self.try_match(r'extra$'):
+                if self.try_match(_SCORE_RE2):
+                    score = self.matched(1)
+                rules = self.match_rules_new()
+        else:
+            score = None
+            if self.try_match(_SCORE_RE):
+                score = self.matched(1)
+            rules = self.match_rules()
+            values = self.match_nvpairs(minpairs=0, terminator=terminator)
+
         if (allow_empty, xmlid, score, len(rules), len(values)) == (False, None, None, 0, 0):
             return None
         return xmlutil.attributes(tag, rules, values, xmlid=xmlid, score=score)
 
-    def match_attr_lists(self, name_map, implicit_initial=None, terminator=None):
+    def match_attr_lists(self, name_map, implicit_initial=None, terminator=None, new_syntax=False):
         """
         generator which matches attr_lists
         name_map: maps CLI name to XML name
@@ -432,17 +506,56 @@ class BaseParser(object):
         to_match = '|'.join(list(name_map.keys()))
         if self.try_match(to_match):
             name = self.matched(0).lower()
-            yield self.match_attr_list(name, name_map[name], terminator=terminator)
+            yield self.match_attr_list(name, name_map[name], terminator=terminator, new_syntax=new_syntax)
         elif implicit_initial is not None:
             attrs = self.match_attr_list(implicit_initial,
                                          name_map[implicit_initial],
                                          allow_empty=False,
-                                         terminator=terminator)
+                                         terminator=terminator,
+                                         new_syntax=new_syntax)
             if attrs is not None:
                 yield attrs
         while self.try_match(to_match):
             name = self.matched(0).lower()
-            yield self.match_attr_list(name, name_map[name], terminator=terminator)
+            yield self.match_attr_list(name, name_map[name], terminator=terminator, new_syntax=new_syntax)
+
+    def match_rules_new(self):
+        '''parse rule definitions'''
+        from .cibconfig import cib_factory
+
+        rules = []
+        while self.try_match('(rule|lifetime)$'):
+            rule = xmlutil.new('rule')
+            rules.append(rule)
+            idref = False
+            if self.try_match_idspec():
+                idtyp, idval = self.matched(1)[1:], self.matched(2)
+                if idtyp == 'id-ref':
+                    idval = cib_factory.resolve_id_ref('rule', idval)
+                    idref = True
+                rule.set(idtyp, idval)
+            if idref:
+                continue
+
+            while self.try_match(_ATTR_RE):
+                if self.matched(1) == "score":
+                    rule.set(*self.validate_score(self.matched(2)))
+                else:
+                    rule.set(self.matched(1), self.matched(2))
+            if rule.get('score') is None and not rule.get('score-attribute'):
+                rule.set("score", "INFINITY")
+
+            while self.try_match(r"expression|date$"):
+                if self.matched(0) == "date":
+                    expression = self.match_date_new(rule)
+                else:
+                    expression = xmlutil.child(rule, self.matched(0))
+                    while self.try_match(_ATTR_RE):
+                        expression.set(self.matched(1), self.matched(2))
+                if self.try_match(_BOOLOP_RE):
+                    if self.matched(1) == "or":
+                        rule.set("boolean-op", self.matched(1))
+        return rules
 
     def match_rules(self):
         '''parse rule definitions'''
@@ -540,6 +653,23 @@ class BaseParser(object):
                 node.set('value-source', val_src_match.group('val_src'))
             return node
 
+    def match_date_new(self, father):
+        node = xmlutil.child(father, 'date_expression')
+        self.try_match(_ATTR_RE)
+        node.set(self.matched(1), self.matched(2))
+        if self.matched(2) == "date_spec":
+            valid_keys = constants.date_spec_names
+            vals = self.match_nvpairs_bykey(valid_keys, minpairs=1)
+            return xmlutil.set_date_expression(node, 'date_spec', vals)
+        while self.try_match(_ATTR_RE):
+            node.set(self.matched(1), self.matched(2))
+        if self.try_match(r"duration$"):
+            valid_keys = list(constants.in_range_attrs) + constants.date_spec_names
+            vals = self.match_nvpairs_bykey(valid_keys, minpairs=1)
+            return xmlutil.set_date_expression(node, 'duration', vals)
+        else:
+            return node
+
     def match_date(self):
         """
         returns for example:
@@ -596,7 +726,7 @@ class BaseParser(object):
         else:
             return ['score-attribute', score]
 
-    def match_arguments(self, out, name_map, implicit_initial=None, terminator=None):
+    def match_arguments(self, out, name_map, implicit_initial=None, terminator=None, new_syntax=False):
         """
         [<name> attr_list]
         [operations id_spec]
@@ -625,19 +755,20 @@ class BaseParser(object):
             if t in names:
                 initial = False
                 if t in oplist:
-                    self.match_operations(out, t == 'operations')
+                    self.match_operations(out, t == 'operations', new_syntax=new_syntax)
                 if t in bundle_list:
                     self.match_container(out, t)
                 else:
                     if bundle_list:
                         terminator = ['network', 'storage', 'primitive']
-                    for attr_list in self.match_attr_lists(name_map, terminator=terminator):
+                    for attr_list in self.match_attr_lists(name_map, terminator=terminator, new_syntax=new_syntax):
                         out.append(attr_list)
             elif initial:
                 initial = False
                 for attr_list in self.match_attr_lists(name_map,
                                                        implicit_initial=implicit_initial,
-                                                       terminator=terminator):
+                                                       terminator=terminator,
+                                                       new_syntax=new_syntax):
                     out.append(attr_list)
             else:
                 break
@@ -671,7 +802,7 @@ class BaseParser(object):
                 self.err("Expected primitive reference, got {}".format(", ".join("{}={}".format(nvp.get('name'), nvp.get('value') or "") for nvp in all_attrs)))
             xmlutil.child(out, 'crmsh-ref', id=all_attrs[0].get('name'))
 
-    def match_op(self, out, pfx='op'):
+    def match_op(self, out, pfx='op', new_syntax=False):
         """
         op <optype> [<n>=<v> ...]
 
@@ -699,7 +830,7 @@ class BaseParser(object):
                 inst_attrs.append(nvp)
         out.append(node)
 
-    def match_operations(self, out, match_id):
+    def match_operations(self, out, match_id, new_syntax=False):
         from .cibconfig import cib_factory
 
         def is_op():
@@ -722,7 +853,7 @@ class BaseParser(object):
         pfx = out.get('id') or 'op'
 
         while is_op():
-            self.match_op(node, pfx=pfx)
+            self.match_op(node, pfx=pfx, new_syntax=new_syntax)
 
 
 _parsers = {}
@@ -754,11 +885,27 @@ def parse_node(self, cmd):
     type :: normal | member | ping | remote
     """
     self.begin(cmd, min_args=1)
+    if self.is_new_syntax():
+        self._new_syntax = True
+    else:
+        self._new_syntax = False
     self.match('node')
     out = xmlutil.new('node')
     xmlutil.maybe_set(out, "id", self.try_match_initial_id() and self.matched(1))
-    self.match(_UNAME_RE, errmsg="Expected uname[:type]")
+    self.match(_UNAME_RE, errmsg="Expected uname")
     out.set("uname", self.matched(1))
+
+    if self._new_syntax:
+        node_attrs = self.match_nvpairs(minpairs=0, terminator=["attributes", "utilization"])
+        for attr in node_attrs:
+            out.set(attr.get('name'), attr.get('value'))
+        self.match_arguments(out, {'attributes': 'instance_attributes',
+                               'utilization': 'utilization'},
+                         implicit_initial='attributes',
+                         terminator=["attributes", "utilization"],
+                         new_syntax=True)
+        return out
+
     if validator.node_type_optional():
         xmlutil.maybe_set(out, "type", self.matched(3))
     else:
@@ -784,7 +931,7 @@ class ResourceParser(BaseParser):
         xmlutil.maybe_set(out, 'provider', cpt[1])
         xmlutil.maybe_set(out, 'type', cpt[2])
 
-    def match_op(self, out, pfx='op'):
+    def match_op(self, out, pfx='op', new_syntax=False):
         """
         op <optype> [<n>=<v> ...]
 
@@ -797,7 +944,10 @@ class ResourceParser(BaseParser):
         """
         self.match('op')
         op_type = self.match_identifier()
-        all_attrs = self.match_nvpairs(minpairs=0)
+        if new_syntax:
+            all_attrs = self.match_nvpairs(minpairs=0, terminator=["extra", "op"])
+        else:
+            all_attrs = self.match_nvpairs(minpairs=0)
         node = xmlutil.new('op', name=op_type)
         if not any(nvp.get('name') == 'interval' for nvp in all_attrs):
             all_attrs.append(xmlutil.nvpair('interval', '0'))
@@ -811,13 +961,21 @@ class ResourceParser(BaseParser):
                 nvpairs_missed += 1
         for i in range(nvpairs_missed):
             self.rewind()
-        for attr_list in self.match_attr_lists({'op_params': 'instance_attributes',
-                                                'op_meta': 'meta_attributes'},
-                                               implicit_initial='op_params'):
-            node.append(attr_list)
+        if new_syntax:
+            for attr_list in self.match_attr_lists({'extra': 'instance_attributes'},
+                                                   implicit_initial='extra',
+                                                   new_syntax=new_syntax):
+                node.append(attr_list)
+
+        else:
+            for attr_list in self.match_attr_lists({'op_params': 'instance_attributes',
+                                                    'op_meta': 'meta_attributes'},
+                                                    implicit_initial='op_params',
+                                                    new_syntax=new_syntax):
+                node.append(attr_list)
         out.append(node)
 
-    def match_operations(self, out, match_id):
+    def match_operations(self, out, match_id, new_syntax=False):
         from .cibconfig import cib_factory
 
         def is_op():
@@ -840,12 +998,32 @@ class ResourceParser(BaseParser):
         pfx = out.get('id') or 'op'
 
         while is_op():
-            self.match_op(node, pfx=pfx)
+            self.match_op(node, pfx=pfx, new_syntax=new_syntax)
+
+    def is_new_syntax(self):
+        like = 0
+        for item in self._cmd[3:]:
+            if _SCORE_RE2.match(item):
+                like += 1
+            if _ATTR_RE2.match(item):
+                like += 1
+            if re.match(r'extra$', item):
+                like += 1
+            if _OP_RE.match(item):
+                like += 1
+            if _SCORE_RE.match(item):
+                return False
+            if re.search('.+:$', item):
+                return False
+        if like > 0:
+            return True
+        else:
+            return False
 
     def parse(self, cmd):
         return self.begin_dispatch(cmd, min_args=2)
 
-    def _primitive_or_template(self):
+    def _primitive_or_template(self, new_syntax=False):
         """
         primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>]
           [params attr_list]
@@ -873,10 +1051,14 @@ class ResourceParser(BaseParser):
                                    'meta': 'meta_attributes',
                                    'utilization': 'utilization',
                                    'operations': 'operations',
-                                   'op': 'op'}, implicit_initial='params')
+                                   'op': 'op'}, implicit_initial='params', new_syntax=new_syntax)
         return out
 
+    def _primitive_or_template_new(self):
+        return self._primitive_or_template(True)
+
     parse_primitive = _primitive_or_template
+    parse_primitive_new = _primitive_or_template_new
     parse_rsc_template = _primitive_or_template
 
     def _master_or_clone(self):
@@ -937,8 +1119,56 @@ class ResourceParser(BaseParser):
 
 @parser_for('location', 'colocation', 'collocation', 'order', 'rsc_ticket')
 class ConstraintParser(BaseParser):
+    def is_new_syntax(self):
+        like = 0
+        for item in self._cmd[2:]:
+            if _SCORE_RE2.match(item):
+                like += 1
+            if _ATTR_RE2.match(item):
+                like += 1
+            if re.match(r'(first|then|with|on|options|resource_set)$', item):
+                like += 1
+            if re.match(r'ticket=(.+)$', item):
+                like += 1
+            if _OP_RE.match(item):
+                like += 1
+            if _SCORE_RE.match(item):
+                return False
+            if re.match(r'\(|\)|{|}|[|]', item):
+                return False
+            if re.search('.+:$', item):
+                return False
+        if like > 0:
+            return True
+        else:
+            return False
+
     def parse(self, cmd):
         return self.begin_dispatch(cmd, min_args=2)
+
+    def parse_location_new(self):
+        out = xmlutil.new('rsc_location', id=self.match_identifier())
+
+        if self.try_match(_RSC_PATTERN_RE):
+            out.set('rsc-pattern', self.matched(1))
+        elif self.try_match('resource_set'):
+            self.try_match_rscset_new(out, self.match_until("(on|rule)$"))
+        else:
+            out.set('rsc', self.match_resource())
+
+        if self.try_match(_LOC_ON_RE):
+            token = self.match_any("expected <node> after \"on\"")
+            if token:
+                out.set('node', token)
+            if self.match(_SCORE_RE2, errmsg="expected <score> after node,"):
+                out.set(*self.validate_score(self.matched(1)))
+        else:
+            rules = self.match_rules_new()
+            if not rules:
+                self.err("expected \"on <node> <score>\" or <rule>, ")
+            out.extend(rules)
+        self.try_match_optional(out)
+        return out
 
     def parse_location(self):
         """
@@ -950,6 +1180,7 @@ class ConstraintParser(BaseParser):
         attribute :: role | resource-discovery
         """
         out = xmlutil.new('rsc_location', id=self.match_identifier())
+
         if self.try_match('^/(.+)/$'):
             out.set('rsc-pattern', self.matched(1))
         elif self.try_match('{'):
@@ -983,6 +1214,28 @@ class ConstraintParser(BaseParser):
             out.extend(rules)
             if not rules:
                 self.err("expected <score>: <node> or <rule> [<rule> ...]")
+
+        return out
+
+    def parse_colocation_new(self):
+        """
+        colocation <id> <score>: <rsc>[:<role>] <rsc>[:<role>] ...
+          [node-attribute=<node_attr>]
+        """
+        out = xmlutil.new('rsc_colocation', id=self.match_identifier())
+
+        if self.try_match('resource_set'):
+            self.try_match_rscset_new(out, self.match_until("lifetime|options"))
+        else:
+            out.set('rsc', self.match_resource())
+            if self.try_match(_ROLE2_RE):
+                out.set('rsc-role', self.matched(2))
+            if self.match(_COL_WITH, errmsg="expected 'with',"):
+                out.set('with-rsc', self.match_resource())
+                if self.try_match(_ROLE2_RE):
+                    out.set('with-rsc-role', self.matched(2))
+        self.try_match_optional(out)
+
         return out
 
     def parse_colocation(self):
@@ -999,6 +1252,30 @@ class ConstraintParser(BaseParser):
         return out
 
     parse_collocation = parse_colocation
+
+    def parse_order_new(self):
+        '''
+        order <id> [{kind|<score>}:] <rsc>[:<action>] <rsc>[:<action>] ...
+          [symmetrical=<bool>]
+
+        kind :: Mandatory | Optional | Serialize
+        '''
+        out = xmlutil.new('rsc_order', id=self.match_identifier())
+
+        if self.try_match('resource_set'):
+            self.try_match_rscset_new(out, self.match_until("lifetime|options"))
+        else:
+            if self.match(r'first$', errmsg="Expected 'first',"):
+                out.set('first', self.match_resource())
+            if self.try_match(r'first-action=(.+)$'):
+                out.set('first-action', self.matched(1))
+            if self.match(r'then$', errmsg="Expected 'then',"):
+                out.set('then', self.match_resource())
+            if self.try_match(r'then-action=(.+)$'):
+                out.set('then-action', self.matched(1))
+        self.try_match_optional(out)
+
+        return out
 
     def parse_order(self):
         '''
@@ -1018,6 +1295,23 @@ class ConstraintParser(BaseParser):
         self.try_match_rscset(out, 'action')
         return out
 
+    def parse_rsc_ticket_new(self):
+        '''
+        '''
+        out = xmlutil.new('rsc_ticket', id=self.match_identifier())
+        self.match(r"ticket=(.+)$", errmsg="Expected ticket=")
+        out.set('ticket', self.matched(1))
+
+        if self.try_match('resource_set'):
+            self.try_match_rscset_new(out, self.match_until(r"options$"))
+        else:
+            out.set('rsc', self.match_resource())
+            if self.try_match(_ROLE2_RE):
+                out.set('rsc-role', self.matched(2))
+        self.try_match_optional(out)
+
+        return out
+
     def parse_rsc_ticket(self):
         '''
         rsc_ticket <id> <ticket_id>: <rsc>[:<role>] [<rsc>[:<role>] ...]
@@ -1033,6 +1327,14 @@ class ConstraintParser(BaseParser):
         self.try_match_rscset(out, 'role', simple_count=1)
         return out
 
+    def try_match_optional(self, out):
+        if self.try_match(_OPTIONS_RE):
+            while self.try_match(_ATTR_RE):
+                if self.matched(1) == "score":
+                    out.set(*self.validate_score(self.matched(2)))
+                else:
+                    out.set(self.matched(1), self.matched(2))
+
     def try_match_rscset(self, out, suffix_type, simple_count=2):
         simple, resources = self.match_resource_set(suffix_type, simple_count=simple_count)
         if simple:
@@ -1047,6 +1349,30 @@ class ConstraintParser(BaseParser):
                     yield v
             self.err("Expected %s | resource_sets" %
                      " ".join(repeat("<rsc>[:<%s>]" % (suffix_type), simple_count)))
+
+    def try_match_rscset_new(self, out, tokens):
+        if not tokens or tokens[-1] == "resource_set":
+            self.err("Empty resource set")
+
+        rscset_arrays = []
+        temp = []
+
+        for token in tokens:
+            if token != "resource_set":
+                temp.append(token)
+            elif temp:
+                rscset_arrays.append(temp)
+                temp = []
+        rscset_arrays.append(temp)
+
+        for rscset in rscset_arrays:
+            rscset_xml = xmlutil.child(out, 'resource_set')
+            for token in rscset:
+                if re.match(_RESOURCE_RE, token):
+                    xmlutil.child(rscset_xml, 'resource_ref', id=token)
+                m = re.match(_NVPAIR_RE, token)
+                if m:
+                    rscset_xml.set(m.group(1), m.group(2))
 
     def try_match_tail(self, rx):
         "ugly hack to prematurely extract a tail attribute"
@@ -1129,6 +1455,10 @@ def property_parser(self, cmd):
               'rsc_defaults': 'meta_attributes',
               'op_defaults': 'meta_attributes'}
     self.begin(cmd, min_args=1)
+    if self.is_new_syntax():
+        self._new_syntax = True
+    else:
+        self._new_syntax = False
     self.match('(%s)$' % '|'.join(self.can_parse))
     if self.matched(1) in constants.defaults_tags:
         root = xmlutil.new(self.matched(1))
@@ -1144,10 +1474,16 @@ def property_parser(self, cmd):
         if idkey == 'id-ref':
             idval = cib_factory.resolve_id_ref(attrs.tag, idval)
         attrs.set(idkey, idval)
-    for rule in self.match_rules():
-        attrs.append(rule)
-    for nvp in self.match_nvpairs(minpairs=0):
-        attrs.append(nvp)
+    if self._new_syntax:
+        for nvp in self.match_nvpairs(minpairs=0):
+            attrs.append(nvp)
+        for rule in self.match_rules_new():
+            attrs.append(rule)
+    else:
+        for rule in self.match_rules():
+            attrs.append(rule)
+        for nvp in self.match_nvpairs(minpairs=0):
+            attrs.append(nvp)
     return root
 
 
@@ -1745,6 +2081,7 @@ def parse(s, comments=None):
     Converts unicode to ascii, XML data to CLI format,
     lexing etc.
     '''
+    _new_syntax = False
     if comments is None:
         comments = []
 
@@ -1754,17 +2091,17 @@ def parse(s, comments=None):
             s = s.decode('utf-8')
         except Exception as e:
             common_err(e)
-            return False
+            return False, _new_syntax
     if isinstance(s, str):
         if s and s.startswith('#'):
             comments.append(s)
-            return None
+            return None, _new_syntax
         if s.startswith('xml'):
             try:
                 s = [x for p in lines2cli(s) for x in p.split()]
             except ValueError as e:
                 common_err(e)
-                return False
+                return False, _new_syntax
         else:
             s = shlex.split(s)
     # but there shouldn't be any newlines (?)
@@ -1773,23 +2110,23 @@ def parse(s, comments=None):
     if s:
         s[0] = s[0].lower()
     if not s:
-        return s
+        return s,  _new_syntax
     kw = s[0]
     parser = _parsers.get(kw)
     if parser is None:
         syntax_err(s, token=s[0], msg="Unknown command")
-        return False
+        return False, _new_syntax
 
     try:
-        ret = parser.do_parse(s)
+        ret, _new_syntax = parser.do_parse(s)
         if ret is not None and len(comments) > 0:
             if ret.tag in constants.defaults_tags:
                 xmlutil.stuff_comments(ret[0], comments)
             else:
                 xmlutil.stuff_comments(ret, comments)
             del comments[:]
-        return ret
+        return ret, _new_syntax
     except ParseError:
-        return False
+        return False, _new_syntax
 
 # vim:ts=4:sw=4:et:

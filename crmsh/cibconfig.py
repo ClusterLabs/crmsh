@@ -577,7 +577,7 @@ class CibObjectSetCli(CibObjectSet):
         comments = []
         for cli_text in lines2cli(s):
             err_buf.incr_lineno()
-            node = parse.parse(cli_text, comments=comments)
+            node, _ = parse.parse(cli_text, comments=comments)
             if node not in (False, None):
                 rc = rc and diff.add(node)
             elif node is False:
@@ -826,14 +826,14 @@ def parse_cli_to_xml(cli, oldnode=None):
     comments = []
     if isinstance(cli, str):
         for s in lines2cli(cli):
-            node = parse.parse(s, comments=comments)
+            node, _new_syntax = parse.parse(s, comments=comments)
     else:  # should be a pre-tokenized list
-        node = parse.parse(cli, comments=comments)
+        node, _new_syntax = parse.parse(cli, comments=comments)
     if node is False:
-        return None, None, None
+        return None, None, None, None
     elif node is None:
-        return None, None, None
-    return postprocess_cli(node, oldnode)
+        return None, None, None, None
+    return postprocess_cli(node, oldnode) + (_new_syntax, )
 
 
 #
@@ -938,8 +938,15 @@ class CibObject(object):
                     comments.append(c.text)
                     continue
                 s = self._repr_cli_child(c, format_mode)
-                if s:
+                if isinstance(s, list):
+                    l.extend(s)
+                elif isinstance(s, str):
                     l.append(s)
+            if cib_factory.get_syntax_type():
+                s = self._repr_optional(format_mode)
+                if s and s != "":
+                    l.append(s)
+            l = [x.rstrip() for x in l]
             return self._cli_format_and_comment(l, comments, format_mode=format_mode)
 
     def _attr_set_str(self, node):
@@ -958,8 +965,13 @@ class CibObject(object):
         # empty set
         # if not (has_nvpairs or idref is not None):
         #    return ''
-
-        ret = "%s " % (clidisplay.keyword(self.set_names[node.tag]))
+        results = []
+        ret = ""
+        if cib_factory.get_syntax_type():
+            if self.set_names[node.tag] != "op_params":
+                ret = "%s " % (clidisplay.keyword(self.set_names[node.tag]))
+        else:
+            ret = "%s " % (clidisplay.keyword(self.set_names[node.tag]))
         node_id = node.get("id")
         if node_id is not None and cib_factory.is_id_refd(node.tag, node_id):
             ret += "%s " % (nvpair_format("$id", node_id))
@@ -977,6 +989,28 @@ class CibObject(object):
                 for item in c.keys():
                     ret += "%s " % nvpair_format(item, c.get(item))
 
+        if cib_factory.get_syntax_type():
+            for c in node.iterchildren():
+                if c.tag == "nvpair":
+                    ret += "%s " % (cli_nvpair(c))
+            if ret:
+                results.append(ret)
+            ret = ""
+
+            score = node.get("score")
+            if score:
+                ret += "%s score=%s " % (clidisplay.keyword("extra"), clidisplay.score(score))
+            if ret:
+                results.append(ret)
+            ret = ""
+
+            for c in node.iterchildren():
+                if c.tag == "rule":
+                    if score is None:
+                        results.append("%s " % clidisplay.keyword("extra"))
+                    results.append(cli_rule(c))
+            return results
+
         score = node.get("score")
         if score:
             ret += "%s: " % (clidisplay.score(score))
@@ -991,9 +1025,49 @@ class CibObject(object):
             ret = ret[:-1]
         return ret
 
+    def _attr_set_str_new(self, node):
+        results = []
+        _keyword = "    %s " % clidisplay.keyword("extra")
+        _score = ""
+        score = node.get("score")
+        if score:
+            _score = "score=%s " % clidisplay.score(score)
+
+        _tmp_string = ""
+        if self.set_names[node.tag] not in ["op_params", "op_meta"]:
+            _tmp_string = "%s " % (clidisplay.keyword(self.set_names[node.tag]))
+        _tmp_rule_string = ""
+        for c in node.iterchildren():
+            if c.tag == "nvpair":
+                _tmp_string += "%s " % cli_nvpair(c)
+            if c.tag == "rule":
+                _tmp_rule_string = "    %s %s" % (clidisplay.keyword("rule"), cli_rule(c))
+        if node.tag == "meta_attributes" and \
+           self.set_names[node.tag] != "meta":
+            _tmp_string += "op_type=meta"
+
+        if self.node.tag == "op":
+            results.append(_keyword + _score + _tmp_string)
+            if _tmp_rule_string != "":
+                results.append(_tmp_rule_string)
+        else:
+            if _tmp_string:
+                results.append(_tmp_string)
+            if _score or _tmp_rule_string != "":
+                results.append(_keyword + _score)
+                if _tmp_rule_string != "":
+                    results.append(_tmp_rule_string)
+        return results
+
     def _repr_cli_child(self, c, format_mode):
         if c.tag in self.set_names:
-            return self._attr_set_str(c)
+            if cib_factory.get_syntax_type():
+                return self._attr_set_str_new(c)
+            else:
+                return self._attr_set_str(c)
+
+    def _repr_optional(self, format_mode):
+        pass
 
     def _get_oldnode(self):
         '''
@@ -1023,7 +1097,7 @@ class CibObject(object):
         Convert CLI representation to a DOM node.
         '''
         oldnode = self._get_oldnode()
-        node, obj_type, obj_id = parse_cli_to_xml(cli, oldnode)
+        node, obj_type, obj_id, _ = parse_cli_to_xml(cli, oldnode)
         return node
 
     def set_node(self, node, oldnode=None):
@@ -1251,14 +1325,14 @@ class CibNode(CibObject):
         uname = self.node.get("uname")
         s = clidisplay.keyword(self.obj_type)
         if self.obj_id != uname:
-            if utils.noquotes(self.obj_id):
-                s = "%s %s:" % (s, self.obj_id)
-            else:
-                s = '%s $id="%s"' % (s, self.obj_id)
+            s = '%s $id="%s"' % (s, self.obj_id)
         s = '%s %s' % (s, clidisplay.ident(uname))
         node_type = self.node.get("type")
         if node_type and node_type != constants.node_default_type:
-            s = '%s:%s' % (s, node_type)
+            if cib_factory.get_syntax_type():
+                s = '%s type=%s' % (s, node_type)
+            else:
+                s = '%s:%s' % (s, node_type)
         return s
 
     def repr_gv(self, gv_obj, from_grp=False):
@@ -1397,7 +1471,10 @@ class CibPrimitive(CibObject):
 
     def _repr_cli_child(self, c, format_mode):
         if c.tag in self.set_names:
-            return self._attr_set_str(c)
+            if cib_factory.get_syntax_type():
+                return self._attr_set_str_new(c)
+            else:
+                return self._attr_set_str(c)
         elif c.tag == "operations":
             l = []
             s = ''
@@ -1692,6 +1769,11 @@ class CibLocation(CibObject):
     '''
 
     def _repr_cli_head(self, format_mode):
+        if cib_factory.get_syntax_type():
+            return self._repr_cli_head_new(format_mode)
+        return self._repr_cli_head_old(format_mode)
+
+    def _repr_cli_head_old(self, format_mode):
         rsc = None
         if "rsc" in list(self.node.keys()):
             rsc = self.node.get("rsc")
@@ -1720,10 +1802,45 @@ class CibLocation(CibObject):
             s = "%s %s: %s" % (s, score, pref_node)
         return s
 
+    def _repr_cli_head_new(self, format_mode):
+        ident = clidisplay.ident(self.obj_id)
+        result = "%s %s" % (clidisplay.keyword(self.obj_type), ident)
+
+        pattern = self.node.get("rsc-pattern")
+        if pattern:
+            rsc = nvpair_format("rsc-pattern", pattern)
+        else:
+            rsc = clidisplay.rscref(self.node.get("rsc"))
+        if rsc:
+            result += " %s" % rsc
+        if self.node.find("rule") is None:
+            pref_node = self.node.get("node")
+            score = clidisplay.score(get_score(self.node))
+            result += " %s %s score=%s" % (clidisplay.keyword("on"), pref_node, score)
+
+        return result
+
     def _repr_cli_child(self, c, format_mode):
+        if c.tag == "resource_set" and cib_factory.get_syntax_type():
+            rscset = rsc_set_constraint(c, self.obj_type)
+            return "%s %s" % (clidisplay.keyword("resource_set"), ' '.join(rscset))
         if c.tag == "rule":
-            return "%s %s" % \
-                (clidisplay.keyword("rule"), cli_rule(c))
+            rule_string = "%s %s" % (clidisplay.keyword("rule"), cli_rule(c))
+            return re.split(r' (?=[^ ]+expression.*attribute)| (?=[^ ]+date[^ _])', rule_string)
+
+    def _repr_optional(self, format_mode):
+        _options = ""
+        known_attrs = ["role", "resource-discovery"]
+        for attr in known_attrs:
+            if attr == "score":
+                val = get_score(self.node)
+            else:
+                val = self.node.get(attr)
+            if val is not None:
+                _options += " %s" % nvpair_format(attr, val)
+        if _options != "":
+            _options = clidisplay.keyword("options") + _options
+        return _options
 
     def check_sanity(self):
         '''
@@ -1832,6 +1949,44 @@ class CibSimpleConstraint(CibObject):
     '''
 
     def _repr_cli_head(self, format_mode):
+        if cib_factory.get_syntax_type():
+            return self._repr_cli_head_new(format_mode)
+        return self._repr_cli_head_old(format_mode)
+
+    def _repr_cli_head_new(self, format_mode):
+        ident = clidisplay.ident(self.obj_id)
+        result = "%s %s" % (clidisplay.keyword(self.obj_type), ident)
+
+        if self.node.find("resource_set") is not None:
+            return result
+
+        if self.obj_type == "order":
+            first = clidisplay.rscref(self.node.get("first"))
+            result += " %s %s" % (clidisplay.keyword("first"), first)
+            first_action = self.node.get("first-action")
+            if first_action:
+                result += " %s" % nvpair_format("first-action", first_action)
+            then = clidisplay.rscref(self.node.get("then"))
+            result += " %s %s" % (clidisplay.keyword("then"), then)
+            then_action = self.node.get("then-action")
+            if then_action:
+                result += " %s" % nvpair_format("then-action", then_action)
+
+        if self.obj_type == "colocation":
+            rsc = clidisplay.rscref(self.node.get("rsc"))
+            result += " %s" % rsc
+            rsc_role = self.node.get("rsc-role")
+            if rsc_role:
+                result += " %s" % nvpair_format("role", rsc_role)
+            _with = clidisplay.rscref(self.node.get("with-rsc"))
+            result += " %s %s" % (clidisplay.keyword("with"), _with)
+            with_role = self.node.get("with-rsc-role")
+            if with_role:
+                result += " %s" % nvpair_format("with_role", with_role)
+
+        return result
+
+    def _repr_cli_head_old(self, format_mode):
         s = clidisplay.keyword(self.obj_type)
         ident = clidisplay.ident(self.obj_id)
         score = get_score(self.node) or get_kind(self.node)
@@ -1853,6 +2008,33 @@ class CibSimpleConstraint(CibObject):
         if score != '':
             s += "%s: " % (clidisplay.score(score))
         return s + ' '.join(col)
+
+    def _repr_cli_child(self, c, format_mode):
+        if c.tag == "resource_set" and cib_factory.get_syntax_type():
+            rscset = rsc_set_constraint(c, self.obj_type)
+            return "%s %s" % (clidisplay.keyword("resource_set"), ' '.join(rscset))
+
+    def _repr_optional(self, format_mode):
+        _options = ""
+        known_attrs = []
+        if self.obj_type == "order":
+            known_attrs = ["kind", "require-all", "score", "symmetrical"]
+        if self.obj_type == "colocation":
+            known_attrs = ["score", "node-attribute"]
+        if self.obj_type == "rsc_ticket":
+            known_attrs = ["loss-policy"]
+        for attr in known_attrs:
+            if attr == "score":
+                val = get_score(self.node)
+                if val == "":
+                    val = None
+            else:
+                val = self.node.get(attr)
+            if val is not None:
+                _options += " %s" % nvpair_format(attr, val)
+        if _options != "":
+            _options = clidisplay.keyword("options") + _options
+        return _options
 
     def _mk_optional_set(self, gv_obj, n):
         '''
@@ -1923,8 +2105,25 @@ class CibRscTicket(CibSimpleConstraint):
     '''
     rsc_ticket constraint.
     '''
-
     def _repr_cli_head(self, format_mode):
+        if cib_factory.get_syntax_type():
+            return self._repr_cli_head_new(format_mode)
+        return self._repr_cli_head_old(format_mode)
+
+    def _repr_cli_head_new(self, format_mode):
+        ident = clidisplay.ident(self.obj_id)
+        result = "%s %s" % (clidisplay.keyword(self.obj_type), ident)
+        ticket = clidisplay.ticket(self.node.get("ticket"))
+        result += " ticket=%s" % ticket
+        rsc = clidisplay.rscref(self.node.get("rsc"))
+        if rsc:
+            result += " %s" % rsc
+            rsc_role = self.node.get("rsc-role")
+            if rsc_role:
+                result += " %s" % nvpair_format("role", rsc_role)
+        return result
+
+    def _repr_cli_head_old(self, format_mode):
         s = clidisplay.keyword(self.obj_type)
         ident = clidisplay.ident(self.obj_id)
         ticket = clidisplay.ticket(self.node.get("ticket"))
@@ -1951,8 +2150,7 @@ class CibProperty(CibObject):
 
     def _repr_cli_child(self, c, format_mode):
         if c.tag == "rule":
-            return ' '.join((clidisplay.keyword("rule"),
-                             cli_rule(c)))
+            return "%s %s " % (clidisplay.keyword("rule"), cli_rule(c))
         elif c.tag == "nvpair":
             return cli_nvpair(c)
         else:
@@ -2367,6 +2565,7 @@ class CibFactory(object):
         # internal (just not to produce silly messages)
         self._no_constraint_rm_msg = False
         self._crm_diff_cmd = None
+        self._new_syntax = False
 
     def is_cib_sane(self):
         # try to initialize
@@ -3376,13 +3575,19 @@ class CibFactory(object):
         del node.attrib['rsc']
         return rsc_obj.add_operation(node)
 
+    def get_syntax_type(self):
+        return self._new_syntax
+
+    def set_syntax_type(self, new_syntax):
+        self._new_syntax = new_syntax
+
     def create_from_cli(self, cli):
         'Create a new cib object from the cli representation.'
         if not self.is_cib_sane():
             common_debug("create_from_cli (%s): is_cib_sane() failed" % (cli))
             return None
         if isinstance(cli, (list, str)):
-            elem, obj_type, obj_id = parse_cli_to_xml(cli)
+            elem, obj_type, obj_id, self._new_syntax = parse_cli_to_xml(cli)
         else:
             elem, obj_type, obj_id = postprocess_cli(cli)
         if elem is None:

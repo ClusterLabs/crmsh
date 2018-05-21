@@ -1415,15 +1415,17 @@ def set_date_expression(expr, tag, values):
     expr: <date_expression/>
     values: [nvpair...]
     """
+    subtag = None
     if set(nvp.get('name') for nvp in values) == set(constants.in_range_attrs):
         for nvp in values:
             expr.set(nvp.get('name'), nvp.get('value'))
         return expr
-    subtag = child(expr, tag)
+    if tag:
+        subtag = child(expr, tag)
     for nvp in values:
         if nvp.get('name') in constants.in_range_attrs:
             expr.set(nvp.get('name'), nvp.get('value'))
-        else:
+        elif subtag is not None:
             subtag.set(nvp.get('name'), nvp.get('value'))
     return expr
 

@@ -121,6 +121,8 @@ op_cli_names = ("monitor",
                 "demote",
                 "notify",
                 "reload")
+op_attr_names = ("interval", "start-delay", "interval-origin", "timeout", "enabled",
+                "record-pending", "role", "on-fail")
 ra_operations = tuple(["probe"] + list(op_cli_names))
 
 subpfx_list = {
@@ -476,6 +478,231 @@ container_helptxt = {
 
         "options": """options:(string)
     Extra command-line options to pass to rkt run"""
+    }
+}
+
+
+location_helptxt = {
+    "rsc-pattern": """rsc-pattern(string)
+A regular expression matching the names of resources to which this constraint applies,
+if rsc is not specified.""",
+
+    "score": """score:(string)    "+INFINITY"|"+inf"|"-INFINITY"|"-inf"|"score number"
+Positive values indicate a preference for running the affected resource(s) on this
+node — the higher the value, the stronger the preference. Negative values indicate the
+resource(s) should avoid this node (a value of -INFINITY changes "should" to "must").""",
+
+    "resource-discovery": """resource-discovery:(string)    "always"|"never"|"exclusive"
+Default: "always"
+Whether Pacemaker should perform resource discovery (that is, check whether the resource
+is already running) for this resource on this node. This should normally be left as the
+default, so that rogue instances of a service can be stopped when they are running where
+they are not supposed to be. However, there are two situations where disabling resource
+discovery is a good idea: when a service is not installed on a node, discovery might return
+an error (properly written OCF agents will not, so this is usually only seen with other agent
+types); and when Pacemaker Remote is used to scale a cluster to hundreds of nodes, limiting
+resource discovery to allowed nodes can significantly boost performance. (since 1.1.13)
+
+• always: Always perform resource discovery for the specified resource on this node.
+• never: Never perform resource discovery for the specified resource on this node. This option
+should generally be used with a -INFINITY score, although that is not strictly required.
+• exclusive: Perform resource discovery for the specified resource only on this node (and other
+nodes similarly marked as exclusive). Multiple location constraints using exclusive discovery
+for the same resource across different nodes creates a subset of nodes resource-discovery is
+exclusive to. If a resource is marked for exclusive discovery on one or more nodes, that resource
+is only allowed to be placed within that subset of nodes."""
+}
+
+
+order_helptxt = {
+    "first-action": """first-action(string)    "start"|"stop"|"promote"|"demote"
+Default: "start"
+The action that the first resource must complete before then-action can be initiated for
+the then resource. Allowed values: start, stop, promote, demote.""",
+
+    "then-action": """then-action(string)    "start"|"stop"|"promote"|"demote"
+Default: value of first-action
+The action that the then resource can execute only after the first-action on the first
+resource has completed. Allowed values: start, stop, promote, demote.""",
+
+    "kind": """kind(string)    "Optional"|"Mandatory"|"Serialize"
+How to enforce the constraint. Allowed values:
+
+• Optional: Just a suggestion. Only applies if both resources are executing the specified
+actions. Any change in state by the first resource will have no effect on the then resource.
+• Mandatory: Always. If first does not perform first-action, then will not be allowed to
+performed then-action. If first is restarted, then (if running) will be stopped beforehand
+and started afterward.
+• Serialize: Ensure that no two stop/start actions occur concurrently for the resources.
+First and then can start in either order, but one must complete starting before the other
+can be started. A typical use case is when resource start-up puts a high load on the host.""",
+
+    "symmetrical": """symmetrical(string)    "True"|"False"
+Default: "True"
+If true, the reverse of the constraint applies for the opposite action (for example, if B
+starts after A starts, then B stops before A stops).""",
+
+    "score": """score:(string)    "+INFINITY"|"+inf"|"-INFINITY"|"-inf"|"score number" """,
+
+    "require-all": """require-all:(string)    "true"|"false"
+Default: "true" """
+}
+
+
+colocation_helptxt = {
+    "score": """score:(string)    "+INFINITY"|"+inf"|"-INFINITY"|"-inf"|"score number"
+Positive values indicate the resources should run on the same node. Negative values indicate
+the resources should run on different nodes. Values of +/- INFINITY change "should" to "must".""",
+
+    "role": """role:(string)    "Started"|"Slave"|"Master"
+An additional attribute of colocation constraints that specifies the role that rsc must be in.
+Allowed values: Started, Master, Slave.""",
+
+    "with_role": """with_role:(string)    "Started"|"Slave"|"Master"
+An additional attribute of colocation constraints that specifies the role that with-rsc must be in.
+Allowed values: Started, Master, Slave.""",
+
+    "node-attribute": """node-attribute:(string)
+Default: "#uname"
+The node attribute that must be the same on the node running rsc and the node running with-rsc for
+the constraint to be satisfied."""
+}
+
+
+rscset_helptxt = {
+    "sequential": """sequential:(string)    "true"|"false"
+Default: "true"
+Whether the members of the set must be acted on in order.""",
+
+    "require-all": """require-all:(string)    "true"|"false"
+Default: "true"
+Whether all members of the set must be active before continuing. With the current
+implementation, the cluster may continue even if only one member of the set is started,
+but if more than one member of the set is starting at the same time, the cluster will
+still wait until all of those have started before continuing (this may change in future
+versions).""",
+
+    "role": """role:(string)
+Limit the effect of the constraint to the specified role.""",
+
+    "action": """action:(string)
+Limit the effect of the constraint to the specified action.""",
+
+    "score": """score:(string)
+Advanced use only. Use a specific score for this set within the constraint."""
+}
+
+
+rules_helptxt = {
+    "role": """role:(string)    "Started"|"Slave"|"Master"
+Limits the rule to apply only when the resource is in the specified role.
+Allowed values are "Started", "Slave", and "Master". A rule with role="Master"
+cannot determine the initial location of a clone instance and will only affect
+which of the active instances will be promoted.""",
+
+    "score": """score:(string)    "+INFINITY"|"+inf"|"-INFINITY"|"-inf"|"score number"
+The score to apply if the rule evaluates to true. Limited to use in rules that
+are part of location constraints.""",
+
+    "score-attribute": """score-attribute:(string)
+The node attribute to look up and use as a score if the rule evaluates to true.
+Limited to use in rules that are part of location constraints.""",
+
+    "boolean-op": """boolean-op:(string)    "and"|"or"
+How to combine the result of multiple expression objects.""",
+
+    "date": {
+        "operation": """operation:(string)    "gt"|"lt"|"in_range"|"date_spec"
+    Compares the current date/time with the start and/or end date, depending on
+    the context. Allowed values:
+    • gt: True if the current date/time is after start
+    • lt: True if the current date/time is before end
+    • in_range: True if the current date/time is after start and before end
+    • date_spec: True if the current date/time matches a date_spec object""",
+
+        "start": """start:(string)
+    A date/time conforming to the ISO8601 specification.""",
+
+        "end": """end:(string)
+    A date/time conforming to the ISO8601 specification. Can be inferred by
+    supplying a value for start and a duration."""
+    },
+
+    "expression": {
+        "attribute": """attribute:(string)
+    The node attribute to test (required)
+    Built-in node attributes:
+    #uname: Node name
+    #id: Node ID
+    #kind: Node type. Possible values are cluster, remote, and container.
+           Kind is remote for Pacemaker Remote nodes created with the
+           ocf:pacemaker:remote resource, and container for Pacemaker Remote
+           guest nodes and bundle nodes
+    #is_dc: "true" if this node is a Designated Controller (DC), "false" otherwise
+    #cluster-name: The value of the cluster-name cluster property, if set
+    #site-name: The value of the site-name cluster property, if set, otherwise
+                identical to #cluster-name
+    #role: The role the relevant multistate resource has on this node. Valid only
+           within a rule for a location constraint for a multistate resource.""",
+
+        "type": """type:(string)
+    Determines how the value(s) should be tested. Allowed values are string, integer,
+    and version.""",
+
+        "operation": """operation:(string)
+    The comparison to perform (required). Allowed values:
+    • lt: True if the value of the node’s attribute is less than value
+    • gt: True if the value of the node’s attribute is greater than value
+    • lte: True if the value of the node’s attribute is less than or equal to value
+    • gte: True if the value of the node’s attribute is greater than or equal to value
+    • eq: True if the value of the node’s attribute is equal to value
+    • ne: True if the value of the node’s attribute is not equal to value
+    • defined: True if the node has the named attribute
+    • not_defined: True if the node does not have the named attribute""",
+
+        "value": """value:(string)
+    User-supplied value for comparison (required)""",
+
+        "value-source": """value-source(string)
+    How the value is derived (since 1.1.17). Allowed values:
+    • literal: value is a literal string to compare against
+    • param: value is the name of a resource parameter to compare against
+      (only valid in location constraints)
+    • meta: value is the name of a resource meta-attribute to compare against
+      (only valid in location constraints)"""
+    },
+
+    "date-common": {
+        "hours": """hours:
+    Allowed values: 0-23""",
+
+        "monthdays": """monthdays:
+    Allowed values: 1-31 (depending on month and year)""",
+
+        "weekdays": """weekdays:
+    Allowed values: 1-7 (1=Monday, 7=Sunday)""",
+
+        "yeardays": """yearsdays:
+    Allowed values: 1-366 (depending on the year)""",
+
+        "months": """months:
+    Allowed values: 1-12""",
+
+        "weeks": """weeks:
+    Allowed values: 1-53 (depending on weekyear)""",
+
+        "years": """years:
+    Year according to the Gregorian calendar""",
+
+        "weekyears": """weekyears:
+    Year in which the week started; e.g. 1 January 2005 can be specified as
+    2005-001 Ordinal, 2005-01-01 Gregorian or 2004-W53-6 Weekly and thus would
+    match years="2005" or weekyears="2004" """,
+
+        "moon": """moon:
+    Allowed values are 0-7 (0 is new, 4 is full moon). Seriously, you can use
+    this. This was implemented to demonstrate the ease with which new comparisons
+    could be added."""
     }
 }
 
