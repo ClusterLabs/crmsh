@@ -18,9 +18,11 @@ def assert_is_not_none(thing):
     assert thing is not None, "Expected non-None value"
 
 
-def roundtrip(cli, debug=False, expected=None, format_mode=-1, strip_color=False):
+def roundtrip(cli, debug=False, expected=None, format_mode=-1, strip_color=False, new_syntax=False):
     parse.validator = MockValidation()
-    node, _, _ = cibconfig.parse_cli_to_xml(cli)
+    if new_syntax:
+        factory.set_syntax_type(True)
+    node, _, _, _ = cibconfig.parse_cli_to_xml(cli)
     assert_is_not_none(node)
     obj = factory.find_object(node.get("id"))
     if obj:
@@ -35,6 +37,7 @@ def roundtrip(cli, debug=False, expected=None, format_mode=-1, strip_color=False
     if strip_color:
         import re
         s = re.sub(r"\$\{[^}]+\}", "", s)
+    s = ' '.join([x for x in s.split(' ') if x])
     if (s != cli) or debug:
         print("GOT:", s)
         print("EXP:", cli)
@@ -44,6 +47,8 @@ def roundtrip(cli, debug=False, expected=None, format_mode=-1, strip_color=False
     else:
         eq_(cli, s)
     assert not debug
+    if new_syntax:
+        factory.set_syntax_type(False)
 
 
 def setup_func():
@@ -61,6 +66,8 @@ def test_rscset():
     roundtrip('colocation foo inf: a b')
     roundtrip('order order_2 Mandatory: [ A B ] C')
     roundtrip('rsc_template public_vm Xen')
+    roundtrip('colocation foo a with b options score=inf', new_syntax=True)
+    roundtrip('order order_2 resource_set A B require-all=false sequential=false resource_set C options kind=Mandatory', new_syntax=True)
 
 
 @with_setup(setup_func, teardown_func)
@@ -72,11 +79,14 @@ def test_group():
 @with_setup(setup_func, teardown_func)
 def test_bnc863736():
     roundtrip('order order_3 Mandatory: [ A B ] C symmetrical=true')
+    roundtrip('order order_3 resource_set A B require-all=false sequential=false resource_set C options kind=Mandatory symmetrical=true',
+               new_syntax=True)
 
 
 @with_setup(setup_func, teardown_func)
 def test_sequential():
     roundtrip('colocation rsc_colocation-master inf: [ vip-master vip-rep sequential=true ] [ msPostgresql:Master sequential=true ]')
+    roundtrip('colocation rsc_colocation-master resource_set vip-master vip-rep require-all=false resource_set msPostgresql require-all=false role=Master options score=inf', new_syntax=True)
 
 
 @with_setup(setup_func, teardown_func)
@@ -96,6 +106,11 @@ def test_broken_colo():
     data = obj.repr_cli(format_mode=-1)
     eq_('colocation colo-2 inf: [ vip1 vip2 sequential=true ] [ apache:Master sequential=true ]', data)
     assert obj.cli_use_validate()
+    factory.set_syntax_type(True)
+    data = obj.repr_cli(format_mode=-1)
+    eq_('colocation colo-2 resource_set vip1 vip2 require-all=false resource_set apache require-all=false role=Master options score=inf', data)
+    assert obj.cli_use_validate()
+    factory.set_syntax_type(False)
 
 
 @with_setup(setup_func, teardown_func)
@@ -236,6 +251,15 @@ def test_param_rules():
               'params 2: rule #uname eq node2 interface=eth2 port=8888 ' +
               'params 1: interface=eth0 port=9999')
 
+    roundtrip('primitive foo Dummy ' +
+              'params laser=yes extra rule expression attribute="#uname" operation=eq value=wizbang ' +
+              'params staff=yes extra rule expression attribute="#uname" operation=eq value=gandalf', new_syntax=True)
+
+    roundtrip('primitive mySpecialRsc me:Special ' +
+              'params interface=eth1 extra score=3 rule expression attribute="#uname" operation=eq value=node1 ' +
+              'params interface=eth2 port=8888 extra score=2 rule expression attribute="#uname" operation=eq value=node2 ' +
+              'params interface=eth0 port=9999 extra score=1', new_syntax=True)
+
 
 @with_setup(setup_func, teardown_func)
 def test_operation_rules():
@@ -246,6 +270,13 @@ def test_operation_rules():
               'op_meta 2: rule #ra-version version:gt 1.0 timeout=120s ' +
               'op_meta 1: timeout=60s')
 
+    roundtrip('primitive test Dummy ' +
+              'op start interval=0 '
+              'extra score=2 fake=fake rule expression attribute="#uname" operation=eq value=node1 ' +
+              'extra score=1 fake=real ' +
+              'extra score=2 timeout=120s op_type=meta rule expression attribute="#ra-version" operation=gt value=1.0 type=version ' +
+              'extra score=1 timeout=60s op_type=meta', new_syntax=True)
+
 
 @with_setup(setup_func, teardown_func)
 def test_multiple_attrsets():
@@ -255,6 +286,12 @@ def test_multiple_attrsets():
     roundtrip('primitive mySpecialRsc me:Special ' +
               'meta 3: interface=eth1 ' +
               'meta 2: port=8888')
+    roundtrip('primitive mySpecialRsc me:Special ' +
+              'params interface=eth1 extra score=3 ' +
+              'params port=8888 extra score=2', new_syntax=True)
+    roundtrip('primitive mySpecialRsc me:Special ' +
+              'meta interface=eth1 extra score=3 ' +
+              'meta port=8888 extra score=2', new_syntax=True)
 
 
 @with_setup(setup_func, teardown_func)
@@ -279,6 +316,9 @@ def test_rules():
     roundtrip('primitive p1 Dummy params ' +
               'rule $role=Started date in start=2009-05-26 end=2010-05-26 ' +
               'or date gt 2014-01-01 state=2')
+    roundtrip('primitive p1 Dummy params state=2 extra ' +
+              'rule $role=Started date operation=in_range start=2009-05-26 end=2010-05-26 ' +
+              'or date operation=gt start=2014-01-01', new_syntax=True)
 
 
 @with_setup(setup_func, teardown_func)
@@ -299,6 +339,7 @@ def test_topology_1114_pattern():
 @with_setup(setup_func, teardown_func)
 def test_locrule():
     roundtrip('location loc-testfs-with-eth1 testfs rule ethmonitor-eth1 eq 1')
+    roundtrip('location loc-testfs-with-eth1 testfs rule expression attribute=ethmonitor-eth1 operation=eq value=1', new_syntax=True)
 
 
 @with_setup(setup_func, teardown_func)

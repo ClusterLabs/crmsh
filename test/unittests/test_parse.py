@@ -102,7 +102,7 @@ class TestCliParser(unittest.TestCase):
         self.comments = []
 
     def _parse(self, s):
-        return parse.parse(s, comments=self.comments)
+        return parse.parse(s, comments=self.comments)[0]
 
     def test_node(self):
         out = self._parse('node node-1')
@@ -121,6 +121,10 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.get('uname'), 'node-1')
 
         out = self._parse('node $id=testid node-1:ping')
+        self.assertEqual(out.get('id'), 'testid')
+        self.assertEqual(out.get('uname'), 'node-1')
+        self.assertEqual(out.get('type'), 'ping')
+        out = self._parse('node $id=testid node-1 type=ping')
         self.assertEqual(out.get('id'), 'testid')
         self.assertEqual(out.get('uname'), 'node-1')
         self.assertEqual(out.get('type'), 'ping')
@@ -221,13 +225,22 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.get('rsc'), 'resource')
         self.assertEqual(out.get('score'), 'INFINITY')
         self.assertEqual(out.get('node'), 'foo')
+        out = self._parse('location loc-1 resource on foo score=inf')
+        self.assertEqual(out.get('id'), 'loc-1')
+        self.assertEqual(out.get('rsc'), 'resource')
+        self.assertEqual(out.get('score'), 'INFINITY')
+        self.assertEqual(out.get('node'), 'foo')
 
         out = self._parse('location loc-1 /foo.*/ inf: bar')
         self.assertEqual(out.get('id'), 'loc-1')
         self.assertEqual(out.get('rsc-pattern'), 'foo.*')
         self.assertEqual(out.get('score'), 'INFINITY')
         self.assertEqual(out.get('node'), 'bar')
-        #print out
+        out = self._parse('location loc-1 rsc-pattern=foo.* on bar score=inf')
+        self.assertEqual(out.get('id'), 'loc-1')
+        self.assertEqual(out.get('rsc-pattern'), 'foo.*')
+        self.assertEqual(out.get('score'), 'INFINITY')
+        self.assertEqual(out.get('node'), 'bar')
 
         out = self._parse('location loc-1 // inf: bar')
         self.assertFalse(out)
@@ -237,9 +250,17 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(['one', 'two', 'three', 'four'], out.xpath('//resource_ref/@id'))
         self.assertEqual(out.get('score'), 'INFINITY')
         self.assertEqual(out.get('node'), 'bar')
-        #print out
+        out = self._parse('location loc-1 resource_set one resource_set two three sequential=false resource_set four on bar score=inf')
+        self.assertEqual(out.get('id'), 'loc-1')
+        self.assertEqual(['one', 'two', 'three', 'four'], out.xpath('//resource_ref/@id'))
+        self.assertEqual(out.get('score'), 'INFINITY')
+        self.assertEqual(out.get('node'), 'bar')
 
         out = self._parse('location loc-1 thing rule role=slave -inf: #uname eq madrid')
+        self.assertEqual(out.get('id'), 'loc-1')
+        self.assertEqual(out.get('rsc'), 'thing')
+        self.assertEqual(out.get('score'), None)
+        out = self._parse('location loc-1 thing rule role=slave score=-inf expression attribute=#uname operation=eq value=madrid')
         self.assertEqual(out.get('id'), 'loc-1')
         self.assertEqual(out.get('rsc'), 'thing')
         self.assertEqual(out.get('score'), None)
@@ -252,6 +273,10 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.get('id'), 'col-1')
         self.assertEqual(['foo', 'bar', 'wiz'], out.xpath('//resource_ref/@id'))
         self.assertEqual([], out.xpath('//resource_set[@name="sequential"]/@value'))
+        out = self._parse('colocation col-1 resource_set foo role=Master resource_set bar wiz options score=inf')
+        self.assertEqual(out.get('id'), 'col-1')
+        self.assertEqual(['foo', 'bar', 'wiz'], out.xpath('//resource_ref/@id'))
+        self.assertEqual([], out.xpath('//resource_set[@name="sequential"]/@value'))
 
         out = self._parse(
             'colocation col-1 -20: foo:Master ( bar wiz ) ( zip zoo ) node-attribute="fiz"')
@@ -259,8 +284,16 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.get('score'), '-20')
         self.assertEqual(['foo', 'bar', 'wiz', 'zip', 'zoo'], out.xpath('//resource_ref/@id'))
         self.assertEqual(['fiz'], out.xpath('//@node-attribute'))
+        out = self._parse(
+            'colocation col-1 resource_set foo role=Master resource_set bar wiz sequential=false resource_set zip zoo sequential=false options score=-20 node-attribute="fiz"')
+        self.assertEqual(out.get('id'), 'col-1')
+        self.assertEqual(out.get('score'), '-20')
+        self.assertEqual(['foo', 'bar', 'wiz', 'zip', 'zoo'], out.xpath('//resource_ref/@id'))
+        self.assertEqual(['fiz'], out.xpath('//@node-attribute'))
 
         out = self._parse('colocation col-1 0: a:master b')
+        self.assertEqual(out.get('id'), 'col-1')
+        out = self._parse('colocation col-1 a role=Master with b options score=0')
         self.assertEqual(out.get('id'), 'col-1')
 
         out = self._parse('colocation col-1 10: ) bar wiz')
@@ -279,35 +312,61 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         self.assertEqual(['false'], out.xpath('/rsc_order/resource_set/@require-all'))
         self.assertEqual(['A', 'B', 'C'], out.xpath('//resource_ref/@id'))
+        out = self._parse('order o1 resource_set A B require-all=false resource_set C options kind=Mandatory')
+        self.assertEqual(['Mandatory'], out.xpath('/rsc_order/@kind'))
+        self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
+        self.assertEqual(['false'], out.xpath('/rsc_order/resource_set/@require-all'))
+        self.assertEqual(['A', 'B', 'C'], out.xpath('//resource_ref/@id'))
 
         out = self._parse('order o1 Mandatory: [ A B sequential=false ] C')
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         #self.assertTrue(['require-all', 'false'] in out.resources[0][1])
         #self.assertTrue(['sequential', 'false'] in out.resources[0][1])
         self.assertEqual(out.get('id'), 'o1')
+        out = self._parse('order o1 resource_set A B require-all=false resource_set C options kind=Mandatory')
+        self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
+        self.assertEqual(out.get('id'), 'o1')
 
         out = self._parse('order o1 Mandatory: A B C sequential=false')
         self.assertEqual(1, len(out.xpath('/rsc_order/resource_set')))
         #self.assertTrue(['sequential', 'false'] in out.resources[0][1])
+        self.assertEqual(out.get('id'), 'o1')
+        out = self._parse('order o1 resource_set A B C sequential=false options kind=Mandatory')
+        self.assertEqual(1, len(out.xpath('/rsc_order/resource_set')))
         self.assertEqual(out.get('id'), 'o1')
 
         out = self._parse('order o1 Mandatory: A B C sequential=true')
         self.assertEqual(1, len(out.xpath('/rsc_order/resource_set')))
         #self.assertTrue(['sequential', 'true'] not in out.resources[0][1])
         self.assertEqual(out.get('id'), 'o1')
+        out = self._parse('order o1 resource_set A B C sequential=true options kind=Mandatory')
+        self.assertEqual(1, len(out.xpath('/rsc_order/resource_set')))
+        self.assertEqual(out.get('id'), 'o1')
 
         out = self._parse('order c_apache_1 Mandatory: apache:start ip_1')
         self.assertEqual(out.get('id'), 'c_apache_1')
+        out = self._parse('order c_apache_1 first apache first-action=start then ip_1 options kind=Mandatory')
+        self.assertEqual(out.get('id'), 'c_apache_1')
 
         out = self._parse('order c_apache_2 Mandatory: apache:start ip_1 ip_2 ip_3')
+        self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
+        self.assertEqual(out.get('id'), 'c_apache_2')
+        out = self._parse('order c_apache_2 resource_set apache action=start resource_set ip_1 ip_2 ip_3 options kind=Mandatory')
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         self.assertEqual(out.get('id'), 'c_apache_2')
 
         out = self._parse('order o1 Serialize: A ( B C )')
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         self.assertEqual(out.get('id'), 'o1')
+        out = self._parse('order o1 resource_set A resource_set B C sequential=false options kind=Serialize')
+        self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
+        self.assertEqual(out.get('id'), 'o1')
 
         out = self._parse('order o1 Serialize: A ( B C ) symmetrical=false')
+        self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
+        self.assertEqual(out.get('id'), 'o1')
+        self.assertEqual(['false'], out.xpath('//@symmetrical'))
+        out = self._parse('order o1 resource_set A resource_set B C sequential=false options kind=Serialize symmetrical=false')
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         self.assertEqual(out.get('id'), 'o1')
         self.assertEqual(['false'], out.xpath('//@symmetrical'))
@@ -316,13 +375,26 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         self.assertEqual(out.get('id'), 'o1')
         self.assertEqual(['true'], out.xpath('//@symmetrical'))
+        out = self._parse('order o1 resource_set A resource_set B C sequential=false options kind=Serialize symmetrical=true')
+        self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
+        self.assertEqual(out.get('id'), 'o1')
+        self.assertEqual(['true'], out.xpath('//@symmetrical'))
 
         inp = 'colocation rsc_colocation-master INFINITY: [ vip-master vip-rep sequential=true ] [ msPostgresql:Master sequential=true ]'
         out = self._parse(inp)
         self.assertEqual(2, len(out.xpath('/rsc_colocation/resource_set')))
         self.assertEqual(out.get('id'), 'rsc_colocation-master')
+        inp = 'colocation rsc_colocation-master resource_set vip-master vip-rep require-all=false resource_set msPostgresql require-all=false role=Master options score=INFINITY'
+        out = self._parse(inp)
+        self.assertEqual(2, len(out.xpath('/rsc_colocation/resource_set')))
+        self.assertEqual(out.get('id'), 'rsc_colocation-master')
 
         out = self._parse('order order_2 Mandatory: [ A B ] C')
+        self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
+        self.assertEqual(out.get('id'), 'order_2')
+        self.assertEqual(['Mandatory'], out.xpath('/rsc_order/@kind'))
+        self.assertEqual(['false'], out.xpath('//resource_set/@sequential'))
+        out = self._parse('order order_2 resource_set A B require-all=false sequential=false resource_set C options kind=Mandatory')
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         self.assertEqual(out.get('id'), 'order_2')
         self.assertEqual(['Mandatory'], out.xpath('/rsc_order/@kind'))
@@ -335,16 +407,30 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(['stop'], out.xpath('/rsc_order/@first-action'))
         self.assertEqual(['group2'], out.xpath('/rsc_order/@then'))
         self.assertEqual(['start'], out.xpath('/rsc_order/@then-action'))
+        out = self._parse('order order-1 first group1 first-action=stop then group2 then-action=start options kind=Optional')
+        self.assertEqual(out.get('id'), 'order-1')
+        self.assertEqual(['Optional'], out.xpath('/rsc_order/@kind'))
+        self.assertEqual(['group1'], out.xpath('/rsc_order/@first'))
+        self.assertEqual(['stop'], out.xpath('/rsc_order/@first-action'))
+        self.assertEqual(['group2'], out.xpath('/rsc_order/@then'))
+        self.assertEqual(['start'], out.xpath('/rsc_order/@then-action'))
 
     def test_ticket(self):
         out = self._parse('rsc_ticket ticket-A_public-ip ticket-A: public-ip')
         self.assertEqual(out.get('id'), 'ticket-A_public-ip')
+        out = self._parse('rsc_ticket ticket-A_public-ip ticket=ticket-A public-ip')
+        self.assertEqual(out.get('id'), 'ticket-A_public-ip')
 
         out = self._parse('rsc_ticket ticket-A_bigdb ticket-A: bigdb loss-policy=fence')
+        self.assertEqual(out.get('id'), 'ticket-A_bigdb')
+        out = self._parse('rsc_ticket ticket-A_bigdb ticket=ticket-A bigdb options loss-policy=fence')
         self.assertEqual(out.get('id'), 'ticket-A_bigdb')
 
         out = self._parse(
             'rsc_ticket ticket-B_storage ticket-B: drbd-a:Master drbd-b:Master')
+        self.assertEqual(out.get('id'), 'ticket-B_storage')
+        out = self._parse(
+            'rsc_ticket ticket-B_storage ticket=ticket-B resource_set drbd-a drbd-b role=Master')
         self.assertEqual(out.get('id'), 'ticket-B_storage')
 
     def test_bundle(self):
@@ -416,14 +502,22 @@ class TestCliParser(unittest.TestCase):
         # missing score
         out = self._parse('property rule #uname eq node1 stonith-enabled=no')
         self.assertEqual(['INFINITY'], out.xpath('//@score'))
+        out = self._parse('property stonith-enabled=no rule expression attribute=#uname operation=eq value=node1')
+        self.assertEqual(['INFINITY'], out.xpath('//@score'))
 
         out = self._parse('property rule 10: #uname eq node1 stonith-enabled=no')
+        self.assertEqual(['no'], out.xpath('//nvpair[@name="stonith-enabled"]/@value'))
+        self.assertEqual(['node1'], out.xpath('//expression[@attribute="#uname"]/@value'))
+        out = self._parse('property stonith-enabled=no rule score=10 expression attribute=#uname operation=eq value=node1')
         self.assertEqual(['no'], out.xpath('//nvpair[@name="stonith-enabled"]/@value'))
         self.assertEqual(['node1'], out.xpath('//expression[@attribute="#uname"]/@value'))
 
         out = self._parse('property rule +inf: date spec years=2014 stonith-enabled=no')
         self.assertEqual(['no'], out.xpath('//nvpair[@name="stonith-enabled"]/@value'))
         self.assertEqual(['2014'], out.xpath('//date_spec/@years'))
+        out = self._parse('property stonith-enabled=no rule score=+inf date operation=date_spec years=2018')
+        self.assertEqual(['no'], out.xpath('//nvpair[@name="stonith-enabled"]/@value'))
+        self.assertEqual(['2018'], out.xpath('//date_spec/@years'))
 
         out = self._parse('rsc_defaults failure-timeout=3m')
         self.assertEqual(['3m'], out.xpath('//nvpair[@name="failure-timeout"]/@value'))
@@ -558,6 +652,11 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual('clone', outp[1].tag)
 
         out = self._parse('LOCATION loc-1 resource INF: foo')
+        self.assertEqual(out.get('id'), 'loc-1')
+        self.assertEqual(out.get('rsc'), 'resource')
+        self.assertEqual(out.get('score'), 'INFINITY')
+        self.assertEqual(out.get('node'), 'foo')
+        out = self._parse('LOCATION loc-1 resource on foo score=INF')
         self.assertEqual(out.get('id'), 'loc-1')
         self.assertEqual(out.get('rsc'), 'resource')
         self.assertEqual(out.get('score'), 'INFINITY')

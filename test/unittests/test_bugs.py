@@ -257,6 +257,13 @@ end="2014-05-17 17:56:11Z"/>
     exp = 'location cli-prefer-dummy-resource dummy-resource role=Started rule #uname eq x64-4 and date lt "2014-05-17 17:56:11Z"'
     assert data == exp
     assert obj.cli_use_validate()
+    factory.set_syntax_type(True)
+    data = obj.repr_cli(format_mode=-1)
+    print("OUTPUT:", data)
+    exp = 'location cli-prefer-dummy-resource dummy-resource rule expression attribute="#uname" operation=eq value=x64-4 and date operation=lt end="2014-05-17 17:56:11Z" options role=Started'
+    assert data == exp
+    assert obj.cli_use_validate()
+    factory.set_syntax_type(False)
 
 
 @with_setup(setup_func, teardown_func)
@@ -273,6 +280,13 @@ def test_order_without_score_kind():
     exp = 'order order-a-b a:promote b:start'
     assert data == exp
     assert obj.cli_use_validate()
+    factory.set_syntax_type(True)
+    data = obj.repr_cli(format_mode=-1)
+    print("OUTPUT:", data)
+    exp = 'order order-a-b first a first-action=promote then b then-action=start'
+    assert data == exp
+    assert obj.cli_use_validate()
+    factory.set_syntax_type(False)
 
 
 
@@ -345,6 +359,14 @@ def test_pengine_test():
     exp = 'primitive rsc1 ocf:pacemaker:Dummy params rule 0: #cluster-name eq clusterA state="/var/run/Dummy-rsc1-clusterA" params rule 0: #cluster-name eq clusterB state="/var/run/Dummy-rsc1-clusterB" op monitor interval=10'
     assert data == exp
     assert obj.cli_use_validate()
+    factory.set_syntax_type(True)
+    data = obj.repr_cli(format_mode=-1)
+    data = ' '.join(data.split())
+    print("OUTPUT:", data)
+    exp = 'primitive rsc1 ocf:pacemaker:Dummy params state="/var/run/Dummy-rsc1-clusterA" extra rule score=0 expression attribute="#cluster-name" operation=eq value=clusterA params state="/var/run/Dummy-rsc1-clusterB" extra rule score=0 expression attribute="#cluster-name" operation=eq value=clusterB op monitor interval=10'
+    assert data == exp
+    assert obj.cli_use_validate()
+    factory.set_syntax_type(False)
 
 
 @with_setup(setup_func, teardown_func)
@@ -475,7 +497,7 @@ def test_nodeattrs():
     obj = factory.create_from_node(data)
     assert obj is not None
     data = obj.repr_cli(format_mode=-1)
-    exp = 'node 1: dell71 attributes staging-0-0-placement=true meta-0-0-placement=true attributes standby=off'
+    exp = 'node $id="1" dell71 attributes staging-0-0-placement=true meta-0-0-placement=true attributes standby=off'
     assert data == exp
     assert obj.cli_use_validate()
 
@@ -512,6 +534,10 @@ def test_group_constraint_location():
     factory.create_object('location', 'loc-p1', 'p1', 'inf:', 'node1')
     c = factory.find_object('loc-p1')
     assert c and c.check_sanity() == 0
+    factory.delete('loc-p1')
+    factory.create_object('location', 'loc-p1', 'p1', 'on', 'node1', 'score=inf')
+    c = factory.find_object('loc-p1')
+    assert c and c.check_sanity() == 0
 
 
 @with_setup(setup_func, teardown_func)
@@ -523,6 +549,10 @@ def test_group_constraint_colocation():
     factory.create_object('primitive', 'p2', 'Dummy')
     factory.create_object('group', 'g1', 'p1', 'p2')
     factory.create_object('colocation', 'coloc-p1-p2', 'inf:', 'p1', 'p2')
+    c = factory.find_object('coloc-p1-p2')
+    assert c and c.check_sanity() > 0
+    factory.delete('coloc-p1-p2')
+    factory.create_object('colocation', 'coloc-p1-p2', 'p1', 'with', 'p2', 'options', 'score=inf')
     c = factory.find_object('coloc-p1-p2')
     assert c and c.check_sanity() > 0
 
@@ -539,6 +569,10 @@ def test_group_constraint_colocation_rscset():
     factory.create_object('colocation', 'coloc-p1-p2-p3', 'inf:', 'p1', 'p2', 'p3')
     c = factory.find_object('coloc-p1-p2-p3')
     assert c and c.check_sanity() > 0
+    factory.delete('coloc-p1-p2-p3')
+    factory.create_object('colocation', 'coloc-p1-p2-p3', 'resource_set', 'p1', 'p2', 'p3', 'options', 'score=inf')
+    c = factory.find_object('coloc-p1-p2-p3')
+    assert c and c.check_sanity() > 0
 
 
 @with_setup(setup_func, teardown_func)
@@ -551,6 +585,10 @@ def test_clone_constraint_colocation_rscset():
     factory.create_object('primitive', 'p3', 'Dummy')
     factory.create_object('clone', 'c1', 'p1')
     factory.create_object('colocation', 'coloc-p1-p2-p3', 'inf:', 'p1', 'p2', 'p3')
+    c = factory.find_object('coloc-p1-p2-p3')
+    assert c and c.check_sanity() > 0
+    factory.delete('coloc-p1-p2-p3')
+    factory.create_object('colocation', 'coloc-p1-p2-p3', 'resource_set', 'p1', 'p2', 'p3', 'options', 'score=inf')
     c = factory.find_object('coloc-p1-p2-p3')
     assert c and c.check_sanity() > 0
 
@@ -815,6 +853,101 @@ op_defaults op-options: \
 
 
 @with_setup(setup_func, teardown_func)
+def test_id_collision_breakage_3():
+    from crmsh import clidisplay
+
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+    with clidisplay.nopretty():
+        original_cib = obj.repr()
+    print(original_cib)
+
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+
+    ok = obj.save("""node 168633610: webui
+node 168633611: node1
+rsc_template web-server apache \
+        params port=8000 \
+        op monitor interval=10s
+primitive d0 Dummy \
+        meta target-role=Started
+primitive d1 Dummy
+primitive d2 Dummy
+# Never use this STONITH agent in production!
+primitive development-stonith stonith:null \
+        params hostlist="webui node1 node2 node3"
+primitive proxy systemd:haproxy \
+        op monitor interval=10s
+primitive proxy-vip IPaddr2 \
+        params ip=10.13.37.20
+primitive srv1 @web-server
+primitive srv2 @web-server
+primitive vip1 IPaddr2 \
+        params ip=10.13.37.21 \
+        op monitor interval=20s
+primitive vip2 IPaddr2 \
+        params ip=10.13.37.22 \
+        op monitor interval=20s
+primitive virtual-ip IPaddr2 \
+        params ip=10.13.37.77 lvs_support=false \
+        op start timeout=20 interval=0 \
+        op stop timeout=20 interval=0 \
+        op monitor interval=10 timeout=20
+primitive yet-another-virtual-ip IPaddr2 \
+        params ip=10.13.37.72 cidr_netmask=24 \
+        op start interval=0 timeout=20 \
+        op stop interval=0 timeout=20 \
+        op monitor interval=10 timeout=20 \
+        meta target-role=Started
+group dovip d0 virtual-ip \
+        meta target-role=Stopped
+group g-proxy proxy-vip proxy
+group g-serv1 vip1 srv1
+group g-serv2 vip2 srv2
+clone d2-clone d2 \
+        meta target-role=Started
+tag dummytag d0 d1 d1-on-node1 d2 d2-clone
+# Never put the two web servers on the same node
+colocation co-serv g-serv1 with g-serv2 options score=-inf
+location d1-on-node1 d1 on node1 score=inf
+# Never put any web server or haproxy on webui
+location l-avoid-webui resource_set g-proxy g-serv1 g-serv2 on webui score=-inf
+# Prever to spread groups across nodes
+location l-proxy g-proxy on node1 score=200
+location l-serv1 g-serv1 on node2 score=200
+location l-serv2 g-serv2 on node3 score=200
+property cib-bootstrap-options: \
+        have-watchdog=false \
+        dc-version="1.1.13+git20150917.20c2178-224.2-1.1.13+git20150917.20c2178" \
+        cluster-infrastructure=corosync \
+        cluster-name=hacluster \
+        stonith-enabled=true \
+        no-quorum-policy=ignore \
+        placement-strategy=balanced
+rsc_defaults rsc-options: \
+        resource-stickiness=1 \
+        migration-threshold=3
+op_defaults op-options: \
+        timeout=600 \
+        record-pending=true
+""")
+    assert ok
+
+    obj = cibconfig.mkset_obj()
+    assert obj is not None
+    ok = obj.save(original_cib)
+    assert ok
+    obj = cibconfig.mkset_obj()
+    with clidisplay.nopretty():
+        print("*** ORIGINAL")
+        print(original_cib)
+        print("*** NOW")
+        print(obj.repr())
+        assert original_cib == obj.repr()
+
+
+@with_setup(setup_func, teardown_func)
 def test_bug_110():
     """
     configuring attribute-based fencing-topology
@@ -857,6 +990,15 @@ def test_reordering_resource_sets():
     obj2 = cibconfig.mkset_obj('o1')
     with clidisplay.nopretty():
         assert "order o1 p4 p3 p2 p1" == obj2.repr().strip()
+
+    factory.delete('o1')
+    o1 = factory.create_object('order', 'o1', 'resource_set', 'p1', 'p2', 'p3', 'p4')
+    assert o1 is True
+
+    obj = cibconfig.mkset_obj('o1')
+    assert obj is not None
+    rc = obj.save('order o1 resource_set p4 p3 p2 p1')
+    assert rc == True
 
 
 @with_setup(setup_func, teardown_func)
