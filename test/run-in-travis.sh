@@ -22,6 +22,7 @@ regression_tests() {
 }
 
 unit_tests
+rc_unittest=$?
 configure
 make_install
-regression_tests
+regression_tests && exit $rc_unittest
