@@ -60,10 +60,15 @@ def exit_handler():
 
 # prefer the user set PATH
 def envsetup():
-    mybinpath = os.path.dirname(sys.argv[0])
     path = os.environ["PATH"].split(':')
-    for p in mybinpath, config.path.crm_daemon_dir:
-        if p not in path:
+    # always add these dirs to PATH if they exist
+    libexec_dirs = ('/usr/lib64', '/usr/libexec', '/usr/lib',
+                    '/usr/local/lib64', '/usr/local/libexec', '/usr/local/lib')
+    pacemaker_dirs = set("{}/pacemaker".format(d) for d in libexec_dirs)
+    pacemaker_dirs.add(config.path.crm_daemon_dir)
+    pacemaker_dirs.add(os.path.dirname(sys.argv[0]))
+    for p in pacemaker_dirs:
+        if p not in path and os.path.isdir(p):
             os.environ['PATH'] = "%s:%s" % (os.environ['PATH'], p)
 
 
