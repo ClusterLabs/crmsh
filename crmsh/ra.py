@@ -190,7 +190,7 @@ def can_use_lrmadmin():
         return False
     if userdir.getuser() not in ("root", config.path.crm_daemon_user):
         return False
-    if not (is_program(lrmadmin_prog) and is_process("lrmd")):
+    if not (is_program(lrmadmin_prog) and is_process(pacemaker_execd())):
         return False
     return utils.ext_cmd(">/dev/null 2>&1 %s -C" % lrmadmin_prog) == 0
 
@@ -268,24 +268,23 @@ def ra_types(ra_class="ocf", ra_provider=""):
 
 @utils.memoize
 def get_pe_meta():
-    return RAInfo("pengine", "metadata")
+    return RAInfo(utils.pacemaker_schedulerd(), "metadata")
 
 
 @utils.memoize
 def get_crmd_meta():
-    info = RAInfo("crmd", "metadata")
-    info.exclude_from_completion(constants.crmd_metadata_do_not_complete)
-    return info
+    return RAInfo(utils.pacemaker_controld(), "metadata",
+                  exclude_from_completion=constants.crmd_metadata_do_not_complete)
 
 
 @utils.memoize
 def get_stonithd_meta():
-    return RAInfo("stonithd", "metadata")
+    return RAInfo(utils.pacemaker_fenced(), "metadata")
 
 
 @utils.memoize
 def get_cib_meta():
-    return RAInfo("cib", "metadata")
+    return RAInfo(utils.pacemaker_based(), "metadata")
 
 
 @utils.memoize
@@ -308,7 +307,7 @@ def prog_meta(prog):
     '''
     Do external program metadata.
     '''
-    prog = is_program(prog)
+    prog = utils.pacemaker_daemon(prog)
     if prog:
         rc, l = stdout2list("%s metadata" % prog)
         if rc == 0:
@@ -643,6 +642,8 @@ class RAInfo(object):
         if cache.is_cached(sid):
             return cache.retrieve(sid)
         if self.ra_class in constants.meta_progs:
+            l = prog_meta(self.ra_class)
+        elif self.ra_class in constants.meta_progs_20:
             l = prog_meta(self.ra_class)
         else:
             l = ra_if().meta(self.ra_class, self.ra_type, self.ra_provider)
