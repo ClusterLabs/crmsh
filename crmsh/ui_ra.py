@@ -115,6 +115,8 @@ class RA(command.UI):
                 ra_type, ra_class, ra_provider = args[0], args[1], args[2]
         elif args[0] in constants.meta_progs:
             ra_class, ra_provider, ra_type = args[0], None, None
+        elif args[0] in constants.meta_progs_20:
+            ra_class, ra_provider, ra_type = args[0], None, None
         else:
             ra_class, ra_provider, ra_type = ra.disambiguate_ra_type(args[0])
         agent = ra.RAInfo(ra_class, ra_type, ra_provider)
