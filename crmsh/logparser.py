@@ -468,7 +468,7 @@ class LogParser(object):
 
         while any(f is not None for _, _, f in lines):
             x = min(lines, key=lambda v: v[0])
-            if x[2] is None:
+            if x[0] is None or x[2] is None:
                 break
             if self.to_ts and x[0] > self.to_ts:
                 break
