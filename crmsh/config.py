@@ -56,6 +56,23 @@ def make_path(path):
     return path
 
 
+def find_pacemaker_daemons():
+    '''
+    Search for the pacemaker daemon location by trying to find
+    where the daemons are. The control daemon is either
+    pacemaker-controld (2.0+) or crmd depending on the version.
+    '''
+    candidate_dirs = ('{}/pacemaker'.format(d) for d in configure_libdir())
+    for d in candidate_dirs:
+        daemon = '{}/pacemaker-controld'.format(d)
+        if os.path.exists(daemon):
+            return d
+        daemon = '{}/crmd'.format(d)
+        if os.path.exists(daemon):
+            return d
+    return '/usr/lib/pacemaker'
+
+
 # opt_ classes
 # members: default, completions, validate()
 
@@ -230,7 +247,7 @@ DEFAULTS = {
         'sharedir': opt_dir('%(datadir)s/crmsh'),
         'cache': opt_dir('%(cachedir)s/crm'),
         'crm_config': opt_dir('%(varlib)s/pacemaker/cib'),
-        'crm_daemon_dir': opt_dir('%(libdir)s/pacemaker'),
+        'crm_daemon_dir': opt_dir(find_pacemaker_daemons()),
         'crm_daemon_user': opt_string('hacluster'),
         'ocf_root': opt_dir('%(libdir)s/ocf'),
         'crm_dtd_dir': opt_dir('%(datadir)s/pacemaker'),
