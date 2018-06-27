@@ -201,6 +201,66 @@ def is_program(prog):
     return None
 
 
+def pacemaker_20_daemon(new, old):
+    "helper to discover renamed pacemaker daemons"
+    if is_program(new):
+        return new
+    return old
+
+
+@memoize
+def pacemaker_attrd():
+    return pacemaker_20_daemon("pacemaker-attrd", "attrd")
+
+
+@memoize
+def pacemaker_based():
+    return pacemaker_20_daemon("pacemaker-based", "cib")
+
+
+@memoize
+def pacemaker_controld():
+    return pacemaker_20_daemon("pacemaker-controld", "crmd")
+
+
+@memoize
+def pacemaker_execd():
+    return pacemaker_20_daemon("pacemaker-execd", "lrmd")
+
+
+@memoize
+def pacemaker_fenced():
+    return pacemaker_20_daemon("pacemaker-fenced", "stonithd")
+
+
+@memoize
+def pacemaker_remoted():
+    return pacemaker_20_daemon("pacemaker-remoted", "pacemaker_remoted")
+
+
+@memoize
+def pacemaker_schedulerd():
+    return pacemaker_20_daemon("pacemaker-schedulerd", "pengine")
+
+
+def pacemaker_daemon(name):
+    if name == "attrd" or name == "pacemaker-attrd":
+        return pacemaker_attrd()
+    if name == "cib" or name == "pacemaker-based":
+        return pacemaker_based()
+    if name == "crmd" or name == "pacemaker-controld":
+        return pacemaker_controld()
+    if name == "lrmd" or name == "pacemaker-execd":
+        return pacemaker_execd()
+    if name == "stonithd" or name == "pacemaker-fenced":
+        return pacemaker_fenced()
+    if name == "pacemaker_remoted" or name == "pacemeaker-remoted":
+        return pacemaker_remoted()
+    if name == "pengine" or name == "pacemaker-schedulerd":
+        return pacemaker_schedulerd()
+    raise ValueError("Not a Pacemaker daemon name: {}".format(name))
+
+
 def can_ask():
     """
     Is user-interactivity possible?
@@ -1436,7 +1496,7 @@ def load_graphviz_file(ini_f):
 def get_pcmk_version(dflt):
     version = dflt
 
-    crmd = is_program('crmd')
+    crmd = pacemaker_controld()
     if crmd:
         cmd = crmd
     else:
