@@ -856,7 +856,7 @@ def valid_adminIP(addr, prev_value=None):
             warn("  Address already in use: {}".format(addr))
             return False
         for net in all_:
-            if addr in utils.Network(net):
+            if utils.ip_in_network(addr, net):
                 return True
         warn("  Address '{}' invalid, expected one of {}".format(addr, all_))
         return False
@@ -919,7 +919,7 @@ Configure Corosync (unicast):
         all_ = utils.network_v6_all()
         for item in all_.values():
             network_list.extend(item)
-        default_networks = map(utils.get_ipv6_network, network_list)
+        default_networks = [utils.get_ipv6_network(x) for x in network_list]
     else:
         default_networks = utils.network_all()
     if not default_networks:
@@ -1721,7 +1721,7 @@ def join_cluster(seed_host):
                 tmp = re.findall(r' {}/[0-9]+ '.format(ringXaddr), outp, re.M)[0].strip()
                 peer_ip = corosync.get_value("nodelist.node.ring{}_addr".format(i))
                 # peer ring0_addr and local ring0_addr must be configured in the same network
-                if peer_ip not in utils.Network(tmp):
+                if not utils.ip_in_network(peer_ip, tmp):
                     print(term.render(clidisplay.error("    Peer IP {} is not in the same network: {}".format(peer_ip, tmp))))
                     continue
 

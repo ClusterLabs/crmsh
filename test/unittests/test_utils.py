@@ -129,12 +129,10 @@ def test_network():
     ip = utils.IP('2001:db3::1')
     assert ip.version() == 6
 
-    net = utils.Network('192.0.2.0/24')
-    assert ('192.168.2.0' in net) is False
-    assert ('192.0.2.42' in net) is True
+    assert (utils.ip_in_network('192.168.2.0', '192.0.2.0/24') is False)
+    assert (utils.ip_in_network('192.0.2.42', '192.0.2.0/24') is True)
 
-    net = utils.Network('2001:db8::2/64')
-    assert ('2001:db3::1' in net) is False
-    assert ('2001:db8::1' in net) is True
+    assert (utils.ip_in_network('2001:db3::1', '2001:db8::2/64') is False)
+    assert (utils.ip_in_network('2001:db8::1', '2001:db8::2/64') is True)
 
     assert utils.get_ipv6_network("2002:db8::2/64") == "2002:db8::"
