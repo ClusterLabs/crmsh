@@ -283,6 +283,7 @@ def collect_info():
     time_status()
     corosync_blackbox()
     get_ratraces()
+    dump_ocfs2()
 
     for p in process_list:
         p.join()
@@ -441,7 +442,7 @@ def dlm_dump():
         for item in grep("^name", incmd="dlm_tool ls"):
             lock_name = item.split()[1]
             out_string += "## NOTICE - Lockspace {}\n".format(lock_name)
-            out_string += get_command_info("dlm_tool lockdump {}".format(lock_name))[1] + '\n'
+            out_string += get_command_info("dlm_tool lockdebug {}".format(lock_name))[1] + '\n'
         out_string += "##### NOTICE - Lockspace history:\n"
         out_string += get_command_info("dlm_tool dump")[1] + '\n'
 
@@ -1629,6 +1630,20 @@ def time_status():
     time_f = os.path.join(constants.WORKDIR, constants.TIME_F)
     crmutils.str2file(out_string, time_f)
 
+def dump_ocfs2():
+    ocfs2_f = os.path.join(constants.WORKDIR, constants.OCFS2_F)
+    f = open(ocfs2_f, "w")
+
+    #dump all tasks stack into dmesg
+    cmd = "echo t > /proc/sysrq-trigger"
+    crmutils.get_stdout(cmd)
+
+    cmds = [ "dmesg",  "ps -efL", "lsof", "lsblk", "mounted.ocfs2 -f"]
+    for cmd in cmds:
+        _, out = crmutils.get_stdout(cmd)
+        f.write(out)
+
+    f.close()
 
 def touch_dc():
     if constants.SKIP_LVL:
