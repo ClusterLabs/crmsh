@@ -47,9 +47,18 @@ class Context(object):
         '''
         Execute the given command line.
         '''
+        def trans_to_help(line):
+            line_list = line.split()
+            if len(line_list) == 2 and line_list[1] in ["-h", "--help"]:
+                return "help " + line_list[0]
+            else:
+                return line
+
         line = line.strip()
         if not line or line.startswith('#'):
             return True
+
+        line = trans_to_help(line)
 
         self._mark = len(self.stack)
         self._in_transit = False
