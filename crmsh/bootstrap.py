@@ -921,7 +921,11 @@ Configure Corosync (unicast):
             network_list.extend(item)
         default_networks = [utils.get_ipv6_network(x) for x in network_list]
     else:
-        default_networks = utils.network_all()
+        network_list = utils.network_all()
+        if len(network_list) > 1:
+            default_networks = [_context.ip_network, network_list.remove(_context.ip_network)]
+        else:
+            default_networks = _context.ip_network
     if not default_networks:
         error("No network configured at {}!".format(utils.this_node()))
 
@@ -1008,7 +1012,11 @@ Configure Corosync:
             network_list.extend(item)
         default_networks = [utils.get_ipv6_network(x) for x in network_list]
     else:
-        default_networks = utils.network_all()
+        network_list = utils.network_all()
+        if len(network_list) > 1:
+            default_networks = [_context.ip_network, network_list.remove(_context.ip_network)]
+        else:
+            default_networks = _context.ip_network
     if not default_networks:
         error("No network configured at {}!".format(utils.this_node()))
 
