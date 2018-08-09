@@ -420,7 +420,7 @@ Examples:
         '''
         return tab completions
         '''
-        return list(self._children.keys())
+        return [x for x in self._children.keys() if x not in self._aliases]
 
     def get_child(self, child):
         '''
@@ -455,9 +455,10 @@ Examples:
             child = getattr(cls, attr)
             return child if attr.startswith('do_') and inspect.isfunction(child) else None
 
-        def add_aliases(children, info):
+        def add_aliases(children, info, aliases):
             "Add any aliases for command to child map"
             for alias in info.aliases:
+                aliases.append(alias)
                 children[alias] = info
 
         def add_help(info):
@@ -480,23 +481,25 @@ Examples:
             elif info.type == 'level':
                 help_module.add_help(entry, level=info.name)
 
-        def prepare(children, child):
+        def prepare(children, child, aliases):
             info = ChildInfo(child, cls)
             if info.type == 'command' and not is_valid_command_function(info.function):
                 raise ValueError("Invalid command function: %s.%s" %
                                  (cls.__name__, info.function.__name__))
             children[info.name] = info
-            add_aliases(children, info)
+            add_aliases(children, info, aliases)
             add_help(info)
 
         children = {}
+        aliases = []
         for child_name in dir(cls):
             if child_name == 'do_up' and re.search("ui_root.Root", str(cls)):
                 continue
             child = get_if_command(child_name)
             if child:
-                prepare(children, child)
+                prepare(children, child, aliases)
         setattr(cls, '_children', children)
+        setattr(cls, '_aliases', aliases)
         return children
 
 
