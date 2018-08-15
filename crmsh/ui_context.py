@@ -49,8 +49,9 @@ class Context(object):
         '''
         def trans_to_help(line):
             line_list = line.split()
-            if len(line_list) == 2 and line_list[1] in ["-h", "--help"]:
-                return "help " + line_list[0]
+            if line_list[-1] in ["-h", "--help"] and \
+               line_list[-2] == "property":
+                return " ".join(line_list[:-2] + ["help", "property"])
             else:
                 return line
 
