@@ -145,6 +145,7 @@ runtestcase() {
 		fi > $difff
 		if [ $? -ne 0 ]; then
 			echo " FAIL" >&3
+			cat $difff >&3
 			dumpcase
 			return 1
 		else

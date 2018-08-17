@@ -8,6 +8,10 @@ ogid=$4
 cat /etc/group | awk '{ FS = ":" } { print $3 }' | grep -q "$ogid" || groupadd -g "$ogid"
 id -u $oname >/dev/null 2>&1 || useradd -u $ouid -g $ogid $oname
 
+preamble() {
+	systemctl start dbus
+}
+
 unit_tests() {
 	echo "** Unit tests"
 	su $oname -c "./test/run"
@@ -29,6 +33,7 @@ regression_tests() {
 	sh /usr/share/crmsh/tests/regression.sh
 }
 
+preamble
 unit_tests
 configure
 make_install
