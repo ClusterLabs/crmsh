@@ -1,4 +1,4 @@
-FROM opensuse:42.3
+FROM opensuse/leap:15
 MAINTAINER Kristoffer Gronlund version: 0.5
 
 ENV container docker

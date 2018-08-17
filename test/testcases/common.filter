@@ -2,4 +2,8 @@
 # 1. replace .EXT [path/]<cmd> <parameter> with .EXT <cmd> <parameter>
 /\.EXT \/(.+)/ { gsub(/\/.*\//, "", $2) }
 /\.EXT >\/dev\/null 2>&1 \/(.+)/ { gsub(/\/.*\//, "", $4) }
+/\.EXT pacemaker-fenced/ { gsub(/pacemaker-fenced/,"stonithd") }
+/\.EXT pacemaker-controld/ { gsub(/pacemaker-controld/,"crmd") }
+/\.EXT pacemaker-schedulerd/ { gsub(/pacemaker-schedulerd/,"pengine") }
+/\.EXT pacemaker-based/ { gsub(/pacemaker-based/,"cib") }
 { print }
