@@ -866,7 +866,7 @@ def get_config():
     workdir = constants.WORKDIR
     if os.path.isfile(constants.CONF):
         shutil.copy2(constants.CONF, workdir)
-    if crmutils.is_process("crmd"):
+    if crmutils.is_process("pacemaker-controld") or crmutils.is_process("crmd"):
         dump_state(workdir)
         open(os.path.join(workdir, "RUNNING"), 'w')
     else:
@@ -933,7 +933,7 @@ def get_nodes():
     if constants.USER_NODES:
         nodes = constants.USER_NODES.split()
     # 2. running crm
-    elif crmutils.is_process("crmd"):
+    elif crmutils.is_process("pacemaker-controld") or crmutils.is_process("crmd"):
         cmd = "crm node server"
         nodes = get_command_info(cmd)[1].strip().split('\n')
     # 3. if the cluster's stopped, try the CIB
