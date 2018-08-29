@@ -138,5 +138,6 @@ SBDCONF = "/etc/sysconfig/sbd"
 SYSINFO_F = "sysinfo.txt"
 SYSSTATS_F = "sysstats.txt"
 TIME_F = "time.txt"
+OCFS2_F = "ocfs2.txt"
 
 # vim:ts=4:sw=4:et:
