@@ -1572,7 +1572,7 @@ def join_csync2(seed_host):
 
     # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
     # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
-    if not invoke("ssh root@{} crm cluster init csync2_remote {}".format(seed_host, utils.this_node())):
+    if not invoke("ssh -o StrictHostKeyChecking=no root@{} crm cluster init csync2_remote {}".format(seed_host, utils.this_node())):
         error("Can't invoke crm cluster init init csync2_remote on {}".format(seed_host))
 
     # This is necessary if syncing /etc/hosts (to ensure everyone's got the
@@ -1596,7 +1596,7 @@ def join_csync2(seed_host):
     # they haven't gone to all nodes in the cluster, which means a
     # subseqent join of another node can fail its sync of corosync.conf
     # when it updates expected_votes.  Grrr...
-    if not invoke('ssh root@%s "csync2 -mr / ; csync2 -fr / ; csync2 -xv"' % (seed_host)):
+    if not invoke('ssh -o StrictHostKeyChecking=no root@%s "csync2 -mr / ; csync2 -fr / ; csync2 -xv"' % (seed_host)):
         print("")
         warn("csync2 run failed - some files may not be sync'd")
 
@@ -1740,11 +1740,11 @@ def join_cluster(seed_host):
         invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
         corosync.add_node_ucast(ringXaddr_res)
         csync2_update(corosync.conf())
-        invoke("ssh root@{} corosync-cfgtool -R".format(seed_host))
+        invoke("ssh -o StrictHostKeyChecking=no root@{} corosync-cfgtool -R".format(seed_host))
 
     # if no SBD devices are configured,
     # check the existing cluster if the sbd service is enabled
-    if not configured_sbd_device() and invoke("ssh root@{} systemctl is-enabled sbd.service".format(seed_host)):
+    if not configured_sbd_device() and invoke("ssh -o StrictHostKeyChecking=no root@{} systemctl is-enabled sbd.service".format(seed_host)):
         _context.diskless_sbd = True
 
     if ipv6_flag and not is_unicast:
@@ -1909,7 +1909,7 @@ def remove_get_hostname(seed_host):
         _context.host_status = 1
         return
 
-    _rc, outp, _errp = utils.get_stdout_stderr("ssh root@{} \"hostname\"".format(seed_host))
+    _rc, outp, _errp = utils.get_stdout_stderr("ssh -o StrictHostKeyChecking=no root@{} \"hostname\"".format(seed_host))
     if outp:
         _context.connect_name = seed_host
         _context.cluster_node = outp.strip()
@@ -1924,7 +1924,7 @@ def remove_get_hostname(seed_host):
         if nodename not in xmlutil.listnodes():
             error("Specified node {} is not configured in cluster, can not remove".format(nodename))
 
-        _rc, outp, _errp = utils.get_stdout_stderr("ssh root@{} \"hostname\"".format(nodename))
+        _rc, outp, _errp = utils.get_stdout_stderr("ssh -o StrictHostKeyChecking=no root@{} \"hostname\"".format(nodename))
         if outp:
             _context.connect_name = seed_host
             _context.cluster_node = nodename
@@ -1941,7 +1941,7 @@ def remove_get_hostname(seed_host):
             error("Invalid IP address")
 
         # try to use the IP address to connect
-        _rc, outp, _errp = utils.get_stdout_stderr("ssh root@{} \"hostname\"".format(nodename))
+        _rc, outp, _errp = utils.get_stdout_stderr("ssh -o StrictHostKeyChecking=no root@{} \"hostname\"".format(nodename))
         if outp:
             ipaddr = nodename
             nodename = outp.strip()
@@ -1965,12 +1965,12 @@ def remove_node_from_cluster():
 
     if _context.host_status != 0:
         status("Stopping the corosync service")
-        if not invoke('ssh root@{} "systemctl stop corosync"'.format(_context.connect_name)):
+        if not invoke('ssh -o StrictHostKeyChecking=no root@{} "systemctl stop corosync"'.format(_context.connect_name)):
             error("Stopping corosync on {} failed".format(_context.connect_name))
 
         # delete configuration files from the node to be removed
         toremove = [SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY, COROSYNC_AUTH]
-        if not invoke('ssh root@{} "bash -c \\\"rm -f {} && rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*\\\""'.format(node, " ".join(toremove))):
+        if not invoke('ssh -o StrictHostKeyChecking=no root@{} "bash -c \\\"rm -f {} && rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*\\\""'.format(node, " ".join(toremove))):
             error("Deleting the configuration files failed")
     else:
         # Check node status
