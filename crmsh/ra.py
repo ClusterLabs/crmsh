@@ -351,8 +351,8 @@ class RAInfo(object):
     skip_ops = ("meta-data", "validate-all")
     skip_op_attr = ("name", "depth", "role")
 
-    def __init__(self, ra_class, ra_type, ra_provider="heartbeat"):
-        self.excluded_from_completion = []
+    def __init__(self, ra_class, ra_type, ra_provider="heartbeat", exclude_from_completion=None):
+        self.excluded_from_completion = exclude_from_completion or []
         self.ra_class = ra_class
         self.ra_type = ra_type
         self.ra_provider = ra_provider
