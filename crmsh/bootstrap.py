@@ -1713,12 +1713,11 @@ def join_cluster(seed_host):
     is_unicast = "nodelist" in open(corosync.conf()).read()
     if is_unicast:
         ringXaddr_res = []
-        print("")
         for i in 0, 1:
             while True:
                 ringXaddr = prompt_for_string('Address for ring{}'.format(i),
                                               r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:',
-                                              "",
+                                              _context.ip_address if i == 0 and _context.ip_address else "",
                                               valid_ucastIP,
                                               ringXaddr_res)
                 if not ringXaddr:
@@ -1729,8 +1728,12 @@ def join_cluster(seed_host):
                 peer_ip = corosync.get_value("nodelist.node.ring{}_addr".format(i))
                 # peer ring0_addr and local ring0_addr must be configured in the same network
                 if not utils.ip_in_network(peer_ip, tmp):
-                    print(term.render(clidisplay.error("    Peer IP {} is not in the same network: {}".format(peer_ip, tmp))))
-                    continue
+                    errmsg = "    Peer IP {} is not in the same network: {}".format(peer_ip, tmp)
+                    if _context.yes_to_all:
+                        error(errmsg)
+                    else:
+                        print(term.render(clidisplay.error(errmsg)))
+                        continue
 
                 ringXaddr_res.append(ringXaddr)
                 break
