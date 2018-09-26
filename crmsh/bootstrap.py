@@ -924,7 +924,7 @@ Configure Corosync (unicast):
         if len(network_list) > 1:
             default_networks = [_context.ip_network, network_list.remove(_context.ip_network)]
         else:
-            default_networks = _context.ip_network
+            default_networks = [_context.ip_network]
     if not default_networks:
         error("No network configured at {}!".format(utils.this_node()))
 
@@ -1015,7 +1015,7 @@ Configure Corosync:
         if len(network_list) > 1:
             default_networks = [_context.ip_network, network_list.remove(_context.ip_network)]
         else:
-            default_networks = _context.ip_network
+            default_networks = [_context.ip_network]
     if not default_networks:
         error("No network configured at {}!".format(utils.this_node()))
 
