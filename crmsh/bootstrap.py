@@ -1090,15 +1090,14 @@ def init_corosync():
     """
     Configure corosync (unicast or multicast, encrypted?)
     """
-    @utils.memoize
-    def check_amazon():
-        if not utils.is_program("dmidecode"):
-            return False
-        _rc, outp = utils.get_stdout("dmidecode -s system-version")
-        return re.search(r"\<.*\.amazon\>", outp) is not None
+    def requires_unicast():
+        host = utils.detect_cloud()
+        if host is not None:
+            status("Detected cloud platform: {}".format(host))
+        return host is not None
 
     init_corosync_auth()
-    if _context.unicast or check_amazon():
+    if _context.unicast or requires_unicast():
         init_corosync_unicast()
     else:
         init_corosync_multicast()
