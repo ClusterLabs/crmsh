@@ -1671,7 +1671,7 @@ def join_cluster(seed_host):
     # check whether have two rings
     rrp_flag = False
     rrp = corosync.get_value("totem.rrp_mode")
-    if rrp:
+    if rrp in ('active', 'passive'):
         rrp_flag = True
 
     # Need to do this if second (or subsequent) node happens to be up and
