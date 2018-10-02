@@ -76,12 +76,14 @@ def network_defaults(interface=None):
         if info[0] is None and len(sp) >= 5 and sp[0] == 'default' and sp[1] == 'via':
             info[0] = sp[4]
         if info[0] is not None and valfor(sp, 'dev') == info[0] and sp[0] != 'default':
+            src = valfor(sp, 'src')
             if sp[0].find('/') >= 0:
                 nw, length = sp[0].split('/')
-                info[1], info[2], info[3] = valfor(sp, 'src'), nw, length
+                info[1], info[2], info[3] = src, nw, length
+                break
             # we are reading /32 route entry
             else:
-                info[1], info[2], info[3] = valfor(sp, 'src'), sp[0], 32
+                info[1], info[2], info[3] = src, sp[0], 32
     if info[0] is None:
         raise ValueError("Failed to determine default network interface")
     return tuple(info)
