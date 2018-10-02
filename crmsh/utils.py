@@ -2107,14 +2107,14 @@ def detect_cloud():
     """
     global _ip_for_cloud
 
-    if not utils.is_program("dmidecode"):
+    if not is_program("dmidecode"):
         return None
-    rc, system_version = utils.get_stdout("dmidecode -s system-version")
+    rc, system_version = get_stdout("dmidecode -s system-version")
     if re.search(r"\<.*\.amazon\>", system_version) is not None:
         return "amazon-web-services"
     if rc != 0:
         return None
-    rc, system_manufacturer = utils.get_stdout("dmidecode -s system-manufacturer")
+    rc, system_manufacturer = get_stdout("dmidecode -s system-manufacturer")
     if rc == 0 and "microsoft corporation" in system_manufacturer.lower():
         # To detect azure we also need to make an API request
         result = _cloud_metadata_request(
@@ -2123,7 +2123,7 @@ def detect_cloud():
         if result:
             _ip_for_cloud = result
             return "microsoft-azure"
-    rc, bios_vendor = utils.get_stdout("dmidecode -s bios-vendor")
+    rc, bios_vendor = get_stdout("dmidecode -s bios-vendor")
     if rc == 0 and "Google" in bios_vendor:
         # To detect GCP we also need to make an API request
         result = _cloud_metadata_request(
