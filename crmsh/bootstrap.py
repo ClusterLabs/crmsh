@@ -1725,17 +1725,19 @@ def join_cluster(seed_host):
                 if not ringXaddr:
                     error("No value for ring{}".format(i))
 
-                _, outp = utils.get_stdout("ip addr show")
-                tmp = re.findall(r' {}/[0-9]+ '.format(ringXaddr), outp, re.M)[0].strip()
-                peer_ip = corosync.get_value("nodelist.node.ring{}_addr".format(i))
-                # peer ring0_addr and local ring0_addr must be configured in the same network
-                if not utils.ip_in_network(peer_ip, tmp):
-                    errmsg = "    Peer IP {} is not in the same network: {}".format(peer_ip, tmp)
-                    if _context.yes_to_all:
-                        error(errmsg)
-                    else:
-                        print(term.render(clidisplay.error(errmsg)))
-                        continue
+                # this check does not work on GCP (bsc#1106946)
+                if utils.detect_cloud() != "google-cloud-platform":
+                    _, outp = utils.get_stdout("ip addr show")
+                    tmp = re.findall(r' {}/[0-9]+ '.format(ringXaddr), outp, re.M)[0].strip()
+                    peer_ip = corosync.get_value("nodelist.node.ring{}_addr".format(i))
+                    # peer ring0_addr and local ring0_addr must be configured in the same network
+                    if not utils.ip_in_network(peer_ip, tmp):
+                        errmsg = "    Peer IP {} is not in the same network: {}".format(peer_ip, tmp)
+                        if _context.yes_to_all:
+                            error(errmsg)
+                        else:
+                            print(term.render(clidisplay.error(errmsg)))
+                            continue
 
                 ringXaddr_res.append(ringXaddr)
                 break
