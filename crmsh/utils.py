@@ -120,6 +120,10 @@ def network_defaults(interface=None):
                 info[1], info[2], info[3] = src, sp[0], 32
     if info[0] is None:
         raise ValueError("Failed to determine default network interface")
+    if info[1] is None:
+        ips = ip_in_local()
+        if len(ips) > 0:
+            info[1] = ips[0]
     return tuple(info)
 
 
