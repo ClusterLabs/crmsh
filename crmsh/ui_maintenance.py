@@ -32,7 +32,8 @@ class Maintenance(command.UI):
         if resource is not None:
             return utils.ext_cmd(self.rsc_maintenance % (resource, onoff)) == 0
         else:
-            return cib_factory.create_object('property', 'maintenance-mode=%s' % (onoff))
+            cib_factory.create_object('property', 'maintenance-mode=%s' % (onoff))
+            return cib_factory.commit()
 
     @command.skill_level('administrator')
     @command.completers_repeating(compl.call(cib_factory.rsc_id_list))
