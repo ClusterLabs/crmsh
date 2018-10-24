@@ -1321,6 +1321,16 @@ remove [options] [<node> ...]
 ...............
 
 
+[[cmdhelp_cluster_restart,Restart cluster services]]
+==== `restart`
+
+Restarts the cluster-related system services on this node.
+
+Usage:
+.........
+restart
+.........
+
 [[cmdhelp_cluster_rename,Rename the cluster]]
 ==== `rename`
 
