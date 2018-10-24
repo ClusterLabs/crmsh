@@ -100,6 +100,14 @@ class Cluster(command.UI):
         # TODO: optionally stop services on all nodes or specific node
 
     @command.skill_level('administrator')
+    def do_restart(self, context):
+        '''
+        Restarts the cluster services on this node
+        '''
+        self.do_stop(context)
+        self.do_start(context)
+
+    @command.skill_level('administrator')
     def do_enable(self, context):
         '''
         Enable the cluster services on this node
