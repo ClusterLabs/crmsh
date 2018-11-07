@@ -449,7 +449,7 @@ class RAInfo(object):
             name = c.get("name")
             if not name:
                 continue
-            required = c.get("required") if not c.get("deprecated") else "0"
+            required = c.get("required") if not (c.get("deprecated") or c.get("obsoletes")) else "0"
             unique = c.get("unique")
             typ, default = self.param_type_default(c)
             d[name] = {
