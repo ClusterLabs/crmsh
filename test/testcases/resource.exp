@@ -829,11 +829,11 @@ INFO: Trace set, restart p0 to trace the stop operation
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .TRY configure primitive p3 Dummy
+.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
-.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .TRY resource stop p3
 .TRY resource start p3
 .TRY resource cleanup
