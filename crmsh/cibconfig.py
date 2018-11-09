@@ -911,6 +911,9 @@ class CibObject(object):
         '''
         pass
 
+    def normalize_parameters(self):
+        pass
+
     def _repr_cli_head(self, format_mode):
         'implemented in subclasses'
         pass
@@ -1495,6 +1498,23 @@ class CibPrimitive(CibObject):
         self._append_op(new_op_node)
         self.set_updated()
         return new_op_node
+
+    def normalize_parameters(self):
+        """
+        Normalize parameter names:
+        If a parameter "foo-bar" is set but the
+        agent doesn't have a parameter "foo-bar",
+        and instead has a parameter "foo_bar", then
+        change the name to set the value of "foo_bar"
+        instead.
+        """
+        r_node = self.node
+        if self.obj_type == "primitive":
+            r_node = reduce_primitive(self.node)
+        if r_node is None:
+            return
+        ra = get_ra(r_node)
+        ra.normalize_parameters(r_node)
 
     def check_sanity(self):
         '''
@@ -3355,6 +3375,7 @@ class CibFactory(object):
             topnode.append(obj.node)
             self.cib_objects.append(obj)
         copy_nvpairs(obj.node, node)
+        obj.normalize_parameters()
         obj.set_updated()
         return obj
 
@@ -3682,6 +3703,7 @@ class CibFactory(object):
             return None
         pnode.append(node)
         self._redirect_children_constraints(obj)
+        obj.normalize_parameters()
         if not obj.cli_use_validate():
             self.nocli_warn = True
             obj.nocli = True

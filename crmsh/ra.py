@@ -470,6 +470,23 @@ class RAInfo(object):
         except:
             return None
 
+    def normalize_parameters(self, root):
+        """
+        Find all instance_attributes/nvpair objects,
+        check if parameter exists. If not, normalize name
+        and check if THAT exists (replacing - with _).
+        If so, change the name of the parameter.
+        """
+        params = self.params()
+        if not params:
+            return
+        for nvp in root.xpath("instance_attributes/nvpair"):
+            name = nvp.get("name")
+            if name is not None and name not in params:
+                name = name.replace("-", "_")
+                if name in params:
+                    nvp.attrib["name"] = name
+
     def sanity_check_params(self, ident, nvpairs, existence_only=False):
         '''
         nvpairs is a list of <nvpair> tags.
