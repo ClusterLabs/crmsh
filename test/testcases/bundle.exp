@@ -8,16 +8,16 @@
 .INP: node node1 	attributes mem=16G
 .INP: node node2 utilization cpu=4
 .INP: primitive st stonith:ssh 	params hostlist='node1 node2' 	meta target-role="Started" requires=nothing 	op start timeout=60s 	op monitor interval=60m timeout=60s
+.EXT crm_resource --show-metadata stonith:ssh
+.EXT stonithd metadata
 .INP: primitive st2 stonith:ssh 	params hostlist='node1 node2'
 .INP: bundle id=bundle-test1 docker image=test network ip-range-start=10.10.10.123 port-mapping id=port1 port=80 storage storage-mapping id=storage1 target-dir=test source-dir=test meta target-role=Stopped
 .INP: primitive id=dummy ocf:heartbeat:Dummy op monitor interval=10 meta target-role=Stopped
+.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: bundle id=bundle-test2 docker image=test network ip-range-start=10.10.10.123 primitive dummy meta target-role=Stopped priority=1
 .INP: property stonith-enabled=true
 .INP: _test
 .INP: verify
-.EXT crm_resource --show-metadata stonith:ssh
-.EXT stonithd metadata
-.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata

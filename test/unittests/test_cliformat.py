@@ -62,6 +62,16 @@ def test_rscset():
     roundtrip('order order_2 Mandatory: [ A B ] C')
     roundtrip('rsc_template public_vm Xen')
 
+@with_setup(setup_func, teardown_func)
+def test_normalize():
+    """
+    Test automatic normalization of parameter names:
+    "shutdown_timeout" is a parameter name, but
+    "shutdown-timeout" is not.
+    """
+    roundtrip('primitive vm1 Xen params shutdown-timeout=0',
+              expected='primitive vm1 Xen params shutdown_timeout=0')
+
 
 @with_setup(setup_func, teardown_func)
 def test_group():
@@ -303,12 +313,12 @@ def test_locrule():
 
 @with_setup(setup_func, teardown_func)
 def test_is_value_sane():
-    roundtrip('''primitive p1 dummy params state="bo'o"''')
+    roundtrip('''primitive p1 Dummy params state="bo'o"''')
 
 
 @with_setup(setup_func, teardown_func)
 def test_is_value_sane_2():
-    roundtrip('primitive p1 dummy params state="bo\\"o"')
+    roundtrip('primitive p1 Dummy params state="bo\\"o"')
 
 
 @with_setup(setup_func, teardown_func)
