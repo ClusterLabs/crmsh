@@ -6,7 +6,7 @@ from . import utils
 from .msg import err_buf
 
 
-cib_verify = "crm_verify --verbose -p"
+cib_verify = "crm_verify -VV -p"
 VALIDATE_RE = re.compile(r"^Entity: line (\d)+: element (\w+): " +
                          r"Relax-NG validity error : (.+)$")
 
