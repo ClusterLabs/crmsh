@@ -96,7 +96,7 @@ def warn(*args):
     Log and display a warning message.
     """
     log("WARNING: {}".format(" ".join(str(arg) for arg in args)))
-    print(term.render(clidisplay.warn("! {}".format(" ".join(str(arg) for arg in args)))))
+    print(term.render(clidisplay.warn("WARNING: {}".format(" ".join(str(arg) for arg in args)))))
 
 
 @utils.memoize
