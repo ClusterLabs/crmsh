@@ -126,3 +126,26 @@ property SAPHanaSR_2: \
 .INP: commit
 .INP: _test
 .INP: verify
+.TRY template
+.INP: configure
+.INP: erase
+.INP: template
+.INP: delete vip
+ERROR: 4: vip: no such config
+.INP: new vip virtual-ip params ip=10.10.10.123
+INFO: 5: pulling in template virtual-ip
+.INP: load vip
+.INP: apply
+Traceback (most recent call last):
+    rc = main.run()
+    return main_input_loop(context, user_args)
+    if not context.run(inp):
+    rv = self.execute_command() is not False
+    rv = self.command_info.function(*arglist)
+    s = self.process()
+    s = shlex.split(inp)
+    return list(lex)
+    token = self.get_token()
+    raw = self.read_token()
+    nextchar = self.instream.read(1)
+AttributeError: 'bytes' object has no attribute 'read'
