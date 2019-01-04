@@ -60,3 +60,20 @@ commit
 _test
 verify
 .
+session template
+configure
+erase
+node node1
+primitive st stonith:null \
+	params hostlist='node1' \
+	meta description="some description here" requires=nothing \
+	op monitor interval=60m
+template
+new vip virtual-ip params ip=10.10.10.123
+load vip
+apply update
+up
+commit
+_test
+verify
+.
