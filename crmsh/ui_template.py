@@ -296,11 +296,10 @@ class Template(command.UI):
         err_buf.start_tmp_lineno()
         rc = True
         for inp in f:
+            inp = utils.to_ascii(inp)
             err_buf.incr_lineno()
             if inp.startswith('#'):
                 continue
-            if isinstance(inp, str):
-                inp = inp.encode('ascii')
             inp = inp.strip()
             try:
                 s = shlex.split(inp)
