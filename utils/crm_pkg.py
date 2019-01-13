@@ -86,10 +86,10 @@ class Zypper(PackageManager):
 
     def present(self, name):
         if self.is_installed(name):
-            return (0, '', '', False)
+            return (0, b'', b'', False)
 
         if DRY_RUN:
-            return (0, '', '', True)
+            return (0, b'', b'', True)
 
         cmd = [self._zyp,
                '--non-interactive',
@@ -106,7 +106,7 @@ class Zypper(PackageManager):
             return self.present(name)
 
         if DRY_RUN:
-            return (0, '', '', True)
+            return (0, b'', b'', True)
 
         pre_version = self.get_version(name)
         cmd = [self._zyp,
@@ -122,10 +122,10 @@ class Zypper(PackageManager):
 
     def absent(self, name):
         if not self.is_installed(name):
-            return (0, '', '', False)
+            return (0, b'', b'', False)
 
         if DRY_RUN:
-            return (0, '', '', True)
+            return (0, b'', b'', True)
 
         cmd = [self._zyp,
                '--non-interactive',
@@ -157,10 +157,10 @@ class Yum(PackageManager):
 
     def present(self, name):
         if self.is_installed(name):
-            return (0, '', '', False)
+            return (0, b'', b'', False)
 
         if DRY_RUN:
-            return (0, '', '', True)
+            return (0, b'', b'', True)
 
         cmd = [self._yum,
                '--assumeyes',
@@ -176,7 +176,7 @@ class Yum(PackageManager):
             return self.present(name)
 
         if DRY_RUN:
-            return (0, '', '', True)
+            return (0, b'', b'', True)
 
         pre_version = self.get_version(name)
         cmd = [self._yum,
@@ -191,10 +191,10 @@ class Yum(PackageManager):
 
     def absent(self, name):
         if not self.is_installed(name):
-            return (0, '', '', False)
+            return (0, b'', b'', False)
 
         if DRY_RUN:
-            return (0, '', '', True)
+            return (0, b'', b'', True)
 
         cmd = [self._yum,
                '--assumeyes',
