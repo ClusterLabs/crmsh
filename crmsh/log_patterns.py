@@ -33,7 +33,7 @@ _patterns_old = {
             "lrmd.*WARN: .* %% .*timed out$",
             "crmd.*LRM operation %%_(?:start|stop|promote|demote|migrate)_.*confirmed=true",
             "crmd.*LRM operation %%_.*Timed Out",
-            "[(]%%[)][[]",
+            "[(]%%[)]\[",
         ),
         (  # detail 1
             "lrmd.*%% (?:probe|notify)",
@@ -91,7 +91,7 @@ _patterns_118 = {
 
             "crmd.*LRM operation %%_(?:start|stop|promote|demote|migrate)_.*confirmed=true",
             "crmd.*LRM operation %%_.*Timed Out",
-            "[(]%%[)][[]",
+            "[(]%%[)]\[",
         ),
         (  # detail 1
             "crmd.*Initiating.*%%_(?:monitor_0|notify)",
