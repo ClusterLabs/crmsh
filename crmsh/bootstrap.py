@@ -1577,7 +1577,7 @@ def join_csync2(seed_host):
     #   || error "Can't retrieve /etc/hosts from seed_host"
     # install_tmp $tmp_conf /etc/hosts
 
-    if not invoke("scp root@%s:'/etc/csync2/{csync2.cfg,key_hagroup}' /etc/csync2" % (seed_host)):
+    if not invoke("scp root@%s:/etc/csync2/{csync2.cfg,key_hagroup} /etc/csync2" % (seed_host)):
         error("Can't retrieve csync2 config from %s" % (seed_host))
 
     start_service("csync2.socket")
