@@ -207,7 +207,82 @@ class Yum(PackageManager):
 
 
 class Apt(PackageManager):
-    pass
+    def __init__(self):
+        self._apt = is_program('apt-get')
+        self._dpkg = is_program('dpkg')
+        if self._apt is None or self._dpkg is None:
+            raise OSError("Missing tools: %s, %s" % (self._apt, self._dpkg))
+
+    def get_version(self, name):
+        cmd = [self._dpkg, '--status', name]
+        rc, stdout, stderr = run(cmd)
+        if rc == 0:
+            for line in stdout.splitlines():
+                info = line.decode('utf-8').split(':', 1)
+                if len(info) == 2 and info[0] == 'Version':
+                    return info[1].strip()
+        return None
+
+    def is_installed(self, name):
+        cmd = [self._dpkg, '--status', name]
+        rc, stdout, stderr = run(cmd)
+        if rc == 0:
+            for line in stdout.splitlines():
+                info = line.decode('utf-8').split(':', 1)
+                if len(info) == 2 and info[0] == 'Status':
+                    return info[1].strip().endswith('installed')
+        return False
+
+    def present(self, name):
+        if self.is_installed(name):
+            return (0, b'', b'', False)
+
+        if DRY_RUN:
+            return (0, b'', b'', True)
+
+        cmd = [self._apt,
+               '--assume-yes',
+               '--quiet',
+               'install',
+               name]
+        rc, stdout, stderr = run(cmd)
+        changed = rc == 0
+        return (rc, stdout, stderr, changed)
+
+    def latest(self, name):
+        if not self.is_installed(name):
+            return self.present(name)
+
+        if DRY_RUN:
+            return (0, b'', b'', True)
+
+        pre_version = self.get_version(name)
+        cmd = [self._apt,
+               '--assume-yes',
+               '--quiet',
+               '--only-upgrade',
+               'install',
+               name]
+        rc, stdout, stderr = run(cmd)
+        post_version = self.get_version(name)
+        changed = pre_version != post_version
+        return (rc, stdout, stderr, changed)
+
+    def absent(self, name):
+        if not self.is_installed(name):
+            return (0, b'', b'', False)
+
+        if DRY_RUN:
+            return (0, b'', b'', True)
+
+        cmd = [self._apt,
+               '--assume-yes',
+               '--quiet',
+               'purge',
+               name]
+        rc, stdout, stderr = run(cmd)
+        changed = rc == 0
+        return (rc, stdout, stderr, changed)
 
 
 class Pacman(PackageManager):
@@ -226,7 +301,7 @@ def manage_package(pkg, state):
     managers = {
         'zypper': Zypper,
         'yum': Yum,
-        #'apt-get': Apt,
+        'apt-get': Apt,
         #'pacman': Pacman
     }
     for name, mgr in managers.items():
