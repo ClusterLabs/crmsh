@@ -40,4 +40,4 @@ actions:
       ms ms-{{db2:id}} {{db2:id}}
         meta target-role=Stopped notify=true
       colocation {{virtual-ip:id}}-with-master inf: {{virtual-ip:id}}:Started ms-{{db2:id}}:Master
-      order {{virtual-ip:id}}-after-master inf: ms-{{db2:id}}:promote {{virtual-ip:id}}:start
+      order {{virtual-ip:id}}-after-master Mandatory: ms-{{db2:id}}:promote {{virtual-ip:id}}:start
