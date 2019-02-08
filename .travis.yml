@@ -4,6 +4,15 @@ language: python
 services:
   - docker
 
+env:
+  global:
+    - CC_TEST_REPORTER_ID=a2579335b631ec35473874d7bb4fe983025c0287cea89c9dc34c35f98ee3963d
+
+before_script:
+  - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+  - chmod +x ./cc-test-reporter
+  - ./cc-test-reporter before-build
+
 before_install:
   - docker pull krig/crmsh:latest
 
@@ -12,3 +21,6 @@ script:
 
 after_failure:
   - sudo cat $TRAVIS_BUILD_DIR/crmtestout/regression.out $TRAVIS_BUILD_DIR/crmtestout/crm.*
+
+after_script:
+  - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
