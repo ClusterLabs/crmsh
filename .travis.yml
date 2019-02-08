@@ -4,11 +4,23 @@ language: python
 services:
   - docker
 
+env:
+  global:
+- CC_TEST_REPORTER_ID=a2579335b631ec35473874d7bb4fe983025c0287cea89c9dc34c35f98ee3963d
+
+before_script:
+    - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+    - chmod +x ./cc-test-reporter
+    - ./cc-test-reporter before-build
+
 before_install:
   - docker pull krig/crmsh:latest
 
 script:
   - docker run -t -v "$(pwd):/app" krig/crmsh /bin/sh -c "systemctl start dbus; cd /app; ./test/run-in-travis.sh"
+
+after_script:
+  - ./cc-test-reporter after-build -t coverage.py --exit-code $TRAVIS_TEST_RESULT coverage.xml
 
 after_failure:
   - sudo cat $TRAVIS_BUILD_DIR/crmtestout/regression.out $TRAVIS_BUILD_DIR/crmtestout/crm.*

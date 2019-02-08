@@ -2,7 +2,8 @@
 
 unit_tests() {
 	echo "** Unit tests"
-	./test/run
+	./test/run --with-coverage --cover-package=crmsh
+	coverage xml
 }
 
 configure() {

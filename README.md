@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/ClusterLabs/crmsh.svg?branch=master)](https://travis-ci.org/ClusterLabs/crmsh)
 [![Code Health](https://landscape.io/github/ClusterLabs/crmsh/master/landscape.svg?style=flat)](https://landscape.io/github/ClusterLabs/crmsh/master)
+[![Maintainability](https://api.codeclimate.com/v1/badges/e958d643f14bb7c7455a/maintainability)](https://codeclimate.com/github/ClusterLabs/crmsh/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/e958d643f14bb7c7455a/test_coverage)](https://codeclimate.com/github/ClusterLabs/crmsh/test_coverage)
 
 ## Introduction
 
