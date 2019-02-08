@@ -6,7 +6,7 @@ services:
 
 env:
   global:
-- CC_TEST_REPORTER_ID=a2579335b631ec35473874d7bb4fe983025c0287cea89c9dc34c35f98ee3963d
+    - CC_TEST_REPORTER_ID=a2579335b631ec35473874d7bb4fe983025c0287cea89c9dc34c35f98ee3963d
 
 before_script:
     - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
