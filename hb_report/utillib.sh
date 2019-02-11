@@ -122,7 +122,7 @@ findmsg() {
 		[ -d $d ] || continue
 		log=`grep -l -e "$mark" $d/$favourites` && break
 		test "$log" && break
-		log=`grep -l -e "$mark" $d/*` && break
+                log=`find $d -type f -mindepth 1 -maxdepth 1 | xargs grep -l -e "$mark"` && break
 		test "$log" && break
 	done 2>/dev/null
 
