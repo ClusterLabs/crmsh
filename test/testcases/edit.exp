@@ -1,3 +1,4 @@
+WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .TRY Configuration editing
 .INP: configure
 .INP: _regtest on
@@ -113,9 +114,7 @@ order o-d456 d4 d5 d6
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
-.EXT crmd metadata
-.EXT pengine metadata
-.EXT cib metadata
+WARNING: 63: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .INP: show
 node node1 \
 	attributes mem=16G
@@ -151,3 +150,4 @@ property cib-bootstrap-options: \
 rsc_defaults rsc_options: \
 	failure-timeout=10m
 .INP: commit
+WARNING: 65: cib-bootstrap-options: unknown attribute 'default-action-timeout'

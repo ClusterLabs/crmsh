@@ -1,3 +1,4 @@
+WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .TRY Configuration bugs
 .INP: options
 .INP: sort_elements false
@@ -91,11 +92,10 @@ property cib-bootstrap-options: \
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
-.EXT crmd metadata
-.EXT pengine metadata
-.EXT cib metadata
+WARNING: 7: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .INP: _test
 .INP: verify
+WARNING: 9: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .TRY Unknown properties
 .INP: configure
 .INP: erase

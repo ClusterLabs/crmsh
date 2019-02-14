@@ -1,3 +1,4 @@
+WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .TRY ACL
 .INP: configure
 .INP: _regtest on
@@ -22,9 +23,8 @@
 .EXT crm_resource --show-metadata stonith:ssh
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
-.EXT crmd metadata
+WARNING: 20: cib-bootstrap-options: unknown attribute 'enable-acl'
 .EXT pengine metadata
-.EXT cib metadata
 .INP: show
 node node1
 primitive d0 ocf:pacemaker:Dummy
@@ -85,3 +85,4 @@ acl_target bob \
 acl_target cyrus \
 	cyrus-role
 .INP: commit
+WARNING: 22: cib-bootstrap-options: unknown attribute 'enable-acl'

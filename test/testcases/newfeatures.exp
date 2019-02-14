@@ -1,3 +1,4 @@
+WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .TRY New features
 .INP: configure
 .INP: # erase to start from scratch
@@ -50,7 +51,7 @@ alert notify_9 "/usr/share/pacemaker/alerts/alert_snmp.sh" \
 .EXT crm_resource --show-metadata stonith:ssh
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
-.EXT crmd metadata
+WARNING: 22: cib-bootstrap-options: unknown attribute 'stonith-enabled'
 .EXT pengine metadata
-.EXT cib metadata
 .INP: commit
+WARNING: 23: cib-bootstrap-options: unknown attribute 'stonith-enabled'

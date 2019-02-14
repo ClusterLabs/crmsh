@@ -1,3 +1,4 @@
+WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .TRY Delete/Rename test
 .INP: configure
 .INP: # erase to start from scratch

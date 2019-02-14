@@ -1,3 +1,4 @@
+WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .TRY Shadow CIB management
 .INP: cib
 .INP: new regtest force

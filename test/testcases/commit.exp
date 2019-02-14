@@ -1,3 +1,4 @@
+WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .TRY Commits of all kinds
 .INP: configure
 .INP: _regtest on
@@ -8,9 +9,7 @@
 .INP: commit
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
-.EXT crmd metadata
-.EXT pengine metadata
-.EXT cib metadata
+WARNING: 7: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 WARNING: 7: st: unknown attribute 'yoyo-meta'
 .INP: node node1 	attributes mem=16G
 .INP: primitive p1 ocf:heartbeat:Dummy 	op monitor interval=60m 	op monitor interval=120m OCF_CHECK_LEVEL=10
@@ -49,6 +48,7 @@ INFO: 24: modified order:o1 from c1 to g1
 .INP: commit
 .INP: _test
 .INP: verify
+WARNING: 35: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 WARNING: 35: st: unknown attribute 'yoyo-meta'
 .INP: show
 node node1 \
