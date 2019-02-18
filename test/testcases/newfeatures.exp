@@ -1,4 +1,3 @@
-WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .TRY New features
 .INP: configure
 .INP: # erase to start from scratch
@@ -7,7 +6,10 @@ WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .INP: node node1
 .INP: # create one stonith so that verify does not complain
 .INP: primitive st stonith:ssh 	params hostlist='node1' 	meta target-role="Started" 	op start requires=nothing timeout=60s 	op monitor interval=60m timeout=60s
+.EXT crm_resource --show-metadata stonith:ssh
+.EXT stonithd metadata
 .INP: primitive p0 Dummy params $p0-state:state=1
+.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: primitive p1 Dummy params     rule role=Started date in start=2009-05-26 end=2010-05-26 or date gt 2014-01-01     state=2
 .INP: primitive p2 Dummy params @p0-state
 .INP: property rule #uname eq node1 stonith-enabled=no
@@ -48,10 +50,7 @@ alert notify_9 "/usr/share/pacemaker/alerts/alert_snmp.sh" \
 	to 192.168.40.9
 .INP: _test
 .INP: verify
-.EXT crm_resource --show-metadata stonith:ssh
-.EXT stonithd metadata
-.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
-WARNING: 22: cib-bootstrap-options: unknown attribute 'stonith-enabled'
+.EXT crmd metadata
 .EXT pengine metadata
+.EXT cib metadata
 .INP: commit
-WARNING: 23: cib-bootstrap-options: unknown attribute 'stonith-enabled'

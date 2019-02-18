@@ -1,4 +1,3 @@
-WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .TRY Basic configure
 .INP: configure
 .INP: _regtest on
@@ -9,10 +8,14 @@ WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .INP: node node1 	attributes mem=16G
 .INP: node node2 utilization cpu=4
 .INP: primitive st stonith:ssh 	params hostlist='node1 node2' 	meta target-role="Started" 	op start requires=nothing timeout=60s 	op monitor interval=60m timeout=60s
+.EXT crm_resource --show-metadata stonith:ssh
+.EXT stonithd metadata
 .INP: primitive st2 stonith:ssh 	params hostlist='node1 node2'
 .INP: primitive d1 ocf:pacemaker:Dummy 	operations $id=d1-ops 	op monitor interval=60m 	op monitor interval=120m OCF_CHECK_LEVEL=10
+.EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .INP: monitor d1 60s:30s
 .INP: primitive d2 ocf:heartbeat:Delay 	params mondelay=60 	op start timeout=60s 	op stop timeout=60s
+.EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .INP: monitor d2:Started 60s:30s
 .INP: group g1 d1 d2
 .INP: primitive d3 ocf:pacemaker:Dummy
@@ -22,10 +25,12 @@ WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .INP: delete m
 .INP: master m d4
 .INP: primitive s5 ocf:pacemaker:Stateful 	operations $id-ref=d1-ops
+.EXT crm_resource --show-metadata ocf:pacemaker:Stateful
 .INP: primitive s6 ocf:pacemaker:Stateful 	operations $id-ref=d1
 .INP: ms m5 s5
 .INP: ms m6 s6
 .INP: primitive d7 Dummy 	params rule inf: #uname eq node1 fake=1 	params rule inf: #uname eq node2 fake=2
+.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: location l1 g1 100: node1
 .INP: location l2 c 	rule $id=l2-rule1 100: #uname eq node1
 .INP: location l3 m5 	rule inf: #uname eq node1 and pingd gt 0
@@ -51,15 +56,10 @@ WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .INP: set d2.mondelay 45
 .INP: _test
 .INP: verify
-.EXT crm_resource --show-metadata stonith:ssh
-.EXT stonithd metadata
-.EXT crm_resource --show-metadata ocf:pacemaker:Dummy
-.EXT crm_resource --show-metadata ocf:heartbeat:Delay
-.EXT crm_resource --show-metadata ocf:pacemaker:Stateful
-.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 WARNING: 51: c2: resource d1 is grouped, constraints should apply to the group
-WARNING: 51: cib-bootstrap-options: unknown attribute 'stonith-enabled'
+.EXT crmd metadata
 .EXT pengine metadata
+.EXT cib metadata
 .INP: show
 node node1 \
 	attributes mem=16G
@@ -134,4 +134,3 @@ op_defaults opsdef2: \
 	record-pending=true
 .INP: commit
 WARNING: 53: c2: resource d1 is grouped, constraints should apply to the group
-WARNING: 53: cib-bootstrap-options: unknown attribute 'stonith-enabled'

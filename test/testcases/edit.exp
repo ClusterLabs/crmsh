@@ -1,4 +1,3 @@
-WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .TRY Configuration editing
 .INP: configure
 .INP: _regtest on
@@ -7,7 +6,10 @@ WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .INP: property default-action-timeout=2m
 .INP: node node1 	attributes mem=16G
 .INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" 	op start requires=nothing 	op monitor interval=60m
+.EXT crm_resource --show-metadata stonith:null
+.EXT stonithd metadata
 .INP: primitive p1 ocf:heartbeat:Dummy 	op monitor interval=60m 	op monitor interval=120m OCF_CHECK_LEVEL=10
+.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: filter "sed '$aprimitive p2 ocf:heartbeat:Dummy'"
 .INP: filter "sed '$agroup g1 p1 p2'"
 .INP: show
@@ -111,10 +113,9 @@ tag t-d45 d4 d5
 order o-d456 d4 d5 d6
 .INP: _test
 .INP: verify
-.EXT crm_resource --show-metadata stonith:null
-.EXT stonithd metadata
-.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
-WARNING: 63: cib-bootstrap-options: unknown attribute 'default-action-timeout'
+.EXT crmd metadata
+.EXT pengine metadata
+.EXT cib metadata
 .INP: show
 node node1 \
 	attributes mem=16G
@@ -150,4 +151,3 @@ property cib-bootstrap-options: \
 rsc_defaults rsc_options: \
 	failure-timeout=10m
 .INP: commit
-WARNING: 65: cib-bootstrap-options: unknown attribute 'default-action-timeout'

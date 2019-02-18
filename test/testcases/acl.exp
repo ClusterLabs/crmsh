@@ -1,4 +1,3 @@
-WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .TRY ACL
 .INP: configure
 .INP: _regtest on
@@ -7,7 +6,10 @@ WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .INP: node node1
 .INP: property enable-acl=true
 .INP: primitive st stonith:ssh 	params hostlist='node1' 	meta target-role="Started" 	op start requires=nothing timeout=60s 	op monitor interval=60m timeout=60s
+.EXT crm_resource --show-metadata stonith:ssh
+.EXT stonithd metadata
 .INP: primitive d0 ocf:pacemaker:Dummy
+.EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .INP: primitive d1 ocf:pacemaker:Dummy
 .INP: role basic-read        read status        read type:node attribute:uname        read type:node attribute:type        read property
 .INP: role basic-read-basic 	read cib
@@ -20,11 +22,9 @@ WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .INP: acl_target cyrus cyrus-role
 .INP: _test
 .INP: verify
-.EXT crm_resource --show-metadata stonith:ssh
-.EXT stonithd metadata
-.EXT crm_resource --show-metadata ocf:pacemaker:Dummy
-WARNING: 20: cib-bootstrap-options: unknown attribute 'enable-acl'
+.EXT crmd metadata
 .EXT pengine metadata
+.EXT cib metadata
 .INP: show
 node node1
 primitive d0 ocf:pacemaker:Dummy
@@ -85,4 +85,3 @@ acl_target bob \
 acl_target cyrus \
 	cyrus-role
 .INP: commit
-WARNING: 22: cib-bootstrap-options: unknown attribute 'enable-acl'

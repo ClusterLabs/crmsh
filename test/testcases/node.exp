@@ -1,4 +1,3 @@
-WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .TRY node show
 node1: member
 .TRY node show node1

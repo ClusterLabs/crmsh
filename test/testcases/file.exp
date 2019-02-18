@@ -1,4 +1,3 @@
-WARNING: 11: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .TRY configure save sample.txt
 .EXT cat sample.txt
 node node1
@@ -19,7 +18,9 @@ property cib-bootstrap-options: \
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
-WARNING: cib-bootstrap-options: unknown attribute 'default-action-timeout'
+.EXT crmd metadata
+.EXT pengine metadata
+.EXT cib metadata
 .EXT sed -i 's/60s/2m/' sample.txt
 .EXT sed -i '8a # comment' sample.txt
 .TRY Load update
@@ -31,8 +32,9 @@ WARNING: cib-bootstrap-options: unknown attribute 'default-action-timeout'
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
-WARNING: 4: cib-bootstrap-options: unknown attribute 'default-action-timeout'
-WARNING: 4: cib-bootstrap-options: unknown attribute 'cluster-recheck-interval'
+.EXT crmd metadata
+.EXT pengine metadata
+.EXT cib metadata
 .TRY configure show
 node node1
 primitive p0 ocf:pacemaker:Dummy
