@@ -58,5 +58,5 @@ actions:
   - shortdesc: Configure LVM and File System Group and Constraints
     cib: |
       group {{group_id}} {{lvm:id}} {{#example_fs:id}}{{example_fs:id}}{{/example_fs:id}}
-      order o-drbd_before_{{group_id}} inf: ms-{{drbd:id}}:promote {{group_id}}:start
+      order o-drbd_before_{{group_id}} Mandatory: ms-{{drbd:id}}:promote {{group_id}}:start
       colocation c-{{group_id}}_on_drbd inf: {{group_id}} ms-{{drbd:id}}:Master

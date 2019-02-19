@@ -61,11 +61,11 @@ actions:
   - include: virtual-ip
   - cib: |
       group g-nfs {{exportfs:id}} {{virtual-ip:id}}
-      order base-then-nfs inf: {{base-id}} g-nfs
+      order base-then-nfs Mandatory: {{base-id}} g-nfs
       colocation nfs-with-base inf: g-nfs {{base-id}}
       {{#rootfs}}
       clone c-{{rootfs:id}} {{rootfs:id}}
-      order rootfs-before-nfs inf: c-{{rootfs:id}} g-nfs:start
+      order rootfs-before-nfs Mandatory: c-{{rootfs:id}} g-nfs:start
       colocation nfs-with-rootfs inf: g-nfs c-{{rootfs:id}}
       {{/rootfs}}
   - call: /usr/sbin/exportfs -v

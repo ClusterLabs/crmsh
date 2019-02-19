@@ -112,7 +112,7 @@ actions:
   - shortdesc: Configure LVM and File System Group and Constraints
     cib: |
       group g-nfs {{lvm:id}} {{#example_fs:id}}{{example_fs:id}}{{/example_fs:id}}
-      order o-drbd_before_nfs inf: ms-{{drbd:id}}:promote g-nfs:start
+      order o-drbd_before_nfs Mandatory: ms-{{drbd:id}}:promote g-nfs:start
       colocation c-nfs_on_drbd inf: g-nfs ms-{{drbd:id}}:Master
 
   - include: rootfs

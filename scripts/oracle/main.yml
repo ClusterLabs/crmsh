@@ -47,5 +47,5 @@ actions:
         op monitor interval="120s"
 
       colocation lsn-with-{{id}} inf: {{id}} lsn-{{id}}
-      order lsn-before-{{id}} inf: lsn-{{id}} {{id}}
+      order lsn-before-{{id}} Mandatory: lsn-{{id}} {{id}}
     
