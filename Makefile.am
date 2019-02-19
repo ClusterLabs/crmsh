@@ -53,7 +53,8 @@ install-data-hook:
 	for d in $$(cat data-manifest); do \
 	install -D -m $$(test -x $$d && echo 0755 || echo 0644) $$d $(DESTDIR)$(datadir)/@PACKAGE@/$$d; done; \
 	mv $(DESTDIR)$(datadir)/@PACKAGE@/test $(DESTDIR)$(datadir)/@PACKAGE@/tests; \
-	cp test/testcases/xmlonly.sh $(DESTDIR)$(datadir)/@PACKAGE@/tests/testcases/configbasic-xml.filter
+	cp test/testcases/xmlonly.sh $(DESTDIR)$(datadir)/@PACKAGE@/tests/testcases/confbasic-xml.filter; \
+	cp test/testcases/xmlonly.sh $(DESTDIR)$(datadir)/@PACKAGE@/tests/testcases/rset-xml.filter
 
 hanoarchdir = $(datadir)/@PACKAGE@/hb_report
 hanoarch_DATA = hb_report/utillib.sh hb_report/ha_cf_support.sh hb_report/openais_conf_support.sh

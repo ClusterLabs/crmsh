@@ -5,15 +5,16 @@
 .INP: erase nodes
 .INP: property default-action-timeout=2m
 .INP: primitive st stonith:null 	params hostlist='node1' 	meta yoyo-meta="yoyo 2" 	op start requires=nothing 	op monitor interval=60m
-.INP: commit
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
+.INP: commit
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata
 WARNING: 7: st: unknown attribute 'yoyo-meta'
 .INP: node node1 	attributes mem=16G
 .INP: primitive p1 ocf:heartbeat:Dummy 	op monitor interval=60m 	op monitor interval=120m OCF_CHECK_LEVEL=10
+.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: primitive p2 ocf:heartbeat:Dummy
 .INP: primitive p3 ocf:heartbeat:Dummy
 .INP: group g1 p1 p2
@@ -25,7 +26,6 @@ WARNING: 7: st: unknown attribute 'yoyo-meta'
 .INP: primitive d2 ocf:heartbeat:Dummy
 .INP: primitive d3 ocf:heartbeat:Dummy
 .INP: commit
-.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: rename p3 pp3
 INFO: 21: modified colocation:cl1 from p3 to pp3
 INFO: 21: modified location:l1 from p3 to pp3

@@ -14,6 +14,7 @@ ERROR: 2: Error when loading script haproxy: No meta-data for agent: systemd:hap
 .EXT crm_resource --show-metadata ocf:heartbeat:Raid1
 Basic:
 
+health           Verify health and configuration
 mailto           E-Mail
 virtual-ip       Virtual IP
 
@@ -64,6 +65,7 @@ vmware           Fencing using vCenter / ESX Server
 ERROR: 3: Error when loading script haproxy: No meta-data for agent: systemd:haproxy
 Basic:
 
+health           Verify health and configuration
 mailto           E-Mail
 virtual-ip       Virtual IP
 
@@ -103,7 +105,6 @@ Script:
 
 check-uptime     Check uptime of nodes
 gfs2-base        GFS2 File System Base (Cloned)
-health           Check the health of the cluster
 lvm              Controls the availability of an LVM Volume Group
 raid1            Manages Linux software RAID (MD) devices on shared storage
 sapdb            SAP Database Instance
@@ -133,6 +134,7 @@ filesystem
 gfs2
 .EXT crm_resource --show-metadata systemd:haproxy
 ERROR: 4: Error when loading script haproxy: No meta-data for agent: systemd:haproxy
+health
 libvirt
 lvm-drbd
 mailto

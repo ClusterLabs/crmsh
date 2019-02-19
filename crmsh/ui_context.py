@@ -170,6 +170,15 @@ class Context(object):
         except IOError:
             pass
 
+    def disable_completion(self):
+        import readline
+        readline.parse_and_bind('tab: complete')
+        readline.set_completer(self.disable_completer)
+
+    def disable_completer(self, text, state):
+        # complete nothing
+        return
+
     def clear_readline_cache(self):
         self._rl_line = None
         self._rl_words = []

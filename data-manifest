@@ -58,6 +58,7 @@ test/cibtests/004.exp.xml
 test/cibtests/004.input
 test/cib-tests.sh
 test/cibtests/shadow.base
+test/containerized-regression-tests.sh
 test/crm-interface
 test/defaults
 test/descriptions
@@ -68,6 +69,8 @@ test/profile-history.sh
 test/README.regression
 test/regression.sh
 test/run
+test/run-in-container.sh
+test/run-in-travis.sh
 test/testcases/acl
 test/testcases/acl.excl
 test/testcases/acl.exp

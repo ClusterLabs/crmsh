@@ -9,7 +9,6 @@
 # Implemented as a straight-forward set of python functions for
 # simplicity and flexibility.
 #
-# TODO: Firewall handling for non-SUSE platforms
 # TODO: Make csync2 usage optional
 # TODO: Configuration file for bootstrap?
 
@@ -18,6 +17,7 @@ import sys
 import random
 import re
 import time
+import readline
 from string import Template
 from lxml import etree
 from . import config
@@ -42,6 +42,10 @@ INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "stor
 
 
 class Context(object):
+    """
+    Context object used to avoid having to pass these variables
+    to every bootstrap method.
+    """
     def __init__(self, quiet, yes_to_all, nic=None, ip_address=None, ip_network=None):
         self.quiet = quiet
         self.yes_to_all = yes_to_all
@@ -55,10 +59,13 @@ class Context(object):
         self.sbd_device = None
         self.diskless_sbd = False  # if True, enable SBD for diskless operation
         self.unicast = None
+        self.ipv6 = None
         self.admin_ip = None
         self.watchdog = None
         self.host_status = None
         self.connect_name = None
+        self.second_hb = None
+        self.ui_context = None
 
 _context = None
 
@@ -72,40 +79,82 @@ def die(*args):
 
 
 def error(*args):
+    """
+    Log an error message and raise ValueError to bail out of
+    bootstrap process.
+    """
     log("ERROR: {}".format(" ".join([str(arg) for arg in args])))
     die(*args)
 
 
 def warn(*args):
+    """
+    Log and display a warning message.
+    """
     log("WARNING: {}".format(" ".join(str(arg) for arg in args)))
     if not _context.quiet:
         print term.render(clidisplay.warn("! {}".format(" ".join(str(arg) for arg in args))))
 
 
+@utils.memoize
+def log_file_fallback():
+    """
+    If the standard log location isn't writable,
+    just log to the nearest temp dir.
+    """
+    return os.path.join(utils.get_tempdir(), "ha-cluster-bootstrap.log")
+
+
 def log(*args):
+    global LOG_FILE
     try:
         with open(LOG_FILE, "a") as logfile:
             logfile.write(" ".join([str(arg) for arg in args]) + "\n")
     except IOError:
-        die("Can't append to {} - aborting".format(LOG_FILE))
+        if LOG_FILE != log_file_fallback():
+            LOG_FILE = log_file_fallback()
+            log(*args)
+        else:
+            die("Can't append to {} - aborting".format(LOG_FILE))
 
 
-def prompt_for_string(msg, match=None, default=''):
+def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=None):
     if _context.yes_to_all:
         return default
     while True:
+        disable_completion()
         val = utils.multi_input('  %s [%s]' % (msg, default))
-        if val is None or len(val) == 0:
+        enable_completion()
+        if not val:
             val = default
+        else:
+            readline.remove_history_item(readline.get_current_history_length()-1)
         if match is None:
             return val
         if re.match(match, val) is not None:
-            return val
-        print >>sys.stderr, "    Invalid value entered"
+            if not valid_func or valid_func(val, prev_value):
+                return val
+        print term.render(clidisplay.error("    Invalid value entered"))
 
 
 def confirm(msg):
-    return _context.yes_to_all or utils.ask(msg)
+    if _context.yes_to_all:
+        return True
+    disable_completion()
+    rc = utils.ask(msg)
+    enable_completion()
+    readline.remove_history_item(readline.get_current_history_length()-1)
+    return rc
+
+
+def disable_completion():
+    if _context.ui_context:
+        _context.ui_context.disable_completion()
+
+
+def enable_completion():
+    if _context.ui_context:
+        _context.ui_context.setup_readline()
 
 
 def invoke(*args):
@@ -321,12 +370,15 @@ def check_prereqs(stage):
             "Please add an entry to /etc/hosts or configure DNS."))
         warned = True
 
-    ntpd = "ntp.service"
-    if service_is_available("ntpd.service"):
-        ntpd = "ntpd.service"
+    timekeepers = ('chronyd.service', 'ntp.service', 'ntpd.service')
+    timekeeper = None
+    for tk in timekeepers:
+        if service_is_available(tk):
+            timekeeper = tk
+            break
 
-    if not service_is_enabled(ntpd):
-        warn("NTP is not configured to start at system boot.")
+    if not service_is_enabled(timekeeper):
+        warn("{} is not configured to start at system boot.".format(timekeeper))
         warned = True
 
     if stage in ("", "join", "sbd"):
@@ -375,7 +427,16 @@ def init_network():
     up. If $IP_ADDRESS is overridden, network detect shouldn't work,
     because "ip route" won't be able to help us.
     """
-    nic, ipaddr, ipnetwork, _prefix = utils.network_defaults(_context.nic)
+    if not _context.ipv6:
+        nic, ipaddr, ipnetwork, _prefix = utils.network_defaults(_context.nic)
+    else:
+        all_ = utils.network_v6_all()
+        if not all_:
+            error("Unable to configure network: No usable IPv6 addresses found.")
+        nic = sorted(all_.keys())[0]
+        ipaddr = all_[nic][0].split('/')[0]
+        ipnetwork = utils.get_ipv6_network(all_[nic][0])
+
     if _context.nic is None:
         _context.nic = nic
     if _context.ip_address is None:
@@ -385,7 +446,7 @@ def init_network():
     if _context.ip_address is None:
         warn("Could not detect IP address for {}".format(nic))
     if _context.ip_network is None:
-        warn("Could not detect network address for {}".format(nic))
+        warn("Could not detect IP network address for {}".format(nic))
 
 
 def configure_firewall(tcp=None, udp=None):
@@ -421,22 +482,22 @@ def configure_firewall(tcp=None, udp=None):
         # Firewall is active, either restart or complain if we couldn't tweak it
         status("Restarting firewall (tcp={}, udp={})".format(" ".join(tcp), " ".join(udp)))
         if not invoke("rcSuSEfirewall2 restart"):
-            error("Failed to restart firewall")
+            error("Failed to restart firewall (SuSEfirewall2)")
 
-    def init_firewall_rhel7(tcp, udp):
+    def init_firewall_firewalld(tcp, udp):
         for p in tcp:
             if not invoke("firewall-cmd --zone=public --add-port={}/tcp --permanent".format(p)):
-                error("Failed to configure firewall")
+                error("Failed to configure firewall (firewalld via firewall-cmd)")
 
         for p in udp:
             if not invoke("firewall-cmd --zone=public --add-port={}/udp --permanent".format(p)):
-                error("Failed to configure firewall")
+                error("Failed to configure firewall (firewalld via firewall-cmd)")
 
         if not service_is_active("firewalld"):
             return
 
         if not invoke("firewall-cmd --reload"):
-            warn("Failed to reload firewall configuration")
+            warn("Failed to reload firewall configuration (firewalld via firewall-cmd)")
 
     def init_firewall_ufw(tcp, udp):
         """
@@ -444,24 +505,25 @@ def configure_firewall(tcp=None, udp=None):
         """
         for p in tcp:
             if not invoke("ufw allow {}/tcp".format(p)):
-                error("Failed to configure firewall using ufw")
+                error("Failed to configure firewall (ufw)")
         for p in udp:
             if not invoke("ufw allow {}/udp".format(p)):
-                error("Failed to configure firewall using ufw")
+                error("Failed to configure firewall (ufw)")
 
-    version = open("/proc/version").read()
-    if "SUSE" in version:
+    if package_is_installed("firewalld"):
+        init_firewall_firewalld(tcp, udp)
+    elif package_is_installed("SuSEfirewall2"):
         init_firewall_suse(tcp, udp)
-    elif "Red Hat 7" in version:
-        init_firewall_rhel7(tcp, udp)
-    elif utils.is_program("ufw"):
+    elif package_is_installed("ufw"):
         init_firewall_ufw(tcp, udp)
     else:
-        warn("Firewall: Could not open ports tcp={}, udp={}".format("|".join(tcp), "|".join(udp)))
+        warn("Failed to detect firewall: Could not open ports tcp={}, udp={}".format("|".join(tcp), "|".join(udp)))
 
 
 def firewall_open_basic_ports():
-    # ports for csync2, mgmtd, hawk & dlm respectively
+    """
+    Open ports for csync2, mgmtd, hawk & dlm respectively
+    """
     configure_firewall(tcp=["30865", "5560", "7630", "21064"])
 
 
@@ -664,7 +726,114 @@ def init_corosync_auth():
     invoke("corosync-keygen -l")
 
 
+def valid_network(addr, prev_value=None):
+    """
+    bindnetaddr(IPv4) must one of the local networks
+    """
+    if prev_value and addr == prev_value[0]:
+        warn("  Network address '{}' is already in use!".format(addr))
+        return False
+    all_ = utils.network_all()
+    if all_ and addr in all_:
+        return True
+    warn("  Address '{}' invalid, expected one of {}".format(addr, all_))
+    return False
+
+
+def valid_v6_network(addr, prev_value=None):
+    """
+    bindnetaddr(IPv6) must one of the local networks
+    """
+    if prev_value and addr == prev_value[0]:
+        warn("  Network address '{}' is already in use!".format(addr))
+        return False
+    network_list = []
+    all_ = utils.network_v6_all()
+    # the format of return example:
+    # {'eth2': ['2002:db8::3/64'], 'eth1': ['2001:db8::3/64']}
+    if not all_:
+        return False
+    for item in all_.values():
+        network_list.extend(item)
+    network_list = map(lambda x:utils.get_ipv6_network(x), network_list)
+    if addr in network_list:
+        return True
+    warn("  Address '{}' invalid, expected one of {}".format(addr, network_list))
+    return False
+
+
+def valid_ucastIP(addr, prev_value=None):
+    if prev_value and addr == prev_value[0]:
+        print(term.render(clidisplay.error("    {} has been used".format(addr))))
+        return False
+    ip_local = utils.ip_in_local(_context.ipv6)
+    if addr not in ip_local:
+        print(term.render(clidisplay.error("    Must one of {}".format(ip_local))))
+        return False
+    return True
+
+
+def valid_adminIP(addr, prev_value=None):
+    """
+    valid adminIP for IPv4/IPv6
+    """
+    try:
+        ip = utils.IP(addr)
+    except ValueError as err:
+        print term.render(clidisplay.error("    {}".format(err)))
+        return False
+    else:
+        all_ = []
+        if ip.version() == 4:
+            ping = "ping"
+            all_ = utils.network_all(with_mask=True)
+        else:
+            # for IPv6
+            ping = "ping6"
+            network_list = utils.network_v6_all()
+            for item in network_list.values():
+                all_.extend(item)
+        if invoke("{} -c 1 {}".format(ping, addr)):
+            warn("  Address already in use: {}".format(addr))
+            return False
+        for net in all_:
+            if utils.Network(net).has_key(addr):
+                return True
+        warn("  Address '{}' invalid, expected one of {}".format(addr, all_))
+        return False
+
+
+def valid_ipv4_addr(addr, prev_value=None):
+    if prev_value and addr == prev_value[0]:
+        warn("  Address already in use: {}".format(addr))
+        return False
+    return utils.valid_ip_addr(addr)
+
+
+def valid_ipv6_addr(addr, prev_value=None):
+    if prev_value and addr == prev_value[0]:
+        warn("  Address already in use: {}".format(addr))
+        return False
+    return utils.valid_ip_addr(addr, 6)
+
+
+def valid_port(port, prev_value=None):
+    if prev_value:
+        if abs(int(port) - int(prev_value[0])) <= 1:
+            warn("  Port {} is already in use by corosync. Leave a gap between multiple rings.".format(port))
+            return False
+    if int(port) >= 1024 and int(port) <= 65535:
+        return True
+    return False
+
+
 def init_corosync_unicast():
+    def pick_default_value(vlist, ilist):
+        # give a different value for second config items
+        if len(ilist) == 1:
+            vlist.remove(ilist[0])
+        return vlist[0]
+
     if _context.yes_to_all:
         status("Configuring corosync (unicast)")
     else:
@@ -680,24 +849,79 @@ Configure Corosync (unicast):
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
-    mcastport = prompt_for_string('Port', '[0-9]+', "5405")
-    if not mcastport:
-        error("No value for mcastport")
+    ringXaddr_res = []
+    mcastport_res = []
+    default_ports = ["5045", "5047"]
+    two_rings = False
+    default_networks = []
+
+    if _context.ipv6:
+        network_list = []
+        all_ = utils.network_v6_all()
+        for item in all_.values():
+            network_list.extend(item)
+        default_networks = map(utils.get_ipv6_network, network_list)
+    else:
+        network_list = utils.network_all()
+        if len(network_list) > 1:
+            default_networks = [_context.ip_network, network_list.remove(_context.ip_network)]
+        else:
+            default_networks = _context.ip_network
+    if not default_networks:
+        error("No network configured at {}!".format(utils.this_node()))
+
+    for i in 0, 1:
+        ringXaddr = prompt_for_string('Address for ring{}'.format(i),
+                                      r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:',
+                                      _context.ip_address if i == 0 and _context.ip_address else "",
+                                      valid_ucastIP,
+                                      ringXaddr_res)
+        if not ringXaddr:
+            error("No value for ring{}".format(i))
+        ringXaddr_res.append(ringXaddr)
+
+        mcastport = prompt_for_string('Port for ring{}'.format(i),
+                                      '[0-9]+',
+                                      pick_default_value(default_ports, mcastport_res),
+                                      valid_port,
+                                      mcastport_res)
+        if not mcastport:
+            error("No value for mcastport")
+        mcastport_res.append(mcastport)
+
+        if i == 1 or \
+           len(default_networks) == 1 or \
+           not _context.second_hb or \
+           not confirm("\nAdd another heartbeat line?"):
+            break
+        two_rings = True
 
     corosync.create_configuration(
         clustername=_context.cluster_name,
-        bindnetaddr=None,
-        mcastport=mcastport,
-        transport="udpu")
+        ringXaddr=ringXaddr_res,
+        mcastport=mcastport_res,
+        transport="udpu",
+        ipv6=_context.ipv6,
+        two_rings=two_rings)
     csync2_update(corosync.conf())
 
 
 def init_corosync_multicast():
     def gen_mcastaddr():
+        if _context.ipv6:
+            return "ff3e::%s:%d" % (
+                ''.join([random.choice('0123456789abcdef') for _ in range(4)]),
+                random.randint(0, 9))
         return "239.%d.%d.%d" % (
             random.randint(0, 255),
             random.randint(0, 255),
             random.randint(1, 255))
+
+    def pick_default_value(vlist, ilist):
+        # give a different value for second config items
+        if len(ilist) == 1:
+            vlist.remove(ilist[0])
+        return vlist[0]
 
     if _context.yes_to_all:
         status("Configuring corosync")
@@ -714,23 +938,95 @@ Configure Corosync:
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
-    bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)', r'([0-9]+\.){3}[0-9]+', _context.ip_network)
-    if not bindnetaddr:
-        error("No value for bindnetaddr")
+    bindnetaddr_res = []
+    mcastaddr_res = []
+    mcastport_res = []
+    default_ports = ["5045", "5047"]
+    two_rings = False
+    default_networks = []
 
-    mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)', r'([0-9]+\.){3}[0-9]+', gen_mcastaddr())
-    if not mcastaddr:
-        error("No value for mcastaddr")
+    if _context.ipv6:
+        network_list = []
+        all_ = utils.network_v6_all()
+        for item in all_.values():
+            network_list.extend(item)
+        default_networks = map(lambda x:utils.get_ipv6_network(x), network_list)
+    else:
+        network_list = utils.network_all()
+        if len(network_list) > 1:
+            default_networks = [_context.ip_network, network_list.remove(_context.ip_network)]
+        else:
+            default_networks = _context.ip_network
+    if not default_networks:
+        error("No network configured at {}!".format(utils.this_node()))
 
-    mcastport = prompt_for_string('Multicast port', '[0-9]+', "5405")
-    if not mcastport:
-        error("No value for mcastport")
+    for i in 0, 1:
+        if _context.ipv6:
+            bindnetaddr = prompt_for_string('Network address to bind to',
+                                            r'.*(::|0)$',
+                                            pick_default_value(default_networks, bindnetaddr_res),
+                                            valid_v6_network,
+                                            bindnetaddr_res)
+            if not bindnetaddr:
+                error("No value for bindnetaddr")
+            bindnetaddr_res.append(bindnetaddr)
+
+            mcastaddr = prompt_for_string('Multicast address',
+                                          r'^[Ff][Ff].*',
+                                          gen_mcastaddr(),
+                                          valid_ipv6_addr,
+                                          mcastaddr_res)
+            if not mcastaddr:
+                error("No value for mcastaddr")
+            mcastaddr_res.append(mcastaddr)
+
+        else:
+            bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)',
+                                            r'([0-9]+\.){3}0$',
+                                            pick_default_value(default_networks, bindnetaddr_res),
+                                            valid_network,
+                                            bindnetaddr_res)
+            if not bindnetaddr:
+                error("No value for bindnetaddr")
+            bindnetaddr_res.append(bindnetaddr)
+
+            mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)',
+                                          utils.mcast_regrex,
+                                          gen_mcastaddr(),
+                                          valid_ipv4_addr,
+                                          mcastaddr_res)
+            if not mcastaddr:
+                error("No value for mcastaddr")
+            mcastaddr_res.append(mcastaddr)
+
+        mcastport = prompt_for_string('Multicast port',
+                                      '[0-9]+',
+                                      pick_default_value(default_ports, mcastport_res),
+                                      valid_port,
+                                      mcastport_res)
+        if not mcastport:
+            error("No value for mcastport")
+        mcastport_res.append(mcastport)
+
+        if i == 1 or \
+           len(default_networks) == 1 or \
+           not _context.second_hb or \
+           not confirm("\nConfigure a second multicast ring?"):
+            break
+        two_rings = True
+
+    nodeid = None
+    if _context.ipv6:
+        nodeid = utils.gen_nodeid_from_ipv6(_context.ip_address)
 
     corosync.create_configuration(
         clustername=_context.cluster_name,
-        bindnetaddr=bindnetaddr,
-        mcastaddr=mcastaddr,
-        mcastport=mcastport)
+        bindnetaddr=bindnetaddr_res,
+        mcastaddr=mcastaddr_res,
+        mcastport=mcastport_res,
+        ipv6=_context.ipv6,
+        nodeid=nodeid,
+        two_rings=two_rings)
     csync2_update(corosync.conf())
 
 
@@ -753,7 +1049,12 @@ def init_corosync():
 
 def is_block_device(dev):
     from stat import S_ISBLK
-    return S_ISBLK(os.stat(dev).st_mode)
+    try:
+        rc = S_ISBLK(os.stat(dev).st_mode)
+    except OSError as msg:
+        warn(msg)
+        return False
+    return rc
 
 
 def list_partitions(dev):
@@ -823,7 +1124,7 @@ Configure Shared Storage:
             #  4) Non-empty parition table
             #
             partitions = list_partitions(dev)
-            if len(partitions) > 0:
+            if partitions:
                 status("WARNING: Partitions exist on %s!" % (dev))
                 if confirm("Are you ABSOLUTELY SURE you want to overwrite?"):
                     dev_looks_sane = True
@@ -832,12 +1133,12 @@ Configure Shared Storage:
             else:
                 # It's either broken, no partition table, or empty partition table
                 status("%s appears to be empty" % (dev))
-                if confirm("Are you sure you wish to use this device?"):
+                if confirm("Device appears empty (no partition table). Do you want to use {}?".format(dev)):
                     dev_looks_sane = True
                 else:
                     dev = ""
 
-    if len(partitions):
+    if partitions:
         if not confirm("Really?"):
             return
         status_long("Erasing existing partitions...")
@@ -982,6 +1283,9 @@ Configure SBD:
                     csync2_update(SYSCONFIG_SBD)
             return
 
+        if not check_watchdog():
+            error("Watchdog device must be configured if want to use SBD!")
+
         if utils.is_program("sbd") is None:
             error("sbd executable not found! Cannot configure SBD.")
 
@@ -995,6 +1299,7 @@ Configure SBD:
                 return
             if not is_block_device(dev):
                 print >>sys.stderr, "    That doesn't look like a block device"
+                dev = ""
             else:
                 warn("All data on {} will be destroyed!".format(dev))
                 if confirm('Are you sure you wish to use this device'):
@@ -1122,15 +1427,15 @@ Configure Administration IP Address:
   with the cluster, rather than using the IP address
   of any specific cluster node.
 """)
-        if not confirm("Do you wish to configure an administration IP?"):
+        if not confirm("Do you wish to configure a virtual IP address?"):
             return
 
-        adminaddr = prompt_for_string('Administration Virtual IP', r'([0-9]+\.){3}[0-9]+', "")
+        adminaddr = prompt_for_string('Virtual IP', r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:', "", valid_adminIP)
         if not adminaddr:
-            error("No value for admin address")
+            error("Expected an IP address")
 
     crm_configure_load("update", 'primitive admin-ip IPaddr2 ip=%s op monitor interval=10 timeout=20' % (utils.doublequote(adminaddr)))
-    wait_for_resource("Waiting for Admin Address", "admin-ip")
+    wait_for_resource("Configuring virtual IP ({})".format(adminaddr), "admin-ip")
 
 
 def init():
@@ -1143,6 +1448,7 @@ def init():
 
 def join_ssh(seed_host):
     """
+    SSH configuration for joining node.
     """
     if not seed_host:
         error("No existing IP/hostname specified (use -c option)")
@@ -1181,16 +1487,17 @@ def join_ssh(seed_host):
     # authorized_keys file (again, to help with the case where the
     # user has done manual initial setup without the assistance of
     # ha-cluster-init).
-    if not invoke("ssh root@%s ha-cluster-init ssh_remote" % (seed_host)):
-        error("Can't invoke ha-cluster-init ssh_remote on %s" % (seed_host))
+    if not invoke("ssh root@%s crm cluster init ssh_remote" % (seed_host)):
+        error("Can't invoke crm cluster init ssh_remote on %s" % (seed_host))
 
 
 def join_csync2(seed_host):
     """
+    Csync2 configuration for joining node.
     """
     if not seed_host:
         error("No existing IP/hostname specified (use -c option)")
-    status("Configuring csync2")
+    status_long("Configuring csync2")
 
     # Necessary if re-running join on a node that's been configured before.
     invoke("rm -f /var/lib/csync2/{}.db3".format(utils.this_node()))
@@ -1202,8 +1509,8 @@ def join_csync2(seed_host):
 
     # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
     # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
-    if not invoke("ssh root@{} ha-cluster-init csync2_remote {}".format(seed_host, utils.this_node())):
-        error("Can't invoke ha-cluster-init csync2_remote on {}".format(seed_host))
+    if not invoke("ssh root@{} crm cluster init csync2_remote {}".format(seed_host, utils.this_node())):
+        error("Can't invoke crm cluster init init csync2_remote on {}".format(seed_host))
 
     # This is necessary if syncing /etc/hosts (to ensure everyone's got the
     # same list of hosts)
@@ -1229,12 +1536,14 @@ def join_csync2(seed_host):
     if not invoke('ssh root@%s "csync2 -mr / ; csync2 -fr / ; csync2 -xv"' % (seed_host)):
         warn("csync2 run failed - some files may not be sync'd")
 
+    status_done()
+
 
 def join_ssh_merge(_cluster_node):
     status("Merging known_hosts")
 
     hosts = [m.group(1) for m in re.finditer(r"^\s*host\s*([^ ;]+)\s*;", open(CSYNC2_CFG).read(), re.M)]
-    if len(hosts) == 0:
+    if not hosts:
         error("Unable to extract host list from %s" % (CSYNC2_CFG))
 
     try:
@@ -1269,7 +1578,38 @@ def join_ssh_merge(_cluster_node):
 
 def join_cluster(seed_host):
     """
+    Cluster configuration for joining node.
     """
+    def get_local_nodeid():
+        # for IPv6
+        all_ = utils.network_v6_all()
+        if not all_:
+            error("Doesn't have any usable IPv6 addresses!")
+        nic = sorted(all_.keys())[0]
+        ipaddr = all_[nic][0].split('/')[0]
+        return utils.gen_nodeid_from_ipv6(ipaddr)
+
+    def update_nodeid(nodeid, node=None):
+        # for IPv6
+        if node and node != utils.this_node():
+            cmd = "crm corosync set totem.nodeid %d" % nodeid
+            invoke("crm cluster run '{}' {}".format(cmd, node))
+        else:
+            corosync.set_value("totem.nodeid", nodeid)
+
+    # check if use IPv6
+    ipv6_flag = False
+    ipv6 = corosync.get_value("totem.ip_version")
+    if ipv6 and ipv6 == "ipv6":
+        ipv6_flag = True
+    _context.ipv6 = ipv6_flag
+
+    # check whether have two rings
+    rrp_flag = False
+    rrp = corosync.get_value("totem.rrp_mode")
+    if rrp:
+        rrp_flag = True
+
     # Need to do this if second (or subsequent) node happens to be up and
     # connected to storage while it's being repartitioned on the first node.
     probe_partitions()
@@ -1281,8 +1621,8 @@ def join_cluster(seed_host):
     # that yet, so the following crawling horror takes a punt on the seed
     # node being up, then asks it for a list of mountpoints...
     if _context.cluster_node:
-        rc, outp, _ = utils.get_stdout_stderr("ssh -o StrictHostKeyChecking=no root@{} 'cibadmin -Q --xpath \"//primitive\"'".format(seed_host))
-        if len(outp):
+        _rc, outp, _ = utils.get_stdout_stderr("ssh -o StrictHostKeyChecking=no root@{} 'cibadmin -Q --xpath \"//primitive\"'".format(seed_host))
+        if outp:
             xml = etree.fromstring(outp)
             mountpoints = xml.xpath(' and '.join(['//primitive[@class="ocf"',
                                                   '@provider="heartbeat"',
@@ -1303,19 +1643,63 @@ def join_cluster(seed_host):
     # if unicast, we need to add our node to $corosync.conf()
     is_unicast = "nodelist" in open(corosync.conf()).read()
     if is_unicast:
-        corosync.add_node(utils.this_node())
+        ringXaddr_res = []
+        print("")
+        for i in 0, 1:
+            while True:
+                ringXaddr = prompt_for_string('Address for ring{}'.format(i),
+                                              r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:',
+                                              "",
+                                              valid_ucastIP,
+                                              ringXaddr_res)
+                if not ringXaddr:
+                    error("No value for ring{}".format(i))
+
+                _, outp = utils.get_stdout("ip addr show")
+                tmp = re.findall(r' {}/[0-9]+ '.format(ringXaddr), outp, re.M)[0].strip()
+                peer_ip = corosync.get_value("nodelist.node.ring{}_addr".format(i))
+                # e.g. peer ring0_addr and local ring0_addr must int the same network
+                if peer_ip not in utils.Network(tmp):
+                    print(term.render(clidisplay.error("    shouldn't in network {}".format(tmp))))
+                    continue
+
+                ringXaddr_res.append(ringXaddr)
+                break
+            if not rrp_flag:
+                break
+        print("")
+        invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
+        corosync.add_node_ucast(ringXaddr_res)
         csync2_update(corosync.conf())
+        invoke("ssh root@{} corosync-cfgtool -R".format(seed_host))
 
     # if no SBD devices are configured,
     # check the existing cluster if the sbd service is enabled
     if not configured_sbd_device() and invoke("ssh root@{} systemctl is-enabled sbd.service".format(seed_host)):
         _context.diskless_sbd = True
 
+    if ipv6_flag and not is_unicast:
+        # for ipv6 mcast
+        # using ipv6 need nodeid configured
+        local_nodeid = get_local_nodeid()
+        update_nodeid(local_nodeid)
+
     # Initialize the cluster before adjusting quorum. This is so
     # that we can query the cluster to find out how many nodes
     # there are (so as not to adjust multiple times if a previous
     # attempt to join the cluster failed)
     init_cluster_local()
+
+    status_long("Reloading cluster configuration")
+
+    if ipv6_flag and not is_unicast:
+        # for ipv6 mcast
+        nodeid_dict = {}
+        _rc, outp, _ = utils.get_stdout_stderr("crm_node -l")
+        if _rc == 0:
+            for line in outp.split('\n'):
+                tmp = line.split()
+                nodeid_dict[tmp[1]] = tmp[0]
 
     # apply nodelist in cluster
     if is_unicast:
@@ -1369,6 +1753,18 @@ def join_cluster(seed_host):
     # on the other nodes
     if is_unicast:
         invoke("crm cluster run 'crm corosync reload'")
+
+    if ipv6_flag and not is_unicast:
+        # for ipv6 mcast
+        # after csync2_update, all config files are same
+        # but nodeid must be uniqe
+        for node in nodeid_dict.keys():
+            if node == utils.this_node():
+                continue
+            update_nodeid(int(nodeid_dict[node]), node)
+        update_nodeid(local_nodeid)
+
+    status_done()
 
 
 def remove_ssh():
@@ -1442,8 +1838,9 @@ def remove_get_hostname(seed_host):
             _context.host_status = 0
 
 
-def remove_cluster():
+def remove_node_from_cluster():
     """
+    Remove node from running cluster and the corosync / pacemaker configuration.
     """
     node = _context.cluster_node
 
@@ -1502,10 +1899,10 @@ def remove_localhost_check():
     return nodename == utils.this_node()
 
 
-def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
+def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_device=None,
                    shared_device=None, sbd_device=None, diskless_sbd=False, quiet=False,
                    template=None, admin_ip=None, yes_to_all=False,
-                   unicast=False, watchdog=None, stage=None, args=None):
+                   unicast=False, second_hb=False, ipv6=False, watchdog=None, stage=None, args=None):
     """
     -i <nic>
     -o <ocfs2-device>
@@ -1539,8 +1936,15 @@ def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
     _context.sbd_device = sbd_device
     _context.diskless_sbd = diskless_sbd
     _context.unicast = unicast
+    _context.second_hb = second_hb
+    _context.ipv6 = ipv6
     _context.admin_ip = admin_ip
     _context.watchdog = watchdog
+    _context.ui_context = ui_context
+
+    def check_option():
+        if _context.admin_ip and not valid_adminIP(_context.admin_ip):
+            error("Invalid option: admin_ip")
 
     if stage is None:
         stage = ""
@@ -1558,6 +1962,8 @@ def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
     elif stage not in ("ssh", "ssh_remote", "csync2", "csync2_remote"):
         if corosync_active:
             error("Cluster is currently active - can't run %s stage" % (stage))
+
+    check_option()
 
     # Need hostname resolution to work, want NTP (but don't block ssh_remote or csync2_remote)
     if stage not in ('ssh_remote', 'csync2_remote'):
@@ -1592,7 +1998,7 @@ def bootstrap_init(cluster_name="hacluster", nic=None, ocfs2_device=None,
     status("Done (log saved to %s)" % (LOG_FILE))
 
 
-def bootstrap_join(cluster_node=None, nic=None, quiet=False, yes_to_all=False, watchdog=None, stage=None):
+def bootstrap_join(cluster_node=None, ui_context=None, nic=None, quiet=False, yes_to_all=False, watchdog=None, stage=None):
     """
     -c <cluster-node>
     -i <nic>
@@ -1609,6 +2015,7 @@ def bootstrap_join(cluster_node=None, nic=None, quiet=False, yes_to_all=False, w
     _context = Context(quiet=quiet, yes_to_all=yes_to_all, nic=nic)
     _context.cluster_node = cluster_node
     _context.watchdog = watchdog
+    _context.ui_context = ui_context
 
     check_tty()
 
@@ -1642,7 +2049,7 @@ def bootstrap_join(cluster_node=None, nic=None, quiet=False, yes_to_all=False, w
     status("Done (log saved to %s)" % (LOG_FILE))
 
 
-def bootstrap_remove(cluster_node=None, quiet=False, yes_to_all=False, force=False):
+def bootstrap_remove(cluster_node=None, ui_context=None, quiet=False, yes_to_all=False, force=False):
     """
     -c <cluster-node> - node to remove from cluster
     -q - quiet
@@ -1652,6 +2059,7 @@ def bootstrap_remove(cluster_node=None, quiet=False, yes_to_all=False, force=Fal
     global _context
     _context = Context(quiet=quiet, yes_to_all=yes_to_all)
     _context.cluster_node = cluster_node
+    _context.ui_context = ui_context
 
     if not yes_to_all and cluster_node is None:
         status("""Remove This Node from Cluster:
@@ -1664,6 +2072,10 @@ def bootstrap_remove(cluster_node=None, quiet=False, yes_to_all=False, force=Fal
 
     init()
     remove_ssh()
+
+    if not confirm("Do you want to remove node \"{}\" anyway?".format(cluster_node)):
+        return
+
     if remove_localhost_check():
         if not config.core.force and not force:
             error("Removing self requires --force")
@@ -1688,7 +2100,7 @@ def bootstrap_remove(cluster_node=None, quiet=False, yes_to_all=False, force=Fal
             if not invoke('bash -c "rm -f {} && rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*"'.format(" ".join(toremove))):
                 error("Deleting the configuration files failed")
     else:
-        remove_cluster()
+        remove_node_from_cluster()
 
 
 def init_common_geo():
@@ -1749,12 +2161,13 @@ port="9929"
     os.chmod(BOOTH_CFG, 0o644)
 
 
-def bootstrap_init_geo(quiet, yes_to_all, arbitrator, clusters, tickets):
+def bootstrap_init_geo(quiet, yes_to_all, arbitrator, clusters, tickets, ui_context=None):
     """
     Configure as a geo cluster member.
     """
     global _context
     _context = Context(quiet=quiet, yes_to_all=yes_to_all)
+    _context.ui_context = ui_context
 
     if os.path.exists(BOOTH_CFG) and not confirm("This will overwrite {} - continue?".format(BOOTH_CFG)):
         return
@@ -1810,13 +2223,14 @@ group g-booth booth-ip booth-site meta target-role=Stopped
     crm_configure_load("update", crm_template.substitute(iprules=" ".join(iprule.format(k, v) for k, v in clusters.iteritems())))
 
 
-def bootstrap_join_geo(quiet, yes_to_all, node, clusters):
+def bootstrap_join_geo(quiet, yes_to_all, node, clusters, ui_context=None):
     """
     Run on second cluster to add to a geo configuration.
     It fetches its booth configuration from the other node (cluster node or arbitrator).
     """
     global _context
     _context = Context(quiet=quiet, yes_to_all=yes_to_all)
+    _context.ui_context = ui_context
     init_common_geo()
     check_tty()
     geo_fetch_config(node)
@@ -1825,13 +2239,14 @@ def bootstrap_join_geo(quiet, yes_to_all, node, clusters):
     geo_cib_config(clusters)
 
 
-def bootstrap_arbitrator(quiet, yes_to_all, node):
+def bootstrap_arbitrator(quiet, yes_to_all, node, ui_context=None):
     """
     Configure this machine as an arbitrator.
     It fetches its booth configuration from a cluster node already in the cluster.
     """
     global _context
     _context = Context(quiet=quiet, yes_to_all=yes_to_all)
+    _context.ui_context = ui_context
     init_common_geo()
     check_tty()
     geo_fetch_config(node)

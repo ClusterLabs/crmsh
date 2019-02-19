@@ -22,6 +22,9 @@ def _remove_completer(args):
         n = utils.list_cluster_nodes()
     except:
         n = []
+    for node in args[1:]:
+        if node in n:
+            n.remove(node)   
     return scripts.param_completion_list('remove') + n
 
 
@@ -159,6 +162,10 @@ Note:
                                  "Default is multicast unless an environment where multicast cannot be used is detected.")
         network_group.add_option("-A", "--admin-ip", dest="admin_ip", metavar="IP",
                                  help="Configure IP address as an administration virtual IP")
+        network_group.add_option("-M", "--multi-heartbeats", action="store_true", dest="second_hb",
+                                 help="Configure corosync with second heartbeat line")
+        network_group.add_option("-I", "--ipv6", action="store_true", dest="ipv6",
+                                 help="Configure corosync use IPv6")
         parser.add_option_group(network_group)
 
         storage_group = optparse.OptionGroup(parser, "Storage configuration", "Options for configuring shared storage.")
@@ -194,6 +201,7 @@ Note:
 
         bootstrap.bootstrap_init(
             cluster_name=options.name,
+            ui_context=context,
             nic=options.nic,
             ocfs2_device=options.ocfs2_device,
             shared_device=options.shared_device,
@@ -204,6 +212,8 @@ Note:
             admin_ip=options.admin_ip,
             yes_to_all=options.yes_to_all,
             unicast=options.unicast,
+            second_hb=options.second_hb,
+            ipv6=options.ipv6,
             watchdog=options.watchdog,
             stage=stage,
             args=args)
@@ -216,7 +226,7 @@ Note:
             for node in nodelist:
                 if node == utils.this_node():
                     continue
-                bootstrap.status("Add node {} (may prompt for root password):".format(node))
+                bootstrap.status("\n\nAdd node {} (may prompt for root password):".format(node))
                 if not self._add_node(node, yes_to_all=options.yes_to_all):
                     return False
 
@@ -264,6 +274,7 @@ If stage is not specified, each stage will be invoked in sequence.
 
         bootstrap.bootstrap_join(
             cluster_node=options.cluster_node,
+            ui_context=context,
             nic=options.nic,
             quiet=options.quiet,
             yes_to_all=options.yes_to_all,
@@ -327,12 +338,14 @@ If stage is not specified, each stage will be invoked in sequence.
         if len(args) == 0:
             bootstrap.bootstrap_remove(
                 cluster_node=None,
+                ui_context=context,
                 quiet=options.quiet,
                 yes_to_all=options.yes_to_all)
         else:
             for node in args:
                 bootstrap.bootstrap_remove(
                     cluster_node=node,
+                    ui_context=context,
                     quiet=options.quiet,
                     yes_to_all=options.yes_to_all,
                     force=options.force)
@@ -410,7 +423,7 @@ Cluster Description
                 ticketlist = [t for t in re.split('[ ,;]+', options.tickets)]
             except ValueError:
                 parser.error("Invalid ticket list")
-        bootstrap.bootstrap_init_geo(options.quiet, options.yes_to_all, options.arbitrator, clustermap, ticketlist)
+        bootstrap.bootstrap_init_geo(options.quiet, options.yes_to_all, options.arbitrator, clustermap, ticketlist, ui_context=context)
         return True
 
     @command.name("geo_join")
@@ -443,7 +456,7 @@ Cluster Description
         clustermap = self._parse_clustermap(options.clusters)
         if clustermap is None:
             parser.error("Invalid cluster description format")
-        bootstrap.bootstrap_join_geo(options.quiet, options.yes_to_all, options.node, clustermap)
+        bootstrap.bootstrap_join_geo(options.quiet, options.yes_to_all, options.node, clustermap, ui_context=context)
         return True
 
     @command.name("geo_init_arbitrator")
@@ -465,7 +478,7 @@ Cluster Description
         if options.help:
             parser.print_help()
             return
-        bootstrap.bootstrap_arbitrator(options.quiet, options.yes_to_all, options.other)
+        bootstrap.bootstrap_arbitrator(options.quiet, options.yes_to_all, options.other, ui_context=context)
         return True
 
     @command.completers_repeating(compl.call(scripts.param_completion_list, 'health'))
@@ -542,7 +555,10 @@ Cluster Description
                 if result[0] != 0:
                     err_buf.error("[%s]: rc=%s\n%s\n%s" % (host, result[0], result[1], result[2]))
                 else:
-                    err_buf.ok("[%s]\n%s" % (host, result[1]))
+                    if not result[1]:
+                        err_buf.ok("[%s]" % host)
+                    else:
+                        err_buf.ok("[%s]\n%s" % (host, result[1]))
 
     def do_copy(self, context, local_file, *nodes):
         '''

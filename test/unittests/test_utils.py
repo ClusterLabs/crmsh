@@ -120,3 +120,20 @@ def test_msec():
     assert utils.crm_msec('1') == 1000
     assert utils.crm_msec('1m') == 60*1000
     assert utils.crm_msec('1h') == 60*60*1000
+
+
+def test_network():
+    ip = utils.IP('192.168.1.2')
+    assert ip.version() == 4
+    ip = utils.IP('2001:db3::1')
+    assert ip.version() == 6
+
+    net = utils.Network('192.0.2.0/24')
+    assert net.has_key('192.168.2.0') is False
+    assert net.has_key('192.0.2.42') is True
+
+    net = utils.Network('2001:db8::2/64')
+    assert net.has_key('2001:db3::1') is False
+    assert net.has_key('2001:db8::1') is True
+
+    assert utils.get_ipv6_network("2002:db8::2/64") == "2002:db8::"

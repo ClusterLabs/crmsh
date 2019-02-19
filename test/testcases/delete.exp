@@ -6,7 +6,10 @@
 .INP: node node1
 .INP: # create one stonith so that verify does not complain
 .INP: primitive st stonith:ssh 	params hostlist='node1' 	meta target-role="Started" 	op start requires=nothing timeout=60s 	op monitor interval=60m timeout=60s
+.EXT crm_resource --show-metadata stonith:ssh
+.EXT stonithd metadata
 .INP: primitive d1 ocf:pacemaker:Dummy
+.EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .INP: primitive d2 ocf:pacemaker:Dummy
 .INP: location d1-pref d1 100: node1
 .INP: show
@@ -87,9 +90,6 @@ primitive st stonith:ssh \
 	op monitor interval=60m timeout=60s
 location d1-pref d1 100: node1
 .INP: verify
-.EXT crm_resource --show-metadata stonith:ssh
-.EXT stonithd metadata
-.EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT pengine metadata
 .INP: # delete a group which is in a clone
 .INP: primitive d2 ocf:pacemaker:Dummy
