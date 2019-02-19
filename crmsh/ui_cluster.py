@@ -4,6 +4,7 @@
 
 import optparse
 import re
+from . import options as cmdoptions
 from . import command
 from . import utils
 from .msg import err_buf
@@ -183,58 +184,19 @@ Note:
     will be skipped.
 """, add_help_option=False)
 
-        parser.add_option("-h", "--help", action="store_true", dest="help", help="Show this help message")
-        parser.add_option("-q", "--quiet", action="store_true", dest="quiet",
-                          help="Be quiet (don't describe what's happening, just do it)")
-        parser.add_option("-y", "--yes", action="store_true", dest="yes_to_all",
-                          help='Answer "yes" to all prompts (use with caution, this is destructive, especially during the "storage" stage)')
-        parser.add_option("-t", "--template", dest="template",
-                          help='Optionally configure cluster with template "name" (currently only "ocfs2" is valid here)')
-        parser.add_option("-n", "--name", metavar="NAME", dest="name", default="hacluster",
-                          help='Set the name of the configured cluster.')
-        parser.add_option("-N", "--nodes", metavar="NODES", dest="nodes",
-                          help='Additional nodes to add to the created cluster. ' +
-                          'May include the current node, which will always be the initial cluster node.')
-        # parser.add_option("--quick-start", dest="quickstart", action="store_true", help="Perform basic system configuration (NTP, watchdog, /etc/hosts)")
-        parser.add_option("-S", "--enable-sbd", dest="diskless_sbd", action="store_true",
-                          help="Enable SBD even if no SBD device is configured (diskless mode)")
-        parser.add_option("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG",
-                          help="Use the given watchdog device")
+        for _options in cmdoptions.CLUSTER_INIT_BASE_OPTIONS:
+            parser.add_option(*_options[0], **_options[-1])
 
         network_group = optparse.OptionGroup(parser, "Network configuration", "Options for configuring the network and messaging layer.")
-        network_group.add_option("-i", "--interface", dest="nic", metavar="IF",
-                                 help="Bind to IP address on interface IF")
-        network_group.add_option("-u", "--unicast", action="store_true", dest="unicast",
-                                 help="Configure corosync to communicate over unicast (UDP), and not multicast. " +
-                                 "Default is multicast unless an environment where multicast cannot be used is detected.")
-        network_group.add_option("-A", "--admin-ip", dest="admin_ip", metavar="IP",
-                                 help="Configure IP address as an administration virtual IP")
-        network_group.add_option("-M", "--multi-heartbeats", action="store_true", dest="second_hb",
-                                 help="Configure corosync with second heartbeat line")
-        network_group.add_option("-I", "--ipv6", action="store_true", dest="ipv6",
-                                 help="Configure corosync use IPv6")
-        network_group.add_option("--qdevice",
-                                 dest="qdevice", metavar="QDEVICE",
-                                 help="QDevice IP")
-        network_group.add_option("--qdevice-port",
-                                 dest="qdevice_port", metavar="QDEVICE_PORT", type="int", default=5403,
-                                 help="QDevice port")
-        network_group.add_option("--qdevice-algo",
-                                 dest="qdevice_algo", metavar="QDEVICE_ALGO", default="ffsplit",
-                                 help="QDevice algorithm")
-        network_group.add_option("--qdevice-tie-breaker",
-                                 dest="qdevice_tie_breaker", metavar="QDEVICE_TIE_BREAKER", default="lowest",
-                                 help="QDevice algorithm")
+        for _options in cmdoptions.CLUSTER_INIT_NET_OPTIONS:
+            network_group.add_option(*_options[0], **_options[-1])
         parser.add_option_group(network_group)
 
         storage_group = optparse.OptionGroup(parser, "Storage configuration", "Options for configuring shared storage.")
-        storage_group.add_option("-p", "--partition-device", dest="shared_device", metavar="DEVICE",
-                                 help='Partition this shared storage device (only used in "storage" stage)')
-        storage_group.add_option("-s", "--sbd-device", dest="sbd_device", metavar="DEVICE",
-                                 help="Block device to use for SBD fencing")
-        storage_group.add_option("-o", "--ocfs2-device", dest="ocfs2_device", metavar="DEVICE",
-                                 help='Block device to use for OCFS2 (only used in "vgfs" stage)')
+        for _options in cmdoptions.CLUSTER_INIT_STORAGE_OPTIONS:
+            storage_group.add_option(*_options[0], **_options[-1])
         parser.add_option_group(storage_group)
+
         try:
             options, args = parser.parse_args(list(args))
         except:
