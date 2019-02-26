@@ -61,12 +61,6 @@ BuildRequires:  python3-lxml
 BuildRequires:  python3-setuptools
 
 %if 0%{?suse_version}
-# only require csync2 on SUSE since bootstrap
-# only works for SUSE at the moment anyway
-Requires:       csync2
-%endif
-
-%if 0%{?suse_version}
 Requires:       python3-PyYAML
 # Suse splits this off into a separate package
 Requires:       python3-curses
