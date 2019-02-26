@@ -5,14 +5,12 @@ import platform
 import socket
 import crm_script
 
-PACKAGES = ['booth', 'cluster-glue', 'corosync', 'crmsh', 'csync2', 'drbd',
+PACKAGES = ['booth', 'cluster-glue', 'corosync', 'crmsh', 'drbd',
             'fence-agents', 'gfs2', 'gfs2-utils', 'hawk', 'ocfs2',
             'ocfs2-tools', 'pacemaker', 'pacemaker-mgmt',
             'resource-agents', 'sbd']
 SERVICES = ['sshd', 'ntp', 'corosync', 'pacemaker', 'hawk', 'SuSEfirewall2_init']
 SSH_KEY = os.path.expanduser('~/.ssh/id_rsa')
-CSYNC2_KEY = '/etc/csync2/key_hagroup'
-CSYNC2_CFG = '/etc/csync2/csync2.cfg'
 COROSYNC_CONF = '/etc/corosync/corosync.conf'
 SYSCONFIG_SBD = '/etc/sysconfig/sbd'
 SYSCONFIG_FW = '/etc/sysconfig/SuSEfirewall2'
@@ -81,8 +79,6 @@ def files_info():
             return os.path.expanduser(fn)
         return ''
     return {'ssh_key': check(SSH_KEY),
-            'csync2_key': check(CSYNC2_KEY),
-            'csync2_cfg': check(CSYNC2_CFG),
             'corosync_conf': check(COROSYNC_CONF),
             'sysconfig_sbd': check(SYSCONFIG_SBD),
             'sysconfig_fw': check(SYSCONFIG_FW),
