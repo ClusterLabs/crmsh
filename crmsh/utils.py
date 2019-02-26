@@ -1986,7 +1986,7 @@ def remote_checksum(local_path, nodes, this_node):
         print("%-16s: %s" % (host, hashlib.sha1(open(path).read()).hexdigest()))
 
 
-def cluster_copy_file(local_path, nodes=None):
+def cluster_copy_file(local_path, nodes=None, output=True):
     """
     Copies given file to all other cluster nodes.
     """
@@ -2008,7 +2008,8 @@ def cluster_copy_file(local_path, nodes=None):
             err_buf.error("Failed to push %s to %s: %s" % (local_path, host, result))
             ok = False
         else:
-            err_buf.ok(host)
+            if output:
+                err_buf.ok(host)
     return ok
 
 

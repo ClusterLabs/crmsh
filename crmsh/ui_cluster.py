@@ -164,7 +164,6 @@ class Cluster(command.UI):
 
 Stage can be one of:
     ssh         Create SSH keys for passwordless SSH between cluster nodes
-    csync2      Configure csync2
     corosync    Configure corosync
     storage     Partition shared storage (ocfs2 template only)
     sbd         Configure SBD (requires -s <dev>)
@@ -271,9 +270,7 @@ Note:
 
 Stage can be one of:
     ssh         Obtain SSH keys from existing cluster node (requires -c <host>)
-    csync2      Configure csync2 (requires -c <host>)
-    ssh_merge   Merge root's SSH known_hosts across all nodes (csync2 must
-                already be configured).
+    ssh_merge   Merge root's SSH known_hosts across all nodes
     cluster     Start the cluster on this node
 
 If stage is not specified, each stage will be invoked in sequence.
@@ -298,7 +295,7 @@ If stage is not specified, each stage will be invoked in sequence.
         stage = ""
         if len(args) == 1:
             stage = args[0]
-        if stage not in ("ssh", "csync2", "ssh_merge", "cluster", ""):
+        if stage not in ("ssh", "ssh_merge", "cluster", ""):
             parser.error("Invalid stage (%s)" % (stage))
             return False
 
