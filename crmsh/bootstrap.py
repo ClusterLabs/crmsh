@@ -1748,7 +1748,10 @@ def join_cluster(seed_host):
                 break
         print("")
         invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
-        corosync.add_node_ucast(ringXaddr_res)
+        try:
+            corosync.add_node_ucast(ringXaddr_res)
+        except ValueError as e:
+            warn(e)
         csync2_update(corosync.conf())
         invoke("ssh -o StrictHostKeyChecking=no root@{} corosync-cfgtool -R".format(seed_host))
 

@@ -386,6 +386,15 @@ def add_node_ucast(IParray, node_name=None):
     f = open(conf()).read()
     p = Parser(f)
 
+    # to check if the same IP already configured
+    exist_iplist = []
+    for path in p.all_paths():
+        if re.search('nodelist.node.ring[0-9]*_addr', path):
+            exist_iplist.extend(p.get_all(path))
+    for ip in IParray:
+        if ip in exist_iplist:
+            raise ValueError("IP {} was already configured".format(ip))
+
     node_id = get_free_nodeid(p)
     node_value = []
     for i, addr in enumerate(IParray):
