@@ -686,7 +686,7 @@ def fix_node_ids(node, oldnode):
         'alerts': 'alert',
         }
 
-    idless = set(['operations', 'fencing-topology', 'network', 'docker', 'rkt', 'storage'])
+    idless = set(['operations', 'fencing-topology', 'network', 'docker', 'rkt', 'storage', 'select', 'select_attributes'])
     isref = set(['resource_ref', 'obj_ref', 'crmsh-ref'])
 
     def needs_id(node):
