@@ -19,6 +19,7 @@
 .INP: primitive node1 Dummy
 .INP: tag ones l1 p1
 .INP: alert notify_9 /usr/share/pacemaker/alerts/alert_snmp.sh         attributes         trap_add_hires_timestamp_oid="false"         trap_node_states="non-trap"         trap_resource_tasks="start,stop,monitor,promote,demote"         to "192.168.40.9"
+.INP: alert notify_10 /usr/share/pacemaker/alerts/alert_snmp.sh         attributes         trap_add_hires_timestamp_oid="false"         select attributes { master-prmStateful test1 }         to 192.168.28.188
 .INP: show tag:ones and type:location
 location l1 { p0 p1 p2 } inf: node1
 .INP: show tag:ones and p1
@@ -45,6 +46,10 @@ location l1 { p0 p1 p2 } inf: node1
 property cib-bootstrap-options: \
 	rule #uname eq node1 \
 	stonith-enabled=no
+alert notify_10 "/usr/share/pacemaker/alerts/alert_snmp.sh" \
+	attributes trap_add_hires_timestamp_oid=false \
+        select attributes { master-prmStateful test1 } \
+	to 192.168.28.188
 alert notify_9 "/usr/share/pacemaker/alerts/alert_snmp.sh" \
 	attributes trap_add_hires_timestamp_oid=false trap_node_states=non-trap trap_resource_tasks="start,stop,monitor,promote,demote" \
 	to 192.168.40.9
