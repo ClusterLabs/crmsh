@@ -27,6 +27,11 @@ alert notify_9 /usr/share/pacemaker/alerts/alert_snmp.sh \
         trap_node_states="non-trap" \
         trap_resource_tasks="start,stop,monitor,promote,demote" \
         to "192.168.40.9"
+alert notify_10 /usr/share/pacemaker/alerts/alert_snmp.sh \
+        attributes \
+        trap_add_hires_timestamp_oid="false" \
+        select attributes { master-prmStateful test1 } \
+        to 192.168.28.188
 show tag:ones and type:location
 show tag:ones and p1
 show
