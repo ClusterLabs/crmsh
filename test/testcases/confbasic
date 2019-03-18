@@ -43,6 +43,11 @@ primitive d7 Dummy \
 	op_params 1: op_param=smart \
 	op_meta 2: rule #ra-version version:gt 1.0 start-delay=120m \
 	op_meta 1: start-delay=60m
+primitive d8 ocf:pacemaker:Dummy
+clone m7 d8 \
+	meta promotable=true \
+	meta promoted-max=1 \
+	meta promoted-node-max=1
 location l1 g1 100: node1
 location l2 c \
 	rule $id=l2-rule1 100: #uname eq node1

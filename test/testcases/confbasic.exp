@@ -31,6 +31,8 @@
 .INP: ms m6 s6
 .INP: primitive d7 Dummy 	params rule inf: #uname eq node1 fake=1 	params rule inf: #uname eq node2 fake=2         op start interval=0 timeout=60s         op_params 2: rule #uname eq node1 op_param=dummy         op_params 1: op_param=smart         op_meta 2: rule #ra-version version:gt 1.0 start-delay=120m         op_meta 1: start-delay=60m
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
+.INP: primitive d8 ocf:pacemaker:Dummy
+.INP: clone m7 d8 	meta promotable=true 	meta promoted-max=1 	meta promoted-node-max=1
 .INP: location l1 g1 100: node1
 .INP: location l2 c 	rule $id=l2-rule1 100: #uname eq node1
 .INP: location l3 m5 	rule inf: #uname eq node1 and pingd gt 0
@@ -56,7 +58,7 @@
 .INP: set d2.mondelay 45
 .INP: _test
 .INP: verify
-WARNING: 51: c2: resource d1 is grouped, constraints should apply to the group
+WARNING: 53: c2: resource d1 is grouped, constraints should apply to the group
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata
@@ -86,6 +88,7 @@ primitive d7 Dummy \
 	op_params 1: op_param=smart \
 	op_meta 2: rule #ra-version version:gt 1.0 start-delay=120m \
 	op_meta 1: start-delay=60m
+primitive d8 ocf:pacemaker:Dummy
 primitive s5 ocf:pacemaker:Stateful \
 	operations  $id-ref=d1-ops
 primitive s6 ocf:pacemaker:Stateful \
@@ -103,6 +106,10 @@ ms m5 s5
 ms m6 s6
 clone c d3 \
 	meta clone-max=1
+clone m7 d8 \
+	meta promotable=true \
+	meta promoted-max=1 \
+	meta promoted-node-max=1
 tag t1 m5 m6
 colocation c1 inf: m6 m5
 colocation c2 inf: m5:Master d1:Started
@@ -139,4 +146,4 @@ op_defaults opsdef2: \
 	rule 100: #uname eq node1 \
 	record-pending=true
 .INP: commit
-WARNING: 53: c2: resource d1 is grouped, constraints should apply to the group
+WARNING: 55: c2: resource d1 is grouped, constraints should apply to the group
