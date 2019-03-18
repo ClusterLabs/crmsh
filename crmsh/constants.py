@@ -219,7 +219,7 @@ group_meta_attributes = common_meta_attributes + ("container", )
 clone_meta_attributes = common_meta_attributes + (
     "ordered", "notify", "interleave", "globally-unique",
     "clone-max", "clone-node-max", "clone-state", "description",
-    "clone-min",
+    "clone-min", "promotable", "promoted-max", "promoted-node-max",
 )
 ms_meta_attributes = common_meta_attributes + (
     "clone-max", "clone-node-max", "notify", "globally-unique", "ordered", 
