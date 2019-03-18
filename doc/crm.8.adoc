@@ -3082,6 +3082,9 @@ Example:
 ...............
 clone cl_fence apc_1 \
   meta clone-node-max=1 globally-unique=false
+
+clone disk1 drbd1 \
+  meta promotable=true notify=true globally-unique=false
 ...............
 
 [[cmdhelp_configure_colocation,colocate resources]]
@@ -3603,6 +3606,18 @@ Example:
 ms disk1 drbd1 \
   meta notify=true globally-unique=false
 ...............
+
+.Note on `ms` deprecated
+****************************
+From Pacemaker-2.0, the resource type referred to as "master/slave",
+"stateful", or "multi-state" is no longer a separate resource type,
+but a variation of clone now referred to as a "promotable clone".
+For backward compatibility, above configurations are also accepted.
+...............
+clone disk1 drbd1 \
+  meta promotable=true notify=true globally-unique=false
+...............
+****************************
 
 .Note on `id-ref` usage
 ****************************
