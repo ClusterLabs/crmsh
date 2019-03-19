@@ -63,7 +63,8 @@ def make_time(t):
 _syslog2node_formats = (re.compile(r'^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:.(\d+))?([+-])(\d{2}):?(\d{2})\s+(?:\[\d+\])?\s*([\S]+)'),
                         re.compile(r'^(\d{4}-\d{2}-\d{2}T\S+)\s+(?:\[\d+\])?\s*([\S]+)'),
                         re.compile(r'^([a-zA-Z]{2,4}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+(?:\[\d+\])?\s*([\S]+)'),
-                        re.compile(r'^(\d{4}\/\d{2}\/\d{2}_\d{2}:\d{2}:\d{2})'))
+                        re.compile(r'^(\d{4}\/\d{2}\/\d{2}_\d{2}:\d{2}:\d{2})'),
+                        re.compile(r'^([A-Z][a-z]+ \d{1,2} \d{2}:\d{2}:\d{2}\.\d+) ([\S]+)'))
 
 _syslog_ts_prev = None
 
@@ -74,7 +75,7 @@ def syslog_ts(s):
     Returns as floating point, seconds
     """
     global _syslog_ts_prev
-    fmt1, fmt2, fmt3, fmt4 = _syslog2node_formats
+    fmt1, fmt2, fmt3, fmt4, fm5 = _syslog2node_formats
 
     # RFC3339
     m = fmt1.match(s)
@@ -113,6 +114,11 @@ def syslog_ts(s):
         _syslog_ts_prev = utils.parse_to_timestamp(tstr)
         return _syslog_ts_prev
 
+    m = fm5.match(s)
+    if m:
+        _syslog_ts_prev = utils.parse_to_timestamp(m.group(1))
+        return _syslog_ts_prev
+
     logger.debug("malformed line: %s", s)
     return _syslog_ts_prev
 
@@ -135,7 +141,7 @@ def syslog2node(s):
     '''
     global _syslog_node_prev
 
-    fmt1, fmt2, fmt3, _ = _syslog2node_formats
+    fmt1, fmt2, fmt3, _, _ = _syslog2node_formats
     m = fmt1.match(s)
     if m:
         _syslog_node_prev = m.group(11)
@@ -179,7 +185,7 @@ def syslog_ts_node(s):
     """
     global _syslog_ts_prev
     global _syslog_node_prev
-    fmt1, fmt2, fmt3, fmt4 = _syslog2node_formats
+    fmt1, fmt2, fmt3, fmt4, fmt5 = _syslog2node_formats
 
     # RFC3339
     m = fmt1.match(s)
@@ -215,6 +221,11 @@ def syslog_ts_node(s):
     if m:
         tstr = m.group(1).replace('_', ' ')
         _syslog_ts_prev = utils.parse_to_timestamp(tstr)
+        return _syslog_ts_prev, _syslog_node_prev
+
+    m = fmt5.match(s)
+    if m:
+        _syslog_ts_prev, _syslog_node_prev = utils.parse_to_timestamp(m.group(1)), m.group(2)
         return _syslog_ts_prev, _syslog_node_prev
 
     logger.debug("malformed line: %s", s)

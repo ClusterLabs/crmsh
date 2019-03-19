@@ -52,8 +52,8 @@ def _transition_start_re():
     2: full path of pe file
     3: pe file number
     """
-    m1 = "crmd.*Processing graph ([0-9]+).*derived from (.*/pe-[^-]+-([0-9]+)[.]bz2)"
-    m2 = "pengine.*[Tt]ransition ([0-9]+).*([^ ]*/pe-[^-]+-([0-9]+)[.]bz2)"
+    m1 = "pacemaker-controld.*Processing graph ([0-9]+).*derived from (.*/pe-[^-]+-([0-9]+)[.]bz2)"
+    m2 = "pacemaker-schedulerd.*[Tt]ransition ([0-9]+).*([^ ]*/pe-[^-]+-([0-9]+)[.]bz2)"
     try:
         return re.compile("(?:%s)|(?:%s)" % (m1, m2))
     except re.error as e:
@@ -81,7 +81,7 @@ def _transition_end_re():
     4: state
     """
     try:
-        return re.compile("crmd.*Transition ([0-9]+).*Source=(.*/pe-[^-]+-([0-9]+)[.]bz2).:.*(Stopped|Complete|Terminated)")
+        return re.compile("pacemaker-controld.*Transition ([0-9]+).*Source=(.*/pe-[^-]+-([0-9]+)[.]bz2).:.*(Stopped|Complete|Terminated)")
     except re.error as e:
         logger.debug("RE compilation failed: %s", e)
         raise ValueError("Error in search expression")
@@ -409,7 +409,7 @@ class LogParser(object):
                             ts = logtime.syslog_ts(line)
                             if ts is None:
                                 continue
-                            logger.debug("+Event %s: %s", etype, ", ".join(m.groups()))
+                            logger.debug("+Event %s: %s: %s", etype, ", ".join(m.groups()), line.strip('\n'))
                             sk = (int(ts) << 32) + int(spos)
                             self.events[etype].append((sk, logidx, spos))
                             if transition is not None:
