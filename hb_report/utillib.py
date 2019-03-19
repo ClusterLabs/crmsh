@@ -1642,6 +1642,10 @@ def dump_ocfs2():
                 "cat /sys/fs/ocfs2/cluster_stack"
                 ]
         for cmd in cmds:
+            cmd_name = cmd.split()[0]
+            if not which(cmd_name) or \
+               cmd_name == "cat" and not os.path.exists(cmd.split()[1]):
+                continue
             _, out = crmutils.get_stdout(cmd)
             f.write("\n\n#=====[ Command ] ==========================#\n")
             f.write("# %s\n"%(cmd))
