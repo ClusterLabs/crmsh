@@ -2159,4 +2159,8 @@ def iplist_for_cloud():
     return []
 
 
+def debug_timestamp():
+    return datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+
+
 # vim:ts=4:sw=4:et:
