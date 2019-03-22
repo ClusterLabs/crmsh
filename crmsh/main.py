@@ -360,6 +360,8 @@ def run():
             err_buf.reset_lineno()
             options.batch = True
         user_args = parse_options()
+        if config.core.debug:
+            print(utils.debug_timestamp())
         term.init()
         if options.profile:
             return profile_run(context, user_args)
