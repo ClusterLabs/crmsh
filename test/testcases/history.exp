@@ -5,378 +5,589 @@
 .EXT tar -tj < history-test.tar.bz2 2> /dev/null | head -1
 .EXT tar -xj < history-test.tar.bz2
 Source: history-test.tar.bz2
-Created on: Fri 14 Dec 19:08:38 UTC 2012
-By: unknown
-Period: 2012-12-14 20:06:34 - 2012-12-14 20:08:44
-Nodes: xen-d xen-e
-Groups: 
+Created on: Fri Mar 22 15:08:40 CST 2019
+By: report
+Period: 2019-03-19 01:09:49 - 2019-03-22 23:08:36
+Nodes: 15sp1-1 15sp1-2
+Groups: g1
 Clones: 
-Resources: d1 s-libvirt
-Transitions: 43 44* 45 46 47 48* 272* 49* 50*
+Resources: stonith-sbd d1 d2
+Transitions: ... 37* 38* 39* 40* 41 42* 43 44* 45 46 0 48 49* 11 12 13* 15* 16 18 19*
 .INP: events
-Dec 14 20:06:57 xen-e pengine: [24227]: ERROR: unpack_resources: Resource start-up disabled since no STONITH resources have been defined
-Dec 14 20:06:57 xen-e pengine: [24227]: ERROR: unpack_resources: Either configure some or disable STONITH with the stonith-enabled option
-Dec 14 20:06:57 xen-e pengine: [24227]: ERROR: unpack_resources: NOTE: Clusters with shared data need STONITH to ensure data integrity
-Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24387]: ERROR: Failed to get status for xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen
-Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24393]: ERROR: setlocale: No such file or directory
-Dec 14 20:07:37 xen-e stonith-ng: [24224]: ERROR: log_operation: s-libvirt: Performing: stonith -t external/libvirt -S
-Dec 14 20:07:37 xen-e stonith: [24366]: ERROR: external/libvirt device not accessible.
-Dec 14 20:07:37 xen-e stonith-ng: [24224]: ERROR: log_operation: s-libvirt: failed:  1
-Dec 14 20:07:43 xen-d stonith-ng: [5656]: ERROR: ais_dispatch: Receiving message body failed: (2) Library error: Resource temporarily unavailable (11)
-Dec 14 20:07:43 xen-d cib: [5655]: ERROR: ais_dispatch: Receiving message body failed: (2) Library error: Resource temporarily unavailable (11)
-Dec 14 20:07:43 xen-d attrd: [5658]: ERROR: ais_dispatch: Receiving message body failed: (2) Library error: Resource temporarily unavailable (11)
-Dec 14 20:07:43 xen-d crmd: [5660]: ERROR: ais_dispatch: Receiving message body failed: (2) Library error: Resource temporarily unavailable (11)
-Dec 14 20:07:43 xen-d stonith-ng: [5656]: ERROR: ais_dispatch: AIS connection failed
-Dec 14 20:07:43 xen-d cib: [5655]: ERROR: ais_dispatch: AIS connection failed
-Dec 14 20:07:43 xen-d attrd: [5658]: ERROR: ais_dispatch: AIS connection failed
-Dec 14 20:07:43 xen-d crmd: [5660]: ERROR: ais_dispatch: AIS connection failed
-Dec 14 20:07:43 xen-d stonith-ng: [5656]: ERROR: stonith_peer_ais_destroy: AIS connection terminated
-Dec 14 20:07:43 xen-d cib: [5655]: ERROR: cib_ais_destroy: Corosync connection lost!  Exiting.
-Dec 14 20:07:43 xen-d attrd: [5658]: CRIT: attrd_ais_destroy: Lost connection to OpenAIS service!
-Dec 14 20:07:43 xen-d attrd: [5658]: ERROR: attrd_cib_connection_destroy: Connection to the CIB terminated...
-Dec 14 20:07:43 xen-d crmd: [5660]: CRIT: stonith_dispatch_internal: Lost connection to the STONITH service [5656/callback].
-Dec 14 20:07:43 xen-d crmd: [5660]: CRIT: stonith_dispatch_internal: Lost connection to the STONITH service [5656/command].
-Dec 14 20:07:43 xen-d crmd: [5660]: CRIT: tengine_stonith_connection_destroy: Fencing daemon connection failed
-Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: te_connect_stonith: Sign-in failed: triggered a retry
-Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: attrd_connection_destroy: Lost connection to attrd
-Dec 14 20:07:44 xen-d crmd: [5660]: CRIT: cib_native_dispatch: Lost connection to the CIB service [5655/callback].
-Dec 14 20:07:44 xen-d crmd: [5660]: CRIT: cib_native_dispatch: Lost connection to the CIB service [5655/command].
-Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: crmd_cib_connection_destroy: Connection to the CIB terminated...
-Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: do_log: FSA: Input I_ERROR from crmd_cib_connection_destroy() received in state S_NOT_DC
-Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: do_recover: Action A_RECOVER (0000000001000000) not supported
-Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: do_log: FSA: Input I_TERMINATE from do_recover() received in state S_RECOVERY
-Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: verify_stopped: Resource d1 was active at shutdown.  You may ignore this error if it is unmanaged.
-Dec 14 20:07:44 xen-d crmd: [5660]: ERROR: do_exit: Could not recover from internal error
-Dec 14 20:06:35 xen-d corosync[5649]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
-Dec 14 20:06:35 xen-e corosync[24218]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
-Dec 14 20:06:36 xen-d corosync[5649]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
-Dec 14 20:07:54 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: xen-e 923599370
-Dec 14 20:07:54 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: lost: xen-d 906822154
-Dec 14 20:07:54 xen-e pengine: [24227]: WARN: pe_fence_node: Node xen-d will be fenced because it is un-expectedly down
-Dec 14 20:07:54 xen-e crmd: [24228]: notice: te_fence_node: Executing reboot fencing operation (12) on xen-d (timeout=60000)
-Dec 14 20:07:54 xen-e pengine: [24227]: WARN: stage6: Scheduling Node xen-d for STONITH
-Dec 14 20:07:56 xen-e stonith-ng: [24224]: notice: log_operation: Operation 'reboot' [24519] (call 0 from c0c111a5-d332-48f7-9375-739b91e04f0e) for host 'xen-d' with device 's-libvirt' returned: 0
-Dec 14 20:08:23 xen-d corosync[1874]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
-Dec 14 20:08:23 xen-d corosync[1874]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
-Dec 14 20:08:40 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: xen-e 923599370
-Dec 14 20:06:36 xen-e crmd: [24228]: notice: ais_dispatch_message: Membership 1289820: quorum acquired
-Dec 14 20:06:36 xen-d crmd: [5660]: notice: ais_dispatch_message: Membership 1289820: quorum acquired
-Dec 14 20:07:54 xen-e crmd: [24228]: notice: ais_dispatch_message: Membership 1289824: quorum lost
-Dec 14 20:08:24 xen-d crmd: [1948]: notice: ais_dispatch_message: Membership 1289828: quorum acquired
-Dec 14 20:08:40 xen-e crmd: [24228]: notice: ais_dispatch_message: Membership 1289828: quorum acquired
-Dec 14 20:07:19 xen-d lrmd: [5657]: info: rsc:d1 start[4] (pid 5833)
-Dec 14 20:07:19 xen-d crmd: [5660]: info: process_lrm_event: LRM operation d1_start_0 (call=4, rc=0, cib-update=14, confirmed=true) ok
-Dec 14 20:07:19 xen-e lrmd: [24225]: info: rsc:s-libvirt start[4] (pid 24264)
-Dec 14 20:07:20 xen-e external/libvirt(s-libvirt)[24271]: [24288]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:07:21 xen-e crmd: [24228]: info: process_lrm_event: LRM operation s-libvirt_start_0 (call=4, rc=0, cib-update=66, confirmed=true) ok
-Dec 14 20:07:22 xen-e external/libvirt(s-libvirt)[24296]: [24313]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:07:29 xen-d lrmd: [5657]: info: rsc:d1 stop[6] (pid 5926)
-Dec 14 20:07:29 xen-d crmd: [5660]: info: process_lrm_event: LRM operation d1_stop_0 (call=6, rc=0, cib-update=17, confirmed=true) ok
-Dec 14 20:07:29 xen-d lrmd: [5657]: info: rsc:d1 start[7] (pid 5929)
-Dec 14 20:07:29 xen-d crmd: [5660]: info: process_lrm_event: LRM operation d1_start_0 (call=7, rc=0, cib-update=18, confirmed=true) ok
-Dec 14 20:07:29 xen-e external/libvirt(s-libvirt)[24321]: [24338]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24387]: ERROR: Failed to get status for xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen
-Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24393]: ERROR: setlocale: No such file or directory
-Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24393]: error: Cannot recv data: Warning: Identity file /root/.ssh/xen not accessible: No such file or directory.
-Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24393]: Permission denied (publickey,keyboard-interactive). : Connection reset by peer
-Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24393]: error: failed to connect to the hypervisor
-Dec 14 20:07:37 xen-e lrmd: [24225]: info: rsc:s-libvirt stop[6] (pid 24417)
-Dec 14 20:07:37 xen-e crmd: [24228]: info: process_lrm_event: LRM operation s-libvirt_stop_0 (call=6, rc=0, cib-update=74, confirmed=true) ok
-Dec 14 20:07:37 xen-e lrmd: [24225]: info: rsc:s-libvirt start[7] (pid 24418)
-Dec 14 20:07:39 xen-e external/libvirt(s-libvirt)[24425]: [24442]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:07:40 xen-e crmd: [24228]: info: process_lrm_event: LRM operation s-libvirt_start_0 (call=7, rc=0, cib-update=75, confirmed=true) ok
-Dec 14 20:07:41 xen-e external/libvirt(s-libvirt)[24463]: [24480]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:07:48 xen-e external/libvirt(s-libvirt)[24488]: [24505]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:07:55 xen-e external/libvirt(s-libvirt)[24525]: [24540]: notice: Domain xen-d was rebooted
-Dec 14 20:07:56 xen-e lrmd: [24225]: info: rsc:d1 start[9] (pid 24568)
-Dec 14 20:07:56 xen-e crmd: [24228]: info: process_lrm_event: LRM operation d1_start_0 (call=9, rc=0, cib-update=96, confirmed=true) ok
-Dec 14 20:07:57 xen-e external/libvirt(s-libvirt)[24555]: [24588]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:08:07 xen-e external/libvirt(s-libvirt)[24599]: [24616]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:08:15 xen-e external/libvirt(s-libvirt)[24630]: [24647]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:08:22 xen-e external/libvirt(s-libvirt)[24658]: [24678]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:08:26 xen-d lrmd: [1945]: info: rsc:d1 start[4] (pid 2405)
-Dec 14 20:08:26 xen-d crmd: [1948]: info: process_lrm_event: LRM operation d1_start_0 (call=4, rc=0, cib-update=9, confirmed=true) ok
-Dec 14 20:08:29 xen-e external/libvirt(s-libvirt)[24689]: [24706]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:08:36 xen-e external/libvirt(s-libvirt)[24717]: [24734]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:08:43 xen-e lrmd: [24225]: info: rsc:d1 stop[11] (pid 24774)
-Dec 14 20:08:43 xen-e crmd: [24228]: info: process_lrm_event: LRM operation d1_stop_0 (call=11, rc=0, cib-update=125, confirmed=true) ok
-Dec 14 20:08:43 xen-e external/libvirt(s-libvirt)[24748]: [24786]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-.INP: node xen-d
-Dec 14 20:06:35 xen-d corosync[5649]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
-Dec 14 20:06:36 xen-d corosync[5649]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
-Dec 14 20:07:54 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: lost: xen-d 906822154
-Dec 14 20:07:54 xen-e pengine: [24227]: WARN: pe_fence_node: Node xen-d will be fenced because it is un-expectedly down
-Dec 14 20:07:54 xen-e crmd: [24228]: notice: te_fence_node: Executing reboot fencing operation (12) on xen-d (timeout=60000)
-Dec 14 20:07:54 xen-e pengine: [24227]: WARN: stage6: Scheduling Node xen-d for STONITH
-Dec 14 20:07:56 xen-e stonith-ng: [24224]: notice: log_operation: Operation 'reboot' [24519] (call 0 from c0c111a5-d332-48f7-9375-739b91e04f0e) for host 'xen-d' with device 's-libvirt' returned: 0
-Dec 14 20:08:23 xen-d corosync[1874]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
-Dec 14 20:08:23 xen-d corosync[1874]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
-.INP: node xen-e
-Dec 14 20:06:35 xen-e corosync[24218]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
-Dec 14 20:07:54 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: xen-e 923599370
-Dec 14 20:08:40 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: xen-e 923599370
+2019-03-22T10:56:18.986113+08:00 15sp1-2 mysql(mysql)[2185]: ERROR: Setup problem: couldn't find command: /usr/bin/safe_mysqld
+2019-03-22T10:56:18.586826+08:00 15sp1-1 mysql(mysql)[4459]: ERROR: Setup problem: couldn't find command: /usr/bin/safe_mysqld
+2019-03-22T10:56:19.028197+08:00 15sp1-2 mysql(mysql)[2224]: ERROR: Setup problem: couldn't find command: /usr/bin/safe_mysqld
+2019-03-22T10:56:19.082101+08:00 15sp1-2 mysql(mysql)[2259]: ERROR: Setup problem: couldn't find command: /usr/bin/safe_mysqld
+2019-03-22T10:56:19.026652+08:00 15sp1-1 pacemaker-schedulerd[1739]:  notice:  * Recover    mysql           ( 15sp1-2 -> 15sp1-1 )
+2019-03-22T10:56:19.292370+08:00 15sp1-1 mysql(mysql)[4498]: ERROR: Setup problem: couldn't find command: /usr/bin/safe_mysqld
+2019-03-22T10:56:19.646138+08:00 15sp1-1 mysql(mysql)[4533]: ERROR: Setup problem: couldn't find command: /usr/bin/safe_mysqld
+2019-03-22T11:02:21.651185+08:00 15sp1-1 pacemakerd[1742]:  warning: pacemaker-controld[1749] terminated with signal 9 (core=0)
+2019-03-22T11:45:15.291388+08:00 15sp1-1 pacemaker-controld[1813]:  error: Cannot route message to unknown node node1
+2019-03-22T11:46:15.982330+08:00 15sp1-1 pacemaker-controld[1813]:  error: Cannot route message to unknown node node1
+2019-03-22T14:46:29.149904+08:00 15sp1-1 sshd[11637]: error: PAM: Authentication failure for root from 10.67.19.6
+2019-03-22T10:34:47.224345+08:00 15sp1-1 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:34:47.602896+08:00 15sp1-1 corosync[1656]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:34:48.151543+08:00 15sp1-1 corosync[1638]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:34:48.153049+08:00 15sp1-1 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:34:56.014052+08:00 15sp1-2 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:34:56.294554+08:00 15sp1-2 corosync[1660]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:34:56.851006+08:00 15sp1-2 corosync[1639]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:34:56.854249+08:00 15sp1-2 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:36:11.038712+08:00 15sp1-1 systemd[1]: Stopping Corosync Cluster Engine...
+2019-03-22T10:36:11.045811+08:00 15sp1-1 corosync[2731]: Signaling Corosync Cluster Engine (corosync) to terminate: [  OK  ]
+2019-03-22T10:36:11.314757+08:00 15sp1-1 corosync[1681]:   [MAIN  ] Corosync Cluster Engine exiting normally
+2019-03-22T10:36:12.057745+08:00 15sp1-1 systemd[1]: Stopped Corosync Cluster Engine.
+2019-03-22T10:37:14.300560+08:00 15sp1-2 systemd[1]: Stopping Corosync Cluster Engine...
+2019-03-22T10:37:14.308907+08:00 15sp1-2 corosync[2762]: Signaling Corosync Cluster Engine (corosync) to terminate: [  OK  ]
+2019-03-22T10:37:14.526591+08:00 15sp1-2 corosync[1674]:   [MAIN  ] Corosync Cluster Engine exiting normally
+2019-03-22T10:37:15.321200+08:00 15sp1-2 systemd[1]: Stopped Corosync Cluster Engine.
+2019-03-22T10:39:25.658818+08:00 15sp1-1 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:39:25.747937+08:00 15sp1-1 corosync[2907]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:39:26.283560+08:00 15sp1-1 corosync[2895]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:39:26.284460+08:00 15sp1-1 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:40:35.393413+08:00 15sp1-2 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:40:35.482538+08:00 15sp1-2 corosync[2951]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:40:36.016624+08:00 15sp1-2 corosync[2939]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:40:36.017584+08:00 15sp1-2 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:42:20.133830+08:00 15sp1-1 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:42:20.417231+08:00 15sp1-1 corosync[1596]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:42:20.966749+08:00 15sp1-1 corosync[1570]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:42:20.967453+08:00 15sp1-1 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:42:30.288757+08:00 15sp1-2 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:42:30.455372+08:00 15sp1-2 corosync[1594]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:42:31.022153+08:00 15sp1-2 corosync[1569]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:42:31.022858+08:00 15sp1-2 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:56:55.416215+08:00 15sp1-1 pacemaker-schedulerd[1739]:  warning: Cluster node 15sp1-2 will be fenced: termination was requested
+2019-03-22T10:56:55.416215+08:00 15sp1-1 pacemaker-schedulerd[1739]:  warning: Cluster node 15sp1-2 will be fenced: termination was requested
+2019-03-22T10:56:55.419697+08:00 15sp1-1 pacemaker-schedulerd[1739]:  warning: Scheduling Node 15sp1-2 for STONITH
+2019-03-22T10:57:47.129510+08:00 15sp1-2 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:57:47.345204+08:00 15sp1-2 corosync[1605]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:57:47.940808+08:00 15sp1-2 corosync[1578]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:57:47.941515+08:00 15sp1-2 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T11:00:43.905492+08:00 15sp1-1 systemd[1]: Stopping Corosync Cluster Engine...
+2019-03-22T11:01:22.108074+08:00 15sp1-1 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T11:01:22.240699+08:00 15sp1-1 corosync[1604]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T11:01:22.822920+08:00 15sp1-1 corosync[1581]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T11:01:22.823827+08:00 15sp1-1 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:35:10.376892+08:00 15sp1-2 pacemaker-controld[1750]:  notice: Updating quorum status to true (call=26)
+2019-03-22T10:39:50.964158+08:00 15sp1-1 pacemaker-controld[2921]:  notice: Updating quorum status to true (call=26)
+2019-03-22T10:40:41.791107+08:00 15sp1-1 pacemaker-controld[2921]:  notice: Updating quorum status to true (call=53)
+2019-03-22T10:41:15.144867+08:00 15sp1-2 pacemaker-controld[2965]:  notice: Updating quorum status to true (call=31)
+2019-03-22T10:42:43.668990+08:00 15sp1-1 pacemaker-controld[1740]:  notice: Updating quorum status to true (call=26)
+2019-03-22T10:57:27.930481+08:00 15sp1-1 pacemaker-controld[1740]:  notice: Peer 15sp1-2 was terminated (reboot) by 15sp1-1 on behalf of pacemaker-controld.1740: OK
+2019-03-22T10:57:52.410569+08:00 15sp1-1 pacemaker-controld[1740]:  notice: Updating quorum status to true (call=175)
+2019-03-22T11:00:43.930597+08:00 15sp1-2 pacemaker-controld[1748]:  notice: Updating quorum status to true (call=34)
+2019-03-22T11:01:29.688725+08:00 15sp1-2 pacemaker-controld[1748]:  notice: Updating quorum status to true (call=62)
+2019-03-22T11:02:23.786295+08:00 15sp1-2 pacemaker-controld[1748]:  notice: Updating quorum status to true (call=85)
+2019-03-22T10:39:55.137238+08:00 15sp1-1 pacemaker-controld[2921]:  notice: Initiating start operation stonith-sbd_start_0 locally on 15sp1-1
+2019-03-22T10:39:55.137767+08:00 15sp1-1 pacemaker-execd[2918]:  notice: executing - rsc:stonith-sbd action:start call_id:6
+2019-03-22T10:39:57.604345+08:00 15sp1-1 pacemaker-execd[2918]:  notice: finished - rsc:stonith-sbd action:start call_id:6  exit-code:0 exec-time:2467ms queue-time:0ms
+2019-03-22T10:41:13.905506+08:00 15sp1-2 pacemaker-execd[2962]:  notice: executing - rsc:stonith-sbd action:start call_id:6
+2019-03-22T10:41:13.913809+08:00 15sp1-1 pacemaker-controld[2921]:  notice: Initiating stop operation stonith-sbd_stop_0 locally on 15sp1-1
+2019-03-22T10:41:13.913941+08:00 15sp1-1 pacemaker-execd[2918]:  notice: executing - rsc:stonith-sbd action:stop call_id:7
+2019-03-22T10:41:13.914056+08:00 15sp1-1 pacemaker-execd[2918]:  notice: finished - rsc:stonith-sbd action:stop call_id:7  exit-code:0 exec-time:0ms queue-time:0ms
+2019-03-22T10:41:13.914284+08:00 15sp1-1 pacemaker-controld[2921]:  notice: Initiating start operation stonith-sbd_start_0 on 15sp1-2
+2019-03-22T10:41:15.074728+08:00 15sp1-2 pacemaker-execd[2962]:  notice: finished - rsc:stonith-sbd action:start call_id:6  exit-code:0 exec-time:1170ms queue-time:0ms
+2019-03-22T10:41:16.497053+08:00 15sp1-2 pacemaker-controld[2965]:  notice: Initiating stop operation stonith-sbd_stop_0 locally on 15sp1-2
+2019-03-22T10:41:16.497127+08:00 15sp1-2 pacemaker-execd[2962]:  notice: executing - rsc:stonith-sbd action:stop call_id:7
+2019-03-22T10:41:16.497217+08:00 15sp1-2 pacemaker-execd[2962]:  notice: finished - rsc:stonith-sbd action:stop call_id:7  exit-code:0 exec-time:2ms queue-time:0ms
+2019-03-22T10:42:44.878768+08:00 15sp1-1 pacemaker-controld[1740]:  notice: Initiating start operation stonith-sbd_start_0 locally on 15sp1-1
+2019-03-22T10:42:44.880933+08:00 15sp1-1 pacemaker-execd[1737]:  notice: executing - rsc:stonith-sbd action:start call_id:6
+2019-03-22T10:42:46.405487+08:00 15sp1-1 pacemaker-execd[1737]:  notice: finished - rsc:stonith-sbd action:start call_id:6  exit-code:0 exec-time:1524ms queue-time:0ms
+2019-03-22T10:43:08.620641+08:00 15sp1-1 pacemaker-controld[1740]:  notice: Initiating stop operation stonith-sbd_stop_0 locally on 15sp1-1
+2019-03-22T10:43:08.620831+08:00 15sp1-1 pacemaker-execd[1737]:  notice: executing - rsc:stonith-sbd action:stop call_id:7
+2019-03-22T10:43:08.621463+08:00 15sp1-1 pacemaker-execd[1737]:  notice: finished - rsc:stonith-sbd action:stop call_id:7  exit-code:0 exec-time:1ms queue-time:0ms
+2019-03-22T10:54:17.948621+08:00 15sp1-1 pacemaker-controld[1740]:  notice: Initiating start operation stonith-sbd_start_0 locally on 15sp1-1
+2019-03-22T10:54:17.948709+08:00 15sp1-1 pacemaker-execd[1737]:  notice: executing - rsc:stonith-sbd action:start call_id:42
+2019-03-22T10:54:19.157468+08:00 15sp1-1 pacemaker-execd[1737]:  notice: finished - rsc:stonith-sbd action:start call_id:42  exit-code:0 exec-time:1209ms queue-time:0ms
+2019-03-22T10:54:48.477139+08:00 15sp1-2 pacemaker-execd[1737]:  notice: executing - rsc:d1 action:start call_id:38
+2019-03-22T10:54:48.492428+08:00 15sp1-2 pacemaker-execd[1737]:  notice: finished - rsc:d1 action:start call_id:38 pid:2141 exit-code:0 exec-time:15ms queue-time:0ms
+2019-03-22T10:54:48.496863+08:00 15sp1-2 pacemaker-execd[1737]:  notice: executing - rsc:d2 action:start call_id:39
+2019-03-22T10:54:48.510603+08:00 15sp1-2 pacemaker-execd[1737]:  notice: finished - rsc:d2 action:start call_id:39 pid:2145 exit-code:0 exec-time:14ms queue-time:0ms
+2019-03-22T10:54:48.455384+08:00 15sp1-1 pacemaker-controld[1740]:  notice: Initiating start operation d1_start_0 on 15sp1-2
+2019-03-22T10:54:48.474653+08:00 15sp1-1 pacemaker-controld[1740]:  notice: Initiating start operation d2_start_0 on 15sp1-2
+2019-03-22T10:54:58.218867+08:00 15sp1-2 pacemaker-execd[1737]:  notice: executing - rsc:d2 action:stop call_id:40
+2019-03-22T10:54:58.234531+08:00 15sp1-2 pacemaker-execd[1737]:  notice: finished - rsc:d2 action:stop call_id:40 pid:2150 exit-code:0 exec-time:16ms queue-time:0ms
+2019-03-22T10:54:58.240981+08:00 15sp1-2 pacemaker-execd[1737]:  notice: executing - rsc:d1 action:stop call_id:41
+2019-03-22T10:54:58.256143+08:00 15sp1-2 pacemaker-execd[1737]:  notice: finished - rsc:d1 action:stop call_id:41 pid:2154 exit-code:0 exec-time:16ms queue-time:0ms
+2019-03-22T10:54:58.196862+08:00 15sp1-1 pacemaker-controld[1740]:  notice: Initiating stop operation d2_stop_0 on 15sp1-2
+2019-03-22T10:54:58.219353+08:00 15sp1-1 pacemaker-controld[1740]:  notice: Initiating stop operation d1_stop_0 on 15sp1-2
+2019-03-22T11:00:42.659431+08:00 15sp1-1 pacemaker-controld[1740]:  notice: Initiating stop operation stonith-sbd_stop_0 locally on 15sp1-1
+2019-03-22T11:00:42.660180+08:00 15sp1-1 pacemaker-execd[1737]:  notice: executing - rsc:stonith-sbd action:stop call_id:58
+2019-03-22T11:00:42.660574+08:00 15sp1-1 pacemaker-execd[1737]:  notice: finished - rsc:stonith-sbd action:stop call_id:58  exit-code:0 exec-time:0ms queue-time:0ms
+2019-03-22T11:00:42.661106+08:00 15sp1-1 pacemaker-controld[1740]:  notice: Initiating start operation stonith-sbd_start_0 on 15sp1-2
+2019-03-22T11:00:42.660196+08:00 15sp1-2 pacemaker-execd[1745]:  notice: executing - rsc:stonith-sbd action:start call_id:14
+2019-03-22T11:00:43.862608+08:00 15sp1-2 pacemaker-execd[1745]:  notice: finished - rsc:stonith-sbd action:start call_id:14  exit-code:0 exec-time:1202ms queue-time:0ms
+2019-03-22T11:03:05.194349+08:00 15sp1-2 pacemaker-controld[1748]:  notice: Initiating start operation d1_start_0 on 15sp1-1
+2019-03-22T11:03:05.233648+08:00 15sp1-2 pacemaker-controld[1748]:  notice: Initiating start operation d2_start_0 on 15sp1-1
+2019-03-22T11:03:05.193318+08:00 15sp1-1 pacemaker-execd[1746]:  notice: executing - rsc:d1 action:start call_id:21
+2019-03-22T11:03:05.226554+08:00 15sp1-1 pacemaker-execd[1746]:  notice: finished - rsc:d1 action:start call_id:21 pid:1848 exit-code:0 exec-time:33ms queue-time:0ms
+2019-03-22T11:03:05.232910+08:00 15sp1-1 pacemaker-execd[1746]:  notice: executing - rsc:d2 action:start call_id:22
+2019-03-22T11:03:05.246921+08:00 15sp1-1 pacemaker-execd[1746]:  notice: finished - rsc:d2 action:start call_id:22 pid:1852 exit-code:0 exec-time:14ms queue-time:0ms
+2019-03-22T11:45:14.806899+08:00 15sp1-2 pacemaker-controld[1748]:  notice: Initiating start operation stonith-sbd_start_0 on 15sp1-1
+2019-03-22T11:45:14.805511+08:00 15sp1-1 pacemaker-execd[1746]:  notice: executing - rsc:stonith-sbd action:start call_id:34
+2019-03-22T11:45:16.071026+08:00 15sp1-1 pacemaker-execd[1746]:  notice: finished - rsc:stonith-sbd action:start call_id:34  exit-code:0 exec-time:1266ms queue-time:0ms
+2019-03-22T11:46:15.742947+08:00 15sp1-2 pacemaker-controld[1748]:  notice: Initiating start operation stonith-sbd_start_0 locally on 15sp1-2
+2019-03-22T11:46:15.743031+08:00 15sp1-2 pacemaker-execd[1745]:  notice: executing - rsc:stonith-sbd action:start call_id:45
+2019-03-22T11:46:16.907002+08:00 15sp1-2 pacemaker-execd[1745]:  notice: finished - rsc:stonith-sbd action:start call_id:45  exit-code:0 exec-time:1165ms queue-time:0ms
+.INP: node 15sp1-1
+2019-03-22T10:34:47.224345+08:00 15sp1-1 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:34:47.602896+08:00 15sp1-1 corosync[1656]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:34:48.151543+08:00 15sp1-1 corosync[1638]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:34:48.153049+08:00 15sp1-1 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:36:11.038712+08:00 15sp1-1 systemd[1]: Stopping Corosync Cluster Engine...
+2019-03-22T10:36:11.045811+08:00 15sp1-1 corosync[2731]: Signaling Corosync Cluster Engine (corosync) to terminate: [  OK  ]
+2019-03-22T10:36:11.314757+08:00 15sp1-1 corosync[1681]:   [MAIN  ] Corosync Cluster Engine exiting normally
+2019-03-22T10:36:12.057745+08:00 15sp1-1 systemd[1]: Stopped Corosync Cluster Engine.
+2019-03-22T10:39:25.658818+08:00 15sp1-1 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:39:25.747937+08:00 15sp1-1 corosync[2907]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:39:26.283560+08:00 15sp1-1 corosync[2895]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:39:26.284460+08:00 15sp1-1 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:42:20.133830+08:00 15sp1-1 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:42:20.417231+08:00 15sp1-1 corosync[1596]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:42:20.966749+08:00 15sp1-1 corosync[1570]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:42:20.967453+08:00 15sp1-1 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:56:55.416215+08:00 15sp1-1 pacemaker-schedulerd[1739]:  warning: Cluster node 15sp1-2 will be fenced: termination was requested
+2019-03-22T10:56:55.416215+08:00 15sp1-1 pacemaker-schedulerd[1739]:  warning: Cluster node 15sp1-2 will be fenced: termination was requested
+2019-03-22T11:00:43.905492+08:00 15sp1-1 systemd[1]: Stopping Corosync Cluster Engine...
+2019-03-22T11:01:22.108074+08:00 15sp1-1 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T11:01:22.240699+08:00 15sp1-1 corosync[1604]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T11:01:22.822920+08:00 15sp1-1 corosync[1581]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T11:01:22.823827+08:00 15sp1-1 systemd[1]: Started Corosync Cluster Engine.
+.INP: node 15sp1-2
+2019-03-22T10:34:56.014052+08:00 15sp1-2 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:34:56.294554+08:00 15sp1-2 corosync[1660]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:34:56.851006+08:00 15sp1-2 corosync[1639]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:34:56.854249+08:00 15sp1-2 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:37:14.300560+08:00 15sp1-2 systemd[1]: Stopping Corosync Cluster Engine...
+2019-03-22T10:37:14.308907+08:00 15sp1-2 corosync[2762]: Signaling Corosync Cluster Engine (corosync) to terminate: [  OK  ]
+2019-03-22T10:37:14.526591+08:00 15sp1-2 corosync[1674]:   [MAIN  ] Corosync Cluster Engine exiting normally
+2019-03-22T10:37:15.321200+08:00 15sp1-2 systemd[1]: Stopped Corosync Cluster Engine.
+2019-03-22T10:40:35.393413+08:00 15sp1-2 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:40:35.482538+08:00 15sp1-2 corosync[2951]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:40:36.016624+08:00 15sp1-2 corosync[2939]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:40:36.017584+08:00 15sp1-2 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:42:30.288757+08:00 15sp1-2 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:42:30.455372+08:00 15sp1-2 corosync[1594]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:42:31.022153+08:00 15sp1-2 corosync[1569]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:42:31.022858+08:00 15sp1-2 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:56:55.416215+08:00 15sp1-1 pacemaker-schedulerd[1739]:  warning: Cluster node 15sp1-2 will be fenced: termination was requested
+2019-03-22T10:56:55.416215+08:00 15sp1-1 pacemaker-schedulerd[1739]:  warning: Cluster node 15sp1-2 will be fenced: termination was requested
+2019-03-22T10:56:55.419697+08:00 15sp1-1 pacemaker-schedulerd[1739]:  warning: Scheduling Node 15sp1-2 for STONITH
+2019-03-22T10:57:47.129510+08:00 15sp1-2 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:57:47.345204+08:00 15sp1-2 corosync[1605]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:57:47.940808+08:00 15sp1-2 corosync[1578]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:57:47.941515+08:00 15sp1-2 systemd[1]: Started Corosync Cluster Engine.
 .INP: node .*
-Dec 14 20:06:35 xen-d corosync[5649]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
-Dec 14 20:06:35 xen-e corosync[24218]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
-Dec 14 20:06:36 xen-d corosync[5649]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
-Dec 14 20:07:54 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: xen-e 923599370
-Dec 14 20:07:54 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: lost: xen-d 906822154
-Dec 14 20:07:54 xen-e pengine: [24227]: WARN: pe_fence_node: Node xen-d will be fenced because it is un-expectedly down
-Dec 14 20:07:54 xen-e crmd: [24228]: notice: te_fence_node: Executing reboot fencing operation (12) on xen-d (timeout=60000)
-Dec 14 20:07:54 xen-e pengine: [24227]: WARN: stage6: Scheduling Node xen-d for STONITH
-Dec 14 20:07:56 xen-e stonith-ng: [24224]: notice: log_operation: Operation 'reboot' [24519] (call 0 from c0c111a5-d332-48f7-9375-739b91e04f0e) for host 'xen-d' with device 's-libvirt' returned: 0
-Dec 14 20:08:23 xen-d corosync[1874]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
-Dec 14 20:08:23 xen-d corosync[1874]:  [pcmk  ] info: pcmk_peer_update: memb: xen-d 906822154
-Dec 14 20:08:40 xen-e corosync[24218]:  [pcmk  ] info: pcmk_peer_update: memb: xen-e 923599370
+2019-03-22T10:34:47.224345+08:00 15sp1-1 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:34:47.602896+08:00 15sp1-1 corosync[1656]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:34:48.151543+08:00 15sp1-1 corosync[1638]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:34:48.153049+08:00 15sp1-1 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:34:56.014052+08:00 15sp1-2 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:34:56.294554+08:00 15sp1-2 corosync[1660]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:34:56.851006+08:00 15sp1-2 corosync[1639]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:34:56.854249+08:00 15sp1-2 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:36:11.038712+08:00 15sp1-1 systemd[1]: Stopping Corosync Cluster Engine...
+2019-03-22T10:36:11.045811+08:00 15sp1-1 corosync[2731]: Signaling Corosync Cluster Engine (corosync) to terminate: [  OK  ]
+2019-03-22T10:36:11.314757+08:00 15sp1-1 corosync[1681]:   [MAIN  ] Corosync Cluster Engine exiting normally
+2019-03-22T10:36:12.057745+08:00 15sp1-1 systemd[1]: Stopped Corosync Cluster Engine.
+2019-03-22T10:37:14.300560+08:00 15sp1-2 systemd[1]: Stopping Corosync Cluster Engine...
+2019-03-22T10:37:14.308907+08:00 15sp1-2 corosync[2762]: Signaling Corosync Cluster Engine (corosync) to terminate: [  OK  ]
+2019-03-22T10:37:14.526591+08:00 15sp1-2 corosync[1674]:   [MAIN  ] Corosync Cluster Engine exiting normally
+2019-03-22T10:37:15.321200+08:00 15sp1-2 systemd[1]: Stopped Corosync Cluster Engine.
+2019-03-22T10:39:25.658818+08:00 15sp1-1 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:39:25.747937+08:00 15sp1-1 corosync[2907]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:39:26.283560+08:00 15sp1-1 corosync[2895]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:39:26.284460+08:00 15sp1-1 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:40:35.393413+08:00 15sp1-2 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:40:35.482538+08:00 15sp1-2 corosync[2951]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:40:36.016624+08:00 15sp1-2 corosync[2939]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:40:36.017584+08:00 15sp1-2 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:42:20.133830+08:00 15sp1-1 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:42:20.417231+08:00 15sp1-1 corosync[1596]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:42:20.966749+08:00 15sp1-1 corosync[1570]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:42:20.967453+08:00 15sp1-1 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:42:30.288757+08:00 15sp1-2 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:42:30.455372+08:00 15sp1-2 corosync[1594]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:42:31.022153+08:00 15sp1-2 corosync[1569]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:42:31.022858+08:00 15sp1-2 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:56:55.416215+08:00 15sp1-1 pacemaker-schedulerd[1739]:  warning: Cluster node 15sp1-2 will be fenced: termination was requested
+2019-03-22T10:56:55.416215+08:00 15sp1-1 pacemaker-schedulerd[1739]:  warning: Cluster node 15sp1-2 will be fenced: termination was requested
+2019-03-22T10:56:55.419697+08:00 15sp1-1 pacemaker-schedulerd[1739]:  warning: Scheduling Node 15sp1-2 for STONITH
+2019-03-22T10:57:47.129510+08:00 15sp1-2 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:57:47.345204+08:00 15sp1-2 corosync[1605]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:57:47.940808+08:00 15sp1-2 corosync[1578]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:57:47.941515+08:00 15sp1-2 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T11:00:43.905492+08:00 15sp1-1 systemd[1]: Stopping Corosync Cluster Engine...
+2019-03-22T11:01:22.108074+08:00 15sp1-1 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T11:01:22.240699+08:00 15sp1-1 corosync[1604]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T11:01:22.822920+08:00 15sp1-1 corosync[1581]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T11:01:22.823827+08:00 15sp1-1 systemd[1]: Started Corosync Cluster Engine.
 .INP: exclude pcmk_peer_update
 .INP: exclude
 pcmk_peer_update
-.INP: node xen-e
-Dec 14 20:06:35 xen-e corosync[24218]:  [MAIN  ] Corosync Cluster Engine ('1.4.3'): started and ready to provide service.
+.INP: node 15sp1-2
+2019-03-22T10:34:56.014052+08:00 15sp1-2 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:34:56.294554+08:00 15sp1-2 corosync[1660]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:34:56.851006+08:00 15sp1-2 corosync[1639]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:34:56.854249+08:00 15sp1-2 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:37:14.300560+08:00 15sp1-2 systemd[1]: Stopping Corosync Cluster Engine...
+2019-03-22T10:37:14.308907+08:00 15sp1-2 corosync[2762]: Signaling Corosync Cluster Engine (corosync) to terminate: [  OK  ]
+2019-03-22T10:37:14.526591+08:00 15sp1-2 corosync[1674]:   [MAIN  ] Corosync Cluster Engine exiting normally
+2019-03-22T10:37:15.321200+08:00 15sp1-2 systemd[1]: Stopped Corosync Cluster Engine.
+2019-03-22T10:40:35.393413+08:00 15sp1-2 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:40:35.482538+08:00 15sp1-2 corosync[2951]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:40:36.016624+08:00 15sp1-2 corosync[2939]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:40:36.017584+08:00 15sp1-2 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:42:30.288757+08:00 15sp1-2 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:42:30.455372+08:00 15sp1-2 corosync[1594]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:42:31.022153+08:00 15sp1-2 corosync[1569]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:42:31.022858+08:00 15sp1-2 systemd[1]: Started Corosync Cluster Engine.
+2019-03-22T10:56:55.416215+08:00 15sp1-1 pacemaker-schedulerd[1739]:  warning: Cluster node 15sp1-2 will be fenced: termination was requested
+2019-03-22T10:56:55.416215+08:00 15sp1-1 pacemaker-schedulerd[1739]:  warning: Cluster node 15sp1-2 will be fenced: termination was requested
+2019-03-22T10:56:55.419697+08:00 15sp1-1 pacemaker-schedulerd[1739]:  warning: Scheduling Node 15sp1-2 for STONITH
+2019-03-22T10:57:47.129510+08:00 15sp1-2 systemd[1]: Starting Corosync Cluster Engine...
+2019-03-22T10:57:47.345204+08:00 15sp1-2 corosync[1605]:   [MAIN  ] Corosync Cluster Engine ('2.4.4'): started and ready to provide service.
+2019-03-22T10:57:47.940808+08:00 15sp1-2 corosync[1578]: Starting Corosync Cluster Engine (corosync): [  OK  ]
+2019-03-22T10:57:47.941515+08:00 15sp1-2 systemd[1]: Started Corosync Cluster Engine.
 .INP: exclude clear
-.INP: exclude corosync|crmd|pengine|stonith-ng|cib|attrd|mgmtd|sshd
-.INP: log
-Dec 14 20:06:35 xen-d lrmd: [5657]: info: max-children set to 4 (2 processors online)
-Dec 14 20:06:35 xen-d lrmd: [5657]: info: enabling coredumps
-Dec 14 20:06:35 xen-d lrmd: [5657]: info: Started.
-Dec 14 20:06:35 xen-e lrmd: [24225]: info: max-children set to 4 (2 processors online)
-Dec 14 20:06:35 xen-e lrmd: [24225]: info: enabling coredumps
-Dec 14 20:06:35 xen-e lrmd: [24225]: info: Started.
-Dec 14 20:06:36 xen-e lrmd: [24225]: info: max-children already set to 4
-Dec 14 20:06:37 xen-d lrmd: [5657]: info: max-children already set to 4
-Dec 14 20:07:19 xen-d lrmd: [5657]: info: rsc:d1 probe[2] (pid 5812)
-Dec 14 20:07:19 xen-d lrmd: [5657]: notice: lrmd_rsc_new(): No lrm_rprovider field in message
-Dec 14 20:07:19 xen-d lrmd: [5657]: info: rsc:s-libvirt probe[3] (pid 5813)
-Dec 14 20:07:19 xen-d lrmd: [5657]: info: operation monitor[3] on s-libvirt for client 5660: pid 5813 exited with return code 7
-Dec 14 20:07:19 xen-d lrmd: [5657]: info: operation monitor[2] on d1 for client 5660: pid 5812 exited with return code 7
-Dec 14 20:07:19 xen-d lrmd: [5657]: info: rsc:d1 start[4] (pid 5833)
-Dec 14 20:07:19 xen-d lrmd: [5657]: info: operation start[4] on d1 for client 5660: pid 5833 exited with return code 0
-Dec 14 20:07:19 xen-d lrmd: [5657]: info: rsc:d1 monitor[5] (pid 5840)
-Dec 14 20:07:19 xen-d lrmd: [5657]: info: operation monitor[5] on d1 for client 5660: pid 5840 exited with return code 0
-Dec 14 20:07:19 xen-e lrmd: [24225]: info: rsc:d1 probe[2] (pid 24243)
-Dec 14 20:07:19 xen-e lrmd: [24225]: notice: lrmd_rsc_new(): No lrm_rprovider field in message
-Dec 14 20:07:19 xen-e lrmd: [24225]: info: rsc:s-libvirt probe[3] (pid 24244)
-Dec 14 20:07:19 xen-e lrmd: [24225]: info: operation monitor[3] on s-libvirt for client 24228: pid 24244 exited with return code 7
-Dec 14 20:07:19 xen-e lrmd: [24225]: info: operation monitor[2] on d1 for client 24228: pid 24243 exited with return code 7
-Dec 14 20:07:19 xen-e lrmd: [24225]: info: rsc:s-libvirt start[4] (pid 24264)
-Dec 14 20:07:20 xen-e external/libvirt(s-libvirt)[24271]: [24288]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:07:21 xen-e lrmd: [24225]: info: operation start[4] on s-libvirt for client 24228: pid 24264 exited with return code 0
-Dec 14 20:07:21 xen-e lrmd: [24225]: info: rsc:s-libvirt monitor[5] (pid 24289)
-Dec 14 20:07:22 xen-e external/libvirt(s-libvirt)[24296]: [24313]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:07:23 xen-e lrmd: [24225]: info: operation monitor[5] on s-libvirt for client 24228: pid 24289 exited with return code 0
-Dec 14 20:07:29 xen-d lrmd: [5657]: info: cancel_op: operation monitor[5] on d1 for client 5660, its parameters: CRM_meta_name=[monitor] crm_feature_set=[3.0.6] CRM_meta_timeout=[30000] CRM_meta_interval=[5000]  cancelled
-Dec 14 20:07:29 xen-d lrmd: [5657]: info: rsc:d1 stop[6] (pid 5926)
-Dec 14 20:07:29 xen-d lrmd: [5657]: info: operation stop[6] on d1 for client 5660: pid 5926 exited with return code 0
-Dec 14 20:07:29 xen-d lrmd: [5657]: info: rsc:d1 start[7] (pid 5929)
-Dec 14 20:07:29 xen-d lrmd: [5657]: info: operation start[7] on d1 for client 5660: pid 5929 exited with return code 0
-Dec 14 20:07:29 xen-d lrmd: [5657]: info: rsc:d1 monitor[8] (pid 5938)
-Dec 14 20:07:29 xen-d lrmd: [5657]: info: operation monitor[8] on d1 for client 5660: pid 5938 exited with return code 0
-Dec 14 20:07:29 xen-e external/libvirt(s-libvirt)[24321]: [24338]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24387]: ERROR: Failed to get status for xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen
-Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24393]: ERROR: setlocale: No such file or directory
-Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24393]: error: Cannot recv data: Warning: Identity file /root/.ssh/xen not accessible: No such file or directory.
-Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24393]: Permission denied (publickey,keyboard-interactive). : Connection reset by peer
-Dec 14 20:07:36 xen-e external/libvirt(s-libvirt)[24371]: [24393]: error: failed to connect to the hypervisor
-Dec 14 20:07:37 xen-e stonith: [24366]: WARN: external_status: 'libvirt status' failed with rc 1
-Dec 14 20:07:37 xen-e stonith: [24366]: ERROR: external/libvirt device not accessible.
-Dec 14 20:07:37 xen-e lrm-stonith: [24364]: WARN: map_ra_retvalue: Mapped the invalid return code -2.
-Dec 14 20:07:37 xen-e lrmd: [24225]: info: cancel_op: operation monitor[5] on s-libvirt for client 24228, its parameters: CRM_meta_name=[monitor] crm_feature_set=[3.0.6] CRM_meta_timeout=[60000] CRM_meta_interval=[5000] hostlist=[xen-d xen-e] hypervisor_uri=[xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen] reset_method=[reboot]  cancelled
-Dec 14 20:07:37 xen-e lrmd: [24225]: info: rsc:s-libvirt stop[6] (pid 24417)
-Dec 14 20:07:37 xen-e lrmd: [24225]: info: operation stop[6] on s-libvirt for client 24228: pid 24417 exited with return code 0
-Dec 14 20:07:37 xen-e lrmd: [24225]: info: rsc:s-libvirt start[7] (pid 24418)
-Dec 14 20:07:39 xen-e external/libvirt(s-libvirt)[24425]: [24442]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:07:40 xen-e lrmd: [24225]: info: operation start[7] on s-libvirt for client 24228: pid 24418 exited with return code 0
-Dec 14 20:07:40 xen-e lrmd: [24225]: info: rsc:s-libvirt monitor[8] (pid 24456)
-Dec 14 20:07:41 xen-e external/libvirt(s-libvirt)[24463]: [24480]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:07:42 xen-e lrmd: [24225]: info: operation monitor[8] on s-libvirt for client 24228: pid 24456 exited with return code 0
-Dec 14 20:07:44 xen-d lrmd: [5657]: info: cancel_op: operation monitor[8] on d1 for client 5660, its parameters: CRM_meta_name=[monitor] crm_feature_set=[3.0.6] CRM_meta_timeout=[30000] CRM_meta_interval=[5000]  cancelled
-Dec 14 20:07:48 xen-e external/libvirt(s-libvirt)[24488]: [24505]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:07:55 xen-d shutdown[6093]: shutting down for system reboot
-Dec 14 20:07:55 xen-d init: Switching to runlevel: 6
-Dec 14 20:07:55 xen-e external/libvirt(s-libvirt)[24525]: [24540]: notice: Domain xen-d was rebooted
-Dec 14 20:07:56 xen-e lrmd: [24225]: info: rsc:d1 start[9] (pid 24568)
-Dec 14 20:07:56 xen-e lrmd: [24225]: info: operation start[9] on d1 for client 24228: pid 24568 exited with return code 0
-Dec 14 20:07:57 xen-d logd: [6194]: debug: Stopping ha_logd with pid 1787
-Dec 14 20:07:57 xen-d logd: [6194]: info: Waiting for pid=1787 to exit
-Dec 14 20:07:57 xen-d logd: [1787]: debug: logd_term_action: received SIGTERM
-Dec 14 20:07:57 xen-d logd: [1787]: debug: logd_term_action: waiting for 0 messages to be read for process lrmd
-Dec 14 20:07:57 xen-d logd: [1787]: debug: logd_term_action: waiting for 0 messages to be read by write process
-Dec 14 20:07:57 xen-d logd: [1787]: debug: logd_term_action: sending SIGTERM to write process
-Dec 14 20:07:57 xen-d logd: [1790]: info: logd_term_write_action: received SIGTERM
-Dec 14 20:07:57 xen-d logd: [1790]: debug: Writing out 0 messages then quitting
-Dec 14 20:07:57 xen-d logd: [1790]: info: Exiting write process
-Dec 14 20:07:57 xen-d haveged: haveged stopping due to signal 15
-Dec 14 20:07:57 xen-e lrmd: [24225]: info: rsc:d1 monitor[10] (pid 24577)
-Dec 14 20:07:57 xen-e lrmd: [24225]: info: operation monitor[10] on d1 for client 24228: pid 24577 exited with return code 0
-Dec 14 20:07:57 xen-e external/libvirt(s-libvirt)[24555]: [24588]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:07:58 xen-d logd: [6194]: info: Pid 1787 exited
-Dec 14 20:07:58 xen-d rpcbind: rpcbind terminating on signal. Restart with "rpcbind -w"
-Dec 14 20:07:58 xen-d kernel: Kernel logging (proc) stopped.
-Dec 14 20:07:58 xen-d kernel: Kernel log daemon terminating.
-Dec 14 20:07:58 xen-d syslog-ng[1679]: Termination requested via signal, terminating;
-Dec 14 20:07:58 xen-d syslog-ng[1679]: syslog-ng shutting down; version='2.0.9'
-Dec 14 20:08:07 xen-e external/libvirt(s-libvirt)[24599]: [24616]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:08:15 xen-e external/libvirt(s-libvirt)[24630]: [24647]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:08:21 xen-d syslog-ng[1681]: syslog-ng starting up; version='2.0.9'
-Dec 14 20:08:21 xen-d iscsid: iSCSI logger with pid=1682 started!
-Dec 14 20:08:22 xen-d sm-notify[1716]: Version 1.2.3 starting
-Dec 14 20:08:22 xen-d haveged: haveged starting up
-Dec 14 20:08:22 xen-d haveged: arch:        x86 vendor:      amd generic:     0 i_cache:     64 d_cache:     64 loop_idx:    20 loop_idxmax: 40 loop_sz:     63724 loop_szmax:  124334 etime:       18207 havege_ndpt  0
-Dec 14 20:08:22 xen-d logd: [1789]: info: setting log facility to daemon
-Dec 14 20:08:22 xen-d logd: [1789]: info: logd started with /etc/logd.cf.
-Dec 14 20:08:22 xen-d iscsid: transport class version 2.0-870. iscsid version 2.0-872.suse
-Dec 14 20:08:22 xen-d iscsid: iSCSI daemon with pid=1683 started!
-Dec 14 20:08:22 xen-e external/libvirt(s-libvirt)[24658]: [24678]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:08:23 xen-d lrmd: [1945]: info: max-children set to 4 (2 processors online)
-Dec 14 20:08:23 xen-d lrmd: [1945]: info: enabling coredumps
-Dec 14 20:08:23 xen-d lrmd: [1945]: info: Started.
-Dec 14 20:08:25 xen-d lrmd: [1945]: info: max-children already set to 4
-Dec 14 20:08:25 xen-d ntpd[2127]: ntpd 4.2.4p8@1.1612-o Thu Nov 10 17:10:45 UTC 2011 (1)
-Dec 14 20:08:25 xen-d ntpd[2128]: precision = 2.000 usec
-Dec 14 20:08:25 xen-d ntpd[2128]: ntp_io: estimated max descriptors: 1024, initial socket boundary: 16
-Dec 14 20:08:25 xen-d ntpd[2128]: Listening on interface #0 wildcard, 0.0.0.0#123 Disabled
-Dec 14 20:08:25 xen-d ntpd[2128]: Listening on interface #1 wildcard, ::#123 Disabled
-Dec 14 20:08:25 xen-d ntpd[2128]: Listening on interface #2 eth0, fe80::216:3eff:fe65:738a#123 Enabled
-Dec 14 20:08:25 xen-d ntpd[2128]: Listening on interface #3 lo, ::1#123 Enabled
-Dec 14 20:08:25 xen-d ntpd[2128]: Listening on interface #4 lo, 127.0.0.1#123 Enabled
-Dec 14 20:08:25 xen-d ntpd[2128]: Listening on interface #5 lo, 127.0.0.2#123 Enabled
-Dec 14 20:08:25 xen-d ntpd[2128]: Listening on interface #6 eth0, 10.2.13.54#123 Enabled
-Dec 14 20:08:25 xen-d ntpd[2128]: kernel time sync status 2040
-Dec 14 20:08:25 xen-d ntpd[2128]: frequency initialized 29.933 PPM from /var/lib/ntp/drift/ntp.drift
-Dec 14 20:08:25 xen-d /usr/sbin/cron[2244]: (CRON) STARTUP (V5.0)
-Dec 14 20:08:26 xen-d lrmd: [1945]: info: rsc:d1 probe[2] (pid 2384)
-Dec 14 20:08:26 xen-d lrmd: [1945]: notice: lrmd_rsc_new(): No lrm_rprovider field in message
-Dec 14 20:08:26 xen-d lrmd: [1945]: info: rsc:s-libvirt probe[3] (pid 2385)
-Dec 14 20:08:26 xen-d lrmd: [1945]: info: operation monitor[3] on s-libvirt for client 1948: pid 2385 exited with return code 7
-Dec 14 20:08:26 xen-d lrmd: [1945]: info: operation monitor[2] on d1 for client 1948: pid 2384 exited with return code 7
-Dec 14 20:08:26 xen-d lrmd: [1945]: info: rsc:d1 start[4] (pid 2405)
-Dec 14 20:08:26 xen-d lrmd: [1945]: info: operation start[4] on d1 for client 1948: pid 2405 exited with return code 0
-Dec 14 20:08:26 xen-d kernel: klogd 1.4.1, log source = /proc/kmsg started.
-Dec 14 20:08:26 xen-d kernel: [   22.808182] Loading iSCSI transport class v2.0-870.
-Dec 14 20:08:26 xen-d kernel: [   22.815399] iscsi: registered transport (tcp)
-Dec 14 20:08:26 xen-d kernel: [   23.572989] BIOS EDD facility v0.16 2004-Jun-25, 0 devices found
-Dec 14 20:08:26 xen-d kernel: [   23.573005] EDD information not available.
-Dec 14 20:08:26 xen-d lrmd: [1945]: info: rsc:d1 monitor[5] (pid 2409)
-Dec 14 20:08:26 xen-d lrmd: [1945]: info: operation monitor[5] on d1 for client 1948: pid 2409 exited with return code 0
-Dec 14 20:08:29 xen-d kernel: [   30.841076] eth0: no IPv6 routers present
-Dec 14 20:08:29 xen-d logger: Mark:HB_REPORT:1355512108
-Dec 14 20:08:29 xen-e external/libvirt(s-libvirt)[24689]: [24706]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:08:36 xen-e external/libvirt(s-libvirt)[24717]: [24734]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
-Dec 14 20:08:43 xen-e lrmd: [24225]: info: cancel_op: operation monitor[10] on d1 for client 24228, its parameters: CRM_meta_name=[monitor] crm_feature_set=[3.0.6] CRM_meta_timeout=[30000] CRM_meta_interval=[5000]  cancelled
-Dec 14 20:08:43 xen-e lrmd: [24225]: info: rsc:d1 stop[11] (pid 24774)
-Dec 14 20:08:43 xen-e lrmd: [24225]: info: operation stop[11] on d1 for client 24228: pid 24774 exited with return code 0
-Dec 14 20:08:43 xen-e external/libvirt(s-libvirt)[24748]: [24786]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+.INP: exclude corosync|pacemaker-based|pacemaker-fenced|pacemaker-execd|pacemaker-attrd|pacemaker-schedulerd|pacemaker-controld|sshd
 .INP: exclude clear
 .INP: peinputs
-history-test/xen-e/pengine/pe-input-43.bz2
-history-test/xen-e/pengine/pe-input-44.bz2
-history-test/xen-e/pengine/pe-input-45.bz2
-history-test/xen-e/pengine/pe-input-46.bz2
-history-test/xen-e/pengine/pe-input-47.bz2
-history-test/xen-e/pengine/pe-input-48.bz2
-history-test/xen-e/pengine/pe-warn-272.bz2
-history-test/xen-e/pengine/pe-input-49.bz2
-history-test/xen-e/pengine/pe-input-50.bz2
+history-test/15sp1-2/pengine/pe-input-3.bz2
+history-test/15sp1-2/pengine/pe-input-4.bz2
+history-test/15sp1-2/pengine/pe-input-5.bz2
+history-test/15sp1-1/pengine/pe-input-4.bz2
+history-test/15sp1-1/pengine/pe-input-5.bz2
+history-test/15sp1-1/pengine/pe-input-6.bz2
+history-test/15sp1-1/pengine/pe-input-7.bz2
+history-test/15sp1-1/pengine/pe-input-8.bz2
+history-test/15sp1-2/pengine/pe-input-7.bz2
+history-test/15sp1-2/pengine/pe-input-8.bz2
+history-test/15sp1-1/pengine/pe-input-9.bz2
+history-test/15sp1-1/pengine/pe-input-10.bz2
+history-test/15sp1-1/pengine/pe-input-11.bz2
+history-test/15sp1-1/pengine/pe-input-12.bz2
+history-test/15sp1-1/pengine/pe-input-13.bz2
+history-test/15sp1-1/pengine/pe-input-14.bz2
+history-test/15sp1-1/pengine/pe-input-15.bz2
+history-test/15sp1-1/pengine/pe-input-16.bz2
+history-test/15sp1-1/pengine/pe-input-17.bz2
+history-test/15sp1-1/pengine/pe-input-18.bz2
+history-test/15sp1-1/pengine/pe-input-19.bz2
+history-test/15sp1-1/pengine/pe-input-20.bz2
+history-test/15sp1-1/pengine/pe-input-21.bz2
+history-test/15sp1-1/pengine/pe-input-23.bz2
+history-test/15sp1-1/pengine/pe-input-24.bz2
+history-test/15sp1-1/pengine/pe-input-25.bz2
+history-test/15sp1-1/pengine/pe-input-26.bz2
+history-test/15sp1-1/pengine/pe-input-27.bz2
+history-test/15sp1-1/pengine/pe-input-28.bz2
+history-test/15sp1-1/pengine/pe-input-30.bz2
+history-test/15sp1-1/pengine/pe-input-31.bz2
+history-test/15sp1-1/pengine/pe-input-32.bz2
+history-test/15sp1-1/pengine/pe-input-33.bz2
+history-test/15sp1-1/pengine/pe-input-34.bz2
+history-test/15sp1-1/pengine/pe-input-36.bz2
+history-test/15sp1-1/pengine/pe-input-37.bz2
+history-test/15sp1-1/pengine/pe-input-38.bz2
+history-test/15sp1-1/pengine/pe-input-39.bz2
+history-test/15sp1-1/pengine/pe-input-40.bz2
+history-test/15sp1-1/pengine/pe-input-41.bz2
+history-test/15sp1-1/pengine/pe-input-42.bz2
+history-test/15sp1-1/pengine/pe-input-43.bz2
+history-test/15sp1-1/pengine/pe-input-44.bz2
+history-test/15sp1-1/pengine/pe-input-45.bz2
+history-test/15sp1-1/pengine/pe-input-46.bz2
+history-test/15sp1-1/pengine/pe-warn-0.bz2
+history-test/15sp1-1/pengine/pe-input-48.bz2
+history-test/15sp1-1/pengine/pe-input-49.bz2
+history-test/15sp1-2/pengine/pe-input-11.bz2
+history-test/15sp1-2/pengine/pe-input-12.bz2
+history-test/15sp1-2/pengine/pe-input-13.bz2
+history-test/15sp1-2/pengine/pe-input-15.bz2
+history-test/15sp1-2/pengine/pe-input-16.bz2
+history-test/15sp1-2/pengine/pe-input-18.bz2
+history-test/15sp1-2/pengine/pe-input-19.bz2
 .INP: peinputs v
 Date       Start    End       Filename      Client     User       Origin      Tags
 ====       =====    ===       ========      ======     ====       ======      ====
-2012-12-14 20:06:57 20:06:57  pe-input-43   crmd       hacluster  xen-e
-2012-12-14 20:07:19 20:07:23  pe-input-44   cibadmin   root       xen-d   s-libvirt
-2012-12-14 20:07:29 20:07:29  pe-input-45   cibadmin   root       xen-d
-2012-12-14 20:07:29 20:07:29  pe-input-46   cibadmin   root       xen-d
-2012-12-14 20:07:37 --:--:--  pe-input-47   cibadmin   root       xen-d   
-2012-12-14 20:07:37 20:07:42  pe-input-48   cibadmin   root       xen-d   s-libvirt
-2012-12-14 20:07:54 20:07:56  pe-warn-272   cibadmin   root       xen-d   d1 s-libvirt xen-d
-2012-12-14 20:07:56 20:07:57  pe-input-49   cibadmin   root       xen-d   d1
-2012-12-14 20:08:43 20:08:43  pe-input-50   cibadmin   root       xen-d   d1
+2019-03-22 18:35:11 18:35:11  pe-input-3    crmd       hacluster  15sp1-1   
+2019-03-22 18:36:10 18:36:10  pe-input-4    crmd       hacluster  15sp1-1   
+2019-03-22 18:37:14 18:37:14  pe-input-5    crmd       hacluster  15sp1-1   
+2019-03-22 18:39:51 18:39:51  pe-input-4    crmd       hacluster  15sp1-1   
+2019-03-22 18:39:55 18:39:57  pe-input-5    cibadmin   root       15sp1-1   stonith-sbd
+2019-03-22 18:39:57 18:39:57  pe-input-6    cibadmin   root       15sp1-1   
+2019-03-22 18:40:41 18:40:41  pe-input-7    cibadmin   root       15sp1-1   
+2019-03-22 18:41:13 18:41:15  pe-input-8    cibadmin   root       15sp1-1   stonith-sbd
+2019-03-22 18:41:16 --:--:--  pe-input-7    crmd       hacluster  15sp1-1   
+2019-03-22 18:41:16 18:41:16  pe-input-8    crmd       hacluster  15sp1-1   stonith-sbd
+2019-03-22 18:42:44 18:42:46  pe-input-9    cibadmin   root       15sp1-1   stonith-sbd
+2019-03-22 18:43:08 18:43:08  pe-input-10   cibadmin   root       15sp1-1   stonith-sbd
+2019-03-22 18:43:23 18:43:23  pe-input-11   cibadmin   root       15sp1-1   
+2019-03-22 18:43:44 18:43:45  pe-input-12   cibadmin   root       15sp1-1   
+2019-03-22 18:44:29 18:44:29  pe-input-13   cibadmin   root       15sp1-1   
+2019-03-22 18:44:36 18:44:36  pe-input-14   cibadmin   root       15sp1-1   
+2019-03-22 18:44:38 18:44:38  pe-input-15   cibadmin   root       15sp1-1   
+2019-03-22 18:44:59 18:45:00  pe-input-16   cibadmin   root       15sp1-1   
+2019-03-22 18:45:14 18:45:14  pe-input-17   cibadmin   root       15sp1-1   
+2019-03-22 18:45:32 18:45:32  pe-input-18   cibadmin   root       15sp1-1   
+2019-03-22 18:45:37 18:45:37  pe-input-19   cibadmin   root       15sp1-1   
+2019-03-22 18:48:50 18:48:50  pe-input-20   cibadmin   root       15sp1-1   
+2019-03-22 18:48:51 --:--:--  pe-input-21   cibadmin   root       15sp1-1   
+2019-03-22 18:49:48 18:49:48  pe-input-23   cibadmin   root       15sp1-1   
+2019-03-22 18:49:53 18:49:53  pe-input-24   cibadmin   root       15sp1-1   
+2019-03-22 18:51:19 18:51:19  pe-input-25   cibadmin   root       15sp1-1   
+2019-03-22 18:51:39 18:51:39  pe-input-26   cibadmin   root       15sp1-1   
+2019-03-22 18:51:53 18:51:53  pe-input-27   cibadmin   root       15sp1-1   
+2019-03-22 18:51:54 --:--:--  pe-input-28   cibadmin   root       15sp1-1   
+2019-03-22 18:52:06 18:52:06  pe-input-30   cibadmin   root       15sp1-1   
+2019-03-22 18:52:25 18:52:25  pe-input-31   cibadmin   root       15sp1-1   
+2019-03-22 18:53:09 18:53:09  pe-input-32   cibadmin   root       15sp1-1   
+2019-03-22 18:53:15 18:53:15  pe-input-33   cibadmin   root       15sp1-1   
+2019-03-22 18:53:15 --:--:--  pe-input-34   cibadmin   root       15sp1-1   
+2019-03-22 18:54:08 18:54:08  pe-input-36   cibadmin   root       15sp1-1   
+2019-03-22 18:54:17 18:54:19  pe-input-37   cibadmin   root       15sp1-1   stonith-sbd
+2019-03-22 18:54:48 18:54:48  pe-input-38   cibadmin   root       15sp1-1   d1 d2
+2019-03-22 18:54:58 18:54:58  pe-input-39   cibadmin   root       15sp1-1   d1 d2
+2019-03-22 18:56:18 18:56:19  pe-input-40   cibadmin   root       15sp1-1   error
+2019-03-22 18:56:19 18:56:19  pe-input-41   cibadmin   root       15sp1-1   
+2019-03-22 18:56:19 18:56:19  pe-input-42   cibadmin   root       15sp1-1   error
+2019-03-22 18:56:19 --:--:--  pe-input-43   cibadmin   root       15sp1-1   
+2019-03-22 18:56:19 18:56:19  pe-input-44   cibadmin   root       15sp1-1   error
+2019-03-22 18:56:42 18:56:42  pe-input-45   cibadmin   root       15sp1-1   
+2019-03-22 18:56:43 --:--:--  pe-input-46   cibadmin   root       15sp1-1   
+2019-03-22 18:56:55 18:57:27  pe-warn-0     cibadmin   root       15sp1-1   
+2019-03-22 18:57:52 18:57:52  pe-input-48   cibadmin   root       15sp1-1   
+2019-03-22 19:00:42 19:00:43  pe-input-49   cibadmin   root       15sp1-1   stonith-sbd
+2019-03-22 19:01:30 19:01:31  pe-input-11   cibadmin   root       15sp1-1   
+2019-03-22 19:02:24 19:02:24  pe-input-12   cibadmin   root       15sp1-1   
+2019-03-22 19:03:05 19:03:05  pe-input-13   cibadmin   root       15sp1-1   d1 d2
+2019-03-22 19:45:14 19:45:16  pe-input-15   cibadmin   root       15sp1-1   stonith-sbd
+2019-03-22 19:45:16 19:45:16  pe-input-16   cibadmin   root       15sp1-1   
+2019-03-22 19:46:15 19:46:15  pe-input-18   cibadmin   root       15sp1-1   
+2019-03-22 19:46:15 19:46:16  pe-input-19   cibadmin   root       15sp1-1   stonith-sbd
 .INP: transitions
 Time                            Name            Node            Tags
-2012-12-14 20:06:57 - 20:06:57: pe-input-43     xen-e           
-2012-12-14 20:07:19 - 20:07:23: pe-input-44     xen-e           s-libvirt
-2012-12-14 20:07:29 - 20:07:29: pe-input-45     xen-e           
-2012-12-14 20:07:29 - 20:07:29: pe-input-46     xen-e           
-2012-12-14 20:07:37 - --:--:--: pe-input-47     xen-e           
-2012-12-14 20:07:37 - 20:07:42: pe-input-48     xen-e           s-libvirt
-2012-12-14 20:07:54 - 20:07:56: pe-warn-272     xen-e           d1 s-libvirt xen-d
-2012-12-14 20:07:56 - 20:07:57: pe-input-49     xen-e           d1
-2012-12-14 20:08:43 - 20:08:43: pe-input-50     xen-e           d1
+2019-03-22 18:35:11 - 18:35:11: pe-input-3      15sp1-2         
+2019-03-22 18:36:10 - 18:36:10: pe-input-4      15sp1-2         
+2019-03-22 18:37:14 - 18:37:14: pe-input-5      15sp1-2         
+2019-03-22 18:39:51 - 18:39:51: pe-input-4      15sp1-1         
+2019-03-22 18:39:55 - 18:39:57: pe-input-5      15sp1-1         stonith-sbd
+2019-03-22 18:39:57 - 18:39:57: pe-input-6      15sp1-1         
+2019-03-22 18:40:41 - 18:40:41: pe-input-7      15sp1-1         
+2019-03-22 18:41:13 - 18:41:15: pe-input-8      15sp1-1         stonith-sbd
+2019-03-22 18:41:16 - --:--:--: pe-input-7      15sp1-2         
+2019-03-22 18:41:16 - 18:41:16: pe-input-8      15sp1-2         stonith-sbd
+2019-03-22 18:42:44 - 18:42:46: pe-input-9      15sp1-1         stonith-sbd
+2019-03-22 18:43:08 - 18:43:08: pe-input-10     15sp1-1         stonith-sbd
+2019-03-22 18:43:23 - 18:43:23: pe-input-11     15sp1-1         
+2019-03-22 18:43:44 - 18:43:45: pe-input-12     15sp1-1         
+2019-03-22 18:44:29 - 18:44:29: pe-input-13     15sp1-1         
+2019-03-22 18:44:36 - 18:44:36: pe-input-14     15sp1-1         
+2019-03-22 18:44:38 - 18:44:38: pe-input-15     15sp1-1         
+2019-03-22 18:44:59 - 18:45:00: pe-input-16     15sp1-1         
+2019-03-22 18:45:14 - 18:45:14: pe-input-17     15sp1-1         
+2019-03-22 18:45:32 - 18:45:32: pe-input-18     15sp1-1         
+2019-03-22 18:45:37 - 18:45:37: pe-input-19     15sp1-1         
+2019-03-22 18:48:50 - 18:48:50: pe-input-20     15sp1-1         
+2019-03-22 18:48:51 - --:--:--: pe-input-21     15sp1-1         
+2019-03-22 18:49:48 - 18:49:48: pe-input-23     15sp1-1         
+2019-03-22 18:49:53 - 18:49:53: pe-input-24     15sp1-1         
+2019-03-22 18:51:19 - 18:51:19: pe-input-25     15sp1-1         
+2019-03-22 18:51:39 - 18:51:39: pe-input-26     15sp1-1         
+2019-03-22 18:51:53 - 18:51:53: pe-input-27     15sp1-1         
+2019-03-22 18:51:54 - --:--:--: pe-input-28     15sp1-1         
+2019-03-22 18:52:06 - 18:52:06: pe-input-30     15sp1-1         
+2019-03-22 18:52:25 - 18:52:25: pe-input-31     15sp1-1         
+2019-03-22 18:53:09 - 18:53:09: pe-input-32     15sp1-1         
+2019-03-22 18:53:15 - 18:53:15: pe-input-33     15sp1-1         
+2019-03-22 18:53:15 - --:--:--: pe-input-34     15sp1-1         
+2019-03-22 18:54:08 - 18:54:08: pe-input-36     15sp1-1         
+2019-03-22 18:54:17 - 18:54:19: pe-input-37     15sp1-1         stonith-sbd
+2019-03-22 18:54:48 - 18:54:48: pe-input-38     15sp1-1         d1 d2
+2019-03-22 18:54:58 - 18:54:58: pe-input-39     15sp1-1         d1 d2
+2019-03-22 18:56:18 - 18:56:19: pe-input-40     15sp1-1         error
+2019-03-22 18:56:19 - 18:56:19: pe-input-41     15sp1-1         
+2019-03-22 18:56:19 - 18:56:19: pe-input-42     15sp1-1         error
+2019-03-22 18:56:19 - --:--:--: pe-input-43     15sp1-1         
+2019-03-22 18:56:19 - 18:56:19: pe-input-44     15sp1-1         error
+2019-03-22 18:56:42 - 18:56:42: pe-input-45     15sp1-1         
+2019-03-22 18:56:43 - --:--:--: pe-input-46     15sp1-1         
+2019-03-22 18:56:55 - 18:57:27: pe-warn-0       15sp1-1         
+2019-03-22 18:57:52 - 18:57:52: pe-input-48     15sp1-1         
+2019-03-22 19:00:42 - 19:00:43: pe-input-49     15sp1-1         stonith-sbd
+2019-03-22 19:01:30 - 19:01:31: pe-input-11     15sp1-2         
+2019-03-22 19:02:24 - 19:02:24: pe-input-12     15sp1-2         
+2019-03-22 19:03:05 - 19:03:05: pe-input-13     15sp1-2         d1 d2
+2019-03-22 19:45:14 - 19:45:16: pe-input-15     15sp1-2         stonith-sbd
+2019-03-22 19:45:16 - 19:45:16: pe-input-16     15sp1-2         
+2019-03-22 19:46:15 - 19:46:15: pe-input-18     15sp1-2         
+2019-03-22 19:46:15 - 19:46:16: pe-input-19     15sp1-2         stonith-sbd
 .INP: refresh
 Refreshing log data...
-9 transitions, 87 events.
+55 transitions, 116 events.
 .INP: resource d1
-Dec 14 20:07:19 xen-d lrmd: [5657]: info: rsc:d1 start[4] (pid 5833)
-Dec 14 20:07:19 xen-d crmd: [5660]: info: process_lrm_event: LRM operation d1_start_0 (call=4, rc=0, cib-update=14, confirmed=true) ok
-Dec 14 20:07:29 xen-d lrmd: [5657]: info: rsc:d1 stop[6] (pid 5926)
-Dec 14 20:07:29 xen-d crmd: [5660]: info: process_lrm_event: LRM operation d1_stop_0 (call=6, rc=0, cib-update=17, confirmed=true) ok
-Dec 14 20:07:29 xen-d lrmd: [5657]: info: rsc:d1 start[7] (pid 5929)
-Dec 14 20:07:29 xen-d crmd: [5660]: info: process_lrm_event: LRM operation d1_start_0 (call=7, rc=0, cib-update=18, confirmed=true) ok
-Dec 14 20:07:56 xen-e lrmd: [24225]: info: rsc:d1 start[9] (pid 24568)
-Dec 14 20:07:56 xen-e crmd: [24228]: info: process_lrm_event: LRM operation d1_start_0 (call=9, rc=0, cib-update=96, confirmed=true) ok
-Dec 14 20:08:26 xen-d lrmd: [1945]: info: rsc:d1 start[4] (pid 2405)
-Dec 14 20:08:26 xen-d crmd: [1948]: info: process_lrm_event: LRM operation d1_start_0 (call=4, rc=0, cib-update=9, confirmed=true) ok
-Dec 14 20:08:43 xen-e lrmd: [24225]: info: rsc:d1 stop[11] (pid 24774)
-Dec 14 20:08:43 xen-e crmd: [24228]: info: process_lrm_event: LRM operation d1_stop_0 (call=11, rc=0, cib-update=125, confirmed=true) ok
+2019-03-22T10:54:48.477139+08:00 15sp1-2 pacemaker-execd[1737]:  notice: executing - rsc:d1 action:start call_id:38
+2019-03-22T10:54:48.492428+08:00 15sp1-2 pacemaker-execd[1737]:  notice: finished - rsc:d1 action:start call_id:38 pid:2141 exit-code:0 exec-time:15ms queue-time:0ms
+2019-03-22T10:54:48.455384+08:00 15sp1-1 pacemaker-controld[1740]:  notice: Initiating start operation d1_start_0 on 15sp1-2
+2019-03-22T10:54:58.240981+08:00 15sp1-2 pacemaker-execd[1737]:  notice: executing - rsc:d1 action:stop call_id:41
+2019-03-22T10:54:58.256143+08:00 15sp1-2 pacemaker-execd[1737]:  notice: finished - rsc:d1 action:stop call_id:41 pid:2154 exit-code:0 exec-time:16ms queue-time:0ms
+2019-03-22T10:54:58.219353+08:00 15sp1-1 pacemaker-controld[1740]:  notice: Initiating stop operation d1_stop_0 on 15sp1-2
+2019-03-22T11:03:05.194349+08:00 15sp1-2 pacemaker-controld[1748]:  notice: Initiating start operation d1_start_0 on 15sp1-1
+2019-03-22T11:03:05.193318+08:00 15sp1-1 pacemaker-execd[1746]:  notice: executing - rsc:d1 action:start call_id:21
+2019-03-22T11:03:05.226554+08:00 15sp1-1 pacemaker-execd[1746]:  notice: finished - rsc:d1 action:start call_id:21 pid:1848 exit-code:0 exec-time:33ms queue-time:0ms
 .INP: # reduce report span
-.INP: timeframe "2012-12-14 20:07:30"
-WARNING: 21: This command 'timeframe' is deprecated, please use 'limit'
-INFO: 21: "timeframe" is accepted as "limit"
+.INP: timeframe "2019-03-22 15:07:37"
+WARNING: 20: This command 'timeframe' is deprecated, please use 'limit'
+INFO: 20: "timeframe" is accepted as "limit"
 .INP: peinputs
-history-test/xen-e/pengine/pe-input-47.bz2
-history-test/xen-e/pengine/pe-input-48.bz2
-history-test/xen-e/pengine/pe-warn-272.bz2
-history-test/xen-e/pengine/pe-input-49.bz2
-history-test/xen-e/pengine/pe-input-50.bz2
+history-test/15sp1-2/pengine/pe-input-3.bz2
+history-test/15sp1-2/pengine/pe-input-4.bz2
+history-test/15sp1-2/pengine/pe-input-5.bz2
+history-test/15sp1-1/pengine/pe-input-4.bz2
+history-test/15sp1-1/pengine/pe-input-5.bz2
+history-test/15sp1-1/pengine/pe-input-6.bz2
+history-test/15sp1-1/pengine/pe-input-7.bz2
+history-test/15sp1-1/pengine/pe-input-8.bz2
+history-test/15sp1-2/pengine/pe-input-7.bz2
+history-test/15sp1-2/pengine/pe-input-8.bz2
+history-test/15sp1-1/pengine/pe-input-9.bz2
+history-test/15sp1-1/pengine/pe-input-10.bz2
+history-test/15sp1-1/pengine/pe-input-11.bz2
+history-test/15sp1-1/pengine/pe-input-12.bz2
+history-test/15sp1-1/pengine/pe-input-13.bz2
+history-test/15sp1-1/pengine/pe-input-14.bz2
+history-test/15sp1-1/pengine/pe-input-15.bz2
+history-test/15sp1-1/pengine/pe-input-16.bz2
+history-test/15sp1-1/pengine/pe-input-17.bz2
+history-test/15sp1-1/pengine/pe-input-18.bz2
+history-test/15sp1-1/pengine/pe-input-19.bz2
+history-test/15sp1-1/pengine/pe-input-20.bz2
+history-test/15sp1-1/pengine/pe-input-21.bz2
+history-test/15sp1-1/pengine/pe-input-23.bz2
+history-test/15sp1-1/pengine/pe-input-24.bz2
+history-test/15sp1-1/pengine/pe-input-25.bz2
+history-test/15sp1-1/pengine/pe-input-26.bz2
+history-test/15sp1-1/pengine/pe-input-27.bz2
+history-test/15sp1-1/pengine/pe-input-28.bz2
+history-test/15sp1-1/pengine/pe-input-30.bz2
+history-test/15sp1-1/pengine/pe-input-31.bz2
+history-test/15sp1-1/pengine/pe-input-32.bz2
+history-test/15sp1-1/pengine/pe-input-33.bz2
+history-test/15sp1-1/pengine/pe-input-34.bz2
+history-test/15sp1-1/pengine/pe-input-36.bz2
+history-test/15sp1-1/pengine/pe-input-37.bz2
+history-test/15sp1-1/pengine/pe-input-38.bz2
+history-test/15sp1-1/pengine/pe-input-39.bz2
+history-test/15sp1-1/pengine/pe-input-40.bz2
+history-test/15sp1-1/pengine/pe-input-41.bz2
+history-test/15sp1-1/pengine/pe-input-42.bz2
+history-test/15sp1-1/pengine/pe-input-43.bz2
+history-test/15sp1-1/pengine/pe-input-44.bz2
+history-test/15sp1-1/pengine/pe-input-45.bz2
+history-test/15sp1-1/pengine/pe-input-46.bz2
+history-test/15sp1-1/pengine/pe-warn-0.bz2
+history-test/15sp1-1/pengine/pe-input-48.bz2
+history-test/15sp1-1/pengine/pe-input-49.bz2
+history-test/15sp1-2/pengine/pe-input-11.bz2
+history-test/15sp1-2/pengine/pe-input-12.bz2
+history-test/15sp1-2/pengine/pe-input-13.bz2
+history-test/15sp1-2/pengine/pe-input-15.bz2
+history-test/15sp1-2/pengine/pe-input-16.bz2
+history-test/15sp1-2/pengine/pe-input-18.bz2
+history-test/15sp1-2/pengine/pe-input-19.bz2
 .INP: resource d1
-Dec 14 20:07:56 xen-e lrmd: [24225]: info: rsc:d1 start[9] (pid 24568)
-Dec 14 20:07:56 xen-e crmd: [24228]: info: process_lrm_event: LRM operation d1_start_0 (call=9, rc=0, cib-update=96, confirmed=true) ok
-Dec 14 20:08:26 xen-d lrmd: [1945]: info: rsc:d1 start[4] (pid 2405)
-Dec 14 20:08:26 xen-d crmd: [1948]: info: process_lrm_event: LRM operation d1_start_0 (call=4, rc=0, cib-update=9, confirmed=true) ok
-Dec 14 20:08:43 xen-e lrmd: [24225]: info: rsc:d1 stop[11] (pid 24774)
-Dec 14 20:08:43 xen-e crmd: [24228]: info: process_lrm_event: LRM operation d1_stop_0 (call=11, rc=0, cib-update=125, confirmed=true) ok
-.INP: exclude corosync|crmd|pengine|stonith-ng|cib|attrd|mgmtd|sshd
+2019-03-22T10:54:48.477139+08:00 15sp1-2 pacemaker-execd[1737]:  notice: executing - rsc:d1 action:start call_id:38
+2019-03-22T10:54:48.492428+08:00 15sp1-2 pacemaker-execd[1737]:  notice: finished - rsc:d1 action:start call_id:38 pid:2141 exit-code:0 exec-time:15ms queue-time:0ms
+2019-03-22T10:54:48.455384+08:00 15sp1-1 pacemaker-controld[1740]:  notice: Initiating start operation d1_start_0 on 15sp1-2
+2019-03-22T10:54:58.240981+08:00 15sp1-2 pacemaker-execd[1737]:  notice: executing - rsc:d1 action:stop call_id:41
+2019-03-22T10:54:58.256143+08:00 15sp1-2 pacemaker-execd[1737]:  notice: finished - rsc:d1 action:stop call_id:41 pid:2154 exit-code:0 exec-time:16ms queue-time:0ms
+2019-03-22T10:54:58.219353+08:00 15sp1-1 pacemaker-controld[1740]:  notice: Initiating stop operation d1_stop_0 on 15sp1-2
+2019-03-22T11:03:05.194349+08:00 15sp1-2 pacemaker-controld[1748]:  notice: Initiating start operation d1_start_0 on 15sp1-1
+2019-03-22T11:03:05.193318+08:00 15sp1-1 pacemaker-execd[1746]:  notice: executing - rsc:d1 action:start call_id:21
+2019-03-22T11:03:05.226554+08:00 15sp1-1 pacemaker-execd[1746]:  notice: finished - rsc:d1 action:start call_id:21 pid:1848 exit-code:0 exec-time:33ms queue-time:0ms
+.INP: exclude corosync|pacemaker-based|pacemaker-fenced|pacemaker-execd|pacemaker-attrd|pacemaker-schedulerd|pacemaker-controld|sshd
 .INP: transition log
-Dec 14 20:08:43 xen-e lrmd: [24225]: info: cancel_op: operation monitor[10] on d1 for client 24228, its parameters: CRM_meta_name=[monitor] crm_feature_set=[3.0.6] CRM_meta_timeout=[30000] CRM_meta_interval=[5000]  cancelled
-Dec 14 20:08:43 xen-e lrmd: [24225]: info: rsc:d1 stop[11] (pid 24774)
-Dec 14 20:08:43 xen-e lrmd: [24225]: info: operation stop[11] on d1 for client 24228: pid 24774 exited with return code 0
-Dec 14 20:08:43 xen-e external/libvirt(s-libvirt)[24748]: [24786]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+2019-03-22T11:46:15.797222+08:00 15sp1-2 sbd[2770]:   notice: main: Doing flush + writing 'b' to sysrq on timeout
+2019-03-22T11:46:15.812786+08:00 15sp1-2 sbd[2774]:   notice: main: Doing flush + writing 'b' to sysrq on timeout
 .INP: transition nograph
-INFO: 26: running ptest with history-test/xen-e/pengine/pe-input-50.bz2
+INFO: 25: running ptest with history-test/15sp1-2/pengine/pe-input-19.bz2
 .EXT >/dev/null 2>&1 crm_simulate -x - -S -VV
-Transition xen-e:pe-input-50 (20:08:43 - 20:08:43):
-	total 8 actions: 8 Complete
-Dec 14 20:08:43 xen-e lrmd: [24225]: info: rsc:d1 stop[11] (pid 24774)
-Dec 14 20:08:43 xen-e external/libvirt(s-libvirt)[24748]: [24786]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+Transition 15sp1-2:pe-input-19 (19:46:15 - 19:46:16):
+	total 1 actions: 1 Complete
 .INP: transition -1 nograph
-INFO: 27: running ptest with history-test/xen-e/pengine/pe-input-49.bz2
+INFO: 26: running ptest with history-test/15sp1-2/pengine/pe-input-18.bz2
 .EXT >/dev/null 2>&1 crm_simulate -x - -S -VV
-Transition xen-e:pe-input-49 (20:07:56 - 20:07:57):
-	total 2 actions: 2 Complete
-Dec 14 20:07:56 xen-e lrmd: [24225]: info: rsc:d1 start[9] (pid 24568)
-Dec 14 20:07:57 xen-e external/libvirt(s-libvirt)[24555]: [24588]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+Transition 15sp1-2:pe-input-18 (19:46:15 - 19:46:15):
+	total 12 actions: 7 Complete, 1 Skipped, 4 Incomplete
 .INP: transition save 0 _crmsh_regtest
-INFO: 28: transition history-test/xen-e/pengine/pe-input-50.bz2 saved to shadow _crmsh_regtest
+INFO: 27: transition history-test/15sp1-2/pengine/pe-input-19.bz2 saved to shadow _crmsh_regtest
 .INP: transition log 49
-Dec 14 20:07:56 xen-e lrmd: [24225]: info: rsc:d1 start[9] (pid 24568)
-Dec 14 20:07:56 xen-e lrmd: [24225]: info: operation start[9] on d1 for client 24228: pid 24568 exited with return code 0
-Dec 14 20:07:57 xen-d logd: [6194]: debug: Stopping ha_logd with pid 1787
-Dec 14 20:07:57 xen-d logd: [6194]: info: Waiting for pid=1787 to exit
-Dec 14 20:07:57 xen-d logd: [1787]: debug: logd_term_action: received SIGTERM
-Dec 14 20:07:57 xen-d logd: [1787]: debug: logd_term_action: waiting for 0 messages to be read for process lrmd
-Dec 14 20:07:57 xen-d logd: [1787]: debug: logd_term_action: waiting for 0 messages to be read by write process
-Dec 14 20:07:57 xen-d logd: [1787]: debug: logd_term_action: sending SIGTERM to write process
-Dec 14 20:07:57 xen-d logd: [1790]: info: logd_term_write_action: received SIGTERM
-Dec 14 20:07:57 xen-d logd: [1790]: debug: Writing out 0 messages then quitting
-Dec 14 20:07:57 xen-d logd: [1790]: info: Exiting write process
-Dec 14 20:07:57 xen-d haveged: haveged stopping due to signal 15
-Dec 14 20:07:57 xen-e lrmd: [24225]: info: rsc:d1 monitor[10] (pid 24577)
-Dec 14 20:07:57 xen-e lrmd: [24225]: info: operation monitor[10] on d1 for client 24228: pid 24577 exited with return code 0
-Dec 14 20:07:57 xen-e external/libvirt(s-libvirt)[24555]: [24588]: notice: xen+ssh://hex-12.suse.de/?keyfile=/root/.ssh/xen: Running hypervisor: Xen 4.1.0
+2019-03-22T11:00:42.614804+08:00 15sp1-1 systemd[1]: Stopped target Timers.
+2019-03-22T11:00:42.615759+08:00 15sp1-1 systemd[1]: Stopped Discard unused blocks once a week.
+2019-03-22T11:00:42.615966+08:00 15sp1-1 systemd[1]: Stopped Scrub btrfs filesystem, verify block checksums.
+2019-03-22T11:00:42.616312+08:00 15sp1-1 systemd[1]: Stopped target Sound Card.
+2019-03-22T11:00:42.616521+08:00 15sp1-1 systemd[1]: Stopped Daily Cleanup of Temporary Directories.
+2019-03-22T11:00:42.616840+08:00 15sp1-1 systemd[1]: Stopped target Multi-User System.
+2019-03-22T11:00:42.617530+08:00 15sp1-1 pacemakerd[1733]:  notice: Caught 'Terminated' signal
+2019-03-22T11:00:42.617672+08:00 15sp1-1 pacemakerd[1733]:  notice: Shutting down Pacemaker
+2019-03-22T11:00:42.635974+08:00 15sp1-1 systemd[1]: Stopping Pacemaker High Availability Cluster Manager...
+2019-03-22T11:00:42.640402+08:00 15sp1-1 systemd[1]: Stopped target Login Prompts.
+2019-03-22T11:00:42.649788+08:00 15sp1-1 systemd[1]: Stopping Session 1 of user root.
+2019-03-22T11:00:42.656415+08:00 15sp1-1 systemd[1]: Stopping OpenSSH Daemon...
+2019-03-22T11:00:42.659094+08:00 15sp1-1 systemd[1]: Stopped Detect if the system suffers from bsc#1089761.
+2019-03-22T11:00:42.660023+08:00 15sp1-1 systemd[1]: Stopped Timeline of Snapper Snapshots.
+2019-03-22T11:00:42.660434+08:00 15sp1-1 systemd[1]: Stopping Restore /run/initramfs on shutdown...
+2019-03-22T11:00:42.660712+08:00 15sp1-1 systemd[1]: Stopped Do daily mandb update.
+2019-03-22T11:00:42.660980+08:00 15sp1-1 systemd[1]: Stopped Check if mainboard battery is Ok.
+2019-03-22T11:00:42.661239+08:00 15sp1-1 systemd[1]: Stopped Early Kernel Boot Messages.
+2019-03-22T11:00:42.661471+08:00 15sp1-1 systemd[1]: Stopped Apply settings from /etc/sysconfig/keyboard.
+2019-03-22T11:00:42.661722+08:00 15sp1-1 systemd[1]: Closed LVM2 poll daemon socket.
+2019-03-22T11:00:42.661854+08:00 15sp1-1 systemd[1]: Stopped Backup of RPM database.
+2019-03-22T11:00:42.661990+08:00 15sp1-1 systemd[1]: Stopped Backup of /etc/sysconfig.
+2019-03-22T11:00:42.663466+08:00 15sp1-2 systemd[1]: Started Timeline of Snapper Snapshots.
+2019-03-22T11:00:42.673313+08:00 15sp1-1 systemd[1766]: Stopped target Default.
+2019-03-22T11:00:42.673554+08:00 15sp1-1 systemd[1766]: Stopped target Basic System.
+2019-03-22T11:00:42.673738+08:00 15sp1-1 systemd[1766]: Stopped target Sockets.
+2019-03-22T11:00:42.673880+08:00 15sp1-1 systemd[1766]: Closed D-Bus User Message Bus Socket.
+2019-03-22T11:00:42.674004+08:00 15sp1-1 systemd[1766]: Stopped target Paths.
+2019-03-22T11:00:42.674122+08:00 15sp1-1 systemd[1766]: Reached target Shutdown.
+2019-03-22T11:00:42.674236+08:00 15sp1-1 systemd[1766]: Stopped target Timers.
+2019-03-22T11:00:42.674360+08:00 15sp1-1 systemd[1766]: Starting Exit the Session...
+2019-03-22T11:00:42.674478+08:00 15sp1-1 systemd[1]: Stopping User Manager for UID 0...
+2019-03-22T11:00:42.674594+08:00 15sp1-1 systemd[1]: Stopped Balance block groups on a btrfs filesystem.
+2019-03-22T11:00:42.674701+08:00 15sp1-1 systemd[1]: Stopping iSCSI UserSpace I/O driver...
+2019-03-22T11:00:42.674806+08:00 15sp1-1 systemd[1]: Stopping Getty on tty1...
+2019-03-22T11:00:42.674911+08:00 15sp1-1 systemd[1]: Stopping Command Scheduler...
+2019-03-22T11:00:42.675020+08:00 15sp1-1 systemd[1]: Stopped Daily rotation of log files.
+2019-03-22T11:00:42.675126+08:00 15sp1-1 systemd[1]: Stopped Daily Cleanup of Snapper Snapshots.
+2019-03-22T11:00:42.675231+08:00 15sp1-1 systemd[1]: Removed slice system-systemd\x2dhibernate\x2dresume.slice.
+2019-03-22T11:00:42.675345+08:00 15sp1-1 systemd[1]: Stopped iSCSI UserSpace I/O driver.
+2019-03-22T11:00:42.675452+08:00 15sp1-1 systemd[1]: Stopped OpenSSH Daemon.
+2019-03-22T11:00:42.675561+08:00 15sp1-1 systemd[1]: Stopped Session 1 of user root.
+2019-03-22T11:00:42.683003+08:00 15sp1-1 systemd-logind[819]: Session 1 logged out. Waiting for processes to exit.
+2019-03-22T11:00:42.683239+08:00 15sp1-1 systemd[1]: Stopped Getty on tty1.
+2019-03-22T11:00:42.683375+08:00 15sp1-1 systemd[1]: Stopped Restore /run/initramfs on shutdown.
+2019-03-22T11:00:42.683487+08:00 15sp1-1 systemd-logind[819]: Removed session 1.
+2019-03-22T11:00:42.683603+08:00 15sp1-1 systemd[1]: Starting Show Plymouth Reboot Screen...
+2019-03-22T11:00:42.683861+08:00 15sp1-1 systemd[1]: Removed slice system-getty.slice.
+2019-03-22T11:00:42.686592+08:00 15sp1-1 systemd[1]: Received SIGRTMIN+20 from PID 5230 (plymouthd).
+2019-03-22T11:00:42.687482+08:00 15sp1-2 dbus-daemon[768]: [system] Activating service name='org.opensuse.Snapper' requested by ':1.13' (uid=0 pid=1835 comm="/usr/lib/snapper/systemd-helper --timeline ") (using servicehelper)
+2019-03-22T11:00:42.687871+08:00 15sp1-1 cron[1730]: (CRON) INFO (Shutting down)
+2019-03-22T11:00:42.689646+08:00 15sp1-1 systemd[1]: Stopped Command Scheduler.
+2019-03-22T11:00:42.689784+08:00 15sp1-1 systemd[1]: Stopping Postfix Mail Transport Agent...
+2019-03-22T11:00:42.705412+08:00 15sp1-2 dbus-daemon[768]: [system] Successfully activated service 'org.opensuse.Snapper'
+2019-03-22T11:00:42.745173+08:00 15sp1-2 sbd[1847]:   notice: main: Doing flush + writing 'b' to sysrq on timeout
+2019-03-22T11:00:42.760480+08:00 15sp1-2 sbd[1851]:   notice: main: Doing flush + writing 'b' to sysrq on timeout
+2019-03-22T11:00:42.765095+08:00 15sp1-1 systemd[1]: Stopped Postfix Mail Transport Agent.
+2019-03-22T11:00:42.765239+08:00 15sp1-1 systemd[1]: Stopped target Host and Network Name Lookups.
 .INP: transition tags 49
-d1
+stonith-sbd
 .INP: # reset timeframe
 .INP: timeframe
-WARNING: 32: This command 'timeframe' is deprecated, please use 'limit'
-INFO: 32: "timeframe" is accepted as "limit"
+WARNING: 31: This command 'timeframe' is deprecated, please use 'limit'
+INFO: 31: "timeframe" is accepted as "limit"
 .INP: session save _crmsh_regtest
 .INP: session load _crmsh_regtest
 .INP: session
@@ -386,4 +597,4 @@ current session: _crmsh_regtest
 .INP: history
 .INP: session load _crmsh_regtest
 .INP: exclude
-corosync|crmd|pengine|stonith-ng|cib|attrd|mgmtd|sshd
+corosync|pacemaker-based|pacemaker-fenced|pacemaker-execd|pacemaker-attrd|pacemaker-schedulerd|pacemaker-controld|sshd

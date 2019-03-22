@@ -3,15 +3,14 @@ history
 source history-test.tar.bz2
 info
 events
-node xen-d
-node xen-e
+node 15sp1-1
+node 15sp1-2
 node .*
 exclude pcmk_peer_update
 exclude
-node xen-e
+node 15sp1-2
 exclude clear
-exclude corosync|crmd|pengine|stonith-ng|cib|attrd|mgmtd|sshd
-log
+exclude corosync|pacemaker-based|pacemaker-fenced|pacemaker-execd|pacemaker-attrd|pacemaker-schedulerd|pacemaker-controld|sshd
 exclude clear
 peinputs
 peinputs v
@@ -19,10 +18,10 @@ transitions
 refresh
 resource d1
 # reduce report span
-timeframe "2012-12-14 20:07:30"
+timeframe "2019-03-22 15:07:37"
 peinputs
 resource d1
-exclude corosync|crmd|pengine|stonith-ng|cib|attrd|mgmtd|sshd
+exclude corosync|pacemaker-based|pacemaker-fenced|pacemaker-execd|pacemaker-attrd|pacemaker-schedulerd|pacemaker-controld|sshd
 transition log
 transition nograph
 transition -1 nograph
