@@ -1880,14 +1880,15 @@ def parse_sysconfig(sysconfig_file):
     Reads a sysconfig file into a dict
     """
     ret = {}
-    vre = re.compile(r"(\S+)\s*=\s*(.*)")
     if os.path.isfile(sysconfig_file):
         for line in open(sysconfig_file).readlines():
             if line.lstrip().startswith('#'):
                 continue
-            m = vre.match(line)
-            if m:
-                ret[m.group(1)] = unquote(m.group(2))
+            try:
+                key, val = line.split("=", 1)
+                ret[key] = unquote(val)
+            except ValueError:
+                pass
     return ret
 
 
@@ -1896,7 +1897,6 @@ def sysconfig_set(sysconfig_file, **values):
     Set the values in the sysconfig file, updating the variables
     if they exist already, appending them if not.
     """
-    vre = re.compile(r"(\S+)\s*=\s*(.*)")
     outp = ""
     if os.path.isfile(sysconfig_file):
         for line in open(sysconfig_file).readlines():
@@ -1904,16 +1904,19 @@ def sysconfig_set(sysconfig_file, **values):
                 outp += line
             else:
                 matched = False
-                m = vre.match(line)
-                if m:
-                    for k, v in values.items():
-                        if k == m.group(1):
-                            matched = True
-                            outp += '%s=%s\n' % (k, doublequote(v))
-                            del values[k]
-                            break
+            try:
+                key, _ = line.split("=", 1)
+                for k, v in values.items():
+                    if k == key:
+                        matched = True
+                        outp += '%s=%s\n' % (k, doublequote(v))
+                        del values[k]
+                        break
                 if not matched:
                     outp += line
+            except ValueError:
+                outp += line
+
     for k, v in values.items():
         outp += '%s=%s\n' % (k, doublequote(v))
     str2file(outp, sysconfig_file)
