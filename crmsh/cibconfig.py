@@ -46,6 +46,7 @@ from .xmlutil import merge_attributes, is_cib_element, sanity_check_meta
 from .xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
 from .xmlutil import get_rsc_operations, delete_rscref, xml_equals, lookup_node, RscState
 from .xmlutil import cibtext2elem, is_related, check_id_ref, xml_tostring
+from .xmlutil import sanitize_cib_for_patching
 from .cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
 from .cliformat import cli_nvpair, cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
 from .cliformat import simple_rsc_constraint, cli_rule, cli_format
@@ -2679,7 +2680,7 @@ class CibFactory(object):
             # now increase the epoch by 1
             self.bump_epoch()
         self._set_cib_attributes(self.cib_elem)
-        tmpf = cibdump2tmp()
+        tmpf = cibdump2tmp(filterfn=sanitize_cib_for_patching)
         if not tmpf or not ensure_sudo_readable(tmpf):
             return False
         tmpfiles.add(tmpf)
