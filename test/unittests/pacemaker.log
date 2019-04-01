@@ -1,0 +1,923 @@
+Set r/w permissions for uid=90, gid=90 on /var/log/pacemaker/pacemaker.log
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (crm_log_init) 	info: Changed active directory to /var/lib/pacemaker/cores
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (get_cluster_type) 	info: Detected an active 'corosync' cluster
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (mcp_read_config) 	info: Reading configure for stack: corosync
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (main) 	notice: Starting Pacemaker 2.0.1+20190304.9e909a5bd-1.4 | build=2.0.1+20190304.9e909a5bd features: generated-manpages agent-manpages ncurses libqb-logging libqb-ipc lha-fencing systemd nagios  corosync-native atomic-attrd acls cibsecrets
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (main) 	info: Maximum core file size is: 18446744073709551615
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (qb_ipcs_us_publish) 	info: server name: pacemakerd
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 1
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (crm_get_peer) 	info: Created entry 58f6784c-39df-4fbe-90df-d462a893c0d4/0x55b94329e2e0 for node (null)/1 (1 total)
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (crm_get_peer) 	info: Node 1 has uuid 1
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (crm_update_peer_proc) 	info: cluster_connect_cpg: Node (null)[1] - corosync-cpg is now online
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (cluster_connect_quorum) 	notice: Quorum acquired
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 1
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (get_node_name) 	notice: Defaulting to uname -n for the local corosync node name
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (crm_get_peer) 	info: Node 1 is now known as 15sp1-1
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (start_child) 	info: Using uid=90 and group=90 for process pacemaker-based
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (start_child) 	info: Forked child 1943 for process pacemaker-based
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (start_child) 	info: Forked child 1944 for process pacemaker-fenced
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (start_child) 	info: Forked child 1945 for process pacemaker-execd
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (start_child) 	info: Using uid=90 and group=90 for process pacemaker-attrd
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (start_child) 	info: Forked child 1946 for process pacemaker-attrd
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (start_child) 	info: Using uid=90 and group=90 for process pacemaker-schedulerd
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (start_child) 	info: Forked child 1947 for process pacemaker-schedulerd
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (start_child) 	info: Using uid=90 and group=90 for process pacemaker-controld
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (start_child) 	info: Forked child 1948 for process pacemaker-controld
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (main) 	info: Starting mainloop
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (pcmk_quorum_notification) 	info: Quorum retained | membership=4 members=1
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (crm_update_peer_state_iter) 	notice: Node 15sp1-1 state is now member | nodeid=1 previous=unknown source=pcmk_quorum_notification
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (pcmk_cpg_membership) 	info: Group event pacemakerd.0: node 1 joined
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (pcmk_cpg_membership) 	info: Group event pacemakerd.0: node 1 (15sp1-1) is member
+Apr 03 11:01:18 15sp1-1 pacemaker-fenced    [1944] (crm_log_init) 	info: Changed active directory to /var/lib/pacemaker/cores
+Apr 03 11:01:18 15sp1-1 pacemaker-fenced    [1944] (get_cluster_type) 	info: Verifying cluster type: 'corosync'
+Apr 03 11:01:18 15sp1-1 pacemaker-fenced    [1944] (get_cluster_type) 	info: Assuming an active 'corosync' cluster
+Apr 03 11:01:18 15sp1-1 pacemaker-fenced    [1944] (crm_cluster_connect) 	notice: Connecting to cluster infrastructure: corosync
+Apr 03 11:01:18 15sp1-1 pacemaker-execd     [1945] (crm_log_init) 	info: Changed active directory to /var/lib/pacemaker/cores
+Apr 03 11:01:18 15sp1-1 pacemaker-execd     [1945] (qb_ipcs_us_publish) 	info: server name: lrmd
+Apr 03 11:01:18 15sp1-1 pacemaker-execd     [1945] (main) 	info: Starting
+Apr 03 11:01:18 15sp1-1 pacemaker-schedulerd[1947] (crm_log_init) 	info: Changed active directory to /var/lib/pacemaker/cores
+Apr 03 11:01:18 15sp1-1 pacemaker-schedulerd[1947] (qb_ipcs_us_publish) 	info: server name: pengine
+Apr 03 11:01:18 15sp1-1 pacemaker-schedulerd[1947] (main) 	info: Starting pacemaker-schedulerd
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (crm_log_init) 	info: Changed active directory to /var/lib/pacemaker/cores
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (get_cluster_type) 	info: Verifying cluster type: 'corosync'
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (get_cluster_type) 	info: Assuming an active 'corosync' cluster
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (pcmk__daemon_can_write) 	notice: /var/lib/pacemaker/cib/cib.xml not found: No such file or directory
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (retrieveCib) 	info: Reading cluster configuration file /var/lib/pacemaker/cib/cib.xml (digest: /var/lib/pacemaker/cib/cib.xml.sig)
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (cib_file_read_and_verify) 	warning: Could not verify cluster configuration file /var/lib/pacemaker/cib/cib.xml: No such file or directory (2)
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (readCibXmlFile) 	warning: Primary configuration corrupt or unusable, trying backups in /var/lib/pacemaker/cib
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (readCibXmlFile) 	warning: Continuing with an empty configuration.
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (validate_with_relaxng) 	info: Creating RNG parser context
+Apr 03 11:01:18 15sp1-1 pacemaker-fenced    [1944] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:18 15sp1-1 pacemaker-fenced    [1944] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 1
+Apr 03 11:01:18 15sp1-1 pacemaker-fenced    [1944] (crm_get_peer) 	info: Created entry ce9f3668-a138-4e36-aec8-124d76e0e8b8/0x5649957b59c0 for node (null)/1 (1 total)
+Apr 03 11:01:18 15sp1-1 pacemaker-fenced    [1944] (crm_get_peer) 	info: Node 1 has uuid 1
+Apr 03 11:01:18 15sp1-1 pacemaker-fenced    [1944] (crm_update_peer_proc) 	info: cluster_connect_cpg: Node (null)[1] - corosync-cpg is now online
+Apr 03 11:01:18 15sp1-1 pacemaker-fenced    [1944] (crm_update_peer_state_iter) 	notice: Node (null) state is now member | nodeid=1 previous=unknown source=crm_update_peer_proc
+Apr 03 11:01:18 15sp1-1 pacemaker-attrd     [1946] (crm_log_init) 	info: Changed active directory to /var/lib/pacemaker/cores
+Apr 03 11:01:18 15sp1-1 pacemaker-attrd     [1946] (main) 	info: Starting up
+Apr 03 11:01:18 15sp1-1 pacemaker-fenced    [1944] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:18 15sp1-1 pacemaker-fenced    [1944] (get_node_name) 	notice: Defaulting to uname -n for the local corosync node name
+Apr 03 11:01:18 15sp1-1 pacemaker-fenced    [1944] (init_cs_connection_once) 	info: Connection to 'corosync': established
+Apr 03 11:01:18 15sp1-1 pacemaker-controld  [1948] (crm_log_init) 	info: Changed active directory to /var/lib/pacemaker/cores
+Apr 03 11:01:18 15sp1-1 pacemaker-controld  [1948] (main) 	info: CRM Git Version: 2.0.1+20190304.9e909a5bd-1.4 (2.0.1+20190304.9e909a5bd)
+Apr 03 11:01:18 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_STARTUP received in state S_STARTING from crmd_init
+Apr 03 11:01:18 15sp1-1 pacemaker-fenced    [1944] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:18 15sp1-1 pacemaker-fenced    [1944] (get_node_name) 	notice: Defaulting to uname -n for the local corosync node name
+Apr 03 11:01:18 15sp1-1 pacemaker-fenced    [1944] (crm_get_peer) 	info: Node 1 is now known as 15sp1-1
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (startCib) 	info: CIB Initialization completed successfully
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (crm_cluster_connect) 	notice: Connecting to cluster infrastructure: corosync
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 1
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (crm_get_peer) 	info: Created entry 6c579ba7-433c-4d00-88f8-a4a9534cd017/0x56042ff25eb0 for node (null)/1 (1 total)
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (crm_get_peer) 	info: Node 1 has uuid 1
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (crm_update_peer_proc) 	info: cluster_connect_cpg: Node (null)[1] - corosync-cpg is now online
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (crm_update_peer_state_iter) 	notice: Node (null) state is now member | nodeid=1 previous=unknown source=crm_update_peer_proc
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (init_cs_connection_once) 	info: Connection to 'corosync': established
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (get_node_name) 	notice: Defaulting to uname -n for the local corosync node name
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (crm_get_peer) 	info: Node 1 is now known as 15sp1-1
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (qb_ipcs_us_publish) 	info: server name: cib_ro
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (qb_ipcs_us_publish) 	info: server name: cib_rw
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (qb_ipcs_us_publish) 	info: server name: cib_shm
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (cib_init) 	info: Starting pacemaker-based mainloop
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (pcmk_cpg_membership) 	info: Group event cib.0: node 1 joined
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (pcmk_cpg_membership) 	info: Group event cib.0: node 1 (15sp1-1) is member
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (cib_file_read_and_verify) 	warning: Could not verify cluster configuration file /var/lib/pacemaker/cib/cib.xml: No such file or directory (2)
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (cib_file_backup) 	info: Archived previous version as /var/lib/pacemaker/cib/cib-0.raw
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (cib_file_write_with_digest) 	info: Wrote version 0.0.0 of the CIB to disk (digest: 48469f360effdb63efdbbf08822875d8)
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (cib_file_write_with_digest) 	info: Reading cluster configuration file /var/lib/pacemaker/cib/cib.glQmxd (digest: /var/lib/pacemaker/cib/cib.OJiM5q)
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (main) 	info: CIB connection active
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (get_cluster_type) 	info: Verifying cluster type: 'corosync'
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (get_cluster_type) 	info: Assuming an active 'corosync' cluster
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (crm_cluster_connect) 	notice: Connecting to cluster infrastructure: corosync
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 1
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (crm_get_peer) 	info: Created entry 97d13205-d013-44ab-bd52-01d8ec4132f7/0x55995aef1580 for node (null)/1 (1 total)
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (crm_get_peer) 	info: Node 1 has uuid 1
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (crm_update_peer_proc) 	info: cluster_connect_cpg: Node (null)[1] - corosync-cpg is now online
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (crm_update_peer_state_iter) 	notice: Node (null) state is now member | nodeid=1 previous=unknown source=crm_update_peer_proc
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (init_cs_connection_once) 	info: Connection to 'corosync': established
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (get_node_name) 	notice: Defaulting to uname -n for the local corosync node name
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (crm_get_peer) 	info: Node 1 is now known as 15sp1-1
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (main) 	info: Cluster connection active
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (attrd_erase_attrs) 	info: Clearing transient attributes from CIB | xpath=//node_state[@uname='15sp1-1']/transient_attributes
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (get_node_name) 	notice: Defaulting to uname -n for the local corosync node name
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (qb_ipcs_us_publish) 	info: server name: attrd
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (main) 	info: Accepting attribute updates
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (pcmk_cpg_membership) 	info: Group event attrd.0: node 1 joined
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (pcmk_cpg_membership) 	info: Group event attrd.0: node 1 (15sp1-1) is member
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (attrd_peer_update) 	info: Setting #attrd-protocol[15sp1-1]: (null) -> 2 from 15sp1-1
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (attrd_start_election_if_needed) 	info: Starting an election to determine the writer
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (election_check) 	info: election-attrd won by local node
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (attrd_declare_winner) 	notice: Recorded local node as attribute writer (was unset)
+Apr 03 11:01:19 15sp1-1 pacemaker-attrd     [1946] (write_attribute) 	info: Processed 1 private change for #attrd-protocol, id=n/a, set=n/a
+Apr 03 11:01:19 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_delete operation for section //node_state[@uname='15sp1-1']/transient_attributes to all (origin=local/attrd/2)
+Apr 03 11:01:19 15sp1-1 pacemaker-based     [1943] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:19 15sp1-1 pacemaker-based     [1943] (get_node_name) 	notice: Defaulting to uname -n for the local corosync node name
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (get_cluster_type) 	info: Verifying cluster type: 'corosync'
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (get_cluster_type) 	info: Assuming an active 'corosync' cluster
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (crm_cluster_connect) 	notice: Connecting to cluster infrastructure: corosync
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 1
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (crm_get_peer) 	info: Created entry 0e996957-89f6-4cd2-af8f-271088c53399/0x558f48e15840 for node (null)/1 (1 total)
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (crm_get_peer) 	info: Node 1 has uuid 1
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_proc) 	info: cluster_connect_cpg: Node (null)[1] - corosync-cpg is now online
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (init_cs_connection_once) 	info: Connection to 'corosync': established
+Apr 03 11:01:19 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_delete operation for section //node_state[@uname='15sp1-1']/transient_attributes: OK (rc=0, origin=15sp1-1/attrd/2, version=0.0.0)
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (get_node_name) 	notice: Defaulting to uname -n for the local corosync node name
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (crm_get_peer) 	info: Node 1 is now known as 15sp1-1
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (peer_update_callback) 	info: Cluster node 15sp1-1 is now in unknown state
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (cluster_connect_quorum) 	notice: Quorum acquired
+Apr 03 11:01:19 15sp1-1 pacemaker-fenced    [1944] (setup_cib) 	info: Watching for stonith topology changes
+Apr 03 11:01:19 15sp1-1 pacemaker-fenced    [1944] (qb_ipcs_us_publish) 	info: server name: stonith-ng
+Apr 03 11:01:19 15sp1-1 pacemaker-fenced    [1944] (main) 	info: Starting pacemaker-fenced mainloop
+Apr 03 11:01:19 15sp1-1 pacemaker-fenced    [1944] (pcmk_cpg_membership) 	info: Group event stonith-ng.0: node 1 joined
+Apr 03 11:01:19 15sp1-1 pacemaker-fenced    [1944] (pcmk_cpg_membership) 	info: Group event stonith-ng.0: node 1 (15sp1-1) is member
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:19 15sp1-1 pacemaker-fenced    [1944] (init_cib_cache_cb) 	info: Updating device list from the cib: init
+Apr 03 11:01:19 15sp1-1 pacemaker-fenced    [1944] (cib_devices_update) 	info: Updating devices to version 0.0.0
+Apr 03 11:01:19 15sp1-1 pacemaker-fenced    [1944] (unpack_nodes) 	info: Creating a fake local node
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (do_ha_control) 	info: Connected to the cluster
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (lrmd_ipc_connect) 	info: Connecting to executor
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (do_lrm_control) 	info: Connection to the executor established
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (do_started) 	info: Delaying start, no membership data (0000000000100000)
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (pcmk_quorum_notification) 	info: Quorum retained | membership=4 members=1
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_state_iter) 	notice: Node 15sp1-1 state is now member | nodeid=1 previous=unknown source=pcmk_quorum_notification
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (peer_update_callback) 	info: Cluster node 15sp1-1 is now member (was in unknown state)
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (corosync_node_name) 	info: Unable to get node name for nodeid 1
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (get_node_name) 	notice: Defaulting to uname -n for the local corosync node name
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (do_started) 	info: Delaying start, Config not read (0000000000000040)
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (pcmk_cpg_membership) 	info: Group event crmd.0: node 1 joined
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (pcmk_cpg_membership) 	info: Group event crmd.0: node 1 (15sp1-1) is member
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (do_started) 	info: Delaying start, Config not read (0000000000000040)
+Apr 03 11:01:19 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section nodes to all (origin=local/crmd/2)
+Apr 03 11:01:19 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section nodes: OK (rc=0, origin=15sp1-1/crmd/2, version=0.0.0)
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (qb_ipcs_us_publish) 	info: server name: crmd
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (do_started) 	notice: The local CRM is operational
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_PENDING received in state S_STARTING from do_started
+Apr 03 11:01:19 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_STARTING -> S_PENDING | input=I_PENDING cause=C_FSA_INTERNAL origin=do_started
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (crm_timer_popped) 	info: Election Trigger (I_DC_TIMEOUT) just popped (20000ms)
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (do_log) 	warning: Input I_DC_TIMEOUT received in state S_PENDING from crm_timer_popped
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_PENDING -> S_ELECTION | input=I_DC_TIMEOUT cause=C_TIMER_POPPED origin=crm_timer_popped
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (election_check) 	info: election-DC won by local node
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_ELECTION_DC received in state S_ELECTION from election_win_cb
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_ELECTION -> S_INTEGRATION | input=I_ELECTION_DC cause=C_FSA_INTERNAL origin=election_win_cb
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (do_te_control) 	info: Registering TE UUID: 305c37e8-0981-497b-a285-c430070e70ae
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (set_graph_functions) 	info: Setting custom graph functions
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (do_dc_takeover) 	info: Taking over DC status for this partition
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_readwrite) 	info: We are now in R/W mode
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_master operation for section 'all': OK (rc=0, origin=local/crmd/5, version=0.0.0)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section cib to all (origin=local/crmd/6)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section cib: OK (rc=0, origin=15sp1-1/crmd/6, version=0.0.0)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section crm_config to all (origin=local/crmd/8)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.0.0 2
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.1.0 (null)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @epoch=1
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/configuration/crm_config:  <cluster_property_set id="cib-bootstrap-options"/>
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                                   <nvpair id="cib-bootstrap-options-have-watchdog" name="have-watchdog" value="false"/>
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                                 </cluster_property_set>
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section crm_config: OK (rc=0, origin=15sp1-1/crmd/8, version=0.1.0)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section crm_config to all (origin=local/crmd/10)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.1.0 2
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.2.0 (null)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @epoch=2
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/configuration/crm_config/cluster_property_set[@id='cib-bootstrap-options']:  <nvpair id="cib-bootstrap-options-dc-version" name="dc-version" value="2.0.1+20190304.9e909a5bd-1.4-2.0.1+20190304.9e909a5bd"/>
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section crm_config: OK (rc=0, origin=15sp1-1/crmd/10, version=0.2.0)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section crm_config to all (origin=local/crmd/12)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.2.0 2
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.3.0 (null)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @epoch=3
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/configuration/crm_config/cluster_property_set[@id='cib-bootstrap-options']:  <nvpair id="cib-bootstrap-options-cluster-infrastructure" name="cluster-infrastructure" value="corosync"/>
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (join_make_offer) 	info: Making join offers based on membership 4
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (join_make_offer) 	info: join-1: Sending offer to 15sp1-1
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: join_make_offer: Node 15sp1-1[1] - join-1 phase none -> welcomed
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (do_dc_join_offer_all) 	info: join-1: Waiting on 1 outstanding join acks
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (update_dc) 	info: Set DC to 15sp1-1 (3.1.0)
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_expected) 	info: update_dc: Node 15sp1-1[1] - expected state is now member (was (null))
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section crm_config: OK (rc=0, origin=15sp1-1/crmd/12, version=0.3.0)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section crm_config to all (origin=local/crmd/14)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.3.0 2
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.4.0 (null)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @epoch=4
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/configuration/crm_config/cluster_property_set[@id='cib-bootstrap-options']:  <nvpair id="cib-bootstrap-options-cluster-name" name="cluster-name" value="hacluster"/>
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: do_dc_join_filter_offer: Node 15sp1-1[1] - join-1 phase welcomed -> integrated
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_INTEGRATION -> S_FINALIZE_JOIN | input=I_INTEGRATED cause=C_FSA_INTERNAL origin=check_join_state
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (crmd_join_phase_log) 	info: join-1: 15sp1-1=integrated
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (do_dc_join_finalize) 	info: join-1: Syncing our CIB to the rest of the cluster
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section crm_config: OK (rc=0, origin=15sp1-1/crmd/14, version=0.4.0)
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: finalize_join_for: Node 15sp1-1[1] - join-1 phase integrated -> finalized
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: do_dc_join_ack: Node 15sp1-1[1] - join-1 phase finalized -> confirmed
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (do_dc_join_ack) 	info: join-1: Updating node state to member for 15sp1-1
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (erase_status_tag) 	info: Deleting lrm status entries for 15sp1-1 | xpath=//node_state[@uname='15sp1-1']/lrm
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_replace) 	info: Digest matched on replace from 15sp1-1: 1df7ee72464178ed9ef4d38760c5c496
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_replace) 	info: Replaced 0.4.0 with 0.4.0 from 15sp1-1
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_replace operation for section 'all': OK (rc=0, origin=15sp1-1/crmd/19, version=0.4.0)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section nodes to all (origin=local/crmd/21)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_delete operation for section //node_state[@uname='15sp1-1']/lrm to all (origin=local/crmd/22)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section status to all (origin=local/crmd/23)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.4.0 2
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.4.1 (null)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=1
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/configuration/nodes:  <node id="1" uname="15sp1-1"/>
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section nodes: OK (rc=0, origin=15sp1-1/crmd/21, version=0.4.1)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_delete operation for section //node_state[@uname='15sp1-1']/lrm: OK (rc=0, origin=15sp1-1/crmd/22, version=0.4.1)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.4.1 2
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.4.2 (null)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=2
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/status:  <node_state id="1" uname="15sp1-1" in_ccm="true" crmd="online" crm-debug-origin="do_lrm_query_internal"/>
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                 <lrm id="1">
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                   <lrm_resources/>
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                 </lrm>
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++               </node_state>
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section status: OK (rc=0, origin=15sp1-1/crmd/23, version=0.4.2)
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_FINALIZE_JOIN -> S_POLICY_ENGINE | input=I_FINALIZED cause=C_FSA_INTERNAL origin=check_join_state
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (crm_update_quorum) 	notice: Updating quorum status to true (call=27)
+Apr 03 11:01:40 15sp1-1 pacemaker-controld  [1948] (abort_transition_graph) 	info: Transition -1 aborted: Peer Cancelled | source=do_te_invoke:132 complete=true
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section nodes to all (origin=local/crmd/25)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section status to all (origin=local/crmd/26)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section cib to all (origin=local/crmd/27)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section nodes: OK (rc=0, origin=15sp1-1/crmd/25, version=0.4.2)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.4.2 2
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.4.3 (null)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=3
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib/status/node_state[@id='1']:  @crm-debug-origin=do_state_transition, @join=member, @expected=member
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section status: OK (rc=0, origin=15sp1-1/crmd/26, version=0.4.3)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.4.3 2
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.4.4 (null)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=4, @have-quorum=1, @dc-uuid=1
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section cib: OK (rc=0, origin=15sp1-1/crmd/27, version=0.4.4)
+Apr 03 11:01:40 15sp1-1 pacemaker-based     [1943] (cib_file_backup) 	info: Archived previous version as /var/lib/pacemaker/cib/cib-1.raw
+Apr 03 11:01:41 15sp1-1 pacemaker-based     [1943] (cib_file_write_with_digest) 	info: Wrote version 0.1.0 of the CIB to disk (digest: da12c1ea82516c83c42bbb6af78f7c43)
+Apr 03 11:01:41 15sp1-1 pacemaker-based     [1943] (cib_file_write_with_digest) 	info: Reading cluster configuration file /var/lib/pacemaker/cib/cib.Q2Mefv (digest: /var/lib/pacemaker/cib/cib.lYgCoM)
+Apr 03 11:01:41 15sp1-1 pacemaker-schedulerd[1947] (unpack_resources) 	error: Resource start-up disabled since no STONITH resources have been defined
+Apr 03 11:01:41 15sp1-1 pacemaker-schedulerd[1947] (unpack_resources) 	error: Either configure some or disable STONITH with the stonith-enabled option
+Apr 03 11:01:41 15sp1-1 pacemaker-schedulerd[1947] (unpack_resources) 	error: NOTE: Clusters with shared data need STONITH to ensure data integrity
+Apr 03 11:01:41 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status_fencing) 	info: Node 15sp1-1 is active
+Apr 03 11:01:41 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-1 is online
+Apr 03 11:01:41 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 11:01:41 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 11:01:41 15sp1-1 pacemaker-schedulerd[1947] (stage6) 	notice: Delaying fencing operations until there are resources to manage
+Apr 03 11:01:41 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	notice: Calculated transition 0, saving inputs in /var/lib/pacemaker/pengine/pe-input-0.bz2
+Apr 03 11:01:41 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	notice: Configuration errors found during scheduler processing,  please run "crm_verify -L" to identify issues
+Apr 03 11:01:41 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_POLICY_ENGINE -> S_TRANSITION_ENGINE | input=I_PE_SUCCESS cause=C_IPC_MESSAGE origin=handle_response
+Apr 03 11:01:41 15sp1-1 pacemaker-controld  [1948] (do_te_invoke) 	notice: Processing graph 0 (ref=pe_calc-dc-1554260501-7) derived from /var/lib/pacemaker/pengine/pe-input-0.bz2
+Apr 03 11:01:41 15sp1-1 pacemaker-controld  [1948] (run_graph) 	notice: Transition 0 (Complete=0, Pending=0, Fired=0, Skipped=0, Incomplete=0, Source=/var/lib/pacemaker/pengine/pe-input-0.bz2): Complete
+Apr 03 11:01:41 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_TE_SUCCESS received in state S_TRANSITION_ENGINE from notify_crmd
+Apr 03 11:01:41 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_TRANSITION_ENGINE -> S_IDLE | input=I_TE_SUCCESS cause=C_FSA_INTERNAL origin=notify_crmd
+Apr 03 11:01:41 15sp1-1 pacemaker-based     [1943] (cib_file_backup) 	info: Archived previous version as /var/lib/pacemaker/cib/cib-2.raw
+Apr 03 11:01:41 15sp1-1 pacemaker-based     [1943] (cib_file_write_with_digest) 	info: Wrote version 0.4.0 of the CIB to disk (digest: 41a7a4f3446765b9550c8eed97655f87)
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_file_write_with_digest) 	info: Reading cluster configuration file /var/lib/pacemaker/cib/cib.k86jdq (digest: /var/lib/pacemaker/cib/cib.2VIuZJ)
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_apply_diff operation for section 'all' to all (origin=local/cibadmin/2)
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.4.4 2
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.0 (null)
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @epoch=5, @num_updates=0
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/configuration/crm_config/cluster_property_set[@id='cib-bootstrap-options']:  <nvpair name="stonith-enabled" value="false" id="cib-bootstrap-options-stonith-enabled"/>
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/configuration/crm_config/cluster_property_set[@id='cib-bootstrap-options']:  <nvpair name="placement-strategy" value="balanced" id="cib-bootstrap-options-placement-strategy"/>
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/configuration:  <rsc_defaults/>
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                        <meta_attributes id="rsc-options">
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                          <nvpair name="resource-stickiness" value="1" id="rsc-options-resource-stickiness"/>
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                          <nvpair name="migration-threshold" value="3" id="rsc-options-migration-threshold"/>
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                        </meta_attributes>
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                      </rsc_defaults>
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/configuration:  <op_defaults/>
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                        <meta_attributes id="op-options">
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                          <nvpair name="timeout" value="600" id="op-options-timeout"/>
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                          <nvpair name="record-pending" value="true" id="op-options-record-pending"/>
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                        </meta_attributes>
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                      </op_defaults>
+Apr 03 11:01:42 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_apply_diff operation for section 'all': OK (rc=0, origin=15sp1-1/cibadmin/2, version=0.5.0)
+Apr 03 11:01:42 15sp1-1 pacemaker-controld  [1948] (abort_transition_graph) 	info: Transition 0 aborted by cib-bootstrap-options-stonith-enabled doing create stonith-enabled=false: Configuration change | cib=0.5.0 source=te_update_diff_v2:499 path=/cib/configuration/crm_config/cluster_property_set[@id='cib-bootstrap-options'] complete=true
+Apr 03 11:01:42 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_IDLE -> S_POLICY_ENGINE | input=I_PE_CALC cause=C_FSA_INTERNAL origin=abort_transition_graph
+Apr 03 11:01:43 15sp1-1 pacemaker-based     [1943] (cib_file_backup) 	info: Archived previous version as /var/lib/pacemaker/cib/cib-3.raw
+Apr 03 11:01:43 15sp1-1 pacemaker-based     [1943] (cib_file_write_with_digest) 	info: Wrote version 0.5.0 of the CIB to disk (digest: 80483689fd341b672c06963bb25bdd6b)
+Apr 03 11:01:43 15sp1-1 pacemaker-based     [1943] (cib_file_write_with_digest) 	info: Reading cluster configuration file /var/lib/pacemaker/cib/cib.ZE4jzT (digest: /var/lib/pacemaker/cib/cib.xCbzOh)
+Apr 03 11:01:43 15sp1-1 pacemaker-schedulerd[1947] (unpack_config) 	warning: Blind faith: not fencing unseen nodes
+Apr 03 11:01:43 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-1 is online
+Apr 03 11:01:43 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 11:01:43 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 11:01:43 15sp1-1 pacemaker-schedulerd[1947] (stage6) 	notice: Delaying fencing operations until there are resources to manage
+Apr 03 11:01:43 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	notice: Calculated transition 1, saving inputs in /var/lib/pacemaker/pengine/pe-input-1.bz2
+Apr 03 11:01:43 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_POLICY_ENGINE -> S_TRANSITION_ENGINE | input=I_PE_SUCCESS cause=C_IPC_MESSAGE origin=handle_response
+Apr 03 11:01:43 15sp1-1 pacemaker-controld  [1948] (do_te_invoke) 	notice: Processing graph 1 (ref=pe_calc-dc-1554260503-8) derived from /var/lib/pacemaker/pengine/pe-input-1.bz2
+Apr 03 11:01:43 15sp1-1 pacemaker-controld  [1948] (run_graph) 	notice: Transition 1 (Complete=0, Pending=0, Fired=0, Skipped=0, Incomplete=0, Source=/var/lib/pacemaker/pengine/pe-input-1.bz2): Complete
+Apr 03 11:01:43 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_TE_SUCCESS received in state S_TRANSITION_ENGINE from notify_crmd
+Apr 03 11:01:43 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_TRANSITION_ENGINE -> S_IDLE | input=I_TE_SUCCESS cause=C_FSA_INTERNAL origin=notify_crmd
+Apr 03 11:01:47 15sp1-1 pacemaker-based     [1943] (cib_process_ping) 	info: Reporting our current digest to 15sp1-1: 8d4ba34bb3113e36afd6b6bf39fb69a0 for 0.5.0 (0x5604300bf500 0)
+Apr 03 11:01:49 15sp1-1 pacemaker-controld  [1948] (crm_procfs_pid_of) 	info: Found pacemaker-based active as process 1943
+Apr 03 11:01:49 15sp1-1 pacemaker-controld  [1948] (throttle_check_thresholds) 	notice: High CPU load detected: 1.040000
+Apr 03 11:01:49 15sp1-1 pacemaker-controld  [1948] (throttle_send_command) 	info: New throttle mode: 0100 (was ffffffff)
+Apr 03 11:02:19 15sp1-1 pacemaker-controld  [1948] (throttle_check_thresholds) 	info: Moderate CPU load detected: 0.810000
+Apr 03 11:02:19 15sp1-1 pacemaker-controld  [1948] (throttle_send_command) 	info: New throttle mode: 0010 (was 0100)
+Apr 03 11:02:30 15sp1-1 pacemaker-controld  [1948] (pcmk_quorum_notification) 	info: Quorum retained | membership=8 members=2
+Apr 03 11:02:30 15sp1-1 pacemakerd          [1941] (pcmk_quorum_notification) 	info: Quorum retained | membership=8 members=2
+Apr 03 11:02:30 15sp1-1 pacemaker-controld  [1948] (corosync_node_name) 	info: Unable to get node name for nodeid 2
+Apr 03 11:02:30 15sp1-1 pacemaker-controld  [1948] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 2
+Apr 03 11:02:30 15sp1-1 pacemaker-controld  [1948] (crm_get_peer) 	info: Created entry 1f91ec8f-7986-4c15-be46-302b53ff3193/0x558f48ea7bf0 for node (null)/2 (2 total)
+Apr 03 11:02:30 15sp1-1 pacemaker-controld  [1948] (crm_get_peer) 	info: Node 2 has uuid 2
+Apr 03 11:02:30 15sp1-1 pacemakerd          [1941] (corosync_node_name) 	info: Unable to get node name for nodeid 2
+Apr 03 11:02:30 15sp1-1 pacemakerd          [1941] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 2
+Apr 03 11:02:30 15sp1-1 pacemakerd          [1941] (crm_get_peer) 	info: Created entry de9bd295-1272-4db2-bdc6-6b1906ae5553/0x55b9435a50e0 for node (null)/2 (2 total)
+Apr 03 11:02:30 15sp1-1 pacemakerd          [1941] (crm_get_peer) 	info: Node 2 has uuid 2
+Apr 03 11:02:30 15sp1-1 pacemaker-controld  [1948] (corosync_node_name) 	info: Unable to get node name for nodeid 2
+Apr 03 11:02:30 15sp1-1 pacemaker-controld  [1948] (pcmk_quorum_notification) 	info: Obtaining name for new node 2
+Apr 03 11:02:30 15sp1-1 pacemaker-controld  [1948] (corosync_node_name) 	info: Unable to get node name for nodeid 2
+Apr 03 11:02:30 15sp1-1 pacemakerd          [1941] (corosync_node_name) 	info: Unable to get node name for nodeid 2
+Apr 03 11:02:30 15sp1-1 pacemakerd          [1941] (pcmk_quorum_notification) 	info: Obtaining name for new node 2
+Apr 03 11:02:30 15sp1-1 pacemaker-controld  [1948] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 2
+Apr 03 11:02:30 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_state_iter) 	notice: Node (null) state is now member | nodeid=2 previous=unknown source=pcmk_quorum_notification
+Apr 03 11:02:30 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section nodes to all (origin=local/crmd/34)
+Apr 03 11:02:30 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section status to all (origin=local/crmd/35)
+Apr 03 11:02:30 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section nodes: OK (rc=0, origin=15sp1-1/crmd/34, version=0.5.0)
+Apr 03 11:02:30 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.0 2
+Apr 03 11:02:30 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.1 (null)
+Apr 03 11:02:30 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=1
+Apr 03 11:02:30 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib/status/node_state[@id='1']:  @crm-debug-origin=post_cache_update
+Apr 03 11:02:30 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/status:  <node_state id="2" in_ccm="true" crmd="offline" crm-debug-origin="post_cache_update"/>
+Apr 03 11:02:30 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section status: OK (rc=0, origin=15sp1-1/crmd/35, version=0.5.1)
+Apr 03 11:02:30 15sp1-1 pacemakerd          [1941] (corosync_node_name) 	info: Unable to get node name for nodeid 2
+Apr 03 11:02:30 15sp1-1 pacemakerd          [1941] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 2
+Apr 03 11:02:30 15sp1-1 pacemakerd          [1941] (crm_update_peer_state_iter) 	notice: Node (null) state is now member | nodeid=2 previous=unknown source=pcmk_quorum_notification
+Apr 03 11:02:31 15sp1-1 pacemakerd          [1941] (pcmk_cpg_membership) 	info: Group event pacemakerd.1: node 2 joined
+Apr 03 11:02:31 15sp1-1 pacemakerd          [1941] (pcmk_cpg_membership) 	info: Group event pacemakerd.1: node 1 (15sp1-1) is member
+Apr 03 11:02:31 15sp1-1 pacemakerd          [1941] (corosync_node_name) 	info: Unable to get node name for nodeid 2
+Apr 03 11:02:31 15sp1-1 pacemakerd          [1941] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 2
+Apr 03 11:02:31 15sp1-1 pacemakerd          [1941] (pcmk_cpg_membership) 	info: Group event pacemakerd.1: node 2 (<unknown>) is member
+Apr 03 11:02:31 15sp1-1 pacemakerd          [1941] (crm_update_peer_proc) 	info: pcmk_cpg_membership: Node (null)[2] - corosync-cpg is now online
+Apr 03 11:02:31 15sp1-1 pacemakerd          [1941] (crm_get_peer) 	info: Node 2 is now known as 15sp1-2
+Apr 03 11:02:31 15sp1-1 pacemaker-fenced    [1944] (pcmk_cpg_membership) 	info: Group event stonith-ng.1: node 2 joined
+Apr 03 11:02:31 15sp1-1 pacemaker-fenced    [1944] (pcmk_cpg_membership) 	info: Group event stonith-ng.1: node 1 (15sp1-1) is member
+Apr 03 11:02:31 15sp1-1 pacemaker-fenced    [1944] (corosync_node_name) 	info: Unable to get node name for nodeid 2
+Apr 03 11:02:31 15sp1-1 pacemaker-fenced    [1944] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 2
+Apr 03 11:02:31 15sp1-1 pacemaker-fenced    [1944] (crm_get_peer) 	info: Created entry 82f3fa83-e1aa-4b46-99aa-91c7dda4969a/0x5649958bed90 for node (null)/2 (2 total)
+Apr 03 11:02:31 15sp1-1 pacemaker-fenced    [1944] (crm_get_peer) 	info: Node 2 has uuid 2
+Apr 03 11:02:31 15sp1-1 pacemaker-fenced    [1944] (pcmk_cpg_membership) 	info: Group event stonith-ng.1: node 2 (<unknown>) is member
+Apr 03 11:02:31 15sp1-1 pacemaker-fenced    [1944] (crm_update_peer_proc) 	info: pcmk_cpg_membership: Node (null)[2] - corosync-cpg is now online
+Apr 03 11:02:31 15sp1-1 pacemaker-fenced    [1944] (crm_update_peer_state_iter) 	notice: Node (null) state is now member | nodeid=2 previous=unknown source=crm_update_peer_proc
+Apr 03 11:02:31 15sp1-1 pacemaker-fenced    [1944] (crm_get_peer) 	info: Node 2 is now known as 15sp1-2
+Apr 03 11:02:31 15sp1-1 pacemaker-based     [1943] (pcmk_cpg_membership) 	info: Group event cib.1: node 2 joined
+Apr 03 11:02:31 15sp1-1 pacemaker-based     [1943] (pcmk_cpg_membership) 	info: Group event cib.1: node 1 (15sp1-1) is member
+Apr 03 11:02:31 15sp1-1 pacemaker-based     [1943] (corosync_node_name) 	info: Unable to get node name for nodeid 2
+Apr 03 11:02:31 15sp1-1 pacemaker-based     [1943] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 2
+Apr 03 11:02:31 15sp1-1 pacemaker-based     [1943] (crm_get_peer) 	info: Created entry f747eb13-dfe9-4182-9b3e-00d9f416e88e/0x56042fb54140 for node (null)/2 (2 total)
+Apr 03 11:02:31 15sp1-1 pacemaker-based     [1943] (crm_get_peer) 	info: Node 2 has uuid 2
+Apr 03 11:02:31 15sp1-1 pacemaker-based     [1943] (pcmk_cpg_membership) 	info: Group event cib.1: node 2 (<unknown>) is member
+Apr 03 11:02:31 15sp1-1 pacemaker-based     [1943] (crm_update_peer_proc) 	info: pcmk_cpg_membership: Node (null)[2] - corosync-cpg is now online
+Apr 03 11:02:31 15sp1-1 pacemaker-based     [1943] (crm_update_peer_state_iter) 	notice: Node (null) state is now member | nodeid=2 previous=unknown source=crm_update_peer_proc
+Apr 03 11:02:32 15sp1-1 pacemaker-attrd     [1946] (pcmk_cpg_membership) 	info: Group event attrd.1: node 2 joined
+Apr 03 11:02:32 15sp1-1 pacemaker-attrd     [1946] (pcmk_cpg_membership) 	info: Group event attrd.1: node 1 (15sp1-1) is member
+Apr 03 11:02:32 15sp1-1 pacemaker-attrd     [1946] (corosync_node_name) 	info: Unable to get node name for nodeid 2
+Apr 03 11:02:32 15sp1-1 pacemaker-attrd     [1946] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 2
+Apr 03 11:02:32 15sp1-1 pacemaker-attrd     [1946] (crm_get_peer) 	info: Created entry f2f954cd-386a-4993-9142-8621ae195416/0x55995aef4080 for node (null)/2 (2 total)
+Apr 03 11:02:32 15sp1-1 pacemaker-attrd     [1946] (crm_get_peer) 	info: Node 2 has uuid 2
+Apr 03 11:02:32 15sp1-1 pacemaker-attrd     [1946] (pcmk_cpg_membership) 	info: Group event attrd.1: node 2 (<unknown>) is member
+Apr 03 11:02:32 15sp1-1 pacemaker-attrd     [1946] (crm_update_peer_proc) 	info: pcmk_cpg_membership: Node (null)[2] - corosync-cpg is now online
+Apr 03 11:02:32 15sp1-1 pacemaker-attrd     [1946] (crm_update_peer_state_iter) 	notice: Node (null) state is now member | nodeid=2 previous=unknown source=crm_update_peer_proc
+Apr 03 11:02:32 15sp1-1 pacemaker-attrd     [1946] (crm_get_peer) 	info: Node 2 is now known as 15sp1-2
+Apr 03 11:02:32 15sp1-1 pacemaker-attrd     [1946] (attrd_peer_update) 	info: Setting #attrd-protocol[15sp1-2]: (null) -> 2 from 15sp1-2
+Apr 03 11:02:32 15sp1-1 pacemaker-attrd     [1946] (write_attribute) 	info: Processed 2 private changes for #attrd-protocol, id=n/a, set=n/a
+Apr 03 11:02:32 15sp1-1 pacemaker-based     [1943] (crm_get_peer) 	info: Node 2 is now known as 15sp1-2
+Apr 03 11:02:32 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_delete operation for section //node_state[@uname='15sp1-2']/transient_attributes: OK (rc=0, origin=15sp1-2/attrd/2, version=0.5.1)
+Apr 03 11:02:32 15sp1-1 pacemaker-controld  [1948] (pcmk_cpg_membership) 	info: Group event crmd.1: node 2 joined
+Apr 03 11:02:32 15sp1-1 pacemaker-controld  [1948] (pcmk_cpg_membership) 	info: Group event crmd.1: node 1 (15sp1-1) is member
+Apr 03 11:02:32 15sp1-1 pacemaker-controld  [1948] (corosync_node_name) 	info: Unable to get node name for nodeid 2
+Apr 03 11:02:32 15sp1-1 pacemaker-controld  [1948] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 2
+Apr 03 11:02:32 15sp1-1 pacemaker-controld  [1948] (pcmk_cpg_membership) 	info: Group event crmd.1: node 2 (<unknown>) is member
+Apr 03 11:02:32 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_proc) 	info: pcmk_cpg_membership: Node (null)[2] - corosync-cpg is now online
+Apr 03 11:02:32 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section nodes: OK (rc=0, origin=15sp1-2/crmd/2, version=0.5.1)
+Apr 03 11:02:32 15sp1-1 pacemaker-controld  [1948] (crm_get_peer) 	info: Node 2 is now known as 15sp1-2
+Apr 03 11:02:32 15sp1-1 pacemaker-controld  [1948] (peer_update_callback) 	info: Cluster node 15sp1-2 is now member
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_IDLE -> S_INTEGRATION | input=I_NODE_JOIN cause=C_HA_MESSAGE origin=route_message
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (do_dc_join_offer_one) 	info: join-1: Processing join_announce request from 15sp1-2 in state S_INTEGRATION
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (join_make_offer) 	info: Making join offers based on membership 8
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (join_make_offer) 	info: join-1: Sending offer to 15sp1-2
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: join_make_offer: Node 15sp1-2[2] - join-1 phase none -> welcomed
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: join_make_offer: Node 15sp1-1[1] - join-1 phase confirmed -> none
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (join_make_offer) 	info: join-1: Sending offer to 15sp1-1
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: join_make_offer: Node 15sp1-1[1] - join-1 phase none -> welcomed
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (abort_transition_graph) 	info: Transition 1 aborted: Node join | source=do_dc_join_offer_one:267 complete=true
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (abort_transition_graph) 	info: Transition 1 aborted: Peer Halt | source=do_te_invoke:139 complete=true
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: do_dc_join_filter_offer: Node 15sp1-1[1] - join-1 phase welcomed -> integrated
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: do_dc_join_filter_offer: Node 15sp1-2[2] - join-1 phase welcomed -> integrated
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_expected) 	info: do_dc_join_filter_offer: Node 15sp1-2[2] - expected state is now member (was (null))
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_INTEGRATION -> S_FINALIZE_JOIN | input=I_INTEGRATED cause=C_FSA_INTERNAL origin=check_join_state
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (crmd_join_phase_log) 	info: join-1: 15sp1-2=integrated
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (crmd_join_phase_log) 	info: join-1: 15sp1-1=integrated
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (do_dc_join_finalize) 	info: join-1: Syncing our CIB to the rest of the cluster
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_process_replace) 	info: Digest matched on replace from 15sp1-1: e5b55e525a867a8154545eca60a3828b
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_process_replace) 	info: Replaced 0.5.1 with 0.5.1 from 15sp1-1
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_replace operation for section 'all': OK (rc=0, origin=15sp1-1/crmd/37, version=0.5.1)
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: finalize_join_for: Node 15sp1-2[2] - join-1 phase integrated -> finalized
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: finalize_join_for: Node 15sp1-1[1] - join-1 phase integrated -> finalized
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section nodes to all (origin=local/crmd/38)
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section nodes to all (origin=local/crmd/39)
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: do_dc_join_ack: Node 15sp1-1[1] - join-1 phase finalized -> confirmed
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (do_dc_join_ack) 	info: join-1: Updating node state to member for 15sp1-1
+Apr 03 11:02:33 15sp1-1 pacemaker-controld  [1948] (erase_status_tag) 	info: Deleting lrm status entries for 15sp1-1 | xpath=//node_state[@uname='15sp1-1']/lrm
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.1 2
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.2 (null)
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=2
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/configuration/nodes:  <node id="2" uname="15sp1-2"/>
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section nodes: OK (rc=0, origin=15sp1-1/crmd/38, version=0.5.2)
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section nodes: OK (rc=0, origin=15sp1-1/crmd/39, version=0.5.2)
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_delete operation for section //node_state[@uname='15sp1-1']/lrm to all (origin=local/crmd/40)
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section status to all (origin=local/crmd/41)
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.2 2
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.3 (null)
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: -- /cib/status/node_state[@id='1']/lrm[@id='1']
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=3
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_delete operation for section //node_state[@uname='15sp1-1']/lrm: OK (rc=0, origin=15sp1-1/crmd/40, version=0.5.3)
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.3 2
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.4 (null)
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=4
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib/status/node_state[@id='1']:  @crm-debug-origin=do_lrm_query_internal
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/status/node_state[@id='1']:  <lrm id="1"/>
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                                     <lrm_resources/>
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                                   </lrm>
+Apr 03 11:02:33 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section status: OK (rc=0, origin=15sp1-1/crmd/41, version=0.5.4)
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_file_backup) 	info: Archived previous version as /var/lib/pacemaker/cib/cib-4.raw
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_file_write_with_digest) 	info: Wrote version 0.5.0 of the CIB to disk (digest: bd5d2bae72ccab0f8431984061bf46bf)
+Apr 03 11:02:34 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: do_dc_join_ack: Node 15sp1-2[2] - join-1 phase finalized -> confirmed
+Apr 03 11:02:34 15sp1-1 pacemaker-controld  [1948] (do_dc_join_ack) 	info: join-1: Updating node state to member for 15sp1-2
+Apr 03 11:02:34 15sp1-1 pacemaker-controld  [1948] (erase_status_tag) 	info: Deleting lrm status entries for 15sp1-2 | xpath=//node_state[@uname='15sp1-2']/lrm
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_delete operation for section //node_state[@uname='15sp1-2']/lrm to all (origin=local/crmd/42)
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section status to all (origin=local/crmd/43)
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_delete operation for section //node_state[@uname='15sp1-2']/lrm: OK (rc=0, origin=15sp1-1/crmd/42, version=0.5.4)
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.4 2
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.5 (null)
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=5
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib/status/node_state[@id='2']:  @crmd=online, @crm-debug-origin=do_lrm_query_internal, @uname=15sp1-2
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/status/node_state[@id='2']:  <lrm id="2"/>
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                                     <lrm_resources/>
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                                   </lrm>
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section status: OK (rc=0, origin=15sp1-1/crmd/43, version=0.5.5)
+Apr 03 11:02:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_FINALIZE_JOIN -> S_POLICY_ENGINE | input=I_FINALIZED cause=C_FSA_INTERNAL origin=check_join_state
+Apr 03 11:02:34 15sp1-1 pacemaker-controld  [1948] (crm_update_quorum) 	notice: Updating quorum status to true (call=48)
+Apr 03 11:02:34 15sp1-1 pacemaker-controld  [1948] (abort_transition_graph) 	info: Transition 1 aborted: Peer Cancelled | source=do_te_invoke:132 complete=true
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section nodes to all (origin=local/crmd/46)
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section status to all (origin=local/crmd/47)
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section cib to all (origin=local/crmd/48)
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section nodes: OK (rc=0, origin=15sp1-1/crmd/46, version=0.5.5)
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.5 2
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.6 (null)
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=6
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib/status/node_state[@id='1']:  @crm-debug-origin=do_state_transition
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib/status/node_state[@id='2']:  @crm-debug-origin=do_state_transition, @join=member, @expected=member
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section status: OK (rc=0, origin=15sp1-1/crmd/47, version=0.5.6)
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section cib: OK (rc=0, origin=15sp1-1/crmd/48, version=0.5.6)
+Apr 03 11:02:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-1 is online
+Apr 03 11:02:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-2 is online
+Apr 03 11:02:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 11:02:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 11:02:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 11:02:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 11:02:34 15sp1-1 pacemaker-schedulerd[1947] (stage6) 	notice: Delaying fencing operations until there are resources to manage
+Apr 03 11:02:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	notice: Calculated transition 2, saving inputs in /var/lib/pacemaker/pengine/pe-input-2.bz2
+Apr 03 11:02:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_POLICY_ENGINE -> S_TRANSITION_ENGINE | input=I_PE_SUCCESS cause=C_IPC_MESSAGE origin=handle_response
+Apr 03 11:02:34 15sp1-1 pacemaker-controld  [1948] (do_te_invoke) 	notice: Processing graph 2 (ref=pe_calc-dc-1554260554-18) derived from /var/lib/pacemaker/pengine/pe-input-2.bz2
+Apr 03 11:02:34 15sp1-1 pacemaker-controld  [1948] (run_graph) 	notice: Transition 2 (Complete=0, Pending=0, Fired=0, Skipped=0, Incomplete=0, Source=/var/lib/pacemaker/pengine/pe-input-2.bz2): Complete
+Apr 03 11:02:34 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_TE_SUCCESS received in state S_TRANSITION_ENGINE from notify_crmd
+Apr 03 11:02:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_TRANSITION_ENGINE -> S_IDLE | input=I_TE_SUCCESS cause=C_FSA_INTERNAL origin=notify_crmd
+Apr 03 11:02:34 15sp1-1 pacemaker-based     [1943] (cib_file_write_with_digest) 	info: Reading cluster configuration file /var/lib/pacemaker/cib/cib.4bNgNm (digest: /var/lib/pacemaker/cib/cib.MRpEpc)
+Apr 03 11:02:39 15sp1-1 pacemaker-based     [1943] (cib_process_ping) 	info: Reporting our current digest to 15sp1-1: 44ae77e9ff79c954e9d39a4b11a48f55 for 0.5.6 (0x56042ffaf6e0 0)
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_expected) 	info: handle_request: Node 15sp1-2[2] - expected state is now down (was member)
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (handle_shutdown_request) 	info: Creating shutdown request for 15sp1-2 (state=S_IDLE)
+Apr 03 11:02:47 15sp1-1 pacemaker-attrd     [1946] (attrd_peer_update) 	info: Setting shutdown[15sp1-2]: (null) -> 1554260567 from 15sp1-1
+Apr 03 11:02:47 15sp1-1 pacemaker-attrd     [1946] (write_attribute) 	info: Sent CIB request 4 with 1 change for shutdown (id n/a, set n/a)
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section status to all (origin=local/attrd/4)
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.6 2
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.7 (null)
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=7
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/status/node_state[@id='2']:  <transient_attributes id="2"/>
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                                     <instance_attributes id="status-2">
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                                       <nvpair id="status-2-shutdown" name="shutdown" value="1554260567"/>
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                                     </instance_attributes>
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                                   </transient_attributes>
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (abort_transition_graph) 	info: Transition 2 aborted by transient_attributes.2 'create': Transient attribute change | cib=0.5.7 source=abort_unless_down:329 path=/cib/status/node_state[@id='2'] complete=true
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_IDLE -> S_POLICY_ENGINE | input=I_PE_CALC cause=C_FSA_INTERNAL origin=abort_transition_graph
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section status: OK (rc=0, origin=15sp1-1/attrd/4, version=0.5.7)
+Apr 03 11:02:47 15sp1-1 pacemaker-attrd     [1946] (attrd_cib_callback) 	info: CIB update 4 result for shutdown: OK | rc=0
+Apr 03 11:02:47 15sp1-1 pacemaker-attrd     [1946] (attrd_cib_callback) 	info: * shutdown[15sp1-2]=1554260567
+Apr 03 11:02:47 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-1 is online
+Apr 03 11:02:47 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-2 is shutting down
+Apr 03 11:02:47 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 11:02:47 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 11:02:47 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 11:02:47 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 11:02:47 15sp1-1 pacemaker-schedulerd[1947] (stage6) 	notice: Delaying fencing operations until there are resources to manage
+Apr 03 11:02:47 15sp1-1 pacemaker-schedulerd[1947] (sched_shutdown_op) 	notice: Scheduling shutdown of node 15sp1-2
+Apr 03 11:02:47 15sp1-1 pacemaker-schedulerd[1947] (LogNodeActions) 	notice:  * Shutdown 15sp1-2
+Apr 03 11:02:47 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	notice: Calculated transition 3, saving inputs in /var/lib/pacemaker/pengine/pe-input-3.bz2
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_POLICY_ENGINE -> S_TRANSITION_ENGINE | input=I_PE_SUCCESS cause=C_IPC_MESSAGE origin=handle_response
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (do_te_invoke) 	notice: Processing graph 3 (ref=pe_calc-dc-1554260567-19) derived from /var/lib/pacemaker/pengine/pe-input-3.bz2
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (te_crm_command) 	info: Executing crm-event (1) without waiting: do_shutdown on 15sp1-2
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (run_graph) 	notice: Transition 3 (Complete=1, Pending=0, Fired=0, Skipped=0, Incomplete=0, Source=/var/lib/pacemaker/pengine/pe-input-3.bz2): Complete
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_TE_SUCCESS received in state S_TRANSITION_ENGINE from notify_crmd
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_TRANSITION_ENGINE -> S_IDLE | input=I_TE_SUCCESS cause=C_FSA_INTERNAL origin=notify_crmd
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (pcmk_cpg_membership) 	info: Group event crmd.2: node 2 (15sp1-2) left
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_proc) 	info: pcmk_cpg_membership: Node 15sp1-2[2] - corosync-cpg is now offline
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (peer_update_callback) 	info: Node 15sp1-2 is no longer a peer | DC=true old=0x4000000 new=0x0000000
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (erase_status_tag) 	info: Deleting transient_attributes status entries for 15sp1-2 | xpath=//node_state[@uname='15sp1-2']/transient_attributes
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_delete operation for section //node_state[@uname='15sp1-2']/transient_attributes to all (origin=local/crmd/51)
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: crmd_peer_down: Node 15sp1-2[2] - join-1 phase confirmed -> none
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (peer_update_callback) 	info: do_shutdown of peer 15sp1-2 is in progress | action=1
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section status to all (origin=local/crmd/52)
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (pcmk_cpg_membership) 	info: Group event crmd.2: node 1 (15sp1-1) is member
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.7 2
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.8 (null)
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: -- /cib/status/node_state[@id='2']/transient_attributes[@id='2']
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=8
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_delete operation for section //node_state[@uname='15sp1-2']/transient_attributes: OK (rc=0, origin=15sp1-1/crmd/51, version=0.5.8)
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.8 2
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.9 (null)
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=9
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib/status/node_state[@id='2']:  @crmd=offline, @crm-debug-origin=peer_update_callback, @join=down, @expected=down
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section status: OK (rc=0, origin=15sp1-1/crmd/52, version=0.5.9)
+Apr 03 11:02:47 15sp1-1 pacemaker-attrd     [1946] (pcmk_cpg_membership) 	info: Group event attrd.2: node 2 (15sp1-2) left
+Apr 03 11:02:47 15sp1-1 pacemaker-attrd     [1946] (crm_update_peer_proc) 	info: pcmk_cpg_membership: Node 15sp1-2[2] - corosync-cpg is now offline
+Apr 03 11:02:47 15sp1-1 pacemaker-attrd     [1946] (crm_update_peer_state_iter) 	notice: Node 15sp1-2 state is now lost | nodeid=2 previous=member source=crm_update_peer_proc
+Apr 03 11:02:47 15sp1-1 pacemaker-attrd     [1946] (attrd_peer_remove) 	notice: Removing all 15sp1-2 attributes for peer loss
+Apr 03 11:02:47 15sp1-1 pacemaker-attrd     [1946] (crm_reap_dead_member) 	info: Removing node with name 15sp1-2 and id 2 from membership cache
+Apr 03 11:02:47 15sp1-1 pacemaker-attrd     [1946] (reap_crm_member) 	notice: Purged 1 peer with id=2 and/or uname=15sp1-2 from the membership cache
+Apr 03 11:02:47 15sp1-1 pacemaker-attrd     [1946] (pcmk_cpg_membership) 	info: Group event attrd.2: node 1 (15sp1-1) is member
+Apr 03 11:02:47 15sp1-1 pacemaker-fenced    [1944] (pcmk_cpg_membership) 	info: Group event stonith-ng.2: node 2 (15sp1-2) left
+Apr 03 11:02:47 15sp1-1 pacemaker-fenced    [1944] (crm_update_peer_proc) 	info: pcmk_cpg_membership: Node 15sp1-2[2] - corosync-cpg is now offline
+Apr 03 11:02:47 15sp1-1 pacemaker-fenced    [1944] (crm_update_peer_state_iter) 	notice: Node 15sp1-2 state is now lost | nodeid=2 previous=member source=crm_update_peer_proc
+Apr 03 11:02:47 15sp1-1 pacemaker-fenced    [1944] (crm_reap_dead_member) 	info: Removing node with name 15sp1-2 and id 2 from membership cache
+Apr 03 11:02:47 15sp1-1 pacemaker-fenced    [1944] (reap_crm_member) 	notice: Purged 1 peer with id=2 and/or uname=15sp1-2 from the membership cache
+Apr 03 11:02:47 15sp1-1 pacemaker-fenced    [1944] (pcmk_cpg_membership) 	info: Group event stonith-ng.2: node 1 (15sp1-1) is member
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_process_shutdown_req) 	info: Peer 15sp1-2 is requesting to shut down
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (pcmk_cpg_membership) 	info: Group event cib.2: node 2 (15sp1-2) left
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (crm_update_peer_proc) 	info: pcmk_cpg_membership: Node 15sp1-2[2] - corosync-cpg is now offline
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (crm_update_peer_state_iter) 	notice: Node 15sp1-2 state is now lost | nodeid=2 previous=member source=crm_update_peer_proc
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (crm_reap_dead_member) 	info: Removing node with name 15sp1-2 and id 2 from membership cache
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (reap_crm_member) 	notice: Purged 1 peer with id=2 and/or uname=15sp1-2 from the membership cache
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (pcmk_cpg_membership) 	info: Group event cib.2: node 1 (15sp1-1) is member
+Apr 03 11:02:47 15sp1-1 pacemakerd          [1941] (pcmk_cpg_membership) 	info: Group event pacemakerd.2: node 2 (15sp1-2) left
+Apr 03 11:02:47 15sp1-1 pacemakerd          [1941] (crm_update_peer_proc) 	info: pcmk_cpg_membership: Node 15sp1-2[2] - corosync-cpg is now offline
+Apr 03 11:02:47 15sp1-1 pacemakerd          [1941] (pcmk_cpg_membership) 	info: Group event pacemakerd.2: node 1 (15sp1-1) is member
+Apr 03 11:02:47 15sp1-1 pacemakerd          [1941] (pcmk_quorum_notification) 	info: Quorum retained | membership=12 members=1
+Apr 03 11:02:47 15sp1-1 pacemakerd          [1941] (crm_update_peer_state_iter) 	notice: Node 15sp1-2 state is now lost | nodeid=2 previous=member source=crm_reap_unseen_nodes
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (pcmk_quorum_notification) 	info: Quorum retained | membership=12 members=1
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_state_iter) 	notice: Node 15sp1-2 state is now lost | nodeid=2 previous=member source=crm_reap_unseen_nodes
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (peer_update_callback) 	info: Cluster node 15sp1-2 is now lost (was member)
+Apr 03 11:02:47 15sp1-1 pacemaker-controld  [1948] (peer_update_callback) 	notice: do_shutdown of peer 15sp1-2 is complete | action=1
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section status to all (origin=local/crmd/53)
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section nodes to all (origin=local/crmd/56)
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section status to all (origin=local/crmd/57)
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section status: OK (rc=0, origin=15sp1-1/crmd/53, version=0.5.9)
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section nodes: OK (rc=0, origin=15sp1-1/crmd/56, version=0.5.9)
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.9 2
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.10 (null)
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=10
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib/status/node_state[@id='1']:  @crm-debug-origin=post_cache_update
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib/status/node_state[@id='2']:  @in_ccm=false, @crm-debug-origin=post_cache_update
+Apr 03 11:02:47 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section status: OK (rc=0, origin=15sp1-1/crmd/57, version=0.5.10)
+Apr 03 11:02:49 15sp1-1 pacemaker-controld  [1948] (throttle_send_command) 	info: New throttle mode: 0001 (was 0010)
+Apr 03 11:02:52 15sp1-1 pacemaker-based     [1943] (cib_process_ping) 	info: Reporting our current digest to 15sp1-1: 721b7cebe807ad0faf4a6dc35780fe91 for 0.5.10 (0x560430039b10 0)
+Apr 03 11:03:19 15sp1-1 pacemaker-controld  [1948] (throttle_send_command) 	info: New throttle mode: 0000 (was 0001)
+Apr 03 11:03:30 15sp1-1 pacemaker-controld  [1948] (pcmk_quorum_notification) 	info: Quorum retained | membership=16 members=2
+Apr 03 11:03:30 15sp1-1 pacemakerd          [1941] (pcmk_quorum_notification) 	info: Quorum retained | membership=16 members=2
+Apr 03 11:03:30 15sp1-1 pacemakerd          [1941] (crm_update_peer_state_iter) 	notice: Node 15sp1-2 state is now member | nodeid=2 previous=lost source=pcmk_quorum_notification
+Apr 03 11:03:30 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_state_iter) 	notice: Node 15sp1-2 state is now member | nodeid=2 previous=lost source=pcmk_quorum_notification
+Apr 03 11:03:30 15sp1-1 pacemaker-controld  [1948] (peer_update_callback) 	info: Cluster node 15sp1-2 is now member (was lost)
+Apr 03 11:03:30 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section status to all (origin=local/crmd/58)
+Apr 03 11:03:30 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.10 2
+Apr 03 11:03:30 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.11 (null)
+Apr 03 11:03:30 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=11
+Apr 03 11:03:30 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib/status/node_state[@id='2']:  @crm-debug-origin=peer_update_callback
+Apr 03 11:03:30 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section status: OK (rc=0, origin=15sp1-1/crmd/58, version=0.5.11)
+Apr 03 11:03:30 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section nodes to all (origin=local/crmd/61)
+Apr 03 11:03:30 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section status to all (origin=local/crmd/62)
+Apr 03 11:03:30 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section nodes: OK (rc=0, origin=15sp1-1/crmd/61, version=0.5.11)
+Apr 03 11:03:30 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.11 2
+Apr 03 11:03:30 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.12 (null)
+Apr 03 11:03:30 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=12
+Apr 03 11:03:30 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib/status/node_state[@id='2']:  @in_ccm=true, @crm-debug-origin=post_cache_update
+Apr 03 11:03:30 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section status: OK (rc=0, origin=15sp1-1/crmd/62, version=0.5.12)
+Apr 03 11:03:30 15sp1-1 pacemakerd          [1941] (pcmk_cpg_membership) 	info: Group event pacemakerd.3: node 2 joined
+Apr 03 11:03:30 15sp1-1 pacemakerd          [1941] (pcmk_cpg_membership) 	info: Group event pacemakerd.3: node 1 (15sp1-1) is member
+Apr 03 11:03:30 15sp1-1 pacemakerd          [1941] (pcmk_cpg_membership) 	info: Group event pacemakerd.3: node 2 (15sp1-2) is member
+Apr 03 11:03:30 15sp1-1 pacemakerd          [1941] (crm_update_peer_proc) 	info: pcmk_cpg_membership: Node 15sp1-2[2] - corosync-cpg is now online
+Apr 03 11:03:31 15sp1-1 pacemaker-fenced    [1944] (pcmk_cpg_membership) 	info: Group event stonith-ng.3: node 2 joined
+Apr 03 11:03:31 15sp1-1 pacemaker-fenced    [1944] (pcmk_cpg_membership) 	info: Group event stonith-ng.3: node 1 (15sp1-1) is member
+Apr 03 11:03:31 15sp1-1 pacemaker-fenced    [1944] (corosync_node_name) 	info: Unable to get node name for nodeid 2
+Apr 03 11:03:31 15sp1-1 pacemaker-fenced    [1944] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 2
+Apr 03 11:03:31 15sp1-1 pacemaker-fenced    [1944] (crm_get_peer) 	info: Created entry 5c9c833c-faec-4e40-9451-1eca51fe31c1/0x5649958c6240 for node (null)/2 (2 total)
+Apr 03 11:03:31 15sp1-1 pacemaker-fenced    [1944] (crm_get_peer) 	info: Node 2 has uuid 2
+Apr 03 11:03:31 15sp1-1 pacemaker-fenced    [1944] (pcmk_cpg_membership) 	info: Group event stonith-ng.3: node 2 (<unknown>) is member
+Apr 03 11:03:31 15sp1-1 pacemaker-fenced    [1944] (crm_update_peer_proc) 	info: pcmk_cpg_membership: Node (null)[2] - corosync-cpg is now online
+Apr 03 11:03:31 15sp1-1 pacemaker-fenced    [1944] (crm_update_peer_state_iter) 	notice: Node (null) state is now member | nodeid=2 previous=unknown source=crm_update_peer_proc
+Apr 03 11:03:31 15sp1-1 pacemaker-fenced    [1944] (crm_get_peer) 	info: Node 2 is now known as 15sp1-2
+Apr 03 11:03:31 15sp1-1 pacemaker-based     [1943] (pcmk_cpg_membership) 	info: Group event cib.3: node 2 joined
+Apr 03 11:03:31 15sp1-1 pacemaker-based     [1943] (pcmk_cpg_membership) 	info: Group event cib.3: node 1 (15sp1-1) is member
+Apr 03 11:03:31 15sp1-1 pacemaker-based     [1943] (corosync_node_name) 	info: Unable to get node name for nodeid 2
+Apr 03 11:03:31 15sp1-1 pacemaker-based     [1943] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 2
+Apr 03 11:03:31 15sp1-1 pacemaker-based     [1943] (crm_get_peer) 	info: Created entry 53c0909d-78ff-49b5-bf79-9ef7ceb014aa/0x56042ffb1100 for node (null)/2 (2 total)
+Apr 03 11:03:31 15sp1-1 pacemaker-based     [1943] (crm_get_peer) 	info: Node 2 has uuid 2
+Apr 03 11:03:31 15sp1-1 pacemaker-based     [1943] (pcmk_cpg_membership) 	info: Group event cib.3: node 2 (<unknown>) is member
+Apr 03 11:03:31 15sp1-1 pacemaker-based     [1943] (crm_update_peer_proc) 	info: pcmk_cpg_membership: Node (null)[2] - corosync-cpg is now online
+Apr 03 11:03:31 15sp1-1 pacemaker-based     [1943] (crm_update_peer_state_iter) 	notice: Node (null) state is now member | nodeid=2 previous=unknown source=crm_update_peer_proc
+Apr 03 11:03:32 15sp1-1 pacemaker-attrd     [1946] (pcmk_cpg_membership) 	info: Group event attrd.3: node 2 joined
+Apr 03 11:03:32 15sp1-1 pacemaker-attrd     [1946] (pcmk_cpg_membership) 	info: Group event attrd.3: node 1 (15sp1-1) is member
+Apr 03 11:03:32 15sp1-1 pacemaker-attrd     [1946] (corosync_node_name) 	info: Unable to get node name for nodeid 2
+Apr 03 11:03:32 15sp1-1 pacemaker-attrd     [1946] (get_node_name) 	notice: Could not obtain a node name for corosync nodeid 2
+Apr 03 11:03:32 15sp1-1 pacemaker-attrd     [1946] (crm_get_peer) 	info: Created entry cc7d88cd-ec11-4a95-9820-ec156175b0ca/0x55995aef85e0 for node (null)/2 (2 total)
+Apr 03 11:03:32 15sp1-1 pacemaker-attrd     [1946] (crm_get_peer) 	info: Node 2 has uuid 2
+Apr 03 11:03:32 15sp1-1 pacemaker-attrd     [1946] (pcmk_cpg_membership) 	info: Group event attrd.3: node 2 (<unknown>) is member
+Apr 03 11:03:32 15sp1-1 pacemaker-attrd     [1946] (crm_update_peer_proc) 	info: pcmk_cpg_membership: Node (null)[2] - corosync-cpg is now online
+Apr 03 11:03:32 15sp1-1 pacemaker-attrd     [1946] (crm_update_peer_state_iter) 	notice: Node (null) state is now member | nodeid=2 previous=unknown source=crm_update_peer_proc
+Apr 03 11:03:32 15sp1-1 pacemaker-attrd     [1946] (crm_get_peer) 	info: Node 2 is now known as 15sp1-2
+Apr 03 11:03:32 15sp1-1 pacemaker-attrd     [1946] (attrd_peer_update) 	info: Setting #attrd-protocol[15sp1-2]: (null) -> 2 from 15sp1-2
+Apr 03 11:03:32 15sp1-1 pacemaker-attrd     [1946] (write_attribute) 	info: Processed 2 private changes for #attrd-protocol, id=n/a, set=n/a
+Apr 03 11:03:32 15sp1-1 pacemaker-based     [1943] (crm_get_peer) 	info: Node 2 is now known as 15sp1-2
+Apr 03 11:03:32 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_delete operation for section //node_state[@uname='15sp1-2']/transient_attributes: OK (rc=0, origin=15sp1-2/attrd/2, version=0.5.12)
+Apr 03 11:03:32 15sp1-1 pacemaker-controld  [1948] (pcmk_cpg_membership) 	info: Group event crmd.3: node 2 joined
+Apr 03 11:03:32 15sp1-1 pacemaker-controld  [1948] (pcmk_cpg_membership) 	info: Group event crmd.3: node 1 (15sp1-1) is member
+Apr 03 11:03:32 15sp1-1 pacemaker-controld  [1948] (pcmk_cpg_membership) 	info: Group event crmd.3: node 2 (15sp1-2) is member
+Apr 03 11:03:32 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_proc) 	info: pcmk_cpg_membership: Node 15sp1-2[2] - corosync-cpg is now online
+Apr 03 11:03:32 15sp1-1 pacemaker-controld  [1948] (peer_update_callback) 	info: Node 15sp1-2 is now a peer | DC=true old=0x0000000 new=0x4000000
+Apr 03 11:03:32 15sp1-1 pacemaker-controld  [1948] (te_trigger_stonith_history_sync) 	info: Fence history will be synchronized cluster-wide within 5 seconds
+Apr 03 11:03:32 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_IDLE -> S_INTEGRATION | input=I_NODE_JOIN cause=C_FSA_INTERNAL origin=peer_update_callback
+Apr 03 11:03:32 15sp1-1 pacemaker-controld  [1948] (do_dc_join_offer_one) 	info: An unknown node joined - (re-)offer to any unconfirmed nodes
+Apr 03 11:03:32 15sp1-1 pacemaker-controld  [1948] (join_make_offer) 	info: Making join offers based on membership 16
+Apr 03 11:03:32 15sp1-1 pacemaker-controld  [1948] (join_make_offer) 	info: join-1: Sending offer to 15sp1-2
+Apr 03 11:03:32 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: join_make_offer: Node 15sp1-2[2] - join-1 phase none -> welcomed
+Apr 03 11:03:32 15sp1-1 pacemaker-controld  [1948] (join_make_offer) 	info: Skipping 15sp1-1: already known 4
+Apr 03 11:03:32 15sp1-1 pacemaker-controld  [1948] (abort_transition_graph) 	info: Transition 3 aborted: Peer Halt | source=do_te_invoke:139 complete=true
+Apr 03 11:03:32 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section status to all (origin=local/crmd/63)
+Apr 03 11:03:32 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.12 2
+Apr 03 11:03:32 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.13 (null)
+Apr 03 11:03:32 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=13
+Apr 03 11:03:32 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib/status/node_state[@id='2']:  @crmd=online, @crm-debug-origin=peer_update_callback
+Apr 03 11:03:32 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section status: OK (rc=0, origin=15sp1-1/crmd/63, version=0.5.13)
+Apr 03 11:03:32 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section nodes: OK (rc=0, origin=15sp1-2/crmd/2, version=0.5.13)
+Apr 03 11:03:33 15sp1-1 pacemaker-controld  [1948] (do_dc_join_offer_one) 	info: join-1: Processing join_announce request from 15sp1-2 in state S_INTEGRATION
+Apr 03 11:03:33 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: do_dc_join_offer_one: Node 15sp1-2[2] - join-1 phase welcomed -> none
+Apr 03 11:03:33 15sp1-1 pacemaker-controld  [1948] (join_make_offer) 	info: join-1: Sending offer to 15sp1-2
+Apr 03 11:03:33 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: join_make_offer: Node 15sp1-2[2] - join-1 phase none -> welcomed
+Apr 03 11:03:33 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: join_make_offer: Node 15sp1-1[1] - join-1 phase confirmed -> none
+Apr 03 11:03:33 15sp1-1 pacemaker-controld  [1948] (join_make_offer) 	info: join-1: Sending offer to 15sp1-1
+Apr 03 11:03:33 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: join_make_offer: Node 15sp1-1[1] - join-1 phase none -> welcomed
+Apr 03 11:03:33 15sp1-1 pacemaker-controld  [1948] (abort_transition_graph) 	info: Transition 3 aborted: Node join | source=do_dc_join_offer_one:267 complete=true
+Apr 03 11:03:33 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: do_dc_join_filter_offer: Node 15sp1-1[1] - join-1 phase welcomed -> integrated
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: do_dc_join_filter_offer: Node 15sp1-2[2] - join-1 phase welcomed -> integrated
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_expected) 	info: do_dc_join_filter_offer: Node 15sp1-2[2] - expected state is now member (was down)
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_INTEGRATION -> S_FINALIZE_JOIN | input=I_INTEGRATED cause=C_FSA_INTERNAL origin=check_join_state
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (crmd_join_phase_log) 	info: join-1: 15sp1-2=integrated
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (crmd_join_phase_log) 	info: join-1: 15sp1-1=integrated
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (do_dc_join_finalize) 	info: join-1: Syncing our CIB to the rest of the cluster
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: finalize_join_for: Node 15sp1-2[2] - join-1 phase integrated -> finalized
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: finalize_join_for: Node 15sp1-1[1] - join-1 phase integrated -> finalized
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_replace) 	info: Digest matched on replace from 15sp1-1: 9cc271d2c23b97671004273302f97501
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: do_dc_join_ack: Node 15sp1-1[1] - join-1 phase finalized -> confirmed
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (do_dc_join_ack) 	info: join-1: Updating node state to member for 15sp1-1
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (erase_status_tag) 	info: Deleting lrm status entries for 15sp1-1 | xpath=//node_state[@uname='15sp1-1']/lrm
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_replace) 	info: Replaced 0.5.13 with 0.5.13 from 15sp1-1
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_replace operation for section 'all': OK (rc=0, origin=15sp1-1/crmd/65, version=0.5.13)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section nodes to all (origin=local/crmd/66)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section nodes to all (origin=local/crmd/67)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_delete operation for section //node_state[@uname='15sp1-1']/lrm to all (origin=local/crmd/68)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section status to all (origin=local/crmd/69)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section nodes: OK (rc=0, origin=15sp1-1/crmd/66, version=0.5.13)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section nodes: OK (rc=0, origin=15sp1-1/crmd/67, version=0.5.13)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.13 2
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.14 (null)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: -- /cib/status/node_state[@id='1']/lrm[@id='1']
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=14
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_delete operation for section //node_state[@uname='15sp1-1']/lrm: OK (rc=0, origin=15sp1-1/crmd/68, version=0.5.14)
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (crm_update_peer_join) 	info: do_dc_join_ack: Node 15sp1-2[2] - join-1 phase finalized -> confirmed
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (do_dc_join_ack) 	info: join-1: Updating node state to member for 15sp1-2
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (erase_status_tag) 	info: Deleting lrm status entries for 15sp1-2 | xpath=//node_state[@uname='15sp1-2']/lrm
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.14 2
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.15 (null)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=15
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib/status/node_state[@id='1']:  @crm-debug-origin=do_lrm_query_internal
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/status/node_state[@id='1']:  <lrm id="1"/>
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                                     <lrm_resources/>
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                                   </lrm>
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section status: OK (rc=0, origin=15sp1-1/crmd/69, version=0.5.15)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_delete operation for section //node_state[@uname='15sp1-2']/lrm to all (origin=local/crmd/70)
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_FINALIZE_JOIN -> S_POLICY_ENGINE | input=I_FINALIZED cause=C_FSA_INTERNAL origin=check_join_state
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (crm_update_quorum) 	notice: Updating quorum status to true (call=76)
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (abort_transition_graph) 	info: Transition 3 aborted: Peer Cancelled | source=do_te_invoke:132 complete=true
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section status to all (origin=local/crmd/71)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.15 2
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.16 (null)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: -- /cib/status/node_state[@id='2']/lrm[@id='2']
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=16
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_delete operation for section //node_state[@uname='15sp1-2']/lrm: OK (rc=0, origin=15sp1-1/crmd/70, version=0.5.16)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.16 2
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.17 (null)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=17
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib/status/node_state[@id='2']:  @crm-debug-origin=do_lrm_query_internal
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++ /cib/status/node_state[@id='2']:  <lrm id="2"/>
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                                     <lrm_resources/>
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: ++                                   </lrm>
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section status: OK (rc=0, origin=15sp1-1/crmd/71, version=0.5.17)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section nodes to all (origin=local/crmd/74)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section status to all (origin=local/crmd/75)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Forwarding cib_modify operation for section cib to all (origin=local/crmd/76)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section nodes: OK (rc=0, origin=15sp1-1/crmd/74, version=0.5.17)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: --- 0.5.17 2
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: Diff: +++ 0.5.18 (null)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib:  @num_updates=18
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib/status/node_state[@id='1']:  @crm-debug-origin=do_state_transition
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_perform_op) 	info: +  /cib/status/node_state[@id='2']:  @crm-debug-origin=do_state_transition, @join=member, @expected=member
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section status: OK (rc=0, origin=15sp1-1/crmd/75, version=0.5.18)
+Apr 03 11:03:34 15sp1-1 pacemaker-based     [1943] (cib_process_request) 	info: Completed cib_modify operation for section cib: OK (rc=0, origin=15sp1-1/crmd/76, version=0.5.18)
+Apr 03 11:03:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-1 is online
+Apr 03 11:03:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-2 is online
+Apr 03 11:03:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 11:03:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 11:03:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 11:03:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 11:03:34 15sp1-1 pacemaker-schedulerd[1947] (stage6) 	notice: Delaying fencing operations until there are resources to manage
+Apr 03 11:03:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	notice: Calculated transition 4, saving inputs in /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_POLICY_ENGINE -> S_TRANSITION_ENGINE | input=I_PE_SUCCESS cause=C_IPC_MESSAGE origin=handle_response
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (do_te_invoke) 	notice: Processing graph 4 (ref=pe_calc-dc-1554260614-32) derived from /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (run_graph) 	notice: Transition 4 (Complete=0, Pending=0, Fired=0, Skipped=0, Incomplete=0, Source=/var/lib/pacemaker/pengine/pe-input-4.bz2): Complete
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_TE_SUCCESS received in state S_TRANSITION_ENGINE from notify_crmd
+Apr 03 11:03:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_TRANSITION_ENGINE -> S_IDLE | input=I_TE_SUCCESS cause=C_FSA_INTERNAL origin=notify_crmd
+Apr 03 11:03:35 15sp1-1 pacemaker-based     [1943] (cib_file_backup) 	info: Archived previous version as /var/lib/pacemaker/cib/cib-5.raw
+Apr 03 11:03:35 15sp1-1 pacemaker-based     [1943] (cib_file_write_with_digest) 	info: Wrote version 0.5.0 of the CIB to disk (digest: ca3eacfa6d368fd79cf391411a7d16de)
+Apr 03 11:03:35 15sp1-1 pacemaker-based     [1943] (cib_file_write_with_digest) 	info: Reading cluster configuration file /var/lib/pacemaker/cib/cib.F8yvtW (digest: /var/lib/pacemaker/cib/cib.iAVwFF)
+Apr 03 11:03:39 15sp1-1 pacemaker-based     [1943] (cib_process_ping) 	info: Reporting our current digest to 15sp1-1: 5d5b6ac1becdd43a5327925a8d1f5579 for 0.5.18 (0x56042ffb12f0 0)
+Apr 03 11:18:34 15sp1-1 pacemaker-controld  [1948] (crm_timer_popped) 	info: Cluster Recheck Timer (I_PE_CALC) just popped (900000ms)
+Apr 03 11:18:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_IDLE -> S_POLICY_ENGINE | input=I_PE_CALC cause=C_TIMER_POPPED origin=crm_timer_popped
+Apr 03 11:18:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: Progressed to state S_POLICY_ENGINE after C_TIMER_POPPED
+Apr 03 11:18:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	info: Input has not changed since last time, not saving to disk
+Apr 03 11:18:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-1 is online
+Apr 03 11:18:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-2 is online
+Apr 03 11:18:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 11:18:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 11:18:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 11:18:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 11:18:34 15sp1-1 pacemaker-schedulerd[1947] (stage6) 	notice: Delaying fencing operations until there are resources to manage
+Apr 03 11:18:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	notice: Calculated transition 5, saving inputs in /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 11:18:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_POLICY_ENGINE -> S_TRANSITION_ENGINE | input=I_PE_SUCCESS cause=C_IPC_MESSAGE origin=handle_response
+Apr 03 11:18:34 15sp1-1 pacemaker-controld  [1948] (do_te_invoke) 	notice: Processing graph 5 (ref=pe_calc-dc-1554261514-33) derived from /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 11:18:34 15sp1-1 pacemaker-controld  [1948] (run_graph) 	notice: Transition 5 (Complete=0, Pending=0, Fired=0, Skipped=0, Incomplete=0, Source=/var/lib/pacemaker/pengine/pe-input-4.bz2): Complete
+Apr 03 11:18:34 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_TE_SUCCESS received in state S_TRANSITION_ENGINE from notify_crmd
+Apr 03 11:18:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_TRANSITION_ENGINE -> S_IDLE | input=I_TE_SUCCESS cause=C_FSA_INTERNAL origin=notify_crmd
+Apr 03 11:33:34 15sp1-1 pacemaker-controld  [1948] (crm_timer_popped) 	info: Cluster Recheck Timer (I_PE_CALC) just popped (900000ms)
+Apr 03 11:33:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_IDLE -> S_POLICY_ENGINE | input=I_PE_CALC cause=C_TIMER_POPPED origin=crm_timer_popped
+Apr 03 11:33:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: Progressed to state S_POLICY_ENGINE after C_TIMER_POPPED
+Apr 03 11:33:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	info: Input has not changed since last time, not saving to disk
+Apr 03 11:33:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-1 is online
+Apr 03 11:33:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-2 is online
+Apr 03 11:33:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 11:33:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 11:33:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 11:33:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 11:33:34 15sp1-1 pacemaker-schedulerd[1947] (stage6) 	notice: Delaying fencing operations until there are resources to manage
+Apr 03 11:33:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	notice: Calculated transition 6, saving inputs in /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 11:33:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_POLICY_ENGINE -> S_TRANSITION_ENGINE | input=I_PE_SUCCESS cause=C_IPC_MESSAGE origin=handle_response
+Apr 03 11:33:34 15sp1-1 pacemaker-controld  [1948] (do_te_invoke) 	notice: Processing graph 6 (ref=pe_calc-dc-1554262414-34) derived from /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 11:33:34 15sp1-1 pacemaker-controld  [1948] (run_graph) 	notice: Transition 6 (Complete=0, Pending=0, Fired=0, Skipped=0, Incomplete=0, Source=/var/lib/pacemaker/pengine/pe-input-4.bz2): Complete
+Apr 03 11:33:34 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_TE_SUCCESS received in state S_TRANSITION_ENGINE from notify_crmd
+Apr 03 11:33:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_TRANSITION_ENGINE -> S_IDLE | input=I_TE_SUCCESS cause=C_FSA_INTERNAL origin=notify_crmd
+Apr 03 11:48:34 15sp1-1 pacemaker-controld  [1948] (crm_timer_popped) 	info: Cluster Recheck Timer (I_PE_CALC) just popped (900000ms)
+Apr 03 11:48:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_IDLE -> S_POLICY_ENGINE | input=I_PE_CALC cause=C_TIMER_POPPED origin=crm_timer_popped
+Apr 03 11:48:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: Progressed to state S_POLICY_ENGINE after C_TIMER_POPPED
+Apr 03 11:48:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	info: Input has not changed since last time, not saving to disk
+Apr 03 11:48:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-1 is online
+Apr 03 11:48:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-2 is online
+Apr 03 11:48:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 11:48:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 11:48:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 11:48:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 11:48:34 15sp1-1 pacemaker-schedulerd[1947] (stage6) 	notice: Delaying fencing operations until there are resources to manage
+Apr 03 11:48:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	notice: Calculated transition 7, saving inputs in /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 11:48:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_POLICY_ENGINE -> S_TRANSITION_ENGINE | input=I_PE_SUCCESS cause=C_IPC_MESSAGE origin=handle_response
+Apr 03 11:48:34 15sp1-1 pacemaker-controld  [1948] (do_te_invoke) 	notice: Processing graph 7 (ref=pe_calc-dc-1554263314-35) derived from /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 11:48:34 15sp1-1 pacemaker-controld  [1948] (run_graph) 	notice: Transition 7 (Complete=0, Pending=0, Fired=0, Skipped=0, Incomplete=0, Source=/var/lib/pacemaker/pengine/pe-input-4.bz2): Complete
+Apr 03 11:48:34 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_TE_SUCCESS received in state S_TRANSITION_ENGINE from notify_crmd
+Apr 03 11:48:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_TRANSITION_ENGINE -> S_IDLE | input=I_TE_SUCCESS cause=C_FSA_INTERNAL origin=notify_crmd
+Apr 03 12:03:34 15sp1-1 pacemaker-controld  [1948] (crm_timer_popped) 	info: Cluster Recheck Timer (I_PE_CALC) just popped (900000ms)
+Apr 03 12:03:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_IDLE -> S_POLICY_ENGINE | input=I_PE_CALC cause=C_TIMER_POPPED origin=crm_timer_popped
+Apr 03 12:03:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: Progressed to state S_POLICY_ENGINE after C_TIMER_POPPED
+Apr 03 12:03:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	info: Input has not changed since last time, not saving to disk
+Apr 03 12:03:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-1 is online
+Apr 03 12:03:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-2 is online
+Apr 03 12:03:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 12:03:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 12:03:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 12:03:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 12:03:34 15sp1-1 pacemaker-schedulerd[1947] (stage6) 	notice: Delaying fencing operations until there are resources to manage
+Apr 03 12:03:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	notice: Calculated transition 8, saving inputs in /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 12:03:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_POLICY_ENGINE -> S_TRANSITION_ENGINE | input=I_PE_SUCCESS cause=C_IPC_MESSAGE origin=handle_response
+Apr 03 12:03:34 15sp1-1 pacemaker-controld  [1948] (do_te_invoke) 	notice: Processing graph 8 (ref=pe_calc-dc-1554264214-36) derived from /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 12:03:34 15sp1-1 pacemaker-controld  [1948] (run_graph) 	notice: Transition 8 (Complete=0, Pending=0, Fired=0, Skipped=0, Incomplete=0, Source=/var/lib/pacemaker/pengine/pe-input-4.bz2): Complete
+Apr 03 12:03:34 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_TE_SUCCESS received in state S_TRANSITION_ENGINE from notify_crmd
+Apr 03 12:03:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_TRANSITION_ENGINE -> S_IDLE | input=I_TE_SUCCESS cause=C_FSA_INTERNAL origin=notify_crmd
+Apr 03 12:18:34 15sp1-1 pacemaker-controld  [1948] (crm_timer_popped) 	info: Cluster Recheck Timer (I_PE_CALC) just popped (900000ms)
+Apr 03 12:18:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_IDLE -> S_POLICY_ENGINE | input=I_PE_CALC cause=C_TIMER_POPPED origin=crm_timer_popped
+Apr 03 12:18:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: Progressed to state S_POLICY_ENGINE after C_TIMER_POPPED
+Apr 03 12:18:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	info: Input has not changed since last time, not saving to disk
+Apr 03 12:18:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-1 is online
+Apr 03 12:18:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-2 is online
+Apr 03 12:18:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 12:18:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 12:18:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 12:18:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 12:18:34 15sp1-1 pacemaker-schedulerd[1947] (stage6) 	notice: Delaying fencing operations until there are resources to manage
+Apr 03 12:18:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	notice: Calculated transition 9, saving inputs in /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 12:18:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_POLICY_ENGINE -> S_TRANSITION_ENGINE | input=I_PE_SUCCESS cause=C_IPC_MESSAGE origin=handle_response
+Apr 03 12:18:34 15sp1-1 pacemaker-controld  [1948] (do_te_invoke) 	notice: Processing graph 9 (ref=pe_calc-dc-1554265114-37) derived from /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 12:18:34 15sp1-1 pacemaker-controld  [1948] (run_graph) 	notice: Transition 9 (Complete=0, Pending=0, Fired=0, Skipped=0, Incomplete=0, Source=/var/lib/pacemaker/pengine/pe-input-4.bz2): Complete
+Apr 03 12:18:34 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_TE_SUCCESS received in state S_TRANSITION_ENGINE from notify_crmd
+Apr 03 12:18:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_TRANSITION_ENGINE -> S_IDLE | input=I_TE_SUCCESS cause=C_FSA_INTERNAL origin=notify_crmd
+Apr 03 12:33:34 15sp1-1 pacemaker-controld  [1948] (crm_timer_popped) 	info: Cluster Recheck Timer (I_PE_CALC) just popped (900000ms)
+Apr 03 12:33:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_IDLE -> S_POLICY_ENGINE | input=I_PE_CALC cause=C_TIMER_POPPED origin=crm_timer_popped
+Apr 03 12:33:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: Progressed to state S_POLICY_ENGINE after C_TIMER_POPPED
+Apr 03 12:33:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	info: Input has not changed since last time, not saving to disk
+Apr 03 12:33:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-1 is online
+Apr 03 12:33:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-2 is online
+Apr 03 12:33:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 12:33:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 12:33:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 12:33:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 12:33:34 15sp1-1 pacemaker-schedulerd[1947] (stage6) 	notice: Delaying fencing operations until there are resources to manage
+Apr 03 12:33:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	notice: Calculated transition 10, saving inputs in /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 12:33:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_POLICY_ENGINE -> S_TRANSITION_ENGINE | input=I_PE_SUCCESS cause=C_IPC_MESSAGE origin=handle_response
+Apr 03 12:33:34 15sp1-1 pacemaker-controld  [1948] (do_te_invoke) 	notice: Processing graph 10 (ref=pe_calc-dc-1554266014-38) derived from /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 12:33:34 15sp1-1 pacemaker-controld  [1948] (run_graph) 	notice: Transition 10 (Complete=0, Pending=0, Fired=0, Skipped=0, Incomplete=0, Source=/var/lib/pacemaker/pengine/pe-input-4.bz2): Complete
+Apr 03 12:33:34 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_TE_SUCCESS received in state S_TRANSITION_ENGINE from notify_crmd
+Apr 03 12:33:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_TRANSITION_ENGINE -> S_IDLE | input=I_TE_SUCCESS cause=C_FSA_INTERNAL origin=notify_crmd
+Apr 03 12:48:34 15sp1-1 pacemaker-controld  [1948] (crm_timer_popped) 	info: Cluster Recheck Timer (I_PE_CALC) just popped (900000ms)
+Apr 03 12:48:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_IDLE -> S_POLICY_ENGINE | input=I_PE_CALC cause=C_TIMER_POPPED origin=crm_timer_popped
+Apr 03 12:48:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: Progressed to state S_POLICY_ENGINE after C_TIMER_POPPED
+Apr 03 12:48:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	info: Input has not changed since last time, not saving to disk
+Apr 03 12:48:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-1 is online
+Apr 03 12:48:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-2 is online
+Apr 03 12:48:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 12:48:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 12:48:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 12:48:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 12:48:34 15sp1-1 pacemaker-schedulerd[1947] (stage6) 	notice: Delaying fencing operations until there are resources to manage
+Apr 03 12:48:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	notice: Calculated transition 11, saving inputs in /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 12:48:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_POLICY_ENGINE -> S_TRANSITION_ENGINE | input=I_PE_SUCCESS cause=C_IPC_MESSAGE origin=handle_response
+Apr 03 12:48:34 15sp1-1 pacemaker-controld  [1948] (do_te_invoke) 	notice: Processing graph 11 (ref=pe_calc-dc-1554266914-39) derived from /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 12:48:34 15sp1-1 pacemaker-controld  [1948] (run_graph) 	notice: Transition 11 (Complete=0, Pending=0, Fired=0, Skipped=0, Incomplete=0, Source=/var/lib/pacemaker/pengine/pe-input-4.bz2): Complete
+Apr 03 12:48:34 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_TE_SUCCESS received in state S_TRANSITION_ENGINE from notify_crmd
+Apr 03 12:48:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_TRANSITION_ENGINE -> S_IDLE | input=I_TE_SUCCESS cause=C_FSA_INTERNAL origin=notify_crmd
+Apr 03 13:03:34 15sp1-1 pacemaker-controld  [1948] (crm_timer_popped) 	info: Cluster Recheck Timer (I_PE_CALC) just popped (900000ms)
+Apr 03 13:03:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_IDLE -> S_POLICY_ENGINE | input=I_PE_CALC cause=C_TIMER_POPPED origin=crm_timer_popped
+Apr 03 13:03:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: Progressed to state S_POLICY_ENGINE after C_TIMER_POPPED
+Apr 03 13:03:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	info: Input has not changed since last time, not saving to disk
+Apr 03 13:03:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-1 is online
+Apr 03 13:03:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-2 is online
+Apr 03 13:03:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 13:03:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 13:03:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 13:03:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 13:03:34 15sp1-1 pacemaker-schedulerd[1947] (stage6) 	notice: Delaying fencing operations until there are resources to manage
+Apr 03 13:03:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	notice: Calculated transition 12, saving inputs in /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 13:03:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_POLICY_ENGINE -> S_TRANSITION_ENGINE | input=I_PE_SUCCESS cause=C_IPC_MESSAGE origin=handle_response
+Apr 03 13:03:34 15sp1-1 pacemaker-controld  [1948] (do_te_invoke) 	notice: Processing graph 12 (ref=pe_calc-dc-1554267814-40) derived from /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 13:03:34 15sp1-1 pacemaker-controld  [1948] (run_graph) 	notice: Transition 12 (Complete=0, Pending=0, Fired=0, Skipped=0, Incomplete=0, Source=/var/lib/pacemaker/pengine/pe-input-4.bz2): Complete
+Apr 03 13:03:34 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_TE_SUCCESS received in state S_TRANSITION_ENGINE from notify_crmd
+Apr 03 13:03:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_TRANSITION_ENGINE -> S_IDLE | input=I_TE_SUCCESS cause=C_FSA_INTERNAL origin=notify_crmd
+Apr 03 13:18:34 15sp1-1 pacemaker-controld  [1948] (crm_timer_popped) 	info: Cluster Recheck Timer (I_PE_CALC) just popped (900000ms)
+Apr 03 13:18:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_IDLE -> S_POLICY_ENGINE | input=I_PE_CALC cause=C_TIMER_POPPED origin=crm_timer_popped
+Apr 03 13:18:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: Progressed to state S_POLICY_ENGINE after C_TIMER_POPPED
+Apr 03 13:18:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	info: Input has not changed since last time, not saving to disk
+Apr 03 13:18:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-1 is online
+Apr 03 13:18:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-2 is online
+Apr 03 13:18:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 13:18:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 13:18:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 13:18:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 13:18:34 15sp1-1 pacemaker-schedulerd[1947] (stage6) 	notice: Delaying fencing operations until there are resources to manage
+Apr 03 13:18:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	notice: Calculated transition 13, saving inputs in /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 13:18:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_POLICY_ENGINE -> S_TRANSITION_ENGINE | input=I_PE_SUCCESS cause=C_IPC_MESSAGE origin=handle_response
+Apr 03 13:18:34 15sp1-1 pacemaker-controld  [1948] (do_te_invoke) 	notice: Processing graph 13 (ref=pe_calc-dc-1554268714-41) derived from /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 13:18:34 15sp1-1 pacemaker-controld  [1948] (run_graph) 	notice: Transition 13 (Complete=0, Pending=0, Fired=0, Skipped=0, Incomplete=0, Source=/var/lib/pacemaker/pengine/pe-input-4.bz2): Complete
+Apr 03 13:18:34 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_TE_SUCCESS received in state S_TRANSITION_ENGINE from notify_crmd
+Apr 03 13:18:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_TRANSITION_ENGINE -> S_IDLE | input=I_TE_SUCCESS cause=C_FSA_INTERNAL origin=notify_crmd
+Apr 03 13:33:34 15sp1-1 pacemaker-controld  [1948] (crm_timer_popped) 	info: Cluster Recheck Timer (I_PE_CALC) just popped (900000ms)
+Apr 03 13:33:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_IDLE -> S_POLICY_ENGINE | input=I_PE_CALC cause=C_TIMER_POPPED origin=crm_timer_popped
+Apr 03 13:33:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: Progressed to state S_POLICY_ENGINE after C_TIMER_POPPED
+Apr 03 13:33:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	info: Input has not changed since last time, not saving to disk
+Apr 03 13:33:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-1 is online
+Apr 03 13:33:34 15sp1-1 pacemaker-schedulerd[1947] (determine_online_status) 	info: Node 15sp1-2 is online
+Apr 03 13:33:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 13:33:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 13:33:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 1 is already processed
+Apr 03 13:33:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop) 	info: Node 2 is already processed
+Apr 03 13:33:34 15sp1-1 pacemaker-schedulerd[1947] (stage6) 	notice: Delaying fencing operations until there are resources to manage
+Apr 03 13:33:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message) 	notice: Calculated transition 14, saving inputs in /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 13:33:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	info: State transition S_POLICY_ENGINE -> S_TRANSITION_ENGINE | input=I_PE_SUCCESS cause=C_IPC_MESSAGE origin=handle_response
+Apr 03 13:33:34 15sp1-1 pacemaker-controld  [1948] (do_te_invoke) 	notice: Processing graph 14 (ref=pe_calc-dc-1554269614-42) derived from /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 13:33:34 15sp1-1 pacemaker-controld  [1948] (run_graph) 	notice: Transition 14 (Complete=0, Pending=0, Fired=0, Skipped=0, Incomplete=0, Source=/var/lib/pacemaker/pengine/pe-input-4.bz2): Complete
+Apr 03 13:33:34 15sp1-1 pacemaker-controld  [1948] (do_log) 	info: Input I_TE_SUCCESS received in state S_TRANSITION_ENGINE from notify_crmd
+Apr 03 13:33:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition) 	notice: State transition S_TRANSITION_ENGINE -> S_IDLE | input=I_TE_SUCCESS cause=C_FSA_INTERNAL origin=notify_crmd
+Apr 03 13:37:23 15sp1-1 pacemaker-controld  [1948] (handle_ping) 	notice: Current ping state: S_IDLE
