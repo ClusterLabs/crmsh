@@ -368,6 +368,10 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.get('role'), None)
         self.assertEqual(out.get('interval'), '60m')
 
+        out = self._parse('primitive rsc_dummy1 Dummy op monitor interval=10 OCF_CHECK_LEVEL=10 timeout=60')
+        # incorrect ordering of attributes
+        self.assertFalse(out)
+
     def test_acl(self):
         out = self._parse('role user-1 error')
         self.assertFalse(out)
