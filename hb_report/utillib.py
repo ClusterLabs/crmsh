@@ -1467,6 +1467,16 @@ def sbd_info():
     if os.path.exists(constants.SBDCONF):
         shutil.copy2(constants.SBDCONF, constants.WORKDIR)
 
+    if not which("sbd"):
+        return
+    sbd_f = os.path.join(constants.WORKDIR, constants.SBD_F)
+    cmd = ". {};export SBD_DEVICE;{};{}".format(constants.SBDCONF, "sbd dump", "sbd list")
+    with open(sbd_f, "w") as f:
+        _, out = crmutils.get_stdout(cmd)
+        f.write("\n\n#=====[ Command ] ==========================#\n")
+        f.write("# %s\n"%(cmd))
+        f.write(out)
+
 
 def sed_inplace(filename, pattern, repl):
     out_string = ""
