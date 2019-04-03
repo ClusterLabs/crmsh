@@ -49,7 +49,6 @@ SSH_USER = ""
 SUDO = ""
 THIS_IS_NODE = 0
 TMP = None
-TMPFLIST = None
 TO_TIME = 0
 TRY_SSH = "root hacluster"
 # UNIQUE_MSG = "Mark:HB_REPORT:%d" % now_second
