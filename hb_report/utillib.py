@@ -594,10 +594,10 @@ def find_first_ts(data):
 def filter_lines(logf, from_line, to_line=None):
     out_string = ""
     if not to_line:
-        to_line = sum(1 for l in open(logf, 'r', encoding='utf-8'))
+        to_line = sum(1 for l in open(logf, 'r', encoding='utf-8', errors='replace'))
 
     count = 1
-    with open(logf, 'r', encoding='utf-8') as f:
+    with open(logf, 'r', encoding='utf-8', errors='replace') as f:
         for line in f.readlines():
             if count >= from_line and count <= to_line:
                 out_string += line
@@ -625,7 +625,7 @@ def finalword():
 def find_getstampproc(log_file):
     func = None
     loop_cout = 10
-    with open(log_file, 'r', encoding='utf-8') as f:
+    with open(log_file, 'r', encoding='utf-8', errors='replace') as f:
         for line in f.readlines():
             if loop_cout == 0:
                 break
@@ -720,7 +720,7 @@ def find_ssh_user():
 def findln_by_time(logf, tm):
     tmid = None
     first = 1
-    last = sum(1 for l in open(logf, 'r', encoding='utf-8'))
+    last = sum(1 for l in open(logf, 'r', encoding='utf-8', errors='replace'))
     while first <= last:
         mid = (last+first)//2
         trycnt = 10
@@ -1200,7 +1200,7 @@ def is_our_log(logf, from_time, to_time):
 
 def line_time(logf, line_num):
     ts = None
-    with open(logf, 'r', encoding='utf-8') as fd:
+    with open(logf, 'r', encoding='utf-8', errors='replace') as fd:
         line_res = head(line_num, fd.read())
         if line_res:
             ts = get_ts(line_res[-1])

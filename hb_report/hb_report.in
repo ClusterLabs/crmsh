@@ -409,6 +409,11 @@ def version():
 
 
 if __name__ == "__main__":
-    run()
+    try:
+        run()
+    except UnicodeDecodeError:
+        import traceback
+        traceback.print_exc()
+        sys.stdout.flush()
 
 # vim:ts=4:sw=4:et:
