@@ -2690,6 +2690,7 @@ class CibFactory(object):
         # produce a diff:
         # dump_new_conf | crm_diff -o self.cib_orig -n -
 
+        common_debug("Basis: %s" % (open(tmpf).read()))
         common_debug("Input: %s" % (xml_tostring(self.cib_elem)))
         rc, cib_diff = filter_string("%s -o %s -n -" %
                                      (self._crm_diff_cmd, tmpf),
