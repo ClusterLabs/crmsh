@@ -1,3 +1,64 @@
+* Mon Apr 8 2019 Xin Liang <XLiang@suse.com> and many others
+- Release 3.0.4
+- Fix: bootstrap: "-i" option doesn't work(bsc#1103833, bsc#1103834)
+- high: bootstrap: Use default IP address for ring0 (bsc#1069142)
+- low: bootstrap: change multi-heartbeats as option-mode
+- low: bootstrap: Clarify messages
+- low: bootstrap: give a confirm message when remove node
+- low: bootstrap: Improve comments / error messages
+- low: bootstrap: Fall back to logging into $TMPDIR/ha-cluster-bootstrap.log
+- low: bootstrap: Check for firewalld before SuSEfirewall2
+- medium: bootstrap: Add support for chrony
+- Detect firewall by checking installed packages
+- low: ui_cluster: complete node name once     or the same node name will be
+completed many times with many "Tab"s
+- medium: enable add the second heartbeat line for unicast   Changes inlcude:
+1. IPv4 & IPv6 support   2. user should specify local IP for ringX_addr when
+init and join both   3. user input must be one of local IP addresses   4. peer
+ringX_addr and local ringX_addr must in the same network
+- medium: bootstrap: check init options before running   * we can add other
+option checkings to here later
+- low: bootstrap: simplify the code for checking adminIP
+- low: bootstrap: reset dev value when input of dev not valid
+- low: bootstrap: catch OSError except instead of crash
+- low: bootstrap: give error hints when use sbd without watchdog
+- medium: enable add the second heartbeat line for mcast   Changes include:
+1. skip second heartbeat configure when number of local networks < 2   2.
+bindnetaddrs must be different and the gap between ports must larger than 1
+3. give different default value for second configuration   4. IPv4 & IPv6
+support
+- medium: bootstrap: adminIP should not be exist before config
+- medium: bootstrap: adminIP should not be the network self
+- fix: utils.list_cluster_nodes: use "crm_node -l" first
+- medium: utils: list_cluster_nodes: read nodes list from cib.xml
+- medium: utils: extend "IP/Network" codes for IPv4/IPv6 both
+- low: ui_cluster: strip "None" when cmd stdout is None
+- medium: bootstrap: valid adminIP   The administration virtaul IP must:   1)
+have a valid IPv4/IPv6 formation   2) belongs one of local networks
+- medium: bootstrap: use strict regrex and valid function for
+bindnetaddr/mcastaddr
+- low: bootstrap: when node joining, it will take a while after
+init_cluster_local
+- low: bootstrap: join_csync2 may take a long while   so, use status_long and
+status_done to give the hints
+- medium: bootstrap: configure with IPv6(unicast)
+- medium: bootstrap: configure with IPv6(mcast)   Changes include:   1) use
+"-I" option stand for IPv6 in ui_cluster   2) totem.ip_version should set as
+"ipv6"   3) choose one interface which has IPv6 address as default values   4)
+each node must have an uniqe nodeid when using IPv6,      the nodeid came from
+IPv6 address in default interface   5) for IPv6 network compute, learn from
+https://github.com/tehmaze/ipcalc
+- medium: bootstrap: disable completion and history when running bootstrap
+- low: ui_cluster: Add two new lines before add a new node
+- low: bootstrap: Don't rely on ha-cluster-* shortcuts
+- fix: bootstrap: remove cib.xml before corosync.add_node
+- low: bootstrap: color the input error message
+- medium: bootstrap: add callback function to check valid port range
+- high: cibconfig: Normalize - to _ in param names (bsc#1111579)
+- medium: ra: Handle obsoletes attribute (bsc#1111579)
+- Merge pull request #386 from deanrasheed/fix-RAInfo-constructor
+- Fix missing argument in RAInfo's constructor.
+
 * Fri Jul 21 2017 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - high: bootstrap: Add option to enable diskless SBD mode to cluster init (bsc#1045118)
 - high: cibconfig: Graph file output option was reversed (bsc#1036595)
