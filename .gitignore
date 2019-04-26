@@ -15,6 +15,7 @@ config.status
 configure
 crm.conf
 crmsh.spec
+crmsh.changes
 install-sh
 missing
 version
