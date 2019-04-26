@@ -58,6 +58,7 @@ hb_report/hb_report      \
 crm.conf                 \
 version                  \
 crmsh.spec               \
+crmsh.changes            \
 )
 
 AC_OUTPUT
