@@ -4,23 +4,70 @@ language: python
 services:
   - docker
 
+stages:
+  - test
+  - delivery
+  - submit  
+
 env:
   global:
     - CC_TEST_REPORTER_ID=a2579335b631ec35473874d7bb4fe983025c0287cea89c9dc34c35f98ee3963d
 
-before_script:
-  - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
-  - chmod +x ./cc-test-reporter
-  - ./cc-test-reporter before-build
+jobs:
+  include:
+    - stage: test
+      before_script:
+        - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+        - chmod +x ./cc-test-reporter
+        - ./cc-test-reporter before-build
 
-before_install:
-  - docker pull krig/crmsh:latest
+      before_install:
+        - docker pull krig/crmsh:latest
 
-script:
-  - docker run -t -v "$(pwd):/app" krig/crmsh /bin/sh -c "systemctl start dbus; cd /app; ./test/run-in-travis.sh"
+      script:
+        - docker run -t -v "$(pwd):/app" krig/crmsh /bin/sh -c "systemctl start dbus; cd /app; ./test/run-in-travis.sh"
 
-after_failure:
-  - sudo cat $TRAVIS_BUILD_DIR/crmtestout/regression.out $TRAVIS_BUILD_DIR/crmtestout/crm.*
+      after_failure:
+        - sudo cat $TRAVIS_BUILD_DIR/crmtestout/regression.out $TRAVIS_BUILD_DIR/crmtestout/crm.*
 
-after_script:
-  - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
+      after_script:
+        - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
+  
+    - stage: delivery
+      if: type != pull_request
+      env:
+        - FOLDER=/package
+        - PACKAGE_NAME=crmsh
+
+      before_install:
+        - docker pull shap/continuous_deliver:latest
+
+      script:
+        - |
+          docker run -t -v "$(pwd):/package" \
+          -e OBS_USER=$OBS_USER \
+          -e OBS_PASS=$OBS_PASS \
+          -e FOLDER=$FOLDER \
+          -e OBS_PROJECT=$OBS_PROJECT \
+          -e PACKAGE_NAME=$PACKAGE_NAME \
+          shap/continuous_deliver \
+          /bin/bash -c "cd /package;./autogen.sh;./configure;/scripts/upload.sh"
+
+    - stage: submit
+      if: type != pull_request AND branch = master
+      env:
+        - PACKAGE_NAME=crmsh
+
+      before_install:
+        - docker pull shap/continuous_deliver:latest
+
+      script:
+        - |
+          docker run -t -v "$(pwd):/package" \
+          -e OBS_USER=$OBS_USER \
+          -e OBS_PASS=$OBS_PASS \
+          -e OBS_PROJECT=$OBS_PROJECT \
+          -e PACKAGE_NAME=$PACKAGE_NAME \
+          -e TARGET_PROJECT=$TARGET_PROJECT \
+          shap/continuous_deliver \
+          /bin/bash -c "cd /package;/scripts/submit.sh"
