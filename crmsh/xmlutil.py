@@ -87,9 +87,17 @@ def cibdump2file(fname):
     return None
 
 
-def cibdump2tmp():
+def cibdump2tmp(filterfn=None):
     try:
         _, outp, _ = sudocall(cib_dump)
+        if filterfn is not None:
+            try:
+                cib_elem = etree.fromstring(outp)
+            except etree.ParseError as msg:
+                common_err(msg)
+                return None
+            filterfn(cib_elem)
+            outp = etree.tostring(cib_elem, pretty_print=True)
         if outp is not None:
             return str2tmp(outp)
     except IOError as msg:
@@ -667,6 +675,7 @@ def remove_text(e_list):
 
 
 def sanitize_cib(doc):
+
     xml_processnodes(doc, is_status_node, rmnodes)
     # xml_processnodes(doc, true, printid)
     # xml_processnodes(doc, is_emptynvpairs, rmnodes)
@@ -678,6 +687,17 @@ def sanitize_cib(doc):
     xml_processnodes(doc, true, remove_text)
     xmltraverse(doc, drop_attr_defaults)
 
+def sanitize_cib_for_patching(doc):
+    """
+    Custom version of sanitize_cib which
+    doesn't sort container children, to use
+    for processing the original CIB when
+    generating a patch to apply using crm_diff.
+    """
+    xml_processnodes(doc, is_status_node, rmnodes)
+    xml_processnodes(doc, is_entity, rmnodes)
+    xml_processnodes(doc, true, remove_dflt_attrs)
+    xml_processnodes(doc, true, remove_text)
 
 def is_simpleconstraint(node):
     return len(node.xpath("resource_set/resource_ref")) == 0
