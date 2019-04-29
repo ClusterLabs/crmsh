@@ -7,6 +7,7 @@ import os
 from itertools import chain
 from crmsh import utils
 from crmsh import config
+from crmsh import tmpfiles
 
 
 def test_systeminfo():
@@ -137,3 +138,32 @@ def test_network():
     assert net.has_key('2001:db8::1') is True
 
     assert utils.get_ipv6_network("2002:db8::2/64") == "2002:db8::"
+
+
+def test_parse_sysconfig():
+    """
+    bsc#1129317: Fails on this line
+
+    FW_SERVICES_ACCEPT_EXT="0/0,tcp,22,,hitcount=3,blockseconds=60,recentname=ssh"
+    """
+    s = '''
+FW_SERVICES_ACCEPT_EXT="0/0,tcp,22,,hitcount=3,blockseconds=60,recentname=ssh"
+'''
+
+    fd, fname = tmpfiles.create()
+    with open(fname, 'w') as f:
+        f.write(s)
+    sc = utils.parse_sysconfig(fname)
+    assert ("FW_SERVICES_ACCEPT_EXT" in sc)
+
+def test_sysconfig_set():
+    s = '''
+FW_SERVICES_ACCEPT_EXT="0/0,tcp,22,,hitcount=3,blockseconds=60,recentname=ssh"
+'''
+    fd, fname = tmpfiles.create()
+    with open(fname, 'w') as f:
+        f.write(s)
+    utils.sysconfig_set(fname, FW_SERVICES_ACCEPT_EXT="foo=bar", FOO="bar")
+    sc = utils.parse_sysconfig(fname)
+    assert (sc.get("FW_SERVICES_ACCEPT_EXT") == "foo=bar")
+    assert (sc.get("FOO") == "bar")
