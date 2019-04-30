@@ -40,8 +40,8 @@ jobs:
         - PACKAGE_NAME=crmsh
 
       before_install:
-        - docker pull shap/continuous_deliver:latest
-
+        - docker pull shap/continuous_deliver:autotools 
+      
       script:
         - |
           docker run -t -v "$(pwd):/package" \
@@ -50,7 +50,7 @@ jobs:
           -e FOLDER=$FOLDER \
           -e OBS_PROJECT=$OBS_PROJECT \
           -e PACKAGE_NAME=$PACKAGE_NAME \
-          shap/continuous_deliver \
+          shap/continuous_deliver:autotools \
           /bin/bash -c "cd /package;./autogen.sh;./configure;/scripts/upload.sh"
 
     - stage: submit
