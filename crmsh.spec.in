@@ -39,7 +39,7 @@ Group:          %{pkg_group}
 Version:        @VERSION@
 Release:        0
 Url:            http://crmsh.github.io
-Source0:        %{name}-%{version}.tar.bz2
+Source0:        %{name}-%{version}.tar.gz
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 %if 0%{?suse_version}
