@@ -34,7 +34,7 @@ jobs:
         - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
   
     - stage: delivery
-      if: type != pull_request
+      if: type != pull_request AND branch = master
       env:
         - FOLDER=/package
         - PACKAGE_NAME=crmsh
