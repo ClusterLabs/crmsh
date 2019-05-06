@@ -88,7 +88,7 @@ chmod +x .git/hooks/pre-commit
 
 You can contribute following the standard `fork -> clone -> change -> pull request` Github process for code changes. The pull request process is integrated with the [openSUSE Build Service](https://build.opensuse.org/), and as soon as it gets merged, a new RPM package is built on [network:ha-clustering:Unstable](https://build.opensuse.org/project/show/network:ha-clustering:Unstable) and a `submit request` is created to the _crmsh_ package maintainers at [network:ha-clustering:Factory](https://build.opensuse.org/project/show/network:ha-clustering:Factory).
 
-Please, include also a changelog entry into the [crmsh.changes.in](crmsh.changes.in) file when is it relevant. It will be included on the RPM package changelog.
+The commit messages are used to create the changelog, so, please, include relevant and comprehensive messages on your commits.
 
 ## Community
 
