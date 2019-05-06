@@ -160,3 +160,24 @@ Deleted nodes attribute: id=nodes-node1-a1 name=a1
   </configuration>
 </cib>
 
+.TRY node clearstate node1
+.INP: configure
+.INP: _regtest on
+.INP: show xml node1
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes>
+      <node uname="node1" id="node1">
+        <instance_attributes id="nodes-node1">
+          <nvpair id="nodes-node1-standby" name="standby" value="off"/>
+          <nvpair id="nodes-node1-maintenance" name="maintenance" value="off"/>
+        </instance_attributes>
+      </node>
+    </nodes>
+    <resources/>
+    <constraints/>
+  </configuration>
+</cib>
+

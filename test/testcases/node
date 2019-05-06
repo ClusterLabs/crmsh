@@ -8,3 +8,5 @@ node ready node1
 node attribute node1 set a1 "1 2 3"
 node attribute node1 show a1
 node attribute node1 delete a1
+node clearstate node1
+
