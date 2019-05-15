@@ -1,7 +1,6 @@
 # crmsh
 
 [![Build Status](https://travis-ci.org/ClusterLabs/crmsh.svg?branch=master)](https://travis-ci.org/ClusterLabs/crmsh)
-[![Code Health](https://landscape.io/github/ClusterLabs/crmsh/master/landscape.svg?style=flat)](https://landscape.io/github/ClusterLabs/crmsh/master)
 
 ## Introduction
 
