@@ -1,0 +1,30 @@
+Set r/w permissions for uid=90, gid=90 on /var/log/pacemaker/pacemaker.log
+� ∀↱
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (crm_log_init) 	info: Changed active directory to /var/lib/pacemaker/cores
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (get_cluster_type) 	info: ¶ an ⅓ 'corosync' cluster
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (mcp_read_config) 	info: ⚽ configure for stack: corosync
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (main) 	notice: → Pacemaker 2.0.1+20190304.9e909a5bd-1.4 | build=2.0.1+20190304.9e909a5bd features: generated-manpages agent-manpages ncurses libqb-logging libqb-ipc lha-fencing systemd nagios  corosync-native atomic-attrd acls cibsecrets
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (main) 	info: Maximum core file size is: 18446744073709551615Ḽơᶉëᶆ ȋṕšᶙṁ ḍỡḽǭᵳ ʂǐť ӓṁệẗ, ĉṓɲṩḙċťᶒțûɾ ấɖḯƥĭṩčįɳġ ḝłįʈ, șếᶑ ᶁⱺ ẽḭŭŝḿꝋď ṫĕᶆᶈṓɍ ỉñḉīḑȋᵭṵńť ṷŧ ḹẩḇőꝛế éȶ đꝍꞎôꝛȇ ᵯáꞡᶇā ąⱡîɋṹẵ.
+Apr 03 11:01:18 15sp1-1 pacemakerd          [1941] (qb_ipcs_us_publish) 	info: 你好 \xf0\x28\x8c\x28: pac我很特殊
+Apr 03 11:01:18 15sp1-1 pacemaker-execd     [1945] (qb_ipcs_us_publish)         info: κόσμε
+Apr 03 11:01:18 15sp1-1 pacemaker-execd     [1945] (main)       info: a  a 𐀀
+Apr 03 11:01:18 15sp1-1 pacemaker-execd     [1945] (main)       info: \xc3\x28  a 𐀀
+Apr 03 11:01:18 15sp1-1 pacemaker-schedulerd[1947] (crm_log_init)       info: � d�ectory to /var/lib/pacemaker/cores
+Apr 03 11:01:18 15sp1-1 pacemaker-sche,̆dulerd[1947] (qb_ipcs_us_publish)         info: 𐀀 name: pengine
+Apr 03 11:01:18 15sp1-1 pacemaker-schedulerd[1947] (main)       info: �����r-schedulerd
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (crm_log_init)       info: ������ directory to /var/lib/pacemaker/cores
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (get_cluster_type)   info: Verifying cluster type: 'corosync' ������
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (get_cluster_type)   info: � � � � � � � � � � � � � � � �
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (pcmk__daemon_can_write)     notice: �����������������������������
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (retrieveCib)        info: Reading cluster\xa0\xa1 configuration file /var/lib/pacemaker/cib/cib.xml (﷐﷑﷒﷓﷔﷕﷖﷗﷘﷙﷚﷛﷜﷝﷞﷟﷠﷡﷢﷣﷤﷥﷦﷧﷨﷩﷪﷫﷬﷭﷮﷯digest: /var/lib/pacemaker/cib/cib.xml.sig)
+Apr 03 11:01:18 15sp1-1 pacemaker-based     [1943] (cib_file_read_and_verify)   warning: Could not verify cluster configuration file /var/lib/pacemaker/cib/cib.xml: No such file or directory \xF0\xA4\xAD  (2)
+Apr 03 13:33:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop)   info: Node 1 is already processed "\xF0\xA4\xAD\xA2"."\xF0\xA4\xAD\xA2"
+Apr 03 13:33:34 15sp1-1 pacemaker-schedulerd[1947] (unpack_node_loop)   info: Node 2 is already processed "\xF0\xA4\xAD\xA2"."\xF0\xA4\xAD\xA2"."\xF0\xA4\xAD"
+Apr 03 13:33:34 15sp1-1 pacemaker-schedulerd[1947] (stage6)     notice: Delaying fencing operations until there are resources to manage
+Apr 03 13:33:34 15sp1-1 pacemaker-schedulerd[1947] (process_pe_message)         notice: Calculated transition 14, saving inputs in /var/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 13:33:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition)        info: State transition S_POLICY_ENGINE -> S_TRANSITION_ENGINE | input=I_PE_SUCCESS cause=C_IPC_MESSAGE origin=handle_response
+Apr 03 13:33:34 15sp1-1 pacemaker-controld  [1948] (do_te_invoke)       notice: Processing graph 14 (ref=pe_calc-dc-1554269614-42) derived from /v \xf0\x90\x8c\xb car/lib/pacemaker/pengine/pe-input-4.bz2
+Apr 03 13:33:34 15sp1-1 pacemaker-controld  [1948] (run_graph)  notice: Transition 14 (Complete=0, Pending=0,åabc Fired=0, Skipped=0, \xf0\x28\x8c\xbc Incomplete=0, Source=/var/lib/pacemake \xf0\x90\x28\xbcr/pengine/pe-input-4.bz2): Complete
+Apr 03 13:33:34 15sp1-1 pacemaker-controld  [1948] (do_log)     info: Input I_TE_SUCCESS received in state S_TRANSITION_ENGINE fro\xf8\xa1\xa1\xa1\xa1m \xf0\x28\x8c\x28notify_crmd
+Apr 03 13:33:34 15sp1-1 pacemaker-controld  [1948] (do_state_transition)        notice: State transition \xfc\xa1\xa1\xa1\xa1\xa1S_TRANSITION_ENGINE -> S_IDLE | input=I_TE_SUCCESS cause=C_FSA_INTERNAL origin=notify_crmd
+Apr 03 13:37:23 15sp1-1 pacemaker-controld  [1948] (handle_ping)        notice: \xfc\xa1\xa1\xa1\xa1\xa1 test_unicode

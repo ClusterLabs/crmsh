@@ -15,15 +15,45 @@ import stat
 import string
 import subprocess
 import sys
+import atexit
 import tempfile
 import contextlib
 from dateutil import tz
 from threading import Timer
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import constants
 import crmsh.config
 from crmsh import msg as crmmsg
 from crmsh import utils as crmutils
+
+
+class Tempfile(object):
+
+    def __init__(self):
+        self.file = create_tempfile()
+        log_debug("create tempfile \"{}\"".format(self.file))
+
+    def add(self, filename):
+        with open(self.file, 'a') as f:
+            f.write(filename + '\n')
+        log_debug("add tempfile \"{}\" to \"{}\"".format(filename, self.file))
+
+    def drop(self):
+        with open(self.file, 'r') as f:
+            for line in f.read().split('\n'):
+                if os.path.isdir(line):
+                    shutil.rmtree(line)
+                if os.path.isfile(line):
+                    os.remove(line)
+        os.remove(self.file)
+        log_debug("remove tempfile \"{}\"".format(self.file))
+
+
+def add_tempfiles(filename):
+    t = Tempfile()
+    t.add(filename)
+    atexit.register(t.drop)
 
 
 def _mkdir(directory):
@@ -35,14 +65,6 @@ def _mkdir(directory):
             os.makedirs(directory)
         except OSError as err:
             log_fatal("Failed to create directory: %s" % (err))
-
-
-def add_tmpfiles(contents):
-    """
-    add contents for removing when program exit
-    """
-    with open(constants.TMPFLIST, 'a') as f:
-        f.write(contents+'\n')
 
 
 def arch_logs(logf, from_time, to_time):
@@ -450,19 +472,6 @@ def dlm_dump():
         crmutils.str2file(out_string, dlm_f)
 
 
-def drop_tempfiles():
-    """
-    tmp files business
-    """
-    with open(constants.TMPFLIST, 'r') as f:
-        for line in f.read().split('\n'):
-            if os.path.isdir(line):
-                shutil.rmtree(line)
-            if os.path.isfile(line):
-                os.remove(line)
-    os.remove(constants.TMPFLIST)
-
-
 def dump_log(logf, from_line, to_line):
     if not from_line:
         return
@@ -549,20 +558,19 @@ def find_files(dirs, from_time, to_time):
         log_warning("sorry, can't find files based on time if you don't supply time")
         return
 
-    from_stamp = create_tempfile(from_time)
-    add_tmpfiles(from_stamp)
-    findexp = "-newer %s" % from_stamp
+    file_with_stamp = create_tempfile(from_time)
+    findexp = "-newer %s" % file_with_stamp
 
     if crmutils.is_int(to_time) and to_time > 0:
-        to_stamp = create_tempfile(to_time)
-        add_tmpfiles(to_stamp)
-        findexp += " ! -newer %s" % to_stamp
+        file_with_stamp = create_tempfile(to_time)
+        findexp += " ! -newer %s" % file_with_stamp
 
     cmd = r"find %s -type f %s" % (dirs, findexp)
     cmd_res = get_command_info(cmd)[1].strip()
     if cmd_res:
         res = cmd_res.split('\n')
 
+    os.remove(file_with_stamp)
     return res
 
 
@@ -586,10 +594,10 @@ def find_first_ts(data):
 def filter_lines(logf, from_line, to_line=None):
     out_string = ""
     if not to_line:
-        to_line = sum(1 for l in open(logf, 'r', encoding='utf-8'))
+        to_line = sum(1 for l in open(logf, 'r', encoding='utf-8', errors='replace'))
 
     count = 1
-    with open(logf, 'r', encoding='utf-8') as f:
+    with open(logf, 'r', encoding='utf-8', errors='replace') as f:
         for line in f.readlines():
             if count >= from_line and count <= to_line:
                 out_string += line
@@ -617,7 +625,7 @@ def finalword():
 def find_getstampproc(log_file):
     func = None
     loop_cout = 10
-    with open(log_file, 'r', encoding='utf-8') as f:
+    with open(log_file, 'r', encoding='utf-8', errors='replace') as f:
         for line in f.readlines():
             if loop_cout == 0:
                 break
@@ -712,7 +720,7 @@ def find_ssh_user():
 def findln_by_time(logf, tm):
     tmid = None
     first = 1
-    last = sum(1 for l in open(logf, 'r', encoding='utf-8'))
+    last = sum(1 for l in open(logf, 'r', encoding='utf-8', errors='replace'))
     while first <= last:
         mid = (last+first)//2
         trycnt = 10
@@ -1192,7 +1200,7 @@ def is_our_log(logf, from_time, to_time):
 
 def line_time(logf, line_num):
     ts = None
-    with open(logf, 'r', encoding='utf-8') as fd:
+    with open(logf, 'r', encoding='utf-8', errors='replace') as fd:
         line_res = head(line_num, fd.read())
         if line_res:
             ts = get_ts(line_res[-1])
@@ -1358,7 +1366,8 @@ def print_logseg(logf, from_time, to_time):
     cat = find_decompressor(logf)
     if cat != "cat":
         tmp = create_tempfile()
-        add_tmpfiles(tmp)
+        add_tempfiles(tmp)
+
         cmd = "%s %s > %s" % (cat, logf, tmp)
         code, out, err = crmutils.get_stdout_stderr(cmd)
         if code != 0:
@@ -1444,7 +1453,7 @@ def sanitize_one(in_file, mode=None):
             return 0
 
     ref = create_tempfile()
-    add_tmpfiles(ref)
+    add_tempfiles(ref)
     touch_r(in_file, ref)
 
     with open_(in_file, 'w') as f:

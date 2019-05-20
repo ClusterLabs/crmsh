@@ -2,7 +2,6 @@
 # Copyright (C) 2017 Xin Liang <XLiang@suse.com>
 # See COPYING for license information.
 
-import atexit
 import getopt
 import multiprocessing
 import os
@@ -11,6 +10,7 @@ import sys
 import datetime
 import shutil
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import constants
 import utillib
 from crmsh import utils as crmutils
@@ -210,10 +210,8 @@ def parse_argument(argv):
 def run():
 
     utillib.check_env()
-    constants.TMPFLIST = utillib.create_tempfile()
-    atexit.register(utillib.drop_tempfiles)
     tmpdir = utillib.make_temp_dir()
-    utillib.add_tmpfiles(tmpdir)
+    utillib.add_tempfiles(tmpdir)
 
     #
     # get and check options; and the destination
@@ -411,6 +409,11 @@ def version():
 
 
 if __name__ == "__main__":
-    run()
+    try:
+        run()
+    except UnicodeDecodeError:
+        import traceback
+        traceback.print_exc()
+        sys.stdout.flush()
 
 # vim:ts=4:sw=4:et:
