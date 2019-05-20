@@ -728,15 +728,18 @@ def init_corosync_auth():
 
 def valid_network(addr, prev_value=None):
     """
-    bindnetaddr(IPv4) must one of the local networks
+    bindnetaddr(IPv4) must one of the local networks or local IP addresses
     """
     if prev_value and addr == prev_value[0]:
         warn("  Network address '{}' is already in use!".format(addr))
         return False
-    all_ = utils.network_all()
-    if all_ and addr in all_:
+
+    all_networks = utils.network_all()
+    all_ips = utils.ip_in_local()
+    if addr in all_networks or \
+       addr in all_ips:
         return True
-    warn("  Address '{}' invalid, expected one of {}".format(addr, all_))
+    warn("  Address '{}' invalid, expected one of {}".format(addr, all_networks + all_ips))
     return False
 
 
@@ -982,7 +985,7 @@ Configure Corosync:
 
         else:
             bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)',
-                                            r'([0-9]+\.){3}0$',
+                                            r'([0-9]+\.){3}[0-9]+',
                                             pick_default_value(default_networks, bindnetaddr_res),
                                             valid_network,
                                             bindnetaddr_res)
