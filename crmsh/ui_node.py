@@ -259,9 +259,11 @@ class NodeMgmt(command.UI):
             cib_elem = xmlutil.cibdump2elem()
             if cib_elem is None:
                 return False
-            node_state = cib_elem.xpath("//node_state[@uname=\"%s\"]/@crmd" % node)
-            if node_state == ['online']:
+            if cib_elem.xpath("//node_state[@uname=\"%s\"]/@crmd" % node) == ["online"]:
                 return utils.ext_cmd(self.node_cleanup_resources % node) == 0
+            elif cib_elem.xpath("//node_state[@uname=\"%s\"]/@in_ccm" % node) == ["true"]:
+                common_warn("Node is offline according to Pacemaker, but online according to corosync. First shut down node '%s'" % node)
+                return False
             else:
                 return utils.ext_cmd(self.node_clear_state_118 % node) == 0
         else:
