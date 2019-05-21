@@ -195,11 +195,11 @@ def check_logs(workdir):
     out_string = ""
     log_list = []
     for l in constants.EXTRA_LOGS.split():
-        log_list += find_files_all(workdir, os.path.basename(l))
+        log_list += find_files_all(os.path.basename(l), workdir)
     if not log_list:
         return out_string
 
-    out_string += "Log patterns:\n"
+    out_string += "\nLog patterns:\n"
     log_patterns = constants.LOG_PATTERNS.replace(' ', '|')
     for n in constants.NODES.split():
         for f in log_list:
