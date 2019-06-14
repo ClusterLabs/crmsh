@@ -5,10 +5,21 @@ from __future__ import unicode_literals
 # unit tests for utils.py
 
 import os
+from unittest import mock
 from itertools import chain
 from crmsh import utils
 from crmsh import config
 from crmsh import tmpfiles
+
+
+def test_to_ascii():
+    assert utils.to_ascii(None) is None
+    assert utils.to_ascii('test') == 'test'
+    assert utils.to_ascii(b'test') == 'test'
+    # Test not utf-8 characters
+    with mock.patch('traceback.print_exc') as mock_traceback:
+        assert utils.to_ascii(b'te\xe9st') == 'test'
+    mock_traceback.assert_called_once_with()
 
 
 def test_systeminfo():

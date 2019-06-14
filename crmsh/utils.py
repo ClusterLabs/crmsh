@@ -27,20 +27,20 @@ from .msg import common_warn, common_info, common_debug, common_err, err_buf
 mcast_regrex = r'2(?:2[4-9]|3\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d?|0)){3}'
 
 
-def to_ascii(s):
+def to_ascii(input_str):
     """Convert the bytes string to a ASCII string
     Usefull to remove accent (diacritics)"""
-    if s is None:
-        return s
-    if isinstance(s, str):
-        return s
+    if input_str is None:
+        return input_str
+    if isinstance(input_str, str):
+        return input_str
     try:
-        return str(s, 'utf-8')
+        return str(input_str, 'utf-8')
     except UnicodeDecodeError:
         if config.core.debug or options.regression_tests:
             import traceback
             traceback.print_exc()
-        return s
+        return input_str.decode('utf-8', errors='ignore')
 
 
 def filter_keys(key_list, args, sign="="):
