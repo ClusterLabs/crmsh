@@ -1,4 +1,5 @@
 * Fri Jun 21 2019 Diego Akechi <dakechi@suse.com> and many others
+- Release 4.1.0
 - Fix: utils: issue in to_ascii (bsc#1138115)
 - Fix: bootstrap: bindnetaddr should accept both network and specific IP(bsc#1135585, bsc#1135586)
 - Fix: hb_report: analysis.txt should includes warning, error, critical messages(bsc#1135696)
@@ -50,6 +51,7 @@
 - High: hbreport: fix UnicodeEncodeError while print(bsc#1093564)
 
 * Thu Mar 28 2019 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- Release 3.0.4
 - Fix: bootstrap: "-i" option doesn't work(bsc#1103833, bsc#1103834)
 - high: bootstrap: Use default IP address for ring0 (bsc#1069142)
 - low: bootstrap: change multi-heartbeats as option-mode
@@ -91,12 +93,14 @@
 - Fix missing argument in RAInfo's constructor.
 
 * Thu Jun 28 2018 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- Release 3.0.3
 - low: bootstrap: suppress the error message
 - high: bootstrap: expected votes wouldn't update in unicast mode
 - medium: bootstrap: run "csync2_update" for all files after new joining node call csync2_remote (bsc#1087248)
 - medium: utils: Avoid crash on missing process id (bsc#1084730)
 
 * Thu Jun 28 2018 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- Release 3.0.2
 - high: ra: Support Pacemaker 2.0 daemon names
 - high: config: Locate pacemaker daemons more intelligently (#67) (bsc#1096783)
 - Fix: TypeError in logparser.py(bsc#1093433)
@@ -320,6 +324,7 @@
 - doc: Bootstrap howto guide
 
 * Fri Jul 21 2017 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- Release 3.0.1
 - low: ui_cluster: when have an error for optparse, just return and stay at shell
 - low: ui_cluster: when use help option, do not exit, just print help messages and return
 - medium: bootstrap: replace 'nodename' to 'seed_host'     because when given a node name which is not configured in cluster, program will crash     and say - UnboundLocalError: local variable 'nodename' referenced before assignment
