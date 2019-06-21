@@ -1,3 +1,351 @@
+* Fri Jun 21 2019 Diego Akechi <dakechi@suse.com> and many others
+- Fix: utils: issue in to_ascii (bsc#1138115)
+- Fix: bootstrap: bindnetaddr should accept both network and specific IP(bsc#1135585, bsc#1135586)
+- Fix: hb_report: analysis.txt should includes warning, error, critical messages(bsc#1135696)
+- Included Contributing Section on README.
+- medium: ui_node: Check corosync state before clearstate (bsc#1129702)
+- fix: hb_report: handle UnicodeDecodeError(bsc#1130715)   * setting error='replace' to replace invalid utf-8 characters   * try to catch UnicodeDecodeError and print traceback
+- medium: cibconfig: Sanitize CIB for patching (bsc#1127716)
+- high: cibconfig: Use correct CIB as patch base (bsc#1127716)
+- medium: parse: Detect and error on illegal ordering of op attributes (bsc#1129210)
+- medium: utils: Handle sysconfig values containing = (bsc#1129317)
+- low: hb_report: collect output of "sbd dump" and "sbd list"(bsc#1129383)
+- low: msg: add timestamp for DEBUG messages(bsc#1129380)
+- Fix: bsc#1129719: check command and related files exist
+- Low: doc: add related notice for new "promot*" tags
+- High: testcase: add testcases from new added "promot*"tags
+- High: constants: add "promotable", "promoted-max" and "promoted-node-max" in clone meta attributes
+- Low: testcase: add testcase for #425
+- Fix: cibconfig: #425 The ID attribute is not required for select and select_attributes
+- doc: Add guide to releasing new versions
+- medium: scripts: Set kind for order constraints, not score (bsc#1123187)
+- low: utils: add support for dpkg
+- low: utils: add support for apt-get
+- low: utils: convert string contstants to bytes
+- High: Testcases: update the testcases/bugs for bsc#1120554
+- Fix: bsc#1120857,1120856 bootstrap warning messages should better start with like "WARNING:" instead of "!"
+- Fix: bsc#1120554, bsc#1120555 crmsh crashed when using configure>template>apply
+- medium: cibverify: Increase log level for verification (bsc#1116559)
+- high: cibconfig: Normalize - to _ in param names (bsc#1111579)
+- medium: ra: Handle obsoletes attribute (bsc#1111579)
+- ui_cluster: restart cluster is added
+- auto-commit enabling/disabling maintenance mode for a whole cluster
+- medium: bootstrap: Skip netmask check on GCP (bsc#1106946)
+- medium: utils: Detect local IP on GCP (bsc#1106946)
+- medium: bootstrap: Correctly check rrp_mode flag (bsc#1110463)
+- medium: bootstrap: Pick first match for multiple routes (bsc#1106946)
+- medium: utils: Use cloud metadata service to discover IP (bsc#1106946)
+- Fix: bootstrap: change default ip address way for both mcast and unicat(bsc#1109975,bsc#1109974)
+- Fix incorrect bindnetaddr in corosync.conf (bsc#1103833) (bsc#1103834)
+- fix: bootstrap: non interactive unicast cluster init and join(bsc#1109172)
+- medium: bootstrap: Disable strict host key checking on all ssh invocations
+- support ocfs2 log collecting
+- hbreport: process name change for pacemaker 2.0(bsc#1106052)
+- Fix: bootstrap: "-i" option doesn't work(bsc#1103833, bsc#1103834)
+- Low: bootstrap: No warning message when using '-q'
+- high: ra: Support Pacemaker 2.0 daemon names
+- high: config: Locate pacemaker daemons more intelligently (#67) (bsc#1096783)
+- Low: Travis-CI: make sure exit value is not 0 while unittest failed
+- Fix: TypeError in logparser.py(bsc#1093433)
+- High: hbreport: fix UnicodeEncodeError while print(bsc#1093564)
+
+* Thu Mar 28 2019 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- Fix: bootstrap: "-i" option doesn't work(bsc#1103833, bsc#1103834)
+- high: bootstrap: Use default IP address for ring0 (bsc#1069142)
+- low: bootstrap: change multi-heartbeats as option-mode
+- low: bootstrap: Clarify messages
+- low: bootstrap: give a confirm message when remove node
+- low: bootstrap: Improve comments / error messages
+- low: bootstrap: Fall back to logging into $TMPDIR/ha-cluster-bootstrap.log
+- low: bootstrap: Check for firewalld before SuSEfirewall2
+- medium: bootstrap: Add support for chrony
+- Detect firewall by checking installed packages
+- low: ui_cluster: complete node name once     or the same node name will be completed many times with many "Tab"s
+- medium: enable add the second heartbeat line for unicast   Changes inlcude:   1. IPv4 & IPv6 support   2. user should specify local IP for ringX_addr when init and join both   3. user input must be one of local IP addresses   4. peer ringX_addr and local ringX_addr must in the same network
+- medium: bootstrap: check init options before running   * we can add other option checkings to here later
+- low: bootstrap: simplify the code for checking adminIP
+- low: bootstrap: reset dev value when input of dev not valid
+- low: bootstrap: catch OSError except instead of crash
+- low: bootstrap: give error hints when use sbd without watchdog
+- medium: enable add the second heartbeat line for mcast   Changes include:   1. skip second heartbeat configure when number of local networks < 2   2. bindnetaddrs must be different and the gap between ports must larger than 1   3. give different default value for second configuration   4. IPv4 & IPv6 support
+- medium: bootstrap: adminIP should not be exist before config
+- medium: bootstrap: adminIP should not be the network self
+- fix: utils.list_cluster_nodes: use "crm_node -l" first
+- medium: utils: list_cluster_nodes: read nodes list from cib.xml
+- medium: utils: extend "IP/Network" codes for IPv4/IPv6 both
+- low: ui_cluster: strip "None" when cmd stdout is None
+- medium: bootstrap: valid adminIP   The administration virtaul IP must:   1) have a valid IPv4/IPv6 formation   2) belongs one of local networks
+- medium: bootstrap: use strict regrex and valid function for bindnetaddr/mcastaddr
+- low: bootstrap: when node joining, it will take a while after init_cluster_local
+- low: bootstrap: join_csync2 may take a long while   so, use status_long and status_done to give the hints
+- medium: bootstrap: configure with IPv6(unicast)
+- medium: bootstrap: configure with IPv6(mcast)   Changes include:   1) use "-I" option stand for IPv6 in ui_cluster   2) totem.ip_version should set as "ipv6"   3) choose one interface which has IPv6 address as default values   4) each node must have an uniqe nodeid when using IPv6,      the nodeid came from IPv6 address in default interface   5) for IPv6 network compute, learn from      https://github.com/tehmaze/ipcalc
+- medium: bootstrap: disable completion and history when running bootstrap
+- low: ui_cluster: Add two new lines before add a new node
+- low: bootstrap: Don't rely on ha-cluster-* shortcuts
+- fix: bootstrap: remove cib.xml before corosync.add_node
+- low: bootstrap: color the input error message
+- medium: bootstrap: add callback function to check valid port range
+- high: cibconfig: Normalize - to _ in param names (bsc#1111579)
+- medium: ra: Handle obsoletes attribute (bsc#1111579)
+- Fix missing argument in RAInfo's constructor.
+
+* Thu Jun 28 2018 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- low: bootstrap: suppress the error message
+- high: bootstrap: expected votes wouldn't update in unicast mode
+- medium: bootstrap: run "csync2_update" for all files after new joining node call csync2_remote (bsc#1087248)
+- medium: utils: Avoid crash on missing process id (bsc#1084730)
+
+* Thu Jun 28 2018 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- high: ra: Support Pacemaker 2.0 daemon names
+- high: config: Locate pacemaker daemons more intelligently (#67) (bsc#1096783)
+- Fix: TypeError in logparser.py(bsc#1093433)
+- Parse /32 route entries
+- medium: ui_cluster: Stop corosync when stopping pacemaker (bsc#1066156)
+- low: ui_node: normal is deprecated in favor of member
+- fix: ui_resource: Using crm_failcount instead of crm_attribute(bsc#1074127)
+- Fix is_program(dmidecode) error (bsc#1070344)
+- low: ra: Don't require deprecated parameters (#321)
+- medium: bootstrap: Missing dmidecode on ppc64le (bsc#1069802)
+- low: bootstrap: Improve message when sbd is not installed (bsc#1050427)
+- Fix SBD configuration when using SBD device (Fixes #235)
+
+
+* Fri May 18 2018 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- Release 4.0.0 - Python3 only compatible.
+- Parse /32 route entries
+- low: terminal will lose cursor after type ctrl+c(bsc#1090626)
+- high: bash_completion: Adjust for non-interactive mode(bsc#1090304)
+- low: ui_configure: Adjust prompt string after help messages(bsc#1090140)
+- doc: Fix unbalanced example marker
+- high: hbreport: adjustment for hbreport(bsc#1088784)   * encoding utf-8 when open a file   * pacemaker.log should not exclude as HA_LOG
+- high: ui_resource: Undeprecate refresh and remove reprobe (bsc#1084736)
+- Update man-2.0.adoc
+- Update man-1.2.adoc
+- Update crm.8.adoc
+- Update man-3.adoc
+- low: bootstrap: Updated authkey generation (bsc#1077389)
+- low: bootstrap: Strip spaces before some status descriptions
+- fix: bootstrap: Create pacemaker_remote authkey(#bsc 1077389)
+- low: bootstrap: Always ask whether to use sbd
+- fix: hb_report: using log_debug instead of log_warning
+- fix: hb_report: got the right file decompressor(bsc#1077553)
+- medium: hb_report: Avoid calling deprecated network utilities (bsc#1073638)
+- high: crm_script: Python2->3 string conversion crash in wizards (bsc#1074835)
+- fix: hb_report: Collect irregular log file
+- fix: hb_report: Don't create *.log.info file if not in timespan
+- medium: hb_report: implement dlm_dump info
+- fix: hb_report: sbd info patch for review
+- fix: hb_report: add some new packages name in constants.PACKAGES
+- fix: hb_report: collect sbd info (bsc#1076389)
+- low: constants: Add bundle to more lists of things
+- low: xmlutil: Add bundle to sort (bsc#1076239)
+- medium: constants: Add bundle to constants (bsc#1076239)
+- implement logic for lms and ffsplit
+- low: ui_node: normal is deprecated in favor of member
+- medium: ui_cluster: Stop corosync when stopping pacemaker (bsc#1066156)
+- low: ui_configure: no complete for rename new_id
+- high: bootstrap: Add QDevice/QNetd support (bsc#1070961)
+- medium: bootstrap: Don't try to remove full nodes from remote nodes
+- low: bootstrap: Don't ssh to localhost in remove
+- clvm-vg wizard: update to use LVM-activate RA
+- clvm wizard: update to use lvmlockd instead of clvmd
+- fix: cibconfig: cleanup codes about default-action-timeout
+- high: scripts: Enable complex expressions in when: (bsc#1074835)
+- medium: hb_report: Support new pacemaker.log location (fate#324508)
+- low: ui_configure: enable completer for rsc_template
+- low: ui_configure: Complete rsc template correctly
+- fix: ra: Convert bytes to str
+- fix: ui_resource: Using crm_failcount instead of crm_attribute(bsc#1074127)
+- low: ui_configure: improve do_group completer
+- high: scripts: Fix Python 3 migration issues in health, check-uptime (bsc#1071519)
+- high: parse: Support new alert syntax (#280) (bsc#1069129)
+- low: ui_configure: use filter_keys replace any_startswith
+- fix: hb_report: return "" to avoid TypeError
+- high: bootstrap: Fix firewall reload command invocation (bsc#1071108)
+- high: bootstrap: Encode, not decode (bsc#1070344)
+- Fix writing non-ascii chars to log (bsc#1070344)
+- Fix is_program(dmidecode) error (bsc#1070344)
+- low: ui_configure: fix for 309d2e, remove "id=" in a save way
+- low: ra: Don't require deprecated parameters (#321)
+- medium: bootstrap: Missing dmidecode on ppc64le (bsc#1069802)
+- high: crm_rpmcheck: Fix bytes to str encoding error (bsc#1069294)
+- high: bootstrap: Use default IP address for ring0 (bsc#1069142)
+- low: cibconfig: replace etree.tostring to xml_tostring for debug/error messages
+- low: ui_configure: Improve group/clone/ms completer
+- low: bootstrap: Change error/confirm message with specific device name
+- medium: bootstrap: fix init vgfs crash if no "-o device" option
+- medium: bootstrap: fix init storage crash if no value input
+- low: ui_configure: Improve do_clone completer
+- medium: scripts: make sure gfs2 can be configured using hawk(bsc#1067123)
+- low: ui_configure: fix for db4fc62, not complete if previous' value changed
+- low: utils: convert bytes to str(bsc#1067823)
+- Low: ui_context: Continue completing when input is an alias
+- medium: ui_configure: fix crash when no args given
+- high: utils: Use python3 in util scripts (bsc#1067823)
+- Low: script: Add nginx script for Hawk
+- medium: filter exist args
+- high: bootstrap: Use firewall-offline-cmd for firewalld (bsc#1067498)
+- medium: hb_report: Verify corosync.conf exists before opening it (bsc#1067456)
+- low: config: Collect /var/log/ha-cluster-bootstrap.log (bsc#1067438)
+- medium: bootstrap: Avoid SSH to localhost (bsc#1067324)
+- low: bootstrap: Clarify removal warning
+- low: bootstrap: Avoid printing None instead of NTP service name
+- high: bootstrap: Fix readline error in cluster remove (bsc#1067424)
+- low: cibconfig: use refresh instead of reset after commit
+- high: bootstrap: revert corosync ports for mcast configuration as well (bsc#1066196)
+- high: bootstrap: Revert default corosync port to 5405/5404 (bsc#1066196)
+- low: ui_context: reset term when using help command+ctrlC   If dont do this, type "ctrl+C" when using help command will cause   the term lost curses.
+- medium: NewCommit: ui_configure: complete for ra actions   * append action items which in agent default actions;   * monitor_Master will be mapped to "monitor role=Master".   * monitor_Slave will be mapped to "monitor role=Slave"   * remove action items which not in default actions   * remove action items which already used   * make sure all of default items can be completed
+- medium: ui_configure: Replace compl.null to compl.attr_id where an id is required
+- low: utils: Stop using deprecated functionality
+- medium: ui_context: Stop completing when an id is required
+- low: ui_script: Sort keys when printing JSON
+- Updating the exception type used for catching a missing process id.  This change is based on recommendations from @krig regarding handling the base exception class.
+- medium: enable add the second heartbeat line for unicast   Changes inlcude:   1. IPv4 & IPv6 support   2. user should specify local IP for ringX_addr when init and join both   3. user input must be one of local IP addresses   4. peer ringX_addr and local ringX_addr must in the same network
+- low: bootstrap: change multi-heartbeats as option-mode
+- medium: bootstrap: check init options before running   * we can add other option checkings to here later
+- medium: ui_corosync: adjust do_push's completer
+- low: ui_corosync: adjust do_pull's output hints
+- medium: ui_corosync: adjust for do_delnode   * add completer to complete node for delete   * limit to udpu transport
+- low: ui_corosync: adjust for do_diff completer   * remove node name which already completed   * limit completing node number to 2
+- low: ui_root: add completers for do_status
+- Update Dockerfile
+- fix exception of xml sort in python3
+- make it compatible with python3
+- This is a proposed fix for bug 283.  The fix was to change the except object type to IOError when a directory cannot be found due to a process that has terminated.
+- medium: bootstrap: Only call firewall-cmd if firewalld is active
+- medium: ui_node: node attribute/status-attr is about node attr, not for resources
+- low: ordereddict: Use builtin if available
+- medium: ui_node: node utilization is about node attr, not for resources
+- medium: ui_configure: in modgroup, comlete none when remove for one ra group
+- medium: ui_configure: in modgroup, complete none after remove
+- medium: ui_configure: in modgroup, add free id and remove id in group
+- low: bootstrap: Clarify messages
+- low: bootstrap: Improve comments / error messages
+- low: bootstrap: Check for firewalld before SuSEfirewall2
+- medium: bootstrap: Add support for chrony
+- Fix SBD configuration when using SBD device (Fixes #235)
+- Detect firewall by checking installed packages
+- medium: ui_resource: start stopped resources and stop started resources
+- low: bootstrap: simplify the code for checking adminIP
+- low: bootstrap: reset dev value when input of dev not valid
+- low: bootstrap: catch OSError except instead of crash
+- low: bootstrap: give error hints when use sbd without watchdog
+- medium: enable add the second heartbeat line for mcast   Changes include:   1. skip second heartbeat configure when number of local networks < 2   2. bindnetaddrs must be different and the gap between ports must larger than 1   3. give different default value for second configuration   4. IPv4 & IPv6 support
+- fix: bootstrap: remove cib.xml before corosync.add_node
+- medium: bootstrap: adminIP should not be exist before config
+- medium: bootstrap: adminIP should not be the network self
+- low: main: add hostname in promptstr
+- fix: utils.list_cluster_nodes: use "crm_node -l" first
+- medium: utils: list_cluster_nodes: read nodes list from cib.xml
+- low: ui_node: return False when cibdump2elem return None
+- low: ui_cluster: strip "None" when cmd stdout is None
+- medium: bootstrap: valid adminIP   The administration virtaul IP must:   1) have a valid IPv4/IPv6 formation   2) belongs one of local networks
+- medium: utils: extend "IP/Network" codes for IPv4/IPv6 both
+- medium: bootstrap: use strict regrex and valid function for bindnetaddr/mcastaddr
+- low: bootstrap: when node joining, it will take a while after init_cluster_local
+- low: bootstrap: join_csync2 may take a long while   so, use status_long and status_done to give the hints
+- medium: bootstrap: configure with IPv6(unicast)
+- medium: bootstrap: configure with IPv6(mcast)   Changes include:   1) use "-I" option stand for IPv6 in ui_cluster   2) totem.ip_version should set as "ipv6"   3) choose one interface which has IPv6 address as default values   4) each node must have an uniqe nodeid when using IPv6,      the nodeid came from IPv6 address in default interface   5) for IPv6 network compute, learn from      https://github.com/tehmaze/ipcalc
+- high: bootstrap: expected votes wouldn't update in unicast mode
+- medium: bootstrap: disable completion and history when running bootstrap
+- low: ui_cluster: change cluster name need restart cluster service
+- low: ui_cluster: Add two new lines before add a new node
+- medium: bootstrap: run "csync2_update" for all files after new joining node call csync2_remote
+- low: config: add "%s" in format
+- low: ui_cluster: run command on a specific node
+- low: bootstrap: color the input error message
+- low: bootstrap: suppress the error message
+- low: bootstrap: Improve message when sbd is not installed (bsc#1050427)
+- low: bootstrap: Don't rely on ha-cluster-* shortcuts
+- low: completers: filter out ms resource when doing promote/demote
+- Add missing ')'
+- medium: ui_cluster: use get_property instead of get_property_w_default
+- low: ui_cluster: show cluster name in cluster status command
+- low: help: adjust the help print width     adjust the width between cmd and cmd short description for long cmd name
+- low: command: a clear and better way replace for commit 4ac8d4(Improved cd completion)       * code changes happened just in command:_cd_completer function       * on the root level, complete sublevel names after "cd "       * on the sublevel, complete other sublevel path after "cd ../"       * complete sublevel names if this sublevel also have some sublevel names       * prevent '..' complete after every tab
+- low: ui_cluster: complete node name once     or the same node name will be completed many times with many "Tab"s
+- low: ui_cluster: when have an error for optparse, just return and stay at shell
+- low: ui_cluster: when use help option, do not exit, just print help messages and return
+- low: doc: add cluster rename info
+- medium: ui_cluster: Add cluster rename command   * Update /etc/corosync/corosync.conf with the new name on all nodes   * Change the cluster-name property in the CIB   * Reload the corosync configuration on all nodes(use corosync-cmapctl)
+- medium: bootstrap: add callback function to check valid port range
+- low: bootstrap: give a confirm message when remove node
+- medium: bootstrap: replace 'nodename' to 'seed_host'     because when given a node name which is not configured in cluster, program will crash     and say - UnboundLocalError: local variable 'nodename' referenced before assignment
+- low: ui_cluster: add "delete" alias for "remove" option
+- low:scripts:health: save health-report when run "crm cluster health"
+- medium:command:adjust the 'ls' print width for long option   like 'crm cluster geo-init-arbitrator'
+- low:doc:Add help info for cluster enable/disable option
+- medium: ui_cluster: Add enable/disable option to enable/disable pacemaker service
+- medium: bootstrap: Revert to --clusters as argument name
+- low: doc: Correct minor mistakes in documentation
+- medium: bootstrap: Rename --clusters to --sites (bsc#1047074)
+- low: doc: Clarify --cluster-node parameter to geo-join
+- medium: ui_ra: Improve resource agents completion
+- medium: ui_context: Make all the options can be completed   Currently, not all the options can be completed by 'Tab', for example:     crm->configure->verify     crm->configure->back     crm->configure->master     crm->cluster->init   Maybe because the subcommand doesn't have completer yet;   Maybe because the subcommand itself is an alias of other command;
+- Remove "up/back/end" option at root level
+- Improve ls command outputs:   * sorted outputs   * print results column by column, like other complete results
+- Improved cd completion:   * on the root level, complete sublevel names after "cd "   * on the sublevel, complete other sublevel path after "cd ../"   * prevent '..' complete after every tab
+- medium: bootstrap: Fix watchdog SBD envvars (bsc#1045118)
+- medium: scripts: Relax broadcast IP validation (bsc#1044233)
+- medium: scripts: Clarify help text for NFS wizard (bsc#1044244)
+- high: bootstrap: Add option to enable diskless SBD mode to cluster init (bsc#1045118)
+- remove _keywords/_objects/_regtest/_test options from tab completion
+- low: bootstrap: Fall back to logging into $TMPDIR/ha-cluster-bootstrap.log
+- medium: ui_cluster: Add --force to ha-cluster-remove (bsc#1044071)
+- medium: history: Revert preference of messages over ha-log.txt (bsc#1031138)
+- Doc: add rules in operations example
+- Test: add tests for rules in operations
+- Fix: apply new cliformat to regression tests
+- Feature: add rules support to operations
+- medium: Add support for pacemaker PR#1208
+- doc: Document lifetime parameter format
+- medium: bootstrap: Make arbitrator argument optional (bsc#1038386)
+- doc: geo-join requires --clusters argument (bsc#1037442)
+- medium: bootstrap: Check required arguments to geo-join (bsc#1037421)
+- medium: bootstrap: Handle failure to fetch config gracefully (bsc#1037423)
+- medium: bootstrap: Enable "help geo-init" etc. (bsc#1037417)
+- high: cibconfig: Graph file output option was reversed (bsc#1036595)
+- medium: scripts/health: Make health script available as wizard (fate#320848) (fate#320866)
+- lsb, service, stonith and systemd don't have any providers; so, it shouldn't be completed when type 'tab' after these ra classes.
+- remove bindnetaddr for unicast(bsc#1030437)
+- medium: bootstrap: Set expected_votes based on actual node count (bsc#1033288)
+- low: bootstrap: Fix formatting of confirmation prompt (bsc#1028704)
+- low: utils: Use /proc for process discovery
+- medium: ui_cluster: Fix init with no arguments (bsc#1028735)
+- low: bootstrap: Fix warning for formatting SBD device (bsc#1028704)
+- low: utils: is_process did not work
+- Allow empty fencing_topology (bsc#1025393)
+- doc: Bootstrap howto guide
+
+* Fri Jul 21 2017 Kristoffer Grönlund <kgronlund@suse.com> and many others
+- low: ui_cluster: when have an error for optparse, just return and stay at shell
+- low: ui_cluster: when use help option, do not exit, just print help messages and return
+- medium: bootstrap: replace 'nodename' to 'seed_host'     because when given a node name which is not configured in cluster, program will crash     and say - UnboundLocalError: local variable 'nodename' referenced before assignment
+- medium: bootstrap: Revert to --clusters as argument name
+- Add missing ')'
+- medium: bootstrap: Rename --clusters to --sites (bsc#1047074)
+- medium: bootstrap: Fix watchdog SBD envvars (bsc#1045118)
+- medium: scripts: Relax broadcast IP validation (bsc#1044233)
+- medium: scripts: Clarify help text for NFS wizard (bsc#1044244)
+- high: bootstrap: Add option to enable diskless SBD mode to cluster init (bsc#1045118)
+- medium: ui_cluster: Add --force to ha-cluster-remove (bsc#1044071)
+- medium: history: Revert preference of messages over ha-log.txt (bsc#1031138)
+- medium: bootstrap: Make arbitrator argument optional (bsc#1038386)
+- doc: geo-join requires --clusters argument (bsc#1037442)
+- medium: bootstrap: Check required arguments to geo-join (bsc#1037421)
+- medium: bootstrap: Handle failure to fetch config gracefully (bsc#1037423)
+- medium: bootstrap: Enable "help geo-init" etc. (bsc#1037417)
+- high: cibconfig: Graph file output option was reversed (bsc#1036595)
+- medium: bootstrap: Set expected_votes based on actual node count (bsc#1033288)
+- remove bindnetaddr for unicast(bsc#1030437)
+- medium: scripts/health: Make health script available as wizard (fate#320848) (fate#320866)
+- low: utils: Use /proc for process discovery
+- medium: ui_cluster: Fix init with no arguments (bsc#1028735)
+- low: bootstrap: Fix warning for formatting SBD device (bsc#1028704)
+- Allow empty fencing_topology (bsc#1025393)
+
 * Tue Jan 31 2017 Kristoffer Grönlund <kgronlund@suse.com> and many others
 - Release 3.0.0
 - high: bootstrap: Add bootstrap commands (fate#321114)
