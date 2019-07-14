@@ -3314,7 +3314,7 @@ graph dot clu1.conf.svg svg
 
 The `group` command creates a group of resources. This can be useful
 when resources depend on other resources and require that those
-resources start in order on the same node. A commmon use of resource
+resources start in order on the same node. A common use of resource
 groups is to ensure that a server and a virtual IP are located
 together, and that the virtual IP is started before the server.
 
