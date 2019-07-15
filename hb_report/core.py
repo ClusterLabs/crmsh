@@ -7,7 +7,8 @@ import shutil
 import time
 import glob
 import tarfile
-import multiprocessing
+from multiprocessing import Process
+import info
 
 import utils
 from crmsh import utils as crmutils
@@ -222,6 +223,7 @@ def process_some_arguments(context):
     else:
         context.to_time_str = utils.dt_to_str(utils.ts_to_dt(context.to_time))
 
+    # log provided by the user?
     if context.ha_log and \
        not os.path.isfile(context.ha_log) and \
        not is_collector():
@@ -333,18 +335,8 @@ def print_logseg(context, logf):
 
 
 def get_log(context):
-    if context.extra_logs:
-        collect_journal(context)
-
     if not context.ha_log:
-        context.ha_log = find_log(context)
-    if not context.ha_log or not os.path.isfile(context.ha_log):
-        utils.log_warning("no log at {}".format(utils.me()))
-        return
-    utils.log_debug("find ha-log {}".format(context.ha_log))
-
-    outf = os.path.join(context.work_dir, HALOG_F)
-    dump_logset(context, context.ha_log, outf)
+        collect_journal_ha(context)
 
 
 def find_log(context):
@@ -427,14 +419,10 @@ def setup_workdir(context):
     utils.log_debug('set up work directory in {}'.format(context.work_dir))
 
 
-def collect_journal(context):
+def collect_journal(context, cmd, outf):
     if not utils.which("journalctl"):
         utils.log_warning("Command journalctl not found")
         return
-
-    outf = os.path.join(context.work_dir, JOURNAL_F)
-    if os.path.isfile(outf):
-        utils.log_warning("{} already exists".format(outf))
 
     utils.log_debug("journalctl from: '{}' until: '{}' from_time: '{}' to_time: '{}' > {}".\
                     format(context.from_time,
@@ -443,12 +431,54 @@ def collect_journal(context):
                            context.to_time_str,
                            outf))
 
-    cmd = 'journalctl -o short-iso --since "{}" --until "{}" --no-pager | tail -n +2'.\
-          format(context.from_time_str, context.to_time_str)
     utils.log_debug("running command: {}".format(cmd))
     info = utils.get_command_info(cmd)
     if info:
         crmutils.str2file(info, outf)
+
+
+def collect_journal_ha(context):
+    '''
+    Using journalctl collect ha related log as ha-log.txt
+    '''
+    outf = os.path.join(context.work_dir, HALOG_F)
+    if os.path.isfile(outf):
+        utils.log_warning("{} already exists".format(outf))
+
+    cmd = 'journalctl -u pacemaker -u corosync -u sbd \
+                      --since "{}" --until "{}" \
+                      -o short-iso --no-pager | tail -n +2'.\
+          format(context.from_time_str, context.to_time_str)
+
+    collect_journal(context, cmd, outf)
+
+
+def collect_journal_general(context):
+    '''
+    Using journalctl collect system log as journal.log
+    '''
+    outf = os.path.join(context.work_dir, JOURNAL_F)
+    if os.path.isfile(outf):
+        utils.log_warning("{} already exists".format(outf))
+
+    cmd = 'journalctl --since "{}" --until "{}" \
+                      -o short-iso --no-pager | tail -n +2'.\
+          format(context.from_time_str, context.to_time_str)
+
+    collect_journal(context, cmd, outf)
+
+
+def collect_other_logs_and_info(context):
+    process_list = []
+    process_list.append(Process(target=info.sys_info, args=(context,)))
+
+    for p in process_list:
+        p.start()
+    for p in process_list:
+        p.join()
+
+    for l in context.extra_logs.split():
+        pass
 
 
 def test_ssh_conn(addr):
@@ -532,7 +562,7 @@ def collect_for_nodes(context):
                            format(say_ssh_user(context), node))
             utils.log_info("Note that collecting data will take a while.")
         else:
-            p = multiprocessing.Process(target=start_slave_collector, args=(context, node))
+            p = Process(target=start_slave_collector, args=(context, node))
             p.start()
             p.join()
 
@@ -606,14 +636,19 @@ def run(context):
 
         ssh_issue(context)
 
-    if is_collector():
-        utils.log_mark("{}.info {}".format(context.log_facility, UNIQUE_MSG))
+    #if is_collector():
+    #    utils.log_mark("{}.info {}".format(context.log_facility, UNIQUE_MSG))
 
-    if include_me(context):
-        get_log(context)
+    #if is_collector() and include_me(context):
+    #    get_log(context)
 
     if not is_collector():
         collect_for_nodes(context)
+
+    if is_collector():
+        collect_journal_ha(context)
+        collect_journal_general(context)
+        collect_other_logs_and_info(context)
 
 
 ctx = Context()

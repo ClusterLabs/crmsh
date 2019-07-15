@@ -328,3 +328,8 @@ def filter_lines(logf, from_line, to_line):
                 break
             count += 1
     return out_string
+
+
+def rpm_version(pkg):
+    cmd = "rpm -qi {}|awk -F':' '/Version/{print $2}'".format(pkg)
+    return utils.get_command_info(cmd).lstrip()
