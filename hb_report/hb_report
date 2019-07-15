@@ -1,0 +1,11 @@
+#!/usr/bin/python3
+
+import os
+import core
+if __name__ == "__main__":
+    try:
+        core.ctx.name = os.path.basename(__file__)
+        core.run(core.ctx)
+    except KeyboardInterrupt:
+        print("\nCtrl-C, leaving")
+        sys.exit(1)
