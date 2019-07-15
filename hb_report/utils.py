@@ -55,6 +55,10 @@ def log_warning(msg):
     crmmsg.common_warn("%s# %s" % (me(), msg))
 
 
+def log_error(msg):
+    crmmsg.common_err("%s# %s" % (me(), msg))
+
+
 def log_fatal(msg):
     crmmsg.common_err("%s# %s" % (me(), msg))
     sys.exit(1)
@@ -214,6 +218,72 @@ def zip_nested(nested):
     return [x for sublist in nested for x in sublist]
 
 
+def get_pkg_mgr():
+    pkg_mgr = None
+
+    if which("dpkg"):
+        pkg_mgr = "deb"
+    elif which("rpm"):
+        pkg_mgr = "rpm"
+    elif which("pkg_info"):
+        pkg_mgr = "pkg_info"
+    elif which("pkginfo"):
+        pkg_mgr = "pkginfo"
+    else:
+        log_warning("Unknown package manager!")
+
+    return pkg_mgr
+
+
+def pkg_versions(packages):
+    pkg_mgr = get_pkg_mgr()
+    if not pkg_mgr:
+        return ""
+    log_debug("the package manager is %s" % pkg_mgr)
+    if pkg_mgr == "deb":
+        return pkg_ver_deb(packages)
+    if pkg_mgr == "rpm":
+        return pkg_ver_rpm(packages)
+    if pkg_mgr == "pkg_info":
+        return pkg_ver_pkg_info(packages)
+    if pkg_mgr == "pkginfo":
+        return pkg_ver_pkginfo(packages)
+
+
+def pkg_ver_deb(packages):
+    pass
+
+
+def pkg_ver_pkg_info(packages):
+    pass
+
+
+def pkg_ver_pkginfo(packages):
+    pass
+
+
+def pkg_ver_rpm(packages):
+    res = ""
+    for pkg in packages.split():
+        out = get_command_info("rpm -qi %s" % pkg, False)
+        if out is None:
+            continue
+        distro = "Unknown"
+        for line in out.split('\n'):
+            if re.match("^Name\s*:", line):
+                name = line.split(':')[1].lstrip()
+            elif re.match("^Version\s*:", line):
+                version = line.split(':')[1].lstrip()
+            elif re.match("^Release\s*:", line):
+                release = line.split(':')[1].lstrip()
+            elif re.match("^Distribution\s*:", line):
+                distro = line.split(':')[1].lstrip()
+            elif re.match("^Architecture\s*:", line):
+                arch = line.split(':')[1].lstrip()
+        res += "%s %s-%s - %s %s\n" % (name, version, release, distro, arch)
+    return res
+
+
 def which(prog):
     return crmutils.ext_cmd("which {} &> /dev/null".format(prog)) == 0
 
@@ -277,12 +347,13 @@ def dt_to_str(dt, form="%Y-%m-%d %H:%M"):
     return dt.strftime(form)
 
 
-def get_command_info(cmd):
+def get_command_info(cmd, print_error=True):
     rc, out, err = crmutils.get_stdout_stderr(cmd)
     if rc == 0:
         return out
     else:
-        log_fatal("Error running \"{}\"({}): {}".format(cmd, rc, err))
+        if print_error:
+            log_error("Error running \"{}\"({}): {}".format(cmd, rc, err))
         return None
 
 

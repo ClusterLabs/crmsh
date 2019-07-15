@@ -25,6 +25,27 @@ PCMK_LOG = "/var/log/pacemaker/pacemaker.log /var/log/pacemaker.log"
 UNIQUE_MSG= "Mark:HB_REPORT:{}".format(utils.now())
 TRY_SSH = "root hacluster"
 SSH_OPTS = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
+SYSINFO_F = "sysinfo.txt"
+
+
+def cluster_info():
+    return utils.get_command_info("corosync -v")
+
+
+def crmsh_info():
+    return utils.rpm_version("crmsh")
+
+
+def sys_info(context):
+    '''
+    some basic system info and stats
+    '''
+    out_string = "----- Cluster info -----\n"
+    out_string += cluster_info()
+    out_string += crmsh_info()
+
+    out_f = os.path.join(context.work_dir, SYSINFO_F)
+    crmutils.str2file(out_string, out_f)
 
 
 def is_collector():
@@ -470,7 +491,7 @@ def collect_journal_general(context):
 
 def collect_other_logs_and_info(context):
     process_list = []
-    process_list.append(Process(target=info.sys_info, args=(context,)))
+    process_list.append(Process(target=sys_info, args=(context,)))
 
     for p in process_list:
         p.start()
