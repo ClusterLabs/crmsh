@@ -87,17 +87,9 @@ def cibdump2file(fname):
     return None
 
 
-def cibdump2tmp(filterfn=None):
+def cibdump2tmp():
     try:
         _, outp, _ = sudocall(cib_dump)
-        if filterfn is not None:
-            try:
-                cib_elem = etree.fromstring(outp)
-            except etree.ParseError as msg:
-                common_err(msg)
-                return None
-            filterfn(cib_elem)
-            outp = etree.tostring(cib_elem, pretty_print=True)
         if outp is not None:
             return str2tmp(outp)
     except IOError as msg:
@@ -675,7 +667,6 @@ def remove_text(e_list):
 
 
 def sanitize_cib(doc):
-
     xml_processnodes(doc, is_status_node, rmnodes)
     # xml_processnodes(doc, true, printid)
     # xml_processnodes(doc, is_emptynvpairs, rmnodes)
