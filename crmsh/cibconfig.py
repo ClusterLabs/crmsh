@@ -2721,9 +2721,10 @@ class CibFactory(object):
             cib = cibtext2elem(cib)
         if not self._import_cib(cib):
             return False
-        sanitize_cib(self.cib_elem)
         if cibadmin_can_patch():
             self.cib_orig = copy.deepcopy(self.cib_elem)
+            sanitize_cib_for_patching(self.cib_orig)
+        sanitize_cib(self.cib_elem)
         show_unrecognized_elems(self.cib_elem)
         self._populate()
         return self.check_structure()
