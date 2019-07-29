@@ -2604,7 +2604,7 @@ class CibFactory(object):
             # now increase the epoch by 1
             self.bump_epoch()
         self._set_cib_attributes(self.cib_elem)
-        tmpf = cibdump2tmp(filterfn=sanitize_cib_for_patching)
+        tmpf = cibdump2tmp()
         if not tmpf or not ensure_sudo_readable(tmpf):
             return False
         tmpfiles.add(tmpf)
