@@ -2106,6 +2106,11 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     def check_option():
         if _context.admin_ip and not valid_adminIP(_context.admin_ip):
             error("Invalid option: admin_ip")
+        if _context.qdevice:
+            try:
+                _context.qdevice.valid_attr()
+            except ValueError as err:
+                error(err)
 
     if stage is None:
         stage = ""

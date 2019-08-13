@@ -15,7 +15,7 @@ import bz2
 import fnmatch
 import gc
 import ipaddress
-from contextlib import contextmanager
+from contextlib import contextmanager, closing
 from . import config
 from . import userdir
 from . import constants
@@ -2198,4 +2198,50 @@ def check_ssh_passwd_need(hosts):
         if rc != 0:
             return True
     return False
+
+
+def check_port_open(host, port):
+    import socket
+
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+        if sock.connect_ex((host, port)) == 0:
+            return True
+        else:
+            return False
+
+
+def test_ssh_need_passwd(host):
+    ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
+    ssh_cmd = "ssh {} -T -o Batchmode=yes {} true".format(ssh_options, host)
+    rc, _, _ = get_stdout_stderr(ssh_cmd)
+    return rc == 0
+
+
+def valid_port(port):
+    return int(port) >= 1024 and int(port) <= 65535
+
+
+def parallax_call(nodes, cmd, askpass=False, ssh_options=None):
+    def is_ssh_error(msg):
+        return re.search(" 255,.* (ssh:|Permission denied)", str(msg))
+
+    try:
+        import parallax
+    except ImportError:
+        raise ImportError("parallax python library is missing")
+
+    if ssh_options is None:
+        ssh_options = ['StrictHostKeyChecking=no', 'ConnectTimeout=10']
+
+    opts = parallax.Options()
+    opts.ssh_options = ssh_options
+    opts.askpass = askpass
+    #opts.warn_message = False
+
+    results = list(parallax.call(nodes, cmd, opts).items())
+    for host, result in results:
+        if isinstance(result, parallax.Error) and is_ssh_error(result):
+            common_warn("Failed on {}: {}".format(host, result))
+            results.remove((host, result))
+    return results
 # vim:ts=4:sw=4:et:

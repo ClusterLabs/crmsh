@@ -63,6 +63,34 @@ class QDevice(object):
         self.port = port
         self.algo = algo
         self.tie_breaker = tie_breaker
+        self.askpass = False
+
+    def valid_attr(self):
+        if self.ip == utils.this_node() or self.ip in utils.ip_in_local():
+            raise ValueError("host for qnetd must be a remote one")
+        if not utils.resolve_hostnames([self.ip])[0]:
+            raise ValueError("host \"{}\" is unreachable".format(self.ip))
+        if not utils.check_port_open(self.ip, 22):
+            raise ValueError("ssh service on \"{}\" not available".format(self.ip))
+        if not utils.valid_port(self.port):
+            raise ValueError("invalid qdevice port range(1024 - 65535)")
+        if self.algo not in ["ffsplit", "lms"]:
+            raise ValueError("invalid qdevice algorithm(ffsplit/lms)")
+        if self.tie_breaker not in ["lowest", "highest"] and not utils.is_int(self.tie_breaker):
+            raise ValueError("invalid qdevice tie_breaker(lowest/highest/valid_node_id)")
+        if not utils.test_ssh_need_passwd(self.ip):
+            self.askpass = True
+        if self.remote_running_cluster():
+            raise ValueError("host for qnetd must be a non-cluster node")
+
+    def remote_running_cluster(self):
+        cmd = "systemctl -q is-active pacemaker"
+        results = utils.parallax_call([self.ip], cmd, self.askpass)
+        if results:
+            import parallax
+            return not isinstance(results[0][1], parallax.Error)
+        else:
+            raise ValueError("ssh error")
 
 
 def corosync_tokenizer(stream):
