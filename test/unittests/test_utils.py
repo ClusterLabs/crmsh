@@ -177,3 +177,14 @@ FW_SERVICES_ACCEPT_EXT="0/0,tcp,22,,hitcount=3,blockseconds=60,recentname=ssh"
     sc = utils.parse_sysconfig(fname)
     assert (sc.get("FW_SERVICES_ACCEPT_EXT") == "foo=bar")
     assert (sc.get("FOO") == "bar")
+
+def test_sysconfig_set_bsc1145823():
+    s = '''# this is test
+#age=1000
+'''
+    fd, fname = tmpfiles.create()
+    with open(fname, 'w') as f:
+        f.write(s)
+    utils.sysconfig_set(fname, age="100")
+    sc = utils.parse_sysconfig(fname)
+    assert (sc.get("age") == "100")
