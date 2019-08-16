@@ -1904,18 +1904,18 @@ def sysconfig_set(sysconfig_file, **values):
                 outp += line
             else:
                 matched = False
-            try:
-                key, _ = line.split("=", 1)
-                for k, v in values.items():
-                    if k == key:
-                        matched = True
-                        outp += '%s=%s\n' % (k, doublequote(v))
-                        del values[k]
-                        break
-                if not matched:
+                try:
+                    key, _ = line.split("=", 1)
+                    for k, v in values.items():
+                        if k == key:
+                            matched = True
+                            outp += '%s=%s\n' % (k, doublequote(v))
+                            del values[k]
+                            break
+                    if not matched:
+                        outp += line
+                except ValueError:
                     outp += line
-            except ValueError:
-                outp += line
 
     for k, v in values.items():
         outp += '%s=%s\n' % (k, doublequote(v))
