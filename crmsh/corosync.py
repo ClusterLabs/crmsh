@@ -64,6 +64,7 @@ class QDevice(object):
         self.algo = algo
         self.tie_breaker = tie_breaker
         self.askpass = False
+        self.qnetd_service = "corosync-qnetd.service"
 
     def valid_attr(self):
         if self.ip == utils.this_node() or self.ip in utils.ip_in_local():
@@ -85,12 +86,32 @@ class QDevice(object):
 
     def remote_running_cluster(self):
         cmd = "systemctl -q is-active pacemaker"
+        if self.askpass:
+            print("Checking on {}".format(self.ip))
         results = utils.parallax_call([self.ip], cmd, self.askpass)
         if results:
             import parallax
             return not isinstance(results[0][1], parallax.Error)
         else:
             raise ValueError("ssh error")
+
+    def enable(self):
+        cmd = "systemctl enable {}".format(self.qnetd_service)
+        results = utils.parallax_call([self.ip], cmd, self.askpass)
+        self.handle_parallax_results(results)
+
+    def start(self):
+        cmd = "systemctl start {}".format(self.qnetd_service)
+        results = utils.parallax_call([self.ip], cmd, self.askpass)
+        self.handle_parallax_results(results)
+
+    def handle_parallax_results(self, results):
+        if not results:
+            raise ValueError("ssh error")
+        import parallax
+        host, result = results[0] # just one qnetd node
+        if isinstance(result, parallax.Error):
+            raise ValueError("Failed on {}: {}".format(host, result))
 
 
 def corosync_tokenizer(stream):

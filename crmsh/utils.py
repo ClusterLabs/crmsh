@@ -2236,7 +2236,9 @@ def parallax_call(nodes, cmd, askpass=False, ssh_options=None):
     opts = parallax.Options()
     opts.ssh_options = ssh_options
     opts.askpass = askpass
-    #opts.warn_message = False
+    # warn_message will available from parallax-1.0.5
+    if hasattr(opts, 'warn_message'):
+        opts.warn_message = False
 
     results = list(parallax.call(nodes, cmd, opts).items())
     for host, result in results:
