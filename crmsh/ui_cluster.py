@@ -610,6 +610,7 @@ Cluster Description
         if node and node in hosts:
             hosts = [node]
         opts = parallax.Options()
+        opts.ssh_options = ['StrictHostKeyChecking=no']
         for host, result in parallax.call(hosts, cmd, opts).items():
             if isinstance(result, parallax.Error):
                 err_buf.error("[%s]: %s" % (host, result))
