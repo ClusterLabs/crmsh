@@ -1760,13 +1760,23 @@ def list_cluster_nodes():
         return None
 
     try:
+        # when pacemaker running
         rc, outp = stdout2list(['crm_node', '-l'], stderr_on=False, shell=False)
         if rc == 0:
             return [x for x in [getname(line.split()) for line in outp] if x and x != '(null)']
 
+        # when corosync running
+        ip_list = get_member_iplist()
+        if ip_list:
+            return ip_list
+
+        # static situation
+        cib_path = os.getenv('CIB_file', '/var/lib/pacemaker/cib/cib.xml')
+        if not os.path.isfile(cib_path):
+            return None
         from . import xmlutil
         node_list = []
-        cib = xmlutil.cibdump2elem()
+        cib = xmlutil.file2cib_elem(cib_path)
         if cib is None:
             return None
         for node in cib.xpath('/cib/configuration/nodes/node'):
@@ -2165,5 +2175,18 @@ def iplist_for_cloud():
 def debug_timestamp():
     return datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
 
+
+def get_member_iplist():
+    rc, out, err= get_stdout_stderr("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
+    if rc != 0:
+        common_debug(err)
+        return None
+
+    ip_list = []
+    for line in out.split('\n'):
+        match = re.search(r'ip\((.*?)\)', line)
+        if match:
+            ip_list.append(match.group(1))
+    return ip_list
 
 # vim:ts=4:sw=4:et:

@@ -607,6 +607,8 @@ Cluster Description
             context.fatal_error("python package parallax is needed for this command")
 
         hosts = utils.list_cluster_nodes()
+        if hosts is None:
+            context.fatal_error("failed to get node list from cluster")
         if node and node in hosts:
             hosts = [node]
         opts = parallax.Options()
