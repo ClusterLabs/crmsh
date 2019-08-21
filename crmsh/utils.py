@@ -2189,4 +2189,13 @@ def get_member_iplist():
             ip_list.append(match.group(1))
     return ip_list
 
+
+def check_ssh_passwd_need(hosts):
+    ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
+    for host in hosts:
+        ssh_cmd = "ssh {} -T -o Batchmode=yes {} true".format(ssh_options, host)
+        rc, _, _ = get_stdout_stderr(ssh_cmd)
+        if rc != 0:
+            return True
+    return False
 # vim:ts=4:sw=4:et:
