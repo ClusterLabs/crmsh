@@ -1346,18 +1346,18 @@ rename <new_cluster_name>
 ==== `run`
 
 This command takes a shell statement as argument, executes that
-statement on all nodes or a specific node in the cluster, 
+statement on all nodes in the cluster or a specific node,
 and reports the result.
 
 Usage:
 ...............
-run <command> [node]
+run <command> [node ...]
 ...............
 
 Example:
 ...............
 run "cat /proc/uptime" 
-run "ls" node2 
+run "ls" node1 node2
 ...............
 
 [[cmdhelp_cluster_start,Start cluster services]]
