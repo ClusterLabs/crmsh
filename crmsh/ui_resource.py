@@ -533,7 +533,7 @@ class RscMgmt(command.UI):
             on_off = 'true'
         else:
             on_off = 'false'
-        return utils.ext_cmd(self.rsc_maintenance % (resource, on_off)) == 0
+        return self._commit_meta_attr(context, resource, "maintenance", on_off)
 
     def _get_trace_rsc(self, rsc_id):
         if not cib_factory.refresh():
