@@ -5,6 +5,9 @@ resource stop p3
 %setenv showobj=c1
 resource manage c1
 resource unmanage c1
+%setenv showobj=p2
+resource maintenance p2 on
+resource maintenance p2 off
 %setenv showobj=cli-prefer-p3
 resource migrate p3 node1
 %setenv showobj=
