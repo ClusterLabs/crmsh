@@ -2,8 +2,8 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
-import optparse
 import re
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from . import command
 from . import utils
 from .msg import err_buf
@@ -14,7 +14,7 @@ from . import corosync
 from .cibconfig import cib_factory
 
 
-class OptParser(optparse.OptionParser):
+class ArgParser(ArgumentParser):
     def format_epilog(self, formatter):
         return self.epilog or ""
 
@@ -163,7 +163,7 @@ class Cluster(command.UI):
         if len(args) > 0:
             if '--dry-run' in args or looks_like_hostnames(args):
                 args = ['--yes', '--nodes'] + [arg for arg in args if arg != '--dry-run']
-        parser = OptParser(usage="usage: init [options] [STAGE]", epilog="""
+        parser = ArgParser(usage="init [options] [STAGE]", epilog="""
 
 Stage can be one of:
     ssh         Create SSH keys for passwordless SSH between cluster nodes
@@ -186,70 +186,68 @@ Note:
     To use storage you have already configured, pass -s and -o to specify
     the block devices for SBD and OCFS2, and the automatic partitioning
     will be skipped.
-""", add_help_option=False)
+""", add_help=False, formatter_class=RawDescriptionHelpFormatter)
 
-        parser.add_option("-h", "--help", action="store_true", dest="help", help="Show this help message")
-        parser.add_option("-q", "--quiet", action="store_true", dest="quiet",
-                          help="Be quiet (don't describe what's happening, just do it)")
-        parser.add_option("-y", "--yes", action="store_true", dest="yes_to_all",
-                          help='Answer "yes" to all prompts (use with caution, this is destructive, especially during the "storage" stage. The /root/.ssh/id_rsa key will be overwritten unless the option "--no-overwrite-sshkey" is used)')
-        parser.add_option("-t", "--template", dest="template",
-                          help='Optionally configure cluster with template "name" (currently only "ocfs2" is valid here)')
-        parser.add_option("-n", "--name", metavar="NAME", dest="name", default="hacluster",
-                          help='Set the name of the configured cluster.')
-        parser.add_option("-N", "--nodes", metavar="NODES", dest="nodes",
-                          help='Additional nodes to add to the created cluster. ' +
-                          'May include the current node, which will always be the initial cluster node.')
-        # parser.add_option("--quick-start", dest="quickstart", action="store_true", help="Perform basic system configuration (NTP, watchdog, /etc/hosts)")
-        parser.add_option("-S", "--enable-sbd", dest="diskless_sbd", action="store_true",
-                          help="Enable SBD even if no SBD device is configured (diskless mode)")
-        parser.add_option("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG",
-                          help="Use the given watchdog device")
-        parser.add_option("--no-overwrite-sshkey", action="store_true", dest="no_overwrite_sshkey",
-                          help='Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is used (False by default)')
+        parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
+        parser.add_argument("-q", "--quiet", action="store_true", dest="quiet",
+                            help="Be quiet (don't describe what's happening, just do it)")
+        parser.add_argument("-y", "--yes", action="store_true", dest="yes_to_all",
+                            help='Answer "yes" to all prompts (use with caution, this is destructive, especially during the "storage" stage. The /root/.ssh/id_rsa key will be overwritten unless the option "--no-overwrite-sshkey" is used)')
+        parser.add_argument("-t", "--template", dest="template",
+                            help='Optionally configure cluster with template "name" (currently only "ocfs2" is valid here)')
+        parser.add_argument("-n", "--name", metavar="NAME", dest="name", default="hacluster",
+                            help='Set the name of the configured cluster.')
+        parser.add_argument("-N", "--nodes", metavar="NODES", dest="nodes",
+                            help='Additional nodes to add to the created cluster. May include the current node, which will always be the initial cluster node.')
+        # parser.add_argument("--quick-start", dest="quickstart", action="store_true", help="Perform basic system configuration (NTP, watchdog, /etc/hosts)")
+        parser.add_argument("-S", "--enable-sbd", dest="diskless_sbd", action="store_true",
+                            help="Enable SBD even if no SBD device is configured (diskless mode)")
+        parser.add_argument("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG",
+                            help="Use the given watchdog device")
+        parser.add_argument("--no-overwrite-sshkey", action="store_true", dest="no_overwrite_sshkey",
+                            help='Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is used (False by default)')
 
-        network_group = optparse.OptionGroup(parser, "Network configuration", "Options for configuring the network and messaging layer.")
-        network_group.add_option("-i", "--interface", dest="nic", metavar="IF",
-                                 help="Bind to IP address on interface IF")
-        network_group.add_option("-u", "--unicast", action="store_true", dest="unicast",
-                                 help="Configure corosync to communicate over unicast (UDP), and not multicast. " +
-                                 "Default is multicast unless an environment where multicast cannot be used is detected.")
-        network_group.add_option("-A", "--admin-ip", dest="admin_ip", metavar="IP",
-                                 help="Configure IP address as an administration virtual IP")
-        network_group.add_option("-M", "--multi-heartbeats", action="store_true", dest="second_hb",
-                                 help="Configure corosync with second heartbeat line")
-        network_group.add_option("-I", "--ipv6", action="store_true", dest="ipv6",
-                                 help="Configure corosync use IPv6")
-        network_group.add_option("--qnetd-hostname",
-                                 dest="qdevice", metavar="HOST",
-                                 help="HOST or IP of the QNetd server to be used")
-        network_group.add_option("--qdevice-port",
-                                 dest="qdevice_port", metavar="PORT", type="int", default=5403,
-                                 help="TCP PORT of QNetd server(default:5403)")
-        network_group.add_option("--qdevice-algo",
-                                 dest="qdevice_algo", metavar="ALGORITHM", default="ffsplit",
-                                 help="QNetd decision ALGORITHM(ffsplit/lms, default:ffsplit)")
-        network_group.add_option("--qdevice-tie-breaker",
-                                 dest="qdevice_tie_breaker", metavar="TIE_BREAKER", default="lowest",
-                                 help="QNetd TIE_BREAKER(lowest/highest/valid_node_id, default:lowest)")
-        network_group.add_option("--qdevice-tls",
-                                 dest="qdevice_tls", metavar="TLS", default="on",
-                                 help="Whether using TLS on QDevice/QNetd(on/off/required, default:on)")
-        network_group.add_option("--qdevice-heuristics",
-                                 dest="qdevice_heuristics", metavar="COMMAND",
-                                 help="COMMAND to run with absolute path. For multiple commands, use \";\" to separate(details about heuristics can see man 8 corosync-qdevice)")
-        parser.add_option_group(network_group)
+        network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
+        network_group.add_argument("-i", "--interface", dest="nic", metavar="IF",
+                                   help="Bind to IP address on interface IF")
+        network_group.add_argument("-u", "--unicast", action="store_true", dest="unicast",
+                                   help="Configure corosync to communicate over unicast (UDP), and not multicast. " +
+                                   "Default is multicast unless an environment where multicast cannot be used is detected.")
+        network_group.add_argument("-A", "--admin-ip", dest="admin_ip", metavar="IP",
+                                   help="Configure IP address as an administration virtual IP")
+        network_group.add_argument("-M", "--multi-heartbeats", action="store_true", dest="second_hb",
+                                   help="Configure corosync with second heartbeat line")
+        network_group.add_argument("-I", "--ipv6", action="store_true", dest="ipv6",
+                                   help="Configure corosync use IPv6")
+        network_group.add_argument("--qnetd-hostname",
+                                   dest="qdevice", metavar="HOST",
+                                   help="HOST or IP of the QNetd server to be used")
+        network_group.add_argument("--qdevice-port",
+                                   dest="qdevice_port", metavar="PORT", type=int, default=5403,
+                                   help="TCP PORT of QNetd server(default:5403)")
+        network_group.add_argument("--qdevice-algo",
+                                   dest="qdevice_algo", metavar="ALGORITHM", default="ffsplit",
+                                   help="QNetd decision ALGORITHM(ffsplit/lms, default:ffsplit)")
+        network_group.add_argument("--qdevice-tie-breaker",
+                                   dest="qdevice_tie_breaker", metavar="TIE_BREAKER", default="lowest",
+                                   help="QNetd TIE_BREAKER(lowest/highest/valid_node_id, default:lowest)")
+        network_group.add_argument("--qdevice-tls",
+                                   dest="qdevice_tls", metavar="TLS", default="on",
+                                   help="Whether using TLS on QDevice/QNetd(on/off/required, default:on)")
+        network_group.add_argument("--qdevice-heuristics",
+                                   dest="qdevice_heuristics", metavar="COMMAND",
+                                   help="COMMAND to run with absolute path. For multiple commands, use \";\" to separate(details about heuristics can see man 8 corosync-qdevice)")
 
-        storage_group = optparse.OptionGroup(parser, "Storage configuration", "Options for configuring shared storage.")
-        storage_group.add_option("-p", "--partition-device", dest="shared_device", metavar="DEVICE",
-                                 help='Partition this shared storage device (only used in "storage" stage)')
-        storage_group.add_option("-s", "--sbd-device", dest="sbd_device", metavar="DEVICE", action="append",
-                                 help="Block device to use for SBD fencing, use \";\" as separator or -s multiple times for multi path (up to 3 devices)")
-        storage_group.add_option("-o", "--ocfs2-device", dest="ocfs2_device", metavar="DEVICE",
-                                 help='Block device to use for OCFS2 (only used in "vgfs" stage)')
-        parser.add_option_group(storage_group)
+        storage_group = parser.add_argument_group("Storage configuration", "Options for configuring shared storage.")
+        storage_group.add_argument("-p", "--partition-device", dest="shared_device", metavar="DEVICE",
+                                   help='Partition this shared storage device (only used in "storage" stage)')
+        storage_group.add_argument("-s", "--sbd-device", dest="sbd_device", metavar="DEVICE", action="append",
+                                   help="Block device to use for SBD fencing, use \";\" as separator or -s multiple times for multi path (up to 3 devices)")
+        storage_group.add_argument("-o", "--ocfs2-device", dest="ocfs2_device", metavar="DEVICE",
+                                   help='Block device to use for OCFS2 (only used in "vgfs" stage)')
+
         try:
-            options, args = parser.parse_args(list(args))
+            options, args = parser.parse_known_args(list(args))
         except:
             return
         if options.help:
@@ -321,7 +319,7 @@ Note:
         '''
         Join this node to an existing cluster
         '''
-        parser = OptParser(usage="usage: join [options] [STAGE]", epilog="""
+        parser = ArgParser(usage="join [options] [STAGE]", epilog="""
 
 Stage can be one of:
     ssh         Obtain SSH keys from existing cluster node (requires -c <host>)
@@ -331,18 +329,17 @@ Stage can be one of:
     cluster     Start the cluster on this node
 
 If stage is not specified, each stage will be invoked in sequence.
-""", add_help_option=False)
-        parser.add_option("-h", "--help", action="store_true", dest="help", help="Show this help message")
-        parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
-        parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
-        parser.add_option("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG", help="Use the given watchdog device")
+""", add_help=False, formatter_class=RawDescriptionHelpFormatter)
+        parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
+        parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
+        parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
+        parser.add_argument("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG", help="Use the given watchdog device")
 
-        network_group = optparse.OptionGroup(parser, "Network configuration", "Options for configuring the network and messaging layer.")
-        network_group.add_option("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of existing cluster node", metavar="HOST")
-        network_group.add_option("-i", "--interface", dest="nic", help="Bind to IP address on interface IF", metavar="IF")
-        parser.add_option_group(network_group)
+        network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
+        network_group.add_argument("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of existing cluster node", metavar="HOST")
+        network_group.add_argument("-i", "--interface", dest="nic", help="Bind to IP address on interface IF", metavar="IF")
         try:
-            options, args = parser.parse_args(list(args))
+            options, args = parser.parse_known_args(list(args))
         except:
             return
         if options.help:
@@ -384,11 +381,11 @@ If stage is not specified, each stage will be invoked in sequence.
         Installs packages, sets up corosync and pacemaker, etc.
         Must be executed from a node in the existing cluster.
         '''
-        parser = OptParser(usage="usage: add [options] [node ...]", add_help_option=False)
-        parser.add_option("-h", "--help", action="store_true", dest="help", help="Show this help message")
-        parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
+        parser = ArgParser(usage="add [options] [node ...]", add_help=False, formatter_class=RawDescriptionHelpFormatter)
+        parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
+        parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         try:
-            options, args = parser.parse_args(list(args))
+            options, args = parser.parse_known_args(list(args))
         except:
             return
         if options.help:
@@ -405,15 +402,16 @@ If stage is not specified, each stage will be invoked in sequence.
         '''
         Remove the given node(s) from the cluster.
         '''
-        parser = OptParser(usage="usage: remove [options] [<node> ...]", add_help_option=False)
-        parser.add_option("-h", "--help", action="store_true", dest="help", help="Show this help message")
-        parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
-        parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
-        parser.add_option("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of cluster node which will be deleted", metavar="HOST")
-        parser.add_option("-F", "--force", dest="force", help="Remove current node", action="store_true")
-        parser.add_option("--qdevice", dest="qdevice", help="Remove QDevice configuration and service from cluster", action="store_true")
+        parser = ArgParser(usage="remove [options] [<node> ...]", add_help=False, formatter_class=RawDescriptionHelpFormatter)
+        parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
+        parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
+        parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
+        parser.add_argument("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of cluster node which will be deleted", metavar="HOST")
+        parser.add_argument("-F", "--force", dest="force", help="Remove current node", action="store_true")
+        parser.add_argument("--qdevice", dest="qdevice", help="Remove QDevice configuration and service from cluster", action="store_true")
+
         try:
-            options, args = parser.parse_args(list(args))
+            options, args = parser.parse_known_args(list(args))
         except:
             return
         if options.help:
@@ -492,7 +490,7 @@ If stage is not specified, each stage will be invoked in sequence.
         * arbitrator IP / hostname (optional)
         * list of tickets (can be empty)
         '''
-        parser = OptParser(usage="usage: geo-init [options]", epilog="""
+        parser = ArgParser(usage="geo-init [options]", epilog="""
 
 Cluster Description
 
@@ -507,15 +505,15 @@ Cluster Description
 
   Name clusters using the --name parameter to
   crm bootstrap init.
-""", add_help_option=False)
-        parser.add_option("-h", "--help", action="store_true", dest="help", help="Show this help message")
-        parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
-        parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
-        parser.add_option("-a", "--arbitrator", help="IP address of geo cluster arbitrator", dest="arbitrator", metavar="IP")
-        parser.add_option("-s", "--clusters", help="Geo cluster description (see details below)", dest="clusters", metavar="DESC")
-        parser.add_option("-t", "--tickets", help="Tickets to create (space-separated)", dest="tickets", metavar="LIST")
+""", add_help=False, formatter_class=RawDescriptionHelpFormatter)
+        parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
+        parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
+        parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
+        parser.add_argument("-a", "--arbitrator", help="IP address of geo cluster arbitrator", dest="arbitrator", metavar="IP")
+        parser.add_argument("-s", "--clusters", help="Geo cluster description (see details below)", dest="clusters", metavar="DESC")
+        parser.add_argument("-t", "--tickets", help="Tickets to create (space-separated)", dest="tickets", metavar="LIST")
         try:
-            options, args = parser.parse_args(list(args))
+            options, args = parser.parse_known_args(list(args))
         except:
             return
         if options.help:
@@ -547,14 +545,14 @@ Cluster Description
         '''
         Join this cluster to a geo configuration.
         '''
-        parser = OptParser(usage="usage: geo-join [options]", add_help_option=False)
-        parser.add_option("-h", "--help", action="store_true", dest="help", help="Show this help message")
-        parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
-        parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
-        parser.add_option("-c", "--cluster-node", help="IP address of an already-configured geo cluster or arbitrator", dest="node", metavar="IP")
-        parser.add_option("-s", "--clusters", help="Geo cluster description (see geo-init for details)", dest="clusters", metavar="DESC")
+        parser = ArgParser(usage="geo-join [options]", add_help=False, formatter_class=RawDescriptionHelpFormatter)
+        parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
+        parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
+        parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
+        parser.add_argument("-c", "--cluster-node", help="IP address of an already-configured geo cluster or arbitrator", dest="node", metavar="IP")
+        parser.add_argument("-s", "--clusters", help="Geo cluster description (see geo-init for details)", dest="clusters", metavar="DESC")
         try:
-            options, args = parser.parse_args(list(args))
+            options, args = parser.parse_known_args(list(args))
         except:
             return
         if options.help:
@@ -580,13 +578,13 @@ Cluster Description
         '''
         Make this node a geo arbitrator.
         '''
-        parser = OptParser(usage="usage: geo-init-arbitrator [options]", add_help_option=False)
-        parser.add_option("-h", "--help", action="store_true", dest="help", help="Show this help message")
-        parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
-        parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
-        parser.add_option("-c", "--cluster-node", help="IP address of an already-configured geo cluster", dest="other", metavar="IP")
+        parser = ArgParser(usage="geo-init-arbitrator [options]", add_help=False, formatter_class=RawDescriptionHelpFormatter)
+        parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
+        parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
+        parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
+        parser.add_argument("-c", "--cluster-node", help="IP address of an already-configured geo cluster", dest="other", metavar="IP")
         try:
-            options, args = parser.parse_args(list(args))
+            options, args = parser.parse_known_args(list(args))
         except:
             return
         if options.help:
