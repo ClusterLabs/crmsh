@@ -84,58 +84,58 @@ def cib_prompt():
 
 
 def make_option_parser():
-    from optparse import OptionParser
-    parser = OptionParser(usage="""%prog [-h|--help] [OPTIONS] [SUBCOMMAND ARGS...]
-or %prog help SUBCOMMAND
+    from argparse import ArgumentParser, REMAINDER
+    parser = ArgumentParser(prog='crm', usage="""%(prog)s [-h|--help] [OPTIONS] [SUBCOMMAND ARGS...]
+or %(prog)s help SUBCOMMAND
 
-For a list of available subcommands, use %prog help.
+For a list of available subcommands, use %(prog)s help.
 
-Use %prog without arguments for an interactive session.
+Use %(prog)s without arguments for an interactive session.
 Call a subcommand directly for a "single-shot" use.
-Call %prog with a level name as argument to start an interactive
+Call %(prog)s with a level name as argument to start an interactive
 session from that level.
 
-See the crm(8) man page or call %prog help for more details.""",
-                          version="%prog " + config.CRM_VERSION)
-    parser.disable_interspersed_args()
-    parser.add_option("-f", "--file", dest="filename", metavar="FILE",
-                      help="Load commands from the given file. If a dash (-) " +
-                      "is used in place of a file name, crm will read commands " +
-                      "from the shell standard input (stdin).")
-    parser.add_option("-c", "--cib", dest="cib", metavar="CIB",
-                      help="Start the session using the given shadow CIB file. " +
-                      "Equivalent to `cib use <CIB>`.")
-    parser.add_option("-D", "--display", dest="display", metavar="OUTPUT_TYPE",
-                      help="Choose one of the output options: plain, color-always, color, or uppercase. " +
-                      "The default is color if the terminal emulation supports colors, " +
-                      "else plain.")
-    parser.add_option("-F", "--force", action="store_true", default=False, dest="force",
-                      help="Make crm proceed with applying changes where it would normally " +
-                      "ask the user to confirm before proceeding. This option is mainly useful " +
-                      "in scripts, and should be used with care.")
-    parser.add_option("-n", "--no", action="store_true", default=False, dest="ask_no",
-                      help="Automatically answer no when prompted")
-    parser.add_option("-w", "--wait", action="store_true", default=False, dest="wait",
-                      help="Make crm wait for the cluster transition to finish " +
-                      "(for the changes to take effect) after each processed line.")
-    parser.add_option("-H", "--history", dest="history", metavar="DIR|FILE|SESSION",
-                      help="A directory or file containing a cluster report to load " +
-                      "into history, or the name of a previously saved history session.")
-    parser.add_option("-d", "--debug", action="store_true", default=False, dest="debug",
-                      help="Print verbose debugging information.")
-    parser.add_option("-R", "--regression-tests", action="store_true", default=False,
-                      dest="regression_tests",
-                      help="Enables extra verbose trace logging used by the regression " +
-                      "tests. Logs all external calls made by crmsh.")
-    parser.add_option("--scriptdir", dest="scriptdir", metavar="DIR",
-                      help="Extra directory where crm looks for cluster scripts, or a list " +
-                      "of directories separated by semi-colons (e.g. /dir1;/dir2;etc.).")
-    parser.add_option("-X", dest="profile", metavar="PROFILE",
-                      help="Collect profiling data and save in PROFILE.")
-    parser.add_option("-o", "--opt", action="append", type="string", metavar="OPTION=VALUE",
-                      help="Set crmsh option temporarily. If the options are saved using" +
-                      "+options save+ then the value passed here will also be saved." +
-                      "Multiple options can be set by using +-o+ multiple times.")
+See the crm(8) man page or call %(prog)s help for more details.""")
+    parser.add_argument('--version', action='version', version="%(prog)s " + config.CRM_VERSION)
+    parser.add_argument("-f", "--file", dest="filename", metavar="FILE",
+                        help="Load commands from the given file. If a dash (-) " +
+                        "is used in place of a file name, crm will read commands " +
+                        "from the shell standard input (stdin).")
+    parser.add_argument("-c", "--cib", dest="cib", metavar="CIB",
+                        help="Start the session using the given shadow CIB file. " +
+                        "Equivalent to `cib use <CIB>`.")
+    parser.add_argument("-D", "--display", dest="display", metavar="OUTPUT_TYPE",
+                        help="Choose one of the output options: plain, color-always, color, or uppercase. " +
+                        "The default is color if the terminal emulation supports colors, " +
+                        "else plain.")
+    parser.add_argument("-F", "--force", action="store_true", default=False, dest="force",
+                        help="Make crm proceed with applying changes where it would normally " +
+                        "ask the user to confirm before proceeding. This option is mainly useful " +
+                        "in scripts, and should be used with care.")
+    parser.add_argument("-n", "--no", action="store_true", default=False, dest="ask_no",
+                        help="Automatically answer no when prompted")
+    parser.add_argument("-w", "--wait", action="store_true", default=False, dest="wait",
+                        help="Make crm wait for the cluster transition to finish " +
+                        "(for the changes to take effect) after each processed line.")
+    parser.add_argument("-H", "--history", dest="history", metavar="DIR|FILE|SESSION",
+                        help="A directory or file containing a cluster report to load " +
+                        "into history, or the name of a previously saved history session.")
+    parser.add_argument("-d", "--debug", action="store_true", default=False, dest="debug",
+                        help="Print verbose debugging information.")
+    parser.add_argument("-R", "--regression-tests", action="store_true", default=False,
+                        dest="regression_tests",
+                        help="Enables extra verbose trace logging used by the regression " +
+                        "tests. Logs all external calls made by crmsh.")
+    parser.add_argument("--scriptdir", dest="scriptdir", metavar="DIR",
+                        help="Extra directory where crm looks for cluster scripts, or a list " +
+                        "of directories separated by semi-colons (e.g. /dir1;/dir2;etc.).")
+    parser.add_argument("-X", dest="profile", metavar="PROFILE",
+                        help="Collect profiling data and save in PROFILE.")
+    parser.add_argument("-o", "--opt", action="append", type=str, metavar="OPTION=VALUE",
+                        help="Set crmsh option temporarily. If the options are saved using" +
+                        "+options save+ then the value passed here will also be saved." +
+                        "Multiple options can be set by using +-o+ multiple times.")
+    parser.add_argument("SUBCOMMAND", nargs=REMAINDER)
     return parser
 
 
@@ -302,7 +302,7 @@ def compgen():
 
 
 def parse_options():
-    opts, args = option_parser.parse_args()
+    opts, args = option_parser.parse_known_args()
     utils.check_space_option_value(opts)
     config.core.debug = "yes" if opts.debug else config.core.debug
     options.profile = opts.profile or options.profile
@@ -324,7 +324,7 @@ def parse_options():
             config.set_option(s, n, v)
         except ValueError as e:
             raise ValueError("Expected -o <section>.<name>=<value>: %s" % (e))
-    return args
+    return opts.SUBCOMMAND
 
 
 def profile_run(context, user_args):
