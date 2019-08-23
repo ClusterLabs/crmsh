@@ -12,6 +12,70 @@ from crmsh import config
 from crmsh import tmpfiles
 
 
+def test_check_ssh_passwd_need_True():
+    with mock.patch('crmsh.utils.get_stdout_stderr') as mock_get_stdout_stderr:
+        mock_get_stdout_stderr.side_effect = [(0, None, None), (1, None, None)]
+        assert utils.check_ssh_passwd_need(["node1", "node2"]) == True
+    mock_get_stdout_stderr.assert_has_calls([
+            mock.call('ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node1 true'),
+            mock.call('ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node2 true')
+        ])
+
+
+def test_check_ssh_passwd_need_Flase():
+    with mock.patch('crmsh.utils.get_stdout_stderr') as mock_get_stdout_stderr:
+        mock_get_stdout_stderr.side_effect = [(0, None, None), (0, None, None)]
+        assert utils.check_ssh_passwd_need(["node1", "node2"]) == False
+    mock_get_stdout_stderr.assert_has_calls([
+            mock.call('ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node1 true'),
+            mock.call('ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node2 true')
+        ])
+
+
+@mock.patch('crmsh.utils.common_debug')
+@mock.patch('crmsh.utils.get_stdout_stderr')
+def test_get_member_iplist_None(mock_get_stdout_stderr, mock_common_debug):
+    mock_get_stdout_stderr.return_value = (1, None, "Failed to initialize the cmap API. Error CS_ERR_LIBRARY")
+    assert utils.get_member_iplist() is None
+    mock_get_stdout_stderr.assert_called_once_with('corosync-cmapctl -b runtime.totem.pg.mrp.srp.members')
+    mock_common_debug.assert_called_once_with('Failed to initialize the cmap API. Error CS_ERR_LIBRARY')
+
+
+def test_get_member_iplist():
+    with mock.patch('crmsh.utils.get_stdout_stderr') as mock_get_stdout_stderr:
+        cmap_value = '''
+runtime.totem.pg.mrp.srp.members.336860211.config_version (u64) = 0
+runtime.totem.pg.mrp.srp.members.336860211.ip (str) = r(0) ip(20.20.20.51)
+runtime.totem.pg.mrp.srp.members.336860211.join_count (u32) = 1
+runtime.totem.pg.mrp.srp.members.336860211.status (str) = joined
+runtime.totem.pg.mrp.srp.members.336860212.config_version (u64) = 0
+runtime.totem.pg.mrp.srp.members.336860212.ip (str) = r(0) ip(20.20.20.52)
+runtime.totem.pg.mrp.srp.members.336860212.join_count (u32) = 1
+runtime.totem.pg.mrp.srp.members.336860212.status (str) = joined
+        '''
+        mock_get_stdout_stderr.return_value = (0, cmap_value, None)
+        assert utils.get_member_iplist() == ['20.20.20.51', '20.20.20.52']
+    mock_get_stdout_stderr.assert_called_once_with('corosync-cmapctl -b runtime.totem.pg.mrp.srp.members')
+
+
+def test_list_cluster_nodes_pacemaker_running():
+    with mock.patch('crmsh.utils.stdout2list') as mock_stdout2list:
+        crm_node_value= ["336860211 15sp1-1 member", "336860212 15sp1-2 member"]
+        mock_stdout2list.return_value = (0, crm_node_value)
+        assert utils.list_cluster_nodes() == ['15sp1-1', '15sp1-2']
+    mock_stdout2list.assert_called_once_with(['crm_node', '-l'], shell=False, stderr_on=False)
+
+
+@mock.patch('crmsh.utils.stdout2list')
+@mock.patch('crmsh.utils.get_member_iplist')
+def test_list_cluster_nodes_corosync_running(mock_get_member_iplist, mock_stdout2list):
+    mock_stdout2list.return_value = (1, None)
+    mock_get_member_iplist.return_value = ["node1", "node2"]
+    assert utils.list_cluster_nodes() == ["node1", "node2"]
+    mock_stdout2list.assert_called_once_with(['crm_node', '-l'], shell=False, stderr_on=False)
+    mock_get_member_iplist.assert_called_once_with()
+
+
 def test_to_ascii():
     assert utils.to_ascii(None) is None
     assert utils.to_ascii('test') == 'test'
