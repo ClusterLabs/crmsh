@@ -551,6 +551,8 @@ class CibConfig(command.UI):
         from .utils import obscure
         osargs = [arg[8:] for arg in args if arg.startswith('obscure:')]
         args = [arg for arg in args if not arg.startswith('obscure:')]
+        if "changed" in args:
+            args.append("from_show")
         with obscure(osargs):
             set_obj = mkset_obj(*args)
             return set_obj.show()

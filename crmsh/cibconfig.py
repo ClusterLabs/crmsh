@@ -3223,7 +3223,7 @@ class CibFactory(object):
         obj_set = orderedset.oset([])
         and_filter, and_set = False, None
         for spec in filters:
-            if spec == "or":
+            if spec in ["or", "from_show"]:
                 continue
             elif spec == "and":
                 and_filter, and_set = True, obj_set
@@ -3231,6 +3231,8 @@ class CibFactory(object):
                 continue
             if spec == "changed":
                 obj_set |= orderedset.oset(self.modified_elems())
+                if "from_show" in filters:
+                    obj_set |= orderedset.oset(self.remove_queue)
             elif spec.startswith("type:"):
                 obj_set |= orderedset.oset(self.get_elems_on_type(spec))
             elif spec.startswith("tag:"):
