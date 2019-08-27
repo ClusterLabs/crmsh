@@ -127,6 +127,8 @@ test/unittests/corosync.conf.1
 test/unittests/corosync.conf.2
 test/unit-tests-in-container.sh
 test/unittests/__init__.py
+test/unittests/pacemaker.log
+test/unittests/pacemaker_unicode.log
 test/unittests/schemas/acls-1.1.rng
 test/unittests/schemas/acls-1.2.rng
 test/unittests/schemas/constraints-1.0.rng
@@ -162,7 +164,7 @@ test/unittests/test_gv.py
 test/unittests/test_handles.py
 test/unittests/test_objset.py
 test/unittests/test_parse.py
-test/unittests/test_resource.py
+test/unittests/test_report.py
 test/unittests/test_scripts.py
 test/unittests/test_time.py
 test/unittests/test_utils.py

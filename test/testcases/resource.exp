@@ -85,6 +85,61 @@ resource p0 is NOT running
   </configuration>
 </cib>
 
+.SETENV showobj=p2
+.TRY resource maintenance p2 on
+.INP: configure
+.INP: _regtest on
+.INP: show xml p2
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <master id="m1">
+        <meta_attributes id="m1-meta_attributes">
+          <nvpair id="m1-meta_attributes-maintenance" name="maintenance" value="true"/>
+        </meta_attributes>
+        <primitive id="p2" class="ocf" provider="heartbeat" type="Delay">
+          <instance_attributes id="p2-instance_attributes">
+            <nvpair name="startdelay" value="2" id="p2-instance_attributes-startdelay"/>
+            <nvpair name="mondelay" value="2" id="p2-instance_attributes-mondelay"/>
+            <nvpair name="stopdelay" value="2" id="p2-instance_attributes-stopdelay"/>
+          </instance_attributes>
+        </primitive>
+      </master>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource maintenance p2 off
+.INP: configure
+.INP: _regtest on
+.INP: show xml p2
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <master id="m1">
+        <meta_attributes id="m1-meta_attributes">
+          <nvpair id="m1-meta_attributes-maintenance" name="maintenance" value="false"/>
+        </meta_attributes>
+        <primitive id="p2" class="ocf" provider="heartbeat" type="Delay">
+          <instance_attributes id="p2-instance_attributes">
+            <nvpair name="startdelay" value="2" id="p2-instance_attributes-startdelay"/>
+            <nvpair name="mondelay" value="2" id="p2-instance_attributes-mondelay"/>
+            <nvpair name="stopdelay" value="2" id="p2-instance_attributes-stopdelay"/>
+          </instance_attributes>
+        </primitive>
+      </master>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
 .SETENV showobj=cli-prefer-p3
 .TRY resource migrate p3 node1
 .EXT crm_resource --quiet --move --resource 'p3' --node 'node1'
