@@ -44,9 +44,26 @@ def get_children_with_different_attr(node, attr, value):
             l.append(p)
     return l
 
+def get_children_with_attr(node, attr):
+    l = []
+    for p in node.xpath(".//primitive"):
+        diff_attr = False
+        for meta_set in xmlutil.get_set_nodes(p, "meta_attributes", create=False):
+            p_value = xmlutil.get_attr_value(meta_set, attr)
+            if p_value is not None:
+                diff_attr = True
+                break
+        if diff_attr:
+            l.append(p)
+    return l
 
 def set_deep_meta_attr_node(target_node, attr, value):
     nvpair_l = []
+    conflicting_attr = ''
+    if 'maintenance' == attr:
+        conflicting_attr = 'is-managed'
+    if 'is-managed' == attr:
+        conflicting_attr = 'maintenance'
     if xmlutil.is_clone(target_node):
         for c in target_node.iterchildren():
             if xmlutil.is_child_rsc(c):
@@ -54,16 +71,35 @@ def set_deep_meta_attr_node(target_node, attr, value):
     if config.core.manage_children != "never" and \
             (xmlutil.is_group(target_node) or
              (xmlutil.is_clone(target_node) and xmlutil.cloned_el(target_node) == "group")):
+        # maintenance and is-managed attributes conflict,
+        # ask the user if he wants to leave both.
+        if '' != conflicting_attr:
+            odd_children = get_children_with_attr(target_node, conflicting_attr)
+            for c in odd_children:
+                if config.core.manage_children == "always" or \
+                        (config.core.manage_children == "ask" and
+                        utils.ask("'%s' conflicts with '%s' attribute. Remove '%s' for child resource %s?" %
+                                (attr, conflicting_attr, conflicting_attr, c.get("id")))):
+                    common_debug("force remove meta attr %s from %s" %
+                                (conflicting_attr, c.get("id")))
+                    rm_meta_attribute(c, conflicting_attr, nvpair_l, force_children=True)
+        # remove attributes with different values
         odd_children = get_children_with_different_attr(target_node, attr, value)
         for c in odd_children:
             if config.core.manage_children == "always" or \
                     (config.core.manage_children == "ask" and
-                     utils.ask("Do you want to override %s for child resource %s?" %
+                     utils.ask("Do you want to override '%s' for child resource %s?" %
                                (attr, c.get("id")))):
                 common_debug("force remove meta attr %s from %s" %
                              (attr, c.get("id")))
                 rm_meta_attribute(c, attr, nvpair_l, force_children=True)
     xmlutil.rmnodes(list(set(nvpair_l)))
+    if '' != conflicting_attr:
+        nvpairs = target_node.xpath("./meta_attributes/nvpair[@name='%s']" % (conflicting_attr))
+        if len(nvpairs) > 0:
+            if (utils.ask("'%s' conflicts with '%s' attribute. Remove '%s' for resource %s?" %
+                        (attr, conflicting_attr, conflicting_attr, target_node.get("id")))):
+                xmlutil.rmnodes(list(set(nvpairs)))
     xmlutil.xml_processnodes(target_node,
                              xmlutil.is_emptynvpairs, xmlutil.rmnodes)
 
