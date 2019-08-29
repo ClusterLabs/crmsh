@@ -958,3 +958,159 @@ g:0 promotion score on none: 0
 Remaining: node1 capacity:
 
 Transition Summary:
+.SETENV showobj=
+.TRY configure primitive p5 Dummy
+.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
+.EXT crm_resource --show-metadata stonith:null
+.EXT stonithd metadata
+.EXT crm_resource --show-metadata ocf:pacemaker:Dummy
+.EXT crm_resource --show-metadata ocf:heartbeat:Delay
+.TRY configure group g1 p5
+.TRY resource manage p5
+.SETENV showobj=p5
+.TRY -F resource maintenance p5 on
+INFO: 'maintenance' conflicts with 'is-managed' attribute. Remove 'is-managed' for resource p5? [YES]
+.INP: configure
+.INP: _regtest on
+.INP: show xml p5
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <group id="g1">
+        <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy">
+          <meta_attributes id="p5-meta_attributes-0">
+            <nvpair id="p5-meta_attributes-0-maintenance" name="maintenance" value="true"/>
+          </meta_attributes>
+        </primitive>
+      </group>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.SETENV showobj=p5
+.TRY -F resource unmanage p5
+INFO: 'is-managed' conflicts with 'maintenance' attribute. Remove 'maintenance' for resource p5? [YES]
+.INP: configure
+.INP: _regtest on
+.INP: show xml p5
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <group id="g1">
+        <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy">
+          <meta_attributes id="p5-meta_attributes">
+            <nvpair id="p5-meta_attributes-is-managed" name="is-managed" value="false"/>
+          </meta_attributes>
+        </primitive>
+      </group>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.SETENV showobj=p5
+.TRY -F resource maintenance g1
+.INP: configure
+.INP: _regtest on
+.INP: show xml p5
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <group id="g1">
+        <meta_attributes id="g1-meta_attributes">
+          <nvpair id="g1-meta_attributes-maintenance" name="maintenance" value="true"/>
+        </meta_attributes>
+        <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy"/>
+      </group>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource start p5
+.INP: configure
+.INP: _regtest on
+.INP: show xml p5
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <group id="g1">
+        <meta_attributes id="g1-meta_attributes">
+          <nvpair id="g1-meta_attributes-maintenance" name="maintenance" value="true"/>
+        </meta_attributes>
+        <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy">
+          <meta_attributes id="p5-meta_attributes">
+            <nvpair id="p5-meta_attributes-target-role" name="target-role" value="Started"/>
+          </meta_attributes>
+        </primitive>
+      </group>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.SETENV showobj=g1
+.TRY -F resource manage g1
+INFO: 'is-managed' conflicts with 'maintenance' attribute. Remove 'maintenance' for resource g1? [YES]
+.INP: configure
+.INP: _regtest on
+.INP: show xml g1
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <group id="g1">
+        <meta_attributes id="g1-meta_attributes-0">
+          <nvpair id="g1-meta_attributes-0-is-managed" name="is-managed" value="true"/>
+        </meta_attributes>
+        <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy">
+          <meta_attributes id="p5-meta_attributes">
+            <nvpair id="p5-meta_attributes-target-role" name="target-role" value="Started"/>
+          </meta_attributes>
+        </primitive>
+      </group>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource start p5
+.INP: configure
+.INP: _regtest on
+.INP: show xml g1
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <group id="g1">
+        <meta_attributes id="g1-meta_attributes-0">
+          <nvpair id="g1-meta_attributes-0-is-managed" name="is-managed" value="true"/>
+        </meta_attributes>
+        <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy">
+          <meta_attributes id="p5-meta_attributes">
+            <nvpair id="p5-meta_attributes-target-role" name="target-role" value="Started"/>
+          </meta_attributes>
+        </primitive>
+      </group>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
