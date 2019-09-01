@@ -408,7 +408,7 @@ def _parse_yaml(scriptname, scriptfile):
     try:
         import yaml
         with open(scriptfile) as f:
-            data = yaml.load(f)
+            data = yaml.load(f, Loader=yaml.SafeLoader)
             if isinstance(data, list):
                 data = data[0]
     except ImportError as e:
@@ -1015,7 +1015,7 @@ def load_script_string(script, yml):
     build_script_cache()
     import cStringIO
     import yaml
-    data = yaml.load(cStringIO.StringIO(yml))
+    data = yaml.load(cStringIO.StringIO(yml), Loader=yaml.SafeLoader)
     if isinstance(data, list):
         data = data[0]
     if 'parameters' in data:
