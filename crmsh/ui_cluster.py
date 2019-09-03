@@ -171,6 +171,7 @@ Stage can be one of:
     vgfs        Create volume group and filesystem (ocfs2 template only,
                 requires -o <dev>)
     admin       Create administration virtual IP (optional)
+    qdevice     Configure qdevice and qnetd
 
 Note:
   - If stage is not specified, the script will run through each stage

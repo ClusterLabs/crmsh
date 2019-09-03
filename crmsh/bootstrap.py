@@ -40,7 +40,7 @@ SYSCONFIG_FW_CLUSTER = "/etc/sysconfig/SuSEfirewall2.d/services/cluster"
 PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
 
 
-INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin")
+INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin", "qdevice")
 
 
 class Context(object):
@@ -413,6 +413,10 @@ def check_prereqs(stage):
         if not check_watchdog():
             warn("No watchdog device found. If SBD is used, the cluster will be unable to start without a watchdog.")
             warned = True
+
+    if stage == "qdevice":
+        if not _context.qdevice:
+            error("Miss qdevice related option(at least with --qdevice)")
 
     if warned:
         if not confirm("Do you want to continue anyway?"):
@@ -1504,8 +1508,17 @@ Configure Administration IP Address:
 
 
 def init_qdevice():
+    def copy_ssh_id_to_qnetd():
+        qnetd_addr = _context.qdevice.ip
+        status("""
+Copy ssh key to qnetd node({})""".format(qnetd_addr))
+        invoke("ssh-copy-id -i /root/.ssh/id_rsa.pub root@{}".format(qnetd_addr))
+
     if _context.qdevice:
+        if _context.qdevice.test_ssh_need_passwd():
+            copy_ssh_id_to_qnetd()
         try:
+            _context.qdevice.valid2()
             status("""
 Enable corosync-qnetd.service""")
             _context.qdevice.enable()
@@ -2099,6 +2112,7 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     cluster
     vgfs
     admin
+    qdevice
     """
     global _context
     _context = Context(quiet=quiet, yes_to_all=yes_to_all, nic=nic)
@@ -2132,7 +2146,7 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     # except ssh and csync2 (which don't care) and csync2_remote (which mustn't care,
     # just in case this breaks ha-cluster-join on another node).
     corosync_active = service_is_active("corosync.service")
-    if stage in ("vgfs", "admin"):
+    if stage in ("vgfs", "admin", "qdevice"):
         if not corosync_active:
             error("Cluster is inactive - can't run %s stage" % (stage))
     elif stage == "":

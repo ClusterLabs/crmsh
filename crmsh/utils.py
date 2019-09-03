@@ -2214,7 +2214,7 @@ def test_ssh_need_passwd(host):
     ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
     ssh_cmd = "ssh {} -T -o Batchmode=yes {} true".format(ssh_options, host)
     rc, _, _ = get_stdout_stderr(ssh_cmd)
-    return rc == 0
+    return rc != 0
 
 
 def valid_port(port):
