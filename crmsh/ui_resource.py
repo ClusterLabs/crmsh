@@ -181,7 +181,7 @@ class RscMgmt(command.UI):
         'get': "crm_resource --meta --resource '%s' --get-parameter '%s'",
     }
     rsc_failcount = {
-        'set': "crm_attribute -t status -n 'fail-count-%s' -N '%s' -v '%s' -d 0",
+        'set': "crm_attribute -t status -P 'fail-count-%s*' -N '%s' -v '%s' -d 0",
         'delete': "crm_failcount -D -r %s -N %s",
         'show': "crm_failcount -G -r %s -N %s",
         'get': "crm_failcount -G -r %s -N %s",
