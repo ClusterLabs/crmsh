@@ -64,3 +64,17 @@ resource stop p3
 configure rm cg
 configure ms msg g
 resource scores
+%setenv showobj=
+configure primitive p5 Dummy
+configure group g1 p5
+resource manage p5
+%setenv showobj=p5
+-F resource maintenance p5 on
+%setenv showobj=p5
+-F resource unmanage p5
+%setenv showobj=p5
+-F resource maintenance g1
+resource start p5
+%setenv showobj=g1
+-F resource manage g1
+resource start p5

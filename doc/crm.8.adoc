@@ -2038,6 +2038,9 @@ locate [<rsc> ...]
 
 Enables or disables the per-resource maintenance mode. When this mode
 is enabled, no monitor operations will be triggered for the resource.
+`maintenance` attribute conflicts with the `is-managed`. When setting
+the `maintenance` attribute, the user is proposed to remove the
+`is-managed` attribute if it exists.
 
 Usage:
 ..................
@@ -2057,6 +2060,9 @@ Manage a resource using the `is-managed` attribute. If there
 are multiple meta attributes sets, the attribute is set in all of
 them. If the resource is a clone, all `is-managed` attributes are
 removed from the children resources.
+`is-managed` attribute conflicts with the `maintenance`. When setting
+the `is-managed` attribute, the user is proposed to remove the
+`maintenance` attribute if it exists.
 
 For details on group management see <<cmdhelp_options_manage-children,`options manage-children`>>.
 
