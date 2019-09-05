@@ -2246,4 +2246,9 @@ def parallax_call(nodes, cmd, askpass=False, ssh_options=None):
             common_warn("Failed on {}: {}".format(host, result))
             results.remove((host, result))
     return results
+
+
+def use_qdevice():
+    from . import corosync
+    return corosync.get_value("quorum.device.model") == "net"
 # vim:ts=4:sw=4:et:

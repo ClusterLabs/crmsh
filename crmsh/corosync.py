@@ -435,7 +435,7 @@ def set_value(path, value):
     f.close()
 
 
-def add_node_ucast(IParray, node_name=None):
+def add_node_ucast(IParray, node_id=None):
 
     f = open(conf()).read()
     p = Parser(f)
@@ -449,12 +449,15 @@ def add_node_ucast(IParray, node_name=None):
         if ip in exist_iplist:
             raise ValueError("IP {} was already configured".format(ip))
 
-    node_id = get_free_nodeid(p)
+    if node_id is None:
+        node_id = get_free_nodeid(p)
     node_value = []
     for i, addr in enumerate(IParray):
         node_value += make_value('nodelist.node.ring{}_addr'.format(i), addr)
     node_value += make_value('nodelist.node.nodeid', str(node_id))
 
+    if get_values("nodelist.node.ring0_addr") == []:
+        p.add('', make_section('nodelist', []))
     p.add('nodelist', make_section('nodelist.node', node_value))
 
     num_nodes = p.count('nodelist.node')

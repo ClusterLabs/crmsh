@@ -911,6 +911,16 @@ def valid_port(port, prev_value=None):
     return False
 
 
+def add_nodelist_from_cfgtool():
+    _, out = utils.get_stdout("corosync-cfgtool -s")
+    iplist = re.findall(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', out)
+    nodeid = None
+    match = re.search(r'Local node ID ([0-9]+)', out)
+    if match:
+        nodeid = match.group(1)
+    corosync.add_node_ucast(iplist, nodeid)
+
+
 def init_corosync_unicast():
 
     if _context.yes_to_all:
@@ -1426,6 +1436,16 @@ rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
         if not invoke("crm configure property stonith-enabled=true stonith-watchdog-timeout=5s"):
             error("Can't enable STONITH for diskless SBD")
 
+    # qdevice need nodelist for mcast situation
+    if _context.qdevice:
+        # In single node situation, for now, we already have nodelist(to make sure cluster can start)
+        # expected_votes should set to "0" if we want to use qdevice
+        corosync.set_value("quorum.expected_votes", "0")
+        corosync.set_value("quorum.device.votes", "1")
+        if corosync.get_value("totem.transport") != "udpu":
+            add_nodelist_from_cfgtool()
+        invoke("crm corosync reload")
+
 
 def init_vgfs():
     """
@@ -1509,24 +1529,34 @@ Configure Administration IP Address:
 
 def init_qdevice():
     def copy_ssh_id_to_qnetd():
-        qnetd_addr = _context.qdevice.ip
-        status("""
-Copy ssh key to qnetd node({})""".format(qnetd_addr))
+        status("Copy ssh key to qnetd node({})".format(qnetd_addr))
         invoke("ssh-copy-id -i /root/.ssh/id_rsa.pub root@{}".format(qnetd_addr))
 
-    if _context.qdevice:
-        if _context.qdevice.test_ssh_need_passwd():
-            copy_ssh_id_to_qnetd()
-        try:
-            _context.qdevice.valid2()
-            status("""
-Enable corosync-qnetd.service""")
-            _context.qdevice.enable()
-            status("""
-Starting corosync-qnetd.service""")
-            _context.qdevice.start()
-        except ValueError as err:
-            error(err)
+    if not _context.qdevice:
+        return
+
+    status("""
+Configure Qdevice/Qnetd""")
+
+    if utils.use_qdevice() and _context.stage == "qdevice":
+        if not confirm("Qdevice is already configured - overwrite?"):
+            return
+
+    qnetd_addr = _context.qdevice.ip
+    if _context.qdevice.test_ssh_need_passwd():
+        copy_ssh_id_to_qnetd()
+    try:
+        _context.qdevice.valid2()
+        status("Enable and start corosync-qdevice.service")
+        start_service("corosync-qdevice.service")
+
+        status("Enable corosync-qnetd.service on {}".format(qnetd_addr))
+        _context.qdevice.enable()
+
+        status("Starting corosync-qnetd.service on {}".format(qnetd_addr))
+        _context.qdevice.start()
+    except ValueError as err:
+        error(err)
 
 
 def init():
@@ -1738,7 +1768,7 @@ def join_cluster(seed_host):
         error("{} is not readable. Please ensure that hostnames are resolvable.".format(corosync.conf()))
 
     # if unicast, we need to add our node to $corosync.conf()
-    is_unicast = "nodelist" in open(corosync.conf()).read()
+    is_unicast = corosync.get_value("totem.transport") == "udpu"
     if is_unicast:
         local_iplist = utils.ip_in_local(_context.ipv6)
         len_iplist = len(local_iplist)
@@ -1796,6 +1826,11 @@ def join_cluster(seed_host):
         local_nodeid = get_local_nodeid()
         update_nodeid(local_nodeid)
 
+    use_qdevice = utils.use_qdevice()
+    if use_qdevice and not is_unicast:
+        # expected_votes here maybe is "0", set to "3" to make sure cluster can start
+        corosync.set_value("quorum.expected_votes", "3")
+
     # Initialize the cluster before adjusting quorum. This is so
     # that we can query the cluster to find out how many nodes
     # there are (so as not to adjust multiple times if a previous
@@ -1814,7 +1849,7 @@ def join_cluster(seed_host):
                 nodeid_dict[tmp[1]] = tmp[0]
 
     # apply nodelist in cluster
-    if is_unicast:
+    if is_unicast or use_qdevice:
         invoke("crm cluster run 'crm corosync reload'")
 
     def update_expected_votes():
@@ -1845,7 +1880,6 @@ def join_cluster(seed_host):
         # so that we can ask the cluster for the current membership list
         # Have to check if a qnetd device is configured and increase
         # expected_votes in that case
-        use_qdevice = 1 if corosync.get_value("quorum.device.model") == "net" else 0
         if nodelist is None:
             for v in corosync.get_values("quorum.expected_votes"):
                 expected_votes = v
@@ -1865,7 +1899,7 @@ def join_cluster(seed_host):
                 elif corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
                     device_votes = 1
                     nodecount = expected_votes - device_votes
-                elif use_qdevice == 0:
+                elif use_qdevice:
                     device_votes = 0
                     nodecount = v
 
@@ -1888,10 +1922,10 @@ def join_cluster(seed_host):
 
             if corosync.get_value("quorum.expected_votes"):
                 corosync.set_value("quorum.expected_votes", str(expected_votes))
-        if use_qdevice == 0:
-            corosync.set_value("quorum.two_node", 1 if expected_votes == 2 else 0)
         if use_qdevice:
             corosync.set_value("quorum.device.votes", device_votes)
+        else:
+            corosync.set_value("quorum.two_node", 1 if expected_votes == 2 else 0)
 
         csync2_update(corosync.conf())
     update_expected_votes()
@@ -1918,6 +1952,13 @@ def join_cluster(seed_host):
                 continue
             update_nodeid(int(nodeid_dict[node]), node)
         update_nodeid(local_nodeid)
+
+    if use_qdevice:
+        if not is_unicast:
+            add_nodelist_from_cfgtool()
+            csync2_update(corosync.conf())
+            invoke("crm corosync reload")
+        start_service("corosync-qdevice.service")
 
     status_done()
 
@@ -2129,6 +2170,7 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     _context.ui_context = ui_context
     _context.qdevice = qdevice
     _context.no_overwrite_sshkey = no_overwrite_sshkey
+    _context.stage = stage
 
     def check_option():
         if _context.admin_ip and not valid_adminIP(_context.admin_ip):
