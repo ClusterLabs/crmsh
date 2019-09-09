@@ -118,6 +118,26 @@ class QDevice(object):
         if isinstance(result, parallax.Error):
             raise ValueError("Failed on {}: {}".format(host, result))
 
+    def config(self):
+        f = open(conf()).read()
+        p = Parser(f)
+
+        p.remove("quorum.device")
+
+        p.add('quorum', make_section('quorum.device', []))
+        p.set('quorum.device.votes', '1')
+        p.set('quorum.device.model', 'net')
+        p.add('quorum.device', make_section('quorum.device.net', []))
+        p.set('quorum.device.net.tls', 'off')
+        p.set('quorum.device.net.host', self.ip)
+        p.set('quorum.device.net.port', self.port)
+        p.set('quorum.device.net.algorithm', self.algo)
+        p.set('quorum.device.net.tie_breaker', self.tie_breaker)
+
+        f = open(conf(), 'w')
+        f.write(p.to_string())
+        f.close()
+
 
 def corosync_tokenizer(stream):
     """Parses the corosync config file into a token stream"""

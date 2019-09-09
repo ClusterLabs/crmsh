@@ -1538,21 +1538,31 @@ def init_qdevice():
     status("""
 Configure Qdevice/Qnetd""")
 
-    if utils.use_qdevice() and _context.stage == "qdevice":
-        if not confirm("Qdevice is already configured - overwrite?"):
+    if _context.stage == "qdevice":
+        if utils.use_qdevice() and not confirm("Qdevice is already configured - overwrite?"):
             return
+        _context.qdevice.config()
+        if corosync.get_value("quorum.expected_votes") == "1":
+            corosync.set_value("quorum.expected_votes", "0")
+        if corosync.get_value("totem.transport") != "udpu":
+            res = utils.get_nodeinfo_from_cmaptool()
+            for nodeid, iplist in res.items():
+                corosync.add_node_ucast(iplist, nodeid)
+        csync2_update(corosync.conf())
+        invoke("crm cluster run 'crm corosync reload'")
 
     qnetd_addr = _context.qdevice.ip
     if _context.qdevice.test_ssh_need_passwd():
         copy_ssh_id_to_qnetd()
     try:
         _context.qdevice.valid2()
-        status("Enable and start corosync-qdevice.service")
-        start_service("corosync-qdevice.service")
+        status("Enable corosync-qdevice.service")
+        invoke("crm cluster run 'systemctl enable corosync-qdevice'")
+        status("Starting corosync-qdevice.service")
+        invoke("crm cluster run 'systemctl start corosync-qdevice'")
 
         status("Enable corosync-qnetd.service on {}".format(qnetd_addr))
         _context.qdevice.enable()
-
         status("Starting corosync-qnetd.service on {}".format(qnetd_addr))
         _context.qdevice.start()
     except ValueError as err:

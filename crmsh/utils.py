@@ -2251,4 +2251,19 @@ def parallax_call(nodes, cmd, askpass=False, ssh_options=None):
 def use_qdevice():
     from . import corosync
     return corosync.get_value("quorum.device.model") == "net"
+
+
+def get_nodeinfo_from_cmaptool():
+    nodeid_ip_dict = {}
+    rc, out = get_stdout("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
+    if rc != 0:
+        return nodeid_ip_dict
+
+    for line in out.split('\n'):
+        match = re.search(r'members\.(.*)\.ip', line)
+        if match:
+            node_id = match.group(1)
+            iplist = re.findall(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', line)
+            nodeid_ip_dict[node_id] = iplist
+    return nodeid_ip_dict
 # vim:ts=4:sw=4:et:
