@@ -1996,6 +1996,84 @@ def join_ssh_merge(_cluster_node):
             if isinstance(result, parallax.Error):
                 warn("scp to {} failed ({}), known_hosts update may be incomplete".format(host, str(result)))
 
+def update_expected_votes():
+    # get a list of nodes, excluding remote nodes
+    nodelist = None
+    loop_count = 0
+    device_votes = 0
+    nodecount = 0
+    expected_votes = 0
+    while True:
+        rc, nodelist_text = utils.get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
+        if rc == 0:
+            try:
+                nodelist_xml = etree.fromstring(nodelist_text)
+                nodelist = [n.get('uname') for n in nodelist_xml.xpath('//node_state') if n.get('remote_node') != 'true']
+                if len(nodelist) >= 2:
+                    break
+            except Exception:
+                break
+        # timeout: 10 seconds
+        if loop_count == 10:
+            break
+        loop_count += 1
+        sleep(1)
+
+    # Increase expected_votes
+    # TODO: wait to adjust expected_votes until after cluster join,
+    # so that we can ask the cluster for the current membership list
+    # Have to check if a qnetd device is configured and increase
+    # expected_votes in that case
+    use_qdevice = 1 if corosync.get_value("quorum.device.model") == "net" else 0
+    if nodelist is None:
+        for v in corosync.get_values("quorum.expected_votes"):
+            expected_votes = v
+
+            # For node >= 2, expected_votes = nodecount + device_votes
+            # Assume nodecount is N, for ffsplit, qdevice only has one vote
+            # which means that device_votes is 1, ie:expected_votes = N + 1;
+            # while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
+            # and update quorum.device.net.algorithm based on device_votes
+
+            if corosync.get_value("quorum.device.net.algorithm") == "lms":
+                device_votes = int((expected_votes - 1) / 2)
+                nodecount = expected_votes - device_votes
+                # as nodecount will increase 1, and device_votes is nodecount - 1
+                # device_votes also increase 1
+                device_votes += 1
+            elif corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
+                device_votes = 1
+                nodecount = expected_votes - device_votes
+            elif use_qdevice == 0:
+                device_votes = 0
+                nodecount = v
+
+            nodecount += 1
+            expected_votes = nodecount + device_votes
+            corosync.set_value("quorum.expected_votes", str(expected_votes))
+    else:
+        nodecount = len(nodelist)
+        expected_votes = 0
+        # For node >= 2, expected_votes = nodecount + device_votes
+        # Assume nodecount is N, for ffsplit, qdevice only has one vote
+        # which means that device_votes is 1, ie:expected_votes = N + 1;
+        # while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
+        if corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
+            device_votes = 1
+        if corosync.get_value("quorum.device.net.algorithm") == "lms":
+            device_votes = nodecount - 1
+
+        expected_votes = nodecount + device_votes
+
+        if corosync.get_value("quorum.expected_votes"):
+            corosync.set_value("quorum.expected_votes", str(expected_votes))
+    if use_qdevice == 0:
+        corosync.set_value("quorum.two_node", 1 if expected_votes == 2 else 0)
+    if use_qdevice:
+        corosync.set_value("quorum.device.votes", device_votes)
+
+    csync2_update(corosync.conf())
+
 
 def setup_passwordless_with_other_nodes(init_node):
     """
@@ -2155,85 +2233,7 @@ def join_cluster(seed_host):
     if is_unicast:
         invoke("crm cluster run 'crm corosync reload'")
 
-    def update_expected_votes():
-        # get a list of nodes, excluding remote nodes
-        nodelist = None
-        loop_count = 0
-        device_votes = 0
-        nodecount = 0
-        expected_votes = 0
-        while True:
-            rc, nodelist_text = utils.get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
-            if rc == 0:
-                try:
-                    nodelist_xml = etree.fromstring(nodelist_text)
-                    nodelist = [n.get('uname') for n in nodelist_xml.xpath('//node_state') if n.get('remote_node') != 'true']
-                    if len(nodelist) >= 2:
-                        break
-                except Exception:
-                    break
-            # timeout: 10 seconds
-            if loop_count == 10:
-                break
-            loop_count += 1
-            sleep(1)
-
-        # Increase expected_votes
-        # TODO: wait to adjust expected_votes until after cluster join,
-        # so that we can ask the cluster for the current membership list
-        # Have to check if a qnetd device is configured and increase
-        # expected_votes in that case
-        use_qdevice = 1 if corosync.get_value("quorum.device.model") == "net" else 0
-        if nodelist is None:
-            for v in corosync.get_values("quorum.expected_votes"):
-                expected_votes = v
-
-                # For node >= 2, expected_votes = nodecount + device_votes
-                # Assume nodecount is N, for ffsplit, qdevice only has one vote
-                # which means that device_votes is 1, ie:expected_votes = N + 1;
-                # while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
-                # and update quorum.device.net.algorithm based on device_votes
-
-                if corosync.get_value("quorum.device.net.algorithm") == "lms":
-                    device_votes = int((expected_votes - 1) / 2)
-                    nodecount = expected_votes - device_votes
-                    # as nodecount will increase 1, and device_votes is nodecount - 1
-                    # device_votes also increase 1
-                    device_votes += 1
-                elif corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
-                    device_votes = 1
-                    nodecount = expected_votes - device_votes
-                elif use_qdevice == 0:
-                    device_votes = 0
-                    nodecount = v
-
-                nodecount += 1
-                expected_votes = nodecount + device_votes
-                corosync.set_value("quorum.expected_votes", str(expected_votes))
-        else:
-            nodecount = len(nodelist)
-            expected_votes = 0
-            # For node >= 2, expected_votes = nodecount + device_votes
-            # Assume nodecount is N, for ffsplit, qdevice only has one vote
-            # which means that device_votes is 1, ie:expected_votes = N + 1;
-            # while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
-            if corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
-                device_votes = 1
-            if corosync.get_value("quorum.device.net.algorithm") == "lms":
-                device_votes = nodecount - 1
-
-            expected_votes = nodecount + device_votes
-
-            if corosync.get_value("quorum.expected_votes"):
-                corosync.set_value("quorum.expected_votes", str(expected_votes))
-        if use_qdevice == 0:
-            corosync.set_value("quorum.two_node", 1 if expected_votes == 2 else 0)
-        if use_qdevice:
-            corosync.set_value("quorum.device.votes", device_votes)
-
-        csync2_update(corosync.conf())
     update_expected_votes()
-
     # Trigger corosync config reload to ensure expected_votes is propagated
     invoke("corosync-cfgtool -R")
 
