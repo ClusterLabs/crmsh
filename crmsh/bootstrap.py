@@ -911,14 +911,13 @@ def valid_port(port, prev_value=None):
     return False
 
 
-def add_nodelist_from_cfgtool():
-    _, out = utils.get_stdout("corosync-cfgtool -s")
-    iplist = re.findall(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', out)
-    nodeid = None
-    match = re.search(r'Local node ID ([0-9]+)', out)
-    if match:
-        nodeid = match.group(1)
-    corosync.add_node_ucast(iplist, nodeid)
+def add_nodelist_from_cmaptool():
+    for nodeid, iplist in utils.get_nodeinfo_from_cmaptool().items():
+        try:
+            corosync.add_node_ucast(iplist, nodeid)
+        except ValueError as err:
+            if "was already configured" in str(err):
+                continue
 
 
 def init_corosync_unicast():
@@ -1436,16 +1435,6 @@ rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
         if not invoke("crm configure property stonith-enabled=true stonith-watchdog-timeout=5s"):
             error("Can't enable STONITH for diskless SBD")
 
-    # qdevice need nodelist for mcast situation
-    if _context.qdevice:
-        # In single node situation, for now, we already have nodelist(to make sure cluster can start)
-        # expected_votes should set to "0" if we want to use qdevice
-        corosync.set_value("quorum.expected_votes", "0")
-        corosync.set_value("quorum.device.votes", "1")
-        if corosync.get_value("totem.transport") != "udpu":
-            add_nodelist_from_cfgtool()
-        invoke("crm corosync reload")
-
 
 def init_vgfs():
     """
@@ -1534,7 +1523,6 @@ def init_qdevice():
 
     if not _context.qdevice:
         return
-
     status("""
 Configure Qdevice/Qnetd""")
 
@@ -1542,15 +1530,12 @@ Configure Qdevice/Qnetd""")
         if utils.use_qdevice() and not confirm("Qdevice is already configured - overwrite?"):
             return
         _context.qdevice.config()
-        if corosync.get_value("quorum.expected_votes") == "1":
-            corosync.set_value("quorum.expected_votes", "0")
-        if corosync.get_value("totem.transport") != "udpu":
-            res = utils.get_nodeinfo_from_cmaptool()
-            for nodeid, iplist in res.items():
-                corosync.add_node_ucast(iplist, nodeid)
-        update_expected_votes()
-        csync2_update(corosync.conf())
-        invoke("crm cluster run 'crm corosync reload'")
+    # qdevice need nodelist for mcast situation
+    if corosync.get_value("totem.transport") != "udpu":
+        add_nodelist_from_cmaptool()
+    update_expected_votes()
+    csync2_update(corosync.conf())
+    invoke("crm cluster run 'crm corosync reload'")
 
     qnetd_addr = _context.qdevice.ip
     if _context.qdevice.test_ssh_need_passwd():
@@ -1780,7 +1765,8 @@ def update_expected_votes():
         if corosync.get_value("quorum.device.net.algorithm") == "lms":
             device_votes = nodecount - 1
 
-        expected_votes = nodecount + device_votes
+        if nodecount > 1:
+            expected_votes = nodecount + device_votes
 
         if corosync.get_value("quorum.expected_votes"):
             corosync.set_value("quorum.expected_votes", str(expected_votes))
@@ -1966,7 +1952,7 @@ def join_cluster(seed_host):
 
     if use_qdevice:
         if not is_unicast:
-            add_nodelist_from_cfgtool()
+            add_nodelist_from_cmaptool()
             csync2_update(corosync.conf())
             invoke("crm corosync reload")
         start_service("corosync-qdevice.service")
