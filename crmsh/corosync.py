@@ -79,8 +79,6 @@ class QDevice(object):
             raise ValueError("invalid qdevice algorithm(ffsplit/lms)")
         if self.tie_breaker not in ["lowest", "highest"] and not utils.is_int(self.tie_breaker):
             raise ValueError("invalid qdevice tie_breaker(lowest/highest/valid_node_id)")
-
-    def valid2(self):
         if self.test_ssh_need_passwd():
             self.askpass = True
         if self.remote_running_cluster():

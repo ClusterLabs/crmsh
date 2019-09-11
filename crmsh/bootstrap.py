@@ -1541,7 +1541,6 @@ Configure Qdevice/Qnetd""")
     if _context.qdevice.test_ssh_need_passwd():
         copy_ssh_id_to_qnetd()
     try:
-        _context.qdevice.valid2()
         status("Enable corosync-qdevice.service")
         invoke("crm cluster run 'systemctl enable corosync-qdevice'")
         status("Starting corosync-qdevice.service")
