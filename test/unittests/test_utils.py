@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 # unit tests for utils.py
 
 import os
+import socket
 from unittest import mock
 from itertools import chain
 from crmsh import utils
@@ -252,3 +253,120 @@ def test_sysconfig_set_bsc1145823():
     utils.sysconfig_set(fname, age="100")
     sc = utils.parse_sysconfig(fname)
     assert (sc.get("age") == "100")
+
+@mock.patch("socket.socket")
+@mock.patch("crmsh.utils.closing")
+def test_check_port_open_false(mock_closing, mock_socket):
+    sock_inst = mock.Mock()
+    mock_socket.return_value = sock_inst
+    mock_closing.return_value.__enter__.return_value = sock_inst
+    sock_inst.connect_ex.return_value = 1
+
+    assert utils.check_port_open("node1.com", 22) is False
+
+    mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_STREAM)
+    mock_closing.assert_called_once_with(sock_inst)
+    sock_inst.connect_ex.assert_called_once_with(("node1.com", 22))
+
+@mock.patch("socket.socket")
+@mock.patch("crmsh.utils.closing")
+def test_check_port_open_true(mock_closing, mock_socket):
+    sock_inst = mock.Mock()
+    mock_socket.return_value = sock_inst
+    mock_closing.return_value.__enter__.return_value = sock_inst
+    sock_inst.connect_ex.return_value = 0
+
+    assert utils.check_port_open("node1.com", 22) is True
+
+    mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_STREAM)
+    mock_closing.assert_called_once_with(sock_inst)
+    sock_inst.connect_ex.assert_called_once_with(("node1.com", 22))
+
+def test_valid_port():
+    assert utils.valid_port(1) is False
+    assert utils.valid_port(10000000) is False
+    assert utils.valid_port(1234) is True
+
+@mock.patch("crmsh.corosync.get_value")
+def test_use_qdevice_false(mock_get_value):
+    mock_get_value.return_value = "ip"
+    assert utils.use_qdevice() is False
+    mock_get_value.assert_called_once_with("quorum.device.model")
+
+@mock.patch("crmsh.corosync.get_value")
+def test_use_qdevice_true(mock_get_value):
+    mock_get_value.return_value = "net"
+    assert utils.use_qdevice() is True
+    mock_get_value.assert_called_once_with("quorum.device.model")
+
+@mock.patch("crmsh.corosync.get_value")
+def test_qdevice_tls_on_false(mock_get_value):
+    mock_get_value.return_value = "off"
+    assert utils.qdevice_tls_on() is False
+    mock_get_value.assert_called_once_with("quorum.device.net.tls")
+
+@mock.patch("crmsh.corosync.get_value")
+def test_qdevice_tls_on_true(mock_get_value):
+    mock_get_value.return_value = "on"
+    assert utils.qdevice_tls_on() is True
+    mock_get_value.assert_called_once_with("quorum.device.net.tls")
+
+@mock.patch("crmsh.utils.get_stdout")
+def test_get_nodeinfo_from_cmaptool_return_none(mock_get_stdout):
+    mock_get_stdout.return_value = (1, None)
+    assert bool(utils.get_nodeinfo_from_cmaptool()) is False
+    mock_get_stdout.assert_called_once_with("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
+
+@mock.patch("re.findall")
+@mock.patch("re.search")
+@mock.patch("crmsh.utils.get_stdout")
+def test_get_nodeinfo_from_cmaptool(mock_get_stdout, mock_search, mock_findall):
+    mock_get_stdout.return_value = (0, 'runtime.totem.pg.mrp.srp.members.1.ip (str) = r(0) ip(192.168.43.129)\nruntime.totem.pg.mrp.srp.members.2.ip (str) = r(0) ip(192.168.43.128)')
+    match_inst1 = mock.Mock()
+    match_inst2 = mock.Mock()
+    mock_search.side_effect = [match_inst1, match_inst2]
+    match_inst1.group.return_value = '1'
+    match_inst2.group.return_value = '2'
+    mock_findall.side_effect = [["192.168.43.129"], ["192.168.43.128"]]
+
+    result = utils.get_nodeinfo_from_cmaptool()
+    assert result['1'] == ["192.168.43.129"]
+    assert result['2'] == ["192.168.43.128"]
+    
+    mock_get_stdout.assert_called_once_with("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
+    mock_search.assert_has_calls([
+        mock.call(r'members\.(.*)\.ip', 'runtime.totem.pg.mrp.srp.members.1.ip (str) = r(0) ip(192.168.43.129)'),
+        mock.call(r'members\.(.*)\.ip', 'runtime.totem.pg.mrp.srp.members.2.ip (str) = r(0) ip(192.168.43.128)')
+    ])
+    match_inst1.group.assert_called_once_with(1)
+    match_inst2.group.assert_called_once_with(1)
+    mock_findall.assert_has_calls([
+        mock.call(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', 'runtime.totem.pg.mrp.srp.members.1.ip (str) = r(0) ip(192.168.43.129)'),
+        mock.call(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', 'runtime.totem.pg.mrp.srp.members.2.ip (str) = r(0) ip(192.168.43.128)')
+    ])
+
+@mock.patch("crmsh.utils.get_nodeinfo_from_cmaptool")
+@mock.patch("crmsh.bootstrap.service_is_active")
+def test_valid_nodeid_false_service_not_active(mock_is_active, mock_nodeinfo):
+    mock_is_active.return_value = False
+    assert utils.valid_nodeid("3") is False
+    mock_is_active.assert_called_once_with('corosync.service')
+    mock_nodeinfo.assert_not_called()
+
+@mock.patch("crmsh.utils.get_nodeinfo_from_cmaptool")
+@mock.patch("crmsh.bootstrap.service_is_active")
+def test_valid_nodeid_false(mock_is_active, mock_nodeinfo):
+    mock_is_active.return_value = True
+    mock_nodeinfo.return_value = {'1': ["10.10.10.1"], "2": ["20.20.20.2"]}
+    assert utils.valid_nodeid("3") is False
+    mock_is_active.assert_called_once_with('corosync.service')
+    mock_nodeinfo.assert_called_once_with()
+
+@mock.patch("crmsh.utils.get_nodeinfo_from_cmaptool")
+@mock.patch("crmsh.bootstrap.service_is_active")
+def test_valid_nodeid_true(mock_is_active, mock_nodeinfo):
+    mock_is_active.return_value = True
+    mock_nodeinfo.return_value = {'1': ["10.10.10.1"], "2": ["20.20.20.2"]}
+    assert utils.valid_nodeid("2") is True
+    mock_is_active.assert_called_once_with('corosync.service')
+    mock_nodeinfo.assert_called_once_with()
