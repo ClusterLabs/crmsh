@@ -134,6 +134,18 @@ class QDevice(object):
 
         f = open(conf(), 'w')
         f.write(p.to_string())
+        f.flush()
+        os.fsync(f)
+        f.close()
+
+    def remove_config(self):
+        f = open(conf()).read()
+        p = Parser(f)
+        p.remove("quorum.device")
+        f = open(conf(), 'w')
+        f.write(p.to_string())
+        f.flush()
+        os.fsync(f)
         f.close()
 
 

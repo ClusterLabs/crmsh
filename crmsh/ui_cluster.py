@@ -403,6 +403,7 @@ If stage is not specified, each stage will be invoked in sequence.
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of cluster node which will be deleted", metavar="HOST")
         parser.add_option("-F", "--force", dest="force", help="Remove current node", action="store_true")
+        parser.add_option("--qdevice", dest="qdevice", help="Remove QDevice configuration and service from cluster", action="store_true")
         try:
             options, args = parser.parse_args(list(args))
         except:
@@ -417,7 +418,8 @@ If stage is not specified, each stage will be invoked in sequence.
                 cluster_node=None,
                 ui_context=context,
                 quiet=options.quiet,
-                yes_to_all=options.yes_to_all)
+                yes_to_all=options.yes_to_all,
+                qdevice=options.qdevice)
         else:
             for node in args:
                 bootstrap.bootstrap_remove(
