@@ -77,7 +77,7 @@ class QDevice(object):
             raise ValueError("invalid qdevice port range(1024 - 65535)")
         if self.algo not in ["ffsplit", "lms"]:
             raise ValueError("invalid qdevice algorithm(ffsplit/lms)")
-        if self.tie_breaker not in ["lowest", "highest"] and not utils.is_int(self.tie_breaker):
+        if self.tie_breaker not in ["lowest", "highest"] and not utils.valid_nodeid(self.tie_breaker):
             raise ValueError("invalid qdevice tie_breaker(lowest/highest/valid_node_id)")
         if self.test_ssh_need_passwd():
             self.askpass = True

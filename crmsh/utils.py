@@ -2266,4 +2266,15 @@ def get_nodeinfo_from_cmaptool():
             iplist = re.findall(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', line)
             nodeid_ip_dict[node_id] = iplist
     return nodeid_ip_dict
+
+
+def valid_nodeid(nodeid):
+    from . import bootstrap
+    if not bootstrap.service_is_active('corosync.service'):
+        return False
+
+    for _id, _ in get_nodeinfo_from_cmaptool().items():
+        if _id == nodeid:
+            return True
+    return False
 # vim:ts=4:sw=4:et:
