@@ -2210,13 +2210,6 @@ def check_port_open(host, port):
             return False
 
 
-def test_ssh_need_passwd(host):
-    ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
-    ssh_cmd = "ssh {} -T -o Batchmode=yes {} true".format(ssh_options, host)
-    rc, _, _ = get_stdout_stderr(ssh_cmd)
-    return rc != 0
-
-
 def valid_port(port):
     return int(port) >= 1024 and int(port) <= 65535
 
@@ -2232,7 +2225,6 @@ def parallax_call(nodes, cmd, askpass=False, ssh_options=None):
 
     if ssh_options is None:
         ssh_options = ['StrictHostKeyChecking=no', 'ConnectTimeout=10']
-
     opts = parallax.Options()
     opts.ssh_options = ssh_options
     opts.askpass = askpass
@@ -2248,9 +2240,68 @@ def parallax_call(nodes, cmd, askpass=False, ssh_options=None):
     return results
 
 
+def parallax_slurp(nodes, localdir, filename, askpass=False, ssh_options=None):
+    def is_ssh_error(msg):
+        return re.search(" 255,.* (ssh:|Permission denied)", str(msg))
+
+    try:
+        import parallax
+    except ImportError:
+        raise ImportError("parallax python library is missing")
+
+    if ssh_options is None:
+        ssh_options = ['StrictHostKeyChecking=no', 'ConnectTimeout=10']
+    opts = parallax.Options()
+    opts.ssh_options = ssh_options
+    opts.askpass = askpass
+    # warn_message will available from parallax-1.0.5
+    if hasattr(opts, 'warn_message'):
+        opts.warn_message = False
+    opts.localdir = localdir
+    dst = os.path.basename(filename)
+
+    results = list(parallax.slurp(nodes, filename, dst, opts).items())
+    for host, result in results:
+        if isinstance(result, parallax.Error) and is_ssh_error(result):
+            common_warn("Failed on {}: {}".format(host, result))
+            results.remove((host, result))
+    return results
+
+
+def parallax_copy(nodes, src, dst, askpass=False, ssh_options=None):
+    def is_ssh_error(msg):
+        return re.search(" 255,.* (ssh:|Permission denied)", str(msg))
+
+    try:
+        import parallax
+    except ImportError:
+        raise ImportError("parallax python library is missing")
+
+    if ssh_options is None:
+        ssh_options = ['StrictHostKeyChecking=no', 'ConnectTimeout=10']
+    opts = parallax.Options()
+    opts.ssh_options = ssh_options
+    opts.askpass = askpass
+    # warn_message will available from parallax-1.0.5
+    if hasattr(opts, 'warn_message'):
+        opts.warn_message = False
+
+    results = list(parallax.copy(nodes, src, dst, opts).items())
+    for host, result in results:
+        if isinstance(result, parallax.Error) and is_ssh_error(result):
+            common_warn("Failed on {}: {}".format(host, result))
+            results.remove((host, result))
+    return results
+
+
 def use_qdevice():
     from . import corosync
     return corosync.get_value("quorum.device.model") == "net"
+
+
+def qdevice_tls_on():
+    from . import corosync
+    return corosync.get_value("quorum.device.net.tls") == "on"
 
 
 def get_nodeinfo_from_cmaptool():
