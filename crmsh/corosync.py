@@ -72,11 +72,13 @@ class QDevice(object):
     Step 10: copy_p12_to_cluster
     Step 11: import_p12_on_cluster
     '''
-    def __init__(self, ip, port=5403, algo="ffsplit", tie_breaker="lowest"):
+    def __init__(self, ip, port=5403,
+                 algo="ffsplit", tie_breaker="lowest", tls="on"):
         self.ip = ip
         self.port = port
         self.algo = algo
         self.tie_breaker = tie_breaker
+        self.tls = tls
         self.askpass = False
 
         self.qnetd_service = "corosync-qnetd.service"
@@ -127,6 +129,8 @@ class QDevice(object):
             raise ValueError("invalid qdevice algorithm(ffsplit/lms)")
         if self.tie_breaker not in ["lowest", "highest"] and not utils.valid_nodeid(self.tie_breaker):
             raise ValueError("invalid qdevice tie_breaker(lowest/highest/valid_node_id)")
+        if self.tls not in ["on", "ff", "required"]:
+            raise ValueError("invalid qdevice tls(on/off/required)")
 
     def valid_qnetd(self):
         if self.check_ssh_passwd_need():
@@ -353,7 +357,7 @@ class QDevice(object):
         p.set('quorum.device.votes', '1')
         p.set('quorum.device.model', 'net')
         p.add('quorum.device', make_section('quorum.device.net', []))
-        p.set('quorum.device.net.tls', 'on')
+        p.set('quorum.device.net.tls', self.tls)
         p.set('quorum.device.net.host', self.ip)
         p.set('quorum.device.net.port', self.port)
         p.set('quorum.device.net.algorithm', self.algo)
@@ -935,7 +939,7 @@ def create_configuration(clustername="hacluster",
       votes: 0
       model: net
       net {
-        tls: on
+        tls: %(tls)s
         host: %(ip)s
         port: %(port)s
         algorithm: %(algo)s

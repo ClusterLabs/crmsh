@@ -221,17 +221,20 @@ Note:
         network_group.add_option("-I", "--ipv6", action="store_true", dest="ipv6",
                                  help="Configure corosync use IPv6")
         network_group.add_option("--qdevice",
-                                 dest="qdevice", metavar="QDEVICE",
-                                 help="QDevice IP")
+                                 dest="qdevice", metavar="QDEVICE_ADDR",
+                                 help="IP or host name of the QNetd server to be used")
         network_group.add_option("--qdevice-port",
                                  dest="qdevice_port", metavar="QDEVICE_PORT", type="int", default=5403,
-                                 help="QDevice port")
+                                 help="TCP port of QNetd server(default:5403)")
         network_group.add_option("--qdevice-algo",
                                  dest="qdevice_algo", metavar="QDEVICE_ALGO", default="ffsplit",
-                                 help="QDevice algorithm")
+                                 help="QNetd decision algorithm(ffsplit/lms, default:ffsplit)")
         network_group.add_option("--qdevice-tie-breaker",
                                  dest="qdevice_tie_breaker", metavar="QDEVICE_TIE_BREAKER", default="lowest",
-                                 help="QDevice algorithm")
+                                 help="QNetd tie_breaker(lowest/highest/valid_node_id, default:lowest)")
+        network_group.add_option("--qdevice-tls",
+                                 dest="qdevice_tls", metavar="QDEVICE_TLS", default="on",
+                                 help="Whether using TLS on QDevice/QNetd(on/off/required, default:on)")
         parser.add_option_group(network_group)
 
         storage_group = optparse.OptionGroup(parser, "Storage configuration", "Options for configuring shared storage.")
@@ -271,7 +274,8 @@ Note:
                 options.qdevice,
                 port=options.qdevice_port,
                 algo=options.qdevice_algo,
-                tie_breaker=options.qdevice_tie_breaker)
+                tie_breaker=options.qdevice_tie_breaker,
+                tls=options.qdevice_tls)
 
         bootstrap.bootstrap_init(
             cluster_name=options.name,
