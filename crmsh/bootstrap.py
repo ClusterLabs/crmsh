@@ -1981,6 +1981,13 @@ def join_cluster(seed_host):
             add_nodelist_from_cmaptool()
             csync2_update(corosync.conf())
             invoke("crm corosync reload")
+        if utils.qdevice_tls_on():
+            qnetd_addr = corosync.get_value("quorum.device.net.host")
+            qdevice = corosync.QDevice(qnetd_addr, cluster_node=seed_host)
+            qdevice.fetch_qnetd_crt_from_cluster()
+            qdevice.init_db_on_local()
+            qdevice.fetch_p12_from_cluster()
+            qdevice.import_p12_on_local()
         start_service("corosync-qdevice.service")
         status_done()
 
