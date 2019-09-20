@@ -165,19 +165,24 @@ class QDevice(object):
         results = utils.parallax_call([self.ip], cmd, self.askpass)
         return self.handle_parallax_results(results, _return=True)
 
-    def enable(self):
-        cmd = "systemctl enable {}".format(self.qnetd_service)
+    def manage_qnetd(self, action):
+        cmd = "systemctl {} {}".format(action, self.qnetd_service)
         if self.askpass:
-            print("Enable corosync-qnetd.service on {}".format(self.ip))
+            print("{} {} on {}".format(action.capitalize(), self.qnetd_service, self.ip))
         results = utils.parallax_call([self.ip], cmd, self.askpass)
         self.handle_parallax_results(results)
 
-    def start(self):
-        cmd = "systemctl start {}".format(self.qnetd_service)
-        if self.askpass:
-            print("Start corosync-qnetd.service on {}".format(self.ip))
-        results = utils.parallax_call([self.ip], cmd, self.askpass)
-        self.handle_parallax_results(results)
+    def enable_qnetd(self):
+        self.manage_qnetd("enable")
+
+    def disable_qnetd(self):
+        self.manage_qnetd("disable")
+
+    def start_qnetd(self):
+        self.manage_qnetd("start")
+
+    def stop_qnetd(self):
+        self.manage_qnetd("stop")
 
     def init_db_on_qnetd(self):
         '''
