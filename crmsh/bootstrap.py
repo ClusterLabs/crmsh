@@ -981,8 +981,7 @@ Configure Corosync (unicast):
         mcastport=mcastport_res,
         transport="udpu",
         ipv6=_context.ipv6,
-        two_rings=two_rings,
-        qdevice=_context.qdevice)
+        two_rings=two_rings)
     csync2_update(corosync.conf())
 
 
@@ -1101,8 +1100,7 @@ Configure Corosync:
         mcastport=mcastport_res,
         ipv6=_context.ipv6,
         nodeid=nodeid,
-        two_rings=two_rings,
-        qdevice=_context.qdevice)
+        two_rings=two_rings)
     csync2_update(corosync.conf())
 
 
@@ -1548,16 +1546,15 @@ Configure Qdevice/Qnetd""")
     except ValueError as err:
         error(err)
 
-    if _context.stage == "qdevice":
-        if utils.use_qdevice() and not confirm("Qdevice is already configured - overwrite?"):
-            return
-        _context.qdevice.config()
+    if utils.use_qdevice() and not confirm("Qdevice is already configured - overwrite?"):
+        return
+    _context.qdevice.remove_qdevice_db()
+    _context.qdevice.config()
     # qdevice need nodelist for mcast situation
     if corosync.get_value("totem.transport") != "udpu":
         add_nodelist_from_cmaptool()
     status_long("Update configuration")
     update_expected_votes()
-    csync2_update(corosync.conf())
     invoke("crm cluster run 'crm corosync reload'")
     status_done()
 
@@ -2348,12 +2345,14 @@ def bootstrap_remove(cluster_node=None, ui_context=None, quiet=False, yes_to_all
         status("Stopping corosync-qdevice.service")
         invoke("crm cluster run 'systemctl stop corosync-qdevice'")
 
-        status("Removing QDevice configuration from cluster")
+        status_long("Removing QDevice configuration from cluster")
         qnetd_host = corosync.get_value('quorum.device.net.host')
         qdevice_inst = corosync.QDevice(qnetd_host)
         qdevice_inst.remove_config()
+        qdevice_inst.remove_qdevice_db()
         update_expected_votes()
-        csync2_update(corosync.conf())
+        invoke("crm cluster run 'crm corosync reload'")
+        status_done()
 
         return
 

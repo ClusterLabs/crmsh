@@ -95,6 +95,7 @@ class QDevice(object):
         self.qdevice_p12_filename = "qdevice-net-node.p12"
         self.qnetd_path = "/etc/corosync/qnetd"
         self.qdevice_path = "/etc/corosync/qdevice/net"
+        self.qdevice_db_path = "/etc/corosync/qdevice/net/nssdb"
 
     @property
     def qnetd_cacert_on_qnetd(self):
@@ -455,6 +456,16 @@ class QDevice(object):
         f.flush()
         os.fsync(f)
         f.close()
+
+    def remove_qdevice_db(self):
+        if not os.path.exists(self.qdevice_db_path):
+            return
+        node_list = utils.list_cluster_nodes()
+        cmd = "rm -rf {}/*".format(self.qdevice_path)
+        if self.askpass:
+            print("Remove database on cluster nodes")
+        results = utils.parallax_call(node_list, cmd, self.askpass)
+        self.handle_parallax_results(results)
 
 
 def corosync_tokenizer(stream):
