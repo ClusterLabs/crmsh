@@ -631,7 +631,7 @@ Cluster Description
             context.fatal_error("Timed out waiting for cluster (rc = %s)" % (ret))
 
     @command.skill_level('expert')
-    def do_run(self, context, cmd, node=None):
+    def do_run(self, context, cmd, *nodes):
         '''
         Execute the given command on all nodes/specific node, report outcome
         '''
@@ -644,10 +644,16 @@ Cluster Description
         if not _has_parallax:
             context.fatal_error("python package parallax is needed for this command")
 
-        hosts = utils.list_cluster_nodes()
-        if node and node in hosts:
-            hosts = [node]
+        if nodes:
+            hosts = list(nodes)
+        else:
+            hosts = utils.list_cluster_nodes()
+            if hosts is None:
+                context.fatal_error("failed to get node list from cluster")
+
         opts = parallax.Options()
+        opts.ssh_options = ['StrictHostKeyChecking=no']
+        opts.askpass = utils.check_ssh_passwd_need(hosts)
         for host, result in parallax.call(hosts, cmd, opts).items():
             if isinstance(result, parallax.Error):
                 err_buf.error("[%s]: %s" % (host, result))
