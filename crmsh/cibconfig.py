@@ -40,7 +40,7 @@ from .xmlutil import rename_rscref, is_ms, silly_constraint, is_container, fix_c
 from .xmlutil import sanity_check_nvpairs, merge_nodes, op2list, mk_rsc_type, is_resource
 from .xmlutil import stuff_comments, is_comment, is_constraint, read_cib, processing_sort_cli
 from .xmlutil import find_operation, get_rsc_children_ids, is_primitive, referenced_resources
-from .xmlutil import cibdump2tmp, cibdump2elem, processing_sort, get_rsc_ref_ids, merge_tmpl_into_prim
+from .xmlutil import cibdump2elem, processing_sort, get_rsc_ref_ids, merge_tmpl_into_prim
 from .xmlutil import remove_id_used_attributes, get_top_cib_nodes
 from .xmlutil import merge_attributes, is_cib_element, sanity_check_meta
 from .xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
@@ -2604,7 +2604,8 @@ class CibFactory(object):
             # now increase the epoch by 1
             self.bump_epoch()
         self._set_cib_attributes(self.cib_elem)
-        tmpf = cibdump2tmp(filterfn=sanitize_cib_for_patching)
+        cib_s = etree.tostring(self.cib_orig, pretty_print=True)
+        tmpf = str2tmp(cib_s, suffix=".xml")
         if not tmpf or not ensure_sudo_readable(tmpf):
             return False
         tmpfiles.add(tmpf)
@@ -2720,9 +2721,10 @@ class CibFactory(object):
             cib = cibtext2elem(cib)
         if not self._import_cib(cib):
             return False
-        sanitize_cib(self.cib_elem)
         if cibadmin_can_patch():
             self.cib_orig = copy.deepcopy(self.cib_elem)
+            sanitize_cib_for_patching(self.cib_orig)
+        sanitize_cib(self.cib_elem)
         show_unrecognized_elems(self.cib_elem)
         self._populate()
         return self.check_structure()
