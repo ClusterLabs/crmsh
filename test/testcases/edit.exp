@@ -127,11 +127,6 @@ order o1 inf: p3 c1
 primitive d4 Dummy
 tag t-d45 d4 d5
 order o-d456 d4 d5 d6
-.INP: _test
-.INP: verify
-.EXT crmd metadata
-.EXT pengine metadata
-.EXT cib metadata
 .INP: show
 node node1 \
 	attributes mem=16G
@@ -168,3 +163,132 @@ rsc_defaults rsc_options: \
 op_defaults op-options: \
 	timeout=60s
 .INP: commit
+.EXT crmd metadata
+.EXT pengine metadata
+.EXT cib metadata
+.INP: _test
+.INP: verify
+.INP: primitive a0 ocf:heartbeat:Dummy
+.INP: primitive a1 ocf:heartbeat:Dummy
+.INP: primitive a2 ocf:heartbeat:Dummy
+.INP: primitive a3 ocf:heartbeat:Dummy
+.INP: primitive a4 ocf:heartbeat:Dummy
+.INP: primitive a5 ocf:heartbeat:Dummy
+.INP: primitive a6 ocf:heartbeat:Dummy
+.INP: primitive a7 ocf:heartbeat:Dummy
+.INP: primitive a8 ocf:heartbeat:Dummy
+.INP: primitive a9 ocf:heartbeat:Dummy
+.INP: primitive aErr ocf:heartbeat:Dummy
+.INP: group as a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aErr
+.INP: commit
+.INP: cd ..
+.INP: cd configure
+.INP: filter "sed '/as/s/a9//'"
+.INP: filter "sed '/as/s/a1/a1 a9/'"
+.INP: commit
+.INP: cd ..
+.INP: cd configure
+.INP: filter "sed '/abs/s/a9//'"
+.INP: filter "sed '/abs/s/a8/a8 a9/'"
+.INP: show
+node node1 \
+	attributes mem=16G
+primitive a0 Dummy
+primitive a1 Dummy
+primitive a2 Dummy
+primitive a3 Dummy
+primitive a4 Dummy
+primitive a5 Dummy
+primitive a6 Dummy
+primitive a7 Dummy
+primitive a8 Dummy
+primitive a9 Dummy
+primitive aErr Dummy
+primitive d1 Dummy
+primitive d2 Dummy
+primitive d3 Dummy
+primitive d4 Dummy
+primitive d5 Dummy
+primitive d6 Dummy
+primitive p1 Dummy \
+	op monitor interval=60m \
+	op monitor interval=120m \
+	op_params OCF_CHECK_LEVEL=10
+primitive p2 Dummy
+primitive p3 Dummy
+primitive st stonith:null \
+	params hostlist=node1 \
+	meta description="some description here" requires=nothing \
+	op monitor interval=60m
+group as a0 a1 a9 a2 a3 a4 a5 a6 a7 a8 aErr
+group g1 p1 p2 d3
+group g2 d1 d2
+clone c1 g1
+tag t-d45 d4 d5
+location l1 p3 100: node1
+location loc-d1 d1 \
+	rule -inf: not_defined webserver or mem number:lte 0 \
+	rule -inf: not_defined a2 \
+	rule webserver: defined webserver
+order o-d456 d4 d5 d6
+order o1 inf: p3 c1
+property cib-bootstrap-options:
+rsc_defaults rsc_options: \
+	failure-timeout=10m
+op_defaults op-options: \
+	timeout=60s
+.INP: commit
+INFO: 89: apparently there is nothing to commit
+INFO: 89: try changing something first
+.INP: _test
+.INP: verify
+.INP: show
+node node1 \
+	attributes mem=16G
+primitive a0 Dummy
+primitive a1 Dummy
+primitive a2 Dummy
+primitive a3 Dummy
+primitive a4 Dummy
+primitive a5 Dummy
+primitive a6 Dummy
+primitive a7 Dummy
+primitive a8 Dummy
+primitive a9 Dummy
+primitive aErr Dummy
+primitive d1 Dummy
+primitive d2 Dummy
+primitive d3 Dummy
+primitive d4 Dummy
+primitive d5 Dummy
+primitive d6 Dummy
+primitive p1 Dummy \
+	op monitor interval=60m \
+	op monitor interval=120m \
+	op_params OCF_CHECK_LEVEL=10
+primitive p2 Dummy
+primitive p3 Dummy
+primitive st stonith:null \
+	params hostlist=node1 \
+	meta description="some description here" requires=nothing \
+	op monitor interval=60m
+group as a0 a1 a9 a2 a3 a4 a5 a6 a7 a8 aErr
+group g1 p1 p2 d3
+group g2 d1 d2
+clone c1 g1
+tag t-d45 d4 d5
+location l1 p3 100: node1
+location loc-d1 d1 \
+	rule -inf: not_defined webserver or mem number:lte 0 \
+	rule -inf: not_defined a2 \
+	rule webserver: defined webserver
+order o-d456 d4 d5 d6
+order o1 inf: p3 c1
+property cib-bootstrap-options:
+rsc_defaults rsc_options: \
+	failure-timeout=10m
+op_defaults op-options: \
+	timeout=60s
+.INP: commit
+INFO: 93: apparently there is nothing to commit
+INFO: 93: try changing something first

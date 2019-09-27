@@ -62,6 +62,34 @@ order o-d456 d4 d5 d6
 tag t-d45: d4 d5
 show type:order
 show related:d4
+show
+commit
+_test
+verify
+primitive a0 ocf:heartbeat:Dummy
+primitive a1 ocf:heartbeat:Dummy
+primitive a2 ocf:heartbeat:Dummy
+primitive a3 ocf:heartbeat:Dummy
+primitive a4 ocf:heartbeat:Dummy
+primitive a5 ocf:heartbeat:Dummy
+primitive a6 ocf:heartbeat:Dummy
+primitive a7 ocf:heartbeat:Dummy
+primitive a8 ocf:heartbeat:Dummy
+primitive a9 ocf:heartbeat:Dummy
+primitive aErr ocf:heartbeat:Dummy
+group as a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aErr
+commit
+cd ..
+cd configure
+filter "sed '/as/s/a9//'"
+filter "sed '/as/s/a1/a1 a9/'"
+commit
+cd ..
+cd configure
+filter "sed '/abs/s/a9//'"
+filter "sed '/abs/s/a8/a8 a9/'"
+show
+commit
 _test
 verify
 .
