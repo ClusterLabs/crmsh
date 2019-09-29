@@ -609,12 +609,9 @@ def init_ssh():
     start_service("sshd.service")
     invoke("mkdir -m 700 -p /root/.ssh")
     if os.path.exists("/root/.ssh/id_rsa"):
-        if not confirm("/root/.ssh/id_rsa already exists - overwrite?"):
-            return
-        try:
-            os.remove("/root/.ssh/id_rsa")
-        except os.error:
-            error("Failed to remove /root/.ssh/id_rsa")
+        if not os.path.exists("/root/.ssh/authorized_keys"):
+            append("/root/.ssh/id_rsa.pub", "/root/.ssh/authorized_keys")
+        return
     status("Generating SSH key")
     invoke("ssh-keygen -q -f /root/.ssh/id_rsa -C 'Cluster Internal' -N ''")
     append("/root/.ssh/id_rsa.pub", "/root/.ssh/authorized_keys")
