@@ -10,6 +10,7 @@ import re
 import socket
 from . import utils
 from . import tmpfiles
+from . import parallax
 from .msg import err_buf, common_debug
 
 
@@ -162,15 +163,18 @@ class QDevice(object):
         cmd = "systemctl -q is-active pacemaker"
         if self.askpass:
             print("Checking on QNetd node({})".format(self.ip))
-        results = utils.parallax_call([self.ip], cmd, self.askpass)
-        return self.handle_parallax_results(results, _return=True)
+        try:
+            parallax.parallax_call([self.ip], cmd, self.askpass)
+        except ValueError:
+            return False
+        else:
+            return True
 
     def manage_qnetd(self, action):
         cmd = "systemctl {} {}".format(action, self.qnetd_service)
         if self.askpass:
             print("{} {} on {}".format(action.capitalize(), self.qnetd_service, self.ip))
-        results = utils.parallax_call([self.ip], cmd, self.askpass)
-        self.handle_parallax_results(results)
+        parallax.parallax_call([self.ip], cmd, self.askpass)
 
     def enable_qnetd(self):
         self.manage_qnetd("enable")
@@ -193,15 +197,17 @@ class QDevice(object):
         cmd = "test -f {}".format(self.qnetd_cacert_on_qnetd)
         if self.askpass:
             print("Test whether QNetd server({}) has database".format(self.ip))
-        results = utils.parallax_call([self.ip], cmd, self.askpass)
-        if self.handle_parallax_results(results, _return=True):
+        try:
+            parallax.parallax_call([self.ip], cmd, self.askpass)
+        except ValueError:
+            pass
+        else:
             return
 
         cmd = "corosync-qnetd-certutil -i"
         if self.askpass:
             print("Initialize database on QNetd server({})".format(self.ip))
-        results = utils.parallax_call([self.ip], cmd, self.askpass)
-        self.handle_parallax_results(results)
+        parallax.parallax_call([self.ip], cmd, self.askpass)
 
     def fetch_qnetd_crt_from_qnetd(self):
         '''
@@ -214,11 +220,8 @@ class QDevice(object):
 
         if self.askpass:
             print("Fetch qnetd-cacert.crt from QNetd server({})".format(self.ip))
-        results = utils.parallax_slurp([self.ip],
-                                       self.qdevice_path,
-                                       self.qnetd_cacert_on_qnetd,
-                                       self.askpass)
-        self.handle_parallax_results(results)
+        parallax.parallax_slurp([self.ip], self.qdevice_path,
+                             self.qnetd_cacert_on_qnetd, self.askpass)
 
     def copy_qnetd_crt_to_cluster(self):
         '''
@@ -232,11 +235,8 @@ class QDevice(object):
 
         if self.askpass:
             print("Copy exported QNetd CA certificate(qnetd-cacert.crt) to every node")
-        results = utils.parallax_copy(node_list,
-                                      os.path.dirname(self.qnetd_cacert_on_local),
-                                      self.qdevice_path,
-                                      self.askpass)
-        self.handle_parallax_results(results)
+        parallax.parallax_copy(node_list, os.path.dirname(self.qnetd_cacert_on_local),
+                            self.qdevice_path, self.askpass)
 
     def init_db_on_cluster(self):
         '''
@@ -249,8 +249,7 @@ class QDevice(object):
         cmd = "corosync-qdevice-net-certutil -i -c {}".format(self.qnetd_cacert_on_local)
         if self.askpass:
             print("Initialize database on cluster nodes")
-        results = utils.parallax_call(node_list, cmd, self.askpass)
-        self.handle_parallax_results(results)
+        parallax.parallax_call(node_list, cmd, self.askpass)
 
     def create_ca_request(self):
         '''
@@ -276,11 +275,8 @@ class QDevice(object):
         '''
         if self.askpass:
             print("Copy exported CRQ to QNetd server({})".format(self.ip))
-        results = utils.parallax_copy([self.ip],
-                                      self.qdevice_crq_on_local,
-                                      os.path.dirname(self.qdevice_crq_on_qnetd),
-                                      self.askpass)
-        self.handle_parallax_results(results)
+        parallax.parallax_copy([self.ip], self.qdevice_crq_on_local,
+                            os.path.dirname(self.qdevice_crq_on_qnetd), self.askpass)
 
     def sign_crq_on_qnetd(self):
         '''
@@ -293,8 +289,7 @@ class QDevice(object):
                 format(self.qdevice_crq_on_qnetd, self.cluster_name)
         if self.askpass:
             print("On QNetd server({}) sign and export cluster certificate".format(self.ip))
-        results = utils.parallax_call([self.ip], cmd, self.askpass)
-        self.handle_parallax_results(results)
+        parallax.parallax_call([self.ip], cmd, self.askpass)
 
     def fetch_cluster_crt_from_qnetd(self):
         '''
@@ -304,11 +299,8 @@ class QDevice(object):
         '''
         if self.askpass:
             print("Fetch cluster crt file from QNetd server({})".format(self.ip))
-        results = utils.parallax_slurp([self.ip],
-                                       self.qdevice_path,
-                                       self.qnetd_cluster_crt_on_qnetd,
-                                       self.askpass)
-        self.handle_parallax_results(results)
+        parallax.parallax_slurp([self.ip], self.qdevice_path,
+                             self.qnetd_cluster_crt_on_qnetd, self.askpass)
 
     def import_cluster_crt(self):
         '''
@@ -334,11 +326,8 @@ class QDevice(object):
 
         if self.askpass:
             print("Copy output qdevice-net-node.p12 to all other cluster nodes")
-        results = utils.parallax_copy(node_list,
-                                      self.qdevice_p12_on_local,
-                                      os.path.dirname(self.qdevice_p12_on_local),
-                                      self.askpass)
-        self.handle_parallax_results(results)
+        parallax.parallax_copy(node_list, self.qdevice_p12_on_local,
+                            os.path.dirname(self.qdevice_p12_on_local), self.askpass)
 
     def import_p12_on_cluster(self):
         '''
@@ -354,8 +343,7 @@ class QDevice(object):
         if self.askpass:
             print("Import cluster certificate and key on all other cluster nodes")
         cmd = "corosync-qdevice-net-certutil -m -c {}".format(self.qdevice_p12_on_local)
-        results = utils.parallax_call(node_list, cmd, self.askpass)
-        self.handle_parallax_results(results)
+        parallax.parallax_call(node_list, cmd, self.askpass)
 
     def fetch_qnetd_crt_from_cluster(self):
         '''
@@ -368,11 +356,8 @@ class QDevice(object):
 
         if self.askpass:
             print("Fetch qnetd-cacert.crt from cluster node({})".format(self.cluster_node))
-        results = utils.parallax_slurp([self.cluster_node],
-                                       self.qdevice_path,
-                                       self.qnetd_cacert_on_local,
-                                       self.askpass)
-        self.handle_parallax_results(results)
+        parallax.parallax_slurp([self.cluster_node], self.qdevice_path,
+                             self.qnetd_cacert_on_local, self.askpass)
 
     def init_db_on_local(self):
         '''
@@ -400,11 +385,8 @@ class QDevice(object):
 
         if self.askpass:
             print("Fetch {} from cluster node({})".format(self.qdevice_p12_filename, self.cluster_node))
-        results = utils.parallax_slurp([self.cluster_node],
-                                       self.qdevice_path,
-                                       self.qdevice_p12_on_local,
-                                       self.askpass)
-        self.handle_parallax_results(results)
+        parallax.parallax_slurp([self.cluster_node], self.qdevice_path,
+                             self.qdevice_p12_on_local, self.askpass)
 
     def import_p12_on_local(self):
         '''
@@ -416,19 +398,6 @@ class QDevice(object):
         rc, _, err = utils.get_stdout_stderr(cmd)
         if rc != 0:
             raise ValueError(err)
-
-    def handle_parallax_results(self, results, _return=False):
-        if not results:
-            raise ValueError("ssh error")
-
-        import parallax
-        for host, result in results:
-            if isinstance(result, parallax.Error):
-                if _return:
-                    return False
-                else:
-                    raise ValueError("Failed on {}: {}".format(host, result))
-        return True
 
     def config(self):
         f = open(conf()).read()
@@ -469,8 +438,7 @@ class QDevice(object):
         cmd = "rm -rf {}/*".format(self.qdevice_path)
         if self.askpass:
             print("Remove database on cluster nodes")
-        results = utils.parallax_call(node_list, cmd, self.askpass)
-        self.handle_parallax_results(results)
+        parallax.parallax_call(node_list, cmd, self.askpass)
 
 
 def corosync_tokenizer(stream):
