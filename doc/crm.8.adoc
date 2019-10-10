@@ -1708,11 +1708,11 @@ show
 [[cmdhelp_corosync_status,Display the corosync status]]
 ==== `status`
 
-Displays the status of Corosync, including the votequorum state.
+Displays the corosync ring status(default), quorum status and qnetd status.
 
 Usage:
 .........
-status
+status [ring|quorum|qnetd]
 .........
 
 [[cmdhelp_cib,CIB shadow management]]
