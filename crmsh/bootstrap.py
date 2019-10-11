@@ -670,9 +670,11 @@ def init_ssh():
     start_service("sshd.service")
     invoke("mkdir -m 700 -p /root/.ssh")
     if os.path.exists("/root/.ssh/id_rsa"):
-        if not os.path.exists("/root/.ssh/authorized_keys"):
-            append("/root/.ssh/id_rsa.pub", "/root/.ssh/authorized_keys")
-        return
+        if not confirm("/root/.ssh/id_rsa already exists - overwrite?"):
+            return
+        if _context.yes_to_all and _context.no_overwrite_sshkey:
+            return
+        rmfile("/root/.ssh/id_rsa")
     status("Generating SSH key")
     invoke("ssh-keygen -q -f /root/.ssh/id_rsa -C 'Cluster Internal' -N ''")
     append("/root/.ssh/id_rsa.pub", "/root/.ssh/authorized_keys")
@@ -2053,7 +2055,7 @@ def remove_localhost_check():
 
 def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_device=None,
                    shared_device=None, sbd_device=None, diskless_sbd=False, quiet=False,
-                   template=None, admin_ip=None, yes_to_all=False,
+                   template=None, admin_ip=None, yes_to_all=False, no_overwrite_sshkey=False,
                    unicast=False, second_hb=False, ipv6=False, watchdog=None, qdevice=None, stage=None, args=None):
     """
     -i <nic>
@@ -2094,6 +2096,7 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     _context.watchdog = watchdog
     _context.ui_context = ui_context
     _context.qdevice = qdevice
+    _context.no_overwrite_sshkey = no_overwrite_sshkey
 
     def check_option():
         if _context.admin_ip and not valid_adminIP(_context.admin_ip):

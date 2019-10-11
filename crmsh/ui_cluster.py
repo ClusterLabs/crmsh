@@ -187,7 +187,7 @@ Note:
         parser.add_option("-q", "--quiet", action="store_true", dest="quiet",
                           help="Be quiet (don't describe what's happening, just do it)")
         parser.add_option("-y", "--yes", action="store_true", dest="yes_to_all",
-                          help='Answer "yes" to all prompts (use with caution, this is destructive, especially during the "storage" stage)')
+                          help='Answer "yes" to all prompts (use with caution, this is destructive, especially during the "storage" stage. The /root/.ssh/id_rsa key will be overwritten unless the option "--no-overwrite-sshkey" is used)')
         parser.add_option("-t", "--template", dest="template",
                           help='Optionally configure cluster with template "name" (currently only "ocfs2" is valid here)')
         parser.add_option("-n", "--name", metavar="NAME", dest="name", default="hacluster",
@@ -200,6 +200,8 @@ Note:
                           help="Enable SBD even if no SBD device is configured (diskless mode)")
         parser.add_option("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG",
                           help="Use the given watchdog device")
+        parser.add_option("--no-overwrite-sshkey", action="store_true", dest="no_overwrite_sshkey",
+                          help='Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is used (False by default)')
 
         network_group = optparse.OptionGroup(parser, "Network configuration", "Options for configuring the network and messaging layer.")
         network_group.add_option("-i", "--interface", dest="nic", metavar="IF",
@@ -278,6 +280,7 @@ Note:
             template=options.template,
             admin_ip=options.admin_ip,
             yes_to_all=options.yes_to_all,
+            no_overwrite_sshkey=options.no_overwrite_sshkey,
             unicast=options.unicast,
             second_hb=options.second_hb,
             ipv6=options.ipv6,
