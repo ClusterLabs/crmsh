@@ -2011,10 +2011,13 @@ demote <rsc>
 ==== `failcount`
 
 Show/edit/delete the failcount of a resource.
+When `set` a non-zero value, `operation` and `interval` should be 
+provided when multiple operation failcount entries exist.
+`interval` is a value in seconds.
 
 Usage:
 ...............
-failcount <rsc> set <node> <value>
+failcount <rsc> set <node> <value> [operation] [interval]
 failcount <rsc> delete <node>
 failcount <rsc> show <node>
 ...............
