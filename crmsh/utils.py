@@ -2198,4 +2198,15 @@ def check_ssh_passwd_need(hosts):
         if rc != 0:
             return True
     return False
+
+
+def get_nodeid_from_name(name):
+    rc, out = get_stdout('crm_node -l')
+    if rc != 0:
+        return None
+    res = re.search(r'^([0-9]+) {} '.format(name), out, re.M)
+    if res:
+        return res.group(1)
+    else:
+        return None
 # vim:ts=4:sw=4:et:
