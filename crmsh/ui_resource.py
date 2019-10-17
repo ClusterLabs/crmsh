@@ -30,20 +30,6 @@ def rm_meta_attribute(node, attr, l, force_children=False):
                 (xmlutil.is_child_rsc(c) and not c.getparent().tag == "group"):
             rm_meta_attribute(c, attr, l, force_children=force_children)
 
-
-def get_children_with_different_attr(node, attr, value):
-    l = []
-    for p in node.xpath(".//primitive"):
-        diff_attr = False
-        for meta_set in xmlutil.get_set_nodes(p, "meta_attributes", create=False):
-            p_value = xmlutil.get_attr_value(meta_set, attr)
-            if p_value is not None and p_value != value:
-                diff_attr = True
-                break
-        if diff_attr:
-            l.append(p)
-    return l
-
 def get_children_with_attr(node, attr):
     l = []
     for p in node.xpath(".//primitive"):
@@ -83,8 +69,8 @@ def set_deep_meta_attr_node(target_node, attr, value):
                     common_debug("force remove meta attr %s from %s" %
                                 (conflicting_attr, c.get("id")))
                     rm_meta_attribute(c, conflicting_attr, nvpair_l, force_children=True)
-        # remove attributes with different values
-        odd_children = get_children_with_different_attr(target_node, attr, value)
+        # remove the same attributes from all children (if wanted)
+        odd_children = get_children_with_attr(target_node, attr)
         for c in odd_children:
             if config.core.manage_children == "always" or \
                     (config.core.manage_children == "ask" and
