@@ -78,3 +78,7 @@ resource start p5
 %setenv showobj=g1
 -F resource manage g1
 resource start p5
+%setenv showobj=p5
+-F resource maintenance p5 on
+%setenv showobj=g1
+-F resource maintenance g1
