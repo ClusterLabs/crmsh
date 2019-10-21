@@ -712,11 +712,7 @@ INFO: Trace set, restart p0 to trace the stop operation
           <nvpair id="cg-meta_attributes-target-role" name="target-role" value="Started"/>
         </meta_attributes>
         <group id="g">
-          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
-            <meta_attributes id="p0-meta_attributes">
-              <nvpair id="p0-meta_attributes-target-role" name="target-role" value="Started"/>
-            </meta_attributes>
-          </primitive>
+          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy"/>
           <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy"/>
         </group>
       </clone>
@@ -1102,6 +1098,60 @@ INFO: 'is-managed' conflicts with 'maintenance' attribute. Remove 'maintenance' 
       <group id="g1">
         <meta_attributes id="g1-meta_attributes-0">
           <nvpair id="g1-meta_attributes-0-is-managed" name="is-managed" value="true"/>
+        </meta_attributes>
+        <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy">
+          <meta_attributes id="p5-meta_attributes">
+            <nvpair id="p5-meta_attributes-target-role" name="target-role" value="Started"/>
+          </meta_attributes>
+        </primitive>
+      </group>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.SETENV showobj=p5
+.TRY -F resource maintenance p5 on
+.INP: configure
+.INP: _regtest on
+.INP: show xml p5
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <group id="g1">
+        <meta_attributes id="g1-meta_attributes-0">
+          <nvpair id="g1-meta_attributes-0-is-managed" name="is-managed" value="true"/>
+        </meta_attributes>
+        <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy">
+          <meta_attributes id="p5-meta_attributes">
+            <nvpair id="p5-meta_attributes-target-role" name="target-role" value="Started"/>
+            <nvpair id="p5-meta_attributes-maintenance" name="maintenance" value="true"/>
+          </meta_attributes>
+        </primitive>
+      </group>
+    </resources>
+    <constraints/>
+  </configuration>
+</cib>
+
+.SETENV showobj=g1
+.TRY -F resource maintenance g1
+INFO: 'maintenance' conflicts with 'is-managed' attribute. Remove 'is-managed' for resource g1? [YES]
+.INP: configure
+.INP: _regtest on
+.INP: show xml g1
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes/>
+    <resources>
+      <group id="g1">
+        <meta_attributes id="g1-meta_attributes">
+          <nvpair id="g1-meta_attributes-maintenance" name="maintenance" value="true"/>
         </meta_attributes>
         <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy">
           <meta_attributes id="p5-meta_attributes">
