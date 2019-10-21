@@ -1,6 +1,7 @@
 ---
 sudo: required
 language: python
+python: 2.7
 services:
   - docker
 
@@ -15,9 +16,13 @@ before_script:
 
 before_install:
   - docker pull krig/crmsh2:latest
+  - docker run -d --name=hanode1 --hostname hanode1 --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" krig/crmsh2
+  - docker exec -t hanode1 /bin/sh -c "zypper -n in curl"
+  - docker exec -t hanode1 /bin/sh -c "curl https://bootstrap.pypa.io/get-pip.py | python"
+  - docker exec -t hanode1 /bin/sh -c "pip install mock"
 
 script:
-  - docker run -t -v "$(pwd):/app" krig/crmsh2 /bin/sh -c "systemctl start dbus; cd /app; ./test/run-in-travis.sh"
+  - docker exec -t hanode1 /bin/sh -c "systemctl start dbus; cd /app; ./test/run-in-travis.sh"
 
 after_failure:
   - sudo cat $TRAVIS_BUILD_DIR/crmtestout/regression.out $TRAVIS_BUILD_DIR/crmtestout/crm.*
