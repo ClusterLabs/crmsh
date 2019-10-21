@@ -45,8 +45,12 @@ node1: member
   </configuration>
 </cib>
 
-.TRY node maintenance node1
-.EXT crm_attribute -t nodes -N 'node1' -n maintenance -v 'on'
+.TRY configure primitive p5 Dummy
+.EXT crm_resource --show-metadata ocf:heartbeat:Dummy
+.EXT crm_resource --show-metadata ocf:pacemaker:Dummy
+.EXT crm_resource --show-metadata stonith:null
+.EXT stonithd metadata
+.EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
@@ -58,7 +62,89 @@ node1: member
       <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
           <nvpair id="nodes-node1-standby" name="standby" value="off"/>
-          <nvpair id="nodes-node1-maintenance" name="maintenance" value="on"/>
+        </instance_attributes>
+      </node>
+    </nodes>
+    <resources/>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY configure group g0 p5
+.INP: configure
+.INP: _regtest on
+.INP: show xml node1
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes>
+      <node uname="node1" id="node1">
+        <instance_attributes id="nodes-node1">
+          <nvpair id="nodes-node1-standby" name="standby" value="off"/>
+        </instance_attributes>
+      </node>
+    </nodes>
+    <resources/>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource maintenance g0
+.INP: configure
+.INP: _regtest on
+.INP: show xml node1
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes>
+      <node uname="node1" id="node1">
+        <instance_attributes id="nodes-node1">
+          <nvpair id="nodes-node1-standby" name="standby" value="off"/>
+        </instance_attributes>
+      </node>
+    </nodes>
+    <resources/>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY resource maintenance p5
+.INP: configure
+.INP: _regtest on
+.INP: show xml node1
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes>
+      <node uname="node1" id="node1">
+        <instance_attributes id="nodes-node1">
+          <nvpair id="nodes-node1-standby" name="standby" value="off"/>
+        </instance_attributes>
+      </node>
+    </nodes>
+    <resources/>
+    <constraints/>
+  </configuration>
+</cib>
+
+.TRY -F node maintenance node1
+INFO: 'maintenance' attribute already exists in p5. Remove it? [YES]
+INFO: 'maintenance' attribute already exists in g0. Remove it? [YES]
+.INP: configure
+.INP: _regtest on
+.INP: show xml node1
+<?xml version="1.0" ?>
+<cib>
+  <configuration>
+    <crm_config/>
+    <nodes>
+      <node uname="node1" id="node1">
+        <instance_attributes id="nodes-node1">
+          <nvpair id="nodes-node1-standby" name="standby" value="off"/>
+          <nvpair id="nodes-node1-maintenance" name="maintenance" value="true"/>
         </instance_attributes>
       </node>
     </nodes>

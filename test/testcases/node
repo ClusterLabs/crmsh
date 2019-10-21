@@ -3,7 +3,11 @@ node show node1
 %setenv showobj=node1
 node standby node1
 node online node1
-node maintenance node1
+configure primitive p5 Dummy
+configure group g0 p5
+resource maintenance g0
+resource maintenance p5
+-F node maintenance node1
 node ready node1
 node attribute node1 set a1 "1 2 3"
 node attribute node1 show a1
