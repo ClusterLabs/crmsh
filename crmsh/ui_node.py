@@ -5,13 +5,121 @@
 from . import config
 from . import command
 from . import completers as compl
+from . import constants
 from . import ui_utils
 from . import utils
 from . import xmlutil
 from .msg import common_err, syntax_err, no_prog_err, common_info, common_warn
+from .msg import common_debug
 from .cliformat import cli_nvpairs, nvpairs2list
 from . import term
+from .cibconfig import cib_factory
+from .ui_resource import rm_meta_attribute
 
+def remove_redundant_attrs(objs, attr, conflicting_attr = None):
+    """
+    Remove attr from all resources_tags in the cib.xml
+    """
+    # Override the resources on the node
+    for r in objs:
+        for meta_set in xmlutil.get_set_nodes(r, "meta_attributes", create=False):
+            a = xmlutil.get_attr_in_set(meta_set, attr)
+            if a is not None and \
+                (config.core.manage_children == "always" or \
+                (config.core.manage_children == "ask" and
+                utils.ask("'%s' attribute already exists in %s. Remove it?" %
+                        (attr, r.get("id"))))):
+                common_debug("force remove meta attr %s from %s" %
+                        (attr, r.get("id")))
+                xmlutil.rmnode(a)
+                xmlutil.xml_processnodes(r, xmlutil.is_emptynvpairs, xmlutil.rmnodes)
+            if conflicting_attr is not None:
+                a = xmlutil.get_attr_in_set(meta_set, conflicting_attr)
+                if a is not None and \
+                    (config.core.manage_children == "always" or \
+                    (config.core.manage_children == "ask" and
+                    utils.ask("'%s' conflicts with '%s' in %s. Remove it?" %
+                            (conflicting_attr, attr, r.get("id"))))):
+                    common_debug("force remove meta attr %s from %s" %
+                            (conflicting_attr, r.get("id")))
+                    xmlutil.rmnode(a)
+                    xmlutil.xml_processnodes(r, xmlutil.is_emptynvpairs, xmlutil.rmnodes)
+
+def get_resources_on_nodes(nodes, resources_tags):
+    prefix = "cli-prefer-"
+    exclude = [str(x.node.get("id")).replace(prefix,"") for x in cib_factory.cib_objects
+        if x.obj_type  == "location" and x.node.get("node") not in nodes]
+
+    resources = [x.node for x in cib_factory.cib_objects
+        if x.obj_type in resources_tags and x.obj_id not in exclude]
+    return resources
+
+def update_xml_node(cluster_node_name, attr, value):
+    '''
+    xml_node.attr := value
+
+    Besides, it asks the user if he wants to
+    1) remove both the attr and conflicting_attr
+    in primitives, groups and clones
+    2) remove the conflicting attribute in the node itself
+    '''
+
+    node_obj = cib_factory.find_node(cluster_node_name)
+    if node_obj is None:
+        common_err("CIB is not valid!")
+        return False
+
+    common_debug("update_xml_node: %s" % (node_obj.obj_id))
+
+    xml_node = node_obj.node
+    node_obj.set_updated()
+
+    conflicting_attr = ''
+    if 'maintenance' == attr:
+        conflicting_attr = 'is-managed'
+    if 'is-managed' == attr:
+        conflicting_attr = 'maintenance'
+
+    # Get all primitive, group and clone resources currently running on the cluster_node_name
+    objs = get_resources_on_nodes([cluster_node_name], [ "primitive", "group", "clone"])
+
+    # Ask the user to remove the 'attr' attributes on those primitives, groups and clones
+    remove_redundant_attrs(objs, attr, conflicting_attr)
+
+    # Remove the node conflicting attribute
+    nvpairs = xml_node.xpath("./instance_attributes/nvpair[@name='%s']" % (conflicting_attr))
+    if len(nvpairs) > 0 and \
+        utils.ask("'%s' conflicts with '%s' in %s. Remove it?" %
+                        (conflicting_attr, attr, xml_node.get("uname"))):
+        for nvpair in nvpairs:
+            xmlutil.rmnode(nvpair)
+            xmlutil.xml_processnodes(xml_node, xmlutil.is_emptynvpairs, xmlutil.rmnodes)
+
+    # Set the node attribute
+    nvpairs = xml_node.xpath("./instance_attributes/nvpair[@name='%s']" % (attr))
+    if len(nvpairs) > 0:
+        for nvpair in nvpairs:
+            nvpair.set("value", value)
+    else:
+        for n in xmlutil.get_set_instace_attributes(xml_node, create=True):
+            xmlutil.set_attr(n, attr, value)
+    return True
+
+def set_node_attr(cluster_node_name, attr_name, value, commit=True):
+    """
+    Set an attribute for a node
+    """
+    if not update_xml_node(cluster_node_name, attr_name, value):
+        common_err("Failed to update node attributes for %s" % (cluster_node_name))
+        return False
+
+    if not commit:
+        return True
+
+    if not cib_factory.commit():
+        common_err("Failed to commit updates to %s" % (cluster_node_name))
+        return False
+    return True
 
 def _oneline(s):
     'join s into a single line of space-separated tokens'
@@ -218,7 +326,8 @@ class NodeMgmt(command.UI):
             node = utils.this_node()
         if not utils.is_name_sane(node):
             return False
-        return utils.ext_cmd(self.node_maint % (node, "on")) == 0
+        return self._commit_node_attr(context, node, "maintenance", "true")
+
 
     @command.wait
     @command.completers(compl.nodes)
@@ -346,6 +455,17 @@ class NodeMgmt(command.UI):
         status-attr <node> show <attr>"""
         return ui_utils.manage_attr(context.get_command_name(), self.node_status,
                                     node, cmd, attr, value)
+
+    def _commit_node_attr(self, context, node_name, attr_name, value):
+        """
+        Perform change to resource
+        """
+        if not utils.is_name_sane(node_name):
+            return False
+        commit = not cib_factory.has_cib_changed()
+        if not commit:
+            context.info("Currently editing the CIB, changes will not be committed")
+        return set_node_attr(node_name, attr_name, value, commit=commit)
 
     def do_server(self, context, *nodes):
         """

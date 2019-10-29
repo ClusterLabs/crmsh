@@ -1226,6 +1226,20 @@ def get_set_nodes(e, setname, create=False):
         l.append(elem)
     return l
 
+def get_set_instace_attributes(e, create=False):
+    '''
+    Return instance attributes set nodes (create one if requested)
+    '''
+    l = [c for c in e.iterchildren("instance_attributes")]
+    if l:
+        return l
+    if create:
+        from . import idmgmt
+        elem = etree.SubElement(e, "instance_attributes", id="")
+        elem.set("id", "nodes-"+e.attrib["id"])
+        l.append(elem)
+    return l
+
 
 _checker = doctestcompare.LXMLOutputChecker()
 

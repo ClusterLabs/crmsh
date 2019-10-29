@@ -2101,7 +2101,9 @@ fence <node>
 
 Set the node status to maintenance. This is equivalent to the
 cluster-wide `maintenance-mode` property but puts just one node
-into the maintenance mode.
+into the maintenance mode. If there are maintenaned resources on
+the node, the user will be proposed to remove the maintenance
+property from them.
 
 The node parameter defaults to the node where the command is run.
 
