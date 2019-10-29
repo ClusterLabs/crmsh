@@ -16,21 +16,26 @@ from . import term
 from .cibconfig import cib_factory
 from .ui_resource import rm_meta_attribute
 
-def remove_redundant_attrs(objs, attr, conflicting_attr = None):
+def remove_redundant_attrs(objs, attributes_tag, attr, conflicting_attr = None):
     """
     Remove attr from all resources_tags in the cib.xml
     """
+    field2show = "id" # if attributes_tag == "meta_attributes"
+    # By default the id of the object should be shown
+    # The id of nodes is simply an integer number => show its uname field
+    if "instance_attributes" == attributes_tag:
+        field2show = "uname"
     # Override the resources on the node
     for r in objs:
-        for meta_set in xmlutil.get_set_nodes(r, "meta_attributes", create=False):
+        for meta_set in xmlutil.get_set_nodes(r, attributes_tag, create=False):
             a = xmlutil.get_attr_in_set(meta_set, attr)
             if a is not None and \
                 (config.core.manage_children == "always" or \
                 (config.core.manage_children == "ask" and
                 utils.ask("'%s' attribute already exists in %s. Remove it?" %
-                        (attr, r.get("id"))))):
+                        (attr, r.get(field2show))))):
                 common_debug("force remove meta attr %s from %s" %
-                        (attr, r.get("id")))
+                        (attr, r.get(field2show)))
                 xmlutil.rmnode(a)
                 xmlutil.xml_processnodes(r, xmlutil.is_emptynvpairs, xmlutil.rmnodes)
             if conflicting_attr is not None:
@@ -39,9 +44,9 @@ def remove_redundant_attrs(objs, attr, conflicting_attr = None):
                     (config.core.manage_children == "always" or \
                     (config.core.manage_children == "ask" and
                     utils.ask("'%s' conflicts with '%s' in %s. Remove it?" %
-                            (conflicting_attr, attr, r.get("id"))))):
+                            (conflicting_attr, attr, r.get(field2show))))):
                     common_debug("force remove meta attr %s from %s" %
-                            (conflicting_attr, r.get("id")))
+                            (conflicting_attr, r.get(field2show)))
                     xmlutil.rmnode(a)
                     xmlutil.xml_processnodes(r, xmlutil.is_emptynvpairs, xmlutil.rmnodes)
 
@@ -84,7 +89,7 @@ def update_xml_node(cluster_node_name, attr, value):
     objs = get_resources_on_nodes([cluster_node_name], [ "primitive", "group", "clone"])
 
     # Ask the user to remove the 'attr' attributes on those primitives, groups and clones
-    remove_redundant_attrs(objs, attr, conflicting_attr)
+    remove_redundant_attrs(objs, "meta_attributes", attr, conflicting_attr)
 
     # Remove the node conflicting attribute
     nvpairs = xml_node.xpath("./instance_attributes/nvpair[@name='%s']" % (conflicting_attr))

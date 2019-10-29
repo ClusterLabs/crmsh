@@ -27,6 +27,7 @@ from . import ui_history
 from . import ui_utils
 from . import ui_assist
 from .crm_gv import gv_types
+from .ui_node import get_resources_on_nodes, remove_redundant_attrs
 
 
 def _type_completions():
@@ -884,6 +885,34 @@ class CibConfig(command.UI):
             return True
         return cib_factory.change_schema(schema_st)
 
+    def __override_lower_level_attrs(self, *args):
+        """
+        When setting up an attribute of a cluster, the same
+        attribute may already exist in one of the nodes an/or
+        any resource.
+        The user should be informed about it and, if he wants,
+        he will have an option to delete the already existing
+        attribute.
+        """
+        if not args:
+            return
+
+        nvpair = args[0].split('=', 1)
+        if 2 != len(nvpair):
+            return
+
+        attr_name, attr_value = nvpair
+
+        if "maintenance-mode" == attr_name:
+            attr = "maintenance"
+            conflicting_lower_level_attr = 'is-managed'
+            # FIXME! the first argument is hardcoded
+            objs = get_resources_on_nodes(cib_factory.node_id_list(), [ "primitive", "group", "clone"])
+            remove_redundant_attrs(objs, "meta_attributes", attr, conflicting_lower_level_attr)
+
+            objs = get_resources_on_nodes(cib_factory.node_id_list(), [ "node" ])
+            remove_redundant_attrs(objs, "instance_attributes", attr, conflicting_lower_level_attr)
+
     def __conf_object(self, cmd, *args):
         "The configure object command."
         if cmd in list(constants.cib_cli_map.values()) and \
@@ -1024,6 +1053,7 @@ class CibConfig(command.UI):
     @command.completers_repeating(_property_completer)
     def do_property(self, context, *args):
         "usage: property [$id=<set_id>] <option>=<value>"
+        self.__override_lower_level_attrs(*args)
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
