@@ -670,7 +670,8 @@ def init_ssh():
     start_service("sshd.service")
     invoke("mkdir -m 700 -p /root/.ssh")
     if os.path.exists("/root/.ssh/id_rsa"):
-        if not confirm("/root/.ssh/id_rsa already exists - overwrite?"):
+        if _context.yes_to_all and _context.no_overwrite_sshkey or \
+                not confirm("/root/.ssh/id_rsa already exists - overwrite?"):
             return
         rmfile("/root/.ssh/id_rsa")
     status("Generating SSH key")
@@ -682,7 +683,10 @@ def init_ssh_remote():
     """
     Called by ha-cluster-join
     """
-    authkeys = open("/root/.ssh/authorized_keys", "r+")
+    authorized_keys_file = "/root/.ssh/authorized_keys"
+    if not os.path.exists(authorized_keys_file):
+        open(authorized_keys_file, 'w').close()
+    authkeys = open(authorized_keys_file, "r+")
     authkeys_data = authkeys.read()
     for key in ("id_rsa", "id_dsa", "id_ecdsa", "id_ed25519"):
         fn = os.path.join("/root/.ssh", key)
@@ -690,7 +694,7 @@ def init_ssh_remote():
             continue
         keydata = open(fn + ".pub").read()
         if keydata not in authkeys_data:
-            append(fn + ".pub", "/root/.ssh/authorized_keys")
+            append(fn + ".pub", authorized_keys_file)
 
 
 def init_csync2():
@@ -2056,7 +2060,7 @@ def remove_localhost_check():
 
 def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_device=None,
                    shared_device=None, sbd_device=None, diskless_sbd=False, quiet=False,
-                   template=None, admin_ip=None, yes_to_all=False,
+                   template=None, admin_ip=None, yes_to_all=False, no_overwrite_sshkey=False,
                    unicast=False, second_hb=False, ipv6=False, watchdog=None, qdevice=None, stage=None, args=None):
     """
     -i <nic>
@@ -2097,6 +2101,7 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     _context.watchdog = watchdog
     _context.ui_context = ui_context
     _context.qdevice = qdevice
+    _context.no_overwrite_sshkey = no_overwrite_sshkey
 
     def check_option():
         if _context.admin_ip and not valid_adminIP(_context.admin_ip):
