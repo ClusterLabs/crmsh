@@ -85,3 +85,7 @@ set d2.mondelay 45
 _test
 verify
 .
+-F node maintenance node1
+-F resource maintenance g1 off
+-F resource maintenance d1
+-F configure property maintenance-mode=true
