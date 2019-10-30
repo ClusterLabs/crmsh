@@ -21,8 +21,25 @@ regression_tests() {
 	sh /usr/share/crmsh/tests/regression.sh
 }
 
-unit_tests
-rc_unittest=$?
-configure
-make_install
-regression_tests && exit $rc_unittest
+bootstrap_tests() {
+	echo "** Bootstrap process tests using python-behave"
+        behave --no-logcapture --tags "@bootstrap" --tags "~@wip" /usr/share/crmsh/tests/features/bootstrap_$1.feature
+}
+
+case "$1" in
+	build)
+		configure
+		make_install
+		exit $?;;
+	bootstrap)
+		configure
+		make_install
+		bootstrap_tests "$2"
+		exit $?;;
+	*)
+		unit_tests
+		rc_unittest=$?
+		configure
+		make_install
+		regression_tests && exit $rc_unittest;;
+esac

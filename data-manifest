@@ -63,7 +63,15 @@ test/containerized-regression-tests.sh
 test/crm-interface
 test/defaults
 test/descriptions
+test/docker_scripts.sh
 test/evaltest.sh
+test/features/bootstrap_1.feature
+test/features/bootstrap_2.feature
+test/features/bootstrap_3.feature
+test/features/environment.py
+test/features/hb_report_1.feature
+test/features/steps/step_bootstrap.py
+test/features/steps/utils.py
 test/history-test.tar.bz2
 test/list-undocumented-commands.py
 test/profile-history.sh
@@ -155,6 +163,7 @@ test/unittests/scripts/v2/main.yml
 test/unittests/scripts/vipinc/main.yml
 test/unittests/scripts/vip/main.yml
 test/unittests/scripts/workflows/10-webserver.xml
+test/unittests/test_bootstrap.py
 test/unittests/test_bugs.py
 test/unittests/test_cib.py
 test/unittests/test_cliformat.py

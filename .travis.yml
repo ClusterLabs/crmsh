@@ -16,6 +16,7 @@ env:
 jobs:
   include:
     - stage: test
+      name: "original regression test"
       before_script:
         - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
         - chmod +x ./cc-test-reporter
@@ -33,6 +34,24 @@ jobs:
       after_script:
         - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
   
+    - name: "regression test using python-behave thread 1"
+      before_install:
+        - /bin/bash $TRAVIS_BUILD_DIR/test/docker_scripts.sh before_install
+      script:
+        - /bin/bash $TRAVIS_BUILD_DIR/test/docker_scripts.sh script 1
+
+    - name: "regression test using python-behave thread 2"
+      before_install:
+        - /bin/bash $TRAVIS_BUILD_DIR/test/docker_scripts.sh before_install
+      script:
+        - /bin/bash $TRAVIS_BUILD_DIR/test/docker_scripts.sh script 2
+
+    - name: "regression test using python-behave thread 3"
+      before_install:
+        - /bin/bash $TRAVIS_BUILD_DIR/test/docker_scripts.sh before_install
+      script:
+        - /bin/bash $TRAVIS_BUILD_DIR/test/docker_scripts.sh script 3
+
     - stage: delivery
       if: type != pull_request AND branch = master
       env:
