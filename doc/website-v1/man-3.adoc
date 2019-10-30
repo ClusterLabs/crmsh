@@ -3732,6 +3732,9 @@ Set cluster configuration properties. To list the
 available cluster configuration properties, use the
 <<cmdhelp_ra_info,`ra info`>> command with +pengine+, +crmd+,
 +cib+ and +stonithd+ as arguments.
+When setting the +maintenance-mode+ property, it will
+inform the user if there are nodes or resources that
+have the +maintenance+ property.
 
 For more information on rule expressions, see
 <<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
