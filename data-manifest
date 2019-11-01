@@ -149,6 +149,7 @@ test/unittests/scripts/v2/main.yml
 test/unittests/scripts/vipinc/main.yml
 test/unittests/scripts/vip/main.yml
 test/unittests/scripts/workflows/10-webserver.xml
+test/unittests/test_bootstrap.py
 test/unittests/test_bugs.py
 test/unittests/test_cib.py
 test/unittests/test_cliformat.py
@@ -157,6 +158,7 @@ test/unittests/test_corosync.py
 test/unittests/test_gv.py
 test/unittests/test_handles.py
 test/unittests/test_objset.py
+test/unittests/test_parallax.py
 test/unittests/test_parse.py
 test/unittests/test_resource.py
 test/unittests/test_scripts.py

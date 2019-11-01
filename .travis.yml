@@ -17,7 +17,7 @@ before_script:
 before_install:
   - docker pull krig/crmsh2:latest
   - docker run -d --name=hanode1 --hostname hanode1 --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" krig/crmsh2
-  - docker exec -t hanode1 /bin/sh -c "zypper -n in curl"
+  - docker exec -t hanode1 /bin/sh -c "zypper -n in curl python-parallax"
   - docker exec -t hanode1 /bin/sh -c "curl https://bootstrap.pypa.io/get-pip.py | python"
   - docker exec -t hanode1 /bin/sh -c "pip install mock"
 
