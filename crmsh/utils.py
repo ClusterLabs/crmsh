@@ -16,6 +16,7 @@ import fnmatch
 import gc
 import ipaddress
 from contextlib import contextmanager
+import parallax
 from . import config
 from . import userdir
 from . import constants
