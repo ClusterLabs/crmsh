@@ -235,6 +235,9 @@ Note:
         network_group.add_option("--qdevice-tls",
                                  dest="qdevice_tls", metavar="QDEVICE_TLS", default="on",
                                  help="Whether using TLS on QDevice/QNetd(on/off/required, default:on)")
+        network_group.add_option("--qdevice-heuristics",
+                                 dest="qdevice_heuristics", metavar="QDEVICE_HEURISTICS",
+                                 help="Heuristics are set of commands executed locally on startup. The heuristics result is sent to corosync-qnetd and there it's used in calculations to determine which partition should be quorate. Commands should separated by \";\"")
         parser.add_option_group(network_group)
 
         storage_group = optparse.OptionGroup(parser, "Storage configuration", "Options for configuring shared storage.")
@@ -275,7 +278,8 @@ Note:
                 port=options.qdevice_port,
                 algo=options.qdevice_algo,
                 tie_breaker=options.qdevice_tie_breaker,
-                tls=options.qdevice_tls)
+                tls=options.qdevice_tls,
+                cmds=options.qdevice_heuristics)
 
         bootstrap.bootstrap_init(
             cluster_name=options.name,

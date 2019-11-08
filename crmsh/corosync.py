@@ -81,7 +81,7 @@ class QDevice(object):
     Step 4:  import_p12_on_local
     '''
     def __init__(self, ip, port=5403, algo="ffsplit",
-                 tie_breaker="lowest", tls="on", cluster_node=None):
+                 tie_breaker="lowest", tls="on", cluster_node=None, cmds=None):
         self.ip = ip
         self.port = port
         self.algo = algo
@@ -89,6 +89,7 @@ class QDevice(object):
         self.tls = tls
         self.cluster_node = cluster_node
         self.askpass = False
+        self.cmds = cmds
 
         self.qnetd_service = "corosync-qnetd.service"
         self.qnetd_cacert_filename = "qnetd-cacert.crt"
@@ -149,6 +150,12 @@ class QDevice(object):
             raise ValueError("invalid qdevice tie_breaker(lowest/highest/valid_node_id)")
         if self.tls not in ["on", "off", "required"]:
             raise ValueError("invalid qdevice tls(on/off/required)")
+        if self.cmds:
+            for cmd in self.cmds.strip(';').split(';'):
+                if not cmd.startswith('/'):
+                    raise ValueError("commands for heuristics should be absolute path")
+                if not os.path.exists(cmd.split()[0]):
+                    raise ValueError("command {} not exists".format(cmd.split()[0]))
 
     def valid_qnetd(self):
         if self.check_ssh_passwd_need():
@@ -414,6 +421,12 @@ class QDevice(object):
         p.set('quorum.device.net.port', self.port)
         p.set('quorum.device.net.algorithm', self.algo)
         p.set('quorum.device.net.tie_breaker', self.tie_breaker)
+        if self.cmds:
+            p.add('quorum.device', make_section('quorum.device.heuristics', []))
+            p.set('quorum.device.heuristics.mode', 'sync')
+            for i, cmd in enumerate(self.cmds.strip(';').split(';')):
+                exec_name = "exec_{}{}".format(os.path.basename(cmd.split()[0]), i)
+                p.set('quorum.device.heuristics.{}'.format(exec_name), cmd)
 
         f = open(conf(), 'w')
         f.write(p.to_string())
@@ -444,7 +457,7 @@ class QDevice(object):
 def corosync_tokenizer(stream):
     """Parses the corosync config file into a token stream"""
     section_re = re.compile(r'(\w+)\s*{')
-    value_re = re.compile(r'(\w+):\s*(\S+)')
+    value_re = re.compile(r'(\w+):\s*([\S ]+)')
     path = []
     while stream:
         stream = stream.lstrip()
