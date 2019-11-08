@@ -1532,6 +1532,17 @@ def init_qdevice():
         _context.qdevice.copy_p12_to_cluster()
         _context.qdevice.import_p12_on_cluster()
 
+    def start_qdevice_qnetd():
+        status("Enable corosync-qdevice.service in cluster")
+        invoke("crm cluster run 'systemctl enable corosync-qdevice'")
+        status("Starting corosync-qdevice.service in cluster")
+        invoke("crm cluster run 'systemctl start corosync-qdevice'")
+
+        status("Enable corosync-qnetd.service on {}".format(qnetd_addr))
+        _context.qdevice.enable_qnetd()
+        status("Starting corosync-qnetd.service on {}".format(qnetd_addr))
+        _context.qdevice.start_qnetd()
+
     if not _context.qdevice:
         return
 
@@ -1547,6 +1558,7 @@ Configure Qdevice/Qnetd""")
         error(err)
 
     if utils.use_qdevice() and not confirm("Qdevice is already configured - overwrite?"):
+        start_qdevice_qnetd()
         return
     _context.qdevice.remove_qdevice_db()
     _context.qdevice.config()
@@ -1563,15 +1575,7 @@ Configure Qdevice/Qnetd""")
             status_long("Qdevice certification process")
             qdevice_cert_process()
             status_done()
-        status("Enable corosync-qdevice.service in cluster")
-        invoke("crm cluster run 'systemctl enable corosync-qdevice'")
-        status("Starting corosync-qdevice.service in cluster")
-        invoke("crm cluster run 'systemctl start corosync-qdevice'")
-
-        status("Enable corosync-qnetd.service on {}".format(qnetd_addr))
-        _context.qdevice.enable_qnetd()
-        status("Starting corosync-qnetd.service on {}".format(qnetd_addr))
-        _context.qdevice.start_qnetd()
+        start_qdevice_qnetd()
     except ValueError as err:
         error(err)
 
