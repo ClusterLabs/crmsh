@@ -381,7 +381,11 @@ def set_value(path, value):
     f.close()
 
 
-def add_node_ucast(IParray, node_name=None):
+class IPAlreadyConfiguredError(Exception):
+    pass
+
+
+def add_node_ucast(IParray, node_id=None):
 
     f = open(conf()).read()
     p = Parser(f)
@@ -393,7 +397,7 @@ def add_node_ucast(IParray, node_name=None):
             exist_iplist.extend(p.get_all(path))
     for ip in IParray:
         if ip in exist_iplist:
-            raise ValueError("IP {} was already configured".format(ip))
+            raise IPAlreadyConfiguredError("IP {} was already configured".format(ip))
 
     node_id = get_free_nodeid(p)
     node_value = []
