@@ -370,3 +370,15 @@ def test_valid_nodeid_true(mock_is_active, mock_nodeinfo):
     assert utils.valid_nodeid("2") is True
     mock_is_active.assert_called_once_with('corosync.service')
     mock_nodeinfo.assert_called_once_with()
+
+@mock.patch("crmsh.corosync.get_value")
+def test_is_unicast_false(mock_get_value):
+    mock_get_value.return_value = None
+    assert utils.is_unicast() is False
+    mock_get_value.assert_called_once_with("totem.transport")
+
+@mock.patch("crmsh.corosync.get_value")
+def test_is_unicast_true(mock_get_value):
+    mock_get_value.return_value = "udpu"
+    assert utils.is_unicast() is True
+    mock_get_value.assert_called_once_with("totem.transport")

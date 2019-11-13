@@ -2248,4 +2248,9 @@ def valid_nodeid(nodeid):
         if _id == nodeid:
             return True
     return False
+
+
+def is_unicast():
+    from . import corosync
+    return corosync.get_value("totem.transport") == "udpu"
 # vim:ts=4:sw=4:et:

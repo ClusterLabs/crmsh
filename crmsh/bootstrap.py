@@ -1866,7 +1866,7 @@ def join_cluster(seed_host):
         error("{} is not readable. Please ensure that hostnames are resolvable.".format(corosync.conf()))
 
     # if unicast, we need to add our node to $corosync.conf()
-    is_unicast = corosync.get_value("totem.transport") == "udpu"
+    is_unicast = utils.is_unicast()
     if is_unicast:
         local_iplist = utils.ip_in_local(_context.ipv6)
         len_iplist = len(local_iplist)
