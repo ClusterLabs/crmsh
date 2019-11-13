@@ -102,14 +102,14 @@ class TestCorosyncParser(unittest.TestCase):
         exist_iplist = get_values('nodelist.node.ring0_addr')
         try:
             add_node_ucast(['10.10.10.11'])
-        except ValueError:
+        except corosync.IPAlreadyConfiguredError:
             self.fail("corosync.add_node_ucast raised ValueError unexpectedly!")
         now_iplist = get_values('nodelist.node.ring0_addr')
         self.assertEqual(len(exist_iplist) + 1, len(now_iplist))
         self.assertTrue('10.10.10.11' in get_values('nodelist.node.ring0_addr'))
 
         # bsc#1127095, 1127096; address 10.10.10.11 already exist
-        with self.assertRaises(ValueError) as err:
+        with self.assertRaises(corosync.IPAlreadyConfiguredError) as err:
             add_node_ucast(['10.10.10.11'])
         self.assertEqual("IP 10.10.10.11 was already configured", str(err.exception))
         now_iplist = get_values('nodelist.node.ring0_addr')

@@ -770,6 +770,10 @@ def set_value(path, value):
     f.close()
 
 
+class IPAlreadyConfiguredError(Exception):
+    pass
+
+
 def add_node_ucast(IParray, node_id=None):
 
     f = open(conf()).read()
@@ -782,7 +786,7 @@ def add_node_ucast(IParray, node_id=None):
             exist_iplist.extend(p.get_all(path))
     for ip in IParray:
         if ip in exist_iplist:
-            raise ValueError("IP {} was already configured".format(ip))
+            raise IPAlreadyConfiguredError("IP {} was already configured".format(ip))
 
     if node_id is None:
         node_id = get_free_nodeid(p)

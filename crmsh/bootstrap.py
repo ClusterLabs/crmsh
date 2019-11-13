@@ -915,9 +915,8 @@ def add_nodelist_from_cmaptool():
     for nodeid, iplist in utils.get_nodeinfo_from_cmaptool().items():
         try:
             corosync.add_node_ucast(iplist, nodeid)
-        except ValueError as err:
-            if "was already configured" in str(err):
-                continue
+        except corosync.IPAlreadyConfiguredError:
+            continue
 
 
 def init_corosync_unicast():
@@ -1909,7 +1908,7 @@ def join_cluster(seed_host):
         invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
         try:
             corosync.add_node_ucast(ringXaddr_res)
-        except ValueError as e:
+        except corosync.IPAlreadyConfiguredError as e:
             warn(e)
         csync2_update(corosync.conf())
         invoke("ssh -o StrictHostKeyChecking=no root@{} corosync-cfgtool -R".format(seed_host))
