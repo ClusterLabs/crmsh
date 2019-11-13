@@ -1737,7 +1737,7 @@ def join_cluster(seed_host):
         invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
         try:
             corosync.add_node_ucast(ringXaddr_res)
-        except ValueError as e:
+        except corosync.IPAlreadyConfiguredError as e:
             warn(e)
         csync2_update(corosync.conf())
         invoke("ssh root@{} corosync-cfgtool -R".format(seed_host))
