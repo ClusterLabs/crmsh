@@ -221,23 +221,23 @@ Note:
         network_group.add_option("-I", "--ipv6", action="store_true", dest="ipv6",
                                  help="Configure corosync use IPv6")
         network_group.add_option("--qdevice",
-                                 dest="qdevice", metavar="QDEVICE_ADDR",
+                                 dest="qdevice", metavar="IP",
                                  help="IP or host name of the QNetd server to be used")
         network_group.add_option("--qdevice-port",
-                                 dest="qdevice_port", metavar="QDEVICE_PORT", type="int", default=5403,
-                                 help="TCP port of QNetd server(default:5403)")
+                                 dest="qdevice_port", metavar="PORT", type="int", default=5403,
+                                 help="TCP PORT of QNetd server(default:5403)")
         network_group.add_option("--qdevice-algo",
-                                 dest="qdevice_algo", metavar="QDEVICE_ALGO", default="ffsplit",
-                                 help="QNetd decision algorithm(ffsplit/lms, default:ffsplit)")
+                                 dest="qdevice_algo", metavar="ALGORITHM", default="ffsplit",
+                                 help="QNetd decision ALGORITHM(ffsplit/lms, default:ffsplit)")
         network_group.add_option("--qdevice-tie-breaker",
-                                 dest="qdevice_tie_breaker", metavar="QDEVICE_TIE_BREAKER", default="lowest",
-                                 help="QNetd tie_breaker(lowest/highest/valid_node_id, default:lowest)")
+                                 dest="qdevice_tie_breaker", metavar="TIE_BREAKER", default="lowest",
+                                 help="QNetd TIE_BREAKER(lowest/highest/valid_node_id, default:lowest)")
         network_group.add_option("--qdevice-tls",
-                                 dest="qdevice_tls", metavar="QDEVICE_TLS", default="on",
+                                 dest="qdevice_tls", metavar="TLS", default="on",
                                  help="Whether using TLS on QDevice/QNetd(on/off/required, default:on)")
         network_group.add_option("--qdevice-heuristics",
-                                 dest="qdevice_heuristics", metavar="QDEVICE_HEURISTICS",
-                                 help="Heuristics are set of commands executed locally on startup. The heuristics result is sent to corosync-qnetd and there it's used in calculations to determine which partition should be quorate. Commands should separated by \";\"")
+                                 dest="qdevice_heuristics", metavar="COMMAND",
+                                 help="COMMAND to run with absolute path. For multiple commands, use \";\" to separate(details about heuristics can see man 8 corosync-qdevice)")
         parser.add_option_group(network_group)
 
         storage_group = optparse.OptionGroup(parser, "Storage configuration", "Options for configuring shared storage.")
