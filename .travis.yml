@@ -16,6 +16,7 @@ env:
 jobs:
   include:
     - stage: test
+      name: "original regression test"
       before_script:
         - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
         - chmod +x ./cc-test-reporter
@@ -33,6 +34,18 @@ jobs:
       after_script:
         - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
   
+    - name: "functional test for bootstrap - init, join and remove"
+      before_install:
+        - $TRAVIS_BUILD_DIR/test/docker_scripts.sh bootstrap before_install
+      script:
+        - $TRAVIS_BUILD_DIR/test/docker_scripts.sh bootstrap run init_join_remove
+
+    - name: "functional test for bootstrap - options"
+      before_install:
+        - $TRAVIS_BUILD_DIR/test/docker_scripts.sh bootstrap before_install
+      script:
+        - $TRAVIS_BUILD_DIR/test/docker_scripts.sh bootstrap run options
+
     - stage: delivery
       if: type != pull_request AND branch = master
       env:
