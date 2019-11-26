@@ -65,6 +65,12 @@ jobs:
       script:
         - $FUNCTIONAL_TEST qdevice run validate
 
+    - name: "functional test for resource subcommand"
+      before_install:
+        - $FUNCTIONAL_TEST resource before_install
+      script:
+        - $FUNCTIONAL_TEST resource run
+
     - stage: delivery
       if: type != pull_request AND branch = master
       env:

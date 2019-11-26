@@ -11,6 +11,10 @@ def get_online_nodes():
         return None
 
 
+def resource_cleanup():
+    utils.get_stdout_stderr('crm resource cleanup')
+
+
 def before_step(context, step):
     context.logger = logging.getLogger("Step:{}".format(step.name))
 
@@ -20,6 +24,7 @@ def before_tag(context, tag):
     if tag == "clean":
         online_nodes = get_online_nodes()
         if online_nodes:
+            resource_cleanup()
             try:
                 parallax.parallax_call(online_nodes, 'crm cluster stop')
             except ValueError as err:
