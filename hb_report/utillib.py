@@ -1649,11 +1649,29 @@ def time_status():
     time_f = os.path.join(constants.WORKDIR, constants.TIME_F)
     crmutils.str2file(out_string, time_f)
 
+
+def dump_D_process():
+    '''
+    dump D-state process stack
+    '''
+    out_string = ""
+    _, out, _ = crmutils.get_stdout_stderr("ps aux|awk '$8 ~ /^D/{print $2}'")
+    len_D_process = len(out.split('\n')) if out else 0
+    out_string += "Dump D-state process stack: {}\n".format(len_D_process)
+    if len_D_process == 0:
+        return out_string
+    for pid in out.split('\n'):
+        _, cmd_out, _ = crmutils.get_stdout_stderr("cat /proc/{}/comm".format(pid))
+        out_string += "pid: {}     comm: {}\n".format(pid, cmd_out)
+        _, stack_out, _ = crmutils.get_stdout_stderr("cat /proc/{}/stack".format(pid))
+        out_string += stack_out + "\n\n"
+    return out_string
+
+
 def dump_ocfs2():
     ocfs2_f = os.path.join(constants.WORKDIR, constants.OCFS2_F)
     with open(ocfs2_f, "w") as f:
-        #dump all tasks stack into dmesg
-        os.system("echo t > /proc/sysrq-trigger")
+        f.write(dump_D_process())
 
         cmds = [ "dmesg",  "ps -efL", "lsof",
                 "lsblk -o 'NAME,KNAME,MAJ:MIN,FSTYPE,LABEL,RO,RM,MODEL,SIZE,OWNER,GROUP,MODE,ALIGNMENT,MIN-IO,OPT-IO,PHY-SEC,LOG-SEC,ROTA,SCHED,MOUNTPOINT'",
@@ -1669,6 +1687,7 @@ def dump_ocfs2():
             f.write("\n\n#=====[ Command ] ==========================#\n")
             f.write("# %s\n"%(cmd))
             f.write(out)
+
 
 def touch_dc():
     if constants.SKIP_LVL:
