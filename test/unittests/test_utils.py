@@ -288,27 +288,27 @@ def test_valid_port():
     assert utils.valid_port(1234) is True
 
 @mock.patch("crmsh.corosync.get_value")
-def test_use_qdevice_false(mock_get_value):
+def test_is_qdevice_configured_false(mock_get_value):
     mock_get_value.return_value = "ip"
-    assert utils.use_qdevice() is False
+    assert utils.is_qdevice_configured() is False
     mock_get_value.assert_called_once_with("quorum.device.model")
 
 @mock.patch("crmsh.corosync.get_value")
-def test_use_qdevice_true(mock_get_value):
+def test_is_qdevice_configured_true(mock_get_value):
     mock_get_value.return_value = "net"
-    assert utils.use_qdevice() is True
+    assert utils.is_qdevice_configured() is True
     mock_get_value.assert_called_once_with("quorum.device.model")
 
 @mock.patch("crmsh.corosync.get_value")
-def test_qdevice_tls_on_false(mock_get_value):
+def test_is_qdevice_tls_on_false(mock_get_value):
     mock_get_value.return_value = "off"
-    assert utils.qdevice_tls_on() is False
+    assert utils.is_qdevice_tls_on() is False
     mock_get_value.assert_called_once_with("quorum.device.net.tls")
 
 @mock.patch("crmsh.corosync.get_value")
-def test_qdevice_tls_on_true(mock_get_value):
+def test_is_qdevice_tls_on_true(mock_get_value):
     mock_get_value.return_value = "on"
-    assert utils.qdevice_tls_on() is True
+    assert utils.is_qdevice_tls_on() is True
     mock_get_value.assert_called_once_with("quorum.device.net.tls")
 
 @mock.patch("crmsh.utils.get_stdout")

@@ -416,7 +416,7 @@ def check_prereqs(stage):
 
     if stage == "qdevice":
         if not _context.qdevice:
-            error("Miss qdevice related option(at least with --qdevice)")
+            error("qdevice related options are missing (--qdevice option is mandatory, find for more information using --help)")
 
     if warned:
         if not confirm("Do you want to continue anyway?"):
@@ -1556,7 +1556,7 @@ Configure Qdevice/Qnetd""")
     except ValueError as err:
         error(err)
 
-    if utils.use_qdevice() and not confirm("Qdevice is already configured - overwrite?"):
+    if utils.is_qdevice_configured() and not confirm("Qdevice is already configured - overwrite?"):
         start_qdevice_qnetd()
         return
     _context.qdevice.remove_qdevice_db()
@@ -1570,7 +1570,7 @@ Configure Qdevice/Qnetd""")
     status_done()
 
     try:
-        if utils.qdevice_tls_on():
+        if utils.is_qdevice_tls_on():
             status_long("Qdevice certification process")
             qdevice_cert_process()
             status_done()
@@ -1750,7 +1750,7 @@ def update_expected_votes():
     # so that we can ask the cluster for the current membership list
     # Have to check if a qnetd device is configured and increase
     # expected_votes in that case
-    use_qdevice = utils.use_qdevice()
+    is_qdevice_configured = utils.is_qdevice_configured()
     if nodelist is None:
         for v in corosync.get_values("quorum.expected_votes"):
             expected_votes = v
@@ -1770,7 +1770,7 @@ def update_expected_votes():
             elif corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
                 device_votes = 1
                 nodecount = expected_votes - device_votes
-            elif use_qdevice:
+            elif is_qdevice_configured:
                 device_votes = 0
                 nodecount = v
 
@@ -1794,7 +1794,7 @@ def update_expected_votes():
 
         if corosync.get_value("quorum.expected_votes"):
             corosync.set_value("quorum.expected_votes", str(expected_votes))
-    if use_qdevice:
+    if is_qdevice_configured:
         corosync.set_value("quorum.device.votes", device_votes)
     corosync.set_value("quorum.two_node", 1 if expected_votes == 2 else 0)
 
@@ -1924,8 +1924,8 @@ def join_cluster(seed_host):
         local_nodeid = get_local_nodeid()
         update_nodeid(local_nodeid)
 
-    use_qdevice = utils.use_qdevice()
-    if use_qdevice and not is_unicast:
+    is_qdevice_configured = utils.is_qdevice_configured()
+    if is_qdevice_configured and not is_unicast:
         # expected_votes here maybe is "0", set to "3" to make sure cluster can start
         corosync.set_value("quorum.expected_votes", "3")
 
@@ -1947,7 +1947,7 @@ def join_cluster(seed_host):
                 nodeid_dict[tmp[1]] = tmp[0]
 
     # apply nodelist in cluster
-    if is_unicast or use_qdevice:
+    if is_unicast or is_qdevice_configured:
         invoke("crm cluster run 'crm corosync reload'")
 
     update_expected_votes()
@@ -1975,13 +1975,13 @@ def join_cluster(seed_host):
         update_nodeid(local_nodeid)
     status_done()
 
-    if use_qdevice:
+    if is_qdevice_configured:
         status_long("Starting corosync-qdevice.service")
         if not is_unicast:
             add_nodelist_from_cmaptool()
             csync2_update(corosync.conf())
             invoke("crm corosync reload")
-        if utils.qdevice_tls_on():
+        if utils.is_qdevice_tls_on():
             qnetd_addr = corosync.get_value("quorum.device.net.host")
             qdevice = corosync.QDevice(qnetd_addr, cluster_node=seed_host)
             qdevice.fetch_qnetd_crt_from_cluster()
@@ -2105,11 +2105,11 @@ def remove_node_from_cluster():
         corosync.del_node(node)
 
     # Decrement expected_votes in corosync.conf
-    use_qdevice = 1 if "net" in corosync.get_values("quorum.device.model") else 0
+    is_qdevice_configured = 1 if "net" in corosync.get_values("quorum.device.model") else 0
     for vote in corosync.get_values("quorum.expected_votes"):
         quorum = int(vote)
         new_quorum = quorum - 1
-        if use_qdevice > 0:
+        if is_qdevice_configured > 0:
             new_nodecount = 0
             device_votes = 0
             nodecount = 0
@@ -2130,7 +2130,7 @@ def remove_node_from_cluster():
             corosync.set_value("quorum.device.votes", device_votes)
             new_quorum = new_nodecount + device_votes
 
-        if use_qdevice == 0:
+        if is_qdevice_configured == 0:
             corosync.set_value("quorum.two_node", 1 if new_quorum == 2 else 0)
         corosync.set_value("quorum.expected_votes", str(new_quorum))
 
@@ -2339,7 +2339,7 @@ def bootstrap_remove(cluster_node=None, ui_context=None, quiet=False, yes_to_all
     _context.qdevice = qdevice
 
     if _context.qdevice:
-        if not utils.use_qdevice():
+        if not utils.is_qdevice_configured():
             error("No QDevice configuration in this cluster")
         if not confirm("Removing QDevice service and configuration from cluster: Are you sure?"):
             return

@@ -70,4 +70,4 @@ Feature: corosync qdevice/qnetd options validate
     When    Run "crm cluster init -y --no-overwrite-sshkey" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Try "crm cluster init qdevice"
-    Then    Except "ERROR: cluster.init: Miss qdevice related option(at least with --qdevice)"
+    Then    Except "ERROR: cluster.init: qdevice related options are missing (--qdevice option is mandatory, find for more information using --help)"

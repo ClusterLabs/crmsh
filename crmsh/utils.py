@@ -2214,12 +2214,12 @@ def valid_port(port):
     return int(port) >= 1024 and int(port) <= 65535
 
 
-def use_qdevice():
+def is_qdevice_configured():
     from . import corosync
     return corosync.get_value("quorum.device.model") == "net"
 
 
-def qdevice_tls_on():
+def is_qdevice_tls_on():
     from . import corosync
     return corosync.get_value("quorum.device.net.tls") == "on"
 

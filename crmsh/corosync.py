@@ -80,6 +80,14 @@ class QDevice(object):
     Step 3:  fetch_p12_from_cluster
     Step 4:  import_p12_on_local
     '''
+    qnetd_service = "corosync-qnetd.service"
+    qnetd_cacert_filename = "qnetd-cacert.crt"
+    qdevice_crq_filename = "qdevice-net-node.crq"
+    qdevice_p12_filename = "qdevice-net-node.p12"
+    qnetd_path = "/etc/corosync/qnetd"
+    qdevice_path = "/etc/corosync/qdevice/net"
+    qdevice_db_path = "/etc/corosync/qdevice/net/nssdb"
+
     def __init__(self, ip, port=5403, algo="ffsplit",
                  tie_breaker="lowest", tls="on", cluster_node=None, cmds=None):
         self.ip = ip
@@ -90,14 +98,6 @@ class QDevice(object):
         self.cluster_node = cluster_node
         self.askpass = False
         self.cmds = cmds
-
-        self.qnetd_service = "corosync-qnetd.service"
-        self.qnetd_cacert_filename = "qnetd-cacert.crt"
-        self.qdevice_crq_filename = "qdevice-net-node.crq"
-        self.qdevice_p12_filename = "qdevice-net-node.p12"
-        self.qnetd_path = "/etc/corosync/qnetd"
-        self.qdevice_path = "/etc/corosync/qdevice/net"
-        self.qdevice_db_path = "/etc/corosync/qdevice/net/nssdb"
 
     @property
     def qnetd_cacert_on_qnetd(self):

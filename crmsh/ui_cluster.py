@@ -80,7 +80,7 @@ class Cluster(command.UI):
         '''
         try:
             utils.start_service("pacemaker")
-            if utils.use_qdevice():
+            if utils.is_qdevice_configured():
                 utils.start_service("corosync-qdevice")
             err_buf.info("Cluster services started")
         except IOError as err:
@@ -94,7 +94,7 @@ class Cluster(command.UI):
         Stops the cluster services on this node
         '''
         try:
-            if utils.use_qdevice():
+            if utils.is_qdevice_configured():
                 utils.stop_service("corosync-qdevice")
             utils.stop_service("corosync")
             err_buf.info("Cluster services stopped")

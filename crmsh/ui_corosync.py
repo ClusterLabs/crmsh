@@ -74,7 +74,7 @@ class Corosync(command.UI):
             print(corosync.quorumtool('-s')[1])
             return
         if status_type == "qnetd":
-            if not utils.use_qdevice():
+            if not utils.is_qdevice_configured():
                 err_buf.error("QDevice/QNetd not configured!")
                 return False
             cluster_name = corosync.get_value('totem.cluster_name')
