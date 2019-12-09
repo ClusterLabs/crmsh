@@ -80,6 +80,8 @@ class Cluster(command.UI):
         '''
         try:
             utils.start_service("pacemaker")
+            if utils.is_qdevice_configured():
+                utils.start_service("corosync-qdevice")
             err_buf.info("Cluster services started")
         except IOError as err:
             context.fatal_error(str(err))
@@ -92,6 +94,8 @@ class Cluster(command.UI):
         Stops the cluster services on this node
         '''
         try:
+            if utils.is_qdevice_configured():
+                utils.stop_service("corosync-qdevice")
             utils.stop_service("corosync")
             err_buf.info("Cluster services stopped")
         except IOError as err:
@@ -171,6 +175,7 @@ Stage can be one of:
     vgfs        Create volume group and filesystem (ocfs2 template only,
                 requires -o <dev>)
     admin       Create administration virtual IP (optional)
+    qdevice     Configure qdevice and qnetd
 
 Note:
   - If stage is not specified, the script will run through each stage
@@ -215,18 +220,24 @@ Note:
                                  help="Configure corosync with second heartbeat line")
         network_group.add_option("-I", "--ipv6", action="store_true", dest="ipv6",
                                  help="Configure corosync use IPv6")
-        network_group.add_option("--qdevice",
-                                 dest="qdevice", metavar="QDEVICE",
-                                 help="QDevice IP")
+        network_group.add_option("--qnetd-hostname",
+                                 dest="qdevice", metavar="HOST",
+                                 help="HOST or IP of the QNetd server to be used")
         network_group.add_option("--qdevice-port",
-                                 dest="qdevice_port", metavar="QDEVICE_PORT", type="int", default=5403,
-                                 help="QDevice port")
+                                 dest="qdevice_port", metavar="PORT", type="int", default=5403,
+                                 help="TCP PORT of QNetd server(default:5403)")
         network_group.add_option("--qdevice-algo",
-                                 dest="qdevice_algo", metavar="QDEVICE_ALGO", default="ffsplit",
-                                 help="QDevice algorithm")
+                                 dest="qdevice_algo", metavar="ALGORITHM", default="ffsplit",
+                                 help="QNetd decision ALGORITHM(ffsplit/lms, default:ffsplit)")
         network_group.add_option("--qdevice-tie-breaker",
-                                 dest="qdevice_tie_breaker", metavar="QDEVICE_TIE_BREAKER", default="lowest",
-                                 help="QDevice algorithm")
+                                 dest="qdevice_tie_breaker", metavar="TIE_BREAKER", default="lowest",
+                                 help="QNetd TIE_BREAKER(lowest/highest/valid_node_id, default:lowest)")
+        network_group.add_option("--qdevice-tls",
+                                 dest="qdevice_tls", metavar="TLS", default="on",
+                                 help="Whether using TLS on QDevice/QNetd(on/off/required, default:on)")
+        network_group.add_option("--qdevice-heuristics",
+                                 dest="qdevice_heuristics", metavar="COMMAND",
+                                 help="COMMAND to run with absolute path. For multiple commands, use \";\" to separate(details about heuristics can see man 8 corosync-qdevice)")
         parser.add_option_group(network_group)
 
         storage_group = optparse.OptionGroup(parser, "Storage configuration", "Options for configuring shared storage.")
@@ -266,7 +277,9 @@ Note:
                 options.qdevice,
                 port=options.qdevice_port,
                 algo=options.qdevice_algo,
-                tie_breaker=options.qdevice_tie_breaker)
+                tie_breaker=options.qdevice_tie_breaker,
+                tls=options.qdevice_tls,
+                cmds=options.qdevice_heuristics)
 
         bootstrap.bootstrap_init(
             cluster_name=options.name,
@@ -398,6 +411,7 @@ If stage is not specified, each stage will be invoked in sequence.
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of cluster node which will be deleted", metavar="HOST")
         parser.add_option("-F", "--force", dest="force", help="Remove current node", action="store_true")
+        parser.add_option("--qdevice", dest="qdevice", help="Remove QDevice configuration and service from cluster", action="store_true")
         try:
             options, args = parser.parse_args(list(args))
         except:
@@ -412,7 +426,8 @@ If stage is not specified, each stage will be invoked in sequence.
                 cluster_node=None,
                 ui_context=context,
                 quiet=options.quiet,
-                yes_to_all=options.yes_to_all)
+                yes_to_all=options.yes_to_all,
+                qdevice=options.qdevice)
         else:
             for node in args:
                 bootstrap.bootstrap_remove(

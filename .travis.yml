@@ -12,6 +12,7 @@ stages:
 env:
   global:
     - CC_TEST_REPORTER_ID=a2579335b631ec35473874d7bb4fe983025c0287cea89c9dc34c35f98ee3963d
+    - FUNCTIONAL_TEST=$TRAVIS_BUILD_DIR/test/docker_scripts.sh
 
 jobs:
   include:
@@ -36,15 +37,33 @@ jobs:
   
     - name: "functional test for bootstrap - init, join and remove"
       before_install:
-        - $TRAVIS_BUILD_DIR/test/docker_scripts.sh bootstrap before_install
+        - $FUNCTIONAL_TEST bootstrap before_install
       script:
-        - $TRAVIS_BUILD_DIR/test/docker_scripts.sh bootstrap run init_join_remove
+        - $FUNCTIONAL_TEST bootstrap run init_join_remove
 
     - name: "functional test for bootstrap - options"
       before_install:
-        - $TRAVIS_BUILD_DIR/test/docker_scripts.sh bootstrap before_install
+        - $FUNCTIONAL_TEST bootstrap before_install
       script:
-        - $TRAVIS_BUILD_DIR/test/docker_scripts.sh bootstrap run options
+        - $FUNCTIONAL_TEST bootstrap run options
+
+    - name: "functional test for qdevice - setup and remove"
+      before_install:
+        - $FUNCTIONAL_TEST qdevice before_install
+      script:
+        - $FUNCTIONAL_TEST qdevice run setup_remove
+
+    - name: "functional test for qdevice - options"
+      before_install:
+        - $FUNCTIONAL_TEST qdevice before_install
+      script:
+        - $FUNCTIONAL_TEST qdevice run options
+
+    - name: "functional test for qdevice - validate"
+      before_install:
+        - $FUNCTIONAL_TEST qdevice before_install
+      script:
+        - $FUNCTIONAL_TEST qdevice run validate
 
     - stage: delivery
       if: type != pull_request AND branch = master

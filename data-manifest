@@ -68,8 +68,11 @@ test/evaltest.sh
 test/features/bootstrap_init_join_remove.feature
 test/features/bootstrap_options.feature
 test/features/environment.py
+test/features/qdevice_options.feature
+test/features/qdevice_setup_remove.feature
+test/features/qdevice_validate.feature
 test/features/steps/__init__.py
-test/features/steps/step_bootstrap.py
+test/features/steps/step_implenment.py
 test/features/steps/utils.py
 test/history-test.tar.bz2
 test/list-undocumented-commands.py
@@ -132,6 +135,7 @@ test/travis-tests.sh
 test/unittests/bug-862577_corosync.conf
 test/unittests/corosync.conf.1
 test/unittests/corosync.conf.2
+test/unittests/corosync.conf.3
 test/unit-tests-in-container.sh
 test/unittests/__init__.py
 test/unittests/pacemaker.log

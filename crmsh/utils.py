@@ -15,7 +15,7 @@ import bz2
 import fnmatch
 import gc
 import ipaddress
-from contextlib import contextmanager
+from contextlib import contextmanager, closing
 from . import config
 from . import userdir
 from . import constants
@@ -2198,4 +2198,59 @@ def check_ssh_passwd_need(hosts):
         if rc != 0:
             return True
     return False
+
+
+def check_port_open(host, port):
+    import socket
+
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+        if sock.connect_ex((host, port)) == 0:
+            return True
+        else:
+            return False
+
+
+def valid_port(port):
+    return int(port) >= 1024 and int(port) <= 65535
+
+
+def is_qdevice_configured():
+    from . import corosync
+    return corosync.get_value("quorum.device.model") == "net"
+
+
+def is_qdevice_tls_on():
+    from . import corosync
+    return corosync.get_value("quorum.device.net.tls") == "on"
+
+
+def get_nodeinfo_from_cmaptool():
+    nodeid_ip_dict = {}
+    rc, out = get_stdout("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
+    if rc != 0:
+        return nodeid_ip_dict
+
+    for line in out.split('\n'):
+        match = re.search(r'members\.(.*)\.ip', line)
+        if match:
+            node_id = match.group(1)
+            iplist = re.findall(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', line)
+            nodeid_ip_dict[node_id] = iplist
+    return nodeid_ip_dict
+
+
+def valid_nodeid(nodeid):
+    from . import bootstrap
+    if not bootstrap.service_is_active('corosync.service'):
+        return False
+
+    for _id, _ in get_nodeinfo_from_cmaptool().items():
+        if _id == nodeid:
+            return True
+    return False
+
+
+def is_unicast():
+    from . import corosync
+    return corosync.get_value("totem.transport") == "udpu"
 # vim:ts=4:sw=4:et:

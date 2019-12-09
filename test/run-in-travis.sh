@@ -33,8 +33,6 @@ case "$1" in
 		make_install
 		exit $?;;
 	bootstrap|qdevice|hb_report)
-		configure
-		make_install
 		functional_tests $1 $2
 		exit $?;;
 	*)

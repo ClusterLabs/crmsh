@@ -40,7 +40,7 @@ SYSCONFIG_FW_CLUSTER = "/etc/sysconfig/SuSEfirewall2.d/services/cluster"
 PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
 
 
-INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin")
+INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin", "qdevice")
 
 
 class Context(object):
@@ -413,6 +413,10 @@ def check_prereqs(stage):
         if not check_watchdog():
             warn("No watchdog device found. If SBD is used, the cluster will be unable to start without a watchdog.")
             warned = True
+
+    if stage == "qdevice":
+        if not _context.qdevice:
+            error("qdevice related options are missing (--qnetd-hostname option is mandatory, find for more information using --help)")
 
     if warned:
         if not confirm("Do you want to continue anyway?"):
@@ -907,6 +911,14 @@ def valid_port(port, prev_value=None):
     return False
 
 
+def add_nodelist_from_cmaptool():
+    for nodeid, iplist in utils.get_nodeinfo_from_cmaptool().items():
+        try:
+            corosync.add_node_ucast(iplist, nodeid)
+        except corosync.IPAlreadyConfiguredError:
+            continue
+
+
 def init_corosync_unicast():
 
     if _context.yes_to_all:
@@ -968,8 +980,7 @@ Configure Corosync (unicast):
         mcastport=mcastport_res,
         transport="udpu",
         ipv6=_context.ipv6,
-        two_rings=two_rings,
-        qdevice=_context.qdevice)
+        two_rings=two_rings)
     csync2_update(corosync.conf())
 
 
@@ -1088,8 +1099,7 @@ Configure Corosync:
         mcastport=mcastport_res,
         ipv6=_context.ipv6,
         nodeid=nodeid,
-        two_rings=two_rings,
-        qdevice=_context.qdevice)
+        two_rings=two_rings)
     csync2_update(corosync.conf())
 
 
@@ -1503,6 +1513,72 @@ Configure Administration IP Address:
     wait_for_resource("Configuring virtual IP ({})".format(adminaddr), "admin-ip")
 
 
+def init_qdevice():
+    def copy_ssh_id_to_qnetd():
+        status("Copy ssh key to qnetd node({})".format(qnetd_addr))
+        invoke("ssh-copy-id -i /root/.ssh/id_rsa.pub root@{}".format(qnetd_addr))
+
+    def qdevice_cert_process():
+        _context.qdevice.init_db_on_qnetd()
+        _context.qdevice.fetch_qnetd_crt_from_qnetd()
+        _context.qdevice.copy_qnetd_crt_to_cluster()
+        _context.qdevice.init_db_on_cluster()
+        _context.qdevice.create_ca_request()
+        _context.qdevice.copy_crq_to_qnetd()
+        _context.qdevice.sign_crq_on_qnetd()
+        _context.qdevice.fetch_cluster_crt_from_qnetd()
+        _context.qdevice.import_cluster_crt()
+        _context.qdevice.copy_p12_to_cluster()
+        _context.qdevice.import_p12_on_cluster()
+
+    def start_qdevice_qnetd():
+        status("Enable corosync-qdevice.service in cluster")
+        invoke("crm cluster run 'systemctl enable corosync-qdevice'")
+        status("Starting corosync-qdevice.service in cluster")
+        invoke("crm cluster run 'systemctl start corosync-qdevice'")
+
+        status("Enable corosync-qnetd.service on {}".format(qnetd_addr))
+        _context.qdevice.enable_qnetd()
+        status("Starting corosync-qnetd.service on {}".format(qnetd_addr))
+        _context.qdevice.start_qnetd()
+
+    if not _context.qdevice:
+        return
+
+    status("""
+Configure Qdevice/Qnetd""")
+
+    qnetd_addr = _context.qdevice.ip
+    if _context.qdevice.check_ssh_passwd_need():
+        copy_ssh_id_to_qnetd()
+    try:
+        _context.qdevice.valid_qnetd()
+    except ValueError as err:
+        error(err)
+
+    if utils.is_qdevice_configured() and not confirm("Qdevice is already configured - overwrite?"):
+        start_qdevice_qnetd()
+        return
+    _context.qdevice.remove_qdevice_db()
+    _context.qdevice.config()
+    # qdevice need nodelist for mcast situation
+    if corosync.get_value("totem.transport") != "udpu":
+        add_nodelist_from_cmaptool()
+    status_long("Update configuration")
+    update_expected_votes()
+    invoke("crm cluster run 'crm corosync reload'")
+    status_done()
+
+    try:
+        if utils.is_qdevice_tls_on():
+            status_long("Qdevice certification process")
+            qdevice_cert_process()
+            status_done()
+        start_qdevice_qnetd()
+    except ValueError as err:
+        error(err)
+
+
 def init():
     """
     Basic init
@@ -1646,6 +1722,84 @@ def join_ssh_merge(_cluster_node):
             if isinstance(result, parallax.Error):
                 warn("scp to {} failed ({}), known_hosts update may be incomplete".format(host, str(result)))
 
+def update_expected_votes():
+    # get a list of nodes, excluding remote nodes
+    nodelist = None
+    loop_count = 0
+    device_votes = 0
+    nodecount = 0
+    expected_votes = 0
+    while True:
+        rc, nodelist_text = utils.get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
+        if rc == 0:
+            try:
+                nodelist_xml = etree.fromstring(nodelist_text)
+                nodelist = [n.get('uname') for n in nodelist_xml.xpath('//node_state') if n.get('remote_node') != 'true']
+                if len(nodelist) >= 2:
+                    break
+            except Exception:
+                break
+        # timeout: 10 seconds
+        if loop_count == 10:
+            break
+        loop_count += 1
+        sleep(1)
+
+    # Increase expected_votes
+    # TODO: wait to adjust expected_votes until after cluster join,
+    # so that we can ask the cluster for the current membership list
+    # Have to check if a qnetd device is configured and increase
+    # expected_votes in that case
+    is_qdevice_configured = utils.is_qdevice_configured()
+    if nodelist is None:
+        for v in corosync.get_values("quorum.expected_votes"):
+            expected_votes = v
+
+            # For node >= 2, expected_votes = nodecount + device_votes
+            # Assume nodecount is N, for ffsplit, qdevice only has one vote
+            # which means that device_votes is 1, ie:expected_votes = N + 1;
+            # while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
+            # and update quorum.device.net.algorithm based on device_votes
+
+            if corosync.get_value("quorum.device.net.algorithm") == "lms":
+                device_votes = int((expected_votes - 1) / 2)
+                nodecount = expected_votes - device_votes
+                # as nodecount will increase 1, and device_votes is nodecount - 1
+                # device_votes also increase 1
+                device_votes += 1
+            elif corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
+                device_votes = 1
+                nodecount = expected_votes - device_votes
+            elif is_qdevice_configured:
+                device_votes = 0
+                nodecount = v
+
+            nodecount += 1
+            expected_votes = nodecount + device_votes
+            corosync.set_value("quorum.expected_votes", str(expected_votes))
+    else:
+        nodecount = len(nodelist)
+        expected_votes = 0
+        # For node >= 2, expected_votes = nodecount + device_votes
+        # Assume nodecount is N, for ffsplit, qdevice only has one vote
+        # which means that device_votes is 1, ie:expected_votes = N + 1;
+        # while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
+        if corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
+            device_votes = 1
+        if corosync.get_value("quorum.device.net.algorithm") == "lms":
+            device_votes = nodecount - 1
+
+        if nodecount > 1:
+            expected_votes = nodecount + device_votes
+
+        if corosync.get_value("quorum.expected_votes"):
+            corosync.set_value("quorum.expected_votes", str(expected_votes))
+    if is_qdevice_configured:
+        corosync.set_value("quorum.device.votes", device_votes)
+    corosync.set_value("quorum.two_node", 1 if expected_votes == 2 else 0)
+
+    csync2_update(corosync.conf())
+
 
 def join_cluster(seed_host):
     """
@@ -1712,7 +1866,7 @@ def join_cluster(seed_host):
         error("{} is not readable. Please ensure that hostnames are resolvable.".format(corosync.conf()))
 
     # if unicast, we need to add our node to $corosync.conf()
-    is_unicast = "nodelist" in open(corosync.conf()).read()
+    is_unicast = utils.is_unicast()
     if is_unicast:
         local_iplist = utils.ip_in_local(_context.ipv6)
         len_iplist = len(local_iplist)
@@ -1754,7 +1908,7 @@ def join_cluster(seed_host):
         invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
         try:
             corosync.add_node_ucast(ringXaddr_res)
-        except ValueError as e:
+        except corosync.IPAlreadyConfiguredError as e:
             warn(e)
         csync2_update(corosync.conf())
         invoke("ssh -o StrictHostKeyChecking=no root@{} corosync-cfgtool -R".format(seed_host))
@@ -1769,6 +1923,11 @@ def join_cluster(seed_host):
         # using ipv6 need nodeid configured
         local_nodeid = get_local_nodeid()
         update_nodeid(local_nodeid)
+
+    is_qdevice_configured = utils.is_qdevice_configured()
+    if is_qdevice_configured and not is_unicast:
+        # expected_votes here maybe is "0", set to "3" to make sure cluster can start
+        corosync.set_value("quorum.expected_votes", "3")
 
     # Initialize the cluster before adjusting quorum. This is so
     # that we can query the cluster to find out how many nodes
@@ -1788,88 +1947,10 @@ def join_cluster(seed_host):
                 nodeid_dict[tmp[1]] = tmp[0]
 
     # apply nodelist in cluster
-    if is_unicast:
+    if is_unicast or is_qdevice_configured:
         invoke("crm cluster run 'crm corosync reload'")
 
-    def update_expected_votes():
-        # get a list of nodes, excluding remote nodes
-        nodelist = None
-        loop_count = 0
-        device_votes = 0
-        nodecount = 0
-        expected_votes = 0
-        while True:
-            rc, nodelist_text = utils.get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
-            if rc == 0:
-                try:
-                    nodelist_xml = etree.fromstring(nodelist_text)
-                    nodelist = [n.get('uname') for n in nodelist_xml.xpath('//node_state') if n.get('remote_node') != 'true']
-                    if len(nodelist) >= 2:
-                        break
-                except Exception:
-                    break
-            # timeout: 10 seconds
-            if loop_count == 10:
-                break
-            loop_count += 1
-            sleep(1)
-
-        # Increase expected_votes
-        # TODO: wait to adjust expected_votes until after cluster join,
-        # so that we can ask the cluster for the current membership list
-        # Have to check if a qnetd device is configured and increase
-        # expected_votes in that case
-        use_qdevice = 1 if corosync.get_value("quorum.device.model") == "net" else 0
-        if nodelist is None:
-            for v in corosync.get_values("quorum.expected_votes"):
-                expected_votes = v
-
-                # For node >= 2, expected_votes = nodecount + device_votes
-                # Assume nodecount is N, for ffsplit, qdevice only has one vote
-                # which means that device_votes is 1, ie:expected_votes = N + 1;
-                # while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
-                # and update quorum.device.net.algorithm based on device_votes
-
-                if corosync.get_value("quorum.device.net.algorithm") == "lms":
-                    device_votes = int((expected_votes - 1) / 2)
-                    nodecount = expected_votes - device_votes
-                    # as nodecount will increase 1, and device_votes is nodecount - 1
-                    # device_votes also increase 1
-                    device_votes += 1
-                elif corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
-                    device_votes = 1
-                    nodecount = expected_votes - device_votes
-                elif use_qdevice == 0:
-                    device_votes = 0
-                    nodecount = v
-
-                nodecount += 1
-                expected_votes = nodecount + device_votes
-                corosync.set_value("quorum.expected_votes", str(expected_votes))
-        else:
-            nodecount = len(nodelist)
-            expected_votes = 0
-            # For node >= 2, expected_votes = nodecount + device_votes
-            # Assume nodecount is N, for ffsplit, qdevice only has one vote
-            # which means that device_votes is 1, ie:expected_votes = N + 1;
-            # while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
-            if corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
-                device_votes = 1
-            if corosync.get_value("quorum.device.net.algorithm") == "lms":
-                device_votes = nodecount - 1
-
-            expected_votes = nodecount + device_votes
-
-            if corosync.get_value("quorum.expected_votes"):
-                corosync.set_value("quorum.expected_votes", str(expected_votes))
-        if use_qdevice == 0:
-            corosync.set_value("quorum.two_node", 1 if expected_votes == 2 else 0)
-        if use_qdevice:
-            corosync.set_value("quorum.device.votes", device_votes)
-
-        csync2_update(corosync.conf())
     update_expected_votes()
-
     # Trigger corosync config reload to ensure expected_votes is propagated
     invoke("corosync-cfgtool -R")
 
@@ -1892,8 +1973,23 @@ def join_cluster(seed_host):
                 continue
             update_nodeid(int(nodeid_dict[node]), node)
         update_nodeid(local_nodeid)
-
     status_done()
+
+    if is_qdevice_configured:
+        status_long("Starting corosync-qdevice.service")
+        if not is_unicast:
+            add_nodelist_from_cmaptool()
+            csync2_update(corosync.conf())
+            invoke("crm corosync reload")
+        if utils.is_qdevice_tls_on():
+            qnetd_addr = corosync.get_value("quorum.device.net.host")
+            qdevice = corosync.QDevice(qnetd_addr, cluster_node=seed_host)
+            qdevice.fetch_qnetd_crt_from_cluster()
+            qdevice.init_db_on_local()
+            qdevice.fetch_p12_from_cluster()
+            qdevice.import_p12_on_local()
+        start_service("corosync-qdevice.service")
+        status_done()
 
 
 def remove_ssh():
@@ -2009,11 +2105,11 @@ def remove_node_from_cluster():
         corosync.del_node(node)
 
     # Decrement expected_votes in corosync.conf
-    use_qdevice = 1 if "net" in corosync.get_values("quorum.device.model") else 0
+    is_qdevice_configured = 1 if "net" in corosync.get_values("quorum.device.model") else 0
     for vote in corosync.get_values("quorum.expected_votes"):
         quorum = int(vote)
         new_quorum = quorum - 1
-        if use_qdevice > 0:
+        if is_qdevice_configured > 0:
             new_nodecount = 0
             device_votes = 0
             nodecount = 0
@@ -2034,7 +2130,7 @@ def remove_node_from_cluster():
             corosync.set_value("quorum.device.votes", device_votes)
             new_quorum = new_nodecount + device_votes
 
-        if use_qdevice == 0:
+        if is_qdevice_configured == 0:
             corosync.set_value("quorum.two_node", 1 if new_quorum == 2 else 0)
         corosync.set_value("quorum.expected_votes", str(new_quorum))
 
@@ -2086,6 +2182,7 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     cluster
     vgfs
     admin
+    qdevice
     """
     global _context
     _context = Context(quiet=quiet, yes_to_all=yes_to_all, nic=nic)
@@ -2102,10 +2199,16 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     _context.ui_context = ui_context
     _context.qdevice = qdevice
     _context.no_overwrite_sshkey = no_overwrite_sshkey
+    _context.stage = stage
 
     def check_option():
         if _context.admin_ip and not valid_adminIP(_context.admin_ip):
             error("Invalid option: admin_ip")
+        if _context.qdevice:
+            try:
+                _context.qdevice.valid_attr()
+            except ValueError as err:
+                error(err)
 
     if stage is None:
         stage = ""
@@ -2114,7 +2217,7 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     # except ssh and csync2 (which don't care) and csync2_remote (which mustn't care,
     # just in case this breaks ha-cluster-join on another node).
     corosync_active = service_is_active("corosync.service")
-    if stage in ("vgfs", "admin"):
+    if stage in ("vgfs", "admin", "qdevice"):
         if not corosync_active:
             error("Cluster is inactive - can't run %s stage" % (stage))
     elif stage == "":
@@ -2156,6 +2259,7 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
         if template == 'ocfs2':
             init_vgfs()
         init_admin()
+        init_qdevice()
 
     status("Done (log saved to %s)" % (LOG_FILE))
 
@@ -2220,7 +2324,8 @@ def join_remote_auth(node):
     invoke("touch {}".format(PCMK_REMOTE_AUTH))
 
 
-def bootstrap_remove(cluster_node=None, ui_context=None, quiet=False, yes_to_all=False, force=False):
+def bootstrap_remove(cluster_node=None, ui_context=None, quiet=False, yes_to_all=False, force=False,
+                     qdevice=None):
     """
     -c <cluster-node> - node to remove from cluster
     -q - quiet
@@ -2231,6 +2336,28 @@ def bootstrap_remove(cluster_node=None, ui_context=None, quiet=False, yes_to_all
     _context = Context(quiet=quiet, yes_to_all=yes_to_all)
     _context.cluster_node = cluster_node
     _context.ui_context = ui_context
+    _context.qdevice = qdevice
+
+    if _context.qdevice:
+        if not utils.is_qdevice_configured():
+            error("No QDevice configuration in this cluster")
+        if not confirm("Removing QDevice service and configuration from cluster: Are you sure?"):
+            return
+        status("Disable corosync-qdevice.service")
+        invoke("crm cluster run 'systemctl disable corosync-qdevice'")
+        status("Stopping corosync-qdevice.service")
+        invoke("crm cluster run 'systemctl stop corosync-qdevice'")
+
+        status_long("Removing QDevice configuration from cluster")
+        qnetd_host = corosync.get_value('quorum.device.net.host')
+        qdevice_inst = corosync.QDevice(qnetd_host)
+        qdevice_inst.remove_config()
+        qdevice_inst.remove_qdevice_db()
+        update_expected_votes()
+        invoke("crm cluster run 'crm corosync reload'")
+        status_done()
+
+        return
 
     if not yes_to_all and cluster_node is None:
         status("""Remove This Node from Cluster:

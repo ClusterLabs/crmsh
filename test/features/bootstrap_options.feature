@@ -18,6 +18,7 @@ Feature: crmsh bootstrap process - options
     Then    Cluster service is "started" on "hanode1"
     And     Cluster service is "started" on "hanode2"
     And     Online nodes are "hanode1 hanode2"
+    And     Show cluster status on "hanode1"
 
   @clean
   Scenario: Bind specific network interface using "-i" option
@@ -26,6 +27,7 @@ Feature: crmsh bootstrap process - options
     When    Run "crm cluster init -i eth1 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     IP "10.10.10.2" is used by corosync
+    And     Show corosync ring status
 
   @clean
   Scenario: Using multiple network interface using "-M" option
@@ -36,6 +38,7 @@ Feature: crmsh bootstrap process - options
     Then    Cluster service is "started" on "hanode1"
     And     IP "172.17.0.2" is used by corosync
     And     IP "10.10.10.2" is used by corosync
+    And     Show corosync ring status
 
   @clean
   Scenario: Setup cluster name and virtual IP using "-A" option
@@ -44,6 +47,7 @@ Feature: crmsh bootstrap process - options
     Then    Cluster service is "started" on "hanode1"
     And     Cluster name is "hatest"
     And     Cluster virtual IP is "10.10.10.123"
+    And     Show cluster status on "hanode1"
 
   @clean
   Scenario: Init cluster service with udpu using "-u" option
@@ -52,3 +56,4 @@ Feature: crmsh bootstrap process - options
     Then    Cluster service is "started" on "hanode1"
     And     Cluster is using udpu transport mode
     And     IP "172.17.0.2" is used by corosync
+    And     Show corosync ring status

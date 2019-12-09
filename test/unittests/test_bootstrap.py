@@ -144,3 +144,17 @@ class TestBootstrap(unittest.TestCase):
             mock.call("/root/.ssh/id_ed25519"),
         ])
         mock_append.assert_called_once_with("/root/.ssh/id_rsa.pub", "/root/.ssh/authorized_keys")
+
+    @mock.patch('crmsh.utils.get_nodeinfo_from_cmaptool')
+    @mock.patch('crmsh.corosync.add_node_ucast')
+    def test_add_nodelist_from_cmaptool(self, mock_add_ucast, mock_nodeinfo):
+        mock_nodeinfo.return_value = {'1': ['10.10.10.1', '20.20.20.1'],
+                                      '2': ['10.10.10.2', '20.20.20.2']}
+
+        bootstrap.add_nodelist_from_cmaptool()
+
+        mock_nodeinfo.assert_called_once_with()
+        mock_add_ucast.assert_has_calls([
+            mock.call(['10.10.10.1', '20.20.20.1'], '1'),
+            mock.call(['10.10.10.2', '20.20.20.2'], '2')
+        ])

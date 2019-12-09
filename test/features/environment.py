@@ -4,15 +4,18 @@ from crmsh import utils, parallax
 
 
 def get_online_nodes():
-    _, out = utils.get_stdout('crm_node -l')
+    _, out, _ = utils.get_stdout_stderr('crm_node -l')
     if out:
         return re.findall(r'[0-9]+ (.*) member', out)
     else:
         return None
 
 
+def before_step(context, step):
+    context.logger = logging.getLogger("Step:{}".format(step.name))
+
+
 def before_tag(context, tag):
-    context.logger = logging.getLogger("test.{}".format(tag))
     # tag @clean means need to stop cluster service
     if tag == "clean":
         online_nodes = get_online_nodes()
