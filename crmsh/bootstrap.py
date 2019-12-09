@@ -416,7 +416,7 @@ def check_prereqs(stage):
 
     if stage == "qdevice":
         if not _context.qdevice:
-            error("qdevice related options are missing (--qdevice option is mandatory, find for more information using --help)")
+            error("qdevice related options are missing (--qnetd-hostname option is mandatory, find for more information using --help)")
 
     if warned:
         if not confirm("Do you want to continue anyway?"):

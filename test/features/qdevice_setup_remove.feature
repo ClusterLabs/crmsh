@@ -12,7 +12,7 @@ Feature: corosync qdevice/qnetd setup/remove process
 
   @clean
   Scenario: Setup qdevice/qnetd during init/join process
-    When    Run "crm cluster init --qdevice=qnetd-node -y --no-overwrite-sshkey" on "hanode1"
+    When    Run "crm cluster init --qnetd-hostname=qnetd-node -y --no-overwrite-sshkey" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Service "corosync-qdevice" is "started" on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
@@ -32,7 +32,7 @@ Feature: corosync qdevice/qnetd setup/remove process
     Then    Cluster service is "started" on "hanode2"
     And     Online nodes are "hanode1 hanode2"
     And     Service "corosync-qdevice" is "stopped" on "hanode2"
-    When    Run "crm cluster init qdevice --qdevice=qnetd-node -y" on "hanode1"
+    When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1"
     Then    Service "corosync-qdevice" is "started" on "hanode1"
     And     Service "corosync-qdevice" is "started" on "hanode2"
     And     Service "corosync-qnetd" is "started" on "qnetd-node"
@@ -41,7 +41,7 @@ Feature: corosync qdevice/qnetd setup/remove process
 
   @clean
   Scenario: Remove qdevice from a two nodes cluster
-    When    Run "crm cluster init --qdevice=qnetd-node -y --no-overwrite-sshkey" on "hanode1"
+    When    Run "crm cluster init --qnetd-hostname=qnetd-node -y --no-overwrite-sshkey" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Service "corosync-qdevice" is "started" on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"

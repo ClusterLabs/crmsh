@@ -220,9 +220,9 @@ Note:
                                  help="Configure corosync with second heartbeat line")
         network_group.add_option("-I", "--ipv6", action="store_true", dest="ipv6",
                                  help="Configure corosync use IPv6")
-        network_group.add_option("--qdevice",
-                                 dest="qdevice", metavar="IP",
-                                 help="IP or host name of the QNetd server to be used")
+        network_group.add_option("--qnetd-hostname",
+                                 dest="qdevice", metavar="HOST",
+                                 help="HOST or IP of the QNetd server to be used")
         network_group.add_option("--qdevice-port",
                                  dest="qdevice_port", metavar="PORT", type="int", default=5403,
                                  help="TCP PORT of QNetd server(default:5403)")
