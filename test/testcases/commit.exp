@@ -43,10 +43,14 @@ INFO: 24: modified colocation:cl1 from c1 to g1
 .INP: filter "sed '/g1/s/p1/d1/'"
 .INP: group g2 d3 d2
 .INP: delete d2
+.INP: show changed
+primitive d2 Dummy
+group g1 d1 p2
+group g2 d3
 .INP: commit
 .INP: _test
 .INP: verify
-WARNING: 35: st: unknown attribute 'yoyo-meta'
+WARNING: 36: st: unknown attribute 'yoyo-meta'
 .INP: show
 node node1 \
 	attributes mem=16G
@@ -70,5 +74,5 @@ order o1 inf: p3 g1
 op_defaults op-options: \
 	timeout=2m
 .INP: commit
-INFO: 37: apparently there is nothing to commit
-INFO: 37: try changing something first
+INFO: 38: apparently there is nothing to commit
+INFO: 38: try changing something first

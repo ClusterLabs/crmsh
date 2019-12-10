@@ -33,6 +33,7 @@ commit
 filter "sed '/g1/s/p1/d1/'"
 group g2 d3 d2
 delete d2
+show changed
 commit
 _test
 verify
