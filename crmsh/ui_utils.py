@@ -22,7 +22,7 @@ def _dispatch_attr_cmd(cmd, attr_cmd, rsc, subcmd, attr, value):
     def sanity_check(arg):
         if not utils.is_name_sane(arg):
             raise ValueError("Expected valid name, got '%s'" % (arg))
-    if subcmd == 'set':
+    if subcmd in ['set', 'set_p']:
         if value is None:
             raise ValueError("Missing value argument to set")
         sanity_check(rsc)
