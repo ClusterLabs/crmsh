@@ -678,6 +678,8 @@ def init_ssh():
                 not confirm("/root/.ssh/id_rsa already exists - overwrite?"):
             return
         rmfile("/root/.ssh/id_rsa")
+    elif _context.no_overwrite_sshkey:
+        warn("No SSH key while using --no-overwrite-sshkey")
     status("Generating SSH key")
     invoke("ssh-keygen -q -f /root/.ssh/id_rsa -C 'Cluster Internal' -N ''")
     append("/root/.ssh/id_rsa.pub", "/root/.ssh/authorized_keys")
