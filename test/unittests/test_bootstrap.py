@@ -49,14 +49,16 @@ class TestBootstrap(unittest.TestCase):
         Global tearDown.
         """
 
+    @mock.patch('crmsh.bootstrap.warn')
     @mock.patch('crmsh.bootstrap.append')
     @mock.patch('crmsh.bootstrap.status')
     @mock.patch('os.path.exists')
     @mock.patch('crmsh.bootstrap.start_service')
     @mock.patch('crmsh.bootstrap.invoke')
     def test_init_ssh_no_exist_keys(self, mock_invoke, mock_start_service,
-                                    mock_exists, mock_status, mock_append):
+                                    mock_exists, mock_status, mock_append, mock_warn):
         mock_exists.return_value = False
+        bootstrap._context = mock.Mock(no_overwrite_sshkey=True)
 
         bootstrap.init_ssh()
 
@@ -68,6 +70,7 @@ class TestBootstrap(unittest.TestCase):
         mock_exists.assert_called_once_with("/root/.ssh/id_rsa")
         mock_status.assert_called_once_with("Generating SSH key")
         mock_append.assert_called_once_with("/root/.ssh/id_rsa.pub", "/root/.ssh/authorized_keys")
+        mock_warn.assert_called_once_with("No SSH key while using --no-overwrite-sshkey")
 
     @mock.patch('crmsh.bootstrap.append')
     @mock.patch('crmsh.bootstrap.status')
