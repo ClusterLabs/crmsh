@@ -1293,38 +1293,44 @@ Configure SBD:
             if not confirm("SBD is already configured to use %s - overwrite?" % (configured_dev)):
                 return
 
-        dev = ""
         dev_looks_sane = False
         while not dev_looks_sane:
-            dev = prompt_for_string('Path to storage device (e.g. /dev/disk/by-id/...), or "none"', r'none|\/.*', dev)
+            dev = prompt_for_string('Path to storage device (e.g. /dev/disk/by-id/...), or "none", use ";" as separator for multi path', r'none|\/.*')
             if dev == "none":
                 _context.diskless_sbd = True
                 init_sbd_diskless()
                 return
-            if not is_block_device(dev):
-                print >>sys.stderr, "    That doesn't look like a block device"
-                dev = ""
-            else:
-                warn("All data on {} will be destroyed!".format(dev))
-                if confirm('Are you sure you wish to use this device'):
-                    dev_looks_sane = True
+            dev_list = dev.strip(';').split(';')
+            for dev_item in dev_list:
+                if not is_block_device(dev_item):
+                    print >>sys.stderr, "    %s doesn't look like a block device" % (dev_item)
+                    dev_looks_sane = False
+                    break
                 else:
-                    dev = ""
-        _context.sbd_device = dev
+                    warn("All data on {} will be destroyed!".format(dev_item))
+                    if confirm('Are you sure you wish to use this device?'):
+                        dev_looks_sane = True
+                    else:
+                        dev_looks_sane = False
+                        break
 
-    if not is_block_device(_context.sbd_device):
-        error("SBD device %s doesn't seem to exist" % (_context.sbd_device))
+        _context.sbd_device = dev_list
+
+    for dev in _context.sbd_device:
+        if not is_block_device(dev):
+            error("SBD device %s doesn't seem to exist" % (dev))
 
     # TODO: need to ensure watchdog is available
     # (actually, should work if watchdog unavailable, it'll just whine in the logs...)
     # TODO: what about timeouts for multipath devices?
     status_long('Initializing SBD...')
-    if not invoke("sbd -d %s create" % (_context.sbd_device)):
-        error("Failed to initialize SBD device %s" % (_context.sbd_device))
+    for dev in _context.sbd_device:
+        if not invoke("sbd -d %s create" % (dev)):
+            error("Failed to initialize SBD device %s" % (dev))
     status_done()
 
     utils.sysconfig_set(SYSCONFIG_SBD,
-                        SBD_DEVICE=_context.sbd_device,
+                        SBD_DEVICE=';'.join(_context.sbd_device),
                         SBD_PACEMAKER="yes",
                         SBD_STARTMODE="always",
                         SBD_DELAY_START="no",
