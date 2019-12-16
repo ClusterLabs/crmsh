@@ -225,6 +225,21 @@ def wait_for_cluster():
     status_done()
 
 
+def pick_default_value(default_list, prev_list):
+    """
+    Provide default value for function 'prompt_for_string'.
+    Make sure give different default value in multi-ring mode.
+
+    Parameters:
+    * default_list - default value list for config item
+    * prev_list    - previous value for config item in multi-ring mode
+    """
+    for value in default_list:
+        if value not in prev_list:
+            return value
+    return ""
+
+
 def start_service(service):
     """
     Start and enable systemd service
@@ -832,11 +847,6 @@ def valid_port(port, prev_value=None):
 
 
 def init_corosync_unicast():
-    def pick_default_value(vlist, ilist):
-        # give a different value for second config items
-        if len(ilist) == 1:
-            vlist.remove(ilist[0])
-        return vlist[0]
 
     if _context.yes_to_all:
         status("Configuring corosync (unicast)")
@@ -857,27 +867,18 @@ Configure Corosync (unicast):
     mcastport_res = []
     default_ports = ["5405", "5407"]
     two_rings = False
-    default_networks = []
 
-    if _context.ipv6:
-        network_list = []
-        all_ = utils.network_v6_all()
-        for item in all_.values():
-            network_list.extend(item)
-        default_networks = map(utils.get_ipv6_network, network_list)
-    else:
-        network_list = utils.network_all()
-        if len(network_list) > 1:
-            default_networks = [_context.ip_network, network_list.remove(_context.ip_network)]
-        else:
-            default_networks = [_context.ip_network]
-    if not default_networks:
+    local_iplist = utils.ip_in_local(_context.ipv6)
+    len_iplist = len(local_iplist)
+    if len_iplist == 0:
         error("No network configured at {}!".format(utils.this_node()))
 
-    for i in 0, 1:
+    current_ips = [_context.ip_address] + [ip for ip in local_iplist if ip != _context.ip_address]
+
+    for i in range(2):
         ringXaddr = prompt_for_string('Address for ring{}'.format(i),
                                       r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:',
-                                      _context.ip_address if i == 0 and _context.ip_address else "",
+                                      pick_default_value(current_ips, ringXaddr_res),
                                       valid_ucastIP,
                                       ringXaddr_res)
         if not ringXaddr:
@@ -894,7 +895,7 @@ Configure Corosync (unicast):
         mcastport_res.append(mcastport)
 
         if i == 1 or \
-           len(default_networks) == 1 or \
+           len_iplist == 1 or \
            not _context.second_hb or \
            not confirm("\nAdd another heartbeat line?"):
             break
@@ -920,12 +921,6 @@ def init_corosync_multicast():
             random.randint(0, 255),
             random.randint(0, 255),
             random.randint(1, 255))
-
-    def pick_default_value(vlist, ilist):
-        # give a different value for second config items
-        if len(ilist) == 1:
-            vlist.remove(ilist[0])
-        return vlist[0]
 
     if _context.yes_to_all:
         status("Configuring corosync")
@@ -958,13 +953,14 @@ Configure Corosync:
     else:
         network_list = utils.network_all()
         if len(network_list) > 1:
-            default_networks = [_context.ip_network, network_list.remove(_context.ip_network)]
+            network_list.remove(_context.ip_network)
+            default_networks = [_context.ip_network, network_list[0]]
         else:
             default_networks = [_context.ip_network]
     if not default_networks:
         error("No network configured at {}!".format(utils.this_node()))
 
-    for i in 0, 1:
+    for i in range(2):
         if _context.ipv6:
             bindnetaddr = prompt_for_string('Network address to bind to',
                                             r'.*(::|0)$',
@@ -1653,13 +1649,20 @@ def join_cluster(seed_host):
     # if unicast, we need to add our node to $corosync.conf()
     is_unicast = "nodelist" in open(corosync.conf()).read()
     if is_unicast:
+        local_iplist = utils.ip_in_local(_context.ipv6)
+        len_iplist = len(local_iplist)
+        if len_iplist == 0:
+            error("No network configured at {}!".format(utils.this_node()))
+
+        current_ips = [_context.ip_address] + [ip for ip in local_iplist if ip != _context.ip_address]
+
         ringXaddr_res = []
         print("")
-        for i in 0, 1:
+        for i in range(2):
             while True:
                 ringXaddr = prompt_for_string('Address for ring{}'.format(i),
                                               r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:',
-                                              "",
+                                              pick_default_value(current_ips, ringXaddr_res),
                                               valid_ucastIP,
                                               ringXaddr_res)
                 if not ringXaddr:

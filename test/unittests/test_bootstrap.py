@@ -112,3 +112,19 @@ class TestBootstrap(unittest.TestCase):
         mock_exists.assert_called_once_with("/root/.ssh/id_rsa")
         mock_confirm.assert_not_called()
         mock_rmfile.assert_not_called()
+
+    def test_pick_default_value(self):
+        default_list = ["10.10.10.1", "20.20.20.1"]
+        prev_list = ["10.10.10.1"]
+        value = bootstrap.pick_default_value(default_list, prev_list)
+        self.assertEqual(value, "20.20.20.1")
+
+        default_list = ["10.10.10.1", "20.20.20.1"]
+        prev_list = []
+        value = bootstrap.pick_default_value(default_list, prev_list)
+        self.assertEqual(value, "10.10.10.1")
+
+        default_list = ["10.10.10.1", "20.20.20.1"]
+        prev_list = ["10.10.10.1", "20.20.20.1"]
+        value = bootstrap.pick_default_value(default_list, prev_list)
+        self.assertEqual(value, "")
