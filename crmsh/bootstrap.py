@@ -1260,6 +1260,8 @@ def init_sbd():
     # non-interactive case
     if _context.sbd_device:
         _context.sbd_device = get_dev_list(_context.sbd_device)
+        if len(_context.sbd_device) > 3:
+            error("Maximum number of SBD device is 3")
         for dev in _context.sbd_device:
             if not is_block_device(dev):
                 error("{} doesn't look like a block device".format(dev))
@@ -1314,9 +1316,12 @@ Configure SBD:
                 init_sbd_diskless()
                 return
             dev_list = dev.strip(';').split(';')
+            if len(dev_list) > 3:
+                error("Maximum number of SBD device is 3")
+                continue
             for dev_item in dev_list:
                 if not is_block_device(dev_item):
-                    print >>sys.stderr, "    %s doesn't look like a block device" % (dev_item)
+                    error("%s doesn't look like a block device" % (dev_item))
                     dev_looks_sane = False
                     break
                 else:
