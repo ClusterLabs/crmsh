@@ -233,7 +233,7 @@ Note:
         storage_group.add_option("-p", "--partition-device", dest="shared_device", metavar="DEVICE",
                                  help='Partition this shared storage device (only used in "storage" stage)')
         storage_group.add_option("-s", "--sbd-device", dest="sbd_device", metavar="DEVICE", action="append",
-                                 help="Block device to use for SBD fencing, use \";\" as separator for multi path")
+                                 help="Block device to use for SBD fencing, use \";\" as separator or -s multiple times for multi path (up to 3 devices)")
         storage_group.add_option("-o", "--ocfs2-device", dest="ocfs2_device", metavar="DEVICE",
                                  help='Block device to use for OCFS2 (only used in "vgfs" stage)')
         parser.add_option_group(storage_group)
