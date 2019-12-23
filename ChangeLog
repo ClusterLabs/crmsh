@@ -1,3 +1,63 @@
+* Mon Dec 23 2019 Xin Liang <XLiang@suse.com> and many others
+- Release 4.2.0
+- Merge pull request #464 from liangxin1300/2019_crmsh_qdevice_qnetd
+- Low: ui_cluster: replace --qdevice as --qnetd-hostname
+- Low: corosync: add log and debug messages on each certificate steps
+- Low: ui_cluster: change qdevice related option's help message
+- Low: bootstrap: support qdevice heuristics
+- Low: bootstrap: start qdevice/qnetd service when not overwrite configuration
+- Low: ui_corosync: improve corosync status sub-command
+- Low: bootstrap: when removing qdevice, remove qdevice database
+- Low: bootstrap: qdevice certification process when cluster join
+- Low: ui_cluster: change option info for qdevice/qnetd
+- Low: bootstrap: qdevice certification process when cluster init
+- Low: bootstrap: interface for removing qdevice
+- Low: corosync: check tie-breaker is a valid nodeid
+- Low: bootstrap: improve init_qdevice function
+- Low: bootstrap: write qdevice config section when configuring qdevice in stage
+- Low: bootstrap: adjust corosync configuration for qdevice
+- Low: bootstrap: make qdevice process as a bootstrap stage
+- Low: bootstrap: manage qnetd node
+- Low: bootstrap: valid qdevice parameters
+- Merge pull request #483 from liangxin1300/20191105_python_behave
+- Merge pull request #484 from liangxin1300/20191112_nose_verbose
+- Merge pull request #482 from liangxin1300/20191101_parallax_functions
+- Low: parallax: create class Parallax to simplify using parallax
+- Merge pull request #480 from aleksei-burlakov/config-do_property
+- Doc: ui_configure: do_property: ask to remove maintenance from resources and nodes
+- Low: ui_configure: do_property: ask to remove maintenance from resources and nodes
+- Merge pull request #476 from liangxin1300/20191011_ssh_key
+- Merge pull request #478 from aleksei-burlakov/node-do_maintenance
+- Doc: ui_node: do_maintenance: ask to remove maintenance attr from primitives
+- Low: ui_node: do_maintenance: ask to remove maintenance attr from primitives
+- Merge pull request #422 from liangxin1300/20190227a
+- Merge pull request #479 from aleksei-burlakov/resource-do_maintenance
+- Low: ui_resource: ask about ALL primitives when overriding attributes
+- Fix: corosync: reject append ipaddress to config file if already have(bsc#1127095, 1127096)
+- Low: bootstrap: create authorized_keys file if not exists
+- Low: bootstrap: add "--no-overwrite-sshkey" option to avoid SSH key be overwritten
+- Low: bootstrap: don't overwrite ssh key if already exists
+- Merge pull request #465 from liangxin1300/20190814a
+- Merge pull request #461 from gao-yan/sanitize-orig-cib-as-patch-base
+- Merge pull request #472 from vvidic/yaml-load
+- Merge pull request #471 from aleksei-burlakov/crm-resource-maintaintenance
+- Doc: ui_resource: resolve maintenance vs is-managed conflict
+- Low: ui_resource: resolve maintenance vs is-managed conflict
+- Scripts: fix yaml loader warning
+- Merge pull request #468 from aleksei-burlakov/crm-resource-maintaintenance
+- Low: doc: update cluster run help documetation
+- Low: ui_cluster: running command for multiple specific nodes
+- Fix: ui_cluster: refactor function list_cluster_nodes and handle the None situation(bsc#1145520)
+- Low: ui_resource: maintenance: stop using crm_resource
+- Merge pull request #467 from liangxin1300/revert_52a44fdce
+- Merge pull request #466 from liangxin1300/20190816_bsc1145823
+- Fix: utils: fix logic for process non comments line(bsc#1145823)
+- High: cibconfig: Correctly sanitize the original CIB as patch base (bsc#1127716, bsc#1138405)
+- Revert "high: cibconfig: Use correct CIB as patch base (bsc#1127716)"
+- Partially revert "medium: cibconfig: Sanitize CIB for patching (bsc#1127716)"
+- Merge pull request #457 from vvidic/commmon
+- Doc: manpages: Fix spelling
+
 * Fri Jun 21 2019 Diego Akechi <dakechi@suse.com> and many others
 - Release 4.1.0
 - Fix: utils: issue in to_ascii (bsc#1138115)
