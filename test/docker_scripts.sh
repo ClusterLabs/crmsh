@@ -1,7 +1,7 @@
 #!/bin/bash
 Tumbleweed_image='liangxin1300/hatbw'
-HA_packages='pacemaker corosync corosync-qdevice csync2 python3 python3-lxml python3-python-dateutil python3-parallax libglue-devel python3-setuptools python3-tox asciidoc autoconf automake make pkgconfig which libxslt-tools mailx procps python3-nose python3-PyYAML python3-curses tar python3-behave iproute2 iputils vim bzip2'
-TEST_TYPE='bootstrap qdevice hb_report'
+HA_packages='pacemaker corosync'
+TEST_TYPE='bootstrap hb_report'
 
 before() {
   docker pull ${Tumbleweed_image}
@@ -13,6 +13,7 @@ before() {
   docker network connect --ip=10.10.10.2 second_net hanode1
   docker exec -t hanode1 /bin/sh -c "echo \"10.10.10.3 hanode2\" >> /etc/hosts"
   docker exec -t hanode1 /bin/sh -c "zypper -n in ${HA_packages}"
+  docker exec -t hanode1 /bin/sh -c "cd /app; ./test/run-in-travis.sh build"
 
   # deploy second node hanode2
   docker run -d --name=hanode2 --hostname hanode2 \
@@ -32,7 +33,7 @@ usage() {
   echo "Usage: ./test/`basename $0` <`echo ${TEST_TYPE// /|}`>"
 }
 
-# $1 could be "bootstrap", "hb_report", "qdevice" etc.
+# $1 could be "bootstrap", "hb_report" etc.
 # $2 could be "before_install" or "run"
 # $3 could be suffix of feature file
 case "$1/$2" in
