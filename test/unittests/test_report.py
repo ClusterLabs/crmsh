@@ -1,6 +1,7 @@
 import sys
 import os
 import shutil
+from datetime import datetime
 from nose.tools import eq_, ok_
 
 from hb_report.utillib import which, ts_to_dt, sub_string, random_string,\
@@ -22,10 +23,11 @@ pacemaker_unicode_log = "pacemaker_unicode.log"
 evil_unicode_log = "evil_unicode.txt"
 invalid_utf8 = b'Apr 03 11:01:18 [13042] \xe5abc\nApr 03 11:01:18 [13042] test\xe5'
 
-time_before = crmsh.utils.parse_to_timestamp("2019/04/03 11:01:00")
-time_after = crmsh.utils.parse_to_timestamp("2019/04/03 14:00:00")
-time_between = crmsh.utils.parse_to_timestamp("2019/04/03 12:03:31")
-first_time = crmsh.utils.parse_to_timestamp("2019/04/03 11:01:18")
+year = datetime.now().year
+time_before = crmsh.utils.parse_to_timestamp("%d/04/03 11:01:00" % year)
+time_after = crmsh.utils.parse_to_timestamp("%d/04/03 14:00:00" % year)
+time_between = crmsh.utils.parse_to_timestamp("%d/04/03 12:03:31" % year)
+first_time = crmsh.utils.parse_to_timestamp("%d/04/03 11:01:18" % year)
 
 line5424_1 = r"2017-01-26T11:04:19.562885+08:00 12sp2-4 kernel: [    0.000000]"
 line5424_2 = r"2017-07-10T01:33:54.993374+08:00 12sp2-1 pengine[2020]:   notice: Calculated transition 221"
@@ -133,7 +135,7 @@ def test_find_decompressor():
 def test_find_first_ts():
     with open(pacemaker_log, 'r') as f:
         res = find_first_ts(f.read().split('\n'))
-        eq_(ts_to_dt(res).strftime("%Y/%m/%d %H:%M:%S"), "2019/04/03 11:01:18")
+        eq_(ts_to_dt(res).strftime("%Y/%m/%d %H:%M:%S"), "%d/04/03 11:01:18" % year)
 
 
 def test_find_files():
@@ -298,15 +300,15 @@ def test_is_our_log_unicode():
 
 
 def test_line_time():
-    eq_(ts_to_dt(line_time(pacemaker_log, 2)).strftime("%Y/%m/%d %H:%M:%S"), "2019/04/03 11:01:18")
-    eq_(ts_to_dt(line_time(pacemaker_log, 195)).strftime("%Y/%m/%d %H:%M:%S"), "2019/04/03 11:01:40")
+    eq_(ts_to_dt(line_time(pacemaker_log, 2)).strftime("%Y/%m/%d %H:%M:%S"), "%d/04/03 11:01:18" % year)
+    eq_(ts_to_dt(line_time(pacemaker_log, 195)).strftime("%Y/%m/%d %H:%M:%S"),"%d/04/03 11:01:40" % year)
 
 
 def test_line_time_unicode():
-    eq_(ts_to_dt(line_time(pacemaker_unicode_log, 3)).strftime("%Y/%m/%d %H:%M:%S"), "2019/04/03 11:01:18")
+    eq_(ts_to_dt(line_time(pacemaker_unicode_log, 3)).strftime("%Y/%m/%d %H:%M:%S"), "%d/04/03 11:01:18" % year)
     with open(evil_unicode_log, 'wb') as f:
         f.write(invalid_utf8)
-    eq_(ts_to_dt(line_time(evil_unicode_log, 1)).strftime("%Y/%m/%d %H:%M:%S"), "2019/04/03 11:01:18")
+    eq_(ts_to_dt(line_time(evil_unicode_log, 1)).strftime("%Y/%m/%d %H:%M:%S"), "%d/04/03 11:01:18" % year)
     os.remove(evil_unicode_log)
 
 
