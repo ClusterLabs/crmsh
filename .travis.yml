@@ -47,6 +47,12 @@ jobs:
       script:
         - $FUNCTIONAL_TEST bootstrap run options
 
+    - name: "regression test for bootstrap bugs"
+      before_install:
+        - $FUNCTIONAL_TEST bootstrap before_install
+      script:
+        - $FUNCTIONAL_TEST bootstrap run bugs
+
     - name: "functional test for qdevice - setup and remove"
       before_install:
         - $FUNCTIONAL_TEST qdevice before_install
