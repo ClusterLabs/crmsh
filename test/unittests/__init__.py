@@ -30,7 +30,6 @@ _CIB = """
       <cluster_property_set id="cib-bootstrap-options">
         <nvpair name="stonith-enabled" value="false" id="cib-bootstrap-options-stonith-enabled"/>
         <nvpair name="no-quorum-policy" value="ignore" id="cib-bootstrap-options-no-quorum-policy"/>
-        <nvpair name="placement-strategy" value="balanced" id="cib-bootstrap-options-placement-strategy"/>
         <nvpair name="dc-version" value="1.1.11+git20140221.0b7d85a-115.1-1.1.11+git20140221.0b7d85a" id="cib-bootstrap-options-dc-version"/>
         <nvpair name="cluster-infrastructure" value="corosync" id="cib-bootstrap-options-cluster-infrastructure"/>
         <nvpair name="symmetric-cluster" value="true" id="cib-bootstrap-options-symmetric-cluster"/>
