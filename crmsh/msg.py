@@ -7,6 +7,7 @@ from . import clidisplay
 from . import options
 
 ERR_STREAM = sys.stderr
+OUT_STREAM = sys.stdout
 
 
 class ErrorBuffer(object):
@@ -30,10 +31,8 @@ class ErrorBuffer(object):
 
     def release(self):
         if self.msg_list:
-            if ERR_STREAM:
-                print('\n'.join(self.msg_list), file=ERR_STREAM)
-            else:
-                print('\n'.join(self.msg_list))
+            for to, msg in self.msg_list:
+                print(msg, file=to)
             if not options.batch:
                 try:
                     input("Press enter to continue... ")
@@ -53,7 +52,7 @@ class ErrorBuffer(object):
             else:
                 print(msg, file=to)
         else:
-            self.msg_list.append(msg)
+            self.msg_list.append((to, msg))
 
     def reset_lineno(self, to=0):
         self.lineno = to
@@ -79,26 +78,26 @@ class ErrorBuffer(object):
         self.writemsg(self._render("%s: %s" % (pfx, self.add_lineno(s))), to=to)
 
     def ok(self, s):
-        self._prefix(clidisplay.ok("OK"), s, to=sys.stdout)
+        self._prefix(clidisplay.ok("OK"), s, to=OUT_STREAM)
 
     def error(self, s):
         self._prefix(clidisplay.error("ERROR"), s)
 
     def warning(self, s):
-        self._prefix(clidisplay.warn("WARNING"), s)
+        self._prefix(clidisplay.warn("WARNING"), s, to=OUT_STREAM)
 
     def one_warning(self, s):
         if s not in self.written:
             self.written[s] = 1
             self.writemsg(self._render(clidisplay.warn("WARNING")) + ": %s" %
-                          self.add_lineno(s))
+                          self.add_lineno(s), to=OUT_STREAM)
 
     def info(self, s):
-        self._prefix(clidisplay.info("INFO"), s)
+        self._prefix(clidisplay.info("INFO"), s, to=OUT_STREAM)
 
     def debug(self, s):
         if config.core.debug:
-            self._prefix("DEBUG", s)
+            self._prefix("DEBUG", s, to=OUT_STREAM)
 
     def _render(self, s):
         'Render for TERM.'
