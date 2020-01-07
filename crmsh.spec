@@ -187,7 +187,7 @@ fi
 # Run regression tests after installing the package
 # NB: this is called twice by OBS, that's why we touch the file
 %post test
-testfile=/tmp/.crmsh_regression_tests_ran
+testfile=`mktemp -t .crmsh_regression_tests_ran_XXXXXX`
 # check if time in file is less than 2 minutes ago
 if [ -e $testfile ] && [ "$(( $(date +%s) - $(cat $testfile) ))" -lt 120 ]; then
 	echo "Skipping regression tests..."
