@@ -30,7 +30,8 @@ def step_impl(context, addr, iface):
 
 @when('Run "{cmd}" on "{addr}"')
 def step_impl(context, cmd, addr):
-    run_command_local_or_remote(context, cmd, addr)
+    out = run_command_local_or_remote(context, cmd, addr)
+    context.stdout = out
 
 
 @when('Try "{cmd}"')
@@ -41,6 +42,12 @@ def step_impl(context, cmd):
 @when('Wait "{second}" seconds')
 def step_impl(context, second):
     time.sleep(int(second))
+
+
+@then('Got output "{msg}"')
+def step_impl(context, msg):
+    assert context.stdout == msg
+    context.stdout = None
 
 
 @then('Except "{msg}"')
