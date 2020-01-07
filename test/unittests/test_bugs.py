@@ -789,8 +789,7 @@ property cib-bootstrap-options: \
 	cluster-infrastructure=corosync \
 	cluster-name=hacluster \
 	stonith-enabled=true \
-	no-quorum-policy=ignore \
-	placement-strategy=balanced
+	no-quorum-policy=ignore
 rsc_defaults rsc-options: \
 	resource-stickiness=1 \
 	migration-threshold=3
