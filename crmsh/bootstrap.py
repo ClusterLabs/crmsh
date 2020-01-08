@@ -1248,10 +1248,29 @@ def init_sbd():
     SBD can also run in diskless mode if no device
     is configured.
     """
-    if not _context.sbd_device and _context.diskless_sbd:
+    def get_dev_list(dev_list):
+        result_list = []
+        for dev in dev_list:
+            if ';' in dev:
+                result_list.extend(dev.strip(';').split(';'))
+            else:
+                result_list.append(dev)
+        return result_list
+
+    # non-interactive case
+    if _context.sbd_device:
+        _context.sbd_device = get_dev_list(_context.sbd_device)
+        if len(_context.sbd_device) > 3:
+            error("Maximum number of SBD device is 3")
+        for dev in _context.sbd_device:
+            if not is_block_device(dev):
+                error("{} doesn't look like a block device".format(dev))
+    # diskless sbd
+    elif _context.diskless_sbd:
         init_sbd_diskless()
         return
-    elif not _context.sbd_device:
+    # interactive case
+    else:
         # SBD device not set up by init_storage (ocfs2 template) and
         # also not passed in as command line argument - prompt user
         if _context.yes_to_all:
@@ -1297,9 +1316,12 @@ Configure SBD:
                 init_sbd_diskless()
                 return
             dev_list = dev.strip(';').split(';')
+            if len(dev_list) > 3:
+                error("Maximum number of SBD device is 3")
+                continue
             for dev_item in dev_list:
                 if not is_block_device(dev_item):
-                    print >>sys.stderr, "    %s doesn't look like a block device" % (dev_item)
+                    error("%s doesn't look like a block device" % (dev_item))
                     dev_looks_sane = False
                     break
                 else:
@@ -1311,10 +1333,6 @@ Configure SBD:
                         break
 
         _context.sbd_device = dev_list
-
-    for dev in _context.sbd_device:
-        if not is_block_device(dev):
-            error("SBD device %s doesn't seem to exist" % (dev))
 
     # TODO: need to ensure watchdog is available
     # (actually, should work if watchdog unavailable, it'll just whine in the logs...)
