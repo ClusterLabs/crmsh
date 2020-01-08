@@ -1,7 +1,7 @@
 #
 # spec file for package crmsh
 #
-# Copyright (c) 2016 SUSE LINUX GmbH, Nuernberg, Germany.
+# Copyright (c) 2019 SUSE LINUX GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -12,9 +12,11 @@
 # license that conforms to the Open Source Definition (Version 1.9)
 # published by the Open Source Initiative.
 
-# Please submit bugfixes or comments via http://bugs.opensuse.org/
+# Please submit bugfixes or comments via https://bugs.opensuse.org/
 #
 
+
+%bcond_with regression_tests
 
 %global gname haclient
 %global uname hacluster
@@ -30,16 +32,17 @@
 %define pkg_group Productivity/Clustering/HA
 %endif
 
-%{!?python_sitelib: %define python_sitelib %(python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
+%{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           crmsh
 Summary:        High Availability cluster command-line interface
-License:        GPL-2.0+
+License:        GPL-2.0-or-later
 Group:          %{pkg_group}
-Version:        2.3.0
+Version:        3.0.4
 Release:        0
 Url:            http://crmsh.github.io
 Source0:        %{name}-%{version}.tar.bz2
+
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 %if 0%{?suse_version}
 # Requiring pacemaker makes crmsh harder to build on other distributions,
@@ -54,6 +57,12 @@ Requires:       python-lxml
 Requires:       python-parallax
 BuildRequires:  python-lxml
 BuildRequires:  python-setuptools
+
+%if 0%{?suse_version}
+# only require csync2 on SUSE since bootstrap
+# only works for SUSE at the moment anyway
+Requires:       csync2
+%endif
 
 %if 0%{?suse_version}
 Requires:       python-PyYAML
@@ -95,18 +104,16 @@ clusters, by providing a powerful and intuitive set of features.
 Summary:        Test package for crmsh
 Group:          %{pkg_group}
 Requires:       crmsh
-%if 0%{?with_regression_tests}
+%if %{with regression_tests}
 Requires(post):  mailx
 Requires(post):  procps
 Requires(post):  python-dateutil
 Requires(post):  python-nose
 Requires(post):  python-parallax
 Requires(post):  pacemaker
-
 %if 0%{?suse_version} > 1110
 BuildArch:      noarch
 %endif
-
 %if 0%{?suse_version}
 Requires(post):  libglue-devel
 %else
@@ -117,8 +124,8 @@ Requires(post):  PyYAML
 %else
 Requires(post):  python-PyYAML
 %endif
-
 %endif
+
 %description test
 The crm shell is a command-line interface for High-Availability
 cluster management on GNU/Linux systems. It simplifies the
@@ -157,12 +164,12 @@ find . -mtime -0 -exec touch \{\} \;
 
 make %{_smp_mflags} VERSION="%{version}" sysconfdir=%{_sysconfdir} localstatedir=%{_var}
 
-%if 0%{?with_regression_tests}
-	./test/run --quiet
-    if [ ! $? ]; then
-        echo "Unit tests failed."
-        exit 1
-    fi
+%if %{with regression_tests}
+./test/run --quiet
+if [ ! $? ]; then
+    echo "Unit tests failed."
+    exit 1
+fi
 %endif
 
 %install
@@ -176,24 +183,27 @@ fi
 %fdupes %{buildroot}
 %endif
 
-%clean
-rm -rf %{buildroot}
-
+%if %{with regression_tests}
 # Run regression tests after installing the package
 # NB: this is called twice by OBS, that's why we touch the file
-%if 0%{?with_regression_tests}
 %post test
-if [ ! -e /tmp/.crmsh_regression_tests_ran ]; then
-    touch /tmp/.crmsh_regression_tests_ran
-	%{_datadir}/%{name}/tests/regression.sh
-	result1=$?
-	cd %{_datadir}/%{name}/tests
-	./cib-tests.sh
-	result2=$?
-	[ $result1 -ne 0 ] && (echo "Regression tests failed."; cat ${buildroot}/crmtestout/regression.out)
-	[ $result2 -ne 0 ] && echo "CIB tests failed."
-	[ $result1 -eq 0 -a $result2 -eq 0 ]
+testfile=`mktemp -t .crmsh_regression_tests_ran_XXXXXX`
+# check if time in file is less than 2 minutes ago
+if [ -e $testfile ] && [ "$(( $(date +%s) - $(cat $testfile) ))" -lt 120 ]; then
+	echo "Skipping regression tests..."
+	exit 0
 fi
+# write current time to file
+rm -f "$testfile"
+echo "$(date +%s)" > "$testfile"
+%{_datadir}/%{name}/tests/regression.sh
+result1=$?
+cd %{_datadir}/%{name}/tests
+./cib-tests.sh
+result2=$?
+[ $result1 -ne 0 ] && (echo "Regression tests failed."; cat ${buildroot}/crmtestout/regression.out)
+[ $result2 -ne 0 ] && echo "CIB tests failed."
+[ $result1 -eq 0 -a $result2 -eq 0 ]
 %endif
 
 %files
