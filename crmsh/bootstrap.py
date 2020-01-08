@@ -1311,10 +1311,29 @@ def init_sbd():
     SBD can also run in diskless mode if no device
     is configured.
     """
-    if not _context.sbd_device and _context.diskless_sbd:
+    def get_dev_list(dev_list):
+        result_list = []
+        for dev in dev_list:
+            if ';' in dev:
+                result_list.extend(dev.strip(';').split(';'))
+            else:
+                result_list.append(dev)
+        return result_list
+
+    # non-interactive case
+    if _context.sbd_device:
+        _context.sbd_device = get_dev_list(_context.sbd_device)
+        if len(_context.sbd_device) > 3:
+            error("Maximum number of SBD device is 3")
+        for dev in _context.sbd_device:
+            if not is_block_device(dev):
+                error("{} doesn't look like a block device".format(dev))
+    # diskless sbd
+    elif _context.diskless_sbd:
         init_sbd_diskless()
         return
-    elif not _context.sbd_device:
+    # interactive case
+    else:
         # SBD device not set up by init_storage (ocfs2 template) and
         # also not passed in as command line argument - prompt user
         if _context.yes_to_all:
@@ -1352,38 +1371,43 @@ Configure SBD:
             if not confirm("SBD is already configured to use %s - overwrite?" % (configured_dev)):
                 return
 
-        dev = ""
         dev_looks_sane = False
         while not dev_looks_sane:
-            dev = prompt_for_string('Path to storage device (e.g. /dev/disk/by-id/...), or "none"', r'none|\/.*', dev)
+            dev = prompt_for_string('Path to storage device (e.g. /dev/disk/by-id/...), or "none", use ";" as separator for multi path', r'none|\/.*')
             if dev == "none":
                 _context.diskless_sbd = True
                 init_sbd_diskless()
                 return
-            if not is_block_device(dev):
-                print("    That doesn't look like a block device", file=sys.stderr)
-                dev = ""
-            else:
-                warn("All data on {} will be destroyed!".format(dev))
-                if confirm('Are you sure you wish to use this device?'):
-                    dev_looks_sane = True
+            dev_list = dev.strip(';').split(';')
+            if len(dev_list) > 3:
+                error("Maximum number of SBD device is 3")
+                continue
+            for dev_item in dev_list:
+                if not is_block_device(dev_item):
+                    error("{} doesn't look like a block device".format(dev_item))
+                    dev_looks_sane = False
+                    break
                 else:
-                    dev = ""
-        _context.sbd_device = dev
+                    warn("All data on {} will be destroyed!".format(dev_item))
+                    if confirm('Are you sure you wish to use this device?'):
+                        dev_looks_sane = True
+                    else:
+                        dev_looks_sane = False
+                        break
 
-    if not is_block_device(_context.sbd_device):
-        error("SBD device %s doesn't seem to exist" % (_context.sbd_device))
+        _context.sbd_device = dev_list
 
     # TODO: need to ensure watchdog is available
     # (actually, should work if watchdog unavailable, it'll just whine in the logs...)
     # TODO: what about timeouts for multipath devices?
     status_long('Initializing SBD...')
-    if not invoke("sbd -d %s create" % (_context.sbd_device)):
-        error("Failed to initialize SBD device %s" % (_context.sbd_device))
+    for dev in _context.sbd_device:
+        if not invoke("sbd -d %s create" % (dev)):
+            error("Failed to initialize SBD device %s" % (dev))
     status_done()
 
     utils.sysconfig_set(SYSCONFIG_SBD,
-                        SBD_DEVICE=_context.sbd_device,
+                        SBD_DEVICE=';'.join(_context.sbd_device),
                         SBD_PACEMAKER="yes",
                         SBD_STARTMODE="always",
                         SBD_DELAY_START="no",
