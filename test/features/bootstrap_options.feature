@@ -11,6 +11,25 @@ Feature: crmsh bootstrap process - options
   Tag @clean means need to stop cluster service if the service is available
 
   @clean
+  Scenario: Check help output
+    When    Run "crm -h" on "hanode1"
+    Then    Output is the same with expected "crm" help output
+    When    Run "crm cluster init -h" on "hanode1"
+    Then    Output is the same with expected "crm cluster init" help output
+    When    Run "crm cluster join -h" on "hanode1"
+    Then    Output is the same with expected "crm cluster join" help output
+    When    Run "crm cluster add -h" on "hanode1"
+    Then    Output is the same with expected "crm cluster add" help output
+    When    Run "crm cluster remove -h" on "hanode1"
+    Then    Output is the same with expected "crm cluster remove" help output
+    When    Run "crm cluster geo-init -h" on "hanode1"
+    Then    Output is the same with expected "crm cluster geo-init" help output
+    When    Run "crm cluster geo-join -h" on "hanode1"
+    Then    Output is the same with expected "crm cluster geo-join" help output
+    When    Run "crm cluster geo-init-arbitrator -h" on "hanode1"
+    Then    Output is the same with expected "crm cluster geo-init-arbitrator" help output
+
+  @clean
   Scenario: Init whole cluster service on node "hanode1" using "--nodes" option
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"

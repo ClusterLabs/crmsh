@@ -4,6 +4,7 @@ from behave import given, when, then
 from crmsh import corosync, parallax
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
                   run_command_local_or_remote
+import const
 
 
 @given('Cluster service is "{state}" on "{addr}"')
@@ -147,3 +148,18 @@ def step_impl(context, res, node, number):
     if out:
         result = re.search(r'name=fail-count-{} value={}'.format(res, number), out)
         assert result is not None
+
+
+@then('Output is the same with expected "{cmd}" help output')
+def step_impl(context, cmd):
+    cmd_help = {}
+    cmd_help["crm"] = const.CRM_H_OUTPUT
+    cmd_help["crm_cluster_init"] = const.CRM_CLUSTER_INIT_H_OUTPUT
+    cmd_help["crm_cluster_join"] = const.CRM_CLUSTER_JOIN_H_OUTPUT
+    cmd_help["crm_cluster_add"] = const.CRM_CLUSTER_ADD_H_OUTPUT
+    cmd_help["crm_cluster_remove"] = const.CRM_CLUSTER_REMOVE_H_OUTPUT
+    cmd_help["crm_cluster_geo-init"] = const.CRM_CLUSTER_GEO_INIT_H_OUTPUT
+    cmd_help["crm_cluster_geo-join"] = const.CRM_CLUSTER_GEO_JOIN_H_OUTPUT
+    cmd_help["crm_cluster_geo-init-arbitrator"] = const.CRM_CLUSTER_GEO_INIT_ARBIT_H_OUTPUT
+    key = '_'.join(cmd.split())
+    assert context.stdout == cmd_help[key]
