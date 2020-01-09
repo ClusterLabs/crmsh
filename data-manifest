@@ -70,6 +70,7 @@ test/features/bootstrap_init_join_remove.feature
 test/features/bootstrap_options.feature
 test/features/environment.py
 test/features/resource_failcount.feature
+test/features/steps/const.py
 test/features/steps/__init__.py
 test/features/steps/step_implenment.py
 test/features/steps/utils.py
