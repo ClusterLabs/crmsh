@@ -3,6 +3,7 @@ import os
 import shutil
 from datetime import datetime
 from nose.tools import eq_, ok_
+from unittest import mock
 
 from hb_report.utillib import which, ts_to_dt, sub_string, random_string,\
                               head, create_tempfile, tail, grep,\
@@ -14,6 +15,7 @@ from hb_report.utillib import which, ts_to_dt, sub_string, random_string,\
                               findln_by_time, get_conf_var, is_conf_set,\
                               line_time, get_command_info, Tempfile
 from hb_report import constants
+import hb_report
 import crmsh.utils
 
 
@@ -364,3 +366,30 @@ def test_ts_to_dt():
 def test_which():
     ok_(which("ls"))
     ok_(not which("llll"))
+
+
+@mock.patch('crmsh.utils.get_stdout_stderr')
+def test_dump_D_process_None(mock_get_stdout_stderr):
+    mock_get_stdout_stderr.return_value = (0, None, None)
+    eq_(hb_report.utillib.dump_D_process(), "Dump D-state process stack: 0\n")
+    mock_get_stdout_stderr.assert_called_once_with("ps aux|awk '$8 ~ /^D/{print $2}'")
+
+
+@mock.patch('crmsh.utils.get_stdout_stderr')
+def test_dump_D_process_None(mock_get_stdout_stderr):
+    mock_get_stdout_stderr.side_effect = [
+            (0, "10001\n10002", None),
+            (0, "comm_out for 10001", None),
+            (0, "stack_out for 10001", None),
+            (0, "comm_out for 10002", None),
+            (0, "stack_out for 10002", None)
+            ]
+    out_string = "Dump D-state process stack: 2\npid: 10001     comm: comm_out for 10001\nstack_out for 10001\n\npid: 10002     comm: comm_out for 10002\nstack_out for 10002\n\n"
+    eq_(hb_report.utillib.dump_D_process(), out_string)
+    mock_get_stdout_stderr.assert_has_calls([
+        mock.call("ps aux|awk '$8 ~ /^D/{print $2}'"),
+        mock.call("cat /proc/10001/comm"),
+        mock.call("cat /proc/10001/stack"),
+        mock.call("cat /proc/10002/comm"),
+        mock.call("cat /proc/10002/stack")
+        ])
