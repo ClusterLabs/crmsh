@@ -34,7 +34,13 @@ jobs:
 
       after_script:
         - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
-  
+
+    - name: "regression test for bootstrap bugs"
+      before_install:
+        - $FUNCTIONAL_TEST bootstrap before_install
+      script:
+        - $FUNCTIONAL_TEST bootstrap run bugs
+
     - name: "functional test for bootstrap - init, join and remove"
       before_install:
         - $FUNCTIONAL_TEST bootstrap before_install
@@ -46,12 +52,6 @@ jobs:
         - $FUNCTIONAL_TEST bootstrap before_install
       script:
         - $FUNCTIONAL_TEST bootstrap run options
-
-    - name: "regression test for bootstrap bugs"
-      before_install:
-        - $FUNCTIONAL_TEST bootstrap before_install
-      script:
-        - $FUNCTIONAL_TEST bootstrap run bugs
 
     - name: "functional test for qdevice - setup and remove"
       before_install:
