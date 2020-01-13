@@ -16,6 +16,7 @@ import fnmatch
 import gc
 import ipaddress
 from contextlib import contextmanager
+import argparse
 from . import config
 from . import userdir
 from . import constants
@@ -2209,4 +2210,14 @@ def get_nodeid_from_name(name):
         return res.group(1)
     else:
         return None
+
+
+def check_space_option_value(options):
+    if not isinstance(options, argparse.Namespace):
+        raise ValueError("Expected type of \"options\" is \"argparse.Namespace\", not \"{}\"".format(type(options)))
+
+    for opt in vars(options):
+        value = getattr(options, opt)
+        if isinstance(value, str) and len(value.strip()) == 0:
+            raise ValueError("Space value not allowed for dest \"{}\"".format(opt))
 # vim:ts=4:sw=4:et:
