@@ -2184,5 +2184,5 @@ def check_space_option_value(options):
     for opt in vars(options):
         value = getattr(options, opt)
         if isinstance(value, str) and len(value.strip()) == 0:
-            raise ValueError("Not allowed space value for dest \"{}\"".format(opt))
+            raise ValueError("Space value not allowed for dest \"{}\"".format(opt))
 # vim:ts=4:sw=4:et:
