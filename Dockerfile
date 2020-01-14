@@ -1,5 +1,9 @@
 FROM opensuse/leap:42.3
-MAINTAINER Kristoffer Gronlund version: 0.5
+MAINTAINER Xin Liang <XLiang@suse.com>
+
+ARG ssh_prv_key
+ARG ssh_pub_key
+# docker build -t haleap --build-arg ssh_prv_key="$(cat /root/.ssh/id_rsa)" --build-arg ssh_pub_key="$(cat /root/.ssh/id_rsa.pub)" .
 
 ENV container docker
 
@@ -13,9 +17,16 @@ rm -f /usr/lib/systemd/system/sockets.target.wants/*initctl*; \
 rm -f /usr/lib/systemd/system/basic.target.wants/*;\
 rm -f /usr/lib/systemd/system/anaconda.target.wants/*;
 
+RUN mkdir -p /root/.ssh && chmod 0700 /root/.ssh
+RUN echo "$ssh_prv_key" > /root/.ssh/id_rsa && chmod 600 /root/.ssh/id_rsa
+RUN echo "$ssh_pub_key" > /root/.ssh/id_rsa.pub && chmod 600 /root/.ssh/id_rsa.pub
+RUN echo "$ssh_pub_key" > /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys
+
+RUN zypper -n install make autoconf automake pkg-config vim which libxslt-tools mailx procps iproute2 iputils bzip2 openssh tar
+RUN zypper -n install python python-setuptools python-lxml python-parallax python-tox python-pip python-PyYAML python-curses python-dateutil python-nose
+RUN zypper -n install csync2 libglue-devel
+RUN pip install --upgrade pip
+RUN pip install behave mock
+
 VOLUME [ "/sys/fs/cgroup" ]
-
-RUN zypper -n --gpg-auto-import-keys ref && zypper -n --gpg-auto-import-keys in pacemaker python python-lxml python-python-dateutil python-parallax libglue-devel python-setuptools python-tox asciidoc autoconf automake make pkgconfig which libxslt-tools mailx procps python-nose python-PyYAML python-curses tar
-
 CMD ["/usr/lib/systemd/systemd", "--system"]
-

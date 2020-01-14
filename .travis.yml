@@ -15,11 +15,9 @@ before_script:
   - ./cc-test-reporter before-build
 
 before_install:
-  - docker pull krig/crmsh2:latest
-  - docker run -d --name=hanode1 --hostname hanode1 --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" krig/crmsh2
-  - docker exec -t hanode1 /bin/sh -c "zypper -n in curl python-parallax"
-  - docker exec -t hanode1 /bin/sh -c "curl https://bootstrap.pypa.io/get-pip.py | python"
-  - docker exec -t hanode1 /bin/sh -c "pip install mock"
+  - docker pull liangxin1300/haleap:42.3
+  - docker run -d --name=hanode1 --hostname hanode1 --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" liangxin1300/haleap:42.3
+  - docker exec -t hanode1 /bin/sh -c "zypper -n in pacemaker"
 
 script:
   - docker exec -t hanode1 /bin/sh -c "systemctl start dbus; cd /app; ./test/run-in-travis.sh"
