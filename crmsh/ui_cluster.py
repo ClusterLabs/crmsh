@@ -17,6 +17,18 @@ class OptParser(optparse.OptionParser):
         return self.epilog or ""
 
 
+def parse_options(parser, args):
+    try:
+        options, args = parser.parse_args(list(args))
+    except:
+        return None, None
+    if options.help:
+        parser.print_help()
+        return None, None
+    utils.check_space_option_value(options)
+    return options, args
+
+
 def _remove_completer(args):
     try:
         n = utils.list_cluster_nodes()
@@ -178,12 +190,8 @@ Note:
         storage_group.add_option("-o", "--ocfs2-device", dest="ocfs2_device", metavar="DEVICE",
                                  help='Block device to use for OCFS2 (only used in "vgfs" stage)')
         parser.add_option_group(storage_group)
-        try:
-            options, args = parser.parse_args(list(args))
-        except:
-            return
-        if options.help:
-            parser.print_help()
+        options, args = parse_options(parser, args)
+        if options is None or args is None:
             return
 
         stage = ""
@@ -191,11 +199,9 @@ Note:
             stage = args[0]
         if stage not in bootstrap.INIT_STAGES and stage != "":
             parser.error("Invalid stage (%s)" % (stage))
-            return False
 
         if options.template and options.template != "ocfs2":
             parser.error("Invalid template (%s)" % (options.template))
-            return False
 
         # if options.geo and options.name == "hacluster":
         #    parser.error("For a geo cluster, each cluster must have a unique name (use --name to set)")
@@ -260,12 +266,8 @@ If stage is not specified, each stage will be invoked in sequence.
         network_group.add_option("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of existing cluster node", metavar="HOST")
         network_group.add_option("-i", "--interface", dest="nic", help="Bind to IP address on interface IF", metavar="IF")
         parser.add_option_group(network_group)
-        try:
-            options, args = parser.parse_args(list(args))
-        except:
-            return
-        if options.help:
-            parser.print_help()
+        options, args = parse_options(parser, args)
+        if options is None or args is None:
             return
 
         stage = ""
@@ -273,7 +275,6 @@ If stage is not specified, each stage will be invoked in sequence.
             stage = args[0]
         if stage not in ("ssh", "csync2", "ssh_merge", "cluster", ""):
             parser.error("Invalid stage (%s)" % (stage))
-            return False
 
         bootstrap.bootstrap_join(
             cluster_node=options.cluster_node,
@@ -306,12 +307,8 @@ If stage is not specified, each stage will be invoked in sequence.
         parser = OptParser(usage="usage: add [options] [node ...]", add_help_option=False)
         parser.add_option("-h", "--help",action="store_true", dest="help", help="Show this help message")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
-        try:
-            options, args = parser.parse_args(list(args))
-        except:
-            return
-        if options.help:
-            parser.print_help()
+        options, args = parse_options(parser, args)
+        if options is None or args is None:
             return
         for node in args:
             if not self._add_node(node, yes_to_all=options.yes_to_all):
@@ -329,12 +326,8 @@ If stage is not specified, each stage will be invoked in sequence.
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of cluster node which will be deleted", metavar="HOST")
         parser.add_option("-F", "--force", dest="force", help="Remove current node", action="store_true")
-        try:
-            options, args = parser.parse_args(list(args))
-        except:
-            return
-        if options.help:
-            parser.print_help()
+        options, args = parse_options(parser, args)
+        if options is None or args is None:
             return
         if options.cluster_node is not None and options.cluster_node not in args:
             args = list(args) + [options.cluster_node]
@@ -403,12 +396,8 @@ Cluster Description
         parser.add_option("-a", "--arbitrator", help="IP address of geo cluster arbitrator", dest="arbitrator", metavar="IP")
         parser.add_option("-s", "--clusters", help="Geo cluster description (see details below)", dest="clusters", metavar="DESC")
         parser.add_option("-t", "--tickets", help="Tickets to create (space-separated)", dest="tickets", metavar="LIST")
-        try:
-            options, args = parser.parse_args(list(args))
-        except:
-            return
-        if options.help:
-            parser.print_help()
+        options, args = parse_options(parser, args)
+        if options is None or args is None:
             return
 
         if options.clusters is None:
@@ -442,12 +431,8 @@ Cluster Description
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", help="IP address of an already-configured geo cluster or arbitrator", dest="node", metavar="IP")
         parser.add_option("-s", "--clusters", help="Geo cluster description (see geo-init for details)", dest="clusters", metavar="DESC")
-        try:
-            options, args = parser.parse_args(list(args))
-        except:
-            return
-        if options.help:
-            parser.print_help()
+        options, args = parse_options(parser, args)
+        if options is None or args is None:
             return
         errs = []
         if options.node is None:
@@ -474,12 +459,8 @@ Cluster Description
         parser.add_option("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_option("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_option("-c", "--cluster-node", help="IP address of an already-configured geo cluster", dest="other", metavar="IP")
-        try:
-            options, args = parser.parse_args(list(args))
-        except:
-            return
-        if options.help:
-            parser.print_help()
+        options, args = parse_options(parser, args)
+        if options is None or args is None:
             return
         bootstrap.bootstrap_arbitrator(options.quiet, options.yes_to_all, options.other, ui_context=context)
         return True

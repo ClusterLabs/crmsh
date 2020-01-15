@@ -303,6 +303,7 @@ def compgen():
 
 def parse_options():
     opts, args = option_parser.parse_args()
+    utils.check_space_option_value(opts)
     config.core.debug = "yes" if opts.debug else config.core.debug
     options.profile = opts.profile or options.profile
     options.regression_tests = opts.regression_tests or options.regression_tests
@@ -373,5 +374,6 @@ def run():
             import traceback
             traceback.print_exc()
         common_err(str(e))
+        sys.exit(1)
 
 # vim:ts=4:sw=4:et:
