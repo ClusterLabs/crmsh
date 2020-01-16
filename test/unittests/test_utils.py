@@ -8,7 +8,6 @@ import os
 import socket
 import re
 from unittest import mock
-from nose.tools import eq_
 from itertools import chain
 from crmsh import utils
 from crmsh import config
@@ -22,7 +21,7 @@ def test_get_nodeid_from_name_run_None1(mock_get_stdout, mock_re_search):
     mock_re_search_inst = mock.Mock()
     mock_re_search.return_value = mock_re_search_inst
     res = utils.get_nodeid_from_name("node1")
-    eq_(res, None)
+    assert res is None
     mock_get_stdout.assert_called_once_with('crm_node -l')
     mock_re_search.assert_not_called()
 
@@ -33,7 +32,7 @@ def test_get_nodeid_from_name_run_None2(mock_get_stdout, mock_re_search):
     mock_get_stdout.return_value = (0, "172167901 node1 member\n172168231 node2 member")
     mock_re_search.return_value = None
     res = utils.get_nodeid_from_name("node111")
-    eq_(res, None)
+    assert res is None
     mock_get_stdout.assert_called_once_with('crm_node -l')
     mock_re_search.assert_called_once_with(r'^([0-9]+) node111 ', mock_get_stdout.return_value[1], re.M)
 
@@ -46,7 +45,7 @@ def test_get_nodeid_from_name(mock_get_stdout, mock_re_search):
     mock_re_search.return_value = mock_re_search_inst
     mock_re_search_inst.group.return_value = '172168231'
     res = utils.get_nodeid_from_name("node2")
-    eq_(res, '172168231')
+    assert res == '172168231'
     mock_get_stdout.assert_called_once_with('crm_node -l')
     mock_re_search.assert_called_once_with(r'^([0-9]+) node2 ', mock_get_stdout.return_value[1], re.M)
     mock_re_search_inst.group.assert_called_once_with(1)

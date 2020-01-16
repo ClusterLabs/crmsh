@@ -6,24 +6,22 @@ from __future__ import unicode_literals
 
 from crmsh import cibconfig
 from lxml import etree
-from nose.tools import eq_, with_setup
 from crmsh import xmlutil
 
 factory = cibconfig.cib_factory
 
 
-def setup_func():
+def setup_function():
     "set up test fixtures"
     from crmsh import idmgmt
     idmgmt.clear()
     factory._push_state()
 
 
-def teardown_func():
+def teardown_function():
     factory._pop_state()
 
 
-@with_setup(setup_func, teardown_func)
 def test_bug41660_1():
     xml = """<primitive id="bug41660" class="ocf" provider="pacemaker" type="Dummy"> \
     <meta_attributes id="bug41660-meta"> \
@@ -45,13 +43,11 @@ def test_bug41660_1():
         factory.commit = lambda *args: True
         from crmsh.ui_resource import set_deep_meta_attr
         set_deep_meta_attr("bug41660", "target-role", "Started")
-        eq_(['Started'],
-            obj.node.xpath('.//nvpair[@name="target-role"]/@value'))
+        assert ['Started'] == obj.node.xpath('.//nvpair[@name="target-role"]/@value')
     finally:
         factory.commit = commit_holder
 
 
-@with_setup(setup_func, teardown_func)
 def test_bug41660_2():
     xml = """
 <clone id="libvirtd-clone">
@@ -88,13 +84,11 @@ def test_bug41660_2():
         print("PRE", etree.tostring(obj.node))
         set_deep_meta_attr("libvirtd-clone", "target-role", "Started")
         print("POST", etree.tostring(obj.node))
-        eq_(['Started'],
-            obj.node.xpath('.//nvpair[@name="target-role"]/@value'))
+        assert ['Started'] == obj.node.xpath('.//nvpair[@name="target-role"]/@value')
     finally:
         factory.commit = commit_holder
 
 
-@with_setup(setup_func, teardown_func)
 def test_bug41660_3():
     xml = """
 <clone id="libvirtd-clone">
@@ -125,13 +119,11 @@ def test_bug41660_3():
         factory.commit = lambda *args: True
         from crmsh.ui_resource import set_deep_meta_attr
         set_deep_meta_attr("libvirtd-clone", "target-role", "Started")
-        eq_(['Started'],
-            obj.node.xpath('.//nvpair[@name="target-role"]/@value'))
+        assert ['Started'] == obj.node.xpath('.//nvpair[@name="target-role"]/@value')
     finally:
         factory.commit = commit_holder
 
 
-@with_setup(setup_func, teardown_func)
 def test_comments():
     xml = """<cib epoch="25" num_updates="1" admin_epoch="0" validate-with="pacemaker-1.2" cib-last-written="Thu Mar  6 15:53:49 2014" update-origin="beta1" update-client="cibadmin" update-user="root" crm_feature_set="3.0.8" have-quorum="1" dc-uuid="1">
   <configuration>
@@ -175,7 +167,6 @@ def test_comments():
     assert xmlutil.xml_tostring(elems).count("COMMENT TEXT") == 3
 
 
-@with_setup(setup_func, teardown_func)
 def test_eq1():
     xml1 = """<cluster_property_set id="cib-bootstrap-options">
     <nvpair id="cib-bootstrap-options-stonith-enabled" name="stonith-enabled" value="true"></nvpair>
@@ -206,7 +197,6 @@ def test_eq1():
     assert xmlutil.xml_equals(e1, e2, show=True)
 
 
-@with_setup(setup_func, teardown_func)
 def test_pcs_interop_1():
     """
     pcs<>crmsh interop bug
@@ -235,7 +225,6 @@ def test_pcs_interop_1():
     assert len(elem.xpath(".//meta_attributes/nvpair[@name='target-role']")) == 1
 
 
-@with_setup(setup_func, teardown_func)
 def test_bnc878128():
     """
     L3: "crm configure show" displays XML information instead of typical crm output.
@@ -259,7 +248,6 @@ end="2014-05-17 17:56:11Z"/>
     assert obj.cli_use_validate()
 
 
-@with_setup(setup_func, teardown_func)
 def test_order_without_score_kind():
     """
     Spec says order doesn't require score or kind to be set
@@ -276,7 +264,6 @@ def test_order_without_score_kind():
 
 
 
-@with_setup(setup_func, teardown_func)
 def test_bnc878112():
     """
     crm configure group can hijack a cloned primitive (and then crash)
@@ -290,7 +277,6 @@ def test_bnc878112():
     assert obj3 is False
 
 
-@with_setup(setup_func, teardown_func)
 def test_copy_nvpairs():
     from crmsh.cibconfig import copy_nvpairs
 
@@ -305,8 +291,8 @@ def test_copy_nvpairs():
     </node>
     '''))
 
-    eq_(['stonith-enabled'], to.xpath('./nvpair/@name'))
-    eq_(['false'], to.xpath('./nvpair/@value'))
+    assert ['stonith-enabled'] == to.xpath('./nvpair/@name')
+    assert ['false'] == to.xpath('./nvpair/@value')
 
     copy_nvpairs(to, etree.fromstring('''
     <node>
@@ -314,11 +300,10 @@ def test_copy_nvpairs():
     </node>
     '''))
 
-    eq_(['stonith-enabled'], to.xpath('./nvpair/@name'))
-    eq_(['true'], to.xpath('./nvpair/@value'))
+    assert ['stonith-enabled'] == to.xpath('./nvpair/@name')
+    assert ['true'] == to.xpath('./nvpair/@value')
 
 
-@with_setup(setup_func, teardown_func)
 def test_pengine_test():
     xml = '''<primitive class="ocf" id="rsc1" provider="pacemaker" type="Dummy">
         <instance_attributes id="rsc1-instance_attributes-1">
@@ -347,7 +332,6 @@ def test_pengine_test():
     assert obj.cli_use_validate()
 
 
-@with_setup(setup_func, teardown_func)
 def test_tagset():
     xml = '''<primitive class="ocf" id="%s" provider="pacemaker" type="Dummy"/>'''
     tag = '''<tag id="t0"><obj_ref id="r1"/><obj_ref id="r2"/></tag>'''
@@ -358,7 +342,7 @@ def test_tagset():
     elems = factory.get_elems_on_tag("tag:t0")
     assert set(x.obj_id for x in elems) == set(['r1', 'r2'])
 
-@with_setup(setup_func, teardown_func)
+
 def test_ratrace():
     xml = '''<primitive class="ocf" id="%s" provider="pacemaker" type="Dummy"/>'''
     factory.create_from_node(etree.fromstring(xml % ('r1')))
@@ -378,7 +362,6 @@ def test_ratrace():
     assert set(obj.node.xpath('./operations/op/@name')) == set(['start', 'stop'])
 
 
-@with_setup(setup_func, teardown_func)
 def test_op_role():
     xml = '''<primitive class="ocf" id="rsc2" provider="pacemaker" type="Dummy">
         <operations>
@@ -395,7 +378,6 @@ def test_op_role():
     assert obj.cli_use_validate()
 
 
-@with_setup(setup_func, teardown_func)
 def test_nvpair_no_value():
     xml = '''<primitive class="ocf" id="rsc3" provider="heartbeat" type="Dummy">
         <instance_attributes id="rsc3-instance_attributes-1">
@@ -414,7 +396,6 @@ def test_nvpair_no_value():
     assert obj.cli_use_validate()
 
 
-@with_setup(setup_func, teardown_func)
 def test_delete_ticket():
     xml0 = '<primitive id="daa0" class="ocf" provider="heartbeat" type="Dummy"/>'
     xml1 = '<primitive id="daa1" class="ocf" provider="heartbeat" type="Dummy"/>'
@@ -435,7 +416,6 @@ def test_delete_ticket():
     assert factory.find_object('taa0') is not None
 
 
-@with_setup(setup_func, teardown_func)
 def test_quotes():
     """
     Parsing escaped quotes
@@ -456,7 +436,6 @@ def test_quotes():
     assert obj.cli_use_validate()
 
 
-@with_setup(setup_func, teardown_func)
 def test_nodeattrs():
     """
     bug with parsing node attrs
@@ -480,7 +459,6 @@ def test_nodeattrs():
     assert obj.cli_use_validate()
 
 
-@with_setup(setup_func, teardown_func)
 def test_nodeattrs2():
     xml = """<node id="h04" uname="h04"> \
  <utilization id="h04-utilization"> \
@@ -500,7 +478,6 @@ def test_nodeattrs2():
     assert obj.cli_use_validate()
 
 
-@with_setup(setup_func, teardown_func)
 def test_group_constraint_location():
     """
     configuring a location constraint on a grouped resource is OK
@@ -514,7 +491,6 @@ def test_group_constraint_location():
     assert c and c.check_sanity() == 0
 
 
-@with_setup(setup_func, teardown_func)
 def test_group_constraint_colocation():
     """
     configuring a colocation constraint on a grouped resource is bad
@@ -527,7 +503,6 @@ def test_group_constraint_colocation():
     assert c and c.check_sanity() > 0
 
 
-@with_setup(setup_func, teardown_func)
 def test_group_constraint_colocation_rscset():
     """
     configuring a constraint on a grouped resource is bad
@@ -541,7 +516,6 @@ def test_group_constraint_colocation_rscset():
     assert c and c.check_sanity() > 0
 
 
-@with_setup(setup_func, teardown_func)
 def test_clone_constraint_colocation_rscset():
     """
     configuring a constraint on a cloned resource is bad
@@ -555,7 +529,6 @@ def test_clone_constraint_colocation_rscset():
     assert c and c.check_sanity() > 0
 
 
-@with_setup(setup_func, teardown_func)
 def test_existing_node_resource():
     factory.create_object('primitive', 'ha-one', 'Dummy')
 
@@ -574,7 +547,6 @@ def test_existing_node_resource():
     assert ok
 
 
-@with_setup(setup_func, teardown_func)
 def test_existing_node_resource_2():
     obj = cibconfig.mkset_obj()
     assert obj is not None
@@ -594,7 +566,6 @@ def test_existing_node_resource_2():
     assert sorted(text.split('\n')) == sorted(text2.split('\n'))
 
 
-@with_setup(setup_func, teardown_func)
 def test_id_collision_breakage_1():
     from crmsh import clidisplay
 
@@ -675,7 +646,6 @@ primitive p1 ocf:heartbeat:Dummy \
         assert original_cib == obj.repr()
 
 
-@with_setup(setup_func, teardown_func)
 def test_id_collision_breakage_3():
     from crmsh import clidisplay
 
@@ -719,7 +689,6 @@ primitive node1 Dummy params fake=something
         assert original_cib == obj.repr()
 
 
-@with_setup(setup_func, teardown_func)
 def test_id_collision_breakage_2():
     from crmsh import clidisplay
 
@@ -813,7 +782,6 @@ op_defaults op-options: \
         assert original_cib == obj.repr()
 
 
-@with_setup(setup_func, teardown_func)
 def test_bug_110():
     """
     configuring attribute-based fencing-topology
@@ -831,7 +799,6 @@ def test_bug_110():
             assert o.check_sanity() == 0
 
 
-@with_setup(setup_func, teardown_func)
 def test_reordering_resource_sets():
     """
     Can we reorder resource sets?
@@ -858,7 +825,6 @@ def test_reordering_resource_sets():
         assert "order o1 p4 p3 p2 p1" == obj2.repr().strip()
 
 
-@with_setup(setup_func, teardown_func)
 def test_bug959895():
     """
     Allow importing XML with cloned groups
@@ -884,13 +850,11 @@ def test_bug959895():
         factory.commit = lambda *args: True
         from crmsh.ui_resource import set_deep_meta_attr
         set_deep_meta_attr("c-bug959895", "target-role", "Started")
-        eq_(['Started'],
-            obj.node.xpath('.//nvpair[@name="target-role"]/@value'))
+        assert ['Started'] == obj.node.xpath('.//nvpair[@name="target-role"]/@value')
     finally:
         factory.commit = commit_holder
 
 
-@with_setup(setup_func, teardown_func)
 def test_node_util_attr():
     """
     Handle node with utitilization before attributes correctly
@@ -915,7 +879,6 @@ def test_node_util_attr():
     assert obj.cli_use_validate()
 
 
-@with_setup(setup_func, teardown_func)
 def test_dup_create():
     """
     Creating two objects with the same name
@@ -926,7 +889,6 @@ def test_dup_create():
     assert not ok
 
 
-@with_setup(setup_func, teardown_func)
 def test_dup_create():
     """
     Creating property sets with unknown properties
