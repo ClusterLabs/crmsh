@@ -1471,7 +1471,7 @@ def save_graphviz_file(ini_f, attr_d):
         common_err(msg)
         return False
     import configparser
-    p = configparser.SafeConfigParser()
+    p = configparser.ConfigParser()
     for section, sect_d in attr_d.items():
         p.add_section(section)
         for n, v in sect_d.items():
@@ -1493,7 +1493,7 @@ def load_graphviz_file(ini_f):
     if not os.path.isfile(ini_f):
         return True, None
     import configparser
-    p = configparser.SafeConfigParser()
+    p = configparser.ConfigParser()
     try:
         p.read(ini_f)
     except Exception as msg:
