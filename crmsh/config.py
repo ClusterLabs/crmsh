@@ -304,21 +304,21 @@ class _Configuration(object):
         self._user = None
 
     def load(self):
-        self._defaults = configparser.SafeConfigParser()
+        self._defaults = configparser.ConfigParser()
         for section, keys in DEFAULTS.items():
             self._defaults.add_section(section)
             for key, opt in keys.items():
                 self._defaults.set(section, key, opt.default)
 
         if os.path.isfile(_SYSTEMWIDE):
-            self._systemwide = configparser.SafeConfigParser()
+            self._systemwide = configparser.ConfigParser()
             self._systemwide.read([_SYSTEMWIDE])
         # for backwards compatibility with <=2.1.1 due to ridiculous bug
         elif os.path.isfile("/etc/crm/crmsh.conf"):
-            self._systemwide = configparser.SafeConfigParser()
+            self._systemwide = configparser.ConfigParser()
             self._systemwide.read(["/etc/crm/crmsh.conf"])
         if os.path.isfile(_PERUSER):
-            self._user = configparser.SafeConfigParser()
+            self._user = configparser.ConfigParser()
             self._user.read([_PERUSER])
 
     def save(self):
@@ -351,7 +351,7 @@ class _Configuration(object):
             raise ValueError("Setting invalid option %s.%s" % (section, name))
         DEFAULTS[section][name].validate(value)
         if self._user is None:
-            self._user = configparser.SafeConfigParser()
+            self._user = configparser.ConfigParser()
         if not self._user.has_section(section):
             self._user.add_section(section)
         self._user.set(section, name, _stringify(value))
@@ -369,7 +369,7 @@ class _Configuration(object):
 
     def reset(self):
         '''reset to what is on disk'''
-        self._user = configparser.SafeConfigParser()
+        self._user = configparser.ConfigParser()
         self._user.read([_PERUSER])
 
 
