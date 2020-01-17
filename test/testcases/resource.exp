@@ -189,8 +189,7 @@ INFO: Removed migration constraints for p3
 .SETENV showobj=p0
 .TRY resource param p0 set a0 "1 2 3"
 .EXT crm_resource --resource 'p0' --set-parameter 'a0' --parameter-value '1 2 3'
-
-Set 'p0' option: id=p0-instance_attributes-a0 set=p0-instance_attributes name=a0=1 2 3
+Set 'p0' option: id=p0-instance_attributes-a0 set=p0-instance_attributes name=a0 value=1 2 3
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -254,8 +253,7 @@ Deleted 'p0' option: id=p0-instance_attributes-a0 name=a0
 
 .TRY resource meta p0 set m0 123
 .EXT crm_resource --meta --resource 'p0' --set-parameter 'm0' --parameter-value '123'
-
-Set 'p0' option: id=p0-meta_attributes-m0 set=p0-meta_attributes name=m0=123
+Set 'p0' option: id=p0-meta_attributes-m0 set=p0-meta_attributes name=m0 value=123
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -924,10 +922,10 @@ Node node1: UNCLEAN (offline)
  st	(stonith:null):	Stopped 
  Clone Set: c1 [p1] (unmanaged)
      Stopped: [ node1 ]
- Master/Slave Set: m1 [p2]
+ Clone Set: m1 [p2] (promotable)
      Stopped: [ node1 ]
  p3	(ocf::heartbeat:Dummy):	Stopped ( disabled ) 
- Master/Slave Set: msg [g]
+ Clone Set: msg [g] (promotable)
      Stopped: [ node1 ]
 
 Allocation scores and utilization information:

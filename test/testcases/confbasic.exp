@@ -45,7 +45,7 @@
 .INP: order o1 Mandatory: m5 m6
 .INP: order o2 Optional: d1:start m5:promote
 .INP: order o3 Serialize: m5 m6
-.INP: order o4 inf: m5 m6
+.INP: order o4 Mandatory: m5 m6
 .INP: rsc_ticket ticket-A_m6 ticket-A: m6
 .INP: rsc_ticket ticket-B_m6_m5 ticket-B: m6 m5 loss-policy=fence
 .INP: rsc_ticket ticket-C_master ticket-C: m6 m5:Master loss-policy=fence
@@ -131,7 +131,7 @@ location l7 m5 \
 order o1 Mandatory: m5 m6
 order o2 Optional: d1:start m5:promote
 order o3 Serialize: m5 m6
-order o4 inf: m5 m6
+order o4 Mandatory: m5 m6
 fencing_topology st st2
 rsc_ticket ticket-A_m6 ticket-A: m6
 rsc_ticket ticket-B_m6_m5 ticket-B: m6 m5 loss-policy=fence

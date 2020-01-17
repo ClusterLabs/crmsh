@@ -148,7 +148,7 @@
       <rsc_location id="l7" rsc="m5">
         <rule id-ref="l2-rule1"/>
       </rsc_location>
-      <rsc_order id="o4" score="INFINITY" first="m5" then="m6"/>
+      <rsc_order id="o4" kind="Mandatory" first="m5" then="m6"/>
     </constraints>
     <rsc_defaults>
       <meta_attributes id="rsc-options">
