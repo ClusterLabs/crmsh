@@ -110,7 +110,7 @@ Requires:       crmsh
 Requires(post):  mailx
 Requires(post):  procps
 Requires(post):  python3-python-dateutil
-Requires(post):  python3-nose
+Requires(post):  python3-tox
 %if 0%{?suse_version} > 1320
 Requires(post):  python3-parallax
 %else
@@ -179,7 +179,7 @@ touch -r doc/crm.8.adoc{.timestamp,}
 make %{_smp_mflags} VERSION="%{version}" sysconfdir=%{_sysconfdir} localstatedir=%{_var}
 
 %if %{with regression_tests}
-./test/run --quiet
+tox -q
 if [ ! $? ]; then
     echo "Unit tests failed."
     exit 1

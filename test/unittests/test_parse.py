@@ -12,7 +12,6 @@ import shlex
 from crmsh.utils import lines2cli
 from crmsh.xmlutil import xml_tostring
 from lxml import etree
-from nose.tools import ok_, eq_
 
 
 class MockValidation(parse.Validation):
@@ -456,7 +455,7 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(expect, xml_tostring(out))
 
         out = self._parse('fencing_topology poison-pill power')
-        expect = '<fencing-topology><fencing-level devices="poison-pill" index="1" target="ha-one"/><fencing-level devices="power" index="2" target="ha-one"/><fencing-level devices="poison-pill" index="1" target="ha-three"/><fencing-level devices="power" index="2" target="ha-three"/><fencing-level devices="poison-pill" index="1" target="ha-two"/><fencing-level devices="power" index="2" target="ha-two"/></fencing-topology>'
+        expect = '<fencing-topology><fencing-level target="ha-one" index="1" devices="poison-pill"/><fencing-level target="ha-one" index="2" devices="power"/><fencing-level target="ha-three" index="1" devices="poison-pill"/><fencing-level target="ha-three" index="2" devices="power"/><fencing-level target="ha-two" index="1" devices="poison-pill"/><fencing-level target="ha-two" index="2" devices="power"/></fencing-topology>'
         self.assertEqual(expect, xml_tostring(out))
 
         out = self._parse('fencing_topology node-a: poison-pill power node-b: ipmi serial')
@@ -473,11 +472,11 @@ class TestCliParser(unittest.TestCase):
         Test node attribute fence target assignment
         """
         out = self._parse('fencing_topology attr:rack=1 poison-pill power')
-        expect = """<fencing-topology><fencing-level devices="poison-pill" index="1" target-attribute="rack" target-value="1"/><fencing-level devices="power" index="2" target-attribute="rack" target-value="1"/></fencing-topology>"""
+        expect = """<fencing-topology><fencing-level index="1" devices="poison-pill" target-attribute="rack" target-value="1"/><fencing-level index="2" devices="power" target-attribute="rack" target-value="1"/></fencing-topology>"""
         self.assertEqual(expect, xml_tostring(out))
 
         out = self._parse('fencing_topology attr:rack=1 poison-pill,power')
-        expect = '<fencing-topology><fencing-level devices="poison-pill,power" index="1" target-attribute="rack" target-value="1"/></fencing-topology>'
+        expect = '<fencing-topology><fencing-level index="1" devices="poison-pill,power" target-attribute="rack" target-value="1"/></fencing-topology>'
         self.assertEqual(expect, xml_tostring(out))
 
     def test_tag(self):
@@ -588,12 +587,12 @@ class TestCliParser(unittest.TestCase):
         meta target-role=Started"""
 
         outp = self._parse_lines(inp)
-        eq_(len(outp), 1)
-        eq_('primitive', outp[0].tag)
+        self.assertEqual(len(outp), 1)
+        self.assertEqual('primitive', outp[0].tag)
         # print xml_tostring(outp[0])
         verbose = outp[0].xpath('//nvpair[@name="verbose"]')
-        eq_(len(verbose), 1)
-        ok_('value' not in verbose[0].attrib)
+        self.assertEqual(len(verbose), 1)
+        self.assertTrue('value' not in verbose[0].attrib)
 
 
     def test_configs(self):
@@ -699,10 +698,10 @@ class TestCliParser(unittest.TestCase):
             '<master id="m5"><crmsh-ref id="s5"/></master>',
             '<master id="m6"><crmsh-ref id="s6"/></master>',
             '<rsc_location id="l1" rsc="g1" score="100" node="node1"/>',
-            '<rsc_location id="l2" rsc="c"><rule id="l2-rule1" score="100"><expression attribute="#uname" operation="eq" value="node1"/></rule></rsc_location>',
-            '<rsc_location id="l3" rsc="m5"><rule score="INFINITY"><expression attribute="#uname" operation="eq" value="node1"/><expression attribute="pingd" operation="gt" value="0"/></rule></rsc_location>',
-            '<rsc_location id="l4" rsc="m5"><rule score="-INFINITY" boolean-op="or"><expression attribute="pingd" operation="not_defined"/><expression attribute="pingd" operation="lte" value="0"/></rule></rsc_location>',
-            '<rsc_location id="l5" rsc="m5"><rule score="-INFINITY" boolean-op="or"><expression attribute="pingd" operation="not_defined"/><expression attribute="pingd" operation="lte" value="0"/></rule><rule score="INFINITY"><expression attribute="#uname" operation="eq" value="node1"/><expression attribute="pingd" operation="gt" value="0"/></rule><rule score="INFINITY"><date_expression operation="lt" end="2009-05-26"/><date_expression operation="in_range" start="2009-05-26" end="2009-07-26"/><date_expression operation="in_range" start="2009-05-26"><duration years="2009"/></date_expression><date_expression operation="date_spec"><date_spec years="2009" hours="09-17"/></date_expression></rule></rsc_location>',
+            '<rsc_location id="l2" rsc="c"><rule id="l2-rule1" score="100"><expression operation="eq" attribute="#uname" value="node1"/></rule></rsc_location>',
+            '<rsc_location id="l3" rsc="m5"><rule score="INFINITY"><expression operation="eq" attribute="#uname" value="node1"/><expression operation="gt" attribute="pingd" value="0"/></rule></rsc_location>',
+            '<rsc_location id="l4" rsc="m5"><rule score="-INFINITY" boolean-op="or"><expression operation="not_defined" attribute="pingd"/><expression operation="lte" attribute="pingd" value="0"/></rule></rsc_location>',
+            '<rsc_location id="l5" rsc="m5"><rule score="-INFINITY" boolean-op="or"><expression operation="not_defined" attribute="pingd"/><expression operation="lte" attribute="pingd" value="0"/></rule><rule score="INFINITY"><expression operation="eq" attribute="#uname" value="node1"/><expression operation="gt" attribute="pingd" value="0"/></rule><rule score="INFINITY"><date_expression operation="lt" end="2009-05-26"/><date_expression operation="in_range" start="2009-05-26" end="2009-07-26"/><date_expression operation="in_range" start="2009-05-26"><duration years="2009"/></date_expression><date_expression operation="date_spec"><date_spec years="2009" hours="09-17"/></date_expression></rule></rsc_location>',
             '<rsc_location id="l6" rsc="m5"><rule id-ref="l2-rule1"/></rsc_location>',
             '<rsc_location id="l7" rsc="m5"><rule id-ref="l2"/></rsc_location>',
             '<rsc_colocation id="c1" score="INFINITY" rsc="m6" with-rsc="m5"/>',
@@ -714,7 +713,7 @@ class TestCliParser(unittest.TestCase):
             '<rsc_ticket id="ticket-A_m6" ticket="ticket-A" rsc="m6"/>',
             '<rsc_ticket id="ticket-B_m6_m5" ticket="ticket-B" loss-policy="fence"><resource_set><resource_ref id="m6"/><resource_ref id="m5"/></resource_set></rsc_ticket>',
             '<rsc_ticket id="ticket-C_master" ticket="ticket-C" loss-policy="fence"><resource_set><resource_ref id="m6"/></resource_set><resource_set role="Master"><resource_ref id="m5"/></resource_set></rsc_ticket>',
-            '<fencing-topology><fencing-level devices="st" index="1" target="ha-one"/><fencing-level devices="st2" index="2" target="ha-one"/><fencing-level devices="st" index="1" target="ha-three"/><fencing-level devices="st2" index="2" target="ha-three"/><fencing-level devices="st" index="1" target="ha-two"/><fencing-level devices="st2" index="2" target="ha-two"/></fencing-topology>',
+            '<fencing-topology><fencing-level target="ha-one" index="1" devices="st"/><fencing-level target="ha-one" index="2" devices="st2"/><fencing-level target="ha-three" index="1" devices="st"/><fencing-level target="ha-three" index="2" devices="st2"/><fencing-level target="ha-two" index="1" devices="st"/><fencing-level target="ha-two" index="2" devices="st2"/></fencing-topology>',
             '<cluster_property_set><nvpair name="stonith-enabled" value="true"/></cluster_property_set>',
             '<cluster_property_set id="cpset2"><nvpair name="maintenance-mode" value="true"/></cluster_property_set>',
             '<rsc_defaults><meta_attributes><nvpair name="failure-timeout" value="10m"/></meta_attributes></rsc_defaults>',
@@ -722,6 +721,7 @@ class TestCliParser(unittest.TestCase):
             ]
 
         for result, expected in zip(a, b):
+            self.maxDiff = None
             self.assertEqual(expected, result)
 
 if __name__ == '__main__':
