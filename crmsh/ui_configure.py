@@ -592,24 +592,50 @@ class CibConfig(command.UI):
     @command.skill_level('administrator')
     @command.completers(_id_list)
     def do_set(self, context, path, value):
-        "usage: set <path> <value>"
-        def split_path():
-            for oid in cib_factory.id_list():
-                if path.startswith(oid + "."):
-                    return oid, path[len(oid)+1:]
-            context.fatal_error("Invalid path: " + path)
-        obj_id, obj_attr = split_path()
+        """
+        usage: set <path> <value>
+
+        path:: id.[op_type.][interval.]name
+        """
+        path_errmsg = "Invalid path: \"{}\"; Valid path: \"id.[op_type.][interval.]name\"".format(path)
+        path_list = path.split('.')
+        if len(path_list) < 2 or len(path_list) > 4:
+            context.fatal_error(path_errmsg)
+
+        obj_id, *other_path_list = path_list
         rsc = cib_factory.find_object(obj_id)
         if not rsc:
-            context.fatal_error("Resource %s not found" % (obj_id))
-        nvpairs = rsc.node.xpath(".//nvpair[@name='%s']" % (obj_attr))
-        if not nvpairs:
-            context.fatal_error("Attribute not found: %s" % (path))
-        if len(nvpairs) != 1:
-            context.fatal_error("Expected 1 attribute named %s, found %s" %
-                                (obj_attr, len(nvpairs)))
+            context.fatal_error("Object {} not found".format(obj_id))
+
+        # Use case for: set id.name value
+        if len(other_path_list) == 1:
+            obj_attr = other_path_list[0]
+            nvpairs = rsc.node.xpath(".//nvpair[@name='{}']".format(obj_attr))
+            if not nvpairs:
+                context.fatal_error("Attribute not found: {}".format(path))
+            if len(nvpairs) != 1:
+                context.fatal_error("Expected 1 attribute named {}, found {}".format(obj_attr, len(nvpairs)))
+            nvpairs[0].set("value", value)
+
+        # Use case for: set id.op_type.name value
+        if len(other_path_list) == 2:
+            op_type, name = other_path_list
+            op_res = rsc.node.xpath(".//operations/op[@name='{}']".format(op_type))
+            if not op_res:
+                context.fatal_error("Operation \"{}\" not found for resource {}".format(op_type, obj_id))
+            if len(op_res) > 1:
+                context.fatal_error("Should specify interval of {}".format(op_type))
+            op_res[0].set(name, value)
+
+        # Use case for: set id.op_type.interval.name value
+        if len(other_path_list) == 3:
+            op_type, iv, name = other_path_list
+            op_res = rsc.node.xpath(".//operations/op[@id='{}-{}-{}']".format(obj_id, op_type, iv))
+            if not op_res:
+                context.fatal_error("Operation \"{}\" interval \"{}\" not found for resource {}".format(op_type, iv, obj_id))
+            op_res[0].set(name, value)
+
         rsc.set_updated()
-        nvpairs[0].set("value", value)
         return True
 
     @command.skill_level('administrator')

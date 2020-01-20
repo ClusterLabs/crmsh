@@ -4149,22 +4149,27 @@ schema pacemaker-1.1
 ==== `set`
 
 Set the value of a configured attribute. The attribute must
-have a value configured previously, and can be an agent
-parameter, meta attribute or utilization value.
+configured previously, and can be an agent parameter, meta attribute,
+utilization value or operation value.
 
 The first argument to the command is a path to an attribute.
 This is a dot-separated sequence beginning with the name of
-the resource, and ending with the name of the attribute to
-set.
+the resource or object, and ending with the name of the attribute to
+set. To set operation value, `op_type` should be specified; when multi
+operations exist like multi monitors, `interval` should be specified.
 
 Usage:
 ...............
 set <path> <value>
+
+path:: id.[op_type.][interval.]name
 ...............
 Examples:
 ...............
 set vip1.ip 192.168.20.5
 set vm-a.force_stop 1
+set vip1.monitor.on-fail ignore
+set drbd.monitor.10s.interval 20s
 ...............
 
 [[cmdhelp_configure_show,display CIB objects]]
