@@ -1685,19 +1685,6 @@ def join_cluster(seed_host):
                                               ringXaddr_res)
                 if not ringXaddr:
                     error("No value for ring{}".format(i))
-
-                _, outp = utils.get_stdout("ip addr show")
-                tmp = re.findall(r' {}/[0-9]+ '.format(ringXaddr), outp, re.M)[0].strip()
-                peer_ip = corosync.get_value("nodelist.node.ring{}_addr".format(i))
-                # peer ring0_addr and local ring0_addr must be configured in the same network
-                if peer_ip not in utils.Network(tmp):
-                    errmsg = "Peer IP {} is not in the same network: {}".format(peer_ip, tmp)
-                    if _context.yes_to_all:
-                        error(errmsg)
-                    else:
-                        print(term.render(clidisplay.error("    {}".format(errmsg))))
-                        continue
-
                 ringXaddr_res.append(ringXaddr)
                 break
             if not rrp_flag:
