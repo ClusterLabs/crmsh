@@ -910,7 +910,7 @@ class Report(object):
         - detail
         TODO
         '''
-        p = configparser.SafeConfigParser()
+        p = configparser.ConfigParser()
         p.add_section(self.rpt_section)
         p.set(self.rpt_section, 'dir',
               self.source == "live" and sdir or self.source)
@@ -934,7 +934,7 @@ class Report(object):
         '''
         Load the history state from a file.
         '''
-        p = configparser.SafeConfigParser()
+        p = configparser.ConfigParser()
         fname = os.path.join(sdir, self.state_file)
         try:
             p.read(fname)
@@ -1014,7 +1014,7 @@ class Report(object):
         '''Exclude messages from log files.
         arg: None (show, clear)
              regex (add)
-             instance of ConfigParser.SafeConfigParser (load, save)
+             instance of ConfigParser.ConfigParser (load, save)
         '''
         if not self.prepare_source(no_live_update=True):
             return False

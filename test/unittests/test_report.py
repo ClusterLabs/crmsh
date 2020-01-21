@@ -2,9 +2,9 @@ import sys
 import os
 import shutil
 from datetime import datetime
-from nose.tools import eq_, ok_
 from unittest import mock
 
+sys.path.append('../..')
 from hb_report.utillib import which, ts_to_dt, sub_string, random_string,\
                               head, create_tempfile, tail, grep,\
                               get_stamp_rfc5424, get_stamp_syslog,\
@@ -61,16 +61,16 @@ some dddd"""
 def test_arch_logs():
     # test blank file
     temp_file = create_tempfile()
-    ok_(not arch_logs(temp_file, time_before, time_between))
+    assert not arch_logs(temp_file, time_before, time_between)
 
     # from_time > last_time
-    ok_(not arch_logs(pacemaker_log, time_after, time_between))
+    assert not arch_logs(pacemaker_log, time_after, time_between)
     # from_time >= first_time
-    eq_(arch_logs(pacemaker_log, time_before, time_between)[0], pacemaker_log)
+    assert arch_logs(pacemaker_log, time_before, time_between)[0] == pacemaker_log
     # to_time == 0
-    eq_(arch_logs(pacemaker_log, time_before, 0)[0], pacemaker_log)
+    assert arch_logs(pacemaker_log, time_before, 0)[0] == pacemaker_log
     # to_time >= first_time
-    eq_(arch_logs(pacemaker_log, time_before, first_time)[0], pacemaker_log)
+    assert arch_logs(pacemaker_log, time_before, first_time)[0] == pacemaker_log
 
     os.remove(temp_file)
 
@@ -84,15 +84,15 @@ def test_Tempfile():
     tmpfile = create_tempfile()
     t.add(tmpfile)
 
-    ok_(os.path.isdir(tmpdir))
-    ok_(os.path.isfile(tmpfile))
-    ok_(os.path.isfile(t.file))
+    assert os.path.isdir(tmpdir)
+    assert os.path.isfile(tmpfile)
+    assert os.path.isfile(t.file)
 
     t.drop()
 
-    ok_(not os.path.isdir(tmpdir))
-    ok_(not os.path.isfile(tmpfile))
-    ok_(not os.path.isfile(t.file))
+    assert not os.path.isdir(tmpdir)
+    assert not os.path.isfile(tmpfile)
+    assert not os.path.isfile(t.file)
 
 
 def test_filter_lines():
@@ -102,47 +102,47 @@ def test_filter_lines():
     out1 = filter_lines(pacemaker_log, begin_line)
     out2 = filter_lines(pacemaker_log, begin_line, end_line)
 
-    eq_(len(out1.split('\n')), 924)
-    eq_(len(out2.split('\n')), 804)
+    assert len(out1.split('\n')) == 924
+    assert len(out2.split('\n')) == 804
 
 
 def test_filter_lines_unicode():
     with open(evil_unicode_log, 'wb') as f:
         f.write(invalid_utf8)
     out1 = filter_lines(evil_unicode_log, 1, 3)
-    eq_(len(out1.split('\n')), 2)
+    assert len(out1.split('\n')) == 2
     os.remove(evil_unicode_log)
 
     out2 = filter_lines(pacemaker_unicode_log, 1, 30)
-    eq_(len(out2.split('\n')), 31)
+    assert len(out2.split('\n')) == 31
 
 
 def test_find_decompressor():
     log_file = "testfile"
-    eq_(find_decompressor(log_file), "cat")
+    assert find_decompressor(log_file) == "cat"
     log_file = "log.bz2"
-    eq_(find_decompressor(log_file), "bzip2 -dc")
+    assert find_decompressor(log_file) == "bzip2 -dc"
     log_file = "log.gz"
-    eq_(find_decompressor(log_file), "gzip -dc")
+    assert find_decompressor(log_file) == "gzip -dc"
     log_file = "log.tar.xz"
-    eq_(find_decompressor(log_file), "xz -dc")
+    assert find_decompressor(log_file) == "xz -dc"
 
     log_file = create_tempfile()
     with open(log_file, 'w') as f:
         f.write("test")
-    eq_(find_decompressor(log_file), "cat")
+    assert find_decompressor(log_file) == "cat"
     os.remove(log_file)
 
 
 def test_find_first_ts():
     with open(pacemaker_log, 'r') as f:
         res = find_first_ts(f.read().split('\n'))
-        eq_(ts_to_dt(res).strftime("%Y/%m/%d %H:%M:%S"), "%d/04/03 11:01:18" % year)
+        assert ts_to_dt(res).strftime("%Y/%m/%d %H:%M:%S") == "%d/04/03 11:01:18" % year
 
 
 def test_find_files():
-    ok_(not find_files("test", "testtime", time_after))
-    ok_(not find_files("test", 0, time_after))
+    assert not find_files("test", "testtime", time_after)
+    assert not find_files("test", 0, time_after)
 
     dirs = make_temp_dir()
     tmpfile1 = create_tempfile(time_between)
@@ -155,8 +155,8 @@ def test_find_files():
     t.add(tmpfile1)
     t.add(tmpfile2)
 
-    eq_(sorted(find_files(dirs, time_before, 0)), sorted([os.path.join(dirs, os.path.basename(tmpfile1)), os.path.join(dirs, os.path.basename(tmpfile2))]))
-    eq_(find_files(dirs, time_before, time_between), [os.path.join(dirs, os.path.basename(tmpfile1))])
+    assert sorted(find_files(dirs, time_before, 0)) == sorted([os.path.join(dirs, os.path.basename(tmpfile1)), os.path.join(dirs, os.path.basename(tmpfile2))])
+    assert find_files(dirs, time_before, time_between) == [os.path.join(dirs, os.path.basename(tmpfile1))]
 
     t.drop()
 
@@ -168,76 +168,76 @@ def test_find_getstampproc():
 efg"""
     with open(temp_file, 'w') as f:
         f.write(in_string1)
-    ok_(not find_getstampproc(temp_file))
+    assert not find_getstampproc(temp_file)
 
     in_string2 = """%s
 %s""" % (line5424_1, line5424_2)
     with open(temp_file, 'w') as f:
         f.write(in_string2)
-    eq_(find_getstampproc(temp_file), "rfc5424")
+    assert find_getstampproc(temp_file) == "rfc5424"
 
     in_string3 = """%s
 %s""" % (linesyslog_1, linesyslog_2)
     with open(temp_file, 'w') as f:
         f.write(in_string3)
-    eq_(find_getstampproc(temp_file), "syslog")
+    assert find_getstampproc(temp_file) == "syslog"
 
     os.remove(temp_file)
 
 
 def test_find_getstampproc_unicode():
-    eq_(find_getstampproc(pacemaker_unicode_log), "syslog")
+    assert find_getstampproc(pacemaker_unicode_log) == "syslog"
 
     with open(evil_unicode_log, 'wb') as f:
         f.write(invalid_utf8)
-    eq_(find_getstampproc(evil_unicode_log), "syslog")
+    assert find_getstampproc(evil_unicode_log) == "syslog"
     os.remove(evil_unicode_log)
 
 
 def test_find_getstampproc_raw():
-    eq_(find_getstampproc_raw(line5424_1), "rfc5424")
-    eq_(find_getstampproc_raw(line5424_2), "rfc5424")
-    eq_(find_getstampproc_raw(linesyslog_1), "syslog")
-    eq_(find_getstampproc_raw(linesyslog_2), "syslog")
+    assert find_getstampproc_raw(line5424_1) == "rfc5424"
+    assert find_getstampproc_raw(line5424_2) == "rfc5424"
+    assert find_getstampproc_raw(linesyslog_1) == "syslog"
+    assert find_getstampproc_raw(linesyslog_2) == "syslog"
 
 
 def test_findln_by_time():
     # time before log happen
-    eq_(findln_by_time(pacemaker_log, time_before), 1)
+    assert findln_by_time(pacemaker_log, time_before) == 1
     # time after log happen
-    eq_(findln_by_time(pacemaker_log, time_after), 923)
+    assert findln_by_time(pacemaker_log, time_after) == 923
     # time between log happen
-    eq_(findln_by_time(pacemaker_log, time_between), 803)
+    assert findln_by_time(pacemaker_log, time_between) == 803
 
 
 def test_findln_by_time():
-    eq_(findln_by_time(pacemaker_unicode_log, time_before), 1)
+    assert findln_by_time(pacemaker_unicode_log, time_before) == 1
 
     with open(evil_unicode_log, 'wb') as f:
         f.write(invalid_utf8)
-    eq_(findln_by_time(evil_unicode_log, time_before), 1)
+    assert findln_by_time(evil_unicode_log, time_before) == 1
     os.remove(evil_unicode_log)
 
 
 def test_get_stamp_rfc5424():
-    ok_(get_stamp_rfc5424(line5424_1))
-    ok_(get_stamp_rfc5424(line5424_2))
+    assert get_stamp_rfc5424(line5424_1)
+    assert get_stamp_rfc5424(line5424_2)
 
 
 def test_get_stamp_syslog():
-    ok_(get_stamp_syslog(linesyslog_1))
-    ok_(get_stamp_syslog(linesyslog_2))
+    assert get_stamp_syslog(linesyslog_1)
+    assert get_stamp_syslog(linesyslog_2)
 
 
 def test_get_ts():
-    eq_(ts_to_dt(get_ts(line5424_1)).strftime("%Y/%m/%d %H:%M"), "2017/01/26 03:04")
-    eq_(ts_to_dt(get_ts(linesyslog_1)).strftime("%m/%d %H:%M:%S"), "05/17 15:52:40")
+    assert ts_to_dt(get_ts(line5424_1)).strftime("%Y/%m/%d %H:%M") == "2017/01/26 03:04"
+    assert ts_to_dt(get_ts(linesyslog_1)).strftime("%m/%d %H:%M:%S") == "05/17 15:52:40"
 
 
 def test_grep():
     res = grep("^Name", incmd="rpm -qi bash")[0]
     _, out = get_command_info("rpm -qi bash|grep \"^Name\"")
-    eq_(res, out.strip("\n"))
+    assert res == out.strip("\n")
 
     in_string = """aaaa
 bbbb
@@ -248,7 +248,7 @@ bbbb
     res = grep("aaaa", infile=temp_file, flag='v')[0]
     _, out = get_command_info("grep -v aaaa %s"%temp_file)
     os.remove(temp_file)
-    eq_(res, out.strip("\n"))
+    assert res == out.strip("\n")
 
 
 def test_grep_unicode():
@@ -256,10 +256,10 @@ def test_grep_unicode():
         f.write(invalid_utf8)
     res = grep("11:01", infile=evil_unicode_log)[0]
     os.remove(evil_unicode_log)
-    eq_(res, 'Apr 03 11:01:18 [13042] \ufffdabc')
+    assert res == 'Apr 03 11:01:18 [13042] \ufffdabc'
 
     res = grep("test_unicode", infile=pacemaker_unicode_log)[0]
-    eq_(res, 'Apr 03 13:37:23 15sp1-1 pacemaker-controld  [1948] (handle_ping)        notice: \\xfc\\xa1\\xa1\\xa1\\xa1\\xa1 test_unicode')
+    assert res == 'Apr 03 13:37:23 15sp1-1 pacemaker-controld  [1948] (handle_ping)        notice: \\xfc\\xa1\\xa1\\xa1\\xa1\\xa1 test_unicode'
 
 
 def test_head():
@@ -272,50 +272,50 @@ def test_head():
     res = head(3, data)
 
     os.remove(temp_file)
-    eq_(out.rstrip('\n'), '\n'.join(res))
+    assert out.rstrip('\n') == '\n'.join(res)
 
 
 def test_is_our_log():
     # empty log
     temp_file = create_tempfile()
-    eq_(is_our_log(temp_file, time_before, time_between), 0)
+    assert is_our_log(temp_file, time_before, time_between) == 2
 
     # from_time > last_time
-    eq_(is_our_log(pacemaker_log, time_after, time_between), 2)
+    assert is_our_log(pacemaker_log, time_after, time_between) == 2
     # from_time >= first_time
-    eq_(is_our_log(pacemaker_log, time_between, time_after), 3)
+    assert is_our_log(pacemaker_log, time_between, time_after) == 3
     # to_time == 0
-    eq_(is_our_log(pacemaker_log, time_before, 0), 1)
+    assert is_our_log(pacemaker_log, time_before, 0) == 1
     # to_time >= first_time
-    eq_(is_our_log(pacemaker_log, time_before, first_time), 1)
+    assert is_our_log(pacemaker_log, time_before, first_time) == 1
 
     os.remove(temp_file)
 
 
 def test_is_our_log_unicode():
-    eq_(is_our_log(pacemaker_unicode_log, time_before, 0), 1)
+    assert is_our_log(pacemaker_unicode_log, time_before, 0) == 1
 
     with open(evil_unicode_log, 'wb') as f:
         f.write(invalid_utf8)
-    eq_(is_our_log(evil_unicode_log, time_before, 0), 1)
+    assert is_our_log(evil_unicode_log, time_before, 0) == 1
     os.remove(evil_unicode_log)
 
 
 def test_line_time():
-    eq_(ts_to_dt(line_time(pacemaker_log, 2)).strftime("%Y/%m/%d %H:%M:%S"), "%d/04/03 11:01:18" % year)
-    eq_(ts_to_dt(line_time(pacemaker_log, 195)).strftime("%Y/%m/%d %H:%M:%S"),"%d/04/03 11:01:40" % year)
+    assert ts_to_dt(line_time(pacemaker_log, 2)).strftime("%Y/%m/%d %H:%M:%S") == "%d/04/03 11:01:18" % year
+    assert ts_to_dt(line_time(pacemaker_log, 195)).strftime("%Y/%m/%d %H:%M:%S") == "%d/04/03 11:01:40" % year
 
 
 def test_line_time_unicode():
-    eq_(ts_to_dt(line_time(pacemaker_unicode_log, 3)).strftime("%Y/%m/%d %H:%M:%S"), "%d/04/03 11:01:18" % year)
+    assert ts_to_dt(line_time(pacemaker_unicode_log, 3)).strftime("%Y/%m/%d %H:%M:%S") == "%d/04/03 11:01:18" % year
     with open(evil_unicode_log, 'wb') as f:
         f.write(invalid_utf8)
-    eq_(ts_to_dt(line_time(evil_unicode_log, 1)).strftime("%Y/%m/%d %H:%M:%S"), "%d/04/03 11:01:18" % year)
+    assert ts_to_dt(line_time(evil_unicode_log, 1)).strftime("%Y/%m/%d %H:%M:%S") == "%d/04/03 11:01:18" % year
     os.remove(evil_unicode_log)
 
 
 def test_random_string():
-    eq_(len(random_string(8)), 8)
+    assert len(random_string(8)) == 8
 
 
 def test_sub_string():
@@ -333,7 +333,7 @@ I like name="password" value="******" some="more".
 some number some number
 """
     pattern = "passw.* OSS"
-    eq_(sub_string(in_string, pattern), out_string)
+    assert sub_string(in_string, pattern) == out_string
 
 
 def test_tail():
@@ -346,7 +346,7 @@ def test_tail():
     res = tail(3, data)
 
     os.remove(temp_file)
-    eq_(out.rstrip('\n'), '\n'.join(res))
+    assert out.rstrip('\n') == '\n'.join(res)
 
 
 def test_ts_to_dt():
@@ -356,22 +356,22 @@ def test_ts_to_dt():
     ts4 = crmsh.utils.parse_to_timestamp("09-Sep-15 2:00")
     ts5 = crmsh.utils.parse_to_timestamp("2017-06-01T14:27:08.412531+08:00")
 
-    eq_(ts_to_dt(ts1).strftime("%-I%P"), "2pm")
-    eq_(ts_to_dt(ts2).strftime("%Y/%-m/%-d %H:%M"), "2007/9/5 12:30")
-    eq_(ts_to_dt(ts3).strftime("%-H:%M"), "1:00")
-    eq_(ts_to_dt(ts4).strftime("%d-%b-%y %-H:%M"), "09-Sep-15 2:00")
-    eq_(ts_to_dt(ts5).strftime("%Y/%m/%d %H:%M:%S"), "2017/06/01 06:27:08")
+    assert ts_to_dt(ts1).strftime("%-I%P") == "2pm"
+    assert ts_to_dt(ts2).strftime("%Y/%-m/%-d %H:%M") == "2007/9/5 12:30"
+    assert ts_to_dt(ts3).strftime("%-H:%M") == "1:00"
+    assert ts_to_dt(ts4).strftime("%d-%b-%y %-H:%M") == "09-Sep-15 2:00"
+    assert ts_to_dt(ts5).strftime("%Y/%m/%d %H:%M:%S") == "2017/06/01 06:27:08"
 
 
 def test_which():
-    ok_(which("ls"))
-    ok_(not which("llll"))
+    assert which("ls")
+    assert not which("llll")
 
 
 @mock.patch('crmsh.utils.get_stdout_stderr')
 def test_dump_D_process_None(mock_get_stdout_stderr):
     mock_get_stdout_stderr.return_value = (0, None, None)
-    eq_(hb_report.utillib.dump_D_process(), "Dump D-state process stack: 0\n")
+    assert hb_report.utillib.dump_D_process() == "Dump D-state process stack: 0\n"
     mock_get_stdout_stderr.assert_called_once_with("ps aux|awk '$8 ~ /^D/{print $2}'")
 
 
@@ -385,7 +385,7 @@ def test_dump_D_process_None(mock_get_stdout_stderr):
             (0, "stack_out for 10002", None)
             ]
     out_string = "Dump D-state process stack: 2\npid: 10001     comm: comm_out for 10001\nstack_out for 10001\n\npid: 10002     comm: comm_out for 10002\nstack_out for 10002\n\n"
-    eq_(hb_report.utillib.dump_D_process(), out_string)
+    assert hb_report.utillib.dump_D_process() == out_string
     mock_get_stdout_stderr.assert_has_calls([
         mock.call("ps aux|awk '$8 ~ /^D/{print $2}'"),
         mock.call("cat /proc/10001/comm"),

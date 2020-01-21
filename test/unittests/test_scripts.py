@@ -8,7 +8,7 @@ from builtins import str
 from builtins import object
 from os import path
 from pprint import pprint
-from nose.tools import eq_, with_setup, assert_raises
+import pytest
 from lxml import etree
 from crmsh import scripts
 from crmsh import ra
@@ -430,7 +430,7 @@ _saved_get_ra = ra.get_ra
 _saved_cluster_nodes = utils.list_cluster_nodes
 
 
-def setup_func():
+def setup_function():
     "hijack ra.get_ra to add new resource class (of sorts)"
     class Agent(object):
         def __init__(self, name):
@@ -451,26 +451,24 @@ def setup_func():
     utils.list_cluster_nodes = lambda: [utils.this_node(), 'a', 'b', 'c']
 
 
-def teardown_func():
+def teardown_function():
     ra.get_ra = _saved_get_ra
     utils.list_cluster_nodes = _saved_cluster_nodes
 
 
 def test_list():
-    eq_(set(['v2', 'legacy', '10-webserver', 'inc1', 'inc2', 'vip', 'vipinc', 'unified']),
-        set(s for s in scripts.list_scripts()))
+    assert set(['v2', 'legacy', '10-webserver', 'inc1', 'inc2', 'vip', 'vipinc', 'unified']) == set(s for s in scripts.list_scripts())
 
 
-@with_setup(setup_func, teardown_func)
 def test_load_legacy():
     script = scripts.load_script('legacy')
     assert script is not None
-    eq_('legacy', script['name'])
+    assert 'legacy' == script['name']
     assert len(script['shortdesc']) > 0
     pprint(script)
     actions = scripts.verify(script, {}, external_check=False)
     pprint(actions)
-    eq_([{'longdesc': '',
+    assert [{'longdesc': '',
           'name': 'apply_local',
           'shortdesc': 'Configure SSH',
           'text': '',
@@ -504,21 +502,20 @@ def test_load_legacy():
           'name': 'apply_local',
           'shortdesc': 'Initialize cluster',
           'text': '',
-          'value': 'init.py'}], actions)
+          'value': 'init.py'}] == actions
 
 
 def test_load_workflow():
     script = scripts.load_script('10-webserver')
     assert script is not None
-    eq_('10-webserver', script['name'])
+    assert '10-webserver' == script['name']
     assert len(script['shortdesc']) > 0
 
 
-@with_setup(setup_func, teardown_func)
 def test_v2():
     script = scripts.load_script('v2')
     assert script is not None
-    eq_('v2', script['name'])
+    assert 'v2' == script['name']
     assert len(script['shortdesc']) > 0
 
     actions = scripts.verify(
@@ -528,7 +525,7 @@ def test_v2():
          'virtual-ip': {'id': 'www-vip', 'ip': '192.168.1.100'},
          'install': False}, external_check=False)
     pprint(actions)
-    eq_(len(actions), 1)
+    assert len(actions) == 1
     assert str(actions[0]['text']).find('group www') >= 0
 
     actions = scripts.verify(
@@ -538,10 +535,9 @@ def test_v2():
          'virtual-ip': {'id': 'www-vip', 'ip': '192.168.1.100'},
          'install': True}, external_check=False)
     pprint(actions)
-    eq_(len(actions), 3)
+    assert len(actions) == 3
 
 
-@with_setup(setup_func, teardown_func)
 def test_agent_include():
     inc2 = scripts.load_script('inc2')
     actions = scripts.verify(
@@ -550,24 +546,22 @@ def test_agent_include():
          'foo': 'cde',
          'included-script': {'foo': True, 'bar': 'bah bah'}}, external_check=False)
     pprint(actions)
-    eq_(len(actions), 6)
-    eq_('33\n\nabc', actions[-1]['text'].strip())
+    assert len(actions) == 6
+    assert '33\n\nabc' == actions[-1]['text'].strip()
 
 
-@with_setup(setup_func, teardown_func)
 def test_vipinc():
     script = scripts.load_script('vipinc')
     assert script is not None
     actions = scripts.verify(
         script,
         {'vip': {'id': 'vop', 'ip': '10.0.0.4'}}, external_check=False)
-    eq_(len(actions), 1)
+    assert len(actions) == 1
     pprint(actions)
     assert actions[0]['text'].find('primitive vop test:virtual-ip\n\tip="10.0.0.4"') >= 0
     assert actions[0]['text'].find("clone c-vop vop") >= 0
 
 
-@with_setup(setup_func, teardown_func)
 def test_value_replace_handles():
     a = '''---
 - version: 2.2
@@ -597,12 +591,11 @@ def test_value_replace_handles():
     assert script_b is not None
     actions = scripts.verify(script_b,
                              {'wiz': "SARUMAN"}, external_check=False)
-    eq_(len(actions), 1)
+    assert len(actions) == 1
     pprint(actions)
     assert actions[0]['text'] == "SARUMAN+SARUMAN"
 
 
-@with_setup(setup_func, teardown_func)
 def test_optional_step_ref():
     """
     It seems I have a bug in referencing ids from substeps.
@@ -637,7 +630,7 @@ def test_optional_step_ref():
 
     actions = scripts.verify(script_a,
                              {"id": "apacho"}, external_check=False)
-    eq_(len(actions), 1)
+    assert len(actions) == 1
     pprint(actions)
     assert actions[0]['text'] == "primitive apacho test:apache"
 
@@ -645,12 +638,11 @@ def test_optional_step_ref():
     #ipdb.set_trace()
     actions = scripts.verify(script_b,
                              {'wiz': "SARUMAN", "apache": {"id": "apacho"}}, external_check=False)
-    eq_(len(actions), 1)
+    assert len(actions) == 1
     pprint(actions)
     assert actions[0]['text'] == "primitive SARUMAN apacho"
 
 
-@with_setup(setup_func, teardown_func)
 def test_enums_basic():
     a = '''---
 - version: 2.2
@@ -672,18 +664,17 @@ def test_enums_basic():
 
     actions = scripts.verify(script_a,
                              {"foo": "one"}, external_check=False)
-    eq_(len(actions), 1)
+    assert len(actions) == 1
     pprint(actions)
     assert actions[0]['text'] == "one"
 
     actions = scripts.verify(script_a,
                              {"foo": "three"}, external_check=False)
-    eq_(len(actions), 1)
+    assert len(actions) == 1
     pprint(actions)
     assert actions[0]['text'] == "three"
 
 
-@with_setup(setup_func, teardown_func)
 def test_enums_fail():
     a = '''---
 - version: 2.2
@@ -704,10 +695,10 @@ def test_enums_fail():
 
     def ver():
         return scripts.verify(script_a, {"foo": "wrong"}, external_check=False)
-    assert_raises(ValueError, ver)
+    with pytest.raises(ValueError):
+        ver()
 
 
-@with_setup(setup_func, teardown_func)
 def test_enums_fail2():
     a = '''---
 - version: 2.2
@@ -724,10 +715,10 @@ def test_enums_fail2():
 
     def ver():
         return scripts.verify(script_a, {"foo": "one"}, external_check=False)
-    assert_raises(ValueError, ver)
+    with pytest.raises(ValueError):
+        ver()
 
 
-@with_setup(setup_func, teardown_func)
 def test_two_substeps():
     """
     There is a scoping bug
@@ -768,12 +759,11 @@ def test_two_substeps():
 
     actions = scripts.verify(script_b,
                              {'wiz': "head", "apache-a": {"id": "one"}, "apache-b": {"id": "two"}}, external_check=False)
-    eq_(len(actions), 1)
+    assert len(actions) == 1
     pprint(actions)
     assert actions[0]['text'] == "primitive one test:apache\n\nprimitive two test:apache\n\nprimitive head one two"
 
 
-@with_setup(setup_func, teardown_func)
 def test_required_subscript_params():
     """
     If an optional subscript has multiple required parameters,
@@ -815,10 +805,10 @@ def test_required_subscript_params():
         actions = scripts.verify(script_b,
                                  {"foofoo": {"foo": "one"}}, external_check=False)
         pprint(actions)
-    assert_raises(ValueError, ver)
+    with pytest.raises(ValueError):
+        ver()
 
 
-@with_setup(setup_func, teardown_func)
 def test_unified():
     unified = scripts.load_script('unified')
     actions = scripts.verify(
@@ -826,8 +816,8 @@ def test_unified():
         {'id': 'foo',
          'vip': {'id': 'bar', 'ip': '192.168.0.15'}}, external_check=False)
     pprint(actions)
-    eq_(len(actions), 1)
-    eq_('primitive bar IPaddr2 ip=192.168.0.15\ngroup g-foo foo bar', actions[-1]['text'].strip())
+    assert len(actions) == 1
+    assert 'primitive bar IPaddr2 ip=192.168.0.15\ngroup g-foo foo bar' == actions[-1]['text'].strip()
 
 
 class TestPrinter(object):
@@ -842,7 +832,6 @@ class TestPrinter(object):
         for name in ('print_header', 'debug', 'error', 'start', 'flush', 'print_command', 'finish'):
             add_capture(name)
 
-@with_setup(setup_func, teardown_func)
 def test_inline_script():
     """
     Test inline script feature for call actions
@@ -881,7 +870,6 @@ def test_inline_script():
             assert args[0]['value'] == '#!/bin/sh\necho "hello world"'
 
 
-@with_setup(setup_func, teardown_func)
 def test_when_expression():
     """
     Test when expressions
