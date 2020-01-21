@@ -1,15 +1,15 @@
 #!/bin/bash
-Tumbleweed_image='liangxin1300/hatbw'
+Docker_image='liangxin1300/haleap:15.2'
 HA_packages='pacemaker corosync corosync-qdevice'
 TEST_TYPE='bootstrap qdevice hb_report'
 
 before() {
-  docker pull ${Tumbleweed_image}
+  docker pull ${Docker_image}
   docker network create --subnet 10.10.10.0/24 second_net
 
   # deploy first node hanode1
   docker run -d --name=hanode1 --hostname hanode1 \
-             --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" ${Tumbleweed_image}
+             --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" ${Docker_image}
   docker network connect --ip=10.10.10.2 second_net hanode1
   docker exec -t hanode1 /bin/sh -c "echo \"10.10.10.3 hanode2\" >> /etc/hosts"
   if [ x"$1" == x"qdevice" ];then
@@ -21,7 +21,7 @@ before() {
 
   # deploy second node hanode2
   docker run -d --name=hanode2 --hostname hanode2 \
-             --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" ${Tumbleweed_image}
+             --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" ${Docker_image}
   docker network connect --ip=10.10.10.3 second_net hanode2
   docker exec -t hanode2 /bin/sh -c "echo \"10.10.10.2 hanode1\" >> /etc/hosts"
   if [ x"$1" == x"qdevice" ];then
@@ -34,14 +34,14 @@ before() {
   if [ x"$1" == x"qdevice" ];then
     # deploy node qnetd-node for qnetd service
     docker run -d --name=qnetd-node --hostname qnetd-node \
-	       --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro ${Tumbleweed_image}
+	       --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro ${Docker_image}
     docker network connect --ip=10.10.10.9 second_net qnetd-node
     docker exec -t qnetd-node /bin/sh -c "zypper -n in corosync-qnetd"
     docker exec -t qnetd-node /bin/sh -c "systemctl start sshd.service"
 
     # deploy node without ssh.service running for validation
     docker run -d --name=node-without-ssh --hostname node-without-ssh \
-	       --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro ${Tumbleweed_image}
+	       --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro ${Docker_image}
     docker network connect --ip=10.10.10.10 second_net node-without-ssh
     docker exec -t node-without-ssh /bin/sh -c "systemctl stop sshd.service"
   fi

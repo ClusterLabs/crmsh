@@ -1,5 +1,10 @@
-FROM opensuse/leap:15
-MAINTAINER Kristoffer Gronlund version: 0.5
+FROM opensuse/leap:15.2
+MAINTAINER Xin Liang <XLiang@suse.com>
+
+ARG ssh_prv_key
+ARG ssh_pub_key
+# Above is for passwordless ssh
+# docker build -t haleap --build-arg ssh_prv_key="$(cat /root/.ssh/id_rsa)" --build-arg ssh_pub_key="$(cat /root/.ssh/id_rsa.pub)" .
 
 ENV container docker
 
@@ -13,10 +18,16 @@ rm -f /usr/lib/systemd/system/sockets.target.wants/*initctl*; \
 rm -f /usr/lib/systemd/system/basic.target.wants/*;\
 rm -f /usr/lib/systemd/system/anaconda.target.wants/*;
 
+RUN mkdir -p /root/.ssh && chmod 0700 /root/.ssh
+RUN echo "$ssh_prv_key" > /root/.ssh/id_rsa && chmod 600 /root/.ssh/id_rsa
+RUN echo "$ssh_pub_key" > /root/.ssh/id_rsa.pub && chmod 600 /root/.ssh/id_rsa.pub
+RUN echo "$ssh_pub_key" > /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys
+
+RUN zypper -n install make autoconf automake vim which libxslt-tools mailx iproute2 iputils bzip2 openssh tar file
+RUN zypper -n install python3 python3-lxml python3-python-dateutil python3-parallax python3-setuptools python3-PyYAML python3-curses python3-pip
+RUN zypper -n install csync2 libglue-devel corosync corosync-qdevice pacemaker
+RUN pip install --upgrade pip
+RUN pip install behave tox
+
 VOLUME [ "/sys/fs/cgroup" ]
-
-RUN zypper -n --gpg-auto-import-keys ar obs://network:ha-clustering:Factory network:ha-clustering:Factory
-RUN zypper -n --gpg-auto-import-keys ref && zypper -n --gpg-auto-import-keys in pacemaker python3 python3-lxml python3-python-dateutil python3-parallax libglue-devel python3-setuptools python3-tox asciidoc autoconf automake make pkgconfig which libxslt-tools mailx procps python3-nose python3-PyYAML python3-curses tar
-
 CMD ["/usr/lib/systemd/systemd", "--system"]
-
