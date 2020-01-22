@@ -18,6 +18,7 @@ import random
 import re
 import time
 import readline
+import shutil
 from string import Template
 from lxml import etree
 from . import config
@@ -38,6 +39,7 @@ SYSCONFIG_SBD = "/etc/sysconfig/sbd"
 SYSCONFIG_FW = "/etc/sysconfig/SuSEfirewall2"
 SYSCONFIG_FW_CLUSTER = "/etc/sysconfig/SuSEfirewall2.d/services/cluster"
 PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
+COROSYNC_CONF_ORIG = tmpfiles.create()[1]
 
 
 INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin", "qdevice")
@@ -228,11 +230,51 @@ def wait_for_cluster():
     status_long("Waiting for cluster")
     while True:
         _rc, out, _err = utils.get_stdout_stderr("crm_mon -1")
-        if "online" in out.lower():
+        if is_online(out):
             break
         status_progress()
-        sleep(5)
+        sleep(2)
     status_done()
+
+
+def get_cluster_node_hostname():
+    """
+    Get the hostname of the cluster node used during the join process if an IP address is used.
+    """
+    peer_node = None
+    if _context.cluster_node:
+        if utils.valid_ip_addr(_context.cluster_node):
+            rc, out, err = utils.get_stdout_stderr("ssh {} crm_node --name".format(_context.cluster_node))
+            if rc != 0:
+                error(err)
+            peer_node = out
+        else:
+            peer_node = _context.cluster_node
+    return peer_node
+
+
+def is_online(crm_mon_txt):
+    """
+    Check whether local node is online
+    Besides that, in join process, check whether init node is online
+    """
+    if not re.search("Online: .* {} ".format(utils.this_node()), crm_mon_txt):
+        return False
+
+    # if peer_node is None, this is in the init process
+    peer_node = get_cluster_node_hostname()
+    if peer_node is None:
+        return True
+    # In join process
+    # If the joining node is already online but can't find the init node
+    # The communication IP maybe mis-configured
+    if not re.search("Online: .* {} ".format(peer_node), crm_mon_txt):
+        shutil.copy(COROSYNC_CONF_ORIG, corosync.conf())
+        csync2_update(corosync.conf())
+        stop_service("corosync")
+        print()
+        error("Cannot see peer node \"{}\", please check the communication IP".format(peer_node))
+    return True
 
 
 def pick_default_value(default_list, prev_list):
@@ -1845,6 +1887,8 @@ def join_cluster(seed_host):
             invoke("crm cluster run '{}' {}".format(cmd, node))
         else:
             corosync.set_value("totem.nodeid", nodeid)
+
+    shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
 
     # check if use IPv6
     ipv6_flag = False
