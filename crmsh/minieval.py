@@ -200,9 +200,13 @@ class SimpleEval(object):  # pylint: disable=too-few-public-methods
 
         # py3k stuff:
         if hasattr(ast, 'NameConstant'):
-            self.nodes[ast.NameConstant] = self._eval_nameconstant
+            self.nodes[ast.NameConstant] = self._eval_constant
         elif isinstance(self.names, dict) and "None" not in self.names:
             self.names["None"] = None
+
+        # py3.8 uses ast.Constant instead of ast.Num, ast.Str, ast.NameConstant
+        if hasattr(ast, 'Constant'):
+            self.nodes[ast.Constant] = self._eval_constant
 
     def evaluate(self, expr):
         """ evaluate an expresssion, using the operators, functions and
@@ -239,7 +243,13 @@ class SimpleEval(object):  # pylint: disable=too-few-public-methods
         return node.s
 
     @staticmethod
-    def _eval_nameconstant(node):
+    def _eval_constant(node):
+        if (hasattr(node.value, '__len__') and
+                len(node.value) > MAX_STRING_LENGTH):
+            raise IterableTooLong("Literal in statement is too long!"
+                                  " ({0}, when {1} is max)"
+                                  "".format(len(node.value),
+                                            MAX_STRING_LENGTH))
         return node.value
 
     def _eval_unaryop(self, node):
