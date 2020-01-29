@@ -2083,6 +2083,11 @@ class IP:
     def version(self):
         return self.addr.version
 
+
+def is_ipv6(addr):
+    return IP(addr).version() == 6
+
+
 # Set by detect_cloud() or iplist_for_cloud()
 # to avoid multiple requests
 _ip_for_cloud = None
