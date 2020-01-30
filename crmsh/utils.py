@@ -2233,7 +2233,7 @@ def detect_cloud():
     if not is_program("dmidecode"):
         return None
     rc, system_version = get_stdout("dmidecode -s system-version")
-    if re.search(r"\<.*\.amazon\>", system_version) is not None:
+    if re.search(r".*amazon.*", system_version) is not None:
         return "amazon-web-services"
     if rc != 0:
         return None
