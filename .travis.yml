@@ -13,7 +13,13 @@ env:
 jobs:
   include:
     - stage: test
-      name: "original regression test"
+      name: "unit test"
+      before_install:
+        - docker pull liangxin1300/haleap:42.3
+      script:
+        - docker run -t -v "$(pwd):/app" liangxin1300/haleap:42.3 /bin/sh -c "cd /app; TOXENV=py27-codeclimate; tox"
+
+    - name: "original regression test"
       before_script:
         - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
         - chmod +x ./cc-test-reporter
