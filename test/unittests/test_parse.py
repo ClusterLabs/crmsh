@@ -8,7 +8,6 @@ import unittest
 import shlex
 from crmsh.utils import lines2cli
 from lxml import etree
-from nose.tools import ok_, eq_
 
 
 class MockValidation(parse.Validation):
@@ -561,12 +560,12 @@ class TestCliParser(unittest.TestCase):
         meta target-role=Started"""
 
         outp = self._parse_lines(inp)
-        eq_(len(outp), 1)
-        eq_('primitive', outp[0].tag)
+        self.assertEqual(len(outp), 1)
+        self.assertEqual('primitive', outp[0].tag)
         # print etree.tostring(outp[0])
         verbose = outp[0].xpath('//nvpair[@name="verbose"]')
-        eq_(len(verbose), 1)
-        ok_('value' not in verbose[0].attrib)
+        self.assertEqual(len(verbose), 1)
+        self.assertTrue('value' not in verbose[0].attrib)
 
 
     def test_configs(self):

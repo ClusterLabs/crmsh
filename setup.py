@@ -12,5 +12,5 @@ setup(name='crmsh',
       packages=['crmsh'],
       install_requires=['parallax', 'lxml', 'PyYAML', 'python-dateutil'],
       scripts=['bin/crm'],
-      data_files=[('/usr/share/crmsh', ['doc/crm.8.adoc'])],
+      #data_files=[('/usr/share/crmsh', ['doc/crm.8.adoc'])],
       include_package_data=True)

@@ -1,10 +1,4 @@
 #!/bin/sh
-
-unit_tests() {
-	echo "** Unit tests"
-	./test/run
-}
-
 configure() {
 	echo "** Autogen / Configure"
 	./autogen.sh
@@ -36,9 +30,7 @@ case "$1" in
 		functional_tests $1 $2
 		exit $?;;
 	*)
-		unit_tests
-		rc_unittest=$?
 		configure
 		make_install
-		regression_tests && exit $rc_unittest;;
+		regression_tests;;
 esac
