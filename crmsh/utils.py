@@ -121,6 +121,13 @@ def network_v6_all():
 
 
 def ip_in_local(IPv6=False):
+    # short-circuit ip list handling for
+    # cloud providers in order to use
+    # metadata service instead
+    ips = iplist_for_cloud()
+    if len(ips) > 0:
+        return ips
+
     if not IPv6:
         regex = r' [0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]+ '
     else:
@@ -2178,6 +2185,95 @@ class Network(IP):
         :type ip: :class:`IP` or str or long or int
         """
         return self.__contains__(ip)
+
+# Set by detect_cloud() or iplist_for_cloud()
+# to avoid multiple requests
+_ip_for_cloud = None
+
+
+def _cloud_metadata_request(uri, headers={}):
+    try:
+        import urllib2 as urllib
+    except ImportError:
+        import urllib.request as urllib
+    req = urllib.Request(uri)
+    for header, value in headers.items():
+        req.add_header(header, value)
+    try:
+        resp = urllib.urlopen(req, timeout=5)
+        content = resp.read()
+        if type(content) != str:
+            return content.decode('utf-8').strip()
+        return content.strip()
+    except urllib.URLError:
+        return None
+
+
+@memoize
+def detect_cloud():
+    """
+    Tries to determine which (if any) cloud environment
+    the cluster is running on.
+
+    This is mainly done using dmidecode.
+
+    If the host cannot be determined, this function
+    returns None. Otherwise, it returns a string
+    identifying the platform.
+
+    These are the currently known platforms:
+
+    * amazon-web-services
+    * microsoft-azure
+    * google-cloud-platform
+
+    """
+    global _ip_for_cloud
+
+    if not is_program("dmidecode"):
+        return None
+    rc, system_version = get_stdout("dmidecode -s system-version")
+    if re.search(r".*amazon.*", system_version) is not None:
+        return "amazon-web-services"
+    if rc != 0:
+        return None
+    rc, system_manufacturer = get_stdout("dmidecode -s system-manufacturer")
+    if rc == 0 and "microsoft corporation" in system_manufacturer.lower():
+        # To detect azure we also need to make an API request
+        result = _cloud_metadata_request(
+            "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/privateIpAddress?api-version=2017-08-01&format=text",
+            headers={"Metadata": "true"})
+        if result:
+            _ip_for_cloud = result
+            return "microsoft-azure"
+    rc, bios_vendor = get_stdout("dmidecode -s bios-vendor")
+    if rc == 0 and "Google" in bios_vendor:
+        # To detect GCP we also need to make an API request
+        result = _cloud_metadata_request(
+            "http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ip",
+            headers={"Metadata-Flavor": "Google"})
+        if result:
+            _ip_for_cloud = result
+            return "google-cloud-platform"
+    return None
+
+
+def iplist_for_cloud():
+    """
+    Return list of viable IPs for the
+    current cloud provider (if any)
+    """
+    global _ip_for_cloud
+    provider = detect_cloud()
+    if _ip_for_cloud is not None:
+        return [_ip_for_cloud]
+    if provider == "amazon-web-services":
+        uri = "http://169.254.169.254/latest/meta-data/local-ipv4"
+        result = _cloud_metadata_request(uri)
+        if result:
+            _ip_for_cloud = result
+            return [_ip_for_cloud]
+    return []
 
 
 def check_space_option_value(options):

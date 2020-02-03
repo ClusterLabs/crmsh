@@ -217,7 +217,7 @@ def wait_for_stop(message, resource):
 def wait_for_cluster():
     status_long("Waiting for cluster")
     while True:
-        rc, out, err = utils.get_stdout_stderr("crm_mon -1")
+        _rc, out, _err = utils.get_stdout_stderr("crm_mon -1")
         if "online" in out.lower():
             break
         status_progress()
@@ -761,7 +761,7 @@ def valid_network(addr, prev_value=None):
 
 def valid_v6_network(addr, prev_value=None):
     """
-    bindnetaddr(IPv6) must one of the local networks
+    bindnetaddr(IPv6) must be one of the local networks
     """
     if prev_value and addr == prev_value[0]:
         warn("  Network address '{}' is already in use!".format(addr))
@@ -783,11 +783,11 @@ def valid_v6_network(addr, prev_value=None):
 
 def valid_ucastIP(addr, prev_value=None):
     if prev_value and addr == prev_value[0]:
-        print(term.render(clidisplay.error("    {} has been used".format(addr))))
+        print(term.render(clidisplay.error("    IP {} is already in use".format(addr))))
         return False
     ip_local = utils.ip_in_local(_context.ipv6)
     if addr not in ip_local:
-        print(term.render(clidisplay.error("    Must one of {}".format(ip_local))))
+        print(term.render(clidisplay.error("    IP must be a local address (one of {})".format(ip_local))))
         return False
     return True
 
@@ -891,7 +891,7 @@ Configure Corosync (unicast):
                                       valid_port,
                                       mcastport_res)
         if not mcastport:
-            error("No value for mcastport")
+            error("Expected a multicast port for ring{}".format(i))
         mcastport_res.append(mcastport)
 
         if i == 1 or \
@@ -1034,14 +1034,14 @@ def init_corosync():
     """
     Configure corosync (unicast or multicast, encrypted?)
     """
-    def check_amazon():
-        if not utils.is_program("dmidecode"):
-            return False
-        _rc, outp = utils.get_stdout("dmidecode -s system-version")
-        return re.search(r"\<.*\.amazon\>", outp) is not None
+    def requires_unicast():
+        host = utils.detect_cloud()
+        if host is not None:
+            status("Detected cloud platform: {}".format(host))
+        return host is not None
 
     init_corosync_auth()
-    if _context.unicast or check_amazon():
+    if _context.unicast or requires_unicast():
         init_corosync_unicast()
     else:
         init_corosync_multicast()
@@ -1689,7 +1689,7 @@ def join_cluster(seed_host):
                 _, outp = utils.get_stdout("ip addr show")
                 tmp = re.findall(r' {}/[0-9]+ '.format(ringXaddr), outp, re.M)[0].strip()
                 peer_ip = corosync.get_value("nodelist.node.ring{}_addr".format(i))
-                # e.g. peer ring0_addr and local ring0_addr must int the same network
+                # peer ring0_addr and local ring0_addr must be configured in the same network
                 if peer_ip not in utils.Network(tmp):
                     errmsg = "Peer IP {} is not in the same network: {}".format(peer_ip, tmp)
                     if _context.yes_to_all:
