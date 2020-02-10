@@ -11,7 +11,6 @@ import socket
 from . import utils
 from . import tmpfiles
 from . import parallax
-from . import bootstrap
 from .msg import err_buf, common_debug
 
 
@@ -197,6 +196,7 @@ class QDevice(object):
         self.manage_qnetd("stop")
 
     def debug_and_log_to_bootstrap(self, msg):
+        from . import bootstrap
         common_debug(msg)
         bootstrap.log("# " + msg)
 
