@@ -32,7 +32,6 @@ class TestBootstrap(unittest.TestCase):
         Global setUp.
         """
 
-    #@mock.patch('crmsh.bootstrap.Context')
     def setUp(self):
         """
         Test setUp.
@@ -158,3 +157,128 @@ class TestBootstrap(unittest.TestCase):
             mock.call(['10.10.10.1', '20.20.20.1'], '1'),
             mock.call(['10.10.10.2', '20.20.20.2'], '2')
         ])
+
+    @mock.patch('crmsh.utils.valid_ip_addr')
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    def test_get_cluster_node_hostname_None(self, mock_stdout_stderr, mock_valid_ip):
+        bootstrap._context = mock.Mock(cluster_node=None)
+
+        peer_node = bootstrap.get_cluster_node_hostname()
+        assert peer_node is None
+
+        mock_valid_ip.assert_not_called()
+        mock_stdout_stderr.assert_not_called()
+
+    @mock.patch('crmsh.utils.valid_ip_addr')
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    def test_get_cluster_node_hostname_IP(self, mock_stdout_stderr, mock_valid_ip):
+        bootstrap._context = mock.Mock(cluster_node="1.1.1.1")
+        mock_valid_ip.return_value = True
+        mock_stdout_stderr.return_value = (0, "node1", None)
+
+        peer_node = bootstrap.get_cluster_node_hostname()
+        assert peer_node == "node1"
+
+        mock_valid_ip.assert_called_once_with("1.1.1.1")
+        mock_stdout_stderr.assert_called_once_with("ssh 1.1.1.1 crm_node --name")
+
+    @mock.patch('crmsh.utils.valid_ip_addr')
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    def test_get_cluster_node_hostname_HOST(self, mock_stdout_stderr, mock_valid_ip):
+        bootstrap._context = mock.Mock(cluster_node="node2")
+        mock_valid_ip.return_value = False
+
+        peer_node = bootstrap.get_cluster_node_hostname()
+        assert peer_node == "node2"
+
+        mock_valid_ip.assert_called_once_with("node2")
+        mock_stdout_stderr.assert_not_called()
+
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('re.search')
+    @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
+    def test_is_online_local_offline(self, mock_get_peer, mock_search, mock_this_node):
+        mock_this_node.return_value = "node1"
+        mock_search.return_value = None
+
+        assert bootstrap.is_online("text") is False
+
+        mock_this_node.assert_called_once_with()
+        mock_get_peer.assert_not_called()
+        mock_search.assert_called_once_with("Online: .* node1 ", "text")
+
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('re.search')
+    @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
+    def test_is_online_on_init_node(self, mock_get_peer, mock_search, mock_this_node):
+        mock_search.return_value = mock.Mock()
+        mock_this_node.return_value = "node1"
+        mock_get_peer.return_value = None
+
+        assert bootstrap.is_online("text") is True
+
+        mock_this_node.assert_called_once_with()
+        mock_get_peer.assert_called_once_with()
+        mock_search.assert_called_once_with("Online: .* node1 ", "text")
+
+    @mock.patch('crmsh.bootstrap.error')
+    @mock.patch('crmsh.bootstrap.stop_service')
+    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.corosync.conf')
+    @mock.patch('shutil.copy')
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('re.search')
+    @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
+    def test_is_online_peer_offline(self, mock_get_peer, mock_search, mock_this_node,
+            mock_copy, mock_corosync_conf, mock_csync2, mock_stop_service, mock_error):
+        bootstrap.COROSYNC_CONF_ORIG = "/tmp/crmsh_tmpfile"
+        mock_search.side_effect = [ mock.Mock(), None ]
+        mock_this_node.return_value = "node2"
+        mock_get_peer.return_value = "node1"
+        mock_corosync_conf.side_effect = [ "/etc/corosync/corosync.conf", 
+                "/etc/corosync/corosync.conf"]
+
+        bootstrap.is_online("text")
+
+        mock_this_node.assert_called_once_with()
+        mock_get_peer.assert_called_once_with()
+        mock_search.assert_has_calls([
+            mock.call("Online: .* node2 ", "text"),
+            mock.call("Online: .* node1 ", "text")
+            ])
+        mock_corosync_conf.assert_has_calls([
+            mock.call(),
+            mock.call()
+            ])
+        mock_copy.assert_called_once_with(bootstrap.COROSYNC_CONF_ORIG, "/etc/corosync/corosync.conf")
+        mock_csync2.assert_called_once_with("/etc/corosync/corosync.conf")
+        mock_stop_service.assert_called_once_with("corosync")
+        mock_error.assert_called_once_with("Cannot see peer node \"node1\", please check the communication IP")
+
+    @mock.patch('crmsh.bootstrap.error')
+    @mock.patch('crmsh.bootstrap.stop_service')
+    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.corosync.conf')
+    @mock.patch('shutil.copy')
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('re.search')
+    @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
+    def test_is_online_both_online(self, mock_get_peer, mock_search, mock_this_node,
+            mock_copy, mock_corosync_conf, mock_csync2, mock_stop_service, mock_error):
+        mock_search.side_effect = [ mock.Mock(), mock.Mock() ]
+        mock_this_node.return_value = "node2"
+        mock_get_peer.return_value = "node1"
+
+        assert bootstrap.is_online("text") is True
+
+        mock_this_node.assert_called_once_with()
+        mock_get_peer.assert_called_once_with()
+        mock_search.assert_has_calls([
+            mock.call("Online: .* node2 ", "text"),
+            mock.call("Online: .* node1 ", "text")
+            ])
+        mock_corosync_conf.assert_not_called()
+        mock_copy.assert_not_called()
+        mock_csync2.assert_not_called()
+        mock_stop_service.assert_not_called()
+        mock_error.assert_not_called()

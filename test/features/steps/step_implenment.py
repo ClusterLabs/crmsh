@@ -35,6 +35,11 @@ def step_impl(context, cmd, addr):
     context.stdout = out
 
 
+@when('Try "{cmd}" on "{addr}"')
+def step_impl(context, cmd, addr):
+    run_command_local_or_remote(context, cmd, addr, err_record=True)
+
+
 @when('Try "{cmd}"')
 def step_impl(context, cmd):
     run_command(context, cmd, err_record=True)
@@ -66,6 +71,12 @@ def step_impl(context, msg):
 @then('Except "{msg}"')
 def step_impl(context, msg):
     assert context.command_error_output == msg
+    context.command_error_output = None
+
+
+@then('Except "{msg}" in stderr')
+def step_impl(context, msg):
+    assert msg in context.command_error_output
     context.command_error_output = None
 
 
