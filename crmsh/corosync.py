@@ -381,23 +381,51 @@ def set_value(path, value):
     f.close()
 
 
-def add_node_ucast(IParray, node_name=None):
+class IPAlreadyConfiguredError(Exception):
+    pass
+
+
+def find_configured_ip(ip_list):
+    """
+    find if the same IP already configured
+    If so, raise IPAlreadyConfiguredError
+    """
+    with open(conf()) as f:
+        p = Parser(f.read())
+
+    # get exist ip list from corosync.conf
+    corosync_iplist = []
+    for path in set(p.all_paths()):
+        if re.search('nodelist.node.ring[0-9]*_addr', path):
+            corosync_iplist.extend(p.get_all(path))
+
+    # all_possible_ip is a ip set to check whether one of them already configured
+    all_possible_ip = set(ip_list)
+    # get local ip list
+    local_ip_list = utils.ip_in_local(utils.is_ipv6(ip_list[0]))
+    # extend all_possible_ip if ip_list contain local ip
+    # to avoid this scenarios in join node:
+    #   eth0's ip already configured in corosync.conf
+    #   eth1's ip also want to add in nodelist
+    # if this scenarios happened, raise IPAlreadyConfiguredError
+    if bool(set(ip_list) & set(local_ip_list)):
+        all_possible_ip |= set(local_ip_list)
+    configured_ip = list(all_possible_ip & set(corosync_iplist))
+    if configured_ip:
+        raise IPAlreadyConfiguredError("IP {} was already configured".format(','.join(configured_ip)))
+
+
+def add_node_ucast(ip_list, node_id=None):
+
+    find_configured_ip(ip_list)
 
     f = open(conf()).read()
     p = Parser(f)
 
-    # to check if the same IP already configured
-    exist_iplist = []
-    for path in p.all_paths():
-        if re.search('nodelist.node.ring[0-9]*_addr', path):
-            exist_iplist.extend(p.get_all(path))
-    for ip in IParray:
-        if ip in exist_iplist:
-            raise ValueError("IP {} was already configured".format(ip))
-
-    node_id = get_free_nodeid(p)
+    if node_id is None:
+        node_id = get_free_nodeid(p)
     node_value = []
-    for i, addr in enumerate(IParray):
+    for i, addr in enumerate(ip_list):
         node_value += make_value('nodelist.node.ring{}_addr'.format(i), addr)
     node_value += make_value('nodelist.node.nodeid', str(node_id))
 
