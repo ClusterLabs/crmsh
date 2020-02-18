@@ -19,14 +19,17 @@ def run_command(context, cmd, err_record=False):
     return out
 
 
-def run_command_local_or_remote(context, cmd, addr):
+def run_command_local_or_remote(context, cmd, addr, err_record=False):
     if addr == me():
-        out = run_command(context, cmd)
+        out = run_command(context, cmd, err_record)
         return out
     else:
         try:
             results = parallax_helper.parallax_call([addr], cmd)
         except ValueError as err:
+            if err_record:
+                context.command_error_output = str(err)
+                return
             context.logger.error("\n{}\n".format(err))
             context.failed = True
         else:

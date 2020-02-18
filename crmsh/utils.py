@@ -2022,6 +2022,10 @@ MAX_IPV6 = (1 << 128) - 1
 MAX_IPV4 = (1 << 32) - 1
 
 
+def is_ipv6(addr):
+    return IP(addr).version() == 6
+
+
 class IP(object):
     """
     learn from https://github.com/tehmaze/ipcalc
