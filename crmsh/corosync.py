@@ -803,18 +803,24 @@ def get_ip(node):
 
 
 def get_all_paths():
+    if not os.path.exists(conf()):
+        return None
     f = open(conf()).read()
     p = Parser(f)
     return p.all_paths()
 
 
 def get_value(path):
+    if not os.path.exists(conf()):
+        return None
     f = open(conf()).read()
     p = Parser(f)
     return p.get(path)
 
 
 def get_values(path):
+    if not os.path.exists(conf()):
+        return None
     f = open(conf()).read()
     p = Parser(f)
     return p.get_all(path)
