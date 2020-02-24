@@ -9,16 +9,10 @@ heartbeat pacemaker
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 Example stateless resource agent (ocf:pacemaker:Dummy)
 
-This is a Dummy Resource Agent. It does absolutely nothing except 
-keep track of whether its running or not.
-Its purpose in life is for testing and to serve as a template for RA writers.
-
-NB: Please pay attention to the timeouts specified in the actions
-section below. They should be meaningful for the kind of resource
-the agent manages. They should be the minimum advised timeouts,
-but they shouldn't/cannot cover _all_ possible resource
-instances. So, try to be neither overly generous nor too stingy,
-but moderate. The minimum timeouts should never be below 10 seconds.
+This is a dummy OCF resource agent. It does absolutely nothing except keep track
+of whether it is running or not, and can be configured so that actions fail or
+take a long time. Its purpose is primarily for testing, and to serve as a
+template for resource agent writers.
 
 Parameters (*: required, []: default):
 

@@ -914,7 +914,7 @@ INFO: Trace set, restart p0 to trace the stop operation
 .TRY configure ms msg g
 .TRY resource scores
 .EXT crm_simulate -sUL
-3 of 6 resources DISABLED and 0 BLOCKED from being started due to failures
+2 of 6 resource instances DISABLED and 0 BLOCKED from further action due to failure
 
 Current cluster status:
 Node node1: UNCLEAN (offline)
@@ -930,24 +930,24 @@ Node node1: UNCLEAN (offline)
 
 Allocation scores and utilization information:
 Original: node1 capacity:
-native_color: st allocation score on node1: 0
-clone_color: c1 allocation score on node1: 0
-clone_color: p1:0 allocation score on node1: 0
-native_color: p1:0 allocation score on node1: -INFINITY
-clone_color: m1 allocation score on node1: 0
-clone_color: p2:0 allocation score on node1: 0
-native_color: p2:0 allocation score on node1: -INFINITY
+pcmk__native_allocate: st allocation score on node1: 0
+pcmk__clone_allocate: c1 allocation score on node1: 0
+pcmk__clone_allocate: p1:0 allocation score on node1: 0
+pcmk__native_allocate: p1:0 allocation score on node1: -INFINITY
+pcmk__clone_allocate: m1 allocation score on node1: 0
+pcmk__clone_allocate: p2:0 allocation score on node1: 0
+pcmk__native_allocate: p2:0 allocation score on node1: -INFINITY
 p2:0 promotion score on none: 0
-native_color: p3 allocation score on node1: -INFINITY
-clone_color: msg allocation score on node1: 0
-clone_color: g:0 allocation score on node1: 0
-clone_color: p0:0 allocation score on node1: 0
-clone_color: p4:0 allocation score on node1: 0
-group_color: g:0 allocation score on node1: -INFINITY
-group_color: p0:0 allocation score on node1: -INFINITY
-group_color: p4:0 allocation score on node1: -INFINITY
-native_color: p0:0 allocation score on node1: -INFINITY
-native_color: p4:0 allocation score on node1: -INFINITY
+pcmk__native_allocate: p3 allocation score on node1: -INFINITY
+pcmk__clone_allocate: msg allocation score on node1: 0
+pcmk__clone_allocate: g:0 allocation score on node1: 0
+pcmk__clone_allocate: p0:0 allocation score on node1: 0
+pcmk__clone_allocate: p4:0 allocation score on node1: 0
+pcmk__group_allocate: g:0 allocation score on node1: -INFINITY
+pcmk__group_allocate: p0:0 allocation score on node1: -INFINITY
+pcmk__group_allocate: p4:0 allocation score on node1: -INFINITY
+pcmk__native_allocate: p0:0 allocation score on node1: -INFINITY
+pcmk__native_allocate: p4:0 allocation score on node1: -INFINITY
 g:0 promotion score on none: 0
 Remaining: node1 capacity:
 
