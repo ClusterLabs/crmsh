@@ -5352,19 +5352,30 @@ or call `crm report -h`
 
 Usage:
 ...............
-report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
-       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog]
-       [-MSDZAVsvhd] [dest]
+report [-f time][-t time][-b time][-u user][-n node][-E file][-p patt][-L patt]
+       [-X ssh-options][-MQSZsvhd][dest]
 ...............
 
 Examples:
 ...............
+# collect from 2pm, today
 report -f 2pm report_1
+# collect from "2007/9/5 12:30" to "2007/9/5 14:00"
 report -f "2007/9/5 12:30" -t "2007/9/5 14:00" report_2
-report -f 1:00 -t 3:00 -l /var/log/cluster/ha-debug report_3
-report -f "09sep07 2:00" -u hbadmin report_4
-report -f 18:00 -p "usern.*" -p "admin.*" report_5
-report -f cts:133 ctstest_133
+# collect from 1:00 to 3:00, today; include /var/log/cluster/ha-debug as extra log
+report -f 1:00 -t 3:00 -E /var/log/cluster/ha-debug report_3
+# collect from "09sep07 2:00" and use 'hacluster' as ssh user
+report -f "09sep07 2:00" -u hacluster report_4
+# collect from 18:00, today; replace sensitive message like "usern.*" or "admin.*"
+report -f 18:00 -s -p "usern.*" -p "admin.*" report_5
+# collect from 1 mounth ago
+report -b 1m
+# collect from 12 days ago
+report -b 12d
+# collect from 75 hours ago
+report -b 75H
+# collect from 10 minutes ago
+report -b 10M
 ...............
 
 === `end` (`cd`, `up`)

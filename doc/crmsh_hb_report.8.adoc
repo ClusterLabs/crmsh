@@ -12,9 +12,8 @@ crmsh_hb_report - create report for CRM based clusters (Pacemaker)
 
 SYNOPSIS
 --------
-*crm report* -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
-       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog]
-	   [-MSDCZAQVsvhd] [dest]
+*crm report* [-f time][-t time][-b time][-u user][-n node][-E file][-p patt][-L patt]
+       [-X ssh-options][-MQSZsvhd][dest]
 
 
 DESCRIPTION
@@ -32,62 +31,29 @@ dest::
 	current directory named "hb_report-current_date", for instance
 	hb_report-Wed-03-Mar-2010.
 
-*-d*::
-	Don't create the compressed tar, but leave the result in a
-	directory.
+*-h*::
+	Show usage and some examples.
 
-*-f* { time | "cts:"testnum }::
-	The start time from which to collect logs. The time is in the
-	format as used by the Date::Parse perl module. For cts tests,
-	specify the "cts:" string followed by the test number. This
-	option is required.
+*-f* time::
+	The start time from which to collect logs. 
+        Default: 12 hours before.
 
 *-t* time::
 	The end time to which to collect logs. Defaults to now.
 
-*-n* nodes::
+*-b* time::
+	how long time in the past, before now ([1-9][0-9]*[YmdHM]).
+
+*-d*::
+	Don't create the compressed tar, but leave the result in a
+	directory.
+
+*-n* node::
 	A list of space separated hostnames (cluster members).
 	crm report may try to find out the set of nodes by itself, but
 	if it runs on the loghost which, as it is usually the case,
-	does not belong to the cluster, that may be difficult. Also,
-	OpenAIS doesn't contain a list of nodes and if Pacemaker is
-	not running, there is no way to find it out automatically.
-	This option is cumulative (i.e. use -n "a b" or -n a -n b).
-
-*-l* file::
-	Log file location. If, for whatever reason, crm report cannot
-	find the log files, you can specify its absolute path.
-
-*-E* files::
-	Extra log files to collect. This option is cumulative. By
-	default, /var/log/messages are collected along with the
-	cluster logs.
-
-*-M*::
-	Don't collect extra log files, but only the file containing
-	messages from the cluster subsystems.
-
-*-L* patt::
-	A list of regular expressions to match in log files for
-	analysis. This option is additive (default: "CRIT: ERROR:").
-
-*-p* patt::
-	Additional patterns to match parameter name which contain
-	sensitive information. This option is additive (default: "passw.*").
-
-*-Q*::
-	Quick run. Gathering some system information can be expensive.
-	With this option, such operations are skipped and thus
-	information collecting sped up. The operations considered
-	I/O or CPU intensive: verifying installed packages content,
-	sanitizing files for sensitive information, and producing dot
-	files from PE inputs.
-
-*-A*::
-	This is an OpenAIS cluster. `crm report` has some heuristics to
-	find the cluster stack, but that is not always reliable.
-	By default, `crm report` assumes that it is run on a Heartbeat
-	cluster.
+	does not belong to the cluster, that may be difficult. This 
+        option is additive (use -n a -n b or -n "a b").
 
 *-u* user::
 	The ssh user. `crm report` will try to login to other nodes
@@ -96,122 +62,141 @@ dest::
 	ssh, please use this option.
 
 *-X* ssh-options::
-	Extra ssh options. These will be added to every ssh
-	invocation. Alternatively, use `$HOME/.ssh/config` to setup
-	desired ssh connection options.
+	Extra ssh options (default: StrictHostKeyChecking=no EscapeChar=none 
+        ConnectTimeout=15). These will be added to every ssh invocation. 
+        Alternatively, use `$HOME/.ssh/config` to setup desired ssh connection options.
+        This option is additive (use -X opt1 -X opt2 or -X "opt1 opt2").
 
+*-E* file::
+        Extra logs to collect (default: /var/log/messages, 
+        /var/log/ha-cluster-bootstrap.log); this option is additive 
+        (use -E file1 -E file2 or -E "file1 file2")
+
+*-s* ::
+        Replace sensitive info in PE or CIB or pacemaker log files.
+
+*-p* patt::
+	Additional patterns to match parameter name which contain
+	sensitive information (default: "passw.*").
+        This option is additive (use -p patt1 -p patt2 or -p "patt1 patt2").
+
+*-L* patt::
+	A list of regular expressions to match in log files for
+	analysis (default: "CRIT:, ERROR:, error:, warning:, crit:").
+        This option is additive (use -L patt1 -L patt2 or -L "patt1 patt2").
+
+*-Q*::
+	Quick run. Gathering some system information can be expensive.
+	With this option, such operations are skipped and thus
+	information collecting speed up. The operations considered
+	I/O or CPU intensive: verifying installed packages content,
+	sanitizing files for sensitive information, and producing dot
+	files from PE inputs.
+
+*-M*::
+	Don't collect extra log files, but only the file containing
+	messages from the cluster subsystems.
+
+*-Z*::
+	If the destination directory exist, remove it instead of
+	exiting.
 *-S*::
 	Single node operation. Run `crm report` only on this node and
 	don't try to start slave collectors on other members of the
 	cluster. Under normal circumstances this option is not
 	needed. Use if ssh(1) does not work to other nodes.
 
-*-Z*::
-	If the destination directory exist, remove it instead of
-	exiting (this is default for CTS).
-
-*-V*::
-	Print the version including the last repository changeset.
-
 *-v*::
 	Increase verbosity. Normally used to debug unexpected
-	behaviour.
+	behaviour. "-vv" will show more details debug messages.
 
-*-h*::
-	Show usage and some examples.
-
-*-D* (obsolete)::
-	Don't invoke editor to fill the description text file.
-
-*-e* prog (obsolete)::
-	Your favourite text editor. Defaults to $EDITOR, vim, vi,
-	emacs, or nano, whichever is found first.
-
-*-C* (obsolete)::
-	Remove the destination directory once the report has been put
-	in a tarball.
 
 EXAMPLES
 --------
-Last night during the backup there were several warnings
-encountered (logserver is the log host):
+Examples
 
-	logserver# crm report -f 3:00 -t 4:00 -n "node1 node2" report
+  # collect from 2pm, today
+  hb_report -f 2pm report_1
 
-collects everything from all nodes from 3am to 4am last night.
-The files are compressed to a tarball report.tar.bz2.
+  # collect from "2007/9/5 12:30" to "2007/9/5 14:00"
+  hb_report -f "2007/9/5 12:30" -t "2007/9/5 14:00" report_2
 
-Just found a problem during testing:
+  # collect from 1:00 to 3:00, today; include /var/log/cluster/ha-debug as extra log
+  hb_report -f 1:00 -t 3:00 -E /var/log/cluster/ha-debug report_3
 
-	# note the current time
-	node1# date
-	Fri Sep 11 18:51:40 CEST 2009
-	node1# /etc/init.d/heartbeat start
-	node1# nasty-command-that-breaks-things
-	node1# sleep 120 #wait for the cluster to settle
-	node1# crm report -f 18:51 hb1
+  # collect from "09sep07 2:00" and use 'hacluster' as ssh user
+  hb_report -f "09sep07 2:00" -u hacluster report_4
 
-	# if crm report can't figure out that this is corosync
-	node1# crm report -f 18:51 -A hb1
+  # collect from 18:00, today; replace sensitive message like "usern.*" or "admin.*"
+  hb_report -f 18:00 -s -p "usern.*" -p "admin.*" report_5
 
-	# if crm report can't figure out the cluster members
-	node1# crm report -f 18:51 -n "node1 node2" hb1
+  # collect from 1 mounth ago
+  hb_report -b 1m
 
-The files are compressed to a tarball hb1.tar.bz2.
+  # collect from 12 days ago
+  hb_report -b 12d
 
-INTERPRETING RESULTS
+  # collect from 75 hours ago
+  hb_report -b 75H
+
+  # collect from 10 minutes ago
+  hb_report -b 10M
+
+
+INTERPRETIN RESULTS
 --------------------
 The compressed tar archive is the final product of `crm report`.
-This is one example of its content, for a CTS test case on a
-three node OpenAIS cluster:
+This is one example of its content, from a two nodes cluster:
 
-	$ ls -RF 001-Restart
+	$ ls -RF hb_report-Sun-01-Mar-2020
+        hb_report-Sun-01-Mar-2020:
+        15sp1-1/  15sp1-2/  analysis.txt  corosync.conf  members.txt  sysinfo.txt
 
-	001-Restart:
-	analysis.txt     events.txt  logd.cf       s390vm13/  s390vm16/
-	description.txt  ha-log.txt  openais.conf  s390vm14/
+        hb_report-Sun-01-Mar-2020/15sp1-1:
+        cib.txt  context.txt	 crm_mon.txt  dlm_dump.txt  ha-cluster-bootstrap.log  journal.log   ocfs2.txt	   pengine/	    RUNNING  sbd.txt	   sysstats.txt
+        cib.xml  corosync.conf@  DC	      events.txt    ha-log.txt		      members.txt@  pacemaker.log  permissions.txt  sbd      sysinfo.txt@  time.txt
 
-	001-Restart/s390vm13:
-	STOPPED  crm_verify.txt  hb_uuid.txt  openais.conf@   sysinfo.txt
-	cib.txt  dlm_dump.txt    logd.cf@     pengine/        sysstats.txt
-	cib.xml  events.txt      messages     permissions.txt
+        hb_report-Sun-01-Mar-2020/15sp1-1/pengine:
+        pe-input-5.bz2	pe-input-5.dot
 
-	001-Restart/s390vm13/pengine:
-	pe-input-738.bz2  pe-input-740.bz2  pe-warn-450.bz2
-	pe-input-739.bz2  pe-warn-449.bz2   pe-warn-451.bz2
-
-	001-Restart/s390vm14:
-	STOPPED  crm_verify.txt  hb_uuid.txt  openais.conf@   sysstats.txt
-	cib.txt  dlm_dump.txt    logd.cf@     permissions.txt
-	cib.xml  events.txt      messages     sysinfo.txt
-
-	001-Restart/s390vm16:
-	STOPPED  crm_verify.txt  hb_uuid.txt  messages        sysinfo.txt
-	cib.txt  dlm_dump.txt    hostcache    openais.conf@   sysstats.txt
-	cib.xml  events.txt      logd.cf@     permissions.txt
+        hb_report-Sun-01-Mar-2020/15sp1-2:
+        cib.txt  context.txt	 crm_mon.txt   events.txt		 ha-log.txt   members.txt@  permissions.txt  sbd      sysinfo.txt@  time.txt
+        cib.xml  corosync.conf@  dlm_dump.txt  ha-cluster-bootstrap.log  journal.log  ocfs2.txt     RUNNING	     sbd.txt  sysstats.txt
 
 The top directory contains information which pertains to the
-cluster or event as a whole. Files with exactly the same content
-on all nodes will also be at the top, with per-node links created
-(as it is in this example the case with openais.conf and logd.cf).
-
-The cluster log files are named ha-log.txt regardless of the
-actual log file name on the system. If it is found on the
-loghost, then it is placed in the top directory. If not, the top
-directory ha-log.txt contains all nodes logs merged and sorted by
-time. Files named messages are excerpts of /var/log/messages from
-nodes.
+cluster as a whole. Files with exactly the same content on all nodes 
+will also be at the top, with per-node links created (as it is in 
+this example the case with corosync.conf).
 
 Most files are copied verbatim or they contain output of a
 command. For instance, cib.xml is a copy of the CIB found in
-/var/lib/heartbeat/crm/cib.xml. crm_verify.txt is output of the
-crm_verify(8) program.
+/var/lib/pacemaker/cib/cib.xml. crm_mon.txt is output of the
+crm_mon(8) program.
 
 Some files are result of a more involved processing:
 
 	*analysis.txt*::
 	A set of log messages matching user defined patterns (may be
 	provided with the -L option).
+
+        *cib.txt*::
+        Output of command "crm configure show"
+
+        *context.txt*::
+        Debug info only for developers, contain internal attributes values
+
+        *ha-cluster-bootstrap.log*::
+        The log generated by "ha-cluster-*" commands
+
+        *ha-log.txt*::
+        Include pacemaker, corosync and sbd logs from journal log
+
+        *pacemaker.log*::
+        Compared to messages logged via syslog, messages in this file may 
+        have extended information, and will include messages of "info" severity 
+        (and, if debug and/or trace logging has been enabled, those as well). 
+        This log is of more use to developers and advanced system administrators, 
+        and when reporting problems
 
 	*events.txt*::
 	A set of log messages matching event patterns. It should
@@ -220,18 +205,13 @@ Some files are result of a more involved processing:
 	cluster experts.  Currently, the patterns cover membership
 	and quorum changes, resource starts and stops, fencing
 	(stonith) actions, and cluster starts and stops. events.txt
-	is always generated for each node. In case the central
-	cluster log was found, also combined for all nodes.
+	is always generated for each node.
 
 	*permissions.txt*::
 	One of the more common problem causes are file and directory
 	permissions. `crm report` looks for a set of predefined
 	directories and checks their permissions. Any issues are
 	reported here.
-
-	*backtraces.txt*::
-	gdb generated backtrace information for cores dumped
-	within the specified period.
 
 	*sysinfo.txt*::
 	Various release information about the platform, kernel,
@@ -241,10 +221,6 @@ Some files are result of a more involved processing:
 	*sysstats.txt*::
 	Output of various system commands such as ps(1), uptime(1),
 	netstat(8), and ip(8). The dynamic part of the system.
-
-description.txt should contain a user supplied description of the
-problem, but since it is very seldom used, it will be dropped
-from the future releases.
 
 PREREQUISITES
 -------------
@@ -276,52 +252,6 @@ sudo::
 	+
 	See the `sudoers(5)` man page for more details.
 
-Times::
-	In order to find files and messages in the given period and to
-	parse the `-f` and `-t` options, `crm report` uses perl and one of the
-	`Date::Parse` or `Date::Manip` perl modules. Note that you need
-	only one of these. Furthermore, on nodes which have no logs and
-	where you don't run `crm report` directly, no date parsing is
-	necessary. In other words, if you run this on a loghost then you
-	don't need these perl modules on the cluster nodes.
-	+
-	On rpm based distributions, you can find `Date::Parse` in
-	`perl-TimeDate` and on Debian and its derivatives in
-	`libtimedate-perl`.
-
-Core dumps::
-	To backtrace core dumps gdb is needed and the packages with
-	the debugging info. The debug info packages may be installed
-	at the time the report is created. Let's hope that you will
-	need this really seldom.
-
-TIMES
------
-
-Specifying times can at times be a nuisance. That is why we have
-chosen to use one of the perl modules--they do allow certain
-freedom when talking dates. You can either read the instructions
-at the
-http://search.cpan.org/dist/TimeDate/lib/Date/Parse.pm#EXAMPLE_DATES[Date::Parse
-examples page].
-or just rely on common sense and try stuff like:
-
-	3:00          (today at 3am)
-	15:00         (today at 3pm)
-	2007/9/1 2pm  (September 1st at 2pm)
-	Tue Sep 15 20:46:27 CEST 2009 (September 15th etc)
-
-`crm report` will (probably) complain if it can't figure out what do
-you mean.
-
-Try to delimit the event as close as possible in order to reduce
-the size of the report, but still leaving a minute or two around
-for good measure.
-
-`-f` is not optional. And don't forget to quote dates when they
-contain spaces.
-
-
 Should I send all this to the rest of Internet?
 -----------------------------------------------
 
@@ -336,32 +266,10 @@ sensitive.  Use the `-p` option to specify additional regular
 expressions to match variable names which may contain information
 you don't want to leak. For example:
 
-	# crm report -f 18:00 -p "user.*" -p "secret.*" /var/tmp/report
-
-Heartbeat's ha.cf is always sanitized. Logs and other files are
-not filtered.
+	# crm report -f 18:00 -s -p "user.*" -p "secret.*" /var/tmp/report
 
 LOGS
 ----
-
-It may be tricky to find syslog logs. The scheme used is to log a
-unique message on all nodes and then look it up in the usual
-syslog locations. This procedure is not foolproof, in particular
-if the syslog files are in a non-standard directory. We look in
-/var/log /var/logs /var/syslog /var/adm /var/log/ha
-/var/log/cluster. In case we can't find the logs, please supply
-their location:
-
-	# crm report -f 5pm -l /var/log/cluster1/ha-log -S /tmp/report_node1
-
-If you have different log locations on different nodes, well,
-perhaps you'd like to make them the same and make life easier for
-everybody.
-
-Files starting with "ha-" are preferred. In case syslog sends
-messages to more than one file, if one of them is named ha-log or
-ha-debug those will be favoured over syslog or messages.
-
 `crm report` supports also archived logs in case the period
 specified extends that far in the past. The archives must reside
 in the same directory as the current log and their names must
@@ -385,7 +293,7 @@ If you also have a log host which is not in the cluster, then
 you'll have to copy the log to one of the nodes and tell us where
 it is:
 
-	# crm report -f 5:20pm -t 5:30pm -l /var/tmp/ha-log -S /tmp/report_node1
+	# crm report -f 5:20pm -t 5:30pm -E /var/tmp/ha-log -S /tmp/report_node1
 
 OPERATION
 ---------
@@ -396,10 +304,10 @@ case) and coordinating the operation on multiple nodes.
 
 The instance of `crm report` running on the host where it was
 invoked is the master instance. Instances running on other nodes
-are slave instances. The master instance communicates with slave
-instances by ssh. There are multiple ssh invocations per run, so
-it is essential that the ssh works without password, i.e. with
-the public key authentication and authorized_keys.
+are slave(collecter) instances. The master instance communicates 
+with slave instances by ssh. There are multiple ssh invocations 
+per run, so it is essential that the ssh works without password, 
+i.e. with the public key authentication and authorized_keys.
 
 The operation consists of three phases. Each phase must finish
 on all nodes before the next one can commence. The first phase
@@ -417,7 +325,9 @@ local information is collected, which includes:
 - system information and status
 - package information and status
 - dlm lock information
-- backtraces (if there were core dumps)
+- sbd information
+- ocfs2 information
+- core dump files
 
 The third phase is collecting information from all nodes and
 analyzing it. The analyzis consists of the following tasks:
@@ -428,9 +338,6 @@ analyzing it. The analyzis consists of the following tasks:
   (defaults to ERRORs and CRITical conditions)
 - report if there were coredumps and by whom
 - report crm_verify(8) results
-- save log messages matching major events to events.txt
-- in case logging is configured without loghost, node logs and
-  events files are combined using a perl utility
 
 
 BUGS
@@ -452,26 +359,25 @@ There are way too many options.
 AUTHOR
 ------
 Written by Dejan Muhamedagic, <dejan@suse.de>
+           Xin Liang, <xliang@suse.com>
 
 
 RESOURCES
 ---------
 ClusterLabs: <http://clusterlabs.org/>
 
-Heartbeat and other Linux HA resources: <http://linux-ha.org/wiki>
-
-OpenAIS: <http://www.openais.org/>
+Crmsh: <https://github.com/ClusterLabs/crmsh/>
 
 Corosync: <http://www.corosync.org/>
 
 
 SEE ALSO
 --------
-crm(8), Date::Parse(3)
+crm(8)
 
 
 COPYING
 -------
-Copyright \(C) 2007-2009 Dejan Muhamedagic. Free use of this
+Copyright \(C) 2007-2020 Dejan Muhamedagic and Xin Liang. Free use of this
 software is granted under the terms of the GNU General Public License (GPL).
 
