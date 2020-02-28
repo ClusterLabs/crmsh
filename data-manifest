@@ -70,6 +70,8 @@ test/features/bootstrap_init_join_remove.feature
 test/features/bootstrap_options.feature
 test/features/environment.py
 test/features/geo_setup.feature
+test/features/hb_report_bugs.feature
+test/features/hb_report_normal.feature
 test/features/resource_failcount.feature
 test/features/resource_set.feature
 test/features/steps/const.py
