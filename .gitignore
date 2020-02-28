@@ -24,7 +24,6 @@ doc/crm.8
 doc/crm.8.html
 doc/crmsh_hb_report.8
 doc/crmsh_hb_report.8.html
-hb_report/hb_report
 patches/*
 build/*
 
