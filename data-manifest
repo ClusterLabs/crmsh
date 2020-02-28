@@ -71,7 +71,10 @@ test/features/bootstrap_options.feature
 test/features/environment.py
 test/features/hb_report_bugs.feature
 test/features/hb_report_normal.feature
+<<<<<<< HEAD
 test/features/geo_setup.feature
+=======
+>>>>>>> cfdc5c4f... Dev: behave: Functional test for hb_report module
 test/features/qdevice_options.feature
 test/features/qdevice_setup_remove.feature
 test/features/qdevice_usercase.feature
