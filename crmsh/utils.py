@@ -2280,6 +2280,63 @@ def iplist_for_cloud():
     return []
 
 
+def get_nodeinfo_from_cmaptool():
+    nodeid_ip_dict = {}
+    rc, out = get_stdout("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
+    if rc != 0:
+        return nodeid_ip_dict
+
+    for line in out.split('\n'):
+        match = re.search(r'members\.(.*)\.ip', line)
+        if match:
+            node_id = match.group(1)
+            iplist = re.findall(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', line)
+            nodeid_ip_dict[node_id] = iplist
+    return nodeid_ip_dict
+
+
+def get_iplist_from_name(name):
+    '''
+    Given node host name, return this host's ip list in corosync cmap
+    '''
+    ip_list = []
+    nodeid = get_nodeid_from_name(name)
+    if not nodeid:
+        return ip_list
+    nodeinfo = {}
+    nodeinfo = get_nodeinfo_from_cmaptool()
+    if not nodeinfo:
+        return ip_list
+    return nodeinfo[nodeid]
+
+
+def valid_nodeid(nodeid):
+    from . import bootstrap
+    if not bootstrap.service_is_active('corosync.service'):
+        return False
+
+    for _id, _ in get_nodeinfo_from_cmaptool().items():
+        if _id == nodeid:
+            return True
+    return False
+
+
+def is_unicast():
+    from . import corosync
+    return corosync.get_value("totem.transport") == "udpu"
+
+
+def get_nodeid_from_name(name):
+    rc, out = get_stdout('crm_node -l')
+    if rc != 0:
+        return None
+    res = re.search(r'^([0-9]+) {} '.format(name), out, re.M)
+    if res:
+        return res.group(1)
+    else:
+        return None
+
+
 def check_space_option_value(options):
     for opt in vars(options):
         value = getattr(options, opt)
