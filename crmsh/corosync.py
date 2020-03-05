@@ -523,19 +523,6 @@ def del_node(addr):
     f.write(p.to_string())
     f.close()
 
-    # check for running config
-    try:
-        nodes = utils.list_cluster_nodes()
-    except Exception:
-        nodes = []
-    if nodes:
-        utils.ext_cmd(["corosync-cmapctl", "-D", "nodelist.node.%s.nodeid" % (nth)],
-                      shell=False)
-        utils.ext_cmd(["corosync-cmapctl", "-D", "nodelist.node.%s.ring0_addr" % (nth)],
-                      shell=False)
-        utils.ext_cmd(["corosync-cmapctl", "-D", "nodelist.node.%s.name" % (nth)],
-                      shell=False)
-
 
 _COROSYNC_CONF_TEMPLATE_HEAD = """# Please read the corosync.conf.5 manual page
 
