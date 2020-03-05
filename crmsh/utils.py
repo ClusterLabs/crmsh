@@ -2206,6 +2206,46 @@ def check_ssh_passwd_need(hosts):
     return False
 
 
+def get_nodeinfo_from_cmaptool():
+    nodeid_ip_dict = {}
+    rc, out = get_stdout("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
+    if rc != 0:
+        return nodeid_ip_dict
+
+    for line in out.split('\n'):
+        match = re.search(r'members\.(.*)\.ip', line)
+        if match:
+            node_id = match.group(1)
+            iplist = re.findall(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', line)
+            nodeid_ip_dict[node_id] = iplist
+    return nodeid_ip_dict
+
+
+def get_iplist_from_name(name):
+    '''
+    Given node host name, return this host's ip list in corosync cmap
+    '''
+    ip_list = []
+    nodeid = get_nodeid_from_name(name)
+    if not nodeid:
+        return ip_list
+    nodeinfo = {}
+    nodeinfo = get_nodeinfo_from_cmaptool()
+    if not nodeinfo:
+        return ip_list
+    return nodeinfo[nodeid]
+
+
+def is_unicast():
+    from . import corosync
+    return corosync.get_value("totem.transport") == "udpu"
+
+
+def is_qdevice_configured():
+    from . import corosync
+    return corosync.get_value("quorum.device.model") == "net"
+
+
 def get_nodeid_from_name(name):
     rc, out = get_stdout('crm_node -l')
     if rc != 0:

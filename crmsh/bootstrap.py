@@ -62,6 +62,7 @@ class Context(object):
         self.watchdog = None
         self.no_overwrite_sshkey = None
         self.nic = None
+        self.cluster_node_ip = None
         self.unicast = None
         self.admin_ip = None
         self.second_hb = None
@@ -1985,82 +1986,24 @@ def join_cluster(seed_host):
     status_done()
 
 
-def remove_ssh():
-    seed_host = _context.cluster_node
-    if not seed_host:
-        error("No existing IP/hostname specified (use -c option)")
+def get_cluster_node_ip():
+    '''
+    ringx_addr might be hostname or IP
+    _context.cluster_node by now is always hostname
 
-    # check whether corosync has been started on local node
-    if not service_is_active("corosync.service"):
-        error("Cluster is not active - can't execute removing action")
-
-    remove_get_hostname(seed_host)
-
-
-def remove_get_hostname(seed_host):
-    """
-    Get the nodename
-
-    Sets _context.host_status to
-    0 = Disconnected
-    1 = Connected
-    2 = Connected through IP address
-    """
-    _context.connect_name = seed_host
-    _context.host_status = 0
-
-    # if node is localhost, assume connected and hostname = cluster name
-    if seed_host == utils.this_node():
-        _context.cluster_node = seed_host
-        _context.host_status = 1
+    If ring0_addr is IP, we should get the configured iplist which belong _context.cluster_node
+    Then filter out which one is configured as ring0_addr
+    At last assign that ip to _context.cluster_node_ip which will be removed later
+    '''
+    node = _context.cluster_node
+    addr_list = corosync.get_values('nodelist.node.ring0_addr')
+    if node in addr_list:
         return
-
-    _rc, outp, _errp = utils.get_stdout_stderr("ssh -o StrictHostKeyChecking=no root@{} \"hostname\"".format(seed_host))
-    if outp:
-        _context.connect_name = seed_host
-        _context.cluster_node = outp.strip()
-        _context.host_status = 1
-    elif re.match(r'^[\[0-9].*', seed_host):
-        # IP address
-        warn("Could not connect to {}".format(seed_host))
-        nodename = prompt_for_string('Please enter the hostname of the node to be removed', '.+' "")
-        if not nodename:
-            error("Not a valid hostname")
-
-        if nodename not in xmlutil.listnodes():
-            error("Specified node {} is not configured in cluster, can not remove".format(nodename))
-
-        _rc, outp, _errp = utils.get_stdout_stderr("ssh -o StrictHostKeyChecking=no root@{} \"hostname\"".format(nodename))
-        if outp:
-            _context.connect_name = seed_host
-            _context.cluster_node = nodename
-            _context.host_status = 1
-        else:
-            _context.host_status = 2
-    else:
-        if seed_host not in xmlutil.listnodes():
-            error("Specified node {} is not configured in cluster, can not remove".format(seed_host))
-
-        warn("Could not resolve hostname {}".format(seed_host))
-        nodename = prompt_for_string('Please enter the IP address of the node to be removed (e.g: 192.168.0.1)', r'([0-9]+\.){3}[0-9]+', "")
-        if not nodename:
-            error("Invalid IP address")
-
-        # try to use the IP address to connect
-        _rc, outp, _errp = utils.get_stdout_stderr("ssh -o StrictHostKeyChecking=no root@{} \"hostname\"".format(nodename))
-        if outp:
-            ipaddr = nodename
-            nodename = outp.strip()
-            if nodename != seed_host:
-                warn("Specified IP address {ipaddr} is node {nodename}, not configured in cluster.".format(ipaddr=ipaddr, nodename=nodename))
-                warn("Trying to remove node {}".format(seed_host))
-                _context.host_status = 0
-                _context.cluster_node = nodename
-            else:
-                _context.host_status = 2
-                _context.connect_name = ipaddr
-        else:
-            _context.host_status = 0
+    ip_list = utils.get_iplist_from_name(node)
+    for ip in ip_list:
+        if ip in addr_list:
+            _context.cluster_node_ip = ip
+            break
 
 
 def remove_node_from_cluster():
@@ -2068,22 +2011,16 @@ def remove_node_from_cluster():
     Remove node from running cluster and the corosync / pacemaker configuration.
     """
     node = _context.cluster_node
+    get_cluster_node_ip()
 
-    if _context.host_status != 0:
-        status("Stopping the corosync service")
-        if not invoke('ssh -o StrictHostKeyChecking=no root@{} "systemctl stop corosync"'.format(_context.connect_name)):
-            error("Stopping corosync on {} failed".format(_context.connect_name))
+    status("Stopping the corosync service")
+    if not invoke('ssh -o StrictHostKeyChecking=no root@{} "systemctl stop corosync"'.format(node)):
+        error("Stopping corosync on {} failed".format(node))
 
-        # delete configuration files from the node to be removed
-        toremove = [SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY, COROSYNC_AUTH]
-        if not invoke('ssh -o StrictHostKeyChecking=no root@{} "bash -c \\\"rm -f {} && rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*\\\""'.format(node, " ".join(toremove))):
-            error("Deleting the configuration files failed")
-    else:
-        # Check node status
-        _, outp = utils.get_stdout("crm_node --list")
-        if any("lost" in l for l in [l for l in outp.splitlines() if node in l.split()]):
-            if not confirm("The node has not been cleaned up... - remove it?"):
-                return
+    # delete configuration files from the node to be removed
+    toremove = [SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY, COROSYNC_AUTH]
+    if not invoke('ssh -o StrictHostKeyChecking=no root@{} "bash -c \\\"rm -f {} && rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*\\\""'.format(node, " ".join(toremove))):
+        error("Deleting the configuration files failed")
 
     # execute the command : crm node delete $HOSTNAME
     status("Removing the node {}".format(node))
@@ -2093,58 +2030,54 @@ def remove_node_from_cluster():
     if not invoke("sed -i /{}/d {}".format(node, CSYNC2_CFG)):
         error("Removing the node {} from {} failed".format(node, CSYNC2_CFG))
 
-    # Remove node from nodelist if this is a unicast configuration
-    if "nodelist" in open(corosync.conf()).read():
-        corosync.del_node(node)
+    # Remove node from nodelist
+    if corosync.get_values("nodelist.node.ring0_addr"):
+        del_target = _context.cluster_node_ip or node
+        corosync.del_node(del_target)
 
-    # Decrement expected_votes in corosync.conf
-    use_qdevice = 1 if "net" in corosync.get_values("quorum.device.model") else 0
-    for vote in corosync.get_values("quorum.expected_votes"):
-        quorum = int(vote)
-        new_quorum = quorum - 1
-        if use_qdevice > 0:
-            new_nodecount = 0
-            device_votes = 0
-            nodecount = 0
-
-            if corosync.get_value("quorum.device.net.algorithm") == "lms":
-                nodecount = int((quorum + 1)/2)
-                new_nodecount = nodecount - 1
-                device_votes = new_nodecount - 1
-
-            elif corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
-                device_votes = 1
-                nodecount = quorum - device_votes
-                new_nodecount = nodecount - 1
-
-            if new_nodecount == 1:
-                device_votes = 0
-
-            corosync.set_value("quorum.device.votes", device_votes)
-            new_quorum = new_nodecount + device_votes
-
-        if use_qdevice == 0:
-            corosync.set_value("quorum.two_node", 1 if new_quorum == 2 else 0)
-        corosync.set_value("quorum.expected_votes", str(new_quorum))
+    decrease_expected_votes()
 
     status("Propagating configuration changes across the remaining nodes")
     csync2_update(CSYNC2_CFG)
+    csync2_update(corosync.conf())
 
     # Trigger corosync config reload to ensure expected_votes is propagated
     invoke("corosync-cfgtool -R")
 
 
-def remove_localhost_check():
-    """
-    Check whether the specified node is a cluster member
-    or the local node.
-    """
-    nodename = _context.cluster_node
-    nodes = xmlutil.listnodes()
-    if nodename not in nodes:
-        error("Specified node {} is not configured in cluster! Unable to remove.".format(nodename))
+def decrease_expected_votes():
+    '''
+    Decrement expected_votes in corosync.conf
+    '''
+    vote = corosync.get_value("quorum.expected_votes")
+    if not vote:
+        return
+    quorum = int(vote)
+    new_quorum = quorum - 1
+    if utils.is_qdevice_configured():
+        new_nodecount = 0
+        device_votes = 0
+        nodecount = 0
 
-    return nodename == utils.this_node()
+        if corosync.get_value("quorum.device.net.algorithm") == "lms":
+            nodecount = int((quorum + 1)/2)
+            new_nodecount = nodecount - 1
+            device_votes = new_nodecount - 1
+
+        elif corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
+            device_votes = 1
+            nodecount = quorum - device_votes
+            new_nodecount = nodecount - 1
+
+        if new_nodecount > 1:
+            new_quorum = new_nodecount + device_votes
+        else:
+            new_quorum = 0
+
+        corosync.set_value("quorum.device.votes", device_votes)
+    else:
+        corosync.set_value("quorum.two_node", 1 if new_quorum == 2 else 0)
+    corosync.set_value("quorum.expected_votes", str(new_quorum))
 
 
 def bootstrap_init(context):
@@ -2269,57 +2202,62 @@ def bootstrap_remove(context):
     """
     global _context
     _context = context
-    yes_to_all = _context.yes_to_all
-    cluster_node = _context.cluster_node
-    force = _context.force
+    force_flag = config.core.force or _context.force
 
-    if not yes_to_all and cluster_node is None:
+    init()
+
+    if not service_is_active("corosync.service"):
+        error("Cluster is not active - can't execute removing action")
+
+    if not _context.yes_to_all and _context.cluster_node is None:
         status("""Remove This Node from Cluster:
   You will be asked for the IP address or name of an existing node,
   which will be removed from the cluster. This command must be
   executed from a different node in the cluster.
 """)
-        cluster_node = prompt_for_string("IP address or hostname of cluster node (e.g.: 192.168.1.1)", ".+")
-        _context.cluster_node = cluster_node
+        _context.cluster_node = prompt_for_string("IP address or hostname of cluster node (e.g.: 192.168.1.1)", ".+")
 
-    init()
-    remove_ssh()
+    if not _context.cluster_node:
+        error("No existing IP/hostname specified (use -c option)")
 
-    if not force and not confirm("Removing node \"{}\" from the cluster: Are you sure?".format(cluster_node)):
+    _context.cluster_node = get_cluster_node_hostname()
+
+    if not force_flag and not confirm("Removing node \"{}\" from the cluster: Are you sure?".format(_context.cluster_node)):
         return
 
-    if remove_localhost_check():
-        if not config.core.force and not force:
+    if _context.cluster_node == utils.this_node():
+        if not force_flag:
             error("Removing self requires --force")
-        # get list of cluster nodes
-        me = utils.this_node()
-        nodes = xmlutil.listnodes(include_remote_nodes=False)
-        othernode = next((x for x in nodes if x != me), None)
-        if othernode is not None:
-            # remove from other node
-            cmd = "crm cluster remove{} -c {}".format(" -y" if yes_to_all else "", me)
-            rc = utils.ext_cmd_nosudo("ssh{} -o StrictHostKeyChecking=no {} '{}'".format("" if yes_to_all else " -t", othernode, cmd))
-            if rc != 0:
-                error("Failed to remove this node from {}".format(othernode))
-        else:
-            # stop cluster
-            if not stop_service("corosync"):
-                error("Stopping corosync failed")
+        remove_self()
+        return
 
-            # remove all trace of cluster from this node
-            # delete configuration files from the node to be removed
-            toremove = [
-                SYSCONFIG_SBD,
-                CSYNC2_CFG,
-                corosync.conf(),
-                CSYNC2_KEY,
-                COROSYNC_AUTH,
-                "/var/lib/heartbeat/crm/*",
-                "/var/lib/pacemaker/cib/*"]
-            if not invoke('bash -c "rm -f {}"'.format(" ".join(toremove))):
-                error("Deleting the configuration files failed")
-    else:
+    if _context.cluster_node in xmlutil.listnodes():
         remove_node_from_cluster()
+    else:
+        error("Specified node {} is not configured in cluster! Unable to remove.".format(_context.cluster_node))
+
+
+def remove_self():
+    me = _context.cluster_node
+    yes_to_all = _context.yes_to_all
+    nodes = xmlutil.listnodes(include_remote_nodes=False)
+    othernode = next((x for x in nodes if x != me), None)
+    if othernode is not None:
+        # remove from other node
+        cmd = "crm cluster remove{} -c {}".format(" -y" if yes_to_all else "", me)
+        rc = utils.ext_cmd_nosudo("ssh{} -o StrictHostKeyChecking=no {} '{}'".format("" if yes_to_all else " -t", othernode, cmd))
+        if rc != 0:
+            error("Failed to remove this node from {}".format(othernode))
+    else:
+        # stop cluster
+        if not stop_service("corosync"):
+            error("Stopping corosync failed")
+        # remove all trace of cluster from this node
+        # delete configuration files from the node to be removed
+        toremove = [SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY,
+                COROSYNC_AUTH, "/var/lib/heartbeat/crm/*", "/var/lib/pacemaker/cib/*"]
+        if not invoke('bash -c "rm -f {}"'.format(" ".join(toremove))):
+            error("Deleting the configuration files failed")
 
 
 def init_common_geo():
