@@ -472,3 +472,33 @@ def test_interface_choice(mock_get_stdout):
     mock_get_stdout.return_value = (0, ip_a_output)
     assert utils.interface_choice() == ["enp1s0", "br-933fa0e1438c", "veth3fff6e9"]
     mock_get_stdout.assert_called_once_with("ip a")
+
+
+@mock.patch("crmsh.utils.get_nodeid_from_name")
+def test_get_iplist_from_name_no_nodeid(mock_get_nodeid):
+    mock_get_nodeid.return_value = None
+    res = utils.get_iplist_from_name("test")
+    assert res == []
+    mock_get_nodeid.assert_called_once_with("test")
+
+
+@mock.patch("crmsh.utils.get_nodeinfo_from_cmaptool")
+@mock.patch("crmsh.utils.get_nodeid_from_name")
+def test_get_iplist_from_name_no_nodeinfo(mock_get_nodeid, mock_get_nodeinfo):
+    mock_get_nodeid.return_value = "1"
+    mock_get_nodeinfo.return_value = None
+    res = utils.get_iplist_from_name("test")
+    assert res == []
+    mock_get_nodeid.assert_called_once_with("test")
+    mock_get_nodeinfo.assert_called_once_with()
+
+
+@mock.patch("crmsh.utils.get_nodeinfo_from_cmaptool")
+@mock.patch("crmsh.utils.get_nodeid_from_name")
+def test_get_iplist_from_name(mock_get_nodeid, mock_get_nodeinfo):
+    mock_get_nodeid.return_value = "1"
+    mock_get_nodeinfo.return_value = {"1": ["10.10.10.1"], "2": ["10.10.10.2"]}
+    res = utils.get_iplist_from_name("test")
+    assert res == ["10.10.10.1"]
+    mock_get_nodeid.assert_called_once_with("test")
+    mock_get_nodeinfo.assert_called_once_with()
