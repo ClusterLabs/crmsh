@@ -93,6 +93,12 @@ def step_impl(context, num):
     assert context.return_code == int(num)
 
 
+@then('Expected "{msg}" not in stdout')
+def step_impl(context, msg):
+    assert msg not in context.stdout
+    context.stdout = None
+
+
 @then('Except "{msg}"')
 def step_impl(context, msg):
     assert context.command_error_output == msg
