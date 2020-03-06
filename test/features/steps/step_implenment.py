@@ -56,6 +56,24 @@ def step_impl(context, msg):
     context.stdout = None
 
 
+@then('Expected multiple lines')
+def step_impl(context):
+    assert context.stdout == context.text
+    context.stdout = None
+
+
+@then('Expected "{msg}" in stdout')
+def step_impl(context, msg):
+    assert msg in context.stdout
+    context.stdout = None
+
+
+@then('Expected "{msg}" not in stdout')
+def step_impl(context, msg):
+    assert msg not in context.stdout
+    context.stdout = None
+
+
 @then('Except "{msg}"')
 def step_impl(context, msg):
     assert context.command_error_output == msg
