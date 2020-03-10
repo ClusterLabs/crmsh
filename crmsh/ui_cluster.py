@@ -2,6 +2,7 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+import sys
 import re
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from . import command
@@ -231,24 +232,22 @@ Note:
                                    help="Configure corosync with second heartbeat line")
         network_group.add_argument("-I", "--ipv6", action="store_true", dest="ipv6",
                                    help="Configure corosync use IPv6")
-        network_group.add_argument("--qnetd-hostname",
-                                   dest="qdevice", metavar="HOST",
+
+        qdevice_group = parser.add_argument_group("QDevice configuration", "Options for configuring QDevice and QNetd.")
+        qdevice_group.add_argument("--qnetd-hostname", dest="qdevice", metavar="HOST",
                                    help="HOST or IP of the QNetd server to be used")
-        network_group.add_argument("--qdevice-port",
-                                   dest="qdevice_port", metavar="PORT", type=int, default=5403,
+        qdevice_group.add_argument("--qdevice-port", dest="qdevice_port", metavar="PORT", type=int, default=5403,
                                    help="TCP PORT of QNetd server(default:5403)")
-        network_group.add_argument("--qdevice-algo",
-                                   dest="qdevice_algo", metavar="ALGORITHM", default="ffsplit",
+        qdevice_group.add_argument("--qdevice-algo", dest="qdevice_algo", metavar="ALGORITHM", default="ffsplit", choices=['ffsplit', 'lms'],
                                    help="QNetd decision ALGORITHM(ffsplit/lms, default:ffsplit)")
-        network_group.add_argument("--qdevice-tie-breaker",
-                                   dest="qdevice_tie_breaker", metavar="TIE_BREAKER", default="lowest",
+        qdevice_group.add_argument("--qdevice-tie-breaker", dest="qdevice_tie_breaker", metavar="TIE_BREAKER", default="lowest",
                                    help="QNetd TIE_BREAKER(lowest/highest/valid_node_id, default:lowest)")
-        network_group.add_argument("--qdevice-tls",
-                                   dest="qdevice_tls", metavar="TLS", default="on",
+        qdevice_group.add_argument("--qdevice-tls", dest="qdevice_tls", metavar="TLS", default="on", choices=['on', 'off', 'required'],
                                    help="Whether using TLS on QDevice/QNetd(on/off/required, default:on)")
-        network_group.add_argument("--qdevice-heuristics",
-                                   dest="qdevice_heuristics", metavar="COMMAND",
+        qdevice_group.add_argument("--qdevice-heuristics", dest="qdevice_heuristics", metavar="COMMAND",
                                    help="COMMAND to run with absolute path. For multiple commands, use \";\" to separate(details about heuristics can see man 8 corosync-qdevice)")
+        qdevice_group.add_argument("--qdevice-heuristics-mode", dest="qdevice_heuristics_mode", metavar="MODE", choices=['on', 'sync', 'off'],
+                                   help="MODE of operation of heuristics(on/sync/off, default:sync)")
 
         storage_group = parser.add_argument_group("Storage configuration", "Options for configuring shared storage.")
         storage_group.add_argument("-p", "--partition-device", dest="shared_device", metavar="DEVICE",
@@ -276,13 +275,19 @@ Note:
 
         qdevice = None
         if options.qdevice:
+            if options.qdevice_heuristics_mode and not options.qdevice_heuristics:
+                parser.error("Option --qdevice-heuristics is required if want to configure heuristics mode")
+            options.qdevice_heuristics_mode = options.qdevice_heuristics_mode or "sync"
             qdevice = corosync.QDevice(
                 options.qdevice,
                 port=options.qdevice_port,
                 algo=options.qdevice_algo,
                 tie_breaker=options.qdevice_tie_breaker,
                 tls=options.qdevice_tls,
-                cmds=options.qdevice_heuristics)
+                cmds=options.qdevice_heuristics,
+                mode=options.qdevice_heuristics_mode)
+        elif re.search("--qdevice-.*", ' '.join(sys.argv)):
+            parser.error("Option --qnetd-hostname is required if want to configure qdevice")
 
         bootstrap.bootstrap_init(
             cluster_name=options.name,
