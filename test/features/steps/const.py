@@ -91,6 +91,10 @@ Network configuration:
   -M, --multi-heartbeats
                         Configure corosync with second heartbeat line
   -I, --ipv6            Configure corosync use IPv6
+
+QDevice configuration:
+  Options for configuring QDevice and QNetd.
+
   --qnetd-hostname HOST
                         HOST or IP of the QNetd server to be used
   --qdevice-port PORT   TCP PORT of QNetd server(default:5403)
@@ -105,6 +109,9 @@ Network configuration:
                         COMMAND to run with absolute path. For multiple
                         commands, use ";" to separate(details about heuristics
                         can see man 8 corosync-qdevice)
+  --qdevice-heuristics-mode MODE
+                        MODE of operation of heuristics(on/sync/off,
+                        default:sync)
 
 Storage configuration:
   Options for configuring shared storage.

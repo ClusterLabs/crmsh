@@ -74,6 +74,12 @@ def step_impl(context, msg):
     context.command_error_output = None
 
 
+@then('Except multiple lines')
+def step_impl(context):
+    assert context.command_error_output.split('\n') == context.text.split('\n')
+    context.command_error_output = None
+
+
 @then('Except "{msg}" in stderr')
 def step_impl(context, msg):
     assert msg in context.command_error_output
