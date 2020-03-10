@@ -42,6 +42,24 @@ Feature: corosync qdevice/qnetd setup/remove process
     And     Show corosync qdevice configuration
 
   @clean
+  Scenario: Setup qdevice with heuristics
+    When    Run "crm cluster init -y --no-overwrite-sshkey --qnetd-hostname=qnetd-node --qdevice-heuristics="/usr/bin/test -f /tmp/heuristics.txt" --qdevice-heuristics-mode="on"" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "corosync-qdevice" is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Online nodes are "hanode1 hanode2"
+    And     Service "corosync-qdevice" is "started" on "hanode2"
+    And     Service "corosync-qnetd" is "started" on "qnetd-node"
+    And     Show corosync qdevice configuration
+    When    Run "crm corosync status qnetd" on "hanode1"
+    Then    Expected "Heuristics:		Fail" in stdout
+    When    Run "touch /tmp/heuristics.txt" on "hanode1"
+    When    Run "sleep 30" on "hanode1"
+    When    Run "crm corosync status qnetd" on "hanode1"
+    Then    Expected "Heuristics:		Pass" in stdout
+
+  @clean
   Scenario: Remove qdevice from a two nodes cluster
     When    Run "crm cluster init --qnetd-hostname=qnetd-node -y --no-overwrite-sshkey" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
