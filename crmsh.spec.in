@@ -169,7 +169,7 @@ fi
 
 %install
 make DESTDIR=%{buildroot} docdir=%{crmsh_docdir} install
-install -Dm0644 contrib/bash_completion.sh %{buildroot}%{_datadir}/bash-completion/completions/crm.sh
+install -Dm0644 contrib/bash_completion.sh %{buildroot}%{_datadir}/bash-completion/completions/crm
 if [ -f %{buildroot}%{_bindir}/crm ]; then
 	install -Dm0755 %{buildroot}%{_bindir}/crm %{buildroot}%{_sbindir}/crm
 	rm %{buildroot}%{_bindir}/crm
@@ -226,7 +226,7 @@ result2=$?
 %dir %{crmsh_docdir}
 %dir %{crmsh_docdir}/contrib
 %dir %attr (770, %{uname}, %{gname}) %{_var}/cache/crm
-%{_datadir}/bash-completion/completions/crm.sh
+%{_datadir}/bash-completion/completions/crm
 
 %files scripts
 %defattr(-,root,root)
