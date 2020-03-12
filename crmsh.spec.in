@@ -1,7 +1,7 @@
 #
 # spec file for package crmsh
 #
-# Copyright (c) 2017 SUSE LINUX GmbH, Nuernberg, Germany.
+# Copyright (c) 2020 SUSE LINUX GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -12,7 +12,7 @@
 # license that conforms to the Open Source Definition (Version 1.9)
 # published by the Open Source Initiative.
 
-# Please submit bugfixes or comments via http://bugs.opensuse.org/
+# Please submit bugfixes or comments via https://bugs.opensuse.org/
 #
 
 
@@ -34,7 +34,7 @@
 
 Name:           crmsh
 Summary:        High Availability cluster command-line interface
-License:        GPL-2.0+
+License:        GPL-2.0-or-later
 Group:          %{pkg_group}
 Version:        @VERSION@
 Release:        0
@@ -49,14 +49,10 @@ Requires(pre):  pacemaker
 %endif
 Requires:       %{name}-scripts >= %{version}-%{release}
 Requires:       /usr/bin/which
-Requires:       python3 >= 3.6
+Requires:       python3 >= 3.4
 Requires:       python3-lxml
-Requires:       python3-python-dateutil
-%if 0%{?suse_version} > 1320
 Requires:       python3-parallax
-%else
-Requires:       python-parallax
-%endif
+Requires:       python3-python-dateutil
 BuildRequires:  python3-lxml
 BuildRequires:  python3-setuptools
 
@@ -111,11 +107,7 @@ Requires(post):  mailx
 Requires(post):  procps
 Requires(post):  python3-python-dateutil
 Requires(post):  python3-tox
-%if 0%{?suse_version} > 1320
 Requires(post):  python3-parallax
-%else
-Requires(post):  python-parallax
-%endif
 Requires(post):  pacemaker
 %if 0%{?suse_version} > 1110
 BuildArch:      noarch
@@ -150,22 +142,11 @@ like hawk to implement configuration wizards.
 
 %prep
 %setup -q
-touch -r doc/crm.8.adoc{,.timestamp}
 
 # replace the shebang in all the scripts
 # with ${_bindir}/python3
 find . -type f -exec perl -pi -e 'BEGIN{undef $/};s[^#\!/usr/bin/python[3]?][#\!%{_bindir}/python3]' {} \;
 find . -type f -exec perl -pi -e 'BEGIN{undef $/};s[^#\!/usr/bin/env python[3]?][#\!%{_bindir}/python3]' {} \;
-
-# Force the local time
-#
-# 'hg archive' sets the file date to the date of the last commit.
-# This can result in files having been created in the future
-# when building on machines in timezones 'behind' the one the
-# commit occurred in - which seriously confuses 'make'
-find . -mtime -0 -exec touch \{\} \;
-# keep the .adoc mtime because it gets embedded in crm.8.html
-touch -r doc/crm.8.adoc{.timestamp,}
 
 %build
 ./autogen.sh
@@ -179,7 +160,7 @@ touch -r doc/crm.8.adoc{.timestamp,}
 make %{_smp_mflags} VERSION="%{version}" sysconfdir=%{_sysconfdir} localstatedir=%{_var}
 
 %if %{with regression_tests}
-tox -q
+tox
 if [ ! $? ]; then
     echo "Unit tests failed."
     exit 1
@@ -188,7 +169,7 @@ fi
 
 %install
 make DESTDIR=%{buildroot} docdir=%{crmsh_docdir} install
-install -Dm0644 contrib/bash_completion.sh %{buildroot}%{_sysconfdir}/bash_completion.d/crm.sh
+install -Dm0644 contrib/bash_completion.sh %{buildroot}%{_datadir}/bash-completion/completions/crm
 if [ -f %{buildroot}%{_bindir}/crm ]; then
 	install -Dm0755 %{buildroot}%{_bindir}/crm %{buildroot}%{_sbindir}/crm
 	rm %{buildroot}%{_bindir}/crm
@@ -245,7 +226,7 @@ result2=$?
 %dir %{crmsh_docdir}
 %dir %{crmsh_docdir}/contrib
 %dir %attr (770, %{uname}, %{gname}) %{_var}/cache/crm
-%config %{_sysconfdir}/bash_completion.d/crm.sh
+%{_datadir}/bash-completion/completions/crm
 
 %files scripts
 %defattr(-,root,root)
