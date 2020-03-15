@@ -36,7 +36,7 @@ before() {
     docker run -d --name=qnetd-node --hostname qnetd-node \
 	       --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro ${Docker_image}
     docker network connect --ip=10.10.10.9 second_net qnetd-node
-    docker exec -t qnetd-node /bin/sh -c "zypper -n in corosync-qnetd"
+    docker exec -t qnetd-node /bin/sh -c "zypper ref;zypper -n in corosync-qnetd"
     docker exec -t qnetd-node /bin/sh -c "systemctl start sshd.service"
 
     # deploy node without ssh.service running for validation
