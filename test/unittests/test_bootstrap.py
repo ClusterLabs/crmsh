@@ -268,3 +268,25 @@ class TestBootstrap(unittest.TestCase):
         mock_csync2.assert_not_called()
         mock_stop_service.assert_not_called()
         mock_error.assert_not_called()
+
+    @mock.patch('crmsh.bootstrap.invoke')
+    def test_csync2_update_no_conflicts(self, mock_invoke):
+        mock_invoke.side_effect = [True, True]
+        bootstrap.csync2_update("/etc/corosync.conf")
+        mock_invoke.assert_has_calls([
+            mock.call("csync2 -rm /etc/corosync.conf"),
+            mock.call("csync2 -rxv /etc/corosync.conf")
+            ])
+
+    @mock.patch('crmsh.bootstrap.warn')
+    @mock.patch('crmsh.bootstrap.invoke')
+    def test_csync2_update(self, mock_invoke, mock_warn):
+        mock_invoke.side_effect = [True, False, True, False]
+        bootstrap.csync2_update("/etc/corosync.conf")
+        mock_invoke.assert_has_calls([
+            mock.call("csync2 -rm /etc/corosync.conf"),
+            mock.call("csync2 -rxv /etc/corosync.conf"),
+            mock.call("csync2 -rf /etc/corosync.conf"),
+            mock.call("csync2 -rxv /etc/corosync.conf")
+            ])
+        mock_warn.assert_called_once_with("/etc/corosync.conf was not synced")
