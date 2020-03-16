@@ -733,9 +733,17 @@ include /etc/sysconfig/sbd;
 
 
 def csync2_update(path):
-    invoke("csync2 -rm %s" % (path))
-    invoke("csync2 -rf %s" % (path))
-    invoke("csync2 -rxv %s" % (path))
+    '''
+    Sync path to all peers
+
+    If there was a conflict, use '-f' to force this side to win
+    '''
+    invoke("csync2 -rm {}".format(path))
+    if invoke("csync2 -rxv {}".format(path)):
+        return
+    invoke("csync2 -rf {}".format(path))
+    if not invoke("csync2 -rxv {}".format(path)):
+        warn("{} was not synced".format(path))
 
 
 def init_csync2_remote():
@@ -1599,7 +1607,8 @@ def join_csync2(seed_host):
     # they haven't gone to all nodes in the cluster, which means a
     # subseqent join of another node can fail its sync of corosync.conf
     # when it updates expected_votes.  Grrr...
-    if not invoke('ssh root@%s "csync2 -mr / ; csync2 -fr / ; csync2 -xv"' % (seed_host)):
+    if not invoke('ssh -o StrictHostKeyChecking=no root@{} "csync2 -rm /; csync2 -rxv || csync2 -rf / && csync2 -rxv"'.format(seed_host)):
+        print("")
         warn("csync2 run failed - some files may not be sync'd")
 
     status_done()
