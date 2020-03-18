@@ -660,7 +660,7 @@ def init_cluster_local():
 
     # for cluster join, diskless_sbd flag is set in join_cluster() if
     # sbd is running on seed host
-    if configured_sbd_device() or _context.diskless_sbd:
+    if (configured_sbd_device() and _context.sbd_device) or _context.diskless_sbd:
         invoke("systemctl enable sbd.service")
     else:
         invoke("systemctl disable sbd.service")
@@ -1496,7 +1496,7 @@ op_defaults op-options: timeout=600 record-pending=true
 rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
 """)
 
-    if configured_sbd_device():
+    if configured_sbd_device() and _context.sbd_device:
         if not invoke("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"):
             error("Can't create stonith-sbd primitive")
         if not invoke("crm configure property stonith-enabled=true"):
