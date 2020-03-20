@@ -146,26 +146,51 @@ class TestCorosyncParser(unittest.TestCase):
         mock_ip_local.assert_called_once_with(False)
         mock_search.assert_called_once_with("nodelist.node.ring[0-9]*_addr", "nodelist.node.ring0_addr")
 
-    def test_add_node_ucast(self):
-        from crmsh.corosync import add_node_ucast, get_values
+    @mock.patch("crmsh.corosync.make_section")
+    @mock.patch("crmsh.corosync.make_value")
+    @mock.patch("crmsh.corosync.get_free_nodeid")
+    @mock.patch("crmsh.corosync.Parser")
+    @mock.patch("__builtin__.open", create=True)
+    @mock.patch("crmsh.corosync.conf")
+    @mock.patch("crmsh.corosync.find_configured_ip")
+    def test_add_node_ucast(self, mock_find_ip, mock_conf, mock_open_file, mock_parser,
+            mock_free_id, mock_make_value, mock_make_section):
+        mock_parser_inst = mock.Mock()
+        mock_conf.side_effect = ["corosync.conf", "corosync.conf"]
+        mock_open_read = mock.mock_open(read_data="read data")
+        mock_open_write = mock.mock_open()
+        mock_open_file.side_effect = [
+                mock_open_read.return_value,
+                mock_open_write.return_value]
+        mock_parser.return_value = mock_parser_inst
+        mock_free_id.return_value = 2
+        mock_make_value.side_effect = [["value1"], ["value2"]]
+        mock_make_section.return_value = "section1"
+        mock_parser_inst.count.return_value = 2
+        mock_parser_inst.to_string.return_value = "string data"
 
-        os.environ["COROSYNC_MAIN_CONFIG_FILE"] = os.path.join(os.path.dirname(__file__), 'corosync.conf.2')
+        corosync.add_node_ucast(['10.10.10.1'])
 
-        exist_iplist = get_values('nodelist.node.ring0_addr')
-        try:
-            add_node_ucast(['10.10.10.11'])
-        except corosync.IPAlreadyConfiguredError:
-            self.fail("corosync.add_node_ucast raised ValueError unexpectedly!")
-        now_iplist = get_values('nodelist.node.ring0_addr')
-        self.assertEqual(len(exist_iplist) + 1, len(now_iplist))
-        self.assertTrue('10.10.10.11' in get_values('nodelist.node.ring0_addr'))
-
-        # bsc#1127095, 1127096; address 10.10.10.11 already exist
-        with self.assertRaises(corosync.IPAlreadyConfiguredError) as err:
-            add_node_ucast(['10.10.10.11'])
-        self.assertEqual("IP 10.10.10.11 was already configured", str(err.exception))
-        now_iplist = get_values('nodelist.node.ring0_addr')
-        self.assertEqual(len(exist_iplist) + 1, len(now_iplist))
+        mock_find_ip.assert_called_once_with(['10.10.10.1'])
+        mock_open_file.assert_has_calls([
+            mock.call("corosync.conf"),
+            mock.call("corosync.conf", 'w')
+            ])
+        file_handle = mock_open_read.return_value.__enter__.return_value
+        file_handle.read.assert_called_once_with()
+        mock_parser.assert_called_once_with("read data")
+        mock_free_id.assert_called_once_with(mock_parser_inst)
+        mock_make_value.assert_has_calls([
+            mock.call('nodelist.node.ring0_addr', '10.10.10.1'),
+            mock.call('nodelist.node.nodeid', '2')
+            ])
+        mock_make_section.assert_called_once_with('nodelist.node', ["value1", "value2"])
+        mock_parser_inst.add.assert_called_once_with('nodelist', 'section1')
+        mock_parser_inst.count.assert_called_once_with("nodelist.node")
+        mock_parser_inst.set.assert_called_once_with('quorum.two_node', '1')
+        mock_parser_inst.to_string.assert_called_once_with()
+        file_handle = mock_open_write.return_value.__enter__.return_value
+        file_handle.write.assert_called_once_with("string data")
 
     def test_add_node_nodelist(self):
         from crmsh.corosync import make_section, make_value, get_free_nodeid
