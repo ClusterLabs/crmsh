@@ -25,9 +25,6 @@ from . import term
 from .msg import common_warn, common_info, common_debug, common_err, err_buf
 
 
-mcast_regrex = r'2(?:2[4-9]|3\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d?|0)){3}'
-
-
 def to_ascii(input_str):
     """Convert the bytes string to a ASCII string
     Usefull to remove accent (diacritics)"""
@@ -126,37 +123,6 @@ def network_defaults(interface=None):
         if len(ips) > 0:
             info[1] = ips[0]
     return tuple(info)
-
-
-def network_all(with_mask=False):
-    """
-    returns all networks on local node
-    """
-    all_networks = []
-    _, outp = get_stdout("/sbin/ip -o route show")
-    for l in outp.split('\n'):
-        if re.search(r'\.0/[0-9]+ ', l):
-            if with_mask:
-                all_networks.append(l.split()[0])
-            else:
-                all_networks.append(l.split('/')[0])
-    return all_networks
-
-
-def network_v6_all():
-    _, outp = get_stdout("/sbin/ip -6 -o addr show")
-    dict_ = {}
-    for line in outp.split('\n'):
-        if re.search(r' ::1/| [Ff][Ee]80:', line):
-            # skip local address and link-local address
-            continue
-        dict_[line.split()[1]] = []
-    for line in outp.split('\n'):
-        if re.search(r' ::1/| [Ff][Ee]80:', line):
-            # skip local address and link-local address
-            continue
-        dict_[line.split()[1]].append(line.split()[3])
-    return dict_
 
 
 def ip_in_local(IPv6=False):
@@ -2069,28 +2035,8 @@ def valid_ip_addr(addr, version=4):
     return True
 
 
-def get_ipv6_network(addr_with_mask):
-    return str(ipaddress.ip_interface(addr_with_mask).network.network_address)
-
-
 def gen_nodeid_from_ipv6(addr):
     return int(ipaddress.ip_address(addr)) % 1000000000
-
-
-def ip_in_network(addr, net):
-    return ipaddress.ip_address(addr) in ipaddress.ip_interface(net).network
-
-
-class IP:
-    def __init__(self, addr):
-        self.addr = ipaddress.ip_address(addr)
-
-    def version(self):
-        return self.addr.version
-
-
-def is_ipv6(addr):
-    return IP(addr).version() == 6
 
 
 # Set by detect_cloud() or iplist_for_cloud()
@@ -2237,4 +2183,223 @@ def interface_choice():
     # should consider interface format like "ethx@xxx"
     interface_list = re.findall(r'(?:[0-9]+:) (.*?)(?=: |@.*?: )', out)
     return [nic for nic in interface_list if nic != "lo"]
+
+
+class IP(object):
+    """
+    Class to get some properties of IP address
+    """
+
+    def __init__(self, addr):
+        """
+        Init function
+        """
+        self.addr = addr
+
+    @property
+    def ip_address(self):
+        """
+        Create ipaddress instance
+        """
+        return ipaddress.ip_address(self.addr)
+
+    @property
+    def version(self):
+        """
+        Get IP address version
+        """
+        return self.ip_address.version
+
+    @classmethod
+    def is_mcast(cls, addr):
+        """
+        Check whether the address is multicast address
+        """
+        cls_inst = cls(addr)
+        return cls_inst.ip_address.is_multicast
+
+    @classmethod
+    def is_ipv6(cls, addr):
+        """
+        Check whether the address is IPV6 address
+        """
+        return cls(addr).version == 6
+
+
+class Interface(object):
+    """
+    Class to get information from one interface
+    """
+
+    def __init__(self, ip_with_mask):
+        """
+        Init function
+        """
+        self.ip, self.mask = ip_with_mask.split('/')
+
+    @property
+    def ip_with_mask(self):
+        """
+        Get ip with netmask
+        """
+        return '{}/{}'.format(self.ip, self.mask)
+
+    @property
+    def ip_interface(self):
+        """
+        Create ip_interface instance
+        """
+        return ipaddress.ip_interface(self.ip_with_mask)
+
+    @property
+    def network(self):
+        """
+        Get network address
+        """
+        return str(self.ip_interface.network.network_address)
+
+    def ip_in_network(self, addr):
+        """
+        Check whether the addr in the network
+        """
+        return IP(addr).ip_address in self.ip_interface.network
+
+
+class InterfacesInfo(object):
+    """
+    Class to collect interfaces information on local node
+    """
+
+    def __init__(self, ipv6=False, second_heartbeat=False, custom_nic_list=[]):
+        """
+        Init function
+
+        On init process,
+        "ipv6" is provided by -I option
+        "second_heartbeat" is provided by -M option
+        "custom_nic_list" is provided by -i option
+        """
+        self.ipv6 = ipv6
+        self.second_heartbeat = second_heartbeat
+        self._default_nic_list = custom_nic_list
+        self._nic_info_dict = {}
+
+    def get_interfaces_info(self):
+        """
+        Try to get interfaces info dictionary via "ip" command
+        """
+        cmd = "ip -{} -o addr show".format(6 if self.ipv6 else 4)
+        rc, out, err = get_stdout_stderr(cmd)
+        if rc != 0:
+            raise ValueError(err)
+
+        # format on each line will like:
+        # 2: enp1s0    inet 192.168.122.241/24 brd 192.168.122.255 scope global enp1s0\       valid_lft forever preferred_lft forever
+        for line in out.splitlines():
+            _, nic, _, ip_with_mask, *_ = line.split()
+            #TODO change this condition when corosync support link-local address
+            if nic == "lo" or re.search(r' [Ff][Ee]80:', line):
+                continue
+            # one nic might configured multi IP addresses
+            if nic not in self._nic_info_dict:
+                self._nic_info_dict[nic] = []
+            self._nic_info_dict[nic].append(Interface(ip_with_mask))
+
+        if not self._nic_info_dict:
+            raise ValueError("No address configured")
+        if self.second_heartbeat and len(self._nic_info_dict) == 1:
+            raise ValueError("Cannot configure second heartbeat, since only one address is available")
+
+    @property
+    def nic_list(self):
+        """
+        Get interfaces name list
+        """
+        return list(self._nic_info_dict.keys())
+
+    @property
+    def interface_list(self):
+        """
+        Get instance list of class Interface
+        """
+        _interface_list = []
+        for interface in self._nic_info_dict.values():
+            _interface_list.extend(interface)
+        return _interface_list
+
+    @property
+    def ip_list(self):
+        """
+        Get IP address list
+        """
+        return [interface.ip for interface in self.interface_list]
+
+    @classmethod
+    def get_local_ip_list(cls, is_ipv6):
+        """
+        Get IP address list
+        """
+        cls_inst = cls(is_ipv6)
+        cls_inst.get_interfaces_info()
+        return cls_inst.ip_list
+
+    @property
+    def network_list(self):
+        """
+        Get network list
+        """
+        return list(set([interface.network for interface in self.interface_list]))
+
+    def nic_first_ip(self, nic):
+        """
+        Get the first IP of specific nic
+        """
+        return self._nic_info_dict[nic][0].ip
+
+    def get_default_nic_list_from_route(self):
+        """
+        Get default nic list from route
+        """
+        if self._default_nic_list:
+            return self._default_nic_list
+
+        #TODO what if user only has ipv6 route?
+        cmd = "ip -o route show"
+        rc, out, err = get_stdout_stderr(cmd)
+        if rc != 0:
+            raise ValueError(err)
+        res = re.search(r'^default via .* dev (.*?) ', out)
+        if res:
+            self._default_nic_list = [res.group(1)]
+        else:
+            common_warn("No default route configured. Using the first found nic")
+            self._default_nic_list = [self.nic_list[0]]
+        return self._default_nic_list
+
+    def get_default_ip_list(self):
+        """
+        Get default IP list used by corosync
+        """
+        _ip_list = []
+        for nic in self._default_nic_list:
+            # in case given interface not exist
+            if nic not in self.nic_list:
+                raise ValueError("Failed to detect IP address for {}".format(nic))
+            _ip_list.append(self.nic_first_ip(nic))
+        # in case -M specified but given one interface via -i
+        if self.second_heartbeat and len(self._default_nic_list) == 1:
+            for nic in self.nic_list:
+                if nic not in self._default_nic_list:
+                    _ip_list.append(self.nic_first_ip(nic))
+                    break
+        return _ip_list
+
+    def ip_in_network(self, addr):
+        """
+        Check whether given address was in one of local networks
+        """
+        for interface_inst in self.interface_list:
+            if interface_inst.ip_in_network(addr):
+                return True
+        return False
 # vim:ts=4:sw=4:et:
