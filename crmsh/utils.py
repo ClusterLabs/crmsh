@@ -128,6 +128,24 @@ def network_defaults(interface=None):
     return tuple(info)
 
 
+def network_v6_defaults(interface=None):
+    """
+    returns (interface, ip-address, network, prefix-length)
+    """
+    v6_network_dict = network_v6_all()
+    if not v6_network_dict:
+        raise ValueError("No usable IPv6 addresses found")
+    if interface and not interface in v6_network_dict:
+        raise ValueError("Interface \"{}\" not exist".format(interface))
+
+    nic = interface if interface else v6_network_dict.keys()[0]
+    default_interface = v6_network_dict[nic][0]
+    ipaddr = default_interface.split('/')[0]
+    ipnetwork = get_ipv6_network(default_interface)
+    mask = default_interface.split('/')[1]
+    return nic, ipaddr, ipnetwork, mask
+
+
 def network_all(with_mask=False):
     """
     returns all networks on local node
@@ -144,19 +162,22 @@ def network_all(with_mask=False):
 
 
 def network_v6_all():
+    nic_network_dict = {}
+
     _, outp = get_stdout("/sbin/ip -6 -o addr show")
-    dict_ = {}
+    if not outp:
+        return nic_network_dict
+
     for line in outp.split('\n'):
-        if re.search(r' ::1/| [Ff][Ee]80:', line):
-            # skip local address and link-local address
+        if re.search(r' ::1/', line):
             continue
-        dict_[line.split()[1]] = []
-    for line in outp.split('\n'):
-        if re.search(r' ::1/| [Ff][Ee]80:', line):
-            # skip local address and link-local address
-            continue
-        dict_[line.split()[1]].append(line.split()[3])
-    return dict_
+
+        _, nic, _, network, *_ = line.split()
+        if nic not in nic_network_dict.keys():
+            nic_network_dict[nic] = []
+        nic_network_dict[nic].append(network)
+
+    return nic_network_dict
 
 
 def ip_in_local(IPv6=False):

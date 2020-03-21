@@ -504,12 +504,7 @@ def init_network():
     if not _context.ipv6:
         nic, ipaddr, ipnetwork, _prefix = utils.network_defaults(_context.nic)
     else:
-        all_ = utils.network_v6_all()
-        if not all_:
-            error("Unable to configure network: No usable IPv6 addresses found.")
-        nic = sorted(all_.keys())[0]
-        ipaddr = all_[nic][0].split('/')[0]
-        ipnetwork = utils.get_ipv6_network(all_[nic][0])
+        nic, ipaddr, ipnetwork, _prefix = utils.network_v6_defaults(_context.nic)
 
     if _context.nic is None:
         _context.nic = nic
