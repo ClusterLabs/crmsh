@@ -137,10 +137,10 @@ class QDevice(object):
     def qdevice_p12_on_cluster(self):
         return "{}/{}/{}".format(self.qdevice_path, self.cluster_node, self.qdevice_p12_filename)
 
-    def valid_attr(self):
+    def valid_attr(self, interfaces_inst):
         if not bootstrap.package_is_installed("corosync-qdevice"):
             raise ValueError("Package \"corosync-qdevice\" not installed on this node")
-        if self.ip == utils.this_node() or self.ip in utils.ip_in_local():
+        if self.ip == utils.this_node() or self.ip in interfaces_inst.ip_list:
             raise ValueError("host for qnetd must be a remote one")
         if not utils.resolve_hostnames([self.ip])[0]:
             raise ValueError("host \"{}\" is unreachable".format(self.ip))
@@ -850,7 +850,8 @@ def find_configured_ip(ip_list):
     # all_possible_ip is a ip set to check whether one of them already configured
     all_possible_ip = set(ip_list)
     # get local ip list
-    local_ip_list = utils.ip_in_local(utils.is_ipv6(ip_list[0]))
+    is_ipv6 = utils.IP.is_ipv6(ip_list[0])
+    local_ip_list = utils.InterfacesInfo.get_local_ip_list(is_ipv6)
     # extend all_possible_ip if ip_list contain local ip
     # to avoid this scenarios in join node:
     #   eth0's ip already configured in corosync.conf
