@@ -208,7 +208,7 @@ Note:
                             help='Answer "yes" to all prompts (use with caution, this is destructive, especially during the "storage" stage. The /root/.ssh/id_rsa key will be overwritten unless the option "--no-overwrite-sshkey" is used)')
         parser.add_argument("-t", "--template", dest="template",
                             help='Optionally configure cluster with template "name" (currently only "ocfs2" is valid here)')
-        parser.add_argument("-n", "--name", metavar="NAME", dest="name", default="hacluster",
+        parser.add_argument("-n", "--name", metavar="NAME", dest="cluster_name", default="hacluster",
                             help='Set the name of the configured cluster.')
         parser.add_argument("-N", "--nodes", metavar="NODES", dest="nodes",
                             help='Additional nodes to add to the created cluster. May include the current node, which will always be the initial cluster node.')
@@ -234,7 +234,7 @@ Note:
                                    help="Configure corosync use IPv6")
 
         qdevice_group = parser.add_argument_group("QDevice configuration", "Options for configuring QDevice and QNetd.")
-        qdevice_group.add_argument("--qnetd-hostname", dest="qdevice", metavar="HOST",
+        qdevice_group.add_argument("--qnetd-hostname", dest="qdevice_host", metavar="HOST",
                                    help="HOST or IP of the QNetd server to be used")
         qdevice_group.add_argument("--qdevice-port", dest="qdevice_port", metavar="PORT", type=int, default=5403,
                                    help="TCP PORT of QNetd server(default:5403)")
@@ -270,45 +270,21 @@ Note:
         if options.template and options.template != "ocfs2":
             parser.error("Invalid template (%s)" % (options.template))
 
-        # if options.geo and options.name == "hacluster":
-        #    parser.error("For a geo cluster, each cluster must have a unique name (use --name to set)")
-
-        qdevice = None
-        if options.qdevice:
+        if options.qdevice_host:
             if options.qdevice_heuristics_mode and not options.qdevice_heuristics:
                 parser.error("Option --qdevice-heuristics is required if want to configure heuristics mode")
             options.qdevice_heuristics_mode = options.qdevice_heuristics_mode or "sync"
-            qdevice = corosync.QDevice(
-                options.qdevice,
-                port=options.qdevice_port,
-                algo=options.qdevice_algo,
-                tie_breaker=options.qdevice_tie_breaker,
-                tls=options.qdevice_tls,
-                cmds=options.qdevice_heuristics,
-                mode=options.qdevice_heuristics_mode)
         elif re.search("--qdevice-.*", ' '.join(sys.argv)):
             parser.error("Option --qnetd-hostname is required if want to configure qdevice")
 
-        bootstrap.bootstrap_init(
-            cluster_name=options.name,
-            ui_context=context,
-            nic=options.nic,
-            ocfs2_device=options.ocfs2_device,
-            shared_device=options.shared_device,
-            sbd_device=options.sbd_device,
-            diskless_sbd=options.diskless_sbd,
-            quiet=options.quiet,
-            template=options.template,
-            admin_ip=options.admin_ip,
-            yes_to_all=options.yes_to_all,
-            no_overwrite_sshkey=options.no_overwrite_sshkey,
-            unicast=options.unicast,
-            second_hb=options.second_hb,
-            ipv6=options.ipv6,
-            watchdog=options.watchdog,
-            qdevice=qdevice,
-            stage=stage,
-            args=args)
+        # if options.geo and options.name == "hacluster":
+        #    parser.error("For a geo cluster, each cluster must have a unique name (use --name to set)")
+        boot_context = bootstrap.Context.set_context(options)
+        boot_context.ui_context = context
+        boot_context.stage = stage
+        boot_context.args = args
+
+        bootstrap.bootstrap_init(boot_context)
 
         # if options.geo:
         #    bootstrap.bootstrap_init_geo()
@@ -358,14 +334,11 @@ If stage is not specified, each stage will be invoked in sequence.
         if stage not in ("ssh", "csync2", "ssh_merge", "cluster", ""):
             parser.error("Invalid stage (%s)" % (stage))
 
-        bootstrap.bootstrap_join(
-            cluster_node=options.cluster_node,
-            ui_context=context,
-            nic=options.nic,
-            quiet=options.quiet,
-            yes_to_all=options.yes_to_all,
-            watchdog=options.watchdog,
-            stage=stage)
+        join_context = bootstrap.Context.set_context(options)
+        join_context.ui_context = context
+        join_context.stage = stage
+
+        bootstrap.bootstrap_join(join_context)
 
         return True
 
@@ -417,21 +390,16 @@ If stage is not specified, each stage will be invoked in sequence.
 
         if options.cluster_node is not None and options.cluster_node not in args:
             args = list(args) + [options.cluster_node]
+
+        rm_context = bootstrap.Context.set_context(options)
+        rm_context.ui_context = context
+
         if len(args) == 0:
-            bootstrap.bootstrap_remove(
-                cluster_node=None,
-                ui_context=context,
-                quiet=options.quiet,
-                yes_to_all=options.yes_to_all,
-                qdevice=options.qdevice)
+            bootstrap.bootstrap_remove(rm_context)
         else:
             for node in args:
-                bootstrap.bootstrap_remove(
-                    cluster_node=node,
-                    ui_context=context,
-                    quiet=options.quiet,
-                    yes_to_all=options.yes_to_all,
-                    force=options.force)
+                rm_context.cluster_node = node
+                bootstrap.bootstrap_remove(rm_context)
         return True
 
     @command.skill_level('administrator')
@@ -529,7 +497,13 @@ Cluster Description
                 ticketlist = [t for t in re.split('[ ,;]+', options.tickets)]
             except ValueError:
                 parser.error("Invalid ticket list")
-        bootstrap.bootstrap_init_geo(options.quiet, options.yes_to_all, options.arbitrator, clustermap, ticketlist, ui_context=context)
+
+        geo_context = bootstrap.Context.set_context(options)
+        geo_context.clusters = clustermap
+        geo_context.tickets = ticketlist
+        geo_context.ui_context = context
+
+        bootstrap.bootstrap_init_geo(geo_context)
         return True
 
     @command.name("geo_join")
@@ -543,13 +517,13 @@ Cluster Description
         parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
-        parser.add_argument("-c", "--cluster-node", help="IP address of an already-configured geo cluster or arbitrator", dest="node", metavar="IP")
+        parser.add_argument("-c", "--cluster-node", help="IP address of an already-configured geo cluster or arbitrator", dest="cluster_node", metavar="IP")
         parser.add_argument("-s", "--clusters", help="Geo cluster description (see geo-init for details)", dest="clusters", metavar="DESC")
         options, args = parse_options(parser, args)
         if options is None or args is None:
             return
         errs = []
-        if options.node is None:
+        if options.cluster_node is None:
             errs.append("The --cluster-node argument is required.")
         if options.clusters is None:
             errs.append("The --clusters argument is required.")
@@ -558,7 +532,12 @@ Cluster Description
         clustermap = self._parse_clustermap(options.clusters)
         if clustermap is None:
             parser.error("Invalid cluster description format")
-        bootstrap.bootstrap_join_geo(options.quiet, options.yes_to_all, options.node, clustermap, ui_context=context)
+
+        geo_context = bootstrap.Context.set_context(options)
+        geo_context.clusters = clustermap
+        geo_context.ui_context = context
+
+        bootstrap.bootstrap_join_geo(geo_context)
         return True
 
     @command.name("geo_init_arbitrator")
@@ -572,11 +551,15 @@ Cluster Description
         parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
-        parser.add_argument("-c", "--cluster-node", help="IP address of an already-configured geo cluster", dest="other", metavar="IP")
+        parser.add_argument("-c", "--cluster-node", help="IP address of an already-configured geo cluster", dest="cluster_node", metavar="IP")
         options, args = parse_options(parser, args)
         if options is None or args is None:
             return
-        bootstrap.bootstrap_arbitrator(options.quiet, options.yes_to_all, options.other, ui_context=context)
+
+        geo_context = bootstrap.Context.set_context(options)
+        geo_context.ui_context = context
+
+        bootstrap.bootstrap_arbitrator(geo_context)
         return True
 
     @command.completers_repeating(compl.call(scripts.param_completion_list, 'health'))
