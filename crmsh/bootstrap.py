@@ -50,27 +50,59 @@ class Context(object):
     Context object used to avoid having to pass these variables
     to every bootstrap method.
     """
-    def __init__(self, quiet, yes_to_all, nic=None, ip_address=None, ip_network=None):
-        self.quiet = quiet
-        self.yes_to_all = yes_to_all
-        self.nic = nic
-        self.ip_address = ip_address
-        self.ip_network = ip_network
+    def __init__(self):
+        '''
+        Initialize attributes
+        '''
+        self.quiet = None
+        self.yes_to_all = None
+        self.template = None
         self.cluster_name = None
-        self.cluster_node = None
-        self.ocfs2_device = None
+        self.diskless_sbd = None
+        self.watchdog = None
+        self.no_overwrite_sshkey = None
+        self.nic = None
+        self.unicast = None
+        self.admin_ip = None
+        self.second_hb = None
+        self.ipv6 = None
+        self.qdevice = None
+        self.qdevice_host = None
+        self.qdevice_port = None
+        self.qdevice_algo = None
+        self.qdevice_tie_breaker = None
+        self.qdevice_tls = None
+        self.qdevice_heuristics = None
+        self.qdevice_heuristics_mode = None
         self.shared_device = None
         self.sbd_device = None
-        self.diskless_sbd = False  # if True, enable SBD for diskless operation
-        self.unicast = None
-        self.ipv6 = None
-        self.admin_ip = None
-        self.watchdog = None
-        self.host_status = None
-        self.connect_name = None
-        self.second_hb = None
-        self.ui_context = None
-        self.qdevice = None
+        self.ocfs2_device = None
+        self.cluster_node = None
+        self.force = None
+        self.arbitrator = None
+        self.clusters = None
+        self.tickets = None
+        self.ip_address = None
+        self.ip_network = None
+
+    @classmethod
+    def set_context(cls, options):
+        ctx = cls()
+        for opt in vars(options):
+            setattr(ctx, opt, getattr(options, opt))
+        return ctx
+
+    def init_qdevice(self):
+        if not self.qdevice_host:
+            return
+        self.qdevice = corosync.QDevice(
+                self.qdevice_host,
+                port=self.qdevice_port,
+                algo=self.qdevice_algo,
+                tie_breaker=self.qdevice_tie_breaker,
+                tls=self.qdevice_tls,
+                cmds=self.qdevice_heuristics,
+                mode=self.qdevice_heuristics_mode)
 
 
 _context = None
@@ -1724,8 +1756,9 @@ def join_csync2(seed_host):
 
     # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
     # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
-    if not invoke("ssh -o StrictHostKeyChecking=no root@{} crm cluster init csync2_remote {}".format(seed_host, utils.this_node())):
-        error("Can't invoke crm cluster init init csync2_remote on {}".format(seed_host))
+    cmd = "crm cluster init -i {} csync2_remote {}".format(_context.nic, utils.this_node())
+    if not invoke("ssh -o StrictHostKeyChecking=no root@{} {}".format(seed_host, cmd)):
+        error("Can't invoke \"{}\" on {}".format(cmd, seed_host))
 
     # This is necessary if syncing /etc/hosts (to ensure everyone's got the
     # same list of hosts)
@@ -2215,53 +2248,10 @@ def remove_localhost_check():
     return nodename == utils.this_node()
 
 
-def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_device=None,
-                   shared_device=None, sbd_device=None, diskless_sbd=False, quiet=False,
-                   template=None, admin_ip=None, yes_to_all=False, no_overwrite_sshkey=False,
-                   unicast=False, second_hb=False, ipv6=False, watchdog=None, qdevice=None, stage=None, args=None):
+def bootstrap_init(context):
     """
-    -i <nic>
-    -o <ocfs2-device>
-    -p <shared-device>
-    -s <sbd-device>
-    -S - configure SBD without disk
-    -t <template>
-    -A [<admin-ip>]
-    -q - quiet
-    -y - yes to all
-    -u - unicast
-    <stage>
-
-    stages:
-    ssh
-    ssh_remote
-    csync2
-    csync2_remote
-    corosync
-    storage
-    sbd
-    cluster
-    vgfs
-    admin
-    qdevice
+    Init cluster process
     """
-    global _context
-    _context = Context(quiet=quiet, yes_to_all=yes_to_all, nic=nic)
-    _context.cluster_name = cluster_name
-    _context.ocfs2_device = ocfs2_device
-    _context.shared_device = shared_device
-    _context.sbd_device = sbd_device
-    _context.diskless_sbd = diskless_sbd
-    _context.unicast = unicast
-    _context.second_hb = second_hb
-    _context.ipv6 = ipv6
-    _context.admin_ip = admin_ip
-    _context.watchdog = watchdog
-    _context.ui_context = ui_context
-    _context.qdevice = qdevice
-    _context.no_overwrite_sshkey = no_overwrite_sshkey
-    _context.stage = stage
-
     def check_option():
         if _context.admin_ip and not valid_adminIP(_context.admin_ip):
             error("Invalid option: admin_ip")
@@ -2271,6 +2261,11 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
             except ValueError as err:
                 error(err)
 
+    global _context
+    _context = context
+    _context.init_qdevice()
+
+    stage = _context.stage
     if stage is None:
         stage = ""
 
@@ -2296,6 +2291,7 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
         if not check_prereqs(stage):
             return
     elif stage == 'csync2_remote':
+        args = _context.args
         log("args: {}".format(args))
         if len(args) != 2:
             error("Expected NODE argument to csync2_remote")
@@ -2306,18 +2302,18 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     if stage != "":
         globals()["init_" + stage]()
     else:
-        if watchdog is not None:
+        if _context.watchdog is not None:
             init_watchdog()
         init_ssh()
         init_csync2()
         init_corosync()
         init_remote_auth()
-        if template == 'ocfs2':
-            if sbd_device is None or ocfs2_device is None:
+        if _context.template == 'ocfs2':
+            if _context.sbd_device is None or _context.ocfs2_device is None:
                 init_storage()
         init_sbd()
         init_cluster()
-        if template == 'ocfs2':
+        if _context.template == 'ocfs2':
             init_vgfs()
         init_admin()
         init_qdevice()
@@ -2325,24 +2321,12 @@ def bootstrap_init(cluster_name="hacluster", ui_context=None, nic=None, ocfs2_de
     status("Done (log saved to %s)" % (LOG_FILE))
 
 
-def bootstrap_join(cluster_node=None, ui_context=None, nic=None, quiet=False, yes_to_all=False, watchdog=None, stage=None):
+def bootstrap_join(context):
     """
-    -c <cluster-node>
-    -i <nic>
-    -q - quiet
-    -y - yes to all
-    <stage>
-    # stages:
-    ssh
-    csync2
-    ssh_merge
-    cluster
+    Join cluster process
     """
     global _context
-    _context = Context(quiet=quiet, yes_to_all=yes_to_all, nic=nic)
-    _context.cluster_node = cluster_node
-    _context.watchdog = watchdog
-    _context.ui_context = ui_context
+    _context = context
 
     check_tty()
 
@@ -2355,10 +2339,11 @@ def bootstrap_join(cluster_node=None, ui_context=None, nic=None, quiet=False, ye
 
     init()
 
-    if stage != "":
-        globals()["join_" + stage](cluster_node)
+    cluster_node = _context.cluster_node
+    if _context.stage != "":
+        globals()["join_" + _context.stage](cluster_node)
     else:
-        if not yes_to_all and cluster_node is None:
+        if not _context.yes_to_all and cluster_node is None:
             status("""Join This Node to Cluster:
   You will be asked for the IP address of an existing node, from which
   configuration will be copied.  If you have not already configured
@@ -2385,19 +2370,15 @@ def join_remote_auth(node):
     invoke("touch {}".format(PCMK_REMOTE_AUTH))
 
 
-def bootstrap_remove(cluster_node=None, ui_context=None, quiet=False, yes_to_all=False, force=False,
-                     qdevice=None):
+def bootstrap_remove(context):
     """
-    -c <cluster-node> - node to remove from cluster
-    -q - quiet
-    -y - yes to all
-    -f - force removal of self
+    Remove node from cluster, or remove qdevice configuration
     """
     global _context
-    _context = Context(quiet=quiet, yes_to_all=yes_to_all)
-    _context.cluster_node = cluster_node
-    _context.ui_context = ui_context
-    _context.qdevice = qdevice
+    _context = context
+    yes_to_all = _context.yes_to_all
+    cluster_node = _context.cluster_node
+    force = _context.force
 
     if _context.qdevice:
         if not utils.is_qdevice_configured():
@@ -2527,13 +2508,12 @@ port="9929"
     os.chmod(BOOTH_CFG, 0o644)
 
 
-def bootstrap_init_geo(quiet, yes_to_all, arbitrator, clusters, tickets, ui_context=None):
+def bootstrap_init_geo(context):
     """
     Configure as a geo cluster member.
     """
     global _context
-    _context = Context(quiet=quiet, yes_to_all=yes_to_all)
-    _context.ui_context = ui_context
+    _context = context
 
     if os.path.exists(BOOTH_CFG) and not confirm("This will overwrite {} - continue?".format(BOOTH_CFG)):
         return
@@ -2548,18 +2528,18 @@ def bootstrap_init_geo(quiet, yes_to_all, arbitrator, clusters, tickets, ui_cont
     # set common.startup.degr-wfc-timeout 120
 
     create_booth_authkey()
-    create_booth_config(arbitrator, clusters, tickets)
+    create_booth_config(_context.arbitrator, _context.clusters, _context.tickets)
     status("Sync booth configuration across cluster")
     csync2_update("/etc/booth")
     init_csync2_geo()
-    geo_cib_config(clusters)
+    geo_cib_config(_context.clusters)
 
 
 def geo_fetch_config(node):
     # TODO: clean this up
     status("Retrieving configuration - This may prompt for root@%s:" % (node))
     tmpdir = tmpfiles.create_dir()
-    invoke("scp root@%s:'/etc/booth/*' %s/" % (node, tmpdir))
+    invoke("scp -oStrictHostKeyChecking=no root@%s:'/etc/booth/*' %s/" % (node, tmpdir))
     try:
         if os.path.isfile("%s/authkey" % (tmpdir)):
             invoke("mv %s/authkey %s" % (tmpdir, BOOTH_AUTH))
@@ -2589,30 +2569,30 @@ group g-booth booth-ip booth-site meta target-role=Stopped
     crm_configure_load("update", crm_template.substitute(iprules=" ".join(iprule.format(k, v) for k, v in clusters.items())))
 
 
-def bootstrap_join_geo(quiet, yes_to_all, node, clusters, ui_context=None):
+def bootstrap_join_geo(context):
     """
     Run on second cluster to add to a geo configuration.
     It fetches its booth configuration from the other node (cluster node or arbitrator).
     """
     global _context
-    _context = Context(quiet=quiet, yes_to_all=yes_to_all)
-    _context.ui_context = ui_context
+    _context = context
     init_common_geo()
     check_tty()
-    geo_fetch_config(node)
+    geo_fetch_config(_context.cluster_node)
     status("Sync booth configuration across cluster")
     csync2_update("/etc/booth")
-    geo_cib_config(clusters)
+    geo_cib_config(_context.clusters)
 
 
-def bootstrap_arbitrator(quiet, yes_to_all, node, ui_context=None):
+def bootstrap_arbitrator(context):
     """
     Configure this machine as an arbitrator.
     It fetches its booth configuration from a cluster node already in the cluster.
     """
     global _context
-    _context = Context(quiet=quiet, yes_to_all=yes_to_all)
-    _context.ui_context = ui_context
+    _context = context
+    node = _context.cluster_node
+
     init_common_geo()
     check_tty()
     geo_fetch_config(node)
