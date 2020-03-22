@@ -72,6 +72,12 @@ jobs:
         - $FUNCTIONAL_TEST qdevice before_install
       script:
         - $FUNCTIONAL_TEST qdevice run validate
+    
+    - name: "functional test for qdevice - user case"
+      before_install:
+        - $FUNCTIONAL_TEST qdevice before_install
+      script:
+        - $FUNCTIONAL_TEST qdevice run usercase
 
     - name: "functional test for resource subcommand"
       before_install:
