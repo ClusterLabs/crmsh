@@ -6,6 +6,10 @@ from utils import check_cluster_state, check_service_state, online, run_command,
                   run_command_local_or_remote
 import const
 
+@when('Write multi lines to file "{f}"')
+def step_impl(context, f):
+    with open(f, 'w') as fd:
+        fd.write(context.text)
 
 @given('Cluster service is "{state}" on "{addr}"')
 def step_impl(context, state, addr):

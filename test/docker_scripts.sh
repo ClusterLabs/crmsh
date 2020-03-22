@@ -9,7 +9,7 @@ before() {
 
   # deploy first node hanode1
   docker run -d --name=hanode1 --hostname hanode1 \
-             --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" ${Docker_image}
+             --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" --shm-size="1g" ${Docker_image}
   docker network connect --ip=10.10.10.2 second_net hanode1
   docker exec -t hanode1 /bin/sh -c "echo \"10.10.10.3 hanode2\" >> /etc/hosts"
   if [ x"$1" == x"qdevice" ];then
@@ -21,7 +21,7 @@ before() {
 
   # deploy second node hanode2
   docker run -d --name=hanode2 --hostname hanode2 \
-             --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" ${Docker_image}
+             --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" --shm-size="1g" ${Docker_image}
   docker network connect --ip=10.10.10.3 second_net hanode2
   docker exec -t hanode2 /bin/sh -c "echo \"10.10.10.2 hanode1\" >> /etc/hosts"
   if [ x"$1" == x"qdevice" ];then
@@ -34,7 +34,7 @@ before() {
   if [ x"$1" == x"qdevice" ];then
     # deploy node qnetd-node for qnetd service
     docker run -d --name=qnetd-node --hostname qnetd-node \
-	       --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro ${Docker_image}
+	       --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro --shm-size="1g" ${Docker_image}
     docker network connect --ip=10.10.10.9 second_net qnetd-node
     docker exec -t qnetd-node /bin/sh -c "zypper ref;zypper -n in corosync-qnetd"
     docker exec -t qnetd-node /bin/sh -c "systemctl start sshd.service"
