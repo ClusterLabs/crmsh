@@ -280,13 +280,10 @@ def run():
     #     problem description template, and prints final notes
     #
     if is_collector():
-        import io
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-
         utillib.collect_info()
         cmd = r"cd %s/.. && tar -h -cf - %s" % (constants.WORKDIR, constants.WE)
-        code, out, err = crmutils.get_stdout_stderr(cmd)
-        print(out)
+        code, out, err = crmutils.get_stdout_stderr(cmd, raw=True)
+        print("{}{}".format(constants.COMPRESS_DATA_FLAG, out))
     else:
         p_list = []
         p_list.append(multiprocessing.Process(target=utillib.analyze))
