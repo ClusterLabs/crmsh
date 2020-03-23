@@ -725,7 +725,7 @@ def pipe_cmd_nosudo(cmd):
     return rc
 
 
-def get_stdout(cmd, input_s=None, stderr_on=True, shell=True):
+def get_stdout(cmd, input_s=None, stderr_on=True, shell=True, raw=False):
     '''
     Run a cmd, return stdout output.
     Optional input string "input_s".
@@ -743,10 +743,12 @@ def get_stdout(cmd, input_s=None, stderr_on=True, shell=True):
                             stdout=subprocess.PIPE,
                             stderr=stderr)
     stdout_data, stderr_data = proc.communicate(input_s)
+    if raw:
+        return proc.returncode, stdout_data
     return proc.returncode, to_ascii(stdout_data).strip()
 
 
-def get_stdout_stderr(cmd, input_s=None, shell=True):
+def get_stdout_stderr(cmd, input_s=None, shell=True, raw=False):
     '''
     Run a cmd, return (rc, stdout, stderr)
     '''
@@ -758,6 +760,8 @@ def get_stdout_stderr(cmd, input_s=None, shell=True):
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
     stdout_data, stderr_data = proc.communicate(input_s)
+    if raw:
+        return proc.returncode, stdout_data, stderr_data
     return proc.returncode, to_ascii(stdout_data).strip(), to_ascii(stderr_data).strip()
 
 
