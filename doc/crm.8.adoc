@@ -212,15 +212,14 @@ are a few examples:
 
 ...............
 crm(live)resource# <TAB><TAB>
-bye           failcount     move          restart       unmigrate
-cd            help          param         show          unmove
-cleanup       list          promote       start         up
-demote        manage        quit          status        utilization
-end           meta          refresh       stop
-exit          migrate       unmanage
+ban           demote        maintenance   param         scores        trace 
+cd            failcount     manage        promote       secret        unmanage 
+cleanup       help          meta          quit          start         untrace 
+clear         locate        move          refresh       status        up 
+constraints   ls            operations    restart       stop          utilization
 
 crm(live)configure# primitive fence-1 <TAB><TAB>
-heartbeat:  lsb:    ocf:    stonith:
+lsb:      ocf:      service:  stonith:  systemd:
 
 crm(live)configure# primitive fence-1 stonith:<TAB><TAB>
 apcmaster                external/ippower9258     fence_legacy
