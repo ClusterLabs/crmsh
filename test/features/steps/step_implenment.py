@@ -6,6 +6,10 @@ from utils import check_cluster_state, check_service_state, online, run_command,
                   run_command_local_or_remote
 import const
 
+@when('Write multi lines to file "{f}"')
+def step_impl(context, f):
+    with open(f, 'w') as fd:
+        fd.write(context.text)
 
 @given('Cluster service is "{state}" on "{addr}"')
 def step_impl(context, state, addr):
@@ -71,6 +75,12 @@ def step_impl(context, msg):
 @then('Except "{msg}"')
 def step_impl(context, msg):
     assert context.command_error_output == msg
+    context.command_error_output = None
+
+
+@then('Except multiple lines')
+def step_impl(context):
+    assert context.command_error_output.split('\n') == context.text.split('\n')
     context.command_error_output = None
 
 
