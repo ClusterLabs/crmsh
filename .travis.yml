@@ -55,6 +55,12 @@ jobs:
       script:
         - $FUNCTIONAL_TEST bootstrap run options
 
+    - name: "functional test for geo cluster"
+      before_install:
+        - $FUNCTIONAL_TEST geo before_install
+      script:
+        - $FUNCTIONAL_TEST geo run setup
+
     - name: "functional test for resource subcommand"
       before_install:
         - $FUNCTIONAL_TEST resource before_install

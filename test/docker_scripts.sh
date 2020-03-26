@@ -1,7 +1,7 @@
 #!/bin/bash
 Docker_image='liangxin1300/haleap:15.1'
 HA_packages='pacemaker corosync'
-TEST_TYPE='bootstrap hb_report'
+TEST_TYPE='bootstrap hb_report geo'
 
 before() {
   docker pull ${Docker_image}
@@ -13,6 +13,9 @@ before() {
              --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" ${Docker_image}
   docker network connect --ip=10.10.10.2 second_net hanode1
   docker exec -t hanode1 /bin/sh -c "echo \"10.10.10.3 hanode2\" >> /etc/hosts"
+  if [ x"$1" == x"geo" ];then
+    docker exec -t hanode1 /bin/sh -c "echo \"10.10.10.4 hanode3\" >> /etc/hosts"
+  fi
   docker exec -t hanode1 /bin/sh -c "zypper -n in ${HA_packages}"
   docker exec -t hanode1 /bin/sh -c "cd /app; ./test/run-in-travis.sh build"
 
@@ -22,9 +25,22 @@ before() {
   docker network connect --ip=10.10.10.3 second_net hanode2
   docker network connect --ip=20.20.20.3 third_net hanode2
   docker exec -t hanode2 /bin/sh -c "echo \"10.10.10.2 hanode1\" >> /etc/hosts"
+  if [ x"$1" == x"geo" ];then
+    docker exec -t hanode2 /bin/sh -c "echo \"10.10.10.4 hanode3\" >> /etc/hosts"
+  fi
   docker exec -t hanode2 /bin/sh -c "zypper -n in ${HA_packages}"
   docker exec -t hanode2 /bin/sh -c "systemctl start sshd.service"
   docker exec -t hanode2 /bin/sh -c "cd /app; ./test/run-in-travis.sh build"
+
+  if [ x"$1" == x"geo" ];then
+    docker run -d --name=hanode3 --hostname hanode3 \
+            --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" ${Docker_image}
+    docker network connect --ip=10.10.10.4 second_net hanode3
+    docker exec -t hanode3 /bin/sh -c "echo \"10.10.10.2 hanode1\" >> /etc/hosts"
+    docker exec -t hanode3 /bin/sh -c "echo \"10.10.10.3 hanode2\" >> /etc/hosts"
+    docker exec -t hanode3 /bin/sh -c "systemctl start sshd.service"
+    docker exec -t hanode3 /bin/sh -c "cd /app; ./test/run-in-travis.sh build"
+  fi
 }
 
 run() {
