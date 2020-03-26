@@ -13,15 +13,16 @@ env:
   global:
     - CC_TEST_REPORTER_ID=a2579335b631ec35473874d7bb4fe983025c0287cea89c9dc34c35f98ee3963d
     - FUNCTIONAL_TEST=$TRAVIS_BUILD_DIR/test/docker_scripts.sh
+    - IMAGE=liangxin1300/hatbw
 
 jobs:
   include:
     - stage: test
       name: "unit test"
       before_install:
-        - docker pull liangxin1300/haleap:15.2
+        - docker pull $IMAGE
       script:
-        - docker run -t -v "$(pwd):/app" liangxin1300/haleap:15.2 /bin/sh -c "cd /app; TOXENV=py36-codeclimate; tox"
+        - docker run -t -v "$(pwd):/app" $IMAGE /bin/sh -c "cd /app; TOXENV=py38-codeclimate; tox"
 
     - name: "original regression test"
       before_script:
@@ -29,9 +30,9 @@ jobs:
         - chmod +x ./cc-test-reporter
         - ./cc-test-reporter before-build
       before_install:
-        - docker pull liangxin1300/haleap:15.2
+        - docker pull $IMAGE
       script:
-        - docker run -t -v "$(pwd):/app" liangxin1300/haleap:15.2 /bin/sh -c "cd /app; ./test/run-in-travis.sh"
+        - docker run -t -v "$(pwd):/app" $IMAGE /bin/sh -c "cd /app; ./test/run-in-travis.sh"
       after_failure:
         - sudo cat $TRAVIS_BUILD_DIR/crmtestout/regression.out $TRAVIS_BUILD_DIR/crmtestout/crm.*
       after_script:
@@ -54,6 +55,12 @@ jobs:
         - $FUNCTIONAL_TEST bootstrap before_install
       script:
         - $FUNCTIONAL_TEST bootstrap run options
+
+    - name: "functional test for geo cluster"
+      before_install:
+        - $FUNCTIONAL_TEST geo before_install
+      script:
+        - $FUNCTIONAL_TEST geo run setup
 
     - name: "functional test for qdevice - setup and remove"
       before_install:
