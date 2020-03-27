@@ -22,7 +22,7 @@ Feature: Regression test for bootstrap bugs
     When    Try "crm -c ' '"
     Then    Except "ERROR: Space value not allowed for dest "cib""
     When    Try "crm cluster init --name ' '"
-    Then    Except "ERROR: cluster.init: Space value not allowed for dest "name""
+    Then    Except "ERROR: cluster.init: Space value not allowed for dest "cluster_name""
     When    Try "crm cluster join -c ' '"
     Then    Except "ERROR: cluster.join: Space value not allowed for dest "cluster_node""
     When    Try "crm cluster remove -c ' '"
@@ -30,9 +30,9 @@ Feature: Regression test for bootstrap bugs
     When    Try "crm cluster geo-init -a ' '"
     Then    Except "ERROR: cluster.geo_init: Space value not allowed for dest "arbitrator""
     When    Try "crm cluster geo-join -c ' '"
-    Then    Except "ERROR: cluster.geo_join: Space value not allowed for dest "node""
+    Then    Except "ERROR: cluster.geo_join: Space value not allowed for dest "cluster_node""
     When    Try "crm cluster geo-init-arbitrator -c ' '"
-    Then    Except "ERROR: cluster.geo_init_arbitrator: Space value not allowed for dest "other""
+    Then    Except "ERROR: cluster.geo_init_arbitrator: Space value not allowed for dest "cluster_node""
 
   @clean
   Scenario: Setup cluster with crossed network(udpu only)
