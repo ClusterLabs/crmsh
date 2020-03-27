@@ -26,7 +26,7 @@ case "$1" in
 		configure
 		make_install
 		exit $?;;
-	bootstrap)
+	bootstrap|geo)
 		functional_tests $1 $2
 		exit $?;;
 	*)
