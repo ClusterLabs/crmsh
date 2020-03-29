@@ -27,11 +27,11 @@ Feature: Regression test for bootstrap bugs
     Then    Except "ERROR: cluster.join: Space value not allowed for dest "cluster_node""
     When    Try "crm cluster remove -c ' '"
     Then    Except "ERROR: cluster.remove: Space value not allowed for dest "cluster_node""
-    When    Try "crm cluster geo-init -a ' '"
+    When    Try "crm cluster geo_init -a ' '"
     Then    Except "ERROR: cluster.geo_init: Space value not allowed for dest "arbitrator""
-    When    Try "crm cluster geo-join -c ' '"
+    When    Try "crm cluster geo_join -c ' '"
     Then    Except "ERROR: cluster.geo_join: Space value not allowed for dest "node""
-    When    Try "crm cluster geo-init-arbitrator -c ' '"
+    When    Try "crm cluster geo_init_arbitrator -c ' '"
     Then    Except "ERROR: cluster.geo_init_arbitrator: Space value not allowed for dest "other""
 
   @clean
