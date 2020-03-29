@@ -604,7 +604,7 @@ class RscMgmt(command.UI):
                                     rsc, cmd, attr, value)
 
     @command.alias('reprobe')
-    @command.completers(compl.nodes)
+    @command.completers(compl.resources, compl.nodes)
     def do_refresh(self, context, rsc=None, node=None, force=False):
         'usage: refresh [<rsc>] [<node>] [force]'
         return self._refresh_cleanup("refresh", rsc, node, force)
