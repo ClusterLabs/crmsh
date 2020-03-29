@@ -87,6 +87,7 @@ resource p0 is NOT running
 
 .SETENV showobj=cli-prefer-p3
 .TRY resource migrate p3 node1
+WARNING: This command 'migrate' is deprecated, please use 'move'
 .EXT crm_resource --quiet --move -r 'p3' --node='node1'
 INFO: Move constraint created for p3 to node1
 .INP: configure
@@ -106,10 +107,12 @@ INFO: Move constraint created for p3 to node1
 
 .SETENV showobj=
 .TRY resource unmigrate p3
+WARNING: This command 'unmigrate' is deprecated, please use 'clear'
 .EXT crm_resource --quiet --clear -r 'p3'
 INFO: Removed migration constraints for p3
 .SETENV showobj=cli-prefer-p3
 .TRY resource migrate p3 node1 force
+WARNING: This command 'migrate' is deprecated, please use 'move'
 .EXT crm_resource --quiet --move -r 'p3' --node='node1' --force
 INFO: Move constraint created for p3 to node1
 .INP: configure
@@ -129,6 +132,7 @@ INFO: Move constraint created for p3 to node1
 
 .SETENV showobj=
 .TRY resource unmigrate p3
+WARNING: This command 'unmigrate' is deprecated, please use 'clear'
 .EXT crm_resource --quiet --clear -r 'p3'
 INFO: Removed migration constraints for p3
 .SETENV showobj=p0
@@ -917,6 +921,7 @@ INFO: Trace set, restart p0 to trace the stop operation
 
 .SETENV showobj=
 .TRY configure rm cg
+WARNING: This command 'rm' is deprecated, please use 'delete'
 .TRY configure ms msg g
 .TRY resource scores
 .EXT crm_simulate -sUL

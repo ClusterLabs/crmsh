@@ -318,6 +318,7 @@ Dec 14 20:08:43 xen-e lrmd: [24225]: info: rsc:d1 stop[11] (pid 24774)
 Dec 14 20:08:43 xen-e crmd: [24228]: info: process_lrm_event: LRM operation d1_stop_0 (call=11, rc=0, cib-update=125, confirmed=true) ok
 .INP: # reduce report span
 .INP: timeframe "2012-12-14 20:07:30"
+WARNING: 21: This command 'timeframe' is deprecated, please use 'limit'
 .INP: peinputs
 history-test/xen-e/pengine/pe-input-47.bz2
 history-test/xen-e/pengine/pe-input-48.bz2
@@ -373,6 +374,7 @@ Dec 14 20:07:57 xen-e external/libvirt(s-libvirt)[24555]: [24588]: notice: xen+s
 d1
 .INP: # reset timeframe
 .INP: timeframe
+WARNING: 32: This command 'timeframe' is deprecated, please use 'limit'
 .INP: session save _crmsh_regtest
 .EXT mkdir -p /var/cache/crm/history-root/session/_crmsh_regtest
 .INP: session load _crmsh_regtest
