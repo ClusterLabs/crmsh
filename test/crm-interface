@@ -35,7 +35,7 @@ clone c1 p1
 ms m1 p2
 op_defaults timeout=60s
 commit
-end
+up
 EOF
 }
 crm_show() {
