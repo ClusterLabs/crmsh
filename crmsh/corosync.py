@@ -411,8 +411,8 @@ def add_node_ucast(ip_list, node_id=None):
 
     find_configured_ip(ip_list)
 
-    f = open(conf()).read()
-    p = Parser(f)
+    with open(conf()) as f:
+        p = Parser(f.read())
 
     if node_id is None:
         node_id = get_free_nodeid(p)
@@ -426,9 +426,8 @@ def add_node_ucast(ip_list, node_id=None):
     num_nodes = p.count('nodelist.node')
     p.set('quorum.two_node', '1' if num_nodes == 2 else '0')
 
-    f = open(conf(), 'w')
-    f.write(p.to_string())
-    f.close()
+    with open(conf(), 'w') as f:
+        f.write(p.to_string())
 
 
 def add_node(addr, name=None):
