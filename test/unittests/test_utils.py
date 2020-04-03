@@ -322,3 +322,35 @@ def test_detect_cloud_gcp_rc_error(mock_metadata, mock_get_stdout, mock_is_progr
     ])
     assert mock_metadata.call_count == 0
     assert utils._ip_for_cloud is None
+
+
+@mock.patch("crmsh.utils.get_stdout")
+def test_interface_choice(mock_get_stdout):
+    ip_a_output = """
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: enp1s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 52:54:00:9e:1b:4f brd ff:ff:ff:ff:ff:ff
+    inet 192.168.122.241/24 brd 192.168.122.255 scope global enp1s0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5054:ff:fe9e:1b4f/64 scope link 
+       valid_lft forever preferred_lft forever
+3: br-933fa0e1438c: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 9e:fe:24:df:59:49 brd ff:ff:ff:ff:ff:ff
+    inet 10.10.10.1/24 brd 10.10.10.255 scope global br-933fa0e1438c
+       valid_lft forever preferred_lft forever
+    inet6 fe80::9cfe:24ff:fedf:5949/64 scope link 
+       valid_lft forever preferred_lft forever
+4: veth3fff6e9@if7: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
+    link/ether 1e:2c:b3:73:6b:42 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet6 fe80::1c2c:b3ff:fe73:6b42/64 scope link 
+       valid_lft forever preferred_lft forever
+       valid_lft forever preferred_lft forever
+"""
+    mock_get_stdout.return_value = (0, ip_a_output)
+    assert utils.interface_choice() == ["enp1s0", "br-933fa0e1438c", "veth3fff6e9"]
+    mock_get_stdout.assert_called_once_with("ip a")
