@@ -278,7 +278,7 @@ def test_head():
 def test_is_our_log():
     # empty log
     temp_file = create_tempfile()
-    assert is_our_log(temp_file, time_before, time_between) == 2
+    assert is_our_log(temp_file, time_before, time_between) == 0
 
     # from_time > last_time
     assert is_our_log(pacemaker_log, time_after, time_between) == 2
