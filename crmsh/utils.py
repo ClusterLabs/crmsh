@@ -2285,4 +2285,11 @@ def check_space_option_value(options):
         value = getattr(options, opt)
         if isinstance(value, str) and len(value.strip()) == 0:
             raise ValueError("Space value not allowed for dest \"{}\"".format(opt))
+
+
+def interface_choice():
+    _, out = get_stdout("ip a")
+    # should consider interface format like "ethx@xxx"
+    interface_list = re.findall(r'(?:[0-9]+:) (.*?)(?=: |@.*?: )', out)
+    return [nic for nic in interface_list if nic != "lo"]
 # vim:ts=4:sw=4:et:
