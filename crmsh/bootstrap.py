@@ -104,6 +104,15 @@ class Context(object):
                 cmds=self.qdevice_heuristics,
                 mode=self.qdevice_heuristics_mode)
 
+    def validate_option(self):
+        if self.admin_ip and not valid_adminIP(self.admin_ip):
+            error("Invalid option for administration virtual IP")
+        if self.qdevice:
+            try:
+                self.qdevice.valid_attr()
+            except ValueError as err:
+                error(err)
+
 
 _context = None
 
@@ -2252,18 +2261,10 @@ def bootstrap_init(context):
     """
     Init cluster process
     """
-    def check_option():
-        if _context.admin_ip and not valid_adminIP(_context.admin_ip):
-            error("Invalid option: admin_ip")
-        if _context.qdevice:
-            try:
-                _context.qdevice.valid_attr()
-            except ValueError as err:
-                error(err)
-
     global _context
     _context = context
     _context.init_qdevice()
+    _context.validate_option()
 
     stage = _context.stage
     if stage is None:
@@ -2282,8 +2283,6 @@ def bootstrap_init(context):
     elif stage not in ("ssh", "ssh_remote", "csync2", "csync2_remote"):
         if corosync_active:
             error("Cluster is currently active - can't run %s stage" % (stage))
-
-    check_option()
 
     # Need hostname resolution to work, want NTP (but don't block ssh_remote or csync2_remote)
     if stage not in ('ssh_remote', 'csync2_remote'):
