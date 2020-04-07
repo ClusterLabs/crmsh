@@ -200,7 +200,7 @@ Note:
                             help="Be quiet (don't describe what's happening, just do it)")
         parser.add_argument("-y", "--yes", action="store_true", dest="yes_to_all",
                             help='Answer "yes" to all prompts (use with caution, this is destructive, especially during the "storage" stage. The /root/.ssh/id_rsa key will be overwritten unless the option "--no-overwrite-sshkey" is used)')
-        parser.add_argument("-t", "--template", dest="template",
+        parser.add_argument("-t", "--template", dest="template", metavar="TEMPLATE", choices=['ocfs2'],
                             help='Optionally configure cluster with template "name" (currently only "ocfs2" is valid here)')
         parser.add_argument("-n", "--name", metavar="NAME", dest="cluster_name", default="hacluster",
                             help='Set the name of the configured cluster.')
@@ -215,7 +215,7 @@ Note:
                             help='Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is used (False by default)')
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
-        network_group.add_argument("-i", "--interface", dest="nic", metavar="IF",
+        network_group.add_argument("-i", "--interface", dest="nic", metavar="IF", choices=utils.interface_choice(),
                                    help="Bind to IP address on interface IF")
         network_group.add_argument("-u", "--unicast", action="store_true", dest="unicast",
                                    help="Configure corosync to communicate over unicast (UDP), and not multicast. " +
@@ -256,9 +256,6 @@ Note:
             stage = args[0]
         if stage not in bootstrap.INIT_STAGES and stage != "":
             parser.error("Invalid stage (%s)" % (stage))
-
-        if options.template and options.template != "ocfs2":
-            parser.error("Invalid template (%s)" % (options.template))
 
         # if options.geo and options.name == "hacluster":
         #    parser.error("For a geo cluster, each cluster must have a unique name (use --name to set)")
@@ -306,7 +303,8 @@ If stage is not specified, each stage will be invoked in sequence.
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
         network_group.add_argument("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of existing cluster node", metavar="HOST")
-        network_group.add_argument("-i", "--interface", dest="nic", help="Bind to IP address on interface IF", metavar="IF")
+        network_group.add_argument("-i", "--interface", dest="nic", metavar="IF", choices=utils.interface_choice(),
+                help="Bind to IP address on interface IF")
         options, args = parse_options(parser, args)
         if options is None or args is None:
             return
