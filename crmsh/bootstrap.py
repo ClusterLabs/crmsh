@@ -84,6 +84,9 @@ class Context(object):
         self.tickets = None
         self.ip_address = None
         self.ip_network = None
+        self.stage = None
+        self.args = None
+        self.ui_context = None
 
     @classmethod
     def set_context(cls, options):
