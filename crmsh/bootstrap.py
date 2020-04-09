@@ -1547,7 +1547,8 @@ def join_ssh(seed_host):
 
     tmpdir = tmpfiles.create_dir()
     status("Retrieving SSH keys - This may prompt for root@%s:" % (seed_host))
-    invoke("scp -oStrictHostKeyChecking=no  root@%s:'/root/.ssh/id_*' %s/" % (seed_host, tmpdir))
+    if not invoke("scp -oStrictHostKeyChecking=no  root@%s:'/root/.ssh/id_*' %s/" % (seed_host, tmpdir)):
+        error("Failed to retrieve ssh keys")
 
     # This supports all SSH key types, for the case where ha-cluster-init
     # wasn't used to set up the seed node, and the user has manually
@@ -2239,7 +2240,8 @@ def geo_fetch_config(node):
     # TODO: clean this up
     status("Retrieving configuration - This may prompt for root@%s:" % (node))
     tmpdir = tmpfiles.create_dir()
-    invoke("scp -oStrictHostKeyChecking=no root@%s:'/etc/booth/*' %s/" % (node, tmpdir))
+    if not invoke("scp -oStrictHostKeyChecking=no root@%s:'/etc/booth/*' %s/" % (node, tmpdir)):
+        error("Failed to retrieve configuration")
     try:
         if os.path.isfile("%s/authkey" % (tmpdir)):
             invoke("mv %s/authkey %s" % (tmpdir, BOOTH_AUTH))
