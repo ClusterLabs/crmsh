@@ -94,13 +94,13 @@ class TestCorosyncParser(unittest.TestCase):
         _valid(p)
         self.assertEqual(p.count('nodelist.node'), nid - 1)
  
-    @mock.patch("crmsh.utils.is_ipv6")
-    @mock.patch("crmsh.utils.ip_in_local")
+    @mock.patch("crmsh.utils.InterfacesInfo.get_local_ip_list")
+    @mock.patch("crmsh.utils.IP.is_ipv6")
     @mock.patch("re.search")
     @mock.patch("crmsh.corosync.Parser")
     @mock.patch("crmsh.corosync.conf")
     @mock.patch("builtins.open", new_callable=mock.mock_open, read_data="corosync conf data")
-    def test_find_configured_ip_no_exception(self, mock_open_file, mock_conf, mock_parser, mock_search, mock_ip_local, mock_isv6):
+    def test_find_configured_ip_no_exception(self, mock_open_file, mock_conf, mock_parser, mock_search, mock_isv6, mock_ip_local):
         mock_conf.return_value = "/etc/corosync/corosync.conf"
         mock_parser_inst = mock.Mock()
         mock_parser.return_value = mock_parser_inst
@@ -120,13 +120,13 @@ class TestCorosyncParser(unittest.TestCase):
         mock_ip_local.assert_called_once_with(False)
         mock_search.assert_called_once_with("nodelist.node.ring[0-9]*_addr", "nodelist.node.ring0_addr")
 
-    @mock.patch("crmsh.utils.is_ipv6")
-    @mock.patch("crmsh.utils.ip_in_local")
+    @mock.patch("crmsh.utils.InterfacesInfo.get_local_ip_list")
+    @mock.patch("crmsh.utils.IP.is_ipv6")
     @mock.patch("re.search")
     @mock.patch("crmsh.corosync.Parser")
     @mock.patch("crmsh.corosync.conf")
     @mock.patch("builtins.open", new_callable=mock.mock_open, read_data="corosync conf data")
-    def test_find_configured_ip_exception(self, mock_open_file, mock_conf, mock_parser, mock_search, mock_ip_local, mock_isv6):
+    def test_find_configured_ip_exception(self, mock_open_file, mock_conf, mock_parser, mock_search, mock_isv6, mock_ip_local):
         mock_conf.return_value = "/etc/corosync/corosync.conf"
         mock_parser_inst = mock.Mock()
         mock_parser.return_value = mock_parser_inst
@@ -281,121 +281,124 @@ class TestQDevice(unittest.TestCase):
         Global tearDown.
         """
 
+    @mock.patch("crmsh.utils.InterfacesInfo")
     @mock.patch("crmsh.bootstrap.package_is_installed")
-    def test_valid_attr_not_installed(self, mock_installed):
+    def test_valid_attr_not_installed(self, mock_installed, mock_interfaces):
+        mock_interfaces_inst = mock.Mock(ip_list=["192.168.1.1", "10.10.10.123"])
+        mock_interfaces.return_value = mock_interfaces_inst
         mock_installed.return_value = False
         with self.assertRaises(ValueError) as err:
-            self.qdevice_with_ip.valid_attr()
+            self.qdevice_with_ip.valid_attr(mock_interfaces_inst)
         self.assertEqual("Package \"corosync-qdevice\" not installed on this node", str(err.exception))
         mock_installed.assert_called_once_with("corosync-qdevice")
 
     @mock.patch("crmsh.utils.this_node")
-    @mock.patch("crmsh.utils.ip_in_local")
+    @mock.patch("crmsh.utils.InterfacesInfo")
     @mock.patch("crmsh.bootstrap.package_is_installed")
-    def test_valid_attr_remote_exception(self, mock_installed, mock_ip_in_local, mock_this_node):
+    def test_valid_attr_remote_exception(self, mock_installed, mock_interfaces, mock_this_node):
         mock_installed.return_value = True
-        mock_ip_in_local.return_value = ["192.168.1.1", "10.10.10.123"]
+        mock_interfaces_inst = mock.Mock(ip_list=["192.168.1.1", "10.10.10.123"])
+        mock_interfaces.return_value = mock_interfaces_inst
         mock_this_node.return_value = "node1.com"
 
         with self.assertRaises(ValueError) as err:
-            self.qdevice_with_ip.valid_attr()
+            self.qdevice_with_ip.valid_attr(mock_interfaces_inst)
         self.assertEqual("host for qnetd must be a remote one", str(err.exception))
 
         mock_installed.assert_called_once_with("corosync-qdevice")
-        mock_ip_in_local.assert_called_once_with()
         mock_this_node.assert_called_once_with()
 
     @mock.patch("crmsh.utils.this_node")
-    @mock.patch("crmsh.utils.ip_in_local")
+    @mock.patch("crmsh.utils.InterfacesInfo")
     @mock.patch("crmsh.utils.resolve_hostnames")
     @mock.patch("crmsh.bootstrap.package_is_installed")
-    def test_valid_attr_unreachable_exception(self, mock_installed, mock_resolve, mock_ip_in_local, mock_this_node):
+    def test_valid_attr_unreachable_exception(self, mock_installed, mock_resolve, mock_interfaces, mock_this_node):
         mock_installed.return_value = True
         mock_resolve.return_value = (False, "node.qnetd")
-        mock_ip_in_local.return_value = ["192.168.1.1", "10.10.10.123"]
+        mock_interfaces_inst = mock.Mock(ip_list=["192.168.1.1", "10.10.10.123"])
+        mock_interfaces.return_value = mock_interfaces_inst
         mock_this_node.return_value = "node1.com"
 
         with self.assertRaises(ValueError) as err:
-            self.qdevice_with_hostname.valid_attr()
+            self.qdevice_with_hostname.valid_attr(mock_interfaces_inst)
         self.assertEqual("host \"node.qnetd\" is unreachable", str(err.exception))
 
         mock_installed.assert_called_once_with("corosync-qdevice")
-        mock_ip_in_local.assert_called_once_with()
         mock_this_node.assert_called_once_with()
         mock_resolve.assert_called_once_with(["node.qnetd"])
 
     @mock.patch("crmsh.utils.this_node")
-    @mock.patch("crmsh.utils.ip_in_local")
+    @mock.patch("crmsh.utils.InterfacesInfo")
     @mock.patch("crmsh.utils.resolve_hostnames")
     @mock.patch("crmsh.utils.check_port_open")
     @mock.patch("crmsh.bootstrap.package_is_installed")
     def test_valid_attr_ssh_service_exception(self, mock_installed, mock_port_open,
-            mock_resolve, mock_ip_in_local, mock_this_node):
+            mock_resolve, mock_interfaces, mock_this_node):
         mock_installed.return_value = True
         mock_resolve.return_value = (True, None)
-        mock_ip_in_local.return_value = ["192.168.1.1", "10.10.10.11"]
+        mock_interfaces_inst = mock.Mock(ip_list=["192.168.1.1", "10.10.10.11"])
+        mock_interfaces.return_value = mock_interfaces_inst
         mock_this_node.return_value = "node1.com"
         mock_port_open.return_value = False
 
         with self.assertRaises(ValueError) as err:
-            self.qdevice_with_ip.valid_attr()
+            self.qdevice_with_ip.valid_attr(mock_interfaces_inst)
         self.assertEqual("ssh service on \"10.10.10.123\" not available", str(err.exception))
 
         mock_installed.assert_called_once_with("corosync-qdevice")
-        mock_ip_in_local.assert_called_once_with()
         mock_this_node.assert_called_once_with()
         mock_resolve.assert_called_once_with(["10.10.10.123"])
         mock_port_open.assert_called_once_with("10.10.10.123", 22)
 
     @mock.patch("crmsh.utils.this_node")
-    @mock.patch("crmsh.utils.ip_in_local")
+    @mock.patch("crmsh.utils.InterfacesInfo")
     @mock.patch("crmsh.utils.resolve_hostnames")
     @mock.patch("crmsh.utils.check_port_open")
     @mock.patch("crmsh.utils.valid_port")
     @mock.patch("crmsh.bootstrap.package_is_installed")
     def test_valid_attr_invalid_port_exception(self, mock_installed, mock_valid_port,
-            mock_port_open, mock_resolve, mock_ip_in_local, mock_this_node):
+            mock_port_open, mock_resolve, mock_interfaces, mock_this_node):
         mock_installed.return_value = True
         mock_resolve.return_value = (True, None)
-        mock_ip_in_local.return_value = ["192.168.1.1", "10.10.10.11"]
+        mock_interfaces_inst = mock.Mock(ip_list=["192.168.1.1", "10.10.10.11"])
+        mock_interfaces.return_value = mock_interfaces_inst
         mock_this_node.return_value = "node1.com"
         mock_port_open.return_value = True
         mock_valid_port.return_value = False
 
         with self.assertRaises(ValueError) as err:
-            self.qdevice_with_invalid_port.valid_attr()
+            self.qdevice_with_invalid_port.valid_attr(mock_interfaces_inst)
         self.assertEqual("invalid qdevice port range(1024 - 65535)", str(err.exception))
 
         mock_installed.assert_called_once_with("corosync-qdevice")
-        mock_ip_in_local.assert_called_once_with()
         mock_this_node.assert_called_once_with()
         mock_resolve.assert_called_once_with(["10.10.10.123"])
         mock_port_open.assert_called_once_with("10.10.10.123", 22)
         mock_valid_port.assert_called_once_with(100)
 
     @mock.patch("crmsh.utils.this_node")
-    @mock.patch("crmsh.utils.ip_in_local")
+    @mock.patch("crmsh.utils.InterfacesInfo")
     @mock.patch("crmsh.utils.resolve_hostnames")
     @mock.patch("crmsh.utils.check_port_open")
     @mock.patch("crmsh.utils.valid_port")
     @mock.patch("crmsh.utils.valid_nodeid")
     @mock.patch("crmsh.bootstrap.package_is_installed")
     def test_valid_attr_invalid_nodeid_exception(self, mock_installed, mock_valid_nodeid,
-            mock_valid_port, mock_port_open, mock_resolve, mock_ip_in_local, mock_this_node):
+            mock_valid_port, mock_port_open, mock_resolve, mock_interfaces, mock_this_node):
         mock_installed.return_value = True
         mock_resolve.return_value = (True, None)
-        mock_ip_in_local.return_value = ["192.168.1.1", "10.10.10.11"]
+        mock_interfaces_inst = mock.Mock(ip_list=["192.168.1.1", "10.10.10.11"])
+        mock_interfaces.return_value = mock_interfaces_inst
         mock_this_node.return_value = "node1.com"
         mock_port_open.return_value = True
         mock_valid_port.return_value = True
         mock_valid_nodeid.return_value = False
 
         with self.assertRaises(ValueError) as err:
-            self.qdevice_with_invalid_tie_breaker.valid_attr()
+            self.qdevice_with_invalid_tie_breaker.valid_attr(mock_interfaces_inst)
         self.assertEqual("invalid qdevice tie_breaker(lowest/highest/valid_node_id)", str(err.exception))
 
         mock_installed.assert_called_once_with("corosync-qdevice")
-        mock_ip_in_local.assert_called_once_with()
         mock_this_node.assert_called_once_with()
         mock_resolve.assert_called_once_with(["10.10.10.123"])
         mock_port_open.assert_called_once_with("10.10.10.123", 22)
@@ -403,28 +406,28 @@ class TestQDevice(unittest.TestCase):
         mock_valid_nodeid.assert_called_once_with("wrong")
 
     @mock.patch("crmsh.utils.this_node")
-    @mock.patch("crmsh.utils.ip_in_local")
+    @mock.patch("crmsh.utils.InterfacesInfo")
     @mock.patch("crmsh.utils.resolve_hostnames")
     @mock.patch("crmsh.utils.check_port_open")
     @mock.patch("crmsh.utils.valid_port")
     @mock.patch("crmsh.utils.valid_nodeid")
     @mock.patch("crmsh.bootstrap.package_is_installed")
     def test_valid_attr_invalid_cmds_relative_path(self, mock_installed, mock_valid_nodeid,
-            mock_valid_port, mock_port_open, mock_resolve, mock_ip_in_local, mock_this_node):
+            mock_valid_port, mock_port_open, mock_resolve, mock_interfaces, mock_this_node):
         mock_installed.return_value = True
         mock_resolve.return_value = (True, None)
-        mock_ip_in_local.return_value = ["192.168.1.1", "10.10.10.11"]
+        mock_interfaces_inst = mock.Mock(ip_list=["192.168.1.1", "10.10.10.11"])
+        mock_interfaces.return_value = mock_interfaces_inst
         mock_this_node.return_value = "node1.com"
         mock_port_open.return_value = True
         mock_valid_port.return_value = True
         mock_valid_nodeid.return_value = True
 
         with self.assertRaises(ValueError) as err:
-            self.qdevice_with_invalid_cmds_relative_path.valid_attr()
+            self.qdevice_with_invalid_cmds_relative_path.valid_attr(mock_interfaces_inst)
         self.assertEqual("commands for heuristics should be absolute path", str(err.exception))
 
         mock_installed.assert_called_once_with("corosync-qdevice")
-        mock_ip_in_local.assert_called_once_with()
         mock_this_node.assert_called_once_with()
         mock_resolve.assert_called_once_with(["10.10.10.123"])
         mock_port_open.assert_called_once_with("10.10.10.123", 22)
@@ -432,28 +435,28 @@ class TestQDevice(unittest.TestCase):
         mock_valid_nodeid.assert_not_called()
 
     @mock.patch("crmsh.utils.this_node")
-    @mock.patch("crmsh.utils.ip_in_local")
+    @mock.patch("crmsh.utils.InterfacesInfo")
     @mock.patch("crmsh.utils.resolve_hostnames")
     @mock.patch("crmsh.utils.check_port_open")
     @mock.patch("crmsh.utils.valid_port")
     @mock.patch("crmsh.utils.valid_nodeid")
     @mock.patch("crmsh.bootstrap.package_is_installed")
     def test_valid_attr_invalid_cmds_not_exist(self, mock_installed, mock_valid_nodeid,
-            mock_valid_port, mock_port_open, mock_resolve, mock_ip_in_local, mock_this_node):
+            mock_valid_port, mock_port_open, mock_resolve, mock_interfaces, mock_this_node):
         mock_installed.return_value = True
         mock_resolve.return_value = (True, None)
-        mock_ip_in_local.return_value = ["192.168.1.1", "10.10.10.11"]
+        mock_interfaces_inst = mock.Mock(ip_list=["192.168.1.1", "10.10.10.11"])
+        mock_interfaces.return_value = mock_interfaces_inst
         mock_this_node.return_value = "node1.com"
         mock_port_open.return_value = True
         mock_valid_port.return_value = True
         mock_valid_nodeid.return_value = True
 
         with self.assertRaises(ValueError) as err:
-            self.qdevice_with_invalid_cmds_not_exist.valid_attr()
+            self.qdevice_with_invalid_cmds_not_exist.valid_attr(mock_interfaces_inst)
         self.assertEqual("command /not_exist not exist", str(err.exception))
 
         mock_installed.assert_called_once_with("corosync-qdevice")
-        mock_ip_in_local.assert_called_once_with()
         mock_this_node.assert_called_once_with()
         mock_resolve.assert_called_once_with(["10.10.10.123"])
         mock_port_open.assert_called_once_with("10.10.10.123", 22)

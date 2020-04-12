@@ -450,7 +450,7 @@ class TestBootstrap(unittest.TestCase):
             mock.call(['10.10.10.2', '20.20.20.2'], '2')
         ])
 
-    @mock.patch('crmsh.utils.valid_ip_addr')
+    @mock.patch('crmsh.utils.IP.is_valid_ip')
     @mock.patch('crmsh.utils.get_stdout_stderr')
     def test_get_cluster_node_hostname_None(self, mock_stdout_stderr, mock_valid_ip):
         bootstrap._context = mock.Mock(cluster_node=None)
@@ -461,7 +461,7 @@ class TestBootstrap(unittest.TestCase):
         mock_valid_ip.assert_not_called()
         mock_stdout_stderr.assert_not_called()
 
-    @mock.patch('crmsh.utils.valid_ip_addr')
+    @mock.patch('crmsh.utils.IP.is_valid_ip')
     @mock.patch('crmsh.utils.get_stdout_stderr')
     def test_get_cluster_node_hostname_IP(self, mock_stdout_stderr, mock_valid_ip):
         bootstrap._context = mock.Mock(cluster_node="1.1.1.1")
@@ -474,7 +474,7 @@ class TestBootstrap(unittest.TestCase):
         mock_valid_ip.assert_called_once_with("1.1.1.1")
         mock_stdout_stderr.assert_called_once_with("ssh 1.1.1.1 crm_node --name")
 
-    @mock.patch('crmsh.utils.valid_ip_addr')
+    @mock.patch('crmsh.utils.IP.is_valid_ip')
     @mock.patch('crmsh.utils.get_stdout_stderr')
     def test_get_cluster_node_hostname_HOST(self, mock_stdout_stderr, mock_valid_ip):
         bootstrap._context = mock.Mock(cluster_node="node2")
@@ -596,3 +596,122 @@ class TestBootstrap(unittest.TestCase):
             mock.call("csync2 -rxv /etc/corosync.conf")
             ])
         mock_warn.assert_called_once_with("/etc/corosync.conf was not synced")
+
+    @mock.patch('crmsh.utils.InterfacesInfo')
+    def test_init_network(self, mock_interfaces):
+        mock_interfaces_inst = mock.Mock()
+        mock_interfaces.return_value = mock_interfaces_inst
+        mock_interfaces_inst.get_default_nic_list_from_route.return_value = ["eth0", "eth1"]
+        bootstrap._context = mock.Mock(ipv6=False, second_heartbeat=False, nic_list=["eth0", "eth1"], default_nic_list=["eth0", "eth1"])
+
+        bootstrap.init_network()
+
+        mock_interfaces.assert_called_once_with(False, False, bootstrap._context.nic_list)
+        mock_interfaces_inst.get_interfaces_info.assert_called_once_with()
+        mock_interfaces_inst.get_default_nic_list_from_route.assert_called_once_with()
+        mock_interfaces_inst.get_default_ip_list.assert_called_once_with()
+
+
+class TestValidation(unittest.TestCase):
+    """
+    Unitary tests for class bootstrap.Validation
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Global setUp.
+        """
+
+    def setUp(self):
+        """
+        Test setUp.
+        """
+        self.validate_inst = bootstrap.Validation("10.10.10.1")
+        self.validate_port_inst_in_use = bootstrap.Validation("4567", ["4568"])
+        self.validate_port_inst_out_of_range = bootstrap.Validation("456766")
+
+    def tearDown(self):
+        """
+        Test tearDown.
+        """
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        Global tearDown.
+        """
+
+    @mock.patch('crmsh.utils.IP.is_mcast')
+    def test_is_mcast_addr(self, mock_mcast):
+        mock_mcast.return_value = False
+        with self.assertRaises(ValueError) as err:
+            self.validate_inst._is_mcast_addr()
+        self.assertEqual("10.10.10.1 is not multicast address", str(err.exception))
+        mock_mcast.assert_called_once_with("10.10.10.1")
+
+    def test_is_local_addr(self):
+        with self.assertRaises(ValueError) as err:
+            self.validate_inst._is_local_addr(["20.20.20.1", "20.20.20.2"])
+        self.assertEqual("Address must be a local address (one of ['20.20.20.1', '20.20.20.2'])", str(err.exception))
+
+    def test_is_valid_port_in_use(self):
+        with self.assertRaises(ValueError) as err:
+            self.validate_port_inst_in_use._is_valid_port()
+        self.assertEqual("Port 4567 is already in use by corosync. Leave a gap between multiple rings.", str(err.exception))
+
+    def test_is_valid_port_out_of_range(self):
+        with self.assertRaises(ValueError) as err:
+            self.validate_port_inst_out_of_range._is_valid_port()
+        self.assertEqual("Valid port range should be 1025-65535", str(err.exception))
+
+    @mock.patch('crmsh.bootstrap.Validation._is_mcast_addr')
+    def test_valid_mcast_address(self, mock_mcast):
+        bootstrap.Validation.valid_mcast_address("10.10.10.1")
+        mock_mcast.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.Validation._is_local_addr')
+    def test_valid_ucast_ip(self, mock_local_addr):
+        bootstrap._context = mock.Mock(local_ip_list=["10.10.10.2", "10.10.10.3"])
+        bootstrap.Validation.valid_ucast_ip("10.10.10.1")
+        mock_local_addr.assert_called_once_with(["10.10.10.2", "10.10.10.3"])
+    
+    @mock.patch('crmsh.bootstrap.Validation._is_local_addr')
+    def test_valid_mcast_ip(self, mock_local_addr):
+        bootstrap._context = mock.Mock(local_ip_list=["10.10.10.2", "10.10.10.3"],
+                local_network_list=["10.10.10.0"])
+        bootstrap.Validation.valid_mcast_ip("10.10.10.1")
+        mock_local_addr.assert_called_once_with(["10.10.10.2", "10.10.10.3", "10.10.10.0"])
+
+    @mock.patch('crmsh.bootstrap.Validation._is_valid_port')
+    def test_valid_port(self, mock_port):
+        bootstrap.Validation.valid_port("10.10.10.1")
+        mock_port.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.utils.IP.is_ipv6')
+    def test_valid_admin_ip_in_use(self, mock_ipv6, mock_invoke):
+        mock_ipv6.return_value = False
+        mock_invoke.return_value = True
+
+        with self.assertRaises(ValueError) as err:
+            self.validate_inst.valid_admin_ip("10.10.10.1")
+        self.assertEqual("Address already in use: 10.10.10.1", str(err.exception))
+
+        mock_ipv6.assert_called_once_with("10.10.10.1")
+        mock_invoke.assert_called_once_with("ping -c 1 10.10.10.1")
+
+    @mock.patch('crmsh.utils.InterfacesInfo.ip_in_network')
+    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.utils.IP.is_ipv6')
+    def test_valid_admin_ip_not_in_network(self, mock_ipv6, mock_invoke, mock_ip_in_network):
+        mock_ipv6.return_value = False
+        mock_invoke.return_value = False
+        mock_ip_in_network.return_value = False
+
+        with self.assertRaises(ValueError) as err:
+            self.validate_inst.valid_admin_ip("10.10.10.1")
+        self.assertEqual("Address '10.10.10.1' not in any local network", str(err.exception))
+
+        mock_ipv6.assert_called_once_with("10.10.10.1")
+        mock_invoke.assert_called_once_with("ping -c 1 10.10.10.1")
+        mock_ip_in_network.assert_called_once_with("10.10.10.1")
