@@ -62,6 +62,11 @@ class Corosync(command.UI):
         '''
         Quick cluster health status. Corosync status or QNetd status
         '''
+        def print_cluster_nodes():
+            rc, out = utils.get_stdout("crm_node -l")
+            if rc == 0 and out:
+                print("{}\n".format(out))
+
         rc, _ = utils.get_stdout('systemctl -q is-active corosync.service')
         if rc != 0:
             err_buf.error("corosync.service is not running!")
@@ -71,6 +76,7 @@ class Corosync(command.UI):
             print(corosync.cfgtool('-s')[1])
             return
         if status_type == "quorum":
+            print_cluster_nodes()
             print(corosync.quorumtool('-s')[1])
             return
         if status_type == "qnetd":
@@ -94,6 +100,7 @@ class Corosync(command.UI):
                 return False
             _, qnetd_result_stdout, _ = result[0][1]
             if qnetd_result_stdout:
+                print_cluster_nodes()
                 print(utils.to_ascii(qnetd_result_stdout))
             return
 
