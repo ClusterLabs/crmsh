@@ -2292,4 +2292,14 @@ def interface_choice():
     # should consider interface format like "ethx@xxx"
     interface_list = re.findall(r'(?:[0-9]+:) (.*?)(?=: |@.*?: )', out)
     return [nic for nic in interface_list if nic != "lo"]
+
+
+def check_ssh_passwd_need(hosts):
+    ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
+    for host in hosts:
+        ssh_cmd = "ssh {} -T -o Batchmode=yes {} true".format(ssh_options, host)
+        rc, _, _ = get_stdout_stderr(ssh_cmd)
+        if rc != 0:
+            return True
+    return False
 # vim:ts=4:sw=4:et:
