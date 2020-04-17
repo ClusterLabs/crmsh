@@ -752,6 +752,7 @@ def init_ssh():
                 not confirm("/root/.ssh/id_rsa already exists - overwrite?"):
             return
         rmfile("/root/.ssh/id_rsa")
+        rmfile("/root/.ssh/authorized_keys")
     status("Generating SSH key")
     invoke("ssh-keygen -q -f /root/.ssh/id_rsa -C 'Cluster Internal' -N ''")
     append("/root/.ssh/id_rsa.pub", "/root/.ssh/authorized_keys")
@@ -764,15 +765,10 @@ def init_ssh_remote():
     authorized_keys_file = "/root/.ssh/authorized_keys"
     if not os.path.exists(authorized_keys_file):
         open(authorized_keys_file, 'w').close()
-    authkeys = open(authorized_keys_file, "r+")
-    authkeys_data = authkeys.read()
     for key in ("id_rsa", "id_dsa", "id_ecdsa", "id_ed25519"):
         fn = os.path.join("/root/.ssh", key)
-        if not os.path.exists(fn):
-            continue
-        keydata = open(fn + ".pub").read()
-        if keydata not in authkeys_data:
-            append(fn + ".pub", authorized_keys_file)
+        if os.path.exists(fn):
+            append_to_file(fn + ".pub", authorized_keys_file)
 
 
 def init_csync2():
@@ -1701,6 +1697,19 @@ def init():
     init_network()
 
 
+def append_to_file(source_file, target_file):
+    """
+    Append source_file to target_file if target_file doesn't include content of source_file
+    """
+    if not os.path.exists(source_file):
+        return
+    data = None
+    with open(source_file) as fd:
+        data = fd.read()
+    if data and not grep_file(target_file, data):
+        append(source_file, target_file)
+
+
 def join_ssh(seed_host):
     """
     SSH configuration for joining node.
@@ -1709,6 +1718,12 @@ def join_ssh(seed_host):
         error("No existing IP/hostname specified (use -c option)")
 
     start_service("sshd.service")
+
+    # Detect whether need password to login to seed_host
+    need_pw = True
+    if not utils.check_ssh_passwd_need([seed_host]):
+        need_pw = False
+
     invoke("mkdir -m 700 -p /root/.ssh")
 
     tmpdir = tmpfiles.create_dir()
@@ -1725,11 +1740,17 @@ def join_ssh(seed_host):
             continue
 
         if os.path.exists(os.path.join("/root/.ssh", key)):
-            if not confirm("/root/.ssh/%s already exists - overwrite?" % (key)):
+            # not yes or not True  ==> False, overwrite
+            # not yes or not False ==> True, continue
+            # not no or not True ==> True, continue
+            # not no or not False  ==> True, continue
+            if not confirm("/root/.ssh/%s already exists - overwrite?" % (key)) or not need_pw:
+                # authorized_keys need includes local node's public key, for login to itself(for parallax using)
+                append_to_file("/root/.ssh/{}.pub".format(key), "/root/.ssh/authorized_keys")
                 continue
+
         invoke("mv %s* /root/.ssh/" % (os.path.join(tmpdir, key)))
-        if not grep_file("/root/.ssh/authorized_keys", open("/root/.ssh/%s.pub" % (key)).read()):
-            append("/root/.ssh/%s.pub" % (key), "/root/.ssh/authorized_keys")
+        append_to_file("/root/.ssh/{}.pub".format(key), "/root/.ssh/authorized_keys")
         got_keys += 1
 
     if got_keys == 0:
