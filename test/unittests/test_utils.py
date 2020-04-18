@@ -354,3 +354,23 @@ def test_interface_choice(mock_get_stdout):
     mock_get_stdout.return_value = (0, ip_a_output)
     assert utils.interface_choice() == ["enp1s0", "br-933fa0e1438c", "veth3fff6e9"]
     mock_get_stdout.assert_called_once_with("ip a")
+
+
+def test_check_ssh_passwd_need_True():
+    with mock.patch('crmsh.utils.get_stdout_stderr') as mock_get_stdout_stderr:
+        mock_get_stdout_stderr.side_effect = [(0, None, None), (1, None, None)]
+        assert utils.check_ssh_passwd_need(["node1", "node2"]) == True
+    mock_get_stdout_stderr.assert_has_calls([
+            mock.call('ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node1 true'),
+            mock.call('ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node2 true')
+        ])
+
+
+def test_check_ssh_passwd_need_Flase():
+    with mock.patch('crmsh.utils.get_stdout_stderr') as mock_get_stdout_stderr:
+        mock_get_stdout_stderr.side_effect = [(0, None, None), (0, None, None)]
+        assert utils.check_ssh_passwd_need(["node1", "node2"]) == False
+    mock_get_stdout_stderr.assert_has_calls([
+            mock.call('ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node1 true'),
+            mock.call('ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node2 true')
+        ])

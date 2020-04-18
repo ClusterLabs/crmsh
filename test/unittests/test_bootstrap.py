@@ -90,7 +90,10 @@ class TestBootstrap(unittest.TestCase):
         ])
         mock_exists.assert_called_once_with("/root/.ssh/id_rsa")
         mock_confirm.assert_called_once_with("/root/.ssh/id_rsa already exists - overwrite?")
-        mock_rmfile.assert_called_once_with("/root/.ssh/id_rsa")
+        mock_rmfile.assert_has_calls([
+            mock.call("/root/.ssh/id_rsa"),
+            mock.call("/root/.ssh/authorized_keys")
+            ])
         mock_status.assert_called_once_with("Generating SSH key")
         mock_append.assert_called_once_with("/root/.ssh/id_rsa.pub", "/root/.ssh/authorized_keys")
 
@@ -127,6 +130,30 @@ class TestBootstrap(unittest.TestCase):
         prev_list = ["10.10.10.1", "20.20.20.1"]
         value = bootstrap.pick_default_value(default_list, prev_list)
         self.assertEqual(value, "")
+
+    @mock.patch('__builtin__.open')
+    @mock.patch('crmsh.bootstrap.append_to_file')
+    @mock.patch('os.path.join')
+    @mock.patch('os.path.exists')
+    def test_init_ssh_remote(self, mock_exists, mock_join, mock_append, mock_open_file):
+        mock_exists.side_effect = [False, True, False, False, False]
+        mock_join.side_effect = ["/root/.ssh/id_rsa",
+                                 "/root/.ssh/id_dsa",
+                                 "/root/.ssh/id_ecdsa",
+                                 "/root/.ssh/id_ed25519"]
+        mock_open_file.return_value = mock.mock_open().return_value
+
+        bootstrap.init_ssh_remote()
+
+        mock_open_file.assert_called_once_with("/root/.ssh/authorized_keys", 'w')
+        mock_exists.assert_has_calls([
+            mock.call("/root/.ssh/authorized_keys"),
+            mock.call("/root/.ssh/id_rsa"),
+            mock.call("/root/.ssh/id_dsa"),
+            mock.call("/root/.ssh/id_ecdsa"),
+            mock.call("/root/.ssh/id_ed25519"),
+        ])
+        mock_append.assert_called_once_with("/root/.ssh/id_rsa.pub", "/root/.ssh/authorized_keys")
 
     @mock.patch('crmsh.utils.valid_ip_addr')
     @mock.patch('crmsh.utils.get_stdout_stderr')
@@ -274,3 +301,24 @@ class TestBootstrap(unittest.TestCase):
             mock.call("csync2 -rxv /etc/corosync.conf")
             ])
         mock_warn.assert_called_once_with("/etc/corosync.conf was not synced")
+
+    @mock.patch('os.path.exists')
+    def test_append_to_file_no_exist(self, mock_exists):
+        mock_exists.return_value = False
+        bootstrap.append_to_file("file1", "file2")
+        mock_exists.assert_called_once_with("file1")
+
+    @mock.patch('crmsh.bootstrap.append')
+    @mock.patch('crmsh.bootstrap.grep_file')
+    @mock.patch('__builtin__.open', new_callable=mock.mock_open, read_data='data')
+    @mock.patch('os.path.exists')
+    def test_append_to_file(self, mock_exists, mock_open_file, mock_grep, mock_append):
+        mock_exists.return_value = True
+        mock_grep.return_value = False
+
+        bootstrap.append_to_file("file1", "file2")
+
+        mock_exists.assert_called_once_with("file1")
+        mock_open_file.assert_called_once_with("file1")
+        mock_grep.assert_called_once_with("file2", "data")
+        mock_append.assert_called_once_with("file1", "file2")
