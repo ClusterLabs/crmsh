@@ -62,7 +62,24 @@ before() {
 }
 
 run() {
+  before_run $1 $2
   docker exec -t hanode1 /bin/sh -c "cd /app; ./test/run-in-travis.sh $1 $2"
+}
+
+before_run() {
+  case "$1/$2" in
+    "bootstrap/bugs2")
+      # simulate scenarios of bsc#1169581
+      docker exec -t hanode1 /bin/sh -c "rm -f /root/.ssh/id_rsa*"
+      docker exec -t hanode1 /bin/sh -c "ssh-keygen -q -f /root/.ssh/id_rsa -C 'hanode1' -N ''"
+      hanode1_pub_key=`docker exec -t hanode1 /bin/sh -c "cat /root/.ssh/id_rsa.pub"`
+      docker exec -t hanode2 /bin/sh -c "rm -f /root/.ssh/id_rsa*"
+      docker exec -t hanode2 /bin/sh -c "ssh-keygen -q -f /root/.ssh/id_rsa -C 'hanode2' -N ''"
+      hanode2_pub_key=`docker exec -t hanode2 /bin/sh -c "cat /root/.ssh/id_rsa.pub"`
+      docker exec -t hanode1 /bin/sh -c "echo \"$hanode2_pub_key\" > /root/.ssh/authorized_keys"
+      docker exec -t hanode2 /bin/sh -c "echo \"$hanode1_pub_key\" > /root/.ssh/authorized_keys"
+      ;;
+  esac
 }
 
 usage() {

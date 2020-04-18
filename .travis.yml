@@ -44,6 +44,12 @@ jobs:
       script:
         - $FUNCTIONAL_TEST bootstrap run bugs
 
+    - name: "regression test for bootstrap bugs (second set)"
+      before_install:
+        - $FUNCTIONAL_TEST bootstrap before_install
+      script:
+        - $FUNCTIONAL_TEST bootstrap run bugs2
+
     - name: "functional test for bootstrap - init, join and remove"
       before_install:
         - $FUNCTIONAL_TEST bootstrap before_install
