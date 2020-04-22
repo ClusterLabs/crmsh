@@ -12,6 +12,7 @@ import random
 from copy import deepcopy
 from glob import glob
 from lxml import etree
+from .constants import SSH_KEY_CRMSH, SSH_WITH_KEY
 
 try:
     import json
@@ -420,6 +421,8 @@ def _make_options(params):
         'ControlPersist=no']
     if options.regression_tests:
         opts.ssh_extra += ['-vvv']
+    if hasattr(opts, 'ssh_key'):
+        opts.ssh_key = SSH_KEY_CRMSH
     return opts
 
 
@@ -1082,7 +1085,7 @@ def _check_control_persist():
     Checks if ControlPersist is available. If so,
     we'll use it to make things faster.
     '''
-    cmd = 'ssh -o ControlPersist'.split()
+    cmd = '{} -o ControlPersist'.format(SSH_WITH_KEY).split()
     if options.regression_tests:
         print((".EXT", cmd))
     cmd = subprocess.Popen(cmd,

@@ -20,6 +20,7 @@ from parallax import Options
 
 from .msg import common_err, common_debug, common_warn
 from . import config
+from .constants import SSH_KEY_CRMSH
 
 
 _DEFAULT_TIMEOUT = 60
@@ -92,6 +93,8 @@ def do_pssh(l, opts):
             cmd += ['-l', user]
         if port:
             cmd += ['-p', port]
+        if os.path.exists(SSH_KEY_CRMSH):
+            cmd += ['-i', SSH_KEY_CRMSH]
         if hasattr(opts, 'extra'):
             cmd.extend(opts.extra)
         if cmdline:
