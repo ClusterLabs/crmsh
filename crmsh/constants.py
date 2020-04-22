@@ -338,4 +338,8 @@ extra_cluster_properties = ("dc-version",
                             "cluster-name")
 pcmk_version = ""  # set later
 
+SSH_KEY_CRMSH = "/root/.ssh/id_rsa.crmsh"
+SSH_KEY_CRMSH_TAG = "crmsh-generated"
+SSH_WITH_KEY = "ssh -i {}".format(SSH_KEY_CRMSH)
+SCP_WITH_KEY = "scp -i {}".format(SSH_KEY_CRMSH)
 # vim:ts=4:sw=4:et:
