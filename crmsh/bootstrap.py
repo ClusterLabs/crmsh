@@ -33,7 +33,7 @@ from . import lock
 from . import userdir
 
 
-LOG_FILE = "/var/log/ha-cluster-bootstrap.log"
+LOG_FILE = "/var/log/crmsh/ha-cluster-bootstrap.log"
 CSYNC2_KEY = "/etc/csync2/key_hagroup"
 CSYNC2_CFG = "/etc/csync2/csync2.cfg"
 COROSYNC_AUTH = "/etc/corosync/authkey"
@@ -610,6 +610,7 @@ def log_file_fallback():
 def log(*args):
     global LOG_FILE
     try:
+        utils.mkdirp(os.path.dirname(LOG_FILE))
         with open(LOG_FILE, "ab") as logfile:
             text = " ".join([utils.to_ascii(arg) for arg in args]) + "\n"
             logfile.write(text.encode('ascii', 'backslashreplace'))

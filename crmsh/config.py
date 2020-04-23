@@ -280,7 +280,7 @@ DEFAULTS = {
         'from_time': opt_string('-12H'),
         'compress': opt_boolean('yes'),
         'speed_up': opt_boolean('no'),
-        'collect_extra_logs': opt_string('/var/log/messages /var/log/pacemaker/pacemaker.log /var/log/pacemaker.log /var/log/ha-cluster-bootstrap.log'),
+        'collect_extra_logs': opt_string('/var/log/messages /var/log/pacemaker/pacemaker.log /var/log/pacemaker.log /var/log/crmsh/ha-cluster-bootstrap.log'),
         'remove_exist_dest': opt_boolean('no'),
         'single_node': opt_boolean('no'),
         'sanitize_rule': opt_string('passw.*')

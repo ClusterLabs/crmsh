@@ -245,6 +245,7 @@ result2=$?
 %dir %{crmsh_docdir}
 %dir %{crmsh_docdir}/contrib
 %dir %attr (770, %{uname}, %{gname}) %{_var}/cache/crm
+%dir %attr (770, %{uname}, %{gname}) %{_var}/log/crmsh
 %config %{_sysconfdir}/bash_completion.d/crm.sh
 
 %files scripts

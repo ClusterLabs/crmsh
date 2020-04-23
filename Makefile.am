@@ -69,6 +69,7 @@ all-local:
 python_prefix = --prefix=$(prefix)
 
 install-exec-local:
+	$(INSTALL) -d -m 770 $(DESTDIR)/${localstatedir}/log/crmsh
 	-mkdir -p $(DESTDIR)$(pkgpythondir)
 	$(PYTHON) $(srcdir)/setup.py install \
 		--root $(DESTDIR)/// \
