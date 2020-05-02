@@ -1770,8 +1770,13 @@ def join_cluster(seed_host):
 
     # if no SBD devices are configured,
     # check the existing cluster if the sbd service is enabled
-    if not configured_sbd_device() and invoke("ssh root@{} systemctl is-enabled sbd.service".format(seed_host)):
-        _context.diskless_sbd = True
+    sbd_device = configured_sbd_device()
+    sbd_enabled_on_peer = invoke("ssh -o StrictHostKeyChecking=no root@{} systemctl is-enabled sbd.service".format(seed_host))
+    if sbd_enabled_on_peer:
+        if sbd_device:
+            _context.sbd_device = sbd_device.split(';')
+        else:
+            _context.diskless_sbd = True
 
     if ipv6_flag and not is_unicast:
         # for ipv6 mcast
