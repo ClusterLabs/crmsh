@@ -131,7 +131,7 @@ def load_script(script):
     if main and os.path.isfile(main):
         try:
             import yaml
-            return yaml.load(open(main))[0]
+            return yaml.load(open(main), Loader=yaml.SafeLoader)[0]
         except ImportError, e:
             raise ValueError("PyYAML error: %s" % (e))
     return None
