@@ -21,6 +21,7 @@ import readline
 import shutil
 from string import Template
 from lxml import etree
+from pathlib import Path
 from . import config
 from . import utils
 from . import xmlutil
@@ -31,7 +32,7 @@ from . import clidisplay
 from . import term
 
 
-LOG_FILE = "/var/log/ha-cluster-bootstrap.log"
+LOG_FILE = "/var/log/crmsh/ha-cluster-bootstrap.log"
 CSYNC2_KEY = "/etc/csync2/key_hagroup"
 CSYNC2_CFG = "/etc/csync2/csync2.cfg"
 COROSYNC_AUTH = "/etc/corosync/authkey"
@@ -145,6 +146,7 @@ def log_file_fallback():
 def log(*args):
     global LOG_FILE
     try:
+        Path(os.path.dirname(LOG_FILE)).mkdir(parents=True, exist_ok=True)
         with open(LOG_FILE, "ab") as logfile:
             text = " ".join([utils.to_ascii(arg) for arg in args]) + "\n"
             logfile.write(text.encode('ascii', 'backslashreplace'))
