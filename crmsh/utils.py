@@ -132,15 +132,12 @@ def network_all(with_mask=False):
     """
     returns all networks on local node
     """
-    all_networks = []
     _, outp = get_stdout("/sbin/ip -o route show")
-    for l in outp.split('\n'):
-        if re.search(r'\.0/[0-9]+ ', l):
-            if with_mask:
-                all_networks.append(l.split()[0])
-            else:
-                all_networks.append(l.split('/')[0])
-    return all_networks
+    res_list = re.findall('[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]+', outp)
+    if with_mask:
+        return res_list
+    else:
+        return [x.split('/')[0] for x in res_list]
 
 
 def network_v6_all():
