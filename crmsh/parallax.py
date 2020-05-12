@@ -90,6 +90,32 @@ def parallax_slurp(nodes, localdir, filename, askpass=False, ssh_options=None):
     return p.slurp()
 
 
+def parallax_slurp_one(node, localdir, filename, askpass=False, ssh_options=None):
+    """
+    Copies from the remote node to the local node
+    Unlike the parallax_slurp it doesn't create a folder for each node
+    It simply copies the source file to the localdir
+    node:        one host
+    localdir:    localpath
+    filename:    remote filename want to slurp
+    askpass:     Ask for a password if passwordless not configured
+    ssh_options: Extra options to pass to SSH
+    Returns (host, (rc, stdout, stdin, localpath)) or ValueError exception
+    """
+    p = Parallax([node], localdir=localdir, filename=filename,
+                 askpass=askpass, ssh_options=ssh_options)
+    result = p.slurp()[0]
+    dest = src = result[1][3]
+    from_where = os.path.join(localdir, result[0])
+    if from_where in dest:
+        dest = dest.replace(from_where, '')
+    while dest[0] == '/':
+        dest = dest[1:]
+    dest = os.path.join(localdir, dest)
+    os.replace(src, dest)
+    os.rmdir(from_where)
+    return (result[0], (result[1][0], result[1][1], result[1][2], dest))
+
 def parallax_copy(nodes, src, dst, askpass=False, ssh_options=None):
     """
     Copies from the local node to a set of remote hosts
