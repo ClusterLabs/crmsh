@@ -68,6 +68,7 @@ test/evaltest.sh
 test/features/bootstrap_bugs.feature
 test/features/bootstrap_init_join_remove.feature
 test/features/bootstrap_options.feature
+test/features/bootstrap_sbd.feature
 test/features/environment.py
 test/features/geo_setup.feature
 test/features/qdevice_options.feature

@@ -21,6 +21,12 @@ def step_impl(context, name, state, addr):
     assert check_service_state(context, name, state, addr) is True
 
 
+@given('Has disk "{disk}" on "{addr}"')
+def step_impl(context, disk, addr):
+    out = run_command_local_or_remote(context, "fdisk -l", addr)
+    assert re.search(r'{} '.format(disk), out) is not None
+
+
 @given('Online nodes are "{nodelist}"')
 def step_impl(context, nodelist):
     assert online(context, nodelist) is True
@@ -181,6 +187,13 @@ def step_impl(context, res, node, number):
     if out:
         result = re.search(r'name=fail-count-{} value={}'.format(res, number), out)
         assert result is not None
+
+
+@then('Resource "{res_type}" not configured')
+def step_impl(context, res_type):
+    out = run_command(context, "crm configure show")
+    result = re.search(r' {} '.format(res_type), out)
+    assert result is None
 
 
 @then('Output is the same with expected "{cmd}" help output')
