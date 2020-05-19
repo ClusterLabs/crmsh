@@ -60,7 +60,6 @@ class Context(object):
         self.yes_to_all = None
         self.template = None
         self.cluster_name = None
-        self.diskless_sbd = None
         self.watchdog = None
         self.nic = None
         self.unicast = None
@@ -76,7 +75,6 @@ class Context(object):
         self.qdevice_heuristics = None
         self.qdevice_heuristics_mode = None
         self.shared_device = None
-        self.sbd_device = None
         self.ocfs2_device = None
         self.cluster_node = None
         self.force = None
@@ -85,6 +83,9 @@ class Context(object):
         self.tickets = None
         self.ip_address = None
         self.ip_network = None
+        self.sbd_manager = None
+        self.sbd_devices = None
+        self.diskless_sbd = None
 
     @classmethod
     def set_context(cls, options):
@@ -104,6 +105,225 @@ class Context(object):
                 tls=self.qdevice_tls,
                 cmds=self.qdevice_heuristics,
                 mode=self.qdevice_heuristics_mode)
+
+    def init_sbd_manager(self):
+        self.sbd_manager = SBDManager(self.sbd_devices, self.diskless_sbd)
+
+
+class SBDManager(object):
+    """
+    Class to manage sbd configuration and services
+    """
+    SYSCONFIG_SBD_TEMPLATE = "/usr/share/fillup-templates/sysconfig.sbd"
+    SBD_STATUS_DESCRIPTION = """
+Configure SBD:
+  If you have shared storage, for example a SAN or iSCSI target,
+  you can use it avoid split-brain scenarios by configuring SBD.
+  This requires a 1 MB partition, accessible to all nodes in the
+  cluster.  The device path must be persistent and consistent
+  across all nodes in the cluster, so /dev/disk/by-id/* devices
+  are a good choice.  Note that all data on the partition you
+  specify here will be destroyed.
+"""
+
+    def __init__(self, sbd_devices=None, diskless_sbd=False):
+        """
+        Init function
+
+        sbd_devices is provided by '-s' option on init process
+        diskless_sbd is provided by '-S' option on init process
+        """
+        self.sbd_devices_input = sbd_devices
+        self.diskless_sbd = diskless_sbd
+        self._sbd_service_flag = False
+        self._sbd_devices = None
+
+    @staticmethod
+    def _check_environment():
+        """
+        Check prerequisites for SBD
+        """
+        if not check_watchdog():
+            error("Watchdog device must be configured in order to use SBD")
+        if not utils.is_program("sbd"):
+            error("sbd executable not found! Cannot configure SBD")
+
+    def _parse_sbd_device(self):
+        """
+        Parse sbd devices, possible command line is like:
+          -s "/dev/sdb1;/dev/sdb2"
+          -s /dev/sdb1 -s /dev/sbd2
+        """
+        result_list = []
+        for dev in self.sbd_devices_input:
+            if ';' in dev:
+                result_list.extend(dev.strip(';').split(';'))
+            else:
+                result_list.append(dev)
+        return result_list
+
+    @staticmethod
+    def _verify_sbd_device(dev_list):
+        """
+        Verify sbd device
+        """
+        if len(dev_list) > 3:
+            raise ValueError("Maximum number of SBD device is 3")
+        for dev in dev_list:
+            if not is_block_device(dev):
+                raise ValueError("{} doesn't look like a block device".format(dev))
+
+    def _get_sbd_device_interactive(self):
+        """
+        Get sbd device on interactive mode
+        """
+        if _context.yes_to_all:
+            warn("Not configuring SBD (%s left untouched)." % (SYSCONFIG_SBD))
+            return
+
+        status(self.SBD_STATUS_DESCRIPTION)
+
+        if not confirm("Do you wish to use SBD?"):
+            warn("Not configuring SBD - STONITH will be disabled.")
+            return
+
+        self._check_environment()
+
+        configured_dev = self._get_sbd_device_from_config()
+        if configured_dev and not confirm("SBD is already configured to use {} - overwrite?".format(';'.join(configured_dev))):
+            return configured_dev
+
+        dev_list = []
+        dev_looks_sane = False
+        while not dev_looks_sane:
+            dev = prompt_for_string('Path to storage device (e.g. /dev/disk/by-id/...), or "none" for diskless sbd, use ";" as separator for multi path', r'none|\/.*')
+            if dev == "none":
+                self.diskless_sbd = True
+                return
+            dev_list = dev.strip(';').split(';')
+            try:
+                self._verify_sbd_device(dev_list)
+            except ValueError as err_msg:
+                print(term.render(clidisplay.error(str(err_msg))))
+                continue
+            for dev_item in dev_list:
+                warn("All data on {} will be destroyed!".format(dev_item))
+                if confirm('Are you sure you wish to use this device?'):
+                    dev_looks_sane = True
+                else:
+                    dev_looks_sane = False
+                    break
+
+        return dev_list
+
+    def _get_sbd_device(self):
+        """
+        Get sbd device from options or interactive mode
+        """
+        dev_list = []
+        if self.sbd_devices_input:
+            dev_list = self._parse_sbd_device()
+            self._verify_sbd_device(dev_list)
+            self._check_environment()
+        elif self.diskless_sbd:
+            self._check_environment()
+        else:
+            dev_list = self._get_sbd_device_interactive()
+        self._sbd_devices = dev_list
+
+    def _initialize_sbd(self):
+        """
+        Initialize SBD device
+        """
+        if self.diskless_sbd:
+            return
+        for dev in self._sbd_devices:
+            if not invoke("sbd -d {} create".format(dev)):
+                error("Failed to initialize SBD device {}".format(dev))
+
+    def _update_configuration(self):
+        """
+        Update /etc/sysconfig/sbd
+        """
+        shutil.copyfile(self.SYSCONFIG_SBD_TEMPLATE, SYSCONFIG_SBD)
+        sbd_config_dict = {
+                "SBD_PACEMAKER": "yes",
+                "SBD_STARTMODE": "always",
+                "SBD_DELAY_START": "no",
+                "SBD_WATCHDOG_DEV": detect_watchdog_device()
+                }
+        if self._sbd_devices:
+            sbd_config_dict["SBD_DEVICE"] = ';'.join(self._sbd_devices)
+        utils.sysconfig_set(SYSCONFIG_SBD, **sbd_config_dict)
+        csync2_update(SYSCONFIG_SBD)
+
+    @staticmethod
+    def _get_sbd_device_from_config():
+        """
+        Gets currently configured SBD device, i.e. what's in /etc/sysconfig/sbd
+        """
+        conf = utils.parse_sysconfig(SYSCONFIG_SBD)
+        res = conf.get("SBD_DEVICE")
+        if res:
+            return res.strip(';').split(';')
+        else:
+            return None
+
+    def sbd_init(self):
+        """
+        Function sbd_init includes these steps:
+        1. Get sbd device from options or interactive mode
+        2. Initialize sbd device
+        3. Write config file /etc/sysconfig/sbd
+        """
+        self._get_sbd_device()
+        if not self._sbd_devices and not self.diskless_sbd:
+            return
+        status_long("Initializing {}SBD...".format("diskless " if self.diskless_sbd else ""))
+        self._initialize_sbd()
+        self._update_configuration()
+        status_done()
+        # If process work through here, consider it's ready for enable service
+        self._sbd_service_flag = True
+
+    def manage_sbd_service(self):
+        """
+        Manage sbd service, running on both init and join process
+        """
+        if self._sbd_service_flag:
+            invoke("systemctl enable sbd.service")
+        else:
+            invoke("systemctl disable sbd.service")
+
+    def configure_sbd_resource(self):
+        """
+        Configure stonith-sbd resource and stonith-enabled property
+        """
+        if self._sbd_devices and self._get_sbd_device_from_config():
+            if not invoke("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"):
+                error("Can't create stonith-sbd primitive")
+            if not invoke("crm configure property stonith-enabled=true"):
+                error("Can't enable STONITH for SBD")
+        elif self.diskless_sbd:
+            if not invoke("crm configure property stonith-enabled=true stonith-watchdog-timeout=5s"):
+                error("Can't enable STONITH for diskless SBD")
+
+    def join_sbd(self, peer_host):
+        """
+        Function join_sbd running on join process only
+        On joining process, check whether peer node has enabled sbd.service
+        If so, check prerequisites of SBD and verify sbd device on join node
+        """
+        if not os.path.exists(SYSCONFIG_SBD):
+            return
+        if not invoke("{} -o StrictHostKeyChecking=no root@{} systemctl is-enabled sbd.service".format(SSH_WITH_KEY, peer_host)):
+            return
+        self._check_environment()
+        dev_list = self._get_sbd_device_from_config()
+        if dev_list:
+            self._verify_sbd_device(dev_list)
+        status("Got {}SBD configuration".format("" if dev_list else "diskless "))
+        self._sbd_service_flag = True
 
 
 _context = None
@@ -421,14 +641,6 @@ def probe_partitions():
     status_done()
 
 
-def configured_sbd_device():
-    """
-    Gets currently configured SBD device, i.e. what's in /etc/sysconfig/sbd
-    """
-    conf = utils.parse_sysconfig(SYSCONFIG_SBD)
-    return conf.get("SBD_DEVICE")
-
-
 def check_tty():
     """
     Check for pseudo-tty: Cannot display read prompts without a TTY (bnc#892702)
@@ -692,12 +904,7 @@ def init_cluster_local():
     if pass_msg:
         warn("You should change the hacluster password to something more secure!")
 
-    # for cluster join, diskless_sbd flag is set in join_cluster() if
-    # sbd is running on seed host
-    if (configured_sbd_device() and _context.sbd_device) or _context.diskless_sbd:
-        invoke("systemctl enable sbd.service")
-    else:
-        invoke("systemctl disable sbd.service")
+    _context.sbd_manager.manage_sbd_service()
 
     start_service("pacemaker.service")
     wait_for_cluster()
@@ -1188,8 +1395,7 @@ def is_block_device(dev):
     from stat import S_ISBLK
     try:
         rc = S_ISBLK(os.stat(dev).st_mode)
-    except OSError as msg:
-        warn(msg)
+    except OSError:
         return False
     return rc
 
@@ -1342,42 +1548,6 @@ def check_watchdog():
     return rc == 0
 
 
-def sysconfig_comment_out(scfile, key):
-    """
-    Comments out the given key in the sysconfig file
-    """
-    matcher = re.compile(r'^\s*{}\s*='.format(key))
-    outp, ncomments = "", 0
-    for line in scfile.readlines():
-        if matcher.match(line):
-            outp += '#' + line
-            ncomments += 1
-        else:
-            outp += line
-    return outp, ncomments
-
-
-def init_sbd_diskless():
-    """
-    Initialize SBD in diskless mode.
-    """
-    status_long("Initializing diskless SBD...")
-    if os.path.isfile(SYSCONFIG_SBD):
-        log("Overwriting {} with diskless configuration".format(SYSCONFIG_SBD))
-        scfg, nmatches = sysconfig_comment_out(open(SYSCONFIG_SBD), "SBD_DEVICE")
-        if nmatches > 0:
-            utils.str2file(scfg, SYSCONFIG_SBD)
-    else:
-        log("Creating {} with diskless configuration".format(SYSCONFIG_SBD))
-    utils.sysconfig_set(SYSCONFIG_SBD,
-                        SBD_PACEMAKER="yes",
-                        SBD_STARTMODE="always",
-                        SBD_DELAY_START="no",
-                        SBD_WATCHDOG_DEV=detect_watchdog_device())
-    csync2_update(SYSCONFIG_SBD)
-    status_done()
-
-
 def init_sbd():
     """
     Configure SBD (Storage-based fencing).
@@ -1385,108 +1555,7 @@ def init_sbd():
     SBD can also run in diskless mode if no device
     is configured.
     """
-    def get_dev_list(dev_list):
-        result_list = []
-        for dev in dev_list:
-            if ';' in dev:
-                result_list.extend(dev.strip(';').split(';'))
-            else:
-                result_list.append(dev)
-        return result_list
-
-    # non-interactive case
-    if _context.sbd_device:
-        _context.sbd_device = get_dev_list(_context.sbd_device)
-        if len(_context.sbd_device) > 3:
-            error("Maximum number of SBD device is 3")
-        for dev in _context.sbd_device:
-            if not is_block_device(dev):
-                error("{} doesn't look like a block device".format(dev))
-    # diskless sbd
-    elif _context.diskless_sbd:
-        init_sbd_diskless()
-        return
-    # interactive case
-    else:
-        # SBD device not set up by init_storage (ocfs2 template) and
-        # also not passed in as command line argument - prompt user
-        if _context.yes_to_all:
-            warn("Not configuring SBD (%s left untouched)." % (SYSCONFIG_SBD))
-            return
-        status("""
-Configure SBD:
-  If you have shared storage, for example a SAN or iSCSI target,
-  you can use it avoid split-brain scenarios by configuring SBD.
-  This requires a 1 MB partition, accessible to all nodes in the
-  cluster.  The device path must be persistent and consistent
-  across all nodes in the cluster, so /dev/disk/by-id/* devices
-  are a good choice.  Note that all data on the partition you
-  specify here will be destroyed.
-""")
-
-        if not confirm("Do you wish to use SBD?"):
-            warn("Not configuring SBD - STONITH will be disabled.")
-            # Comment out SBD devices if present
-            if os.path.isfile(SYSCONFIG_SBD):
-                scfg, nmatches = sysconfig_comment_out(open(SYSCONFIG_SBD), "SBD_DEVICE")
-                if nmatches > 0:
-                    utils.str2file(scfg, SYSCONFIG_SBD)
-                    csync2_update(SYSCONFIG_SBD)
-            return
-
-        if not check_watchdog():
-            error("Watchdog device must be configured if want to use SBD!")
-
-        if utils.is_program("sbd") is None:
-            error("sbd executable not found! Cannot configure SBD.")
-
-        configured_dev = configured_sbd_device()
-        if configured_dev:
-            if not confirm("SBD is already configured to use %s - overwrite?" % (configured_dev)):
-                return
-
-        dev_looks_sane = False
-        while not dev_looks_sane:
-            dev = prompt_for_string('Path to storage device (e.g. /dev/disk/by-id/...), or "none", use ";" as separator for multi path', r'none|\/.*')
-            if dev == "none":
-                _context.diskless_sbd = True
-                init_sbd_diskless()
-                return
-            dev_list = dev.strip(';').split(';')
-            if len(dev_list) > 3:
-                error("Maximum number of SBD device is 3")
-                continue
-            for dev_item in dev_list:
-                if not is_block_device(dev_item):
-                    error("{} doesn't look like a block device".format(dev_item))
-                    dev_looks_sane = False
-                    break
-                else:
-                    warn("All data on {} will be destroyed!".format(dev_item))
-                    if confirm('Are you sure you wish to use this device?'):
-                        dev_looks_sane = True
-                    else:
-                        dev_looks_sane = False
-                        break
-
-        _context.sbd_device = dev_list
-
-    # TODO: need to ensure watchdog is available
-    # (actually, should work if watchdog unavailable, it'll just whine in the logs...)
-    # TODO: what about timeouts for multipath devices?
-    status_long('Initializing SBD...')
-    for dev in _context.sbd_device:
-        if not invoke("sbd -d %s create" % (dev)):
-            error("Failed to initialize SBD device %s" % (dev))
-    status_done()
-
-    utils.sysconfig_set(SYSCONFIG_SBD,
-                        SBD_DEVICE=';'.join(_context.sbd_device),
-                        SBD_PACEMAKER="yes",
-                        SBD_STARTMODE="always",
-                        SBD_DELAY_START="no",
-                        SBD_WATCHDOG_DEV=detect_watchdog_device())
-    csync2_update(SYSCONFIG_SBD)
+    _context.sbd_manager.sbd_init()
 
 
 def init_cluster():
@@ -1510,15 +1579,7 @@ op_defaults op-options: timeout=600 record-pending=true
 rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
 """)
 
-    if configured_sbd_device() and _context.sbd_device:
-        if not invoke("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"):
-            error("Can't create stonith-sbd primitive")
-        if not invoke("crm configure property stonith-enabled=true"):
-            error("Can't enable STONITH for SBD")
-    elif _context.diskless_sbd:
-        # TODO: configure stonith-watchdog-timeout correctly
-        if not invoke("crm configure property stonith-enabled=true stonith-watchdog-timeout=5s"):
-            error("Can't enable STONITH for diskless SBD")
+    _context.sbd_manager.configure_sbd_resource()
 
 
 def init_vgfs():
@@ -1928,10 +1989,7 @@ def join_cluster(seed_host):
         csync2_update(corosync.conf())
         invoke("{} -o StrictHostKeyChecking=no root@{} corosync-cfgtool -R".format(SSH_WITH_KEY, seed_host))
 
-    # if no SBD devices are configured,
-    # check the existing cluster if the sbd service is enabled
-    if not configured_sbd_device() and invoke("{} -o StrictHostKeyChecking=no root@{} systemctl is-enabled sbd.service".format(SSH_WITH_KEY, seed_host)):
-        _context.diskless_sbd = True
+    _context.sbd_manager.join_sbd(seed_host)
 
     if ipv6_flag and not is_unicast:
         # for ipv6 mcast
@@ -2185,6 +2243,7 @@ def bootstrap_init(context):
     global _context
     _context = context
     _context.init_qdevice()
+    _context.init_sbd_manager()
 
     stage = _context.stage
     if stage is None:
@@ -2248,6 +2307,7 @@ def bootstrap_join(context):
     """
     global _context
     _context = context
+    _context.init_sbd_manager()
 
     check_tty()
 
