@@ -241,7 +241,7 @@ Note:
         storage_group = parser.add_argument_group("Storage configuration", "Options for configuring shared storage.")
         storage_group.add_argument("-p", "--partition-device", dest="shared_device", metavar="DEVICE",
                                    help='Partition this shared storage device (only used in "storage" stage)')
-        storage_group.add_argument("-s", "--sbd-device", dest="sbd_device", metavar="DEVICE", action="append",
+        storage_group.add_argument("-s", "--sbd-device", dest="sbd_devices", metavar="DEVICE", action="append",
                                    help="Block device to use for SBD fencing, use \";\" as separator or -s multiple times for multi path (up to 3 devices)")
         storage_group.add_argument("-o", "--ocfs2-device", dest="ocfs2_device", metavar="DEVICE",
                                    help='Block device to use for OCFS2 (only used in "vgfs" stage)')
@@ -255,6 +255,9 @@ Note:
             stage = args[0]
         if stage not in bootstrap.INIT_STAGES and stage != "":
             parser.error("Invalid stage (%s)" % (stage))
+
+        if options.sbd_devices and options.diskless_sbd:
+            parser.error("Can't use -s and -S options together")
 
         # if options.geo and options.name == "hacluster":
         #    parser.error("For a geo cluster, each cluster must have a unique name (use --name to set)")
