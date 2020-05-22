@@ -385,23 +385,22 @@ class TestBootstrap(unittest.TestCase):
             bootstrap.join_ssh(None)
         mock_error.assert_called_once_with("No existing IP/hostname specified (use -c option)")
 
+    @mock.patch('crmsh.utils.get_stdout_stderr')
     @mock.patch('crmsh.bootstrap.status')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.bootstrap.start_service')
     @mock.patch('crmsh.bootstrap.error')
-    def test_join_ssh_error_scp(self, mock_error, mock_start, mock_invoke, mock_status):
+    def test_join_ssh_error_scp(self, mock_error, mock_start, mock_invoke, mock_status, mock_run):
         mock_error.side_effect = ValueError
-        mock_invoke.side_effect = [True, False]
+        mock_run.return_value = (1, None, "Error: No such file or directory")
 
         with self.assertRaises(ValueError):
             bootstrap.join_ssh("node1")
 
         mock_start.assert_called_once_with("sshd.service")
-        mock_invoke.assert_has_calls([
-            mock.call("mkdir -m 700 -p /root/.ssh"),
-            mock.call("scp -oStrictHostKeyChecking=no root@node1:'{}*' /root/.ssh".format(SSH_KEY_CRMSH))
-            ])
-        mock_error.assert_called_once_with("Failed to retrieve ssh keys")
+        mock_invoke.assert_called_once_with("mkdir -m 700 -p /root/.ssh")
+        mock_run.assert_called_once_with("scp -oStrictHostKeyChecking=no root@node1:'{}*' /root/.ssh".format(SSH_KEY_CRMSH))
+        mock_error.assert_called_once_with("/root/.ssh/id_rsa.crmsh couldn't be fetch from node1.\nThis happens if the cluster was created with an older version of crmsh or the keys have been removed.\nPlease, run the next commands on node1 with admin rights:\n  ssh-keygen -q -f /root/.ssh/id_rsa.crmsh -C 'crmsh-generated' -N ''\n  cat /root/.ssh/id_rsa.crmsh.pub  >> /root/.ssh/authorized_keys\nThen re-run the join process.\n")
         mock_status.assert_called_once_with("Retrieving SSH keys - This may prompt for root@node1:")
 
     def test_pick_default_value(self):
@@ -420,22 +419,23 @@ class TestBootstrap(unittest.TestCase):
         value = bootstrap.pick_default_value(default_list, prev_list)
         self.assertEqual(value, "")
     
+    @mock.patch('crmsh.utils.get_stdout_stderr')
     @mock.patch('crmsh.bootstrap.append')
     @mock.patch('crmsh.bootstrap.status')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.bootstrap.start_service')
     @mock.patch('crmsh.bootstrap.error')
-    def test_join_ssh(self, mock_error, mock_start, mock_invoke, mock_status, mock_append):
-        mock_invoke.side_effect = [True, True, True]
+    def test_join_ssh(self, mock_error, mock_start, mock_invoke, mock_status, mock_append, mock_run):
+        mock_run.return_value = (0, None, None)
 
         bootstrap.join_ssh("node1")
 
         mock_start.assert_called_once_with("sshd.service")
         mock_invoke.assert_has_calls([
             mock.call("mkdir -m 700 -p /root/.ssh"),
-            mock.call("scp -oStrictHostKeyChecking=no root@node1:'{}*' /root/.ssh".format(SSH_KEY_CRMSH)),
             mock.call("sed -i '/{}/d' /root/.ssh/authorized_keys".format(SSH_KEY_CRMSH_TAG))
             ])
+        mock_run.assert_called_once_with("scp -oStrictHostKeyChecking=no root@node1:'{}*' /root/.ssh".format(SSH_KEY_CRMSH))
         mock_error.assert_not_called()
         mock_status.assert_called_once_with("Retrieving SSH keys - This may prompt for root@node1:")
         mock_append.assert_called_once_with("{}.pub".format(SSH_KEY_CRMSH), "/root/.ssh/authorized_keys")
