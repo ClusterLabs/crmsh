@@ -29,7 +29,7 @@ from . import corosync
 from . import tmpfiles
 from . import clidisplay
 from . import term
-from .constants import SSH_KEY_CRMSH, SSH_WITH_KEY, SCP_WITH_KEY, SSH_KEY_CRMSH_TAG
+from .constants import SSH_KEY_CRMSH, SSH_WITH_KEY, SCP_WITH_KEY, SSH_KEY_CRMSH_TAG, KEY_NOT_EXIST_HINTS
 
 
 LOG_FILE = "/var/log/ha-cluster-bootstrap.log"
@@ -1587,8 +1587,13 @@ def join_ssh(seed_host):
     invoke("mkdir -m 700 -p /root/.ssh")
 
     status("Retrieving SSH keys - This may prompt for root@%s:" % (seed_host))
-    if not invoke("scp -oStrictHostKeyChecking=no root@{}:'{}*' /root/.ssh".format(seed_host, SSH_KEY_CRMSH)):
-        error("Failed to retrieve ssh keys")
+    cmd = "scp -oStrictHostKeyChecking=no root@{}:'{}*' /root/.ssh".format(seed_host, SSH_KEY_CRMSH)
+    rc, stdout, stderr = utils.get_stdout_stderr(cmd)
+    if rc != 0 and stderr:
+        if "No such file or directory" in stderr:
+            error(KEY_NOT_EXIST_HINTS.format(key=SSH_KEY_CRMSH, peer=seed_host))
+        else:
+            error(stderr)
 
     invoke("sed -i '/{}/d' /root/.ssh/authorized_keys".format(SSH_KEY_CRMSH_TAG))
     append("{}.pub".format(SSH_KEY_CRMSH), "/root/.ssh/authorized_keys")
