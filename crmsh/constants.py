@@ -486,4 +486,11 @@ SSH_KEY_CRMSH = "/root/.ssh/id_rsa.crmsh"
 SSH_KEY_CRMSH_TAG = "crmsh-generated"
 SSH_WITH_KEY = "ssh -i {}".format(SSH_KEY_CRMSH)
 SCP_WITH_KEY = "scp -i {}".format(SSH_KEY_CRMSH)
+KEY_NOT_EXIST_HINTS = """{key} couldn't be fetch from {peer}.
+This happens if the cluster was created with an older version of crmsh or the keys have been removed.
+Please, run the next commands on {peer} with admin rights:
+  ssh-keygen -q -f /root/.ssh/id_rsa.crmsh -C 'crmsh-generated' -N ''
+  cat /root/.ssh/id_rsa.crmsh.pub  >> /root/.ssh/authorized_keys
+Then re-run the join process.
+"""
 # vim:ts=4:sw=4:et:
