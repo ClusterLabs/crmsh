@@ -32,6 +32,9 @@ alert notify_10 /usr/share/pacemaker/alerts/alert_snmp.sh \
         trap_add_hires_timestamp_oid="false" \
         select attributes { master-prmStateful test1 } \
         to 192.168.28.188
+alert notify_11 /usr/share/pacemaker/alerts/alert_snmp.sh \
+        select fencing nodes resources \
+        to 192.168.28.188
 show tag:ones and type:location
 show tag:ones and p1
 show
