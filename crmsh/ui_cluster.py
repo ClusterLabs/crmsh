@@ -13,7 +13,6 @@ from . import completers as compl
 from . import bootstrap
 from . import corosync
 from .cibconfig import cib_factory
-from .constants import SSH_KEY_CRMSH, SSH_WITH_KEY
 
 
 class ArgParser(ArgumentParser):
@@ -206,7 +205,7 @@ Note:
         parser.add_argument("-q", "--quiet", action="store_true", dest="quiet",
                             help="Be quiet (don't describe what's happening, just do it)")
         parser.add_argument("-y", "--yes", action="store_true", dest="yes_to_all",
-                            help='Answer "yes" to all prompts (use with caution, this is destructive, especially during the "storage" stage.)')
+                            help='Answer "yes" to all prompts (use with caution, this is destructive, especially during the "storage" stage. The /root/.ssh/id_rsa key will be overwritten unless the option "--no-overwrite-sshkey" is used)')
         parser.add_argument("-t", "--template", dest="template", metavar="TEMPLATE", choices=['ocfs2'],
                             help='Optionally configure cluster with template "name" (currently only "ocfs2" is valid here)')
         parser.add_argument("-n", "--name", metavar="NAME", dest="cluster_name", default="hacluster",
@@ -218,6 +217,8 @@ Note:
                             help="Enable SBD even if no SBD device is configured (diskless mode)")
         parser.add_argument("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG",
                             help="Use the given watchdog device")
+        parser.add_argument("--no-overwrite-sshkey", action="store_true", dest="no_overwrite_sshkey",
+                            help='Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is used (False by default)')
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
         network_group.add_argument("-i", "--interface", dest="nic", metavar="IF", choices=utils.interface_choice(),
@@ -309,6 +310,8 @@ Note:
 Stage can be one of:
     ssh         Obtain SSH keys from existing cluster node (requires -c <host>)
     csync2      Configure csync2 (requires -c <host>)
+    ssh_merge   Merge root's SSH known_hosts across all nodes (csync2 must
+                already be configured).
     cluster     Start the cluster on this node
 
 If stage is not specified, each stage will be invoked in sequence.
@@ -329,7 +332,7 @@ If stage is not specified, each stage will be invoked in sequence.
         stage = ""
         if len(args) == 1:
             stage = args[0]
-        if stage not in ("ssh", "csync2", "cluster", ""):
+        if stage not in ("ssh", "csync2", "ssh_merge", "cluster", ""):
             parser.error("Invalid stage (%s)" % (stage))
 
         join_context = bootstrap.Context.set_context(options)
@@ -637,8 +640,6 @@ Cluster Description
         opts = parallax.Options()
         opts.ssh_options = ['StrictHostKeyChecking=no']
         opts.askpass = utils.check_ssh_passwd_need(hosts)
-        if hasattr(opts, 'ssh_key'):
-            opts.ssh_key = SSH_KEY_CRMSH
         for host, result in parallax.call(hosts, cmd, opts).items():
             if isinstance(result, parallax.Error):
                 err_buf.error("[%s]: %s" % (host, result))
