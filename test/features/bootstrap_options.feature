@@ -33,7 +33,7 @@ Feature: crmsh bootstrap process - options
   Scenario: Init whole cluster service on node "hanode1" using "--nodes" option
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster init -y --nodes \"hanode1 hanode2\"" on "hanode1"
+    When    Run "crm cluster init -y --no-overwrite-sshkey --nodes \"hanode1 hanode2\"" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Cluster service is "started" on "hanode2"
     And     Online nodes are "hanode1 hanode2"
@@ -71,7 +71,7 @@ Feature: crmsh bootstrap process - options
   @clean
   Scenario: Init cluster service with udpu using "-u" option
     Given   Cluster service is "stopped" on "hanode1"
-    When    Run "crm cluster init -u -y" on "hanode1"
+    When    Run "crm cluster init -u -y --no-overwrite-sshkey" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Cluster is using udpu transport mode
     And     IP "172.17.0.2" is used by corosync
