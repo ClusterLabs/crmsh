@@ -1,21 +1,5 @@
 import socket
-import parallax
-from crmsh import utils, bootstrap
-
-
-def parallax_call(nodes_list, cmd, askpass=False, ssh_options=None):
-    opts = parallax.Options()
-    if ssh_options is None:
-        opts.ssh_options = ['StrictHostKeyChecking=no', 'ConnectTimeout=10']
-    opts.askpass = askpass
-    if hasattr(opts, 'warn_message'):
-        opts.warn_message = False
-
-    results = parallax.call(nodes_list, cmd, opts)
-    for host, result in results.items():
-        if isinstance(result, parallax.Error):
-            raise ValueError("Failed on {}: {}".format(host, result))
-    return list(results.items())
+from crmsh import utils, bootstrap, parallax
 
 
 def me():
@@ -41,7 +25,7 @@ def run_command_local_or_remote(context, cmd, addr, err_record=False):
         return out
     else:
         try:
-            results = parallax_call([addr], cmd)
+            results = parallax.parallax_call([addr], cmd)
         except ValueError as err:
             if err_record:
                 context.command_error_output = str(err)
@@ -64,7 +48,7 @@ def check_service_state(context, service_name, state, addr):
     else:
         test_active = "systemctl -q is-active {}".format(service_name)
         try:
-            parallax_call([addr], test_active)
+            parallax.parallax_call([addr], test_active)
         except ValueError:
             return state_dict[state] is False
         else:
