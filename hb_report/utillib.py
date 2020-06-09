@@ -26,7 +26,6 @@ import constants
 import crmsh.config
 from crmsh import msg as crmmsg
 from crmsh import utils as crmutils
-from crmsh.constants import SSH_WITH_KEY
 
 
 class Tempfile(object):
@@ -1533,8 +1532,8 @@ def start_slave_collector(node, arg_str):
             cmd += " {}".format(str(item))
         _, out = crmutils.get_stdout(cmd)
     else:
-        cmd = r'{} {} {} "{} hb_report __slave"'.\
-              format(SSH_WITH_KEY, constants.SSH_OPTS, node,
+        cmd = r'ssh {} {} "{} hb_report __slave"'.\
+              format(constants.SSH_OPTS, node,
                      constants.SUDO, os.getcwd())
         for item in arg_str.split():
             cmd += " {}".format(str(item))
@@ -1633,7 +1632,7 @@ def tail(n, indata):
 
 
 def test_ssh_conn(addr):
-    cmd = r"{} {} -T -o Batchmode=yes {} true".format(SSH_WITH_KEY, constants.SSH_OPTS, addr)
+    cmd = r"ssh %s -T -o Batchmode=yes %s true" % (constants.SSH_OPTS, addr)
     code, _ = get_command_info(cmd)
     if code == 0:
         return True
