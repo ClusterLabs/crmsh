@@ -61,9 +61,9 @@ Feature: corosync qdevice/qnetd options validate
   @clean
   Scenario: Node for qnetd is a cluster node
     Given   Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster init -y" on "hanode2"
+    When    Run "crm cluster init -y --no-overwrite-sshkey" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
-    When    Try "crm cluster init --qnetd-hostname=hanode2 -y"
+    When    Try "crm cluster init --qnetd-hostname=hanode2 -y --no-overwrite-sshkey"
     Then    Except multiple lines
       """"
       ERROR: cluster.init: host for qnetd must be a non-cluster node
@@ -78,7 +78,7 @@ Feature: corosync qdevice/qnetd options validate
   @clean
   Scenario: Node for qnetd not installed corosync-qnetd
     Given   Cluster service is "stopped" on "hanode2"
-    When    Try "crm cluster init --qnetd-hostname=hanode2 -y"
+    When    Try "crm cluster init --qnetd-hostname=hanode2 -y --no-overwrite-sshkey"
     Then    Except multiple lines
       """"
       ERROR: cluster.init: Package "corosync-qnetd" not installed on hanode2
@@ -98,7 +98,7 @@ Feature: corosync qdevice/qnetd options validate
   @clean
   Scenario: Run qdevice stage but miss "--qnetd-hostname" option
     Given   Cluster service is "stopped" on "hanode1"
-    When    Run "crm cluster init -y" on "hanode1"
+    When    Run "crm cluster init -y --no-overwrite-sshkey" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Try "crm cluster init qdevice"
     Then    Except "ERROR: cluster.init: qdevice related options are missing (--qnetd-hostname option is mandatory, find for more information using --help)"

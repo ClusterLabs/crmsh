@@ -12,7 +12,7 @@ Feature: corosync qdevice/qnetd setup/remove process
 
   @clean
   Scenario: Setup qdevice/qnetd during init/join process
-    When    Run "crm cluster init --qnetd-hostname=qnetd-node -y" on "hanode1"
+    When    Run "crm cluster init --qnetd-hostname=qnetd-node -y --no-overwrite-sshkey" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Service "corosync-qdevice" is "started" on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
@@ -25,7 +25,7 @@ Feature: corosync qdevice/qnetd setup/remove process
 
   @clean
   Scenario: Setup qdevice/qnetd on running cluster
-    When    Run "crm cluster init -y" on "hanode1"
+    When    Run "crm cluster init -y --no-overwrite-sshkey" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Service "corosync-qdevice" is "stopped" on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
@@ -43,7 +43,7 @@ Feature: corosync qdevice/qnetd setup/remove process
 
   @clean
   Scenario: Setup qdevice with heuristics
-    When    Run "crm cluster init -y --qnetd-hostname=qnetd-node --qdevice-heuristics="/usr/bin/test -f /tmp/heuristics.txt" --qdevice-heuristics-mode="on"" on "hanode1"
+    When    Run "crm cluster init -y --no-overwrite-sshkey --qnetd-hostname=qnetd-node --qdevice-heuristics="/usr/bin/test -f /tmp/heuristics.txt" --qdevice-heuristics-mode="on"" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Service "corosync-qdevice" is "started" on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
@@ -61,7 +61,7 @@ Feature: corosync qdevice/qnetd setup/remove process
 
   @clean
   Scenario: Remove qdevice from a two nodes cluster
-    When    Run "crm cluster init --qnetd-hostname=qnetd-node -y" on "hanode1"
+    When    Run "crm cluster init --qnetd-hostname=qnetd-node -y --no-overwrite-sshkey" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Service "corosync-qdevice" is "started" on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"

@@ -8,11 +8,11 @@ Feature: geo cluster
   Scenario: GEO cluster setup
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster init -y -n cluster1" on "hanode1"
+    When    Run "crm cluster init -y --no-overwrite-sshkey -n cluster1" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Run "crm configure primitive vip IPaddr2 params ip=10.10.10.123" on "hanode1"
 
-    When    Run "crm cluster init -y -n cluster2" on "hanode2"
+    When    Run "crm cluster init -y --no-overwrite-sshkey -n cluster2" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     When    Run "crm configure primitive vip IPaddr2 params ip=10.10.10.124" on "hanode2"
 

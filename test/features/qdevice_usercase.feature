@@ -21,7 +21,7 @@ Feature: Verify usercase master survive when split-brain
   @clean
   Scenario: Master survive when split-brain
     # Setup a two-nodes cluster
-    When    Run "crm cluster init -y" on "hanode1"
+    When    Run "crm cluster init -y --no-overwrite-sshkey" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
