@@ -1943,8 +1943,6 @@ def remote_diff_slurp(nodes, filename):
     tmpdir = tmpfiles.create_dir()
     opts = parallax.Options()
     opts.localdir = tmpdir
-    if hasattr(opts, 'ssh_key'):
-        opts.ssh_key = constants.SSH_KEY_CRMSH
     dst = os.path.basename(filename)
     return list(parallax.slurp(nodes, filename, dst, opts).items())
 
@@ -2010,13 +2008,10 @@ def cluster_copy_file(local_path, nodes=None):
         import parallax
     except ImportError:
         raise ValueError("parallax is required to copy cluster files")
-
     if not nodes:
         nodes = list_cluster_nodes()
         nodes.remove(this_node())
     opts = parallax.Options()
-    if hasattr(opts, 'ssh_key'):
-        opts.ssh_key = constants.SSH_KEY_CRMSH
     opts.timeout = 60
     opts.ssh_options += ['ControlPersist=no']
     ok = True
@@ -2204,7 +2199,7 @@ def get_member_iplist():
 def check_ssh_passwd_need(hosts):
     ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
     for host in hosts:
-        ssh_cmd = "{} {} -T -o Batchmode=yes {} true".format(constants.SSH_WITH_KEY, ssh_options, host)
+        ssh_cmd = "ssh {} -T -o Batchmode=yes {} true".format(ssh_options, host)
         rc, _, _ = get_stdout_stderr(ssh_cmd)
         if rc != 0:
             return True
