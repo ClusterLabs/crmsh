@@ -7,7 +7,7 @@ Feature: crmsh bootstrap process - init, join and remove
   Background: Setup a two nodes cluster
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster init -y" on "hanode1"
+    When    Run "crm cluster init -y --no-overwrite-sshkey" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Show cluster status on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"

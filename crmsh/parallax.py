@@ -4,7 +4,6 @@
 
 import os
 import parallax
-from .constants import SSH_KEY_CRMSH
 
 
 class Parallax(object):
@@ -37,8 +36,6 @@ class Parallax(object):
             self.ssh_options = ['StrictHostKeyChecking=no', 'ConnectTimeout=10']
         opts.ssh_options = self.ssh_options
         opts.askpass = self.askpass
-        if hasattr(opts, 'ssh_key'):
-            opts.ssh_key = SSH_KEY_CRMSH
         # warn_message will available from parallax-1.0.5
         if hasattr(opts, 'warn_message'):
             opts.warn_message = False
@@ -88,7 +85,8 @@ def parallax_slurp(nodes, localdir, filename, askpass=False, ssh_options=None):
     ssh_options: Extra options to pass to SSH
     Returns [(host, (rc, stdout, stdin, localpath)), ...] or ValueError exception
     """
-    p = Parallax(nodes, localdir=localdir, filename=filename, askpass=askpass, ssh_options=ssh_options)
+    p = Parallax(nodes, localdir=localdir, filename=filename,
+                 askpass=askpass, ssh_options=ssh_options)
     return p.slurp()
 
 

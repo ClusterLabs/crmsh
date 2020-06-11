@@ -5,7 +5,7 @@ Feature: Use "crm configure set" to update attributes and operations
 
   Background: Setup one node cluster and configure some resources
     Given     Cluster service is "stopped" on "hanode1"
-    When      Run "crm cluster init -y" on "hanode1"
+    When      Run "crm cluster init -y --no-overwrite-sshkey" on "hanode1"
     Then      Cluster service is "started" on "hanode1"
     When      Run "crm configure primitive d Dummy op monitor interval=3s" on "hanode1"
     Then      Resource "d" type "Dummy" is "Started"
