@@ -29,7 +29,6 @@ from . import corosync
 from . import tmpfiles
 from . import clidisplay
 from . import term
-from .constants import SSH_KEY_CRMSH, SSH_WITH_KEY, SCP_WITH_KEY, SSH_KEY_CRMSH_TAG
 
 
 LOG_FILE = "/var/log/ha-cluster-bootstrap.log"
@@ -41,7 +40,7 @@ SYSCONFIG_FW = "/etc/sysconfig/SuSEfirewall2"
 SYSCONFIG_FW_CLUSTER = "/etc/sysconfig/SuSEfirewall2.d/services/cluster"
 COROSYNC_CONF_ORIG = tmpfiles.create()[1]
 
-INIT_STAGES = ("ssh", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin")
+INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin")
 
 
 class Context(object):
@@ -58,6 +57,7 @@ class Context(object):
         self.template = None
         self.cluster_name = None
         self.watchdog = None
+        self.no_overwrite_sshkey = None
         self.nic = None
         self.unicast = None
         self.admin_ip = None
@@ -294,7 +294,7 @@ Configure SBD:
         """
         if not os.path.exists(SYSCONFIG_SBD):
             return
-        if not invoke("{} -o StrictHostKeyChecking=no root@{} systemctl is-enabled sbd.service".format(SSH_WITH_KEY, peer_host)):
+        if not invoke("ssh -o StrictHostKeyChecking=no root@{} systemctl is-enabled sbd.service".format(peer_host)):
             return
         self._check_environment()
         dev_list = self._get_sbd_device_from_config()
@@ -469,7 +469,7 @@ def get_cluster_node_hostname():
     peer_node = None
     if _context.cluster_node:
         if utils.valid_ip_addr(_context.cluster_node):
-            rc, out, err = utils.get_stdout_stderr("{} {} crm_node --name".format(SSH_WITH_KEY, _context.cluster_node))
+            rc, out, err = utils.get_stdout_stderr("ssh {} crm_node --name".format(_context.cluster_node))
             if rc != 0:
                 error(err)
             peer_node = out
@@ -883,16 +883,36 @@ def append(fromfile, tofile):
 
 def init_ssh():
     """
-    Configure passwordless SSH with crmsh specific key.
+    Configure passwordless SSH.
     """
     start_service("sshd.service")
-    if os.path.exists(SSH_KEY_CRMSH):
-        if not confirm("{} already exists - overwrite?".format(SSH_KEY_CRMSH)):
+    invoke("mkdir -m 700 -p /root/.ssh")
+    if os.path.exists("/root/.ssh/id_rsa"):
+        if _context.yes_to_all and _context.no_overwrite_sshkey or \
+                not confirm("/root/.ssh/id_rsa already exists - overwrite?"):
             return
-        os.remove(SSH_KEY_CRMSH)
-        invoke("sed -i '/{}/d' /root/.ssh/authorized_keys".format(SSH_KEY_CRMSH_TAG))
-    invoke("ssh-keygen -q -f {} -C '{}' -N ''".format(SSH_KEY_CRMSH, SSH_KEY_CRMSH_TAG))
-    append("{}.pub".format(SSH_KEY_CRMSH), "/root/.ssh/authorized_keys")
+        os.remove("/root/.ssh/id_rsa")
+    status("Generating SSH key")
+    invoke("ssh-keygen -q -f /root/.ssh/id_rsa -C 'Cluster Internal' -N ''")
+    append("/root/.ssh/id_rsa.pub", "/root/.ssh/authorized_keys")
+
+
+def init_ssh_remote():
+    """
+    Called by ha-cluster-join
+    """
+    authorized_keys_file = "/root/.ssh/authorized_keys"
+    if not os.path.exists(authorized_keys_file):
+        open(authorized_keys_file, 'w').close()
+    authkeys = open(authorized_keys_file, "r+")
+    authkeys_data = authkeys.read()
+    for key in ("id_rsa", "id_dsa", "id_ecdsa", "id_ed25519"):
+        fn = os.path.join("/root/.ssh", key)
+        if not os.path.exists(fn):
+            continue
+        keydata = open(fn + ".pub").read()
+        if keydata not in authkeys_data:
+            append(fn + ".pub", authorized_keys_file)
 
 
 def init_csync2():
@@ -1586,12 +1606,40 @@ def join_ssh(seed_host):
     start_service("sshd.service")
     invoke("mkdir -m 700 -p /root/.ssh")
 
+    tmpdir = tmpfiles.create_dir()
     status("Retrieving SSH keys - This may prompt for root@%s:" % (seed_host))
-    if not invoke("scp -oStrictHostKeyChecking=no root@{}:'{}*' /root/.ssh".format(seed_host, SSH_KEY_CRMSH)):
+    if not invoke("scp -oStrictHostKeyChecking=no  root@%s:'/root/.ssh/id_*' %s/" % (seed_host, tmpdir)):
         error("Failed to retrieve ssh keys")
 
-    invoke("sed -i '/{}/d' /root/.ssh/authorized_keys".format(SSH_KEY_CRMSH_TAG))
-    append("{}.pub".format(SSH_KEY_CRMSH), "/root/.ssh/authorized_keys")
+    # This supports all SSH key types, for the case where ha-cluster-init
+    # wasn't used to set up the seed node, and the user has manually
+    # created, for example, DSA keys (bnc#878080)
+    got_keys = 0
+    for key in ("id_rsa", "id_dsa", "id_ecdsa", "id_ed25519"):
+        if not os.path.exists(os.path.join(tmpdir, key)):
+            continue
+
+        if os.path.exists(os.path.join("/root/.ssh", key)):
+            if not confirm("/root/.ssh/%s already exists - overwrite?" % (key)):
+                continue
+        invoke("mv %s* /root/.ssh/" % (os.path.join(tmpdir, key)))
+        if not grep_file("/root/.ssh/authorized_keys", open("/root/.ssh/%s.pub" % (key)).read()):
+            append("/root/.ssh/%s.pub" % (key), "/root/.ssh/authorized_keys")
+        got_keys += 1
+
+    if got_keys == 0:
+        status("No new SSH keys installed")
+    elif got_keys == 1:
+        status("One new SSH key installed")
+    else:
+        status("%s new SSH keys installed" % (got_keys))
+
+    # This makes sure the seed host has its own SSH keys in its own
+    # authorized_keys file (again, to help with the case where the
+    # user has done manual initial setup without the assistance of
+    # ha-cluster-init).
+    if not invoke("ssh root@{} crm cluster init -i {} ssh_remote".format(seed_host, _context.nic)):
+        error("Can't invoke crm cluster init -i {} ssh_remote on {}".format(_context.nic, seed_host))
 
 
 def join_csync2(seed_host):
@@ -1613,7 +1661,7 @@ def join_csync2(seed_host):
     # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
     # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
     cmd = "crm cluster init -i {} csync2_remote {}".format(_context.nic, utils.this_node())
-    if not invoke("{} -o StrictHostKeyChecking=no root@{} {}".format(SSH_WITH_KEY, seed_host, cmd)):
+    if not invoke("ssh -o StrictHostKeyChecking=no root@{} {}".format(seed_host, cmd)):
         error("Can't invoke \"{}\" on {}".format(cmd, seed_host))
 
     # This is necessary if syncing /etc/hosts (to ensure everyone's got the
@@ -1622,8 +1670,9 @@ def join_csync2(seed_host):
     # invoke scp root@seed_host:/etc/hosts $tmp_conf \
     #   || error "Can't retrieve /etc/hosts from seed_host"
     # install_tmp $tmp_conf /etc/hosts
-    if not invoke("{} root@{}:'/etc/csync2/{{csync2.cfg,key_hagroup}}' /etc/csync2".format(SCP_WITH_KEY, seed_host)):
-        error("Can't retrieve csync2 config from {}".format(seed_host))
+
+    if not invoke("scp root@%s:'/etc/csync2/{csync2.cfg,key_hagroup}' /etc/csync2" % (seed_host)):
+        error("Can't retrieve csync2 config from %s" % (seed_host))
 
     start_service("csync2.socket")
 
@@ -1636,11 +1685,48 @@ def join_csync2(seed_host):
     # they haven't gone to all nodes in the cluster, which means a
     # subseqent join of another node can fail its sync of corosync.conf
     # when it updates expected_votes.  Grrr...
-    if not invoke('{} -o StrictHostKeyChecking=no root@{} "csync2 -rm /; csync2 -rxv || csync2 -rf / && csync2 -rxv"'.format(SSH_WITH_KEY, seed_host)):
+    if not invoke('ssh -o StrictHostKeyChecking=no root@{} "csync2 -rm /; csync2 -rxv || csync2 -rf / && csync2 -rxv"'.format(seed_host)):
         print("")
         warn("csync2 run failed - some files may not be sync'd")
 
     status_done()
+
+
+def join_ssh_merge(_cluster_node):
+    status("Merging known_hosts")
+
+    hosts = [m.group(1) for m in re.finditer(r"^\s*host\s*([^ ;]+)\s*;", open(CSYNC2_CFG).read(), re.M)]
+    if not hosts:
+        error("Unable to extract host list from %s" % (CSYNC2_CFG))
+
+    try:
+        import parallax
+    except ImportError:
+        error("parallax python library is missing")
+
+    opts = parallax.Options()
+    opts.ssh_options = ['StrictHostKeyChecking=no']
+
+    # The act of using pssh to connect to every host (without strict host key
+    # checking) ensures that at least *this* host has every other host in its
+    # known_hosts
+    known_hosts_new = set()
+    cat_cmd = "[ -e /root/.ssh/known_hosts ] && cat /root/.ssh/known_hosts || true"
+    log("parallax.call {} : {}".format(hosts, cat_cmd))
+    results = parallax.call(hosts, cat_cmd, opts)
+    for host, result in results.iteritems():
+        if isinstance(result, parallax.Error):
+            warn("Failed to get known_hosts from {}: {}".format(host, str(result)))
+        else:
+            known_hosts_new.update((result[1] or "").splitlines())
+    if known_hosts_new:
+        hoststxt = "\n".join(sorted(known_hosts_new))
+        tmpf = utils.str2tmp(hoststxt)
+        log("parallax.copy {} : {}".format(hosts, hoststxt))
+        results = parallax.copy(hosts, tmpf, "/root/.ssh/known_hosts")
+        for host, result in results.iteritems():
+            if isinstance(result, parallax.Error):
+                warn("scp to {} failed ({}), known_hosts update may be incomplete".format(host, str(result)))
 
 
 def join_cluster(seed_host):
@@ -1690,7 +1776,7 @@ def join_cluster(seed_host):
     # that yet, so the following crawling horror takes a punt on the seed
     # node being up, then asks it for a list of mountpoints...
     if _context.cluster_node:
-        _rc, outp, _ = utils.get_stdout_stderr("{} -o StrictHostKeyChecking=no root@{} 'cibadmin -Q --xpath \"//primitive\"'".format(SSH_WITH_KEY, seed_host))
+        _rc, outp, _ = utils.get_stdout_stderr("ssh -o StrictHostKeyChecking=no root@{} 'cibadmin -Q --xpath \"//primitive\"'".format(seed_host))
         if outp:
             xml = etree.fromstring(outp)
             mountpoints = xml.xpath(' and '.join(['//primitive[@class="ocf"',
@@ -1741,7 +1827,7 @@ def join_cluster(seed_host):
         except corosync.IPAlreadyConfiguredError as e:
             warn(e)
         csync2_update(corosync.conf())
-        invoke("{} -o StrictHostKeyChecking=no root@{} corosync-cfgtool -R".format(SSH_WITH_KEY, seed_host))
+        invoke("ssh root@{} corosync-cfgtool -R".format(seed_host))
 
     _context.sbd_manager.join_sbd(seed_host)
 
@@ -1857,7 +1943,7 @@ def remove_get_hostname(seed_host):
     """
     _context.connect_name = seed_host
     _context.host_status = 0
-    _rc, outp, _errp = utils.get_stdout_stderr("{} -o StrictHostKeyChecking=no root@{} \"hostname\"".format(SSH_WITH_KEY, seed_host))
+    _rc, outp, _errp = utils.get_stdout_stderr("ssh root@{} \"hostname\"".format(seed_host))
     if outp:
         _context.connect_name = seed_host
         _context.cluster_node = outp.strip()
@@ -1872,7 +1958,7 @@ def remove_get_hostname(seed_host):
         if nodename not in xmlutil.listnodes():
             error("Specified node {} is not configured in cluster, can not remove".format(nodename))
 
-        _rc, outp, _errp = utils.get_stdout_stderr("{} -o StrictHostKeyChecking=no root@{} \"hostname\"".format(SSH_WITH_KEY, nodename))
+        _rc, outp, _errp = utils.get_stdout_stderr("ssh root@{} \"hostname\"".format(nodename))
         if outp:
             _context.connect_name = seed_host
             _context.cluster_node = nodename
@@ -1889,7 +1975,7 @@ def remove_get_hostname(seed_host):
             error("Invalid IP address")
 
         # try to use the IP address to connect
-        _rc, outp, _errp = utils.get_stdout_stderr("{} -o StrictHostKeyChecking=no root@{} \"hostname\"".format(SSH_WITH_KEY, nodename))
+        _rc, outp, _errp = utils.get_stdout_stderr("ssh root@{} \"hostname\"".format(nodename))
         if outp:
             ipaddr = nodename
             nodename = outp.strip()
@@ -1913,12 +1999,12 @@ def remove_node_from_cluster():
 
     if _context.host_status != 0:
         status("Stopping the corosync service")
-        if not invoke('{} -o StrictHostKeyChecking=no root@{} "systemctl stop corosync"'.format(SSH_WITH_KEY, _context.connect_name)):
+        if not invoke('ssh root@{} "systemctl stop corosync"'.format(_context.connect_name)):
             error("Stopping corosync on {} failed".format(_context.connect_name))
 
         # delete configuration files from the node to be removed
         toremove = [SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY, COROSYNC_AUTH]
-        if not invoke('{} -o StrictHostKeyChecking=no root@{} "bash -c \\\"rm -f {} && rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*\\\""'.format(SSH_WITH_KEY, node, " ".join(toremove))):
+        if not invoke('ssh root@{} "bash -c \\\"rm -f {} && rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*\\\""'.format(node, " ".join(toremove))):
             error("Deleting the configuration files failed")
     else:
         # Check node status
@@ -1992,14 +2078,14 @@ def bootstrap_init(context):
     elif stage == "":
         if corosync_active:
             error("Cluster is currently active - can't run")
-    elif stage not in ("ssh", "csync2", "csync2_remote"):
+    elif stage not in ("ssh", "ssh_remote", "csync2", "csync2_remote"):
         if corosync_active:
             error("Cluster is currently active - can't run %s stage" % (stage))
 
     check_option()
 
-    # Need hostname resolution to work, want NTP (but don't block csync2_remote)
-    if stage not in ('csync2_remote',):
+    # Need hostname resolution to work, want NTP (but don't block ssh_remote or csync2_remote)
+    if stage not in ('ssh_remote', 'csync2_remote'):
         check_tty()
         if not check_prereqs(stage):
             return
@@ -2067,6 +2153,7 @@ def bootstrap_join(context):
 
         join_ssh(cluster_node)
         join_csync2(cluster_node)
+        join_ssh_merge(cluster_node)
         join_cluster(cluster_node)
 
     status("Done (log saved to %s)" % (LOG_FILE))
@@ -2107,7 +2194,7 @@ def bootstrap_remove(context):
         if othernode is not None:
             # remove from other node
             cmd = "crm cluster remove{} -c {}".format(" -y" if yes_to_all else "", me)
-            rc = utils.ext_cmd_nosudo("{}{} -o StrictHostKeyChecking=no {} '{}'".format(SSH_WITH_KEY, "" if yes_to_all else " -t", othernode, cmd))
+            rc = utils.ext_cmd_nosudo("ssh{} -o StrictHostKeyChecking=no {} '{}'".format("" if yes_to_all else " -t", othernode, cmd))
             if rc != 0:
                 error("Failed to remove this node from {}".format(othernode))
         else:

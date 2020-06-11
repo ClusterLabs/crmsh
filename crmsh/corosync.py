@@ -11,7 +11,6 @@ import socket
 from . import utils
 from . import tmpfiles
 from .msg import err_buf, common_debug
-from .constants import SCP_WITH_KEY
 
 
 def conf():
@@ -290,7 +289,7 @@ def pull_configuration(from_node):
     local_path = conf()
     _, fname = tmpfiles.create()
     print "Retrieving %s:%s..." % (from_node, local_path)
-    cmd = [SCP_WITH_KEY, '-qC',
+    cmd = ['scp', '-qC',
            '-o', 'PasswordAuthentication=no',
            '-o', 'StrictHostKeyChecking=no',
            '%s:%s' % (from_node, local_path),
