@@ -41,6 +41,11 @@ SYSCONFIG_FW = "/etc/sysconfig/SuSEfirewall2"
 SYSCONFIG_FW_CLUSTER = "/etc/sysconfig/SuSEfirewall2.d/services/cluster"
 PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
 COROSYNC_CONF_ORIG = tmpfiles.create()[1]
+RSA_PRIVATE_KEY = "/root/.ssh/id_rsa"
+RSA_PUBLIC_KEY = "/root/.ssh/id_rsa.pub"
+AUTHORIZED_KEYS_FILE = "/root/.ssh/authorized_keys"
+
+
 INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin", "qdevice")
 
 
@@ -129,6 +134,8 @@ class Context(object):
                 error("Maximum number of interface is 2")
             if len(self.nic_list) != len(set(self.nic_list)):
                 error("Duplicated input")
+        if self.no_overwrite_sshkey:
+            warn("--no-overwrite-sshkey option is deprecated since crmsh does not overwrite ssh keys by default anymore and will be removed in future versions")
 
     def init_sbd_manager(self):
         self.sbd_manager = SBDManager(self.sbd_devices, self.diskless_sbd)
@@ -956,6 +963,14 @@ def append(fromfile, tofile):
             tf.write(ff.read())
 
 
+def append_unique(fromfile, tofile):
+    """
+    Append unique content from fromfile to tofile
+    """
+    if not utils.check_file_content_included(fromfile, tofile):
+        append(fromfile, tofile)
+
+
 def rmfile(path, ignore_errors=False):
     """
     Try to remove the given file, and
@@ -987,15 +1002,22 @@ def init_ssh():
     Configure passwordless SSH.
     """
     start_service("sshd.service")
-    invoke("mkdir -m 700 -p /root/.ssh")
-    if os.path.exists("/root/.ssh/id_rsa"):
-        if _context.yes_to_all and _context.no_overwrite_sshkey or \
-                not confirm("/root/.ssh/id_rsa already exists - overwrite?"):
-            return
-        rmfile("/root/.ssh/id_rsa")
-    status("Generating SSH key")
-    invoke("ssh-keygen -q -f /root/.ssh/id_rsa -C 'Cluster Internal' -N ''")
-    append("/root/.ssh/id_rsa.pub", "/root/.ssh/authorized_keys")
+    configure_local_ssh_key()
+
+
+def configure_local_ssh_key():
+    """
+    Configure ssh rsa key locally
+
+    If /root/.ssh/id_rsa not exist, generate a new one
+    Add /root/.ssh/id_rsa.pub to /root/.ssh/authorized_keys anyway, make sure itself authorized
+    """
+    if not os.path.exists(RSA_PRIVATE_KEY):
+        status("Generating SSH key")
+        invoke("ssh-keygen -q -f {} -C 'Cluster Internal on {}' -N ''".format(RSA_PRIVATE_KEY, utils.this_node()))
+    if not os.path.exists(AUTHORIZED_KEYS_FILE):
+        open(AUTHORIZED_KEYS_FILE, 'w').close()
+    append_unique(RSA_PUBLIC_KEY, AUTHORIZED_KEYS_FILE)
 
 
 def init_ssh_remote():
@@ -1014,6 +1036,15 @@ def init_ssh_remote():
         keydata = open(fn + ".pub").read()
         if keydata not in authkeys_data:
             append(fn + ".pub", authorized_keys_file)
+
+
+def append_to_remote_file(fromfile, remote_node, tofile):
+    """
+    Append content of fromfile to tofile on remote_node
+    """
+    cmd = "cat {} | ssh -oStrictHostKeyChecking=no root@{} 'cat >> {}'".format(fromfile, remote_node, tofile)
+    if not invoke(cmd):
+        error("Failed to run \"{}\"".format(cmd))
 
 
 def init_csync2():
@@ -1739,35 +1770,8 @@ def join_ssh(seed_host):
         error("No existing IP/hostname specified (use -c option)")
 
     start_service("sshd.service")
-    invoke("mkdir -m 700 -p /root/.ssh")
-
-    tmpdir = tmpfiles.create_dir()
-    status("Retrieving SSH keys - This may prompt for root@%s:" % (seed_host))
-    if not invoke("scp -oStrictHostKeyChecking=no  root@%s:'/root/.ssh/id_*' %s/" % (seed_host, tmpdir)):
-        error("Failed to retrieve ssh keys")
-
-    # This supports all SSH key types, for the case where ha-cluster-init
-    # wasn't used to set up the seed node, and the user has manually
-    # created, for example, DSA keys (bnc#878080)
-    got_keys = 0
-    for key in ("id_rsa", "id_dsa", "id_ecdsa", "id_ed25519"):
-        if not os.path.exists(os.path.join(tmpdir, key)):
-            continue
-
-        if os.path.exists(os.path.join("/root/.ssh", key)):
-            if not confirm("/root/.ssh/%s already exists - overwrite?" % (key)):
-                continue
-        invoke("mv %s* /root/.ssh/" % (os.path.join(tmpdir, key)))
-        if not grep_file("/root/.ssh/authorized_keys", open("/root/.ssh/%s.pub" % (key)).read()):
-            append("/root/.ssh/%s.pub" % (key), "/root/.ssh/authorized_keys")
-        got_keys += 1
-
-    if got_keys == 0:
-        status("No new SSH keys installed")
-    elif got_keys == 1:
-        status("One new SSH key installed")
-    else:
-        status("%s new SSH keys installed" % (got_keys))
+    configure_local_ssh_key()
+    swap_public_ssh_key(seed_host)
 
     # This makes sure the seed host has its own SSH keys in its own
     # authorized_keys file (again, to help with the case where the
@@ -1775,6 +1779,51 @@ def join_ssh(seed_host):
     # ha-cluster-init).
     if not invoke("ssh root@{} crm cluster init -i {} ssh_remote".format(seed_host, _context.default_nic_list[0])):
         error("Can't invoke crm cluster init -i {} ssh_remote on {}".format(_context.default_nic_list[0], seed_host))
+
+
+def swap_public_ssh_key(remote_node):
+    """
+    Swap public ssh key between remote_node and local
+    """
+    # Detect whether need password to login to remote_node
+    if utils.check_ssh_passwd_need(remote_node):
+        # If no passwordless configured, paste /root/.ssh/id_rsa.pub to remote_node's /root/.ssh/authorized_keys
+        status("Configuring SSH passwordless with root@{}".format(remote_node))
+        # After this, login to remote_node is passwordless
+        append_to_remote_file(RSA_PUBLIC_KEY, remote_node, AUTHORIZED_KEYS_FILE)
+
+    try:
+        # Fetch public key file from remote_node
+        public_key_file_remote = fetch_public_key_from_remote_node(remote_node)
+    except ValueError as err:
+        warn(err)
+        return
+    # Append public key file from remote_node to local's /root/.ssh/authorized_keys
+    # After this, login from remote_node is passwordless
+    # Should do this step even passwordless is True, to make sure we got two-way passwordless
+    append_unique(public_key_file_remote, AUTHORIZED_KEYS_FILE)
+
+
+def fetch_public_key_from_remote_node(node):
+    """
+    Fetch public key file from remote node
+    Return a temp file contains public key
+    Return None if no key exist
+    """
+
+    # For dsa, might need to add PubkeyAcceptedKeyTypes=+ssh-dss to config file, see
+    # https://superuser.com/questions/1016989/ssh-dsa-keys-no-longer-work-for-password-less-authentication
+    for key in ("id_rsa", "id_ecdsa", "id_ed25519", "id_dsa"):
+        public_key_file = "/root/.ssh/{}.pub".format(key)
+        cmd = "ssh -oStrictHostKeyChecking=no root@{} 'test -f {}'".format(node, public_key_file)
+        if not invoke(cmd):
+            continue
+        _, temp_public_key_file = tmpfiles.create()
+        cmd = "scp -oStrictHostKeyChecking=no root@{}:{} {}".format(node, public_key_file, temp_public_key_file)
+        if not invoke(cmd):
+            error("Failed to run \"{}\"".format(cmd))
+        return temp_public_key_file
+    raise ValueError("No ssh key exist on {}".format(node))
 
 
 def join_csync2(seed_host):
@@ -1826,47 +1875,6 @@ def join_csync2(seed_host):
 
     status_done()
 
-
-def join_ssh_merge(_cluster_node):
-    status("Merging known_hosts")
-
-    me = utils.this_node()
-    hosts = [m.group(1)
-             for m in re.finditer(r"^\s*host\s*([^ ;]+)\s*;", open(CSYNC2_CFG).read(), re.M)
-             if m.group(1) != me]
-    if not hosts:
-        hosts = [_cluster_node]
-        warn("Unable to extract host list from %s" % (CSYNC2_CFG))
-
-    try:
-        import parallax
-    except ImportError:
-        error("parallax python library is missing")
-
-    opts = parallax.Options()
-    opts.ssh_options = ['StrictHostKeyChecking=no']
-
-    # The act of using pssh to connect to every host (without strict host key
-    # checking) ensures that at least *this* host has every other host in its
-    # known_hosts
-    known_hosts_new = set()
-    cat_cmd = "[ -e /root/.ssh/known_hosts ] && cat /root/.ssh/known_hosts || true"
-    log("parallax.call {} : {}".format(hosts, cat_cmd))
-    results = parallax.call(hosts, cat_cmd, opts)
-    for host, result in results.items():
-        if isinstance(result, parallax.Error):
-            warn("Failed to get known_hosts from {}: {}".format(host, str(result)))
-        else:
-            if result[1]:
-                known_hosts_new.update((utils.to_ascii(result[1]) or "").splitlines())
-    if known_hosts_new:
-        hoststxt = "\n".join(sorted(known_hosts_new))
-        tmpf = utils.str2tmp(hoststxt)
-        log("parallax.copy {} : {}".format(hosts, hoststxt))
-        results = parallax.copy(hosts, tmpf, "/root/.ssh/known_hosts")
-        for host, result in results.items():
-            if isinstance(result, parallax.Error):
-                warn("scp to {} failed ({}), known_hosts update may be incomplete".format(host, str(result)))
 
 def update_expected_votes():
     # get a list of nodes, excluding remote nodes
@@ -1947,6 +1955,42 @@ def update_expected_votes():
     csync2_update(corosync.conf())
 
 
+def setup_passwordless_with_other_nodes(init_node):
+    """
+    Setup passwordless with other cluster nodes
+
+    Should fetch the node list from init node, then swap the key
+    """
+    # Check whether pacemaker.service is active on init node
+    cmd = "ssh -o StrictHostKeyChecking=no root@{} systemctl -q is-active {}".format(init_node, "pacemaker.service")
+    rc, _, _ = utils.get_stdout_stderr(cmd)
+    if rc != 0:
+        error("Cluster is inactive on {}".format(init_node))
+
+    # Fetch cluster nodes list
+    cmd = "ssh -o StrictHostKeyChecking=no root@{} crm_node -l".format(init_node)
+    rc, out, err = utils.get_stdout_stderr(cmd)
+    if rc != 0:
+        error("Can't fetch cluster nodes list from {}: {}".format(init_node, err))
+    cluster_nodes_list = []
+    for line in out.splitlines():
+        _, node, stat = line.split()
+        if stat == "member":
+            cluster_nodes_list.append(node)
+
+    # Filter out init node from cluster_nodes_list
+    cmd = "ssh -o StrictHostKeyChecking=no root@{} hostname".format(init_node)
+    rc, out, err = utils.get_stdout_stderr(cmd)
+    if rc != 0:
+        error("Can't fetch hostname of {}: {}".format(init_node, err))
+    if out in cluster_nodes_list:
+        cluster_nodes_list.remove(out)
+
+    # Swap ssh public key between join node and other cluster nodes
+    for node in cluster_nodes_list:
+        swap_public_ssh_key(node)
+
+
 def join_cluster(seed_host):
     """
     Cluster configuration for joining node.
@@ -1962,6 +2006,8 @@ def join_cluster(seed_host):
             invoke("crm cluster run '{}' {}".format(cmd, node))
         else:
             corosync.set_value("totem.nodeid", nodeid)
+
+    setup_passwordless_with_other_nodes(seed_host)
 
     shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
 
@@ -2375,7 +2421,6 @@ def bootstrap_join(context):
         join_ssh(cluster_node)
         join_remote_auth(cluster_node)
         join_csync2(cluster_node)
-        join_ssh_merge(cluster_node)
         join_cluster(cluster_node)
 
     status("Done (log saved to %s)" % (LOG_FILE))
