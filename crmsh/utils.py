@@ -2292,4 +2292,15 @@ def interface_choice():
     # should consider interface format like "ethx@xxx"
     interface_list = re.findall(r'(?:[0-9]+:) (.*?)(?=: |@.*?: )', out)
     return [nic for nic in interface_list if nic != "lo"]
+
+
+def check_file_content_included(source_file, target_file):
+    """
+    Check whether target_file includes contents of source_file
+    """
+    with open(target_file, 'r') as target_fd:
+        target_data = target_fd.read()
+    with open(source_file, 'r') as source_fd:
+        source_data = source_fd.read()
+    return source_data in target_data
 # vim:ts=4:sw=4:et:
