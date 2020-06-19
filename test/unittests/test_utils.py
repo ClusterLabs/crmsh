@@ -58,24 +58,12 @@ def test_get_nodeid_from_name(mock_get_stdout, mock_re_search):
     mock_re_search_inst.group.assert_called_once_with(1)
 
 
-def test_check_ssh_passwd_need_True():
-    with mock.patch('crmsh.utils.get_stdout_stderr') as mock_get_stdout_stderr:
-        mock_get_stdout_stderr.side_effect = [(0, None, None), (1, None, None)]
-        assert utils.check_ssh_passwd_need(["node1", "node2"]) == True
-    mock_get_stdout_stderr.assert_has_calls([
-            mock.call('ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node1 true'),
-            mock.call('ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node2 true')
-        ])
-
-
-def test_check_ssh_passwd_need_Flase():
-    with mock.patch('crmsh.utils.get_stdout_stderr') as mock_get_stdout_stderr:
-        mock_get_stdout_stderr.side_effect = [(0, None, None), (0, None, None)]
-        assert utils.check_ssh_passwd_need(["node1", "node2"]) == False
-    mock_get_stdout_stderr.assert_has_calls([
-            mock.call('ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node1 true'),
-            mock.call('ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node2 true')
-        ])
+@mock.patch('crmsh.utils.get_stdout_stderr')
+def test_check_ssh_passwd_need(mock_run):
+    mock_run.return_value = (1, None, None)
+    res = utils.check_ssh_passwd_need("node1")
+    assert res is True
+    mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node1 true")
 
 
 @mock.patch('crmsh.utils.common_debug')
