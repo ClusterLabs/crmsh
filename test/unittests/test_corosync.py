@@ -495,7 +495,7 @@ class TestQDevice(unittest.TestCase):
     def test_check_ssh_passwd_need(self, mock_ssh_passwd):
         mock_ssh_passwd.return_value = True
         self.assertTrue(self.qdevice_with_ip.check_ssh_passwd_need())
-        mock_ssh_passwd.assert_called_once_with(["10.10.10.123"])
+        mock_ssh_passwd.assert_called_once_with("10.10.10.123")
 
     @mock.patch("crmsh.parallax.parallax_call")
     def test_remote_running_cluster_false(self, mock_call):
