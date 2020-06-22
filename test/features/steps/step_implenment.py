@@ -101,9 +101,9 @@ def step_impl(context, nodelist):
     assert online(context, nodelist) is True
 
 
-@then('IP "{addr}" is used by corosync')
-def step_impl(context, addr):
-    out = run_command(context, 'corosync-cfgtool -s')
+@then('IP "{addr}" is used by corosync on "{node}"')
+def step_impl(context, addr, node):
+    out = run_command_local_or_remote(context, 'corosync-cfgtool -s', node)
     res = re.search(r' {}\n'.format(addr), out)
     assert bool(res) is True
 
@@ -185,3 +185,11 @@ def step_impl(context, cmd):
     cmd_help["crm_cluster_geo-init-arbitrator"] = const.CRM_CLUSTER_GEO_INIT_ARBIT_H_OUTPUT
     key = '_'.join(cmd.split())
     assert context.stdout == cmd_help[key]
+
+
+@then('Corosync working on "{transport_type}" mode')
+def step_impl(context, transport_type):
+    if transport_type == "multicast":
+        assert corosync.get_value("totem.transport") != "udpu"
+    if transport_type == "unicast":
+        assert corosync.get_value("totem.transport") == "udpu"
