@@ -92,13 +92,13 @@ class TestCorosyncParser(unittest.TestCase):
         _valid(p)
         self.assertEqual(p.count('nodelist.node'), nid - 1)
  
-    @mock.patch("crmsh.utils.is_ipv6")
-    @mock.patch("crmsh.utils.ip_in_local")
+    @mock.patch("crmsh.utils.InterfacesInfo.get_local_ip_list")
+    @mock.patch("crmsh.utils.IP.is_ipv6")
     @mock.patch("re.search")
     @mock.patch("crmsh.corosync.Parser")
     @mock.patch("crmsh.corosync.conf")
     @mock.patch("__builtin__.open", new_callable=mock.mock_open, read_data="corosync conf data")
-    def test_find_configured_ip_no_exception(self, mock_open_file, mock_conf, mock_parser, mock_search, mock_ip_local, mock_isv6):
+    def test_find_configured_ip_no_exception(self, mock_open_file, mock_conf, mock_parser, mock_search, mock_isv6, mock_ip_local):
         mock_conf.return_value = "/etc/corosync/corosync.conf"
         mock_parser_inst = mock.Mock()
         mock_parser.return_value = mock_parser_inst
@@ -118,13 +118,13 @@ class TestCorosyncParser(unittest.TestCase):
         mock_ip_local.assert_called_once_with(False)
         mock_search.assert_called_once_with("nodelist.node.ring[0-9]*_addr", "nodelist.node.ring0_addr")
 
-    @mock.patch("crmsh.utils.is_ipv6")
-    @mock.patch("crmsh.utils.ip_in_local")
+    @mock.patch("crmsh.utils.InterfacesInfo.get_local_ip_list")
+    @mock.patch("crmsh.utils.IP.is_ipv6")
     @mock.patch("re.search")
     @mock.patch("crmsh.corosync.Parser")
     @mock.patch("crmsh.corosync.conf")
     @mock.patch("__builtin__.open", new_callable=mock.mock_open, read_data="corosync conf data")
-    def test_find_configured_ip_exception(self, mock_open_file, mock_conf, mock_parser, mock_search, mock_ip_local, mock_isv6):
+    def test_find_configured_ip_exception(self, mock_open_file, mock_conf, mock_parser, mock_search, mock_isv6, mock_ip_local):
         mock_conf.return_value = "/etc/corosync/corosync.conf"
         mock_parser_inst = mock.Mock()
         mock_parser.return_value = mock_parser_inst
@@ -231,6 +231,7 @@ class TestCorosyncParser(unittest.TestCase):
         self.assertEqual(1, corosync.get_free_nodeid(ids('2', '5')))
         self.assertEqual(3, corosync.get_free_nodeid(ids('1', '2', '5')))
         self.assertEqual(4, corosync.get_free_nodeid(ids('1', '2', '3')))
+
 
 if __name__ == '__main__':
     unittest.main()
