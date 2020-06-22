@@ -82,7 +82,8 @@ Network configuration:
   Options for configuring the network and messaging layer.
 
   -i IF, --interface IF
-                        Bind to IP address on interface IF
+                        Bind to IP address on interface IF. Use -i second time
+                        for second interface
   -u, --unicast         Configure corosync to communicate over unicast (UDP),
                         and not multicast. Default is multicast unless an
                         environment where multicast cannot be used is
@@ -165,7 +166,8 @@ Network configuration:
   -c HOST, --cluster-node HOST
                         IP address or hostname of existing cluster node
   -i IF, --interface IF
-                        Bind to IP address on interface IF
+                        Bind to IP address on interface IF. Use -i second time
+                        for second interface
 
 Stage can be one of:
     ssh         Obtain SSH keys from existing cluster node (requires -c <host>)
