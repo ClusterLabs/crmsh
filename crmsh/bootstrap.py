@@ -69,14 +69,15 @@ class Context(object):
         self.admin_ip = None
         self.second_heartbeat = None
         self.ipv6 = None
-        self.qdevice = None
-        self.qdevice_host = None
+        self.qdevice_inst = None
+        self.qnetd_addr = None
         self.qdevice_port = None
         self.qdevice_algo = None
         self.qdevice_tie_breaker = None
         self.qdevice_tls = None
         self.qdevice_heuristics = None
         self.qdevice_heuristics_mode = None
+        self.qdevice_rm_flag = None
         self.shared_device = None
         self.ocfs2_device = None
         self.cluster_node = None
@@ -103,11 +104,14 @@ class Context(object):
             setattr(ctx, opt, getattr(options, opt))
         return ctx
 
-    def init_qdevice(self):
-        if not self.qdevice_host:
+    def initialize_qdevice(self):
+        """
+        Initialize qdevice instance
+        """
+        if not self.qnetd_addr:
             return
-        self.qdevice = corosync.QDevice(
-                self.qdevice_host,
+        self.qdevice_inst = corosync.QDevice(
+                self.qnetd_addr,
                 port=self.qdevice_port,
                 algo=self.qdevice_algo,
                 tie_breaker=self.qdevice_tie_breaker,
@@ -124,9 +128,9 @@ class Context(object):
                 Validation.valid_admin_ip(self.admin_ip)
             except ValueError as err:
                 error(err)
-        if self.qdevice:
+        if self.qdevice_inst:
             try:
-                self.qdevice.valid_attr(self.interfaces_inst)
+                self.qdevice_inst.valid_attr()
             except ValueError as err:
                 error(err)
         if self.nic_list:
@@ -320,7 +324,7 @@ Configure SBD:
         """
         Configure stonith-sbd resource and stonith-enabled property
         """
-        if service_is_enabled("sbd.service"):
+        if utils.service_is_enabled("sbd.service"):
             if self._get_sbd_device_from_config():
                 if not invoke("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"):
                     error("Can't create stonith-sbd primitive")
@@ -604,29 +608,6 @@ def stop_service(service):
     return invoke("systemctl stop " + service)
 
 
-def service_is_enabled(service):
-    """
-    Check if service is enabled
-    """
-    rc, _out, _err = utils.get_stdout_stderr('systemctl is-enabled %s' % (service))
-    return rc == 0
-
-
-def service_is_active(service):
-    """
-    Check if service is active
-    """
-    rc, _out, _err = utils.get_stdout_stderr('systemctl -q is-active %s' % (service))
-    return rc == 0
-
-
-def package_is_installed(pkg):
-    """
-    Check if package is installed
-    """
-    return invoke("rpm -q --quiet {}".format(pkg))
-
-
 def sleep(t):
     """
     Sleep for t seconds.
@@ -733,7 +714,7 @@ def check_prereqs(stage):
     if timekeeper is None:
         warn("No NTP service found.")
         warned = True
-    elif not service_is_enabled(timekeeper):
+    elif not utils.service_is_enabled(timekeeper):
         warn("{} is not configured to start at system boot.".format(timekeeper))
         warned = True
 
@@ -741,10 +722,6 @@ def check_prereqs(stage):
         if not check_watchdog():
             warn("No watchdog device found. If SBD is used, the cluster will be unable to start without a watchdog.")
             warned = True
-
-    if stage == "qdevice":
-        if not _context.qdevice:
-            error("qdevice related options are missing (--qnetd-hostname option is mandatory, find for more information using --help)")
 
     if warned:
         if not confirm("Do you want to continue anyway?"):
@@ -773,7 +750,7 @@ def log_start():
     is not writable (e.g. if not running as root)
     """
     # Reload rsyslog to make sure it logs with the correct hostname
-    if service_is_active("rsyslog.service"):
+    if utils.service_is_active("rsyslog.service"):
         invoke("systemctl reload rsyslog.service")
     datestr = utils.get_stdout("date --rfc-3339=seconds")[1]
     log('================================================================')
@@ -826,7 +803,7 @@ def configure_firewall(tcp=None, udp=None):
         utils.sysconfig_set(SYSCONFIG_FW, FW_CONFIGURATIONS_EXT=ext)
 
         # No need to do anything else if the firewall is inactive
-        if not service_is_active("SuSEfirewall2"):
+        if not utils.service_is_active("SuSEfirewall2"):
             return
 
         # Firewall is active, either restart or complain if we couldn't tweak it
@@ -835,7 +812,7 @@ def configure_firewall(tcp=None, udp=None):
             error("Failed to restart firewall (SuSEfirewall2)")
 
     def init_firewall_firewalld(tcp, udp):
-        has_firewalld = service_is_active("firewalld")
+        has_firewalld = utils.service_is_active("firewalld")
         cmdbase = 'firewall-cmd --zone=public --permanent ' if has_firewalld else 'firewall-offline-cmd --zone=public '
 
         def cmd(args):
@@ -863,11 +840,11 @@ def configure_firewall(tcp=None, udp=None):
             if not invoke("ufw allow {}/udp".format(p)):
                 error("Failed to configure firewall (ufw)")
 
-    if package_is_installed("firewalld"):
+    if utils.package_is_installed("firewalld"):
         init_firewall_firewalld(tcp, udp)
-    elif package_is_installed("SuSEfirewall2"):
+    elif utils.package_is_installed("SuSEfirewall2"):
         init_firewall_suse(tcp, udp)
-    elif package_is_installed("ufw"):
+    elif utils.package_is_installed("ufw"):
         init_firewall_ufw(tcp, udp)
     else:
         warn("Failed to detect firewall: Could not open ports tcp={}, udp={}".format("|".join(tcp), "|".join(udp)))
@@ -902,7 +879,7 @@ def firewall_open_corosync_ports():
 
 def init_cluster_local():
     # Caller should check this, but I'm paranoid...
-    if service_is_active("corosync.service"):
+    if utils.service_is_active("corosync.service"):
         error("corosync service is running!")
 
     firewall_open_corosync_ports()
@@ -1230,18 +1207,6 @@ class Validation(object):
         ping_cmd = "ping6" if ipv6 else "ping"
         if invoke("{} -c 1 {}".format(ping_cmd, addr)):
             raise ValueError("Address already in use: {}".format(addr))
-
-        # Check whether this IP belong to one of local network
-        if not utils.InterfacesInfo.ip_in_network(addr):
-            raise ValueError("Address '{}' not in any local network".format(addr))
-
-
-def add_nodelist_from_cmaptool():
-    for nodeid, iplist in utils.get_nodeinfo_from_cmaptool().items():
-        try:
-            corosync.add_node_ucast(iplist, nodeid)
-        except corosync.IPAlreadyConfiguredError:
-            continue
 
 
 def init_corosync_unicast():
@@ -1670,77 +1635,72 @@ Configure Administration IP Address:
 
 
 def init_qdevice():
-    def copy_ssh_id_to_qnetd():
-        status("Copy ssh key to qnetd node({})".format(qnetd_addr))
-        if not invoke("ssh-copy-id -i /root/.ssh/id_rsa.pub root@{}".format(qnetd_addr)):
-            error_msg = "Failed to copy ssh key"
-            if not _context.stage:
-                suggest = """
-Cluster service already successfully started on this node.
-If you still want to use qdevice, run previous init command with \"qdevice\" stage.
-That will setup qdevice separately"""
-                error_msg += suggest
-            error(error_msg)
-
-    def qdevice_cert_process():
-        _context.qdevice.init_db_on_qnetd()
-        _context.qdevice.fetch_qnetd_crt_from_qnetd()
-        _context.qdevice.copy_qnetd_crt_to_cluster()
-        _context.qdevice.init_db_on_cluster()
-        _context.qdevice.create_ca_request()
-        _context.qdevice.copy_crq_to_qnetd()
-        _context.qdevice.sign_crq_on_qnetd()
-        _context.qdevice.fetch_cluster_crt_from_qnetd()
-        _context.qdevice.import_cluster_crt()
-        _context.qdevice.copy_p12_to_cluster()
-        _context.qdevice.import_p12_on_cluster()
-
-    def start_qdevice_qnetd():
-        status("Enable corosync-qdevice.service in cluster")
-        invoke("crm cluster run 'systemctl enable corosync-qdevice'")
-        status("Starting corosync-qdevice.service in cluster")
-        invoke("crm cluster run 'systemctl start corosync-qdevice'")
-
-        status("Enable corosync-qnetd.service on {}".format(qnetd_addr))
-        _context.qdevice.enable_qnetd()
-        status("Starting corosync-qnetd.service on {}".format(qnetd_addr))
-        _context.qdevice.start_qnetd()
-
-    if not _context.qdevice:
+    """
+    Setup qdevice and qnetd service
+    """
+    # If don't want to config qdevice, return
+    if not _context.qdevice_inst:
         return
 
     status("""
-Configure Qdevice/Qnetd""")
-
-    qnetd_addr = _context.qdevice.ip
-    if _context.qdevice.check_ssh_passwd_need():
-        copy_ssh_id_to_qnetd()
-    try:
-        _context.qdevice.valid_qnetd()
-    except ValueError as err:
-        error(err)
-
+Configure Qdevice/Qnetd:""")
+    qdevice_inst = _context.qdevice_inst
+    qnetd_addr = qdevice_inst.qnetd_addr
+    # Configure ssh passwordless to qnetd if detect password is needed
+    if utils.check_ssh_passwd_need(qnetd_addr):
+        status("Copy ssh key to qnetd node({})".format(qnetd_addr))
+        if not invoke("ssh-copy-id -i /root/.ssh/id_rsa.pub root@{}".format(qnetd_addr)):
+            error("Failed to copy ssh key")
+    # Start qdevice service if qdevice already configured
     if utils.is_qdevice_configured() and not confirm("Qdevice is already configured - overwrite?"):
-        start_qdevice_qnetd()
+        start_qdevice_service()
         return
-    _context.qdevice.remove_qdevice_db()
-    _context.qdevice.config()
-    # qdevice need nodelist for mcast situation
-    if corosync.get_value("totem.transport") != "udpu":
-        add_nodelist_from_cmaptool()
+
+    # Validate qnetd node
+    qdevice_inst.valid_qnetd()
+    # Config qdevice
+    config_qdevice()
+    # Execute certificate process when tls flag is on
+    if utils.is_qdevice_tls_on():
+        status_long("Qdevice certification process")
+        qdevice_inst.certificate_process_on_init()
+        status_done()
+
+    start_qdevice_service()
+
+
+def start_qdevice_service():
+    """
+    Start qdevice and qnetd service
+    """
+    qdevice_inst = _context.qdevice_inst
+    qnetd_addr = qdevice_inst.qnetd_addr
+
+    status("Enable corosync-qdevice.service in cluster")
+    utils.cluster_run_cmd("systemctl enable corosync-qdevice")
+    status("Starting corosync-qdevice.service in cluster")
+    utils.cluster_run_cmd("systemctl start corosync-qdevice")
+
+    status("Enable corosync-qnetd.service on {}".format(qnetd_addr))
+    qdevice_inst.enable_qnetd()
+    status("Starting corosync-qnetd.service on {}".format(qnetd_addr))
+    qdevice_inst.start_qnetd()
+
+
+def config_qdevice():
+    """
+    Process of config qdevice
+    """
+    qdevice_inst = _context.qdevice_inst
+
+    qdevice_inst.remove_qdevice_db()
+    qdevice_inst.write_qdevice_config()
+    if not corosync.is_unicast():
+        corosync.add_nodelist_from_cmaptool()
     status_long("Update configuration")
     update_expected_votes()
-    invoke("crm cluster run 'crm corosync reload'")
+    utils.cluster_run_cmd("crm corosync reload")
     status_done()
-
-    try:
-        if utils.is_qdevice_tls_on():
-            status_long("Qdevice certification process")
-            qdevice_cert_process()
-            status_done()
-        start_qdevice_qnetd()
-    except ValueError as err:
-        error(err)
 
 
 def init():
@@ -2088,7 +2048,7 @@ def join_cluster(seed_host):
         error("{} is not readable. Please ensure that hostnames are resolvable.".format(corosync.conf()))
 
     # if unicast, we need to add our node to $corosync.conf()
-    is_unicast = utils.is_unicast()
+    is_unicast = corosync.is_unicast()
     if is_unicast:
         ringXaddr_res = []
         for i in 0, 1:
@@ -2173,20 +2133,24 @@ def join_cluster(seed_host):
     status_done()
 
     if is_qdevice_configured:
-        status_long("Starting corosync-qdevice.service")
-        if not is_unicast:
-            add_nodelist_from_cmaptool()
-            csync2_update(corosync.conf())
-            invoke("crm corosync reload")
-        if utils.is_qdevice_tls_on():
-            qnetd_addr = corosync.get_value("quorum.device.net.host")
-            qdevice = corosync.QDevice(qnetd_addr, cluster_node=seed_host)
-            qdevice.fetch_qnetd_crt_from_cluster()
-            qdevice.init_db_on_local()
-            qdevice.fetch_p12_from_cluster()
-            qdevice.import_p12_on_local()
-        start_service("corosync-qdevice.service")
-        status_done()
+        start_qdevice_on_join_node(seed_host)
+
+
+def start_qdevice_on_join_node(seed_host):
+    """
+    Doing qdevice certificate process and start qdevice service on join node
+    """
+    status_long("Starting corosync-qdevice.service")
+    if not corosync.is_unicast():
+        corosync.add_nodelist_from_cmaptool()
+        csync2_update(corosync.conf())
+        invoke("crm corosync reload")
+    if utils.is_qdevice_tls_on():
+        qnetd_addr = corosync.get_value("quorum.device.net.host")
+        qdevice_inst = corosync.QDevice(qnetd_addr, cluster_node=seed_host)
+        qdevice_inst.certificate_process_on_join()
+    start_service("corosync-qdevice.service")
+    status_done()
 
 
 def remove_ssh():
@@ -2195,7 +2159,7 @@ def remove_ssh():
         error("No existing IP/hostname specified (use -c option)")
 
     # check whether corosync has been started on local node
-    if not service_is_active("corosync.service"):
+    if not utils.service_is_active("corosync.service"):
         error("Cluster is not active - can't execute removing action")
 
     remove_get_hostname(seed_host)
@@ -2359,7 +2323,7 @@ def bootstrap_init(context):
     _context = context
 
     init()
-    _context.init_qdevice()
+    _context.initialize_qdevice()
     _context.validate_option()
     _context.init_sbd_manager()
 
@@ -2370,7 +2334,7 @@ def bootstrap_init(context):
     # vgfs stage requires running cluster, everything else requires inactive cluster,
     # except ssh and csync2 (which don't care) and csync2_remote (which mustn't care,
     # just in case this breaks ha-cluster-join on another node).
-    corosync_active = service_is_active("corosync.service")
+    corosync_active = utils.service_is_active("corosync.service")
     if stage in ("vgfs", "admin", "qdevice"):
         if not corosync_active:
             error("Cluster is inactive - can't run %s stage" % (stage))
@@ -2428,7 +2392,7 @@ def bootstrap_join(context):
 
     check_tty()
 
-    corosync_active = service_is_active("corosync.service")
+    corosync_active = utils.service_is_active("corosync.service")
     if corosync_active:
         error("Abort: Cluster is currently active. Run this command on a node joining the cluster.")
 
@@ -2466,6 +2430,30 @@ def join_remote_auth(node):
     invoke("touch {}".format(PCMK_REMOTE_AUTH))
 
 
+def remove_qdevice():
+    """
+    Remove qdevice service and configuration from cluster
+    """
+    if not utils.is_qdevice_configured():
+        error("No QDevice configuration in this cluster")
+    if not confirm("Removing QDevice service and configuration from cluster: Are you sure?"):
+        return
+
+    status("Disable corosync-qdevice.service")
+    invoke("crm cluster run 'systemctl disable corosync-qdevice'")
+    status("Stopping corosync-qdevice.service")
+    invoke("crm cluster run 'systemctl stop corosync-qdevice'")
+
+    status_long("Removing QDevice configuration from cluster")
+    qnetd_host = corosync.get_value('quorum.device.net.host')
+    qdevice_inst = corosync.QDevice(qnetd_host)
+    qdevice_inst.remove_qdevice_config()
+    qdevice_inst.remove_qdevice_db()
+    update_expected_votes()
+    invoke("crm cluster run 'crm corosync reload'")
+    status_done()
+
+
 def bootstrap_remove(context):
     """
     Remove node from cluster, or remove qdevice configuration
@@ -2476,25 +2464,8 @@ def bootstrap_remove(context):
     cluster_node = _context.cluster_node
     force = _context.force
 
-    if _context.qdevice:
-        if not utils.is_qdevice_configured():
-            error("No QDevice configuration in this cluster")
-        if not confirm("Removing QDevice service and configuration from cluster: Are you sure?"):
-            return
-        status("Disable corosync-qdevice.service")
-        invoke("crm cluster run 'systemctl disable corosync-qdevice'")
-        status("Stopping corosync-qdevice.service")
-        invoke("crm cluster run 'systemctl stop corosync-qdevice'")
-
-        status_long("Removing QDevice configuration from cluster")
-        qnetd_host = corosync.get_value('quorum.device.net.host')
-        qdevice_inst = corosync.QDevice(qnetd_host)
-        qdevice_inst.remove_config()
-        qdevice_inst.remove_qdevice_db()
-        update_expected_votes()
-        invoke("crm cluster run 'crm corosync reload'")
-        status_done()
-
+    if _context.qdevice_rm_flag:
+        remove_qdevice()
         return
 
     if not yes_to_all and cluster_node is None:
@@ -2550,7 +2521,7 @@ def init_common_geo():
     """
     Tasks to do both on first and other geo nodes.
     """
-    if not package_is_installed("booth"):
+    if not utils.package_is_installed("booth"):
         error("Booth not installed - Not configurable as a geo cluster node.")
 
 

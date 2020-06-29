@@ -22,6 +22,7 @@ from . import userdir
 from . import constants
 from . import options
 from . import term
+from . import parallax
 from .msg import common_warn, common_info, common_debug, common_err, err_buf
 
 
@@ -723,6 +724,29 @@ def pipe_cmd_nosudo(cmd):
         print(outp)
         print(err_outp)
     return rc
+
+
+def run_cmd_on_remote(cmd, remote_addr, prompt_msg=None):
+    """
+    Run a cmd on remote node
+    return (rc, stdout, err_msg)
+    """
+    rc = 1
+    out_data = None
+    err_data = None
+
+    need_pw = check_ssh_passwd_need(remote_addr)
+    if need_pw and prompt_msg:
+        print(prompt_msg)
+    try:
+        result = parallax.parallax_call([remote_addr], cmd, need_pw)
+        rc, out_data, _ = result[0][1]
+    except ValueError as err:
+        err_match = re.search("Exited with error code ([0-9]+), Error output: (.*)", str(err))
+        if err_match:
+            rc, err_data = err_match.groups()
+    finally:
+        return int(rc), to_ascii(out_data), err_data
 
 
 def get_stdout(cmd, input_s=None, stderr_on=True, shell=True, raw=False):
@@ -1714,6 +1738,29 @@ def list_cluster_nodes():
         raise ValueError("Error listing cluster nodes: %s" % (msg))
 
 
+def cluster_run_cmd(cmd):
+    """
+    Run cmd in cluster nodes
+    """
+    node_list = list_cluster_nodes()
+    if not node_list:
+        raise ValueError("Failed to get node list from cluster")
+    parallax.parallax_call(node_list, cmd)
+
+
+def list_cluster_nodes_except_me():
+    """
+    Get cluster node list and filter out self
+    """
+    node_list = list_cluster_nodes()
+    if not node_list:
+        raise ValueError("Failed to get node list from cluster")
+    me = this_node()
+    if me in node_list:
+        node_list.remove(me)
+    return node_list
+
+
 def service_info(name):
     p = is_program('systemctl')
     if p:
@@ -2066,6 +2113,16 @@ def get_member_iplist():
     return ip_list
 
 
+def get_iplist_corosync_using():
+    """
+    Get ip list used by corosync
+    """
+    rc, out, err = get_stdout_stderr("corosync-cfgtool -s")
+    if rc != 0:
+        raise ValueError(err)
+    return re.findall(r'id\s*=\s*(.*)', out)
+
+
 def check_ssh_passwd_need(host):
     """
     Check whether access to host need password
@@ -2076,11 +2133,12 @@ def check_ssh_passwd_need(host):
     return rc != 0
 
 
-def check_port_open(host, port):
+def check_port_open(ip, port):
     import socket
 
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-        if sock.connect_ex((host, port)) == 0:
+    family = socket.AF_INET6 if IP.is_ipv6(ip) else socket.AF_INET
+    with closing(socket.socket(family, socket.SOCK_STREAM)) as sock:
+        if sock.connect_ex((ip, port)) == 0:
             return True
         else:
             return False
@@ -2117,18 +2175,13 @@ def get_nodeinfo_from_cmaptool():
 
 def valid_nodeid(nodeid):
     from . import bootstrap
-    if not bootstrap.service_is_active('corosync.service'):
+    if not service_is_active('corosync.service'):
         return False
 
     for _id, _ in get_nodeinfo_from_cmaptool().items():
         if _id == nodeid:
             return True
     return False
-
-
-def is_unicast():
-    from . import corosync
-    return corosync.get_value("totem.transport") == "udpu"
 
 
 def get_nodeid_from_name(name):
@@ -2348,6 +2401,15 @@ class InterfacesInfo(object):
         cls_inst.get_interfaces_info()
         return cls_inst.ip_list
 
+    @classmethod
+    def ip_in_local(cls, addr):
+        """
+        Check whether given address was in one of local address
+        """
+        cls_inst = cls(IP.is_ipv6(addr))
+        cls_inst.get_interfaces_info()
+        return addr in cls_inst.ip_list
+
     @property
     def network_list(self):
         """
@@ -2433,4 +2495,49 @@ def check_file_content_included(source_file, target_file):
     with open(source_file, 'r') as source_fd:
         source_data = source_fd.read()
     return source_data in target_data
+
+
+def service_is_enabled(service, remote_addr=None):
+    """
+    Check if service is enabled
+    """
+    cmd = "systemctl is-enabled {}".format(service)
+    if remote_addr:
+        # check on remote
+        prompt_msg = "Check whether {} is enabled on {}".format(service, remote_addr)
+        rc, _, _ = run_cmd_on_remote(cmd, remote_addr, prompt_msg)
+    else:
+        # check on local
+        rc, _ = get_stdout(cmd)
+    return rc == 0
+
+
+def service_is_active(service, remote_addr=None):
+    """
+    Check if service is active
+    """
+    cmd = "systemctl -q is-active {}".format(service)
+    if remote_addr:
+        # check on remote
+        prompt_msg = "Check whether {} is active on {}".format(service, remote_addr)
+        rc, _, _ = run_cmd_on_remote(cmd, remote_addr, prompt_msg)
+    else:
+        # check on local
+        rc, _ = get_stdout(cmd)
+    return rc == 0
+
+
+def package_is_installed(pkg, remote_addr=None):
+    """
+    Check if package is installed
+    """
+    cmd = "rpm -q --quiet {}".format(pkg)
+    if remote_addr:
+        # check on remote
+        prompt_msg = "Check whether {} is installed on {}".format(pkg, remote_addr)
+        rc, _, _ = run_cmd_on_remote(cmd, remote_addr, prompt_msg)
+    else:
+        # check on local
+        rc, _ = get_stdout(cmd)
+    return rc == 0
 # vim:ts=4:sw=4:et:
