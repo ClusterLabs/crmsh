@@ -65,12 +65,13 @@ Feature: corosync qdevice/qnetd options validate
     Then    Cluster service is "started" on "hanode2"
     When    Try "crm cluster init --qnetd-hostname=hanode2 -y"
     Then    Except multiple lines
-      """"
+      """
       ERROR: cluster.init: host for qnetd must be a non-cluster node
-      Cluster service already successfully started on this node
+      Cluster service already successfully started on this node except qdevice service
       If you still want to use qdevice, change to another host or stop cluster service on hanode2
-      Then run command "crm cluster init qdevice --qnetd-hostname=hanode2"
-      This command will setup qdevice separately
+      Then run command "crm cluster init" with "qdevice" stage, like:
+        crm cluster init qdevice qdevice_related_options
+      That command will setup qdevice separately
       """
     And     Cluster service is "started" on "hanode1"
     When    Run "crm cluster stop" on "hanode2"
@@ -80,12 +81,13 @@ Feature: corosync qdevice/qnetd options validate
     Given   Cluster service is "stopped" on "hanode2"
     When    Try "crm cluster init --qnetd-hostname=hanode2 -y"
     Then    Except multiple lines
-      """"
+      """
       ERROR: cluster.init: Package "corosync-qnetd" not installed on hanode2
-      Cluster service already successfully started on this node
+      Cluster service already successfully started on this node except qdevice service
       If you still want to use qdevice, install "corosync-qnetd" on hanode2
-      Then run command "crm cluster init qdevice --qnetd-hostname=hanode2"
-      This command will setup qdevice separately
+      Then run command "crm cluster init" with "qdevice" stage, like:
+        crm cluster init qdevice qdevice_related_options
+      That command will setup qdevice separately
       """
     And     Cluster service is "started" on "hanode1"
 
@@ -101,4 +103,8 @@ Feature: corosync qdevice/qnetd options validate
     When    Run "crm cluster init -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Try "crm cluster init qdevice"
-    Then    Except "ERROR: cluster.init: qdevice related options are missing (--qnetd-hostname option is mandatory, find for more information using --help)"
+    Then    Except multiple lines
+      """
+      usage: init [options] [STAGE]
+      crm: error: Option --qnetd-hostname is required if want to configure qdevice
+      """

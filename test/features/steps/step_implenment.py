@@ -78,6 +78,13 @@ def step_impl(context, msg):
     context.stdout = None
 
 
+@then('Expected regrex "{reg_str}" in stdout')
+def step_impl(context, reg_str):
+    res = re.search(reg_str, context.stdout)
+    assert res is not None
+    context.stdout = None
+
+
 @then('Except "{msg}"')
 def step_impl(context, msg):
     assert context.command_error_output == msg
@@ -217,3 +224,8 @@ def step_impl(context, transport_type):
         assert corosync.get_value("totem.transport") != "udpu"
     if transport_type == "unicast":
         assert corosync.get_value("totem.transport") == "udpu"
+
+
+@then('Expected votes will be "{votes}"')
+def step_impl(context, votes):
+    assert int(corosync.get_value("quorum.expected_votes")) == int(votes)
