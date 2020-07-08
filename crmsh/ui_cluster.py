@@ -639,7 +639,11 @@ Cluster Description
 
         opts = parallax.Options()
         opts.ssh_options = ['StrictHostKeyChecking=no']
-        opts.askpass = utils.check_ssh_passwd_need(hosts)
+        for host in hosts:
+            res = utils.check_ssh_passwd_need(host)
+            if res:
+                opts.askpass = True
+                break
         for host, result in parallax.call(hosts, cmd, opts).items():
             if isinstance(result, parallax.Error):
                 err_buf.error("[%s]: %s" % (host, result))

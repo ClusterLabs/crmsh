@@ -175,7 +175,7 @@ class QDevice(object):
             raise ValueError(exception_msg)
 
     def check_ssh_passwd_need(self):
-        return utils.check_ssh_passwd_need([self.ip])
+        return utils.check_ssh_passwd_need(self.ip)
 
     def remote_running_cluster(self):
         cmd = "systemctl -q is-active pacemaker"
