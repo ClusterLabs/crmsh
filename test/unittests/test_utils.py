@@ -23,6 +23,38 @@ def setup_function():
     imp.reload(utils)
 
 
+@mock.patch('os.path.exists')
+def test_check_file_content_included_target_not_exist(mock_exists):
+    mock_exists.side_effect = [True, False]
+    res = utils.check_file_content_included("file1", "file2")
+    assert res is False
+    mock_exists.assert_has_calls([mock.call("file1"), mock.call("file2")])
+
+
+@mock.patch("__builtin__.open")
+@mock.patch('os.path.exists')
+def test_check_file_content_included(mock_exists, mock_open_file):
+    mock_exists.side_effect = [True, True]
+    mock_open_file.side_effect = [
+            mock.mock_open(read_data="data1").return_value,
+            mock.mock_open(read_data="data2").return_value
+        ]
+
+    res = utils.check_file_content_included("file1", "file2")
+    assert res is False
+
+    mock_exists.assert_has_calls([mock.call("file1"), mock.call("file2")])
+    mock_open_file.assert_has_calls([mock.call("file2", 'r'), mock.call("file1", 'r')])
+
+
+@mock.patch('crmsh.utils.get_stdout_stderr')
+def test_check_ssh_passwd_need(mock_run):
+    mock_run.return_value = (1, None, None)
+    res = utils.check_ssh_passwd_need("node1")
+    assert res is True
+    mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node1 true")
+
+
 def test_systeminfo():
     assert utils.getuser() is not None
     assert utils.gethomedir() is not None

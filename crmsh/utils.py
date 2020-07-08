@@ -1986,6 +1986,21 @@ def detect_cloud():
     return None
 
 
+def check_ssh_passwd_need(host):
+    """
+    Check whether access to host need password
+    """
+    ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
+    ssh_cmd = "ssh {} -T -o Batchmode=yes {} true".format(ssh_options, host)
+    rc, _, _ = get_stdout_stderr(ssh_cmd)
+    return rc != 0
+
+
+def is_unicast():
+    from . import corosync
+    return corosync.get_value("totem.transport") == "udpu"
+
+
 def check_space_option_value(options):
     for opt in vars(options):
         value = getattr(options, opt)
@@ -2259,4 +2274,20 @@ class InterfacesInfo(object):
             if interface_inst.ip_in_network(addr):
                 return True
         return False
+
+
+def check_file_content_included(source_file, target_file):
+    """
+    Check whether target_file includes contents of source_file
+    """
+    if not os.path.exists(source_file):
+        raise ValueError("File {} not exist".format(source_file))
+    if not os.path.exists(target_file):
+        return False
+
+    with open(target_file, 'r') as target_fd:
+        target_data = target_fd.read()
+    with open(source_file, 'r') as source_fd:
+        source_data = source_fd.read()
+    return source_data in target_data
 # vim:ts=4:sw=4:et:

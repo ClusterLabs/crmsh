@@ -522,6 +522,12 @@ Cluster Description
 
         hosts = utils.list_cluster_nodes()
         opts = parallax.Options()
+        opts.ssh_options = ['StrictHostKeyChecking=no']
+        for host in hosts:
+            res = utils.check_ssh_passwd_need(host)
+            if res:
+                opts.askpass = True
+                break
         for host, result in parallax.call(hosts, cmd, opts).iteritems():
             if isinstance(result, parallax.Error):
                 err_buf.error("[%s]: %s" % (host, result))
