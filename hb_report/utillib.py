@@ -1548,14 +1548,17 @@ def start_slave_collector(node, arg_str):
                     log_warning(err)
                 break
 
+    compress_data = ""
+    for data in out.split('\n'):
+        if data.startswith(constants.COMPRESS_DATA_FLAG):
+            # hb_report data from collector
+            compress_data = data.lstrip(constants.COMPRESS_DATA_FLAG)
+        else:
+            # log data from collector
+            print(data)
+
     cmd = r"(cd {} && tar xf -)".format(constants.WORKDIR)
-    # typeof out here will always "str"
-    # input_s of get_stdout will always need bytes
-    # different situation depend on whether found pe file
-    if out.startswith("b'"):
-        crmutils.get_stdout(cmd, input_s=eval(out))
-    else:
-        crmutils.get_stdout(cmd, input_s=out.encode('utf-8'))
+    crmutils.get_stdout(cmd, input_s=eval(compress_data))
 
 
 def str_to_bool(v):

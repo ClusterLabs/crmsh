@@ -8,6 +8,7 @@ ARGOPTS_VALUE = "f:t:l:u:X:p:L:e:E:n:MSDZVsvhdQ"
 B_CONF = None
 CIB_DIR = None
 COMPRESS = config.report.compress
+COMPRESS_DATA_FLAG = "COMPRESS HB_REPORT DATA:::"
 COMPRESS_PROG = ""
 COMPRESS_EXT = ""
 CORES_DIRS = None
