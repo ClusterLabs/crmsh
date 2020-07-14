@@ -26,7 +26,6 @@ import constants
 import crmsh.config
 from crmsh import msg as crmmsg
 from crmsh import utils as crmutils
-from crmsh.constants import SSH_WITH_KEY
 
 
 class Tempfile(object):
@@ -1533,8 +1532,8 @@ def start_slave_collector(node, arg_str):
             cmd += " {}".format(str(item))
         _, out = crmutils.get_stdout(cmd)
     else:
-        cmd = r'{} {} {} "{} hb_report __slave"'.\
-              format(SSH_WITH_KEY, constants.SSH_OPTS, node,
+        cmd = r'ssh {} {} "{} hb_report __slave"'.\
+              format(constants.SSH_OPTS, node,
                      constants.SUDO, os.getcwd())
         for item in arg_str.split():
             cmd += " {}".format(str(item))
@@ -1549,14 +1548,17 @@ def start_slave_collector(node, arg_str):
                     log_warning(err)
                 break
 
+    compress_data = ""
+    for data in out.split('\n'):
+        if data.startswith(constants.COMPRESS_DATA_FLAG):
+            # hb_report data from collector
+            compress_data = data.lstrip(constants.COMPRESS_DATA_FLAG)
+        else:
+            # log data from collector
+            print(data)
+
     cmd = r"(cd {} && tar xf -)".format(constants.WORKDIR)
-    # typeof out here will always "str"
-    # input_s of get_stdout will always need bytes
-    # different situation depend on whether found pe file
-    if out.startswith("b'"):
-        crmutils.get_stdout(cmd, input_s=eval(out))
-    else:
-        crmutils.get_stdout(cmd, input_s=out.encode('utf-8'))
+    crmutils.get_stdout(cmd, input_s=eval(compress_data))
 
 
 def str_to_bool(v):
@@ -1633,7 +1635,7 @@ def tail(n, indata):
 
 
 def test_ssh_conn(addr):
-    cmd = r"{} {} -T -o Batchmode=yes {} true".format(SSH_WITH_KEY, constants.SSH_OPTS, addr)
+    cmd = r"ssh %s -T -o Batchmode=yes %s true" % (constants.SSH_OPTS, addr)
     code, _ = get_command_info(cmd)
     if code == 0:
         return True

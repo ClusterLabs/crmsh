@@ -19,7 +19,6 @@ except ImportError:
     import mock
 
 from crmsh import bootstrap
-from crmsh.constants import SSH_KEY_CRMSH, SSH_WITH_KEY, SCP_WITH_KEY, SSH_KEY_CRMSH_TAG
 
 
 class TestSBDManager(unittest.TestCase):
@@ -290,7 +289,7 @@ class TestSBDManager(unittest.TestCase):
         self.sbd_inst.join_sbd("node1")
 
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
-        mock_invoke.assert_called_once_with("ssh -i /root/.ssh/id_rsa.crmsh -o StrictHostKeyChecking=no root@node1 systemctl is-enabled sbd.service")
+        mock_invoke.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 systemctl is-enabled sbd.service")
         mock_check.assert_not_called()
 
     @mock.patch('crmsh.bootstrap.status')
@@ -307,7 +306,7 @@ class TestSBDManager(unittest.TestCase):
         self.sbd_inst.join_sbd("node1")
 
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
-        mock_invoke.assert_called_once_with("ssh -i /root/.ssh/id_rsa.crmsh -o StrictHostKeyChecking=no root@node1 systemctl is-enabled sbd.service")
+        mock_invoke.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 systemctl is-enabled sbd.service")
         mock_check.assert_called_once_with()
         mock_get_device.assert_called_once_with()
         mock_verify.assert_called_once_with(["/dev/sdb1"])
@@ -341,88 +340,239 @@ class TestBootstrap(unittest.TestCase):
         Global tearDown.
         """
 
-    @mock.patch('crmsh.bootstrap.confirm')
-    @mock.patch('os.path.exists')
+    @mock.patch('crmsh.bootstrap.configure_local_ssh_key')
     @mock.patch('crmsh.bootstrap.start_service')
-    def test_init_ssh_no_overwrite(self, mock_start, mock_exists, mock_confirm):
-        mock_exists.return_value = True
-        mock_confirm.return_value = False
+    def test_init_ssh(self, mock_start_service, mock_config_ssh):
         bootstrap.init_ssh()
-        mock_start.assert_called_once_with("sshd.service")
-        mock_exists.assert_called_once_with(SSH_KEY_CRMSH)
-        mock_confirm.assert_called_once_with("{} already exists - overwrite?".format(SSH_KEY_CRMSH))
+        mock_start_service.assert_called_once_with("sshd.service")
+        mock_config_ssh.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.append_unique')
+    @mock.patch('builtins.open', create=True)
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.bootstrap.status')
+    @mock.patch('os.path.exists')
+    def test_configure_local_ssh_key(self, mock_exists, mock_status, mock_invoke,
+            mock_this_node, mock_open_file, mock_append):
+        mock_exists.side_effect = [False, False]
+        mock_this_node.return_value = "node1"
+
+        bootstrap.configure_local_ssh_key()
+
+        mock_exists.assert_has_calls([
+            mock.call(bootstrap.RSA_PRIVATE_KEY),
+            mock.call(bootstrap.AUTHORIZED_KEYS_FILE)
+            ])
+        mock_status.assert_called_once_with("Generating SSH key")
+        mock_invoke.assert_called_once_with("ssh-keygen -q -f {} -C 'Cluster Internal on {}' -N ''".format(bootstrap.RSA_PRIVATE_KEY, mock_this_node.return_value))
+        mock_this_node.assert_called_once_with()
+        mock_open_file.assert_called_once_with(bootstrap.AUTHORIZED_KEYS_FILE, 'w')
+        mock_append.assert_called_once_with(bootstrap.RSA_PUBLIC_KEY, bootstrap.AUTHORIZED_KEYS_FILE)
 
     @mock.patch('crmsh.bootstrap.append')
-    @mock.patch('crmsh.bootstrap.invoke')
-    @mock.patch('crmsh.bootstrap.rmfile')
-    @mock.patch('crmsh.bootstrap.confirm')
-    @mock.patch('os.path.exists')
-    @mock.patch('crmsh.bootstrap.start_service')
-    def test_init_ssh_overwrite(self, mock_start, mock_exists, mock_confirm, mock_rmfile,
-            mock_invoke, mock_append):
-        mock_exists.return_value = True
-        mock_confirm.return_value = True
-
-        bootstrap.init_ssh()
-
-        mock_start.assert_called_once_with("sshd.service")
-        mock_exists.assert_called_once_with(SSH_KEY_CRMSH)
-        mock_confirm.assert_called_once_with("{} already exists - overwrite?".format(SSH_KEY_CRMSH))
-        mock_rmfile.assert_called_once_with(SSH_KEY_CRMSH)
-        mock_invoke.assert_has_calls([
-            mock.call("sed -i '/{}/d' /root/.ssh/authorized_keys".format(SSH_KEY_CRMSH_TAG)),
-            mock.call("ssh-keygen -q -f {} -C '{}' -N ''".format(SSH_KEY_CRMSH, SSH_KEY_CRMSH_TAG))
-            ])
-        mock_append.assert_called_once_with("{}.pub".format(SSH_KEY_CRMSH), "/root/.ssh/authorized_keys")
+    @mock.patch('crmsh.utils.check_file_content_included')
+    def test_append_unique(self, mock_check, mock_append):
+        mock_check.return_value = False
+        bootstrap.append_unique("fromfile", "tofile")
+        mock_check.assert_called_once_with("fromfile", "tofile")
+        mock_append.assert_called_once_with("fromfile", "tofile")
 
     @mock.patch('crmsh.bootstrap.error')
-    def test_join_ssh_error_no_seed_host(self, mock_error):
-        mock_error.side_effect = ValueError
+    @mock.patch('crmsh.bootstrap.invoke')
+    def test_append_to_remote_file(self, mock_invoke, mock_error):
+        mock_invoke.return_value = False
+        bootstrap.append_to_remote_file("fromfile", "node1", "tofile")
+        cmd = "cat fromfile | ssh -oStrictHostKeyChecking=no root@node1 'cat >> tofile'"
+        mock_invoke.assert_called_once_with(cmd)
+        mock_error.assert_called_once_with("Failed to run \"{}\"".format(cmd))
 
+    @mock.patch('crmsh.bootstrap.invoke')
+    def test_fetch_public_key_from_remote_node_exception(self, mock_invoke):
+        mock_invoke.side_effect = [False, False, False, False]
+
+        with self.assertRaises(ValueError) as err:
+            bootstrap.fetch_public_key_from_remote_node("node1")
+        self.assertEqual("No ssh key exist on node1", str(err.exception))
+
+        mock_invoke.assert_has_calls([
+            mock.call("ssh -oStrictHostKeyChecking=no root@node1 'test -f /root/.ssh/id_rsa.pub'"),
+            mock.call("ssh -oStrictHostKeyChecking=no root@node1 'test -f /root/.ssh/id_ecdsa.pub'"),
+            mock.call("ssh -oStrictHostKeyChecking=no root@node1 'test -f /root/.ssh/id_ed25519.pub'"),
+            mock.call("ssh -oStrictHostKeyChecking=no root@node1 'test -f /root/.ssh/id_dsa.pub'")
+            ])
+
+    @mock.patch('crmsh.tmpfiles.create')
+    @mock.patch('crmsh.bootstrap.invoke')
+    def test_fetch_public_key_from_remote_node(self, mock_invoke, mock_tmpfile):
+        mock_invoke.side_effect = [True, True]
+        mock_tmpfile.return_value = (0, "temp_file_name")
+
+        res = bootstrap.fetch_public_key_from_remote_node("node1")
+        self.assertEqual(res, "temp_file_name")
+
+        mock_invoke.assert_has_calls([
+            mock.call("ssh -oStrictHostKeyChecking=no root@node1 'test -f /root/.ssh/id_rsa.pub'"),
+            mock.call("scp -oStrictHostKeyChecking=no root@node1:/root/.ssh/id_rsa.pub temp_file_name")
+            ])
+        mock_tmpfile.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.error')
+    def test_join_ssh_no_seed_host(self, mock_error):
+        mock_error.side_effect = ValueError
         with self.assertRaises(ValueError):
             bootstrap.join_ssh(None)
         mock_error.assert_called_once_with("No existing IP/hostname specified (use -c option)")
 
-    @mock.patch('crmsh.bootstrap.status')
-    @mock.patch('crmsh.bootstrap.invoke')
-    @mock.patch('crmsh.bootstrap.start_service')
     @mock.patch('crmsh.bootstrap.error')
-    def test_join_ssh_error_scp(self, mock_error, mock_start, mock_invoke, mock_status):
-        mock_error.side_effect = ValueError
-        mock_invoke.side_effect = [True, False]
-
-        with self.assertRaises(ValueError):
-            bootstrap.join_ssh("node1")
-
-        mock_start.assert_called_once_with("sshd.service")
-        mock_invoke.assert_has_calls([
-            mock.call("mkdir -m 700 -p /root/.ssh"),
-            mock.call("scp -oStrictHostKeyChecking=no root@node1:'{}*' /root/.ssh".format(SSH_KEY_CRMSH))
-            ])
-        mock_error.assert_called_once_with("Failed to retrieve ssh keys")
-        mock_status.assert_called_once_with("Retrieving SSH keys - This may prompt for root@node1:")
-
-    @mock.patch('crmsh.bootstrap.append')
-    @mock.patch('crmsh.bootstrap.status')
     @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.bootstrap.swap_public_ssh_key')
+    @mock.patch('crmsh.bootstrap.configure_local_ssh_key')
     @mock.patch('crmsh.bootstrap.start_service')
-    @mock.patch('crmsh.bootstrap.error')
-    def test_join_ssh(self, mock_error, mock_start, mock_invoke, mock_status, mock_append):
-        mock_invoke.side_effect = [True, True, True]
+    def test_join_ssh(self, mock_start_service, mock_config_ssh, mock_swap, mock_invoke, mock_error):
+        bootstrap._context = mock.Mock(default_nic_list=["eth1"])
+        mock_invoke.return_value = False
 
         bootstrap.join_ssh("node1")
 
-        mock_start.assert_called_once_with("sshd.service")
-        mock_invoke.assert_has_calls([
-            mock.call("mkdir -m 700 -p /root/.ssh"),
-            mock.call("scp -oStrictHostKeyChecking=no root@node1:'{}*' /root/.ssh".format(SSH_KEY_CRMSH)),
-            mock.call("sed -i '/{}/d' /root/.ssh/authorized_keys".format(SSH_KEY_CRMSH_TAG))
-            ])
-        mock_error.assert_not_called()
-        mock_status.assert_called_once_with("Retrieving SSH keys - This may prompt for root@node1:")
-        mock_append.assert_called_once_with("{}.pub".format(SSH_KEY_CRMSH), "/root/.ssh/authorized_keys")
+        mock_start_service.assert_called_once_with("sshd.service")
+        mock_config_ssh.assert_called_once_with()
+        mock_swap.assert_called_once_with("node1")
+        mock_invoke.assert_called_once_with("ssh root@node1 crm cluster init -i eth1 ssh_remote")
+        mock_error.assert_called_once_with("Can't invoke crm cluster init -i eth1 ssh_remote on node1")
 
-    @mock.patch('crmsh.utils.valid_ip_addr')
+    @mock.patch('crmsh.bootstrap.warn')
+    @mock.patch('crmsh.bootstrap.fetch_public_key_from_remote_node')
+    @mock.patch('crmsh.utils.check_ssh_passwd_need')
+    def test_swap_public_ssh_key_exception(self, mock_check_passwd, mock_fetch, mock_warn):
+        mock_check_passwd.return_value = False
+        mock_fetch.side_effect = ValueError("No key exist")
+
+        bootstrap.swap_public_ssh_key("node1")
+
+        mock_warn.assert_called_once_with(mock_fetch.side_effect)
+        mock_check_passwd.assert_called_once_with("node1")
+        mock_fetch.assert_called_once_with("node1")
+
+    @mock.patch('crmsh.bootstrap.append_unique')
+    @mock.patch('crmsh.bootstrap.fetch_public_key_from_remote_node')
+    @mock.patch('crmsh.bootstrap.append_to_remote_file')
+    @mock.patch('crmsh.bootstrap.status')
+    @mock.patch('crmsh.utils.check_ssh_passwd_need')
+    def test_swap_public_ssh_key(self, mock_check_passwd, mock_status, mock_append_remote, mock_fetch, mock_append_unique):
+        mock_check_passwd.return_value = True
+        mock_fetch.return_value = "file1"
+
+        bootstrap.swap_public_ssh_key("node1")
+
+        mock_check_passwd.assert_called_once_with("node1")
+        mock_status.assert_called_once_with("Configuring SSH passwordless with root@node1")
+        mock_append_remote.assert_called_once_with(bootstrap.RSA_PUBLIC_KEY, "node1", bootstrap.AUTHORIZED_KEYS_FILE)
+        mock_fetch.assert_called_once_with("node1")
+        mock_append_unique.assert_called_once_with("file1", bootstrap.AUTHORIZED_KEYS_FILE)
+
+    @mock.patch('crmsh.bootstrap.error')
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    def test_setup_passwordless_with_other_nodes_cluster_inactive(self, mock_run, mock_error):
+        mock_run.return_value = (1, None, None)
+        mock_error.side_effect = SystemExit
+
+        with self.assertRaises(SystemExit):
+            bootstrap.setup_passwordless_with_other_nodes("node1")
+
+        mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 systemctl -q is-active pacemaker.service")
+        mock_error.assert_called_once_with("Cluster is inactive on node1")
+
+    @mock.patch('crmsh.bootstrap.error')
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    def test_setup_passwordless_with_other_nodes_failed_fetch_nodelist(self, mock_run, mock_error):
+        mock_run.side_effect = [(0, None, None), (1, None, None)]
+        mock_error.side_effect = SystemExit
+
+        with self.assertRaises(SystemExit):
+            bootstrap.setup_passwordless_with_other_nodes("node1")
+
+        mock_run.assert_has_calls([
+            mock.call("ssh -o StrictHostKeyChecking=no root@node1 systemctl -q is-active pacemaker.service"),
+            mock.call("ssh -o StrictHostKeyChecking=no root@node1 crm_node -l")
+            ])
+        mock_error.assert_called_once_with("Can't fetch cluster nodes list from node1: None")
+
+    @mock.patch('crmsh.bootstrap.error')
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    def test_setup_passwordless_with_other_nodes_failed_fetch_hostname(self, mock_run, mock_error):
+        out_node_list = """1 node1 member
+        2 node2 member"""
+        mock_run.side_effect = [
+                (0, None, None),
+                (0, out_node_list, None),
+                (1, None, None)
+                ]
+        mock_error.side_effect = SystemExit
+
+        with self.assertRaises(SystemExit):
+            bootstrap.setup_passwordless_with_other_nodes("node1")
+
+        mock_run.assert_has_calls([
+            mock.call("ssh -o StrictHostKeyChecking=no root@node1 systemctl -q is-active pacemaker.service"),
+            mock.call("ssh -o StrictHostKeyChecking=no root@node1 crm_node -l"),
+            mock.call("ssh -o StrictHostKeyChecking=no root@node1 hostname")
+            ])
+        mock_error.assert_called_once_with("Can't fetch hostname of node1: None")
+
+    @mock.patch('crmsh.bootstrap.swap_public_ssh_key')
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    def test_setup_passwordless_with_other_nodes(self, mock_run, mock_swap):
+        out_node_list = """1 node1 member
+        2 node2 member"""
+        mock_run.side_effect = [
+                (0, None, None),
+                (0, out_node_list, None),
+                (0, "node1", None)
+                ]
+
+        bootstrap.setup_passwordless_with_other_nodes("node1")
+
+        mock_run.assert_has_calls([
+            mock.call("ssh -o StrictHostKeyChecking=no root@node1 systemctl -q is-active pacemaker.service"),
+            mock.call("ssh -o StrictHostKeyChecking=no root@node1 crm_node -l"),
+            mock.call("ssh -o StrictHostKeyChecking=no root@node1 hostname")
+            ])
+        mock_swap.assert_called_once_with("node2")
+
+    @mock.patch('builtins.open')
+    @mock.patch('crmsh.bootstrap.append')
+    @mock.patch('os.path.join')
+    @mock.patch('os.path.exists')
+    def test_init_ssh_remote_no_sshkey(self, mock_exists, mock_join, mock_append, mock_open_file):
+        mock_exists.side_effect = [False, True, False, False, False]
+        mock_join.side_effect = ["/root/.ssh/id_rsa",
+                                 "/root/.ssh/id_dsa",
+                                 "/root/.ssh/id_ecdsa",
+                                 "/root/.ssh/id_ed25519"]
+        mock_open_file.side_effect = [
+            mock.mock_open().return_value,
+            mock.mock_open(read_data="data1 data2").return_value,
+            mock.mock_open(read_data="data1111").return_value
+        ]
+
+        bootstrap.init_ssh_remote()
+
+        mock_open_file.assert_has_calls([
+            mock.call("/root/.ssh/authorized_keys", 'w'),
+            mock.call("/root/.ssh/authorized_keys", "r+"),
+            mock.call("/root/.ssh/id_rsa.pub")
+        ])
+        mock_exists.assert_has_calls([
+            mock.call("/root/.ssh/authorized_keys"),
+            mock.call("/root/.ssh/id_rsa"),
+            mock.call("/root/.ssh/id_dsa"),
+            mock.call("/root/.ssh/id_ecdsa"),
+            mock.call("/root/.ssh/id_ed25519"),
+        ])
+        mock_append.assert_called_once_with("/root/.ssh/id_rsa.pub", "/root/.ssh/authorized_keys")
+
+    @mock.patch('crmsh.utils.IP.is_valid_ip')
     @mock.patch('crmsh.utils.get_stdout_stderr')
     def test_get_cluster_node_hostname_None(self, mock_stdout_stderr, mock_valid_ip):
         bootstrap._context = mock.Mock(cluster_node=None)
@@ -433,7 +583,7 @@ class TestBootstrap(unittest.TestCase):
         mock_valid_ip.assert_not_called()
         mock_stdout_stderr.assert_not_called()
 
-    @mock.patch('crmsh.utils.valid_ip_addr')
+    @mock.patch('crmsh.utils.IP.is_valid_ip')
     @mock.patch('crmsh.utils.get_stdout_stderr')
     def test_get_cluster_node_hostname_IP(self, mock_stdout_stderr, mock_valid_ip):
         bootstrap._context = mock.Mock(cluster_node="1.1.1.1")
@@ -444,9 +594,9 @@ class TestBootstrap(unittest.TestCase):
         assert peer_node == "node1"
 
         mock_valid_ip.assert_called_once_with("1.1.1.1")
-        mock_stdout_stderr.assert_called_once_with("ssh -i /root/.ssh/id_rsa.crmsh 1.1.1.1 crm_node --name")
+        mock_stdout_stderr.assert_called_once_with("ssh 1.1.1.1 crm_node --name")
 
-    @mock.patch('crmsh.utils.valid_ip_addr')
+    @mock.patch('crmsh.utils.IP.is_valid_ip')
     @mock.patch('crmsh.utils.get_stdout_stderr')
     def test_get_cluster_node_hostname_HOST(self, mock_stdout_stderr, mock_valid_ip):
         bootstrap._context = mock.Mock(cluster_node="node2")
@@ -568,3 +718,122 @@ class TestBootstrap(unittest.TestCase):
             mock.call("csync2 -rxv /etc/corosync.conf")
             ])
         mock_warn.assert_called_once_with("/etc/corosync.conf was not synced")
+
+    @mock.patch('crmsh.utils.InterfacesInfo')
+    def test_init_network(self, mock_interfaces):
+        mock_interfaces_inst = mock.Mock()
+        mock_interfaces.return_value = mock_interfaces_inst
+        mock_interfaces_inst.get_default_nic_list_from_route.return_value = ["eth0", "eth1"]
+        bootstrap._context = mock.Mock(ipv6=False, second_heartbeat=False, nic_list=["eth0", "eth1"], default_nic_list=["eth0", "eth1"])
+
+        bootstrap.init_network()
+
+        mock_interfaces.assert_called_once_with(False, False, bootstrap._context.nic_list)
+        mock_interfaces_inst.get_interfaces_info.assert_called_once_with()
+        mock_interfaces_inst.get_default_nic_list_from_route.assert_called_once_with()
+        mock_interfaces_inst.get_default_ip_list.assert_called_once_with()
+
+
+class TestValidation(unittest.TestCase):
+    """
+    Unitary tests for class bootstrap.Validation
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Global setUp.
+        """
+
+    def setUp(self):
+        """
+        Test setUp.
+        """
+        self.validate_inst = bootstrap.Validation("10.10.10.1")
+        self.validate_port_inst_in_use = bootstrap.Validation("4567", ["4568"])
+        self.validate_port_inst_out_of_range = bootstrap.Validation("456766")
+
+    def tearDown(self):
+        """
+        Test tearDown.
+        """
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        Global tearDown.
+        """
+
+    @mock.patch('crmsh.utils.IP.is_mcast')
+    def test_is_mcast_addr(self, mock_mcast):
+        mock_mcast.return_value = False
+        with self.assertRaises(ValueError) as err:
+            self.validate_inst._is_mcast_addr()
+        self.assertEqual("10.10.10.1 is not multicast address", str(err.exception))
+        mock_mcast.assert_called_once_with("10.10.10.1")
+
+    def test_is_local_addr(self):
+        with self.assertRaises(ValueError) as err:
+            self.validate_inst._is_local_addr(["20.20.20.1", "20.20.20.2"])
+        self.assertEqual("Address must be a local address (one of ['20.20.20.1', '20.20.20.2'])", str(err.exception))
+
+    def test_is_valid_port_in_use(self):
+        with self.assertRaises(ValueError) as err:
+            self.validate_port_inst_in_use._is_valid_port()
+        self.assertEqual("Port 4567 is already in use by corosync. Leave a gap between multiple rings.", str(err.exception))
+
+    def test_is_valid_port_out_of_range(self):
+        with self.assertRaises(ValueError) as err:
+            self.validate_port_inst_out_of_range._is_valid_port()
+        self.assertEqual("Valid port range should be 1025-65535", str(err.exception))
+
+    @mock.patch('crmsh.bootstrap.Validation._is_mcast_addr')
+    def test_valid_mcast_address(self, mock_mcast):
+        bootstrap.Validation.valid_mcast_address("10.10.10.1")
+        mock_mcast.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.Validation._is_local_addr')
+    def test_valid_ucast_ip(self, mock_local_addr):
+        bootstrap._context = mock.Mock(local_ip_list=["10.10.10.2", "10.10.10.3"])
+        bootstrap.Validation.valid_ucast_ip("10.10.10.1")
+        mock_local_addr.assert_called_once_with(["10.10.10.2", "10.10.10.3"])
+    
+    @mock.patch('crmsh.bootstrap.Validation._is_local_addr')
+    def test_valid_mcast_ip(self, mock_local_addr):
+        bootstrap._context = mock.Mock(local_ip_list=["10.10.10.2", "10.10.10.3"],
+                local_network_list=["10.10.10.0"])
+        bootstrap.Validation.valid_mcast_ip("10.10.10.1")
+        mock_local_addr.assert_called_once_with(["10.10.10.2", "10.10.10.3", "10.10.10.0"])
+
+    @mock.patch('crmsh.bootstrap.Validation._is_valid_port')
+    def test_valid_port(self, mock_port):
+        bootstrap.Validation.valid_port("10.10.10.1")
+        mock_port.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.utils.IP.is_ipv6')
+    def test_valid_admin_ip_in_use(self, mock_ipv6, mock_invoke):
+        mock_ipv6.return_value = False
+        mock_invoke.return_value = True
+
+        with self.assertRaises(ValueError) as err:
+            self.validate_inst.valid_admin_ip("10.10.10.1")
+        self.assertEqual("Address already in use: 10.10.10.1", str(err.exception))
+
+        mock_ipv6.assert_called_once_with("10.10.10.1")
+        mock_invoke.assert_called_once_with("ping -c 1 10.10.10.1")
+
+    @mock.patch('crmsh.utils.InterfacesInfo.ip_in_network')
+    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.utils.IP.is_ipv6')
+    def test_valid_admin_ip_not_in_network(self, mock_ipv6, mock_invoke, mock_ip_in_network):
+        mock_ipv6.return_value = False
+        mock_invoke.return_value = False
+        mock_ip_in_network.return_value = False
+
+        with self.assertRaises(ValueError) as err:
+            self.validate_inst.valid_admin_ip("10.10.10.1")
+        self.assertEqual("Address '10.10.10.1' not in any local network", str(err.exception))
+
+        mock_ipv6.assert_called_once_with("10.10.10.1")
+        mock_invoke.assert_called_once_with("ping -c 1 10.10.10.1")
+        mock_ip_in_network.assert_called_once_with("10.10.10.1")

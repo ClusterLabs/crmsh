@@ -7,6 +7,7 @@ from __future__ import unicode_literals
 import os
 import re
 import imp
+import unittest
 from unittest import mock
 from itertools import chain
 from crmsh import utils
@@ -18,6 +19,30 @@ def setup_function():
     # Mock memoize method and reload the module under test later with imp
     mock.patch('crmsh.utils.memoize', lambda x: x).start()
     imp.reload(utils)
+
+
+@mock.patch('os.path.exists')
+def test_check_file_content_included_target_not_exist(mock_exists):
+    mock_exists.side_effect = [True, False]
+    res = utils.check_file_content_included("file1", "file2")
+    assert res is False
+    mock_exists.assert_has_calls([mock.call("file1"), mock.call("file2")])
+
+
+@mock.patch("builtins.open")
+@mock.patch('os.path.exists')
+def test_check_file_content_included(mock_exists, mock_open_file):
+    mock_exists.side_effect = [True, True]
+    mock_open_file.side_effect = [
+            mock.mock_open(read_data="data1").return_value,
+            mock.mock_open(read_data="data2").return_value
+        ]
+
+    res = utils.check_file_content_included("file1", "file2")
+    assert res is False
+
+    mock_exists.assert_has_calls([mock.call("file1"), mock.call("file2")])
+    mock_open_file.assert_has_calls([mock.call("file2", 'r'), mock.call("file1", 'r')])
 
 
 @mock.patch('re.search')
@@ -57,24 +82,12 @@ def test_get_nodeid_from_name(mock_get_stdout, mock_re_search):
     mock_re_search_inst.group.assert_called_once_with(1)
 
 
-def test_check_ssh_passwd_need_True():
-    with mock.patch('crmsh.utils.get_stdout_stderr') as mock_get_stdout_stderr:
-        mock_get_stdout_stderr.side_effect = [(0, None, None), (1, None, None)]
-        assert utils.check_ssh_passwd_need(["node1", "node2"]) == True
-    mock_get_stdout_stderr.assert_has_calls([
-            mock.call('ssh -i /root/.ssh/id_rsa.crmsh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node1 true'),
-            mock.call('ssh -i /root/.ssh/id_rsa.crmsh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node2 true')
-        ])
-
-
-def test_check_ssh_passwd_need_Flase():
-    with mock.patch('crmsh.utils.get_stdout_stderr') as mock_get_stdout_stderr:
-        mock_get_stdout_stderr.side_effect = [(0, None, None), (0, None, None)]
-        assert utils.check_ssh_passwd_need(["node1", "node2"]) == False
-    mock_get_stdout_stderr.assert_has_calls([
-            mock.call('ssh -i /root/.ssh/id_rsa.crmsh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node1 true'),
-            mock.call('ssh -i /root/.ssh/id_rsa.crmsh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node2 true')
-        ])
+@mock.patch('crmsh.utils.get_stdout_stderr')
+def test_check_ssh_passwd_need(mock_run):
+    mock_run.return_value = (1, None, None)
+    res = utils.check_ssh_passwd_need("node1")
+    assert res is True
+    mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node1 true")
 
 
 @mock.patch('crmsh.utils.common_debug')
@@ -242,21 +255,6 @@ def test_msec():
     assert utils.crm_msec('1') == 1000
     assert utils.crm_msec('1m') == 60*1000
     assert utils.crm_msec('1h') == 60*60*1000
-
-
-def test_network():
-    ip = utils.IP('192.168.1.2')
-    assert ip.version() == 4
-    ip = utils.IP('2001:db3::1')
-    assert ip.version() == 6
-
-    assert (utils.ip_in_network('192.168.2.0', '192.0.2.0/24') is False)
-    assert (utils.ip_in_network('192.0.2.42', '192.0.2.0/24') is True)
-
-    assert (utils.ip_in_network('2001:db3::1', '2001:db8::2/64') is False)
-    assert (utils.ip_in_network('2001:db8::1', '2001:db8::2/64') is True)
-
-    assert utils.get_ipv6_network("2002:db8::2/64") == "2002:db8::"
 
 
 def test_parse_sysconfig():
@@ -472,3 +470,330 @@ def test_interface_choice(mock_get_stdout):
     mock_get_stdout.return_value = (0, ip_a_output)
     assert utils.interface_choice() == ["enp1s0", "br-933fa0e1438c", "veth3fff6e9"]
     mock_get_stdout.assert_called_once_with("ip a")
+
+
+class TestIP(unittest.TestCase):
+    """
+    Unitary tests for class utils.IP
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Global setUp.
+        """
+
+    def setUp(self):
+        """
+        Test setUp.
+        """
+        self.ip_inst = utils.IP("10.10.10.1")
+
+    def tearDown(self):
+        """
+        Test tearDown.
+        """
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        Global tearDown.
+        """
+
+    @mock.patch('ipaddress.ip_address')
+    def test_ip_address(self, mock_ip_address):
+        mock_ip_address_inst = mock.Mock()
+        mock_ip_address.return_value = mock_ip_address_inst
+        self.ip_inst.ip_address
+        mock_ip_address.assert_called_once_with("10.10.10.1")
+
+    @mock.patch('crmsh.utils.IP.ip_address', new_callable=mock.PropertyMock)
+    def test_version(self, mock_ip_address):
+        mock_ip_address_inst = mock.Mock(version=4)
+        mock_ip_address.return_value = mock_ip_address_inst
+        res = self.ip_inst.version
+        self.assertEqual(res, mock_ip_address_inst.version)
+        mock_ip_address.assert_called_once_with()
+
+    @mock.patch('crmsh.utils.IP.ip_address', new_callable=mock.PropertyMock)
+    def test_is_mcast(self, mock_ip_address):
+        mock_ip_address_inst = mock.Mock(is_multicast=False)
+        mock_ip_address.return_value = mock_ip_address_inst
+        res = utils.IP.is_mcast("10.10.10.1")
+        self.assertEqual(res, False)
+        mock_ip_address.assert_called_once_with()
+
+    @mock.patch('crmsh.utils.IP.version', new_callable=mock.PropertyMock)
+    def test_is_ipv6(self, mock_version):
+        mock_version.return_value = 4
+        res = utils.IP.is_ipv6("10.10.10.1")
+        self.assertEqual(res, False)
+        mock_version.assert_called_once_with()
+
+    @mock.patch('crmsh.utils.IP.ip_address', new_callable=mock.PropertyMock)
+    def test_is_valid_ip_exception(self, mock_ip_address):
+        mock_ip_address.side_effect = ValueError
+        res = utils.IP.is_valid_ip("xxxx")
+        self.assertEqual(res, False)
+        mock_ip_address.assert_called_once_with()
+
+    @mock.patch('crmsh.utils.IP.ip_address', new_callable=mock.PropertyMock)
+    def test_is_valid_ip(self, mock_ip_address):
+        res = utils.IP.is_valid_ip("10.10.10.1")
+        self.assertEqual(res, True)
+        mock_ip_address.assert_called_once_with()
+
+    @mock.patch('crmsh.utils.IP.ip_address', new_callable=mock.PropertyMock)
+    def test_is_loopback(self, mock_ip_address):
+        mock_ip_address_inst = mock.Mock(is_loopback=False)
+        mock_ip_address.return_value = mock_ip_address_inst
+        res = self.ip_inst.is_loopback
+        self.assertEqual(res, mock_ip_address_inst.is_loopback)
+        mock_ip_address.assert_called_once_with()
+
+    @mock.patch('crmsh.utils.IP.ip_address', new_callable=mock.PropertyMock)
+    def test_is_link_local(self, mock_ip_address):
+        mock_ip_address_inst = mock.Mock(is_link_local=False)
+        mock_ip_address.return_value = mock_ip_address_inst
+        res = self.ip_inst.is_link_local
+        self.assertEqual(res, mock_ip_address_inst.is_link_local)
+        mock_ip_address.assert_called_once_with()
+
+
+class TestInterface(unittest.TestCase):
+    """
+    Unitary tests for class utils.Interface
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Global setUp.
+        """
+
+    def setUp(self):
+        """
+        Test setUp.
+        """
+        self.interface = utils.Interface("10.10.10.123/24")
+
+    def tearDown(self):
+        """
+        Test tearDown.
+        """
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        Global tearDown.
+        """
+
+    def test_ip_with_mask(self):
+        assert self.interface.ip_with_mask == "10.10.10.123/24"
+
+    @mock.patch('ipaddress.ip_interface')
+    def test_ip_interface(self, mock_ip_interface):
+        mock_ip_interface_inst = mock.Mock()
+        mock_ip_interface.return_value = mock_ip_interface_inst
+        self.interface.ip_interface
+        mock_ip_interface.assert_called_once_with("10.10.10.123/24")
+
+    @mock.patch('crmsh.utils.Interface.ip_interface', new_callable=mock.PropertyMock)
+    def test_network(self, mock_ip_interface):
+        mock_ip_interface_inst = mock.Mock()
+        mock_ip_interface.return_value = mock_ip_interface_inst
+        mock_ip_interface_inst.network = mock.Mock(network_address="10.10.10.0")
+        assert self.interface.network == "10.10.10.0"
+        mock_ip_interface.assert_called_once_with()
+
+    @mock.patch('crmsh.utils.Interface.ip_interface', new_callable=mock.PropertyMock)
+    @mock.patch('crmsh.utils.IP')
+    def test_ip_in_network(self, mock_ip, mock_ip_interface):
+        mock_ip_inst = mock.Mock(ip_address="10.10.10.123")
+        mock_ip.return_value = mock_ip_inst
+        mock_ip_interface_inst = mock.Mock(network=["10.10.10.123"])
+        mock_ip_interface.return_value = mock_ip_interface_inst
+        res = self.interface.ip_in_network("10.10.10.123")
+        assert res is True
+        mock_ip.assert_called_once_with("10.10.10.123")
+        mock_ip_interface.assert_called_once_with()
+
+
+class TestInterfacesInfo(unittest.TestCase):
+    """
+    Unitary tests for class utils.InterfacesInfo
+    """
+
+    network_output_error = """1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+2: enp1s0    inet 192.168.122.241/24 brd 192.168.122.255 scope global enp1s0"""
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Global setUp.
+        """
+
+    def setUp(self):
+        """
+        Test setUp.
+        """
+        self.interfaces_info = utils.InterfacesInfo()
+        self.interfaces_info_with_second_hb = utils.InterfacesInfo(second_heartbeat=True)
+        self.interfaces_info_with_custom_nic = utils.InterfacesInfo(second_heartbeat=True, custom_nic_list=['eth1'])
+        self.interfaces_info_with_wrong_nic = utils.InterfacesInfo(custom_nic_list=['eth7'])
+        self.interfaces_info_fake = utils.InterfacesInfo()
+        self.interfaces_info_fake._nic_info_dict = {
+                "eth0": [mock.Mock(ip="10.10.10.1", network="10.10.10.0"), mock.Mock(ip="10.10.10.2", network="10.10.10.0")],
+                "eth1": [mock.Mock(ip="20.20.20.1", network="20.20.20.0")]
+                }
+        self.interfaces_info_fake._default_nic_list = ["eth7"]
+
+    def tearDown(self):
+        """
+        Test tearDown.
+        """
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        Global tearDown.
+        """
+
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    def test_get_interfaces_info_no_address(self, mock_run):
+        only_lo = "1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever"
+        mock_run.return_value = (0, only_lo, None)
+        with self.assertRaises(ValueError) as err:
+            self.interfaces_info.get_interfaces_info()
+        self.assertEqual("No address configured", str(err.exception))
+        mock_run.assert_called_once_with("ip -4 -o addr show")
+
+    @mock.patch('crmsh.utils.Interface')
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    def test_get_interfaces_info_one_addr(self, mock_run, mock_interface):
+        mock_run.return_value = (0, self.network_output_error, None)
+        mock_interface_inst_1 = mock.Mock(is_loopback=True, is_link_local=False)
+        mock_interface_inst_2 = mock.Mock(is_loopback=False, is_link_local=False)
+        mock_interface.side_effect = [mock_interface_inst_1, mock_interface_inst_2]
+
+        with self.assertRaises(ValueError) as err:
+            self.interfaces_info_with_second_hb.get_interfaces_info()
+        self.assertEqual("Cannot configure second heartbeat, since only one address is available", str(err.exception))
+
+        mock_run.assert_called_once_with("ip -4 -o addr show")
+        mock_interface.assert_has_calls([
+            mock.call("127.0.0.1/8"),
+            mock.call("192.168.122.241/24")
+            ])
+
+    def test_nic_list(self):
+        res = self.interfaces_info_fake.nic_list
+        self.assertEqual(res, ["eth0", "eth1"])
+ 
+    def test_interface_list(self):
+        res = self.interfaces_info_fake.interface_list
+        assert len(res) == 3
+
+    @mock.patch('crmsh.utils.InterfacesInfo.interface_list', new_callable=mock.PropertyMock)
+    def test_ip_list(self, mock_interface_list):
+        mock_interface_list.return_value = [
+                mock.Mock(ip="10.10.10.1"),
+                mock.Mock(ip="10.10.10.2")
+                ]
+        res = self.interfaces_info_fake.ip_list
+        self.assertEqual(res, ["10.10.10.1", "10.10.10.2"])
+        mock_interface_list.assert_called_once_with()
+
+    @mock.patch('crmsh.utils.InterfacesInfo.ip_list', new_callable=mock.PropertyMock)
+    @mock.patch('crmsh.utils.InterfacesInfo.get_interfaces_info')
+    def test_get_local_ip_list(self, mock_get_info, mock_ip_list):
+        mock_ip_list.return_value = ["10.10.10.1", "10.10.10.2"]
+        res = utils.InterfacesInfo.get_local_ip_list(False)
+        self.assertEqual(res, mock_ip_list.return_value)
+        mock_get_info.assert_called_once_with()
+        mock_ip_list.assert_called_once_with()
+
+    @mock.patch('crmsh.utils.InterfacesInfo.interface_list', new_callable=mock.PropertyMock)
+    def test_network_list(self, mock_interface_list):
+        mock_interface_list.return_value = [
+                mock.Mock(network="10.10.10.0"),
+                mock.Mock(network="20.20.20.0")
+                ]
+        res = self.interfaces_info.network_list
+        self.assertEqual(res, list(set(["10.10.10.0", "20.20.20.0"])))
+        mock_interface_list.assert_called_once_with()
+
+    def test_nic_first_ip(self):
+        res = self.interfaces_info_fake._nic_first_ip("eth0")
+        self.assertEqual(res, "10.10.10.1")
+
+    @mock.patch('crmsh.utils.InterfacesInfo.nic_list', new_callable=mock.PropertyMock)
+    @mock.patch('crmsh.utils.common_warn')
+    @mock.patch('crmsh.utils.InterfacesInfo.get_interfaces_info')
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    def test_get_default_nic_list_from_route_no_default(self, mock_run, mock_get_interfaces_info, mock_warn, mock_nic_list):
+        output = """10.10.10.0/24 dev eth1 proto kernel scope link src 10.10.10.51 
+        20.20.20.0/24 dev eth2 proto kernel scope link src 20.20.20.51"""
+        mock_run.return_value = (0, output, None)
+        mock_nic_list.side_effect = [["eth0", "eth1"], ["eth0", "eth1"]]
+
+        res = self.interfaces_info.get_default_nic_list_from_route()
+        self.assertEqual(res, ["eth0"])
+
+        mock_run.assert_called_once_with("ip -o route show")
+        mock_warn.assert_called_once_with("No default route configured. Using the first found nic")
+        mock_nic_list.assert_has_calls([mock.call(), mock.call()])
+
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    def test_get_default_nic_list_from_route(self, mock_run):
+        output = """default via 192.168.122.1 dev eth8 proto dhcp 
+        10.10.10.0/24 dev eth1 proto kernel scope link src 10.10.10.51 
+        20.20.20.0/24 dev eth2 proto kernel scope link src 20.20.20.51 
+        192.168.122.0/24 dev eth8 proto kernel scope link src 192.168.122.120"""
+        mock_run.return_value = (0, output, None)
+
+        res = self.interfaces_info.get_default_nic_list_from_route()
+        self.assertEqual(res, ["eth8"])
+
+        mock_run.assert_called_once_with("ip -o route show")
+
+    @mock.patch('crmsh.utils.InterfacesInfo.nic_list', new_callable=mock.PropertyMock)
+    def test_get_default_ip_list_failed_detect(self, mock_nic_list):
+        mock_nic_list.side_effect = [["eth0", "eth1"], ["eth0", "eth1"]]
+
+        with self.assertRaises(ValueError) as err:
+            self.interfaces_info_with_wrong_nic.get_default_ip_list()
+        self.assertEqual("Failed to detect IP address for eth7", str(err.exception))
+
+        mock_nic_list.assert_has_calls([mock.call(), mock.call()])
+
+    @mock.patch('crmsh.utils.InterfacesInfo._nic_first_ip')
+    @mock.patch('crmsh.utils.InterfacesInfo.nic_list', new_callable=mock.PropertyMock)
+    def test_get_default_ip_list(self, mock_nic_list, mock_first_ip):
+        mock_nic_list.side_effect = [["eth0", "eth1"], ["eth0", "eth1"], ["eth0", "eth1"]]
+        mock_first_ip.side_effect = ["10.10.10.1", "20.20.20.1"]
+
+        res = self.interfaces_info_with_custom_nic.get_default_ip_list()
+        self.assertEqual(res, ["10.10.10.1", "20.20.20.1"])
+
+        mock_nic_list.assert_has_calls([mock.call(), mock.call(), mock.call()])
+        mock_first_ip.assert_has_calls([mock.call("eth1"), mock.call("eth0")])
+
+    @mock.patch('crmsh.utils.Interface')
+    @mock.patch('crmsh.utils.InterfacesInfo.interface_list', new_callable=mock.PropertyMock)
+    @mock.patch('crmsh.utils.InterfacesInfo.get_interfaces_info')
+    @mock.patch('crmsh.utils.IP.is_ipv6')
+    def test_ip_in_network(self, mock_is_ipv6, mock_get_interfaces_info, mock_interface_list, mock_interface):
+        mock_is_ipv6.return_value = False
+        mock_interface_inst_1 = mock.Mock()
+        mock_interface_inst_2 = mock.Mock()
+        mock_interface_inst_1.ip_in_network.return_value = False
+        mock_interface_inst_2.ip_in_network.return_value = True
+        mock_interface_list.return_value = [mock_interface_inst_1, mock_interface_inst_2]
+
+        res = utils.InterfacesInfo.ip_in_network("10.10.10.1")
+        assert res is True
+
+        mock_is_ipv6.assert_called_once_with("10.10.10.1")
+        mock_get_interfaces_info.assert_called_once_with()
+        mock_interface_list.assert_called_once_with()
+        mock_interface_inst_1.ip_in_network.assert_called_once_with("10.10.10.1")
+        mock_interface_inst_2.ip_in_network.assert_called_once_with("10.10.10.1")

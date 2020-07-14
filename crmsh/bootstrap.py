@@ -29,7 +29,6 @@ from . import corosync
 from . import tmpfiles
 from . import clidisplay
 from . import term
-from .constants import SSH_KEY_CRMSH, SSH_WITH_KEY, SCP_WITH_KEY, SSH_KEY_CRMSH_TAG
 
 
 LOG_FILE = "/var/log/ha-cluster-bootstrap.log"
@@ -41,9 +40,12 @@ SYSCONFIG_FW = "/etc/sysconfig/SuSEfirewall2"
 SYSCONFIG_FW_CLUSTER = "/etc/sysconfig/SuSEfirewall2.d/services/cluster"
 PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
 COROSYNC_CONF_ORIG = tmpfiles.create()[1]
+RSA_PRIVATE_KEY = "/root/.ssh/id_rsa"
+RSA_PUBLIC_KEY = "/root/.ssh/id_rsa.pub"
+AUTHORIZED_KEYS_FILE = "/root/.ssh/authorized_keys"
 
 
-INIT_STAGES = ("ssh", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin")
+INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin")
 
 
 class Context(object):
@@ -60,10 +62,11 @@ class Context(object):
         self.template = None
         self.cluster_name = None
         self.watchdog = None
-        self.nic = None
+        self.no_overwrite_sshkey = None
+        self.nic_list = None
         self.unicast = None
         self.admin_ip = None
-        self.second_hb = None
+        self.second_heartbeat = None
         self.ipv6 = None
         self.qdevice = None
         self.qdevice_host = None
@@ -77,11 +80,17 @@ class Context(object):
         self.arbitrator = None
         self.clusters = None
         self.tickets = None
-        self.ip_address = None
-        self.ip_network = None
         self.sbd_manager = None
         self.sbd_devices = None
         self.diskless_sbd = None
+        self.stage = None
+        self.args = None
+        self.ui_context = None
+        self.interfaces_inst = None
+        self.default_nic_list = []
+        self.default_ip_list = []
+        self.local_ip_list = []
+        self.local_network_list = []
 
     @classmethod
     def set_context(cls, options):
@@ -98,6 +107,28 @@ class Context(object):
                 port=self.qdevice_port,
                 algo=self.qdevice_algo,
                 tie_breaker=self.qdevice_tie_breaker)
+
+    def validate_option(self):
+        """
+        Validate options
+        """
+        if self.admin_ip:
+            try:
+                Validation.valid_admin_ip(self.admin_ip)
+            except ValueError as err:
+                error(err)
+        if self.qdevice:
+            try:
+                self.qdevice.valid_attr(self.interfaces_inst)
+            except ValueError as err:
+                error(err)
+        if self.nic_list:
+            if len(self.nic_list) > 2:
+                error("Maximum number of interface is 2")
+            if len(self.nic_list) != len(set(self.nic_list)):
+                error("Duplicated input")
+        if self.no_overwrite_sshkey:
+            warn("--no-overwrite-sshkey option is deprecated since crmsh does not overwrite ssh keys by default anymore and will be removed in future versions")
 
     def init_sbd_manager(self):
         self.sbd_manager = SBDManager(self.sbd_devices, self.diskless_sbd)
@@ -313,7 +344,7 @@ Configure SBD:
         """
         if not os.path.exists(SYSCONFIG_SBD):
             return
-        if not invoke("{} -o StrictHostKeyChecking=no root@{} systemctl is-enabled sbd.service".format(SSH_WITH_KEY, peer_host)):
+        if not invoke("ssh -o StrictHostKeyChecking=no root@{} systemctl is-enabled sbd.service".format(peer_host)):
             return
         self._check_environment()
         dev_list = self._get_sbd_device_from_config()
@@ -341,6 +372,13 @@ def error(*args):
     """
     log("ERROR: {}".format(" ".join([str(arg) for arg in args])))
     die(*args)
+
+
+def print_error_msg(msg):
+    """
+    Just print error message
+    """
+    print(term.render(clidisplay.error("ERROR:")) + " {}".format(msg))
 
 
 def warn(*args):
@@ -380,9 +418,10 @@ def drop_last_history():
         readline.remove_history_item(hlen - 1)
 
 
-def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=None):
+def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=[]):
     if _context.yes_to_all:
         return default
+
     while True:
         disable_completion()
         val = utils.multi_input('  %s [%s]' % (msg, default))
@@ -391,12 +430,22 @@ def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=N
             val = default
         else:
             drop_last_history()
-        if match is None:
+
+        if not val:
+            return None
+        if not match and not valid_func:
             return val
-        if val and re.match(match, val) is not None:
-            if not valid_func or valid_func(val, prev_value):
-                return val
-        print(term.render(clidisplay.error("    Invalid value entered")))
+        if match and not re.match(match, val):
+            print_error_msg("Invalid value entered")
+            continue
+        if valid_func:
+            try:
+                valid_func(val, prev_value)
+            except ValueError as err:
+                print_error_msg(err)
+                continue
+
+        return val
 
 
 def confirm(msg):
@@ -493,8 +542,8 @@ def get_cluster_node_hostname():
     """
     peer_node = None
     if _context.cluster_node:
-        if utils.valid_ip_addr(_context.cluster_node):
-            rc, out, err = utils.get_stdout_stderr("{} {} crm_node --name".format(SSH_WITH_KEY, _context.cluster_node))
+        if utils.IP.is_valid_ip(_context.cluster_node):
+            rc, out, err = utils.get_stdout_stderr("ssh {} crm_node --name".format(_context.cluster_node))
             if rc != 0:
                 error(err)
             peer_node = out
@@ -735,30 +784,20 @@ def log_start():
 
 def init_network():
     """
-    Auto-detection of IP address and netmask only works if $NET_IF is
-    up. If $IP_ADDRESS is overridden, network detect shouldn't work,
-    because "ip route" won't be able to help us.
+    Get all needed network information through utils.InterfacesInfo
     """
-    if not _context.ipv6:
-        nic, ipaddr, ipnetwork, _prefix = utils.network_defaults(_context.nic)
-    else:
-        all_ = utils.network_v6_all()
-        if not all_:
-            error("Unable to configure network: No usable IPv6 addresses found.")
-        nic = sorted(all_.keys())[0]
-        ipaddr = all_[nic][0].split('/')[0]
-        ipnetwork = utils.get_ipv6_network(all_[nic][0])
+    interfaces_inst = utils.InterfacesInfo(_context.ipv6, _context.second_heartbeat, _context.nic_list)
+    interfaces_inst.get_interfaces_info()
+    _context.default_nic_list = interfaces_inst.get_default_nic_list_from_route()
+    _context.default_ip_list = interfaces_inst.get_default_ip_list()
 
-    if _context.nic is None:
-        _context.nic = nic
-    if _context.ip_address is None:
-        _context.ip_address = ipaddr
-    if _context.ip_network is None:
-        _context.ip_network = ipnetwork
-    if _context.ip_address is None:
-        warn("Could not detect IP address for {}".format(nic))
-    if _context.ip_network is None:
-        warn("Could not detect IP network address for {}".format(nic))
+    # local_ip_list and local_network_list are for validation
+    _context.local_ip_list = interfaces_inst.ip_list
+    _context.local_network_list = interfaces_inst.network_list
+    _context.interfaces_inst = interfaces_inst
+    # use two "-i" options equal to use "-M" option
+    if len(_context.default_nic_list) == 2 and not _context.second_heartbeat:
+        _context.second_heartbeat = True
 
 
 def configure_firewall(tcp=None, udp=None):
@@ -888,8 +927,8 @@ def init_cluster_local():
     if service_is_available("hawk.service"):
         start_service("hawk.service")
         status("Hawk cluster interface is now running. To see cluster status, open:")
-        status("  https://%s:7630/" % (_context.ip_address))
-        status("Log in with username 'hacluster'%s" % (pass_msg))
+        status("  https://{}:7630/".format(_context.default_ip_list[0]))
+        status("Log in with username 'hacluster'{}".format(pass_msg))
     else:
         warn("Hawk not installed - not configuring web management interface.")
 
@@ -914,6 +953,14 @@ def append(fromfile, tofile):
     with open(tofile, "a") as tf:
         with open(fromfile, "r") as ff:
             tf.write(ff.read())
+
+
+def append_unique(fromfile, tofile):
+    """
+    Append unique content from fromfile to tofile
+    """
+    if not utils.check_file_content_included(fromfile, tofile):
+        append(fromfile, tofile)
 
 
 def rmfile(path, ignore_errors=False):
@@ -944,16 +991,52 @@ def mkdirs_owned(dirs, mode=0o777, uid=-1, gid=-1):
 
 def init_ssh():
     """
-    Configure passwordless SSH with crmsh specific key.
+    Configure passwordless SSH.
     """
     start_service("sshd.service")
-    if os.path.exists(SSH_KEY_CRMSH):
-        if not confirm("{} already exists - overwrite?".format(SSH_KEY_CRMSH)):
-            return
-        rmfile(SSH_KEY_CRMSH)
-        invoke("sed -i '/{}/d' /root/.ssh/authorized_keys".format(SSH_KEY_CRMSH_TAG))
-    invoke("ssh-keygen -q -f {} -C '{}' -N ''".format(SSH_KEY_CRMSH, SSH_KEY_CRMSH_TAG))
-    append("{}.pub".format(SSH_KEY_CRMSH), "/root/.ssh/authorized_keys")
+    configure_local_ssh_key()
+
+
+def configure_local_ssh_key():
+    """
+    Configure ssh rsa key locally
+
+    If /root/.ssh/id_rsa not exist, generate a new one
+    Add /root/.ssh/id_rsa.pub to /root/.ssh/authorized_keys anyway, make sure itself authorized
+    """
+    if not os.path.exists(RSA_PRIVATE_KEY):
+        status("Generating SSH key")
+        invoke("ssh-keygen -q -f {} -C 'Cluster Internal on {}' -N ''".format(RSA_PRIVATE_KEY, utils.this_node()))
+    if not os.path.exists(AUTHORIZED_KEYS_FILE):
+        open(AUTHORIZED_KEYS_FILE, 'w').close()
+    append_unique(RSA_PUBLIC_KEY, AUTHORIZED_KEYS_FILE)
+
+
+def init_ssh_remote():
+    """
+    Called by ha-cluster-join
+    """
+    authorized_keys_file = "/root/.ssh/authorized_keys"
+    if not os.path.exists(authorized_keys_file):
+        open(authorized_keys_file, 'w').close()
+    authkeys = open(authorized_keys_file, "r+")
+    authkeys_data = authkeys.read()
+    for key in ("id_rsa", "id_dsa", "id_ecdsa", "id_ed25519"):
+        fn = os.path.join("/root/.ssh", key)
+        if not os.path.exists(fn):
+            continue
+        keydata = open(fn + ".pub").read()
+        if keydata not in authkeys_data:
+            append(fn + ".pub", authorized_keys_file)
+
+
+def append_to_remote_file(fromfile, remote_node, tofile):
+    """
+    Append content of fromfile to tofile on remote_node
+    """
+    cmd = "cat {} | ssh -oStrictHostKeyChecking=no root@{} 'cat >> {}'".format(fromfile, remote_node, tofile)
+    if not invoke(cmd):
+        error("Failed to run \"{}\"".format(cmd))
 
 
 def init_csync2():
@@ -1070,108 +1153,90 @@ def init_remote_auth():
     os.chmod(PCMK_REMOTE_AUTH, 0o640)
 
 
-def valid_network(addr, prev_value=None):
+class Validation(object):
     """
-    bindnetaddr(IPv4) must one of the local networks or local IP addresses
+    Class to validate values from interactive inputs
     """
-    if prev_value and addr == prev_value[0]:
-        warn("  Network address '{}' is already in use!".format(addr))
-        return False
 
-    all_networks = utils.network_all()
-    all_ips = utils.ip_in_local()
-    if addr in all_networks or \
-       addr in all_ips:
-        return True
-    warn("  Address '{}' invalid, expected one of {}".format(addr, all_networks + all_ips))
-    return False
+    def __init__(self, value, prev_value_list=[]):
+        """
+        Init function
+        """
+        self.value = value
+        self.prev_value_list = prev_value_list
+        if self.value in self.prev_value_list:
+            raise ValueError("Already in use: {}".format(self.value))
 
+    def _is_mcast_addr(self):
+        """
+        Check whether the address is multicast address
+        """
+        if not utils.IP.is_mcast(self.value):
+            raise ValueError("{} is not multicast address".format(self.value))
 
-def valid_v6_network(addr, prev_value=None):
-    """
-    bindnetaddr(IPv6) must be one of the local networks
-    """
-    if prev_value and addr == prev_value[0]:
-        warn("  Network address '{}' is already in use!".format(addr))
-        return False
-    network_list = []
-    all_ = utils.network_v6_all()
-    # the format of return example:
-    # {'eth2': ['2002:db8::3/64'], 'eth1': ['2001:db8::3/64']}
-    if not all_:
-        return False
-    for item in list(all_.values()):
-        network_list.extend(item)
-    network_list = [utils.get_ipv6_network(x) for x in network_list]
-    if addr in network_list:
-        return True
-    warn("  Address '{}' invalid, expected one of {}".format(addr, network_list))
-    return False
+    def _is_local_addr(self, local_addr_list):
+        """
+        Check whether the address is in local
+        """
+        if self.value not in local_addr_list:
+            raise ValueError("Address must be a local address (one of {})".format(local_addr_list))
 
+    def _is_valid_port(self):
+        """
+        Check whether the port is valid
+        """
+        if self.prev_value_list and abs(int(self.value) - int(self.prev_value_list[0])) <= 1:
+            raise ValueError("Port {} is already in use by corosync. Leave a gap between multiple rings.".format(self.value))
+        if int(self.value) <= 1024 or int(self.value) > 65535:
+            raise ValueError("Valid port range should be 1025-65535")
 
-def valid_ucastIP(addr, prev_value=None):
-    if prev_value and addr == prev_value[0]:
-        print(term.render(clidisplay.error("    IP {} is already in use".format(addr))))
-        return False
-    ip_local = utils.ip_in_local(_context.ipv6)
-    if addr not in ip_local:
-        print(term.render(clidisplay.error("    IP must be a local address (one of {})".format(ip_local))))
-        return False
-    return True
+    @classmethod
+    def valid_mcast_address(cls, addr, prev_value_list=[]):
+        """
+        Check whether the address is already in use and whether the address is for multicast
+        """
+        cls_inst = cls(addr, prev_value_list)
+        cls_inst._is_mcast_addr()
 
+    @classmethod
+    def valid_ucast_ip(cls, addr, prev_value_list=[]):
+        """
+        Check whether the address is already in use and whether the address exists on local
+        """
+        cls_inst = cls(addr, prev_value_list)
+        cls_inst._is_local_addr(_context.local_ip_list)
 
-def valid_adminIP(addr, prev_value=None):
-    """
-    valid adminIP for IPv4/IPv6
-    """
-    try:
-        ip = utils.IP(addr)
-    except ValueError as err:
-        print(term.render(clidisplay.error("    {}".format(err))))
-        return False
-    else:
-        all_ = []
-        if ip.version() == 4:
-            ping = "ping"
-            all_ = utils.network_all(with_mask=True)
-        else:
-            # for IPv6
-            ping = "ping6"
-            network_list = utils.network_v6_all()
-            for item in list(network_list.values()):
-                all_.extend(item)
-        if invoke("{} -c 1 {}".format(ping, addr)):
-            warn("  Address already in use: {}".format(addr))
-            return False
-        for net in all_:
-            if utils.ip_in_network(addr, net):
-                return True
-        warn("  Address '{}' invalid, expected one of {}".format(addr, all_))
-        return False
+    @classmethod
+    def valid_mcast_ip(cls, addr, prev_value_list=[]):
+        """
+        Check whether the address is already in use and whether the address exists on local address and network
+        """
+        cls_inst = cls(addr, prev_value_list)
+        cls_inst._is_local_addr(_context.local_ip_list + _context.local_network_list)
 
+    @classmethod
+    def valid_port(cls, port, prev_value_list=[]):
+        """
+        Check whether the port is valid
+        """
+        cls_inst = cls(port, prev_value_list)
+        cls_inst._is_valid_port()
 
-def valid_ipv4_addr(addr, prev_value=None):
-    if prev_value and addr == prev_value[0]:
-        warn("  Address already in use: {}".format(addr))
-        return False
-    return utils.valid_ip_addr(addr)
+    @staticmethod
+    def valid_admin_ip(addr, prev_value_list=[]):
+        """
+        Validate admin IP address
+        """
+        ipv6 = utils.IP.is_ipv6(addr)
 
+        # Check whether this IP already configured in cluster
+        ping_cmd = "ping6" if ipv6 else "ping"
+        if invoke("{} -c 1 {}".format(ping_cmd, addr)):
+            raise ValueError("Address already in use: {}".format(addr))
 
-def valid_ipv6_addr(addr, prev_value=None):
-    if prev_value and addr == prev_value[0]:
-        warn("  Address already in use: {}".format(addr))
-        return False
-    return utils.valid_ip_addr(addr, 6)
-
-
-def valid_port(port, prev_value=None):
-    if prev_value:
-        if abs(int(port) - int(prev_value[0])) <= 1:
-            warn("  Port {} is already in use by corosync. Leave a gap between multiple rings.".format(port))
-            return False
-    if int(port) >= 1024 and int(port) <= 65535:
-        return True
-    return False
+        # Check whether this IP belong to one of local network
+        if not utils.InterfacesInfo.ip_in_network(addr):
+            raise ValueError("Address '{}' not in any local network".format(addr))
 
 
 def init_corosync_unicast():
@@ -1183,60 +1248,49 @@ def init_corosync_unicast():
 Configure Corosync (unicast):
   This will configure the cluster messaging layer.  You will need
   to specify a network address over which to communicate (default
-  is %s's network, but you can use the network address of any
+  is {}'s network, but you can use the network address of any
   active interface).
-""" % (_context.nic))
-
-    if os.path.exists(corosync.conf()):
-        if not confirm("%s already exists - overwrite?" % (corosync.conf())):
-            return
+""".format(_context.default_nic_list[0]))
 
     ringXaddr_res = []
     mcastport_res = []
     default_ports = ["5405", "5407"]
     two_rings = False
 
-    local_iplist = utils.ip_in_local(_context.ipv6)
-    len_iplist = len(local_iplist)
-    if len_iplist == 0:
-        error("No network configured at {}!".format(utils.this_node()))
-
-    default_ip = [_context.ip_address] + [ip for ip in local_iplist if ip != _context.ip_address]
-
-    for i in 0, 1:
-        ringXaddr = prompt_for_string('Address for ring{}'.format(i),
-                                      r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:',
-                                      pick_default_value(default_ip, ringXaddr_res),
-                                      valid_ucastIP,
-                                      ringXaddr_res)
+    for i in range(2):
+        ringXaddr = prompt_for_string(
+                'Address for ring{}'.format(i),
+                default=pick_default_value(_context.default_ip_list, ringXaddr_res),
+                valid_func=Validation.valid_ucast_ip,
+                prev_value=ringXaddr_res)
         if not ringXaddr:
             error("No value for ring{}".format(i))
         ringXaddr_res.append(ringXaddr)
 
-        mcastport = prompt_for_string('Port for ring{}'.format(i),
-                                      '[0-9]+',
-                                      pick_default_value(default_ports, mcastport_res),
-                                      valid_port,
-                                      mcastport_res)
+        mcastport = prompt_for_string(
+                'Port for ring{}'.format(i),
+                match='[0-9]+',
+                default=pick_default_value(default_ports, mcastport_res),
+                valid_func=Validation.valid_port,
+                prev_value=mcastport_res)
         if not mcastport:
             error("Expected a multicast port for ring{}".format(i))
         mcastport_res.append(mcastport)
 
         if i == 1 or \
-           len_iplist == 1 or \
-           not _context.second_hb or \
+           not _context.second_heartbeat or \
            not confirm("\nAdd another heartbeat line?"):
             break
         two_rings = True
 
     corosync.create_configuration(
-        clustername=_context.cluster_name,
-        ringXaddr=ringXaddr_res,
-        mcastport=mcastport_res,
-        transport="udpu",
-        ipv6=_context.ipv6,
-        two_rings=two_rings,
-        qdevice=_context.qdevice)
+            clustername=_context.cluster_name,
+            ringXaddr=ringXaddr_res,
+            mcastport=mcastport_res,
+            transport="udpu",
+            ipv6=_context.ipv6,
+            two_rings=two_rings,
+            qdevice=_context.qdevice)
     csync2_update(corosync.conf())
 
 
@@ -1258,95 +1312,54 @@ def init_corosync_multicast():
 Configure Corosync:
   This will configure the cluster messaging layer.  You will need
   to specify a network address over which to communicate (default
-  is %s's network, but you can use the network address of any
+  is {}'s network, but you can use the network address of any
   active interface).
-""" % (_context.nic))
-
-    if os.path.exists(corosync.conf()):
-        if not confirm("%s already exists - overwrite?" % (corosync.conf())):
-            return
+""".format(_context.default_nic_list[0]))
 
     bindnetaddr_res = []
     mcastaddr_res = []
     mcastport_res = []
     default_ports = ["5405", "5407"]
     two_rings = False
-    default_networks = []
 
-    if _context.ipv6:
-        network_list = []
-        all_ = utils.network_v6_all()
-        for item in list(all_.values()):
-            network_list.extend(item)
-        default_networks = [utils.get_ipv6_network(x) for x in network_list]
-    else:
-        network_list = utils.network_all()
-        if len(network_list) > 1:
-            network_list.remove(_context.ip_network)
-            default_networks = [_context.ip_network, network_list[0]]
-        else:
-            default_networks = [_context.ip_network]
-    if not default_networks:
-        error("No network configured at {}!".format(utils.this_node()))
+    for i in range(2):
+        bindnetaddr = prompt_for_string(
+                'IP or network address to bind to',
+                default=pick_default_value(_context.default_ip_list, bindnetaddr_res),
+                valid_func=Validation.valid_mcast_ip,
+                prev_value=bindnetaddr_res)
+        if not bindnetaddr:
+            error("No value for bindnetaddr")
+        bindnetaddr_res.append(bindnetaddr)
 
-    for i in 0, 1:
-        if _context.ipv6:
-            bindnetaddr = prompt_for_string('Network address to bind to',
-                                            r'.*(::|0)$',
-                                            pick_default_value(default_networks, bindnetaddr_res),
-                                            valid_v6_network,
-                                            bindnetaddr_res)
-            if not bindnetaddr:
-                error("No value for bindnetaddr")
-            bindnetaddr_res.append(bindnetaddr)
+        mcastaddr = prompt_for_string(
+                'Multicast address',
+                default=gen_mcastaddr(),
+                valid_func=Validation.valid_mcast_address,
+                prev_value=mcastaddr_res)
+        if not mcastaddr:
+            error("No value for mcastaddr")
+        mcastaddr_res.append(mcastaddr)
 
-            mcastaddr = prompt_for_string('Multicast address',
-                                          r'^[Ff][Ff].*',
-                                          gen_mcastaddr(),
-                                          valid_ipv6_addr,
-                                          mcastaddr_res)
-            if not mcastaddr:
-                error("No value for mcastaddr")
-            mcastaddr_res.append(mcastaddr)
-
-        else:
-            bindnetaddr = prompt_for_string('Network address to bind to (e.g.: 192.168.1.0)',
-                                            r'([0-9]+\.){3}[0-9]+',
-                                            pick_default_value(default_networks, bindnetaddr_res),
-                                            valid_network,
-                                            bindnetaddr_res)
-            if not bindnetaddr:
-                error("No value for bindnetaddr")
-            bindnetaddr_res.append(bindnetaddr)
-
-            mcastaddr = prompt_for_string('Multicast address (e.g.: 239.x.x.x)',
-                                          utils.mcast_regrex,
-                                          gen_mcastaddr(),
-                                          valid_ipv4_addr,
-                                          mcastaddr_res)
-            if not mcastaddr:
-                error("No value for mcastaddr")
-            mcastaddr_res.append(mcastaddr)
-
-        mcastport = prompt_for_string('Multicast port',
-                                      '[0-9]+',
-                                      pick_default_value(default_ports, mcastport_res),
-                                      valid_port,
-                                      mcastport_res)
+        mcastport = prompt_for_string(
+                'Multicast port',
+                match='[0-9]+',
+                default=pick_default_value(default_ports, mcastport_res),
+                valid_func=Validation.valid_port,
+                prev_value=mcastport_res)
         if not mcastport:
             error("No value for mcastport")
         mcastport_res.append(mcastport)
 
         if i == 1 or \
-           len(default_networks) == 1 or \
-           not _context.second_hb or \
+           not _context.second_heartbeat or \
            not confirm("\nConfigure a second multicast ring?"):
             break
         two_rings = True
 
     nodeid = None
     if _context.ipv6:
-        nodeid = utils.gen_nodeid_from_ipv6(_context.ip_address)
+        nodeid = utils.gen_nodeid_from_ipv6(_context.default_ip_list[0])
 
     corosync.create_configuration(
         clustername=_context.cluster_name,
@@ -1371,6 +1384,11 @@ def init_corosync():
         return host is not None
 
     init_corosync_auth()
+
+    if os.path.exists(corosync.conf()):
+        if not confirm("%s already exists - overwrite?" % (corosync.conf())):
+            return
+
     if _context.unicast or requires_unicast():
         init_corosync_unicast()
     else:
@@ -1640,7 +1658,7 @@ Configure Administration IP Address:
         if not confirm("Do you wish to configure a virtual IP address?"):
             return
 
-        adminaddr = prompt_for_string('Virtual IP', r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:', "", valid_adminIP)
+        adminaddr = prompt_for_string('Virtual IP', valid_func=Validation.valid_admin_ip)
         if not adminaddr:
             error("Expected an IP address")
 
@@ -1664,14 +1682,60 @@ def join_ssh(seed_host):
         error("No existing IP/hostname specified (use -c option)")
 
     start_service("sshd.service")
-    invoke("mkdir -m 700 -p /root/.ssh")
+    configure_local_ssh_key()
+    swap_public_ssh_key(seed_host)
 
-    status("Retrieving SSH keys - This may prompt for root@%s:" % (seed_host))
-    if not invoke("scp -oStrictHostKeyChecking=no root@{}:'{}*' /root/.ssh".format(seed_host, SSH_KEY_CRMSH)):
-        error("Failed to retrieve ssh keys")
+    # This makes sure the seed host has its own SSH keys in its own
+    # authorized_keys file (again, to help with the case where the
+    # user has done manual initial setup without the assistance of
+    # ha-cluster-init).
+    if not invoke("ssh root@{} crm cluster init -i {} ssh_remote".format(seed_host, _context.default_nic_list[0])):
+        error("Can't invoke crm cluster init -i {} ssh_remote on {}".format(_context.default_nic_list[0], seed_host))
 
-    invoke("sed -i '/{}/d' /root/.ssh/authorized_keys".format(SSH_KEY_CRMSH_TAG))
-    append("{}.pub".format(SSH_KEY_CRMSH), "/root/.ssh/authorized_keys")
+
+def swap_public_ssh_key(remote_node):
+    """
+    Swap public ssh key between remote_node and local
+    """
+    # Detect whether need password to login to remote_node
+    if utils.check_ssh_passwd_need(remote_node):
+        # If no passwordless configured, paste /root/.ssh/id_rsa.pub to remote_node's /root/.ssh/authorized_keys
+        status("Configuring SSH passwordless with root@{}".format(remote_node))
+        # After this, login to remote_node is passwordless
+        append_to_remote_file(RSA_PUBLIC_KEY, remote_node, AUTHORIZED_KEYS_FILE)
+
+    try:
+        # Fetch public key file from remote_node
+        public_key_file_remote = fetch_public_key_from_remote_node(remote_node)
+    except ValueError as err:
+        warn(err)
+        return
+    # Append public key file from remote_node to local's /root/.ssh/authorized_keys
+    # After this, login from remote_node is passwordless
+    # Should do this step even passwordless is True, to make sure we got two-way passwordless
+    append_unique(public_key_file_remote, AUTHORIZED_KEYS_FILE)
+
+
+def fetch_public_key_from_remote_node(node):
+    """
+    Fetch public key file from remote node
+    Return a temp file contains public key
+    Return None if no key exist
+    """
+
+    # For dsa, might need to add PubkeyAcceptedKeyTypes=+ssh-dss to config file, see
+    # https://superuser.com/questions/1016989/ssh-dsa-keys-no-longer-work-for-password-less-authentication
+    for key in ("id_rsa", "id_ecdsa", "id_ed25519", "id_dsa"):
+        public_key_file = "/root/.ssh/{}.pub".format(key)
+        cmd = "ssh -oStrictHostKeyChecking=no root@{} 'test -f {}'".format(node, public_key_file)
+        if not invoke(cmd):
+            continue
+        _, temp_public_key_file = tmpfiles.create()
+        cmd = "scp -oStrictHostKeyChecking=no root@{}:{} {}".format(node, public_key_file, temp_public_key_file)
+        if not invoke(cmd):
+            error("Failed to run \"{}\"".format(cmd))
+        return temp_public_key_file
+    raise ValueError("No ssh key exist on {}".format(node))
 
 
 def join_csync2(seed_host):
@@ -1692,8 +1756,8 @@ def join_csync2(seed_host):
 
     # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
     # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
-    cmd = "crm cluster init -i {} csync2_remote {}".format(_context.nic, utils.this_node())
-    if not invoke("{} -o StrictHostKeyChecking=no root@{} {}".format(SSH_WITH_KEY, seed_host, cmd)):
+    cmd = "crm cluster init -i {} csync2_remote {}".format(_context.default_nic_list[0], utils.this_node())
+    if not invoke("ssh -o StrictHostKeyChecking=no root@{} {}".format(seed_host, cmd)):
         error("Can't invoke \"{}\" on {}".format(cmd, seed_host))
 
     # This is necessary if syncing /etc/hosts (to ensure everyone's got the
@@ -1702,8 +1766,9 @@ def join_csync2(seed_host):
     # invoke scp root@seed_host:/etc/hosts $tmp_conf \
     #   || error "Can't retrieve /etc/hosts from seed_host"
     # install_tmp $tmp_conf /etc/hosts
-    if not invoke("{} root@{}:'/etc/csync2/{{csync2.cfg,key_hagroup}}' /etc/csync2".format(SCP_WITH_KEY, seed_host)):
-        error("Can't retrieve csync2 config from {}".format(seed_host))
+
+    if not invoke("scp root@%s:'/etc/csync2/{csync2.cfg,key_hagroup}' /etc/csync2" % (seed_host)):
+        error("Can't retrieve csync2 config from %s" % (seed_host))
 
     start_service("csync2.socket")
 
@@ -1716,11 +1781,47 @@ def join_csync2(seed_host):
     # they haven't gone to all nodes in the cluster, which means a
     # subseqent join of another node can fail its sync of corosync.conf
     # when it updates expected_votes.  Grrr...
-    if not invoke('{} -o StrictHostKeyChecking=no root@{} "csync2 -rm /; csync2 -rxv || csync2 -rf / && csync2 -rxv"'.format(SSH_WITH_KEY, seed_host)):
+    if not invoke('ssh -o StrictHostKeyChecking=no root@{} "csync2 -rm /; csync2 -rxv || csync2 -rf / && csync2 -rxv"'.format(seed_host)):
         print("")
         warn("csync2 run failed - some files may not be sync'd")
 
     status_done()
+
+
+def setup_passwordless_with_other_nodes(init_node):
+    """
+    Setup passwordless with other cluster nodes
+
+    Should fetch the node list from init node, then swap the key
+    """
+    # Check whether pacemaker.service is active on init node
+    cmd = "ssh -o StrictHostKeyChecking=no root@{} systemctl -q is-active {}".format(init_node, "pacemaker.service")
+    rc, _, _ = utils.get_stdout_stderr(cmd)
+    if rc != 0:
+        error("Cluster is inactive on {}".format(init_node))
+
+    # Fetch cluster nodes list
+    cmd = "ssh -o StrictHostKeyChecking=no root@{} crm_node -l".format(init_node)
+    rc, out, err = utils.get_stdout_stderr(cmd)
+    if rc != 0:
+        error("Can't fetch cluster nodes list from {}: {}".format(init_node, err))
+    cluster_nodes_list = []
+    for line in out.splitlines():
+        _, node, stat = line.split()
+        if stat == "member":
+            cluster_nodes_list.append(node)
+
+    # Filter out init node from cluster_nodes_list
+    cmd = "ssh -o StrictHostKeyChecking=no root@{} hostname".format(init_node)
+    rc, out, err = utils.get_stdout_stderr(cmd)
+    if rc != 0:
+        error("Can't fetch hostname of {}: {}".format(init_node, err))
+    if out in cluster_nodes_list:
+        cluster_nodes_list.remove(out)
+
+    # Swap ssh public key between join node and other cluster nodes
+    for node in cluster_nodes_list:
+        swap_public_ssh_key(node)
 
 
 def join_cluster(seed_host):
@@ -1729,12 +1830,7 @@ def join_cluster(seed_host):
     """
     def get_local_nodeid():
         # for IPv6
-        all_ = utils.network_v6_all()
-        if not all_:
-            error("Doesn't have any usable IPv6 addresses!")
-        nic = sorted(all_.keys())[0]
-        ipaddr = all_[nic][0].split('/')[0]
-        return utils.gen_nodeid_from_ipv6(ipaddr)
+        return utils.gen_nodeid_from_ipv6(_context.local_ip_list[0])
 
     def update_nodeid(nodeid, node=None):
         # for IPv6
@@ -1744,6 +1840,8 @@ def join_cluster(seed_host):
         else:
             corosync.set_value("totem.nodeid", nodeid)
 
+    setup_passwordless_with_other_nodes(seed_host)
+
     shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
 
     # check if use IPv6
@@ -1752,6 +1850,8 @@ def join_cluster(seed_host):
     if ipv6 and ipv6 == "ipv6":
         ipv6_flag = True
     _context.ipv6 = ipv6_flag
+
+    init_network()
 
     # check whether have two rings
     rrp_flag = False
@@ -1770,7 +1870,7 @@ def join_cluster(seed_host):
     # that yet, so the following crawling horror takes a punt on the seed
     # node being up, then asks it for a list of mountpoints...
     if _context.cluster_node:
-        _rc, outp, _ = utils.get_stdout_stderr("{} -o StrictHostKeyChecking=no root@{} 'cibadmin -Q --xpath \"//primitive\"'".format(SSH_WITH_KEY, seed_host))
+        _rc, outp, _ = utils.get_stdout_stderr("ssh -o StrictHostKeyChecking=no root@{} 'cibadmin -Q --xpath \"//primitive\"'".format(seed_host))
         if outp:
             xml = etree.fromstring(outp)
             mountpoints = xml.xpath(' and '.join(['//primitive[@class="ocf"',
@@ -1792,21 +1892,14 @@ def join_cluster(seed_host):
     # if unicast, we need to add our node to $corosync.conf()
     is_unicast = "nodelist" in open(corosync.conf()).read()
     if is_unicast:
-        local_iplist = utils.ip_in_local(_context.ipv6)
-        len_iplist = len(local_iplist)
-        if len_iplist == 0:
-            error("No network configured at {}!".format(utils.this_node()))
-
-        default_ip = [_context.ip_address] + [ip for ip in local_iplist if ip != _context.ip_address]
-
         ringXaddr_res = []
         for i in 0, 1:
             while True:
-                ringXaddr = prompt_for_string('Address for ring{}'.format(i),
-                                              r'([0-9]+\.){3}[0-9]+|[0-9a-fA-F]{1,4}:',
-                                              pick_default_value(default_ip, ringXaddr_res),
-                                              valid_ucastIP,
-                                              ringXaddr_res)
+                ringXaddr = prompt_for_string(
+                        'Address for ring{}'.format(i),
+                        default=pick_default_value(_context.default_ip_list, ringXaddr_res),
+                        valid_func=Validation.valid_ucast_ip,
+                        prev_value=ringXaddr_res)
                 if not ringXaddr:
                     error("No value for ring{}".format(i))
                 ringXaddr_res.append(ringXaddr)
@@ -1820,7 +1913,7 @@ def join_cluster(seed_host):
         except corosync.IPAlreadyConfiguredError as e:
             warn(e)
         csync2_update(corosync.conf())
-        invoke("{} -o StrictHostKeyChecking=no root@{} corosync-cfgtool -R".format(SSH_WITH_KEY, seed_host))
+        invoke("ssh -o StrictHostKeyChecking=no root@{} corosync-cfgtool -R".format(seed_host))
 
     _context.sbd_manager.join_sbd(seed_host)
 
@@ -1986,7 +2079,7 @@ def remove_get_hostname(seed_host):
         _context.host_status = 1
         return
 
-    _rc, outp, _errp = utils.get_stdout_stderr("{} -o StrictHostKeyChecking=no root@{} \"hostname\"".format(SSH_WITH_KEY, seed_host))
+    _rc, outp, _errp = utils.get_stdout_stderr("ssh -o StrictHostKeyChecking=no root@{} \"hostname\"".format(seed_host))
     if outp:
         _context.connect_name = seed_host
         _context.cluster_node = outp.strip()
@@ -2001,7 +2094,7 @@ def remove_get_hostname(seed_host):
         if nodename not in xmlutil.listnodes():
             error("Specified node {} is not configured in cluster, can not remove".format(nodename))
 
-        _rc, outp, _errp = utils.get_stdout_stderr("{} -o StrictHostKeyChecking=no root@{} \"hostname\"".format(SSH_WITH_KEY, nodename))
+        _rc, outp, _errp = utils.get_stdout_stderr("ssh -o StrictHostKeyChecking=no root@{} \"hostname\"".format(nodename))
         if outp:
             _context.connect_name = seed_host
             _context.cluster_node = nodename
@@ -2018,7 +2111,7 @@ def remove_get_hostname(seed_host):
             error("Invalid IP address")
 
         # try to use the IP address to connect
-        _rc, outp, _errp = utils.get_stdout_stderr("{} -o StrictHostKeyChecking=no root@{} \"hostname\"".format(SSH_WITH_KEY, nodename))
+        _rc, outp, _errp = utils.get_stdout_stderr("ssh -o StrictHostKeyChecking=no root@{} \"hostname\"".format(nodename))
         if outp:
             ipaddr = nodename
             nodename = outp.strip()
@@ -2042,12 +2135,12 @@ def remove_node_from_cluster():
 
     if _context.host_status != 0:
         status("Stopping the corosync service")
-        if not invoke('{} -o StrictHostKeyChecking=no root@{} "systemctl stop corosync"'.format(SSH_WITH_KEY, _context.connect_name)):
+        if not invoke('ssh -o StrictHostKeyChecking=no root@{} "systemctl stop corosync"'.format(_context.connect_name)):
             error("Stopping corosync on {} failed".format(_context.connect_name))
 
         # delete configuration files from the node to be removed
         toremove = [SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY, COROSYNC_AUTH]
-        if not invoke('{} -o StrictHostKeyChecking=no root@{} "bash -c \\\"rm -f {} && rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*\\\""'.format(SSH_WITH_KEY, node, " ".join(toremove))):
+        if not invoke('ssh -o StrictHostKeyChecking=no root@{} "bash -c \\\"rm -f {} && rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*\\\""'.format(node, " ".join(toremove))):
             error("Deleting the configuration files failed")
     else:
         # Check node status
@@ -2122,13 +2215,12 @@ def bootstrap_init(context):
     """
     Init cluster process
     """
-    def check_option():
-        if _context.admin_ip and not valid_adminIP(_context.admin_ip):
-            error("Invalid option: admin_ip")
-
     global _context
     _context = context
+
+    init()
     _context.init_qdevice()
+    _context.validate_option()
     _context.init_sbd_manager()
 
     stage = _context.stage
@@ -2145,14 +2237,12 @@ def bootstrap_init(context):
     elif stage == "":
         if corosync_active:
             error("Cluster is currently active - can't run")
-    elif stage not in ("ssh", "csync2", "csync2_remote"):
+    elif stage not in ("ssh", "ssh_remote", "csync2", "csync2_remote"):
         if corosync_active:
             error("Cluster is currently active - can't run %s stage" % (stage))
 
-    check_option()
-
-    # Need hostname resolution to work, want NTP (but don't block csync2_remote)
-    if stage not in ('csync2_remote',):
+    # Need hostname resolution to work, want NTP (but don't block ssh_remote or csync2_remote)
+    if stage not in ('ssh_remote', 'csync2_remote'):
         check_tty()
         if not check_prereqs(stage):
             return
@@ -2162,8 +2252,6 @@ def bootstrap_init(context):
         if len(args) != 2:
             error("Expected NODE argument to csync2_remote")
         _context.cluster_node = args[1]
-
-    init()
 
     if stage != "":
         globals()["init_" + stage]()
@@ -2192,7 +2280,10 @@ def bootstrap_join(context):
     """
     global _context
     _context = context
+
+    init()
     _context.init_sbd_manager()
+    _context.validate_option()
 
     check_tty()
 
@@ -2202,8 +2293,6 @@ def bootstrap_join(context):
 
     if not check_prereqs("join"):
         return
-
-    init()
 
     cluster_node = _context.cluster_node
     if _context.stage != "":
@@ -2270,7 +2359,7 @@ def bootstrap_remove(context):
         if othernode is not None:
             # remove from other node
             cmd = "crm cluster remove{} -c {}".format(" -y" if yes_to_all else "", me)
-            rc = utils.ext_cmd_nosudo("{}{} -o StrictHostKeyChecking=no {} '{}'".format(SSH_WITH_KEY, "" if yes_to_all else " -t", othernode, cmd))
+            rc = utils.ext_cmd_nosudo("ssh{} -o StrictHostKeyChecking=no {} '{}'".format("" if yes_to_all else " -t", othernode, cmd))
             if rc != 0:
                 error("Failed to remove this node from {}".format(othernode))
         else:

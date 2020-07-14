@@ -59,7 +59,9 @@ optional arguments:
   -h, --help            Show this help message
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
   -y, --yes             Answer "yes" to all prompts (use with caution, this is
-                        destructive, especially during the "storage" stage.)
+                        destructive, especially during the "storage" stage.
+                        The /root/.ssh/id_rsa key will be overwritten unless
+                        the option "--no-overwrite-sshkey" is used)
   -t TEMPLATE, --template TEMPLATE
                         Optionally configure cluster with template "name"
                         (currently only "ocfs2" is valid here)
@@ -72,12 +74,16 @@ optional arguments:
                         (diskless mode)
   -w WATCHDOG, --watchdog WATCHDOG
                         Use the given watchdog device
+  --no-overwrite-sshkey
+                        Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is
+                        used (False by default)
 
 Network configuration:
   Options for configuring the network and messaging layer.
 
   -i IF, --interface IF
-                        Bind to IP address on interface IF
+                        Bind to IP address on interface IF. Use -i second time
+                        for second interface
   -u, --unicast         Configure corosync to communicate over unicast (UDP),
                         and not multicast. Default is multicast unless an
                         environment where multicast cannot be used is
@@ -146,11 +152,14 @@ Network configuration:
   -c HOST, --cluster-node HOST
                         IP address or hostname of existing cluster node
   -i IF, --interface IF
-                        Bind to IP address on interface IF
+                        Bind to IP address on interface IF. Use -i second time
+                        for second interface
 
 Stage can be one of:
     ssh         Obtain SSH keys from existing cluster node (requires -c <host>)
     csync2      Configure csync2 (requires -c <host>)
+    ssh_merge   Merge root's SSH known_hosts across all nodes (csync2 must
+                already be configured).
     cluster     Start the cluster on this node
 
 If stage is not specified, each stage will be invoked in sequence.'''

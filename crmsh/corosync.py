@@ -11,7 +11,6 @@ import socket
 from . import utils
 from . import tmpfiles
 from .msg import err_buf, common_debug
-from .constants import SCP_WITH_KEY
 
 
 def conf():
@@ -298,7 +297,7 @@ def pull_configuration(from_node):
     local_path = conf()
     _, fname = tmpfiles.create()
     print("Retrieving %s:%s..." % (from_node, local_path))
-    cmd = [SCP_WITH_KEY, '-qC',
+    cmd = ['scp', '-qC',
            '-o', 'PasswordAuthentication=no',
            '-o', 'StrictHostKeyChecking=no',
            '%s:%s' % (from_node, local_path),
@@ -403,7 +402,8 @@ def find_configured_ip(ip_list):
     # all_possible_ip is a ip set to check whether one of them already configured
     all_possible_ip = set(ip_list)
     # get local ip list
-    local_ip_list = utils.ip_in_local(utils.is_ipv6(ip_list[0]))
+    is_ipv6 = utils.IP.is_ipv6(ip_list[0])
+    local_ip_list = utils.InterfacesInfo.get_local_ip_list(is_ipv6)
     # extend all_possible_ip if ip_list contain local ip
     # to avoid this scenarios in join node:
     #   eth0's ip already configured in corosync.conf
