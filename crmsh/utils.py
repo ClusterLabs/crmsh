@@ -14,6 +14,7 @@ import shlex
 import bz2
 import fnmatch
 import gc
+import ipaddress
 from contextlib import contextmanager
 from . import config
 from . import userdir
@@ -21,9 +22,6 @@ from . import constants
 from . import options
 from . import term
 from .msg import common_warn, common_info, common_debug, common_err, err_buf
-
-
-mcast_regrex = r'2(?:2[4-9]|3\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d?|0)){3}'
 
 
 def memoize(function):
@@ -56,90 +54,6 @@ gethomedir = userdir.gethomedir
 def this_node():
     'returns name of this node (hostname)'
     return os.uname()[1]
-
-
-def network_defaults(interface=None):
-    """
-    returns (interface, ip-address, network, prefix-length)
-    """
-    def valfor(l, key):
-        for i in range(0, len(l) - 1):
-            if l[i] == key:
-                return l[i + 1]
-        return None
-    _, outp = get_stdout("/sbin/ip -o route show")
-    info = [None, None, None, None]
-    if interface is not None:
-        info[0] = interface
-    for l in outp.splitlines():
-        sp = l.split()
-        if info[0] is None and len(sp) >= 5 and sp[0] == 'default' and sp[1] == 'via':
-            info[0] = sp[4]
-        if info[0] is not None and valfor(sp, 'dev') == info[0] and sp[0] != 'default':
-            src = valfor(sp, 'src')
-            if sp[0].find('/') >= 0:
-                nw, length = sp[0].split('/')
-                info[1], info[2], info[3] = src, nw, length
-                break
-            # we are reading /32 route entry
-            else:
-                info[1], info[2], info[3] = src, sp[0], 32
-    if info[0] is None:
-        raise ValueError("Failed to determine default network interface")
-    return tuple(info)
-
-
-def network_all(with_mask=False):
-    """
-    returns all networks on local node
-    """
-    all_networks = []
-    _, outp = get_stdout("/sbin/ip -o route show")
-    for l in outp.split('\n'):
-        if re.search(r'\.0/[0-9]+ ', l):
-            if with_mask:
-                all_networks.append(l.split()[0])
-            else:
-                all_networks.append(l.split('/')[0])
-    return all_networks
-
-
-def network_v6_all():
-    _, outp = get_stdout("/sbin/ip -6 -o addr show")
-    dict_ = {}
-    for line in outp.split('\n'):
-        if re.search(r' ::1/| [Ff][Ee]80:', line):
-            # skip local address and link-local address
-            continue
-        dict_[line.split()[1]] = []
-    for line in outp.split('\n'):
-        if re.search(r' ::1/| [Ff][Ee]80:', line):
-            # skip local address and link-local address
-            continue
-        dict_[line.split()[1]].append(line.split()[3])
-    return dict_
-
-
-def ip_in_local(IPv6=False):
-    # short-circuit ip list handling for
-    # cloud providers in order to use
-    # metadata service instead
-    ips = iplist_for_cloud()
-    if len(ips) > 0:
-        return ips
-
-    if not IPv6:
-        regex = r' [0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]+ '
-    else:
-        regex = r' [0-9a-fA-F]{1,4}:.*:[0-9a-fA-F]{1,4}/[0-9]+ '
-
-    ip_local = []
-    _, outp = get_stdout("/sbin/ip addr show")
-    tmp = re.findall(regex, outp, re.M)
-    if tmp:
-        tmp = map(lambda x: x.split('/')[0].strip(), tmp)
-        ip_local += filter(lambda x: x != "127.0.0.1" and not re.search(r'^[Ff][Ee]80:', x), tmp)
-    return ip_local
 
 
 _cib_shadow = 'CIB_shadow'
@@ -1996,201 +1910,11 @@ def obscure(obscure_list):
         _obscured_nvpairs = prev
 
 
-def valid_ip_addr(addr, version=4):
-    import socket
-    try:
-        if version == 4:
-            socket.inet_pton(socket.AF_INET, addr)
-        elif version == 6:
-            socket.inet_pton(socket.AF_INET6, addr)
-        else:
-            return False
-    except socket.error:
-        return False
-    return True
-
-
-def get_ipv6_network(addr_with_mask):
-    return Network(addr_with_mask).network().to_compressed()
-
-
 def gen_nodeid_from_ipv6(addr):
-    return IP(addr).ip_long() % 1000000000
+    return int(int(ipaddress.ip_address(unicode(addr))) % 100000)
 
 
-MAX_IPV6 = (1 << 128) - 1
-MAX_IPV4 = (1 << 32) - 1
-
-
-def is_ipv6(addr):
-    return IP(addr).version() == 6
-
-
-class IP(object):
-    """
-    learn from https://github.com/tehmaze/ipcalc
-    """
-    def __init__(self, ip, mask=None, version=0):
-        """Initialize a new IPv4 or IPv6 address."""
-        self.mask = mask
-        self.v = 0
-
-        if isinstance(ip, (int, long)):
-            self.ip = int(ip)
-            if self.ip <= MAX_IPV4:
-                self.v = version or 4
-                self.dq = self._itodq(ip)
-            else:
-                self.v = version or 6
-                self.dq = self._itodq(ip)
-        else:
-            if '/' in ip:
-                ip, mask = ip.split('/', 1)
-                self.mask = int(mask)
-            self.v = version or 0
-            self.dq = ip
-            self.ip = self._dqtoi(ip)
-
-        if self.mask is None:
-            self.mask = {4: 32, 6: 128}[self.v]
-        elif isinstance(self.mask, (int, long)) or self.mask.isdigit():
-            self.mask = int(self.mask)
-
-    def __str__(self):
-        return self.dq
-
-    def _dqtoi(self, dq):
-        """Convert dotquad or hextet to long."""
-        if ':' in dq:
-            if not valid_ip_addr(dq, 6):
-                raise ValueError("Invalid IPv6 address")
-            return self._dqtoi_ipv6(dq)
-        if '.' in dq:
-            if not valid_ip_addr(dq):
-                raise ValueError("Invalid IPv4 address")
-            return self._dqtoi_ipv4(dq)
-
-        raise ValueError("Invalid address input")
-
-    def _dqtoi_ipv4(self, dq):
-        q = dq.split('.')
-        q.reverse()
-        self.v = 4
-        return sum(int(byte) << 8 * index for index, byte in enumerate(q))
-
-    def _dqtoi_ipv6(self, dq):
-        hx = dq.split(':')
-        if len(hx) < 8:
-            ix = hx.index('')
-            px = len(hx[ix + 1:])
-            for x in range(ix + px + 1, 8):
-                hx.insert(ix, '0')
-
-        ip = ''
-        hx = [x == '' and '0' or x for x in hx]
-        for h in hx:
-            if len(h) < 4:
-                h = '%04x' % int(h, 16)
-            ip += h
-        self.v = 6
-        return int(ip, 16)
-
-    def _itodq(self, n):
-        """Convert long to dotquad or hextet."""
-        if self.v == 4:
-            return '.'.join(map(str, [
-                (n >> 24) & 0xff,
-                (n >> 16) & 0xff,
-                (n >> 8) & 0xff,
-                n & 0xff,
-            ]))
-        else:
-            n = '%032x' % n
-            return ':'.join(n[4 * x:4 * x + 4] for x in range(0, 8))
-
-    def version(self):
-        return self.v
-
-    def ip_long(self):
-        return self.ip
-
-    def to_compressed(self):
-        """
-        Compress an IP address to its shortest possible compressed form.
-        """
-        if self.v == 6:
-            quads = map(lambda q: '%x' % (int(q, 16)), self.dq.split(':'))
-            quadc = ':%s:' % (':'.join(quads),)
-            zeros = [0, -1]
-
-            # Find the largest group of zeros
-            for match in re.finditer(r'(:[:0]+)', quadc):
-                count = len(match.group(1)) - 1
-                if count > zeros[0]:
-                    zeros = [count, match.start(1)]
-
-            count, where = zeros
-            if count:
-                quadc = quadc[:where] + ':' + quadc[where + count:]
-
-            quadc = re.sub(r'((^:)|(:$))', '', quadc)
-            quadc = re.sub(r'((^:)|(:$))', '::', quadc)
-            return quadc
-
-
-class Network(IP):
-    """
-    learn from https://github.com/tehmaze/ipcalc
-    """
-    def netmask_long(self):
-        """
-        Network netmask derived from subnet size, as long.
-        """
-        if self.version() == 4:
-            return (MAX_IPV4 >> (32 - self.mask)) << (32 - self.mask)
-        else:
-            return (MAX_IPV6 >> (128 - self.mask)) << (128 - self.mask)
-
-    def network(self):
-        """
-        Network address, as IP object.
-        """
-        return IP(self.network_long(), version=self.version())
-
-    def network_long(self):
-        """
-        Network address, as long.
-        """
-        return self.ip & self.netmask_long()
-
-    def broadcast_long(self):
-        """
-        Broadcast address, as long.
-        """
-        if self.version() == 4:
-            return self.network_long() | (MAX_IPV4 - self.netmask_long())
-        else:
-            return self.network_long() | (MAX_IPV6 - self.netmask_long())
-
-    def check_collision(self, other):
-        """Check another network against the given network."""
-        other = Network(other)
-        return self.network_long() < other.network_long() < self.broadcast_long() or \
-            other.network_long() < self.network_long() < other.broadcast_long()
-
-    def __contains__(self, ip):
-        return self.check_collision(ip)
-
-    def has_key(self, ip):
-        """
-        Check if the given ip is part of the network.
-
-        :param ip: the ip address
-        :type ip: :class:`IP` or str or long or int
-        """
-        return self.__contains__(ip)
-
-# Set by detect_cloud() or iplist_for_cloud()
+# Set by detect_cloud()
 # to avoid multiple requests
 _ip_for_cloud = None
 
@@ -2262,22 +1986,19 @@ def detect_cloud():
     return None
 
 
-def iplist_for_cloud():
+def check_ssh_passwd_need(host):
     """
-    Return list of viable IPs for the
-    current cloud provider (if any)
+    Check whether access to host need password
     """
-    global _ip_for_cloud
-    provider = detect_cloud()
-    if _ip_for_cloud is not None:
-        return [_ip_for_cloud]
-    if provider == "amazon-web-services":
-        uri = "http://169.254.169.254/latest/meta-data/local-ipv4"
-        result = _cloud_metadata_request(uri)
-        if result:
-            _ip_for_cloud = result
-            return [_ip_for_cloud]
-    return []
+    ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
+    ssh_cmd = "ssh {} -T -o Batchmode=yes {} true".format(ssh_options, host)
+    rc, _, _ = get_stdout_stderr(ssh_cmd)
+    return rc != 0
+
+
+def is_unicast():
+    from . import corosync
+    return corosync.get_value("totem.transport") == "udpu"
 
 
 def check_space_option_value(options):
@@ -2292,4 +2013,281 @@ def interface_choice():
     # should consider interface format like "ethx@xxx"
     interface_list = re.findall(r'(?:[0-9]+:) (.*?)(?=: |@.*?: )', out)
     return [nic for nic in interface_list if nic != "lo"]
+
+
+class IP(object):
+    """
+    Class to get some properties of IP address
+    """
+
+    def __init__(self, addr):
+        """
+        Init function
+        """
+        self.addr = addr
+
+    @property
+    def ip_address(self):
+        """
+        Create ipaddress instance
+        """
+        return ipaddress.ip_address(unicode(self.addr))
+
+    @property
+    def version(self):
+        """
+        Get IP address version
+        """
+        return self.ip_address.version
+
+    @classmethod
+    def is_mcast(cls, addr):
+        """
+        Check whether the address is multicast address
+        """
+        cls_inst = cls(addr)
+        return cls_inst.ip_address.is_multicast
+
+    @classmethod
+    def is_ipv6(cls, addr):
+        """
+        Check whether the address is IPV6 address
+        """
+        return cls(addr).version == 6
+
+    @classmethod
+    def is_valid_ip(cls, addr):
+        """
+        Check whether the address is valid IP address
+        """
+        cls_inst = cls(addr)
+        try:
+            cls_inst.ip_address
+        except ValueError:
+            return False
+        else:
+            return True
+
+    @property
+    def is_loopback(self):
+        """
+        Check whether the address is loopback address
+        """
+        return self.ip_address.is_loopback
+
+    @property
+    def is_link_local(self):
+        """
+        Check whether the address is link-local address
+        """
+        return self.ip_address.is_link_local
+
+
+class Interface(IP):
+    """
+    Class to get information from one interface
+    """
+
+    def __init__(self, ip_with_mask):
+        """
+        Init function
+        """
+        self.ip, self.mask = ip_with_mask.split('/')
+        super(self.__class__, self).__init__(self.ip)
+
+    @property
+    def ip_with_mask(self):
+        """
+        Get ip with netmask
+        """
+        return '{}/{}'.format(self.ip, self.mask)
+
+    @property
+    def ip_interface(self):
+        """
+        Create ip_interface instance
+        """
+        return ipaddress.ip_interface(unicode(self.ip_with_mask))
+
+    @property
+    def network(self):
+        """
+        Get network address
+        """
+        return str(self.ip_interface.network.network_address)
+
+    def ip_in_network(self, addr):
+        """
+        Check whether the addr in the network
+        """
+        return IP(addr).ip_address in self.ip_interface.network
+
+
+class InterfacesInfo(object):
+    """
+    Class to collect interfaces information on local node
+    """
+
+    def __init__(self, ipv6=False, second_heartbeat=False, custom_nic_list=[]):
+        """
+        Init function
+
+        On init process,
+        "ipv6" is provided by -I option
+        "second_heartbeat" is provided by -M option
+        "custom_nic_list" is provided by -i option
+        """
+        self.ip_version = 6 if ipv6 else 4
+        self.second_heartbeat = second_heartbeat
+        self._default_nic_list = custom_nic_list
+        self._nic_info_dict = {}
+
+    def get_interfaces_info(self):
+        """
+        Try to get interfaces info dictionary via "ip" command
+
+        IMPORTANT: This is the method that populates the data, should always be called after initialize
+        """
+        cmd = "ip -{} -o addr show".format(self.ip_version)
+        rc, out, err = get_stdout_stderr(cmd)
+        if rc != 0:
+            raise ValueError(err)
+
+        # format on each line will like:
+        # 2: enp1s0    inet 192.168.122.241/24 brd 192.168.122.255 scope global enp1s0\       valid_lft forever preferred_lft forever
+        for line in out.splitlines():
+            data = line.split()
+            nic, ip_with_mask = data[1], data[3]
+            #TODO change this condition when corosync support link-local address
+            interface_inst = Interface(ip_with_mask)
+            if interface_inst.is_loopback or interface_inst.is_link_local:
+                continue
+            # one nic might configured multi IP addresses
+            if nic not in self._nic_info_dict:
+                self._nic_info_dict[nic] = []
+            self._nic_info_dict[nic].append(interface_inst)
+
+        if not self._nic_info_dict:
+            raise ValueError("No address configured")
+        if self.second_heartbeat and len(self._nic_info_dict) == 1:
+            raise ValueError("Cannot configure second heartbeat, since only one address is available")
+
+    @property
+    def nic_list(self):
+        """
+        Get interfaces name list
+        """
+        return list(self._nic_info_dict.keys())
+
+    @property
+    def interface_list(self):
+        """
+        Get instance list of class Interface
+        """
+        _interface_list = []
+        for interface in self._nic_info_dict.values():
+            _interface_list.extend(interface)
+        return _interface_list
+
+    @property
+    def ip_list(self):
+        """
+        Get IP address list
+        """
+        return [interface.ip for interface in self.interface_list]
+
+    @classmethod
+    def get_local_ip_list(cls, is_ipv6):
+        """
+        Get IP address list
+        """
+        cls_inst = cls(is_ipv6)
+        cls_inst.get_interfaces_info()
+        return cls_inst.ip_list
+
+    @property
+    def network_list(self):
+        """
+        Get network list
+        """
+        return list(set([interface.network for interface in self.interface_list]))
+
+    def _nic_first_ip(self, nic):
+        """
+        Get the first IP of specific nic
+        """
+        return self._nic_info_dict[nic][0].ip
+
+    def get_default_nic_list_from_route(self):
+        """
+        Get default nic list from route
+        """
+        if self._default_nic_list:
+            return self._default_nic_list
+
+        #TODO what if user only has ipv6 route?
+        cmd = "ip -o route show"
+        rc, out, err = get_stdout_stderr(cmd)
+        if rc != 0:
+            raise ValueError(err)
+        res = re.search(r'^default via .* dev (.*?) ', out)
+        if res:
+            self._default_nic_list = [res.group(1)]
+        else:
+            if not self.nic_list:
+                self.get_interfaces_info()
+            common_warn("No default route configured. Using the first found nic")
+            self._default_nic_list = [self.nic_list[0]]
+        return self._default_nic_list
+
+    def get_default_ip_list(self):
+        """
+        Get default IP list will be used by corosync
+        """
+        if not self._default_nic_list:
+            self.get_default_nic_list_from_route()
+        if not self.nic_list:
+            self.get_interfaces_info()
+
+        _ip_list = []
+        for nic in self._default_nic_list:
+            # in case given interface not exist
+            if nic not in self.nic_list:
+                raise ValueError("Failed to detect IP address for {}".format(nic))
+            _ip_list.append(self._nic_first_ip(nic))
+        # in case -M specified but given one interface via -i
+        if self.second_heartbeat and len(self._default_nic_list) == 1:
+            for nic in self.nic_list:
+                if nic not in self._default_nic_list:
+                    _ip_list.append(self._nic_first_ip(nic))
+                    break
+        return _ip_list
+
+    @classmethod
+    def ip_in_network(cls, addr):
+        """
+        Check whether given address was in one of local networks
+        """
+        cls_inst = cls(IP.is_ipv6(addr))
+        cls_inst.get_interfaces_info()
+        for interface_inst in cls_inst.interface_list:
+            if interface_inst.ip_in_network(addr):
+                return True
+        return False
+
+
+def check_file_content_included(source_file, target_file):
+    """
+    Check whether target_file includes contents of source_file
+    """
+    if not os.path.exists(source_file):
+        raise ValueError("File {} not exist".format(source_file))
+    if not os.path.exists(target_file):
+        return False
+
+    with open(target_file, 'r') as target_fd:
+        target_data = target_fd.read()
+    with open(source_file, 'r') as source_fd:
+        source_data = source_fd.read()
+    return source_data in target_data
 # vim:ts=4:sw=4:et:

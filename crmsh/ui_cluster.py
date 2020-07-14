@@ -168,14 +168,14 @@ Note:
                             help='Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is used (False by default)')
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
-        network_group.add_argument("-i", "--interface", dest="nic", metavar="IF", choices=utils.interface_choice(),
-                                   help="Bind to IP address on interface IF")
+        network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action="append", choices=utils.interface_choice(),
+                                   help="Bind to IP address on interface IF. Use -i second time for second interface")
         network_group.add_argument("-u", "--unicast", action="store_true", dest="unicast",
                                    help="Configure corosync to communicate over unicast (UDP), and not multicast. " +
                                    "Default is multicast unless an environment where multicast cannot be used is detected.")
         network_group.add_argument("-A", "--admin-ip", dest="admin_ip", metavar="IP",
                                    help="Configure IP address as an administration virtual IP")
-        network_group.add_argument("-M", "--multi-heartbeats", action="store_true", dest="second_hb",
+        network_group.add_argument("-M", "--multi-heartbeats", action="store_true", dest="second_heartbeat",
                                    help="Configure corosync with second heartbeat line")
         network_group.add_argument("-I", "--ipv6", action="store_true", dest="ipv6",
                                    help="Configure corosync use IPv6")
@@ -183,7 +183,7 @@ Note:
         storage_group = parser.add_argument_group("Storage configuration", "Options for configuring shared storage.")
         storage_group.add_argument("-p", "--partition-device", dest="shared_device", metavar="DEVICE",
                                    help='Partition this shared storage device (only used in "storage" stage)')
-        storage_group.add_argument("-s", "--sbd-device", dest="sbd_device", metavar="DEVICE", action="append",
+        storage_group.add_argument("-s", "--sbd-device", dest="sbd_devices", metavar="DEVICE", action="append",
                                    help="Block device to use for SBD fencing, use \";\" as separator or -s multiple times for multi path (up to 3 devices)")
         storage_group.add_argument("-o", "--ocfs2-device", dest="ocfs2_device", metavar="DEVICE",
                                    help='Block device to use for OCFS2 (only used in "vgfs" stage)')
@@ -197,6 +197,9 @@ Note:
             stage = args[0]
         if stage not in bootstrap.INIT_STAGES and stage != "":
             parser.error("Invalid stage (%s)" % (stage))
+
+        if options.sbd_devices and options.diskless_sbd:
+            parser.error("Can't use -s and -S options together")
 
         boot_context = bootstrap.Context.set_context(options)
         boot_context.ui_context = context
@@ -242,8 +245,8 @@ If stage is not specified, each stage will be invoked in sequence.
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
         network_group.add_argument("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of existing cluster node", metavar="HOST")
-        network_group.add_argument("-i", "--interface", dest="nic", metavar="IF", choices=utils.interface_choice(),
-                help="Bind to IP address on interface IF")
+        network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action="append", choices=utils.interface_choice(),
+                help="Bind to IP address on interface IF. Use -i second time for second interface")
         options, args = parse_options(parser, args)
         if options is None or args is None:
             return
@@ -519,6 +522,12 @@ Cluster Description
 
         hosts = utils.list_cluster_nodes()
         opts = parallax.Options()
+        opts.ssh_options = ['StrictHostKeyChecking=no']
+        for host in hosts:
+            res = utils.check_ssh_passwd_need(host)
+            if res:
+                opts.askpass = True
+                break
         for host, result in parallax.call(hosts, cmd, opts).iteritems():
             if isinstance(result, parallax.Error):
                 err_buf.error("[%s]: %s" % (host, result))

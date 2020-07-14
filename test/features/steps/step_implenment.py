@@ -17,6 +17,12 @@ def step_impl(context, name, state, addr):
     assert check_service_state(context, name, state, addr) is True
 
 
+@given('Has disk "{disk}" on "{addr}"')
+def step_impl(context, disk, addr):
+    out = run_command_local_or_remote(context, "fdisk -l", addr)
+    assert re.search(r'{} '.format(disk), out) is not None
+
+
 @given('Online nodes are "{nodelist}"')
 def step_impl(context, nodelist):
     assert online(context, nodelist) is True
@@ -83,9 +89,9 @@ def step_impl(context, nodelist):
     assert online(context, nodelist) is True
 
 
-@then('IP "{addr}" is used by corosync')
-def step_impl(context, addr):
-    out = run_command(context, 'corosync-cfgtool -s')
+@then('IP "{addr}" is used by corosync on "{node}"')
+def step_impl(context, addr, node):
+    out = run_command_local_or_remote(context, 'corosync-cfgtool -s', node)
     res = re.search(r' {}\n'.format(addr), out)
     assert bool(res) is True
 
@@ -147,6 +153,13 @@ def step_impl(context, res, node, number):
         assert result is not None
 
 
+@then('Resource "{res_type}" not configured')
+def step_impl(context, res_type):
+    out = run_command(context, "crm configure show")
+    result = re.search(r' {} '.format(res_type), out)
+    assert result is None
+
+
 @then('Output is the same with expected "{cmd}" help output')
 def step_impl(context, cmd):
     cmd_help = {}
@@ -160,3 +173,11 @@ def step_impl(context, cmd):
     cmd_help["crm_cluster_geo-init-arbitrator"] = const.CRM_CLUSTER_GEO_INIT_ARBIT_H_OUTPUT
     key = '_'.join(cmd.split())
     assert context.stdout == cmd_help[key]
+
+
+@then('Corosync working on "{transport_type}" mode')
+def step_impl(context, transport_type):
+    if transport_type == "multicast":
+        assert corosync.get_value("totem.transport") != "udpu"
+    if transport_type == "unicast":
+        assert corosync.get_value("totem.transport") == "udpu"
