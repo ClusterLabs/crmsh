@@ -139,11 +139,10 @@ class TestSBDManager(unittest.TestCase):
             ])
         mock_error.assert_called_once_with("Failed to initialize SBD device /dev/sdc1")
 
-    @mock.patch('crmsh.bootstrap.csync2_update')
     @mock.patch('crmsh.utils.sysconfig_set')
     @mock.patch('crmsh.bootstrap.detect_watchdog_device')
     @mock.patch('shutil.copyfile')
-    def test_update_configuration(self, mock_copy, mock_detect, mock_sysconfig, mock_update):
+    def test_update_configuration(self, mock_copy, mock_detect, mock_sysconfig):
         self.sbd_inst._sbd_devices = ["/dev/sdb1", "/dev/sdc1"]
         mock_detect.return_value = "/dev/watchdog"
 
@@ -152,7 +151,6 @@ class TestSBDManager(unittest.TestCase):
         mock_copy.assert_called_once_with("/usr/share/fillup-templates/sysconfig.sbd", "/etc/sysconfig/sbd")
         mock_detect.assert_called_once_with()
         mock_sysconfig.assert_called_once_with("/etc/sysconfig/sbd", SBD_PACEMAKER='yes', SBD_STARTMODE='always', SBD_DELAY_START='no', SBD_WATCHDOG_DEV='/dev/watchdog', SBD_DEVICE='/dev/sdb1;/dev/sdc1')
-        mock_update.assert_called_once_with("/etc/sysconfig/sbd")
 
     @mock.patch('crmsh.bootstrap.utils.parse_sysconfig')
     def test_get_sbd_device_from_config_none(self, mock_parse):
@@ -651,7 +649,7 @@ class TestBootstrap(unittest.TestCase):
 
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.bootstrap.stop_service')
-    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.corosync.conf')
     @mock.patch('shutil.copy')
     @mock.patch('crmsh.utils.this_node')
@@ -685,7 +683,7 @@ class TestBootstrap(unittest.TestCase):
 
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.bootstrap.stop_service')
-    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.corosync.conf')
     @mock.patch('shutil.copy')
     @mock.patch('crmsh.utils.this_node')
