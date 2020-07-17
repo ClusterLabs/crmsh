@@ -44,8 +44,21 @@ COROSYNC_CONF_ORIG = tmpfiles.create()[1]
 RSA_PRIVATE_KEY = "/root/.ssh/id_rsa"
 RSA_PUBLIC_KEY = "/root/.ssh/id_rsa.pub"
 AUTHORIZED_KEYS_FILE = "/root/.ssh/authorized_keys"
-
-
+POSSIBLE_CONFIG_FILE = '''/etc/booth
+/etc/corosync/corosync.conf
+/etc/corosync/authkey
+/etc/csync2/csync2.cfg
+/etc/csync2/key_hagroup
+/etc/ctdb/nodes
+/etc/drbd.conf
+/etc/drbd.d
+/etc/ha.d/ldirectord.cf
+/etc/lvm/lvm.conf
+/etc/multipath.conf
+/etc/samba/smb.conf
+/etc/sysconfig/pacemaker
+/etc/sysconfig/sbd
+/etc/pacemaker/authkey'''
 INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin", "qdevice")
 
 
@@ -286,7 +299,6 @@ Configure SBD:
         if self._sbd_devices:
             sbd_config_dict["SBD_DEVICE"] = ';'.join(self._sbd_devices)
         utils.sysconfig_set(SYSCONFIG_SBD, **sbd_config_dict)
-        csync2_update(SYSCONFIG_SBD)
 
     @staticmethod
     def _get_sbd_device_from_config():
@@ -573,7 +585,7 @@ def is_online(crm_mon_txt):
     # The communication IP maybe mis-configured
     if not re.search("Online: .* {} ".format(peer_node), crm_mon_txt):
         shutil.copy(COROSYNC_CONF_ORIG, corosync.conf())
-        csync2_update(corosync.conf())
+        sync_file(corosync.conf())
         stop_service("corosync")
         print()
         error("Cannot see peer node \"{}\", please check the communication IP".format(peer_node))
@@ -1059,27 +1071,16 @@ def init_csync2():
         error("Can't create csync2 key {}".format(CSYNC2_KEY))
     status_done()
 
+    include_files = ""
+    for f in POSSIBLE_CONFIG_FILE.split('\n'):
+        include_files += "include {};\n".format(f)
+
     utils.str2file("""group ha_group
 {
 key /etc/csync2/key_hagroup;
 host %s;
-include /etc/booth;
-include /etc/corosync/corosync.conf;
-include /etc/corosync/authkey;
-include /etc/csync2/csync2.cfg;
-include /etc/csync2/key_hagroup;
-include /etc/ctdb/nodes;
-include /etc/drbd.conf;
-include /etc/drbd.d;
-include /etc/ha.d/ldirectord.cf;
-include /etc/lvm/lvm.conf;
-include /etc/multipath.conf;
-include /etc/samba/smb.conf;
-include /etc/sysconfig/pacemaker;
-include /etc/sysconfig/sbd;
-include /etc/pacemaker/authkey;
-}
-    """ % (utils.this_node()), CSYNC2_CFG)
+%s}
+    """ % (utils.this_node(), include_files), CSYNC2_CFG)
 
     start_service("csync2.socket")
     status_long("csync2 checking files")
@@ -1126,7 +1127,6 @@ def init_csync2_remote():
         if not re.search(r"^\s*host.*\s+%s\s*;" % (newhost), curr_cfg, flags=re.M):
             curr_cfg = re.sub(r"\bhost.*\s+\S+\s*;", r"\g<0>\n\thost %s;" % (utils.doublequote(newhost)), curr_cfg, count=1)
             utils.str2file(curr_cfg, CSYNC2_CFG)
-            csync2_update("/")
         else:
             log(": Not updating %s - remote host %s already exists" % (CSYNC2_CFG, newhost))
     finally:
@@ -1306,7 +1306,6 @@ Configure Corosync (unicast):
             transport="udpu",
             ipv6=_context.ipv6,
             two_rings=two_rings)
-    csync2_update(corosync.conf())
 
 
 def init_corosync_multicast():
@@ -1384,7 +1383,6 @@ Configure Corosync:
         ipv6=_context.ipv6,
         nodeid=nodeid,
         two_rings=two_rings)
-    csync2_update(corosync.conf())
 
 
 def init_corosync():
@@ -1869,9 +1867,9 @@ def join_csync2(seed_host):
     # they haven't gone to all nodes in the cluster, which means a
     # subseqent join of another node can fail its sync of corosync.conf
     # when it updates expected_votes.  Grrr...
-    if not invoke('ssh -o StrictHostKeyChecking=no root@{} "csync2 -rm /; csync2 -rxv || csync2 -rf / && csync2 -rxv"'.format(seed_host)):
-        print("")
-        warn("csync2 run failed - some files may not be sync'd")
+
+    # sync CSYNC2_CFG to other nodes
+    sync_file(CSYNC2_CFG)
 
     status_done()
 
@@ -1952,7 +1950,7 @@ def update_expected_votes():
         corosync.set_value("quorum.device.votes", device_votes)
     corosync.set_value("quorum.two_node", 1 if expected_votes == 2 else 0)
 
-    csync2_update(corosync.conf())
+    sync_file(corosync.conf())
 
 
 def setup_passwordless_with_other_nodes(init_node):
@@ -2079,7 +2077,7 @@ def join_cluster(seed_host):
             corosync.add_node_ucast(ringXaddr_res)
         except corosync.IPAlreadyConfiguredError as e:
             warn(e)
-        csync2_update(corosync.conf())
+        sync_file(corosync.conf())
         invoke("ssh -o StrictHostKeyChecking=no root@{} corosync-cfgtool -R".format(seed_host))
 
     _context.sbd_manager.join_sbd(seed_host)
@@ -2132,7 +2130,7 @@ def join_cluster(seed_host):
 
     if ipv6_flag and not is_unicast:
         # for ipv6 mcast
-        # after csync2_update, all config files are same
+        # after sync_file, all config files are same
         # but nodeid must be uniqe
         for node in list(nodeid_dict.keys()):
             if node == utils.this_node():
@@ -2145,7 +2143,7 @@ def join_cluster(seed_host):
         status_long("Starting corosync-qdevice.service")
         if not is_unicast:
             add_nodelist_from_cmaptool()
-            csync2_update(corosync.conf())
+            sync_file(corosync.conf())
             invoke("crm corosync reload")
         if utils.is_qdevice_tls_on():
             qnetd_addr = corosync.get_value("quorum.device.net.host")
@@ -2301,7 +2299,7 @@ def remove_node_from_cluster():
         corosync.set_value("quorum.expected_votes", str(new_quorum))
 
     status("Propagating configuration changes across the remaining nodes")
-    csync2_update(CSYNC2_CFG)
+    sync_file(CSYNC2_CFG)
 
     # Trigger corosync config reload to ensure expected_votes is propagated
     invoke("corosync-cfgtool -R")
@@ -2421,6 +2419,7 @@ def bootstrap_join(context):
         join_ssh(cluster_node)
         join_remote_auth(cluster_node)
         join_csync2(cluster_node)
+        retrieve_all_config_files(cluster_node)
         join_cluster(cluster_node)
 
     status("Done (log saved to %s)" % (LOG_FILE))
@@ -2594,7 +2593,6 @@ def bootstrap_init_geo(context):
     create_booth_authkey()
     create_booth_config(_context.arbitrator, _context.clusters, _context.tickets)
     status("Sync booth configuration across cluster")
-    csync2_update("/etc/booth")
     init_csync2_geo()
     geo_cib_config(_context.clusters)
 
@@ -2645,7 +2643,7 @@ def bootstrap_join_geo(context):
     check_tty()
     geo_fetch_config(_context.cluster_node)
     status("Sync booth configuration across cluster")
-    csync2_update("/etc/booth")
+    sync_file("/etc/booth")
     geo_cib_config(_context.clusters)
 
 
@@ -2667,4 +2665,21 @@ def bootstrap_arbitrator(context):
     status("Enabling and starting the booth arbitrator service")
     start_service("booth@booth")
 
+
+def retrieve_all_config_files(cluster_node):
+    status_long("Retrieve all config files")
+    for f in POSSIBLE_CONFIG_FILE.split('\n'):
+        if not invoke("ssh -oStrictHostKeyChecking=no root@%s test -f %s" % (cluster_node, f)):
+            continue
+        if not invoke("scp -oStrictHostKeyChecking=no root@%s:%s %s" % (cluster_node, f, os.path.dirname(f))):
+            error("Can't retrieve %s from %s" % (f, cluster_node))
+    status_done()
+
+
+def sync_file(path):
+    with open(CSYNC2_CFG) as f:
+        data = f.read()
+    node_list_orig = re.findall("host\s+(.*);", data)
+    node_list = [n for n in node_list_orig if n != utils.this_node()]
+    utils.cluster_copy_file(path, nodes=node_list, output=False)
 # EOF

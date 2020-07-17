@@ -1913,7 +1913,7 @@ def remote_checksum(local_path, nodes, this_node):
         print("%-16s: %s" % (host, hashlib.sha1(open(path).read()).hexdigest()))
 
 
-def cluster_copy_file(local_path, nodes=None):
+def cluster_copy_file(local_path, nodes=None, output=True):
     """
     Copies given file to all other cluster nodes.
     """
@@ -1926,6 +1926,7 @@ def cluster_copy_file(local_path, nodes=None):
         nodes.remove(this_node())
     opts = parallax.Options()
     opts.timeout = 60
+    opts.ssh_options += ['StrictHostKeyChecking=no']
     opts.ssh_options += ['ControlPersist=no']
     ok = True
     for host, result in parallax.copy(nodes,
@@ -1935,7 +1936,8 @@ def cluster_copy_file(local_path, nodes=None):
             err_buf.error("Failed to push %s to %s: %s" % (local_path, host, result))
             ok = False
         else:
-            err_buf.ok(host)
+            if output:
+                err_buf.ok(host)
     return ok
 
 
