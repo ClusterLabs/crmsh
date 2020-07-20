@@ -1868,9 +1868,6 @@ def join_csync2(seed_host):
     # subseqent join of another node can fail its sync of corosync.conf
     # when it updates expected_votes.  Grrr...
 
-    # sync CSYNC2_CFG to other nodes
-    sync_file(CSYNC2_CFG)
-
     status_done()
 
 
@@ -2006,6 +2003,8 @@ def join_cluster(seed_host):
             corosync.set_value("totem.nodeid", nodeid)
 
     setup_passwordless_with_other_nodes(seed_host)
+    # sync CSYNC2_CFG to other nodes
+    sync_file(CSYNC2_CFG)
 
     shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
 
