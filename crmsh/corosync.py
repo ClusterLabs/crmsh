@@ -36,6 +36,73 @@ def quorumtool(*args):
     return utils.get_stdout(['corosync-quorumtool'] + list(args), shell=False)
 
 
+def query_status(status_type):
+    """
+    Query status of corosync
+
+    Possible types could be ring/quorum/qnetd
+    """
+    if status_type == "ring":
+        query_ring_status()
+    elif status_type == "quorum":
+        query_quorum_status()
+    elif status_type == "qnetd":
+        query_qnetd_status()
+    else:
+        raise ValueError("Wrong type \"{}\" to query status".format(status_type))
+
+
+def query_ring_status():
+    """
+    Query corosync ring status
+    """
+    rc, out, err = utils.get_stdout_stderr("corosync-cfgtool -s")
+    if rc != 0 and err:
+        raise ValueError(err)
+    if rc == 0 and out:
+        print(out)
+
+
+def query_quorum_status():
+    """
+    Query corosync quorum status
+    """
+    utils.print_cluster_nodes()
+    rc, out, err = utils.get_stdout_stderr("corosync-quorumtool -s")
+    if rc != 0 and err:
+        raise ValueError(err)
+    if rc == 0 and out:
+        print(out)
+
+
+def query_qnetd_status():
+    """
+    Query qnetd status
+    """
+    if not utils.is_qdevice_configured():
+        raise ValueError("QDevice/QNetd not configured!")
+    cluster_name = get_value('totem.cluster_name')
+    if not cluster_name:
+        raise ValueError("cluster_name not configured!")
+    qnetd_addr = get_value('quorum.device.net.host')
+    if not qnetd_addr:
+        raise ValueError("host for qnetd not configured!")
+
+    # Configure ssh passwordless to qnetd if detect password is needed
+    if utils.check_ssh_passwd_need(qnetd_addr):
+        print("Copy ssh key to qnetd node({})".format(qnetd_addr))
+        rc, _, err = utils.get_stdout_stderr("ssh-copy-id -i /root/.ssh/id_rsa.pub root@{}".format(qnetd_addr))
+        if rc != 0:
+            raise ValueError(err)
+
+    cmd = "corosync-qnetd-tool -lv -c {}".format(cluster_name)
+    result = parallax.parallax_call([qnetd_addr], cmd)
+    _, qnetd_result_stdout, _ = result[0][1]
+    if qnetd_result_stdout:
+        utils.print_cluster_nodes()
+        print(utils.to_ascii(qnetd_result_stdout))
+
+
 _tCOMMENT = 0
 _tBEGIN = 1
 _tEND = 2
