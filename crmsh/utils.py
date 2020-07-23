@@ -1664,6 +1664,15 @@ def list_corosync_nodes():
         return []
 
 
+def print_cluster_nodes():
+    """
+    Print the output of crm_node -l
+    """
+    rc, out, _ = get_stdout_stderr("crm_node -l")
+    if rc == 0 and out:
+        print("{}\n".format(out))
+
+
 def list_cluster_nodes():
     '''
     Returns a list of nodes in the cluster.

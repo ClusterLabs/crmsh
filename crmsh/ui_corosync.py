@@ -8,6 +8,7 @@ from . import utils
 from .msg import err_buf
 from . import corosync
 from . import parallax
+from . import bootstrap
 
 
 def _push_completer(args):
@@ -62,47 +63,15 @@ class Corosync(command.UI):
         '''
         Quick cluster health status. Corosync status or QNetd status
         '''
-        def print_cluster_nodes():
-            rc, out = utils.get_stdout("crm_node -l")
-            if rc == 0 and out:
-                print("{}\n".format(out))
-
-        rc, _ = utils.get_stdout('systemctl -q is-active corosync.service')
-        if rc != 0:
+        if not bootstrap.service_is_active("corosync.service"):
             err_buf.error("corosync.service is not running!")
             return False
 
-        if status_type == "ring":
-            print(corosync.cfgtool('-s')[1])
-            return
-        if status_type == "quorum":
-            print_cluster_nodes()
-            print(corosync.quorumtool('-s')[1])
-            return
-        if status_type == "qnetd":
-            if not utils.is_qdevice_configured():
-                err_buf.error("QDevice/QNetd not configured!")
-                return False
-            cluster_name = corosync.get_value('totem.cluster_name')
-            if not cluster_name:
-                err_buf.error("cluster_name not configured!")
-                return False
-            qnetd_addr = corosync.get_value('quorum.device.net.host')
-            if not qnetd_addr:
-                err_buf.error("host for qnetd not configured!")
-                return False
-
-            cmd = "corosync-qnetd-tool -lv -c {}".format(cluster_name)
-            try:
-                result = parallax.parallax_call([qnetd_addr], cmd)
-            except ValueError as err:
-                err_buf.error(err)
-                return False
-            _, qnetd_result_stdout, _ = result[0][1]
-            if qnetd_result_stdout:
-                print_cluster_nodes()
-                print(utils.to_ascii(qnetd_result_stdout))
-            return
+        try:
+            corosync.query_status(status_type)
+        except ValueError as err:
+            err_buf.error(str(err))
+            return False
 
     @command.skill_level('administrator')
     def do_reload(self, context):

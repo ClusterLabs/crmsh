@@ -9,6 +9,7 @@ from builtins import str
 from builtins import object
 import os
 import unittest
+import pytest
 from unittest import mock
 from crmsh import corosync
 from crmsh.corosync import Parser, make_section, make_value
@@ -38,6 +39,149 @@ def _valid(parser):
 
 def _print(parser):
     print(parser.to_string())
+
+
+@mock.patch("crmsh.corosync.query_ring_status")
+def test_query_status_ring(mock_ring_status):
+    corosync.query_status("ring")
+    mock_ring_status.assert_called_once_with()
+
+
+@mock.patch("crmsh.corosync.query_quorum_status")
+def test_query_status_quorum(mock_quorum_status):
+    corosync.query_status("quorum")
+    mock_quorum_status.assert_called_once_with()
+
+
+@mock.patch("crmsh.corosync.query_qnetd_status")
+def test_query_status_qnetd(mock_qnetd_status):
+    corosync.query_status("qnetd")
+    mock_qnetd_status.assert_called_once_with()
+
+
+def test_query_status_except():
+    with pytest.raises(ValueError) as err:
+        corosync.query_status("xxx")
+    assert str(err.value) == "Wrong type \"xxx\" to query status"
+
+
+@mock.patch("crmsh.utils.get_stdout_stderr")
+def test_query_ring_status_except(mock_run):
+    mock_run.return_value = (1, None, "error")
+    with pytest.raises(ValueError) as err:
+        corosync.query_ring_status()
+    assert str(err.value) == "error"
+    mock_run.assert_called_once_with("corosync-cfgtool -s")
+
+
+@mock.patch("crmsh.utils.get_stdout_stderr")
+def test_query_ring_status(mock_run):
+    mock_run.return_value = (0, "data", None)
+    corosync.query_ring_status()
+    mock_run.assert_called_once_with("corosync-cfgtool -s")
+
+
+@mock.patch("crmsh.utils.print_cluster_nodes")
+@mock.patch("crmsh.utils.get_stdout_stderr")
+def test_query_quorum_status_except(mock_run, mock_print_nodes):
+    mock_run.return_value = (1, None, "error")
+    with pytest.raises(ValueError) as err:
+        corosync.query_quorum_status()
+    assert str(err.value) == "error"
+    mock_run.assert_called_once_with("corosync-quorumtool -s")
+    mock_print_nodes.assert_called_once_with()
+
+
+@mock.patch("crmsh.utils.print_cluster_nodes")
+@mock.patch("crmsh.utils.get_stdout_stderr")
+def test_query_quorum_status(mock_run, mock_print_nodes):
+    mock_run.return_value = (0, "data", None)
+    corosync.query_quorum_status()
+    mock_run.assert_called_once_with("corosync-quorumtool -s")
+    mock_print_nodes.assert_called_once_with()
+
+
+@mock.patch("crmsh.utils.is_qdevice_configured")
+def test_query_qnetd_status_no_qdevice(mock_qdevice_configured):
+    mock_qdevice_configured.return_value = False
+    with pytest.raises(ValueError) as err:
+        corosync.query_qnetd_status()
+    assert str(err.value) == "QDevice/QNetd not configured!"
+    mock_qdevice_configured.assert_called_once_with()
+
+
+@mock.patch("crmsh.corosync.get_value")
+@mock.patch("crmsh.utils.is_qdevice_configured")
+def test_query_qnetd_status_no_cluster_name(mock_qdevice_configured, mock_get_value):
+    mock_qdevice_configured.return_value = True
+    mock_get_value.return_value = None
+    with pytest.raises(ValueError) as err:
+        corosync.query_qnetd_status()
+    assert str(err.value) == "cluster_name not configured!"
+    mock_qdevice_configured.assert_called_once_with()
+    mock_get_value.assert_called_once_with("totem.cluster_name")
+
+
+@mock.patch("crmsh.corosync.get_value")
+@mock.patch("crmsh.utils.is_qdevice_configured")
+def test_query_qnetd_status_no_cluster_name(mock_qdevice_configured, mock_get_value):
+    mock_qdevice_configured.return_value = True
+    mock_get_value.side_effect = ["hacluster", None]
+    with pytest.raises(ValueError) as err:
+        corosync.query_qnetd_status()
+    assert str(err.value) == "host for qnetd not configured!"
+    mock_qdevice_configured.assert_called_once_with()
+    mock_get_value.assert_has_calls([
+        mock.call("totem.cluster_name"),
+        mock.call("quorum.device.net.host")
+        ])
+
+
+@mock.patch("crmsh.utils.get_stdout_stderr")
+@mock.patch("crmsh.utils.check_ssh_passwd_need")
+@mock.patch("crmsh.corosync.get_value")
+@mock.patch("crmsh.utils.is_qdevice_configured")
+def test_query_qnetd_status_copy_id_failed(mock_qdevice_configured, mock_get_value, mock_check_passwd, mock_run):
+    mock_qdevice_configured.return_value = True
+    mock_get_value.side_effect = ["hacluster", "10.10.10.123"]
+    mock_check_passwd.return_value = True
+    mock_run.return_value = [1, None, "error"]
+    with pytest.raises(ValueError) as err:
+        corosync.query_qnetd_status()
+    assert str(err.value) == "error"
+    mock_qdevice_configured.assert_called_once_with()
+    mock_get_value.assert_has_calls([
+        mock.call("totem.cluster_name"),
+        mock.call("quorum.device.net.host")
+        ])
+    mock_check_passwd.assert_called_once_with("10.10.10.123")
+    mock_run.assert_called_once_with("ssh-copy-id -i /root/.ssh/id_rsa.pub root@10.10.10.123")
+
+
+@mock.patch("crmsh.utils.print_cluster_nodes")
+@mock.patch("crmsh.parallax.parallax_call")
+@mock.patch("crmsh.utils.get_stdout_stderr")
+@mock.patch("crmsh.utils.check_ssh_passwd_need")
+@mock.patch("crmsh.corosync.get_value")
+@mock.patch("crmsh.utils.is_qdevice_configured")
+def test_query_qnetd_status_copy(mock_qdevice_configured, mock_get_value, mock_check_passwd, mock_run, mock_parallax_call, mock_print_nodes):
+    mock_qdevice_configured.return_value = True
+    mock_get_value.side_effect = ["hacluster", "10.10.10.123"]
+    mock_check_passwd.return_value = True
+    mock_run.return_value = [0, "data", None]
+    mock_parallax_call.return_value = [("node1", (0, "data", None)), ]
+
+    corosync.query_qnetd_status()
+
+    mock_qdevice_configured.assert_called_once_with()
+    mock_get_value.assert_has_calls([
+        mock.call("totem.cluster_name"),
+        mock.call("quorum.device.net.host")
+        ])
+    mock_check_passwd.assert_called_once_with("10.10.10.123")
+    mock_run.assert_called_once_with("ssh-copy-id -i /root/.ssh/id_rsa.pub root@10.10.10.123")
+    mock_parallax_call.assert_called_once_with(["10.10.10.123"], "corosync-qnetd-tool -lv -c hacluster")
+    mock_print_nodes.assert_called_once_with()
 
 
 class TestCorosyncParser(unittest.TestCase):

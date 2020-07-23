@@ -22,6 +22,13 @@ def setup_function():
     imp.reload(utils)
 
 
+@mock.patch("crmsh.utils.get_stdout_stderr")
+def test_print_cluster_nodes(mock_run):
+    mock_run.return_value = (0, "data", None)
+    utils.print_cluster_nodes()
+    mock_run.assert_called_once_with("crm_node -l")
+
+
 @mock.patch('os.path.exists')
 def test_check_file_content_included_target_not_exist(mock_exists):
     mock_exists.side_effect = [True, False]
