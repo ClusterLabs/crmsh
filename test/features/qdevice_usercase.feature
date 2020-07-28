@@ -55,9 +55,9 @@ Feature: Verify usercase master survive when split-brain
     And     Run "iptables -I INPUT -s 172.17.0.2 -j DROP; iptables -I OUTPUT -d 172.17.0.2 -j DROP" on "hanode2"
     # Check whether hanode1 has quorum, while hanode2 doesn't
     And     Run "sleep 20" on "hanode1"
-    When    Run "corosync-quorumtool -s" on "hanode1"
+    When    Run "crm corosync status quorum" on "hanode1"
     Then    Expected "Quorate:          Yes" in stdout
-    When    Run "ssh root@hanode2 corosync-quorumtool -s" on "hanode1"
+    When    Run "crm corosync status quorum" on "hanode2"
     Then    Expected "Quorate:          No" in stdout
     And     Show cluster status on "hanode1"
     And     Show cluster status on "hanode2"

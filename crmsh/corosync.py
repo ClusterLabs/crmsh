@@ -66,12 +66,15 @@ def query_ring_status():
 def query_quorum_status():
     """
     Query corosync quorum status
+
     """
     utils.print_cluster_nodes()
     rc, out, err = utils.get_stdout_stderr("corosync-quorumtool -s")
     if rc != 0 and err:
         raise ValueError(err)
-    if rc == 0 and out:
+    # If the return code of corosync-quorumtool is 2,
+    # that means no problem appeared but node is not quorate
+    if rc in [0, 2] and out:
         print(out)
 
 

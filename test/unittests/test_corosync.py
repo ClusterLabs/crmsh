@@ -101,6 +101,15 @@ def test_query_quorum_status(mock_run, mock_print_nodes):
     mock_print_nodes.assert_called_once_with()
 
 
+@mock.patch("crmsh.utils.print_cluster_nodes")
+@mock.patch("crmsh.utils.get_stdout_stderr")
+def test_query_quorum_status_no_quorum(mock_run, mock_print_nodes):
+    mock_run.return_value = (2, "no quorum", None)
+    corosync.query_quorum_status()
+    mock_run.assert_called_once_with("corosync-quorumtool -s")
+    mock_print_nodes.assert_called_once_with()
+
+
 @mock.patch("crmsh.utils.is_qdevice_configured")
 def test_query_qnetd_status_no_qdevice(mock_qdevice_configured):
     mock_qdevice_configured.return_value = False
