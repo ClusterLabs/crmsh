@@ -242,7 +242,7 @@ def multi_input(prompt=''):
             text = input(prompt)
         except EOFError:
             return None
-        err_buf.incr_lineno()
+        #err_buf.incr_lineno()
         if options.regression_tests:
             print(".INP:", text)
             sys.stdout.flush()
