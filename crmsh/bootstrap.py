@@ -1777,6 +1777,48 @@ def join_csync2(seed_host):
     status_done()
 
 
+def join_ssh_merge(_cluster_node):
+    status("Merging known_hosts")
+
+    me = utils.this_node()
+    hosts = [m.group(1)
+             for m in re.finditer(r"^\s*host\s*([^ ;]+)\s*;", open(CSYNC2_CFG).read(), re.M)
+             if m.group(1) != me]
+    if not hosts:
+        hosts = [_cluster_node]
+        warn("Unable to extract host list from %s" % (CSYNC2_CFG))
+
+    try:
+        import parallax
+    except ImportError:
+        error("parallax python library is missing")
+
+    opts = parallax.Options()
+    opts.ssh_options = ['StrictHostKeyChecking=no']
+
+    # The act of using pssh to connect to every host (without strict host key
+    # checking) ensures that at least *this* host has every other host in its
+    # known_hosts
+    known_hosts_new = set()
+    cat_cmd = "[ -e /root/.ssh/known_hosts ] && cat /root/.ssh/known_hosts || true"
+    log("parallax.call {} : {}".format(hosts, cat_cmd))
+    results = parallax.call(hosts, cat_cmd, opts)
+    for host, result in results.items():
+        if isinstance(result, parallax.Error):
+            warn("Failed to get known_hosts from {}: {}".format(host, str(result)))
+        else:
+            if result[1]:
+                known_hosts_new.update((utils.to_ascii(result[1]) or "").splitlines())
+    if known_hosts_new:
+        hoststxt = "\n".join(sorted(known_hosts_new))
+        tmpf = utils.str2tmp(hoststxt)
+        log("parallax.copy {} : {}".format(hosts, hoststxt))
+        results = parallax.copy(hosts, tmpf, "/root/.ssh/known_hosts")
+        for host, result in results.items():
+            if isinstance(result, parallax.Error):
+                warn("scp to {} failed ({}), known_hosts update may be incomplete".format(host, str(result)))
+
+
 def setup_passwordless_with_other_nodes(init_node):
     """
     Setup passwordless with other cluster nodes
@@ -2300,6 +2342,7 @@ def bootstrap_join(context):
         join_ssh(cluster_node)
         join_remote_auth(cluster_node)
         join_csync2(cluster_node)
+        join_ssh_merge(cluster_node)
         join_cluster(cluster_node)
 
     status("Done (log saved to %s)" % (LOG_FILE))
