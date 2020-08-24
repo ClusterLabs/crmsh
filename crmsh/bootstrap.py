@@ -163,7 +163,6 @@ Configure SBD:
         """
         self.sbd_devices_input = sbd_devices
         self.diskless_sbd = diskless_sbd
-        self._sbd_service_flag = False
         self._sbd_devices = None
 
     @staticmethod
@@ -306,35 +305,27 @@ Configure SBD:
         """
         self._get_sbd_device()
         if not self._sbd_devices and not self.diskless_sbd:
+            invoke("systemctl disable sbd.service")
             return
         status_long("Initializing {}SBD...".format("diskless " if self.diskless_sbd else ""))
         self._initialize_sbd()
         self._update_configuration()
+        invoke("systemctl enable sbd.service")
         status_done()
-        # If process work through here, consider it's ready for enable service
-        self._sbd_service_flag = True
-
-    def manage_sbd_service(self):
-        """
-        Manage sbd service, running on both init and join process
-        """
-        if self._sbd_service_flag:
-            invoke("systemctl enable sbd.service")
-        else:
-            invoke("systemctl disable sbd.service")
 
     def configure_sbd_resource(self):
         """
         Configure stonith-sbd resource and stonith-enabled property
         """
-        if self._sbd_devices and self._get_sbd_device_from_config():
-            if not invoke("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"):
-                error("Can't create stonith-sbd primitive")
-            if not invoke("crm configure property stonith-enabled=true"):
-                error("Can't enable STONITH for SBD")
-        elif self.diskless_sbd:
-            if not invoke("crm configure property stonith-enabled=true stonith-watchdog-timeout=5s"):
-                error("Can't enable STONITH for diskless SBD")
+        if service_is_enabled("sbd.service"):
+            if self._get_sbd_device_from_config():
+                if not invoke("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"):
+                    error("Can't create stonith-sbd primitive")
+                if not invoke("crm configure property stonith-enabled=true"):
+                    error("Can't enable STONITH for SBD")
+            else:
+                if not invoke("crm configure property stonith-enabled=true stonith-watchdog-timeout=5s"):
+                    error("Can't enable STONITH for diskless SBD")
 
     def join_sbd(self, peer_host):
         """
@@ -342,16 +333,16 @@ Configure SBD:
         On joining process, check whether peer node has enabled sbd.service
         If so, check prerequisites of SBD and verify sbd device on join node
         """
-        if not os.path.exists(SYSCONFIG_SBD):
-            return
-        if not invoke("ssh -o StrictHostKeyChecking=no root@{} systemctl is-enabled sbd.service".format(peer_host)):
+        cmd_detect_enabled = "ssh -o StrictHostKeyChecking=no root@{} systemctl is-enabled sbd.service".format(peer_host)
+        if not os.path.exists(SYSCONFIG_SBD) or not invoke(cmd_detect_enabled):
+            invoke("systemctl disable sbd.service")
             return
         self._check_environment()
         dev_list = self._get_sbd_device_from_config()
         if dev_list:
             self._verify_sbd_device(dev_list)
         status("Got {}SBD configuration".format("" if dev_list else "diskless "))
-        self._sbd_service_flag = True
+        invoke("systemctl enable sbd.service")
 
 
 _context = None
@@ -934,8 +925,6 @@ def init_cluster_local():
 
     if pass_msg:
         warn("You should change the hacluster password to something more secure!")
-
-    _context.sbd_manager.manage_sbd_service()
 
     start_service("pacemaker.service")
     wait_for_cluster()
@@ -1788,6 +1777,48 @@ def join_csync2(seed_host):
     status_done()
 
 
+def join_ssh_merge(_cluster_node):
+    status("Merging known_hosts")
+
+    me = utils.this_node()
+    hosts = [m.group(1)
+             for m in re.finditer(r"^\s*host\s*([^ ;]+)\s*;", open(CSYNC2_CFG).read(), re.M)
+             if m.group(1) != me]
+    if not hosts:
+        hosts = [_cluster_node]
+        warn("Unable to extract host list from %s" % (CSYNC2_CFG))
+
+    try:
+        import parallax
+    except ImportError:
+        error("parallax python library is missing")
+
+    opts = parallax.Options()
+    opts.ssh_options = ['StrictHostKeyChecking=no']
+
+    # The act of using pssh to connect to every host (without strict host key
+    # checking) ensures that at least *this* host has every other host in its
+    # known_hosts
+    known_hosts_new = set()
+    cat_cmd = "[ -e /root/.ssh/known_hosts ] && cat /root/.ssh/known_hosts || true"
+    log("parallax.call {} : {}".format(hosts, cat_cmd))
+    results = parallax.call(hosts, cat_cmd, opts)
+    for host, result in results.items():
+        if isinstance(result, parallax.Error):
+            warn("Failed to get known_hosts from {}: {}".format(host, str(result)))
+        else:
+            if result[1]:
+                known_hosts_new.update((utils.to_ascii(result[1]) or "").splitlines())
+    if known_hosts_new:
+        hoststxt = "\n".join(sorted(known_hosts_new))
+        tmpf = utils.str2tmp(hoststxt)
+        log("parallax.copy {} : {}".format(hosts, hoststxt))
+        results = parallax.copy(hosts, tmpf, "/root/.ssh/known_hosts")
+        for host, result in results.items():
+            if isinstance(result, parallax.Error):
+                warn("scp to {} failed ({}), known_hosts update may be incomplete".format(host, str(result)))
+
+
 def setup_passwordless_with_other_nodes(init_node):
     """
     Setup passwordless with other cluster nodes
@@ -2311,6 +2342,7 @@ def bootstrap_join(context):
         join_ssh(cluster_node)
         join_remote_auth(cluster_node)
         join_csync2(cluster_node)
+        join_ssh_merge(cluster_node)
         join_cluster(cluster_node)
 
     status("Done (log saved to %s)" % (LOG_FILE))

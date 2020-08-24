@@ -209,23 +209,12 @@ class TestSBDManager(unittest.TestCase):
         mock_update.assert_called_once_with()
         mock_status_done.assert_called_once_with()
 
-    @mock.patch('crmsh.bootstrap.invoke')
-    def test_manage_sbd_service_enable(self, mock_invoke):
-        self.sbd_inst._sbd_service_flag = True
-        self.sbd_inst.manage_sbd_service()
-        mock_invoke.assert_called_once_with("systemctl enable sbd.service")
-
-    @mock.patch('crmsh.bootstrap.invoke')
-    def test_manage_sbd_service_disable(self, mock_invoke):
-        self.sbd_inst._sbd_service_flag = False
-        self.sbd_inst.manage_sbd_service()
-        mock_invoke.assert_called_once_with("systemctl disable sbd.service")
-
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
-    def test_configure_sbd_resource_error_primitive(self, mock_get_device, mock_invoke, mock_error):
-        self.sbd_inst._sbd_devices = ["/dev/sdb1"]
+    @mock.patch('crmsh.bootstrap.service_is_enabled')
+    def test_configure_sbd_resource_error_primitive(self, mock_enabled, mock_get_device, mock_invoke, mock_error):
+        mock_enabled.return_value = True
         mock_get_device.return_value = ["/dev/sdb1"]
         mock_invoke.return_value = False
         mock_error.side_effect = ValueError
@@ -233,6 +222,7 @@ class TestSBDManager(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.sbd_inst.configure_sbd_resource()
 
+        mock_enabled.assert_called_once_with("sbd.service")
         mock_get_device.assert_called_once_with()
         mock_invoke.assert_called_once_with("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s")
         mock_error.assert_called_once_with("Can't create stonith-sbd primitive")
@@ -240,8 +230,9 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
-    def test_configure_sbd_resource_error_property(self, mock_get_device, mock_invoke, mock_error):
-        self.sbd_inst._sbd_devices = ["/dev/sdb1"]
+    @mock.patch('crmsh.bootstrap.service_is_enabled')
+    def test_configure_sbd_resource_error_property(self, mock_enabled, mock_get_device, mock_invoke, mock_error):
+        mock_enabled.return_value = True
         mock_get_device.return_value = ["/dev/sdb1"]
         mock_invoke.side_effect = [True, False]
         mock_error.side_effect = ValueError
@@ -249,6 +240,7 @@ class TestSBDManager(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.sbd_inst.configure_sbd_resource()
 
+        mock_enabled.assert_called_once_with("sbd.service")
         mock_get_device.assert_called_once_with()
         mock_invoke.assert_has_calls([
             mock.call("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"),
@@ -259,15 +251,18 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
-    def test_configure_sbd_resource_diskless(self, mock_get_device, mock_invoke, mock_error):
-        self.sbd_inst_diskless._sbd_devices = None
+    @mock.patch('crmsh.bootstrap.service_is_enabled')
+    def test_configure_sbd_resource_diskless(self, mock_enabled, mock_get_device, mock_invoke, mock_error):
+        mock_enabled.return_value = True
+        mock_get_device.return_value = None
         mock_invoke.return_value = False
         mock_error.side_effect = ValueError
 
         with self.assertRaises(ValueError):
             self.sbd_inst_diskless.configure_sbd_resource()
 
-        mock_get_device.assert_not_called()
+        mock_enabled.assert_called_once_with("sbd.service")
+        mock_get_device.assert_called_once_with()
         mock_invoke.assert_called_once_with("crm configure property stonith-enabled=true stonith-watchdog-timeout=5s")
         mock_error.assert_called_once_with("Can't enable STONITH for diskless SBD")
 
@@ -277,19 +272,22 @@ class TestSBDManager(unittest.TestCase):
         mock_exists.return_value = False
         self.sbd_inst.join_sbd("node1")
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
-        mock_invoke.assert_not_called()
+        mock_invoke.assert_called_once_with("systemctl disable sbd.service")
 
     @mock.patch('crmsh.bootstrap.SBDManager._check_environment')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('os.path.exists')
     def test_join_sbd_config_disabled(self, mock_exists, mock_invoke, mock_check):
         mock_exists.return_value = True
-        mock_invoke.return_value = False
+        mock_invoke.side_effect = [False, True]
 
         self.sbd_inst.join_sbd("node1")
 
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
-        mock_invoke.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 systemctl is-enabled sbd.service")
+        mock_invoke.assert_has_calls([
+                mock.call("ssh -o StrictHostKeyChecking=no root@node1 systemctl is-enabled sbd.service"),
+                mock.call("systemctl disable sbd.service")
+            ])
         mock_check.assert_not_called()
 
     @mock.patch('crmsh.bootstrap.status')
@@ -300,13 +298,16 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('os.path.exists')
     def test_join_sbd(self, mock_exists, mock_invoke, mock_check, mock_get_device, mock_verify, mock_status):
         mock_exists.return_value = True
-        mock_invoke.return_value = True
+        mock_invoke.side_effect = [True, True]
         mock_get_device.return_value = ["/dev/sdb1"]
 
         self.sbd_inst.join_sbd("node1")
 
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
-        mock_invoke.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 systemctl is-enabled sbd.service")
+        mock_invoke.assert_has_calls([
+            mock.call("ssh -o StrictHostKeyChecking=no root@node1 systemctl is-enabled sbd.service"),
+            mock.call("systemctl enable sbd.service")
+            ])
         mock_check.assert_called_once_with()
         mock_get_device.assert_called_once_with()
         mock_verify.assert_called_once_with(["/dev/sdb1"])
