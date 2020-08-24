@@ -77,3 +77,41 @@ Feature: crmsh bootstrap sbd management
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
+
+  @clean
+  Scenario: Configure sbd in several stages(bsc#1175057)
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init ssh -y" on "hanode1"
+    And     Run "crm cluster init csync2 -y" on "hanode1"
+    And     Run "crm cluster init corosync -y" on "hanode1"
+    And     Run "crm cluster init sbd -s /dev/sda1 -y" on "hanode1"
+    And     Run "crm cluster init cluster -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode1"
+    When    Run "crm cluster join ssh -y -c hanode1" on "hanode2"
+    And     Run "crm cluster join csync2 -y -c hanode1" on "hanode2"
+    And     Run "crm cluster join ssh_merge -y -c hanode1" on "hanode2"
+    And     Run "crm cluster join cluster -y -c hanode1" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Service "sbd" is "started" on "hanode2"
+    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+
+  @clean
+  Scenario: Configure diskless sbd in several stages(bsc#1175057)
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init ssh -y" on "hanode1"
+    And     Run "crm cluster init csync2 -y" on "hanode1"
+    And     Run "crm cluster init corosync -y" on "hanode1"
+    And     Run "crm cluster init sbd -S -y" on "hanode1"
+    And     Run "crm cluster init cluster -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode1"
+    When    Run "crm cluster join ssh -y -c hanode1" on "hanode2"
+    And     Run "crm cluster join csync2 -y -c hanode1" on "hanode2"
+    And     Run "crm cluster join ssh_merge -y -c hanode1" on "hanode2"
+    And     Run "crm cluster join cluster -y -c hanode1" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Service "sbd" is "started" on "hanode2"
+    And     Resource "stonith:external/sbd" not configured
