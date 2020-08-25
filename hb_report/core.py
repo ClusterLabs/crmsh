@@ -616,7 +616,7 @@ def sanitize_one(context, in_file):
 
 
 def sub_sensitive_string(context, data, _type):
-    sub_pattern_dict = {"xml": ' value=".*" ', "txt": "({})=.*".format(context.sanitize_pattern_string)}
+    sub_pattern_dict = {"xml": ' value=".*" ', "txt": "({})=\w+".format(context.sanitize_pattern_string)}
     replace_string_dict= {"xml": ' value="******" ', "txt": r"\1=******"}
     res_string = ""
     for line in data.strip('\n').split('\n'):
