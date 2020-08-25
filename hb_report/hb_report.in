@@ -42,8 +42,8 @@ def dump_env():
     env_dict["NODES"] = constants.NODES
     env_dict["HA_LOG"] = constants.HA_LOG
     # env_dict["UNIQUE_MSG"] = constants.UNIQUE_MSG
-    env_dict["SANITIZE"] = constants.SANITIZE
-    env_dict["DO_SANITIZE"] = int(constants.DO_SANITIZE)
+    env_dict["SANITIZE_RULE_DICT"] = constants.SANITIZE_RULE_DICT
+    env_dict["DO_SANITIZE"] = constants.DO_SANITIZE
     env_dict["SKIP_LVL"] = constants.SKIP_LVL
     env_dict["EXTRA_LOGS"] = constants.EXTRA_LOGS
     env_dict["PCMK_LOG"] = constants.PCMK_LOG
@@ -120,8 +120,8 @@ def load_env(env_str):
     constants.NODES = env_dict["NODES"]
     constants.HA_LOG = env_dict["HA_LOG"]
     # constants.UNIQUE_MSG = env_dict["UNIQUE_MSG"]
-    constants.SANITIZE = env_dict["SANITIZE"]
-    constants.DO_SANITIZE = int(env_dict["DO_SANITIZE"])
+    constants.SANITIZE_RULE_DICT = env_dict["SANITIZE_RULE_DICT"]
+    constants.DO_SANITIZE = env_dict["DO_SANITIZE"]
     constants.SKIP_LVL = utillib.str_to_bool(env_dict["SKIP_LVL"])
     constants.EXTRA_LOGS = env_dict["EXTRA_LOGS"]
     constants.PCMK_LOG = env_dict["PCMK_LOG"]
@@ -164,9 +164,9 @@ def parse_argument(argv):
         if args == "-e":
             constants.EDITOR = option
         if args == "-p":
-            constants.SANITIZE += " %s" % option
+            constants.SANITIZE_RULE += " %s" % option
         if args == "-s":
-            constants.DO_SANITIZE = 1
+            constants.DO_SANITIZE = True
         if args == "-Q":
             constants.SKIP_LVL = True
         if args == "-L":
@@ -185,6 +185,13 @@ def parse_argument(argv):
             constants.VERBOSITY += 1
         if args == '-d':
             constants.COMPRESS = False
+
+    if config.report.sanitize_rule:
+        constants.DO_SANITIZE = True
+        temp_pattern_set = set()
+        temp_pattern_set |= set(re.split('\s*\|\s*|\s+', config.report.sanitize_rule.strip('|')))
+        constants.SANITIZE_RULE += " {}".format(' '.join(temp_pattern_set))
+    utillib.parse_sanitize_rule(constants.SANITIZE_RULE)
 
     if not constants.FROM_TIME:
         from_time = config.report.from_time
@@ -296,6 +303,9 @@ def run():
 
         for p in p_list:
             p.join()
+
+        if not constants.SKIP_LVL:
+            utillib.sanitize()
 
         if constants.COMPRESS:
             utillib.pick_compress()
