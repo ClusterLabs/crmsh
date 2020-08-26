@@ -8,6 +8,7 @@ configure() {
 make_install() {
 	echo "** Make / Install"
 	make install
+	make install-crmconfDATA prefix=
 }
 
 regression_tests() {
