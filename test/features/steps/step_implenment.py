@@ -1,9 +1,11 @@
 import re
 import time
+import os
+import datetime
 from behave import given, when, then
 from crmsh import corosync, parallax
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
-                  run_command_local_or_remote
+                  run_command_local_or_remote, file_in_archive
 import const
 
 @when('Write multi lines to file "{f}"')
@@ -35,7 +37,7 @@ def step_impl(context, nodelist):
 @given('IP "{addr}" is belong to "{iface}"')
 def step_impl(context, addr, iface):
     cmd = 'ip address show dev {}'.format(iface)
-    res = re.search(r' {}/'.format(addr), run_command(context, cmd))
+    res = re.search(r' {}/'.format(addr), run_command(context, cmd)[1])
     assert bool(res) is True
 
 
@@ -52,7 +54,8 @@ def step_impl(context, cmd, addr):
 
 @when('Try "{cmd}"')
 def step_impl(context, cmd):
-    run_command(context, cmd, err_record=True)
+    rc, out = run_command(context, cmd, err_record=True)
+    context.return_code = rc
 
 
 @when('Wait "{second}" seconds')
@@ -85,6 +88,11 @@ def step_impl(context, reg_str):
     context.stdout = None
 
 
+@then('Expected return code is "{num}"')
+def step_impl(context, num):
+    assert context.return_code == int(num)
+
+
 @then('Except "{msg}"')
 def step_impl(context, msg):
     assert context.command_error_output == msg
@@ -95,6 +103,12 @@ def step_impl(context, msg):
 def step_impl(context):
     assert context.command_error_output.split('\n') == context.text.split('\n')
     context.command_error_output = None
+
+
+@then('Expected multiple lines in output')
+def step_impl(context):
+    assert context.text in context.stdout
+    context.stdout = None
 
 
 @then('Except "{msg}" in stderr')
@@ -127,13 +141,13 @@ def step_impl(context, addr, node):
 
 @then('Cluster name is "{name}"')
 def step_impl(context, name):
-    out = run_command(context, 'corosync-cmapctl -b totem.cluster_name')
+    _, out = run_command(context, 'corosync-cmapctl -b totem.cluster_name')
     assert out.split()[-1] == name
 
 
 @then('Cluster virtual IP is "{addr}"')
 def step_impl(context, addr):
-    out = run_command(context, 'crm configure show|grep -A1 IPaddr2')
+    _, out = run_command(context, 'crm configure show|grep -A1 IPaddr2')
     res = re.search(r' ip={}'.format(addr), out)
     assert bool(res) is True
 
@@ -152,21 +166,21 @@ def step_impl(context, addr):
 
 @then('Show corosync ring status')
 def step_impl(context):
-    out = run_command(context, 'crm corosync status ring')
+    _, out = run_command(context, 'crm corosync status ring')
     if out:
         context.logger.info("\n{}".format(out))
 
 
 @then('Show status from qnetd')
 def step_impl(context):
-    out = run_command(context, 'crm corosync status qnetd')
+    _, out = run_command(context, 'crm corosync status qnetd')
     if out:
         context.logger.info("\n{}".format(out))
 
 
 @then('Show corosync qdevice configuration')
 def step_impl(context):
-    out = run_command(context, "sed -n -e '/quorum/,/^}/ p' /etc/corosync/corosync.conf")
+    _, out = run_command(context, "sed -n -e '/quorum/,/^}/ p' /etc/corosync/corosync.conf")
     if out:
         context.logger.info("\n{}".format(out))
 
@@ -177,7 +191,7 @@ def step_impl(context, res, res_type, state):
     result = None
     while try_count < 5:
         time.sleep(1)
-        out = run_command(context, "crm_mon -1")
+        _, out = run_command(context, "crm_mon -1")
         if out:
             result = re.search(r'\s{}\s+.*:{}\):\s+{} '.format(res, res_type, state), out)
             if not result:
@@ -190,7 +204,7 @@ def step_impl(context, res, res_type, state):
 @then('Resource "{res}" failcount on "{node}" is "{number}"')
 def step_impl(context, res, node, number):
     cmd = "crm resource failcount {} show {}".format(res, node)
-    out = run_command(context, cmd)
+    _, out = run_command(context, cmd)
     if out:
         result = re.search(r'name=fail-count-{} value={}'.format(res, number), out)
         assert result is not None
@@ -198,7 +212,7 @@ def step_impl(context, res, node, number):
 
 @then('Resource "{res_type}" not configured')
 def step_impl(context, res_type):
-    out = run_command(context, "crm configure show")
+    _, out = run_command(context, "crm configure show")
     result = re.search(r' {} '.format(res_type), out)
     assert result is None
 
@@ -229,3 +243,25 @@ def step_impl(context, transport_type):
 @then('Expected votes will be "{votes}"')
 def step_impl(context, votes):
     assert int(corosync.get_value("quorum.expected_votes")) == int(votes)
+
+
+@then('Default hb_report tar file created')
+def step_impl(context):
+    default_file_name = 'hb_report-{}.tar.bz2'.format(datetime.datetime.now().strftime("%w-%d-%m-%Y"))
+    assert os.path.exists(default_file_name) is True
+
+
+@when('Remove default hb_report tar file')
+def step_impl(context):
+    default_file_name = 'hb_report-{}.tar.bz2'.format(datetime.datetime.now().strftime("%w-%d-%m-%Y"))
+    os.remove(default_file_name)
+
+
+@then('File "{f}" in "{archive}"')
+def step_impl(context, f, archive):
+    assert file_in_archive(f, archive) is True
+
+
+@then('File "{f}" not in "{archive}"')
+def step_impl(context, f, archive):
+    assert file_in_archive(f, archive) is False
