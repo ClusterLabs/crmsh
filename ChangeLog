@@ -1,3 +1,45 @@
+* Thu Sep 3 2020 Xin Liang <XLiang@suse.com> and many others
+- Fix: bootstrap: revert ssh_merge function for compatibility(bsc#1175057, bsc#1174517)
+- Fix: bootstrap: adjust sbd config process to fix bug on sbd stage(bsc#1175057)
+- High: bootstrap: ssh key configuration improvement(bsc#1169581)
+- High: bootstrap: bootstrap network improvement
+- Revert "Fix: bootstrap: crmsh use its own specific ssh key(bsc#1169581)"
+- High: bootstrap: using class SBDManager for sbd configuration and management(bsc#1170037, bsc#1170999)
+- scripts: fix yaml loader warning
+- Fix: bootstrap: crmsh use its own specific ssh key(bsc#1169581)
+- Low: bootstrap: exit with proper error messages when ssh return failed
+- Low: ui_cluster: use argparse choices to validate -i and -t option
+- Low: corosync: Use with statement  to open file
+- Low: bootstrap: Simplify bootstrap context
+- Low: bootstrap: replace optparse with argparse
+- Fix: bootstrap: Change condition to add stonith-sbd resource(bsc#1166967)
+- Fix: bootstrap: use csync2 '-f' option correctly(bsc#1166684)
+- Low: utils: update detect_cloud pattern for aws
+- medium: utils: Use cloud metadata service to discover IP (bsc#1106946)
+- Low: travis: Change the Dockerfile and image for testing
+- Fix: Not allowed space value for option(bsc#1141976)
+- Fix: crmsh.spec: using mktemp to create tmp file(bsc#1154163)
+- Fix: bootstrap: set placement-strategy value as "default"(bsc#1129462)
+- Fix: corosync: reject append ipaddress to config file if already have(bsc#1127095, 1127096)
+- Fix: bootstrap: get default ip correctly when cluster join(bsc#1156319)
+- Feature: bootstrap: support multi disk sbd configure
+- low: bootstrap: Always ask whether to use sbd
+- Low: bootstrap: create authorized_keys file if not exists
+- Low: bootstrap: add "--no-overwrite-sshkey" option to avoid SSH key be overwritten
+- Low: bootstrap: don't overwrite ssh key if already exists
+- high: bootstrap: revert corosync ports for mcast configuration as well (bsc#1066196)
+- high: bootstrap: Revert default corosync port to 5405/5404 (bsc#1066196)
+- High: cibconfig: Correctly sanitize the original CIB as patch base (bsc#1127716, bsc#1138405)
+- Revert "high: cibconfig: Use correct CIB as patch base (bsc#1127716)"
+- Partially revert "medium: cibconfig: Sanitize CIB for patching (bsc#1127716)"
+- medium: bootstrap: Pick first match for multiple routes (bsc#1106946)
+- Fix incorrect bindnetaddr in corosync.conf (bsc#1103833) (bsc#1103834)
+- Fix: hb_report: Report gets stuck on named pipe in /var/log/ (bsc#1121912)
+- medium: utils: Handle sysconfig values containing = (bsc#1129317)
+- auto-commit enabling/disabling maintenance mode for a whole cluster
+- medium: cibconfig: Sanitize CIB for patching (bsc#1127716)
+- high: cibconfig: Use correct CIB as patch base (bsc#1127716)
+
 * Mon Apr 8 2019 Xin Liang <XLiang@suse.com> and many others
 - Release 3.0.4
 - Fix: bootstrap: "-i" option doesn't work(bsc#1103833, bsc#1103834)
