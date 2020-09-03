@@ -1,65 +1,51 @@
 #!/bin/bash
-Docker_image='liangxin1300/hatbw'
-HA_packages='pacemaker corosync corosync-qdevice'
+IMAGE='liangxin1300/hatbw'
 TEST_TYPE='bootstrap qdevice hb_report geo'
 
+ETC_HOSTS_CONTENT=`cat <<EOF
+10.10.10.2 hanode1
+10.10.10.3 hanode2
+10.10.10.4 hanode3
+10.10.10.5 hanode4
+10.10.10.6 hanode5
+20.20.20.7 qnetd-node
+10.10.10.8 node-without-ssh
+EOF`
+
+deploy_node() {
+  node_name=$1
+  echo "##### Deploy $node_name start"
+
+  docker run -d --name=$node_name --hostname $node_name \
+             --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" --shm-size="1g" ${IMAGE}
+  docker network connect second_net $node_name
+  docker network connect third_net $node_name
+  docker exec -t $node_name /bin/sh -c "echo \"$ETC_HOSTS_CONTENT\" | grep -v $node_name >> /etc/hosts"
+
+  if [ "$node_name" == "qnetd-node" ];then
+    docker exec -t $node_name /bin/sh -c "zypper ref;zypper -n in corosync-qnetd"
+  elif [ "$node_name" == "node-without-ssh" ];then
+    docker exec -t $node_name /bin/sh -c "systemctl stop sshd.service"
+  else
+    docker exec -t $node_name /bin/sh -c "cd /app; ./test/run-in-travis.sh build"
+  fi
+  echo "##### Deploy $node_name finished"
+  echo
+}
+
 before() {
-  docker pull ${Docker_image}
+  docker pull ${IMAGE}
   docker network create --subnet 10.10.10.0/24 --ipv6 --subnet 2001:db8:10::/64 second_net
+  docker network create --subnet 20.20.20.0/24 --ipv6 --subnet 2001:db8:20::/64 third_net
 
-  # deploy first node hanode1
-  docker run -d --name=hanode1 --hostname hanode1 \
-             --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" --shm-size="1g" ${Docker_image}
-  docker network connect --ip=10.10.10.2 second_net hanode1
-  docker network connect --ip=2001:db8:10::2 second_net hanode1
-  docker exec -t hanode1 /bin/sh -c "echo \"10.10.10.3 hanode2\" >> /etc/hosts"
-  if [ x"$1" == x"qdevice" ];then
-    docker exec -t hanode1 /bin/sh -c "echo \"10.10.10.9 qnetd-node\" >> /etc/hosts"
-    docker exec -t hanode1 /bin/sh -c "echo \"10.10.10.10 node-without-ssh\" >> /etc/hosts"
-  fi
-  if [ x"$1" == x"geo" ];then
-    docker exec -t hanode1 /bin/sh -c "echo \"10.10.10.4 hanode3\" >> /etc/hosts"
-  fi
-  docker exec -t hanode1 /bin/sh -c "cd /app; ./test/run-in-travis.sh build"
-
-  # deploy second node hanode2
-  docker run -d --name=hanode2 --hostname hanode2 \
-             --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" --shm-size="1g" ${Docker_image}
-  docker network connect --ip=10.10.10.3 second_net hanode2
-  docker network connect --ip=2001:db8:10::3 second_net hanode2
-  docker exec -t hanode2 /bin/sh -c "echo \"10.10.10.2 hanode1\" >> /etc/hosts"
-  if [ x"$1" == x"qdevice" ];then
-    docker exec -t hanode2 /bin/sh -c "echo \"10.10.10.9 qnetd-node\" >> /etc/hosts"
-  fi
-  if [ x"$1" == x"geo" ];then
-    docker exec -t hanode2 /bin/sh -c "echo \"10.10.10.4 hanode3\" >> /etc/hosts"
-  fi
-  docker exec -t hanode2 /bin/sh -c "systemctl start sshd.service"
-  docker exec -t hanode2 /bin/sh -c "cd /app; ./test/run-in-travis.sh build"
-
-  if [ x"$1" == x"qdevice" ];then
-    # deploy node qnetd-node for qnetd service
-    docker run -d --name=qnetd-node --hostname qnetd-node \
-	       --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro --shm-size="1g" ${Docker_image}
-    docker network connect --ip=10.10.10.9 second_net qnetd-node
-    docker exec -t qnetd-node /bin/sh -c "zypper ref;zypper -n in corosync-qnetd"
-    docker exec -t qnetd-node /bin/sh -c "systemctl start sshd.service"
-
-    # deploy node without ssh.service running for validation
-    docker run -d --name=node-without-ssh --hostname node-without-ssh \
-	       --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro ${Docker_image}
-    docker network connect --ip=10.10.10.10 second_net node-without-ssh
-    docker exec -t node-without-ssh /bin/sh -c "systemctl stop sshd.service"
-  fi
-
-  if [ x"$1" == x"geo" ];then
-    docker run -d --name=hanode3 --hostname hanode3 \
-	    --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" --shm-size="1g" ${Docker_image}
-    docker network connect --ip=10.10.10.4 second_net hanode3
-    docker exec -t hanode3 /bin/sh -c "echo \"10.10.10.2 hanode1\" >> /etc/hosts"
-    docker exec -t hanode3 /bin/sh -c "echo \"10.10.10.3 hanode2\" >> /etc/hosts"
-    docker exec -t hanode3 /bin/sh -c "systemctl start sshd.service"
-    docker exec -t hanode3 /bin/sh -c "cd /app; ./test/run-in-travis.sh build"
+  deploy_node hanode1
+  deploy_node hanode2
+  deploy_node hanode3
+  deploy_node hanode4
+  deploy_node hanode5
+  if [ "$1" == "qdevice" ];then
+    deploy_node qnetd-node
+    deploy_node node-without-ssh
   fi
 }
 
