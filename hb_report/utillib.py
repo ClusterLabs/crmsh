@@ -2,6 +2,7 @@
 # See COPYING for license information.
 
 import bz2
+import lzma
 import datetime
 import glob
 import gzip
@@ -76,8 +77,9 @@ def arch_logs(logf, from_time, to_time):
     """
     ret = []
     files = [logf]
-    #files += glob.glob(logf+"*[0-9z]")
-    for f in sorted(files, key=os.path.getctime):
+    files += glob.glob(logf+"*[0-9z]")
+    # like ls -t, newest first
+    for f in sorted(files, key=os.path.getmtime, reverse=True):
         # reset this var to check every file's format
         constants.GET_STAMP_FUNC = None
         res = is_our_log(f, from_time, to_time)
@@ -501,7 +503,7 @@ def dump_logset(logf, from_time, to_time, outf):
     else:
         out_string += print_logseg(oldest, from_time, 0)
         for f in mid_logfiles:
-            out_string += print_log(f)
+            out_string += print_logseg(f, 0, 0)
             log_debug("including complete %s logfile" % f)
         out_string += print_logseg(newest, 0, to_time)
 
@@ -591,19 +593,15 @@ def find_first_ts(data):
     return ts
 
 
-def filter_lines(logf, from_line, to_line=None):
+def filter_lines(data, from_line, to_line):
     out_string = ""
-    if not to_line:
-        to_line = sum(1 for l in open(logf, 'r', encoding='utf-8', errors='replace'))
-
     count = 1
-    with open(logf, 'r', encoding='utf-8', errors='replace') as f:
-        for line in f.readlines():
-            if count >= from_line and count <= to_line:
-                out_string += line
-            if count > to_line:
-                break
-            count += 1
+    for line in data.split('\n'):
+        if count >= from_line and count <= to_line:
+            out_string += line + '\n'
+        if count > to_line:
+            break
+        count += 1
     return out_string
 
 
@@ -717,43 +715,47 @@ def find_ssh_user():
         constants.SSH_USER = ssh_user
 
 
-def findln_by_time(logf, tm):
-    tmid = None
-    first = 1
-    last = sum(1 for l in open(logf, 'r', encoding='utf-8', errors='replace'))
+def findln_by_time(data, ts):
+    '''
+    Get line number of the specific time stamp
+    '''
+    data_list = data.split('\n')
+
+    first= 1
+    last= len(data_list)
+    time_middle = None
+
     while first <= last:
-        mid = (last+first)//2
+        middle = (last + first) // 2
         trycnt = 10
         while trycnt > 0:
-            res = line_time(logf, mid)
+            res = line_time(data_list, middle)
             if res:
-                tmid = int(res)
+                time_middle = res
                 break
-            log_debug("cannot extract time: %s:%d; will try the next one" % (logf, mid))
             trycnt -= 1
             # shift the whole first-last segment
-            prevmid = mid
-            while prevmid == mid:
+            prevmid = middle
+            while prevmid == middle:
                 first -= 1
                 if first < 1:
                     first = 1
                 last -= 1
                 if last < first:
                     last = first
-                prevmid = mid
-                mid = (last+first)//2
+                prevmid = middle
+                middle = (last + first) // 2
                 if first == last:
                     break
-        if not tmid:
-            log_warning("giving up on log...")
-            return
-        if int(tmid) > tm:
-            last = mid - 1
-        elif int(tmid) < tm:
-            first = mid + 1
+        if not time_middle:
+            return None
+        if time_middle > ts:
+            last = middle - 1
+        elif time_middle < ts:
+            first = middle + 1
         else:
             break
-    return mid
+    return middle
 
 
 def get_backtraces():
@@ -1178,10 +1180,12 @@ def is_our_log(logf, from_time, to_time):
     """
     check if the log contains a piece of our segment
     """
-    with open(logf, 'r', encoding='utf-8', errors="replace") as fd:
-        data = fd.read()
-        first_time = find_first_ts(head(10, data))
-        last_time = find_first_ts(tail(10, data))
+    data = read_from_file(logf)
+    if not data:
+        log_debug("Found empty file \"{}\"; exclude".format(logf))
+        return 0
+    first_time = find_first_ts(head(10, data))
+    last_time = find_first_ts(tail(10, data))
 
     if (not first_time) or (not last_time):
         if os.stat(logf).st_size > 0:
@@ -1198,13 +1202,12 @@ def is_our_log(logf, from_time, to_time):
         return 0  # don't include this log
 
 
-def line_time(logf, line_num):
-    ts = None
-    with open(logf, 'r', encoding='utf-8', errors='replace') as fd:
-        line_res = head(line_num, fd.read())
-        if line_res:
-            ts = get_ts(line_res[-1])
-    return ts
+
+def line_time(data_list, line_num):
+    '''
+    Get time stamp of the specific line
+    '''
+    return get_ts(data_list[line_num-1])
 
 
 def load_ocf_dirs():
@@ -1363,38 +1366,24 @@ def print_log(logf):
 
 
 def print_logseg(logf, from_time, to_time):
-    cat = find_decompressor(logf)
-    if cat != "cat":
-        tmp = create_tempfile()
-        add_tempfiles(tmp)
-
-        cmd = "%s %s > %s" % (cat, logf, tmp)
-        code, out, err = crmutils.get_stdout_stderr(cmd)
-        if code != 0:
-            log_fatal("maybe disk full: %s" % err)
-        sourcef = tmp
-    else:
-        sourcef = logf
-        tmp = ""
+    data = read_from_file(logf)
 
     if from_time == 0:
-        FROM_LINE = 1
+        from_line = 1
     else:
-        FROM_LINE = findln_by_time(sourcef, from_time)
-
-    if not FROM_LINE:
-        log_warning("couldn't find line for time %d; corrupt log file?" % from_time)
-        return ""
-
-    TO_LINE = ""
-    if to_time != 0:
-        TO_LINE = findln_by_time(sourcef, to_time)
-        if not TO_LINE:
-            log_warning("couldn't find line for time %d; corrupt log file?" % to_time)
+        from_line = findln_by_time(data, from_time)
+        if from_line is None:
             return ""
 
-    log_debug("including segment [%s-%s] from %s" % (FROM_LINE, TO_LINE, sourcef))
-    return dump_log(sourcef, FROM_LINE, TO_LINE)
+    if to_time == 0:
+        to_line = len(data.split('\n'))
+    else:
+        to_line = findln_by_time(data, to_time)
+        if to_line is None:
+            return ""
+
+    log_debug("Including segment [{}-{}] from {}".format(from_line, to_line, logf))
+    return filter_lines(data, from_line, to_line)
 
 
 def ra_build_info():
@@ -1768,4 +1757,33 @@ def which(prog):
     else:
         return False
 
+
+def get_open_method(infile):
+    file_type_open_dict = {
+            "gz": gzip.open,
+            "bz2": bz2.open,
+            "xz": lzma.open
+            }
+    try:
+        _open = file_type_open_dict[infile.split('.')[-1]]
+    except KeyError:
+        _open = open
+    return _open
+
+
+def read_from_file(infile):
+    data = None
+    _open = get_open_method(infile)
+    with _open(infile, 'rt', encoding='utf-8', errors='replace') as f:
+        data = f.read()
+    return crmutils.to_ascii(data)
+
+
+def write_to_file(tofile, data):
+    _open = get_open_method(tofile)
+    with _open(tofile, 'w') as f:
+        if _open == open:
+            f.write(data)
+        else:
+            f.write(data.encode('utf-8'))
 # vim:ts=4:sw=4:et:
