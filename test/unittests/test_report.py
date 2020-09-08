@@ -96,25 +96,11 @@ def test_Tempfile():
 
 
 def test_filter_lines():
-    begin_line = findln_by_time(pacemaker_log, time_before)
-    end_line = findln_by_time(pacemaker_log, time_between)
-
-    out1 = filter_lines(pacemaker_log, begin_line)
-    out2 = filter_lines(pacemaker_log, begin_line, end_line)
-
-    assert len(out1.split('\n')) == 924
-    assert len(out2.split('\n')) == 804
-
-
-def test_filter_lines_unicode():
-    with open(evil_unicode_log, 'wb') as f:
-        f.write(invalid_utf8)
-    out1 = filter_lines(evil_unicode_log, 1, 3)
-    assert len(out1.split('\n')) == 2
-    os.remove(evil_unicode_log)
-
-    out2 = filter_lines(pacemaker_unicode_log, 1, 30)
-    assert len(out2.split('\n')) == 31
+    with open('pacemaker.log') as f:
+        data = f.read()
+    res = filter_lines(data, 140, 143)
+    _, expected = crmsh.utils.get_stdout("sed -n '140, 143p' pacemaker.log")
+    assert res == expected + '\n'
 
 
 def test_find_decompressor():
@@ -202,21 +188,21 @@ def test_find_getstampproc_raw():
 
 
 def test_findln_by_time():
-    # time before log happen
-    assert findln_by_time(pacemaker_log, time_before) == 1
-    # time after log happen
-    assert findln_by_time(pacemaker_log, time_after) == 923
-    # time between log happen
-    assert findln_by_time(pacemaker_log, time_between) == 803
+    target_time = "Apr 03 13:10"
+    target_time_stamp = crmsh.utils.parse_to_timestamp(target_time)
+    with open('pacemaker.log') as f:
+        data = f.read()
+    result_line = findln_by_time(data, target_time_stamp)
+    result_line_stamp = line_time(data.split('\n'), result_line)
+    assert result_line_stamp > target_time_stamp
+    result_pre_line_stamp = line_time(data.split('\n'), result_line-1)
+    assert result_pre_line_stamp < target_time_stamp
 
-
-def test_findln_by_time():
-    assert findln_by_time(pacemaker_unicode_log, time_before) == 1
-
-    with open(evil_unicode_log, 'wb') as f:
-        f.write(invalid_utf8)
-    assert findln_by_time(evil_unicode_log, time_before) == 1
-    os.remove(evil_unicode_log)
+    target_time = "Apr 03 11:01:19"
+    target_time_stamp = crmsh.utils.parse_to_timestamp(target_time)
+    result_line = findln_by_time(data, target_time_stamp)
+    result_time = ' '.join(data.split('\n')[result_line-1].split()[:3])
+    assert result_time == target_time
 
 
 def test_get_stamp_rfc5424():
@@ -301,17 +287,15 @@ def test_is_our_log_unicode():
     os.remove(evil_unicode_log)
 
 
-def test_line_time():
-    assert ts_to_dt(line_time(pacemaker_log, 2)).strftime("%Y/%m/%d %H:%M:%S") == "%d/04/03 11:01:18" % year
-    assert ts_to_dt(line_time(pacemaker_log, 195)).strftime("%Y/%m/%d %H:%M:%S") == "%d/04/03 11:01:40" % year
+@mock.patch('hb_report.utillib.get_ts')
+def test_line_time(mock_get_ts):
+    mock_get_ts.return_value = 12345
 
+    data_list = ["Feb 13 13:28:57 15sp1-1 pacemaker-based", "Feb 13 13:28:57 15sp1-1 pacemaker-based"]
+    res = line_time(data_list, 2)
+    assert res == mock_get_ts.return_value
 
-def test_line_time_unicode():
-    assert ts_to_dt(line_time(pacemaker_unicode_log, 3)).strftime("%Y/%m/%d %H:%M:%S") == "%d/04/03 11:01:18" % year
-    with open(evil_unicode_log, 'wb') as f:
-        f.write(invalid_utf8)
-    assert ts_to_dt(line_time(evil_unicode_log, 1)).strftime("%Y/%m/%d %H:%M:%S") == "%d/04/03 11:01:18" % year
-    os.remove(evil_unicode_log)
+    mock_get_ts.assert_called_once_with("Feb 13 13:28:57 15sp1-1 pacemaker-based")
 
 
 def test_random_string():
