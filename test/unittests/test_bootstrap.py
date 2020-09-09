@@ -425,12 +425,13 @@ class TestBootstrap(unittest.TestCase):
             bootstrap.join_ssh(None)
         mock_error.assert_called_once_with("No existing IP/hostname specified (use -c option)")
 
+    @mock.patch('crmsh.bootstrap.setup_passwordless_with_other_nodes')
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key')
     @mock.patch('crmsh.bootstrap.configure_local_ssh_key')
     @mock.patch('crmsh.bootstrap.start_service')
-    def test_join_ssh(self, mock_start_service, mock_config_ssh, mock_swap, mock_invoke, mock_error):
+    def test_join_ssh(self, mock_start_service, mock_config_ssh, mock_swap, mock_invoke, mock_error, mock_swap_other):
         bootstrap._context = mock.Mock(default_nic_list=["eth1"])
         mock_invoke.return_value = False
 
@@ -441,6 +442,7 @@ class TestBootstrap(unittest.TestCase):
         mock_swap.assert_called_once_with("node1")
         mock_invoke.assert_called_once_with("ssh root@node1 crm cluster init -i eth1 ssh_remote")
         mock_error.assert_called_once_with("Can't invoke crm cluster init -i eth1 ssh_remote on node1")
+        mock_swap_other.assert_called_once_with("node1")
 
     @mock.patch('crmsh.bootstrap.warn')
     @mock.patch('crmsh.bootstrap.fetch_public_key_from_remote_node')
