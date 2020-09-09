@@ -1602,6 +1602,8 @@ def join_ssh(seed_host):
     if not invoke("ssh root@{} crm cluster init -i {} ssh_remote".format(seed_host, _context.default_nic_list[0])):
         error("Can't invoke crm cluster init -i {} ssh_remote on {}".format(_context.default_nic_list[0], seed_host))
 
+    setup_passwordless_with_other_nodes(seed_host)
+
 
 def swap_public_ssh_key(remote_node):
     """
@@ -1786,8 +1788,6 @@ def join_cluster(seed_host):
             invoke("crm cluster run '{}' {}".format(cmd, node))
         else:
             corosync.set_value("totem.nodeid", nodeid)
-
-    setup_passwordless_with_other_nodes(seed_host)
 
     shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
 
