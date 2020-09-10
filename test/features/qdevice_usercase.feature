@@ -19,6 +19,24 @@ Feature: Verify usercase master survive when split-brain
     And     Service "corosync-qdevice" is "stopped" on "hanode2"
 
   @clean
+  Scenario: Setup qdevice with heuristics
+    When    Run "crm cluster init -y --qnetd-hostname=qnetd-node --qdevice-heuristics="/usr/bin/test -f /tmp/heuristics.txt" --qdevice-heuristics-mode="on"" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "corosync-qdevice" is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Online nodes are "hanode1 hanode2"
+    And     Service "corosync-qdevice" is "started" on "hanode2"
+    And     Service "corosync-qnetd" is "started" on "qnetd-node"
+    And     Show corosync qdevice configuration
+    When    Run "crm corosync status qnetd" on "hanode1"
+    Then    Expected regrex "Heuristics:\s+Fail" in stdout
+    When    Run "touch /tmp/heuristics.txt" on "hanode1"
+    When    Run "sleep 30" on "hanode1"
+    When    Run "crm corosync status qnetd" on "hanode1"
+    Then    Expected regrex "Heuristics:\s+Pass" in stdout
+
+  @clean
   Scenario: Master survive when split-brain
     # Setup a two-nodes cluster
     When    Run "crm cluster init -y -i eth0" on "hanode1"

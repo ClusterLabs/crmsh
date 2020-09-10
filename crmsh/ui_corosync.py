@@ -63,7 +63,7 @@ class Corosync(command.UI):
         '''
         Quick cluster health status. Corosync status or QNetd status
         '''
-        if not bootstrap.service_is_active("corosync.service"):
+        if not utils.service_is_active("corosync.service"):
             err_buf.error("corosync.service is not running!")
             return False
 

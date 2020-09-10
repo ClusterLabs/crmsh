@@ -55,7 +55,7 @@ def script_args(args):
 
 def get_cluster_name():
     cluster_name = None
-    if not bootstrap.service_is_active("corosync.service"):
+    if not utils.service_is_active("corosync.service"):
         name = corosync.get_values('totem.cluster_name')
         if name:
             cluster_name = name[0]
@@ -234,7 +234,7 @@ Note:
                                    help="Configure corosync use IPv6")
 
         qdevice_group = parser.add_argument_group("QDevice configuration", "Options for configuring QDevice and QNetd.")
-        qdevice_group.add_argument("--qnetd-hostname", dest="qdevice_host", metavar="HOST",
+        qdevice_group.add_argument("--qnetd-hostname", dest="qnetd_addr", metavar="HOST",
                                    help="HOST or IP of the QNetd server to be used")
         qdevice_group.add_argument("--qdevice-port", dest="qdevice_port", metavar="PORT", type=int, default=5403,
                                    help="TCP PORT of QNetd server(default:5403)")
@@ -267,11 +267,11 @@ Note:
         if stage not in bootstrap.INIT_STAGES and stage != "":
             parser.error("Invalid stage (%s)" % (stage))
 
-        if options.qdevice_host:
+        if options.qnetd_addr:
             if options.qdevice_heuristics_mode and not options.qdevice_heuristics:
                 parser.error("Option --qdevice-heuristics is required if want to configure heuristics mode")
             options.qdevice_heuristics_mode = options.qdevice_heuristics_mode or "sync"
-        elif re.search("--qdevice-.*", ' '.join(sys.argv)):
+        elif re.search("--qdevice-.*", ' '.join(sys.argv)) or stage == "qdevice":
             parser.error("Option --qnetd-hostname is required if want to configure qdevice")
 
         if options.sbd_devices and options.diskless_sbd:
@@ -384,7 +384,7 @@ If stage is not specified, each stage will be invoked in sequence.
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_argument("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of cluster node which will be deleted", metavar="HOST")
         parser.add_argument("-F", "--force", dest="force", help="Remove current node", action="store_true")
-        parser.add_argument("--qdevice", dest="qdevice", help="Remove QDevice configuration and service from cluster", action="store_true")
+        parser.add_argument("--qdevice", dest="qdevice_rm_flag", help="Remove QDevice configuration and service from cluster", action="store_true")
         options, args = parse_options(parser, args)
         if options is None or args is None:
             return
@@ -408,7 +408,7 @@ If stage is not specified, each stage will be invoked in sequence.
         '''
         Rename the cluster.
         '''
-        if not bootstrap.service_is_active("corosync.service"):
+        if not utils.service_is_active("corosync.service"):
             context.fatal_error("Can't rename cluster when cluster service is stopped")
         old_name = cib_factory.get_property('cluster-name')
         if old_name and new_name == old_name:

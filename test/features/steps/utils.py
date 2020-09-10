@@ -44,7 +44,7 @@ def check_service_state(context, service_name, state, addr):
     state_dict = {"started": True, "stopped": False}
 
     if addr == me():
-        return bootstrap.service_is_active(service_name) is state_dict[state]
+        return utils.service_is_active(service_name) is state_dict[state]
     else:
         test_active = "systemctl -q is-active {}".format(service_name)
         try:

@@ -9,6 +9,7 @@ import socket
 import re
 import imp
 import unittest
+import pytest
 from unittest import mock
 from itertools import chain
 from crmsh import utils
@@ -27,6 +28,81 @@ def test_print_cluster_nodes(mock_run):
     mock_run.return_value = (0, "data", None)
     utils.print_cluster_nodes()
     mock_run.assert_called_once_with("crm_node -l")
+
+
+@mock.patch("crmsh.utils.to_ascii")
+@mock.patch("crmsh.parallax.parallax_call")
+@mock.patch("crmsh.utils.check_ssh_passwd_need")
+def test_run_cmd_on_remote(mock_check_ssh_pw, mock_parallax_call, mock_to_ascii):
+    mock_check_ssh_pw.return_value = False
+    mock_parallax_call.side_effect = ValueError("Exited with error code 2, Error output: cmd error message")
+    mock_to_ascii.return_value = None
+
+    rc, out, err = utils.run_cmd_on_remote("cmd", "other_node")
+    assert rc == 2
+    assert out is None
+    assert err == "cmd error message"
+
+    mock_check_ssh_pw.assert_called_once_with("other_node")
+    mock_parallax_call.assert_called_once_with(["other_node"], "cmd", False)
+    mock_to_ascii.assert_called_once_with(None)
+
+
+@mock.patch("crmsh.utils.get_stdout")
+def test_service_is_enabled_local(mock_run):
+    mock_run.return_value = (0, None)
+    res = utils.service_is_enabled("pacemaker")
+    assert res is True
+    mock_run.assert_called_once_with("systemctl is-enabled pacemaker")
+
+
+@mock.patch("crmsh.utils.run_cmd_on_remote")
+def test_service_is_enabled_remote(mock_run_remote):
+    mock_run_remote.return_value = (0, None, None)
+    res = utils.service_is_enabled("pacemaker", "other_node")
+    assert res is True
+    mock_run_remote.assert_called_once_with(
+            "systemctl is-enabled pacemaker",
+            "other_node",
+            "Check whether pacemaker is enabled on other_node")
+
+
+@mock.patch("crmsh.utils.get_stdout")
+def test_service_is_active_local(mock_run):
+    mock_run.return_value = (0, None)
+    res = utils.service_is_active("pacemaker")
+    assert res is True
+    mock_run.assert_called_once_with("systemctl -q is-active pacemaker")
+
+
+@mock.patch("crmsh.utils.run_cmd_on_remote")
+def test_service_is_active_remote(mock_run_remote):
+    mock_run_remote.return_value = (0, None, None)
+    res = utils.service_is_active("pacemaker", "other_node")
+    assert res is True
+    mock_run_remote.assert_called_once_with(
+            "systemctl -q is-active pacemaker",
+            "other_node",
+            "Check whether pacemaker is active on other_node")
+
+
+@mock.patch("crmsh.utils.get_stdout")
+def test_package_is_installed_local(mock_run):
+    mock_run.return_value = (0, None)
+    res = utils.package_is_installed("crmsh")
+    assert res is True
+    mock_run.assert_called_once_with("rpm -q --quiet crmsh")
+
+
+@mock.patch("crmsh.utils.run_cmd_on_remote")
+def test_package_is_installed_remote(mock_run_remote):
+    mock_run_remote.return_value = (0, None, None)
+    res = utils.package_is_installed("crmsh", "other_node")
+    assert res is True
+    mock_run_remote.assert_called_once_with(
+            "rpm -q --quiet crmsh",
+            "other_node",
+            "Check whether crmsh is installed on other_node")
 
 
 @mock.patch('os.path.exists')
@@ -51,6 +127,31 @@ def test_check_file_content_included(mock_exists, mock_open_file):
 
     mock_exists.assert_has_calls([mock.call("file1"), mock.call("file2")])
     mock_open_file.assert_has_calls([mock.call("file2", 'r'), mock.call("file1", 'r')])
+
+
+@mock.patch("crmsh.utils.get_stdout_stderr")
+def test_get_iplist_corosync_using_exception(mock_run):
+    mock_run.return_value = (1, None, "error of cfgtool")
+    with pytest.raises(ValueError) as err:
+        utils.get_iplist_corosync_using()
+    assert str(err.value) == "error of cfgtool"
+    mock_run.assert_called_once_with("corosync-cfgtool -s")
+
+
+@mock.patch("crmsh.utils.get_stdout_stderr")
+def test_get_iplist_corosync_using(mock_run):
+    output = """
+RING ID 0
+        id      = 192.168.122.193
+        status  = ring 0 active with no faults
+RING ID 1
+        id      = 10.10.10.121
+        status  = ring 1 active with no faults
+"""
+    mock_run.return_value = (0, output, None)
+    res = utils.get_iplist_corosync_using()
+    assert res == ["192.168.122.193", "10.10.10.121"]
+    mock_run.assert_called_once_with("corosync-cfgtool -s")
 
 
 @mock.patch('re.search')
@@ -140,6 +241,44 @@ def test_list_cluster_nodes_corosync_running(mock_get_member_iplist, mock_stdout
     assert utils.list_cluster_nodes() == ["node1", "node2"]
     mock_stdout2list.assert_called_once_with(['crm_node', '-l'], shell=False, stderr_on=False)
     mock_get_member_iplist.assert_called_once_with()
+
+
+@mock.patch('crmsh.utils.list_cluster_nodes')
+def test_cluster_run_cmd_exception(mock_list_nodes):
+    mock_list_nodes.return_value = None
+    with pytest.raises(ValueError) as err:
+        utils.cluster_run_cmd("test")
+    assert str(err.value) == "Failed to get node list from cluster"
+    mock_list_nodes.assert_called_once_with()
+
+
+@mock.patch('crmsh.parallax.parallax_call')
+@mock.patch('crmsh.utils.list_cluster_nodes')
+def test_cluster_run_cmd(mock_list_nodes, mock_parallax_call):
+    mock_list_nodes.return_value = ["node1", "node2"]
+    utils.cluster_run_cmd("test")
+    mock_list_nodes.assert_called_once_with()
+    mock_parallax_call.assert_called_once_with(["node1", "node2"], "test")
+
+
+@mock.patch('crmsh.utils.list_cluster_nodes')
+def test_list_cluster_nodes_except_me_exception(mock_list_nodes):
+    mock_list_nodes.return_value = None
+    with pytest.raises(ValueError) as err:
+        utils.list_cluster_nodes_except_me()
+    assert str(err.value) == "Failed to get node list from cluster"
+    mock_list_nodes.assert_called_once_with()
+
+
+@mock.patch('crmsh.utils.this_node')
+@mock.patch('crmsh.utils.list_cluster_nodes')
+def test_list_cluster_nodes_except_me_exception(mock_list_nodes, mock_this_node):
+    mock_list_nodes.return_value = ["node1", "node2"]
+    mock_this_node.return_value = "node1"
+    res = utils.list_cluster_nodes_except_me()
+    assert res == ["node2"]
+    mock_list_nodes.assert_called_once_with()
+    mock_this_node.assert_called_once_with()
 
 
 def test_to_ascii():
@@ -304,33 +443,39 @@ def test_sysconfig_set_bsc1145823():
     sc = utils.parse_sysconfig(fname)
     assert (sc.get("age") == "100")
 
+@mock.patch("crmsh.utils.IP.is_ipv6")
 @mock.patch("socket.socket")
 @mock.patch("crmsh.utils.closing")
-def test_check_port_open_false(mock_closing, mock_socket):
+def test_check_port_open_false(mock_closing, mock_socket, mock_is_ipv6):
+    mock_is_ipv6.return_value = False
     sock_inst = mock.Mock()
     mock_socket.return_value = sock_inst
     mock_closing.return_value.__enter__.return_value = sock_inst
     sock_inst.connect_ex.return_value = 1
 
-    assert utils.check_port_open("node1.com", 22) is False
+    assert utils.check_port_open("10.10.10.1", 22) is False
 
+    mock_is_ipv6.assert_called_once_with("10.10.10.1")
     mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_STREAM)
     mock_closing.assert_called_once_with(sock_inst)
-    sock_inst.connect_ex.assert_called_once_with(("node1.com", 22))
+    sock_inst.connect_ex.assert_called_once_with(("10.10.10.1", 22))
 
+@mock.patch("crmsh.utils.IP.is_ipv6")
 @mock.patch("socket.socket")
 @mock.patch("crmsh.utils.closing")
-def test_check_port_open_true(mock_closing, mock_socket):
+def test_check_port_open_true(mock_closing, mock_socket, mock_is_ipv6):
+    mock_is_ipv6.return_value = True
     sock_inst = mock.Mock()
     mock_socket.return_value = sock_inst
     mock_closing.return_value.__enter__.return_value = sock_inst
     sock_inst.connect_ex.return_value = 0
 
-    assert utils.check_port_open("node1.com", 22) is True
+    assert utils.check_port_open("2001:db8:10::7", 22) is True
 
-    mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_STREAM)
+    mock_is_ipv6.assert_called_once_with("2001:db8:10::7")
+    mock_socket.assert_called_once_with(socket.AF_INET6, socket.SOCK_STREAM)
     mock_closing.assert_called_once_with(sock_inst)
-    sock_inst.connect_ex.assert_called_once_with(("node1.com", 22))
+    sock_inst.connect_ex.assert_called_once_with(("2001:db8:10::7", 22))
 
 def test_valid_port():
     assert utils.valid_port(1) is False
@@ -396,7 +541,7 @@ def test_get_nodeinfo_from_cmaptool(mock_get_stdout, mock_search, mock_findall):
     ])
 
 @mock.patch("crmsh.utils.get_nodeinfo_from_cmaptool")
-@mock.patch("crmsh.bootstrap.service_is_active")
+@mock.patch("crmsh.utils.service_is_active")
 def test_valid_nodeid_false_service_not_active(mock_is_active, mock_nodeinfo):
     mock_is_active.return_value = False
     assert utils.valid_nodeid("3") is False
@@ -404,7 +549,7 @@ def test_valid_nodeid_false_service_not_active(mock_is_active, mock_nodeinfo):
     mock_nodeinfo.assert_not_called()
 
 @mock.patch("crmsh.utils.get_nodeinfo_from_cmaptool")
-@mock.patch("crmsh.bootstrap.service_is_active")
+@mock.patch("crmsh.utils.service_is_active")
 def test_valid_nodeid_false(mock_is_active, mock_nodeinfo):
     mock_is_active.return_value = True
     mock_nodeinfo.return_value = {'1': ["10.10.10.1"], "2": ["20.20.20.2"]}
@@ -413,26 +558,13 @@ def test_valid_nodeid_false(mock_is_active, mock_nodeinfo):
     mock_nodeinfo.assert_called_once_with()
 
 @mock.patch("crmsh.utils.get_nodeinfo_from_cmaptool")
-@mock.patch("crmsh.bootstrap.service_is_active")
+@mock.patch("crmsh.utils.service_is_active")
 def test_valid_nodeid_true(mock_is_active, mock_nodeinfo):
     mock_is_active.return_value = True
     mock_nodeinfo.return_value = {'1': ["10.10.10.1"], "2": ["20.20.20.2"]}
     assert utils.valid_nodeid("2") is True
     mock_is_active.assert_called_once_with('corosync.service')
     mock_nodeinfo.assert_called_once_with()
-
-@mock.patch("crmsh.corosync.get_value")
-def test_is_unicast_false(mock_get_value):
-    mock_get_value.return_value = None
-    assert utils.is_unicast() is False
-    mock_get_value.assert_called_once_with("totem.transport")
-
-@mock.patch("crmsh.corosync.get_value")
-def test_is_unicast_true(mock_get_value):
-    mock_get_value.return_value = "udpu"
-    assert utils.is_unicast() is True
-    mock_get_value.assert_called_once_with("totem.transport")
-
 
 @mock.patch("crmsh.utils.is_program")
 def test_detect_cloud_not_dmidecode(mock_is_program):
@@ -849,6 +981,18 @@ class TestInterfacesInfo(unittest.TestCase):
         mock_get_info.assert_called_once_with()
         mock_ip_list.assert_called_once_with()
 
+    @mock.patch('crmsh.utils.InterfacesInfo.ip_list', new_callable=mock.PropertyMock)
+    @mock.patch('crmsh.utils.IP.is_ipv6')
+    @mock.patch('crmsh.utils.InterfacesInfo.get_interfaces_info')
+    def test_ip_in_local(self, mock_get_info, mock_is_ipv6, mock_ip_list):
+        mock_is_ipv6.return_value = False
+        mock_ip_list.return_value = ["10.10.10.1", "10.10.10.2"]
+        res = utils.InterfacesInfo.ip_in_local("10.10.10.1")
+        assert res is True
+        mock_get_info.assert_called_once_with()
+        mock_ip_list.assert_called_once_with()
+        mock_is_ipv6.assert_called_once_with("10.10.10.1")
+
     @mock.patch('crmsh.utils.InterfacesInfo.interface_list', new_callable=mock.PropertyMock)
     def test_network_list(self, mock_interface_list):
         mock_interface_list.return_value = [
@@ -929,6 +1073,27 @@ class TestInterfacesInfo(unittest.TestCase):
 
         res = utils.InterfacesInfo.ip_in_network("10.10.10.1")
         assert res is True
+
+        mock_is_ipv6.assert_called_once_with("10.10.10.1")
+        mock_get_interfaces_info.assert_called_once_with()
+        mock_interface_list.assert_called_once_with()
+        mock_interface_inst_1.ip_in_network.assert_called_once_with("10.10.10.1")
+        mock_interface_inst_2.ip_in_network.assert_called_once_with("10.10.10.1")
+
+    @mock.patch('crmsh.utils.Interface')
+    @mock.patch('crmsh.utils.InterfacesInfo.interface_list', new_callable=mock.PropertyMock)
+    @mock.patch('crmsh.utils.InterfacesInfo.get_interfaces_info')
+    @mock.patch('crmsh.utils.IP.is_ipv6')
+    def test_ip_in_network_false(self, mock_is_ipv6, mock_get_interfaces_info, mock_interface_list, mock_interface):
+        mock_is_ipv6.return_value = False
+        mock_interface_inst_1 = mock.Mock()
+        mock_interface_inst_2 = mock.Mock()
+        mock_interface_inst_1.ip_in_network.return_value = False
+        mock_interface_inst_2.ip_in_network.return_value = False
+        mock_interface_list.return_value = [mock_interface_inst_1, mock_interface_inst_2]
+
+        res = utils.InterfacesInfo.ip_in_network("10.10.10.1")
+        assert res is False
 
         mock_is_ipv6.assert_called_once_with("10.10.10.1")
         mock_get_interfaces_info.assert_called_once_with()
