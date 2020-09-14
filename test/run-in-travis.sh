@@ -8,6 +8,7 @@ configure() {
 make_install() {
 	echo "** Make / Install"
 	make install
+	make install-crmconfDATA prefix=
 }
 
 regression_tests() {
@@ -26,7 +27,7 @@ case "$1" in
 		configure
 		make_install
 		exit $?;;
-	bootstrap|geo)
+	bootstrap|geo|configure)
 		functional_tests $1 $2
 		exit $?;;
 	*)

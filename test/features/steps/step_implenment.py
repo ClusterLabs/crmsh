@@ -31,7 +31,7 @@ def step_impl(context, nodelist):
 @given('IP "{addr}" is belong to "{iface}"')
 def step_impl(context, addr, iface):
     cmd = 'ip address show dev {}'.format(iface)
-    res = re.search(r' {}/'.format(addr), run_command(context, cmd))
+    res = re.search(r' {}/'.format(addr), run_command(context, cmd)[1])
     assert bool(res) is True
 
 
@@ -48,7 +48,8 @@ def step_impl(context, cmd, addr):
 
 @when('Try "{cmd}"')
 def step_impl(context, cmd):
-    run_command(context, cmd, err_record=True)
+    rc, out = run_command(context, cmd, err_record=True)
+    context.return_code = rc
 
 
 @when('Wait "{second}" seconds')
@@ -98,13 +99,13 @@ def step_impl(context, addr, node):
 
 @then('Cluster name is "{name}"')
 def step_impl(context, name):
-    out = run_command(context, 'corosync-cmapctl -b totem.cluster_name')
+    _, out = run_command(context, 'corosync-cmapctl -b totem.cluster_name')
     assert out.split()[-1] == name
 
 
 @then('Cluster virtual IP is "{addr}"')
 def step_impl(context, addr):
-    out = run_command(context, 'crm configure show|grep -A1 IPaddr2')
+    _, out = run_command(context, 'crm configure show|grep -A1 IPaddr2')
     res = re.search(r' ip={}'.format(addr), out)
     assert bool(res) is True
 
@@ -123,7 +124,14 @@ def step_impl(context, addr):
 
 @then('Show corosync ring status')
 def step_impl(context):
-    out = run_command(context, 'crm corosync status')
+    _, out = run_command(context, 'crm corosync status')
+    if out:
+        context.logger.info("\n{}".format(out))
+
+
+@then('Show crm configure')
+def step_impl(context):
+    _, out = run_command(context, 'crm configure show')
     if out:
         context.logger.info("\n{}".format(out))
 
@@ -134,7 +142,7 @@ def step_impl(context, res, res_type, state):
     result = None
     while try_count < 5:
         time.sleep(1)
-        out = run_command(context, "crm_mon -1")
+        _, out = run_command(context, "crm_mon -1")
         if out:
             result = re.search(r'\s{}\s+.*:{}\):\s+{} '.format(res, res_type, state), out)
             if not result:
@@ -147,7 +155,7 @@ def step_impl(context, res, res_type, state):
 @then('Resource "{res}" failcount on "{node}" is "{number}"')
 def step_impl(context, res, node, number):
     cmd = "crm resource failcount {} show {}".format(res, node)
-    out = run_command(context, cmd)
+    _, out = run_command(context, cmd)
     if out:
         result = re.search(r'name=fail-count-{} value={}'.format(res, number), out)
         assert result is not None
@@ -155,7 +163,7 @@ def step_impl(context, res, node, number):
 
 @then('Resource "{res_type}" not configured')
 def step_impl(context, res_type):
-    out = run_command(context, "crm configure show")
+    _, out = run_command(context, "crm configure show")
     result = re.search(r' {} '.format(res_type), out)
     assert result is None
 
@@ -181,3 +189,7 @@ def step_impl(context, transport_type):
         assert corosync.get_value("totem.transport") != "udpu"
     if transport_type == "unicast":
         assert corosync.get_value("totem.transport") == "udpu"
+
+@then('Expected return code is "{num}"')
+def step_impl(context, num):
+    assert context.return_code == int(num)
