@@ -166,6 +166,13 @@ def step_impl(context):
         context.logger.info("\n{}".format(out))
 
 
+@then('Show crm configure')
+def step_impl(context):
+    _, out = run_command(context, 'crm configure show')
+    if out:
+        context.logger.info("\n{}".format(out))
+
+
 @then('Resource "{res}" type "{res_type}" is "{state}"')
 def step_impl(context, res, res_type, state):
     try_count = 0
