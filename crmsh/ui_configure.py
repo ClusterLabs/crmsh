@@ -2,6 +2,7 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+import re
 import time
 from . import command
 from . import completers as compl
@@ -550,6 +551,12 @@ class CibConfig(command.UI):
         "usage: show [xml] [<id>...]"
         from .utils import obscure
         osargs = [arg[8:] for arg in args if arg.startswith('obscure:')]
+        if not osargs and config.core.obscure_pattern:
+            # obscure_pattern could be
+            #   1. "pattern1 pattern2 pattern3"
+            #   2. "pattern1|pattern2|pattern3"
+            # regrex here also filter out possible spaces
+            osargs = re.split('\s*\|\s*|\s+', config.core.obscure_pattern.strip('|'))
         args = [arg for arg in args if not arg.startswith('obscure:')]
         with obscure(osargs):
             set_obj = mkset_obj(*args)
