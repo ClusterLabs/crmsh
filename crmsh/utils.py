@@ -2540,4 +2540,15 @@ def package_is_installed(pkg, remote_addr=None):
         # check on local
         rc, _ = get_stdout(cmd)
     return rc == 0
+
+
+@contextmanager
+def disable_exception_traceback():
+    """
+    All traceback information is suppressed and only the exception type and value are printed
+    """
+    default_value = getattr(sys, "tracebacklimit", 1000)  # `1000` is a Python's default value
+    sys.tracebacklimit = 0
+    yield
+    sys.tracebacklimit = default_value  # revert changes
 # vim:ts=4:sw=4:et:
