@@ -304,6 +304,17 @@ class _Configuration(object):
         self._systemwide = None
         self._user = None
 
+    def _safe_read(self, config_parser_inst, file_list):
+        """
+        Try to handle configparser.MissingSectionHeaderError while reading
+        """
+        from . import utils
+        try:
+            config_parser_inst.read(file_list)
+        except configparser.MissingSectionHeaderError:
+            with utils.disable_exception_traceback():
+                raise
+
     def load(self):
         self._defaults = configparser.ConfigParser()
         for section, keys in DEFAULTS.items():
@@ -313,14 +324,14 @@ class _Configuration(object):
 
         if os.path.isfile(_SYSTEMWIDE):
             self._systemwide = configparser.ConfigParser()
-            self._systemwide.read([_SYSTEMWIDE])
+            self._safe_read(self._systemwide, [_SYSTEMWIDE])
         # for backwards compatibility with <=2.1.1 due to ridiculous bug
         elif os.path.isfile("/etc/crm/crmsh.conf"):
             self._systemwide = configparser.ConfigParser()
-            self._systemwide.read(["/etc/crm/crmsh.conf"])
+            self._safe_read(self._systemwide, ["/etc/crm/crmsh.conf"])
         if os.path.isfile(_PERUSER):
             self._user = configparser.ConfigParser()
-            self._user.read([_PERUSER])
+            self._safe_read(self._user, [_PERUSER])
 
     def save(self):
         if self._user:
