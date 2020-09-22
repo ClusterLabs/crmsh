@@ -45,4 +45,4 @@ actions:
           START_PROFILE="{{START_PROFILE}}"
         op monitor interval="180" timeout="60" start_delay="240"
         op start timeout="240"
-        op stop timeout="240" on_fail="block"
+        op stop timeout="240" on-fail="block"
