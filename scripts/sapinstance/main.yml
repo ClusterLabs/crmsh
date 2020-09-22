@@ -43,6 +43,6 @@ actions:
           InstanceName="{{InstanceName}}"
           AUTOMATIC_RECOVER="{{AUTOMATIC_RECOVER}}"
           START_PROFILE="{{START_PROFILE}}"
-        op monitor interval="180" timeout="60" start_delay="240"
+        op monitor interval="180" timeout="60" start-delay="240"
         op start timeout="240"
         op stop timeout="240" on-fail="block"
