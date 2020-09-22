@@ -78,6 +78,12 @@ jobs:
       script:
         - $FUNCTIONAL_TEST resource run
 
+    - name: "functional test for configure sublevel bugs"
+      before_install:
+        - $FUNCTIONAL_TEST configure before_install
+      script:
+        - $FUNCTIONAL_TEST configure run bugs
+
     - name: "functional test for geo cluster"
       before_install:
         - $FUNCTIONAL_TEST geo before_install

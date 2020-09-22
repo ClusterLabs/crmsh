@@ -171,6 +171,13 @@ def step_impl(context):
         context.logger.info("\n{}".format(out))
 
 
+@then('Show crm configure')
+def step_impl(context):
+    _, out = run_command(context, 'crm configure show')
+    if out:
+        context.logger.info("\n{}".format(out))
+
+
 @then('Show status from qnetd')
 def step_impl(context):
     _, out = run_command(context, 'crm corosync status qnetd')

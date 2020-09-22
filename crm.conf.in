@@ -20,6 +20,22 @@
 ; ignore_missing_metadata = no
 ; report_tool_options =
 
+; obscure_pattern option is the persisent configuration of CLI.
+; Example, for the high security concern, obscure_pattern = passw* | ip
+; which makes `crm configure show` is equal to
+;
+; node-1:~ # crm configure show obscure:passw* obscure:ip
+; node 1084783297: node1
+; primitive fence_device stonith:fence_ilo5 \
+;         params password="******"
+; primitive ip IPaddr2 \
+;         params ip="******"
+;
+; The default option is passw*
+; If you don't want to obscure, change the value to blank.
+;
+; obscure_pattern = passw*
+
 [path]
 ; sharedir = <detected>
 ; cache = <detected>
