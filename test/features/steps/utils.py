@@ -11,17 +11,17 @@ def run_command(context, cmd, err_record=False):
     if rc != 0 and err:
         if err_record:
             context.command_error_output = err
-            return
+            return rc, out
         if out:
             context.logger.info("\n{}\n".format(out))
         context.logger.error("\n{}\n".format(err))
         context.failed = True
-    return out
+    return rc, out
 
 
 def run_command_local_or_remote(context, cmd, addr, err_record=False):
     if addr == me():
-        out = run_command(context, cmd, err_record)
+        _, out = run_command(context, cmd, err_record)
         return out
     else:
         try:
