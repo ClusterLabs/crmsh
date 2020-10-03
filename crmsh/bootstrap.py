@@ -485,6 +485,7 @@ def invoke(*args):
         log(stdout)
     if stderr:
         log(stderr)
+        print_error_msg(stderr)
     return rc == 0
 
 
