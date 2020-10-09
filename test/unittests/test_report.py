@@ -5,7 +5,7 @@ from datetime import datetime
 from unittest import mock
 
 sys.path.append('../..')
-from hb_report.utillib import which, ts_to_dt, sub_string, random_string,\
+from hb_report.utillib import which, ts_to_dt, random_string,\
                               head, create_tempfile, tail, grep,\
                               get_stamp_rfc5424, get_stamp_syslog,\
                               find_getstampproc_raw, find_getstampproc,\
@@ -13,7 +13,8 @@ from hb_report.utillib import which, ts_to_dt, sub_string, random_string,\
                               add_tempfiles, make_temp_dir,\
                               find_decompressor, find_files, filter_lines,\
                               findln_by_time, get_conf_var, is_conf_set,\
-                              line_time, get_command_info, Tempfile
+                              line_time, get_command_info, Tempfile, sub_sensitive_string,\
+                              extract_sensitive_value_list
 from hb_report import constants
 import hb_report
 import crmsh.utils
@@ -302,24 +303,6 @@ def test_random_string():
     assert len(random_string(8)) == 8
 
 
-def test_sub_string():
-    in_string = """
-some text some text
-I like name="OSS" value="redhat" target="mememe".
-I like name="password" value="123456" some="more".
-some number some number
-"""
-
-    out_string = """
-some text some text
-I like name="OSS" value="******" target="mememe".
-I like name="password" value="******" some="more".
-some number some number
-"""
-    pattern = "passw.* OSS"
-    assert sub_string(in_string, pattern) == out_string
-
-
 def test_tail():
     temp_file = create_tempfile()
     with open(temp_file, 'w') as f:
@@ -377,3 +360,96 @@ def test_dump_D_process_None(mock_get_stdout_stderr):
         mock.call("cat /proc/10002/comm"),
         mock.call("cat /proc/10002/stack")
         ])
+
+@mock.patch('hb_report.utillib.constants')
+def test_sub_sensitive_string(mock_const):
+    data = """
+node 1084783193: node2 \
+        utilization passwd=1234567890
+node 1084783297: node1 \
+        utilization password=qwertyu12345
+        utilization TEL=0987654321
+
+10.10.10.1
+
+<nvpair name="password" value="qwertyu12345" id="nodes-1084783297-utilization-password"/>
+<nvpair name="passwd" value="1234567890" id="nodes-1084783193-utilization-passwd"/>
+<nvpair name="TEL" value="0987654321" id="nodes-1084783193-utilization-passwd"/>
+<nvpair name="ip" value="10.10.10.1" id="nodes-1084783193-utilization-passwd"/>
+
+1234567890
+qwertyu12345
+
+Sep 27 16:53:12 node1 pacemaker-based     [20562] (cib_perform_op)      info: +  /cib/configuration/nodes/node[@id='1084783297']/utilization[@id='nodes-1084783297-utilization']/nvpair[@id='nodes-1084783297-utilization-password']:  @value=qwertyu12345
+    """
+
+    expected = """
+node 1084783193: node2 \
+        utilization passwd=******
+node 1084783297: node1 \
+        utilization password=******
+        utilization TEL=******
+
+******
+
+<nvpair name="password" value="******" id="nodes-1084783297-utilization-password"/>
+<nvpair name="passwd" value="******" id="nodes-1084783193-utilization-passwd"/>
+<nvpair name="TEL" value="******" id="nodes-1084783193-utilization-passwd"/>
+<nvpair name="ip" value="******" id="nodes-1084783193-utilization-passwd"/>
+
+1234567890
+qwertyu12345
+
+Sep 27 16:53:12 node1 pacemaker-based     [20562] (cib_perform_op)      info: +  /cib/configuration/nodes/node[@id='1084783297']/utilization[@id='nodes-1084783297-utilization']/nvpair[@id='nodes-1084783297-utilization-password']:  @value=******
+    """
+    mock_const.SANITIZE_VALUE_RAW = ["10.10.10.1"]
+    mock_const.SANITIZE_VALUE_CIB = ["1234567890", "qwertyu12345", "0987654321"]
+    mock_const.SANITIZE_KEY_CIB = ["passw.*?", "TEL.*?"]
+
+    res = sub_sensitive_string(data)
+    assert res == expected
+
+
+cib_data = """
+<nodes>
+      <node id="1084783297" uname="node1">
+        <utilization id="nodes-1084783297-utilization">
+          <nvpair name="password" value="qwertyu12345" id="nodes-1084783297-utilization-password"/>
+          <nvpair id="nodes-1084783297-utilization-TEL" name="TEL" value="13356789876"/>
+        </utilization>
+      </node>
+      <node id="1084783193" uname="node2">
+        <utilization id="nodes-1084783193-utilization">
+          <nvpair name="passwd" value="1234567890" id="nodes-1084783193-utilization-passwd"/>
+        </utilization>
+      </node>
+    </nodes>
+    <resources>
+      <primitive id="ip2" class="ocf" provider="heartbeat" type="IPaddr2">
+        <instance_attributes id="ip2-instance_attributes">
+          <nvpair name="ip" value="10.10.10.158" id="ip2-instance_attributes-ip"/>
+        </instance_attributes>
+        <operations>
+          <op name="monitor" timeout="20s" interval="10s" id="ip2-monitor-10s"/>
+        </operations>
+      </primitive>
+      <primitive id="ip1" class="ocf" provider="heartbeat" type="IPaddr2">
+        <instance_attributes id="ip1-instance_attributes">
+          <nvpair name="ip" value="10.10.10.157" id="ip1-instance_attributes-ip"/>
+"""
+
+@mock.patch("builtins.open", new_callable=mock.mock_open, read_data=cib_data)
+@mock.patch('os.path.exists')
+@mock.patch('hb_report.utillib.constants')
+@mock.patch('os.path.join')
+def test_extract_sensitive_value_list(mock_join, mock_const, mock_exists, mock_open):
+    mock_const.WORKDIR = "/tmp"
+    mock_const.WE = "node1"
+    mock_const.CIB_F = "cib.xml"
+    mock_join.return_value = "/tmp/node1/cib.xml"
+    mock_exists.return_value = True
+
+    res = extract_sensitive_value_list("passw.*")
+    assert res == ['qwertyu12345', '1234567890']
+    res = extract_sensitive_value_list("ip.*")
+    assert res == ['10.10.10.158', '10.10.10.157']

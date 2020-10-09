@@ -24,7 +24,7 @@ jobs:
       script:
         - docker run -t -v "$(pwd):/app" $IMAGE /bin/sh -c "cd /app; TOXENV=py38-codeclimate; tox"
 
-    - name: "functional test for hb_report"
+    - name: "functional test for hb_report bugs"
       before_install:
         - $FUNCTIONAL_TEST hb_report before_install
       script:
