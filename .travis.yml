@@ -37,7 +37,7 @@ jobs:
       after_script:
         - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
 
-    - name: "functional test for hb_report"
+    - name: "functional test for hb_report bugs"
       before_install:
         - $FUNCTIONAL_TEST hb_report before_install
       script:
