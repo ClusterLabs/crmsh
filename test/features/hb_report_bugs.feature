@@ -43,6 +43,22 @@ Feature: hb_report functional test for verifying bugs
     When    Run "rm -rf report1.tar.gz report1" on "hanode1"
 
   @clean
+  Scenario: Collect corosync.log(bsc#1148874)
+    When    Run "sed -i 's/\(\s*logfile:\s*\).*/\1\/var\/log\/cluster\/corosync.log/' /etc/corosync/corosync.conf" on "hanode1"
+    And     Run "hb_report report" on "hanode1"
+    And     Run "tar jxf report.tar.bz2" on "hanode1"
+    Then    File "corosync.log" not in "report.tar.bz2"
+    When    Run "rm -rf report.tar.gz report" on "hanode1"
+
+    When    Run "sed -i 's/\(\s*to_logfile:\s*\).*/\1yes/' /etc/corosync/corosync.conf" on "hanode1"
+    And     Run "crm cluster stop" on "hanode1"
+    And     Run "crm cluster start" on "hanode1"
+    And     Run "hb_report report" on "hanode1"
+    And     Run "tar jxf report.tar.bz2" on "hanode1"
+    Then    File "corosync.log" in "report.tar.bz2"
+    When    Run "rm -rf report.tar.gz report" on "hanode1"
+
+  @clean
   Scenario: Replace sensitive data(bsc#1163581)
     # Set sensitive data TEL and password
     When    Run "crm node utilization hanode1 set TEL 13356789876" on "hanode1"
