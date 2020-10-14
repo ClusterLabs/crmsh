@@ -2173,6 +2173,21 @@ def get_nodeinfo_from_cmaptool():
     return nodeid_ip_dict
 
 
+def get_iplist_from_name(name):
+    """
+    Given node host name, return this host's ip list in corosync cmap
+    """
+    ip_list = []
+    nodeid = get_nodeid_from_name(name)
+    if not nodeid:
+        return ip_list
+    nodeinfo = {}
+    nodeinfo = get_nodeinfo_from_cmaptool()
+    if not nodeinfo:
+        return ip_list
+    return nodeinfo[nodeid]
+
+
 def valid_nodeid(nodeid):
     from . import bootstrap
     if not service_is_active('corosync.service'):
