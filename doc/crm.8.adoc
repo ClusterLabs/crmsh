@@ -947,21 +947,9 @@ These commands enable easy installation and maintenance of a HA
 cluster, by providing support for package installation, configuration
 of the cluster messaging layer, file system setup and more.
 
-[[cmdhelp_cluster_add,Add a new node to the cluster]]
+[[cmdhelp_cluster_add,Add a new node to the cluster,From Code]]
 ==== `add`
-
-Add a new node to the cluster. The new node will be
-configured as a cluster member.
-
-Options:
-
-*-y, --yes*::
-    Answer "yes" to all prompts (use with caution)
-
-Usage:
-...............
-add [options] [<node> ...]
-...............
+See "crm cluster help add" or "crm cluster add --help"
 
 [[cmdhelp_cluster_copy,Copy file to other cluster nodes]]
 ==== `copy`
@@ -1020,101 +1008,17 @@ Usage:
 enable
 ...............
 
-[[cmdhelp_cluster_geo_init,Configure cluster as geo cluster]]
+[[cmdhelp_cluster_geo_init,Configure cluster as geo cluster,From Code]]
 ==== `geo-init`
+See "crm cluster help geo_init" or "crm cluster geo_init --help"
 
-Create a new geo cluster with the current cluster as the
-first member. Pass the complete geo cluster topology as
-arguments to this command, and then use `geo-join` and
-`geo-init-arbitrator` to add the remaining members to
-the geo cluster.
-
-Options:
-
-*-q, --quiet*::
-    Be quiet (don't describe what's happening, just do it)
-
-*-y, --yes*::
-    Answer "yes" to all prompts (use with caution)
-
-*-s DESC, --clusters=DESC*::
-    Geo cluster description (see details below)
-
-*-a IP, --arbitrator=IP*::
-    IP address of geo cluster arbitrator (optional)
-
-*-t LIST, --tickets=LIST*::
-    Tickets to create (space-separated)
-
-
-Cluster Description:
-
-This is a map of cluster names to IP addresses.
-Each IP address will be configured as a virtual IP
-representing that cluster in the geo cluster
-configuration.
-
-Example with two clusters named paris and amsterdam:
-
-............
-  --clusters "paris=192.168.10.10 amsterdam=192.168.10.11"
-............
-
-Name clusters using the +--name+ parameter to `init`.
-
-Usage:
-...............
-geo-init [options]
-...............
-
-
-[[cmdhelp_cluster_geo_init_arbitrator,Initialize node as geo cluster arbitrator]]
+[[cmdhelp_cluster_geo_init_arbitrator,Initialize node as geo cluster arbitrator,From Code]]
 ==== `geo-init-arbitrator`
+See "crm cluster help geo_init_arbitrator" or "crm cluster geo_init_arbitrator --help"
 
-Configure the current node as a geo arbitrator. The command
-requires an existing geo cluster or geo arbitrator from which
-to get the geo cluster configuration.
-
-Options:
-
-*-c IP, --cluster-node=IP*::
-    IP address of an already-configured geo cluster
-
-Usage:
-...............
-geo-init-arbitrator [options]
-...............
-
-
-[[cmdhelp_cluster_geo_join,Join cluster to existing geo cluster]]
+[[cmdhelp_cluster_geo_join,Join cluster to existing geo cluster,From Code]]
 ==== `geo-join`
-
-This command should be run from one of the nodes in a cluster
-which is currently not a member of a geo cluster. The geo
-cluster configuration will be fetched from the provided node,
-and the cluster will be added to the geo cluster.
-
-Note that each cluster in a geo cluster needs to have a unique
-name set. The cluster name can be set using the `--name` argument
-to `init`, or by configuring corosync with the cluster name in
-an existing cluster.
-
-Options:
-
-*-s DESC, --clusters=DESC*::
-    Geo cluster description (see +geo-init+ for details)
-
-*-c IP, --cluster-node=IP*::
-    IP address of an already-configured geo cluster node
-    or arbitrator. This argument can also be a virtual IP
-    as long as it resolves to a node in an existing geo
-    cluster.
-
-Usage:
-...............
-geo-join --cluster-node <node> --clusters <description>
-...............
-
+See "crm cluster help geo_join" or "crm cluster geo_join --help"
 
 [[cmdhelp_cluster_health,Cluster health check]]
 ==== `health`
@@ -1127,198 +1031,17 @@ Usage:
 health
 ...............
 
-[[cmdhelp_cluster_init,Initializes a new HA cluster]]
+[[cmdhelp_cluster_init,Initializes a new HA cluster,From Code]]
 ==== `init`
+See "crm cluster help init" or "crm cluster init --help"
 
-Initialize a cluster from scratch. This command configures
-a complete cluster, and can also add additional cluster
-nodes to the initial one-node cluster using the `--nodes`
-option.
-
-Options:
-
-*-q, --quiet*::
-    Be quiet (don't describe what's happening, just do it)
-
-*-y, --yes*::
-    Answer "yes" to all prompts (use with caution, this
-    is destructive, especially during the "storage" stage)
-    
-*-t TEMPLATE, --template=TEMPLATE**::
-    Optionally configure cluster with template "name"
-    (currently only "ocfs2" is valid here)
-
-*-n NAME, --name=NAME*::
-    Set the name of the configured cluster.
-
-*-N NODES, --nodes=NODES*::
-    Additional nodes to add to the created cluster. May
-    include the current node, which will always be the
-    initial cluster node.
-
-*-w WATCHDOG, --watchdog=WATCHDOG*::
-    Use the given watchdog device.
-
-*-S, --enable-sbd*::
-    Enable SBD even if no SBD device is configured (diskless mode).
-
-Network configuration:
-
-Options for configuring the network and messaging layer.
-
-*-i IF, --interface=IF*::
-    Bind to IP address on interface IF
-
-*-u, --unicast*::
-    Configure corosync to communicate over unicast (UDP),
-    and not multicast. Default is multicast unless an
-    environment where multicast cannot be used is
-    detected.
-
-*-A IP, --admin-ip=IP*::
-    Configure IP address as an administration virtual IP
-
-Storage configuration:
-
-Options for configuring shared storage.
-
-*-p DEVICE, --partition-device=DEVICE*::
-    Partition this shared storage device (only used in
-    "storage" stage)
-
-*-s DEVICE, --sbd-device=DEVICE*::
-    Block device to use for SBD fencing
-
-*-o DEVICE, --ocfs2-device=DEVICE*::
-    Block device to use for OCFS2 (only used in "vgfs"
-    stage)
-
-
-Stage can be one of:
-
-*ssh*::
-    Create SSH keys for passwordless SSH between cluster nodes
-
-*csync2*::
-    Configure csync2
-
-*corosync*::
-    Configure corosync
-
-*storage*::
-    Partition shared storage (ocfs2 template only)
-
-*sbd*::
-    Configure SBD (requires -s <dev>)
-
-*cluster*::
-    Bring the cluster online
-
-*vgfs*::
-    Create volume group and filesystem (ocfs2 template only, requires `-o <dev>`)
-
-*admin*::
-    Create administration virtual IP (optional)
-
-[NOTE]
-============
-- If stage is not specified, the script will run through each stage
-  in sequence, with prompts for required information.
-- If using the ocfs2 template, the storage stage will partition a block
-  device into two pieces, one for SBD, the remainder for OCFS2.  This is
-  good for testing and demonstration, but not ideal for production.
-  To use storage you have already configured, pass -s and -o to specify
-  the block devices for SBD and OCFS2, and the automatic partitioning
-  will be skipped.
-============
-
-Usage:
-...............
-init [options] [STAGE]
-...............
-
-
-[[cmdhelp_cluster_join,Join existing cluster]]
+[[cmdhelp_cluster_join,Join existing cluster,From Code]]
 ==== `join`
+See "crm cluster help join" or "crm cluster join --help"
 
-Join the current node to an existing cluster. The
-current node cannot be a member of a cluster already.
-Pass any node in the existing cluster as the argument
-to the `-c` option.
-
-Options:
-
-*-q, --quiet*::
-    Be quiet (don't describe what's happening, just do it)
-
-*-y, --yes*::
-    Answer "yes" to all prompts (use with caution)
-
-*-w WATCHDOG, --watchdog=WATCHDOG*::
-    Use the given watchdog device
-
-Network configuration:
-
-Options for configuring the network and messaging layer.
-
-
-*-c HOST, --cluster-node=HOST*::
-    IP address or hostname of existing cluster node
-
-*-i IF, --interface=IF*::
-    Bind to IP address on interface IF
-
-
-Stage can be one of:
-
-*ssh*::
-    Obtain SSH keys from existing cluster node (requires -c <host>)
-
-*csync2*::
-    Configure csync2 (requires -c <host>)
-
-*ssh_merge*::
-    Merge root's SSH known_hosts across all nodes (csync2 must
-    already be configured).
-
-*cluster*::
-    Start the cluster on this node
-
-If stage is not specified, each stage will be invoked in sequence.
-
-Usage:
-...............
-join [options] [STAGE]
-...............
-
-
-[[cmdhelp_cluster_remove,Remove node(s) from the cluster]]
+[[cmdhelp_cluster_remove,Remove node(s) from the cluster,From Code]]
 ==== `remove`
-
-Remove one or more nodes from the cluster.
-
-This command can remove the last node in the cluster,
-thus effectively removing the whole cluster. To remove
-the last node, pass `--force` argument to `crm` or set
-the `config.core.force` option.
-
-Options:
-
-*-q, --quiet*::
-    Be quiet (don't describe what's happening, just do it)
-
-*-y, --yes*::
-    Answer "yes" to all prompts (use with caution)
-
-*-c HOST, --cluster-node=HOST*::
-    IP address or hostname of cluster node which will be
-    removed from the cluster
-
-Usage:
-...............
-remove [options] [<node> ...]
-...............
-
+See "crm cluster help remove" or "crm cluster remove --help"
 
 [[cmdhelp_cluster_restart,Restart cluster services]]
 ==== `restart`
