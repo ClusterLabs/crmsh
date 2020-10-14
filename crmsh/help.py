@@ -27,7 +27,7 @@ Help for the level itself is like this:
 
 import os
 import re
-from .utils import page_string
+from .utils import page_string, get_stdout_stderr
 from .msg import common_err
 from . import config
 from . import clidisplay
@@ -100,6 +100,9 @@ class HelpEntry(object):
             prefix = helpfilter("(Redirected from `%s` to `%s`)\n" % self.alias_for)
 
         page_string(short_help + '\n' + prefix + long_help)
+
+    def set_long_help(self, long_help):
+        self.long = long_help
 
     def __str__(self):
         if self.long:
@@ -300,9 +303,15 @@ def _load_help():
 
     def parse_header(line):
         'returns a new entry'
-        entry = {'type': '', 'name': '', 'short': '', 'long': ''}
+        entry = {'type': '', 'name': '', 'short': '', 'long': '', "from_cli": False}
         line = line[2:-3]  # strip [[ and ]]\n
         info, short_help = line.split(',', 1)
+        # TODO see https://github.com/ClusterLabs/crmsh/pull/644
+        # This solution has shortcome to delete the content of adoc,
+        # which lose the static man page archive
+        if "From Code" in short_help:
+            short_help, _ = short_help.split(',')
+            entry['from_cli'] = True
         entry['short'] = short_help.strip()
         info = info.split('_')
         if info[0] == 'topics':
@@ -335,6 +344,10 @@ def _load_help():
             lvl = entry['level']
             if lvl not in _COMMANDS:
                 _COMMANDS[lvl] = odict()
+            if entry['from_cli']:
+                _, help_output, _ = get_stdout_stderr("crm {} {} --help".format(lvl, name))
+                if help_output:
+                    helpobj.set_long_help(help_output.rstrip())
             _COMMANDS[lvl][name] = helpobj
 
     def filter_line(line):
