@@ -77,8 +77,6 @@ Feature: crmsh bootstrap process - options
     Then    Except "ERROR: cluster.init: 'xxx' does not appear to be an IPv4 or IPv6 address"
     When    Try "crm cluster init -A 10.10.10.2 -y"
     Then    Except "ERROR: cluster.init: Address already in use: 10.10.10.2"
-    When    Try "crm cluster init -A 10.20.10.2 -y"
-    Then    Except "ERROR: cluster.init: Address '10.20.10.2' not in any local network"
     When    Run "crm cluster init -n hatest -A 10.10.10.123 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Cluster name is "hatest"

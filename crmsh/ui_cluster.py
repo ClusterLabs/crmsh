@@ -54,7 +54,7 @@ def script_args(args):
 
 def get_cluster_name():
     cluster_name = None
-    if not bootstrap.service_is_active("corosync.service"):
+    if not utils.service_is_active("corosync.service"):
         name = corosync.get_values('totem.cluster_name')
         if name:
             cluster_name = name[0]
@@ -390,7 +390,7 @@ If stage is not specified, each stage will be invoked in sequence.
         '''
         Rename the cluster.
         '''
-        if not bootstrap.service_is_active("corosync.service"):
+        if not utils.service_is_active("corosync.service"):
             context.fatal_error("Can't rename cluster when cluster service is stopped")
         old_name = cib_factory.get_property('cluster-name')
         if old_name and new_name == old_name:
