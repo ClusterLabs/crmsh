@@ -2276,6 +2276,33 @@ class InterfacesInfo(object):
         return False
 
 
+def service_is_enabled(service):
+    """
+    Check if service is enabled
+    """
+    cmd = "systemctl is-enabled {}".format(service)
+    rc, _ = get_stdout(cmd)
+    return rc == 0
+
+
+def service_is_active(service):
+    """
+    Check if service is active
+    """
+    cmd = "systemctl -q is-active {}".format(service)
+    rc, _ = get_stdout(cmd)
+    return rc == 0
+
+
+def package_is_installed(pkg):
+    """
+    Check if package is installed
+    """
+    cmd = "rpm -q --quiet {}".format(pkg)
+    rc, _ = get_stdout(cmd)
+    return rc == 0
+
+
 def check_file_content_included(source_file, target_file):
     """
     Check whether target_file includes contents of source_file
@@ -2290,4 +2317,50 @@ def check_file_content_included(source_file, target_file):
     with open(source_file, 'r') as source_fd:
         source_data = source_fd.read()
     return source_data in target_data
+
+
+def get_nodeinfo_from_cmaptool():
+    nodeid_ip_dict = {}
+    rc, out = get_stdout("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
+    if rc != 0:
+        return nodeid_ip_dict
+
+    for line in out.split('\n'):
+        match = re.search(r'members\.(.*)\.ip', line)
+        if match:
+            node_id = match.group(1)
+            iplist = re.findall(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', line)
+            nodeid_ip_dict[node_id] = iplist
+    return nodeid_ip_dict
+
+
+def get_iplist_from_name(name):
+    """
+    Given node host name, return this host's ip list in corosync cmap
+    """
+    ip_list = []
+    nodeid = get_nodeid_from_name(name)
+    if not nodeid:
+        return ip_list
+    nodeinfo = {}
+    nodeinfo = get_nodeinfo_from_cmaptool()
+    if not nodeinfo:
+        return ip_list
+    return nodeinfo[nodeid]
+
+
+def is_qdevice_configured():
+    from . import corosync
+    return corosync.get_value("quorum.device.model") == "net"
+
+
+def get_nodeid_from_name(name):
+    rc, out = get_stdout('crm_node -l')
+    if rc != 0:
+        return None
+    res = re.search(r'^([0-9]+) {} '.format(name), out, re.M)
+    if res:
+        return res.group(1)
+    else:
+        return None
 # vim:ts=4:sw=4:et:
