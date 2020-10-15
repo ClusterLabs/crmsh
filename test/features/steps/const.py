@@ -55,6 +55,11 @@ optional arguments:
 
 CRM_CLUSTER_INIT_H_OUTPUT = '''usage: init [options] [STAGE]
 
+Initialize a cluster from scratch. This command configures
+a complete cluster, and can also add additional cluster
+nodes to the initial one-node cluster using the --nodes
+option.
+
 optional arguments:
   -h, --help            Show this help message
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
@@ -139,6 +144,11 @@ Note:
 
 CRM_CLUSTER_JOIN_H_OUTPUT = '''usage: join [options] [STAGE]
 
+Join the current node to an existing cluster. The
+current node cannot be a member of a cluster already.
+Pass any node in the existing cluster as the argument
+to the -c option.
+
 optional arguments:
   -h, --help            Show this help message
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
@@ -167,12 +177,22 @@ If stage is not specified, each stage will be invoked in sequence.'''
 
 CRM_CLUSTER_ADD_H_OUTPUT = '''usage: add [options] [node ...]
 
+Add a new node to the cluster. The new node will be
+configured as a cluster member.
+
 optional arguments:
   -h, --help  Show this help message
   -y, --yes   Answer "yes" to all prompts (use with caution)'''
 
 
 CRM_CLUSTER_REMOVE_H_OUTPUT = '''usage: remove [options] [<node> ...]
+
+Remove one or more nodes from the cluster.
+
+This command can remove the last node in the cluster,
+thus effectively removing the whole cluster. To remove
+the last node, pass --force argument to crm or set
+the config.core.force option.
 
 optional arguments:
   -h, --help            Show this help message
@@ -185,6 +205,12 @@ optional arguments:
 
 
 CRM_CLUSTER_GEO_INIT_H_OUTPUT = '''usage: geo-init [options]
+
+Create a new geo cluster with the current cluster as the
+first member. Pass the complete geo cluster topology as
+arguments to this command, and then use geo-join and
+geo-init-arbitrator to add the remaining members to
+the geo cluster.
 
 optional arguments:
   -h, --help            Show this help message
@@ -214,6 +240,16 @@ Cluster Description
 
 CRM_CLUSTER_GEO_JOIN_H_OUTPUT = '''usage: geo-join [options]
 
+This command should be run from one of the nodes in a cluster
+which is currently not a member of a geo cluster. The geo
+cluster configuration will be fetched from the provided node,
+and the cluster will be added to the geo cluster.
+
+Note that each cluster in a geo cluster needs to have a unique
+name set. The cluster name can be set using the --name argument
+to init, or by configuring corosync with the cluster name in
+an existing cluster.
+
 optional arguments:
   -h, --help            Show this help message
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
@@ -226,6 +262,10 @@ optional arguments:
 
 
 CRM_CLUSTER_GEO_INIT_ARBIT_H_OUTPUT = '''usage: geo-init-arbitrator [options]
+
+Configure the current node as a geo arbitrator. The command
+requires an existing geo cluster or geo arbitrator from which
+to get the geo cluster configuration.
 
 optional arguments:
   -h, --help            Show this help message
