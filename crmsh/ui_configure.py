@@ -1071,7 +1071,7 @@ class CibConfig(command.UI):
                                   compl.call(schema.rng_attr_values, 'rsc_order', 'kind'),
                                   top_rsc_tmpl_id_list)
     def do_order(self, context, *args):
-        """usage: order <id> {kind|<score>}: <rsc>[:<action>] <rsc>[:<action>] ...
+        """usage: order <id> [kind]: <rsc>[:<action>] <rsc>[:<action>] ...
         [symmetrical=<bool>]"""
         return self.__conf_object(context.get_command_name(), *args)
 

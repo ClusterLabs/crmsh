@@ -581,12 +581,15 @@ class BaseParser(object):
         else:
             self.err("Unknown date operation '%s', please upgrade crmsh" % (op))
 
-    def validate_score(self, score, noattr=False):
+    def validate_score(self, score, noattr=False, to_kind=False):
         if not noattr and score in olist(constants.score_types):
             return ["score", constants.score_types[score.lower()]]
         elif re.match("^[+-]?(inf(inity)?|INF(INITY)?|[0-9]+)$", score):
             score = re.sub("inf(inity)?|INF(INITY)?", "INFINITY", score)
-            return ["score", score]
+            if to_kind:
+                return ["kind", score_to_kind(score)]
+            else:
+                return ["score", score]
         if noattr:
             # orders have the special kind attribute
             kind = validator.canonize(score, validator.rsc_order_kinds())
@@ -952,7 +955,7 @@ class ConstraintParser(BaseParser):
 
     def parse_order(self):
         '''
-        order <id> [{kind|<score>}:] <rsc>[:<action>] <rsc>[:<action>] ...
+        order <id> [kind] <rsc>[:<action>] <rsc>[:<action>] ...
           [symmetrical=<bool>]
 
         kind :: Mandatory | Optional | Serialize
@@ -962,7 +965,7 @@ class ConstraintParser(BaseParser):
             out.set('kind', validator.canonize(
                 self.matched(1), validator.rsc_order_kinds()))
         elif self.try_match(_SCORE_RE):
-            out.set(*self.validate_score(self.matched(1), noattr=True))
+            out.set(*self.validate_score(self.matched(1), noattr=True, to_kind=True))
         if self.try_match_tail('symmetrical=(true|false|yes|no|on|off)$'):
             out.set('symmetrical', canonical_boolean(self.matched(1)))
         self.try_match_rscset(out, 'action')
@@ -1742,4 +1745,10 @@ def parse(s, comments=None):
     except ParseError:
         return False
 
+
+def score_to_kind(score):
+    """
+    Convert score to kind for rsc_order
+    """
+    return "Optional" if score == "0" else "Mandatory"
 # vim:ts=4:sw=4:et:
