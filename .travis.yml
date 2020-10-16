@@ -83,6 +83,12 @@ jobs:
         - $FUNCTIONAL_TEST configure before_install
       script:
         - $FUNCTIONAL_TEST configure run bugs
+    
+    - name: "functional test for constraints bugs"
+      before_install:
+        - $FUNCTIONAL_TEST constraints before_install
+      script:
+        - $FUNCTIONAL_TEST constraints run bugs
 
     - name: "functional test for geo cluster"
       before_install:
