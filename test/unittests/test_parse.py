@@ -14,6 +14,12 @@ from crmsh.xmlutil import xml_tostring
 from lxml import etree
 
 
+def test_score_to_kind():
+    assert parse.score_to_kind("0") == "Optional"
+    assert parse.score_to_kind("INFINITY") == "Mandatory"
+    assert parse.score_to_kind("200") == "Mandatory"
+
+
 class MockValidation(parse.Validation):
     def resource_roles(self):
         return ['Master', 'Slave', 'Started']
@@ -709,7 +715,7 @@ class TestCliParser(unittest.TestCase):
             '<rsc_order id="o1" kind="Mandatory" first="m5" then="m6"/>',
             '<rsc_order id="o2" kind="Optional" first="d1" first-action="start" then="m5" then-action="promote"/>',
             '<rsc_order id="o3" kind="Serialize" first="m5" then="m6"/>',
-            '<rsc_order id="o4" score="INFINITY" first="m5" then="m6"/>',
+            '<rsc_order id="o4" kind="Mandatory" first="m5" then="m6"/>',
             '<rsc_ticket id="ticket-A_m6" ticket="ticket-A" rsc="m6"/>',
             '<rsc_ticket id="ticket-B_m6_m5" ticket="ticket-B" loss-policy="fence"><resource_set><resource_ref id="m6"/><resource_ref id="m5"/></resource_set></rsc_ticket>',
             '<rsc_ticket id="ticket-C_master" ticket="ticket-C" loss-policy="fence"><resource_set><resource_ref id="m6"/></resource_set><resource_set role="Master"><resource_ref id="m5"/></resource_set></rsc_ticket>',
