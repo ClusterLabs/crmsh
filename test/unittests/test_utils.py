@@ -834,3 +834,194 @@ class TestInterfacesInfo(unittest.TestCase):
         mock_interface_list.assert_called_once_with()
         mock_interface_inst_1.ip_in_network.assert_called_once_with("10.10.10.1")
         mock_interface_inst_2.ip_in_network.assert_called_once_with("10.10.10.1")
+
+    @mock.patch('crmsh.utils.Interface')
+    @mock.patch('crmsh.utils.InterfacesInfo.interface_list', new_callable=mock.PropertyMock)
+    @mock.patch('crmsh.utils.InterfacesInfo.get_interfaces_info')
+    @mock.patch('crmsh.utils.IP.is_ipv6')
+    def test_ip_in_network_false(self, mock_is_ipv6, mock_get_interfaces_info, mock_interface_list, mock_interface):
+        mock_is_ipv6.return_value = False
+        mock_interface_inst_1 = mock.Mock()
+        mock_interface_inst_2 = mock.Mock()
+        mock_interface_inst_1.ip_in_network.return_value = False
+        mock_interface_inst_2.ip_in_network.return_value = False
+        mock_interface_list.return_value = [mock_interface_inst_1, mock_interface_inst_2]
+
+        res = utils.InterfacesInfo.ip_in_network("10.10.10.1")
+        assert res is False
+
+        mock_is_ipv6.assert_called_once_with("10.10.10.1")
+        mock_get_interfaces_info.assert_called_once_with()
+        mock_interface_list.assert_called_once_with()
+        mock_interface_inst_1.ip_in_network.assert_called_once_with("10.10.10.1")
+        mock_interface_inst_2.ip_in_network.assert_called_once_with("10.10.10.1")
+
+
+class TestServiceManager(unittest.TestCase):
+    """
+    Unitary tests for class utils.ServiceManager
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Global setUp.
+        """
+
+    def setUp(self):
+        """
+        Test setUp.
+        """
+        self.service_local = utils.ServiceManager("service1")
+        self.service_remote = utils.ServiceManager("service1", "node1")
+
+    def tearDown(self):
+        """
+        Test tearDown.
+        """
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        Global tearDown.
+        """
+
+    def test_do_action_wrong_type(self):
+        with self.assertRaises(ValueError) as err:
+            self.service_local._do_action("test")
+        self.assertEqual("status_type should be enable/disable/start/stop/is-enabled/is-active/list-unit-files", str(err.exception))
+
+    @mock.patch("crmsh.utils.get_stdout_stderr")
+    def test_do_action_except_run_error(self, mock_run):
+        mock_run.return_value = (1, None, "this command failed")
+        with self.assertRaises(ValueError) as err:
+            self.service_local._do_action("start")
+        self.assertEqual("Run \"systemctl start service1\" error: this command failed", str(err.exception))
+        mock_run.assert_called_once_with("systemctl start service1")
+
+    @mock.patch("crmsh.utils.run_cmd_on_remote")
+    def test_do_action_remote(self, mock_run_remote):
+        mock_run_remote.return_value = (0, "data", None)
+        rc, out = self.service_remote._do_action("start")
+        assert rc == True
+        assert out == "data"
+        mock_run_remote.assert_called_once_with("systemctl start service1",
+                "node1",
+                "Run \"systemctl start service1\" on node1")
+
+    def test_is_available(self):
+        self.service_local._do_action = mock.Mock()
+        self.service_local._do_action.return_value = (True, "service1 service2")
+        assert self.service_local.is_available() == True
+        self.service_local._do_action.assert_called_once_with("list-unit-files")
+
+    def test_is_enabled(self):
+        self.service_local._do_action = mock.Mock()
+        self.service_local._do_action.return_value = (True, None)
+        assert self.service_local.is_enabled() == True
+        self.service_local._do_action.assert_called_once_with("is-enabled")
+
+    def test_is_active(self):
+        self.service_local._do_action = mock.Mock()
+        self.service_local._do_action.return_value = (True, None)
+        assert self.service_local.is_active() == True
+        self.service_local._do_action.assert_called_once_with("is-active")
+
+    def test_start(self):
+        self.service_local._do_action = mock.Mock()
+        self.service_local._do_action.return_value = (True, None)
+        self.service_local.start()
+        self.service_local._do_action.assert_called_once_with("start")
+
+    def test_stop(self):
+        self.service_local._do_action = mock.Mock()
+        self.service_local._do_action.return_value = (True, None)
+        self.service_local.stop()
+        self.service_local._do_action.assert_called_once_with("stop")
+
+    def test_enable(self):
+        self.service_local._do_action = mock.Mock()
+        self.service_local._do_action.return_value = (True, None)
+        self.service_local.enable()
+        self.service_local._do_action.assert_called_once_with("enable")
+
+    def test_disable(self):
+        self.service_local._do_action = mock.Mock()
+        self.service_local._do_action.return_value = (True, None)
+        self.service_local.disable()
+        self.service_local._do_action.assert_called_once_with("disable")
+
+    @mock.patch("crmsh.utils.ServiceManager.is_available")
+    def test_service_is_available(self, mock_available):
+        mock_available.return_value = True
+        res = utils.ServiceManager.service_is_available("service1")
+        self.assertEqual(res, True)
+        mock_available.assert_called_once_with()
+
+    @mock.patch("crmsh.utils.ServiceManager.is_enabled")
+    def test_service_is_enabled(self, mock_enabled):
+        mock_enabled.return_value = True
+        res = utils.ServiceManager.service_is_enabled("service1")
+        self.assertEqual(res, True)
+        mock_enabled.assert_called_once_with()
+
+    @mock.patch("crmsh.utils.ServiceManager.is_active")
+    def test_service_is_active(self, mock_active):
+        mock_active.return_value = True
+        res = utils.ServiceManager.service_is_active("service1")
+        self.assertEqual(res, True)
+        mock_active.assert_called_once_with()
+
+    @mock.patch('crmsh.utils.ServiceManager.start')
+    @mock.patch('crmsh.utils.ServiceManager.enable')
+    def test_start_service(self, mock_enable, mock_start):
+        utils.ServiceManager.start_service("service1", enable=True)
+        mock_enable.assert_called_once_with()
+        mock_start.assert_called_once_with()
+
+    @mock.patch('crmsh.utils.ServiceManager.stop')
+    @mock.patch('crmsh.utils.ServiceManager.disable')
+    def test_stop_service(self, mock_disable, mock_stop):
+        utils.ServiceManager.stop_service("service1", disable=True)
+        mock_disable.assert_called_once_with()
+        mock_stop.assert_called_once_with()
+
+    @mock.patch('crmsh.utils.ServiceManager.enable')
+    def test_enable_service(self, mock_enable):
+        utils.ServiceManager.enable_service("service1")
+        mock_enable.assert_called_once_with()
+
+    @mock.patch('crmsh.utils.ServiceManager.disable')
+    def test_disable_service(self, mock_disable):
+        utils.ServiceManager.disable_service("service1")
+        mock_disable.assert_called_once_with()
+
+
+@mock.patch("crmsh.utils.get_nodeid_from_name")
+def test_get_iplist_from_name_no_nodeid(mock_get_nodeid):
+    mock_get_nodeid.return_value = None
+    res = utils.get_iplist_from_name("test")
+    assert res == []
+    mock_get_nodeid.assert_called_once_with("test")
+
+
+@mock.patch("crmsh.utils.get_nodeinfo_from_cmaptool")
+@mock.patch("crmsh.utils.get_nodeid_from_name")
+def test_get_iplist_from_name_no_nodeinfo(mock_get_nodeid, mock_get_nodeinfo):
+    mock_get_nodeid.return_value = "1"
+    mock_get_nodeinfo.return_value = None
+    res = utils.get_iplist_from_name("test")
+    assert res == []
+    mock_get_nodeid.assert_called_once_with("test")
+    mock_get_nodeinfo.assert_called_once_with()
+
+
+@mock.patch("crmsh.utils.get_nodeinfo_from_cmaptool")
+@mock.patch("crmsh.utils.get_nodeid_from_name")
+def test_get_iplist_from_name(mock_get_nodeid, mock_get_nodeinfo):
+    mock_get_nodeid.return_value = "1"
+    mock_get_nodeinfo.return_value = {"1": ["10.10.10.1"], "2": ["10.10.10.2"]}
+    res = utils.get_iplist_from_name("test")
+    assert res == ["10.10.10.1"]
+    mock_get_nodeid.assert_called_once_with("test")
+    mock_get_nodeinfo.assert_called_once_with()
