@@ -1779,45 +1779,6 @@ def service_info(name):
     return None
 
 
-def start_service(service, enable=False, start=True):
-    """
-    Start (and optionally enable) systemd service
-    TODO: support other init systems
-    """
-    if enable:
-        _rc, _out, _err = get_stdout_stderr("systemctl -q enable {}".format(service))
-    if start:
-        rc, _out, _err = get_stdout_stderr("systemctl -q is-active {}".format(service))
-        if rc != 0:
-            rc, _out, err = get_stdout_stderr("systemctl -q start {}".format(service))
-            if rc != 0:
-                raise IOError("systemd failed to start {}: {}".format(service, err))
-
-
-def stop_service(service, disable=False, stop=True):
-    """
-    Stop (and optionally disable) systemd service
-    TODO: support other init systems
-    """
-    rc, err = 0, ""
-    if stop:
-        rc, _out, err = get_stdout_stderr("systemctl -q stop {}".format(service))
-    if disable:
-        _rc, _out, _err = get_stdout_stderr("systemctl -q disable {}".format(service))
-    if rc != 0:
-        raise IOError("systemd failed to stop {}: {}".format(service, err))
-
-
-def enable_service(service, start=False):
-    "Enable (and optionally start) system service"
-    start_service(service, enable=True, start=start)
-
-
-def disable_service(service, stop=False):
-    "Enable (and optionally stop) system service"
-    stop_service(service, disable=True, stop=stop)
-
-
 def running_on(resource):
     "returns list of node names where the given resource is running"
     rsc_locate = "crm_resource --resource '%s' --locate"
@@ -2512,34 +2473,133 @@ def check_file_content_included(source_file, target_file):
     return source_data in target_data
 
 
-def service_is_enabled(service, remote_addr=None):
+class ServiceManager(object):
     """
-    Check if service is enabled
+    Class to manage systemctl services
     """
-    cmd = "systemctl is-enabled {}".format(service)
-    if remote_addr:
-        # check on remote
-        prompt_msg = "Check whether {} is enabled on {}".format(service, remote_addr)
-        rc, _, _ = run_cmd_on_remote(cmd, remote_addr, prompt_msg)
-    else:
-        # check on local
-        rc, _ = get_stdout(cmd)
-    return rc == 0
+    ACTION_MAP = {
+            "enable": "enable",
+            "disable": "disable",
+            "start": "start",
+            "stop": "stop",
+            "is_enabled": "is-enabled",
+            "is_active": "is-active",
+            "is_available": "list-unit-files"
+            }
+
+    def __init__(self, service_name, remote_addr=None):
+        """
+        Init function
+        """
+        self.service_name = service_name
+        self.remote_addr = remote_addr
+
+    def _do_action(self, action_type):
+        """
+        Actual do actions to manage service
+        """
+        if action_type not in self.ACTION_MAP.values():
+            raise ValueError("status_type should be {}".format('/'.join(list(self.ACTION_MAP.values()))))
+
+        cmd = "systemctl {} {}".format(action_type, self.service_name)
+        if self.remote_addr:
+            prompt_msg = "Run \"{}\" on {}".format(cmd, self.remote_addr)
+            rc, output, err = run_cmd_on_remote(cmd, self.remote_addr, prompt_msg)
+        else:
+            rc, output, err = get_stdout_stderr(cmd)
+        if rc != 0 and err:
+            raise ValueError("Run \"{}\" error: {}".format(cmd, err))
+        return rc == 0, output
+
+    def is_available(self):
+        return self.service_name in self._do_action(self.ACTION_MAP["is_available"])[1]
+
+    def is_enabled(self):
+        return self._do_action(self.ACTION_MAP["is_enabled"])[0]
+
+    def is_active(self):
+        return self._do_action(self.ACTION_MAP["is_active"])[0]
+
+    def start(self):
+        self._do_action(self.ACTION_MAP["start"])
+
+    def stop(self):
+        self._do_action(self.ACTION_MAP["stop"])
+
+    def enable(self):
+        self._do_action(self.ACTION_MAP["enable"])
+
+    def disable(self):
+        self._do_action(self.ACTION_MAP["disable"])
+
+    @classmethod
+    def service_is_available(cls, name, remote_addr=None):
+        """
+        Check whether service is available
+        """
+        inst = cls(name, remote_addr)
+        return inst.is_available()
+
+    @classmethod
+    def service_is_enabled(cls, name, remote_addr=None):
+        """
+        Check whether service is enabled
+        """
+        inst = cls(name, remote_addr)
+        return inst.is_enabled()
+
+    @classmethod
+    def service_is_active(cls, name, remote_addr=None):
+        """
+        Check whether service is active
+        """
+        inst = cls(name, remote_addr)
+        return inst.is_active()
+
+    @classmethod
+    def start_service(cls, name, enable=False, remote_addr=None):
+        """
+        Start service
+        """
+        inst = cls(name, remote_addr)
+        if enable:
+            inst.enable()
+        inst.start()
+
+    @classmethod
+    def stop_service(cls, name, disable=False, remote_addr=None):
+        """
+        Stop service
+        """
+        inst = cls(name, remote_addr)
+        if disable:
+            inst.disable()
+        inst.stop()
+
+    @classmethod
+    def enable_service(cls, name, remote_addr=None):
+        """
+        Enable service
+        """
+        inst = cls(name, remote_addr)
+        inst.enable()
+
+    @classmethod
+    def disable_service(cls, name, remote_addr=None):
+        """
+        Disable service
+        """
+        inst = cls(name, remote_addr)
+        inst.disable()
 
 
-def service_is_active(service, remote_addr=None):
-    """
-    Check if service is active
-    """
-    cmd = "systemctl -q is-active {}".format(service)
-    if remote_addr:
-        # check on remote
-        prompt_msg = "Check whether {} is active on {}".format(service, remote_addr)
-        rc, _, _ = run_cmd_on_remote(cmd, remote_addr, prompt_msg)
-    else:
-        # check on local
-        rc, _ = get_stdout(cmd)
-    return rc == 0
+service_is_available = ServiceManager.service_is_available
+service_is_enabled = ServiceManager.service_is_enabled
+service_is_active = ServiceManager.service_is_active
+start_service = ServiceManager.start_service
+stop_service = ServiceManager.stop_service
+enable_service = ServiceManager.enable_service
+disable_service = ServiceManager.disable_service
 
 
 def package_is_installed(pkg, remote_addr=None):
