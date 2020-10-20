@@ -22,7 +22,10 @@ def verify(cib):
     rc, _, stderr = utils.get_stdout_stderr(cib_verify, cib.encode('utf-8'))
     for i, line in enumerate(line for line in stderr.split('\n') if line):
         if i == 0:
-            err_buf.error(_prettify(line, 0))
+            if "warning:" in line:
+                err_buf.warning(_prettify(line, 0))
+            else:
+                err_buf.error(_prettify(line, 0))
         else:
             err_buf.writemsg(_prettify(line, 7))
     return rc
