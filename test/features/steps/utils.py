@@ -71,16 +71,8 @@ def check_service_state(context, service_name, state, addr):
 
     state_dict = {"started": True, "stopped": False}
 
-    if addr == me():
-        return utils.service_is_active(service_name) is state_dict[state]
-    else:
-        test_active = "systemctl -q is-active {}".format(service_name)
-        try:
-            parallax.parallax_call([addr], test_active)
-        except ValueError:
-            return state_dict[state] is False
-        else:
-            return state_dict[state] is True
+    remote_addr = None if addr == me() else addr
+    return utils.service_is_active(service_name, remote_addr) is state_dict[state]
 
 
 def check_cluster_state(context, state, addr):
