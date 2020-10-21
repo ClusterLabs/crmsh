@@ -306,6 +306,8 @@ Configure SBD:
         2. Initialize sbd device
         3. Write config file /etc/sysconfig/sbd
         """
+        if not utils.package_is_installed("sbd"):
+            return
         self._get_sbd_device()
         if not self._sbd_devices and not self.diskless_sbd:
             invoke("systemctl disable sbd.service")
@@ -320,6 +322,8 @@ Configure SBD:
         """
         Configure stonith-sbd resource and stonith-enabled property
         """
+        if not utils.package_is_installed("sbd"):
+            return
         if utils.service_is_enabled("sbd.service"):
             if self._get_sbd_device_from_config():
                 if not invoke("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"):
@@ -336,6 +340,8 @@ Configure SBD:
         On joining process, check whether peer node has enabled sbd.service
         If so, check prerequisites of SBD and verify sbd device on join node
         """
+        if not utils.package_is_installed("sbd"):
+            return
         cmd_detect_enabled = "ssh -o StrictHostKeyChecking=no root@{} systemctl is-enabled sbd.service".format(peer_host)
         if not os.path.exists(SYSCONFIG_SBD) or not invoke(cmd_detect_enabled):
             invoke("systemctl disable sbd.service")
