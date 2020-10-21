@@ -21,7 +21,31 @@ from . import userdir
 from . import constants
 from . import options
 from . import term
+from . import parallax_helper
 from .msg import common_warn, common_info, common_debug, common_err, err_buf
+
+
+def run_cmd_on_remote(cmd, remote_addr, prompt_msg=None):
+    """
+    Run a cmd on remote node
+    return (rc, stdout, err_msg)
+    """
+    rc = 1
+    out_data = None
+    err_data = None
+
+    need_pw = check_ssh_passwd_need(remote_addr)
+    if need_pw and prompt_msg:
+        print(prompt_msg)
+    try:
+        result = parallax_helper.parallax_call([remote_addr], cmd, need_pw)
+        rc, out_data, _ = result[0][1]
+    except ValueError as err:
+        err_match = re.search("Exited with error code ([0-9]+), Error output: (.*)", str(err))
+        if err_match:
+            rc, err_data = err_match.groups()
+    finally:
+        return int(rc), out_data, err_data
 
 
 def memoize(function):
@@ -2294,12 +2318,18 @@ def service_is_active(service):
     return rc == 0
 
 
-def package_is_installed(pkg):
+def package_is_installed(pkg, remote_addr=None):
     """
     Check if package is installed
     """
     cmd = "rpm -q --quiet {}".format(pkg)
-    rc, _ = get_stdout(cmd)
+    if remote_addr:
+        # check on remote
+        prompt_msg = "Check whether {} is installed on {}".format(pkg, remote_addr)
+        rc, _, _ = run_cmd_on_remote(cmd, remote_addr, prompt_msg)
+    else:
+        # check on local
+        rc, _ = get_stdout(cmd)
     return rc == 0
 
 
