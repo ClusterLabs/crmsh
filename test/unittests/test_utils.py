@@ -23,6 +23,40 @@ def setup_function():
     imp.reload(utils)
 
 
+@mock.patch("crmsh.utils.get_stdout")
+def test_package_is_installed_local(mock_run):
+    mock_run.return_value = (0, None)
+    res = utils.package_is_installed("crmsh")
+    assert res is True
+    mock_run.assert_called_once_with("rpm -q --quiet crmsh")
+
+
+@mock.patch("crmsh.utils.run_cmd_on_remote")
+def test_package_is_installed_remote(mock_run_remote):
+    mock_run_remote.return_value = (0, None, None)
+    res = utils.package_is_installed("crmsh", "other_node")
+    assert res is True
+    mock_run_remote.assert_called_once_with(
+            "rpm -q --quiet crmsh",
+            "other_node",
+            "Check whether crmsh is installed on other_node")
+
+
+@mock.patch("crmsh.utils.parallax_helper.parallax_call")
+@mock.patch("crmsh.utils.check_ssh_passwd_need")
+def test_run_cmd_on_remote(mock_check_ssh_pw, mock_parallax_call):
+    mock_check_ssh_pw.return_value = False
+    mock_parallax_call.side_effect = ValueError("Exited with error code 2, Error output: cmd error message")
+
+    rc, out, err = utils.run_cmd_on_remote("cmd", "other_node")
+    assert rc == 2
+    assert out is None
+    assert err == "cmd error message"
+
+    mock_check_ssh_pw.assert_called_once_with("other_node")
+    mock_parallax_call.assert_called_once_with(["other_node"], "cmd", False)
+
+
 @mock.patch('os.path.exists')
 def test_check_file_content_included_target_not_exist(mock_exists):
     mock_exists.side_effect = [True, False]
