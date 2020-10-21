@@ -183,12 +183,15 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.SBDManager._initialize_sbd')
     @mock.patch('crmsh.bootstrap.status_long')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device')
-    def test_sbd_init_return(self, mock_get_device, mock_status, mock_initialize, mock_update, mock_status_done):
+    @mock.patch('crmsh.utils.package_is_installed')
+    def test_sbd_init_return(self, mock_installed, mock_get_device, mock_status, mock_initialize, mock_update, mock_status_done):
         self.sbd_inst._sbd_devices = None
+        mock_installed.return_value = True
         self.sbd_inst.diskless_sbd = False
 
         self.sbd_inst.sbd_init()
 
+        mock_installed.assert_called_once_with("sbd")
         mock_get_device.assert_called_once_with()
         mock_status.assert_not_called()
         mock_initialize.assert_not_called()
@@ -200,9 +203,12 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.SBDManager._initialize_sbd')
     @mock.patch('crmsh.bootstrap.status_long')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device')
-    def test_sbd_init_return(self, mock_get_device, mock_status, mock_initialize, mock_update, mock_status_done):
+    @mock.patch('crmsh.utils.package_is_installed')
+    def test_sbd_init(self, mock_installed, mock_get_device, mock_status, mock_initialize, mock_update, mock_status_done):
+        mock_installed.return_value = True
         self.sbd_inst_diskless.sbd_init()
 
+        mock_installed.assert_called_once_with("sbd")
         mock_get_device.assert_called_once_with()
         mock_status.assert_called_once_with("Initializing diskless SBD...")
         mock_initialize.assert_called_once_with()
@@ -213,7 +219,9 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.utils.service_is_enabled')
-    def test_configure_sbd_resource_error_primitive(self, mock_enabled, mock_get_device, mock_invoke, mock_error):
+    @mock.patch('crmsh.utils.package_is_installed')
+    def test_configure_sbd_resource_error_primitive(self, mock_installed, mock_enabled, mock_get_device, mock_invoke, mock_error):
+        mock_installed.return_value = True
         mock_enabled.return_value = True
         mock_get_device.return_value = ["/dev/sdb1"]
         mock_invoke.return_value = False
@@ -222,6 +230,7 @@ class TestSBDManager(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.sbd_inst.configure_sbd_resource()
 
+        mock_installed.assert_called_once_with("sbd")
         mock_enabled.assert_called_once_with("sbd.service")
         mock_get_device.assert_called_once_with()
         mock_invoke.assert_called_once_with("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s")
@@ -231,7 +240,9 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.utils.service_is_enabled')
-    def test_configure_sbd_resource_error_property(self, mock_enabled, mock_get_device, mock_invoke, mock_error):
+    @mock.patch('crmsh.utils.package_is_installed')
+    def test_configure_sbd_resource_error_property(self, mock_installed, mock_enabled, mock_get_device, mock_invoke, mock_error):
+        mock_installed.return_value = True
         mock_enabled.return_value = True
         mock_get_device.return_value = ["/dev/sdb1"]
         mock_invoke.side_effect = [True, False]
@@ -240,6 +251,7 @@ class TestSBDManager(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.sbd_inst.configure_sbd_resource()
 
+        mock_installed.assert_called_once_with("sbd")
         mock_enabled.assert_called_once_with("sbd.service")
         mock_get_device.assert_called_once_with()
         mock_invoke.assert_has_calls([
@@ -252,7 +264,9 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.utils.service_is_enabled')
-    def test_configure_sbd_resource_diskless(self, mock_enabled, mock_get_device, mock_invoke, mock_error):
+    @mock.patch('crmsh.utils.package_is_installed')
+    def test_configure_sbd_resource_diskless(self, mock_installed, mock_enabled, mock_get_device, mock_invoke, mock_error):
+        mock_installed.return_value = True
         mock_enabled.return_value = True
         mock_get_device.return_value = None
         mock_invoke.return_value = False
@@ -261,6 +275,7 @@ class TestSBDManager(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.sbd_inst_diskless.configure_sbd_resource()
 
+        mock_installed.assert_called_once_with("sbd")
         mock_enabled.assert_called_once_with("sbd.service")
         mock_get_device.assert_called_once_with()
         mock_invoke.assert_called_once_with("crm configure property stonith-enabled=true stonith-watchdog-timeout=5s")
@@ -268,21 +283,27 @@ class TestSBDManager(unittest.TestCase):
 
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('os.path.exists')
-    def test_join_sbd_config_not_exist(self, mock_exists, mock_invoke):
+    @mock.patch('crmsh.utils.package_is_installed')
+    def test_join_sbd_config_not_exist(self, mock_installed, mock_exists, mock_invoke):
+        mock_installed.return_value = True
         mock_exists.return_value = False
         self.sbd_inst.join_sbd("node1")
+        mock_installed.assert_called_once_with("sbd")
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
         mock_invoke.assert_called_once_with("systemctl disable sbd.service")
 
     @mock.patch('crmsh.bootstrap.SBDManager._check_environment')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('os.path.exists')
-    def test_join_sbd_config_disabled(self, mock_exists, mock_invoke, mock_check):
+    @mock.patch('crmsh.utils.package_is_installed')
+    def test_join_sbd_config_disabled(self, mock_installed, mock_exists, mock_invoke, mock_check):
+        mock_installed.return_value = True
         mock_exists.return_value = True
         mock_invoke.side_effect = [False, True]
 
         self.sbd_inst.join_sbd("node1")
 
+        mock_installed.assert_called_once_with("sbd")
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
         mock_invoke.assert_has_calls([
                 mock.call("ssh -o StrictHostKeyChecking=no root@node1 systemctl is-enabled sbd.service"),
@@ -296,13 +317,16 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.SBDManager._check_environment')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('os.path.exists')
-    def test_join_sbd(self, mock_exists, mock_invoke, mock_check, mock_get_device, mock_verify, mock_status):
+    @mock.patch('crmsh.utils.package_is_installed')
+    def test_join_sbd(self, mock_installed, mock_exists, mock_invoke, mock_check, mock_get_device, mock_verify, mock_status):
+        mock_installed.return_value = True
         mock_exists.return_value = True
         mock_invoke.side_effect = [True, True]
         mock_get_device.return_value = ["/dev/sdb1"]
 
         self.sbd_inst.join_sbd("node1")
 
+        mock_installed.assert_called_once_with("sbd")
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
         mock_invoke.assert_has_calls([
             mock.call("ssh -o StrictHostKeyChecking=no root@node1 systemctl is-enabled sbd.service"),
