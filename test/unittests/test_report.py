@@ -343,7 +343,7 @@ def test_dump_D_process_None(mock_get_stdout_stderr):
 
 
 @mock.patch('crmsh.utils.get_stdout_stderr')
-def test_dump_D_process_None(mock_get_stdout_stderr):
+def test_dump_D_process(mock_get_stdout_stderr):
     mock_get_stdout_stderr.side_effect = [
             (0, "10001\n10002", None),
             (0, "comm_out for 10001", None),

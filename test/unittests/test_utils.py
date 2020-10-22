@@ -234,7 +234,7 @@ def test_list_cluster_nodes_except_me_exception(mock_list_nodes):
 
 @mock.patch('crmsh.utils.this_node')
 @mock.patch('crmsh.utils.list_cluster_nodes')
-def test_list_cluster_nodes_except_me_exception(mock_list_nodes, mock_this_node):
+def test_list_cluster_nodes_except_me(mock_list_nodes, mock_this_node):
     mock_list_nodes.return_value = ["node1", "node2"]
     mock_this_node.return_value = "node1"
     res = utils.list_cluster_nodes_except_me()

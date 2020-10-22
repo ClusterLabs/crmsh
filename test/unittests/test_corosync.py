@@ -134,7 +134,7 @@ def test_query_qnetd_status_no_cluster_name(mock_qdevice_configured, mock_get_va
 
 @mock.patch("crmsh.corosync.get_value")
 @mock.patch("crmsh.utils.is_qdevice_configured")
-def test_query_qnetd_status_no_cluster_name(mock_qdevice_configured, mock_get_value):
+def test_query_qnetd_status_no_host(mock_qdevice_configured, mock_get_value):
     mock_qdevice_configured.return_value = True
     mock_get_value.side_effect = ["hacluster", None]
     with pytest.raises(ValueError) as err:
