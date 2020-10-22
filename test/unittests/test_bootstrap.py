@@ -1427,11 +1427,11 @@ class TestValidation(unittest.TestCase):
 
     @mock.patch('crmsh.utils.stop_service')
     @mock.patch('crmsh.bootstrap.status')
-    @mock.patch('crmsh.utils.service_is_available')
-    def test_stop_services(self, mock_available, mock_status, mock_stop):
-        mock_available.side_effect = [True, True, True]
+    @mock.patch('crmsh.utils.service_is_active')
+    def test_stop_services(self, mock_active, mock_status, mock_stop):
+        mock_active.side_effect = [True, True, True]
         bootstrap.stop_services(bootstrap.SERVICES_STOP_LIST)
-        mock_available.assert_has_calls([
+        mock_active.assert_has_calls([
             mock.call("corosync-qdevice.service", remote_addr=None),
             mock.call("corosync.service", remote_addr=None),
             mock.call("hawk.service", remote_addr=None)
