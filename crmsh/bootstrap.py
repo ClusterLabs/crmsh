@@ -546,7 +546,7 @@ def is_online(crm_mon_txt):
     if not re.search("Online: .* {} ".format(peer_node), crm_mon_txt):
         shutil.copy(COROSYNC_CONF_ORIG, corosync.conf())
         csync2_update(corosync.conf())
-        stop_service("corosync")
+        utils.stop_service("corosync")
         print()
         error("Cannot see peer node \"{}\", please check the communication IP".format(peer_node))
     return True
@@ -565,24 +565,6 @@ def pick_default_value(default_list, prev_list):
         if value not in prev_list:
             return value
     return ""
-
-
-def start_service(service):
-    """
-    Start and enable systemd service
-    """
-    invoke("systemctl enable " + service)
-    rc, _out, _err = utils.get_stdout_stderr('systemctl -q is-active ' + service)
-    if rc != 0:
-        if not invoke("systemctl start " + service):
-            error("Failed to start " + service)
-
-
-def stop_service(service):
-    """
-    Stops the systemd service
-    """
-    return invoke("systemctl stop " + service)
 
 
 def sleep(t):
@@ -649,19 +631,6 @@ def check_tty():
         error("No pseudo-tty detected! Use -t option to ssh if calling remotely.")
 
 
-def grep_output(cmd, txt):
-    _rc, outp, _err = utils.get_stdout_stderr(cmd)
-    return txt in outp
-
-
-def grep_file(fn, txt):
-    return os.path.exists(fn) and txt in open(fn).read()
-
-
-def service_is_available(svcname):
-    return grep_output("systemctl list-unit-files {}".format(svcname), svcname)
-
-
 def my_hostname_resolves():
     import socket
     hostname = utils.this_node()
@@ -684,7 +653,7 @@ def check_prereqs(stage):
     timekeepers = ('chronyd.service', 'ntp.service', 'ntpd.service')
     timekeeper = None
     for tk in timekeepers:
-        if service_is_available(tk):
+        if utils.service_is_available(tk):
             timekeeper = tk
             break
 
@@ -870,8 +839,8 @@ def init_cluster_local():
     invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
 
     # only try to start hawk if hawk is installed
-    if service_is_available("hawk.service"):
-        start_service("hawk.service")
+    if utils.service_is_available("hawk.service"):
+        utils.start_service("hawk.service", enable=True)
         status("Hawk cluster interface is now running. To see cluster status, open:")
         status("  https://{}:7630/".format(_context.default_ip_list[0]))
         status("Log in with username 'hacluster'{}".format(pass_msg))
@@ -881,7 +850,7 @@ def init_cluster_local():
     if pass_msg:
         warn("You should change the hacluster password to something more secure!")
 
-    start_service("pacemaker.service")
+    utils.start_service("pacemaker.service", enable=True)
     wait_for_cluster()
 
 
@@ -911,7 +880,7 @@ def init_ssh():
     """
     Configure passwordless SSH.
     """
-    start_service("sshd.service")
+    utils.start_service("sshd.service", enable=True)
     configure_local_ssh_key()
 
 
@@ -990,7 +959,7 @@ include /etc/sysconfig/sbd;
 }
     """ % (utils.this_node()), CSYNC2_CFG)
 
-    start_service("csync2.socket")
+    utils.start_service("csync2.socket", enable=True)
     status_long("csync2 checking files")
     invoke("csync2", "-cr", "/")
     status_done()
@@ -1576,7 +1545,7 @@ def join_ssh(seed_host):
     if not seed_host:
         error("No existing IP/hostname specified (use -c option)")
 
-    start_service("sshd.service")
+    utils.start_service("sshd.service", enable=True)
     configure_local_ssh_key()
     swap_public_ssh_key(seed_host)
 
@@ -1667,7 +1636,7 @@ def join_csync2(seed_host):
     if not invoke("scp root@%s:'/etc/csync2/{csync2.cfg,key_hagroup}' /etc/csync2" % (seed_host)):
         error("Can't retrieve csync2 config from %s" % (seed_host))
 
-    start_service("csync2.socket")
+    utils.start_service("csync2.socket", enable=True)
 
     # Sync new config out.  This goes to all hosts; csync2.cfg definitely
     # needs to go to all hosts (else hosts other than the seed and the
@@ -1968,8 +1937,7 @@ def remove_node_from_cluster():
     set_cluster_node_ip()
 
     status("Stopping the corosync service")
-    if not invoke('ssh -o StrictHostKeyChecking=no root@{} "systemctl stop corosync"'.format(node)):
-        error("Stopping corosync on {} failed".format(node))
+    utils.stop_service("corosync.service", disable=True, remote_addr=node)
 
     # delete configuration files from the node to be removed
     if not invoke('ssh -o StrictHostKeyChecking=no root@{} "bash -c \\\"rm -f {}\\\""'.format(node, " ".join(_context.rm_list))):
@@ -2165,9 +2133,8 @@ def remove_self():
         if rc != 0:
             error("Failed to remove this node from {}".format(othernode))
     else:
-        # stop cluster
-        if not stop_service("corosync"):
-            error("Stopping corosync failed")
+        # disable and stop cluster
+        utils.stop_service("corosync", disable=True)
         # remove all trace of cluster from this node
         # delete configuration files from the node to be removed
         if not invoke('bash -c "rm -f {}"'.format(" ".join(_context.rm_list))):
@@ -2325,6 +2292,6 @@ def bootstrap_arbitrator(context):
         error("Failed to copy {} from {}".format(BOOTH_CFG, node))
     # TODO: verify that the arbitrator IP in the configuration is us?
     status("Enabling and starting the booth arbitrator service")
-    start_service("booth@booth")
+    utils.start_service("booth@booth", enable=True)
 
 # EOF
