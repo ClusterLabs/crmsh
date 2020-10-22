@@ -2157,7 +2157,7 @@ def stop_services(stop_list, remote_addr=None):
     Stop cluster related service
     """
     for service in stop_list:
-        if utils.service_is_available(service, remote_addr=remote_addr):
+        if utils.service_is_active(service, remote_addr=remote_addr):
             status("Stopping the {}".format(service))
             utils.stop_service(service, disable=True, remote_addr=remote_addr)
 
