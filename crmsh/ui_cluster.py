@@ -78,6 +78,9 @@ class Cluster(command.UI):
         Starts the cluster services on this node
         '''
         try:
+            if utils.service_is_active("pacemaker.service"):
+                err_buf.info("Cluster services already started")
+                return
             utils.start_service("pacemaker")
             err_buf.info("Cluster services started")
         except IOError as err:
@@ -91,6 +94,9 @@ class Cluster(command.UI):
         Stops the cluster services on this node
         '''
         try:
+            if not utils.service_is_active("corosync.service"):
+                err_buf.info("Cluster services already stopped")
+                return
             utils.stop_service("corosync")
             err_buf.info("Cluster services stopped")
         except IOError as err:
