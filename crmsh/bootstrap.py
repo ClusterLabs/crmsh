@@ -43,7 +43,7 @@ COROSYNC_CONF_ORIG = tmpfiles.create()[1]
 RSA_PRIVATE_KEY = "/root/.ssh/id_rsa"
 RSA_PUBLIC_KEY = "/root/.ssh/id_rsa.pub"
 AUTHORIZED_KEYS_FILE = "/root/.ssh/authorized_keys"
-
+SERVICES_STOP_LIST = ["corosync.service", "hawk.service"]
 
 INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin")
 
@@ -2052,6 +2052,16 @@ def set_cluster_node_ip():
             break
 
 
+def stop_services(stop_list, remote_addr=None):
+    """
+    Stop cluster related service
+    """
+    for service in stop_list:
+        if utils.service_is_active(service, remote_addr=remote_addr):
+            status("Stopping the {}".format(service))
+            utils.stop_service(service, disable=True, remote_addr=remote_addr)
+
+
 def remove_node_from_cluster():
     """
     Remove node from running cluster and the corosync / pacemaker configuration.
@@ -2059,8 +2069,7 @@ def remove_node_from_cluster():
     node = _context.cluster_node
     set_cluster_node_ip()
 
-    status("Stopping the corosync service")
-    utils.stop_service("corosync.service", disable=True, remote_addr=node)
+    stop_services(SERVICES_STOP_LIST, remote_addr=node)
 
     # delete configuration files from the node to be removed
     if not invoke('ssh -o StrictHostKeyChecking=no root@{} "bash -c \\\"rm -f {}\\\""'.format(node, " ".join(_context.rm_list))):
@@ -2292,7 +2301,7 @@ def remove_self():
             error("Failed to remove this node from {}".format(othernode))
     else:
         # disable and stop cluster
-        utils.stop_service("corosync", disable=True)
+        stop_services(SERVICES_STOP_LIST)
         # remove all trace of cluster from this node
         # delete configuration files from the node to be removed
         if not invoke('bash -c "rm -f {}"'.format(" ".join(_context.rm_list))):
