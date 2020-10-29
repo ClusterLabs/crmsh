@@ -144,6 +144,7 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.detect_watchdog_device')
     @mock.patch('shutil.copyfile')
     def test_update_configuration(self, mock_copy, mock_detect, mock_sysconfig, mock_update):
+        self.sbd_inst.SYSCONFIG_SBD_TEMPLATE = "/usr/share/fillup-templates/sysconfig.sbd"
         self.sbd_inst._sbd_devices = ["/dev/sdb1", "/dev/sdc1"]
         mock_detect.return_value = "/dev/watchdog"
 
