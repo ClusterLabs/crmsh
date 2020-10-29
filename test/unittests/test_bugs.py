@@ -877,7 +877,7 @@ def test_node_util_attr():
     assert obj.cli_use_validate()
 
 
-def test_dup_create():
+def test_dup_create_same_name():
     """
     Creating two objects with the same name
     """
