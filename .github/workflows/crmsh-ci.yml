@@ -1,0 +1,85 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+# For more information about secrets see: https://docs.github.com/en/free-pro-team@latest/actions/reference/encrypted-secrets
+
+name: crmsh CI
+
+on:
+  push:
+    branches: [ crmsh-3.0 ]
+  pull_request:
+    branches: [ crmsh-3.0 ]
+
+env:
+  DOCKER_SCRIPT: ./test/docker_scripts.sh
+
+jobs:
+  unit_test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 2.7
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install tox
+    - name: Test with pytest in tox
+      run: |
+        tox -v
+
+  functional_test_bootstrap_bugs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: functional test for bootstrap bugs
+      run:  |
+        $DOCKER_SCRIPT bootstrap before_install
+        $DOCKER_SCRIPT bootstrap run bugs
+
+  functional_test_bootstrap_common:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: functional test for bootstrap common
+      run:  |
+        $DOCKER_SCRIPT bootstrap before_install
+        $DOCKER_SCRIPT bootstrap run init_join_remove
+
+  functional_test_bootstrap_options:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: functional test for bootstrap options
+      run:  |
+        $DOCKER_SCRIPT bootstrap before_install
+        $DOCKER_SCRIPT bootstrap run options
+
+  functional_test_configure_sublevel:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: functional test for configure sublevel bugs
+      run:  |
+        $DOCKER_SCRIPT configure before_install
+        $DOCKER_SCRIPT configure run bugs
+
+  functional_test_geo_cluster:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: functional test for geo cluster
+      run:  |
+        $DOCKER_SCRIPT geo before_install
+        $DOCKER_SCRIPT geo run setup
+
+  original_regression_test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: original regression test
+      run:  |
+        $DOCKER_SCRIPT original before_install
+        $DOCKER_SCRIPT original run
