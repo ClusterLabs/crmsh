@@ -12,12 +12,6 @@ on:
 
 env:
   DOCKER_SCRIPT: ./test/docker_scripts.sh
-  FOLDER: /package
-  PACKAGE_NAME: crmsh
-  OBS_USER: ${{ secrets.OBS_USER }}
-  OBS_PASS: ${{ secrets.OBS_PASS }}
-  OBS_PROJECT: ${{ secrets.OBS_PROJECT }}
-  TARGET_PROJECT: ${{ secrets.TARGET_PROJECT }}
 
 jobs:
   delivery:
@@ -26,6 +20,13 @@ jobs:
     - uses: actions/checkout@v2
     - name: delivery process
       #if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      env:
+        FOLDER: /package
+        PACKAGE_NAME: crmsh
+        OBS_USER: ${{ secrets.OBS_USER }}
+        OBS_PASS: ${{ secrets.OBS_PASS }}
+        OBS_PROJECT: ${{ secrets.OBS_PROJECT }}
+        TARGET_PROJECT: ${{ secrets.TARGET_PROJECT }}
       run: |
         docker pull shap/continuous_deliver:latest
         docker run -t -v "$(pwd):/package" \
