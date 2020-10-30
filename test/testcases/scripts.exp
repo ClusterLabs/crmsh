@@ -8,7 +8,6 @@
 .EXT crm_resource --show-metadata ocf:heartbeat:db2
 .EXT crm_resource --show-metadata ocf:heartbeat:exportfs
 .EXT crm_resource --show-metadata systemd:haproxy
-ERROR: 2: Error when loading script haproxy: No meta-data for agent: systemd:haproxy
 .EXT crm_resource --show-metadata ocf:heartbeat:LVM
 .EXT crm_resource --show-metadata ocf:heartbeat:MailTo
 .EXT crm_resource --show-metadata ocf:heartbeat:nginx
@@ -54,6 +53,7 @@ sap-simple-stack-plus SAP SimpleStack+ Instance
 Server:
 
 apache           Apache Webserver
+haproxy          HAProxy
 nginx            Nginx Webserver
 
 Stonith:
@@ -63,7 +63,6 @@ sbd              SBD, Shared storage based fencing
 vmware           Fencing using vCenter / ESX Server
 
 .INP: list all
-ERROR: 3: Error when loading script haproxy: No meta-data for agent: systemd:haproxy
 Basic:
 
 health           Verify health and configuration
@@ -115,6 +114,7 @@ sbd-device       Create SBD Device
 Server:
 
 apache           Apache Webserver
+haproxy          HAProxy
 nginx            Nginx Webserver
 
 Stonith:
@@ -134,7 +134,7 @@ drbd
 exportfs
 filesystem
 gfs2
-ERROR: 4: Error when loading script haproxy: No meta-data for agent: systemd:haproxy
+haproxy
 health
 libvirt
 lvm-drbd
