@@ -30,10 +30,10 @@ jobs:
       run: |
         docker pull shap/continuous_deliver:latest
         docker run -t -v "$(pwd):/package" \
-          -e OBS_USER=$OBS_USER \
-          -e OBS_PASS=$OBS_PASS \
-          -e FOLDER=$FOLDER \
-          -e OBS_PROJECT=$OBS_PROJECT \
-          -e PACKAGE_NAME=$PACKAGE_NAME \
+          -e OBS_USER="$OBS_USER" \
+          -e OBS_PASS="$OBS_PASS" \
+          -e FOLDER="$FOLDER" \
+          -e OBS_PROJECT="$OBS_PROJECT" \
+          -e PACKAGE_NAME="$PACKAGE_NAME" \
           shap/continuous_deliver \
           /bin/bash -c "cd /package;/scripts/upload.sh"
