@@ -222,10 +222,6 @@ def test_get_ts():
 
 
 def test_grep():
-    res = grep("^Name", incmd="rpm -qi bash")[0]
-    _, out = get_command_info("rpm -qi bash|grep \"^Name\"")
-    assert res == out.strip("\n")
-
     in_string = """aaaa
 bbbb
 """

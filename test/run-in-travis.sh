@@ -30,7 +30,7 @@ case "$1" in
 	bootstrap|hb_report|resource|geo|configure)
 		functional_tests $1 $2
 		exit $?;;
-	*)
+	*|original)
 		configure
 		make_install
 		regression_tests;;
