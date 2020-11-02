@@ -27,6 +27,7 @@ import constants
 import crmsh.config
 from crmsh import msg as crmmsg
 from crmsh import utils as crmutils
+from crmsh import corosync
 
 
 class Tempfile(object):
@@ -312,7 +313,13 @@ def collect_info():
     for p in process_list:
         p.join()
 
-    for l in constants.EXTRA_LOGS.split():
+    logfile_list = []
+    corosync_log = corosync.get_value('logging.logfile')
+    if corosync_log:
+        logfile_list.append(corosync_log)
+    logfile_list += constants.EXTRA_LOGS.split()
+
+    for l in logfile_list:
         if not os.path.isfile(l):
             continue
         if l == constants.HA_LOG and l != constants.HALOG_F:
