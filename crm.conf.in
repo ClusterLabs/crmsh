@@ -1,4 +1,3 @@
-; crmsh configuration file
 ; To override per user, create a file ~/.config/crm/crm.conf
 ;
 ; [core]
