@@ -208,7 +208,7 @@ Configure SBD:
         Get sbd device on interactive mode
         """
         if _context.yes_to_all:
-            warn("Not configuring SBD (%s left untouched)." % (SYSCONFIG_SBD))
+            warn("Not configuring SBD ({} left untouched).".format(SYSCONFIG_SBD))
             return
 
         status(self.SBD_STATUS_DESCRIPTION)
@@ -219,14 +219,16 @@ Configure SBD:
 
         self._check_environment()
 
-        configured_dev = self._get_sbd_device_from_config()
-        if configured_dev and not confirm("SBD is already configured to use {} - overwrite?".format(';'.join(configured_dev))):
-            return configured_dev
+        configured_dev_list = self._get_sbd_device_from_config()
+        if configured_dev_list and not confirm("SBD is already configured to use {} - overwrite?".format(';'.join(configured_dev_list))):
+            return configured_dev_list
 
         dev_list = []
         dev_looks_sane = False
         while not dev_looks_sane:
             dev = prompt_for_string('Path to storage device (e.g. /dev/disk/by-id/...), or "none" for diskless sbd, use ";" as separator for multi path', r'none|\/.*')
+            if not dev:
+                continue
             if dev == "none":
                 self.diskless_sbd = True
                 return
@@ -234,7 +236,7 @@ Configure SBD:
             try:
                 self._verify_sbd_device(dev_list)
             except ValueError as err_msg:
-                print(term.render(clidisplay.error(str(err_msg))))
+                print_error_msg(str(err_msg))
                 continue
             for dev_item in dev_list:
                 warn("All data on {} will be destroyed!".format(dev_item))
