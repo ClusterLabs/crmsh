@@ -1019,6 +1019,7 @@ include /etc/ha.d/ldirectord.cf;
 include /etc/lvm/lvm.conf;
 include /etc/multipath.conf;
 include /etc/samba/smb.conf;
+include /etc/sysconfig/nfs;
 include /etc/sysconfig/pacemaker;
 include /etc/sysconfig/sbd;
 include /etc/pacemaker/authkey;
