@@ -52,6 +52,116 @@ class TestSBDManager(unittest.TestCase):
         Global tearDown.
         """
 
+    @mock.patch('crmsh.bootstrap.warn')
+    def test_get_sbd_device_interactive_yes_to_all(self, mock_warn):
+        bootstrap._context = mock.Mock(yes_to_all=True)
+        self.sbd_inst._get_sbd_device_interactive()
+        mock_warn.assert_called_once_with("Not configuring SBD ({} left untouched).".format(bootstrap.SYSCONFIG_SBD))
+
+    @mock.patch('crmsh.bootstrap.confirm')
+    @mock.patch('crmsh.bootstrap.status')
+    @mock.patch('crmsh.bootstrap.warn')
+    def test__get_sbd_device_interactive_not_confirm(self, mock_warn, mock_status, mock_confirm):
+        bootstrap._context = mock.Mock(yes_to_all=False)
+        mock_confirm.return_value = False
+        self.sbd_inst._get_sbd_device_interactive()
+        mock_status.assert_called_once_with(bootstrap.SBDManager.SBD_STATUS_DESCRIPTION)
+        mock_warn.assert_called_once_with("Not configuring SBD - STONITH will be disabled.")
+
+    @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
+    @mock.patch('crmsh.bootstrap.SBDManager._check_environment')
+    @mock.patch('crmsh.bootstrap.confirm')
+    @mock.patch('crmsh.bootstrap.status')
+    def test__get_sbd_device_interactive_already_configured(self, mock_status, mock_confirm, mock_check, mock_from_config):
+        bootstrap._context = mock.Mock(yes_to_all=False)
+        mock_confirm.side_effect = [True, False]
+        mock_from_config.return_value = ["/dev/sda1"]
+
+        res = self.sbd_inst._get_sbd_device_interactive()
+        self.assertEqual(res, ["/dev/sda1"])
+
+        mock_status.assert_called_once_with(bootstrap.SBDManager.SBD_STATUS_DESCRIPTION)
+        mock_confirm.assert_has_calls([
+            mock.call("Do you wish to use SBD?"),
+            mock.call("SBD is already configured to use /dev/sda1 - overwrite?")
+            ])
+        mock_status.assert_called_once_with(bootstrap.SBDManager.SBD_STATUS_DESCRIPTION)
+        mock_check.assert_called_once_with()
+        mock_from_config.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.prompt_for_string')
+    @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
+    @mock.patch('crmsh.bootstrap.SBDManager._check_environment')
+    @mock.patch('crmsh.bootstrap.confirm')
+    @mock.patch('crmsh.bootstrap.status')
+    def test_get_sbd_device_interactive_diskless(self, mock_status, mock_confirm, mock_check, mock_from_config, mock_prompt):
+        bootstrap._context = mock.Mock(yes_to_all=False)
+        mock_confirm.return_value = True
+        mock_from_config.return_value = None
+        mock_prompt.return_value = "none"
+
+        self.sbd_inst._get_sbd_device_interactive()
+
+        mock_status.assert_called_once_with(bootstrap.SBDManager.SBD_STATUS_DESCRIPTION)
+        mock_check.assert_called_once_with()
+        mock_from_config.assert_called_once_with()
+        mock_prompt.assert_called_once_with('Path to storage device (e.g. /dev/disk/by-id/...), or "none" for diskless sbd, use ";" as separator for multi path', 'none|\\/.*')
+
+    @mock.patch('crmsh.bootstrap.prompt_for_string')
+    @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
+    @mock.patch('crmsh.bootstrap.SBDManager._check_environment')
+    @mock.patch('crmsh.bootstrap.confirm')
+    @mock.patch('crmsh.bootstrap.status')
+    def test_get_sbd_device_interactive_null_and_diskless(self, mock_status, mock_confirm, mock_check, mock_from_config, mock_prompt):
+        bootstrap._context = mock.Mock(yes_to_all=False)
+        mock_confirm.return_value = True
+        mock_from_config.return_value = None
+        mock_prompt.side_effect = [None, "none"]
+
+        self.sbd_inst._get_sbd_device_interactive()
+
+        mock_status.assert_called_once_with(bootstrap.SBDManager.SBD_STATUS_DESCRIPTION)
+        mock_confirm.assert_called_once_with("Do you wish to use SBD?")
+        mock_check.assert_called_once_with()
+        mock_from_config.assert_called_once_with()
+        mock_prompt.assert_has_calls([
+            mock.call('Path to storage device (e.g. /dev/disk/by-id/...), or "none" for diskless sbd, use ";" as separator for multi path', 'none|\\/.*') for x in range(2)
+            ])
+
+    @mock.patch('crmsh.bootstrap.warn')
+    @mock.patch('crmsh.bootstrap.print_error_msg')
+    @mock.patch('crmsh.bootstrap.SBDManager._verify_sbd_device')
+    @mock.patch('crmsh.bootstrap.prompt_for_string')
+    @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
+    @mock.patch('crmsh.bootstrap.SBDManager._check_environment')
+    @mock.patch('crmsh.bootstrap.confirm')
+    @mock.patch('crmsh.bootstrap.status')
+    def test_get_sbd_device_interactive(self, mock_status, mock_confirm, mock_check, mock_from_config, mock_prompt, mock_verify, mock_error_msg, mock_warn):
+        bootstrap._context = mock.Mock(yes_to_all=False)
+        mock_confirm.side_effect = [True, False, True]
+        mock_from_config.return_value = None
+        mock_prompt.side_effect = ["/dev/test1", "/dev/sda1", "/dev/sdb1"]
+        mock_verify.side_effect = [ValueError("/dev/test1 error"), None, None]
+
+        res = self.sbd_inst._get_sbd_device_interactive()
+        self.assertEqual(res, ["/dev/sdb1"])
+
+        mock_status.assert_called_once_with(bootstrap.SBDManager.SBD_STATUS_DESCRIPTION)
+        mock_confirm.assert_has_calls([
+            mock.call("Do you wish to use SBD?"),
+            mock.call("Are you sure you wish to use this device?")
+            ])
+        mock_check.assert_called_once_with()
+        mock_from_config.assert_called_once_with()
+        mock_error_msg.assert_called_once_with("/dev/test1 error")
+        mock_warn.assert_has_calls([
+            mock.call("All data on /dev/sda1 will be destroyed!"),
+            mock.call("All data on /dev/sdb1 will be destroyed!")
+            ])
+        mock_prompt.assert_has_calls([
+            mock.call('Path to storage device (e.g. /dev/disk/by-id/...), or "none" for diskless sbd, use ";" as separator for multi path', 'none|\\/.*') for x in range(3)
+            ])
+
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.bootstrap.check_watchdog')
     def test_check_environment_no_watchdog(self, mock_watchdog, mock_error):
