@@ -136,7 +136,7 @@ def parse_argument(argv):
 
     if len(arg) == 0:
         constants.DESTDIR = "."
-        constants.DEST = "hb_report-%s" % datetime.datetime.now().strftime('%w-%d-%m-%Y')
+        constants.DEST = "hb_report-%s" % datetime.datetime.now().strftime('%a-%d-%b-%Y')
     elif len(arg) == 1:
         constants.TMP = arg[0]
     else:
