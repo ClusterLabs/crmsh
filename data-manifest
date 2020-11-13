@@ -170,7 +170,6 @@ test/unittests/scripts/v2/main.yml
 test/unittests/scripts/vipinc/main.yml
 test/unittests/scripts/vip/main.yml
 test/unittests/scripts/workflows/10-webserver.xml
-test/unittests/test_bootstrap_lock.py
 test/unittests/test_bootstrap.py
 test/unittests/test_bugs.py
 test/unittests/test_cib.py
@@ -183,6 +182,10 @@ test/unittests/test_lock.py
 test/unittests/test_objset.py
 test/unittests/test_parallax.py
 test/unittests/test_parse.py
+test/unittests/test_preflight_check.py
+test/unittests/test_preflight_main.py
+test/unittests/test_preflight_task.py
+test/unittests/test_preflight_utils.py
 test/unittests/test_report.py
 test/unittests/test_scripts.py
 test/unittests/test_time.py
