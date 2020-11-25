@@ -2511,12 +2511,15 @@ class ServiceManager(object):
             raise ValueError("Run \"{}\" error: {}".format(cmd, err))
         return rc == 0, output
 
+    @property
     def is_available(self):
         return self.service_name in self._do_action(self.ACTION_MAP["is_available"])[1]
 
+    @property
     def is_enabled(self):
         return self._do_action(self.ACTION_MAP["is_enabled"])[0]
 
+    @property
     def is_active(self):
         return self._do_action(self.ACTION_MAP["is_active"])[0]
 
@@ -2538,7 +2541,7 @@ class ServiceManager(object):
         Check whether service is available
         """
         inst = cls(name, remote_addr)
-        return inst.is_available()
+        return inst.is_available
 
     @classmethod
     def service_is_enabled(cls, name, remote_addr=None):
@@ -2546,7 +2549,7 @@ class ServiceManager(object):
         Check whether service is enabled
         """
         inst = cls(name, remote_addr)
-        return inst.is_enabled()
+        return inst.is_enabled
 
     @classmethod
     def service_is_active(cls, name, remote_addr=None):
@@ -2554,7 +2557,7 @@ class ServiceManager(object):
         Check whether service is active
         """
         inst = cls(name, remote_addr)
-        return inst.is_active()
+        return inst.is_active
 
     @classmethod
     def start_service(cls, name, enable=False, remote_addr=None):
@@ -2582,7 +2585,8 @@ class ServiceManager(object):
         Enable service
         """
         inst = cls(name, remote_addr)
-        inst.enable()
+        if inst.is_available and not inst.is_enabled:
+            inst.enable()
 
     @classmethod
     def disable_service(cls, name, remote_addr=None):
@@ -2590,7 +2594,8 @@ class ServiceManager(object):
         Disable service
         """
         inst = cls(name, remote_addr)
-        inst.disable()
+        if inst.is_available and inst.is_enabled:
+            inst.disable()
 
 
 service_is_available = ServiceManager.service_is_available

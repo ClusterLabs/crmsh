@@ -1621,8 +1621,7 @@ def init_qdevice():
     """
     # If don't want to config qdevice, return
     if not _context.qdevice_inst:
-        if utils.service_is_enabled("corosync-qdevice.service"):
-            utils.disable_service("corosync-qdevice.service")
+        utils.disable_service("corosync-qdevice.service")
         return
 
     status("""
@@ -2118,8 +2117,7 @@ def join_cluster(seed_host):
     if is_qdevice_configured:
         start_qdevice_on_join_node(seed_host)
     else:
-        if utils.service_is_enabled("corosync-qdevice.service"):
-            utils.disable_service("corosync-qdevice.service")
+        utils.disable_service("corosync-qdevice.service")
 
 
 def start_qdevice_on_join_node(seed_host):
