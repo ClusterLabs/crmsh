@@ -1497,6 +1497,11 @@ def check_watchdog():
     Verify watchdog device. Fall back to /dev/watchdog.
     """
     watchdog_dev = detect_watchdog_device()
+    # In case this watchdog already in use
+    _, out, _ = utils.get_stdout_stderr("lsof")
+    if re.search(" {}\n".format(watchdog_dev), out):
+        return True
+    # not in use
     rc, _out, _err = utils.get_stdout_stderr("wdctl %s" % (watchdog_dev))
     return rc == 0
 
