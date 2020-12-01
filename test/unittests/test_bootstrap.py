@@ -891,14 +891,11 @@ class TestBootstrap(unittest.TestCase):
         mock_interfaces_inst.get_default_ip_list.assert_called_once_with()
 
     @mock.patch('crmsh.utils.disable_service')
-    @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('crmsh.bootstrap.status')
-    def test_init_qdevice_no_config(self, mock_status, mock_enabled, mock_disable):
+    def test_init_qdevice_no_config(self, mock_status, mock_disable):
         bootstrap._context = mock.Mock(qdevice_inst=None)
-        mock_enabled.return_value = True
         bootstrap.init_qdevice()
         mock_status.assert_not_called()
-        mock_enabled.assert_called_once_with("corosync-qdevice.service")
         mock_disable.assert_called_once_with("corosync-qdevice.service")
 
     @mock.patch('crmsh.bootstrap.error')

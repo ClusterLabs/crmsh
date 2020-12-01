@@ -1119,19 +1119,19 @@ class TestServiceManager(unittest.TestCase):
     def test_is_available(self):
         self.service_local._do_action = mock.Mock()
         self.service_local._do_action.return_value = (True, "service1 service2")
-        assert self.service_local.is_available() == True
+        assert self.service_local.is_available == True
         self.service_local._do_action.assert_called_once_with("list-unit-files")
 
     def test_is_enabled(self):
         self.service_local._do_action = mock.Mock()
         self.service_local._do_action.return_value = (True, None)
-        assert self.service_local.is_enabled() == True
+        assert self.service_local.is_enabled == True
         self.service_local._do_action.assert_called_once_with("is-enabled")
 
     def test_is_active(self):
         self.service_local._do_action = mock.Mock()
         self.service_local._do_action.return_value = (True, None)
-        assert self.service_local.is_active() == True
+        assert self.service_local.is_active == True
         self.service_local._do_action.assert_called_once_with("is-active")
 
     def test_start(self):
@@ -1158,21 +1158,21 @@ class TestServiceManager(unittest.TestCase):
         self.service_local.disable()
         self.service_local._do_action.assert_called_once_with("disable")
 
-    @mock.patch("crmsh.utils.ServiceManager.is_available")
+    @mock.patch("crmsh.utils.ServiceManager.is_available", new_callable=mock.PropertyMock)
     def test_service_is_available(self, mock_available):
         mock_available.return_value = True
         res = utils.ServiceManager.service_is_available("service1")
         self.assertEqual(res, True)
         mock_available.assert_called_once_with()
 
-    @mock.patch("crmsh.utils.ServiceManager.is_enabled")
+    @mock.patch("crmsh.utils.ServiceManager.is_enabled", new_callable=mock.PropertyMock)
     def test_service_is_enabled(self, mock_enabled):
         mock_enabled.return_value = True
         res = utils.ServiceManager.service_is_enabled("service1")
         self.assertEqual(res, True)
         mock_enabled.assert_called_once_with()
 
-    @mock.patch("crmsh.utils.ServiceManager.is_active")
+    @mock.patch("crmsh.utils.ServiceManager.is_active", new_callable=mock.PropertyMock)
     def test_service_is_active(self, mock_active):
         mock_active.return_value = True
         res = utils.ServiceManager.service_is_active("service1")
@@ -1194,12 +1194,20 @@ class TestServiceManager(unittest.TestCase):
         mock_stop.assert_called_once_with()
 
     @mock.patch('crmsh.utils.ServiceManager.enable')
-    def test_enable_service(self, mock_enable):
+    @mock.patch('crmsh.utils.ServiceManager.is_enabled', new_callable=mock.PropertyMock)
+    @mock.patch('crmsh.utils.ServiceManager.is_available', new_callable=mock.PropertyMock)
+    def test_enable_service(self, mock_available, mock_enabled, mock_enable):
+        mock_available.return_value = True
+        mock_enabled.return_value = False
         utils.ServiceManager.enable_service("service1")
         mock_enable.assert_called_once_with()
 
     @mock.patch('crmsh.utils.ServiceManager.disable')
-    def test_disable_service(self, mock_disable):
+    @mock.patch('crmsh.utils.ServiceManager.is_enabled', new_callable=mock.PropertyMock)
+    @mock.patch('crmsh.utils.ServiceManager.is_available', new_callable=mock.PropertyMock)
+    def test_disable_service(self, mock_available, mock_enabled, mock_disable):
+        mock_available.return_value = True
+        mock_enabled.return_value = True
         utils.ServiceManager.disable_service("service1")
         mock_disable.assert_called_once_with()
 
