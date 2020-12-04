@@ -184,12 +184,14 @@ test/unittests/test.conf
 test/unittests/test_corosync.py
 test/unittests/test_gv.py
 test/unittests/test_handles.py
+test/unittests/test_join_lock.py
 test/unittests/test_objset.py
 test/unittests/test_parallax.py
 test/unittests/test_parse.py
 test/unittests/test_report.py
 test/unittests/test_scripts.py
 test/unittests/test_time.py
+test/unittests/test_ui_cluster.py
 test/unittests/test_utils.py
 test/update-expected-output.sh
 utils/crm_clean.py

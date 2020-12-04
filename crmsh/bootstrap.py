@@ -30,6 +30,7 @@ from . import corosync
 from . import tmpfiles
 from . import clidisplay
 from . import term
+from . import join_lock
 
 
 LOG_FILE = "/var/log/crmsh/ha-cluster-bootstrap.log"
@@ -1711,8 +1712,6 @@ def join_ssh(seed_host):
     if not invoke("ssh root@{} crm cluster init -i {} ssh_remote".format(seed_host, _context.default_nic_list[0])):
         error("Can't invoke crm cluster init -i {} ssh_remote on {}".format(_context.default_nic_list[0], seed_host))
 
-    setup_passwordless_with_other_nodes(seed_host)
-
 
 def swap_public_ssh_key(remote_node):
     """
@@ -2338,10 +2337,14 @@ def bootstrap_join(context):
             _context.cluster_node = cluster_node
 
         join_ssh(cluster_node)
-        join_remote_auth(cluster_node)
-        join_csync2(cluster_node)
-        join_ssh_merge(cluster_node)
-        join_cluster(cluster_node)
+
+        lock_inst = join_lock.JoinLock(cluster_node)
+        with lock_inst.lock():
+            setup_passwordless_with_other_nodes(cluster_node)
+            join_remote_auth(cluster_node)
+            join_csync2(cluster_node)
+            join_ssh_merge(cluster_node)
+            join_cluster(cluster_node)
 
     status("Done (log saved to %s)" % (LOG_FILE))
 
