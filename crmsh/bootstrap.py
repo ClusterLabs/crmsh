@@ -170,7 +170,36 @@ Configure SBD:
         return result_list
 
     @staticmethod
-    def _verify_sbd_device(dev_list):
+    def _get_device_uuid(dev, node=None):
+        """
+        Get UUID for specific device and node
+        """
+        cmd = "sbd -d {} dump".format(dev)
+        if node:
+            cmd = "ssh -o StrictHostKeyChecking=no root@{} '{}'".format(node, cmd)
+
+        rc, out, err = utils.get_stdout_stderr(cmd)
+        if rc != 0 and err:
+            raise ValueError("Cannot dump sbd meta-data: {}".format(err))
+        if rc == 0 and out:
+            res = re.search("UUID\s*:\s*(.*)\n", out)
+            if not res:
+                raise ValueError("Cannot find sbd device UUID for {}".format(dev))
+            return res.group(1)
+
+    def _compare_device_uuid(self, dev, node_list):
+        """
+        Compare local sbd device UUID with other node's sbd device UUID
+        """
+        if not node_list:
+            return
+        local_uuid = self._get_device_uuid(dev)
+        for node in node_list:
+            remote_uuid = self._get_device_uuid(dev, node)
+            if local_uuid != remote_uuid:
+                raise ValueError("Device {} doesn't have the same UUID with {}".format(dev, node))
+
+    def _verify_sbd_device(self, dev_list, compare_node_list=[]):
         """
         Verify sbd device
         """
@@ -179,6 +208,7 @@ Configure SBD:
         for dev in dev_list:
             if not is_block_device(dev):
                 raise ValueError("{} doesn't look like a block device".format(dev))
+            self._compare_device_uuid(dev, compare_node_list)
 
     def _get_sbd_device_interactive(self):
         """
@@ -322,16 +352,27 @@ Configure SBD:
         """
         if not utils.package_is_installed("sbd"):
             return
-        cmd_detect_enabled = "ssh -o StrictHostKeyChecking=no root@{} systemctl is-enabled sbd.service".format(peer_host)
-        if not os.path.exists(SYSCONFIG_SBD) or not invokerc(cmd_detect_enabled):
+        if not os.path.exists(SYSCONFIG_SBD) or not utils.service_is_enabled("sbd.service", peer_host):
             invoke("systemctl disable sbd.service")
             return
         self._check_environment()
         dev_list = self._get_sbd_device_from_config()
         if dev_list:
-            self._verify_sbd_device(dev_list)
+            self._verify_sbd_device(dev_list, [peer_host])
         status("Got {}SBD configuration".format("" if dev_list else "diskless "))
         invoke("systemctl enable sbd.service")
+
+    @classmethod
+    def verify_sbd_device(cls):
+        """
+        This classmethod is for verifying sbd device on a running cluster
+        Raise ValueError for exceptions
+        """
+        inst = cls()
+        dev_list = inst._get_sbd_device_from_config()
+        if not dev_list:
+            raise ValueError("No sbd device configured")
+        inst._verify_sbd_device(dev_list, utils.list_cluster_nodes_except_me())
 
 
 _context = None
