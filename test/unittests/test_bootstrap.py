@@ -609,29 +609,14 @@ class TestBootstrap(unittest.TestCase):
 
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_setup_passwordless_with_other_nodes_cluster_inactive(self, mock_run, mock_error):
+    def test_setup_passwordless_with_other_nodes_failed_fetch_nodelist(self, mock_run, mock_error):
         mock_run.return_value = (1, None, None)
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
             bootstrap.setup_passwordless_with_other_nodes("node1")
 
-        mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 systemctl -q is-active pacemaker.service")
-        mock_error.assert_called_once_with("Cluster is inactive on node1")
-
-    @mock.patch('crmsh.bootstrap.error')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_setup_passwordless_with_other_nodes_failed_fetch_nodelist(self, mock_run, mock_error):
-        mock_run.side_effect = [(0, None, None), (1, None, None)]
-        mock_error.side_effect = SystemExit
-
-        with self.assertRaises(SystemExit):
-            bootstrap.setup_passwordless_with_other_nodes("node1")
-
-        mock_run.assert_has_calls([
-            mock.call("ssh -o StrictHostKeyChecking=no root@node1 systemctl -q is-active pacemaker.service"),
-            mock.call("ssh -o StrictHostKeyChecking=no root@node1 crm_node -l")
-            ])
+        mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 crm_node -l")
         mock_error.assert_called_once_with("Can't fetch cluster nodes list from node1: None")
 
     @mock.patch('crmsh.bootstrap.error')
@@ -640,7 +625,6 @@ class TestBootstrap(unittest.TestCase):
         out_node_list = """1 node1 member
         2 node2 member"""
         mock_run.side_effect = [
-                (0, None, None),
                 (0, out_node_list, None),
                 (1, None, None)
                 ]
@@ -650,7 +634,6 @@ class TestBootstrap(unittest.TestCase):
             bootstrap.setup_passwordless_with_other_nodes("node1")
 
         mock_run.assert_has_calls([
-            mock.call("ssh -o StrictHostKeyChecking=no root@node1 systemctl -q is-active pacemaker.service"),
             mock.call("ssh -o StrictHostKeyChecking=no root@node1 crm_node -l"),
             mock.call("ssh -o StrictHostKeyChecking=no root@node1 hostname")
             ])
@@ -662,7 +645,6 @@ class TestBootstrap(unittest.TestCase):
         out_node_list = """1 node1 member
         2 node2 member"""
         mock_run.side_effect = [
-                (0, None, None),
                 (0, out_node_list, None),
                 (0, "node1", None)
                 ]
@@ -670,7 +652,6 @@ class TestBootstrap(unittest.TestCase):
         bootstrap.setup_passwordless_with_other_nodes("node1")
 
         mock_run.assert_has_calls([
-            mock.call("ssh -o StrictHostKeyChecking=no root@node1 systemctl -q is-active pacemaker.service"),
             mock.call("ssh -o StrictHostKeyChecking=no root@node1 crm_node -l"),
             mock.call("ssh -o StrictHostKeyChecking=no root@node1 hostname")
             ])
