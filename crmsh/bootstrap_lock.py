@@ -15,9 +15,8 @@ class SSHError(Exception):
     pass
 
 
-class JoinLock(object):
+class Lock(object):
     """
-    Class to manage lock for multiple nodes join in parallel
     """
 
     JOIN_LOCK_DIR = "/tmp/.crmsh_join_lock_directory"
@@ -26,6 +25,60 @@ class JoinLock(object):
     SSH_TIMEOUT = 10
     SSH_OPTION = "-o ConnectTimeout={} -o StrictHostKeyChecking=no".format(SSH_TIMEOUT)
     SSH_EXIT_ERR = 255
+
+    def __init__(self, init_node=None):
+        self.init_node = init_node
+        self.is_joining = True if self.init_node else False
+        # only the lock owner can unlock
+        self.lock_owner = False
+
+    def _run(self, cmd):
+        """
+        Run command on target node, consider specific exceptions
+        """
+        if self.is_joining:
+            cmd = "ssh {} root@{} \"{}\"".format(self.SSH_OPTION, self.init_node, cmd)
+        rc, out, err = utils.get_stdout_stderr(cmd)
+        if self.is_joining and rc == self.SSH_EXIT_ERR:
+            raise SSHError(err)
+        return rc, out, err
+
+    def _create_lock_dir(self):
+        """
+        Create lock directory, mkdir command was atomic
+        """
+        rc, _, _ = self._run(self.MKDIR_CMD)
+        return rc == 0
+
+    def unlock(self):
+        """
+        Remove the lock directory on target node
+        """
+        if self.lock_owner:
+            self._run(self.RM_CMD)
+
+
+class InitLock(Lock):
+
+    @contextmanager
+    def lock(self):
+        try:
+            if self._create_lock_dir():
+                self.lock_owner = True
+            else:
+                raise RuntimeError("Failed to claim lock on init process")
+            yield
+        except:
+            raise
+        finally:
+            self.unlock()
+
+
+class JoinLock(Lock):
+    """
+    Class to manage lock for multiple nodes join in parallel
+    """
+
     MIN_JOIN_TIMEOUT = 120
     WAIT_INTERVAL = 10
 
@@ -33,9 +86,7 @@ class JoinLock(object):
         """
         Init function
         """
-        self.init_node = init_node
-        # only the lock owner can unlock
-        self.lock_owner = False
+        super(__class__, self).__init__(init_node)
 
     @property
     def join_timeout(self):
@@ -49,23 +100,6 @@ class JoinLock(object):
         if value < self.MIN_JOIN_TIMEOUT:
             raise ValueError("Minimum value of core.join_timeout should be {}".format(self.MIN_JOIN_TIMEOUT))
         return value
-
-    def _run(self, cmd):
-        """
-        Run command on target node, consider specific exceptions
-        """
-        cmd_with_ssh = "ssh {} root@{} \"{}\"".format(self.SSH_OPTION, self.init_node, cmd)
-        rc, out, err = utils.get_stdout_stderr(cmd_with_ssh)
-        if rc == self.SSH_EXIT_ERR:
-            raise SSHError(err)
-        return rc, out, err
-
-    def _create_lock_dir(self):
-        """
-        Create lock directory, mkdir command was atomic
-        """
-        rc, _, _ = self._run(self.MKDIR_CMD)
-        return rc == 0
 
     def _get_online_nodelist(self):
         """
@@ -131,10 +165,3 @@ class JoinLock(object):
             raise
         finally:
             self.unlock()
-
-    def unlock(self):
-        """
-        Remove the lock directory on target node
-        """
-        if self.lock_owner:
-            self._run(self.RM_CMD)

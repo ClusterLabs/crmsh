@@ -2294,10 +2294,13 @@ def bootstrap_init(context):
                 init_storage()
         init_sbd()
         init_cluster()
-        if _context.template == 'ocfs2':
-            init_vgfs()
-        init_admin()
-        init_qdevice()
+
+        lock_inst = bootstrap_lock.InitLock()
+        with lock_inst.lock():
+            if _context.template == 'ocfs2':
+                init_vgfs()
+            init_admin()
+            init_qdevice()
 
     status("Done (log saved to %s)" % (LOG_FILE))
 
@@ -2338,7 +2341,10 @@ def bootstrap_join(context):
 
         join_ssh(cluster_node)
 
-        lock_inst = join_lock.JoinLock(cluster_node)
+        if not utils.service_is_active("pacemaker.service", cluster_node):
+            error("Cluster is inactive on {}".format(cluster_node))
+
+        lock_inst = bootstrap_lock.JoinLock(cluster_node)
         with lock_inst.lock():
             setup_passwordless_with_other_nodes(cluster_node)
             join_remote_auth(cluster_node)
