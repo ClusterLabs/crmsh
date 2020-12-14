@@ -558,6 +558,8 @@ class CibConfig(command.UI):
             # regrex here also filter out possible spaces
             osargs = re.split('\s*\|\s*|\s+', config.core.obscure_pattern.strip('|'))
         args = [arg for arg in args if not arg.startswith('obscure:')]
+        if "changed" in args:
+            args.append("from_show")
         with obscure(osargs):
             set_obj = mkset_obj(*args)
             return set_obj.show()
