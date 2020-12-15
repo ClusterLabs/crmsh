@@ -1935,12 +1935,6 @@ def setup_passwordless_with_other_nodes(init_node):
 
     Should fetch the node list from init node, then swap the key
     """
-    # Check whether pacemaker.service is active on init node
-    cmd = "ssh -o StrictHostKeyChecking=no root@{} systemctl -q is-active {}".format(init_node, "pacemaker.service")
-    rc, _, _ = utils.get_stdout_stderr(cmd)
-    if rc != 0:
-        error("Cluster is inactive on {}".format(init_node))
-
     # Fetch cluster nodes list
     cmd = "ssh -o StrictHostKeyChecking=no root@{} crm_node -l".format(init_node)
     rc, out, err = utils.get_stdout_stderr(cmd)
@@ -2337,6 +2331,9 @@ def bootstrap_join(context):
             _context.cluster_node = cluster_node
 
         join_ssh(cluster_node)
+
+        if not utils.service_is_active("pacemaker.service", cluster_node):
+            error("Cluster is inactive on {}".format(cluster_node))
 
         lock_inst = join_lock.JoinLock(cluster_node)
         with lock_inst.lock():
