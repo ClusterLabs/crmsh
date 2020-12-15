@@ -243,7 +243,7 @@ DEFAULTS = {
         'dot': opt_program('', ('dot',)),
         'ignore_missing_metadata': opt_boolean('no'),
         'report_tool_options': opt_string(''),
-        'join_timeout': opt_string('120'),
+        'lock_timeout': opt_string('120'),
         'obscure_pattern': opt_string('passw*')
     },
     'path': {

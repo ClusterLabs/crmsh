@@ -29,7 +29,7 @@ from . import corosync
 from . import tmpfiles
 from . import clidisplay
 from . import term
-from . import join_lock
+from . import lock
 
 
 LOG_FILE = "/var/log/ha-cluster-bootstrap.log"
@@ -2034,10 +2034,16 @@ def bootstrap_init(context):
             if _context.sbd_device is None or _context.ocfs2_device is None:
                 init_storage()
         init_sbd()
-        init_cluster()
-        if _context.template == 'ocfs2':
-            init_vgfs()
-        init_admin()
+
+        lock_inst = lock.Lock()
+        try:
+            with lock_inst.lock():
+                init_cluster()
+                if _context.template == 'ocfs2':
+                    init_vgfs()
+                init_admin()
+        except lock.ClaimLockError as err:
+            error(err)
 
     status("Done (log saved to %s)" % (LOG_FILE))
 
@@ -2083,12 +2089,15 @@ def bootstrap_join(context):
         if not utils.service_is_active("pacemaker.service", cluster_node):
             error("Cluster is inactive on {}".format(cluster_node))
 
-        lock_inst = join_lock.JoinLock(cluster_node)
-        with lock_inst.lock():
-            setup_passwordless_with_other_nodes(cluster_node)
-            join_csync2(cluster_node)
-            join_ssh_merge(cluster_node)
-            join_cluster(cluster_node)
+        lock_inst = lock.RemoteLock(cluster_node)
+        try:
+            with lock_inst.lock():
+                setup_passwordless_with_other_nodes(cluster_node)
+                join_csync2(cluster_node)
+                join_ssh_merge(cluster_node)
+                join_cluster(cluster_node)
+        except (lock.SSHError, lock.ClaimLockError) as err:
+            error(err)
 
     status("Done (log saved to %s)" % (LOG_FILE))
 
