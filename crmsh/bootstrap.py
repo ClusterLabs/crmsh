@@ -30,7 +30,7 @@ from . import corosync
 from . import tmpfiles
 from . import clidisplay
 from . import term
-from . import join_lock
+from . import bootstrap_lock
 
 
 LOG_FILE = "/var/log/crmsh/ha-cluster-bootstrap.log"
