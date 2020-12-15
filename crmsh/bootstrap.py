@@ -271,8 +271,9 @@ Configure SBD:
         if self.diskless_sbd:
             return
         for dev in self._sbd_devices:
-            if not invoke("sbd -d {} create".format(dev)):
-                error("Failed to initialize SBD device {}".format(dev))
+            rc, _, err = invoke("sbd -d {} create".format(dev))
+            if not rc:
+                error("Failed to initialize SBD device {}: {}".format(dev, err))
 
     def _update_configuration(self):
         """
@@ -329,12 +330,12 @@ Configure SBD:
             return
         if utils.service_is_enabled("sbd.service"):
             if self._get_sbd_device_from_config():
-                if not invoke("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"):
+                if not invokerc("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"):
                     error("Can't create stonith-sbd primitive")
-                if not invoke("crm configure property stonith-enabled=true"):
+                if not invokerc("crm configure property stonith-enabled=true"):
                     error("Can't enable STONITH for SBD")
             else:
-                if not invoke("crm configure property stonith-enabled=true stonith-watchdog-timeout=5s"):
+                if not invokerc("crm configure property stonith-enabled=true stonith-watchdog-timeout=5s"):
                     error("Can't enable STONITH for diskless SBD")
 
     def join_sbd(self, peer_host):
@@ -346,7 +347,7 @@ Configure SBD:
         if not utils.package_is_installed("sbd"):
             return
         cmd_detect_enabled = "ssh -o StrictHostKeyChecking=no root@{} systemctl is-enabled sbd.service".format(peer_host)
-        if not os.path.exists(SYSCONFIG_SBD) or not invoke(cmd_detect_enabled):
+        if not os.path.exists(SYSCONFIG_SBD) or not invokerc(cmd_detect_enabled):
             invoke("systemctl disable sbd.service")
             return
         self._check_environment()
@@ -475,7 +476,7 @@ def invoke(*args):
     """
     Log command execution to log file.
     Log output from command to log file.
-    Return returncode == 0
+    Return (boolean, stdout, stderr)
     """
     log("+ " + " ".join(args))
     rc, stdout, stderr = utils.get_stdout_stderr(" ".join(args))
@@ -483,17 +484,14 @@ def invoke(*args):
         log(stdout)
     if stderr:
         log(stderr)
-    return rc == 0
+    return rc == 0, stdout, stderr
 
 
 def invokerc(*args):
-    "Like invoke, but returns the returncode, not True/False"
-    log("+ " + " ".join(args))
-    rc, stdout, stderr = utils.get_stdout_stderr(" ".join(args))
-    if stdout:
-        log(stdout)
-    if stderr:
-        log(stderr)
+    """
+    Calling invoke, return True/False
+    """
+    rc, _, _ = invoke(*args)
     return rc
 
 
@@ -781,7 +779,7 @@ def configure_firewall(tcp=None, udp=None):
 
         # Firewall is active, either restart or complain if we couldn't tweak it
         status("Restarting firewall (tcp={}, udp={})".format(" ".join(tcp), " ".join(udp)))
-        if not invoke("rcSuSEfirewall2 restart"):
+        if not invokerc("rcSuSEfirewall2 restart"):
             error("Failed to restart firewall (SuSEfirewall2)")
 
     def init_firewall_firewalld(tcp, udp):
@@ -789,7 +787,7 @@ def configure_firewall(tcp=None, udp=None):
         cmdbase = 'firewall-cmd --zone=public --permanent ' if has_firewalld else 'firewall-offline-cmd --zone=public '
 
         def cmd(args):
-            if not invoke(cmdbase + args):
+            if not invokerc(cmdbase + args):
                 error("Failed to configure firewall.")
 
         for p in tcp:
@@ -799,7 +797,7 @@ def configure_firewall(tcp=None, udp=None):
             cmd("--add-port={}/udp".format(p))
 
         if has_firewalld:
-            if not invoke("firewall-cmd --reload"):
+            if not invokerc("firewall-cmd --reload"):
                 error("Failed to reload firewall configuration.")
 
     def init_firewall_ufw(tcp, udp):
@@ -807,10 +805,10 @@ def configure_firewall(tcp=None, udp=None):
         try configuring firewall with ufw
         """
         for p in tcp:
-            if not invoke("ufw allow {}/tcp".format(p)):
+            if not invokerc("ufw allow {}/tcp".format(p)):
                 error("Failed to configure firewall (ufw)")
         for p in udp:
-            if not invoke("ufw allow {}/udp".format(p)):
+            if not invokerc("ufw allow {}/udp".format(p)):
                 error("Failed to configure firewall (ufw)")
 
     if utils.package_is_installed("firewalld"):
@@ -981,9 +979,15 @@ def append_to_remote_file(fromfile, remote_node, tofile):
     """
     Append content of fromfile to tofile on remote_node
     """
+    err_details_string = """
+    crmsh has no way to help you to setup up passwordless ssh among nodes at this time. 
+    As the hint, likely, `PasswordAuthentication` is 'no' in /etc/ssh/sshd_config. 
+    Given in this case, users must setup passwordless ssh beforehand, or change it to 'yes' and manage passwords properly
+    """
     cmd = "cat {} | ssh -oStrictHostKeyChecking=no root@{} 'cat >> {}'".format(fromfile, remote_node, tofile)
-    if not invoke(cmd):
-        error("Failed to run \"{}\"".format(cmd))
+    rc, _, err = invoke(cmd)
+    if not rc:
+        error("Failed to append contents of {} to {}:\n\"{}\"\n{}".format(fromfile, remote_node, err, err_details_string))
 
 
 def init_csync2():
@@ -994,7 +998,7 @@ def init_csync2():
 
     invoke("rm", "-f", CSYNC2_KEY)
     status_long("Generating csync2 shared key (this may take a while)")
-    if not invoke("csync2", "-k", CSYNC2_KEY):
+    if not invokerc("csync2", "-k", CSYNC2_KEY):
         error("Can't create csync2 key {}".format(CSYNC2_KEY))
     status_done()
 
@@ -1033,10 +1037,10 @@ def csync2_update(path):
     If there was a conflict, use '-f' to force this side to win
     '''
     invoke("csync2 -rm {}".format(path))
-    if invoke("csync2 -rxv {}".format(path)):
+    if invokerc("csync2 -rxv {}".format(path)):
         return
     invoke("csync2 -rf {}".format(path))
-    if not invoke("csync2 -rxv {}".format(path)):
+    if not invokerc("csync2 -rxv {}".format(path)):
         warn("{} was not synced".format(path))
 
 
@@ -1094,7 +1098,7 @@ def init_remote_auth():
 
     pcmk_remote_dir = os.path.dirname(PCMK_REMOTE_AUTH)
     mkdirs_owned(pcmk_remote_dir, mode=0o750, gid="haclient")
-    if not invoke("dd if=/dev/urandom of={} bs=4096 count=1".format(PCMK_REMOTE_AUTH)):
+    if not invokerc("dd if=/dev/urandom of={} bs=4096 count=1".format(PCMK_REMOTE_AUTH)):
         warn("Failed to create pacemaker authkey: {}".format(PCMK_REMOTE_AUTH))
     utils.chown(PCMK_REMOTE_AUTH, "hacluster", "haclient")
     os.chmod(PCMK_REMOTE_AUTH, 0o640)
@@ -1178,7 +1182,7 @@ class Validation(object):
 
         # Check whether this IP already configured in cluster
         ping_cmd = "ping6" if ipv6 else "ping"
-        if invoke("{} -c 1 {}".format(ping_cmd, addr)):
+        if invokerc("{} -c 1 {}".format(ping_cmd, addr)):
             raise ValueError("Address already in use: {}".format(addr))
 
 
@@ -1433,12 +1437,12 @@ Configure Shared Storage:
             return
         status_long("Erasing existing partitions...")
         for part in partitions:
-            if not invoke("parted -s %s rm %s" % (dev, part)):
+            if not invokerc("parted -s %s rm %s" % (dev, part)):
                 error("Failed to remove partition %s from %s" % (part, dev))
         status_done()
 
     status_long("Creating partitions...")
-    if not invoke("parted", "-s", dev, "mklabel", "msdos"):
+    if not invokerc("parted", "-s", dev, "mklabel", "msdos"):
         error("Failed to create partition table")
 
     # This is a bit rough, and probably won't result in great performance,
@@ -1446,9 +1450,9 @@ Configure Shared Storage:
     # we have to specify the size of the first partition in this in bytes
     # rather than MB, or parted's rounding gives us a ~30Kb partition
     # (see rhbz#623268).
-    if not invoke("parted -s %s mkpart primary 0 1048576B" % (dev)):
+    if not invokerc("parted -s %s mkpart primary 0 1048576B" % (dev)):
         error("Failed to create first partition on %s" % (dev))
-    if not invoke("parted -s %s mkpart primary 1M 100%%" % (dev)):
+    if not invokerc("parted -s %s mkpart primary 1M 100%%" % (dev)):
         error("Failed to create second partition")
 
     status_done()
@@ -1570,14 +1574,14 @@ colocation clusterfs-with-base inf: c-clusterfs base-clone
     # existing partition.  For the commit that introduced this, see:
     # http://oss.oracle.com/git/?p=ocfs2-tools.git;a=commit;h=8345a068479196172190f4fa287052800fa2b66f
     # TODO: if make the cluster name configurable, we need to update it here too
-    if not invoke("mkfs.ocfs2 --cluster-stack pcmk --cluster-name %s -N 8 -x %s" % (_context.cluster_name, dev)):
+    if not invokerc("mkfs.ocfs2 --cluster-stack pcmk --cluster-name %s -N 8 -x %s" % (_context.cluster_name, dev)):
         error("Failed to create OCFS2 filesystem on %s" % (dev))
     status_done()
 
     # TODO: refactor, maybe
-    if not invoke("mkdir -p %s" % (mntpoint)):
+    if not invokerc("mkdir -p %s" % (mntpoint)):
         error("Can't create mountpoint %s" % (mntpoint))
-    if not invoke("crm resource meta clusterfs delete target-role"):
+    if not invokerc("crm resource meta clusterfs delete target-role"):
         error("Can't start cluster filesystem clone")
     wait_for_resource("Waiting for %s to be mounted" % (mntpoint), "clusterfs:0")
 
@@ -1632,8 +1636,9 @@ def join_ssh(seed_host):
     # authorized_keys file (again, to help with the case where the
     # user has done manual initial setup without the assistance of
     # ha-cluster-init).
-    if not invoke("ssh root@{} crm cluster init -i {} ssh_remote".format(seed_host, _context.default_nic_list[0])):
-        error("Can't invoke crm cluster init -i {} ssh_remote on {}".format(_context.default_nic_list[0], seed_host))
+    rc, _, err = invoke("ssh root@{} crm cluster init -i {} ssh_remote".format(seed_host, _context.default_nic_list[0]))
+    if not rc:
+        error("Can't invoke crm cluster init -i {} ssh_remote on {}: {}".format(_context.default_nic_list[0], seed_host, err))
 
 
 def swap_public_ssh_key(remote_node):
@@ -1671,12 +1676,13 @@ def fetch_public_key_from_remote_node(node):
     for key in ("id_rsa", "id_ecdsa", "id_ed25519", "id_dsa"):
         public_key_file = "/root/.ssh/{}.pub".format(key)
         cmd = "ssh -oStrictHostKeyChecking=no root@{} 'test -f {}'".format(node, public_key_file)
-        if not invoke(cmd):
+        if not invokerc(cmd):
             continue
         _, temp_public_key_file = tmpfiles.create()
         cmd = "scp -oStrictHostKeyChecking=no root@{}:{} {}".format(node, public_key_file, temp_public_key_file)
-        if not invoke(cmd):
-            error("Failed to run \"{}\"".format(cmd))
+        rc, _, err = invoke(cmd)
+        if not rc:
+            error("Failed to run \"{}\": {}".format(cmd, err))
         return temp_public_key_file
     raise ValueError("No ssh key exist on {}".format(node))
 
@@ -1700,8 +1706,9 @@ def join_csync2(seed_host):
     # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
     # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
     cmd = "crm cluster init -i {} csync2_remote {}".format(_context.default_nic_list[0], utils.this_node())
-    if not invoke("ssh -o StrictHostKeyChecking=no root@{} {}".format(seed_host, cmd)):
-        error("Can't invoke \"{}\" on {}".format(cmd, seed_host))
+    rc, _, err = invoke("ssh -o StrictHostKeyChecking=no root@{} {}".format(seed_host, cmd))
+    if not rc:
+        error("Can't invoke \"{}\" on {}: {}".format(cmd, seed_host, err))
 
     # This is necessary if syncing /etc/hosts (to ensure everyone's got the
     # same list of hosts)
@@ -1709,9 +1716,9 @@ def join_csync2(seed_host):
     # invoke scp root@seed_host:/etc/hosts $tmp_conf \
     #   || error "Can't retrieve /etc/hosts from seed_host"
     # install_tmp $tmp_conf /etc/hosts
-
-    if not invoke("scp root@%s:'/etc/csync2/{csync2.cfg,key_hagroup}' /etc/csync2" % (seed_host)):
-        error("Can't retrieve csync2 config from %s" % (seed_host))
+    rc, _, err = invoke("scp root@%s:'/etc/csync2/{csync2.cfg,key_hagroup}' /etc/csync2" % (seed_host))
+    if not rc:
+        error("Can't retrieve csync2 config from {}: {}".format(seed_host, err))
 
     utils.start_service("csync2.socket", enable=True)
 
@@ -1724,7 +1731,7 @@ def join_csync2(seed_host):
     # they haven't gone to all nodes in the cluster, which means a
     # subseqent join of another node can fail its sync of corosync.conf
     # when it updates expected_votes.  Grrr...
-    if not invoke('ssh -o StrictHostKeyChecking=no root@{} "csync2 -rm /; csync2 -rxv || csync2 -rf / && csync2 -rxv"'.format(seed_host)):
+    if not invokerc('ssh -o StrictHostKeyChecking=no root@{} "csync2 -rm /; csync2 -rxv || csync2 -rf / && csync2 -rxv"'.format(seed_host)):
         print("")
         warn("csync2 run failed - some files may not be sync'd")
 
@@ -2067,15 +2074,16 @@ def remove_node_from_cluster():
     stop_services(SERVICES_STOP_LIST, remote_addr=node)
 
     # delete configuration files from the node to be removed
-    if not invoke('ssh -o StrictHostKeyChecking=no root@{} "bash -c \\\"rm -f {}\\\""'.format(node, " ".join(_context.rm_list))):
-        error("Deleting the configuration files failed")
+    rc, _, err = invoke('ssh -o StrictHostKeyChecking=no root@{} "bash -c \\\"rm -f {}\\\""'.format(node, " ".join(_context.rm_list)))
+    if not rc:
+        error("Deleting the configuration files failed: {}".format(err))
 
     # execute the command : crm node delete $HOSTNAME
     status("Removing the node {}".format(node))
-    if not invoke("crm node delete {}".format(node)):
+    if not invokerc("crm node delete {}".format(node)):
         error("Failed to remove {}".format(node))
 
-    if not invoke("sed -i /{}/d {}".format(node, CSYNC2_CFG)):
+    if not invokerc("sed -i /{}/d {}".format(node, CSYNC2_CFG)):
         error("Removing the node {} from {} failed".format(node, CSYNC2_CFG))
 
     # Remove node from nodelist
@@ -2317,7 +2325,7 @@ def remove_self():
         stop_services(SERVICES_STOP_LIST)
         # remove all trace of cluster from this node
         # delete configuration files from the node to be removed
-        if not invoke('bash -c "rm -f {}"'.format(" ".join(_context.rm_list))):
+        if not invokerc('bash -c "rm -f {}"'.format(" ".join(_context.rm_list))):
             error("Deleting the configuration files failed")
 
 
@@ -2346,8 +2354,9 @@ def create_booth_authkey():
     status("Create authentication key for booth")
     if os.path.exists(BOOTH_AUTH):
         rmfile(BOOTH_AUTH)
-    if not invoke("booth-keygen {}".format(BOOTH_AUTH)):
-        error("Failed to generate booth authkey")
+    rc, _, err = invoke("booth-keygen {}".format(BOOTH_AUTH))
+    if not rc:
+        error("Failed to generate booth authkey: {}".format(err))
 
 
 def create_booth_config(arbitrator, clusters, tickets):
@@ -2410,8 +2419,9 @@ def geo_fetch_config(node):
     # TODO: clean this up
     status("Retrieving configuration - This may prompt for root@%s:" % (node))
     tmpdir = tmpfiles.create_dir()
-    if not invoke("scp -oStrictHostKeyChecking=no root@%s:'/etc/booth/*' %s/" % (node, tmpdir)):
-        error("Failed to retrieve configuration")
+    rc, _, err = invoke("scp -oStrictHostKeyChecking=no root@%s:'/etc/booth/*' %s/" % (node, tmpdir))
+    if not rc:
+        error("Failed to retrieve configuration: {}".format(err))
     try:
         if os.path.isfile("%s/authkey" % (tmpdir)):
             invoke("mv %s/authkey %s" % (tmpdir, BOOTH_AUTH))
