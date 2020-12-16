@@ -2330,6 +2330,8 @@ def bootstrap_join(context):
             cluster_node = prompt_for_string("IP address or hostname of existing node (e.g.: 192.168.1.1)", ".+")
             _context.cluster_node = cluster_node
 
+        utils.ping_node(cluster_node)
+
         join_ssh(cluster_node)
 
         if not utils.service_is_active("pacemaker.service", cluster_node):
