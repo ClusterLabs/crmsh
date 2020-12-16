@@ -2466,4 +2466,13 @@ def get_nodeid_from_name(name):
         return res.group(1)
     else:
         return None
+
+
+def ping_node(node):
+    """
+    Check if the remote node is reachable
+    """
+    rc, _, err = get_stdout_stderr("ping -c 1 {}".format(node))
+    if rc != 0:
+        raise ValueError("host \"{}\" is unreachable: {}".format(node, err))
 # vim:ts=4:sw=4:et:
