@@ -271,9 +271,7 @@ class QDevice(object):
         except socket.error:
             raise ValueError("host \"{}\" is unreachable".format(self.qnetd_addr))
 
-        rc, _ = utils.get_stdout("ping -c 1 {}".format(self.qnetd_addr))
-        if rc != 0:
-            raise ValueError("host \"{}\" is unreachable".format(self.qnetd_addr))
+        utils.ping_node(self.qnetd_addr)
 
         if utils.InterfacesInfo.ip_in_local(qnetd_ip):
             raise ValueError("host for qnetd must be a remote one")

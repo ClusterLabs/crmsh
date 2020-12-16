@@ -1240,3 +1240,12 @@ def test_get_iplist_from_name(mock_get_nodeid, mock_get_nodeinfo):
     assert res == ["10.10.10.1"]
     mock_get_nodeid.assert_called_once_with("test")
     mock_get_nodeinfo.assert_called_once_with()
+
+
+@mock.patch("crmsh.utils.get_stdout_stderr")
+def test_ping_node(mock_run):
+    mock_run.return_value = (1, None, "error data")
+    with pytest.raises(ValueError) as err:
+        utils.ping_node("node_unreachable")
+    assert str(err.value) == 'host "node_unreachable" is unreachable: error data'
+    mock_run.assert_called_once_with("ping -c 1 node_unreachable")

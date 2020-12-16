@@ -465,13 +465,12 @@ class TestQDevice(unittest.TestCase):
         mock_installed.assert_called_once_with("corosync-qdevice")
 
     @mock.patch("crmsh.utils.InterfacesInfo.ip_in_local")
-    @mock.patch("crmsh.utils.get_stdout")
+    @mock.patch("crmsh.utils.ping_node")
     @mock.patch("socket.getaddrinfo")
     @mock.patch("crmsh.utils.package_is_installed")
-    def test_valid_attr_remote_exception(self, mock_installed, mock_getaddrinfo, mock_run, mock_ip_local):
+    def test_valid_attr_remote_exception(self, mock_installed, mock_getaddrinfo, mock_ping, mock_ip_local):
         mock_installed.return_value = True
         mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
-        mock_run.return_value = (0, None)
         mock_ip_local.return_value = True
 
         with self.assertRaises(ValueError) as err:
@@ -480,7 +479,7 @@ class TestQDevice(unittest.TestCase):
 
         mock_installed.assert_called_once_with("corosync-qdevice")
         mock_getaddrinfo.assert_called_once_with("10.10.10.123", None)
-        mock_run.assert_called_once_with("ping -c 1 10.10.10.123")
+        mock_ping.assert_called_once_with("10.10.10.123")
         mock_ip_local.assert_called_once_with("10.10.10.123")
 
     @mock.patch("socket.getaddrinfo")
@@ -496,32 +495,15 @@ class TestQDevice(unittest.TestCase):
         mock_installed.assert_called_once_with("corosync-qdevice")
         mock_getaddrinfo.assert_called_once_with("node.qnetd", None)
 
-    @mock.patch("crmsh.utils.get_stdout")
-    @mock.patch("socket.getaddrinfo")
-    @mock.patch("crmsh.utils.package_is_installed")
-    def test_valid_attr_unreachable_exception(self, mock_installed, mock_getaddrinfo, mock_run):
-        mock_installed.return_value = True
-        mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
-        mock_run.return_value = (1, None)
-
-        with self.assertRaises(ValueError) as err:
-            self.qdevice_with_hostname.valid_attr()
-        self.assertEqual("host \"node.qnetd\" is unreachable", str(err.exception))
-
-        mock_installed.assert_called_once_with("corosync-qdevice")
-        mock_getaddrinfo.assert_called_once_with("node.qnetd", None)
-        mock_run.assert_called_once_with("ping -c 1 node.qnetd")
-
     @mock.patch("crmsh.utils.check_port_open")
     @mock.patch("crmsh.utils.InterfacesInfo.ip_in_local")
-    @mock.patch("crmsh.utils.get_stdout")
+    @mock.patch("crmsh.utils.ping_node")
     @mock.patch("socket.getaddrinfo")
     @mock.patch("crmsh.utils.package_is_installed")
     def test_valid_attr_ssh_service_exception(self, mock_installed, mock_getaddrinfo,
-            mock_run, mock_ip_local, mock_port_open):
+            mock_ping, mock_ip_local, mock_port_open):
         mock_installed.return_value = True
         mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
-        mock_run.return_value = (0, None)
         mock_ip_local.return_value = False
         mock_port_open.return_value = False
 
@@ -531,21 +513,20 @@ class TestQDevice(unittest.TestCase):
 
         mock_installed.assert_called_once_with("corosync-qdevice")
         mock_getaddrinfo.assert_called_once_with("10.10.10.123", None)
-        mock_run.assert_called_once_with("ping -c 1 10.10.10.123")
+        mock_ping.assert_called_once_with("10.10.10.123")
         mock_port_open.assert_called_once_with("10.10.10.123", 22)
         mock_ip_local.assert_called_once_with("10.10.10.123")
 
     @mock.patch("crmsh.utils.valid_port")
     @mock.patch("crmsh.utils.check_port_open")
     @mock.patch("crmsh.utils.InterfacesInfo.ip_in_local")
-    @mock.patch("crmsh.utils.get_stdout")
+    @mock.patch("crmsh.utils.ping_node")
     @mock.patch("socket.getaddrinfo")
     @mock.patch("crmsh.utils.package_is_installed")
     def test_valid_attr_invalid_port_exception(self, mock_installed, mock_getaddrinfo,
-            mock_run, mock_ip_local, mock_port_open, mock_valid_port):
+            mock_ping, mock_ip_local, mock_port_open, mock_valid_port):
         mock_installed.return_value = True
         mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
-        mock_run.return_value = (0, None)
         mock_ip_local.return_value = False
         mock_port_open.return_value = True
         mock_valid_port.return_value = False
@@ -556,7 +537,7 @@ class TestQDevice(unittest.TestCase):
 
         mock_installed.assert_called_once_with("corosync-qdevice")
         mock_getaddrinfo.assert_called_once_with("10.10.10.123", None)
-        mock_run.assert_called_once_with("ping -c 1 10.10.10.123")
+        mock_ping.assert_called_once_with("10.10.10.123")
         mock_ip_local.assert_called_once_with("10.10.10.123")
         mock_port_open.assert_called_once_with("10.10.10.123", 22)
         mock_valid_port.assert_called_once_with(100)
@@ -565,14 +546,13 @@ class TestQDevice(unittest.TestCase):
     @mock.patch("crmsh.utils.valid_port")
     @mock.patch("crmsh.utils.check_port_open")
     @mock.patch("crmsh.utils.InterfacesInfo.ip_in_local")
-    @mock.patch("crmsh.utils.get_stdout")
+    @mock.patch("crmsh.utils.ping_node")
     @mock.patch("socket.getaddrinfo")
     @mock.patch("crmsh.utils.package_is_installed")
     def test_valid_attr_invalid_nodeid_exception(self, mock_installed, mock_getaddrinfo,
-            mock_run, mock_ip_local, mock_port_open, mock_valid_port, mock_valid_nodeid):
+            mock_ping, mock_ip_local, mock_port_open, mock_valid_port, mock_valid_nodeid):
         mock_installed.return_value = True
         mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
-        mock_run.return_value = (0, None)
         mock_ip_local.return_value = False
         mock_port_open.return_value = True
         mock_valid_port.return_value = True
@@ -585,7 +565,7 @@ class TestQDevice(unittest.TestCase):
         mock_installed.assert_called_once_with("corosync-qdevice")
         mock_ip_local.assert_called_once_with("10.10.10.123")
         mock_getaddrinfo.assert_called_once_with("10.10.10.123", None)
-        mock_run.assert_called_once_with("ping -c 1 10.10.10.123")
+        mock_ping.assert_called_once_with("10.10.10.123")
         mock_port_open.assert_called_once_with("10.10.10.123", 22)
         mock_valid_port.assert_called_once_with(5403)
         mock_valid_nodeid.assert_called_once_with("wrong")
@@ -594,14 +574,13 @@ class TestQDevice(unittest.TestCase):
     @mock.patch("crmsh.utils.valid_port")
     @mock.patch("crmsh.utils.check_port_open")
     @mock.patch("crmsh.utils.InterfacesInfo.ip_in_local")
-    @mock.patch("crmsh.utils.get_stdout")
+    @mock.patch("crmsh.utils.ping_node")
     @mock.patch("socket.getaddrinfo")
     @mock.patch("crmsh.utils.package_is_installed")
     def test_valid_attr_invalid_cmds_relative_path(self, mock_installed, mock_getaddrinfo,
-            mock_run, mock_ip_local, mock_port_open, mock_valid_port, mock_valid_nodeid):
+            mock_ping, mock_ip_local, mock_port_open, mock_valid_port, mock_valid_nodeid):
         mock_installed.return_value = True
         mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
-        mock_run.return_value = (0, None)
         mock_ip_local.return_value = False
         mock_port_open.return_value = True
         mock_valid_port.return_value = True
@@ -613,7 +592,7 @@ class TestQDevice(unittest.TestCase):
 
         mock_installed.assert_called_once_with("corosync-qdevice")
         mock_getaddrinfo.assert_called_once_with("10.10.10.123", None)
-        mock_run.assert_called_once_with("ping -c 1 10.10.10.123")
+        mock_ping.assert_called_once_with("10.10.10.123")
         mock_ip_local.assert_called_once_with("10.10.10.123")
         mock_port_open.assert_called_once_with("10.10.10.123", 22)
         mock_valid_port.assert_called_once_with(5403)
@@ -623,14 +602,13 @@ class TestQDevice(unittest.TestCase):
     @mock.patch("crmsh.utils.valid_port")
     @mock.patch("crmsh.utils.check_port_open")
     @mock.patch("crmsh.utils.InterfacesInfo.ip_in_local")
-    @mock.patch("crmsh.utils.get_stdout")
+    @mock.patch("crmsh.utils.ping_node")
     @mock.patch("socket.getaddrinfo")
     @mock.patch("crmsh.utils.package_is_installed")
     def test_valid_attr_invalid_cmds_not_exist(self, mock_installed, mock_getaddrinfo,
-            mock_run, mock_ip_local, mock_port_open, mock_valid_port, mock_valid_nodeid):
+            mock_ping, mock_ip_local, mock_port_open, mock_valid_port, mock_valid_nodeid):
         mock_installed.return_value = True
         mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
-        mock_run.return_value = (0, None)
         mock_ip_local.return_value = False
         mock_port_open.return_value = True
         mock_valid_port.return_value = True
@@ -642,7 +620,7 @@ class TestQDevice(unittest.TestCase):
 
         mock_installed.assert_called_once_with("corosync-qdevice")
         mock_getaddrinfo.assert_called_once_with("10.10.10.123", None)
-        mock_run.assert_called_once_with("ping -c 1 10.10.10.123")
+        mock_ping.assert_called_once_with("10.10.10.123")
         mock_ip_local.assert_called_once_with("10.10.10.123")
         mock_port_open.assert_called_once_with("10.10.10.123", 22)
         mock_valid_port.assert_called_once_with(5403)
