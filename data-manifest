@@ -169,7 +169,7 @@ test/unittests/test.conf
 test/unittests/test_corosync.py
 test/unittests/test_gv.py
 test/unittests/test_handles.py
-test/unittests/test_join_lock.py
+test/unittests/test_lock.py
 test/unittests/test_objset.py
 test/unittests/test_parallax.py
 test/unittests/test_parse.py
