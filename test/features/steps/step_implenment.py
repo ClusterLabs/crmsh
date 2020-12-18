@@ -83,7 +83,7 @@ def step_impl(context, msg):
 
 @then('Except "{msg}"')
 def step_impl(context, msg):
-    assert context.command_error_output == msg
+    assert msg in context.command_error_output
     context.command_error_output = None
 
 
@@ -208,6 +208,14 @@ def step_impl(context, transport_type):
     if transport_type == "unicast":
         assert corosync.get_value("totem.transport") == "udpu"
 
+
 @then('Expected return code is "{num}"')
 def step_impl(context, num):
     assert context.return_code == int(num)
+
+
+@then('File "{f}" was synced in cluster')
+def step_impl(context, f):
+    cmd = "crm cluster diff {}".format(f)
+    rc, out = run_command(context, cmd)
+    assert out == ""
