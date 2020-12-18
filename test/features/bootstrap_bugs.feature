@@ -64,3 +64,35 @@ Feature: Regression test for bootstrap bugs
     And     Service "hawk.service" is "stopped" on "hanode2"
     When    Run "crm corosync get nodelist.node.ring0_addr" on "hanode1"
     Then    Expected "10.10.10.3" not in stdout
+
+  @clean
+  Scenario: Multi nodes join in parallel(bsc#1175976)
+    Given   Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    And     Cluster service is "stopped" on "hanode3"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Show cluster status on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2,hanode3"
+    Then    Cluster service is "started" on "hanode2"
+    And     Cluster service is "started" on "hanode3"
+    And     Online nodes are "hanode1 hanode2 hanode3"
+    And     Show cluster status on "hanode1"
+    And     File "/etc/corosync/corosync.conf" was synced in cluster
+
+  @clean
+  Scenario: Multi nodes join in parallel timed out(bsc#1175976)
+    Given   Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    And     Cluster service is "stopped" on "hanode3"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Show cluster status on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    # Try to simulate the join process hanging on hanode2 or hanode2 died
+    # Just leave the lock directory unremoved
+    When    Run "mkdir /tmp/.crmsh_lock_directory" on "hanode1"
+    When    Try "crm cluster join -c hanode1 -y" on "hanode3"
+    Then    Except "ERROR: cluster.join: Timed out after 120 seconds. Cannot continue since the lock directory exists at the node (hanode1:/tmp/.crmsh_lock_directory)"
+    When    Run "rm -rf /tmp/.crmsh_lock_directory" on "hanode1"
