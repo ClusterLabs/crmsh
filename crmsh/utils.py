@@ -2534,4 +2534,13 @@ def get_iplist_from_name(name):
 def is_qdevice_configured():
     from . import corosync
     return corosync.get_value("quorum.device.model") == "net"
+
+
+def ping_node(node):
+    """
+    Check if the remote node is reachable
+    """
+    rc, _, err = get_stdout_stderr("ping -c 1 {}".format(node))
+    if rc != 0:
+        raise ValueError("host \"{}\" is unreachable: {}".format(node, err))
 # vim:ts=4:sw=4:et:
