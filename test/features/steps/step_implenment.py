@@ -101,7 +101,7 @@ def step_impl(context, msg):
 
 @then('Except "{msg}"')
 def step_impl(context, msg):
-    assert context.command_error_output == msg
+    assert msg in context.command_error_output
     context.command_error_output = None
 
 
@@ -278,3 +278,10 @@ def step_impl(context, f, archive):
 @then('File "{f}" not in "{archive}"')
 def step_impl(context, f, archive):
     assert file_in_archive(f, archive) is False
+
+
+@then('File "{f}" was synced in cluster')
+def step_impl(context, f):
+    cmd = "crm cluster diff {}".format(f)
+    rc, out = run_command(context, cmd)
+    assert out == ""
