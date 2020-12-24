@@ -3,46 +3,39 @@ Docker_image='liangxin1300/haleap:15.1'
 HA_packages='pacemaker corosync'
 TEST_TYPE='bootstrap hb_report geo'
 
+etc_hosts_content=`cat <<EOF
+10.10.10.2 hanode1
+10.10.10.3 hanode2
+10.10.10.4 hanode3
+10.10.10.5 hanode4
+10.10.10.6 hanode5
+EOF`
+
+deploy_node() {
+  node_name=$1
+  echo "##### Deploy $node_name start"
+
+  docker run -d --name=$node_name --hostname $node_name \
+             --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" --shm-size="1g" ${Docker_image}
+  docker network connect second_net $node_name
+  docker network connect third_net $node_name
+  docker exec -t $node_name /bin/sh -c "echo \"$etc_hosts_content\" | grep -v $node_name >> /etc/hosts"
+  docker exec -t $node_name /bin/sh -c "cd /app; ./test/run-in-travis.sh build"
+  docker exec -t $node_name /bin/sh -c "systemctl start sshd.service"
+  echo "##### Deploy $node_name finished"
+  echo
+}
+
 before() {
   docker pull ${Docker_image}
   docker network create --subnet 10.10.10.0/24 --ipv6 --subnet 2001:db8:10::/64 second_net
-  docker network create --subnet 20.20.20.0/24 third_net
+  docker network create --subnet 20.20.20.0/24 --ipv6 --subnet 2001:db8:20::/64 third_net
 
-  # deploy first node hanode1
-  docker run -d --name=hanode1 --hostname hanode1 \
-             --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" ${Docker_image}
-  docker network connect --ip=10.10.10.2 second_net hanode1
-  docker network connect --ip=2001:db8:10::2 second_net hanode1
-  docker exec -t hanode1 /bin/sh -c "echo \"10.10.10.3 hanode2\" >> /etc/hosts"
-  if [ x"$1" == x"geo" ];then
-    docker exec -t hanode1 /bin/sh -c "echo \"10.10.10.4 hanode3\" >> /etc/hosts"
-  fi
-  docker exec -t hanode1 /bin/sh -c "zypper -n in ${HA_packages}"
-  docker exec -t hanode1 /bin/sh -c "cd /app; ./test/run-in-travis.sh build"
-
-  # deploy second node hanode2
-  docker run -d --name=hanode2 --hostname hanode2 \
-             --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" ${Docker_image}
-  docker network connect --ip=10.10.10.3 second_net hanode2
-  docker network connect --ip=2001:db8:10::3 second_net hanode2
-  docker network connect --ip=20.20.20.3 third_net hanode2
-  docker exec -t hanode2 /bin/sh -c "echo \"10.10.10.2 hanode1\" >> /etc/hosts"
-  if [ x"$1" == x"geo" ];then
-    docker exec -t hanode2 /bin/sh -c "echo \"10.10.10.4 hanode3\" >> /etc/hosts"
-  fi
-  docker exec -t hanode2 /bin/sh -c "zypper -n in ${HA_packages}"
-  docker exec -t hanode2 /bin/sh -c "systemctl start sshd.service"
-  docker exec -t hanode2 /bin/sh -c "cd /app; ./test/run-in-travis.sh build"
-
-  if [ x"$1" == x"geo" ];then
-    docker run -d --name=hanode3 --hostname hanode3 \
-            --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" ${Docker_image}
-    docker network connect --ip=10.10.10.4 second_net hanode3
-    docker exec -t hanode3 /bin/sh -c "echo \"10.10.10.2 hanode1\" >> /etc/hosts"
-    docker exec -t hanode3 /bin/sh -c "echo \"10.10.10.3 hanode2\" >> /etc/hosts"
-    docker exec -t hanode3 /bin/sh -c "systemctl start sshd.service"
-    docker exec -t hanode3 /bin/sh -c "cd /app; ./test/run-in-travis.sh build"
-  fi
+  deploy_node hanode1
+  deploy_node hanode2
+  deploy_node hanode3
+  deploy_node hanode4
+  deploy_node hanode5
 }
 
 run() {
@@ -52,6 +45,7 @@ run() {
 usage() {
   echo "Usage: ./test/`basename $0` <`echo ${TEST_TYPE// /|}`>"
 }
+
 
 # $1 could be "bootstrap", "hb_report" etc.
 # $2 could be "before_install" or "run"

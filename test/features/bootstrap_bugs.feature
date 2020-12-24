@@ -40,9 +40,11 @@ Feature: Regression test for bootstrap bugs
     Given   Cluster service is "stopped" on "hanode2"
     When    Run "crm cluster init -u -i eth0 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
-    When    Try "crm cluster join -c hanode1 -i eth2 -y" on "hanode2"
+    When    Run "ip link set eth0 down" on "hanode2"
+    When    Try "crm cluster join -c hanode1 -i eth1 -y" on "hanode2"
     Then    Cluster service is "stopped" on "hanode2"
     And     Except "Cannot see peer node "hanode1", please check the communication IP" in stderr
+    When    Run "ip link set eth0 up" on "hanode2"
     When    Run "crm cluster join -c hanode1 -i eth0 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
 
