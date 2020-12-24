@@ -51,12 +51,12 @@ Feature: crmsh bootstrap process - options
   @clean
   Scenario: Using multiple network interface using "-M" option
     Given   Cluster service is "stopped" on "hanode1"
-    And     IP "172.17.0.2" is belong to "eth0"
     And     IP "10.10.10.2" is belong to "eth1"
+    And     IP "20.20.20.2" is belong to "eth2"
     When    Run "crm cluster init -M -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
-    And     IP "172.17.0.2" is used by corosync on "hanode1"
     And     IP "10.10.10.2" is used by corosync on "hanode1"
+    And     IP "20.20.20.2" is used by corosync on "hanode1"
     And     Show corosync ring status
 
   @clean
