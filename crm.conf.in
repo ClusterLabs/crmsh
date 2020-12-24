@@ -19,7 +19,7 @@
 ; dot = dot
 ; ignore_missing_metadata = no
 ; report_tool_options =
-; join_timeout = 120
+; lock_timeout = 120
 
 ; obscure_pattern option is the persisent configuration of CLI.
 ; Example, for the high security concern, obscure_pattern = passw* | ip

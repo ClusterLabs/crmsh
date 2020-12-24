@@ -161,6 +161,7 @@ test/unittests/scripts/v2/main.yml
 test/unittests/scripts/vipinc/main.yml
 test/unittests/scripts/vip/main.yml
 test/unittests/scripts/workflows/10-webserver.xml
+test/unittests/test_bootstrap_lock.py
 test/unittests/test_bootstrap.py
 test/unittests/test_bugs.py
 test/unittests/test_cib.py
@@ -169,7 +170,7 @@ test/unittests/test.conf
 test/unittests/test_corosync.py
 test/unittests/test_gv.py
 test/unittests/test_handles.py
-test/unittests/test_join_lock.py
+test/unittests/test_lock.py
 test/unittests/test_objset.py
 test/unittests/test_parallax.py
 test/unittests/test_parse.py
