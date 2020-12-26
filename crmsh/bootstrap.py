@@ -90,6 +90,8 @@ class Context(object):
         self.tickets = None
         self.sbd_manager = None
         self.sbd_devices = None
+        self.nodes = None
+        self.add_node_list = []
         self.diskless_sbd = None
         self.stage = None
         self.args = None
@@ -145,11 +147,21 @@ class Context(object):
                 error("Duplicated input")
         if self.no_overwrite_sshkey:
             warn("--no-overwrite-sshkey option is deprecated since crmsh does not overwrite ssh keys by default anymore and will be removed in future versions")
+        if self.add_node_list:
+            for node in self.add_node_list:
+                utils.ping_node(node)
         if self.type == "join" and self.watchdog:
             warn("-w option is deprecated and will be removed in future versions")
 
     def init_sbd_manager(self):
         self.sbd_manager = SBDManager(self.sbd_devices, self.diskless_sbd)
+
+    def init_add_node_list(self):
+        if self.nodes:
+            self.add_node_list = utils.parse_append_option(self.nodes)
+            me = utils.this_node()
+            if me in self.add_node_list:
+                self.add_node_list.remove(me)
 
 
 class Watchdog(object):
@@ -352,20 +364,6 @@ Configure SBD:
         self._sbd_devices = None
         self._watchdog_inst = None
 
-    def _parse_sbd_device(self):
-        """
-        Parse sbd devices, possible command line is like:
-          -s "/dev/sdb1;/dev/sdb2"
-          -s /dev/sdb1 -s /dev/sbd2
-        """
-        result_list = []
-        for dev in self.sbd_devices_input:
-            if ';' in dev:
-                result_list.extend(dev.strip(';').split(';'))
-            else:
-                result_list.append(dev)
-        return result_list
-
     @staticmethod
     def _get_device_uuid(dev, node=None):
         """
@@ -456,7 +454,7 @@ Configure SBD:
         """
         dev_list = []
         if self.sbd_devices_input:
-            dev_list = self._parse_sbd_device()
+            dev_list = utils.parse_append_option(self.sbd_devices_input)
             self._verify_sbd_device(dev_list)
         elif not self.diskless_sbd:
             dev_list = self._get_sbd_device_interactive()
@@ -2414,6 +2412,7 @@ def bootstrap_init(context):
 
     init()
     _context.initialize_qdevice()
+    _context.init_add_node_list()
     _context.validate_option()
     _context.init_sbd_manager()
 
@@ -2471,6 +2470,17 @@ def bootstrap_init(context):
             error(err)
 
     status("Done (log saved to %s)" % (LOG_FILE))
+
+
+def bootstrap_add(context):
+    """
+    """
+    global _context
+    _context = context
+
+    init()
+    _context.add_node_list = _context.args
+    _context.validate_option()
 
 
 def bootstrap_join(context):

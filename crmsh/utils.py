@@ -2643,4 +2643,17 @@ def ping_node(node):
     rc, _, err = get_stdout_stderr("ping -c 1 {}".format(node))
     if rc != 0:
         raise ValueError("host \"{}\" is unreachable: {}".format(node, err))
+
+
+def parse_append_option(option_input_list):
+    """
+    Parse argparse option which action is append
+    """
+    result_list = []
+    for item in option_input_list:
+        result_list.extend(re.split('[ ,;]+', item))
+
+    # filter out empty ones and,
+    # remove duplicates from a list while preserving order
+    return list(dict.fromkeys([x for x in result_list if x]))
 # vim:ts=4:sw=4:et:

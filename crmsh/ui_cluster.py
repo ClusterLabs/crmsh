@@ -216,7 +216,7 @@ Note:
                             help='Optionally configure cluster with template "name" (currently only "ocfs2" is valid here)')
         parser.add_argument("-n", "--name", metavar="NAME", dest="cluster_name", default="hacluster",
                             help='Set the name of the configured cluster.')
-        parser.add_argument("-N", "--nodes", metavar="NODES", dest="nodes",
+        parser.add_argument("-N", "--nodes", metavar="NODES", dest="nodes", action="append",
                             help='Additional nodes to add to the created cluster. May include the current node, which will always be the initial cluster node.')
         # parser.add_argument("--quick-start", dest="quickstart", action="store_true", help="Perform basic system configuration (NTP, watchdog, /etc/hosts)")
         parser.add_argument("-S", "--enable-sbd", dest="diskless_sbd", action="store_true",
@@ -295,7 +295,7 @@ Note:
 
         # if options.geo:
         #    bootstrap.bootstrap_init_geo()
-
+        """
         if options.nodes is not None:
             nodelist = [n for n in re.split('[ ,;]+', options.nodes)]
             for node in nodelist:
@@ -305,6 +305,9 @@ Note:
                 if not self._add_node(node, yes_to_all=options.yes_to_all):
                     return False
 
+        """
+        for node in boot_context.add_node_list:
+            print(node)
         return True
 
     @command.skill_level('administrator')
@@ -351,12 +354,17 @@ If stage is not specified, each stage will be invoked in sequence.
 
         return True
 
-    def _add_node(self, node, yes_to_all=False):
+    def _add_node(self, node, yes_to_all=False, nic_list=[]):
         '''
         Adds the given node to the cluster.
         '''
         me = utils.this_node()
         cmd = "crm cluster join{} -c {}".format(" -y" if yes_to_all else "", me)
+        interface_option = ""
+        for nic in nic_list:
+            interface_option += " -i {}".format(nic)
+        cmd += interface_option
+        print(cmd)
         rc = utils.ext_cmd_nosudo("ssh{} root@{} -o StrictHostKeyChecking=no '{}'".format("" if yes_to_all else " -t", node, cmd))
         return rc == 0
 
@@ -371,13 +379,24 @@ If stage is not specified, each stage will be invoked in sequence.
         parser = ArgParser(usage="add [options] [node ...]", add_help=False, formatter_class=RawDescriptionHelpFormatter)
         parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
+        network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
+        network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action="append", choices=utils.interface_choice(),
+                help="Bind to IP address on interface IF. Use -i second time for second interface")
         options, args = parse_options(parser, args)
         if options is None or args is None:
             return
 
+        add_context = bootstrap.Context.set_context(options)
+        add_context.ui_context = context
+        add_context.args = args
+
+        bootstrap.bootstrap_add(add_context)
+        """
         for node in args:
             if not self._add_node(node, yes_to_all=options.yes_to_all):
                 return False
+        """
+        return True
 
     @command.alias("delete")
     @command.completers_repeating(_remove_completer)
