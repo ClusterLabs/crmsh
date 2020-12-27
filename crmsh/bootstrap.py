@@ -2495,8 +2495,11 @@ def bootstrap_add(context):
     _context = context
 
     init()
-    _context.add_node_list = _context.args
+    _context.add_node_list = utils.get_unique_list(_context.args)
     _context.validate_option()
+
+    if not utils.service_is_active("corosync.service"):
+        error("Cluster is inactive")
 
     for node in _context.add_node_list:
         swap_public_ssh_key(node)

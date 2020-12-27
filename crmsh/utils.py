@@ -2655,5 +2655,13 @@ def parse_append_option(option_input_list):
 
     # filter out empty ones and,
     # remove duplicates from a list while preserving order
-    return list(dict.fromkeys([x for x in result_list if x]))
+    return get_unique_list(result_list)
+
+
+def get_unique_list(_list):
+    """
+    Filter out empty ones and,
+    Remove duplicates from a list while preserving order
+    """
+    return list(dict.fromkeys([x for x in _list if x.strip()]))
 # vim:ts=4:sw=4:et:
