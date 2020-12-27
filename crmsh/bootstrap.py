@@ -2500,6 +2500,9 @@ def bootstrap_add(context):
 
     for node in _context.add_node_list:
         swap_public_ssh_key(node)
+        cmd = "crm cluster join -y -c {}".format(utils.this_node())
+        cmd_with_ssh = "ssh -o StrictHostKeyChecking=no root@{} \"{}\"".format(node, cmd)
+        utils.ext_cmd_nosudo(cmd_with_ssh)
 
 
 def bootstrap_join(context):
