@@ -2482,6 +2482,9 @@ def bootstrap_add(context):
     _context.add_node_list = _context.args
     _context.validate_option()
 
+    for node in _context.add_node_list:
+        swap_public_ssh_key(node)
+
 
 def bootstrap_join(context):
     """
