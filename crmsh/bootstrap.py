@@ -1150,6 +1150,18 @@ def configure_local_ssh_key():
     append_unique(RSA_PUBLIC_KEY, AUTHORIZED_KEYS_FILE)
 
 
+def configure_remote_ssh_key(remote_node):
+    status("Generating SSH key on {}".format(remote_node))
+    cmd = "ssh-keygen -q -f {} -C 'Cluster Internal on {}' -N ''".format(RSA_PRIVATE_KEY, remote_node)
+    cmd_with_ssh = "ssh -o StrictHostKeyChecking=no root@{} \"{}\"".format(remote_node, cmd)
+    if not invoke(cmd_with_ssh):
+        error("Failed to generate SSH key on {}".format(remote_node))
+    cmd_append_to_authorized_keys = "cat {} >> {}".format(RSA_PUBLIC_KEY, AUTHORIZED_KEYS_FILE)
+    cmd_with_ssh = "ssh -o StrictHostKeyChecking=no root@{} \"{}\"".format(remote_node, cmd_append_to_authorized_keys)
+    if not invoke(cmd_with_ssh):
+        error("Failed")
+
+
 def init_ssh_remote():
     """
     Called by ha-cluster-join
@@ -1890,14 +1902,18 @@ def swap_public_ssh_key(remote_node):
         # If no passwordless configured, paste /root/.ssh/id_rsa.pub to remote_node's /root/.ssh/authorized_keys
         status("Configuring SSH passwordless with root@{}".format(remote_node))
         # After this, login to remote_node is passwordless
-        append_to_remote_file(RSA_PUBLIC_KEY, remote_node, AUTHORIZED_KEYS_FILE)
+        if not invoke("ssh-copy-id -i {} root@{}".format(RSA_PUBLIC_KEY, remote_node)):
+            error("Failed to copy ssh key")
 
-    try:
-        # Fetch public key file from remote_node
+    # Fetch public key file from remote_node
+    while True:
         public_key_file_remote = fetch_public_key_from_remote_node(remote_node)
-    except ValueError as err:
-        warn(err)
-        return
+        if public_key_file_remote:
+            break
+        else:
+            configure_remote_ssh_key(remote_node)
+            continue
+
     # Append public key file from remote_node to local's /root/.ssh/authorized_keys
     # After this, login from remote_node is passwordless
     # Should do this step even passwordless is True, to make sure we got two-way passwordless
@@ -1924,7 +1940,7 @@ def fetch_public_key_from_remote_node(node):
         if not rc:
             error("Failed to run \"{}\": {}".format(cmd, err))
         return temp_public_key_file
-    raise ValueError("No ssh key exist on {}".format(node))
+    return None
 
 
 def join_csync2(seed_host):
