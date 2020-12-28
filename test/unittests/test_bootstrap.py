@@ -237,7 +237,7 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.invoke')
     def test_initialize_sbd(self, mock_invoke, mock_error):
         self.sbd_inst._sbd_devices = ["/dev/sdb1", "/dev/sdc1"]
-        mock_invoke.side_effect = [True, False]
+        mock_invoke.side_effect = [(True, None, None), (False, None, "error")]
         mock_error.side_effect = ValueError
 
         with self.assertRaises(ValueError):
@@ -247,7 +247,7 @@ class TestSBDManager(unittest.TestCase):
             mock.call("sbd -d /dev/sdb1 create"),
             mock.call("sbd -d /dev/sdc1 create")
             ])
-        mock_error.assert_called_once_with("Failed to initialize SBD device /dev/sdc1")
+        mock_error.assert_called_once_with("Failed to initialize SBD device /dev/sdc1: error")
 
     @mock.patch('crmsh.bootstrap.csync2_update')
     @mock.patch('crmsh.utils.sysconfig_set')
@@ -326,7 +326,7 @@ class TestSBDManager(unittest.TestCase):
         mock_status_done.assert_called_once_with()
 
     @mock.patch('crmsh.bootstrap.error')
-    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('crmsh.utils.package_is_installed')
@@ -347,7 +347,7 @@ class TestSBDManager(unittest.TestCase):
         mock_error.assert_called_once_with("Can't create stonith-sbd primitive")
 
     @mock.patch('crmsh.bootstrap.error')
-    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('crmsh.utils.package_is_installed')
@@ -371,7 +371,7 @@ class TestSBDManager(unittest.TestCase):
         mock_error.assert_called_once_with("Can't enable STONITH for SBD")
 
     @mock.patch('crmsh.bootstrap.error')
-    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('crmsh.utils.package_is_installed')
@@ -404,21 +404,20 @@ class TestSBDManager(unittest.TestCase):
 
     @mock.patch('crmsh.bootstrap.SBDManager._check_environment')
     @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('os.path.exists')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_join_sbd_config_disabled(self, mock_installed, mock_exists, mock_invoke, mock_check):
-        mock_installed.return_value = True
+    def test_join_sbd_config_disabled(self, mock_package, mock_exists, mock_invokerc, mock_invoke, mock_check):
+        mock_package.return_value = True
         mock_exists.return_value = True
-        mock_invoke.side_effect = [False, True]
+        mock_invokerc.return_value = False
 
         self.sbd_inst.join_sbd("node1")
 
-        mock_installed.assert_called_once_with("sbd")
+        mock_package.assert_called_once_with("sbd")
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
-        mock_invoke.assert_has_calls([
-                mock.call("ssh -o StrictHostKeyChecking=no root@node1 systemctl is-enabled sbd.service"),
-                mock.call("systemctl disable sbd.service")
-            ])
+        mock_invokerc.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 systemctl is-enabled sbd.service")
+        mock_invoke.assert_called_once_with("systemctl disable sbd.service")
         mock_check.assert_not_called()
 
     @mock.patch('crmsh.bootstrap.status')
@@ -426,22 +425,21 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.bootstrap.SBDManager._check_environment')
     @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('os.path.exists')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_join_sbd(self, mock_installed, mock_exists, mock_invoke, mock_check, mock_get_device, mock_verify, mock_status):
-        mock_installed.return_value = True
+    def test_join_sbd(self, mock_package, mock_exists, mock_invokerc, mock_invoke, mock_check, mock_get_device, mock_verify, mock_status):
+        mock_package.return_value = True
         mock_exists.return_value = True
-        mock_invoke.side_effect = [True, True]
+        mock_invokerc.return_value = True
         mock_get_device.return_value = ["/dev/sdb1"]
 
         self.sbd_inst.join_sbd("node1")
 
-        mock_installed.assert_called_once_with("sbd")
+        mock_package.assert_called_once_with("sbd")
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
-        mock_invoke.assert_has_calls([
-            mock.call("ssh -o StrictHostKeyChecking=no root@node1 systemctl is-enabled sbd.service"),
-            mock.call("systemctl enable sbd.service")
-            ])
+        mock_invokerc.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 systemctl is-enabled sbd.service")
+        mock_invoke.assert_called_once_with("systemctl enable sbd.service")
         mock_check.assert_called_once_with()
         mock_get_device.assert_called_once_with()
         mock_verify.assert_called_once_with(["/dev/sdb1"])
@@ -516,13 +514,14 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.bootstrap.invoke')
     def test_append_to_remote_file(self, mock_invoke, mock_error):
-        mock_invoke.return_value = False
+        mock_invoke.return_value = (False, None, "error")
+        error_string = 'Failed to append contents of fromfile to node1:\n"error"\n\n    crmsh has no way to help you to setup up passwordless ssh among nodes at this time. \n    As the hint, likely, `PasswordAuthentication` is \'no\' in /etc/ssh/sshd_config. \n    Given in this case, users must setup passwordless ssh beforehand, or change it to \'yes\' and manage passwords properly\n    '
         bootstrap.append_to_remote_file("fromfile", "node1", "tofile")
         cmd = "cat fromfile | ssh -oStrictHostKeyChecking=no root@node1 'cat >> tofile'"
         mock_invoke.assert_called_once_with(cmd)
-        mock_error.assert_called_once_with("Failed to run \"{}\"".format(cmd))
+        mock_error.assert_called_once_with(error_string)
 
-    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.bootstrap.invokerc')
     def test_fetch_public_key_from_remote_node_exception(self, mock_invoke):
         mock_invoke.side_effect = [False, False, False, False]
 
@@ -539,18 +538,18 @@ class TestBootstrap(unittest.TestCase):
 
 
     @mock.patch('crmsh.tmpfiles.create')
+    @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.bootstrap.invoke')
-    def test_fetch_public_key_from_remote_node(self, mock_invoke, mock_tmpfile):
-        mock_invoke.side_effect = [True, True]
+    def test_fetch_public_key_from_remote_node(self, mock_invoke, mock_invokerc, mock_tmpfile):
+        mock_invokerc.return_value = True
+        mock_invoke.return_value = (True, None, None)
         mock_tmpfile.return_value = (0, "temp_file_name")
 
         res = bootstrap.fetch_public_key_from_remote_node("node1")
         self.assertEqual(res, "temp_file_name")
 
-        mock_invoke.assert_has_calls([
-            mock.call("ssh -oStrictHostKeyChecking=no root@node1 'test -f /root/.ssh/id_rsa.pub'"),
-            mock.call("scp -oStrictHostKeyChecking=no root@node1:/root/.ssh/id_rsa.pub temp_file_name")
-            ])
+        mock_invokerc.assert_called_once_with("ssh -oStrictHostKeyChecking=no root@node1 'test -f /root/.ssh/id_rsa.pub'")
+        mock_invoke.assert_called_once_with("scp -oStrictHostKeyChecking=no root@node1:/root/.ssh/id_rsa.pub temp_file_name")
         mock_tmpfile.assert_called_once_with()
 
     @mock.patch('crmsh.bootstrap.error')
@@ -567,7 +566,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.utils.start_service')
     def test_join_ssh(self, mock_start_service, mock_config_ssh, mock_swap, mock_invoke, mock_error):
         bootstrap._context = mock.Mock(default_nic_list=["eth1"])
-        mock_invoke.return_value = False
+        mock_invoke.return_value = (False, None, "error")
 
         bootstrap.join_ssh("node1")
 
@@ -575,7 +574,7 @@ class TestBootstrap(unittest.TestCase):
         mock_config_ssh.assert_called_once_with()
         mock_swap.assert_called_once_with("node1")
         mock_invoke.assert_called_once_with("ssh root@node1 crm cluster init -i eth1 ssh_remote")
-        mock_error.assert_called_once_with("Can't invoke crm cluster init -i eth1 ssh_remote on node1")
+        mock_error.assert_called_once_with("Can't invoke crm cluster init -i eth1 ssh_remote on node1: error")
 
     @mock.patch('crmsh.bootstrap.warn')
     @mock.patch('crmsh.bootstrap.fetch_public_key_from_remote_node')
@@ -798,24 +797,26 @@ class TestBootstrap(unittest.TestCase):
         mock_stop_service.assert_not_called()
         mock_error.assert_not_called()
 
+    @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.bootstrap.invoke')
-    def test_csync2_update_no_conflicts(self, mock_invoke):
-        mock_invoke.side_effect = [True, True]
+    def test_csync2_update_no_conflicts(self, mock_invoke, mock_invokerc):
+        mock_invokerc.return_value = True
         bootstrap.csync2_update("/etc/corosync.conf")
-        mock_invoke.assert_has_calls([
-            mock.call("csync2 -rm /etc/corosync.conf"),
-            mock.call("csync2 -rxv /etc/corosync.conf")
-            ])
+        mock_invoke.assert_called_once_with("csync2 -rm /etc/corosync.conf")
+        mock_invokerc.assert_called_once_with("csync2 -rxv /etc/corosync.conf")
 
     @mock.patch('crmsh.bootstrap.warn')
+    @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.bootstrap.invoke')
-    def test_csync2_update(self, mock_invoke, mock_warn):
-        mock_invoke.side_effect = [True, False, True, False]
+    def test_csync2_update(self, mock_invoke, mock_invokerc, mock_warn):
+        mock_invokerc.side_effect = [False, False]
         bootstrap.csync2_update("/etc/corosync.conf")
         mock_invoke.assert_has_calls([
             mock.call("csync2 -rm /etc/corosync.conf"),
+            mock.call("csync2 -rf /etc/corosync.conf")
+            ])
+        mock_invokerc.assert_has_calls([
             mock.call("csync2 -rxv /etc/corosync.conf"),
-            mock.call("csync2 -rf /etc/corosync.conf"),
             mock.call("csync2 -rxv /etc/corosync.conf")
             ])
         mock_warn.assert_called_once_with("/etc/corosync.conf was not synced")
@@ -833,6 +834,26 @@ class TestBootstrap(unittest.TestCase):
         mock_interfaces_inst.get_interfaces_info.assert_called_once_with()
         mock_interfaces_inst.get_default_nic_list_from_route.assert_called_once_with()
         mock_interfaces_inst.get_default_ip_list.assert_called_once_with()
+
+
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.bootstrap.log')
+    def test_invoke(self, mock_log, mock_run):
+        mock_run.return_value = (0, "output", "error")
+        res = bootstrap.invoke("cmd --option")
+        self.assertEqual(res, (True, "output", "error"))
+        mock_log.assert_has_calls([
+            mock.call('+ cmd --option'),
+            mock.call('output'),
+            mock.call('error')
+            ])
+
+    @mock.patch('crmsh.bootstrap.invoke')
+    def test_invokerc(self, mock_invoke):
+        mock_invoke.return_value = (True, None, None)
+        res = bootstrap.invokerc("cmd")
+        self.assertEqual(res, True)
+        mock_invoke.assert_called_once_with("cmd")
 
 
 class TestValidation(unittest.TestCase):
@@ -910,7 +931,7 @@ class TestValidation(unittest.TestCase):
         bootstrap.Validation.valid_port("10.10.10.1")
         mock_port.assert_called_once_with()
 
-    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.utils.IP.is_ipv6')
     def test_valid_admin_ip_in_use(self, mock_ipv6, mock_invoke):
         mock_ipv6.return_value = False
@@ -1113,7 +1134,7 @@ class TestValidation(unittest.TestCase):
         mock_error.assert_called_once_with("Failed to remove this node from node2")
 
     @mock.patch('crmsh.bootstrap.error')
-    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.xmlutil.listnodes')
     def test_remove_self_rm_failed(self, mock_list, mock_stop_service, mock_invoke, mock_error):
@@ -1173,7 +1194,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.bootstrap.set_cluster_node_ip')
     def test_remove_node_from_cluster_rm_failed(self, mock_get_ip, mock_stop, mock_invoke, mock_error):
-        mock_invoke.return_value = False
+        mock_invoke.return_value = (False, None, "error")
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
@@ -1183,15 +1204,17 @@ class TestValidation(unittest.TestCase):
         mock_get_ip.assert_called_once_with()
         mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
         mock_invoke.assert_called_once_with('ssh -o StrictHostKeyChecking=no root@node1 "bash -c \\"rm -f file1 file2\\""')
-        mock_error.assert_called_once_with("Deleting the configuration files failed")
+        mock_error.assert_called_once_with("Deleting the configuration files failed: error")
 
     @mock.patch('crmsh.bootstrap.error')
+    @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.bootstrap.status')
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.bootstrap.set_cluster_node_ip')
-    def test_remove_node_from_cluster_rm_node_failed(self, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_error):
-        mock_invoke.side_effect = [True, False]
+    def test_remove_node_from_cluster_rm_node_failed(self, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_invokerc, mock_error):
+        mock_invoke.return_value = (True, None, None)
+        mock_invokerc.return_value = False
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
@@ -1201,19 +1224,19 @@ class TestValidation(unittest.TestCase):
         mock_get_ip.assert_called_once_with()
         mock_status.assert_called_once_with("Removing the node node1")
         mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
-        mock_invoke.assert_has_calls([
-            mock.call('ssh -o StrictHostKeyChecking=no root@node1 "bash -c \\"rm -f file1 file2\\""'),
-            mock.call('crm node delete node1')
-            ])
+        mock_invoke.assert_called_once_with('ssh -o StrictHostKeyChecking=no root@node1 "bash -c \\"rm -f file1 file2\\""')
+        mock_invokerc.assert_called_once_with("crm node delete node1")
         mock_error.assert_called_once_with("Failed to remove node1")
 
     @mock.patch('crmsh.bootstrap.error')
+    @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.bootstrap.status')
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.bootstrap.set_cluster_node_ip')
-    def test_remove_node_from_cluster_rm_csync_failed(self, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_error):
-        mock_invoke.side_effect = [True, True, False]
+    def test_remove_node_from_cluster_rm_csync_failed(self, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_invokerc, mock_error):
+        mock_invoke.return_value = (True, None, None)
+        mock_invokerc.side_effect = [True, False]
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
@@ -1223,8 +1246,8 @@ class TestValidation(unittest.TestCase):
         mock_get_ip.assert_called_once_with()
         mock_status.assert_called_once_with("Removing the node node1")
         mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
-        mock_invoke.assert_has_calls([
-            mock.call('ssh -o StrictHostKeyChecking=no root@node1 "bash -c \\"rm -f file1 file2\\""'),
+        mock_invoke.assert_called_once_with('ssh -o StrictHostKeyChecking=no root@node1 "bash -c \\"rm -f file1 file2\\""')
+        mock_invokerc.assert_has_calls([
             mock.call('crm node delete node1'),
             mock.call("sed -i /node1/d {}".format(bootstrap.CSYNC2_CFG))
             ])
@@ -1235,13 +1258,15 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.corosync.del_node')
     @mock.patch('crmsh.corosync.get_values')
     @mock.patch('crmsh.bootstrap.error')
+    @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.bootstrap.status')
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.bootstrap.set_cluster_node_ip')
     def test_remove_node_from_cluster_hostname(self, mock_get_ip, mock_stop, mock_status,
-            mock_invoke, mock_error, mock_get_values, mock_del, mock_decrease, mock_csync2):
-        mock_invoke.side_effect = [True, True, True, True]
+            mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del, mock_decrease, mock_csync2):
+        mock_invoke.side_effect = [(True, None, None), (True, None, None)]
+        mock_invokerc.side_effect = [True, True]
         mock_get_values.return_value = ["10.10.10.1"]
 
         bootstrap._context = mock.Mock(cluster_node="node1", cluster_node_ip=None, rm_list=["file1", "file2"])
@@ -1255,9 +1280,11 @@ class TestValidation(unittest.TestCase):
         mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
         mock_invoke.assert_has_calls([
             mock.call('ssh -o StrictHostKeyChecking=no root@node1 "bash -c \\"rm -f file1 file2\\""'),
-            mock.call('crm node delete node1'),
-            mock.call("sed -i /node1/d {}".format(bootstrap.CSYNC2_CFG)),
             mock.call("corosync-cfgtool -R")
+            ])
+        mock_invokerc.assert_has_calls([
+            mock.call('crm node delete node1'),
+            mock.call("sed -i /node1/d {}".format(bootstrap.CSYNC2_CFG))
             ])
         mock_error.assert_not_called()
         mock_get_values.assert_called_once_with("nodelist.node.ring0_addr")
