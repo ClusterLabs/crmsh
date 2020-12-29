@@ -964,6 +964,7 @@ include /etc/multipath.conf;
 include /etc/samba/smb.conf;
 include /etc/sysconfig/pacemaker;
 include /etc/sysconfig/sbd;
+include /etc/modules-load.d/watchdog.conf;
 }
     """ % (utils.this_node()), CSYNC2_CFG)
 
