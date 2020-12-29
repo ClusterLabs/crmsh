@@ -1021,6 +1021,7 @@ include /etc/samba/smb.conf;
 include /etc/sysconfig/pacemaker;
 include /etc/sysconfig/sbd;
 include /etc/pacemaker/authkey;
+include /etc/modules-load.d/watchdog.conf;
 }
     """ % (utils.this_node()), CSYNC2_CFG)
 
