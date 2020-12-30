@@ -2222,6 +2222,9 @@ class InterfacesInfo(object):
         # 2: enp1s0    inet 192.168.122.241/24 brd 192.168.122.255 scope global enp1s0\       valid_lft forever preferred_lft forever
         for line in out.splitlines():
             _, nic, _, ip_with_mask, *_ = line.split()
+            # maybe from tun interface
+            if not '/' in ip_with_mask:
+                continue
             #TODO change this condition when corosync support link-local address
             interface_inst = Interface(ip_with_mask)
             if interface_inst.is_loopback or interface_inst.is_link_local:
