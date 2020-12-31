@@ -558,7 +558,8 @@ class TestInterfacesInfo(unittest.TestCase):
     """
 
     network_output_error = """1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
-2: enp1s0    inet 192.168.122.241/24 brd 192.168.122.255 scope global enp1s0"""
+2: enp1s0    inet 192.168.122.241/24 brd 192.168.122.255 scope global enp1s0
+61: tun0    inet 10.163.45.46 peer 10.163.45.45/32 scope global tun0"""
 
     @classmethod
     def setUpClass(cls):
