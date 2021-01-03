@@ -73,7 +73,7 @@ optional arguments:
   -S, --enable-sbd      Enable SBD even if no SBD device is configured
                         (diskless mode)
   -w WATCHDOG, --watchdog WATCHDOG
-                        Use the given watchdog device
+                        Use the given watchdog device or driver name
   --no-overwrite-sshkey
                         Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is
                         used (False by default)
