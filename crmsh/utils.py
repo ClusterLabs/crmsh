@@ -2143,6 +2143,9 @@ class InterfacesInfo(object):
         for line in out.splitlines():
             data = line.split()
             nic, ip_with_mask = data[1], data[3]
+            # maybe from tun interface
+            if not '/' in ip_with_mask:
+                continue
             #TODO change this condition when corosync support link-local address
             interface_inst = Interface(ip_with_mask)
             if interface_inst.is_loopback or interface_inst.is_link_local:
