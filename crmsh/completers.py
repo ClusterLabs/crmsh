@@ -50,6 +50,8 @@ def resources(args=None):
         return []
     nodes = xmlutil.get_interesting_nodes(cib_el, [])
     rsc_id_list = [x.get("id") for x in nodes if xmlutil.is_resource(x)]
+    if args and args[0] in ['promote', 'demote']:
+        return [item for item in rsc_id_list if xmlutil.RscState().is_ms(item)]
     if args and args[0] == "started":
         return [item for item in rsc_id_list if xmlutil.RscState().is_running(item)]
     if args and args[0] == "stopped":
