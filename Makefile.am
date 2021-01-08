@@ -58,7 +58,11 @@ install-data-hook:
 hanoarchdir = $(datadir)/@PACKAGE@/hb_report
 hanoarch_DATA = hb_report/constants.py hb_report/utillib.py
 hanoarch_SCRIPTS = hb_report/hb_report
-EXTRA_DIST = $(hanoarch_DATA)
+preflightnoarchdir = $(datadir)/@PACKAGE@/preflight_check
+preflightnoarch_DATA = preflight_check/check.py preflight_check/explain.py preflight_check/__init__.py \
+		       preflight_check/config.py preflight_check/main.py preflight_check/utils.py preflight_check/task.py
+preflightnoarch_SCRIPTS = preflight_check/ha-cluster-preflight-check
+EXTRA_DIST = $(hanoarch_DATA) $(preflightnoarch_DATA)
 
 # Python module installation
 all-local:
