@@ -89,7 +89,7 @@ class Task(object):
         Print testcase header
         """
         print(self.header())
-        if not crmshutils.ask("Run?"):
+        if not self.yes and not crmshutils.ask("Run?"):
             self.info("Testcase cancelled")
             sys.exit()
 
@@ -160,13 +160,14 @@ class TaskFence(Task):
     """
     Class to fence node
     """
-    def  __init__(self, target):
+    def  __init__(self, context):
         """
         Init function
         """
-        self.target_node = target
+        self.target_node = context.fence_node
         description = "Fence node {}".format(self.target_node)
         super(self.__class__, self).__init__(description, flush=True)
+        self.yes = context.yes
 
     def header(self):
         """
@@ -312,6 +313,7 @@ class TaskKill(Task):
         super(self.__class__, self).__init__(self.description, flush=True)
         self.cmd = "killall -9 {}".format(self.target_kill)
         self.looping = context.loop
+        self.yes = context.yes
         if not self.looping:
             self.expected = self.EXPECTED[self.target_kill][0]
         else:
@@ -435,7 +437,7 @@ class TaskSplitBrain(Task):
     Class to define how to simulate split brain by blocking corosync ports
     """
 
-    def  __init__(self):
+    def  __init__(self, yes=False):
         """
         Init function
         """
@@ -444,6 +446,7 @@ class TaskSplitBrain(Task):
         self.ports = []
         self.peer_nodelist = []
         super(self.__class__, self).__init__(self.description, flush=True)
+        self.yes = yes
 
     def header(self):
         """
