@@ -6,10 +6,8 @@ import logging.config
 from argparse import RawTextHelpFormatter
 
 from . import check
-from . import config
 from . import utils
 from . import task
-from crmsh import utils as crmshutils
 
 
 logger = logging.getLogger('cpc')
@@ -157,8 +155,8 @@ def fence_node(context):
 
 
 class MyArgParseFormatter(RawTextHelpFormatter):
-    def __init__(self,prog):
-        super(MyArgParseFormatter,self).__init__(prog, max_help_position=50)
+    def __init__(self, prog):
+        super(MyArgParseFormatter, self).__init__(prog, max_help_position=50)
 
 
 def parse_argument(context):
@@ -204,7 +202,7 @@ For each --kill-* testcase, report directory: {}'''.format(context.logfile,
                                help='Show this help message and exit')
 
     args = parser.parse_args()
-    if args.help:
+    if args.help or len(sys.argv) == 1:
         parser.print_help()
         sys.exit(0)
     for arg in vars(args):

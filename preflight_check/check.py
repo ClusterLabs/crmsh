@@ -239,7 +239,7 @@ def check_firewall():
                     task_inst.warn("{}.service is not active".format(item))
                 break
         else:
-           task_inst.warn("Failed to detect firewall")
+            task_inst.warn("Failed to detect firewall")
 
 
 def check_cluster():
