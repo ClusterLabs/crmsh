@@ -31,7 +31,8 @@ class Context(object):
         self.logfile = None
         self.current_case = None
 
-        # set by argparse
+        # set by argparse(functions)
+        self.fix_conf = None
         self.env_check = None
         self.cluster_check = None
         self.sbd = None
@@ -40,6 +41,8 @@ class Context(object):
         self.fence_node = None
         self.sp_iptables = None
         self.loop = None
+
+        # set by argument(additional options)
         self.yes = None
         self.help = None
 
@@ -173,6 +176,8 @@ For each --kill-* testcase, report directory: {}'''.format(context.logfile,
                                                            context.jsonfile,
                                                            context.report_path))
 
+    parser.add_argument('-f', '--fix-conf', dest='fix_conf', action='store_true',
+                        help='Fix configuration')
     parser.add_argument('-e', '--env-check', dest='env_check', action='store_true',
                         help='Check environment')
     parser.add_argument('-c', '--cluster-check', dest='cluster_check', action='store_true',
@@ -239,6 +244,7 @@ def run(context):
     setup_logging(context)
 
     try:
+        check.fix(context)
         check.check(context)
         kill_process(context)
         fence_node(context)

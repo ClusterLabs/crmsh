@@ -1,9 +1,143 @@
 import re
-from . import utils
-from . import task
+import os
+import sys
+
 from crmsh import utils as crmshutils
 from crmsh import bootstrap as crmshboot
 from crmsh import completers
+
+from . import utils
+from . import task
+from . import config
+
+
+def fix(context):
+    """
+    Check configuration and fix the abnormal options
+    """
+    if context.fix_conf:
+        can = check_sbd()
+        if can != "":
+            correct_sbd(context, can)
+    print()
+
+
+def _find_match_count(str1, str2):
+    """
+    Find the max match number of s1 and s2
+    """
+    leng = min(len(str1), len(str2))
+    num = 0
+
+    for i in range(leng):
+        if str1[i] == str2[i]:
+            num += 1
+        else:
+            break
+
+    return num
+
+
+def find_candidate_sbd(dev):
+    """
+    Find the devices that already have SBD header
+
+    return the path of candidate SBD device
+    """
+    from glob import glob
+    ddir = os.path.dirname(dev)
+    dname = os.path.basename(dev)
+
+    dev_list = glob(ddir + "/*")
+    if len(dev_list) == 0:
+        return ""
+
+    can_filter = filter(utils.is_valid_sbd, dev_list)
+    candidates = list(can_filter)
+
+    if len(candidates) == 0:
+        return ""
+
+    index = 0
+    i = 0
+    max_match = -1
+    num_list = map(_find_match_count, [dev] * len(candidates), candidates)
+    for num in num_list:
+        if num > max_match:
+            max_match = num
+            index = i
+        i += 1
+
+    return candidates[index]
+
+
+def check_sbd():
+    """
+    Check the sbd device and find a possible fix for incorrect disk
+
+    Only support one path SBD_DEVICE in the current version
+    """
+    print("\n============ Check the SBD device ============")
+    if not os.path.exists(config.SBD_CONF):
+        utils.msg_info("SBD configuration file {} not found.".format(config.SBD_CONF))
+        return ""
+
+    sbd_options = utils.conf_parser(config.SBD_CONF)
+
+    if not "SBD_DEVICE" in sbd_options:
+        utils.msg_info("SBD DEVICE not used.")
+        return ""
+
+    dev = sbd_options["SBD_DEVICE"]
+
+    task_inst = task.TaskCheck("Checking SBD device")
+
+    with task_inst.run():
+        if not os.path.exists(dev):
+            task_inst.warn("SBD device '{}' is not exist.".format(dev))
+
+        rc, _, err = crmshutils.get_stdout_stderr("which {}".format("hexdump"))
+        if rc != 0 and err:
+            task_inst.info("Can't check SBD '{}' without util-linux(hexdump) installed."
+                           .format(dev))
+            return ""
+
+        if os.path.exists(dev):
+            if utils.is_valid_sbd(dev):
+                task_inst.info("'{}' is a valid SBD device.".format(dev))
+                return ""
+            else:
+                task_inst.warn("Device '{}' is not valid for SBD, may need initialize."
+                               .format(dev))
+
+        candidate = find_candidate_sbd(dev)
+
+        if candidate == "":
+            task_inst.warn("Fail to find a valid candidate SBD device.")
+            return ""
+
+        task_inst.info("Found '{}' with SBD header exist.".format(candidate))
+
+    return candidate
+
+
+def correct_sbd(context, can):
+    """
+    Fix the sbd device conf with candidate device
+
+    Only support one path SBD_DEVICE in the current version
+    """
+
+    task_inst = task.TaskFixSBD(can, context.yes)
+    try:
+        task_inst.pre_check()
+        task_inst.print_header()
+        with task_inst.backup():
+            task_inst.run()
+        task_inst.verify()
+    except task.TaskError as err:
+        task_inst.error(str(err))
+        sys.exit(1)
 
 
 def check(context):
