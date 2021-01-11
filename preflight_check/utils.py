@@ -232,3 +232,57 @@ def get_process_status(s):
             # a process may have died since we got the list of pids
             pass
     return False, -1
+
+
+def conf_parser(f, sp="="):
+    """
+    Parse a configuration file with content like "A = B"
+    Note: can't use @crmshutils.memoize for verification conf
+
+    f: file path
+    return the dict of parse result
+    """
+
+    result = {}
+
+    if not os.path.exists(f):
+        return result
+
+    with open(f, 'r') as fd:
+        lines = fd.readlines()
+        line = [ l.strip() for l in lines
+                if len(l.strip()) != 0 and not l.strip().startswith("#") ]
+
+        for l in line:
+            if l.count(sp) != 1:
+                continue
+
+            value = l.split(sp)[1].strip()
+            value = value.strip("'")
+            value = value.strip('"')
+            value = value.strip()
+
+            result[l.split(sp)[0].strip()] = value
+
+        return result
+
+
+def is_valid_sbd(dev):
+    """
+    Check whether the device is a initialized SBD device
+
+    dev: dev path
+    return 'True' if 'dev' is a initialized SBD device
+    """
+    if not os.path.exists(dev):
+        return False
+
+    rc, out, err = crmshutils.get_stdout_stderr(config.SBD_CHECK_CMD.format(dev=dev))
+    if rc != 0 and err:
+        msg_error(err)
+        return False
+
+    if out.strip() != 'SBD_SBD':
+        return False
+
+    return True
