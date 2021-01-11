@@ -124,7 +124,7 @@ def split_brain(context):
     if not context.sp_iptables:
         return
 
-    task_inst = task.TaskSplitBrain()
+    task_inst = task.TaskSplitBrain(context.yes)
     try:
         task_inst.pre_check()
         task_inst.print_header()
@@ -143,7 +143,7 @@ def fence_node(context):
     if not context.fence_node:
         return
 
-    task_inst = task.TaskFence(context.fence_node)
+    task_inst = task.TaskFence(context)
     try:
         task_inst.pre_check()
         task_inst.print_header()
