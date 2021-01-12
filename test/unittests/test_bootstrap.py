@@ -200,8 +200,9 @@ class TestSBDManager(unittest.TestCase):
             self.sbd_inst_devices_gt_3._verify_sbd_device(dev_list)
         self.assertEqual("Maximum number of SBD device is 3", str(err.exception))
 
+    @mock.patch('crmsh.bootstrap.SBDManager._compare_device_uuid')
     @mock.patch('crmsh.bootstrap.is_block_device')
-    def test_verify_sbd_device_not_block(self, mock_block_device):
+    def test_verify_sbd_device_not_block(self, mock_block_device, mock_compare):
         assert self.sbd_inst.sbd_devices_input == ["/dev/sdb1", "/dev/sdc1"]
         dev_list = self.sbd_inst.sbd_devices_input
         mock_block_device.side_effect = [True, False]
@@ -211,6 +212,7 @@ class TestSBDManager(unittest.TestCase):
         self.assertEqual("/dev/sdc1 doesn't look like a block device", str(err.exception))
 
         mock_block_device.assert_has_calls([mock.call("/dev/sdb1"), mock.call("/dev/sdc1")])
+        mock_compare.assert_called_once_with("/dev/sdb1", [])
 
     @mock.patch('crmsh.bootstrap.SBDManager._check_environment')
     @mock.patch('crmsh.bootstrap.SBDManager._verify_sbd_device')
@@ -405,20 +407,20 @@ class TestSBDManager(unittest.TestCase):
 
     @mock.patch('crmsh.bootstrap.SBDManager._check_environment')
     @mock.patch('crmsh.bootstrap.invoke')
-    @mock.patch('crmsh.bootstrap.invokerc')
+    @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('os.path.exists')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_join_sbd_config_disabled(self, mock_package, mock_exists, mock_invokerc, mock_invoke, mock_check):
+    def test_join_sbd_config_disabled(self, mock_package, mock_exists, mock_enabled, mock_invoke, mock_check):
         mock_package.return_value = True
         mock_exists.return_value = True
-        mock_invokerc.return_value = False
+        mock_enabled.return_value = False
 
         self.sbd_inst.join_sbd("node1")
 
         mock_package.assert_called_once_with("sbd")
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
-        mock_invokerc.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 systemctl is-enabled sbd.service")
         mock_invoke.assert_called_once_with("systemctl disable sbd.service")
+        mock_enabled.assert_called_once_with("sbd.service", "node1")
         mock_check.assert_not_called()
 
     @mock.patch('crmsh.bootstrap.status')
@@ -426,25 +428,91 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.bootstrap.SBDManager._check_environment')
     @mock.patch('crmsh.bootstrap.invoke')
-    @mock.patch('crmsh.bootstrap.invokerc')
+    @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('os.path.exists')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_join_sbd(self, mock_package, mock_exists, mock_invokerc, mock_invoke, mock_check, mock_get_device, mock_verify, mock_status):
+    def test_join_sbd(self, mock_package, mock_exists, mock_enabled, mock_invoke, mock_check, mock_get_device, mock_verify, mock_status):
         mock_package.return_value = True
         mock_exists.return_value = True
-        mock_invokerc.return_value = True
+        mock_enabled.return_value = True
         mock_get_device.return_value = ["/dev/sdb1"]
 
         self.sbd_inst.join_sbd("node1")
 
         mock_package.assert_called_once_with("sbd")
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
-        mock_invokerc.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 systemctl is-enabled sbd.service")
         mock_invoke.assert_called_once_with("systemctl enable sbd.service")
         mock_check.assert_called_once_with()
         mock_get_device.assert_called_once_with()
-        mock_verify.assert_called_once_with(["/dev/sdb1"])
+        mock_verify.assert_called_once_with(["/dev/sdb1"], ["node1"])
+        mock_enabled.assert_called_once_with("sbd.service", "node1")
         mock_status.assert_called_once_with("Got SBD configuration")
+
+    @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
+    def test_verify_sbd_device_classmethod_exception(self, mock_get_config):
+        mock_get_config.return_value = []
+        with self.assertRaises(ValueError) as err:
+            bootstrap.SBDManager.verify_sbd_device()
+        self.assertEqual("No sbd device configured", str(err.exception))
+        mock_get_config.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.SBDManager._verify_sbd_device')
+    @mock.patch('crmsh.utils.list_cluster_nodes_except_me')
+    @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
+    def test_verify_sbd_device_classmethod(self, mock_get_config, mock_list_nodes, mock_verify):
+        mock_get_config.return_value = ["/dev/sda1"]
+        mock_list_nodes.return_value = ["node1"]
+        bootstrap.SBDManager.verify_sbd_device()
+        mock_get_config.assert_called_once_with()
+        mock_verify.assert_called_once_with(["/dev/sda1"], ["node1"])
+
+    @mock.patch('crmsh.bootstrap.SBDManager._get_device_uuid')
+    def test_compare_device_uuid_return(self, mock_get_uuid):
+        self.sbd_inst._compare_device_uuid("/dev/sdb1", None)
+        mock_get_uuid.assert_not_called()
+
+    @mock.patch('crmsh.bootstrap.SBDManager._get_device_uuid')
+    def test_compare_device_uuid(self, mock_get_uuid):
+        mock_get_uuid.side_effect = ["1234", "5678"]
+        with self.assertRaises(ValueError) as err:
+            self.sbd_inst._compare_device_uuid("/dev/sdb1", ["node1"])
+        self.assertEqual("Device /dev/sdb1 doesn't have the same UUID with node1", str(err.exception))
+        mock_get_uuid.assert_has_calls([mock.call("/dev/sdb1"), mock.call("/dev/sdb1", "node1")])
+
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    def test_get_device_uuid_error_dump(self, mock_run):
+        mock_run.return_value = (1, None, "error data")
+        with self.assertRaises(ValueError) as err:
+            self.sbd_inst._get_device_uuid("/dev/sdb1")
+        self.assertEqual("Cannot dump sbd meta-data: error data", str(err.exception))
+        mock_run.assert_called_once_with("sbd -d /dev/sdb1 dump")
+
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    def test_get_device_uuid_not_match(self, mock_run):
+        mock_run.return_value = (0, "output data", None)
+        with self.assertRaises(ValueError) as err:
+            self.sbd_inst._get_device_uuid("/dev/sdb1")
+        self.assertEqual("Cannot find sbd device UUID for /dev/sdb1", str(err.exception))
+        mock_run.assert_called_once_with("sbd -d /dev/sdb1 dump")
+
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    def test_get_device_uuid(self, mock_run):
+        output = """
+        ==Dumping header on disk /dev/sda1
+        Header version     : 2.1
+        UUID               : a2e9a92c-cc72-4ef9-ac55-ccc342f3546b
+        Number of slots    : 255
+        Sector size        : 512
+        Timeout (watchdog) : 5
+        Timeout (allocate) : 2
+        Timeout (loop)     : 1
+        Timeout (msgwait)  : 10
+        ==Header on disk /dev/sda1 is dumped
+        """
+        mock_run.return_value = (0, output, None)
+        res = self.sbd_inst._get_device_uuid("/dev/sda1")
+        self.assertEqual(res, "a2e9a92c-cc72-4ef9-ac55-ccc342f3546b")
+        mock_run.assert_called_once_with("sbd -d /dev/sda1 dump")
 
 
 class TestBootstrap(unittest.TestCase):

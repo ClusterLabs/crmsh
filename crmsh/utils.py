@@ -1729,6 +1729,19 @@ def list_cluster_nodes():
         raise ValueError("Error listing cluster nodes: %s" % (msg))
 
 
+def list_cluster_nodes_except_me():
+    """
+    Get cluster node list and filter out self
+    """
+    node_list = list_cluster_nodes()
+    if not node_list:
+        raise ValueError("Failed to get node list from cluster")
+    me = this_node()
+    if me in node_list:
+        node_list.remove(me)
+    return node_list
+
+
 def service_info(name):
     p = is_program('systemctl')
     if p:
