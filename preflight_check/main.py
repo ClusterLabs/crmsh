@@ -30,8 +30,7 @@ class Context(object):
         self.current_case = None
 
         # set by argparse(functions)
-        self.fix_conf = None
-        self.env_check = None
+        self.check_conf = None
         self.cluster_check = None
         self.sbd = None
         self.corosync = None
@@ -174,12 +173,8 @@ For each --kill-* testcase, report directory: {}'''.format(context.logfile,
                                                            context.jsonfile,
                                                            context.report_path))
 
-    parser.add_argument('-f', '--fix-conf', dest='fix_conf', action='store_true',
-                        help='Fix configuration')
-    parser.add_argument('-e', '--env-check', dest='env_check', action='store_true',
-                        help='Check environment')
-    parser.add_argument('-c', '--cluster-check', dest='cluster_check', action='store_true',
-                        help='Check cluster state')
+    parser.add_argument('-c', '--check-conf', dest='check_conf', action='store_true',
+                        help='Valid the configurations')
 
     group_mutual = parser.add_mutually_exclusive_group()
     group_mutual.add_argument('--kill-sbd', dest='sbd', action='store_true',
@@ -202,11 +197,15 @@ For each --kill-* testcase, report directory: {}'''.format(context.logfile,
                                help='Show this help message and exit')
 
     args = parser.parse_args()
-    if args.help or len(sys.argv) == 1:
+    if args.help:
         parser.print_help()
         sys.exit(0)
+
     for arg in vars(args):
         setattr(context, arg, getattr(args, arg))
+
+    if len(sys.argv) == 1:
+        setattr(context, 'cluster_check', True)
 
 
 def setup_logging(context):

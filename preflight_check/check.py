@@ -15,7 +15,7 @@ def fix(context):
     """
     Check configuration and fix the abnormal options
     """
-    if context.fix_conf:
+    if context.check_conf:
         can = check_sbd()
         if can != "":
             correct_sbd(context, can)
@@ -144,8 +144,6 @@ def check(context):
     """
     Check environment and cluster state if related options are enabled
     """
-    if context.env_check:
-        check_environment()
     if context.cluster_check:
         check_cluster()
     print()
