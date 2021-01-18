@@ -567,6 +567,9 @@ Fence timeout:     {}
 
 
 class TaskFixSBD(Task):
+    """
+    Class to fix SBD DEVICE incorrect issue
+    """
 
     def  __init__(self, candidate, yes=False):
         self.new = candidate
@@ -577,7 +580,7 @@ class TaskFixSBD(Task):
         self.edit = tempfile.mktemp()
         self.yes = yes
 
-        sbd_options = utils.conf_parser(self.conf)
+        sbd_options = crmshutils.parse_sysconfig(self.conf)
         self.old = sbd_options["SBD_DEVICE"]
 
     def header(self):
@@ -648,7 +651,7 @@ New SBD device:      {}
         """
         Verify the modification is working
         """
-        sbd_options = utils.conf_parser(self.conf)
+        sbd_options = crmshutils.parse_sysconfig(self.conf)
 
         if sbd_options["SBD_DEVICE"] == self.new:
             self.info("SBD DEVICE change succeed")

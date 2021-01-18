@@ -1,5 +1,6 @@
 import os
 import re
+import glob
 import json
 import logging
 from datetime import datetime
@@ -234,37 +235,20 @@ def get_process_status(s):
     return False, -1
 
 
-def conf_parser(f, sp="="):
+def _find_match_count(str1, str2):
     """
-    Parse a configuration file with content like "A = B"
-    Note: can't use @crmshutils.memoize for verification conf
-
-    f: file path
-    return the dict of parse result
+    Find the max match number of s1 and s2
     """
+    leng = min(len(str1), len(str2))
+    num = 0
 
-    result = {}
+    for i in range(leng):
+        if str1[i] == str2[i]:
+            num += 1
+        else:
+            break
 
-    if not os.path.exists(f):
-        return result
-
-    with open(f, 'r') as fd:
-        lines = fd.readlines()
-        line = [ l.strip() for l in lines
-                if len(l.strip()) != 0 and not l.strip().startswith("#") ]
-
-        for l in line:
-            if l.count(sp) != 1:
-                continue
-
-            value = l.split(sp)[1].strip()
-            value = value.strip("'")
-            value = value.strip('"')
-            value = value.strip()
-
-            result[l.split(sp)[0].strip()] = value
-
-        return result
+    return num
 
 
 def is_valid_sbd(dev):
@@ -282,7 +266,36 @@ def is_valid_sbd(dev):
         msg_error(err)
         return False
 
-    if out.strip() != 'SBD_SBD':
-        return False
-
     return True
+
+
+def find_candidate_sbd(dev):
+    """
+    Find the devices that already have SBD header
+
+    return the path of candidate SBD device
+    """
+    ddir = os.path.dirname(dev)
+    dname = os.path.basename(dev)
+
+    dev_list = glob.glob(ddir + "/*")
+    if len(dev_list) == 0:
+        return ""
+
+    can_filter = filter(is_valid_sbd, dev_list)
+    candidates = list(can_filter)
+
+    if len(candidates) == 0:
+        return ""
+
+    index = 0
+    i = 0
+    max_match = -1
+    num_list = map(_find_match_count, [dev] * len(candidates), candidates)
+    for num in num_list:
+        if num > max_match:
+            max_match = num
+            index = i
+        i += 1
+
+    return candidates[index]
