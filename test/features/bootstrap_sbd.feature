@@ -4,20 +4,6 @@ Feature: crmsh bootstrap sbd management
   Tag @clean means need to stop cluster service if the service is available
 
   @clean
-  Scenario: Check prerequisites for SBD
-    Given   Has disk "/dev/sda1" on "hanode1"
-
-    When    Run "mv /usr/sbin/sbd /tmp" on "hanode1"
-    And     Try "crm cluster init -s /dev/sda1 -y"
-    Then    Except "ERROR: cluster.init: sbd executable not found! Cannot configure SBD"
-    When    Run "mv /tmp/sbd /usr/sbin" on "hanode1"
-
-    When    Run "mv /dev/watchdog /tmp" on "hanode1"
-    And     Try "crm cluster init -s /dev/sda1 -y"
-    Then    Except "ERROR: cluster.init: Watchdog device must be configured in order to use SBD"
-    When    Run "mv /tmp/watchdog /dev" on "hanode1"
-
-  @clean
   Scenario: Verify sbd device
     When    Try "crm cluster init -s "/dev/sda1;/dev/sda2;/dev/sda3;/dev/sda4" -y"
     Then    Except "ERROR: cluster.init: Maximum number of SBD device is 3"
