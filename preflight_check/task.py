@@ -328,7 +328,7 @@ class TaskKill(Task):
         self.report = True
         from . import main
         if not os.path.isdir(main.ctx.report_path):
-            utils.msg_error("{} is not a directory".format(main.ctx.report_path))
+            raise TaskError("{} is not a directory".format(main.ctx.report_path))
 
         report_path = main.ctx.report_path
         report_name = "{}-{}.report".format(main.ctx.process_name, utils.now("%Y%m%d-%s"))
