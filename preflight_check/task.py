@@ -4,11 +4,13 @@ import re
 import time
 import threading
 import logging
+import shutil
+import tempfile
 from contextlib import contextmanager
+from crmsh import utils as crmshutils
 
 from . import utils
 from . import config
-from crmsh import utils as crmshutils
 
 
 logger = logging.getLogger('cpc')
@@ -29,6 +31,7 @@ class Task(object):
         flush, to print the message immediately
         """
         self.passed = True
+        self.yes = False
         self.quiet = quiet
         self.messages = []
         self.timestamp = utils.now()
@@ -86,7 +89,7 @@ class Task(object):
         Print testcase header
         """
         print(self.header())
-        if not crmshutils.ask("Run?"):
+        if not self.yes and not crmshutils.ask("Run?"):
             self.info("Testcase cancelled")
             sys.exit()
 
@@ -157,13 +160,14 @@ class TaskFence(Task):
     """
     Class to fence node
     """
-    def  __init__(self, target):
+    def  __init__(self, context):
         """
         Init function
         """
-        self.target_node = target
+        self.target_node = context.fence_node
         description = "Fence node {}".format(self.target_node)
         super(self.__class__, self).__init__(description, flush=True)
+        self.yes = context.yes
 
     def header(self):
         """
@@ -309,6 +313,7 @@ class TaskKill(Task):
         super(self.__class__, self).__init__(self.description, flush=True)
         self.cmd = "killall -9 {}".format(self.target_kill)
         self.looping = context.loop
+        self.yes = context.yes
         if not self.looping:
             self.expected = self.EXPECTED[self.target_kill][0]
         else:
@@ -432,7 +437,7 @@ class TaskSplitBrain(Task):
     Class to define how to simulate split brain by blocking corosync ports
     """
 
-    def  __init__(self):
+    def  __init__(self, yes=False):
         """
         Init function
         """
@@ -441,6 +446,7 @@ class TaskSplitBrain(Task):
         self.ports = []
         self.peer_nodelist = []
         super(self.__class__, self).__init__(self.description, flush=True)
+        self.yes = yes
 
     def header(self):
         """
@@ -558,3 +564,97 @@ Fence timeout:     {}
         if not result:
             self.thread_stop_event.set()
             # should be an error here
+
+
+class TaskFixSBD(Task):
+    """
+    Class to fix SBD DEVICE incorrect issue
+    """
+
+    def  __init__(self, candidate, yes=False):
+        self.new = candidate
+        self.description = "Replace SBD_DEVICE with candidate {}".format(self.new)
+        self.conf = config.SBD_CONF
+        super(self.__class__, self).__init__(self.description, flush=True)
+        self.bak = tempfile.mktemp()
+        self.edit = tempfile.mktemp()
+        self.yes = yes
+
+        sbd_options = crmshutils.parse_sysconfig(self.conf)
+        self.old = sbd_options["SBD_DEVICE"]
+
+    def header(self):
+        """
+        Case header
+        """
+        h = '''==============================================
+Case:                {}
+Original SBD device: {}
+New SBD device:      {}
+'''.format(self.description, self.old, self.new)
+        return h
+
+    def to_json(self): # pragma: no cover
+        """
+        Generate json output
+        """
+        self.build_base_result()
+        self.result['Original SBD device'] = self.old
+        self.result['New SBD device'] = self.new
+        from . import main
+        main.ctx.task_list = self.prev_task_list + [self.result]
+        utils.json_dumps()
+
+    def pre_check(self):
+        """
+        Check the prerequisite
+        """
+        if not os.path.exists(self.conf):
+            raise TaskError("Configure file {} not exist!".format(self.conf))
+
+        if not os.path.exists(self.new):
+            raise TaskError("Device {} not exist!".format(self.new))
+
+    @contextmanager
+    def backup(self):
+        """
+        Backup the configuration file before modify
+        """
+        shutil.copyfile(self.conf, self.bak)
+        try:
+            yield
+        finally:
+            if self.bak:
+                shutil.copyfile(self.bak, self.conf)
+
+    def run(self):
+        """
+        Change the SBD DEVICE of configuration file
+        """
+        with open(self.edit, "w") as editfd:
+            with open(self.conf, "r") as oldfd:
+                for line in oldfd.readlines():
+                    if line.strip().startswith("SBD_DEVICE"):
+                        line = "SBD_DEVICE='" + self.new +"'\n"
+                    editfd.write(line)
+
+        try:
+            shutil.copymode(self.conf, self.edit)
+            os.remove(self.conf)
+            shutil.move(self.edit, self.conf)
+            os.remove(self.bak)
+            self.bak = None
+        except:
+            raise TaskError("Fail to modify file {}".format(self.conf))
+
+    def verify(self):
+        """
+        Verify the modification is working
+        """
+        sbd_options = crmshutils.parse_sysconfig(self.conf)
+
+        if sbd_options["SBD_DEVICE"] == self.new:
+            self.info("SBD DEVICE change succeed")
+        else:
+            raise TaskError("Fail to replace SBD device {} in {}!".
+                            format(self.new, config.SBD_CONF))

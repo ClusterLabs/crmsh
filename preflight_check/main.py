@@ -6,10 +6,8 @@ import logging.config
 from argparse import RawTextHelpFormatter
 
 from . import check
-from . import config
 from . import utils
 from . import task
-from crmsh import utils as crmshutils
 
 
 logger = logging.getLogger('cpc')
@@ -31,8 +29,8 @@ class Context(object):
         self.logfile = None
         self.current_case = None
 
-        # set by argparse
-        self.env_check = None
+        # set by argparse(functions)
+        self.check_conf = None
         self.cluster_check = None
         self.sbd = None
         self.corosync = None
@@ -40,6 +38,8 @@ class Context(object):
         self.fence_node = None
         self.sp_iptables = None
         self.loop = None
+
+        # set by argument(additional options)
         self.yes = None
         self.help = None
 
@@ -123,7 +123,7 @@ def split_brain(context):
     if not context.sp_iptables:
         return
 
-    task_inst = task.TaskSplitBrain()
+    task_inst = task.TaskSplitBrain(context.yes)
     try:
         task_inst.pre_check()
         task_inst.print_header()
@@ -142,7 +142,7 @@ def fence_node(context):
     if not context.fence_node:
         return
 
-    task_inst = task.TaskFence(context.fence_node)
+    task_inst = task.TaskFence(context)
     try:
         task_inst.pre_check()
         task_inst.print_header()
@@ -154,8 +154,8 @@ def fence_node(context):
 
 
 class MyArgParseFormatter(RawTextHelpFormatter):
-    def __init__(self,prog):
-        super(MyArgParseFormatter,self).__init__(prog, max_help_position=50)
+    def __init__(self, prog):
+        super(MyArgParseFormatter, self).__init__(prog, max_help_position=50)
 
 
 def parse_argument(context):
@@ -173,10 +173,8 @@ For each --kill-* testcase, report directory: {}'''.format(context.logfile,
                                                            context.jsonfile,
                                                            context.report_path))
 
-    parser.add_argument('-e', '--env-check', dest='env_check', action='store_true',
-                        help='Check environment')
-    parser.add_argument('-c', '--cluster-check', dest='cluster_check', action='store_true',
-                        help='Check cluster state')
+    parser.add_argument('-c', '--check-conf', dest='check_conf', action='store_true',
+                        help='Valid the configurations')
 
     group_mutual = parser.add_mutually_exclusive_group()
     group_mutual.add_argument('--kill-sbd', dest='sbd', action='store_true',
@@ -202,8 +200,12 @@ For each --kill-* testcase, report directory: {}'''.format(context.logfile,
     if args.help:
         parser.print_help()
         sys.exit(0)
+
     for arg in vars(args):
         setattr(context, arg, getattr(args, arg))
+
+    if len(sys.argv) == 1:
+        setattr(context, 'cluster_check', True)
 
 
 def setup_logging(context):
@@ -239,6 +241,7 @@ def run(context):
     setup_logging(context)
 
     try:
+        check.fix(context)
         check.check(context)
         kill_process(context)
         fence_node(context)

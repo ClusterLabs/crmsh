@@ -1,17 +1,95 @@
 import re
-from . import utils
-from . import task
+import os
+import sys
+
 from crmsh import utils as crmshutils
 from crmsh import bootstrap as crmshboot
 from crmsh import completers
+
+from . import utils
+from . import task
+from . import config
+
+
+def fix(context):
+    """
+    Check configuration and fix the abnormal options
+    """
+    if context.check_conf:
+        candidate = check_sbd()
+        if candidate != "":
+            correct_sbd(context, candidate)
+    print()
+
+
+def check_sbd():
+    """
+    Check the sbd device and find a possible fix for incorrect disk
+
+    Only support one path SBD_DEVICE in the current version
+    """
+    print("\n============ Checking the SBD device ============")
+    task_inst = task.TaskCheck("Checking SBD device")
+
+    with task_inst.run():
+
+        if not os.path.exists(config.SBD_CONF):
+            utils.msg_info("SBD configuration file {} not found.".
+                           format(config.SBD_CONF))
+            return ""
+
+        sbd_options = crmshutils.parse_sysconfig(config.SBD_CONF)
+
+        if not "SBD_DEVICE" in sbd_options:
+            utils.msg_info("SBD DEVICE not used.")
+            return ""
+
+        dev = sbd_options["SBD_DEVICE"]
+
+        if not os.path.exists(dev):
+            task_inst.warn("SBD device '{}' is not exist.".format(dev))
+        else:
+            if utils.is_valid_sbd(dev):
+                task_inst.info("'{}' is a valid SBD device.".format(dev))
+                return ""
+            else:
+                task_inst.warn("Device '{}' is not valid for SBD, may need initialize."
+                               .format(dev))
+
+        candidate = utils.find_candidate_sbd(dev)
+
+        if candidate == "":
+            task_inst.warn("Fail to find a valid candidate SBD device.")
+            return ""
+
+        task_inst.info("Found '{}' with SBD header exist.".format(candidate))
+
+    return candidate
+
+
+def correct_sbd(context, can):
+    """
+    Fix the sbd device conf with candidate device
+
+    Only support one path SBD_DEVICE in the current version
+    """
+
+    task_inst = task.TaskFixSBD(can, context.yes)
+    try:
+        task_inst.pre_check()
+        task_inst.print_header()
+        with task_inst.backup():
+            task_inst.run()
+        task_inst.verify()
+    except task.TaskError as err:
+        task_inst.error(str(err))
+        sys.exit(1)
 
 
 def check(context):
     """
     Check environment and cluster state if related options are enabled
     """
-    if context.env_check:
-        check_environment()
     if context.cluster_check:
         check_cluster()
     print()
@@ -105,7 +183,7 @@ def check_firewall():
                     task_inst.warn("{}.service is not active".format(item))
                 break
         else:
-           task_inst.warn("Failed to detect firewall")
+            task_inst.warn("Failed to detect firewall")
 
 
 def check_cluster():
