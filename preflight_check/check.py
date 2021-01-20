@@ -34,14 +34,14 @@ def check_sbd():
     with task_inst.run():
 
         if not os.path.exists(config.SBD_CONF):
-            utils.msg_info("SBD configuration file {} not found.".
+            task_inst.info("SBD configuration file {} not found.".
                            format(config.SBD_CONF))
             return ""
 
         sbd_options = crmshutils.parse_sysconfig(config.SBD_CONF)
 
         if not "SBD_DEVICE" in sbd_options:
-            utils.msg_info("SBD DEVICE not used.")
+            task_inst.info("SBD DEVICE not used.")
             return ""
 
         dev = sbd_options["SBD_DEVICE"]
