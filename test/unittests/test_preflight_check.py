@@ -1,17 +1,16 @@
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-import unittest
 try:
-    from unittest import mock
+    from unittest import mock, TestCase
 except ImportError:
     import mock
 
-from preflight_check import check
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+from preflight_check import check, config
 
 
-class TestCheck(unittest.TestCase):
+class TestCheck(TestCase):
 
     @mock.patch('preflight_check.check.check_cluster')
     def test_check(self, mock_cluster_check):
@@ -134,7 +133,7 @@ class TestCheck(unittest.TestCase):
 
         mock_corosync_port.assert_called_once_with()
         task_inst.error.assert_called_once_with("Can not get corosync's port")
-    
+
     @mock.patch('preflight_check.check.crmshutils.get_stdout_stderr')
     @mock.patch('preflight_check.utils.corosync_port_list')
     def test_check_port_open(self, mock_corosync_port, mock_run):
@@ -188,7 +187,7 @@ class TestCheck(unittest.TestCase):
         mock_installed.assert_called_once_with("firewalld")
         mock_task_inst.info.assert_called_once_with("firewalld.service is available")
         mock_task_inst.warn.assert_called_once_with("firewalld.service is not active")
-    
+
     @mock.patch('preflight_check.check.check_port_open')
     @mock.patch('preflight_check.check.crmshutils.service_is_active')
     @mock.patch('preflight_check.check.crmshutils.package_is_installed')

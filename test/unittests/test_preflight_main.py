@@ -1,24 +1,23 @@
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-import unittest
 try:
-    from unittest import mock
+    from unittest import mock, TestCase
 except ImportError:
     import mock
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from preflight_check import utils, main, config, task
 
 
-class TestContext(unittest.TestCase):
+class TestContext(TestCase):
 
     def test_context(self):
         main.ctx.name = "xin"
         self.assertEqual(main.ctx.name, "xin")
 
 
-class TestMain(unittest.TestCase):
+class TestMain(TestCase):
 
     @mock.patch('sys.exit')
     @mock.patch('preflight_check.main.MyArgParseFormatter')
@@ -26,8 +25,8 @@ class TestMain(unittest.TestCase):
     def test_parse_argument_help(self, mock_parser, mock_myformatter, mock_exit):
         mock_parser_inst = mock.Mock()
         mock_parser.return_value = mock_parser_inst
-        ctx = mock.Mock(process_name="preflight_check", logfile="logfile1", jsonfile="jsonfile1",
-                report_path="/var/log/report")
+        ctx = mock.Mock(process_name="preflight_check", logfile="logfile1",
+                        jsonfile="jsonfile1", report_path="/var/log/report")
         mock_parse_args_inst = mock.Mock(help=True)
         mock_parser_inst.parse_args.return_value = mock_parse_args_inst
         mock_exit.side_effect = SystemExit
@@ -43,8 +42,8 @@ class TestMain(unittest.TestCase):
     def test_parse_argument(self, mock_parser, mock_myformatter):
         mock_parser_inst = mock.Mock()
         mock_parser.return_value = mock_parser_inst
-        ctx = mock.Mock(process_name="preflight_check", logfile="logfile1", jsonfile="jsonfile1",
-                report_path="/var/log/report")
+        ctx = mock.Mock(process_name="preflight_check", logfile="logfile1",
+                        jsonfile="jsonfile1", report_path="/var/log/report")
         mock_parse_args_inst = mock.Mock(help=False, env_check=True, sbd=True)
         mock_parser_inst.parse_args.return_value = mock_parse_args_inst
 
@@ -99,7 +98,7 @@ class TestMain(unittest.TestCase):
     @mock.patch('preflight_check.main.parse_argument')
     @mock.patch('preflight_check.main.setup_basic_context')
     def test_run(self, mock_setup, mock_parse, mock_is_root, mock_exists, mock_mkdir,
-            mock_setup_logging, mock_fix, mock_check, mock_kill, mock_fence, mock_sb):
+                 mock_setup_logging, mock_fix, mock_check, mock_kill, mock_fence, mock_sb):
         mock_is_root.return_value = True
         ctx = mock.Mock(var_dir="/var/lib/preflight_check")
         mock_exists.return_value = False
@@ -128,7 +127,7 @@ class TestMain(unittest.TestCase):
     @mock.patch('preflight_check.main.parse_argument')
     @mock.patch('preflight_check.main.setup_basic_context')
     def test_run_except(self, mock_setup, mock_parse, mock_is_root, mock_exists,
-            mock_setup_logging, mock_fix, mock_check, mock_dumps, mock_exit):
+                        mock_setup_logging, mock_fix, mock_check, mock_dumps, mock_exit):
         mock_is_root.return_value = True
         ctx = mock.Mock(var_dir="/var/lib/preflight_check")
         mock_exists.return_value = True
@@ -233,5 +232,6 @@ class TestMain(unittest.TestCase):
         mock_task_fence_inst.error.assert_called_once_with("error data")
         mock_exit.assert_called_once_with(1)
 
-    def test_MyArgParseFormatter(self):
-        inst = main.MyArgParseFormatter("test")
+    @classmethod
+    def test_MyArgParseFormatter(cls):
+        main.MyArgParseFormatter("test")
