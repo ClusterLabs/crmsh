@@ -7,7 +7,19 @@ Holds user-configurable options.
 import os
 import re
 import configparser
+from contextlib import contextmanager
 from . import userdir
+
+
+@contextmanager
+def _disable_exception_traceback():
+    """
+    All traceback information is suppressed and only the exception type and value are printed
+    """
+    default_value = getattr(sys, "tracebacklimit", 1000)  # `1000` is a Python's default value
+    sys.tracebacklimit = 0
+    yield
+    sys.tracebacklimit = default_value  # revert changes
 
 
 def configure_libdir():
@@ -310,11 +322,10 @@ class _Configuration(object):
         """
         Try to handle configparser.MissingSectionHeaderError while reading
         """
-        from . import utils
         try:
             config_parser_inst.read(file_list)
         except configparser.MissingSectionHeaderError:
-            with utils.disable_exception_traceback():
+            with _disable_exception_traceback():
                 raise
 
     def load(self):
