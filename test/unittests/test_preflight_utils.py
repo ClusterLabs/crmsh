@@ -2,17 +2,17 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-import unittest
 try:
-    from unittest import mock
+    from unittest import mock, TestCase
 except ImportError:
     import mock
 import logging
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from preflight_check import utils, main, config
 
 
-class TestMyLoggingFormatter(unittest.TestCase):
+class TestMyLoggingFormatter(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -38,7 +38,7 @@ class TestMyLoggingFormatter(unittest.TestCase):
         """
 
 
-class TestFenceInfo(unittest.TestCase):
+class TestFenceInfo(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -108,7 +108,7 @@ class TestFenceInfo(unittest.TestCase):
         mock_get_property.assert_called_once_with("stonith-timeout")
 
 
-class TestUtils(unittest.TestCase):
+class TestUtils(TestCase):
     '''
     Unitary tests for preflight_check/utils.py
     '''
@@ -270,13 +270,13 @@ totem.interface.1.ttl (u8) = 1
         mock_open_read_1 = mock.mock_open(read_data=b'/usr/sbin/cmd1\x00--user\x00')
         mock_open_read_2 = mock.mock_open(read_data=b'/usr/sbin/cmd2\x00')
         mock_open_file.side_effect = [
-                mock_open_read_1.return_value,
-                mock_open_read_2.return_value
-                ]
+            mock_open_read_1.return_value,
+            mock_open_read_2.return_value
+        ]
         mock_to_ascii.side_effect = [
-                "/usr/sbin/cmd1\x00--user\x00",
-                "/usr/sbin/cmd2\x00"
-                ]
+            "/usr/sbin/cmd1\x00--user\x00",
+            "/usr/sbin/cmd2\x00"
+        ]
         mock_basename.side_effect = ["cmd1", "cmd2"]
 
         rc, pid = utils.get_process_status("sbd")
@@ -308,13 +308,13 @@ totem.interface.1.ttl (u8) = 1
         mock_open_read_1 = mock.mock_open(read_data=b'/usr/sbin/cmd1\x00--user\x00')
         mock_open_read_2 = mock.mock_open(read_data=b'/usr/sbin/sbd\x00')
         mock_open_file.side_effect = [
-                mock_open_read_1.return_value,
-                mock_open_read_2.return_value
-                ]
+            mock_open_read_1.return_value,
+            mock_open_read_2.return_value
+        ]
         mock_to_ascii.side_effect = [
-                "/usr/sbin/cmd1\x00--user\x00",
-                "/usr/sbin/sbd\x00"
-                ]
+            "/usr/sbin/cmd1\x00--user\x00",
+            "/usr/sbin/sbd\x00"
+        ]
         mock_basename.side_effect = ["cmd1", "sbd"]
 
         rc, pid = utils.get_process_status("sbd")

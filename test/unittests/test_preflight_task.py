@@ -1,19 +1,18 @@
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-import unittest
 try:
-    from unittest import mock
+    from unittest import mock, TestCase
 except ImportError:
     import mock
 import logging
 from datetime import datetime
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from preflight_check import utils, main, config, task
 
 
-class TestTaskKill(unittest.TestCase):
+class TestTaskKill(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -47,7 +46,7 @@ class TestTaskKill(unittest.TestCase):
         mock_isdir.return_value = False
         main.ctx = mock.Mock(report_path="/path")
         with self.assertRaises(task.TaskError) as error:
-           self.task_kill_inst.enable_report()
+            self.task_kill_inst.enable_report()
         self.assertEqual("/path is not a directory", str(error.exception))
         mock_isdir.assert_called_once_with("/path")
 
@@ -104,7 +103,7 @@ Expected State:    a) sbd process restarted
         file_handle = mock_open_file.return_value.__enter__.return_value
 
         self.task_kill_inst.to_report()
-        
+
         file_handle.write.assert_has_calls([
             mock.call("#### header"),
             mock.call("\nLog:\n"),
@@ -196,7 +195,7 @@ Expected State:    a) sbd process restarted
         mock_sleep.assert_called_once_with(1)
 
 
-class TestTaskCheck(unittest.TestCase):
+class TestTaskCheck(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -299,7 +298,7 @@ class TestTaskCheck(unittest.TestCase):
         self.task_check_inst.print_result.assert_called_once_with()
 
 
-class TestTaskSplitBrain(unittest.TestCase):
+class TestTaskSplitBrain(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -494,7 +493,7 @@ Fence timeout:     60
         self.task_sp_inst.thread_stop_event.set.assert_called_once_with()
 
 
-class TestFence(unittest.TestCase):
+class TestFence(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -507,7 +506,7 @@ class TestFence(unittest.TestCase):
         """
         Test setUp.
         """
-        ctx = mock.Mock(fence_node="node1", yes=False) 
+        ctx = mock.Mock(fence_node="node1", yes=False)
         self.task_fence_inst = task.TaskFence(ctx)
         self.task_fence_inst.fence_action = "reboot"
         self.task_fence_inst.fence_timeout = 60
@@ -610,7 +609,7 @@ Fence timeout:     60
         self.task_fence_inst.fence_finish_event.wait.assert_called_once_with(60)
 
 
-class TestTask(unittest.TestCase):
+class TestTask(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -707,10 +706,10 @@ class TestTask(unittest.TestCase):
     def test_build_base_result(self):
         self.task_inst.build_base_result()
         expected_result = {
-                "Timestamp": self.task_inst.timestamp,
-                "Description": self.task_inst.description,
-                "Messages": []
-                }
+            "Timestamp": self.task_inst.timestamp,
+            "Description": self.task_inst.description,
+            "Messages": []
+        }
         self.assertDictEqual(expected_result, self.task_inst.result)
 
     @mock.patch('sys.exit')
@@ -743,9 +742,9 @@ class TestTask(unittest.TestCase):
         mock_run.side_effect = [(1, None, None), (0, output, None), (1, None, None), (0, output2, None)]
         self.task_inst.timestamp = "2021/01/19 16:08:24"
         mock_datetime.side_effect = [
-                datetime.strptime(self.task_inst.timestamp, '%Y/%m/%d %H:%M:%S'),
-                datetime.strptime("Tue Jan 19 16:08:37 2021", '%a %b %d %H:%M:%S %Y')
-                ]
+            datetime.strptime(self.task_inst.timestamp, '%Y/%m/%d %H:%M:%S'),
+            datetime.strptime("Tue Jan 19 16:08:37 2021", '%a %b %d %H:%M:%S %Y')
+        ]
 
         self.task_inst.fence_action_monitor()
 
