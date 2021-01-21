@@ -481,3 +481,315 @@ Active Resources:
             mock.call("Started resources: r1,r2"),
             mock.call("Stopped resources: r3,r4")
             ])
+
+    # Test fix()
+    @classmethod
+    @mock.patch('preflight_check.check.correct_sbd')
+    @mock.patch('preflight_check.check.check_sbd')
+    def test_fix_no_candidate(cls, mock_check_sbd, mock_correct_sbd):
+        """
+        Test fix() has no valid candidate
+        """
+        dev = "/dev/disk/by-id/scsi-SATA_ST2000LM007-1R81_WDZ5J42A"
+        ctx = mock.Mock(fix_conf=True)
+        mock_check_sbd.return_value = dev
+        check.fix(ctx)
+        mock_correct_sbd.assert_called_once_with(ctx, dev)
+
+    @classmethod
+    @mock.patch('preflight_check.check.correct_sbd')
+    @mock.patch('preflight_check.check.check_sbd')
+    def test_fix_has_candidate(cls, mock_check_sbd, mock_correct_sbd):
+        """
+        Test fix() has valid candidate
+        """
+        ctx = mock.Mock(fix_conf=True)
+        mock_check_sbd.return_value = ""
+        mock_correct_sbd.return_value = ""
+        check.fix(ctx)
+        mock_correct_sbd.assert_not_called()
+
+    # Test check_sbd()
+    @classmethod
+    @mock.patch('preflight_check.task.TaskCheck.print_result')
+    @mock.patch('preflight_check.utils.msg_info')
+    @mock.patch('os.path.exists')
+    def test_check_sbd_no_conf(cls, mock_os_path_exists,
+                               mock_utils_msg_info, mock_run):
+        """
+        Test no configuration file
+        """
+        mock_os_path_exists.return_value = False
+        check.check_sbd()
+        mock_utils_msg_info.assert_called_with("SBD configuration file {} not found.".
+                                               format(config.SBD_CONF), to_stdout=False)
+        mock_run.assert_called_once_with()
+
+    @classmethod
+    @mock.patch('preflight_check.task.TaskCheck.print_result')
+    @mock.patch('preflight_check.utils.msg_info')
+    @mock.patch('crmsh.utils.parse_sysconfig')
+    @mock.patch('os.path.exists')
+    def test_check_sbd_not_configured(cls, mock_os_path_exists, mock_utils_parse_sysconf,
+                                      mock_utils_msg_info, mock_run):
+        """
+        Test SBD device not configured
+        """
+        mock_os_path_exists.return_value = True
+        mock_utils_parse_sysconf.return_value = {}
+        check.check_sbd()
+        mock_utils_msg_info.assert_called_with("SBD DEVICE not used.", to_stdout=False)
+        mock_run.assert_called_once_with()
+
+    @classmethod
+    @mock.patch('preflight_check.task.TaskCheck.print_result')
+    @mock.patch('preflight_check.utils.is_valid_sbd')
+    @mock.patch('preflight_check.utils.msg_info')
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.utils.parse_sysconfig')
+    @mock.patch('os.path.exists')
+    def test_check_sbd_exist_and_valid(cls, mock_os_path_exists,
+                                       mock_utils_parse_sysconf, mock_find_hexdump,
+                                       mock_msg_info, mock_is_valid_sbd, mock_run):
+        """
+        Test configured SBD device exist and valid
+        """
+        dev = "/dev/disk/by-id/scsi-SATA_ST2000LM007-1R81_WDZ5J42A"
+        mock_os_path_exists.side_effect = [True, True, True]
+        mock_utils_parse_sysconf.return_value = {"SBD_DEVICE": dev}
+        mock_find_hexdump.return_value = (0, "/usr/bin/hexdump", None)
+        mock_is_valid_sbd.return_value = True
+
+        check.check_sbd()
+        mock_msg_info.assert_called_with("'{}' is a valid SBD device.".format(dev),
+                                         to_stdout=False)
+        mock_run.assert_called_once_with()
+
+    @classmethod
+    @mock.patch('preflight_check.task.TaskCheck.print_result')
+    @mock.patch('preflight_check.utils.find_candidate_sbd')
+    @mock.patch('preflight_check.utils.is_valid_sbd')
+    @mock.patch('preflight_check.utils.msg_warn')
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.utils.parse_sysconfig')
+    @mock.patch('os.path.exists')
+    def test_check_sbd_exist_and_not_valid_but_no_can(cls, mock_os_path_exists,
+                                                      mock_utils_parse_sysconf, mock_find_hexdump,
+                                                      mock_msg_warn, mock_is_valid_sbd,
+                                                      mock_find_can_sbd, mock_run):
+        """
+        Test configured SBD device not valid and no candidate
+        """
+        dev = "/dev/disk/by-id/scsi-SATA_ST2000LM007-1R81_WDZ5J42A"
+        mock_os_path_exists.side_effect = [True, True, True]
+        mock_utils_parse_sysconf.return_value = {"SBD_DEVICE": dev}
+        mock_find_hexdump.return_value = (0, "/usr/bin/hexdump", None)
+        mock_is_valid_sbd.return_value = False
+        mock_find_can_sbd.return_value = ""
+
+        check.check_sbd()
+        mock_msg_warn.assert_has_calls(
+            [mock.call("Device '{}' is not valid for SBD, may need initialize.".
+                       format(dev), to_stdout=False),
+             mock.call("Fail to find a valid candidate SBD device.",
+                       to_stdout=False)])
+        mock_run.assert_called_once_with()
+
+    @classmethod
+    @mock.patch('preflight_check.task.TaskCheck.print_result')
+    @mock.patch('preflight_check.utils.find_candidate_sbd')
+    @mock.patch('preflight_check.utils.is_valid_sbd')
+    @mock.patch('preflight_check.utils.msg_info')
+    @mock.patch('preflight_check.utils.msg_warn')
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.utils.parse_sysconfig')
+    @mock.patch('os.path.exists')
+    def test_check_sbd_exist_and_not_exist_has_can(cls, mock_os_path_exists,
+                                                   mock_utils_parse_sysconf, mock_find_hexdump,
+                                                   mock_msg_warn, mock_msg_info, mock_is_valid_sbd,
+                                                   mock_find_can_sbd, mock_run):
+        """
+        Test configured SBD device not valid but has candidate
+        """
+        dev = "/dev/disk/by-id/scsi-SATA_ST2000LM007-1R81_WDZ5J42A"
+        candev = "/dev/disk/by-id/scsi-SATA_ST2037LM010-2R82_WDZ5J36B"
+        mock_os_path_exists.side_effect = [True, False]
+        mock_utils_parse_sysconf.return_value = {"SBD_DEVICE": dev}
+        mock_find_hexdump.return_value = (0, "/usr/bin/hexdump", None)
+        mock_is_valid_sbd.return_value = False
+        mock_find_can_sbd.return_value = candev
+
+        check.check_sbd()
+        mock_msg_warn.assert_called_once_with(
+            "SBD device '{}' is not exist.".format(dev),
+            to_stdout=False)
+        mock_msg_info.assert_called_with("Found '{}' with SBD header exist.".format(candev),
+                                         to_stdout=False)
+        mock_run.assert_called_once_with()
+
+    @classmethod
+    @mock.patch('preflight_check.task.TaskCheck.print_result')
+    @mock.patch('preflight_check.utils.find_candidate_sbd')
+    @mock.patch('preflight_check.utils.is_valid_sbd')
+    @mock.patch('preflight_check.utils.msg_info')
+    @mock.patch('preflight_check.utils.msg_warn')
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.utils.parse_sysconfig')
+    @mock.patch('os.path.exists')
+    def test_check_sbd_exist_and_not_valid_has_can(cls, mock_os_path_exists,
+                                                   mock_utils_parse_sysconf, mock_find_hexdump,
+                                                   mock_msg_warn, mock_msg_info, mock_is_valid_sbd,
+                                                   mock_find_can_sbd, mock_run):
+        """
+        Test configured SBD device not valid but has candidate
+        """
+        dev = "/dev/disk/by-id/scsi-SATA_ST2000LM007-1R81_WDZ5J42A"
+        candev = "/dev/disk/by-id/scsi-SATA_ST2037LM010-2R82_WDZ5J36B"
+        mock_os_path_exists.side_effect = [True, True, True]
+        mock_utils_parse_sysconf.return_value = {"SBD_DEVICE": dev}
+        mock_find_hexdump.return_value = (0, "/usr/bin/hexdump", None)
+        mock_is_valid_sbd.return_value = False
+        mock_find_can_sbd.return_value = candev
+
+        check.check_sbd()
+        mock_msg_warn.assert_called_once_with(
+            "Device '{}' is not valid for SBD, may need initialize.".format(dev),
+            to_stdout=False)
+        mock_msg_info.assert_called_with("Found '{}' with SBD header exist.".format(candev),
+                                         to_stdout=False)
+        mock_run.assert_called_once_with()
+
+    # Test correct_sbd()
+    @mock.patch('sys.exit')
+    @mock.patch('preflight_check.task.Task.error')
+    @mock.patch('preflight_check.utils.msg_info')
+    @mock.patch('crmsh.utils.parse_sysconfig')
+    @mock.patch('os.path.exists')
+    @mock.patch('preflight_check.main.Context')
+    def test_correct_sbd_exception_no_conf(self, mock_context, mock_os_path_exists,
+                                           mock_utils_parse_sysconf, mock_msg_info,
+                                           mock_error, mock_exit):
+        """
+        Test correct_sbd with exception
+        """
+        dev = "/dev/disk/by-id/scsi-SATA_ST2000LM007-1R81_WDZ5J42A"
+        mock_context = mock.Mock(yes=True)
+        mock_os_path_exists.side_effect = [False, True]
+        mock_utils_parse_sysconf.retrun_value = {"SBD_DEVICE": dev}
+        mock_exit.side_effect = SystemExit
+
+        with self.assertRaises(SystemExit):
+            check.correct_sbd(mock_context, dev)
+
+        mock_msg_info.assert_called_once_with('Replace SBD_DEVICE with candidate {}'.
+                                              format(dev), to_stdout=False)
+        mock_error.assert_called_once_with('Configure file {} not exist!'.
+                                           format(config.SBD_CONF))
+
+    @mock.patch('sys.exit')
+    @mock.patch('preflight_check.task.Task.error')
+    @mock.patch('preflight_check.utils.msg_info')
+    @mock.patch('crmsh.utils.parse_sysconfig')
+    @mock.patch('os.path.exists')
+    @mock.patch('preflight_check.main.Context')
+    def test_correct_sbd_exception_no_dev(self, mock_context, mock_os_path_exists,
+                                          mock_utils_parse_sysconf, mock_msg_info,
+                                          mock_error, mock_exit):
+        """
+        Test correct_sbd with exception
+        """
+        dev = "/dev/disk/by-id/scsi-SATA_ST2000LM007-1R81_WDZ5J42A"
+        mock_context = mock.Mock(yes=True)
+        mock_os_path_exists.side_effect = [True, False]
+        mock_utils_parse_sysconf.retrun_value = {"SBD_DEVICE": dev}
+        mock_exit.side_effect = SystemExit
+
+        with self.assertRaises(SystemExit):
+            check.correct_sbd(mock_context, dev)
+
+        mock_msg_info.assert_called_once_with('Replace SBD_DEVICE with candidate {}'.
+                                              format(dev), to_stdout=False)
+        mock_error.assert_called_once_with('Device {} not exist!'.format(dev))
+
+    @classmethod
+    @mock.patch('builtins.open')
+    @mock.patch('preflight_check.task.TaskFixSBD.verify')
+    @mock.patch('tempfile.mktemp')
+    @mock.patch('os.remove')
+    @mock.patch('shutil.move')
+    @mock.patch('shutil.copymode')
+    @mock.patch('shutil.copyfile')
+    @mock.patch('preflight_check.utils.msg_info')
+    @mock.patch('crmsh.utils.parse_sysconfig')
+    @mock.patch('os.path.exists')
+    @mock.patch('preflight_check.main.Context')
+    def test_correct_sbd(cls, mock_context, mock_os_path_exists,
+                         mock_utils_parse_sysconf, mock_msg_info, mock_copyfile,
+                         mock_copymode, mock_move, mock_remove,
+                         mock_mktemp, mock_sbd_verify, mock_open):
+        """
+        Test correct_sbd
+        """
+        dev = "/dev/disk/by-id/scsi-SATA_ST2000LM007-1R81_WDZ5J42A"
+        bak = "/tmp/tmpmby3ty9g"
+        edit = "/tmp/tmpnic4t30s"
+        mock_context.return_value = mock.Mock(yes=True)
+        mock_os_path_exists.side_effect = [True, True]
+        mock_utils_parse_sysconf.retrun_value = {"SBD_DEVICE": dev}
+        mock_open.side_effect = [
+            mock.mock_open(read_data="data1").return_value,
+            mock.mock_open(read_data="SBD_DEVICE={}".format(dev)).return_value
+        ]
+        mock_mktemp.side_effect = [bak, edit]
+
+        check.correct_sbd(mock_context, dev)
+
+        mock_msg_info.assert_called_once_with('Replace SBD_DEVICE with candidate {}'.
+                                              format(dev), to_stdout=False)
+        mock_copyfile.assert_called_once_with(config.SBD_CONF, bak)
+        mock_copymode.assert_called_once_with(config.SBD_CONF, edit)
+        mock_move.assert_called_once_with(edit, config.SBD_CONF)
+        mock_remove.assert_called()
+        mock_sbd_verify.assert_called_once_with()
+
+    @classmethod
+    @mock.patch('sys.exit')
+    @mock.patch('builtins.open')
+    @mock.patch('preflight_check.task.Task.error')
+    @mock.patch('tempfile.mktemp')
+    @mock.patch('shutil.copymode')
+    @mock.patch('shutil.copyfile')
+    @mock.patch('preflight_check.utils.msg_info')
+    @mock.patch('crmsh.utils.parse_sysconfig')
+    @mock.patch('os.path.exists')
+    @mock.patch('preflight_check.main.Context')
+    def test_correct_sbd_run_exception(cls, mock_context, mock_os_path_exists,
+                                       mock_utils_parse_sysconf, mock_msg_info, mock_copyfile,
+                                       mock_copymode, mock_mktemp, mock_msg_error,
+                                       mock_open, mock_exit):
+        """
+        Test correct_sbd
+        """
+        dev = "/dev/disk/by-id/scsi-SATA_ST2000LM007-1R81_WDZ5J42A"
+        bak = "/tmp/tmpmby3ty9g"
+        edit = "/tmp/tmpnic4t30s"
+        mock_context.return_value = mock.Mock(yes=True)
+        mock_os_path_exists.side_effect = [True, True]
+        mock_utils_parse_sysconf.retrun_value = {"SBD_DEVICE": dev}
+        mock_open.side_effect = [
+            mock.mock_open(read_data="data1").return_value,
+            mock.mock_open(read_data="data2").return_value
+        ]
+        mock_mktemp.side_effect = [bak, edit]
+        mock_copymode.side_effect = Exception('Copy file error!')
+
+        check.correct_sbd(mock_context, dev)
+
+        mock_msg_info.assert_called_once_with('Replace SBD_DEVICE with candidate {}'.
+                                              format(dev), to_stdout=False)
+        mock_copyfile.assert_has_calls([mock.call(config.SBD_CONF, bak),
+                                        mock.call(bak, config.SBD_CONF)])
+        mock_copymode.assert_called_once_with(config.SBD_CONF, edit)
+        mock_msg_error.assert_called_once_with('Fail to modify file {}'.
+                                               format(config.SBD_CONF))
+        mock_exit.assert_called_once_with(1)
