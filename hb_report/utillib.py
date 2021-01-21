@@ -1643,12 +1643,30 @@ def dump_D_process():
     return out_string
 
 
+def lsof_ocfs2_device():
+    """
+    List open files for OCFS2 device
+    """
+    out_string = ""
+    _, out, _ = crmutils.get_stdout_stderr("mount")
+    dev_list = re.findall("\n(.*) on .* type ocfs2 ", out)
+    for dev in dev_list:
+        cmd = "lsof {}".format(dev)
+        out_string += "\n\n#=====[ Command ] ==========================#\n"
+        out_string += "# {}\n".format(cmd)
+        _, cmd_out, _ = crmutils.get_stdout_stderr(cmd)
+        if cmd_out:
+            out_string += cmd_out
+    return out_string
+
+
 def dump_ocfs2():
     ocfs2_f = os.path.join(constants.WORKDIR, constants.OCFS2_F)
     with open(ocfs2_f, "w") as f:
         f.write(dump_D_process())
+        f.write(lsof_ocfs2_device())
 
-        cmds = [ "dmesg",  "ps -efL", "lsof",
+        cmds = [ "dmesg",  "ps -efL",
                 "lsblk -o 'NAME,KNAME,MAJ:MIN,FSTYPE,LABEL,RO,RM,MODEL,SIZE,OWNER,GROUP,MODE,ALIGNMENT,MIN-IO,OPT-IO,PHY-SEC,LOG-SEC,ROTA,SCHED,MOUNTPOINT'",
                 "mounted.ocfs2 -f", "findmnt", "mount",
                 "cat /sys/fs/ocfs2/cluster_stack"
