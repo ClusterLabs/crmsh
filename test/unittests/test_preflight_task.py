@@ -5,7 +5,6 @@ try:
     from unittest import mock, TestCase
 except ImportError:
     import mock
-import logging
 from datetime import datetime
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -766,3 +765,74 @@ class TestTask(TestCase):
             ])
         self.task_inst.fence_start_event.set.assert_called_once_with()
         self.task_inst.fence_finish_event.set.assert_called_once_with()
+
+class TestFixSBD(TestCase):
+    """
+    Class to test TaskFixSBD of task.py
+    All tested in test_preflight_check.py except verify()
+    """
+
+    @mock.patch('builtins.open')
+    @mock.patch('os.path.isfile')
+    @mock.patch('tempfile.mktemp')
+    @mock.patch('preflight_check.utils.msg_info')
+    def setUp(self, mock_msg_info, mock_mktemp, mock_isfile, mock_open):
+        """
+        Test setUp.
+        """
+        dev = "/dev/disk/by-id/scsi-SATA_ST2000LM007-1R81_WDZ5J42A"
+        bak = "/tmp/tmpmby3ty9g"
+        edit = "/tmp/tmpnic4t30s"
+        mock_isfile.return_value = True
+        mock_open.return_value = mock.mock_open(read_data="SBD_DEVICE={}".
+                                                format(dev)).return_value
+        mock_mktemp.side_effect = [bak, edit]
+
+        self.task_fixsbd = task.TaskFixSBD(dev, yes=False)
+        mock_msg_info.assert_called_once_with('Replace SBD_DEVICE with candidate {}'.
+                                              format(dev), to_stdout=False)
+
+    def tearDown(self):
+        """
+        Test tearDown.
+        """
+        pass
+
+    @mock.patch('os.fsync')
+    @mock.patch('builtins.open')
+    @mock.patch('os.path.isfile')
+    @mock.patch('preflight_check.utils.msg_info')
+    def test_verify_succeed(self, mock_msg_info, mock_isfile, mock_open, mock_fsync):
+        """
+        Test verify successful.
+        """
+        dev = "/dev/disk/by-id/scsi-SATA_ST2000LM007-1R81_WDZ5J42A"
+        mock_isfile.return_value = True
+        mock_open.return_value = mock.mock_open(read_data="SBD_DEVICE={}".
+                                                format(dev)).return_value
+        self.task_fixsbd.prev_task_list = []
+
+        self.task_fixsbd.verify()
+        mock_isfile.assert_called_once_with(config.SBD_CONF)
+        mock_msg_info.assert_called_once_with('SBD DEVICE change succeed',
+                                              to_stdout=True)
+        mock_fsync.assert_called()
+
+    @mock.patch('builtins.open')
+    @mock.patch('os.path.isfile')
+    def test_verify_fail(self, mock_isfile, mock_open):
+        """
+        Test verify failed.
+        """
+        dev = "/dev/disk/by-id/scsi-SATA_ST2000LM007-1R81_WDZ5J42A"
+        dev_cur = "/dev/disk/by-id/scsi-SATA_ST2000LM007-no_change"
+        mock_isfile.return_value = True
+        mock_open.return_value = mock.mock_open(read_data="SBD_DEVICE={}".
+                                                format(dev_cur)).return_value
+        self.task_fixsbd.prev_task_list = []
+
+        with self.assertRaises(task.TaskError) as err:
+            self.task_fixsbd.verify()
+        mock_isfile.assert_called_once_with(config.SBD_CONF)
+        self.assertEqual("Fail to replace SBD device {} in {}!".
+                         format(dev, config.SBD_CONF), str(err.exception))

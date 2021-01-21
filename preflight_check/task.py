@@ -594,7 +594,7 @@ New SBD device:      {}
 '''.format(self.description, self.old, self.new)
         return h
 
-    def to_json(self): # pragma: no cover
+    def to_json(self):
         """
         Generate json output
         """
