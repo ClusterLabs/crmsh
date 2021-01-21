@@ -83,7 +83,7 @@ def correct_sbd(context, can):
         task_inst.verify()
     except task.TaskError as err:
         task_inst.error(str(err))
-        sys.exit(1)
+        raise crmshutils.TerminateSubCommand
 
 
 def check(context):
@@ -312,3 +312,6 @@ def check_resources():
             task_inst.info("Stopped resources: {}".format(','.join(stopped_list)))
         if failed_list:
             task_inst.warn("Failed resources: {}".format(','.join(failed_list)))
+
+        if not (started_list or stopped_list or failed_list):
+            task_inst.info("No resources configured")
