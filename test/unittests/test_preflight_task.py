@@ -774,9 +774,9 @@ class TestFixSBD(TestCase):
 
     @mock.patch('builtins.open')
     @mock.patch('os.path.isfile')
-    @mock.patch('tempfile.mktemp')
+    @mock.patch('tempfile.mkstemp')
     @mock.patch('preflight_check.utils.msg_info')
-    def setUp(self, mock_msg_info, mock_mktemp, mock_isfile, mock_open):
+    def setUp(self, mock_msg_info, mock_mkstemp, mock_isfile, mock_open):
         """
         Test setUp.
         """
@@ -786,7 +786,7 @@ class TestFixSBD(TestCase):
         mock_isfile.return_value = True
         mock_open.return_value = mock.mock_open(read_data="SBD_DEVICE={}".
                                                 format(dev)).return_value
-        mock_mktemp.side_effect = [bak, edit]
+        mock_mkstemp.side_effect = [(1, bak), (2, edit)]
 
         self.task_fixsbd = task.TaskFixSBD(dev, yes=False)
         mock_msg_info.assert_called_once_with('Replace SBD_DEVICE with candidate {}'.
