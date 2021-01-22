@@ -1751,20 +1751,18 @@ def list_cluster_nodes_except_me():
 
 
 def service_info(name):
-    p = is_program('systemctl')
-    if p:
-        rc, outp = get_stdout([p, 'show',
-                               '-p', 'UnitFileState',
-                               '-p', 'ActiveState',
-                               '-p', 'SubState',
-                               name + '.service'], shell=False)
-        if rc == 0:
-            info = []
-            for line in outp.split('\n'):
-                data = line.split('=', 1)
-                if len(data) == 2:
-                    info.append(data[1].strip())
-            return '/'.join(info)
+    """
+    Get service info via systemctl
+    """
+    cmd = "systemctl show -p UnitFileState -p ActiveState -p SubState {}".format(name)
+    rc, out, err = get_stdout_stderr(cmd)
+    if rc != 0:
+        err_buf.error("Failed to run {}: {}".format(cmd, err))
+        return None
+    # output might be ActiveState=active\nSubState=running\nUnitFileState=enabled
+    res = re.search("ActiveState=(.*)\nSubState=(.*)\nUnitFileState=(.*)", out)
+    if res:
+        return '/'.join(res.groups())
     return None
 
 

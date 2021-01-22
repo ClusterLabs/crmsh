@@ -587,23 +587,16 @@ Cluster Description
 
     def do_status(self, context):
         '''
-        Quick cluster health status. Corosync status, DRBD status...
+        Show cluster related service status
         '''
-        print("Name: {}\n".format(get_cluster_name()))
+        print("Cluster name: {}\n".format(get_cluster_name()))
         print("Services:")
         for svc in ["corosync", "pacemaker"]:
             info = utils.service_info(svc)
             if info:
-                print("%-16s %s" % (svc, info))
+                print("{}        {}".format(svc, info))
             else:
-                print("%-16s unknown" % (svc))
-
-        rc, outp = utils.get_stdout(['corosync-cfgtool', '-s'], shell=False)
-        if rc == 0:
-            print("")
-            print(outp)
-        else:
-            print("Failed to get corosync status")
+                print("{}        unknown".format(svc))
 
     @command.completers_repeating(compl.choice(['10', '60', '600']))
     def do_wait_for_startup(self, context, timeout='10'):
