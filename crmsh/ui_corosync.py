@@ -162,7 +162,7 @@ class Corosync(command.UI):
         corosync.del_node(name)
 
     @command.skill_level('administrator')
-    @command.completers(completers.call(corosync.get_all_paths))
+    @command.completers(completers.call(corosync.Parser.get_all_paths))
     def do_get(self, context, path):
         "Get a corosync configuration value"
         for v in corosync.get_values(path):

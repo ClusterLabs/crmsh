@@ -8,6 +8,9 @@ configuration file, and also the corosync-* utilities.
 import os
 import re
 import socket
+import tokenize
+from tokenize import COMMENT, NL, LBRACE, RBRACE, NEWLINE, NAME
+from contextlib import contextmanager
 from . import utils
 from . import tmpfiles
 from . import parallax
@@ -116,29 +119,6 @@ def add_nodelist_from_cmaptool():
 
 def is_unicast():
     return get_value("totem.transport") == "udpu"
-
-
-_tCOMMENT = 0
-_tBEGIN = 1
-_tEND = 2
-_tVALUE = 3
-
-
-class Token(object):
-    def __init__(self, token, path, key=None, value=None):
-        self.token = token
-        self.path = '.'.join(path)
-        self.key = key
-        self.value = value
-
-    def __repr__(self):
-        if self.token == _tCOMMENT:
-            return self.key
-        elif self.token == _tBEGIN:
-            return "%s {" % (self.key)
-        elif self.token == _tEND:
-            return '}'
-        return '%s: %s' % (self.key, self.value)
 
 
 class QDevice(object):
@@ -669,215 +649,331 @@ class QDevice(object):
         parallax.parallax_call(node_list, cmd, self.askpass)
 
 
-def corosync_tokenizer(stream):
-    """Parses the corosync config file into a token stream"""
-    section_re = re.compile(r'(\w+)\s*{')
-    value_re = re.compile(r'(\w+):\s*([\S ]+)')
-    path = []
-    while stream:
-        stream = stream.lstrip()
-        if not stream:
-            break
-        if stream[0] == '#':
-            end = stream.find('\n')
-            t = Token(_tCOMMENT, [], stream[:end])
-            stream = stream[end:]
-            yield t
-            continue
-        if stream[0] == '}':
-            t = Token(_tEND, [])
-            stream = stream[1:]
-            yield t
-            path = path[:-1]
-            continue
-        m = section_re.match(stream)
-        if m:
-            path.append(m.group(1))
-            t = Token(_tBEGIN, path, m.group(1))
-            stream = stream[m.end():]
-            yield t
-            continue
-        m = value_re.match(stream)
-        if m:
-            t = Token(_tVALUE, path + [m.group(1)], m.group(1), m.group(2))
-            stream = stream[m.end():]
-            yield t
-            continue
-        raise ValueError("Parse error at [..%s..]" % (stream[:16]))
-
-
-def make_section(path, contents=None):
-    "Create a token sequence representing a section"
-    if not contents:
-        contents = []
-    sp = path.split('.')
-    name = sp[-1]
-    for t in contents:
-        if t.path and not t.path.startswith(path):
-            raise ValueError("%s (%s) not in path %s" % (t.path, t.key, path))
-    return [Token(_tBEGIN, sp, name)] + contents + [Token(_tEND, [])]
-
-
-def make_value(path, value):
-    "Create a token sequence representing a value"
-    sp = path.split('.')
-    name = sp[-1]
-    return [Token(_tVALUE, sp, name, value)]
-
-
 class Parser(object):
-    def __init__(self, data):
-        self._tokens = list(corosync_tokenizer(data))
+    """
+    """
+    INDENT = 4
 
-    def find(self, name, start=0):
-        """Gets the index of the element with the given path"""
-        for i, t in enumerate(self._tokens[start:]):
-            if t.path == name:
-                return i + start
-        return -1
+    def __init__(self, config_file=None):
+        """
+        """
+        self._config_file = config_file if config_file else conf()
+        self._config_dict = {}
+        self._config_list = []
 
-    def find_bounds(self, name, start=0):
-        """find the (start, end) of the next instance of name found at start"""
-        i = self.find(name, start)
-        if i < 0:
-            return -1, -1
-        if self._tokens[i].token != _tBEGIN:
-            return i, i
-        e = i + 1
-        depth = 0
-        while e < len(self._tokens):
-            t = self._tokens[e]
-            if t.token == _tBEGIN:
-                depth += 1
-            if t.token == _tEND:
-                depth -= 1
-            if depth < 0:
-                break
-            e += 1
-        if e == len(self._tokens):
-            raise ValueError("Unclosed section")
-        return i, e
+    @staticmethod
+    def _inner_key(path, index):
+        """
+        Generate inner key by combining path and index
+        """
+        return "{}__{}".format(path, index)
 
-    def get(self, path):
-        """Gets the value for the key (if any)"""
-        for t in self._tokens:
-            if t.token == _tVALUE and t.path == path:
-                return t.value
-        return None
+    @staticmethod
+    def _matched_inner_key(path, inner_key):
+        """
+        Check if given path matched an inner key
+        """
+        # example of inner key:
+        #   totem.interface.ringnumber__0
+        #   quorum.two_node__0
+        return re.search("{}__[0-9]+$".format(path), inner_key)
+
+    @staticmethod
+    def _matched_inner_section_end(path, inner_sec_end):
+        """
+        Check if given path matched an inner end section
+        """
+        # example of inner section end:
+        #   totem.interface__0__END
+        #   nodelist.node__1__END
+        #   quorum__0__END
+        return re.search("{}__[0-9]+__END$".format(path), inner_sec_end)
+
+    @staticmethod
+    def _inner_section_name(inner_key):
+        """
+        Extract inner section name from an inner key
+        """
+        # nodelist.node.nodeid__1 -> nodelist.node__1
+        return re.sub("(.*)\.\w+(__[0-9])", "\\1\\2", inner_key)
+
+    @staticmethod
+    def _section_name(inner_key):
+        """
+        Extract section name from an inner key
+        """
+        # nodelist.node.nodeid__1 -> nodelist.node
+        return re.sub("(.*)\.\w+(__[0-9])", "\\1", inner_key)
+
+    @staticmethod
+    def _key_name(inner_key):
+        """
+        Extract key name from an inner key
+        """
+        # nodelist.node.nodeid__1 -> nodelist.node.nodeid
+        return re.sub("__[0-9]+", "", inner_key)
+
+    @property
+    def _inner_section_name_list(self):
+        """
+        Get list of inner section name
+        """
+        return [key for key, value in self._config_dict.items() if value == "{"]
+
+    @property
+    def _inner_section_end_list(self):
+        """
+        Get list of inner section end
+        """
+        return [key for key, value in self._config_dict.items() if value == "}"]
+
+    def _is_inner_section(self, inner_key):
+        """
+        Check if an inner key is an inner section name
+        """
+        return inner_key in self._inner_section_name_list
+
+    def _unused_inner_key(self, path):
+        """
+        Generate unused inner key
+        """
+        index = 0
+        key = self._inner_key(path, index)
+        while key in self._config_dict:
+            index += 1
+            key = re.sub("__[0-9]+", "__{}".format(index), key)
+        return key
+
+    def load_config_file(self):
+        """
+        Use tokenize.generate_tokens to generate dict self._config_dict
+        """
+        key_prefix = ""
+        key_prefix_list = []
+        section_key_list = []
+        prev_token_string, prev_content_line = None, None
+ 
+        with tokenize.open(self._config_file) as f:
+            tokens = tokenize.generate_tokens(f.readline)
+            for token in tokens:
+                token_type = token.exact_type
+                if token_type in [COMMENT, NL, NEWLINE]:
+                    continue
+
+                # like: cluster_name
+                token_string = token.string
+                # like: cluster_name: hacluster
+                content_line = token.line
+
+                new_line = False
+                if prev_content_line and prev_content_line != content_line:
+                    new_line = True
+
+                # current token is: {
+                if token_type == LBRACE:
+                    key_prefix_list.append(prev_token_string)
+                    key_prefix = '.'.join(key_prefix_list)
+                    section_key = self._unused_inner_key(key_prefix)
+                    section_key_list.append(section_key)
+                    self._config_dict[section_key] = "{"
+
+                # restore prev line into dict
+                if new_line and ':' in prev_content_line:
+                    key, *value = prev_content_line.split(':')
+                    key = "{}.{}".format(key_prefix, key.strip())
+                    self._config_dict[self._unused_inner_key(key)] = ':'.join(value).strip()
+
+                # current token is: }
+                if token_type == RBRACE:
+                    section_key = section_key_list.pop()
+                    self._config_dict[section_key+"__END"] = "}"
+                    key_prefix_list.pop()
+                    key_prefix = '.'.join(key_prefix_list)
+
+                prev_token_string = token_string
+                prev_content_line = content_line
+
+    def get(self, path, index=0):
+        """
+        Gets the value for the path
+        path: config path
+        index: known index in section
+        """
+        key = self._inner_key(path, index)
+        if key not in self._config_dict or self._is_inner_section(key):
+            return None
+        return self._config_dict[key]
 
     def get_all(self, path):
-        """Returns all values matching path"""
+        """
+        Returns all values matching path
+        """
         ret = []
-        for t in self._tokens:
-            if t.token == _tVALUE and t.path == path:
-                ret.append(t.value)
+        for key, value in self._config_dict.items():
+            if self._matched_inner_key(path, key) and not self._is_inner_section(key):
+                ret.append(value)
         return ret
-
-    def all_paths(self):
-        """Returns all value paths"""
-        ret = []
-        for t in self._tokens:
-            if t.token == _tVALUE:
-                ret.append(t.path)
-        return ret
-
+        
     def count(self, path):
-        """Returns the number of elements matching path"""
+        """
+        Returns the number of elements matching path
+        """
         n = 0
-        for t in self._tokens:
-            if t.path == path:
+        for key, value in self._config_dict.items():
+            if self._matched_inner_key(path, key) and value != "}":
                 n += 1
         return n
 
-    def remove(self, path):
-        """Removes the given section or value"""
-        i, e = self.find_bounds(path)
-        if i < 0:
-            return
-        self._tokens = self._tokens[:i] + self._tokens[(e+1):]
-
-    def remove_section_where(self, path, key, value):
+    @contextmanager
+    def _operate_config_list(self):
         """
-        Remove section which contains key: value
-        Used to remove node definitions
+        The contextmanager for convert between config dict and list
         """
-        nth = -1
-        start = 0
-        keypath = '.'.join([path, key])
-        while True:
-            nth += 1
-            i, e = self.find_bounds(path, start)
-            start = e + 1
-            if i < 0:
-                break
-            k = self.find(keypath, i)
-            if k < 0 or k > e:
-                continue
-            vt = self._tokens[k]
-            if vt.token == _tVALUE and vt.value == value:
-                self._tokens = self._tokens[:i] + self._tokens[(e+1):]
-                return nth
-        return -1
+        self._config_list = list(self._config_dict.items())
+        yield
+        self._config_dict = dict(self._config_list)
 
-    def add(self, path, tokens):
-        """Adds tokens to a section"""
-        common_debug("corosync.add (%s) (%s)" % (path, tokens))
-        if not path:
-            self._tokens += tokens
-            return
-        start = self.find(path)
-        if start < 0:
-            return None
-        depth = 0
-        end = None
-        for i, t in enumerate(self._tokens[start + 1:]):
-            if t.token == _tBEGIN:
-                depth += 1
-            elif t.token == _tEND:
-                depth -= 1
-            if depth < 0:
-                end = start + i + 1
-                break
-        if end is None:
-            raise ValueError("Unterminated section at %s" % (start))
-        self._tokens = self._tokens[:end] + tokens + self._tokens[end:]
+    @staticmethod
+    def _section_item(key):
+        return (key, "{")
 
-    def set(self, path, value):
-        """Sets a key: value entry. sections are given
-        via dot-notation."""
-        i = self.find(path)
-        if i < 0:
-            spath = path.split('.')
-            return self.add('.'.join(spath[:-1]),
-                            make_value(path, value))
-        if self._tokens[i].token != _tVALUE:
-            raise ValueError("%s is not a value" % (path))
-        self._tokens[i].value = value
+    @staticmethod
+    def _section_end_item(key):
+        if key.endswith("__END"):
+            return (key, "}")
+        return (key+"__END", "}")
+
+    def add_section(self, section_path):
+        """
+        """
+        # totem.cluster_name -> error
+        # totem.new_section  -> before
+        # quorum.device      -> before
+        # totem.interface    -> after
+        # nodelist.node      -> after
+        # nodelist           -> after
+        after = None
+        last_match = ""
+        for key in self._inner_section_end_list:
+            if self._matched_inner_section_end(section_path, key):
+                last_match = key
+                after = True
+                print("1111")
+
+        # add section from root
+        if not last_match:
+            parent_section = '.'.join(section_path.split('.')[:-1])
+            for key in self._inner_section_end_list:
+                if self._matched_inner_section_end(parent_section, key):
+                    last_match = key
+                    print(last_match)
+                    after = False
+                    print("2222")
+            else:
+                last_match = self._inner_section_end_list[-1]
+                print("3333")
+                after = True
+
+        with self._operate_config_list():
+            key = self._unused_inner_key(section_path)
+            index = self._config_list.index(self._section_end_item(last_match))
+            if not after:
+                self._config_list.insert(index, self._section_item(key))
+                self._config_list.insert(index + 1, self._section_end_item(key))
+            else:
+                self._config_list.insert(index+1, self._section_item(key))
+                self._config_list.insert(index+2, self._section_end_item(key))
+
+    def _find_and_insert(self, inner_key, value):
+        """
+        Find the index then insert
+        """
+        with self._operate_config_list():
+            section_name = self._inner_section_name(inner_key)
+            section_end_index = self._config_list.index(self._section_end_item(section_name))
+            self._config_list.insert(section_end_index, (inner_key, value))
+
+    def set(self, path, value, index=0):
+        """
+        Set the value for the path
+        index: known index in section
+        """
+        key = self._inner_key(path, index)
+        # try to update exists key
+        if key in self._config_dict:
+            # shouldn't be a section name
+            if self._is_inner_section(key):
+                raise ValueError("{} is a section name".format(path))
+            self._config_dict[key] = value
+        # try to set a new key
+        else:
+            # must contain a known section name
+            if not self._is_inner_section(self._inner_section_name(key)):
+                raise ValueError("No section {} exist".format(self._section_name(key)))
+            self._find_and_insert(key, value)
+
+    def write_to_file(self):
+        """
+        Write back to config file
+        """
+        with open(self._config_file, 'w') as f:
+            f.write(self.to_string())
 
     def to_string(self):
-        '''
-        Serialize tokens into the corosync.conf
-        file format
-        '''
-        def joiner(tstream):
-            indent = 0
-            last = None
-            while tstream:
-                t = tstream[0]
-                if indent and t.token == _tEND:
-                    indent -= 1
-                s = ''
-                if t.token == _tCOMMENT and (last and last.token != _tCOMMENT):
-                    s += '\n'
-                s += ('\t'*indent) + str(t) + '\n'
-                if t.token == _tEND:
-                    s += '\n'
-                yield s
-                if t.token == _tBEGIN:
-                    indent += 1
-                last = t
-                tstream = tstream[1:]
-        return ''.join(joiner(self._tokens))
+        """
+        Use tokenize.untokenize to convert self._config_dit to string
+        """
+        token_list = []
+        for index, (key, value) in enumerate(self._config_dict.items()):
+
+            key = self._key_name(key)
+            # section begin
+            if value == "{":
+                line = key.split('.')[-1] + " {"
+            # section end
+            elif value == "}":
+                line = "}\n"
+            # content line
+            else:
+                *_, name = key.split('.')
+                line = "{}: {}".format(name, value)
+
+            row = index + 1
+            col = (len(key.split('.'))-1) * self.INDENT
+            token_list.append((NAME, line, (row, col), (row, col+len(line)), ''))
+
+        res = tokenize.untokenize(token_list)
+        return res.replace('\\\n', '\n')
+
+    @classmethod
+    def get_value(cls, path, index=0):
+        """
+        Class method to get value
+        Return None if not found
+        """
+        inst = cls()
+        inst.load_config_file()
+        return inst.get(path, index)
+
+    @classmethod
+    def get_values(cls, path):
+        """
+        Class method to get value list matched by path
+        Return [] if not matched
+        """
+        inst = cls()
+        inst.load_config_file()
+        return inst.get_all(path)
+
+    @classmethod
+    def set_value(cls, path, value, index=0):
+        """
+        Class method to set value and write back to file
+        """
+        inst = cls()
+        inst.load_config_file()
+        inst.set(path, value, index)
+        inst.write_to_file()
 
 
 def logfile(conftext):
@@ -958,33 +1054,6 @@ def get_ip(node):
         return None
 
 
-def get_all_paths():
-    f = open(conf()).read()
-    p = Parser(f)
-    return p.all_paths()
-
-
-def get_value(path):
-    f = open(conf()).read()
-    p = Parser(f)
-    return p.get(path)
-
-
-def get_values(path):
-    f = open(conf()).read()
-    p = Parser(f)
-    return p.get_all(path)
-
-
-def set_value(path, value):
-    f = open(conf()).read()
-    p = Parser(f)
-    p.set(path, value)
-    f = open(conf(), 'w')
-    f.write(p.to_string())
-    f.close()
-
-
 class IPAlreadyConfiguredError(Exception):
     pass
 
@@ -999,7 +1068,7 @@ def find_configured_ip(ip_list):
 
     # get exist ip list from corosync.conf
     corosync_iplist = []
-    for path in set(p.all_paths()):
+    for path in set(Parser.get_all_paths()):
         if re.search('nodelist.node.ring[0-9]*_addr', path):
             corosync_iplist.extend(p.get_all(path))
 
