@@ -264,7 +264,6 @@ DEFAULTS = {
         'crm_dtd_dir': opt_dir('%(datadir)s/pacemaker'),
         'pe_state_dir': opt_dir('%(varlib)s/pacemaker/pengine'),
         'heartbeat_dir': opt_dir('%(varlib)s/heartbeat'),
-        'hb_delnode': opt_program('', ('%(datadir)s/heartbeat/hb_delnode',)),
         'nagios_plugins': opt_dir('%(libdir)s/nagios/plugins'),
         'hawk_wizards': opt_dir('%(wwwdir)s/hawk/config/wizard'),
     },

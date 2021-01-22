@@ -223,7 +223,6 @@ class NodeMgmt(command.UI):
                    shutdown="0"
        />'""")
     node_clear_state_118 = "stonith_admin --confirm %s"
-    hb_delnode = config.path.hb_delnode + " '%s'"
     crm_node = "crm_node"
     node_fence = "crm_attribute -t status -N '%s' -n terminate -v true"
     dc = "crmadmin -D"
@@ -387,21 +386,18 @@ class NodeMgmt(command.UI):
     def _call_delnode(self, node):
         "Remove node (how depends on cluster stack)"
         rc = True
-        if utils.cluster_stack() == "heartbeat":
-            cmd = (self.hb_delnode % node)
+        ec, s = utils.get_stdout("%s -p" % self.crm_node)
+        if not s:
+            common_err('%s -p could not list any nodes (rc=%d)' %
+                       (self.crm_node, ec))
+            rc = False
         else:
-            ec, s = utils.get_stdout("%s -p" % self.crm_node)
-            if not s:
-                common_err('%s -p could not list any nodes (rc=%d)' %
-                           (self.crm_node, ec))
+            partition_l = s.split()
+            if node in partition_l:
+                common_err("according to %s, node %s is still active" %
+                           (self.crm_node, node))
                 rc = False
-            else:
-                partition_l = s.split()
-                if node in partition_l:
-                    common_err("according to %s, node %s is still active" %
-                               (self.crm_node, node))
-                    rc = False
-            cmd = "%s --force -R %s" % (self.crm_node, node)
+        cmd = "%s --force -R %s" % (self.crm_node, node)
         if not rc:
             if config.core.force:
                 common_info('proceeding with node %s removal' % node)
