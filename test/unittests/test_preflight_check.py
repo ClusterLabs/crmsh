@@ -714,7 +714,7 @@ Active Resources:
     @classmethod
     @mock.patch('builtins.open')
     @mock.patch('preflight_check.task.TaskFixSBD.verify')
-    @mock.patch('tempfile.mktemp')
+    @mock.patch('tempfile.mkstemp')
     @mock.patch('os.remove')
     @mock.patch('shutil.move')
     @mock.patch('shutil.copymode')
@@ -726,7 +726,7 @@ Active Resources:
     def test_correct_sbd(cls, mock_context, mock_os_path_exists,
                          mock_utils_parse_sysconf, mock_msg_info, mock_copyfile,
                          mock_copymode, mock_move, mock_remove,
-                         mock_mktemp, mock_sbd_verify, mock_open):
+                         mock_mkstemp, mock_sbd_verify, mock_open):
         """
         Test correct_sbd
         """
@@ -740,7 +740,7 @@ Active Resources:
             mock.mock_open(read_data="data1").return_value,
             mock.mock_open(read_data="SBD_DEVICE={}".format(dev)).return_value
         ]
-        mock_mktemp.side_effect = [bak, edit]
+        mock_mkstemp.side_effect = [(1, bak), (2, edit)]
 
         check.correct_sbd(mock_context, dev)
 
@@ -756,7 +756,7 @@ Active Resources:
     @mock.patch('sys.exit')
     @mock.patch('builtins.open')
     @mock.patch('preflight_check.task.Task.error')
-    @mock.patch('tempfile.mktemp')
+    @mock.patch('tempfile.mkstemp')
     @mock.patch('shutil.copymode')
     @mock.patch('shutil.copyfile')
     @mock.patch('preflight_check.utils.msg_info')
@@ -765,7 +765,7 @@ Active Resources:
     @mock.patch('preflight_check.main.Context')
     def test_correct_sbd_run_exception(cls, mock_context, mock_os_path_exists,
                                        mock_utils_parse_sysconf, mock_msg_info, mock_copyfile,
-                                       mock_copymode, mock_mktemp, mock_msg_error,
+                                       mock_copymode, mock_mkstemp, mock_msg_error,
                                        mock_open, mock_exit):
         """
         Test correct_sbd
@@ -780,7 +780,7 @@ Active Resources:
             mock.mock_open(read_data="data1").return_value,
             mock.mock_open(read_data="data2").return_value
         ]
-        mock_mktemp.side_effect = [bak, edit]
+        mock_mkstemp.side_effect = [(1, bak), (2, edit)]
         mock_copymode.side_effect = Exception('Copy file error!')
 
         check.correct_sbd(mock_context, dev)

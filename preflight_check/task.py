@@ -576,8 +576,8 @@ class TaskFixSBD(Task):
         self.description = "Replace SBD_DEVICE with candidate {}".format(self.new)
         self.conf = config.SBD_CONF
         super(self.__class__, self).__init__(self.description, flush=True)
-        self.bak = tempfile.mktemp()
-        self.edit = tempfile.mktemp()
+        self.bak = tempfile.mkstemp()[1]
+        self.edit = tempfile.mkstemp()[1]
         self.yes = yes
 
         sbd_options = crmshutils.parse_sysconfig(self.conf)
