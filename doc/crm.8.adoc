@@ -932,6 +932,44 @@ Usage:
 verify [scores]
 ...............
 
+[[cmdhelp_analyze,Cluster analyze]]
+=== `analyze` - Cluster analyze
+
+The subcommands of this level try to analyze the cluster, report any
+error or less optimal configuration, provide the suggestions to the
+users, and even fix it with the option, if applicable.
+
+[[cmdhelp_analyze_preflight_check,Cluster preflight check tool set]]
+==== `preflight_check` - Cluster preflight check tool set
+
+It standardizes the steps to simulate cluster failures and to
+verify some key configuration before you move your cluster into
+production. It is carefully designed with the proper steps and does not
+change any configuration to harm the cluster without the confirmation
+from users.
+
+usage: preflight_check [-c]
+                       [--kill-sbd | --kill-corosync | --kill-pacemakerd | --fence-node NODE | --split-brain-iptables]
+                       [-l] [-y] [-h]
+
+Cluster preflight check tool set
+
+optional arguments:
+  -c, --check-conf        Validate the configurations
+  --kill-sbd              Kill sbd daemon
+  --kill-corosync         Kill corosync daemon
+  --kill-pacemakerd       Kill pacemakerd daemon
+  --fence-node NODE       Fence specific node
+  --split-brain-iptables  Make split brain by blocking corosync ports
+  -l, --kill-loop         Kill process in loop
+
+other options:
+  -y, --yes               Answer "yes" if asked to run the test
+  -h, --help              Show this help message and exit
+
+Log: /var/log/crmsh/preflight_check.log
+Json results: /var/lib/crmsh/preflight_check/preflight_check.json
+For each --kill-* testcase, report directory: /var/lib/crmsh/preflight_check
 
 [[cmdhelp_cluster,Cluster setup and management]]
 === `cluster` - Cluster setup and management
