@@ -2,17 +2,17 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-import unittest
 try:
-    from unittest import mock
+    from unittest import mock, TestCase
 except ImportError:
     import mock
 import logging
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from preflight_check import utils, main, config
 
 
-class TestMyLoggingFormatter(unittest.TestCase):
+class TestMyLoggingFormatter(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -38,7 +38,7 @@ class TestMyLoggingFormatter(unittest.TestCase):
         """
 
 
-class TestFenceInfo(unittest.TestCase):
+class TestFenceInfo(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -108,7 +108,7 @@ class TestFenceInfo(unittest.TestCase):
         mock_get_property.assert_called_once_with("stonith-timeout")
 
 
-class TestUtils(unittest.TestCase):
+class TestUtils(TestCase):
     '''
     Unitary tests for preflight_check/utils.py
     '''
@@ -270,13 +270,13 @@ totem.interface.1.ttl (u8) = 1
         mock_open_read_1 = mock.mock_open(read_data=b'/usr/sbin/cmd1\x00--user\x00')
         mock_open_read_2 = mock.mock_open(read_data=b'/usr/sbin/cmd2\x00')
         mock_open_file.side_effect = [
-                mock_open_read_1.return_value,
-                mock_open_read_2.return_value
-                ]
+            mock_open_read_1.return_value,
+            mock_open_read_2.return_value
+        ]
         mock_to_ascii.side_effect = [
-                "/usr/sbin/cmd1\x00--user\x00",
-                "/usr/sbin/cmd2\x00"
-                ]
+            "/usr/sbin/cmd1\x00--user\x00",
+            "/usr/sbin/cmd2\x00"
+        ]
         mock_basename.side_effect = ["cmd1", "cmd2"]
 
         rc, pid = utils.get_process_status("sbd")
@@ -308,13 +308,13 @@ totem.interface.1.ttl (u8) = 1
         mock_open_read_1 = mock.mock_open(read_data=b'/usr/sbin/cmd1\x00--user\x00')
         mock_open_read_2 = mock.mock_open(read_data=b'/usr/sbin/sbd\x00')
         mock_open_file.side_effect = [
-                mock_open_read_1.return_value,
-                mock_open_read_2.return_value
-                ]
+            mock_open_read_1.return_value,
+            mock_open_read_2.return_value
+        ]
         mock_to_ascii.side_effect = [
-                "/usr/sbin/cmd1\x00--user\x00",
-                "/usr/sbin/sbd\x00"
-                ]
+            "/usr/sbin/cmd1\x00--user\x00",
+            "/usr/sbin/sbd\x00"
+        ]
         mock_basename.side_effect = ["cmd1", "sbd"]
 
         rc, pid = utils.get_process_status("sbd")
@@ -411,3 +411,145 @@ Node List:
         res = utils.peer_node_list()
         self.assertEqual(res, ["node2"])
         mock_online.assert_called_once_with()
+
+    # Test is_valid_sbd():
+    @classmethod
+    @mock.patch('os.path.exists')
+    def test_is_valid_sbd_not_exist(cls, mock_os_path_exists):
+        """
+        Test device not exist
+        """
+        dev = "/dev/disk/by-id/scsi-device1"
+        mock_os_path_exists.return_value = False
+
+        res = utils.is_valid_sbd(dev)
+        assert res is False
+
+    @classmethod
+    @mock.patch('preflight_check.utils.msg_error')
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('os.path.exists')
+    def test_is_valid_sbd_cmd_error(cls, mock_os_path_exists,
+                                    mock_sbd_check_header, mock_msg_err):
+        """
+        Test device is not valid sbd
+        """
+        dev = "/dev/disk/by-id/scsi-device1"
+        mock_os_path_exists.return_value = True
+        mock_sbd_check_header.return_value = (-1, None, "Unknown error!")
+        mock_msg_err.return_value = ""
+
+        res = utils.is_valid_sbd(dev)
+        mock_msg_err.assert_called_once_with("Unknown error!")
+        assert res is False
+
+    @classmethod
+    @mock.patch('preflight_check.utils.msg_error')
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('os.path.exists')
+    def test_is_valid_sbd_not_sbd(cls, mock_os_path_exists,
+                                  mock_sbd_check_header, mock_msg_err):
+        """
+        Test device is not SBD device
+        """
+        dev = "/dev/disk/by-id/scsi-device1"
+        err_output = """
+==Dumping header on disk {}
+==Header on disk {} NOT dumped
+sbd failed; please check the logs.
+""".format(dev, dev)
+        mock_os_path_exists.return_value = True
+        mock_sbd_check_header.return_value = (1, "==Dumping header on disk {}".format(dev),
+                                              err_output)
+
+        res = utils.is_valid_sbd(dev)
+        assert res is False
+        mock_msg_err.assert_called_once_with(err_output)
+
+    @classmethod
+    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('os.path.exists')
+    def test_is_valid_sbd_is_sbd(cls, mock_os_path_exists,
+                                 mock_sbd_check_header):
+        """
+        Test device is not SBD device
+        """
+        dev = "/dev/disk/by-id/scsi-device1"
+        std_output = """
+==Dumping header on disk {}
+Header version     : 2.1
+UUID               : f4c99362-6522-46fc-8ce4-7db60aff19bb
+Number of slots    : 255
+Sector size        : 512
+Timeout (watchdog) : 5
+Timeout (allocate) : 2
+Timeout (loop)     : 1
+Timeout (msgwait)  : 10
+==Header on disk {} is dumped
+""".format(dev, dev)
+        mock_os_path_exists.return_value = True
+        mock_sbd_check_header.return_value = (0, std_output, None)
+
+        res = utils.is_valid_sbd(dev)
+        assert res is True
+
+    # Test find_candidate_sbd() and _find_match_count()
+    @classmethod
+    @mock.patch('glob.glob')
+    @mock.patch('os.path.basename')
+    @mock.patch('os.path.dirname')
+    def test_find_candidate_no_dev(cls, mock_os_path_dname, mock_os_path_bname,
+                                   mock_glob):
+        """
+        Test no suitable device
+        """
+        mock_os_path_dname.return_value = "/dev/disk/by-id"
+        mock_os_path_bname.return_value = "scsi-label_CN_devA"
+        mock_glob.return_value = []
+
+        res = utils.find_candidate_sbd("/not-exist-folder/not-exist-dev")
+        assert res == ""
+
+    @classmethod
+    @mock.patch('preflight_check.utils.is_valid_sbd')
+    @mock.patch('glob.glob')
+    @mock.patch('os.path.basename')
+    @mock.patch('os.path.dirname')
+    def test_find_candidate_no_can(cls, mock_os_path_dname, mock_os_path_bname,
+                                   mock_glob, mock_is_valid_sbd):
+        """
+        Test no valid candidate device
+        """
+        mock_os_path_dname.return_value = "/dev/disk/by-id"
+        mock_os_path_bname.return_value = "scsi-label_CN_devA"
+        mock_glob.return_value = ["/dev/disk/by-id/scsi-label_DE_devA",
+                                  "/dev/disk/by-id/scsi-label_DE_devB",
+                                  "/dev/disk/by-id/scsi-label_DE_devC",
+                                  "/dev/disk/by-id/scsi-label_DE_devD"]
+        mock_is_valid_sbd.side_effect = [False, False, False, False]
+
+        res = utils.find_candidate_sbd("/dev/disk/by-id/scsi-label_CN_devA")
+        assert res == ""
+
+    @classmethod
+    @mock.patch('preflight_check.utils.is_valid_sbd')
+    @mock.patch('glob.glob')
+    @mock.patch('os.path.basename')
+    @mock.patch('os.path.dirname')
+    def test_find_candidate_has_multi(cls, mock_os_path_dname, mock_os_path_bname,
+                                      mock_glob, mock_is_valid_sbd):
+        """
+        Test has multiple valid candidate devices
+        """
+        mock_os_path_dname.return_value = "/dev/disk/by-id"
+        mock_os_path_bname.return_value = "scsi-label_CN_devA"
+        mock_glob.return_value = ["/dev/disk/by-id/scsi-label_DE_devA",
+                                  "/dev/disk/by-id/scsi-label_DE_devB",
+                                  "/dev/disk/by-id/scsi-label_CN_devC",
+                                  "/dev/disk/by-id/scsi-label_CN_devD",
+                                  "/dev/disk/by-id/scsi-mp_China_devE",
+                                  "/dev/disk/by-id/scsi-mp_China_devF"]
+        mock_is_valid_sbd.side_effect = [True, False, False, True, True, False]
+
+        res = utils.find_candidate_sbd("/dev/disk/by-id/scsi-label_CN_devA")
+        assert res == "/dev/disk/by-id/scsi-label_CN_devD"

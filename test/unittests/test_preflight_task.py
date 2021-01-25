@@ -1,19 +1,17 @@
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-import unittest
 try:
-    from unittest import mock
+    from unittest import mock, TestCase
 except ImportError:
     import mock
-import logging
 from datetime import datetime
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from preflight_check import utils, main, config, task
 
 
-class TestTaskKill(unittest.TestCase):
+class TestTaskKill(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -47,7 +45,7 @@ class TestTaskKill(unittest.TestCase):
         mock_isdir.return_value = False
         main.ctx = mock.Mock(report_path="/path")
         with self.assertRaises(task.TaskError) as error:
-           self.task_kill_inst.enable_report()
+            self.task_kill_inst.enable_report()
         self.assertEqual("/path is not a directory", str(error.exception))
         mock_isdir.assert_called_once_with("/path")
 
@@ -104,7 +102,7 @@ Expected State:    a) sbd process restarted
         file_handle = mock_open_file.return_value.__enter__.return_value
 
         self.task_kill_inst.to_report()
-        
+
         file_handle.write.assert_has_calls([
             mock.call("#### header"),
             mock.call("\nLog:\n"),
@@ -196,7 +194,7 @@ Expected State:    a) sbd process restarted
         mock_sleep.assert_called_once_with(1)
 
 
-class TestTaskCheck(unittest.TestCase):
+class TestTaskCheck(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -299,7 +297,7 @@ class TestTaskCheck(unittest.TestCase):
         self.task_check_inst.print_result.assert_called_once_with()
 
 
-class TestTaskSplitBrain(unittest.TestCase):
+class TestTaskSplitBrain(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -494,7 +492,7 @@ Fence timeout:     60
         self.task_sp_inst.thread_stop_event.set.assert_called_once_with()
 
 
-class TestFence(unittest.TestCase):
+class TestFence(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -507,7 +505,7 @@ class TestFence(unittest.TestCase):
         """
         Test setUp.
         """
-        ctx = mock.Mock(fence_node="node1", yes=False) 
+        ctx = mock.Mock(fence_node="node1", yes=False)
         self.task_fence_inst = task.TaskFence(ctx)
         self.task_fence_inst.fence_action = "reboot"
         self.task_fence_inst.fence_timeout = 60
@@ -610,7 +608,7 @@ Fence timeout:     60
         self.task_fence_inst.fence_finish_event.wait.assert_called_once_with(60)
 
 
-class TestTask(unittest.TestCase):
+class TestTask(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -707,10 +705,10 @@ class TestTask(unittest.TestCase):
     def test_build_base_result(self):
         self.task_inst.build_base_result()
         expected_result = {
-                "Timestamp": self.task_inst.timestamp,
-                "Description": self.task_inst.description,
-                "Messages": []
-                }
+            "Timestamp": self.task_inst.timestamp,
+            "Description": self.task_inst.description,
+            "Messages": []
+        }
         self.assertDictEqual(expected_result, self.task_inst.result)
 
     @mock.patch('sys.exit')
@@ -743,9 +741,9 @@ class TestTask(unittest.TestCase):
         mock_run.side_effect = [(1, None, None), (0, output, None), (1, None, None), (0, output2, None)]
         self.task_inst.timestamp = "2021/01/19 16:08:24"
         mock_datetime.side_effect = [
-                datetime.strptime(self.task_inst.timestamp, '%Y/%m/%d %H:%M:%S'),
-                datetime.strptime("Tue Jan 19 16:08:37 2021", '%a %b %d %H:%M:%S %Y')
-                ]
+            datetime.strptime(self.task_inst.timestamp, '%Y/%m/%d %H:%M:%S'),
+            datetime.strptime("Tue Jan 19 16:08:37 2021", '%a %b %d %H:%M:%S %Y')
+        ]
 
         self.task_inst.fence_action_monitor()
 
@@ -767,3 +765,74 @@ class TestTask(unittest.TestCase):
             ])
         self.task_inst.fence_start_event.set.assert_called_once_with()
         self.task_inst.fence_finish_event.set.assert_called_once_with()
+
+class TestFixSBD(TestCase):
+    """
+    Class to test TaskFixSBD of task.py
+    All tested in test_preflight_check.py except verify()
+    """
+
+    @mock.patch('builtins.open')
+    @mock.patch('os.path.isfile')
+    @mock.patch('tempfile.mkstemp')
+    @mock.patch('preflight_check.utils.msg_info')
+    def setUp(self, mock_msg_info, mock_mkstemp, mock_isfile, mock_open):
+        """
+        Test setUp.
+        """
+        dev = "/dev/disk/by-id/scsi-SATA_ST2000LM007-1R81_WDZ5J42A"
+        bak = "/tmp/tmpmby3ty9g"
+        edit = "/tmp/tmpnic4t30s"
+        mock_isfile.return_value = True
+        mock_open.return_value = mock.mock_open(read_data="SBD_DEVICE={}".
+                                                format(dev)).return_value
+        mock_mkstemp.side_effect = [(1, bak), (2, edit)]
+
+        self.task_fixsbd = task.TaskFixSBD(dev, yes=False)
+        mock_msg_info.assert_called_once_with('Replace SBD_DEVICE with candidate {}'.
+                                              format(dev), to_stdout=False)
+
+    def tearDown(self):
+        """
+        Test tearDown.
+        """
+        pass
+
+    @mock.patch('os.fsync')
+    @mock.patch('builtins.open')
+    @mock.patch('os.path.isfile')
+    @mock.patch('preflight_check.utils.msg_info')
+    def test_verify_succeed(self, mock_msg_info, mock_isfile, mock_open, mock_fsync):
+        """
+        Test verify successful.
+        """
+        dev = "/dev/disk/by-id/scsi-SATA_ST2000LM007-1R81_WDZ5J42A"
+        mock_isfile.return_value = True
+        mock_open.return_value = mock.mock_open(read_data="SBD_DEVICE={}".
+                                                format(dev)).return_value
+        self.task_fixsbd.prev_task_list = []
+
+        self.task_fixsbd.verify()
+        mock_isfile.assert_called_once_with(config.SBD_CONF)
+        mock_msg_info.assert_called_once_with('SBD DEVICE change succeed',
+                                              to_stdout=True)
+        mock_fsync.assert_called()
+
+    @mock.patch('builtins.open')
+    @mock.patch('os.path.isfile')
+    def test_verify_fail(self, mock_isfile, mock_open):
+        """
+        Test verify failed.
+        """
+        dev = "/dev/disk/by-id/scsi-SATA_ST2000LM007-1R81_WDZ5J42A"
+        dev_cur = "/dev/disk/by-id/scsi-SATA_ST2000LM007-no_change"
+        mock_isfile.return_value = True
+        mock_open.return_value = mock.mock_open(read_data="SBD_DEVICE={}".
+                                                format(dev_cur)).return_value
+        self.task_fixsbd.prev_task_list = []
+
+        with self.assertRaises(task.TaskError) as err:
+            self.task_fixsbd.verify()
+        mock_isfile.assert_called_once_with(config.SBD_CONF)
+        self.assertEqual("Fail to replace SBD device {} in {}!".
+                         format(dev, config.SBD_CONF), str(err.exception))
