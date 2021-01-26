@@ -357,6 +357,20 @@ def test_dump_D_process(mock_get_stdout_stderr):
         mock.call("cat /proc/10002/stack")
         ])
 
+
+@mock.patch('crmsh.utils.get_stdout_stderr')
+def test_lsof_ocfs2_device(mock_run):
+    output = "\n/dev/sdb1 on /data type ocfs2 (rw,relatime,heartbeat=none)"
+    output_lsof = "lsof data"
+    mock_run.side_effect = [(0, output, None), (0, output_lsof, None)]
+    expected = "\n\n#=====[ Command ] ==========================#\n# lsof /dev/sdb1\nlsof data"
+    assert hb_report.utillib.lsof_ocfs2_device() == expected
+    mock_run.assert_has_calls([
+        mock.call("mount"),
+        mock.call("lsof /dev/sdb1")
+        ])
+
+
 @mock.patch('hb_report.utillib.constants')
 def test_sub_sensitive_string(mock_const):
     data = """
