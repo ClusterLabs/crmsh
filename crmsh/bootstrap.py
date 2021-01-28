@@ -1828,6 +1828,11 @@ def start_qdevice_service():
     qdevice_inst = _context.qdevice_inst
     qnetd_addr = qdevice_inst.qnetd_addr
 
+    status_long("Update configuration")
+    update_expected_votes()
+    utils.cluster_run_cmd("crm corosync reload")
+    status_done()
+
     status("Enable corosync-qdevice.service in cluster")
     utils.cluster_run_cmd("systemctl enable corosync-qdevice")
     status("Starting corosync-qdevice.service in cluster")
@@ -1849,10 +1854,6 @@ def config_qdevice():
     qdevice_inst.write_qdevice_config()
     if not corosync.is_unicast():
         corosync.add_nodelist_from_cmaptool()
-    status_long("Update configuration")
-    update_expected_votes()
-    utils.cluster_run_cmd("crm corosync reload")
-    status_done()
 
 
 def init():
@@ -2545,19 +2546,20 @@ def remove_qdevice():
     if not confirm("Removing QDevice service and configuration from cluster: Are you sure?"):
         return
 
+    status_long("Removing QDevice configuration from cluster")
+
+    qnetd_host = corosync.get_value('quorum.device.net.host')
+    qdevice_inst = corosync.QDevice(qnetd_host)
+    qdevice_inst.remove_qdevice_config()
+    update_expected_votes()
+    status_done()
+
     status("Disable corosync-qdevice.service")
     invoke("crm cluster run 'systemctl disable corosync-qdevice'")
     status("Stopping corosync-qdevice.service")
     invoke("crm cluster run 'systemctl stop corosync-qdevice'")
-
-    status_long("Removing QDevice configuration from cluster")
-    qnetd_host = corosync.get_value('quorum.device.net.host')
-    qdevice_inst = corosync.QDevice(qnetd_host)
-    qdevice_inst.remove_qdevice_config()
-    qdevice_inst.remove_qdevice_db()
-    update_expected_votes()
     invoke("crm cluster run 'crm corosync reload'")
-    status_done()
+    qdevice_inst.remove_qdevice_db()
 
 
 def bootstrap_remove(context):
