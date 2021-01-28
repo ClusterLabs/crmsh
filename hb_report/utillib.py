@@ -1663,6 +1663,15 @@ def lsof_ocfs2_device():
 def dump_ocfs2():
     ocfs2_f = os.path.join(constants.WORKDIR, constants.OCFS2_F)
     with open(ocfs2_f, "w") as f:
+        rc, out, err = crmutils.get_stdout_stderr("mounted.ocfs2 -d")
+        if rc != 0:
+            f.write("Failed to run \"mounted.ocfs2 -d\": {}".format(err))
+            return
+        # No ocfs2 device, just header line printed
+        elif len(out.split('\n')) == 1:
+            f.write("No ocfs2 partitions found")
+            return
+
         f.write(dump_D_process())
         f.write(lsof_ocfs2_device())
 
