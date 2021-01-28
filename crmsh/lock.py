@@ -60,7 +60,7 @@ class Lock(object):
         Raise ClaimLockError if claiming lock failed
         """
         if not self._create_lock_dir():
-            raise ClaimLockError("Failed to claim lock")
+            raise ClaimLockError("Failed to claim lock (the lock directory exists at {})".format(self.LOCK_DIR))
 
     def _unlock(self):
         """
