@@ -6,6 +6,7 @@ try:
 except ImportError:
     import mock
 
+from crmsh import utils as crmshutils
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from preflight_check import check, config
 
@@ -660,7 +661,6 @@ Active Resources:
         mock_run.assert_called_once_with()
 
     # Test correct_sbd()
-    @mock.patch('sys.exit')
     @mock.patch('preflight_check.task.Task.error')
     @mock.patch('preflight_check.utils.msg_info')
     @mock.patch('crmsh.utils.parse_sysconfig')
@@ -668,7 +668,7 @@ Active Resources:
     @mock.patch('preflight_check.main.Context')
     def test_correct_sbd_exception_no_conf(self, mock_context, mock_os_path_exists,
                                            mock_utils_parse_sysconf, mock_msg_info,
-                                           mock_error, mock_exit):
+                                           mock_error):
         """
         Test correct_sbd with exception
         """
@@ -676,9 +676,8 @@ Active Resources:
         mock_context = mock.Mock(yes=True)
         mock_os_path_exists.side_effect = [False, True]
         mock_utils_parse_sysconf.retrun_value = {"SBD_DEVICE": dev}
-        mock_exit.side_effect = SystemExit
 
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(crmshutils.TerminateSubCommand):
             check.correct_sbd(mock_context, dev)
 
         mock_msg_info.assert_called_once_with('Replace SBD_DEVICE with candidate {}'.
@@ -686,7 +685,6 @@ Active Resources:
         mock_error.assert_called_once_with('Configure file {} not exist!'.
                                            format(config.SBD_CONF))
 
-    @mock.patch('sys.exit')
     @mock.patch('preflight_check.task.Task.error')
     @mock.patch('preflight_check.utils.msg_info')
     @mock.patch('crmsh.utils.parse_sysconfig')
@@ -694,7 +692,7 @@ Active Resources:
     @mock.patch('preflight_check.main.Context')
     def test_correct_sbd_exception_no_dev(self, mock_context, mock_os_path_exists,
                                           mock_utils_parse_sysconf, mock_msg_info,
-                                          mock_error, mock_exit):
+                                          mock_error):
         """
         Test correct_sbd with exception
         """
@@ -702,9 +700,8 @@ Active Resources:
         mock_context = mock.Mock(yes=True)
         mock_os_path_exists.side_effect = [True, False]
         mock_utils_parse_sysconf.retrun_value = {"SBD_DEVICE": dev}
-        mock_exit.side_effect = SystemExit
 
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(crmshutils.TerminateSubCommand):
             check.correct_sbd(mock_context, dev)
 
         mock_msg_info.assert_called_once_with('Replace SBD_DEVICE with candidate {}'.
@@ -753,7 +750,6 @@ Active Resources:
         mock_sbd_verify.assert_called_once_with()
 
     @classmethod
-    @mock.patch('sys.exit')
     @mock.patch('builtins.open')
     @mock.patch('preflight_check.task.Task.error')
     @mock.patch('tempfile.mkstemp')
@@ -766,7 +762,7 @@ Active Resources:
     def test_correct_sbd_run_exception(cls, mock_context, mock_os_path_exists,
                                        mock_utils_parse_sysconf, mock_msg_info, mock_copyfile,
                                        mock_copymode, mock_mkstemp, mock_msg_error,
-                                       mock_open, mock_exit):
+                                       mock_open):
         """
         Test correct_sbd
         """
@@ -783,7 +779,8 @@ Active Resources:
         mock_mkstemp.side_effect = [(1, bak), (2, edit)]
         mock_copymode.side_effect = Exception('Copy file error!')
 
-        check.correct_sbd(mock_context, dev)
+        with cls.assertRaises(cls, crmshutils.TerminateSubCommand):
+            check.correct_sbd(mock_context, dev)
 
         mock_msg_info.assert_called_once_with('Replace SBD_DEVICE with candidate {}'.
                                               format(dev), to_stdout=False)
@@ -792,4 +789,3 @@ Active Resources:
         mock_copymode.assert_called_once_with(config.SBD_CONF, edit)
         mock_msg_error.assert_called_once_with('Fail to modify file {}'.
                                                format(config.SBD_CONF))
-        mock_exit.assert_called_once_with(1)
