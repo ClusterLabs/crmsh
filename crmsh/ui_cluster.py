@@ -216,7 +216,7 @@ Note:
         parser.add_argument("-S", "--enable-sbd", dest="diskless_sbd", action="store_true",
                             help="Enable SBD even if no SBD device is configured (diskless mode)")
         parser.add_argument("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG",
-                            help="Use the given watchdog device")
+                            help="Use the given watchdog device or driver name")
         parser.add_argument("--no-overwrite-sshkey", action="store_true", dest="no_overwrite_sshkey",
                             help='Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is used (False by default)')
 
@@ -272,6 +272,7 @@ Note:
         boot_context.ui_context = context
         boot_context.stage = stage
         boot_context.args = args
+        boot_context.type = "init"
 
         bootstrap.bootstrap_init(boot_context)
 
@@ -327,6 +328,7 @@ If stage is not specified, each stage will be invoked in sequence.
         join_context = bootstrap.Context.set_context(options)
         join_context.ui_context = context
         join_context.stage = stage
+        join_context.type = "join"
 
         bootstrap.bootstrap_join(join_context)
 
