@@ -2462,11 +2462,11 @@ def bootstrap_init(context):
         lock_inst = lock.Lock()
         try:
             with lock_inst.lock():
+                init_qdevice()
                 init_cluster()
                 if _context.template == 'ocfs2':
                     init_vgfs()
                 init_admin()
-                init_qdevice()
         except lock.ClaimLockError as err:
             error(err)
 
