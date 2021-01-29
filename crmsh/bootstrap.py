@@ -21,6 +21,7 @@ import readline
 import shutil
 from string import Template
 from lxml import etree
+from collections import OrderedDict
 from . import config
 from . import utils
 from . import xmlutil
@@ -57,6 +58,7 @@ class Context(object):
         '''
         Initialize attributes
         '''
+        self.type = None # init or join
         self.quiet = None
         self.yes_to_all = None
         self.template = None
@@ -113,9 +115,183 @@ class Context(object):
                 error("Duplicated input")
         if self.no_overwrite_sshkey:
             warn("--no-overwrite-sshkey option is deprecated since crmsh does not overwrite ssh keys by default anymore and will be removed in future versions")
+        if self.type == "join" and self.watchdog:
+            warn("-w option is deprecated and will be removed in future versions")
 
     def init_sbd_manager(self):
         self.sbd_manager = SBDManager(self.sbd_devices, self.diskless_sbd)
+
+
+class Watchdog(object):
+    """
+    Class to find valid watchdog device name
+    """
+    QUERY_CMD = "sbd query-watchdog"
+    DEVICE_FIND_REGREX = "\[[0-9]+\] (/dev/.*)\n.*\nDriver: (.*)"
+
+    def __init__(self, _input=None, peer_host=None):
+        """
+        Init function
+        """
+        self._input = _input
+        self._peer_host = peer_host
+        self._watchdog_info_dict = {}
+        self._watchdog_device_name = None
+    
+    @property
+    def watchdog_device_name(self):
+        return self._watchdog_device_name
+
+    @staticmethod
+    def _verify_watchdog_device(dev, ignore_error=False):
+        """
+        Use wdctl to verify watchdog device
+        """
+        rc, _, err = utils.get_stdout_stderr("wdctl {}".format(dev))
+        if rc != 0:
+            if ignore_error:
+                return False
+            else:
+                error("Invalid watchdog device {}: {}".format(dev, err))
+        return True
+
+    @staticmethod
+    def _load_watchdog_driver(driver):
+        """
+        Load specific watchdog driver
+        """
+        invoke("echo {} > /etc/modules-load.d/watchdog.conf".format(driver))
+        invoke("systemctl restart systemd-modules-load")
+
+    @staticmethod
+    def _get_watchdog_device_from_sbd_config():
+        """
+        Try to get watchdog device name from sbd config file
+        """
+        conf = utils.parse_sysconfig(SYSCONFIG_SBD)
+        return conf.get("SBD_WATCHDOG_DEV")
+
+    @staticmethod
+    def _driver_is_loaded(driver):
+        """
+        Check if driver was already loaded
+        """
+        _, out, _ = utils.get_stdout_stderr("lsmod")
+        return re.search("\n{}\s+".format(driver), out)
+
+    def _set_watchdog_info(self):
+        """
+        Set watchdog info through sbd query-watchdog command
+        Content in self._watchdog_info_dict: {device_name: driver_name}
+        """
+        rc, out, err = utils.get_stdout_stderr(self.QUERY_CMD)
+        if rc == 0 and out:
+            # output format might like:
+            #   [1] /dev/watchdog\nIdentity: Software Watchdog\nDriver: softdog\n
+            self._watchdog_info_dict = OrderedDict(re.findall(self.DEVICE_FIND_REGREX, out))
+        else:
+            error("Failed to run {}: {}".format(self.QUERY_CMD, err))
+
+    def _get_device_through_driver(self, driver_name):
+        """
+        Get watchdog device name which has driver_name
+        """
+        for device, driver in self._watchdog_info_dict.items():
+            if driver == driver_name and self._verify_watchdog_device(device):
+                return device
+        return None
+
+    def _get_driver_through_device_remotely(self, dev_name):
+        """
+        Given watchdog device name, get driver name on remote node
+        """
+        cmd = "ssh -o StrictHostKeyChecking=no root@{} {}".format(self._peer_host, self.QUERY_CMD)
+        rc, out, err = utils.get_stdout_stderr(cmd)
+        if rc == 0 and out:
+            # output format might like:
+            #   [1] /dev/watchdog\nIdentity: Software Watchdog\nDriver: softdog\n
+            device_driver_dict = OrderedDict(re.findall(self.DEVICE_FIND_REGREX, out))
+            if device_driver_dict and dev_name in device_driver_dict:
+                return device_driver_dict[dev_name]
+            else:
+                return None
+        else:
+            error("Failed to run {} remotely: {}".format(self.QUERY_CMD, err))
+
+    def _get_first_unused_device(self):
+        """
+        Get first unused watchdog device name
+        """
+        for dev in self._watchdog_info_dict:
+            if self._verify_watchdog_device(dev, ignore_error=True):
+                return dev
+        return None
+
+    def _set_input(self):
+        """
+        If self._input was not provided by option:
+          1. Try to get it from sbd config file
+          2. Try to get the first valid device from result of sbd query-watchdog
+          3. Set the self._input as softdog
+        """
+        if not self._input:
+            dev = self._get_watchdog_device_from_sbd_config()
+            if dev and self._verify_watchdog_device(dev, ignore_error=True):
+                self._input = dev
+                return
+            first_unused = self._get_first_unused_device()
+            self._input = first_unused if first_unused else "softdog"
+
+    def _valid_device(self, dev):
+        """
+        Is an unused watchdog device
+        """
+        if dev in self._watchdog_info_dict and self._verify_watchdog_device(dev):
+            return True
+        return False
+
+    def join_watchdog(self):
+        """
+        In join proces, get watchdog device from config
+        If that device not exist, get driver name from init node, and load that driver
+        """
+        self._set_watchdog_info()
+
+        res = self._get_watchdog_device_from_sbd_config()
+        if not res:
+            error("Failed to get watchdog device from {}".format(SYSCONFIG_SBD))
+        self._input = res
+
+        if not self._valid_device(self._input):
+            driver = self._get_driver_through_device_remotely(self._input)
+            self._load_watchdog_driver(driver)
+
+    def init_watchdog(self):
+        """
+        In init process, find valid watchdog device
+        """
+        self._set_watchdog_info()
+        self._set_input()
+
+        # self._input is a device name
+        if self._valid_device(self._input):
+            self._watchdog_device_name = self._input
+            return
+
+        # self._input is invalid, exit
+        if not invokerc("modinfo {}".format(self._input)):
+            error("Should provide valid watchdog device or driver name by -w option")
+
+        # self._input is a driver name, load it if it was unloaded
+        if not self._driver_is_loaded(self._input):
+            self._load_watchdog_driver(self._input)
+            self._set_watchdog_info()
+
+        # self._input is a loaded driver name, find corresponding device name
+        res = self._get_device_through_driver(self._input)
+        if res:
+            self._watchdog_device_name = res
+            return
 
 
 class SBDManager(object):
@@ -144,16 +320,7 @@ Configure SBD:
         self.sbd_devices_input = sbd_devices
         self.diskless_sbd = diskless_sbd
         self._sbd_devices = None
-
-    @staticmethod
-    def _check_environment():
-        """
-        Check prerequisites for SBD
-        """
-        if not check_watchdog():
-            error("Watchdog device must be configured in order to use SBD")
-        if not utils.is_program("sbd"):
-            error("sbd executable not found! Cannot configure SBD")
+        self._watchdog_inst = None
 
     def _parse_sbd_device(self):
         """
@@ -224,8 +391,6 @@ Configure SBD:
             warn("Not configuring SBD - STONITH will be disabled.")
             return
 
-        self._check_environment()
-
         configured_dev_list = self._get_sbd_device_from_config()
         if configured_dev_list and not confirm("SBD is already configured to use {} - overwrite?".format(';'.join(configured_dev_list))):
             return configured_dev_list
@@ -263,10 +428,7 @@ Configure SBD:
         if self.sbd_devices_input:
             dev_list = self._parse_sbd_device()
             self._verify_sbd_device(dev_list)
-            self._check_environment()
-        elif self.diskless_sbd:
-            self._check_environment()
-        else:
+        elif not self.diskless_sbd:
             dev_list = self._get_sbd_device_interactive()
         self._sbd_devices = dev_list
 
@@ -290,7 +452,7 @@ Configure SBD:
                 "SBD_PACEMAKER": "yes",
                 "SBD_STARTMODE": "always",
                 "SBD_DELAY_START": "no",
-                "SBD_WATCHDOG_DEV": detect_watchdog_device()
+                "SBD_WATCHDOG_DEV": self._watchdog_inst.watchdog_device_name
                 }
         if self._sbd_devices:
             sbd_config_dict["SBD_DEVICE"] = ';'.join(self._sbd_devices)
@@ -318,6 +480,8 @@ Configure SBD:
         """
         if not utils.package_is_installed("sbd"):
             return
+        self._watchdog_inst = Watchdog(_input=_context.watchdog)
+        self._watchdog_inst.init_watchdog()
         self._get_sbd_device()
         if not self._sbd_devices and not self.diskless_sbd:
             invoke("systemctl disable sbd.service")
@@ -355,7 +519,8 @@ Configure SBD:
         if not os.path.exists(SYSCONFIG_SBD) or not utils.service_is_enabled("sbd.service", peer_host):
             invoke("systemctl disable sbd.service")
             return
-        self._check_environment()
+        self._watchdog_inst = Watchdog(peer_host=peer_host)
+        self._watchdog_inst.join_watchdog()
         dev_list = self._get_sbd_device_from_config()
         if dev_list:
             self._verify_sbd_device(dev_list, [peer_host])
@@ -706,30 +871,12 @@ def check_prereqs(stage):
         warn("{} is not configured to start at system boot.".format(timekeeper))
         warned = True
 
-    if stage in ("", "join", "sbd"):
-        if not check_watchdog():
-            warn("No watchdog device found. If SBD is used, the cluster will be unable to start without a watchdog.")
-            warned = True
-
     if warned:
         if not confirm("Do you want to continue anyway?"):
             return False
 
     firewall_open_basic_ports()
     return True
-
-
-def init_watchdog():
-    """
-    If a watchdog device was provided on the command line, configure it
-    """
-    if _context.watchdog:
-        _, outp = utils.get_stdout("lsmod")
-        if not any(re.match(r"^{}\b", d) is not None for d in outp.splitlines()):
-            invoke("modprobe {}".format(_context.watchdog))
-            with open("/etc/modules-load.d/watchdog.conf", "w") as f:
-                f.write("{}\n".format(_context.watchdog))
-            invoke("systemctl restart systemd-modules-load")
 
 
 def log_start():
@@ -1444,30 +1591,6 @@ Configure Shared Storage:
     status("Created %s for OCFS2 partition" % (_context.ocfs2_device))
 
 
-def detect_watchdog_device():
-    """
-    Find the watchdog device. Fall back to /dev/watchdog.
-    """
-    wdconf = "/etc/modules-load.d/watchdog.conf"
-    watchdog_dev = "/dev/watchdog"
-    if os.path.exists(wdconf):
-        txt = open(wdconf, "r").read()
-        for line in txt.splitlines():
-            m = re.match(r'^\s*watchdog-device\s*=\s*(.*)$', line)
-            if m:
-                watchdog_dev = m.group(1)
-    return watchdog_dev
-
-
-def check_watchdog():
-    """
-    Verify watchdog device. Fall back to /dev/watchdog.
-    """
-    watchdog_dev = detect_watchdog_device()
-    rc, _out, _err = utils.get_stdout_stderr("wdctl %s" % (watchdog_dev))
-    return rc == 0
-
-
 def init_sbd():
     """
     Configure SBD (Storage-based fencing).
@@ -2076,8 +2199,6 @@ def bootstrap_init(context):
     if stage != "":
         globals()["init_" + stage]()
     else:
-        if _context.watchdog is not None:
-            init_watchdog()
         init_ssh()
         init_csync2()
         init_corosync()
