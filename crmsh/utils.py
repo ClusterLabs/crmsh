@@ -2649,4 +2649,46 @@ def ping_node(node):
     rc, _, err = get_stdout_stderr("ping -c 1 {}".format(node))
     if rc != 0:
         raise ValueError("host \"{}\" is unreachable: {}".format(node, err))
+
+
+def is_quorate(expected_votes, actual_votes):
+    """
+    Given expected votes and actual votes, calculate if is quorated
+    """
+    return int(actual_votes)/int(expected_votes) > 0.5
+
+
+def get_stdout_or_raise_error(cmd):
+    """
+    Common function to get stdout from cmd or raise exception
+    """
+    rc, out, err = get_stdout_stderr(cmd)
+    if rc != 0:
+        raise ValueError("Failed to run \"{}\": {}".format(cmd, err))
+    return out
+
+
+def get_quorum_votes_dict():
+    """
+    Return a dictionary which contain expect votes and total votes
+    """
+    out = get_stdout_or_raise_error("corosync-quorumtool -s")
+    return dict(re.findall("(Expected|Total) votes:\s+(\d+)", out))
+
+
+def has_resource_running():
+    """
+    Check if any RA is running
+    """
+    out = get_stdout_or_raise_error("crm_mon -1")
+    return re.search("No active resources", out) is None
+
+
+def check_all_nodes_reachable():
+    """
+    Check if all cluster nodes are reachable
+    """
+    out = get_stdout_or_raise_error("crm_node -l")
+    for node in re.findall("\d+ (.*) \w+", out):
+        ping_node(node)
 # vim:ts=4:sw=4:et:

@@ -22,6 +22,7 @@ import shutil
 from string import Template
 from lxml import etree
 from pathlib import Path
+from enum import Enum
 from . import config
 from . import utils
 from . import xmlutil
@@ -45,8 +46,15 @@ PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
 COROSYNC_CONF_ORIG = tmpfiles.create()[1]
 SERVICES_STOP_LIST = ["corosync-qdevice.service", "corosync.service", "hawk.service"]
 USER_LIST = ["root", "hacluster"]
+QDEVICE_ADD = "add"
+QDEVICE_REMOVE = "remove"
 
 INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin", "qdevice")
+
+class QdevicePolicy(Enum):
+    QDEVICE_RELOAD = 0
+    QDEVICE_RESTART = 1
+    QDEVICE_RESTART_LATER = 2
 
 
 class Context(object):
@@ -79,6 +87,7 @@ class Context(object):
         self.qdevice_heuristics = None
         self.qdevice_heuristics_mode = None
         self.qdevice_rm_flag = None
+        self.qdevice_reload_policy = QdevicePolicy.QDEVICE_RESTART
         self.shared_device = None
         self.ocfs2_device = None
         self.cluster_node = None
@@ -1828,6 +1837,34 @@ Configure Administration IP Address:
     wait_for_resource("Configuring virtual IP ({})".format(adminaddr), "admin-ip")
 
 
+def evaluate_qdevice_quorum_effect(mode):
+    """
+    While adding/removing qdevice, get current expected votes and actual total votes,
+    to calculate after adding/removing qdevice, whether cluster has quorum
+    return different policy
+    """
+    quorum_votes_dict = utils.get_quorum_votes_dict()
+    expected_votes = int(quorum_votes_dict["Expected"])
+    actual_votes = int(quorum_votes_dict["Total"])
+    if mode == QDEVICE_ADD:
+        expected_votes += 1
+    elif mode == QDEVICE_REMOVE:
+        actual_votes -= 1
+
+    if utils.is_quorate(expected_votes, actual_votes):
+        # safe to use reload
+        return QdevicePolicy.QDEVICE_RELOAD
+    elif utils.has_resource_running():
+        # will lose quorum, and with RA running
+        # no reload, no restart cluster service
+        # just leave a warning
+        return QdevicePolicy.QDEVICE_RESTART_LATER
+    else:
+        # will lose quorum, without RA running
+        # safe to restart cluster service
+        return QdevicePolicy.QDEVICE_RESTART
+
+
 def init_qdevice():
     """
     Setup qdevice and qnetd service
@@ -1836,6 +1873,10 @@ def init_qdevice():
     if not _context.qdevice_inst:
         utils.disable_service("corosync-qdevice.service")
         return
+
+    if _context.stage == "qdevice":
+        utils.check_all_nodes_reachable()
+        _context.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD)
 
     status("""
 Configure Qdevice/Qnetd:""")
@@ -1874,8 +1915,15 @@ def start_qdevice_service():
 
     status("Enable corosync-qdevice.service in cluster")
     utils.cluster_run_cmd("systemctl enable corosync-qdevice")
-    status("Starting corosync-qdevice.service in cluster")
-    utils.cluster_run_cmd("systemctl start corosync-qdevice")
+    if _context.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
+        status("Starting corosync-qdevice.service in cluster")
+        utils.cluster_run_cmd("systemctl restart corosync-qdevice")
+    elif _context.qdevice_reload_policy == QdevicePolicy.QDEVICE_RESTART:
+        status("Restarting cluster service")
+        utils.cluster_run_cmd("crm cluster restart")
+        wait_for_cluster()
+    else:
+        warn("To use qdevice service, need to restart cluster service manually on each node")
 
     status("Enable corosync-qnetd.service on {}".format(qnetd_addr))
     qdevice_inst.enable_qnetd()
@@ -1895,7 +1943,8 @@ def config_qdevice():
         corosync.add_nodelist_from_cmaptool()
     status_long("Update configuration")
     update_expected_votes()
-    utils.cluster_run_cmd("crm corosync reload")
+    if _context.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
+        utils.cluster_run_cmd("crm corosync reload")
     status_done()
 
 
@@ -2596,10 +2645,14 @@ def remove_qdevice():
     if not confirm("Removing QDevice service and configuration from cluster: Are you sure?"):
         return
 
+    utils.check_all_nodes_reachable()
+    _context.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_REMOVE)
+
     status("Disable corosync-qdevice.service")
     invoke("crm cluster run 'systemctl disable corosync-qdevice'")
-    status("Stopping corosync-qdevice.service")
-    invoke("crm cluster run 'systemctl stop corosync-qdevice'")
+    if _context.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
+        status("Stopping corosync-qdevice.service")
+        invoke("crm cluster run 'systemctl stop corosync-qdevice'")
 
     status_long("Removing QDevice configuration from cluster")
     qnetd_host = corosync.get_value('quorum.device.net.host')
@@ -2607,8 +2660,15 @@ def remove_qdevice():
     qdevice_inst.remove_qdevice_config()
     qdevice_inst.remove_qdevice_db()
     update_expected_votes()
-    invoke("crm cluster run 'crm corosync reload'")
     status_done()
+    if _context.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
+        invoke("crm cluster run 'crm corosync reload'")
+    elif _context.qdevice_reload_policy == QdevicePolicy.QDEVICE_RESTART:
+        status("Restarting cluster service")
+        utils.cluster_run_cmd("crm cluster restart")
+        wait_for_cluster()
+    else:
+        warn("To remove qdevice service, need to restart cluster service manually on each node")
 
 
 def bootstrap_remove(context):
