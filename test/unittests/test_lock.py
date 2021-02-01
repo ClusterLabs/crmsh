@@ -73,7 +73,7 @@ class TestLock(unittest.TestCase):
         mock_create.return_value = False
         with self.assertRaises(lock.ClaimLockError) as err:
             self.local_inst._lock_or_fail()
-        self.assertEqual("Failed to claim lock", str(err.exception))
+        self.assertEqual("Failed to claim lock (the lock directory exists at /tmp/.crmsh_lock_directory)", str(err.exception))
         mock_create.assert_called_once_with()
 
     @mock.patch('crmsh.lock.Lock._run')
