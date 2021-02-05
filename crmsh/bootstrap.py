@@ -31,6 +31,7 @@ from . import tmpfiles
 from . import clidisplay
 from . import term
 from . import lock
+from . import userdir
 
 
 LOG_FILE = "/var/log/ha-cluster-bootstrap.log"
@@ -41,10 +42,8 @@ SYSCONFIG_SBD = "/etc/sysconfig/sbd"
 SYSCONFIG_FW = "/etc/sysconfig/SuSEfirewall2"
 SYSCONFIG_FW_CLUSTER = "/etc/sysconfig/SuSEfirewall2.d/services/cluster"
 COROSYNC_CONF_ORIG = tmpfiles.create()[1]
-RSA_PRIVATE_KEY = "/root/.ssh/id_rsa"
-RSA_PUBLIC_KEY = "/root/.ssh/id_rsa.pub"
-AUTHORIZED_KEYS_FILE = "/root/.ssh/authorized_keys"
 SERVICES_STOP_LIST = ["corosync.service", "hawk.service"]
+USER_LIST = ["root", "hacluster"]
 
 INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin")
 
@@ -85,6 +84,7 @@ class Context(object):
         self.args = None
         self.ui_context = None
         self.interfaces_inst = None
+        self.with_other_user = True
         self.default_nic_list = []
         self.default_ip_list = []
         self.local_ip_list = []
@@ -1071,22 +1071,69 @@ def init_ssh():
     Configure passwordless SSH.
     """
     utils.start_service("sshd.service", enable=True)
-    configure_local_ssh_key()
+    for user in USER_LIST:
+        configure_local_ssh_key(user)
 
 
-def configure_local_ssh_key():
+def key_files(user):
+    """
+    Find home directory for user and return key files with abspath
+    """
+    keyfile_dict = {}
+    home_dir = userdir.gethomedir(user)
+    keyfile_dict['private'] = "{}/.ssh/id_rsa".format(home_dir)
+    keyfile_dict['public'] = "{}/.ssh/id_rsa.pub".format(home_dir)
+    keyfile_dict['authorized'] = "{}/.ssh/authorized_keys".format(home_dir)
+    return keyfile_dict
+
+
+def is_nologin(user):
+    """
+    Check if user's shell is /sbin/nologin
+    """
+    with open("/etc/passwd") as f:
+        return re.search("{}:.*:/sbin/nologin".format(user), f.read())
+
+
+def change_user_shell(user):
+    """
+    To change user's login shell
+    """
+    if user != "root" and is_nologin(user):
+        if not _context.yes_to_all:
+            status("""
+User {} will be changed the login shell as /bin/bash, and
+be setted up authorized ssh access among cluster nodes""".format(user))
+            if not confirm("Continue?"):
+                _context.with_other_user = False
+                return
+        invoke("usermod -s /bin/bash {}".format(user))
+
+
+def configure_local_ssh_key(user="root"):
     """
     Configure ssh rsa key locally
 
-    If /root/.ssh/id_rsa not exist, generate a new one
-    Add /root/.ssh/id_rsa.pub to /root/.ssh/authorized_keys anyway, make sure itself authorized
+    If <home_dir>/.ssh/id_rsa not exist, generate a new one
+    Add <home_dir>/.ssh/id_rsa.pub to <home_dir>/.ssh/authorized_keys anyway, make sure itself authorized
     """
-    if not os.path.exists(RSA_PRIVATE_KEY):
-        status("Generating SSH key")
-        invoke("ssh-keygen -q -f {} -C 'Cluster Internal on {}' -N ''".format(RSA_PRIVATE_KEY, utils.this_node()))
-    if not os.path.exists(AUTHORIZED_KEYS_FILE):
-        open(AUTHORIZED_KEYS_FILE, 'w').close()
-    append_unique(RSA_PUBLIC_KEY, AUTHORIZED_KEYS_FILE)
+    change_user_shell(user)
+
+    key_dict = key_files(user)
+    private_key = key_dict['private']
+    public_key = key_dict['public']
+    authorized_file = key_dict['authorized']
+    if not os.path.exists(private_key):
+        status("Generating SSH key for {}".format(user))
+        cmd = "ssh-keygen -q -f {} -C 'Cluster Internal on {}' -N ''".format(private_key, utils.this_node())
+        cmd = utils.add_su(cmd, user)
+        rc, _, err = invoke(cmd)
+        if not rc:
+            error("Failed to generate ssh key for {}: {}".format(user, err))
+
+    if not os.path.exists(authorized_file):
+        open(authorized_file, 'w').close()
+    append_unique(public_key, authorized_file)
 
 
 def init_ssh_remote():
@@ -1719,8 +1766,9 @@ def join_ssh(seed_host):
         error("No existing IP/hostname specified (use -c option)")
 
     utils.start_service("sshd.service", enable=True)
-    configure_local_ssh_key()
-    swap_public_ssh_key(seed_host)
+    for user in USER_LIST:
+        configure_local_ssh_key(user)
+        swap_public_ssh_key(seed_host, user)
 
     # This makes sure the seed host has its own SSH keys in its own
     # authorized_keys file (again, to help with the case where the
@@ -1731,30 +1779,36 @@ def join_ssh(seed_host):
         error("Can't invoke crm cluster init -i {} ssh_remote on {}: {}".format(_context.default_nic_list[0], seed_host, err))
 
 
-def swap_public_ssh_key(remote_node):
+def swap_public_ssh_key(remote_node, user="root"):
     """
     Swap public ssh key between remote_node and local
     """
+    if user != "root" and not _context.with_other_user:
+        return
+
+    key_dict = key_files(user)
+    public_key = key_dict['public']
+    authorized_file = key_dict['authorized']
     # Detect whether need password to login to remote_node
-    if utils.check_ssh_passwd_need(remote_node):
+    if utils.check_ssh_passwd_need(remote_node, user):
         # If no passwordless configured, paste /root/.ssh/id_rsa.pub to remote_node's /root/.ssh/authorized_keys
-        status("Configuring SSH passwordless with root@{}".format(remote_node))
+        status("Configuring SSH passwordless with {}@{}".format(user, remote_node))
         # After this, login to remote_node is passwordless
-        append_to_remote_file(RSA_PUBLIC_KEY, remote_node, AUTHORIZED_KEYS_FILE)
+        append_to_remote_file(public_key, remote_node, authorized_file)
 
     try:
         # Fetch public key file from remote_node
-        public_key_file_remote = fetch_public_key_from_remote_node(remote_node)
+        public_key_file_remote = fetch_public_key_from_remote_node(remote_node, user)
     except ValueError as err:
         warn(err)
         return
     # Append public key file from remote_node to local's /root/.ssh/authorized_keys
     # After this, login from remote_node is passwordless
     # Should do this step even passwordless is True, to make sure we got two-way passwordless
-    append_unique(public_key_file_remote, AUTHORIZED_KEYS_FILE)
+    append_unique(public_key_file_remote, authorized_file)
 
 
-def fetch_public_key_from_remote_node(node):
+def fetch_public_key_from_remote_node(node, user="root"):
     """
     Fetch public key file from remote node
     Return a temp file contains public key
@@ -1763,8 +1817,9 @@ def fetch_public_key_from_remote_node(node):
 
     # For dsa, might need to add PubkeyAcceptedKeyTypes=+ssh-dss to config file, see
     # https://superuser.com/questions/1016989/ssh-dsa-keys-no-longer-work-for-password-less-authentication
+    home_dir = userdir.gethomedir(user)
     for key in ("id_rsa", "id_ecdsa", "id_ed25519", "id_dsa"):
-        public_key_file = "/root/.ssh/{}.pub".format(key)
+        public_key_file = "{}/.ssh/{}.pub".format(home_dir, key)
         cmd = "ssh -oStrictHostKeyChecking=no root@{} 'test -f {}'".format(node, public_key_file)
         if not invokerc(cmd):
             continue
@@ -1892,7 +1947,8 @@ def setup_passwordless_with_other_nodes(init_node):
 
     # Swap ssh public key between join node and other cluster nodes
     for node in cluster_nodes_list:
-        swap_public_ssh_key(node)
+        for user in USER_LIST:
+            swap_public_ssh_key(node, user)
 
 
 def join_cluster(seed_host):
@@ -2234,7 +2290,7 @@ def bootstrap_join(context):
     check_tty()
 
     corosync_active = utils.service_is_active("corosync.service")
-    if corosync_active:
+    if corosync_active and _context.stage != "ssh":
         error("Abort: Cluster is currently active. Run this command on a node joining the cluster.")
 
     if not check_prereqs("join"):
