@@ -344,6 +344,15 @@ def add_sudo(cmd):
     return cmd
 
 
+def add_su(cmd, user):
+    """
+    Wrapped cmd with su -c "<cmd>" <user>
+    """
+    if user == "root":
+        return cmd
+    return "su -c \"{}\" {}".format(cmd, user)
+
+
 def chown(path, user, group):
     if isinstance(user, int):
         uid = user
@@ -2084,12 +2093,13 @@ def get_iplist_corosync_using():
     return re.findall(r'id\s*=\s*(.*)', out)
 
 
-def check_ssh_passwd_need(host):
+def check_ssh_passwd_need(host, user="root"):
     """
     Check whether access to host need password
     """
     ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
     ssh_cmd = "ssh {} -T -o Batchmode=yes {} true".format(ssh_options, host)
+    ssh_cmd = add_su(ssh_cmd, user)
     rc, _, _ = get_stdout_stderr(ssh_cmd)
     return rc != 0
 
