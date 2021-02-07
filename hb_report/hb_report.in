@@ -82,7 +82,10 @@ def get_log():
     if constants.CTS:
         pass  # TODO
     else:
-        getstampproc = utillib.find_getstampproc(constants.HA_LOG)
+        try:
+            getstampproc = utillib.find_getstampproc(constants.HA_LOG)
+        except PermissionError:
+            return
         if getstampproc:
             constants.GET_STAMP_FUNC = getstampproc
             if utillib.dump_logset(constants.HA_LOG, constants.FROM_TIME, constants.TO_TIME, outf):
