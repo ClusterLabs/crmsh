@@ -1386,8 +1386,8 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.corosync.QDevice.enable_qnetd')
     @mock.patch('crmsh.utils.cluster_run_cmd')
     @mock.patch('crmsh.bootstrap.status')
-    def test_start_qdevice_service(self, mock_status, mock_cluster_run, mock_enable_qnetd, mock_start_qnetd):
-        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip)
+    def test_start_qdevice_service_reload(self, mock_status, mock_cluster_run, mock_enable_qnetd, mock_start_qnetd):
+        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, qdevice_reload_policy=bootstrap.QdevicePolicy.QDEVICE_RELOAD)
 
         bootstrap.start_qdevice_service()
 
@@ -1399,8 +1399,54 @@ class TestBootstrap(unittest.TestCase):
             ])
         mock_cluster_run.assert_has_calls([
             mock.call("systemctl enable corosync-qdevice"),
-            mock.call("systemctl start corosync-qdevice")
+            mock.call("systemctl restart corosync-qdevice")
             ])
+        mock_enable_qnetd.assert_called_once_with()
+        mock_start_qnetd.assert_called_once_with()
+
+    @mock.patch('crmsh.corosync.QDevice.start_qnetd')
+    @mock.patch('crmsh.corosync.QDevice.enable_qnetd')
+    @mock.patch('crmsh.bootstrap.wait_for_cluster')
+    @mock.patch('crmsh.utils.cluster_run_cmd')
+    @mock.patch('crmsh.bootstrap.status')
+    def test_start_qdevice_service_restart(self, mock_status, mock_cluster_run, mock_wait, mock_enable_qnetd, mock_start_qnetd):
+        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, qdevice_reload_policy=bootstrap.QdevicePolicy.QDEVICE_RESTART)
+
+        bootstrap.start_qdevice_service()
+
+        mock_status.assert_has_calls([
+            mock.call("Enable corosync-qdevice.service in cluster"),
+            mock.call("Restarting cluster service"),
+            mock.call("Enable corosync-qnetd.service on 10.10.10.123"),
+            mock.call("Starting corosync-qnetd.service on 10.10.10.123")
+            ])
+        mock_wait.assert_called_once_with()
+        mock_cluster_run.assert_has_calls([
+            mock.call("systemctl enable corosync-qdevice"),
+            mock.call("crm cluster restart")
+            ])
+        mock_enable_qnetd.assert_called_once_with()
+        mock_start_qnetd.assert_called_once_with()
+
+    @mock.patch('crmsh.corosync.QDevice.start_qnetd')
+    @mock.patch('crmsh.corosync.QDevice.enable_qnetd')
+    @mock.patch('crmsh.bootstrap.warn')
+    @mock.patch('crmsh.utils.cluster_run_cmd')
+    @mock.patch('crmsh.bootstrap.status')
+    def test_start_qdevice_service_warn(self, mock_status, mock_cluster_run, mock_warn, mock_enable_qnetd, mock_start_qnetd):
+        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, qdevice_reload_policy=bootstrap.QdevicePolicy.QDEVICE_RESTART_LATER)
+
+        bootstrap.start_qdevice_service()
+
+        mock_status.assert_has_calls([
+            mock.call("Enable corosync-qdevice.service in cluster"),
+            mock.call("Enable corosync-qnetd.service on 10.10.10.123"),
+            mock.call("Starting corosync-qnetd.service on 10.10.10.123")
+            ])
+        mock_cluster_run.assert_has_calls([
+            mock.call("systemctl enable corosync-qdevice"),
+            ])
+        mock_warn.assert_called_once_with("To use qdevice service, need to restart cluster service manually on each node")
         mock_enable_qnetd.assert_called_once_with()
         mock_start_qnetd.assert_called_once_with()
 
@@ -1414,7 +1460,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.corosync.QDevice.remove_qdevice_db')
     def test_config_qdevice(self, mock_remove_qdevice_db, mock_write_qdevice_config, mock_is_unicast,
             mock_add_nodelist, mock_status_long, mock_update_votes, mock_cluster_run, mock_status_done):
-        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip)
+        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, qdevice_reload_policy=bootstrap.QdevicePolicy.QDEVICE_RELOAD)
         mock_is_unicast.return_value = False
 
         bootstrap.config_qdevice()
@@ -1458,12 +1504,15 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.status_long')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.bootstrap.status')
+    @mock.patch('crmsh.bootstrap.evaluate_qdevice_quorum_effect')
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.utils.is_qdevice_configured')
-    def test_remove_qdevice(self, mock_qdevice_configured, mock_confirm, mock_status, mock_invoke,
-            mock_status_long, mock_get_value, mock_qdevice, mock_update_votes, mock_status_done):
+    def test_remove_qdevice_reload(self, mock_qdevice_configured, mock_confirm, mock_reachable, mock_evaluate,
+            mock_status, mock_invoke, mock_status_long, mock_get_value, mock_qdevice, mock_update_votes, mock_status_done):
         mock_qdevice_configured.return_value = True
         mock_confirm.return_value = True
+        mock_evaluate.return_value = bootstrap.QdevicePolicy.QDEVICE_RELOAD
         mock_get_value.return_value = "10.10.10.123"
         mock_qdevice_inst = mock.Mock()
         mock_qdevice.return_value = mock_qdevice_inst
@@ -1474,6 +1523,8 @@ class TestBootstrap(unittest.TestCase):
 
         mock_qdevice_configured.assert_called_once_with()
         mock_confirm.assert_called_once_with("Removing QDevice service and configuration from cluster: Are you sure?")
+        mock_reachable.assert_called_once_with()
+        mock_evaluate.assert_called_once_with(bootstrap.QDEVICE_REMOVE)
         mock_status.assert_has_calls([
             mock.call("Disable corosync-qdevice.service"),
             mock.call("Stopping corosync-qdevice.service")
@@ -1546,6 +1597,42 @@ class TestBootstrap(unittest.TestCase):
         res = bootstrap.invokerc("cmd")
         self.assertEqual(res, True)
         mock_invoke.assert_called_once_with("cmd")
+
+    @mock.patch('crmsh.utils.is_quorate')
+    @mock.patch('crmsh.utils.get_quorum_votes_dict')
+    def test_evaluate_qdevice_quorum_effect_reload(self, mock_get_dict, mock_quorate):
+        mock_get_dict.return_value = {'Expected': '2', 'Total': '2'}
+        mock_quorate.return_value = True
+        res = bootstrap.evaluate_qdevice_quorum_effect(bootstrap.QDEVICE_ADD)
+        self.assertEqual(res, bootstrap.QdevicePolicy.QDEVICE_RELOAD)
+        mock_get_dict.assert_called_once_with()
+        mock_quorate.assert_called_once_with(3, 2)
+
+    @mock.patch('crmsh.utils.has_resource_running')
+    @mock.patch('crmsh.utils.is_quorate')
+    @mock.patch('crmsh.utils.get_quorum_votes_dict')
+    def test_evaluate_qdevice_quorum_effect_reload(self, mock_get_dict, mock_quorate, mock_ra_running):
+        mock_get_dict.return_value = {'Expected': '2', 'Total': '2'}
+        mock_quorate.return_value = False
+        mock_ra_running.return_value = True
+        res = bootstrap.evaluate_qdevice_quorum_effect(bootstrap.QDEVICE_REMOVE)
+        self.assertEqual(res, bootstrap.QdevicePolicy.QDEVICE_RESTART_LATER)
+        mock_get_dict.assert_called_once_with()
+        mock_quorate.assert_called_once_with(2, 1)
+        mock_ra_running.assert_called_once_with()
+
+    @mock.patch('crmsh.utils.has_resource_running')
+    @mock.patch('crmsh.utils.is_quorate')
+    @mock.patch('crmsh.utils.get_quorum_votes_dict')
+    def test_evaluate_qdevice_quorum_effect(self, mock_get_dict, mock_quorate, mock_ra_running):
+        mock_get_dict.return_value = {'Expected': '2', 'Total': '2'}
+        mock_quorate.return_value = False
+        mock_ra_running.return_value = False
+        res = bootstrap.evaluate_qdevice_quorum_effect(bootstrap.QDEVICE_REMOVE)
+        self.assertEqual(res, bootstrap.QdevicePolicy.QDEVICE_RESTART)
+        mock_get_dict.assert_called_once_with()
+        mock_quorate.assert_called_once_with(2, 1)
+        mock_ra_running.assert_called_once_with()
 
 
 class TestValidation(unittest.TestCase):
@@ -1855,67 +1942,6 @@ class TestValidation(unittest.TestCase):
         mock_this_node.assert_called_once_with()
         mock_error.assert_not_called()
         mock_remove.assert_called_once_with()
-
-    @mock.patch('crmsh.bootstrap.error')
-    @mock.patch('crmsh.utils.is_qdevice_configured')
-    def test_remove_qdevice_not_configured(self, mock_configured, mock_error):
-        mock_configured.return_value = False
-        mock_error.side_effect = SystemExit
-
-        with self.assertRaises(SystemExit):
-            bootstrap.remove_qdevice()
-
-        mock_configured.assert_called_once_with()
-        mock_error.assert_called_once_with("No QDevice configuration in this cluster")
-
-    @mock.patch('crmsh.bootstrap.confirm')
-    @mock.patch('crmsh.utils.is_qdevice_configured')
-    def test_remove_qdevice_not_confrim(self, mock_configured, mock_confirm):
-        mock_configured.return_value = True
-        mock_confirm.return_value = False
-
-        bootstrap.remove_qdevice()
-
-        mock_configured.assert_called_once_with()
-        mock_confirm.assert_called_once_with("Removing QDevice service and configuration from cluster: Are you sure?")
-
-    @mock.patch('crmsh.bootstrap.status_done')
-    @mock.patch('crmsh.bootstrap.update_expected_votes')
-    @mock.patch('crmsh.corosync.QDevice')
-    @mock.patch('crmsh.corosync.get_value')
-    @mock.patch('crmsh.bootstrap.status_long')
-    @mock.patch('crmsh.bootstrap.invoke')
-    @mock.patch('crmsh.bootstrap.status')
-    @mock.patch('crmsh.bootstrap.confirm')
-    @mock.patch('crmsh.utils.is_qdevice_configured')
-    def test_remove_qdevice(self, mock_configured, mock_confirm, mock_status, mock_invoke,
-            mock_long, mock_get_value, mock_qdevice, mock_expected, mock_done):
-        mock_configured.return_value = True
-        mock_confirm.return_value = True
-        mock_get_value.return_value = "node1"
-        mock_qdevice_inst = mock.Mock()
-        mock_qdevice.return_value = mock_qdevice_inst
-
-        bootstrap.remove_qdevice()
-
-        mock_configured.assert_called_once_with()
-        mock_confirm.assert_called_once_with("Removing QDevice service and configuration from cluster: Are you sure?")
-        mock_status.assert_has_calls([
-            mock.call("Disable corosync-qdevice.service"),
-            mock.call("Stopping corosync-qdevice.service")
-            ])
-        mock_invoke.assert_has_calls([
-            mock.call("crm cluster run 'systemctl disable corosync-qdevice'"),
-            mock.call("crm cluster run 'systemctl stop corosync-qdevice'"),
-            mock.call("crm cluster run 'crm corosync reload'")
-            ])
-        mock_long.assert_called_once_with("Removing QDevice configuration from cluster")
-        mock_get_value.assert_called_once_with("quorum.device.net.host")
-        mock_qdevice.assert_called_once_with("node1")
-        mock_qdevice_inst.remove_qdevice_config.assert_called_once_with()
-        mock_qdevice_inst.remove_qdevice_db.assert_called_once_with()
-        mock_expected.assert_called_once_with()
-        mock_done.assert_called_once_with()
 
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.utils.ext_cmd_nosudo')

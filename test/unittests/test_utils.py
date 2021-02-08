@@ -1250,3 +1250,55 @@ def test_ping_node(mock_run):
         utils.ping_node("node_unreachable")
     assert str(err.value) == 'host "node_unreachable" is unreachable: error data'
     mock_run.assert_called_once_with("ping -c 1 node_unreachable")
+
+
+def test_is_quorate():
+    assert utils.is_quorate(3, 2) is True
+    assert utils.is_quorate(3, 1) is False
+
+
+@mock.patch("crmsh.utils.get_stdout_stderr")
+def test_get_stdout_or_raise_error_failed(mock_run):
+    mock_run.return_value = (1, None, "error data")
+    with pytest.raises(ValueError) as err:
+        utils.get_stdout_or_raise_error("cmd")
+    assert str(err.value) == 'Failed to run "cmd": error data'
+    mock_run.assert_called_once_with("cmd")
+
+
+@mock.patch("crmsh.utils.get_stdout_stderr")
+def test_get_stdout_or_raise_error(mock_run):
+    mock_run.return_value = (0, "output data", None)
+    res = utils.get_stdout_or_raise_error("cmd")
+    assert res == "output data"
+    mock_run.assert_called_once_with("cmd")
+
+
+@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+def test_get_quorum_votes_dict(mock_run):
+    mock_run.return_value = """
+Votequorum information
+----------------------
+Expected votes:   1
+Highest expected: 1
+Total votes:      1
+Quorum:           1
+Flags:            Quorate
+    """
+    res = utils.get_quorum_votes_dict()
+    assert res == {'Expected': '1', 'Total': '1'}
+    mock_run.assert_called_once_with("corosync-quorumtool -s")
+
+
+@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+def test_has_resource_running(mock_run):
+    mock_run.return_value = """
+Node List:
+  * Online: [ 15sp2-1 ]
+
+Active Resources:
+  * No active resources
+    """
+    res = utils.has_resource_running()
+    assert res is False
+    mock_run.assert_called_once_with("crm_mon -1")
