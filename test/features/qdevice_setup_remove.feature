@@ -14,6 +14,8 @@ Feature: corosync qdevice/qnetd setup/remove process
   Scenario: Setup qdevice/qnetd during init/join process
     When    Run "crm cluster init --qnetd-hostname=qnetd-node -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
+    # for bsc#1181415
+    Then    Expected "Restarting cluster service" in stdout
     And     Service "corosync-qdevice" is "started" on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
@@ -35,6 +37,8 @@ Feature: corosync qdevice/qnetd setup/remove process
     When    Run "echo "# This is a test for bsc#1166684" >> /etc/corosync/corosync.conf" on "hanode1"
     When    Run "scp /etc/corosync/corosync.conf root@hanode2:/etc/corosync" on "hanode1"
     When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1"
+    # for bsc#1181415
+    Then    Expected "Starting corosync-qdevice.service in cluster" in stdout
     Then    Service "corosync-qdevice" is "started" on "hanode1"
     And     Service "corosync-qdevice" is "started" on "hanode2"
     And     Service "corosync-qnetd" is "started" on "qnetd-node"
