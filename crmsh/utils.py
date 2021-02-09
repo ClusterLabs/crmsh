@@ -489,13 +489,14 @@ def open_atomic(filepath, mode="r", buffering=-1, fsync=False):
         os.rename(tmppath, filepath)
 
 
-def str2file(s, fname):
+def str2file(s, fname, mod=0o644):
     '''
     Write a string to a file.
     '''
     try:
         with open_atomic(fname, 'w') as dst:
             dst.write(s)
+        os.chmod(fname, mod)
     except IOError, msg:
         common_err(msg)
         return False
