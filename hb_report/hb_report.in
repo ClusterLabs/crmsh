@@ -578,11 +578,11 @@ start_slave_collector() {
 
 	dumpenv |
 	if [ "$node" = "$WE" ]; then
-		debug "running: $LOCAL_SUDO hb_report __slave"
-		$LOCAL_SUDO ${HA_NOARCHBIN}/hb_report __slave
+		debug "running: hb_report __slave"
+		${HA_NOARCHBIN}/hb_report __slave
 	else
-		debug "running: ssh $SSH_OPTS $node \"$SUDO ${HA_NOARCHBIN}/hb_report __slave\""
-		ssh $SSH_OPTS $node "$SUDO ${HA_NOARCHBIN}/hb_report __slave"
+		debug "running: ssh $SSH_OPTS $node \"${HA_NOARCHBIN}/hb_report __slave\""
+		ssh $SSH_OPTS $node "${HA_NOARCHBIN}/hb_report __slave"
 	fi | (cd $WORKDIR && tar xf -)
 }
 
