@@ -1294,4 +1294,3 @@ def create_configuration(clustername="hacluster",
                               _COROSYNC_CONF_TEMPLATE_RING_ALL + \
                               _COROSYNC_CONF_TEMPLATE_TAIL
     utils.str2file(_COROSYNC_CONF_TEMPLATE % config_common, conf())
-    os.chmod(conf(), 0o644)
