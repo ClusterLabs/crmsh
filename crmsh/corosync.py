@@ -656,6 +656,7 @@ class Parser(object):
 
     def __init__(self, config_file=None):
         """
+        Init function
         """
         self._config_file = config_file if config_file else conf()
         self._config_dict = {}
@@ -843,46 +844,43 @@ class Parser(object):
             return (key, "}")
         return (key+"__END", "}")
 
-    def add_section(self, section_path):
-        """
-        """
+    def _find_last_match(self, section_path):
         # totem.cluster_name -> error
         # totem.new_section  -> before
         # quorum.device      -> before
         # totem.interface    -> after
         # nodelist.node      -> after
         # nodelist           -> after
-        after = None
-        last_match = ""
-        for key in self._inner_section_end_list:
-            if self._matched_inner_section_end(section_path, key):
-                last_match = key
-                after = True
-                print("1111")
+        after_match_flag = True
+        two_levels = False
+        while True:
+            for key in self._inner_section_end_list[::-1]:
+                if self._matched_inner_section_end(section_path, key):
+                    return key, after_match_flag
 
-        # add section from root
-        if not last_match:
-            parent_section = '.'.join(section_path.split('.')[:-1])
-            for key in self._inner_section_end_list:
-                if self._matched_inner_section_end(parent_section, key):
-                    last_match = key
-                    print(last_match)
-                    after = False
-                    print("2222")
+            if two_levels:
+                raise ValueError("No section {} exist".format(section_path))
+
+            section_path = '.'.join(section_path.split('.')[:-1])
+            if not section_path:
+                after_match_flag = True
+                return self._inner_section_end_list[-1], after_match_flag
             else:
-                last_match = self._inner_section_end_list[-1]
-                print("3333")
-                after = True
+                two_levels = True
+                after_match_flag = False
+
+
+    def add_section(self, section_path):
+        """
+        """
+        last_match, after = self._find_last_match(section_path)
+        offset = 1 if after else 0
 
         with self._operate_config_list():
             key = self._unused_inner_key(section_path)
             index = self._config_list.index(self._section_end_item(last_match))
-            if not after:
-                self._config_list.insert(index, self._section_item(key))
-                self._config_list.insert(index + 1, self._section_end_item(key))
-            else:
-                self._config_list.insert(index+1, self._section_item(key))
-                self._config_list.insert(index+2, self._section_end_item(key))
+            self._config_list.insert(index+offset, self._section_item(key))
+            self._config_list.insert(index+1+offset, self._section_end_item(key))
 
     def _find_and_insert(self, inner_key, value):
         """
@@ -911,6 +909,14 @@ class Parser(object):
             if not self._is_inner_section(self._inner_section_name(key)):
                 raise ValueError("No section {} exist".format(self._section_name(key)))
             self._find_and_insert(key, value)
+
+    def remove(self, path, index=0):
+        key = self._inner_key(path, index)
+        del self._config_dict[key]
+
+    def remove_section(self):
+        with self._operate_config_list():
+            pass
 
     def write_to_file(self):
         """
