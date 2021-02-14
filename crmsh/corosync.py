@@ -651,6 +651,8 @@ class QDevice(object):
 
 class Parser(object):
     """
+    Class to parse config file which syntax is similar with corosync.conf
+    Parse corosync.conf by default
     """
     INDENT = 4
 
@@ -845,33 +847,42 @@ class Parser(object):
         return (key+"__END", "}")
 
     def _find_last_match(self, section_path):
-        # totem.cluster_name -> error
-        # totem.new_section  -> before
-        # quorum.device      -> before
-        # totem.interface    -> after
-        # nodelist.node      -> after
-        # nodelist           -> after
-        after_match_flag = True
+        """
+        When adding seciton, need to find an anchor
+        Then the new section name will insert just after or before this anchor
+
+        Example:
+          section_path  |        anchor        |  after/before anchor
+          ===========================================================
+          quorum.device |        quorum        |  before
+          nodelist      |  <last section name> |  after
+          nodelist.node |     nodelist.node    |  after
+        """
+        after = True
         two_levels = False
+
         while True:
             for key in self._inner_section_end_list[::-1]:
                 if self._matched_inner_section_end(section_path, key):
-                    return key, after_match_flag
+                    return key, after
 
             if two_levels:
                 raise ValueError("No section {} exist".format(section_path))
 
             section_path = '.'.join(section_path.split('.')[:-1])
-            if not section_path:
-                after_match_flag = True
-                return self._inner_section_end_list[-1], after_match_flag
-            else:
+            if section_path:
+                after = False
                 two_levels = True
-                after_match_flag = False
+            else:
+                # e.g, add new nodelist section in mcast mode
+                after = True
+                return self._inner_section_end_list[-1], after
 
 
     def add_section(self, section_path):
         """
+        Add section
+        Need to find the index where to insert
         """
         last_match, after = self._find_last_match(section_path)
         offset = 1 if after else 0
@@ -879,12 +890,13 @@ class Parser(object):
         with self._operate_config_list():
             key = self._unused_inner_key(section_path)
             index = self._config_list.index(self._section_end_item(last_match))
+
             self._config_list.insert(index+offset, self._section_item(key))
             self._config_list.insert(index+1+offset, self._section_end_item(key))
 
     def _find_and_insert(self, inner_key, value):
         """
-        Find the index then insert
+        When set value, find the index then insert
         """
         with self._operate_config_list():
             section_name = self._inner_section_name(inner_key)
@@ -907,16 +919,19 @@ class Parser(object):
         else:
             # must contain a known section name
             if not self._is_inner_section(self._inner_section_name(key)):
-                raise ValueError("No section {} exist".format(self._section_name(key)))
+                raise ValueError("No section {} exist at index {}".format(self._section_name(key), index))
             self._find_and_insert(key, value)
 
     def remove(self, path, index=0):
         key = self._inner_key(path, index)
         del self._config_dict[key]
 
-    def remove_section(self):
+    def remove_section(self, section_path, index=0):
         with self._operate_config_list():
-            pass
+            inner_sec_name = self._inner_key(section_path, index)
+            section_start_index = self._config_list.index(self._section_item(inner_sec_name))
+            section_end_index = self._config_list.index(self._section_end_item(inner_sec_name))
+            self._config_list = self._config_list[:section_start_index] + self._config_list[section_end_index+1:]
 
     def write_to_file(self):
         """
@@ -924,6 +939,14 @@ class Parser(object):
         """
         with open(self._config_file, 'w') as f:
             f.write(self.to_string())
+
+    @staticmethod
+    def _token_item(line, row, col, token_type=NAME, orig_line=''):
+        """
+        Generate tuple for untokenize
+        Details see https://github.com/python/cpython/blob/3.9/Lib/tokenize.py
+        """
+        return (token_type, line, (row, col), (row, col+len(line)), orig_line)
 
     def to_string(self):
         """
@@ -946,7 +969,7 @@ class Parser(object):
 
             row = index + 1
             col = (len(key.split('.'))-1) * self.INDENT
-            token_list.append((NAME, line, (row, col), (row, col+len(line)), ''))
+            token_list.append(self._token_item(line, row, col))
 
         res = tokenize.untokenize(token_list)
         return res.replace('\\\n', '\n')
