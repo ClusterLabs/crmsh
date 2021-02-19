@@ -91,7 +91,7 @@ class Task(object):
         print(self.header())
         if not self.yes and not crmshutils.ask("Run?"):
             self.info("Testcase cancelled")
-            sys.exit()
+            raise crmshutils.TerminateSubCommand
 
     def task_pre_check(self, need_fence=True):
         """
