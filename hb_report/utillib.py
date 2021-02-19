@@ -1521,14 +1521,12 @@ def stdchannel_redirected(stdchannel, dest_filename):
 
 def start_slave_collector(node, arg_str):
     if node == constants.WE:
-        cmd = r"hb_report __slave".format(os.getcwd())
+        cmd = r"/usr/sbin/hb_report __slave".format(os.getcwd())
         for item in arg_str.split():
             cmd += " {}".format(str(item))
         _, out = crmutils.get_stdout(cmd)
     else:
-        cmd = r'ssh {} {} "{} hb_report __slave"'.\
-              format(constants.SSH_OPTS, node,
-                     constants.SUDO, os.getcwd())
+        cmd = r'ssh {} {} "/usr/sbin/hb_report __slave"'.format(constants.SSH_OPTS, node, os.getcwd())
         for item in arg_str.split():
             cmd += " {}".format(str(item))
         code, out, err = crmutils.get_stdout_stderr(cmd)
