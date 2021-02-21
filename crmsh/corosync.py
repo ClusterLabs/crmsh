@@ -747,10 +747,20 @@ class Parser(object):
             key = re.sub("__[0-9]+", "__{}".format(index), key)
         return key
 
+    def _verify_config_file(self):
+        """
+        """
+        with open(self._config_file) as f:
+            data = f.read()
+            if len(re.findall("[{}]", data)) % 2 != 0:
+                raise ValueError("Missing closing brace")
+
     def load_config_file(self):
         """
         Use tokenize.generate_tokens to generate dict self._config_dict
         """
+        self._verify_config_file()
+
         key_prefix = ""
         key_prefix_list = []
         section_key_list = []
