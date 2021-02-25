@@ -566,21 +566,21 @@ class RAInfo(object):
         rc = 0
         d = {}
         for nvp in nvpairs:
-            if 'name' in nvp.attrib and 'value' in nvp.attrib:
+            if 'name' in nvp.attrib:
                 d[nvp.get('name')] = nvp.get('value')
         if not existence_only:
             for p in self.reqd_params_list():
                 if self.unreq_param(p):
                     continue
                 if p not in d:
-                    common_err("%s: required parameter %s not defined" % (ident, p))
+                    common_err("{}: required parameter \"{}\" not defined".format(ident, p))
                     rc |= utils.get_check_rc()
         for p in d:
             if p.startswith("$"):
                 # these are special, non-RA parameters
                 continue
             if p not in self.params():
-                common_err("%s: parameter %s does not exist" % (ident, p))
+                common_err("{}: parameter \"{}\" is not known".format(ident, p))
                 rc |= utils.get_check_rc()
         return rc
 
