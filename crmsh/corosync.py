@@ -843,8 +843,10 @@ class Parser(object):
         The contextmanager for convert between config dict and list
         """
         self._config_list = list(self._config_dict.items())
-        yield
-        self._config_dict = dict(self._config_list)
+        try:
+            yield
+        finally:
+            self._config_dict = dict(self._config_list)
 
     @staticmethod
     def _section_item(key):
