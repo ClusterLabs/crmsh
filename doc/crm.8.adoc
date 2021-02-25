@@ -2446,18 +2446,6 @@ Example:
 standby bob reboot
 ...............
 
-
-[[cmdhelp_node_status,show nodes' status as XML]]
-==== `status`
-
-Show nodes' status as XML. If the node parameter is omitted then
-all nodes are shown.
-
-Usage:
-...............
-status [<node>]
-...............
-
 [[cmdhelp_node_status-attr,manage status attributes]]
 ==== `status-attr`
 
