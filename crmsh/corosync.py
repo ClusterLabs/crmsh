@@ -860,7 +860,7 @@ class Parser(object):
 
     def _find_last_match(self, section_path):
         """
-        When adding seciton, need to find an anchor
+        When adding section, need to find an anchor
         Then the new section name will insert just after or before this anchor
 
         Example:
@@ -962,7 +962,7 @@ class Parser(object):
 
     def to_string(self):
         """
-        Use tokenize.untokenize to convert self._config_dit to string
+        Use tokenize.untokenize to convert self._config_dict into string
         """
         token_list = []
         for index, (key, value) in enumerate(self._config_dict.items()):
