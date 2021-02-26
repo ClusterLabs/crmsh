@@ -113,13 +113,6 @@ class NodeMgmt(command.UI):
                 return False
         return True
 
-    @command.completers(compl.nodes)
-    def do_status(self, context, node=None):
-        'usage: status [<node>]'
-        a = node and ('--xpath "//nodes/node[@uname=\'%s\']"' % node) or \
-            '-o nodes'
-        return utils.ext_cmd("%s %s" % (xmlutil.cib_dump, a)) == 0
-
     @command.alias('list')
     @command.completers(compl.nodes)
     def do_show(self, context, node=None):
