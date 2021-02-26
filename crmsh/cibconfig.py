@@ -2391,7 +2391,7 @@ class CibFactory(object):
         self.last_commit_time = 0
         # internal (just not to produce silly messages)
         self._no_constraint_rm_msg = False
-        self._crm_diff_cmd = None
+        self._crm_diff_cmd = "crm_diff --no-version"
 
     def is_cib_sane(self):
         # try to initialize
@@ -2531,17 +2531,6 @@ class CibFactory(object):
         schema.init_schema(self.cib_elem)
         return True
 
-    #
-    # create a doc from the list of objects
-    # (used by CibObjectSetRaw)
-    #
-    def bump_epoch(self):
-        try:
-            self.cib_attrs["epoch"] = str(int(self.cib_attrs["epoch"])+1)
-        except:
-            self.cib_attrs["epoch"] = "1"
-        common_debug("Bump epoch to %s" % (self.cib_attrs["epoch"]))
-
     def _get_cib_attributes(self, cib):
         for attr in list(cib.keys()):
             self.cib_attrs[attr] = cib.get(attr)
@@ -2669,20 +2658,8 @@ class CibFactory(object):
         if current_cib is None:
             return False
 
-        # check if crm_diff supports --no-version
-        if self._crm_diff_cmd is None:
-            rc, out = utils.get_stdout("crm_diff --help")
-            if "--no-version" in out:
-                self._crm_diff_cmd = 'crm_diff --no-version'
-            else:
-                self._crm_diff_cmd = 'crm_diff'
-
         self._copy_cib_attributes(current_cib, self.cib_orig)
         current_cib = None  # don't need that anymore
-        # only bump epoch if we don't have support for --no-version
-        if not self._crm_diff_cmd.endswith('--no-version'):
-            # now increase the epoch by 1
-            self.bump_epoch()
         self._set_cib_attributes(self.cib_elem)
         cib_s = xml_tostring(self.cib_orig, pretty_print=True)
         tmpf = str2tmp(cib_s, suffix=".xml")
@@ -2705,13 +2682,7 @@ class CibFactory(object):
         elif not cib_diff:
             common_err("crm_diff apparently failed to produce the diff (rc=%d)" % rc)
             return False
-        if not self._crm_diff_cmd.endswith('--no-version'):
-            # skip the version information for source and target
-            # if we dont have support for --no-version
-            e = etree.fromstring(cib_diff)
-            for tag in e.xpath("./version/*[self::target or self::source]"):
-                tag.attrib.clear()
-            cib_diff = xml_tostring(e)
+
         # for v1 diffs, fall back to non-patching if
         # any containers are modified, else strip the digest
         if "<diff" in cib_diff and "digest=" in cib_diff:
