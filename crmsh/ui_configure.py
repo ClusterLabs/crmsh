@@ -327,7 +327,11 @@ def primitive_complete_complex(args):
     if last_keyw is None:
         return []
 
-    return completers_set[last_keyw](agent, args) + keywords
+    complete_results = completers_set[last_keyw](agent, args)
+    if len(args) > 4 and '=' in args[-2]: # args[-1] will be the space
+        return complete_results + keywords
+
+    return complete_results
 
 
 def container_helptxt(params, helptxt, topic):
