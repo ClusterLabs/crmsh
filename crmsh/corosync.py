@@ -17,10 +17,6 @@ def conf():
     return os.getenv('COROSYNC_MAIN_CONFIG_FILE', '/etc/corosync/corosync.conf')
 
 
-def is_corosync_stack():
-    return utils.cluster_stack() == 'corosync'
-
-
 def check_tools():
     return all(utils.is_program(p)
                for p in ['corosync-cfgtool', 'corosync-quorumtool', 'corosync-cmapctl'])

@@ -571,26 +571,21 @@ Cluster Description
         '''
         Quick cluster health status. Corosync status, DRBD status...
         '''
-
-        stack = utils.cluster_stack()
-        if not stack:
-            err_buf.error("No supported cluster stack found (tried heartbeat|openais|corosync)")
-        if utils.cluster_stack() == 'corosync':
-            print("Name: {}\n".format(get_cluster_name()))
-            print("Services:")
-            for svc in ["corosync", "pacemaker"]:
-                info = utils.service_info(svc)
-                if info:
-                    print("%-16s %s" % (svc, info))
-                else:
-                    print("%-16s unknown" % (svc))
-
-            rc, outp = utils.get_stdout(['corosync-cfgtool', '-s'], shell=False)
-            if rc == 0:
-                print("")
-                print(outp)
+        print("Name: {}\n".format(get_cluster_name()))
+        print("Services:")
+        for svc in ["corosync", "pacemaker"]:
+            info = utils.service_info(svc)
+            if info:
+                print("%-16s %s" % (svc, info))
             else:
-                print("Failed to get corosync status")
+                print("%-16s unknown" % (svc))
+
+        rc, outp = utils.get_stdout(['corosync-cfgtool', '-s'], shell=False)
+        if rc == 0:
+            print("")
+            print(outp)
+        else:
+            print("Failed to get corosync status")
 
     @command.completers_repeating(compl.choice(['10', '60', '600']))
     def do_wait_for_startup(self, context, timeout='10'):
