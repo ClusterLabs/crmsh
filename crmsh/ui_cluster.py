@@ -285,15 +285,13 @@ Note:
         elif re.search("--qdevice-.*", ' '.join(sys.argv)) or (stage == "qdevice" and options.yes_to_all):
             parser.error("Option --qnetd-hostname is required if want to configure qdevice")
 
-        if options.sbd_devices and options.diskless_sbd:
-            parser.error("Can't use -s and -S options together")
-
         # if options.geo and options.name == "hacluster":
         #    parser.error("For a geo cluster, each cluster must have a unique name (use --name to set)")
         boot_context = bootstrap.Context.set_context(options)
         boot_context.ui_context = context
         boot_context.stage = stage
         boot_context.args = args
+        boot_context.cluster_is_running = utils.service_is_active("pacemaker.service")
         boot_context.type = "init"
 
         bootstrap.bootstrap_init(boot_context)
