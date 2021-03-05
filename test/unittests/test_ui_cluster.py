@@ -69,17 +69,14 @@ class TestCluster(unittest.TestCase):
         mock_info.assert_called_once_with("Cluster services already stopped")
 
     @mock.patch('crmsh.ui_cluster.err_buf.info')
-    @mock.patch('crmsh.utils.is_qdevice_configured')
     @mock.patch('crmsh.utils.stop_service')
     @mock.patch('crmsh.utils.service_is_active')
-    def test_do_stop(self, mock_active, mock_stop, mock_qdevice_configured, mock_info):
+    def test_do_stop(self, mock_active, mock_stop, mock_info):
         context_inst = mock.Mock()
-        mock_active.return_value = True
-        mock_qdevice_configured.return_value = True
+        mock_active.side_effect = [True, True]
 
         self.ui_cluster_inst.do_stop(context_inst)
 
-        mock_active.assert_called_once_with("corosync.service")
+        mock_active.assert_has_calls([mock.call("corosync.service"), mock.call("corosync-qdevice")])
         mock_stop.assert_has_calls([mock.call("corosync-qdevice"), mock.call("corosync")])
-        mock_qdevice_configured.assert_called_once_with()
         mock_info.assert_called_once_with("Cluster services stopped")

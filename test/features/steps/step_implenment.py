@@ -47,6 +47,16 @@ def step_impl(context, cmd, addr):
     context.stdout = out
 
 
+@then('Print stdout')
+def step_impl(context):
+    context.logger.info("\n{}".format(context.stdout))
+
+
+@then('Print stderr')
+def step_impl(context):
+    context.logger.info("\n{}".format(context.command_error_output))
+
+
 @when('Try "{cmd}" on "{addr}"')
 def step_impl(context, cmd, addr):
     run_command_local_or_remote(context, cmd, addr, err_record=True)

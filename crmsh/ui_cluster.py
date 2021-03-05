@@ -113,7 +113,7 @@ class Cluster(command.UI):
             if not utils.service_is_active("corosync.service"):
                 err_buf.info("Cluster services already stopped")
                 return
-            if utils.is_qdevice_configured():
+            if utils.service_is_active("corosync-qdevice"):
                 utils.stop_service("corosync-qdevice")
             utils.stop_service("corosync")
             err_buf.info("Cluster services stopped")

@@ -108,3 +108,39 @@ Feature: corosync qdevice/qnetd options validate
       usage: init [options] [STAGE]
       crm: error: Option --qnetd-hostname is required if want to configure qdevice
       """
+
+  @clean
+  Scenario: Setup qdevice on a single node cluster with RA running(bsc#1181415)
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "corosync-qdevice" is "stopped" on "hanode1"
+    When    Run "crm configure primitive d Dummy op monitor interval=3s" on "hanode1"
+    When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1"
+    Then    Expected "WARNING: To use qdevice service, need to restart cluster service manually on each node" in stdout
+    And     Service "corosync-qdevice" is "stopped" on "hanode1"
+    When    Run "crm cluster restart" on "hanode1"
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+
+  @clean
+  Scenario: Remove qdevice from a single node cluster(bsc#1181415)
+    When    Run "crm cluster init --qnetd-hostname=qnetd-node -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "corosync-qdevice" is "started" on "hanode1"
+    When    Run "crm cluster remove --qdevice -y" on "hanode1"
+    Then    Expected "Restarting cluster service" in stdout
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "corosync-qdevice" is "stopped" on "hanode1"
+
+  @clean
+  Scenario: Remove qdevice from a single node cluster which has RA running(bsc#1181415)
+    When    Run "crm cluster init --qnetd-hostname=qnetd-node -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "corosync-qdevice" is "started" on "hanode1"
+    When    Run "crm configure primitive d Dummy op monitor interval=3s" on "hanode1"
+    When    Run "crm cluster remove --qdevice -y" on "hanode1"
+    Then    Expected "WARNING: To remove qdevice service, need to restart cluster service manually on each node" in stdout
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "corosync-qdevice" is "started" on "hanode1"
+    When    Run "crm cluster restart" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "corosync-qdevice" is "stopped" on "hanode1"
