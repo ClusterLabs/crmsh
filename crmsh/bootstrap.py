@@ -1865,15 +1865,42 @@ def evaluate_qdevice_quorum_effect(mode):
         return QdevicePolicy.QDEVICE_RESTART
 
 
+def configure_qdevice_interactive():
+    """
+    Configure qdevice on interactive mode
+    """
+    if _context.yes_to_all or not confirm("Do you want to configure QDevice?"):
+        return
+    qnetd_addr = prompt_for_string("HOST or IP of the QNetd server to be used")
+    if not qnetd_addr:
+        error("Address of QNetd is required")
+    qdevice_port = prompt_for_string("TCP PORT of QNetd server", default=5403)
+    qdevice_algo = prompt_for_string("QNetd decision ALGORITHM (ffsplit/lms)", default="ffsplit")
+    qdevice_tie_breaker = prompt_for_string("QNetd TIE_BREAKER (lowest/highest/valid node id)", default="lowest")
+    qdevice_tls = prompt_for_string("Whether using TLS on QDevice/QNetd (on/off/required)", default="on")
+    qdevice_heuristics = prompt_for_string("Heuristics COMMAND to run with absolute path; For multiple commands, use \";\" to separate")
+    qdevice_heuristics_mode = prompt_for_string("MODE of operation of heuristics (on/sync/off)", default="sync") if qdevice_heuristics else None
+    _context.qdevice_inst = corosync.QDevice(
+            qnetd_addr,
+            port=qdevice_port,
+            algo=qdevice_algo,
+            tie_breaker=qdevice_tie_breaker,
+            tls=qdevice_tls,
+            cmds=qdevice_heuristics,
+            mode=qdevice_heuristics_mode)
+    _context.qdevice_inst.valid_attr()
+
+
 def init_qdevice():
     """
     Setup qdevice and qnetd service
     """
+    if not _context.qdevice_inst:
+        configure_qdevice_interactive()
     # If don't want to config qdevice, return
     if not _context.qdevice_inst:
         utils.disable_service("corosync-qdevice.service")
         return
-
     if _context.stage == "qdevice":
         utils.check_all_nodes_reachable()
         _context.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD)
