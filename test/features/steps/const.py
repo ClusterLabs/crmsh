@@ -98,20 +98,21 @@ QDevice configuration:
 
   --qnetd-hostname HOST
                         HOST or IP of the QNetd server to be used
-  --qdevice-port PORT   TCP PORT of QNetd server(default:5403)
+  --qdevice-port PORT   TCP PORT of QNetd server (default:5403)
   --qdevice-algo ALGORITHM
-                        QNetd decision ALGORITHM(ffsplit/lms, default:ffsplit)
+                        QNetd decision ALGORITHM (ffsplit/lms,
+                        default:ffsplit)
   --qdevice-tie-breaker TIE_BREAKER
-                        QNetd TIE_BREAKER(lowest/highest/valid_node_id,
+                        QNetd TIE_BREAKER (lowest/highest/valid_node_id,
                         default:lowest)
-  --qdevice-tls TLS     Whether using TLS on QDevice/QNetd(on/off/required,
+  --qdevice-tls TLS     Whether using TLS on QDevice/QNetd (on/off/required,
                         default:on)
   --qdevice-heuristics COMMAND
                         COMMAND to run with absolute path. For multiple
-                        commands, use ";" to separate(details about heuristics
-                        can see man 8 corosync-qdevice)
+                        commands, use ";" to separate (details about
+                        heuristics can see man 8 corosync-qdevice)
   --qdevice-heuristics-mode MODE
-                        MODE of operation of heuristics(on/sync/off,
+                        MODE of operation of heuristics (on/sync/off,
                         default:sync)
 
 Storage configuration:

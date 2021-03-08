@@ -102,7 +102,7 @@ Feature: corosync qdevice/qnetd options validate
     Given   Cluster service is "stopped" on "hanode1"
     When    Run "crm cluster init -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
-    When    Try "crm cluster init qdevice"
+    When    Try "crm cluster init qdevice -y"
     Then    Except multiple lines
       """
       usage: init [options] [STAGE]
