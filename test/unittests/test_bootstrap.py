@@ -1382,6 +1382,51 @@ class TestBootstrap(unittest.TestCase):
         mock_status_done.assert_called_once_with()
         mock_start_qdevice.assert_called_once_with()
 
+    @mock.patch('crmsh.bootstrap.prompt_for_string')
+    def test_configure_qdevice_interactive_return(self, mock_prompt):
+        bootstrap._context = mock.Mock(yes_to_all=True)
+        bootstrap.configure_qdevice_interactive()
+        mock_prompt.assert_not_called()
+
+    @mock.patch('crmsh.bootstrap.error')
+    @mock.patch('crmsh.bootstrap.prompt_for_string')
+    @mock.patch('crmsh.bootstrap.confirm')
+    def test_configure_qdevice_interactive_error(self, mock_confirm, mock_prompt, mock_error):
+        bootstrap._context = mock.Mock(yes_to_all=False)
+        mock_confirm.return_value = True
+        mock_prompt.return_value = None
+        mock_error.side_effect = SystemExit
+
+        with self.assertRaises(SystemExit):
+            bootstrap.configure_qdevice_interactive()
+
+        mock_error.assert_called_once_with("Address of QNetd is required")
+        mock_confirm.assert_called_once_with("Do you want to configure QDevice?")
+        mock_prompt.assert_called_once_with("HOST or IP of the QNetd server to be used")
+
+    @mock.patch('crmsh.corosync.QDevice')
+    @mock.patch('crmsh.bootstrap.prompt_for_string')
+    @mock.patch('crmsh.bootstrap.confirm')
+    def test_configure_qdevice_interactive(self, mock_confirm, mock_prompt, mock_qdevice):
+        bootstrap._context = mock.Mock(yes_to_all=False)
+        mock_confirm.return_value = True
+        mock_prompt.side_effect = ["qnetd-node", 5403, "ffsplit", "lowest", "on", None]
+        mock_qdevice_inst = mock.Mock()
+        mock_qdevice.return_value = mock_qdevice_inst
+
+        bootstrap.configure_qdevice_interactive()
+        mock_confirm.assert_called_once_with("Do you want to configure QDevice?")
+        mock_prompt.assert_has_calls([
+            mock.call("HOST or IP of the QNetd server to be used"),
+            mock.call("TCP PORT of QNetd server", default=5403),
+            mock.call("QNetd decision ALGORITHM (ffsplit/lms)", default="ffsplit"),
+            mock.call("QNetd TIE_BREAKER (lowest/highest/valid node id)", default="lowest"),
+            mock.call("Whether using TLS on QDevice/QNetd (on/off/required)", default="on"),
+            mock.call("Heuristics COMMAND to run with absolute path; For multiple commands, use \";\" to separate")
+            ])
+        mock_qdevice.assert_called_once_with('qnetd-node', port=5403, algo='ffsplit', tie_breaker='lowest', tls='on', cmds=None, mode=None)
+        mock_qdevice_inst.valid_attr.assert_called_once_with()
+
     @mock.patch('crmsh.corosync.QDevice.start_qnetd')
     @mock.patch('crmsh.corosync.QDevice.enable_qnetd')
     @mock.patch('crmsh.utils.cluster_run_cmd')
