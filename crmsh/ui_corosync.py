@@ -34,10 +34,6 @@ class Corosync(command.UI):
     name = "corosync"
 
     def requires(self):
-        stack = utils.cluster_stack()
-        if len(stack) > 0 and stack != 'corosync':
-            err_buf.warning("Unsupported cluster stack %s detected." % (stack))
-            return False
         return corosync.check_tools()
 
     def do_status(self, context):
