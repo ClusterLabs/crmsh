@@ -1103,17 +1103,6 @@ def print_stacktrace():
     traceback.print_stack(sf)
 
 
-@memoize
-def cluster_stack():
-    if is_process("heartbeat:.[m]aster"):
-        return "heartbeat"
-    elif is_process("[a]isexec"):
-        return "openais"
-    elif os.path.exists("/etc/corosync/corosync.conf") or is_program('corosync-cfgtool'):
-        return "corosync"
-    return ""
-
-
 def edit_file(fname):
     'Edit a file.'
     if not fname:
