@@ -2576,4 +2576,24 @@ def cluster_run_cmd(cmd):
     if not node_list:
         raise ValueError("Failed to get node list from cluster")
     parallax.parallax_call(node_list, cmd)
+
+
+def get_stdout_or_raise_error(cmd, remote=None, success_val=0):
+    """
+    Common function to get stdout from cmd or raise exception
+    """
+    if remote:
+        cmd = "ssh -o StrictHostKeyChecking=no root@{} \"{}\"".format(remote, cmd)
+    rc, out, err = get_stdout_stderr(cmd)
+    if rc != success_val:
+        raise ValueError("Failed to run \"{}\": {}".format(cmd, err))
+    return out
+
+
+def get_quorum_votes_dict(remote=None):
+    """
+    Return a dictionary which contain expect votes and total votes
+    """
+    out = get_stdout_or_raise_error("corosync-quorumtool -s", remote=remote)
+    return dict(re.findall("(Expected|Total) votes:\s+(\d+)", out))
 # vim:ts=4:sw=4:et:
