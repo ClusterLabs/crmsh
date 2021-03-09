@@ -348,6 +348,8 @@ Configure SBD:
   are a good choice.  Note that all data on the partition you
   specify here will be destroyed.
 """
+    DISKLESS_SBD_WARNING = """Diskless SBD requires cluster with three or more nodes.
+If you want to use diskless SBD for two-nodes cluster, should be combined with QDevice."""
 
     def __init__(self, sbd_devices=None, diskless_sbd=False):
         """
@@ -525,6 +527,8 @@ Configure SBD:
         if not self._sbd_devices and not self.diskless_sbd:
             invoke("systemctl disable sbd.service")
             return
+        if self.diskless_sbd:
+            warn(self.DISKLESS_SBD_WARNING)
         status_long("Initializing {}SBD...".format("diskless " if self.diskless_sbd else ""))
         self._initialize_sbd()
         self._update_configuration()
@@ -563,6 +567,10 @@ Configure SBD:
         dev_list = self._get_sbd_device_from_config()
         if dev_list:
             self._verify_sbd_device(dev_list, [peer_host])
+        else:
+            vote_dict = utils.get_quorum_votes_dict(peer_host)
+            if int(vote_dict['Expected']) < 2:
+                warn(self.DISKLESS_SBD_WARNING)
         status("Got {}SBD configuration".format("" if dev_list else "diskless "))
         invoke("systemctl enable sbd.service")
 

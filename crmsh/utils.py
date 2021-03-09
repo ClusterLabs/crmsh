@@ -2647,21 +2647,23 @@ def is_quorate(expected_votes, actual_votes):
     return int(actual_votes)/int(expected_votes) > 0.5
 
 
-def get_stdout_or_raise_error(cmd):
+def get_stdout_or_raise_error(cmd, remote=None, success_val=0):
     """
     Common function to get stdout from cmd or raise exception
     """
+    if remote:
+        cmd = "ssh -o StrictHostKeyChecking=no root@{} \"{}\"".format(remote, cmd)
     rc, out, err = get_stdout_stderr(cmd)
-    if rc != 0:
+    if rc != success_val:
         raise ValueError("Failed to run \"{}\": {}".format(cmd, err))
     return out
 
 
-def get_quorum_votes_dict():
+def get_quorum_votes_dict(remote=None):
     """
     Return a dictionary which contain expect votes and total votes
     """
-    out = get_stdout_or_raise_error("corosync-quorumtool -s")
+    out = get_stdout_or_raise_error("corosync-quorumtool -s", remote=remote)
     return dict(re.findall("(Expected|Total) votes:\s+(\d+)", out))
 
 

@@ -1269,9 +1269,9 @@ def test_get_stdout_or_raise_error_failed(mock_run):
 @mock.patch("crmsh.utils.get_stdout_stderr")
 def test_get_stdout_or_raise_error(mock_run):
     mock_run.return_value = (0, "output data", None)
-    res = utils.get_stdout_or_raise_error("cmd")
+    res = utils.get_stdout_or_raise_error("cmd", remote="node1")
     assert res == "output data"
-    mock_run.assert_called_once_with("cmd")
+    mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 \"cmd\"")
 
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
@@ -1287,7 +1287,7 @@ Flags:            Quorate
     """
     res = utils.get_quorum_votes_dict()
     assert res == {'Expected': '1', 'Total': '1'}
-    mock_run.assert_called_once_with("corosync-quorumtool -s")
+    mock_run.assert_called_once_with("corosync-quorumtool -s", remote=None)
 
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
