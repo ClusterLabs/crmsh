@@ -51,7 +51,7 @@ For each --kill-* testcase, report directory: /var/lib/crmsh/preflight_check
 [2021/03/09 13:49:52]INFO: Checking resources [Pass]
   INFO: Started resources: stonith-sbd,vip
 ```
-## Planned check item collections
+* Planned check item collections
 - [x] Checking cluster service status
 - [x] Checking STONITH/Fence status
 - [x] Checking nodes
