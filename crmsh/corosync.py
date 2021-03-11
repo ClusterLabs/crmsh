@@ -11,7 +11,6 @@ import socket
 from . import utils
 from . import tmpfiles
 from . import parallax
-from . import bootstrap
 from .msg import err_buf, common_debug
 
 
@@ -333,6 +332,7 @@ class QDevice(object):
         self.manage_qnetd("stop")
 
     def debug_and_log_to_bootstrap(self, msg):
+        from . import bootstrap
         common_debug(msg)
         bootstrap.log("# " + msg)
 
@@ -640,11 +640,7 @@ class QDevice(object):
                 cmd_name = re.sub("[.-]", "_", os.path.basename(cmd.split()[0]))
                 exec_name = "exec_{}{}".format(cmd_name, i)
                 p.set('quorum.device.heuristics.{}'.format(exec_name), cmd)
-
-        with open(conf(), 'w') as f:
-            f.write(p.to_string())
-            f.flush()
-            os.fsync(f)
+        utils.str2file(p.to_string(), conf())
 
     def remove_qdevice_config(self):
         """
@@ -653,10 +649,7 @@ class QDevice(object):
         with open(conf()) as f:
             p = Parser(f.read())
             p.remove("quorum.device")
-        with open(conf(), 'w') as f:
-            f.write(p.to_string())
-            f.flush()
-            os.fsync(f)
+        utils.str2file(p.to_string(), conf())
 
     def remove_qdevice_db(self):
         """
@@ -982,9 +975,7 @@ def set_value(path, value):
     f = open(conf()).read()
     p = Parser(f)
     p.set(path, value)
-    f = open(conf(), 'w')
-    f.write(p.to_string())
-    f.close()
+    utils.str2file(p.to_string(), conf())
 
 
 class IPAlreadyConfiguredError(Exception):
@@ -1045,8 +1036,7 @@ def add_node_ucast(ip_list, node_id=None):
     if p.get("quorum.device.model") == "net":
         p.set('quorum.two_node', '0')
 
-    with open(conf(), 'w') as f:
-        f.write(p.to_string())
+    utils.str2file(p.to_string(), conf())
 
 
 def add_node(addr, name=None):
@@ -1094,9 +1084,7 @@ def add_node(addr, name=None):
     if p.get("quorum.device.model") == "net":
         p.set('quorum.two_node', '0')
 
-    f = open(conf(), 'w')
-    f.write(p.to_string())
-    f.close()
+    utils.str2file(p.to_string(), conf())
 
     # update running config (if any)
     if nodes:
@@ -1127,9 +1115,7 @@ def del_node(addr):
     if p.get("quorum.device.model") == "net":
         p.set('quorum.two_node', '0')
 
-    f = open(conf(), 'w')
-    f.write(p.to_string())
-    f.close()
+    utils.str2file(p.to_string(), conf())
 
 
 _COROSYNC_CONF_TEMPLATE_HEAD = """# Please read the corosync.conf.5 manual page

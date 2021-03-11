@@ -528,7 +528,7 @@ def str2file(s, fname, mod=0o644):
     Write a string to a file.
     '''
     try:
-        with open_atomic(fname, 'w', encoding='utf-8') as dst:
+        with open_atomic(fname, 'w', encoding='utf-8', fsync=True) as dst:
             dst.write(to_ascii(s))
         os.chmod(fname, mod)
     except IOError as msg:
