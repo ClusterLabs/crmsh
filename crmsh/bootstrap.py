@@ -38,12 +38,20 @@ CSYNC2_KEY = "/etc/csync2/key_hagroup"
 CSYNC2_CFG = "/etc/csync2/csync2.cfg"
 COROSYNC_AUTH = "/etc/corosync/authkey"
 SYSCONFIG_SBD = "/etc/sysconfig/sbd"
+SYSCONFIG_PCMK = "/etc/sysconfig/pacemaker"
 SYSCONFIG_FW = "/etc/sysconfig/SuSEfirewall2"
 SYSCONFIG_FW_CLUSTER = "/etc/sysconfig/SuSEfirewall2.d/services/cluster"
 PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
 COROSYNC_CONF_ORIG = tmpfiles.create()[1]
 SERVICES_STOP_LIST = ["corosync.service", "hawk.service"]
 USER_LIST = ["root", "hacluster"]
+WATCHDOG_CFG = "/etc/modules-load.d/watchdog.conf"
+BOOTH_DIR = "/etc/booth"
+BOOTH_CFG = "/etc/booth/booth.conf"
+BOOTH_AUTH = "/etc/booth/authkey"
+FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_KEY, "/etc/ctdb/nodes",
+        "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
+        "/etc/samba/smb.conf", SYSCONFIG_PCMK, SYSCONFIG_SBD, PCMK_REMOTE_AUTH, WATCHDOG_CFG)
 
 INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin")
 
@@ -179,7 +187,7 @@ class Watchdog(object):
         """
         Load specific watchdog driver
         """
-        invoke("echo {} > /etc/modules-load.d/watchdog.conf".format(driver))
+        invoke("echo {} > {}".format(driver, WATCHDOG_CFG))
         invoke("systemctl restart systemd-modules-load")
 
     @staticmethod
@@ -1231,28 +1239,17 @@ def init_csync2():
         error("Can't create csync2 key {}".format(CSYNC2_KEY))
     status_done()
 
+    csync2_file_list = ""
+    for f in FILES_TO_SYNC:
+        csync2_file_list += "include {};\n".format(f)
+
     utils.str2file("""group ha_group
-{
+{{
 key /etc/csync2/key_hagroup;
-host %s;
-include /etc/booth;
-include /etc/corosync/corosync.conf;
-include /etc/corosync/authkey;
-include /etc/csync2/csync2.cfg;
-include /etc/csync2/key_hagroup;
-include /etc/ctdb/nodes;
-include /etc/drbd.conf;
-include /etc/drbd.d;
-include /etc/ha.d/ldirectord.cf;
-include /etc/lvm/lvm.conf;
-include /etc/multipath.conf;
-include /etc/samba/smb.conf;
-include /etc/sysconfig/pacemaker;
-include /etc/sysconfig/sbd;
-include /etc/pacemaker/authkey;
-include /etc/modules-load.d/watchdog.conf;
-}
-    """ % (utils.this_node()), CSYNC2_CFG)
+host {};
+{}
+}}
+    """.format(utils.this_node(), csync2_file_list), CSYNC2_CFG)
 
     utils.start_service("csync2.socket", enable=True)
     status_long("csync2 checking files")
@@ -1314,7 +1311,7 @@ def init_corosync_auth():
         if not confirm("%s already exists - overwrite?" % (COROSYNC_AUTH)):
             return
         rmfile(COROSYNC_AUTH)
-    invoke("corosync-keygen -l")
+    invoke("corosync-keygen -l -k {}".format(COROSYNC_AUTH))
 
 
 def init_remote_auth():
@@ -2025,6 +2022,15 @@ def setup_passwordless_with_other_nodes(init_node):
             swap_public_ssh_key(node, user)
 
 
+def sync_files_to_disk():
+    """
+    Sync file content to disk between cluster nodes
+    """
+    files_string = ' '.join(filter(lambda f: os.path.isfile(f), FILES_TO_SYNC))
+    if files_string:
+        utils.cluster_run_cmd("sync {}".format(files_string.strip()))
+
+
 def join_cluster(seed_host):
     """
     Cluster configuration for joining node.
@@ -2245,6 +2251,7 @@ def join_cluster(seed_host):
             update_nodeid(int(nodeid_dict[node]), node)
         update_nodeid(local_nodeid)
 
+    sync_files_to_disk()
     status_done()
 
 
@@ -2550,10 +2557,6 @@ def init_common_geo():
         error("Booth not installed - Not configurable as a geo cluster node.")
 
 
-BOOTH_CFG = "/etc/booth/booth.conf"
-BOOTH_AUTH = "/etc/booth/authkey"
-
-
 def init_csync2_geo():
     """
     TODO: Configure csync2 for geo cluster
@@ -2623,7 +2626,7 @@ def bootstrap_init_geo(context):
     create_booth_authkey()
     create_booth_config(_context.arbitrator, _context.clusters, _context.tickets)
     status("Sync booth configuration across cluster")
-    csync2_update("/etc/booth")
+    csync2_update(BOOTH_DIR)
     init_csync2_geo()
     geo_cib_config(_context.clusters)
 
@@ -2632,7 +2635,7 @@ def geo_fetch_config(node):
     # TODO: clean this up
     status("Retrieving configuration - This may prompt for root@%s:" % (node))
     tmpdir = tmpfiles.create_dir()
-    rc, _, err = invoke("scp -oStrictHostKeyChecking=no root@%s:'/etc/booth/*' %s/" % (node, tmpdir))
+    rc, _, err = invoke("scp -oStrictHostKeyChecking=no root@{}:'{}/*' {}/".format(node, BOOTH_DIR, tmpdir))
     if not rc:
         error("Failed to retrieve configuration: {}".format(err))
     try:
@@ -2675,7 +2678,7 @@ def bootstrap_join_geo(context):
     check_tty()
     geo_fetch_config(_context.cluster_node)
     status("Sync booth configuration across cluster")
-    csync2_update("/etc/booth")
+    csync2_update(BOOTH_DIR)
     geo_cib_config(_context.clusters)
 
 
