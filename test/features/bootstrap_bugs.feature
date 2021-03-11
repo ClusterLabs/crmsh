@@ -94,7 +94,7 @@ Feature: Regression test for bootstrap bugs
     Then    Cluster service is "started" on "hanode2"
     # Try to simulate the join process hanging on hanode2 or hanode2 died
     # Just leave the lock directory unremoved
-    When    Run "mkdir /tmp/.crmsh_lock_directory" on "hanode1"
+    When    Run "mkdir /run/.crmsh_lock_directory" on "hanode1"
     When    Try "crm cluster join -c hanode1 -y" on "hanode3"
-    Then    Except "ERROR: cluster.join: Timed out after 120 seconds. Cannot continue since the lock directory exists at the node (hanode1:/tmp/.crmsh_lock_directory)"
-    When    Run "rm -rf /tmp/.crmsh_lock_directory" on "hanode1"
+    Then    Except "ERROR: cluster.join: Timed out after 120 seconds. Cannot continue since the lock directory exists at the node (hanode1:/run/.crmsh_lock_directory)"
+    When    Run "rm -rf /run/.crmsh_lock_directory" on "hanode1"
