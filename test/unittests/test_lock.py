@@ -73,7 +73,7 @@ class TestLock(unittest.TestCase):
         mock_create.return_value = False
         with self.assertRaises(lock.ClaimLockError) as err:
             self.local_inst._lock_or_fail()
-        self.assertEqual("Failed to claim lock (the lock directory exists at /tmp/.crmsh_lock_directory)", str(err.exception))
+        self.assertEqual("Failed to claim lock (the lock directory exists at {})".format(lock.Lock.LOCK_DIR), str(err.exception))
         mock_create.assert_called_once_with()
 
     @mock.patch('crmsh.lock.Lock._run')
@@ -210,7 +210,7 @@ class TestRemoteLock(unittest.TestCase):
 
         with self.assertRaises(lock.ClaimLockError) as err:
             self.lock_inst._lock_or_wait()
-        self.assertEqual("Timed out after 120 seconds. Cannot continue since the lock directory exists at the node (node1:/tmp/.crmsh_lock_directory)", str(err.exception))
+        self.assertEqual("Timed out after 120 seconds. Cannot continue since the lock directory exists at the node (node1:{})".format(lock.Lock.LOCK_DIR), str(err.exception))
 
         mock_time.assert_has_calls([ mock.call(), mock.call()])
         mock_time_out.assert_has_calls([mock.call(), mock.call(), mock.call()])
