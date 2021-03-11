@@ -28,7 +28,7 @@ class Lock(object):
     A base class define a lock mechanism used to exclude other nodes
     """
 
-    LOCK_DIR = "/tmp/.crmsh_lock_directory"
+    LOCK_DIR = "/run/.crmsh_lock_directory"
     MKDIR_CMD = "mkdir {}".format(LOCK_DIR)
     RM_CMD = "rm -rf {}".format(LOCK_DIR)
 
