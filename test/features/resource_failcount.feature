@@ -12,14 +12,10 @@ Feature: Use "crm resource failcount" to manage failcounts
 
   @clean
   Scenario: Validation, input the wrong parameters
-    When    Try "crm resource failcount ddd show hanode1"
-    Then    Except "ERROR: resource.failcount: Resource ddd not exists in this cluster"
     When    Try "crm resource failcount d showss hanode1"
     Then    Except "ERROR: resource.failcount: showss is not valid command(should be one of ['set', 'delete', 'show'])"
     When    Try "crm resource failcount d set hanode11 0"
     Then    Except "ERROR: resource.failcount: Node hanode11 not in this cluster"
-    When    Try "crm resource failcount d set hanode1 0"
-    Then    Except "ERROR: resource.failcount: No failcount on node hanode1 for resource d"
 
   @clean
   Scenario: Set the failcount to 0
