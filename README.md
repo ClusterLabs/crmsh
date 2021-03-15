@@ -1,6 +1,7 @@
 # crmsh
 
-[![Build Status](https://travis-ci.org/ClusterLabs/crmsh.svg?branch=master)](https://travis-ci.org/ClusterLabs/crmsh)
+[![Build Status](https://github.com/ClusterLabs/crmsh/actions/workflows/crmsh-ci.yml/badge.svg)](https://github.com/ClusterLabs/crmsh/actions/workflows/crmsh-ci.yml)
+
 
 ## Introduction
 
