@@ -496,7 +496,8 @@ class RscMgmt(command.UI):
             return m[:len(m)-3]
 
         if rsc not in compl.resources():
-            context.fatal_error("Resource {} not exists in this cluster".format(rsc))
+            context.warning("Resource {} not exists in this cluster".format(rsc))
+            return
         valid_cmd_list = ["set", "delete", "show"]
         if cmd not in valid_cmd_list:
             context.fatal_error("{} is not valid command(should be one of {})".format(cmd, valid_cmd_list))
@@ -515,7 +516,7 @@ class RscMgmt(command.UI):
             import re
             failcount_res = re.findall(r'fail-count-{}#(.*)_([0-9]+)'.format(rsc), out)
             if not failcount_res:
-                context.fatal_error("No failcount on node {} for resource {}".format(node, rsc))
+                return True if value and int(value) == 0 else False
             failcount_dict = dict(failcount_res)
 
             # validate for operation and interval
