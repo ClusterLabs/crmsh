@@ -278,8 +278,14 @@ class QDevice(object):
         if not utils.valid_port(self.port):
             raise ValueError("invalid qdevice port range(1024 - 65535)")
 
-        if self.tie_breaker not in ["lowest", "highest"] and not utils.valid_nodeid(self.tie_breaker):
+        if self.algo not in ("ffsplit", "lms"):
+            raise ValueError("invalid ALGORITHM choice: '{}' (choose from 'ffsplit', 'lms')".format(self.algo))
+
+        if self.tie_breaker not in ("lowest", "highest") and not utils.valid_nodeid(self.tie_breaker):
             raise ValueError("invalid qdevice tie_breaker(lowest/highest/valid_node_id)")
+
+        if self.tls not in ("on", "off", "required"):
+            raise ValueError("invalid TLS choice: '{}' (choose from 'on', 'off', 'required')".format(self.tls))
 
         if self.cmds:
             for cmd in self.cmds.strip(';').split(';'):

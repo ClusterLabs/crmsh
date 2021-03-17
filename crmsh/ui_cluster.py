@@ -243,17 +243,17 @@ Note:
         qdevice_group.add_argument("--qnetd-hostname", dest="qnetd_addr", metavar="HOST",
                                    help="HOST or IP of the QNetd server to be used")
         qdevice_group.add_argument("--qdevice-port", dest="qdevice_port", metavar="PORT", type=int, default=5403,
-                                   help="TCP PORT of QNetd server(default:5403)")
+                                   help="TCP PORT of QNetd server (default:5403)")
         qdevice_group.add_argument("--qdevice-algo", dest="qdevice_algo", metavar="ALGORITHM", default="ffsplit", choices=['ffsplit', 'lms'],
-                                   help="QNetd decision ALGORITHM(ffsplit/lms, default:ffsplit)")
+                                   help="QNetd decision ALGORITHM (ffsplit/lms, default:ffsplit)")
         qdevice_group.add_argument("--qdevice-tie-breaker", dest="qdevice_tie_breaker", metavar="TIE_BREAKER", default="lowest",
-                                   help="QNetd TIE_BREAKER(lowest/highest/valid_node_id, default:lowest)")
+                                   help="QNetd TIE_BREAKER (lowest/highest/valid_node_id, default:lowest)")
         qdevice_group.add_argument("--qdevice-tls", dest="qdevice_tls", metavar="TLS", default="on", choices=['on', 'off', 'required'],
-                                   help="Whether using TLS on QDevice/QNetd(on/off/required, default:on)")
+                                   help="Whether using TLS on QDevice/QNetd (on/off/required, default:on)")
         qdevice_group.add_argument("--qdevice-heuristics", dest="qdevice_heuristics", metavar="COMMAND",
-                                   help="COMMAND to run with absolute path. For multiple commands, use \";\" to separate(details about heuristics can see man 8 corosync-qdevice)")
+                                   help="COMMAND to run with absolute path. For multiple commands, use \";\" to separate (details about heuristics can see man 8 corosync-qdevice)")
         qdevice_group.add_argument("--qdevice-heuristics-mode", dest="qdevice_heuristics_mode", metavar="MODE", choices=['on', 'sync', 'off'],
-                                   help="MODE of operation of heuristics(on/sync/off, default:sync)")
+                                   help="MODE of operation of heuristics (on/sync/off, default:sync)")
 
         storage_group = parser.add_argument_group("Storage configuration", "Options for configuring shared storage.")
         storage_group.add_argument("-p", "--partition-device", dest="shared_device", metavar="DEVICE",
@@ -277,7 +277,7 @@ Note:
             if options.qdevice_heuristics_mode and not options.qdevice_heuristics:
                 parser.error("Option --qdevice-heuristics is required if want to configure heuristics mode")
             options.qdevice_heuristics_mode = options.qdevice_heuristics_mode or "sync"
-        elif re.search("--qdevice-.*", ' '.join(sys.argv)) or stage == "qdevice":
+        elif re.search("--qdevice-.*", ' '.join(sys.argv)) or (stage == "qdevice" and options.yes_to_all):
             parser.error("Option --qnetd-hostname is required if want to configure qdevice")
 
         if options.sbd_devices and options.diskless_sbd:
