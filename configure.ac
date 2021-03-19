@@ -8,7 +8,7 @@ dnl License: GNU General Public License (GPL)
 
 AC_PREREQ([2.53])
 
-AC_INIT([crmsh],[4.2.0],[users@clusterlabs.org])
+AC_INIT([crmsh],[4.3.0],[users@clusterlabs.org])
 
 AC_ARG_WITH(version,
     [  --with-version=version   Override package version (if you're a packager needing to pretend) ],
