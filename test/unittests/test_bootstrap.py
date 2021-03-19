@@ -1117,41 +1117,28 @@ class TestBootstrap(unittest.TestCase):
         value = bootstrap.pick_default_value(default_list, prev_list)
         self.assertEqual(value, "")
 
-    @mock.patch('crmsh.utils.IP.is_valid_ip')
     @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_get_cluster_node_hostname_None(self, mock_stdout_stderr, mock_valid_ip):
-        bootstrap._context = mock.Mock(cluster_node=None)
+    def test_get_cluster_node_hostname(self, mock_stdout_stderr):
+        bootstrap._context = mock.Mock(cluster_node="node1")
+        mock_stdout_stderr.return_value = (0, "Node1", None)
 
         peer_node = bootstrap.get_cluster_node_hostname()
-        assert peer_node is None
+        assert peer_node == "Node1"
 
-        mock_valid_ip.assert_not_called()
-        mock_stdout_stderr.assert_not_called()
+        mock_stdout_stderr.assert_called_once_with("ssh node1 crm_node --name")
 
-    @mock.patch('crmsh.utils.IP.is_valid_ip')
+    @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_get_cluster_node_hostname_IP(self, mock_stdout_stderr, mock_valid_ip):
-        bootstrap._context = mock.Mock(cluster_node="1.1.1.1")
-        mock_valid_ip.return_value = True
-        mock_stdout_stderr.return_value = (0, "node1", None)
-
-        peer_node = bootstrap.get_cluster_node_hostname()
-        assert peer_node == "node1"
-
-        mock_valid_ip.assert_called_once_with("1.1.1.1")
-        mock_stdout_stderr.assert_called_once_with("ssh 1.1.1.1 crm_node --name")
-
-    @mock.patch('crmsh.utils.IP.is_valid_ip')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_get_cluster_node_hostname_HOST(self, mock_stdout_stderr, mock_valid_ip):
+    def test_get_cluster_node_hostname_error(self, mock_stdout_stderr, mock_error):
         bootstrap._context = mock.Mock(cluster_node="node2")
-        mock_valid_ip.return_value = False
+        mock_stdout_stderr.return_value = (1, None, "error")
+        mock_error.side_effect = SystemExit
 
-        peer_node = bootstrap.get_cluster_node_hostname()
-        assert peer_node == "node2"
+        with self.assertRaises(SystemExit):
+            bootstrap.get_cluster_node_hostname()
 
-        mock_valid_ip.assert_called_once_with("node2")
-        mock_stdout_stderr.assert_not_called()
+        mock_stdout_stderr.assert_called_once_with("ssh node2 crm_node --name")
+        mock_error.assert_called_once_with("error")
 
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('re.search')
