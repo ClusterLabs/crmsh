@@ -1716,6 +1716,15 @@ class TestBootstrap(unittest.TestCase):
         mock_quorate.assert_called_once_with(2, 1)
         mock_ra_running.assert_called_once_with()
 
+    @mock.patch('crmsh.utils.cluster_run_cmd')
+    @mock.patch('os.path.isfile')
+    def test_sync_files_to_disk(self, mock_isfile, mock_cluster_cmd):
+        bootstrap.FILES_TO_SYNC = ("file1", "file2")
+        mock_isfile.side_effect = [True, True]
+        bootstrap.sync_files_to_disk()
+        mock_isfile.assert_has_calls([mock.call("file1"), mock.call("file2")])
+        mock_cluster_cmd.assert_called_once_with("sync file1 file2")
+
 
 class TestValidation(unittest.TestCase):
     """

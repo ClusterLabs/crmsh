@@ -324,6 +324,7 @@ class TestCorosyncParser(unittest.TestCase):
         # For some reason mock_search.assert_called_once_with does not work
         mock_search.assert_has_calls([mock.call("nodelist.node.ring[0-9]*_addr", "nodelist.node.ring0_addr")])
 
+    @mock.patch("crmsh.utils.str2file")
     @mock.patch("crmsh.corosync.make_section")
     @mock.patch("crmsh.corosync.get_values")
     @mock.patch("crmsh.corosync.make_value")
@@ -333,14 +334,13 @@ class TestCorosyncParser(unittest.TestCase):
     @mock.patch("crmsh.corosync.conf")
     @mock.patch("crmsh.corosync.find_configured_ip")
     def test_add_node_ucast(self, mock_find_ip, mock_conf, mock_open_file, mock_parser,
-            mock_free_id, mock_make_value, mock_get_values, mock_make_section):
+            mock_free_id, mock_make_value, mock_get_values, mock_make_section, mock_str2file):
         mock_parser_inst = mock.Mock()
         mock_conf.side_effect = ["corosync.conf", "corosync.conf"]
         mock_open_read = mock.mock_open(read_data="read data")
-        mock_open_write = mock.mock_open()
         mock_open_file.side_effect = [
                 mock_open_read.return_value,
-                mock_open_write.return_value]
+                ]
         mock_parser.return_value = mock_parser_inst
         mock_free_id.return_value = 2
         mock_make_value.side_effect = [["value1"], ["value2"]]
@@ -355,7 +355,6 @@ class TestCorosyncParser(unittest.TestCase):
         mock_find_ip.assert_called_once_with(['10.10.10.1'])
         mock_open_file.assert_has_calls([
             mock.call("corosync.conf"),
-            mock.call("corosync.conf", 'w')
             ])
         file_handle = mock_open_read.return_value.__enter__.return_value
         file_handle.read.assert_called_once_with()
@@ -381,8 +380,7 @@ class TestCorosyncParser(unittest.TestCase):
             ])
         mock_parser_inst.get.assert_called_once_with('quorum.device.model')
         mock_parser_inst.to_string.assert_called_once_with()
-        file_handle = mock_open_write.return_value.__enter__.return_value
-        file_handle.write.assert_called_once_with("string data")
+        mock_str2file.assert_called_once_with("string data", "corosync.conf")
 
     def test_add_node_nodelist(self):
         from crmsh.corosync import make_section, make_value, get_free_nodeid
@@ -1161,31 +1159,29 @@ class TestQDevice(unittest.TestCase):
         mock_fetch_p12_from_cluster.assert_called_once_with()
         mock_import_p12_on_local.assert_called_once_with()
 
-    @mock.patch("os.fsync")
+    @mock.patch("crmsh.utils.str2file")
     @mock.patch("crmsh.corosync.make_section")
     @mock.patch("crmsh.corosync.Parser")
     @mock.patch("crmsh.corosync.conf")
     @mock.patch("builtins.open")
-    def test_write_qdevice_config(self, mock_open_file, mock_conf, mock_parser, mock_mksection, mock_fsync):
+    def test_write_qdevice_config(self, mock_open_file, mock_conf, mock_parser, mock_mksection, mock_str2file):
         open_return_value_1 = mock.mock_open(read_data=F2).return_value
-        open_return_value_2 = mock.mock_open().return_value
         mock_open_file.side_effect = [
             open_return_value_1,
-            open_return_value_2
         ]
         mock_mksection.side_effect = [
             ["device {", "}"],
             ["net {", "}"]
         ]
-        mock_conf.return_value = "/etc/corosync/corosync.conf"
+        mock_conf.side_effect = ["corosync.conf", "corosync.conf"]
         mock_instance = mock.Mock()
         mock_parser.return_value = mock_instance
+        mock_instance.to_string.return_value = "string data"
 
         self.qdevice_with_ip.write_qdevice_config()
 
         mock_open_file.assert_has_calls([
-            mock.call(mock_conf.return_value),
-            mock.call(mock_conf.return_value, 'w')
+            mock.call("corosync.conf"),
         ])
         mock_conf.assert_has_calls([mock.call(), mock.call()])
         mock_parser.assert_called_once_with(F2)
@@ -1208,38 +1204,32 @@ class TestQDevice(unittest.TestCase):
             mock.call('quorum.device', []),
             mock.call('quorum.device.net', [])
         ])
-        mock_fsync.assert_called_once_with(open_return_value_2)
-        open_return_value_2.write.assert_called_once_with(mock_instance.to_string())
-        open_return_value_2.flush.assert_called_once_with()
+        mock_str2file.assert_called_once_with("string data", "corosync.conf")
 
-    @mock.patch("os.fsync")
+    @mock.patch("crmsh.utils.str2file")
     @mock.patch("crmsh.corosync.Parser")
     @mock.patch("crmsh.corosync.conf")
     @mock.patch("builtins.open")
-    def test_remove_qdevice_config(self, mock_open_file, mock_conf, mock_parser, mock_fsync):
+    def test_remove_qdevice_config(self, mock_open_file, mock_conf, mock_parser, mock_str2file):
         open_return_value_1 = mock.mock_open(read_data=F4).return_value
-        open_return_value_2 = mock.mock_open().return_value
         mock_open_file.side_effect = [
             open_return_value_1,
-            open_return_value_2
         ]
-        mock_conf.return_value = "/etc/corosync/corosync.conf"
+        mock_conf.side_effect = ["corosync.conf", "corosync.conf"]
         mock_instance = mock.Mock()
         mock_parser.return_value = mock_instance
+        mock_instance.to_string.return_value = "string data"
 
         self.qdevice_with_ip.remove_qdevice_config()
 
         mock_open_file.assert_has_calls([
-            mock.call(mock_conf.return_value),
-            mock.call(mock_conf.return_value, 'w')
+            mock.call("corosync.conf"),
         ])
         mock_conf.assert_has_calls([mock.call(), mock.call()])
         mock_parser.assert_called_once_with(F4)
         mock_instance.remove.assert_called_once_with("quorum.device")
         mock_instance.to_string.assert_called_once_with()
-        mock_fsync.assert_called_once_with(open_return_value_2)
-        open_return_value_2.write.assert_called_once_with(mock_instance.to_string())
-        open_return_value_2.flush.assert_called_once_with()
+        mock_str2file.assert_called_once_with("string data", "corosync.conf")
 
     @mock.patch("crmsh.parallax.parallax_call")
     @mock.patch('crmsh.utils.list_cluster_nodes')
