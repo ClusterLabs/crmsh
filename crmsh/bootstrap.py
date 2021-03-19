@@ -745,17 +745,14 @@ def wait_for_cluster():
 
 def get_cluster_node_hostname():
     """
-    Get the hostname of the cluster node used during the join process if an IP address is used.
+    Get the hostname of the cluster node
     """
     peer_node = None
     if _context.cluster_node:
-        if utils.IP.is_valid_ip(_context.cluster_node):
-            rc, out, err = utils.get_stdout_stderr("ssh {} crm_node --name".format(_context.cluster_node))
-            if rc != 0:
-                error(err)
-            peer_node = out
-        else:
-            peer_node = _context.cluster_node
+        rc, out, err = utils.get_stdout_stderr("ssh {} crm_node --name".format(_context.cluster_node))
+        if rc != 0:
+            error(err)
+        peer_node = out
     return peer_node
 
 
