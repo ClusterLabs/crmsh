@@ -6,8 +6,7 @@ import sys
 
 from . import command
 from . import utils
-sys.path.append("/usr/share/crmsh")
-from preflight_check import main
+from .preflight_check import main
 
 
 class Analyze(command.UI):
