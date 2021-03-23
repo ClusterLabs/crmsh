@@ -7,8 +7,7 @@ except ImportError:
     import mock
 
 from crmsh import utils as crmshutils
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from preflight_check import utils, main, config, task
+from crmsh.preflight_check import utils, main, config, task
 
 
 class TestContext(TestCase):
@@ -20,7 +19,7 @@ class TestContext(TestCase):
 
 class TestMain(TestCase):
 
-    @mock.patch('preflight_check.main.MyArgParseFormatter')
+    @mock.patch('crmsh.preflight_check.main.MyArgParseFormatter')
     @mock.patch('argparse.ArgumentParser')
     def test_parse_argument_help(self, mock_parser, mock_myformatter):
         mock_parser_inst = mock.Mock()
@@ -35,7 +34,7 @@ class TestMain(TestCase):
 
         mock_parser_inst.print_help.assert_called_once_with()
 
-    @mock.patch('preflight_check.main.MyArgParseFormatter')
+    @mock.patch('crmsh.preflight_check.main.MyArgParseFormatter')
     @mock.patch('argparse.ArgumentParser')
     def test_parse_argument(self, mock_parser, mock_myformatter):
         mock_parser_inst = mock.Mock()
@@ -66,9 +65,9 @@ class TestMain(TestCase):
         self.assertEqual(ctx.logfile, "/var/log/crmsh/preflight_check.log")
 
     @mock.patch('logging.fatal')
-    @mock.patch('preflight_check.utils.is_root')
-    @mock.patch('preflight_check.main.parse_argument')
-    @mock.patch('preflight_check.main.setup_basic_context')
+    @mock.patch('crmsh.preflight_check.utils.is_root')
+    @mock.patch('crmsh.preflight_check.main.parse_argument')
+    @mock.patch('crmsh.preflight_check.main.setup_basic_context')
     def test_run_non_root(self, mock_setup, mock_parse, mock_is_root, mock_log_fatal):
         mock_is_root.return_value = False
         ctx = mock.Mock(process_name="preflight_check")
@@ -81,17 +80,17 @@ class TestMain(TestCase):
         mock_is_root.assert_called_once_with()
         mock_log_fatal.assert_called_once_with("{} can only be executed as user root!".format(ctx.process_name))
 
-    @mock.patch('preflight_check.main.split_brain')
-    @mock.patch('preflight_check.main.fence_node')
-    @mock.patch('preflight_check.main.kill_process')
-    @mock.patch('preflight_check.main.check.check')
-    @mock.patch('preflight_check.main.check.fix')
-    @mock.patch('preflight_check.main.setup_logging')
+    @mock.patch('crmsh.preflight_check.main.split_brain')
+    @mock.patch('crmsh.preflight_check.main.fence_node')
+    @mock.patch('crmsh.preflight_check.main.kill_process')
+    @mock.patch('crmsh.preflight_check.main.check.check')
+    @mock.patch('crmsh.preflight_check.main.check.fix')
+    @mock.patch('crmsh.preflight_check.main.setup_logging')
     @mock.patch('os.makedirs')
     @mock.patch('os.path.exists')
-    @mock.patch('preflight_check.utils.is_root')
-    @mock.patch('preflight_check.main.parse_argument')
-    @mock.patch('preflight_check.main.setup_basic_context')
+    @mock.patch('crmsh.preflight_check.utils.is_root')
+    @mock.patch('crmsh.preflight_check.main.parse_argument')
+    @mock.patch('crmsh.preflight_check.main.setup_basic_context')
     def test_run(self, mock_setup, mock_parse, mock_is_root, mock_exists, mock_mkdir,
                  mock_setup_logging, mock_fix, mock_check, mock_kill, mock_fence, mock_sb):
         mock_is_root.return_value = True
@@ -112,14 +111,14 @@ class TestMain(TestCase):
         mock_fence.assert_called_once_with(ctx)
         mock_sb.assert_called_once_with(ctx)
 
-    @mock.patch('preflight_check.utils.json_dumps')
-    @mock.patch('preflight_check.main.check.check')
-    @mock.patch('preflight_check.main.check.fix')
-    @mock.patch('preflight_check.main.setup_logging')
+    @mock.patch('crmsh.preflight_check.utils.json_dumps')
+    @mock.patch('crmsh.preflight_check.main.check.check')
+    @mock.patch('crmsh.preflight_check.main.check.fix')
+    @mock.patch('crmsh.preflight_check.main.setup_logging')
     @mock.patch('os.path.exists')
-    @mock.patch('preflight_check.utils.is_root')
-    @mock.patch('preflight_check.main.parse_argument')
-    @mock.patch('preflight_check.main.setup_basic_context')
+    @mock.patch('crmsh.preflight_check.utils.is_root')
+    @mock.patch('crmsh.preflight_check.main.parse_argument')
+    @mock.patch('crmsh.preflight_check.main.setup_basic_context')
     def test_run_except(self, mock_setup, mock_parse, mock_is_root, mock_exists,
             mock_setup_logging, mock_fix, mock_check, mock_dumps):
         mock_is_root.return_value = True
@@ -139,19 +138,19 @@ class TestMain(TestCase):
         mock_fix.assert_called_once_with(ctx)
         mock_dumps.assert_called_once_with()
 
-    @mock.patch('preflight_check.task.TaskKill')
+    @mock.patch('crmsh.preflight_check.task.TaskKill')
     def test_kill_porcess_return_pacemaker_loop(self, mock_task_kill):
         ctx = mock.Mock(pacemakerd=True, loop=True, sbd=None, corosync=None)
         main.kill_process(ctx)
         mock_task_kill.assert_not_called()
 
-    @mock.patch('preflight_check.task.TaskKill')
+    @mock.patch('crmsh.preflight_check.task.TaskKill')
     def test_kill_porcess_return(self, mock_task_kill):
         ctx = mock.Mock(pacemakerd=False, sbd=False, corosync=False)
         main.kill_process(ctx)
         mock_task_kill.assert_not_called()
 
-    @mock.patch('preflight_check.task.TaskKill')
+    @mock.patch('crmsh.preflight_check.task.TaskKill')
     def test_kill_process(self, mock_task_kill):
         mock_task_kill_inst = mock.Mock()
         mock_task_kill.return_value = mock_task_kill_inst
@@ -172,7 +171,7 @@ class TestMain(TestCase):
         ctx = mock.Mock(sp_iptables=None)
         main.split_brain(ctx)
 
-    @mock.patch('preflight_check.task.TaskSplitBrain')
+    @mock.patch('crmsh.preflight_check.task.TaskSplitBrain')
     def test_split_brain(self, mock_sp):
         ctx = mock.Mock(sp_iptables=True, yes=False)
         mock_sp_inst = mock.Mock()
@@ -189,7 +188,7 @@ class TestMain(TestCase):
         mock_sp_inst.run.assert_called_once_with()
         mock_sp_inst.wait.assert_called_once_with()
 
-    @mock.patch('preflight_check.task.TaskSplitBrain')
+    @mock.patch('crmsh.preflight_check.task.TaskSplitBrain')
     def test_split_brain_exception(self, mock_sp):
         ctx = mock.Mock(sp_iptables=True)
         mock_sp_inst = mock.Mock()
@@ -205,7 +204,7 @@ class TestMain(TestCase):
         ctx = mock.Mock(fence_node=None)
         main.fence_node(ctx)
 
-    @mock.patch('preflight_check.task.TaskFence')
+    @mock.patch('crmsh.preflight_check.task.TaskFence')
     def test_fence_node(self, mock_task_fence):
         mock_task_fence_inst = mock.Mock()
         mock_task_fence.return_value = mock_task_fence_inst

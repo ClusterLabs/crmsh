@@ -8,8 +8,7 @@ except ImportError:
     import mock
 import logging
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from preflight_check import utils, main, config
+from crmsh.preflight_check import utils, main, config
 
 
 class TestMyLoggingFormatter(TestCase):
@@ -63,22 +62,22 @@ class TestFenceInfo(TestCase):
         Global tearDown.
         """
 
-    @mock.patch('preflight_check.utils.get_property')
+    @mock.patch('crmsh.preflight_check.utils.get_property')
     def test_fence_enabled_false(self, mock_get_property):
         mock_get_property.return_value = None
         res = self.fence_info_inst.fence_enabled
         self.assertEqual(res, False)
         mock_get_property.assert_called_once_with("stonith-enabled")
 
-    @mock.patch('preflight_check.utils.get_property')
+    @mock.patch('crmsh.preflight_check.utils.get_property')
     def test_fence_enabled_true(self, mock_get_property):
         mock_get_property.return_value = "True"
         res = self.fence_info_inst.fence_enabled
         self.assertEqual(res, True)
         mock_get_property.assert_called_once_with("stonith-enabled")
 
-    @mock.patch('preflight_check.utils.msg_error')
-    @mock.patch('preflight_check.utils.get_property')
+    @mock.patch('crmsh.preflight_check.utils.msg_error')
+    @mock.patch('crmsh.preflight_check.utils.get_property')
     def test_fence_action_none(self, mock_get_property, mock_error):
         mock_get_property.return_value = None
         res = self.fence_info_inst.fence_action
@@ -86,21 +85,21 @@ class TestFenceInfo(TestCase):
         mock_get_property.assert_called_once_with("stonith-action")
         mock_error.assert_called_once_with('Cluster property "stonith-action" should be reboot|off|poweroff')
 
-    @mock.patch('preflight_check.utils.get_property')
+    @mock.patch('crmsh.preflight_check.utils.get_property')
     def test_fence_action(self, mock_get_property):
         mock_get_property.return_value = "reboot"
         res = self.fence_info_inst.fence_action
         self.assertEqual(res, "reboot")
         mock_get_property.assert_called_once_with("stonith-action")
 
-    @mock.patch('preflight_check.utils.get_property')
+    @mock.patch('crmsh.preflight_check.utils.get_property')
     def test_fence_timeout(self, mock_get_property):
         mock_get_property.return_value = "60s"
         res = self.fence_info_inst.fence_timeout
         self.assertEqual(res, "60")
         mock_get_property.assert_called_once_with("stonith-timeout")
 
-    @mock.patch('preflight_check.utils.get_property')
+    @mock.patch('crmsh.preflight_check.utils.get_property')
     def test_fence_timeout_default(self, mock_get_property):
         mock_get_property.return_value = None
         res = self.fence_info_inst.fence_timeout
@@ -135,7 +134,7 @@ class TestUtils(TestCase):
         Global tearDown.
         """
 
-    @mock.patch('preflight_check.utils.datetime')
+    @mock.patch('crmsh.preflight_check.utils.datetime')
     def test_now(self, mock_datetime):
         mock_now = mock.Mock()
         mock_datetime.now.return_value = mock_now
@@ -147,7 +146,7 @@ class TestUtils(TestCase):
         mock_datetime.now.assert_called_once_with()
         mock_now.strftime.assert_called_once_with("%Y/%m/%d %H:%M:%S")
 
-    @mock.patch('preflight_check.utils.get_handler')
+    @mock.patch('crmsh.preflight_check.utils.get_handler')
     def test_manage_handler(self, mock_get_handler):
         mock_get_handler.return_value = "handler"
         utils.logger = mock.Mock()
@@ -161,7 +160,7 @@ class TestUtils(TestCase):
         utils.logger.removeHandler.assert_called_once_with("handler")
         utils.logger.addHandler.assert_called_once_with("handler")
 
-    @mock.patch('preflight_check.utils.manage_handler')
+    @mock.patch('crmsh.preflight_check.utils.manage_handler')
     def test_msg_raw(self, mock_handler):
         utils.logger = mock.Mock()
         utils.logger.log = mock.Mock()
@@ -169,17 +168,17 @@ class TestUtils(TestCase):
         mock_handler.assert_called_once_with("stream", True)
         utils.logger.log.assert_called_once_with("level1", "msg1")
 
-    @mock.patch('preflight_check.utils.msg_raw')
+    @mock.patch('crmsh.preflight_check.utils.msg_raw')
     def test_msg_info(self, mock_raw):
         utils.msg_info("msg1")
         mock_raw.assert_called_once_with(logging.INFO, "msg1", True)
 
-    @mock.patch('preflight_check.utils.msg_raw')
+    @mock.patch('crmsh.preflight_check.utils.msg_raw')
     def test_msg_warn(self, mock_raw):
         utils.msg_warn("msg1")
         mock_raw.assert_called_once_with(logging.WARNING, "msg1", True)
 
-    @mock.patch('preflight_check.utils.msg_raw')
+    @mock.patch('crmsh.preflight_check.utils.msg_raw')
     def test_msg_error(self, mock_raw):
         utils.msg_error("msg1")
         mock_raw.assert_called_once_with(logging.ERROR, "msg1", True)
@@ -202,9 +201,9 @@ class TestUtils(TestCase):
         file_handle.flush.assert_called_once_with()
         mock_fsync.assert_called_once_with(file_handle)
 
-    @mock.patch('preflight_check.utils.crmshutils.this_node')
-    @mock.patch('preflight_check.utils.msg_error')
-    @mock.patch('preflight_check.utils.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.preflight_check.utils.crmshutils.this_node')
+    @mock.patch('crmsh.preflight_check.utils.msg_error')
+    @mock.patch('crmsh.preflight_check.utils.crmshutils.get_stdout_stderr')
     def test_this_node_false(self, mock_run, mock_error, mock_this_node):
         mock_run.return_value = (1, None, "error data")
         mock_this_node.return_value = "node1"
@@ -216,19 +215,19 @@ class TestUtils(TestCase):
         mock_error.assert_called_once_with("error data")
         mock_this_node.assert_called_once_with()
     
-    @mock.patch('preflight_check.utils.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.preflight_check.utils.crmshutils.get_stdout_stderr')
     def test_this_node(self, mock_run):
         mock_run.return_value = (0, "data", None)
         res = utils.this_node()
         self.assertEqual(res, "data")
         mock_run.assert_called_once_with("crm_node --name")
 
-    @mock.patch('preflight_check.utils.datetime')
+    @mock.patch('crmsh.preflight_check.utils.datetime')
     def test_str_to_datetime(self, mock_datetime):
         utils.str_to_datetime("Mon Nov  2 15:37:11 2020", "%a %b %d %H:%M:%S %Y")
         mock_datetime.strptime.assert_called_once_with("Mon Nov  2 15:37:11 2020", "%a %b %d %H:%M:%S %Y")
 
-    @mock.patch('preflight_check.utils.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.preflight_check.utils.crmshutils.get_stdout_stderr')
     def test_corosync_port_list(self, mock_run):
         output = """
 totem.interface.0.bindnetaddr (str) = 10.10.10.121
@@ -259,7 +258,7 @@ totem.interface.1.ttl (u8) = 1
         self.assertEqual(utils.is_root(), True)
         mock_getuid.assert_called_once_with()
 
-    @mock.patch('preflight_check.utils.crmshutils.to_ascii')
+    @mock.patch('crmsh.preflight_check.utils.crmshutils.to_ascii')
     @mock.patch('os.path.basename')
     @mock.patch('builtins.open')
     @mock.patch('os.path.join')
@@ -297,7 +296,7 @@ totem.interface.1.ttl (u8) = 1
             mock.call(b'/usr/sbin/cmd2\x00')
             ])
 
-    @mock.patch('preflight_check.utils.crmshutils.to_ascii')
+    @mock.patch('crmsh.preflight_check.utils.crmshutils.to_ascii')
     @mock.patch('os.path.basename')
     @mock.patch('builtins.open')
     @mock.patch('os.path.join')
@@ -335,8 +334,8 @@ totem.interface.1.ttl (u8) = 1
             mock.call(b'/usr/sbin/sbd\x00')
             ])
 
-    @mock.patch('preflight_check.utils.msg_error')
-    @mock.patch('preflight_check.utils.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.preflight_check.utils.msg_error')
+    @mock.patch('crmsh.preflight_check.utils.crmshutils.get_stdout_stderr')
     def test_check_node_status_error_cmd(self, mock_run, mock_error):
         mock_run.return_value = (1, None, "error")
         res = utils.check_node_status("node1", "member")
@@ -344,8 +343,8 @@ totem.interface.1.ttl (u8) = 1
         mock_run.assert_called_once_with("crm_node -l")
         mock_error.assert_called_once_with("error")
 
-    @mock.patch('preflight_check.utils.msg_error')
-    @mock.patch('preflight_check.utils.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.preflight_check.utils.msg_error')
+    @mock.patch('crmsh.preflight_check.utils.crmshutils.get_stdout_stderr')
     def test_check_node_status(self, mock_run, mock_error):
         output = """
 1084783297 15sp2-1 member
@@ -364,14 +363,14 @@ totem.interface.1.ttl (u8) = 1
             ])
         mock_error.assert_not_called()
 
-    @mock.patch('preflight_check.utils.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.preflight_check.utils.crmshutils.get_stdout_stderr')
     def test_online_nodes_empty(self, mock_run):
         mock_run.return_value = (0, "data", None)
         res = utils.online_nodes()
         self.assertEqual(res, [])
         mock_run.assert_called_once_with("crm_mon -1")
 
-    @mock.patch('preflight_check.utils.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.preflight_check.utils.crmshutils.get_stdout_stderr')
     def test_online_nodes(self, mock_run):
         output = """
 Node List:
@@ -382,29 +381,29 @@ Node List:
         self.assertEqual(res, ["15sp2-1", "15sp2-2"])
         mock_run.assert_called_once_with("crm_mon -1")
 
-    @mock.patch('preflight_check.utils.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.preflight_check.utils.crmshutils.get_stdout_stderr')
     def test_get_property_none(self, mock_run):
         mock_run.return_value = (1, None, "error")
         res = utils.get_property("test")
         self.assertEqual(res, None)
         mock_run.assert_called_once_with("crm configure get_property test")
 
-    @mock.patch('preflight_check.utils.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.preflight_check.utils.crmshutils.get_stdout_stderr')
     def test_get_property(self, mock_run):
         mock_run.return_value = (0, "data", None)
         res = utils.get_property("test")
         self.assertEqual(res, "data")
         mock_run.assert_called_once_with("crm configure get_property test")
 
-    @mock.patch('preflight_check.utils.online_nodes')
+    @mock.patch('crmsh.preflight_check.utils.online_nodes')
     def test_peer_node_list_empty(self, mock_online):
         mock_online.return_value = None
         res = utils.peer_node_list()
         self.assertEqual(res, [])
         mock_online.assert_called_once_with()
 
-    @mock.patch('preflight_check.utils.this_node')
-    @mock.patch('preflight_check.utils.online_nodes')
+    @mock.patch('crmsh.preflight_check.utils.this_node')
+    @mock.patch('crmsh.preflight_check.utils.online_nodes')
     def test_peer_node_list(self, mock_online, mock_this_node):
         mock_online.return_value = ["node1", "node2"]
         mock_this_node.return_value = "node1"
@@ -426,7 +425,7 @@ Node List:
         assert res is False
 
     @classmethod
-    @mock.patch('preflight_check.utils.msg_error')
+    @mock.patch('crmsh.preflight_check.utils.msg_error')
     @mock.patch('crmsh.utils.get_stdout_stderr')
     @mock.patch('os.path.exists')
     def test_is_valid_sbd_cmd_error(cls, mock_os_path_exists,
@@ -444,7 +443,7 @@ Node List:
         assert res is False
 
     @classmethod
-    @mock.patch('preflight_check.utils.msg_error')
+    @mock.patch('crmsh.preflight_check.utils.msg_error')
     @mock.patch('crmsh.utils.get_stdout_stderr')
     @mock.patch('os.path.exists')
     def test_is_valid_sbd_not_sbd(cls, mock_os_path_exists,
@@ -511,7 +510,7 @@ Timeout (msgwait)  : 10
         assert res == ""
 
     @classmethod
-    @mock.patch('preflight_check.utils.is_valid_sbd')
+    @mock.patch('crmsh.preflight_check.utils.is_valid_sbd')
     @mock.patch('glob.glob')
     @mock.patch('os.path.basename')
     @mock.patch('os.path.dirname')
@@ -532,7 +531,7 @@ Timeout (msgwait)  : 10
         assert res == ""
 
     @classmethod
-    @mock.patch('preflight_check.utils.is_valid_sbd')
+    @mock.patch('crmsh.preflight_check.utils.is_valid_sbd')
     @mock.patch('glob.glob')
     @mock.patch('os.path.basename')
     @mock.patch('os.path.dirname')
