@@ -60,7 +60,7 @@ LOGGING_CFG = {
                 'datefmt': '%Y/%m/%d %H:%M:%S'
                 },
             'stream_formatter': {
-                '()': 'preflight_check.utils.MyLoggingFormatter'
+                '()': 'crmsh.preflight_check.utils.MyLoggingFormatter'
                 }
             },
         'handlers': {
