@@ -136,7 +136,9 @@ class Cluster(command.UI):
         Enable the cluster services on this node
         '''
         try:
-            utils.enable_service("pacemaker")
+            utils.enable_service("pacemaker.service")
+            if utils.is_qdevice_configured():
+                utils.enable_service("corosync-qdevice.service")
             err_buf.info("Cluster services enabled")
         except IOError as err:
             context.fatal_error(str(err))
@@ -149,7 +151,9 @@ class Cluster(command.UI):
         Disable the cluster services on this node
         '''
         try:
-            utils.disable_service("pacemaker")
+            utils.disable_service("pacemaker.service")
+            if utils.is_qdevice_configured():
+                utils.disable_service("corosync-qdevice.service")
             err_buf.info("Cluster services disabled")
         except IOError as err:
             context.fatal_error(str(err))
