@@ -1302,3 +1302,8 @@ Active Resources:
     res = utils.has_resource_running()
     assert res is False
     mock_run.assert_called_once_with("crm_mon -1")
+
+
+def test_re_split_string():
+    assert utils.re_split_string('[; ]', "/dev/sda1; /dev/sdb1 ; ") == ["/dev/sda1", "/dev/sdb1"]
+    assert utils.re_split_string('[; ]', "/dev/sda1 ") == ["/dev/sda1"]
