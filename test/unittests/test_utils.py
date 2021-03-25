@@ -924,3 +924,8 @@ def test_ping_node(mock_run):
         utils.ping_node("node_unreachable")
     assert str(err.value) == 'host "node_unreachable" is unreachable: error data'
     mock_run.assert_called_once_with("ping -c 1 node_unreachable")
+
+
+def test_re_split_string():
+    assert utils.re_split_string('[; ]', "/dev/sda1; /dev/sdb1 ; ") == ["/dev/sda1", "/dev/sdb1"]
+    assert utils.re_split_string('[; ]', "/dev/sda1 ") == ["/dev/sda1"]
