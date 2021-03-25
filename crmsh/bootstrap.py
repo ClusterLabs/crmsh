@@ -350,6 +350,7 @@ Configure SBD:
 """
     DISKLESS_SBD_WARNING = """Diskless SBD requires cluster with three or more nodes.
 If you want to use diskless SBD for two-nodes cluster, should be combined with QDevice."""
+    PARSE_RE = "[; ]"
 
     def __init__(self, sbd_devices=None, diskless_sbd=False):
         """
@@ -371,10 +372,7 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         """
         result_list = []
         for dev in self.sbd_devices_input:
-            if ';' in dev:
-                result_list.extend(dev.strip(';').split(';'))
-            else:
-                result_list.append(dev)
+            result_list += utils.re_split_string(self.PARSE_RE, dev)
         return result_list
 
     @staticmethod
@@ -445,7 +443,7 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
             if dev == "none":
                 self.diskless_sbd = True
                 return
-            dev_list = dev.strip(';').split(';')
+            dev_list = utils.re_split_string(self.PARSE_RE, dev)
             try:
                 self._verify_sbd_device(dev_list)
             except ValueError as err_msg:
@@ -500,15 +498,14 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         utils.sysconfig_set(SYSCONFIG_SBD, **sbd_config_dict)
         csync2_update(SYSCONFIG_SBD)
 
-    @staticmethod
-    def _get_sbd_device_from_config():
+    def _get_sbd_device_from_config(self):
         """
         Gets currently configured SBD device, i.e. what's in /etc/sysconfig/sbd
         """
         conf = utils.parse_sysconfig(SYSCONFIG_SBD)
         res = conf.get("SBD_DEVICE")
         if res:
-            return res.strip(';').split(';')
+            return utils.re_split_string(self.PARSE_RE, res)
         else:
             return None
 
