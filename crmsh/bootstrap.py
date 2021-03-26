@@ -33,6 +33,7 @@ from . import clidisplay
 from . import term
 from . import lock
 from . import userdir
+from . import constants
 
 
 LOG_FILE = "/var/log/crmsh/ha-cluster-bootstrap.log"
@@ -1871,7 +1872,10 @@ def configure_qdevice_interactive():
     """
     Configure qdevice on interactive mode
     """
-    if _context.yes_to_all or not confirm("Do you want to configure QDevice?"):
+    if _context.yes_to_all:
+        return
+    status("\nConfigure Qdevice/Qnetd:\n" + constants.qdevice_help_info + "\n")
+    if not confirm("Do you want to configure QDevice?"):
         return
     qnetd_addr = prompt_for_string("HOST or IP of the QNetd server to be used")
     if not qnetd_addr:

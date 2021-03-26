@@ -13,6 +13,7 @@ from . import completers as compl
 from . import bootstrap
 from . import corosync
 from .cibconfig import cib_factory
+from . import constants
 
 
 class ArgParser(ArgumentParser):
@@ -243,7 +244,7 @@ Note:
         network_group.add_argument("-I", "--ipv6", action="store_true", dest="ipv6",
                                    help="Configure corosync use IPv6")
 
-        qdevice_group = parser.add_argument_group("QDevice configuration", "Options for configuring QDevice and QNetd.")
+        qdevice_group = parser.add_argument_group("QDevice configuration", re.sub('  ', '', constants.qdevice_help_info) + "\n\nOptions for configuring QDevice and QNetd.")
         qdevice_group.add_argument("--qnetd-hostname", dest="qnetd_addr", metavar="HOST",
                                    help="HOST or IP of the QNetd server to be used")
         qdevice_group.add_argument("--qdevice-port", dest="qdevice_port", metavar="PORT", type=int, default=5403,
