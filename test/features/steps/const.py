@@ -94,6 +94,12 @@ Network configuration:
   -I, --ipv6            Configure corosync use IPv6
 
 QDevice configuration:
+  QDevice participates in quorum decisions. With the assistance of 
+  a third-party arbitrator Qnetd, it provides votes so that a cluster 
+  is able to sustain more node failures than standard quorum rules 
+  allow. It is recommended for clusters with an even number of nodes 
+  and highly recommended for 2 node clusters.
+  
   Options for configuring QDevice and QNetd.
 
   --qnetd-hostname HOST
