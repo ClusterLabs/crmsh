@@ -22,6 +22,129 @@ from crmsh import bootstrap
 from crmsh import corosync
 
 
+class TestContext(unittest.TestCase):
+    """
+    Unitary tests for crmsh.bootstrap.Context
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Global setUp.
+        """
+
+    def setUp(self):
+        """
+        Test setUp.
+        """
+        self.ctx_inst = bootstrap.Context()
+
+    def tearDown(self):
+        """
+        Test tearDown.
+        """
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        Global tearDown.
+        """
+
+    def test_set_context(self):
+        options = mock.Mock(yes_to_all=True, ipv6=False)
+        ctx = self.ctx_inst.set_context(options)
+        self.assertEqual(ctx.yes_to_all, True)
+        self.assertEqual(ctx.ipv6, False)
+
+    @mock.patch('crmsh.corosync.QDevice')
+    def test_initialize_qdevice_return(self, mock_qdevice):
+        self.ctx_inst.initialize_qdevice()
+        mock_qdevice.assert_not_called()
+
+    @mock.patch('crmsh.corosync.QDevice')
+    def test_initialize_qdevice(self, mock_qdevice):
+        options = mock.Mock(qnetd_addr="node3", qdevice_port=123)
+        ctx = self.ctx_inst.set_context(options)
+        ctx.initialize_qdevice()
+        mock_qdevice.assert_called_once_with('node3', port=123, algo=None, tie_breaker=None, tls=None, cmds=None, mode=None)
+
+    @mock.patch('crmsh.bootstrap.error')
+    def test_validate_sbd_option_error_together(self, mock_error):
+        mock_error.side_effect = SystemExit
+        options = mock.Mock(sbd_devices=["/dev/sda1"], diskless_sbd=True)
+        ctx = self.ctx_inst.set_context(options)
+        with self.assertRaises(SystemExit):
+            ctx._validate_sbd_option()
+        mock_error.assert_called_once_with("Can't use -s and -S options together")
+
+    @mock.patch('crmsh.bootstrap.error')
+    def test_validate_sbd_option_error_sbd_stage_no_option(self, mock_error):
+        mock_error.side_effect = SystemExit
+        options = mock.Mock(stage="sbd", yes_to_all=True)
+        ctx = self.ctx_inst.set_context(options)
+        with self.assertRaises(SystemExit):
+            ctx._validate_sbd_option()
+        mock_error.assert_called_once_with("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
+
+    @mock.patch('crmsh.bootstrap.error')
+    @mock.patch('crmsh.utils.service_is_active')
+    def test_validate_sbd_option_error_sbd_stage_service(self, mock_active, mock_error):
+        mock_error.side_effect = SystemExit
+        options = mock.Mock(stage="sbd", diskless_sbd=True)
+        ctx = self.ctx_inst.set_context(options)
+        mock_active.return_value = True
+        with self.assertRaises(SystemExit):
+            ctx._validate_sbd_option()
+        mock_error.assert_called_once_with("Cannot configure stage sbd: sbd.service already running!")
+        mock_active.assert_called_once_with("sbd.service")
+
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.utils.service_is_active')
+    def test_validate_sbd_option_error_sbd_stage(self, mock_active, mock_check_all):
+        options = mock.Mock(stage="sbd", diskless_sbd=True, cluster_is_running=True)
+        ctx = self.ctx_inst.set_context(options)
+        mock_active.return_value = False
+        ctx._validate_sbd_option()
+        mock_active.assert_called_once_with("sbd.service")
+        mock_check_all.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.error')
+    def test_validate_option_error_nic_number(self, mock_error):
+        mock_error.side_effect = SystemExit
+        options = mock.Mock(nic_list=["eth1", "eth2", "eth3"])
+        ctx = self.ctx_inst.set_context(options)
+        with self.assertRaises(SystemExit):
+            ctx.validate_option()
+        mock_error.assert_called_once_with("Maximum number of interface is 2")
+
+    @mock.patch('crmsh.bootstrap.error')
+    def test_validate_option_error_nic_dup(self, mock_error):
+        mock_error.side_effect = SystemExit
+        options = mock.Mock(nic_list=["eth2", "eth2"])
+        ctx = self.ctx_inst.set_context(options)
+        with self.assertRaises(SystemExit):
+            ctx.validate_option()
+        mock_error.assert_called_once_with("Duplicated input")
+
+    @mock.patch('crmsh.bootstrap.warn')
+    @mock.patch('crmsh.bootstrap.Validation.valid_admin_ip')
+    def test_validate_option(self, mock_admin_ip, mock_warn):
+        options = mock.Mock(admin_ip="10.10.10.123", qdevice_inst=mock.Mock())
+        ctx = self.ctx_inst.set_context(options)
+        ctx._validate_sbd_option = mock.Mock()
+        ctx.validate_option()
+        mock_admin_ip.assert_called_once_with("10.10.10.123")
+        ctx.qdevice_inst.valid_attr.assert_called_once_with()
+        ctx._validate_sbd_option.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.SBDManager')
+    def test_init_sbd_manager(self, mock_sbd):
+        options = mock.Mock(sbd_devices=["/dev/sda1"], diskless_sbd=False)
+        ctx = self.ctx_inst.set_context(options)
+        ctx.init_sbd_manager()
+        mock_sbd.assert_called_once_with(["/dev/sda1"], False)
+
+
 class TestWatchdog(unittest.TestCase):
     """
     Unitary tests for crmsh.bootstrap.Watchdog
@@ -563,6 +686,22 @@ class TestSBDManager(unittest.TestCase):
         mock_parse_inst.get.assert_called_once_with("SBD_DEVICE")
         mock_split.assert_called_once_with(bootstrap.SBDManager.PARSE_RE, "/dev/sdb1;/dev/sdc1")
 
+    @mock.patch('crmsh.bootstrap.warn')
+    @mock.patch('crmsh.utils.get_quorum_votes_dict')
+    def test_warn_diskless_sbd_diskless(self, mock_vote, mock_warn):
+        bootstrap._context = mock.Mock(cluster_is_running=False)
+        self.sbd_inst_diskless._warn_diskless_sbd()
+        mock_vote.assert_not_called()
+        mock_warn.assert_called_once_with(bootstrap.SBDManager.DISKLESS_SBD_WARNING)
+
+    @mock.patch('crmsh.bootstrap.warn')
+    @mock.patch('crmsh.utils.get_quorum_votes_dict')
+    def test_warn_diskless_sbd_peer(self, mock_vote, mock_warn):
+        mock_vote.return_value = {'Expected': '1'}
+        self.sbd_inst_diskless._warn_diskless_sbd("node2")
+        mock_vote.assert_called_once_with("node2")
+        mock_warn.assert_called_once_with(bootstrap.SBDManager.DISKLESS_SBD_WARNING)
+
     @mock.patch('crmsh.utils.package_is_installed')
     def test_sbd_init_not_installed(self, mock_package):
         mock_package.return_value = False
@@ -594,15 +733,17 @@ class TestSBDManager(unittest.TestCase):
         mock_watchdog.assert_called_once_with(_input=None)
         mock_watchdog_inst.init_watchdog.assert_called_once_with()
         mock_invoke.assert_called_once_with("systemctl disable sbd.service")
-
-    @mock.patch('crmsh.bootstrap.warn')
+ 
+    @mock.patch('crmsh.bootstrap.SBDManager._determine_stonith_watchdog_timeout')
+    @mock.patch('crmsh.bootstrap.SBDManager._enable_sbd_service')
+    @mock.patch('crmsh.bootstrap.SBDManager._warn_diskless_sbd')
     @mock.patch('crmsh.bootstrap.SBDManager._update_configuration')
     @mock.patch('crmsh.bootstrap.SBDManager._initialize_sbd')
     @mock.patch('crmsh.bootstrap.status_long')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device')
     @mock.patch('crmsh.bootstrap.Watchdog')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_sbd_init(self, mock_package, mock_watchdog, mock_get_device, mock_status, mock_initialize, mock_update, mock_warn):
+    def test_sbd_init(self, mock_package, mock_watchdog, mock_get_device, mock_status, mock_initialize, mock_update, mock_warn, mock_enable_sbd, mock_determine):
         bootstrap._context = mock.Mock(watchdog=None)
         mock_package.return_value = True
         mock_watchdog_inst = mock.Mock()
@@ -617,7 +758,76 @@ class TestSBDManager(unittest.TestCase):
         mock_update.assert_called_once_with()
         mock_watchdog.assert_called_once_with(_input=None)
         mock_watchdog_inst.init_watchdog.assert_called_once_with()
-        mock_warn.assert_called_once_with(bootstrap.SBDManager.DISKLESS_SBD_WARNING)
+        mock_warn.assert_called_once_with()
+        mock_enable_sbd.assert_called_once_with()
+        mock_determine.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.SBDManager.configure_sbd_resource')
+    @mock.patch('crmsh.bootstrap.wait_for_cluster')
+    @mock.patch('crmsh.utils.cluster_run_cmd')
+    @mock.patch('crmsh.bootstrap.status')
+    @mock.patch('crmsh.utils.has_resource_running')
+    def test_restart_cluster_on_needed_no_ra_running(self, mock_ra_running, mock_status, mock_cluster_run, mock_wait, mock_config_sbd_ra):
+        mock_ra_running.return_value = False
+        self.sbd_inst._restart_cluster_and_configure_sbd_ra()
+        mock_status.assert_called_once_with("Restarting cluster service")
+        mock_cluster_run.assert_called_once_with("crm cluster restart")
+        mock_wait.assert_called_once_with()
+        mock_config_sbd_ra.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.warn')
+    @mock.patch('crmsh.utils.has_resource_running')
+    def test_restart_cluster_on_needed_diskless(self, mock_ra_running, mock_warn):
+        mock_ra_running.return_value = True
+        self.sbd_inst_diskless._restart_cluster_and_configure_sbd_ra()
+        mock_warn.assert_has_calls([
+            mock.call("To start sbd.service, need to restart cluster service manually on each node"),
+            mock.call("Then run \"crm configure property stonith-enabled=true stonith-watchdog-timeout=10s\" on any node")
+            ])
+
+    @mock.patch('crmsh.bootstrap.SBDManager.configure_sbd_resource')
+    @mock.patch('crmsh.bootstrap.warn')
+    @mock.patch('crmsh.utils.has_resource_running')
+    def test_restart_cluster_on_needed(self, mock_ra_running, mock_warn, mock_config_sbd_ra):
+        mock_ra_running.return_value = True
+        self.sbd_inst._restart_cluster_and_configure_sbd_ra()
+        mock_warn.assert_has_calls([
+            mock.call("To start sbd.service, need to restart cluster service manually on each node"),
+            ])
+        mock_config_sbd_ra.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.invoke')
+    def test_enable_sbd_service_init(self, mock_invoke):
+        bootstrap._context = mock.Mock(cluster_is_running=False)
+        self.sbd_inst._enable_sbd_service()
+        mock_invoke.assert_called_once_with("systemctl enable sbd.service")
+
+    @mock.patch('crmsh.bootstrap.SBDManager._restart_cluster_and_configure_sbd_ra')
+    @mock.patch('crmsh.utils.cluster_run_cmd')
+    def test_enable_sbd_service_restart(self, mock_cluster_run, mock_restart):
+        bootstrap._context = mock.Mock(cluster_is_running=True)
+        self.sbd_inst._enable_sbd_service()
+        mock_cluster_run.assert_has_calls([
+            mock.call("systemctl enable sbd.service"),
+            ])
+        mock_restart.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.warn')
+    @mock.patch('crmsh.bootstrap.SBDManager.configure_sbd_resource')
+    @mock.patch('crmsh.utils.has_resource_running')
+    @mock.patch('crmsh.utils.cluster_run_cmd')
+    def test_enable_sbd_service(self, mock_cluster_run, mock_ra_running, mock_config_sbd_ra, mock_warn):
+        bootstrap._context = mock.Mock(cluster_is_running=True)
+        mock_ra_running.return_value = True
+
+        self.sbd_inst._enable_sbd_service()
+
+        mock_cluster_run.assert_has_calls([
+            mock.call("systemctl enable sbd.service"),
+            ])
+        mock_ra_running.assert_called_once_with()
+        mock_config_sbd_ra.assert_called_once_with()
+        mock_warn.assert_called_once_with("To start sbd.service, need to restart cluster service manually on each node")
 
     @mock.patch('crmsh.utils.package_is_installed')
     def test_configure_sbd_resource_not_installed(self, mock_package):
@@ -628,11 +838,13 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
+    @mock.patch('crmsh.utils.has_resource_configured')
     @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_configure_sbd_resource_error_primitive(self, mock_package, mock_enabled, mock_get_device, mock_invoke, mock_error):
+    def test_configure_sbd_resource_error_primitive(self, mock_package, mock_enabled, mock_ra_configured, mock_get_device, mock_invoke, mock_error):
         mock_package.return_value = True
         mock_enabled.return_value = True
+        mock_ra_configured.return_value = False
         mock_get_device.return_value = ["/dev/sdb1"]
         mock_invoke.return_value = False
         mock_error.side_effect = ValueError
@@ -642,6 +854,7 @@ class TestSBDManager(unittest.TestCase):
 
         mock_package.assert_called_once_with("sbd")
         mock_enabled.assert_called_once_with("sbd.service")
+        mock_ra_configured.assert_called_once_with("stonith:external/sbd")
         mock_get_device.assert_called_once_with()
         mock_invoke.assert_called_once_with("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s")
         mock_error.assert_called_once_with("Can't create stonith-sbd primitive")
@@ -649,11 +862,13 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
+    @mock.patch('crmsh.utils.has_resource_configured')
     @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_configure_sbd_resource_error_property(self, mock_package, mock_enabled, mock_get_device, mock_invoke, mock_error):
+    def test_configure_sbd_resource_error_property(self, mock_package, mock_enabled, mock_ra_configured, mock_get_device, mock_invoke, mock_error):
         mock_package.return_value = True
         mock_enabled.return_value = True
+        mock_ra_configured.return_value = False
         mock_get_device.return_value = ["/dev/sdb1"]
         mock_invoke.side_effect = [True, False]
         mock_error.side_effect = ValueError
@@ -663,6 +878,7 @@ class TestSBDManager(unittest.TestCase):
 
         mock_package.assert_called_once_with("sbd")
         mock_enabled.assert_called_once_with("sbd.service")
+        mock_ra_configured.assert_called_once_with("stonith:external/sbd")
         mock_get_device.assert_called_once_with()
         mock_invoke.assert_has_calls([
             mock.call("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"),
@@ -673,11 +889,13 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
+    @mock.patch('crmsh.utils.has_resource_configured')
     @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_configure_sbd_resource_diskless(self, mock_package, mock_enabled, mock_get_device, mock_invoke, mock_error):
+    def test_configure_sbd_resource_diskless(self, mock_package, mock_enabled, mock_ra_configured, mock_get_device, mock_invoke, mock_error):
         mock_package.return_value = True
         mock_enabled.return_value = True
+        mock_ra_configured.return_value = False
         mock_get_device.return_value = None
         mock_invoke.return_value = False
         mock_error.side_effect = ValueError
@@ -688,8 +906,9 @@ class TestSBDManager(unittest.TestCase):
         mock_package.assert_called_once_with("sbd")
         mock_enabled.assert_called_once_with("sbd.service")
         mock_get_device.assert_called_once_with()
-        mock_invoke.assert_called_once_with("crm configure property stonith-enabled=true stonith-watchdog-timeout=5s")
+        mock_invoke.assert_called_once_with("crm configure property stonith-enabled=true stonith-watchdog-timeout=10s")
         mock_error.assert_called_once_with("Can't enable STONITH for diskless SBD")
+        mock_ra_configured.assert_called_once_with("stonith:external/sbd")
 
     @mock.patch('crmsh.utils.package_is_installed')
     def test_join_sbd_config_not_installed(self, mock_package):
@@ -754,15 +973,14 @@ class TestSBDManager(unittest.TestCase):
         mock_watchdog_inst.join_watchdog.assert_called_once_with()
 
     @mock.patch('crmsh.bootstrap.status')
-    @mock.patch('crmsh.bootstrap.warn')
-    @mock.patch('crmsh.utils.get_quorum_votes_dict')
+    @mock.patch('crmsh.bootstrap.SBDManager._warn_diskless_sbd')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.bootstrap.Watchdog')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('os.path.exists')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_join_sbd_diskless(self, mock_package, mock_exists, mock_enabled, mock_invoke, mock_watchdog, mock_get_device, mock_quorum_votes, mock_warn, mock_status):
+    def test_join_sbd_diskless(self, mock_package, mock_exists, mock_enabled, mock_invoke, mock_watchdog, mock_get_device, mock_warn, mock_status):
         mock_package.return_value = True
         mock_exists.return_value = True
         mock_enabled.return_value = True
@@ -770,7 +988,6 @@ class TestSBDManager(unittest.TestCase):
         mock_watchdog_inst = mock.Mock()
         mock_watchdog.return_value = mock_watchdog_inst
         mock_watchdog_inst.join_watchdog = mock.Mock()
-        mock_quorum_votes.return_value = {'Expected': '1', 'Total': '1'}
 
         self.sbd_inst.join_sbd("node1")
 
@@ -778,8 +995,7 @@ class TestSBDManager(unittest.TestCase):
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
         mock_invoke.assert_called_once_with("systemctl enable sbd.service")
         mock_get_device.assert_called_once_with()
-        mock_quorum_votes.assert_called_once_with("node1")
-        mock_warn.assert_called_once_with(bootstrap.SBDManager.DISKLESS_SBD_WARNING)
+        mock_warn.assert_called_once_with("node1")
         mock_enabled.assert_called_once_with("sbd.service", "node1")
         mock_status.assert_called_once_with("Got diskless SBD configuration")
         mock_watchdog.assert_called_once_with(peer_host="node1")
@@ -850,6 +1066,31 @@ class TestSBDManager(unittest.TestCase):
         res = self.sbd_inst._get_device_uuid("/dev/sda1")
         self.assertEqual(res, "a2e9a92c-cc72-4ef9-ac55-ccc342f3546b")
         mock_run.assert_called_once_with("sbd -d /dev/sda1 dump")
+
+    @mock.patch('crmsh.utils.parse_sysconfig')
+    def test_determine_watchdog_timeout(self, mock_parse):
+        mock_parse_inst = mock.Mock()
+        mock_parse.return_value = mock_parse_inst
+        mock_parse_inst.get.return_value = "5"
+        self.sbd_inst._determine_stonith_watchdog_timeout()
+        assert self.sbd_inst._stonith_watchdog_timeout == -1
+        mock_parse.assert_called_once_with(bootstrap.SYSCONFIG_SBD)
+        mock_parse_inst.get.assert_called_once_with("SBD_WATCHDOG_TIMEOUT")
+
+    @mock.patch('os.uname')
+    @mock.patch('crmsh.utils.parse_sysconfig')
+    def test_determine_watchdog_timeout_s390(self, mock_parse, mock_uname):
+        mock_parse_inst = mock.Mock()
+        mock_parse.return_value = mock_parse_inst
+        mock_parse_inst.get.return_value = None
+        mock_uname_inst = mock.Mock()
+        mock_uname.return_value = mock_uname_inst
+        mock_uname_inst.machine = "s390"
+        self.sbd_inst._determine_stonith_watchdog_timeout()
+        assert self.sbd_inst._stonith_watchdog_timeout == "30s"
+        mock_parse.assert_called_once_with(bootstrap.SYSCONFIG_SBD)
+        mock_parse_inst.get.assert_called_once_with("SBD_WATCHDOG_TIMEOUT")
+        mock_uname.assert_called_once_with()
 
 
 class TestBootstrap(unittest.TestCase):
