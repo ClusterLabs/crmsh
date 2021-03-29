@@ -420,6 +420,7 @@ class TestSBDManager(unittest.TestCase):
             mock.call('Path to storage device (e.g. /dev/disk/by-id/...), or "none" for diskless sbd, use ";" as separator for multi path', 'none|\\/.*') for x in range(2)
             ])
 
+    @mock.patch('crmsh.utils.re_split_string')
     @mock.patch('crmsh.bootstrap.warn')
     @mock.patch('crmsh.bootstrap.print_error_msg')
     @mock.patch('crmsh.bootstrap.SBDManager._verify_sbd_device')
@@ -427,11 +428,12 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.bootstrap.status')
-    def test_get_sbd_device_interactive(self, mock_status, mock_confirm, mock_from_config, mock_prompt, mock_verify, mock_error_msg, mock_warn):
+    def test_get_sbd_device_interactive(self, mock_status, mock_confirm, mock_from_config, mock_prompt, mock_verify, mock_error_msg, mock_warn, mock_split):
         bootstrap._context = mock.Mock(yes_to_all=False)
         mock_confirm.side_effect = [True, False, True]
         mock_from_config.return_value = None
         mock_prompt.side_effect = ["/dev/test1", "/dev/sda1", "/dev/sdb1"]
+        mock_split.side_effect = [["/dev/test1"], ["/dev/sda1"], ["/dev/sdb1"]]
         mock_verify.side_effect = [ValueError("/dev/test1 error"), None, None]
 
         res = self.sbd_inst._get_sbd_device_interactive()
@@ -451,10 +453,21 @@ class TestSBDManager(unittest.TestCase):
         mock_prompt.assert_has_calls([
             mock.call('Path to storage device (e.g. /dev/disk/by-id/...), or "none" for diskless sbd, use ";" as separator for multi path', 'none|\\/.*') for x in range(3)
             ])
+        mock_split.assert_has_calls([
+            mock.call(bootstrap.SBDManager.PARSE_RE, "/dev/test1"),
+            mock.call(bootstrap.SBDManager.PARSE_RE, "/dev/sda1"),
+            mock.call(bootstrap.SBDManager.PARSE_RE, "/dev/sdb1"),
+            ])
 
-    def test_parse_sbd_device(self):
+    @mock.patch('crmsh.utils.re_split_string')
+    def test_parse_sbd_device(self, mock_split):
+        mock_split.side_effect = [["/dev/sdb1"], ["/dev/sdc1"]]
         res = self.sbd_inst._parse_sbd_device()
         assert res == ["/dev/sdb1", "/dev/sdc1"]
+        mock_split.assert_has_calls([
+            mock.call(bootstrap.SBDManager.PARSE_RE, "/dev/sdb1"),
+            mock.call(bootstrap.SBDManager.PARSE_RE, "/dev/sdc1")
+            ])
 
     def test_verify_sbd_device_gt_3(self):
         assert self.sbd_inst_devices_gt_3.sbd_devices_input == ["/dev/sdb1", "/dev/sdc1", "/dev/sdd1", "/dev/sde1"]
@@ -535,17 +548,20 @@ class TestSBDManager(unittest.TestCase):
         mock_parse.assert_called_once_with("/etc/sysconfig/sbd")
         mock_parse_inst.get.assert_called_once_with("SBD_DEVICE")
 
+    @mock.patch('crmsh.utils.re_split_string')
     @mock.patch('crmsh.bootstrap.utils.parse_sysconfig')
-    def test_get_sbd_device_from_config(self, mock_parse):
+    def test_get_sbd_device_from_config(self, mock_parse, mock_split):
         mock_parse_inst = mock.Mock()
         mock_parse.return_value = mock_parse_inst
         mock_parse_inst.get.return_value = "/dev/sdb1;/dev/sdc1"
+        mock_split.return_value = ["/dev/sdb1", "/dev/sdc1"]
 
         res = self.sbd_inst._get_sbd_device_from_config()
         assert res == ["/dev/sdb1", "/dev/sdc1"]
 
         mock_parse.assert_called_once_with("/etc/sysconfig/sbd")
         mock_parse_inst.get.assert_called_once_with("SBD_DEVICE")
+        mock_split.assert_called_once_with(bootstrap.SBDManager.PARSE_RE, "/dev/sdb1;/dev/sdc1")
 
     @mock.patch('crmsh.utils.package_is_installed')
     def test_sbd_init_not_installed(self, mock_package):

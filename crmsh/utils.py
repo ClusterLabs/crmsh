@@ -2682,4 +2682,11 @@ def check_all_nodes_reachable():
     out = get_stdout_or_raise_error("crm_node -l")
     for node in re.findall("\d+ (.*) \w+", out):
         ping_node(node)
+
+
+def re_split_string(reg, string):
+    """
+    Split a string by a regrex, filter out empty items
+    """
+    return [x for x in re.split(reg, string) if x]
 # vim:ts=4:sw=4:et:
