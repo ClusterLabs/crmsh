@@ -101,3 +101,38 @@ Feature: crmsh bootstrap sbd management
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
     And     Resource "stonith:external/sbd" not configured
+
+  @clean
+  Scenario: Configure sbd on running cluster via stage(bsc#1181906)
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Online nodes are "hanode1 hanode2"
+    When    Run "crm cluster init sbd -s /dev/sda1 -y" on "hanode1"
+    Then    Service "sbd" is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode2"
+    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+
+  @clean
+  Scenario: Configure sbd on running cluster via stage with ra running(bsc#1181906)
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Online nodes are "hanode1 hanode2"
+    When    Run "crm configure primitive d Dummy op monitor interval=3s" on "hanode1"
+    When    Run "crm cluster init sbd -s /dev/sda1 -y" on "hanode1"
+    Then    Expected "WARNING: To start sbd.service, need to restart cluster service manually on each node" in stdout
+    Then    Service "sbd" is "stopped" on "hanode1"
+    And     Service "sbd" is "stopped" on "hanode2"
+    When    Run "crm cluster restart" on "hanode1"
+    Then    Service "sbd" is "started" on "hanode1"
+    When    Run "crm cluster restart" on "hanode2"
+    Then    Service "sbd" is "started" on "hanode2"
+    When    Run "sleep 20" on "hanode1"
+    Then    Resource "stonith-sbd" type "external/sbd" is "Started"
