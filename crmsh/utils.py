@@ -2559,4 +2559,11 @@ def ping_node(node):
     rc, _, err = get_stdout_stderr("ping -c 1 {}".format(node))
     if rc != 0:
         raise ValueError("host \"{}\" is unreachable: {}".format(node, err))
+
+
+def re_split_string(reg, string):
+    """
+    Split a string by a regrex, filter out empty items
+    """
+    return [x for x in re.split(reg, string) if x]
 # vim:ts=4:sw=4:et:
