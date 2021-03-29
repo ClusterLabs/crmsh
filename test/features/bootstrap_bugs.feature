@@ -98,3 +98,18 @@ Feature: Regression test for bootstrap bugs
     When    Try "crm cluster join -c hanode1 -y" on "hanode3"
     Then    Except "ERROR: cluster.join: Timed out after 120 seconds. Cannot continue since the lock directory exists at the node (hanode1:/run/.crmsh_lock_directory)"
     When    Run "rm -rf /run/.crmsh_lock_directory" on "hanode1"
+
+  @clean
+  Scenario: Change host name in /etc/hosts as alias(bsc#1183654)
+    Given   Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "echo '10.10.10.2 HANODE1' >> /etc/hosts" on "hanode1"
+    When    Run "echo '10.10.10.3 HANODE2' >> /etc/hosts" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c HANODE1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Online nodes are "hanode1 hanode2"
+    When    Run "crm cluster remove HANODE2 -y" on "hanode1"
+    Then    Cluster service is "stopped" on "hanode2"
+    And     Online nodes are "hanode1"
