@@ -54,7 +54,7 @@ class Corosync(command.UI):
     def requires(self):
         return corosync.check_tools()
 
-    @command.completers(completers.choice(['ring', 'quorum', 'qnetd']))
+    @command.completers(completers.choice(['ring', 'quorum', 'qdevice', 'qnetd']))
     def do_status(self, context, status_type="ring"):
         '''
         Quick cluster health status. Corosync status or QNetd status

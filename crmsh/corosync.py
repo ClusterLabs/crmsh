@@ -36,14 +36,16 @@ def query_status(status_type):
     """
     Query status of corosync
 
-    Possible types could be ring/quorum/qnetd
+    Possible types could be ring/quorum/qdevice/qnetd
     """
-    if status_type == "ring":
-        query_ring_status()
-    elif status_type == "quorum":
-        query_quorum_status()
-    elif status_type == "qnetd":
-        query_qnetd_status()
+    status_func_dict = {
+            "ring": query_ring_status,
+            "quorum": query_quorum_status,
+            "qdevice": query_qdevice_status,
+            "qnetd": query_qnetd_status
+            }
+    if status_type in status_func_dict:
+        status_func_dict[status_type]()
     else:
         raise ValueError("Wrong type \"{}\" to query status".format(status_type))
 
@@ -72,6 +74,18 @@ def query_quorum_status():
     # that means no problem appeared but node is not quorate
     if rc in [0, 2] and out:
         print(out)
+
+
+def query_qdevice_status():
+    """
+    Query qdevice status
+    """
+    if not utils.is_qdevice_configured():
+        raise ValueError("QDevice/QNetd not configured!")
+    cmd = "corosync-qdevice-tool -sv"
+    out = utils.get_stdout_or_raise_error(cmd)
+    utils.print_cluster_nodes()
+    print(out)
 
 
 def query_qnetd_status():
