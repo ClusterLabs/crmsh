@@ -364,9 +364,7 @@ def set_value(path, value):
     f = open(conf()).read()
     p = Parser(f)
     p.set(path, value)
-    f = open(conf(), 'w')
-    f.write(p.to_string())
-    f.close()
+    utils.str2file(p.to_string(), conf())
 
 
 class IPAlreadyConfiguredError(Exception):
@@ -423,8 +421,7 @@ def add_node_ucast(ip_list, node_id=None):
     num_nodes = p.count('nodelist.node')
     p.set('quorum.two_node', '1' if num_nodes == 2 else '0')
 
-    with open(conf(), 'w') as f:
-        f.write(p.to_string())
+    utils.str2file(p.to_string(), conf())
 
 
 def add_node(addr, name=None):
@@ -470,9 +467,7 @@ def add_node(addr, name=None):
     num_nodes = p.count('nodelist.node')
     p.set('quorum.two_node', '1' if num_nodes == 2 else '0')
 
-    f = open(conf(), 'w')
-    f.write(p.to_string())
-    f.close()
+    utils.str2file(p.to_string(), conf())
 
     # update running config (if any)
     if nodes:
@@ -501,9 +496,7 @@ def del_node(addr):
     num_nodes = p.count('nodelist.node')
     p.set('quorum.two_node', '1' if num_nodes == 2 else '0')
 
-    f = open(conf(), 'w')
-    f.write(p.to_string())
-    f.close()
+    utils.str2file(p.to_string(), conf())
 
 
 _COROSYNC_CONF_TEMPLATE_HEAD = """# Please read the corosync.conf.5 manual page

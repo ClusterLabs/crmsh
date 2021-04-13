@@ -503,7 +503,7 @@ def str2file(s, fname, mod=0o644):
     Write a string to a file.
     '''
     try:
-        with open_atomic(fname, 'w') as dst:
+        with open_atomic(fname, 'w', fsync=True) as dst:
             dst.write(s)
         os.chmod(fname, mod)
     except IOError, msg:
@@ -2498,4 +2498,14 @@ def re_split_string(reg, string):
     Split a string by a regrex, filter out empty items
     """
     return [x for x in re.split(reg, string) if x]
+
+
+def cluster_run_cmd(cmd):
+    """
+    Run cmd in cluster nodes
+    """
+    node_list = list_cluster_nodes()
+    if not node_list:
+        raise ValueError("Failed to get node list from cluster")
+    parallax_helper.parallax_call(node_list, cmd)
 # vim:ts=4:sw=4:et:
