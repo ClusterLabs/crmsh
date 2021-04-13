@@ -353,7 +353,7 @@ class TestSBDManager(unittest.TestCase):
     def test_get_sbd_device_interactive_yes_to_all(self, mock_warn):
         bootstrap._context = mock.Mock(yes_to_all=True)
         self.sbd_inst._get_sbd_device_interactive()
-        mock_warn.assert_called_once_with("Not configuring SBD ({} left untouched).".format(bootstrap.SYSCONFIG_SBD))
+        mock_warn.assert_called_once_with(bootstrap.SBDManager.SBD_WARNING)
 
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.bootstrap.status')
