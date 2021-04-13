@@ -148,6 +148,7 @@ class TestCorosyncParser(unittest.TestCase):
         # For some reason mock_search.assert_called_once_with does not work
         mock_search.assert_has_calls([mock.call("nodelist.node.ring[0-9]*_addr", "nodelist.node.ring0_addr")])
 
+    @mock.patch("crmsh.utils.str2file")
     @mock.patch("crmsh.corosync.make_section")
     @mock.patch("crmsh.corosync.make_value")
     @mock.patch("crmsh.corosync.get_free_nodeid")
@@ -156,14 +157,13 @@ class TestCorosyncParser(unittest.TestCase):
     @mock.patch("crmsh.corosync.conf")
     @mock.patch("crmsh.corosync.find_configured_ip")
     def test_add_node_ucast(self, mock_find_ip, mock_conf, mock_open_file, mock_parser,
-            mock_free_id, mock_make_value, mock_make_section):
+            mock_free_id, mock_make_value, mock_make_section, mock_str2file):
         mock_parser_inst = mock.Mock()
         mock_conf.side_effect = ["corosync.conf", "corosync.conf"]
         mock_open_read = mock.mock_open(read_data="read data")
-        mock_open_write = mock.mock_open()
         mock_open_file.side_effect = [
                 mock_open_read.return_value,
-                mock_open_write.return_value]
+                ]
         mock_parser.return_value = mock_parser_inst
         mock_free_id.return_value = 2
         mock_make_value.side_effect = [["value1"], ["value2"]]
@@ -177,7 +177,6 @@ class TestCorosyncParser(unittest.TestCase):
         mock_find_ip.assert_called_once_with(['10.10.10.1'])
         mock_open_file.assert_has_calls([
             mock.call("corosync.conf"),
-            mock.call("corosync.conf", 'w')
             ])
         file_handle = mock_open_read.return_value.__enter__.return_value
         file_handle.read.assert_called_once_with()
@@ -196,8 +195,7 @@ class TestCorosyncParser(unittest.TestCase):
             ])
         mock_parser_inst.get.assert_called_once_with('quorum.device.model')
         mock_parser_inst.to_string.assert_called_once_with()
-        file_handle = mock_open_write.return_value.__enter__.return_value
-        file_handle.write.assert_called_once_with("string data")
+        mock_str2file.assert_called_once_with("string data", "corosync.conf")
 
     def test_add_node_nodelist(self):
         from crmsh.corosync import make_section, make_value, get_free_nodeid
