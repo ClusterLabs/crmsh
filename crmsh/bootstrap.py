@@ -340,6 +340,7 @@ Configure SBD:
   are a good choice.  Note that all data on the partition you
   specify here will be destroyed.
 """
+    SBD_WARNING = "Not configuring SBD - STONITH will be disabled."
     PARSE_RE = "[; ]"
 
     def __init__(self, sbd_devices=None, diskless_sbd=False):
@@ -411,13 +412,13 @@ Configure SBD:
         Get sbd device on interactive mode
         """
         if _context.yes_to_all:
-            warn("Not configuring SBD ({} left untouched).".format(SYSCONFIG_SBD))
+            warn(self.SBD_WARNING)
             return
 
         status(self.SBD_STATUS_DESCRIPTION)
 
         if not confirm("Do you wish to use SBD?"):
-            warn("Not configuring SBD - STONITH will be disabled.")
+            warn(self.SBD_WARNING)
             return
 
         configured_dev_list = self._get_sbd_device_from_config()
@@ -1007,8 +1008,6 @@ def configure_firewall(tcp=None, udp=None):
         init_firewall_suse(tcp, udp)
     elif utils.package_is_installed("ufw"):
         init_firewall_ufw(tcp, udp)
-    else:
-        warn("Failed to detect firewall: Could not open ports tcp={}, udp={}".format("|".join(tcp), "|".join(udp)))
 
 
 def firewall_open_basic_ports():
