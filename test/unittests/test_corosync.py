@@ -42,6 +42,37 @@ def _print(parser):
     print(parser.to_string())
 
 
+def test_query_status_exception():
+    with pytest.raises(ValueError) as err:
+        corosync.query_status("test")
+    assert str(err.value) == "Wrong type \"test\" to query status"
+
+
+@mock.patch('crmsh.corosync.query_ring_status')
+def test_query_status(mock_ring_status):
+    corosync.query_status("ring")
+    mock_ring_status.assert_called_once_with()
+
+
+@mock.patch('crmsh.utils.is_qdevice_configured')
+def test_query_qdevice_status_exception(mock_configured):
+    mock_configured.return_value = False
+    with pytest.raises(ValueError) as err:
+        corosync.query_qdevice_status()
+    assert str(err.value) == "QDevice/QNetd not configured!"
+    mock_configured.assert_called_once_with()
+
+
+@mock.patch('crmsh.utils.print_cluster_nodes')
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.utils.is_qdevice_configured')
+def test_query_qdevice_status(mock_configured, mock_run, mock_print):
+    mock_configured.return_value = True
+    corosync.query_qdevice_status()
+    mock_run.assert_called_once_with("corosync-qdevice-tool -sv")
+    mock_print.assert_called_once_with()
+
+
 @mock.patch("crmsh.corosync.query_ring_status")
 def test_query_status_ring(mock_ring_status):
     corosync.query_status("ring")
