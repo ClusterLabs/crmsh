@@ -570,14 +570,13 @@ class TestSBDManager(unittest.TestCase):
         mock_package.assert_called_once_with("sbd")
 
     @mock.patch('crmsh.bootstrap.invoke')
-    @mock.patch('crmsh.bootstrap.status_done')
     @mock.patch('crmsh.bootstrap.SBDManager._update_configuration')
     @mock.patch('crmsh.bootstrap.SBDManager._initialize_sbd')
     @mock.patch('crmsh.bootstrap.status_long')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device')
     @mock.patch('crmsh.bootstrap.Watchdog')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_sbd_init_return(self, mock_package, mock_watchdog, mock_get_device, mock_status, mock_initialize, mock_update, mock_status_done, mock_invoke):
+    def test_sbd_init_return(self, mock_package, mock_watchdog, mock_get_device, mock_status, mock_initialize, mock_update, mock_invoke):
         mock_package.return_value = True
         self.sbd_inst._sbd_devices = None
         self.sbd_inst.diskless_sbd = False
@@ -592,20 +591,18 @@ class TestSBDManager(unittest.TestCase):
         mock_status.assert_not_called()
         mock_initialize.assert_not_called()
         mock_update.assert_not_called()
-        mock_status_done.assert_not_called()
         mock_watchdog.assert_called_once_with(_input=None)
         mock_watchdog_inst.init_watchdog.assert_called_once_with()
         mock_invoke.assert_called_once_with("systemctl disable sbd.service")
 
     @mock.patch('crmsh.bootstrap.warn')
-    @mock.patch('crmsh.bootstrap.status_done')
     @mock.patch('crmsh.bootstrap.SBDManager._update_configuration')
     @mock.patch('crmsh.bootstrap.SBDManager._initialize_sbd')
     @mock.patch('crmsh.bootstrap.status_long')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device')
     @mock.patch('crmsh.bootstrap.Watchdog')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_sbd_init(self, mock_package, mock_watchdog, mock_get_device, mock_status, mock_initialize, mock_update, mock_status_done, mock_warn):
+    def test_sbd_init(self, mock_package, mock_watchdog, mock_get_device, mock_status, mock_initialize, mock_update, mock_warn):
         bootstrap._context = mock.Mock(watchdog=None)
         mock_package.return_value = True
         mock_watchdog_inst = mock.Mock()
@@ -618,7 +615,6 @@ class TestSBDManager(unittest.TestCase):
         mock_status.assert_called_once_with("Initializing diskless SBD...")
         mock_initialize.assert_called_once_with()
         mock_update.assert_called_once_with()
-        mock_status_done.assert_called_once_with()
         mock_watchdog.assert_called_once_with(_input=None)
         mock_watchdog_inst.init_watchdog.assert_called_once_with()
         mock_warn.assert_called_once_with(bootstrap.SBDManager.DISKLESS_SBD_WARNING)
@@ -1390,7 +1386,6 @@ class TestBootstrap(unittest.TestCase):
         mock_qdevice_start.assert_called_once_with()
 
     @mock.patch('crmsh.bootstrap.start_qdevice_service')
-    @mock.patch('crmsh.bootstrap.status_done')
     @mock.patch('crmsh.corosync.QDevice.certificate_process_on_init')
     @mock.patch('crmsh.bootstrap.status_long')
     @mock.patch('crmsh.utils.is_qdevice_tls_on')
@@ -1400,7 +1395,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
     @mock.patch('crmsh.bootstrap.status')
     def test_init_qdevice(self, mock_status, mock_ssh, mock_qdevice_configured, mock_valid_qnetd, mock_config_qdevice,
-            mock_tls, mock_status_long, mock_certificate, mock_status_done, mock_start_qdevice):
+            mock_tls, mock_status_long, mock_certificate, mock_start_qdevice):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip)
         mock_ssh.return_value = False
         mock_qdevice_configured.return_value = False
@@ -1416,7 +1411,6 @@ class TestBootstrap(unittest.TestCase):
         mock_tls.assert_called_once_with()
         mock_status_long.assert_called_once_with("Qdevice certification process")
         mock_certificate.assert_called_once_with()
-        mock_status_done.assert_called_once_with()
         mock_start_qdevice.assert_called_once_with()
 
     @mock.patch('crmsh.bootstrap.prompt_for_string')
@@ -1532,7 +1526,6 @@ class TestBootstrap(unittest.TestCase):
         mock_enable_qnetd.assert_called_once_with()
         mock_start_qnetd.assert_called_once_with()
 
-    @mock.patch('crmsh.bootstrap.status_done')
     @mock.patch('crmsh.utils.cluster_run_cmd')
     @mock.patch('crmsh.bootstrap.update_expected_votes')
     @mock.patch('crmsh.bootstrap.status_long')
@@ -1541,7 +1534,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.corosync.QDevice.write_qdevice_config')
     @mock.patch('crmsh.corosync.QDevice.remove_qdevice_db')
     def test_config_qdevice(self, mock_remove_qdevice_db, mock_write_qdevice_config, mock_is_unicast,
-            mock_add_nodelist, mock_status_long, mock_update_votes, mock_cluster_run, mock_status_done):
+            mock_add_nodelist, mock_status_long, mock_update_votes, mock_cluster_run):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, qdevice_reload_policy=bootstrap.QdevicePolicy.QDEVICE_RELOAD)
         mock_is_unicast.return_value = False
 
@@ -1554,7 +1547,6 @@ class TestBootstrap(unittest.TestCase):
         mock_status_long.assert_called_once_with("Update configuration")
         mock_update_votes.assert_called_once_with()
         mock_cluster_run.assert_called_once_with("crm corosync reload")
-        mock_status_done.assert_called_once_with()
 
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.utils.is_qdevice_configured')
@@ -1579,7 +1571,6 @@ class TestBootstrap(unittest.TestCase):
         mock_qdevice_configured.assert_called_once_with()
         mock_confirm.assert_called_once_with("Removing QDevice service and configuration from cluster: Are you sure?")
 
-    @mock.patch('crmsh.bootstrap.status_done')
     @mock.patch('crmsh.bootstrap.update_expected_votes')
     @mock.patch('crmsh.corosync.QDevice')
     @mock.patch('crmsh.corosync.get_value')
@@ -1591,7 +1582,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.utils.is_qdevice_configured')
     def test_remove_qdevice_reload(self, mock_qdevice_configured, mock_confirm, mock_reachable, mock_evaluate,
-            mock_status, mock_invoke, mock_status_long, mock_get_value, mock_qdevice, mock_update_votes, mock_status_done):
+            mock_status, mock_invoke, mock_status_long, mock_get_value, mock_qdevice, mock_update_votes):
         mock_qdevice_configured.return_value = True
         mock_confirm.return_value = True
         mock_evaluate.return_value = bootstrap.QdevicePolicy.QDEVICE_RELOAD
@@ -1622,9 +1613,7 @@ class TestBootstrap(unittest.TestCase):
         mock_qdevice_inst.remove_qdevice_config.assert_called_once_with()
         mock_qdevice_inst.remove_qdevice_db.assert_called_once_with()
         mock_update_votes.assert_called_once_with()
-        mock_status_done.assert_called_once_with()
 
-    @mock.patch('crmsh.bootstrap.status_done')
     @mock.patch('crmsh.utils.start_service')
     @mock.patch('crmsh.corosync.QDevice')
     @mock.patch('crmsh.corosync.get_value')
@@ -1637,7 +1626,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.status_long')
     def test_start_qdevice_on_join_node(self, mock_status_long, mock_is_unicast, mock_add_nodelist,
             mock_conf, mock_csync2_update, mock_invoke, mock_qdevice_tls,
-            mock_get_value, mock_qdevice, mock_start_service, mock_status_done):
+            mock_get_value, mock_qdevice, mock_start_service):
         mock_is_unicast.return_value = False
         mock_qdevice_tls.return_value = True
         mock_conf.return_value = "corosync.conf"
@@ -1659,7 +1648,6 @@ class TestBootstrap(unittest.TestCase):
         mock_qdevice.assert_called_once_with("10.10.10.123", cluster_node="node2")
         mock_qdevice_inst.certificate_process_on_join.assert_called_once_with()
         mock_start_service.assert_called_once_with("corosync-qdevice.service", enable=True)
-        mock_status_done.assert_called_once_with()
 
     @mock.patch('crmsh.utils.get_stdout_stderr')
     @mock.patch('crmsh.bootstrap.log')
