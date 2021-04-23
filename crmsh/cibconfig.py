@@ -2973,7 +2973,7 @@ class CibFactory(object):
             if tag in constants.defaults_tags:
                 expr = '//%s/meta_attributes[@id="%s"]' % (tag, ident)
             elif tag == 'fencing-topology':
-                expr = '//fencing-topology' % tag
+                expr = '//fencing-topology'
             else:
                 expr = '//%s[@id="%s"]' % (tag, ident)
             return self.cib_elem.xpath(expr)[0]
