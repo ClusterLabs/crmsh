@@ -173,7 +173,7 @@ class TestMain(TestCase):
 
     @mock.patch('crmsh.preflight_check.task.TaskSplitBrain')
     def test_split_brain(self, mock_sp):
-        ctx = mock.Mock(sp_iptables=True, yes=False)
+        ctx = mock.Mock(sp_iptables=True, force=False)
         mock_sp_inst = mock.Mock()
         mock_sp.return_value = mock_sp_inst
         mock_sp_inst.do_block.return_value.__enter__ = mock.Mock()

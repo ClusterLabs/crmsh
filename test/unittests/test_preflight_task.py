@@ -711,7 +711,7 @@ class TestTask(TestCase):
         }
         self.assertDictEqual(expected_result, self.task_inst.result)
 
-    @mock.patch('crmsh.preflight_check.task.crmshutils.ask')
+    @mock.patch('crmsh.preflight_check.utils.warning_ask')
     def test_print_header(self, mock_ask):
         self.task_inst.header = mock.Mock()
         self.task_inst.info = mock.Mock()
@@ -721,7 +721,7 @@ class TestTask(TestCase):
             self.task_inst.print_header()
 
         self.task_inst.header.assert_called_once_with()
-        mock_ask.assert_called_once_with("Run?")
+        mock_ask.assert_called_once_with(task.Task.REBOOT_WARNING)
         self.task_inst.info.assert_called_once_with("Testcase cancelled")
 
     @mock.patch('crmsh.preflight_check.utils.str_to_datetime')
@@ -785,7 +785,7 @@ class TestFixSBD(TestCase):
                                                 format(dev)).return_value
         mock_mkstemp.side_effect = [(1, bak), (2, edit)]
 
-        self.task_fixsbd = task.TaskFixSBD(dev, yes=False)
+        self.task_fixsbd = task.TaskFixSBD(dev, force=False)
         mock_msg_info.assert_called_once_with('Replace SBD_DEVICE with candidate {}'.
                                               format(dev), to_stdout=False)
 
