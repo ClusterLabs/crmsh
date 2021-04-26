@@ -41,7 +41,7 @@ class Context(object):
         self.loop = None
 
         # set by argument(additional options)
-        self.yes = None
+        self.force = None
         self.help = None
 
     def __setattr__(self, name, value):
@@ -124,7 +124,7 @@ def split_brain(context):
     if not context.sp_iptables:
         return
 
-    task_inst = task.TaskSplitBrain(context.yes)
+    task_inst = task.TaskSplitBrain(context.force)
     try:
         task_inst.pre_check()
         task_inst.print_header()
@@ -192,8 +192,8 @@ For each --kill-* testcase, report directory: {}'''.format(context.logfile,
                         help='Kill process in loop')
 
     other_options = parser.add_argument_group('other options')
-    other_options.add_argument('-y', '--yes', dest='yes', action='store_true',
-                               help='Answer "yes" if asked to run the test')
+    other_options.add_argument('-f', '--force', dest='force', action='store_true',
+                               help='Force to skip all prompts (Use with caution, this is destructive)')
     other_options.add_argument('-h', '--help', dest='help', action='store_true',
                                help='Show this help message and exit')
 

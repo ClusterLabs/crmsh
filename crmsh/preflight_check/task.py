@@ -25,13 +25,17 @@ class Task(object):
     Task is a base class
     Use for record the information of each test case
     """
+    REBOOT_WARNING = """!!! WARNING WARNING WARNING !!!
+THIS CASE MAY LEAD TO NODE BE FENCED.
+TYPE Yes TO CONTINUE, OTHER INPUTS WILL CANCEL THIS CASE: """
+
     def __init__(self, description, flush=False, quiet=False):
         """
         Init function
         flush, to print the message immediately
         """
         self.passed = True
-        self.yes = False
+        self.force = False
         self.quiet = quiet
         self.messages = []
         self.timestamp = utils.now()
@@ -89,7 +93,7 @@ class Task(object):
         Print testcase header
         """
         print(self.header())
-        if not self.yes and not crmshutils.ask("Run?"):
+        if not self.force and not utils.warning_ask(self.REBOOT_WARNING):
             self.info("Testcase cancelled")
             raise crmshutils.TerminateSubCommand
 
@@ -167,7 +171,7 @@ class TaskFence(Task):
         self.target_node = context.fence_node
         description = "Fence node {}".format(self.target_node)
         super(self.__class__, self).__init__(description, flush=True)
-        self.yes = context.yes
+        self.force = context.force
 
     def header(self):
         """
@@ -313,7 +317,7 @@ class TaskKill(Task):
         super(self.__class__, self).__init__(self.description, flush=True)
         self.cmd = "killall -9 {}".format(self.target_kill)
         self.looping = context.loop
-        self.yes = context.yes
+        self.force = context.force
         if not self.looping:
             self.expected = self.EXPECTED[self.target_kill][0]
         else:
@@ -437,7 +441,7 @@ class TaskSplitBrain(Task):
     Class to define how to simulate split brain by blocking corosync ports
     """
 
-    def  __init__(self, yes=False):
+    def  __init__(self, force=False):
         """
         Init function
         """
@@ -446,7 +450,7 @@ class TaskSplitBrain(Task):
         self.ports = []
         self.peer_nodelist = []
         super(self.__class__, self).__init__(self.description, flush=True)
-        self.yes = yes
+        self.force = force
 
     def header(self):
         """
@@ -571,14 +575,14 @@ class TaskFixSBD(Task):
     Class to fix SBD DEVICE incorrect issue
     """
 
-    def  __init__(self, candidate, yes=False):
+    def  __init__(self, candidate, force=False):
         self.new = candidate
         self.description = "Replace SBD_DEVICE with candidate {}".format(self.new)
         self.conf = config.SBD_CONF
         super(self.__class__, self).__init__(self.description, flush=True)
         self.bak = tempfile.mkstemp()[1]
         self.edit = tempfile.mkstemp()[1]
-        self.yes = yes
+        self.force = force
 
         sbd_options = crmshutils.parse_sysconfig(self.conf)
         self.old = sbd_options["SBD_DEVICE"]
