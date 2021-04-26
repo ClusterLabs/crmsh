@@ -3,7 +3,7 @@ import sys
 import argparse
 import logging
 import logging.config
-from argparse import RawTextHelpFormatter
+from argparse import RawDescriptionHelpFormatter
 
 from . import check
 from . import utils
@@ -41,7 +41,7 @@ class Context(object):
         self.loop = None
 
         # set by argument(additional options)
-        self.yes = None
+        self.force = None
         self.help = None
 
     def __setattr__(self, name, value):
@@ -124,7 +124,7 @@ def split_brain(context):
     if not context.sp_iptables:
         return
 
-    task_inst = task.TaskSplitBrain(context.yes)
+    task_inst = task.TaskSplitBrain(context.force)
     try:
         task_inst.pre_check()
         task_inst.print_header()
@@ -154,7 +154,7 @@ def fence_node(context):
         raise crmshutils.TerminateSubCommand
 
 
-class MyArgParseFormatter(RawTextHelpFormatter):
+class MyArgParseFormatter(RawDescriptionHelpFormatter):
     def __init__(self, prog):
         super(MyArgParseFormatter, self).__init__(prog, max_help_position=50)
 
@@ -165,12 +165,11 @@ def parse_argument(context):
     """
     parser = argparse.ArgumentParser(prog=context.process_name,
                                      description="""
-Cluster crash test tool set.
-It standardizes the steps to simulate cluster failures and to
-verify some key configuration before you move your cluster into
-production. It is carefully designed with the proper steps and does not
-change any configuration to harm the cluster without the confirmation
-from users.""",
+Cluster crash test tool set. It standardizes the steps to simulate
+cluster failures and to verify some key configuration before you move
+your cluster into production. It is carefully designed with the proper
+steps and does not change any configuration to harm the cluster without
+the confirmation from users.""",
                                      add_help=False,
                                      formatter_class=MyArgParseFormatter,
                                      epilog='''
@@ -198,8 +197,8 @@ For each --kill-* testcase, report directory: {}'''.format(context.logfile,
                         help='Kill process in loop')
 
     other_options = parser.add_argument_group('other options')
-    other_options.add_argument('-y', '--yes', dest='yes', action='store_true',
-                               help='Answer "yes" if asked to run the test')
+    other_options.add_argument('-f', '--force', dest='force', action='store_true',
+                               help='Force to skip all prompts (Use with caution, the intended fault will be injected to verify the cluster resilence)')
     other_options.add_argument('-h', '--help', dest='help', action='store_true',
                                help='Show this help message and exit')
 
