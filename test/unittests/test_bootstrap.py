@@ -597,6 +597,7 @@ class TestSBDManager(unittest.TestCase):
         mock_watchdog_inst.init_watchdog.assert_called_once_with()
         mock_invoke.assert_called_once_with("systemctl disable sbd.service")
 
+    @mock.patch('crmsh.bootstrap.warn')
     @mock.patch('crmsh.bootstrap.status_done')
     @mock.patch('crmsh.bootstrap.SBDManager._update_configuration')
     @mock.patch('crmsh.bootstrap.SBDManager._initialize_sbd')
@@ -604,7 +605,7 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device')
     @mock.patch('crmsh.bootstrap.Watchdog')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_sbd_init(self, mock_package, mock_watchdog, mock_get_device, mock_status, mock_initialize, mock_update, mock_status_done):
+    def test_sbd_init(self, mock_package, mock_watchdog, mock_get_device, mock_status, mock_initialize, mock_update, mock_status_done, mock_warn):
         bootstrap._context = mock.Mock(watchdog=None)
         mock_package.return_value = True
         mock_watchdog_inst = mock.Mock()
@@ -620,6 +621,7 @@ class TestSBDManager(unittest.TestCase):
         mock_status_done.assert_called_once_with()
         mock_watchdog.assert_called_once_with(_input=None)
         mock_watchdog_inst.init_watchdog.assert_called_once_with()
+        mock_warn.assert_called_once_with(bootstrap.SBDManager.DISKLESS_SBD_WARNING)
 
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.bootstrap.invokerc')
@@ -740,6 +742,38 @@ class TestSBDManager(unittest.TestCase):
         mock_verify.assert_called_once_with(["/dev/sdb1"], ["node1"])
         mock_enabled.assert_called_once_with("sbd.service", "node1")
         mock_status.assert_called_once_with("Got SBD configuration")
+        mock_watchdog.assert_called_once_with(peer_host="node1")
+        mock_watchdog_inst.join_watchdog.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.status')
+    @mock.patch('crmsh.bootstrap.warn')
+    @mock.patch('crmsh.utils.get_quorum_votes_dict')
+    @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
+    @mock.patch('crmsh.bootstrap.Watchdog')
+    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.utils.service_is_enabled')
+    @mock.patch('os.path.exists')
+    @mock.patch('crmsh.utils.package_is_installed')
+    def test_join_sbd_diskless(self, mock_package, mock_exists, mock_enabled, mock_invoke, mock_watchdog, mock_get_device, mock_quorum_votes, mock_warn, mock_status):
+        mock_package.return_value = True
+        mock_exists.return_value = True
+        mock_enabled.return_value = True
+        mock_get_device.return_value = []
+        mock_watchdog_inst = mock.Mock()
+        mock_watchdog.return_value = mock_watchdog_inst
+        mock_watchdog_inst.join_watchdog = mock.Mock()
+        mock_quorum_votes.return_value = {'Expected': '1', 'Total': '1'}
+
+        self.sbd_inst.join_sbd("node1")
+
+        mock_package.assert_called_once_with("sbd")
+        mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
+        mock_invoke.assert_called_once_with("systemctl enable sbd.service")
+        mock_get_device.assert_called_once_with()
+        mock_quorum_votes.assert_called_once_with("node1")
+        mock_warn.assert_called_once_with(bootstrap.SBDManager.DISKLESS_SBD_WARNING)
+        mock_enabled.assert_called_once_with("sbd.service", "node1")
+        mock_status.assert_called_once_with("Got diskless SBD configuration")
         mock_watchdog.assert_called_once_with(peer_host="node1")
         mock_watchdog_inst.join_watchdog.assert_called_once_with()
 

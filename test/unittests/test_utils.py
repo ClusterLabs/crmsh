@@ -1041,3 +1041,36 @@ def test_ping_node(mock_run):
 def test_re_split_string():
     assert utils.re_split_string('[; ]', "/dev/sda1; /dev/sdb1 ; ") == ["/dev/sda1", "/dev/sdb1"]
     assert utils.re_split_string('[; ]', "/dev/sda1 ") == ["/dev/sda1"]
+
+
+@mock.patch("crmsh.utils.get_stdout_stderr")
+def test_get_stdout_or_raise_error_failed(mock_run):
+    mock_run.return_value = (1, None, "error data")
+    with pytest.raises(ValueError) as err:
+        utils.get_stdout_or_raise_error("cmd")
+    assert str(err.value) == 'Failed to run "cmd": error data'
+    mock_run.assert_called_once_with("cmd")
+
+
+@mock.patch("crmsh.utils.get_stdout_stderr")
+def test_get_stdout_or_raise_error(mock_run):
+    mock_run.return_value = (0, "output data", None)
+    res = utils.get_stdout_or_raise_error("cmd", remote="node1")
+    assert res == "output data"
+    mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 \"cmd\"")
+
+
+@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+def test_get_quorum_votes_dict(mock_run):
+    mock_run.return_value = """
+Votequorum information
+----------------------
+Expected votes:   1
+Highest expected: 1
+Total votes:      1
+Quorum:           1
+Flags:            Quorate
+    """
+    res = utils.get_quorum_votes_dict()
+    assert res == {'Expected': '1', 'Total': '1'}
+    mock_run.assert_called_once_with("corosync-quorumtool -s", remote=None)
