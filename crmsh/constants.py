@@ -338,4 +338,6 @@ extra_cluster_properties = ("dc-version",
                             "cluster-name")
 pcmk_version = ""  # set later
 
+
+SSH_OPTION = "-o StrictHostKeyChecking=no"
 # vim:ts=4:sw=4:et:
