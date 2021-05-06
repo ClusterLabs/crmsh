@@ -574,14 +574,13 @@ class TestSBDManager(unittest.TestCase):
         mock_package.assert_called_once_with("sbd")
 
     @mock.patch('crmsh.bootstrap.invoke')
-    @mock.patch('crmsh.bootstrap.status_done')
     @mock.patch('crmsh.bootstrap.SBDManager._update_configuration')
     @mock.patch('crmsh.bootstrap.SBDManager._initialize_sbd')
     @mock.patch('crmsh.bootstrap.status_long')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device')
     @mock.patch('crmsh.bootstrap.Watchdog')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_sbd_init_return(self, mock_package, mock_watchdog, mock_get_device, mock_status, mock_initialize, mock_update, mock_status_done, mock_invoke):
+    def test_sbd_init_return(self, mock_package, mock_watchdog, mock_get_device, mock_status, mock_initialize, mock_update, mock_invoke):
         mock_package.return_value = True
         self.sbd_inst._sbd_devices = None
         self.sbd_inst.diskless_sbd = False
@@ -596,20 +595,18 @@ class TestSBDManager(unittest.TestCase):
         mock_status.assert_not_called()
         mock_initialize.assert_not_called()
         mock_update.assert_not_called()
-        mock_status_done.assert_not_called()
         mock_watchdog.assert_called_once_with(_input=None)
         mock_watchdog_inst.init_watchdog.assert_called_once_with()
         mock_invoke.assert_called_once_with("systemctl disable sbd.service")
 
     @mock.patch('crmsh.bootstrap.warn')
-    @mock.patch('crmsh.bootstrap.status_done')
     @mock.patch('crmsh.bootstrap.SBDManager._update_configuration')
     @mock.patch('crmsh.bootstrap.SBDManager._initialize_sbd')
     @mock.patch('crmsh.bootstrap.status_long')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device')
     @mock.patch('crmsh.bootstrap.Watchdog')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_sbd_init(self, mock_package, mock_watchdog, mock_get_device, mock_status, mock_initialize, mock_update, mock_status_done, mock_warn):
+    def test_sbd_init(self, mock_package, mock_watchdog, mock_get_device, mock_status, mock_initialize, mock_update, mock_warn):
         bootstrap._context = mock.Mock(watchdog=None)
         mock_package.return_value = True
         mock_watchdog_inst = mock.Mock()
@@ -622,7 +619,6 @@ class TestSBDManager(unittest.TestCase):
         mock_status.assert_called_once_with("Initializing diskless SBD...")
         mock_initialize.assert_called_once_with()
         mock_update.assert_called_once_with()
-        mock_status_done.assert_called_once_with()
         mock_watchdog.assert_called_once_with(_input=None)
         mock_watchdog_inst.init_watchdog.assert_called_once_with()
         mock_warn.assert_called_once_with(bootstrap.SBDManager.DISKLESS_SBD_WARNING)
