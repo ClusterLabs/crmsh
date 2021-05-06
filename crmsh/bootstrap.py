@@ -1958,6 +1958,42 @@ def sync_files_to_disk():
         utils.cluster_run_cmd("sync {}".format(files_string.strip()))
 
 
+def update_expected_votes():
+    # get a list of nodes, excluding remote nodes
+    nodelist = None
+    loop_count = 0
+    while True:
+        rc, nodelist_text = utils.get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
+        if rc == 0:
+            try:
+                nodelist_xml = etree.fromstring(nodelist_text)
+                nodelist = [n.get('uname') for n in nodelist_xml.xpath('//node_state') if n.get('remote_node') != 'true']
+                if len(nodelist) >= 2:
+                    break
+            except Exception:
+                break
+        # timeout: 10 seconds
+        if loop_count == 10:
+            break
+        loop_count += 1
+        sleep(1)
+
+    # Increase expected_votes
+    # TODO: wait to adjust expected_votes until after cluster join,
+    # so that we can ask the cluster for the current membership list
+    if nodelist is None:
+        nodecount = 0
+        for v in corosync.get_values("quorum.expected_votes"):
+            nodecount = int(v) + 1
+            corosync.set_value("quorum.expected_votes", str(nodecount))
+            corosync.set_value("quorum.two_node", 1 if nodecount == 2 else 0)
+    else:
+        nodecount = len(nodelist)
+        corosync.set_value("quorum.expected_votes", str(nodecount))
+        corosync.set_value("quorum.two_node", 1 if nodecount == 2 else 0)
+    csync2_update(corosync.conf())
+
+
 def join_cluster(seed_host):
     """
     Cluster configuration for joining node.
@@ -2077,40 +2113,6 @@ def join_cluster(seed_host):
     if is_unicast:
         invoke("crm cluster run 'crm corosync reload'")
 
-    def update_expected_votes():
-        # get a list of nodes, excluding remote nodes
-        nodelist = None
-        loop_count = 0
-        while True:
-            rc, nodelist_text = utils.get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
-            if rc == 0:
-                try:
-                    nodelist_xml = etree.fromstring(nodelist_text)
-                    nodelist = [n.get('uname') for n in nodelist_xml.xpath('//node_state') if n.get('remote_node') != 'true']
-                    if len(nodelist) >= 2:
-                        break
-                except Exception:
-                    break
-            # timeout: 10 seconds
-            if loop_count == 10:
-                break
-            loop_count += 1
-            sleep(1)
-
-        # Increase expected_votes
-        # TODO: wait to adjust expected_votes until after cluster join,
-        # so that we can ask the cluster for the current membership list
-        if nodelist is None:
-            nodecount = 0
-            for v in corosync.get_values("quorum.expected_votes"):
-                nodecount = int(v) + 1
-                corosync.set_value("quorum.expected_votes", str(nodecount))
-                corosync.set_value("quorum.two_node", 1 if nodecount == 2 else 0)
-        else:
-            nodecount = len(nodelist)
-            corosync.set_value("quorum.expected_votes", str(nodecount))
-            corosync.set_value("quorum.two_node", 1 if nodecount == 2 else 0)
-        csync2_update(corosync.conf())
     update_expected_votes()
 
     # Trigger corosync config reload to ensure expected_votes is propagated
