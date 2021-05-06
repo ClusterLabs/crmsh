@@ -24,6 +24,7 @@ from . import options
 from . import term
 from . import parallax
 from .msg import common_warn, common_info, common_debug, common_err, err_buf
+from .constants import SSH_OPTION
 
 
 def to_ascii(input_str):
@@ -2583,7 +2584,7 @@ def get_stdout_or_raise_error(cmd, remote=None, success_val=0):
     Common function to get stdout from cmd or raise exception
     """
     if remote:
-        cmd = "ssh -o StrictHostKeyChecking=no root@{} \"{}\"".format(remote, cmd)
+        cmd = "ssh {} root@{} \"{}\"".format(SSH_OPTION, remote, cmd)
     rc, out, err = get_stdout_stderr(cmd)
     if rc != success_val:
         raise ValueError("Failed to run \"{}\": {}".format(cmd, err))

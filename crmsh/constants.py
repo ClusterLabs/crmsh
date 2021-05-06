@@ -481,4 +481,6 @@ container_helptxt = {
     }
 }
 
+
+SSH_OPTION = "-o StrictHostKeyChecking=no"
 # vim:ts=4:sw=4:et:
