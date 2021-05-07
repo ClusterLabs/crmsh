@@ -19,6 +19,7 @@ except ImportError:
     import mock
 
 from crmsh import bootstrap
+from crmsh import constants
 
 
 class TestWatchdog(unittest.TestCase):
@@ -156,7 +157,7 @@ Driver: iTCO_wdt
     def test_get_driver_through_device_remotely_error(self, mock_run, mock_error):
         mock_run.return_value = (1, None, "error")
         self.watchdog_join_inst._get_driver_through_device_remotely("test")
-        mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 sbd query-watchdog")
+        mock_run.assert_called_once_with("ssh {} root@node1 sbd query-watchdog".format(constants.SSH_OPTION))
         mock_error.assert_called_once_with("Failed to run sbd query-watchdog remotely: error")
 
     @mock.patch('crmsh.utils.get_stdout_stderr')
@@ -164,7 +165,7 @@ Driver: iTCO_wdt
         mock_run.return_value = (0, "data", None)
         res = self.watchdog_join_inst._get_driver_through_device_remotely("/dev/watchdog")
         self.assertEqual(res, None)
-        mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 sbd query-watchdog")
+        mock_run.assert_called_once_with("ssh {} root@node1 sbd query-watchdog".format(constants.SSH_OPTION))
 
     @mock.patch('crmsh.utils.get_stdout_stderr')
     def test_get_driver_through_device_remotely(self, mock_run):
@@ -188,7 +189,7 @@ Driver: iTCO_wdt
         mock_run.return_value = (0, output, None)
         res = self.watchdog_join_inst._get_driver_through_device_remotely("/dev/watchdog")
         self.assertEqual(res, "softdog")
-        mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 sbd query-watchdog")
+        mock_run.assert_called_once_with("ssh {} root@node1 sbd query-watchdog".format(constants.SSH_OPTION))
 
     def test_get_first_unused_device_none(self):
         res = self.watchdog_inst._get_first_unused_device()
@@ -985,7 +986,7 @@ class TestBootstrap(unittest.TestCase):
         mock_invoke.return_value = (False, None, "error")
         error_string = 'Failed to append contents of fromfile to node1:\n"error"\n\n    crmsh has no way to help you to setup up passwordless ssh among nodes at this time. \n    As the hint, likely, `PasswordAuthentication` is \'no\' in /etc/ssh/sshd_config. \n    Given in this case, users must setup passwordless ssh beforehand, or change it to \'yes\' and manage passwords properly\n    '
         bootstrap.append_to_remote_file("fromfile", "node1", "tofile")
-        cmd = "cat fromfile | ssh -oStrictHostKeyChecking=no root@node1 'cat >> tofile'"
+        cmd = "cat fromfile | ssh {} root@node1 'cat >> tofile'".format(constants.SSH_OPTION)
         mock_invoke.assert_called_once_with(cmd)
         mock_error.assert_called_once_with(error_string)
 
@@ -998,10 +999,10 @@ class TestBootstrap(unittest.TestCase):
         self.assertEqual("No ssh key exist on node1", str(err.exception))
 
         mock_invoke.assert_has_calls([
-            mock.call("ssh -oStrictHostKeyChecking=no root@node1 'test -f /root/.ssh/id_rsa.pub'"),
-            mock.call("ssh -oStrictHostKeyChecking=no root@node1 'test -f /root/.ssh/id_ecdsa.pub'"),
-            mock.call("ssh -oStrictHostKeyChecking=no root@node1 'test -f /root/.ssh/id_ed25519.pub'"),
-            mock.call("ssh -oStrictHostKeyChecking=no root@node1 'test -f /root/.ssh/id_dsa.pub'")
+            mock.call("ssh {} root@node1 'test -f /root/.ssh/id_rsa.pub'".format(constants.SSH_OPTION)),
+            mock.call("ssh {} root@node1 'test -f /root/.ssh/id_ecdsa.pub'".format(constants.SSH_OPTION)),
+            mock.call("ssh {} root@node1 'test -f /root/.ssh/id_ed25519.pub'".format(constants.SSH_OPTION)),
+            mock.call("ssh {} root@node1 'test -f /root/.ssh/id_dsa.pub'".format(constants.SSH_OPTION))
             ])
 
     @mock.patch('crmsh.tmpfiles.create')
@@ -1015,8 +1016,8 @@ class TestBootstrap(unittest.TestCase):
         res = bootstrap.fetch_public_key_from_remote_node("node1")
         self.assertEqual(res, "temp_file_name")
 
-        mock_invokerc.assert_called_once_with("ssh -oStrictHostKeyChecking=no root@node1 'test -f /root/.ssh/id_rsa.pub'")
-        mock_invoke.assert_called_once_with("scp -oStrictHostKeyChecking=no root@node1:/root/.ssh/id_rsa.pub temp_file_name")
+        mock_invokerc.assert_called_once_with("ssh {} root@node1 'test -f /root/.ssh/id_rsa.pub'".format(constants.SSH_OPTION))
+        mock_invoke.assert_called_once_with("scp -o StrictHostKeyChecking=no root@node1:/root/.ssh/id_rsa.pub temp_file_name")
         mock_tmpfile.assert_called_once_with()
 
     @mock.patch('crmsh.bootstrap.error')
@@ -1046,7 +1047,7 @@ class TestBootstrap(unittest.TestCase):
             mock.call("node1", "root"),
             mock.call("node1", "hacluster")
             ])
-        mock_invoke.assert_called_once_with("ssh root@node1 crm cluster init -i eth1 ssh_remote")
+        mock_invoke.assert_called_once_with("ssh {} root@node1 crm cluster init -i eth1 ssh_remote".format(constants.SSH_OPTION))
         mock_error.assert_called_once_with("Can't invoke crm cluster init -i eth1 ssh_remote on node1: error")
 
     def test_swap_public_ssh_key_return(self):
@@ -1098,7 +1099,7 @@ class TestBootstrap(unittest.TestCase):
         with self.assertRaises(SystemExit):
             bootstrap.setup_passwordless_with_other_nodes("node1")
 
-        mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 crm_node -l")
+        mock_run.assert_called_once_with("ssh {} root@node1 crm_node -l".format(constants.SSH_OPTION))
         mock_error.assert_called_once_with("Can't fetch cluster nodes list from node1: None")
 
     @mock.patch('crmsh.bootstrap.error')
@@ -1116,8 +1117,8 @@ class TestBootstrap(unittest.TestCase):
             bootstrap.setup_passwordless_with_other_nodes("node1")
 
         mock_run.assert_has_calls([
-            mock.call("ssh -o StrictHostKeyChecking=no root@node1 crm_node -l"),
-            mock.call("ssh -o StrictHostKeyChecking=no root@node1 hostname")
+            mock.call("ssh {} root@node1 crm_node -l".format(constants.SSH_OPTION)),
+            mock.call("ssh {} root@node1 hostname".format(constants.SSH_OPTION))
             ])
         mock_error.assert_called_once_with("Can't fetch hostname of node1: None")
 
@@ -1134,8 +1135,8 @@ class TestBootstrap(unittest.TestCase):
         bootstrap.setup_passwordless_with_other_nodes("node1")
 
         mock_run.assert_has_calls([
-            mock.call("ssh -o StrictHostKeyChecking=no root@node1 crm_node -l"),
-            mock.call("ssh -o StrictHostKeyChecking=no root@node1 hostname")
+            mock.call("ssh {} root@node1 crm_node -l".format(constants.SSH_OPTION)),
+            mock.call("ssh {} root@node1 hostname".format(constants.SSH_OPTION))
             ])
         mock_swap.assert_has_calls([
             mock.call("node2", "root"),
@@ -1182,7 +1183,7 @@ class TestBootstrap(unittest.TestCase):
         peer_node = bootstrap.get_cluster_node_hostname()
         assert peer_node == "Node1"
 
-        mock_stdout_stderr.assert_called_once_with("ssh node1 crm_node --name")
+        mock_stdout_stderr.assert_called_once_with("ssh {} node1 crm_node --name".format(constants.SSH_OPTION))
 
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.utils.get_stdout_stderr')
@@ -1194,7 +1195,7 @@ class TestBootstrap(unittest.TestCase):
         with self.assertRaises(SystemExit):
             bootstrap.get_cluster_node_hostname()
 
-        mock_stdout_stderr.assert_called_once_with("ssh node2 crm_node --name")
+        mock_stdout_stderr.assert_called_once_with("ssh {} node2 crm_node --name".format(constants.SSH_OPTION))
         mock_error.assert_called_once_with("error")
 
     @mock.patch('crmsh.utils.this_node')
@@ -1628,7 +1629,7 @@ class TestValidation(unittest.TestCase):
             bootstrap.remove_self()
 
         mock_list.assert_called_once_with(include_remote_nodes=False)
-        mock_ext.assert_called_once_with("ssh -o StrictHostKeyChecking=no node2 'crm cluster remove -y -c node1'")
+        mock_ext.assert_called_once_with("ssh {} node2 'crm cluster remove -y -c node1'".format(constants.SSH_OPTION))
         mock_error.assert_called_once_with("Failed to remove this node from node2")
 
     @mock.patch('crmsh.bootstrap.error')
@@ -1701,7 +1702,7 @@ class TestValidation(unittest.TestCase):
 
         mock_get_ip.assert_called_once_with()
         mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
-        mock_invoke.assert_called_once_with('ssh -o StrictHostKeyChecking=no root@node1 "bash -c \\"rm -f file1 file2\\""')
+        mock_invoke.assert_called_once_with('ssh {} root@node1 "bash -c \\"rm -f file1 file2\\""'.format(constants.SSH_OPTION))
         mock_error.assert_called_once_with("Deleting the configuration files failed: error")
 
     @mock.patch('crmsh.bootstrap.error')
@@ -1722,7 +1723,7 @@ class TestValidation(unittest.TestCase):
         mock_get_ip.assert_called_once_with()
         mock_status.assert_called_once_with("Removing the node node1")
         mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
-        mock_invoke.assert_called_once_with('ssh -o StrictHostKeyChecking=no root@node1 "bash -c \\"rm -f file1 file2\\""')
+        mock_invoke.assert_called_once_with('ssh {} root@node1 "bash -c \\"rm -f file1 file2\\""'.format(constants.SSH_OPTION))
         mock_invokerc.assert_called_once_with("crm node delete node1")
         mock_error.assert_called_once_with("Failed to remove node1")
 
@@ -1744,7 +1745,7 @@ class TestValidation(unittest.TestCase):
         mock_get_ip.assert_called_once_with()
         mock_status.assert_called_once_with("Removing the node node1")
         mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
-        mock_invoke.assert_called_once_with('ssh -o StrictHostKeyChecking=no root@node1 "bash -c \\"rm -f file1 file2\\""')
+        mock_invoke.assert_called_once_with('ssh {} root@node1 "bash -c \\"rm -f file1 file2\\""'.format(constants.SSH_OPTION))
         mock_invokerc.assert_has_calls([
             mock.call('crm node delete node1'),
             mock.call("sed -i /node1/d {}".format(bootstrap.CSYNC2_CFG))
@@ -1777,7 +1778,7 @@ class TestValidation(unittest.TestCase):
             ])
         mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
         mock_invoke.assert_has_calls([
-            mock.call('ssh -o StrictHostKeyChecking=no root@node1 "bash -c \\"rm -f file1 file2\\""'),
+            mock.call('ssh {} root@node1 "bash -c \\"rm -f file1 file2\\""'.format(constants.SSH_OPTION)),
             mock.call("corosync-cfgtool -R")
             ])
         mock_invokerc.assert_has_calls([
