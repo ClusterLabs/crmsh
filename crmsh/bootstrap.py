@@ -114,6 +114,7 @@ class Context(object):
         self.ui_context = None
         self.interfaces_inst = None
         self.with_other_user = True
+        self.cluster_is_running = None
         self.default_nic_list = []
         self.default_ip_list = []
         self.local_ip_list = []
@@ -143,20 +144,28 @@ class Context(object):
                 cmds=self.qdevice_heuristics,
                 mode=self.qdevice_heuristics_mode)
 
+    def _validate_sbd_option(self):
+        """
+        Validate sbd options
+        """
+        if self.sbd_devices and self.diskless_sbd:
+            error("Can't use -s and -S options together")
+        if self.stage == "sbd":
+            if not self.sbd_devices and not self.diskless_sbd and self.yes_to_all:
+                error("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
+            if utils.service_is_active("sbd.service"):
+                error("Cannot configure stage sbd: sbd.service already running!")
+            if self.cluster_is_running:
+                utils.check_all_nodes_reachable()
+
     def validate_option(self):
         """
         Validate options
         """
         if self.admin_ip:
-            try:
-                Validation.valid_admin_ip(self.admin_ip)
-            except ValueError as err:
-                error(err)
+            Validation.valid_admin_ip(self.admin_ip)
         if self.qdevice_inst:
-            try:
-                self.qdevice_inst.valid_attr()
-            except ValueError as err:
-                error(err)
+            self.qdevice_inst.valid_attr()
         if self.nic_list:
             if len(self.nic_list) > 2:
                 error("Maximum number of interface is 2")
@@ -166,6 +175,7 @@ class Context(object):
             warn("--no-overwrite-sshkey option is deprecated since crmsh does not overwrite ssh keys by default anymore and will be removed in future versions")
         if self.type == "join" and self.watchdog:
             warn("-w option is deprecated and will be removed in future versions")
+        self._validate_sbd_option()
 
     def init_sbd_manager(self):
         self.sbd_manager = SBDManager(self.sbd_devices, self.diskless_sbd)
@@ -374,6 +384,7 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         self.diskless_sbd = diskless_sbd
         self._sbd_devices = None
         self._watchdog_inst = None
+        self._stonith_watchdog_timeout = "10s"
 
     def _parse_sbd_device(self):
         """
@@ -509,6 +520,17 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         utils.sysconfig_set(SYSCONFIG_SBD, **sbd_config_dict)
         csync2_update(SYSCONFIG_SBD)
 
+    def _determine_stonith_watchdog_timeout(self):
+        """
+        Determine value of stonith-watchdog-timeout
+        """
+        conf = utils.parse_sysconfig(SYSCONFIG_SBD)
+        res = conf.get("SBD_WATCHDOG_TIMEOUT")
+        if res:
+            self._stonith_watchdog_timeout = -1
+        elif "390" in os.uname().machine:
+            self._stonith_watchdog_timeout = "30s"
+
     def _get_sbd_device_from_config(self):
         """
         Gets currently configured SBD device, i.e. what's in /etc/sysconfig/sbd
@@ -519,6 +541,48 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
             return utils.re_split_string(self.PARSE_RE, res)
         else:
             return None
+
+    def _restart_cluster_and_configure_sbd_ra(self):
+        """
+        Try to configure sbd resource, restart cluster on needed
+        """
+        if not utils.has_resource_running():
+            status("Restarting cluster service")
+            utils.cluster_run_cmd("crm cluster restart")
+            wait_for_cluster()
+            self.configure_sbd_resource()
+        else:
+            warn("To start sbd.service, need to restart cluster service manually on each node")
+            if self.diskless_sbd:
+                warn("Then run \"crm configure property stonith-enabled=true stonith-watchdog-timeout={}\" on any node".format(self._stonith_watchdog_timeout))
+            else:
+                self.configure_sbd_resource()
+
+    def _enable_sbd_service(self):
+        """
+        Try to enable sbd service
+        """
+        if _context.cluster_is_running:
+            # in sbd stage, enable sbd.service on cluster wide
+            utils.cluster_run_cmd("systemctl enable sbd.service")
+            self._restart_cluster_and_configure_sbd_ra()
+        else:
+            # in init process
+            invoke("systemctl enable sbd.service")
+
+    def _warn_diskless_sbd(self, peer=None):
+        """
+        Give warning when configuring diskless sbd
+        """
+        # When in sbd stage or join process
+        if (self.diskless_sbd and _context.cluster_is_running) or peer:
+            vote_dict = utils.get_quorum_votes_dict(peer)
+            expected_vote = int(vote_dict['Expected'])
+            if (expected_vote < 2 and peer) or (expected_vote < 3 and not peer):
+                warn(self.DISKLESS_SBD_WARNING)
+        # When in init process
+        elif self.diskless_sbd:
+            warn(self.DISKLESS_SBD_WARNING)
 
     def sbd_init(self):
         """
@@ -535,28 +599,30 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         if not self._sbd_devices and not self.diskless_sbd:
             invoke("systemctl disable sbd.service")
             return
-        if self.diskless_sbd:
-            warn(self.DISKLESS_SBD_WARNING)
+        self._warn_diskless_sbd()
         with status_long("Initializing {}SBD...".format("diskless " if self.diskless_sbd else "")):
             self._initialize_sbd()
             self._update_configuration()
-            invoke("systemctl enable sbd.service")
+        self._determine_stonith_watchdog_timeout()
+        self._enable_sbd_service()
 
     def configure_sbd_resource(self):
         """
         Configure stonith-sbd resource and stonith-enabled property
         """
-        if not utils.package_is_installed("sbd"):
+        if not utils.package_is_installed("sbd") or \
+                not utils.service_is_enabled("sbd.service") or \
+                utils.has_resource_configured("stonith:external/sbd"):
             return
-        if utils.service_is_enabled("sbd.service"):
-            if self._get_sbd_device_from_config():
-                if not invokerc("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"):
-                    error("Can't create stonith-sbd primitive")
-                if not invokerc("crm configure property stonith-enabled=true"):
-                    error("Can't enable STONITH for SBD")
-            else:
-                if not invokerc("crm configure property stonith-enabled=true stonith-watchdog-timeout=5s"):
-                    error("Can't enable STONITH for diskless SBD")
+
+        if self._get_sbd_device_from_config():
+            if not invokerc("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"):
+                error("Can't create stonith-sbd primitive")
+            if not invokerc("crm configure property stonith-enabled=true"):
+                error("Can't enable STONITH for SBD")
+        else:
+            if not invokerc("crm configure property stonith-enabled=true stonith-watchdog-timeout={}".format(self._stonith_watchdog_timeout)):
+                error("Can't enable STONITH for diskless SBD")
 
     def join_sbd(self, peer_host):
         """
@@ -575,9 +641,7 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         if dev_list:
             self._verify_sbd_device(dev_list, [peer_host])
         else:
-            vote_dict = utils.get_quorum_votes_dict(peer_host)
-            if int(vote_dict['Expected']) < 2:
-                warn(self.DISKLESS_SBD_WARNING)
+            self._warn_diskless_sbd(peer_host)
         status("Got {}SBD configuration".format("" if dev_list else "diskless "))
         invoke("systemctl enable sbd.service")
 
@@ -2561,7 +2625,7 @@ def bootstrap_init(context):
     elif stage == "":
         if corosync_active:
             error("Cluster is currently active - can't run")
-    elif stage not in ("ssh", "ssh_remote", "csync2", "csync2_remote"):
+    elif stage not in ("ssh", "ssh_remote", "csync2", "csync2_remote", "sbd"):
         if corosync_active:
             error("Cluster is currently active - can't run %s stage" % (stage))
 

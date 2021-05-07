@@ -2676,6 +2676,14 @@ def has_resource_running():
     return re.search("No active resources", out) is None
 
 
+def has_resource_configured(ra_type):
+    """
+    Check if the RA configured
+    """
+    out = get_stdout_or_raise_error("crm configure show")
+    return re.search(r' {} '.format(ra_type), out) is not None
+
+
 def check_all_nodes_reachable():
     """
     Check if all cluster nodes are reachable

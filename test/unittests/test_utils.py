@@ -1307,3 +1307,13 @@ Active Resources:
 def test_re_split_string():
     assert utils.re_split_string('[; ]', "/dev/sda1; /dev/sdb1 ; ") == ["/dev/sda1", "/dev/sdb1"]
     assert utils.re_split_string('[; ]', "/dev/sda1 ") == ["/dev/sda1"]
+
+
+@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+def test_has_resource_configured(mock_run):
+    mock_run.return_value = """
+primitive stonith-sbd stonith:external/sbd \
+        params pcmk_delay_max=30s
+    """
+    res = utils.has_resource_configured("stonith:external/sbd")
+    assert res is True
