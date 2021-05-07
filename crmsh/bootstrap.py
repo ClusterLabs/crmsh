@@ -21,6 +21,7 @@ import readline
 import shutil
 from string import Template
 from lxml import etree
+from contextlib import contextmanager
 from . import config
 from . import utils
 from . import xmlutil
@@ -518,11 +519,10 @@ Configure SBD:
             return
         if self.diskless_sbd:
             warn(self.DISKLESS_SBD_WARNING)
-        status_long("Initializing {}SBD...".format("diskless " if self.diskless_sbd else ""))
-        self._initialize_sbd()
-        self._update_configuration()
-        invoke("systemctl enable sbd.service")
-        status_done()
+        with status_long("Initializing {}SBD...".format("diskless " if self.diskless_sbd else "")):
+            self._initialize_sbd()
+            self._update_configuration()
+            invoke("systemctl enable sbd.service")
 
     def configure_sbd_resource(self):
         """
@@ -729,16 +729,15 @@ def crm_configure_load(action, configuration):
 
 
 def wait_for_resource(message, resource, needle="running on"):
-    status_long(message)
-    while True:
-        _rc, out, err = utils.get_stdout_stderr("crm_resource --locate --resource " + resource)
-        if needle in out:
-            break
-        if needle in err:
-            break
-        status_progress()
-        sleep(1)
-    status_done()
+    with status_long(message):
+        while True:
+            _rc, out, err = utils.get_stdout_stderr("crm_resource --locate --resource " + resource)
+            if needle in out:
+                break
+            if needle in err:
+                break
+            status_progress()
+            sleep(1)
 
 
 def wait_for_stop(message, resource):
@@ -746,14 +745,13 @@ def wait_for_stop(message, resource):
 
 
 def wait_for_cluster():
-    status_long("Waiting for cluster")
-    while True:
-        _rc, out, _err = utils.get_stdout_stderr("crm_mon -1")
-        if is_online(out):
-            break
-        status_progress()
-        sleep(2)
-    status_done()
+    with status_long("Waiting for cluster"):
+        while True:
+            _rc, out, _err = utils.get_stdout_stderr("crm_mon -1")
+            if is_online(out):
+                break
+            status_progress()
+            sleep(2)
 
 
 def get_cluster_node_hostname():
@@ -822,11 +820,18 @@ def status(msg):
         print("  {}".format(msg))
 
 
+@contextmanager
 def status_long(msg):
     log("# {}...".format(msg))
     if not _context.quiet:
         sys.stdout.write("  {}...".format(msg))
         sys.stdout.flush()
+    try:
+        yield
+    except:
+        raise
+    else:
+        status_done()
 
 
 def status_progress():
@@ -856,10 +861,9 @@ def partprobe():
 
 
 def probe_partitions():
-    status_long("Probing for new partitions")
-    partprobe()
-    sleep(5)
-    status_done()
+    with status_long("Probing for new partitions"):
+        partprobe()
+        sleep(5)
 
 
 def check_tty():
@@ -1240,10 +1244,9 @@ def init_csync2():
             return
 
     invoke("rm", "-f", CSYNC2_KEY)
-    status_long("Generating csync2 shared key (this may take a while)")
-    if not invokerc("csync2", "-k", CSYNC2_KEY):
-        error("Can't create csync2 key {}".format(CSYNC2_KEY))
-    status_done()
+    with status_long("Generating csync2 shared key (this may take a while)"):
+        if not invokerc("csync2", "-k", CSYNC2_KEY):
+            error("Can't create csync2 key {}".format(CSYNC2_KEY))
 
     csync2_file_list = ""
     for f in FILES_TO_SYNC:
@@ -1258,9 +1261,8 @@ host {};
     """.format(utils.this_node(), csync2_file_list), CSYNC2_CFG)
 
     utils.start_service("csync2.socket", enable=True)
-    status_long("csync2 checking files")
-    invoke("csync2", "-cr", "/")
-    status_done()
+    with status_long("csync2 checking files"):
+        invoke("csync2", "-cr", "/")
 
 
 def csync2_update(path):
@@ -1668,27 +1670,25 @@ Configure Shared Storage:
     if partitions:
         if not confirm("Really?"):
             return
-        status_long("Erasing existing partitions...")
-        for part in partitions:
-            if not invokerc("parted -s %s rm %s" % (dev, part)):
-                error("Failed to remove partition %s from %s" % (part, dev))
-        status_done()
+        with status_long("Erasing existing partitions..."):
+            for part in partitions:
+                if not invokerc("parted -s %s rm %s" % (dev, part)):
+                    error("Failed to remove partition %s from %s" % (part, dev))
 
-    status_long("Creating partitions...")
-    if not invokerc("parted", "-s", dev, "mklabel", "msdos"):
-        error("Failed to create partition table")
+    with status_long("Creating partitions..."):
+        if not invokerc("parted", "-s", dev, "mklabel", "msdos"):
+            error("Failed to create partition table")
 
-    # This is a bit rough, and probably won't result in great performance,
-    # but it's fine for test/demo purposes to carve off 1MB for SBD.  Note
-    # we have to specify the size of the first partition in this in bytes
-    # rather than MB, or parted's rounding gives us a ~30Kb partition
-    # (see rhbz#623268).
-    if not invokerc("parted -s %s mkpart primary 0 1048576B" % (dev)):
-        error("Failed to create first partition on %s" % (dev))
-    if not invokerc("parted -s %s mkpart primary 1M 100%%" % (dev)):
-        error("Failed to create second partition")
+        # This is a bit rough, and probably won't result in great performance,
+        # but it's fine for test/demo purposes to carve off 1MB for SBD.  Note
+        # we have to specify the size of the first partition in this in bytes
+        # rather than MB, or parted's rounding gives us a ~30Kb partition
+        # (see rhbz#623268).
+        if not invokerc("parted -s %s mkpart primary 0 1048576B" % (dev)):
+            error("Failed to create first partition on %s" % (dev))
+        if not invokerc("parted -s %s mkpart primary 1M 100%%" % (dev)):
+            error("Failed to create second partition")
 
-    status_done()
 
     # TODO: May not be strictly necessary, but...
     probe_partitions()
@@ -1777,15 +1777,14 @@ colocation clusterfs-with-base inf: c-clusterfs base-clone
                 wait_for_stop("Waiting for resource %s to stop" % (res), res)
             invoke("crm configure delete dlm clusterfs base-group base-clone c-clusterfs base-then-clusterfs clusterfs-with-base")
 
-    status_long("Creating OCFS2 filesystem")
-    # TODO: want "-T vmstore", but this'll only fly on >2GB partition
-    # Note: using undocumented '-x' switch to avoid prompting if overwriting
-    # existing partition.  For the commit that introduced this, see:
-    # http://oss.oracle.com/git/?p=ocfs2-tools.git;a=commit;h=8345a068479196172190f4fa287052800fa2b66f
-    # TODO: if make the cluster name configurable, we need to update it here too
-    if not invokerc("mkfs.ocfs2 --cluster-stack pcmk --cluster-name %s -N 8 -x %s" % (_context.cluster_name, dev)):
-        error("Failed to create OCFS2 filesystem on %s" % (dev))
-    status_done()
+    with status_long("Creating OCFS2 filesystem"):
+        # TODO: want "-T vmstore", but this'll only fly on >2GB partition
+        # Note: using undocumented '-x' switch to avoid prompting if overwriting
+        # existing partition.  For the commit that introduced this, see:
+        # http://oss.oracle.com/git/?p=ocfs2-tools.git;a=commit;h=8345a068479196172190f4fa287052800fa2b66f
+        # TODO: if make the cluster name configurable, we need to update it here too
+        if not invokerc("mkfs.ocfs2 --cluster-stack pcmk --cluster-name %s -N 8 -x %s" % (_context.cluster_name, dev)):
+            error("Failed to create OCFS2 filesystem on %s" % (dev))
 
     # TODO: refactor, maybe
     if not invokerc("mkdir -p %s" % (mntpoint)):
@@ -1910,49 +1909,47 @@ def join_csync2(seed_host):
     """
     if not seed_host:
         error("No existing IP/hostname specified (use -c option)")
-    status_long("Configuring csync2")
+    with status_long("Configuring csync2"):
 
-    # Necessary if re-running join on a node that's been configured before.
-    rmfile("/var/lib/csync2/{}.db3".format(utils.this_node()), ignore_errors=True)
+        # Necessary if re-running join on a node that's been configured before.
+        rmfile("/var/lib/csync2/{}.db3".format(utils.this_node()), ignore_errors=True)
 
-    # Not automatically updating /etc/hosts - risky in the general case.
-    # etc_hosts_add_me
-    # local hosts_line=$(etc_hosts_get_me)
-    # [ -n "$hosts_line" ] || error "No valid entry for $(hostname) in /etc/hosts - csync2 can't work"
+        # Not automatically updating /etc/hosts - risky in the general case.
+        # etc_hosts_add_me
+        # local hosts_line=$(etc_hosts_get_me)
+        # [ -n "$hosts_line" ] || error "No valid entry for $(hostname) in /etc/hosts - csync2 can't work"
 
-    # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
-    # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
-    cmd = "crm cluster init -i {} csync2_remote {}".format(_context.default_nic_list[0], utils.this_node())
-    rc, _, err = invoke("ssh -o StrictHostKeyChecking=no root@{} {}".format(seed_host, cmd))
-    if not rc:
-        error("Can't invoke \"{}\" on {}: {}".format(cmd, seed_host, err))
+        # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
+        # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
+        cmd = "crm cluster init -i {} csync2_remote {}".format(_context.default_nic_list[0], utils.this_node())
+        rc, _, err = invoke("ssh -o StrictHostKeyChecking=no root@{} {}".format(seed_host, cmd))
+        if not rc:
+            error("Can't invoke \"{}\" on {}: {}".format(cmd, seed_host, err))
 
-    # This is necessary if syncing /etc/hosts (to ensure everyone's got the
-    # same list of hosts)
-    # local tmp_conf=/etc/hosts.$$
-    # invoke scp root@seed_host:/etc/hosts $tmp_conf \
-    #   || error "Can't retrieve /etc/hosts from seed_host"
-    # install_tmp $tmp_conf /etc/hosts
-    rc, _, err = invoke("scp root@%s:'/etc/csync2/{csync2.cfg,key_hagroup}' /etc/csync2" % (seed_host))
-    if not rc:
-        error("Can't retrieve csync2 config from {}: {}".format(seed_host, err))
+        # This is necessary if syncing /etc/hosts (to ensure everyone's got the
+        # same list of hosts)
+        # local tmp_conf=/etc/hosts.$$
+        # invoke scp root@seed_host:/etc/hosts $tmp_conf \
+        #   || error "Can't retrieve /etc/hosts from seed_host"
+        # install_tmp $tmp_conf /etc/hosts
+        rc, _, err = invoke("scp root@%s:'/etc/csync2/{csync2.cfg,key_hagroup}' /etc/csync2" % (seed_host))
+        if not rc:
+            error("Can't retrieve csync2 config from {}: {}".format(seed_host, err))
 
-    utils.start_service("csync2.socket", enable=True)
+        utils.start_service("csync2.socket", enable=True)
 
-    # Sync new config out.  This goes to all hosts; csync2.cfg definitely
-    # needs to go to all hosts (else hosts other than the seed and the
-    # joining host won't have the joining host in their config yet).
-    # Strictly, the rest of the files need only go to the new host which
-    # could theoretically be effected using `csync2 -xv -P $(hostname)`,
-    # but this still leaves all the other files in dirty state (becuase
-    # they haven't gone to all nodes in the cluster, which means a
-    # subseqent join of another node can fail its sync of corosync.conf
-    # when it updates expected_votes.  Grrr...
-    if not invokerc('ssh -o StrictHostKeyChecking=no root@{} "csync2 -rm /; csync2 -rxv || csync2 -rf / && csync2 -rxv"'.format(seed_host)):
-        print("")
-        warn("csync2 run failed - some files may not be sync'd")
-
-    status_done()
+        # Sync new config out.  This goes to all hosts; csync2.cfg definitely
+        # needs to go to all hosts (else hosts other than the seed and the
+        # joining host won't have the joining host in their config yet).
+        # Strictly, the rest of the files need only go to the new host which
+        # could theoretically be effected using `csync2 -xv -P $(hostname)`,
+        # but this still leaves all the other files in dirty state (becuase
+        # they haven't gone to all nodes in the cluster, which means a
+        # subseqent join of another node can fail its sync of corosync.conf
+        # when it updates expected_votes.  Grrr...
+        if not invokerc('ssh -o StrictHostKeyChecking=no root@{} "csync2 -rm /; csync2 -rxv || csync2 -rf / && csync2 -rxv"'.format(seed_host)):
+            print("")
+            warn("csync2 run failed - some files may not be sync'd")
 
 
 def join_ssh_merge(_cluster_node):
@@ -1995,6 +1992,84 @@ def join_ssh_merge(_cluster_node):
         for host, result in results.items():
             if isinstance(result, parallax.Error):
                 warn("scp to {} failed ({}), known_hosts update may be incomplete".format(host, str(result)))
+
+def update_expected_votes():
+    # get a list of nodes, excluding remote nodes
+    nodelist = None
+    loop_count = 0
+    device_votes = 0
+    nodecount = 0
+    expected_votes = 0
+    while True:
+        rc, nodelist_text = utils.get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
+        if rc == 0:
+            try:
+                nodelist_xml = etree.fromstring(nodelist_text)
+                nodelist = [n.get('uname') for n in nodelist_xml.xpath('//node_state') if n.get('remote_node') != 'true']
+                if len(nodelist) >= 2:
+                    break
+            except Exception:
+                break
+        # timeout: 10 seconds
+        if loop_count == 10:
+            break
+        loop_count += 1
+        sleep(1)
+
+    # Increase expected_votes
+    # TODO: wait to adjust expected_votes until after cluster join,
+    # so that we can ask the cluster for the current membership list
+    # Have to check if a qnetd device is configured and increase
+    # expected_votes in that case
+    use_qdevice = 1 if corosync.get_value("quorum.device.model") == "net" else 0
+    if nodelist is None:
+        for v in corosync.get_values("quorum.expected_votes"):
+            expected_votes = v
+
+            # For node >= 2, expected_votes = nodecount + device_votes
+            # Assume nodecount is N, for ffsplit, qdevice only has one vote
+            # which means that device_votes is 1, ie:expected_votes = N + 1;
+            # while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
+            # and update quorum.device.net.algorithm based on device_votes
+
+            if corosync.get_value("quorum.device.net.algorithm") == "lms":
+                device_votes = int((expected_votes - 1) / 2)
+                nodecount = expected_votes - device_votes
+                # as nodecount will increase 1, and device_votes is nodecount - 1
+                # device_votes also increase 1
+                device_votes += 1
+            elif corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
+                device_votes = 1
+                nodecount = expected_votes - device_votes
+            elif use_qdevice == 0:
+                device_votes = 0
+                nodecount = v
+
+            nodecount += 1
+            expected_votes = nodecount + device_votes
+            corosync.set_value("quorum.expected_votes", str(expected_votes))
+    else:
+        nodecount = len(nodelist)
+        expected_votes = 0
+        # For node >= 2, expected_votes = nodecount + device_votes
+        # Assume nodecount is N, for ffsplit, qdevice only has one vote
+        # which means that device_votes is 1, ie:expected_votes = N + 1;
+        # while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
+        if corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
+            device_votes = 1
+        if corosync.get_value("quorum.device.net.algorithm") == "lms":
+            device_votes = nodecount - 1
+
+        expected_votes = nodecount + device_votes
+
+        if corosync.get_value("quorum.expected_votes"):
+            corosync.set_value("quorum.expected_votes", str(expected_votes))
+    if use_qdevice == 0:
+        corosync.set_value("quorum.two_node", 1 if expected_votes == 2 else 0)
+    if use_qdevice:
+        corosync.set_value("quorum.device.votes", device_votes)
+
+    csync2_update(corosync.conf())
 
 
 def setup_passwordless_with_other_nodes(init_node):
@@ -2140,125 +2215,46 @@ def join_cluster(seed_host):
     # attempt to join the cluster failed)
     init_cluster_local()
 
-    status_long("Reloading cluster configuration")
+    with status_long("Reloading cluster configuration"):
 
-    if ipv6_flag and not is_unicast:
-        # for ipv6 mcast
-        nodeid_dict = {}
-        _rc, outp, _ = utils.get_stdout_stderr("crm_node -l")
-        if _rc == 0:
-            for line in outp.split('\n'):
-                tmp = line.split()
-                nodeid_dict[tmp[1]] = tmp[0]
+        if ipv6_flag and not is_unicast:
+            # for ipv6 mcast
+            nodeid_dict = {}
+            _rc, outp, _ = utils.get_stdout_stderr("crm_node -l")
+            if _rc == 0:
+                for line in outp.split('\n'):
+                    tmp = line.split()
+                    nodeid_dict[tmp[1]] = tmp[0]
 
-    # apply nodelist in cluster
-    if is_unicast:
-        invoke("crm cluster run 'crm corosync reload'")
+        # apply nodelist in cluster
+        if is_unicast:
+            invoke("crm cluster run 'crm corosync reload'")
 
-    def update_expected_votes():
-        # get a list of nodes, excluding remote nodes
-        nodelist = None
-        loop_count = 0
-        device_votes = 0
-        nodecount = 0
-        expected_votes = 0
-        while True:
-            rc, nodelist_text = utils.get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
-            if rc == 0:
-                try:
-                    nodelist_xml = etree.fromstring(nodelist_text)
-                    nodelist = [n.get('uname') for n in nodelist_xml.xpath('//node_state') if n.get('remote_node') != 'true']
-                    if len(nodelist) >= 2:
-                        break
-                except Exception:
-                    break
-            # timeout: 10 seconds
-            if loop_count == 10:
-                break
-            loop_count += 1
-            sleep(1)
+        update_expected_votes()
+        # Trigger corosync config reload to ensure expected_votes is propagated
+        invoke("corosync-cfgtool -R")
 
-        # Increase expected_votes
-        # TODO: wait to adjust expected_votes until after cluster join,
-        # so that we can ask the cluster for the current membership list
-        # Have to check if a qnetd device is configured and increase
-        # expected_votes in that case
-        use_qdevice = 1 if corosync.get_value("quorum.device.model") == "net" else 0
-        if nodelist is None:
-            for v in corosync.get_values("quorum.expected_votes"):
-                expected_votes = v
+        # Ditch no-quorum-policy=ignore
+        _rc, outp = utils.get_stdout("crm configure show")
+        if re.search('no-quorum-policy=.*ignore', outp):
+            invoke("crm_attribute --attr-name no-quorum-policy --delete-attr")
 
-                # For node >= 2, expected_votes = nodecount + device_votes
-                # Assume nodecount is N, for ffsplit, qdevice only has one vote
-                # which means that device_votes is 1, ie:expected_votes = N + 1;
-                # while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
-                # and update quorum.device.net.algorithm based on device_votes
+        # if unicast, we need to reload the corosync configuration
+        # on the other nodes
+        if is_unicast:
+            invoke("crm cluster run 'crm corosync reload'")
 
-                if corosync.get_value("quorum.device.net.algorithm") == "lms":
-                    device_votes = int((expected_votes - 1) / 2)
-                    nodecount = expected_votes - device_votes
-                    # as nodecount will increase 1, and device_votes is nodecount - 1
-                    # device_votes also increase 1
-                    device_votes += 1
-                elif corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
-                    device_votes = 1
-                    nodecount = expected_votes - device_votes
-                elif use_qdevice == 0:
-                    device_votes = 0
-                    nodecount = v
+        if ipv6_flag and not is_unicast:
+            # for ipv6 mcast
+            # after csync2_update, all config files are same
+            # but nodeid must be uniqe
+            for node in list(nodeid_dict.keys()):
+                if node == utils.this_node():
+                    continue
+                update_nodeid(int(nodeid_dict[node]), node)
+            update_nodeid(local_nodeid)
 
-                nodecount += 1
-                expected_votes = nodecount + device_votes
-                corosync.set_value("quorum.expected_votes", str(expected_votes))
-        else:
-            nodecount = len(nodelist)
-            expected_votes = 0
-            # For node >= 2, expected_votes = nodecount + device_votes
-            # Assume nodecount is N, for ffsplit, qdevice only has one vote
-            # which means that device_votes is 1, ie:expected_votes = N + 1;
-            # while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
-            if corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
-                device_votes = 1
-            if corosync.get_value("quorum.device.net.algorithm") == "lms":
-                device_votes = nodecount - 1
-
-            expected_votes = nodecount + device_votes
-
-            if corosync.get_value("quorum.expected_votes"):
-                corosync.set_value("quorum.expected_votes", str(expected_votes))
-        if use_qdevice == 0:
-            corosync.set_value("quorum.two_node", 1 if expected_votes == 2 else 0)
-        if use_qdevice:
-            corosync.set_value("quorum.device.votes", device_votes)
-
-        csync2_update(corosync.conf())
-    update_expected_votes()
-
-    # Trigger corosync config reload to ensure expected_votes is propagated
-    invoke("corosync-cfgtool -R")
-
-    # Ditch no-quorum-policy=ignore
-    _rc, outp = utils.get_stdout("crm configure show")
-    if re.search('no-quorum-policy=.*ignore', outp):
-        invoke("crm_attribute --attr-name no-quorum-policy --delete-attr")
-
-    # if unicast, we need to reload the corosync configuration
-    # on the other nodes
-    if is_unicast:
-        invoke("crm cluster run 'crm corosync reload'")
-
-    if ipv6_flag and not is_unicast:
-        # for ipv6 mcast
-        # after csync2_update, all config files are same
-        # but nodeid must be uniqe
-        for node in list(nodeid_dict.keys()):
-            if node == utils.this_node():
-                continue
-            update_nodeid(int(nodeid_dict[node]), node)
-        update_nodeid(local_nodeid)
-
-    sync_files_to_disk()
-    status_done()
+        sync_files_to_disk()
 
 
 def set_cluster_node_ip():
