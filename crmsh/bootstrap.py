@@ -910,7 +910,9 @@ def status_long(msg):
         sys.stdout.flush()
     try:
         yield
-    finally:
+    except:
+        raise
+    else:
         status_done()
 
 
