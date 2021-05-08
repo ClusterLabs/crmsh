@@ -188,6 +188,7 @@ test/unittests/test_scripts.py
 test/unittests/test_time.py
 test/unittests/test_ui_cluster.py
 test/unittests/test_utils.py
+test/unittests/test_watchdog.py
 test/update-expected-output.sh
 utils/crm_clean.py
 utils/crm_init.py

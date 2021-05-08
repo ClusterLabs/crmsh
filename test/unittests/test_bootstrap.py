@@ -22,9 +22,9 @@ from crmsh import bootstrap
 from crmsh import constants
 
 
-class TestWatchdog(unittest.TestCase):
+class TestContext(unittest.TestCase):
     """
-    Unitary tests for crmsh.bootstrap.Watchdog
+    Unitary tests for crmsh.bootstrap.Context
     """
 
     @classmethod
@@ -37,8 +37,7 @@ class TestWatchdog(unittest.TestCase):
         """
         Test setUp.
         """
-        self.watchdog_inst = bootstrap.Watchdog()
-        self.watchdog_join_inst = bootstrap.Watchdog(peer_host="node1")
+        self.ctx_inst = bootstrap.Context()
 
     def tearDown(self):
         """
@@ -51,272 +50,99 @@ class TestWatchdog(unittest.TestCase):
         Global tearDown.
         """
 
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_verify_watchdog_device_ignore_error(self, mock_run):
-        mock_run.return_value = (1, None, "error")
-        res = self.watchdog_inst._verify_watchdog_device("/dev/watchdog", True)
-        self.assertEqual(res, False)
-        mock_run.assert_called_once_with("wdctl /dev/watchdog")
+    def test_set_context(self):
+        options = mock.Mock(yes_to_all=True, ipv6=False)
+        ctx = self.ctx_inst.set_context(options)
+        self.assertEqual(ctx.yes_to_all, True)
+        self.assertEqual(ctx.ipv6, False)
+
+    @mock.patch('crmsh.corosync.QDevice')
+    def test_initialize_qdevice_return(self, mock_qdevice):
+        self.ctx_inst.initialize_qdevice()
+        mock_qdevice.assert_not_called()
+
+    @mock.patch('crmsh.corosync.QDevice')
+    def test_initialize_qdevice(self, mock_qdevice):
+        options = mock.Mock(qnetd_addr="node3", qdevice_port=123)
+        ctx = self.ctx_inst.set_context(options)
+        ctx.initialize_qdevice()
+        mock_qdevice.assert_called_once_with('node3', port=123, algo=None, tie_breaker=None, tls=None, cmds=None, mode=None)
 
     @mock.patch('crmsh.bootstrap.error')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_verify_watchdog_device_error(self, mock_run, mock_error):
-        mock_run.return_value = (1, None, "error")
-        mock_error.side_effect = ValueError
-        with self.assertRaises(ValueError) as err:
-            self.watchdog_inst._verify_watchdog_device("/dev/watchdog")
-        mock_error.assert_called_once_with("Invalid watchdog device /dev/watchdog: error")
-        mock_run.assert_called_once_with("wdctl /dev/watchdog")
-
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_verify_watchdog_device(self, mock_run):
-        mock_run.return_value = (0, None, None)
-        res = self.watchdog_inst._verify_watchdog_device("/dev/watchdog")
-        self.assertEqual(res, True)
-
-    @mock.patch('crmsh.bootstrap.invoke')
-    def test_load_watchdog_driver(self, mock_invoke):
-        self.watchdog_inst._load_watchdog_driver("softdog")
-        mock_invoke.assert_has_calls([
-            mock.call("echo softdog > /etc/modules-load.d/watchdog.conf"),
-            mock.call("systemctl restart systemd-modules-load")
-            ])
-
-    @mock.patch('crmsh.utils.parse_sysconfig')
-    def test_get_watchdog_device_from_sbd_config(self, mock_parse):
-        mock_parse_inst = mock.Mock()
-        mock_parse.return_value = mock_parse_inst
-        mock_parse_inst.get.return_value = "/dev/watchdog"
-        res = self.watchdog_inst._get_watchdog_device_from_sbd_config()
-        self.assertEqual(res, "/dev/watchdog")
-        mock_parse.assert_called_once_with(bootstrap.SYSCONFIG_SBD)
-
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_driver_is_loaded(self, mock_run):
-        output = """
-button                 24576  0
-softdog                16384  2
-btrfs                1474560  1
-        """
-        mock_run.return_value = (0, output, None)
-        res = self.watchdog_inst._driver_is_loaded("softdog")
-        assert res is not None
-        mock_run.assert_called_once_with("lsmod")
-
-    @mock.patch('crmsh.bootstrap.error')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_set_watchdog_info_error(self, mock_run, mock_error):
-        mock_run.return_value = (1, None, "error")
-        mock_error.side_effect = ValueError
-        with self.assertRaises(ValueError):
-            self.watchdog_inst._set_watchdog_info()
-        mock_run.assert_called_once_with(bootstrap.Watchdog.QUERY_CMD)
-        mock_error.assert_called_once_with("Failed to run {}: error".format(bootstrap.Watchdog.QUERY_CMD))
-
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_set_watchdog_info(self, mock_run):
-        output = """
-Discovered 3 watchdog devices:
-
-[1] /dev/watchdog
-Identity: Software Watchdog
-Driver: softdog
-CAUTION: Not recommended for use with sbd.
-
-[2] /dev/watchdog0
-Identity: Software Watchdog
-Driver: softdog
-CAUTION: Not recommended for use with sbd.
-
-[3] /dev/watchdog1
-Identity: iTCO_wdt
-Driver: iTCO_wdt
-        """
-        mock_run.return_value = (0, output, None)
-        self.watchdog_inst._set_watchdog_info()
-        self.assertEqual(self.watchdog_inst._watchdog_info_dict, {'/dev/watchdog': 'softdog', '/dev/watchdog0': 'softdog', '/dev/watchdog1': 'iTCO_wdt'})
-
-    @mock.patch('crmsh.bootstrap.Watchdog._verify_watchdog_device')
-    def test_get_device_through_driver_none(self, mock_verify):
-        self.watchdog_inst._watchdog_info_dict = {'/dev/watchdog': 'softdog', '/dev/watchdog0': 'softdog', '/dev/watchdog1': 'iTCO_wdt'}
-        mock_verify.return_value = False
-        res = self.watchdog_inst._get_device_through_driver("iTCO_wdt")
-        self.assertEqual(res, None)
-        mock_verify.assert_called_once_with("/dev/watchdog1")
-
-    @mock.patch('crmsh.bootstrap.Watchdog._verify_watchdog_device')
-    def test_get_device_through_driver(self, mock_verify):
-        self.watchdog_inst._watchdog_info_dict = {'/dev/watchdog': 'softdog', '/dev/watchdog0': 'softdog', '/dev/watchdog1': 'iTCO_wdt'}
-        mock_verify.return_value = True
-        res = self.watchdog_inst._get_device_through_driver("iTCO_wdt")
-        self.assertEqual(res, "/dev/watchdog1")
-        mock_verify.assert_called_once_with("/dev/watchdog1")
-
-    @mock.patch('crmsh.bootstrap.error')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_get_driver_through_device_remotely_error(self, mock_run, mock_error):
-        mock_run.return_value = (1, None, "error")
-        self.watchdog_join_inst._get_driver_through_device_remotely("test")
-        mock_run.assert_called_once_with("ssh {} root@node1 sbd query-watchdog".format(constants.SSH_OPTION))
-        mock_error.assert_called_once_with("Failed to run sbd query-watchdog remotely: error")
-
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_get_driver_through_device_remotely_none(self, mock_run):
-        mock_run.return_value = (0, "data", None)
-        res = self.watchdog_join_inst._get_driver_through_device_remotely("/dev/watchdog")
-        self.assertEqual(res, None)
-        mock_run.assert_called_once_with("ssh {} root@node1 sbd query-watchdog".format(constants.SSH_OPTION))
-
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_get_driver_through_device_remotely(self, mock_run):
-        output = """
-Discovered 3 watchdog devices:
-
-[1] /dev/watchdog
-Identity: Software Watchdog
-Driver: softdog
-CAUTION: Not recommended for use with sbd.
-
-[2] /dev/watchdog0
-Identity: Software Watchdog
-Driver: softdog
-CAUTION: Not recommended for use with sbd.
-
-[3] /dev/watchdog1
-Identity: iTCO_wdt
-Driver: iTCO_wdt
-        """
-        mock_run.return_value = (0, output, None)
-        res = self.watchdog_join_inst._get_driver_through_device_remotely("/dev/watchdog")
-        self.assertEqual(res, "softdog")
-        mock_run.assert_called_once_with("ssh {} root@node1 sbd query-watchdog".format(constants.SSH_OPTION))
-
-    def test_get_first_unused_device_none(self):
-        res = self.watchdog_inst._get_first_unused_device()
-        self.assertEqual(res, None)
-
-    @mock.patch('crmsh.bootstrap.Watchdog._verify_watchdog_device')
-    def test_get_first_unused_device(self, mock_verify):
-        mock_verify.return_value = True
-        self.watchdog_inst._watchdog_info_dict = {'/dev/watchdog': 'softdog', '/dev/watchdog0': 'softdog', '/dev/watchdog1': 'iTCO_wdt'}
-        res = self.watchdog_inst._get_first_unused_device()
-        self.assertEqual(res, "/dev/watchdog")
-        mock_verify.assert_called_once_with("/dev/watchdog", ignore_error=True)
-
-    @mock.patch('crmsh.bootstrap.Watchdog._get_first_unused_device')
-    @mock.patch('crmsh.bootstrap.Watchdog._verify_watchdog_device')
-    @mock.patch('crmsh.bootstrap.Watchdog._get_watchdog_device_from_sbd_config')
-    def test_set_input_from_config(self, mock_from_config, mock_verify, mock_first):
-        mock_from_config.return_value = "/dev/watchdog"
-        mock_verify.return_value = True
-        self.watchdog_inst._set_input()
-        mock_first.assert_not_called()
-        mock_from_config.assert_called_once_with()
-
-    @mock.patch('crmsh.bootstrap.Watchdog._get_first_unused_device')
-    @mock.patch('crmsh.bootstrap.Watchdog._verify_watchdog_device')
-    @mock.patch('crmsh.bootstrap.Watchdog._get_watchdog_device_from_sbd_config')
-    def test_set_input(self, mock_from_config, mock_verify, mock_first):
-        mock_from_config.return_value = None
-        mock_first.return_value = None
-        self.watchdog_inst._set_input()
-        self.assertEqual(self.watchdog_inst._input, "softdog")
-        mock_from_config.assert_called_once_with()
-        mock_verify.assert_not_called()
-        mock_first.assert_called_once_with()
-
-    def test_valid_device_false(self):
-        res = self.watchdog_inst._valid_device("test")
-        self.assertEqual(res, False)
-
-    @mock.patch('crmsh.bootstrap.Watchdog._verify_watchdog_device')
-    def test_valid_device(self, mock_verify):
-        mock_verify.return_value = True
-        self.watchdog_inst._watchdog_info_dict = {'/dev/watchdog': 'softdog', '/dev/watchdog0': 'softdog', '/dev/watchdog1': 'iTCO_wdt'}
-        res = self.watchdog_inst._valid_device("/dev/watchdog")
-        self.assertEqual(res, True)
-
-    @mock.patch('crmsh.bootstrap.error')
-    @mock.patch('crmsh.bootstrap.Watchdog._get_watchdog_device_from_sbd_config')
-    @mock.patch('crmsh.bootstrap.Watchdog._set_watchdog_info')
-    def test_join_watchdog_error(self, mock_set_info, mock_from_config, mock_error):
-        mock_from_config.return_value = None
+    def test_validate_sbd_option_error_together(self, mock_error):
         mock_error.side_effect = SystemExit
+        options = mock.Mock(sbd_devices=["/dev/sda1"], diskless_sbd=True)
+        ctx = self.ctx_inst.set_context(options)
         with self.assertRaises(SystemExit):
-            self.watchdog_join_inst.join_watchdog()
-        mock_set_info.assert_called_once_with()
-        mock_from_config.assert_called_once_with()
-        mock_error.assert_called_once_with("Failed to get watchdog device from {}".format(bootstrap.SYSCONFIG_SBD))
-
-    @mock.patch('crmsh.bootstrap.Watchdog._load_watchdog_driver')
-    @mock.patch('crmsh.bootstrap.Watchdog._get_driver_through_device_remotely')
-    @mock.patch('crmsh.bootstrap.Watchdog._valid_device')
-    @mock.patch('crmsh.bootstrap.Watchdog._get_watchdog_device_from_sbd_config')
-    @mock.patch('crmsh.bootstrap.Watchdog._set_watchdog_info')
-    def test_join_watchdog(self, mock_set_info, mock_from_config, mock_valid, mock_get_driver_remotely, mock_load):
-        mock_from_config.return_value = "/dev/watchdog"
-        mock_valid.return_value = False
-        mock_get_driver_remotely.return_value = "softdog"
-
-        self.watchdog_join_inst.join_watchdog()
-
-        mock_set_info.assert_called_once_with()
-        mock_from_config.assert_called_once_with()
-        mock_valid.assert_called_once_with("/dev/watchdog")
-        mock_get_driver_remotely.assert_called_once_with("/dev/watchdog")
-        mock_load.assert_called_once_with("softdog")
-
-    @mock.patch('crmsh.bootstrap.invokerc')
-    @mock.patch('crmsh.bootstrap.Watchdog._valid_device')
-    @mock.patch('crmsh.bootstrap.Watchdog._set_input')
-    @mock.patch('crmsh.bootstrap.Watchdog._set_watchdog_info')
-    def test_init_watchdog_valid(self, mock_set_info, mock_set_input, mock_valid, mock_invokerc):
-        mock_valid.return_value = True
-        self.watchdog_inst._input = "/dev/watchdog"
-        self.watchdog_inst.init_watchdog()
-        mock_invokerc.assert_not_called()
-        mock_valid.assert_called_once_with("/dev/watchdog")
+            ctx._validate_sbd_option()
+        mock_error.assert_called_once_with("Can't use -s and -S options together")
 
     @mock.patch('crmsh.bootstrap.error')
-    @mock.patch('crmsh.bootstrap.invokerc')
-    @mock.patch('crmsh.bootstrap.Watchdog._valid_device')
-    @mock.patch('crmsh.bootstrap.Watchdog._set_input')
-    @mock.patch('crmsh.bootstrap.Watchdog._set_watchdog_info')
-    def test_init_watchdog_error(self, mock_set_info, mock_set_input, mock_valid, mock_invokerc, mock_error):
-        mock_valid.return_value = False
-        mock_invokerc.return_value = False
-        self.watchdog_inst._input = "test"
+    def test_validate_sbd_option_error_sbd_stage_no_option(self, mock_error):
         mock_error.side_effect = SystemExit
-
+        options = mock.Mock(stage="sbd", yes_to_all=True)
+        ctx = self.ctx_inst.set_context(options)
         with self.assertRaises(SystemExit):
-            self.watchdog_inst.init_watchdog()
+            ctx._validate_sbd_option()
+        mock_error.assert_called_once_with("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
 
-        mock_valid.assert_called_once_with("test")
-        mock_invokerc.assert_called_once_with("modinfo test")
-        mock_error.assert_called_once_with("Should provide valid watchdog device or driver name by -w option")
+    @mock.patch('crmsh.bootstrap.error')
+    @mock.patch('crmsh.utils.service_is_active')
+    def test_validate_sbd_option_error_sbd_stage_service(self, mock_active, mock_error):
+        mock_error.side_effect = SystemExit
+        options = mock.Mock(stage="sbd", diskless_sbd=True)
+        ctx = self.ctx_inst.set_context(options)
+        mock_active.return_value = True
+        with self.assertRaises(SystemExit):
+            ctx._validate_sbd_option()
+        mock_error.assert_called_once_with("Cannot configure stage sbd: sbd.service already running!")
+        mock_active.assert_called_once_with("sbd.service")
 
-    @mock.patch('crmsh.bootstrap.Watchdog._get_device_through_driver')
-    @mock.patch('crmsh.bootstrap.Watchdog._load_watchdog_driver')
-    @mock.patch('crmsh.bootstrap.Watchdog._driver_is_loaded')
-    @mock.patch('crmsh.bootstrap.invokerc')
-    @mock.patch('crmsh.bootstrap.Watchdog._valid_device')
-    @mock.patch('crmsh.bootstrap.Watchdog._set_input')
-    @mock.patch('crmsh.bootstrap.Watchdog._set_watchdog_info')
-    def test_init_watchdog(self, mock_set_info, mock_set_input, mock_valid, mock_invokerc, mock_is_loaded, mock_load, mock_get_device):
-        mock_valid.return_value = False
-        self.watchdog_inst._input = "softdog"
-        mock_invokerc.return_value = True
-        mock_is_loaded.return_value = False
-        mock_get_device.return_value = "/dev/watchdog"
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.utils.service_is_active')
+    def test_validate_sbd_option_error_sbd_stage(self, mock_active, mock_check_all):
+        options = mock.Mock(stage="sbd", diskless_sbd=True, cluster_is_running=True)
+        ctx = self.ctx_inst.set_context(options)
+        mock_active.return_value = False
+        ctx._validate_sbd_option()
+        mock_active.assert_called_once_with("sbd.service")
+        mock_check_all.assert_called_once_with()
 
-        self.watchdog_inst.init_watchdog()
+    @mock.patch('crmsh.bootstrap.error')
+    def test_validate_option_error_nic_number(self, mock_error):
+        mock_error.side_effect = SystemExit
+        options = mock.Mock(nic_list=["eth1", "eth2", "eth3"])
+        ctx = self.ctx_inst.set_context(options)
+        with self.assertRaises(SystemExit):
+            ctx.validate_option()
+        mock_error.assert_called_once_with("Maximum number of interface is 2")
 
-        mock_valid.assert_called_once_with("softdog")
-        mock_invokerc.assert_called_once_with("modinfo softdog")
-        mock_is_loaded.assert_called_once_with("softdog")
-        mock_load.assert_called_once_with("softdog")
-        mock_set_info.assert_has_calls([mock.call(), mock.call()])
-        mock_get_device.assert_called_once_with("softdog")
+    @mock.patch('crmsh.bootstrap.error')
+    def test_validate_option_error_nic_dup(self, mock_error):
+        mock_error.side_effect = SystemExit
+        options = mock.Mock(nic_list=["eth2", "eth2"])
+        ctx = self.ctx_inst.set_context(options)
+        with self.assertRaises(SystemExit):
+            ctx.validate_option()
+        mock_error.assert_called_once_with("Duplicated input")
+
+    @mock.patch('crmsh.bootstrap.warn')
+    @mock.patch('crmsh.bootstrap.Validation.valid_admin_ip')
+    def test_validate_option(self, mock_admin_ip, mock_warn):
+        options = mock.Mock(admin_ip="10.10.10.123", qdevice_inst=mock.Mock())
+        ctx = self.ctx_inst.set_context(options)
+        ctx._validate_sbd_option = mock.Mock()
+        ctx.validate_option()
+        mock_admin_ip.assert_called_once_with("10.10.10.123")
+        ctx.qdevice_inst.valid_attr.assert_called_once_with()
+        ctx._validate_sbd_option.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.SBDManager')
+    def test_init_sbd_manager(self, mock_sbd):
+        options = mock.Mock(sbd_devices=["/dev/sda1"], diskless_sbd=False)
+        ctx = self.ctx_inst.set_context(options)
+        ctx.init_sbd_manager()
+        mock_sbd.assert_called_once_with(["/dev/sda1"], False)
 
 
 class TestSBDManager(unittest.TestCase):
@@ -575,7 +401,7 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.SBDManager._initialize_sbd')
     @mock.patch('crmsh.bootstrap.status_long')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device')
-    @mock.patch('crmsh.bootstrap.Watchdog')
+    @mock.patch('crmsh.watchdog.Watchdog')
     @mock.patch('crmsh.utils.package_is_installed')
     def test_sbd_init_return(self, mock_package, mock_watchdog, mock_get_device, mock_status, mock_initialize, mock_update, mock_invoke):
         mock_package.return_value = True
@@ -601,7 +427,7 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.SBDManager._initialize_sbd')
     @mock.patch('crmsh.bootstrap.status_long')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device')
-    @mock.patch('crmsh.bootstrap.Watchdog')
+    @mock.patch('crmsh.watchdog.Watchdog')
     @mock.patch('crmsh.utils.package_is_installed')
     def test_sbd_init(self, mock_package, mock_watchdog, mock_get_device, mock_status, mock_initialize, mock_update, mock_warn):
         bootstrap._context = mock.Mock(watchdog=None)
@@ -716,7 +542,7 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.status')
     @mock.patch('crmsh.bootstrap.SBDManager._verify_sbd_device')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
-    @mock.patch('crmsh.bootstrap.Watchdog')
+    @mock.patch('crmsh.watchdog.Watchdog')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('os.path.exists')
@@ -746,7 +572,7 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.warn')
     @mock.patch('crmsh.utils.get_quorum_votes_dict')
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_from_config')
-    @mock.patch('crmsh.bootstrap.Watchdog')
+    @mock.patch('crmsh.watchdog.Watchdog')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('os.path.exists')
