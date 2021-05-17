@@ -20,8 +20,5 @@ class Analyze(command.UI):
     def do_preflight_check(self, context, *args):
         sys.argv[1:] = args
         main.ctx.process_name = context.command_name
-        try:
-            main.run(main.ctx)
-        except utils.TerminateSubCommand:
-            return False
+        main.run(main.ctx)
         return True

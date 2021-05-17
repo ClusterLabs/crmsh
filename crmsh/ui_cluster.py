@@ -193,32 +193,24 @@ Stage can be one of:
     ssh         Create SSH keys for passwordless SSH between cluster nodes
     csync2      Configure csync2
     corosync    Configure corosync
-    storage     Partition shared storage (ocfs2 template only)
     sbd         Configure SBD (requires -s <dev>)
     cluster     Bring the cluster online
+    ocfs2       Configure OCFS2 (requires -o <dev>) NOTE: this is a Technical Preview
     vgfs        Create volume group and filesystem (ocfs2 template only,
-                requires -o <dev>)
+                    requires -o <dev>) NOTE: this stage is an alias of ocfs2 stage
     admin       Create administration virtual IP (optional)
     qdevice     Configure qdevice and qnetd
 
 Note:
   - If stage is not specified, the script will run through each stage
     in sequence, with prompts for required information.
-  - If using the ocfs2 template, the storage stage will partition a block
-    device into two pieces, one for SBD, the remainder for OCFS2.  This is
-    good for testing and demonstration, but not ideal for production.
-    To use storage you have already configured, pass -s and -o to specify
-    the block devices for SBD and OCFS2, and the automatic partitioning
-    will be skipped.
 """, add_help=False, formatter_class=RawDescriptionHelpFormatter)
 
         parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_argument("-q", "--quiet", action="store_true", dest="quiet",
                             help="Be quiet (don't describe what's happening, just do it)")
         parser.add_argument("-y", "--yes", action="store_true", dest="yes_to_all",
-                            help='Answer "yes" to all prompts (use with caution, this is destructive, especially during the "storage" stage. The /root/.ssh/id_rsa key will be overwritten unless the option "--no-overwrite-sshkey" is used)')
-        parser.add_argument("-t", "--template", dest="template", metavar="TEMPLATE", choices=['ocfs2'],
-                            help='Optionally configure cluster with template "name" (currently only "ocfs2" is valid here)')
+                            help='Answer "yes" to all prompts (use with caution, this is destructive, especially those storage related configurations and stages. The /root/.ssh/id_rsa key will be overwritten unless the option "--no-overwrite-sshkey" is used)')
         parser.add_argument("-n", "--name", metavar="NAME", dest="cluster_name", default="hacluster",
                             help='Set the name of the configured cluster.')
         parser.add_argument("-N", "--nodes", metavar="NODES", dest="nodes",
@@ -261,12 +253,14 @@ Note:
                                    help="MODE of operation of heuristics (on/sync/off, default:sync)")
 
         storage_group = parser.add_argument_group("Storage configuration", "Options for configuring shared storage.")
-        storage_group.add_argument("-p", "--partition-device", dest="shared_device", metavar="DEVICE",
-                                   help='Partition this shared storage device (only used in "storage" stage)')
         storage_group.add_argument("-s", "--sbd-device", dest="sbd_devices", metavar="DEVICE", action="append",
                                    help="Block device to use for SBD fencing, use \";\" as separator or -s multiple times for multi path (up to 3 devices)")
-        storage_group.add_argument("-o", "--ocfs2-device", dest="ocfs2_device", metavar="DEVICE",
-                                   help='Block device to use for OCFS2 (only used in "vgfs" stage)')
+        storage_group.add_argument("-o", "--ocfs2-device", dest="ocfs2_devices", metavar="DEVICE", action="append", default=[],
+                help="Block device to use for OCFS2; When using Cluster LVM2 to manage the shared storage, user can specify one or multiple raw disks, use \";\" as separator or -o multiple times for multi path (must specify -C option) NOTE: this is a Technical Preview")
+        storage_group.add_argument("-C", "--cluster-lvm2", action="store_true", dest="use_cluster_lvm2",
+                help="Use Cluster LVM2 (only valid together with -o option) NOTE: this is a Technical Preview")
+        storage_group.add_argument("-m", "--mount-point", dest="mount_point", metavar="MOUNT", default="/srv/clusterfs",
+                help="Mount point for OCFS2 device (default is /srv/clusterfs, only valid together with -o option) NOTE: this is a Technical Preview")
 
         options, args = parse_options(parser, args)
         if options is None or args is None:
@@ -275,6 +269,9 @@ Note:
         stage = ""
         if len(args):
             stage = args[0]
+        if stage == "vgfs":
+            stage = "ocfs2"
+            err_buf.warning("vgfs stage was deprecated and is an alias of ocfs2 stage now")
         if stage not in bootstrap.INIT_STAGES and stage != "":
             parser.error("Invalid stage (%s)" % (stage))
 
