@@ -214,9 +214,9 @@ def step_impl(context, res, res_type, state):
     result = None
     while try_count < 5:
         time.sleep(1)
-        _, out = run_command(context, "crm_mon -1")
+        _, out = run_command(context, "crm_mon -1rR")
         if out:
-            result = re.search(r'\s{}\s+.*:{}\):\s+{} '.format(res, res_type, state), out)
+            result = re.search(r'\s{}\s+.*:+{}\):\s+{} '.format(res, res_type, state), out)
             if not result:
                 try_count += 1
             else:
