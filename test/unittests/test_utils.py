@@ -1317,3 +1317,215 @@ primitive stonith-sbd stonith:external/sbd \
     """
     res = utils.has_resource_configured("stonith:external/sbd")
     assert res is True
+
+
+@mock.patch('crmsh.utils.get_dev_info')
+def test_has_dev_partitioned(mock_get_dev_info):
+    mock_get_dev_info.return_value = """
+disk
+part
+    """
+    res = utils.has_dev_partitioned("/dev/sda1")
+    assert res is True
+    mock_get_dev_info.assert_called_once_with("/dev/sda1", "NAME", peer=None)
+
+
+@mock.patch('crmsh.utils.get_dev_uuid')
+def test_compare_uuid_with_peer_dev_cannot_find_local(mock_get_dev_uuid):
+    mock_get_dev_uuid.return_value = ""
+    with pytest.raises(ValueError) as err:
+        utils.compare_uuid_with_peer_dev(["/dev/sdb1"], "node2")
+    assert str(err.value) == "Cannot find UUID for /dev/sdb1 on local"
+    mock_get_dev_uuid.assert_called_once_with("/dev/sdb1")
+
+
+@mock.patch('crmsh.utils.get_dev_uuid')
+def test_compare_uuid_with_peer_dev_cannot_find_peer(mock_get_dev_uuid):
+    mock_get_dev_uuid.side_effect = ["1234", ""]
+    with pytest.raises(ValueError) as err:
+        utils.compare_uuid_with_peer_dev(["/dev/sdb1"], "node2")
+    assert str(err.value) == "Cannot find UUID for /dev/sdb1 on node2"
+    mock_get_dev_uuid.assert_has_calls([
+        mock.call("/dev/sdb1"),
+        mock.call("/dev/sdb1", "node2")
+        ])
+
+
+@mock.patch('crmsh.utils.get_dev_uuid')
+def test_compare_uuid_with_peer_dev(mock_get_dev_uuid):
+    mock_get_dev_uuid.side_effect = ["1234", "5678"]
+    with pytest.raises(ValueError) as err:
+        utils.compare_uuid_with_peer_dev(["/dev/sdb1"], "node2")
+    assert str(err.value) == "UUID of /dev/sdb1 not same with peer node2"
+    mock_get_dev_uuid.assert_has_calls([
+        mock.call("/dev/sdb1"),
+        mock.call("/dev/sdb1", "node2")
+        ])
+
+
+@mock.patch('crmsh.utils.get_dev_info')
+def test_is_dev_used_for_lvm(mock_dev_info):
+    mock_dev_info.return_value = "lvm"
+    res = utils.is_dev_used_for_lvm("/dev/sda1")
+    assert res is True
+    mock_dev_info.assert_called_once_with("/dev/sda1", "TYPE", peer=None)
+
+
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_get_dev_info(mock_run):
+    mock_run.return_value = "data"
+    res = utils.get_dev_info("/dev/sda1", "TYPE")
+    assert res == "data"
+    mock_run.assert_called_once_with("lsblk -fno TYPE /dev/sda1", remote=None)
+
+
+@mock.patch('crmsh.utils.get_dev_info')
+def test_get_dev_fs_type(mock_get_info):
+    mock_get_info.return_value = "data"
+    res = utils.get_dev_fs_type("/dev/sda1")
+    assert res == "data"
+    mock_get_info.assert_called_once_with("/dev/sda1", "FSTYPE", peer=None)
+
+
+@mock.patch('crmsh.utils.get_dev_info')
+def test_get_dev_uuid(mock_get_info):
+    mock_get_info.return_value = "uuid"
+    res = utils.get_dev_uuid("/dev/sda1")
+    assert res == "uuid"
+    mock_get_info.assert_called_once_with("/dev/sda1", "UUID", peer=None)
+
+
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_get_pe_number_except(mock_run):
+    mock_run.return_value = "data"
+    with pytest.raises(ValueError) as err:
+        utils.get_pe_number("vg1")
+    assert str(err.value) == "Cannot find PE on VG(vg1)"
+    mock_run.assert_called_once_with("vgdisplay vg1")
+
+
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_get_pe_number(mock_run):
+    mock_run.return_value = """
+PE Size               4.00 MiB
+Total PE              1534
+Alloc PE / Size       1534 / 5.99 GiB
+    """
+    res = utils.get_pe_number("vg1")
+    assert res == 1534
+    mock_run.assert_called_once_with("vgdisplay vg1")
+
+
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_get_all_vg_name(mock_run):
+    mock_run.return_value = """
+--- Volume group ---
+  VG Name               ocfs2-vg
+  System ID
+    """
+    res = utils.get_all_vg_name()
+    assert res == ["ocfs2-vg"]
+    mock_run.assert_called_once_with("vgdisplay")
+
+
+@mock.patch('crmsh.utils.randomword')
+def test_gen_unused_id(mock_rand):
+    mock_rand.return_value = "1234xxxx"
+    res = utils.gen_unused_id(["test-id"], "test-id")
+    assert res == "test-id-1234xxxx"
+    mock_rand.assert_called_once_with(6)
+
+
+@mock.patch('random.choice')
+def test_randomword(mock_rand):
+    import string
+    mock_rand.side_effect = ['z', 'f', 'k', 'e', 'c', 'd']
+    res = utils.randomword()
+    assert res == "zfkecd"
+    mock_rand.assert_has_calls([mock.call(string.ascii_lowercase) for x in range(6)])
+
+
+@mock.patch('crmsh.cibconfig.cib_factory')
+def test_all_exist_id(mock_cib):
+    mock_cib.refresh = mock.Mock()
+    mock_cib.id_list = mock.Mock()
+    mock_cib.id_list.return_value = ['1', '2']
+    res = utils.all_exist_id()
+    assert res == ['1', '2']
+    mock_cib.id_list.assert_called_once_with()
+    mock_cib.refresh.assert_called_once_with()
+
+
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_has_mount_point_used(mock_run):
+    mock_run.return_value = """
+/dev/vda2 on /usr/local type btrfs (rw,relatime,space_cache,subvolid=259,subvol=/@/usr/local)
+/dev/vda2 on /opt type btrfs (rw,relatime,space_cache,subvolid=263,subvol=/@/opt)
+/dev/vda2 on /var/lib/docker/btrfs type btrfs (rw,relatime,space_cache,subvolid=258,subvol=/@/var)
+    """
+    res = utils.has_mount_point_used("/opt")
+    assert res is True
+    mock_run.assert_called_once_with("mount")
+
+
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_has_disk_mounted(mock_run):
+    mock_run.return_value = """
+/dev/vda2 on /usr/local type btrfs (rw,relatime,space_cache,subvolid=259,subvol=/@/usr/local)
+/dev/vda2 on /opt type btrfs (rw,relatime,space_cache,subvolid=263,subvol=/@/opt)
+/dev/vda2 on /var/lib/docker/btrfs type btrfs (rw,relatime,space_cache,subvolid=258,subvol=/@/var)
+    """
+    res = utils.has_disk_mounted("/dev/vda2")
+    assert res is True
+    mock_run.assert_called_once_with("mount")
+
+
+def test_parse_append_action_argument():
+    res = utils.parse_append_action_argument(["/dev/sda1", "/dev/sda2 "])
+    assert res == ["/dev/sda1", "/dev/sda2"]
+    res = utils.parse_append_action_argument(["/dev/sda1 ; /dev/sda2"])
+    assert res == ["/dev/sda1", "/dev/sda2"]
+
+
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_has_stonith_running(mock_run):
+    mock_run.return_value = """
+stonith-sbd
+1 fence device found
+    """
+    res = utils.has_stonith_running()
+    assert res is True
+    mock_run.assert_called_once_with("stonith_admin -L")
+
+
+@mock.patch('crmsh.utils.S_ISBLK')
+@mock.patch('os.stat')
+def test_is_block_device_error(mock_stat, mock_isblk):
+    mock_stat_inst = mock.Mock(st_mode=12345)
+    mock_stat.return_value = mock_stat_inst
+    mock_isblk.side_effect = OSError
+    res = utils.is_block_device("/dev/sda1")
+    assert res is False
+    mock_stat.assert_called_once_with("/dev/sda1")
+    mock_isblk.assert_called_once_with(12345)
+
+
+@mock.patch('crmsh.utils.S_ISBLK')
+@mock.patch('os.stat')
+def test_is_block_device(mock_stat, mock_isblk):
+    mock_stat_inst = mock.Mock(st_mode=12345)
+    mock_stat.return_value = mock_stat_inst
+    mock_isblk.return_value = True
+    res = utils.is_block_device("/dev/sda1")
+    assert res is True
+    mock_stat.assert_called_once_with("/dev/sda1")
+    mock_isblk.assert_called_once_with(12345)
+
+
+@mock.patch('crmsh.utils.ping_node')
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_check_all_nodes_reachable(mock_run, mock_ping):
+    mock_run.return_value = "1084783297 15sp2-1 member"
+    utils.check_all_nodes_reachable()
+    mock_run.assert_called_once_with("crm_node -l")
+    mock_ping.assert_called_once_with("15sp2-1")
