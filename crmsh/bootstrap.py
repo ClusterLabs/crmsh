@@ -205,6 +205,10 @@ Configure SBD:
     DISKLESS_SBD_WARNING = """Diskless SBD requires cluster with three or more nodes.
 If you want to use diskless SBD for two-nodes cluster, should be combined with QDevice."""
     PARSE_RE = "[; ]"
+    DISKLESS_CRM_CMD = "crm configure property stonith-enabled=true stonith-watchdog-timeout={} stonith-timeout={}"
+    SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE = 35
+    STONITH_WATCHDOG_TIMEOUT_DEFAULT = "10s"
+    STONITH_WATCHDOG_TIMEOUT_DEFAULT_S390 = "30s"
 
     def __init__(self, sbd_devices=None, diskless_sbd=False):
         """
@@ -217,7 +221,10 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         self.diskless_sbd = diskless_sbd
         self._sbd_devices = None
         self._watchdog_inst = None
-        self._stonith_watchdog_timeout = "10s"
+        self._stonith_watchdog_timeout = self.STONITH_WATCHDOG_TIMEOUT_DEFAULT
+        self._stonith_timeout = 60
+        self._sbd_watchdog_timeout = 0
+        self._is_s390 = "390" in os.uname().machine
 
     @staticmethod
     def _get_device_uuid(dev, node=None):
@@ -331,34 +338,53 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         Update /etc/sysconfig/sbd
         """
         shutil.copyfile(self.SYSCONFIG_SBD_TEMPLATE, SYSCONFIG_SBD)
+        self._determine_sbd_watchdog_timeout()
         sbd_config_dict = {
                 "SBD_PACEMAKER": "yes",
                 "SBD_STARTMODE": "always",
                 "SBD_DELAY_START": "no",
                 "SBD_WATCHDOG_DEV": self._watchdog_inst.watchdog_device_name
                 }
+        if self._sbd_watchdog_timeout > 0:
+            sbd_config_dict["SBD_WATCHDOG_TIMEOUT"] = str(self._sbd_watchdog_timeout)
         if self._sbd_devices:
             sbd_config_dict["SBD_DEVICE"] = ';'.join(self._sbd_devices)
         utils.sysconfig_set(SYSCONFIG_SBD, **sbd_config_dict)
         csync2_update(SYSCONFIG_SBD)
 
+    def _determine_sbd_watchdog_timeout(self):
+        """
+        When using diskless SBD, determine value of SBD_WATCHDOG_TIMEOUT
+        """
+        if not self.diskless_sbd:
+            return
+        # add sbd after qdevice started
+        if utils.is_qdevice_configured() and utils.service_is_active("corosync-qdevice.service"):
+            qdevice_sync_timeout = utils.get_qdevice_sync_timeout()
+            self._sbd_watchdog_timeout = qdevice_sync_timeout + 5
+            if self._is_s390 and self._sbd_watchdog_timeout < 15:
+                self._sbd_watchdog_timeout = 15
+            self._stonith_timeout = self.calculate_stonith_timeout(self._sbd_watchdog_timeout)
+        # add sbd and qdevice together from beginning
+        elif _context.qdevice_inst:
+            self._sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
+            self._stonith_timeout = self.calculate_stonith_timeout(self._sbd_watchdog_timeout)
+
     def _determine_stonith_watchdog_timeout(self):
         """
         Determine value of stonith-watchdog-timeout
         """
-        conf = utils.parse_sysconfig(SYSCONFIG_SBD)
-        res = conf.get("SBD_WATCHDOG_TIMEOUT")
+        res = SBDManager.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
         if res:
             self._stonith_watchdog_timeout = -1
-        elif "390" in os.uname().machine:
-            self._stonith_watchdog_timeout = "30s"
+        elif self._is_s390:
+            self._stonith_watchdog_timeout = self.STONITH_WATCHDOG_TIMEOUT_DEFAULT_S390
 
     def _get_sbd_device_from_config(self):
         """
         Gets currently configured SBD device, i.e. what's in /etc/sysconfig/sbd
         """
-        conf = utils.parse_sysconfig(SYSCONFIG_SBD)
-        res = conf.get("SBD_DEVICE")
+        res = SBDManager.get_sbd_value_from_config("SBD_DEVICE")
         if res:
             return utils.re_split_string(self.PARSE_RE, res)
         else:
@@ -376,7 +402,8 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         else:
             warn("To start sbd.service, need to restart cluster service manually on each node")
             if self.diskless_sbd:
-                warn("Then run \"crm configure property stonith-enabled=true stonith-watchdog-timeout={}\" on any node".format(self._stonith_watchdog_timeout))
+                cmd = self.DISKLESS_CRM_CMD.format(self._stonith_watchdog_timeout, str(self._stonith_timeout)+"s")
+                warn("Then run \"{}\" on any node".format(cmd))
             else:
                 self.configure_sbd_resource()
 
@@ -445,7 +472,8 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
             if not invokerc("crm configure property stonith-enabled=true"):
                 error("Can't enable STONITH for SBD")
         else:
-            if not invokerc("crm configure property stonith-enabled=true stonith-watchdog-timeout={}".format(self._stonith_watchdog_timeout)):
+            cmd = self.DISKLESS_CRM_CMD.format(self._stonith_watchdog_timeout, str(self._stonith_timeout)+"s")
+            if not invokerc(cmd):
                 error("Can't enable STONITH for diskless SBD")
 
     def join_sbd(self, peer_host):
@@ -490,6 +518,41 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         """
         inst = cls()
         return inst._get_sbd_device_from_config()
+
+    @classmethod
+    def is_using_diskless_sbd(cls):
+        """
+        Check if using diskless SBD
+        """
+        inst = cls()
+        dev_list = inst._get_sbd_device_from_config()
+        if not dev_list and utils.service_is_active("sbd.service"):
+            return True
+        return False
+
+    @staticmethod
+    def update_configuration(sbd_config_dict):
+        """
+        Update and sync sbd configuration
+        """
+        utils.sysconfig_set(SYSCONFIG_SBD, **sbd_config_dict)
+        csync2_update(SYSCONFIG_SBD)
+
+    @staticmethod
+    def calculate_stonith_timeout(sbd_watchdog_timeout):
+        """
+        Calculate stonith timeout
+        """
+        return int(sbd_watchdog_timeout * 2 * 1.2)
+
+    @staticmethod
+    def get_sbd_value_from_config(key):
+        """
+        Get value from /etc/sysconfig/sbd
+        """
+        conf = utils.parse_sysconfig(SYSCONFIG_SBD)
+        res = conf.get(key)
+        return res
 
 
 _context = None
@@ -1562,7 +1625,7 @@ Configure Administration IP Address:
     wait_for_resource("Configuring virtual IP ({})".format(adminaddr), "admin-ip")
 
 
-def evaluate_qdevice_quorum_effect(mode):
+def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False):
     """
     While adding/removing qdevice, get current expected votes and actual total votes,
     to calculate after adding/removing qdevice, whether cluster has quorum
@@ -1576,7 +1639,7 @@ def evaluate_qdevice_quorum_effect(mode):
     elif mode == QDEVICE_REMOVE:
         actual_votes -= 1
 
-    if utils.is_quorate(expected_votes, actual_votes):
+    if utils.is_quorate(expected_votes, actual_votes) and not diskless_sbd:
         # safe to use reload
         return QdevicePolicy.QDEVICE_RELOAD
     elif utils.has_resource_running():
@@ -1631,7 +1694,18 @@ def init_qdevice():
         return
     if _context.stage == "qdevice":
         utils.check_all_nodes_reachable()
-        _context.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD)
+        using_diskless_sbd = SBDManager.is_using_diskless_sbd()
+        _context.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, using_diskless_sbd)
+        # add qdevice after diskless sbd started
+        if using_diskless_sbd:
+            res = SBDManager.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
+            if res:
+                sbd_watchdog_timeout = max(int(res), SBDManager.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)
+            else:
+                sbd_watchdog_timeout = SBDManager.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
+            stonith_timeout = SBDManager.calculate_stonith_timeout(sbd_watchdog_timeout)
+            SBDManager.update_configuration({"SBD_WATCHDOG_TIMEOUT": str(sbd_watchdog_timeout)})
+            invokerc("crm configure property stonith-watchdog-timeout=-1 stonith-timeout={}s".format(stonith_timeout))
 
     status("""
 Configure Qdevice/Qnetd:""")

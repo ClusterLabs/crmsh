@@ -2868,4 +2868,15 @@ def append_res_to_group(group_id, res_id):
     """
     cmd = "crm configure modgroup {} add {}".format(group_id, res_id)
     get_stdout_or_raise_error(cmd)
+
+
+def get_qdevice_sync_timeout():
+    """
+    Get qdevice sync_timeout
+    """
+    out = get_stdout_or_raise_error("crm corosync status qdevice")
+    res = re.search("Sync HB interval:\s+(\d+)ms", out)
+    if not res:
+        raise ValueError("Cannot find qdevice sync timeout")
+    return int(int(res.group(1))/1000)
 # vim:ts=4:sw=4:et:
