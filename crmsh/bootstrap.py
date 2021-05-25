@@ -35,6 +35,8 @@ from . import term
 from . import lock
 from . import userdir
 from .constants import SSH_OPTION, QDEVICE_HELP_INFO
+from . import ocfs2
+
 
 
 LOG_FILE = "/var/log/crmsh/ha-cluster-bootstrap.log"
@@ -60,7 +62,7 @@ FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_K
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
         "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SYSCONFIG_SBD, PCMK_REMOTE_AUTH, WATCHDOG_CFG)
 
-INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "storage", "sbd", "cluster", "vgfs", "admin", "qdevice")
+INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "sbd", "cluster", "ocfs2", "admin", "qdevice")
 
 class QdevicePolicy(Enum):
     QDEVICE_RELOAD = 0
@@ -80,7 +82,6 @@ class Context(object):
         self.type = None # init or join
         self.quiet = None
         self.yes_to_all = None
-        self.template = None
         self.cluster_name = None
         self.watchdog = None
         self.no_overwrite_sshkey = None
@@ -99,8 +100,9 @@ class Context(object):
         self.qdevice_heuristics_mode = None
         self.qdevice_rm_flag = None
         self.qdevice_reload_policy = QdevicePolicy.QDEVICE_RESTART
-        self.shared_device = None
-        self.ocfs2_device = None
+        self.ocfs2_devices = []
+        self.use_cluster_lvm2 = None
+        self.mount_point = None
         self.cluster_node = None
         self.cluster_node_ip = None
         self.force = None
@@ -176,6 +178,8 @@ class Context(object):
             warn("--no-overwrite-sshkey option is deprecated since crmsh does not overwrite ssh keys by default anymore and will be removed in future versions")
         if self.type == "join" and self.watchdog:
             warn("-w option is deprecated and will be removed in future versions")
+        if self.ocfs2_devices or self.stage == "ocfs2":
+            ocfs2.OCFS2Manager.verify_ocfs2(self)
         self._validate_sbd_option()
 
     def init_sbd_manager(self):
@@ -215,17 +219,6 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         self._watchdog_inst = None
         self._stonith_watchdog_timeout = "10s"
 
-    def _parse_sbd_device(self):
-        """
-        Parse sbd devices, possible command line is like:
-          -s "/dev/sdb1;/dev/sdb2"
-          -s /dev/sdb1 -s /dev/sbd2
-        """
-        result_list = []
-        for dev in self.sbd_devices_input:
-            result_list += utils.re_split_string(self.PARSE_RE, dev)
-        return result_list
-
     @staticmethod
     def _get_device_uuid(dev, node=None):
         """
@@ -263,7 +256,7 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         if len(dev_list) > 3:
             raise ValueError("Maximum number of SBD device is 3")
         for dev in dev_list:
-            if not is_block_device(dev):
+            if not utils.is_block_device(dev):
                 raise ValueError("{} doesn't look like a block device".format(dev))
             self._compare_device_uuid(dev, compare_node_list)
 
@@ -316,7 +309,7 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         """
         dev_list = []
         if self.sbd_devices_input:
-            dev_list = self._parse_sbd_device()
+            dev_list = utils.parse_append_action_argument(self.sbd_devices_input)
             self._verify_sbd_device(dev_list)
         elif not self.diskless_sbd:
             dev_list = self._get_sbd_device_interactive()
@@ -490,6 +483,14 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
             raise ValueError("No sbd device configured")
         inst._verify_sbd_device(dev_list, utils.list_cluster_nodes_except_me())
 
+    @classmethod
+    def get_sbd_device_from_config(cls):
+        """
+        Get sbd device list from config
+        """
+        inst = cls()
+        return inst._get_sbd_device_from_config()
+
 
 _context = None
 
@@ -643,20 +644,21 @@ def crm_configure_load(action, configuration):
         error("Failed to commit cluster configuration")
 
 
-def wait_for_resource(message, resource, needle="running on"):
+def wait_for_resource(message, resource):
+    """
+    Wait for resource started
+    """
     with status_long(message):
         while True:
-            _rc, out, err = utils.get_stdout_stderr("crm_resource --locate --resource " + resource)
-            if needle in out:
-                break
-            if needle in err:
+            # -r here to display inactive resources
+            # -R here to display individual clone instances
+            _rc, out, err = utils.get_stdout_stderr("crm_mon -1rR")
+            # Make sure clone instances also started(no Stopped instance)
+            if re.search(r"{}\s+.*:\s+Started\s".format(resource), out) and \
+                    not re.search(r"{}\s+.*:\s+(Stopped|Starting)".format(resource), out):
                 break
             status_progress()
             sleep(1)
-
-
-def wait_for_stop(message, resource):
-    return wait_for_resource(message, resource, needle="NOT running")
 
 
 def wait_for_cluster():
@@ -776,6 +778,8 @@ def partprobe():
 
 
 def probe_partitions():
+    # Need to do this if second (or subsequent) node happens to be up and
+    # connected to storage while it's being repartitioned on the first node.
     with status_long("Probing for new partitions"):
         partprobe()
         sleep(5)
@@ -1487,137 +1491,6 @@ def init_corosync():
         init_corosync_multicast()
 
 
-def is_block_device(dev):
-    from stat import S_ISBLK
-    try:
-        rc = S_ISBLK(os.stat(dev).st_mode)
-    except OSError:
-        return False
-    return rc
-
-
-def list_partitions(dev):
-    rc, outp, errp = utils.get_stdout_stderr("parted -s %s print" % (dev))
-    partitions = []
-    for line in outp.splitlines():
-        m = re.match(r"^\s*([0-9]+)\s*", line)
-        if m:
-            partitions.append(m.group(1))
-    if rc != 0:
-        # ignore "Error: /dev/vdb: unrecognised disk label"
-        if errp.count('\n') > 1 or "unrecognised disk label" not in errp.strip():
-            error("Failed to list partitions in {}: {}".format(dev, errp))
-    return partitions
-
-
-def list_devices(dev):
-    "TODO: THIS IS *WRONG* FOR MULTIPATH! (but possibly nothing we can do about it)"
-    _rc, outp = utils.get_stdout("fdisk -l %s" % (dev))
-    partitions = []
-    for line in outp.splitlines():
-        m = re.match(r"^(\/dev\S+)", line)
-        if m:
-            partitions.append(m.group(1))
-    return partitions
-
-
-def init_storage():
-    """
-    Configure SBD and OCFS2 both on the same storage device.
-    """
-    dev = _context.shared_device
-    partitions = []
-    dev_looks_sane = False
-
-    if _context.yes_to_all or not dev:
-        status("Configuring shared storage")
-    else:
-        status("""
-Configure Shared Storage:
-  You will need to provide the path to a shared storage device,
-  for example a SAN volume or iSCSI target.  The device path must
-  be persistent and consistent across all nodes in the cluster,
-  so /dev/disk/by-id/* devices are a good choice.  This device
-  will be automatically paritioned into two pieces, 1MB for SBD
-  fencing, and the remainder for an OCFS2 filesystem.
-""")
-
-    while not dev_looks_sane:
-        dev = prompt_for_string('Path to storage device (e.g. /dev/disk/by-id/...)', r'\/.*', dev)
-        if not dev:
-            error("No value for shared storage device")
-
-        if not is_block_device(dev):
-            if _context.yes_to_all:
-                error(dev + " is not a block device")
-            else:
-                print("    That doesn't look like a block device", file=sys.stderr)
-        else:
-            #
-            # Got something that looks like a block device, there
-            # are four possibilities now:
-            #
-            #  1) It's completely broken/inaccessible
-            #  2) No recognizable partition table
-            #  3) Empty partition table
-            #  4) Non-empty parition table
-            #
-            partitions = list_partitions(dev)
-            if partitions:
-                status("WARNING: Partitions exist on %s!" % (dev))
-                if confirm("Are you ABSOLUTELY SURE you want to overwrite?"):
-                    dev_looks_sane = True
-                else:
-                    dev = ""
-            else:
-                # It's either broken, no partition table, or empty partition table
-                status("%s appears to be empty" % (dev))
-                if confirm("Device appears empty (no partition table). Do you want to use {}?".format(dev)):
-                    dev_looks_sane = True
-                else:
-                    dev = ""
-
-    if partitions:
-        if not confirm("Really?"):
-            return
-        with status_long("Erasing existing partitions..."):
-            for part in partitions:
-                if not invokerc("parted -s %s rm %s" % (dev, part)):
-                    error("Failed to remove partition %s from %s" % (part, dev))
-
-    with status_long("Creating partitions..."):
-        if not invokerc("parted", "-s", dev, "mklabel", "msdos"):
-            error("Failed to create partition table")
-
-        # This is a bit rough, and probably won't result in great performance,
-        # but it's fine for test/demo purposes to carve off 1MB for SBD.  Note
-        # we have to specify the size of the first partition in this in bytes
-        # rather than MB, or parted's rounding gives us a ~30Kb partition
-        # (see rhbz#623268).
-        if not invokerc("parted -s %s mkpart primary 0 1048576B" % (dev)):
-            error("Failed to create first partition on %s" % (dev))
-        if not invokerc("parted -s %s mkpart primary 1M 100%%" % (dev)):
-            error("Failed to create second partition")
-
-
-    # TODO: May not be strictly necessary, but...
-    probe_partitions()
-
-    # TODO: THIS IS *WRONG* FOR MULTIPATH! (but possibly nothing we can do about it)
-    devices = list_devices(dev)
-
-    _context.sbd_device = devices[0]
-    if not _context.sbd_device:
-        error("Unable to determine device path for SBD partition")
-
-    _context.ocfs2_device = devices[1]
-    if not _context.ocfs2_device:
-        error("Unable to determine device path for OCFS2 partition")
-
-    status("Created %s for SBD partition" % (_context.sbd_device))
-    status("Created %s for OCFS2 partition" % (_context.ocfs2_device))
-
-
 def init_sbd():
     """
     Configure SBD (Storage-based fencing).
@@ -1626,6 +1499,16 @@ def init_sbd():
     is configured.
     """
     _context.sbd_manager.sbd_init()
+
+
+def init_ocfs2():
+    """
+    OCFS2 configure process
+    """
+    if _context.yes_to_all and not _context.ocfs2_devices:
+        return
+    ocfs2_manager = ocfs2.OCFS2Manager(_context)
+    ocfs2_manager.init_ocfs2()
 
 
 def init_cluster():
@@ -1650,58 +1533,6 @@ rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
 """)
 
     _context.sbd_manager.configure_sbd_resource()
-
-
-def init_vgfs():
-    """
-    Configure cluster OCFS2 device.
-    """
-    dev = _context.ocfs2_device
-    if not dev:
-        error("vgfs stage requires -o <dev>")
-    mntpoint = "/srv/clusterfs"
-
-    if not is_block_device(dev):
-        error("OCFS2 device \"{}\" does not exist".format(dev))
-
-    # TODO: configurable mountpoint and vg name
-    crm_configure_load("update", """
-primitive dlm ocf:pacemaker:controld op start timeout=90 op stop timeout=100 op monitor interval=60 timeout=60
-primitive clusterfs Filesystem directory=%(mntpoint)s fstype=ocfs2 device=%(dev)s \
-    op monitor interval=20 timeout=40 op start timeout=60 op stop timeout=60 \
-    meta target-role=Stopped
-clone base-clone dlm meta interleave=true
-clone c-clusterfs clusterfs meta interleave=true clone-max=8
-order base-then-clusterfs inf: base-clone c-clusterfs
-colocation clusterfs-with-base inf: c-clusterfs base-clone
-    """ % {"mntpoint": utils.doublequote(mntpoint), "dev": utils.doublequote(dev)})
-
-    wait_for_resource("Waiting for DLM", "dlm:0")
-    wait_for_stop("Making sure filesystem is not active", "clusterfs:0")
-
-    _rc, blkid, _err = utils.get_stdout_stderr("blkid %s" % (dev))
-    if "TYPE" in blkid:
-        if not confirm("Exiting filesystem found on \"{}\" - destroy?".format(dev)):
-            for res in ("base-clone", "c-clusterfs"):
-                invoke("crm resource stop %s" % (res))
-                wait_for_stop("Waiting for resource %s to stop" % (res), res)
-            invoke("crm configure delete dlm clusterfs base-group base-clone c-clusterfs base-then-clusterfs clusterfs-with-base")
-
-    with status_long("Creating OCFS2 filesystem"):
-        # TODO: want "-T vmstore", but this'll only fly on >2GB partition
-        # Note: using undocumented '-x' switch to avoid prompting if overwriting
-        # existing partition.  For the commit that introduced this, see:
-        # http://oss.oracle.com/git/?p=ocfs2-tools.git;a=commit;h=8345a068479196172190f4fa287052800fa2b66f
-        # TODO: if make the cluster name configurable, we need to update it here too
-        if not invokerc("mkfs.ocfs2 --cluster-stack pcmk --cluster-name %s -N 8 -x %s" % (_context.cluster_name, dev)):
-            error("Failed to create OCFS2 filesystem on %s" % (dev))
-
-    # TODO: refactor, maybe
-    if not invokerc("mkdir -p %s" % (mntpoint)):
-        error("Can't create mountpoint %s" % (mntpoint))
-    if not invokerc("crm resource meta clusterfs delete target-role"):
-        error("Can't start cluster filesystem clone")
-    wait_for_resource("Waiting for %s to be mounted" % (mntpoint), "clusterfs:0")
 
 
 def init_admin():
@@ -2193,10 +2024,6 @@ def join_cluster(seed_host):
     if rrp in ('active', 'passive'):
         rrp_flag = True
 
-    # Need to do this if second (or subsequent) node happens to be up and
-    # connected to storage while it's being repartitioned on the first node.
-    probe_partitions()
-
     # It would be massively useful at this point if new nodes could come
     # up in standby mode, so we could query the CIB locally to see if
     # there was any further local setup that needed doing, e.g.: creating
@@ -2442,9 +2269,6 @@ def bootstrap_init(context):
     _context = context
 
     init()
-    _context.initialize_qdevice()
-    _context.validate_option()
-    _context.init_sbd_manager()
 
     stage = _context.stage
     if stage is None:
@@ -2454,15 +2278,19 @@ def bootstrap_init(context):
     # except ssh and csync2 (which don't care) and csync2_remote (which mustn't care,
     # just in case this breaks ha-cluster-join on another node).
     corosync_active = utils.service_is_active("corosync.service")
-    if stage in ("vgfs", "admin", "qdevice"):
+    if stage in ("vgfs", "admin", "qdevice", "ocfs2"):
         if not corosync_active:
             error("Cluster is inactive - can't run %s stage" % (stage))
     elif stage == "":
         if corosync_active:
             error("Cluster is currently active - can't run")
-    elif stage not in ("ssh", "ssh_remote", "csync2", "csync2_remote", "sbd"):
+    elif stage not in ("ssh", "ssh_remote", "csync2", "csync2_remote", "sbd", "ocfs2"):
         if corosync_active:
             error("Cluster is currently active - can't run %s stage" % (stage))
+
+    _context.initialize_qdevice()
+    _context.validate_option()
+    _context.init_sbd_manager()
 
     # Need hostname resolution to work, want NTP (but don't block ssh_remote or csync2_remote)
     if stage not in ('ssh_remote', 'csync2_remote'):
@@ -2483,19 +2311,15 @@ def bootstrap_init(context):
         init_csync2()
         init_corosync()
         init_remote_auth()
-        if _context.template == 'ocfs2':
-            if _context.sbd_device is None or _context.ocfs2_device is None:
-                init_storage()
         init_sbd()
 
         lock_inst = lock.Lock()
         try:
             with lock_inst.lock():
                 init_cluster()
-                if _context.template == 'ocfs2':
-                    init_vgfs()
                 init_admin()
                 init_qdevice()
+                init_ocfs2()
         except lock.ClaimLockError as err:
             error(err)
 
@@ -2550,11 +2374,21 @@ def bootstrap_join(context):
                 join_remote_auth(cluster_node)
                 join_csync2(cluster_node)
                 join_ssh_merge(cluster_node)
+                probe_partitions()
+                join_ocfs2(cluster_node)
                 join_cluster(cluster_node)
         except (lock.SSHError, lock.ClaimLockError) as err:
             error(err)
 
     status("Done (log saved to %s)" % (LOG_FILE))
+
+
+def join_ocfs2(peer_host):
+    """
+    If init node configured OCFS2 device, verify that device on join node
+    """
+    ocfs2_inst = ocfs2.OCFS2Manager(_context)
+    ocfs2_inst.join_ocfs2(peer_host)
 
 
 def join_remote_auth(node):

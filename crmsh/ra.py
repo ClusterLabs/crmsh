@@ -875,4 +875,40 @@ def validate_agent(agentname, params, log=False):
     return p.returncode, out
 
 
+DLM_RA_SCRIPTS = """
+primitive {id} ocf:pacemaker:controld \
+op start timeout=90 \
+op stop timeout=100 \
+op monitor interval=60 timeout=60"""
+FILE_SYSTEM_RA_SCRIPTS = """
+primitive {id} ocf:heartbeat:Filesystem \
+params directory="{mnt_point}" fstype="{fs_type}" device="{device}" \
+op monitor interval=20 timeout=40 \
+op start timeout=60 \
+op stop timeout=60"""
+LVMLOCKD_RA_SCRIPTS = """
+primitive {id} ocf:heartbeat:lvmlockd \
+op start timeout=90 \
+op stop timeout=100 \
+op monitor interval=30 timeout=90"""
+LVMACTIVATE_RA_SCRIPTS = """
+primitive {id} ocf:heartbeat:LVM-activate \
+params vgname={vgname} vg_access_mode=lvmlockd activation_mode=shared \
+op start timeout=90s \
+op stop timeout=90s \
+op monitor interval=30s timeout=90s"""
+GROUP_SCRIPTS = """
+group {id} {ra_string}"""
+CLONE_SCRIPTS = """
+clone {id} {group_id} meta interleave=true"""
+
+
+CONFIGURE_RA_TEMPLATE_DICT = {
+        "DLM": DLM_RA_SCRIPTS,
+        "Filesystem": FILE_SYSTEM_RA_SCRIPTS,
+        "LVMLockd": LVMLOCKD_RA_SCRIPTS,
+        "LVMActivate": LVMACTIVATE_RA_SCRIPTS,
+        "GROUP": GROUP_SCRIPTS,
+        "CLONE": CLONE_SCRIPTS
+        }
 # vim:ts=4:sw=4:et:

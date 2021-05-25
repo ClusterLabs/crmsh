@@ -59,12 +59,10 @@ optional arguments:
   -h, --help            Show this help message
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
   -y, --yes             Answer "yes" to all prompts (use with caution, this is
-                        destructive, especially during the "storage" stage.
-                        The /root/.ssh/id_rsa key will be overwritten unless
-                        the option "--no-overwrite-sshkey" is used)
-  -t TEMPLATE, --template TEMPLATE
-                        Optionally configure cluster with template "name"
-                        (currently only "ocfs2" is valid here)
+                        destructive, especially those storage related
+                        configurations and stages. The /root/.ssh/id_rsa key
+                        will be overwritten unless the option "--no-overwrite-
+                        sshkey" is used)
   -n NAME, --name NAME  Set the name of the configured cluster.
   -N NODES, --nodes NODES
                         Additional nodes to add to the created cluster. May
@@ -124,38 +122,38 @@ QDevice configuration:
 Storage configuration:
   Options for configuring shared storage.
 
-  -p DEVICE, --partition-device DEVICE
-                        Partition this shared storage device (only used in
-                        "storage" stage)
   -s DEVICE, --sbd-device DEVICE
                         Block device to use for SBD fencing, use ";" as
                         separator or -s multiple times for multi path (up to 3
                         devices)
   -o DEVICE, --ocfs2-device DEVICE
-                        Block device to use for OCFS2 (only used in "vgfs"
-                        stage)
+                        Block device to use for OCFS2; When using Cluster LVM2
+                        to manage the shared storage, user can specify one or
+                        multiple raw disks, use ";" as separator or -o
+                        multiple times for multi path (must specify -C option)
+                        NOTE: this is a Technical Preview
+  -C, --cluster-lvm2    Use Cluster LVM2 (only valid together with -o option)
+                        NOTE: this is a Technical Preview
+  -m MOUNT, --mount-point MOUNT
+                        Mount point for OCFS2 device (default is
+                        /srv/clusterfs, only valid together with -o option)
+                        NOTE: this is a Technical Preview
 
 Stage can be one of:
     ssh         Create SSH keys for passwordless SSH between cluster nodes
     csync2      Configure csync2
     corosync    Configure corosync
-    storage     Partition shared storage (ocfs2 template only)
     sbd         Configure SBD (requires -s <dev>)
     cluster     Bring the cluster online
+    ocfs2       Configure OCFS2 (requires -o <dev>) NOTE: this is a Technical Preview
     vgfs        Create volume group and filesystem (ocfs2 template only,
-                requires -o <dev>)
+                    requires -o <dev>) NOTE: this stage is an alias of ocfs2 stage
     admin       Create administration virtual IP (optional)
     qdevice     Configure qdevice and qnetd
 
 Note:
   - If stage is not specified, the script will run through each stage
-    in sequence, with prompts for required information.
-  - If using the ocfs2 template, the storage stage will partition a block
-    device into two pieces, one for SBD, the remainder for OCFS2.  This is
-    good for testing and demonstration, but not ideal for production.
-    To use storage you have already configured, pass -s and -o to specify
-    the block devices for SBD and OCFS2, and the automatic partitioning
-    will be skipped.'''
+    in sequence, with prompts for required information.'''
 
 
 CRM_CLUSTER_JOIN_H_OUTPUT = '''usage: join [options] [STAGE]

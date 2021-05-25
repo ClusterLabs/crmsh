@@ -16,7 +16,10 @@ import fnmatch
 import gc
 import ipaddress
 import argparse
+import random
+import string
 from contextlib import contextmanager, closing
+from stat import S_ISBLK
 from . import config
 from . import userdir
 from . import constants
@@ -2668,20 +2671,23 @@ def get_quorum_votes_dict(remote=None):
     return dict(re.findall("(Expected|Total) votes:\s+(\d+)", out))
 
 
-def has_resource_running():
+def has_resource_running(ra_type=None):
     """
     Check if any RA is running
     """
     out = get_stdout_or_raise_error("crm_mon -1")
-    return re.search("No active resources", out) is None
+    if ra_type:
+        return re.search("{}.*Started".format(ra_type), out) is not None
+    else:
+        return re.search("No active resources", out) is None
 
 
-def has_resource_configured(ra_type):
+def has_resource_configured(ra_type, peer=None):
     """
     Check if the RA configured
     """
-    out = get_stdout_or_raise_error("crm configure show")
-    return re.search(r' {} '.format(ra_type), out) is not None
+    out = get_stdout_or_raise_error("crm_mon -1rR", remote=peer)
+    return re.search(ra_type, out) is not None
 
 
 def check_all_nodes_reachable():
@@ -2698,4 +2704,168 @@ def re_split_string(reg, string):
     Split a string by a regrex, filter out empty items
     """
     return [x for x in re.split(reg, string) if x]
+
+
+def is_block_device(dev):
+    """
+    Check if dev is a block device
+    """
+    try:
+        rc = S_ISBLK(os.stat(dev).st_mode)
+    except OSError:
+        return False
+    return rc
+
+
+def has_stonith_running():
+    """
+    Check if any stonith device registered
+    """
+    out = get_stdout_or_raise_error("stonith_admin -L")
+    return re.search("[1-9]+ fence device[s]* found", out) is not None
+
+
+def parse_append_action_argument(input_list, parse_re="[; ]"):
+    """
+    Parse append action argument into a list, like:
+      -s "/dev/sdb1;/dev/sdb2"
+      -s /dev/sdb1 -s /dev/sbd2
+
+      Both return ["/dev/sdb1", "/dev/sdb2"]
+    """
+    result_list = []
+    for item in input_list:
+        result_list += re_split_string(parse_re, item)
+    return result_list
+
+
+def has_disk_mounted(dev):
+    """
+    Check if device already mounted
+    """
+    out = get_stdout_or_raise_error("mount")
+    return re.search("\n{} on ".format(dev), out) is not None
+
+
+def has_mount_point_used(directory):
+    """
+    Check if mount directory already mounted
+    """
+    out = get_stdout_or_raise_error("mount")
+    return re.search(" on {}".format(directory), out) is not None
+
+
+def all_exist_id():
+    """
+    Get current exist id list
+    """
+    from .cibconfig import cib_factory
+    cib_factory.refresh()
+    return cib_factory.id_list()
+
+
+def randomword(length=6):
+    """
+    Generate random word
+    """
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for i in range(length))
+
+
+def gen_unused_id(exist_id_list, prefix="", length=6):
+    """
+    Generate unused id
+    """
+    unused_id = prefix or randomword(length)
+    while unused_id in exist_id_list:
+        unused_id = re.sub("$", "-{}".format(randomword(length)), unused_id)
+    return unused_id
+
+
+def get_all_vg_name():
+    """
+    Get all available VGs
+    """
+    out = get_stdout_or_raise_error("vgdisplay")
+    return re.findall("VG Name\s+(.*)", out)
+
+
+def get_pe_number(vg_id):
+    """
+    Get pe number
+    """
+    output = get_stdout_or_raise_error("vgdisplay {}".format(vg_id))
+    res = re.search("Total PE\s+(\d+)", output)
+    if not res:
+        raise ValueError("Cannot find PE on VG({})".format(vg_id))
+    return int(res.group(1))
+
+
+def has_dev_partitioned(dev, peer=None):
+    """
+    Check if device has partitions
+    """
+    return len(get_dev_info(dev, "NAME", peer=peer).splitlines()) > 1
+
+
+def get_dev_uuid(dev, peer=None):
+    """
+    Get UUID of device on local or peer node
+    """
+    out = get_dev_info(dev, "UUID", peer=peer).splitlines()
+    return out[0] if out else get_dev_uuid_2(dev, peer)
+
+
+def get_dev_uuid_2(dev, peer=None):
+    """
+    Get UUID of device using blkid
+    """
+    out = get_stdout_or_raise_error("blkid {}".format(dev), remote=peer)
+    res = re.search("UUID=\"(.*?)\"", out)
+    return res.group(1) if res else None
+
+
+def get_dev_fs_type(dev, peer=None):
+    """
+    Get filesystem type of device
+    """
+    return get_dev_info(dev, "FSTYPE", peer=peer)
+
+
+def get_dev_info(dev, *_type, peer=None):
+    """
+    Get device info using lsblk
+    """
+    cmd = "lsblk -fno {} {}".format(','.join(_type), dev)
+    return get_stdout_or_raise_error(cmd, remote=peer)
+
+
+def is_dev_used_for_lvm(dev, peer=None):
+    """
+    Check if device is LV
+    """
+    return get_dev_info(dev, "TYPE", peer=peer) == "lvm"
+
+
+def compare_uuid_with_peer_dev(dev_list, peer):
+    """
+    Check if device UUID is the same with peer's device
+    """
+    for dev in dev_list:
+        local_uuid = get_dev_uuid(dev)
+        if not local_uuid:
+            raise ValueError("Cannot find UUID for {} on local".format(dev))
+        peer_uuid = get_dev_uuid(dev, peer)
+        if not peer_uuid:
+            raise ValueError("Cannot find UUID for {} on {}".format(dev, peer))
+        if local_uuid != peer_uuid:
+            raise ValueError("UUID of {} not same with peer {}".format(dev, peer))
+
+
+def append_res_to_group(group_id, res_id):
+    """
+    Append resource to exist group
+    """
+    cmd = "crm configure modgroup {} add {}".format(group_id, res_id)
+    get_stdout_or_raise_error(cmd)
 # vim:ts=4:sw=4:et:

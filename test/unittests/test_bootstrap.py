@@ -286,16 +286,6 @@ class TestSBDManager(unittest.TestCase):
             mock.call(bootstrap.SBDManager.PARSE_RE, "/dev/sdb1"),
             ])
 
-    @mock.patch('crmsh.utils.re_split_string')
-    def test_parse_sbd_device(self, mock_split):
-        mock_split.side_effect = [["/dev/sdb1"], ["/dev/sdc1"]]
-        res = self.sbd_inst._parse_sbd_device()
-        assert res == ["/dev/sdb1", "/dev/sdc1"]
-        mock_split.assert_has_calls([
-            mock.call(bootstrap.SBDManager.PARSE_RE, "/dev/sdb1"),
-            mock.call(bootstrap.SBDManager.PARSE_RE, "/dev/sdc1")
-            ])
-
     def test_verify_sbd_device_gt_3(self):
         assert self.sbd_inst_devices_gt_3.sbd_devices_input == ["/dev/sdb1", "/dev/sdc1", "/dev/sdd1", "/dev/sde1"]
         dev_list = self.sbd_inst_devices_gt_3.sbd_devices_input
@@ -304,7 +294,7 @@ class TestSBDManager(unittest.TestCase):
         self.assertEqual("Maximum number of SBD device is 3", str(err.exception))
 
     @mock.patch('crmsh.bootstrap.SBDManager._compare_device_uuid')
-    @mock.patch('crmsh.bootstrap.is_block_device')
+    @mock.patch('crmsh.utils.is_block_device')
     def test_verify_sbd_device_not_block(self, mock_block_device, mock_compare):
         assert self.sbd_inst.sbd_devices_input == ["/dev/sdb1", "/dev/sdc1"]
         dev_list = self.sbd_inst.sbd_devices_input
@@ -318,11 +308,11 @@ class TestSBDManager(unittest.TestCase):
         mock_compare.assert_called_once_with("/dev/sdb1", [])
 
     @mock.patch('crmsh.bootstrap.SBDManager._verify_sbd_device')
-    @mock.patch('crmsh.bootstrap.SBDManager._parse_sbd_device')
+    @mock.patch('crmsh.utils.parse_append_action_argument')
     def test_get_sbd_device_from_option(self, mock_parse, mock_verify):
         mock_parse.return_value = ["/dev/sdb1", "/dev/sdc1"]
         self.sbd_inst._get_sbd_device()
-        mock_parse.assert_called_once_with()
+        mock_parse.assert_called_once_with(mock_parse.return_value)
         mock_verify.assert_called_once_with(mock_parse.return_value)
 
     @mock.patch('crmsh.bootstrap.SBDManager._get_sbd_device_interactive')
