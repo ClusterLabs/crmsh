@@ -187,7 +187,11 @@ class Cluster(command.UI):
         if len(args) > 0:
             if '--dry-run' in args or looks_like_hostnames(args):
                 args = ['--yes', '--nodes'] + [arg for arg in args if arg != '--dry-run']
-        parser = ArgParser(usage="init [options] [STAGE]", epilog="""
+        parser = ArgParser(description="""
+Initialize a cluster from scratch. This command configures
+a complete cluster, and can also add additional cluster
+nodes to the initial one-node cluster using the --nodes
+option.""", usage="init [options] [STAGE]", epilog="""
 
 Stage can be one of:
     ssh         Create SSH keys for passwordless SSH between cluster nodes
@@ -312,7 +316,11 @@ Note:
         '''
         Join this node to an existing cluster
         '''
-        parser = ArgParser(usage="join [options] [STAGE]", epilog="""
+        parser = ArgParser(description="""
+Join the current node to an existing cluster. The
+current node cannot be a member of a cluster already.
+Pass any node in the existing cluster as the argument
+to the -c option.""",usage="join [options] [STAGE]", epilog="""
 
 Stage can be one of:
     ssh         Obtain SSH keys from existing cluster node (requires -c <host>)
@@ -368,7 +376,10 @@ If stage is not specified, each stage will be invoked in sequence.
         Installs packages, sets up corosync and pacemaker, etc.
         Must be executed from a node in the existing cluster.
         '''
-        parser = ArgParser(usage="add [options] [node ...]", add_help=False, formatter_class=RawDescriptionHelpFormatter)
+        parser = ArgParser(description="""
+Add a new node to the cluster. The new node will be
+configured as a cluster member.""",
+                usage="add [options] [node ...]", add_help=False, formatter_class=RawDescriptionHelpFormatter)
         parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         options, args = parse_options(parser, args)
@@ -386,7 +397,14 @@ If stage is not specified, each stage will be invoked in sequence.
         '''
         Remove the given node(s) from the cluster.
         '''
-        parser = ArgParser(usage="remove [options] [<node> ...]", add_help=False, formatter_class=RawDescriptionHelpFormatter)
+        parser = ArgParser(description="""
+Remove one or more nodes from the cluster.
+
+This command can remove the last node in the cluster,
+thus effectively removing the whole cluster. To remove
+the last node, pass --force argument to crm or set
+the config.core.force option.""",
+                usage="remove [options] [<node> ...]", add_help=False, formatter_class=RawDescriptionHelpFormatter)
         parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
@@ -465,7 +483,13 @@ If stage is not specified, each stage will be invoked in sequence.
         * arbitrator IP / hostname (optional)
         * list of tickets (can be empty)
         '''
-        parser = ArgParser(usage="geo-init [options]", epilog="""
+        parser = ArgParser(description="""
+Create a new geo cluster with the current cluster as the
+first member. Pass the complete geo cluster topology as
+arguments to this command, and then use geo-join and
+geo-init-arbitrator to add the remaining members to
+the geo cluster.""",
+        usage="geo-init [options]", epilog="""
 
 Cluster Description
 
@@ -522,7 +546,17 @@ Cluster Description
         '''
         Join this cluster to a geo configuration.
         '''
-        parser = ArgParser(usage="geo-join [options]", add_help=False, formatter_class=RawDescriptionHelpFormatter)
+        parser = ArgParser(description="""
+This command should be run from one of the nodes in a cluster
+which is currently not a member of a geo cluster. The geo
+cluster configuration will be fetched from the provided node,
+and the cluster will be added to the geo cluster.
+
+Note that each cluster in a geo cluster needs to have a unique
+name set. The cluster name can be set using the --name argument
+to init, or by configuring corosync with the cluster name in
+an existing cluster.""",
+                usage="geo-join [options]", add_help=False, formatter_class=RawDescriptionHelpFormatter)
         parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
@@ -556,7 +590,11 @@ Cluster Description
         '''
         Make this node a geo arbitrator.
         '''
-        parser = ArgParser(usage="geo-init-arbitrator [options]", add_help=False, formatter_class=RawDescriptionHelpFormatter)
+        parser = ArgParser(description="""
+Configure the current node as a geo arbitrator. The command
+requires an existing geo cluster or geo arbitrator from which
+to get the geo cluster configuration.""",
+                usage="geo-init-arbitrator [options]", add_help=False, formatter_class=RawDescriptionHelpFormatter)
         parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")

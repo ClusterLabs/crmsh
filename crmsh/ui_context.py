@@ -76,7 +76,7 @@ class Context(object):
                 self.command_info = self.current_level().get_child(token)
                 if not self.command_info:
                     self.fatal_error("No such command")
-                if self.command_name in self.command_info.aliases:
+                if self.command_name in self.command_info.aliases and self.command_name not in ["-h", "--help"]:
                     common_warn("This command '{}' is deprecated, please use '{}'"\
                             .format(self.command_name, self.command_info.name))
                 self.command_name = self.command_info.name
