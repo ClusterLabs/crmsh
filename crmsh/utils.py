@@ -21,6 +21,7 @@ import string
 from pathlib import Path
 from contextlib import contextmanager, closing
 from stat import S_ISBLK
+from lxml import etree
 from . import config
 from . import userdir
 from . import constants
@@ -1715,51 +1716,40 @@ def list_cluster_nodes():
     '''
     Returns a list of nodes in the cluster.
     '''
-    def getname(toks):
-        if toks and len(toks) >= 2:
-            return toks[1]
-        return None
-
-    try:
-        # when pacemaker running
-        rc, outp = stdout2list(['crm_node', '-l'], stderr_on=False, shell=False)
-        if rc == 0:
-            return [x for x in [getname(line.split()) for line in outp] if x and x != '(null)']
-
-        # when corosync running
-        ip_list = get_member_iplist()
-        if ip_list:
-            return ip_list
-
-        # static situation
-        cib_path = os.getenv('CIB_file', '/var/lib/pacemaker/cib/cib.xml')
+    from . import xmlutil
+    cib = None
+    rc, out, err = get_stdout_stderr(constants.CIB_QUERY)
+    # When cluster service running
+    if rc == 0:
+        cib = etree.fromstring(out)
+    # Static situation
+    else:
+        cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
         if not os.path.isfile(cib_path):
             return None
-        from . import xmlutil
-        node_list = []
         cib = xmlutil.file2cib_elem(cib_path)
-        if cib is None:
-            return None
-        for node in cib.xpath('/cib/configuration/nodes/node'):
-            name = node.get('uname') or node.get('id')
-            if node.get('type') == 'remote':
-                srv = cib.xpath("//primitive[@id='%s']/instance_attributes/nvpair[@name='server']" % (name))
-                if srv:
-                    continue
-            node_list.append(name)
-        return node_list
-    except OSError as msg:
-        raise ValueError("Error listing cluster nodes: %s" % (msg))
+    if cib is None:
+        return None
+
+    node_list = []
+    for node in cib.xpath(constants.XML_NODE_PATH):
+        name = node.get('uname') or node.get('id')
+        if node.get('type') == 'remote':
+            srv = cib.xpath("//primitive[@id='%s']/instance_attributes/nvpair[@name='server']" % (name))
+            if srv:
+                continue
+        node_list.append(name)
+    return node_list
 
 
-def cluster_run_cmd(cmd):
+def cluster_run_cmd(cmd, node_list=[]):
     """
     Run cmd in cluster nodes
     """
-    node_list = list_cluster_nodes()
-    if not node_list:
+    nodelist = node_list or list_cluster_nodes()
+    if not nodelist:
         raise ValueError("Failed to get node list from cluster")
-    parallax.parallax_call(node_list, cmd)
+    return parallax.parallax_call(nodelist, cmd)
 
 
 def list_cluster_nodes_except_me():
@@ -2528,12 +2518,14 @@ class ServiceManager(object):
             "is_available": "list-unit-files"
             }
 
-    def __init__(self, service_name, remote_addr=None):
+    def __init__(self, service_name, remote_addr=None, node_list=[]):
         """
         Init function
+        When node_list set, execute action between nodes in parallel
         """
         self.service_name = service_name
         self.remote_addr = remote_addr
+        self.node_list = node_list
 
     def _do_action(self, action_type):
         """
@@ -2543,7 +2535,10 @@ class ServiceManager(object):
             raise ValueError("status_type should be {}".format('/'.join(list(self.ACTION_MAP.values()))))
 
         cmd = "systemctl {} {}".format(action_type, self.service_name)
-        if self.remote_addr:
+        if self.node_list:
+            cluster_run_cmd(cmd, self.node_list)
+            return True, None
+        elif self.remote_addr and self.remote_addr != this_node():
             prompt_msg = "Run \"{}\" on {}".format(cmd, self.remote_addr)
             rc, output, err = run_cmd_on_remote(cmd, self.remote_addr, prompt_msg)
         else:
@@ -2601,40 +2596,40 @@ class ServiceManager(object):
         return inst.is_active
 
     @classmethod
-    def start_service(cls, name, enable=False, remote_addr=None):
+    def start_service(cls, name, enable=False, remote_addr=None, node_list=[]):
         """
         Start service
         """
-        inst = cls(name, remote_addr)
+        inst = cls(name, remote_addr, node_list)
         if enable:
             inst.enable()
         inst.start()
 
     @classmethod
-    def stop_service(cls, name, disable=False, remote_addr=None):
+    def stop_service(cls, name, disable=False, remote_addr=None, node_list=[]):
         """
         Stop service
         """
-        inst = cls(name, remote_addr)
+        inst = cls(name, remote_addr, node_list)
         if disable:
             inst.disable()
         inst.stop()
 
     @classmethod
-    def enable_service(cls, name, remote_addr=None):
+    def enable_service(cls, name, remote_addr=None, node_list=[]):
         """
         Enable service
         """
-        inst = cls(name, remote_addr)
+        inst = cls(name, remote_addr, node_list)
         if inst.is_available and not inst.is_enabled:
             inst.enable()
 
     @classmethod
-    def disable_service(cls, name, remote_addr=None):
+    def disable_service(cls, name, remote_addr=None, node_list=[]):
         """
         Disable service
         """
-        inst = cls(name, remote_addr)
+        inst = cls(name, remote_addr, node_list)
         if inst.is_available and inst.is_enabled:
             inst.disable()
 
@@ -2672,21 +2667,21 @@ def ping_node(node):
         raise ValueError("host \"{}\" is unreachable: {}".format(node, err))
 
 
-def is_quorate(expected_votes, actual_votes):
+def calculate_quorate_status(expected_votes, actual_votes):
     """
     Given expected votes and actual votes, calculate if is quorated
     """
     return int(actual_votes)/int(expected_votes) > 0.5
 
 
-def get_stdout_or_raise_error(cmd, remote=None, success_val=0):
+def get_stdout_or_raise_error(cmd, remote=None, success_val_list=[0]):
     """
     Common function to get stdout from cmd or raise exception
     """
     if remote:
         cmd = "ssh {} root@{} \"{}\"".format(SSH_OPTION, remote, cmd)
     rc, out, err = get_stdout_stderr(cmd)
-    if rc != success_val:
+    if rc not in success_val_list:
         raise ValueError("Failed to run \"{}\": {}".format(cmd, err))
     return out
 
@@ -2695,7 +2690,7 @@ def get_quorum_votes_dict(remote=None):
     """
     Return a dictionary which contain expect votes and total votes
     """
-    out = get_stdout_or_raise_error("corosync-quorumtool -s", remote=remote)
+    out = get_stdout_or_raise_error("corosync-quorumtool -s", remote=remote, success_val_list=[0, 2])
     return dict(re.findall("(Expected|Total) votes:\s+(\d+)", out))
 
 
@@ -2931,4 +2926,12 @@ def fatal(error_msg):
     handled by Context.run in ui_context.py
     """
     raise ValueError(error_msg)
+
+
+def is_standby(node):
+    """
+    Check if the node is already standby
+    """
+    out = get_stdout_or_raise_error("crm_mon -1")
+    return re.search(r'Node\s+{}:\s+standby'.format(node), out) is not None
 # vim:ts=4:sw=4:et:

@@ -501,4 +501,26 @@ RED = '\033[31m'
 YELLOW = '\033[33m'
 GREEN = '\033[32m'
 END = '\033[0m'
+
+
+CIB_QUERY = "cibadmin -Q"
+CIB_REPLACE = "cibadmin -R -X '{xmlstr}'"
+CIB_RAW_FILE = "/var/lib/pacemaker/cib/cib.xml"
+XML_NODE_PATH = "/cib/configuration/nodes/node"
+XML_STATUS_PATH = "/cib/status/node_state"
+XML_NODE_QUERY_STANDBY_PATH = "//nodes/node[@id='{node_id}']/instance_attributes/nvpair[@name='standby']/@value"
+XML_STATUS_QUERY_STANDBY_PATH = "//status/node_state[@id='{node_id}']/transient_attributes/instance_attributes/nvpair[@name='standby']/@value"
+STANDBY_TEMPLATE = """
+<instance_attributes id="nodes-{node_id}">
+  <nvpair id="nodes-{node_id}-standby" name="standby" value="{value}"/>
+</instance_attributes>
+"""
+STANDBY_TEMPLATE_REBOOT = """
+<transient_attributes id="{node_id}">
+  <instance_attributes id="status-{node_id}">
+    <nvpair id="status-{node_id}-standby" name="standby" value="{value}"/>
+  </instance_attributes>
+</transient_attributes>
+"""
+STANDBY_NV_RE = r'(<nvpair.*{node_id}.*name="standby".*)value="{value}"(.*)'
 # vim:ts=4:sw=4:et:

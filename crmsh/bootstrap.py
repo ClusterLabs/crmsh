@@ -677,9 +677,10 @@ def init_cluster_local():
     wait_for_cluster()
 
 
-def start_pacemaker():
+def start_pacemaker(node_list=[]):
     """
     Start pacemaker service with wait time for sbd
+    When node_list set, start pacemaker service in parallel
     """
     from .sbd import SBDManager
     pacemaker_start_msg = "Starting pacemaker"
@@ -688,7 +689,7 @@ def start_pacemaker():
             SBDManager.is_delay_start():
         pacemaker_start_msg += "(waiting for sbd {}s)".format(SBDManager.get_suitable_sbd_systemd_timeout())
     with logger_utils.status_long(pacemaker_start_msg):
-        utils.start_service("pacemaker.service", enable=True)
+        utils.start_service("pacemaker.service", enable=True, node_list=node_list)
 
 
 def install_tmp(tmpfile, to):
@@ -1263,7 +1264,7 @@ def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False):
     elif mode == QDEVICE_REMOVE:
         actual_votes -= 1
 
-    if utils.is_quorate(expected_votes, actual_votes) and not diskless_sbd:
+    if utils.calculate_quorate_status(expected_votes, actual_votes) and not diskless_sbd:
         # safe to use reload
         return QdevicePolicy.QDEVICE_RELOAD
     elif utils.has_resource_running():
