@@ -276,7 +276,7 @@ class BaseParser(object):
                 self.err("Expected at least %d name-value pairs" % (minpairs))
         return ret
 
-    def match_nvpairs(self, terminator=None, minpairs=1):
+    def match_nvpairs(self, terminator=None, minpairs=1, allow_empty=True):
         """
         Matches string of p=v tokens
         Returns list of <nvpair> tags
@@ -298,6 +298,8 @@ class BaseParser(object):
                                              self.matched(2),
                                              self.matched(3)))
             elif self.try_match(_NVPAIR_RE):
+                if not allow_empty and not self.matched(2):
+                    self.err("Empty value for {} is not allowed".format(self.matched(1)))
                 ret.append(xmlutil.nvpair(self.matched(1),
                                           self.matched(2)))
             elif len(terminator) and self.try_match(_NVPAIR_KEY_RE):
@@ -1096,7 +1098,7 @@ def property_parser(self, cmd):
         attrs.set(idkey, idval)
     for rule in self.match_rules():
         attrs.append(rule)
-    for nvp in self.match_nvpairs(minpairs=0):
+    for nvp in self.match_nvpairs(terminator=[], minpairs=0, allow_empty=False):
         attrs.append(nvp)
     return root
 
