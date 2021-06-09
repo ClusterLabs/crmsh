@@ -2343,9 +2343,8 @@ class InterfacesInfo(object):
             # maybe from tun interface
             if not '/' in ip_with_mask:
                 continue
-            #TODO change this condition when corosync support link-local address
             interface_inst = Interface(ip_with_mask)
-            if interface_inst.is_loopback or interface_inst.is_link_local:
+            if interface_inst.is_loopback:
                 continue
             # one nic might configured multi IP addresses
             if nic not in self._nic_info_dict:
