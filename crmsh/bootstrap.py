@@ -1505,7 +1505,7 @@ def init_ocfs2():
     """
     OCFS2 configure process
     """
-    if _context.yes_to_all and not _context.ocfs2_devices:
+    if not _context.ocfs2_devices:
         return
     ocfs2_manager = ocfs2.OCFS2Manager(_context)
     ocfs2_manager.init_ocfs2()
