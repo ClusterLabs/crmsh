@@ -476,7 +476,7 @@ class TestSBDManager(unittest.TestCase):
         self.sbd_inst_diskless._restart_cluster_and_configure_sbd_ra()
         mock_warn.assert_has_calls([
             mock.call("To start sbd.service, need to restart cluster service manually on each node"),
-            mock.call("Then run \"crm configure property stonith-enabled=true stonith-watchdog-timeout=10s\" on any node")
+            mock.call("Then run \"crm configure property stonith-enabled=true stonith-watchdog-timeout=10s stonith-timeout=60s\" on any node")
             ])
 
     @mock.patch('crmsh.bootstrap.SBDManager.configure_sbd_resource')
@@ -600,7 +600,7 @@ class TestSBDManager(unittest.TestCase):
         mock_package.assert_called_once_with("sbd")
         mock_enabled.assert_called_once_with("sbd.service")
         mock_get_device.assert_called_once_with()
-        mock_invoke.assert_called_once_with("crm configure property stonith-enabled=true stonith-watchdog-timeout=10s")
+        mock_invoke.assert_called_once_with("crm configure property stonith-enabled=true stonith-watchdog-timeout=10s stonith-timeout=60s")
         mock_error.assert_called_once_with("Can't enable STONITH for diskless SBD")
         mock_ra_configured.assert_called_once_with("stonith:external/sbd")
 
@@ -771,20 +771,16 @@ class TestSBDManager(unittest.TestCase):
         mock_parse.assert_called_once_with(bootstrap.SYSCONFIG_SBD)
         mock_parse_inst.get.assert_called_once_with("SBD_WATCHDOG_TIMEOUT")
 
-    @mock.patch('os.uname')
     @mock.patch('crmsh.utils.parse_sysconfig')
-    def test_determine_watchdog_timeout_s390(self, mock_parse, mock_uname):
+    def test_determine_watchdog_timeout_s390(self, mock_parse):
         mock_parse_inst = mock.Mock()
         mock_parse.return_value = mock_parse_inst
         mock_parse_inst.get.return_value = None
-        mock_uname_inst = mock.Mock()
-        mock_uname.return_value = mock_uname_inst
-        mock_uname_inst.machine = "s390"
+        self.sbd_inst._is_s390 = True
         self.sbd_inst._determine_stonith_watchdog_timeout()
         assert self.sbd_inst._stonith_watchdog_timeout == "30s"
         mock_parse.assert_called_once_with(bootstrap.SYSCONFIG_SBD)
         mock_parse_inst.get.assert_called_once_with("SBD_WATCHDOG_TIMEOUT")
-        mock_uname.assert_called_once_with()
 
 
 class TestBootstrap(unittest.TestCase):
