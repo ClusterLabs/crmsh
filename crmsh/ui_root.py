@@ -29,7 +29,6 @@ from . import ui_history
 from . import ui_maintenance
 from . import ui_node
 from . import ui_options
-from . import ui_analyze
 from . import ui_ra
 from . import ui_report
 from . import ui_resource
@@ -121,11 +120,6 @@ Several user preferences are available. Note that it is possible
 to save the preferences to a startup file.
 ''')
     def do_options(self):
-        pass
-
-    @command.level(ui_analyze.Analyze)
-    @command.help('''Analyze help''')
-    def do_analyze(self):
         pass
 
     @command.level(ui_ra.RA)

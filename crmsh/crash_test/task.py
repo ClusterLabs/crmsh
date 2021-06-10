@@ -141,7 +141,7 @@ class Task(object):
         while not self.thread_stop_event.is_set():
             rc, out, _ = crmshutils.get_stdout_stderr(config.FENCE_HISTORY.format(node=target_node))
             if rc == 0 and out:
-                match = re.search(r"Node {} last fenced at: (.*)".format(target_node), out)
+                match = re.search(r"Node {} last kicked at: (.*)".format(target_node), out)
                 if match:
                     fence_timestamp = match.group(1)
                     task_timestamp_dt = utils.str_to_datetime(self.timestamp, '%Y/%m/%d %H:%M:%S')

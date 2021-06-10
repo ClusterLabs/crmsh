@@ -92,7 +92,7 @@ def check(context):
     """
     if context.cluster_check:
         check_cluster()
-    print()
+        print()
 
 
 def check_environment():
