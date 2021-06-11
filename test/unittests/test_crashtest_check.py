@@ -7,29 +7,29 @@ except ImportError:
     import mock
 
 from crmsh import utils as crmshutils
-from crmsh.preflight_check import check, config
+from crmsh.crash_test import check, config
 
 
 class TestCheck(TestCase):
 
-    @mock.patch('crmsh.preflight_check.check.check_cluster')
+    @mock.patch('crmsh.crash_test.check.check_cluster')
     def test_check(self, mock_cluster_check):
         ctx = mock.Mock(cluster_check=True)
         check.check(ctx)
         mock_cluster_check.assert_called_once_with()
 
-    @mock.patch('crmsh.preflight_check.check.check_firewall')
-    @mock.patch('crmsh.preflight_check.check.check_time_service')
-    @mock.patch('crmsh.preflight_check.check.check_my_hostname_resolves')
+    @mock.patch('crmsh.crash_test.check.check_firewall')
+    @mock.patch('crmsh.crash_test.check.check_time_service')
+    @mock.patch('crmsh.crash_test.check.check_my_hostname_resolves')
     def test_check_environment(self, mock_hostname, mock_time, mock_firewall):
         check.check_environment()
         mock_hostname.assert_called_once_with()
         mock_time.assert_called_once_with()
         mock_firewall.assert_called_once_with()
 
-    @mock.patch('crmsh.preflight_check.utils.this_node')
-    @mock.patch('crmsh.preflight_check.check.crmshboot.my_hostname_resolves')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.utils.this_node')
+    @mock.patch('crmsh.crash_test.check.crmshboot.my_hostname_resolves')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_my_hostname_resolves(self, mock_task_check, mock_hostname, mock_this_node):
         mock_task_inst = mock.Mock()
         mock_task_check.return_value = mock_task_inst
@@ -44,10 +44,10 @@ class TestCheck(TestCase):
         mock_hostname.assert_called_once_with()
         mock_task_inst.error.assert_called_once_with('Hostname "node1" is unresolvable.\n  Please add an entry to /etc/hosts or configure DNS.')
 
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_active')
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_enabled')
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_available')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_enabled')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_available')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_time_service_none(self, mock_task, mock_service_available, mock_service_enabled, mock_service_active):
         mock_task_inst = mock.Mock()
         mock_task.return_value = mock_task_inst
@@ -65,10 +65,10 @@ class TestCheck(TestCase):
             ])
         mock_task_inst.warn.assert_called_once_with("No NTP service found.")
 
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_active')
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_enabled')
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_available')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_enabled')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_available')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_time_service_warn(self, mock_task, mock_service_available, mock_service_enabled, mock_service_active):
         mock_task_inst = mock.Mock()
         mock_task.return_value = mock_task_inst
@@ -88,10 +88,10 @@ class TestCheck(TestCase):
             mock.call("chronyd.service is not active"),
             ])
 
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_active')
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_enabled')
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_available')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_enabled')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_available')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_time_service(self, mock_task, mock_service_available, mock_service_enabled, mock_service_active):
         mock_task_inst = mock.Mock()
         mock_task.return_value = mock_task_inst
@@ -111,8 +111,8 @@ class TestCheck(TestCase):
             mock.call("chronyd.service is active")
             ])
 
-    @mock.patch('crmsh.preflight_check.check.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.utils.corosync_port_list')
+    @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.utils.corosync_port_list')
     def test_check_port_open_return(self, mock_corosync_port, mock_run):
         mock_corosync_port.return_value = ["1234", "5678"]
         mock_run.return_value = (1, None, "error")
@@ -124,7 +124,7 @@ class TestCheck(TestCase):
         task_inst.error.assert_called_once_with("error")
         mock_run.assert_called_once_with("firewall-cmd --list-port")
 
-    @mock.patch('crmsh.preflight_check.utils.corosync_port_list')
+    @mock.patch('crmsh.crash_test.utils.corosync_port_list')
     def test_check_port_open_fail_to_get_port(self, mock_corosync_port):
         mock_corosync_port.return_value = []
         task_inst = mock.Mock()
@@ -134,8 +134,8 @@ class TestCheck(TestCase):
         mock_corosync_port.assert_called_once_with()
         task_inst.error.assert_called_once_with("Can not get corosync's port")
 
-    @mock.patch('crmsh.preflight_check.check.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.utils.corosync_port_list')
+    @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.utils.corosync_port_list')
     def test_check_port_open(self, mock_corosync_port, mock_run):
         mock_corosync_port.return_value = ["1234", "5678"]
         output_cmd = """
@@ -152,8 +152,8 @@ class TestCheck(TestCase):
         mock_run.assert_called_once_with("firewall-cmd --list-port")
         task_inst.info.assert_called_once_with("UDP port 1234 is opened in firewalld")
 
-    @mock.patch('crmsh.preflight_check.check.crmshutils.package_is_installed')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.check.crmshutils.package_is_installed')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_firewall_not_intalled(self, mock_task, mock_installed):
         mock_task_inst = mock.Mock()
         mock_task.return_value = mock_task_inst
@@ -170,9 +170,9 @@ class TestCheck(TestCase):
             ])
         mock_task_inst.warn.assert_called_once_with("Failed to detect firewall")
 
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_active')
-    @mock.patch('crmsh.preflight_check.check.crmshutils.package_is_installed')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
+    @mock.patch('crmsh.crash_test.check.crmshutils.package_is_installed')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_firewall_warn(self, mock_task, mock_installed, mock_active):
         mock_task_inst = mock.Mock()
         mock_task.return_value = mock_task_inst
@@ -188,10 +188,10 @@ class TestCheck(TestCase):
         mock_task_inst.info.assert_called_once_with("firewalld.service is available")
         mock_task_inst.warn.assert_called_once_with("firewalld.service is not active")
 
-    @mock.patch('crmsh.preflight_check.check.check_port_open')
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_active')
-    @mock.patch('crmsh.preflight_check.check.crmshutils.package_is_installed')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.check.check_port_open')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
+    @mock.patch('crmsh.crash_test.check.crmshutils.package_is_installed')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_firewall(self, mock_task, mock_installed, mock_active, mock_check_port):
         mock_task_inst = mock.Mock()
         mock_task.return_value = mock_task_inst
@@ -211,16 +211,16 @@ class TestCheck(TestCase):
         mock_active.assert_called_once_with("firewalld")
         mock_check_port.assert_called_once_with(mock_task_inst, "firewalld")
 
-    @mock.patch('crmsh.preflight_check.check.check_cluster_service')
+    @mock.patch('crmsh.crash_test.check.check_cluster_service')
     def test_check_cluster_return(self, mock_check_cluster):
         mock_check_cluster.return_value = False
         check.check_cluster()
         mock_check_cluster.assert_called_once_with()
 
-    @mock.patch('crmsh.preflight_check.check.check_resources')
-    @mock.patch('crmsh.preflight_check.check.check_nodes')
-    @mock.patch('crmsh.preflight_check.check.check_fencing')
-    @mock.patch('crmsh.preflight_check.check.check_cluster_service')
+    @mock.patch('crmsh.crash_test.check.check_resources')
+    @mock.patch('crmsh.crash_test.check.check_nodes')
+    @mock.patch('crmsh.crash_test.check.check_fencing')
+    @mock.patch('crmsh.crash_test.check.check_cluster_service')
     def test_check_cluster(self, mock_check_cluster, mock_check_fencing, mock_check_nodes, mock_check_resources):
         mock_check_cluster.return_value = True
         check.check_cluster()
@@ -229,9 +229,9 @@ class TestCheck(TestCase):
         mock_check_nodes.assert_called_once_with()
         mock_check_resources.assert_called_once_with()
 
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_active')
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_enabled')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_enabled')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_cluster_service_pacemaker_disable(self, mock_task, mock_enabled, mock_active):
         mock_task_inst = mock.Mock(passed=False)
         mock_task.return_value = mock_task_inst
@@ -259,9 +259,9 @@ class TestCheck(TestCase):
         mock_task_inst.info.assert_called_once_with("corosync.service is running")
         mock_task_inst.error.assert_called_once_with("pacemaker.service is not running!")
 
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_active')
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_enabled')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_enabled')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_cluster_service(self, mock_task, mock_enabled, mock_active):
         mock_task_inst = mock.Mock(passed=True)
         mock_task.return_value = mock_task_inst
@@ -289,8 +289,8 @@ class TestCheck(TestCase):
             ])
         mock_task_inst.warn.assert_called_once_with("corosync.service is enabled")
 
-    @mock.patch('crmsh.preflight_check.utils.FenceInfo')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.utils.FenceInfo')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_fencing_no_stonith(self, mock_task, mock_fence_info):
         mock_task_inst = mock.Mock()
         mock_task.return_value = mock_task_inst
@@ -305,9 +305,9 @@ class TestCheck(TestCase):
         mock_fence_info.assert_called_once_with()
         mock_task_inst.warn.assert_called_once_with("stonith is disabled")
 
-    @mock.patch('crmsh.preflight_check.check.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.utils.FenceInfo')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.utils.FenceInfo')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_fencing_no_resources(self, mock_task, mock_fence_info, mock_run):
         mock_task_inst = mock.Mock()
         mock_task.return_value = mock_task_inst
@@ -325,10 +325,10 @@ class TestCheck(TestCase):
         mock_task_inst.info.assert_called_once_with("stonith is enabled")
         mock_task_inst.warn.assert_called_once_with("No stonith resource configured!")
 
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_active')
-    @mock.patch('crmsh.preflight_check.check.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.utils.FenceInfo')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
+    @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.utils.FenceInfo')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_fencing_has_warn(self, mock_task, mock_fence_info, mock_run, mock_active):
         mock_task_inst = mock.Mock()
         mock_task.return_value = mock_task_inst
@@ -353,10 +353,10 @@ class TestCheck(TestCase):
             mock.call("sbd service is not running!")
             ])
 
-    @mock.patch('crmsh.preflight_check.check.crmshutils.service_is_active')
-    @mock.patch('crmsh.preflight_check.check.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.utils.FenceInfo')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
+    @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.utils.FenceInfo')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_fencing(self, mock_task, mock_fence_info, mock_run, mock_active):
         mock_task_inst = mock.Mock()
         mock_task.return_value = mock_task_inst
@@ -380,8 +380,8 @@ class TestCheck(TestCase):
             ])
         mock_active.assert_called_once_with("sbd")
 
-    @mock.patch('crmsh.preflight_check.check.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_nodes_error(self, mock_task, mock_run):
         mock_task_inst = mock.Mock()
         mock_task.return_value = mock_task_inst
@@ -395,8 +395,8 @@ class TestCheck(TestCase):
         mock_run.assert_called_once_with("crm_mon -1")
         mock_task_inst.error.assert_called_once_with("run \"crm_mon -1\" error: error data")
 
-    @mock.patch('crmsh.preflight_check.check.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_nodes(self, mock_task, mock_run):
         mock_task_inst = mock.Mock()
         mock_task.return_value = mock_task_inst
@@ -428,8 +428,8 @@ Node List:
             ])
         mock_task_inst.warn.assert_called_once_with("OFFLINE nodes: [ 15sp2-2 ]")
 
-    @mock.patch('crmsh.preflight_check.check.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_nodes_warn(self, mock_task, mock_run):
         mock_task_inst = mock.Mock()
         mock_task.return_value = mock_task_inst
@@ -463,9 +463,9 @@ Active Resources:
             mock.call("Node 15sp2-2 is UNCLEAN!")
             ])
 
-    @mock.patch('crmsh.preflight_check.check.completers.resources_stopped')
-    @mock.patch('crmsh.preflight_check.check.completers.resources_started')
-    @mock.patch('crmsh.preflight_check.task.TaskCheck')
+    @mock.patch('crmsh.crash_test.check.completers.resources_stopped')
+    @mock.patch('crmsh.crash_test.check.completers.resources_started')
+    @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_resources(self, mock_task, mock_started, mock_stopped):
         mock_task_inst = mock.Mock()
         mock_task.return_value = mock_task_inst
@@ -484,8 +484,8 @@ Active Resources:
 
     # Test fix()
     @classmethod
-    @mock.patch('crmsh.preflight_check.check.correct_sbd')
-    @mock.patch('crmsh.preflight_check.check.check_sbd')
+    @mock.patch('crmsh.crash_test.check.correct_sbd')
+    @mock.patch('crmsh.crash_test.check.check_sbd')
     def test_fix_no_candidate(cls, mock_check_sbd, mock_correct_sbd):
         """
         Test fix() has no valid candidate
@@ -497,8 +497,8 @@ Active Resources:
         mock_correct_sbd.assert_called_once_with(ctx, dev)
 
     @classmethod
-    @mock.patch('crmsh.preflight_check.check.correct_sbd')
-    @mock.patch('crmsh.preflight_check.check.check_sbd')
+    @mock.patch('crmsh.crash_test.check.correct_sbd')
+    @mock.patch('crmsh.crash_test.check.check_sbd')
     def test_fix_has_candidate(cls, mock_check_sbd, mock_correct_sbd):
         """
         Test fix() has valid candidate
@@ -511,8 +511,8 @@ Active Resources:
 
     # Test check_sbd()
     @classmethod
-    @mock.patch('crmsh.preflight_check.task.TaskCheck.print_result')
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
+    @mock.patch('crmsh.crash_test.task.TaskCheck.print_result')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
     @mock.patch('os.path.exists')
     def test_check_sbd_no_conf(cls, mock_os_path_exists,
                                mock_utils_msg_info, mock_run):
@@ -526,8 +526,8 @@ Active Resources:
         mock_run.assert_called_once_with()
 
     @classmethod
-    @mock.patch('crmsh.preflight_check.task.TaskCheck.print_result')
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
+    @mock.patch('crmsh.crash_test.task.TaskCheck.print_result')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
     @mock.patch('crmsh.utils.parse_sysconfig')
     @mock.patch('os.path.exists')
     def test_check_sbd_not_configured(cls, mock_os_path_exists, mock_utils_parse_sysconf,
@@ -542,9 +542,9 @@ Active Resources:
         mock_run.assert_called_once_with()
 
     @classmethod
-    @mock.patch('crmsh.preflight_check.task.TaskCheck.print_result')
-    @mock.patch('crmsh.preflight_check.utils.is_valid_sbd')
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
+    @mock.patch('crmsh.crash_test.task.TaskCheck.print_result')
+    @mock.patch('crmsh.crash_test.utils.is_valid_sbd')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
     @mock.patch('crmsh.utils.get_stdout_stderr')
     @mock.patch('crmsh.utils.parse_sysconfig')
     @mock.patch('os.path.exists')
@@ -566,10 +566,10 @@ Active Resources:
         mock_run.assert_called_once_with()
 
     @classmethod
-    @mock.patch('crmsh.preflight_check.task.TaskCheck.print_result')
-    @mock.patch('crmsh.preflight_check.utils.find_candidate_sbd')
-    @mock.patch('crmsh.preflight_check.utils.is_valid_sbd')
-    @mock.patch('crmsh.preflight_check.utils.msg_warn')
+    @mock.patch('crmsh.crash_test.task.TaskCheck.print_result')
+    @mock.patch('crmsh.crash_test.utils.find_candidate_sbd')
+    @mock.patch('crmsh.crash_test.utils.is_valid_sbd')
+    @mock.patch('crmsh.crash_test.utils.msg_warn')
     @mock.patch('crmsh.utils.get_stdout_stderr')
     @mock.patch('crmsh.utils.parse_sysconfig')
     @mock.patch('os.path.exists')
@@ -596,11 +596,11 @@ Active Resources:
         mock_run.assert_called_once_with()
 
     @classmethod
-    @mock.patch('crmsh.preflight_check.task.TaskCheck.print_result')
-    @mock.patch('crmsh.preflight_check.utils.find_candidate_sbd')
-    @mock.patch('crmsh.preflight_check.utils.is_valid_sbd')
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
-    @mock.patch('crmsh.preflight_check.utils.msg_warn')
+    @mock.patch('crmsh.crash_test.task.TaskCheck.print_result')
+    @mock.patch('crmsh.crash_test.utils.find_candidate_sbd')
+    @mock.patch('crmsh.crash_test.utils.is_valid_sbd')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
+    @mock.patch('crmsh.crash_test.utils.msg_warn')
     @mock.patch('crmsh.utils.get_stdout_stderr')
     @mock.patch('crmsh.utils.parse_sysconfig')
     @mock.patch('os.path.exists')
@@ -628,11 +628,11 @@ Active Resources:
         mock_run.assert_called_once_with()
 
     @classmethod
-    @mock.patch('crmsh.preflight_check.task.TaskCheck.print_result')
-    @mock.patch('crmsh.preflight_check.utils.find_candidate_sbd')
-    @mock.patch('crmsh.preflight_check.utils.is_valid_sbd')
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
-    @mock.patch('crmsh.preflight_check.utils.msg_warn')
+    @mock.patch('crmsh.crash_test.task.TaskCheck.print_result')
+    @mock.patch('crmsh.crash_test.utils.find_candidate_sbd')
+    @mock.patch('crmsh.crash_test.utils.is_valid_sbd')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
+    @mock.patch('crmsh.crash_test.utils.msg_warn')
     @mock.patch('crmsh.utils.get_stdout_stderr')
     @mock.patch('crmsh.utils.parse_sysconfig')
     @mock.patch('os.path.exists')
@@ -660,11 +660,11 @@ Active Resources:
         mock_run.assert_called_once_with()
 
     # Test correct_sbd()
-    @mock.patch('crmsh.preflight_check.task.Task.error')
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
+    @mock.patch('crmsh.crash_test.task.Task.error')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
     @mock.patch('crmsh.utils.parse_sysconfig')
     @mock.patch('os.path.exists')
-    @mock.patch('crmsh.preflight_check.main.Context')
+    @mock.patch('crmsh.crash_test.main.Context')
     def test_correct_sbd_exception_no_conf(self, mock_context, mock_os_path_exists,
                                            mock_utils_parse_sysconf, mock_msg_info,
                                            mock_error):
@@ -684,11 +684,11 @@ Active Resources:
         mock_error.assert_called_once_with('Configure file {} not exist!'.
                                            format(config.SBD_CONF))
 
-    @mock.patch('crmsh.preflight_check.task.Task.error')
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
+    @mock.patch('crmsh.crash_test.task.Task.error')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
     @mock.patch('crmsh.utils.parse_sysconfig')
     @mock.patch('os.path.exists')
-    @mock.patch('crmsh.preflight_check.main.Context')
+    @mock.patch('crmsh.crash_test.main.Context')
     def test_correct_sbd_exception_no_dev(self, mock_context, mock_os_path_exists,
                                           mock_utils_parse_sysconf, mock_msg_info,
                                           mock_error):
@@ -709,16 +709,16 @@ Active Resources:
 
     @classmethod
     @mock.patch('builtins.open')
-    @mock.patch('crmsh.preflight_check.task.TaskFixSBD.verify')
+    @mock.patch('crmsh.crash_test.task.TaskFixSBD.verify')
     @mock.patch('tempfile.mkstemp')
     @mock.patch('os.remove')
     @mock.patch('shutil.move')
     @mock.patch('shutil.copymode')
     @mock.patch('shutil.copyfile')
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
     @mock.patch('crmsh.utils.parse_sysconfig')
     @mock.patch('os.path.exists')
-    @mock.patch('crmsh.preflight_check.main.Context')
+    @mock.patch('crmsh.crash_test.main.Context')
     def test_correct_sbd(cls, mock_context, mock_os_path_exists,
                          mock_utils_parse_sysconf, mock_msg_info, mock_copyfile,
                          mock_copymode, mock_move, mock_remove,
@@ -750,14 +750,14 @@ Active Resources:
 
     @classmethod
     @mock.patch('builtins.open')
-    @mock.patch('crmsh.preflight_check.task.Task.error')
+    @mock.patch('crmsh.crash_test.task.Task.error')
     @mock.patch('tempfile.mkstemp')
     @mock.patch('shutil.copymode')
     @mock.patch('shutil.copyfile')
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
     @mock.patch('crmsh.utils.parse_sysconfig')
     @mock.patch('os.path.exists')
-    @mock.patch('crmsh.preflight_check.main.Context')
+    @mock.patch('crmsh.crash_test.main.Context')
     def test_correct_sbd_run_exception(cls, mock_context, mock_os_path_exists,
                                        mock_utils_parse_sysconf, mock_msg_info, mock_copyfile,
                                        mock_copymode, mock_mkstemp, mock_msg_error,
