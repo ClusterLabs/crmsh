@@ -8,7 +8,7 @@ except ImportError:
 from datetime import datetime
 
 from crmsh import utils as crmshutils
-from crmsh.preflight_check import utils, main, config, task
+from crmsh.crash_test import utils, main, config, task
 
 
 class TestTaskKill(TestCase):
@@ -19,7 +19,7 @@ class TestTaskKill(TestCase):
         Global setUp.
         """
 
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
     def setUp(self, mock_msg_info):
         """
         Test setUp.
@@ -49,8 +49,8 @@ class TestTaskKill(TestCase):
         self.assertEqual("/path is not a directory", str(error.exception))
         mock_isdir.assert_called_once_with("/path")
 
-    @mock.patch('crmsh.preflight_check.utils.this_node')
-    @mock.patch('crmsh.preflight_check.utils.now')
+    @mock.patch('crmsh.crash_test.utils.this_node')
+    @mock.patch('crmsh.crash_test.utils.now')
     @mock.patch('os.path.isdir')
     def test_enable_report_looping(self, mock_isdir, mock_now, mock_this_node):
         main.ctx = mock.Mock(report_path="/path", process_name="cpc")
@@ -58,8 +58,8 @@ class TestTaskKill(TestCase):
         mock_this_node.return_value = "node1"
         self.task_kill_inst_loop.enable_report()
 
-    @mock.patch('crmsh.preflight_check.utils.this_node')
-    @mock.patch('crmsh.preflight_check.utils.now')
+    @mock.patch('crmsh.crash_test.utils.this_node')
+    @mock.patch('crmsh.crash_test.utils.now')
     @mock.patch('os.path.isdir')
     def test_enable_report(self, mock_isdir, mock_now, mock_this_node):
         main.ctx = mock.Mock(report_path="/path", process_name="cpc")
@@ -77,7 +77,7 @@ Expected State:    a) sbd process restarted
         res = self.task_kill_inst.header()
         self.assertEqual(res, expected_res)
 
-    @mock.patch('crmsh.preflight_check.utils.json_dumps')
+    @mock.patch('crmsh.crash_test.utils.json_dumps')
     def test_to_json(self, mock_dumps):
         self.task_kill_inst.build_base_result = mock.Mock()
         self.task_kill_inst.result = {}
@@ -92,7 +92,7 @@ Expected State:    a) sbd process restarted
 
     @mock.patch('os.fsync')
     @mock.patch('builtins.open', create=True)
-    @mock.patch('crmsh.preflight_check.task.TaskKill.header')
+    @mock.patch('crmsh.crash_test.task.TaskKill.header')
     def test_to_report(self, mock_header, mock_open_file, mock_fsync):
         mock_header.return_value = "#### header"
         self.task_kill_inst.report = True
@@ -111,8 +111,8 @@ Expected State:    a) sbd process restarted
             mock.call("explain\n")
             ])
 
-    @mock.patch('crmsh.preflight_check.utils.get_process_status')
-    @mock.patch('crmsh.preflight_check.task.Task.task_pre_check')
+    @mock.patch('crmsh.crash_test.utils.get_process_status')
+    @mock.patch('crmsh.crash_test.task.Task.task_pre_check')
     def test_pre_check(self, mock_pre_check, mock_status):
         mock_status.return_value = (False, 100)
         with self.assertRaises(task.TaskError) as err:
@@ -121,12 +121,12 @@ Expected State:    a) sbd process restarted
         mock_pre_check.assert_called_once_with()
         mock_status.assert_called_once_with("sbd")
 
-    @mock.patch('crmsh.preflight_check.task.TaskKill.process_monitor')
-    @mock.patch('crmsh.preflight_check.task.Task.fence_action_monitor')
+    @mock.patch('crmsh.crash_test.task.TaskKill.process_monitor')
+    @mock.patch('crmsh.crash_test.task.Task.fence_action_monitor')
     @mock.patch('threading.Thread')
-    @mock.patch('crmsh.preflight_check.task.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.task.Task.info')
-    @mock.patch('crmsh.preflight_check.utils.get_process_status')
+    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.Task.info')
+    @mock.patch('crmsh.crash_test.utils.get_process_status')
     def test_run(self, mock_status, mock_info, mock_run, mock_thread, mock_fence_monitor, mock_process_monitor):
         mock_status.side_effect = [(False, -1), (True, 100)]
         mock_thread_fence_inst = mock.Mock()
@@ -171,8 +171,8 @@ Expected State:    a) sbd process restarted
         self.task_kill_inst.thread_stop_event.set.assert_called_once_with()
 
     @mock.patch('time.sleep')
-    @mock.patch('crmsh.preflight_check.task.Task.info')
-    @mock.patch('crmsh.preflight_check.utils.get_process_status')
+    @mock.patch('crmsh.crash_test.task.Task.info')
+    @mock.patch('crmsh.crash_test.utils.get_process_status')
     def test_process_monitor(self, mock_status, mock_info, mock_sleep):
         self.task_kill_inst.thread_stop_event = mock.Mock()
         self.task_kill_inst.thread_stop_event.is_set.side_effect = [False, False]
@@ -202,8 +202,8 @@ class TestTaskCheck(TestCase):
         Global setUp.
         """
 
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
-    @mock.patch('crmsh.preflight_check.utils.now')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
+    @mock.patch('crmsh.crash_test.utils.now')
     def setUp(self, mock_now, mock_msg_info):
         """
         Test setUp.
@@ -224,9 +224,9 @@ class TestTaskCheck(TestCase):
         Global tearDown.
         """
 
-    @mock.patch('crmsh.preflight_check.utils.MyLoggingFormatter')
-    @mock.patch('crmsh.preflight_check.utils.get_handler')
-    @mock.patch('crmsh.preflight_check.utils.manage_handler')
+    @mock.patch('crmsh.crash_test.utils.MyLoggingFormatter')
+    @mock.patch('crmsh.crash_test.utils.get_handler')
+    @mock.patch('crmsh.crash_test.utils.manage_handler')
     def test_to_stdout(self, mock_manage_handler, mock_get_handler, mock_myformatter):
         mock_manage_handler.return_value.__enter__ = mock.Mock()
         mock_manage_handler.return_value.__exit__ = mock.Mock()
@@ -269,7 +269,7 @@ class TestTaskCheck(TestCase):
             mock.call(30, 'warn message', extra={'timestamp': '  '})
             ])
 
-    @mock.patch('crmsh.preflight_check.utils.json_dumps')
+    @mock.patch('crmsh.crash_test.utils.json_dumps')
     def test_to_json(self, mock_dumps):
         self.task_check_inst.build_base_result = mock.Mock()
         self.task_check_inst.result = {}
@@ -305,7 +305,7 @@ class TestTaskSplitBrain(TestCase):
         Global setUp.
         """
 
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
     def setUp(self, mock_msg_info):
         """
         Test setUp.
@@ -335,16 +335,16 @@ Fence timeout:     60
         res = self.task_sp_inst.header()
         self.assertEqual(res, expected_res)
 
-    @mock.patch('crmsh.preflight_check.utils.json_dumps')
-    @mock.patch('crmsh.preflight_check.task.Task.build_base_result')
+    @mock.patch('crmsh.crash_test.utils.json_dumps')
+    @mock.patch('crmsh.crash_test.task.Task.build_base_result')
     def test_to_json(self, mock_result, mock_json):
         self.task_sp_inst.result = {}
         self.task_sp_inst.to_json()
         mock_result.assert_called_once_with()
         mock_json.assert_called_once_with()
 
-    @mock.patch('crmsh.preflight_check.task.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.task.Task.task_pre_check')
+    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.Task.task_pre_check')
     def test_pre_check_no_cmd(self, mock_pre_check, mock_run):
         mock_run.return_value = (1, None, "error")
         with self.assertRaises(task.TaskError) as err:
@@ -353,9 +353,9 @@ Fence timeout:     60
         mock_run.assert_called_once_with("which iptables")
         mock_pre_check.assert_called_once_with()
 
-    @mock.patch('crmsh.preflight_check.utils.online_nodes')
-    @mock.patch('crmsh.preflight_check.task.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.task.Task.task_pre_check')
+    @mock.patch('crmsh.crash_test.utils.online_nodes')
+    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.Task.task_pre_check')
     def test_pre_check_error(self, mock_pre_check, mock_run, mock_online_nodes):
         mock_run.return_value = (0, None, None)
         mock_online_nodes.return_value = ["node1"]
@@ -365,7 +365,7 @@ Fence timeout:     60
         mock_run.assert_called_once_with("which iptables")
         mock_online_nodes.assert_called_once_with()
 
-    @mock.patch('crmsh.preflight_check.task.crmshutils.service_is_active')
+    @mock.patch('crmsh.crash_test.task.crmshutils.service_is_active')
     def test_do_block_firewalld_disactive(self, mock_active):
         mock_active.return_value = False
         self.task_sp_inst.do_block_iptables = mock.Mock()
@@ -376,7 +376,7 @@ Fence timeout:     60
         self.task_sp_inst.do_block_iptables.assert_called_once_with()
         self.task_sp_inst.un_block.assert_called_once_with()
 
-    @mock.patch('crmsh.preflight_check.task.crmshutils.service_is_active')
+    @mock.patch('crmsh.crash_test.task.crmshutils.service_is_active')
     def test_do_block_firewalld_active(self, mock_active):
         mock_active.return_value = True
         self.task_sp_inst.do_block_firewalld = mock.Mock()
@@ -387,7 +387,7 @@ Fence timeout:     60
         self.task_sp_inst.do_block_firewalld.assert_called_once_with()
         self.task_sp_inst.un_block.assert_called_once_with()
 
-    @mock.patch('crmsh.preflight_check.utils.corosync_port_list')
+    @mock.patch('crmsh.crash_test.utils.corosync_port_list')
     def test_do_block_firewalld_error(self, mock_port_list):
         mock_port_list.return_value = []
         with self.assertRaises(task.TaskError) as err:
@@ -395,9 +395,9 @@ Fence timeout:     60
         self.assertEqual("Can not get corosync's port", str(err.exception))
         mock_port_list.assert_called_once_with()
 
-    @mock.patch('crmsh.preflight_check.task.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.task.Task.info')
-    @mock.patch('crmsh.preflight_check.utils.corosync_port_list')
+    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.Task.info')
+    @mock.patch('crmsh.crash_test.utils.corosync_port_list')
     def test_do_block_firewalld(self, mock_port_list, mock_info, mock_run):
         mock_port_list.return_value = ["1234"]
         self.task_sp_inst.do_block_firewalld()
@@ -405,10 +405,10 @@ Fence timeout:     60
         mock_info.assert_called_once_with("Trying to temporarily block port 1234")
         mock_run.assert_called_once_with(config.REMOVE_PORT.format(port=1234))
 
-    @mock.patch('crmsh.preflight_check.task.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.task.crmshutils.get_iplist_from_name')
-    @mock.patch('crmsh.preflight_check.task.Task.info')
-    @mock.patch('crmsh.preflight_check.utils.peer_node_list')
+    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.crmshutils.get_iplist_from_name')
+    @mock.patch('crmsh.crash_test.task.Task.info')
+    @mock.patch('crmsh.crash_test.utils.peer_node_list')
     def test_do_block_iptables(self, mock_peer_list, mock_info, mock_get_iplist, mock_run):
         mock_peer_list.return_value = ["node1", "node2"]
         mock_get_iplist.side_effect = [["10.10.10.1", "20.20.20.1"], ["10.10.10.2", "20.20.20.2"]]
@@ -429,20 +429,20 @@ Fence timeout:     60
             mock.call(config.BLOCK_IP.format(action='I', peer_ip="20.20.20.2"))
             ])
 
-    @mock.patch('crmsh.preflight_check.task.TaskSplitBrain.un_block_firewalld')
+    @mock.patch('crmsh.crash_test.task.TaskSplitBrain.un_block_firewalld')
     def test_un_block_firewalld_enabled(self, mock_unblock_firewalld):
         self.task_sp_inst.firewalld_enabled = True
         self.task_sp_inst.un_block()
         mock_unblock_firewalld.assert_called_once_with()
 
-    @mock.patch('crmsh.preflight_check.task.TaskSplitBrain.un_block_iptables')
+    @mock.patch('crmsh.crash_test.task.TaskSplitBrain.un_block_iptables')
     def test_un_block(self, mock_unblock_iptables):
         self.task_sp_inst.firewalld_enabled = False
         self.task_sp_inst.un_block()
         mock_unblock_iptables.assert_called_once_with()
 
-    @mock.patch('crmsh.preflight_check.task.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.task.Task.info')
+    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.Task.info')
     def test_un_block_firewalld(self, mock_info, mock_run):
         self.task_sp_inst.ports = ["5405", "5407"]
         self.task_sp_inst.un_block_firewalld()
@@ -452,9 +452,9 @@ Fence timeout:     60
             mock.call(config.ADD_PORT.format(port=5407))
             ])
 
-    @mock.patch('crmsh.preflight_check.task.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.task.crmshutils.get_iplist_from_name')
-    @mock.patch('crmsh.preflight_check.task.Task.info')
+    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.crmshutils.get_iplist_from_name')
+    @mock.patch('crmsh.crash_test.task.Task.info')
     def test_un_block_iptables(self, mock_info, mock_get_iplist, mock_run):
         mock_get_iplist.side_effect = [["10.10.10.1", "20.20.20.1"], ["10.10.10.2", "20.20.20.2"]]
         self.task_sp_inst.peer_nodelist = ["node1", "node2"]
@@ -474,7 +474,7 @@ Fence timeout:     60
             mock.call(config.BLOCK_IP.format(action='D', peer_ip="20.20.20.2"))
             ])
 
-    @mock.patch('crmsh.preflight_check.task.Task.fence_action_monitor')
+    @mock.patch('crmsh.crash_test.task.Task.fence_action_monitor')
     @mock.patch('threading.Thread')
     def test_run(self, mock_thread, mock_monitor):
         mock_thread_inst = mock.Mock()
@@ -500,7 +500,7 @@ class TestFence(TestCase):
         Global setUp.
         """
 
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
     def setUp(self, mock_msg_info):
         """
         Test setUp.
@@ -530,16 +530,16 @@ Fence timeout:     60
         res = self.task_fence_inst.header()
         self.assertEqual(res, expected_res)
 
-    @mock.patch('crmsh.preflight_check.utils.json_dumps')
-    @mock.patch('crmsh.preflight_check.task.Task.build_base_result')
+    @mock.patch('crmsh.crash_test.utils.json_dumps')
+    @mock.patch('crmsh.crash_test.task.Task.build_base_result')
     def test_to_json(self, mock_result, mock_json):
         self.task_fence_inst.result = {}
         self.task_fence_inst.to_json()
         mock_result.assert_called_once_with()
         mock_json.assert_called_once_with()
 
-    @mock.patch('crmsh.preflight_check.task.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.task.Task.task_pre_check')
+    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.Task.task_pre_check')
     def test_pre_check_no_cmd(self, mock_pre_check, mock_run):
         mock_run.return_value = (1, None, "error")
         with self.assertRaises(task.TaskError) as err:
@@ -548,9 +548,9 @@ Fence timeout:     60
         mock_run.assert_called_once_with("which crm_node")
         mock_pre_check.assert_called_once_with()
 
-    @mock.patch('crmsh.preflight_check.utils.check_node_status')
-    @mock.patch('crmsh.preflight_check.task.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.task.Task.task_pre_check')
+    @mock.patch('crmsh.crash_test.utils.check_node_status')
+    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.Task.task_pre_check')
     def test_pre_check_error(self, mock_pre_check, mock_run, mock_node_status):
         mock_run.side_effect = [(0, None, None), (0, None, None), (0, None, None)]
         mock_node_status.return_value = False
@@ -564,10 +564,10 @@ Fence timeout:     60
             ])
         mock_node_status.assert_called_once_with("node1", "member")
 
-    @mock.patch('crmsh.preflight_check.task.Task.fence_action_monitor')
+    @mock.patch('crmsh.crash_test.task.Task.fence_action_monitor')
     @mock.patch('threading.Thread')
-    @mock.patch('crmsh.preflight_check.task.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.preflight_check.task.Task.info')
+    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.Task.info')
     def test_run(self, mock_info, mock_run, mock_thread, mock_monitor):
         mock_thread_inst = mock.Mock()
         mock_thread.return_value = mock_thread_inst
@@ -577,8 +577,8 @@ Fence timeout:     60
         mock_thread.assert_called_once_with(target=mock_monitor)
         mock_thread_inst.start.assert_called_once_with()
 
-    @mock.patch('crmsh.preflight_check.task.Task.info')
-    @mock.patch('crmsh.preflight_check.utils.this_node')
+    @mock.patch('crmsh.crash_test.task.Task.info')
+    @mock.patch('crmsh.crash_test.utils.this_node')
     def test_wait_this_node(self, mock_this_node, mock_info):
         mock_this_node.return_value = "node1"
         self.task_fence_inst.fence_finish_event = mock.Mock()
@@ -591,8 +591,8 @@ Fence timeout:     60
         mock_info.assert_called_once_with("Waiting 60s for self reboot...")
         self.task_fence_inst.fence_finish_event.wait.assert_called_once_with(60)
 
-    @mock.patch('crmsh.preflight_check.task.Task.info')
-    @mock.patch('crmsh.preflight_check.utils.this_node')
+    @mock.patch('crmsh.crash_test.task.Task.info')
+    @mock.patch('crmsh.crash_test.utils.this_node')
     def test_wait(self, mock_this_node, mock_info):
         mock_this_node.return_value = "node2"
         self.task_fence_inst.fence_finish_event = mock.Mock()
@@ -616,8 +616,8 @@ class TestTask(TestCase):
         Global setUp.
         """
 
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
-    @mock.patch('crmsh.preflight_check.utils.now')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
+    @mock.patch('crmsh.crash_test.utils.now')
     def setUp(self, mock_now, mock_info):
         """
         Test setUp.
@@ -647,7 +647,7 @@ class TestTask(TestCase):
     def test_to_json(self):
         self.task_inst.to_json()
 
-    @mock.patch('crmsh.preflight_check.task.crmshutils.service_is_active')
+    @mock.patch('crmsh.crash_test.task.crmshutils.service_is_active')
     def test_task_pre_check_exception(self, mock_active):
         mock_active.return_value = False
         with self.assertRaises(task.TaskError) as err:
@@ -655,7 +655,7 @@ class TestTask(TestCase):
         self.assertEqual("Cluster not running!", str(err.exception))
         mock_active.assert_called_once_with("pacemaker.service")
 
-    @mock.patch('crmsh.preflight_check.task.crmshutils.service_is_active')
+    @mock.patch('crmsh.crash_test.task.crmshutils.service_is_active')
     def test_task_pre_check_exception_no_fence(self, mock_active):
         mock_active.return_value = True
         self.task_inst.get_fence_info = mock.Mock()
@@ -666,34 +666,34 @@ class TestTask(TestCase):
         mock_active.assert_called_once_with("pacemaker.service")
         self.task_inst.get_fence_info.assert_called_once_with()
 
-    @mock.patch('crmsh.preflight_check.utils.FenceInfo')
+    @mock.patch('crmsh.crash_test.utils.FenceInfo')
     def test_get_fence_info(self, mock_fence_info):
         mock_fence_info_inst = mock.Mock()
         mock_fence_info.return_value = mock_fence_info_inst
         self.task_inst.get_fence_info()
 
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
     def test_info(self, mock_info):
         self.task_inst.msg_append = mock.Mock()
         self.task_inst.info("info message")
         self.task_inst.msg_append.assert_called_once_with("info", "info message")
         mock_info.assert_called_once_with("info message", to_stdout=True)
 
-    @mock.patch('crmsh.preflight_check.utils.msg_warn')
+    @mock.patch('crmsh.crash_test.utils.msg_warn')
     def test_warn(self, mock_warn):
         self.task_inst.msg_append = mock.Mock()
         self.task_inst.warn("warn message")
         self.task_inst.msg_append.assert_called_once_with("warn", "warn message")
         mock_warn.assert_called_once_with("warn message", to_stdout=True)
 
-    @mock.patch('crmsh.preflight_check.utils.msg_error')
+    @mock.patch('crmsh.crash_test.utils.msg_error')
     def test_error(self, mock_error):
         self.task_inst.msg_append = mock.Mock()
         self.task_inst.error("error message")
         self.task_inst.msg_append.assert_called_once_with("error", "error message")
         mock_error.assert_called_once_with("error message", to_stdout=True)
 
-    @mock.patch('crmsh.preflight_check.utils.now')
+    @mock.patch('crmsh.crash_test.utils.now')
     def test_msg_append(self, mock_now):
         self.task_inst.to_json = mock.Mock()
         self.task_inst.to_report = mock.Mock()
@@ -711,7 +711,7 @@ class TestTask(TestCase):
         }
         self.assertDictEqual(expected_result, self.task_inst.result)
 
-    @mock.patch('crmsh.preflight_check.task.crmshutils.ask')
+    @mock.patch('crmsh.crash_test.utils.warning_ask')
     def test_print_header(self, mock_ask):
         self.task_inst.header = mock.Mock()
         self.task_inst.info = mock.Mock()
@@ -721,20 +721,20 @@ class TestTask(TestCase):
             self.task_inst.print_header()
 
         self.task_inst.header.assert_called_once_with()
-        mock_ask.assert_called_once_with("Run?")
+        mock_ask.assert_called_once_with(task.Task.REBOOT_WARNING)
         self.task_inst.info.assert_called_once_with("Testcase cancelled")
 
-    @mock.patch('crmsh.preflight_check.utils.str_to_datetime')
+    @mock.patch('crmsh.crash_test.utils.str_to_datetime')
     @mock.patch('time.sleep')
-    @mock.patch('crmsh.preflight_check.task.Task.info')
-    @mock.patch('crmsh.preflight_check.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.Task.info')
+    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
     def test_fence_action_monitor(self, mock_run, mock_info, mock_sleep, mock_datetime):
         self.task_inst.thread_stop_event = mock.Mock()
         self.task_inst.thread_stop_event.is_set.side_effect = [False, False, False, False]
         self.task_inst.fence_start_event = mock.Mock()
         self.task_inst.fence_finish_event = mock.Mock()
         output = "Pending Fencing Actions:\n  * reboot of 15sp2-2 pending: client=pacemaker-controld.2430, origin=15sp2-1"
-        output2 = "Node 15sp2-2 last fenced at: Tue Jan 19 16:08:37 2021"
+        output2 = "Node 15sp2-2 last kicked at: Tue Jan 19 16:08:37 2021"
         mock_run.side_effect = [(1, None, None), (0, output, None), (1, None, None), (0, output2, None)]
         self.task_inst.timestamp = "2021/01/19 16:08:24"
         mock_datetime.side_effect = [
@@ -766,13 +766,13 @@ class TestTask(TestCase):
 class TestFixSBD(TestCase):
     """
     Class to test TaskFixSBD of task.py
-    All tested in test_preflight_check.py except verify()
+    All tested in test_crash_test.py except verify()
     """
 
     @mock.patch('builtins.open')
     @mock.patch('os.path.isfile')
     @mock.patch('tempfile.mkstemp')
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
     def setUp(self, mock_msg_info, mock_mkstemp, mock_isfile, mock_open):
         """
         Test setUp.
@@ -785,7 +785,7 @@ class TestFixSBD(TestCase):
                                                 format(dev)).return_value
         mock_mkstemp.side_effect = [(1, bak), (2, edit)]
 
-        self.task_fixsbd = task.TaskFixSBD(dev, yes=False)
+        self.task_fixsbd = task.TaskFixSBD(dev, force=False)
         mock_msg_info.assert_called_once_with('Replace SBD_DEVICE with candidate {}'.
                                               format(dev), to_stdout=False)
 
@@ -798,7 +798,7 @@ class TestFixSBD(TestCase):
     @mock.patch('os.fsync')
     @mock.patch('builtins.open')
     @mock.patch('os.path.isfile')
-    @mock.patch('crmsh.preflight_check.utils.msg_info')
+    @mock.patch('crmsh.crash_test.utils.msg_info')
     def test_verify_succeed(self, mock_msg_info, mock_isfile, mock_open, mock_fsync):
         """
         Test verify successful.
