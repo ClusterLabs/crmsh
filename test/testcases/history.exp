@@ -376,7 +376,6 @@ d1
 .INP: timeframe
 WARNING: 32: This command 'timeframe' is deprecated, please use 'limit'
 .INP: session save _crmsh_regtest
-.EXT mkdir -p /var/cache/crm/history-root/session/_crmsh_regtest
 .INP: session load _crmsh_regtest
 .INP: session
 current session: _crmsh_regtest
