@@ -18,6 +18,7 @@ import ipaddress
 import argparse
 import random
 import string
+from pathlib import Path
 from contextlib import contextmanager, closing
 from stat import S_ISBLK
 from . import config
@@ -588,14 +589,14 @@ def safe_close_w(f):
 
 
 def is_path_sane(name):
-    if re.search(r"['`#*?$\[\]]", name):
+    if re.search(r"['`#*?$\[\];]", name):
         common_err("%s: bad path" % name)
         return False
     return True
 
 
 def is_filename_sane(name):
-    if re.search(r"['`/#*?$\[\]]", name):
+    if re.search(r"['`/#*?$\[\];]", name):
         common_err("%s: bad filename" % name)
         return False
     return True
@@ -724,10 +725,11 @@ def lock(lockdir):
             rmdir_r(os.path.join(lockdir, _LOCKDIR))
 
 
-def mkdirp(d, mode=0o777):
-    if os.path.isdir(d):
-        return True
-    os.makedirs(d, mode=mode)
+def mkdirp(directory, mode=0o777, parents=True, exist_ok=True):
+    """
+    Same behavior as the POSIX mkdir -p command
+    """
+    Path(directory).mkdir(mode, parents, exist_ok)
 
 
 def pipe_cmd_nosudo(cmd):
