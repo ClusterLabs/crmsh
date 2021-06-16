@@ -74,7 +74,7 @@ def correct_sbd(context, can):
     Only support one path SBD_DEVICE in the current version
     """
 
-    task_inst = task.TaskFixSBD(can, context.yes)
+    task_inst = task.TaskFixSBD(can, context.force)
     try:
         task_inst.pre_check()
         task_inst.print_header()
@@ -92,7 +92,7 @@ def check(context):
     """
     if context.cluster_check:
         check_cluster()
-    print()
+        print()
 
 
 def check_environment():

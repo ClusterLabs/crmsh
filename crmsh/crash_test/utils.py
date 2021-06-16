@@ -299,3 +299,15 @@ def find_candidate_sbd(dev):
         i += 1
 
     return candidates[index]
+
+
+def warning_ask(warn_string):
+    from . import main
+    if main.ctx.force:
+        return False
+        
+    try:
+        ans = input(CYELLOW + warn_string + CEND)
+    except EOFError:
+        return False
+    return True if ans == "Yes" else False
