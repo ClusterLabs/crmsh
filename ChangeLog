@@ -1,3 +1,138 @@
+* Thu Jun 17 2021 Xin Liang <XLiang@suse.com>
+- Release 4.3.1
+- Fix: history: use Path.mkdir instead of mkdir command(bsc#1179999)
+- Dev: doc: replace preflight check doc as crash test doc
+- Dev: crash_test: Add big warnings to have users' attention to potential failover
+- Dev: crash_test: rename preflight_check as crash_test
+- Fix: bootstrap: update sbd watchdog timeout when using diskless SBD with qdevice(bsc#1184465)
+- Dev: utils: allow configure link-local ipv6 address
+- Dev: bootstrap: return when not specify ocfs2 device on interactive mode
+- Fix: parse: shouldn't allow property setting with an empty value(bsc#1185423)
+- Dev: crm.8.adoc: remove redundant help message
+- Fix: help: show help message from argparse(bsc#1175982)
+- Dev: ocfs2: add ocfs2.OCFS2Manager to manage ocfs2 configure process
+- Dev: watchdog: split class Watchdog into watchdog.py from bootstrap.py
+- Dev: bootstrap: raise exception and execute status_done on success
+- Fix: bootstrap: add sbd via bootstrap stage on an existing cluster (bsc#1181906)
+- Fix: bootstrap: change StrictHostKeyChecking=no as a constants(bsc#1185437)
+- Dev: cibconfig: resolve TypeError for fencing-topology tag
+- Dev: bootstrap: change status_long with contextmanager
+- Dev: bootstrap: disable unnecessary warnings (bsc#1178118)
+- Fix: bootstrap: sync corosync.conf before finished joining(bsc#1183359)
+- Dev: add "crm corosync status qdevice" sub-command
+- Dev: ui_cluster: add qdevice help info
+- Dev: ui_cluster: enable/disable corosync-qdevice.service
+- Fix: bootstrap: parse space in sbd device correctly(bsc#1183883)
+- Dev: preflight_check: move preflight_check directory into crmsh
+- Fix: bootstrap: get the peer node name correctly (bsc#1183654)
+- Fix: update verion and author (bsc#1183689)
+- Dev: bootstrap: enable configuring qdevice on interactive mode
+- Fix: ui_resource: change return code and error to warning for some unharmful actions(bsc#1180332)
+- Dev: README: change the build status link in README
+- Dev: lock: change lock directory under /run
+- Fix: bootstrap: raise warning when configuring diskless SBD with node's count less than 3(bsc#1181907)
+- Fix: bootstrap: Adjust qdevice configure/remove process to avoid race condition due to quorum lost(bsc#1181415)
+- Dev: utils: remove unused utils.cluster_stack and its related codes
+- Dev: cibconfig: remove related code about detecting crm_diff support --no-verion
+- Fix: ui_configure: raise error when params not exist(bsc#1180126)
+- Dev: doc: remove doc for crm node status
+- Dev: ui_node: remove status subcommand
+- Fix: hb_report: walk through hb_report process under hacluster(CVE-2020-35459, bsc#1179999; CVE-2021-3020, bsc#1180571)
+- Fix: bootstrap: setup authorized ssh access for hacluster(CVE-2020-35459, bsc#1179999; CVE-2021-3020, bsc#1180571)
+
+* Fri Feb 19 2021 Xin Liang <XLiang@suse.com>
+- Release 4.3.0
+- Dev: doc: add analyze and preflight_check help messages in doc
+- Dev: analyze: Add analyze sublevel and put preflight_check in it
+- Dev: utils: change default file mod as 644 for str2file function
+- Dev: hb_report: Detect if any ocfs2 partitions exist
+- Dev: lock: give more specific error message when raise ClaimLockError
+- Fix: Replace mktemp() to mkstemp() for security
+- Dev: unit test cases for preflight check ASR SBD feature utils.py
+- Fix: Remove the duplicate --cov-report html in tox.
+- Dev: unit test cases for preflight check ASR SBD feature check.py and task.py
+- Fix: fix some lint issues.
+- Fix: Replace utils.msg_info to task.info
+- Fix: Solve a circular import error of utils.py
+- Fix: hb_report: run lsof with specific ocfs2 device(bsc#1180688)
+- Dev: corosync: change the permission of corosync.conf to 644
+- Fix: preflight_check: task: raise error when report_path isn't a directory
+- Fix: bootstrap: Use class Watchdog to simplify watchdog config(bsc#1154927, bsc#1178869)
+- Dev: Polish the sbd feature.
+- Dev: Replace -f with -c and run check when no parameter provide.
+- Fix: Fix the yes option not working
+- Fix: Remove useless import and show help when no input.
+- Dev: Correct SBD device id inconsistenc during ASR
+- Fix: completers: return complete start/stop resource id list correctly(bsc#1180137)
+- Dev: Makefile.am: change makefile to integrate preflight_check
+- Medium: integrate preflight_check into crmsh
+- Fix: bootstrap: make sure sbd device UUID was the same between nodes(bsc#1178454)
+- Fix: utils: skip if no netmask in the result of ip -o addr show(bsc#1180421)
+- Fix: bootstrap: add /etc/modules-load.d/watchdog.conf into csync.cfg(bsc#1180424)
+- Low: bootstrap: make invoke return specific error(bsc#1177023)
+- Dev: test: add timeout-minutes to each test job
+- Fix: bootstrap: Refactor join_lock.py for more generic using purpose
+- Dev: bootstrap: use ping to test host is reachable before joining
+- Dev: unittset: adjust unit test code for setup_passwordless_with_other_nodes function
+- Low: bootstrap: check cluster was running on init node
+- Fix: bootstrap: use class JoinLock to manage lock in parallel join(bsc#1175976)
+
+* Tue Dec 1 2020 Xin Liang <XLiang@suse.com>
+- Release 4.2.1
+- Fix: utils: improve disable_service and enable_service function(bsc#1178701)
+- Fix: bootstrap: disable corosync-qdevice if not configured(bsc#1178701)
+- Low: bootstrap: should include /etc/sysconfig/nfs into csync2.cfg(bsc#1178373)
+- Low: bootstrap: minor change for _get_sbd_device_interactive function(bsc#1178333)
+- Fix: hb_report: collect corosync.log if it defined in config file(bsc#1148874)
+- Fix: ui_cluster: check service status while start/stop(bsc#1177980)
+- Fix: bootstrap: Stop hawk service when removing node(bsc#1175708)
+- Fix: cibverify: give warning if crm_verify return warning(bsc#1122391)
+- Fix: parse: convert score to kind for rsc_order configure(bsc#1122391)
+- Fix: bootstrap: remove specific configured address while removing node(bsc#1165644)
+- Fix: hb_report: fix sanitize functionality(bsc#1163581)
+- FIx start_delay with start-delay
+- fix on_fail should be on-fail
+- Low: config: Try to handle configparser.MissingSectionHeaderError while reading config file
+- Medium: ui_configure: Obscure sensitive data by default(bsc#1163581)
+- Fix: hb_report: collect archived logs(bsc#1148873)
+- Low: bootstrap: check whether sbd package installed
+- Low: bootstrap: Improve qdevice configure process * More reasonable naming for variables * More function docstrings * Move function to more reasonable location * Create functions to integrate similar functions inside one * Change big function to small one, more easier for unit test, like: * Refactor functions * Create utils.cluster_run_cmd function to avoid using crm cluster run directly in code
+- Low: bootstrap: swap keys with other nodes when join_ssh(bsc#1176178)
+- Fix: bootstrap: revert ssh_merge function for compatibility(bsc#1175057)
+- Fix: bootstrap: adjust sbd config process to fix bug on sbd stage(bsc#1175057)
+- Low: corosync: handle the return code of corosync-quorumtool correctly(bsc#1174588)
+- Low: ui_corosync: copy ssh key to qnetd while detect need password(bsc#1174385)
+- Low: hb_report: Fix collecting of binary data (bsc#1166962)
+- High: bootstrap: ssh key configuration improvement(bsc#1169581)
+- High: bootstrap: bootstrap network improvement
+- Revert "Fix: bootstrap: crmsh use its own specific ssh key(bsc#1169581)"
+- Low: cibconfig: Avoid adding the ID attribute to select_* nodes
+- High: bootstrap: using class SBDManager for sbd configuration and management(bsc#1170037, bsc#1170999)
+- Fix: bootstrap: crmsh use its own specific ssh key(bsc#1169581)
+- Low: bootstrap: change ha-cluster-bootstrap log path
+- Low: ui_corosync: print cluster nodes while getting quorum and qnetd status
+- Low: bootstrap: exit with proper error messages when ssh return failed
+- Low: ui_cluster: use argparse choices to validate -i and -t option
+- Low: corosync: Use with statement  to open file
+- Fix: ui_resource: refresh <Tab> should complete resource first(bsc#1167220)
+- Low: ui_context: give warning if using alias command
+- Low: bootstrap: Simplify bootstrap context
+- Low: corosync: Improve qdevice configure process
+- Fix: doc: Update man page about completion example of crm resource(bsc#1166644)
+- Fix: bootstrap: Change condition to add stonith-sbd resource(bsc#1166967)
+- Fix: bootstrap: use csync2 '-f' option correctly(bsc#1166684)
+- Low: setup.py: update crmsh's version
+- Fix: crmsh.spec.in: enable completion of crm command(bsc#1166329)
+- Low: crmsh.spec.in: sync contents from NHF's crmsh.spec file
+- Low: utils: update detect_cloud pattern for aws
+- Low: doc: update configure.set documentation
+- Feature: configure: make configure.set to update operation
+- Low: replace configparser.SafeConfigParser as configparser.ConfigParser
+- Fix: ui_cluster: Not allowed space value for option (bsc#1141976)
+- Fix: crmsh.spec: using mktemp to create tmp file(bsc#1154163)
+- Fix: bootstrap: set placement-strategy value as "default"(bsc#1129462)
+- Fix: hb_report: disable dump all tasks stack into dmesg(bsc#1158060)
+
 * Mon Dec 23 2019 Xin Liang <XLiang@suse.com> and many others
 - Release 4.2.0
 - Merge pull request #464 from liangxin1300/2019_crmsh_qdevice_qnetd
