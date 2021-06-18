@@ -113,8 +113,9 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         """
         Raise error when ocfs2 device is the same with sbd device
         """
+        from . import sbd
         if utils.service_is_enabled("sbd.service"):
-            sbd_device_list = bootstrap.SBDManager.get_sbd_device_from_config()
+            sbd_device_list = sbd.SBDManager.get_sbd_device_from_config()
             for dev in self.ocfs2_devices:
                 if dev in sbd_device_list:
                     self._dynamic_raise_error("{} cannot be the same with SBD device".format(dev))
