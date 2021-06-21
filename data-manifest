@@ -196,6 +196,7 @@ test/unittests/test_parallax.py
 test/unittests/test_parse.py
 test/unittests/test_ratrace.py
 test/unittests/test_report.py
+test/unittests/test_sbd.py
 test/unittests/test_scripts.py
 test/unittests/test_time.py
 test/unittests/test_ui_cluster.py

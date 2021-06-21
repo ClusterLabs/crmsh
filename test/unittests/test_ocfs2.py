@@ -161,7 +161,7 @@ class TestOCFS2Manager(unittest.TestCase):
         self.assertEqual("error messages", str(err.exception))
 
     @mock.patch('crmsh.ocfs2.OCFS2Manager._dynamic_raise_error')
-    @mock.patch('crmsh.bootstrap.SBDManager.get_sbd_device_from_config')
+    @mock.patch('crmsh.sbd.SBDManager.get_sbd_device_from_config')
     @mock.patch('crmsh.utils.service_is_enabled')
     def test_check_sbd_and_ocfs2_dev(self, mock_enabled, mock_get_device, mock_error):
         mock_enabled.return_value = True
