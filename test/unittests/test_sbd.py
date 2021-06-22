@@ -207,19 +207,21 @@ class TestSBDManager(unittest.TestCase):
             ])
         mock_error.assert_called_once_with("Failed to initialize SBD device /dev/sdc1: error")
 
+    @mock.patch('crmsh.utils.detect_virt')
     @mock.patch('crmsh.bootstrap.csync2_update')
     @mock.patch('crmsh.utils.sysconfig_set')
     @mock.patch('crmsh.sbd.SBDManager._determine_sbd_watchdog_timeout')
     @mock.patch('shutil.copyfile')
-    def test_update_configuration(self, mock_copy, mock_determine, mock_sysconfig, mock_update):
+    def test_update_configuration(self, mock_copy, mock_determine, mock_sysconfig, mock_update, mock_detect):
         self.sbd_inst._sbd_devices = ["/dev/sdb1", "/dev/sdc1"]
         self.sbd_inst._watchdog_inst = mock.Mock(watchdog_device_name="/dev/watchdog")
+        mock_detect.return_value = True
 
         self.sbd_inst._sbd_watchdog_timeout = 30
         self.sbd_inst._update_configuration()
 
         mock_copy.assert_called_once_with("/usr/share/fillup-templates/sysconfig.sbd", "/etc/sysconfig/sbd")
-        mock_sysconfig.assert_called_once_with("/etc/sysconfig/sbd", SBD_PACEMAKER='yes', SBD_STARTMODE='always', SBD_DELAY_START='no', SBD_WATCHDOG_DEV='/dev/watchdog', SBD_DEVICE='/dev/sdb1;/dev/sdc1', SBD_WATCHDOG_TIMEOUT="30")
+        mock_sysconfig.assert_called_once_with("/etc/sysconfig/sbd", SBD_PACEMAKER='yes', SBD_STARTMODE='always', SBD_DELAY_START='yes', SBD_WATCHDOG_DEV='/dev/watchdog', SBD_DEVICE='/dev/sdb1;/dev/sdc1', SBD_WATCHDOG_TIMEOUT="30")
         mock_update.assert_called_once_with("/etc/sysconfig/sbd")
 
     @mock.patch('crmsh.bootstrap.utils.parse_sysconfig')

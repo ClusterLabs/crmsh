@@ -1529,3 +1529,10 @@ def test_check_all_nodes_reachable(mock_run, mock_ping):
     utils.check_all_nodes_reachable()
     mock_run.assert_called_once_with("crm_node -l")
     mock_ping.assert_called_once_with("15sp2-1")
+
+
+@mock.patch('crmsh.utils.get_stdout_stderr')
+def test_detect_virt(mock_run):
+    mock_run.return_value = (0, None, None)
+    assert utils.detect_virt() is True
+    mock_run.assert_called_once_with("systemd-detect-virt")
