@@ -164,7 +164,7 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         sbd_config_dict = {
                 "SBD_PACEMAKER": "yes",
                 "SBD_STARTMODE": "always",
-                "SBD_DELAY_START": "no",
+                "SBD_DELAY_START": "yes" if utils.detect_virt() and self._sbd_devices else "no",
                 "SBD_WATCHDOG_DEV": self._watchdog_inst.watchdog_device_name
                 }
         if self._sbd_watchdog_timeout > 0:

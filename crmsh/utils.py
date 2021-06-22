@@ -2880,4 +2880,12 @@ def get_qdevice_sync_timeout():
     if not res:
         raise ValueError("Cannot find qdevice sync timeout")
     return int(int(res.group(1))/1000)
+
+
+def detect_virt():
+    """
+    Detect if running in virt environment
+    """
+    rc, _, _ = get_stdout_stderr("systemd-detect-virt")
+    return rc == 0
 # vim:ts=4:sw=4:et:
