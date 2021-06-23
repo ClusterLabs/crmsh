@@ -1371,6 +1371,14 @@ def test_is_dev_used_for_lvm(mock_dev_info):
     mock_dev_info.assert_called_once_with("/dev/sda1", "TYPE", peer=None)
 
 
+@mock.patch('crmsh.utils.get_dev_info')
+def test_is_dev_a_plain_raw_disk_or_partition(mock_dev_info):
+    mock_dev_info.return_value = "raid1\nlvm"
+    res = utils.is_dev_a_plain_raw_disk_or_partition("/dev/md127")
+    assert res is False
+    mock_dev_info.assert_called_once_with("/dev/md127", "TYPE", peer=None)
+
+
 @mock.patch('crmsh.utils.get_stdout_or_raise_error')
 def test_get_dev_info(mock_run):
     mock_run.return_value = "data"
