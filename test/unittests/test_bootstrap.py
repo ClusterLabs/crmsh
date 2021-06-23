@@ -21,6 +21,7 @@ except ImportError:
 from crmsh import bootstrap
 from crmsh import corosync
 from crmsh import constants
+from crmsh import qdevice
 
 
 class TestContext(unittest.TestCase):
@@ -57,12 +58,12 @@ class TestContext(unittest.TestCase):
         self.assertEqual(ctx.yes_to_all, True)
         self.assertEqual(ctx.ipv6, False)
 
-    @mock.patch('crmsh.corosync.QDevice')
+    @mock.patch('crmsh.qdevice.QDevice')
     def test_initialize_qdevice_return(self, mock_qdevice):
         self.ctx_inst.initialize_qdevice()
         mock_qdevice.assert_not_called()
 
-    @mock.patch('crmsh.corosync.QDevice')
+    @mock.patch('crmsh.qdevice.QDevice')
     def test_initialize_qdevice(self, mock_qdevice):
         options = mock.Mock(qnetd_addr="node3", qdevice_port=123)
         ctx = self.ctx_inst.set_context(options)
@@ -135,7 +136,7 @@ class TestContext(unittest.TestCase):
         ctx._validate_sbd_option = mock.Mock()
         ctx.validate_option()
         mock_admin_ip.assert_called_once_with("10.10.10.123")
-        ctx.qdevice_inst.valid_attr.assert_called_once_with()
+        ctx.qdevice_inst.valid_qdevice_options.assert_called_once_with()
         ctx._validate_sbd_option.assert_called_once_with()
 
 
@@ -154,7 +155,7 @@ class TestBootstrap(unittest.TestCase):
         """
         Test setUp.
         """
-        self.qdevice_with_ip = corosync.QDevice("10.10.10.123")
+        self.qdevice_with_ip = qdevice.QDevice("10.10.10.123")
 
     def tearDown(self):
         """
@@ -673,11 +674,11 @@ class TestBootstrap(unittest.TestCase):
         mock_qdevice_start.assert_called_once_with()
 
     @mock.patch('crmsh.bootstrap.start_qdevice_service')
-    @mock.patch('crmsh.corosync.QDevice.certificate_process_on_init')
+    @mock.patch('crmsh.qdevice.QDevice.certificate_process_on_init')
     @mock.patch('crmsh.bootstrap.status_long')
     @mock.patch('crmsh.utils.is_qdevice_tls_on')
     @mock.patch('crmsh.bootstrap.config_qdevice')
-    @mock.patch('crmsh.corosync.QDevice.valid_qnetd')
+    @mock.patch('crmsh.qdevice.QDevice.valid_qnetd')
     @mock.patch('crmsh.utils.is_qdevice_configured')
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
     @mock.patch('crmsh.bootstrap.status')
@@ -722,7 +723,7 @@ class TestBootstrap(unittest.TestCase):
         mock_confirm.assert_called_once_with("Do you want to configure QDevice?")
         mock_prompt.assert_called_once_with("HOST or IP of the QNetd server to be used")
 
-    @mock.patch('crmsh.corosync.QDevice')
+    @mock.patch('crmsh.qdevice.QDevice')
     @mock.patch('crmsh.bootstrap.prompt_for_string')
     @mock.patch('crmsh.bootstrap.confirm')
     def test_configure_qdevice_interactive(self, mock_confirm, mock_prompt, mock_qdevice):
@@ -743,10 +744,10 @@ class TestBootstrap(unittest.TestCase):
             mock.call("Heuristics COMMAND to run with absolute path; For multiple commands, use \";\" to separate")
             ])
         mock_qdevice.assert_called_once_with('qnetd-node', port=5403, algo='ffsplit', tie_breaker='lowest', tls='on', cmds=None, mode=None)
-        mock_qdevice_inst.valid_attr.assert_called_once_with()
+        mock_qdevice_inst.valid_qdevice_options.assert_called_once_with()
 
-    @mock.patch('crmsh.corosync.QDevice.start_qnetd')
-    @mock.patch('crmsh.corosync.QDevice.enable_qnetd')
+    @mock.patch('crmsh.qdevice.QDevice.start_qnetd')
+    @mock.patch('crmsh.qdevice.QDevice.enable_qnetd')
     @mock.patch('crmsh.utils.cluster_run_cmd')
     @mock.patch('crmsh.bootstrap.status')
     def test_start_qdevice_service_reload(self, mock_status, mock_cluster_run, mock_enable_qnetd, mock_start_qnetd):
@@ -767,8 +768,8 @@ class TestBootstrap(unittest.TestCase):
         mock_enable_qnetd.assert_called_once_with()
         mock_start_qnetd.assert_called_once_with()
 
-    @mock.patch('crmsh.corosync.QDevice.start_qnetd')
-    @mock.patch('crmsh.corosync.QDevice.enable_qnetd')
+    @mock.patch('crmsh.qdevice.QDevice.start_qnetd')
+    @mock.patch('crmsh.qdevice.QDevice.enable_qnetd')
     @mock.patch('crmsh.bootstrap.wait_for_cluster')
     @mock.patch('crmsh.utils.cluster_run_cmd')
     @mock.patch('crmsh.bootstrap.status')
@@ -791,8 +792,8 @@ class TestBootstrap(unittest.TestCase):
         mock_enable_qnetd.assert_called_once_with()
         mock_start_qnetd.assert_called_once_with()
 
-    @mock.patch('crmsh.corosync.QDevice.start_qnetd')
-    @mock.patch('crmsh.corosync.QDevice.enable_qnetd')
+    @mock.patch('crmsh.qdevice.QDevice.start_qnetd')
+    @mock.patch('crmsh.qdevice.QDevice.enable_qnetd')
     @mock.patch('crmsh.bootstrap.warn')
     @mock.patch('crmsh.utils.cluster_run_cmd')
     @mock.patch('crmsh.bootstrap.status')
@@ -818,8 +819,8 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.status_long')
     @mock.patch('crmsh.corosync.add_nodelist_from_cmaptool')
     @mock.patch('crmsh.corosync.is_unicast')
-    @mock.patch('crmsh.corosync.QDevice.write_qdevice_config')
-    @mock.patch('crmsh.corosync.QDevice.remove_qdevice_db')
+    @mock.patch('crmsh.qdevice.QDevice.write_qdevice_config')
+    @mock.patch('crmsh.qdevice.QDevice.remove_qdevice_db')
     def test_config_qdevice(self, mock_remove_qdevice_db, mock_write_qdevice_config, mock_is_unicast,
             mock_add_nodelist, mock_status_long, mock_update_votes, mock_cluster_run):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, qdevice_reload_policy=bootstrap.QdevicePolicy.QDEVICE_RELOAD)
@@ -859,7 +860,7 @@ class TestBootstrap(unittest.TestCase):
         mock_confirm.assert_called_once_with("Removing QDevice service and configuration from cluster: Are you sure?")
 
     @mock.patch('crmsh.bootstrap.update_expected_votes')
-    @mock.patch('crmsh.corosync.QDevice')
+    @mock.patch('crmsh.qdevice.QDevice')
     @mock.patch('crmsh.corosync.get_value')
     @mock.patch('crmsh.bootstrap.status_long')
     @mock.patch('crmsh.bootstrap.invoke')
@@ -902,7 +903,7 @@ class TestBootstrap(unittest.TestCase):
         mock_update_votes.assert_called_once_with()
 
     @mock.patch('crmsh.utils.start_service')
-    @mock.patch('crmsh.corosync.QDevice')
+    @mock.patch('crmsh.qdevice.QDevice')
     @mock.patch('crmsh.corosync.get_value')
     @mock.patch('crmsh.utils.is_qdevice_tls_on')
     @mock.patch('crmsh.bootstrap.invoke')
