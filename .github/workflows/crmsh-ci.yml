@@ -6,9 +6,9 @@ name: crmsh CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ crmsh-4.3 ]
   pull_request:
-    branches: [ master ]
+    branches: [ crmsh-4.3 ]
 
 env:
   DOCKER_SCRIPT: ./test/docker_scripts.sh
