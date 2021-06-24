@@ -2845,7 +2845,15 @@ def is_dev_used_for_lvm(dev, peer=None):
     """
     Check if device is LV
     """
-    return get_dev_info(dev, "TYPE", peer=peer) == "lvm"
+    return "lvm" in get_dev_info(dev, "TYPE", peer=peer)
+
+
+def is_dev_a_plain_raw_disk_or_partition(dev, peer=None):
+    """
+    Check if device is a raw disk or partition
+    """
+    out = get_dev_info(dev, "TYPE", peer=peer)
+    return re.search("(disk|part)", out) is not None
 
 
 def compare_uuid_with_peer_dev(dev_list, peer):

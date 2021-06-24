@@ -103,13 +103,6 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         self._verify_options()
         self._verify_devices()
 
-    def _static_verify_on_join(self, dev_list, peer, use_cluster_lvm2=False):
-        """
-        Verify before configuring on join process
-        """
-        self._verify_packages(use_cluster_lvm2)
-        utils.compare_uuid_with_peer_dev(dev_list, peer)
-
     def _dynamic_raise_error(self, error_msg):
         """
         Customize error message after cluster running
@@ -320,16 +313,6 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
                     raise ValueError("Filesystem require configure device")
         return None
 
-    def _get_device_list_on_join(self, target, peer, clvm2=False):
-        """
-        Return device list
-        When using cluster lvm, return pv device list
-        """
-        if not clvm2:
-            return [target]
-        out = utils.get_stdout_or_raise_error("lvs {} -o +devices".format(target), remote=peer)
-        return re.findall("(/dev/.*)[(]", out)
-
     def join_ocfs2(self, peer):
         """
         Called on join process, to verify ocfs2 environment
@@ -339,8 +322,9 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
             return
         with bootstrap.status_long("Verify OCFS2 environment"):
             use_cluster_lvm2 = utils.has_resource_configured("ocf::heartbeat:lvmlockd", peer)
-            dev_list = self._get_device_list_on_join(target, peer, use_cluster_lvm2)
-            self._static_verify_on_join(dev_list, peer, use_cluster_lvm2)
+            self._verify_packages(use_cluster_lvm2)
+            if utils.is_dev_a_plain_raw_disk_or_partition(target, peer):
+                utils.compare_uuid_with_peer_dev([target], peer)
 
     @classmethod
     def verify_ocfs2(cls, ctx):

@@ -155,13 +155,6 @@ class TestOCFS2Manager(unittest.TestCase):
         mock_configured.assert_called_once_with()
         mock_verify_devices.assert_called_once_with()
 
-    @mock.patch('crmsh.utils.compare_uuid_with_peer_dev')
-    @mock.patch('crmsh.ocfs2.OCFS2Manager._verify_packages')
-    def test_static_verify_on_join(self, mock_verify_packages, mock_uuid):
-        self.ocfs2_inst1._static_verify_on_join(["/dev/sda1"], "node1")
-        mock_verify_packages.assert_called_once_with(False)
-        mock_uuid.assert_called_once_with(["/dev/sda1"], "node1")
-
     def test_dynamic_raise_error(self):
         with self.assertRaises(ValueError) as err:
             self.ocfs2_inst2._dynamic_raise_error("error messages")
@@ -195,6 +188,29 @@ class TestOCFS2Manager(unittest.TestCase):
         mock_confirm.assert_has_calls([
             mock.call("Found a partition table in /dev/sdb2 - Proceed anyway?"),
             mock.call("/dev/sdc2 contains a ext4 file system - Proceed anyway?")
+            ])
+
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.bootstrap.confirm')
+    @mock.patch('crmsh.utils.get_dev_fs_type')
+    @mock.patch('crmsh.utils.has_dev_partitioned')
+    def test_confirm_to_overwrite_ocfs2_dev_confirmed(self, mock_has_parted, mock_fstype, mock_confirm, mock_run):
+        mock_has_parted.side_effect = [True, False]
+        mock_fstype.return_value = "ext4"
+        mock_confirm.side_effect = [True, True]
+        self.ocfs2_inst3._confirm_to_overwrite_ocfs2_dev()
+        mock_has_parted.assert_has_calls([
+            mock.call("/dev/sdb2"),
+            mock.call("/dev/sdc2")
+            ])
+        mock_fstype.assert_called_once_with("/dev/sdc2")
+        mock_confirm.assert_has_calls([
+            mock.call("Found a partition table in /dev/sdb2 - Proceed anyway?"),
+            mock.call("/dev/sdc2 contains a ext4 file system - Proceed anyway?")
+            ])
+        mock_run.assert_has_calls([
+            mock.call("wipefs -a /dev/sdb2"),
+            mock.call("wipefs -a /dev/sdc2")
             ])
 
     @mock.patch('crmsh.ocfs2.OCFS2Manager._dynamic_raise_error')
@@ -416,41 +432,28 @@ params directory="/srv/clusterfs" fstype=ocfs2 device="/dev/sda2"
         self.assertEqual(res, "/dev/sda2")
         mock_run.assert_called_once_with("crm configure show", remote="node1")
 
-    def test_get_device_list_on_join_return(self):
-        res = self.ocfs2_inst3._get_device_list_on_join("/dev/sda2", "node1")
-        self.assertEqual(res, ["/dev/sda2"])
-
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
-    def test_get_device_list_on_join(self, mock_run):
-        mock_run.return_value = """
-LV       VG       Attr       LSize Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert Devices
-ocfs2-lv ocfs2-vg -wi-ao---- 5.99g                                                     /dev/sda2(0)
-ocfs2-lv ocfs2-vg -wi-ao---- 5.99g                                                     /dev/sda3(0)
-        """
-        res = self.ocfs2_inst3._get_device_list_on_join("/dev/vg1/lv1", "node1", True)
-        self.assertEqual(res, ["/dev/sda2", "/dev/sda3"])
-        mock_run.assert_called_once_with("lvs /dev/vg1/lv1 -o +devices", remote="node1")
-
     @mock.patch('crmsh.ocfs2.OCFS2Manager._find_target_on_join')
     def test_join_ocfs2_return(self, mock_find):
         mock_find.return_value = None
         self.ocfs2_inst3.join_ocfs2("node1")
         mock_find.assert_called_once_with("node1")
 
-    @mock.patch('crmsh.ocfs2.OCFS2Manager._static_verify_on_join')
-    @mock.patch('crmsh.ocfs2.OCFS2Manager._get_device_list_on_join')
+    @mock.patch('crmsh.utils.compare_uuid_with_peer_dev')
+    @mock.patch('crmsh.utils.is_dev_a_plain_raw_disk_or_partition')
+    @mock.patch('crmsh.ocfs2.OCFS2Manager._verify_packages')
     @mock.patch('crmsh.utils.has_resource_configured')
     @mock.patch('crmsh.bootstrap.status_long')
     @mock.patch('crmsh.ocfs2.OCFS2Manager._find_target_on_join')
-    def test_join_ocfs2(self, mock_find, mock_long, mock_configured, mock_get_devlist, mock_static_verify):
+    def test_join_ocfs2(self, mock_find, mock_long, mock_configured, mock_verify_packages, mock_is_mapper, mock_compare):
         mock_find.return_value = "/dev/sda2"
         mock_configured.return_value = False
-        mock_get_devlist.return_value = ["/dev/sda2"]
+        mock_is_mapper.return_value = True
         self.ocfs2_inst3.join_ocfs2("node1")
         mock_find.assert_called_once_with("node1")
         mock_configured.assert_called_once_with("ocf::heartbeat:lvmlockd", "node1")
-        mock_get_devlist.assert_called_once_with("/dev/sda2", "node1", False)
-        mock_static_verify.assert_called_once_with(["/dev/sda2"], "node1", False)
+        mock_verify_packages.assert_called_once_with(False)
+        mock_is_mapper.assert_called_once_with("/dev/sda2", "node1")
+        mock_compare.assert_called_once_with(["/dev/sda2"], "node1")
 
     @mock.patch('crmsh.ocfs2.OCFS2Manager._static_verify')
     def test_verify_ocfs2(self, mock_static_verify):
