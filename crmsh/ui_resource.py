@@ -644,7 +644,8 @@ class RscMgmt(command.UI):
         return rsc.add_operation(n)
 
     def _trace_resource(self, context, rsc_id, rsc):
-        op_nodes = rsc.node.xpath('.//op')
+        """Enable RA tracing for a specified resource."""
+        op_nodes = rsc.node.xpath('operations/op')
 
         def trace(name):
             for o in op_nodes:
@@ -661,7 +662,8 @@ class RscMgmt(command.UI):
             rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
 
     def _trace_op(self, context, rsc_id, rsc, op):
-        op_nodes = rsc.node.xpath('.//op[@name="%s"]' % (op))
+        """Enable RA tracing for a specified operation."""
+        op_nodes = rsc.node.xpath('operations/op[@name="%s"]' % (op))
         if not op_nodes:
             if op == 'monitor':
                 context.fatal_error("No monitor operation configured for %s" % (rsc_id))
@@ -671,6 +673,7 @@ class RscMgmt(command.UI):
             rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
 
     def _trace_op_interval(self, context, rsc_id, rsc, op, interval):
+        """Enable RA tracing for an operation with the exact interval."""
         op_node = xmlutil.find_operation(rsc.node, op, interval)
         if op_node is None and utils.crm_msec(interval) != 0:
             context.fatal_error("Operation %s with interval %s not found in %s" % (op, interval, rsc_id))
@@ -711,11 +714,35 @@ class RscMgmt(command.UI):
         return True
 
     def _remove_trace(self, rsc, op_node):
-        from lxml import etree
         common_debug("op_node: %s" % (xmlutil.xml_tostring(op_node)))
         op_node = rsc.del_op_attr(op_node, constants.trace_ra_attr)
         if rsc.is_dummy_operation(op_node):
             rsc.del_operation(op_node)
+
+    def _untrace_resource(self, context, rsc_id, rsc):
+        """Disable RA tracing for a specified resource."""
+        op_nodes = rsc.node.xpath(
+            'operations/op[instance_attributes/nvpair[@name="%s"]]' %
+            (constants.trace_ra_attr))
+        for op_node in op_nodes:
+            self._remove_trace(rsc, op_node)
+
+    def _untrace_op(self, context, rsc_id, rsc, op):
+        """Disable RA tracing for a specified operation."""
+        op_nodes = rsc.node.xpath('operations/op[@name="%s"]' % (op))
+        if not op_nodes:
+            context.fatal_error("Operation %s not found in %s" % (op, rsc_id))
+        for op_node in op_nodes:
+            self._remove_trace(rsc, op_node)
+
+    def _untrace_op_interval(self, context, rsc_id, rsc, op, interval):
+        """Disable RA tracing for an operation with the exact interval."""
+        op_node = xmlutil.find_operation(rsc.node, op, interval)
+        if op_node is None:
+            context.fatal_error(
+                "Operation %s with interval %s not found in %s" %
+                (op, interval, rsc_id))
+        self._remove_trace(rsc, op_node)
 
     @command.completers(compl.primitives, _raoperations)
     def do_untrace(self, context, rsc_id, op=None, interval=None):
@@ -725,19 +752,12 @@ class RscMgmt(command.UI):
             return False
         if op == "probe":
             op = "monitor"
+            if interval is None:
+                interval = "0"
         if op is None:
-            n = 0
-            for tn in rsc.node.xpath('.//*[@%s]' % (constants.trace_ra_attr)):
-                self._remove_trace(rsc, tn)
-                n += 1
-            for tn in rsc.node.xpath('.//*[@name="%s"]' % (constants.trace_ra_attr)):
-                if tn.getparent().getparent().tag == 'op':
-                    self._remove_trace(rsc, tn.getparent().getparent())
-                    n += 1
+            self._untrace_resource(context, rsc_id, rsc)
+        elif interval is None:
+            self._untrace_op(context, rsc_id, rsc, op)
         else:
-            op_node = xmlutil.find_operation(rsc.node, op, interval=interval)
-            if op_node is None:
-                common_err("operation %s does not exist in %s" % (op, rsc.obj_id))
-                return False
-            self._remove_trace(rsc, op_node)
+            self._untrace_op_interval(context, rsc_id, rsc, op, interval)
         return cib_factory.commit()
