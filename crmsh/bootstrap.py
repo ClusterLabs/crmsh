@@ -2038,9 +2038,21 @@ def setup_passwordless_with_other_nodes(init_node):
         error("Can't fetch cluster nodes list from {}: {}".format(init_node, err))
     cluster_nodes_list = []
     for line in out.splitlines():
-        _, node, stat = line.split()
-        if stat == "member":
-            cluster_nodes_list.append(node)
+        # Parse line in format: <id> <nodename> <state>, and collect the
+        # nodename.
+        tokens = line.split()
+        if len(tokens) == 0:
+            pass  # Skip any spurious empty line.
+        elif len(tokens) < 3:
+            warn("Unable to configure passwordless ssh with nodeid {}. The "
+                 "node has no known name and/or state information".format(
+                     tokens[0]))
+        elif tokens[2] != "member":
+            warn("Skipping configuration of passwordless ssh with node {} in "
+                 "state '{}'. The node is not a current member".format(
+                     tokens[1], tokens[2]))
+        else:
+            cluster_nodes_list.append(tokens[1])
 
     # Filter out init node from cluster_nodes_list
     cmd = "ssh {} root@{} hostname".format(SSH_OPTION, init_node)
@@ -2176,9 +2188,16 @@ def join_cluster(seed_host):
             nodeid_dict = {}
             _rc, outp, _ = utils.get_stdout_stderr("crm_node -l")
             if _rc == 0:
-                for line in outp.split('\n'):
-                    tmp = line.split()
-                    nodeid_dict[tmp[1]] = tmp[0]
+                for line in outp.splitlines():
+                    tokens = line.split()
+                    if len(tokens) == 0:
+                        pass  # Skip any spurious empty line.
+                    elif len(tokens) < 3:
+                        warn("Unable to update configuration for nodeid {}. "
+                             "The node has no known name and/or state "
+                             "information".format(tokens[0]))
+                    else:
+                        nodeid_dict[tokens[1]] = tokens[0]
 
         # apply nodelist in cluster
         if is_unicast or is_qdevice_configured:
