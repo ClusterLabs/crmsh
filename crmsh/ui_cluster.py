@@ -2,6 +2,7 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+import sys
 import re
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from . import command
@@ -706,3 +707,12 @@ to get the geo cluster configuration.""",
             utils.remote_diff_this(filename, nodes, this_node)
         elif len(nodes):
             utils.remote_diff(filename, nodes)
+
+    def do_crash_test(self, context, *args):
+        """
+        """
+        from .crash_test import main
+        sys.argv[1:] = args
+        main.ctx.process_name = context.command_name
+        main.run(main.ctx)
+        return True

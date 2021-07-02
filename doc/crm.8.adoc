@@ -932,7 +932,6 @@ Usage:
 verify [scores]
 ...............
 
-
 [[cmdhelp_cluster,Cluster setup and management]]
 === `cluster` - Cluster setup and management
 
@@ -1042,6 +1041,10 @@ See "crm cluster help join" or "crm cluster join --help"
 [[cmdhelp_cluster_remove,Remove node(s) from the cluster,From Code]]
 ==== `remove`
 See "crm cluster help remove" or "crm cluster remove --help"
+
+[[cmdhelp_cluster_crash_test,Cluster crash test tool set,From Code]]
+==== `crash_test`
+See "crm cluster help crash_test" or "crm cluster crash_test --help"
 
 [[cmdhelp_cluster_restart,Restart cluster services]]
 ==== `restart`

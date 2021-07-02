@@ -27,6 +27,12 @@ from .msg import common_warn, common_info, common_debug, common_err, err_buf
 from .constants import SSH_OPTION
 
 
+class TerminateSubCommand(Exception):
+    """
+    This is an exception to jump out of subcommand when meeting errors while staying interactive shell
+    """
+
+
 def to_ascii(input_str):
     """Convert the bytes string to a ASCII string
     Usefull to remove accent (diacritics)"""

@@ -101,6 +101,8 @@ class Context(object):
                 sys.stdout.flush()
             common_err("%s: %s" % (self.get_qualified_name(), msg))
             rv = False
+        except utils.TerminateSubCommand:
+            return False
         if cmd or (rv is False):
             rv = self._back_out() and rv
 
