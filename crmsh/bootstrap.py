@@ -36,7 +36,7 @@ from . import lock
 from . import userdir
 from .constants import SSH_OPTION, QDEVICE_HELP_INFO
 from . import ocfs2
-
+from . import qdevice
 
 
 LOG_FILE = "/var/log/crmsh/ha-cluster-bootstrap.log"
@@ -138,7 +138,7 @@ class Context(object):
         """
         if not self.qnetd_addr:
             return
-        self.qdevice_inst = corosync.QDevice(
+        self.qdevice_inst = qdevice.QDevice(
                 self.qnetd_addr,
                 port=self.qdevice_port,
                 algo=self.qdevice_algo,
@@ -168,7 +168,7 @@ class Context(object):
         if self.admin_ip:
             Validation.valid_admin_ip(self.admin_ip)
         if self.qdevice_inst:
-            self.qdevice_inst.valid_attr()
+            self.qdevice_inst.valid_qdevice_options()
         if self.nic_list:
             if len(self.nic_list) > 2:
                 error("Maximum number of interface is 2")
@@ -1303,7 +1303,7 @@ def configure_qdevice_interactive():
     qdevice_tls = prompt_for_string("Whether using TLS on QDevice/QNetd (on/off/required)", default="on")
     qdevice_heuristics = prompt_for_string("Heuristics COMMAND to run with absolute path; For multiple commands, use \";\" to separate")
     qdevice_heuristics_mode = prompt_for_string("MODE of operation of heuristics (on/sync/off)", default="sync") if qdevice_heuristics else None
-    _context.qdevice_inst = corosync.QDevice(
+    _context.qdevice_inst = qdevice.QDevice(
             qnetd_addr,
             port=qdevice_port,
             algo=qdevice_algo,
@@ -1311,7 +1311,7 @@ def configure_qdevice_interactive():
             tls=qdevice_tls,
             cmds=qdevice_heuristics,
             mode=qdevice_heuristics_mode)
-    _context.qdevice_inst.valid_attr()
+    _context.qdevice_inst.valid_qdevice_options()
 
 
 def init_qdevice():
@@ -1879,7 +1879,7 @@ def start_qdevice_on_join_node(seed_host):
             invoke("crm corosync reload")
         if utils.is_qdevice_tls_on():
             qnetd_addr = corosync.get_value("quorum.device.net.host")
-            qdevice_inst = corosync.QDevice(qnetd_addr, cluster_node=seed_host)
+            qdevice_inst = qdevice.QDevice(qnetd_addr, cluster_node=seed_host)
             qdevice_inst.certificate_process_on_join()
         utils.start_service("corosync-qdevice.service", enable=True)
 
@@ -2145,7 +2145,7 @@ def remove_qdevice():
 
     with status_long("Removing QDevice configuration from cluster"):
         qnetd_host = corosync.get_value('quorum.device.net.host')
-        qdevice_inst = corosync.QDevice(qnetd_host)
+        qdevice_inst = qdevice.QDevice(qnetd_host)
         qdevice_inst.remove_qdevice_config()
         qdevice_inst.remove_qdevice_db()
         update_expected_votes()
