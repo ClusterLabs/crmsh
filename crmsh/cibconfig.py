@@ -882,13 +882,6 @@ class CibObject(object):
                                 self.parent and self.parent.obj_id or "",
                                 len(self.children)))
 
-    def _repr_cli_xml(self, format_mode):
-        with clidisplay.nopretty(format_mode < 0):
-            h = clidisplay.keyword("xml")
-            l = xml_tostring(self.node, pretty_print=True).split('\n')
-            l = [x for x in l if x]  # drop empty lines
-            return "%s %s" % (h, cli_format(l, break_lines=(format_mode > 0), xml=True))
-
     def _gv_rsc_id(self):
         if self.parent and self.parent.obj_type in constants.clonems_tags:
             return "%s:%s" % (self.parent.obj_type, self.obj_id)
@@ -928,8 +921,6 @@ class CibObject(object):
         CLI representation for the node.
         _repr_cli_head and _repr_cli_child in subclasess.
         '''
-        if self.nocli:
-            return self._repr_cli_xml(format_mode)
         l = []
         with clidisplay.nopretty(format_mode < 0):
             head_s = self._repr_cli_head(format_mode)
