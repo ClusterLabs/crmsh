@@ -372,12 +372,14 @@ class TestOCFS2Manager(unittest.TestCase):
         mock_mkfs.assert_called_once_with("/dev/sdb2")
         mock_fs.assert_called_once_with()
 
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
     @mock.patch('crmsh.ocfs2.OCFS2Manager._config_resource_stack_lvm2')
     @mock.patch('crmsh.utils.all_exist_id')
     @mock.patch('crmsh.ocfs2.OCFS2Manager._dynamic_verify')
     @mock.patch('crmsh.bootstrap.status')
-    def test_init_ocfs2_lvm2(self, mock_status, mock_dynamic_verify, mock_all_id, mock_lvm2):
+    def test_init_ocfs2_lvm2(self, mock_status, mock_dynamic_verify, mock_all_id, mock_lvm2, mock_run):
         mock_all_id.return_value = []
+        mock_run.return_value = "freeze"
         self.ocfs2_inst7.mount_point = "/data"
         self.ocfs2_inst7.target_device = "/dev/vg1/lv1"
         self.ocfs2_inst7.init_ocfs2()
@@ -389,12 +391,14 @@ class TestOCFS2Manager(unittest.TestCase):
         mock_all_id.assert_called_once_with()
         mock_lvm2.assert_called_once_with()
 
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
     @mock.patch('crmsh.ocfs2.OCFS2Manager._config_resource_stack_ocfs2_along')
     @mock.patch('crmsh.utils.all_exist_id')
     @mock.patch('crmsh.ocfs2.OCFS2Manager._dynamic_verify')
     @mock.patch('crmsh.bootstrap.status')
-    def test_init_ocfs2(self, mock_status, mock_dynamic_verify, mock_all_id, mock_ocfs2):
+    def test_init_ocfs2(self, mock_status, mock_dynamic_verify, mock_all_id, mock_ocfs2, mock_run):
         mock_all_id.return_value = []
+        mock_run.side_effect = ["stop", None]
         self.ocfs2_inst3.mount_point = "/data"
         self.ocfs2_inst3.target_device = "/dev/sda1"
         self.ocfs2_inst3.init_ocfs2()
@@ -405,6 +409,10 @@ class TestOCFS2Manager(unittest.TestCase):
         mock_dynamic_verify.assert_called_once_with()
         mock_all_id.assert_called_once_with()
         mock_ocfs2.assert_called_once_with()
+        mock_run.assert_has_calls([
+            mock.call("crm configure get_property no-quorum-policy"),
+            mock.call("crm configure property no-quorum-policy=freeze")
+            ])
 
     @mock.patch('crmsh.utils.get_stdout_or_raise_error')
     def test_find_target_on_join_none(self, mock_run):
