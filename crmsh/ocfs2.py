@@ -299,6 +299,11 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
             self._config_resource_stack_ocfs2_along()
         bootstrap.status("  OCFS2 device {} mounted on {}".format(self.target_device, self.mount_point))
 
+        res = utils.get_stdout_or_raise_error("crm configure get_property no-quorum-policy")
+        if res != "freeze":
+            utils.get_stdout_or_raise_error("crm configure property no-quorum-policy=freeze")
+            err_buf.info("'no-quorum-policy' is changed to \"freeze\"")
+
     def _find_target_on_join(self, peer):
         """
         Find device name from OCF Filesystem param on peer node
