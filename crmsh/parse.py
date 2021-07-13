@@ -164,11 +164,12 @@ class BaseParser(object):
         self.begin(cmd, min_args=min_args)
         return self.match_dispatch(errmsg="Unknown command")
 
-    def do_parse(self, cmd):
+    def do_parse(self, cmd, ignore_empty):
         """
         Called by CliParser. Calls parse()
         Parsers should pass their return value through this method.
         """
+        self.ignore_empty = ignore_empty
         out = self.parse(cmd)
         if self.has_tokens():
             self.err("Unknown arguments: " + ' '.join(self._cmd[self._currtok:]))
@@ -1101,7 +1102,11 @@ def property_parser(self, cmd):
         attrs.set(idkey, idval)
     for rule in self.match_rules():
         attrs.append(rule)
-    for nvp in self.match_nvpairs(terminator=[], minpairs=0, allow_empty=False):
+    if self.ignore_empty:
+        res_list = self.match_nvpairs(minpairs=0)
+    else:
+        res_list = self.match_nvpairs(terminator=[], minpairs=0, allow_empty=False)
+    for nvp in res_list:
         attrs.append(nvp)
     return root
 
@@ -1690,7 +1695,7 @@ class ResourceSet(object):
         return ret
 
 
-def parse(s, comments=None):
+def parse(s, comments=None, ignore_empty=True):
     '''
     Input: a list of tokens (or a CLI format string).
     Return: a cibobject
@@ -1736,7 +1741,7 @@ def parse(s, comments=None):
         return False
 
     try:
-        ret = parser.do_parse(s)
+        ret = parser.do_parse(s, ignore_empty)
         if ret is not None and len(comments) > 0:
             if ret.tag in constants.defaults_tags:
                 xmlutil.stuff_comments(ret[0], comments)
