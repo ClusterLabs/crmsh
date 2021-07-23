@@ -2,6 +2,7 @@
 .INP: options
 .INP: sort_elements false
 WARNING: 2: This command 'sort_elements' is deprecated, please use 'sort-elements'
+INFO: 2: "sort_elements" is accepted as "sort-elements"
 .INP: up
 .INP: configure
 .INP: erase
@@ -60,6 +61,7 @@ colocation c2 inf: ( p1 p2 ) p3 p4
 .INP: options
 .INP: sort_elements false
 WARNING: 2: This command 'sort_elements' is deprecated, please use 'sort-elements'
+INFO: 2: "sort_elements" is accepted as "sort-elements"
 .INP: up
 .INP: configure
 .INP: load update bugs-test.txt

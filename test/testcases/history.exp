@@ -319,6 +319,7 @@ Dec 14 20:08:43 xen-e crmd: [24228]: info: process_lrm_event: LRM operation d1_s
 .INP: # reduce report span
 .INP: timeframe "2012-12-14 20:07:30"
 WARNING: 21: This command 'timeframe' is deprecated, please use 'limit'
+INFO: 21: "timeframe" is accepted as "limit"
 .INP: peinputs
 history-test/xen-e/pengine/pe-input-47.bz2
 history-test/xen-e/pengine/pe-input-48.bz2
@@ -375,6 +376,7 @@ d1
 .INP: # reset timeframe
 .INP: timeframe
 WARNING: 32: This command 'timeframe' is deprecated, please use 'limit'
+INFO: 32: "timeframe" is accepted as "limit"
 .INP: session save _crmsh_regtest
 .INP: session load _crmsh_regtest
 .INP: session
