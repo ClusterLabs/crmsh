@@ -43,11 +43,12 @@ class TestCluster(unittest.TestCase):
         mock_active.assert_called_once_with("pacemaker.service")
         mock_info.assert_called_once_with("Cluster services already started")
 
+    @mock.patch('crmsh.bootstrap.start_pacemaker')
     @mock.patch('crmsh.ui_cluster.err_buf.info')
     @mock.patch('crmsh.utils.is_qdevice_configured')
     @mock.patch('crmsh.utils.start_service')
     @mock.patch('crmsh.utils.service_is_active')
-    def test_do_start(self, mock_active, mock_start, mock_qdevice_configured, mock_info):
+    def test_do_start(self, mock_active, mock_start, mock_qdevice_configured, mock_info, mock_start_pacemaker):
         context_inst = mock.Mock()
         mock_active.return_value = False
         mock_qdevice_configured.return_value = True
@@ -55,7 +56,7 @@ class TestCluster(unittest.TestCase):
         self.ui_cluster_inst.do_start(context_inst)
 
         mock_active.assert_called_once_with("pacemaker.service")
-        mock_start.assert_has_calls([mock.call("pacemaker"), mock.call("corosync-qdevice")])
+        mock_start.assert_has_calls([mock.call("corosync-qdevice")])
         mock_qdevice_configured.assert_called_once_with()
         mock_info.assert_called_once_with("Cluster services started")
 
