@@ -1,0 +1,29 @@
+# The valid profile names are:
+# "microsoft-azure", "google-cloud-platform", "amazon-web-services", "s390", "default"
+#
+# "default" profile is loaded in the beginning.
+#
+# Those specific profile will override the corresponding values in "default"
+# profile if the specific environment is detected.
+#
+# Users could customize the "default" profile for their needs, for example,
+# those on-premise environments which is not defined yet.
+#
+# Profiles are only loaded on bootstrap init node.
+#
+# More details please see man corosync.conf, man sbd
+
+default:
+  corosync.totem.crypto_hash: sha1
+  corosync.totem.crypto_cipher: aes256
+  corosync.totem.token: 5000
+  corosync.totem.join: 60
+  corosync.totem.max_messages: 20
+  corosync.totem.token_retransmits_before_loss_const: 10
+  # sbd.msgwait is set to sbd.watchdog_timeout*2 by crmsh
+  # or, you can define your own value in profiles.yml
+  sbd.watchdog_timeout: 15
+
+microsoft-azure:
+  corosync.totem.token: 30000
+  sbd.watchdog_timeout: 60

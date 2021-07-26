@@ -25,7 +25,7 @@ MAINTAINERCLEANFILES    = Makefile.in aclocal.m4 configure
 # Documentation
 doc_DATA = AUTHORS COPYING README.md ChangeLog $(generated_docs)
 crmconfdir=$(sysconfdir)/crm
-crmconf_DATA = crm.conf
+crmconf_DATA = etc/crm.conf etc/profiles.yml
 contribdir      = $(docdir)/contrib
 contrib_DATA	= contrib/pcmk.vim  contrib/README.vimsyntax
 helpdir     = $(datadir)/$(PACKAGE)

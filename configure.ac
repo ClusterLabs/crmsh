@@ -55,7 +55,7 @@ AM_CONDITIONAL(BUILD_ASCIIDOC, test x"${ASCIIDOC}" != x"")
 
 AC_CONFIG_FILES(Makefile \
 hb_report/hb_report      \
-crm.conf                 \
+etc/crm.conf             \
 version                  \
 crmsh.spec               \
 )
