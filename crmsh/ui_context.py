@@ -79,6 +79,8 @@ class Context(object):
                 if self.command_name in self.command_info.aliases and self.command_name not in ["-h", "--help"]:
                     common_warn("This command '{}' is deprecated, please use '{}'"\
                             .format(self.command_name, self.command_info.name))
+                if token != self.command_info.name:
+                    common_info("\"{}\" is accepted as \"{}\"".format(token, self.command_info.name))
                 self.command_name = self.command_info.name
                 if self.command_info.type == 'level':
                     self.enter_level(self.command_info.level)

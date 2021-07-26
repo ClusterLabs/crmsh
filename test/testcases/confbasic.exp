@@ -25,6 +25,7 @@
 .INP: delete m
 .INP: master m d4
 WARNING: 21: This command 'master' is deprecated, please use 'ms'
+INFO: 21: "master" is accepted as "ms"
 .INP: primitive s5 ocf:pacemaker:Stateful 	operations $id-ref=d1-ops
 .EXT crm_resource --show-metadata ocf:pacemaker:Stateful
 .INP: primitive s6 ocf:pacemaker:Stateful 	operations $id-ref=d1
@@ -43,8 +44,10 @@ WARNING: 21: This command 'master' is deprecated, please use 'ms'
 .INP: location l7 m5 	rule $id-ref=l2
 .INP: collocation c1 inf: m6 m5
 WARNING: 36: This command 'collocation' is deprecated, please use 'colocation'
+INFO: 36: "collocation" is accepted as "colocation"
 .INP: collocation c2 inf: m5:Master d1:Started
 WARNING: 37: This command 'collocation' is deprecated, please use 'colocation'
+INFO: 37: "collocation" is accepted as "colocation"
 .INP: order o1 Mandatory: m5 m6
 .INP: order o2 Optional: d1:start m5:promote
 .INP: order o3 Serialize: m5 m6
