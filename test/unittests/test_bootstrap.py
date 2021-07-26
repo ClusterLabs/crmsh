@@ -12,6 +12,7 @@ Unitary tests for crmsh/bootstrap.py
 
 import os
 import unittest
+import yaml
 
 try:
     from unittest import mock
@@ -138,6 +139,98 @@ class TestContext(unittest.TestCase):
         mock_admin_ip.assert_called_once_with("10.10.10.123")
         ctx.qdevice_inst.valid_qdevice_options.assert_called_once_with()
         ctx._validate_sbd_option.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.status')
+    def test_load_specific_profile_return(self, mock_status):
+        res = self.ctx_inst.load_specific_profile(None)
+        assert res == {}
+        mock_status.assert_not_called()
+
+    @mock.patch('crmsh.bootstrap.status')
+    def test_load_specific_profile_not_exist(self, mock_status):
+        self.ctx_inst.profiles_data = {"name": "test"}
+        res = self.ctx_inst.load_specific_profile("newname")
+        assert res == {}
+        mock_status.assert_called_once_with("\"newname\" profile does not exist in {}".format(bootstrap.Context.PROFILES_FILE))
+
+    @mock.patch('crmsh.bootstrap.status')
+    def test_load_specific_profile(self, mock_status):
+        self.ctx_inst.profiles_data = {"name": "test"}
+        res = self.ctx_inst.load_specific_profile("name")
+        assert res == "test"
+        mock_status.assert_called_once_with("Loading \"name\" profile from {}".format(bootstrap.Context.PROFILES_FILE))
+
+    @mock.patch('crmsh.bootstrap.status')
+    @mock.patch('crmsh.utils.detect_cloud')
+    @mock.patch('os.uname')
+    def test_detect_platform_s390(self, mock_uname, mock_cloud, mock_status):
+        mock_uname.return_value = mock.Mock(machine="s390")
+        res = self.ctx_inst.detect_platform()
+        self.assertEqual(res, bootstrap.Context.S390_PROFILE_NAME)
+        mock_uname.assert_called_once_with()
+        mock_cloud.assert_not_called()
+        mock_status.assert_called_once_with("Detected \"{}\" platform".format(res))
+
+    @mock.patch('crmsh.bootstrap.status')
+    @mock.patch('crmsh.utils.detect_cloud')
+    @mock.patch('os.uname')
+    def test_detect_platform(self, mock_uname, mock_cloud, mock_status):
+        mock_uname.return_value = mock.Mock(machine="xxx")
+        mock_cloud.return_value = "azure"
+        res = self.ctx_inst.detect_platform()
+        self.assertEqual(res, "azure")
+        mock_uname.assert_called_once_with()
+        mock_cloud.assert_called_once_with()
+        mock_status.assert_called_once_with("Detected \"{}\" platform".format(res))
+
+    @mock.patch('os.path.exists')
+    @mock.patch('crmsh.bootstrap.Context.detect_platform')
+    def test_load_profiles_file_not_exist(self, mock_platform, mock_exists):
+        mock_platform.return_value = "s390"
+        mock_exists.return_value = False
+        self.ctx_inst.load_profiles()
+        mock_platform.assert_called_once_with()
+        mock_exists.assert_called_once_with(bootstrap.Context.PROFILES_FILE)
+
+    @mock.patch('yaml.load')
+    @mock.patch('builtins.open', new_callable=mock.mock_open, read_data="")
+    @mock.patch('os.path.exists')
+    @mock.patch('crmsh.bootstrap.Context.detect_platform')
+    def test_load_profiles_file_empty(self, mock_platform, mock_exists, mock_open_file, mock_load):
+        mock_platform.return_value = "s390"
+        mock_exists.return_value = True
+        mock_load.return_value = ""
+        self.ctx_inst.load_profiles()
+        mock_platform.assert_called_once_with()
+        mock_exists.assert_called_once_with(bootstrap.Context.PROFILES_FILE)
+        mock_open_file.assert_called_once_with(bootstrap.Context.PROFILES_FILE)
+        mock_load.assert_called_once_with(mock_open_file.return_value, Loader=yaml.SafeLoader)
+
+    @mock.patch('crmsh.bootstrap.Context.load_specific_profile')
+    @mock.patch('yaml.load')
+    @mock.patch('builtins.open', new_callable=mock.mock_open, read_data="")
+    @mock.patch('os.path.exists')
+    @mock.patch('crmsh.bootstrap.Context.detect_platform')
+    def test_load_profiles_file(self, mock_platform, mock_exists, mock_open_file, mock_load, mock_load_specific):
+        mock_platform.return_value = "s390"
+        mock_exists.return_value = True
+        mock_load.return_value = "data"
+        mock_load_specific.side_effect = [
+                {"name": "xin", "age": 18},
+                {"name": "wang"}
+                ]
+
+        self.ctx_inst.load_profiles()
+        assert self.ctx_inst.profiles_dict == {"name": "wang", "age": 18}
+
+        mock_platform.assert_called_once_with()
+        mock_exists.assert_called_once_with(bootstrap.Context.PROFILES_FILE)
+        mock_open_file.assert_called_once_with(bootstrap.Context.PROFILES_FILE)
+        mock_load.assert_called_once_with(mock_open_file.return_value, Loader=yaml.SafeLoader)
+        mock_load_specific.assert_has_calls([
+            mock.call(bootstrap.Context.DEFAULT_PROFILE_NAME),
+            mock.call("s390")
+            ])
 
 
 class TestBootstrap(unittest.TestCase):
