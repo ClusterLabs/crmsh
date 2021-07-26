@@ -1136,17 +1136,8 @@ _COROSYNC_CONF_TEMPLATE_HEAD = """# Please read the corosync.conf.5 manual page
 
 totem {
     version:    2
-    secauth:    on
-    crypto_hash:    sha1
-    crypto_cipher:  aes256
     cluster_name:   %(clustername)s
     clear_node_high_bit: yes
-
-    token:      5000
-    token_retransmits_before_loss_const: 10
-    join:       60
-    consensus:  6000
-    max_messages:   20
 """
 _COROSYNC_CONF_TEMPLATE_TAIL = """
     %(rrp_mode)s

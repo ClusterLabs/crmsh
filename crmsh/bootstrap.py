@@ -19,6 +19,7 @@ import re
 import time
 import readline
 import shutil
+import yaml
 from string import Template
 from lxml import etree
 from pathlib import Path
@@ -75,6 +76,10 @@ class Context(object):
     Context object used to avoid having to pass these variables
     to every bootstrap method.
     """
+    PROFILES_FILE = "/etc/crm/profiles.yml"
+    DEFAULT_PROFILE_NAME = "default"
+    S390_PROFILE_NAME = "s390"
+
     def __init__(self):
         '''
         Initialize attributes
@@ -118,6 +123,10 @@ class Context(object):
         self.interfaces_inst = None
         self.with_other_user = True
         self.cluster_is_running = None
+        self.cloud_type = None
+        self.is_s390 = False
+        self.profiles_data = None
+        self.profiles_dict = {}
         self.default_nic_list = []
         self.default_ip_list = []
         self.local_ip_list = []
@@ -185,6 +194,59 @@ class Context(object):
     def init_sbd_manager(self):
         from .sbd import SBDManager
         self.sbd_manager = SBDManager(self)
+
+    def detect_platform(self):
+        """
+        Detect platform
+        Return profile type for different platform
+        """
+        profile_type = None
+
+        self.is_s390 = "390" in os.uname().machine
+        if self.is_s390:
+            profile_type = self.S390_PROFILE_NAME
+        else:
+            self.cloud_type = utils.detect_cloud()
+            if self.cloud_type:
+                profile_type = self.cloud_type
+
+        if profile_type:
+            status("Detected \"{}\" platform".format(profile_type))
+        return profile_type
+
+    def load_specific_profile(self, profile_type):
+        """
+        Load specific profile
+        """
+        profile_dict = {}
+        if not profile_type:
+            return profile_dict
+
+        if profile_type in self.profiles_data:
+            status("Loading \"{}\" profile from {}".format(profile_type, self.PROFILES_FILE))
+            profile_dict = self.profiles_data[profile_type]
+        else:
+            status("\"{}\" profile does not exist in {}".format(profile_type, self.PROFILES_FILE))
+        return profile_dict
+
+    def load_profiles(self):
+        """
+        Load profiles data for different environment
+        """
+        profile_type = self.detect_platform()
+
+        if not os.path.exists(self.PROFILES_FILE):
+            return
+        with open(self.PROFILES_FILE) as f:
+            self.profiles_data = yaml.load(f, Loader=yaml.SafeLoader)
+        # empty file
+        if not self.profiles_data:
+            return
+
+        default_profile_dict = self.load_specific_profile(self.DEFAULT_PROFILE_NAME)
+        specific_profile_dict = self.load_specific_profile(profile_type)
+        # merge two dictionaries
+        self.profiles_dict = {**default_profile_dict, **specific_profile_dict}
 
 
 _context = None
@@ -435,8 +497,9 @@ def status(msg):
 @contextmanager
 def status_long(msg):
     log("# {}...".format(msg))
-    if not _context.quiet:
-        sys.stdout.write("  {}...".format(msg))
+    if not _context or not _context.quiet:
+        space = "  " if _context else ""
+        sys.stdout.write("{}{}...".format(space, msg))
         sys.stdout.flush()
     try:
         yield
@@ -447,14 +510,14 @@ def status_long(msg):
 
 
 def status_progress():
-    if not _context.quiet:
+    if not _context or not _context.quiet:
         sys.stdout.write(".")
         sys.stdout.flush()
 
 
 def status_done():
     log("# done")
-    if not _context.quiet:
+    if not _context or not _context.quiet:
         print("done")
 
 
@@ -696,8 +759,22 @@ def init_cluster_local():
     if pass_msg:
         warn("You should change the hacluster password to something more secure!")
 
-    utils.start_service("pacemaker.service", enable=True)
+    start_pacemaker()
     wait_for_cluster()
+
+
+def start_pacemaker():
+    """
+    Start pacemaker service with wait time for sbd
+    """
+    from .sbd import SBDManager
+    pacemaker_start_msg = "Starting pacemaker"
+    if utils.package_is_installed("sbd") and \
+            utils.service_is_enabled("sbd.service") and \
+            SBDManager.is_delay_start():
+        pacemaker_start_msg += "(waiting for sbd {}s)".format(SBDManager.get_suitable_sbd_systemd_timeout())
+    with status_long(pacemaker_start_msg):
+        utils.start_service("pacemaker.service", enable=True)
 
 
 def install_tmp(tmpfile, to):
@@ -1164,26 +1241,32 @@ Configure Corosync:
     csync2_update(corosync.conf())
 
 
+def adjust_corosync_parameters_according_to_profiles():
+    """
+    Adjust corosync's parameters according profiles
+    """
+    if not _context.profiles_dict:
+        return
+    for k, v in _context.profiles_dict.items():
+        if k.startswith("corosync."):
+            corosync.set_value('.'.join(k.split('.')[1:]), v)
+
+
 def init_corosync():
     """
     Configure corosync (unicast or multicast, encrypted?)
     """
-    def requires_unicast():
-        host = utils.detect_cloud()
-        if host is not None:
-            status("Detected cloud platform: {}".format(host))
-        return host is not None
-
     init_corosync_auth()
 
     if os.path.exists(corosync.conf()):
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
-    if _context.unicast or requires_unicast():
+    if _context.unicast or _context.cloud_type:
         init_corosync_unicast()
     else:
         init_corosync_multicast()
+    adjust_corosync_parameters_according_to_profiles()
 
 
 def init_sbd():
@@ -2014,6 +2097,7 @@ def bootstrap_init(context):
 
     _context.initialize_qdevice()
     _context.validate_option()
+    _context.load_profiles()
     _context.init_sbd_manager()
 
     # Need hostname resolution to work, want NTP (but don't block ssh_remote or csync2_remote)
