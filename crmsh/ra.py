@@ -65,7 +65,7 @@ def can_use_lrmadmin():
 
 @utils.memoize
 def can_use_crm_resource():
-    _rc, s = get_stdout("crm_resource --list-standards", stderr_on=False)
+    _rc, s = get_stdout("crm_resource --list-ocf-providers", stderr_on=False)
     return s != ""
 
 
