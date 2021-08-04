@@ -701,12 +701,8 @@ class RscMgmt(command.UI):
             self._trace_op_interval(context, rsc_id, rsc, op, interval)
         if not cib_factory.commit():
             return False
-        if op is not None:
-            common_info("Trace for %s:%s is written to %s/trace_ra/" %
-                        (rsc_id, op, config.path.heartbeat_dir))
-        else:
-            common_info("Trace for %s is written to %s/trace_ra/" %
-                        (rsc_id, config.path.heartbeat_dir))
+        rsc_type = rsc.node.get("type")
+        common_info("Trace for {}{} is written to {}/trace_ra/{}".format(rsc_id, ":"+op if op else "", config.path.heartbeat_dir, rsc_type))
         if op is not None and op != "monitor":
             common_info("Trace set, restart %s to trace the %s operation" % (rsc_id, op))
         else:
@@ -760,4 +756,7 @@ class RscMgmt(command.UI):
             self._untrace_op(context, rsc_id, rsc, op)
         else:
             self._untrace_op_interval(context, rsc_id, rsc, op, interval)
-        return cib_factory.commit()
+        if not cib_factory.commit():
+            return False
+        common_info("Stop tracing {}{}".format(rsc_id, " for operation "+op if op else ""))
+        return True
