@@ -2006,6 +2006,10 @@ To trace the probe operation which exists for all resources, either
 set a trace for `monitor` with interval `0`, or use `probe` as the
 operation name.
 
+Note: RA tracing is only supported by OCF resource agents;
+The pacemaker-execd daemon does not log recurring monitor operations
+unless an error occurred.
+
 Usage:
 ...............
 trace <rsc> [<op> [<interval>] ]
