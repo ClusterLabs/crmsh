@@ -465,6 +465,8 @@ class Report(object):
             return None
 
         d = self._live_loc()
+        if not utils.is_path_sane(d):
+            return None
         utils.rmdir_r(d)
         tarball = "%s.tar.bz2" % d
         to_option = ""
@@ -473,8 +475,7 @@ class Report(object):
         nodes_option = ""
         if self.setnodes:
             nodes_option = "'-n %s'" % ' '.join(self.setnodes)
-        if utils.pipe_cmd_nosudo("mkdir -p %s" % os.path.dirname(d)) != 0:
-            return None
+        utils.mkdirp(os.path.dirname(d))
         common_info("Retrieving information from cluster nodes, please wait...")
         rc = utils.pipe_cmd_nosudo("%s -Z -Q -f '%s' %s %s %s %s" %
                                    (extcmd,
@@ -981,6 +982,8 @@ class Report(object):
 
     def manage_session(self, subcmd, name):
         session_dir = self.get_session_dir(name)
+        if not utils.is_path_sane(session_dir):
+            return False
         if subcmd == "save" and os.path.exists(session_dir):
             common_err("history session %s exists" % name)
             return False
@@ -988,8 +991,7 @@ class Report(object):
             common_err("history session %s does not exist" % name)
             return False
         if subcmd == "save":
-            if utils.pipe_cmd_nosudo("mkdir -p %s" % session_dir) != 0:
-                return False
+            utils.mkdirp(session_dir)
             if self.source == "live":
                 rc = utils.pipe_cmd_nosudo("tar -C '%s' -c . | tar -C '%s' -x" %
                                            (self._live_loc(), session_dir))

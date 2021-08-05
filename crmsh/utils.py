@@ -608,14 +608,14 @@ def safe_close_w(f):
 
 
 def is_path_sane(name):
-    if re.search(r"['`#*?$\[\]]", name):
+    if re.search(r"['`#*?$\[\];]", name):
         common_err("%s: bad path" % name)
         return False
     return True
 
 
 def is_filename_sane(name):
-    if re.search(r"['`/#*?$\[\]]", name):
+    if re.search(r"['`/#*?$\[\];]", name):
         common_err("%s: bad filename" % name)
         return False
     return True
