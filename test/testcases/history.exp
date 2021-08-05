@@ -374,7 +374,6 @@ d1
 .INP: # reset timeframe
 .INP: timeframe
 .INP: session save _crmsh_regtest
-.EXT mkdir -p /var/cache/crm/history-root/session/_crmsh_regtest
 .INP: session load _crmsh_regtest
 .INP: session
 current session: _crmsh_regtest
