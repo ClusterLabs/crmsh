@@ -293,6 +293,9 @@ class RscMgmt(command.UI):
 
         rc = True
         for rsc in resources:
+            rc_managed, reason = xmlutil.RscState().is_managed(rsc)
+            if not rc_managed:
+                context.warning("Resource {} is unmanaged ({})".format(rsc, reason))
             rc = rc and set_deep_meta_attr(rsc, name, value, commit=False)
         if commit and rc:
             ok = cib_factory.commit()

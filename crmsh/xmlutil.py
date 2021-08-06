@@ -17,7 +17,7 @@ from .msg import common_err, common_error, common_warn, common_debug, cib_parse_
 from . import userdir
 from .utils import add_sudo, str2file, str2tmp, get_boolean
 from .utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
-from .utils import olist, get_cib_in_use, get_tempdir, to_ascii
+from .utils import olist, get_cib_in_use, get_tempdir, to_ascii, running_on
 
 
 def xmlparse(f):
@@ -173,7 +173,71 @@ def get_top_cib_nodes(node, nodes_l):
     return nodes_l
 
 
-class RscState(object):
+class CibConfiguration(object):
+    """
+    Base class to load current cib configuration
+    """
+    def __init__(self):
+        self.current_cib = None
+
+    def _init_cib(self):
+        self.current_cib = cibdump2elem()
+        if self.current_cib is None:
+            raise ValueError("Cannot dump cib configuration")
+
+
+class NodeState(CibConfiguration):
+    """
+    Class to get specific node state
+    """
+    def list_nodes(self, include_remote_nodes=True):
+        """
+        List current nodes in cib
+        """
+        if self.current_cib is None:
+            self._init_cib()
+        local_nodes = self.current_cib.xpath('configuration/nodes/node/@uname')
+        if include_remote_nodes:
+            remote_nodes = self.current_cib.xpath('status/node_state[@remote_node="true"]/@uname')
+        else:
+            remote_nodes = []
+        return list(set([n for n in local_nodes + remote_nodes if n]))
+
+    def get_specific_node(self, uname):
+        """
+        Get a node XML element given the uname.
+        """
+        if self.current_cib is None:
+            self._init_cib()
+        if uname not in self.list_nodes():
+            raise ValueError("Node \"{}\" not exist".format(uname))
+        return self.current_cib.xpath("configuration//*[@uname=\"{}\"]".format(uname))[0]
+
+    def is_node_in_maintenance(self, uname):
+        """
+        Check if a node is in maintenance
+        """
+        node_entry = self.get_specific_node(uname)
+        attr_entry = get_child_nvset_node(node_entry, attr_set="instance_attributes")
+        if attr_entry is None:
+            return False
+        attr = get_attr_value(attr_entry, "maintenance")
+        return is_xs_boolean_true(attr) if attr else False
+
+    def are_all_nodes_in_maintenance(self):
+        """
+        Check if all nodes are in maintenance
+        """
+        return all([self.is_node_in_maintenance(node) for node in self.list_nodes()])
+
+    def is_node_in_maintenance_for_the_running_resource(self, rsc_id):
+        """
+        Check if node running this resource is in maintenance
+        """
+        return any([self.is_node_in_maintenance(node) for node in running_on(rsc_id)])
+
+
+class RscState(CibConfiguration):
     '''
     Get the resource status and some other relevant bits.
     In particular, this class should allow for a bit of caching
@@ -184,17 +248,17 @@ class RscState(object):
     rsc_status = "crm_resource -W -r '%s'"
 
     def __init__(self):
-        self.current_cib = None
+        super(self.__class__, self).__init__()
         self.rsc_elem = None
         self.prop_elem = None
         self.rsc_dflt_elem = None
 
-    def _init_cib(self):
-        cib = cibdump2elem("configuration")
-        self.current_cib = cib
-        self.rsc_elem = get_first_conf_elem(cib, "resources")
-        self.prop_elem = get_first_conf_elem(cib, "crm_config/cluster_property_set")
-        self.rsc_dflt_elem = get_first_conf_elem(cib, "rsc_defaults/meta_attributes")
+    def _load_cib(self):
+        if self.current_cib is None:
+            self._init_cib()
+        self.rsc_elem = get_first_conf_elem(self.current_cib, "resources")
+        self.prop_elem = get_first_conf_elem(self.current_cib, "crm_config/cluster_property_set")
+        self.rsc_dflt_elem = get_first_conf_elem(self.current_cib, "rsc_defaults/meta_attributes")
 
     def rsc2node(self, ident):
         '''
@@ -204,23 +268,21 @@ class RscState(object):
         expensive.
         '''
         if self.rsc_elem is None:
-            self._init_cib()
+            self._load_cib()
         if self.rsc_elem is None:
-            return None
+            raise ValueError("Failed to load resources cib")
         # does this need to be optimized?
         expr = './/*[@id="%s"]' % ident
         try:
             return self.rsc_elem.xpath(expr)[0]
         except (IndexError, AttributeError):
-            return None
+            raise ValueError("Cannot find resource \"{}\"".format(ident))
 
     def is_ms(self, ident):
         '''
         Test if the resource is master-slave.
         '''
         rsc_node = self.rsc2node(ident)
-        if rsc_node is None:
-            return False
         return is_ms(rsc_node)
 
     def rsc_clone(self, ident):
@@ -229,8 +291,6 @@ class RscState(object):
         or None if it's not cloned.
         '''
         rsc_node = self.rsc2node(ident)
-        if rsc_node is None:
-            return None
         pnode = rsc_node.getparent()
         if pnode is None:
             return None
@@ -243,28 +303,33 @@ class RscState(object):
     def is_managed(self, ident):
         '''
         Is this resource managed?
+        Return (boolean, reason)
         '''
         rsc_node = self.rsc2node(ident)
-        if rsc_node is None:
-            return False
         # maintenance-mode, if true, overrides all
         attr = get_attr_value(self.prop_elem, "maintenance-mode")
         if attr and is_xs_boolean_true(attr):
-            return False
-        # then check the rsc is-managed meta attribute
+            return False, "cluster property maintenance-mode is true"
+        # then check if all nodes are in maintenance
+        if NodeState().are_all_nodes_in_maintenance():
+            return False, "all nodes are in maintenance"
+        # then check if node running this resource is in maintenance
+        if NodeState().is_node_in_maintenance_for_the_running_resource(ident):
+            return False, "node which running \"{}\" is in maintenance".format(ident)
         rsc_meta_node = get_rsc_meta_node(rsc_node)
+        # then check the rsc maintenance meta attribute
+        attr = get_attr_value(rsc_meta_node, "maintenance")
+        if attr and is_xs_boolean_true(attr):
+            return False, "resource \"{}\" is in maintenance".format(ident)
+        # then check the rsc is-managed meta attribute
         attr = get_attr_value(rsc_meta_node, "is-managed")
-        if attr:
-            return is_xs_boolean_true(attr)
+        if attr and not is_xs_boolean_true(attr):
+            return False, "resource \"{}\" meta_attributes is-managed is false".format(ident)
         # then rsc_defaults is-managed attribute
         attr = get_attr_value(self.rsc_dflt_elem, "is-managed")
-        if attr:
-            return is_xs_boolean_true(attr)
-        # finally the is-managed-default property
-        attr = get_attr_value(self.prop_elem, "is-managed-default")
-        if attr:
-            return is_xs_boolean_true(attr)
-        return True
+        if attr and not is_xs_boolean_true(attr):
+            return False, "resource defaults meta_attributes is-managed is false"
+        return True, None
 
     def is_running(self, ident):
         '''
@@ -281,8 +346,6 @@ class RscState(object):
         Test if the resource is a group
         '''
         rsc_node = self.rsc2node(ident)
-        if rsc_node is None:
-            return False
         return is_group(rsc_node)
 
     def can_delete(self, ident):
@@ -290,7 +353,7 @@ class RscState(object):
         Can a resource be deleted?
         The order below is important!
         '''
-        return not (self.is_running(ident) and not self.is_group(ident) and self.is_managed(ident))
+        return not (self.is_running(ident) and not self.is_group(ident) and self.is_managed(ident)[0])
 
 
 def resources_xml():
@@ -334,18 +397,6 @@ def mk_rsc_type(n):
     return ''.join((s1, s2, ra_type))
 
 
-def listnodes(include_remote_nodes=True):
-    cib = cibdump2elem()
-    if cib is None:
-        return []
-    local_nodes = cib.xpath('/cib/configuration/nodes/node/@uname')
-    if include_remote_nodes:
-        remote_nodes = cib.xpath('/cib/status/node_state[@remote_node="true"]/@uname')
-    else:
-        remote_nodes = []
-    return list(set([n for n in local_nodes + remote_nodes if n]))
-
-
 def is_our_node(s):
     '''
     Check if s is in a list of our nodes (ignore case).
@@ -353,7 +404,7 @@ def is_our_node(s):
 
     Includes remote nodes as well
     '''
-    for n in listnodes():
+    for n in NodeState().list_nodes():
         if n.lower() == s.lower():
             return True
     return False
