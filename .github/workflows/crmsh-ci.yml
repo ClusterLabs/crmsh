@@ -127,6 +127,16 @@ jobs:
         $DOCKER_SCRIPT resource before_install
         $DOCKER_SCRIPT resource run
 
+  functional_test_operation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@v2
+    - name: functional test for operations
+      run:  |
+        $DOCKER_SCRIPT operation before_install
+        $DOCKER_SCRIPT operation run
+
   functional_test_configure_sublevel:
     runs-on: ubuntu-latest
     timeout-minutes: 20
