@@ -75,6 +75,7 @@ test/features/environment.py
 test/features/geo_setup.feature
 test/features/hb_report_bugs.feature
 test/features/ocfs2.feature
+test/features/operation_maintenance.feature
 test/features/qdevice_options.feature
 test/features/qdevice_setup_remove.feature
 test/features/qdevice_usercase.feature
@@ -194,8 +195,8 @@ test/unittests/test_objset.py
 test/unittests/test_ocfs2.py
 test/unittests/test_parallax.py
 test/unittests/test_parse.py
-test/unittests/test_ratrace.py
 test/unittests/test_qdevice.py
+test/unittests/test_ratrace.py
 test/unittests/test_report.py
 test/unittests/test_sbd.py
 test/unittests/test_scripts.py

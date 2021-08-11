@@ -2285,7 +2285,7 @@ def bootstrap_remove(context):
         remove_self()
         return
 
-    if _context.cluster_node in xmlutil.listnodes():
+    if _context.cluster_node in xmlutil.NodeState().list_nodes():
         remove_node_from_cluster()
     else:
         error("Specified node {} is not configured in cluster! Unable to remove.".format(_context.cluster_node))
@@ -2294,7 +2294,7 @@ def bootstrap_remove(context):
 def remove_self():
     me = _context.cluster_node
     yes_to_all = _context.yes_to_all
-    nodes = xmlutil.listnodes(include_remote_nodes=False)
+    nodes = xmlutil.NodeState().list_nodes(include_remote_nodes=False)
     othernode = next((x for x in nodes if x != me), None)
     if othernode is not None:
         # remove from other node

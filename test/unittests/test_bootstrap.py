@@ -1342,7 +1342,7 @@ class TestValidation(unittest.TestCase):
         mock_error.assert_not_called()
         mock_self.assert_called_once_with()
 
-    @mock.patch('crmsh.xmlutil.listnodes')
+    @mock.patch('crmsh.xmlutil.NodeState.list_nodes')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
@@ -1373,7 +1373,7 @@ class TestValidation(unittest.TestCase):
         mock_error.assert_called_once_with("Specified node node2 is not configured in cluster! Unable to remove.")
 
     @mock.patch('crmsh.bootstrap.remove_node_from_cluster')
-    @mock.patch('crmsh.xmlutil.listnodes')
+    @mock.patch('crmsh.xmlutil.NodeState.list_nodes')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
@@ -1405,7 +1405,7 @@ class TestValidation(unittest.TestCase):
 
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.utils.ext_cmd_nosudo')
-    @mock.patch('crmsh.xmlutil.listnodes')
+    @mock.patch('crmsh.xmlutil.NodeState.list_nodes')
     def test_remove_self_other_nodes(self, mock_list, mock_ext, mock_error):
         mock_list.return_value = ["node1", "node2"]
         mock_ext.return_value = 1
@@ -1422,7 +1422,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.bootstrap.stop_services')
-    @mock.patch('crmsh.xmlutil.listnodes')
+    @mock.patch('crmsh.xmlutil.NodeState.list_nodes')
     def test_remove_self_rm_failed(self, mock_list, mock_stop_service, mock_invoke, mock_error):
         mock_list.return_value = ["node1"]
         mock_invoke.return_value = False

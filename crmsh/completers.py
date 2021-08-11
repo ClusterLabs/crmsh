@@ -75,7 +75,7 @@ def primitives(args):
     return [x.get("id") for x in nodes if xmlutil.is_primitive(x)]
 
 
-nodes = call(xmlutil.listnodes)
+nodes = call(xmlutil.NodeState().list_nodes)
 
 shadows = call(xmlutil.listshadows)
 

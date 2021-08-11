@@ -299,6 +299,8 @@ class NodeMgmt(command.UI):
         else:
             syntax_err(args, context=context.get_command_name())
             return False
+        if xmlutil.NodeState().is_node_in_maintenance(node):
+            context.warning("Node \"{}\" is in maintenance".format(node))
         opts = ''
         if lifetime:
             opts = "--lifetime='%s'" % lifetime
