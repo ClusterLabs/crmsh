@@ -4,7 +4,6 @@ import shutil
 from . import utils
 from . import bootstrap
 from .bootstrap import SYSCONFIG_SBD
-from .constants import SSH_OPTION
 
 
 class SBDManager(object):
@@ -27,9 +26,10 @@ Configure SBD:
 If you want to use diskless SBD for two-nodes cluster, should be combined with QDevice."""
     PARSE_RE = "[; ]"
     DISKLESS_CRM_CMD = "crm configure property stonith-enabled=true stonith-watchdog-timeout={} stonith-timeout={}"
+
+    SBD_WATCHDOG_TIMEOUT_DEFAULT = 5
+    SBD_WATCHDOG_TIMEOUT_DEFAULT_S390 = 15
     SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE = 35
-    STONITH_WATCHDOG_TIMEOUT_DEFAULT = "10s"
-    STONITH_WATCHDOG_TIMEOUT_DEFAULT_S390 = "30s"
 
     def __init__(self, context):
         """
@@ -42,29 +42,37 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         self.diskless_sbd = context.diskless_sbd
         self._sbd_devices = None
         self._watchdog_inst = None
-        self._stonith_watchdog_timeout = self.STONITH_WATCHDOG_TIMEOUT_DEFAULT
         self._stonith_timeout = 60
-        self._sbd_watchdog_timeout = 0
-        self._is_s390 = "390" in os.uname().machine
+        if context.is_s390:
+            self._sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390
+        else:
+            self._sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT
+        self._stonith_watchdog_timeout = -1
         self._context = context
+        self._delay_start = False
 
     @staticmethod
     def _get_device_uuid(dev, node=None):
         """
         Get UUID for specific device and node
         """
-        cmd = "sbd -d {} dump".format(dev)
-        if node:
-            cmd = "ssh {} root@{} '{}'".format(SSH_OPTION, node, cmd)
+        out = utils.get_stdout_or_raise_error("sbd -d {} dump".format(dev), remote=node)
+        res = re.search("UUID\s*:\s*(.*)\n", out)
+        if not res:
+            raise ValueError("Cannot find sbd device UUID for {}".format(dev))
+        return res.group(1)
 
-        rc, out, err = utils.get_stdout_stderr(cmd)
-        if rc != 0 and err:
-            raise ValueError("Cannot dump sbd meta-data: {}".format(err))
-        if rc == 0 and out:
-            res = re.search("UUID\s*:\s*(.*)\n", out)
-            if not res:
-                raise ValueError("Cannot find sbd device UUID for {}".format(dev))
-            return res.group(1)
+    @staticmethod
+    def _get_sbd_msgwait(dev):
+        """
+        Get msgwait for sbd device
+        """
+        out = utils.get_stdout_or_raise_error("sbd -d {} dump".format(dev))
+        # Format like "Timeout (msgwait)  : 30"
+        res = re.search("\(msgwait\)\s+:\s+(\d+)", out)
+        if not res:
+            raise ValueError("Cannot get sbd msgwait for {}".format(dev))
+        return int(res.group(1))
 
     def _compare_device_uuid(self, dev, node_list):
         """
@@ -144,27 +152,53 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
             dev_list = self._get_sbd_device_interactive()
         self._sbd_devices = dev_list
 
+    def _adjust_sbd_watchdog_timeout_for_s390(self):
+        """
+        Correct watchdog timeout if less than s390 default
+        """
+        if self._context.is_s390 and self._sbd_watchdog_timeout < self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390:
+            bootstrap.warn("sbd_watchdog_timeout is set to {} for s390, it was {}".format(self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390, self._sbd_watchdog_timeout))
+            self._sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390
+
     def _initialize_sbd(self):
         """
-        Initialize SBD device
+        Initialize SBD parameters according to profiles.yml, or the crmsh defined defaulst as the last resort.
+        This covers both disk-based-sbd, and diskless-sbd scenarios.
+        For diskless-sbd, set _sbd_watchdog_timeout then return;
+        For disk-based-sbd, also calculate the msgwait value, then initialize the SBD device.
         """
+        if "sbd.watchdog_timeout" in self._context.profiles_dict:
+            self._sbd_watchdog_timeout = self._context.profiles_dict["sbd.watchdog_timeout"]
+            self._adjust_sbd_watchdog_timeout_for_s390()
         if self.diskless_sbd:
             return
+
+        sbd_msgwait_default = int(self._sbd_watchdog_timeout) * 2
+        sbd_msgwait = sbd_msgwait_default
+        if "sbd.msgwait" in self._context.profiles_dict:
+            sbd_msgwait = self._context.profiles_dict["sbd.msgwait"]
+            if int(sbd_msgwait) < sbd_msgwait_default:
+                bootstrap.warn("sbd msgwait is set to {}, it was {}".format(sbd_msgwait_default, sbd_msgwait))
+                sbd_msgwait = sbd_msgwait_default
+        opt = "-4 {} -1 {}".format(sbd_msgwait, self._sbd_watchdog_timeout)
+
         for dev in self._sbd_devices:
-            rc, _, err = bootstrap.invoke("sbd -d {} create".format(dev))
+            rc, _, err = bootstrap.invoke("sbd {} -d {} create".format(opt, dev))
             if not rc:
                 bootstrap.error("Failed to initialize SBD device {}: {}".format(dev, err))
 
-    def _update_configuration(self):
+    def _update_sbd_configuration(self):
         """
         Update /etc/sysconfig/sbd
         """
         shutil.copyfile(self.SYSCONFIG_SBD_TEMPLATE, SYSCONFIG_SBD)
-        self._determine_sbd_watchdog_timeout()
+        self._adjust_sbd_watchdog_timeout_with_diskless_and_qdevice()
+        if utils.detect_virt():
+            self._delay_start = True
         sbd_config_dict = {
                 "SBD_PACEMAKER": "yes",
                 "SBD_STARTMODE": "always",
-                "SBD_DELAY_START": "yes" if utils.detect_virt() and self._sbd_devices else "no",
+                "SBD_DELAY_START": "yes" if self._delay_start else "no",
                 "SBD_WATCHDOG_DEV": self._watchdog_inst.watchdog_device_name
                 }
         if self._sbd_watchdog_timeout > 0:
@@ -174,33 +208,26 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         utils.sysconfig_set(SYSCONFIG_SBD, **sbd_config_dict)
         bootstrap.csync2_update(SYSCONFIG_SBD)
 
-    def _determine_sbd_watchdog_timeout(self):
+    def _adjust_sbd_watchdog_timeout_with_diskless_and_qdevice(self):
         """
-        When using diskless SBD, determine value of SBD_WATCHDOG_TIMEOUT
+        When using diskless SBD with Qdevice, adjust value of sbd_watchdog_timeout
         """
         if not self.diskless_sbd:
             return
         # add sbd after qdevice started
         if utils.is_qdevice_configured() and utils.service_is_active("corosync-qdevice.service"):
             qdevice_sync_timeout = utils.get_qdevice_sync_timeout()
-            self._sbd_watchdog_timeout = qdevice_sync_timeout + 5
-            if self._is_s390 and self._sbd_watchdog_timeout < 15:
-                self._sbd_watchdog_timeout = 15
+            if self._sbd_watchdog_timeout <= qdevice_sync_timeout:
+                watchdog_timeout_with_qdevice = qdevice_sync_timeout + 5
+                bootstrap.warn("sbd_watchdog_timeout is set to {} for qdevice, it was {}".format(watchdog_timeout_with_qdevice, self._sbd_watchdog_timeout))
+                self._sbd_watchdog_timeout = watchdog_timeout_with_qdevice
             self._stonith_timeout = self.calculate_stonith_timeout(self._sbd_watchdog_timeout)
         # add sbd and qdevice together from beginning
         elif self._context.qdevice_inst:
-            self._sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
+            if self._sbd_watchdog_timeout < self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
+                bootstrap.warn("sbd_watchdog_timeout is set to {} for qdevice, it was {}".format(self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE, self._sbd_watchdog_timeout))
+                self._sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
             self._stonith_timeout = self.calculate_stonith_timeout(self._sbd_watchdog_timeout)
-
-    def _determine_stonith_watchdog_timeout(self):
-        """
-        Determine value of stonith-watchdog-timeout
-        """
-        res = SBDManager.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
-        if res:
-            self._stonith_watchdog_timeout = -1
-        elif self._is_s390:
-            self._stonith_watchdog_timeout = self.STONITH_WATCHDOG_TIMEOUT_DEFAULT_S390
 
     def _get_sbd_device_from_config(self):
         """
@@ -211,6 +238,44 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
             return utils.re_split_string(self.PARSE_RE, res)
         else:
             return None
+
+    @staticmethod
+    def is_delay_start():
+        """
+        Check if SBD_DELAY_START is yes
+        """
+        res = SBDManager.get_sbd_value_from_config("SBD_DELAY_START")
+        return utils.is_boolean_true(res)
+
+    @staticmethod
+    def get_sbd_watchdog_timeout():
+        """
+        Get SBD_WATCHDOG_TIMEOUT from /etc/sysconfig/sbd
+        """
+        res = SBDManager.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
+        if not res:
+            raise ValueError("Cannot get the value of SBD_WATCHDOG_TIMEOUT")
+        return int(res)
+
+    @staticmethod
+    def get_sbd_start_timeout_threshold():
+        """
+        Get sbd start timeout threshold
+        TimeoutStartUSec of sbd shouldn't less than this value
+        """
+        dev_list = SBDManager.get_sbd_device_from_config()
+        if not dev_list:
+            return int(SBDManager.get_sbd_watchdog_timeout() * 2)
+        else:
+            return int(SBDManager._get_sbd_msgwait(dev_list[0]))
+
+    @staticmethod
+    def get_suitable_sbd_systemd_timeout():
+        """
+        Get suitable systemd start timeout for sbd.service
+        """
+        timeout_value = SBDManager.get_sbd_start_timeout_threshold()
+        return int(timeout_value * 1.2)
 
     def _restart_cluster_and_configure_sbd_ra(self):
         """
@@ -240,6 +305,29 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         else:
             # in init process
             bootstrap.invoke("systemctl enable sbd.service")
+
+    def _adjust_systemd(self):
+        """
+        Adjust start timeout for sbd when set SBD_DELAY_START
+        """
+        if not self.is_delay_start():
+            return
+
+        # TimeoutStartUSec default is 1min 30s, need to parse as seconds
+        cmd = "systemctl show -p TimeoutStartUSec sbd --value"
+        out = utils.get_stdout_or_raise_error(cmd)
+        res_seconds = re.search("(\d+)s", out)
+        default_start_timeout = int(res_seconds.group(1)) if res_seconds else 0
+        res_min = re.search("(\d+)min", out)
+        default_start_timeout += 60 * int(res_min.group(1)) if res_min else 0
+        if default_start_timeout >= self.get_sbd_start_timeout_threshold():
+            return
+
+        systemd_sbd_dir = "/etc/systemd/system/sbd.service.d"
+        utils.mkdirp(systemd_sbd_dir)
+        sbd_delay_start_file = "{}/sbd_delay_start.conf".format(systemd_sbd_dir)
+        utils.str2file("[Service]\nTimeoutSec={}".format(self.get_suitable_sbd_systemd_timeout()), sbd_delay_start_file)
+        utils.get_stdout_or_raise_error("systemctl daemon-reload")
 
     def _warn_diskless_sbd(self, peer=None):
         """
@@ -275,9 +363,9 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         self._warn_diskless_sbd()
         with bootstrap.status_long("Initializing {}SBD...".format("diskless " if self.diskless_sbd else "")):
             self._initialize_sbd()
-            self._update_configuration()
-        self._determine_stonith_watchdog_timeout()
+            self._update_sbd_configuration()
         self._enable_sbd_service()
+        self._adjust_systemd()
 
     def configure_sbd_resource(self):
         """
@@ -318,6 +406,7 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
             self._verify_sbd_device(dev_list, [peer_host])
         else:
             self._warn_diskless_sbd(peer_host)
+        self._adjust_systemd()
         bootstrap.status("Got {}SBD configuration".format("" if dev_list else "diskless "))
         bootstrap.invoke("systemctl enable sbd.service")
 

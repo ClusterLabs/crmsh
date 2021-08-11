@@ -96,7 +96,7 @@ class Cluster(command.UI):
             if utils.service_is_active("pacemaker.service"):
                 err_buf.info("Cluster services already started")
                 return
-            utils.start_service("pacemaker")
+            bootstrap.start_pacemaker()
             if utils.is_qdevice_configured():
                 utils.start_service("corosync-qdevice")
             err_buf.info("Cluster services started")
