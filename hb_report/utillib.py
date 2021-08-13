@@ -967,11 +967,9 @@ def get_ratraces():
     log_debug("looking for RA trace files in %s" % trace_dir)
     flist = []
     for f in find_files(trace_dir, constants.FROM_TIME, constants.TO_TIME):
-        flist.append(os.path.join("trace_ra", '/'.join(f.split('/')[-2:])))
-    if flist:
-        cmd = "tar -cf - -C `dirname %s` %s | tar -xf - -C %s" % (trace_dir, ' '.join(flist), constants.WORKDIR)
-        crmutils.ext_cmd(cmd)
-        log_debug("found %d RA trace files in %s" % (len(flist), trace_dir))
+        dest_dir = os.path.join(constants.WORKDIR, '/'.join(f.split('/')[-3:-1]))
+        crmutils.mkdirp(dest_dir)
+        shutil.copy2(f, dest_dir)
 
 
 def get_pe_inputs():
