@@ -5,10 +5,13 @@ import os
 from . import command
 from . import completers
 from . import utils
-from .msg import err_buf
 from . import corosync
 from . import parallax
 from . import bootstrap
+from . import log
+
+
+logger = log.setup_logger(__name__)
 
 
 def _push_completer(args):
@@ -60,13 +63,13 @@ class Corosync(command.UI):
         Quick cluster health status. Corosync status or QNetd status
         '''
         if not utils.service_is_active("corosync.service"):
-            err_buf.error("corosync.service is not running!")
+            logger.error("corosync.service is not running!")
             return False
 
         try:
             corosync.query_status(status_type)
         except ValueError as err:
-            err_buf.error(str(err))
+            logger.error(str(err))
             return False
 
     @command.skill_level('administrator')

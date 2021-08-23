@@ -10,10 +10,12 @@ from . import utils
 from . import xmlutil
 from . import ui_utils
 from . import options
-
-from .msg import common_error, common_err, common_info, common_debug
-from .msg import no_prog_err
 from .cibconfig import cib_factory
+from . import log
+
+
+logger = log.setup_logger(__name__)
+logger_utils = log.LoggerUtils(logger)
 
 
 def rm_meta_attribute(node, attr, l, force_children=False):
@@ -66,8 +68,7 @@ def set_deep_meta_attr_node(target_node, attr, value):
                         (config.core.manage_children == "ask" and
                         utils.ask("'%s' conflicts with '%s' attribute. Remove '%s' for child resource %s?" %
                                 (attr, conflicting_attr, conflicting_attr, c.get("id")))):
-                    common_debug("force remove meta attr %s from %s" %
-                                (conflicting_attr, c.get("id")))
+                    logger.debug("force remove meta attr %s from %s", conflicting_attr, c.get("id"))
                     rm_meta_attribute(c, conflicting_attr, nvpair_l, force_children=True)
         # remove the same attributes from all children (if wanted)
         odd_children = get_children_with_attr(target_node, attr)
@@ -76,8 +77,7 @@ def set_deep_meta_attr_node(target_node, attr, value):
                     (config.core.manage_children == "ask" and
                      utils.ask("Do you want to override '%s' for child resource %s?" %
                                (attr, c.get("id")))):
-                common_debug("force remove meta attr %s from %s" %
-                             (attr, c.get("id")))
+                logger.debug("force remove meta attr %s from %s", attr, c.get("id"))
                 rm_meta_attribute(c, attr, nvpair_l, force_children=True)
     xmlutil.rmnodes(list(set(nvpair_l)))
     if '' != conflicting_attr:
@@ -147,19 +147,19 @@ def set_deep_meta_attr(rsc, attr, value, commit=True):
 
     objs = cib_factory.find_objects(rsc)
     if objs is None:
-        common_error("CIB is not valid!")
+        logger.error("CIB is not valid!")
         return False
     while any(obj for obj in objs if obj.obj_type == 'tag'):
         objs = list(flatten(resolve(obj) for obj in objs))
     objs = list(filter(is_resource, objs))
-    common_debug("set_deep_meta_attr: %s" % (', '.join([obj.obj_id for obj in objs])))
+    logger.debug("set_deep_meta_attr: %s", ', '.join([obj.obj_id for obj in objs]))
     if not objs:
-        common_error("Resource not found: %s" % (rsc))
+        logger.error("Resource not found: %s", rsc)
         return False
 
     ok = all(update_obj(obj) for obj in objs)
     if not ok:
-        common_error("Failed to update meta attributes for %s" % (rsc))
+        logger.error("Failed to update meta attributes for %s", rsc)
         return False
 
     if not commit:
@@ -167,7 +167,7 @@ def set_deep_meta_attr(rsc, attr, value, commit=True):
 
     ok = cib_factory.commit()
     if not ok:
-        common_error("Failed to commit updates to %s" % (rsc))
+        logger.error("Failed to commit updates to %s", rsc)
         return False
     return True
 
@@ -251,7 +251,7 @@ class RscMgmt(command.UI):
     def requires(self):
         for program in ('crm_resource', 'crm_attribute'):
             if not utils.is_program(program):
-                no_prog_err(program)
+                logger_utils.no_prog_err(program)
                 return False
         return True
 
@@ -297,7 +297,7 @@ class RscMgmt(command.UI):
         if commit and rc:
             ok = cib_factory.commit()
             if not ok:
-                common_error("Failed to commit updates to %s" % (rsc))
+                logger.error("Failed to commit updates to %s", rsc)
             return ok
         return rc
 
@@ -321,12 +321,12 @@ class RscMgmt(command.UI):
     @command.completers(compl.resources)
     def do_restart(self, context, *resources):
         "usage: restart <rsc> [<rsc> ...]"
-        common_info("ordering %s to stop" % ", ".join(resources))
+        logger.info("ordering %s to stop", ", ".join(resources))
         if not self._commit_meta_attrs(context, resources, "target-role", "Stopped"):
             return False
         if not utils.wait4dc("stop", not options.batch):
             return False
-        common_info("ordering %s to start" % ", ".join(resources))
+        logger.info("ordering %s to start", ", ".join(resources))
         return self._commit_meta_attrs(context, resources, "target-role", "Started")
 
     @command.wait
@@ -336,7 +336,7 @@ class RscMgmt(command.UI):
         if not utils.is_name_sane(rsc):
             return False
         if not xmlutil.RscState().is_ms(rsc):
-            common_err("%s is not a master-slave resource" % rsc)
+            logger.error("%s is not a master-slave resource", rsc)
             return False
         return utils.ext_cmd(self.rsc_setrole % (rsc, "Master")) == 0
 
@@ -364,7 +364,7 @@ class RscMgmt(command.UI):
         if not utils.is_name_sane(rsc):
             return False
         if not xmlutil.RscState().is_ms(rsc):
-            common_err("%s is not a master-slave resource" % rsc)
+            logger.error("%s is not a master-slave resource", rsc)
             return False
         return utils.ext_cmd(self.rsc_setrole % (rsc, "Slave")) == 0
 
@@ -410,9 +410,9 @@ class RscMgmt(command.UI):
         rc = utils.ext_cmd(self.rsc_migrate % (rsc, opts))
         if rc == 0:
             if node:
-                common_info("Move constraint created for %s to %s" % (rsc, node))
+                logger.info("Move constraint created for %s to %s", rsc, node)
             else:
-                common_info("Move constraint created for %s" % (rsc))
+                logger.info("Move constraint created for %s", rsc)
         return rc == 0
 
     @command.skill_level('administrator')
@@ -440,9 +440,9 @@ class RscMgmt(command.UI):
         rc = utils.ext_cmd(self.rsc_ban % (rsc, opts))
         if rc == 0:
             if node:
-                common_info("Ban constraint created for %s on %s" % (rsc, node))
+                logger.info("Ban constraint created for %s on %s", rsc, node)
             else:
-                common_info("Ban constraint created for %s" % (rsc))
+                logger.info("Ban constraint created for %s", rsc)
         return rc == 0
 
     @command.alias('unmove', 'unban', 'unmigrate')
@@ -455,7 +455,7 @@ class RscMgmt(command.UI):
             return False
         rc = utils.ext_cmd(self.rsc_unmigrate % rsc)
         if rc == 0:
-            common_info("Removed migration constraints for %s" % (rsc))
+            logger.info("Removed migration constraints for %s", rsc)
         return rc == 0
 
     @command.skill_level('administrator')
@@ -628,10 +628,10 @@ class RscMgmt(command.UI):
             return None
         rsc = cib_factory.find_object(rsc_id)
         if not rsc:
-            common_err("resource %s does not exist" % rsc_id)
+            logger.error("resource %s does not exist", rsc_id)
             return None
         if rsc.obj_type != "primitive":
-            common_err("element %s is not a primitive resource" % rsc_id)
+            logger.error("element %s is not a primitive resource", rsc_id)
             return None
         return rsc
 
@@ -702,15 +702,15 @@ class RscMgmt(command.UI):
         if not cib_factory.commit():
             return False
         rsc_type = rsc.node.get("type")
-        common_info("Trace for {}{} is written to {}/trace_ra/{}".format(rsc_id, ":"+op if op else "", config.path.heartbeat_dir, rsc_type))
+        logger.info("Trace for %s%s is written to %s/trace_ra/%s", rsc_id, ":"+op if op else "", config.path.heartbeat_dir, rsc_type)
         if op is not None and op != "monitor":
-            common_info("Trace set, restart %s to trace the %s operation" % (rsc_id, op))
+            logger.info("Trace set, restart %s to trace the %s operation", rsc_id, op)
         else:
-            common_info("Trace set, restart %s to trace non-monitor operations" % (rsc_id))
+            logger.info("Trace set, restart %s to trace non-monitor operations", rsc_id)
         return True
 
     def _remove_trace(self, rsc, op_node):
-        common_debug("op_node: %s" % (xmlutil.xml_tostring(op_node)))
+        logger.debug("op_node: %s", xmlutil.xml_tostring(op_node))
         op_node = rsc.del_op_attr(op_node, constants.trace_ra_attr)
         if rsc.is_dummy_operation(op_node):
             rsc.del_operation(op_node)
@@ -758,5 +758,5 @@ class RscMgmt(command.UI):
             self._untrace_op_interval(context, rsc_id, rsc, op, interval)
         if not cib_factory.commit():
             return False
-        common_info("Stop tracing {}{}".format(rsc_id, " for operation "+op if op else ""))
+        logger.info("Stop tracing %s%s", rsc_id, " for operation "+op if op else "")
         return True

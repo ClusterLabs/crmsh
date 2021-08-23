@@ -3,7 +3,6 @@ import sys
 import re
 import time
 import threading
-import logging
 import shutil
 import tempfile
 from contextlib import contextmanager

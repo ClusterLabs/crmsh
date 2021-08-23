@@ -4,8 +4,12 @@
 
 import re
 import inspect
-from .msg import bad_usage, common_err
 from . import utils
+from . import log
+
+
+logger = log.setup_logger(__name__)
+logger_utils = log.LoggerUtils(logger)
 
 
 def _get_attr_cmd(attr_ext_commands, subcmd):
@@ -50,7 +54,7 @@ def manage_attr(cmd, attr_ext_commands, rsc, subcmd, attr, value):
         cmdline = [rsc, subcmd, attr]
         if value is not None:
             cmdline.append(value)
-        bad_usage(cmd, ' '.join(cmdline), msg)
+        logger_utils.bad_usage(cmd, ' '.join(cmdline), msg)
         return False
 
 
@@ -72,7 +76,7 @@ def ptestlike(simfun, def_verb, cmd, args):
         elif re.match("^vv*$", p):
             verbosity = p
         else:
-            bad_usage(cmd, ' '.join(args))
+            logger_utils.bad_usage(cmd, ' '.join(args))
             return False
     return simfun(nograph, scores, utilization, actions, verbosity)
 
@@ -95,7 +99,7 @@ def graph_args(args):
     gtype, outf, ftype = None, None, None
     gtype = tryarg(0, "dot")
     if gtype not in gv_types:
-        common_err("graph type %s is not supported" % gtype)
+        logger.error("graph type %s is not supported", gtype)
         return False, gtype, outf, ftype
     outf = tryarg(1, None)
     if outf is not None and not utils.is_path_sane(outf):

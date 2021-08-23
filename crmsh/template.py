@@ -5,7 +5,10 @@ import os
 import re
 from . import config
 from . import userdir
-from .msg import common_err, common_info, common_warn
+from . import log
+
+
+logger = log.setup_logger(__name__)
 
 
 def get_var(l, key):
@@ -35,14 +38,14 @@ def chk_key(l, key):
 def validate_template(l):
     'Test for required stuff in a template.'
     if not chk_var(l, '%name'):
-        common_err("invalid template: missing '%name'")
+        logger.error("invalid template: missing '%name'")
         return False
     if not chk_key(l, '%generate'):
-        common_err("invalid template: missing '%generate'")
+        logger.error("invalid template: missing '%generate'")
         return False
     g = l.index('%generate')
     if not (chk_key(l[0:g], '%required') or chk_key(l[0:g], '%optional')):
-        common_err("invalid template: missing '%required' or '%optional'")
+        logger.error("invalid template: missing '%required' or '%optional'")
         return False
     return True
 
@@ -103,7 +106,7 @@ class LoadTemplate(object):
         try:
             f = open("%s/%s" % (userdir.CRMCONF_DIR, name), "w")
         except IOError as msg:
-            common_err("open: %s" % msg)
+            logger.error("open: %s", msg)
             return False
         print(self.generate(), file=f)
         f.close()
@@ -113,11 +116,11 @@ class LoadTemplate(object):
         try:
             l = open(os.path.join(config.path.sharedir, 'templates', tmpl)).read().split('\n')
         except IOError as msg:
-            common_err("open: %s" % msg)
+            logger.error("open: %s", msg)
             return ''
         if not validate_template(l):
             return ''
-        common_info("pulling in template %s" % tmpl)
+        logger.info("pulling in template %s", tmpl)
         g = l.index('%generate')
         pre_gen = l[0:g]
         post_gen = l[g+1:]
@@ -126,7 +129,7 @@ class LoadTemplate(object):
             if s.startswith('%depends_on'):
                 a = s.split()
                 if len(a) != 2:
-                    common_warn("%s: wrong usage" % s)
+                    logger.warning("%s: wrong usage", s)
                     continue
                 tmpl_id = a[1]
                 tmpl_pfx = self.load_template(a[1])

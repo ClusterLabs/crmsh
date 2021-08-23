@@ -4,6 +4,11 @@ import shutil
 from . import utils
 from . import bootstrap
 from .bootstrap import SYSCONFIG_SBD
+from . import log
+
+
+logger = log.setup_logger(__name__)
+logger_utils = log.LoggerUtils(logger)
 
 
 class SBDManager(object):
@@ -11,8 +16,7 @@ class SBDManager(object):
     Class to manage sbd configuration and services
     """
     SYSCONFIG_SBD_TEMPLATE = "/usr/share/fillup-templates/sysconfig.sbd"
-    SBD_STATUS_DESCRIPTION = """
-Configure SBD:
+    SBD_STATUS_DESCRIPTION = """Configure SBD:
   If you have shared storage, for example a SAN or iSCSI target,
   you can use it avoid split-brain scenarios by configuring SBD.
   This requires a 1 MB partition, accessible to all nodes in the
@@ -102,13 +106,13 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         Get sbd device on interactive mode
         """
         if self._context.yes_to_all:
-            bootstrap.warn(self.SBD_WARNING)
+            logger.warning(self.SBD_WARNING)
             return
 
-        bootstrap.status(self.SBD_STATUS_DESCRIPTION)
+        logger.info(self.SBD_STATUS_DESCRIPTION)
 
         if not bootstrap.confirm("Do you wish to use SBD?"):
-            bootstrap.warn(self.SBD_WARNING)
+            logger.warning(self.SBD_WARNING)
             return
 
         configured_dev_list = self._get_sbd_device_from_config()
@@ -128,10 +132,10 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
             try:
                 self._verify_sbd_device(dev_list)
             except ValueError as err_msg:
-                bootstrap.print_error_msg(str(err_msg))
+                logger.error(str(err_msg))
                 continue
             for dev_item in dev_list:
-                bootstrap.warn("All data on {} will be destroyed!".format(dev_item))
+                logger.warning("All data on {} will be destroyed!".format(dev_item))
                 if bootstrap.confirm('Are you sure you wish to use this device?'):
                     dev_looks_sane = True
                 else:
@@ -157,7 +161,7 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         Correct watchdog timeout if less than s390 default
         """
         if self._context.is_s390 and self._sbd_watchdog_timeout < self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390:
-            bootstrap.warn("sbd_watchdog_timeout is set to {} for s390, it was {}".format(self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390, self._sbd_watchdog_timeout))
+            logger.warning("sbd_watchdog_timeout is set to {} for s390, it was {}".format(self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390, self._sbd_watchdog_timeout))
             self._sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390
 
     def _initialize_sbd(self):
@@ -167,6 +171,8 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         For diskless-sbd, set _sbd_watchdog_timeout then return;
         For disk-based-sbd, also calculate the msgwait value, then initialize the SBD device.
         """
+        logger.info("Initializing {}SBD".format("diskless " if self.diskless_sbd else ""))
+
         if "sbd.watchdog_timeout" in self._context.profiles_dict:
             self._sbd_watchdog_timeout = self._context.profiles_dict["sbd.watchdog_timeout"]
             self._adjust_sbd_watchdog_timeout_for_s390()
@@ -178,14 +184,14 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         if "sbd.msgwait" in self._context.profiles_dict:
             sbd_msgwait = self._context.profiles_dict["sbd.msgwait"]
             if int(sbd_msgwait) < sbd_msgwait_default:
-                bootstrap.warn("sbd msgwait is set to {}, it was {}".format(sbd_msgwait_default, sbd_msgwait))
+                logger.warning("sbd msgwait is set to {}, it was {}".format(sbd_msgwait_default, sbd_msgwait))
                 sbd_msgwait = sbd_msgwait_default
         opt = "-4 {} -1 {}".format(sbd_msgwait, self._sbd_watchdog_timeout)
 
         for dev in self._sbd_devices:
             rc, _, err = bootstrap.invoke("sbd {} -d {} create".format(opt, dev))
             if not rc:
-                bootstrap.error("Failed to initialize SBD device {}: {}".format(dev, err))
+                utils.fatal("Failed to initialize SBD device {}: {}".format(dev, err))
 
     def _update_sbd_configuration(self):
         """
@@ -219,13 +225,13 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
             qdevice_sync_timeout = utils.get_qdevice_sync_timeout()
             if self._sbd_watchdog_timeout <= qdevice_sync_timeout:
                 watchdog_timeout_with_qdevice = qdevice_sync_timeout + 5
-                bootstrap.warn("sbd_watchdog_timeout is set to {} for qdevice, it was {}".format(watchdog_timeout_with_qdevice, self._sbd_watchdog_timeout))
+                logger.warning("sbd_watchdog_timeout is set to {} for qdevice, it was {}".format(watchdog_timeout_with_qdevice, self._sbd_watchdog_timeout))
                 self._sbd_watchdog_timeout = watchdog_timeout_with_qdevice
             self._stonith_timeout = self.calculate_stonith_timeout(self._sbd_watchdog_timeout)
         # add sbd and qdevice together from beginning
         elif self._context.qdevice_inst:
             if self._sbd_watchdog_timeout < self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
-                bootstrap.warn("sbd_watchdog_timeout is set to {} for qdevice, it was {}".format(self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE, self._sbd_watchdog_timeout))
+                logger.warning("sbd_watchdog_timeout is set to {} for qdevice, it was {}".format(self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE, self._sbd_watchdog_timeout))
                 self._sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
             self._stonith_timeout = self.calculate_stonith_timeout(self._sbd_watchdog_timeout)
 
@@ -282,15 +288,15 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         Try to configure sbd resource, restart cluster on needed
         """
         if not utils.has_resource_running():
-            bootstrap.status("Restarting cluster service")
+            logger.info("Restarting cluster service")
             utils.cluster_run_cmd("crm cluster restart")
             bootstrap.wait_for_cluster()
             self.configure_sbd_resource()
         else:
-            bootstrap.warn("To start sbd.service, need to restart cluster service manually on each node")
+            logger.warning("To start sbd.service, need to restart cluster service manually on each node")
             if self.diskless_sbd:
                 cmd = self.DISKLESS_CRM_CMD.format(self._stonith_watchdog_timeout, str(self._stonith_timeout)+"s")
-                bootstrap.warn("Then run \"{}\" on any node".format(cmd))
+                logger.warning("Then run \"{}\" on any node".format(cmd))
             else:
                 self.configure_sbd_resource()
 
@@ -338,10 +344,10 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
             vote_dict = utils.get_quorum_votes_dict(peer)
             expected_vote = int(vote_dict['Expected'])
             if (expected_vote < 2 and peer) or (expected_vote < 3 and not peer):
-                bootstrap.warn(self.DISKLESS_SBD_WARNING)
+                logger.warning(self.DISKLESS_SBD_WARNING)
         # When in init process
         elif self.diskless_sbd:
-            bootstrap.warn(self.DISKLESS_SBD_WARNING)
+            logger.warning(self.DISKLESS_SBD_WARNING)
 
     def sbd_init(self):
         """
@@ -361,9 +367,8 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
             bootstrap.invoke("systemctl disable sbd.service")
             return
         self._warn_diskless_sbd()
-        with bootstrap.status_long("Initializing {}SBD...".format("diskless " if self.diskless_sbd else "")):
-            self._initialize_sbd()
-            self._update_sbd_configuration()
+        self._initialize_sbd()
+        self._update_sbd_configuration()
         self._enable_sbd_service()
         self._adjust_systemd()
 
@@ -378,13 +383,13 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
 
         if self._get_sbd_device_from_config():
             if not bootstrap.invokerc("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"):
-                bootstrap.error("Can't create stonith-sbd primitive")
+                utils.fatal("Can't create stonith-sbd primitive")
             if not bootstrap.invokerc("crm configure property stonith-enabled=true"):
-                bootstrap.error("Can't enable STONITH for SBD")
+                utils.fatal("Can't enable STONITH for SBD")
         else:
             cmd = self.DISKLESS_CRM_CMD.format(self._stonith_watchdog_timeout, str(self._stonith_timeout)+"s")
             if not bootstrap.invokerc(cmd):
-                bootstrap.error("Can't enable STONITH for diskless SBD")
+                utils.fatal("Can't enable STONITH for diskless SBD")
 
     def join_sbd(self, peer_host):
         """
@@ -407,7 +412,7 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         else:
             self._warn_diskless_sbd(peer_host)
         self._adjust_systemd()
-        bootstrap.status("Got {}SBD configuration".format("" if dev_list else "diskless "))
+        logger.info("Got {}SBD configuration".format("" if dev_list else "diskless "))
         bootstrap.invoke("systemctl enable sbd.service")
 
     @classmethod

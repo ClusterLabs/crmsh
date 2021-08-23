@@ -26,10 +26,6 @@ from . import crm_gv
 from . import ui_utils
 from . import userdir
 from .ra import get_ra, get_properties_list, get_pe_meta, get_properties_meta
-from .msg import common_warn, common_err, common_debug, common_info, err_buf
-from .msg import common_error, constraint_norefobj_err, cib_parse_err, no_object_err
-from .msg import missing_obj_err, common_warning, update_err, unsupported_err, empty_cib_err
-from .msg import invalid_id_err, cib_ver_unsupported_err
 from .utils import ext_cmd, safe_open_w, pipe_string, safe_close_w, crm_msec
 from .utils import ask, lines2cli, olist
 from .utils import page_string, cibadmin_can_patch, str2tmp, ensure_sudo_readable
@@ -51,13 +47,18 @@ from .cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, 
 from .cliformat import cli_nvpair, cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
 from .cliformat import simple_rsc_constraint, cli_rule, cli_format
 from .cliformat import cli_acl_role, cli_acl_permission, cli_path
+from . import log
+
+
+logger = log.setup_logger(__name__)
+logger_utils = log.LoggerUtils(logger)
 
 
 def show_unrecognized_elems(cib_elem):
     try:
         conf = cib_elem.findall("configuration")[0]
     except IndexError:
-        common_warn("CIB has no configuration element")
+        logger.warning("CIB has no configuration element")
         return False
     rc = True
     for topnode in conf.iterchildren():
@@ -65,7 +66,7 @@ def show_unrecognized_elems(cib_elem):
             continue
         for c in topnode.iterchildren():
             if c.tag not in cib_object_map:
-                common_warn("unrecognized CIB element %s" % c.tag)
+                logger.warning("unrecognized CIB element %s", c.tag)
                 rc = False
     return rc
 
@@ -181,7 +182,7 @@ def copy_nvpair(nvpairs, nvp, id_hint=None):
     """
     Copies the given nvpair into the given tag containing nvpairs
     """
-    common_debug("copy_nvpair: %s" % (xml_tostring(nvp)))
+    logger.debug("copy_nvpair: %s", xml_tostring(nvp))
     if 'value' not in nvp.attrib:
         nvpairs.append(copy.deepcopy(nvp))
         return
@@ -220,7 +221,7 @@ def copy_nvpairs(tonode, fromnode):
         else:
             tonode.append(copy.deepcopy(node))
 
-    common_debug("copy_nvpairs: %s -> %s" % (xml_tostring(fromnode), xml_tostring(tonode)))
+    logger.debug("copy_nvpairs: %s -> %s", xml_tostring(fromnode), xml_tostring(tonode))
     id_hint = tonode.get('id')
     for c in fromnode:
         if is_comment(c):
@@ -267,7 +268,7 @@ class CibObjectSet(object):
             ret = open(src)
             return ret
         except IOError as e:
-            common_err("could not open %s: %s" % (src, e))
+            logger.error("could not open %s: %s", src, e)
         return False
 
     def _pre_edit(self, s):
@@ -299,21 +300,20 @@ class CibObjectSet(object):
                 if hash(s) != filehash:
                     ok = self.save(self._post_edit(s))
                     if not ok and config.core.force:
-                        common_err("Save failed and --force is set, " +
-                                   "aborting edit to avoid infinite loop")
+                        logger.error("Save failed and --force is set, aborting edit to avoid infinite loop")
                     elif not ok and ask("Edit or discard changes (yes to edit, no to discard)?"):
                         continue
                 rc = True
             os.unlink(tmp)
         except OSError as e:
-            common_debug("unlink(%s) failure: %s" % (tmp, e))
+            logger.error("unlink(%s) failure: %s", tmp, e)
         except IOError as msg:
-            common_err(msg)
+            logger.error(msg)
         return rc
 
     def edit(self):
         if options.batch:
-            common_info("edit not allowed in batch mode")
+            logger.info("edit not allowed in batch mode")
             return False
         with clidisplay.nopretty():
             s = self.repr()
@@ -363,7 +363,7 @@ class CibObjectSet(object):
         if not self.obj_set:
             return True, None
         if gtype not in crm_gv.gv_types:
-            common_err("graphviz type %s is not supported" % gtype)
+            logger.error("graphviz type %s is not supported", gtype)
             return False, None
         gv_obj = crm_gv.gv_types[gtype]()
         set_graph_attrs(gv_obj, ".")
@@ -506,7 +506,7 @@ class CibObjectSet(object):
                 rc = 2
                 msg = 'Resources %s violate uniqueness for parameter "%s": "%s"' % (
                     ",".join(sorted(resources)), param[3], param[4])
-                common_warning(msg)
+                logger.warning(msg)
         return rc
 
     def semantic_check(self, set_obj_all):
@@ -574,16 +574,15 @@ class CibObjectSetCli(CibObjectSet):
         '''
         diff = CibDiff(self)
         rc = True
-        err_buf.start_tmp_lineno()
         comments = []
-        for cli_text in lines2cli(s):
-            err_buf.incr_lineno()
-            node = parse.parse(cli_text, comments=comments)
-            if node not in (False, None):
-                rc = rc and diff.add(node)
-            elif node is False:
-                rc = False
-        err_buf.stop_tmp_lineno()
+        with logger_utils.line_number():
+            for cli_text in lines2cli(s):
+                logger_utils.incr_lineno()
+                node = parse.parse(cli_text, comments=comments)
+                if node not in (False, None):
+                    rc = rc and diff.add(node)
+                elif node is False:
+                    rc = False
 
         # we can't proceed if there was a syntax error, but we
         # can ask the user to fix problems
@@ -624,7 +623,7 @@ class CibObjectSetRaw(CibObjectSet):
         try:
             cib_elem = etree.fromstring(s)
         except etree.ParseError as msg:
-            cib_parse_err(msg, s)
+            logger_utils.cib_parse_err(msg, s)
             return False
         sanitize_cib(cib_elem)
         if not show_unrecognized_elems(cib_elem):
@@ -648,7 +647,7 @@ class CibObjectSetRaw(CibObjectSet):
         rc = cibverify.verify(cib)
 
         if rc not in (0, 1):
-            common_debug("verify (rc=%s): %s" % (rc, cib))
+            logger.debug("verify (rc=%s): %s", rc, cib)
         return rc in (0, 1)
 
     def ptest(self, nograph, scores, utilization, actions, verbosity):
@@ -657,7 +656,7 @@ class CibObjectSetRaw(CibObjectSet):
         cib_elem = cib_factory.obj_set2cib(self.obj_set)
         status = cibstatus.cib_status.get_status()
         if status is None:
-            common_err("no status section found")
+            logger.error("no status section found")
             return False
         cib_elem.append(copy.deepcopy(status))
         graph_s = etree.tostring(cib_elem)
@@ -730,8 +729,7 @@ def resolve_idref(node):
     if obj:
         nodes = obj.node.xpath(".//%s" % attr_list_type)
         if len(nodes) > 1:
-            common_warn("%s contains more than one %s, using first" %
-                        (obj.obj_id, attr_list_type))
+            logger.warning("%s contains more than one %s, using first", obj.obj_id, attr_list_type)
         if len(nodes) > 0:
             node_id = nodes[0].get("id")
             if node_id:
@@ -756,14 +754,13 @@ def resolve_references(node):
         # TODO: This always refers to a resource ATM.
         # Handle case where it may refer to a node name?
         obj = cib_factory.find_resource(child_id)
-        common_debug("resolve_references: %s -> %s" % (child_id, obj))
+        logger.debug("resolve_references: %s -> %s", child_id, obj)
         if obj is not None:
             newnode = copy.deepcopy(obj.node)
             node.replace(ref, newnode)
         else:
             node.remove(ref)
-            common_err("%s refers to missing object %s" % (node.get('id'),
-                                                           child_id))
+            logger.error("%s refers to missing object %s", node.get('id'), child_id)
 
 
 def id_for_node(node, id_hint=None):
@@ -791,7 +788,7 @@ def id_for_node(node, id_hint=None):
                 obj_id = node.get('id')
                 idmgmt.save(obj_id)
     if root.tag != "node" and obj_id and not is_id_valid(obj_id):
-        invalid_id_err(obj_id)
+        logger_utils.invalid_id_err(obj_id)
         return None
     return obj_id
 
@@ -811,7 +808,7 @@ def postprocess_cli(node, oldnode=None, id_hint=None):
             # In this case, we need to delay postprocessing
             # until we know where to insert the op
             return node, obj_type, None
-        common_err("No ID found for %s: %s" % (obj_type, xml_tostring(node)))
+        logger.error("No ID found for %s: %s", obj_type, xml_tostring(node))
         return None, None, None
     if node.tag in constants.defaults_tags:
         node = node[0]
@@ -853,7 +850,7 @@ class CibObject(object):
 
     def __init__(self, xml_obj_type):
         if xml_obj_type not in cib_object_map:
-            unsupported_err(xml_obj_type)
+            logger_utils.unsupported_err(xml_obj_type)
             return
         self.obj_type = cib_object_map[xml_obj_type][0]
         self.parent_type = cib_object_map[xml_obj_type][2]
@@ -1086,10 +1083,10 @@ class CibObject(object):
             return False
         rscstat = RscState()
         if not rscstat.can_delete(self.obj_id):
-            common_err("cannot rename a running resource (%s)" % self.obj_id)
+            logger.error("cannot rename a running resource (%s)", self.obj_id)
             return False
         if not is_live_cib() and self.node.tag == "node":
-            common_err("cannot rename nodes")
+            logger.error("cannot rename nodes")
             return False
         return True
 
@@ -1118,19 +1115,14 @@ class CibObject(object):
         with clidisplay.nopretty():
             cli_text = self.repr_cli(format_mode=0)
         if not cli_text:
-            common_debug("validation failed: %s" % (xml_tostring(self.node)))
+            logger.debug("validation failed: %s", xml_tostring(self.node))
             return False
         xml2 = self.cli2node(cli_text)
         if xml2 is None:
-            common_debug("validation failed: %s -> %s" % (
-                xml_tostring(self.node),
-                cli_text))
+            logger.debug("validation failed: %s -> %s", xml_tostring(self.node), cli_text)
             return False
         if not xml_equals(self.node, xml2, show=True):
-            common_debug("validation failed: %s -> %s -> %s" % (
-                xml_tostring(self.node),
-                cli_text,
-                xml_tostring(xml2)))
+            logger.debug("validation failed: %s -> %s -> %s", xml_tostring(self.node), cli_text, xml_tostring(xml2))
             return False
         return True
 
@@ -1147,8 +1139,7 @@ class CibObject(object):
                 continue
             v = op_node.get(name)
             if v not in vals:
-                common_warn("%s: op '%s' attribute '%s' value '%s' not recognized" %
-                            (self.obj_id, op_id, name, v))
+                logger.warning("%s: op '%s' attribute '%s' value '%s' not recognized", self.obj_id, op_id, name, v)
                 rc = 1
         return rc
 
@@ -1435,8 +1426,7 @@ class CibPrimitive(CibObject):
         name = node.get("name")
         interval = node.get("interval")
         if find_operation(self.node, name, interval) is not None:
-            common_err("%s already has a %s op with interval %s" %
-                       (self.obj_id, name, interval))
+            logger.error("%s already has a %s op with interval %s", self.obj_id, name, interval)
             return None
         # create an xml node
         if 'id' not in node.attrib:
@@ -1527,13 +1517,13 @@ class CibPrimitive(CibObject):
         are defined.
         '''
         if self.node is None:  # eh?
-            common_err("%s: no xml (strange)" % self.obj_id)
+            logger.error("%s: no xml (strange)", self.obj_id)
             return utils.get_check_rc()
         rc3 = sanity_check_meta(self.obj_id, self.node, constants.rsc_meta_attributes)
         if self.obj_type == "primitive":
             r_node = reduce_primitive(self.node)
             if r_node is None:
-                common_err("%s: no such resource template" % self.node.get("template"))
+                logger.error("%s: no such resource template", self.node.get("template"))
                 return utils.get_check_rc()
         else:
             r_node = self.node
@@ -1637,7 +1627,7 @@ class CibContainer(CibObject):
         Check meta attributes.
         '''
         if self.node is None:  # eh?
-            common_err("%s: no xml (strange)" % self.obj_id)
+            logger.error("%s: no xml (strange)", self.obj_id)
             return utils.get_check_rc()
         l = constants.rsc_meta_attributes
         if self.obj_type == "clone":
@@ -1699,14 +1689,14 @@ def _check_if_constraint_ref_is_child(obj):
     for rscid in obj.referenced_resources():
         tgt = cib_factory.find_object(rscid)
         if not tgt:
-            common_warn("%s: resource %s does not exist" % (obj.obj_id, rscid))
+            logger.warning("%s: resource %s does not exist", obj.obj_id, rscid)
             rc = 1
         elif tgt.parent and tgt.parent.obj_type == "group":
             if obj.obj_type == "colocation":
-                common_warn("%s: resource %s is grouped, constraints should apply to the group" % (obj.obj_id, rscid))
+                logger.warning("%s: resource %s is grouped, constraints should apply to the group", obj.obj_id, rscid)
                 rc = 1
         elif tgt.parent and tgt.parent.obj_type in constants.container_tags:
-            common_warn("%s: resource %s ambiguous, apply constraints to container" % (obj.obj_id, rscid))
+            logger.warning("%s: resource %s ambiguous, apply constraints to container", obj.obj_id, rscid)
             rc = 1
     return rc
 
@@ -1727,7 +1717,7 @@ class CibLocation(CibObject):
         elif self.node.find("resource_set") is not None:
             rsc = '{ %s }' % (' '.join(rsc_set_constraint(self.node, self.obj_type)))
         else:
-            common_err("%s: unknown rsc_location format" % self.obj_id)
+            logger.error("%s: unknown rsc_location format", self.obj_id)
             return None
         s = clidisplay.keyword(self.obj_type)
         ident = clidisplay.ident(self.obj_id)
@@ -1755,31 +1745,29 @@ class CibLocation(CibObject):
         Check if node references match existing nodes.
         '''
         if self.node is None:  # eh?
-            common_err("%s: no xml (strange)" % self.obj_id)
+            logger.error("%s: no xml (strange)", self.obj_id)
             return utils.get_check_rc()
         rc = 0
         uname = self.node.get("node")
         if uname and uname.lower() not in [ident.lower() for ident in cib_factory.node_id_list()]:
-            common_warn("%s: referenced node %s does not exist" % (self.obj_id, uname))
+            logger.warning("%s: referenced node %s does not exist", self.obj_id, uname)
             rc = 1
         pattern = self.node.get("rsc-pattern")
         if pattern:
             try:
                 re.compile(pattern)
             except IndexError as e:
-                common_warn("%s: '%s' may not be a valid regular expression (%s)" %
-                            (self.obj_id, pattern, e))
+                logger.warning("%s: '%s' may not be a valid regular expression (%s)", self.obj_id, pattern, e)
                 rc = 1
             except re.error as e:
-                common_warn("%s: '%s' may not be a valid regular expression (%s)" %
-                            (self.obj_id, pattern, e))
+                logger.warning("%s: '%s' may not be a valid regular expression (%s)", self.obj_id, pattern, e)
                 rc = 1
         for enode in self.node.xpath("rule/expression"):
             if enode.get("attribute") == "#uname":
                 uname = enode.get("value")
                 ids = [i.lower() for i in cib_factory.node_id_list()]
                 if uname and uname.lower() not in ids:
-                    common_warn("%s: referenced node %s does not exist" % (self.obj_id, uname))
+                    logger.warning("%s: referenced node %s does not exist", self.obj_id, uname)
                     rc = 1
         rc2 = _check_if_constraint_ref_is_child(self)
         if rc2 > rc:
@@ -1939,7 +1927,7 @@ class CibSimpleConstraint(CibObject):
 
     def check_sanity(self):
         if self.node is None:
-            common_err("%s: no xml (strange)" % self.obj_id)
+            logger.error("%s: no xml (strange)", self.obj_id)
             return utils.get_check_rc()
         return _check_if_constraint_ref_is_child(self)
 
@@ -1988,7 +1976,7 @@ class CibProperty(CibObject):
         Match properties with PE metadata.
         '''
         if self.node is None:  # eh?
-            common_err("%s: no xml (strange)" % self.obj_id)
+            logger.error("%s: no xml (strange)", self.obj_id)
             return utils.get_check_rc()
         l = []
         if self.obj_type == "property":
@@ -2079,13 +2067,13 @@ class CibFencingOrder(CibObject):
         Targets are nodes and resource are stonith resources.
         '''
         if self.node is None:  # eh?
-            common_err("%s: no xml (strange)" % self.obj_id)
+            logger.error("%s: no xml (strange)", self.obj_id)
             return utils.get_check_rc()
         rc = 0
         nl = self.node.findall("fencing-level")
         for target in [x.get("target") for x in nl if x.get("target") is not None]:
             if target.lower() not in [ident.lower() for ident in cib_factory.node_id_list()]:
-                common_warn("%s: target %s not a node" % (self.obj_id, target))
+                logger.warning("%s: target %s not a node", self.obj_id, target)
                 rc = 1
         stonith_rsc_l = [x.obj_id for x in
                          cib_factory.get_elems_on_type("type:primitive")
@@ -2093,10 +2081,10 @@ class CibFencingOrder(CibObject):
         for devices in [x.get("devices") for x in nl]:
             for dev in devices.split(","):
                 if not cib_factory.find_object(dev):
-                    common_warn("%s: resource %s does not exist" % (self.obj_id, dev))
+                    logger.warning("%s: resource %s does not exist", self.obj_id, dev)
                     rc = 1
                 elif dev not in stonith_rsc_l:
-                    common_warn("%s: %s not a stonith resource" % (self.obj_id, dev))
+                    logger.warning("%s: %s not a stonith resource", self.obj_id, dev)
                     rc = 1
         return rc
 
@@ -2282,14 +2270,13 @@ class CibDiff(object):
         obj_id = id_for_node(item)
         is_node = item.tag == 'node'
         if obj_id is None:
-            common_err("element %s has no id!" %
-                       xml_tostring(item, pretty_print=True))
+            logger.error("element %s has no id!", xml_tostring(item, pretty_print=True))
             return False
         elif is_node and obj_id in self._node_set:
-            common_err("Duplicate node: %s" % (obj_id))
+            logger.error("Duplicate node: %s", obj_id)
             return False
         elif not is_node and obj_id in self._rsc_set:
-            common_err("Duplicate resource: %s" % (obj_id))
+            logger.error("Duplicate resource: %s", obj_id)
             return False
         elif is_node:
             self._node_set.add(obj_id)
@@ -2335,15 +2322,13 @@ class CibDiff(object):
         not_allowed = id_set & self.objset.locked_ids
         rscstat = RscState()
         if not_allowed:
-            common_err("Elements %s already exist" %
-                       ', '.join(list(not_allowed)))
+            logger.error("Elements %s already exist", ', '.join(list(not_allowed)))
             rc = False
         delete_set = existing - id_set
         cannot_delete = [x for x in delete_set
                          if not rscstat.can_delete(x)]
         if cannot_delete:
-            common_err("Cannot delete running resources: %s" %
-                       ', '.join(cannot_delete))
+            logger.error("Cannot delete running resources: %s", ', '.join(cannot_delete))
             rc = False
         return rc
 
@@ -2398,7 +2383,7 @@ class CibFactory(object):
         if self.cib_elem is None:
             self.initialize()
             if self.cib_elem is None:
-                empty_cib_err()
+                logger_utils.empty_cib_err()
                 return False
         return True
 
@@ -2412,19 +2397,14 @@ class CibFactory(object):
 
     def _check_parent(self, obj, parent):
         if obj not in parent.children:
-            common_err("object %s does not reference its child %s" %
-                       (parent.obj_id, obj.obj_id))
+            logger.error("object %s does not reference its child %s", parent.obj_id, obj.obj_id)
             return False
         if parent.node != obj.node.getparent():
             if obj.node.getparent() is None:
-                common_err("object %s node is not a child of its parent %s" %
-                           (obj.obj_id, parent.obj_id))
+                logger.error("object %s node is not a child of its parent %s", obj.obj_id, parent.obj_id)
             else:
-                common_err("object %s node is not a child of its parent %s, but %s:%s" %
-                           (obj.obj_id,
-                            parent.obj_id,
-                            obj.node.getparent().tag,
-                            obj.node.getparent().get("id")))
+                logger.error("object %s node is not a child of its parent %s, but %s:%s",
+                        obj.obj_id, parent.obj_id, obj.node.getparent().tag, obj.node.getparent().get("id"))
             return False
         return True
 
@@ -2435,12 +2415,11 @@ class CibFactory(object):
         for obj in self.cib_objects:
             if obj.parent:
                 if not self._check_parent(obj, obj.parent):
-                    common_debug("check_parent failed: %s %s" % (obj.obj_id, obj.parent))
+                    logger.debug("check_parent failed: %s %s", obj.obj_id, obj.parent)
                     rc = False
             for child in obj.children:
                 if not child.parent:
-                    common_err("child %s does not reference its parent %s" %
-                               (child.obj_id, obj.obj_id))
+                    logger.error("child %s does not reference its parent %s", child.obj_id, obj.obj_id)
                     rc = False
         return rc
 
@@ -2453,7 +2432,7 @@ class CibFactory(object):
         elif param == "on":
             self.regtest = True
         else:
-            common_warn("bad parameter for regtest: %s" % param)
+            logger.warning("bad parameter for regtest: %s", param)
 
     def get_schema(self):
         return self.cib_attrs["validate-with"]
@@ -2461,28 +2440,27 @@ class CibFactory(object):
     def change_schema(self, schema_st):
         'Use another schema'
         if schema_st == self.get_schema():
-            common_info("already using schema %s" % schema_st)
+            logger.info("already using schema %s", schema_st)
             return True
         if not schema.is_supported(schema_st):
-            common_warn("schema %s is not supported by the shell" % schema_st)
+            logger.warning("schema %s is not supported by the shell", schema_st)
         self.cib_elem.set("validate-with", schema_st)
         if not schema.test_schema(self.cib_elem):
             self.cib_elem.set("validate-with", self.get_schema())
-            common_err("schema %s does not exist" % schema_st)
+            logger.error("schema %s does not exist", schema_st)
             return False
         schema.init_schema(self.cib_elem)
         rc = True
         for obj in self.cib_objects:
             if schema.get('sub', obj.node.tag, 'a') is None:
-                common_err("Element '%s' is not supported by the RNG schema %s" %
-                           (obj.node.tag, schema_st))
-                common_debug("Offending object: %s" % (xml_tostring(obj.node)))
+                logger.error("Element '%s' is not supported by the RNG schema %s", obj.node.tag, schema_st)
+                logger.debug("Offending object: %s", xml_tostring(obj.node))
                 rc = False
         if not rc:
             # revert, as some elements won't validate
             self.cib_elem.set("validate-with", self.get_schema())
             schema.init_schema(self.cib_elem)
-            common_err("Schema %s conflicts with current configuration" % schema_st)
+            logger.error("Schema %s conflicts with current configuration", schema_st)
             return 4
         self.cib_attrs["validate-with"] = schema_st
         self.new_schema = True
@@ -2504,7 +2482,7 @@ class CibFactory(object):
         # if no schema is configured, just assume that it validates
         if not validator or schema.is_supported(validator):
             return True
-        cib_ver_unsupported_err(validator, req)
+        logger_utils.cib_ver_unsupported_err(validator, req)
         return False
 
     def upgrade_validate_with(self, force=False):
@@ -2526,7 +2504,7 @@ class CibFactory(object):
         if self.cib_elem is None:
             return False
         if not self.is_cib_supported():
-            common_warn("CIB schema is not supported by the shell")
+            logger.warning("CIB schema is not supported by the shell")
         self._get_cib_attributes(self.cib_elem)
         schema.init_schema(self.cib_elem)
         return True
@@ -2589,7 +2567,7 @@ class CibFactory(object):
         rc = self._attr_match(cib_elem, 'epoch') and \
             self._attr_match(cib_elem, 'admin_epoch')
         if not silent and not rc:
-            common_warn("CIB changed in the meantime: won't touch it!")
+            logger.warning("CIB changed in the meantime: won't touch it!")
         return rc
 
     def _state_header(self):
@@ -2617,7 +2595,7 @@ class CibFactory(object):
         if rc:
             # reload the cib!
             t = time.time()
-            common_debug("CIB commit successful at %s" % (t))
+            logger.debug("CIB commit successful at %s", t)
             if is_live_cib():
                 self.last_commit_time = t
             self.refresh()
@@ -2630,7 +2608,7 @@ class CibFactory(object):
         s = '<cib validate-with="%s"/>' % self.cib_attrs["validate-with"]
         rc = pipe_string("%s -U" % cib_piped, s)
         if rc != 0:
-            update_err("cib", "-U", s, rc)
+            logger_utils.update_err("cib", "-U", s, rc)
             return False
         self.new_schema = False
         return True
@@ -2639,14 +2617,14 @@ class CibFactory(object):
         try:
             conf_el = self.cib_elem.findall("configuration")[0]
         except IndexError:
-            common_error("cannot find the configuration element")
+            logger.error("cannot find the configuration element")
             return False
         if self.new_schema and not self._update_schema():
             return False
         cibadmin_opts = force and "-R --force" or "-R"
         rc = pipe_string("%s %s" % (cib_piped, cibadmin_opts), etree.tostring(conf_el))
         if rc != 0:
-            update_err("cib", cibadmin_opts, xml_tostring(conf_el), rc)
+            logger_utils.update_err("cib", cibadmin_opts, xml_tostring(conf_el), rc)
             return False
         return True
 
@@ -2671,8 +2649,8 @@ class CibFactory(object):
         # produce a diff:
         # dump_new_conf | crm_diff -o self.cib_orig -n -
 
-        common_debug("Basis: %s" % (open(tmpf).read()))
-        common_debug("Input: %s" % (xml_tostring(self.cib_elem)))
+        logger.debug("Basis: %s", open(tmpf).read())
+        logger.debug("Input: %s", xml_tostring(self.cib_elem))
         rc, cib_diff = filter_string("%s -o %s -n -" %
                                      (self._crm_diff_cmd, tmpf),
                                      etree.tostring(self.cib_elem))
@@ -2680,7 +2658,7 @@ class CibFactory(object):
             # no diff = no action
             return True
         elif not cib_diff:
-            common_err("crm_diff apparently failed to produce the diff (rc=%d)" % rc)
+            logger.error("crm_diff apparently failed to produce the diff (rc=%d)", rc)
             return False
 
         # for v1 diffs, fall back to non-patching if
@@ -2693,11 +2671,11 @@ class CibFactory(object):
                 if "digest" in tag.attrib:
                     del tag.attrib["digest"]
             cib_diff = xml_tostring(e)
-        common_debug("Diff: %s" % (cib_diff))
+        logger.debug("Diff: %s", cib_diff)
         rc = pipe_string("%s %s" % (cib_piped, cibadmin_opts),
                          cib_diff.encode('utf-8'))
         if rc != 0:
-            update_err("cib", cibadmin_opts, cib_diff, rc)
+            logger_utils.update_err("cib", cibadmin_opts, cib_diff, rc)
             return False
         return True
 
@@ -2761,7 +2739,7 @@ class CibFactory(object):
                 obj.nocli = True
                 obj.nocli_warn = False
                 # no need to warn, user can see the object displayed as XML
-                common_debug("object %s cannot be represented in the CLI notation" % (obj.obj_id))
+                logger.debug("object %s cannot be represented in the CLI notation", obj.obj_id)
 
     def initialize(self, cib=None):
         if self.cib_elem is not None:
@@ -2806,7 +2784,7 @@ class CibFactory(object):
 
     def _pop_state(self):
         try:
-            common_debug("performing rollback from %s" % (self.cib_objects))
+            logger.debug("performing rollback from %s", self.cib_objects)
             self.cib_elem, \
                 self.cib_attrs, self.cib_objects, \
                 self.remove_queue, self.id_refs = self._state.pop()
@@ -2979,7 +2957,7 @@ class CibFactory(object):
             return self.cib_elem.xpath(expr)[0]
         except IndexError:
             if strict:
-                common_warn("strange, %s element %s not found" % (tag, ident))
+                logger.warning("strange, %s element %s not found", tag, ident)
             return None
 
     #
@@ -3000,17 +2978,17 @@ class CibFactory(object):
         for obj_id in args:
             obj = self.find_resource(obj_id)
             if not obj:
-                no_object_err(obj_id)
+                logger_utils.no_object_err(obj_id)
                 rc = False
                 continue
             if obj.obj_type != "primitive":
-                common_warn("element %s is not a primitive" % obj_id)
+                logger.warning("element %s is not a primitive", obj_id)
                 rc = False
                 continue
             r_node = reduce_primitive(obj.node)
             if r_node is None:
                 # cannot do anything without template defined
-                common_warn("template for %s not defined" % obj_id)
+                logger.warning("template for %s not defined", obj_id)
                 rc = False
                 continue
             ra = get_ra(r_node)
@@ -3083,8 +3061,7 @@ class CibFactory(object):
             nodes = obj.node.xpath(".//%s" % attr_list_type)
             numnodes = len(nodes)
             if numnodes > 1:
-                common_warn("%s contains more than one %s, using first" %
-                            (obj.obj_id, attr_list_type))
+                logger.warning("%s contains more than one %s, using first", obj.obj_id, attr_list_type)
             if numnodes > 0:
                 node_id = nodes[0].get("id")
                 if node_id:
@@ -3133,10 +3110,10 @@ class CibFactory(object):
 
     def new_object(self, obj_type, obj_id):
         "Create a new object of type obj_type."
-        common_debug("new_object: %s:%s" % (obj_type, obj_id))
+        logger.debug("new_object: %s:%s", obj_type, obj_id)
         existing = self.find_object(obj_id)
         if existing and [obj_type, existing.obj_type].count("node") != 1:
-            common_error("Cannot create %s with ID '%s': Found existing %s with same ID." % (obj_type, obj_id, existing.obj_type))
+            logger.error("Cannot create %s with ID '%s': Found existing %s with same ID.", obj_type, obj_id, existing.obj_type)
             return None
         xml_obj_type = backtrans.get(obj_type)
         v = cib_object_map.get(xml_obj_type)
@@ -3231,7 +3208,7 @@ class CibFactory(object):
     def mkobj_set(self, *args):
         rc, obj_set = self.filter_objects(args)
         if rc is False:
-            no_object_err(obj_set)
+            logger_utils.no_object_err(obj_set)
             return False, orderedset.oset([])
         return rc, obj_set
 
@@ -3254,7 +3231,7 @@ class CibFactory(object):
         constraint_id = node.get("id")
         for obj_id in referenced_resources(node):
             if not self.find_resource(obj_id):
-                constraint_norefobj_err(constraint_id, obj_id)
+                logger_utils.constraint_norefobj_err(constraint_id, obj_id)
                 rc = False
         return rc
 
@@ -3275,17 +3252,14 @@ class CibFactory(object):
             if not self._verify_child(child_id, obj.node.tag, obj_id):
                 rc = False
             if child_id in c_dict:
-                common_err("in group %s child %s listed more than once" %
-                           (obj_id, child_id))
+                logger.error("in group %s child %s listed more than once", obj_id, child_id)
                 rc = False
             c_dict[child_id] = 1
         for other in [x for x in self.cib_objects
                       if x != obj and is_container(x.node)]:
             shared_obj = set(obj.children) & set(other.children)
             if shared_obj:
-                common_err("%s contained in both %s and %s" %
-                           (','.join([x.obj_id for x in shared_obj]),
-                            obj_id, other.obj_id))
+                logger.error("%s contained in both %s and %s", ','.join([x.obj_id for x in shared_obj]), obj_id, other.obj_id)
                 rc = False
         return rc
 
@@ -3293,18 +3267,16 @@ class CibFactory(object):
         'Check if child exists and obj_id is (or may become) its parent.'
         child = self.find_resource(child_id)
         if not child:
-            no_object_err(child_id)
+            logger_utils.no_object_err(child_id)
             return False
         if parent_tag == "group" and child.obj_type != "primitive":
-            common_err("a group may contain only primitives; %s is %s" %
-                       (child_id, child.obj_type))
+            logger.error("a group may contain only primitives; %s is %s", child_id, child.obj_type)
             return False
         if child.parent and child.parent.obj_id != obj_id:
-            common_err("%s already in use at %s" % (child_id, child.parent.obj_id))
+            logger.error("%s already in use at %s", child_id, child.parent.obj_id)
             return False
         if child.node.tag not in constants.children_tags:
-            common_err("%s may contain a primitive or a group; %s is %s" %
-                       (parent_tag, child_id, child.obj_type))
+            logger.error("%s may contain a primitive or a group; %s is %s", parent_tag, child_id, child.obj_type)
             return False
         return True
 
@@ -3323,7 +3295,7 @@ class CibFactory(object):
         try:
             cib_object_map[node.tag][0]
         except KeyError:
-            common_err("element %s (%s) not recognized" % (node.tag, obj_id))
+            logger.error("element %s (%s) not recognized", node.tag, obj_id)
             return False
         if is_container(node):
             rc &= self._verify_rsc_children(obj)
@@ -3341,7 +3313,7 @@ class CibFactory(object):
         obj = self.find_object(pset_id)
         if not obj:
             if not is_id_valid(pset_id):
-                invalid_id_err(pset_id)
+                logger_utils.invalid_id_err(pset_id)
                 return None
             obj = self.new_object(obj_type, pset_id)
             if not obj:
@@ -3363,10 +3335,10 @@ class CibFactory(object):
         rsc_id = node.get('rsc')
         rsc_obj = self.find_resource(rsc_id)
         if not rsc_obj:
-            no_object_err(rsc_id)
+            logger_utils.no_object_err(rsc_id)
             return None
         if rsc_obj.obj_type != "primitive":
-            common_err("%s is not a primitive" % rsc_id)
+            logger.error("%s is not a primitive", rsc_id)
             return None
 
         # the given node is not postprocessed
@@ -3378,7 +3350,7 @@ class CibFactory(object):
     def create_from_cli(self, cli):
         'Create a new cib object from the cli representation.'
         if not self.is_cib_sane():
-            common_debug("create_from_cli (%s): is_cib_sane() failed" % (cli))
+            logger.debug("create_from_cli (%s): is_cib_sane() failed", cli)
             return None
         if isinstance(cli, (list, str)):
             elem, obj_type, obj_id = parse_cli_to_xml(cli)
@@ -3386,9 +3358,9 @@ class CibFactory(object):
             elem, obj_type, obj_id = postprocess_cli(cli)
         if elem is None:
             # FIXME: raise error?
-            common_debug("create_from_cli (%s): failed" % (cli))
+            logger.debug("create_from_cli (%s): failed", cli)
             return None
-        common_debug("create_from_cli: %s, %s, %s" % (xml_tostring(elem), obj_type, obj_id))
+        logger.debug("create_from_cli: %s, %s, %s", xml_tostring(elem), obj_type, obj_id)
         if obj_type in olist(constants.nvset_cli_names):
             return self.set_property_cli(obj_type, elem)
         if obj_type == "op":
@@ -3433,21 +3405,21 @@ class CibFactory(object):
                 newnode.getparent().remove(newnode)
             return True  # the new and the old versions are equal
         obj.node = newnode
-        common_debug("update CIB element: %s" % str(obj))
+        logger.debug("update CIB element: %s", str(obj))
         if oldnode.getparent() is not None:
             oldnode.getparent().replace(oldnode, newnode)
         obj.nocli = False  # try again after update
         if not self._adjust_children(obj):
             return False
         if not obj.cli_use_validate():
-            common_debug("update_element: validation failed (%s, %s)" % (obj, xml_tostring(newnode)))
+            logger.debug("update_element: validation failed (%s, %s)", obj, xml_tostring(newnode))
             obj.nocli_warn = True
             obj.nocli = True
         obj.set_updated()
         return True
 
     def merge_from_cli(self, obj, node):
-        common_debug("merge_from_cli: %s %s" % (obj.obj_type, xml_tostring(node)))
+        logger.debug("merge_from_cli: %s %s", obj.obj_type, xml_tostring(node))
         if obj.obj_type in constants.nvset_cli_names:
             rc = merge_attributes(obj.node, node, "nvpair")
         else:
@@ -3465,7 +3437,7 @@ class CibFactory(object):
         del_set is a set to be removed.
         method is either replace or update.
         '''
-        common_debug("_cli_set_update: mk=%s, upd=%s, del=%s" % (mk_set, upd_set, del_set))
+        logger.debug("_cli_set_update: mk=%s, upd=%s, del=%s", mk_set, upd_set, del_set)
         test_l = []
 
         def obj_is_container(x):
@@ -3489,17 +3461,16 @@ class CibFactory(object):
 
         # delete constraints and containers first in case objects are moved elsewhere
         if not self.delete(*del_constraints):
-            common_debug("delete %s failed" % (list(del_set)))
+            logger.debug("delete %s failed", list(del_set))
             return False
         if not self.delete(*del_containers):
-            common_debug("delete %s failed" % (list(del_set)))
+            logger.debug("delete %s failed", list(del_set))
             return False
 
         for cli in processing_sort([edit_d[x] for x in mk_set]):
             obj = self.create_from_cli(cli)
             if not obj:
-                common_debug("create_from_cli '%s' failed" %
-                             (xml_tostring(cli, pretty_print=True)))
+                logger.debug("create_from_cli '%s' failed", xml_tostring(cli, pretty_print=True))
                 return False
             test_l.append(obj)
 
@@ -3509,25 +3480,24 @@ class CibFactory(object):
             else:
                 obj = self.find_resource(ident)
             if not obj:
-                common_debug("%s not found!" % (ident))
+                logger.debug("%s not found!", ident)
                 return False
             node, _, _ = postprocess_cli(edit_d[ident], oldnode=obj.node)
             if node is None:
-                common_debug("postprocess_cli failed: %s" % (ident))
+                logger.debug("postprocess_cli failed: %s", ident)
                 return False
             if not self.update_from_cli(obj, node, method):
-                common_debug("update_from_cli failed: %s, %s, %s" %
-                             (obj, xml_tostring(node), method))
+                logger.debug("update_from_cli failed: %s, %s, %s", obj, xml_tostring(node), method)
                 return False
             test_l.append(obj)
 
         if not self.delete(*reversed(del_objs)):
-            common_debug("delete %s failed" % (list(del_set)))
+            logger.debug("delete %s failed", list(del_set))
             return False
         rc = True
         for obj in test_l:
             if not self.test_element(obj):
-                common_debug("test_element failed for %s" % (obj))
+                logger.debug("test_element failed for %s", obj)
                 rc = False
         return rc & self.check_structure()
 
@@ -3539,7 +3509,7 @@ class CibFactory(object):
         upd_set is a set of ids to be updated (replaced).
         del_set is a set to be removed.
         '''
-        common_debug("_xml_set_update: %s, %s, %s" % (mk_set, upd_set, del_set))
+        logger.debug("_xml_set_update: %s, %s, %s", mk_set, upd_set, del_set)
         test_l = []
         for el in processing_sort([edit_d[x] for x in mk_set]):
             obj = self.create_from_node(el)
@@ -3597,7 +3567,7 @@ class CibFactory(object):
         obj.children = new_children
         # relink orphans to top
         for child in set(old_children) - set(obj.children):
-            common_debug("relink child %s to top" % str(child))
+            logger.debug("relink child %s to top", str(child))
             self._relink_child_to_top(child)
         if not self._are_children_orphans(obj):
             return False
@@ -3619,7 +3589,7 @@ class CibFactory(object):
             if child.parent == obj or child.parent.obj_id == obj.obj_id:
                 continue
             if child.parent.obj_type in constants.container_tags:
-                common_err("Cannot create %s: Child %s already in %s" % (obj, child, child.parent))
+                logger.error("Cannot create %s: Child %s already in %s", obj, child, child.parent)
                 return False
         return True
 
@@ -3631,7 +3601,7 @@ class CibFactory(object):
             oldnode = child.node
             newnode = obj.find_child_in_node(child)
             if newnode is None:
-                common_err("Child found in children list but not in node: %s, %s" % (obj, child))
+                logger.error("Child found in children list but not in node: %s, %s", obj, child)
                 return False
             child.node = newnode
             if child.children:  # and children of children
@@ -3663,7 +3633,7 @@ class CibFactory(object):
             if is_child_rsc(c):
                 child = self.find_container_child(c)
                 if not child:
-                    missing_obj_err(c)
+                    logger_utils.missing_obj_err(c)
                     continue
                 child.parent = obj
                 obj.children.append(child)
@@ -3676,7 +3646,7 @@ class CibFactory(object):
         obj.node = node
         obj.set_id()
         pnode = get_topnode(self.cib_elem, obj.parent_type)
-        common_debug("_add_element: append child %s to %s" % (obj.obj_id, pnode.tag))
+        logger.debug("_add_element: append child %s to %s", obj.obj_id, pnode.tag)
         if not self._adjust_children(obj):
             return None
         pnode.append(node)
@@ -3714,17 +3684,17 @@ class CibFactory(object):
     def create_from_node(self, node):
         'Create a new cib object from a document node.'
         if node is None:
-            common_debug("create_from_node: got None")
+            logger.debug("create_from_node: got None")
             return None
         try:
             obj_type = cib_object_map[node.tag][0]
         except KeyError:
-            common_debug("create_from_node: keyerror (%s)" % (node.tag))
+            logger.debug("create_from_node: keyerror (%s)", node.tag)
             return None
         if is_defaults(node):
             node = get_rscop_defaults_meta_node(node)
             if node is None:
-                common_debug("create_from_node: get_rscop_defaults_meta_node failed")
+                logger.debug("create_from_node: get_rscop_defaults_meta_node failed")
                 return None
 
         if not self._add_children(obj_type, node):
@@ -3737,7 +3707,7 @@ class CibFactory(object):
 
     def _remove_obj(self, obj):
         "Remove a cib object."
-        common_debug("remove object %s" % str(obj))
+        logger.debug("remove object %s", str(obj))
         for child in obj.children:
             # just relink, don't remove children
             self._relink_child_to_top(child)
@@ -3756,7 +3726,7 @@ class CibFactory(object):
             if not tag.node.xpath('./obj_ref'):
                 self._remove_obj(tag)
                 if not self._no_constraint_rm_msg:
-                    err_buf.info("hanging %s deleted" % str(tag))
+                    logger.info("hanging %s deleted", str(tag))
         for c_obj in self.related_constraints(obj):
             if is_simpleconstraint(c_obj.node) and obj.children:
                 # the first child inherits constraints
@@ -3768,9 +3738,9 @@ class CibFactory(object):
                 # remove invalid constraints
                 self._remove_obj(c_obj)
                 if not self._no_constraint_rm_msg:
-                    err_buf.info("hanging %s deleted" % str(c_obj))
+                    logger.info("hanging %s deleted", str(c_obj))
             elif deleted:
-                err_buf.info("constraint %s updated" % str(c_obj))
+                logger.info("constraint %s updated", str(c_obj))
 
     def related_tags(self, obj):
         def related_tag(tobj):
@@ -3824,7 +3794,7 @@ class CibFactory(object):
         rscstat = RscState()
         for prim in prim_l:
             if not rscstat.can_delete(prim.obj_id):
-                common_err("resource %s is running, can't delete it" % prim.obj_id)
+                logger.error("resource %s is running, can't delete it", prim.obj_id)
                 return False
         return True
 
@@ -3859,11 +3829,11 @@ class CibFactory(object):
                 # workflows without compromising an interactive
                 # use.
                 if not config.core.force:
-                    no_object_err(obj_id)
+                    logger_utils.no_object_err(obj_id)
                     rc = False
                 continue
             if not rscstat.can_delete(obj_id):
-                common_err("resource %s is running, can't delete it" % obj_id)
+                logger.error("resource %s is running, can't delete it", obj_id)
                 rc = False
                 continue
             if is_template(obj.node):
@@ -3874,7 +3844,7 @@ class CibFactory(object):
                     rc = False
                     continue
                 for prim in prim_l:
-                    common_info("hanging %s deleted" % str(prim))
+                    logger.info("hanging %s deleted", str(prim))
                     l.append(prim)
             l.append(obj)
         if l:
@@ -3901,7 +3871,7 @@ class CibFactory(object):
             return False
         obj = self.find_object(old_id)
         if not obj:
-            no_object_err(old_id)
+            logger_utils.no_object_err(old_id)
             return False
         if not obj.can_be_renamed():
             return False
@@ -3927,12 +3897,12 @@ class CibFactory(object):
         rscstat = RscState()
         for obj in [obj for obj in self.cib_objects if not obj.children and not is_constraint(obj.node) and obj.obj_type != "node"]:
             if not rscstat.can_delete(obj.obj_id):
-                common_warn("resource %s is running, can't delete it" % obj.obj_id)
+                logger.warning("resource %s is running, can't delete it", obj.obj_id)
                 erase_ok = False
             else:
                 l.append(obj)
         if not erase_ok:
-            common_err("CIB erase aborted (nothing was deleted)")
+            logger.error("CIB erase aborted (nothing was deleted)")
             return False
         self._no_constraint_rm_msg = True
         for obj in l:
@@ -3943,7 +3913,7 @@ class CibFactory(object):
             if obj.obj_type != "node":
                 remaining += 1
         if remaining > 0:
-            common_err("strange, but these objects remained:")
+            logger.error("strange, but these objects remained:")
             for obj in self.cib_objects:
                 if obj.obj_type != "node":
                     print(str(obj), file=sys.stderr)

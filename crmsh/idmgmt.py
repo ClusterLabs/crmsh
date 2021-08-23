@@ -6,8 +6,11 @@
 import copy
 from . import constants
 from . import xmlutil
-from .msg import common_error, id_used_err
+from . import log
 
+
+logger = log.setup_logger(__name__)
+logger_utils = log.LoggerUtils(logger)
 _id_store = {}
 _state = []
 ok = True  # error var
@@ -80,7 +83,7 @@ def check_node(node, lvl):
     if not node_id:
         return
     if id_in_use(node_id):
-        common_error("id_store: id %s is in use" % node_id)
+        logger.error("id_store: id %s is in use", node_id)
         ok = False
         return
 
@@ -125,7 +128,7 @@ def is_used(node_id):
 
 def id_in_use(obj_id):
     if is_used(obj_id):
-        id_used_err(obj_id)
+        logger_utils.id_used_err(obj_id)
         return True
     return False
 

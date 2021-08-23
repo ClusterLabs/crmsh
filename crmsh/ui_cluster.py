@@ -7,13 +7,16 @@ import re
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from . import command
 from . import utils
-from .msg import err_buf
 from . import scripts
 from . import completers as compl
 from . import bootstrap
 from . import corosync
 from .cibconfig import cib_factory
 from . import constants
+
+
+from . import log
+logger = log.setup_logger(__name__)
 
 
 class ArgParser(ArgumentParser):
@@ -94,12 +97,12 @@ class Cluster(command.UI):
         '''
         try:
             if utils.service_is_active("pacemaker.service"):
-                err_buf.info("Cluster services already started")
+                logger.info("Cluster services already started")
                 return
             bootstrap.start_pacemaker()
             if utils.is_qdevice_configured():
                 utils.start_service("corosync-qdevice")
-            err_buf.info("Cluster services started")
+            logger.info("Cluster services started")
         except IOError as err:
             context.fatal_error(str(err))
 
@@ -112,12 +115,12 @@ class Cluster(command.UI):
         '''
         try:
             if not utils.service_is_active("corosync.service"):
-                err_buf.info("Cluster services already stopped")
+                logger.info("Cluster services already stopped")
                 return
             if utils.service_is_active("corosync-qdevice"):
                 utils.stop_service("corosync-qdevice")
             utils.stop_service("corosync")
-            err_buf.info("Cluster services stopped")
+            logger.info("Cluster services stopped")
         except IOError as err:
             context.fatal_error(str(err))
 
@@ -140,7 +143,7 @@ class Cluster(command.UI):
             utils.enable_service("pacemaker.service")
             if utils.is_qdevice_configured():
                 utils.enable_service("corosync-qdevice.service")
-            err_buf.info("Cluster services enabled")
+            logger.info("Cluster services enabled")
         except IOError as err:
             context.fatal_error(str(err))
 
@@ -155,7 +158,7 @@ class Cluster(command.UI):
             utils.disable_service("pacemaker.service")
             if utils.is_qdevice_configured():
                 utils.disable_service("corosync-qdevice.service")
-            err_buf.info("Cluster services disabled")
+            logger.info("Cluster services disabled")
         except IOError as err:
             context.fatal_error(str(err))
 
@@ -275,7 +278,7 @@ Note:
             stage = args[0]
         if stage == "vgfs":
             stage = "ocfs2"
-            err_buf.warning("vgfs stage was deprecated and is an alias of ocfs2 stage now")
+            logger.warning("vgfs stage was deprecated and is an alias of ocfs2 stage now")
         if stage not in bootstrap.INIT_STAGES and stage != "":
             parser.error("Invalid stage (%s)" % (stage))
 
@@ -305,7 +308,7 @@ Note:
             for node in nodelist:
                 if node == utils.this_node():
                     continue
-                bootstrap.status("\n\nAdd node {} (may prompt for root password):".format(node))
+                logger.info("\n\nAdd node {} (may prompt for root password):".format(node))
                 if not self._add_node(node, yes_to_all=options.yes_to_all):
                     return False
 
@@ -687,15 +690,15 @@ to get the geo cluster configuration.""",
                 break
         for host, result in parallax.call(hosts, cmd, opts).items():
             if isinstance(result, parallax.Error):
-                err_buf.error("[%s]: %s" % (host, result))
+                logger.error("[%s]: %s" % (host, result))
             else:
                 if result[0] != 0:
-                    err_buf.error("[%s]: rc=%s\n%s\n%s" % (host, result[0], utils.to_ascii(result[1]), utils.to_ascii(result[2])))
+                    logger.error("[%s]: rc=%s\n%s\n%s" % (host, result[0], utils.to_ascii(result[1]), utils.to_ascii(result[2])))
                 else:
                     if not result[1]:
-                        err_buf.ok("[%s]" % host)
+                        logger.info("[%s]" % host)
                     else:
-                        err_buf.ok("[%s]\n%s" % (host, utils.to_ascii(result[1])))
+                        logger.info("[%s]\n%s" % (host, utils.to_ascii(result[1])))
 
     def do_copy(self, context, local_file, *nodes):
         '''

@@ -31,7 +31,10 @@ from . import handles
 from . import options
 from . import userdir
 from . import utils
-from .msg import err_buf, common_debug
+from . import log
+
+
+logger = log.setup_logger(__name__)
 
 
 _script_cache = None
@@ -500,7 +503,7 @@ def _parse_hawk_template(workflow, name, kind, step, actions):
         xml = _hawk_template_cache[path]
     elif os.path.isfile(path):
         xml = etree.parse(path).getroot()
-        common_debug("Found matching template: %s" % (path))
+        logger.debug("Found matching template: %s", path)
         _hawk_template_cache[path] = xml
     else:
         raise ValueError("Template does not exist: %s" % (path))
@@ -1056,7 +1059,7 @@ def load_script_string(script, yml):
 def load_script(script):
     build_script_cache()
     if script not in _script_cache:
-        common_debug("cache: %s" % (list(_script_cache.keys())))
+        logger.debug("cache: %s", list(_script_cache.keys()))
         raise ValueError("Script not found: %s" % (script))
     s = _script_cache[script]
     if isinstance(s, str):
@@ -1189,9 +1192,7 @@ def _extract_localnode(hosts):
             hosts2.append((h, p, u))
         else:
             local_node = (h, p, u)
-    err_buf.debug("Local node: %s, Remote hosts: %s" % (
-        local_node,
-        ', '.join(h[0] for h in hosts2)))
+    logger.debug("Local node: %s, Remote hosts: %s", local_node, ', '.join(h[0] for h in hosts2))
     return local_node, hosts2
 
 
@@ -1784,7 +1785,7 @@ class RunActions(object):
             raise ValueError("action index out of range")
 
         action = self.actions[action_index]
-        common_debug("Execute: %s" % (action))
+        logger.debug("Execute: %s", action)
         # if this is not the first action, load action data
         if action_index != 1:
             if not os.path.isfile(statefile):
@@ -2188,7 +2189,7 @@ def verify(script, params, external_check=True):
             cmd.append(_join_script_lines(action['value']))
         cmd.extend(["verify", "commit", "\n"])
         try:
-            common_debug("Try executing %s" % ("\n".join(cmd)))
+            logger.debug("Try executing %s", "\n".join(cmd))
             rc, out = utils.filter_string(['crm', '-f', '-', 'configure'], "\n".join(cmd).encode('utf-8'), stderr_on='stdout', shell=False)
             errm = re.compile(r"^ERROR: \d+: (.*)$")
             outp = []

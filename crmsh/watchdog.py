@@ -1,7 +1,7 @@
 import re
 from . import utils
 from .constants import SSH_OPTION
-from .bootstrap import error, invoke, invokerc, WATCHDOG_CFG, SYSCONFIG_SBD
+from .bootstrap import invoke, invokerc, WATCHDOG_CFG, SYSCONFIG_SBD
 
 
 class Watchdog(object):
@@ -34,7 +34,7 @@ class Watchdog(object):
             if ignore_error:
                 return False
             else:
-                error("Invalid watchdog device {}: {}".format(dev, err))
+                utils.fatal("Invalid watchdog device {}: {}".format(dev, err))
         return True
 
     @staticmethod
@@ -72,7 +72,7 @@ class Watchdog(object):
             #   [1] /dev/watchdog\nIdentity: Software Watchdog\nDriver: softdog\n
             self._watchdog_info_dict = dict(re.findall(self.DEVICE_FIND_REGREX, out))
         else:
-            error("Failed to run {}: {}".format(self.QUERY_CMD, err))
+            utils.fatal("Failed to run {}: {}".format(self.QUERY_CMD, err))
 
     def _get_device_through_driver(self, driver_name):
         """
@@ -98,7 +98,7 @@ class Watchdog(object):
             else:
                 return None
         else:
-            error("Failed to run {} remotely: {}".format(self.QUERY_CMD, err))
+            utils.fatal("Failed to run {} remotely: {}".format(self.QUERY_CMD, err))
 
     def _get_first_unused_device(self):
         """
@@ -141,7 +141,7 @@ class Watchdog(object):
 
         res = self._get_watchdog_device_from_sbd_config()
         if not res:
-            error("Failed to get watchdog device from {}".format(SYSCONFIG_SBD))
+            utils.fatal("Failed to get watchdog device from {}".format(SYSCONFIG_SBD))
         self._input = res
 
         if not self._valid_device(self._input):
@@ -162,7 +162,7 @@ class Watchdog(object):
 
         # self._input is invalid, exit
         if not invokerc("modinfo {}".format(self._input)):
-            error("Should provide valid watchdog device or driver name by -w option")
+            utils.fatal("Should provide valid watchdog device or driver name by -w option")
 
         # self._input is a driver name, load it if it was unloaded
         if not self._driver_is_loaded(self._input):

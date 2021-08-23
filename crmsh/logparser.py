@@ -10,11 +10,14 @@ import collections
 import json
 import time
 
-from . import msg as crmlog
 from . import xmlutil
 from . import logtime
 from . import utils
 from . import log_patterns
+from . import log
+
+
+logger = log.setup_logger(__name__)
 
 
 _METADATA_FILENAME = "__meta.json"
@@ -35,7 +38,7 @@ def _open_logfile(logfile):
             return gzip.open(logfile)
         return open(logfile, "rb")
     except IOError as msg:
-        crmlog.common_error("open %s: %s" % (logfile, msg))
+        logger.error("open %s: %s", logfile, msg)
         return None
 
 
@@ -54,7 +57,7 @@ def _transition_start_re():
     try:
         return re.compile("(?:%s)|(?:%s)" % (m1, m2))
     except re.error as e:
-        crmlog.common_debug("RE compilation failed: %s" % (e))
+        logger.debug("RE compilation failed: %s", e)
         raise ValueError("Error in search expression")
 
 
@@ -80,7 +83,7 @@ def _transition_end_re():
     try:
         return re.compile("crmd.*Transition ([0-9]+).*Source=(.*/pe-[^-]+-([0-9]+)[.]bz2).:.*(Stopped|Complete|Terminated)")
     except re.error as e:
-        crmlog.common_debug("RE compilation failed: %s" % (e))
+        logger.debug("RE compilation failed: %s", e)
         raise ValueError("Error in search expression")
 
 
@@ -346,7 +349,7 @@ class LogParser(object):
 
         for logidx, (filename, log) in enumerate(zip(self.filenames, self.fileobjs)):
             log.seek(0)
-            crmlog.common_debug("parsing %s" % (filename))
+            logger.debug("parsing %s", filename)
             line = "a"
             while line != '':
                 spos = log.tell()
@@ -371,13 +374,12 @@ class LogParser(object):
                         transition = Transition(self.loc, dc, ts, trans_num, pe_file, pe_num)
                         self.transitions.append(transition)
                         transitions_map[id_] = transition
-                        crmlog.common_debug("{Transition: %s" % (transition))
+                        logger.debug("{Transition: %s", transition)
 
                         if not os.path.isfile(transition.path()):
                             missing_pefiles.append((dc, pe_orig))
                     else:
-                        crmlog.common_debug("~Transition: %s old(%s, %s) new(%s, %s)" %
-                                            (transition, transition.trans_num, transition.pe_file, trans_num, pe_file))
+                        logger.debug("~Transition: %s old(%s, %s) new(%s, %s)", transition, transition.trans_num, transition.pe_file, trans_num, pe_file)
                     state = IN_TRANSITION
                     continue
                 if state == IN_TRANSITION:
@@ -391,12 +393,12 @@ class LogParser(object):
                         transition = transitions_map.get(trans_str(dc, pe_file))
                         if transition is None:
                             # transition end without previous begin...
-                            crmlog.common_debug("Found transition end without start: %s: %s - %s:%s" % (ts, filename, trans_num, pe_file))
+                            logger.debug("Found transition end without start: %s: %s - %s:%s", ts, filename, trans_num, pe_file)
                         else:
                             transition.end_state = state
                             transition.end_ts = ts
                             transition.end_actions = _run_graph_msg_actions(line)
-                            crmlog.common_debug("}Transition: %s %s" % (transition, state))
+                            logger.debug("}Transition: %s %s", transition, state)
                         state = DEFAULT
 
                 # events
@@ -407,7 +409,7 @@ class LogParser(object):
                             ts = logtime.syslog_ts(line)
                             if ts is None:
                                 continue
-                            crmlog.common_debug("+Event %s: %s" % (etype, ", ".join(m.groups())))
+                            logger.debug("+Event %s: %s", etype, ", ".join(m.groups()))
                             sk = (int(ts) << 32) + int(spos)
                             self.events[etype].append((sk, logidx, spos))
                             if transition is not None:
@@ -514,7 +516,7 @@ class LogParser(object):
             rxes = None
 
         if event == "resource" and resources is not None and rxes is not None:
-            crmlog.common_debug("resource %s rxes: %s" % (", ".join(resources), ", ".join(r.pattern for r in rxes)))
+            logger.debug("resource %s rxes: %s", ", ".join(resources), ", ".join(r.pattern for r in rxes))
 
         if rxes is not None:
             for log in eventlogs:
@@ -549,7 +551,7 @@ class LogParser(object):
         '''
         patterns = log_patterns.patterns(cib_f=self.cib.filename)
         if etype not in patterns:
-            crmlog.common_error("%s not featured in log patterns" % etype)
+            logger.error("%s not featured in log patterns", etype)
             return None
         return patterns[etype][0:self.detail+1]
 
@@ -611,9 +613,9 @@ class LogParser(object):
         try:
             with open(fn, 'wt') as f:
                 json.dump(self.to_dict(), f, indent=2)
-                crmlog.common_debug("Transition metadata saved to %s" % (fn))
+                logger.debug("Transition metadata saved to %s", fn)
         except IOError as e:
-            crmlog.common_debug("Could not update metadata cache: %s" % (e))
+            logger.debug("Could not update metadata cache: %s", e)
 
     def _load_cache(self):
         """
@@ -630,10 +632,10 @@ class LogParser(object):
                         try:
                             if not self.from_dict(json.load(f)):
                                 return False
-                            crmlog.common_debug("Transition metadata loaded from %s" % (fn))
+                            logger.debug("Transition metadata loaded from %s", fn)
                             return True
                         except ValueError as e:
-                            crmlog.common_debug("Failed to load metadata: %s" % (e))
+                            logger.debug("Failed to load metadata: %s", e)
                 except IOError as e:
                     return False
         return False

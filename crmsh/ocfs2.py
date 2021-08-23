@@ -4,7 +4,11 @@ from . import utils
 from . import bootstrap
 from . import ra
 from . import corosync
-from .msg import err_buf
+from . import log
+
+
+logger = log.setup_logger(__name__)
+logger_utils = log.LoggerUtils(logger)
 
 
 class OCFS2Manager(object):
@@ -91,7 +95,7 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
             return
         out = utils.get_stdout_or_raise_error("crm configure show")
         if "fstype=ocfs2" in out:
-            err_buf.info("Already configured OCFS2 related resources")
+            logger.info("Already configured OCFS2 related resources")
             raise utils.TerminateSubCommand
 
     def _static_verify(self):
@@ -162,7 +166,7 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         """
         Creating OCFS2 filesystem for the target device
         """
-        with bootstrap.status_long("  Creating OCFS2 filesystem for {}".format(target)):
+        with logger_utils.status_long("  Creating OCFS2 filesystem for {}".format(target)):
             self.cluster_name = corosync.get_value('totem.cluster_name')
             utils.get_stdout_or_raise_error(self.MKFS_CMD.format(self.cluster_name, self.MAX_CLONE_NUM, target))
 
@@ -184,16 +188,16 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         disks_string = ' '.join(self.ocfs2_devices)
 
         # Create PV
-        with bootstrap.status_long("  Creating PV for {}".format(disks_string)):
+        with logger_utils.status_long("  Creating PV for {}".format(disks_string)):
             utils.get_stdout_or_raise_error("pvcreate {} -y".format(disks_string))
 
         # Create VG
         self.vg_id = utils.gen_unused_id(utils.get_all_vg_name(), self.VG_ID)
-        with bootstrap.status_long("  Creating VG {}".format(self.vg_id)):
+        with logger_utils.status_long("  Creating VG {}".format(self.vg_id)):
             utils.get_stdout_or_raise_error("vgcreate --shared {} {} -y".format(self.vg_id, disks_string))
 
         # Create LV
-        with bootstrap.status_long("  Creating LV {} on VG {}".format(self.LV_ID, self.vg_id)):
+        with logger_utils.status_long("  Creating LV {} on VG {}".format(self.LV_ID, self.vg_id)):
             pe_number = utils.get_pe_number(self.vg_id)
             utils.get_stdout_or_raise_error("lvcreate -l {} {} -n {} -y".format(pe_number, self.vg_id, self.LV_ID))
  
@@ -289,7 +293,7 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         """
         OCFS2 configure process on init node
         """
-        bootstrap.status("{}Configuring OCFS2".format("" if self.yes_to_all else "\n"))
+        logger.info("Configuring OCFS2")
         self._dynamic_verify()
         self.exist_ra_id_list = utils.all_exist_id()
 
@@ -297,12 +301,12 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
             self._config_resource_stack_lvm2()
         else:
             self._config_resource_stack_ocfs2_along()
-        bootstrap.status("  OCFS2 device {} mounted on {}".format(self.target_device, self.mount_point))
+        logger.info("  OCFS2 device %s mounted on %s", self.target_device, self.mount_point)
 
         res = utils.get_stdout_or_raise_error("crm configure get_property no-quorum-policy")
         if res != "freeze":
             utils.get_stdout_or_raise_error("crm configure property no-quorum-policy=freeze")
-            err_buf.info("'no-quorum-policy' is changed to \"freeze\"")
+            logger.info("  'no-quorum-policy' is changed to \"freeze\"")
 
     def _find_target_on_join(self, peer):
         """
@@ -325,7 +329,7 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         target = self._find_target_on_join(peer)
         if not target:
             return
-        with bootstrap.status_long("Verify OCFS2 environment"):
+        with logger_utils.status_long("Verify OCFS2 environment"):
             use_cluster_lvm2 = utils.has_resource_configured("ocf::heartbeat:lvmlockd", peer)
             self._verify_packages(use_cluster_lvm2)
             if utils.is_dev_a_plain_raw_disk_or_partition(target, peer):

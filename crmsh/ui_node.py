@@ -9,12 +9,16 @@ from . import constants
 from . import ui_utils
 from . import utils
 from . import xmlutil
-from .msg import common_err, syntax_err, no_prog_err, common_info, common_warn
-from .msg import common_debug
 from .cliformat import cli_nvpairs, nvpairs2list
 from . import term
 from .cibconfig import cib_factory
 from .ui_resource import rm_meta_attribute
+from . import log
+
+
+logger = log.setup_logger(__name__)
+logger_utils = log.LoggerUtils(logger)
+
 
 def remove_redundant_attrs(objs, attributes_tag, attr, conflicting_attr = None):
     """
@@ -34,8 +38,7 @@ def remove_redundant_attrs(objs, attributes_tag, attr, conflicting_attr = None):
                 (config.core.manage_children == "ask" and
                 utils.ask("'%s' attribute already exists in %s. Remove it?" %
                         (attr, r.get(field2show))))):
-                common_debug("force remove meta attr %s from %s" %
-                        (attr, r.get(field2show)))
+                logger.debug("force remove meta attr %s from %s", attr, r.get(field2show))
                 xmlutil.rmnode(a)
                 xmlutil.xml_processnodes(r, xmlutil.is_emptynvpairs, xmlutil.rmnodes)
             if conflicting_attr is not None:
@@ -45,8 +48,7 @@ def remove_redundant_attrs(objs, attributes_tag, attr, conflicting_attr = None):
                     (config.core.manage_children == "ask" and
                     utils.ask("'%s' conflicts with '%s' in %s. Remove it?" %
                             (conflicting_attr, attr, r.get(field2show))))):
-                    common_debug("force remove meta attr %s from %s" %
-                            (conflicting_attr, r.get(field2show)))
+                    logger.debug("force remove meta attr %s from %s", conflicting_attr, r.get(field2show))
                     xmlutil.rmnode(a)
                     xmlutil.xml_processnodes(r, xmlutil.is_emptynvpairs, xmlutil.rmnodes)
 
@@ -71,10 +73,10 @@ def update_xml_node(cluster_node_name, attr, value):
 
     node_obj = cib_factory.find_node(cluster_node_name)
     if node_obj is None:
-        common_err("CIB is not valid!")
+        logger.error("CIB is not valid!")
         return False
 
-    common_debug("update_xml_node: %s" % (node_obj.obj_id))
+    logger.debug("update_xml_node: %s", node_obj.obj_id)
 
     xml_node = node_obj.node
     node_obj.set_updated()
@@ -115,14 +117,14 @@ def set_node_attr(cluster_node_name, attr_name, value, commit=True):
     Set an attribute for a node
     """
     if not update_xml_node(cluster_node_name, attr_name, value):
-        common_err("Failed to update node attributes for %s" % (cluster_node_name))
+        logger.error("Failed to update node attributes for %s", cluster_node_name)
         return False
 
     if not commit:
         return True
 
     if not cib_factory.commit():
-        common_err("Failed to commit updates to %s" % (cluster_node_name))
+        logger.error("Failed to commit updates to %s", cluster_node_name)
         return False
     return True
 
@@ -246,7 +248,7 @@ class NodeMgmt(command.UI):
     def requires(self):
         for p in ('cibadmin', 'crm_attribute'):
             if not utils.is_program(p):
-                no_prog_err(p)
+                logger_utils.no_prog_err(p)
                 return False
         return True
 
@@ -294,10 +296,10 @@ class NodeMgmt(command.UI):
         elif len(argl) == 1:
             node = args[0]
             if not xmlutil.is_our_node(node):
-                common_err("%s: node name not recognized" % node)
+                logger.error("%s: node name not recognized", node)
                 return False
         else:
-            syntax_err(args, context=context.get_command_name())
+            logger_utils.syntax_err(args, context=context.get_command_name())
             return False
         opts = ''
         if lifetime:
@@ -369,7 +371,7 @@ class NodeMgmt(command.UI):
             if cib_elem.xpath("//node_state[@uname=\"%s\"]/@crmd" % node) == ["online"]:
                 return utils.ext_cmd(self.node_cleanup_resources % node) == 0
             elif cib_elem.xpath("//node_state[@uname=\"%s\"]/@in_ccm" % node) == ["true"]:
-                common_warn("Node is offline according to Pacemaker, but online according to corosync. First shut down node '%s'" % node)
+                logger.warning("Node is offline according to Pacemaker, but online according to corosync. First shut down node '%s'", node)
                 return False
             else:
                 return utils.ext_cmd(self.node_clear_state_118 % node) == 0
@@ -382,24 +384,22 @@ class NodeMgmt(command.UI):
         rc = True
         ec, s = utils.get_stdout("%s -p" % self.crm_node)
         if not s:
-            common_err('%s -p could not list any nodes (rc=%d)' %
-                       (self.crm_node, ec))
+            logger.error('%s -p could not list any nodes (rc=%d)', self.crm_node, ec)
             rc = False
         else:
             partition_l = s.split()
             if node in partition_l:
-                common_err("according to %s, node %s is still active" %
-                           (self.crm_node, node))
+                logger.error("according to %s, node %s is still active", self.crm_node, node)
                 rc = False
         cmd = "%s --force -R %s" % (self.crm_node, node)
         if not rc:
             if config.core.force:
-                common_info('proceeding with node %s removal' % node)
+                logger.info('proceeding with node %s removal', node)
             else:
                 return False
         ec = utils.ext_cmd(cmd)
         if ec != 0:
-            common_warn('"%s" failed, rc=%d' % (cmd, ec))
+            logger.warning('"%s" failed, rc=%d', cmd, ec)
             return False
         return True
 
@@ -409,15 +409,15 @@ class NodeMgmt(command.UI):
         if not utils.is_name_sane(node):
             return False
         if not xmlutil.is_our_node(node):
-            common_err("node %s not found in the CIB" % node)
+            logger.error("node %s not found in the CIB", node)
             return False
         if not self._call_delnode(node):
             return False
         if utils.ext_cmd(self.node_delete % node) != 0 or \
                 utils.ext_cmd(self.node_delete_status % node) != 0:
-            common_err("%s removed from membership, but not from CIB!" % node)
+            logger.error("%s removed from membership, but not from CIB!", node)
             return False
-        common_info("node %s deleted" % node)
+        logger.info("node %s deleted", node)
         return True
 
     @command.wait

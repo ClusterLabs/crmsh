@@ -7,8 +7,11 @@ from . import command
 from . import completers as compl
 from . import config
 from . import utils
-from .msg import no_prog_err
+from . import log
 
+
+logger = log.setup_logger(__name__)
+logger_utils = log.LoggerUtils(logger)
 _ticket_commands = {
     'grant': "%s -t '%s' -g",
     'revoke': "%s -t '%s' -r",
@@ -47,7 +50,7 @@ class Site(command.UI):
 
     def requires(self):
         if not utils.is_program('crm_ticket'):
-            no_prog_err('crm_ticket')
+            logger_utils.no_prog_err('crm_ticket')
             return False
         return True
 

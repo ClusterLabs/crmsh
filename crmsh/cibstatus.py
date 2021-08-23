@@ -9,7 +9,10 @@ from . import xmlutil
 from . import utils
 from . import config
 from .utils import ext_cmd, show_dot_graph, page_string
-from .msg import common_err, common_info, common_warn
+from . import log
+
+
+logger = log.setup_logger(__name__)
 
 
 def get_tag_by_id(node, tag, ident):
@@ -179,7 +182,7 @@ class CibStatus(object):
             os.unlink(self.backing_file)
             self.backing_file = ""
         if not self._load(source):
-            common_err("the cib contains no status")
+            logger.error("the cib contains no status")
             return False
         self.origin = source
         return True
@@ -193,10 +196,10 @@ class CibStatus(object):
         is saved.
         '''
         if not self.modified:
-            common_info("apparently you didn't modify status")
+            logger.info("apparently you didn't modify status")
             return False
         if (not dest and self.origin == "live") or dest == "live":
-            common_warn("cannot save status to the cluster")
+            logger.warning("cannot save status to the cluster")
             return False
         cib = self.cib
         if dest:
@@ -204,7 +207,7 @@ class CibStatus(object):
             if os.path.isfile(dest_path):
                 cib = self._load_cib(dest)
                 if cib is None:
-                    common_err("%s exists, but no cib inside" % dest)
+                    logger.error("%s exists, but no cib inside", dest)
                     return False
         else:
             dest_path = cib_path(self.origin)
@@ -216,7 +219,7 @@ class CibStatus(object):
         try:
             f = open(dest_path, "w")
         except IOError as msg:
-            common_err(msg)
+            logger.error(msg)
             return False
         f.write(xml)
         f.close()
@@ -309,11 +312,11 @@ class CibStatus(object):
         if self.get_status() is None:
             return False
         if state not in self.node_ops:
-            common_err("unknown state %s" % state)
+            logger.error("unknown state %s", state)
             return False
         node_node = get_tag_by_id(self.status_node, "node_state", node)
         if node_node is None:
-            common_info("node %s created" % node)
+            logger.info("node %s created", node)
             return False
         rc = self.inject("%s %s" % (self.node_ops[state], node))
         if rc != 0:
@@ -330,7 +333,7 @@ class CibStatus(object):
         if self.get_status() is None:
             return False
         if subcmd not in self.ticket_ops:
-            common_err("unknown ticket command %s" % subcmd)
+            logger.error("unknown ticket command %s", subcmd)
             return False
         rc = self.inject("%s %s" % (self.ticket_ops[subcmd], ticket))
         if rc != 0:
@@ -350,14 +353,14 @@ class CibStatus(object):
         l_op, l_int = split_op(op)
         op_nodes = get_status_ops(self.status_node, rsc, l_op, l_int, node)
         if l_int == "-1" and len(op_nodes) != 1:
-            common_err("need interval for the monitor op")
+            logger.error("need interval for the monitor op")
             return False
         if node == '' and len(op_nodes) != 1:
             if op_nodes:
                 nodelist = [get_status_node_id(x) for x in op_nodes]
-                common_err("operation %s found at %s" % (op, ' '.join(nodelist)))
+                logger.error("operation %s found at %s", op, ' '.join(nodelist))
             else:
-                common_err("operation %s not found" % op)
+                logger.error("operation %s not found", op)
             return False
         # either the op is fully specified (maybe not found)
         # or we found exactly one op_node
@@ -366,7 +369,7 @@ class CibStatus(object):
             if not node:
                 node = get_status_node_id(op_node)
             if not node:
-                common_err("node not found for the operation %s" % op)
+                logger.error("node not found for the operation %s", op)
                 return False
             if l_int == "-1":
                 l_int = op_node.get("interval")
