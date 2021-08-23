@@ -7,9 +7,11 @@ from datetime import datetime
 from contextlib import contextmanager
 from crmsh import utils as crmshutils
 from . import config
+from crmsh import log
 
 
-logger = logging.getLogger('cpc')
+logger = log.setup_logger(__name__)
+
 
 CRED = '\033[31m'
 CYELLOW = '\033[33m'
@@ -69,7 +71,7 @@ def manage_handler(_type, keep=True):
 
 
 def msg_raw(level, msg, to_stdout=True):
-    with manage_handler("stream", to_stdout):
+    with manage_handler("console", to_stdout):
         logger.log(level, msg)
 
 

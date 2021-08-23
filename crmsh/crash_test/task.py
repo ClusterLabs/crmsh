@@ -8,12 +8,12 @@ import shutil
 import tempfile
 from contextlib import contextmanager
 from crmsh import utils as crmshutils
-
+from crmsh import log
 from . import utils
 from . import config
 
 
-logger = logging.getLogger('cpc')
+logger = log.setup_logger(__name__)
 
 
 class TaskError(Exception):
