@@ -10,9 +10,12 @@ import re
 import imp
 import unittest
 import pytest
+import logging
 from unittest import mock
 from itertools import chain
 from crmsh import utils, config, tmpfiles, constants
+
+logging.basicConfig(level=logging.DEBUG)
 
 def setup_function():
     utils._ip_for_cloud = None
@@ -159,7 +162,7 @@ def test_check_ssh_passwd_need(mock_run):
     mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node1 true")
 
 
-@mock.patch('crmsh.utils.common_debug')
+@mock.patch('logging.Logger.debug')
 @mock.patch('crmsh.utils.get_stdout_stderr')
 def test_get_member_iplist_None(mock_get_stdout_stderr, mock_common_debug):
     mock_get_stdout_stderr.return_value = (1, None, "Failed to initialize the cmap API. Error CS_ERR_LIBRARY")
@@ -320,7 +323,8 @@ def test_str2tmp():
     os.unlink(filename)
 
 
-def test_sanity():
+@mock.patch('logging.Logger.error')
+def test_sanity(mock_error):
     sane_paths = ['foo/bar', 'foo', '/foo/bar', 'foo0',
                   'foo_bar', 'foo-bar', '0foo', '.foo',
                   'foo.bar']
@@ -918,7 +922,7 @@ class TestInterfacesInfo(unittest.TestCase):
         self.assertEqual(res, "10.10.10.1")
 
     @mock.patch('crmsh.utils.InterfacesInfo.nic_list', new_callable=mock.PropertyMock)
-    @mock.patch('crmsh.utils.common_warn')
+    @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.utils.InterfacesInfo.get_interfaces_info')
     @mock.patch('crmsh.utils.get_stdout_stderr')
     def test_get_default_nic_list_from_route_no_default(self, mock_run, mock_get_interfaces_info, mock_warn, mock_nic_list):

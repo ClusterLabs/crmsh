@@ -50,7 +50,7 @@ class TestWatchdog(unittest.TestCase):
         self.assertEqual(res, False)
         mock_run.assert_called_once_with("wdctl /dev/watchdog")
 
-    @mock.patch('crmsh.watchdog.error')
+    @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.get_stdout_stderr')
     def test_verify_watchdog_device_error(self, mock_run, mock_error):
         mock_run.return_value = (1, None, "error")
@@ -95,7 +95,7 @@ btrfs                1474560  1
         assert res is not None
         mock_run.assert_called_once_with("lsmod")
 
-    @mock.patch('crmsh.watchdog.error')
+    @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.get_stdout_stderr')
     def test_set_watchdog_info_error(self, mock_run, mock_error):
         mock_run.return_value = (1, None, "error")
@@ -144,7 +144,7 @@ Driver: iTCO_wdt
         self.assertEqual(res, "/dev/watchdog1")
         mock_verify.assert_called_once_with("/dev/watchdog1")
 
-    @mock.patch('crmsh.watchdog.error')
+    @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.get_stdout_stderr')
     def test_get_driver_through_device_remotely_error(self, mock_run, mock_error):
         mock_run.return_value = (1, None, "error")
@@ -228,7 +228,7 @@ Driver: iTCO_wdt
         res = self.watchdog_inst._valid_device("/dev/watchdog")
         self.assertEqual(res, True)
 
-    @mock.patch('crmsh.watchdog.error')
+    @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.watchdog.Watchdog._get_watchdog_device_from_sbd_config')
     @mock.patch('crmsh.watchdog.Watchdog._set_watchdog_info')
     def test_join_watchdog_error(self, mock_set_info, mock_from_config, mock_error):
@@ -269,7 +269,7 @@ Driver: iTCO_wdt
         mock_invokerc.assert_not_called()
         mock_valid.assert_called_once_with("/dev/watchdog")
 
-    @mock.patch('crmsh.watchdog.error')
+    @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.watchdog.invokerc')
     @mock.patch('crmsh.watchdog.Watchdog._valid_device')
     @mock.patch('crmsh.watchdog.Watchdog._set_input')

@@ -196,7 +196,7 @@ class TestRemoteLock(unittest.TestCase):
         mock_time_out.assert_called_once_with()
 
     @mock.patch('time.sleep')
-    @mock.patch('crmsh.lock.common_warn')
+    @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.lock.RemoteLock._get_online_nodelist')
     @mock.patch('crmsh.lock.Lock._create_lock_dir')
     @mock.patch('crmsh.lock.RemoteLock.lock_timeout', new_callable=mock.PropertyMock)
@@ -216,11 +216,11 @@ class TestRemoteLock(unittest.TestCase):
         mock_time_out.assert_has_calls([mock.call(), mock.call(), mock.call()])
         mock_create.assert_called_once_with()
         mock_get_nodelist.assert_called_once_with()
-        mock_warn.assert_called_once_with("Might have unfinished process on other nodes, wait 120s...")
+        mock_warn.assert_called_once_with('Might have unfinished process on other nodes, wait %ss...', 120)
         mock_sleep.assert_called_once_with(10)
 
     @mock.patch('time.sleep')
-    @mock.patch('crmsh.lock.common_warn')
+    @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.lock.RemoteLock._get_online_nodelist')
     @mock.patch('crmsh.lock.Lock._create_lock_dir')
     @mock.patch('crmsh.lock.RemoteLock.lock_timeout', new_callable=mock.PropertyMock)
@@ -238,7 +238,7 @@ class TestRemoteLock(unittest.TestCase):
         mock_time_out.assert_has_calls([mock.call(), mock.call(), mock.call()])
         mock_create.assert_has_calls([mock.call(), mock.call(), mock.call()])
         mock_get_nodelist.assert_has_calls([mock.call(), mock.call()])
-        mock_warn.assert_called_once_with("Might have unfinished process on other nodes, wait 120s...")
+        mock_warn.assert_called_once_with('Might have unfinished process on other nodes, wait %ss...', 120)
         mock_sleep.assert_has_calls([mock.call(10), mock.call(10)])
 
     @mock.patch('crmsh.lock.Lock._unlock')

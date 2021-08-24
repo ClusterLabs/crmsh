@@ -1,3 +1,4 @@
+import logging
 import unittest
 try:
     from unittest import mock
@@ -5,6 +6,7 @@ except ImportError:
     import mock
 from crmsh import ocfs2, utils, ra
 
+logging.basicConfig(level=logging.INFO)
 
 class TestOCFS2Manager(unittest.TestCase):
     """
@@ -134,15 +136,14 @@ class TestOCFS2Manager(unittest.TestCase):
     def test_check_if_already_configured_return(self):
         self.ocfs2_inst3._check_if_already_configured()
 
-    @mock.patch('crmsh.ocfs2.err_buf')
+    @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.get_stdout_or_raise_error')
-    def test_check_if_already_configured(self, mock_run, mock_buf):
+    def test_check_if_already_configured(self, mock_run, mock_info):
         mock_run.return_value = "data xxx fstype=ocfs2  sss"
-        mock_buf.info = mock.Mock()
         with self.assertRaises(utils.TerminateSubCommand):
             self.ocfs2_inst2._check_if_already_configured()
         mock_run.assert_called_once_with("crm configure show")
-        mock_buf.info.assert_called_once_with("Already configured OCFS2 related resources")
+        mock_info.assert_called_once_with("Already configured OCFS2 related resources")
 
     @mock.patch('crmsh.ocfs2.OCFS2Manager._verify_devices')
     @mock.patch('crmsh.ocfs2.OCFS2Manager._check_if_already_configured')
@@ -243,7 +244,7 @@ class TestOCFS2Manager(unittest.TestCase):
 
     @mock.patch('crmsh.utils.get_stdout_or_raise_error')
     @mock.patch('crmsh.corosync.get_value')
-    @mock.patch('crmsh.bootstrap.status_long')
+    @mock.patch('crmsh.log.LoggerUtils.status_long')
     def test_mkfs(self, mock_long, mock_get_value, mock_run):
         mock_get_value.return_value = "hacluster"
         self.ocfs2_inst3._mkfs("/dev/sdb2")
@@ -265,7 +266,7 @@ class TestOCFS2Manager(unittest.TestCase):
     @mock.patch('crmsh.utils.gen_unused_id')
     @mock.patch('crmsh.utils.get_all_vg_name')
     @mock.patch('crmsh.utils.get_stdout_or_raise_error')
-    @mock.patch('crmsh.bootstrap.status_long')
+    @mock.patch('crmsh.log.LoggerUtils.status_long')
     def test_create_lv(self, mock_long, mock_run, mock_all_vg, mock_unused, mock_pe_num):
         mock_all_vg.return_value = []
         mock_unused.return_value = "vg1"
@@ -376,7 +377,7 @@ class TestOCFS2Manager(unittest.TestCase):
     @mock.patch('crmsh.ocfs2.OCFS2Manager._config_resource_stack_lvm2')
     @mock.patch('crmsh.utils.all_exist_id')
     @mock.patch('crmsh.ocfs2.OCFS2Manager._dynamic_verify')
-    @mock.patch('crmsh.bootstrap.status')
+    @mock.patch('logging.Logger.info')
     def test_init_ocfs2_lvm2(self, mock_status, mock_dynamic_verify, mock_all_id, mock_lvm2, mock_run):
         mock_all_id.return_value = []
         mock_run.return_value = "freeze"
@@ -385,7 +386,7 @@ class TestOCFS2Manager(unittest.TestCase):
         self.ocfs2_inst7.init_ocfs2()
         mock_status.assert_has_calls([
             mock.call("Configuring OCFS2"),
-            mock.call("  OCFS2 device /dev/vg1/lv1 mounted on /data")
+            mock.call('  OCFS2 device %s mounted on %s', '/dev/vg1/lv1', '/data')
             ])
         mock_dynamic_verify.assert_called_once_with()
         mock_all_id.assert_called_once_with()
@@ -395,7 +396,7 @@ class TestOCFS2Manager(unittest.TestCase):
     @mock.patch('crmsh.ocfs2.OCFS2Manager._config_resource_stack_ocfs2_along')
     @mock.patch('crmsh.utils.all_exist_id')
     @mock.patch('crmsh.ocfs2.OCFS2Manager._dynamic_verify')
-    @mock.patch('crmsh.bootstrap.status')
+    @mock.patch('logging.Logger.info')
     def test_init_ocfs2(self, mock_status, mock_dynamic_verify, mock_all_id, mock_ocfs2, mock_run):
         mock_all_id.return_value = []
         mock_run.side_effect = ["stop", None]
@@ -404,7 +405,8 @@ class TestOCFS2Manager(unittest.TestCase):
         self.ocfs2_inst3.init_ocfs2()
         mock_status.assert_has_calls([
             mock.call("Configuring OCFS2"),
-            mock.call("  OCFS2 device /dev/sda1 mounted on /data")
+            mock.call('  OCFS2 device %s mounted on %s', '/dev/sda1', '/data'),
+            mock.call('  \'no-quorum-policy\' is changed to "freeze"')
             ])
         mock_dynamic_verify.assert_called_once_with()
         mock_all_id.assert_called_once_with()
@@ -450,7 +452,7 @@ params directory="/srv/clusterfs" fstype=ocfs2 device="/dev/sda2"
     @mock.patch('crmsh.utils.is_dev_a_plain_raw_disk_or_partition')
     @mock.patch('crmsh.ocfs2.OCFS2Manager._verify_packages')
     @mock.patch('crmsh.utils.has_resource_configured')
-    @mock.patch('crmsh.bootstrap.status_long')
+    @mock.patch('crmsh.log.LoggerUtils.status_long')
     @mock.patch('crmsh.ocfs2.OCFS2Manager._find_target_on_join')
     def test_join_ocfs2(self, mock_find, mock_long, mock_configured, mock_verify_packages, mock_is_mapper, mock_compare):
         mock_find.return_value = "/dev/sda2"

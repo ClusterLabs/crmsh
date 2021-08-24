@@ -165,7 +165,7 @@ class TestUtils(TestCase):
         utils.logger = mock.Mock()
         utils.logger.log = mock.Mock()
         utils.msg_raw("level1", "msg1")
-        mock_handler.assert_called_once_with("stream", True)
+        mock_handler.assert_called_once_with("console", True)
         utils.logger.log.assert_called_once_with("level1", "msg1")
 
     @mock.patch('crmsh.crash_test.utils.msg_raw')

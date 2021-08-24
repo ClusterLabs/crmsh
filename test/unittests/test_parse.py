@@ -4,6 +4,10 @@ from __future__ import unicode_literals
 # See COPYING for license information.
 #
 # unit tests for parse.py
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 from builtins import zip
 from crmsh import parse
@@ -53,14 +57,16 @@ class TestBaseParser(unittest.TestCase):
         self.base._cmd = shlex.split(cmd)
         self.base._currtok = 0
 
-    def test_err(self):
+    @mock.patch('logging.Logger.error')
+    def test_err(self, mock_err):
         self._reset('a:b:c:d')
 
         def runner():
             self.base.match_split()
         self.assertRaises(parse.ParseError, runner)
 
-    def test_idspec(self):
+    @mock.patch('logging.Logger.error')
+    def test_idspec(self, mock_error):
         self._reset('$id=foo')
         self.base.match_idspec()
         self.assertEqual(self.base.matched(1), '$id')
@@ -109,7 +115,8 @@ class TestCliParser(unittest.TestCase):
     def _parse(self, s):
         return parse.parse(s, comments=self.comments)
 
-    def test_node(self):
+    @mock.patch('logging.Logger.error')
+    def test_node(self, mock_error):
         out = self._parse('node node-1')
         self.assertEqual(out.get('uname'), 'node-1')
 
@@ -141,7 +148,8 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(['bar'], out.xpath('instance_attributes/nvpair[@name="foo"]/@value'))
         self.assertEqual(['bang'], out.xpath('utilization/nvpair[@name="wiz"]/@value'))
 
-    def test_resources(self):
+    @mock.patch('logging.Logger.error')
+    def test_resources(self, mock_error):
         out = self._parse('primitive www ocf:heartbeat:apache op monitor timeout=10s')
         self.assertEqual(out.get('id'), 'www')
         self.assertEqual(out.get('class'), 'ocf')
@@ -220,7 +228,8 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(['fiz'], out.xpath('.//nvpair/@id-ref'))
         self.assertEqual(['buz'], out.xpath('.//nvpair/@name'))
 
-    def test_location(self):
+    @mock.patch('logging.Logger.error')
+    def test_location(self, mock_error):
         out = self._parse('location loc-1 resource inf: foo')
         self.assertEqual(out.get('id'), 'loc-1')
         self.assertEqual(out.get('rsc'), 'resource')
@@ -252,7 +261,8 @@ class TestCliParser(unittest.TestCase):
         out = self._parse('location l { a:foo b:bar }')
         self.assertFalse(out)
 
-    def test_colocation(self):
+    @mock.patch('logging.Logger.error')
+    def test_colocation(self, mock_error):
         out = self._parse('colocation col-1 inf: foo:master ( bar wiz sequential=yes )')
         self.assertEqual(out.get('id'), 'col-1')
         self.assertEqual(['foo', 'bar', 'wiz'], out.xpath('//resource_ref/@id'))
@@ -352,7 +362,8 @@ class TestCliParser(unittest.TestCase):
             'rsc_ticket ticket-B_storage ticket-B: drbd-a:Master drbd-b:Master')
         self.assertEqual(out.get('id'), 'ticket-B_storage')
 
-    def test_bundle(self):
+    @mock.patch('logging.Logger.error')
+    def test_bundle(self, mock_error):
         out = self._parse('bundle httpd docker image=pcmk:httpd replicas=3 network ip-range-start=10.10.10.123 host-netmask=24 port-mapping port=80 storage storage-mapping target-dir=/var/www/html source-dir=/srv/www options=rw primitive httpd-apache')
         self.assertEqual(out.get('id'), 'httpd')
         self.assertEqual(['pcmk:httpd'], out.xpath('/bundle/docker/@image'))
@@ -361,7 +372,8 @@ class TestCliParser(unittest.TestCase):
         out = self._parse('bundle httpd docker image=pcmk:httpd primitive httpd-apache apache')
         self.assertFalse(out)
 
-    def test_op(self):
+    @mock.patch('logging.Logger.error')
+    def test_op(self, mock_error):
         out = self._parse('monitor apache:Master 10s:20s')
         self.assertEqual(out.get('rsc'), 'apache')
         self.assertEqual(out.get('role'), 'Master')
@@ -377,7 +389,8 @@ class TestCliParser(unittest.TestCase):
         # incorrect ordering of attributes
         self.assertFalse(out)
 
-    def test_acl(self):
+    @mock.patch('logging.Logger.error')
+    def test_acl(self, mock_error):
         out = self._parse('role user-1 error')
         self.assertFalse(out)
         out = self._parse('user user-1 role:user-1')
@@ -418,7 +431,8 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual('node', out.tag)
         self.assertEqual('foo-1', out.get('uname'))
 
-    def test_property(self):
+    @mock.patch('logging.Logger.error')
+    def test_property(self, mock_error):
         out = self._parse('property stonith-enabled=true')
         self.assertEqual(['true'], out.xpath('//nvpair[@name="stonith-enabled"]/@value'))
 
@@ -485,7 +499,8 @@ class TestCliParser(unittest.TestCase):
         expect = '<fencing-topology><fencing-level index="1" devices="poison-pill,power" target-attribute="rack" target-value="1"/></fencing-topology>'
         self.assertEqual(expect, xml_tostring(out))
 
-    def test_tag(self):
+    @mock.patch('logging.Logger.error')
+    def test_tag(self, mock_error):
         out = self._parse('tag tag1: one two three')
         self.assertEqual(out.get('id'), 'tag1')
         self.assertEqual(['one', 'two', 'three'], out.xpath('/tag/obj_ref/@id'))
@@ -600,8 +615,8 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(len(verbose), 1)
         self.assertTrue('value' not in verbose[0].attrib)
 
-
-    def test_configs(self):
+    @mock.patch('logging.Logger.error')
+    def test_configs(self, mock_error):
         outp = self._parse_lines('''
         primitive rsc_dummy ocf:heartbeat:Dummy
         monitor rsc_dummy 30
