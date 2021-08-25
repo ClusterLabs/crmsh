@@ -60,7 +60,7 @@ op_defaults op-options: \
 .INP: primitive d3 ocf:heartbeat:Dummy
 .INP: group g2 d1 d2
 .INP: filter "sed '/g2/s/d1/p1/;/g1/s/p1/d1/'"
-ERROR: 29: Cannot create group:g1: Child primitive:d1 already in group:g2
+ERROR: Cannot create group:g1: Child primitive:d1 already in group:g2
 .INP: filter "sed '/g1/s/d1/p1/;/g2/s/p1/d1/'"
 .INP: filter "sed '$alocation loc-d1 d1 rule $id=r1 -inf: not_defined webserver rule $id=r2 webserver: defined webserver'"
 .INP: filter "sed 's/not_defined webserver/& or mem number:lte 0/'" loc-d1
@@ -99,9 +99,9 @@ Traceback (most recent call last):
 ValueError: nosuch is not member of g1
 ERROR: 44: configure.modgroup: nosuch is not member of g1
 .INP: modgroup g1 add c1
-ERROR: 45: a group may contain only primitives; c1 is clone
+ERROR: a group may contain only primitives; c1 is clone
 .INP: modgroup g1 add nosuch
-ERROR: 46: g1 refers to missing object nosuch
+ERROR: g1 refers to missing object nosuch
 .INP: filter "sed 's/^/# this is a comment\n/'" loc-d1
 .INP: rsc_defaults $id="rsc_options" failure-timeout=10m
 .INP: filter "sed 's/2m/60s/'" op-options

@@ -22,4 +22,4 @@ Error performing operation: Transport endpoint is not connected
 ^\.EXT sed ["][^"]+
 ^\.EXT [a-zA-Z]+ validate-all
 ^[ ]+File ["][^"]+
-^WARNING\: ([0-9]+\: )?\(cluster\_status\) 	warning\: Fencing and resource management disabled due to lack of quorum
+^.*\: ([0-9]+\: )?\(cluster\_status\) 	warning\: Fencing and resource management disabled due to lack of quorum
