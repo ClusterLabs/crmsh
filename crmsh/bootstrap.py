@@ -1623,10 +1623,8 @@ def join_csync2(seed_host):
 def join_ssh_merge(_cluster_node):
     status("Merging known_hosts")
 
-    me = utils.this_node()
     hosts = [m.group(1)
-             for m in re.finditer(r"^\s*host\s*([^ ;]+)\s*;", open(CSYNC2_CFG).read(), re.M)
-             if m.group(1) != me]
+             for m in re.finditer(r"^\s*host\s*([^ ;]+)\s*;", open(CSYNC2_CFG).read(), re.M)]
     if not hosts:
         hosts = [_cluster_node]
         warn("Unable to extract host list from %s" % (CSYNC2_CFG))
