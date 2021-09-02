@@ -1971,11 +1971,6 @@ def gen_nodeid_from_ipv6(addr):
     return int(ipaddress.ip_address(addr)) % 1000000000
 
 
-# Set by detect_cloud()
-# to avoid multiple requests
-_ip_for_cloud = None
-
-
 def _cloud_metadata_request(uri, headers={}):
     try:
         import urllib2 as urllib
@@ -1992,6 +1987,51 @@ def _cloud_metadata_request(uri, headers={}):
         return content.strip()
     except urllib.URLError:
         return None
+
+
+def detect_aws():
+    """
+    Detect if in AWS
+    """
+    system_version = get_stdout_or_raise_error("dmidecode -s system-version")
+    return re.search(r".*amazon.*", system_version) is not None
+
+
+def detect_azure():
+    """
+    Detect if in Azure
+    """
+    # Should check both system-manufacturer and chassis-asset-tag
+    # In some azure environment, dmidecode -s system-manufacturer
+    # might return American Megatrends Inc. instead of Microsoft Corporation in Azure.
+    # The better way is to check the result of dmidecode -s chassis-asset-tag is
+    # 7783-7084-3265-9085-8269-3286-77, aka. the ascii code of MSFT AZURE VM
+    system_manufacturer = get_stdout_or_raise_error("dmidecode -s system-manufacturer")
+    chassis_asset_tag = get_stdout_or_raise_error("dmidecode -s chassis-asset-tag")
+    if "microsoft corporation" in system_manufacturer.lower() or \
+            ''.join([chr(int(n)) for n in re.findall("\d\d", chassis_asset_tag)]) == "MSFT AZURE VM":
+        # To detect azure we also need to make an API request
+        result = _cloud_metadata_request(
+            "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/privateIpAddress?api-version=2017-08-01&format=text",
+            headers={"Metadata": "true"})
+        if result:
+            return True
+    return False
+
+
+def detect_gcp():
+    """
+    Detect if in GCP
+    """
+    bios_vendor = get_stdout_or_raise_error("dmidecode -s bios-vendor")
+    if "Google" in bios_vendor:
+        # To detect GCP we also need to make an API request
+        result = _cloud_metadata_request(
+            "http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ip",
+            headers={"Metadata-Flavor": "Google"})
+        if result:
+            return True
+    return False
 
 
 @memoize
@@ -2013,33 +2053,17 @@ def detect_cloud():
     * google-cloud-platform
 
     """
-    global _ip_for_cloud
-
     if not is_program("dmidecode"):
         return None
-    rc, system_version = get_stdout("dmidecode -s system-version")
-    if re.search(r".*amazon.*", system_version) is not None:
-        return "amazon-web-services"
-    if rc != 0:
-        return None
-    rc, system_manufacturer = get_stdout("dmidecode -s system-manufacturer")
-    if rc == 0 and "microsoft corporation" in system_manufacturer.lower():
-        # To detect azure we also need to make an API request
-        result = _cloud_metadata_request(
-            "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/privateIpAddress?api-version=2017-08-01&format=text",
-            headers={"Metadata": "true"})
-        if result:
-            _ip_for_cloud = result
-            return "microsoft-azure"
-    rc, bios_vendor = get_stdout("dmidecode -s bios-vendor")
-    if rc == 0 and "Google" in bios_vendor:
-        # To detect GCP we also need to make an API request
-        result = _cloud_metadata_request(
-            "http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ip",
-            headers={"Metadata-Flavor": "Google"})
-        if result:
-            _ip_for_cloud = result
-            return "google-cloud-platform"
+    aws = detect_aws()
+    if aws:
+        return constants.CLOUD_AWS
+    azure = detect_azure()
+    if azure:
+        return constants.CLOUD_AZURE
+    gcp = detect_gcp()
+    if gcp:
+        return constants.CLOUD_GCP
     return None
 
 
