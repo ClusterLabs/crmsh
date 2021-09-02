@@ -11,9 +11,7 @@ import pytest
 import unittest
 from unittest import mock
 from itertools import chain
-from crmsh import utils
-from crmsh import config
-from crmsh import tmpfiles
+from crmsh import utils, config, tmpfiles, constants
 
 def setup_function():
     utils._ip_for_cloud = None
@@ -349,134 +347,144 @@ def test_detect_cloud_aws(mock_get_stdout, mock_is_program):
     mock_is_program.assert_called_once_with("dmidecode")
     mock_get_stdout.assert_called_once_with("dmidecode -s system-version")
 
+@mock.patch("crmsh.corosync.get_value")
+def test_is_qdevice_configured_false(mock_get_value):
+    mock_get_value.return_value = "ip"
+    assert utils.is_qdevice_configured() is False
+    mock_get_value.assert_called_once_with("quorum.device.model")
 
-@mock.patch("crmsh.utils.is_program")
+@mock.patch("crmsh.corosync.get_value")
+def test_is_qdevice_configured_true(mock_get_value):
+    mock_get_value.return_value = "net"
+    assert utils.is_qdevice_configured() is True
+    mock_get_value.assert_called_once_with("quorum.device.model")
+
 @mock.patch("crmsh.utils.get_stdout")
-def test_detect_cloud_aws_error(mock_get_stdout, mock_is_program):
-    mock_is_program.return_value = True
-    mock_get_stdout.return_value = (1, "other")
-    assert utils.detect_cloud() is None
-    mock_is_program.assert_called_once_with("dmidecode")
-    mock_get_stdout.assert_called_once_with("dmidecode -s system-version")
+def test_get_nodeinfo_from_cmaptool_return_none(mock_get_stdout):
+    mock_get_stdout.return_value = (1, None)
+    assert bool(utils.get_nodeinfo_from_cmaptool()) is False
+    mock_get_stdout.assert_called_once_with("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
 
-
-@mock.patch("crmsh.utils.is_program")
+@mock.patch("re.findall")
+@mock.patch("re.search")
 @mock.patch("crmsh.utils.get_stdout")
-@mock.patch("crmsh.utils._cloud_metadata_request")
-def test_detect_cloud_microsoft(mock_metadata, mock_get_stdout, mock_is_program):
-    mock_is_program.return_value = True
-    mock_get_stdout.side_effect = [(0, "other"), (0, "microsoft corporation")]
-    mock_metadata.return_value = "10.10.10.10"
-    assert utils.detect_cloud() == "microsoft-azure"
-    mock_is_program.assert_called_once_with("dmidecode")
-    mock_get_stdout.assert_has_calls([
-        mock.call("dmidecode -s system-version"),
-        mock.call("dmidecode -s system-manufacturer")
+def test_get_nodeinfo_from_cmaptool(mock_get_stdout, mock_search, mock_findall):
+    mock_get_stdout.return_value = (0, 'runtime.totem.pg.mrp.srp.members.1.ip (str) = r(0) ip(192.168.43.129)\nruntime.totem.pg.mrp.srp.members.2.ip (str) = r(0) ip(192.168.43.128)')
+    match_inst1 = mock.Mock()
+    match_inst2 = mock.Mock()
+    mock_search.side_effect = [match_inst1, match_inst2]
+    match_inst1.group.return_value = '1'
+    match_inst2.group.return_value = '2'
+    mock_findall.side_effect = [["192.168.43.129"], ["192.168.43.128"]]
+
+    result = utils.get_nodeinfo_from_cmaptool()
+    assert result['1'] == ["192.168.43.129"]
+    assert result['2'] == ["192.168.43.128"]
+
+    mock_get_stdout.assert_called_once_with("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
+    mock_search.assert_has_calls([
+        mock.call(r'members\.(.*)\.ip', 'runtime.totem.pg.mrp.srp.members.1.ip (str) = r(0) ip(192.168.43.129)'),
+        mock.call(r'members\.(.*)\.ip', 'runtime.totem.pg.mrp.srp.members.2.ip (str) = r(0) ip(192.168.43.128)')
     ])
-    mock_metadata.assert_called_once_with(
-        "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/privateIpAddress?api-version=2017-08-01&format=text",
-        headers={"Metadata": "true"})
-    assert utils._ip_for_cloud == "10.10.10.10"
-
-
-@mock.patch("crmsh.utils.is_program")
-@mock.patch("crmsh.utils.get_stdout")
-@mock.patch("crmsh.utils._cloud_metadata_request")
-def test_detect_cloud_microsoft_error(mock_metadata, mock_get_stdout, mock_is_program):
-    mock_is_program.return_value = True
-    mock_get_stdout.side_effect = [
-        (0, "other"), (0, "microsoft corporation"), (0, "microsoft corporation")]
-    mock_metadata.return_value = None
-    assert utils.detect_cloud() is None
-    mock_is_program.assert_called_once_with("dmidecode")
-    mock_get_stdout.assert_has_calls([
-        mock.call("dmidecode -s system-version"),
-        mock.call("dmidecode -s system-manufacturer")
+    match_inst1.group.assert_called_once_with(1)
+    match_inst2.group.assert_called_once_with(1)
+    mock_findall.assert_has_calls([
+        mock.call(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', 'runtime.totem.pg.mrp.srp.members.1.ip (str) = r(0) ip(192.168.43.129)'),
+        mock.call(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', 'runtime.totem.pg.mrp.srp.members.2.ip (str) = r(0) ip(192.168.43.128)')
     ])
-    mock_metadata.assert_called_once_with(
-        "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/privateIpAddress?api-version=2017-08-01&format=text",
-        headers={"Metadata": "true"})
-    assert utils._ip_for_cloud is None
 
+@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+def test_detect_aws(mock_run):
+    mock_run.return_value = "in amazon host"
+    assert utils.detect_aws() is True
+    mock_run.assert_called_once_with("dmidecode -s system-version")
 
-@mock.patch("crmsh.utils.is_program")
-@mock.patch("crmsh.utils.get_stdout")
-@mock.patch("crmsh.utils._cloud_metadata_request")
-def test_detect_cloud_microsoft_rc_error(mock_metadata, mock_get_stdout, mock_is_program):
-    mock_is_program.return_value = True
-    mock_get_stdout.side_effect = [
-        (0, "other"), (1, "other"), (0, "other")]
-    mock_metadata.return_value = None
-    assert utils.detect_cloud() is None
-    mock_is_program.assert_called_once_with("dmidecode")
-    mock_get_stdout.assert_has_calls([
-        mock.call("dmidecode -s system-version"),
-        mock.call("dmidecode -s system-manufacturer")
-    ])
-    assert mock_metadata.call_count == 0
-    assert utils._ip_for_cloud is None
-
-
-@mock.patch("crmsh.utils.is_program")
-@mock.patch("crmsh.utils.get_stdout")
-@mock.patch("crmsh.utils._cloud_metadata_request")
-def test_detect_cloud_gcp(mock_metadata, mock_get_stdout, mock_is_program):
-    mock_is_program.return_value = True
-    mock_get_stdout.side_effect = [
-        (0, "other"), (1, "other"), (0, "Google")]
-    mock_metadata.return_value = "10.10.10.10"
-    assert utils.detect_cloud() == "google-cloud-platform"
-    mock_is_program.assert_called_once_with("dmidecode")
-    mock_get_stdout.assert_has_calls([
-        mock.call("dmidecode -s system-version"),
+@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+def test_detect_azure_false(mock_run):
+    mock_run.side_effect = ["test", "test"]
+    assert utils.detect_azure() is False
+    mock_run.assert_has_calls([
         mock.call("dmidecode -s system-manufacturer"),
-        mock.call("dmidecode -s bios-vendor")
-    ])
-    mock_metadata.assert_called_once_with(
-        "http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ip",
-        headers={"Metadata-Flavor": "Google"})
-    assert utils._ip_for_cloud == "10.10.10.10"
+        mock.call("dmidecode -s chassis-asset-tag")
+        ])
 
+@mock.patch("crmsh.utils._cloud_metadata_request")
+@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+def test_detect_azure_microsoft_corporation(mock_run, mock_request):
+    mock_run.side_effect = ["microsoft corporation", "test"]
+    mock_request.return_value = "data"
+    assert utils.detect_azure() is True
+    mock_run.assert_has_calls([
+        mock.call("dmidecode -s system-manufacturer"),
+        mock.call("dmidecode -s chassis-asset-tag")
+        ])
+
+@mock.patch("crmsh.utils._cloud_metadata_request")
+@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+def test_detect_azure_chassis(mock_run, mock_request):
+    mock_run.side_effect = ["test", "7783-7084-3265-9085-8269-3286-77"]
+    mock_request.return_value = "data"
+    assert utils.detect_azure() is True
+    mock_run.assert_has_calls([
+        mock.call("dmidecode -s system-manufacturer"),
+        mock.call("dmidecode -s chassis-asset-tag")
+        ])
+
+@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+def test_detect_gcp_false(mock_run):
+    mock_run.return_value = "test"
+    assert utils.detect_gcp() is False
+    mock_run.assert_called_once_with("dmidecode -s bios-vendor")
+
+@mock.patch("crmsh.utils._cloud_metadata_request")
+@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+def test_detect_gcp(mock_run, mock_request):
+    mock_run.return_value = "Google instance"
+    mock_request.return_value = "data"
+    assert utils.detect_gcp() is True
+    mock_run.assert_called_once_with("dmidecode -s bios-vendor")
 
 @mock.patch("crmsh.utils.is_program")
-@mock.patch("crmsh.utils.get_stdout")
-@mock.patch("crmsh.utils._cloud_metadata_request")
-def test_detect_cloud_gcp_error(mock_metadata, mock_get_stdout, mock_is_program):
-    mock_is_program.return_value = True
-    mock_get_stdout.side_effect = [
-        (0, "other"), (0, "other"), (0, "Google")]
-    mock_metadata.return_value = None
+def test_detect_cloud_no_cmd(mock_is_program):
+    mock_is_program.return_value = False
     assert utils.detect_cloud() is None
     mock_is_program.assert_called_once_with("dmidecode")
-    mock_get_stdout.assert_has_calls([
-        mock.call("dmidecode -s system-version"),
-        mock.call("dmidecode -s system-manufacturer"),
-        mock.call("dmidecode -s bios-vendor")
-    ])
-    mock_metadata.assert_called_once_with(
-        "http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ip",
-        headers={"Metadata-Flavor": "Google"})
-    assert utils._ip_for_cloud is None
 
-
+@mock.patch("crmsh.utils.detect_aws")
 @mock.patch("crmsh.utils.is_program")
-@mock.patch("crmsh.utils.get_stdout")
-@mock.patch("crmsh.utils._cloud_metadata_request")
-def test_detect_cloud_gcp_rc_error(mock_metadata, mock_get_stdout, mock_is_program):
+def test_detect_cloud_aws(mock_is_program, mock_aws):
     mock_is_program.return_value = True
-    mock_get_stdout.side_effect = [
-        (0, "other"), (0, "other"), (1, "other")]
-    mock_metadata.return_value = None
-    assert utils.detect_cloud() is None
+    mock_aws.return_value = True
+    assert utils.detect_cloud() == constants.CLOUD_AWS
     mock_is_program.assert_called_once_with("dmidecode")
-    mock_get_stdout.assert_has_calls([
-        mock.call("dmidecode -s system-version"),
-        mock.call("dmidecode -s system-manufacturer"),
-        mock.call("dmidecode -s bios-vendor")
-    ])
-    assert mock_metadata.call_count == 0
-    assert utils._ip_for_cloud is None
+    mock_aws.assert_called_once_with()
 
+@mock.patch("crmsh.utils.detect_azure")
+@mock.patch("crmsh.utils.detect_aws")
+@mock.patch("crmsh.utils.is_program")
+def test_detect_cloud_azure(mock_is_program, mock_aws, mock_azure):
+    mock_is_program.return_value = True
+    mock_aws.return_value = False
+    mock_azure.return_value = True
+    assert utils.detect_cloud() == constants.CLOUD_AZURE
+    mock_is_program.assert_called_once_with("dmidecode")
+    mock_aws.assert_called_once_with()
+    mock_azure.assert_called_once_with()
+
+@mock.patch("crmsh.utils.detect_gcp")
+@mock.patch("crmsh.utils.detect_azure")
+@mock.patch("crmsh.utils.detect_aws")
+@mock.patch("crmsh.utils.is_program")
+def test_detect_cloud_gcp(mock_is_program, mock_aws, mock_azure, mock_gcp):
+    mock_is_program.return_value = True
+    mock_aws.return_value = False
+    mock_azure.return_value = False
+    mock_gcp.return_value = True
+    assert utils.detect_cloud() == constants.CLOUD_GCP
+    mock_is_program.assert_called_once_with("dmidecode")
+    mock_aws.assert_called_once_with()
+    mock_azure.assert_called_once_with()
+    mock_gcp.assert_called_once_with()
 
 @mock.patch("crmsh.utils.get_stdout")
 def test_interface_choice(mock_get_stdout):
