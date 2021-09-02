@@ -2046,8 +2046,11 @@ def detect_cloud():
         return "amazon-web-services"
     if rc != 0:
         return None
+
+    # the ascii code of `MSFT AZURE VM` is `7783-7084-3265-9085-8269-3286-77` 
     rc, system_manufacturer = get_stdout("dmidecode -s system-manufacturer")
-    if rc == 0 and "microsoft corporation" in system_manufacturer.lower():
+    rc, chassis_asset_tag = get_stdout("dmidecode -s chassis-asset-tag")
+    if rc == 0 and ( "microsoft corporation" in system_manufacturer.lower() or "7783-7084-3265-9085-8269-3286-77" in chassis_asset_tag ) :
         # To detect azure we also need to make an API request
         result = _cloud_metadata_request(
             "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/privateIpAddress?api-version=2017-08-01&format=text",
@@ -2055,6 +2058,7 @@ def detect_cloud():
         if result:
             _ip_for_cloud = result
             return "microsoft-azure"
+
     rc, bios_vendor = get_stdout("dmidecode -s bios-vendor")
     if rc == 0 and "Google" in bios_vendor:
         # To detect GCP we also need to make an API request
