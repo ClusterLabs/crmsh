@@ -490,4 +490,9 @@ QDEVICE_HELP_INFO = """  QDevice participates in quorum decisions. With the assi
 
 
 SSH_OPTION = "-o StrictHostKeyChecking=no"
+
+
+CLOUD_AWS = "amazon-web-services"
+CLOUD_AZURE = "microsoft-azure"
+CLOUD_GCP = "google-cloud-platform"
 # vim:ts=4:sw=4:et:
