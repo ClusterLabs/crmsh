@@ -1,3 +1,19 @@
+* Tue Sep 7 2021 Xin Liang <XLiang@suse.com>
+- Release 4.3.2
+- Fix: utils: Improve detect_cloud function and support non-Hyper-V in Azure
+- Fix: hb_report: Using python way to collect ra trace files (bsc#1189641)
+- Dev: ui_resource: Enhancement trace output
+- Fix: doc: Note that resource tracing is only supported by OCF RAs(bsc#1188966)
+- Fix: bootstrap: adjust host list for parallax to get and copy known_hosts file(bsc#1188971)
+- Medium: ra: performance/usability improvement (avoid systemd)
+- Dev: ui_context: Add info when spell-corrections happen
+- Dev: ocfs2: set no-quorum-policy as freeze when configuring OCFS2
+- Fix: parse: Should still be able to show the empty property if it already exists(bsc#1188290)
+- Fix: bootstrap: check for missing fields in 'crm_node -l' output (bsc#1182131)
+- Fix: resource: make untrace consistent with trace (bsc#1187396)
+- Dev: sbd: enable SBD_DELAY_START in virtualization environment
+- Fix: ocfs2: Skip verifying UUID for ocfs2 device on top of raid or lvm on the join node (bsc#1187553)
+
 * Thu Jun 17 2021 Xin Liang <XLiang@suse.com>
 - Release 4.3.1
 - Fix: history: use Path.mkdir instead of mkdir command(bsc#1179999)
