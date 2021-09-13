@@ -16,8 +16,6 @@ from .cibconfig import mkset_obj, cib_factory
 from . import clidisplay
 from . import term
 from . import options
-from .msg import common_err, common_info, common_warn
-from .msg import err_buf, syntax_err
 from . import rsctest
 from . import schema
 from . import ui_cib
@@ -29,6 +27,11 @@ from . import ui_utils
 from . import ui_assist
 from .crm_gv import gv_types
 from .ui_node import get_resources_on_nodes, remove_redundant_attrs
+
+
+from . import log
+logger = log.setup_logger(__name__)
+logger_utils = log.LoggerUtils(logger)
 
 
 def _type_completions():
@@ -499,7 +502,7 @@ class CibConfig(command.UI):
         if not has_simulate:
             constants.simulate_programs["simulate"] = "ptest"
         if not (has_ptest or has_simulate):
-            common_warn("neither ptest nor crm_simulate exist, check your installation")
+            logger.warning("neither ptest nor crm_simulate exist, check your installation")
             constants.simulate_programs["ptest"] = ""
             constants.simulate_programs["simulate"] = ""
         return True
@@ -656,7 +659,7 @@ class CibConfig(command.UI):
         """usage: modgroup <id> add <id> [after <id>|before <id>]
         modgroup <id> remove <id>"""
         if subcmd not in ("add", "remove"):
-            common_err("modgroup subcommand %s unknown" % subcmd)
+            logger.error("modgroup subcommand %s unknown" % subcmd)
             return False
         after_before = None
         if args:
@@ -701,9 +704,8 @@ class CibConfig(command.UI):
     @command.completers_repeating(_id_xml_list, _id_list)
     def do_edit(self, context, *args):
         "usage: edit [xml] [<id>...]"
-        err_buf.buffer()  # keep error messages
-        set_obj = mkset_obj(*args)
-        err_buf.release()  # show them, but get an ack from the user
+        with logger_utils.buffer():  # keep error messages
+            set_obj = mkset_obj(*args)
         return set_obj.edit()
 
     def _verify(self, set_obj_semantic, set_obj_all):
@@ -873,8 +875,8 @@ class CibConfig(command.UI):
 
     def _commit(self, force=False, replace=False):
         if not cib_factory.has_cib_changed():
-            common_info("apparently there is nothing to commit")
-            common_info("try changing something first")
+            logger.info("apparently there is nothing to commit")
+            logger.info("try changing something first")
             return True
         replace = replace or not utils.cibadmin_can_patch()
         rc1 = True
@@ -885,7 +887,7 @@ class CibConfig(command.UI):
         if rc1 and rc2:
             return cib_factory.commit(replace=replace)
         if force or config.core.force:
-            common_info("commit forced")
+            logger.info("commit forced")
             return cib_factory.commit(force=True, replace=replace)
         if utils.ask("Do you still want to commit?"):
             return cib_factory.commit(force=True, replace=replace)
@@ -899,10 +901,10 @@ class CibConfig(command.UI):
         force = "force" in [arg0, arg1]
         replace = "replace" in [arg0, arg1]
         if arg0 is not None and arg0 not in ("force", "replace"):
-            syntax_err(('configure.commit', arg0))
+            logger_utils.syntax_err(('configure.commit', arg0))
             return False
         if arg1 is not None and arg1 not in ("force", "replace"):
-            syntax_err(('configure.commit', arg1))
+            logger_utils.syntax_err(('configure.commit', arg1))
             return False
         return self._commit(force=force, replace=replace)
 
@@ -954,7 +956,7 @@ class CibConfig(command.UI):
         "The configure object command."
         if cmd in list(constants.cib_cli_map.values()) and \
                 not cib_factory.is_elem_supported(cmd):
-            common_err("%s not supported by the RNG schema" % cmd)
+            logger.error("%s not supported by the RNG schema" % cmd)
             return False
         if not args:
             return cib_factory.create_object(cmd, *args)
@@ -1181,7 +1183,7 @@ class CibConfig(command.UI):
         for ident in args:
             el = cib_factory.find_object(ident)
             if not el:
-                common_err("element %s does not exist" % ident)
+                logger.error("element %s does not exist" % ident)
                 rc = False
             elif current == "r" and xmlutil.is_resource(el.node):
                 if xmlutil.is_container(el.node):
@@ -1192,12 +1194,12 @@ class CibConfig(command.UI):
                 current = "n"
                 node_l.append(el.node.get("uname"))
             else:
-                syntax_err((context.get_command_name(), ident), context='rsctest')
+                logger_utils.syntax_err((context.get_command_name(), ident), context='rsctest')
                 return False
         if not rc:
             return False
         if not rsc_l:
-            common_err("specify at least one resource")
+            logger.error("specify at least one resource")
             return False
         all_nodes = cib_factory.node_id_list()
         if not node_l:

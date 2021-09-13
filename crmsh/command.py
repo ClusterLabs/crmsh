@@ -10,7 +10,10 @@ import inspect
 import re
 from . import help as help_module
 from . import ui_utils
-from .msg import common_debug
+from . import log
+
+
+logger = log.setup_logger(__name__)
 
 
 def name(n):
@@ -376,7 +379,7 @@ Examples:
             else:
                 info = context.current_level().get_child(path)
                 if not info or not info.level:
-                    common_debug("children: %s" % (self._children))
+                    logger.debug("children: %s", self._children)
                     context.fatal_error("%s not found in %s" % (path, context.current_level()))
                 context.enter_level(info.level)
         else:

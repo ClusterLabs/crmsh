@@ -9,7 +9,6 @@ import random
 from . import config
 from . import options
 from . import constants
-from .msg import err_buf, common_err
 from . import clidisplay
 from . import term
 from . import utils
@@ -17,6 +16,11 @@ from . import userdir
 
 from . import ui_root
 from . import ui_context
+from . import log
+
+
+logger = log.setup_logger(__name__)
+logger_utils = log.LoggerUtils(logger)
 
 
 random.seed()
@@ -41,7 +45,7 @@ def load_rc(context, rcfile):
             if not context.run(inp):
                 raise ValueError("Error in RC file: " + rcfile)
         except ValueError as msg:
-            common_err(msg)
+            logger.error(msg)
     f.close()
     sys.stdin = save_stdin
 
@@ -198,7 +202,7 @@ def handle_noninteractive_use(context, user_args):
     elif len(user_args) > 0:
         # we're not sure yet whether it's an interactive session or not
         # (single-shot commands aren't)
-        err_buf.reset_lineno()
+        logger_utils.reset_lineno()
         options.interactive = False
 
         l = add_quotes(user_args)
@@ -208,7 +212,7 @@ def handle_noninteractive_use(context, user_args):
                 return 0
             set_interactive()
             if options.interactive:
-                err_buf.reset_lineno(-1)
+                logger_utils.reset_lineno(-1)
         else:
             return 1
     return None
@@ -233,7 +237,7 @@ def setup_context(context):
         try:
             sys.stdin = open(options.input_file)
         except IOError as msg:
-            common_err(msg)
+            logger.error(msg)
             usage(2)
 
     if options.interactive and not options.batch:
@@ -265,7 +269,7 @@ def main_input_loop(context, user_args):
                     rc = 1
             except ValueError as msg:
                 rc = 1
-                common_err(msg)
+                logger.error(msg)
         except KeyboardInterrupt:
             if options.interactive and not options.batch:
                 print("Ctrl-C, leaving")
@@ -310,7 +314,7 @@ def parse_options():
     config.color.style = opts.display or config.color.style
     config.core.force = opts.force or config.core.force
     if opts.filename:
-        err_buf.reset_lineno()
+        logger_utils.reset_lineno()
         options.input_file, options.batch, options.interactive = opts.filename, True, False
     options.history = opts.history or options.history
     config.core.wait = opts.wait or config.core.wait
@@ -358,7 +362,7 @@ def run():
         atexit.register(exit_handler)
         options.interactive = utils.can_ask()
         if not options.interactive:
-            err_buf.reset_lineno()
+            logger_utils.reset_lineno()
             options.batch = True
         user_args = parse_options()
         if config.core.debug:
@@ -376,7 +380,7 @@ def run():
             import traceback
             traceback.print_exc()
             sys.stdout.flush()
-        common_err(str(e))
+        logger.error(str(e))
         sys.exit(1)
 
 # vim:ts=4:sw=4:et:

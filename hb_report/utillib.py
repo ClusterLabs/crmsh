@@ -25,9 +25,14 @@ from threading import Timer
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import constants
 import crmsh.config
-from crmsh import msg as crmmsg
 from crmsh import utils as crmutils
 from crmsh import corosync
+from crmsh import log
+import logging
+
+
+log.setup_logging()
+logger = logging.getLogger("hb_report")
 
 
 class Tempfile(object):
@@ -1223,15 +1228,15 @@ def load_ocf_dirs():
 
 def log_debug(msg):
     if constants.VERBOSITY > 0 or crmsh.config.core.debug:
-        crmmsg.common_info("%s# %s" % (constants.WE, msg))
+        logger.info(msg)
 
 
 def log_info(msg):
-    crmmsg.common_info("%s# %s" % (constants.WE, msg))
+    logger.info(msg)
 
 
 def log_fatal(msg):
-    crmmsg.common_err("%s# %s" % (constants.WE, msg))
+    logger.error(msg)
     sys.exit(1)
 
 
@@ -1242,7 +1247,7 @@ def log_size(logf, outf):
 
 
 def log_warning(msg):
-    crmmsg.common_warn("%s# %s" % (constants.WE, msg))
+    logger.warning(msg)
 
 
 def make_temp_dir():

@@ -15,10 +15,13 @@ from . import ui_utils
 from . import xmlutil
 from . import options
 from .cibconfig import mkset_obj, cib_factory
-from .msg import common_err, common_debug, common_info
-from .msg import syntax_err
 from . import history
 from . import cmd_status
+from . import log
+
+
+logger = log.setup_logger(__name__)
+logger_utils = log.LoggerUtils(logger)
 
 
 ptest_options = ["@v+", "nograph", "scores", "actions", "utilization"]
@@ -63,7 +66,7 @@ class History(command.UI):
             if to_dt < from_dt:
                 from_dt, to_dt = to_dt, from_dt
             elif to_dt == from_dt:
-                common_err("%s - %s: To and from dates cannot be the same" % (from_time, to_time))
+                logger.error("%s - %s: To and from dates cannot be the same", from_time, to_time)
                 return False
         return crm_report().set_period(from_dt, to_dt)
 
@@ -75,17 +78,17 @@ class History(command.UI):
         def _check_source():
             return (src == 'live') or os.path.isfile(src) or os.path.isdir(src)
 
-        common_debug("setting source to %s" % src)
+        logger.debug("setting source to %s", src)
         if not _check_source():
             if os.path.exists(crm_report().get_session_dir(src)):
-                common_debug("Interpreting %s as session" % src)
+                logger.debug("Interpreting %s as session", src)
                 if crm_report().load_state(crm_report().get_session_dir(src)):
                     options.history = crm_report().get_source()
                     crm_report().prepare_source()
                     self.current_session = src
                     return True
             else:
-                common_err("source %s doesn't exist" % src)
+                logger.error("source %s doesn't exist", src)
             return False
         crm_report().set_source(src)
         options.history = src
@@ -141,7 +144,7 @@ class History(command.UI):
         "usage: setnodes <node> [<node> ...]"
         self._init_source()
         if options.history != "live":
-            common_info("setting nodes not necessary for existing reports, proceeding anyway")
+            logger.info("setting nodes not necessary for existing reports, proceeding anyway")
         return crm_report().set_nodes(*args)
 
     @command.skill_level('administrator')
@@ -190,7 +193,7 @@ class History(command.UI):
         try:
             bits = bz2.decompress(open(self.pe_file, "rb").read())
         except IOError as msg:
-            common_err("open: %s" % msg)
+            logger.error("open: %s", msg)
             return False
         return utils.run_ptest(bits, nograph, scores, utilization, actions, verbosity)
 
@@ -213,7 +216,7 @@ class History(command.UI):
             for s in argl:
                 a = utils.convert2ints(s.split(':'))
                 if a and len(a) == 2 and not utils.check_range(a):
-                    common_err("%s: invalid peinputs range" % a)
+                    logger.error("%s: invalid peinputs range", a)
                     return False
                 l += crm_report().pelist(a, verbose=("v" in opt_l))
         else:
@@ -226,10 +229,10 @@ class History(command.UI):
     def _get_pe_byname(self, s):
         l = crm_report().find_pe_files(s)
         if len(l) == 0:
-            common_err("%s: path not found" % s)
+            logger.error("%s: path not found", s)
             return None
         elif len(l) > 1:
-            common_err("%s: path ambiguous" % s)
+            logger.error("%s: path ambiguous", s)
             return None
         return l[0]
 
@@ -237,19 +240,19 @@ class History(command.UI):
         l = crm_report().pelist()
         if len(l) < abs(idx):
             if idx == -1:
-                common_err("no transitions found in the source")
+                logger.error("no transitions found in the source")
             else:
-                common_err("PE input file for index %d not found" % (idx+1))
+                logger.error("PE input file for index %d not found", (idx+1))
             return None
         return l[idx]
 
     def _get_pe_bynum(self, n):
         l = crm_report().pelist([n])
         if len(l) == 0:
-            common_err("PE file %d not found" % n)
+            logger.error("PE file %d not found", n)
             return None
         elif len(l) > 1:
-            common_err("PE file %d ambiguous" % n)
+            logger.error("PE file %d ambiguous", n)
             return None
         return l[0]
 
@@ -275,11 +278,11 @@ class History(command.UI):
 
     def _display_dot(self, f):
         if not config.core.dotty:
-            common_err("install graphviz to draw transition graphs")
+            logger.error("install graphviz to draw transition graphs")
             return False
         f = crm_report().pe2dot(f)
         if not f:
-            common_err("dot file not found in the report")
+            logger.error("dot file not found in the report")
             return False
         utils.show_dot_graph(f, keep_file=True, desc="configuration graph")
         return True
@@ -289,7 +292,7 @@ class History(command.UI):
             name = argl[0]
         except:
             name = os.path.basename(f).replace(".bz2", "")
-        common_info("transition %s saved to shadow %s" % (f, name))
+        logger.info("transition %s saved to shadow %s", f, name)
         return xmlutil.pe2shadow(f, name)
 
     @command.skill_level('administrator')
@@ -321,12 +324,12 @@ class History(command.UI):
             f = self._get_pe_byidx(-1)
         if (subcmd == "save" and len(argl) > 1) or \
                 (subcmd in ("show", "showdot", "log") and argl):
-            syntax_err(args, context="transition")
+            logger_utils.syntax_err(args, context="transition")
             return False
         if not f:
             return False
         if subcmd == "show":
-            common_info("running ptest with %s" % f)
+            logger.info("running ptest with %s", f)
             rc = self._show_pe(f, opt_l)
         elif subcmd == "showdot":
             rc = self._display_dot(f)
@@ -393,10 +396,9 @@ class History(command.UI):
         rc, s = cmd_status.crm_mon()
         if rc != 0:
             if s:
-                common_err("crm_mon exited with code %d and said: %s" %
-                           (rc, s))
+                logger.error("crm_mon exited with code %d and said: %s", rc, s)
             else:
-                common_err("crm_mon exited with code %d" % rc)
+                logger.error("crm_mon exited with code %d", rc)
             return None
         return s
 
@@ -405,8 +407,7 @@ class History(command.UI):
         self._setup_cib_env(pe_f)
         rc, s = cmd_status.crm_mon()
         if rc != 0:
-            common_err("crm_mon exited with code %d and said: %s" %
-                       (rc, s))
+            logger.error("crm_mon exited with code %d and said: %s", rc, s)
             return None
         l = s.split('\n')
         while l and l[0] != "":
@@ -419,7 +420,7 @@ class History(command.UI):
         if t != "live":
             return self._get_pe_input(t)
         if not utils.get_dc():
-            common_err("cluster not running")
+            logger.error("cluster not running")
             return None
         return "live"
 
@@ -466,7 +467,7 @@ class History(command.UI):
 
     def _common_pe_render_check(self, context, opt_l, *args):
         if context.previous_level_is("cibconfig") and cib_factory.has_cib_changed():
-            common_err("please try again after committing CIB changes")
+            logger.error("please try again after committing CIB changes")
             return False
         argl = list(args)
         supported_l = ["status"]
@@ -474,7 +475,7 @@ class History(command.UI):
             supported_l.append("html")
         opt_l += utils.fetch_opts(argl, supported_l)
         if argl:
-            syntax_err(' '.join(argl), context=context.get_command_name())
+            logger_utils.syntax_err(' '.join(argl), context=context.get_command_name())
             return False
         return True
 
@@ -596,19 +597,19 @@ class History(command.UI):
             return True
         # verify arguments
         if subcmd not in ("save", "load", "pack", "delete", "list", "update"):
-            common_err("unknown history session subcmd: %s" % subcmd)
+            logger.error("unknown history session subcmd: %s", subcmd)
             return False
         if name:
             if subcmd not in ("save", "load", "pack", "delete"):
-                syntax_err(subcmd, context='session')
+                logger_utils.syntax_err(subcmd, context='session')
                 return False
             if not utils.is_filename_sane(name):
                 return False
         elif subcmd not in ("list", "update", "pack"):
-            syntax_err(subcmd, context='session')
+            logger_utils.syntax_err(subcmd, context='session')
             return False
         elif subcmd in ("update", "pack") and not self.current_session:
-            common_err("need to load a history session before update/pack")
+            logger.error("need to load a history session before update/pack")
             return False
         # do work
         if not name:
@@ -622,7 +623,7 @@ class History(command.UI):
             self.current_session = name
         elif rc and subcmd == "delete":
             if name == self.current_session:
-                common_info("current history session deleted, setting source to live")
+                logger.info("current history session deleted, setting source to live")
                 self._set_source("live")
         return rc
 

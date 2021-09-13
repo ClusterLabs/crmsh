@@ -13,18 +13,22 @@ from . import config
 from . import options
 from . import schema
 from . import constants
-from .msg import common_err, common_error, common_warn, common_debug, cib_parse_err, err_buf
 from . import userdir
 from .utils import add_sudo, str2file, str2tmp, get_boolean
 from .utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
 from .utils import olist, get_cib_in_use, get_tempdir, to_ascii
+from . import log
+
+
+logger = log.setup_logger(__name__)
+logger_utils = log.LoggerUtils(logger)
 
 
 def xmlparse(f):
     try:
         cib_elem = etree.parse(f).getroot()
     except Exception as msg:
-        common_err("cannot parse xml: %s" % msg)
+        logger.error("cannot parse xml: %s", msg)
         return None
     return cib_elem
 
@@ -33,7 +37,7 @@ def file2cib_elem(s):
     try:
         f = open(s, 'r')
     except IOError as msg:
-        common_err(msg)
+        logger.error(msg)
         return None
     cib_elem = xmlparse(f)
     f.close()
@@ -52,7 +56,7 @@ def compressed_file_to_cib(s):
         else:
             f = open(s)
     except IOError as msg:
-        common_err(msg)
+        logger.error(msg)
         return None
     cib_elem = xmlparse(f)
     if options.regression_tests and cib_elem is None:
@@ -76,7 +80,7 @@ def sudocall(cmd):
         p.wait()
         return p.returncode, to_ascii(outp), to_ascii(errp)
     except IOError as msg:
-        common_err("running %s: %s" % (cmd, msg))
+        logger.error("running %s: %s", cmd, msg)
         return None, None, None
 
 
@@ -93,7 +97,7 @@ def cibdump2tmp():
         if outp is not None:
             return str2tmp(outp)
     except IOError as msg:
-        common_err(msg)
+        logger.error(msg)
     return None
 
 
@@ -105,7 +109,7 @@ def cibtext2elem(cibtext):
     try:
         return etree.fromstring(cibtext)
     except Exception as err:
-        cib_parse_err(err, cibtext)
+        logger_utils.cib_parse_err(err, cibtext)
         return None
 
 
@@ -118,7 +122,7 @@ def cibdump2elem(section=None):
     if rc == 0:
         return cibtext2elem(outp)
     elif rc != constants.cib_no_section_rc:
-        common_error("running %s: %s" % (cmd, errp))
+        logger.error("running %s: %s", cmd, errp)
     return None
 
 
@@ -134,7 +138,7 @@ def sanity_check_nvpairs(ident, node, attr_list):
     for nvpair in node.iterchildren("nvpair"):
         n = nvpair.get("name")
         if n and n not in attr_list:
-            common_warn("%s: unknown attribute '%s'" % (ident, n))
+            logger.warning("%s: unknown attribute '%s'", ident, n)
             rc |= 1
     return rc
 
@@ -405,7 +409,7 @@ def pe2shadow(pe_file, name):
     try:
         bits = open(pe_file, 'rb').read()
     except IOError as msg:
-        common_err("open: %s" % msg)
+        logger.error("open: %s", msg)
         return False
     # decompresed if it ends with .bz2
     if pe_file.endswith(".bz2"):
@@ -414,7 +418,7 @@ def pe2shadow(pe_file, name):
     try:
         open(shadowfile(name), "wb").write(bits)
     except IOError as msg:
-        common_err("open: %s" % msg)
+        logger.error("open: %s", msg)
         return False
     return True
 
@@ -820,7 +824,7 @@ def op2list(node):
         elif name != "id":  # skip the id
             pl.append([name, node.get(name)])
     if not action:
-        common_err("op is invalid (no name)")
+        logger.error("op is invalid (no name)")
     return action, pl
 
 
@@ -1050,7 +1054,7 @@ def rename_rscref_rset(c_obj, old_id, new_id):
 def rename_rscref(c_obj, old_id, new_id):
     if rename_rscref_simple(c_obj, old_id, new_id) or \
             rename_rscref_rset(c_obj, old_id, new_id):
-        err_buf.info("modified %s from %s to %s" % (str(c_obj), old_id, new_id))
+        logger.info("modified %s from %s to %s", str(c_obj), old_id, new_id)
 
 
 def delete_rscref(c_obj, rsc_id):
@@ -1171,13 +1175,13 @@ def get_topnode(cib_elem, tag):
     "Get configuration element or create/append if there's none."
     conf_elem = cib_elem.find("configuration")
     if conf_elem is None:
-        common_err("no configuration element found!")
+        logger.error("no configuration element found!")
         return None
     if tag == "configuration":
         return conf_elem
     e = cib_elem.find("configuration/%s" % tag)
     if e is None:
-        common_debug("create configuration section %s" % tag)
+        logger.debug("create configuration section %s", tag)
         e = etree.SubElement(conf_elem, tag)
     return e
 
@@ -1250,7 +1254,7 @@ def xml_equals_unordered(a, b):
     NOTE: resource_set children SHOULD be compared with ordering.
     """
     def fail(msg):
-        common_debug("%s!=%s: %s" % (a.tag, b.tag, msg))
+        logger.debug("%s!=%s: %s", a.tag, b.tag, msg)
         return False
 
     def tagflat(x):
@@ -1376,9 +1380,9 @@ def merge_tmpl_into_prim(prim_node, tmpl_node):
 def check_id_ref(elem, id_ref):
     target = elem.xpath('.//*[@id="%s"]' % (id_ref))
     if len(target) == 0:
-        common_err("Reference not found: %s" % id_ref)
+        logger.error("Reference not found: %s", id_ref)
     elif len(target) > 1:
-        common_err("Ambiguous reference to %s" % id_ref)
+        logger.error("Ambiguous reference to %s", id_ref)
 
 
 def new(tag, **attributes):

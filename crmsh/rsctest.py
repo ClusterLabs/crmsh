@@ -3,10 +3,12 @@
 
 import os
 import sys
-from .msg import common_err, common_debug, common_warn, common_info
 from .utils import rmdir_r, quote, this_node, ext_cmd
 from .xmlutil import get_topmost_rsc, get_op_timeout, get_child_nvset_node, is_ms, is_cloned
+from . import log
 
+
+logger = log.setup_logger(__name__)
 
 #
 # Resource testing suite
@@ -56,16 +58,16 @@ class RADriver(object):
         return self.last_op and "%s:%s" % (self.ident, self.last_op) or self.ident
 
     def err(self, s):
-        common_err("%s: %s" % (self.id_str(), s))
+        logger.error("%s: %s", self.id_str(), s)
 
     def warn(self, s):
-        common_warn("%s: %s" % (self.id_str(), s))
+        logger.warning("%s: %s", self.id_str(), s)
 
     def info(self, s):
-        common_info("%s: %s" % (self.id_str(), s))
+        logger.info("%s: %s", self.id_str(), s)
 
     def debug(self, s):
-        common_debug("%s: %s" % (self.id_str(), s))
+        logger.debug("%s: %s", self.id_str(), s)
 
     def is_ms(self):
         return is_ms(get_topmost_rsc(self.rscdef_node))
@@ -136,7 +138,7 @@ class RADriver(object):
         try:
             from .crm_pssh import show_output
         except ImportError:
-            common_err("Parallax SSH not installed, rsctest can not be executed")
+            logger.error("Parallax SSH not installed, rsctest can not be executed")
             return
 
         sys.stderr.write("host %s (%s)\n" %
@@ -167,7 +169,7 @@ class RADriver(object):
         self.set_rscenv(op)
         real_op = (op == "probe" and "monitor" or op)
         cmd = self.exec_cmd(real_op)
-        common_debug("running %s on %s" % (real_op, nodes))
+        logger.debug("running %s on %s", real_op, nodes)
         for attr in self.rscenv:
             # shell doesn't allow "-" in var names
             envvar = attr.replace("-", "_")
@@ -178,7 +180,7 @@ class RADriver(object):
             try:
                 from .crm_pssh import do_pssh_cmd
             except ImportError:
-                common_err("Parallax SSH not installed, rsctest can not be executed")
+                logger.error("Parallax SSH not installed, rsctest can not be executed")
                 return
 
             statuses = do_pssh_cmd(cmd, nodes, self.outdir, self.errdir, self.timeout)
@@ -389,11 +391,10 @@ def check_test_support(resources):
     for r in resources:
         ra_class = r.get("class")
         if not ra_class:
-            common_warn("class attribute not found in %s" % r.get('id'))
+            logger.warning("class attribute not found in %s", r.get('id'))
             rc = False
         elif ra_class not in ra_driver:
-            common_warn("testing of class %s resources not supported" %
-                        ra_class)
+            logger.warning("testing of class %s resources not supported", ra_class)
             rc = False
     return rc
 
@@ -458,7 +459,7 @@ def call_resource(rsc, cmd, nodes, local_only):
     """
     ra_class = rsc.get("class")
     if ra_class not in ra_driver:
-        common_err("Calling '%s' for resource not supported" % (cmd))
+        logger.error("Calling '%s' for resource not supported", cmd)
         return False
     d = ra_driver[ra_class](rsc, [])
 
@@ -467,14 +468,13 @@ def call_resource(rsc, cmd, nodes, local_only):
     actions = list(agent.actions().keys()) + ['meta-data', 'validate-all']
 
     if cmd not in actions:
-        common_err("action '%s' not supported by %s" % (cmd, agent))
+        logger.error("action '%s' not supported by %s", cmd, agent)
         return False
     d.runop(cmd, nodes, local_only=local_only)
     for node in nodes:
         ok = d.is_ok(node)
         if not ok:
-            common_err("%s failed with rc=%d on %s" %
-                       (cmd, d.op_status(node), node))
+            logger.error("%s failed with rc=%d on %s", cmd, d.op_status(node), node)
     return all(d.is_ok(node) for node in nodes)
 
 # vim:ts=4:sw=4:et:

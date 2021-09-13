@@ -14,13 +14,16 @@ from . import options
 from .template import LoadTemplate
 from .cliformat import cli_format
 from .cibconfig import mkset_obj, cib_factory
-from .msg import common_err, common_warn
-from .msg import syntax_err, err_buf
+from . import log
+
+
+logger = log.setup_logger(__name__)
+logger_utils = log.LoggerUtils(logger)
 
 
 def check_transition(inp, state, possible_l):
     if state not in possible_l:
-        common_err("input (%s) in wrong state %s" % (inp, state))
+        logger.error("input (%s) in wrong state %s", inp, state)
         return False
     return True
 
@@ -53,7 +56,7 @@ class Template(command.UI):
         if not utils.is_filename_sane(name):
             return False
         if os.path.isfile("%s/%s" % (userdir.CRMCONF_DIR, name)):
-            common_err("config %s exists; delete it first" % name)
+            logger.error("config %s exists; delete it first", name)
             return False
         lt = LoadTemplate(name)
         rc = True
@@ -66,7 +69,7 @@ class Template(command.UI):
             elif mode == 1:
                 a = s.split('=')
                 if len(a) != 2:
-                    syntax_err(args, context='new')
+                    logger_utils.syntax_err(args, context='new')
                     rc = False
                 else:
                     params[a[0]] = a[1]
@@ -76,7 +79,7 @@ class Template(command.UI):
                 rc = False
         if not loaded_template:
             if name not in utils.listtemplates():
-                common_err("Expected template argument")
+                logger.error("Expected template argument")
                 return False
             tmpl = name
             name = _unique_config_name(tmpl)
@@ -94,7 +97,7 @@ class Template(command.UI):
         "usage: delete <config> [force]"
         if force:
             if force != "force" and force != "--force":
-                syntax_err((context.get_command_name(), force), context='delete')
+                logger_utils.syntax_err((context.get_command_name(), force), context='delete')
                 return False
         if not self.config_exists(name):
             return False
@@ -123,7 +126,7 @@ class Template(command.UI):
     def do_edit(self, context, name=''):
         "usage: edit [<config>]"
         if not name and not self.curr_conf:
-            common_err("please load a config first")
+            logger.error("please load a config first")
             return False
         if name:
             if not self.config_exists(name):
@@ -136,7 +139,7 @@ class Template(command.UI):
     def do_show(self, context, name=''):
         "usage: show [<config>]"
         if not name and not self.curr_conf:
-            common_err("please load a config first")
+            logger.error("please load a config first")
             return False
         if name:
             if not self.config_exists(name):
@@ -161,7 +164,7 @@ class Template(command.UI):
             if len(args) > i:
                 name = args[i]
         if not name and not self.curr_conf:
-            common_err("please load a config first")
+            logger.error("please load a config first")
             return False
         if name:
             if not self.config_exists(name):
@@ -206,7 +209,7 @@ class Template(command.UI):
             try:
                 os.makedirs(userdir.CRMCONF_DIR)
             except os.error as msg:
-                common_err("makedirs: %s" % msg)
+                logger.error("makedirs: %s", msg)
 
     def get_depends(self, tmpl):
         '''return a list of required templates'''
@@ -215,7 +218,7 @@ class Template(command.UI):
             templatepath = os.path.join(config.path.sharedir, 'templates', tmpl)
             tf = open(templatepath, "r")
         except IOError as msg:
-            common_err("open: %s" % msg)
+            logger.error("open: %s", msg)
             return
         l = []
         for s in tf:
@@ -229,7 +232,7 @@ class Template(command.UI):
         if not utils.is_filename_sane(name):
             return False
         if not os.path.isfile("%s/%s" % (userdir.CRMCONF_DIR, name)):
-            common_err("%s: no such config" % name)
+            logger.error("%s: no such config", name)
             return False
         return True
 
@@ -282,7 +285,7 @@ class Template(command.UI):
         try:
             f = open("%s/%s" % (userdir.CRMCONF_DIR, config or self.curr_conf), 'r')
         except IOError as msg:
-            common_err("open: %s" % msg)
+            logger.error("open: %s", msg)
             return ''
         l = []
         piece = []
@@ -293,64 +296,61 @@ class Template(command.UI):
         DATA = 2
         GENERATE = 3
         state = START
-        err_buf.start_tmp_lineno()
-        rc = True
-        for inp in f:
-            inp = utils.to_ascii(inp)
-            err_buf.incr_lineno()
-            if inp.startswith('#'):
-                continue
-            inp = inp.strip()
-            try:
-                s = shlex.split(inp)
-            except ValueError as msg:
-                common_err(msg)
-                continue
-            while '\n' in s:
-                s.remove('\n')
-            if not s:
-                if state == GENERATE and piece:
-                    l.append(piece)
-                    piece = []
-            elif s[0] in ("%name", "%depends_on", "%suggests"):
-                continue
-            elif s[0] == "%pfx":
-                if check_transition(inp, state, (START, DATA)) and len(s) == 2:
-                    pfx = s[1]
-                    state = PFX
-            elif s[0] == "%required":
-                if check_transition(inp, state, (PFX,)):
-                    state = DATA
-                    data_reqd = True
-            elif s[0] == "%optional":
-                if check_transition(inp, state, (PFX, DATA)):
-                    state = DATA
-                    data_reqd = False
-            elif s[0] == "%%":
-                if state != DATA:
-                    common_warn("user data in wrong state %s" % state)
-                if len(s) < 2:
-                    common_warn("parameter name missing")
-                elif len(s) == 2:
-                    if data_reqd:
-                        common_err("required parameter %s not set" % s[1])
-                        rc = False
-                elif len(s) == 3:
-                    user_data["%s:%s" % (pfx, s[1])] = s[2]
-                else:
-                    common_err("%s: syntax error" % inp)
-            elif s[0] == "%generate":
-                if check_transition(inp, state, (DATA,)):
+        with logger_utils.line_number():
+            rc = True
+            for inp in f:
+                inp = utils.to_ascii(inp)
+                logger_utils.incr_lineno()
+                if inp.startswith('#'):
+                    continue
+                inp = inp.strip()
+                try:
+                    s = shlex.split(inp)
+                except ValueError as msg:
+                    logger.error(msg)
+                    continue
+                while '\n' in s:
+                    s.remove('\n')
+                if not s:
+                    if state == GENERATE and piece:
+                        l.append(piece)
+                        piece = []
+                elif s[0] in ("%name", "%depends_on", "%suggests"):
+                    continue
+                elif s[0] == "%pfx":
+                    if check_transition(inp, state, (START, DATA)) and len(s) == 2:
+                        pfx = s[1]
+                        state = PFX
+                elif s[0] == "%required":
+                    if check_transition(inp, state, (PFX,)):
+                        state = DATA
+                        data_reqd = True
+                elif s[0] == "%optional":
+                    if check_transition(inp, state, (PFX, DATA)):
+                        state = DATA
+                        data_reqd = False
+                elif s[0] == "%%":
+                    if state != DATA:
+                        logger.warning("user data in wrong state %s", state)
+                    if len(s) < 2:
+                        logger.warning("parameter name missing")
+                    elif len(s) == 2:
+                        if data_reqd:
+                            logger.error("required parameter %s not set", s[1])
+                            rc = False
+                    elif len(s) == 3:
+                        user_data["%s:%s" % (pfx, s[1])] = s[2]
+                    else:
+                        logger.error("%s: syntax error", inp)
+                elif s[0] == "%generate" and check_transition(inp, state, (DATA,)):
                     state = GENERATE
                     piece = []
-            elif state == GENERATE:
-                if s:
+                elif state == GENERATE and s:
                     piece.append(s)
-            else:
-                common_err("<%s> unexpected" % inp)
-        if piece:
-            l.append(piece)
-        err_buf.stop_tmp_lineno()
+                else:
+                    logger.error("<%s> unexpected", inp)
+            if piece:
+                l.append(piece)
         f.close()
         if not rc:
             return ''

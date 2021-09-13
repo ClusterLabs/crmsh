@@ -1,17 +1,16 @@
 import os
 import sys
 import argparse
-import logging
-import logging.config
 from argparse import RawDescriptionHelpFormatter
 
 from . import check
 from . import utils
 from . import task
 from crmsh import utils as crmshutils
+from crmsh import log
 
 
-logger = logging.getLogger('cpc')
+logger = log.setup_logger(__name__)
 
 
 class Context(object):
@@ -49,41 +48,6 @@ class Context(object):
 
 
 ctx = Context()
-
-
-LOGGING_CFG = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'formatters': {
-            'file_formatter': {
-                'format': '%(asctime)s %(name)s %(levelname)s: %(message)s',
-                'datefmt': '%Y/%m/%d %H:%M:%S'
-                },
-            'stream_formatter': {
-                '()': 'crmsh.crash_test.utils.MyLoggingFormatter'
-                }
-            },
-        'handlers': {
-            'null': {
-                'class': 'logging.NullHandler'
-                },
-            'file': {
-                'class': 'logging.FileHandler',
-                'formatter': 'file_formatter'
-                },
-            'stream': {
-                'class': 'logging.StreamHandler',
-                'formatter': 'stream_formatter'
-                }
-            },
-        'loggers': {
-            'cpc': {
-                'handlers': ['null', 'file', 'stream'],
-                'propagate': False,
-                'level': 'DEBUG'
-                }
-            }
-        }
 
 
 def kill_process(context):
@@ -211,14 +175,6 @@ For each --kill-* testcase, report directory: {}'''.format(context.logfile,
         setattr(context, arg, getattr(args, arg))
 
 
-def setup_logging(context):
-    """
-    Setupt logging
-    """
-    LOGGING_CFG['handlers']['file']['filename'] = context.logfile
-    logging.config.dictConfig(LOGGING_CFG)
-
-
 def setup_basic_context(context):
     """
     Setup basic context
@@ -227,7 +183,7 @@ def setup_basic_context(context):
     context.var_dir = var_dir
     context.report_path = var_dir
     context.jsonfile = "{}/{}.json".format(var_dir, context.process_name)
-    context.logfile = "/var/log/crmsh/{}.log".format(context.process_name)
+    context.logfile = log.CRMSH_LOG_FILE
 
 
 def run(context):
@@ -237,11 +193,10 @@ def run(context):
     setup_basic_context(context)
     parse_argument(context)
     if not utils.is_root():
-        logging.fatal("{} can only be executed as user root!".format(context.process_name))
+        logger.fatal("{} can only be executed as user root!".format(context.process_name))
         raise crmshutils.TerminateSubCommand
     if not os.path.exists(context.var_dir):
         os.makedirs(context.var_dir, exist_ok=True)
-    setup_logging(context)
 
     try:
         check.fix(context)

@@ -16,7 +16,11 @@ from . import utils
 from .utils import stdout2list, is_program, is_process, to_ascii
 from .utils import os_types_list, get_stdout, find_value
 from .utils import crm_msec, crm_time_cmp
-from .msg import common_debug, common_err, common_warn, common_info
+from . import log
+
+
+logger = log.setup_logger(__name__)
+
 
 #
 # Resource Agents interface (meta-data, parameters, etc)
@@ -92,7 +96,7 @@ def ra_providers(ra_type, ra_class="ocf"):
         return cache.retrieve(ident)
     if can_use_crm_resource():
         if ra_class != "ocf":
-            common_err("no providers for class %s" % ra_class)
+            logger.error("no providers for class %s", ra_class)
             return []
         l = crm_resource("--list-ocf-alternatives %s" % ra_type)
     elif can_use_lrmadmin():
@@ -130,7 +134,7 @@ def os_types(ra_class):
         rc, l = stdout2list("stonith -L")
         if rc != 0:
             # stonith(8) may not be installed
-            common_debug("stonith exited with code %d" % rc)
+            logger.debug("stonith exited with code %d", rc)
             l = []
         for ra in os_types_list("/usr/sbin/fence_*"):
             if ra not in ("fence_ack_manual", "fence_pcmk", "fence_legacy"):
@@ -271,7 +275,7 @@ def prog_meta(prog):
         rc, l = stdout2list("%s metadata" % prog)
         if rc == 0:
             return l
-        common_debug("%s metadata exited with code %d" % (prog, rc))
+        logger.debug("%s metadata exited with code %d", prog, rc)
     return []
 
 
@@ -337,16 +341,16 @@ class RAInfo(object):
                else "%s:%s" % (self.ra_class, self.ra_type)
 
     def error(self, s):
-        common_err("%s: %s" % (self, s))
+        logger.error("%s: %s", self, s)
 
     def warn(self, s):
-        common_warn("%s: %s" % (self, s))
+        logger.warning("%s: %s", self, s)
 
     def info(self, s):
-        common_info("%s: %s" % (self, s))
+        logger.info("%s: %s", self, s)
 
     def debug(self, s):
-        common_debug("%s: %s" % (self, s))
+        logger.debug("%s: %s", self, s)
 
     def add_ra_params(self, ra):
         '''
@@ -527,14 +531,14 @@ class RAInfo(object):
                 if unreq_param(p):
                     continue
                 if p not in d:
-                    common_err("{}: required parameter \"{}\" not defined".format(ident, p))
+                    logger.error("%s: required parameter \"%s\" not defined", ident, p)
                     rc |= utils.get_check_rc()
         for p in d:
             if p.startswith("$"):
                 # these are special, non-RA parameters
                 continue
             if p not in self.params():
-                common_err("{}: parameter \"{}\" is not known".format(ident, p))
+                logger.error("%s: parameter \"%s\" is not known", ident, p)
                 rc |= utils.get_check_rc()
         return rc
 
@@ -562,19 +566,19 @@ class RAInfo(object):
             if self.ra_class == "stonith" and op in ("start", "stop"):
                 return rc
             if op not in self.actions():
-                common_warn("%s: action '%s' not found in Resource Agent meta-data" % (ident, op))
+                logger.warning("%s: action '%s' not found in Resource Agent meta-data", ident, op)
                 rc |= 1
             if "interval" in n_ops[op]:
                 v = n_ops[op]["interval"]
                 v_msec = crm_msec(v)
                 if op in ("start", "stop") and v_msec != 0:
-                    common_warn("%s: Specified interval for %s is %s, it must be 0" % (ident, op, v))
+                    logger.warning("%s: Specified interval for %s is %s, it must be 0", ident, op, v)
                     rc |= 1
                 if op.startswith("monitor") and v_msec != 0:
                     if v_msec not in intervals:
                         intervals[v_msec] = 1
                     else:
-                        common_warn("%s: interval in %s must be unique" % (ident, op))
+                        logger.warning("%s: interval in %s must be unique", ident, op)
                         rc |= 1
             try:
                 adv_timeout = self.actions()[op]["timeout"]
@@ -589,8 +593,8 @@ class RAInfo(object):
             if crm_msec(v) < 0:
                 return rc
             if crm_time_cmp(adv_timeout, v) > 0:
-                common_warn("%s: %s %s for %s is smaller than the advised %s" %
-                            (ident, timeout_string, v, op, adv_timeout))
+                logger.warning("%s: %s %s for %s is smaller than the advised %s",
+                            ident, timeout_string, v, op, adv_timeout)
                 rc |= 1
             return rc
 
@@ -762,15 +766,15 @@ def ra_type_validate(s, ra_class, provider, rsc_type):
     Only ocf ra class supports providers.
     '''
     if not rsc_type:
-        common_err("bad resource type specification %s" % s)
+        logger.error("bad resource type specification %s", s)
         return False
     if ra_class == "ocf":
         if not provider:
-            common_err("provider could not be determined for %s" % s)
+            logger.error("provider could not be determined for %s", s)
             return False
     else:
         if provider:
-            common_warn("ra class %s does not support providers" % ra_class)
+            logger.warning("ra class %s does not support providers", ra_class)
             return True
     return True
 
@@ -860,18 +864,17 @@ def validate_agent(agentname, params, log=False):
     p.wait()
 
     if log is True:
-        from . import msg as msglog
         for msg in out.splitlines():
             if msg.startswith("ERROR: "):
-                msglog.err_buf.error(msg[7:])
+                logger.error(msg[7:])
             elif msg.startswith("WARNING: "):
-                msglog.err_buf.warning(msg[9:])
+                logger.warning(msg[9:])
             elif msg.startswith("INFO: "):
-                msglog.err_buf.info(msg[6:])
+                logger.info(msg[6:])
             elif msg.startswith("DEBUG: "):
-                msglog.err_buf.debug(msg[7:])
+                logger.debug(msg[7:])
             else:
-                msglog.err_buf.writemsg(msg)
+                logger.info(msg)
     return p.returncode, out
 
 

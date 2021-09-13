@@ -11,8 +11,12 @@ from .ra import disambiguate_ra_type, ra_type_validate
 from . import schema
 from .utils import keyword_cmp, verify_boolean, lines2cli
 from .utils import get_boolean, olist, canonical_boolean
-from .msg import common_err, syntax_err
 from . import xmlutil
+from . import log
+
+
+logger = log.setup_logger(__name__)
+logger_utils = log.LoggerUtils(logger)
 
 
 _NVPAIR_RE = re.compile(r'([^=@$][^=]*)=(.*)$')
@@ -146,7 +150,7 @@ class BaseParser(object):
             token = self._cmd[self._currtok]
         if context is None:
             context = self._cmd[0]
-        syntax_err(self._cmd, context=context, token=token, msg=msg)
+        logger_utils.syntax_err(self._cmd, context=context, token=token, msg=msg)
         raise ParseError
 
     def begin(self, cmd, min_args=-1):
@@ -1452,7 +1456,7 @@ def parse_xml(self, cmd):
     try:
         e = etree.fromstring(xml_data)
     except Exception as err:
-        common_err("Cannot parse XML data: %s" % xml_data)
+        logger.error("Cannot parse XML data: %s" % xml_data)
         self.err(err)
     if e.tag not in constants.cib_cli_map:
         self.err("Element %s not recognized" % (e.tag))
@@ -1713,7 +1717,7 @@ def parse(s, comments=None, ignore_empty=True):
             s = s.encode('ascii', errors='xmlcharrefreplace')
             s = s.decode('utf-8')
         except Exception as e:
-            common_err(e)
+            logger.error(e)
             return False
     if isinstance(s, str):
         if s and s.startswith('#'):
@@ -1723,7 +1727,7 @@ def parse(s, comments=None, ignore_empty=True):
             try:
                 s = [x for p in lines2cli(s) for x in p.split()]
             except ValueError as e:
-                common_err(e)
+                logger.error(e)
                 return False
         else:
             s = shlex.split(s)
@@ -1737,7 +1741,7 @@ def parse(s, comments=None, ignore_empty=True):
     kw = s[0]
     parser = _parsers.get(kw)
     if parser is None:
-        syntax_err(s, token=s[0], msg="Unknown command")
+        logger_utils.syntax_err(s, token=s[0], msg="Unknown command")
         return False
 
     try:

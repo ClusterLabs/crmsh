@@ -2,6 +2,10 @@
 # See COPYING for license information.
 
 import os
+from . import log
+
+
+logger = log.setup_logger(__name__)
 
 
 def getuser():
@@ -41,20 +45,19 @@ def mv_user_files():
     global CRMCONF_DIR
 
     def _xdg_file(name, xdg_name, chk_fun, directory):
-        from .msg import common_warn, common_info, common_debug
         if not name:
             return name
         if not os.path.isdir(directory):
             os.makedirs(directory, 0o700)
         new = os.path.join(directory, xdg_name)
         if directory == CONFIG_HOME and chk_fun(new) and chk_fun(name):
-            common_warn("both %s and %s exist, please cleanup" % (name, new))
+            logger.warning("both %s and %s exist, please cleanup", name, new)
             return name
         if chk_fun(name):
             if directory == CONFIG_HOME:
-                common_info("moving %s to %s" % (name, new))
+                logger.info("moving %s to %s", name, new)
             else:
-                common_debug("moving %s to %s" % (name, new))
+                logger.debug("moving %s to %s", name, new)
             os.rename(name, new)
         return new
 

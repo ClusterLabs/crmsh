@@ -277,7 +277,7 @@ import crm_init
 crm_init.install_packages(['mailx'])
 crm_script.exit_ok(True)
         
-OK: 10: Ensure mail package is installed
+INFO: 10: Ensure mail package is installed
 ** localhost - temporary file <<END
 primitive foo ocf:heartbeat:MailTo	email="test@example.com"	subject="hello"	op start timeout="10"	op stop timeout="10"	op monitor interval="10" timeout="10"
 clone c-foo foo
@@ -285,7 +285,7 @@ clone c-foo foo
 END
 
 ** localhost - crm --wait --no configure load update <<temporary file>>
-OK: 10: Configure cluster resources
+INFO: 10: Configure cluster resources
 .INP: json '["show", "mailto"]'
 {"category": "basic", "longdesc": "Notifies recipient by e-mail in the event of a resource takeover.", "name": "mailto", "shortdesc": "E-Mail", "steps": [{"longdesc": " This is a resource agent for MailTo. It sends email to a sysadmin\nwhenever  a takeover occurs.", "parameters": [{"advanced": false, "longdesc": "", "name": "id", "required": true, "shortdesc": "Identifier for the cluster resource", "type": "resource", "unique": true}, {"advanced": false, "example": "", "longdesc": " The email address of sysadmin.", "name": "email", "required": true, "shortdesc": "Email address", "type": "email", "unique": false}, {"advanced": false, "example": "Resource Group", "longdesc": " The subject of the email.", "name": "subject", "required": false, "shortdesc": "Subject", "type": "string", "unique": false}], "required": true, "shortdesc": "Notifies recipients by email in the event of resource takeover"}]}
 .INP: json '["verify", "mailto", {"id":"foo", "email":"test@example.com", "subject":"hello"}]'

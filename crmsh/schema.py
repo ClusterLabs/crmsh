@@ -4,7 +4,10 @@
 import re
 from . import config
 from .pacemaker import CrmSchema, PacemakerError
-from .msg import common_err
+from . import log
+
+
+logger = log.setup_logger(__name__)
 
 
 def is_supported(name):
@@ -94,7 +97,7 @@ def init_schema(cib):
     try:
         _crm_schema = _load_schema(cib)
     except PacemakerError as msg:
-        common_err(msg)
+        logger.error(msg)
     reset()
 
 
@@ -102,7 +105,7 @@ def test_schema(cib):
     try:
         crm_schema = _load_schema(cib)
     except PacemakerError as msg:
-        common_err(msg)
+        logger.error(msg)
         return None
     return crm_schema.validate_name
 

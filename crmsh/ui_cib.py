@@ -11,13 +11,15 @@ from . import ui_cibstatus
 from . import constants
 from . import config
 from . import options
-from .msg import no_prog_err
 from .cibstatus import cib_status
 from .cibconfig import cib_factory
 from . import tmpfiles
-
 from . import completers as compl
+from . import log
 
+
+logger = log.setup_logger(__name__)
+logger_utils = log.LoggerUtils(logger)
 _NEWARGS = ('force', '--force', 'withstatus', 'empty')
 
 
@@ -31,7 +33,7 @@ class CibShadow(command.UI):
 
     def requires(self):
         if not utils.is_program('crm_shadow'):
-            no_prog_err('crm_shadow')
+            logger_utils.no_prog_err('crm_shadow')
             return False
         return True
 

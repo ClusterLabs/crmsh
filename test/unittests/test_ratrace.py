@@ -1,6 +1,9 @@
 import unittest
 from lxml import etree
-
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 from crmsh import cibconfig
 from crmsh.ui_context import Context
 from crmsh.ui_resource import RscMgmt
@@ -19,7 +22,8 @@ class TestRATrace(unittest.TestCase):
     def tearDown(self):
         self.factory._pop_state()
 
-    def test_ratrace_resource(self):
+    @mock.patch('logging.Logger.error')
+    def test_ratrace_resource(self, mock_error):
         """Check setting RA tracing for a resource."""
         xml = '''<primitive class="ocf" id="r1" provider="pacemaker" type="Dummy"/>'''
         obj = self.factory.create_from_node(etree.fromstring(xml))
@@ -35,7 +39,8 @@ class TestRATrace(unittest.TestCase):
         self.assertEqual(obj.node.xpath('operations/op/@id'), [])
         self.assertEqual(obj.node.xpath('.//*[@name="trace_ra"]'), [])
 
-    def test_ratrace_op(self):
+    @mock.patch('logging.Logger.error')
+    def test_ratrace_op(self, mock_error):
         """Check setting RA tracing for a specific operation."""
         xml = '''<primitive class="ocf" id="r1" provider="pacemaker" type="Dummy">
             <operations>
@@ -59,7 +64,8 @@ class TestRATrace(unittest.TestCase):
             RscMgmt()._untrace_op(self.context, obj.obj_id, obj, 'invalid-op')
         self.assertEqual(str(err.exception), "Operation invalid-op not found in r1")
 
-    def test_ratrace_new(self):
+    @mock.patch('logging.Logger.error')
+    def test_ratrace_new(self, mock_error):
         """Check setting RA tracing for an operation that is not in CIB."""
         xml = '''<primitive class="ocf" id="r1" provider="pacemaker" type="Dummy">
           </primitive>'''
@@ -77,7 +83,8 @@ class TestRATrace(unittest.TestCase):
             RscMgmt()._trace_op(self.context, obj.obj_id, obj, 'monitor')
         self.assertEqual(str(err.exception), "No monitor operation configured for r1")
 
-    def test_ratrace_op_stateful(self):
+    @mock.patch('logging.Logger.error')
+    def test_ratrace_op_stateful(self, mock_error):
         """Check setting RA tracing for an operation on a stateful resource."""
         xml = '''<primitive class="ocf" id="r1" provider="pacemaker" type="Dummy">
             <operations>
@@ -98,7 +105,8 @@ class TestRATrace(unittest.TestCase):
         self.assertEqual(obj.node.xpath('operations/op/@id'), ['r1-monitor-10', 'r1-monitor-11'])
         self.assertEqual(obj.node.xpath('.//*[@name="trace_ra"]'), [])
 
-    def test_ratrace_op_interval(self):
+    @mock.patch('logging.Logger.error')
+    def test_ratrace_op_interval(self, mock_error):
         """Check setting RA tracing for an operation+interval."""
         xml = '''<primitive class="ocf" id="r1" provider="pacemaker" type="Dummy">
             <operations>

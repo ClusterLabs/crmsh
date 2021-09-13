@@ -7,10 +7,8 @@ try:
 except ImportError as e:
     pass
 
-from crmsh import msg
 from crmsh import config
 from crmsh import options
-msg.ERR_STREAM = None
 config.core.debug = True
 options.regression_tests = True
 _here = os.path.dirname(__file__)

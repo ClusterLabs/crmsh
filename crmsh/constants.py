@@ -495,4 +495,10 @@ SSH_OPTION = "-o StrictHostKeyChecking=no"
 CLOUD_AWS = "amazon-web-services"
 CLOUD_AZURE = "microsoft-azure"
 CLOUD_GCP = "google-cloud-platform"
+
+
+RED = '\033[31m'
+YELLOW = '\033[33m'
+GREEN = '\033[32m'
+END = '\033[0m'
 # vim:ts=4:sw=4:et:

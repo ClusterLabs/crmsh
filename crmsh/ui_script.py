@@ -15,7 +15,10 @@ from . import scripts
 from . import utils
 from . import options
 from . import completers as compl
-from .msg import err_buf
+from . import log
+
+
+logger = log.setup_logger(__name__)
 
 
 class ConsolePrinter(object):
@@ -24,17 +27,17 @@ class ConsolePrinter(object):
 
     def print_header(self, script, params, hosts):
         if script['shortdesc']:
-            err_buf.info(script['shortdesc'])
-        err_buf.info("Nodes: " + ', '.join([x[0] for x in hosts]))
+            logger.info(script['shortdesc'])
+        logger.info("Nodes: " + ', '.join([x[0] for x in hosts]))
 
     def error(self, host, message):
-        err_buf.error("[%s]: %s" % (host, message))
+        logger.error("[%s]: %s", host, message)
 
     def output(self, host, rc, out, err):
         if out:
-            err_buf.ok("[%s]: %s" % (host, out))
+            logger.info("[%s]: %s", host, out)
         if err or rc != 0:
-            err_buf.error("[%s]: (rc=%d) %s" % (host, rc, err))
+            logger.error("[%s]: (rc=%d) %s", host, rc, err)
 
     def start(self, action):
         if not options.batch:
@@ -46,9 +49,9 @@ class ConsolePrinter(object):
     def finish(self, action, rc, output):
         self.flush()
         if rc:
-            err_buf.ok(action['shortdesc'] or action['name'])
+            logger.info(action['shortdesc'] or action['name'])
         else:
-            err_buf.error("%s (rc=%s)" % (action['shortdesc'] or action['name'], rc))
+            logger.error("%s (rc=%s)", action['shortdesc'] or action['name'], rc)
         if output:
             print(output)
 
@@ -64,7 +67,7 @@ class ConsolePrinter(object):
     def debug(self, msg):
         if config.core.debug or options.regression_tests:
             self.flush()
-            err_buf.debug(msg)
+            logger.debug(msg)
 
     def print_command(self, nodes, command):
         self.flush()
@@ -103,7 +106,7 @@ class JsonPrinter(object):
 
     def debug(self, msg):
         if config.core.debug:
-            err_buf.debug(msg)
+            logger.debug(msg)
 
     def print_command(self, nodes, command):
         pass
@@ -212,7 +215,7 @@ class Script(command.UI):
                         categories[cat] = []
                     categories[cat].append("%-16s %s" % (script['name'], script['shortdesc']))
                 except ValueError as err:
-                    err_buf.error(str(err))
+                    logger.error(str(err))
                     continue
             for c, lst in sorted(iter(categories.items()), key=lambda x: x[0]):
                 if c:
@@ -230,7 +233,7 @@ class Script(command.UI):
                     if script is None or script['category'].lower() == 'script':
                         continue
                 except ValueError as err:
-                    err_buf.error(str(err))
+                    logger.error(str(err))
                     continue
                 print(name)
 

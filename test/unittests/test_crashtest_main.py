@@ -50,21 +50,15 @@ class TestMain(TestCase):
 
         mock_parser_inst.print_help.assert_not_called()
 
-    @mock.patch('logging.config.dictConfig')
-    def test_setup_logging(self, mock_dict_config):
-        ctx = mock.Mock(logfile="file1")
-        main.setup_logging(ctx)
-        mock_dict_config.assert_called_once_with(main.LOGGING_CFG)
-
     def test_setup_basic_context(self):
         ctx = mock.Mock(process_name="crash_test")
         main.setup_basic_context(ctx)
         self.assertEqual(ctx.var_dir, "/var/lib/crmsh/crash_test")
         self.assertEqual(ctx.report_path, "/var/lib/crmsh/crash_test")
         self.assertEqual(ctx.jsonfile, "/var/lib/crmsh/crash_test/crash_test.json")
-        self.assertEqual(ctx.logfile, "/var/log/crmsh/crash_test.log")
+        self.assertEqual(ctx.logfile, "/var/log/crmsh/crmsh.log")
 
-    @mock.patch('logging.fatal')
+    @mock.patch('logging.Logger.fatal')
     @mock.patch('crmsh.crash_test.utils.is_root')
     @mock.patch('crmsh.crash_test.main.parse_argument')
     @mock.patch('crmsh.crash_test.main.setup_basic_context')
@@ -85,14 +79,13 @@ class TestMain(TestCase):
     @mock.patch('crmsh.crash_test.main.kill_process')
     @mock.patch('crmsh.crash_test.main.check.check')
     @mock.patch('crmsh.crash_test.main.check.fix')
-    @mock.patch('crmsh.crash_test.main.setup_logging')
     @mock.patch('os.makedirs')
     @mock.patch('os.path.exists')
     @mock.patch('crmsh.crash_test.utils.is_root')
     @mock.patch('crmsh.crash_test.main.parse_argument')
     @mock.patch('crmsh.crash_test.main.setup_basic_context')
     def test_run(self, mock_setup, mock_parse, mock_is_root, mock_exists, mock_mkdir,
-                 mock_setup_logging, mock_fix, mock_check, mock_kill, mock_fence, mock_sb):
+                 mock_fix, mock_check, mock_kill, mock_fence, mock_sb):
         mock_is_root.return_value = True
         ctx = mock.Mock(var_dir="/var/lib/crash_test")
         mock_exists.return_value = False
@@ -104,7 +97,6 @@ class TestMain(TestCase):
         mock_is_root.assert_called_once_with()
         mock_exists.assert_called_once_with(ctx.var_dir)
         mock_mkdir.assert_called_once_with(ctx.var_dir, exist_ok=True)
-        mock_setup_logging.assert_called_once_with(ctx)
         mock_check.assert_called_once_with(ctx)
         mock_fix.assert_called_once_with(ctx)
         mock_kill.assert_called_once_with(ctx)
@@ -114,13 +106,12 @@ class TestMain(TestCase):
     @mock.patch('crmsh.crash_test.utils.json_dumps')
     @mock.patch('crmsh.crash_test.main.check.check')
     @mock.patch('crmsh.crash_test.main.check.fix')
-    @mock.patch('crmsh.crash_test.main.setup_logging')
     @mock.patch('os.path.exists')
     @mock.patch('crmsh.crash_test.utils.is_root')
     @mock.patch('crmsh.crash_test.main.parse_argument')
     @mock.patch('crmsh.crash_test.main.setup_basic_context')
     def test_run_except(self, mock_setup, mock_parse, mock_is_root, mock_exists,
-            mock_setup_logging, mock_fix, mock_check, mock_dumps):
+            mock_fix, mock_check, mock_dumps):
         mock_is_root.return_value = True
         ctx = mock.Mock(var_dir="/var/lib/crash_test")
         mock_exists.return_value = True
@@ -133,7 +124,6 @@ class TestMain(TestCase):
         mock_parse.assert_called_once_with(ctx)
         mock_is_root.assert_called_once_with()
         mock_exists.assert_called_once_with(ctx.var_dir)
-        mock_setup_logging.assert_called_once_with(ctx)
         mock_check.assert_called_once_with(ctx)
         mock_fix.assert_called_once_with(ctx)
         mock_dumps.assert_called_once_with()

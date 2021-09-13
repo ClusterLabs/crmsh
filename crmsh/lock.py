@@ -8,7 +8,10 @@ from contextlib import contextmanager
 
 from . import utils
 from . import config
-from .msg import common_warn
+from . import log
+
+
+logger = log.setup_logger(__name__)
 
 
 class SSHError(Exception):
@@ -162,7 +165,7 @@ class RemoteLock(Lock):
 
             if not warned_once:
                 warned_once = True
-                common_warn("Might have unfinished process on other nodes, wait {}s...".format(self.lock_timeout))
+                logger.warning("Might have unfinished process on other nodes, wait %ss...", self.lock_timeout)
 
             time.sleep(self.WAIT_INTERVAL)
             current_time = int(time.time())

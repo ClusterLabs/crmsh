@@ -18,8 +18,11 @@ from parallax.manager import Manager, FatalError
 from parallax.task import Task
 from parallax import Options
 
-from .msg import common_err, common_debug, common_warn
 from . import config
+from . import log
+
+
+logger = log.setup_logger(__name__)
 
 
 _DEFAULT_TIMEOUT = 60
@@ -109,7 +112,7 @@ def do_pssh(l, opts):
     try:
         return manager.run()  # returns a list of exit codes
     except FatalError:
-        common_err("SSH to nodes failed")
+        logger.error("SSH to nodes failed")
         show_output(opts.errdir, hosts, "stderr")
         return False
 
@@ -123,19 +126,19 @@ def examine_outcome(l, opts, statuses):
     hosts = [x[0] for x in l]
     if min(statuses) < 0:
         # At least one process was killed.
-        common_err("ssh process was killed")
+        logger.error("ssh process was killed")
         show_output(opts.errdir, hosts, "stderr")
         return False
     # The any builtin was introduced in Python 2.5 (so we can't use it yet):
     # elif any(x==255 for x in statuses):
     for status in statuses:
         if status == 255:
-            common_warn("ssh processes failed")
+            logger.warning("ssh processes failed")
             show_output(opts.errdir, hosts, "stderr")
             return False
     for status in statuses:
         if status not in (0, _EC_LOGROT):
-            common_warn("some ssh processes failed")
+            logger.warning("some ssh processes failed")
             show_output(opts.errdir, hosts, "stderr")
             return False
     return True
@@ -147,8 +150,7 @@ def next_loglines(a, outdir, errdir, from_time):
     '''
     l = []
     for node, rptlog, logfile, nextpos in a:
-        common_debug("updating %s from %s (pos %d)" %
-                     (logfile, node, nextpos))
+        logger.debug("updating %s from %s (pos %d)", logfile, node, nextpos)
         if logfile.startswith("/tmp") and logfile.endswith("/journal.log"):
             cmdline = "/usr/bin/journalctl -o short-iso --since '%s' --no-pager" % (from_time)
         else:
@@ -173,7 +175,7 @@ def next_peinputs(node_pe_l, outdir, errdir):
     for node, pe_l in node_pe_l:
         red_pe_l = [os.path.join("pengine", os.path.basename(x)) for x in pe_l]
         cmdline = "tar -C %s -chf - %s" % (vardir, ' '.join(red_pe_l))
-        common_debug("getting new PE inputs %s from %s" % (red_pe_l, node))
+        logger.debug("getting new PE inputs %s from %s", red_pe_l, node)
         opts = parse_args(outdir, errdir)
         l.append([node, cmdline])
     if not l:

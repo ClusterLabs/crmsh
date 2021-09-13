@@ -22,11 +22,11 @@ Feature: crmsh bootstrap process - options
     Then    Output is the same with expected "crm cluster add" help output
     When    Run "crm cluster remove -h" on "hanode1"
     Then    Output is the same with expected "crm cluster remove" help output
-    When    Run "crm cluster geo-init -h" on "hanode1"
+    When    Run "crm cluster geo_init -h" on "hanode1"
     Then    Output is the same with expected "crm cluster geo-init" help output
-    When    Run "crm cluster geo-join -h" on "hanode1"
+    When    Run "crm cluster geo_join -h" on "hanode1"
     Then    Output is the same with expected "crm cluster geo-join" help output
-    When    Run "crm cluster geo-init-arbitrator -h" on "hanode1"
+    When    Run "crm cluster geo_init_arbitrator -h" on "hanode1"
     Then    Output is the same with expected "crm cluster geo-init-arbitrator" help output
 
   @clean

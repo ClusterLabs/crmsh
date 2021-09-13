@@ -6,16 +6,16 @@ import sys
 from . import config
 from . import utils
 from . import options
-from .msg import common_err, common_info, common_warn
 from . import ui_utils
 from . import userdir
 from . import constants
+from . import log
+from . import main
 
 
-# import logging
-# logging.basicConfig(level=logging.DEBUG,
-#                    filename='/tmp/crm-completion.log',
-#                    filemode='a')
+logger = log.setup_logger(__name__)
+logger_utils = log.LoggerUtils(logger)
+
 
 class Context(object):
     """
@@ -54,6 +54,8 @@ class Context(object):
                 return " ".join(line_list[:-2] + ["help", "property"])
             else:
                 return line
+        promptstr = "crm({}/{}){}# ".format(main.cib_prompt(), utils.this_node(), self.prompt())
+        logger_utils.log_only_to_file("{}{}".format(promptstr, line))
 
         line = line.strip()
         if not line or line.startswith('#'):
@@ -77,10 +79,9 @@ class Context(object):
                 if not self.command_info:
                     self.fatal_error("No such command")
                 if self.command_name in self.command_info.aliases and self.command_name not in ["-h", "--help"]:
-                    common_warn("This command '{}' is deprecated, please use '{}'"\
-                            .format(self.command_name, self.command_info.name))
+                    logger.warning("This command '%s' is deprecated, please use '%s'", self.command_name, self.command_info.name)
                 if token != self.command_info.name:
-                    common_info("\"{}\" is accepted as \"{}\"".format(token, self.command_info.name))
+                    logger.info("\"%s\" is accepted as \"%s\"", token, self.command_info.name)
                 self.command_name = self.command_info.name
                 if self.command_info.type == 'level':
                     self.enter_level(self.command_info.level)
@@ -94,14 +95,14 @@ class Context(object):
                 import traceback
                 traceback.print_exc()
                 sys.stdout.flush()
-            common_err("%s: %s" % (self.get_qualified_name(), msg))
+            logger.error("%s: %s", self.get_qualified_name(), msg)
             rv = False
         except IOError as msg:
             if config.core.debug or options.regression_tests:
                 import traceback
                 traceback.print_exc()
                 sys.stdout.flush()
-            common_err("%s: %s" % (self.get_qualified_name(), msg))
+            logger.error("%s: %s", self.get_qualified_name(), msg)
             rv = False
         except utils.TerminateSubCommand:
             return False
@@ -166,10 +167,10 @@ class Context(object):
                 # not sure this is the right thing to do
                 return self.current_level().get_completions()
             except ValueError:
-                # common_err("%s: %s" % (self.get_qualified_name(), msg))
+                # logger.error("%s: %s" % (self.get_qualified_name(), msg))
                 pass
             except IOError:
-                # common_err("%s: %s" % (self.get_qualified_name(), msg))
+                # logger.error("%s: %s" % (self.get_qualified_name(), msg))
                 pass
             return []
         finally:
@@ -400,13 +401,13 @@ class Context(object):
         """
         Error message only, don't cancel execution of command
         """
-        common_err("%s: %s" % (self.get_qualified_name(), msg))
+        logger.error("%s: %s", self.get_qualified_name(), msg)
 
     def warning(self, msg):
-        common_warn("%s: %s" % (self.get_qualified_name(), msg))
+        logger.warning("%s: %s", self.get_qualified_name(), msg)
 
     def info(self, msg):
-        common_info("%s: %s" % (self.get_qualified_name(), msg))
+        logger.info("%s: %s", self.get_qualified_name(), msg)
 
 
 # vim:ts=4:sw=4:et:

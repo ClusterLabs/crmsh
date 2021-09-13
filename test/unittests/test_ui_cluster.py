@@ -1,3 +1,4 @@
+import logging
 import unittest
 try:
     from unittest import mock
@@ -6,6 +7,7 @@ except ImportError:
 
 from crmsh import ui_cluster
 
+logging.basicConfig(level=logging.INFO)
 
 class TestCluster(unittest.TestCase):
     """
@@ -34,7 +36,7 @@ class TestCluster(unittest.TestCase):
         Global tearDown.
         """
 
-    @mock.patch('crmsh.ui_cluster.err_buf.info')
+    @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.service_is_active')
     def test_do_start_already_started(self, mock_active, mock_info):
         context_inst = mock.Mock()
@@ -44,7 +46,7 @@ class TestCluster(unittest.TestCase):
         mock_info.assert_called_once_with("Cluster services already started")
 
     @mock.patch('crmsh.bootstrap.start_pacemaker')
-    @mock.patch('crmsh.ui_cluster.err_buf.info')
+    @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.is_qdevice_configured')
     @mock.patch('crmsh.utils.start_service')
     @mock.patch('crmsh.utils.service_is_active')
@@ -60,7 +62,7 @@ class TestCluster(unittest.TestCase):
         mock_qdevice_configured.assert_called_once_with()
         mock_info.assert_called_once_with("Cluster services started")
 
-    @mock.patch('crmsh.ui_cluster.err_buf.info')
+    @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.service_is_active')
     def test_do_stop_already_stopped(self, mock_active, mock_info):
         context_inst = mock.Mock()
@@ -69,7 +71,7 @@ class TestCluster(unittest.TestCase):
         mock_active.assert_called_once_with("corosync.service")
         mock_info.assert_called_once_with("Cluster services already stopped")
 
-    @mock.patch('crmsh.ui_cluster.err_buf.info')
+    @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.stop_service')
     @mock.patch('crmsh.utils.service_is_active')
     def test_do_stop(self, mock_active, mock_stop, mock_info):

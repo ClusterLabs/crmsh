@@ -2,7 +2,10 @@ from __future__ import print_function
 from __future__ import unicode_literals
 # Copyright (C) 2014 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
-
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 from crmsh import cibconfig
 from lxml import etree
@@ -528,7 +531,9 @@ def test_existing_node_resource():
     assert ok
 
 
-def test_existing_node_resource_2():
+@mock.patch("crmsh.log.LoggerUtils.line_number")
+@mock.patch("crmsh.log.LoggerUtils.incr_lineno")
+def test_existing_node_resource_2(mock_incr, mock_line_num):
     obj = cibconfig.mkset_obj()
     assert obj is not None
 
@@ -547,7 +552,9 @@ def test_existing_node_resource_2():
     assert sorted(text.split('\n')) == sorted(text2.split('\n'))
 
 
-def test_id_collision_breakage_1():
+@mock.patch("crmsh.log.LoggerUtils.line_number")
+@mock.patch("crmsh.log.LoggerUtils.incr_lineno")
+def test_id_collision_breakage_1(mock_incr, mock_line_num):
     from crmsh import clidisplay
 
     obj = cibconfig.mkset_obj()
@@ -627,7 +634,9 @@ primitive p1 ocf:heartbeat:Dummy \
         assert original_cib == obj.repr()
 
 
-def test_id_collision_breakage_3():
+@mock.patch("crmsh.log.LoggerUtils.line_number")
+@mock.patch("crmsh.log.LoggerUtils.incr_lineno")
+def test_id_collision_breakage_3(mock_incr, mock_line_num):
     from crmsh import clidisplay
 
     obj = cibconfig.mkset_obj()
@@ -670,7 +679,9 @@ primitive node1 Dummy params fake=something
         assert original_cib == obj.repr()
 
 
-def test_id_collision_breakage_2():
+@mock.patch("crmsh.log.LoggerUtils.line_number")
+@mock.patch("crmsh.log.LoggerUtils.incr_lineno")
+def test_id_collision_breakage_2(mock_incr, mock_line_num):
     from crmsh import clidisplay
 
     obj = cibconfig.mkset_obj()
@@ -780,7 +791,9 @@ def test_bug_110():
             assert o.check_sanity() == 0
 
 
-def test_reordering_resource_sets():
+@mock.patch("crmsh.log.LoggerUtils.line_number")
+@mock.patch("crmsh.log.LoggerUtils.incr_lineno")
+def test_reordering_resource_sets(mock_incr, mock_line_num):
     """
     Can we reorder resource sets?
     """
