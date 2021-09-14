@@ -46,6 +46,8 @@ logger_utils = log.LoggerUtils(logger)
 CSYNC2_KEY = "/etc/csync2/key_hagroup"
 CSYNC2_CFG = "/etc/csync2/csync2.cfg"
 COROSYNC_AUTH = "/etc/corosync/authkey"
+CRM_CFG = "/etc/crm/crm.conf"
+PROFILES_FILE = "/etc/crm/profiles.yml"
 SYSCONFIG_SBD = "/etc/sysconfig/sbd"
 SYSCONFIG_PCMK = "/etc/sysconfig/pacemaker"
 SYSCONFIG_NFS = "/etc/sysconfig/nfs"
@@ -63,7 +65,8 @@ BOOTH_CFG = "/etc/booth/booth.conf"
 BOOTH_AUTH = "/etc/booth/authkey"
 FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_KEY, "/etc/ctdb/nodes",
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
-        "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SYSCONFIG_SBD, PCMK_REMOTE_AUTH, WATCHDOG_CFG)
+        "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SYSCONFIG_SBD, PCMK_REMOTE_AUTH, WATCHDOG_CFG,
+        PROFILES_FILE, CRM_CFG)
 
 INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "sbd", "cluster", "ocfs2", "admin", "qdevice")
 
@@ -78,7 +81,6 @@ class Context(object):
     Context object used to avoid having to pass these variables
     to every bootstrap method.
     """
-    PROFILES_FILE = "/etc/crm/profiles.yml"
     DEFAULT_PROFILE_NAME = "default"
     S390_PROFILE_NAME = "s390"
 
@@ -225,10 +227,10 @@ class Context(object):
             return profile_dict
 
         if profile_type in self.profiles_data:
-            logger.info("Loading \"{}\" profile from {}".format(profile_type, self.PROFILES_FILE))
+            logger.info("Loading \"{}\" profile from {}".format(profile_type, PROFILES_FILE))
             profile_dict = self.profiles_data[profile_type]
         else:
-            logger.info("\"{}\" profile does not exist in {}".format(profile_type, self.PROFILES_FILE))
+            logger.info("\"{}\" profile does not exist in {}".format(profile_type, PROFILES_FILE))
         return profile_dict
 
     def load_profiles(self):
@@ -237,9 +239,9 @@ class Context(object):
         """
         profile_type = self.detect_platform()
 
-        if not os.path.exists(self.PROFILES_FILE):
+        if not os.path.exists(PROFILES_FILE):
             return
-        with open(self.PROFILES_FILE) as f:
+        with open(PROFILES_FILE) as f:
             self.profiles_data = yaml.load(f, Loader=yaml.SafeLoader)
         # empty file
         if not self.profiles_data:
