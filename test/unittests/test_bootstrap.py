@@ -151,14 +151,14 @@ class TestContext(unittest.TestCase):
         self.ctx_inst.profiles_data = {"name": "test"}
         res = self.ctx_inst.load_specific_profile("newname")
         assert res == {}
-        mock_status.assert_called_once_with("\"newname\" profile does not exist in {}".format(bootstrap.Context.PROFILES_FILE))
+        mock_status.assert_called_once_with("\"newname\" profile does not exist in {}".format(bootstrap.PROFILES_FILE))
 
     @mock.patch('logging.Logger.info')
     def test_load_specific_profile(self, mock_status):
         self.ctx_inst.profiles_data = {"name": "test"}
         res = self.ctx_inst.load_specific_profile("name")
         assert res == "test"
-        mock_status.assert_called_once_with("Loading \"name\" profile from {}".format(bootstrap.Context.PROFILES_FILE))
+        mock_status.assert_called_once_with("Loading \"name\" profile from {}".format(bootstrap.PROFILES_FILE))
 
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.detect_cloud')
@@ -190,7 +190,7 @@ class TestContext(unittest.TestCase):
         mock_exists.return_value = False
         self.ctx_inst.load_profiles()
         mock_platform.assert_called_once_with()
-        mock_exists.assert_called_once_with(bootstrap.Context.PROFILES_FILE)
+        mock_exists.assert_called_once_with(bootstrap.PROFILES_FILE)
 
     @mock.patch('yaml.load')
     @mock.patch('builtins.open', new_callable=mock.mock_open, read_data="")
@@ -202,8 +202,8 @@ class TestContext(unittest.TestCase):
         mock_load.return_value = ""
         self.ctx_inst.load_profiles()
         mock_platform.assert_called_once_with()
-        mock_exists.assert_called_once_with(bootstrap.Context.PROFILES_FILE)
-        mock_open_file.assert_called_once_with(bootstrap.Context.PROFILES_FILE)
+        mock_exists.assert_called_once_with(bootstrap.PROFILES_FILE)
+        mock_open_file.assert_called_once_with(bootstrap.PROFILES_FILE)
         mock_load.assert_called_once_with(mock_open_file.return_value, Loader=yaml.SafeLoader)
 
     @mock.patch('crmsh.bootstrap.Context.load_specific_profile')
@@ -224,8 +224,8 @@ class TestContext(unittest.TestCase):
         assert self.ctx_inst.profiles_dict == {"name": "wang", "age": 18}
 
         mock_platform.assert_called_once_with()
-        mock_exists.assert_called_once_with(bootstrap.Context.PROFILES_FILE)
-        mock_open_file.assert_called_once_with(bootstrap.Context.PROFILES_FILE)
+        mock_exists.assert_called_once_with(bootstrap.PROFILES_FILE)
+        mock_open_file.assert_called_once_with(bootstrap.PROFILES_FILE)
         mock_load.assert_called_once_with(mock_open_file.return_value, Loader=yaml.SafeLoader)
         mock_load_specific.assert_has_calls([
             mock.call(bootstrap.Context.DEFAULT_PROFILE_NAME),
