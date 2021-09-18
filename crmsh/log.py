@@ -121,10 +121,12 @@ LOGGING_CFG = {
             "flushLevel": logging.CRITICAL,
         },
         "file": {
-            "class": "logging.FileHandler",
+            "class": "logging.handlers.RotatingFileHandler",
             "filename": CRMSH_LOG_FILE,
             "formatter": "file",
-            "filters": ["filter"]
+            "filters": ["filter"],
+            "maxBytes": 1*1024*1024,
+            "backupCount": 10
         }
     },
     "loggers": {
