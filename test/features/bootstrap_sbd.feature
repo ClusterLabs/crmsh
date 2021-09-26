@@ -136,3 +136,9 @@ Feature: crmsh bootstrap sbd management
     Then    Service "sbd" is "started" on "hanode2"
     When    Run "sleep 20" on "hanode1"
     Then    Resource "stonith-sbd" type "external/sbd" is "Started"
+
+  @clean
+  Scenario: Verify pcmk_delay_max parameter
+    Given   Cluster service is "stopped" on "hanode1"
+    When    Run "crm cluster init -s /dev/sda1 -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
