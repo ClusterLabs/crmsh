@@ -1804,6 +1804,7 @@ def join_cluster(seed_host):
     # there are (so as not to adjust multiple times if a previous
     # attempt to join the cluster failed)
     init_cluster_local()
+    _context.sbd_manager.adjust_pcmk_delay_max()
 
     with logger_utils.status_long("Reloading cluster configuration"):
 
@@ -1935,6 +1936,7 @@ def remove_node_from_cluster():
         corosync.del_node(del_target)
 
     decrease_expected_votes()
+    _context.sbd_manager.adjust_pcmk_delay_max()
 
     logger.info("Propagating configuration changes across the remaining nodes")
     csync2_update(CSYNC2_CFG)
@@ -2165,6 +2167,7 @@ def bootstrap_remove(context):
     force_flag = config.core.force or _context.force
 
     init()
+    _context.init_sbd_manager()
 
     if not utils.service_is_active("corosync.service"):
         utils.fatal("Cluster is not active - can't execute removing action")

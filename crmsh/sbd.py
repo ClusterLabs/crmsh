@@ -34,6 +34,9 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
     SBD_WATCHDOG_TIMEOUT_DEFAULT = 5
     SBD_WATCHDOG_TIMEOUT_DEFAULT_S390 = 15
     SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE = 35
+    SBD_RA_TYPE = "stonith:external/sbd"
+    PCMK_DELAY_MAX = "pcmk_delay_max"
+    PCMK_DELAY_MAX_VALUE = 30
 
     def __init__(self, context):
         """
@@ -378,11 +381,12 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         """
         if not utils.package_is_installed("sbd") or \
                 not utils.service_is_enabled("sbd.service") or \
-                utils.has_resource_configured("stonith:external/sbd"):
+                utils.has_resource_configured(self.SBD_RA_TYPE):
             return
 
         if self._get_sbd_device_from_config():
-            if not bootstrap.invokerc("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"):
+            pcmk_delay_max_str = " {}={}s".format(self.PCMK_DELAY_MAX, self.PCMK_DELAY_MAX_VALUE) if utils.is_two_nodes_cluster() else ""
+            if not bootstrap.invokerc("crm configure primitive stonith-sbd {}{}".format(self.SBD_RA_TYPE, pcmk_delay_max_str)):
                 utils.fatal("Can't create stonith-sbd primitive")
             if not bootstrap.invokerc("crm configure property stonith-enabled=true"):
                 utils.fatal("Can't enable STONITH for SBD")
@@ -469,3 +473,19 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         conf = utils.parse_sysconfig(SYSCONFIG_SBD)
         res = conf.get(key)
         return res
+
+    def adjust_pcmk_delay_max(self):
+        """
+        """
+        if not utils.has_resource_configured(self.SBD_RA_TYPE):
+            return
+        cmd = None
+        sbd_ra_id = utils.get_primitive_id(self.SBD_RA_TYPE)
+        has_pcmk_delay_max = utils.has_parameter_configured(sbd_ra_id, self.PCMK_DELAY_MAX)
+        if utils.is_two_nodes_cluster():
+            if not has_pcmk_delay_max:
+                cmd = "crm resource param {} set {} {}s".format(sbd_ra_id, self.PCMK_DELAY_MAX, self.PCMK_DELAY_MAX_VALUE)
+        elif has_pcmk_delay_max:
+            cmd = "crm resource param {} delete {}".format(sbd_ra_id, self.PCMK_DELAY_MAX)
+        if cmd:
+            utils.get_stdout_or_raise_error(cmd)

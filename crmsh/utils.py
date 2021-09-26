@@ -2716,6 +2716,23 @@ def has_resource_configured(ra_type, peer=None):
     return re.search(ra_type, out) is not None
 
 
+def get_primitive_id(ra_type):
+    """
+    Get primitive RA id, given ra type
+    """
+    out = get_stdout_or_raise_error("crm configure show type:primitive")
+    res = re.search("primitive (.*) {}".format(ra_type), out)
+    return res.group(1) if res else None
+
+
+def has_parameter_configured(ra_id, param_name):
+    """
+    Check if specific parameter configured in RA
+    """
+    rc, _, _ = get_stdout_stderr("crm resource param {} show {}".format(ra_id, param_name))
+    return rc == 0
+
+
 def check_all_nodes_reachable():
     """
     Check if all cluster nodes are reachable
@@ -2929,4 +2946,11 @@ def fatal(error_msg):
     handled by Context.run in ui_context.py
     """
     raise ValueError(error_msg)
+
+
+def is_two_nodes_cluster():
+    """
+    Check if current cluster has two nodes
+    """
+    return len(list_cluster_nodes()) == 2
 # vim:ts=4:sw=4:et:
