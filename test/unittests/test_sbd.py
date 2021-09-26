@@ -404,18 +404,20 @@ class TestSBDManager(unittest.TestCase):
         self.sbd_inst.configure_sbd_resource()
         mock_package.assert_called_once_with("sbd")
 
+    @mock.patch('crmsh.utils.is_two_nodes_cluster')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.sbd.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.utils.has_resource_configured')
     @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_configure_sbd_resource_error_primitive(self, mock_package, mock_enabled, mock_ra_configured, mock_get_device, mock_invoke, mock_error):
+    def test_configure_sbd_resource_error_primitive(self, mock_package, mock_enabled, mock_ra_configured, mock_get_device, mock_invoke, mock_error, mock_two_nodes):
         mock_package.return_value = True
         mock_enabled.return_value = True
         mock_ra_configured.return_value = False
         mock_get_device.return_value = ["/dev/sdb1"]
         mock_invoke.return_value = False
+        mock_two_nodes.return_value = True
         mock_error.side_effect = ValueError
 
         with self.assertRaises(ValueError):
@@ -428,18 +430,20 @@ class TestSBDManager(unittest.TestCase):
         mock_invoke.assert_called_once_with("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s")
         mock_error.assert_called_once_with("Can't create stonith-sbd primitive")
 
+    @mock.patch('crmsh.utils.is_two_nodes_cluster')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.bootstrap.invokerc')
     @mock.patch('crmsh.sbd.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.utils.has_resource_configured')
     @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_configure_sbd_resource_error_property(self, mock_package, mock_enabled, mock_ra_configured, mock_get_device, mock_invoke, mock_error):
+    def test_configure_sbd_resource_error_property(self, mock_package, mock_enabled, mock_ra_configured, mock_get_device, mock_invoke, mock_error, mock_two_nodes):
         mock_package.return_value = True
         mock_enabled.return_value = True
         mock_ra_configured.return_value = False
         mock_get_device.return_value = ["/dev/sdb1"]
         mock_invoke.side_effect = [True, False]
+        mock_two_nodes.return_value = True
         mock_error.side_effect = ValueError
 
         with self.assertRaises(ValueError):
