@@ -30,6 +30,7 @@ deploy_node() {
   else
     docker exec -t $node_name /bin/sh -c "cd /app; ./test/run-in-travis.sh build"
   fi
+  docker exec -t $node_name /bin/sh -c "rm -rf /run/nologin"
   echo "##### Deploy $node_name finished"
   echo
 }
