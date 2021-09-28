@@ -1,5 +1,5 @@
 #!/bin/bash
-Docker_image='liangxin1300/hatbw'
+Docker_image='liangxin1300/haleap:15.3'
 HA_packages='pacemaker corosync corosync-qdevice'
 TEST_TYPE='bootstrap qdevice hb_report geo'
 
