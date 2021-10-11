@@ -1,5 +1,5 @@
 #!/bin/bash
-Docker_image='liangxin1300/hatbw'
+Docker_image='liangxin1300/haleap:15.2'
 HA_packages='pacemaker corosync corosync-qdevice'
 TEST_TYPE='bootstrap qdevice hb_report geo'
 
@@ -22,6 +22,8 @@ deploy_node() {
   docker network connect second_net $node_name
   docker network connect third_net $node_name
   docker exec -t $node_name /bin/sh -c "echo \"$etc_hosts_content\" | grep -v $node_name >> /etc/hosts"
+  # https://unix.stackexchange.com/questions/335189/system-refuses-ssh-and-stuck-on-booting-up-after-systemd-installation
+  #docker exec -t $node_name /bin/sh -c "systemctl start sshd.service; systemctl start systemd-user-sessions.service"
 
   if [ "$node_name" == "qnetd-node" ];then
     docker exec -t $node_name /bin/sh -c "zypper ref;zypper -n in corosync-qnetd"
