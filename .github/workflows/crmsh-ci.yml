@@ -39,7 +39,7 @@ jobs:
 
   functional_test_hb_report_bugs:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
     - uses: actions/checkout@v2
     - name: functional test for hb_report
@@ -49,7 +49,7 @@ jobs:
 
   functional_test_bootstrap_bugs:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
     - uses: actions/checkout@v2
     - name: functional test for bootstrap bugs
@@ -59,7 +59,7 @@ jobs:
 
   functional_test_bootstrap_common:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
     - uses: actions/checkout@v2
     - name: functional test for bootstrap common
@@ -69,7 +69,7 @@ jobs:
 
   functional_test_bootstrap_options:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
     - uses: actions/checkout@v2
     - name: functional test for bootstrap options
@@ -79,7 +79,7 @@ jobs:
 
   functional_test_qdevice_setup_remove:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
     - uses: actions/checkout@v2
     - name: functional test for qdevice setup and remove
@@ -89,7 +89,7 @@ jobs:
 
   functional_test_qdevice_options:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
     - uses: actions/checkout@v2
     - name: functional test for qdevice options
@@ -99,7 +99,7 @@ jobs:
 
   functional_test_qdevice_validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
     - uses: actions/checkout@v2
     - name: functional test for qdevice validate
@@ -109,7 +109,7 @@ jobs:
 
   functional_test_qdevice_user_case:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
     - uses: actions/checkout@v2
     - name: functional test for qdevice user case
@@ -119,7 +119,7 @@ jobs:
 
   functional_test_resource_subcommand:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
     - uses: actions/checkout@v2
     - name: functional test for resource subcommand
@@ -129,7 +129,7 @@ jobs:
 
   functional_test_configure_sublevel:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
     - uses: actions/checkout@v2
     - name: functional test for configure sublevel bugs
@@ -139,7 +139,7 @@ jobs:
 
   functional_test_constraints_bugs:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
     - uses: actions/checkout@v2
     - name: functional test for constraints bugs
@@ -149,7 +149,7 @@ jobs:
 
   functional_test_geo_cluster:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
     - uses: actions/checkout@v2
     - name: functional test for geo cluster
@@ -159,7 +159,7 @@ jobs:
 
   original_regression_test:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
     - uses: actions/checkout@v2
     - name: original regression test
