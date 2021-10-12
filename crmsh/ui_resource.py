@@ -378,27 +378,30 @@ class RscMgmt(command.UI):
         "usage: unmanage <rsc>"
         return self._commit_meta_attr(context, rsc, "is-managed", "false")
 
-    @command.alias('migrate')
-    @command.skill_level('administrator')
-    @command.wait
-    @command.completers_repeating(compl.resources, compl.nodes,
-                                  compl.choice(['reboot', 'forever', 'force']))
-    def do_move(self, context, rsc, *args):
-        """usage: move <rsc> [<node>] [<lifetime>] [force]"""
+    def move_or_ban(self, context, rsc, *args):
+        """
+        Common codes for move or ban action
+        """
         if not utils.is_name_sane(rsc):
             return False
+        cmd_map_dict = {'move': self.rsc_migrate,
+                'ban': self.rsc_ban}
+        action = context.get_command_name()
+        action_cap = action.capitalize()
+        action_cmd = cmd_map_dict[action]
         node = None
+        lifetime = None
         argl = list(args)
         force = "force" in utils.fetch_opts(argl, ["force"]) or config.core.force
-        lifetime = utils.fetch_lifetime_opt(argl)
         if len(argl) > 0:
             node = argl[0]
             if not xmlutil.is_our_node(node):
                 context.fatal_error("Not our node: " + node)
+        if len(argl) == 2:
+            lifetime = utils.fetch_lifetime_opt(argl[1])
 
-        if context.get_command_name() == 'move':
-            if not node and not force:
-                context.fatal_error("No target node: Move requires either a target node or 'force'")
+        if action == "move" and not node and not force:
+            context.fatal_error("No target node: {} requires either a target node or 'force'".format(action_cap))
 
         opts = ''
         if node:
@@ -407,43 +410,31 @@ class RscMgmt(command.UI):
             opts = "%s --lifetime '%s'" % (opts, lifetime)
         if force or config.core.force:
             opts = "%s --force" % opts
-        rc = utils.ext_cmd(self.rsc_migrate % (rsc, opts))
+        rc = utils.ext_cmd(action_cmd % (rsc, opts))
         if rc == 0:
             if node:
-                logger.info("Move constraint created for %s to %s", rsc, node)
+                logger.info("%s constraint created for %s to %s", action_cap, rsc, node)
             else:
-                logger.info("Move constraint created for %s", rsc)
+                logger.info("%s constraint created for %s", action_cap, rsc)
+            logger.info("Use `crm resource clear %s` to remove this constraint", rsc)
         return rc == 0
+
+    @command.alias('migrate')
+    @command.skill_level('administrator')
+    @command.wait
+    @command.completers_repeating(compl.resources, compl.nodes,
+                                  compl.choice(['reboot', 'forever', 'force']))
+    def do_move(self, context, rsc, *args):
+        """usage: move <rsc> [<node>] [<lifetime>] [force]"""
+        return self.move_or_ban(context, rsc, *args)
+
 
     @command.skill_level('administrator')
     @command.wait
     @command.completers_repeating(compl.resources, compl.nodes)
     def do_ban(self, context, rsc, *args):
         """usage: ban <rsc> [<node>] [<lifetime>] [force]"""
-        if not utils.is_name_sane(rsc):
-            return False
-        node = None
-        argl = list(args)
-        force = "force" in utils.fetch_opts(argl, ["force"]) or config.core.force
-        lifetime = utils.fetch_lifetime_opt(argl)
-        if len(argl) > 0:
-            node = argl[0]
-            if not xmlutil.is_our_node(node):
-                context.fatal_error("Not our node: " + node)
-        opts = ''
-        if node:
-            opts = "--node '%s'" % node
-        if lifetime:
-            opts = "%s --lifetime '%s'" % (opts, lifetime)
-        if force:
-            opts = "%s --force" % opts
-        rc = utils.ext_cmd(self.rsc_ban % (rsc, opts))
-        if rc == 0:
-            if node:
-                logger.info("Ban constraint created for %s on %s", rsc, node)
-            else:
-                logger.info("Ban constraint created for %s", rsc)
-        return rc == 0
+        return self.move_or_ban(context, rsc, *args)
 
     @command.alias('unmove', 'unban', 'unmigrate')
     @command.skill_level('administrator')
