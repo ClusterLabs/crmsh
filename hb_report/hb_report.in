@@ -20,6 +20,7 @@ def collect_for_nodes(nodes, arg_str):
     """
     Start slave collectors
     """
+    process_list = []
     for node in nodes.split():
         if utillib.node_needs_pwd(node):
             utillib.log_info("Please provide password for %s at %s" % (utillib.say_ssh_user(), node))
@@ -28,6 +29,8 @@ def collect_for_nodes(nodes, arg_str):
         else:
             p = multiprocessing.Process(target=utillib.start_slave_collector, args=(node, arg_str))
             p.start()
+            process_list.append(p)
+    for p in process_list:
             p.join()
 
 def dump_env():
