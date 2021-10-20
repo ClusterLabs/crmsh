@@ -8,11 +8,9 @@ import glob
 import gzip
 import multiprocessing
 import os
-import pwd
 import random
 import re
 import shutil
-import stat
 import string
 import subprocess
 import sys
@@ -21,9 +19,11 @@ import tempfile
 import contextlib
 from dateutil import tz
 from threading import Timer
+from inspect import getmembers, isfunction
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import constants
+import collect
 import crmsh.config
 from crmsh import utils as crmutils
 from crmsh import corosync
@@ -225,30 +225,6 @@ def check_permissions(workdir):
     return out_string
 
 
-def check_perms():
-    out_string = ""
-
-    for check_dir in [constants.PCMK_LIB, constants.PE_STATE_DIR, constants.CIB_DIR]:
-        flag = 0
-        out_string += "##### Check perms for %s: " % check_dir
-        stat_info = os.stat(check_dir)
-        if not stat.S_ISDIR(stat_info.st_mode):
-            flag = 1
-            out_string += "\n%s wrong type or doesn't exist\n" % check_dir
-            continue
-        if stat_info.st_uid != pwd.getpwnam('hacluster')[2] or\
-           stat_info.st_gid != pwd.getpwnam('hacluster')[3] or\
-           "%04o" % (stat_info.st_mode & 0o7777) != "0750":
-            flag = 1
-            out_string += "\nwrong permissions or ownership for %s: " % check_dir
-            out_string += get_command_info("ls -ld %s" % check_dir)[1] + '\n'
-        if flag == 0:
-            out_string += "OK\n"
-
-    perms_f = os.path.join(constants.WORKDIR, constants.PERMISSIONS_F)
-    crmutils.str2file(out_string, perms_f)
-
-
 def check_time(var, option):
     if not var:
         log_fatal("""bad time specification: %s
@@ -288,35 +264,37 @@ def cluster_info():
     return get_command_info("corosync -v")[1]
 
 
+def generate_collect_functions():
+    """
+    Generate function list from collect.py
+    """
+    return [func for func, _ in getmembers(collect, isfunction) if func.startswith("collect_")]
+
+
 def collect_info():
     """
     get all other info (config, stats, etc)
     """
-    process_list = []
-    process_list.append(multiprocessing.Process(target=sys_info))
-    process_list.append(multiprocessing.Process(target=sys_stats))
-    process_list.append(multiprocessing.Process(target=sbd_info))
-    process_list.append(multiprocessing.Process(target=get_pe_inputs))
-    process_list.append(multiprocessing.Process(target=crm_config))
-    process_list.append(multiprocessing.Process(target=touch_dc))
+    collect_func_list = generate_collect_functions()
+    # Make sure not to occupy all CPUs
+    pool = multiprocessing.Pool(round(0.8 * multiprocessing.cpu_count()))
+    # result here to store AsyncResult object returned from apply_async
+    # Then calling get() method will catch exceptions like NameError, AttributeError, etc.
+    # Otherwise parent process will not know these exceptions raised
+    # Calling get() right after apply_async will be blocked until child process finished, so
+    # need to append to a list firstly
+    result_list = []
+    for cf in collect_func_list:
+        result = pool.apply_async(getattr(collect, cf))
+        result_list.append(result)
+    pool.close()
+    pool.join()
 
-    for p in process_list[0:2]:
-        p.start()
-    get_config()
-    for p in process_list[2:]:
-        p.start()
-
-    get_backtraces()
-    get_configurations()
-    check_perms()
-    dlm_dump()
-    time_status()
-    corosync_blackbox()
-    get_ratraces()
-    dump_ocfs2()
-
-    for p in process_list:
-        p.join()
+    for result in result_list:
+        try:
+            result.get()
+        except Exception as err:
+            logger.error(str(err))
 
     logfile_list = []
     corosync_log = corosync.get_value('logging.logfile')
@@ -401,16 +379,6 @@ def consolidate(workdir, f):
         os.symlink("../%s" % f, os.path.join(workdir, n, f))
 
 
-def corosync_blackbox():
-    fdata_list = []
-    for f in find_files("/var/lib/corosync", constants.FROM_TIME, constants.TO_TIME):
-        if re.search("fdata", f):
-            fdata_list.append(f)
-    if fdata_list:
-        blackbox_f = os.path.join(constants.WORKDIR, constants.COROSYNC_RECORDER_F)
-        crmutils.str2file(get_command_info("corosync-blackbox")[1], blackbox_f)
-
-
 def create_tempfile(time=None):
     random_str = random_string(4)
     try:
@@ -420,22 +388,6 @@ def create_tempfile(time=None):
     if time:
         os.utime(filename, (time, time))
     return filename
-
-
-def crm_config():
-    workdir = constants.WORKDIR
-    if os.path.isfile(os.path.join(workdir, constants.CIB_F)):
-        cmd = r"CIB_file=%s/%s crm configure show" % (workdir, constants.CIB_F)
-        crmutils.str2file(get_command_info(cmd)[1], os.path.join(workdir, constants.CIB_TXT_F))
-
-
-def crm_info():
-    return get_command_info("%s/crmd version" % constants.CRM_DAEMON_DIR)[1]
-
-
-def crmsh_info():
-    res = grep("^Version", incmd="rpm -qi crmsh")
-    return res[0].split()[-1]
 
 
 def date():
@@ -464,24 +416,6 @@ def distro():
         if re.search("Description:", res):
             ret = ' '.join(res.split()[1:])
         return ret
-
-
-def dlm_dump():
-    """
-    get dlm info
-    """
-    if which("dlm_tool"):
-        out_string = "##### NOTICE - Lockspace overview:\n"
-        out_string += get_command_info("dlm_tool ls")[1] + '\n'
-        for item in grep("^name", incmd="dlm_tool ls"):
-            lock_name = item.split()[1]
-            out_string += "## NOTICE - Lockspace {}\n".format(lock_name)
-            out_string += get_command_info("dlm_tool lockdebug {}".format(lock_name))[1] + '\n'
-        out_string += "##### NOTICE - Lockspace history:\n"
-        out_string += get_command_info("dlm_tool dump")[1] + '\n'
-
-        dlm_f = os.path.join(constants.WORKDIR, constants.DLM_DUMP_F)
-        crmutils.str2file(out_string, dlm_f)
 
 
 def dump_log(logf, from_line, to_line):
@@ -768,18 +702,6 @@ def findln_by_time(data, ts):
     return middle
 
 
-def get_backtraces():
-    """
-    Check CORES_DIRS for core dumps within the report timeframe and
-    use gdb to get the backtraces
-    """
-    cores = find_files(constants.CORES_DIRS, constants.FROM_TIME, constants.TO_TIME)
-    flist = [f for f in cores if "core" in os.path.basename(f)]
-    if flist:
-        print_core_backtraces(flist)
-        log_debug("found backtraces: %s" % ' '.join(flist))
-
-
 def find_binary_for_core(corefile):
     """
     Given a core file, try to find the
@@ -883,30 +805,6 @@ def get_conf_var(option, default=None):
     return ret
 
 
-def get_config():
-    workdir = constants.WORKDIR
-    if os.path.isfile(constants.CONF):
-        shutil.copy2(constants.CONF, workdir)
-    if crmutils.is_process("pacemaker-controld") or crmutils.is_process("crmd"):
-        dump_state(workdir)
-        open(os.path.join(workdir, "RUNNING"), 'w')
-    else:
-        shutil.copy2(os.path.join(constants.CIB_DIR, constants.CIB_F), workdir)
-        open(os.path.join(workdir, "STOPPED"), 'w')
-    if os.path.isfile(os.path.join(workdir, constants.CIB_F)):
-        cmd = "crm_verify -V -x %s" % os.path.join(workdir, constants.CIB_F)
-        crmutils.str2file(get_command_info(cmd)[1], os.path.join(workdir, constants.CRM_VERIFY_F))
-
-
-def get_configurations():
-    workdir = constants.WORKDIR
-    for conf in constants.CONFIGURATIONS:
-        if os.path.isfile(conf):
-            shutil.copy2(conf, workdir)
-        elif os.path.isdir(conf):
-            shutil.copytree(conf, os.path.join(workdir, os.path.basename(conf)))
-
-
 def get_crm_daemon_dir():
     try:
         constants.CRM_DAEMON_DIR = crmsh.config.path.crm_daemon_dir
@@ -965,48 +863,6 @@ def get_nodes():
     return nodes
 
 
-def get_ratraces():
-    trace_dir = os.path.join(constants.HA_VARLIB, "trace_ra")
-    if not os.path.isdir(trace_dir):
-        return
-    log_debug("looking for RA trace files in %s" % trace_dir)
-    flist = []
-    for f in find_files(trace_dir, constants.FROM_TIME, constants.TO_TIME):
-        dest_dir = os.path.join(constants.WORKDIR, '/'.join(f.split('/')[-3:-1]))
-        crmutils.mkdirp(dest_dir)
-        shutil.copy2(f, dest_dir)
-
-
-def get_pe_inputs():
-    from_time = constants.FROM_TIME
-    to_time = constants.TO_TIME
-    work_dir = constants.WORKDIR
-    pe_dir = constants.PE_STATE_DIR
-    log_debug("looking for PE files in %s in %s" % (pe_dir, constants.WE))
-
-    flist = []
-    for f in find_files(pe_dir, from_time, to_time):
-        if re.search("[.]last$", f):
-            continue
-        flist.append(f)
-
-    if flist:
-        flist_dir = os.path.join(work_dir, os.path.basename(pe_dir))
-        _mkdir(flist_dir)
-        for f in flist:
-            os.symlink(f, os.path.join(flist_dir, os.path.basename(f)))
-        log_debug("found %d pengine input files in %s" % (len(flist), pe_dir))
-
-        if len(flist) <= 20:
-            if not constants.SKIP_LVL:
-                for f in flist:
-                    pe_to_dot(os.path.join(flist_dir, os.path.basename(f)))
-        else:
-            log_debug("too many PE inputs to create dot files")
-    else:
-        log_debug("Nothing found for the giving time")
-
-
 def get_peer_ip():
     local_ip = get_local_ip()
     peer_ip = []
@@ -1057,7 +913,7 @@ def get_pkg_mgr():
 
 def get_stamp_legacy(line):
     try:
-        res = crmutils.parse_time(line.split()[1])
+        res = crmutils.parse_time(line.split()[1], quiet=True)
     except:
         return None
     return res
@@ -1065,7 +921,7 @@ def get_stamp_legacy(line):
 
 def get_stamp_rfc5424(line):
     try:
-        res = crmutils.parse_time(line.split()[0])
+        res = crmutils.parse_time(line.split()[0], quiet=True)
     except:
         return None
     return res
@@ -1073,7 +929,7 @@ def get_stamp_rfc5424(line):
 
 def get_stamp_syslog(line):
     try:
-        res = crmutils.parse_time(' '.join(line.split()[0:3]))
+        res = crmutils.parse_time(' '.join(line.split()[0:3]), quiet=True)
     except:
         return None
     return res
@@ -1088,11 +944,11 @@ def get_ts(line):
             func = constants.GET_STAMP_FUNC
         if func:
             if func == "rfc5424":
-                ts = crmutils.parse_to_timestamp(line.split()[0])
+                ts = crmutils.parse_to_timestamp(line.split()[0], quiet=True)
             if func == "syslog":
-                ts = crmutils.parse_to_timestamp(' '.join(line.split()[0:3]))
+                ts = crmutils.parse_to_timestamp(' '.join(line.split()[0:3]), quiet=True)
             if func == "legacy":
-                ts = crmutils.parse_to_timestamp(line.split()[1])
+                ts = crmutils.parse_to_timestamp(line.split()[1], quiet=True)
     return ts
 
 
@@ -1466,24 +1322,6 @@ def say_ssh_user():
         return constants.SSH_USER
 
 
-def sbd_info():
-    """
-    save sbd configuration file
-    """
-    if os.path.exists(constants.SBDCONF):
-        shutil.copy2(constants.SBDCONF, constants.WORKDIR)
-
-    if not which("sbd"):
-        return
-    sbd_f = os.path.join(constants.WORKDIR, constants.SBD_F)
-    cmd = ". {};export SBD_DEVICE;{};{}".format(constants.SBDCONF, "sbd dump", "sbd list")
-    with open(sbd_f, "w") as f:
-        _, out = crmutils.get_stdout(cmd)
-        f.write("\n\n#=====[ Command ] ==========================#\n")
-        f.write("# %s\n"%(cmd))
-        f.write(out)
-
-
 def sed_inplace(filename, pattern, repl):
     out_string = ""
 
@@ -1560,49 +1398,6 @@ def str_to_bool(v):
     return v.lower() in ["true"]
 
 
-def sys_info():
-    """
-    some basic system info and stats
-    """
-    out_string = "#####Cluster info:\n"
-    out_string += cluster_info()
-    out_string += crmsh_info()
-    out_string += ra_build_info()
-    out_string += crm_info()
-    out_string += booth_info()
-    out_string += "\n"
-    out_string += "#####Cluster related packages:\n"
-    out_string += pkg_versions(constants.PACKAGES)
-    if not constants.SKIP_LVL:
-        out_string += verify_packages(constants.PACKAGES)
-    out_string += "\n"
-    out_string += "#####System info:\n"
-    out_string += "Platform: %s\n" % os.uname()[0]
-    out_string += "Kernel release: %s\n" % os.uname()[2]
-    out_string += "Architecture: %s\n" % os.uname()[-1]
-    if os.uname()[0] == "Linux":
-        out_string += "Distribution: %s\n" % distro()
-
-    sys_info_f = os.path.join(constants.WORKDIR, constants.SYSINFO_F)
-    crmutils.str2file(out_string, sys_info_f)
-
-
-def sys_stats():
-    out_string = ""
-    cmd_list = ["hostname", "uptime", "ps axf", "ps auxw", "top -b -n 1",
-                "ip addr", "ip -s link", "ip n show", "lsscsi", "lspci",
-                "mount", "cat /proc/cpuinfo", "df"]
-    for cmd in cmd_list:
-        out_string += "##### run \"%s\" on %s\n" % (cmd, constants.WE)
-        if cmd != "df":
-            out_string += get_command_info(cmd)[1] + '\n'
-        else:
-            out_string += get_command_info_timeout(cmd) + '\n'
-
-    sys_stats_f = os.path.join(constants.WORKDIR, constants.SYSSTATS_F)
-    crmutils.str2file(out_string, sys_stats_f)
-
-
 def tail(n, indata):
     return indata.split('\n')[-n:]
 
@@ -1614,16 +1409,6 @@ def test_ssh_conn(addr):
         return True
     else:
         return False
-
-
-def time_status():
-    out_string = "Time: "
-    out_string += datetime.datetime.now().strftime('%c') + '\n'
-    out_string += "ntpdc: "
-    out_string += get_command_info("ntpdc -pn")[1] + '\n'
-
-    time_f = os.path.join(constants.WORKDIR, constants.TIME_F)
-    crmutils.str2file(out_string, time_f)
 
 
 def dump_D_process():
@@ -1659,45 +1444,6 @@ def lsof_ocfs2_device():
         if cmd_out:
             out_string += cmd_out
     return out_string
-
-
-def dump_ocfs2():
-    ocfs2_f = os.path.join(constants.WORKDIR, constants.OCFS2_F)
-    with open(ocfs2_f, "w") as f:
-        rc, out, err = crmutils.get_stdout_stderr("mounted.ocfs2 -d")
-        if rc != 0:
-            f.write("Failed to run \"mounted.ocfs2 -d\": {}".format(err))
-            return
-        # No ocfs2 device, just header line printed
-        elif len(out.split('\n')) == 1:
-            f.write("No ocfs2 partitions found")
-            return
-
-        f.write(dump_D_process())
-        f.write(lsof_ocfs2_device())
-
-        cmds = [ "dmesg",  "ps -efL",
-                "lsblk -o 'NAME,KNAME,MAJ:MIN,FSTYPE,LABEL,RO,RM,MODEL,SIZE,OWNER,GROUP,MODE,ALIGNMENT,MIN-IO,OPT-IO,PHY-SEC,LOG-SEC,ROTA,SCHED,MOUNTPOINT'",
-                "mounted.ocfs2 -f", "findmnt", "mount",
-                "cat /sys/fs/ocfs2/cluster_stack"
-                ]
-        for cmd in cmds:
-            cmd_name = cmd.split()[0]
-            if not which(cmd_name) or \
-               cmd_name == "cat" and not os.path.exists(cmd.split()[1]):
-                continue
-            _, out = crmutils.get_stdout(cmd)
-            f.write("\n\n#=====[ Command ] ==========================#\n")
-            f.write("# %s\n"%(cmd))
-            f.write(out)
-
-
-def touch_dc():
-    if constants.SKIP_LVL:
-        return
-    node = crmutils.get_dc()
-    if node and node == constants.WE:
-        open(os.path.join(constants.WORKDIR, "DC"), 'w')
 
 
 def touch_r(src, dst):
