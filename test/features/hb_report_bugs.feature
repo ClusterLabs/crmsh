@@ -44,7 +44,7 @@ Feature: hb_report functional test for verifying bugs
 
   @clean
   Scenario: Collect corosync.log(bsc#1148874)
-    When    Run "sed -i 's/\(\s*logfile:\s*\).*/\1\/var\/log\/cluster\/corosync.log/' /etc/corosync/corosync.conf" on "hanode1"
+    When    Run "sed -i 's/\(\s+logfile:\s+\).*/\1\/var\/log\/cluster\/corosync.log/' /etc/corosync/corosync.conf" on "hanode1"
     And     Run "hb_report report" on "hanode1"
     And     Run "tar jxf report.tar.bz2" on "hanode1"
     Then    File "corosync.log" not in "report.tar.bz2"
@@ -56,7 +56,7 @@ Feature: hb_report functional test for verifying bugs
     And     Run "hb_report report" on "hanode1"
     And     Run "tar jxf report.tar.bz2" on "hanode1"
     Then    File "corosync.log" in "report.tar.bz2"
-    When    Run "rm -rf report.tar.gz report" on "hanode1"
+    When    Run "rm -rf report.tar.bz2 report" on "hanode1"
 
   @clean
   Scenario: Replace sensitive data(bsc#1163581)

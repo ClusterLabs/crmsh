@@ -56,7 +56,7 @@ install-data-hook:
 	cp test/testcases/xmlonly.sh $(DESTDIR)$(datadir)/@PACKAGE@/tests/testcases/configbasic-xml.filter
 
 hanoarchdir = $(datadir)/@PACKAGE@/hb_report
-hanoarch_DATA = hb_report/constants.py hb_report/utillib.py
+hanoarch_DATA = hb_report/constants.py hb_report/utillib.py hb_report/collect.py
 hanoarch_SCRIPTS = hb_report/hb_report
 EXTRA_DIST = $(hanoarch_DATA)
 
