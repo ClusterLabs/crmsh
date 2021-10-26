@@ -26,7 +26,7 @@ import collections
 KEY, PREV, NEXT = list(range(3))
 
 
-class OrderedSet(collections.MutableSet):
+class OrderedSet(collections.abc.MutableSet):
 
     def __init__(self, iterable=None):
         self.end = end = []
