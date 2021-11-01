@@ -24,9 +24,9 @@ _LOG_FILES = ("ha-log.txt", "messages", "ha-log", "cluster-log.txt", "journal.lo
 
 
 #
-# hb_report interface
+# crm report interface
 #
-# read hb_report generated report, show interesting stuff, search
+# read crm report generated report, show interesting stuff, search
 # through logs, get PE input files, get log slices (perhaps even
 # coloured nicely!)
 #
@@ -122,9 +122,9 @@ CH_SRC, CH_TIME, CH_UPD = 1, 2, 3
 
 class Report(object):
     '''
-    A hb_report class.
+    A crm report class.
     '''
-    live_recent = 6*60*60   # recreate live hb_report once every 6 hours
+    live_recent = 6*60*60   # recreate live crm report once every 6 hours
     short_live_recent = 60  # update once a minute
     nodecolors = ("NORMAL",
                   "GREEN",
@@ -191,7 +191,7 @@ class Report(object):
 
     def unpack_report(self, tarball):
         '''
-        Unpack hb_report tarball.
+        Unpack crm report tarball.
         Don't unpack if the directory already exists!
         '''
         bfname = os.path.basename(tarball)
@@ -458,12 +458,7 @@ class Report(object):
         '''
         Run the report command to get logs now.
         '''
-        from . import ui_report
-
-        extcmd = ui_report.report_tool()
-        if extcmd is None:
-            self.error("No reporting tool found")
-            return None
+        extcmd = "crm report"
 
         d = self._live_loc()
         if not utils.is_path_sane(d):
@@ -559,7 +554,7 @@ class Report(object):
 
     def _report_setup_source(self):
         constants.pcmk_version = None
-        # is this an hb_report or a crm_report?
+        # is this an crm report or a crm_report?
         for descname in ("description.txt", "report.summary"):
             self.desc = os.path.join(self.loc, descname)
             if os.path.isfile(self.desc):

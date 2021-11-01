@@ -1107,7 +1107,7 @@ def log_warning(msg):
 
 
 def make_temp_dir():
-    dir_path = r"/tmp/.hb_report.workdir.%s" % random_string(6)
+    dir_path = r"/tmp/.crm_report.workdir.%s" % random_string(6)
     _mkdir(dir_path)
     return dir_path
 
@@ -1362,12 +1362,12 @@ def stdchannel_redirected(stdchannel, dest_filename):
 
 def start_slave_collector(node, arg_str):
     if node == constants.WE:
-        cmd = r"/usr/sbin/hb_report __slave".format(os.getcwd())
+        cmd = r"crm report __slave".format(os.getcwd())
         for item in arg_str.split():
             cmd += " {}".format(str(item))
         _, out = crmutils.get_stdout(cmd)
     else:
-        cmd = r'ssh {} {} "/usr/sbin/hb_report __slave"'.format(constants.SSH_OPTS, node, os.getcwd())
+        cmd = r'ssh {} {} "crm report __slave"'.format(constants.SSH_OPTS, node, os.getcwd())
         for item in arg_str.split():
             cmd += " {}".format(str(item))
         code, out, err = crmutils.get_stdout_stderr(cmd)
@@ -1384,7 +1384,7 @@ def start_slave_collector(node, arg_str):
     compress_data = ""
     for data in out.split('\n'):
         if data.startswith(constants.COMPRESS_DATA_FLAG):
-            # hb_report data from collector
+            # crm report data from collector
             compress_data = data.lstrip(constants.COMPRESS_DATA_FLAG)
         else:
             # log data from collector

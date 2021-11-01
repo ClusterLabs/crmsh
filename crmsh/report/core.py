@@ -99,7 +99,7 @@ def get_log():
 
 def is_collector():
     """
-    the instance where user runs hb_report is the master
+    the instance where user runs crm report is the master
     the others are slaves
     """
     if len(sys.argv) > 1 and sys.argv[1] == "__slave":
@@ -142,7 +142,7 @@ def parse_argument(argv):
 
     if len(arg) == 0:
         constants.DESTDIR = "."
-        constants.DEST = "hb_report-%s" % datetime.datetime.now().strftime('%a-%d-%b-%Y')
+        constants.DEST = "crm_report-%s" % datetime.datetime.now().strftime('%a-%d-%b-%Y')
     elif len(arg) == 1:
         constants.TMP = arg[0]
     else:

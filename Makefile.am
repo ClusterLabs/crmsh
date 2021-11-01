@@ -55,11 +55,6 @@ install-data-hook:
 	mv $(DESTDIR)$(datadir)/@PACKAGE@/test $(DESTDIR)$(datadir)/@PACKAGE@/tests; \
 	cp test/testcases/xmlonly.sh $(DESTDIR)$(datadir)/@PACKAGE@/tests/testcases/configbasic-xml.filter
 
-hanoarchdir = $(datadir)/@PACKAGE@/hb_report
-hanoarch_DATA = hb_report/constants.py hb_report/utillib.py hb_report/collect.py
-hanoarch_SCRIPTS = hb_report/hb_report
-EXTRA_DIST = $(hanoarch_DATA)
-
 # Python module installation
 all-local:
 	(cd $(srcdir); $(PYTHON) setup.py build \

@@ -54,7 +54,6 @@ AC_PATH_PROGS(ASCIIDOC, asciidoc)
 AM_CONDITIONAL(BUILD_ASCIIDOC, test x"${ASCIIDOC}" != x"")
 
 AC_CONFIG_FILES(Makefile \
-hb_report/hb_report      \
 etc/crm.conf             \
 version                  \
 crmsh.spec               \
