@@ -4,6 +4,7 @@ import os
 import datetime
 from behave import given, when, then
 from crmsh import corosync, parallax
+from crmsh import utils as crmutils
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
                   run_command_local_or_remote, file_in_archive
 import const
@@ -146,6 +147,16 @@ def step_impl(context, name, state, addr):
 @then('Online nodes are "{nodelist}"')
 def step_impl(context, nodelist):
     assert online(context, nodelist) is True
+
+
+@then('Node "{node}" is standby')
+def step_impl(context, node):
+    assert crmutils.is_standby(node) is True
+
+
+@then('Node "{node}" is online')
+def step_impl(context, node):
+    assert crmutils.is_standby(node) is False
 
 
 @then('IP "{addr}" is used by corosync on "{node}"')
