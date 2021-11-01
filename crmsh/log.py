@@ -47,9 +47,11 @@ class ConsoleCustomFormatter(logging.Formatter):
     FORMAT = "%(levelname)s: %(message)s"
     FORMAT_RAW = "%(message)s"
 
-    def __init__(self, lineno=-1, raw_msg=False):
+    def __init__(self, lineno=-1, raw_msg=False, fmt=None):
         self.lineno = lineno
-        if raw_msg:
+        if fmt:
+            super().__init__(fmt=fmt)
+        elif raw_msg:
             super().__init__(fmt=self.FORMAT_RAW)
         else:
             super().__init__(fmt=self.FORMAT)
@@ -65,6 +67,16 @@ class ConsoleCustomFormatter(logging.Formatter):
             record.msg = "{}: {}".format(self.lineno, msg)
             record.levelname = levelname
         return super().format(record)
+
+
+class ConsoleReportFormatter(ConsoleCustomFormatter):
+    """
+    Custom formatter for crm report
+    """
+    FORMAT_REPORT = "{}: %(levelname)s: %(message)s".format(socket.gethostname())
+
+    def __init__(self):
+        super().__init__(fmt=self.FORMAT_REPORT)
 
 
 class FileCustomFormatter(logging.Formatter):
@@ -83,9 +95,11 @@ class DebugCustomFilter(logging.Filter):
     A custom filter for debug message
     """
     def filter(self, record):
+        from .config import core, report
         if record.levelname == "DEBUG":
-            from .config import core
-            return core.debug
+            return core.debug or int(report.verbosity) >= 1
+        if record.levelname == "DEBUG2":
+            return int(report.verbosity) > 1
         else:
             return True
 
@@ -94,6 +108,9 @@ LOGGING_CFG = {
     "version": 1,
     "disable_existing_loggers": "False",
     "formatters": {
+        "console_report": {
+            "()": ConsoleReportFormatter
+        },
         "console": {
             "()": ConsoleCustomFormatter
         },
@@ -109,6 +126,11 @@ LOGGING_CFG = {
     "handlers": {
         'null': {
             'class': 'logging.NullHandler'
+        },
+        "console_report": {
+            "()": ConsoleCustomHandler,
+            "formatter": "console_report",
+            "filters": ["filter"]
         },
         "console": {
             "()": ConsoleCustomHandler,
@@ -139,8 +161,8 @@ LOGGING_CFG = {
             "propagate": False,
             "level": "DEBUG"
         },
-        "hb_report": {
-            "handlers": ["null", "file", "console"],
+        "crmsh.report": {
+            "handlers": ["null", "file", "console_report"],
             "propagate": False,
             "level": "DEBUG"
         }
@@ -162,6 +184,14 @@ class LoggerUtils(object):
         # used in regression test
         self.lineno = 0
         self.__save_lineno = 0
+
+    def set_debug2_level(self):
+        """
+        Create DEBUG2 level for verbosity
+        """
+        logging.DEBUG2 = logging.DEBUG + 5
+        logging.addLevelName(logging.DEBUG2, "DEBUG2")
+        self.logger.debug2 = lambda msg, *args: self.logger._log(logging.DEBUG2, msg, args)
 
     def get_handler(self, _type):
         """
@@ -200,7 +230,7 @@ class LoggerUtils(object):
         """
         self.lineno += 1
         self.set_console_formatter(self.lineno)
-  
+
     @contextmanager
     def suppress_new_line(self):
         """
@@ -420,4 +450,14 @@ def setup_logger(name):
     logger = logging.getLogger(name)
     logger.handlers = logger.parent.handlers
     logger.propagate = False
+    return logger
+
+
+def setup_report_logger(name):
+    """
+    Get the logger for crm report
+    """
+    logger = setup_logger(name)
+    logger_utils = LoggerUtils(logger)
+    logger_utils.set_debug2_level()
     return logger

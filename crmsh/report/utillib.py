@@ -21,30 +21,25 @@ from dateutil import tz
 from threading import Timer
 from inspect import getmembers, isfunction
 
-sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-import constants
-import collect
 import crmsh.config
 from crmsh import utils as crmutils
-from crmsh import corosync
-from crmsh import log
-import logging
+from crmsh import corosync, log
+from crmsh.report import constants, collect
 
 
-log.setup_logging()
-logger = logging.getLogger("hb_report")
+logger = log.setup_report_logger(__name__)
 
 
 class Tempfile(object):
 
     def __init__(self):
         self.file = create_tempfile()
-        log_debug("create tempfile \"{}\"".format(self.file))
+        logger.debug("create tempfile \"%s\"", self.file)
 
     def add(self, filename):
         with open(self.file, 'a') as f:
             f.write(filename + '\n')
-        log_debug("add tempfile \"{}\" to \"{}\"".format(filename, self.file))
+        logger.debug("add tempfile \"%s\" to \"%s\"", filename, self.file)
 
     def drop(self):
         with open(self.file, 'r') as f:
@@ -54,7 +49,7 @@ class Tempfile(object):
                 if os.path.isfile(line):
                     os.remove(line)
         os.remove(self.file)
-        log_debug("remove tempfile \"{}\"".format(self.file))
+        logger.debug("remove tempfile \"%s\"", self.file)
 
 
 def add_tempfiles(filename):
@@ -93,12 +88,12 @@ def arch_logs(logf, from_time, to_time):
             continue
         elif res == 1: # include log and continue
             ret.append(f)
-            log_debug("found log %s" % f)
+            logger.debug("found log %s", f)
         elif res == 2: # don't go through older logs!
             break
         elif res == 3: # include log and continue
             ret.append(f)
-            log_debug("found log %s" % f)
+            logger.debug("found log %s", f)
             break
     return ret
 
@@ -196,7 +191,7 @@ def check_env():
 def check_if_log_is_empty():
     for f in find_files_all(constants.HALOG_F, constants.WORKDIR):
         if os.stat(f).st_size == 0:
-            log_warning("Report contains no logs; did you get the right timeframe?")
+            logger.warning("Report contains no logs; did you get the right timeframe?")
 
 
 def check_logs(workdir):
@@ -253,7 +248,7 @@ def cib_diff(file1, file2):
             out_string += tmp_string
         else:
             code = 1
-            log_warning("crm_diff(8) not found, cannot diff CIBs")
+            logger.warning("crm_diff(8) not found, cannot diff CIBs")
     else:
         code = 1
         out_string += "can't compare cibs from running and stopped systems\n"
@@ -309,7 +304,7 @@ def collect_info():
             os.symlink(constants.HALOG_F, os.path.join(constants.WORKDIR, os.path.basename(l)))
             continue
         if is_our_log(l, constants.FROM_TIME, constants.TO_TIME) == 4:
-            log_debug("found irregular log file %s" % l)
+            logger.debug("found irregular log file %s", l)
             outf = os.path.join(constants.WORKDIR, os.path.basename(l))
             shutil.copy2(l, constants.WORKDIR)
             log_size(l, outf+'.info')
@@ -321,12 +316,12 @@ def collect_info():
             if dump_logset(l, constants.FROM_TIME, constants.TO_TIME, outf):
                 log_size(l, outf+'.info')
         else:
-            log_warning("could not figure out the log format of %s" % l)
+            logger.warning("could not figure out the log format of %s", l)
 
 
 def collect_journal(from_t, to_t, outf):
     if not which("journalctl"):
-        log_warning("Command journalctl not found")
+        logger.warning("Command journalctl not found")
         return
 
     if crmutils.is_int(from_t) and from_t == 0:
@@ -338,10 +333,10 @@ def collect_journal(from_t, to_t, outf):
     elif crmutils.is_int(to_t):
         to_time = ts_to_dt(to_t).strftime("%Y-%m-%d %H:%M")
     if os.path.isfile(outf):
-        log_warning("%s already exists" % outf)
+        logger.warning("%s already exists", outf)
 
-    log_debug("journalctl from: '%d' until: '%d' from_time: '%s' to_time: '%s' > %s" %
-              (from_t, to_t, from_time, to_time, outf))
+    logger.debug("journalctl from: '%d' until: '%d' from_time: '%s' to_time: '%s' > %s",
+              from_t, to_t, from_time, to_time, outf)
     cmd = 'journalctl -o short-iso --since "%s" --until "%s" --no-pager | tail -n +2' % \
           (from_time, to_time)
     crmutils.str2file(get_command_info(cmd)[1], outf)
@@ -359,7 +354,7 @@ def compatibility_pcmk():
         log_fatal("cannot find cib daemon directory!")
 
     constants.PCMK_LIB = os.path.dirname(constants.CIB_DIR)
-    log_debug("setting PCMK_LIB to %s" % constants.PCMK_LIB)
+    logger.debug("setting PCMK_LIB to %s", constants.PCMK_LIB)
     constants.CORES_DIRS = os.path.join(constants.PCMK_LIB, "cores")
     constants.CONF = "/etc/corosync/corosync.conf"
     if os.path.isfile(constants.CONF):
@@ -411,7 +406,7 @@ def distro():
     """
     ret = ""
     if which("lsb_release"):
-        log_debug("using lsb_release for distribution info")
+        logger.debug("using lsb_release for distribution info")
         res = get_command_info("lsb_release -d")[1]
         if re.search("Description:", res):
             ret = ' '.join(res.split()[1:])
@@ -448,7 +443,7 @@ def dump_logset(logf, from_time, to_time, outf):
         out_string += print_logseg(oldest, from_time, 0)
         for f in mid_logfiles:
             out_string += print_logseg(f, 0, 0)
-            log_debug("including complete %s logfile" % f)
+            logger.debug("including complete %s logfile", f)
         out_string += print_logseg(newest, 0, to_time)
 
     crmutils.str2file(out_string, outf)
@@ -501,7 +496,7 @@ def find_files(dirs, from_time, to_time):
     res = []
 
     if (not crmutils.is_int(from_time)) or (from_time <= 0):
-        log_warning("sorry, can't find files based on time if you don't supply time")
+        logger.warning("sorry, can't find files based on time if you don't supply time")
         return
 
     file_with_stamp = create_tempfile(from_time)
@@ -551,17 +546,15 @@ def filter_lines(data, from_line, to_line):
 
 def finalword():
     if constants.COMPRESS == 1:
-        log_info("The report is saved in %s/%s.tar%s" % (constants.DESTDIR, constants.DEST, constants.COMPRESS_EXT))
+        logger.info("The report is saved in %s/%s.tar%s", constants.DESTDIR, constants.DEST, constants.COMPRESS_EXT)
     else:
-        log_info("The report is saved in %s/%s" % (constants.DESTDIR, constants.DEST))
+        logger.info("The report is saved in %s/%s", constants.DESTDIR, constants.DEST)
     if constants.TO_TIME == 0:
         to_time = datetime.datetime.now().strftime("%x %X")
     else:
         to_time = ts_to_dt(constants.TO_TIME).strftime("%x %X")
-    log_info("Report timespan: %s - %s" %
-             (ts_to_dt(constants.FROM_TIME).strftime("%x %X"),
-              to_time))
-    log_info("Thank you for taking time to create this report.")
+    logger.info("Report timespan: %s - %s", ts_to_dt(constants.FROM_TIME).strftime("%x %X"), to_time)
+    logger.info("Thank you for taking time to create this report.")
 
 
 def find_getstampproc(log_file):
@@ -585,17 +578,17 @@ def find_getstampproc_raw(line):
     res = get_stamp_syslog(line)
     if res:
         func = "syslog"
-        log_debug("the log file is in the syslog format")
+        logger.debug("the log file is in the syslog format")
         return func
     res = get_stamp_rfc5424(line)
     if res:
         func = "rfc5424"
-        log_debug("the log file is in the rfc5424 format")
+        logger.debug("the log file is in the rfc5424 format")
         return func
     res = get_stamp_legacy(line)
     if res:
         func = "legacy"
-        log_debug("the log file is in the legacy format (please consider switching to syslog format)")
+        logger.debug("the log file is in the legacy format (please consider switching to syslog format)")
         return func
     return func
 
@@ -619,7 +612,7 @@ def find_log():
                 return l
 
     if constants.HA_DEBUGFILE:
-        log_debug("will try with %s" % constants.HA_DEBUGFILE)
+        logger.debug("will try with %s", constants.HA_DEBUGFILE)
     return constants.HA_DEBUGFILE
 
 
@@ -641,18 +634,18 @@ def find_ssh_user():
                 ssh_s = n
 
             if test_ssh_conn(ssh_s):
-                log_debug("ssh %s OK" % ssh_s)
+                logger.debug("ssh %s OK", ssh_s)
                 ssh_user = u
                 try_user_list = u
                 rc = 0
                 break
             else:
-                log_debug("ssh %s failed" % ssh_s)
+                logger.debug("ssh %s failed", ssh_s)
         if rc == 1:
             constants.SSH_PASSWORD_NODES += " %s" % n
 
     if constants.SSH_PASSWORD_NODES:
-        log_warning("passwordless ssh to node(s) %s does not work" % constants.SSH_PASSWORD_NODES)
+        logger.warning("passwordless ssh to node(s) %s does not work", constants.SSH_PASSWORD_NODES)
     if ssh_user == "__undef":
         return
     if ssh_user != "__default":
@@ -732,9 +725,9 @@ def find_binary_for_core(corefile):
             fname = m.group(1)
             binname = findbin(fname)
     if binname is not None:
-        log_debug("found the program at {} for core {}".format(testpath, corefile))
+        logger.debug("found the program at %s for core %s", testpath, corefile)
     else:
-        log_warning("Could not find the program path for core {}".format(corefile))
+        logger.warning("Could not find the program path for core %s", corefile)
     return binname
 
 
@@ -744,7 +737,7 @@ def print_core_backtraces(flist):
     flist: names of core files to check
     """
     if not which("gdb"):
-        log_warning("Please install gdb to get backtraces")
+        logger.warning("Please install gdb to get backtraces")
         return
     for corefile in flist:
         absbinpath = find_binary_for_core(corefile)
@@ -839,8 +832,8 @@ def get_log_vars():
     elif is_conf_set("to_syslog"):
         constants.HA_LOGFACILITY = get_conf_var("syslog_facility", default="daemon")
 
-    log_debug("log settings: facility=%s logfile=%s debugfile=%s" %
-              (constants.HA_LOGFACILITY, constants.HA_LOGFILE, constants.HA_DEBUGFILE))
+    logger.debug("log settings: facility=%s logfile=%s debugfile=%s",
+              constants.HA_LOGFACILITY, constants.HA_LOGFILE, constants.HA_DEBUGFILE)
 
 
 def get_nodes():
@@ -906,7 +899,7 @@ def get_pkg_mgr():
     elif which("pkginfo"):
         pkg_mgr = "pkginfo"
     else:
-        log_warning("Unknown package manager!")
+        logger.warning("Unknown package manager!")
 
     return pkg_mgr
 
@@ -1046,7 +1039,7 @@ def is_our_log(logf, from_time, to_time):
     """
     data = read_from_file(logf)
     if not data:
-        log_debug("Found empty file \"{}\"; exclude".format(logf))
+        logger.debug("Found empty file \"%s\"; exclude", logf)
         return 0
     first_time = find_first_ts(head(10, data))
     last_time = find_first_ts(tail(10, data))
@@ -1082,15 +1075,6 @@ def load_ocf_dirs():
     constants.HA_BIN = grep("HA_BIN:=", infile=inf)[0].split(':=')[1].strip('}')
 
 
-def log_debug(msg):
-    if constants.VERBOSITY > 0 or crmsh.config.core.debug:
-        logger.info(msg)
-
-
-def log_info(msg):
-    logger.info(msg)
-
-
 def log_fatal(msg):
     logger.error(msg)
     sys.exit(1)
@@ -1100,10 +1084,6 @@ def log_size(logf, outf):
     l_size = os.stat(logf).st_size + 1
     out_string = "%s %d" % (logf, l_size)
     crmutils.str2file(out_string, outf)
-
-
-def log_warning(msg):
-    logger.warning(msg)
 
 
 def make_temp_dir():
@@ -1145,7 +1125,7 @@ def pe_to_dot(pe_file):
     cmd = "%s -D %s -x %s" % (constants.PTEST, dotf, pe_file)
     code, _ = crmutils.get_stdout(cmd)
     if code != 0:
-        log_warning("pe_to_dot: %s -> %s failed" % (pe_file, dotf))
+        logger.warning("pe_to_dot: %s -> %s failed", pe_file, dotf)
 
 
 def pick_compress():
@@ -1158,7 +1138,7 @@ def pick_compress():
         else:
             constants.COMPRESS_EXT = ".gz"
     else:
-        log_warning("could not find a compression program; \
+        logger.warning("could not find a compression program; \
                      the resulting tarball may be huge")
         constants.COMPRESS_PROG = "cat"
 
@@ -1208,7 +1188,7 @@ def pkg_versions(packages):
     pkg_mgr = get_pkg_mgr()
     if not pkg_mgr:
         return ""
-    log_debug("the package manager is %s" % pkg_mgr)
+    logger.debug("the package manager is %s", pkg_mgr)
     if pkg_mgr == "deb":
         return pkg_ver_deb(packages)
     if pkg_mgr == "rpm":
@@ -1246,7 +1226,7 @@ def print_logseg(logf, from_time, to_time):
         if to_line is None:
             return ""
 
-    log_debug("Including segment [{}-{}] from {}".format(from_line, to_line, logf))
+    logger.debug("Including segment [%d-%d] from %s", from_line, to_line, logf)
     return filter_lines(data, from_line, to_line)
 
 
@@ -1271,7 +1251,7 @@ def sanitize():
     """
     replace sensitive info with '****'
     """
-    log_debug("Check or replace sensitive info from cib, pe and log files")
+    logger.debug("Check or replace sensitive info from cib, pe and log files")
 
     get_sensitive_key_value_list()
 
@@ -1284,8 +1264,8 @@ def sanitize():
     for f in [item for item in file_list if os.path.isfile(item)]:
         rc = sanitize_one(f)
         if rc == 1:
-            log_warning("Some PE/CIB/log files contain possibly sensitive data")
-            log_warning("Using \"-s\" option can replace sensitive data")
+            logger.warning("Some PE/CIB/log files contain possibly sensitive data")
+            logger.warning("Using \"-s\" option can replace sensitive data")
             break
 
 
@@ -1300,7 +1280,7 @@ def sanitize_one(in_file):
         return
     if not constants.DO_SANITIZE:
         return 1
-    log_debug("Replace sensitive info for {}".format(in_file))
+    logger.debug("Replace sensitive info for %s", in_file)
     write_to_file(in_file, sub_sensitive_string(data))
 
 
@@ -1372,13 +1352,13 @@ def start_slave_collector(node, arg_str):
             cmd += " {}".format(str(item))
         code, out, err = crmutils.get_stdout_stderr(cmd)
         if code != 0:
-            log_warning(err)
+            logger.warning(err)
             for ip in get_peer_ip():
-                log_info("Trying connect by %s" % ip)
+                logger.info("Trying connect by %s", ip)
                 cmd = cmd.replace(node, ip, 1)
                 code, out, err = crmutils.get_stdout_stderr(cmd)
                 if code != 0:
-                    log_warning(err)
+                    logger.warning(err)
                 break
 
     compress_data = ""
@@ -1451,7 +1431,7 @@ def touch_r(src, dst):
     like shell command "touch -r src dst"
     """
     if not os.path.exists(src):
-        log_warning("In touch_r function, %s not exists" % src)
+        logger.warning("In touch_r function, %s not exists", src)
         return
     stat_info = os.stat(src)
     os.utime(dst, (stat_info.st_atime, stat_info.st_mtime))
@@ -1557,7 +1537,7 @@ def get_sensitive_key_value_list():
                 constants.SANITIZE_VALUE_CIB += extract_sensitive_value_list(key)
                 constants.SANITIZE_KEY_CIB.append(key.strip('.*?')+'.*?')
         except (FileNotFoundError, EOFError) as e:
-            log_warning(e)
+            logger.warning(e)
 
 
 def extract_sensitive_value_list(rule):

@@ -10,11 +10,12 @@ import stat
 import pwd
 import datetime
 
-sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-
-import constants
-import utillib
+from crmsh import log
 from crmsh import utils as crmutils
+from crmsh.report import constants, utillib
+
+
+logger = log.setup_report_logger(__name__)
 
 
 def collect_ocfs2_info():
@@ -52,7 +53,7 @@ def collect_ratraces():
     trace_dir = os.path.join(constants.HA_VARLIB, "trace_ra")
     if not os.path.isdir(trace_dir):
         return
-    utillib.log_debug("looking for RA trace files in %s" % trace_dir)
+    logger.debug("looking for RA trace files in %s", trace_dir)
     flist = []
     for f in utillib.find_files(trace_dir, constants.FROM_TIME, constants.TO_TIME):
         dest_dir = os.path.join(constants.WORKDIR, '/'.join(f.split('/')[-3:-1]))
@@ -140,7 +141,7 @@ def collect_backtraces():
     flist = [f for f in cores if "core" in os.path.basename(f)]
     if flist:
         utillib.print_core_backtraces(flist)
-        utillib.log_debug("found backtraces: %s" % ' '.join(flist))
+        logger.debug("found backtraces: %s", ' '.join(flist))
 
 
 def collect_config():
@@ -178,7 +179,7 @@ def collect_pe_inputs():
     to_time = constants.TO_TIME
     work_dir = constants.WORKDIR
     pe_dir = constants.PE_STATE_DIR
-    utillib.log_debug("looking for PE files in %s in %s" % (pe_dir, constants.WE))
+    logger.debug("looking for PE files in %s in %s", pe_dir, constants.WE)
 
     flist = []
     for f in utillib.find_files(pe_dir, from_time, to_time):
@@ -191,16 +192,16 @@ def collect_pe_inputs():
         utillib._mkdir(flist_dir)
         for f in flist:
             os.symlink(f, os.path.join(flist_dir, os.path.basename(f)))
-        utillib.log_debug("found %d pengine input files in %s" % (len(flist), pe_dir))
+        logger.debug("found %d pengine input files in %s", len(flist), pe_dir)
 
         if len(flist) <= 20:
             if not constants.SKIP_LVL:
                 for f in flist:
                     utillib.pe_to_dot(os.path.join(flist_dir, os.path.basename(f)))
         else:
-            utillib.log_debug("too many PE inputs to create dot files")
+            logger.debug("too many PE inputs to create dot files")
     else:
-        utillib.log_debug("Nothing found for the giving time")
+        logger.debug("Nothing found for the giving time")
 
 
 def collect_sbd_info():

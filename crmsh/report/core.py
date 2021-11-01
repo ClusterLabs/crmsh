@@ -10,11 +10,13 @@ import sys
 import datetime
 import shutil
 
-sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-import constants
-import utillib
 from crmsh import utils as crmutils
-from crmsh import config
+from crmsh import config, log
+from crmsh.report import constants, utillib
+
+
+logger = log.setup_report_logger(__name__)
+
 
 def collect_for_nodes(nodes, arg_str):
     """
@@ -23,8 +25,8 @@ def collect_for_nodes(nodes, arg_str):
     process_list = []
     for node in nodes.split():
         if utillib.node_needs_pwd(node):
-            utillib.log_info("Please provide password for %s at %s" % (utillib.say_ssh_user(), node))
-            utillib.log_info("Note that collecting data will take a while.")
+            logger.info("Please provide password for %s at %s", utillib.say_ssh_user(), node)
+            logger.info("Note that collecting data will take a while.")
             utillib.start_slave_collector(node, arg_str)
         else:
             p = multiprocessing.Process(target=utillib.start_slave_collector, args=(node, arg_str))
@@ -71,7 +73,7 @@ def get_log():
 
     if constants.HA_LOG and not os.path.isfile(constants.HA_LOG):
         if not is_collector(): # warning if not on slave
-            utillib.log_warning("%s not found; we will try to find log ourselves" % constants.HA_LOG)
+            logger.warning("%s not found; we will try to find log ourselves", constants.HA_LOG)
             constants.HA_LOG = ""
     if not constants.HA_LOG:
         constants.HA_LOG = utillib.find_log()
@@ -79,7 +81,7 @@ def get_log():
         if constants.CTS:
             pass  # TODO
         else:
-            utillib.log_warning("not log at %s" % constants.WE)
+            logger.warning("not log at %s", constants.WE)
         return
 
     if constants.CTS:
@@ -94,7 +96,7 @@ def get_log():
             if utillib.dump_logset(constants.HA_LOG, constants.FROM_TIME, constants.TO_TIME, outf):
                 utillib.log_size(constants.HA_LOG, outf+'.info')
         else:
-            utillib.log_warning("could not figure out the log format of %s" % constants.HA_LOG)
+            logger.warning("could not figure out the log format of %s", constants.HA_LOG)
 
 
 def is_collector():
@@ -132,6 +134,7 @@ def load_env(env_str):
     constants.EXTRA_LOGS = env_dict["EXTRA_LOGS"]
     constants.PCMK_LOG = env_dict["PCMK_LOG"]
     constants.VERBOSITY = int(env_dict["VERBOSITY"])
+    config.report.verbosity = constants.VERBOSITY
 
 
 def parse_argument(argv):
@@ -189,6 +192,7 @@ def parse_argument(argv):
             constants.EXTRA_LOGS += " %s" % option
         if args == "-v":
             constants.VERBOSITY += 1
+            config.report.verbosity = constants.VERBOSITY
         if args == '-d':
             constants.COMPRESS = False
 
@@ -246,7 +250,7 @@ def run():
 
     if not is_collector():
         constants.NODES = ' '.join(utillib.get_nodes())
-        utillib.log_debug("nodes: %s" % constants.NODES)
+        logger.debug("nodes: %s", constants.NODES)
     if constants.NODES == "":
         utillib.log_fatal("could not figure out a list of nodes; is this a cluster node?")
     if constants.WE in constants.NODES.split():
@@ -254,7 +258,7 @@ def run():
 
     if not is_collector():
         if constants.THIS_IS_NODE != 1:
-            utillib.log_warning("this is not a node and you didn't specify a list of nodes using -n")
+            logger.warning("this is not a node and you didn't specify a list of nodes using -n")
         #
         # ssh business
         #
@@ -267,10 +271,10 @@ def run():
         # assume that only root can collect data
         if ((not constants.SSH_USER) and (os.getuid() != 0)) or \
            constants.SSH_USER and constants.SSH_USER != "root":
-            utillib.log_debug("ssh user other than root, use sudo")
+            logger.debug("ssh user other than root, use sudo")
             constants.SUDO = "sudo -u root"
         if os.getuid() != 0:
-            utillib.log_debug("local user other than root, use sudo")
+            logger.debug("local user other than root, use sudo")
             constants.LOCAL_SUDO = "sudo -u root"
 
     #
