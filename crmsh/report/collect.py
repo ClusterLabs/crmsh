@@ -257,7 +257,7 @@ def collect_sys_info():
     out_string += "Kernel release: %s\n" % os.uname()[2]
     out_string += "Architecture: %s\n" % os.uname()[-1]
     if os.uname()[0] == "Linux":
-        out_string += "Distribution: %s\n" % utillib.distro()
+        out_string += "Distribution: %s\n" % utillib.get_distro_info()
 
     sys_info_f = os.path.join(constants.WORKDIR, constants.SYSINFO_F)
     crmutils.str2file(out_string, sys_info_f)

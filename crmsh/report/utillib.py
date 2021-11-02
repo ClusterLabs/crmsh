@@ -400,17 +400,20 @@ def diff_check(file1, file2):
     else:
         return (0, txt_diff(file1, file2))
 
-def distro():
+
+def get_distro_info():
     """
-    get some system info
+    get distribution information
     """
-    ret = ""
-    if which("lsb_release"):
-        logger.debug("using lsb_release for distribution info")
-        res = get_command_info("lsb_release -d")[1]
-        if re.search("Description:", res):
-            ret = ' '.join(res.split()[1:])
-        return ret
+    res = None
+    if os.path.exists(constants.OSRELEASE):
+        logger.debug("Using {} to get distribution info".format(constants.OSRELEASE))
+        res = re.search("PRETTY_NAME=\"(.*)\"", read_from_file(constants.OSRELEASE))
+    elif which("lsb_release"):
+        logger.debug("Using lsb_release to get distribution info")
+        out = crmutils.get_stdout_or_raise_error("lsb_release -d")
+        res = re.search("Description:\s+(.*)", out)
+    return res.group(1) if res else "Unknown"
 
 
 def dump_log(logf, from_line, to_line):
