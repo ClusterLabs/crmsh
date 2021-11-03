@@ -524,4 +524,6 @@ STANDBY_TEMPLATE_REBOOT = """
 """
 STANDBY_NV_RE = r'(<nvpair.*{node_id}.*name="standby".*)value="{value}"(.*)'
 CRM_MON_ONE_SHOT = "crm_mon -1"
+STONITH_TIMEOUT_DEFAULT = 60
+PCMK_DELAY_MAX = 30
 # vim:ts=4:sw=4:et:

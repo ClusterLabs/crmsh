@@ -98,32 +98,20 @@ def json_dumps():
         os.fsync(f)
 
 
-def get_property(name):
-    """
-    Get cluster properties
-    """
-    cmd = "crm configure get_property " + name
-    rc, stdout, _ = crmshutils.get_stdout_stderr(cmd)
-    if rc != 0:
-        return None
-    else:
-        return stdout
-
-
 class FenceInfo(object):
     """
     Class to collect fence info
     """
     @property
     def fence_enabled(self):
-        enable_result = get_property("stonith-enabled")
+        enable_result = crmshutils.get_property("stonith-enabled")
         if not enable_result or enable_result.lower() != "true":
             return False
         return True
 
     @property
     def fence_action(self):
-        action_result = get_property("stonith-action")
+        action_result = crmshutils.get_property("stonith-action")
         if action_result is None or action_result not in ["off", "poweroff", "reboot"]:
             msg_error("Cluster property \"stonith-action\" should be reboot|off|poweroff")
             return None
@@ -131,7 +119,7 @@ class FenceInfo(object):
 
     @property
     def fence_timeout(self):
-        timeout_result = get_property("stonith-timeout")
+        timeout_result = crmshutils.get_property("stonith-timeout")
         if timeout_result and re.match(r'[1-9][0-9]*(s|)$', timeout_result):
             return timeout_result.strip("s")
         return config.FENCE_TIMEOUT

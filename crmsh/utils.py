@@ -2975,6 +2975,25 @@ def is_quorate(peer=None):
         raise ValueError("Failed to get quorate status from corosync-quorumtool")
 
 
+def is_2node_cluster_without_qdevice(removing=False):
+    """
+    Check if current cluster has two nodes without qdevice
+    """
+    current_num = len(list_cluster_nodes())
+    remove_num = 1 if removing else 0
+    qdevice_num = 1 if is_qdevice_configured() else 0
+    return (current_num - remove_num + qdevice_num) == 2
+
+
+def get_pcmk_delay_max(two_node_without_qdevice=False):
+    """
+    Get value of pcmk_delay_max
+    """
+    if service_is_active("pacemaker.service") and two_node_without_qdevice:
+        return constants.PCMK_DELAY_MAX
+    return 0
+
+
 def get_property(name):
     """
     Get cluster properties
@@ -3004,4 +3023,27 @@ def check_no_quorum_policy_with_dlm():
     res = get_property("no-quorum-policy")
     if not res or res != "freeze":
         logger.warning("The DLM cluster best practice suggests to set the cluster property \"no-quorum-policy=freeze\"")
+
+
+def set_property_conditionally(property_name, value_from_calculation):
+    """
+    Set cluster property if calculated value is larger then current cib value
+    """
+    _value = get_property(property_name)
+    value_from_cib = int(_value.strip('s')) if _value else 0
+    if value_from_cib < value_from_calculation:
+        cmd = "crm configure property {}={}".format(property_name, value_from_calculation)
+        get_stdout_or_raise_error(cmd)
+
+
+def get_systemd_timeout_start_in_sec(time_res):
+    """
+    Get the TimeoutStartUSec value in second unit
+    The origin format was like: 1min 30s
+    """
+    res_seconds = re.search("(\d+)s", time_res)
+    start_timeout = int(res_seconds.group(1)) if res_seconds else 0
+    res_min = re.search("(\d+)min", time_res)
+    start_timeout += 60 * int(res_min.group(1)) if res_min else 0
+    return start_timeout
 # vim:ts=4:sw=4:et:

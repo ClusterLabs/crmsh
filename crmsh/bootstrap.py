@@ -33,7 +33,7 @@ from . import corosync
 from . import tmpfiles
 from . import lock
 from . import userdir
-from .constants import SSH_OPTION, QDEVICE_HELP_INFO, CRM_MON_ONE_SHOT
+from .constants import SSH_OPTION, QDEVICE_HELP_INFO, CRM_MON_ONE_SHOT, STONITH_TIMEOUT_DEFAULT
 from . import ocfs2
 from . import qdevice
 from . import log
@@ -63,12 +63,13 @@ WATCHDOG_CFG = "/etc/modules-load.d/watchdog.conf"
 BOOTH_DIR = "/etc/booth"
 BOOTH_CFG = "/etc/booth/booth.conf"
 BOOTH_AUTH = "/etc/booth/authkey"
+SBD_SYSTEMD_DELAY_START_DIR = "/etc/systemd/system/sbd.service.d"
 FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_KEY, "/etc/ctdb/nodes",
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
         "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SYSCONFIG_SBD, PCMK_REMOTE_AUTH, WATCHDOG_CFG,
-        PROFILES_FILE, CRM_CFG)
-
+        PROFILES_FILE, CRM_CFG, SBD_SYSTEMD_DELAY_START_DIR)
 INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "sbd", "cluster", "ocfs2", "admin", "qdevice")
+
 
 class QdevicePolicy(Enum):
     QDEVICE_RELOAD = 0
@@ -698,12 +699,14 @@ def start_pacemaker(node_list=[]):
     Start pacemaker service with wait time for sbd
     When node_list set, start pacemaker service in parallel
     """
-    from .sbd import SBDManager
+    from .sbd import SBDTimeout
     pacemaker_start_msg = "Starting pacemaker"
-    if utils.package_is_installed("sbd") and \
+    # not _context means not in init or join process
+    if not _context and \
+            utils.package_is_installed("sbd") and \
             utils.service_is_enabled("sbd.service") and \
-            SBDManager.is_delay_start():
-        pacemaker_start_msg += "(waiting for sbd {}s)".format(SBDManager.get_suitable_sbd_systemd_timeout())
+            SBDTimeout.is_sbd_delay_start():
+        pacemaker_start_msg += "(delaying start of sbd for {}s)".format(SBDTimeout.get_sbd_delay_start_sec_from_sysconfig())
     with logger_utils.status_long(pacemaker_start_msg):
         utils.start_service("pacemaker.service", enable=True, node_list=node_list)
 
@@ -1237,7 +1240,7 @@ op_defaults op-options: timeout=600 record-pending=true
 rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
 """)
 
-    _context.sbd_manager.configure_sbd_resource()
+    _context.sbd_manager.configure_sbd_resource_and_properties()
 
 
 def init_admin():
@@ -1334,20 +1337,17 @@ def init_qdevice():
         utils.disable_service("corosync-qdevice.service")
         return
     if _context.stage == "qdevice":
-        from .sbd import SBDManager
+        from .sbd import SBDManager, SBDTimeout
         utils.check_all_nodes_reachable()
         using_diskless_sbd = SBDManager.is_using_diskless_sbd()
         _context.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, using_diskless_sbd)
         # add qdevice after diskless sbd started
         if using_diskless_sbd:
             res = SBDManager.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
-            if res:
-                sbd_watchdog_timeout = max(int(res), SBDManager.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)
-            else:
-                sbd_watchdog_timeout = SBDManager.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
-            stonith_timeout = SBDManager.calculate_stonith_timeout(sbd_watchdog_timeout)
-            SBDManager.update_configuration({"SBD_WATCHDOG_TIMEOUT": str(sbd_watchdog_timeout)})
-            invokerc("crm configure property stonith-watchdog-timeout=-1 stonith-timeout={}s".format(stonith_timeout))
+            if not res or int(res) < SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
+                sbd_watchdog_timeout_qdevice = SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
+                SBDManager.update_configuration({"SBD_WATCHDOG_TIMEOUT": str(sbd_watchdog_timeout_qdevice)})
+                utils.set_property(stonith_timeout=SBDTimeout.get_stonith_timeout())
 
     logger.info("""Configure Qdevice/Qnetd:""")
     qdevice_inst = _context.qdevice_inst
@@ -1822,6 +1822,14 @@ def join_cluster(seed_host):
     # attempt to join the cluster failed)
     init_cluster_local()
 
+    if utils.service_is_active("sbd.service"):
+        from .sbd import SBDTimeout
+        SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
+    else:
+        value = get_stonith_timeout_generally_expected()
+        if value:
+            utils.set_property_conditionally("stonith-timeout", value)
+
     with logger_utils.status_long("Reloading cluster configuration"):
 
         if ipv6_flag and not is_unicast:
@@ -1927,6 +1935,10 @@ def remove_node_from_cluster():
     """
     Remove node from running cluster and the corosync / pacemaker configuration.
     """
+    if utils.service_is_active("sbd.service"):
+        from .sbd import SBDTimeout
+        SBDTimeout.adjust_sbd_timeout_related_cluster_configuration(removing=True)
+
     node = _context.cluster_node
     set_cluster_node_ip()
 
@@ -2392,4 +2404,17 @@ def bootstrap_arbitrator(context):
     logger.info("Enabling and starting the booth arbitrator service")
     utils.start_service("booth@booth", enable=True)
 
+
+def get_stonith_timeout_generally_expected():
+    """
+    Adjust stonith-timeout for all scenarios, formula is:
+
+    stonith-timeout = STONITH_TIMEOUT_DEFAULT + token + consensus
+    """
+    stonith_enabled = utils.get_property("stonith-enabled")
+    # When stonith disabled, return
+    if utils.is_boolean_false(stonith_enabled):
+        return None
+
+    return STONITH_TIMEOUT_DEFAULT + corosync.token_and_consensus_timeout()
 # EOF

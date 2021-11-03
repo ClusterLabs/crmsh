@@ -17,6 +17,9 @@ from . import log
 logger = log.setup_logger(__name__)
 
 
+COROSYNC_TOKEN_DEFAULT = 1000  # in ms units
+
+
 def conf():
     return os.getenv('COROSYNC_MAIN_CONFIG_FILE', '/etc/corosync/corosync.conf')
 
@@ -762,3 +765,39 @@ def create_configuration(clustername="hacluster",
                               _COROSYNC_CONF_TEMPLATE_RING_ALL + \
                               _COROSYNC_CONF_TEMPLATE_TAIL
     utils.str2file(_COROSYNC_CONF_TEMPLATE % config_common, conf())
+
+
+def get_corosync_value(key):
+    """
+    Get corosync configuration value from corosync-cmapctl or corosync.conf
+    """
+    try:
+        out = utils.get_stdout_or_raise_error("corosync-cmapctl {}".format(key))
+        res = re.search(r'{}\s+.*=\s+(.*)'.format(key), out)
+        return res.group(1) if res else None
+    except ValueError:
+        out = get_value(key)
+        return out
+
+
+def get_corosync_value_dict():
+    """
+    Get corosync value, then return these values as dict
+    """
+    value_dict = {}
+
+    token = get_corosync_value("totem.token")
+    value_dict["token"] = int(int(token)/1000) if token else int(COROSYNC_TOKEN_DEFAULT/1000)
+
+    consensus = get_corosync_value("totem.consensus")
+    value_dict["consensus"] = int(int(consensus)/1000) if consensus else int(value_dict["token"]*1.2)
+
+    return value_dict
+
+
+def token_and_consensus_timeout():
+    """
+    Get corosync token plus consensus timeout
+    """
+    _dict = get_corosync_value_dict()
+    return _dict["token"] + _dict["consensus"]
