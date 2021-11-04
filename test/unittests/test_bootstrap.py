@@ -261,6 +261,21 @@ class TestBootstrap(unittest.TestCase):
         Global tearDown.
         """
 
+    @mock.patch('crmsh.log.LoggerUtils.status_long')
+    @mock.patch('crmsh.utils.start_service')
+    @mock.patch('crmsh.sbd.SBDManager.get_suitable_sbd_systemd_timeout')
+    @mock.patch('crmsh.sbd.SBDManager.is_delay_start')
+    @mock.patch('crmsh.utils.service_is_enabled')
+    @mock.patch('crmsh.utils.package_is_installed')
+    def test_start_pacemaker(self, mock_installed, mock_enabled, mock_delay_start, mock_timeout, mock_start, mock_long):
+        mock_installed.return_value = True
+        mock_enabled.return_value = True
+        mock_delay_start.return_value = True
+        mock_timeout.return_value = 60
+        bootstrap.start_pacemaker()
+        mock_long.assert_called_once_with('Starting pacemaker(waiting for sbd 60s)')
+        mock_start.assert_called_once_with('pacemaker.service', enable=True, node_list=[])
+
     @mock.patch('crmsh.bootstrap.configure_local_ssh_key')
     @mock.patch('crmsh.utils.start_service')
     def test_init_ssh(self, mock_start_service, mock_config_ssh):
@@ -592,31 +607,37 @@ class TestBootstrap(unittest.TestCase):
         mock_error.assert_called_once_with("error")
 
     @mock.patch('crmsh.utils.this_node')
-    @mock.patch('re.search')
     @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
-    def test_is_online_local_offline(self, mock_get_peer, mock_search, mock_this_node):
-        mock_this_node.return_value = "node1"
-        mock_search.return_value = None
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    def test_is_online_local_offline(self, mock_run, mock_get_peer, mock_this_node):
+        mock_run.return_value = """
+Node List:
+  * Online: [ node1 node2 ]
+        """
+        mock_this_node.return_value = "node3"
 
-        assert bootstrap.is_online("text") is False
+        assert bootstrap.is_online() is False
 
         mock_this_node.assert_called_once_with()
         mock_get_peer.assert_not_called()
-        mock_search.assert_called_once_with("Online: .* node1 ", "text")
+        mock_run.assert_called_once_with(constants.CRM_MON_ONE_SHOT, remote="node3")
 
     @mock.patch('crmsh.utils.this_node')
-    @mock.patch('re.search')
     @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
-    def test_is_online_on_init_node(self, mock_get_peer, mock_search, mock_this_node):
-        mock_search.return_value = mock.Mock()
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    def test_is_online_on_init_node(self, mock_run, mock_get_peer, mock_this_node):
+        mock_run.return_value = """
+Node List:
+  * Online: [ node1 node2 ]
+        """
         mock_this_node.return_value = "node1"
         mock_get_peer.return_value = None
 
-        assert bootstrap.is_online("text") is True
+        assert bootstrap.is_online() is True
 
         mock_this_node.assert_called_once_with()
         mock_get_peer.assert_called_once_with()
-        mock_search.assert_called_once_with("Online: .* node1 ", "text")
+        mock_run.assert_called_once_with(constants.CRM_MON_ONE_SHOT, remote="node1")
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.stop_service')
@@ -624,25 +645,27 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.corosync.conf')
     @mock.patch('shutil.copy')
     @mock.patch('crmsh.utils.this_node')
-    @mock.patch('re.search')
     @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
-    def test_is_online_peer_offline(self, mock_get_peer, mock_search, mock_this_node,
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    def test_is_online_peer_offline(self, mock_run, mock_get_peer, mock_this_node,
             mock_copy, mock_corosync_conf, mock_csync2, mock_stop_service, mock_error):
+        mock_run.return_value = """
+Node List:
+  * Online: [ node1 node2 ]
+        """
         bootstrap.COROSYNC_CONF_ORIG = "/tmp/crmsh_tmpfile"
-        mock_search.side_effect = [ mock.Mock(), None ]
         mock_this_node.return_value = "node2"
-        mock_get_peer.return_value = "node1"
+        mock_get_peer.return_value = "node3"
         mock_corosync_conf.side_effect = [ "/etc/corosync/corosync.conf", 
                 "/etc/corosync/corosync.conf"]
+        mock_error.side_effect = ValueError
 
-        bootstrap.is_online("text")
+        with self.assertRaises(ValueError):
+            bootstrap.is_online()
 
+        mock_run.assert_called_once_with(constants.CRM_MON_ONE_SHOT, remote="node2")
         mock_this_node.assert_called_once_with()
         mock_get_peer.assert_called_once_with()
-        mock_search.assert_has_calls([
-            mock.call("Online: .* node2 ", "text"),
-            mock.call("Online: .* node1 ", "text")
-            ])
         mock_corosync_conf.assert_has_calls([
             mock.call(),
             mock.call()
@@ -650,7 +673,7 @@ class TestBootstrap(unittest.TestCase):
         mock_copy.assert_called_once_with(bootstrap.COROSYNC_CONF_ORIG, "/etc/corosync/corosync.conf")
         mock_csync2.assert_called_once_with("/etc/corosync/corosync.conf")
         mock_stop_service.assert_called_once_with("corosync")
-        mock_error.assert_called_once_with("Cannot see peer node \"node1\", please check the communication IP")
+        mock_error.assert_called_once_with("Cannot see peer node \"node3\", please check the communication IP")
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.stop_service')
@@ -658,22 +681,21 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.corosync.conf')
     @mock.patch('shutil.copy')
     @mock.patch('crmsh.utils.this_node')
-    @mock.patch('re.search')
     @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
-    def test_is_online_both_online(self, mock_get_peer, mock_search, mock_this_node,
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    def test_is_online_both_online(self, mock_run, mock_get_peer, mock_this_node,
             mock_copy, mock_corosync_conf, mock_csync2, mock_stop_service, mock_error):
-        mock_search.side_effect = [ mock.Mock(), mock.Mock() ]
+        mock_run.return_value = """
+Node List:
+  * Online: [ node1 node2 ]
+        """
         mock_this_node.return_value = "node2"
         mock_get_peer.return_value = "node1"
 
-        assert bootstrap.is_online("text") is True
+        assert bootstrap.is_online() is True
 
         mock_this_node.assert_called_once_with()
         mock_get_peer.assert_called_once_with()
-        mock_search.assert_has_calls([
-            mock.call("Online: .* node2 ", "text"),
-            mock.call("Online: .* node1 ", "text")
-            ])
         mock_corosync_conf.assert_not_called()
         mock_copy.assert_not_called()
         mock_csync2.assert_not_called()
@@ -1049,7 +1071,7 @@ class TestBootstrap(unittest.TestCase):
         self.assertEqual(res, True)
         mock_invoke.assert_called_once_with("cmd")
 
-    @mock.patch('crmsh.utils.is_quorate')
+    @mock.patch('crmsh.utils.calculate_quorate_status')
     @mock.patch('crmsh.utils.get_quorum_votes_dict')
     def test_evaluate_qdevice_quorum_effect_reload(self, mock_get_dict, mock_quorate):
         mock_get_dict.return_value = {'Expected': '2', 'Total': '2'}
@@ -1060,7 +1082,7 @@ class TestBootstrap(unittest.TestCase):
         mock_quorate.assert_called_once_with(3, 2)
 
     @mock.patch('crmsh.utils.has_resource_running')
-    @mock.patch('crmsh.utils.is_quorate')
+    @mock.patch('crmsh.utils.calculate_quorate_status')
     @mock.patch('crmsh.utils.get_quorum_votes_dict')
     def test_evaluate_qdevice_quorum_effect_reload(self, mock_get_dict, mock_quorate, mock_ra_running):
         mock_get_dict.return_value = {'Expected': '2', 'Total': '2'}
@@ -1073,7 +1095,7 @@ class TestBootstrap(unittest.TestCase):
         mock_ra_running.assert_called_once_with()
 
     @mock.patch('crmsh.utils.has_resource_running')
-    @mock.patch('crmsh.utils.is_quorate')
+    @mock.patch('crmsh.utils.calculate_quorate_status')
     @mock.patch('crmsh.utils.get_quorum_votes_dict')
     def test_evaluate_qdevice_quorum_effect(self, mock_get_dict, mock_quorate, mock_ra_running):
         mock_get_dict.return_value = {'Expected': '2', 'Total': '2'}
