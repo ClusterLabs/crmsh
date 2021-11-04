@@ -2934,4 +2934,43 @@ def is_standby(node):
     """
     out = get_stdout_or_raise_error("crm_mon -1")
     return re.search(r'Node\s+{}:\s+standby'.format(node), out) is not None
+
+
+def get_dlm_option_dict():
+    """
+    Get dlm config option dictionary
+    """
+    out = get_stdout_or_raise_error("dlm_tool dump_config")
+    return dict(re.findall("(\w+)=(\w+)", out))
+
+
+def set_dlm_option(**kargs):
+    """
+    Set dlm option
+    """
+    dlm_option_dict = get_dlm_option_dict()
+    for option, value in kargs.items():
+        if option not in dlm_option_dict:
+            raise ValueError('"{}" is not dlm config option'.format(option))
+        if dlm_option_dict[option] != value:
+            get_stdout_or_raise_error('dlm_tool set_config "{}={}"'.format(option, value))
+
+
+def is_dlm_configured():
+    """
+    Check if dlm configured
+    """
+    return has_resource_configured("ocf::pacemaker:controld")
+
+
+def is_quorate():
+    """
+    Check if cluster is quorated
+    """
+    out = get_stdout_or_raise_error("corosync-quorumtool -s", success_val_list=[0, 2])
+    res = re.search(r'Quorate:\s+(.*)', out)
+    if res:
+        return res.group(1) == "Yes"
+    else:
+        raise ValueError("Failed to get quorate status from corosync-quorumtool")
 # vim:ts=4:sw=4:et:
