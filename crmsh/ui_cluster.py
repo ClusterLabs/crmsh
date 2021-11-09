@@ -163,23 +163,28 @@ class Cluster(command.UI):
         '''
         node_list = parse_option_for_nodes(context, *args)
         for node in node_list[:]:
-            if not utils.service_is_active("corosync.service", remote_addr=node) and \
-                    not utils.service_is_active("sbd.service", remote_addr=node):
-                logger.info("Cluster services already stopped on {}".format(node))
+            if not utils.service_is_active("corosync.service", remote_addr=node):
+                if utils.service_is_active("sbd.service", remote_addr=node):
+                    utils.stop_service("corosync", remote_addr=node)
+                    logger.info("Cluster services stopped on {}".format(node))
+                else:
+                    logger.info("Cluster services already stopped on {}".format(node))
                 node_list.remove(node)
         if not node_list:
             return
 
+        bootstrap.wait_for_cluster("Waiting for {} online".format(' '.join(node_list)), node_list)
+
         # When dlm configured and quorum is lost, before stop cluster service, should set
         # enable_quorum_fencing=0, enable_quorum_lockspace=0 for dlm config option
-        if utils.is_dlm_configured() and not utils.is_quorate():
+        if utils.is_dlm_configured(node_list[0]) and not utils.is_quorate(node_list[0]):
             logger.debug("Quorum is lost; Set enable_quorum_fencing=0 and enable_quorum_lockspace=0 for dlm")
-            utils.set_dlm_option(enable_quorum_fencing=0, enable_quorum_lockspace=0)
+            utils.set_dlm_option(peer=node_list[0], enable_quorum_fencing=0, enable_quorum_lockspace=0)
 
         # Stop pacemaker since it can make sure cluster has quorum until stop corosync
         utils.stop_service("pacemaker", node_list=node_list)
         # Then, stop qdevice if is active
-        if utils.service_is_active("corosync-qdevice.service"):
+        if utils.service_is_active("corosync-qdevice.service", node_list[0]):
             utils.stop_service("corosync-qdevice.service", node_list=node_list)
         # Last, stop corosync
         utils.stop_service("corosync", node_list=node_list)

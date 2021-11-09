@@ -2936,38 +2936,38 @@ def is_standby(node):
     return re.search(r'Node\s+{}:\s+standby'.format(node), out) is not None
 
 
-def get_dlm_option_dict():
+def get_dlm_option_dict(peer=None):
     """
     Get dlm config option dictionary
     """
-    out = get_stdout_or_raise_error("dlm_tool dump_config")
+    out = get_stdout_or_raise_error("dlm_tool dump_config", remote=peer)
     return dict(re.findall("(\w+)=(\w+)", out))
 
 
-def set_dlm_option(**kargs):
+def set_dlm_option(peer=None, **kargs):
     """
     Set dlm option
     """
-    dlm_option_dict = get_dlm_option_dict()
+    dlm_option_dict = get_dlm_option_dict(peer=peer)
     for option, value in kargs.items():
         if option not in dlm_option_dict:
             raise ValueError('"{}" is not dlm config option'.format(option))
         if dlm_option_dict[option] != value:
-            get_stdout_or_raise_error('dlm_tool set_config "{}={}"'.format(option, value))
+            get_stdout_or_raise_error('dlm_tool set_config "{}={}"'.format(option, value), remote=peer)
 
 
-def is_dlm_configured():
+def is_dlm_configured(peer=None):
     """
     Check if dlm configured
     """
-    return has_resource_configured("ocf::pacemaker:controld")
+    return has_resource_configured("ocf::pacemaker:controld", peer=peer)
 
 
-def is_quorate():
+def is_quorate(peer=None):
     """
     Check if cluster is quorated
     """
-    out = get_stdout_or_raise_error("corosync-quorumtool -s", success_val_list=[0, 2])
+    out = get_stdout_or_raise_error("corosync-quorumtool -s", remote=peer, success_val_list=[0, 2])
     res = re.search(r'Quorate:\s+(.*)', out)
     if res:
         return res.group(1) == "Yes"
