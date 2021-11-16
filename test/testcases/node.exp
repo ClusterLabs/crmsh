@@ -3,48 +3,6 @@ node1: member
 .TRY node show node1
 node1: member
 .SETENV showobj=node1
-.TRY node standby node1
-.EXT crm_attribute -t nodes -N 'node1' -n standby -v 'on' --lifetime='forever'
-.INP: configure
-.INP: _regtest on
-.INP: show xml node1
-<?xml version="1.0" ?>
-<cib>
-  <configuration>
-    <crm_config/>
-    <nodes>
-      <node uname="node1" id="node1">
-        <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-standby" name="standby" value="on"/>
-        </instance_attributes>
-      </node>
-    </nodes>
-    <resources/>
-    <constraints/>
-  </configuration>
-</cib>
-
-.TRY node online node1
-.EXT crm_attribute -t nodes -N 'node1' -n standby -v 'off' --lifetime='forever'
-.INP: configure
-.INP: _regtest on
-.INP: show xml node1
-<?xml version="1.0" ?>
-<cib>
-  <configuration>
-    <crm_config/>
-    <nodes>
-      <node uname="node1" id="node1">
-        <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-standby" name="standby" value="off"/>
-        </instance_attributes>
-      </node>
-    </nodes>
-    <resources/>
-    <constraints/>
-  </configuration>
-</cib>
-
 .TRY configure primitive p5 Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
@@ -59,11 +17,7 @@ node1: member
   <configuration>
     <crm_config/>
     <nodes>
-      <node uname="node1" id="node1">
-        <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-standby" name="standby" value="off"/>
-        </instance_attributes>
-      </node>
+      <node uname="node1" id="node1"/>
     </nodes>
     <resources/>
     <constraints/>
@@ -79,11 +33,7 @@ node1: member
   <configuration>
     <crm_config/>
     <nodes>
-      <node uname="node1" id="node1">
-        <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-standby" name="standby" value="off"/>
-        </instance_attributes>
-      </node>
+      <node uname="node1" id="node1"/>
     </nodes>
     <resources/>
     <constraints/>
@@ -99,11 +49,7 @@ node1: member
   <configuration>
     <crm_config/>
     <nodes>
-      <node uname="node1" id="node1">
-        <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-standby" name="standby" value="off"/>
-        </instance_attributes>
-      </node>
+      <node uname="node1" id="node1"/>
     </nodes>
     <resources/>
     <constraints/>
@@ -119,11 +65,7 @@ node1: member
   <configuration>
     <crm_config/>
     <nodes>
-      <node uname="node1" id="node1">
-        <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-standby" name="standby" value="off"/>
-        </instance_attributes>
-      </node>
+      <node uname="node1" id="node1"/>
     </nodes>
     <resources/>
     <constraints/>
@@ -143,7 +85,6 @@ INFO: 'maintenance' attribute already exists in g0. Remove it? [YES]
     <nodes>
       <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-standby" name="standby" value="off"/>
           <nvpair id="nodes-node1-maintenance" name="maintenance" value="true"/>
         </instance_attributes>
       </node>
@@ -165,7 +106,6 @@ INFO: 'maintenance' attribute already exists in g0. Remove it? [YES]
     <nodes>
       <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-standby" name="standby" value="off"/>
           <nvpair id="nodes-node1-maintenance" name="maintenance" value="off"/>
         </instance_attributes>
       </node>
@@ -187,7 +127,6 @@ INFO: 'maintenance' attribute already exists in g0. Remove it? [YES]
     <nodes>
       <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-standby" name="standby" value="off"/>
           <nvpair id="nodes-node1-maintenance" name="maintenance" value="off"/>
           <nvpair id="nodes-node1-a1" name="a1" value="1 2 3"/>
         </instance_attributes>
@@ -211,7 +150,6 @@ scope=nodes  name=a1 value=1 2 3
     <nodes>
       <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-standby" name="standby" value="off"/>
           <nvpair id="nodes-node1-maintenance" name="maintenance" value="off"/>
           <nvpair id="nodes-node1-a1" name="a1" value="1 2 3"/>
         </instance_attributes>
@@ -236,7 +174,6 @@ Deleted nodes attribute: id=nodes-node1-a1 name=a1
     <nodes>
       <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-standby" name="standby" value="off"/>
           <nvpair id="nodes-node1-maintenance" name="maintenance" value="off"/>
         </instance_attributes>
       </node>
@@ -257,7 +194,6 @@ Deleted nodes attribute: id=nodes-node1-a1 name=a1
     <nodes>
       <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-standby" name="standby" value="off"/>
           <nvpair id="nodes-node1-maintenance" name="maintenance" value="off"/>
         </instance_attributes>
       </node>

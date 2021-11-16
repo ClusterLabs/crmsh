@@ -987,25 +987,13 @@ diff /etc/crm/crm.conf node2
 diff /etc/resolv.conf --checksum
 ...............
 
-[[cmdhelp_cluster_disable,Disable cluster services]]
+[[cmdhelp_cluster_disable,Disable cluster services,From Code]]
 ==== `disable`
+See "crm cluster help disable" or "crm cluster disable --help"
 
-Disable the cluster-related system services on this node.
-
-Usage:
-...............
-disable
-...............
-
-[[cmdhelp_cluster_enable,Enable cluster services]]
+[[cmdhelp_cluster_enable,Enable cluster services,From Code]]
 ==== `enable`
-
-Enable the cluster-related system services on this node.
-
-Usage:
-...............
-enable
-...............
+See "crm cluster help enable" or "crm cluster enable --help
 
 [[cmdhelp_cluster_geo_init,Configure cluster as geo cluster,From Code]]
 ==== `geo-init`
@@ -1046,15 +1034,9 @@ See "crm cluster help remove" or "crm cluster remove --help"
 ==== `crash_test`
 See "crm cluster help crash_test" or "crm cluster crash_test --help"
 
-[[cmdhelp_cluster_restart,Restart cluster services]]
+[[cmdhelp_cluster_restart,Restart cluster services,From Code]]
 ==== `restart`
-
-Restarts the cluster-related system services on this node.
-
-Usage:
-.........
-restart
-.........
+See "crm cluster help restart" or "crm cluster restart --help"
 
 [[cmdhelp_cluster_rename,Rename the cluster]]
 ==== `rename`
@@ -1085,15 +1067,9 @@ run "cat /proc/uptime"
 run "ls" node1 node2
 ...............
 
-[[cmdhelp_cluster_start,Start cluster services]]
+[[cmdhelp_cluster_start,Start cluster services,From Code]]
 ==== `start`
-
-Starts the cluster-related system services on this node.
-
-Usage:
-.........
-start
-.........
+See "crm cluster help start" or "crm cluster start --help"
 
 [[cmdhelp_cluster_status,Cluster status check]]
 ==== `status`
@@ -1106,15 +1082,9 @@ Usage:
 status
 ...............
 
-[[cmdhelp_cluster_stop,Stop cluster services]]
+[[cmdhelp_cluster_stop,Stop cluster services,From Code]]
 ==== `stop`
-
-Stops the cluster-related system services on this node.
-
-Usage:
-.........
-stop
-.........
+See "crm cluster help stop" or "crm cluster stop --help"
 
 [[cmdhelp_cluster_wait_for_startup,Wait for cluster to start]]
 ==== `wait_for_startup`
@@ -2156,17 +2126,9 @@ Usage:
 maintenance [<node>]
 ...............
 
-[[cmdhelp_node_online,set node online]]
+[[cmdhelp_node_online,set node online,From Code]]
 ==== `online`
-
-Set a node to online status.
-
-The node parameter defaults to the node where the command is run.
-
-Usage:
-...............
-online [<node>]
-...............
+See "crm node help online" or "crm node online --help"
 
 [[cmdhelp_node_ready,put node into ready mode]]
 ==== `ready`
@@ -2208,28 +2170,9 @@ Usage:
 show [<node>]
 ...............
 
-[[cmdhelp_node_standby,put node into standby]]
+[[cmdhelp_node_standby,put node into standby,From Code]]
 ==== `standby`
-
-Set a node to standby status. The node parameter defaults to the
-node where the command is run.
-
-Additionally, you may specify a lifetime for the standby---if set to
-`reboot`, the node will be back online once it reboots. `forever` will
-keep the node in standby after reboot. The life time defaults to
-`forever`.
-
-Usage:
-...............
-standby [<node>] [<lifetime>]
-
-lifetime :: reboot | forever
-...............
-
-Example:
-...............
-standby bob reboot
-...............
+See "crm node help standby" or "crm node standby --help"
 
 [[cmdhelp_node_status-attr,manage status attributes]]
 ==== `status-attr`

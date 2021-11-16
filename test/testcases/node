@@ -1,8 +1,6 @@
 node show
 node show node1
 %setenv showobj=node1
-node standby node1
-node online node1
 configure primitive p5 Dummy
 configure group g0 p5
 resource maintenance g0

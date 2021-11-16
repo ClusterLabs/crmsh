@@ -2,6 +2,8 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+import re
+from lxml import etree
 from . import config
 from . import command
 from . import completers as compl
@@ -13,6 +15,7 @@ from .cliformat import cli_nvpairs, nvpairs2list
 from . import term
 from .cibconfig import cib_factory
 from .ui_resource import rm_meta_attribute
+from .ui_cluster import parse_option_for_nodes
 from . import log
 
 
@@ -287,36 +290,87 @@ class NodeMgmt(command.UI):
     @command.wait
     @command.completers(compl.nodes)
     def do_standby(self, context, *args):
-        'usage: standby [<node>] [<lifetime>]'
-        argl = list(args)
-        node = None
-        lifetime = utils.fetch_lifetime_opt(argl, iso8601=False)
-        if not argl:
-            node = utils.this_node()
-        elif len(argl) == 1:
-            node = args[0]
-            if not xmlutil.is_our_node(node):
-                logger.error("%s: node name not recognized", node)
-                return False
-        else:
-            logger_utils.syntax_err(args, context=context.get_command_name())
-            return False
-        opts = ''
+        """
+        usage: standby [<node>] [<lifetime>]
+        To avoid race condition for --all option, melt all standby values into one cib replace session
+        """
+        # Parse lifetime option
+        lifetime_opt = "forever"
+        lifetime = utils.fetch_lifetime_opt(list(args), iso8601=False)
         if lifetime:
-            opts = "--lifetime='%s'" % lifetime
-        else:
-            opts = "--lifetime='forever'"
-        return utils.ext_cmd(self.node_standby % (node, "on", opts)) == 0
+            lifetime_opt = lifetime
+            args = args[:-1]
+
+        # Parse node option
+        node_list = parse_option_for_nodes(context, *args)
+        for node in node_list[:]:
+            if utils.is_standby(node):
+                logger.info("Node %s already standby", node)
+                node_list.remove(node)
+        if not node_list:
+            return
+
+        # For default "forever" lifetime, under "nodes" section
+        xml_path = constants.XML_NODE_PATH
+        xml_query_path = constants.XML_NODE_QUERY_STANDBY_PATH
+        standby_template = constants.STANDBY_TEMPLATE
+        # For "reboot" lifetime, under "status" section
+        if lifetime_opt == "reboot":
+            xml_path = constants.XML_STATUS_PATH
+            xml_query_path = constants.XML_STATUS_QUERY_STANDBY_PATH
+            standby_template = constants.STANDBY_TEMPLATE_REBOOT
+
+        cib = xmlutil.cibdump2elem()
+        xml_item_list = cib.xpath(xml_path)
+        for xml_item in xml_item_list:
+            if xml_item.get("uname") in node_list:
+                node_id = xml_item.get('id')
+                # If the standby nvpair already exists, continue
+                if cib.xpath(xml_query_path.format(node_id=node_id)):
+                    continue
+                # Create standby nvpair
+                standby_template_str = standby_template.format(node_id=node_id, value="on")
+                xml_item.append(etree.fromstring(standby_template_str))
+
+        cib_str = xmlutil.xml_tostring(cib)
+        # Consider both "nodes" and "status" section might contain different standby value at the same time
+        # Should replace all possible "off" values here
+        for node in node_list:
+            node_id = utils.get_nodeid_from_name(node)
+            cib_str = re.sub(constants.STANDBY_NV_RE.format(node_id=node_id, value="off"), r'\1value="on"\2', cib_str)
+
+        cmd = constants.CIB_REPLACE.format(xmlstr=cib_str)
+        utils.get_stdout_or_raise_error(cmd)
+        for node in node_list:
+            logger.info("Standby node %s", node)
+
 
     @command.wait
     @command.completers(compl.nodes)
-    def do_online(self, context, node=None):
-        'usage: online [<node>]'
-        if not node:
-            node = utils.this_node()
-        if not utils.is_name_sane(node):
-            return False
-        return utils.ext_cmd(self.node_standby % (node, "off", "--lifetime='forever'")) == 0
+    def do_online(self, context, *args):
+        """
+        usage: online [<node>]
+        To avoid race condition for --all option, melt all online values into one cib replace session
+        """
+        # Parse node option
+        node_list = parse_option_for_nodes(context, *args)
+        for node in node_list[:]:
+            if not utils.is_standby(node):
+                logger.info("Node %s already online", node)
+                node_list.remove(node)
+        if not node_list:
+            return
+
+        cib = xmlutil.cibdump2elem()
+        cib_str = xmlutil.xml_tostring(cib)
+        for node in node_list:
+            node_id = utils.get_nodeid_from_name(node)
+            cib_str = re.sub(constants.STANDBY_NV_RE.format(node_id=node_id, value="on"), r'\1value="off"\2', cib_str)
+
+        cmd = constants.CIB_REPLACE.format(xmlstr=cib_str)
+        utils.get_stdout_or_raise_error(cmd)
+        for node in node_list:
+            logger.info("Online node %s", node)
 
     @command.wait
     @command.completers(compl.nodes)

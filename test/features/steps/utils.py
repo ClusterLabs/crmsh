@@ -66,14 +66,21 @@ def run_command_local_or_remote(context, cmd, addr, err_record=False):
 
 
 def check_service_state(context, service_name, state, addr):
-    if state not in ["started", "stopped"]:
-        context.logger.error("\nService state should be \"started/stopped\"\n")
+    if state not in ["started", "stopped", "enabled", "disabled"]:
+        context.logger.error("\nService state should be \"started/stopped/enabled/disabled\"\n")
         context.failed = True
 
-    state_dict = {"started": True, "stopped": False}
+    state_dict = {"started": True,
+            "stopped": False,
+            "enabled": True,
+            "disabled": False}
+    if state in ["started", "stopped"]:
+        check_func = utils.service_is_active
+    else:
+        check_func = utils.service_is_enabled
 
     remote_addr = None if addr == me() else addr
-    return utils.service_is_active(service_name, remote_addr) is state_dict[state]
+    return check_func(service_name, remote_addr) is state_dict[state]
 
 
 def check_cluster_state(context, state, addr):

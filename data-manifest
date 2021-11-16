@@ -83,7 +83,7 @@ test/features/resource_failcount.feature
 test/features/resource_set.feature
 test/features/steps/const.py
 test/features/steps/__init__.py
-test/features/steps/step_implenment.py
+test/features/steps/step_implementation.py
 test/features/steps/utils.py
 test/history-test.tar.bz2
 test/list-undocumented-commands.py
@@ -194,9 +194,8 @@ test/unittests/test_objset.py
 test/unittests/test_ocfs2.py
 test/unittests/test_parallax.py
 test/unittests/test_parse.py
-test/unittests/test_ratrace.py
 test/unittests/test_qdevice.py
-test/unittests/test_report.py
+test/unittests/test_ratrace.py
 test/unittests/test_sbd.py
 test/unittests/test_scripts.py
 test/unittests/test_time.py

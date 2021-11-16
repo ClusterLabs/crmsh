@@ -188,24 +188,6 @@ runtime.totem.pg.mrp.srp.members.336860212.status (str) = joined
     mock_get_stdout_stderr.assert_called_once_with('corosync-cmapctl -b runtime.totem.pg.mrp.srp.members')
 
 
-def test_list_cluster_nodes_pacemaker_running():
-    with mock.patch('crmsh.utils.stdout2list') as mock_stdout2list:
-        crm_node_value= ["336860211 15sp1-1 member", "336860212 15sp1-2 member"]
-        mock_stdout2list.return_value = (0, crm_node_value)
-        assert utils.list_cluster_nodes() == ['15sp1-1', '15sp1-2']
-    mock_stdout2list.assert_called_once_with(['crm_node', '-l'], shell=False, stderr_on=False)
-
-
-@mock.patch('crmsh.utils.stdout2list')
-@mock.patch('crmsh.utils.get_member_iplist')
-def test_list_cluster_nodes_corosync_running(mock_get_member_iplist, mock_stdout2list):
-    mock_stdout2list.return_value = (1, None)
-    mock_get_member_iplist.return_value = ["node1", "node2"]
-    assert utils.list_cluster_nodes() == ["node1", "node2"]
-    mock_stdout2list.assert_called_once_with(['crm_node', '-l'], shell=False, stderr_on=False)
-    mock_get_member_iplist.assert_called_once_with()
-
-
 @mock.patch('crmsh.utils.list_cluster_nodes')
 def test_cluster_run_cmd_exception(mock_list_nodes):
     mock_list_nodes.return_value = None
@@ -1203,9 +1185,9 @@ def test_ping_node(mock_run):
     mock_run.assert_called_once_with("ping -c 1 node_unreachable")
 
 
-def test_is_quorate():
-    assert utils.is_quorate(3, 2) is True
-    assert utils.is_quorate(3, 1) is False
+def test_calculate_quorate_status():
+    assert utils.calculate_quorate_status(3, 2) is True
+    assert utils.calculate_quorate_status(3, 1) is False
 
 
 @mock.patch("crmsh.utils.get_stdout_stderr")
@@ -1238,7 +1220,7 @@ Flags:            Quorate
     """
     res = utils.get_quorum_votes_dict()
     assert res == {'Expected': '1', 'Total': '1'}
-    mock_run.assert_called_once_with("corosync-quorumtool -s", remote=None)
+    mock_run.assert_called_once_with("corosync-quorumtool -s", remote=None, success_val_list=[0, 2])
 
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
@@ -1495,3 +1477,129 @@ def test_detect_virt(mock_run):
     mock_run.return_value = (0, None, None)
     assert utils.detect_virt() is True
     mock_run.assert_called_once_with("systemd-detect-virt")
+
+
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_is_standby(mock_run):
+    mock_run.return_value = """
+Node List:
+* Node 15sp2-1: standby
+    """
+    assert utils.is_standby("15sp2-1") is True
+    mock_run.assert_called_once_with("crm_mon -1")
+
+
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_get_dlm_option_dict(mock_run):
+    mock_run.return_value = """
+key1=value1
+key2=value2
+    """
+    res_dict = utils.get_dlm_option_dict()
+    assert res_dict == {
+            "key1": "value1",
+            "key2": "value2"
+            }
+    mock_run.assert_called_once_with("dlm_tool dump_config", remote=None)
+
+
+@mock.patch('crmsh.utils.get_dlm_option_dict')
+def test_set_dlm_option_exception(mock_get_dict):
+    mock_get_dict.return_value = {
+            "key1": "value1",
+            "key2": "value2"
+            }
+    with pytest.raises(ValueError) as err:
+        utils.set_dlm_option(name="xin")
+    assert str(err.value) == '"name" is not dlm config option'
+
+
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.utils.get_dlm_option_dict')
+def test_set_dlm_option(mock_get_dict, mock_run):
+    mock_get_dict.return_value = {
+            "key1": "value1",
+            "key2": "value2"
+            }
+    utils.set_dlm_option(key2="test")
+    mock_run.assert_called_once_with('dlm_tool set_config "key2=test"', remote=None)
+
+
+@mock.patch('crmsh.utils.has_resource_configured')
+def test_is_dlm_configured(mock_configured):
+    mock_configured.return_value = True
+    assert utils.is_dlm_configured() is True
+    mock_configured.assert_called_once_with("ocf::pacemaker:controld", peer=None)
+
+
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_is_quorate_exception(mock_run):
+    mock_run.return_value = "data"
+    with pytest.raises(ValueError) as err:
+        utils.is_quorate()
+    assert str(err.value) == "Failed to get quorate status from corosync-quorumtool"
+    mock_run.assert_called_once_with("corosync-quorumtool -s", remote=None, success_val_list=[0, 2])
+
+
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_is_quorate(mock_run):
+    mock_run.return_value = """
+Ring ID:          1084783297/440
+Quorate:          Yes
+    """
+    assert utils.is_quorate() is True
+    mock_run.assert_called_once_with("corosync-quorumtool -s", remote=None, success_val_list=[0, 2])
+
+
+@mock.patch('crmsh.utils.etree.fromstring')
+@mock.patch('crmsh.utils.get_stdout_stderr')
+def test_list_cluster_nodes_none(mock_run, mock_etree):
+    mock_run.return_value = (0, "data", None)
+    mock_etree.return_value = None
+    res = utils.list_cluster_nodes()
+    assert res is None
+    mock_run.assert_called_once_with(constants.CIB_QUERY)
+    mock_etree.assert_called_once_with("data")
+
+
+@mock.patch('os.path.isfile')
+@mock.patch('os.getenv')
+@mock.patch('crmsh.utils.get_stdout_stderr')
+def test_list_cluster_nodes_cib_not_exist(mock_run, mock_env, mock_isfile):
+    mock_run.return_value = (1, None, None)
+    mock_env.return_value = constants.CIB_RAW_FILE
+    mock_isfile.return_value = False
+    res = utils.list_cluster_nodes()
+    assert res is None
+    mock_run.assert_called_once_with(constants.CIB_QUERY)
+    mock_env.assert_called_once_with("CIB_file", constants.CIB_RAW_FILE)
+    mock_isfile.assert_called_once_with(constants.CIB_RAW_FILE)
+
+
+@mock.patch('crmsh.xmlutil.file2cib_elem')
+@mock.patch('os.path.isfile')
+@mock.patch('os.getenv')
+@mock.patch('crmsh.utils.get_stdout_stderr')
+def test_list_cluster_nodes(mock_run, mock_env, mock_isfile, mock_file2elem):
+    mock_run.return_value = (1, None, None)
+    mock_env.return_value = constants.CIB_RAW_FILE
+    mock_isfile.return_value = True
+    mock_cib_inst = mock.Mock()
+    mock_file2elem.return_value = mock_cib_inst
+    mock_node_inst1 = mock.Mock()
+    mock_node_inst2 = mock.Mock()
+    mock_node_inst1.get.side_effect = ["node1", "remote"]
+    mock_node_inst2.get.side_effect = ["node2", "member"]
+    mock_cib_inst.xpath.side_effect = [[mock_node_inst1, mock_node_inst2], "data"]
+
+    res = utils.list_cluster_nodes()
+    assert res == ["node2"]
+
+    mock_run.assert_called_once_with(constants.CIB_QUERY)
+    mock_env.assert_called_once_with("CIB_file", constants.CIB_RAW_FILE)
+    mock_isfile.assert_called_once_with(constants.CIB_RAW_FILE)
+    mock_file2elem.assert_called_once_with(constants.CIB_RAW_FILE)
+    mock_cib_inst.xpath.assert_has_calls([
+        mock.call(constants.XML_NODE_PATH),
+        mock.call("//primitive[@id='node1']/instance_attributes/nvpair[@name='server']")
+        ])
