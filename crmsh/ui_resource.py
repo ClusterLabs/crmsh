@@ -389,16 +389,24 @@ class RscMgmt(command.UI):
         action = context.get_command_name()
         action_cap = action.capitalize()
         action_cmd = cmd_map_dict[action]
+        usage = "usage: {} <rsc> [<node>] [<lifetime>] [force]".format(action)
         node = None
         lifetime = None
+
         argl = list(args)
         force = "force" in utils.fetch_opts(argl, ["force"]) or config.core.force
-        if len(argl) > 0:
+        if len(argl) >= 3:
+            context.fatal_error(usage)
+        if len(argl) == 2:  # must be <node> <lifetime>
             node = argl[0]
             if not xmlutil.is_our_node(node):
                 context.fatal_error("Not our node: " + node)
-        if len(argl) == 2:
-            lifetime = utils.fetch_lifetime_opt(argl[1])
+            lifetime = utils.fetch_lifetime_opt(argl)
+        elif len(argl) == 1: # could be <node> or <lifetime>
+            if xmlutil.is_our_node(argl[0]):
+                node = argl[0]
+            else:
+                lifetime = utils.fetch_lifetime_opt(argl)
 
         if action == "move" and not node and not force:
             context.fatal_error("No target node: {} requires either a target node or 'force'".format(action_cap))
@@ -422,8 +430,7 @@ class RscMgmt(command.UI):
     @command.alias('migrate')
     @command.skill_level('administrator')
     @command.wait
-    @command.completers_repeating(compl.resources, compl.nodes,
-                                  compl.choice(['reboot', 'forever', 'force']))
+    @command.completers_repeating(compl.resources, compl.nodes)
     def do_move(self, context, rsc, *args):
         """usage: move <rsc> [<node>] [<lifetime>] [force]"""
         return self.move_or_ban(context, rsc, *args)
