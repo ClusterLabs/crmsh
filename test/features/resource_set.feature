@@ -3,10 +3,12 @@ Feature: Use "crm configure set" to update attributes and operations
 
   Tag @clean means need to stop cluster service if the service is available
 
-  Background: Setup one node cluster and configure some resources
+  Background: Setup cluster and configure some resources
     Given     Cluster service is "stopped" on "hanode1"
     When      Run "crm cluster init -y" on "hanode1"
     Then      Cluster service is "started" on "hanode1"
+    When      Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then      Cluster service is "started" on "hanode2"
     When      Run "crm configure primitive d Dummy op monitor interval=3s" on "hanode1"
     Then      Resource "d" type "Dummy" is "Started"
     When      Run "crm configure primitive vip IPaddr2 params ip=10.10.10.123 op monitor interval=3s" on "hanode1"
@@ -45,3 +47,51 @@ Feature: Use "crm configure set" to update attributes and operations
     When    Run "crm configure set op-options.timeout 101" on "hanode1"
     And     Run "crm configure show op-options" on "hanode1"
     Then    Expected "timeout=101" in stdout
+
+  @clean
+  Scenario: Parse node and lifetime correctly (bsc#1192618)
+    Given   Resource "d" is started on "hanode1"
+    # move <res> <node>
+    When    Run "crm resource move d hanode2" on "hanode1"
+    When    Run "sleep 2" on "hanode1"
+    Then    Resource "d" is started on "hanode2"
+    When    Run "crm resource clear d" on "hanode1"
+
+    # move <res> <node> force
+    When    Run "crm resource move d hanode1" on "hanode1"
+    When    Run "sleep 2" on "hanode1"
+    Then    Resource "d" is started on "hanode1"
+    When    Run "crm resource clear d" on "hanode1"
+
+    # move <res> force
+    When    Run "crm resource move d force" on "hanode1"
+    When    Run "sleep 2" on "hanode1"
+    Then    Resource "d" is started on "hanode2"
+    When    Run "crm resource clear d" on "hanode1"
+
+    # move <res> <lifetime> force
+    When    Run "crm resource move d PT5M force" on "hanode1"
+    When    Run "sleep 2" on "hanode1"
+    Then    Resource "d" is started on "hanode1"
+    When    Run "crm resource clear d" on "hanode1"
+
+    # move <res> <node> <lifetime>
+    When    Run "crm resource move d hanode2 PT5M" on "hanode1"
+    When    Run "sleep 2" on "hanode1"
+    Then    Resource "d" is started on "hanode2"
+    When    Run "crm resource clear d" on "hanode1"
+
+    # move <res> <node> <lifetime> force
+    When    Run "crm resource move d hanode1 PT5M force" on "hanode1"
+    When    Run "sleep 2" on "hanode1"
+    Then    Resource "d" is started on "hanode1"
+    When    Run "crm resource clear d" on "hanode1"
+
+    When    Try "crm resource move d hanode2 PT5M force xxx"
+    Then    Except "ERROR: resource.move: usage: move <rsc> [<node>] [<lifetime>] [force]"
+    When    Try "crm resource move d hanode2 PT5M forcd"
+    Then    Except "ERROR: resource.move: usage: move <rsc> [<node>] [<lifetime>] [force]"
+    When    Try "crm resource move d xxxx PT5M force"
+    Then    Except "ERROR: resource.move: Not our node: xxxx"
+    When    Try "crm resource move d"
+    Then    Except "ERROR: resource.move: No target node: Move requires either a target node or 'force'"
