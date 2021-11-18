@@ -4,6 +4,7 @@ import os
 import datetime
 from behave import given, when, then
 from crmsh import corosync, parallax
+from crmsh import utils as crmutils
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
                   run_command_local_or_remote, file_in_archive
 import const
@@ -295,3 +296,15 @@ def step_impl(context, f):
     cmd = "crm cluster diff {}".format(f)
     rc, out = run_command(context, cmd)
     assert out == ""
+
+
+@given('Resource "{res_id}" is started on "{node}"')
+def step_impl(context, res_id, node):
+    rc, out, err = crmutils.get_stdout_stderr("crm_mon -1")
+    assert re.search(r'\*\s+{}\s+.*Started\s+{}'.format(res_id, node), out) is not None
+
+
+@then('Resource "{res_id}" is started on "{node}"')
+def step_impl(context, res_id, node):
+    rc, out, err = crmutils.get_stdout_stderr("crm_mon -1")
+    assert re.search(r'\*\s+{}\s+.*Started\s+{}'.format(res_id, node), out) is not None
