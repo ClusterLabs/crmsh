@@ -62,14 +62,14 @@ class TestFenceInfo(TestCase):
         Global tearDown.
         """
 
-    @mock.patch('crmsh.crash_test.utils.get_property')
+    @mock.patch('crmsh.crash_test.utils.crmshutils.get_property')
     def test_fence_enabled_false(self, mock_get_property):
         mock_get_property.return_value = None
         res = self.fence_info_inst.fence_enabled
         self.assertEqual(res, False)
         mock_get_property.assert_called_once_with("stonith-enabled")
 
-    @mock.patch('crmsh.crash_test.utils.get_property')
+    @mock.patch('crmsh.crash_test.utils.crmshutils.get_property')
     def test_fence_enabled_true(self, mock_get_property):
         mock_get_property.return_value = "True"
         res = self.fence_info_inst.fence_enabled
@@ -77,7 +77,7 @@ class TestFenceInfo(TestCase):
         mock_get_property.assert_called_once_with("stonith-enabled")
 
     @mock.patch('crmsh.crash_test.utils.msg_error')
-    @mock.patch('crmsh.crash_test.utils.get_property')
+    @mock.patch('crmsh.crash_test.utils.crmshutils.get_property')
     def test_fence_action_none(self, mock_get_property, mock_error):
         mock_get_property.return_value = None
         res = self.fence_info_inst.fence_action
@@ -85,21 +85,21 @@ class TestFenceInfo(TestCase):
         mock_get_property.assert_called_once_with("stonith-action")
         mock_error.assert_called_once_with('Cluster property "stonith-action" should be reboot|off|poweroff')
 
-    @mock.patch('crmsh.crash_test.utils.get_property')
+    @mock.patch('crmsh.crash_test.utils.crmshutils.get_property')
     def test_fence_action(self, mock_get_property):
         mock_get_property.return_value = "reboot"
         res = self.fence_info_inst.fence_action
         self.assertEqual(res, "reboot")
         mock_get_property.assert_called_once_with("stonith-action")
 
-    @mock.patch('crmsh.crash_test.utils.get_property')
+    @mock.patch('crmsh.crash_test.utils.crmshutils.get_property')
     def test_fence_timeout(self, mock_get_property):
         mock_get_property.return_value = "60s"
         res = self.fence_info_inst.fence_timeout
         self.assertEqual(res, "60")
         mock_get_property.assert_called_once_with("stonith-timeout")
 
-    @mock.patch('crmsh.crash_test.utils.get_property')
+    @mock.patch('crmsh.crash_test.utils.crmshutils.get_property')
     def test_fence_timeout_default(self, mock_get_property):
         mock_get_property.return_value = None
         res = self.fence_info_inst.fence_timeout
@@ -380,20 +380,6 @@ Node List:
         res = utils.online_nodes()
         self.assertEqual(res, ["15sp2-1", "15sp2-2"])
         mock_run.assert_called_once_with("crm_mon -1")
-
-    @mock.patch('crmsh.crash_test.utils.crmshutils.get_stdout_stderr')
-    def test_get_property_none(self, mock_run):
-        mock_run.return_value = (1, None, "error")
-        res = utils.get_property("test")
-        self.assertEqual(res, None)
-        mock_run.assert_called_once_with("crm configure get_property test")
-
-    @mock.patch('crmsh.crash_test.utils.crmshutils.get_stdout_stderr')
-    def test_get_property(self, mock_run):
-        mock_run.return_value = (0, "data", None)
-        res = utils.get_property("test")
-        self.assertEqual(res, "data")
-        mock_run.assert_called_once_with("crm configure get_property test")
 
     @mock.patch('crmsh.crash_test.utils.online_nodes')
     def test_peer_node_list_empty(self, mock_online):

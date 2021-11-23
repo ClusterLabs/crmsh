@@ -245,6 +245,36 @@ def test_is_unicast(mock_get_value):
     mock_get_value.assert_called_once_with("totem.transport")
 
 
+@mock.patch('crmsh.corosync.get_corosync_value_dict')
+def test_token_and_consensus_timeout(mock_get_dict):
+    mock_get_dict.return_value = {"token": 10, "consensus": 12}
+    assert corosync.token_and_consensus_timeout() == 22
+
+
+@mock.patch('crmsh.corosync.get_corosync_value')
+def test_get_corosync_value_dict(mock_get_value):
+    mock_get_value.side_effect = ["10000", None]
+    res = corosync.get_corosync_value_dict()
+    assert res == {"token": 10, "consensus": 12}
+
+
+@mock.patch('crmsh.corosync.get_value')
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_get_corosync_value_raise(mock_run, mock_get_value):
+    mock_run.side_effect = ValueError
+    mock_get_value.return_value = None
+    assert corosync.get_corosync_value("xxx") is None
+    mock_run.assert_called_once_with("corosync-cmapctl xxx")
+    mock_get_value.assert_called_once_with("xxx")
+
+
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_get_corosync_value(mock_run):
+    mock_run.return_value = "totem.token = 10000"
+    assert corosync.get_corosync_value("totem.token") == "10000"
+    mock_run.assert_called_once_with("corosync-cmapctl totem.token")
+
+
 class TestCorosyncParser(unittest.TestCase):
     def test_parse(self):
         p = Parser(F1)

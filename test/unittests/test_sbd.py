@@ -11,6 +11,275 @@ from crmsh import bootstrap
 from crmsh import sbd
 
 
+class TestSBDTimeout(unittest.TestCase):
+    """
+    Unitary tests for crmsh.sbd.SBDTimeout
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Global setUp.
+        """
+
+    def setUp(self):
+        """
+        Test setUp.
+        """
+        _dict = {"sbd.watchdog_timeout": 5, "sbd.msgwait": 10}
+        _inst_q = mock.Mock()
+        self.sbd_timeout_inst = sbd.SBDTimeout(mock.Mock(profiles_dict=_dict, is_s390=True, qdevice_inst=_inst_q))
+        self.sbd_timeout_inst_removing = sbd.SBDTimeout(mock.Mock(), True)
+
+    def tearDown(self):
+        """
+        Test tearDown.
+        """
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        Global tearDown.
+        """
+
+    @mock.patch('logging.Logger.warning')
+    def test_set_sbd_watchdog_timeout(self, mock_warn):
+        self.sbd_timeout_inst.set_sbd_watchdog_timeout()
+        mock_warn.assert_called_once_with("sbd_watchdog_timeout is set to %d for s390, it was %d", sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390, 5)
+
+    @mock.patch('logging.Logger.warning')
+    def test_set_sbd_msgwait(self, mock_warn):
+        self.sbd_timeout_inst.sbd_watchdog_timeout = 15
+        self.sbd_timeout_inst.set_sbd_msgwait()
+        mock_warn.assert_called_once_with("sbd msgwait is set to %d, it was %d", 30, 10)
+
+    @mock.patch('logging.Logger.warning')
+    @mock.patch('crmsh.utils.get_qdevice_sync_timeout')
+    @mock.patch('crmsh.utils.service_is_active')
+    @mock.patch('crmsh.utils.is_qdevice_configured')
+    def test_adjust_sbd_watchdog_timeout_with_diskless_and_qdevice_sbd_stage(self, mock_is_configured, mock_is_active, mock_get_sync, mock_warn):
+        mock_is_configured.return_value = True
+        mock_is_active.return_value = True
+        mock_get_sync.return_value = 15
+        self.sbd_timeout_inst.sbd_watchdog_timeout = 5
+        self.sbd_timeout_inst.adjust_sbd_watchdog_timeout_with_diskless_and_qdevice()
+        mock_warn.assert_called_once_with("sbd_watchdog_timeout is set to 20 for qdevice, it was 5")
+
+    @mock.patch('logging.Logger.warning')
+    @mock.patch('crmsh.utils.is_qdevice_configured')
+    def test_adjust_sbd_watchdog_timeout_with_diskless_and_qdevice_all(self, mock_is_configured, mock_warn):
+        mock_is_configured.return_value = False
+        self.sbd_timeout_inst.sbd_watchdog_timeout = 5
+        self.sbd_timeout_inst.adjust_sbd_watchdog_timeout_with_diskless_and_qdevice()
+        mock_warn.assert_called_once_with("sbd_watchdog_timeout is set to 35 for qdevice, it was 5")
+
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    def test_get_sbd_msgwait_exception(self, mock_run):
+        mock_run.return_value = "data"
+        with self.assertRaises(ValueError) as err:
+            sbd.SBDTimeout.get_sbd_msgwait("/dev/sda1")
+        self.assertEqual("Cannot get sbd msgwait for /dev/sda1", str(err.exception))
+        mock_run.assert_called_once_with("sbd -d /dev/sda1 dump")
+
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    def test_get_sbd_msgwait(self, mock_run):
+        mock_run.return_value = """
+        Timeout (loop)     : 1
+        Timeout (msgwait)  : 10
+        ==Header on disk /dev/sda1 is dumped
+        """
+        res = sbd.SBDTimeout.get_sbd_msgwait("/dev/sda1")
+        assert res == 10
+        mock_run.assert_called_once_with("sbd -d /dev/sda1 dump")
+
+    @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
+    def test_get_sbd_watchdog_timeout_exception(self, mock_get):
+        mock_get.return_value = None
+        with self.assertRaises(ValueError) as err:
+            sbd.SBDTimeout.get_sbd_watchdog_timeout()
+        self.assertEqual("Cannot get the value of SBD_WATCHDOG_TIMEOUT", str(err.exception))
+        mock_get.assert_called_once_with("SBD_WATCHDOG_TIMEOUT")
+
+    @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
+    def test_get_sbd_watchdog_timeout(self, mock_get):
+        mock_get.return_value = 5
+        res = sbd.SBDTimeout.get_sbd_watchdog_timeout()
+        assert res == 5
+        mock_get.assert_called_once_with("SBD_WATCHDOG_TIMEOUT")
+
+    @mock.patch('crmsh.utils.service_is_active')
+    def test_get_stonith_watchdog_timeout_return(self, mock_active):
+        mock_active.return_value = False
+        res = sbd.SBDTimeout.get_stonith_watchdog_timeout()
+        assert res == sbd.SBDTimeout.STONITH_WATCHDOG_TIMEOUT_DEFAULT
+        mock_active.assert_called_once_with("pacemaker.service")
+
+    @mock.patch('crmsh.utils.get_property')
+    @mock.patch('crmsh.utils.service_is_active')
+    def test_get_stonith_watchdog_timeout(self, mock_active, mock_get_property):
+        mock_active.return_value = True
+        mock_get_property.return_value = "60s"
+        res = sbd.SBDTimeout.get_stonith_watchdog_timeout()
+        assert res == 60
+        mock_active.assert_called_once_with("pacemaker.service")
+
+    @mock.patch('logging.Logger.debug')
+    @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
+    @mock.patch('crmsh.utils.detect_virt')
+    @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_delay_start_expected')
+    @mock.patch('crmsh.utils.get_pcmk_delay_max')
+    @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_msgwait')
+    @mock.patch('crmsh.sbd.SBDManager.get_sbd_device_from_config')
+    @mock.patch('crmsh.utils.is_2node_cluster_without_qdevice')
+    def test_load_configurations(self, mock_2node, mock_get_sbd_dev, mock_get_msgwait, mock_pcmk_delay, mock_delay_expected, mock_detect, mock_get_sbd_value, mock_debug):
+        mock_2node.return_value = True
+        mock_debug.return_value = False
+        mock_get_sbd_value.return_value = "no"
+        mock_get_sbd_dev.return_value = ["/dev/sda1"]
+        mock_get_msgwait.return_value = 30
+        mock_pcmk_delay.return_value = 30
+
+        self.sbd_timeout_inst._load_configurations()
+
+        mock_2node.assert_called_once_with(False)
+        mock_get_sbd_dev.assert_called_once_with()
+        mock_get_msgwait.assert_called_once_with("/dev/sda1")
+        mock_pcmk_delay.assert_called_once_with(True)
+
+    @mock.patch('logging.Logger.debug')
+    @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
+    @mock.patch('crmsh.utils.detect_virt')
+    @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_delay_start_expected')
+    @mock.patch('crmsh.sbd.SBDTimeout.get_stonith_watchdog_timeout')
+    @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
+    @mock.patch('crmsh.sbd.SBDManager.get_sbd_device_from_config')
+    @mock.patch('crmsh.utils.is_2node_cluster_without_qdevice')
+    def test_load_configurations_diskless(self, mock_2node, mock_get_sbd_dev, mock_get_watchdog_timeout, mock_get_stonith_watchdog_timeout, mock_delay_expected, mock_detect, mock_get_sbd_value, mock_debug):
+        mock_2node.return_value = True
+        mock_debug.return_value = False
+        mock_get_sbd_value.return_value = "no"
+        mock_get_sbd_dev.return_value = []
+        mock_get_watchdog_timeout.return_value = 30
+        mock_get_stonith_watchdog_timeout.return_value = 30
+
+        self.sbd_timeout_inst._load_configurations()
+
+        mock_2node.assert_called_once_with(False)
+        mock_get_sbd_dev.assert_called_once_with()
+        mock_get_watchdog_timeout.assert_called_once_with()
+        mock_get_stonith_watchdog_timeout.assert_called_once_with()
+
+    @mock.patch('crmsh.corosync.token_and_consensus_timeout')
+    @mock.patch('logging.Logger.debug')
+    def test_get_stonith_timeout_expected(self, mock_debug, mock_general):
+        self.sbd_timeout_inst.disk_based = True
+        self.sbd_timeout_inst.pcmk_delay_max = 30
+        self.sbd_timeout_inst.msgwait = 30
+        mock_general.return_value = 11
+        res = self.sbd_timeout_inst.get_stonith_timeout_expected()
+        assert res == 83
+
+    @mock.patch('crmsh.corosync.token_and_consensus_timeout')
+    @mock.patch('logging.Logger.debug')
+    def test_get_stonith_timeout_expected_diskless(self, mock_debug, mock_general):
+        self.sbd_timeout_inst.disk_based = False
+        self.sbd_timeout_inst.stonith_watchdog_timeout = -1
+        self.sbd_timeout_inst.sbd_watchdog_timeout = 15
+        mock_general.return_value = 11
+        res = self.sbd_timeout_inst.get_stonith_timeout_expected()
+        assert res == 71
+
+    @mock.patch('crmsh.corosync.token_and_consensus_timeout')
+    def test_get_sbd_delay_start_expected(self, mock_corosync):
+        mock_corosync.return_value = 30
+        self.sbd_timeout_inst.disk_based = True
+        self.sbd_timeout_inst.pcmk_delay_max = 30
+        self.sbd_timeout_inst.msgwait = 30
+        res = self.sbd_timeout_inst.get_sbd_delay_start_expected()
+        assert res == 90
+
+    @mock.patch('crmsh.corosync.token_and_consensus_timeout')
+    def test_get_sbd_delay_start_expected_diskless(self, mock_corosync):
+        mock_corosync.return_value = 30
+        self.sbd_timeout_inst.disk_based = False
+        self.sbd_timeout_inst.sbd_watchdog_timeout = 30
+        res = self.sbd_timeout_inst.get_sbd_delay_start_expected()
+        assert res == 90
+
+    @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
+    def test_is_sbd_delay_start(self, mock_get_sbd_value):
+        mock_get_sbd_value.return_value = "100"
+        assert sbd.SBDTimeout.is_sbd_delay_start() is True
+        mock_get_sbd_value.assert_called_once_with("SBD_DELAY_START")
+
+    @mock.patch('crmsh.sbd.SBDManager.update_configuration')
+    def test_adjust_sbd_delay_start_return(self, mock_update):
+        self.sbd_timeout_inst.sbd_delay_start_value_expected = 100
+        self.sbd_timeout_inst.sbd_delay_start_value_from_config = "100"
+        self.sbd_timeout_inst.adjust_sbd_delay_start()
+        mock_update.assert_not_called()
+
+    @mock.patch('crmsh.sbd.SBDManager.update_configuration')
+    def test_adjust_sbd_delay_start(self, mock_update):
+        self.sbd_timeout_inst.sbd_delay_start_value_expected = 100
+        self.sbd_timeout_inst.sbd_delay_start_value_from_config = "no"
+        self.sbd_timeout_inst.adjust_sbd_delay_start()
+        mock_update.assert_called_once_with({"SBD_DELAY_START": "100"})
+
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
+    def test_adjust_systemd_start_timeout_no_delay_start_no(self, mock_get_sbd_value, mock_run):
+        mock_get_sbd_value.return_value = "no"
+        self.sbd_timeout_inst.adjust_systemd_start_timeout()
+        mock_run.assert_not_called()
+
+    @mock.patch('crmsh.utils.mkdirp')
+    @mock.patch('crmsh.utils.get_systemd_timeout_start_in_sec')
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
+    def test_adjust_systemd_start_timeout_no_delay_start_return(self, mock_get_sbd_value, mock_run, mock_get_systemd_sec, mock_mkdirp):
+        mock_get_sbd_value.return_value = "10"
+        mock_run.return_value = "1min 30s"
+        mock_get_systemd_sec.return_value = 90
+        self.sbd_timeout_inst.adjust_systemd_start_timeout()
+        mock_run.assert_called_once_with("systemctl show -p TimeoutStartUSec sbd --value")
+        mock_get_systemd_sec.assert_called_once_with("1min 30s")
+        mock_mkdirp.assert_not_called()
+
+    @mock.patch('crmsh.utils.cluster_run_cmd')
+    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.utils.str2file')
+    @mock.patch('crmsh.utils.mkdirp')
+    @mock.patch('crmsh.utils.get_systemd_timeout_start_in_sec')
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
+    def test_adjust_systemd_start_timeout_no_delay_start(self, mock_get_sbd_value, mock_run, mock_get_systemd_sec, mock_mkdirp, mock_str2file, mock_csync2, mock_cluster_run):
+        mock_get_sbd_value.return_value = "100"
+        mock_run.return_value = "1min 30s"
+        mock_get_systemd_sec.return_value = 90
+        self.sbd_timeout_inst.adjust_systemd_start_timeout()
+        mock_run.assert_called_once_with("systemctl show -p TimeoutStartUSec sbd --value")
+        mock_get_systemd_sec.assert_called_once_with("1min 30s")
+        mock_mkdirp.assert_called_once_with(bootstrap.SBD_SYSTEMD_DELAY_START_DIR)
+        mock_str2file.assert_called_once_with('[Service]\nTimeoutSec=120', '/etc/systemd/system/sbd.service.d/sbd_delay_start.conf')
+        mock_csync2.assert_called_once_with(bootstrap.SBD_SYSTEMD_DELAY_START_DIR)
+        mock_cluster_run.assert_called_once_with("systemctl daemon-reload")
+
+    @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
+    @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
+    def test_get_sbd_delay_start_sec_from_sysconfig_yes(self, mock_get_sbd_value, mock_get_sbd_timeout):
+        mock_get_sbd_value.return_value = "yes"
+        mock_get_sbd_timeout.return_value = 30
+        assert sbd.SBDTimeout.get_sbd_delay_start_sec_from_sysconfig() == 60
+        mock_get_sbd_value.assert_called_once_with("SBD_DELAY_START")
+
+    @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
+    def test_get_sbd_delay_start_sec_from_sysconfig(self, mock_get_sbd_value):
+        mock_get_sbd_value.return_value = "30"
+        assert sbd.SBDTimeout.get_sbd_delay_start_sec_from_sysconfig() == 30
+        mock_get_sbd_value.assert_called_once_with("SBD_DELAY_START")
+
+
 class TestSBDManager(unittest.TestCase):
     """
     Unitary tests for crmsh.sbd.SBDManager
@@ -189,19 +458,27 @@ class TestSBDManager(unittest.TestCase):
     def test_get_sbd_device_diskless(self):
         self.sbd_inst_diskless._get_sbd_device()
 
-    def test_initialize_sbd_return(self):
+    @mock.patch('crmsh.sbd.SBDTimeout')
+    @mock.patch('logging.Logger.info')
+    def test_initialize_sbd_return(self, mock_info, mock_sbd_timeout):
+        mock_inst = mock.Mock()
+        mock_sbd_timeout.return_value = mock_inst
+        mock_inst.set_sbd_watchdog_timeout = mock.Mock()
+        mock_inst.adjust_sbd_watchdog_timeout_with_diskless_and_qdevice = mock.Mock()
         self.sbd_inst_diskless._context = mock.Mock(profiles_dict={})
         self.sbd_inst_diskless._initialize_sbd()
+        mock_info.assert_called_once_with("Initializing diskless SBD")
+        mock_inst.adjust_sbd_watchdog_timeout_with_diskless_and_qdevice.assert_called_once_with()
 
-    @mock.patch('logging.Logger.warning')
-    @mock.patch('crmsh.sbd.SBDManager._adjust_sbd_watchdog_timeout_for_s390')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.bootstrap.invoke')
-    def test_initialize_sbd(self, mock_invoke, mock_error, mock_adjust_s390, mock_warn):
-        self.sbd_inst._context = mock.Mock(profiles_dict={
-            "sbd.msgwait": 9,
-            "sbd.watchdog_timeout": 5
-            })
+    @mock.patch('crmsh.sbd.SBDTimeout')
+    @mock.patch('logging.Logger.info')
+    def test_initialize_sbd(self, mock_info, mock_sbd_timeout, mock_invoke, mock_error):
+        mock_inst = mock.Mock(sbd_msgwait=10, sbd_watchdog_timeout=5)
+        mock_sbd_timeout.return_value = mock_inst
+        mock_inst.set_sbd_watchdog_timeout = mock.Mock()
+        mock_inst.set_sbd_msgwait = mock.Mock()
         self.sbd_inst._sbd_devices = ["/dev/sdb1", "/dev/sdc1"]
         mock_invoke.side_effect = [(True, None, None), (False, None, "error")]
         mock_error.side_effect = ValueError
@@ -213,24 +490,20 @@ class TestSBDManager(unittest.TestCase):
             mock.call("sbd -4 10 -1 5 -d /dev/sdb1 create"),
             mock.call("sbd -4 10 -1 5 -d /dev/sdc1 create")
             ])
-        mock_warn.assert_called_once_with("sbd msgwait is set to 10, it was 9")
         mock_error.assert_called_once_with("Failed to initialize SBD device /dev/sdc1: error")
 
-    @mock.patch('crmsh.utils.detect_virt')
     @mock.patch('crmsh.bootstrap.csync2_update')
     @mock.patch('crmsh.utils.sysconfig_set')
-    @mock.patch('crmsh.sbd.SBDManager._adjust_sbd_watchdog_timeout_with_diskless_and_qdevice')
     @mock.patch('shutil.copyfile')
-    def test_update_configuration(self, mock_copy, mock_determine, mock_sysconfig, mock_update, mock_detect):
+    def test_update_configuration(self, mock_copy, mock_sysconfig, mock_update):
         self.sbd_inst._sbd_devices = ["/dev/sdb1", "/dev/sdc1"]
         self.sbd_inst._watchdog_inst = mock.Mock(watchdog_device_name="/dev/watchdog")
-        mock_detect.return_value = True
+        self.sbd_inst.timeout_inst = mock.Mock(sbd_watchdog_timeout=15)
 
-        self.sbd_inst._sbd_watchdog_timeout = 30
         self.sbd_inst._update_sbd_configuration()
 
         mock_copy.assert_called_once_with("/usr/share/fillup-templates/sysconfig.sbd", "/etc/sysconfig/sbd")
-        mock_sysconfig.assert_called_once_with("/etc/sysconfig/sbd", SBD_PACEMAKER='yes', SBD_STARTMODE='always', SBD_DELAY_START='yes', SBD_WATCHDOG_DEV='/dev/watchdog', SBD_DEVICE='/dev/sdb1;/dev/sdc1', SBD_WATCHDOG_TIMEOUT="30")
+        mock_sysconfig.assert_called_once_with("/etc/sysconfig/sbd", SBD_WATCHDOG_DEV='/dev/watchdog', SBD_DEVICE='/dev/sdb1;/dev/sdc1', SBD_WATCHDOG_TIMEOUT="15")
         mock_update.assert_called_once_with("/etc/sysconfig/sbd")
 
     @mock.patch('crmsh.bootstrap.utils.parse_sysconfig')
@@ -331,7 +604,7 @@ class TestSBDManager(unittest.TestCase):
         mock_warn.assert_called_once_with()
         mock_enable_sbd.assert_called_once_with()
 
-    @mock.patch('crmsh.sbd.SBDManager.configure_sbd_resource')
+    @mock.patch('crmsh.sbd.SBDManager.configure_sbd_resource_and_properties')
     @mock.patch('crmsh.bootstrap.wait_for_cluster')
     @mock.patch('crmsh.utils.cluster_run_cmd')
     @mock.patch('logging.Logger.info')
@@ -344,17 +617,20 @@ class TestSBDManager(unittest.TestCase):
         mock_wait.assert_called_once_with()
         mock_config_sbd_ra.assert_called_once_with()
 
+    @mock.patch('crmsh.sbd.SBDTimeout.get_stonith_timeout')
     @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.utils.has_resource_running')
-    def test_restart_cluster_on_needed_diskless(self, mock_ra_running, mock_warn):
+    def test_restart_cluster_on_needed_diskless(self, mock_ra_running, mock_warn, mock_get_timeout):
         mock_ra_running.return_value = True
+        mock_get_timeout.return_value = 60
+        self.sbd_inst_diskless.timeout_inst = mock.Mock(stonith_watchdog_timeout=-1)
         self.sbd_inst_diskless._restart_cluster_and_configure_sbd_ra()
         mock_warn.assert_has_calls([
             mock.call("To start sbd.service, need to restart cluster service manually on each node"),
-            mock.call("Then run \"crm configure property stonith-enabled=true stonith-watchdog-timeout=-1 stonith-timeout=60s\" on any node")
+            mock.call("Then run \"crm configure property stonith-enabled=true stonith-watchdog-timeout=-1 stonith-timeout=60\" on any node")
             ])
 
-    @mock.patch('crmsh.sbd.SBDManager.configure_sbd_resource')
+    @mock.patch('crmsh.sbd.SBDManager.configure_sbd_resource_and_properties')
     @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.utils.has_resource_running')
     def test_restart_cluster_on_needed(self, mock_ra_running, mock_warn, mock_config_sbd_ra):
@@ -381,103 +657,33 @@ class TestSBDManager(unittest.TestCase):
             ])
         mock_restart.assert_called_once_with()
 
-    @mock.patch('logging.Logger.warning')
-    @mock.patch('crmsh.sbd.SBDManager.configure_sbd_resource')
-    @mock.patch('crmsh.utils.has_resource_running')
-    @mock.patch('crmsh.utils.cluster_run_cmd')
-    def test_enable_sbd_service(self, mock_cluster_run, mock_ra_running, mock_config_sbd_ra, mock_warn):
-        self.sbd_inst._context = mock.Mock(cluster_is_running=True)
-        mock_ra_running.return_value = True
-
-        self.sbd_inst._enable_sbd_service()
-
-        mock_cluster_run.assert_has_calls([
-            mock.call("systemctl enable sbd.service"),
-            ])
-        mock_ra_running.assert_called_once_with()
-        mock_config_sbd_ra.assert_called_once_with()
-        mock_warn.assert_called_once_with("To start sbd.service, need to restart cluster service manually on each node")
-
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_configure_sbd_resource_not_installed(self, mock_package):
+    def test_configure_sbd_resource_and_properties_not_installed(self, mock_package):
         mock_package.return_value = False
-        self.sbd_inst.configure_sbd_resource()
+        self.sbd_inst.configure_sbd_resource_and_properties()
         mock_package.assert_called_once_with("sbd")
 
-    @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.bootstrap.invokerc')
-    @mock.patch('crmsh.sbd.SBDManager._get_sbd_device_from_config')
+    @mock.patch('crmsh.sbd.SBDTimeout.adjust_sbd_timeout_related_cluster_configuration')
+    @mock.patch('crmsh.utils.set_property')
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
     @mock.patch('crmsh.utils.has_resource_configured')
     @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_configure_sbd_resource_error_primitive(self, mock_package, mock_enabled, mock_ra_configured, mock_get_device, mock_invoke, mock_error):
+    def test_configure_sbd_resource_and_properties(self, mock_package, mock_enabled, mock_configured, mock_run, mock_set_property, sbd_adjust):
         mock_package.return_value = True
         mock_enabled.return_value = True
-        mock_ra_configured.return_value = False
-        mock_get_device.return_value = ["/dev/sdb1"]
-        mock_invoke.return_value = False
-        mock_error.side_effect = ValueError
+        mock_configured.return_value = False
+        self.sbd_inst._context = mock.Mock(cluster_is_running=True)
+        self.sbd_inst._get_sbd_device_from_config = mock.Mock()
+        self.sbd_inst._get_sbd_device_from_config.return_value = ["/dev/sda1"]
 
-        with self.assertRaises(ValueError):
-            self.sbd_inst.configure_sbd_resource()
+        self.sbd_inst.configure_sbd_resource_and_properties()
 
         mock_package.assert_called_once_with("sbd")
         mock_enabled.assert_called_once_with("sbd.service")
-        mock_ra_configured.assert_called_once_with("stonith:external/sbd")
-        mock_get_device.assert_called_once_with()
-        mock_invoke.assert_called_once_with("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s")
-        mock_error.assert_called_once_with("Can't create stonith-sbd primitive")
-
-    @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.bootstrap.invokerc')
-    @mock.patch('crmsh.sbd.SBDManager._get_sbd_device_from_config')
-    @mock.patch('crmsh.utils.has_resource_configured')
-    @mock.patch('crmsh.utils.service_is_enabled')
-    @mock.patch('crmsh.utils.package_is_installed')
-    def test_configure_sbd_resource_error_property(self, mock_package, mock_enabled, mock_ra_configured, mock_get_device, mock_invoke, mock_error):
-        mock_package.return_value = True
-        mock_enabled.return_value = True
-        mock_ra_configured.return_value = False
-        mock_get_device.return_value = ["/dev/sdb1"]
-        mock_invoke.side_effect = [True, False]
-        mock_error.side_effect = ValueError
-
-        with self.assertRaises(ValueError):
-            self.sbd_inst.configure_sbd_resource()
-
-        mock_package.assert_called_once_with("sbd")
-        mock_enabled.assert_called_once_with("sbd.service")
-        mock_ra_configured.assert_called_once_with("stonith:external/sbd")
-        mock_get_device.assert_called_once_with()
-        mock_invoke.assert_has_calls([
-            mock.call("crm configure primitive stonith-sbd stonith:external/sbd pcmk_delay_max=30s"),
-            mock.call("crm configure property stonith-enabled=true")
-            ])
-        mock_error.assert_called_once_with("Can't enable STONITH for SBD")
-
-    @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.bootstrap.invokerc')
-    @mock.patch('crmsh.sbd.SBDManager._get_sbd_device_from_config')
-    @mock.patch('crmsh.utils.has_resource_configured')
-    @mock.patch('crmsh.utils.service_is_enabled')
-    @mock.patch('crmsh.utils.package_is_installed')
-    def test_configure_sbd_resource_diskless(self, mock_package, mock_enabled, mock_ra_configured, mock_get_device, mock_invoke, mock_error):
-        mock_package.return_value = True
-        mock_enabled.return_value = True
-        mock_ra_configured.return_value = False
-        mock_get_device.return_value = None
-        mock_invoke.return_value = False
-        mock_error.side_effect = ValueError
-
-        with self.assertRaises(ValueError):
-            self.sbd_inst_diskless.configure_sbd_resource()
-
-        mock_package.assert_called_once_with("sbd")
-        mock_enabled.assert_called_once_with("sbd.service")
-        mock_get_device.assert_called_once_with()
-        mock_invoke.assert_called_once_with("crm configure property stonith-enabled=true stonith-watchdog-timeout=-1 stonith-timeout=60s")
-        mock_error.assert_called_once_with("Can't enable STONITH for diskless SBD")
-        mock_ra_configured.assert_called_once_with("stonith:external/sbd")
+        mock_configured.assert_called_once_with(sbd.SBDManager.SBD_RA)
+        mock_run.assert_called_once_with("crm configure primitive {} {}".format(sbd.SBDManager.SBD_RA_ID, sbd.SBDManager.SBD_RA))
+        mock_set_property.assert_called_once_with(stonith_enabled="true")
 
     @mock.patch('crmsh.utils.package_is_installed')
     def test_join_sbd_config_not_installed(self, mock_package):
@@ -512,6 +718,7 @@ class TestSBDManager(unittest.TestCase):
         mock_invoke.assert_called_once_with("systemctl disable sbd.service")
         mock_enabled.assert_called_once_with("sbd.service", "node1")
 
+    @mock.patch('crmsh.utils.sysconfig_set')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.sbd.SBDManager._verify_sbd_device')
     @mock.patch('crmsh.sbd.SBDManager._get_sbd_device_from_config')
@@ -520,7 +727,7 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('os.path.exists')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_join_sbd(self, mock_package, mock_exists, mock_enabled, mock_invoke, mock_watchdog, mock_get_device, mock_verify, mock_status):
+    def test_join_sbd(self, mock_package, mock_exists, mock_enabled, mock_invoke, mock_watchdog, mock_get_device, mock_verify, mock_status, mock_set):
         mock_package.return_value = True
         mock_exists.return_value = True
         mock_enabled.return_value = True
@@ -541,6 +748,7 @@ class TestSBDManager(unittest.TestCase):
         mock_watchdog.assert_called_once_with(peer_host="node1")
         mock_watchdog_inst.join_watchdog.assert_called_once_with()
 
+    @mock.patch('crmsh.utils.sysconfig_set')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.sbd.SBDManager._warn_diskless_sbd')
     @mock.patch('crmsh.sbd.SBDManager._get_sbd_device_from_config')
@@ -549,7 +757,7 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('os.path.exists')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_join_sbd_diskless(self, mock_package, mock_exists, mock_enabled, mock_invoke, mock_watchdog, mock_get_device, mock_warn, mock_status):
+    def test_join_sbd_diskless(self, mock_package, mock_exists, mock_enabled, mock_invoke, mock_watchdog, mock_get_device, mock_warn, mock_status, mock_set):
         mock_package.return_value = True
         mock_exists.return_value = True
         mock_enabled.return_value = True
@@ -628,46 +836,6 @@ class TestSBDManager(unittest.TestCase):
         self.assertEqual(res, "a2e9a92c-cc72-4ef9-ac55-ccc342f3546b")
         mock_run.assert_called_once_with("sbd -d /dev/sda1 dump", remote="node1")
 
-    @mock.patch('crmsh.utils.is_qdevice_configured')
-    def test_adjust_sbd_watchdog_timeout_with_diskless_and_qdevice_return(self, mock_qdevice_configured):
-        self.sbd_inst._adjust_sbd_watchdog_timeout_with_diskless_and_qdevice()
-        mock_qdevice_configured.assert_not_called()
-
-    @mock.patch('logging.Logger.warning')
-    @mock.patch('crmsh.sbd.SBDManager.calculate_stonith_timeout')
-    @mock.patch('crmsh.utils.get_qdevice_sync_timeout')
-    @mock.patch('crmsh.utils.service_is_active')
-    @mock.patch('crmsh.utils.is_qdevice_configured')
-    def test_adjust_sbd_watchdog_timeout_with_diskless_and_qdevice_after_qdevice(self, mock_qdevice_configured, mock_active, mock_get_qsync_timeout, mock_cal_timeout, mock_warn):
-        mock_qdevice_configured.return_value = True
-        mock_active.return_value = True
-        mock_get_qsync_timeout.return_value = 30
-        self.sbd_inst_diskless._sbd_watchdog_timeout = 5
-        mock_cal_timeout.return_value = 70
-
-        self.sbd_inst_diskless._adjust_sbd_watchdog_timeout_with_diskless_and_qdevice()
-
-        mock_qdevice_configured.assert_called_once_with()
-        mock_active.assert_called_once_with("corosync-qdevice.service")
-        mock_get_qsync_timeout.assert_called_once_with()
-        mock_cal_timeout.assert_called_once_with(35)
-        mock_warn.assert_called_once_with("sbd_watchdog_timeout is set to 35 for qdevice, it was 5")
-
-    @mock.patch('logging.Logger.warning')
-    @mock.patch('crmsh.sbd.SBDManager.calculate_stonith_timeout')
-    @mock.patch('crmsh.utils.is_qdevice_configured')
-    def test_adjust_sbd_watchdog_timeout_with_diskless_and_qdevice(self, mock_qdevice_configured, mock_cal_timeout, mock_warn):
-        self.sbd_inst_diskless._context = mock.Mock(qdevice_inst=mock.Mock())
-        mock_qdevice_configured.return_value = False
-        mock_cal_timeout.return_value = 10
-        self.sbd_inst_diskless._sbd_watchdog_timeout = 5
-
-        self.sbd_inst_diskless._adjust_sbd_watchdog_timeout_with_diskless_and_qdevice()
-
-        mock_qdevice_configured.assert_called_once_with()
-        mock_cal_timeout.assert_called_once_with(sbd.SBDManager.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)
-        mock_warn.assert_called_once_with("sbd_watchdog_timeout is set to 35 for qdevice, it was 5")
-
     @mock.patch('crmsh.sbd.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.utils.service_is_active')
     @mock.patch('crmsh.bootstrap.Context')
@@ -712,122 +880,3 @@ class TestSBDManager(unittest.TestCase):
         self.sbd_inst.update_configuration(sbd_config_dict)
         mock_config_set.assert_called_once_with(bootstrap.SYSCONFIG_SBD, **sbd_config_dict)
         mock_csync2.assert_called_once_with(bootstrap.SYSCONFIG_SBD)
-
-    def test_calculate_stonith_timeout(self):
-        res = self.sbd_inst.calculate_stonith_timeout(5)
-        assert res == 12
-
-    @mock.patch('crmsh.sbd.SBDManager.is_delay_start')
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
-    def test_adjust_systemd_no_delay(self, mock_run, mock_delay_start):
-        mock_delay_start.return_value = False
-        self.sbd_inst._adjust_systemd()
-        mock_delay_start.assert_called_once_with()
-        mock_run.assert_not_called()
-
-    @mock.patch('crmsh.sbd.SBDManager.get_sbd_start_timeout_threshold')
-    @mock.patch('crmsh.utils.mkdirp')
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
-    @mock.patch('crmsh.sbd.SBDManager.is_delay_start')
-    def test_adjust_systemd_return(self, mock_delay_start, mock_run, mock_dirp, mock_threshold):
-        mock_threshold.return_value = 10
-        mock_delay_start.return_value = True
-        mock_run.return_value = "1min 30s"
-
-        self.sbd_inst._adjust_systemd()
-
-        mock_run.assert_called_once_with("systemctl show -p TimeoutStartUSec sbd --value")
-        mock_threshold.assert_called_once_with()
-        mock_dirp.assert_not_called()
-
-    @mock.patch('crmsh.utils.str2file')
-    @mock.patch('crmsh.utils.mkdirp')
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
-    @mock.patch('crmsh.sbd.SBDManager.get_suitable_sbd_systemd_timeout')
-    @mock.patch('crmsh.sbd.SBDManager.get_sbd_start_timeout_threshold')
-    @mock.patch('crmsh.sbd.SBDManager.is_delay_start')
-    def test_adjust_systemd(self, mock_delay_start, mock_threshold, mock_systemd_timeout, mock_run, mock_dirp, mock_str2file):
-        mock_delay_start.return_value = True
-        mock_threshold.return_value = 120
-        mock_systemd_timeout.return_value = 144
-        mock_run.return_value = "1min 30s"
-
-        self.sbd_inst._adjust_systemd()
-
-        mock_run.assert_has_calls([
-            mock.call("systemctl show -p TimeoutStartUSec sbd --value"),
-            mock.call("systemctl daemon-reload")
-            ])
-        mock_dirp.assert_called_once_with("/etc/systemd/system/sbd.service.d")
-        mock_str2file.assert_called_once_with('[Service]\nTimeoutSec=144', '/etc/systemd/system/sbd.service.d/sbd_delay_start.conf')
-        mock_delay_start.assert_called_once_with()
-        mock_threshold.assert_called_once_with()
-        mock_systemd_timeout.assert_called_once_with()
-
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
-    def test_get_sbd_msgwait_exception(self, mock_run):
-        mock_run.return_value = "data"
-        with self.assertRaises(ValueError) as err:
-            sbd.SBDManager._get_sbd_msgwait("/dev/sda1")
-        self.assertEqual("Cannot get sbd msgwait for /dev/sda1", str(err.exception))
-
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
-    def test_get_sbd_msgwait(self, mock_run):
-        mock_run.return_value = """
-        Timeout (allocate) : 2
-        Timeout (loop)     : 1
-        Timeout (msgwait)  : 30
-        ==Header on disk /dev/sda1 is dumped
-        """
-        res = sbd.SBDManager._get_sbd_msgwait("/dev/sda1")
-        self.assertEqual(res, 30)
-        mock_run.assert_called_once_with("sbd -d /dev/sda1 dump")
-
-    @mock.patch('crmsh.sbd.SBDManager.get_sbd_start_timeout_threshold')
-    def test_get_suitable_sbd_systemd_timeout(self, mock_threshold):
-        mock_threshold.return_value = 10
-        res = sbd.SBDManager.get_suitable_sbd_systemd_timeout()
-        self.assertEqual(res, 12)
-        mock_threshold.assert_called_once_with()
-
-    @mock.patch('logging.Logger.warning')
-    def test_adjust_sbd_watchdog_timeout_for_s390(self, mock_warn):
-        self.sbd_inst._context = mock.Mock(is_s390=True)
-        self.sbd_inst._sbd_watchdog_timeout = 10
-        self.sbd_inst._adjust_sbd_watchdog_timeout_for_s390()
-        mock_warn.assert_called_once_with("sbd_watchdog_timeout is set to 15 for s390, it was 10")
-
-    @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
-    def test_get_sbd_watchdog_timeout_exception(self, mock_get_value):
-        mock_get_value.return_value = None
-        with self.assertRaises(ValueError) as err:
-            sbd.SBDManager.get_sbd_watchdog_timeout()
-        self.assertEqual("Cannot get the value of SBD_WATCHDOG_TIMEOUT", str(err.exception))
-        mock_get_value.assert_called_once_with("SBD_WATCHDOG_TIMEOUT")
-
-    @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
-    def test_get_sbd_watchdog_timeout(self, mock_get_value):
-        mock_get_value.return_value = 10
-        res = sbd.SBDManager.get_sbd_watchdog_timeout()
-        self.assertEqual(res, 10)
-        mock_get_value.assert_called_once_with("SBD_WATCHDOG_TIMEOUT")
-
-    @mock.patch('crmsh.sbd.SBDManager.get_sbd_watchdog_timeout')
-    @mock.patch('crmsh.sbd.SBDManager.get_sbd_device_from_config')
-    def test_get_sbd_start_timeout_threshold_diskless(self, mock_get_device, mock_get_timeout):
-        mock_get_device.return_value = None
-        mock_get_timeout.return_value = 10
-        res = sbd.SBDManager.get_sbd_start_timeout_threshold()
-        self.assertEqual(res, 20)
-        mock_get_device.assert_called_once_with()
-        mock_get_timeout.assert_called_once_with()
-
-    @mock.patch('crmsh.sbd.SBDManager._get_sbd_msgwait')
-    @mock.patch('crmsh.sbd.SBDManager.get_sbd_device_from_config')
-    def test_get_sbd_start_timeout_threshold(self, mock_get_device, mock_get_msgwait):
-        mock_get_device.return_value = ["/dev/sdb1"]
-        mock_get_msgwait.return_value = 10
-        res = sbd.SBDManager.get_sbd_start_timeout_threshold()
-        self.assertEqual(res, 10)
-        mock_get_device.assert_called_once_with()
-        mock_get_msgwait.assert_called_once_with("/dev/sdb1")
