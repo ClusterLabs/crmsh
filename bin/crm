@@ -27,7 +27,11 @@ if int(sys.version[0]) < 3:
 
 try:
     from crmsh import log
-    log.setup_logging()
+    if '-h' not in sys.argv and '--help' not in sys.argv:
+        log.setup_logging()
+    else:
+        log.setup_logging(only_help=True)
+
     from crmsh import main
 except ImportError as msg:
     sys.stderr.write('''Fatal error:
