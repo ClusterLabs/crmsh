@@ -398,11 +398,15 @@ def setup_directory_for_logfile():
     os.makedirs(_dir, exist_ok=True)
 
 
-def setup_logging():
+def setup_logging(only_help=False):
     """
     Setup log directory and loadding logging config dict
     """
-    setup_directory_for_logfile()
+    # To avoid the potential "permission denied" error under other users (boo#1192754)
+    if only_help:
+        LOGGING_CFG["handlers"]["file"] = {'class': 'logging.NullHandler'}
+    else:
+        setup_directory_for_logfile()
     logging.config.dictConfig(LOGGING_CFG)
 
 
