@@ -3,7 +3,6 @@
 # See COPYING for license information.
 
 import re
-from lxml import etree
 from . import config
 from . import command
 from . import completers as compl
@@ -303,47 +302,45 @@ class NodeMgmt(command.UI):
 
         # Parse node option
         node_list = parse_option_for_nodes(context, *args)
-        for node in node_list[:]:
-            if utils.is_standby(node):
-                logger.info("Node %s already standby", node)
-                node_list.remove(node)
         if not node_list:
             return
 
         # For default "forever" lifetime, under "nodes" section
         xml_path = constants.XML_NODE_PATH
         xml_query_path = constants.XML_NODE_QUERY_STANDBY_PATH
-        standby_template = constants.STANDBY_TEMPLATE
+        xml_query_path_oppsite = constants.XML_STATUS_QUERY_STANDBY_PATH
         # For "reboot" lifetime, under "status" section
         if lifetime_opt == "reboot":
             xml_path = constants.XML_STATUS_PATH
             xml_query_path = constants.XML_STATUS_QUERY_STANDBY_PATH
-            standby_template = constants.STANDBY_TEMPLATE_REBOOT
+            xml_query_path_oppsite = constants.XML_NODE_QUERY_STANDBY_PATH
 
         cib = xmlutil.cibdump2elem()
         xml_item_list = cib.xpath(xml_path)
         for xml_item in xml_item_list:
             if xml_item.get("uname") in node_list:
                 node_id = xml_item.get('id')
-                # If the standby nvpair already exists, continue
-                if cib.xpath(xml_query_path.format(node_id=node_id)):
+                # Remove possible oppsite lifetime standby nvpair
+                item_to_del = cib.xpath(xml_query_path_oppsite.format(node_id=node_id))
+                if item_to_del:
+                    xmlutil.rmnodes(item_to_del)
+                # If the standby nvpair already exists, set and continue
+                item = cib.xpath(xml_query_path.format(node_id=node_id))
+                if item and item[0].get("value") != "on":
+                    item[0].set("value", "on")
                     continue
                 # Create standby nvpair
-                standby_template_str = standby_template.format(node_id=node_id, value="on")
-                xml_item.append(etree.fromstring(standby_template_str))
+                interface_item = xml_item
+                if lifetime_opt == "reboot":
+                    res_item = xmlutil.get_set_nodes(xml_item, "transient_attributes", create=True)
+                    interface_item = res_item[0]
+                res_item = xmlutil.get_set_nodes(interface_item, "instance_attributes", create=True)
+                xmlutil.set_attr(res_item[0], "standby", "on")
 
-        cib_str = xmlutil.xml_tostring(cib)
-        # Consider both "nodes" and "status" section might contain different standby value at the same time
-        # Should replace all possible "off" values here
-        for node in node_list:
-            node_id = utils.get_nodeid_from_name(node)
-            cib_str = re.sub(constants.STANDBY_NV_RE.format(node_id=node_id, value="off"), r'\1value="on"\2', cib_str)
-
-        cmd = constants.CIB_REPLACE.format(xmlstr=cib_str)
+        cmd = constants.CIB_REPLACE.format(xmlstr=xmlutil.xml_tostring(cib))
         utils.get_stdout_or_raise_error(cmd)
         for node in node_list:
-            logger.info("Standby node %s", node)
-
+            logger.info("standby node %s", node)
 
     @command.wait
     @command.completers(compl.nodes)
@@ -354,23 +351,21 @@ class NodeMgmt(command.UI):
         """
         # Parse node option
         node_list = parse_option_for_nodes(context, *args)
-        for node in node_list[:]:
-            if not utils.is_standby(node):
-                logger.info("Node %s already online", node)
-                node_list.remove(node)
         if not node_list:
             return
 
         cib = xmlutil.cibdump2elem()
-        cib_str = xmlutil.xml_tostring(cib)
         for node in node_list:
             node_id = utils.get_nodeid_from_name(node)
-            cib_str = re.sub(constants.STANDBY_NV_RE.format(node_id=node_id, value="on"), r'\1value="off"\2', cib_str)
+            for query_path in [constants.XML_NODE_QUERY_STANDBY_PATH, constants.XML_STATUS_QUERY_STANDBY_PATH]:
+                item = cib.xpath(query_path.format(node_id=node_id))
+                if item and item[0].get("value") != "off":
+                    item[0].set("value", "off")
 
-        cmd = constants.CIB_REPLACE.format(xmlstr=cib_str)
+        cmd = constants.CIB_REPLACE.format(xmlstr=xmlutil.xml_tostring(cib))
         utils.get_stdout_or_raise_error(cmd)
         for node in node_list:
-            logger.info("Online node %s", node)
+            logger.info("online node %s", node)
 
     @command.wait
     @command.completers(compl.nodes)
