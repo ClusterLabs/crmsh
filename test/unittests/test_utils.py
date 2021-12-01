@@ -1196,7 +1196,7 @@ def test_get_stdout_or_raise_error_failed(mock_run):
     with pytest.raises(ValueError) as err:
         utils.get_stdout_or_raise_error("cmd")
     assert str(err.value) == 'Failed to run "cmd": error data'
-    mock_run.assert_called_once_with("cmd")
+    mock_run.assert_called_once_with("cmd", no_reg=True)
 
 
 @mock.patch("crmsh.utils.get_stdout_stderr")
@@ -1204,7 +1204,7 @@ def test_get_stdout_or_raise_error(mock_run):
     mock_run.return_value = (0, "output data", None)
     res = utils.get_stdout_or_raise_error("cmd", remote="node1")
     assert res == "output data"
-    mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 \"cmd\"")
+    mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 \"cmd\"", no_reg=True)
 
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
@@ -1603,3 +1603,35 @@ def test_list_cluster_nodes(mock_run, mock_env, mock_isfile, mock_file2elem):
         mock.call(constants.XML_NODE_PATH),
         mock.call("//primitive[@id='node1']/instance_attributes/nvpair[@name='server']")
         ])
+
+
+@mock.patch('crmsh.utils.get_stdout_stderr')
+def test_get_property(mock_run):
+    mock_run.return_value = (0, "data", None)
+    assert utils.get_property("no-quorum-policy") == "data"
+    mock_run.assert_called_once_with("crm configure get_property no-quorum-policy")
+
+
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_set_property(mock_run):
+    utils.set_property(no_quorum_policy="stop")
+    mock_run.assert_called_once_with("crm configure property no-quorum-policy=stop")
+
+
+@mock.patch('crmsh.utils.is_dlm_configured')
+def test_check_no_quorum_policy_with_dlm_return(mock_dlm):
+    mock_dlm.return_value = False
+    utils.check_no_quorum_policy_with_dlm()
+    mock_dlm.assert_called_once_with()
+
+
+@mock.patch('logging.Logger.warning')
+@mock.patch('crmsh.utils.get_property')
+@mock.patch('crmsh.utils.is_dlm_configured')
+def test_check_no_quorum_policy_with_dlm(mock_dlm, mock_get_property, mock_warn):
+    mock_dlm.return_value = True
+    mock_get_property.return_value = "stop"
+    utils.check_no_quorum_policy_with_dlm()
+    mock_dlm.assert_called_once_with()
+    mock_get_property.assert_called_once_with("no-quorum-policy")
+    mock_warn.assert_called_once_with('The DLM cluster best practice suggests to set the cluster property "no-quorum-policy=freeze"')
