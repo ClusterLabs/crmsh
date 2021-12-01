@@ -208,7 +208,7 @@ class Cluster(command.UI):
         node_list = parse_option_for_nodes(context, *args)
         action = context.get_command_name()
         utils.cluster_run_cmd("systemctl {} pacemaker.service".format(action), node_list)
-        if utils.is_qdevice_configured():
+        if utils.service_is_available("corosync-qdevice.service") and (utils.is_qdevice_configured() or action == "disable"):
             utils.cluster_run_cmd("systemctl {} corosync-qdevice.service".format(action), node_list)
         for node in node_list:
             logger.info("Cluster services %s on %s", action+'d', node)
