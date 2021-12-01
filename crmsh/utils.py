@@ -798,11 +798,11 @@ def get_stdout(cmd, input_s=None, stderr_on=True, shell=True, raw=False):
     return proc.returncode, to_ascii(stdout_data).strip()
 
 
-def get_stdout_stderr(cmd, input_s=None, shell=True, raw=False):
+def get_stdout_stderr(cmd, input_s=None, shell=True, raw=False, no_reg=False):
     '''
     Run a cmd, return (rc, stdout, stderr)
     '''
-    if options.regression_tests:
+    if options.regression_tests and not no_reg:
         print(".EXT", cmd)
     proc = subprocess.Popen(cmd,
                             shell=shell,
@@ -2680,7 +2680,7 @@ def get_stdout_or_raise_error(cmd, remote=None, success_val_list=[0]):
     """
     if remote:
         cmd = "ssh {} root@{} \"{}\"".format(SSH_OPTION, remote, cmd)
-    rc, out, err = get_stdout_stderr(cmd)
+    rc, out, err = get_stdout_stderr(cmd, no_reg=True)
     if rc not in success_val_list:
         raise ValueError("Failed to run \"{}\": {}".format(cmd, err))
     return out
@@ -2973,4 +2973,35 @@ def is_quorate(peer=None):
         return res.group(1) == "Yes"
     else:
         raise ValueError("Failed to get quorate status from corosync-quorumtool")
+
+
+def get_property(name):
+    """
+    Get cluster properties
+    """
+    cmd = "crm configure get_property " + name
+    rc, stdout, _ = get_stdout_stderr(cmd)
+    return stdout if rc == 0 else None
+
+
+def set_property(**kwargs):
+    """
+    Set cluster properties
+    """
+    set_str = ""
+    for key, value in kwargs.items():
+        set_str += "{}={} ".format(key, value)
+    cmd = "crm configure property " + set_str.strip().replace('_', '-')
+    get_stdout_or_raise_error(cmd)
+
+
+def check_no_quorum_policy_with_dlm():
+    """
+    Give warning when no-quorum-policy not freeze while configured DLM
+    """
+    if not is_dlm_configured():
+        return
+    res = get_property("no-quorum-policy")
+    if not res or res != "freeze":
+        logger.warning("The DLM cluster best practice suggests to set the cluster property \"no-quorum-policy=freeze\"")
 # vim:ts=4:sw=4:et:
