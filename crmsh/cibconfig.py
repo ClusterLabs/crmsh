@@ -2599,6 +2599,8 @@ class CibFactory(object):
             if is_live_cib():
                 self.last_commit_time = t
             self.refresh()
+
+            utils.check_no_quorum_policy_with_dlm()
         return rc
 
     def _update_schema(self):

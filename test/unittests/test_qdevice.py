@@ -443,7 +443,7 @@ class TestQDevice(unittest.TestCase):
         mock_conf.assert_called_once_with()
 
     @mock.patch("crmsh.log.LoggerUtils.log_only_to_file")
-    @mock.patch("crmsh.utils.get_stdout_stderr")
+    @mock.patch("crmsh.utils.get_stdout_or_raise_error")
     @mock.patch("crmsh.corosync.conf")
     @mock.patch("crmsh.corosync.get_value")
     def test_create_ca_request(self, mock_get_value, mock_conf, mock_stdout_stderr, mock_log):

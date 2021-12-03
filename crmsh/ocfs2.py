@@ -297,16 +297,16 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         self._dynamic_verify()
         self.exist_ra_id_list = utils.all_exist_id()
 
+        no_quorum_policy_value = utils.get_property("no-quorum-policy")
+        if not no_quorum_policy_value or no_quorum_policy_value != "freeze":
+            utils.set_property(no_quorum_policy="freeze")
+            logger.info("  'no-quorum-policy' is changed to \"freeze\"")
+
         if self.use_cluster_lvm2:
             self._config_resource_stack_lvm2()
         else:
             self._config_resource_stack_ocfs2_along()
         logger.info("  OCFS2 device %s mounted on %s", self.target_device, self.mount_point)
-
-        res = utils.get_stdout_or_raise_error("crm configure get_property no-quorum-policy")
-        if res != "freeze":
-            utils.get_stdout_or_raise_error("crm configure property no-quorum-policy=freeze")
-            logger.info("  'no-quorum-policy' is changed to \"freeze\"")
 
     def _find_target_on_join(self, peer):
         """
