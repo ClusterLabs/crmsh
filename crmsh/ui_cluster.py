@@ -142,15 +142,21 @@ class Cluster(command.UI):
         '''
         Starts the cluster services on all nodes or specific node(s)
         '''
+        service_check_list = ["pacemaker.service"]
+        start_qdevice = False
+        if utils.is_qdevice_configured():
+            start_qdevice = True
+            service_check_list.append("corosync-qdevice.service")
+
         node_list = parse_option_for_nodes(context, *args)
         for node in node_list[:]:
-            if utils.service_is_active("pacemaker.service", remote_addr=node):
+            if all([utils.service_is_active(srv, remote_addr=node) for srv in service_check_list]):
                 logger.info("Cluster services already started on {}".format(node))
                 node_list.remove(node)
         if not node_list:
             return
 
-        if utils.is_qdevice_configured():
+        if start_qdevice:
             utils.start_service("corosync-qdevice", node_list=node_list)
         bootstrap.start_pacemaker(node_list)
         for node in node_list:
