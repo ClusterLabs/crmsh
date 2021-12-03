@@ -3,6 +3,7 @@
 #
 # Make sure that ids are unique.
 
+import re
 import copy
 from . import constants
 from . import xmlutil
@@ -45,6 +46,8 @@ def new(node, pfx):
     '''
     Create a unique id for the xml node.
     '''
+    if re.search(r'^\d+$', pfx) and node.tag != "node":
+        pfx = "num-{}".format(pfx)
     name = node.get("name")
     if node.tag == "nvpair":
         node_id = "%s-%s" % (pfx, name)
