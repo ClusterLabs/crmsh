@@ -1,4 +1,4 @@
-@bootstrap
+@sbd
 Feature: crmsh bootstrap sbd management
 
   Tag @clean means need to stop cluster service if the service is available

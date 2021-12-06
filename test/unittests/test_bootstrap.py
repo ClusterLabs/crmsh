@@ -263,17 +263,18 @@ class TestBootstrap(unittest.TestCase):
 
     @mock.patch('crmsh.log.LoggerUtils.status_long')
     @mock.patch('crmsh.utils.start_service')
-    @mock.patch('crmsh.sbd.SBDManager.get_suitable_sbd_systemd_timeout')
-    @mock.patch('crmsh.sbd.SBDManager.is_delay_start')
+    @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_delay_start_sec_from_sysconfig')
+    @mock.patch('crmsh.sbd.SBDTimeout.is_sbd_delay_start')
     @mock.patch('crmsh.utils.service_is_enabled')
     @mock.patch('crmsh.utils.package_is_installed')
     def test_start_pacemaker(self, mock_installed, mock_enabled, mock_delay_start, mock_timeout, mock_start, mock_long):
+        bootstrap._context = None
         mock_installed.return_value = True
         mock_enabled.return_value = True
         mock_delay_start.return_value = True
         mock_timeout.return_value = 60
         bootstrap.start_pacemaker()
-        mock_long.assert_called_once_with('Starting pacemaker(waiting for sbd 60s)')
+        mock_long.assert_called_once_with('Starting pacemaker(delaying start of sbd for 60s)')
         mock_start.assert_called_once_with('pacemaker.service', enable=True, node_list=[])
 
     @mock.patch('crmsh.bootstrap.configure_local_ssh_key')

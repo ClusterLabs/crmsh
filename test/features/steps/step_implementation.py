@@ -2,8 +2,9 @@ import re
 import time
 import os
 import datetime
+import yaml
 from behave import given, when, then
-from crmsh import corosync, parallax
+from crmsh import corosync, parallax, sbd
 from crmsh import utils as crmutils
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
                   run_command_local_or_remote, file_in_archive
@@ -33,6 +34,24 @@ def step_impl(context, disk, addr):
 @given('Online nodes are "{nodelist}"')
 def step_impl(context, nodelist):
     assert online(context, nodelist) is True
+
+
+@given('Run "{cmd}" OK')
+def step_impl(context, cmd):
+    rc, _, = run_command(context, cmd)
+    assert rc == 0
+
+
+@then('Run "{cmd}" OK')
+def step_impl(context, cmd):
+    rc, _, = run_command(context, cmd)
+    assert rc == 0
+
+
+@when('Run "{cmd}" OK')
+def step_impl(context, cmd):
+    rc, _, = run_command(context, cmd)
+    assert rc == 0
 
 
 @given('IP "{addr}" is belong to "{iface}"')
@@ -318,3 +337,44 @@ def step_impl(context, res_id, node):
 def step_impl(context, res_id, node):
     rc, out, err = crmutils.get_stdout_stderr("crm_mon -1")
     assert re.search(r'\*\s+{}\s+.*Started\s+{}'.format(res_id, node), out) is not None
+
+
+@then('SBD option "{key}" value is "{value}"')
+def step_impl(context, key, value):
+    res = sbd.SBDManager.get_sbd_value_from_config(key)
+    assert res == value
+
+
+@then('SBD option "{key}" value for "{dev}" is "{value}"')
+def step_impl(context, key, dev, value):
+    res = sbd.SBDTimeout.get_sbd_msgwait(dev)
+    assert res == int(value)
+
+
+@then('Cluster property "{key}" is "{value}"')
+def step_impl(context, key, value):
+    res = crmutils.get_property(key)
+    assert res is not None and str(res) == value
+
+
+@then('Parameter "{param_name}" not configured in "{res_id}"')
+def step_impl(context, param_name, res_id):
+    _, out = run_command(context, "crm configure show {}".format(res_id))
+    result = re.search("params {}=".format(param_name), out)
+    assert result is None
+
+
+@then('Parameter "{param_name}" configured in "{res_id}"')
+def step_impl(context, param_name, res_id):
+    _, out = run_command(context, "crm configure show {}".format(res_id))
+    result = re.search("params {}=".format(param_name), out)
+    assert result is not None
+
+
+@given('Yaml "{path}" value is "{value}"')
+def step_impl(context, path, value):
+    yaml_file = "/etc/crm/profiles.yml"
+    with open(yaml_file) as f:
+        data = yaml.load(f, Loader=yaml.SafeLoader)
+    sec_name, key = path.split(':')
+    assert str(data[sec_name][key]) == str(value)

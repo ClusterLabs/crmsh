@@ -1635,3 +1635,27 @@ def test_check_no_quorum_policy_with_dlm(mock_dlm, mock_get_property, mock_warn)
     mock_dlm.assert_called_once_with()
     mock_get_property.assert_called_once_with("no-quorum-policy")
     mock_warn.assert_called_once_with('The DLM cluster best practice suggests to set the cluster property "no-quorum-policy=freeze"')
+
+
+@mock.patch('crmsh.utils.is_qdevice_configured')
+@mock.patch('crmsh.utils.list_cluster_nodes')
+def test_is_2node_cluster_without_qdevice(mock_list, mock_is_qdevice):
+    mock_list.return_value = ["node1", "node2"]
+    mock_is_qdevice.return_value = False
+    res = utils.is_2node_cluster_without_qdevice()
+    assert res is True
+    mock_list.assert_called_once_with()
+    mock_is_qdevice.assert_called_once_with()
+
+
+def test_get_systemd_timeout_start_in_sec():
+    res = utils.get_systemd_timeout_start_in_sec("1min 31s")
+    assert res == 91
+
+
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.utils.get_property')
+def test_set_property_conditionally(mock_get_property, mock_run):
+    mock_get_property.return_value = "100s"
+    utils.set_property_conditionally("stonith-timeout", 101)
+    mock_run.assert_called_once_with("crm configure property stonith-timeout=101")

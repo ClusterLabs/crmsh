@@ -68,7 +68,8 @@ test/evaltest.sh
 test/features/bootstrap_bugs.feature
 test/features/bootstrap_init_join_remove.feature
 test/features/bootstrap_options.feature
-test/features/bootstrap_sbd.feature
+test/features/bootstrap_sbd_delay.feature
+test/features/bootstrap_sbd_normal.feature
 test/features/configure_bugs.feature
 test/features/constraints_bugs.feature
 test/features/environment.py
