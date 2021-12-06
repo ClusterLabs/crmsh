@@ -305,21 +305,6 @@ def is_normal_node(n):
     return n.tag == "node" and (n.get("type") in (None, "normal", "member", ""))
 
 
-def unique_ra(typ, klass, provider):
-    """
-    Unique:
-    * it's explicitly ocf:heartbeat:
-    * no explicit class or provider
-    * only one provider (heartbeat counts as one provider)
-    Not unique:
-    * class is not ocf
-    * multiple providers
-    """
-    if klass is None and provider is None:
-        return True
-    return klass == 'ocf' and provider is None or provider == 'heartbeat'
-
-
 def mk_rsc_type(n):
     """
     Returns prefixless for unique RAs
@@ -327,15 +312,13 @@ def mk_rsc_type(n):
     ra_type = n.get("type")
     ra_class = n.get("class")
     ra_provider = n.get("provider")
-    if unique_ra(ra_type, ra_class, ra_provider):
-        ra_class = None
-        ra_provider = None
-    s1 = s2 = ''
+    res = ''
     if ra_class:
-        s1 = "%s:" % ra_class
+        res += "{}:".format(ra_class)
     if ra_provider:
-        s2 = "%s:" % ra_provider
-    return ''.join((s1, s2, ra_type))
+        res += "{}:".format(ra_provider)
+    res += ra_type
+    return res
 
 
 def listnodes(include_remote_nodes=True):
