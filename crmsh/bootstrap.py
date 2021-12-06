@@ -33,7 +33,7 @@ from . import corosync
 from . import tmpfiles
 from . import lock
 from . import userdir
-from .constants import SSH_OPTION, QDEVICE_HELP_INFO, CRM_MON_ONE_SHOT, STONITH_TIMEOUT_DEFAULT
+from .constants import SSH_OPTION, QDEVICE_HELP_INFO, STONITH_TIMEOUT_DEFAULT
 from . import ocfs2
 from . import qdevice
 from . import log
@@ -364,25 +364,14 @@ def wait_for_resource(message, resource):
             sleep(1)
 
 
-def wait_for_cluster(message="Waiting for cluster", node_list=[]):
-    """
-    Wait for local node or specific node(s) online
-    """
-    # Sleep here since just after pacemaker.service started, crm_mon might not ready
-    sleep(2)
-    # Check if already online
-    if is_online(node_list):
-        return
-
-    with logger_utils.status_long(message):
+def wait_for_cluster():
+    with logger_utils.status_long("Waiting for cluster"):
         while True:
-            if is_online(node_list):
+            _rc, out, _err = utils.get_stdout_stderr("crm_mon -1")
+            if is_online(out):
                 break
             status_progress()
             sleep(2)
-    # Sleep here since when do_stop function calling wait_for_cluster,
-    # just after nodes online, if no sleep to wait, some nodes might hang with pending
-    sleep(2)
 
 
 def get_cluster_node_hostname():
@@ -390,7 +379,7 @@ def get_cluster_node_hostname():
     Get the hostname of the cluster node
     """
     peer_node = None
-    if _context and _context.cluster_node:
+    if _context.cluster_node:
         rc, out, err = utils.get_stdout_stderr("ssh {} {} crm_node --name".format(SSH_OPTION, _context.cluster_node))
         if rc != 0:
             utils.fatal(err)
@@ -398,18 +387,13 @@ def get_cluster_node_hostname():
     return peer_node
 
 
-def is_online(node_list=[]):
+def is_online(crm_mon_txt):
     """
-    Check whether local node is online, or specific node(s) online
+    Check whether local node is online
     Besides that, in join process, check whether init node is online
     """
-    _list = node_list if node_list else [utils.this_node()]
-    crm_mon_txt = utils.get_stdout_or_raise_error(CRM_MON_ONE_SHOT, remote=_list[0])
-    # Make sure all nodes online
-    # TODO how about the shutdown node?
-    for node in _list:
-        if not re.search(r'Online:\s+\[.*{}\s+.*'.format(node), crm_mon_txt):
-            return False
+    if not re.search("Online: .* {} ".format(utils.this_node()), crm_mon_txt):
+        return False
 
     # if peer_node is None, this is in the init process
     peer_node = get_cluster_node_hostname()
