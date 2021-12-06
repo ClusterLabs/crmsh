@@ -79,8 +79,15 @@ keep the node in standby after reboot. The life time defaults to
     for node in args:
         if node not in member_list:
             context.fatal_error("Node \"{}\" is not a cluster node".format(node))
-    # return node list
-    return member_list if options.all else args
+
+    node_list = member_list if options.all else args
+    for node in node_list:
+        try:
+            utils.ping_node(node)
+        except ValueError as err:
+            logger.warning(str(err))
+            node_list.remove(node)
+    return node_list
 
 
 def _remove_completer(args):
