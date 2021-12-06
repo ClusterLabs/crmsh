@@ -39,7 +39,9 @@ class TestCluster(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.service_is_active')
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
-    def test_do_start_already_started(self, mock_parse_nodes, mock_active, mock_info):
+    @mock.patch('crmsh.utils.is_qdevice_configured')
+    def test_do_start_already_started(self, mock_qdevice_configured, mock_parse_nodes, mock_active, mock_info):
+        mock_qdevice_configured.return_value = False
         context_inst = mock.Mock()
         mock_parse_nodes.return_value = ["node1", "node2"]
         mock_active.side_effect = [True, True]
@@ -63,12 +65,15 @@ class TestCluster(unittest.TestCase):
     def test_do_start(self, mock_parse_nodes, mock_active, mock_start, mock_qdevice_configured, mock_info, mock_start_pacemaker):
         context_inst = mock.Mock()
         mock_parse_nodes.return_value = ["node1"]
-        mock_active.return_value = False
+        mock_active.side_effect = [False, False]
         mock_qdevice_configured.return_value = True
 
         self.ui_cluster_inst.do_start(context_inst, "node1")
 
-        mock_active.assert_called_once_with("pacemaker.service", remote_addr="node1")
+        mock_active.assert_has_calls([
+            mock.call("pacemaker.service", remote_addr="node1"),
+            mock.call("corosync-qdevice.service", remote_addr="node1")
+            ])
         mock_start.assert_called_once_with("corosync-qdevice", node_list=["node1"])
         mock_qdevice_configured.assert_called_once_with()
         mock_info.assert_called_once_with("Cluster services started on node1")
