@@ -297,6 +297,7 @@ class LoggerUtils(object):
         try:
             yield
         except:
+            print("")
             raise
         else:
             self.status_done()
