@@ -15,7 +15,7 @@ from . import schema
 from . import constants
 from . import userdir
 from .utils import add_sudo, str2file, str2tmp, get_boolean
-from .utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
+from .utils import get_stdout, get_stdout_or_raise_error, stdout2list, crm_msec, crm_time_cmp
 from .utils import olist, get_cib_in_use, get_tempdir, to_ascii
 from . import log
 
@@ -101,15 +101,15 @@ def cibdump2tmp():
     return None
 
 
-def cibtext2elem(cibtext):
+def text2elem(text):
     """
     Convert a text format CIB to
     an XML tree.
     """
     try:
-        return etree.fromstring(cibtext)
+        return etree.fromstring(text)
     except Exception as err:
-        logger_utils.cib_parse_err(err, cibtext)
+        logger_utils.text_xml_parse_err(err, text)
         return None
 
 
@@ -120,7 +120,7 @@ def cibdump2elem(section=None):
         cmd = cib_dump
     rc, outp, errp = sudocall(cmd)
     if rc == 0:
-        return cibtext2elem(outp)
+        return text2elem(outp)
     elif rc != constants.cib_no_section_rc:
         logger.error("running %s: %s", cmd, errp)
     return None
@@ -1482,4 +1482,68 @@ def attributes(typename, rules, values, xmlid=None, score=None):
     return e
 
 
+class CrmMonXmlParser(object):
+    """
+    Class to parse xml output of crm_mon
+    """
+    def __init__(self, peer=None):
+        """
+        Init function
+        when peer set, parse peer node's results
+        """
+        self.xml_elem = None
+        self.peer = peer
+
+    def _load(self):
+        """
+        Load xml output of crm_mon
+        """
+        output = get_stdout_or_raise_error(constants.CRM_MON_XML_OUTPUT, remote=self.peer, no_raise=True)
+        self.xml_elem = text2elem(output)
+
+    @classmethod
+    def is_node_online(cls, node):
+        """
+        Check if node online
+        """
+        cls_inst = cls()
+        cls_inst._load()
+        elem_list = cls_inst.xml_elem.xpath('//node[@name="{}" and @online="true"]'.format(node))
+        return len(elem_list) != 0
+
+    @classmethod
+    def is_resource_configured(cls, ra_type, peer=None):
+        """
+        Check if the RA configured
+        """
+        cls_inst = cls(peer=peer)
+        cls_inst._load()
+        elem_list = cls_inst.xml_elem.xpath('//resource[@resource_agent="{}"]'.format(ra_type))
+        return len(elem_list) != 0
+
+    @classmethod
+    def is_any_resource_running(cls, peer=None):
+        """
+        Check if any RA is running
+        """
+        cls_inst = cls(peer=peer)
+        cls_inst._load()
+        elem_list = cls_inst.xml_elem.xpath('//resource[@active="true"]')
+        return len(elem_list) != 0
+
+    @classmethod
+    def is_resource_started(cls, ra, peer=None):
+        """
+        Check if the RA started(in all clone instances if configured as clone)
+
+        @ra could be resource id or resource type
+        """
+        cls_inst = cls(peer=peer)
+        cls_inst._load()
+        elem_list = cls_inst.xml_elem.xpath('//resource[(@id="{ra}" or @resource_agent="{ra}") and @active="true"]'.format(ra=ra))
+        # Stopped or not exist
+        if not elem_list:
+            return False
+        # Starting will return False
+        return all([True if elem.get('role') == 'Started' else False for elem in elem_list])
 # vim:ts=4:sw=4:et:

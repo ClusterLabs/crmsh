@@ -2676,14 +2676,14 @@ def calculate_quorate_status(expected_votes, actual_votes):
     return int(actual_votes)/int(expected_votes) > 0.5
 
 
-def get_stdout_or_raise_error(cmd, remote=None, success_val_list=[0]):
+def get_stdout_or_raise_error(cmd, remote=None, success_val_list=[0], no_raise=False):
     """
     Common function to get stdout from cmd or raise exception
     """
     if remote:
         cmd = "ssh {} root@{} \"{}\"".format(SSH_OPTION, remote, cmd)
     rc, out, err = get_stdout_stderr(cmd, no_reg=True)
-    if rc not in success_val_list:
+    if rc not in success_val_list and not no_raise:
         raise ValueError("Failed to run \"{}\": {}".format(cmd, err))
     return out
 
@@ -2694,28 +2694,6 @@ def get_quorum_votes_dict(remote=None):
     """
     out = get_stdout_or_raise_error("corosync-quorumtool -s", remote=remote, success_val_list=[0, 2])
     return dict(re.findall("(Expected|Total) votes:\s+(\d+)", out))
-
-
-def has_resource_running(ra_type=None):
-    """
-    Check if any RA is running
-    """
-    cmd = "crm_mon -1"
-    if ra_type:
-        cmd = "crm_mon -1rR"
-    out = get_stdout_or_raise_error(cmd)
-    if ra_type:
-        return re.search("{}.*Started".format(ra_type), out) is not None
-    else:
-        return re.search("No active resources", out) is None
-
-
-def has_resource_configured(ra_type, peer=None):
-    """
-    Check if the RA configured
-    """
-    out = get_stdout_or_raise_error("crm_mon -1rR", remote=peer)
-    return re.search(ra_type, out) is not None
 
 
 def check_all_nodes_reachable():
@@ -2965,14 +2943,16 @@ def is_dlm_running():
     """
     Check if dlm ra controld is running
     """
-    return has_resource_running(constants.DLM_CONTROLD_RA)
+    from . import xmlutil
+    return xmlutil.CrmMonXmlParser.is_resource_started(constants.DLM_CONTROLD_RA)
 
 
 def is_dlm_configured():
     """
     Check if dlm configured
     """
-    return has_resource_configured(constants.DLM_CONTROLD_RA)
+    from . import xmlutil
+    return xmlutil.CrmMonXmlParser.is_resource_configured(constants.DLM_CONTROLD_RA)
 
 
 def is_quorate():

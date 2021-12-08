@@ -370,7 +370,7 @@ class LoggerUtils(object):
     def empty_cib_err(self):
         self.logger.error("No CIB!")
 
-    def cib_parse_err(self, msg, s):
+    def text_xml_parse_err(self, msg, s):
         self.logger.error(msg)
         self.logger.info("offending string: %s", s)
 
