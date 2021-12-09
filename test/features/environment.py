@@ -1,6 +1,7 @@
 import logging
 import re
 from crmsh import utils, parallax
+import time
 
 
 def get_online_nodes():
@@ -25,8 +26,8 @@ def before_tag(context, tag):
         online_nodes = get_online_nodes()
         if online_nodes:
             resource_cleanup()
-            try:
-                parallax.parallax_call(online_nodes, 'crm cluster stop')
-            except ValueError as err:
-                context.logger.error("{}\n".format(err))
-                context.failed = True
+            while True:
+                time.sleep(1)
+                if utils.get_dc():
+                    break
+            utils.get_stdout_or_raise_error("crm cluster stop --all")
