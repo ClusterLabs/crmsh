@@ -97,22 +97,23 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.utils.stop_service')
     @mock.patch('crmsh.utils.set_dlm_option')
     @mock.patch('crmsh.utils.is_quorate')
-    @mock.patch('crmsh.utils.is_dlm_configured')
-    @mock.patch('crmsh.bootstrap.wait_for_cluster')
+    @mock.patch('crmsh.utils.is_dlm_running')
+    @mock.patch('crmsh.utils.get_dc')
     @mock.patch('crmsh.utils.service_is_active')
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
-    def test_do_stop(self, mock_parse_nodes, mock_active, mock_wait, mock_dlm_configured, mock_is_quorate, mock_set_dlm, mock_stop, mock_info, mock_debug):
+    def test_do_stop(self, mock_parse_nodes, mock_active, mock_get_dc, mock_dlm_running, mock_is_quorate, mock_set_dlm, mock_stop, mock_info, mock_debug):
         context_inst = mock.Mock()
         mock_parse_nodes.return_value = ["node1"]
         mock_active.side_effect = [True, True]
-        mock_dlm_configured.return_value = True
+        mock_dlm_running.return_value = True
         mock_is_quorate.return_value = False
+        mock_get_dc.return_value = "node1"
 
         self.ui_cluster_inst.do_stop(context_inst, "node1")
 
         mock_active.assert_has_calls([
             mock.call("corosync.service", remote_addr="node1"),
-            mock.call("corosync-qdevice.service", "node1")
+            mock.call("corosync-qdevice.service")
             ])
         mock_stop.assert_has_calls([
             mock.call("pacemaker", node_list=["node1"]),
