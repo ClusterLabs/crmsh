@@ -186,9 +186,9 @@ class Cluster(command.UI):
         if not node_list:
             return
 
-        # When dlm configured and quorum is lost, before stop cluster service, should set
+        # When dlm running and quorum is lost, before stop cluster service, should set
         # enable_quorum_fencing=0, enable_quorum_lockspace=0 for dlm config option
-        if utils.is_dlm_configured() and not utils.is_quorate():
+        if utils.is_dlm_running() and not utils.is_quorate():
             logger.debug("Quorum is lost; Set enable_quorum_fencing=0 and enable_quorum_lockspace=0 for dlm")
             utils.set_dlm_option(enable_quorum_fencing=0, enable_quorum_lockspace=0)
 

@@ -2698,7 +2698,10 @@ def has_resource_running(ra_type=None):
     """
     Check if any RA is running
     """
-    out = get_stdout_or_raise_error("crm_mon -1")
+    cmd = "crm_mon -1"
+    if ra_type:
+        cmd = "crm_mon -1rR"
+    out = get_stdout_or_raise_error(cmd)
     if ra_type:
         return re.search("{}.*Started".format(ra_type), out) is not None
     else:
@@ -2956,11 +2959,18 @@ def set_dlm_option(**kargs):
             get_stdout_or_raise_error('dlm_tool set_config "{}={}"'.format(option, value))
 
 
+def is_dlm_running():
+    """
+    Check if dlm ra controld is running
+    """
+    return has_resource_running(constants.DLM_CONTROLD_RA)
+
+
 def is_dlm_configured():
     """
     Check if dlm configured
     """
-    return has_resource_configured("ocf::pacemaker:controld")
+    return has_resource_configured(constants.DLM_CONTROLD_RA)
 
 
 def is_quorate():

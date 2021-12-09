@@ -513,4 +513,5 @@ XML_STATUS_QUERY_STANDBY_PATH = "//status/node_state[@id='{node_id}']/transient_
 CRM_MON_ONE_SHOT = "crm_mon -1"
 STONITH_TIMEOUT_DEFAULT = 60
 PCMK_DELAY_MAX = 30
+DLM_CONTROLD_RA = "ocf::pacemaker:controld"
 # vim:ts=4:sw=4:et:
