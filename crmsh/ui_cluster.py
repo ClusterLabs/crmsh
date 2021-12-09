@@ -186,6 +186,10 @@ class Cluster(command.UI):
         if not node_list:
             return
 
+        if not utils.get_dc(timeout=5):
+            logger.error("No DC found currently, please wait if the cluster is still starting")
+            return False
+
         # When dlm running and quorum is lost, before stop cluster service, should set
         # enable_quorum_fencing=0, enable_quorum_lockspace=0 for dlm config option
         if utils.is_dlm_running() and not utils.is_quorate():

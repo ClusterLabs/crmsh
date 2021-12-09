@@ -836,9 +836,11 @@ def append_file(dest, src):
         return False
 
 
-def get_dc():
+def get_dc(timeout=None):
     cmd = "crmadmin -D"
-    rc, s = get_stdout(add_sudo(cmd))
+    if timeout:
+        cmd += " -t {}".format(timeout)
+    rc, s, _ = get_stdout_stderr(add_sudo(cmd))
     if rc != 0:
         return None
     if not s.startswith("Designated"):
