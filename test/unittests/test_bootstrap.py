@@ -608,37 +608,31 @@ class TestBootstrap(unittest.TestCase):
         mock_error.assert_called_once_with("error")
 
     @mock.patch('crmsh.utils.this_node')
+    @mock.patch('re.search')
     @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
-    def test_is_online_local_offline(self, mock_run, mock_get_peer, mock_this_node):
-        mock_run.return_value = """
-Node List:
-  * Online: [ node1 node2 ]
-        """
-        mock_this_node.return_value = "node3"
+    def test_is_online_local_offline(self, mock_get_peer, mock_search, mock_this_node):
+        mock_this_node.return_value = "node1"
+        mock_search.return_value = None
 
-        assert bootstrap.is_online() is False
+        assert bootstrap.is_online("text") is False
 
         mock_this_node.assert_called_once_with()
         mock_get_peer.assert_not_called()
-        mock_run.assert_called_once_with(constants.CRM_MON_ONE_SHOT, remote="node3")
+        mock_search.assert_called_once_with("Online: .* node1 ", "text")
 
     @mock.patch('crmsh.utils.this_node')
+    @mock.patch('re.search')
     @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
-    def test_is_online_on_init_node(self, mock_run, mock_get_peer, mock_this_node):
-        mock_run.return_value = """
-Node List:
-  * Online: [ node1 node2 ]
-        """
+    def test_is_online_on_init_node(self, mock_get_peer, mock_search, mock_this_node):
+        mock_search.return_value = mock.Mock()
         mock_this_node.return_value = "node1"
         mock_get_peer.return_value = None
 
-        assert bootstrap.is_online() is True
+        assert bootstrap.is_online("text") is True
 
         mock_this_node.assert_called_once_with()
         mock_get_peer.assert_called_once_with()
-        mock_run.assert_called_once_with(constants.CRM_MON_ONE_SHOT, remote="node1")
+        mock_search.assert_called_once_with("Online: .* node1 ", "text")
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.stop_service')
@@ -646,27 +640,25 @@ Node List:
     @mock.patch('crmsh.corosync.conf')
     @mock.patch('shutil.copy')
     @mock.patch('crmsh.utils.this_node')
+    @mock.patch('re.search')
     @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
-    def test_is_online_peer_offline(self, mock_run, mock_get_peer, mock_this_node,
+    def test_is_online_peer_offline(self, mock_get_peer, mock_search, mock_this_node,
             mock_copy, mock_corosync_conf, mock_csync2, mock_stop_service, mock_error):
-        mock_run.return_value = """
-Node List:
-  * Online: [ node1 node2 ]
-        """
         bootstrap.COROSYNC_CONF_ORIG = "/tmp/crmsh_tmpfile"
+        mock_search.side_effect = [ mock.Mock(), None ]
         mock_this_node.return_value = "node2"
-        mock_get_peer.return_value = "node3"
-        mock_corosync_conf.side_effect = [ "/etc/corosync/corosync.conf", 
+        mock_get_peer.return_value = "node1"
+        mock_corosync_conf.side_effect = [ "/etc/corosync/corosync.conf",
                 "/etc/corosync/corosync.conf"]
-        mock_error.side_effect = ValueError
 
-        with self.assertRaises(ValueError):
-            bootstrap.is_online()
+        bootstrap.is_online("text")
 
-        mock_run.assert_called_once_with(constants.CRM_MON_ONE_SHOT, remote="node2")
         mock_this_node.assert_called_once_with()
         mock_get_peer.assert_called_once_with()
+        mock_search.assert_has_calls([
+            mock.call("Online: .* node2 ", "text"),
+            mock.call("Online: .* node1 ", "text")
+            ])
         mock_corosync_conf.assert_has_calls([
             mock.call(),
             mock.call()
@@ -674,7 +666,7 @@ Node List:
         mock_copy.assert_called_once_with(bootstrap.COROSYNC_CONF_ORIG, "/etc/corosync/corosync.conf")
         mock_csync2.assert_called_once_with("/etc/corosync/corosync.conf")
         mock_stop_service.assert_called_once_with("corosync")
-        mock_error.assert_called_once_with("Cannot see peer node \"node3\", please check the communication IP")
+        mock_error.assert_called_once_with("Cannot see peer node \"node1\", please check the communication IP")
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.stop_service')
@@ -682,21 +674,22 @@ Node List:
     @mock.patch('crmsh.corosync.conf')
     @mock.patch('shutil.copy')
     @mock.patch('crmsh.utils.this_node')
+    @mock.patch('re.search')
     @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
-    def test_is_online_both_online(self, mock_run, mock_get_peer, mock_this_node,
+    def test_is_online_both_online(self, mock_get_peer, mock_search, mock_this_node,
             mock_copy, mock_corosync_conf, mock_csync2, mock_stop_service, mock_error):
-        mock_run.return_value = """
-Node List:
-  * Online: [ node1 node2 ]
-        """
+        mock_search.side_effect = [ mock.Mock(), mock.Mock() ]
         mock_this_node.return_value = "node2"
         mock_get_peer.return_value = "node1"
 
-        assert bootstrap.is_online() is True
+        assert bootstrap.is_online("text") is True
 
         mock_this_node.assert_called_once_with()
         mock_get_peer.assert_called_once_with()
+        mock_search.assert_has_calls([
+            mock.call("Online: .* node2 ", "text"),
+            mock.call("Online: .* node1 ", "text")
+            ])
         mock_corosync_conf.assert_not_called()
         mock_copy.assert_not_called()
         mock_csync2.assert_not_called()

@@ -1500,7 +1500,7 @@ key2=value2
             "key1": "value1",
             "key2": "value2"
             }
-    mock_run.assert_called_once_with("dlm_tool dump_config", remote=None)
+    mock_run.assert_called_once_with("dlm_tool dump_config")
 
 
 @mock.patch('crmsh.utils.get_dlm_option_dict')
@@ -1522,14 +1522,14 @@ def test_set_dlm_option(mock_get_dict, mock_run):
             "key2": "value2"
             }
     utils.set_dlm_option(key2="test")
-    mock_run.assert_called_once_with('dlm_tool set_config "key2=test"', remote=None)
+    mock_run.assert_called_once_with('dlm_tool set_config "key2=test"')
 
 
 @mock.patch('crmsh.utils.has_resource_configured')
 def test_is_dlm_configured(mock_configured):
     mock_configured.return_value = True
     assert utils.is_dlm_configured() is True
-    mock_configured.assert_called_once_with("ocf::pacemaker:controld", peer=None)
+    mock_configured.assert_called_once_with("ocf::pacemaker:controld")
 
 
 @mock.patch('crmsh.utils.get_stdout_or_raise_error')
@@ -1538,7 +1538,7 @@ def test_is_quorate_exception(mock_run):
     with pytest.raises(ValueError) as err:
         utils.is_quorate()
     assert str(err.value) == "Failed to get quorate status from corosync-quorumtool"
-    mock_run.assert_called_once_with("corosync-quorumtool -s", remote=None, success_val_list=[0, 2])
+    mock_run.assert_called_once_with("corosync-quorumtool -s", success_val_list=[0, 2])
 
 
 @mock.patch('crmsh.utils.get_stdout_or_raise_error')
@@ -1548,7 +1548,7 @@ Ring ID:          1084783297/440
 Quorate:          Yes
     """
     assert utils.is_quorate() is True
-    mock_run.assert_called_once_with("corosync-quorumtool -s", remote=None, success_val_list=[0, 2])
+    mock_run.assert_called_once_with("corosync-quorumtool -s", success_val_list=[0, 2])
 
 
 @mock.patch('crmsh.utils.etree.fromstring')

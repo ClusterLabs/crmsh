@@ -836,9 +836,11 @@ def append_file(dest, src):
         return False
 
 
-def get_dc():
+def get_dc(timeout=None):
     cmd = "crmadmin -D"
-    rc, s = get_stdout(add_sudo(cmd))
+    if timeout:
+        cmd += " -t {}".format(timeout)
+    rc, s, _ = get_stdout_stderr(add_sudo(cmd))
     if rc != 0:
         return None
     if not s.startswith("Designated"):
@@ -2698,7 +2700,10 @@ def has_resource_running(ra_type=None):
     """
     Check if any RA is running
     """
-    out = get_stdout_or_raise_error("crm_mon -1")
+    cmd = "crm_mon -1"
+    if ra_type:
+        cmd = "crm_mon -1rR"
+    out = get_stdout_or_raise_error(cmd)
     if ra_type:
         return re.search("{}.*Started".format(ra_type), out) is not None
     else:
@@ -2936,38 +2941,45 @@ def is_standby(node):
     return re.search(r'Node\s+{}:\s+standby'.format(node), out) is not None
 
 
-def get_dlm_option_dict(peer=None):
+def get_dlm_option_dict():
     """
     Get dlm config option dictionary
     """
-    out = get_stdout_or_raise_error("dlm_tool dump_config", remote=peer)
+    out = get_stdout_or_raise_error("dlm_tool dump_config")
     return dict(re.findall("(\w+)=(\w+)", out))
 
 
-def set_dlm_option(peer=None, **kargs):
+def set_dlm_option(**kargs):
     """
     Set dlm option
     """
-    dlm_option_dict = get_dlm_option_dict(peer=peer)
+    dlm_option_dict = get_dlm_option_dict()
     for option, value in kargs.items():
         if option not in dlm_option_dict:
             raise ValueError('"{}" is not dlm config option'.format(option))
         if dlm_option_dict[option] != value:
-            get_stdout_or_raise_error('dlm_tool set_config "{}={}"'.format(option, value), remote=peer)
+            get_stdout_or_raise_error('dlm_tool set_config "{}={}"'.format(option, value))
 
 
-def is_dlm_configured(peer=None):
+def is_dlm_running():
+    """
+    Check if dlm ra controld is running
+    """
+    return has_resource_running(constants.DLM_CONTROLD_RA)
+
+
+def is_dlm_configured():
     """
     Check if dlm configured
     """
-    return has_resource_configured("ocf::pacemaker:controld", peer=peer)
+    return has_resource_configured(constants.DLM_CONTROLD_RA)
 
 
-def is_quorate(peer=None):
+def is_quorate():
     """
     Check if cluster is quorated
     """
-    out = get_stdout_or_raise_error("corosync-quorumtool -s", remote=peer, success_val_list=[0, 2])
+    out = get_stdout_or_raise_error("corosync-quorumtool -s", success_val_list=[0, 2])
     res = re.search(r'Quorate:\s+(.*)', out)
     if res:
         return res.group(1) == "Yes"

@@ -378,3 +378,11 @@ def step_impl(context, path, value):
         data = yaml.load(f, Loader=yaml.SafeLoader)
     sec_name, key = path.split(':')
     assert str(data[sec_name][key]) == str(value)
+
+
+@when('Wait for DC')
+def step_impl(context):
+    while True:
+        time.sleep(1)
+        if crmutils.get_dc():
+            break

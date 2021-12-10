@@ -26,12 +26,14 @@ Feature: crmsh bootstrap process - init, join and remove
     When    Run "crm node online --all" on "hanode1"
     Then    Node "hanode1" is online
     And     Node "hanode2" is online
+    When    Wait for DC
     When    Run "crm cluster stop --all" on "hanode1"
     Then    Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
     When    Run "crm cluster start --all" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Cluster service is "started" on "hanode2"
+    When    Wait for DC
     When    Run "crm cluster stop hanode2" on "hanode1"
     Then    Cluster service is "stopped" on "hanode2"
     When    Run "crm cluster start hanode2" on "hanode1"
