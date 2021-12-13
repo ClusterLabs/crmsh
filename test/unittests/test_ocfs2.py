@@ -4,7 +4,7 @@ try:
     from unittest import mock
 except ImportError:
     import mock
-from crmsh import ocfs2, utils, ra
+from crmsh import ocfs2, utils, ra, constants
 
 logging.basicConfig(level=logging.INFO)
 
@@ -450,7 +450,7 @@ params directory="/srv/clusterfs" fstype=ocfs2 device="/dev/sda2"
     @mock.patch('crmsh.utils.compare_uuid_with_peer_dev')
     @mock.patch('crmsh.utils.is_dev_a_plain_raw_disk_or_partition')
     @mock.patch('crmsh.ocfs2.OCFS2Manager._verify_packages')
-    @mock.patch('crmsh.utils.has_resource_configured')
+    @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_resource_configured')
     @mock.patch('crmsh.log.LoggerUtils.status_long')
     @mock.patch('crmsh.ocfs2.OCFS2Manager._find_target_on_join')
     def test_join_ocfs2(self, mock_find, mock_long, mock_configured, mock_verify_packages, mock_is_mapper, mock_compare):
@@ -459,7 +459,7 @@ params directory="/srv/clusterfs" fstype=ocfs2 device="/dev/sda2"
         mock_is_mapper.return_value = True
         self.ocfs2_inst3.join_ocfs2("node1")
         mock_find.assert_called_once_with("node1")
-        mock_configured.assert_called_once_with("ocf::heartbeat:lvmlockd", "node1")
+        mock_configured.assert_called_once_with(constants.LVMLOCKD_RA, "node1")
         mock_verify_packages.assert_called_once_with(False)
         mock_is_mapper.assert_called_once_with("/dev/sda2", "node1")
         mock_compare.assert_called_once_with(["/dev/sda2"], "node1")
