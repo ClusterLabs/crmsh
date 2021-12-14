@@ -931,19 +931,14 @@ INFO: "rm" is accepted as "delete"
 .EXT crm_simulate -sUL
 2 of 6 resource instances DISABLED and 0 BLOCKED from further action due to failure
 
-Current cluster status:
 Node node1: UNCLEAN (offline)
 
  st	(stonith:null):	Stopped 
- Clone Set: c1 [p1] (unmanaged)
      Stopped: [ node1 ]
- Clone Set: m1 [p2] (promotable)
      Stopped: [ node1 ]
  p3	(ocf::heartbeat:Dummy):	Stopped ( disabled ) 
- Clone Set: msg [g] (promotable)
      Stopped: [ node1 ]
 
-Allocation scores and utilization information:
 Original: node1 capacity:
 pcmk__native_allocate: st allocation score on node1: 0
 pcmk__clone_allocate: c1 allocation score on node1: 0
@@ -966,7 +961,6 @@ pcmk__native_allocate: p4:0 allocation score on node1: -INFINITY
 g:0 promotion score on none: 0
 Remaining: node1 capacity:
 
-Transition Summary:
 .SETENV showobj=
 .TRY configure primitive p5 Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy

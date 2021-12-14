@@ -10,6 +10,8 @@ primitive st stonith:null \
 	params hostlist=node1
 ms m1 p2
 clone c1 p1
+rsc_defaults build-resource-defaults: \
+       resource-stickiness=1
 op_defaults op-options: \
 	timeout=60s
 .TRY configure erase nodes
@@ -46,6 +48,8 @@ ms m1 p2
 clone c1 p1
 property cib-bootstrap-options: \
 	cluster-recheck-interval=10m
+rsc_defaults build-resource-defaults: \
+       resource-stickiness=1
 op_defaults op-options: \
 	timeout=2m
 .EXT rm sample.txt
