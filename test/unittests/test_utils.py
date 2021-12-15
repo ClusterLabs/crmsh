@@ -1223,33 +1223,9 @@ Flags:            Quorate
     mock_run.assert_called_once_with("corosync-quorumtool -s", remote=None, success_val_list=[0, 2])
 
 
-@mock.patch("crmsh.utils.get_stdout_or_raise_error")
-def test_has_resource_running(mock_run):
-    mock_run.return_value = """
-Node List:
-  * Online: [ 15sp2-1 ]
-
-Active Resources:
-  * No active resources
-    """
-    res = utils.has_resource_running()
-    assert res is False
-    mock_run.assert_called_once_with("crm_mon -1")
-
-
 def test_re_split_string():
     assert utils.re_split_string('[; ]', "/dev/sda1; /dev/sdb1 ; ") == ["/dev/sda1", "/dev/sdb1"]
     assert utils.re_split_string('[; ]', "/dev/sda1 ") == ["/dev/sda1"]
-
-
-@mock.patch("crmsh.utils.get_stdout_or_raise_error")
-def test_has_resource_configured(mock_run):
-    mock_run.return_value = """
-primitive stonith-sbd stonith:external/sbd \
-        params pcmk_delay_max=30s
-    """
-    res = utils.has_resource_configured("stonith:external/sbd")
-    assert res is True
 
 
 @mock.patch('crmsh.utils.get_dev_info')
@@ -1525,11 +1501,11 @@ def test_set_dlm_option(mock_get_dict, mock_run):
     mock_run.assert_called_once_with('dlm_tool set_config "key2=test"')
 
 
-@mock.patch('crmsh.utils.has_resource_configured')
+@mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_resource_configured')
 def test_is_dlm_configured(mock_configured):
     mock_configured.return_value = True
     assert utils.is_dlm_configured() is True
-    mock_configured.assert_called_once_with("ocf::pacemaker:controld")
+    mock_configured.assert_called_once_with(constants.DLM_CONTROLD_RA)
 
 
 @mock.patch('crmsh.utils.get_stdout_or_raise_error')

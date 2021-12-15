@@ -353,12 +353,7 @@ def wait_for_resource(message, resource):
     """
     with logger_utils.status_long(message):
         while True:
-            # -r here to display inactive resources
-            # -R here to display individual clone instances
-            _rc, out, err = utils.get_stdout_stderr("crm_mon -1rR")
-            # Make sure clone instances also started(no Stopped instance)
-            if re.search(r"{}\s+.*:\s+Started\s".format(resource), out) and \
-                    not re.search(r"{}\s+.*:\s+(Stopped|Starting)".format(resource), out):
+            if xmlutil.CrmMonXmlParser.is_resource_started(resource):
                 break
             status_progress()
             sleep(1)
@@ -367,8 +362,7 @@ def wait_for_resource(message, resource):
 def wait_for_cluster():
     with logger_utils.status_long("Waiting for cluster"):
         while True:
-            _rc, out, _err = utils.get_stdout_stderr("crm_mon -1")
-            if is_online(out):
+            if is_online():
                 break
             status_progress()
             sleep(2)
@@ -387,12 +381,12 @@ def get_cluster_node_hostname():
     return peer_node
 
 
-def is_online(crm_mon_txt):
+def is_online():
     """
     Check whether local node is online
     Besides that, in join process, check whether init node is online
     """
-    if not re.search("Online: .* {} ".format(utils.this_node()), crm_mon_txt):
+    if not xmlutil.CrmMonXmlParser.is_node_online(utils.this_node()):
         return False
 
     # if peer_node is None, this is in the init process
@@ -402,7 +396,7 @@ def is_online(crm_mon_txt):
     # In join process
     # If the joining node is already online but can't find the init node
     # The communication IP maybe mis-configured
-    if not re.search("Online: .* {} ".format(peer_node), crm_mon_txt):
+    if not xmlutil.CrmMonXmlParser.is_node_online(peer_node):
         shutil.copy(COROSYNC_CONF_ORIG, corosync.conf())
         csync2_update(corosync.conf())
         utils.stop_service("corosync")
@@ -1270,7 +1264,7 @@ def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False):
     if utils.calculate_quorate_status(expected_votes, actual_votes) and not diskless_sbd:
         # safe to use reload
         return QdevicePolicy.QDEVICE_RELOAD
-    elif utils.has_resource_running():
+    elif xmlutil.CrmMonXmlParser.is_any_resource_running():
         # will lose quorum, and with RA running
         # no reload, no restart cluster service
         # just leave a warning

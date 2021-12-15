@@ -41,7 +41,7 @@ from .xmlutil import remove_id_used_attributes, get_top_cib_nodes
 from .xmlutil import merge_attributes, is_cib_element, sanity_check_meta
 from .xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
 from .xmlutil import get_rsc_operations, delete_rscref, xml_equals, lookup_node, RscState
-from .xmlutil import cibtext2elem, is_related, check_id_ref, xml_tostring
+from .xmlutil import text2elem, is_related, check_id_ref, xml_tostring
 from .xmlutil import sanitize_cib_for_patching
 from .cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
 from .cliformat import cli_nvpair, cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
@@ -623,7 +623,7 @@ class CibObjectSetRaw(CibObjectSet):
         try:
             cib_elem = etree.fromstring(s)
         except etree.ParseError as msg:
-            logger_utils.cib_parse_err(msg, s)
+            logger_utils.text_xml_parse_err(msg, s)
             return False
         sanitize_cib(cib_elem)
         if not show_unrecognized_elems(cib_elem):
@@ -2749,7 +2749,7 @@ class CibFactory(object):
         if cib is None:
             cib = read_cib(cibdump2elem)
         elif isinstance(cib, str):
-            cib = cibtext2elem(cib)
+            cib = text2elem(cib)
         if not self._import_cib(cib):
             return False
         if cibadmin_can_patch():

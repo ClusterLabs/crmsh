@@ -5,6 +5,8 @@ from . import bootstrap
 from . import ra
 from . import corosync
 from . import log
+from . import xmlutil
+from . import constants
 
 
 logger = log.setup_logger(__name__)
@@ -330,7 +332,7 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         if not target:
             return
         with logger_utils.status_long("Verify OCFS2 environment"):
-            use_cluster_lvm2 = utils.has_resource_configured("ocf::heartbeat:lvmlockd", peer)
+            use_cluster_lvm2 = xmlutil.CrmMonXmlParser.is_resource_configured(constants.LVMLOCKD_RA, peer)
             self._verify_packages(use_cluster_lvm2)
             if utils.is_dev_a_plain_raw_disk_or_partition(target, peer):
                 utils.compare_uuid_with_peer_dev([target], peer)

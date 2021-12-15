@@ -7,6 +7,7 @@ from .bootstrap import SYSCONFIG_SBD, SBD_SYSTEMD_DELAY_START_DIR
 from . import log
 from . import constants
 from . import corosync
+from . import xmlutil
 
 
 logger = log.setup_logger(__name__)
@@ -220,7 +221,7 @@ class SBDTimeout(object):
         """
         # TODO this function should be outside of sbd.py, to adjust any fence device
 
-        if not utils.has_resource_configured(SBDManager.SBD_RA):
+        if not xmlutil.CrmMonXmlParser.is_resource_configured(SBDManager.SBD_RA):
             return
 
         if self.two_node_without_qdevice:
@@ -433,7 +434,7 @@ class SBDManager(object):
         """
         Try to configure sbd resource, restart cluster on needed
         """
-        if not utils.has_resource_running():
+        if not xmlutil.CrmMonXmlParser.is_any_resource_running():
             logger.info("Restarting cluster service")
             utils.cluster_run_cmd("crm cluster restart")
             bootstrap.wait_for_cluster()
@@ -500,7 +501,7 @@ class SBDManager(object):
         """
         if not utils.package_is_installed("sbd") or \
                 not utils.service_is_enabled("sbd.service") or \
-                utils.has_resource_configured(self.SBD_RA):
+                xmlutil.CrmMonXmlParser.is_resource_configured(self.SBD_RA):
             return
 
         # disk-based sbd
