@@ -1,5 +1,5 @@
 #!/bin/bash
-Docker_image='liangxin1300/haleap:15.2'
+Docker_image='liangxin1300/hatbw'
 HA_packages='pacemaker corosync corosync-qdevice'
 TEST_TYPE='bootstrap qdevice hb_report geo'
 
@@ -32,6 +32,7 @@ deploy_node() {
   else
     docker exec -t $node_name /bin/sh -c "cd /app; ./test/run-in-travis.sh build"
   fi
+  docker exec -t $node_name /bin/sh -c "rm -rf /run/nologin"
   echo "##### Deploy $node_name finished"
   echo
 }

@@ -8,6 +8,7 @@ Error setting s1=1 2 3 \(section=status, set=status-node1\): The object/attribut
 Error signing on to the CRMd service
 Error connecting to the controller
 Error performing operation: Transport endpoint is not connected
+Error performing operation: Not connected
 .EXT crm_resource --list-ocf-providers
 .EXT crm_resource --list-ocf-alternatives Delay
 .EXT crm_resource --list-ocf-alternatives Dummy

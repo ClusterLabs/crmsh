@@ -23,6 +23,7 @@ def before_step(context, step):
 def before_tag(context, tag):
     # tag @clean means need to stop cluster service
     if tag == "clean":
+        time.sleep(3)
         online_nodes = get_online_nodes()
         if online_nodes:
             resource_cleanup()

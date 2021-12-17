@@ -448,8 +448,12 @@ class NodeMgmt(command.UI):
                 return False
         ec = utils.ext_cmd(cmd)
         if ec != 0:
-            logger.warning('"%s" failed, rc=%d', cmd, ec)
-            return False
+            node_xpath = "//nodes/node[@uname='{}']".format(node)
+            cmd = 'cibadmin --delete-all --force --xpath "{}"'.format(node_xpath)
+            rc, _, err = utils.get_stdout_stderr(cmd)
+            if rc != 0:
+                logger.error('"%s" failed, rc=%d, %s', cmd, rc, err)
+                return False
         return True
 
     @command.completers(compl.nodes)

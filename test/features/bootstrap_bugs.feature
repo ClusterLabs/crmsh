@@ -56,12 +56,12 @@ Feature: Regression test for bootstrap bugs
     Then    Cluster service is "started" on "hanode2"
     When    Run "crm corosync get nodelist.node.ring0_addr" on "hanode1"
     Then    Expected "10.10.10.3" in stdout
-    And     Service "hawk.service" is "started" on "hanode2"
+    #And     Service "hawk.service" is "started" on "hanode2"
     When    Run "crm cluster remove hanode2 -y" on "hanode1"
     Then    Online nodes are "hanode1"
     And     Cluster service is "stopped" on "hanode2"
     # verify bsc#1175708
-    And     Service "hawk.service" is "stopped" on "hanode2"
+    #And     Service "hawk.service" is "stopped" on "hanode2"
     When    Run "crm corosync get nodelist.node.ring0_addr" on "hanode1"
     Then    Expected "10.10.10.3" not in stdout
 
