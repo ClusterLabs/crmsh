@@ -29,7 +29,7 @@ crmconf_DATA = etc/crm.conf etc/profiles.yml
 contribdir      = $(docdir)/contrib
 contrib_DATA	= contrib/pcmk.vim  contrib/README.vimsyntax
 helpdir     = $(datadir)/$(PACKAGE)
-asciiman	= doc/crm.8.adoc doc/crmsh_hb_report.8.adoc
+asciiman	= doc/crm.8.adoc doc/crmsh_hb_report.8.adoc doc/profiles.adoc
 help_DATA	= doc/crm.8.adoc
 
 generated_docs	=

@@ -1,0 +1,47 @@
+=== /etc/crm/profiles.yml
+
+==== Purpose
+
+YAML file `/etc/crm/profiles.yml` contains Corosync, SBD and Pacemaker parameters for different platforms.
+
+crmsh bootstrap detects system environment and load the corresponding parameters predefined in this file.
+
+==== Syntax
+
+............
+profile_name:
+  key_name: value
+............
+
+The valid profile names are:
+"microsoft-azure", "google-cloud-platform", "amazon-web-services", "s390", "default"
+
+`key_name` is a known Corosync, SBD, or Pacemaker parameters, like
+`corosync.totem.token` or `sbd.watchdog_timeout`.
+
+More details about the parameter definitions please refer to the man page of corosync.conf(5), sbd(8).
+
+Example
+............
+default:
+  corosync.totem.crypto_hash: sha1
+  corosync.totem.crypto_cipher: aes256
+  corosync.totem.token: 5000
+  corosync.totem.join: 60
+  corosync.totem.max_messages: 20
+  corosync.totem.token_retransmits_before_loss_const: 10
+  sbd.watchdog_timeout: 15
+
+microsoft-azure:
+  corosync.totem.token: 30000
+  sbd.watchdog_timeout: 60
+............
+
+==== How the content of the file is interpreted
+
+The profiles has the following properties:
+
+* Profiles are only loaded on bootstrap init node.
+* The "default" profile is loaded in the beginning.
+* Specific profiles will override the corresponding values in the "default" profile (if the specific environment is detected).
+* Users could customize the "default" profile for their needs. For example, those on-premise environments which is not defined yet.

@@ -5068,6 +5068,10 @@ help [<topic>]
 
 Leave the program.
 
+FILES
+---
+include::profiles.adoc[]
+
 BUGS
 ----
 Even though all sensible configurations (and most of those that
