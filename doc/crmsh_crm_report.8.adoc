@@ -1,13 +1,13 @@
-:man source:   crmsh_hb_report
+:man source:   crmsh_crm_report
 :man version:  1.2
 :man manual:   Pacemaker documentation
 
-crmsh_hb_report(8)
+crmsh_crm_report(8)
 ==================
 
 NAME
 ----
-crmsh_hb_report - create report for CRM based clusters (Pacemaker)
+crmsh_crm_report - create report for CRM based clusters (Pacemaker)
 
 
 SYNOPSIS
@@ -19,7 +19,7 @@ SYNOPSIS
 
 DESCRIPTION
 -----------
-The crmsh_hb_report(8) is a utility to collect all information (logs,
+The crmsh_crm_report(8) is a utility to collect all information (logs,
 configuration files, system information, etc) relevant to
 Pacemaker (CRM) over the given period of time.
 
@@ -29,8 +29,8 @@ OPTIONS
 dest::
 	The report name. It can also contain a path where to put the
 	report tarball. If left out, the tarball is created in the
-	current directory named "hb_report-current_date", for instance
-	hb_report-Wed-03-Mar-2010.
+	current directory named "crm_report-current_date", for instance
+	crm_report-Wed-03-Mar-2010.
 
 *-d*::
 	Don't create the compressed tar, but leave the result in a

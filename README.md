@@ -64,7 +64,7 @@ included in the repository.
 ./test: unit tests and regression tests
 ./contrib: vim highlighting scripts and other semi-related
            contributions
-./hb_report: log file collection and analysis tool
+./crm report: log file collection and analysis tool
 ```
 
 ## Development
