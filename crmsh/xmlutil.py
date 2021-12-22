@@ -218,6 +218,16 @@ class RscState(object):
         except (IndexError, AttributeError):
             return None
 
+    def has_rsc_stickiness(self):
+        """
+        Check if resource-stickiness already set
+        """
+        self._init_cib()
+        if self.rsc_dflt_elem is None:
+            return False
+        attr = get_attr_in_set(self.rsc_dflt_elem, "resource-stickiness")
+        return attr is not None
+
     def is_ms_or_promotable_clone(self, ident):
         '''
         Test if the resource is master-slave.
