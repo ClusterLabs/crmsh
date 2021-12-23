@@ -1149,11 +1149,10 @@ def change_user_shell(user):
     """
     To change user's login shell
     """
+    message = "The user '{}' will have the login shell configuration changed to /bin/bash"
     if user != "root" and is_nologin(user):
         if not _context.yes_to_all:
-            status("""
-User {} will be changed the login shell as /bin/bash, and
-be setted up authorized ssh access among cluster nodes""".format(user))
+            status(message.format(user))
             if not confirm("Continue?"):
                 _context.with_other_user = False
                 return
