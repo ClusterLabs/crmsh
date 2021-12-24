@@ -311,6 +311,7 @@ class LoggerUtils(object):
         value = input()
         if not value:
             value = default
+            print()
         with self.only_file():
             self.logger.info("input result: %s", value)
         return value
