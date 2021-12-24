@@ -1,7 +1,7 @@
 #!/bin/bash
 Docker_image='liangxin1300/hatbw'
 HA_packages='pacemaker corosync corosync-qdevice'
-TEST_TYPE='bootstrap qdevice hb_report geo'
+TEST_TYPE='bootstrap qdevice crm_report geo'
 
 etc_hosts_content=`cat <<EOF
 10.10.10.2 hanode1
@@ -62,7 +62,7 @@ usage() {
 }
 
 
-# $1 could be "bootstrap", "hb_report", "qdevice" etc.
+# $1 could be "bootstrap", "crm_report", "qdevice" etc.
 # $2 could be "before_install" or "run"
 # $3 could be suffix of feature file
 case "$1/$2" in

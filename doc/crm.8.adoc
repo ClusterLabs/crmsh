@@ -4697,7 +4697,7 @@ history commands look at events within a certain time span.
 
 For the `live` source, the default time span is the _last hour_.
 
-There is no time span limit for the `hb_report` source.
+There is no time span limit for the `crm report` source.
 
 The time period is parsed by the `dateutil` python module. It
 covers a wide range of date formats. For instance:
@@ -4833,7 +4833,7 @@ current settings can be saved and later retrieved.
 If the current history being examined is coming from a live
 cluster the logs, PE inputs, and other files are saved too,
 because they may disappear from nodes. For the existing reports
-coming from `hb_report`, only the directory location is saved
+coming from `crm report`, only the directory location is saved
 (not to waste space).
 
 A history session may also be packed into a tarball which can
@@ -4890,7 +4890,7 @@ show pe-input-2080.bz2 status
 ==== `source`
 
 Events to be examined can come from the current cluster or from a
-`hb_report` report. This command sets the source. `source live`
+`crm report` report. This command sets the source. `source live`
 sets source to the running cluster and system logs. If no source
 is specified, the current source information is printed.
 
@@ -5024,7 +5024,7 @@ and other relevant data for a given time period. This is a useful tool
 for collecting data to attach to bug reports, or for detecting the
 root cause of errors resulting in resource failover, for example.
 
-See `crmsh_hb_report(8)` for more details on arguments,
+See `crmsh_crm_report(8)` for more details on arguments,
 or call `crm report -h`
 
 Usage:

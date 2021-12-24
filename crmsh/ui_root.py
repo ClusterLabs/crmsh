@@ -30,7 +30,6 @@ from . import ui_maintenance
 from . import ui_node
 from . import ui_options
 from . import ui_ra
-from . import ui_report
 from . import ui_resource
 from . import ui_script
 from . import ui_site
@@ -137,8 +136,10 @@ configuration files, system information, etc) relevant to
 crmsh over the given period of time.
 ''')
     def do_report(self, context, *args):
-        rc = ui_report.create_report(context, args)
-        return rc == 0
+        import sys
+        from crmsh.report import core
+        sys.argv[1:] = args
+        core.run()
 
     @command.level(ui_resource.RscMgmt)
     @command.help('''resources management

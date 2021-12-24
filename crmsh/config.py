@@ -291,10 +291,12 @@ DEFAULTS = {
         'from_time': opt_string('-12H'),
         'compress': opt_boolean('yes'),
         'speed_up': opt_boolean('no'),
-        'collect_extra_logs': opt_string('/var/log/messages /var/log/pacemaker/pacemaker.log /var/log/pacemaker.log /var/log/crmsh/crmsh.log'),
+        'collect_extra_logs': opt_string('/var/log/messages /var/log/pacemaker/pacemaker.log \
+                /var/log/pacemaker.log /var/log/crmsh/crmsh.log /etc/crm/profiles.yml /etc/crm/crm.conf'),
         'remove_exist_dest': opt_boolean('no'),
         'single_node': opt_boolean('no'),
-        'sanitize_rule': opt_string('passw.*')
+        'sanitize_rule': opt_string('passw.*'),
+        'verbosity': opt_string('0')
     }
 }
 
@@ -370,7 +372,7 @@ class _Configuration(object):
         return DEFAULTS[section][name].get(self.get_impl(section, name))
 
     def set(self, section, name, value):
-        if section not in ('core', 'path', 'color'):
+        if section not in ('core', 'path', 'color', 'report'):
             raise ValueError("Setting invalid section " + str(section))
         if not self._defaults.has_option(section, name):
             raise ValueError("Setting invalid option %s.%s" % (section, name))

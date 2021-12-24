@@ -27,7 +27,7 @@ case "$1" in
 		configure
 		make_install
 		exit $?;;
-	bootstrap|qdevice|hb_report|resource|geo|configure|constraints|ocfs2)
+	bootstrap|qdevice|crm_report|resource|geo|configure|constraints|ocfs2)
 		functional_tests $1 $2
 		exit $?;;
 	*|original)

@@ -298,15 +298,15 @@ def step_impl(context, votes):
     assert int(corosync.get_value("quorum.expected_votes")) == int(votes)
 
 
-@then('Default hb_report tar file created')
+@then('Default crm_report tar file created')
 def step_impl(context):
-    default_file_name = 'hb_report-{}.tar.bz2'.format(datetime.datetime.now().strftime("%w-%d-%m-%Y"))
+    default_file_name = 'crm_report-{}.tar.bz2'.format(datetime.datetime.now().strftime("%w-%d-%m-%Y"))
     assert os.path.exists(default_file_name) is True
 
 
-@when('Remove default hb_report tar file')
+@when('Remove default crm_report tar file')
 def step_impl(context):
-    default_file_name = 'hb_report-{}.tar.bz2'.format(datetime.datetime.now().strftime("%w-%d-%m-%Y"))
+    default_file_name = 'crm_report-{}.tar.bz2'.format(datetime.datetime.now().strftime("%w-%d-%m-%Y"))
     os.remove(default_file_name)
 
 
