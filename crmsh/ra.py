@@ -14,7 +14,7 @@ from . import options
 from . import userdir
 from . import utils
 from .utils import stdout2list, is_program, is_process, to_ascii
-from .utils import os_types_list, get_stdout, find_value
+from .utils import os_types_list, get_stdout
 from .utils import crm_msec, crm_time_cmp
 from . import log
 
@@ -286,25 +286,6 @@ def get_nodes_text(n, tag):
         return ''
 
 
-def mk_monitor_name(role, depth):
-    depth = ("_%s" % depth) if depth != "0" else ""
-    return role and role != "Started" and \
-        "monitor_%s%s" % (role, depth) or \
-        "monitor%s" % depth
-
-
-def monitor_name_node(node):
-    depth = node.get("depth") or '0'
-    role = node.get("role")
-    return mk_monitor_name(role, depth)
-
-
-def monitor_name_pl(pl):
-    depth = find_value(pl, "depth") or '0'
-    role = find_value(pl, "role")
-    return mk_monitor_name(role, depth)
-
-
 def _param_type_default(n):
     """
     Helper function to get (type, default) from XML parameter node
@@ -322,8 +303,9 @@ class RAInfo(object):
     '''
     ra_tab = "    "  # four horses
     required_ops = ("start", "stop")
+    no_interval_ops = ("start", "stop")
     skip_ops = ("meta-data", "validate-all")
-    skip_op_attr = ("name", "depth", "role")
+    skip_op_attr = ("name",)
 
     def __init__(self, ra_class, ra_type, ra_provider="heartbeat", exclude_from_completion=None):
         self.excluded_from_completion = exclude_from_completion or []
@@ -439,30 +421,26 @@ class RAInfo(object):
             return cache.retrieve(ident)
         if self.mk_ra_node() is None:
             return None
-        d = {}
-        for c in self.ra_elem.xpath("//actions/action"):
-            name = c.get("name")
+
+        actions_dict = {}
+        actions_dict["monitor"] = []
+        for elem in self.ra_elem.xpath("//actions/action"):
+            name = elem.get("name")
             if not name or name in self.skip_ops:
                 continue
-            if name == "monitor":
-                name = monitor_name_node(c)
-            d[name] = {}
-            for a in list(c.attrib.keys()):
-                if a in self.skip_op_attr:
+            d = {}
+            for key in list(elem.attrib.keys()):
+                if key in self.skip_op_attr:
                     continue
-                v = c.get(a)
-                if v:
-                    d[name][a] = v
-        # add monitor ops without role, if they don't already
-        # exist
-        d2 = {}
-        for op in d:
-            if re.match("monitor_[^0-9]", op):
-                norole_op = re.sub(r'monitor_[^0-9_]+_(.*)', r'monitor_\1', op)
-                if norole_op not in d:
-                    d2[norole_op] = d[op]
-        d.update(d2)
-        return cache.store(ident, d)
+                value = elem.get(key)
+                if value:
+                    d[key] = value
+            if name == "monitor":
+                actions_dict[name].append(d)
+            else:
+                actions_dict[name] = d
+
+        return cache.store(ident, actions_dict)
 
     def param_default(self, pname):
         '''
@@ -542,13 +520,35 @@ class RAInfo(object):
                 rc |= utils.get_check_rc()
         return rc
 
-    def get_adv_timeout(self, op, node=None):
-        if node is not None and op == "monitor":
-            name = monitor_name_node(node)
-        else:
-            name = op
+    def get_op_attr_value(self, op, key, role=None, depth=None):
+        """
+        Get operation's attribute value
+        Multi monitors should be distinguished by role or depth
+        """
         try:
-            return self.actions()[name]["timeout"]
+            # actions_dict example:
+            # {'monitor': [
+            #    {'depth': '0', 'timeout': '20s', 'interval': '10s', 'role': 'Promoted'},
+            #    {'depth': '0', 'timeout': '20s', 'interval': '11s', 'role': 'Unpromoted'}
+            #    ],
+            #  'start': {'timeout': '20s'},
+            #  'stop': {'timeout': '20s'}}
+            actions_dict = self.actions()
+            if not actions_dict:
+                return None
+            if op == 'monitor':
+                if role is None and depth is None:
+                    return actions_dict[op][0][key]
+                if role:
+                    for idx, monitor_item in enumerate(actions_dict[op]):
+                        if monitor_item['role'] == role:
+                            return actions_dict[op][idx][key]
+                if depth:
+                    for idx, monitor_item in enumerate(actions_dict[op]):
+                        if monitor_item['depth'] == depth:
+                            return actions_dict[op][idx][key]
+            else:
+                return actions_dict[op][key]
         except:
             return None
 
@@ -558,7 +558,71 @@ class RAInfo(object):
         - do all operations exist
         - are timeouts sensible
         '''
-        def sanity_check_op(op, n_ops, intervals):
+        def timeout_check(op, item_dict, adv_timeout):
+            """
+            Helper method used by sanity_check_op_timeout, to check operation's timeout
+            """
+            rc = 0
+            if "timeout" in item_dict:
+                actual_timeout = item_dict["timeout"]
+                timeout_string = "specified timeout"
+            else:
+                actual_timeout = default_timeout
+                timeout_string = "default timeout"
+            if actual_timeout and crm_time_cmp(adv_timeout, actual_timeout) > 0:
+                logger.warning("%s: %s %s for %s is smaller than the advised %s",
+                        ident, timeout_string, actual_timeout, op, adv_timeout)
+                rc |= 1
+            return rc
+
+        def sanity_check_op_timeout(op, op_dict):
+            """
+            Helper method used by sanity_check_op, to check operation's timeout
+            """
+            rc = 0
+            role = None
+            depth = None
+            if op == "monitor":
+                for monitor_item in op_dict[op]:
+                    role = monitor_item['role'] if 'role' in monitor_item else None
+                    depth = monitor_item['depth'] if 'depth' in monitor_item else None
+                    adv_timeout = self.get_op_attr_value(op, "timeout", role=role, depth=depth)
+                    rc |= timeout_check(op, monitor_item, adv_timeout)
+            else:
+                adv_timeout = self.get_op_attr_value(op, "timeout")
+                rc |= timeout_check(op, op_dict[op], adv_timeout)
+            return rc
+
+        def sanity_check_op_interval(op, op_dict):
+            """
+            Helper method used by sanity_check_op, to check operation's interval
+            """
+            rc = 0
+            prev_intervals = []
+            if op == "monitor":
+                for monitor_item in op_dict[op]:
+                    role = monitor_item['role'] if 'role' in monitor_item else None
+                    depth = monitor_item['depth'] if 'depth' in monitor_item else None
+                    # make sure interval in multi monitor operations is unique and non-zero
+                    adv_interval = self.get_op_attr_value(op, "interval", role=role, depth=depth)
+                    actual_interval_msec = crm_msec(monitor_item["interval"])
+                    if actual_interval_msec == 0:
+                        logger.warning("%s: interval in monitor should be larger than 0, advised is %s", ident, adv_interval)
+                        rc |= 1
+                    elif actual_interval_msec in prev_intervals:
+                        logger.warning("%s: interval in monitor must be unique, advised is %s", ident, adv_interval)
+                        rc |= 1
+                    else:
+                        prev_intervals.append(actual_interval_msec)
+            elif "interval" in op_dict[op]:
+                value = op_dict[op]["interval"]
+                value_msec = crm_msec(value)
+                if op in self.no_interval_ops and value_msec != 0:
+                    logger.warning("%s: Specified interval for %s is %s, it must be 0", ident, op, value)
+                    rc |= 1
+            return rc
+
+        def sanity_check_op(op, op_dict):
             """
             Helper method used by sanity_check_ops.
             """
@@ -568,53 +632,47 @@ class RAInfo(object):
             if op not in self.actions():
                 logger.warning("%s: action '%s' not found in Resource Agent meta-data", ident, op)
                 rc |= 1
-            if "interval" in n_ops[op]:
-                v = n_ops[op]["interval"]
-                v_msec = crm_msec(v)
-                if op in ("start", "stop") and v_msec != 0:
-                    logger.warning("%s: Specified interval for %s is %s, it must be 0", ident, op, v)
-                    rc |= 1
-                if op.startswith("monitor") and v_msec != 0:
-                    if v_msec not in intervals:
-                        intervals[v_msec] = 1
-                    else:
-                        logger.warning("%s: interval in %s must be unique", ident, op)
-                        rc |= 1
-            try:
-                adv_timeout = self.actions()[op]["timeout"]
-            except:
                 return rc
-            if "timeout" in n_ops[op]:
-                v = n_ops[op]["timeout"]
-                timeout_string = "specified timeout"
-            else:
-                v = default_timeout
-                timeout_string = "default timeout"
-            if crm_msec(v) < 0:
-                return rc
-            if crm_time_cmp(adv_timeout, v) > 0:
-                logger.warning("%s: %s %s for %s is smaller than the advised %s",
-                            ident, timeout_string, v, op, adv_timeout)
-                rc |= 1
+            rc |= sanity_check_op_interval(op, op_dict)
+            rc |= sanity_check_op_timeout(op, op_dict)
             return rc
 
+
         rc = 0
-        n_ops = {}
+        op_dict = {}
+        op_dict["monitor"] = []
+        # ops example:
+        # [
+        #   ['monitor', [['role', 'Promoted'], ['interval', '10s']]],
+        #   ['monitor', [['role', 'Unpromoted'], ['interval', '0']]],
+        #   ['start', [['timeout', '20s'], ['interval', '0']]]
+        # ]
         for op in ops:
-            n_op = monitor_name_pl(op[1]) if op[0] == "monitor" else op[0]
-            n_ops[n_op] = {}
-            for p, v in op[1]:
-                if p in self.skip_op_attr:
+            n_op = op[0]
+            d = {}
+            for key, value in op[1]:
+                if key in self.skip_op_attr:
                     continue
-                n_ops[n_op][p] = v
+                d[key] = value
+            if n_op == "monitor":
+                op_dict["monitor"].append(d)
+            else:
+                op_dict[n_op] = d
         for req_op in self.required_ops:
-            if req_op not in n_ops:
+            if req_op not in op_dict:
                 if not (self.ra_class == "stonith" and req_op in ("start", "stop")):
-                    n_ops[req_op] = {}
-        intervals = {}
-        for op in n_ops:
-            rc |= sanity_check_op(op, n_ops, intervals)
+                    op_dict[req_op] = {}
+        # op_dict example:
+        # {'monitor': [
+        #    {'role': 'Promoted', 'interval': '10s'},
+        #    {'role': 'Unpromoted', 'interval': '0'}],
+        #    'start': {'timeout': '20s', 'interval': '0'},
+        #    'stop': {}
+        # }
+        for op in op_dict:
+            rc |= sanity_check_op(op, op_dict)
         return rc
+
 
     def meta(self):
         '''
@@ -725,8 +783,6 @@ class RAInfo(object):
             name = n.get("name")
             if not name or name in self.skip_ops:
                 return ''
-            if name == "monitor":
-                name = monitor_name_node(n)
             s = "%-13s" % name
             for a in list(n.attrib.keys()):
                 if a in self.skip_op_attr:

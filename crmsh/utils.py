@@ -1257,13 +1257,6 @@ def multicolumn(l):
             print(s)
 
 
-def find_value(pl, name):
-    for n, v in pl:
-        if n == name:
-            return v
-    return None
-
-
 def cli_replace_attr(pl, name, new_val):
     for i, attr in enumerate(pl):
         if attr[0] == name:
