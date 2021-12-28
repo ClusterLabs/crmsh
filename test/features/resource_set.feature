@@ -14,7 +14,7 @@ Feature: Use "crm configure set" to update attributes and operations
     When      Run "crm configure primitive vip IPaddr2 params ip=10.10.10.123 op monitor interval=3s" on "hanode1"
     Then      Resource "vip" type "IPaddr2" is "Started"
     And       Cluster virtual IP is "10.10.10.123"
-    When      Run "crm configure primitive s ocf:pacemaker:Stateful op monitor_Master interval=3s op monitor_Slave interval=5s" on "hanode1"
+    When      Run "crm configure primitive s ocf:pacemaker:Stateful op monitor role=Promoted interval=3s op monitor role=Unpromoted interval=5s" on "hanode1"
     Then      Resource "s" type "Stateful" is "Started"
 
   @clean
@@ -95,3 +95,23 @@ Feature: Use "crm configure set" to update attributes and operations
     Then    Except "ERROR: resource.move: Not our node: xxxx"
     When    Try "crm resource move d"
     Then    Except "ERROR: resource.move: No target node: Move requires either a target node or 'force'"
+
+  @clean
+  Scenario: promote and demote promotable clone resource (bsc#1194125)
+    When    Run "crm configure primitive s2 ocf:pacemaker:Stateful op monitor role=Promoted interval=3s op monitor role=Unpromoted interval=5s" on "hanode1"
+    And     Run "crm configure clone p2 s2 meta promotable=true" on "hanode1"
+    And     Run "crm resource demote p2" on "hanode1"
+    Then    Run "sleep 2;! crm_resource --locate -r p2|grep -E 'Master|Promoted'" OK
+    When    Run "crm resource promote p2" on "hanode2"
+    Then    Run "sleep 2;crm_resource --locate -r p2|grep -E 'Master|Promoted'" OK
+
+  @clean
+  Scenario: operation warning
+    When    Run "crm configure primitive id=d2 Dummy op start interval=5s" on "hanode1"
+    Then    Expected "WARNING: d2: Specified interval for start is 5s, it must be 0" in stdout
+    When    Run "crm configure primitive id=d3 Dummy op monitor interval=0" on "hanode1"
+    Then    Expected "WARNING: d3: interval in monitor should be larger than 0, advised is 10s" in stdout
+    When    Run "crm configure primitive s2 ocf:pacemaker:Stateful op monitor role=Promoted interval=3s op monitor role=Unpromoted interval=3s" on "hanode1"
+    Then    Expected "WARNING: s2: interval in monitor must be unique, advised is 11s" in stdout
+    When    Run "crm configure primitive id=d4 Dummy op start timeout=10s" on "hanode1"
+    Then    Expected "WARNING: d4: specified timeout 10s for start is smaller than the advised 20s" in stdout

@@ -41,7 +41,7 @@ Operations' defaults (advisory minimum):
 
     start         timeout=20s
     stop          timeout=20s
-    monitor       timeout=20s interval=10s
+    monitor       timeout=20s interval=10s depth=0
     reload        timeout=20s
     reload-agent  timeout=20s
     migrate_to    timeout=20s
