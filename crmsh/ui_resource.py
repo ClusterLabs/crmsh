@@ -338,7 +338,7 @@ class RscMgmt(command.UI):
         if not xmlutil.RscState().is_ms_or_promotable_clone(rsc):
             logger.error("%s is not a promotable resource", rsc)
             return False
-        return utils.ext_cmd(self.rsc_setrole % (rsc, "Master")) == 0
+        return utils.ext_cmd(self.rsc_setrole % (rsc, "Promoted")) == 0
 
     def do_scores(self, context):
         "usage: scores"
@@ -366,7 +366,7 @@ class RscMgmt(command.UI):
         if not xmlutil.RscState().is_ms_or_promotable_clone(rsc):
             logger.error("%s is not a promotable resource", rsc)
             return False
-        return utils.ext_cmd(self.rsc_setrole % (rsc, "Slave")) == 0
+        return utils.ext_cmd(self.rsc_setrole % (rsc, "Unpromoted")) == 0
 
     @command.completers(compl.resources)
     def do_manage(self, context, rsc):
