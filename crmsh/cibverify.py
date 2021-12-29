@@ -28,5 +28,5 @@ def verify(cib):
             else:
                 logger.error(_prettify(line, 0))
         else:
-            logger.info(_prettify(line, 7))
+            logger.error(_prettify(line, 7))
     return rc
