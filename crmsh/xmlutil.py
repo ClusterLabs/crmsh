@@ -17,7 +17,7 @@ from .msg import common_err, common_error, common_warn, common_debug, cib_parse_
 from . import userdir
 from .utils import add_sudo, str2file, str2tmp, get_boolean
 from .utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
-from .utils import olist, get_cib_in_use, get_tempdir, to_ascii
+from .utils import olist, get_cib_in_use, get_tempdir, to_ascii, is_boolean_true
 
 
 def xmlparse(f):
@@ -214,14 +214,14 @@ class RscState(object):
         except (IndexError, AttributeError):
             return None
 
-    def is_ms(self, ident):
+    def is_ms_or_promotable_clone(self, ident):
         '''
         Test if the resource is master-slave.
         '''
         rsc_node = self.rsc2node(ident)
         if rsc_node is None:
             return False
-        return is_ms(rsc_node)
+        return is_ms_or_promotable_clone(rsc_node)
 
     def rsc_clone(self, ident):
         '''
@@ -536,8 +536,10 @@ def is_group(node):
     return node.tag == "group"
 
 
-def is_ms(node):
-    return node.tag in ("master", "ms")
+def is_ms_or_promotable_clone(node):
+    is_promotable = is_boolean_true(get_attr_value(get_child_nvset_node(node), "promotable"))
+    is_ms = node.tag in ("master", "ms")
+    return is_ms or is_promotable
 
 
 def is_clone(node):

@@ -335,8 +335,8 @@ class RscMgmt(command.UI):
         "usage: promote <rsc>"
         if not utils.is_name_sane(rsc):
             return False
-        if not xmlutil.RscState().is_ms(rsc):
-            common_err("%s is not a master-slave resource" % rsc)
+        if not xmlutil.RscState().is_ms_or_promotable_clone(rsc):
+            common_err("%s is not a promotable resource" % rsc)
             return False
         return utils.ext_cmd(self.rsc_setrole % (rsc, "Master")) == 0
 
@@ -363,8 +363,8 @@ class RscMgmt(command.UI):
         "usage: demote <rsc>"
         if not utils.is_name_sane(rsc):
             return False
-        if not xmlutil.RscState().is_ms(rsc):
-            common_err("%s is not a master-slave resource" % rsc)
+        if not xmlutil.RscState().is_ms_or_promotable_clone(rsc):
+            common_err("%s is not a promotable resource" % rsc)
             return False
         return utils.ext_cmd(self.rsc_setrole % (rsc, "Slave")) == 0
 
@@ -656,7 +656,7 @@ class RscMgmt(command.UI):
                 context.fatal_error("Failed to add trace for %s:%s" % (rsc_id, name))
         trace('start')
         trace('stop')
-        if xmlutil.is_ms(rsc.node):
+        if xmlutil.is_ms_or_promotable_clone(rsc.node):
             trace('promote')
             trace('demote')
         for op_node in op_nodes:
