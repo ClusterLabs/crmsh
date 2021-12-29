@@ -1027,6 +1027,9 @@ class CibConfig(command.UI):
         """usage: ms <name> <rsc>
         [params <param>=<value> [<param>=<value>...]]
         [meta <attribute>=<value> [<attribute>=<value>...]]"""
+        format_str = " " if "meta" in args else " meta "
+        new_cmd_str = ' '.join(args) + "{}promotable=true".format(format_str)
+        logger.warning('"ms" is deprecated. Please use "clone {}"'.format(new_cmd_str))
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
