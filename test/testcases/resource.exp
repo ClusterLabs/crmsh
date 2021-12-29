@@ -96,8 +96,9 @@ resource p0 is NOT running
     <crm_config/>
     <nodes/>
     <resources>
-      <master id="m1">
+      <clone id="m1">
         <meta_attributes id="m1-meta_attributes">
+          <nvpair name="promotable" value="true" id="m1-meta_attributes-promotable"/>
           <nvpair id="m1-meta_attributes-maintenance" name="maintenance" value="true"/>
         </meta_attributes>
         <primitive id="p2" class="ocf" provider="heartbeat" type="Delay">
@@ -107,7 +108,7 @@ resource p0 is NOT running
             <nvpair name="stopdelay" value="2" id="p2-instance_attributes-stopdelay"/>
           </instance_attributes>
         </primitive>
-      </master>
+      </clone>
     </resources>
     <constraints/>
   </configuration>
@@ -123,8 +124,9 @@ resource p0 is NOT running
     <crm_config/>
     <nodes/>
     <resources>
-      <master id="m1">
+      <clone id="m1">
         <meta_attributes id="m1-meta_attributes">
+          <nvpair name="promotable" value="true" id="m1-meta_attributes-promotable"/>
           <nvpair id="m1-meta_attributes-maintenance" name="maintenance" value="false"/>
         </meta_attributes>
         <primitive id="p2" class="ocf" provider="heartbeat" type="Delay">
@@ -134,7 +136,7 @@ resource p0 is NOT running
             <nvpair name="stopdelay" value="2" id="p2-instance_attributes-stopdelay"/>
           </instance_attributes>
         </primitive>
-      </master>
+      </clone>
     </resources>
     <constraints/>
   </configuration>
@@ -927,6 +929,7 @@ INFO: Stop tracing p0 for operation stop
 WARNING: This command 'rm' is deprecated, please use 'delete'
 INFO: "rm" is accepted as "delete"
 .TRY configure ms msg g
+WARNING: "ms" is deprecated. Please use "clone msg g meta promotable=true"
 .TRY resource scores
 .EXT crm_simulate -sUL
 2 of 6 resource instances DISABLED and 0 BLOCKED from further action due to failure

@@ -32,7 +32,7 @@ from .utils import page_string, cibadmin_can_patch, str2tmp, ensure_sudo_readabl
 from .utils import run_ptest, is_id_valid, edit_file, get_boolean, filter_string
 from .xmlutil import is_child_rsc, rsc_constraint, sanitize_cib, rename_id, get_interesting_nodes
 from .xmlutil import is_pref_location, get_topnode, new_cib, get_rscop_defaults_meta_node
-from .xmlutil import rename_rscref, is_ms, silly_constraint, is_container, fix_comments
+from .xmlutil import rename_rscref, is_ms_or_promotable_clone, silly_constraint, is_container, fix_comments
 from .xmlutil import sanity_check_nvpairs, merge_nodes, op2list, mk_rsc_type, is_resource
 from .xmlutil import stuff_comments, is_comment, is_constraint, read_cib, processing_sort_cli
 from .xmlutil import find_operation, get_rsc_children_ids, is_primitive, referenced_resources
@@ -3011,7 +3011,7 @@ class CibFactory(object):
                             implied_actions.remove(op)
                         elif can_migrate(r_node) and op in implied_migrate_actions:
                             implied_migrate_actions.remove(op)
-                        elif is_ms(obj.node.getparent()) and op in implied_ms_actions:
+                        elif is_ms_or_promotable_clone(obj.node.getparent()) and op in implied_ms_actions:
                             implied_ms_actions.remove(op)
                         elif op not in other_actions:
                             continue
@@ -3022,7 +3022,7 @@ class CibFactory(object):
             l = implied_actions
             if can_migrate(r_node):
                 l += implied_migrate_actions
-            if is_ms(obj.node.getparent()):
+            if is_ms_or_promotable_clone(obj.node.getparent()):
                 l += implied_ms_actions
             for op in l:
                 adv_timeout = ra.get_adv_timeout(op)
