@@ -161,7 +161,7 @@ crm(live)# node standby node4
   primitive apcfence stonith:apcsmart \
     params ttydev=/dev/ttyS0 hostlist="node1 node2" \
     op start timeout=60s
-  primitive pingd pingd \
+  primitive pingd ocf:pacemaker:ping \
     params name=pingd dampen=5s multiplier=100 host_list="r1 r2"
   #
   # monitor apache and the UPS
