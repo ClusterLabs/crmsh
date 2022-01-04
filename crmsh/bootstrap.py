@@ -1213,10 +1213,13 @@ def init_cluster():
 
     logger.info("Loading initial cluster configuration")
 
+    rsc_defaults_str = "rsc_defaults rsc-options: migration-threshold=3"
+    if not xmlutil.RscState().has_rsc_stickiness():
+        rsc_defaults_str += " resource-stickiness=1"
     crm_configure_load("update", """property cib-bootstrap-options: stonith-enabled=false
 op_defaults op-options: timeout=600 record-pending=true
-rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
-""")
+{}
+""".format(rsc_defaults_str))
 
     _context.sbd_manager.configure_sbd_resource_and_properties()
 
