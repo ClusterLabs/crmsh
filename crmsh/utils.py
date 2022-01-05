@@ -28,6 +28,7 @@ from . import constants
 from . import options
 from . import term
 from . import parallax
+from . import schema
 from .constants import SSH_OPTION
 from . import log
 
@@ -3034,4 +3035,28 @@ def get_systemd_timeout_start_in_sec(time_res):
     res_min = re.search("(\d+)min", time_res)
     start_timeout += 60 * int(res_min.group(1)) if res_min else 0
     return start_timeout
+
+
+def support_ocf_1_1():
+    """
+    Check if the cib schema version is old(not support OCF 1.1)
+    And if the pacemaker version is new(support OCF 1.1)
+    """
+    from .cibconfig import cib_factory
+    is_old_cib = schema.compare_with(cib_factory.get_schema(), constants.SCHEMA_MIN_VER_SUPPORT_OCF_1_1)
+    is_min_ver = is_min_pcmk_ver(constants.PCMK_MIN_VER_SUPPORT_OCF_1_1)
+    return (not is_old_cib) and is_min_ver
+
+
+def convert_role_if_schema_not_supported(value, name='role'):
+    """
+    Convert role from Promoted/Unpromoted to Master/Slave since the current cib schema version
+    does not support OCF 1.1
+    """
+    role_names = ["role", "target-role"]
+    value_convert_dict = {"Promoted": "Master", "Unpromoted": "Slave"}
+    if name in role_names and value in value_convert_dict and not support_ocf_1_1():
+        logger.warning('Convert "%s" to "%s" since the current schema version is old and not upgraded yet. Please consider "%s"', value, value_convert_dict[value], constants.CIB_UPGRADE)
+        return value_convert_dict[value]
+    return value
 # vim:ts=4:sw=4:et:
