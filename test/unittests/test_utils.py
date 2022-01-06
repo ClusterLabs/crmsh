@@ -1638,3 +1638,45 @@ def test_set_property_conditionally(mock_get_property, mock_run):
     mock_get_property.return_value = "100s"
     utils.set_property_conditionally("stonith-timeout", 101)
     mock_run.assert_called_once_with("crm configure property stonith-timeout=101")
+
+
+@mock.patch('crmsh.utils.is_larger_than_min_version')
+@mock.patch('crmsh.cibconfig.cib_factory')
+def test_is_ocf_1_1_cib_schema_detected(mock_cib, mock_larger):
+    config.core.OCF_1_1_SUPPORT = True
+    mock_cib.get_schema = mock.Mock()
+    mock_cib.get_schema.return_value = "pacemaker-3.5"
+    mock_larger.return_value = True
+    assert utils.is_ocf_1_1_cib_schema_detected() is True
+    mock_cib.get_schema.assert_called_once_with()
+    mock_larger.assert_called_once_with("pacemaker-3.5", constants.SCHEMA_MIN_VER_SUPPORT_OCF_1_1)
+
+
+@mock.patch('logging.Logger.warning')
+@mock.patch('crmsh.utils.is_ocf_1_1_cib_schema_detected')
+def test_handle_role_for_ocf_1_1(mock_support, mock_warn):
+    mock_support.return_value = False
+    assert utils.handle_role_for_ocf_1_1("Promoted") == "Master"
+    mock_support.assert_called_once_with()
+    mock_warn.assert_called_once_with('Convert "%s" to "%s" since the current schema version is old and not upgraded yet. Please consider "%s"', "Promoted", "Master", constants.CIB_UPGRADE)
+
+
+@mock.patch('logging.Logger.info')
+@mock.patch('crmsh.utils.is_ocf_1_1_cib_schema_detected')
+def test_handle_role_for_ocf_1_1_convert_new(mock_support, mock_info):
+    config.core.OCF_1_1_SUPPORT = True
+    mock_support.return_value = True
+    assert utils.handle_role_for_ocf_1_1("Master") == "Promoted"
+    mock_support.assert_called_once_with()
+    mock_info.assert_called_once_with('Convert deprecated "%s" to "%s"', "Master", "Promoted")
+
+
+@mock.patch('crmsh.utils.is_ocf_1_1_cib_schema_detected')
+def test_handle_role_for_ocf_1_1_return(mock_support):
+    mock_support.return_value = True
+    assert utils.handle_role_for_ocf_1_1("Promoted") == "Promoted"
+    mock_support.assert_called_once_with()
+
+
+def test_handle_role_for_ocf_1_1_return_not_role():
+    assert utils.handle_role_for_ocf_1_1("test", name='other') == "test"
