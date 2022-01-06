@@ -151,14 +151,4 @@ def rng_xpath(xpath, namespaces=None):
     if _crm_schema is None:
         return []
     return _crm_schema.rng_xpath(xpath, namespaces=namespaces)
-
-
-def compare_with(schema1, schema2):
-    """
-    Compare with two schemas
-    Return True if schema1 less than schema2
-    """
-    schema1_ver = float(schema1.split('-')[1])
-    schema2_ver = float(schema2.split('-')[1])
-    return schema1_ver < schema2_ver
 # vim:ts=4:sw=4:et:

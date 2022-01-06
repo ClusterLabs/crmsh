@@ -28,7 +28,7 @@ from . import constants
 from . import options
 from . import term
 from . import parallax
-from . import schema
+from distutils.version import LooseVersion
 from .constants import SSH_OPTION
 from . import log
 
@@ -1544,6 +1544,10 @@ def get_cib_attributes(cib_f, tag, attr_l, dflt_l):
     return val_l
 
 
+def is_larger_than_min_version(version, min_version):
+    return LooseVersion(version) >= LooseVersion(min_version)
+
+
 def is_min_pcmk_ver(min_ver, cib_f=None):
     if not constants.pcmk_version:
         if cib_f:
@@ -1551,8 +1555,7 @@ def is_min_pcmk_ver(min_ver, cib_f=None):
             logger.debug("found pacemaker version: %s in cib: %s", constants.pcmk_version, cib_f)
         else:
             constants.pcmk_version = get_pcmk_version("1.1.11")
-    from distutils.version import LooseVersion
-    return LooseVersion(constants.pcmk_version) >= LooseVersion(min_ver)
+    return is_larger_than_min_version(constants.pcmk_version, min_ver)
 
 
 def is_pcmk_118(cib_f=None):
@@ -3037,26 +3040,31 @@ def get_systemd_timeout_start_in_sec(time_res):
     return start_timeout
 
 
-def support_ocf_1_1():
+def is_ocf_1_1_feature_on():
     """
-    Check if the cib schema version is old(not support OCF 1.1)
-    And if the pacemaker version is new(support OCF 1.1)
+    Only turn on ocf_1_1 feature when the cib schema version is pacemaker-3.7 or above
     """
     from .cibconfig import cib_factory
-    is_old_cib = schema.compare_with(cib_factory.get_schema(), constants.SCHEMA_MIN_VER_SUPPORT_OCF_1_1)
-    is_min_ver = is_min_pcmk_ver(constants.PCMK_MIN_VER_SUPPORT_OCF_1_1)
-    return (not is_old_cib) and is_min_ver
+    return is_larger_than_min_version(cib_factory.get_schema(), constants.SCHEMA_MIN_VER_SUPPORT_OCF_1_1)
 
 
-def convert_role_if_schema_not_supported(value, name='role'):
+def handle_role_for_ocf_1_1(value, name='role'):
     """
-    Convert role from Promoted/Unpromoted to Master/Slave since the current cib schema version
-    does not support OCF 1.1
+    * Convert role from Promoted/Unpromoted to Master/Slave if schema doesn't support OCF 1.1
+    * Convert role from Master/Slave to Promoted/Unpromoted if schema support OCF 1.1
     """
     role_names = ["role", "target-role"]
-    value_convert_dict = {"Promoted": "Master", "Unpromoted": "Slave"}
-    if name in role_names and value in value_convert_dict and not support_ocf_1_1():
-        logger.warning('Convert "%s" to "%s" since the current schema version is old and not upgraded yet. Please consider "%s"', value, value_convert_dict[value], constants.CIB_UPGRADE)
-        return value_convert_dict[value]
+    downgrade_dict = {"Promoted": "Master", "Unpromoted": "Slave"}
+    upgrade_dict = {v: k for k, v in downgrade_dict.items()}
+
+    if name not in role_names:
+        return value
+    if value in downgrade_dict and not is_ocf_1_1_feature_on():
+        logger.warning('Convert "%s" to "%s" since the current schema version is old and not upgraded yet. Please consider "%s"', value, downgrade_dict[value], constants.CIB_UPGRADE)
+        return downgrade_dict[value]
+    if value in upgrade_dict and is_ocf_1_1_feature_on():
+        logger.info('Convert deprecated "%s" to "%s"', value, upgrade_dict[value])
+        return upgrade_dict[value]
+
     return value
 # vim:ts=4:sw=4:et:

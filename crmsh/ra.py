@@ -303,7 +303,7 @@ class RAInfo(object):
     '''
     ra_tab = "    "  # four horses
     required_ops = ("start", "stop")
-    no_interval_ops = ("start", "stop")
+    no_interval_ops = ("start", "stop", "promote", "demote")
     skip_ops = ("meta-data", "validate-all")
     skip_op_attr = ("name",)
 
@@ -543,6 +543,7 @@ class RAInfo(object):
                     for idx, monitor_item in enumerate(actions_dict[op]):
                         if monitor_item['role'] == role:
                             return actions_dict[op][idx][key]
+                # Technically, there could be multiple entries defining different depths for a same role.
                 if depth:
                     for idx, monitor_item in enumerate(actions_dict[op]):
                         if monitor_item['depth'] == depth:
