@@ -1691,10 +1691,10 @@ Usage:
 constraints <rsc>
 ................
 
-[[cmdhelp_resource_demote,demote a master-slave resource]]
+[[cmdhelp_resource_demote,demote a promotable resource]]
 ==== `demote`
 
-Demote a master-slave resource using the `target-role`
+Demote a promotable resource using the `target-role`
 attribute.
 
 Usage:
@@ -1831,10 +1831,10 @@ Example:
 param ip_0 show ip
 ...............
 
-[[cmdhelp_resource_promote,promote a master-slave resource]]
+[[cmdhelp_resource_promote,promote a promotable resource]]
 ==== `promote`
 
-Promote a master-slave resource using the `target-role`
+Promote a promotable resource using the `target-role`
 attribute.
 
 Usage:
@@ -2557,8 +2557,8 @@ Commands for resources are:
 - `primitive`
 - `monitor`
 - `group`
-- `clone`
-- `ms`/`master` (master-slave)
+- `clone` (promotable clones)
+- `ms`/`master` (master-slave) (deprecated)
 
 In order to streamline large configurations, it is possible to
 define a template which can later be referenced in primitives:
@@ -2739,6 +2739,9 @@ Enter edit and manage the CIB status section level. See the
 
 The `clone` command creates a resource clone. It may contain a
 single primitive resource or one group of resources.
+
++Promotable clones+ are clone resources with the +promotable=true+ meta attribute for the given promotable resources.
+It's used to deprecate the master-slave resources.
 
 Usage:
 ...............
@@ -3257,7 +3260,7 @@ monitor apcfence 60m:60s
 Note that after executing the command, the monitor operation may
 be shown as part of the primitive definition.
 
-[[cmdhelp_configure_ms,define a master-slave resource]]
+[[cmdhelp_configure_ms,define a master-slave resource (deprecated)]]
 ==== `ms` (`master`)
 
 The `ms` command creates a master/slave resource type. It may contain a
@@ -3409,7 +3412,7 @@ order o-4 first-resource then-resource
 ==== `primitive`
 
 The primitive command describes a resource. It may be referenced
-only once in group, clone, or master-slave objects. If it's not
+only once in group, or clone objects. If it's not
 referenced, then it is placed as a single resource in the CIB.
 
 Operations may be specified anonymously, as a group or by reference:
@@ -3429,6 +3432,7 @@ instance attributes of that operation. A typical example is
 +OCF_CHECK_LEVEL+.
 
 For multistate resources, roles are specified as +role=<role>+.
+The +Master/Slave+ resources are deprecated and replaced by +Promoted/Unpromoted+ promotable resources if desired.
 
 A template may be defined for resources which are of the same
 type and which share most of the configuration. See
@@ -3480,8 +3484,8 @@ primitive db0 mysql \
 
 primitive r0 ocf:linbit:drbd \
   params drbd_resource=r0 \
-  op monitor role=Master interval=60s \
-  op monitor role=Slave interval=300s
+  op monitor role=Promoted interval=60s \
+  op monitor role=Unpromoted interval=300s
 
 primitive xen0 @vm_scheme1 xmfile=/etc/xen/vm/xen0
 
@@ -3722,7 +3726,7 @@ Example:
 ...............
 rsc_ticket ticket-A_public-ip ticket-A: public-ip
 rsc_ticket ticket-A_bigdb ticket-A: bigdb loss-policy=fence
-rsc_ticket ticket-B_storage ticket-B: drbd-a:Master drbd-b:Master
+rsc_ticket ticket-B_storage ticket-B: drbd-a:Promoted drbd-b:Promoted
 ...............
 
 
