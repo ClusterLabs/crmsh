@@ -231,8 +231,9 @@ Note:
         network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action="append", choices=utils.interface_choice(),
                                    help="Bind to IP address on interface IF. Use -i second time for second interface")
         network_group.add_argument("-u", "--unicast", action="store_true", dest="unicast",
-                                   help="Configure corosync to communicate over unicast (UDP), and not multicast. " +
-                                   "Default is multicast unless an environment where multicast cannot be used is detected.")
+                                   help="Configure corosync to communicate over unicast(udpu). This is the default transport type")
+        network_group.add_argument("-U", "--multicast", action="store_true", dest="multicast",
+                                   help="Configure corosync to communicate over multicast. Default is unicast")
         network_group.add_argument("-A", "--admin-ip", dest="admin_ip", metavar="IP",
                                    help="Configure IP address as an administration virtual IP")
         network_group.add_argument("-M", "--multi-heartbeats", action="store_true", dest="second_heartbeat",

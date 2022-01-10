@@ -87,6 +87,7 @@ class Context(object):
         self.no_overwrite_sshkey = None
         self.nic_list = None
         self.unicast = None
+        self.multicast = None
         self.admin_ip = None
         self.second_heartbeat = None
         self.ipv6 = None
@@ -1559,19 +1560,16 @@ def init_corosync():
     """
     Configure corosync (unicast or multicast, encrypted?)
     """
-    def requires_unicast():
-        host = utils.detect_cloud()
-        if host is not None:
-            status("Detected cloud platform: {}".format(host))
-        return host is not None
-
     init_corosync_auth()
 
     if os.path.exists(corosync.conf()):
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
-    if _context.unicast or requires_unicast():
+    cloud_type = utils.detect_cloud()
+    if cloud_type is not None:
+        status("Detected cloud platform: {}".format(cloud_type))
+    if _context.unicast or cloud_type or not _context.multicast:
         init_corosync_unicast()
     else:
         init_corosync_multicast()
