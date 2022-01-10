@@ -97,6 +97,7 @@ class Context(object):
         self.no_overwrite_sshkey = None
         self.nic_list = None
         self.unicast = None
+        self.multicast = None
         self.admin_ip = None
         self.second_heartbeat = None
         self.ipv6 = None
@@ -1171,7 +1172,7 @@ def init_corosync():
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
-    if _context.unicast or _context.cloud_type:
+    if _context.unicast or _context.cloud_type or not _context.multicast:
         init_corosync_unicast()
     else:
         init_corosync_multicast()
