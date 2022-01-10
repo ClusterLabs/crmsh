@@ -87,10 +87,10 @@ Network configuration:
   -i IF, --interface IF
                         Bind to IP address on interface IF. Use -i second time
                         for second interface
-  -u, --unicast         Configure corosync to communicate over unicast (UDP),
-                        and not multicast. Default is multicast unless an
-                        environment where multicast cannot be used is
-                        detected.
+  -u, --unicast         Configure corosync to communicate over unicast(udpu).
+                        This is the default transport type
+  -U, --multicast       Configure corosync to communicate over multicast.
+                        Default is unicast
   -A IP, --admin-ip IP  Configure IP address as an administration virtual IP
   -M, --multi-heartbeats
                         Configure corosync with second heartbeat line
