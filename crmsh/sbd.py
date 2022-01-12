@@ -428,7 +428,7 @@ class SBDManager(object):
         if res:
             return utils.re_split_string(self.PARSE_RE, res)
         else:
-            return None
+            return []
 
     def _restart_cluster_and_configure_sbd_ra(self):
         """
