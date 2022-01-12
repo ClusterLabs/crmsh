@@ -1913,6 +1913,7 @@ def stop_services(stop_list, remote_addr=None):
             utils.stop_service(service, disable=True, remote_addr=remote_addr)
 
 
+@lock.lock
 def remove_node_from_cluster():
     """
     Remove node from running cluster and the corosync / pacemaker configuration.
@@ -2215,6 +2216,7 @@ def bootstrap_remove(context):
     bootstrap_finished()
 
 
+@lock.lock
 def remove_self():
     me = _context.cluster_node
     yes_to_all = _context.yes_to_all

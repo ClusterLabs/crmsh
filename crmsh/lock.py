@@ -4,6 +4,7 @@
 
 import re
 import time
+import functools
 from contextlib import contextmanager
 
 from . import utils
@@ -186,3 +187,15 @@ class RemoteLock(Lock):
             raise
         finally:
             self._unlock()
+
+
+def lock(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        lock_inst = Lock()
+        try:
+            with lock_inst.lock():
+                func(*args, **kwargs)
+        except ClaimLockError as err:
+            utils.fatal(err)
+    return wrapper
