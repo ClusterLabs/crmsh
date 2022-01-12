@@ -3040,9 +3040,9 @@ def get_systemd_timeout_start_in_sec(time_res):
     return start_timeout
 
 
-def is_ocf_1_1_feature_on():
+def is_ocf_1_1_cib_schema_detected():
     """
-    Only turn on ocf_1_1 feature when the cib schema version is pacemaker-3.7 or above
+    Only turn on ocf_1_1 feature the cib schema version is pacemaker-3.7 or above
     """
     from .cibconfig import cib_factory
     return is_larger_than_min_version(cib_factory.get_schema(), constants.SCHEMA_MIN_VER_SUPPORT_OCF_1_1)
@@ -3051,7 +3051,7 @@ def is_ocf_1_1_feature_on():
 def handle_role_for_ocf_1_1(value, name='role'):
     """
     * Convert role from Promoted/Unpromoted to Master/Slave if schema doesn't support OCF 1.1
-    * Convert role from Master/Slave to Promoted/Unpromoted if schema support OCF 1.1
+    * Convert role from Master/Slave to Promoted/Unpromoted if ocf1.1 cib schema detected and OCF_1_1_SUPPORT is yes
     """
     role_names = ["role", "target-role"]
     downgrade_dict = {"Promoted": "Master", "Unpromoted": "Slave"}
@@ -3059,10 +3059,10 @@ def handle_role_for_ocf_1_1(value, name='role'):
 
     if name not in role_names:
         return value
-    if value in downgrade_dict and not is_ocf_1_1_feature_on():
+    if value in downgrade_dict and not is_ocf_1_1_cib_schema_detected():
         logger.warning('Convert "%s" to "%s" since the current schema version is old and not upgraded yet. Please consider "%s"', value, downgrade_dict[value], constants.CIB_UPGRADE)
         return downgrade_dict[value]
-    if value in upgrade_dict and is_ocf_1_1_feature_on():
+    if value in upgrade_dict and is_ocf_1_1_cib_schema_detected() and config.core.OCF_1_1_SUPPORT:
         logger.info('Convert deprecated "%s" to "%s"', value, upgrade_dict[value])
         return upgrade_dict[value]
 
