@@ -517,6 +517,8 @@ STONITH_TIMEOUT_DEFAULT = 60
 PCMK_DELAY_MAX = 30
 DLM_CONTROLD_RA = "ocf::pacemaker:controld"
 LVMLOCKD_RA = "ocf::heartbeat:lvmlockd"
+HA_USER = "hacluster"
+HA_GROUP = "haclient"
 
 
 SCHEMA_MIN_VER_SUPPORT_OCF_1_1 = "pacemaker-3.7"
