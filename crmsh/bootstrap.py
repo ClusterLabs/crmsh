@@ -669,11 +669,11 @@ def init_cluster_local():
     if pass_msg:
         logger.warning("You should change the hacluster password to something more secure!")
 
-    start_pacemaker()
+    start_pacemaker(enable_flag=True)
     wait_for_cluster()
 
 
-def start_pacemaker(node_list=[]):
+def start_pacemaker(node_list=[], enable_flag=False):
     """
     Start pacemaker service with wait time for sbd
     When node_list set, start pacemaker service in parallel
@@ -687,7 +687,7 @@ def start_pacemaker(node_list=[]):
             SBDTimeout.is_sbd_delay_start():
         pacemaker_start_msg += "(delaying start of sbd for {}s)".format(SBDTimeout.get_sbd_delay_start_sec_from_sysconfig())
     with logger_utils.status_long(pacemaker_start_msg):
-        utils.start_service("pacemaker.service", enable=True, node_list=node_list)
+        utils.start_service("pacemaker.service", enable=enable_flag, node_list=node_list)
 
 
 def install_tmp(tmpfile, to):
