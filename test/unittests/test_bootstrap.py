@@ -275,7 +275,7 @@ class TestBootstrap(unittest.TestCase):
         mock_timeout.return_value = 60
         bootstrap.start_pacemaker()
         mock_long.assert_called_once_with('Starting pacemaker(delaying start of sbd for 60s)')
-        mock_start.assert_called_once_with('pacemaker.service', enable=True, node_list=[])
+        mock_start.assert_called_once_with('pacemaker.service', enable=False, node_list=[])
 
     @mock.patch('crmsh.bootstrap.configure_local_ssh_key')
     @mock.patch('crmsh.utils.start_service')
