@@ -1154,7 +1154,21 @@ def pick_first(choice):
 
 
 def pkg_ver_deb(packages):
-    pass
+    res = ""
+    for pack in packages.split():
+        code, out = get_command_info("dpkg-query -s %s" % pack)
+        if code != 0:
+            continue
+        distro = "Unknown"
+        for line in out.split('\n'):
+            if re.match("^Package\s*:", line):
+                name = line.split(':')[1].lstrip()
+            elif re.match("^Version\s*:", line):
+                version = line.split(':')[1].lstrip()
+            elif re.match("^Architecture\s*:", line):
+                arch = line.split(':')[1].lstrip()
+        res += "%s %s - %s\n" % (name, version, arch)
+    return res
 
 
 def pkg_ver_pkg_info(packages):
@@ -1454,7 +1468,14 @@ def txt_diff(file1, file2):
 
 
 def verify_deb(packages):
-    pass
+    res = ""
+    for pack in packages.split():
+        cmd = r"dpkg --verify %s | grep -v 'not installed'" % pack
+        code, out = crmutils.get_stdout(cmd)
+        if code != 0 and out:
+            res = "For package %s:\n" % pack
+            res += out + "\n"
+    return res
 
 
 def verify_packages(packages):
