@@ -1,3 +1,79 @@
+* Thu Jan 14 2022 Xin Liang <XLiang@suse.com>
+- Release 4.4.0
+- Fix: bootstrap: Don't change pacemaker.service bootup preference (bsc#1194616)
+- Fix: log: Change the log file owner as hacluster:haclient (bsc#1194619)
+- Dev: crm.conf: Add OCF_1_1_SUPPORT flag to control ocf 1.1 feature
+- Dev: doc: Introduce promotable clone and role Promoted/Unpromoted
+- Fix: crash_test: Adjust help output of 'crm cluster crash_test -h'(bsc#1194615)
+- Dev: utils: Convert Master/Slave to Promoted/Unpromoted if schema support OCF 1.1
+- Dev: xmlutil: Replace Promoted/Unpromoted as Master/Slave when OCF 1.0 schema detected
+- Dev: doc: Replace pingd as ocf:pacemaker:ping
+- Dev: ui_resource: set target-role as Promoted/Unpromoted when doing promote or demote
+- Dev: ra: Support Promoted/Unpromoted
+- Dev: ocfs2: Fix running ocfs2 stage on cluster with diskless-sbd
+- Fix: bootstrap: Change default transport type as udpu(unicast) (bsc#1132375)
+- Dev: bootstrap: Avoid duplicated setting for rsc_defaults
+- Fix: ui_configure: Give a deprecated warning when using "ms" subcommand (bsc#1194125)
+- Fix: xmlutil: Parse promotable clone correctly and also consider compatibility (bsc#1194125)
+- Dev: doc: Rename hb_report as crm report
+- Dev: crm report: Get distribution info correctly and reuse it
+- Dev: crm_report: Integrate report log into crmsh logging
+- Dev: log: Print new line when input using default value in interactive mode
+- Fix: bootstrap: Change log info when need to change user login shell (bsc#1194026)
+- Dev: crm_report: Move hb_report directory to crmsh/report
+- Dev: doc: Mention /etc/crm/profiles.yml in man crm
+- Dev: ui_node: Delete node directly using cibadmin if crm_node -R failed
+- Dev: xmlutil: Add class CrmMonXmlParser to parse xml output of crm_mon
+- Dev: ui_cluster: Exit stop process when there is no DC
+- Dev: ui_cluster: check dlm controld ra is running when stop cluster
+- Dev: log: In status_long function, add a blank line when exception
+- Revert "Dev: ui_cluster: Make sure node is online when stop service"
+- Dev: sbd: Adjust timeout related values
+- Dev: ui_cluster: check if qdevice service started when starting cluster if qdevice configured
+- Dev: idmgmt: Avoid leading with number for ID
+- Dev: ui_cluster: Check service is available before enable/disable qdevice
+- Dev: ui_node: Improve node standby/online methods
+- Dev: ui_cluster: Remove node from node list if node is unreachable
+- Dev: Give warning when no-quorum-policy not set as freeze while using DLM
+- Fix: crm: To avoid the potential "permission denied" error under other users (boo#1192754)
+- Fix: ui_resource: Parse node and lifetime correctly (bsc#1192618)
+- Dev: doc: Consolidate help info for those using argparse
+- Dev: ui_cluster: Make sure node is online when stop service
+- Dev: ui_cluster: Graceful shutdown dlm
+- Dev: ui_cluster: Support multi sub-commands with --all option or specific node
+- orderedset.py: fix deprecation on collections.MutableSet
+- Dev: crm report: Consolidate collect functions in collect.py and running them in parallel
+- Dev: crm report: Collect report using multiprocessing correctly
+- Dev: CI: change docker image as leap 15.2, and enlarge the timeout value for each CI case
+- Fix: ui_resource: Parse lifetime option correctly (bsc#1191508)
+- Dev: log: Rotate crmsh.log as 1M and backup count as 10
+- Fix: bootstrap: Add /etc/crm/crm.conf and /etc/crm/profiles.yml into /etc/csync2/csync2.cfg (bsc#1190466)
+- Dev: Using python logging in all crmsh modules
+- Dev: hb_report: Integrate hb_report logging
+- Dev: crash_test: Integrate crash test logging
+- Dev: crm: Load python logging config in /usr/sbin/crm
+- Dev: log: Using logging as log system in crmsh
+- Dev: msg: Remove msy.py
+- Dev: constants: Add color const for logging
+- Fix: utils: Improve detect_cloud function and support non-Hyper-V in Azure
+- Fix: hb_report: Using python way to collect ra trace files (bsc#1189641)
+- Fix: bootstrap: Adjust corosync and sbd parameters according to the profile environment detected (bsc#1175896)
+- Fix: sbd: adjust sbd systemd TimeoutStartSec together with SBD_DELAY_START
+- Dev: Makefile: add etc/profiles.yml and move crm.conf.in into etc
+- Fix: doc: Note that resource tracing is only supported by OCF RAs(bsc#1188966)
+- Dev: ui_resource: Enhancement trace output
+- Fix: bootstrap: adjust host list for parallax to get and copy known_hosts file(bsc#1188971)
+- Medium: ra: performance/usability improvement (avoid systemd)
+- Dev: ui_context: Add info when spell-corrections happen
+- Dev: ocfs2: set no-quorum-policy as freeze when configuring OCFS2
+- Fix: parse: Should still be able to show the empty property if it already exists(bsc#1188290)
+- Dev: qdevice: Split class QDevice into qdevice.py from corosync.py
+- Fix: bootstrap: check for missing fields in 'crm_node -l' output (bsc#1182131)
+- Fix: resource: make untrace consistent with trace (bsc#1187396)
+- Dev: sbd: enable SBD_DELAY_START in virtualization environment
+- Fix: ocfs2: Skip verifying UUID for ocfs2 device on top of raid or lvm on the join node (bsc#1187553)
+- Dev: sbd: Split class SBDManager into sbd.py from bootstrap.py
+
 * Thu Jun 17 2021 Xin Liang <XLiang@suse.com>
 - Release 4.3.1
 - Fix: history: use Path.mkdir instead of mkdir command(bsc#1179999)
