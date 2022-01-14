@@ -11,6 +11,7 @@ from .ra import disambiguate_ra_type, ra_type_validate
 from . import schema
 from .utils import keyword_cmp, verify_boolean, lines2cli
 from .utils import get_boolean, olist, canonical_boolean
+from .utils import handle_role_for_ocf_1_1
 from . import xmlutil
 from . import log
 
@@ -467,7 +468,7 @@ class BaseParser(object):
                     idref = True
                 rule.set(idtyp, idval)
             if self.try_match(_ROLE_RE):
-                rule.set('role', self.matched(1))
+                rule.set('role', handle_role_for_ocf_1_1(self.matched(1)))
             if idref:
                 continue
             if self.try_match(_SCORE_RE):
@@ -924,10 +925,13 @@ class ConstraintParser(BaseParser):
             out.set('rsc', self.match_resource())
 
         while self.try_match(_ATTR_RE):
-            out.set(self.matched(1), self.matched(2))
+            name = self.matched(1)
+            value = handle_role_for_ocf_1_1(self.matched(2), name=name)
+            out.set(name, value)
 
+        # not sure this is necessary after parse _ATTR_RE in a while loop
         if self.try_match(_ROLE_RE) or self.try_match(_ROLE2_RE):
-            out.set('role', self.matched(1))
+            out.set('role', handle_role_for_ocf_1_1(self.matched(1)))
 
         score = False
         if self.try_match(_SCORE_RE):
@@ -937,7 +941,7 @@ class ConstraintParser(BaseParser):
             # backwards compatibility: role used to be read here
             if 'role' not in out:
                 if self.try_match(_ROLE_RE) or self.try_match(_ROLE2_RE):
-                    out.set('role', self.matched(1))
+                    out.set('role', handle_role_for_ocf_1_1(self.matched(1)))
         if not score:
             rules = self.match_rules()
             out.extend(rules)
@@ -1040,7 +1044,7 @@ class ConstraintParser(BaseParser):
 
     def _split_setref(self, typename, classifier):
         rsc, typ = self.match_split()
-        typ, t = classifier(typ)
+        typ, t = classifier(handle_role_for_ocf_1_1(typ, name=typename))
         if typ and not t:
             self.err("Invalid %s '%s' for '%s'" % (typename, typ, rsc))
         return rsc, typ, t
@@ -1627,7 +1631,7 @@ class ResourceSet(object):
                     validator.resource_actions())
             else:
                 l[1] = validator.canonize(
-                    l[1],
+                    handle_role_for_ocf_1_1(l[1]),
                     validator.resource_roles())
             if not l[1]:
                 self.err('Invalid %s for %s' % (self.q_attr, p))

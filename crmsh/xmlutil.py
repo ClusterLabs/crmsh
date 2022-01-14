@@ -14,7 +14,7 @@ from . import options
 from . import schema
 from . import constants
 from . import userdir
-from .utils import add_sudo, str2file, str2tmp, get_boolean
+from .utils import add_sudo, str2file, str2tmp, get_boolean, handle_role_for_ocf_1_1
 from .utils import get_stdout, get_stdout_or_raise_error, stdout2list, crm_msec, crm_time_cmp
 from .utils import olist, get_cib_in_use, get_tempdir, to_ascii, is_boolean_true
 from . import log
@@ -1427,6 +1427,7 @@ def nvpair(name, value):
     """
     <nvpair name="" value="" />
     """
+    value = handle_role_for_ocf_1_1(value, name=name)
     return new("nvpair", name=name, value=value)
 
 

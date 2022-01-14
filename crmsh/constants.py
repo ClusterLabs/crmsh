@@ -505,6 +505,7 @@ END = '\033[0m'
 
 CIB_QUERY = "cibadmin -Q"
 CIB_REPLACE = "cibadmin -R -X '{xmlstr}'"
+CIB_UPGRADE = "crm configure upgrade force"
 CIB_RAW_FILE = "/var/lib/pacemaker/cib/cib.xml"
 XML_NODE_PATH = "/cib/configuration/nodes/node"
 XML_STATUS_PATH = "/cib/status/node_state"
@@ -516,4 +517,7 @@ STONITH_TIMEOUT_DEFAULT = 60
 PCMK_DELAY_MAX = 30
 DLM_CONTROLD_RA = "ocf::pacemaker:controld"
 LVMLOCKD_RA = "ocf::heartbeat:lvmlockd"
+
+
+SCHEMA_MIN_VER_SUPPORT_OCF_1_1 = "pacemaker-3.7"
 # vim:ts=4:sw=4:et:

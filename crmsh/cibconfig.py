@@ -2994,7 +2994,7 @@ class CibFactory(object):
                 rc = False
                 continue
             ra = get_ra(r_node)
-            if not ra.mk_ra_node():  # no RA found?
+            if ra.mk_ra_node() is None:  # no RA found?
                 if not self.is_asymm_cluster():
                     ra.error("no resource agent found for %s" % obj_id)
                 continue
@@ -3015,7 +3015,10 @@ class CibFactory(object):
                             implied_ms_actions.remove(op)
                         elif op not in other_actions:
                             continue
-                        adv_timeout = ra.get_adv_timeout(op, c2)
+                        adv_timeout = None
+                        role = c2.get('role')
+                        depth = c2.get('depth')
+                        adv_timeout = ra.get_op_attr_value(op, "timeout", role=role, depth=depth)
                         if adv_timeout:
                             c2.set("timeout", adv_timeout)
                             obj_modified = True
@@ -3025,7 +3028,7 @@ class CibFactory(object):
             if is_ms_or_promotable_clone(obj.node.getparent()):
                 l += implied_ms_actions
             for op in l:
-                adv_timeout = ra.get_adv_timeout(op)
+                adv_timeout = ra.get_op_attr_value(op, "timeout")
                 if not adv_timeout:
                     continue
                 n = etree.Element('op')

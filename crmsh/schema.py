@@ -151,6 +151,4 @@ def rng_xpath(xpath, namespaces=None):
     if _crm_schema is None:
         return []
     return _crm_schema.rng_xpath(xpath, namespaces=namespaces)
-
-
 # vim:ts=4:sw=4:et:

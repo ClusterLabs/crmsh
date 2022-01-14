@@ -28,6 +28,7 @@ from . import constants
 from . import options
 from . import term
 from . import parallax
+from distutils.version import LooseVersion
 from .constants import SSH_OPTION
 from . import log
 
@@ -1257,13 +1258,6 @@ def multicolumn(l):
             print(s)
 
 
-def find_value(pl, name):
-    for n, v in pl:
-        if n == name:
-            return v
-    return None
-
-
 def cli_replace_attr(pl, name, new_val):
     for i, attr in enumerate(pl):
         if attr[0] == name:
@@ -1550,6 +1544,10 @@ def get_cib_attributes(cib_f, tag, attr_l, dflt_l):
     return val_l
 
 
+def is_larger_than_min_version(version, min_version):
+    return LooseVersion(version) >= LooseVersion(min_version)
+
+
 def is_min_pcmk_ver(min_ver, cib_f=None):
     if not constants.pcmk_version:
         if cib_f:
@@ -1557,8 +1555,7 @@ def is_min_pcmk_ver(min_ver, cib_f=None):
             logger.debug("found pacemaker version: %s in cib: %s", constants.pcmk_version, cib_f)
         else:
             constants.pcmk_version = get_pcmk_version("1.1.11")
-    from distutils.version import LooseVersion
-    return LooseVersion(constants.pcmk_version) >= LooseVersion(min_ver)
+    return is_larger_than_min_version(constants.pcmk_version, min_ver)
 
 
 def is_pcmk_118(cib_f=None):
@@ -3041,4 +3038,33 @@ def get_systemd_timeout_start_in_sec(time_res):
     res_min = re.search("(\d+)min", time_res)
     start_timeout += 60 * int(res_min.group(1)) if res_min else 0
     return start_timeout
+
+
+def is_ocf_1_1_cib_schema_detected():
+    """
+    Only turn on ocf_1_1 feature the cib schema version is pacemaker-3.7 or above
+    """
+    from .cibconfig import cib_factory
+    return is_larger_than_min_version(cib_factory.get_schema(), constants.SCHEMA_MIN_VER_SUPPORT_OCF_1_1)
+
+
+def handle_role_for_ocf_1_1(value, name='role'):
+    """
+    * Convert role from Promoted/Unpromoted to Master/Slave if schema doesn't support OCF 1.1
+    * Convert role from Master/Slave to Promoted/Unpromoted if ocf1.1 cib schema detected and OCF_1_1_SUPPORT is yes
+    """
+    role_names = ["role", "target-role"]
+    downgrade_dict = {"Promoted": "Master", "Unpromoted": "Slave"}
+    upgrade_dict = {v: k for k, v in downgrade_dict.items()}
+
+    if name not in role_names:
+        return value
+    if value in downgrade_dict and not is_ocf_1_1_cib_schema_detected():
+        logger.warning('Convert "%s" to "%s" since the current schema version is old and not upgraded yet. Please consider "%s"', value, downgrade_dict[value], constants.CIB_UPGRADE)
+        return downgrade_dict[value]
+    if value in upgrade_dict and is_ocf_1_1_cib_schema_detected() and config.core.OCF_1_1_SUPPORT:
+        logger.info('Convert deprecated "%s" to "%s"', value, upgrade_dict[value])
+        return upgrade_dict[value]
+
+    return value
 # vim:ts=4:sw=4:et:
