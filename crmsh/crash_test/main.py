@@ -165,11 +165,10 @@ def parse_argument(context):
     """
     parser = argparse.ArgumentParser(prog=context.process_name,
                                      description="""
-Cluster crash test tool set. It standardizes the steps to simulate
-cluster failures and to verify some key configuration before you move
-your cluster into production. It is carefully designed with the proper
-steps and does not change any configuration to harm the cluster without
-the confirmation from users.""",
+Cluster crash test tool set.
+It standardizes the steps to simulate cluster failures before you move your cluster
+into production. It is carefully designed with the proper steps and does not change
+any configuration to harm the cluster without the confirmation from users.""",
                                      add_help=False,
                                      formatter_class=MyArgParseFormatter,
                                      epilog='''
