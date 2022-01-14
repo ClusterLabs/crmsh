@@ -807,7 +807,7 @@ def get_crm_daemon_dir():
     except:
         return
     if not os.path.isdir(constants.CRM_DAEMON_DIR) or \
-       not is_exec(os.path.join(constants.CRM_DAEMON_DIR, "crmd")):
+       not any(is_exec(os.path.join(constants.CRM_DAEMON_DIR, cmd)) for cmd in ["crmd", "pacemaker-controld"]):
         constants.CRM_DAEMON_DIR = None
 
 
