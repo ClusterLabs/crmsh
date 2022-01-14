@@ -3,6 +3,7 @@
 import os
 import sys
 import socket
+import shutil
 import logging
 import logging.config
 from contextlib import contextmanager
@@ -440,6 +441,8 @@ def setup_logging(only_help=False):
     else:
         setup_directory_for_logfile()
     logging.config.dictConfig(LOGGING_CFG)
+    if os.path.exists(CRMSH_LOG_FILE):
+        shutil.chown(CRMSH_LOG_FILE, constants.HA_USER, constants.HA_GROUP)
 
 
 def setup_logger(name):
