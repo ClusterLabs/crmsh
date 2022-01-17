@@ -145,6 +145,7 @@ resource p0 is NOT running
 WARNING: This command 'migrate' is deprecated, please use 'move'
 .EXT crm_resource --quiet --move --resource 'p3' --node 'node1'
 INFO: Move constraint created for p3 to node1
+INFO: Use `crm resource clear p3` to remove this constraint
 .INP: configure
 .INP: _regtest on
 .INP: show xml cli-prefer-p3
@@ -170,6 +171,7 @@ INFO: Removed migration constraints for p3
 WARNING: This command 'migrate' is deprecated, please use 'move'
 .EXT crm_resource --quiet --move --resource 'p3' --node 'node1' --force
 INFO: Move constraint created for p3 to node1
+INFO: Use `crm resource clear p3` to remove this constraint
 .INP: configure
 .INP: _regtest on
 .INP: show xml cli-prefer-p3
