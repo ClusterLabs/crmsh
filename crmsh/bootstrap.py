@@ -225,6 +225,7 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         self._stonith_timeout = 60
         self._sbd_watchdog_timeout = 0
         self._is_s390 = "390" in os.uname().machine
+        self.no_overwrite = False
 
     @staticmethod
     def _get_device_uuid(dev, node=None):
@@ -283,6 +284,7 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
 
         configured_dev_list = self._get_sbd_device_from_config()
         if configured_dev_list and not confirm("SBD is already configured to use {} - overwrite?".format(';'.join(configured_dev_list))):
+            self.no_overwrite = True
             return configured_dev_list
 
         dev_list = []
@@ -329,6 +331,8 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         if self.diskless_sbd:
             return
         for dev in self._sbd_devices:
+            if self.no_overwrite and SBDManager.has_sbd_device_already_initialized(dev):
+                continue
             rc, _, err = invoke("sbd -d {} create".format(dev))
             if not rc:
                 error("Failed to initialize SBD device {}: {}".format(dev, err))
@@ -337,6 +341,10 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         """
         Update /etc/sysconfig/sbd
         """
+        if self.no_overwrite:
+            csync2_update(SYSCONFIG_SBD)
+            return
+
         shutil.copyfile(self.SYSCONFIG_SBD_TEMPLATE, SYSCONFIG_SBD)
         self._determine_sbd_watchdog_timeout()
         sbd_config_dict = {
@@ -451,7 +459,12 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
             invoke("systemctl disable sbd.service")
             return
         self._warn_diskless_sbd()
-        with status_long("Initializing {}SBD...".format("diskless " if self.diskless_sbd else "")):
+        msg = ""
+        if self.diskless_sbd:
+            msg = "Configuring diskless SBD"
+        elif not self.no_overwrite:
+            msg = "Initializing SBD"
+        with status_long(msg):
             self._initialize_sbd()
             self._update_configuration()
         self._determine_stonith_watchdog_timeout()
@@ -553,6 +566,15 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         conf = utils.parse_sysconfig(SYSCONFIG_SBD)
         res = conf.get(key)
         return res
+
+    @staticmethod
+    def has_sbd_device_already_initialized(dev):
+        """
+        Check if sbd device already initialized
+        """
+        cmd = "sbd -d {} dump".format(dev)
+        rc, _, _ = utils.get_stdout_stderr(cmd)
+        return rc == 0
 
 
 _context = None
@@ -802,8 +824,9 @@ def status(msg):
 
 @contextmanager
 def status_long(msg):
-    log("# {}...".format(msg))
-    if not _context.quiet:
+    if msg:
+        log("# {}...".format(msg))
+    if not _context.quiet and msg:
         sys.stdout.write("  {}...".format(msg))
         sys.stdout.flush()
     try:
@@ -811,7 +834,8 @@ def status_long(msg):
     except:
         raise
     else:
-        status_done()
+        if msg:
+            status_done()
 
 
 def status_progress():
