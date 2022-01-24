@@ -3067,4 +3067,25 @@ def handle_role_for_ocf_1_1(value, name='role'):
         return upgrade_dict[value]
 
     return value
+
+
+def diff_and_patch(orig_cib_str, current_cib_str):
+    """
+    Use crm_diff to generate patch, then apply
+    """
+    # In cibconfig.py, _patch_cib method doesn't include status section
+    # So here should make a function to handle common cases
+    cmd = "crm_diff -u -O '{}' -N '{}'".format(orig_cib_str, current_cib_str)
+    rc, cib_diff, err = get_stdout_stderr(cmd)
+    if rc == 0: # no difference
+        return True
+    if err:
+        logger.error("Failed to run crm_diff: %s", err)
+        return False
+    logger.debug("Diff: %s", cib_diff)
+    rc = pipe_string("cibadmin -p -P --force", cib_diff)
+    if rc != 0:
+        logger.error("Failed to patch")
+        return False
+    return True
 # vim:ts=4:sw=4:et:
