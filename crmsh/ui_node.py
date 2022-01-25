@@ -337,8 +337,10 @@ class NodeMgmt(command.UI):
                 res_item = xmlutil.get_set_nodes(interface_item, "instance_attributes", create=True)
                 xmlutil.set_attr(res_item[0], "standby", "on")
 
-        cmd = constants.CIB_REPLACE.format(xmlstr=xmlutil.xml_tostring(cib))
-        utils.get_stdout_or_raise_error(cmd)
+        orig_cib = xmlutil.cibdump2elem()
+        rc = utils.diff_and_patch(xmlutil.xml_tostring(orig_cib), xmlutil.xml_tostring(cib))
+        if not rc:
+            return False
         for node in node_list:
             logger.info("standby node %s", node)
 
@@ -362,8 +364,10 @@ class NodeMgmt(command.UI):
                 if item and item[0].get("value") != "off":
                     item[0].set("value", "off")
 
-        cmd = constants.CIB_REPLACE.format(xmlstr=xmlutil.xml_tostring(cib))
-        utils.get_stdout_or_raise_error(cmd)
+        orig_cib = xmlutil.cibdump2elem()
+        rc = utils.diff_and_patch(xmlutil.xml_tostring(orig_cib), xmlutil.xml_tostring(cib))
+        if not rc:
+            return False
         for node in node_list:
             logger.info("online node %s", node)
 

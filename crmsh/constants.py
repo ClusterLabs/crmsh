@@ -504,7 +504,6 @@ END = '\033[0m'
 
 
 CIB_QUERY = "cibadmin -Q"
-CIB_REPLACE = "cibadmin -R -X '{xmlstr}'"
 CIB_UPGRADE = "crm configure upgrade force"
 CIB_RAW_FILE = "/var/lib/pacemaker/cib/cib.xml"
 XML_NODE_PATH = "/cib/configuration/nodes/node"
