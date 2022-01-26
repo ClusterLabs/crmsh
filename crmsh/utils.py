@@ -2754,8 +2754,11 @@ def has_stonith_running():
     """
     Check if any stonith device registered
     """
+    from . import bootstrap
     out = get_stdout_or_raise_error("stonith_admin -L")
-    return re.search("[1-9]+ fence device[s]* found", out) is not None
+    has_stonith_device = re.search("[1-9]+ fence device[s]* found", out) is not None
+    using_diskless_sbd = bootstrap.SBDManager.is_using_diskless_sbd()
+    return has_stonith_device or using_diskless_sbd
 
 
 def parse_append_action_argument(input_list, parse_re="[; ]"):
