@@ -1463,8 +1463,10 @@ def test_parse_append_action_argument():
     assert res == ["/dev/sda1", "/dev/sda2"]
 
 
+@mock.patch('crmsh.bootstrap.SBDManager.is_using_diskless_sbd')
 @mock.patch('crmsh.utils.get_stdout_or_raise_error')
-def test_has_stonith_running(mock_run):
+def test_has_stonith_running(mock_run, mock_diskless):
+    mock_diskless.return_value = True
     mock_run.return_value = """
 stonith-sbd
 1 fence device found
@@ -1472,6 +1474,7 @@ stonith-sbd
     res = utils.has_stonith_running()
     assert res is True
     mock_run.assert_called_once_with("stonith_admin -L")
+    mock_diskless.assert_called_once_with()
 
 
 @mock.patch('crmsh.utils.S_ISBLK')
