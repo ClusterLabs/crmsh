@@ -518,7 +518,7 @@ DLM_CONTROLD_RA = "ocf::pacemaker:controld"
 LVMLOCKD_RA = "ocf::heartbeat:lvmlockd"
 HA_USER = "hacluster"
 HA_GROUP = "haclient"
-
-
 SCHEMA_MIN_VER_SUPPORT_OCF_1_1 = "pacemaker-3.7"
+REJOIN_COUNT = 60
+REJOIN_INTERVAL = 10
 # vim:ts=4:sw=4:et:

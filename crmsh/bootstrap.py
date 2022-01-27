@@ -33,7 +33,7 @@ from . import corosync
 from . import tmpfiles
 from . import lock
 from . import userdir
-from .constants import SSH_OPTION, QDEVICE_HELP_INFO, STONITH_TIMEOUT_DEFAULT
+from .constants import SSH_OPTION, QDEVICE_HELP_INFO, STONITH_TIMEOUT_DEFAULT, REJOIN_COUNT, REJOIN_INTERVAL
 from . import ocfs2
 from . import qdevice
 from . import log
@@ -2094,7 +2094,14 @@ def bootstrap_join(context):
 
         join_ssh(cluster_node)
 
-        if not utils.service_is_active("pacemaker.service", cluster_node):
+        n = 0
+        while n < REJOIN_COUNT:
+            if utils.service_is_active("pacemaker.service", cluster_node):
+                break
+            n += 1
+            logger.warning("Cluster is inactive on %s. Retry in %d seconds", cluster_node, REJOIN_INTERVAL)
+            sleep(REJOIN_INTERVAL)
+        else:
             utils.fatal("Cluster is inactive on {}".format(cluster_node))
 
         lock_inst = lock.RemoteLock(cluster_node)
