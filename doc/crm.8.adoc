@@ -1993,10 +1993,10 @@ stop <rsc> [<rsc> ...]
 [[cmdhelp_resource_trace,start RA tracing]]
 ==== `trace`
 
-Start tracing RA for the given operation. The trace files are
-stored in `$HA_VARLIB/trace_ra`. If the operation to be traced is
-monitor, note that the number of trace files can grow very
-quickly.
+Start tracing RA for the given operation. When `[<log-dir>]`
+is not specified the trace files are stored in `$HA_VARLIB/trace_ra`.
+If the operation to be traced is monitor, note that the number
+of trace files can grow very quickly.
 
 If no operation name is given, crmsh will attempt to trace all
 operations for the RA. This includes any configured operations, start
@@ -2012,14 +2012,14 @@ unless an error occurred.
 
 Usage:
 ...............
-trace <rsc> [<op> [<interval>] ]
+trace <rsc> [<op> [<interval>] [<log-dir>]]
 ...............
 Example:
 ...............
 trace fs start
 trace webserver
 trace webserver probe
-trace fs monitor 0
+trace fs monitor 0 /var/log/foo/bar
 ...............
 
 [[cmdhelp_resource_unmanage,put a resource into unmanaged mode]]
