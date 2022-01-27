@@ -230,6 +230,7 @@ alert_meta_attributes = (
     "timeout", "timestamp-format"
 )
 trace_ra_attr = "trace_ra"
+trace_dir_attr = "trace_dir"
 score_types = {'advisory': '0', 'mandatory': 'INFINITY'}
 boolean_ops = ('or', 'and')
 binary_ops = ('lt', 'gt', 'lte', 'gte', 'eq', 'ne')
