@@ -29,7 +29,7 @@ class TestRATrace(unittest.TestCase):
         obj = self.factory.create_from_node(etree.fromstring(xml))
 
         # Trace the resource.
-        RscMgmt()._trace_resource(self.context, obj.obj_id, obj)
+        RscMgmt()._trace_resource(self.context, obj.obj_id, obj, '/var/lib/heartbeat/trace_ra')
         self.assertEqual(obj.node.xpath('operations/op/@id'), ['r1-start-0', 'r1-stop-0'])
         self.assertEqual(obj.node.xpath('operations/op[@id="r1-start-0"]/instance_attributes/nvpair[@name="trace_ra"]/@value'), ['1'])
         self.assertEqual(obj.node.xpath('operations/op[@id="r1-stop-0"]/instance_attributes/nvpair[@name="trace_ra"]/@value'), ['1'])
@@ -50,7 +50,7 @@ class TestRATrace(unittest.TestCase):
         obj = self.factory.create_from_node(etree.fromstring(xml))
 
         # Trace the operation.
-        RscMgmt()._trace_op(self.context, obj.obj_id, obj, 'monitor')
+        RscMgmt()._trace_op(self.context, obj.obj_id, obj, 'monitor', '/var/lib/heartbeat/trace_ra')
         self.assertEqual(obj.node.xpath('operations/op/@id'), ['r1-monitor-10'])
         self.assertEqual(obj.node.xpath('operations/op[@id="r1-monitor-10"]/instance_attributes/nvpair[@name="trace_ra"]/@value'), ['1'])
 
@@ -73,14 +73,14 @@ class TestRATrace(unittest.TestCase):
 
         # Trace a regular operation that is not yet defined in CIB. The request
         # should succeed and introduce an op node for the operation.
-        RscMgmt()._trace_op(self.context, obj.obj_id, obj, 'start')
+        RscMgmt()._trace_op(self.context, obj.obj_id, obj, 'start', '/var/lib/heartbeat/trace_ra')
         self.assertEqual(obj.node.xpath('operations/op/@id'), ['r1-start-0'])
         self.assertEqual(obj.node.xpath('operations/op[@id="r1-start-0"]/instance_attributes/nvpair[@name="trace_ra"]/@value'), ['1'])
 
         # Try tracing the monitor operation in the same way. The request should
         # get rejected because no explicit interval is specified.
         with self.assertRaises(ValueError) as err:
-            RscMgmt()._trace_op(self.context, obj.obj_id, obj, 'monitor')
+            RscMgmt()._trace_op(self.context, obj.obj_id, obj, 'monitor', '/var/lib/heartbeat/trace_ra')
         self.assertEqual(str(err.exception), "No monitor operation configured for r1")
 
     @mock.patch('logging.Logger.error')
@@ -95,7 +95,7 @@ class TestRATrace(unittest.TestCase):
         obj = self.factory.create_from_node(etree.fromstring(xml))
 
         # Trace the operation.
-        RscMgmt()._trace_op(self.context, obj.obj_id, obj, 'monitor')
+        RscMgmt()._trace_op(self.context, obj.obj_id, obj, 'monitor', '/var/lib/heartbeat/trace_ra')
         self.assertEqual(obj.node.xpath('operations/op/@id'), ['r1-monitor-10', 'r1-monitor-11'])
         self.assertEqual(obj.node.xpath('operations/op[@id="r1-monitor-10"]/instance_attributes/nvpair[@name="trace_ra"]/@value'), ['1'])
         self.assertEqual(obj.node.xpath('operations/op[@id="r1-monitor-11"]/instance_attributes/nvpair[@name="trace_ra"]/@value'), ['1'])
@@ -116,7 +116,7 @@ class TestRATrace(unittest.TestCase):
         obj = self.factory.create_from_node(etree.fromstring(xml))
 
         # Trace the operation.
-        RscMgmt()._trace_op_interval(self.context, obj.obj_id, obj, 'monitor', '10')
+        RscMgmt()._trace_op_interval(self.context, obj.obj_id, obj, 'monitor', '10', '/var/lib/heartbeat/trace_ra')
         self.assertEqual(obj.node.xpath('operations/op/@id'), ['r1-monitor-10'])
         self.assertEqual(obj.node.xpath('operations/op[@id="r1-monitor-10"]/instance_attributes/nvpair[@name="trace_ra"]/@value'), ['1'])
 
