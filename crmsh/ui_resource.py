@@ -635,15 +635,17 @@ class RscMgmt(command.UI):
             return None
         return rsc
 
-    def _add_trace_op(self, rsc, op, interval):
+    def _add_trace_op(self, rsc, op, interval, dir):
         from lxml import etree
         n = etree.Element('op')
         n.set('name', op)
         n.set('interval', interval)
         n.set(constants.trace_ra_attr, '1')
+        if dir is not None:
+            n.set(constants.trace_dir_attr, dir)
         return rsc.add_operation(n)
 
-    def _trace_resource(self, context, rsc_id, rsc):
+    def _trace_resource(self, context, rsc_id, rsc, dir):
         """Enable RA tracing for a specified resource."""
         op_nodes = rsc.node.xpath('operations/op')
 
@@ -651,7 +653,7 @@ class RscMgmt(command.UI):
             for o in op_nodes:
                 if o.get('name') == name:
                     return
-            if not self._add_trace_op(rsc, name, '0'):
+            if not self._add_trace_op(rsc, name, '0', dir):
                 context.fatal_error("Failed to add trace for %s:%s" % (rsc_id, name))
         trace('start')
         trace('stop')
@@ -659,46 +661,75 @@ class RscMgmt(command.UI):
             trace('promote')
             trace('demote')
         for op_node in op_nodes:
-            rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
+            op_node = rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
+            if dir is not None:
+                rsc.set_op_attr(op_node, constants.trace_dir_attr, dir)
 
-    def _trace_op(self, context, rsc_id, rsc, op):
+    def _trace_op(self, context, rsc_id, rsc, op, dir):
         """Enable RA tracing for a specified operation."""
         op_nodes = rsc.node.xpath('operations/op[@name="%s"]' % (op))
         if not op_nodes:
             if op == 'monitor':
                 context.fatal_error("No monitor operation configured for %s" % (rsc_id))
-            if not self._add_trace_op(rsc, op, '0'):
+            if not self._add_trace_op(rsc, op, '0', dir):
                 context.fatal_error("Failed to add trace for %s:%s" % (rsc_id, op))
         for op_node in op_nodes:
-            rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
+            op_node = rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
+            if dir is not None:
+                rsc.set_op_attr(op_node, constants.trace_dir_attr, dir)
 
-    def _trace_op_interval(self, context, rsc_id, rsc, op, interval):
+    def _trace_op_interval(self, context, rsc_id, rsc, op, interval, dir):
         """Enable RA tracing for an operation with the exact interval."""
         op_node = xmlutil.find_operation(rsc.node, op, interval)
         if op_node is None and utils.crm_msec(interval) != 0:
             context.fatal_error("Operation %s with interval %s not found in %s" % (op, interval, rsc_id))
         if op_node is None:
-            if not self._add_trace_op(rsc, op, interval):
+            if not self._add_trace_op(rsc, op, interval, dir):
                 context.fatal_error("Failed to add trace for %s:%s" % (rsc_id, op))
         else:
-            rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
+            op_node = rsc.set_op_attr(op_node, constants.trace_ra_attr, "1")
+            if dir is not None:
+                rsc.set_op_attr(op_node, constants.trace_dir_attr, dir)
 
     @command.completers(compl.primitives, _raoperations)
-    def do_trace(self, context, rsc_id, op=None, interval=None):
-        'usage: trace <rsc> [<op>] [<interval>]'
+    def do_trace(self, context, rsc_id, *args):
+        'usage: trace <rsc> [<op>] [<interval>] [<log-dir>]'
+        usage='usage: trace <rsc> [<op>] [<interval>] [<log-dir>]'
         rsc = self._get_trace_rsc(rsc_id)
         if not rsc:
             return False
+
+        argl = list(args)
+        force = "force" in utils.fetch_opts(argl, ["force"]) or config.core.force
+        if len(argl) > 3:
+            context.fatal_error(usage)
+        op=None
+        interval=None
+        dir=None
+        for arg in argl:
+            if arg[0] == '/':
+                if dir is not None:
+                    context.fatal_error(usage)
+                dir = arg
+            elif arg.isnumeric():
+                if interval is not None:
+                    context.fatal_error(usage)
+                interval = arg
+            else:
+                if op is not None:
+                    context.fatal_error(usage)
+                op = arg
+
         if op == "probe":
             op = "monitor"
             if interval is None:
                 interval = "0"
         if op is None:
-            self._trace_resource(context, rsc_id, rsc)
+            self._trace_resource(context, rsc_id, rsc, dir)
         elif interval is None:
-            self._trace_op(context, rsc_id, rsc, op)
+            self._trace_op(context, rsc_id, rsc, op, dir)
         else:
-            self._trace_op_interval(context, rsc_id, rsc, op, interval)
+            self._trace_op_interval(context, rsc_id, rsc, op, interval, dir)
         if not cib_factory.commit():
             return False
         rsc_type = rsc.node.get("type")
@@ -712,6 +743,7 @@ class RscMgmt(command.UI):
     def _remove_trace(self, rsc, op_node):
         logger.debug("op_node: %s", xmlutil.xml_tostring(op_node))
         op_node = rsc.del_op_attr(op_node, constants.trace_ra_attr)
+        op_node = rsc.del_op_attr(op_node, constants.trace_dir_attr)
         if rsc.is_dummy_operation(op_node):
             rsc.del_operation(op_node)
 
