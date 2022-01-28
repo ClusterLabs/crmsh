@@ -1,0 +1,55 @@
+Releasing crmsh version 4.3.1
+=============================
+:Author: Xin Liang
+:Email: XLiang@suse.com
+:Date: 2021-06-17 11:00
+
+Hello everyone!
+
+I'm happy to announce the release of crmsh version 4.3.1
+
+Major changes since 4.3.0
+
+Features:
+  
+* Add "crm cluster crash_test" for cluster failure simulation (#825)
+
+* Add ocfs2.OCFS2Manager to manage ocfs2 stage process with cluster lvm2 (#798)
+  
+* Support setup SBD via bootstrap "sbd" stage on an existing cluster (#744)
+
+* Enable configuring qdevice on interactive mode (#765)
+
+Fixes:
+
+* Adjust sbd watchdog timeout when using diskless SBD with qdevice (#818)
+
+* Not allow property setting with an empty value (#817)
+
+* Keep consistent for "help <sub-command>" and "<sub-command> -h" for those using argparse (#644)
+
+* Sync corosync.conf before finished joining (#775)
+
+* Adjust qdevice configure/remove process to avoid race condition due to quorum lost (#741)
+
+* Walk through hb_report process under hacluster (#742)
+
+There are some other changes in this release as well, see the
+ChangeLog for the complete list of changes:
+
+* https://github.com/ClusterLabs/crmsh/blob/master/ChangeLog
+
+The source code can be downloaded from Github:
+
+* https://github.com/ClusterLabs/crmsh/releases/tag/4.3.1
+
+Development packages for openSUSE Tumbleweed
+are available from the Open Build System, here:
+
+* https://build.opensuse.org/package/show/network:ha-clustering:Factory/crmsh
+
+As usual, a huge thank you to all contributors and users of crmsh!
+
+
+Regards,
+xin
